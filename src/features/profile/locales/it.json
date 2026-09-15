@@ -16,9 +16,22 @@
     "deleteBlockedTitle": "Impossibile eliminare l'account",
     "deleteBlockedSubtitle": "Il tuo account non può essere eliminato finché non risolvi quanto segue:",
     "deleteResolveTitle": "Per risolvere:",
-    "deleteResolveTransfer": "• Trasferisci la proprietà a un altro membro",
-    "deleteResolveRemoveMembers": "• Rimuovi tutti i membri dalla casa",
-    "deleteResolveDeleteHome": "• Elimina la casa",
+    "deleteBlocker": {
+      "homeOwnership": {
+        "reason": "Nessun altro possiede «{{name}}», che ha ancora altri membri.",
+        "transferOwnership": "Trasferisci la proprietà a un altro membro",
+        "removeMembers": "Rimuovi gli altri membri dalla casa",
+        "deleteResource": "Elimina la casa"
+      },
+      "shoppingList": {
+        "reason": "Nessun altro possiede la lista della spesa «{{name}}», che ha ancora dei collaboratori.",
+        "removeCollaborators": "Rimuovi tutti i collaboratori dalla lista",
+        "deleteResource": "Elimina la lista della spesa"
+      },
+      "other": {
+        "reason": "Devi risolvere «{{name}}» prima di poter eliminare il tuo account."
+      }
+    },
     "deleteWarningTitle": "Attenzione: questa è permanente!",
     "deleteWhatWillBeDeleted": "Cosa verrà eliminato:",
     "deleteWipeProfile": "Il tuo profilo e le informazioni dell'account",
@@ -69,8 +82,8 @@
     "protein": "Proteine",
     "fat": "Grassi",
     "loadingProfile": "Caricamento profilo alimentare...",
-    "noProfileTitle": "Nessun profilo alimentare",
-    "noProfileSubtitle": "Crea il tuo profilo alimentare per ricevere consigli sulle ricette personalizzati"
+    "loadFailedTitle": "Impossibile caricare il tuo profilo alimentare",
+    "loadFailedSubtitle": "Controlla la connessione e riprova."
   },
   "biometricSetup": {
     "authRequiredTitle": "Autenticazione richiesta",
@@ -210,16 +223,21 @@
     "visibilityFriendsOnly": "Solo Amici",
     "visibilityPrivate": "Privato",
     "showEmail": "Mostra Email",
-    "showPhone": "Mostra Telefono"
+    "showPhone": "Mostra Telefono",
+    "firstNamePlaceholder": "es. Mario",
+    "lastNamePlaceholder": "es. Rossi",
+    "displayNamePlaceholder": "es. mario_rossi",
+    "bioPlaceholder": "Raccontaci qualcosa di te...",
+    "phonePlaceholder": "es. +39 312 345 6789",
+    "dateOfBirthPlaceholder": "es. 1990-01-15"
   },
   "accountEvents": {
     "removedFromHome": "Non fai più parte di una casa",
     "addedToHome": "Ora fai parte di una nuova casa",
     "removedFromShoppingList": "Non fai più parte di una lista della spesa",
     "addedToShoppingList": "Ora fai parte di una lista della spesa",
-    "accountBanned": "Il tuo account è stato bannato{{reason}}",
-    "accountSuspended": "Il tuo account è stato sospeso{{reason}}",
-    "reasonSuffix": ": {{reason}}",
+    "accountBanned": "Il tuo account è stato bannato",
+    "accountSuspended": "Il tuo account è stato sospeso",
     "warningReceived": "Hai ricevuto un avviso da un moderatore"
   },
   "biometrics": {
@@ -253,6 +271,18 @@
     "dateFormat": "La data deve essere nel formato AAAA-MM-GG",
     "dateInvalid": "Inserisci una data valida",
     "dateUnreasonable": "Inserisci una data di nascita plausibile",
-    "invalidVisibility": "Seleziona un'opzione di visibilità valida"
+    "invalidVisibility": "Seleziona un'opzione di visibilità valida",
+    "invalidGender": "Seleziona un genere valido"
+  },
+  "stringArrayManager": {
+    "inputPlaceholder": "Inserisci un valore...",
+    "empty": "Nessun elemento aggiunto",
+    "valueRequired": "Inserisci un valore",
+    "duplicate": "Questo elemento esiste già",
+    "maxItems_one": "Puoi aggiungere al massimo {{count}} elemento",
+    "maxItems_other": "Puoi aggiungere al massimo {{count}} elementi"
+  },
+  "restrictionSection": {
+    "empty": "Nessuno aggiunto"
   }
 }

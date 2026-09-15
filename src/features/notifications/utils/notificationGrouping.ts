@@ -66,7 +66,7 @@ export const createNotificationFeedRows = (
 ): NotificationFeedRow[] =>
   [
     { title: t('notificationGroups.urgent'), data: groups.urgent },
-    { title: t('notificationGroups.today'), data: groups.today },
+    { title: t('labels.today'), data: groups.today },
     { title: t('notificationGroups.yesterday'), data: groups.yesterday },
     { title: t('notificationGroups.older'), data: groups.older },
   ]

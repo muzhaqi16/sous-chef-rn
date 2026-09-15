@@ -1,10 +1,6 @@
 import { HttpTransport } from '../HttpTransport';
-import {
-  TelemetryConfig,
-  LogEntry,
-  MetricEntry,
-  TransportSendError,
-} from '../../types';
+import type { TelemetryConfig, LogEntry, MetricEntry } from '../../types';
+import { TransportSendError } from '../../types';
 
 import { logger } from '#/utils/environment';
 

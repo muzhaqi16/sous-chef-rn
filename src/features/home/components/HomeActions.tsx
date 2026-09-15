@@ -5,6 +5,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
+import { homeTestIDs } from '#features/home/testIDs';
 
 interface HomeActionsProps {
   homeId: string;
@@ -30,7 +31,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
   if (!hasVisibleActions) return null;
 
   return (
-    <View style={styles.homeActions} testID="home-actions">
+    <View style={styles.homeActions} testID={homeTestIDs.homeActions}>
       {!isDefault && (
         <AppPressable
           style={styles.actionButton}
@@ -74,7 +75,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
           <Icon name="trash-outline" size={22} tone="error" />
           <Text
             role="caption"
-            tone="error"
+            tone="danger"
             numberOfLines={2}
             style={styles.actionText}
           >

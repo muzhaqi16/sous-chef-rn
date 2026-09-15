@@ -5,7 +5,7 @@
  * The Feature API Boundary Convention stops a feature importing another's
  * `graphql/`, so several mutations exist as near-identical copies — four of
  * `AddItemsToShoppingList`, two of `CreatePantryItem`. Every copy is registered
- * in a `*_SYNC_BUILDERS` table and replays through the SAME `Sync*` fragment,
+ * in `SYNC_REGISTRY` and replays through the SAME `Sync*` fragment,
  * so the queue treats them as one operation while their selection sets are
  * maintained by hand, separately, in different features.
  *
@@ -36,8 +36,7 @@ import type {
   FragmentDefinitionNode,
   SelectionSetNode,
 } from 'graphql';
-import { PANTRY_SYNC_BUILDERS } from '#features/pantry/offline/syncBuilders';
-import { SHOPPING_LIST_SYNC_BUILDERS } from '#features/shoppingList/offline/syncBuilders';
+import { SYNC_REGISTRY } from '#/apollo/offlineQueue/syncRegistry';
 import {
   CreatePantryItemDocument,
   SyncPantryItemDocument,
@@ -49,7 +48,7 @@ import {
 import {
   BarcodeCreatePantryItemDocument,
   BarcodeAddItemToShoppingListDocument,
-} from '#features/barcode/components/SearchResults.generated';
+} from '#features/barcode/hooks/useAddScannedItem.generated';
 import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/screens/FilteredPantryItems.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 
@@ -77,7 +76,7 @@ function fieldPaths(
       paths.push(...fieldPaths(selection.selectionSet, fragments, prefix));
       continue;
     }
-    const field = selection as FieldNode;
+    const field = selection;
     if (field.name.value === '__typename') continue;
     const path = prefix ? `${prefix}.${field.name.value}` : field.name.value;
     if (field.selectionSet) {
@@ -194,10 +193,7 @@ const FAMILIES: Family[] = [
   },
 ];
 
-const REGISTERED = new Set([
-  ...Object.keys(PANTRY_SYNC_BUILDERS),
-  ...Object.keys(SHOPPING_LIST_SYNC_BUILDERS),
-]);
+const REGISTERED = new Set(Object.keys(SYNC_REGISTRY));
 
 describe('local-first copy drift', () => {
   it('covers every copy the sync registries actually replay', () => {
@@ -208,7 +204,10 @@ describe('local-first copy drift', () => {
       FAMILIES.flatMap(f => [f.canonical.name, ...f.copies.map(c => c.name)]),
     );
     const registeredCreates = [...REGISTERED].filter(
-      op => op.startsWith('Create') || op.startsWith('AddItem') || op.includes('Barcode'),
+      op =>
+        op.startsWith('Create') ||
+        op.startsWith('AddItem') ||
+        op.includes('Barcode'),
     );
     const uncovered = registeredCreates.filter(op => !covered.has(op));
     expect(uncovered).toEqual([]);

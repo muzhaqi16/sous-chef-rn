@@ -3,7 +3,6 @@ import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { logger } from '#/utils/environment';
-import { handleMutationError } from '#/utils/errorHandlers';
 import {
   useUser,
   useNavigationUtils,
@@ -13,8 +12,8 @@ import { authService } from '#/services/authService';
 import { useCredentialStorage } from '#features/profile/hooks/useCredentialStorage';
 import { useMutation } from '@apollo/client/react';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
-import { type UpdateSettingsInput } from '#/graphql/generated/schemaTypes';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import type { UpdateSettingsInput } from '#/graphql/generated/schemaTypes';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import type { SettingItem } from '#components/organisms/SettingRow';
 
 import {
@@ -49,9 +48,8 @@ export const useConfigurableSettings = () => {
   const { resetBiometricDeclination, markBiometricEnabled } =
     useAuthPreferences();
   // No optimistic response — UserSettings has many required fields that are
-  // hard to predict; normalization writes the response by id. Rejections are
-  // alerted in `updateUserPreferences` below, the single alerter, so this
-  // mutation deliberately carries no `onError`.
+  // hard to predict; normalization writes the response by id. Failures settle
+  // in `updateUserPreferences` below, the single alerter.
   const [updateSettingsMutation] = useMutation(UpdateUserPreferencesDocument);
 
   // Biometric state
@@ -98,7 +96,7 @@ export const useConfigurableSettings = () => {
       setBiometricLoading(false);
     };
 
-    loadBiometricInfo();
+    void loadBiometricInfo();
   }, [user?.email, getBiometricInfo, checkStoredCredentials]);
 
   // BiometricSetupModal state
@@ -119,59 +117,63 @@ export const useConfigurableSettings = () => {
     }
   };
 
+  const disableBiometrics = async () => {
+    const email = user?.email;
+    try {
+      if (email) {
+        // Server first, while the session that authorises it is live; then the
+        // local slot.
+        await authService.revokeDeviceCredentialForThisDevice();
+        // `removeCredentials` reports a failed keychain delete by returning
+        // false rather than throwing, so an unread result flips the toggle over
+        // a slot that is still there to be offered next launch.
+        const removed = await removeCredentials(email);
+        if (!removed) {
+          alertService.alert(t('labels.error'), t('biometrics.disableFailed'));
+          return;
+        }
+        setBiometricEnabled(false);
+      }
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Failed to disable biometric authentication',
+      });
+      alertService.alert(t('labels.error'), t('biometrics.disableFailed'));
+    }
+  };
+
   const updateUserPreferences = async (input: UpdateSettingsInput) => {
     // No optimisticResponse here (UserSettings input is nested and doesn't map
     // 1:1 onto the flat cached entity), so there's nothing to tear down —
     // queueing it offline is safe and the change applies on replay (idempotent,
     // keyed by userId). The individual preference setters drive the local UI.
-    // A resolved error member (online) is surfaced; the offline-queued null
-    // result is not (alertIfRejected returns false for it).
-    let result;
-    try {
-      result = await updateSettingsMutation({
-        variables: { input },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      handleMutationError(error, { operation: 'Update Preferences' });
-    }
-    alertIfRejected(result, t('errors.codes.genericRetry'));
+    // A queued write is not a failure, so only a refusal or error is alerted.
+    await settleMutation(
+      () =>
+        updateSettingsMutation({
+          variables: { input },
+          context: { localFirst: true },
+        }),
+      {
+        document: UpdateUserPreferencesDocument,
+        fallback: t('errors.codes.genericRetry'),
+      },
+    );
   };
 
   const createSettingItem = (config: SettingItemConfig): SettingItem => {
-    // ==== TEST IDs for Detox ====
-    const testIDMap: Record<string, string> = {
-      personalInformation: 'profile-menu-personalInformation',
-      notifications: 'profile-menu-notifications',
-      dietaryProfile: 'profile-menu-dietaryProfile',
-      appSettings: 'profile-menu-appSettings',
-      debugInfo: 'profile-menu-debugInfo',
-      performanceDashboard: 'profile-menu-performanceDashboard',
-      logout: 'profile-logout-button',
-      privacy: 'profile-menu-privacy',
-      help: 'profile-menu-help',
-      about: 'profile-menu-about',
-      feedback: 'profile-menu-feedback',
-      changePassword: 'profile-menu-changePassword',
-      appearance: 'profile-menu-appearance',
-    };
-
-    // Translate well-known labels (Profile screen entries) via i18next; fall
-    // back to the config's English string for unmapped keys.
+    // Row ids are assigned by `ProfileScreen`, beside the handlers it wires.
     const baseItem: SettingItem = {
       key: config.key,
       label: t(config.labelKey),
       type: config.type,
-      ...(testIDMap[config.key] ? { testID: testIDMap[config.key] } : {}),
     };
 
     // Map configuration keys to actual implementation
     switch (config.key) {
-      // The personal-information fields (firstName, gender, showEmail, …) are
-      // NOT handled here. They belong to PERSONAL_INFO_CONFIG, which
-      // PersonalInformationScreen renders with its own builder; this hook only
-      // ever sees PROFILE_SETTINGS_CONFIG. Eleven such cases sat here
-      // unreachable, two of them carrying untranslated English option lists.
+      // The personal-information fields (firstName, gender, showEmail, …) belong
+      // to PERSONAL_INFO_CONFIG, which PersonalInformationScreen renders with its
+      // own builder; this hook only ever sees PROFILE_SETTINGS_CONFIG.
 
       case 'language':
         if (config.type === 'modal') {
@@ -181,7 +183,7 @@ export const useConfigurableSettings = () => {
             options: [...SUPPORTED_LANGUAGES],
             onSave: (v: string) => {
               setLanguage(v);
-              updateUserPreferences({ regional: { language: v } });
+              void updateUserPreferences({ regional: { language: v } });
             },
           };
         }
@@ -229,7 +231,7 @@ export const useConfigurableSettings = () => {
             value: biometricEnabled,
             disabled: biometricLoading || !biometricAvailable,
             subtitle,
-            onPress: async () => {
+            onPress: () => {
               if (!biometricAvailable) return;
 
               if (!biometricEnabled) {
@@ -243,37 +245,8 @@ export const useConfigurableSettings = () => {
                     {
                       text: t('biometrics.disable'),
                       style: 'destructive',
-                      onPress: async () => {
-                        const email = user?.email;
-                        try {
-                          if (email) {
-                            // Server first, while the session that authorises
-                            // it is live; then the local slot.
-                            await authService.revokeDeviceCredentialForThisDevice();
-                            // `removeCredentials` reports a failed keychain
-                            // delete by returning false rather than throwing,
-                            // so an unread result flips the toggle over a slot
-                            // that is still there to be offered next launch.
-                            const removed = await removeCredentials(email);
-                            if (!removed) {
-                              alertService.alert(
-                                t('labels.error'),
-                                t('biometrics.disableFailed'),
-                              );
-                              return;
-                            }
-                            setBiometricEnabled(false);
-                          }
-                        } catch (error) {
-                          errorService.reportError(error, {
-                            operation:
-                              'Failed to disable biometric authentication',
-                          });
-                          alertService.alert(
-                            t('labels.error'),
-                            t('biometrics.disableFailed'),
-                          );
-                        }
+                      onPress: () => {
+                        void disableBiometrics();
                       },
                     },
                   ],
@@ -375,6 +348,5 @@ export const useConfigurableSettings = () => {
   return {
     sections,
     BiometricModal,
-    biometricLoading,
   };
 };

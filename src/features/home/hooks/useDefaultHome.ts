@@ -14,7 +14,6 @@ import { useStore } from '#store';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import { useMarkHomeAsDefault } from '#features/home/hooks/useMarkHomeAsDefault';
 import { isDefaultHomeSyncPending } from '#features/home/store/useDefaultHomeSyncStore';
-import { handleMutationError } from '#/utils/errorHandlers';
 import {
   pantriesOf,
   defaultPantryOf,
@@ -63,8 +62,8 @@ const isConnectionComplete = (connection: {
 type SelectionCheck = 'valid' | 'invalid' | 'unknown';
 
 /**
- * Adopts the pantry the server names, and reports a failed sync — a new user
- * left with no default home is invisible otherwise.
+ * Adopts the pantry the server names, or the local one when the sync does not
+ * land. `markAsDefault` reports the failure; nothing here is presented.
  */
 const syncAsAccountDefault = (
   markAsDefault: ReturnType<typeof useMarkHomeAsDefault>['markAsDefault'],
@@ -77,12 +76,8 @@ const syncAsAccountDefault = (
       setSelectedPantryId(serverPantry.id);
       return;
     }
-    if (status === 'refused' || status === 'failed') {
-      handleMutationError(new Error(`markHomeAsDefault ${status}`), {
-        operation: 'Set First Home as Default',
-        showAlert: false,
-      });
-      if (localPantryId) setSelectedPantryId(localPantryId);
+    if ((status === 'refused' || status === 'failed') && localPantryId) {
+      setSelectedPantryId(localPantryId);
     }
   });
 };
@@ -113,7 +108,7 @@ const checkPantryBelongsToHome = (
 /**
  * Manages home selection, default home resolution, and pantry ID tracking.
  *
- * @returns `{ state, actions }` — home/pantry selection state and helpers like getDefaultPantry
+ * @returns the selected (or remote default) home id and `getDefaultPantry`
  */
 export const useDefaultHome = () => {
   const client = useApolloClient();
@@ -156,13 +151,11 @@ export const useDefaultHome = () => {
   // PERFORMANCE: Use lazy queries with STABLE options to control when they execute
   // Using hardcoded 'cache-first' instead of dynamic policy prevents function recreation
   // on network status changes which caused query cascades
-  const [
-    getHomes,
-    { data: homes, loading, error, called, refetch: refetchHomes },
-  ] = useLazyQuery(GetHomesDocument, {
-    fetchPolicy: 'cache-first',
-    errorPolicy: 'ignore',
-  });
+  const [getHomes, { data: homes, loading, called, refetch: refetchHomes }] =
+    useLazyQuery(GetHomesDocument, {
+      fetchPolicy: 'cache-first',
+      errorPolicy: 'ignore',
+    });
 
   // Opens the pantry query in parallel with GetHomes when the persisted pair
   // still checks out against the synchronously restored cache. `unknown` takes
@@ -214,7 +207,7 @@ export const useDefaultHome = () => {
       // Logout calls client.clearStore(), so on a fresh login this cache-first
       // read misses and fetches from the network (fresh data for the new user);
       // on a same-user cold start it paints instantly from the persisted cache.
-      getHomes();
+      void getHomes();
     }
   }, [canAttemptQueries, getHomes]);
 
@@ -235,9 +228,7 @@ export const useDefaultHome = () => {
 
   // Extract default pantry ID (React Compiler auto-memoizes this derivation)
   const defaultPantryId = (() => {
-    const defaultHome = homesList?.find(h => h.isDefault) as
-      | HomeNode
-      | undefined;
+    const defaultHome = homesList?.find(h => h.isDefault);
     const pantries = pantriesOf(defaultHome);
     if (!pantries.length) return null;
     const defaultPantry = pantries.find(p => p.isDefault) ?? pantries[0];
@@ -255,9 +246,7 @@ export const useDefaultHome = () => {
   // the ready flag opens `usePantryQuery`'s gate on a valid HOME alone, sending
   // `GetPantry` for a pantry the account cannot read. Judged only against a
   // connection known complete: empty means "not loaded", not "absent".
-  const selectedHome = homesList?.find(h => h.id === selectedHomeId) as
-    | HomeNode
-    | undefined;
+  const selectedHome = homesList?.find(h => h.id === selectedHomeId);
   const selectedHomePantries = pantriesOf(selectedHome);
   const selectedHomeHasCompletePantries = !!(
     selectedHome?.pantriesConnection &&
@@ -572,17 +561,9 @@ export const useDefaultHome = () => {
   return {
     state: {
       selectedHomeId: currentHomeId,
-      homes: homesList,
-      loading,
-      error,
-      hasDefaultHome: !!currentHomeId,
-      remoteDefaultHomeId,
-      selectedPantryId,
-      isHomeSelectionReady,
     },
     actions: {
       getDefaultPantry,
-      setSelectedPantryId,
     },
   };
 };

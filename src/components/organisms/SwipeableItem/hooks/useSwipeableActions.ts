@@ -1,5 +1,6 @@
-import { useRef, ComponentRef } from 'react';
-import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import type { ComponentRef } from 'react';
+import { useRef } from 'react';
+import type Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useRecyclingState } from '@shopify/flash-list';
 
 type SwipeableRef = React.RefObject<ComponentRef<typeof Swipeable> | null>;

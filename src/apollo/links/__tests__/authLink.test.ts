@@ -38,6 +38,20 @@ import { authLink } from '../authLink';
 import { LogoutCleanup } from '../../logoutCleanup';
 import { proactiveTokenRefresh } from '../refreshToken';
 import { getDeviceId } from '#/storage/deviceId';
+import {
+  LoginDocument,
+  RefreshTokenDocument,
+  RegisterDocument,
+} from '#operations/auth/auth.generated';
+import { UpdateDeviceDocument } from '#operations/auth/device.generated';
+import { GetHomeDocument } from '#operations/home/home.generated';
+import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { GetNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
+import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
+import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import type { DocumentNode } from 'graphql';
 
 const shouldSkipOperation = LogoutCleanup.shouldSkipOperation as jest.Mock;
 const mockedProactiveRefresh = proactiveTokenRefresh as jest.Mock;
@@ -76,7 +90,7 @@ type Headers = Record<string, string>;
  * downstream link was handed — the link's entire observable output.
  */
 const run = (
-  operationName: string,
+  document: DocumentNode,
   context: Record<string, unknown> = {},
 ): Promise<Headers> =>
   new Promise((resolve, reject) => {
@@ -92,17 +106,7 @@ const run = (
 
     ApolloLink.execute(
       ApolloLink.from([authLink, downstream]),
-      {
-        query: gql`
-          query ${operationName} {
-            me {
-              id
-            }
-          }
-        `,
-        variables: {},
-        context,
-      },
+      { query: document, variables: {}, context },
       { client },
     ).subscribe({
       error: reject,
@@ -111,20 +115,11 @@ const run = (
   });
 
 /** Drives an operation expected to fail, resolving with the error it produced. */
-const runExpectingError = (operationName: string): Promise<Error> =>
+const runExpectingError = (document: DocumentNode): Promise<Error> =>
   new Promise((resolve, reject) => {
     ApolloLink.execute(
       ApolloLink.from([authLink, new ApolloLink(() => of({ data: null }))]),
-      {
-        query: gql`
-          query ${operationName} {
-            me {
-              id
-            }
-          }
-        `,
-        variables: {},
-      },
+      { query: document, variables: {} },
       { client },
     ).subscribe({
       error: resolve,
@@ -144,7 +139,7 @@ describe('authLink', () => {
 
   describe('headers', () => {
     it('sends the API key and device ID on every request', async () => {
-      const headers = await run('GetPantry');
+      const headers = await run(GetPantryDocument);
 
       expect(headers['x-api-key']).toBe('test-api-key');
       expect(headers['x-device-id']).toBe('test-device-id');
@@ -156,7 +151,7 @@ describe('authLink', () => {
     it('omits the device id when storage has not opened', async () => {
       (getDeviceId as jest.Mock).mockReturnValueOnce(null);
 
-      const headers = await run('GetPantry');
+      const headers = await run(GetPantryDocument);
 
       expect(headers).not.toHaveProperty('x-device-id');
       expect(headers['x-api-key']).toBe('test-api-key');
@@ -165,7 +160,7 @@ describe('authLink', () => {
     it('attaches the bearer token when one is held', async () => {
       mockStoreState.accessToken = makeToken(3600);
 
-      const headers = await run('GetPantry');
+      const headers = await run(GetPantryDocument);
 
       expect(headers.authorization).toBe(
         `Bearer ${mockStoreState.accessToken}`,
@@ -173,19 +168,26 @@ describe('authLink', () => {
     });
 
     it('omits the authorization header when no token is held', async () => {
-      const headers = await run('GetPantry');
+      const headers = await run(GetPantryDocument);
 
       expect(headers).not.toHaveProperty('authorization');
       // The unauthenticated request still identifies the client.
       expect(headers['x-api-key']).toBe('test-api-key');
     });
 
-    it.each(['RefreshToken', 'Login', 'Register', 'SignUp'])(
+    it.each(
+      [RefreshTokenDocument, LoginDocument, RegisterDocument].map(
+        (document): [string, DocumentNode] => [
+          operationNameOf(document),
+          document,
+        ],
+      ),
+    )(
       'omits the authorization header on the public operation %s',
-      async operationName => {
+      async (_name, document) => {
         mockStoreState.accessToken = makeToken(3600);
 
-        const headers = await run(operationName);
+        const headers = await run(document);
 
         expect(headers).not.toHaveProperty('authorization');
         expect(headers['x-api-key']).toBe('test-api-key');
@@ -198,7 +200,13 @@ describe('authLink', () => {
       // normal authenticated query and must carry the token.
       mockStoreState.accessToken = makeToken(3600);
 
-      const headers = await run('LoginHistory');
+      const headers = await run(gql`
+        query LoginHistory {
+          me {
+            id
+          }
+        }
+      `);
 
       expect(headers.authorization).toBe(
         `Bearer ${mockStoreState.accessToken}`,
@@ -210,15 +218,17 @@ describe('authLink', () => {
     it('cancels the operation instead of sending it', async () => {
       shouldSkipOperation.mockReturnValue(true);
 
-      const error = await runExpectingError('GetPantry');
+      const error = await runExpectingError(GetPantryDocument);
 
       expect(error.message).toContain('Operation cancelled');
     });
 
     it('consults the cleanup gate with the operation name', async () => {
-      await run('GetPantry');
+      await run(GetPantryDocument);
 
-      expect(shouldSkipOperation).toHaveBeenCalledWith('GetPantry');
+      expect(shouldSkipOperation).toHaveBeenCalledWith(
+        operationNameOf(GetPantryDocument),
+      );
     });
 
     // The sign-out's own device delete dispatches before the gate closes and
@@ -227,7 +237,9 @@ describe('authLink', () => {
       shouldSkipOperation.mockReturnValue(true);
       mockStoreState.accessToken = makeToken(3600);
 
-      const headers = await run('UpdateDevice', { allowDuringLogout: true });
+      const headers = await run(UpdateDeviceDocument, {
+        allowDuringLogout: true,
+      });
 
       expect(headers.authorization).toBe(
         `Bearer ${mockStoreState.accessToken}`,
@@ -240,7 +252,7 @@ describe('authLink', () => {
       shouldSkipOperation.mockReturnValue(true);
       mockStoreState.accessToken = makeToken(120); // inside the 5-minute buffer
 
-      await run('UpdateDevice', { allowDuringLogout: true });
+      await run(UpdateDeviceDocument, { allowDuringLogout: true });
 
       expect(mockedProactiveRefresh).not.toHaveBeenCalled();
     });
@@ -250,7 +262,7 @@ describe('authLink', () => {
     it('fires a server refresh', async () => {
       mockStoreState.accessToken = makeToken(120); // inside the 5-minute buffer
 
-      await run('GetPantry');
+      await run(GetPantryDocument);
 
       expect(mockedProactiveRefresh).toHaveBeenCalled();
       expect(mockStoreState.setNeedsTokenRefresh).not.toHaveBeenCalled();
@@ -272,7 +284,7 @@ describe('authLink', () => {
       // exiting on its own.
       let stallTimer: ReturnType<typeof setTimeout> | undefined;
       const outcome = await Promise.race([
-        run('GetPantry'),
+        run(GetPantryDocument),
         new Promise<typeof stalled>(resolve => {
           stallTimer = setTimeout(() => resolve(stalled), 500);
         }),
@@ -289,7 +301,7 @@ describe('authLink', () => {
       const current = makeToken(120);
       mockStoreState.accessToken = current;
 
-      const headers = await run('GetPantry');
+      const headers = await run(GetPantryDocument);
 
       expect(headers.authorization).toBe(`Bearer ${current}`);
       expect(headers.authorization).not.toContain('new-token');
@@ -304,7 +316,7 @@ describe('authLink', () => {
     it('defers the refresh rather than attempting one', async () => {
       mockStoreState.accessToken = makeToken(120);
 
-      await run('GetPantry');
+      await run(GetPantryDocument);
 
       expect(mockStoreState.setNeedsTokenRefresh).toHaveBeenCalledWith(true);
       expect(mockedProactiveRefresh).not.toHaveBeenCalled();
@@ -313,7 +325,7 @@ describe('authLink', () => {
     it('still sends the expiring token so a cached read can proceed', async () => {
       mockStoreState.accessToken = makeToken(120);
 
-      const headers = await run('GetPantry');
+      const headers = await run(GetPantryDocument);
 
       expect(headers.authorization).toBe(
         `Bearer ${mockStoreState.accessToken}`,
@@ -329,7 +341,7 @@ describe('authLink', () => {
     ])('never invalidates the session for an %s token', async (_case, ttl) => {
       mockStoreState.accessToken = makeToken(ttl);
 
-      await run('GetPantry');
+      await run(GetPantryDocument);
 
       expect(mockStoreState.tokenRefreshFailed).not.toHaveBeenCalled();
     });
@@ -337,7 +349,7 @@ describe('authLink', () => {
     it('never invalidates the session for an undecodable token', async () => {
       mockStoreState.accessToken = 'not-a-jwt';
 
-      await run('GetPantry');
+      await run(GetPantryDocument);
 
       expect(mockStoreState.tokenRefreshFailed).not.toHaveBeenCalled();
     });
@@ -347,7 +359,7 @@ describe('authLink', () => {
     it('leaves a token outside the buffer alone', async () => {
       mockStoreState.accessToken = makeToken(3600);
 
-      await run('GetPantry');
+      await run(GetPantryDocument);
 
       expect(mockedProactiveRefresh).not.toHaveBeenCalled();
       expect(mockStoreState.setNeedsTokenRefresh).not.toHaveBeenCalled();
@@ -356,7 +368,7 @@ describe('authLink', () => {
     it('leaves a token just outside the buffer alone', async () => {
       mockStoreState.accessToken = makeToken(REFRESH_BUFFER_MS / 1000 + 60);
 
-      await run('GetPantry');
+      await run(GetPantryDocument);
 
       expect(mockedProactiveRefresh).not.toHaveBeenCalled();
     });
@@ -364,7 +376,7 @@ describe('authLink', () => {
     it('refreshes a token just inside the buffer', async () => {
       mockStoreState.accessToken = makeToken(REFRESH_BUFFER_MS / 1000 - 60);
 
-      await run('GetPantry');
+      await run(GetPantryDocument);
 
       expect(mockedProactiveRefresh).toHaveBeenCalled();
     });
@@ -372,7 +384,7 @@ describe('authLink', () => {
     it('refreshes an already-expired token', async () => {
       mockStoreState.accessToken = makeToken(-60);
 
-      await run('GetPantry');
+      await run(GetPantryDocument);
 
       expect(mockedProactiveRefresh).toHaveBeenCalled();
     });
@@ -380,13 +392,13 @@ describe('authLink', () => {
     it('treats an undecodable token as expiring', async () => {
       mockStoreState.accessToken = 'not-a-jwt';
 
-      await run('GetPantry');
+      await run(GetPantryDocument);
 
       expect(mockedProactiveRefresh).toHaveBeenCalled();
     });
 
     it('does not attempt a refresh when there is no token at all', async () => {
-      await run('GetPantry');
+      await run(GetPantryDocument);
 
       expect(mockedProactiveRefresh).not.toHaveBeenCalled();
       expect(mockStoreState.setNeedsTokenRefresh).not.toHaveBeenCalled();
@@ -399,7 +411,7 @@ describe('authLink', () => {
       mockStoreState.accessToken = expired;
       mockedProactiveRefresh.mockResolvedValue('rotated-token');
 
-      const headers = await run('GetPantry');
+      const headers = await run(GetPantryDocument);
 
       expect(headers.authorization).toBe('Bearer rotated-token');
       expect(headers.authorization).not.toContain(expired);
@@ -414,7 +426,7 @@ describe('authLink', () => {
       );
       mockStoreState.accessToken = makeToken(-60);
 
-      const inFlight = run('GetPantry');
+      const inFlight = run(GetPantryDocument);
       let settled = false;
       void inFlight.then(() => {
         settled = true;
@@ -435,13 +447,13 @@ describe('authLink', () => {
 
       const batch = await Promise.all(
         [
-          'GetPantry',
-          'GetShoppingList',
-          'GetRecipes',
-          'GetNotifications',
-          'GetHome',
-          'GetMealPlan',
-        ].map(name => run(name)),
+          GetPantryDocument,
+          GetShoppingListsLiteDocument,
+          GetRecipeDocument,
+          GetNotificationsDocument,
+          GetHomeDocument,
+          GetMealPlanDocument,
+        ].map(document => run(document)),
       );
 
       // The reported production signature: six concurrent requests carrying the
@@ -459,7 +471,7 @@ describe('authLink', () => {
       mockStoreState.accessToken = expired;
       mockedProactiveRefresh.mockResolvedValue(null);
 
-      const headers = await run('GetPantry');
+      const headers = await run(GetPantryDocument);
 
       expect(headers.authorization).toBe(`Bearer ${expired}`);
       expect(mockStoreState.tokenRefreshFailed).not.toHaveBeenCalled();
@@ -474,7 +486,7 @@ describe('authLink', () => {
       mockStoreState.accessToken = expired;
       mockedProactiveRefresh.mockRejectedValue(new Error('Refresh failed'));
 
-      const headers = await run('GetPantry');
+      const headers = await run(GetPantryDocument);
 
       expect(headers.authorization).toBe(`Bearer ${expired}`);
       expect(mockStoreState.tokenRefreshFailed).not.toHaveBeenCalled();
@@ -488,7 +500,7 @@ describe('authLink', () => {
       mockedProactiveRefresh.mockRejectedValue(new Error('Refresh failed'));
 
       const batch = await Promise.all(
-        Array.from({ length: 6 }, () => run('GetPantry')),
+        Array.from({ length: 6 }, () => run(GetPantryDocument)),
       );
 
       expect(batch.map(headers => headers.authorization)).toEqual(

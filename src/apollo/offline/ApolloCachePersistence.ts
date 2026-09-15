@@ -11,7 +11,7 @@ const CACHE_VERSION_KEY = 'apollo-cache-version';
  * redefines what persisted data means — retired ids and rewritten values parse
  * cleanly and are still wrong. `cacheSchemaVersion.test.ts` pins it.
  */
-const CURRENT_CACHE_VERSION = 'shape-2';
+const CURRENT_CACHE_VERSION = 'shape-3';
 /** Keys nothing writes; `clear()` removes them so a session end strands nothing. */
 const LEGACY_SPLIT_KEYS = [
   'apollo-cache-v1-critical',
@@ -20,6 +20,8 @@ const LEGACY_SPLIT_KEYS = [
 /** Freshly allocated by every `extract()`, so its reference is never stable. */
 const META_KEY = '__META';
 const DEBOUNCE_MS = 3000;
+/** After a queued write: short enough to land before a user can kill the app. */
+const EXPEDITE_MS = 250;
 
 type Extractor = () => NormalizedCacheObject;
 
@@ -73,6 +75,8 @@ class ApolloCachePersistence {
   private idleCallbackId: number | null = null;
   /** Non-null exactly while a write is owed; `persist` and `cancel` clear it. */
   private pendingExtractor: Extractor | null = null;
+  /** Set while an expedited save is scheduled; later writes cannot delay it. */
+  private expediteDeadline: number | null = null;
   private lastPersistedSnapshot: NormalizedCacheObject | null = null;
 
   /** Null when nothing is stored or the stored blob is not this shape. */
@@ -121,6 +125,14 @@ class ApolloCachePersistence {
     if (isRecoveryStorage()) return;
     this.pendingExtractor = extractor;
     this.clearHandles();
+    // An expedited save is not pushed back by the writes that follow it.
+    if (this.expediteDeadline !== null) {
+      this.saveTimeout = setTimeout(() => {
+        this.saveTimeout = null;
+        this.persist();
+      }, Math.max(0, this.expediteDeadline - Date.now()));
+      return;
+    }
     this.saveTimeout = setTimeout(() => {
       this.saveTimeout = null;
       this.idleCallbackId = requestIdleCallback(() => {
@@ -140,9 +152,29 @@ class ApolloCachePersistence {
     this.persist();
   }
 
+  /**
+   * Brings an owed save forward to `delayMs`. A queued write is durable at once,
+   * but the cache change it replays against waits out the debounce, so a kill
+   * inside it relaunches with the create queued and no row. Still deferred.
+   */
+  expeditePending(delayMs: number = EXPEDITE_MS): void {
+    if (!this.pendingExtractor || isRecoveryStorage()) return;
+    const deadline = Date.now() + delayMs;
+    if (this.expediteDeadline !== null && this.expediteDeadline <= deadline) {
+      return;
+    }
+    this.expediteDeadline = deadline;
+    this.clearHandles();
+    this.saveTimeout = setTimeout(() => {
+      this.saveTimeout = null;
+      this.persist();
+    }, delayMs);
+  }
+
   cancel(): void {
     this.clearHandles();
     this.pendingExtractor = null;
+    this.expediteDeadline = null;
   }
 
   /** Leaves nothing a later `load()` could restore. */
@@ -180,6 +212,7 @@ class ApolloCachePersistence {
   private persist(): void {
     const extractor = this.pendingExtractor;
     this.pendingExtractor = null;
+    this.expediteDeadline = null;
     // Storage can fall back to the recovery instance after the schedule.
     if (!extractor || isRecoveryStorage()) return;
     try {
@@ -206,11 +239,13 @@ class ApolloCachePersistence {
 
       storage.set(CACHE_STORAGE_KEY, cacheString);
       storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
+      const tWrite = performance.now();
       this.lastPersistedSnapshot = cache;
 
       // Release signals — they bear on cold start — so never behind `__DEV__`.
       Telemetry.histogram('cache_persist_extract_ms', tExtract - t0);
       Telemetry.histogram('cache_persist_stringify_ms', tStringify - tExtract);
+      Telemetry.histogram('cache_persist_write_ms', tWrite - tStringify);
       Telemetry.gauge('cache_persist_size_kb', sizeKB);
 
       if (__DEV__) {

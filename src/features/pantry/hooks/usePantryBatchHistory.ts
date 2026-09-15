@@ -1,3 +1,4 @@
+import { NetworkStatus } from '@apollo/client';
 import { useApolloClient, useQuery } from '@apollo/client/react';
 import { loadPageWithCursorRecovery } from '#hooks/utils/cursorRecovery';
 import { GetPantryItemBatchHistoryDocument } from '#features/pantry/graphql/pantry.generated';
@@ -70,8 +71,7 @@ export function usePantryBatchHistory(pantryItemId: string) {
     : null;
   const hasNextPage = connection?.pageInfo?.hasNextPage ?? false;
   const endCursor = connection?.pageInfo?.endCursor ?? null;
-  // networkStatus 3 = fetchMore in flight.
-  const isFetchingMore = networkStatus === 3;
+  const isFetchingMore = networkStatus === NetworkStatus.fetchMore;
 
   const loadMore = () => {
     if (!hasNextPage || !endCursor || loading || isFetchingMore) return;
@@ -104,6 +104,7 @@ export function usePantryBatchHistory(pantryItemId: string) {
     activeCount,
     state,
     loadMore,
+    hasNextPage,
     isFetchingMore,
     retry,
   };

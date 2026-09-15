@@ -208,10 +208,13 @@ export const createResetManager = (
       await resetManager.endSession('refresh_rejected');
     } else {
       // Network or unknown: keep auth state, defer the refresh.
-      set({ needsTokenRefresh: true } as Partial<RootState>);
+      set({ needsTokenRefresh: true });
     }
   },
 });
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
 
 const clearAuthFromStorage = async () => {
   try {
@@ -225,13 +228,14 @@ const clearAuthFromStorage = async () => {
 
     const currentData = await zustandStorage.getItem(STORAGE_KEY);
     if (currentData) {
-      const parsedData = JSON.parse(currentData);
-      if (parsedData.state) {
+      const parsedData: unknown = JSON.parse(currentData);
+      if (isRecord(parsedData) && isRecord(parsedData.state)) {
+        const persistedState = parsedData.state;
         // The same keys `resetStore` clears in memory. Persist rewrites the
         // whole blob after `set(newState)`; this covers the window in between,
         // where a kill leaves this copy for the next person's session.
         for (const key of Object.keys(SESSION_SCOPED_STATE)) {
-          delete parsedData.state[key];
+          delete persistedState[key];
         }
 
         zustandStorage.setItem(STORAGE_KEY, JSON.stringify(parsedData));

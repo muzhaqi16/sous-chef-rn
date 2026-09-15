@@ -91,10 +91,7 @@ describe('BiometricSetupScreen', () => {
     jest.clearAllMocks();
     mockBiometricInfo = { isAvailable: true, biometryType: 'Face ID' };
     // Restore mocks after clearAllMocks
-    const storeModule = jest.requireMock('#store/useAppStore') as {
-      useAppStore: jest.Mock;
-      useUser: jest.Mock;
-    };
+    const storeModule = jest.requireMock('#store/useAppStore');
     const mockState: Partial<RootState> = {
       user: { id: 'u1', email: 'test@test.com' } as RootState['user'],
       setUserNavigationState: jest.fn(),

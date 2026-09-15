@@ -21,7 +21,6 @@ import {
   executeWithLoadingState,
   executeAsyncWithCleanup,
 } from '#/utils/finallyHelpers';
-import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { Text } from '#components/atoms/Text';
 import { Screen } from '#components/templates/Screen';
@@ -43,7 +42,7 @@ function syncPantryFormState(
   if (pantry && pantryId) {
     setName(pantry.name || '');
     setDescription(pantry.description || '');
-    setIsDefault(pantry.isDefault || false);
+    setIsDefault(pantry.isDefault ?? false);
   } else if (!pantryId) {
     setName('');
     setDescription('');
@@ -125,7 +124,7 @@ export const PantrySettings: React.FC<
       return;
     }
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         if (!pantryId) {
           const outcome = await createPantry({
@@ -136,15 +135,7 @@ export const PantrySettings: React.FC<
             isDefault,
             tags: ['user-created'],
           });
-          if (outcome.status === 'rejected') {
-            // The refusal's code picks the localized line; the caller's copy
-            // is the fallback — never the server's own message.
-            alertRejectedMutation(
-              outcome.result,
-              t('errors.createPantryFailed'),
-            );
-            return;
-          }
+          if (outcome.status === 'rejected') return;
           // Online echoes the same id, queued replays keyed by it — select and
           // leave either way.
           setSelectedPantryId(outcome.id);
@@ -183,16 +174,10 @@ export const PantrySettings: React.FC<
             // Stops the subscription racing the delete.
             subscriptionService.registerParentDeletion(pantryId);
 
-            executeAsyncWithCleanup(
+            void executeAsyncWithCleanup(
               async () => {
                 const outcome = await deletePantry(pantryId);
-                if (outcome.status === 'rejected') {
-                  alertRejectedMutation(
-                    outcome.result,
-                    t('errors.deletePantryFailed'),
-                  );
-                  return;
-                }
+                if (outcome.status === 'rejected') return;
                 setSelectedPantryId(null);
                 goBack();
               },
@@ -249,7 +234,7 @@ export const PantrySettings: React.FC<
     >
       <ScrollView style={styles.content}>
         <View style={commonStyles.settingsSection}>
-          <Text style={commonStyles.settingsSectionTitle}>
+          <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
             {t('labels.general')}
           </Text>
 
@@ -271,10 +256,8 @@ export const PantrySettings: React.FC<
 
           <View style={commonStyles.settingsRow}>
             <View style={commonStyles.settingsRowInfo}>
-              <Text style={commonStyles.settingsRowLabel}>
-                {t('pantrySettings.defaultPantry')}
-              </Text>
-              <Text style={commonStyles.settingsRowDescription}>
+              <Text role="bodyStrong">{t('pantrySettings.defaultPantry')}</Text>
+              <Text role="caption" style={commonStyles.settingsRowDescription}>
                 {t('pantrySettings.defaultPantryDesc')}
               </Text>
             </View>
@@ -288,7 +271,7 @@ export const PantrySettings: React.FC<
 
         {!!pantryId && !!pantry && (
           <View style={commonStyles.settingsSection}>
-            <Text style={commonStyles.settingsSectionTitle}>
+            <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
               {t('labels.information')}
             </Text>
 
@@ -304,7 +287,7 @@ export const PantrySettings: React.FC<
         {/* Only show danger zone if editing existing pantry and user can delete */}
         {!!pantryId && permissions.canDeletePantry ? (
           <View style={commonStyles.settingsSection}>
-            <Text style={commonStyles.settingsSectionTitle}>
+            <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
               {t('labels.dangerZone')}
             </Text>
 
@@ -312,7 +295,7 @@ export const PantrySettings: React.FC<
               <Icon name="trash-outline" size={20} tone="error" />
               <Text
                 role="bodyStrong"
-                tone="error"
+                tone="danger"
                 style={styles.deleteButtonText}
               >
                 {t('labels.deletePantry')}

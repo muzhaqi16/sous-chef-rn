@@ -86,7 +86,7 @@ export const UsageTab: React.FC<
       <ChartSection
         title={t('pantryAnalytics.usageTrend')}
         loading={usageLoading}
-        error={usageError?.message}
+        error={usageError}
         isEmpty={!usageData?.usageTrend?.length}
       >
         <TrendLineChart
@@ -101,7 +101,7 @@ export const UsageTab: React.FC<
       <ChartSection
         title={t('pantryAnalytics.usageByPurpose')}
         loading={usageLoading}
-        error={usageError?.message}
+        error={usageError}
         isEmpty={!usagePurposeData.length}
       >
         <BreakdownPieChart data={usagePurposeData} height={150} />
@@ -111,7 +111,7 @@ export const UsageTab: React.FC<
       <ChartSection
         title={t('pantryAnalytics.usageBySource')}
         loading={usageLoading}
-        error={usageError?.message}
+        error={usageError}
         isEmpty={!usageSourceData.length}
       >
         <BreakdownPieChart data={usageSourceData} height={150} />
@@ -121,7 +121,7 @@ export const UsageTab: React.FC<
       <ChartSection
         title={t('pantryAnalytics.topUsedItems')}
         loading={usageLoading}
-        error={usageError?.message}
+        error={usageError}
         isEmpty={!topUsedItemsData.length}
       >
         <TopItemsBarChart

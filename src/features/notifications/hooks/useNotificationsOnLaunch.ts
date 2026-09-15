@@ -12,6 +12,12 @@ import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/
 import { useDeferredCallback } from '#features/notifications/hooks/useDeferredCallback';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { onWebSocketReconnected } from '#/apollo/links/wsLink';
+import { errorService } from '#/services/errorService';
+
+const reportUnreadFetchFailure = (error: unknown) =>
+  errorService.reportError(error, {
+    operation: 'NotificationsOnLaunch.fetchUnread',
+  });
 
 export function useNotificationsOnLaunch(userId?: string) {
   const hasFetchedRef = useRef(false);
@@ -24,7 +30,7 @@ export function useNotificationsOnLaunch(userId?: string) {
   const fetch = () => {
     if (!userId) return;
     hasFetchedRef.current = true;
-    fetchUnreadNotifications();
+    void fetchUnreadNotifications().catch(reportUnreadFetchFailure);
   };
 
   // PERFORMANCE: Defer 10 s to avoid competing with screen-critical queries at startup
@@ -41,7 +47,7 @@ export function useNotificationsOnLaunch(userId?: string) {
   useEffect(() => {
     const sub = AppState.addEventListener('change', next => {
       if (next === 'active' && hasFetchedRef.current) {
-        fetchUnreadNotifications();
+        void fetchUnreadNotifications().catch(reportUnreadFetchFailure);
       }
     });
     return () => sub.remove();
@@ -51,9 +57,10 @@ export function useNotificationsOnLaunch(userId?: string) {
   // is down, so re-pull unread when it comes back (not only on foreground).
   useEffect(() => {
     return onWebSocketReconnected(() => {
-      if (hasFetchedRef.current) fetchUnreadNotifications();
+      if (hasFetchedRef.current)
+        void fetchUnreadNotifications().catch(reportUnreadFetchFailure);
     });
   }, [fetchUnreadNotifications]);
 
-  useApolloErrorLogger('GetUnreadNotifications', error);
+  useApolloErrorLogger(GetUnreadNotificationsDocument, error);
 }

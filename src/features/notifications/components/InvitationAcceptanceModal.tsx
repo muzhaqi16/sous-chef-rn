@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Modal } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -15,6 +15,8 @@ import { useInvitationActions } from '#features/notifications/hooks/useInvitatio
 import type { InvitationRefusal } from '#/domain/invitationRefusal';
 import { useUser } from '#store/useAppStore';
 import type { InvitationData } from '#features/notifications/types';
+import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
+import { NotificationType } from '#/graphql/generated/schemaTypes';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 
@@ -50,7 +52,7 @@ export const InvitationAcceptanceModal: React.FC<
    */
   const reportRefusal = (
     refusal: InvitationRefusal | undefined,
-    fallbackKey: string,
+    fallbackKey: TranslationKey,
   ) => {
     onClose();
     if (refusal === 'inviteeMismatch') {
@@ -77,7 +79,7 @@ export const InvitationAcceptanceModal: React.FC<
     if (!invitation || !token) return;
 
     setAccepting(true);
-    executeAsyncWithCleanup(
+    void executeAsyncWithCleanup(
       async () => {
         const outcome =
           invitation.type === 'HOME_INVITE'
@@ -138,7 +140,7 @@ export const InvitationAcceptanceModal: React.FC<
           onPress: () => {
             if (!token) return;
             setRejecting(true);
-            executeAsyncWithCleanup(
+            void executeAsyncWithCleanup(
               async () => {
                 const outcome =
                   invitation.type === 'HOME_INVITE'
@@ -191,6 +193,17 @@ export const InvitationAcceptanceModal: React.FC<
 
   if (!invitation) return null;
 
+  const copy = getNotificationCopy(
+    {
+      type:
+        invitation.type === 'HOME_INVITE'
+          ? NotificationType.HomeInvitation
+          : NotificationType.CollaborationInvite,
+      payload: invitation.payload,
+    },
+    t,
+  );
+
   return (
     <Modal
       visible={visible}
@@ -212,7 +225,7 @@ export const InvitationAcceptanceModal: React.FC<
               />
             </View>
             <Text role="heading" style={styles.title}>
-              {invitation.title}
+              {copy.title}
             </Text>
             <AppPressable
               style={styles.closeButton}
@@ -225,7 +238,9 @@ export const InvitationAcceptanceModal: React.FC<
 
           {/* Content */}
           <View style={styles.content}>
-            <Text style={styles.description}>{invitation.description}</Text>
+            <Text role="body" style={styles.description}>
+              {copy.message}
+            </Text>
 
             {!!invitation.inviterName && (
               <View style={styles.inviterContainer}>
@@ -274,7 +289,7 @@ export const InvitationAcceptanceModal: React.FC<
                 ) : (
                   <>
                     <Icon name="close" size={20} tone="error" />
-                    <Text role="bodyStrong" tone="error">
+                    <Text role="bodyStrong" tone="danger">
                       {t('labels.reject')}
                     </Text>
                   </>
@@ -349,7 +364,6 @@ const styles = StyleSheet.create(theme => ({
   },
   description: {
     marginBottom: theme.spacing.md,
-    lineHeight: 22,
   },
   inviterContainer: {
     flexDirection: 'row',

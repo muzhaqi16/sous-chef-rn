@@ -96,7 +96,7 @@ export const DebugInfo: React.FC = () => {
     return (
       <ProfileScreenWrapper title={t('labels.debugInfo')}>
         <View style={styles.notAvailableContainer}>
-          <Text tone="secondary" align="center">
+          <Text role="body" tone="secondary" align="center">
             {t('debugInfo.notAvailable')}
           </Text>
         </View>

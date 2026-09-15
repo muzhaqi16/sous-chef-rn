@@ -10,7 +10,11 @@ import Animated, {
 import { Icon } from '#utils/iconUtils';
 import { useActionTrayScroll } from '#components/templates/ActionTray/ActionTrayScrollContext';
 import { SelectorItemContainer } from './SelectorItemContainer';
-import type { SelectorConfig, SelectableItem } from './types';
+import type {
+  SelectorConfig,
+  SelectableItem,
+  SelectorPagination,
+} from './types';
 import { Text } from '#components/atoms/Text';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { motion } from '#/theme/foundations/motion';
@@ -32,6 +36,33 @@ const LoadingState = () => {
   );
 };
 
+const LoadMoreRow = ({
+  pagination,
+}: {
+  pagination: SelectorPagination | undefined;
+}) => {
+  if (!pagination?.hasMore) return null;
+  if (pagination.loadingMore) {
+    return (
+      <View style={styles.loadingMore}>
+        <ThemedActivityIndicator size="small" />
+      </View>
+    );
+  }
+  return (
+    <SelectorItemContainer onPress={pagination.onLoadMore}>
+      <Text
+        role="label"
+        tone="accent"
+        align="center"
+        style={styles.loadMoreText}
+      >
+        {pagination.loadMoreLabel}
+      </Text>
+    </SelectorItemContainer>
+  );
+};
+
 export const SelectorContent = <T extends SelectableItem>({
   config,
 }: SelectorContentProps<T>) => {
@@ -41,11 +72,13 @@ export const SelectorContent = <T extends SelectableItem>({
     onSelect,
     displayProperty,
     loading = false,
-    emptyMessage = 'No items available',
+    emptyMessage,
     keyExtractor,
     renderCustomItem,
     listHeader,
+    pagination,
   } = config;
+  const { t } = useTranslation();
 
   // This component renders only the scrollable list — the action buttons are
   // pinned by `ActionTray` via its `footer` prop. Scrolling is owned by the
@@ -129,8 +162,12 @@ export const SelectorContent = <T extends SelectableItem>({
       <Animated.View layout={LinearTransition} style={styles.container}>
         {listHeader}
         <Animated.View entering={FadeIn}>
-          <EmptyState size="compact" title={emptyMessage} />
+          <EmptyState
+            size="compact"
+            title={emptyMessage ?? t('empty.noItems')}
+          />
         </Animated.View>
+        <LoadMoreRow pagination={pagination} />
       </Animated.View>
     );
   }
@@ -150,6 +187,7 @@ export const SelectorContent = <T extends SelectableItem>({
           {renderItem(item)}
         </View>
       ))}
+      <LoadMoreRow pagination={pagination} />
     </Animated.View>
   );
 };
@@ -169,5 +207,12 @@ const styles = StyleSheet.create(theme => ({
   },
   defaultItemText: {
     flex: 1,
+  },
+  loadMoreText: {
+    flex: 1,
+  },
+  loadingMore: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.md,
   },
 }));

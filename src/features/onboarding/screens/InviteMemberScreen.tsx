@@ -3,7 +3,6 @@ import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
-import { handleMutationError } from '#/utils/errorHandlers';
 import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
 import { Button } from '#components/molecules/Button';
 import { EmailInput } from '#components/molecules/EmailInput';
@@ -26,6 +25,7 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 import { EmptyState } from '#components/molecules/EmptyState';
+import { onboardingTestIDs } from '#features/onboarding/testIDs';
 
 type InviteEntry = {
   id: string;
@@ -73,11 +73,7 @@ export const InviteMemberScreen = () => {
   const email = useWatch({ control, name: 'email' });
 
   const { requireVerifiedEmail } = useVerifiedEmailGate();
-  const { sendInvites: sendOnboardingInvites } = useSendOnboardingInvites(
-    error => {
-      handleMutationError(error, { operation: 'Onboarding invites' });
-    },
-  );
+  const { sendInvites: sendOnboardingInvites } = useSendOnboardingInvites();
 
   // Reaching here means the address is well-formed, new, and not the person's
   // own; each refusal renders under the input instead of in an alert the reader
@@ -111,7 +107,7 @@ export const InviteMemberScreen = () => {
     if (!requireVerifiedEmail()) return;
 
     if (invites.length > 0) {
-      executeWithLoadingState(
+      void executeWithLoadingState(
         async () => {
           const { refusedCount } = await sendOnboardingInvites(
             invites.map(invite => invite.email),
@@ -170,7 +166,7 @@ export const InviteMemberScreen = () => {
           title={t('labels.continue')}
           onPress={() => navigateToNextStep('InviteMembers')}
           variant="primary"
-          testID="invite-offline-continue"
+          testID={onboardingTestIDs.inviteOfflineContinueButton}
         />
       </OnBoardingWrapper>
     );
@@ -248,7 +244,9 @@ export const InviteMemberScreen = () => {
               </Text>
               {invites.map(invite => (
                 <View key={invite.id} style={styles.inviteItem}>
-                  <Text style={styles.inviteEmail}>{invite.email}</Text>
+                  <Text role="body" style={styles.inviteEmail}>
+                    {invite.email}
+                  </Text>
                   <AppPressable
                     onPress={() => removeInvite(invite.id)}
                     style={styles.removeButton}

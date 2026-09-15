@@ -13,6 +13,8 @@ import {
   CreateHomeDocument,
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
+  type GetHomesQuery,
+  type GetMyPendingInvitesQuery,
 } from '#operations/home/home.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
 import type { RootState } from '#store/index';
@@ -82,6 +84,9 @@ jest.mock('../helpers', () => ({
 // `toHomeViewModels.mockReturnValue(…)` from before the view-model module
 // was removed.
 // Prefixed `mock*` so the jest.mock factory below is allowed to reference it.
+type HomesConnection = GetHomesQuery['homes'];
+type PantriesConnection =
+  HomesConnection['edges'][number]['node']['pantriesConnection'];
 type StagedPantryNode = {
   __typename?: string;
   id: string;
@@ -92,50 +97,42 @@ type StagedHome = {
   id: string;
   name: string;
   pantriesConnection?: {
-    __typename?: string;
+    __typename: PantriesConnection['__typename'];
     edges?: Array<{ __typename?: string; node?: StagedPantryNode } | null>;
     totalCount?: number;
   };
 };
 let mockStagedHomes: StagedHome[] | null = null;
 
+/** Every connection `useCreateHomeFlow` flattens, staged or served. */
+type FlattenedConnection =
+  | HomesConnection
+  | NonNullable<GetMyPendingInvitesQuery['me']>['pendingHomeInvitesConnection']
+  | PantriesConnection
+  | StagedHome['pantriesConnection']
+  | null
+  | undefined;
+
 /**
  * `extractNodes` flattens Relay-style connections in production. The mock
- * supports three shapes so existing fixtures keep working:
- *
- *   1. A real connection (`{ edges: [{ node }] }`) — normalize to nodes.
- *   2. A flat array — already in node form, return as-is.
- *   3. The GetHomes connection (or anything else) — return the test-staged
- *      homes if set; otherwise the default empty array.
+ * returns the test-staged homes for the GetHomes connection when any are
+ * staged, and otherwise normalizes the connection's edges to nodes.
  *
  * Tests that stage homes also pre-flatten each home's pantries onto a
  * `pantries` array; production reads `extractNodes(home.pantriesConnection)`,
  * so the mock surfaces `home.pantries` when `pantriesConnection` is absent.
  */
 jest.mock('#/utils/connectionUtils', () => ({
-  extractNodes: jest.fn((data: unknown) => {
-    // When the input is a Connection-shape (has `edges`/`__typename`) and the
-    // test staged homes, treat that input as the GetHomes connection and
-    // return the staged data. Empty fixtures from `defaultOperationMocks`
-    // would otherwise overwrite the staged value on a re-render.
-    const asConnection = data as {
-      __typename?: string;
-      edges?: Array<{ node?: unknown } | null>;
-    } | null;
-    if (
-      mockStagedHomes &&
-      asConnection &&
-      typeof asConnection === 'object' &&
-      'edges' in asConnection &&
-      (asConnection.__typename === 'HomeConnection' || !asConnection.__typename)
-    ) {
+  extractNodes: jest.fn((data: FlattenedConnection) => {
+    // Empty fixtures from `defaultOperationMocks` would otherwise overwrite the
+    // staged homes on a re-render.
+    if (mockStagedHomes && data?.__typename === 'HomeConnection') {
       return mockStagedHomes;
     }
     if (!data) return mockStagedHomes ?? [];
-    if (Array.isArray(asConnection?.edges)) {
-      return asConnection.edges.map(e => e?.node).filter(Boolean);
+    if (Array.isArray(data.edges)) {
+      return data.edges.map(e => e?.node).filter(Boolean);
     }
-    if (Array.isArray(data)) return data;
     return [];
   }),
 }));

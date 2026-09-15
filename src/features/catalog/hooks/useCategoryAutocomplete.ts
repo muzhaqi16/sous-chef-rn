@@ -1,9 +1,8 @@
+import { logger } from '#/utils/environment';
 import { useLazyQuery } from '@apollo/client/react';
 import { AutocompleteCategoriesDocument } from '#operations/item/item.generated';
-import {
-  CategorySuggestion,
-  CategoryType,
-} from '#/graphql/generated/schemaTypes';
+import type { CategorySuggestion } from '#/graphql/generated/schemaTypes';
+import { CategoryType } from '#/graphql/generated/schemaTypes';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { useAppStore, useIsOnline } from '#store/useAppStore';
 import { filterByName } from '#features/catalog/utils/arrayUtils';
@@ -27,7 +26,7 @@ export function useCategoryAutocomplete(
   const isOnline = useIsOnline();
 
   const search = (term: string) => {
-    searchCategories({
+    void searchCategories({
       variables: {
         input: {
           query: term,
@@ -35,11 +34,11 @@ export function useCategoryAutocomplete(
           type: categoryType,
         },
       },
-    });
+    }).catch(error => logger.warn('Category autocomplete failed', error));
   };
 
   const getResults = (): CategorySuggestion[] => {
-    return (data?.autocompleteCategories?.suggestions ||
+    return (data?.autocompleteCategories?.suggestions ??
       []) as CategorySuggestion[];
   };
 

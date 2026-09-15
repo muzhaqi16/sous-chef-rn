@@ -5,11 +5,12 @@ import {
   type RenderHookOptions,
   type RenderOptions,
 } from '@testing-library/react-native';
-import { gql, InMemoryCache, type OperationVariables } from '@apollo/client';
+import type { InMemoryCache } from '@apollo/client';
+import { gql, type OperationVariables } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { SchemaLink } from '@apollo/client/link/schema';
 import { MockedProvider } from '@apollo/client/testing/react';
-import { MockLink } from '@apollo/client/testing';
+import type { MockLink } from '@apollo/client/testing';
 // Re-export the non-deprecated mocked-response type so consumers can write
 // `MockedResponse[]` without reaching into the `MockLink` namespace. The
 // flat `MockedResponse` import from `@apollo/client/testing` is deprecated
@@ -226,7 +227,9 @@ if (typeof beforeEach === 'function') {
   });
 }
 
-function buildSchemaLink(options: Pick<ApolloTestOptions, 'mocks' | 'resolvers'>) {
+function buildSchemaLink(
+  options: Pick<ApolloTestOptions, 'mocks' | 'resolvers'>,
+) {
   // A caller-supplied `mocks` or `resolvers` map changes what the schema
   // generates, and `resolvers` can WRITE to the store — so those get their own
   // instance. 191 of 204 wrapper builds pass neither and share the one above.
@@ -370,7 +373,9 @@ function collectOmittedFields(
       ? (stated as Record<string, unknown>)
       : {};
   const typename =
-    typeof fullRecord.__typename === 'string' ? fullRecord.__typename : undefined;
+    typeof fullRecord.__typename === 'string'
+      ? fullRecord.__typename
+      : undefined;
   for (const [key, value] of Object.entries(fullRecord)) {
     if (key === '__typename') continue;
     if (!(key in statedRecord)) {
@@ -624,9 +629,9 @@ import type { TypedDocumentNode } from '@graphql-typed-document-node/core';
  *   const item = buildItem();
  *   <PantryItemCard pantryItemRef={toFragmentRef<typeof PantryItemCard_PantryItemFragmentDoc>(item)} />
  */
-export function toFragmentRef<
-  TDoc extends TypedDocumentNode,
->(data: Record<string, unknown> & { __typename: string; id: string }): FragmentType<TDoc> {
+export function toFragmentRef<TDoc extends TypedDocumentNode>(
+  data: Record<string, unknown> & { __typename: string; id: string },
+): FragmentType<TDoc> {
   return data as FragmentType<TDoc>;
 }
 
@@ -660,8 +665,8 @@ export interface RecordedMock {
 type DeepPartial<T> = T extends (infer U)[]
   ? Array<DeepPartial<U>>
   : T extends object
-    ? { [K in keyof T]?: DeepPartial<T[K]> | null }
-    : T;
+  ? { [K in keyof T]?: DeepPartial<T[K]> | null }
+  : T;
 
 export interface RecordMockOptions<TData = Record<string, unknown>> {
   /** Static response data, OR a function of variables → data. */
@@ -814,7 +819,10 @@ function operationName(document: DocumentNode): string {
   return operation?.name?.value ?? 'an unnamed operation';
 }
 
-function reportUnknownFixtureKeys(document: DocumentNode, keys: string[]): void {
+function reportUnknownFixtureKeys(
+  document: DocumentNode,
+  keys: string[],
+): void {
   const name = operationName(document);
   for (const key of keys) unknownFixtureKeys.push(`${name}: ${key}`);
 }
@@ -957,7 +965,9 @@ function reissueGeneratedIds(merged: unknown, stated: unknown): unknown {
       ? (stated as Record<string, unknown>)
       : {};
   const out: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(merged as Record<string, unknown>)) {
+  for (const [key, value] of Object.entries(
+    merged as Record<string, unknown>,
+  )) {
     if (key in statedRecord && typeof statedRecord[key] !== 'object') {
       out[key] = value;
     } else if (typeof value === 'string' && GENERATED_ID.test(value)) {
@@ -1005,12 +1015,20 @@ function mergeOverSchema(
   // object — `JSON` and `Upload` both are, and descending into one would report
   // the payload's own keys as fields the operation cannot return.
   const checkable =
-    baseRecord !== undefined && (fieldPath === '' || '__typename' in baseRecord);
-  for (const [key, value] of Object.entries(override as Record<string, unknown>)) {
+    baseRecord !== undefined &&
+    (fieldPath === '' || '__typename' in baseRecord);
+  for (const [key, value] of Object.entries(
+    override as Record<string, unknown>,
+  )) {
     // A fixture stating a key the operation cannot return describes a response
     // that can never arrive. Nothing else on the test fieldPath checks it, so it
     // survives as a test of a system that does not exist.
-    if (checkable && baseRecord && key !== '__typename' && !(key in baseRecord)) {
+    if (
+      checkable &&
+      baseRecord &&
+      key !== '__typename' &&
+      !(key in baseRecord)
+    ) {
       report.unknownKeys.push(fieldPath === '' ? key : `${fieldPath}.${key}`);
       continue;
     }
@@ -1178,7 +1196,12 @@ function completeFromSchema(
   ]) {
     let executed;
     try {
-      executed = executeSync({ schema, document, variableValues, contextValue });
+      executed = executeSync({
+        schema,
+        document,
+        variableValues,
+        contextValue,
+      });
     } catch {
       executed = undefined;
     }
@@ -1240,9 +1263,9 @@ export function recordMock<
   const result = data
     ? typeof data === 'function'
       ? (vars: Record<string, unknown>) => ({
-          data: (data as (v: Record<string, unknown>) => Record<string, unknown>)(
-            vars,
-          ),
+          data: (
+            data as (v: Record<string, unknown>) => Record<string, unknown>
+          )(vars),
         })
       : { data }
     : undefined;
@@ -1331,8 +1354,11 @@ function buildFullFragment(
   entry: Record<string, unknown> & { __typename: string },
 ): DocumentNode {
   return gql([
-    `fragment Test_${entry.__typename}_${String(entry.id).replace(/[^a-zA-Z0-9]/g, '_')} on ${entry.__typename} { ${selectionSetFor(entry)} }`,
-  ] as unknown as TemplateStringsArray);
+    `fragment Test_${entry.__typename}_${String(entry.id).replace(
+      /[^a-zA-Z0-9]/g,
+      '_',
+    )} on ${entry.__typename} { ${selectionSetFor(entry)} }`,
+  ]);
 }
 
 /**
@@ -1367,7 +1393,7 @@ function selectionFor(key: string, value: unknown): string {
     return `${key} { ${selectionSetFor(merged)} }`;
   }
   if (value && typeof value === 'object' && '__typename' in value) {
-    return `${key} { ${selectionSetFor(value as Record<string, unknown>)} }`;
+    return `${key} { ${selectionSetFor(value)} }`;
   }
   return key;
 }

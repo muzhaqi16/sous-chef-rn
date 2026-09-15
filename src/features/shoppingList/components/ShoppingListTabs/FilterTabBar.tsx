@@ -7,6 +7,8 @@ import type { NavigationState, Route } from 'react-native-tab-view';
 import type { FilterTabActionButton } from '#components/organisms/FilterTabs/types';
 import { FilterTabItem } from './FilterTabItem';
 import { Text } from '#components/atoms/Text';
+import { kitTestIDs } from '#components/testIDs';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
 interface FilterTabBarRoute extends Route {
   key: string;
@@ -18,7 +20,6 @@ interface FilterTabBarProps {
   jumpTo: (key: string) => void;
   counts?: Record<string, number>;
   actionButtons?: FilterTabActionButton[];
-  testIDPrefix?: string;
   /** Optional: measure a specific tab's rect for tutorial spotlight */
   onTabMeasure?: (
     key: string,
@@ -33,7 +34,6 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
   jumpTo,
   counts,
   actionButtons,
-  testIDPrefix = 'filter-tab',
   onTabMeasure,
   measureTabKeys,
 }) => {
@@ -57,7 +57,10 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
             isActive={navigationState.index === index}
             count={counts?.[route.key]}
             onPress={() => handleTabPress(route.key)}
-            testID={`${testIDPrefix}-${route.key}`}
+            testID={kitTestIDs.filterTab(
+              shoppingListTestIDs.tabBarPrefix,
+              route.key,
+            )}
             onMeasure={
               onTabMeasure && measureTabKeys?.includes(route.key)
                 ? rect => onTabMeasure(route.key, rect)
@@ -70,9 +73,9 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
         <View style={styles.actionsRow}>
           {actionButtons.map((btn, idx) => (
             <Pressable
-              key={btn.testID || `${testIDPrefix}-action-${idx}`}
+              key={btn.testID || shoppingListTestIDs.tabBarAction(idx)}
               onPress={btn.disabled ? undefined : btn.onPress}
-              testID={btn.testID || `${testIDPrefix}-action-${idx}`}
+              testID={btn.testID || shoppingListTestIDs.tabBarAction(idx)}
               style={[
                 btn.label ? styles.actionLabelButton : styles.actionButton,
                 !btn.label && styles.actionButtonWithBg,

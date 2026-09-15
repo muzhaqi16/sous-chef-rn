@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import { useMutation } from '@apollo/client/react';
 import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
 import { useRecipeIngredientMatching } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { logger } from '#/utils/environment';
 
 interface UseRecipeCookingActionsOptions {
@@ -41,44 +41,39 @@ export function useRecipeCookingActions({
 
   /**
    * Fires the cook-log mutation with a client-minted id, so a queued replay
-   * converges on the same log instead of re-deducting the pantry. `'rejected'`
-   * means it was refused or threw; `'created'`/`'queued'` succeed. `skipped`
-   * counts ingredients NOT deducted, which a bare success toast would hide.
+   * converges on the same log instead of re-deducting the pantry. `failure` is
+   * the message a refused or failed write shows; `skipped` counts ingredients
+   * NOT deducted, which a bare success toast would hide.
    */
   const fireMarkCooked = async (vars: FireMarkCookedVars) => {
     const id = generateEntityId();
-    let result;
-    try {
-      result = await markRecipeAsCookedMutation({
-        variables: { input: { ...vars, id } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      // Report only — a throw classifies as 'rejected' below and every
-      // caller toasts on that outcome; toasting here too would double up.
-      errorService.reportError(error, { operation: 'markRecipeAsCooked' });
-    }
+    const settled = await settleMutation(
+      () =>
+        markRecipeAsCookedMutation({
+          variables: { input: { ...vars, id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: MarkRecipeAsCookedDocument,
+        fallback: t('recipes.markCookedFailed'),
+        // Every caller reports the cook as a toast.
+        present: 'none',
+      },
+    );
 
     // Replay diagnostics: `converged: true` means this client-minted cooking-log
     // id already existed (an idempotent replay), not a fresh cook.
-    const payload = result ? result.data?.markRecipeAsCooked : undefined;
-    if (
-      payload?.__typename === 'MarkRecipeAsCookedPayload' &&
-      payload.converged
-    ) {
+    const payload = appliedPayload(settled.data);
+    if (payload?.converged) {
       logger.info('markRecipeAsCooked converged — replay of a committed cook', {
         recipeId: vars.recipeId,
         cookingLogId: id,
       });
     }
 
-    const skipped =
-      payload?.__typename === 'MarkRecipeAsCookedPayload'
-        ? payload.skippedIngredients.length
-        : 0;
+    const skipped = payload ? payload.skippedIngredients.length : 0;
 
-    // A falsy result (the call threw) classifies as 'rejected'.
-    return { outcome: classifyCreateResult(result), skipped };
+    return { failure: settled.failure, skipped };
   };
 
   /** Success copy that says so only when nothing was left undeducted. */
@@ -100,18 +95,18 @@ export function useRecipeCookingActions({
 
     // Granular deduction: load ingredient matches and open review sheet
     if (input.useGranularDeduction) {
-      executeWithLoadingState(async () => {
+      void executeWithLoadingState(async () => {
         const loaded = await ingredientMatching.loadMatches(input.servings);
         if (!loaded) {
           // Fallback to simple deduction if matching fails
-          const { outcome, skipped } = await fireMarkCooked({
+          const { failure, skipped } = await fireMarkCooked({
             recipeId,
             servings: input.servings,
             deductFromPantry: input.deductFromPantry,
             notes: input.notes,
           });
-          if (outcome === 'rejected') {
-            toastService.error(t('recipes.markCookedFailed'));
+          if (failure) {
+            toastService.error(failure.body);
             return;
           }
           deductionToast(skipped);
@@ -121,15 +116,15 @@ export function useRecipeCookingActions({
     }
 
     // Simple deduction path
-    executeWithLoadingState(async () => {
-      const { outcome, skipped } = await fireMarkCooked({
+    void executeWithLoadingState(async () => {
+      const { failure, skipped } = await fireMarkCooked({
         recipeId,
         servings: input.servings,
         deductFromPantry: input.deductFromPantry,
         notes: input.notes,
       });
-      if (outcome === 'rejected') {
-        toastService.error(t('recipes.markCookedFailed'));
+      if (failure) {
+        toastService.error(failure.body);
         return;
       }
 
@@ -145,14 +140,14 @@ export function useRecipeCookingActions({
   const handleSkipReview = () => {
     if (!recipeId) return;
     ingredientMatching.closeSheet();
-    executeWithLoadingState(async () => {
-      const { outcome, skipped } = await fireMarkCooked({
+    void executeWithLoadingState(async () => {
+      const { failure, skipped } = await fireMarkCooked({
         recipeId,
         servings: undefined,
         deductFromPantry: true,
       });
-      if (outcome === 'rejected') {
-        toastService.error(t('recipes.markCookedFailed'));
+      if (failure) {
+        toastService.error(failure.body);
         return;
       }
       deductionToast(skipped);

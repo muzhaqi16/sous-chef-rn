@@ -81,7 +81,7 @@ export function normalizeConnectionField<T extends Record<string, unknown>>(
   }
 
   if (config.includePageInfo) {
-    result[`${config.arrayName}PageInfo`] = connection?.pageInfo || undefined;
+    result[`${config.arrayName}PageInfo`] = connection?.pageInfo ?? undefined;
   }
 
   return result;
@@ -122,7 +122,7 @@ export function normalizeConnection<T = unknown>(
   return {
     [arrayName]: extractNodes(connection),
     totalCount: getConnectionTotalCount(connection),
-    pageInfo: connection.pageInfo || undefined,
+    pageInfo: connection.pageInfo ?? undefined,
   };
 }
 

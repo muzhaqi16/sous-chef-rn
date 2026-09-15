@@ -12,12 +12,10 @@ type LocaleTree = Record<string, unknown>;
 export const FEATURE_LOCALES: Record<
   string,
   Record<SupportedLanguage, LocaleTree>
-> = Object.fromEntries(
-  STATIC_FEATURE_REGISTRY.filter(f => f.locales).map(f => [
-    f.id,
-    f.locales as Record<SupportedLanguage, LocaleTree>,
-  ]),
-);
+> = {};
+for (const { id, locales } of STATIC_FEATURE_REGISTRY) {
+  if (locales) FEATURE_LOCALES[id] = locales;
+}
 
 /**
  * Merge locale trees by COMBINING namespaces. A shallow `Object.assign` would

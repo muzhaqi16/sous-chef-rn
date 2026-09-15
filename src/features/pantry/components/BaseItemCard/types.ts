@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleProp, ViewStyle } from 'react-native';
+import type React from 'react';
+import type { StyleProp, ViewStyle } from 'react-native';
 import type {
   SwipeableRef,
   SwipeAction,

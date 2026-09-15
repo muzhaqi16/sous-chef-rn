@@ -67,7 +67,7 @@ function handleRemovedFromHome(
 }
 
 function handleAddedToHome(client: SubscriptionApolloClient) {
-  client.refetchQueries({ include: [GetHomesDocument] });
+  void client.refetchQueries({ include: [GetHomesDocument] });
   toastService.success(t('accountEvents.addedToHome'));
 }
 
@@ -92,19 +92,14 @@ function handleAddedToShoppingList() {
   toastService.success(t('accountEvents.addedToShoppingList'));
 }
 
-function handleBannedOrSuspended(
-  payload: UserEventPayload,
-  subtype: UserSubtype,
-) {
-  const reason = payload.reason
-    ? t('accountEvents.reasonSuffix', { reason: payload.reason })
-    : '';
+// The event's `reason` is a moderator's or the server's English, so no toast shows it.
+function handleBannedOrSuspended(subtype: UserSubtype) {
   const message =
     subtype === UserSubtype.Banned
-      ? t('accountEvents.accountBanned', { reason })
-      : t('accountEvents.accountSuspended', { reason });
+      ? t('accountEvents.accountBanned')
+      : t('accountEvents.accountSuspended');
   toastService.error(message);
-  authService.logout();
+  void authService.logout();
 }
 
 /**
@@ -118,7 +113,7 @@ export function useUserSubscriptions(userId?: string) {
   const selectedHomeId = useSelectedHomeId() || null;
 
   const userEventHandlers = subscriptionService.register<UserEventPayload>({
-    subscriptionName: 'UserEvents',
+    document: UserEventsDocument,
     entityType: 'User',
     enableDeduplication: false,
     userId,
@@ -153,13 +148,11 @@ export function useUserSubscriptions(userId?: string) {
 
         case UserSubtype.Banned:
         case UserSubtype.Suspended:
-          handleBannedOrSuspended(payload, payload.subtype);
+          handleBannedOrSuspended(payload.subtype);
           break;
 
         case UserSubtype.Warned:
-          toastService.error(
-            payload.reason || t('accountEvents.warningReceived'),
-          );
+          toastService.error(t('accountEvents.warningReceived'));
           break;
 
         case UserSubtype.Unbanned:
@@ -171,9 +164,9 @@ export function useUserSubscriptions(userId?: string) {
 
   const userSkip = !userId;
   const userEvents = useSubscription(UserEventsDocument, {
-    variables: { userId: userId! },
+    variables: { userId: userId ?? '' },
     skip: userSkip,
     ...userEventHandlers,
   });
-  useSubscriptionTransportRecovery('UserEvents', userEvents, userSkip);
+  useSubscriptionTransportRecovery(UserEventsDocument, userEvents, userSkip);
 }

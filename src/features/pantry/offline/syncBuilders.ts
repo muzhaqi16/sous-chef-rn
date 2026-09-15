@@ -12,8 +12,6 @@ import {
   getQueuedInput,
   readUnitSpec,
   type SyncBuilder,
-  type SyncBuilderTable,
-  type UnitSpec,
 } from '#/apollo/offlineQueue/syncBuilder';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 
@@ -49,14 +47,13 @@ const readPantryId = (
  * through by name, loosely typed because the queued input is untyped persisted
  * data and a strict annotation would need per-field casts on the replay path.
  */
-const buildPantryItemSync: SyncBuilder = (mutation, cache) => {
+export const buildPantryItemSync: SyncBuilder = (mutation, cache) => {
   const input = getQueuedInput(mutation);
   const clientId = getClientId(mutation, input);
   const { id: _omitId, itemName, ...rest } = input;
 
   // Create inputs carry `pantryId`; `UpdatePantryItemInput` does not.
-  const pantryId =
-    (rest.pantryId as string | undefined) ?? readPantryId(cache, clientId);
+  const pantryId = rest.pantryId ?? readPantryId(cache, clientId);
   if (!pantryId) {
     throw new Error(
       `Cannot sync ${mutation.operationName}: pantryId not found for item ${clientId}`,
@@ -65,7 +62,7 @@ const buildPantryItemSync: SyncBuilder = (mutation, cache) => {
 
   // `SyncPantryItemInput` takes `item: InlineItemInput`, not a flat `itemName`:
   // fold `UpdatePantryItem`'s flat name in so a rename syncs.
-  const existingItem = rest.item as Record<string, unknown> | undefined;
+  const existingItem = rest.item;
   const item =
     itemName != null
       ? { ...(existingItem ?? {}), name: itemName }
@@ -73,7 +70,7 @@ const buildPantryItemSync: SyncBuilder = (mutation, cache) => {
 
   // A create sends `unit: { unitId }`; an edit already sends `{ unitSymbol }`.
   // Both come back carrying the symbol, which is the half a retired id needs.
-  const unit = readUnitSpec(cache, (rest.unit ?? {}) as UnitSpec);
+  const unit = readUnitSpec(cache, rest.unit ?? {});
 
   return {
     syncMutation: SyncPantryItemDocument,
@@ -94,7 +91,7 @@ const buildPantryItemSync: SyncBuilder = (mutation, cache) => {
  * id rides as `pantryItemId`, the quantity is the raw string from the quantity
  * box, and the unit is a flat `unitId`. Map each explicitly.
  */
-const buildPantryItemQuantitySync: SyncBuilder = (mutation, cache) => {
+export const buildPantryItemQuantitySync: SyncBuilder = (mutation, cache) => {
   const input = getQueuedInput(mutation);
   const clientId = input.pantryItemId ?? getClientId(mutation, input);
 
@@ -129,7 +126,7 @@ const buildPantryItemQuantitySync: SyncBuilder = (mutation, cache) => {
 };
 
 /** PantryItem delete sync — idempotent by `clientId`. */
-const buildDeletePantryItemSync: SyncBuilder = mutation => {
+export const buildDeletePantryItemSync: SyncBuilder = mutation => {
   const input = getQueuedInput(mutation);
   const syncInput: SyncDeletePantryItemInput = {
     clientId: getClientId(mutation, input) as string,
@@ -139,18 +136,4 @@ const buildDeletePantryItemSync: SyncBuilder = mutation => {
     syncMutation: SyncDeletePantryItemDocument,
     syncVariables: { input: syncInput },
   };
-};
-
-/**
- * `BarcodeCreatePantryItem` shares the create builder — same entity, same fields.
- * The granular deltas (adjust / restock / consume / waste / …) have NO entry: they
- * queue via their own `context.localFirst` and replay as the original mutation,
- * made at-most-once by a client-minted `input.idempotencyKey`.
- */
-export const PANTRY_SYNC_BUILDERS: SyncBuilderTable = {
-  CreatePantryItem: buildPantryItemSync,
-  UpdatePantryItem: buildPantryItemSync,
-  UpdatePantryItemQuantity: buildPantryItemQuantitySync,
-  BarcodeCreatePantryItem: buildPantryItemSync,
-  DeletePantryItem: buildDeletePantryItemSync,
 };

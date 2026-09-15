@@ -1,8 +1,14 @@
 import { element, by, waitFor, device } from 'detox';
+import { kitTestIDs } from '../../src/components/testIDs';
 import { launchAppWithFabricWorkaround } from '../init';
 import { LandingAuthScreen } from '../screens/LandingAuthScreen';
 import { LoginScreen } from '../screens/LoginScreen';
-import { BiometricSetupScreen, CreateHomeScreen, CreateShoppingListScreen, SelectPantryItemsScreen } from '../screens/OnboardingScreens';
+import {
+  BiometricSetupScreen,
+  CreateHomeScreen,
+  CreateShoppingListScreen,
+  SelectPantryItemsScreen,
+} from '../screens/OnboardingScreens';
 import { PantryScreen } from '../screens/PantryScreen';
 import { dismissBiometricPromptIfPresent, isLoggedIn } from './auth';
 import { delay } from './waitFor';
@@ -71,9 +77,13 @@ export async function bootstrapFreshAuthenticatedSession() {
       return;
     }
 
-    console.log('⚠️ Token injection did not result in logged-in state, falling back to UI login...');
+    console.log(
+      '⚠️ Token injection did not result in logged-in state, falling back to UI login...',
+    );
   } catch (error) {
-    console.log(`⚠️ Token injection failed: ${error}, falling back to UI login...`);
+    console.log(
+      `⚠️ Token injection failed: ${error}, falling back to UI login...`,
+    );
 
     await launchAppWithFabricWorkaround({
       newInstance: true,
@@ -94,26 +104,26 @@ export async function bootstrapFreshAuthenticatedSession() {
 /**
  * Return the app to the pantry tab, whatever state the previous test left.
  * Reloads (closing every modal on both platforms), taps the tab, and throws if
- * `pantry-screen` never lands: a test that cannot reach its starting state has
+ * the pantry screen never lands: a test that cannot reach its starting state has
  * to say so, or one real bug gets reported as nine failures.
  */
 export async function relaunchToHomeTab() {
   const goToPantryTab = async () => {
-    await waitFor(element(by.id('tab-pantry')))
+    await waitFor(element(by.id(kitTestIDs.tab('Pantry'))))
       .toBeVisible()
       .withTimeout(3000);
-    await element(by.id('tab-pantry')).tap();
+    await element(by.id(kitTestIDs.tab('Pantry'))).tap();
     await pantryScreen.waitForScreen(5000);
   };
 
   // Reload unconditionally: a sheet left open by a failing test does NOT hide
-  // `pantry-screen` behind it, so an "am I already home?" probe passes while
+  // the pantry screen behind it, so an "am I already home?" probe passes while
   // the sheet still covers the tab-bar add button. Let the toast clear first —
   // `reloadReactNative` tears the runtime down under Fabric, and landing
   // mid-mounting-transaction SIGSEGVs in `uiManagerDidFinishTransaction`,
   // killing the rest of the file. Sync is off, so nothing waits on our behalf.
   try {
-    await waitFor(element(by.id('toast-success')))
+    await waitFor(element(by.id(kitTestIDs.toast('success'))))
       .not.toBeVisible()
       .withTimeout(6000);
   } catch {

@@ -68,13 +68,11 @@ export const Environment = {
   // class of failure behind commit deaf9d4c. A suite that wants the capability
   // OFF says so explicitly.
   allowsLaunchArgAuth: jest.fn(() => true),
-  getPlatform: jest.fn(() => 'ios' as 'ios' | 'android' | 'web'),
+  getPlatform: jest.fn(() => 'ios'),
   shouldEnableDebugFeatures: jest.fn(() => true),
   shouldEnableCrashReporting: jest.fn(() => false),
   shouldEnableAnalytics: jest.fn(() => false),
-  getLogLevel: jest.fn(
-    () => 'none' as 'debug' | 'info' | 'warn' | 'error' | 'none',
-  ),
+  getLogLevel: jest.fn(() => 'none'),
   getApiConfig: jest.fn(() => apiConfig),
   clearCache: jest.fn(),
 };

@@ -12,9 +12,8 @@ e2e/
 │   ├── actions.ts              # Common action helpers (tap, swipe, type)
 │   ├── assertions.ts           # Custom assertion matchers
 │   ├── auth.ts                 # Authentication helpers (login, logout)
-│   ├── data.ts                 # Test data management (seed, clear)
+│   ├── data.ts                 # Generated names and emails for test data
 │   ├── flows.ts                # End-to-end flow helpers
-│   ├── navigation.ts           # Navigation utilities
 │   ├── offline.ts              # Offline testing utilities
 │   ├── permissions.ts          # Permission handling helpers
 │   ├── waitFor.ts              # Wait utilities
@@ -35,7 +34,7 @@ e2e/
 │   ├── OnboardingScreens.ts     # Onboarding flow screens
 │   └── index.ts                 # Centralized exports
 ├── fixtures/
-│   └── testData.ts             # Test data and fixtures
+│   └── testData.ts             # The test account's credentials
 ├── tests/
 │   ├── auth/                   # Authentication tests
 │   │   ├── login.e2e.ts        # Login flow tests
@@ -65,11 +64,13 @@ e2e/
 ### Prerequisites
 
 1. **Install Detox CLI globally:**
+
    ```bash
    npm install -g detox-cli
    ```
 
 2. **For iOS (macOS only):**
+
    ```bash
    brew tap wix/brew
    brew install applesimutils
@@ -83,6 +84,7 @@ e2e/
 ### Running Tests
 
 **iOS:**
+
 ```bash
 # Build the app for testing
 npm run test:e2e:build
@@ -92,6 +94,7 @@ npm run test:e2e
 ```
 
 **Android:**
+
 ```bash
 # Build the app for testing
 npm run test:e2e:build:android
@@ -101,11 +104,13 @@ npm run test:e2e:android
 ```
 
 **Run specific test file:**
+
 ```bash
 detox test e2e/tests/smoke.e2e.ts --configuration ios.sim.debug
 ```
 
 **Run with different configuration:**
+
 ```bash
 # iOS Release
 detox test --configuration ios.sim.release
@@ -154,24 +159,21 @@ describe('Feature Name', () => {
 ### Using Helpers
 
 ```typescript
-import {
-  loginAsTestUser,
-  navigateToShoppingList,
-  tapByID,
-  expectScreenLoaded,
-} from '../helpers';
+import { loginAsTestUser, expectScreenLoaded } from '../helpers';
+import { ShoppingListScreen } from '../screens/ShoppingListScreen';
+import { shoppingListTestIDs } from '../../src/features/shoppingList/testIDs';
 
 it('should navigate to shopping list', async () => {
   await loginAsTestUser();
-  await navigateToShoppingList();
-  await expectScreenLoaded('shopping-list-screen');
+  await new ShoppingListScreen().navigateToTab();
+  await expectScreenLoaded(shoppingListTestIDs.screen);
 });
 ```
 
 ### Using Test Data
 
 ```typescript
-import { TEST_USER, TEST_SHOPPING_ITEMS } from '../fixtures/testData';
+import { TEST_USER } from '../fixtures/testData';
 
 it('should login with test user', async () => {
   await loginWithCredentials(TEST_USER.email, TEST_USER.password);
@@ -183,6 +185,7 @@ it('should login with test user', async () => {
 Screen object models provide a structured, reusable way to interact with screens in your tests. Each screen has methods that encapsulate common actions and assertions.
 
 **Example: Using LoginScreen**
+
 ```typescript
 import { LoginScreen, ShoppingListScreen } from '../screens';
 
@@ -205,6 +208,7 @@ describe('Login Flow', () => {
 ```
 
 **Example: Using ShoppingListScreen**
+
 ```typescript
 import { ShoppingListScreen } from '../screens';
 
@@ -229,6 +233,7 @@ describe('Shopping List', () => {
 ```
 
 **Example: Using PantryScreen**
+
 ```typescript
 import { PantryScreen } from '../screens';
 
@@ -250,6 +255,7 @@ describe('Pantry Management', () => {
 ```
 
 **Available Screen Objects:**
+
 - `LandingAuthScreen` - Landing page with login/signup options
 - `LoginScreen` - Login form interactions
 - `SignUpScreen` - Sign up form with validation
@@ -263,6 +269,7 @@ describe('Pantry Management', () => {
 - `OnboardingScreen` - Onboarding flow navigation
 
 **Benefits of Screen Objects:**
+
 - **Maintainability:** Changes to UI only require updates in one place
 - **Reusability:** Common actions can be reused across tests
 - **Readability:** Tests read like high-level user interactions
@@ -271,42 +278,41 @@ describe('Pantry Management', () => {
 ## 🛠 Helper Functions
 
 ### Actions (`helpers/actions.ts`)
+
 - `tapByID(testID)` - Tap element by test ID
 - `typeIntoField(testID, text)` - Type text into input
 - `swipeLeft(testID)` - Swipe element left
 - `scrollToBottom(scrollViewID)` - Scroll to bottom
 
 ### Assertions (`helpers/assertions.ts`)
+
 - `expectVisibleAndEnabled(testID)` - Assert element is visible and enabled
-- `expectToastVisible(message)` - Assert toast message appears
 - `expectScreenLoaded(screenTestID)` - Assert screen is loaded
 
 ### Authentication (`helpers/auth.ts`)
+
 - `loginAsTestUser()` - Login with test credentials
 - `logout()` - Logout from app
 - `ensureLoggedIn()` - Ensure user is logged in
 - `bootstrapAuthenticatedSession()` - Setup authenticated test session
 - `signUpWithCredentials(email, password, name)` - Create new account
 
-### Navigation (`helpers/navigation.ts`)
-- `navigateToTab(tabName)` - Navigate to bottom tab
-- `navigateToShoppingList()` - Go to shopping list
-- `navigateToPantry()` - Go to pantry
-- `goBack()` - Navigate back
-
 ### Wait Utilities (`helpers/waitFor.ts`)
+
 - `waitForElementToBeVisible(element, timeout)` - Wait for element
 - `waitForScreen(screenTestID, timeout)` - Wait for screen to load
 - `waitAndTap(element, timeout)` - Wait then tap
 - `retry(action, maxAttempts)` - Retry action if it fails
 
 ### Offline Testing (`helpers/offline.ts`)
+
 - `simulateOffline()` - Simulate network disconnection
 - `simulateOnline()` - Restore network connection
 - `waitForSync()` - Wait for data sync to complete
 - `testOfflineSync(mutation, verification)` - Test offline sync workflow
 
 ### Permissions (`helpers/permissions.ts`)
+
 - `grantCameraPermission()` - Grant camera access
 - `denyCameraPermission()` - Deny camera access
 - `grantNotificationPermission()` - Grant notification permission
@@ -314,31 +320,27 @@ describe('Pantry Management', () => {
 - `launchWithTestPermissions()` - Launch app with common test permissions
 
 ### Test Data (`helpers/data.ts`)
-- `clearPantryItems()` - Clear all pantry items
-- `clearShoppingListItems()` - Clear all shopping list items
-- `seedPantryItems(items)` - Add test items to pantry
-- `seedShoppingListItems(items)` - Add test items to shopping list
+
 - `generateItemName(prefix)` - Generate unique item name
 - `generateTestEmail()` - Generate unique test email
-- `resetAppData()` - Reset app to initial state
 
 ## 🎯 Test IDs
 
-All interactive elements should have `testID` props for E2E testing:
+Every control a spec touches carries a `testID` from its feature's registry (`src/features/<name>/testIDs.ts`, or `src/components/testIDs.ts` for kit components). The app and the spec import the same entry:
 
 ```tsx
-<Button testID="login-button" onPress={handleLogin}>
-  Login
-</Button>
-
-<TextInput testID="email-input" />
-
-<View testID="shopping-list-screen">
-  {/* Screen content */}
-</View>
+<AppPressable testID={authTestIDs.loginSubmitButton} onPress={handleLogin} />
 ```
 
+```ts
+import { authTestIDs } from '../../src/features/auth/testIDs';
+await element(by.id(authTestIDs.loginSubmitButton)).tap();
+```
+
+A spec never selects app copy (`by.text('Skip')`, `by.label('Skip tutorial')`) or taps a screen point (`.tap({ x, y })`): copy changes per locale and point taps land wherever the layout puts them. `by.text(variable)` is for data the spec itself entered, such as an item name it typed. `sous-chef/testid-from-registry` enforces all three.
+
 ### Test ID Naming Convention:
+
 - **Screens:** `{screen-name}-screen` (e.g., `login-screen`)
 - **Buttons:** `{action}-button` (e.g., `login-button`, `add-item-button`)
 - **Inputs:** `{field-name}-input` (e.g., `email-input`, `password-input`)
@@ -349,6 +351,7 @@ All interactive elements should have `testID` props for E2E testing:
 ## 📊 Test Categories
 
 ### Smoke Tests (`tests/smoke.e2e.ts`)
+
 **Run time:** ~1-2 minutes
 **Purpose:** Quick verification that app works
 **Run:** On every commit
@@ -358,11 +361,13 @@ npm run test:e2e -- e2e/tests/smoke.e2e.ts
 ```
 
 ### Functional Tests
+
 **Run time:** ~15-20 minutes
 **Purpose:** Verify features work correctly
 **Run:** On every PR
 
 ### Regression Tests
+
 **Run time:** ~30+ minutes
 **Purpose:** Comprehensive coverage
 **Run:** Before release
@@ -372,10 +377,12 @@ npm run test:e2e -- e2e/tests/smoke.e2e.ts
 ### Authentication Tests (`tests/auth/`)
 
 **Files:**
+
 - `login.e2e.ts` - Login flow tests (20 tests)
 - `logout.e2e.ts` - Logout flow tests (15 tests)
 
 **Coverage:**
+
 - ✅ Successful login with valid credentials
 - ✅ Invalid credentials error handling
 - ✅ Field validation (email format, required fields)
@@ -386,6 +393,7 @@ npm run test:e2e -- e2e/tests/smoke.e2e.ts
 - ✅ Multiple login/logout cycles
 
 **Run:**
+
 ```bash
 detox test e2e/tests/auth --configuration ios.sim.debug
 ```
@@ -393,9 +401,11 @@ detox test e2e/tests/auth --configuration ios.sim.debug
 ### Shopping List Tests (`tests/shoppingList/`)
 
 **Files:**
+
 - `shoppingList.e2e.ts` - Shopping list functionality (40+ tests)
 
 **Coverage:**
+
 - ✅ Adding single and multiple items
 - ✅ Editing item details
 - ✅ Deleting items (swipe to delete)
@@ -408,6 +418,7 @@ detox test e2e/tests/auth --configuration ios.sim.debug
 - ✅ Performance with many items
 
 **Run:**
+
 ```bash
 detox test e2e/tests/shoppingList --configuration ios.sim.debug
 ```
@@ -415,9 +426,11 @@ detox test e2e/tests/shoppingList --configuration ios.sim.debug
 ### Pantry Tests (`tests/pantry/`)
 
 **Files:**
+
 - `pantry.e2e.ts` - Pantry inventory management (35+ tests)
 
 **Coverage:**
+
 - ✅ Adding items with expiration dates
 - ✅ Editing items (name, quantity, expiration)
 - ✅ Deleting items
@@ -430,6 +443,7 @@ detox test e2e/tests/shoppingList --configuration ios.sim.debug
 - ✅ Performance testing
 
 **Run:**
+
 ```bash
 detox test e2e/tests/pantry --configuration ios.sim.debug
 ```
@@ -437,9 +451,11 @@ detox test e2e/tests/pantry --configuration ios.sim.debug
 ### Recipe Tests (`tests/recipe/`)
 
 **Files:**
+
 - `recipes.e2e.ts` - Recipe search and browsing (30+ tests)
 
 **Coverage:**
+
 - ✅ Recipe search by keyword
 - ✅ Filter by cuisine (Italian, Mexican, etc.)
 - ✅ Filter by dietary restrictions (vegetarian, vegan, etc.)
@@ -452,6 +468,7 @@ detox test e2e/tests/pantry --configuration ios.sim.debug
 - ✅ Performance and rapid searches
 
 **Run:**
+
 ```bash
 detox test e2e/tests/recipe --configuration ios.sim.debug
 ```
@@ -459,9 +476,11 @@ detox test e2e/tests/recipe --configuration ios.sim.debug
 ### Profile & Settings Tests (`tests/profile/`)
 
 **Files:**
+
 - `settings.e2e.ts` - Profile and settings (35+ tests)
 
 **Coverage:**
+
 - ✅ Display user information (name, email)
 - ✅ Navigate to various settings screens
 - ✅ Dark mode toggle and persistence
@@ -473,6 +492,7 @@ detox test e2e/tests/recipe --configuration ios.sim.debug
 - ✅ UI responsiveness
 
 **Run:**
+
 ```bash
 detox test e2e/tests/profile --configuration ios.sim.debug
 ```
@@ -480,9 +500,11 @@ detox test e2e/tests/profile --configuration ios.sim.debug
 ### Onboarding Tests (`tests/onboarding/`)
 
 **Files:**
+
 - `onboarding.e2e.ts` - First-time user experience (30+ tests)
 
 **Coverage:**
+
 - ✅ Initial onboarding display
 - ✅ Page navigation with Next button
 - ✅ Page navigation with swipe gestures
@@ -496,30 +518,33 @@ detox test e2e/tests/profile --configuration ios.sim.debug
 - ✅ Onboarding not shown after completion
 
 **Run:**
+
 ```bash
 detox test e2e/tests/onboarding --configuration ios.sim.debug
 ```
 
 ### Test Coverage Summary
 
-| Test Suite | Tests | Coverage Areas |
-|------------|-------|----------------|
-| **Authentication** | 35 | Login, logout, validation, session |
-| **Shopping List** | 40+ | CRUD operations, search, filters |
-| **Pantry** | 35+ | Inventory, expiration, barcode |
-| **Recipes** | 30+ | Search, filters, favorites, details |
-| **Profile/Settings** | 35+ | Theme, notifications, account |
-| **Onboarding** | 30+ | First-time UX, navigation, gestures |
-| **TOTAL** | **200+** | Comprehensive E2E coverage |
+| Test Suite           | Tests    | Coverage Areas                      |
+| -------------------- | -------- | ----------------------------------- |
+| **Authentication**   | 35       | Login, logout, validation, session  |
+| **Shopping List**    | 40+      | CRUD operations, search, filters    |
+| **Pantry**           | 35+      | Inventory, expiration, barcode      |
+| **Recipes**          | 30+      | Search, filters, favorites, details |
+| **Profile/Settings** | 35+      | Theme, notifications, account       |
+| **Onboarding**       | 30+      | First-time UX, navigation, gestures |
+| **TOTAL**            | **200+** | Comprehensive E2E coverage          |
 
 ### Running All Test Suites
 
 **Run all tests:**
+
 ```bash
 npm run test:e2e
 ```
 
 **Run specific category:**
+
 ```bash
 # Authentication tests only
 detox test e2e/tests/auth --configuration ios.sim.debug
@@ -529,6 +554,7 @@ detox test e2e/tests/shoppingList --configuration ios.sim.debug
 ```
 
 **Run with different configuration:**
+
 ```bash
 # Android
 detox test e2e/tests/auth --configuration android.emu.debug
@@ -540,21 +566,25 @@ detox test e2e/tests/auth --configuration ios.sim.release
 ## 🐛 Debugging
 
 ### View Detox Logs
+
 ```bash
 detox test --loglevel trace
 ```
 
 ### Take Screenshots
+
 ```typescript
 await device.takeScreenshot('test-screenshot');
 ```
 
 ### Record Video (iOS)
+
 ```bash
 detox test --record-videos all
 ```
 
 ### Inspect Element Hierarchy
+
 ```bash
 detox test --debug-synchronization
 ```
@@ -562,20 +592,24 @@ detox test --debug-synchronization
 ### Common Issues
 
 **1. App doesn't launch:**
+
 - Rebuild the app: `npm run test:e2e:build`
 - Clean and rebuild: `npm run test:e2e:rebuild`
 
 **2. Element not found:**
+
 - Check if testID is correctly set
 - Use `await waitFor(element).toBeVisible()`
 - Check element hierarchy with debug logs
 
 **3. Tests are flaky:**
+
 - Add proper wait conditions
 - Use `waitFor` instead of delays
 - Check for race conditions
 
 **4. Simulator/Emulator issues:**
+
 - Restart simulator/emulator
 - Check iOS/Android version compatibility
 
@@ -593,6 +627,7 @@ E2E tests are automatically run in GitHub Actions on every PR and push.
 ### Workflows
 
 **1. PR Checks** (runs on every PR)
+
 - TypeScript check
 - Linting
 - Unit tests
@@ -601,12 +636,14 @@ E2E tests are automatically run in GitHub Actions on every PR and push.
 - Duration: ~15-20 minutes
 
 **2. E2E Tests** (runs on PR/push to main/develop)
+
 - Full test suite on iOS
 - Full test suite on Android
 - 200+ tests
 - Duration: ~60 minutes
 
 **3. E2E Nightly** (runs daily at 2 AM UTC)
+
 - All test suites in parallel
 - Both iOS and Android
 - Video recording on failures (iOS)
@@ -615,6 +652,7 @@ E2E tests are automatically run in GitHub Actions on every PR and push.
 ### Running Tests in CI
 
 Tests automatically run on:
+
 - ✅ Pull request creation
 - ✅ New commits to PR
 - ✅ Push to main/develop
@@ -636,12 +674,14 @@ gh run download <run-id>  # Download artifacts
 ### Artifacts
 
 When tests fail, artifacts are uploaded:
+
 - 📸 Screenshots of failures
 - 📹 Videos (iOS nightly only)
 - 📋 Detox logs
 - 📊 Test results (JSON)
 
 **Retention:**
+
 - PR checks: 3 days
 - E2E tests: 7 days
 - Nightly: 14 days
@@ -662,6 +702,7 @@ gh workflow run e2e-smoke-tests.yml
 ### Test Matrix
 
 Nightly tests run in parallel across suites:
+
 - Authentication tests
 - Shopping list tests
 - Pantry tests
@@ -674,11 +715,13 @@ Each suite runs on both iOS and Android simultaneously for faster feedback.
 ### Debugging CI Failures
 
 1. **Check workflow logs:**
+
    ```bash
    gh run view <run-id> --log
    ```
 
 2. **Download artifacts:**
+
    ```bash
    gh run download <run-id>
    ```
@@ -701,6 +744,7 @@ For more details, see [CI/CD Documentation](../docs/CI_CD.md).
 - [x] Phase 5.4: CI/CD Integration (COMPLETE)
 
 **Completed:**
+
 - 200+ comprehensive E2E tests across 6 test suites
 - Full coverage of authentication, shopping list, pantry, recipes, profile/settings, and onboarding
 - Screen object models for all major screens

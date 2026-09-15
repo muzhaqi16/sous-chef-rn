@@ -14,14 +14,14 @@ export const formatMonthDay = (date: Date): string => display(date, 'MMM d');
 export const formatMonthDayYear = (date: Date): string =>
   display(date, 'MMM d, yyyy');
 
+export const formatMonthYear = (date: Date): string =>
+  display(date, 'MMM yyyy');
+
 export const formatWeekdayMonthDay = (date: Date): string =>
   display(date, 'EEE, MMM d');
 
 export const formatFullWeekdayMonthDay = (date: Date): string =>
   display(date, 'EEEE, MMMM d');
-
-export const formatMonthYear = (date: Date): string =>
-  display(date, 'MMMM yyyy');
 
 export const formatWeekdayShort = (date: Date): string => display(date, 'EEE');
 

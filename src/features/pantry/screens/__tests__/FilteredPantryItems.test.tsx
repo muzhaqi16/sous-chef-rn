@@ -364,6 +364,16 @@ describe('FilteredPantryItems', () => {
       expect(screen.getByText('1 stk remaining')).toBeTruthy();
     });
 
+    it('renders a fractional remaining quantity as a cooking fraction', () => {
+      mockAllItems = [
+        { ...mockLowStockItems[0]!, quantity: 1.25 },
+        { ...mockLowStockItems[1]!, quantity: 177.4412 },
+      ];
+      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+      expect(screen.getByText('1 1/4 pcs remaining')).toBeTruthy();
+      expect(screen.getByText('177.441 stk remaining')).toBeTruthy();
+    });
+
     it('shows empty state when all items are stocked', () => {
       mockAllItems = [];
       renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);

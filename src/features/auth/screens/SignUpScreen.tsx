@@ -12,11 +12,12 @@ import { PasswordInput } from '#components/molecules/PasswordInput';
 import { NameInput } from '#components/molecules/NameInput';
 import { getSignUpValidationSchema } from '#/utils/validation/auth';
 import { logValidationErrors } from '#/utils/validation/common';
-import { type RegisterInput } from '#/graphql/generated/schemaTypes';
+import type { RegisterInput } from '#/graphql/generated/schemaTypes';
 import { authService } from '#/services/authService';
 import { useAppStore } from '#store/useAppStore';
 import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { authTestIDs } from '#features/auth/testIDs';
 
 type SignUpValues = RegisterInput & { confirmPassword: string; name: string };
 
@@ -68,7 +69,7 @@ export const SignUpScreen = (): React.JSX.Element => {
   }
 
   return (
-    <AuthWrapper testID="signup-screen">
+    <AuthWrapper testID={authTestIDs.signUpScreen}>
       <AuthFormTemplate<SignUpValues>
         contentPlacement="center"
         title={t('auth.signupTitle')}
@@ -80,19 +81,19 @@ export const SignUpScreen = (): React.JSX.Element => {
             label: t('auth.name'),
             placeholder: t('auth.namePlaceholder'),
             component: NameInput,
-            props: { testID: 'signup-name-input' },
+            props: { testID: authTestIDs.signUpNameInput },
           },
           {
             name: 'email',
             label: t('auth.emailAddress'),
             component: EmailInput,
-            props: { testID: 'signup-email-input' },
+            props: { testID: authTestIDs.signUpEmailInput },
           },
           {
             name: 'password',
             label: t('auth.password'),
             component: PasswordInput,
-            props: { testID: 'signup-password-input' },
+            props: { testID: authTestIDs.signUpPasswordInput },
             // The match rule reports on `confirmPassword` while reading this
             // field, so editing this one has to re-run that one.
             deps: ['confirmPassword'],
@@ -101,7 +102,7 @@ export const SignUpScreen = (): React.JSX.Element => {
             name: 'confirmPassword',
             label: t('auth.confirmPassword'),
             component: PasswordInput,
-            props: { testID: 'signup-confirm-password-input' },
+            props: { testID: authTestIDs.signUpConfirmPasswordInput },
           },
         ]}
         control={form.control}
@@ -110,11 +111,11 @@ export const SignUpScreen = (): React.JSX.Element => {
         submitText={
           isRegistering ? t('auth.creatingAccount') : t('auth.signUp')
         }
-        submitButtonTestID="signup-submit-button"
+        submitButtonTestID={authTestIDs.signUpSubmitButton}
         onSubmit={form.handleSubmit(onSubmit, logValidationErrors)}
         footerText={t('auth.haveAccount')}
         footerLinkText={t('auth.signIn')}
-        footerLinkTestID="signup-login-link"
+        footerLinkTestID={authTestIDs.signUpLoginLink}
         onFooterLinkPress={() => navigateToLogin()}
         isLoading={isRegistering}
       />

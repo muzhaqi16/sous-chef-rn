@@ -25,29 +25,6 @@ mutation MarkNotificationAsRead($input: MarkNotificationAsReadInput!) {
   }
 }
 
-mutation MarkNotificationUnread($input: MarkNotificationUnreadInput!) {
-  markNotificationUnread(input: $input) {
-    __typename
-    ... on MarkNotificationUnreadPayload {
-      notification {
-        id
-        status
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
 # Fire a self-addressed test notification — lets a user validate their
 # notification setup (and, once remote push lands, that pushes arrive) from
 # the settings screen.

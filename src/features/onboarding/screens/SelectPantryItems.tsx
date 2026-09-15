@@ -23,6 +23,7 @@ import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
 import { logger } from '#/utils/environment';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
+import { onboardingTestIDs } from '#features/onboarding/testIDs';
 
 export const SelectPantryItems = () => {
   const { t } = useTranslation();
@@ -72,7 +73,7 @@ export const SelectPantryItems = () => {
       <OnBoardingWrapper
         title={t('onBoarding.stockPantryTitle')}
         subtitle={t('onBoarding.stockPantrySubtitle')}
-        onBack={() => navigateToPreviousStep('CreateShoppingList')}
+        onBack={() => navigateToPreviousStep('SelectPantryItems')}
         onSkip={() => navigateToNextStep('SelectPantryItems')}
       >
         <SousChefLoader
@@ -89,11 +90,16 @@ export const SelectPantryItems = () => {
       <OnBoardingWrapper
         title={t('onBoarding.stockPantryTitle')}
         subtitle={t('onBoarding.stockPantrySubtitle')}
-        onBack={() => navigateToPreviousStep('CreateShoppingList')}
+        onBack={() => navigateToPreviousStep('SelectPantryItems')}
         onSkip={() => navigateToNextStep('SelectPantryItems')}
       >
         <View style={styles.errorContainer}>
-          <Text tone="error" align="center" style={styles.errorText}>
+          <Text
+            role="error"
+            tone="error"
+            align="center"
+            style={styles.errorText}
+          >
             {t('errors.loadItemsFailed')}
           </Text>
           <Button onPress={() => refetch()} variant="primary">
@@ -114,7 +120,7 @@ export const SelectPantryItems = () => {
 
   const onNext = () => {
     if (hasChanges && selectedPantryId) {
-      executeWithLoadingState(
+      void executeWithLoadingState(
         async () => {
           await Promise.all([
             ...itemsToAdd.map(async item => {
@@ -151,9 +157,10 @@ export const SelectPantryItems = () => {
               }
               return result;
             }),
-            ...itemsToRemove.map(catalogId => {
-              const pantryItemId = existingItemMap.get(catalogId)!;
-              return removeItem(pantryItemId);
+            // `itemsToRemove` is drawn from the same index as the map.
+            ...itemsToRemove.flatMap(catalogId => {
+              const pantryItemId = existingItemMap.get(catalogId);
+              return pantryItemId ? [removeItem(pantryItemId)] : [];
             }),
           ]);
           navigateToNextStep('SelectPantryItems');
@@ -175,9 +182,9 @@ export const SelectPantryItems = () => {
     <OnBoardingWrapper
       title={t('onBoarding.stockPantryTitle')}
       subtitle={t('onBoarding.stockPantrySubtitleOptional')}
-      onBack={() => navigateToPreviousStep('CreateShoppingList')}
+      onBack={() => navigateToPreviousStep('SelectPantryItems')}
       onSkip={() => navigateToNextStep('SelectPantryItems')}
-      testID="onboarding-select-pantry-items-screen"
+      testID={onboardingTestIDs.selectPantryItemsScreen}
     >
       <ScrollView
         style={styles.form}

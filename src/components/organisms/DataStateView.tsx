@@ -7,6 +7,7 @@ import {
   type EmptyStateProps,
 } from '#components/molecules/EmptyState';
 import type { DataState } from '#hooks/data/useDataState';
+import { kitTestIDs } from '#components/testIDs';
 
 interface DataStateViewProps {
   /** From `useDataState`. Renders nothing at `'ready'`. */
@@ -41,7 +42,7 @@ export const DataStateView: React.FC<DataStateViewProps> = ({
     return (
       <Loading
         message={t('dataState.loading')}
-        testID={testID ?? 'state-loading'}
+        testID={testID ?? kitTestIDs.stateLoading}
       />
     );
   }
@@ -66,7 +67,9 @@ export const DataStateView: React.FC<DataStateViewProps> = ({
       alignment="center"
       // No `action`: after a failed fetch we don't know what exists, so offering
       // to create it invites a duplicate of something the person already owns.
-      testID={testID ?? (offline ? 'state-offline' : 'state-error')}
+      testID={
+        testID ?? (offline ? kitTestIDs.stateOffline : kitTestIDs.stateError)
+      }
     />
   );
 };

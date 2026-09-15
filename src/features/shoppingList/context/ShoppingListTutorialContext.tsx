@@ -6,11 +6,13 @@ import React, {
   useRef,
   type ReactNode,
 } from 'react';
+import type { TranslationKey } from '#/i18n';
 import { useShowTutorials } from '#store/useAppStore';
 import { useUserId } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 import { storeApi } from '#store';
+import { hasFeatureHintBeenShown } from '#hooks/useFeatureHint';
 
 // Key shape shared with useFeatureHint / resetAllFeatureHints.
 const HINT_PREFIX = 'feature_hint_shown_';
@@ -29,17 +31,12 @@ function buildStorageKey(userId: string | undefined, featureId: string) {
 }
 
 // Read on mount AND on a reset signal, so resetAllFeatureHints (Settings →
-// "Reset to Defaults") clearing the flags replays the tutorial.
+// "Reset to Defaults") clearing the flags replays the tutorial. Through
+// `hasFeatureHintBeenShown`, so the Detox suppression hides it too.
 function readCompletedFromStorage(userId: string | undefined): boolean {
-  if (
-    storeApi.getState().featureHintsShown[buildStorageKey(userId, FEATURE_ID)]
-  )
-    return true;
-  for (const oldId of OLD_TUTORIAL_IDS) {
-    if (storeApi.getState().featureHintsShown[buildStorageKey(userId, oldId)])
-      return true;
-  }
-  return false;
+  return [FEATURE_ID, ...OLD_TUTORIAL_IDS].some(featureId =>
+    hasFeatureHintBeenShown(featureId, userId),
+  );
 }
 
 export enum ShoppingListTutorialStep {
@@ -64,15 +61,18 @@ export type TutorialRectKey =
 
 export const TUTORIAL_TOTAL_STEPS = 8;
 
-export const TUTORIAL_STEP_CONFIG: Record<
-  string,
-  {
-    /** i18n key paths — this table is module-level, no hook. */
-    titleKey: string;
-    subtitleKey: string;
-    rectKey: TutorialRectKey;
-    stepIndex: number;
-  }
+// Partial: the guided and idle steps spotlight nothing.
+export const TUTORIAL_STEP_CONFIG: Partial<
+  Record<
+    ShoppingListTutorialStep,
+    {
+      /** i18n key paths — this table is module-level, no hook. */
+      titleKey: TranslationKey;
+      subtitleKey: TranslationKey;
+      rectKey: TutorialRectKey;
+      stepIndex: number;
+    }
+  >
 > = {
   [ShoppingListTutorialStep.SPOTLIGHT_ADD_BUTTON]: {
     titleKey: 'shoppingListTutorial.addButton.title',

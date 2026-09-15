@@ -1,14 +1,13 @@
 import { Platform } from 'react-native';
-import {
+import type {
   TelemetryConfig,
   LogEntry,
   LogExceptionDetails,
   MetricEntry,
   ErrorDetails,
   TelemetryTransport,
-  TransportSendError,
-  DEFAULT_CONFIG,
 } from './types';
+import { TransportSendError, DEFAULT_CONFIG } from './types';
 import { ConsoleTransport } from './transports/ConsoleTransport';
 import { HttpTransport } from './transports/HttpTransport';
 import { scrubLogExtra, scrubString } from './scrub';
@@ -242,7 +241,7 @@ export class TelemetryService {
     }
 
     if (level === 'error') {
-      this.flushLogs();
+      void this.flushLogs();
     }
   }
 
@@ -361,7 +360,7 @@ export class TelemetryService {
     this.incrementCounter('app_errors_total', 1, {
       component: error.component || 'unknown',
       operation: error.operation || 'unknown',
-      is_fatal: String(error.isFatal || false),
+      is_fatal: String(error.isFatal ?? false),
     });
   }
 
@@ -426,17 +425,15 @@ export class TelemetryService {
     this.clearFlushTimers();
 
     if (this.config.enableLogs) {
-      this.flushTimers.logs = setInterval(
-        () => this.flushLogs(),
-        this.config.flushIntervals.logs,
-      );
+      this.flushTimers.logs = setInterval(() => {
+        void this.flushLogs();
+      }, this.config.flushIntervals.logs);
     }
 
     if (this.config.enableMetrics) {
-      this.flushTimers.metrics = setInterval(
-        () => this.flushMetrics(),
-        this.config.flushIntervals.metrics,
-      );
+      this.flushTimers.metrics = setInterval(() => {
+        void this.flushMetrics();
+      }, this.config.flushIntervals.metrics);
     }
   }
 
@@ -675,7 +672,7 @@ export class TelemetryService {
 
   destroy(): void {
     this.clearFlushTimers();
-    this.flush();
+    void this.flush();
     this.isInitialized = false;
   }
 }

@@ -2,7 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import {
   ConsumptionUnitsForPantryItemDocument,
-  RestockUnitsForItemDocument,
+  RestockUnitsForPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import {
   UnitType,
@@ -59,8 +59,8 @@ function restockMock(
   variables = { pantryItemId: 'pantry-item-1' },
 ): MockedResponse {
   return {
-    request: { query: RestockUnitsForItemDocument, variables },
-    result: { data: { restockUnitsForItem: units } },
+    request: { query: RestockUnitsForPantryItemDocument, variables },
+    result: { data: { restockUnitsForPantryItem: units } },
   };
 }
 
@@ -68,7 +68,7 @@ function restockErrorMock(
   variables = { pantryItemId: 'pantry-item-1' },
 ): MockedResponse {
   return {
-    request: { query: RestockUnitsForItemDocument, variables },
+    request: { query: RestockUnitsForPantryItemDocument, variables },
     error: new Error('Restock query failed'),
   };
 }
@@ -477,8 +477,9 @@ describe('useOperationUnits', () => {
     });
   });
 
-  describe('error state', () => {
-    it('exposes error from consumption query', async () => {
+  // A failed read hides the picker; the modal falls back to the tracking unit.
+  describe('failed read', () => {
+    it('settles with no groups or default after a consumption query error', async () => {
       const { result } = renderHook(
         () =>
           useOperationUnits({
@@ -492,11 +493,12 @@ describe('useOperationUnits', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.error).toBeDefined());
-      expect(result.current.error?.message).toBe('Query failed');
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.groups).toEqual([]);
+      expect(result.current.defaultUnit).toBeNull();
     });
 
-    it('exposes error from restock query', async () => {
+    it('settles with no groups or default after a restock query error', async () => {
       const { result } = renderHook(
         () =>
           useOperationUnits({
@@ -510,8 +512,9 @@ describe('useOperationUnits', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.error).toBeDefined());
-      expect(result.current.error?.message).toBe('Restock query failed');
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.groups).toEqual([]);
+      expect(result.current.defaultUnit).toBeNull();
     });
   });
 });

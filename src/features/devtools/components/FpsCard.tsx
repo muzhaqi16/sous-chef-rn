@@ -19,7 +19,7 @@ export const FpsCard: React.FC = () => {
     >
       <MetricPanel>
         <MetricRow label={t('performance.currentFps')}>
-          <Text role="bodyStrong" tone={isLowFPS ? 'error' : undefined}>
+          <Text role="bodyStrong" tone={isLowFPS ? 'danger' : undefined}>
             {fps}
           </Text>
         </MetricRow>

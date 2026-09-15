@@ -176,7 +176,11 @@
     "currentLabel": "Attuale: ",
     "newQuantity": "Nuova quantità",
     "reasonPlaceholder": "Perché stai modificando la quantità?",
-    "remainingWeightPlaceholder": "Lascia vuoto per regolare automaticamente"
+    "remainingWeightPlaceholder": "Lascia vuoto per regolare automaticamente",
+    "systemReason": {
+      "stackMerged": "Rettifica dopo l'unione di articoli",
+      "stackPurged": "Rimozione amministrativa"
+    }
   },
   "recordWaste": {
     "wasteBy": "Spreco per",
@@ -299,7 +303,8 @@
     "acquisitionMethod": "Come acquisito",
     "methodPurchased": "Acquistato",
     "methodHomegrown": "Coltivato in casa",
-    "methodGifted": "Regalato"
+    "methodGifted": "Regalato",
+    "methodBarcodeScan": "Scansione codice a barre"
   },
   "pantryScreen": {
     "greetingFallback": "Buongiorno",

@@ -1,3 +1,4 @@
+import { logger } from '#/utils/environment';
 import { useEffect, useRef, useState } from 'react';
 import { useLazyQuery, useQuery } from '@apollo/client/react';
 import {
@@ -48,12 +49,14 @@ export function useUnitAutocomplete() {
     if (isCacheFresh) return;
 
     requestIdleCallback(() => {
-      fetchCommonUnits().then(result => {
-        if (result.data?.units && result.data.units.length > 0) {
-          setCachedUnits(result.data.units);
-          setLastUnitsFetchedAt(Date.now());
-        }
-      });
+      void fetchCommonUnits()
+        .then(result => {
+          if (result.data?.units && result.data.units.length > 0) {
+            setCachedUnits(result.data.units);
+            setLastUnitsFetchedAt(Date.now());
+          }
+        })
+        .catch(error => logger.warn('Common units preload failed', error));
     });
   }, [
     cachedUnits.length,
@@ -76,7 +79,7 @@ export function useUnitAutocomplete() {
 
   const getResults = (): UnitItem[] => {
     if (debouncedSearchTerm && debouncedSearchTerm.length >= 2) {
-      return (searchData?.searchUnits || []) as UnitItem[];
+      return searchData?.searchUnits ?? [];
     }
     return [];
   };

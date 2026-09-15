@@ -23,8 +23,8 @@ interface NotificationStoreState {
   resetNotifications: () => void;
 }
 
-const initialState = {
-  pendingExpirationLinks: {} as Record<string, ExpirationLinkData>,
+const initialState: Pick<NotificationStoreState, 'pendingExpirationLinks'> = {
+  pendingExpirationLinks: {},
 };
 
 export const useNotificationStore = create<NotificationStoreState>()(

@@ -76,7 +76,7 @@ describe('TabView', () => {
 
   const renderScene = ({ route }: { route: TabRoute }) => (
     <View testID={`content-${route.key}`}>
-      <Text>{`Content for ${route.title}`}</Text>
+      <Text role="body">{`Content for ${route.title}`}</Text>
     </View>
   );
 
@@ -122,7 +122,7 @@ describe('TabView', () => {
 
   it('renders with custom lazy placeholder', () => {
     const customPlaceholder = ({ route }: { route: TabRoute }) => (
-      <Text>Loading {route.title}...</Text>
+      <Text role="body">Loading {route.title}...</Text>
     );
     const { toJSON } = render(
       <TabView

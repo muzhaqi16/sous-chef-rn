@@ -6,10 +6,10 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#components/molecules/Button';
 import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
+import type { CreateItemFormData } from '#features/catalog/utils/itemValidation';
 import {
   createItemSchema,
   suggestItemEditSchema,
-  CreateItemFormData,
 } from '#features/catalog/utils/itemValidation';
 import {
   StorageState,
@@ -30,7 +30,7 @@ import {
   type NetWeightEntry,
 } from '#features/catalog/ui/NetWeightEntryList/NetWeightEntryList';
 import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
-import { type AddItemFormData } from '#/utils/items/createItemMapping';
+import type { AddItemFormData } from '#/utils/items/createItemMapping';
 import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
 import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 import { Text } from '#components/atoms/Text';
@@ -48,6 +48,7 @@ import {
   requiresEditNote,
   MODE_CONFIG,
 } from './fields';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 
 /**
  * `edit` proposes changes for admin review (createItemSuggestion); `directEdit`
@@ -369,15 +370,15 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
           : undefined,
       tags: allTags,
       primaryUpc: data.upc || undefined,
-      shelfLifeDays: data.shelfLifeDays || undefined,
-      shelfLifeOpenedDays: data.shelfLifeOpenedDays || undefined,
+      shelfLifeDays: data.shelfLifeDays ?? undefined,
+      shelfLifeOpenedDays: data.shelfLifeOpenedDays ?? undefined,
       imageUrl: data.imageUrl || undefined,
       netWeights: netWeights.length > 0 ? netWeights : undefined,
       units: units.length > 0 ? units : undefined,
       sku: data.sku || undefined,
       storeId: selectedStoreId || undefined,
       baseDimension: (data.baseDimension as BaseDimension) || undefined,
-      defaultConsumeIncrement: data.defaultConsumeIncrement || undefined,
+      defaultConsumeIncrement: data.defaultConsumeIncrement ?? undefined,
       defaultConsumeUnitId: data.defaultConsumeUnitId || undefined,
       editReason: data.editReason || undefined,
       selectedImages,
@@ -393,8 +394,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
 
   // Per-tab error detection — drives the red dot on PageIndicator and
   // auto-expansion of "More options" when an errored field lives inside it.
-  const fieldHasError = (name: string) =>
-    !!(errors as Record<string, unknown>)[name];
+  // react-hook-form deletes a field's key when its error clears.
+  const fieldHasError = (name: string) => name in errors;
   const tabHasError = (page: PageName) => {
     const { primary, advanced } = TAB_FIELDS[page];
     return [...primary, ...advanced].some(f => fieldHasError(String(f.name)));
@@ -414,7 +415,11 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         <Text role="title" style={styles.title}>
           {title || t(modeConfig.title)}
         </Text>
-        <Text role="caption" tone="secondary" testID="add-item-form-subtitle">
+        <Text
+          role="caption"
+          tone="secondary"
+          testID={catalogTestIDs.addItemFormSubtitle}
+        >
           {t(modeConfig.subtitle(!!barcode))}
         </Text>
       </View>

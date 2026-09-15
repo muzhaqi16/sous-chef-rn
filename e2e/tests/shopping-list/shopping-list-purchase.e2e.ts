@@ -9,6 +9,7 @@ import { bootstrapAuthenticatedSession } from '../../helpers/auth';
 import { relaunchToHomeTab } from '../../helpers/flows';
 import { generateItemName } from '../../helpers/data';
 import { TIMEOUTS } from '../../helpers/waitFor';
+import { shoppingListTestIDs } from '../../../src/features/shoppingList/testIDs';
 
 describe('Shopping List Purchase', () => {
   const shoppingListScreen = new ShoppingListScreen();
@@ -34,20 +35,19 @@ describe('Shopping List Purchase', () => {
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
-      const checkbox = element(by.id(/shopping-item-checkbox-.*/)).atIndex(0);
+      const checkbox = element(
+        by.id(shoppingListTestIDs.anyItemCheckbox()),
+      ).atIndex(0);
       await waitFor(checkbox).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
       await checkbox.tap();
 
-      const purchasedTab = element(by.text('Purchased'));
-      await waitFor(purchasedTab).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-      await purchasedTab.tap();
+      await shoppingListScreen.openFilterTab('purchased');
 
       await waitFor(element(by.text(itemName)))
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
-      const shoppingTab = element(by.text('Shopping'));
-      await shoppingTab.tap();
+      await shoppingListScreen.openFilterTab('shopping');
       await shoppingListScreen.waitForScreen();
     });
   });
@@ -58,24 +58,20 @@ describe('Shopping List Purchase', () => {
     });
 
     it('should be able to add an item', async () => {
-      await shoppingListScreen.addItem('Bread');
-      await waitFor(element(by.text('Bread')))
+      const itemName = generateItemName('Bread');
+      await shoppingListScreen.addItem(itemName);
+      await waitFor(element(by.text(itemName)))
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
     });
 
     it('should be able to navigate between tabs', async () => {
-      const purchasedTab = element(by.text('Purchased'));
-      await waitFor(purchasedTab).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-      await purchasedTab.tap();
-
-      await waitFor(element(by.text('Purchased')))
+      await shoppingListScreen.openFilterTab('purchased');
+      await waitFor(shoppingListScreen.filterTab('purchased'))
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
-      const shoppingTab = element(by.text('Shopping'));
-      await waitFor(shoppingTab).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-      await shoppingTab.tap();
+      await shoppingListScreen.openFilterTab('shopping');
 
       await shoppingListScreen.waitForScreen();
     });

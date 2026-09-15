@@ -41,6 +41,7 @@ import {
   type CreateRecipeInput,
 } from '#/graphql/generated/schemaTypes';
 import { makeCache } from '#/apollo/cache';
+import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import {
   GetShoppingListsLiteForRecipeDocument,
   CreateShoppingListForRecipeDocument,
@@ -97,6 +98,7 @@ import {
   GetShoppingListsLiteDocument,
   CreateShoppingListDocument,
   AddCollaboratorDocument,
+  ToggleShoppingListItemPurchasedDocument,
   type GetShoppingListItemsFilteredQuery,
   type GetShoppingListsLiteQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -969,7 +971,7 @@ describe('optimistic entity completeness', () => {
       const created = await runAgainstSchema<
         Unmasked<GetShoppingListItemsFilteredQuery>
       >(GetShoppingListItemsFilteredDocument, LIST_VARS);
-      const sample = created.shoppingList!.itemsConnection!.edges![0]!.node!;
+      const sample = created.shoppingList!.itemsConnection.edges[0]!.node;
 
       cache.writeFragment({
         id: 'ShoppingListItem:from-recipe',
@@ -1090,8 +1092,7 @@ describe('optimistic entity completeness', () => {
         {
           id: 'queued-1',
           userId: 'user-1',
-          operationName: 'ToggleShoppingListItemPurchased',
-          mutation: { kind: Kind.DOCUMENT, definitions: [] },
+          ...queuedMutationFor(ToggleShoppingListItemPurchasedDocument),
           variables: { input: { id: row!.id, purchased: true } },
           status: QueueStatus.PENDING,
           createdAt: 0,
@@ -1104,7 +1105,7 @@ describe('optimistic entity completeness', () => {
       );
 
       const input = syncVariables.input as { item: { shoppingListId: string } };
-      expect(input.item.shoppingListId).toBe(row!.shoppingList!.id);
+      expect(input.item.shoppingListId).toBe(row!.shoppingList.id);
     });
 
     it('keeps GetShoppingListsLite complete after an optimistic list create', async () => {

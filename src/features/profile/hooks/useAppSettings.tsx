@@ -15,8 +15,7 @@ import {
   snapshotFields,
   updateEntityFieldsLocalFirst,
 } from '#/apollo/utils/localFirstFields';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import { alertService } from '#/services/alertService';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useTranslation } from '#/i18n';
 
 export interface AppSettings {
@@ -49,8 +48,8 @@ export const useAppSettings = () => {
       autoSync: settings?.autoSync ?? true,
       offlineMode: settings?.offlineMode ?? false,
       preferredUnitSystem: settings?.preferredUnitSystem || UnitSystem.Metric,
-      enabledFeatures: settings?.enabledFeatures || [],
-      betaFeatures: settings?.betaFeatures || [],
+      enabledFeatures: settings?.enabledFeatures ?? [],
+      betaFeatures: settings?.betaFeatures ?? [],
     };
   };
 
@@ -103,42 +102,36 @@ export const useAppSettings = () => {
   ) => {
     const previous = snapshotFields<AppSettings>(memoizedSettings, updates);
 
-    const { persisted, result } =
-      await updateEntityFieldsLocalFirst<AppSettings>({
-        cache: client.cache,
-        entity: settingsEntity,
-        updates,
-        previous,
-        // localFirst: an unreachable API queues the change for replay instead of
-        // failing it, so the setting the user just flipped isn't lost.
-        mutate: () =>
-          updateSettings({
-            variables: { input: toSettingsInput(updates) },
-            context: { localFirst: true },
-          }),
-        logLabel: 'Update Settings',
-      });
-
-    // The ONLY alerter for this failure (there is no mutation `onError`), so
-    // callers must not add their own. Two branches: `false` means the call
-    // THREW, which `alertIfRejected` deliberately no-ops on; anything else is a
-    // resolved rejection, which it owns.
-    if (!persisted) {
-      if (!result) {
-        alertService.alert(t('labels.error'), failureMessage);
-      } else {
-        alertIfRejected(result, failureMessage);
-      }
-      return false;
-    }
-    return true;
+    const { persisted } = await updateEntityFieldsLocalFirst<AppSettings>({
+      cache: client.cache,
+      entity: settingsEntity,
+      updates,
+      previous,
+      // The settle is the ONLY alerter for this failure, so callers must not
+      // add their own. Its failure stands in for the error, driving the revert.
+      mutate: async () => {
+        const settled = await settleMutation(
+          () =>
+            // localFirst: an unreachable API queues the change for replay
+            // instead of failing it, so the flipped setting isn't lost.
+            updateSettings({
+              variables: { input: toSettingsInput(updates) },
+              context: { localFirst: true },
+            }),
+          { document: UpdateUserPreferencesDocument, fallback: failureMessage },
+        );
+        return { data: settled.data, error: settled.failure };
+      },
+      logLabel: 'Update Settings',
+    });
+    return persisted;
   };
 
   /** Single-key convenience over {@link updateMultipleSettings}. */
   const updateAppSetting = async <K extends keyof AppSettings>(
     key: K,
     value: AppSettings[K],
-  ) => updateMultipleSettings({ [key]: value } as Partial<AppSettings>);
+  ) => updateMultipleSettings({ [key]: value });
 
   const resetToDefaults = async () => {
     const defaultSettings: Partial<AppSettings> = {
@@ -179,7 +172,6 @@ export const useAppSettings = () => {
     // Failures RESOLVE under the global `errorPolicy: 'all'`.
     error,
     updateAppSetting,
-    updateMultipleSettings,
     resetToDefaults,
     refetch,
   };

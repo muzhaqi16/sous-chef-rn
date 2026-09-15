@@ -215,7 +215,7 @@ const styles = StyleSheet.create(theme => ({
   },
   pill: {
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 3,
+    paddingVertical: theme.spacing['2xsPlus'],
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
     variants: {

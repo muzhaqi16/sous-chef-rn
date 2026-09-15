@@ -9,19 +9,10 @@ own data, or know about a feature.
 `ErrorState`, `Loading` and `BaseInput` do NOT — each renders several atoms, so
 each is a molecule.
 
-## Why there is no `base/`
+## One folder per tier
 
-There used to be one, holding 25 components beside these. No rule separated the
-two: `Button` was in `base/` while `IconButton` and `PressableScale` were here;
-`Badge` was in `base/` while `Chip` and `QuantityBadge` were here. This file
-even gave _"Examples: Button, Input, Label"_ while `Button.tsx` sat in the other
-folder, and `docs/architecture.md` documented the taxonomy as **atoms,
-molecules, organisms, templates** without mentioning `base/` at all.
-
-So `base/` folded into `atoms/`. The documented taxonomy is the one that
-survives.
-
-`DataStateView` did not come with it — it composes `Loading`, `ErrorState` and
+There is no `base/`: a folder beside the tiers would hold components by taste,
+not by what they render. `DataStateView` composes `Loading`, `ErrorState` and
 `EmptyState` and routes between them, which makes it a molecule.
 
 ## Where a component goes

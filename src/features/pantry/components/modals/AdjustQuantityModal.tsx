@@ -12,10 +12,11 @@ import { commonStyles } from '#/styles/commonStyles';
 import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import { AdjustQuantityModal_PantryItemFragmentDoc } from './AdjustQuantityModal.generated';
+import { localizeNumericHint } from '#/utils/formatters/number';
 import {
-  formatNumberForInput,
-  localizeNumericHint,
-} from '#/utils/formatters/number';
+  formatQuantityForInput,
+  resolveQuantityNotation,
+} from '#/utils/formatQuantity';
 import { Sheet } from '#components/templates/Sheet';
 import {
   adjustQuantitySchema,
@@ -68,7 +69,12 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
     setPendingSeed(
       nextSeedKey && pantryItem
         ? {
-            quantityInput: formatNumberForInput(pantryItem.quantity),
+            quantityInput: formatQuantityForInput(pantryItem.quantity, {
+              notation: resolveQuantityNotation(
+                null,
+                pantryItem.unit.displayAsFraction,
+              ),
+            }),
             reason: '',
             remainingWeightInput: '',
           }
@@ -109,17 +115,17 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
       {!!pantryItem && (
         <>
           <View style={commonStyles.bottomSheetItemInfo}>
-            <Text style={commonStyles.bottomSheetItemName}>
+            <Text role="heading" style={commonStyles.bottomSheetItemName}>
               {pantryItem.itemName}
             </Text>
             <View style={commonStyles.bottomSheetItemRow}>
-              <Text style={commonStyles.bottomSheetItemLabel}>
+              <Text role="body" tone="secondary">
                 {t('adjustQuantity.currentLabel')}
               </Text>
               <FormattedItemSubtitle
                 quantity={pantryItem.quantity}
-                displayAsFraction={pantryItem.unit?.displayAsFraction}
-                unitSymbol={pantryItem.unit?.symbol}
+                displayAsFraction={pantryItem.unit.displayAsFraction}
+                unitSymbol={pantryItem.unit.symbol}
               />
             </View>
           </View>
@@ -127,7 +133,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
           {pantryItem.lastUsedAt != null &&
             pantryItem.remainingNetWeight != null && (
               <View style={commonStyles.bottomSheetItemRow}>
-                <Text style={commonStyles.bottomSheetItemLabel}>
+                <Text role="body" tone="secondary">
                   {t('labels.remaining')}
                   {formatNetWeightDisplay(
                     pantryItem.remainingNetWeight,

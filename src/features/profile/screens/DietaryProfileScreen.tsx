@@ -10,13 +10,13 @@ import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
-import {
+import type {
   Diet,
   Intolerance,
   HealthGoal,
   Cuisine,
-  RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
+import { RestrictionSeverity } from '#/graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#/utils/iconUtils';
 import { StringArrayManager } from '#features/profile/components/StringArrayManager/StringArrayManager';
@@ -39,7 +39,7 @@ export const DietaryProfileScreen: React.FC = () => {
   const { t } = useTranslation();
   const money = useMoney();
   const {
-    profile,
+    editableProfile: profile,
     loading,
     updateDietaryProfile,
     addDietaryRestriction,
@@ -58,14 +58,15 @@ export const DietaryProfileScreen: React.FC = () => {
         {
           text: t('labels.remove'),
           style: 'destructive',
-          onPress: async () => {
-            const success = await removeDietaryRestriction(id);
-            if (!success) {
-              alertService.alert(
-                t('labels.error'),
-                t('dietary.removeRestrictionFailed'),
-              );
-            }
+          onPress: () => {
+            void removeDietaryRestriction(id).then(success => {
+              if (!success) {
+                alertService.alert(
+                  t('labels.error'),
+                  t('dietary.removeRestrictionFailed'),
+                );
+              }
+            });
           },
         },
         { text: t('labels.cancel'), style: 'cancel' },
@@ -170,7 +171,7 @@ export const DietaryProfileScreen: React.FC = () => {
   const handleAddFavoriteIngredient = async (ingredient: string) => {
     return await updateDietaryProfile({
       favoriteIngredients: [
-        ...(profile?.favoriteIngredients || []),
+        ...(profile?.favoriteIngredients ?? []),
         ingredient,
       ],
     });
@@ -178,7 +179,7 @@ export const DietaryProfileScreen: React.FC = () => {
 
   const handleRemoveFavoriteIngredient = async (ingredient: string) => {
     await updateDietaryProfile({
-      favoriteIngredients: (profile?.favoriteIngredients || []).filter(
+      favoriteIngredients: (profile?.favoriteIngredients ?? []).filter(
         i => i !== ingredient,
       ),
     });
@@ -187,7 +188,7 @@ export const DietaryProfileScreen: React.FC = () => {
   const handleAddDislikedIngredient = async (ingredient: string) => {
     return await updateDietaryProfile({
       dislikedIngredients: [
-        ...(profile?.dislikedIngredients || []),
+        ...(profile?.dislikedIngredients ?? []),
         ingredient,
       ],
     });
@@ -195,7 +196,7 @@ export const DietaryProfileScreen: React.FC = () => {
 
   const handleRemoveDislikedIngredient = async (ingredient: string) => {
     await updateDietaryProfile({
-      dislikedIngredients: (profile?.dislikedIngredients || []).filter(
+      dislikedIngredients: (profile?.dislikedIngredients ?? []).filter(
         i => i !== ingredient,
       ),
     });
@@ -228,7 +229,7 @@ export const DietaryProfileScreen: React.FC = () => {
     return (
       <ProfileScreenWrapper title={t('dietary.title')} scrollEnabled={false}>
         <View style={commonStyles.loadingContainer}>
-          <Text style={commonStyles.loadingText}>
+          <Text role="body" style={commonStyles.loadingText}>
             {t('dietary.loadingProfile')}
           </Text>
         </View>
@@ -240,8 +241,8 @@ export const DietaryProfileScreen: React.FC = () => {
     return (
       <ProfileScreenWrapper title={t('dietary.title')} scrollEnabled={false}>
         <EmptyState
-          title={t('dietary.noProfileTitle')}
-          description={t('dietary.noProfileSubtitle')}
+          title={t('dietary.loadFailedTitle')}
+          description={t('dietary.loadFailedSubtitle')}
         />
       </ProfileScreenWrapper>
     );
@@ -255,7 +256,9 @@ export const DietaryProfileScreen: React.FC = () => {
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
-        <Text style={commonStyles.subtitle}>{t('dietary.restrictions')}</Text>
+        <Text role="bodyStrong" tone="secondary">
+          {t('dietary.restrictions')}
+        </Text>
         <View style={styles.sectionCard}>
           <DietaryRestrictionSelector
             existingRestrictions={profile.restrictions}
@@ -271,7 +274,7 @@ export const DietaryProfileScreen: React.FC = () => {
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
-        <Text style={commonStyles.subtitle}>
+        <Text role="bodyStrong" tone="secondary">
           {t('dietary.foodPreferences')}
         </Text>
         <View style={styles.sectionCard}>
@@ -310,7 +313,9 @@ export const DietaryProfileScreen: React.FC = () => {
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
-        <Text style={commonStyles.subtitle}>{t('dietary.nutritionGoals')}</Text>
+        <Text role="bodyStrong" tone="secondary">
+          {t('dietary.nutritionGoals')}
+        </Text>
         <View style={styles.sectionCard}>
           <Pressable
             style={({ pressed }) => pressed && styles.pressed}
@@ -349,7 +354,7 @@ export const DietaryProfileScreen: React.FC = () => {
       >
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={commonStyles.subtitle}>
+            <Text role="bodyStrong" tone="secondary">
               {t('labels.cookingPreferences')}
             </Text>
             <AppPressable
@@ -393,12 +398,12 @@ export const DietaryProfileScreen: React.FC = () => {
         </View>
       </Animated.View>
       {/* Macro Targets Section (Advanced) */}
-      {!!(
-        profile.calorieTarget ||
-        profile.proteinTarget ||
-        profile.carbsTarget ||
-        profile.fatTarget
-      ) && (
+      {[
+        profile.calorieTarget,
+        profile.proteinTarget,
+        profile.carbsTarget,
+        profile.fatTarget,
+      ].some(target => !!target) && (
         <Animated.View
           entering={FadeIn.duration(motion.timing.SLOW).delay(400)}
           layout={LinearTransition}
@@ -406,7 +411,7 @@ export const DietaryProfileScreen: React.FC = () => {
         >
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={commonStyles.subtitle}>
+              <Text role="bodyStrong" tone="secondary">
                 {t('dietary.macroTargets')}
               </Text>
               <AppPressable

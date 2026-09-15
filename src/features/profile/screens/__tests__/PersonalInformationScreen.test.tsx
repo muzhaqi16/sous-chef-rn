@@ -11,29 +11,42 @@ import type { SettingsSectionProps } from '#components/organisms/SettingsSection
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import { ErrorCode, ProfileVisibility } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
+import { kitTestIDs } from '#components/testIDs';
+
+const mockProfile = {
+  __typename: 'UserProfile',
+  id: 'profile-1',
+  firstName: 'John',
+  lastName: 'Doe',
+  displayName: 'JohnDoe',
+  bio: 'A chef',
+  phone: '555-1234',
+  dateOfBirth: '1990-01-15T00:00:00.000Z',
+  gender: 'Male',
+  profileVisibility: 'PUBLIC',
+  showEmail: true,
+  showPhone: false,
+};
+let mockProfileData: {
+  profile: typeof mockProfile | null;
+  loading: boolean;
+  error: Error | undefined;
+  refetch: jest.Mock;
+} = {
+  profile: mockProfile,
+  loading: false,
+  error: undefined,
+  refetch: jest.fn(),
+};
 
 jest.mock('#features/profile/hooks/useProfileData', () => ({
-  useProfileData: () => ({
-    profile: {
-      __typename: 'UserProfile',
-      id: 'profile-1',
-      firstName: 'John',
-      lastName: 'Doe',
-      displayName: 'JohnDoe',
-      bio: 'A chef',
-      phone: '555-1234',
-      dateOfBirth: '1990-01-15T00:00:00.000Z',
-      gender: 'Male',
-      profileVisibility: 'PUBLIC',
-      showEmail: true,
-      showPhone: false,
-    },
-    loading: false,
-  }),
+  useProfileData: () => mockProfileData,
 }));
 
 jest.mock('#store/useAppStore', () => ({
   useUser: () => ({ email: 'john@example.com' }),
+  // `isApiUnavailable`: the server is reachable.
+  useAppStore: () => false,
 }));
 
 jest.mock('#/services/errorService');
@@ -177,6 +190,43 @@ jest.mock('#components/organisms/SettingsSection', () => {
 describe('PersonalInformationScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockProfileData = {
+      profile: mockProfile,
+      loading: false,
+      error: undefined,
+      refetch: jest.fn(() => Promise.resolve()),
+    };
+  });
+
+  // Every write needs the profile's id; blank fields would take edits that go
+  // nowhere.
+  it('shows the error state with a retry when the profile could not be read', async () => {
+    mockProfileData = {
+      profile: null,
+      loading: false,
+      error: new Error('network'),
+      refetch: jest.fn(() => Promise.resolve()),
+    };
+    renderWithApollo(<PersonalInformationScreen />);
+
+    expect(screen.queryByTestId('setting-firstName')).toBeNull();
+    expect(screen.getByTestId(kitTestIDs.stateError)).toBeTruthy();
+
+    await userEvent.press(screen.getByRole('button', { name: 'Try again' }));
+    expect(mockProfileData.refetch).toHaveBeenCalled();
+  });
+
+  it('shows the loading state while a cold profile read is in flight', () => {
+    mockProfileData = {
+      profile: null,
+      loading: true,
+      error: undefined,
+      refetch: jest.fn(() => Promise.resolve()),
+    };
+    renderWithApollo(<PersonalInformationScreen />);
+
+    expect(screen.getByTestId(kitTestIDs.stateLoading)).toBeTruthy();
+    expect(screen.queryByTestId('setting-firstName')).toBeNull();
   });
 
   it('renders the screen with correct title', () => {

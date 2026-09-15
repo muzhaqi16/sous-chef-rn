@@ -4,17 +4,11 @@ import {
   endOfWeek,
   addWeeks,
   subWeeks,
-  startOfMonth,
-  endOfMonth,
-  addMonths,
-  subMonths,
   eachDayOfInterval,
-  isSameDay,
   isBefore,
   isAfter,
   startOfDay,
 } from 'date-fns';
-import { formatMonthYear } from '#/utils/formatters/date';
 
 export type CalendarView = 'week' | 'month';
 
@@ -63,20 +57,6 @@ export function useMealPlanCalendar(options?: UseMealPlanCalendarOptions) {
     return eachDayOfInterval({ start, end });
   })();
 
-  // Date range for filtering meal plan items
-  const dateRange = (() => {
-    if (viewMode === 'week') {
-      return {
-        startDate: startOfWeek(referenceDate, { weekStartsOn: 1 }),
-        endDate: endOfWeek(referenceDate, { weekStartsOn: 1 }),
-      };
-    }
-    return {
-      startDate: startOfMonth(referenceDate),
-      endDate: endOfMonth(referenceDate),
-    };
-  })();
-
   // Compute navigation boundary flags
   const canGoPrevWeek = (() => {
     if (!minDate) return true;
@@ -104,20 +84,6 @@ export function useMealPlanCalendar(options?: UseMealPlanCalendarOptions) {
     setReferenceDate(prev => subWeeks(prev, 1));
   };
 
-  const goToNextMonth = () => {
-    setReferenceDate(prev => addMonths(prev, 1));
-  };
-
-  const goToPrevMonth = () => {
-    setReferenceDate(prev => subMonths(prev, 1));
-  };
-
-  const goToToday = () => {
-    const today = new Date();
-    setSelectedDate(today);
-    setReferenceDate(today);
-  };
-
   const selectDate = (date: Date) => {
     if (minDate && isBefore(startOfDay(date), startOfDay(minDate))) return;
     if (maxDate && isAfter(startOfDay(date), startOfDay(maxDate))) return;
@@ -125,23 +91,13 @@ export function useMealPlanCalendar(options?: UseMealPlanCalendarOptions) {
     setReferenceDate(date);
   };
 
-  const formattedMonth = formatMonthYear(referenceDate);
-  const isToday = isSameDay(selectedDate, new Date());
-
   return {
     selectedDate,
-    referenceDate,
     viewMode,
     setViewMode,
     weekDays,
-    dateRange,
-    formattedMonth,
-    isToday,
     goToNextWeek,
     goToPrevWeek,
-    goToNextMonth,
-    goToPrevMonth,
-    goToToday,
     selectDate,
     canGoPrevWeek,
     canGoNextWeek,

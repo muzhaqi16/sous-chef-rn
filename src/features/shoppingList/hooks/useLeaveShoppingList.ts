@@ -3,7 +3,9 @@ import { useMutation } from '@apollo/client/react';
 import { RemoveCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { useTranslation } from '#/i18n';
 
 /**
  * Shared by the leave-list flow (removing yourself) and the remove-member flow
@@ -26,6 +28,7 @@ interface LeaveCallbacks {
  * One implementation shared by ShareList and ListSettings.
  */
 export function useLeaveShoppingList(listId: string) {
+  const { t } = useTranslation();
   const [removeMember] = useMutation(RemoveCollaboratorDocument);
   const [leaving, setLeaving] = useState(false);
 
@@ -35,30 +38,31 @@ export function useLeaveShoppingList(listId: string) {
   ) => {
     await executeWithLoadingState(
       async () => {
-        const result = await removeMember({
-          variables: { input: { id: collaboratorId } },
-          update(cache, { data }) {
-            // Only evict on success — a resolved error must not remove the
-            // collaborator entry from the cache.
-            if (
-              data?.removeShoppingListCollaborator?.__typename !==
-              'RemoveShoppingListCollaboratorPayload'
-            ) {
-              return;
-            }
-            removeCollaboratorFromShoppingListCache(
-              cache,
-              listId,
-              collaboratorId,
-              { evictItem: true },
-            );
+        const settled = await settleMutation(
+          () =>
+            removeMember({
+              variables: { input: { id: collaboratorId } },
+              update(cache, { data }) {
+                // Only evict on success — a resolved error must not remove the
+                // collaborator entry from the cache.
+                if (!appliedPayload(data)) return;
+                removeCollaboratorFromShoppingListCache(
+                  cache,
+                  listId,
+                  collaboratorId,
+                  { evictItem: true },
+                );
+              },
+            }),
+          {
+            document: RemoveCollaboratorDocument,
+            fallback: t('shoppingListScreens.failedToLeave'),
+            // Callers show their own copy through `onError`.
+            present: 'none',
           },
-        });
-        // Callers alert/toast via callbacks.onError, so nothing is surfaced here.
-        // classifyCreateResult treats the offline-queued null as success; a
-        // resolved error member or a transport error is 'rejected'.
-        if (classifyCreateResult(result) === 'rejected') {
-          callbacks?.onError?.(new Error('Leave Shopping List'));
+        );
+        if (settled.failure) {
+          callbacks?.onError?.(settled.failure);
           return;
         }
         callbacks?.onSuccess?.();

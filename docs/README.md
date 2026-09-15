@@ -43,6 +43,7 @@ Developer documentation for the Sous Chef React Native app. For what the app
 
 | Document | What's in it |
 | --- | --- |
+| [UI layer — mechanisms](ui-layer.md) | The mechanism, evidence and traps behind CLAUDE.md § UI layer — screen and sheet shells, the list row, Unistyles, typography, elevation, motion, gestures, bottom sheets, FlashList, forms, quantities — under the same headings. |
 | [Backdrop lifecycle design](backdrop-lifecycle-design.md) | The global bottom-sheet backdrop system and the leak it was designed to fix. |
 | [FlashList performance — current state](flashlist-performance-analysis.md) | How the pantry and shopping-list FlashLists are fed, what a page append costs (measured), why every write used to refetch a page and recompute the hidden Recipes tab (and the fixes), how to read the perf instrumentation, and the disposition of the earlier investigation's issues. |
 | [FlashList layout-index race](flashlist-layout-index-race.md) | Resolved `not enough layouts` crash on rapid deletes — FlashList shrinks its layout table during render, so list data must never come through `useDeferredValue`/`startTransition`; mechanism, the rule, validation. |
@@ -54,7 +55,7 @@ Developer documentation for the Sous Chef React Native app. For what the app
 | --- | --- |
 | [Android build setup](android-build-setup.md) | Build environments, tag-triggered workflows, keystores, and outputs. |
 | [Android multi-device guide](android-devices-readme.md) | How `MODE` / `TARGET` / `DEVICE_ID` drive `scripts/run-android.sh`. |
-| [Android ProGuard debugging](android-proguard-debugging.md) | Diagnosing R8/ProGuard-only crashes in release builds. |
+| [Android ProGuard debugging](android-proguard-debugging.md) | Crash reporting (Crashlytics, Android) and diagnosing R8/ProGuard-only crashes in release builds. |
 
 ## Operations
 

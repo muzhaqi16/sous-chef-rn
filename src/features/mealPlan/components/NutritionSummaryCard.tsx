@@ -6,7 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { NutritionGoalProgress } from './NutritionGoalProgress';
 import { Text } from '#components/atoms/Text';
-import { type GoalProgress } from '#/graphql/generated/schemaTypes';
+import type { GoalProgress } from '#/graphql/generated/schemaTypes';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 
 // Structural prop types — only the fields the card actually renders. Keeps
@@ -215,9 +215,9 @@ const statStyles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    marginHorizontal: 2,
+    marginHorizontal: theme.spacing['2xs'],
   },
   label: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
 }));

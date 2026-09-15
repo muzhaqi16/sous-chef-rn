@@ -190,7 +190,7 @@ describe('the bag holds commands, not derivations', () => {
     let result: unknown = 'unset';
     const Consumer = () => {
       const actions = useActions();
-      result = (actions.build as ((id: string) => unknown) | undefined)?.('x');
+      result = actions.build?.('x');
       return null;
     };
 

@@ -1,13 +1,16 @@
+import { t } from '#/i18n';
 import React, { type ReactNode } from 'react';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { renderHook, act } from '@testing-library/react-native';
-import { gql, ApolloClient, ApolloLink, InMemoryCache } from '@apollo/client';
+import type { InMemoryCache } from '@apollo/client';
+import { gql, ApolloClient, ApolloLink } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { seedCache } from '#/test-utils/apolloMockProvider';
 import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
-import { ItemCondition } from '#/graphql/generated/schemaTypes';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { ItemCondition, ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { useConvertExpiredToWaste } from '../useConvertExpiredToWaste';
 
@@ -54,7 +57,9 @@ function renderConvert(
   capturedContexts: Array<Record<string, unknown>>,
 ) {
   const tapLink = new ApolloLink((operation, forward) => {
-    if (operation.operationName === 'ConvertExpiredToWaste') {
+    if (
+      operation.operationName === operationNameOf(ConvertExpiredToWasteDocument)
+    ) {
       capturedContexts.push({
         ...operation.getContext(),
         variables: operation.variables,
@@ -136,7 +141,7 @@ describe('useConvertExpiredToWaste (local-first)', () => {
             data: {
               convertExpiredToWaste: {
                 __typename: 'NotFoundError',
-                code: 'NOT_FOUND',
+                code: ErrorCode.NotFound,
                 message: 'Pantry item not found',
                 resource: 'PantryItem',
                 resourceId: 'item-1',
@@ -158,11 +163,11 @@ describe('useConvertExpiredToWaste (local-first)', () => {
       quantity: 4,
       condition: ItemCondition.Good,
     });
-    // A union-error payload carries no transport error, so onError never fires —
-    // the hook must surface its own alert rather than reverting silently.
+    // A refusal resolves as data; the hook still tells the user, in the copy
+    // for a missing record rather than the server's text.
     expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Failed to discard expired items',
+      t('errors.notFoundTitle'),
+      expect.stringContaining('could not be found'),
     );
   });
 });

@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Dimensions, Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import { logger } from './environment';
 import { getDeviceId } from '#/storage/deviceId';
@@ -411,7 +411,6 @@ const collectDisplayInfo = async () => {
 const getScreenResolution = async (): Promise<string> => {
   try {
     // For React Native, we'll get dimensions from the Dimensions API
-    const { Dimensions } = require('react-native');
     const { width: screenWidth, height: screenHeight } =
       Dimensions.get('screen');
 

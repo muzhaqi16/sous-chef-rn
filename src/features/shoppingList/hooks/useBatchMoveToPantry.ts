@@ -7,11 +7,10 @@ import {
 } from '#features/shoppingList/cache/purchase';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
-import { handleMutationError } from '#/utils/errorHandlers';
-import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
-import { t } from '#/i18n';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { generateEntityId } from '#/utils/generateEntityId';
 
 /**
@@ -50,19 +49,13 @@ export function useBatchMoveToPantry({
   purchasedItems,
   onSuccess,
 }: UseBatchMoveToPantryOptions): UseBatchMoveToPantryReturn {
+  const { t } = useTranslation();
   const client = useApolloClient();
+  // No `update` callback and nothing written before firing:
+  // `movePurchasedItemsToPantry` never removes the lines it moves, and it carries
+  // no `pantryId`, so the pantry query picks the rows up on its next fetch.
   const [movePurchasedMutation, { loading }] = useMutation(
     MovePurchasedItemsToPantryDocument,
-    {
-      // No `update` callback and nothing written before firing:
-      // `movePurchasedItemsToPantry` never removes the lines it moves (clearing
-      // them is a separate `deleteShoppingListItems(purchased: true)`), and it
-      // carries no `pantryId`, so the client cannot know which pantry the rows
-      // land in. The pantry query picks them up on its next fetch.
-      onError: error => {
-        handleMutationError(error, { operation: 'Batch Move to Pantry' });
-      },
-    },
   );
 
   const batchMoveToPantry = async () => {
@@ -87,35 +80,29 @@ export function useBatchMoveToPantry({
         ? { shoppingListId: currentListId, pantryItemIds: idHints }
         : { shoppingListId: currentListId };
 
-    let result;
-    try {
-      result = await movePurchasedMutation({
-        variables: { input: moveInput },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Batch move to pantry error:',
-      });
-    }
-
-    const payload = result?.data?.movePurchasedItemsToPantry;
+    const settled = await settleMutation(
+      () =>
+        movePurchasedMutation({
+          variables: { input: moveInput },
+          context: { localFirst: true },
+        }),
+      {
+        document: MovePurchasedItemsToPantryDocument,
+        fallback: t('errors.codes.genericRetry'),
+      },
+    );
+    if (settled.status === 'failed') return;
 
     // Queued (offline / API down): no summary, and `purchasedItems` is only the
     // slice on screen, so report pending rather than a possibly-wrong count.
-    if (classifyCreateResult(result) === 'queued') {
+    if (settled.status === 'queued') {
       toastService.success(t('moveToPantry.queued'));
       onSuccess?.();
       return;
     }
 
-    if (payload?.__typename !== 'MovePurchasedItemsToPantryPayload') {
-      // A resolved `*Error` union member doesn't throw under errorPolicy:'all',
-      // so `onError` never fired for it. The helper skips the transport-error
-      // case, which onError already alerted, so the two never double-alert.
-      alertRejectedMutation(result, t('errors.codes.genericRetry'));
-      return;
-    }
+    const payload = appliedPayload(settled.data);
+    if (!payload) return;
 
     // succeeded = lines THIS call moved; skipped = lines already stocked; failed
     // = itemised in `failedItems`. Every line the payload lists is now in the

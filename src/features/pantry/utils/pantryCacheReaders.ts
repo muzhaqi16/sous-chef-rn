@@ -47,6 +47,9 @@ export interface CachedPantryItemDuplicate extends PantryItemDuplicateInfo {
   quantity: number | null;
 }
 
+const isStoreRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 const normalizeName = (name: string | null | undefined): string =>
   (name ?? '').trim().toLowerCase();
 
@@ -67,7 +70,7 @@ function scanCachedPantryItems(
 ): CachedNode[] {
   let store;
   try {
-    store = cache.extract() as Record<string, Record<string, unknown>>;
+    store = cache.extract();
   } catch (error) {
     logger.warn(
       'Pantry duplicate pre-check could not extract the cache:',
@@ -75,9 +78,10 @@ function scanCachedPantryItems(
     );
     return [];
   }
+  if (!isStoreRecord(store)) return [];
 
   const pantry = store[pantryCacheId];
-  if (!pantry) return [];
+  if (!isStoreRecord(pantry)) return [];
 
   const nodes: CachedNode[] = [];
   for (const [field, value] of Object.entries(pantry)) {
@@ -88,7 +92,7 @@ function scanCachedPantryItems(
     for (const edge of edges) {
       const ref = (edge as { node?: { __ref?: string } } | null)?.node?.__ref;
       const node = ref ? store[ref] : undefined;
-      if (!node) continue;
+      if (!isStoreRecord(node)) continue;
       nodes.push({
         id: node.id as string,
         itemName: (node.itemName as string | null) ?? null,

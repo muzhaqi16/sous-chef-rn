@@ -5,26 +5,12 @@ import path from 'path';
 /**
  * Every i18n key a source file names must exist in en.json.
  *
- * A missing key is not a no-op: `t()` returns the key itself, so the UI renders
- * a raw dot-path like "itemForm.brand". That is exactly the bug this guard was
- * written for — a key was referenced during the i18n sweep but never added to
- * the locale file, and it survived typecheck and lint because a key path is
- * just a string. Only a test that happened to assert the English caught it.
- *
- * Two rules run over one scan of `src`, and neither contains the other:
- *
- * 1. **Literals passed to `t(...)`.** Reaches a key whose very first segment is
- *    wrong — `t('typo.notAKey')` — which rule 2 has no anchor for.
- * 2. **Literals whose first segment is a real en.json namespace.** Reaches the
- *    keys that never appear inside a `t(...)` call: module-level tables cannot
- *    call a hook, so they store a key path (`labelKey`, `titleKey`,
- *    `subtitleKey`, `descriptionKey`, `messageKey`) for a consumer to resolve.
- *    Those account for hundreds of key references across dozens of files, all
- *    of them invisible to rule 1.
- *
- * Dynamic keys (template literals, variables, concatenations) are skipped:
- * they cannot be resolved statically, and the call sites that build them pass
- * an explicit fallback. Comments are skipped too — see `stripComments`.
+ * A literal passed to `t(...)` is checked by the compiler: `t` takes a
+ * `TranslationKey` (`src/i18n/i18next.d.ts`). What the types cannot see is a key
+ * STORED in a plain-string slot for a consumer to resolve later, or a prefix a
+ * consumer completes at runtime. So this matches every literal whose first
+ * segment is a real en.json namespace and requires it to name a message or a
+ * subtree. Comments are skipped — see `stripComments`.
  */
 const SRC = path.join(__dirname, '..', '..', 'src');
 
@@ -35,7 +21,7 @@ const PLURAL_SUFFIXES = ['_one', '_other', '_zero', '_two', '_few', '_many'];
 
 /**
  * A filename can open with a namespace: `profile.jpg` starts with `profile`.
- * Rule 2 matches on the first segment alone, so assets are excluded by suffix.
+ * A key is matched on its first segment alone, so assets are excluded by suffix.
  * No en.json key ends in any of these segments, so nothing real is hidden.
  */
 const ASSET_FILE = /\.(png|jpg|jpeg|gif|webp|svg|heic|mp3|mp4|json|txt|pdf)$/i;
@@ -53,7 +39,7 @@ const TOKEN =
  * Prose names keys too. A doc comment explaining a key-related pitfall spells
  * out the wrong key it is warning about, and a scan of raw text reports that
  * example as a real one — so the comment gets reworded to appease a scanner
- * rather than to read well. Rule 2 makes this acute: it claims every key-shaped
+ * rather than to read well. The scan makes this acute: it claims every key-shaped
  * literal, not just the argument of a `t(...)` call.
  *
  * Strings and template literals are consumed as whole tokens ahead of the
@@ -80,12 +66,8 @@ function collectFiles(dir: string): string[] {
 type NodeKind = 'message' | 'subtree';
 
 /**
- * Every path in en.json, tagged by what sits at it.
- *
- * The distinction is the point: a `t(...)` argument has to land on a message,
- * while rule 2 also accepts a subtree, because `keyPrefix: 'itemPhotos.setPrimary'`
- * names a prefix that `alertMutationFailure` completes into
- * `<keyPrefix>.<suffix>`. Rejecting prefixes would flag correct code.
+ * Every path in en.json, tagged by what sits at it. A stored literal may name a
+ * subtree: a prefix a consumer completes at runtime.
  */
 function indexKeys(
   node: unknown,
@@ -112,14 +94,11 @@ describe('i18n keys referenced in source', () => {
   const english: unknown = mergedLocale('en');
   const entries = indexKeys(english);
 
-  /** The ~163 namespaces rule 2 anchors on, read from en.json rather than listed. */
+  /** The namespaces a stored key is anchored on, read from en.json rather than listed. */
   const namespaces = new Set(Object.keys(english as Record<string, unknown>));
 
   const withPlurals = (key: string, accept: (candidate: string) => boolean) =>
     accept(key) || PLURAL_SUFFIXES.some(suffix => accept(`${key}${suffix}`));
-
-  const resolvesToMessage = (key: string) =>
-    withPlurals(key, candidate => entries.get(candidate) === 'message');
 
   const resolvesToNode = (key: string) =>
     withPlurals(key, candidate => entries.has(candidate));
@@ -146,12 +125,6 @@ describe('i18n keys referenced in source', () => {
     }
     return missing;
   };
-
-  it('keys passed to t() exist in en.json', () => {
-    const CALL = /\bt\(\s*'([a-zA-Z][\w.]*\.[\w.]+)'/g;
-
-    expect(scan(CALL, () => true, resolvesToMessage)).toEqual([]);
-  });
 
   it('keys held outside a t() call exist in en.json', () => {
     const startsWithNamespace = (key: string) => {

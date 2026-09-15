@@ -3,8 +3,6 @@ import { usePantryState } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useCurrentHome } from '#features/pantry/hooks/useCurrentHome';
 
-type PantryNode = { id: string; name?: string; isDefault?: boolean };
-
 /**
  * Resolution order: the selected pantry, the home's default, the first, then a
  * minimal object. Reads cache-only — `useDefaultHome` owns the network fetch, so
@@ -15,9 +13,7 @@ export function useCurrentPantry() {
   const { currentHome, homeCount, selectedHomeId, isHomeSelectionReady } =
     useCurrentHome();
 
-  const pantries = extractNodes(
-    currentHome?.pantriesConnection as never,
-  ) as PantryNode[];
+  const pantries = extractNodes(currentHome?.pantriesConnection);
 
   const defaultPantry = isHomeSelectionReady
     ? pantries.find(p => p.isDefault) ?? pantries[0] ?? null
@@ -70,7 +66,6 @@ export function useCurrentPantry() {
     return {
       pantry: null,
       pantries: [],
-      selectedPantryId: null,
       setSelectedPantryId,
       currentHome: null,
       selectedHomeId: null,
@@ -82,7 +77,6 @@ export function useCurrentPantry() {
   return {
     pantry,
     pantries,
-    selectedPantryId,
     setSelectedPantryId,
     currentHome,
     selectedHomeId,

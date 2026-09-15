@@ -202,9 +202,8 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
             <Icon
               name={rating !== null && star <= rating ? 'star' : 'star-outline'}
               size={32}
-              color={rating !== null && star <= rating ? '#FFB800' : undefined}
               tone={
-                rating !== null && star <= rating ? undefined : 'textSecondary'
+                rating !== null && star <= rating ? 'rating' : 'textSecondary'
               }
             />
           </Pressable>

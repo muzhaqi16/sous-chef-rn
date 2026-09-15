@@ -1,225 +1,300 @@
-# Meal Planning Feature
+# Meal Planning
 
 ## Overview
 
-The meal planning feature allows users to create weekly meal plans, assign recipes to specific days and meal types, track meal completion, and generate shopping lists from their plans. Users can also save plans as reusable templates.
+Meal plans cover a date range (`WEEKLY` or `MONTHLY` from the create form) and hold
+meals, each either a saved recipe or a free-text custom meal, on a date and a
+`MealType`. Users complete meals (optionally deducting pantry stock), generate a
+shopping list from a plan, duplicate plans, and move between plans and reusable
+templates. A plan is personal or linked to a home; home plans sync to other members
+through a subscription.
 
-## Architecture
+Every write is local-first: it lands in the cache before it fires and replays through
+the offline queue (`docs/local-first-architecture.md`).
 
-### Screen & Component Hierarchy
+## Code layout
+
+- `src/features/mealPlan/screens/` — `MealPlanMain` (tab root), `CreateMealPlanScreen`,
+  `MealTemplateBuilderScreen`; the two detail screens are registered in
+  `screens/registration.ts`, the tab stack is `src/navigation/stacks/MealPlanStack.tsx`.
+- `src/features/mealPlan/components/` — sheets, calendar, rows, nutrition cards.
+- `src/features/mealPlan/hooks/` — data and write hooks (colocated `.graphql`).
+- `src/features/mealPlan/graphql/` — shared operations and fragments.
+- `src/features/mealPlan/utils/` — pure derivations (plan ↔ template, duplicate,
+  shopping-list derive, permissions).
+
+## MealPlanMain
+
+`MealPlanMain` renders `DeferredScreen`, which paints `MealPlanSkeleton` first and
+mounts `MealPlanMainInner` on the deferred render. The skeleton also stays up while the
+plan list's first response is in flight.
+
+With no plans, the screen shows `MealPlanEmptyState` ("create" and "create from
+template"), or `DataStateView` when the list failed or the device is offline; its retry
+refetches the plan list. With plans (pull-to-refresh refetches the shown plan and the
+list):
 
 ```
-MealPlanMain (screen)
-├── MealPlanHeader
-├── WeekStrip / MonthCalendar (date selection)
-├── DayMealList
-│   ├── MealTypeSection (per meal type group)
-│   │   └── MealItem (individual meal row)
-│   └── "Add a meal" button
-├── MealPlanEmptyState (when no plans exist)
-└── Bottom Sheets
-    ├── AddMealSheet (select saved recipe)
-    ├── SaveAsTemplateSheet
-    ├── TemplateBrowserSheet
-    ├── TemplatePreviewSheet
-    ├── GenerateShoppingListSheet
-    ├── MealPlanSettingsSheet
-    └── DuplicatePlanSheet
+Screen  (title = active plan name, tap opens the plan selector;
+         actions: OfflineStatusPill, cart, bookmark, ellipsis)
+├── WeekStrip | MonthCalendar
+├── CalendarToggleBar                 week ↔ month
+├── DayMealList                       SwipeAwareScrollComponent + ThemedRefreshControl
+│   ├── NutritionSummaryCard          plan nutritionSummary + NutritionGoalProgress
+│   ├── EmptyDayState                 selected day has no meals
+│   └── MealTypeSection               one per MealType group, "+" adds to that type
+│       └── MealPlanItemCard          checkbox, swipe-to-delete, tap → RecipeDetail
+├── AddMealSheet
+├── SaveAsTemplateSheet
+├── TemplateBrowserSheet → TemplatePreviewSheet
+├── GenerateShoppingListSheet
+├── MealPlanSettingsSheet
+├── DuplicatePlanSheet
+├── MarkCookedModal                   #components/organisms/MarkCookedModal
+└── AnimatedItemSelector              plan selector, MealPlanFilterBar as list header
 ```
 
-### Hooks
+The active plan is resolved by `useActiveMealPlan`: the persisted
+`selectedMealPlanId`, then `useMealPlans`' `currentPlan` (active today → nearest
+upcoming → most recent), then the first loaded plan. An id whose read comes back null
+or forbidden is dropped, cleared from the store and evicted.
 
-| Hook | Purpose |
-|------|---------|
-| `useMealPlans` | Fetches paginated list of plans; derives `currentPlan` (the plan spanning today) |
-| `useMealPlan` | Fetches a single plan by ID with full item list and nutrition summary |
-| `useDailyMeals` | Pure computation — filters and groups items for a selected date |
-| `useMealPlanItemActions` | Wraps create/update/delete/toggle mutations for meal plan items |
-| `useMealTemplateActions` | Create templates from plans and plans from templates |
-| `useGenerateShoppingList` | Generates a shopping list from a meal plan |
-| `useDuplicateMealPlan` | Duplicates an existing meal plan |
-| `useSavedRecipes` | Fetches user's saved (favorited) recipes — used by `AddMealSheet` |
-| `useMealPlanCalendar` | Manages week/month view mode, selected date, and week navigation |
+Edit controls (tab-bar add button, checkbox, swipe-delete, "+") render only when
+`useMealPlanPermissions(plan).canEdit` is true. Permissions follow the home-linked
+model in `utils/homeLinkedPermissions.ts`: the owner is `plan.user` (not
+`createdBy`); a home `MEMBER` edits but cannot delete.
 
-### GraphQL Operations
+## Hooks
 
-Defined in `src/graphql/operations/mealPlan/mealPlan.graphql`.
+| Hook                                                              | Purpose                                                                                                                |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `useMealPlans`                                                    | `GetMealPlans` (`first: 20`, `startDate` desc); materializes `MealPlanDisplay`; derives `currentPlan`                  |
+| `useMealPlan`                                                     | `GetMealPlan` for one id, read live through `MealPlanMain_mealPlan`; skipped while the plan's create is unacknowledged |
+| `useActiveMealPlan`                                               | Picks the plan the screen shows and retires dead ids (above)                                                           |
+| `useMealPlanCalendar`                                             | Selected date, week/month mode, week navigation clamped to the plan's range                                            |
+| `useDailyMeals`                                                   | Filters items to the selected day, groups by `MealType`, sorts by name                                                 |
+| `useMealPlanItemActions`                                          | Local-first create / toggle-completed / delete of meals                                                                |
+| `useMealPlanActions`                                              | Local-first create / update / delete of plans                                                                          |
+| `useAddRecipeToMealPlan`                                          | Adds a recipe to a chosen or current plan on a date clamped into its range                                             |
+| `useAddToMealPlanSheet`                                           | Public entry point to `AddToMealPlanSheet`, used by `RecipeDetail`                                                     |
+| `useDuplicateMealPlan`                                            | Recreates a plan from the cache under new dates                                                                        |
+| `useGenerateShoppingList`                                         | Derives a shopping list from the cached plan and writes it local-first                                                 |
+| `useShoppingListsForMealPlan`                                     | Lists (`first: 20`) the generate sheet can write into                                                                  |
+| `useMealTemplates` / `useMealTemplate` / `useMealTemplateForEdit` | Template list (search + category, paginated), one template grouped by day, the builder's edit read                     |
+| `useMealTemplateActions`                                          | Plan from template, template from plan, delete template, duplicate template                                            |
+| `useMealTemplateEditor`                                           | Builder writes: create/update template, add/update/remove template items                                               |
+| `useMealPlanPermissions`                                          | `canEdit`, `canDelete`, `canDuplicate`, `canGenerateShoppingList`, `canSaveAsTemplate`                                 |
+| `useMealPlanSelectorConfig`                                       | Config for the plan selector (rows, create / from template / new template actions)                                     |
+| `useMealPlanSubscriptions`                                        | `MealPlanEvents` for the selected home; mounted in `src/app/providers/AuthenticatedSubscriptions.tsx`                  |
 
-**Queries:**
+## GraphQL
 
-| Query | Description |
-|-------|-------------|
-| `GetMealPlans` | Paginated list with `MealPlanDisplay` fragment. Supports `filters` and `orderBy`. |
-| `GetMealPlan($id)` | Single plan with `MealPlanFull` fragment (includes items and nutrition summary) |
+**`graphql/mealPlan.graphql`** — queries `GetMealPlans`, `GetMealPlan`,
+`MealPlanForEvent`; mutations `CreateMealPlan`, `UpdateMealPlan`, `DeleteMealPlan`,
+`CreateMealPlanItem`, `UpdateMealPlanItem`, `DeleteMealPlanItem`; subscription
+`MealPlanEvents`.
 
-**Mutations:**
+**`graphql/mealTemplate.graphql`** — `GetMealTemplates`, `GetMealTemplate`,
+`GetMealTemplateForEdit`, `MealTemplateForEvent`; `CreateMealTemplate`,
+`UpdateMealTemplate`, `DeleteMealTemplate`, `AddTemplateItem`, `UpdateTemplateItem`,
+`RemoveTemplateItem`.
 
-| Mutation | Description |
-|----------|-------------|
-| `CreateMealPlan` | Create a new meal plan |
-| `UpdateMealPlan` | Update plan metadata |
-| `DeleteMealPlan` | Delete a plan |
-| `CreateMealPlanItem` | Add a recipe or custom meal to a plan |
-| `UpdateMealPlanItem` | Update an item's fields |
-| `DeleteMealPlanItem` | Remove an item from a plan |
-| `DuplicateMealPlan` | Clone an existing plan |
-| `GenerateShoppingListFromMealPlan` | Create a shopping list from plan items |
+**`hooks/useGenerateShoppingList.graphql`** — `AddDerivedItemsToShoppingList`,
+`LinkDerivedListToMealPlan`.
 
-All mutations return a standard payload: `{ success, message, code, <entity> }`.
+Mutations return result unions (e.g. `CreateMealPlanItemResult = ConflictError |
+CreateMealPlanItemPayload | ForbiddenError | NotFoundError | ValidationError`); each
+document selects the payload member plus `... on Error { code message }`, `NotFoundError
+{ resource resourceId }` and `ValidationError { field }`. Hooks settle them with
+`settleMutation` / `appliedPayload`.
 
-**Fragments:**
+**Fragments.** Shared ones live in `graphql/mealPlanFragments.graphql`:
+`MealPlanDisplay` (list card), `MealTemplateDisplay`, `MealTemplateItemFragment`. The
+rest are colocated with their consumer: `MealPlanMain_mealPlan` / `MealPlanMain_item`,
+`MealPlanItemCard_item`, `DailyMeals_item`, `MealPlanItemActions_item`,
+`MealPlanSettingsSheet_mealPlan`, `AddMealSheet_savedRecipe`,
+`useGenerateShoppingList_mealPlan`, `useDuplicateMealPlan_mealPlan`,
+`useMealTemplateActions_template`. `GetMealPlan` spreads the screen, settings-sheet,
+generate and duplicate fragments; meal-item mutations return the four item fragments so
+the cached row stays complete.
 
-- `MealPlanDisplay` — scalar fields of a plan (no items)
-- `MealPlanFull` — extends Display + `dietaryProfile`, `mealPlanItems`, `generatedShoppingLists`, `nutritionSummary`
-- `MealPlanItemFragment` — full item with nested `BasicRecipeFragment`
+**Subscription.** `MealPlanEvents(homeId)` is one stream for plan, plan-item, template
+and template-item changes, discriminated by `subtype`. The payload is an envelope plus
+`node { id }`, run with `fetchPolicy: 'no-cache'`. Self-echoes are dropped by
+originating device. A new plan or template is read back with `MealPlanForEvent` /
+`MealTemplateForEvent`; plan and item changes trigger a debounced `GetMealPlan`
+refetch, held while a local delete is pending. Personal plans emit no events.
 
-## Data Model
+## Data model
 
-### `CreateMealPlanItemInput`
+`CreateMealPlanItemInput` (from `src/graphql/generated/schema.graphql`):
 
 ```graphql
-mealPlanId: ID!           # Required — which plan
-date: DateTime!            # Required — which day
-mealType: MealType!        # Required — Breakfast | Brunch | Lunch | Snack | Dinner | Dessert
-recipeId: ID               # Optional — reference to a saved recipe
-customMealName: String     # Optional — free-text meal name (alternative to recipeId)
-servings: Int              # Optional
-notes: String              # Optional
-calories: Float            # Optional — manual nutrition override
-protein: Float             # Optional
-carbs: Float               # Optional
-fat: Float                 # Optional
-estimatedCost: Float       # Optional
+id: ID                 # client-minted CUID2; a replay converges on the existing row
+mealPlanId: ID!
+date: DateTime!
+mealType: MealType!
+meal: MealRefInput!    # @oneOf: exactly one of { recipeId: ID } | { customMealName: String }
+servings: Int
+notes: String
+calories: Float        # manual nutrition override; protein, carbs, fat likewise
+protein: Float
+carbs: Float
+fat: Float
+estimatedCost: Float
 ```
 
-A meal plan item is either a **recipe-based** item (`recipeId` set) or a **custom meal** (`customMealName` set).
+`UpdateMealPlanItemInput` adds `isCompleted`, `completedAt`, `deductFromPantry`,
+`actualCost` and `usedPantryItems`; its `meal` is optional.
 
-### `MealPlanItemFragment` fields
+`MealType`: `BREAKFAST`, `BRUNCH`, `LUNCH`, `SNACK`, `DINNER`, `DESSERT` — the order
+`useDailyMeals` groups in. Once a day has any meal, the Breakfast, Lunch, Dinner and
+Snack sections always show (empty ones included); Brunch and Dessert show only when
+they hold a meal.
 
-`id`, `date`, `mealType`, `isCompleted`, `completedAt`, `customMealName`, `servings`, `notes`, `calories`, `protein`, `carbs`, `fat`, `estimatedCost`, `actualCost`, `nutritionSource`, `usedPantryItems`, `recipe { ...BasicRecipeFragment }`
+## User flows
 
-### Meal Types (display order)
+### Creating a plan
 
-`Breakfast` → `Brunch` → `Lunch` → `Snack` → `Dinner` → `Dessert`
+`CreateMealPlanScreen` (a `FormScreen`, react-hook-form + yup in
+`createMealPlanFormConfig.ts`): name, description, plan type (weekly/monthly; the end
+date is derived), start date, servings, budget, "track nutrition" (links the user's
+dietary profile), and personal vs a home. It calls `useMealPlanActions().createMealPlan`,
+which mints the id, writes the plan plus an empty detail stub to the cache, and marks
+the create unconfirmed so `useMealPlan` skips its query until the server acknowledges
+it. A refusal naming `name` or `startDate` is set on that field; others alert. The
+screen can also start from a template.
 
-## User Flows
+Entry points: the empty state, and the plan selector's actions (create, create from
+template, new template).
 
-### Creating a Meal Plan
+### Adding a meal on the Meal Plan tab
 
-1. User navigates to the Meal Plan tab
-2. If no plans exist, `MealPlanEmptyState` is shown with options to create a new plan or browse templates
-3. User taps "Create Plan" → navigates to `CreateMealPlan` screen
-4. Alternatively, user can create a plan from a template via `TemplateBrowserSheet` → `TemplatePreviewSheet`
+1. Pick a date on `WeekStrip` / `MonthCalendar`.
+2. Open `AddMealSheet` from the tab-bar add button (defaults to `DINNER`), a section's
+   "+" (pre-selects that type), or `EmptyDayState`.
+3. The sheet shows:
+   - meal-type chips;
+   - a `SearchBar` (500 ms debounce);
+   - the user's saved recipes from `useSavedRecipes`, paginated on scroll (`hasMore` /
+     `loadMore`) while the query is empty and filtered client-side by name with
+     `filterByTerm`;
+   - once the query is non-empty, an "add custom" row that calls `onAddCustomMeal`;
+   - at 3+ characters, Spoonacular results (10, cached in `useRecipeCacheStore`, the
+     previous request aborted). Picking one fetches its full information, imports it
+     through `useRecipePreload`, then adds the imported recipe;
+   - `EmptyState` for no saved recipes or no results.
+4. `MealPlanMain` calls `createItem` with `meal: { recipeId }` or
+   `meal: { customMealName }` and the selected date.
 
-### Adding a Saved Recipe to a Meal Plan
+### Adding a recipe from RecipeDetail
 
-This is the primary flow for populating a meal plan:
+`RecipeDetail` has an "Add to meal plan" header action that opens
+`AddToMealPlanSheet` via `useAddToMealPlanSheet`. The sheet shows a plan chip row when
+there is more than one plan, a `WeekStrip` limited to the chosen plan's range and
+meal-type chips, and adds through `useAddRecipeToMealPlan`. Without a plan it shows a
+warning and disables Add.
 
-1. User selects a date on the `WeekStrip` or `MonthCalendar`
-2. User taps "Add a meal" (global button at bottom) or the "+" within a specific meal type section
-3. `AddMealSheet` opens as a bottom sheet
-   - If opened from a meal type section, that meal type is pre-selected
-   - Otherwise defaults to `Dinner`
-4. Sheet displays all of the user's **saved recipes** (via `useSavedRecipes`)
-5. User can type in the search bar to **client-side filter** recipes by name (case-insensitive substring match)
-6. User selects a meal type chip if needed (`Breakfast` | `Brunch` | `Lunch` | `Snack` | `Dinner` | `Dessert`)
-7. User taps a recipe row → `onAddRecipe(recipeId, mealType)` is called
-8. `MealPlanMain.handleAddRecipe` calls `createItem({ mealPlanId, recipeId, mealType, date })` and closes the sheet
-9. `GetMealPlan` is refetched to update the daily view
+### Completing a meal
 
-### Recipe Discovery → Save → Add to Plan Journey
+Checking a recipe meal opens `MarkCookedModal` (servings, deduct from pantry, notes);
+checking a custom meal or unchecking toggles directly. `toggleCompleted` writes
+`isCompleted` / `completedAt` to the cache, records the flag in
+`optimisticDataPersistence` until the server confirms, then sends
+`UpdateMealPlanItem` (with `deductFromPantry`, `servings` and `notes` only when
+completing). The success toast says pantry items were deducted when a recipe meal was
+completed with deduction. A completed meal with `usedPantryItems` shows a "pantry
+updated" badge.
 
-Since `AddMealSheet` only shows saved recipes, a user must discover and save a recipe before it can be added to a meal plan:
+### Deleting a meal
 
-1. **Discover** — User finds a recipe via:
-   - `RecipeSearch` screen (external search via Spoonacular API)
-   - `RecipeMain` screen (random suggestions and saved recipe browsing)
-2. **Save** — User taps the save/heart/folder icon on `RecipeDetail` → recipe is stored in backend
-3. **Add to Plan** — User navigates to the Meal Plan tab, opens `AddMealSheet`, and selects the now-saved recipe
+Swipe-to-delete on `MealPlanItemCard`. The row is removed from `mealPlanItems` and
+evicted before the mutation, registered as a pending delete so a subscription echo
+cannot re-add it, and restored if the server refuses.
 
-### Completing a Meal
+### Generating a shopping list
 
-1. User taps the checkbox on a meal item in `DayMealList`
-2. `toggleCompleted(id, isCompleted, hasRecipe)` is called
-3. The mutation sets `isCompleted` and `completedAt`
-4. If the meal has a recipe, a toast shows "Meal completed! Pantry items deducted."
-5. `GetMealPlan` is refetched
+The cart icon (or the settings sheet) opens `GenerateShoppingListSheet`: check pantry
+(default on), new list with an optional name, or an existing list.
+`useGenerateShoppingList` derives the lines on the client
+(`utils/deriveShoppingListFromMealPlan.ts`) from the cached
+`useGenerateShoppingList_mealPlan` read:
 
-### Generating a Shopping List
+- ingredients are scaled by meal servings ÷ recipe servings;
+- lines aggregate on catalog item + exact unit;
+- custom meals, recipes with no ingredients, and ingredients without a catalog item or
+  unit are skipped and reported;
+- pantry coverage uses the cache-only pantry read; with no cached pantry it is not
+  checked and a toast says so.
 
-1. User taps the cart icon in the meal plan header
-2. `GenerateShoppingListSheet` opens
-3. User confirms generation
-4. `GenerateShoppingListFromMealPlan` mutation runs, returning `{ id, name, totalItems }`
+It then creates the list, writes optimistic rows, sends `AddDerivedItemsToShoppingList`,
+and for a new list `LinkDerivedListToMealPlan` — all local-first.
 
-### Saving as Template / Using Templates
+### Templates
 
-- **Save as template**: Bookmark icon in header → `SaveAsTemplateSheet`
-- **Browse templates**: From empty state CTA or three-dot settings menu → `TemplateBrowserSheet` → `TemplatePreviewSheet`
-- **Duplicate plan**: From `MealPlanSettingsSheet` → `DuplicatePlanSheet`
+- **Save plan as template** — bookmark icon → `SaveAsTemplateSheet` (name, description,
+  category, tags). `createTemplateFromPlan` converts dates to day offsets
+  (`utils/templateFromPlan.ts`) and creates the template local-first.
+- **Plan from template** — `TemplateBrowserSheet` (search, category chips, paginated)
+  → `TemplatePreviewSheet` (plan name, start date, servings, day-by-day preview, or
+  `DataStateView` with a retry when the template read failed) →
+  `createPlanFromTemplate`, which creates a `WEEKLY` plan and one `CreateMealPlanItem`
+  per template meal (`utils/planFromTemplate.ts`).
+- **Author / edit** — `MealTemplateBuilderScreen` (`templateId` param for edit): template
+  metadata plus a sub-form adding meals by day offset, meal type, custom name and
+  servings. In create mode meals are drafts sent with `CreateMealTemplate`; in edit mode
+  each change is its own template-item mutation.
 
-## Daily Meals Processing (`useDailyMeals`)
+Derived copies skip a meal that names neither a recipe nor a custom name and report the
+count in a toast.
 
-This hook is a pure computation layer that takes the full item list and selected date:
+### Plan settings and duplicate
 
-1. Filters items to those matching the selected date (`date-fns` `isSameDay`)
-2. Groups items by `MealType` in canonical display order
-3. Sorts items within each group alphabetically by `recipe.name ?? customMealName`
-4. Drops empty groups
+`MealPlanSettingsSheet` shows the home, creator, budget and spend, and offers:
+generate shopping list, duplicate (if `canDuplicate`), show nutrition, toggle nutrition
+tracking (when the user has a dietary profile) and delete (if `canDelete`, confirmed by
+alert). It also lists the plan's generated shopping lists.
 
-Returns: `dailyMeals` (non-empty `MealTypeGroup[]`), `totalMeals`, `totalCalories`, `isEmpty`
+`DuplicatePlanSheet` proposes "Copy of …" starting the day after the plan ends with the
+same duration. `useDuplicateMealPlan` reads the plan from the cache, creates the new
+plan, then fires one `CreateMealPlanItem` per meal with dates shifted by the same
+offset.
 
-## Cache & Refetch Strategy
+### Plan selector
 
-- **Create/Delete item**: Refetches `GetMealPlan` with the active plan ID (full item list reload)
-- **Toggle completed**: Refetches `GetMealPlan` as a runtime option
-- **Generic update**: No automatic refetch — callers manage cache manually
-- No optimistic updates are used in the meal plan flow
+Tapping the header title opens `AnimatedItemSelector` with the loaded plans (name,
+date range, type, home or "personal"). `MealPlanFilterBar` filters that list
+client-side (name search, active only, weekly/monthly) without changing the active plan.
 
-## Current Limitations & Gaps
+## Limitations
 
-### AddMealSheet only shows saved recipes
+- **A planned meal cannot be edited.** Its servings, notes, date and meal type are set
+  when it is added; changing one means deleting the meal and adding it again.
+- **Saved-recipe search in `AddMealSheet` covers loaded pages only.** Filtering is
+  client-side and pagination is suspended while a query is entered.
+- **The template builder authors custom meals only.** It has no recipe picker, and
+  saving an edited item sends `meal: { customMealName }`.
 
-The `AddMealSheet` uses `useSavedRecipes()` to load recipes. There is no external/API recipe search within the sheet. Users must save a recipe first (via `RecipeDetail`), then navigate to the meal plan to add it. The search bar performs client-side filtering only (case-insensitive name match, no debounce).
+## Key files
 
-### No "Add to Meal Plan" action from recipe screens
-
-`RecipeDetail` offers save, add-to-shopping-list, and mark-as-cooked actions, but has no "Add to Meal Plan" option. Similarly, `RecipeSearch` has no meal plan integration. Users must always go through the Meal Plan tab's `AddMealSheet`.
-
-### Custom meal UI not implemented
-
-The backend fully supports `customMealName` on `CreateMealPlanItemInput`, and `MealPlanMain` defines a `handleAddCustomMeal` callback that passes `onAddCustomMeal` to `AddMealSheet`. However, `AddMealSheet` discards this prop (aliased as `_onAddCustomMeal`) — there is no text input or button for entering a custom meal name.
-
-### No loading or empty states in AddMealSheet
-
-`AddMealSheet` does not show a loading indicator while `useSavedRecipes` is fetching, nor does it handle the case where the user has no saved recipes with a helpful message.
-
-### No pagination for saved recipes
-
-`useSavedRecipes` fetches all recipes in a single request with no cursor-based pagination. This may become a performance issue for users with large recipe collections.
-
-### `selectedDate` prop unused in AddMealSheet
-
-The `selectedDate` prop is passed to `AddMealSheet` but aliased as `_selectedDate` and not used. The date context is only used upstream by `MealPlanMain` when calling `createItem`.
-
-### Nutrition calculation caveat
-
-`useDailyMeals` sums `item.calories` directly without adjusting for `servings`. If an item's serving count differs from the recipe default, the calorie total may be inaccurate.
-
-## Key Files Reference
-
-| File | Role |
-|------|------|
-| `src/screens/mealPlan/MealPlanMain.tsx` | Main meal plan screen — orchestrates sheets, hooks, and navigation |
-| `src/components/mealPlan/AddMealSheet.tsx` | Bottom sheet for adding meals (saved recipes only, client-side search) |
-| `src/components/mealPlan/DayMealList.tsx` | Renders daily meals grouped by meal type with add-meal buttons |
-| `src/hooks/mealPlan/useMealPlanItemActions.ts` | Create/update/delete/toggle mutations for meal plan items |
-| `src/hooks/mealPlan/useMealPlans.ts` | Fetch paginated list of meal plans; derive current plan |
-| `src/hooks/mealPlan/useMealPlan.ts` | Fetch single plan with items and nutrition summary |
-| `src/hooks/mealPlan/useDailyMeals.ts` | Filter and group items for a selected date (pure computation) |
-| `src/hooks/mealPlan/useMealPlanCalendar.ts` | Week/month view state and date navigation |
-| `src/hooks/recipe/useSavedRecipes.ts` | Fetch user's saved recipes (consumed by AddMealSheet) |
-| `src/screens/recipe/RecipeMain.tsx` | Saved recipes + random recipe suggestions |
-| `src/screens/recipe/RecipeSearch/index.tsx` | External recipe search via Spoonacular API |
-| `src/screens/recipe/RecipeDetail/index.tsx` | Recipe detail — save, shopping list, mark cooked (no meal plan action) |
-| `src/graphql/operations/mealPlan/mealPlan.graphql` | GraphQL queries and mutations for meal plans and items |
+| File                                                                         | Role                                                     |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `src/features/mealPlan/screens/MealPlanMain.tsx`                             | Tab root: calendar, day list, every sheet, plan selector |
+| `src/features/mealPlan/screens/CreateMealPlanScreen.tsx`                     | Create-plan form                                         |
+| `src/features/mealPlan/screens/MealTemplateBuilderScreen.tsx`                | Create / edit a template                                 |
+| `src/features/mealPlan/components/AddMealSheet.tsx`                          | Saved recipes, custom meal, Spoonacular search           |
+| `src/features/mealPlan/components/AddToMealPlanSheet/AddToMealPlanSheet.tsx` | Add a given recipe to a plan, date and meal type         |
+| `src/features/mealPlan/components/DayMealList.tsx`                           | Day view grouped by meal type                            |
+| `src/features/mealPlan/components/MealPlanItemCard.tsx`                      | Meal row: completion, delete, nutrition and pantry badge |
+| `src/features/mealPlan/hooks/useMealPlanItemActions.ts`                      | Local-first meal writes                                  |
+| `src/features/mealPlan/hooks/useMealPlanActions.ts`                          | Local-first plan writes                                  |
+| `src/features/mealPlan/hooks/useActiveMealPlan.ts`                           | Active plan resolution                                   |
+| `src/features/mealPlan/hooks/useGenerateShoppingList.ts`                     | Client-derived shopping list                             |
+| `src/features/mealPlan/hooks/useMealTemplateActions.ts`                      | Plan ↔ template conversions                              |
+| `src/features/mealPlan/hooks/useMealPlanSubscriptions.ts`                    | Home meal-plan event stream                              |
+| `src/features/mealPlan/graphql/mealPlan.graphql`                             | Plan and meal operations, subscription                   |
+| `src/features/mealPlan/graphql/mealTemplate.graphql`                         | Template operations                                      |
+| `src/features/mealPlan/graphql/mealPlanFragments.graphql`                    | Shared plan and template fragments                       |
+| `src/features/recipes/hooks/useSavedRecipes.ts`                              | Saved recipes (paginated), read by `AddMealSheet`        |
+| `src/features/recipes/screens/RecipeMain.tsx`                                | Recipe discovery and Spoonacular search                  |
+| `src/features/recipes/screens/RecipeDetail/index.tsx`                        | Recipe detail, incl. "Add to meal plan"                  |

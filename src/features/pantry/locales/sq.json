@@ -176,7 +176,11 @@
     "currentLabel": "Aktualisht: ",
     "newQuantity": "Sasia e re",
     "reasonPlaceholder": "Pse po rregullohet sasia?",
-    "remainingWeightPlaceholder": "Lëre bosh për rregullim automatik"
+    "remainingWeightPlaceholder": "Lëre bosh për rregullim automatik",
+    "systemReason": {
+      "stackMerged": "Rregullim pas bashkimit të artikujve",
+      "stackPurged": "Heqje administrative"
+    }
   },
   "recordWaste": {
     "wasteBy": "Mbeturina nga",
@@ -299,7 +303,8 @@
     "acquisitionMethod": "Si u sigurua",
     "methodPurchased": "Blerë",
     "methodHomegrown": "Rritur në shtëpi",
-    "methodGifted": "Dhuratë"
+    "methodGifted": "Dhuratë",
+    "methodBarcodeScan": "Skanim i barkodit"
   },
   "pantryScreen": {
     "greetingFallback": "Mirëmëngjes",

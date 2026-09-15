@@ -2,7 +2,7 @@
  * Server-synced actions for expiration notifications. Same shape as
  * `useNotificationSync`: optimistic Zustand write, then the mutation under
  * `context: { localFirst: true }` so an offline action queues and replays
- * (idempotent server-side). Rolled back on a server error, not a network one.
+ * (idempotent server-side). Rolled back on a failure, never while queued.
  */
 
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
@@ -12,14 +12,13 @@ import {
   MarkExpirationActionDocument,
   MarkExpirationNotificationAsReadDocument,
 } from '#features/notifications/graphql/expirationNotificationMutations.generated';
-import { ExpirationAction } from '#/graphql/generated/schemaTypes';
+import type { ExpirationAction } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import {
   applyNotificationRead,
   applyNotificationUnread,
 } from '#features/notifications/utils/notificationCacheWrites';
-import { errorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
 
 export function useExpirationNotificationSync() {
@@ -48,25 +47,7 @@ export function useExpirationNotificationSync() {
 
     toastService.success(t(`expirationAction.toast.${action}`));
 
-    let result;
-    try {
-      result = await markActionMutation({
-        variables: {
-          input: { notificationId: expirationNotificationId, action },
-        },
-        context: { localFirst: true },
-      });
-    } catch (error: unknown) {
-      // Only a link-level throw lands here; a refusal resolves (errorPolicy
-      // 'all'), which is why the rollback below reads the RESULT.
-      errorService.reportError(error, {
-        operation: 'syncMarkExpirationAction',
-        notificationId: expirationNotificationId,
-        action,
-      });
-    }
-
-    if (classifyCreateResult(result) === 'rejected') {
+    const revertAction = () => {
       useNotificationStore.getState().setExpirationAction(notificationId, '');
       if (markedRead) {
         applyNotificationUnread(
@@ -75,21 +56,38 @@ export function useExpirationNotificationSync() {
           notificationId,
         );
       }
-    }
+    };
+
+    await settleMutation(
+      () =>
+        markActionMutation({
+          variables: {
+            input: { notificationId: expirationNotificationId, action },
+          },
+          context: { localFirst: true },
+        }),
+      {
+        document: MarkExpirationActionDocument,
+        fallback: t('notifications.actionFailed'),
+        onFailed: revertAction,
+      },
+    );
   };
 
   const syncMarkRead = async (expirationNotificationId: string) => {
-    try {
-      await markReadMutation({
-        variables: { input: { notificationId: expirationNotificationId } },
-        context: { localFirst: true },
-      });
-    } catch (error: unknown) {
-      errorService.reportError(error, {
-        operation: 'syncMarkExpirationRead',
-        notificationId: expirationNotificationId,
-      });
-    }
+    await settleMutation(
+      () =>
+        markReadMutation({
+          variables: { input: { notificationId: expirationNotificationId } },
+          context: { localFirst: true },
+        }),
+      {
+        document: MarkExpirationNotificationAsReadDocument,
+        fallback: t('notifications.actionFailed'),
+        // Fired beside `syncMarkAction`, whose failure is the one shown.
+        present: 'none',
+      },
+    );
   };
 
   return { syncMarkAction, syncMarkRead };

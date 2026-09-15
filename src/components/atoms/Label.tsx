@@ -29,7 +29,7 @@ export const Label: React.FC<LabelProps> = ({
       style={[styles.container, style]}
     >
       {children}
-      {!!required && <Text tone="error"> *</Text>}
+      {!!required && <Text tone="danger"> *</Text>}
     </Text>
   );
 };

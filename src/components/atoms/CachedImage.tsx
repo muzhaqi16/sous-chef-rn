@@ -13,6 +13,7 @@ import type { StyleProp, ImageStyle, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
+import { logger } from '#/utils/environment';
 import { SkeletonBase } from '#components/atoms/Skeleton/SkeletonBase';
 
 export interface CachedImageProps
@@ -97,14 +98,7 @@ export const CachedImage = ({
       // makes the component anonymous in exactly the state a placeholder is
       // shown, so a check targeting it finds nothing while the literal is
       // still in the source.
-      <View
-        {...rest}
-        style={[
-          styles.placeholder,
-          style as StyleProp<ViewStyle>,
-          containerStyle,
-        ]}
-      >
+      <View {...rest} style={[styles.placeholder, style, containerStyle]}>
         <Icon name="image-outline" size={24} tone="textTertiary" />
       </View>
     );
@@ -113,7 +107,7 @@ export const CachedImage = ({
   const source = { uri };
   const isPreloaded = loadedUris.has(uri);
 
-  const flat = StyleSheet.flatten(style as StyleProp<ViewStyle>);
+  const flat = StyleSheet.flatten(style);
   const borderRadius = (flat?.borderRadius as number) ?? 0;
   const innerRadius =
     borderRadius > 0 ? Math.max(borderRadius - (flat?.borderWidth ?? 0), 0) : 0;
@@ -125,7 +119,7 @@ export const CachedImage = ({
   const ImageComponent = sharedTransitionTag ? AnimatedTurboImage : TurboImage;
 
   return (
-    <View style={[style as StyleProp<ViewStyle>, containerStyle]}>
+    <View style={[style, containerStyle]}>
       <ImageComponent
         fadeDuration={isPreloaded ? 0 : IMAGE_FADE_MS}
         style={[styles.image, innerRadius > 0 && { borderRadius: innerRadius }]}
@@ -196,6 +190,8 @@ export function preloadImages(uris: string[]): void {
     .filter(u => u && !loadedUris.has(u))
     .map(uri => ({ uri }));
   if (sources.length > 0) {
-    TurboImage.prefetch(sources, 'dataCache');
+    void TurboImage.prefetch(sources, 'dataCache').catch(error =>
+      logger.warn('Image prefetch failed', error),
+    );
   }
 }

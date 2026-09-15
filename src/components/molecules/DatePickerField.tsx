@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { View, Platform } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { ThemedDateTimePicker } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
 import { formatMonthDayYear } from '#/utils/formatters/date';
+import { useTranslation } from '#/i18n';
 
 interface DatePickerFieldProps {
   label?: string;
@@ -29,13 +30,14 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
   label,
   value,
   onChange,
-  placeholder = 'Select date',
+  placeholder,
   minimumDate,
   maximumDate,
   required,
   error,
   testID,
 }) => {
+  const { t } = useTranslation();
   const [showPicker, setShowPicker] = useState(false);
 
   const handleDateChange = (
@@ -73,18 +75,18 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
       >
         <Icon name="calendar-outline" size={20} tone="textSecondary" />
         <Text style={[styles.dateText, !value && styles.placeholder]}>
-          {value ? formatDate(value) : placeholder}
+          {value ? formatDate(value) : placeholder ?? t('labels.selectDate')}
         </Text>
       </AppPressable>
       {error ? (
-        <Text role="caption" tone="error" style={styles.errorText}>
+        <Text role="error" tone="error" style={styles.errorText}>
           {error}
         </Text>
       ) : null}
       {!!showPicker && (
         <ThemedDateTimePicker
           style={styles.calendarPicker}
-          value={value || new Date()}
+          value={value ?? new Date()}
           mode="date"
           display={Platform.OS === 'ios' ? 'inline' : 'default'}
           minimumDate={minimumDate}

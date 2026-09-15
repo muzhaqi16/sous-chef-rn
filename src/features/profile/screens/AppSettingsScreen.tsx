@@ -23,6 +23,7 @@ import { Telemetry } from '#services/telemetry';
 import { Text } from '#components/atoms/Text';
 import { useDataState } from '#hooks/data/useDataState';
 import { DataStateView } from '#components/organisms/DataStateView';
+import { profileTestIDs } from '#features/profile/testIDs';
 
 export const AppSettingsScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -102,7 +103,7 @@ export const AppSettingsScreen: React.FC = () => {
     setUpdating(key);
     // No alert here: `updateAppSetting` is the single alerter for its own
     // failure, and a second one on `!success` stacks two dialogs.
-    executeAsyncWithCleanup(
+    void executeAsyncWithCleanup(
       () => updateAppSetting(key, value),
       () => setUpdating(null),
     );
@@ -117,7 +118,7 @@ export const AppSettingsScreen: React.FC = () => {
   const handleOfflineModeChange = (value: boolean) => {
     setOfflineModeEnabled(value, true);
     setUpdating('offlineMode');
-    executeAsyncWithCleanup(
+    void executeAsyncWithCleanup(
       () => updateAppSetting('offlineMode', value),
       () => setUpdating(null),
     );
@@ -134,7 +135,7 @@ export const AppSettingsScreen: React.FC = () => {
           style: 'destructive',
           onPress: () => {
             setUpdating('reset');
-            executeAsyncWithCleanup(
+            void executeAsyncWithCleanup(
               async () => {
                 const success = await resetToDefaults();
                 // Also reset feature hints/tutorials and per-user preferences
@@ -176,22 +177,23 @@ export const AppSettingsScreen: React.FC = () => {
     return (
       <ProfileScreenWrapper
         title={t('labels.appSettings')}
-        testID="settings-screen"
+        testID={profileTestIDs.settingsScreen}
         scrollEnabled={false}
       >
         <DataStateView
           state={dataState}
           onRetry={() => {
-            refetch();
+            // A failed retry lands in the query's `error`, which this view renders.
+            refetch().catch(() => {});
           }}
-          testID="settings-state"
+          testID={profileTestIDs.settingsState}
         />
         {/* Offline is exactly when someone reaches for this switch, and its
             value lives in the store, not in the settings query. Behind the
             gate it was unreachable in the state it exists for. */}
         <SettingsSection variant="inset" title={t('settings.syncOffline')}>
           <SettingSwitch
-            testID="settings-offline-mode-switch"
+            testID={profileTestIDs.settingsOfflineModeSwitch}
             title={t('settings.offlineMode')}
             description={t('settings.offlineModeDesc')}
             value={offlineModeEnabled}
@@ -205,19 +207,19 @@ export const AppSettingsScreen: React.FC = () => {
   return (
     <ProfileScreenWrapper
       title={t('labels.appSettings')}
-      testID="settings-screen"
+      testID={profileTestIDs.settingsScreen}
     >
       <SettingsSection variant="inset" title={t('settings.unitsSection')}>
         <AppPressable
           haptic
-          testID="settings-unit-system-picker"
+          testID={profileTestIDs.settingsUnitSystemPicker}
           style={styles.pickerContainer}
           onPress={() => setUnitPickerVisible(true)}
           accessibilityRole="button"
           accessibilityLabel={t('settings.preferredUnitSystem')}
           accessibilityValue={{ text: selectedUnitLabel }}
         >
-          <Text style={commonStyles.subtitle}>
+          <Text role="bodyStrong" tone="secondary">
             {t('settings.preferredUnitSystem')}
           </Text>
           <Text role="caption" tone="accent" style={styles.picker}>
@@ -230,7 +232,7 @@ export const AppSettingsScreen: React.FC = () => {
           options={unitSystemOptions}
           selected={settings.preferredUnitSystem}
           onSelect={value => {
-            handleSettingChange('preferredUnitSystem', value as UnitSystem);
+            handleSettingChange('preferredUnitSystem', value);
             setUnitPickerVisible(false);
           }}
           onCancel={() => setUnitPickerVisible(false)}
@@ -239,14 +241,14 @@ export const AppSettingsScreen: React.FC = () => {
 
       <SettingsSection variant="inset" title={t('settings.syncOffline')}>
         <SettingSwitch
-          testID="settings-auto-sync-switch"
+          testID={profileTestIDs.settingsAutoSyncSwitch}
           title={t('settings.autoSync')}
           description={t('settings.autoSyncDesc')}
           value={settings.autoSync}
           onValueChange={value => handleSettingChange('autoSync', value)}
         />
         <SettingSwitch
-          testID="settings-offline-mode-switch"
+          testID={profileTestIDs.settingsOfflineModeSwitch}
           title={t('settings.offlineMode')}
           description={t('settings.offlineModeDesc')}
           value={offlineModeEnabled}
@@ -256,7 +258,7 @@ export const AppSettingsScreen: React.FC = () => {
 
       <SettingsSection variant="inset" title={t('settings.features')}>
         <SettingSwitch
-          testID="settings-show-tutorials-switch"
+          testID={profileTestIDs.settingsShowTutorialsSwitch}
           title={t('settings.showTutorials')}
           description={t('settings.showTutorialsDesc')}
           value={settings.showTutorials}
@@ -265,13 +267,15 @@ export const AppSettingsScreen: React.FC = () => {
 
         {settings.betaFeatures.length > 0 && (
           <View style={styles.betaFeaturesContainer}>
-            <Text style={commonStyles.subtitle}>
+            <Text role="bodyStrong" tone="secondary">
               {t('settings.betaFeaturesEnabled')}
             </Text>
             <View style={styles.chipContainer}>
               {settings.betaFeatures.map((feature, index) => (
                 <View key={index} style={[commonStyles.chip, styles.betaChip]}>
-                  <Text style={commonStyles.chipText}>{feature}</Text>
+                  <Text role="label" style={commonStyles.chipText}>
+                    {feature}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -281,21 +285,21 @@ export const AppSettingsScreen: React.FC = () => {
 
       <SettingsSection variant="inset" title={t('settings.experience')}>
         <SettingSwitch
-          testID="settings-haptic-feedback-switch"
+          testID={profileTestIDs.settingsHapticFeedbackSwitch}
           title={t('settings.hapticFeedback')}
           description={t('settings.hapticFeedbackDesc')}
           value={hapticFeedbackEnabled}
           onValueChange={setHapticFeedbackEnabled}
         />
         <SettingSwitch
-          testID="settings-navigation-labels-switch"
+          testID={profileTestIDs.settingsNavigationLabelsSwitch}
           title={t('settings.navigationLabels')}
           description={t('settings.navigationLabelsDesc')}
           value={showNavigationLabels}
           onValueChange={setShowNavigationLabels}
         />
         <SettingSwitch
-          testID="settings-show-shopping-list-images-switch"
+          testID={profileTestIDs.settingsShowShoppingListImagesSwitch}
           title={t('settings.shoppingListImages')}
           description={t('settings.shoppingListImagesDesc')}
           value={userPrefs.showShoppingListImages}
@@ -304,7 +308,7 @@ export const AppSettingsScreen: React.FC = () => {
           }
         />
         <SettingSwitch
-          testID="settings-share-usage-data-switch"
+          testID={profileTestIDs.settingsShareUsageDataSwitch}
           title={t('settings.shareUsageData')}
           description={t('settings.shareUsageDataDesc')}
           value={userConsent ?? true}

@@ -324,30 +324,6 @@ describe('useNotificationSettings', () => {
     });
   });
 
-  it('updateMultipleSettings sends batch update', async () => {
-    const update = recordMock(UpdateNotificationPreferencesDocument, {
-      data: updatedPrefs({ pushEnabled: true, lowStockAlerts: false }),
-    });
-
-    const { result } = renderHookWithApollo(() => useNotificationSettings(), {
-      operationMocks: [
-        ...withPrefs(mockPreferencesData).operationMocks,
-        update.mock,
-      ],
-    });
-
-    let success: boolean = false;
-    await act(async () => {
-      success = await result.current.updateMultipleSettings({
-        pushEnabled: true,
-        lowStockAlerts: false,
-      });
-    });
-
-    expect(update.fired.length).toBeGreaterThan(0);
-    expect(success).toBe(true);
-  });
-
   it('resetToDefaults sends default values', async () => {
     const update = recordMock(UpdateNotificationPreferencesDocument, {
       data: updatedPrefs({ pushEnabled: false }),
@@ -360,11 +336,13 @@ describe('useNotificationSettings', () => {
       ],
     });
 
+    let success: boolean = false;
     await act(async () => {
-      await result.current.resetToDefaults();
+      success = await result.current.resetToDefaults();
     });
 
     expect(update.fired.length).toBeGreaterThan(0);
+    expect(success).toBe(true);
   });
 
   it('isQuietTime returns false when quiet hours disabled', async () => {

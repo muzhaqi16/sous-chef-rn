@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { makeCache } from '#/apollo/cache';
-import { InMemoryCache } from '@apollo/client';
+import type { InMemoryCache } from '@apollo/client';
 import { screen, userEvent } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetHomeDocument } from '#operations/home/home.generated';
@@ -217,11 +217,22 @@ jest.mock('../ItemInformationSection', () => ({
 }));
 
 jest.mock('../QuantitySection', () => ({
-  QuantitySection: ({ testID }: { testID?: string }) => {
+  QuantitySection: ({
+    testID,
+    control,
+  }: React.ComponentProps<
+    typeof import('../QuantitySection').QuantitySection
+  >) => {
     const { Text, View } = require('react-native');
+    const { useWatch } = require('react-hook-form');
+    const [quantityInput, minQuantity, restockQuantity] = useWatch({
+      control,
+      name: ['quantityInput', 'minQuantity', 'restockQuantity'],
+    });
     return (
       <View testID={testID || 'quantity-section'}>
         <Text>Quantity</Text>
+        <Text>{`seeded:${quantityInput}|${minQuantity}|${restockQuantity}`}</Text>
       </View>
     );
   },
@@ -364,6 +375,25 @@ describe('PantryItemForm — edit mode', () => {
     await screen.findByText('Edit Pantry Item');
     await user.press(screen.getByText('Inventory'));
     expect(screen.getByText('Quantity')).toBeTruthy();
+  });
+});
+
+describe('PantryItemForm — quantity seeds', () => {
+  it('seeds the fraction field with a cooking fraction and the decimal-pad fields rounded to three decimals', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<PantryItemForm itemId="item-1" />, {
+      cache: buildCache({
+        itemId: 'item-1',
+        itemFixture: {
+          quantity: 1.33333334,
+          minQuantity: 0.33333334,
+          restockQuantity: 177.4412,
+        },
+      }),
+    });
+    await screen.findByText('Edit Pantry Item');
+    await user.press(screen.getByText('Inventory'));
+    expect(screen.getByText('seeded:1 1/3|0.333|177.441')).toBeTruthy();
   });
 });
 

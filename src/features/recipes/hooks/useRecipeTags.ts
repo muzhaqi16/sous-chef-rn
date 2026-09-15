@@ -1,19 +1,22 @@
 import { useQuery } from '@apollo/client/react';
 import { MySavedRecipesDocument } from '#features/recipes/graphql/recipe.generated';
+import { SAVED_RECIPES_PAGE_SIZE } from '#features/recipes/hooks/useSavedRecipes';
 
 /**
  * Hook to extract unique tags from user's saved recipes
  * Returns a list of tags for autocomplete suggestions and filtering
  */
 export function useRecipeTags() {
-  const { data, loading, error, refetch } = useQuery(MySavedRecipesDocument, {
+  const { data } = useQuery(MySavedRecipesDocument, {
+    variables: { first: SAVED_RECIPES_PAGE_SIZE },
     fetchPolicy: 'cache-first',
   });
 
   const savedRecipes =
     data?.me?.savedRecipesConnection?.edges?.map(e => e.node) ?? [];
 
-  // Extract unique tags from all saved recipes
+  // Only the pages loaded so far: the connection is shared with the saved list,
+  // so a caller needing every tag pages that list to the end.
   let tags: string[] = [];
   if (savedRecipes.length > 0) {
     const tagSet = new Set<string>();
@@ -31,25 +34,5 @@ export function useRecipeTags() {
     );
   }
 
-  // Count recipes per tag for potential display
-  let tagCounts: Record<string, number> = {};
-  if (savedRecipes.length > 0) {
-    const counts: Record<string, number> = {};
-    savedRecipes.forEach(savedRecipe => {
-      if (savedRecipe.tags && savedRecipe.tags.length > 0) {
-        savedRecipe.tags.forEach(tag => {
-          counts[tag] = (counts[tag] || 0) + 1;
-        });
-      }
-    });
-    tagCounts = counts;
-  }
-
-  return {
-    tags,
-    tagCounts,
-    loading,
-    error,
-    refetch,
-  };
+  return { tags };
 }

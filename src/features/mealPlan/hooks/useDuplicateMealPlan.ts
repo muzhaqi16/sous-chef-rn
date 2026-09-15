@@ -60,9 +60,9 @@ export function useDuplicateMealPlan() {
     }
 
     const created = await createMealPlan(derived.plan);
-    // A refusal has already been reported and the optimistic plan reverted;
-    // queued resolves null too, which is why the minted id is what we go on.
-    if (created?.__typename === 'ValidationError') return null;
+    // A failure has already been reported and the optimistic plan reverted; a
+    // queued create has no server row yet, which is why the minted id is used.
+    if (created.status === 'failed') return null;
 
     for (const item of derived.items) {
       try {

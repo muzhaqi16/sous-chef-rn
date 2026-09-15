@@ -1,4 +1,4 @@
-import { useApolloClient, useQuery } from '@apollo/client/react';
+import { skipToken, useApolloClient, useQuery } from '@apollo/client/react';
 import { GetMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import {
   MealTemplateItemFragmentDoc,
@@ -12,10 +12,10 @@ interface GroupedDay {
 
 export function useMealTemplate(templateId: string | undefined) {
   const client = useApolloClient();
-  const { data, loading, error, refetch } = useQuery(GetMealTemplateDocument, {
-    variables: { id: templateId! },
-    skip: !templateId,
-  });
+  const { data, loading, error, refetch } = useQuery(
+    GetMealTemplateDocument,
+    templateId ? { variables: { id: templateId } } : skipToken,
+  );
 
   const template = data?.mealTemplate ?? null;
 
@@ -48,11 +48,12 @@ export function useMealTemplate(templateId: string | undefined) {
   }
 
   return {
-    template,
-    items,
     groupedByDay,
     loading,
     error,
-    refetch,
+    hasResult: data !== undefined,
+    refetch: () => {
+      void refetch();
+    },
   };
 }

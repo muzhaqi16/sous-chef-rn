@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { View, ViewStyle } from 'react-native';
+import type { ViewStyle } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { NutritionsData, NutrientCategory } from '#/types/nutrition';
 import {
@@ -36,7 +37,7 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
       ? (nutritionsRaw as NutritionsData)
       : parseNutritions(nutritionsRaw);
 
-  const entries = getNutrientEntries(nutritions, actualServingGrams);
+  const entries = getNutrientEntries(nutritions, actualServingGrams, t);
 
   const groupedEntries = groupNutrientsByCategory(entries);
 
@@ -81,7 +82,7 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
         return (
           <View key={category} style={styles.section}>
             <SectionHeader variant="overline" style={styles.sectionTitle}>
-              {getCategoryLabel(category)}
+              {getCategoryLabel(category, t)}
             </SectionHeader>
 
             {categoryEntries.map((entry, index) => (

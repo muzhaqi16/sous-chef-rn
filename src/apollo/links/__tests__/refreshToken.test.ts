@@ -1,4 +1,4 @@
-import { jwtDecode, type JwtPayload } from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 // Mock jwt-decode
 jest.mock('jwt-decode', () => ({
@@ -41,6 +41,7 @@ jest.mock('../../client', () => ({
 }));
 
 import type { ApolloLink } from '@apollo/client/link';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import {
   isRefreshTokenValid,
   getRefreshState,
@@ -54,6 +55,7 @@ import { isNetworkError } from '#/utils/isNetworkError';
 import { reconnectWebSocket } from '../wsLink';
 import { registerApolloClient } from '#/apollo/clientRegistry';
 import { isAuthRefusalCode } from '#/utils/authErrorCodes';
+import { classifyError } from '#/apollo/offlineQueue/queueErrorPolicy';
 
 const mockedJwtDecode = jwtDecode as jest.MockedFunction<typeof jwtDecode>;
 const mockedClient = client as jest.Mocked<typeof client>;
@@ -77,14 +79,14 @@ describe('refreshToken', () => {
   describe('isRefreshTokenValid', () => {
     it('returns true when refresh token is valid and not expired', () => {
       const futureExp = Math.floor(Date.now() / 1000) + 86400; // 24 hours
-      mockedJwtDecode.mockReturnValue({ exp: futureExp } as JwtPayload);
+      mockedJwtDecode.mockReturnValue({ exp: futureExp });
 
       expect(isRefreshTokenValid('valid-refresh-token')).toBe(true);
     });
 
     it('returns false when refresh token is expired', () => {
       const pastExp = Math.floor(Date.now() / 1000) - 3600; // 1 hour ago
-      mockedJwtDecode.mockReturnValue({ exp: pastExp } as JwtPayload);
+      mockedJwtDecode.mockReturnValue({ exp: pastExp });
 
       expect(isRefreshTokenValid('expired-refresh-token')).toBe(false);
     });
@@ -112,14 +114,14 @@ describe('refreshToken', () => {
 
     it('returns true when token expires exactly 1 second from now', () => {
       const exp = Math.floor(Date.now() / 1000) + 1;
-      mockedJwtDecode.mockReturnValue({ exp } as JwtPayload);
+      mockedJwtDecode.mockReturnValue({ exp });
 
       expect(isRefreshTokenValid('almost-expired')).toBe(true);
     });
 
     it('returns false when token just expired (1 second ago)', () => {
       const exp = Math.floor(Date.now() / 1000) - 1;
-      mockedJwtDecode.mockReturnValue({ exp } as JwtPayload);
+      mockedJwtDecode.mockReturnValue({ exp });
 
       expect(isRefreshTokenValid('just-expired')).toBe(false);
     });
@@ -363,11 +365,16 @@ describe('refreshToken', () => {
         setTokens: jest.fn(),
         setNeedsTokenRefresh: jest.fn(),
       });
-      (mockedClient.mutate as jest.Mock).mockRejectedValue({
-        graphQLErrors: [
-          { extensions: { code: 'UNAUTHENTICATED' }, message: 'Token expired' },
-        ],
-      });
+      (mockedClient.mutate as jest.Mock).mockRejectedValue(
+        new CombinedGraphQLErrors({
+          errors: [
+            {
+              extensions: { code: 'UNAUTHENTICATED' },
+              message: 'Token expired',
+            },
+          ],
+        }),
+      );
       (mockedIsNetworkError as jest.Mock).mockReturnValue(false);
       const mockForward = createMockForward();
 
@@ -387,11 +394,16 @@ describe('refreshToken', () => {
         setTokens: jest.fn(),
         setNeedsTokenRefresh: jest.fn(),
       });
-      (mockedClient.mutate as jest.Mock).mockRejectedValue({
-        graphQLErrors: [
-          { extensions: { code: 'UNAUTHENTICATED' }, message: 'Token expired' },
-        ],
-      });
+      (mockedClient.mutate as jest.Mock).mockRejectedValue(
+        new CombinedGraphQLErrors({
+          errors: [
+            {
+              extensions: { code: 'UNAUTHENTICATED' },
+              message: 'Token expired',
+            },
+          ],
+        }),
+      );
       (mockedIsNetworkError as jest.Mock).mockReturnValue(false);
 
       const observable = attemptTokenRefresh(
@@ -417,14 +429,16 @@ describe('refreshToken', () => {
         setTokens: jest.fn(),
         setNeedsTokenRefresh: jest.fn(),
       });
-      (mockedClient.mutate as jest.Mock).mockRejectedValue({
-        graphQLErrors: [
-          {
-            extensions: { code: 'AUTH_TOKEN_EXPIRED' },
-            message: 'Session ended',
-          },
-        ],
-      });
+      (mockedClient.mutate as jest.Mock).mockRejectedValue(
+        new CombinedGraphQLErrors({
+          errors: [
+            {
+              extensions: { code: 'AUTH_TOKEN_EXPIRED' },
+              message: 'Session ended',
+            },
+          ],
+        }),
+      );
       (mockedIsNetworkError as jest.Mock).mockReturnValue(false);
       const mockForward = createMockForward();
 
@@ -691,6 +705,69 @@ describe('refreshToken', () => {
         },
       });
     }, 30000);
+
+    describe('operations waiting on a refresh that fails', () => {
+      /** One leader starts the refresh; the rest join it while it is in flight. */
+      const collectErrors = (count: number): Promise<unknown[]> =>
+        new Promise(resolve => {
+          const errors: unknown[] = [];
+          for (let i = 0; i < count; i++) {
+            attemptTokenRefresh(mockOperation, createMockForward()).subscribe({
+              error: (err: unknown) => {
+                errors.push(err);
+                if (errors.length === count) resolve(errors);
+              },
+            });
+          }
+        });
+
+      beforeEach(() => {
+        (mockedUseStore.getState as jest.Mock).mockReturnValue({
+          refreshToken: 'mock-refresh-token',
+          tokenRefreshFailed: jest.fn(),
+          setTokens: jest.fn(),
+          setNeedsTokenRefresh: jest.fn(),
+        });
+      });
+
+      it('classifies every waiter as the refresh itself when it fails on the network', async () => {
+        (mockedClient.mutate as jest.Mock).mockRejectedValue(
+          new Error('Network request failed'),
+        );
+        (mockedIsNetworkError as jest.Mock).mockReturnValue(true);
+
+        const verdicts = (await collectErrors(3)).map(classifyError);
+
+        // A waiter classified `unknown` is withdrawn by the queue: its write is destroyed.
+        expect(verdicts.map(v => [v.type, v.retryable])).toEqual([
+          ['network', true],
+          ['network', true],
+          ['network', true],
+        ]);
+      }, 30000);
+
+      it('classifies every waiter as auth when the server refuses the refresh', async () => {
+        (mockedClient.mutate as jest.Mock).mockRejectedValue(
+          new CombinedGraphQLErrors({
+            errors: [
+              {
+                extensions: { code: 'UNAUTHENTICATED' },
+                message: 'Token expired',
+              },
+            ],
+          }),
+        );
+        (mockedIsNetworkError as jest.Mock).mockReturnValue(false);
+
+        const verdicts = (await collectErrors(3)).map(classifyError);
+
+        expect(verdicts.map(v => [v.type, v.retryable])).toEqual([
+          ['auth', true],
+          ['auth', true],
+          ['auth', true],
+        ]);
+      });
+    });
   });
 
   describe('proactiveTokenRefresh', () => {

@@ -1,5 +1,9 @@
-import { ApolloLink, Observable } from '@apollo/client';
-import type { ApolloClient, OperationVariables } from '@apollo/client';
+import { Observable } from '@apollo/client';
+import type {
+  ApolloClient,
+  OperationVariables,
+  ApolloLink,
+} from '@apollo/client';
 import { OperationTypeNode, parse } from 'graphql';
 import performance from 'react-native-performance';
 
@@ -12,7 +16,6 @@ jest.mock('#/utils/errorSerialization', () => ({
     stringified: JSON.stringify(val),
     isCircular: false,
   })),
-  isTimerCircularStructureError: jest.fn(() => false),
 }));
 
 import { createConsoleLink } from '../consoleLink';

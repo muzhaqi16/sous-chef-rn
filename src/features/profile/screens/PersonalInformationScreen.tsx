@@ -11,32 +11,31 @@ import {
   type SettingOptionConfig,
 } from '#/config/settingsConfig';
 import { useUpdateProfile } from '#features/profile/hooks/useUpdateProfile';
-import {
-  ProfileVisibility,
-  type UpdateProfileInput,
-} from '#/graphql/generated/schemaTypes';
+import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { useDataState } from '#hooks/data/useDataState';
+import { DataStateView } from '#components/organisms/DataStateView';
 
 export const PersonalInformationScreen: React.FC = () => {
   const { t } = useTranslation();
-  const { profile, refetch } = useProfileData();
+  const { profile, loading, error, refetch } = useProfileData();
   const user = useUser();
-  const { updateProfile: writeProfile } = useUpdateProfile(profile);
+  // A refused write reverts and is alerted inside the hook.
+  const { updateProfile } = useUpdateProfile(profile);
   const [refreshing, setRefreshing] = useState(false);
 
-  const handleRefresh = () => {
-    executeRefreshWithFinally(() => refetch(), setRefreshing);
-  };
+  // Every write needs the profile's id, so a screen without one would show
+  // blank fields whose edits go nowhere.
+  const dataState = useDataState({
+    loading,
+    error,
+    hasResult: profile !== null,
+    isEmpty: false,
+  });
 
-  const updateProfile = async (input: UpdateProfileInput) => {
-    const outcome = await writeProfile(input);
-    // `alertIfRejected` stays quiet when the mutation THREW, which the hook has
-    // already reported, so the two never double-report.
-    if (outcome.rejected) {
-      alertIfRejected(outcome.result, t('errors.updateProfileFailed'));
-    }
+  const handleRefresh = () => {
+    void executeRefreshWithFinally(() => refetch(), setRefreshing);
   };
 
   const translateOptions = (options?: SettingOptionConfig[]) =>
@@ -47,6 +46,7 @@ export const PersonalInformationScreen: React.FC = () => {
       key: config.key,
       label: t(config.labelKey),
       type: config.type,
+      placeholder: config.placeholderKey ? t(config.placeholderKey) : undefined,
     };
 
     switch (config.key) {
@@ -57,35 +57,45 @@ export const PersonalInformationScreen: React.FC = () => {
         return {
           ...baseItem,
           value: profile?.firstName || '',
-          onSave: (v: string) => updateProfile({ firstName: v }),
+          onSave: (v: string) => {
+            void updateProfile({ firstName: v });
+          },
         };
 
       case 'lastName':
         return {
           ...baseItem,
           value: profile?.lastName || '',
-          onSave: (v: string) => updateProfile({ lastName: v }),
+          onSave: (v: string) => {
+            void updateProfile({ lastName: v });
+          },
         };
 
       case 'displayName':
         return {
           ...baseItem,
           value: profile?.displayName || '',
-          onSave: (v: string) => updateProfile({ displayName: v }),
+          onSave: (v: string) => {
+            void updateProfile({ displayName: v });
+          },
         };
 
       case 'bio':
         return {
           ...baseItem,
           value: profile?.bio || '',
-          onSave: (v: string) => updateProfile({ bio: v }),
+          onSave: (v: string) => {
+            void updateProfile({ bio: v });
+          },
         };
 
       case 'phone':
         return {
           ...baseItem,
           value: profile?.phone || '',
-          onSave: (v: string) => updateProfile({ phone: v }),
+          onSave: (v: string) => {
+            void updateProfile({ phone: v });
+          },
         };
 
       case 'dateOfBirth':
@@ -94,7 +104,7 @@ export const PersonalInformationScreen: React.FC = () => {
           value: extractDateString(profile?.dateOfBirth),
           onSave: (v: string) => {
             const isoValue = dateStringToISO(v);
-            updateProfile({ dateOfBirth: isoValue });
+            void updateProfile({ dateOfBirth: isoValue });
           },
         };
 
@@ -103,7 +113,9 @@ export const PersonalInformationScreen: React.FC = () => {
           ...baseItem,
           value: profile?.gender || '',
           options: translateOptions(config.options),
-          onSave: (v: string) => updateProfile({ gender: v }),
+          onSave: (v: string) => {
+            void updateProfile({ gender: v });
+          },
         };
 
       case 'profileVisibility':
@@ -111,22 +123,27 @@ export const PersonalInformationScreen: React.FC = () => {
           ...baseItem,
           value: profile?.profileVisibility || ProfileVisibility.Public,
           options: translateOptions(config.options),
-          onSave: (v: string) =>
-            updateProfile({ profileVisibility: v as ProfileVisibility }),
+          onSave: (v: string) => {
+            void updateProfile({ profileVisibility: v as ProfileVisibility });
+          },
         };
 
       case 'showEmail':
         return {
           ...baseItem,
-          value: profile?.showEmail || false,
-          onPress: () => updateProfile({ showEmail: !profile?.showEmail }),
+          value: profile?.showEmail ?? false,
+          onPress: () => {
+            void updateProfile({ showEmail: !profile?.showEmail });
+          },
         };
 
       case 'showPhone':
         return {
           ...baseItem,
-          value: profile?.showPhone || false,
-          onPress: () => updateProfile({ showPhone: !profile?.showPhone }),
+          value: profile?.showPhone ?? false,
+          onPress: () => {
+            void updateProfile({ showPhone: !profile?.showPhone });
+          },
         };
     }
 
@@ -139,6 +156,23 @@ export const PersonalInformationScreen: React.FC = () => {
       items: configSection.items.map(createSettingItem),
     }));
   })();
+
+  if (dataState !== 'ready') {
+    return (
+      <ProfileScreenWrapper
+        title={t('labels.personalInformation')}
+        scrollEnabled={false}
+      >
+        <DataStateView
+          state={dataState}
+          onRetry={() => {
+            // A failed retry lands in the query's `error`, which this view renders.
+            refetch().catch(() => {});
+          }}
+        />
+      </ProfileScreenWrapper>
+    );
+  }
 
   return (
     <ProfileScreenWrapper

@@ -19,14 +19,14 @@ export interface ShoppingListTemplateOption {
 }
 
 export function useShoppingListTemplates(options: { skip?: boolean } = {}) {
-  const { data, loading, error } = useQuery(GetShoppingListTemplatesDocument, {
+  const { data, error } = useQuery(GetShoppingListTemplatesDocument, {
     // The lines come with the picker so a template can be copied offline;
     // `copySource` reads them straight back out of the cache.
     variables: { first: 50, copyableItemLimit: COPYABLE_ITEM_LIMIT },
     skip: options.skip,
   });
 
-  useApolloErrorLogger('GetShoppingListTemplates', error);
+  useApolloErrorLogger(GetShoppingListTemplatesDocument, error);
 
   const templates: ShoppingListTemplateOption[] = extractNodes(
     data?.shoppingLists,
@@ -36,5 +36,5 @@ export function useShoppingListTemplates(options: { skip?: boolean } = {}) {
     totalItems: node.totalItems,
   }));
 
-  return { templates, loading, error };
+  return { templates };
 }

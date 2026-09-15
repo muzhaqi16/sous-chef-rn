@@ -1,4 +1,4 @@
-import { waitFor } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
 import { useApolloClient } from '@apollo/client/react';
 import {
   recordMock,
@@ -10,7 +10,6 @@ import {
   type MyRecipeCard_RecipeFragment,
 } from '#features/recipes/components/MyRecipeCard.generated';
 import { useRecipeManagement } from '../useRecipeManagement';
-import { Difficulty, RecipeCategory } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
   useIsLoggedOut: () => false,
@@ -30,18 +29,11 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function buildRecipeNode(
-  id: string,
-  name: string,
-  category: RecipeCategory,
-  difficulty: Difficulty,
-) {
+function buildRecipeNode(id: string, name: string) {
   return {
     __typename: 'Recipe' as const,
     id,
     name,
-    category,
-    difficulty,
     description: null,
     imageUrl: null,
     servings: 4,
@@ -60,32 +52,17 @@ function recipesMock() {
           {
             __typename: 'RecipeEdge' as const,
             cursor: 'c1',
-            node: buildRecipeNode(
-              'r1',
-              'Pasta',
-              RecipeCategory.MainCourse,
-              Difficulty.Easy,
-            ),
+            node: buildRecipeNode('r1', 'Pasta'),
           },
           {
             __typename: 'RecipeEdge' as const,
             cursor: 'c2',
-            node: buildRecipeNode(
-              'r2',
-              'Salad',
-              RecipeCategory.Appetizer,
-              Difficulty.Easy,
-            ),
+            node: buildRecipeNode('r2', 'Salad'),
           },
           {
             __typename: 'RecipeEdge' as const,
             cursor: 'c3',
-            node: buildRecipeNode(
-              'r3',
-              'Soup',
-              RecipeCategory.Appetizer,
-              Difficulty.Hard,
-            ),
+            node: buildRecipeNode('r3', 'Soup'),
           },
         ],
         pageInfo: {
@@ -95,6 +72,35 @@ function recipesMock() {
         },
         totalCount: 3,
       },
+    },
+  });
+}
+
+// Page one ends at `page-1`; asking past it returns the last recipe.
+function pagedRecipesMock() {
+  return recordMock(MyRecipesDocument, {
+    data: (vars: Record<string, unknown>) => {
+      const secondPage = vars.cursor === 'page-1';
+      return {
+        recipes: {
+          __typename: 'RecipeConnection' as const,
+          edges: [
+            {
+              __typename: 'RecipeEdge' as const,
+              cursor: secondPage ? 'c2' : 'c1',
+              node: secondPage
+                ? buildRecipeNode('r2', 'Lasagne')
+                : buildRecipeNode('r1', 'Pasta'),
+            },
+          ],
+          pageInfo: {
+            __typename: 'PageInfo' as const,
+            hasNextPage: !secondPage,
+            endCursor: secondPage ? null : 'page-1',
+          },
+          totalCount: 2,
+        },
+      };
     },
   });
 }
@@ -133,7 +139,6 @@ describe('useRecipeManagement', () => {
   it('returns recipes from query data', async () => {
     const result = await renderReady();
     expect(readName(result, 'r1')).toBe('Pasta');
-    expect(result.current.state.totalCount).toBe(3);
   });
 
   it('returns loading and error state', async () => {
@@ -142,31 +147,35 @@ describe('useRecipeManagement', () => {
     expect(result.current.state.error).toBeUndefined();
   });
 
-  it('getRecipeById finds a recipe by ID', async () => {
-    const result = await renderReady();
-    const recipe = result.current.actions.getRecipeById('r2');
-    expect(recipe?.id).toBe('r2');
-    expect(readName(result, 'r2')).toBe('Salad');
+  it('stops at the first page until the list asks for more', async () => {
+    const { result } = renderHookWithApollo(() => useRecipeManagement(), {
+      operationMocks: [pagedRecipesMock().mock],
+    });
+
+    await waitFor(() => expect(result.current.state.recipes).toHaveLength(1));
+    expect(result.current.state.hasMore).toBe(true);
+
+    await act(async () => {
+      await result.current.actions.loadMore();
+    });
+
+    await waitFor(() => expect(result.current.state.recipes).toHaveLength(2));
+    expect(result.current.state.hasMore).toBe(false);
   });
 
-  it('getRecipeById returns undefined for unknown ID', async () => {
-    const result = await renderReady();
-    expect(result.current.actions.getRecipeById('unknown')).toBeUndefined();
-  });
-
-  it('getRecipesByCategory filters by category', async () => {
-    const result = await renderReady();
-    const mainCourses = result.current.actions.getRecipesByCategory(
-      RecipeCategory.MainCourse,
+  it('loadAllPages pages through the rest, so a search sees every recipe', async () => {
+    const { result } = renderHookWithApollo(
+      () => useRecipeManagement({ loadAllPages: true }),
+      { operationMocks: [pagedRecipesMock().mock] },
     );
-    expect(mainCourses).toHaveLength(1);
-    expect(readName(result, mainCourses[0]!.id)).toBe('Pasta');
-  });
 
-  it('getRecipesByDifficulty filters by difficulty', async () => {
-    const result = await renderReady();
-    const easy = result.current.actions.getRecipesByDifficulty(Difficulty.Easy);
-    expect(easy).toHaveLength(2);
+    await waitFor(() =>
+      expect(result.current.state.recipes.map(r => r.name)).toEqual([
+        'Pasta',
+        'Lasagne',
+      ]),
+    );
+    expect(result.current.state.isLoadingRemainingPages).toBe(false);
   });
 
   it('exposes refetch function', async () => {

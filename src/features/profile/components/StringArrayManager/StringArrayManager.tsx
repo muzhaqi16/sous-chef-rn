@@ -51,9 +51,9 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
   items,
   onAdd,
   onRemove,
-  inputPlaceholder = 'Enter value...',
-  addButtonLabel = 'Add Item',
-  emptyMessage = 'No items added yet',
+  inputPlaceholder,
+  addButtonLabel,
+  emptyMessage,
   maxItems,
   validate,
   transform = defaultTransform,
@@ -74,7 +74,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
 
   const handleAddPress = () => {
     if (maxItems && items.length >= maxItems) {
-      setError(`Maximum ${maxItems} items allowed`);
+      setError(t('stringArrayManager.maxItems', { count: maxItems }));
       return;
     }
     setIsAddingModal(true);
@@ -86,12 +86,12 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
     const transformedItem = transform(newItem);
 
     if (!transformedItem) {
-      setError('Please enter a value');
+      setError(t('stringArrayManager.valueRequired'));
       return;
     }
 
     if (items.includes(transformedItem)) {
-      setError('This item already exists');
+      setError(t('stringArrayManager.duplicate'));
       return;
     }
 
@@ -103,7 +103,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
       }
     }
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         const success = await onAdd(transformedItem);
 
@@ -133,7 +133,9 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
   return (
     <View style={[commonStyles.card, containerStyle]}>
       <View style={styles.header}>
-        <Text style={commonStyles.subtitle}>{title}</Text>
+        <Text role="bodyStrong" tone="secondary">
+          {title}
+        </Text>
         {!!showAddButton && (
           <AppPressable
             onPress={handleAddPress}
@@ -163,7 +165,9 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
         ))}
 
         {items.length === 0 && (
-          <Text style={commonStyles.bodySecondary}>{emptyMessage}</Text>
+          <Text role="body" tone="secondary">
+            {emptyMessage ?? t('stringArrayManager.empty')}
+          </Text>
         )}
       </View>
       <Sheet
@@ -174,7 +178,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
         contentContainerStyle={styles.sheetContent}
       >
         <BottomSheetHeader
-          title={addButtonLabel}
+          title={addButtonLabel ?? t('labels.addItem')}
           onCancel={handleCancel}
           onConfirm={handleAdd}
           confirmLabel={t('labels.add')}
@@ -188,13 +192,15 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
             setNewItem(text);
             setError('');
           }}
-          placeholder={inputPlaceholder}
+          placeholder={
+            inputPlaceholder ?? t('stringArrayManager.inputPlaceholder')
+          }
           autoFocus
           editable={!loading}
         />
 
         {error ? (
-          <Text role="caption" style={styles.errorText}>
+          <Text role="error" tone="error" style={styles.errorText}>
             {error}
           </Text>
         ) : null}
@@ -268,7 +274,6 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.danger,
   },
   errorText: {
-    color: theme.colors.danger,
     marginTop: theme.spacing.xs,
   },
 }));

@@ -1,15 +1,17 @@
 import { object, string, array } from 'yup';
 import { emailRule, normalizeSmartPunctuation } from '#utils/validation/common';
-import { t } from '#/i18n';
+import { t, type KeyUnder } from '#/i18n';
 
 /**
  * Schemas are built once at module scope, so a message resolved eagerly would
  * freeze whichever language was active at import time. Yup accepts a function
  * and calls it when the rule fails, so the lookup lands after any language
- * change. Same pattern as `validation/item.ts`.
+ * change. Same pattern as `features/catalog/utils/itemValidation.ts`.
  */
-const msg = (key: string, options?: Record<string, unknown>) => (): string =>
-  t(`onboardingValidation.${key}`, options);
+const msg =
+  (key: KeyUnder<'onboardingValidation'>, options?: Record<string, unknown>) =>
+  (): string =>
+    t(`onboardingValidation.${key}`, options);
 
 // home name rule
 const homeNameRule = string()
@@ -17,10 +19,7 @@ const homeNameRule = string()
   .transform(normalizeSmartPunctuation)
   .min(2, msg('homeMin', { count: 2 }))
   .max(50, msg('homeMax', { count: 50 }))
-  .matches(
-    /^[a-zA-Z0-9\s'"-]+$/,
-    'Home name can only contain letters, numbers, spaces, hyphens, apostrophes, and quotes',
-  )
+  .matches(/^[a-zA-Z0-9\s'"-]+$/, msg('homeChars'))
   .trim();
 
 // pantry name rule

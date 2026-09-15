@@ -12,6 +12,7 @@ import {
 } from '#features/shoppingList/context/ShoppingListTutorialContext';
 import { useAnyShoppingListSheetVisible } from '#features/shoppingList/context/ShoppingListModalsContext';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { getShoppingListPermissionsWithOwner } from '#features/shoppingList/utils/shoppingListPermissions';
 
 type ScreenData = ShoppingListMainContentProps['screenData'];
@@ -23,6 +24,9 @@ jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#hooks/navigation/useAppNavigation');
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: jest.fn(() => false),
+}));
 
 jest.mock('#hooks/navigation/useTabBarAddButton', () => ({
   useTabBarAddButton: jest.fn(),
@@ -198,7 +202,6 @@ const makeScreenData = (overrides: ScreenDataOverrides = {}): ScreenData => {
       // cannot say what this person may do and offers a retry instead.
       currentListDetails: { id: 'list-1', homeId: null, ownerships: [] },
       currentListId: 'list-1',
-      selectedShoppingListId: 'list-1',
       unpurchasedItems: [],
       purchasedItems: [],
       rawUnpurchasedItems: [],
@@ -218,7 +221,6 @@ const makeScreenData = (overrides: ScreenDataOverrides = {}): ScreenData => {
     },
     actions: {
       setSearchQuery: jest.fn(),
-      addItem: jest.fn(),
       toggleItem: jest.fn(),
       removeItem: jest.fn(),
       refetch: jest.fn().mockResolvedValue({}),
@@ -392,6 +394,35 @@ describe('ShoppingListMainContent', () => {
     });
   });
 
+  describe('when the item read fails', () => {
+    it('offers a retry rather than calling the list empty', () => {
+      const { getByTestId } = render(
+        <ShoppingListMainContent
+          screenData={makeScreenData({
+            state: { error: new Error('Network request failed') },
+          })}
+        />,
+      );
+
+      expect(getByTestId('state-error')).toBeTruthy();
+    });
+
+    it('keeps the cached rows on screen', () => {
+      const { queryByTestId } = render(
+        <ShoppingListMainContent
+          screenData={makeScreenData({
+            state: {
+              error: new Error('Network request failed'),
+              rawUnpurchasedItems: [{ id: 'item-1' }],
+            },
+          })}
+        />,
+      );
+
+      expect(queryByTestId('state-error')).toBeNull();
+    });
+  });
+
   describe('when the app cannot say what this person may do', () => {
     // The detail query is `errorPolicy: 'ignore'`, so a failure and a cache
     // that never held the list both arrive as no details at all. Rendering the
@@ -407,6 +438,17 @@ describe('ShoppingListMainContent', () => {
       );
 
       expect(getByTestId('state-error')).toBeTruthy();
+    });
+
+    it('calls an unreachable server offline, not a failed load', () => {
+      jest.mocked(useIsApiUnavailable).mockReturnValue(true);
+      const { getByTestId, queryByTestId } = render(
+        <ShoppingListMainContent screenData={withoutDetails()} />,
+      );
+
+      expect(getByTestId('state-offline')).toBeTruthy();
+      expect(queryByTestId('state-error')).toBeNull();
+      jest.mocked(useIsApiUnavailable).mockReturnValue(false);
     });
 
     it('does not tell the person they lack permission', () => {

@@ -1,4 +1,4 @@
-import { TelemetryTransport, LogEntry, MetricEntry } from '../types';
+import type { TelemetryTransport, LogEntry, MetricEntry } from '../types';
 import { Environment } from '#/utils/environment';
 
 export class ConsoleTransport implements TelemetryTransport {
@@ -36,19 +36,19 @@ export class ConsoleTransport implements TelemetryTransport {
 
       switch (log.level) {
         case 'debug':
-          console.log(prefix, log.message, log.extra || '');
+          console.log(prefix, log.message, log.extra ?? '');
           break;
         case 'info':
-          console.info(prefix, log.message, log.extra || '');
+          console.info(prefix, log.message, log.extra ?? '');
           break;
         case 'warn':
-          console.warn(prefix, log.message, log.extra || '');
+          console.warn(prefix, log.message, log.extra ?? '');
           break;
         case 'error':
-          console.error(prefix, log.message, log.extra || '');
+          console.error(prefix, log.message, log.extra ?? '');
           break;
         default:
-          console.log(prefix, log.message, log.extra || '');
+          console.log(prefix, log.message, log.extra ?? '');
       }
     });
   }

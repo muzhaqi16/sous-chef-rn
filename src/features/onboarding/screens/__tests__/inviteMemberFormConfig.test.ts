@@ -1,4 +1,4 @@
-import { ValidationError } from 'yup';
+import type { ValidationError } from 'yup';
 import {
   inviteEmailSchema,
   normalizeInviteEmail,

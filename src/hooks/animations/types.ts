@@ -1,38 +1,4 @@
-import {
-  type SharedValue,
-  type withTiming,
-  type useAnimatedStyle,
-} from 'react-native-reanimated';
-
-export interface SpringConfig {
-  mass?: number;
-  damping?: number;
-  stiffness?: number;
-}
-
-export interface AnimatedPresenceCallbacks {
-  onOpenStart?: () => void;
-  onOpenComplete?: () => void;
-  onCloseStart?: () => void;
-  onCloseComplete?: () => void;
-}
-
-export interface UseAnimatedPresenceProps {
-  springConfig?: SpringConfig;
-  skipInitialAnimation?: boolean;
-  callbacks?: AnimatedPresenceCallbacks;
-  initialVisible?: boolean;
-}
-
-export interface UseAnimatedPresenceReturn {
-  shouldRender: boolean;
-  isVisible: SharedValue<boolean>;
-  progress: SharedValue<number>;
-  open: () => void;
-  close: () => void;
-  toggle: () => void;
-  isActive: () => boolean;
-}
+import type { withTiming, useAnimatedStyle } from 'react-native-reanimated';
 
 // Slide Animation Types
 export type SlideDirection = 1 | -1; // 1 = right, -1 = left
@@ -74,8 +40,4 @@ export interface UseSlideAnimationReturn {
   animatedSlideStyle: ReturnType<typeof useAnimatedStyle>;
   /** Trigger the slide animation. direction: 1 = right, -1 = left. onComplete called after animation finishes. */
   triggerSlide: (direction: SlideDirection, onComplete?: () => void) => void;
-  /** Reset slide position to origin */
-  resetSlide: () => void;
-  /** Whether animation is currently in progress */
-  isAnimating: SharedValue<boolean>;
 }

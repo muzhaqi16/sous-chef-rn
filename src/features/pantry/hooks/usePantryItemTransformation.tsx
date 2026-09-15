@@ -1,8 +1,16 @@
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import {
+  type AcquisitionMethod,
+  ItemCondition,
+  StorageState,
+} from '#/graphql/generated/schemaTypes';
+import {
+  acquisitionMethodLabelKey,
+  conditionLabelKey,
+} from '#features/pantry/utils/itemEnumLabels';
 // Aliased: despite the `use` prefix this module exports plain functions, not a
 // hook, so there is no component to call `useTranslation` in. Callers that
 // render the result are responsible for re-running these on a language change.
-import { t as tGlobal } from '#/i18n';
+import { isTranslationKey, t as tGlobal } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import { formatCurrency as formatMoney } from '#/utils/formatters/number';
 import { formatMonthDayYear } from '#/utils/formatters/date';
@@ -28,9 +36,14 @@ export interface ExpirationStatus {
  * is a parameter — resolving at module load freezes the first-loaded language.
  */
 export const formatStorageState = (
-  state: string | null | undefined,
+  state: StorageState | null | undefined,
   translate: Translate,
-): string => (state ? translate(`storageStateShort.${state}`, state) : '');
+): string => {
+  if (!state) return '';
+  // `string`: the wire can carry a member the generated enum predates.
+  const key: string = `storageStateShort.${state}`;
+  return isTranslationKey(key) ? translate(key) : translate('labels.unknown');
+};
 
 // Helper to calculate days until expiry (negative if expired)
 export const calculateExpiresIn = (
@@ -49,6 +62,8 @@ export const getLocation = (storageState?: string | null): PantryLocation => {
       return 'fridge';
     case StorageState.Frozen:
       return 'freezer';
+    case null:
+    case undefined:
     default:
       return 'pantry';
   }
@@ -267,30 +282,28 @@ export const getDaysInPantry = (createdAt: string | null | undefined) => {
   );
 };
 
-// Format days in pantry for display
-export const formatDaysInPantry = (days: number | null): string => {
+export const formatDaysInPantry = (
+  days: number | null,
+  t: Translate,
+): string => {
   if (days === null) return '-';
-  if (days === 0) return 'Today';
-  if (days === 1) return '1 day';
-  return `${days} days`;
+  if (days === 0) return t('labels.today');
+  return t('labels.durationDays', { count: days });
 };
 
-// Format condition enum for display
-export const formatCondition = (condition?: string | null): string | null => {
-  if (!condition || condition === 'GOOD') return null;
-  return condition.charAt(0) + condition.slice(1).toLowerCase();
-};
-
-// Format acquisition method enum for display
-export const formatAcquisitionMethod = (
-  method?: string | null,
+/** Null for `GOOD`: the detail screen shows a condition only when it is a concern. */
+export const formatCondition = (
+  condition: ItemCondition | null | undefined,
+  t: Translate,
 ): string | null => {
-  if (!method) return null;
-  return method
-    .split('_')
-    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
-    .join(' ');
+  if (!condition || condition === ItemCondition.Good) return null;
+  return t(conditionLabelKey(condition));
 };
+
+export const formatAcquisitionMethod = (
+  method: AcquisitionMethod | null | undefined,
+  t: Translate,
+): string | null => (method ? t(acquisitionMethodLabelKey(method)) : null);
 
 // A cost, or null when the server recorded none — callers omit the row rather
 // than render an em dash beside populated ones. A cost recorded AS zero is a

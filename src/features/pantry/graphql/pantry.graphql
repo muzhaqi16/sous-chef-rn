@@ -450,8 +450,8 @@ query ConsumptionUnitsForPantryItem($pantryItemId: ID!) {
   }
 }
 
-query RestockUnitsForItem($pantryItemId: ID!) {
-  restockUnitsForItem(pantryItemId: $pantryItemId) {
+query RestockUnitsForPantryItem($pantryItemId: ID!) {
+  restockUnitsForPantryItem(pantryItemId: $pantryItemId) {
     unit {
       id
       name

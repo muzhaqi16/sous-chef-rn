@@ -1,5 +1,5 @@
 import React from 'react';
-import { type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { RIPPLE } from '#constants/ripple';
 import { Icon } from '#utils/iconUtils';

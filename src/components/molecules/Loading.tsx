@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { View, StyleProp, ViewStyle, ActivityIndicator } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';

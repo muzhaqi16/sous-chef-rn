@@ -1,13 +1,15 @@
 import { useEffect } from 'react';
-import { useQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import {
   GetPantryItemSuggestionsDocument,
   type GetPantryItemSuggestionsQuery,
 } from '#features/pantry/graphql/pantry.generated';
-import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { preloadImages } from '#components/atoms/CachedImage';
-import type { ErrorLike } from '@apollo/client';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
+import { useDataState } from '#hooks/data/useDataState';
+import { errorService } from '#/services/errorService';
+import type { SuggestionsHookResult } from '#features/catalog/ui/AddItemSheet/types';
 
 /**
  * Per-source fetch limit. Each section is fetched with its own quota, and the
@@ -26,39 +28,21 @@ interface UsePantryItemSuggestionsOptions {
   skip?: boolean;
 }
 
-interface GroupedSuggestions {
-  [key: string]: PantryItemSuggestion[];
-  lowStock: PantryItemSuggestion[];
-  expiringSoon: PantryItemSuggestion[];
-  recentlyDeleted: PantryItemSuggestion[];
-  frequentlyAdded: PantryItemSuggestion[];
-  popular: PantryItemSuggestion[];
-}
-
-export interface UsePantryItemSuggestionsReturn {
-  suggestions: (PantryItemSuggestion & { imageUrl: string | null })[];
-  grouped: GroupedSuggestions;
-  loading: boolean;
-  error: ErrorLike | undefined;
-  hasSuggestions: boolean;
-  refetch: () => Promise<unknown>;
-  isOffline: boolean;
-}
-
 export function usePantryItemSuggestions({
   pantryId,
   limit = PANTRY_SUGGESTIONS_LIMIT,
   skip = false,
-}: UsePantryItemSuggestionsOptions): UsePantryItemSuggestionsReturn {
-  const isOffline = useIsEffectivelyOffline();
+}: UsePantryItemSuggestionsOptions): SuggestionsHookResult<PantryItemSuggestion> {
+  const skipped = skip || !pantryId;
 
+  // Not skipped offline: `offlineModeLink` serves a cached read and answers a
+  // miss with an error, which `useDataState` classifies as offline.
   const { data, loading, error, refetch } = useQuery(
     GetPantryItemSuggestionsDocument,
-    {
-      variables: { pantryId: pantryId!, limit },
-      skip: skip || !pantryId || isOffline,
-    },
+    skipped ? skipToken : { variables: { pantryId, limit } },
   );
+
+  useApolloErrorLogger(GetPantryItemSuggestionsDocument, error);
 
   // Each source arrives in its own aliased array (own quota); attach the
   // resolved image URL the rows render.
@@ -68,7 +52,7 @@ export function usePantryItemSuggestions({
   });
 
   const pantry = data?.pantry;
-  const grouped: GroupedSuggestions = {
+  const grouped = {
     lowStock: (pantry?.lowStock ?? []).map(withImage),
     expiringSoon: (pantry?.expiringSoon ?? []).map(withImage),
     recentlyDeleted: (pantry?.recentlyDeleted ?? []).map(withImage),
@@ -76,25 +60,17 @@ export function usePantryItemSuggestions({
     popular: (pantry?.popular ?? []).map(withImage),
   };
 
-  const suggestions = [
-    ...grouped.lowStock,
-    ...grouped.expiringSoon,
-    ...grouped.recentlyDeleted,
-    ...grouped.frequentlyAdded,
-    ...grouped.popular,
-  ];
-
   // Preload suggestion images into disk cache for instant display. Keyed on the
   // Apollo result, which only changes when the data does — the derived arrays
   // above are rebuilt on every render.
   useEffect(() => {
     if (!pantry) return;
     const urls = [
-      ...(pantry.lowStock ?? []),
-      ...(pantry.expiringSoon ?? []),
-      ...(pantry.recentlyDeleted ?? []),
-      ...(pantry.frequentlyAdded ?? []),
-      ...(pantry.popular ?? []),
+      ...pantry.lowStock,
+      ...pantry.expiringSoon,
+      ...pantry.recentlyDeleted,
+      ...pantry.frequentlyAdded,
+      ...pantry.popular,
     ]
       .map(s => resolveImageUrl(s))
       .filter((url): url is string => !!url);
@@ -103,16 +79,24 @@ export function usePantryItemSuggestions({
     }
   }, [pantry]);
 
-  const hasSuggestions = !isOffline && suggestions.length > 0;
-
-  return {
-    suggestions: isOffline ? [] : suggestions,
-    grouped,
+  const state = useDataState({
     loading,
     error,
-    hasSuggestions,
-    refetch,
-    isOffline,
+    hasResult: data !== undefined,
+    isEmpty: Object.values(grouped).every(items => items.length === 0),
+    skipped,
+  });
+
+  return {
+    grouped,
+    state,
+    refetch: () => {
+      void refetch().catch(refetchError =>
+        errorService.reportError(refetchError, {
+          operation: 'usePantryItemSuggestions.refetch',
+        }),
+      );
+    },
   };
 }
 

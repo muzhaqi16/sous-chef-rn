@@ -25,6 +25,8 @@ interface BottomSheetHeaderProps {
   savingLabel?: string;
   cancelTestID?: string;
   confirmTestID?: string;
+  /** The title is inert, so a test taps it to blur a field without side effects. */
+  titleTestID?: string;
 }
 
 export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
@@ -39,6 +41,7 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
   savingLabel,
   cancelTestID,
   confirmTestID,
+  titleTestID,
 }) => {
   const { t } = useTranslation();
   styles.useVariants({
@@ -73,6 +76,7 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
             align="center"
             style={styles.title}
             numberOfLines={1}
+            testID={titleTestID}
           >
             {title}
           </Text>

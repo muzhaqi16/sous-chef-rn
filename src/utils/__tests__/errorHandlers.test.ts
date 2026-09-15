@@ -1,19 +1,12 @@
 import { alertService, type AlertButton } from '#/services/alertService';
+import { errorService } from '#/services/errorService';
 import { storeApi } from '#store';
-import {
-  handleVersionConflictAlert,
-  handleMutationErrorAlert,
-} from '../errorHandlers';
-
-jest.mock('../errors/versionConflict', () => ({
-  handleVersionConflict: jest.fn(),
-  getVersionConflictMessage: jest.fn(() => 'Version conflict message'),
-}));
+import { t } from '#/i18n';
+import { OfflineRejectedError } from '#/apollo/offlineQueue/OfflineRejectedError';
+import { alertVersionConflict, reportMutationFailure } from '../errorHandlers';
+import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 
 jest.mock('#/services/errorService');
-
-const { handleVersionConflict } = require('../errors/versionConflict');
-const { errorService } = require('#/services/errorService');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -23,128 +16,81 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('handleVersionConflictAlert', () => {
-  it('returns true and shows alert for version conflict', () => {
-    handleVersionConflict.mockReturnValue(true);
-    const result = handleVersionConflictAlert(new Error('conflict'));
-    expect(result).toBe(true);
-    expect(alertService.alert).toHaveBeenCalled();
-  });
-
-  it('returns false for non-version-conflict errors', () => {
-    handleVersionConflict.mockReturnValue(false);
-    const result = handleVersionConflictAlert(new Error('other'));
-    expect(result).toBe(false);
-    expect(alertService.alert).not.toHaveBeenCalled();
-  });
-
-  it('calls onRefresh when the user presses Refresh', () => {
-    handleVersionConflict.mockReturnValue(true);
+describe('alertVersionConflict', () => {
+  it("offers the caller's refresh", () => {
     const onRefresh = jest.fn();
-    handleVersionConflictAlert(new Error('conflict'), { onRefresh });
-    const buttons = (alertService.alert as jest.Mock).mock.calls[0][2];
-    const refreshButton = buttons.find(
-      (b: AlertButton) => b.text === 'Refresh',
-    );
-    refreshButton.onPress();
-    expect(onRefresh).toHaveBeenCalled();
+    alertVersionConflict({ onRefresh });
+
+    const buttons = (alertService.alert as jest.Mock).mock
+      .calls[0][2] as AlertButton[];
+    buttons.find(button => button.text === t('labels.refresh'))?.onPress?.();
+
+    expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 
   it('uses customMessage when provided', () => {
-    handleVersionConflict.mockReturnValue(true);
-    handleVersionConflictAlert(new Error('conflict'), {
-      customMessage: 'Custom message',
-    });
+    alertVersionConflict({ customMessage: 'Custom message' });
+
     expect(alertService.alert).toHaveBeenCalledWith(
-      'Item Updated',
+      t('errors.entityUpdatedTitle', { entity: t('labels.item') }),
       'Custom message',
       expect.any(Array),
     );
   });
 });
 
-describe('handleMutationErrorAlert', () => {
-  it("shows localized copy, never the error's own message", () => {
-    handleMutationErrorAlert(new Error('boom'), { operation: 'Test' });
+/**
+ * During an outage, reporting every failing mutation writes a console error
+ * and a telemetry error event apiece — one settings session against a down API
+ * produces 228, all describing the same known condition.
+ */
+describe('reportMutationFailure during a known outage', () => {
+  const setApiUnavailable = (unavailable: boolean) => {
+    storeApi.setState({
+      isOnline: !unavailable,
+      // `null` is what losing the link leaves behind: nothing has been tried
+      // since, so the API's state is unknown. `true` means a probe PROVED it
+      // reachable, which outranks NetInfo and is not an outage at all.
+      apiReachable: unavailable ? null : true,
+    } as Partial<ReturnType<typeof storeApi.getState>>);
+  };
 
-    // 'boom' stands for the server's message. Letting it reach the alert
-    // verbatim puts an English "An unexpected database error occurred" under a
-    // "Gabim" title for an Albanian-locale user.
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Something went wrong.',
+  afterEach(() => setApiUnavailable(false));
+
+  it('skips the report for a network error while the API is unavailable', () => {
+    setApiUnavailable(true);
+    reportMutationFailure(
+      new NetworkRequestError('Network request failed'),
+      'Update',
     );
-    expect(alertService.alert).not.toHaveBeenCalledWith(
-      expect.anything(),
-      'boom',
+
+    expect(errorService.reportError).not.toHaveBeenCalled();
+  });
+
+  it('skips the report for an offline rejection while the API is unavailable', () => {
+    setApiUnavailable(true);
+    reportMutationFailure(new OfflineRejectedError('Update'), 'Update');
+
+    expect(errorService.reportError).not.toHaveBeenCalled();
+  });
+
+  it('still reports a non-network error while the API is unavailable', () => {
+    setApiUnavailable(true);
+    reportMutationFailure(
+      new Error('Validation failed: name required'),
+      'Update',
     );
-    // The precise text still goes to the report, where English is correct.
+
     expect(errorService.reportError).toHaveBeenCalled();
   });
 
-  it('suppresses alert when showAlert is false', () => {
-    handleMutationErrorAlert(new Error('boom'), {
-      operation: 'Test',
-      showAlert: false,
-    });
-    expect(alertService.alert).not.toHaveBeenCalled();
+  it('reports a network error normally while the API is reachable', () => {
+    setApiUnavailable(false);
+    reportMutationFailure(
+      new NetworkRequestError('Network request failed'),
+      'Update',
+    );
+
     expect(errorService.reportError).toHaveBeenCalled();
-  });
-
-  it('uses customMessage when provided', () => {
-    handleMutationErrorAlert(new Error('boom'), {
-      operation: 'Test',
-      customMessage: 'Custom error',
-    });
-    expect(alertService.alert).toHaveBeenCalledWith('Error', 'Custom error');
-  });
-
-  /**
-   * During an outage, reporting every failing mutation writes a console error
-   * and a telemetry error event apiece — one settings session against a down API
-   * produces 228, all describing the same known condition.
-   */
-  describe('reporting during a known outage', () => {
-    const setApiUnavailable = (unavailable: boolean) => {
-      storeApi.setState({
-        isOnline: !unavailable,
-        // `null` is what losing the link leaves behind: nothing has been tried
-        // since, so the API's state is unknown. `true` would mean a probe had
-        // PROVEN it reachable, which now outranks NetInfo — and would rightly
-        // make this not an outage at all.
-        apiReachable: unavailable ? null : true,
-      } as Partial<ReturnType<typeof storeApi.getState>>);
-    };
-
-    afterEach(() => setApiUnavailable(false));
-
-    it('skips the report for a network error while the API is unavailable', () => {
-      setApiUnavailable(true);
-      handleMutationErrorAlert(new Error('Network request failed'), {
-        operation: 'Update Settings',
-      });
-
-      expect(errorService.reportError).not.toHaveBeenCalled();
-      // The user still gets told — only the report is suppressed.
-      expect(alertService.alert).toHaveBeenCalled();
-    });
-
-    it('still reports a non-network error while the API is unavailable', () => {
-      setApiUnavailable(true);
-      handleMutationErrorAlert(new Error('Validation failed: name required'), {
-        operation: 'Update Settings',
-      });
-
-      expect(errorService.reportError).toHaveBeenCalled();
-    });
-
-    it('reports a network error normally while the API is reachable', () => {
-      setApiUnavailable(false);
-      handleMutationErrorAlert(new Error('Network request failed'), {
-        operation: 'Update Settings',
-      });
-
-      expect(errorService.reportError).toHaveBeenCalled();
-    });
   });
 });

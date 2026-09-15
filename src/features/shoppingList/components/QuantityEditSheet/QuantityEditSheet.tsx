@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 // The TextInput TYPE comes from RNGH: gorhom's BottomSheetTextInput is typed
 // against it, since the sheet coordinates gestures through RNGH.
-import { TextInput } from 'react-native-gesture-handler';
+import type { TextInput } from 'react-native-gesture-handler';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -23,6 +23,7 @@ import { Text } from '#components/atoms/Text';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
 interface ItemUnit {
   id: string;
@@ -100,7 +101,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
       if (a.isPreferred !== b.isPreferred) return a.isPreferred ? -1 : 1;
       if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
       return a.symbol.localeCompare(b.symbol);
-    }) || [];
+    }) ?? [];
 
   // Seed on open / item-id change only (render-time state update); seeding on
   // item-property changes flashes the old values back during a save.
@@ -226,7 +227,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               variant: 'primary',
               disabled: !hasChanges || !quantityIsValid || loading,
               loading: loading,
-              testID: 'quantity-edit-save',
+              testID: shoppingListTestIDs.quantityEditSaveButton,
             },
           ]}
         />
@@ -240,7 +241,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             </Text>
             <View style={styles.counterContainer}>
               <AppPressable
-                testID="quantity-edit-decrement"
+                testID={shoppingListTestIDs.quantityEditDecrement}
                 accessibilityLabel={t('editableCounter.decrease')}
                 style={styles.counterButton}
                 onPress={handleDecrement}
@@ -254,7 +255,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               </AppPressable>
 
               <AppPressable
-                testID="quantity-edit-value"
+                testID={shoppingListTestIDs.quantityEditValue}
                 style={styles.quantityDisplay}
                 onPress={handleQuantityPress}
               >
@@ -270,7 +271,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                     keyboardType="numbers-and-punctuation"
                     selectTextOnFocus
                     maxLength={10}
-                    testID="quantity-edit-input"
+                    testID={shoppingListTestIDs.quantityEditInput}
                   />
                 ) : (
                   <Text role="display">{quantityInput || '0'}</Text>
@@ -278,7 +279,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               </AppPressable>
 
               <AppPressable
-                testID="quantity-edit-increment"
+                testID={shoppingListTestIDs.quantityEditIncrement}
                 accessibilityLabel={t('editableCounter.increase')}
                 style={styles.incrementButton}
                 onPress={handleIncrement}
@@ -291,11 +292,11 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               the save button is disabled either way. */}
             {quantityInput.trim() !== '' && !quantityIsValid && (
               <Text
-                role="caption"
+                role="error"
                 tone="error"
                 align="center"
                 style={styles.quantityHint}
-                testID="quantity-edit-format-hint"
+                testID={shoppingListTestIDs.quantityEditFormatHint}
               >
                 {localizeNumericHint(t('fractionInput.formatsHint'))}
               </Text>

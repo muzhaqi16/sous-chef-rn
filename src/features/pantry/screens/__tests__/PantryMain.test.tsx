@@ -7,11 +7,11 @@ import { screen } from '@testing-library/react-native';
 // so it needs a client in context even though every other dependency here is
 // mocked out.
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import type { ErrorLike } from '@apollo/client';
 import { PantryMain } from '../PantryMain';
 import type {
   PantryContentProps,
   PantryContentRef,
+  PantryItemsFailure,
 } from '#features/pantry/components/pantryDisplay/types';
 
 // --- Prop capture for PantryContent ---
@@ -68,11 +68,8 @@ const defaultPantryScreen = {
   // Home / Pantry resolution
   pantry: { id: 'p1', name: 'Kitchen' } as { id: string; name: string } | null,
   pantries: [{ id: 'p1', name: 'Kitchen' }],
-  currentHome: { name: 'My Home' } as { name: string } | null,
   selectedHomeId: 'h1' as string | null,
   setSelectedPantryId: jest.fn(),
-  homeCount: 1,
-  isReady: true,
   noHomeSelected: false,
   noHomes: false,
   noPantries: false,
@@ -81,28 +78,16 @@ const defaultPantryScreen = {
   unreadCount: 0,
   pantrySortOption: 'recent',
   pantrySortDirection: 'desc',
-  pendingPantryScrollToTop: false,
-  setPendingPantryScrollToTop: jest.fn(),
 
   // Pantry data
   pantryItems: [] as Array<{ id: string; itemName: string; quantity: number }>,
-  rawPantryItems: [] as Array<{
-    id: string;
-    itemName: string;
-    quantity: number;
-  }>,
-  pantryStorageLocations: [] as Array<{
-    id: string;
-    name: string;
-    icon: string | null;
-  }>,
   stats: { totalItems: 0, expiringCount: 0, lowStockCount: 0 } as {
     totalItems: number;
     expiringCount: number;
     lowStockCount: number;
   } | null,
   totalCount: 0,
-  pantryError: null as ErrorLike | null,
+  itemsFailure: null as PantryItemsFailure | null,
 
   // Loading states
   loading: false,
@@ -136,14 +121,9 @@ const defaultPantryScreen = {
 
   // Mutations / actions
   handleRemoveItem: jest.fn(),
-  removeItem: jest.fn(),
-  refetch: jest.fn(),
   handleRefresh: jest.fn(),
   createLocation: jest.fn(),
   creatingLocation: false,
-
-  // Network
-  isOnline: true,
 };
 
 const mockUsePantryScreen = jest.fn(() => ({ ...defaultPantryScreen }));
@@ -360,6 +340,16 @@ describe('PantryMain', () => {
       expect(screen.getByTestId('prop-itemCount')).toHaveTextContent('2');
     });
 
+    it('passes a failed items read to PantryContent', () => {
+      const itemsFailure: PantryItemsFailure = {
+        state: 'error',
+        onRetry: jest.fn(),
+      };
+      mockPantryScreen({ itemsFailure });
+      renderWithApollo(<PantryMain />);
+      expect(capturedPantryContentProps.itemsFailure).toBe(itemsFailure);
+    });
+
     it('passes pagination props (hasMore, isLoadingMore, onEndReached)', () => {
       const loadMore = jest.fn();
       mockPantryScreen({
@@ -380,10 +370,7 @@ describe('PantryMain', () => {
       mockPantryScreen({
         pantry: null,
         pantries: [],
-        currentHome: null,
         selectedHomeId: null,
-        homeCount: 3,
-        isReady: true,
         noHomeSelected: true,
         noHomes: false,
         householdName: 'Tap to select a home',
@@ -400,10 +387,7 @@ describe('PantryMain', () => {
       mockPantryScreen({
         pantry: null,
         pantries: [],
-        currentHome: null,
         selectedHomeId: null,
-        homeCount: 0,
-        isReady: true,
         noHomeSelected: false,
         noHomes: true,
         householdName: 'No homes yet',
@@ -418,10 +402,7 @@ describe('PantryMain', () => {
       mockPantryScreen({
         pantry: null,
         pantries: [],
-        currentHome: null,
         selectedHomeId: null,
-        homeCount: 3,
-        isReady: true,
         noHomeSelected: true,
         noHomes: false,
       });
@@ -440,10 +421,7 @@ describe('PantryMain', () => {
       mockPantryScreen({
         pantry: null,
         pantries: [],
-        currentHome: { name: 'My Home' },
         selectedHomeId: 'h1',
-        homeCount: 1,
-        isReady: true,
         noHomeSelected: false,
         noHomes: false,
         noPantries: true,

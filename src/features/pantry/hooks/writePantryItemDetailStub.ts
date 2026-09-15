@@ -5,7 +5,7 @@
  * an id the server does not have yet. Values are neutral, never invented.
  */
 
-import { type ApolloCache } from '@apollo/client';
+import type { ApolloCache } from '@apollo/client';
 import { Kind, type DocumentNode, type FragmentDefinitionNode } from 'graphql';
 import type { TypedDocumentNode } from '@graphql-typed-document-node/core';
 import type { Unmasked } from '@apollo/client/masking';

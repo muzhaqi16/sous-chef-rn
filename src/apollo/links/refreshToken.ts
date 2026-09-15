@@ -10,7 +10,6 @@ import {
 import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { SessionError } from '#/utils/errors/sessionError';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import { useStore } from '#store';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
 import {
@@ -19,17 +18,6 @@ import {
   registerTokenRefresh,
 } from './wsLink';
 import { getApolloClient } from '#/apollo/clientRegistry';
-
-// Shape of the error thrown by the refresh mutation that the reactive logic
-// inspects. All fields are optional — reads are individually guarded.
-interface RefreshErrorLike {
-  message?: string;
-  networkError?: { statusCode?: number } | null;
-  graphQLErrors?: ReadonlyArray<{
-    extensions?: { code?: string };
-    message?: string;
-  }>;
-}
 
 // `refresh` returns a RefreshResult union, so a server refusal resolves 200
 // with an error member as DATA — no GraphQL error, nothing for errorPolicy to
@@ -50,21 +38,34 @@ class RefreshRejectedError extends Error {
 // `UNAUTHENTICATED` is tested separately: it arrives only on the top-level
 // channel, so it lives in `TopLevelErrorCode`. Classified by CODE only — never
 // by message prose, which would read an expired invite as a dead session.
+const UNAUTHENTICATED: string = TopLevelErrorCode.Unauthenticated;
+
 const isSessionEndingGraphQLError = (e: {
   extensions?: { code?: unknown };
   message?: string;
 }): boolean => {
-  const code = String(e.extensions?.code ?? '');
-  return (
-    isSessionEndingAuthCode(code) || code === TopLevelErrorCode.Unauthenticated
-  );
+  const rawCode = e.extensions?.code;
+  const code = typeof rawCode === 'string' ? rawCode : '';
+  return isSessionEndingAuthCode(code) || code === UNAUTHENTICATED;
+};
+
+// Apollo types context values `any`; an object is spread as the headers.
+const isHeaderRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const setBearerHeader = (operation: ApolloLink.Operation, token: string) => {
+  const headers: unknown = operation.getContext().headers;
+  operation.setContext({
+    headers: {
+      ...(isHeaderRecord(headers) ? headers : undefined),
+      authorization: `Bearer ${token}`,
+    },
+  });
 };
 
 // A genuine, server-confirmed refresh-token rejection (vs a network failure,
 // which is handled separately and must preserve the cache). Checked only AFTER
-// isNetworkError, so transient/offline failures never reach here. Recognizes
-// AC4 error types (CombinedGraphQLErrors / ServerError) and falls back to the
-// legacy AC3-style shape.
+// isNetworkError, so transient/offline failures never reach here.
 const isAuthRejectionError = (error: unknown): boolean => {
   if (error instanceof RefreshRejectedError) {
     return isSessionEndingAuthCode(error.code);
@@ -75,11 +76,7 @@ const isAuthRejectionError = (error: unknown): boolean => {
   if (CombinedGraphQLErrors.is(error)) {
     return error.errors.some(isSessionEndingGraphQLError);
   }
-  const legacy = error as RefreshErrorLike;
-  return (
-    legacy.networkError?.statusCode === 401 ||
-    (legacy.graphQLErrors?.some(isSessionEndingGraphQLError) ?? false)
-  );
+  return false;
 };
 
 // Enhanced token refresh with mutex pattern and retry logic
@@ -97,7 +94,10 @@ let refreshState: RefreshState = {
   lastRefreshTime: 0,
 };
 
-let refreshQueue: Array<(token: string | null) => void> = [];
+// A waiter settles with the leader's token or the leader's OWN error: the queue
+// parks or withdraws a write by that error's classification, and a failure that
+// is network for the leader must be network for every waiter too.
+let refreshQueue: Array<(token: string | null, error?: unknown) => void> = [];
 
 // Configuration
 /**
@@ -117,13 +117,13 @@ const REFRESH_CONFIG = {
   SUPERSEDED_SETTLE_MS: 300,
 };
 
-const processQueue = (token: string | null) => {
+const processQueue = (token: string | null, error?: unknown) => {
   const callbacks = [...refreshQueue];
   refreshQueue = [];
 
   callbacks.forEach(callback => {
     try {
-      callback(token);
+      callback(token, error);
     } catch (error) {
       logger.error('Error processing refresh queue callback:', error);
     }
@@ -192,7 +192,7 @@ const retryWithSuccessorToken = async (
     logger.error(
       'Refresh token was superseded but no successor was stored, deferring token refresh',
     );
-    state.tokenRefreshFailed('unknown');
+    void state.tokenRefreshFailed('unknown');
     throw new SessionError(
       ErrorCode.AuthRefreshTokenSuperseded,
       'Refresh token superseded with no successor available',
@@ -203,7 +203,7 @@ const retryWithSuccessorToken = async (
     logger.error(
       'Refresh token superseded repeatedly, deferring token refresh',
     );
-    state.tokenRefreshFailed('unknown');
+    void state.tokenRefreshFailed('unknown');
     throw new SessionError(
       ErrorCode.AuthRefreshTokenSuperseded,
       'Refresh token superseded after max retries',
@@ -258,7 +258,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
     });
 
     const payload = response.data?.refresh;
-    if (payload && !isSuccessPayload(payload, 'RefreshTokenPayload')) {
+    if (payload && 'code' in payload) {
       // An error member of RefreshResult. Rethrow with its code so the catch
       // below can tell a dead session (log out) from a transient refusal
       // (defer) — a bare "Missing tokens" throw would collapse both into the
@@ -300,15 +300,8 @@ const performTokenRefresh = async (): Promise<string | null> => {
       error,
     );
 
-    // Legacy AC3-style error shape the reactive refresh logic inspects.
-    const refreshError = error as RefreshErrorLike;
-
-    // A union-member refusal is classified by its code before any message
-    // heuristic runs. The server answered, so this is by construction not a
-    // network failure — and its message is server-authored free text that
-    // must never reach isNetworkError's substring patterns, where wording
-    // like "unreachable" would spin the refresh in a retry loop against a
-    // token the server has already rejected for good.
+    // A union-member refusal is classified by its code: the server answered,
+    // so this is by construction not a network failure.
     if (error instanceof RefreshRejectedError) {
       if (isSupersededRefreshCode(error.code)) {
         return retryWithSuccessorToken(refreshToken, state);
@@ -318,7 +311,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
         logger.info(
           `Refresh rejected by the server (${error.code}), triggering logout with cache clear`,
         );
-        state.tokenRefreshFailed('auth_rejected');
+        void state.tokenRefreshFailed('auth_rejected');
         // OUR message, the server's CODE. Flattening this to a bare `Error`
         // loses the code, and the offline queue then classifies a rejected
         // refresh as an unknown permanent failure and WITHDRAWS the queued
@@ -329,7 +322,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
       logger.error(
         `Refresh rejected by the server (${error.code}), deferring token refresh`,
       );
-      state.tokenRefreshFailed('unknown');
+      void state.tokenRefreshFailed('unknown');
       throw error;
     }
 
@@ -340,7 +333,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
     if (isNetworkFailure) {
       logger.warn(
         `Token refresh failed due to network error (attempt ${refreshState.retryCount}/${REFRESH_CONFIG.MAX_RETRIES}), cache will be preserved:`,
-        refreshError.message,
+        error,
       );
 
       // For network errors, we retry but DON'T trigger logout after max retries
@@ -364,7 +357,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
       logger.info(
         'Refresh token expired (genuine auth error), triggering logout with cache clear',
       );
-      state.tokenRefreshFailed('auth_rejected');
+      void state.tokenRefreshFailed('auth_rejected');
       // Coded for the same reason as the branch above: the queue parks an
       // `auth` failure and withdraws an uncoded one. This path has no code of
       // its own, so it names the refusal it just classified.
@@ -378,7 +371,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
     logger.error(
       'Max token refresh retries exceeded for unknown error, deferring token refresh',
     );
-    state.tokenRefreshFailed('unknown');
+    void state.tokenRefreshFailed('unknown');
     throw error;
   }
 };
@@ -390,17 +383,18 @@ export const attemptTokenRefresh = (
   return new Observable<ApolloLink.Result>(observer => {
     // If already refreshing, join the existing promise (don't throttle these)
     if (refreshState.isRefreshing && refreshState.refreshPromise) {
-      refreshQueue.push((token: string | null) => {
+      refreshQueue.push((token: string | null, error?: unknown) => {
         if (token) {
-          operation.setContext({
-            headers: {
-              ...operation.getContext().headers,
-              authorization: `Bearer ${token}`,
-            },
-          });
+          setBearerHeader(operation, token);
           forward(operation).subscribe(observer);
         } else {
-          observer.error(new Error('Token refresh failed'));
+          observer.error(
+            error ??
+              new SessionError(
+                ErrorCode.AuthRefreshTokenInvalid,
+                'Token refresh failed',
+              ),
+          );
         }
       });
       return;
@@ -427,22 +421,22 @@ export const attemptTokenRefresh = (
     refreshState.refreshPromise.then(
       newToken => {
         resetRefreshState();
-        processQueue(newToken);
         if (newToken) {
-          operation.setContext({
-            headers: {
-              ...operation.getContext().headers,
-              authorization: `Bearer ${newToken}`,
-            },
-          });
+          processQueue(newToken);
+          setBearerHeader(operation, newToken);
           forward(operation).subscribe(observer);
         } else {
-          observer.error(new Error('Token refresh returned null token'));
+          const noToken = new SessionError(
+            ErrorCode.AuthRefreshTokenInvalid,
+            'Token refresh returned no token',
+          );
+          processQueue(null, noToken);
+          observer.error(noToken);
         }
       },
       error => {
         resetRefreshState();
-        processQueue(null);
+        processQueue(null, error);
         observer.error(error);
       },
     );
@@ -513,7 +507,7 @@ export const proactiveTokenRefresh = async (
     logger.info('[ProactiveRefresh] Successfully completed');
     return newToken;
   } catch (error) {
-    processQueue(null);
+    processQueue(null, error);
     logger.error('[ProactiveRefresh] Failed:', error);
     // Don't rethrow - reactive refresh will handle it if needed
     return null;

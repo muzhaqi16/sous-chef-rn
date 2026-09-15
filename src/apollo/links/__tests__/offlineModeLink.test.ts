@@ -11,6 +11,8 @@ import { createOfflineModeLink } from '../offlineModeLink';
 import { useStore } from '#store';
 import { getI18n } from '#/i18n/config';
 import { Telemetry } from '#/services/telemetry';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 
 jest.mock('#store', () => ({
   useStore: { getState: jest.fn() },
@@ -32,22 +34,13 @@ const MOCK_MUTATION = gql`
   }
 `;
 
-const GET_USER_SETTINGS = gql`
-  query GetUserSettings {
-    userSettings {
-      id
-    }
-  }
-`;
-
 function makeOperation(
   query: DocumentNode,
-  operationName: string,
   cache: InMemoryCache = new InMemoryCache(),
 ): ApolloLink.Operation {
   return {
     query,
-    operationName,
+    operationName: operationNameOf(query),
     operationType: OperationTypeNode.QUERY,
     variables: {},
     getContext: () => ({}),
@@ -114,7 +107,7 @@ describe('createOfflineModeLink', () => {
       isOnline: true,
     });
     const forward = makeForward();
-    link.request(makeOperation(MOCK_QUERY, 'GetItems'), forward);
+    link.request(makeOperation(MOCK_QUERY), forward);
     expect(forward).toHaveBeenCalled();
   });
 
@@ -125,7 +118,7 @@ describe('createOfflineModeLink', () => {
     });
     const forward = makeForward();
     const { emitted, completed, value } = observe(
-      link.request(makeOperation(MOCK_QUERY, 'GetItems'), forward),
+      link.request(makeOperation(MOCK_QUERY), forward),
     );
     expect(forward).not.toHaveBeenCalled();
     expect(emitted).toBe(true);
@@ -143,7 +136,7 @@ describe('createOfflineModeLink', () => {
     });
     const forward = makeForward();
     const { emitted, completed, value } = observe(
-      link.request(makeOperation(MOCK_QUERY, 'GetItems'), forward),
+      link.request(makeOperation(MOCK_QUERY), forward),
     );
     expect(forward).not.toHaveBeenCalled();
     expect(emitted).toBe(true);
@@ -162,7 +155,7 @@ describe('createOfflineModeLink', () => {
       apiReachable: false,
     });
     const forward = makeForward();
-    link.request(makeOperation(MOCK_QUERY, 'GetItems'), forward);
+    link.request(makeOperation(MOCK_QUERY), forward);
     expect(forward).toHaveBeenCalledTimes(1);
   });
 
@@ -178,7 +171,7 @@ describe('createOfflineModeLink', () => {
 
     const forward = makeForward();
     const { value } = observe(
-      link.request(makeOperation(MOCK_QUERY, 'GetItems', cache), forward),
+      link.request(makeOperation(MOCK_QUERY, cache), forward),
     );
     expect(forward).not.toHaveBeenCalled();
     expect(value?.data).toEqual(cachedData);
@@ -195,7 +188,7 @@ describe('createOfflineModeLink', () => {
 
     const forward = makeForward();
     const { emitted, completed, value } = observe(
-      link.request(makeOperation(MOCK_QUERY, 'GetItems', cache), forward),
+      link.request(makeOperation(MOCK_QUERY, cache), forward),
     );
     expect(forward).not.toHaveBeenCalled();
     expect(emitted).toBe(true);
@@ -209,7 +202,7 @@ describe('createOfflineModeLink', () => {
       isOnline: false,
     });
     const forward = makeForward();
-    link.request(makeOperation(GET_USER_SETTINGS, 'GetUserSettings'), forward);
+    link.request(makeOperation(GetUserSettingsDocument), forward);
     expect(forward).toHaveBeenCalled();
   });
 
@@ -226,12 +219,7 @@ describe('createOfflineModeLink', () => {
       });
       const cache = new InMemoryCache();
       cache.writeQuery({ query: MOCK_QUERY, data: { items: [] } });
-      observe(
-        link.request(
-          makeOperation(MOCK_QUERY, 'GetItems', cache),
-          makeForward(),
-        ),
-      );
+      observe(link.request(makeOperation(MOCK_QUERY, cache), makeForward()));
       expect(Telemetry.increment).toHaveBeenCalledWith(
         'offline_reads_served_total',
         1,
@@ -244,9 +232,7 @@ describe('createOfflineModeLink', () => {
         offlineModeEnabled: true,
         isOnline: true,
       });
-      observe(
-        link.request(makeOperation(MOCK_QUERY, 'GetItems'), makeForward()),
-      );
+      observe(link.request(makeOperation(MOCK_QUERY), makeForward()));
       expect(Telemetry.increment).toHaveBeenCalledWith(
         'offline_reads_blocked_total',
         1,
@@ -266,7 +252,7 @@ describe('createOfflineModeLink', () => {
       isOnline: false,
     });
     const forward = makeForward();
-    link.request(makeOperation(MOCK_MUTATION, 'AddItem'), forward);
+    link.request(makeOperation(MOCK_MUTATION), forward);
     expect(forward).toHaveBeenCalled();
   });
 });

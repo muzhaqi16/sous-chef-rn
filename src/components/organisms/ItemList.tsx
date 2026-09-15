@@ -15,7 +15,7 @@ import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { ItemCard } from './ItemCard';
-import { IconName } from '#/utils/iconUtils';
+import type { IconName } from '#/utils/iconUtils';
 import { getScrollClearancePadding } from '#constants/layout';
 import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 
@@ -36,6 +36,7 @@ import {
   useItemListActions,
   type ItemListActions,
 } from './ItemListActionsContext';
+import { kitTestIDs } from '#components/testIDs';
 
 // Module-scope keyExtractor — zero runtime overhead
 const keyExtractor = (item: Item) => item.id;
@@ -95,7 +96,9 @@ const ItemListRenderItemComponent: React.FC<ListRenderItemInfo<Item>> = ({
       leftActions={swipe?.left}
       rightActions={swipe?.right}
       onSwipeableWillOpen={onSwipeableWillOpen}
-      testID={testIDPrefix ? `${testIDPrefix}-${index}` : undefined}
+      testID={
+        testIDPrefix ? kitTestIDs.listItem(testIDPrefix, index) : undefined
+      }
     />
   );
 };
@@ -229,7 +232,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   // Apollo's `refetch()` does on any network error.
   const handleRefresh = () => {
     if (!onRefresh) return;
-    executeRefreshWithFinally(onRefresh, setRefreshing);
+    void executeRefreshWithFinally(onRefresh, setRefreshing);
   };
 
   const refreshControl = onRefresh ? (

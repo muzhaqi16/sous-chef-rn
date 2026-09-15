@@ -167,7 +167,7 @@ export function useShoppingListSubscriptions(
   scheduleEntryAnimation?: ScheduleEntryAnimationFn,
 ) {
   const selectedShoppingListId = useSelectedShoppingListId() || undefined;
-  const rejected = useSubscriptionRejected('MyShoppingListsEvents');
+  const rejected = useSubscriptionRejected(MyShoppingListsEventsDocument);
 
   /**
    * Apply an ITEMS_CHANGED event to the active list. A delete is the id and
@@ -322,7 +322,7 @@ export function useShoppingListSubscriptions(
   // no fragment spread fits under it.
   const myListsEventsHandlers =
     subscriptionService.register<MyShoppingListsEventsPayload>({
-      subscriptionName: 'MyShoppingListsEvents',
+      document: MyShoppingListsEventsDocument,
       entityType: 'ShoppingList',
       enableDeduplication: true,
       userId,
@@ -419,7 +419,7 @@ export function useShoppingListSubscriptions(
           clearAllPurchasedItemsFromCache(
             client.cache,
             selectedShoppingListId,
-            payload.clearedItemIds || [],
+            payload.clearedItemIds ?? [],
           );
           return;
         }
@@ -440,7 +440,7 @@ export function useShoppingListSubscriptions(
     ...myListsEventsHandlers,
   });
   useSubscriptionTransportRecovery(
-    'MyShoppingListsEvents',
+    MyShoppingListsEventsDocument,
     myListsEvents,
     myListsSkip,
   );

@@ -12,6 +12,7 @@ import type { Unmasked } from '@apollo/client/masking';
 import {
   StorageState,
   StorageType,
+  UnitType,
 } from '#/graphql/generated/schemaTypes';
 import type { GetPantryQuery } from '#features/pantry/graphql/pantry.generated';
 
@@ -95,7 +96,14 @@ function pantryItemNode(item: PantryItemFixture) {
       imageUrl: null,
       images: [],
     },
-    unit: null,
+    unit: {
+      __typename: 'Unit' as const,
+      id: 'unit-piece',
+      name: 'piece',
+      symbol: 'pc',
+      type: UnitType.Count,
+      displayAsFraction: false,
+    },
     netWeightUnit: null,
     storageLocation: null,
     packageBreakdown: null,

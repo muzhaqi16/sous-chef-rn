@@ -107,7 +107,7 @@ describe('usePantrySubscriptions', () => {
 
     expect(mockRegister).toHaveBeenCalledWith(
       expect.objectContaining({
-        subscriptionName: 'PantryEvents',
+        document: PantryEventsDocument,
         entityType: 'PantryItem',
         userId: 'user-1',
         entityId: 'pantry-1',

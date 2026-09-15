@@ -1,6 +1,6 @@
 import { ApolloLink, Observable, type DefaultContext } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
-import { Kind, type DocumentNode } from 'graphql';
+import { Kind, OperationTypeNode, type DocumentNode } from 'graphql';
 import { generateId } from '#/utils/generateId';
 import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
@@ -11,7 +11,16 @@ import { queueManager } from './queueManager';
 import { hasSyncMapping } from './convertToSyncMutation';
 import { OfflineRejectedError } from './OfflineRejectedError';
 import { QueueCapacityError } from './types';
-import { QueuedMutation, QueueStatus } from './types';
+import type { QueuedMutation } from './types';
+import { QueueStatus } from './types';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
+import {
+  LoginDocument,
+  RefreshTokenDocument,
+  RegisterDocument,
+  VerifyEmailDocument,
+} from '#operations/auth/auth.generated';
 
 /**
  * Rides the queued result as `extensions.queuedReason` so `networkStatusLink`
@@ -22,13 +31,11 @@ export type QueuedReason = 'offline' | 'api-unreachable' | 'network-error';
 
 /** Never queued, even offline. */
 const NEVER_QUEUE_OPERATIONS = [
-  'RefreshToken',
-  'Login',
-  'Register',
-  'SignUp',
-  'Logout',
-  'VerifyEmail',
-];
+  RefreshTokenDocument,
+  LoginDocument,
+  RegisterDocument,
+  VerifyEmailDocument,
+].map(operationNameOf);
 
 /**
  * Intercepts mutations and queues them for replay, but only those on the
@@ -182,6 +189,9 @@ function enqueueAndComplete(
       observer.error(error);
       return;
     }
+    // The write is durable now; the cache change it replays against is not
+    // until the debounced save, so bring that save forward.
+    apolloCachePersistence.expeditePending();
 
     // Apollo writes a mutation result against its selection set, and a bare
     // `null`/`{}` makes InMemoryCache warn "Missing field <field>". A
@@ -207,8 +217,9 @@ function enqueueAndComplete(
  */
 function pickPersistedContext(context: DefaultContext): DefaultContext {
   const persisted: DefaultContext = {};
-  if (context.localFirst !== undefined) {
-    persisted.localFirst = context.localFirst;
+  const localFirst: unknown = context.localFirst;
+  if (localFirst !== undefined) {
+    persisted.localFirst = localFirst;
   }
   return persisted;
 }
@@ -233,7 +244,7 @@ function buildQueuedResultData(query: DocumentNode): Record<string, null> {
 function isMutation(operation: { query: DocumentNode }): boolean {
   const definition = getMainDefinition(operation.query);
   return (
-    definition.kind === 'OperationDefinition' &&
-    definition.operation === 'mutation'
+    definition.kind === Kind.OPERATION_DEFINITION &&
+    definition.operation === OperationTypeNode.MUTATION
   );
 }

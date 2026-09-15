@@ -5,39 +5,49 @@
  */
 import { useTranslation as useI18nextTranslation } from 'react-i18next';
 import type { UseTranslationOptions } from 'react-i18next';
-import type { TOptions } from 'i18next';
+import type { ParseKeys, TOptions } from 'i18next';
 import { getI18n } from './config';
 
 // ---------------------------------------------------------------------------
 // Translating
 // ---------------------------------------------------------------------------
 
-/** A translate function, in either of its two calling forms. */
+/** A key the English copy declares; a plural key is named without its suffix. */
+export type TranslationKey = ParseKeys;
+
+/** The keys under `prefix.`, relative to it: `KeyUnder<'itemValidation'>`. */
+export type KeyUnder<Prefix extends string> = TranslationKey extends infer Key
+  ? Key extends `${Prefix}.${infer Rest}`
+    ? Rest
+    : never
+  : never;
+
+/**
+ * A key composed at runtime from data the types cannot see (a server `field`,
+ * a refusal code), checked against the loaded copy before it is translated.
+ */
+export function isTranslationKey(key: string): key is TranslationKey {
+  const i18n = getI18n();
+  // A plural key is declared only with its suffixes, so it exists for a count.
+  return i18n.exists(key) || i18n.exists(key, { count: 2 });
+}
+
+/**
+ * A translate function. It takes no fallback copy: a fallback renders English
+ * in every locale and hides the missing key (`sous-chef/no-t-default-value`).
+ */
 export interface TranslateFn {
-  (key: string, options?: TOptions): string;
-  (key: string, fallback: string | undefined, options?: TOptions): string;
+  (key: TranslationKey, options?: TOptions): string;
 }
 
 /**
  * Module-scope translation, for code that cannot run a hook. Does NOT subscribe
- * to language changes — in a component or hook use `useTranslation()`, which a
- * `no-restricted-syntax` rule enforces for `.tsx`. Delegates straight to
- * i18next, so key echo, string fallback and interpolation are native.
+ * to language changes — in a component or hook use `useTranslation()`, which
+ * `sous-chef/no-module-level-t` enforces for `.tsx`. Delegates straight to
+ * i18next, so key echo and interpolation are native.
  */
-export function t(key: string, options?: TOptions): string;
-export function t(
-  key: string,
-  fallback: string | undefined,
-  options?: TOptions,
-): string;
-export function t(
-  key: string,
-  fallbackOrOptions?: string | TOptions,
-  options?: TOptions,
-): string {
-  return typeof fallbackOrOptions === 'string'
-    ? getI18n().t(key, fallbackOrOptions, options)
-    : getI18n().t(key, fallbackOrOptions);
+export function t(key: TranslationKey, options?: TOptions): string {
+  return getI18n().t(key, options);
 }
 
 /**

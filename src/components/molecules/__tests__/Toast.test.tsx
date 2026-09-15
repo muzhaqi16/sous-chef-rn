@@ -384,14 +384,18 @@ describe('ToastProvider', () => {
 
       const [animateDismiss, dismissedGeneration] =
         scheduleOnRNMock.mock.calls[0];
-      act(() => animateDismiss(dismissedGeneration));
+      act(() => {
+        animateDismiss(dismissedGeneration);
+      });
       const [onDismissComplete, completedGeneration] =
         scheduleOnRNMock.mock.calls[1];
 
       act(() => {
         show?.({ message: 'Second', type: 'success' });
       });
-      act(() => onDismissComplete(completedGeneration));
+      act(() => {
+        onDismissComplete(completedGeneration);
+      });
 
       expect(screen.getByText('Second')).toBeTruthy();
       // Clearing here would cancel the second toast's own auto-dismiss timer

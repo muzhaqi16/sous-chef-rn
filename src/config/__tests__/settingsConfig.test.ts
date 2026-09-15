@@ -100,9 +100,13 @@ describe('settingsConfig', () => {
       expect(PROFILE_SETTINGS_CONFIG.length).toBeGreaterThan(0);
     });
 
-    it('each section has a title and items array', () => {
+    it('titles every section but the trailing log-out group', () => {
       for (const section of PROFILE_SETTINGS_CONFIG) {
-        expect(typeof section.titleKey).toBe('string');
+        if (section.id === 'logout') {
+          expect(section.titleKey).toBeUndefined();
+        } else {
+          expect(typeof section.titleKey).toBe('string');
+        }
         expect(Array.isArray(section.items)).toBe(true);
         expect(section.items.length).toBeGreaterThan(0);
       }

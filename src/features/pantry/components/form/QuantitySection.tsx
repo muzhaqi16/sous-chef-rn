@@ -1,7 +1,8 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
-import { Control, Controller, FieldErrors } from 'react-hook-form';
+import type { Control, FieldErrors } from 'react-hook-form';
+import { Controller } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/atoms/FormInput';
 import { FractionInput } from '#components/molecules/FractionInput';

@@ -9,7 +9,7 @@ import Animated, {
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import { useFragment } from '@apollo/client/react';
-import { type FragmentType } from '@apollo/client/masking';
+import type { FragmentType } from '@apollo/client/masking';
 
 import { Icon } from '#utils/iconUtils';
 import { HomeActions } from './HomeActions';

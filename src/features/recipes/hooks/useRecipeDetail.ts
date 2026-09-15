@@ -7,22 +7,13 @@ import { useRecipeSavedMetadata } from './useRecipeSavedMetadata';
 import { useRecipeShoppingList } from './useRecipeShoppingList';
 import { useRecipeCookingActions } from './useRecipeCookingActions';
 
-type RecipeDetailParams = {
-  recipeId?: string;
-  externalSource?: string;
-  externalId?: string;
-  sourceTab?: 'Pantry' | 'ShoppingList' | 'Recipe';
-  sourcePantryItemId?: string;
-};
-
 /**
  * Orchestrator that composes the recipe-detail sub-hooks. Each sub-hook owns
  * a narrow concern; this hook just wires them together for the screen.
  */
 export function useRecipeDetail() {
-  const route = useRoute();
-  const params = (route.params as RecipeDetailParams | undefined) ?? {};
-  const { recipeId, externalSource, externalId } = params;
+  const { recipeId, externalSource, externalId } =
+    useRoute('RecipeDetail').params;
   const { goBack } = useAppNavigation();
 
   const cookingActions = useRecipeCookingActions({ recipeId });
@@ -73,7 +64,6 @@ export function useRecipeDetail() {
     // Loading/error states
     loading: data.loading,
     error: data.error,
-    backendError: data.backendError,
 
     // Recipe data
     displayData: data.displayData,
@@ -84,10 +74,6 @@ export function useRecipeDetail() {
     saving: favorites.saving,
     isSaved: favorites.isSaved,
     handleSaveRecipe: favorites.handleSaveRecipe,
-
-    // Recipe preload state
-    preloading: preload.preloading,
-    preloadedRecipe: preload.preloadedRecipe,
 
     // Shopping list (state + handlers + sheet refs)
     ...shoppingList,

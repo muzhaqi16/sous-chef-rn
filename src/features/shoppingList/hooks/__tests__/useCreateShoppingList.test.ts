@@ -22,9 +22,7 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 jest.mock('#features/shoppingList/cache/list', () => {
-  const { classifyCreateResult } = jest.requireActual(
-    '#/apollo/utils/classifyCreateResult',
-  );
+  const { settledStatus } = jest.requireActual('#/apollo/utils/settleMutation');
   const mockRevert = jest.fn();
   return {
     addShoppingListToQueryCache: jest.fn(),
@@ -41,7 +39,7 @@ jest.mock('#features/shoppingList/cache/list', () => {
     // keep/revert decision under test matches production.
     reconcileShoppingListCreate: jest.fn(
       (cache: unknown, id: string, result: unknown) => {
-        if (classifyCreateResult(result) === 'rejected') {
+        if (settledStatus(result) === 'failed') {
           mockRevert(cache, id);
           return 'reverted';
         }
@@ -66,11 +64,10 @@ const mockUser = {
 const createMock = (outcome: {
   result?: MockedResponse['result'];
   error?: Error;
-}): MockedResponse =>
-  ({
-    request: { query: CreateShoppingListDocument, variables: () => true },
-    ...outcome,
-  } as MockedResponse);
+}): MockedResponse => ({
+  request: { query: CreateShoppingListDocument, variables: () => true },
+  ...outcome,
+});
 
 const successResult = (id: string, name: string) => ({
   data: {
@@ -127,7 +124,7 @@ describe('useCreateShoppingList', () => {
 
   it('treats a queued create (offline / API down) as success and returns the optimistic list', async () => {
     // The offline queue resolves intercepted mutations with no data and no
-    // error — that's the queued signature classifyCreateResult keys on.
+    // error — that's the queued signature settledStatus keys on.
     const { result } = renderHookWithApollo(
       () => useCreateShoppingList('Failed to create list'),
       {

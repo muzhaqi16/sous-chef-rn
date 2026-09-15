@@ -125,7 +125,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   const [renameValue, setRenameValue] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const hasFolderActions = Boolean(onRenameFolder || onDeleteFolder);
+  const hasFolderActions = Boolean(onRenameFolder ?? onDeleteFolder);
 
   const filteredFolders = useLocalSearch(folders, searchQuery, [identity]);
 
@@ -339,7 +339,9 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
 
           {loading ? (
             <View style={styles.centeredSpinner}>
-              <Text tone="secondary">{t('folderPicker.loading')}</Text>
+              <Text role="body" tone="secondary">
+                {t('folderPicker.loading')}
+              </Text>
             </View>
           ) : filteredFolders.length > 0 ? (
             <FlashList
@@ -354,7 +356,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
             />
           ) : folders.length > 0 && searchQuery ? (
             <View style={styles.emptyInset}>
-              <Text tone="secondary" align="center">
+              <Text role="body" tone="secondary" align="center">
                 {t('folderPicker.noMatches', { query: searchQuery })}
               </Text>
             </View>
@@ -508,7 +510,7 @@ const styles = StyleSheet.create(theme => ({
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: theme.colors.veil,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: theme.radii.lg,

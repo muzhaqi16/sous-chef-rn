@@ -1,9 +1,7 @@
 import { renderHook, act } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
-import {
-  useAutocompleteSearch,
-  AutocompleteSearchConfig,
-} from '#features/catalog/hooks/useAutocompleteSearch';
+import type { AutocompleteSearchConfig } from '#features/catalog/hooks/useAutocompleteSearch';
+import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 
 // Mock useAppStore to control isOnline
 let mockIsOnline = true;

@@ -1,8 +1,8 @@
 import { useTranslation } from '#/i18n';
 import { useMutation } from '@apollo/client/react';
 import { MarkPrimaryItemImageDocument } from '#features/catalog/hooks/useMarkPrimaryItemImage.generated';
-import { alertMutationFailure } from '#features/catalog/hooks/alertMutationFailure';
-import { errorService } from '#/services/errorService';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 
 /**
  * Promotes one of an item's photos to its hero. No `update` and no optimistic
@@ -15,37 +15,26 @@ export function useMarkPrimaryItemImage() {
     MarkPrimaryItemImageDocument,
   );
 
-  /** Returns whether the photo is now the hero. Alerts on every failure. */
+  /**
+   * Returns whether the photo is now the hero. A ForbiddenError means the
+   * cached `canEdit` was stale, so it is reported rather than silently dropped.
+   */
   const markPrimary = async (imageId: string): Promise<boolean> => {
-    let result;
-    try {
-      result = await markPrimaryItemImage({
-        variables: { input: { imageId } },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Error marking primary item image:',
-      });
-    }
-
-    // A throw escaped Apollo's errorPolicy entirely — nothing to interpret.
-    if (!result) {
-      alertMutationFailure(t, { keyPrefix: 'itemPhotos.setPrimary' });
-      return false;
-    }
-
-    const payload = result.data?.markPrimaryItemImage;
-    if (payload?.__typename === 'MarkPrimaryItemImagePayload') return true;
-
-    // ForbiddenError here means the cached `canEdit` was stale (the item was
-    // published, or ownership moved) — the affordance should not have been
-    // offered, so report it rather than silently no-op.
-    alertMutationFailure(t, {
-      keyPrefix: 'itemPhotos.setPrimary',
-      result,
-      payload,
-    });
-    return false;
+    const settled = await settleMutation(
+      () => markPrimaryItemImage({ variables: { input: { imageId } } }),
+      {
+        document: MarkPrimaryItemImageDocument,
+        fallback: t('itemPhotos.setPrimary.failedBody'),
+        title: t('labels.couldnTSetThatPhoto'),
+        copy: {
+          [ErrorCode.NotFound]: {
+            title: t('itemPhotos.setPrimary.notFoundTitle'),
+            body: t('itemPhotos.setPrimary.notFoundBody'),
+          },
+        },
+      },
+    );
+    return settled.status !== 'failed';
   };
 
   return { markPrimary, loading };

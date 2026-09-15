@@ -28,62 +28,10 @@ jest.mock('#components/atoms/BackButton', () => ({
     );
   },
 }));
-jest.mock(
-  '#features/onboarding/components/OnboardingSteps/OnboardingSteps',
-  () => ({
-    OnboardingSteps: () => {
-      const { Text: RNText } = require('react-native');
-      return <RNText>StepIndicator</RNText>;
-    },
-  }),
-);
-jest.mock(
-  '#features/onboarding/components/OnboardingNavigation/OnboardingNavigation',
-  () => ({
-    OnboardingNavigation: ({
-      showBackButton,
-      showContinueButton,
-      showSkipButton,
-    }: {
-      showBackButton?: boolean;
-      showContinueButton?: boolean;
-      showSkipButton?: boolean;
-    }) => {
-      const { Text: RNText } = require('react-native');
-      return (
-        <>
-          {showBackButton ? <RNText>NavBack</RNText> : null}
-          {showContinueButton ? <RNText>NavContinue</RNText> : null}
-          {showSkipButton ? <RNText>NavSkip</RNText> : null}
-        </>
-      );
-    },
-  }),
-);
-
-interface MockOnboardingContextValue {
-  steps: { id: string; titleKey: string }[];
-  activeStepIndex: number;
-  currentStep: { titleKey: string; subtitleKey?: string } | null;
-  canGoBack: boolean;
-  canGoNext: boolean;
-  isLastStep: boolean;
-  goToStep: jest.Mock;
-  goToNextStep: jest.Mock;
-  goToPreviousStep: jest.Mock;
-}
-
-const mockOnboardingContext = jest.fn<MockOnboardingContextValue | null, []>(
-  () => null,
-);
-jest.mock('#features/onboarding/context/OnboardingContext', () => ({
-  useOnboardingContextSafe: () => mockOnboardingContext(),
-}));
 
 describe('OnBoardingWrapper', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockOnboardingContext.mockReturnValue(null);
   });
 
   it('renders children content', () => {
@@ -135,7 +83,7 @@ describe('OnBoardingWrapper', () => {
     expect(screen.queryByText('Back')).toBeNull();
   });
 
-  it('renders skip button in legacy mode when onSkip is provided', async () => {
+  it('renders skip button when onSkip is provided', async () => {
     const user = userEvent.setup();
     const onSkip = jest.fn();
     render(
@@ -172,104 +120,6 @@ describe('OnBoardingWrapper', () => {
     );
     expect(toJSON()).toBeTruthy();
     expect(screen.queryByLabelText(/^Step /)).toBeNull();
-  });
-
-  it('renders OnboardingNavigation when context is available', () => {
-    mockOnboardingContext.mockReturnValue({
-      steps: [{ id: '1', titleKey: 'onboardingSteps.CreateHome.title' }],
-      activeStepIndex: 0,
-      currentStep: {
-        titleKey: 'onboardingSteps.CreateHome.title',
-        subtitleKey: 'onboardingSteps.CreateHome.subtitle',
-      },
-      canGoBack: true,
-      canGoNext: true,
-      isLastStep: false,
-      goToStep: jest.fn(),
-      goToNextStep: jest.fn(),
-      goToPreviousStep: jest.fn(),
-    });
-    render(
-      <OnBoardingWrapper>
-        <Text>Content</Text>
-      </OnBoardingWrapper>,
-    );
-    expect(screen.getByText('NavBack')).toBeTruthy();
-    expect(screen.getByText('NavContinue')).toBeTruthy();
-  });
-
-  it('uses context title when no direct title prop', () => {
-    mockOnboardingContext.mockReturnValue({
-      steps: [{ id: '1', titleKey: 'onboardingSteps.CreateHome.title' }],
-      activeStepIndex: 0,
-      // The step table carries key paths now; the wrapper resolves them.
-      currentStep: {
-        titleKey: 'onboardingSteps.CreateHome.title',
-        subtitleKey: 'onboardingSteps.CreateHome.subtitle',
-      },
-      canGoBack: false,
-      canGoNext: true,
-      isLastStep: false,
-      goToStep: jest.fn(),
-      goToNextStep: jest.fn(),
-      goToPreviousStep: jest.fn(),
-    });
-    render(
-      <OnBoardingWrapper>
-        <Text>Content</Text>
-      </OnBoardingWrapper>,
-    );
-    expect(screen.getByText('Create Home')).toBeTruthy();
-  });
-
-  it('renders step indicator when showSteps is true and context available', () => {
-    mockOnboardingContext.mockReturnValue({
-      steps: [{ id: '1', titleKey: 'onboardingSteps.CreateHome.title' }],
-      activeStepIndex: 0,
-      currentStep: { titleKey: 'onboardingSteps.CreateHome.title' },
-      canGoBack: false,
-      canGoNext: true,
-      isLastStep: false,
-      goToStep: jest.fn(),
-      goToNextStep: jest.fn(),
-      goToPreviousStep: jest.fn(),
-    });
-    render(
-      <OnBoardingWrapper showSteps>
-        <Text>Content</Text>
-      </OnBoardingWrapper>,
-    );
-    expect(screen.getByText('StepIndicator')).toBeTruthy();
-  });
-
-  it('does not render step indicator in legacy mode', () => {
-    render(
-      <OnBoardingWrapper showSteps>
-        <Text>Content</Text>
-      </OnBoardingWrapper>,
-    );
-    expect(screen.queryByText('StepIndicator')).toBeNull();
-  });
-
-  it('hides navigation when showNavigation is false', () => {
-    mockOnboardingContext.mockReturnValue({
-      steps: [],
-      activeStepIndex: 0,
-      currentStep: null,
-      canGoBack: true,
-      canGoNext: true,
-      isLastStep: false,
-      goToStep: jest.fn(),
-      goToNextStep: jest.fn(),
-      goToPreviousStep: jest.fn(),
-    });
-    render(
-      <OnBoardingWrapper showNavigation={false}>
-        <Text>Content</Text>
-      </OnBoardingWrapper>,
-    );
-    expect(screen.queryByText('NavBack')).toBeNull();
-    expect(screen.queryByText('NavContinue')).toBeNull();
   });
 
   it('passes testID to back button', () => {

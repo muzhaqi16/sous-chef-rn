@@ -1,4 +1,5 @@
 import type { ImageSourcePropType } from 'react-native';
+import logo from '../assets/images/logo.png';
 
 /**
  * Single source of truth for brand identity, and the first file to edit when
@@ -73,7 +74,7 @@ export const appConfig: AppConfig = {
   features: {},
   locales: ['en', 'it', 'es', 'sq'],
   assets: {
-    logo: require('../assets/images/logo.png'),
+    logo,
   },
   branding: {
     primaryColor: '#f58234',

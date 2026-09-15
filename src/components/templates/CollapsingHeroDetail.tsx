@@ -55,7 +55,7 @@ const NO_HERO_TITLE_FADE_END = 72;
 const HeroChip: React.FC<{ action: HeaderAction }> = ({ action }) => (
   <AppPressable
     onPress={action.onPress}
-    disabled={action.disabled || action.loading}
+    disabled={!!action.disabled || !!action.loading}
     style={styles.chip}
     hitSlop={8}
     testID={action.testID}

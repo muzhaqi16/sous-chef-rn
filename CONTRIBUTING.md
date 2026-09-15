@@ -85,25 +85,32 @@ All three must pass — the same checks run in CI on every pull request.
 
 ### Git hooks (installed automatically via husky)
 
-- **pre-commit** — lint-staged: ESLint + Prettier + related Jest tests on
-  staged files.
+- **pre-commit** — lint-staged (ESLint, Prettier and related Jest tests on
+  staged files), then the sub-second whole-tree checks: i18n keys, codegen
+  orphans, version sync, startup origin, launch-arg auth.
 - **commit-msg** — commit messages must follow
   [Conventional Commits](https://www.conventionalcommits.org/) (e.g.
   `fix: correct pantry item sort order`, `feat(recipes): add review sheet`).
-- **pre-push** — typecheck, i18n check, codegen orphan check, and codegen
-  drift check.
+- **pre-push** — typecheck, compiler bailouts, Unistyles variant staleness,
+  dead modules and import cycles in parallel, then a codegen drift check.
+  Skipped for a tag-only push.
+
+Never bypass a hook (`--no-verify`, `HUSKY=0`). The full matrix and what each
+gate protects: `docs/development.md` § Git hooks.
 
 ## Pull Request Guidelines
 
 - Target the `main` branch.
 - Keep PRs focused — one fix or feature per PR.
-- Follow the existing code conventions. `CLAUDE.md` and `docs/` document
-  the project's patterns (Apollo cache updates, Unistyles theming, React
-  Compiler rules, bottom sheet conventions, testing patterns) — new code
-  should match them.
+- Follow the existing code conventions. `CLAUDE.md` is the index; the lint
+  rules that enforce them are catalogued in `docs/rules/README.md`, each with
+  what to use instead. `npm run lint` must pass with zero warnings — a rule is
+  never disabled inline; a justified exemption is a file override in
+  `eslint/project.js`, where review sees it.
 - Add or update tests for behavior changes. Apollo-related tests should use
   the helpers in `__tests__/helpers/apolloMockProvider.tsx`.
-- CI runs typecheck, lint, and unit tests on every PR. E2E (Detox) suites
+- CI runs typecheck, lint, unit tests, the whole-tree gates and a dependency
+  audit on every PR. E2E (Detox) suites
   run on the maintainer's infrastructure; workflow runs on PRs from forks
   require maintainer approval, so they may start with a delay.
 

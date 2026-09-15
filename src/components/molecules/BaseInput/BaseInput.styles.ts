@@ -115,11 +115,6 @@ export default StyleSheet.create(theme => ({
   },
 
   errorText: {
-    fontSize: {
-      xs: theme.fonts.size.xs,
-      md: theme.fonts.size.sm,
-    },
-    color: theme.colors.error,
     marginTop: theme.spacing.xs,
     overflow: 'hidden',
     opacity: 0,

@@ -42,7 +42,7 @@ export const RecipeStepList: React.FC<RecipeStepListProps> = ({
               {index + 1}
             </Text>
           </View>
-          <Text style={styles.stepText} numberOfLines={2}>
+          <Text role="body" style={styles.stepText} numberOfLines={2}>
             {step.instruction || t('recipes.tapToAddInstruction')}
           </Text>
           <Pressable

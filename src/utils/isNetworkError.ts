@@ -1,39 +1,15 @@
-/** Shared network-error detection: errorLink, refreshToken, mutation utils. */
+import { socketCloseOf } from './errors/libraryErrorMessages';
+import { TimeoutError } from './errors/timeoutError';
+import { NetworkRequestError } from './errors/networkRequestError';
 
-const NETWORK_ERROR_PATTERNS = [
-  'network request failed',
-  'network error',
-  'connection refused',
-  'timeout',
-  'enotfound',
-  'econnrefused',
-  'econnreset',
-  'ehostunreach',
-  'socket closed',
-  'websocket',
-  'fetch failed',
-  'ws connection',
-  'connection lost',
-  'no connection',
-  'unreachable',
-  'unable to reach',
-  'no internet',
-  'offline',
-];
-
-interface NetworkErrorLike {
-  message?: string;
-  networkError?: { message?: string } | null;
-}
-
+/**
+ * A request that never got an answer: the HTTP link's fetch rethrows a failed
+ * request as `NetworkRequestError`, our own deadlines throw `TimeoutError`, and
+ * `GraphQLWsLink` reports a socket close. An `AbortError` is a cancellation.
+ */
 export function isNetworkError(error: unknown): boolean {
-  const err = (error ?? {}) as NetworkErrorLike;
-  const message = (
-    err.message ||
-    err.networkError?.message ||
-    ''
-  ).toLowerCase();
-  return (
-    NETWORK_ERROR_PATTERNS.some(p => message.includes(p)) || !!err.networkError
-  );
+  if (error instanceof NetworkRequestError || error instanceof TimeoutError) {
+    return true;
+  }
+  return error instanceof Error && socketCloseOf(error) !== null;
 }

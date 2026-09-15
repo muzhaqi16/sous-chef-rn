@@ -213,19 +213,13 @@ export function useStandardBottomSheet({
 
   // For an event handler that must close the sheet directly; state-driven
   // control goes through the `visible` option instead.
-  const present = () => ref.current?.present();
   const dismiss = () => ref.current?.dismiss();
-  const close = () => ref.current?.close();
-  const snapToIndex = (index: number) => ref.current?.snapToIndex(index);
 
   return {
     ref,
     modalProps,
     contentContainerStyle,
     insets,
-    present,
     dismiss,
-    close,
-    snapToIndex,
   };
 }

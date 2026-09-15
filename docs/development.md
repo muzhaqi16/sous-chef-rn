@@ -50,15 +50,15 @@ npm run genenv
 
 `.env.example` documents every variable. The essentials:
 
-| Variable | Purpose |
-| --- | --- |
-| `API_URL` | GraphQL HTTP endpoint (default local: `http://localhost:4000/graphql`) |
-| `WEB_SOCKET_URL` | GraphQL WebSocket endpoint for subscriptions |
-| `API_KEY` | Backend API key |
-| `NODE_ENV` | `development` · `staging` · `production` |
-| `WEB_APP_URL` | Used for deep links and redirects |
-| `SPOONACULAR_API_KEY` | Recipe search and nutrition data |
-| `OTLP_METRICS_*`, `OTLP_LOGS_*` | Optional telemetry — see [`telemetry-setup.md`](telemetry-setup.md) |
+| Variable                        | Purpose                                                                |
+| ------------------------------- | ---------------------------------------------------------------------- |
+| `API_URL`                       | GraphQL HTTP endpoint (default local: `http://localhost:4000/graphql`) |
+| `WEB_SOCKET_URL`                | GraphQL WebSocket endpoint for subscriptions                           |
+| `API_KEY`                       | Backend API key                                                        |
+| `NODE_ENV`                      | `development` · `staging` · `production`                               |
+| `WEB_APP_URL`                   | Used for deep links and redirects                                      |
+| `SPOONACULAR_API_KEY`           | Recipe search and nutrition data                                       |
+| `OTLP_METRICS_*`, `OTLP_LOGS_*` | Optional telemetry — see [`telemetry-setup.md`](telemetry-setup.md)    |
 
 Per-variant files (`.env`, `.env.staging`, `.env.production`) are selected by
 the build scripts. Never commit a file with real credentials.
@@ -191,19 +191,20 @@ npx jest --findRelatedTests path/to/File.ts # what a specific file affects
 
 Apollo-touching tests must use `renderHookWithApollo` / `renderWithApollo` from
 `__tests__/helpers/apolloMockProvider.tsx`. Two layers, and a description has
-to say which is which — crediting one's fidelity to the other is how a bare
-cache went unnoticed under 143 files. The NETWORK is schema-driven: an
+to say which is which, because crediting one's fidelity to the other hides a
+bare cache. The NETWORK is schema-driven: an
 executable schema built from the real SDL, mocked by `addMocksToSchema`. The
 CACHE is the production one — `makeCache()`, so type policies, merge and read
 functions and `possibleTypes` are all loaded, and a test reads through the same
-rules the app does. Mocking `@apollo/client/react` directly is banned by lint:
+rules the app does. Mocking `@apollo/client/react` directly is banned by lint
+(`sous-chef/no-apollo-react-mock`):
 it couples tests to operation names and bypasses the very cache integration the
 tests exist to catch. Helper shortcuts: `recordMock()` to capture the variables
 Apollo actually observed, `seedCache()` to pre-write entities that hooks read
 with `cache.readFragment`.
 
 The default is kept by lint, not by a test: `new InMemoryCache()` in a test file
-is a `no-restricted-syntax` error (`.eslintrc.js`). Only the two behavioural
+is a `sous-chef/no-bare-in-memory-cache` error. Only the two behavioural
 assertions remain in `__tests__/apollo/testCacheIsTheProductionCache.test.ts`.
 
 Shared auto-mocks live in `__mocks__/` folders next to their modules
@@ -275,11 +276,9 @@ code relies on.
    ```
 
    Do NOT stub a helper to fake the throw — that tests a path the app barely
-   takes. This was previously documented as a workaround around
-   `executeMutation`; removing that wrapper surfaced five hooks that keyed
-   success off "the call returned" and so reported a failed write as a
-   success. **Put the failure handling where the failure arrives: on the
-   resolved result**, not only in the `catch`.
+   takes, and a hook that keys success off "the call returned" reports a failed
+   write as a success. **Put the failure handling where the failure arrives: on
+   the resolved result**, not only in the `catch`.
 
 2. **Use `variables: () => true` for complex transformed inputs.** When a
    mutation's `input` is built from a non-trivial transform (Spoonacular →
@@ -315,8 +314,8 @@ code relies on.
 
 **Helper shortcuts (`#/test-utils/apolloMockProvider`):**
 
-- **`recordMock(query, { data, error?, delay?, maxUsageCount? })`** — replaces
-  the legacy variables-spy pattern. Returns `{ mock, fired }`: `mock` goes
+- **`recordMock(query, { data, error?, delay?, maxUsageCount? })`** — the
+  variables spy. Returns `{ mock, fired }`: `mock` goes
   into `operationMocks`; `fired` is an array of every variables payload Apollo
   observed for that operation, in order. Assert via
   `expect(fired).toContainEqual({ … })`.
@@ -333,10 +332,14 @@ code relies on.
   selection from the fixture's own keys, so it can never be incomplete and
   therefore cannot hold the seed to anything.
 - **Pick ONE mocking strategy.** `operationMocks` and `mocks`/`resolvers` are
-  mutually exclusive by type. Passing both used to discard the second in
-  silence — one live suite ran its hook on defaults with all sixteen tests
-  passing. `operationMocks: []` means "no per-operation mocks", not "answer
-  everything from the schema".
+  mutually exclusive by type, because combined, the second is discarded in
+  silence and a suite runs its hook on defaults with every test passing.
+  `operationMocks: []` means "no per-operation mocks", not "answer everything
+  from the schema".
+- **A per-operation mock's `data` is COMPLETED from the real SDL** before it is
+  served, so state only what you assert on. A field written as `undefined` is
+  served ABSENT, and a field the operation does not select is an error — a
+  fixture the schema cannot produce is a test of a system that does not exist.
 - **`partial: true` on a `recordMock`** is the only opt-out from schema
   completion, and it excuses exactly the `(type, field)` pairs that mock's
   payload omits. Use it only when the omission IS the subject.
@@ -375,6 +378,22 @@ jest.mock('#/utils/environment', () => ({
 
 The same pattern applies to `logger` (no-op `jest.fn()` per method) — assert
 on `logger.error` etc. directly without redefining the mock.
+
+A default matches what the REAL function returns under Jest.
+`allowsLaunchArgAuth` defaults to `true` because the real one returns `__DEV__ ||
+ALLOW_LAUNCH_ARG_AUTH`, and `__DEV__` is true under Jest — a double that inverts
+the thing it stands in for silently disables coverage everywhere.
+
+### Testing a react-hook-form form
+
+A form cannot be stubbed with a plain object: fields render through
+`Controller control={control}`, and `control` has no plain-object equivalent.
+Delegate to the real hook (`jest.requireActual(...)`, seeded via
+`initialState`) and spy on the writes; the test then exercises the real yup
+schema, so a case expecting a refusal gets one for the real reason.
+`jest.clearAllMocks()` does NOT reset a spy's implementation — a
+`mockImplementation` in one test leaks its seeded form into every test after it,
+so pair it with `jest.restoreAllMocks()`.
 
 ### End-to-end (Detox)
 
@@ -416,8 +435,16 @@ node scripts/check-bundled-secrets.mjs --self-test
 `check-compiler-bailouts` (pre-push) guards a file COUNT; separately, WHICH
 function bails in the files where a variant call was deliberately extracted into
 a leaf — moving it back into the composite keeps the count unchanged and would
-otherwise pass; and separately again, the `'use no memo'` opt-out list, which is
-EMPTY, so needing the directive means the Babel plugin order has regressed.
+otherwise pass; and separately again, the `'use no memo'` opt-out list.
+`scripts/check-compiler-bailouts.baseline.json` does not exist, and a missing
+baseline makes each of the three an INVARIANT (`baselineFile` in
+`scripts/lib/tooling.mjs`): no file may bail, and needing the directive means the
+Babel plugin order or `scripts/babel/unistyles-scope-crawl.js` has regressed.
+
+`check-unistyles-variant-staleness` compiles each file to find a style read
+frozen at its first-render value — a defect neither ESLint nor tsc can see,
+because it exists only in the output of two Babel plugins composed in a
+particular order. Its baseline lists no files.
 
 **Why `check:version-sync` is a pre-commit hook and not a habit:** it compares
 `package.json`, `versionName`, and **each** `MARKETING_VERSION` in the
@@ -431,39 +458,39 @@ counters on independent sequences, read by `getBuildNumber()`.
 
 The whole-tree gates, and where each runs:
 
-| Gate | Holds | Runs in |
-| --- | --- | --- |
-| `check-i18n` | `en`, `es`, `it`, `sq` carry the same keys, core and feature locales merged | pre-commit, CI |
-| `check-codegen-orphans` | no `.generated.ts` without its `.graphql` source (they break `tsc`) | pre-commit, CI |
-| `check-version-sync` | `package.json`, `versionName` and every `MARKETING_VERSION` agree | pre-commit, CI |
-| `check-startup-origin` | the startup clock is the first module Metro's output evaluates | pre-commit, CI |
-| `check-launch-arg-auth` | no distributable build accepts an injected session | pre-commit, CI, build |
-| `check-compiler-bailouts` | no component silently skips React Compiler compilation | pre-push, CI |
-| `check-unistyles-variant-staleness` | no `useVariants` read frozen at its first-render value | pre-push, CI |
-| `check:dead-modules` (knip) | every `src/` module has a production importer; a test import or `jest.mock()` does not count | pre-push, CI |
-| `check:import-cycles` (madge) | no load-time import cycle; `import type` and `await import()` edges are skipped | pre-push, CI |
-| `find-stale-cache-fields` | no new mutation that leaves a server-recomputed field stale in the cache | CI |
-| `check-bundled-secrets` | every credential in a built bundle carries a recorded decision | build |
-| `check-build-provenance` | the build identity in `env.generated.ts` is the one CI intended | build |
+| Gate                                | Holds                                                                                        | Runs in               |
+| ----------------------------------- | -------------------------------------------------------------------------------------------- | --------------------- |
+| `check-i18n`                        | `en`, `es`, `it`, `sq` carry the same keys, core and feature locales merged                  | pre-commit, CI        |
+| `check-codegen-orphans`             | no `.generated.ts` without its `.graphql` source (they break `tsc`)                          | pre-commit, CI        |
+| `check-version-sync`                | `package.json`, `versionName` and every `MARKETING_VERSION` agree                            | pre-commit, CI        |
+| `check-startup-origin`              | the startup clock is the first module Metro's output evaluates                               | pre-commit, CI        |
+| `check-launch-arg-auth`             | no distributable build accepts an injected session                                           | pre-commit, CI, build |
+| `check-compiler-bailouts`           | no component silently skips React Compiler compilation                                       | pre-push, CI          |
+| `check-unistyles-variant-staleness` | no `useVariants` read frozen at its first-render value                                       | pre-push, CI          |
+| `check:dead-modules` (knip)         | every `src/` module has a production importer; a test import or `jest.mock()` does not count | pre-push, CI          |
+| `check:import-cycles` (madge)       | no load-time import cycle; `import type` and `await import()` edges are skipped              | pre-push, CI          |
+| `find-stale-cache-fields`           | no new mutation that leaves a server-recomputed field stale in the cache                     | CI                    |
+| `check-bundled-secrets`             | every credential in a built bundle carries a recorded decision                               | build                 |
+| `check-build-provenance`            | the build identity in `env.generated.ts` is the one CI intended                              | build                 |
 
 Everything else that used to be a script — the data-layer boundary, the
 canonical mechanisms, the token, typography and tier rules — is either a
-`no-restricted-imports` / `no-restricted-syntax` / `import/no-restricted-paths`
-entry in `.eslintrc.js` or a convention CLAUDE.md states and review holds.
+`no-restricted-imports` / `sous-chef/*` / `import/no-restricted-paths`
+entry in `eslint/` (the `sous-chef/*` catalog is `docs/rules/`) or a convention CLAUDE.md states and review holds.
 
 ### Bans promoted out of the ratchet
 
 These concerns are hard `no-restricted-imports` bans. Each names the module
 that IS the canonical mechanism as its only exemption:
 
-| Banned import | Use instead | Exempt |
-| --- | --- | --- |
-| `useNavigation` from React Navigation | `useAppNavigation`, whose `navigation` field is the escape hatch for `dispatch` and `addListener` | the two navigation wrappers |
-| `getI18n` from `#/i18n/config` | `t` from `#/i18n` (`tGlobal` in a `.tsx`), or `useTranslation()` | `src/i18n`, and the four modules that need the instance to read or change the language |
-| RN `ActivityIndicator` | a themed spinner from `themedComponents` | `themedComponents`, and `Loading` for its caller-supplied colour |
-| `react-native-permissions` | `PermissionService` | the service |
-| `react-native-turbo-image` | `CachedImage` | `CachedImage`, and `RecipeHeroImage` for its shared-transition wrapper |
-| `@react-native-vector-icons/ionicons` | `Icon` with a `tone`; `type IconName` for a name | `iconUtils`, and `Toast` for a runtime nested-theme lookup |
+| Banned import                         | Use instead                                                                                       | Exempt                                                                                 |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `useNavigation` from React Navigation | `useAppNavigation`, whose `navigation` field is the escape hatch for `dispatch` and `addListener` | the two navigation wrappers                                                            |
+| `getI18n` from `#/i18n/config`        | `t` from `#/i18n` (`tGlobal` in a `.tsx`), or `useTranslation()`                                  | `src/i18n`, and the four modules that need the instance to read or change the language |
+| RN `ActivityIndicator`                | a themed spinner from `themedComponents`                                                          | `themedComponents`, and `Loading` for its caller-supplied colour                       |
+| `react-native-permissions`            | `PermissionService`                                                                               | the service                                                                            |
+| `react-native-turbo-image`            | `CachedImage`                                                                                     | `CachedImage`, and `RecipeHeroImage` for its shared-transition wrapper                 |
+| `@react-native-vector-icons/ionicons` | `Icon` with a `tone`; `type IconName` for a name                                                  | `iconUtils`, and `Toast` for a runtime nested-theme lookup                             |
 
 ### Dependency vulnerabilities
 
@@ -478,11 +505,11 @@ only. Detection does not depend on either.
 
 ### Git hooks (installed by husky on `npm install`)
 
-| Hook | Runs |
-| --- | --- |
+| Hook           | Runs                                                                                                                                                                                                                                       |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **pre-commit** | `lint-staged` — ESLint + Prettier + related Jest tests on staged files — then the whole-tree checks that cost ~0.2s together: `check-i18n`, `check-codegen-orphans`, `check-version-sync`, `check-startup-origin`, `check-launch-arg-auth` |
-| **commit-msg** | commitlint — [Conventional Commits](https://www.conventionalcommits.org/) required |
-| **pre-push** | `typecheck`, `check:compiler-bailouts`, `check:unistyles-variants`, `check:dead-modules` (knip) and `check:import-cycles` (madge) **concurrently**, then a codegen drift check |
+| **commit-msg** | commitlint — [Conventional Commits](https://www.conventionalcommits.org/) required                                                                                                                                                         |
+| **pre-push**   | `typecheck`, `check:compiler-bailouts`, `check:unistyles-variants`, `check:dead-modules` (knip) and `check:import-cycles` (madge) **concurrently**, then a codegen drift check and `check:fillers` (the generated optimistic fillers)      |
 
 The split is by cost. The five sub-second checks run per commit so a broken
 locale key or a version drift surfaces at the commit that caused it. The five
@@ -492,8 +519,8 @@ into its own log so the output does not interleave.
 **A tag-only push skips the code gates entirely.** Git names every ref being
 pushed on the hook's stdin; when they are all `refs/tags/*` there are no new
 commits to check, and the gates would only be judging the working tree.
-`npm run tag:*` pushes twice — delete, then create — so this was previously the
-whole suite twice over, for an operation that ships no code.
+`npm run tag:*` pushes twice — delete, then create — so without the skip it
+would run the whole suite twice for an operation that ships no code.
 
 The codegen drift check is skipped when the working tree is dirty, so it never
 blocks a push mid-edit.
@@ -534,47 +561,47 @@ Pipelines, environments, and secrets: [`CI_CD.md`](CI_CD.md) and
 
 **Run**
 
-| Command | Description |
-| --- | --- |
-| `start` | Metro bundler |
-| `reset:cache` | Metro with a cleared cache |
-| `ios` / `ios:stg` / `ios:prod` | iOS simulator, per scheme |
-| `android` + `MODE`/`TARGET` | Android build + install |
-| `android:stg` / `:prod` / `:release` / `:local-release` | Android variant shortcuts |
-| `android:all` / `:emulator` / `:phone` | Target shortcuts |
+| Command                                                 | Description                |
+| ------------------------------------------------------- | -------------------------- |
+| `start`                                                 | Metro bundler              |
+| `reset:cache`                                           | Metro with a cleared cache |
+| `ios` / `ios:stg` / `ios:prod`                          | iOS simulator, per scheme  |
+| `android` + `MODE`/`TARGET`                             | Android build + install    |
+| `android:stg` / `:prod` / `:release` / `:local-release` | Android variant shortcuts  |
+| `android:all` / `:emulator` / `:phone`                  | Target shortcuts           |
 
 **Codegen**
 
-| Command | Description |
-| --- | --- |
-| `codegen` | Schema pull + types + persisted query manifest |
-| `codegen:schema` | Schema pull only |
-| `codegen:manifest` | Persisted query manifest only |
-| `codegen:watch` | Regenerate on change |
-| `check:codegen-orphans` | Orphaned `.generated.ts` files |
-| `genenv` | Regenerate `src/config/env.generated.ts` from `.env` |
+| Command                 | Description                                          |
+| ----------------------- | ---------------------------------------------------- |
+| `codegen`               | Schema pull + types + persisted query manifest       |
+| `codegen:schema`        | Schema pull only                                     |
+| `codegen:manifest`      | Persisted query manifest only                        |
+| `codegen:watch`         | Regenerate on change                                 |
+| `check:codegen-orphans` | Orphaned `.generated.ts` files                       |
+| `genenv`                | Regenerate `src/config/env.generated.ts` from `.env` |
 
 **Quality**
 
-| Command | Description |
-| --- | --- |
-| `typecheck` | `tsc --noEmit` for app and tests |
-| `lint` / `lint:fix` | ESLint (cached) |
-| `format` | Prettier |
-| `i18n:check` | Locale parity |
-| `check:dead-modules` | knip: a `src/` module with no production importer |
-| `check:import-cycles` | madge: load-time import cycles |
-| `check:audit` | `npm audit` over production dependencies |
-| `test` / `test:changed` | Jest |
-| `test:e2e*` | Detox |
+| Command                 | Description                                       |
+| ----------------------- | ------------------------------------------------- |
+| `typecheck`             | `tsc --noEmit` for app and tests                  |
+| `lint` / `lint:fix`     | ESLint (cached)                                   |
+| `format`                | Prettier                                          |
+| `i18n:check`            | Locale parity                                     |
+| `check:dead-modules`    | knip: a `src/` module with no production importer |
+| `check:import-cycles`   | madge: load-time import cycles                    |
+| `check:audit`           | `npm audit` over production dependencies          |
+| `test` / `test:changed` | Jest                                              |
+| `test:e2e*`             | Detox                                             |
 
 **Performance measurement**
 
-| Command | Description |
-| --- | --- |
-| `perf` / `perf:baseline` / `perf:stability` | Reassure render-time benchmarks |
-| `perf:ios:baseline` | n `simctl` cold launches, one metric set each, read back from Mimir into `e2e/artifacts/ios-baseline.json`. Drives the app directly rather than through Detox, which inflates the pre-JS window |
-| `perf:ios:frames` | Samples the simulator screen from launch and classifies frames by PNG size to time first real content. iOS has no OS-side fully-drawn marker, so this is the only cross-check available there |
+| Command                                     | Description                                                                                                                                                                                     |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `perf` / `perf:baseline` / `perf:stability` | Reassure render-time benchmarks                                                                                                                                                                 |
+| `perf:ios:baseline`                         | n `simctl` cold launches, one metric set each, read back from Mimir into `e2e/artifacts/ios-baseline.json`. Drives the app directly rather than through Detox, which inflates the pre-JS window |
+| `perf:ios:frames`                           | Samples the simulator screen from launch and classifies frames by PNG size to time first real content. iOS has no OS-side fully-drawn marker, so this is the only cross-check available there   |
 
 Both iOS tools need a release build installed and signed in, tutorials
 dismissed, and the local API plus OTLP collector up. Numbers from an iOS
@@ -583,23 +610,23 @@ iOS to iOS, build over build — never against an Android device figure.
 
 **Build & analysis**
 
-| Command | Description |
-| --- | --- |
-| `android:build` | Release APK |
-| `android:build:bundle` | Release AAB |
-| `android:clean` | `gradlew clean` |
-| `ios:clean` | Clear `ios/build` and re-run `pod install` |
+| Command                         | Description                                |
+| ------------------------------- | ------------------------------------------ |
+| `android:build`                 | Release APK                                |
+| `android:build:bundle`          | Release AAB                                |
+| `android:clean`                 | `gradlew clean`                            |
+| `ios:clean`                     | Clear `ios/build` and re-run `pod install` |
 | `bundle:ios` / `bundle:android` | Produce a production JS bundle + sourcemap |
-| `bundle:analyze` | `source-map-explorer` over the bundle |
+| `bundle:analyze`                | `source-map-explorer` over the bundle      |
 
 **Housekeeping**
 
-| Command | Description |
-| --- | --- |
+| Command     | Description                           |
+| ----------- | ------------------------------------- |
 | `npm:clean` | Nuke `node_modules` and the npm cache |
-| `watchman` | Reset watchman |
-| `adb:*` | Android device helpers |
-| `tag:*` | Create release tags |
+| `watchman`  | Reset watchman                        |
+| `adb:*`     | Android device helpers                |
+| `tag:*`     | Create release tags                   |
 
 </details>
 

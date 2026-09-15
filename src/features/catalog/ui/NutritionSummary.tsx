@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { View, ViewStyle, ScrollView } from 'react-native';
+import type { ViewStyle } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -281,7 +282,7 @@ const circleStyles = StyleSheet.create(theme => ({
     },
   },
   unit: {
-    marginTop: -2,
+    marginTop: -theme.spacing['2xs'],
     variants: {
       tone: {
         calories: { color: theme.colors.primary },

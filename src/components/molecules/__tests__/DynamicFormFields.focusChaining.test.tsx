@@ -27,7 +27,7 @@ const SpyInput: React.FC<{
     if (typeof ref === 'function') {
       ref(handle);
     } else if (ref) {
-      (ref as React.RefObject<TextInput | null>).current = handle;
+      ref.current = handle;
     }
   }, [ref, focus]);
 

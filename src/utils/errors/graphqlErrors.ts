@@ -5,6 +5,7 @@
  */
 
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { describeValue } from '#/utils/errorSerialization';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
 export class GraphQLDomainError extends Error {
@@ -51,7 +52,7 @@ export function getTopLevelGraphQLError(
   const first = error.errors[0];
   if (!first) return null;
   return {
-    code: String(first.extensions?.code ?? ''),
+    code: describeValue(first.extensions?.code ?? ''),
     message: String(first.message ?? ''),
   };
 }

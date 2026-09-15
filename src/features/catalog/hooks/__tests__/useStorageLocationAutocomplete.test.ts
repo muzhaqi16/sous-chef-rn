@@ -1,6 +1,7 @@
 import { renderHook } from '@testing-library/react-native';
 import { useStorageLocationAutocomplete } from '#features/catalog/hooks/useStorageLocationAutocomplete';
-import { StorageLocation, StorageType } from '#/graphql/generated/schemaTypes';
+import type { StorageLocation } from '#/graphql/generated/schemaTypes';
+import { StorageType } from '#/graphql/generated/schemaTypes';
 
 const makeLocation = (
   overrides: Partial<StorageLocation> = {},
@@ -159,22 +160,6 @@ describe('useStorageLocationAutocomplete', () => {
     );
 
     expect(result.current.showAddNew).toBe(false);
-  });
-
-  it('isLoading is always false (fully local)', () => {
-    const { result } = renderHook(() =>
-      useStorageLocationAutocomplete({ storageLocations, searchTerm: 'test' }),
-    );
-
-    expect(result.current.isLoading).toBe(false);
-  });
-
-  it('isOnline is always true (fully local)', () => {
-    const { result } = renderHook(() =>
-      useStorageLocationAutocomplete({ storageLocations, searchTerm: '' }),
-    );
-
-    expect(result.current.isOnline).toBe(true);
   });
 
   it('handles empty storageLocations array', () => {

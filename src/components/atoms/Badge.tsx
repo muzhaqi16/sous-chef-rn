@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, ViewStyle } from 'react-native';
+import type { ViewStyle } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 
@@ -51,7 +52,7 @@ const styles = StyleSheet.create(theme => ({
       size: {
         small: {
           paddingHorizontal: theme.spacing.xsPlus,
-          paddingVertical: 2,
+          paddingVertical: theme.spacing['2xs'],
         },
         medium: {
           paddingHorizontal: theme.spacing.smPlus,

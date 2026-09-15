@@ -22,7 +22,7 @@ jest.mock('#/utils/finallyHelpers', () => ({
         await fn();
         return true;
       } catch (e) {
-        if (typeof onError === 'function') onError(e);
+        if (typeof onError === 'function') await onError(e);
         return false;
       }
     },
@@ -88,7 +88,7 @@ describe('usePantryItemFormSubmit', () => {
       const params = defaults();
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      result.current.handleSave({ ...baseData, quantityInput: '' });
+      await result.current.handleSave({ ...baseData, quantityInput: '' });
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
@@ -102,7 +102,7 @@ describe('usePantryItemFormSubmit', () => {
       const params = defaults({ currentPantryId: null });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      result.current.handleSave(baseData);
+      await result.current.handleSave(baseData);
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
@@ -123,7 +123,7 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      result.current.handleSave(baseData);
+      await result.current.handleSave(baseData);
 
       await waitFor(() =>
         expect(params.updateQuantity).toHaveBeenCalledWith(
@@ -146,7 +146,7 @@ describe('usePantryItemFormSubmit', () => {
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
       const data = { ...baseData, netWeightUnit: 'oz' };
-      result.current.handleSave(data);
+      await result.current.handleSave(data);
 
       await waitFor(() =>
         expect(resolveUnitId).toHaveBeenCalledWith(null, 'oz'),
@@ -163,7 +163,7 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      result.current.handleSave({ ...baseData, netWeightUnit: 'oz' });
+      await result.current.handleSave({ ...baseData, netWeightUnit: 'oz' });
 
       await waitFor(() => expect(params.onSuccess).toHaveBeenCalled());
       expect(resolveUnitId).not.toHaveBeenCalled();
@@ -179,7 +179,7 @@ describe('usePantryItemFormSubmit', () => {
       const params = editParams({ existingPantryItem: null });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      result.current.handleSave(baseData);
+      await result.current.handleSave(baseData);
 
       await waitFor(() =>
         expect(alertService.alert).toHaveBeenCalledWith(
@@ -193,7 +193,7 @@ describe('usePantryItemFormSubmit', () => {
       const params = editParams({ dirtyFields: { quantityInput: true } });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      result.current.handleSave(baseData);
+      await result.current.handleSave(baseData);
 
       await waitFor(() =>
         expect(params.updateQuantity).toHaveBeenCalledWith(
@@ -210,7 +210,7 @@ describe('usePantryItemFormSubmit', () => {
       const params = editParams({ dirtyFields: {} });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      result.current.handleSave({ ...baseData, unit: 'kg' });
+      await result.current.handleSave({ ...baseData, unit: 'kg' });
 
       // unit is 'kg' (typed) against 'L' (current) but trackingUnit still has 'L'
       // unitId is 'unit-1' (from trackingUnit), so unitChangedWithoutId is false
@@ -225,7 +225,7 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      result.current.handleSave({ ...baseData, unit: 'kg' });
+      await result.current.handleSave({ ...baseData, unit: 'kg' });
 
       await waitFor(() =>
         expect(params.updatePantryItemFields).toHaveBeenCalledWith(
@@ -246,7 +246,7 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      result.current.handleSave(baseData);
+      await result.current.handleSave(baseData);
 
       await waitFor(() =>
         expect(params.updatePantryItemFields).toHaveBeenCalled(),
@@ -262,7 +262,7 @@ describe('usePantryItemFormSubmit', () => {
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
       // unit unchanged because data.unit === currentItem.unit.symbol === 'L'
-      result.current.handleSave(baseData);
+      await result.current.handleSave(baseData);
 
       await waitFor(() => expect(params.onSuccess).toHaveBeenCalled());
       expect(params.updateQuantity).not.toHaveBeenCalled();
@@ -280,7 +280,7 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      result.current.handleSave(baseData);
+      await result.current.handleSave(baseData);
 
       await waitFor(() =>
         expect(alertService.alert).toHaveBeenCalledWith(

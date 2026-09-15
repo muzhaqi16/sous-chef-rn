@@ -12,24 +12,20 @@ import type {
 } from '@apollo/client';
 import type { NormalizedCacheObject } from '@apollo/client';
 import type { ModifierDetails } from '@apollo/client/cache';
-import {
+import type {
   SubscriptionConfig,
   SubscriptionHandlers,
   SubscriptionPayload,
   SubscriptionEntry,
   SubscriptionStats,
-  CacheStrategy,
-  LogLevel,
 } from './types';
+import { CacheStrategy, LogLevel } from './types';
 import { MutationType } from '#/graphql/generated/schemaTypes';
-import {
-  serializeError,
-  isCircularStructureError,
-  isTimerCircularStructureError,
-} from '#/utils/errorSerialization';
+import { serializeError } from '#/utils/errorSerialization';
 import { safeEvict, type ConnectionData } from '#/apollo/utils/cacheUpdaters';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import {
-  isExpectedNetworkTransitionError,
+  isExpectedTransportError,
   isPermanentSubscriptionRejection,
 } from '#/utils/subscriptionErrorHandler';
 import { markSubscriptionRejected } from './rejectedSubscriptions';
@@ -39,6 +35,11 @@ import { SubscriptionSuppression } from './SubscriptionSuppression';
 
 /** `StoreObject` (so `toReference` accepts it) plus the `id` the service reads. */
 type PayloadEntity = StoreObject & { id?: string };
+
+/** A config after `register` has read its operation name off the document. */
+type RegisteredConfig<TData> = SubscriptionConfig<TData> & {
+  subscriptionName: string;
+};
 
 export class SubscriptionService {
   private static instance: SubscriptionService;
@@ -111,7 +112,7 @@ export class SubscriptionService {
 
   private shouldProcessUpdate<TData>(
     payload: SubscriptionPayload<TData>,
-    config: SubscriptionConfig<TData>,
+    config: RegisteredConfig<TData>,
   ): boolean {
     return this.suppression.shouldProcessUpdate<TData>(payload, info =>
       this.log(config, LogLevel.DEBUG, 'Filtered sortOrder-only update', {
@@ -134,7 +135,8 @@ export class SubscriptionService {
     config: SubscriptionConfig<TData>,
   ): SubscriptionHandlers {
     const finalConfig = {
-      subscriptionName: config.subscriptionName,
+      document: config.document,
+      subscriptionName: operationNameOf(config.document),
       entityType: config.entityType,
       mutation: config.mutation || MutationType.Updated,
       enableDeduplication: config.enableDeduplication ?? true,
@@ -173,7 +175,7 @@ export class SubscriptionService {
    * Create unified onData handler
    */
   private createOnDataHandler<TData>(
-    config: SubscriptionConfig<TData>,
+    config: RegisteredConfig<TData>,
   ): SubscriptionHandlers['onData'] {
     return ({ data, client }) => {
       try {
@@ -303,7 +305,7 @@ export class SubscriptionService {
    * Create unified onError handler
    */
   private createOnErrorHandler<TData>(
-    config: SubscriptionConfig<TData>,
+    config: RegisteredConfig<TData>,
   ): SubscriptionHandlers['onError'] {
     return (error: ErrorLike) => {
       const errorMessage = error?.message?.toLowerCase() || '';
@@ -312,7 +314,7 @@ export class SubscriptionService {
       // Not connection churn: the socket's other subscriptions keep delivering.
       // Close the gate so `skip` stops the resubscribe, and report once.
       if (isPermanentSubscriptionRejection(error)) {
-        const firstTime = markSubscriptionRejected(config.subscriptionName);
+        const firstTime = markSubscriptionRejected(config.document);
         if (firstTime) {
           this.log(
             config,
@@ -340,7 +342,7 @@ export class SubscriptionService {
       // identical lines per disconnect (wsLink already warns once per socket
       // event). Uses the shared predicate so the "expected transition" rule
       // stays in one place.
-      if (isExpectedNetworkTransitionError(error?.message)) {
+      if (isExpectedTransportError(error)) {
         this.log(config, LogLevel.DEBUG, 'WebSocket connection interrupted', {
           error: errorMessage,
           hint: 'WebSocket will attempt auto-reconnect if enabled',
@@ -370,7 +372,7 @@ export class SubscriptionService {
    * Also removes the subscription entry from the registry when the subscription ends
    */
   private createOnCompleteHandler<TData>(
-    config: SubscriptionConfig<TData>,
+    config: RegisteredConfig<TData>,
   ): () => void {
     const key = this.getSubscriptionKey(config);
     return () => {
@@ -393,7 +395,7 @@ export class SubscriptionService {
 
   private updateCache<TData>(
     cache: ApolloCache,
-    config: SubscriptionConfig<TData>,
+    config: RegisteredConfig<TData>,
     payload: SubscriptionPayload<TData>,
   ): void {
     if (!config.cacheFieldName) {
@@ -506,7 +508,7 @@ export class SubscriptionService {
                       existingConnection: ConnectionData = {},
                       { readField }: ModifierDetails,
                     ) => {
-                      const existingEdges = existingConnection?.edges || [];
+                      const existingEdges = existingConnection?.edges ?? [];
                       const edges = existingEdges.filter(
                         edge => readField('id', edge?.node) !== itemId,
                       );
@@ -521,7 +523,7 @@ export class SubscriptionService {
                         edges,
                         totalCount: Math.max(
                           0,
-                          (existingConnection?.totalCount || 0) - 1,
+                          (existingConnection?.totalCount ?? 0) - 1,
                         ),
                       };
                     },
@@ -585,6 +587,7 @@ export class SubscriptionService {
           break;
         }
 
+        case undefined:
         default:
           this.log(config, LogLevel.WARN, 'Unknown mutation type', mutation);
       }
@@ -627,18 +630,12 @@ export class SubscriptionService {
    * Unified logging
    */
   private log<TData>(
-    config: SubscriptionConfig<TData>,
+    config: RegisteredConfig<TData>,
     level: LogLevel,
     message: string,
     data?: unknown,
   ): void {
     if (!config.enableLogging && level !== LogLevel.ERROR) {
-      return;
-    }
-
-    // Silently skip timer-related circular structure errors
-    // These are expected during subscription teardown/setup due to graphql-ws internals
-    if (level === LogLevel.ERROR && isTimerCircularStructureError(data)) {
       return;
     }
 
@@ -654,58 +651,28 @@ export class SubscriptionService {
       return;
     }
 
-    // Extract a `message` string from `data` when present (errors, payloads)
-    const dataMessage =
-      typeof data === 'object' &&
-      data !== null &&
-      'message' in data &&
-      typeof (data as { message: unknown }).message === 'string'
-        ? (data as { message: string }).message
-        : undefined;
-
-    // Check if this is a circular structure error - downgrade to warning
-    const isCircular =
-      level === LogLevel.ERROR &&
-      Boolean(data) &&
-      (isCircularStructureError(data) ||
-        (dataMessage !== undefined && isCircularStructureError(dataMessage)));
-
-    // Extract raw error message for visibility even when circular refs detected
-    const rawErrorMessage =
-      dataMessage !== undefined
-        ? dataMessage
-        : typeof data === 'string'
-        ? data
-        : 'Unknown error';
-
-    const actualLevel = isCircular ? LogLevel.WARN : level;
-    const actualMessage = isCircular
-      ? `${message} (may have circular refs - raw: ${rawErrorMessage})`
-      : message;
-
-    // For circular errors, still log raw message but skip full data object to avoid serialization issues
-    const actualData = isCircular ? '' : data || '';
+    const actualData = data || '';
 
     const emoji = {
       [LogLevel.DEBUG]: '🔍',
       [LogLevel.INFO]: '🔔',
       [LogLevel.WARN]: '⚠️',
       [LogLevel.ERROR]: '❌',
-    }[actualLevel];
+    }[level];
 
     const prefix = `${emoji} [${config.subscriptionName}]`;
 
-    switch (actualLevel) {
+    switch (level) {
       case LogLevel.ERROR:
-        logger.error(prefix, actualMessage, actualData);
+        logger.error(prefix, message, actualData);
         break;
       case LogLevel.WARN:
-        logger.warn(prefix, actualMessage, actualData);
+        logger.warn(prefix, message, actualData);
         break;
       case LogLevel.DEBUG:
       case LogLevel.INFO:
       default:
-        logger.debug(prefix, actualMessage, actualData);
+        logger.debug(prefix, message, actualData);
     }
   }
 
@@ -713,7 +680,7 @@ export class SubscriptionService {
    * Update subscription statistics
    */
   private updateSubscriptionStats<TData>(
-    config: SubscriptionConfig<TData>,
+    config: RegisteredConfig<TData>,
     type: 'update' | 'error',
   ): void {
     const key = this.getSubscriptionKey(config);
@@ -732,7 +699,7 @@ export class SubscriptionService {
   /**
    * Generate unique subscription key
    */
-  private getSubscriptionKey<TData>(config: SubscriptionConfig<TData>): string {
+  private getSubscriptionKey<TData>(config: RegisteredConfig<TData>): string {
     return `${config.subscriptionName}-${config.entityId || 'default'}-${
       config.userId || 'anonymous'
     }`;

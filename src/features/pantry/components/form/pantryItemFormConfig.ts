@@ -1,30 +1,46 @@
 import { object, string } from 'yup';
-import { t } from '#/i18n';
+import { t, type TranslationKey } from '#/i18n';
 // Pages, order and label keys are the ADD form's, declared once in the catalog's
 // public `ui/`. `PageName` is an IDENTIFIER, never a tab label — resolve it
 // through `PAGE_LABEL_KEYS`. Only `TAB_FIELDS` below is this form's own.
 import type { PageName } from '#features/catalog/ui/AddItemForm/fields';
 import { StorageState, ItemCondition } from '#/graphql/generated/schemaTypes';
+import { parseFractionalInput } from '#/utils/fractionUtils';
+import type { PantryItemFormData } from './usePantryItemFormSubmit';
 
 // Messages resolve LAZILY: the schemas are built once at module scope, so an
 // eagerly resolved one freezes whichever language was active at import time.
 // Uses the SAME keys as `addPantryItemFormConfig.ts` so the two cannot drift.
-const msg = (key: string) => (): string => t(key);
+const msg = (key: TranslationKey) => (): string => t(key);
+
+type FieldName = keyof PantryItemFormData;
+
+// yup types a test's sibling values as `any`; these are the ones the rules read.
+type NetWeightSiblings = Partial<
+  Pick<PantryItemFormData, 'netWeight' | 'netWeightUnitId'>
+>;
 
 // Drives the per-tab error indicators on PageIndicator. Tags lives inside the
 // Inventory "More options" expander.
-export const TAB_FIELDS: Record<PageName, readonly string[]> = {
+export const TAB_FIELDS: Record<PageName, readonly FieldName[]> = {
   Basics: ['itemName', 'brand', 'category'],
   Product: ['netWeight', 'netWeightUnit'],
   Storage: ['storageState', 'condition', 'location', 'expirationDate', 'notes'],
   Inventory: ['quantityInput', 'unit', 'minQuantity', 'restockQuantity'],
 };
 
-export const INVENTORY_ADVANCED_FIELDS: readonly string[] = ['tags'];
+export const INVENTORY_ADVANCED_FIELDS: readonly FieldName[] = ['tags'];
 
 export const editItemSchema = object({
   itemName: string(),
-  quantityInput: string().required(msg('errors.invalidQuantity')),
+  // The submit parses it with the same reader, so text it cannot read never gets there.
+  quantityInput: string()
+    .required(msg('errors.invalidQuantity'))
+    .test(
+      'parseable',
+      msg('errors.invalidQuantity'),
+      value => !value || parseFractionalInput(value) !== null,
+    ),
   unit: string(), // Tracking unit
   minQuantity: string(),
   restockQuantity: string(),
@@ -34,7 +50,7 @@ export const editItemSchema = object({
   netWeight: string().test(
     'net-weight-needs-value',
     msg('errors.field.netWeight'),
-    (value, context) => {
+    (value, context: { parent: NetWeightSiblings }) => {
       if ((value ?? '').trim()) return true;
       return !context.parent.netWeightUnitId;
     },
@@ -42,7 +58,7 @@ export const editItemSchema = object({
   netWeightUnit: string().test(
     'net-weight-needs-unit',
     msg('labels.pleaseSelectAUnitForTheNetWeight'),
-    (_value, context) => {
+    (_value, context: { parent: NetWeightSiblings }) => {
       const weight = (context.parent.netWeight ?? '').trim();
       if (!weight) return true;
       return Boolean(context.parent.netWeightUnitId);

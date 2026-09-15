@@ -1449,6 +1449,7 @@ enum ChangeType {
   LOCATION_UPDATED
   """The stack's portion definition or density override was edited"""
   MEASUREMENT_PROFILE
+  MERGED
   QUANTITY_UPDATED
   RESTORED
   WEIGHT_CORRECTED
@@ -2223,6 +2224,13 @@ input CreatePantryInput {
 input CreatePantryItemInput {
   brand: BrandReferenceInput
   expiresAt: DateTime
+  """
+  When the pantry already holds this item in the resolved unit, add the quantity to that
+  stack and return it instead of refusing with DuplicatePantryItemError. A pantry holds one
+  active stack per item per unit. The added stock is measured by this input's own net weight
+  and records its linked purchase. Stack-level fields (brand, storage, tags, thresholds and
+  the item name) are not applied to the held stack.
+  """
   forceAdd: Boolean
   """
   Optional client-generated permanent ID (CUID2).
@@ -3088,8 +3096,18 @@ input DeletePantryItemInput {
 }
 
 type DeletePantryItemPayload {
+  """
+  True when this call CONVERGED on a pre-existing state (the stack was
+  already removed) — a no-op success that did NOT re-remove or re-publish.
+  The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
-  pantryItem: PantryItem!
+  """
+  The removed stack, or null when it was already removed — an idempotent
+  replay (or second device) that converged as success. See converged.
+  """
+  pantryItem: PantryItem
 }
 
 """
@@ -3830,10 +3848,11 @@ Always include a __typename so the variant can be discriminated.
 union DuplicateMealPlanResult = ConflictError | DuplicateMealPlanPayload | ForbiddenError | NotFoundError | ValidationError
 
 """
-The pantry already has an active stack of this catalog item. Returned by
-`createPantryItem` (unless `forceAdd` is set) so the client can route the
-user to restock the existing item instead of creating a duplicate. The
-`code` is `PANTRY_ITEM_ALREADY_EXISTS`.
+The pantry already holds an active stack of this catalog item in this unit, and
+a pantry holds one. Returned by `createPantryItem` without `forceAdd`, and by
+`updatePantryItem` and `restorePantryItem` when the write would open a second,
+so the client can route the user to restock the existing stack. The `code` is
+`PANTRY_ITEM_ALREADY_EXISTS`.
 """
 type DuplicatePantryItemError implements Error {
   code: ErrorCode!
@@ -5333,7 +5352,12 @@ enum ItemMatchType {
 
 """
 Client-settable subset of an item's metadata. The stored column also carries
-server-written moderation and merge-audit keys, which are not settable here.
+server-written moderation, merge-audit and enrichment keys, which are not
+settable here and which an update never removes.
+
+On an update the object is MERGED into the stored metadata: a field set to a
+value overwrites it, a field set to null removes it, and an omitted field is
+kept. Passing null for the whole object removes every field listed here.
 """
 input ItemMetadataInput {
   isDairyFree: Boolean
@@ -8861,8 +8885,8 @@ type PantryItem {
   whose price is known — null when that is none of it.
   """
   totalCost: Float
-  unit: Unit
-  unitId: ID
+  unit: Unit!
+  unitId: ID!
   updatedAt: DateTime!
   usageRecords(after: String, before: String, first: Int, last: Int, orderBy: PantryItemUsageOrderBy): PantryItemUsageConnection!
   version: Int!
@@ -8979,11 +9003,17 @@ type PantryItemChange {
   deviceId: String
   field: String
   id: ID!
+  """The stack's item name when the change was recorded."""
+  itemName: String
   metadata: JSON
   newValue: String
   oldValue: String
-  pantryItem: PantryItem!
-  pantryItemId: ID!
+  pantryId: ID
+  """
+  Null once the stack is destroyed by adminPurgePantryItems; pantryId and itemName still name it.
+  """
+  pantryItem: PantryItem
+  pantryItemId: ID
   source: ChangeSource!
 }
 
@@ -9725,29 +9755,32 @@ type Query {
   """List compatible units for an item with conversion metadata."""
   compatibleUnitsForItem(currentUnitId: ID, itemId: ID!): [CompatibleUnit!]!
   """
-  Ranked consumption-eligible units for a CATALOG item, from whatever part of
-  a stack's measurement profile the caller passes. A netWeight,
-  portionsPerTrackingUnit or densityOverride of zero or less is refused.
+  Ranked consumption-eligible units for a CATALOG item, for a stack described
+  by its unit ids. Amounts are optional: which units are offered does not
+  depend on them. A netWeight, portionsPerTrackingUnit or densityOverride of
+  zero or less is refused, and so is a portionsPerTrackingUnit without its
+  portionUnitId.
   """
   consumptionUnitsForItem(
     """The stack's density in g/mL, when it overrides the item's."""
     densityOverride: Float
     itemId: ID!
-    """
-    The net weight of ONE tracking unit. Without it a stack that records one
-    is read as tracking quantity alone, and the measured units drop out.
-    """
+    """The net weight of ONE tracking unit. Optional."""
     netWeight: Float
+    """
+    The unit the stack's net weight is recorded in. Its measure is offered
+    whether or not netWeight is passed.
+    """
     netWeightUnitId: ID
     """
     The stack's own portion unit (PantryItem.portionUnitId), when it defines
-    one. Pass it and "clove" is offered first for a stack that says a bulb
-    holds ten.
+    one. Passed with or without its count it is read as the stack's portion,
+    so "clove" is offered first for a bulb stack.
     """
     portionUnitId: ID
     """
-    How many portion units one tracking unit holds. Travels with
-    portionUnitId — one without the other defines nothing.
+    How many portion units one tracking unit holds. Optional; requires
+    portionUnitId.
     """
     portionsPerTrackingUnit: Float
     trackingUnitId: ID!
@@ -9825,10 +9858,15 @@ type Query {
   itemConversions(includeStandard: Boolean, itemId: ID!): [ItemUnitConversion!]!
   """
   List items with filtering and cursor-based pagination (Relay spec).
-  Use filters for UPC, SKU, or external ID lookups:
-  - items(filters: { upc, upcFormat }) - UPC/barcode lookup
-  - items(filters: { sku, skuStoreId }) - SKU lookup
-  - items(filters: { externalId, externalProvider }) - External ID lookup
+  Use filters for UPC or SKU lookups:
+  - items(filters: { lookup: { upc, upcFormat } }) - UPC/barcode lookup
+  - items(filters: { lookup: { sku, skuStoreId } }) - SKU lookup
+  
+  A curated list (curation isPopular, isTrending, isRecent, showInOnboarding)
+  and a UPC/SKU lookup each return a single page, so after, before and last
+  are refused, and each applies a subset of the filters. A filter the
+  request's mode does not apply is refused with a validation error naming
+  it, never ignored.
   """
   items(after: String, before: String, filters: ItemFilters, first: Int, last: Int, orderBy: ItemOrderBy): ItemConnection!
   """
@@ -9941,7 +9979,15 @@ type Query {
   savedRecipe(id: ID!): SavedRecipe
   """List all folder names the user has organized saved recipes into."""
   savedRecipeFolders: [String!]!
-  """Search items with cursor-based pagination (Relay spec)."""
+  """
+  Search items with cursor-based pagination (Relay spec).
+  
+  With an orderBy, every page is reachable through after, before and last.
+  Without one, matches are ranked by relevance (the caller's own private
+  items, then their frequent items, then by popularity). A ranked list has
+  no cursor, so only its first page is served: after, before and last are
+  refused with a validation error until an orderBy is named.
+  """
   searchItems(after: String, before: String, filters: ItemFilters, first: Int, last: Int, orderBy: ItemOrderBy, query: String!): ItemConnection!
   """
   Semantic (vector) search over the catalog. The prompt is embedded
@@ -12549,6 +12595,13 @@ input SyncPantryItemInput {
   clientId: ID!
   expirationAlert: Boolean
   expiresAt: DateTime
+  """
+  When the pantry already holds this item in the resolved unit, add the quantity to that
+  stack and return it instead of refusing with DuplicatePantryItemError. A pantry holds one
+  active stack per item per unit. The added stock is measured by this input's own net weight
+  and records its linked purchase. Stack-level fields (brand, storage, tags, thresholds and
+  the item name) are not applied to the held stack.
+  """
   forceAdd: Boolean
   isComposted: Boolean
   isRecycled: Boolean

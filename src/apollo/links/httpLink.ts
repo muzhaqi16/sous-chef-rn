@@ -1,7 +1,10 @@
-import { ApolloLink, HttpLink } from '@apollo/client';
+import type { ApolloLink } from '@apollo/client';
+import { HttpLink } from '@apollo/client';
 import { BatchHttpLink } from '@apollo/client/link/batch-http';
 import { env } from '#/config/env';
 import { Environment } from '#/utils/environment';
+import { TimeoutError } from '#/utils/errors/timeoutError';
+import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 
 /**
  * A fetch with timeout support. Apollo's HttpLink passes its own `signal`,
@@ -37,8 +40,16 @@ const createTimeoutFetch = (timeoutMs: number): typeof fetch => {
       return response;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        if (timedOut) throw new Error(`Request timeout after ${timeoutMs}ms`);
+        if (timedOut) {
+          throw new TimeoutError(
+            `Request timeout after ${timeoutMs}ms`,
+            timeoutMs,
+          );
+        }
         throw error; // cancelled by Apollo (query torn down), not a timeout
+      }
+      if (error instanceof TypeError) {
+        throw new NetworkRequestError(error.message);
       }
       throw error;
     } finally {

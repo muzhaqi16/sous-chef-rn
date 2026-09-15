@@ -74,7 +74,7 @@ for (const file of graphqlFiles) {
   const src = readFileSync(file, 'utf8');
   for (const match of src.matchAll(/^subscription\s+(\w+)/gm)) {
     const name = match[1]!;
-    const body = src.slice(match.index!);
+    const body = src.slice(match.index);
     const end = body.indexOf('\n}');
     const doc = end === -1 ? body : body.slice(0, end);
     const selection = nodeSelection(doc);

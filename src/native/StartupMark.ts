@@ -1,17 +1,28 @@
 import { NativeModules, Platform } from 'react-native';
 
+interface StartupMarkNativeModule {
+  reportFullyDrawn?: () => void;
+  startProfiling?: () => boolean;
+  stopProfiling?: (filename: string) => Promise<string>;
+  writeTextFile?: (filename: string, contents: string) => Promise<string>;
+}
+
+// Every method is optional, and each call site checks for it before calling.
+const isStartupMarkModule = (
+  value: unknown,
+): value is StartupMarkNativeModule =>
+  typeof value === 'object' && value !== null;
+
 /**
  * Resolved per call, NEVER captured at module scope: `index.js` imports this in
  * its first few lines, so a destructured binding freezes whatever the registry
  * held then — an `undefined` captured there makes every method a silent no-op
  * for the process. Not gated on `Platform.OS`; each method gates on itself.
  */
-const nativeModule = (): {
-  reportFullyDrawn?: () => void;
-  startProfiling?: () => boolean;
-  stopProfiling?: (filename: string) => Promise<string>;
-  writeTextFile?: (filename: string, contents: string) => Promise<string>;
-} | null => NativeModules.StartupMarkModule ?? null;
+const nativeModule = (): StartupMarkNativeModule | null => {
+  const candidate: unknown = NativeModules.StartupMarkModule;
+  return isStartupMarkModule(candidate) ? candidate : null;
+};
 
 /**
  * Tells the PLATFORM the app is fully drawn — distinct from our own

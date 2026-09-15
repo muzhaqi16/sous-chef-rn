@@ -387,12 +387,12 @@ jobs:
         typecheck,
         lint,
         i18n-check,
-        fragment-audit,
         unit-tests,
         compiler-bailouts,
         stale-cache-fields,
         bundled-secret-scanner,
         dependency-audit,
+        whole-tree-gates,
       ]
     if: always()
 
@@ -402,23 +402,24 @@ jobs:
           if [ "${{ needs.typecheck.result }}" != "success" ] || \
              [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.i18n-check.result }}" != "success" ] || \
-             [ "${{ needs.fragment-audit.result }}" != "success" ] || \
              [ "${{ needs.unit-tests.result }}" != "success" ] || \
              [ "${{ needs.compiler-bailouts.result }}" != "success" ] || \
              [ "${{ needs.stale-cache-fields.result }}" != "success" ] || \
-             [ "${{ needs.bundled-secret-scanner.result }}" != "success" ]; then
+             [ "${{ needs.bundled-secret-scanner.result }}" != "success" ] || \
+             [ "${{ needs.dependency-audit.result }}" != "success" ] || \
+             [ "${{ needs.whole-tree-gates.result }}" != "success" ]; then
             echo "❌ One or more PR checks failed"
             echo "## PR Check Results" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "- TypeScript: ${{ needs.typecheck.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- Lint: ${{ needs.lint.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- i18n: ${{ needs.i18n-check.result }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Fragment Audit: ${{ needs.fragment-audit.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- Unit Tests: ${{ needs.unit-tests.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- Compiler Bailouts: ${{ needs.compiler-bailouts.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- Stale Cache Fields: ${{ needs.stale-cache-fields.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- Bundled Secrets: ${{ needs.bundled-secret-scanner.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- Dependency Audit: ${{ needs.dependency-audit.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Whole-tree Gates: ${{ needs.whole-tree-gates.result }}" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
           echo "✅ All PR checks passed!"
@@ -428,9 +429,10 @@ jobs:
           echo "- ✅ TypeScript" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Lint" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ i18n" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Fragment Audit" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Unit Tests" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Compiler Bailouts" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Stale Cache Fields" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Bundled Secrets" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Dependency Audit" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Whole-tree Gates" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Dependency Audit" >> $GITHUB_STEP_SUMMARY

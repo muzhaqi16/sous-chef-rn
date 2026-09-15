@@ -3,14 +3,12 @@ import { useMutation } from '@apollo/client/react';
 import {
   CreateItemSuggestionDocument,
   UpdateItemDocument,
-  type UpdateItemMutation,
 } from '#features/catalog/hooks/useSuggestItemEdit.generated';
 import { useImageUpload } from '#hooks/useImageUpload';
 import { alertService } from '#/services/alertService';
-import {
-  alertMutationFailure,
-  type AlertCaseKeySuffixes,
-} from '#features/catalog/hooks/alertMutationFailure';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   buildSuggestibleItemChanges,
   type EditableItemSnapshot,
@@ -29,25 +27,6 @@ export type ItemEditResult =
 
 const FAILED: ItemEditResult = { status: 'failed' };
 
-// The 5-pending cap is the only CONFLICT either mutation raises, so the
-// typename alone identifies it; a second one would need keying on
-// `payload.code`. Values are i18n key SUFFIXES — `alertMutationFailure`
-// composes each under the call's `keyPrefix` (`'suggestItemEdit'` here).
-const SUGGEST_FAILURE_CASES: Record<string, AlertCaseKeySuffixes> = {
-  ConflictError: {
-    titleSuffix: 'pendingCapTitle',
-    bodySuffix: 'pendingCapBody',
-  },
-};
-
-/**
- * Structural on purpose: the helpers take whatever `executeMutation` inferred
- * rather than naming Apollo's result type. Under the global
- * `errorPolicy: 'all'` a failing mutation RESOLVES, so the result union and
- * `result.error` carry server outcomes — the catch is for transport throws.
- */
-type MutationResult<TData> = { data?: TData | null; error?: unknown };
-
 export function useSuggestItemEdit() {
   const { t } = useTranslation();
   // `uploading` has to be part of the returned `loading`: the photos-only path
@@ -60,11 +39,28 @@ export function useSuggestItemEdit() {
   );
   const [updateItem, { loading: updating }] = useMutation(UpdateItemDocument);
 
+  // The 5-pending cap is the only CONFLICT either mutation raises.
+  const failureCopy = {
+    fallback: t('suggestItemEdit.failedBody'),
+    title: t('labels.couldnTSendThat'),
+    copy: {
+      [ErrorCode.Conflict]: {
+        title: t('suggestItemEdit.pendingCapTitle'),
+        body: t('suggestItemEdit.pendingCapBody'),
+      },
+      [ErrorCode.NotFound]: {
+        title: t('errors.itemNotFound'),
+        body: t('labels.thisItemIsnTInTheCatalogAnyMoreItMayHaveBeenRemoved'),
+      },
+    },
+  };
+
   const submitEdit = async (
     original: EditableItemSnapshot,
     formData: AddItemSubmitPayload,
   ): Promise<ItemEditResult> => {
-    const note = String(formData.editReason ?? '').trim();
+    const note =
+      typeof formData.editReason === 'string' ? formData.editReason.trim() : '';
     const images = Array.isArray(formData.selectedImages)
       ? formData.selectedImages
       : [];
@@ -104,49 +100,26 @@ export function useSuggestItemEdit() {
     // inferring from visibility. canEdit wins when both are true (an admin on a
     // public item) — a direct write needs no review.
     if (original.canEdit) {
-      let result;
-      try {
-        result = await updateItem({
-          variables: {
-            input: {
-              id: original.id,
-              ...changes,
-            },
-          },
-        });
-      } catch (error) {
-        errorService.reportError(error, {
-          operation: 'Error updating item:',
-        });
-      }
-
-      // A throw escaped Apollo's errorPolicy entirely — nothing to interpret.
-      if (!result) {
-        alertMutationFailure(t, { keyPrefix: 'suggestItemEdit' });
-        return FAILED;
-      }
-
-      const outcome = interpretUpdate(result);
-      if (outcome === 'updated') {
+      const settled = await settleMutation(
+        () =>
+          updateItem({
+            variables: { input: { id: original.id, ...changes } },
+          }),
+        { document: UpdateItemDocument, ...failureCopy, present: 'none' },
+      );
+      // Forbidden means the cached canEdit was stale (the item was published,
+      // or ownership changed): do what the server asks and suggest instead.
+      if (settled.failure?.code !== ErrorCode.Forbidden) {
+        if (settled.failure) {
+          alertService.alert(settled.failure.title, settled.failure.body);
+          return FAILED;
+        }
         await uploadImages(uploadItemImages, images, original.id);
         alertService.alert(
           t('suggestItemEdit.updatedTitle'),
           t('suggestItemEdit.updatedBody'),
         );
         return { status: 'updated' };
-      }
-      // Anything other than a Forbidden "use createItemSuggestion instead" is a real
-      // failure. Forbidden means the cached canEdit was stale (the item was
-      // published, or ownership changed), so do what the server asked and fall
-      // through to the suggestion path.
-      if (outcome !== 'forbidden') {
-        alertMutationFailure(t, {
-          keyPrefix: 'suggestItemEdit',
-          result,
-          payload: result.data?.updateItem,
-          extraCases: SUGGEST_FAILURE_CASES,
-        });
-        return FAILED;
       }
     }
 
@@ -161,51 +134,34 @@ export function useSuggestItemEdit() {
       return { status: 'readOnly' };
     }
 
-    let result;
-    try {
-      result = await suggestEdit({
-        variables: { input: { itemId: original.id, note, changes } },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Error suggesting item edit:',
-      });
-    }
+    const settled = await settleMutation(
+      () =>
+        suggestEdit({
+          variables: { input: { itemId: original.id, note, changes } },
+        }),
+      { document: CreateItemSuggestionDocument, ...failureCopy },
+    );
+    const payload = appliedPayload(settled.data);
+    if (settled.status === 'failed' || !payload) return FAILED;
 
-    if (!result) {
-      alertMutationFailure(t, { keyPrefix: 'suggestItemEdit' });
-      return FAILED;
-    }
-
-    const payload = result.data?.createItemSuggestion;
-    if (payload?.__typename === 'CreateItemSuggestionPayload') {
-      await uploadImages(uploadItemImages, images, original.id);
-      // The server collapses a byte-identical pending suggestion onto the
-      // existing one and silently drops the new note, so a note that differs
-      // from what we sent is the only signal that nothing new was recorded.
-      const collapsed = payload.suggestion.note.trim() !== note;
-      alertService.alert(
-        t(
-          collapsed
-            ? 'suggestItemEdit.duplicateTitle'
-            : 'suggestItemEdit.sentTitle',
-        ),
-        t(
-          collapsed
-            ? 'suggestItemEdit.duplicateBody'
-            : 'suggestItemEdit.sentBody',
-        ),
-      );
-      return { status: collapsed ? 'duplicate' : 'suggested' };
-    }
-
-    alertMutationFailure(t, {
-      keyPrefix: 'suggestItemEdit',
-      result,
-      payload,
-      extraCases: SUGGEST_FAILURE_CASES,
-    });
-    return FAILED;
+    await uploadImages(uploadItemImages, images, original.id);
+    // The server collapses a byte-identical pending suggestion onto the
+    // existing one and silently drops the new note, so a note that differs
+    // from what we sent is the only signal that nothing new was recorded.
+    const collapsed = payload.suggestion.note.trim() !== note;
+    alertService.alert(
+      t(
+        collapsed
+          ? 'suggestItemEdit.duplicateTitle'
+          : 'suggestItemEdit.sentTitle',
+      ),
+      t(
+        collapsed
+          ? 'suggestItemEdit.duplicateBody'
+          : 'suggestItemEdit.sentBody',
+      ),
+    );
+    return { status: collapsed ? 'duplicate' : 'suggested' };
   };
 
   return { submitEdit, loading: suggesting || updating || uploading };
@@ -231,14 +187,4 @@ async function uploadImages(
     });
   }
   return !result ? 0 : result.length;
-}
-
-/** 'updated' | 'forbidden' | null (any other failure). */
-function interpretUpdate(
-  result: MutationResult<UpdateItemMutation>,
-): 'updated' | 'forbidden' | null {
-  const payload = result.data?.updateItem;
-  if (payload?.__typename === 'UpdateItemPayload') return 'updated';
-  if (payload?.__typename === 'ForbiddenError') return 'forbidden';
-  return null;
 }

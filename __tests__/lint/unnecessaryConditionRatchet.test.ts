@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import * as path from 'node:path';
 
 /**
- * `.eslintrc.js` turns `no-unnecessary-condition` OFF for the files in the
+ * `eslint/project.js` turns `no-unnecessary-condition` OFF for the files in the
  * exclusion list, so lint cannot see one of them getting worse. This lints
  * them with the rule forced on and holds each at its recorded count: a file
  * that gains a finding fails here, and one that loses a finding must record
@@ -29,9 +29,6 @@ function lintCounts(): Record<string, number> {
   const args = [
     '--max-old-space-size=6144',
     'node_modules/eslint/bin/eslint.js',
-    '--no-eslintrc',
-    '-c',
-    '.eslintrc.js',
     '--rule',
     `${RULE}: error`,
     '-f',

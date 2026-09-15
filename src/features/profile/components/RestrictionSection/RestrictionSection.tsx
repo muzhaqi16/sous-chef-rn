@@ -3,7 +3,6 @@ import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
 
@@ -25,14 +24,16 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
   existingItems,
   onRemove,
   onAddPress,
-  emptyMessage = 'None added yet',
+  emptyMessage,
 }) => {
   const { t } = useTranslation();
   return (
     <View style={styles.container}>
       {/* Header with title and add button */}
       <View style={styles.header}>
-        <Text style={commonStyles.subtitle}>{title}</Text>
+        <Text role="bodyStrong" tone="secondary">
+          {title}
+        </Text>
         <AppPressable
           onPress={onAddPress}
           style={styles.addButton}
@@ -63,7 +64,7 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
         </View>
       ) : (
         <Text role="caption" tone="secondary">
-          {emptyMessage}
+          {emptyMessage ?? t('restrictionSection.empty')}
         </Text>
       )}
     </View>

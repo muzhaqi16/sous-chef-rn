@@ -18,10 +18,10 @@ jest.mock('../../apollo/links/refreshToken');
 // Run idle-deferred work synchronously so the warming fires within the test.
 const originalRequestIdleCallback = globalThis.requestIdleCallback;
 beforeAll(() => {
-  globalThis.requestIdleCallback = ((cb: IdleRequestCallback) => {
-    cb({ didTimeout: false, timeRemaining: () => 50 } as IdleDeadline);
+  globalThis.requestIdleCallback = (cb: IdleRequestCallback) => {
+    cb({ didTimeout: false, timeRemaining: () => 50 });
     return 1;
-  }) as typeof globalThis.requestIdleCallback;
+  };
 });
 afterAll(() => {
   globalThis.requestIdleCallback = originalRequestIdleCallback;

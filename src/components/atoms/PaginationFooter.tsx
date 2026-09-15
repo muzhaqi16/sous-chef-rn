@@ -1,7 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from '#/i18n';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
+import { Text } from '#components/atoms/Text';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 
 export interface PaginationFooterProps {
   /** Fallback indicator trigger when `isFetchingMore` is not supplied. */
@@ -25,11 +28,23 @@ export const PaginationFooter: React.FC<PaginationFooterProps> = ({
   skeletonCount = 3,
   SkeletonComponent,
 }) => {
-  // Falls back to `hasMore` when the caller supplies no `isFetchingMore`.
-  const showIndicator = (isFetchingMore ?? hasMore) && itemCount > 0;
-  if (!showIndicator) {
-    return null;
+  const { t } = useTranslation();
+  const networkWithheld = useIsApiUnavailable();
+
+  if (itemCount === 0) return null;
+
+  // With no network leg the next page cannot arrive, so say why the list stops
+  // instead of spinning or ending silently.
+  if (hasMore && networkWithheld && !isFetchingMore) {
+    return (
+      <Text role="footnote" tone="secondary" style={styles.footerNotice}>
+        {t('errors.offlineNoMorePages')}
+      </Text>
+    );
   }
+
+  // Falls back to `hasMore` when the caller supplies no `isFetchingMore`.
+  if (!(isFetchingMore ?? hasMore)) return null;
 
   if (SkeletonComponent) {
     return (
@@ -56,5 +71,9 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: theme.spacing.lg,
+  },
+  footerNotice: {
+    paddingVertical: theme.spacing.lg,
+    textAlign: 'center',
   },
 }));

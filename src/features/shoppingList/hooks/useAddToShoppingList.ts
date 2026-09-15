@@ -45,7 +45,7 @@ export function useAddToShoppingList({
     {
       update: buildAddItemsReconcileUpdate({
         listId: shoppingListId,
-        wrap: { message: 'Cache update failed for addItem:' },
+        wrap: { operation: 'Cache update failed for addItem:' },
       }),
     },
   );

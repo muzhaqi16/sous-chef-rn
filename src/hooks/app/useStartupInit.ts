@@ -1,11 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+import type React from 'react';
+import { useEffect, useRef } from 'react';
 import { LogBox } from 'react-native';
 import { UnistylesRuntime } from 'react-native-unistyles';
 import { LaunchArguments } from 'react-native-launch-arguments';
 import { logger, Environment } from '#/utils/environment';
 import { useAppStore, useIsHydrated } from '#store/useAppStore';
 import { useStore } from '#store';
-import {
+import type {
   PantrySortDirection,
   PantrySortOption,
 } from '#store/slices/preferenceTypes';
@@ -22,6 +23,17 @@ import {
 import { ensureDeviceId } from '#/storage/deviceId';
 import { authService } from '#services/authService';
 import { registerQueueFailureHandler } from '#/apollo/offlineQueue/queueFailureHandler';
+import type { AuthUserInput } from '#store/slices/authSlice';
+
+/** The launch argument is harness-supplied JSON; only a user-shaped value is injected. */
+function isInjectedUser(value: unknown): value is AuthUserInput {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    typeof value.id === 'string'
+  );
+}
 
 /**
  * Reads Detox-injected launch arguments to bypass the login UI in E2E runs.
@@ -53,16 +65,22 @@ function injectDetoxLaunchArgs(
       suppressFeatureHintsForE2E();
     }
     if (args.detoxUserToken && args.detoxRefreshToken && args.detoxUser) {
-      const user =
+      const user: unknown =
         typeof args.detoxUser === 'string'
           ? JSON.parse(args.detoxUser)
           : args.detoxUser;
-      const store = useStore.getState();
-      store.setAuth(user, args.detoxUserToken, args.detoxRefreshToken);
-      // The root navigator gates on navigationState, which the real login flow
-      // sets separately from setAuth — without this the auth group renders.
-      store.setNavigationState('main_app');
-      logger.debug('[Detox] Auth injected via launchArgs');
+      if (isInjectedUser(user)) {
+        const store = useStore.getState();
+        store.setAuth(user, args.detoxUserToken, args.detoxRefreshToken);
+        // The root navigator gates on navigationState, which the real login
+        // flow sets separately from setAuth — without this the auth group renders.
+        store.setNavigationState('main_app');
+        logger.debug('[Detox] Auth injected via launchArgs');
+      } else {
+        logger.warn(
+          '[Detox] detoxUser launch argument is not a user; not injected',
+        );
+      }
     }
     // Seeded rather than driven through the sort modal, which renders under
     // `{!!stats && …}` and so only exists once the stats query resolves.
@@ -139,17 +157,18 @@ export function useStartupInit(): void {
 
       // Credentials are per account, and the login screen offers the
       // most-recently-enrolled one.
-      getLastBiometricEmail().then(email => {
+      // Both keychain reads resolve on failure rather than reject.
+      void getLastBiometricEmail().then(email => {
         if (!email) {
           setHasStoredCredentials(false);
           return;
         }
-        hasCredentials(email).then(setHasStoredCredentials);
+        void hasCredentials(email).then(setHasStoredCredentials);
       });
 
       // An earlier build kept the registration password in the keychain, where
       // it outlives even an app deletion. Nothing writes it now; this purges it.
-      clearTempRegistrationPassword();
+      void clearTempRegistrationPassword();
 
       const telemetryConfig = getTelemetryConfig();
       // A run that asked for telemetry keeps it even with background services

@@ -227,10 +227,11 @@ export function addPantryToHomeCache(
         };
         return {
           ...existingConnection,
-          edges: [...(existingConnection.edges || []), newEdge],
+          edges: [...(existingConnection.edges ?? []), newEdge],
           totalCount:
             (existingConnection.totalCount ??
-              (existingConnection.edges?.length || 0)) + 1,
+              existingConnection.edges?.length ??
+              0) + 1,
         };
       },
     },

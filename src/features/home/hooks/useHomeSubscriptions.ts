@@ -41,10 +41,10 @@ const removeInviteFromCache = createRemoveFromParentConnectionUpdater(
 export function useHomeSubscriptions(userId?: string) {
   const selectedHomeId = useSelectedHomeId() || undefined;
   const isHomeSelectionReady = useIsHomeSelectionReady();
-  const rejected = useSubscriptionRejected('HomeEvents');
+  const rejected = useSubscriptionRejected(HomeEventsDocument);
 
   const homeEventHandlers = subscriptionService.register<HomeEventsPayload>({
-    subscriptionName: 'HomeEvents',
+    document: HomeEventsDocument,
     entityType: 'Home',
     enableDeduplication: true,
     userId,
@@ -87,11 +87,12 @@ export function useHomeSubscriptions(userId?: string) {
           break;
 
         // Invite accepted/declined/revoked → remove from
-        // me.pendingHomeInvitesConnection and evict the entity.
+        // me.pendingHomeInvitesConnection and evict the entity. An `Invite*`
+        // subtype is what names the node as the invite.
         case HomeSubtype.InviteAccepted:
         case HomeSubtype.InviteDeclined:
         case HomeSubtype.InviteRevoked:
-          if (userId && payload.node.__typename === 'HomeInvite') {
+          if (userId) {
             removeInviteFromCache(client.cache, userId, payload.node.id, {
               evictItem: true,
             });
@@ -106,7 +107,8 @@ export function useHomeSubscriptions(userId?: string) {
 
   const homeSkip = !selectedHomeId || !isHomeSelectionReady || rejected;
   const homeEvents = useSubscription(HomeEventsDocument, {
-    variables: { homeId: selectedHomeId! },
+    // `skip` holds while there is no home, so the empty id is never sent.
+    variables: { homeId: selectedHomeId ?? '' },
     skip: homeSkip,
     // Same reason as `PantryEvents`: the envelope's `node` is `__typename` +
     // `id` only, so caching it writes a Membership/HomeInvite stripped of every
@@ -116,5 +118,5 @@ export function useHomeSubscriptions(userId?: string) {
     fetchPolicy: 'no-cache',
     ...homeEventHandlers,
   });
-  useSubscriptionTransportRecovery('HomeEvents', homeEvents, homeSkip);
+  useSubscriptionTransportRecovery(HomeEventsDocument, homeEvents, homeSkip);
 }

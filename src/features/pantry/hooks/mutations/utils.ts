@@ -2,10 +2,10 @@
  * Shared utilities for pantry item mutations
  */
 
-import { type UseUpdatePantryItem_PantryItemFragment } from './useUpdatePantryItem.generated';
+import type { UseUpdatePantryItem_PantryItemFragment } from './useUpdatePantryItem.generated';
+import type { UnitType } from '#/graphql/generated/schemaTypes';
 import {
   StorageState,
-  UnitType,
   type UpdatePantryItemInput,
   type StorageDetailsInput,
   type InventoryThresholdsInput,
@@ -24,20 +24,18 @@ import { parseDecimalInput } from '#/utils/parseDecimalInput';
  */
 export function buildOptimisticUnit(
   newUnit: UnitSelection,
-  currentUnit?: UseUpdatePantryItem_PantryItemFragment['unit'] | null,
-): UseUpdatePantryItem_PantryItemFragment['unit'] | null {
-  if (!newUnit.id) return null;
-
-  // Cast type to UnitType if it's a string, fallback to COUNT
-  const unitType = (newUnit.type || currentUnit?.type || 'COUNT') as UnitType;
+  currentUnit: UseUpdatePantryItem_PantryItemFragment['unit'],
+): UseUpdatePantryItem_PantryItemFragment['unit'] {
+  // No unit picked keeps the one the row has: `PantryItem.unit` is never null.
+  if (!newUnit.id) return currentUnit;
 
   return {
     __typename: 'Unit',
     id: newUnit.id,
-    symbol: newUnit.symbol || currentUnit?.symbol || '',
-    name: newUnit.name || currentUnit?.name || newUnit.symbol || '',
-    type: unitType,
-    displayAsFraction: currentUnit?.displayAsFraction ?? false,
+    symbol: newUnit.symbol || currentUnit.symbol,
+    name: newUnit.name || currentUnit.name || newUnit.symbol || '',
+    type: (newUnit.type as UnitType | null) || currentUnit.type,
+    displayAsFraction: currentUnit.displayAsFraction,
   };
 }
 
@@ -91,7 +89,7 @@ export function buildDirtyUpdateInput(
   }
 
   if (dirtyFields.tags) {
-    input.tags = data.tags || [];
+    input.tags = data.tags ?? [];
   }
 
   // Group threshold fields into thresholds: InventoryThresholdsInput
@@ -166,6 +164,8 @@ export function stateToCountKey(
       return 'refrigerated';
     case StorageState.Frozen:
       return 'frozen';
+    case null:
+    case undefined:
     default:
       return 'ambient';
   }

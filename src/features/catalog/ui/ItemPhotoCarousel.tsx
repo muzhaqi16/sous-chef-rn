@@ -254,7 +254,7 @@ const PhotoPage: React.FC<{
           returns it to its submitter alone, so it must not read as live. */}
       {photo.status === ItemImageStatus.Pending && (
         <View style={styles.pendingBadge} pointerEvents="none">
-          <Icon name="time-outline" size={12} color="#fff" />
+          <Icon name="time-outline" size={12} tone="onScrim" />
           <Text role="label" style={styles.pendingText}>
             {t('itemPhotos.pendingReview')}
           </Text>
@@ -337,10 +337,10 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: theme.spacing['2xs'],
     borderRadius: theme.radii.full,
     borderCurve: 'continuous',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: theme.colors.overlays.dark,
   },
   pendingText: {
     color: theme.colors.onScrim,
@@ -364,9 +364,9 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: theme.spacing['2xs'],
     borderRadius: theme.radii.full,
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    backgroundColor: theme.colors.overlays.medium,
   },
   dot: {
     width: 8,

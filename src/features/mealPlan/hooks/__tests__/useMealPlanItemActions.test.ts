@@ -14,9 +14,9 @@ import {
   ErrorCode,
   MealType,
   type CreateMealPlanItemInput,
-  type UpdateMealPlanItemInput,
 } from '#/graphql/generated/schemaTypes';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
 import { useMealPlanItemActions } from '../useMealPlanItemActions';
 import { MealPlanItemActions_OptimisticFullItemFragmentDoc } from '../useMealPlanItemActions.generated';
 
@@ -77,19 +77,16 @@ beforeEach(() => {
 });
 
 describe('useMealPlanItemActions', () => {
-  it('returns loading states all false initially', () => {
+  it('reports no create in flight initially', () => {
     const { result } = renderHookWithApollo(() =>
       useMealPlanItemActions('plan-1'),
     );
 
-    expect(result.current.loading).toBe(false);
     expect(result.current.creating).toBe(false);
-    expect(result.current.updating).toBe(false);
-    expect(result.current.deleting).toBe(false);
   });
 
   describe('createItem', () => {
-    it('returns payload on success', async () => {
+    it('returns true on success', async () => {
       const payload = {
         __typename: 'CreateMealPlanItemPayload' as const,
         mealPlanItem: { __typename: 'MealPlanItem' as const, id: 'mpi-1' },
@@ -113,13 +110,10 @@ describe('useMealPlanItemActions', () => {
         } satisfies CreateMealPlanItemInput);
       });
 
-      // The served payload is completed from the SDL, so it carries every
-      // field the mutation selects; this asserts the hook returns THAT payload,
-      // not that the fixture happened to be exhaustive.
-      expect(created).toMatchObject(payload);
+      expect(created).toBe(true);
     });
 
-    it('shows error toast and returns null on failure', async () => {
+    it('shows one localized error toast and returns false on failure', async () => {
       const create = recordMock(CreateMealPlanItemDocument, {
         data: {
           createMealPlanItem: {
@@ -149,34 +143,14 @@ describe('useMealPlanItemActions', () => {
         } satisfies CreateMealPlanItemInput);
       });
 
-      expect(created).toBeNull();
-      expect(mockToastError).toHaveBeenCalledWith('Conflict');
-    });
-  });
-
-  describe('updateItem', () => {
-    it('returns payload on success', async () => {
-      const payload = {
-        __typename: 'UpdateMealPlanItemPayload' as const,
-        mealPlanItem: { __typename: 'MealPlanItem' as const, id: 'mpi-1' },
-      };
-      const update = recordMock(UpdateMealPlanItemDocument, {
-        data: { updateMealPlanItem: payload },
-      });
-
-      const { result } = renderHookWithApollo(
-        () => useMealPlanItemActions('plan-1'),
-        { operationMocks: [update.mock] },
+      expect(created).toBe(false);
+      // The app's copy for the code, never the server's `message`.
+      expect(mockToastError).toHaveBeenCalledTimes(1);
+      // `CONFLICT` is a state refusal, never "updated by another user".
+      expect(mockToastError).not.toHaveBeenCalledWith(
+        getVersionConflictMessage(),
       );
-
-      let updated!: Awaited<ReturnType<typeof result.current.updateItem>>;
-      await act(async () => {
-        updated = await result.current.updateItem('mpi-1', {
-          servings: 3,
-        } satisfies Omit<UpdateMealPlanItemInput, 'id'>);
-      });
-
-      expect(updated).toMatchObject(payload);
+      expect(mockToastError).not.toHaveBeenCalledWith('Conflict');
     });
   });
 
@@ -335,13 +309,38 @@ describe('useMealPlanItemActions', () => {
       expect(deleted).toBe(true);
     });
 
-    it('returns false on failure', async () => {
+    it('counts a meal that is already gone as deleted', async () => {
       const del = recordMock(DeleteMealPlanItemDocument, {
         data: {
           deleteMealPlanItem: {
             __typename: 'NotFoundError' as const,
             code: ErrorCode.NotFound,
             message: 'Meal plan item not found',
+          },
+        },
+      });
+
+      const { result } = renderHookWithApollo(
+        () => useMealPlanItemActions('plan-1'),
+        { operationMocks: [del.mock] },
+      );
+
+      let deleted: boolean | undefined;
+      await act(async () => {
+        deleted = await result.current.deleteItem('mpi-1');
+      });
+
+      expect(deleted).toBe(true);
+      expect(mockToastError).not.toHaveBeenCalled();
+    });
+
+    it('returns false on failure', async () => {
+      const del = recordMock(DeleteMealPlanItemDocument, {
+        data: {
+          deleteMealPlanItem: {
+            __typename: 'ForbiddenError' as const,
+            code: ErrorCode.Forbidden,
+            message: 'raw server English',
           },
         },
       });

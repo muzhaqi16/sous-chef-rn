@@ -12,14 +12,8 @@ import {
   type UseAdjustPantryItemQuantity_PantryItemFragment,
 } from './useAdjustPantryItemQuantity.generated';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import {
-  handleMutationError,
-  versionConflictCheck,
-  invalidUnitCheck,
-} from '#/utils/errorHandlers';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
-import { t } from '#/i18n';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { useTranslation } from '#/i18n';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
@@ -31,19 +25,10 @@ interface UseAdjustPantryItemQuantityOptions {
 export function useAdjustPantryItemQuantity({
   onSuccess,
 }: UseAdjustPantryItemQuantityOptions = {}) {
+  const { t } = useTranslation();
   const client = useApolloClient();
 
-  const [adjustMutation, { loading }] = useMutation(
-    AdjustPantryItemQuantityDocument,
-    {
-      onError: error => {
-        handleMutationError(error, {
-          operation: 'Adjust Quantity',
-          checks: [versionConflictCheck(), invalidUnitCheck()],
-        });
-      },
-    },
-  );
+  const [adjustMutation] = useMutation(AdjustPantryItemQuantityDocument);
 
   const adjustQuantity = async (
     pantryItemId: string,
@@ -96,28 +81,7 @@ export function useAdjustPantryItemQuantity({
       );
     }
 
-    // idempotencyKey dedups the ADJUSTMENT ledger entry on replay. `version` is
-    // the optimistic-concurrency check the server now requires.
-    const result = await adjustMutation({
-      variables: {
-        input: {
-          id: pantryItemId,
-          newQuantity,
-          reason,
-          idempotencyKey: generateEntityId(),
-          version,
-          ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
-        },
-      },
-      context: { localFirst: true },
-    });
-
-    const outcome = classifyCreateResult(result);
-
-    if (outcome === 'rejected') {
-      // Server refused the adjust — restore the pre-adjust snapshot. A transport
-      // error already alerted via onError; a non-success union payload
-      // (Validation/Forbidden/NotFound/Conflict) has no error, so alert here.
+    const revert = () => {
       if (currentItem) {
         try {
           writeItem(currentItem);
@@ -128,19 +92,41 @@ export function useAdjustPantryItemQuantity({
         }
       }
       optimisticDataPersistence.clear('PantryItem', pantryItemId, 'quantity');
-      alertRejectedMutation(result, t('errors.adjustQuantityFailed'));
-      return false;
-    }
+    };
 
-    // created (server confirmed, response normalized the authoritative value)
-    // or queued (offline / API down — replays the canonical mutation, deduped
-    // by its idempotencyKey).
-    if (outcome === 'created') {
+    // idempotencyKey dedups the ADJUSTMENT ledger entry on replay. `version` is
+    // the optimistic-concurrency check the server requires.
+    const settled = await settleMutation(
+      () =>
+        adjustMutation({
+          variables: {
+            input: {
+              id: pantryItemId,
+              newQuantity,
+              reason,
+              idempotencyKey: generateEntityId(),
+              version,
+              ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
+            },
+          },
+          context: { localFirst: true },
+        }),
+      {
+        document: AdjustPantryItemQuantityDocument,
+        fallback: t('errors.adjustQuantityFailed'),
+        onFailed: revert,
+      },
+    );
+    if (settled.status === 'failed') return false;
+
+    // Applied: the response normalized the authoritative value. Queued: the
+    // persisted value stands until the replay lands.
+    if (settled.status === 'applied') {
       optimisticDataPersistence.clear('PantryItem', pantryItemId, 'quantity');
     }
     onSuccess?.();
     return true;
   };
 
-  return { adjustQuantity, loading };
+  return { adjustQuantity };
 }

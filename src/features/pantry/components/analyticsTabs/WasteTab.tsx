@@ -110,7 +110,7 @@ export const WasteTab: React.FC<
       <ChartSection
         title={t('pantryAnalytics.wasteTrend')}
         loading={wasteLoading}
-        error={wasteError?.message}
+        error={wasteError}
         isEmpty={!wasteData?.wasteTrend?.length}
       >
         <TrendLineChart
@@ -125,7 +125,7 @@ export const WasteTab: React.FC<
       <ChartSection
         title={t('pantryAnalytics.wasteByReason')}
         loading={wasteLoading}
-        error={wasteError?.message}
+        error={wasteError}
         isEmpty={!wasteReasonData.length}
       >
         <BreakdownPieChart data={wasteReasonData} height={150} />
@@ -135,7 +135,7 @@ export const WasteTab: React.FC<
       <ChartSection
         title={t('pantryAnalytics.topWastedItems')}
         loading={wasteLoading}
-        error={wasteError?.message}
+        error={wasteError}
         isEmpty={!topWastedItemsData.length}
       >
         <TopItemsBarChart

@@ -63,7 +63,7 @@ describe('BaseItemCard', () => {
   it('renders children content', () => {
     const { getByText } = render(
       <BaseItemCard>
-        <Text>Item Content</Text>
+        <Text role="body">Item Content</Text>
       </BaseItemCard>,
     );
     expect(getByText('Item Content')).toBeTruthy();
@@ -72,10 +72,10 @@ describe('BaseItemCard', () => {
   it('renders left and right elements', () => {
     const { getByText } = render(
       <BaseItemCard
-        leftElement={<Text>Left</Text>}
-        rightElement={<Text>Right</Text>}
+        leftElement={<Text role="body">Left</Text>}
+        rightElement={<Text role="body">Right</Text>}
       >
-        <Text>Content</Text>
+        <Text role="body">Content</Text>
       </BaseItemCard>,
     );
     expect(getByText('Left')).toBeTruthy();
@@ -88,7 +88,7 @@ describe('BaseItemCard', () => {
     const onPress = jest.fn();
     const { getByText } = render(
       <BaseItemCard onPress={onPress}>
-        <Text>Pressable</Text>
+        <Text role="body">Pressable</Text>
       </BaseItemCard>,
     );
     await user.press(getByText('Pressable'));
@@ -113,7 +113,7 @@ describe('BaseItemCard', () => {
           },
         ]}
       >
-        <Text>Swipeable</Text>
+        <Text role="body">Swipeable</Text>
       </BaseItemCard>,
     );
     expect(getByText('Swipeable')).toBeTruthy();

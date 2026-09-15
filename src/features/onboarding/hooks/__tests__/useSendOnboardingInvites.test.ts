@@ -9,10 +9,8 @@ import { useSendOnboardingInvites } from '#features/onboarding/hooks/useSendOnbo
 
 jest.mock('#/utils/finallyHelpers');
 
-const onError = jest.fn();
-
 const renderHook = (operationMocks: MockedResponse[]) =>
-  renderHookWithApollo(() => useSendOnboardingInvites(onError), {
+  renderHookWithApollo(() => useSendOnboardingInvites(), {
     operationMocks,
   });
 
@@ -28,9 +26,9 @@ beforeEach(() => {
 
 describe('useSendOnboardingInvites', () => {
   it('counts an invite the server refused', async () => {
-    // The mutation carries an `onError`, so a refusal RESOLVES and the promise
-    // the screen awaits settles either way — the count is the only signal that
-    // separates a sent invite from a discarded one.
+    // A refusal RESOLVES, so the promise the screen awaits settles either way —
+    // the count is the only signal that separates a sent invite from a
+    // discarded one.
     const { mock } = recordMock(InviteToHomeDocument, {
       data: {
         inviteToHome: {

@@ -255,7 +255,7 @@ describe('buildAddItemsReconcileUpdate', () => {
     const cache = createMockCache();
     buildAddItemsReconcileUpdate({
       listId: 'sl-closure',
-      wrap: { message: 'Cache update failed:' },
+      wrap: { operation: 'Cache update failed:' },
     })(cache, successData, variables);
     expect(cache.modify).toHaveBeenCalled();
   });

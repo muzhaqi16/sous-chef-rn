@@ -94,7 +94,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     const pantryRows: PantryStock[] | null = pantry.state.hasResult
       ? pantry.state.pantryItems.map(row => ({
           itemId: row.itemId,
-          unitId: row.unit?.id,
+          unitId: row.unit.id,
           quantity: row.quantity,
         }))
       : null;

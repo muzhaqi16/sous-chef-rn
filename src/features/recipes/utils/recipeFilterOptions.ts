@@ -4,10 +4,11 @@
 // UI) and ActiveFilterChipsRow (active-filter display).
 
 import { isLifestyleDiet } from '#domain/dietary';
+import type { TranslationKey } from '#/i18n';
 import { SPOONACULAR_TO_DIET_ENUM } from './recipeFilterMaps';
 
 export interface RecipeFilterOption {
-  labelKey: string;
+  labelKey: TranslationKey;
   value: string;
 }
 
@@ -71,10 +72,10 @@ export const MEAL_TYPES: RecipeFilterOption[] = [
   { labelKey: 'labels.dessert', value: 'dessert' },
 ];
 
-/** Find the i18n label key for a filter value; falls back to the raw value. */
+/** The i18n label key for a filter value; undefined for a value no option lists. */
 export function filterOptionLabelKey(
   options: RecipeFilterOption[],
   value: string,
-): string {
-  return options.find(option => option.value === value)?.labelKey ?? value;
+): TranslationKey | undefined {
+  return options.find(option => option.value === value)?.labelKey;
 }

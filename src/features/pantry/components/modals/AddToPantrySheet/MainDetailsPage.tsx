@@ -1,3 +1,4 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -79,7 +80,7 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
         placeholder={t('addToPantry.itemNamePlaceholder')}
         useBottomSheetInput
         autoCapitalize="words"
-        testID="add-pantry-item-name-input"
+        testID={pantryTestIDs.addDetailsNameInput}
       />
 
       <DropdownStack>

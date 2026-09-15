@@ -8,19 +8,16 @@ import { alertService } from '#/services/alertService';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
-import {
-  launchCamera,
-  launchImageLibrary,
+import type {
   ImagePickerResponse,
   MediaType,
   CameraOptions,
   ImageLibraryOptions,
 } from 'react-native-image-picker';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  validateImageFile,
-  ImageValidationError,
-} from '#utils/imageValidation';
+import type { ImageValidationError } from '#utils/imageValidation';
+import { validateImageFile } from '#utils/imageValidation';
 import { imageErrorMessage, useImageUpload } from '#hooks/useImageUpload';
 import type { ImageFile } from '#/types/media';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
@@ -50,7 +47,8 @@ async function requestCameraAndLaunch(
 ): Promise<void> {
   const result = await PermissionService.request('camera');
   if (result === 'granted') {
-    launchCamera(DEFAULT_OPTIONS, handleImageResponse);
+    // The picker reports through the callback; its promise only resolves.
+    void launchCamera(DEFAULT_OPTIONS, handleImageResponse);
   } else if (result === 'denied') {
     alertService.alert(
       tGlobal('profile.cameraPermissionDeniedTitle'),
@@ -96,8 +94,9 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
     }
 
     const asset = response.assets[0];
+    if (!asset.uri) return;
     const imageFile: ImageFile = {
-      uri: asset.uri!,
+      uri: asset.uri,
       fileName: asset.fileName,
       fileSize: asset.fileSize,
       type: asset.type,
@@ -134,7 +133,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
   const handleSelectPhoto = () => {
     // Android Photo Picker doesn't require permissions
     // iOS also allows launching without explicit permission on modern versions
-    launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
+    void launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
   };
 
   const handleCropImage = () => {
@@ -144,10 +143,10 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
   };
 
   const handleUpload = () => {
-    const imageToUpload = croppedImage || selectedImage;
+    const imageToUpload = croppedImage ?? selectedImage;
     if (!imageToUpload) return;
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         const imageUrl = await uploadProfileImage(
           imageToUpload,

@@ -1,10 +1,10 @@
-import { StateCreator } from 'zustand';
-import {
+import type { StateCreator } from 'zustand';
+import type {
   RenderMetrics,
   ScreenMetrics,
   MemorySnapshot,
-  DEFAULT_PERFORMANCE_CONFIG,
 } from '#/services/performance/types';
+import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance/types';
 
 export interface PerformanceState {
   // Configuration

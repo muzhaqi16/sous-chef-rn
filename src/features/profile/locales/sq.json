@@ -16,9 +16,22 @@
     "deleteBlockedTitle": "Nuk mund të fshihet llogaria",
     "deleteBlockedSubtitle": "Llogaria jote nuk mund të fshihet derisa të zgjidhësh sa vijon:",
     "deleteResolveTitle": "Për të zgjidhur:",
-    "deleteResolveTransfer": "• Transfero pronësinë te një anëtar tjetër",
-    "deleteResolveRemoveMembers": "• Hiq të gjithë anëtarët nga shtëpia",
-    "deleteResolveDeleteHome": "• Fshi shtëpinë",
+    "deleteBlocker": {
+      "homeOwnership": {
+        "reason": "Askush tjetër nuk e zotëron «{{name}}», që ka ende anëtarë të tjerë.",
+        "transferOwnership": "Transfero pronësinë te një anëtar tjetër",
+        "removeMembers": "Hiq anëtarët e tjerë nga shtëpia",
+        "deleteResource": "Fshi shtëpinë"
+      },
+      "shoppingList": {
+        "reason": "Askush tjetër nuk e zotëron listën e blerjeve «{{name}}», që ka ende bashkëpunëtorë.",
+        "removeCollaborators": "Hiq të gjithë bashkëpunëtorët nga lista",
+        "deleteResource": "Fshi listën e blerjeve"
+      },
+      "other": {
+        "reason": "«{{name}}» duhet zgjidhur para se të mund të fshish llogarinë."
+      }
+    },
     "deleteWarningTitle": "Kujdes: ky veprim është i përhershëm!",
     "deleteWhatWillBeDeleted": "Çfarë do të fshihet:",
     "deleteWipeProfile": "Profili dhe informacioni i llogarisë",
@@ -69,8 +82,8 @@
     "protein": "Proteinë",
     "fat": "Yndyrë",
     "loadingProfile": "Po ngarkohet profili dietik...",
-    "noProfileTitle": "Nuk ka profil dietik",
-    "noProfileSubtitle": "Krijo profilin tënd dietik për të marrë rekomandime recetash të personalizuara"
+    "loadFailedTitle": "Profili dietik nuk u ngarkua",
+    "loadFailedSubtitle": "Kontrollo lidhjen dhe provo sërish."
   },
   "biometricSetup": {
     "authRequiredTitle": "Kërkohet autentifikimi",
@@ -210,16 +223,21 @@
     "visibilityFriendsOnly": "Vetëm Miqtë",
     "visibilityPrivate": "Privat",
     "showEmail": "Shfaq Email-in",
-    "showPhone": "Shfaq Telefonin"
+    "showPhone": "Shfaq Telefonin",
+    "firstNamePlaceholder": "p.sh. Arben",
+    "lastNamePlaceholder": "p.sh. Hoxha",
+    "displayNamePlaceholder": "p.sh. arben_hoxha",
+    "bioPlaceholder": "Na trego diçka për veten...",
+    "phonePlaceholder": "p.sh. +355 69 123 4567",
+    "dateOfBirthPlaceholder": "p.sh. 1990-01-15"
   },
   "accountEvents": {
     "removedFromHome": "Je hequr nga një shtëpi",
     "addedToHome": "Je shtuar në një shtëpi të re",
     "removedFromShoppingList": "Je hequr nga një listë blerjesh",
     "addedToShoppingList": "Je shtuar në një listë blerjesh",
-    "accountBanned": "Llogaria jote është bllokuar{{reason}}",
-    "accountSuspended": "Llogaria jote është pezulluar{{reason}}",
-    "reasonSuffix": ": {{reason}}",
+    "accountBanned": "Llogaria jote është bllokuar",
+    "accountSuspended": "Llogaria jote është pezulluar",
     "warningReceived": "Ke marrë një paralajmërim nga një moderator"
   },
   "biometrics": {
@@ -253,6 +271,18 @@
     "dateFormat": "Data duhet të jetë në formatin VVVV-MM-DD",
     "dateInvalid": "Shkruaj një datë të vlefshme",
     "dateUnreasonable": "Shkruaj një datëlindje të arsyeshme",
-    "invalidVisibility": "Zgjidh një opsion të vlefshëm dukshmërie"
+    "invalidVisibility": "Zgjidh një opsion të vlefshëm dukshmërie",
+    "invalidGender": "Zgjidh një gjini të vlefshme"
+  },
+  "stringArrayManager": {
+    "inputPlaceholder": "Shkruaj një vlerë...",
+    "empty": "Nuk ke shtuar asgjë ende",
+    "valueRequired": "Shkruaj një vlerë",
+    "duplicate": "Ky element ekziston tashmë",
+    "maxItems_one": "Mund të shtosh deri në {{count}} element",
+    "maxItems_other": "Mund të shtosh deri në {{count}} elemente"
+  },
+  "restrictionSection": {
+    "empty": "Asnjë i shtuar ende"
   }
 }

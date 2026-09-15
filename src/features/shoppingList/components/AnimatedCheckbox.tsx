@@ -57,7 +57,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
     },
   );
 
-  const visuallyChecked = pendingChecked !== null ? pendingChecked : checked;
+  const visuallyChecked = pendingChecked ?? checked;
 
   const [prevChecked, setPrevChecked] = useState(checked);
   if (checked !== prevChecked) {
@@ -132,7 +132,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
         style={[styles.container, { width: size, height: size }, animatedStyle]}
       >
         {!!visuallyChecked && (
-          <Icon name="checkmark" size={size * 0.66} color="white" />
+          <Icon name="checkmark" size={size * 0.66} tone="onPrimary" />
         )}
       </Animated.View>
     </Pressable>

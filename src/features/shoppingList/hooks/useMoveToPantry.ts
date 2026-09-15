@@ -1,12 +1,9 @@
 import { gql, type ApolloCache } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { handleMutationError } from '#/utils/errorHandlers';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  AcquisitionMethod,
-  StorageState,
-} from '#/graphql/generated/schemaTypes';
-import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import type { StorageState } from '#/graphql/generated/schemaTypes';
+import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
+import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { Telemetry } from '#/services/telemetry';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { errorService } from '#/services/errorService';
@@ -20,13 +17,14 @@ import {
   evictPantryItemDetailStub,
 } from '#features/pantry/cache/items';
 import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
+import type { ListCounterChange } from '#features/shoppingList/cache/connections';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import {
   removeItemFromShoppingListForMoveToPantry,
   restoreItemToShoppingListAfterMoveToPantry,
 } from '#features/shoppingList/cache/moveToPantry';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
-import { t as tGlobal } from '#/i18n';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { useTranslation } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
 
 export interface MoveToPantryInput {
@@ -146,21 +144,16 @@ export function useMoveToPantry({
   currentListId,
   onSuccess,
 }: UseMoveToPantryOptions) {
-  const [moveShoppingItemToPantry, { loading }] = useMutation(
+  const [moveShoppingItemToPantry] = useMutation(
     MoveShoppingItemToPantryDocument,
     {
       // Read the move target off the mutation's variables (never a shared ref)
       // so overlapping moves can't corrupt the wrong item; purchase status is
       // read from cache to pick the right filtered variant to remove from.
       update: (cache, { data }, { variables }) => {
-        const payload = data?.moveShoppingItemToPantry;
+        const payload = appliedPayload(data);
         const input = variables?.input;
-        if (
-          payload?.__typename !== 'MoveShoppingItemToPantryPayload' ||
-          !input
-        ) {
-          return;
-        }
+        if (!payload || !input) return;
         const { pantryId, shoppingListItemId, removeFromList } = input;
 
         try {
@@ -180,13 +173,11 @@ export function useMoveToPantry({
       onCompleted: () => {
         onSuccess?.();
       },
-      onError: error => {
-        handleMutationError(error, { operation: 'Move Item to Pantry' });
-      },
     },
   );
 
   const client = useApolloClient();
+  const { t } = useTranslation();
 
   /**
    * Move a shopping list item to the pantry (local-first). The pantry row's id is
@@ -209,7 +200,8 @@ export function useMoveToPantry({
         itemName: item.itemName ?? '',
         quantity: input.actualQuantity,
         itemId: item.item?.id,
-        unitId: input.actualUnitId,
+        // The API tracks the stack in the stated unit, else the line's own.
+        unitId: input.actualUnitId ?? item.unit?.id,
         storageState: input.storageState,
         expiresAt: input.expiresAt,
       },
@@ -235,6 +227,7 @@ export function useMoveToPantry({
       costPerUnit: input.actualPrice ?? null,
       quantity: input.actualQuantity,
     };
+    let counterChange: ListCounterChange | undefined;
     try {
       // A detail read on a client-minted id 404s and renders the deleted
       // state; `useIsCreateUnconfirmed` skips it until the server confirms.
@@ -248,7 +241,7 @@ export function useMoveToPantry({
       // client sorting, so a stale one selects the wrong mode too.
       adjustPantryItemCount(client.cache, input.pantryId, 1);
       if (unlinkFromListId) {
-        removeItemFromShoppingListForMoveToPantry(
+        counterChange = removeItemFromShoppingListForMoveToPantry(
           client.cache,
           unlinkFromListId,
           item.id,
@@ -262,73 +255,78 @@ export function useMoveToPantry({
       });
     }
 
-    let result;
-    try {
-      result = await moveShoppingItemToPantry({
-        variables: {
-          input: {
-            shoppingListItemId: item.id,
-            pantryId: input.pantryId,
-            pantryItemId,
-            idempotencyKey: generateEntityId(),
-            actualQuantity: input.actualQuantity,
-            actualUnitId: input.actualUnitId,
-            storageState: input.storageState,
-            expiresAt: input.expiresAt,
-            removeFromList: input.removeFromList,
-            actualPrice: input.actualPrice,
-            notes: input.notes,
-          },
-        },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Failed to move item to pantry:',
-      });
-    }
-
-    const outcome = classifyCreateResult(result);
-
-    if (outcome === 'rejected') {
-      // Both sides were written, so both are undone. The shopping row was
-      // unlinked rather than evicted, so the entity is still here to re-link.
+    // Both sides were written, so both are undone. The shopping row was
+    // unlinked rather than evicted, so the entity is still here to re-link.
+    const revert = () => {
       try {
-        removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId);
+        // Evicted, not only unlinked: a cached row persists and a detail read finds it.
+        removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId, {
+          evictItem: true,
+        });
         adjustPantryItemCount(client.cache, input.pantryId, -1);
         evictPantryItemDetailStub(client.cache, pantryItemId);
         if (input.removeFromList) {
-          restoreItemToShoppingListAfterMoveToPantry(client.cache, item.id);
+          const exact = restoreItemToShoppingListAfterMoveToPantry(
+            client.cache,
+            item.id,
+            counterChange,
+          );
+          // Counters another write moved in the meantime cannot be restored
+          // exactly, so the lists re-read them.
+          if (!exact) {
+            client.refetchQueries({ include: 'active' }).catch(error => {
+              errorService.reportError(error, {
+                operation: 'Re-read after a refused move to pantry',
+              });
+            });
+          }
         }
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Revert rejected move to pantry',
         });
       }
-      if (result?.error) {
-        errorService.reportError(result.error, {
-          operation: 'Failed to move item to pantry:',
-        });
-      }
-      // A refusal resolves with HTTP 200 and no `error`, so nothing else tells
-      // the shopper: the row simply reappears on the list. Reachable now that a
-      // target whose unit changed mid-move comes back as a retryable conflict.
       unconfirmedCreates.confirm(pantryItemId);
-      alertRejectedMutation(result, tGlobal('errors.moveToPantryFailedRetry'));
-      return false;
-    }
+    };
+
+    const settled = await settleMutation(
+      () =>
+        moveShoppingItemToPantry({
+          variables: {
+            input: {
+              shoppingListItemId: item.id,
+              pantryId: input.pantryId,
+              pantryItemId,
+              idempotencyKey: generateEntityId(),
+              actualQuantity: input.actualQuantity,
+              actualUnitId: input.actualUnitId,
+              storageState: input.storageState,
+              expiresAt: input.expiresAt,
+              removeFromList: input.removeFromList,
+              actualPrice: input.actualPrice,
+              notes: input.notes,
+            },
+          },
+          context: { localFirst: true },
+        }),
+      {
+        document: MoveShoppingItemToPantryDocument,
+        fallback: t('errors.moveToPantryFailedRetry'),
+        onFailed: revert,
+      },
+    );
+    if (settled.status === 'failed') return false;
 
     // The minted id is honoured only on the CREATE branch: a restock returns the
     // EXISTING row's id, which makes the locally written entity a ghost. Evict it
     // so the pantry does not show the item twice; `update` adds the server's row.
-    const payload = result?.data?.moveShoppingItemToPantry;
-    const serverId =
-      payload?.__typename === 'MoveShoppingItemToPantryPayload'
-        ? payload.pantryItem.id
-        : undefined;
+    const serverId = appliedPayload(settled.data)?.pantryItem.id;
     if (serverId && serverId !== pantryItemId) {
       try {
-        removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId);
+        // Evicted, not only unlinked: a cached row persists and a detail read finds it.
+        removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId, {
+          evictItem: true,
+        });
         adjustPantryItemCount(client.cache, input.pantryId, -1);
         // The stub's writes survive evicting the row, and persist.
         evictPantryItemDetailStub(client.cache, pantryItemId);
@@ -351,8 +349,5 @@ export function useMoveToPantry({
     return true;
   };
 
-  return {
-    moveToPantry,
-    loading,
-  };
+  return { moveToPantry };
 }

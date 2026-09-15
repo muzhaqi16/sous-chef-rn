@@ -60,6 +60,7 @@
     "myRecipesSubtitle": "Crea y gestiona tus propias recetas",
     "myRecipesTitle": "Mis recetas",
     "myRecipesSearchPlaceholder": "Buscar mis recetas...",
+    "myRecipesSearchingAll": "Buscando en todas tus recetas...",
     "myRecipesEmptyTitle": "Aún no hay recetas",
     "myRecipesEmptyDescription": "Crea tu primera receta",
     "createRecipe": "Crear receta",
@@ -71,6 +72,7 @@
     "loadingRecipe": "Cargando receta...",
     "recipeNotFoundDb": "Receta no encontrada en la base de datos",
     "recipeNotFound": "Receta no encontrada",
+    "loadFailed": "No se pudo cargar la receta",
     "percentHealthy": "% saludable",
     "cookedCount": "Cocinada {{count}}x",
     "markCooked": "Marcar como cocinada",
@@ -106,6 +108,7 @@
     "savedRecipesSearchPlaceholder": "Buscar recetas guardadas...",
     "savedRecipesEmptyTitle": "No hay recetas guardadas",
     "savedRecipesEmptyDescription": "Guarda recetas desde la búsqueda para verlas aquí",
+    "savedRecipesSearchingAll": "Buscando en todas tus recetas guardadas...",
     "removeRecipeFailed": "No se pudo quitar la receta. Inténtalo de nuevo.",
     "filterAll": "Todas",
     "folders": "Carpetas",
@@ -365,7 +368,35 @@
   },
   "nutrition": {
     "noData": "No hay datos nutricionales disponibles",
-    "servingSize": "Tamaño de la ración"
+    "servingSize": "Tamaño de la ración",
+    "nutrient": {
+      "totalFat": "Grasas totales",
+      "saturatedFat": "Grasas saturadas",
+      "transFat": "Grasas trans",
+      "cholesterol": "Colesterol",
+      "vitaminA": "Vitamina A",
+      "vitaminD": "Vitamina D",
+      "vitaminE": "Vitamina E",
+      "vitaminK": "Vitamina K",
+      "vitaminB6": "Vitamina B6",
+      "vitaminB12": "Vitamina B12",
+      "thiamin": "Tiamina",
+      "riboflavin": "Riboflavina",
+      "niacin": "Niacina",
+      "folate": "Folato",
+      "magnesium": "Magnesio",
+      "phosphorus": "Fósforo",
+      "zinc": "Zinc",
+      "copper": "Cobre",
+      "manganese": "Manganeso",
+      "selenium": "Selenio"
+    },
+    "category": {
+      "macro": "Macronutrientes",
+      "vitamin": "Vitaminas",
+      "mineral": "Minerales",
+      "other": "Otros"
+    }
   },
   "cuisineSelector": {
     "title": "Cocinas preferidas",

@@ -15,7 +15,6 @@ import {
   readUnitSpec,
   type QueuedInput,
   type SyncBuilder,
-  type SyncBuilderTable,
   type UnitSpec,
 } from '#/apollo/offlineQueue/syncBuilder';
 
@@ -95,8 +94,16 @@ const readItemRef = (
  * — present on a create input, else read from cache. The specialized single-item
  * creates route here too: same entity from the same fields.
  */
-const buildShoppingItemSync: SyncBuilder = (mutation, cache) => {
+export const buildShoppingItemSync: SyncBuilder = (mutation, cache) => {
   const queued = getQueuedInput(mutation);
+  // One Sync* upsert carries one row. A batch of several replays as itself,
+  // idempotent per row: each row's `id` is its primary key.
+  if (Array.isArray(queued.items) && queued.items.length > 1) {
+    return {
+      syncMutation: mutation.mutation,
+      syncVariables: mutation.variables,
+    };
+  }
   // Single-add ops send the batch AddItemsToShoppingListInput; flatten its one
   // item so the reads below resolve for batch-add and flat update/quantity/
   // toggle inputs alike.
@@ -120,8 +127,8 @@ const buildShoppingItemSync: SyncBuilder = (mutation, cache) => {
   // retired cannot be re-resolved on replay, a symbol can.
   const unit = readUnitSpec(cache, {
     ...((input.unit ?? {}) as UnitSpec),
-    ...(input.unitId != null && { unitId: input.unitId as string }),
-    ...(input.unitName != null && { unitName: input.unitName as string }),
+    ...(input.unitId != null && { unitId: input.unitId }),
+    ...(input.unitName != null && { unitName: input.unitName }),
   });
 
   // Update sends a `purchaseTracking` object, the toggle a flat `purchased`.
@@ -147,29 +154,26 @@ const buildShoppingItemSync: SyncBuilder = (mutation, cache) => {
     item: itemRef,
     ...(input.category != null && { category: input.category }),
     ...(input.notes != null && { notes: input.notes }),
-    ...(unit && { unit: unit as SyncShoppingListItemFieldsInput['unit'] }),
+    ...(unit && { unit: unit }),
     // FlexibleQuantity scalar (string | number, e.g. "1/3") — pass through.
     ...(input.quantity != null && { quantity: input.quantity }),
     ...(purchaseTracking != null && {
-      purchaseTracking:
-        purchaseTracking as SyncShoppingListItemFieldsInput['purchaseTracking'],
+      purchaseTracking: purchaseTracking,
     }),
     ...(input.priority != null && { priority: input.priority }),
     ...(input.sortOrder != null && { sortOrder: input.sortOrder }),
     // Carried by the barcode add; replay must not drop them.
     ...(input.brand != null && {
-      brand: input.brand as SyncShoppingListItemFieldsInput['brand'],
+      brand: input.brand,
     }),
     ...(input.netWeight != null && {
-      netWeight:
-        input.netWeight as SyncShoppingListItemFieldsInput['netWeight'],
+      netWeight: input.netWeight,
     }),
     ...(input.storePrefs != null && {
-      storePrefs:
-        input.storePrefs as SyncShoppingListItemFieldsInput['storePrefs'],
+      storePrefs: input.storePrefs,
     }),
     ...(input.pricing != null && {
-      pricing: input.pricing as SyncShoppingListItemFieldsInput['pricing'],
+      pricing: input.pricing,
     }),
     ...(input.version != null && { version: input.version }),
   };
@@ -181,7 +185,7 @@ const buildShoppingItemSync: SyncBuilder = (mutation, cache) => {
 };
 
 /** ShoppingListItem delete sync — idempotent by `clientId`. */
-const buildDeleteShoppingItemSync: SyncBuilder = mutation => {
+export const buildDeleteShoppingItemSync: SyncBuilder = mutation => {
   const input = getQueuedInput(mutation);
   const syncInput: SyncDeleteShoppingListItemInput = {
     clientId: getClientId(mutation, input) as string,
@@ -194,7 +198,7 @@ const buildDeleteShoppingItemSync: SyncBuilder = mutation => {
 };
 
 /** ShoppingListItem reorder sync — fractional-index move, idempotent by `clientId`. */
-const buildMoveShoppingItemSync: SyncBuilder = mutation => {
+export const buildMoveShoppingItemSync: SyncBuilder = mutation => {
   const input = getQueuedInput(mutation);
   const syncInput: SyncMoveShoppingListItemInput = {
     clientId: getClientId(mutation, input) as string,
@@ -206,18 +210,4 @@ const buildMoveShoppingItemSync: SyncBuilder = mutation => {
     syncMutation: SyncMoveShoppingListItemDocument,
     syncVariables: { input: syncInput },
   };
-};
-
-export const SHOPPING_LIST_SYNC_BUILDERS: SyncBuilderTable = {
-  // create / update
-  AddItemToShoppingList: buildShoppingItemSync,
-  UpdateShoppingListItem: buildShoppingItemSync,
-  UpdateShoppingListItemQuantity: buildShoppingItemSync,
-  ToggleShoppingListItemPurchased: buildShoppingItemSync,
-  BarcodeAddItemToShoppingList: buildShoppingItemSync,
-  AddItemToShoppingListFromFilteredPantry: buildShoppingItemSync,
-  AddItemToShoppingListFromPantryItem: buildShoppingItemSync,
-  // delete / move
-  RemoveItemFromShoppingList: buildDeleteShoppingItemSync,
-  MoveShoppingListItem: buildMoveShoppingItemSync,
 };

@@ -9,8 +9,8 @@ import {
   type ShoppingListItemDisplayFragment,
 } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
-import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { settledStatus } from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { errorService } from '#/services/errorService';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { addNewItemToShoppingListCache } from './connections';
@@ -40,39 +40,40 @@ export function createOptimisticShoppingListItem(
   id: string,
   fields: OptimisticShoppingListItemFields,
 ): ShoppingListItemDisplayFragment {
-  return createOptimisticEntity<ShoppingListItemDisplayFragment>(
-    'ShoppingListItem',
+  return {
+    __typename: 'ShoppingListItem',
     id,
-    {
-      shoppingList: {
-        __typename: 'ShoppingList',
-        id: fields.shoppingListId,
-      },
-      itemName: fields.itemName,
-      quantity: fields.quantity ?? 1,
-      quantityInput: fields.quantityInput ?? null,
-      displayFormat: DisplayFormat.Auto,
-      unitName: fields.unitName ?? null,
-      category: fields.category ?? null,
-      notes: null,
-      sortOrder: '',
-      // Built whole rather than through `writePurchaseInfo`, which patches an
-      // existing record. A just-created line has no prior purchase to preserve.
-      purchaseInfo: {
-        __typename: 'ShoppingListItemPurchaseInfo',
-        isPurchased: false,
-        // Present rather than omitted: the row reads it, and one absent field
-        // makes the whole list read incomplete.
-        movedToPantryAt: null,
-      },
-      item: fields.itemId
-        ? { __typename: 'Item', id: fields.itemId, imageUrl: null, images: [] }
-        : null,
-      unit: fields.unitId
-        ? { __typename: 'Unit', id: fields.unitId, name: '', symbol: '' }
-        : null,
+    // The server owns the version; its response carries the real one.
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    shoppingList: {
+      __typename: 'ShoppingList',
+      id: fields.shoppingListId,
     },
-  );
+    itemName: fields.itemName,
+    quantity: fields.quantity ?? 1,
+    quantityInput: fields.quantityInput ?? null,
+    displayFormat: DisplayFormat.Auto,
+    unitName: fields.unitName ?? null,
+    category: fields.category ?? null,
+    notes: null,
+    sortOrder: '',
+    // Built whole rather than through `writePurchaseInfo`, which patches an
+    // existing record. A just-created line has no prior purchase to preserve.
+    purchaseInfo: {
+      __typename: 'ShoppingListItemPurchaseInfo',
+      isPurchased: false,
+      // Present rather than omitted: the row reads it, and one absent field
+      // makes the whole list read incomplete.
+      movedToPantryAt: null,
+    },
+    item: fields.itemId
+      ? { __typename: 'Item', id: fields.itemId, imageUrl: null, images: [] }
+      : null,
+    unit: fields.unitId
+      ? { __typename: 'Unit', id: fields.unitId, name: '', symbol: '' }
+      : null,
+  };
 }
 
 /**
@@ -135,7 +136,7 @@ interface BuildAddItemsReconcileUpdateOptions {
    * When set, run the reconcile inside a try/catch reporting this failure
    * message and optional refetch fallback. Omit to apply the reconcile directly.
    */
-  wrap?: { message: string; refetch?: () => void };
+  wrap?: { operation: string; refetch?: () => void };
 }
 
 /**
@@ -152,15 +153,9 @@ export function buildAddItemsReconcileUpdate({
     { data }: { data?: AddItemsReconcileDataLike | null },
     { variables }: { variables?: AddItemsReconcileVariablesLike },
   ): void => {
-    const payload = data?.addItemsToShoppingList;
+    const payload = appliedPayload(data);
     const targetListId = listId ?? variables?.input.shoppingListId;
-    if (
-      payload?.__typename !== 'AddItemsToShoppingListPayload' ||
-      !targetListId ||
-      !variables
-    ) {
-      return;
-    }
+    if (!payload || !targetListId || !variables) return;
     const results = payload.results;
     if (!results?.length) return;
     const run = () =>
@@ -179,7 +174,7 @@ export function buildAddItemsReconcileUpdate({
       try {
         run();
       } catch (cacheError) {
-        errorService.reportError(cacheError, { operation: wrap.message });
+        errorService.reportError(cacheError, { operation: wrap.operation });
         wrap.refetch?.();
       }
     } else {
@@ -284,8 +279,8 @@ export function revertOptimisticShoppingListItem(
 }
 
 /**
- * Reconcile a local-first item create once the mutation resolves: `'rejected'`
- * discards the optimistic row, `'created'` / `'queued'` keep it — a queued create
+ * Reconcile a local-first item create once the mutation resolves: `'failed'`
+ * discards the optimistic row, `'applied'` / `'queued'` keep it — a queued create
  * replays later, keyed by the same `id`. Returns which happened, so the caller can
  * drive its own success / error UX.
  */
@@ -295,27 +290,27 @@ export function reconcileShoppingCreate(
   optimisticId: string,
   result: { data?: unknown; error?: unknown } | null | undefined,
 ): 'kept' | 'reverted' {
-  const outcome = classifyCreateResult(result);
+  const failed = settledStatus(result ?? undefined) === 'failed';
   // The batch can resolve successfully while its single item fails
   // (`results[0].success === false` — a per-item validation error reported inside
   // the batch rather than as a top-level error member). Revert that too.
-  const payload = (
-    result as
-      | {
-          data?: {
-            addItemsToShoppingList?: {
-              __typename?: string;
-              results?: Array<{ success: boolean }>;
+  const applied = appliedPayload(
+    (
+      result as
+        | {
+            data?: {
+              addItemsToShoppingList?: {
+                __typename?: string;
+                results?: Array<{ success: boolean }>;
+              };
             };
-          };
-        }
-      | null
-      | undefined
-  )?.data?.addItemsToShoppingList;
-  const itemFailed =
-    payload?.__typename === 'AddItemsToShoppingListPayload' &&
-    payload.results?.[0]?.success === false;
-  if (outcome === 'rejected' || itemFailed) {
+          }
+        | null
+        | undefined
+    )?.data,
+  );
+  const itemFailed = applied?.results?.[0]?.success === false;
+  if (failed || itemFailed) {
     try {
       revertOptimisticShoppingListItem(cache, listId, optimisticId);
     } catch (cacheError) {

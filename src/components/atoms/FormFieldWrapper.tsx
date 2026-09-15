@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, ViewStyle } from 'react-native';
+import type { ViewStyle } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 
@@ -32,11 +33,11 @@ export const FormFieldWrapper: React.FC<FormFieldWrapperProps> = ({
     >
       <Text role="bodyStrong" style={styles.label}>
         {label}
-        {!!required && <Text tone="error"> *</Text>}
+        {!!required && <Text tone="danger"> *</Text>}
       </Text>
       {children}
       {error ? (
-        <Text role="caption" tone="error" style={styles.errorText}>
+        <Text role="error" tone="error" style={styles.errorText}>
           {error}
         </Text>
       ) : null}

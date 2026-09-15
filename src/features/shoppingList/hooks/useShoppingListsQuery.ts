@@ -5,6 +5,8 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
+import { errorService } from '#/services/errorService';
+import { isAbortError } from '#features/shoppingList/utils/abort';
 
 type ShoppingListEdge = NonNullable<
   GetShoppingListsLiteQuery['shoppingLists']['edges']
@@ -26,10 +28,17 @@ export function useShoppingListsQuery() {
     },
   );
 
-  useApolloErrorLogger('GetShoppingListsLite', error);
+  useApolloErrorLogger(GetShoppingListsLiteDocument, error);
 
-  const fetchLists = () => {
-    refetch();
+  const refetchLists = async () => {
+    try {
+      await refetch();
+    } catch (refetchError) {
+      if (isAbortError(refetchError)) return;
+      errorService.reportError(refetchError, {
+        operation: 'ShoppingListsQuery.refetch',
+      });
+    }
   };
 
   // Falls back to the previous result so a failed refetch keeps the lists on screen.
@@ -46,7 +55,6 @@ export function useShoppingListsQuery() {
     // counts too: a failed refetch over lists we already have is not "we never
     // got an answer".
     hasResult: data !== undefined || previousData !== undefined,
-    refetch,
-    fetchLists,
+    refetch: refetchLists,
   };
 }

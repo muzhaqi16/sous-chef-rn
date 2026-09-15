@@ -25,8 +25,7 @@ jest.mock('#features/pantry/hooks/usePantryItemSuggestions', () => ({
   PANTRY_SUGGESTIONS_LIMIT: 20,
   usePantryItemSuggestions: jest.fn(() => ({
     grouped: [],
-    loading: false,
-    hasSuggestions: false,
+    state: 'empty',
     refetch: jest.fn(),
   })),
 }));
@@ -153,8 +152,7 @@ describe('AddToPantrySheet', () => {
     );
     usePantryItemSuggestions.mockReturnValue({
       grouped: [{ title: 'Recent', items: [{ id: '1', name: 'Milk' }] }],
-      loading: false,
-      hasSuggestions: true,
+      state: 'ready',
       refetch: jest.fn(),
     });
 
@@ -168,8 +166,7 @@ describe('AddToPantrySheet', () => {
     );
     usePantryItemSuggestions.mockReturnValue({
       grouped: [],
-      loading: true,
-      hasSuggestions: false,
+      state: 'loading',
       refetch: jest.fn(),
     });
 

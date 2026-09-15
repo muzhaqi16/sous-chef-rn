@@ -34,7 +34,7 @@ export interface ImageValidationError extends Error {
  * `message` is LOG text, deliberately English — it goes to
  * `errorService.reportError` and must NEVER be displayed. `code` is the half
  * that maps to copy, via `imageErrorMessage` in `#hooks/useImageUpload`. A
- * display site reading `.message` is caught by the `.eslintrc.js` sink selector.
+ * display site reading `.message` is caught by `sous-chef/no-untranslated-toast`.
  */
 export const createImageValidationError = (
   message: string,
@@ -65,7 +65,8 @@ export const validateImageFile = (
   }
 
   // Get file size - react-native-image-picker uses fileSize, web uses size
-  const fileSize = file.fileSize || file.size;
+  // A zero `fileSize` is unreported rather than an empty file, so `size` decides.
+  const fileSize = file.fileSize === 0 ? file.size : file.fileSize ?? file.size;
   if (!fileSize) {
     throw createImageValidationError(
       'Unable to determine file size',
@@ -96,6 +97,7 @@ const inferMimeTypeFromFileName = (fileName?: string): string | null => {
       return 'image/png';
     case 'webp':
       return 'image/webp';
+    case undefined:
     default:
       return null;
   }
@@ -184,7 +186,8 @@ export const sniffImageMimeType = async (
     dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onerror = () => reject(reader.error);
-      reader.onloadend = () => resolve(String(reader.result ?? ''));
+      reader.onloadend = () =>
+        resolve(typeof reader.result === 'string' ? reader.result : '');
       reader.readAsDataURL(head);
     });
   } catch {

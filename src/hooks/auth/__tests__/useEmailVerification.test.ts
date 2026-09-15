@@ -30,11 +30,9 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 jest.mock('#hooks/navigation/useAppNavigation');
-const mockNav = (
-  jest.requireMock('#hooks/navigation/useAppNavigation') as {
-    useAppNavigation: jest.Mock;
-  }
-).useAppNavigation();
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
 
 beforeEach(() => {
   jest.clearAllMocks();

@@ -8,7 +8,7 @@ import { Icon } from '#utils/iconUtils';
 import { RatingBreakdown } from './RatingBreakdown';
 import { ReviewCard } from './ReviewCard';
 import { WriteReviewSheet } from './WriteReviewSheet';
-import { type RecipeReviewFragment } from '#features/recipes/graphql/recipeFragments.generated';
+import type { RecipeReviewFragment } from '#features/recipes/graphql/recipeFragments.generated';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 
@@ -80,7 +80,9 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
         {
           text: t('labels.delete'),
           style: 'destructive',
-          onPress: () => deleteReview(userReview.id),
+          onPress: () => {
+            void deleteReview(userReview.id);
+          },
         },
       ],
     );

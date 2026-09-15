@@ -1,6 +1,6 @@
 import { string, number, array, object, boolean, type InferType } from 'yup';
 import { normalizeSmartPunctuation } from '#/utils/validation/common';
-import { t } from '#/i18n';
+import { t, type KeyUnder } from '#/i18n';
 
 /**
  * These schemas are built once at module scope, so a message resolved eagerly
@@ -8,8 +8,10 @@ import { t } from '#/i18n';
  * accepts a function and calls it when the rule actually fails, so the lookup
  * lands after any language change.
  */
-const msg = (key: string, options?: Record<string, unknown>) => (): string =>
-  t(`itemValidation.${key}`, options);
+const msg =
+  (key: KeyUnder<'itemValidation'>, options?: Record<string, unknown>) =>
+  (): string =>
+    t(`itemValidation.${key}`, options);
 
 // --- item-specific validation rules ------------------------------------------
 
@@ -31,7 +33,7 @@ export const descriptionRule = string()
 // Without this, `.min(8)` and `.matches()` run on '' and fail, which blocks
 // form submission for any flow that doesn't start with a scanned barcode.
 export const upcRule = string()
-  .transform(value =>
+  .transform((value: unknown) =>
     typeof value === 'string' && value.trim() === '' ? undefined : value,
   )
   .matches(/^[0-9]+$/, msg('upcDigits'))
@@ -48,7 +50,7 @@ export const urlRule = string().url(msg('urlInvalid')).optional();
 
 // Shelf life validation (in days)
 export const shelfLifeDaysRule = number()
-  .transform((value, originalValue) =>
+  .transform((value: unknown, originalValue: unknown) =>
     String(originalValue).trim() === '' ? undefined : value,
   )
   .typeError(msg('wholeNumber'))
@@ -59,7 +61,7 @@ export const shelfLifeDaysRule = number()
 
 // Shelf life once opened validation (in days)
 export const shelfLifeOpenedDaysRule = number()
-  .transform((value, originalValue) =>
+  .transform((value: unknown, originalValue: unknown) =>
     String(originalValue).trim() === '' ? undefined : value,
   )
   .typeError(msg('wholeNumber'))
@@ -75,7 +77,7 @@ export const displayPricePerUnitRule = string()
 
 // Unit quantity validation
 export const unitQtyRule = number()
-  .transform((value, originalValue) =>
+  .transform((value: unknown, originalValue: unknown) =>
     String(originalValue).trim() === '' ? undefined : value,
   )
   .min(0.001, msg('unitQtyMin'))
@@ -121,7 +123,7 @@ export const vendorRule = string()
 // Transform handles the case where the form value is still a comma-separated
 // string (onChange validation fires before the blur transform runs).
 export const tagsRule = array()
-  .transform((value, originalValue) => {
+  .transform((value: unknown, originalValue: unknown) => {
     if (typeof originalValue === 'string') {
       return originalValue
         .split(',')
@@ -222,7 +224,7 @@ export const createItemSchema = object({
   shelfLifeOpenedDays: shelfLifeOpenedDaysRule,
   baseDimension: string().nullable().optional(),
   defaultConsumeIncrement: number()
-    .transform((value, originalValue) =>
+    .transform((value: unknown, originalValue: unknown) =>
       String(originalValue).trim() === '' ? undefined : value,
     )
     .typeError(msg('greaterThanZero'))

@@ -1,13 +1,8 @@
 import React, { useRef } from 'react';
 import { View } from 'react-native';
 import type { ThemedTextInputRef } from '#components/atoms/themedComponents';
-import {
-  type FieldValues,
-  Control,
-  Controller,
-  FieldErrors,
-  Path,
-} from 'react-hook-form';
+import type { Control, FieldErrors, Path } from 'react-hook-form';
+import { type FieldValues, Controller } from 'react-hook-form';
 
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -15,6 +10,21 @@ import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/atoms/FormInput';
 import { Text } from '#components/atoms/Text';
 import { useFieldRenderers } from './fieldRenderers';
+
+const errorMessage = (error: { message?: unknown } | undefined) =>
+  typeof error?.message === 'string' ? error.message : undefined;
+
+const inputText = (value: unknown) =>
+  typeof value === 'string' ||
+  typeof value === 'number' ||
+  typeof value === 'boolean'
+    ? String(value)
+    : '';
+
+const errorTestID = (own: unknown, fallback: string | undefined) => {
+  const id = typeof own === 'string' && own ? own : fallback;
+  return id ? `${id}-error` : undefined;
+};
 
 export type FieldDef<T extends FieldValues> = {
   name: Path<T>;
@@ -168,7 +178,7 @@ export function DynamicFormFields<T extends FieldValues>({
                           value: displayValue || '',
                           onChangeText: handleChange,
                           required: Boolean(props?.required),
-                          error: errors[name]?.message?.toString(),
+                          error: errorMessage(errors[name]),
                           testID,
                           props: props ?? {},
                         })}
@@ -230,7 +240,7 @@ export function DynamicFormFields<T extends FieldValues>({
                           {...inputProps}
                           value={value || ''}
                           onValueChange={handleChange}
-                          options={options || []}
+                          options={options ?? []}
                         />
                       );
 
@@ -247,7 +257,7 @@ export function DynamicFormFields<T extends FieldValues>({
                       return (
                         <Input
                           {...inputProps}
-                          value={value?.toString() || ''}
+                          value={inputText(value)}
                           onChangeText={handleChange}
                           onBlur={onBlur}
                           error={errors[name]?.message}
@@ -279,16 +289,12 @@ export function DynamicFormFields<T extends FieldValues>({
                 typeof Input === 'string' && renderers[Input]?.ownsErrorDisplay
               ) && (
                 <Text
-                  role="caption"
+                  role="error"
                   tone="error"
                   style={styles.errorText}
-                  testID={
-                    props?.testID || testID
-                      ? `${props?.testID || testID}-error`
-                      : undefined
-                  }
+                  testID={errorTestID(props?.testID, testID)}
                 >
-                  {errors[name]?.message?.toString()}
+                  {errorMessage(errors[name])}
                 </Text>
               )}
           </React.Fragment>

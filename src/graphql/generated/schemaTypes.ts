@@ -1182,6 +1182,7 @@ export enum ChangeType {
   LocationUpdated = 'LOCATION_UPDATED',
   /** The stack's portion definition or density override was edited */
   MeasurementProfile = 'MEASUREMENT_PROFILE',
+  Merged = 'MERGED',
   QuantityUpdated = 'QUANTITY_UPDATED',
   Restored = 'RESTORED',
   WeightCorrected = 'WEIGHT_CORRECTED'
@@ -1973,6 +1974,13 @@ export type CreatePantryInput = {
 export type CreatePantryItemInput = {
   brand?: InputMaybe<BrandReferenceInput>;
   expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  /**
+   * When the pantry already holds this item in the resolved unit, add the quantity to that
+   * stack and return it instead of refusing with DuplicatePantryItemError. A pantry holds one
+   * active stack per item per unit. The added stock is measured by this input's own net weight
+   * and records its linked purchase. Stack-level fields (brand, storage, tags, thresholds and
+   * the item name) are not applied to the held stack.
+   */
   forceAdd?: InputMaybe<Scalars['Boolean']['input']>;
   /**
    * Optional client-generated permanent ID (CUID2).
@@ -2864,8 +2872,18 @@ export type DeletePantryItemInput = {
 
 export type DeletePantryItemPayload = {
   __typename: 'DeletePantryItemPayload';
+  /**
+   * True when this call CONVERGED on a pre-existing state (the stack was
+   * already removed) — a no-op success that did NOT re-remove or re-publish.
+   * The canonical, API-wide replay flag.
+   */
+  converged: Scalars['Boolean']['output'];
   pantry: Maybe<Pantry>;
-  pantryItem: PantryItem;
+  /**
+   * The removed stack, or null when it was already removed — an idempotent
+   * replay (or second device) that converged as success. See converged.
+   */
+  pantryItem: Maybe<PantryItem>;
 };
 
 /**
@@ -3614,10 +3632,11 @@ export type DuplicateMealPlanPayload = {
 export type DuplicateMealPlanResult = ConflictError | DuplicateMealPlanPayload | ForbiddenError | NotFoundError | ValidationError;
 
 /**
- * The pantry already has an active stack of this catalog item. Returned by
- * `createPantryItem` (unless `forceAdd` is set) so the client can route the
- * user to restock the existing item instead of creating a duplicate. The
- * `code` is `PANTRY_ITEM_ALREADY_EXISTS`.
+ * The pantry already holds an active stack of this catalog item in this unit, and
+ * a pantry holds one. Returned by `createPantryItem` without `forceAdd`, and by
+ * `updatePantryItem` and `restorePantryItem` when the write would open a second,
+ * so the client can route the user to restock the existing stack. The `code` is
+ * `PANTRY_ITEM_ALREADY_EXISTS`.
  */
 export type DuplicatePantryItemError = Error & {
   __typename: 'DuplicatePantryItemError';
@@ -5255,7 +5274,12 @@ export enum ItemMatchType {
 
 /**
  * Client-settable subset of an item's metadata. The stored column also carries
- * server-written moderation and merge-audit keys, which are not settable here.
+ * server-written moderation, merge-audit and enrichment keys, which are not
+ * settable here and which an update never removes.
+ *
+ * On an update the object is MERGED into the stored metadata: a field set to a
+ * value overwrites it, a field set to null removes it, and an omitted field is
+ * kept. Passing null for the whole object removes every field listed here.
  */
 export type ItemMetadataInput = {
   isDairyFree?: InputMaybe<Scalars['Boolean']['input']>;
@@ -11643,8 +11667,8 @@ export type PantryItem = {
    * whose price is known — null when that is none of it.
    */
   totalCost: Maybe<Scalars['Float']['output']>;
-  unit: Maybe<Unit>;
-  unitId: Maybe<Scalars['ID']['output']>;
+  unit: Unit;
+  unitId: Scalars['ID']['output'];
   updatedAt: Scalars['DateTime']['output'];
   usageRecords: PantryItemUsageConnection;
   version: Scalars['Int']['output'];
@@ -11782,11 +11806,15 @@ export type PantryItemChange = {
   deviceId: Maybe<Scalars['String']['output']>;
   field: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
+  /** The stack's item name when the change was recorded. */
+  itemName: Maybe<Scalars['String']['output']>;
   metadata: Maybe<Scalars['JSON']['output']>;
   newValue: Maybe<Scalars['String']['output']>;
   oldValue: Maybe<Scalars['String']['output']>;
-  pantryItem: PantryItem;
-  pantryItemId: Scalars['ID']['output'];
+  pantryId: Maybe<Scalars['ID']['output']>;
+  /** Null once the stack is destroyed by adminPurgePantryItems; pantryId and itemName still name it. */
+  pantryItem: Maybe<PantryItem>;
+  pantryItemId: Maybe<Scalars['ID']['output']>;
   source: ChangeSource;
 };
 
@@ -12526,9 +12554,11 @@ export type Query = {
   /** List compatible units for an item with conversion metadata. */
   compatibleUnitsForItem: Array<CompatibleUnit>;
   /**
-   * Ranked consumption-eligible units for a CATALOG item, from whatever part of
-   * a stack's measurement profile the caller passes. A netWeight,
-   * portionsPerTrackingUnit or densityOverride of zero or less is refused.
+   * Ranked consumption-eligible units for a CATALOG item, for a stack described
+   * by its unit ids. Amounts are optional: which units are offered does not
+   * depend on them. A netWeight, portionsPerTrackingUnit or densityOverride of
+   * zero or less is refused, and so is a portionsPerTrackingUnit without its
+   * portionUnitId.
    * @deprecated Use consumptionUnitsForPantryItem instead.
    */
   consumptionUnitsForItem: Array<RankedUnit>;
@@ -12605,10 +12635,15 @@ export type Query = {
   itemConversions: Array<ItemUnitConversion>;
   /**
    * List items with filtering and cursor-based pagination (Relay spec).
-   * Use filters for UPC, SKU, or external ID lookups:
-   * - items(filters: { upc, upcFormat }) - UPC/barcode lookup
-   * - items(filters: { sku, skuStoreId }) - SKU lookup
-   * - items(filters: { externalId, externalProvider }) - External ID lookup
+   * Use filters for UPC or SKU lookups:
+   * - items(filters: { lookup: { upc, upcFormat } }) - UPC/barcode lookup
+   * - items(filters: { lookup: { sku, skuStoreId } }) - SKU lookup
+   *
+   * A curated list (curation isPopular, isTrending, isRecent, showInOnboarding)
+   * and a UPC/SKU lookup each return a single page, so after, before and last
+   * are refused, and each applies a subset of the filters. A filter the
+   * request's mode does not apply is refused with a validation error naming
+   * it, never ignored.
    */
   items: ItemConnection;
   /**
@@ -12724,7 +12759,15 @@ export type Query = {
   savedRecipe: Maybe<SavedRecipe>;
   /** List all folder names the user has organized saved recipes into. */
   savedRecipeFolders: Array<Scalars['String']['output']>;
-  /** Search items with cursor-based pagination (Relay spec). */
+  /**
+   * Search items with cursor-based pagination (Relay spec).
+   *
+   * With an orderBy, every page is reachable through after, before and last.
+   * Without one, matches are ranked by relevance (the caller's own private
+   * items, then their frequent items, then by popularity). A ranked list has
+   * no cursor, so only its first page is served: after, before and last are
+   * refused with a validation error until an orderBy is named.
+   */
   searchItems: ItemConnection;
   /**
    * Semantic (vector) search over the catalog. The prompt is embedded
@@ -16154,6 +16197,13 @@ export type SyncPantryItemInput = {
   clientId: Scalars['ID']['input'];
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
   expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  /**
+   * When the pantry already holds this item in the resolved unit, add the quantity to that
+   * stack and return it instead of refusing with DuplicatePantryItemError. A pantry holds one
+   * active stack per item per unit. The added stock is measured by this input's own net weight
+   * and records its linked purchase. Stack-level fields (brand, storage, tags, thresholds and
+   * the item name) are not applied to the held stack.
+   */
   forceAdd?: InputMaybe<Scalars['Boolean']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;

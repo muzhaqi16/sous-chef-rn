@@ -3,18 +3,28 @@ import type { OperationVariables, TypedDocumentNode } from '@apollo/client';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import { queueStore } from './queueStore';
-import {
+import type {
   QueuedMutation,
-  QueueStatus,
   ProcessingResult,
   QueueConfig,
   QueueError,
+} from './types';
+import {
+  QueueStatus,
   type FailedMutationInfo,
   type FailureHandler,
   type OverwriteReporter,
 } from './types';
 import { convertToSyncMutation, hasSyncMapping } from './convertToSyncMutation';
 import { reconcileReplaySuccess } from './queueReplayReconcilers';
+import { queuedSubject } from './queuedSubject';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import {
+  AdjustPantryItemQuantityDocument,
+  AdjustPantryItemWeightDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdateHomeDocument } from '#operations/home/home.generated';
 import { proactiveTokenRefresh } from '../links/refreshToken';
 import { refreshUnitVocabulary } from './refreshUnitVocabulary';
 import {
@@ -26,6 +36,7 @@ import {
 import { extractMutationPayload } from '#/utils/errors/mutationPayload';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
+import { TimeoutError } from '#/utils/errors/timeoutError';
 import { Telemetry } from '#/services/telemetry';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { registerSessionTeardown } from '#store/sessionTeardown';
@@ -57,12 +68,14 @@ const MAX_CONFLICT_RESENDS = 1;
  * so the conflict is reported instead. Pinned to the SDL by
  * `__tests__/apollo/queueVersionRequirement.test.ts`.
  */
-export const VERSION_REQUIRED_OPERATIONS: ReadonlySet<string> = new Set([
-  'AdjustPantryItemQuantity',
-  'AdjustPantryItemWeight',
-  'UpdateShoppingList',
-  'UpdateHome',
-]);
+export const VERSION_REQUIRED_OPERATIONS: ReadonlySet<string> = new Set(
+  [
+    AdjustPantryItemQuantityDocument,
+    AdjustPantryItemWeightDocument,
+    UpdateShoppingListDocument,
+    UpdateHomeDocument,
+  ].map(operationNameOf),
+);
 
 /**
  * Input keys that name the PARENT a queued write attaches to. A deferred
@@ -94,27 +107,40 @@ export const PARENT_REFERENCE_KEYS: readonly string[] = [
  * its own version.
  */
 const withoutVersion = (variables: OperationVariables): OperationVariables => {
-  const input = variables.input as Record<string, unknown> | undefined;
-  if (!input || typeof input !== 'object') return variables;
+  const input: unknown = variables.input;
+  if (!isRecord(input)) return variables;
 
   const { version: _version, ...rest } = input;
   const items = rest.items;
   if (Array.isArray(items)) {
-    rest.items = items.map(line =>
-      line && typeof line === 'object'
-        ? (({ version: _lineVersion, ...lineRest }) => lineRest)(
-            line as Record<string, unknown>,
-          )
+    rest.items = items.map((line: unknown) =>
+      isRecord(line)
+        ? (({ version: _lineVersion, ...lineRest }) => lineRest)(line)
         : line,
     );
   }
   return { ...variables, input: rest };
 };
 
+// Queued variables are persisted JSON, so their shape is read structurally.
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 /**
  * Replays offline-queued mutations for the signed-in user: auth-aware,
  * user-scoped, dependency-ordered, with bounded retries.
  */
+/** The fields a replay reads off whichever union member the server returned. */
+interface ReplayPayload {
+  code?: string;
+  message?: string;
+  // `NotFoundError.resource`: without it a refusal over a merged-away Unit is
+  // indistinguishable from one over the record itself.
+  resource?: string;
+  conflict?: { message?: string };
+}
+
 export class QueueManager {
   private config: QueueConfig;
   private isProcessing = false;
@@ -154,7 +180,7 @@ export class QueueManager {
         reason: 'already_processing',
       });
       Telemetry.warn('Queue drain skipped: already processing');
-      return this.processingPromise || Promise.resolve();
+      return this.processingPromise ?? Promise.resolve();
     }
 
     const state = useStore.getState();
@@ -369,14 +395,14 @@ export class QueueManager {
     logger.info(`🔄 Queue: Replaying ${mutation.operationName} via sync`);
 
     // Apollo 4.2's signatures reject a manually-passed generic, so the
-    // structural payload type arrives on the document instead — a local cast
-    // rather than widening `SyncConversion`, whose `TypedDocumentNode` params
-    // are invariant and would reject every concrete builder's return.
+    // structural payload type arrives on the document: `SyncConversion` carries
+    // a plain `DocumentNode`, which this declaration types.
+    const typedMutation: TypedDocumentNode<
+      Record<string, unknown>,
+      OperationVariables
+    > = syncMutation;
     const result = await client.mutate({
-      mutation: syncMutation as TypedDocumentNode<
-        Record<string, unknown>,
-        OperationVariables
-      >,
+      mutation: typedMutation,
       variables: syncVariables,
       context: {
         ...mutation.context,
@@ -390,25 +416,15 @@ export class QueueManager {
 
     // The mutation field name varies per queued operation, so the payload is
     // only knowable structurally; shares the foreground path's reader.
-    const payload = extractMutationPayload(result.data) as
-      | {
-          __typename?: string;
-          code?: string;
-          message?: string;
-          // `NotFoundError.resource` — which row the server could not find.
-          // Without it a refusal over a merged-away Unit is indistinguishable
-          // from one over the record itself, and cannot be re-resolved.
-          resource?: string;
-          conflict?: { message?: string };
-        }
-      | null
-      | undefined;
+    const payload: ReplayPayload | null | undefined = extractMutationPayload(
+      result.data,
+    );
 
     // Under errorPolicy 'all' a server refusal RESOLVES as an error union
     // member instead of throwing; without this a rejected replay is marked
     // SUCCESS and dequeued while the optimistic cache write lingers.
     const outcome = classifyReplayResult(payload);
-    if (outcome === 'converged') {
+    if (outcome.status === 'converged') {
       // IDEMPOTENT_REPLAY: an earlier attempt already committed this op, so the
       // change is on the server. Dequeue as success.
       logger.info(
@@ -416,9 +432,9 @@ export class QueueManager {
       );
       return result.data;
     }
-    if (outcome === 'rejected') {
+    if (outcome.status === 'rejected') {
       throw new ReplayRejectedError(
-        payload?.__typename ?? 'Error',
+        outcome.typename,
         payload?.message ??
           `${mutation.operationName} was rejected by the server on replay`,
         payload?.code ?? null,
@@ -640,26 +656,9 @@ export class QueueManager {
     return true;
   }
 
-  /**
-   * The client entity id a queued mutation targets, across every variable shape
-   * the app enqueues. Feeds the failure handler's evict target.
-   */
+  /** The entity a queued write creates or changes: the failure handler's evict target. */
   private getEntityId(mutation: QueuedMutation): string | null {
-    const vars = mutation.variables ?? {};
-    return (
-      vars.id ??
-      vars.input?.id ??
-      // Single adds ride the batch AddItemsToShoppingListInput shape.
-      vars.input?.items?.[0]?.id ??
-      vars.input?.pantryItemId ??
-      vars.input?.itemId ??
-      vars.itemId ??
-      vars.input?.recipeId ??
-      vars.input?.mealPlanId ??
-      vars.input?.batchId ??
-      vars.clientId ??
-      null
-    );
+    return queuedSubject(mutation).subjectIds[0] ?? null;
   }
 
   /**
@@ -681,40 +680,27 @@ export class QueueManager {
     };
   }
 
-  /**
-   * getEntityId's single candidate, a fork's minted recipe, and every
-   * `input.items[].id` of a batch-shaped create (one client-minted id per row).
-   */
+  /** Every entity a queued write creates or changes — one per row of a batch. */
   private getAllEntityIds(mutation: QueuedMutation): string[] {
-    const ids = new Set<string>();
-    const single = this.getEntityId(mutation);
-    if (single) ids.add(single);
-    // A fork's subject is the SOURCE recipe; the row it mints is this one.
-    const minted = mutation.variables?.input?.newRecipeId;
-    if (typeof minted === 'string' && minted) ids.add(minted);
-
-    const items = mutation.variables?.input?.items;
-    if (Array.isArray(items)) {
-      for (const item of items) {
-        if (typeof item?.id === 'string' && item.id) ids.add(item.id);
-      }
-    }
-    return [...ids];
+    return queuedSubject(mutation).subjectIds;
   }
 
-  /** The parents a write attaches to, top-level and per batch row. */
+  /**
+   * What a write waits on: the parents it attaches to, top-level and per batch
+   * row, and the entity it is derived from (a fork's source recipe).
+   */
   private getDependencyIds(mutation: QueuedMutation): string[] {
-    const ids = new Set<string>();
+    const ids = new Set<string>(queuedSubject(mutation).sourceIds);
     const collect = (record: unknown) => {
-      if (!record || typeof record !== 'object') return;
+      if (!isRecord(record)) return;
       for (const key of PARENT_REFERENCE_KEYS) {
-        const value = (record as Record<string, unknown>)[key];
+        const value = record[key];
         if (typeof value === 'string' && value) ids.add(value);
       }
     };
-    const input = mutation.variables?.input;
+    const input: unknown = mutation.variables?.input;
     collect(input);
-    const items = input?.items;
+    const items = isRecord(input) ? input.items : undefined;
     if (Array.isArray(items)) items.forEach(collect);
     return [...ids];
   }
@@ -741,7 +727,8 @@ export class QueueManager {
    * the generic ApolloCache type erases that to `unknown`.
    */
   private extractCacheSnapshot(): Record<string, unknown> {
-    return requireApolloClient().cache.extract() as Record<string, unknown>;
+    const snapshot = requireApolloClient().cache.extract();
+    return isRecord(snapshot) ? snapshot : {};
   }
 
   private findCachedTypename(
@@ -839,7 +826,13 @@ export class QueueManager {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<never>((_, reject) => {
       timer = setTimeout(
-        () => reject(new Error('Operation timed out')),
+        () =>
+          reject(
+            new TimeoutError(
+              'Operation timed out',
+              this.config.processingTimeoutMs,
+            ),
+          ),
         this.config.processingTimeoutMs,
       );
     });
@@ -915,7 +908,9 @@ export class QueueManager {
 
       const state = useStore.getState();
       if (state.isOnline) {
-        this.processQueue();
+        this.processQueue().catch(error => {
+          logger.error('Failed to process queue on user change:', error);
+        });
       }
     }
   }

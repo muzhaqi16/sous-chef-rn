@@ -1,10 +1,5 @@
-import React, {
-  createContext,
-  useContext,
-  useRef,
-  useEffect,
-  ReactNode,
-} from 'react';
+import type { ReactNode } from 'react';
+import React, { createContext, useContext, useRef, useEffect } from 'react';
 import type {
   AnimationDirection,
   ExitAnimationTrigger,

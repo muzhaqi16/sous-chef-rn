@@ -17,17 +17,18 @@ import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { CategoryType } from '#/graphql/generated/schemaTypes';
 import {
   PRIORITY_OPTIONS,
-  PRIORITY_VALUES,
-  PRIORITY_OPTION_BY_VALUE,
+  priorityValueOf,
+  priorityOptionOf,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
 import { useAddShoppingItem } from '#features/shoppingList/hooks/mutations/useAddShoppingItem';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { handleMutationError } from '#/utils/errorHandlers';
+import { alertService } from '#/services/alertService';
 import { makeIdNameHandler } from '#components/organisms/makeIdNameHandler';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { logValidationErrors } from '#/utils/validation/common';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
 interface ShoppingListDetailsStepProps {
   shoppingListId: string | undefined;
@@ -106,16 +107,14 @@ export const ShoppingListDetailsStep: React.FC<
     name => setFieldValue('storeName', name),
   );
 
-  const formatPriorityLabel = (option: string) => t(priorityLabelKey(option));
-
   // `handleSubmit` runs the schema first and only calls this on a valid form;
   // an invalid one renders its message on the offending field instead.
   const handleSave = handleSubmit(() => {
     const unitData = buildUnitInput();
     const netWeightValue = parseNetWeightInput();
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
-        await addItem({
+        const added = await addItem({
           itemName,
           quantityInput,
           unitName: unit || undefined,
@@ -140,16 +139,16 @@ export const ShoppingListDetailsStep: React.FC<
           priority,
           preferredStoreId: storeId ?? undefined,
         });
-        onSuccess();
+        // A refusal was alerted by the hook; the form stays open with its input.
+        if (added) onSuccess();
       },
       setSaving,
-      (error: unknown) =>
-        handleMutationError(error, { operation: 'ShoppingListItem.add' }),
+      () => alertService.alert(t('labels.error'), t('errors.addItemFailed')),
     );
   }, logValidationErrors);
 
   return (
-    <View style={styles.container} testID="add-shopping-item-details">
+    <View style={styles.container} testID={shoppingListTestIDs.addSheetDetails}>
       <BottomSheetHeader
         title={t('labels.addItem')}
         cancelLabel={t('labels.cancel')}
@@ -157,14 +156,16 @@ export const ShoppingListDetailsStep: React.FC<
         onCancel={onClose}
         onConfirm={handleSave}
         saving={saving}
-        confirmTestID="add-shopping-item-submit-button"
+        cancelTestID={shoppingListTestIDs.addSheetCancelButton}
+        confirmTestID={shoppingListTestIDs.addSheetSubmitButton}
+        titleTestID={shoppingListTestIDs.addSheetTitle}
       />
 
       <BottomSheetFormScrollView
         // Named so a test can scroll a field into view. The unit picker sits in
         // the second `FieldRow`, below the fold once the keyboard is up, and
         // Detox refuses to type into a view that is not hittable.
-        testID="add-shopping-item-scroll"
+        testID={shoppingListTestIDs.addSheetScroll}
         style={styles.body}
         contentContainerStyle={[
           styles.content,
@@ -186,7 +187,7 @@ export const ShoppingListDetailsStep: React.FC<
               onChangeText={onChange}
               placeholder={t('shoppingListScreens.itemNamePlaceholder')}
               useBottomSheetInput
-              testID="add-shopping-item-name-input"
+              testID={shoppingListTestIDs.addSheetNameInput}
             />
           )}
         />
@@ -221,7 +222,7 @@ export const ShoppingListDetailsStep: React.FC<
                 value={value}
                 onChangeText={onChange}
                 placeholder="1"
-                testID="add-shopping-item-quantity-input"
+                testID={shoppingListTestIDs.addSheetQuantityInput}
               />
             )}
           />
@@ -232,7 +233,7 @@ export const ShoppingListDetailsStep: React.FC<
             onChangeText={text => setFieldValue('unit', text)}
             onUnitSelected={handleUnitSelect}
             placeholder={t('labels.pcsKgEtc')}
-            testID="add-shopping-item-unit-picker"
+            testID={shoppingListTestIDs.addSheetUnitPicker}
           />
         </FieldRow>
 
@@ -279,11 +280,11 @@ export const ShoppingListDetailsStep: React.FC<
         <SegmentedControl
           label={t('shoppingListScreens.priority')}
           options={PRIORITY_OPTIONS}
-          value={PRIORITY_OPTION_BY_VALUE[priority] ?? 'low'}
+          value={priorityOptionOf(priority) ?? 'low'}
           onChange={option =>
-            setFieldValue('priority', PRIORITY_VALUES[option] ?? 0)
+            setFieldValue('priority', priorityValueOf(option))
           }
-          formatLabel={formatPriorityLabel}
+          formatLabel={option => t(priorityLabelKey(option))}
         />
 
         <StoreAutocompleteField

@@ -29,22 +29,22 @@ describe('toDisplayNotification', () => {
   it('passes the server fragment through and derives the display fields', () => {
     const item = toDisplayNotification(base);
     expect(item.id).toBe('n-1');
-    expect(item.title).toBe('Expiring soon');
     expect(item.category).toBe(NotificationCategory.Pantry);
     expect(item.priority).toBe(Priority.Urgent);
     expect(item.sourceId).toBe('item-9');
     expect(item.isRead).toBe(false);
   });
 
-  it('defaults an absent priority to NORMAL and derives a missing title', () => {
-    const item = toDisplayNotification({
-      ...base,
-      priority: Priority.Normal,
-      title: null,
-    });
+  it('keeps the NORMAL priority and the category', () => {
+    const item = toDisplayNotification({ ...base, priority: Priority.Normal });
     expect(item.priority).toBe(Priority.Normal);
-    expect(item.title).toBeTruthy(); // derived from type
     expect(item.category).toBe(NotificationCategory.Pantry);
+  });
+
+  it("carries none of the server's English copy", () => {
+    const item = toDisplayNotification(base);
+    expect(Object.values(item)).not.toContain(base.title);
+    expect(Object.values(item)).not.toContain(base.message);
   });
 
   // The server counts a notification as unread only while PENDING or SENT, so

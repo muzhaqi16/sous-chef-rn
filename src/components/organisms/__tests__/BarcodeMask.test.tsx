@@ -2,6 +2,12 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import BarcodeMask from '#features/barcode/components/BarcodeMask';
+import { lightTheme } from '#/theme/themes';
+
+const themed = {
+  edgeColor: lightTheme.colors.primary,
+  backgroundColor: lightTheme.colors.overlay,
+};
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -23,17 +29,21 @@ jest.mock('#features/barcode/components/AnimatedScanLine', () => {
 
 describe('BarcodeMask', () => {
   it('renders without crashing', () => {
-    const { toJSON } = render(<BarcodeMask />);
+    const { toJSON } = render(<BarcodeMask {...themed} />);
     expect(toJSON()).toBeTruthy();
   });
 
   it('renders with custom dimensions', () => {
-    const { toJSON } = render(<BarcodeMask width={300} height={250} />);
+    const { toJSON } = render(
+      <BarcodeMask {...themed} width={300} height={250} />,
+    );
     expect(toJSON()).toBeTruthy();
   });
 
   it('renders without animated line when disabled', () => {
-    const { toJSON } = render(<BarcodeMask showAnimatedLine={false} />);
+    const { toJSON } = render(
+      <BarcodeMask {...themed} showAnimatedLine={false} />,
+    );
     expect(toJSON()).toBeTruthy();
   });
 });

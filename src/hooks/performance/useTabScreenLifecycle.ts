@@ -1,10 +1,11 @@
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
+import type { PersistedEntityType } from '#/apollo/offline/OptimisticDataPersistence';
 import { useScreenTransition } from '#/hooks/performance/useScreenTransition';
 import { useScreenTelemetry } from '#/hooks/performance/useScreenTelemetry';
 
 interface UseTabScreenLifecycleOptions {
   screenName: string;
-  optimisticTypes: string[];
+  optimisticTypes: PersistedEntityType[];
   telemetryProperties: () => Record<string, unknown>;
 }
 

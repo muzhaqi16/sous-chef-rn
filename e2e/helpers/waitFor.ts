@@ -55,15 +55,6 @@ export async function waitForElementToExist(
   await waitFor(element).toExist().withTimeout(timeout);
 }
 
-export async function waitForText(
-  text: string,
-  timeout: number = DEFAULT_TIMEOUT,
-) {
-  await waitFor(element(by.text(text)))
-    .toBeVisible()
-    .withTimeout(timeout);
-}
-
 export async function waitForElementById(
   testID: string,
   timeout: number = DEFAULT_TIMEOUT,

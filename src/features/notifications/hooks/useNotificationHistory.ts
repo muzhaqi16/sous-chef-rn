@@ -1,19 +1,20 @@
 /**
- * The notification feed and its counts — the ONLY source; it projects the
- * Apollo cache and holds nothing. The category filter is server-side, so the
- * screen must not filter again. `readFragment` per edge is required, not
+ * The notification feed — the ONLY source; it projects the Apollo cache and
+ * holds nothing. The category filter is server-side, so the screen must not
+ * filter again. `readFragment` per edge is required, not
  * indirection: `dataMasking` leaves `node` as `{ __typename, id }`.
  */
 
 import { loadPageWithCursorRecovery } from '#hooks/utils/cursorRecovery';
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
+import { NetworkStatus } from '@apollo/client';
 import { useApolloClient, useQuery } from '@apollo/client/react';
 import { GetNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import {
   UseNotificationsOnLaunch_NotificationFragmentDoc,
   type UseNotificationsOnLaunch_NotificationFragment,
 } from './useNotificationsOnLaunch.generated';
-import { NotificationCategory } from '#/graphql/generated/schemaTypes';
+import type { NotificationCategory } from '#/graphql/generated/schemaTypes';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import {
   toDisplayNotification,
@@ -43,10 +44,9 @@ export function useNotificationHistory(
     },
   );
 
-  useApolloErrorLogger('GetNotifications', error);
+  useApolloErrorLogger(GetNotificationsDocument, error);
 
-  const me = data?.me;
-  const connection = me?.notificationsConnection;
+  const connection = data?.me?.notificationsConnection;
 
   const notifications: DisplayNotification[] = (connection?.edges ?? [])
     .map(edge =>
@@ -83,12 +83,8 @@ export function useNotificationHistory(
 
   return {
     notifications,
-    unreadCount: me?.unreadNotificationCount ?? 0,
-    hasUrgent: me?.hasUrgentNotifications ?? false,
     loadMore,
-    hasMore,
-    // networkStatus 3 = fetchMore in flight.
-    loadingMore: networkStatus === 3,
+    loadingMore: networkStatus === NetworkStatus.fetchMore,
     loading,
     error,
     // `data !== undefined` — a response arrived, empty or not. Separates "no

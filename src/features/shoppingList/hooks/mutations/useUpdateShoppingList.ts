@@ -2,7 +2,7 @@
  * Local-first: the changed fields are written to the cache PERMANENTLY before
  * firing, so the update survives an offline queue — the replay re-sends absolute
  * field sets keyed by the list id, idempotent. A rejection restores the pre-edit
- * snapshot and throws the precise domain error for the caller's toast.
+ * snapshot and throws, leaving the one message to the caller's toast.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -11,9 +11,9 @@ import {
   UseUpdateShoppingList_ListFragmentDoc,
   type UseUpdateShoppingList_ListFragment,
 } from './useUpdateShoppingList.generated';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { unwrapPayload } from '#/utils/errors/mutationPayload';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import type { ListStatus } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 
@@ -26,7 +26,7 @@ interface ShoppingListSettingsUpdate {
 
 export function useUpdateShoppingList(fallbackErrorMessage: string) {
   const client = useApolloClient();
-  const [mutate, { loading }] = useMutation(UpdateShoppingListDocument);
+  const [mutate] = useMutation(UpdateShoppingListDocument);
 
   const updateShoppingList = async (
     id: string,
@@ -88,41 +88,25 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
       throw new GraphQLNetworkError(fallbackErrorMessage);
     }
 
-    let result;
-    try {
-      result = await mutate({
-        variables: { input: { id, ...updates, version: snapshot.version } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Update Shopping List error:',
-      });
-    }
-
-    if (!result) {
-      // mutate() itself threw (non-queueable transport failure).
-      revert();
-      throw new GraphQLNetworkError(fallbackErrorMessage);
-    }
-
-    const outcome = classifyCreateResult(result);
-    if (outcome === 'queued') {
-      // Offline / API down: the permanent write stands and the update replays
-      // keyed by the list id; there is no server entity to return.
-      return null;
-    }
-    if (outcome === 'rejected') {
-      revert();
-    }
-    // Success returns the server entity; rejection throws the domain error.
-    const success = unwrapPayload(
-      result.data?.updateShoppingList,
-      'UpdateShoppingListPayload',
-      fallbackErrorMessage,
+    const settled = await settleMutation(
+      () =>
+        mutate({
+          variables: { input: { id, ...updates, version: snapshot.version } },
+          context: { localFirst: true },
+        }),
+      {
+        document: UpdateShoppingListDocument,
+        fallback: fallbackErrorMessage,
+        onFailed: revert,
+        present: 'none',
+      },
     );
-    return success.shoppingList;
+    if (settled.failure) throw new GraphQLNetworkError(settled.failure.body);
+
+    // Queued (offline / API down): the permanent write stands and the update
+    // replays keyed by the list id; there is no server entity to return.
+    return appliedPayload(settled.data)?.shoppingList ?? null;
   };
 
-  return { updateShoppingList, loading };
+  return { updateShoppingList };
 }

@@ -1,4 +1,5 @@
-import React, { useState, ReactNode, useEffect, forwardRef } from 'react';
+import type { ReactNode } from 'react';
+import React, { useState, useEffect, forwardRef } from 'react';
 import { AccessibilityInfo, Platform, type ViewProps } from 'react-native';
 
 import Animated, {
@@ -19,6 +20,7 @@ import { TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
 import type { IconName } from '#utils/iconUtils';
 import { motion } from '#/theme/foundations/motion';
+import { kitTestIDs } from '#components/testIDs';
 
 export type ToastType = 'default' | 'success' | 'error' | 'warning' | 'info';
 
@@ -140,7 +142,7 @@ const ToastCard = forwardRef<
     <Animated.View
       ref={ref}
       {...hostProps}
-      testID={`toast-${type}`}
+      testID={kitTestIDs.toast(type)}
       pointerEvents={interactive ? 'auto' : 'none'}
       // Android reads a live region on its own. iOS has no equivalent, so the
       // provider announces there — see the effect that arms auto-dismiss.
@@ -160,9 +162,7 @@ const ToastCard = forwardRef<
           uniProps={t => ({
             color:
               type !== 'default' && type in t.colors.alertBanner
-                ? t.colors.alertBanner[
-                    type as keyof typeof t.colors.alertBanner
-                  ].text
+                ? t.colors.alertBanner[type].text
                 : t.colors.textInverse,
           })}
         />
@@ -170,7 +170,7 @@ const ToastCard = forwardRef<
       <Text
         role="bodyStrong"
         style={styles.toastText}
-        testID="toast-message"
+        testID={kitTestIDs.toastMessage}
         numberOfLines={2}
       >
         {message}

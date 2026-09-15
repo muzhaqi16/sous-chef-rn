@@ -2,6 +2,7 @@ import { createTestStore } from '#/test-utils/createTestStore';
 import {
   blocksCacheMissQueries,
   isApiUnavailable,
+  isNetworkWithheld,
   shouldTreatAsOffline,
 } from '../networkSlice';
 
@@ -315,6 +316,40 @@ describe('networkSlice', () => {
       expect(isApiUnavailable({ isOnline: true, apiReachable: true })).toBe(
         false,
       );
+    });
+  });
+
+  describe('isNetworkWithheld', () => {
+    it('is true with offline mode on while the API is reachable', () => {
+      // offlineModeLink errors a cache miss here, so a screen must call it
+      // offline rather than a failed load.
+      expect(
+        isNetworkWithheld({
+          isOnline: true,
+          apiReachable: true,
+          offlineModeEnabled: true,
+        }),
+      ).toBe(true);
+    });
+
+    it('is true when the API is unavailable with offline mode off', () => {
+      expect(
+        isNetworkWithheld({
+          isOnline: true,
+          apiReachable: false,
+          offlineModeEnabled: false,
+        }),
+      ).toBe(true);
+    });
+
+    it('is false when online, reachable and offline mode is off', () => {
+      expect(
+        isNetworkWithheld({
+          isOnline: true,
+          apiReachable: true,
+          offlineModeEnabled: false,
+        }),
+      ).toBe(false);
     });
   });
 });

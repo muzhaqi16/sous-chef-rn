@@ -1,5 +1,5 @@
 import { ConsoleTransport } from '../ConsoleTransport';
-import { LogEntry, MetricEntry } from '../../types';
+import type { LogEntry, MetricEntry } from '../../types';
 // Environment is auto-mocked via jest.setup.js; we override `isDevelopment`
 // per-test to exercise both dev and prod branches of the transport.
 import { Environment } from '#/utils/environment';

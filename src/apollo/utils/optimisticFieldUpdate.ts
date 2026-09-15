@@ -17,7 +17,9 @@ export function optimisticFieldUpdate(
 ): { revert: () => void } {
   if (!cacheId || !entity) return { revert: () => {} };
 
-  const snapshot = Object.fromEntries(Object.entries(entity));
+  const snapshot: Record<string, unknown> = Object.fromEntries(
+    Object.entries(entity),
+  );
   const applied: Record<string, () => unknown> = {};
   const previous: Record<
     string,

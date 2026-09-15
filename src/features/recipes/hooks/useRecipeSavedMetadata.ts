@@ -18,6 +18,7 @@ import {
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { performOptimisticUnfavorite } from '#features/recipes/utils/optimisticUnfavorite';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 
 interface UseRecipeSavedMetadataOptions {
   recipeId: string | undefined;
@@ -86,6 +87,8 @@ export function useRecipeSavedMetadata({
     updates: Partial<SavedDetailsRef>,
     input: Record<string, unknown>,
   ): Promise<boolean> => {
+    // Every caller returns early without a recipe; this keeps the id typed.
+    if (!recipeId) return false;
     const saved = readSavedDetails(client.cache, recipeId);
     const previous = snapshotFields(saved, updates);
 
@@ -101,7 +104,7 @@ export function useRecipeSavedMetadata({
       logLabel: 'updateFavoriteRecipe',
       mutate: () =>
         updateFavoriteRecipeMutation({
-          variables: { input: { recipeId: recipeId!, ...input } },
+          variables: { input: { recipeId, ...input } },
           context: { localFirst: true },
         }),
     });
@@ -114,13 +117,9 @@ export function useRecipeSavedMetadata({
     UpdateFavoriteRecipeDocument,
     {
       update: (cache, { data }) => {
-        if (
-          data?.updateFavoriteRecipe?.__typename !==
-          'UpdateFavoriteRecipePayload'
-        ) {
-          return;
-        }
-        const updatedSavedRecipe = data.updateFavoriteRecipe.savedRecipe;
+        const payload = appliedPayload(data);
+        if (!payload) return;
+        const updatedSavedRecipe = payload.savedRecipe;
 
         const folder = updatedSavedRecipe.folder;
         if (folder) {
@@ -278,9 +277,8 @@ export function useRecipeSavedMetadata({
             // unreachable instead of surfacing a blocking error.
             context: { localFirst: true },
           }),
-        operation: 'unfavoriteRecipe',
-        reportFailure: () =>
-          toastService.error(t('recipes.removeFromSavedFailed')),
+        fallback: t('recipes.removeFromSavedFailed'),
+        present: failure => toastService.error(failure.body),
       });
       if (!kept) return;
 

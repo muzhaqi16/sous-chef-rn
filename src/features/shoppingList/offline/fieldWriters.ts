@@ -7,20 +7,22 @@ import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import type { FieldWriterTable } from '#/apollo/utils/fieldWriters';
 
 export const SHOPPING_LIST_FIELD_WRITERS: FieldWriterTable = {
-  'ShoppingListItem.purchaseInfo': (cache, entityId, value) => {
-    if (typeof value !== 'object' || value === null) return;
-    const patch = value as {
-      isPurchased?: unknown;
-      movedToPantryAt?: unknown;
-    };
-    writePurchaseInfo(cache, entityId, {
-      ...(typeof patch.isPurchased === 'boolean'
-        ? { isPurchased: patch.isPurchased }
-        : {}),
-      ...(typeof patch.movedToPantryAt === 'string' ||
-      patch.movedToPantryAt === null
-        ? { movedToPantryAt: patch.movedToPantryAt }
-        : {}),
-    });
+  ShoppingListItem: {
+    purchaseInfo: (cache, entityId, value) => {
+      if (typeof value !== 'object' || value === null) return;
+      const patch = value as {
+        isPurchased?: unknown;
+        movedToPantryAt?: unknown;
+      };
+      writePurchaseInfo(cache, entityId, {
+        ...(typeof patch.isPurchased === 'boolean'
+          ? { isPurchased: patch.isPurchased }
+          : {}),
+        ...(typeof patch.movedToPantryAt === 'string' ||
+        patch.movedToPantryAt === null
+          ? { movedToPantryAt: patch.movedToPantryAt }
+          : {}),
+      });
+    },
   },
 };

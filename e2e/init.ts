@@ -3,6 +3,8 @@ import 'detox';
 import { element, by, waitFor } from 'detox';
 import { execSync } from 'child_process';
 import './config/setup';
+import { authTestIDs } from '../src/features/auth/testIDs';
+import { kitTestIDs } from '../src/components/testIDs';
 
 jest.setTimeout(120000);
 
@@ -20,7 +22,9 @@ function setupAdbReverseForLocalTesting() {
       console.log('✅ ADB reverse setup complete (ports 8081, 4000)');
     }
   } catch {
-    console.log('⚠️ Could not setup ADB reverse (this is expected for iOS or if no emulator is connected)');
+    console.log(
+      '⚠️ Could not setup ADB reverse (this is expected for iOS or if no emulator is connected)',
+    );
   }
 }
 
@@ -30,7 +34,8 @@ function setupAdbReverseForLocalTesting() {
  * truthiness check on the raw string reads it as on.
  */
 const isTruthyEnv = (value: string | undefined): boolean =>
-  value !== undefined && !['', '0', 'false', 'no', 'off'].includes(value.toLowerCase());
+  value !== undefined &&
+  !['', '0', 'false', 'no', 'off'].includes(value.toLowerCase());
 
 /**
  * Launches with synchronization off: Detox's FabricUIManagerIdlingResources
@@ -58,12 +63,12 @@ export async function launchAppWithFabricWorkaround(
 
   // The app settles on the landing auth screen (logged out) or the tab bar.
   try {
-    await waitFor(element(by.id('landing-auth-screen')))
+    await waitFor(element(by.id(authTestIDs.landingScreen)))
       .toBeVisible()
       .withTimeout(10000);
   } catch {
     try {
-      await waitFor(element(by.id('tab-bar')))
+      await waitFor(element(by.id(kitTestIDs.tabBar)))
         .toBeVisible()
         .withTimeout(5000);
     } catch {
@@ -84,8 +89,8 @@ export async function launchAppWithFabricWorkaround(
     // setURLBlacklist may not be supported on all platforms
   }
 
-  // Sync stays DISABLED, and it is a trade rather than a necessity. Measured
-  // 2026-08-19 on `pantry-crud`: off 9/9 in 330s, on 8/9 in 480s — Detox does
+  // Sync stays DISABLED, and it is a trade rather than a necessity. On
+  // `pantry-crud` off passes 9/9 in 330s and on 8/9 in 480s — Detox does
   // reach idle, it just costs ~45% wall-clock plus one test that then waits out
   // a validation alert covering the form. The cost of off is that nothing waits
   // for idle on our behalf, so settling is explicit (see `relaunchToHomeTab`).

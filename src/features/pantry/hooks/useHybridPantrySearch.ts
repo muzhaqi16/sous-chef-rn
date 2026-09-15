@@ -75,8 +75,7 @@ export function useHybridPantrySearch({
     // Each node already carries the fields needed for local search + sort
     // (itemName, expiresAt, quantity, …) plus the masked PantryItemCard
     // fragment ref. Pass through without unmasking.
-    extractItems: data =>
-      extractNodes(data.pantry?.itemsConnection) as PantryItem[],
+    extractItems: data => extractNodes(data.pantry?.itemsConnection),
     searchPredicate: pantryItemSearch,
     debounceMs: 300,
   };

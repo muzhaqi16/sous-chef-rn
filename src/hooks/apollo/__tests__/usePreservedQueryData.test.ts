@@ -67,7 +67,7 @@ describe('usePreservedQueryData', () => {
     const { result, rerender } = renderHook(
       ({ data }: { data: string | undefined }) =>
         usePreservedQueryData(data, 'initial'),
-      { initialProps: { data: 'same' as string | undefined } },
+      { initialProps: { data: 'same' } },
     );
 
     expect(result.current).toBe('same');

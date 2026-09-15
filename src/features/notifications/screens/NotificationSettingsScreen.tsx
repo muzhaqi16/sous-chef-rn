@@ -5,7 +5,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { authService } from '#/services/authService';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 
 import { SettingSwitch } from '#components/molecules/SettingSwitch';
@@ -30,11 +30,12 @@ import {
 import { logger } from '#/utils/environment';
 import { Text } from '#components/atoms/Text';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { notificationsTestIDs } from '#features/notifications/testIDs';
 
 interface SettingDef {
   key: keyof NotificationSettings;
-  titleKey: string;
-  descriptionKey: string;
+  titleKey: TranslationKey;
+  descriptionKey: TranslationKey;
 }
 
 const CHANNEL_SETTINGS: SettingDef[] = [
@@ -188,7 +189,7 @@ const renderSettings = (
   defs.map(({ key, titleKey, descriptionKey }) => (
     <SettingSwitch
       key={key}
-      testID={`notification-switch-${key}`}
+      testID={notificationsTestIDs.settingSwitch(key)}
       title={t(titleKey)}
       description={t(descriptionKey)}
       value={!!settings[key]}
@@ -305,7 +306,7 @@ export const NotificationSettingsScreen: React.FC = () => {
   ) => {
     // Special handling for push notification toggle
     if (key === 'pushEnabled' && value === true) {
-      executeWithLoadingState(
+      void executeWithLoadingState(
         async () => {
           const granted = await requestPermissions();
 
@@ -319,9 +320,19 @@ export const NotificationSettingsScreen: React.FC = () => {
                   text: t('labels.openSettings'),
                   onPress: () => {
                     if (Platform.OS === 'ios') {
-                      Linking.openURL('app-settings:');
+                      void Linking.openURL('app-settings:').catch(error =>
+                        logger.warn(
+                          'Opening the system settings failed',
+                          error,
+                        ),
+                      );
                     } else {
-                      Linking.openSettings();
+                      void Linking.openSettings().catch(error =>
+                        logger.warn(
+                          'Opening the system settings failed',
+                          error,
+                        ),
+                      );
                     }
                   },
                 },
@@ -361,7 +372,7 @@ export const NotificationSettingsScreen: React.FC = () => {
     // resolved refusal; `onError` covers a throw, which the finalizer would
     // otherwise swallow — same copy, so one failure produces one message
     // whichever route it took.
-    executeWriteWithFinally(
+    void executeWriteWithFinally(
       async () => {
         const success = await updateNotificationSetting(key, value);
         if (!success) {
@@ -389,7 +400,7 @@ export const NotificationSettingsScreen: React.FC = () => {
           text: t('settings.resetSection'),
           style: 'destructive',
           onPress: () => {
-            executeWriteWithFinally(
+            void executeWriteWithFinally(
               async () => {
                 const success = await resetToDefaults();
                 if (success) {
@@ -430,9 +441,13 @@ export const NotificationSettingsScreen: React.FC = () => {
         <DataStateView
           state={dataState}
           onRetry={() => {
-            refetch();
+            void refetch().catch(error =>
+              errorService.reportError(error, {
+                operation: 'NotificationSettings.retry',
+              }),
+            );
           }}
-          testID="notification-settings-state"
+          testID={notificationsTestIDs.settingsState}
         />
       </ProfileScreenWrapper>
     );
@@ -467,9 +482,19 @@ export const NotificationSettingsScreen: React.FC = () => {
                   text: t('labels.openSettings'),
                   onPress: () => {
                     if (Platform.OS === 'ios') {
-                      Linking.openURL('app-settings:');
+                      void Linking.openURL('app-settings:').catch(error =>
+                        logger.warn(
+                          'Opening the system settings failed',
+                          error,
+                        ),
+                      );
                     } else {
-                      Linking.openSettings();
+                      void Linking.openSettings().catch(error =>
+                        logger.warn(
+                          'Opening the system settings failed',
+                          error,
+                        ),
+                      );
                     }
                   },
                 },
@@ -486,6 +511,7 @@ export const NotificationSettingsScreen: React.FC = () => {
 
       <SettingsSection variant="inset" title={t('notifications.pantry')}>
         <SettingSwitch
+          testID={notificationsTestIDs.settingSwitch('expirationNotifications')}
           title={t('notifications.expirationAlerts')}
           description={t('notifications.expirationAlertsDesc')}
           value={settings.expirationNotifications}

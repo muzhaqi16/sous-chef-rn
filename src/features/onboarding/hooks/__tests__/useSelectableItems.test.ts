@@ -1,5 +1,6 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { useSelectableItems, SelectableItem } from '../useSelectableItems';
+import type { SelectableItem } from '../useSelectableItems';
+import { useSelectableItems } from '../useSelectableItems';
 import { logger } from '#/utils/environment';
 
 interface TestItem extends SelectableItem {
@@ -132,24 +133,6 @@ describe('useSelectableItems', () => {
       );
 
       expect(result.current.isMaxReached).toBe(false);
-    });
-  });
-
-  describe('clearSelection', () => {
-    it('deselects all items', () => {
-      const items = createItems(3, ['item-1', 'item-2', 'item-3']);
-      const { result } = renderHook(() =>
-        useSelectableItems({ initialItems: items }),
-      );
-
-      expect(result.current.selectedItems).toHaveLength(3);
-
-      act(() => {
-        result.current.clearSelection();
-      });
-
-      expect(result.current.selectedItems).toHaveLength(0);
-      expect(result.current.items.every(i => !i.selected)).toBe(true);
     });
   });
 

@@ -1,381 +1,66 @@
 import { useEffect } from 'react';
-import { jwtDecode } from 'jwt-decode';
 import { useAppStore, useIsHydrated } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { logger } from '#/utils/environment';
-import { DeepLinkAction } from '#store/slices/navigationSlice';
+import type { DeepLinkAction } from '#store/slices/navigationSlice';
 import { toastService } from '#/services/toastService';
-import { t } from '#/i18n';
+import { t, type TranslationKey } from '#/i18n';
 
-interface DeepLinkTokenPayload {
-  exp: number;
-  iat: number;
-  type?: string;
-  // Decoded JWT claims are open-ended; only exp/iat/type are read here.
-  [key: string]: unknown;
-}
+const STALE_AFTER_MS = 5 * 60 * 1000;
 
-/** Validates a deep-link JWT, optionally asserting its `type` claim. */
-const validateDeepLinkToken = (
-  token: string,
-  expectedType?: string,
-): { valid: boolean; payload?: DeepLinkTokenPayload; error?: string } => {
-  try {
-    // Basic format validation
-    if (!token || typeof token !== 'string') {
-      return { valid: false, error: 'Invalid token format' };
-    }
-
-    // JWT should have 3 parts separated by dots
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      return { valid: false, error: 'Malformed JWT token' };
-    }
-
-    // Decode the token
-    const decoded = jwtDecode<DeepLinkTokenPayload>(token);
-
-    // Check expiration
-    if (decoded.exp) {
-      const now = Math.floor(Date.now() / 1000); // Current time in seconds
-      if (decoded.exp < now) {
-        return { valid: false, error: 'Token has expired', payload: decoded };
-      }
-    } else {
-      logger.warn('Token does not have expiration field');
-    }
-
-    // Check issued at time (token shouldn't be from the future)
-    if (decoded.iat) {
-      const now = Math.floor(Date.now() / 1000);
-      const fiveMinutesFromNow = now + 300; // Allow 5 minute clock skew
-      if (decoded.iat > fiveMinutesFromNow) {
-        return {
-          valid: false,
-          error: 'Token issued in the future',
-          payload: decoded,
-        };
-      }
-    }
-
-    // Validate token type if specified
-    if (expectedType && decoded.type && decoded.type !== expectedType) {
-      return {
-        valid: false,
-        error: `Invalid token type. Expected ${expectedType}, got ${decoded.type}`,
-        payload: decoded,
-      };
-    }
-
-    return { valid: true, payload: decoded };
-  } catch (error) {
-    logger.error('Token validation error:', error);
-    return {
-      valid: false,
-      error: error instanceof Error ? error.message : 'Failed to decode token',
-    };
-  }
+const STALE_MESSAGE_KEY: Record<DeepLinkAction['type'], TranslationKey> = {
+  join_home: 'joinLink.staleHome',
+  join_list: 'joinLink.staleList',
 };
 
 /**
- * Hook for handling deep link routing and integration with navigation state machine.
- * Queues deep link actions until app is hydrated and routes to appropriate handlers.
+ * Replays the join link `useJoinLinkAuthGate` queued for a logged-out visitor
+ * once they sign in. Token links (verify, reset, invite) reach their screens
+ * through the linking config instead.
  */
-export const useDeepLinkRouter = () => {
-  const {
-    toAuth,
-    toEmailVerification,
-    toResetPassword,
-    toAcceptInvitation,
-    toJoinHomeByCode,
-    toJoinByShareCode,
-  } = useAppNavigation();
+export const useDeepLinkRouter = (): void => {
+  const { toJoinHomeByCode, toJoinByShareCode } = useAppNavigation();
   const isHydrated = useIsHydrated();
   const isAuthenticated = useAppStore(
     state => !!(state.user && state.accessToken),
   );
-
-  // Queue for deep link actions that arrive before app is ready
   const pendingDeepLinkAction = useAppStore(
     state => state.pendingDeepLinkAction,
-  );
-  const setPendingDeepLinkAction = useAppStore(
-    state => state.setPendingDeepLinkAction,
   );
   const clearPendingDeepLinkAction = useAppStore(
     state => state.clearPendingDeepLinkAction,
   );
 
-  const handleEmailVerification = (token: string) => {
-    logger.info('Handling email verification deep link', {
-      token: token.substring(0, 8) + '...',
-    });
-
-    // Validate token before proceeding
-    const validation = validateDeepLinkToken(token, 'email_verification');
-    if (!validation.valid) {
-      logger.error('Invalid email verification token:', validation.error);
-      toastService.error(t('toasts.verificationLinkInvalid'));
-      return;
-    }
-
-    if (!isAuthenticated) {
-      // Store token and redirect to auth for login first
-      setPendingDeepLinkAction({
-        type: 'email_verification',
-        token,
-        timestamp: Date.now(),
-      });
-      toastService.info(t('toasts.signInToVerifyEmail'));
-      toAuth();
-      return;
-    }
-
-    // User is authenticated, proceed with verification
-    toEmailVerification(token);
-  };
-
-  const handlePasswordReset = (token: string) => {
-    logger.info('Handling password reset deep link', {
-      token: token.substring(0, 8) + '...',
-    });
-
-    // Validate token before proceeding
-    const validation = validateDeepLinkToken(token, 'password_reset');
-    if (!validation.valid) {
-      logger.error('Invalid password reset token:', validation.error);
-      toastService.error(t('toasts.resetLinkInvalid'));
-      return;
-    }
-
-    // Always redirect to auth stack for password reset
-    // This will clear any existing auth state
-    toResetPassword(token);
-  };
-
-  const handleAcceptInvitation = (token: string) => {
-    logger.info('Handling accept invitation deep link', {
-      token: token.substring(0, 8) + '...',
-    });
-
-    // Validate token before proceeding
-    const validation = validateDeepLinkToken(token, 'invitation');
-    if (!validation.valid) {
-      logger.error('Invalid invitation token:', validation.error);
-      toastService.error(t('toasts.invitationLinkInvalid'));
-      return;
-    }
-
-    if (!isAuthenticated) {
-      // Store token and redirect to auth for login first
-      setPendingDeepLinkAction({
-        type: 'accept_invitation',
-        token,
-        timestamp: Date.now(),
-      });
-      toastService.info(t('toasts.signInToAcceptInvite'));
-      toAuth();
-      return;
-    }
-
-    // User is authenticated, proceed with invitation
-    toAcceptInvitation(token);
-  };
-
-  const handleJoinHome = (code: string) => {
-    if (!isAuthenticated) {
-      setPendingDeepLinkAction({
-        type: 'join_home',
-        code,
-        timestamp: Date.now(),
-      });
-      toastService.info(t('joinLink.signInHome'));
-      toAuth();
-      return;
-    }
-    toJoinHomeByCode(code);
-  };
-
-  const handleJoinList = (code: string) => {
-    if (!isAuthenticated) {
-      setPendingDeepLinkAction({
-        type: 'join_list',
-        code,
-        timestamp: Date.now(),
-      });
-      toastService.info(t('joinLink.signInList'));
-      toAuth();
-      return;
-    }
-    toJoinByShareCode(code);
-  };
-
-  const routeDeepLink = (action: DeepLinkAction) => {
-    switch (action.type) {
-      case 'email_verification':
-        handleEmailVerification(action.token);
-        break;
-      case 'password_reset':
-        handlePasswordReset(action.token);
-        break;
-      case 'accept_invitation':
-        handleAcceptInvitation(action.token);
-        break;
-      case 'join_home':
-        handleJoinHome(action.code);
-        break;
-      case 'join_list':
-        handleJoinList(action.code);
-        break;
-      default:
-        logger.warn('Unknown deep link action type', { action });
-    }
-  };
-
-  // Process pending deep link actions when conditions are met
   useEffect(() => {
     if (!isHydrated || !pendingDeepLinkAction) {
       return;
     }
+    const action = pendingDeepLinkAction;
 
-    // Check if the action is too old (5 minutes)
-    const fiveMinutes = 5 * 60 * 1000;
-    if (Date.now() - pendingDeepLinkAction.timestamp > fiveMinutes) {
-      logger.warn('Discarding stale deep link action', {
-        action: pendingDeepLinkAction,
-      });
-      const staleCopy: Record<DeepLinkAction['type'], string> = {
-        email_verification:
-          'Your verification link expired. Request a new one to continue.',
-        password_reset:
-          'Your password reset link expired. Request a new one to continue.',
-        accept_invitation:
-          'Your invitation expired. Ask the household to send a new one.',
-        join_home: t('joinLink.staleHome'),
-        join_list: t('joinLink.staleList'),
-      };
-      toastService.warning(staleCopy[pendingDeepLinkAction.type]);
+    if (Date.now() - action.timestamp > STALE_AFTER_MS) {
+      logger.warn('Discarding stale deep link action', { action });
+      toastService.warning(t(STALE_MESSAGE_KEY[action.type]));
       clearPendingDeepLinkAction();
       return;
     }
 
-    // Verification, invitations, and share-code joins all require the user to
-    // be signed in first; wait until authenticated before routing them.
-    const action = pendingDeepLinkAction;
-    if (
-      (action.type === 'email_verification' ||
-        action.type === 'accept_invitation' ||
-        action.type === 'join_home' ||
-        action.type === 'join_list') &&
-      !isAuthenticated
-    ) {
-      return; // Wait for authentication
+    if (!isAuthenticated) {
+      return;
     }
 
-    // Process the pending action
     logger.info('Processing pending deep link action', { action });
-
-    // Share-code joins carry no JWT — navigate straight to the join screen,
-    // now reachable because the user is authenticated.
     if (action.type === 'join_home') {
       toJoinHomeByCode(action.code);
-      clearPendingDeepLinkAction();
-      return;
-    }
-    if (action.type === 'join_list') {
+    } else {
       toJoinByShareCode(action.code);
-      clearPendingDeepLinkAction();
-      return;
     }
-
-    // Token-based actions: validate the JWT inline, then route. The join
-    // branches returned above; this positive check narrows `action` to the
-    // token-carrying shape for the destructure below.
-    if (
-      action.type !== 'email_verification' &&
-      action.type !== 'password_reset' &&
-      action.type !== 'accept_invitation'
-    ) {
-      return;
-    }
-    const { type, token } = action;
-    const routeAction = (actionToken: string, actionType: string) => {
-      const validation = validateDeepLinkToken(
-        actionToken,
-        actionType === 'email_verification'
-          ? 'email_verification'
-          : actionType === 'password_reset'
-          ? 'password_reset'
-          : 'invitation',
-      );
-      if (!validation.valid) {
-        logger.error(`Invalid ${actionType} token:`, validation.error);
-        toastService.error(t('toasts.linkInvalid'));
-        return;
-      }
-
-      if (actionType === 'email_verification') {
-        if (!isAuthenticated) {
-          setPendingDeepLinkAction({
-            type: 'email_verification',
-            token: actionToken,
-            timestamp: Date.now(),
-          });
-          toAuth();
-        } else {
-          toEmailVerification(actionToken);
-        }
-      } else if (actionType === 'password_reset') {
-        toResetPassword(actionToken);
-      } else if (actionType === 'accept_invitation') {
-        if (!isAuthenticated) {
-          setPendingDeepLinkAction({
-            type: 'accept_invitation',
-            token: actionToken,
-            timestamp: Date.now(),
-          });
-          toAuth();
-        } else {
-          toAcceptInvitation(actionToken);
-        }
-      } else {
-        logger.warn('Unknown deep link action type', { type: actionType });
-      }
-    };
-
-    routeAction(token, type);
     clearPendingDeepLinkAction();
   }, [
     isHydrated,
     pendingDeepLinkAction,
     isAuthenticated,
     clearPendingDeepLinkAction,
-    setPendingDeepLinkAction,
-    toAuth,
-    toEmailVerification,
-    toResetPassword,
-    toAcceptInvitation,
     toJoinHomeByCode,
     toJoinByShareCode,
   ]);
-
-  // Public API for triggering deep link actions
-  const triggerDeepLinkAction = (action: DeepLinkAction) => {
-    if (!isHydrated) {
-      // Queue the action if app isn't ready
-      setPendingDeepLinkAction(action);
-      return;
-    }
-
-    // Process immediately if app is ready
-    routeDeepLink(action);
-  };
-
-  return {
-    triggerDeepLinkAction,
-    handleEmailVerification,
-    handlePasswordReset,
-    handleAcceptInvitation,
-    pendingDeepLinkAction,
-  };
 };

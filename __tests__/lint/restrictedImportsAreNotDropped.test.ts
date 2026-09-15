@@ -1,9 +1,9 @@
 /**
- * An `overrides` block REPLACES a rule's config rather than merging it, so an
- * override that retypes a shorter `no-restricted-imports` list silently un-bans
- * everything it left out. Three bans were off in the bottom-sheet trio that way.
- * Overrides go through `restrictedImports({ allow })` so a drop is deliberate
- * and named; this asserts none reappears by omission.
+ * A config object that sets a rule REPLACES that rule's options rather than
+ * merging them, so an override that retypes a shorter `no-restricted-imports`
+ * list silently un-bans everything it left out. Overrides go through
+ * `restrictedImports({ allow })` so a drop is deliberate and named; this
+ * asserts none appears by omission.
  */
 type PathEntry = { name: string; importNames?: string[] };
 type PatternEntry = { group: string[]; importNames?: string[] };
@@ -13,10 +13,11 @@ type Override = {
   rules?: Record<string, RuleConfig | 'off' | undefined>;
 };
 
-const config = require('../../.eslintrc.js') as {
-  rules: Record<string, RuleConfig>;
+const project = require('../../eslint/project.js') as {
+  base: { rules: Record<string, RuleConfig> };
   overrides: Override[];
 };
+const config = { rules: project.base.rules, overrides: project.overrides };
 
 const RULE = 'no-restricted-imports';
 

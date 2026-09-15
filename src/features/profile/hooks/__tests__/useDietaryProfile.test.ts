@@ -2,16 +2,24 @@
 
 import { act, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
 import {
   GetDietaryProfileDocument,
   UpdateDietaryProfileDocument,
   AddDietaryRestrictionDocument,
-  UpdateDietaryRestrictionDocument,
   RemoveDietaryRestrictionDocument,
 } from '#operations/user/user.generated';
-import { Diet, RestrictionSeverity } from '#/graphql/generated/schemaTypes';
+import {
+  Diet,
+  ErrorCode,
+  Intolerance,
+  RestrictionSeverity,
+} from '#/graphql/generated/schemaTypes';
 import type { RootState } from '#store/index';
+import { alertService } from '#/services/alertService';
 import { useDietaryProfile } from '../useDietaryProfile';
 
 jest.mock('#store/useAppStore', () => {
@@ -38,18 +46,12 @@ jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
       ...updates,
     }),
   ),
-  buildOptimisticMutationResponse: jest.fn(
-    (opName: string, typeName: string, fields: Record<string, unknown>) => ({
-      __typename: 'Mutation',
-      [opName]: { __typename: typeName, ...fields },
-    }),
-  ),
 }));
 
 jest.mock('#/utils/finallyHelpers');
 
-jest.mock('#/utils/errorHandlers', () => ({
-  handleMutationError: jest.fn(),
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
 }));
 
 const mockProfileData = {
@@ -151,33 +153,6 @@ function buildAddRestrictionMock(): MockedResponse {
   };
 }
 
-function buildUpdateRestrictionMock(): MockedResponse {
-  return {
-    request: {
-      query: UpdateDietaryRestrictionDocument,
-      variables: () => true,
-    },
-    result: {
-      data: {
-        updateRestriction: {
-          __typename: 'UpdateRestrictionPayload',
-          dietaryRestriction: {
-            __typename: 'DietaryRestriction',
-            id: 'r1',
-            diet: Diet.Vegan,
-            intolerance: null,
-            healthGoal: null,
-            severity: RestrictionSeverity.Preference,
-            notes: 'test',
-            appliesToHomeId: null,
-            createdAt: '2025-01-01T00:00:00.000Z',
-          },
-        },
-      },
-    },
-  };
-}
-
 function buildRemoveRestrictionMock(): MockedResponse {
   return {
     request: {
@@ -240,6 +215,111 @@ describe('useDietaryProfile', () => {
     expect(result.current.profile).toBeNull();
   });
 
+  it('offers the server defaults to edit when the user has no profile row', async () => {
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [buildGetProfileMock(null)],
+    });
+
+    await waitFor(() => {
+      expect(result.current.editableProfile).not.toBeNull();
+    });
+
+    expect(result.current.profile).toBeNull();
+    expect(result.current.editableProfile).toMatchObject({
+      restrictions: [],
+      mealsPerDay: 3,
+      snacksPerDay: 1,
+      maxPrepTimeMinutes: 45,
+      maxCookTimeMinutes: 60,
+    });
+  });
+
+  it('has nothing to edit before the profile has been read', () => {
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [buildGetProfileMock(null)],
+    });
+
+    expect(result.current.editableProfile).toBeNull();
+  });
+
+  it('creates the profile once before parallel first restrictions, and links it to the user', async () => {
+    const createMock = recordMock(UpdateDietaryProfileDocument, {
+      data: {
+        updateDietaryProfile: {
+          __typename: 'UpdateDietaryProfilePayload',
+          dietaryProfile: {
+            __typename: 'DietaryProfile',
+            id: 'dp-new',
+            userId: 'user-1',
+            restrictions: [],
+            user: {
+              __typename: 'User',
+              id: 'user-1',
+              dietaryProfile: { __typename: 'DietaryProfile', id: 'dp-new' },
+            },
+          },
+        },
+      },
+    });
+    const secondAdd = buildAddRestrictionMock();
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [
+        buildGetProfileMock(null),
+        createMock.mock,
+        buildAddRestrictionMock(),
+        {
+          ...secondAdd,
+          result: {
+            data: {
+              addRestriction: {
+                __typename: 'AddRestrictionPayload',
+                dietaryRestriction: {
+                  __typename: 'DietaryRestriction',
+                  id: 'r-second',
+                  diet: null,
+                  intolerance: Intolerance.Gluten,
+                  healthGoal: null,
+                  severity: RestrictionSeverity.Allergy,
+                  notes: null,
+                  appliesToHomeId: null,
+                  createdAt: '2025-01-01T00:00:00.000Z',
+                },
+              },
+            },
+          },
+        },
+      ],
+    });
+
+    await waitFor(() => {
+      expect(result.current.editableProfile).not.toBeNull();
+    });
+
+    let outcomes: boolean[] = [];
+    await act(async () => {
+      outcomes = await Promise.all([
+        result.current.addDietaryRestriction(
+          { diet: Diet.Vegan },
+          RestrictionSeverity.Allergy,
+        ),
+        result.current.addDietaryRestriction(
+          { intolerance: Intolerance.Gluten },
+          RestrictionSeverity.Allergy,
+        ),
+      ]);
+    });
+
+    expect(outcomes).toEqual([true, true]);
+    expect(createMock.fired).toHaveLength(1);
+    await waitFor(() => {
+      expect(result.current.profile?.id).toBe('dp-new');
+    });
+    expect(result.current.profile?.restrictions.map(r => r.id).sort()).toEqual([
+      'r-new',
+      'r-second',
+    ]);
+  });
+
   it('maps restriction fields correctly', async () => {
     const { result } = renderHookWithApollo(() => useDietaryProfile(), {
       operationMocks: [buildGetProfileMock()],
@@ -277,6 +357,45 @@ describe('useDietaryProfile', () => {
     expect(success).toBe(true);
   });
 
+  // A refusal member is `data`, so `!!result.data` read it as success: the
+  // sheet closed on a change the server refused, and nothing was said.
+  it('updateDietaryProfile reports a refusal as a failure, once', async () => {
+    const refused: MockedResponse = {
+      request: { query: UpdateDietaryProfileDocument, variables: () => true },
+      result: {
+        data: {
+          updateDietaryProfile: {
+            __typename: 'ValidationError',
+            code: ErrorCode.ValidationFailed,
+            message: 'SERVER PROSE',
+            field: null,
+          },
+        },
+      },
+    };
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [buildGetProfileMock(), refused],
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    let success = true;
+    await act(async () => {
+      success = await result.current.updateDietaryProfile({ mealsPerDay: 5 });
+    });
+
+    expect(success).toBe(false);
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    expect(alertService.alert).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'SERVER PROSE',
+    );
+    // The permanent local write is reverted.
+    await waitFor(() => expect(result.current.profile?.mealsPerDay).toBe(3));
+  });
+
   it('addDietaryRestriction calls mutation with correct params', async () => {
     const { result } = renderHookWithApollo(() => useDietaryProfile(), {
       operationMocks: [buildGetProfileMock(), buildAddRestrictionMock()],
@@ -293,25 +412,6 @@ describe('useDietaryProfile', () => {
         RestrictionSeverity.Allergy,
         'No animal products',
       );
-    });
-
-    expect(success).toBe(true);
-  });
-
-  it('updateDietaryRestriction calls mutation', async () => {
-    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
-      operationMocks: [buildGetProfileMock(), buildUpdateRestrictionMock()],
-    });
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
-
-    let success: boolean = false;
-    await act(async () => {
-      success = await result.current.updateDietaryRestriction('r1', {
-        severity: RestrictionSeverity.Preference,
-      });
     });
 
     expect(success).toBe(true);

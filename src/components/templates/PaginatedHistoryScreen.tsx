@@ -18,6 +18,7 @@ import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { EmptyState } from '#components/molecules/EmptyState';
 
 export interface PaginatedHistoryScreenProps<T> {
@@ -29,9 +30,9 @@ export interface PaginatedHistoryScreenProps<T> {
   onRetry: () => void;
   /** No-ops unless another page exists — see `hasNextPage` at the call site. */
   onEndReached: () => void;
+  /** Another page exists; offline, the end of the list says why it stops. */
+  hasNextPage: boolean;
   isFetchingMore: boolean;
-  /** The next page could not be fetched because the API is unreachable. */
-  loadMoreOffline?: boolean;
   keyExtractor: (item: T) => string;
   renderItem: (info: ListRenderItemInfo<T>) => React.ReactElement;
   /** One string per row shape, for FlashList's recycling pools. */
@@ -62,8 +63,8 @@ export function PaginatedHistoryScreen<T>({
   state,
   onRetry,
   onEndReached,
+  hasNextPage,
   isFetchingMore,
-  loadMoreOffline = false,
   keyExtractor,
   renderItem,
   getItemType,
@@ -75,6 +76,7 @@ export function PaginatedHistoryScreen<T>({
   renderScrollComponent,
 }: PaginatedHistoryScreenProps<T>) {
   const { t } = useTranslation();
+  const networkWithheld = useIsApiUnavailable();
   const { goBack } = useAppNavigation();
 
   const flashListRef = useRef<FlashListRef<T>>(null);
@@ -115,7 +117,7 @@ export function PaginatedHistoryScreen<T>({
           onLoad={perfCallbacks.onLoad}
           onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
           onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
-          data={items as T[]}
+          data={items}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           getItemType={getItemType}
@@ -131,7 +133,7 @@ export function PaginatedHistoryScreen<T>({
           ListFooterComponent={
             isFetchingMore ? (
               <ThemedActivityIndicator style={styles.footerLoader} />
-            ) : loadMoreOffline ? (
+            ) : hasNextPage && networkWithheld ? (
               // Without this the end of a persisted page is a silent no-op: the
               // reader pulls, nothing arrives, and nothing says why.
               <Text

@@ -40,16 +40,18 @@ function scrubValue(value: unknown, depth: number): unknown {
     if (depth >= MAX_DEPTH) {
       return '[Object]';
     }
-    const out: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(value)) {
-      out[key] = SENSITIVE_KEY.test(key)
-        ? REDACTED
-        : scrubValue(val, depth + 1);
-    }
-    return out;
+    return scrubObject(value, depth);
   }
   // number | boolean | null | undefined — nothing to redact.
   return value;
+}
+
+function scrubObject(value: object, depth: number): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(value)) {
+    out[key] = SENSITIVE_KEY.test(key) ? REDACTED : scrubValue(val, depth + 1);
+  }
+  return out;
 }
 
 export function scrubLogExtra(
@@ -58,5 +60,5 @@ export function scrubLogExtra(
   if (!extra) {
     return {};
   }
-  return scrubValue(extra, 0) as Record<string, unknown>;
+  return scrubObject(extra, 0);
 }

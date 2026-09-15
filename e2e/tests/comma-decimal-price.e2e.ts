@@ -8,19 +8,22 @@ import { element, by, waitFor } from 'detox';
 import { ShoppingListScreen } from '../screens/ShoppingListScreen';
 import { bootstrapAuthenticatedSession } from '../helpers/auth';
 import { TIMEOUTS } from '../helpers/waitFor';
+import { shoppingListTestIDs } from '../../src/features/shoppingList/testIDs';
+
+const editForm = shoppingListTestIDs.editItemForm;
 
 // `fetch` fails inside Detox's jest environment, so this spec does UI only.
 // `scripts/verify-comma-decimal.sh` supplies these and reads the stored
 // `priceEstimate.estimated` back from the server before and after — the bug was
 // in what got persisted, not in what the form held.
-const ITEM_ID = process.env.E2E_ITEM_ID;
+const ITEM_ID = process.env.E2E_ITEM_ID ?? '';
 const ITEM_NAME = process.env.E2E_ITEM_NAME;
 /** Rotated by the script so a run can never re-type the value already stored. */
 const PRICE = process.env.E2E_PRICE ?? '4,99';
 
 // The EDIT screen, not the add sheet: the sheet's name field is a modal-variant
 // autocomplete, so `replaceText` never registers a selection and submit creates
-// nothing. The edit screen has plain inputs and owns `edit-item-price-input`.
+// nothing. The edit screen has plain inputs and owns `editItemForm.priceInput`.
 describe('comma-typed decimal price', () => {
   const shoppingList = new ShoppingListScreen();
 
@@ -40,7 +43,7 @@ describe('comma-typed decimal price', () => {
     // list, so the row is usually below the fold — and Detox `toBeVisible`
     // only matches what is actually on screen.
     if (ITEM_NAME) {
-      const search = element(by.id('shopping-list-search-input'));
+      const search = element(by.id(shoppingListTestIDs.searchInput));
       await waitFor(search).toBeVisible().withTimeout(TIMEOUTS.NETWORK);
       await search.replaceText(ITEM_NAME);
       await new Promise(resolve => setTimeout(resolve, 1200));
@@ -52,42 +55,42 @@ describe('comma-typed decimal price', () => {
     // by.id, not by.text: once the list is filtered by this name the SEARCH
     // FIELD carries the same text, so `by.text(name)` matches it instead of the
     // row, and tapping that opens iOS's selection callout.
-    const row = element(by.id(`shopping-list-item-${ITEM_ID}`));
+    const row = element(by.id(shoppingListTestIDs.itemRow(ITEM_ID)));
     await waitFor(row).toBeVisible().withTimeout(TIMEOUTS.NETWORK);
     await row.tap();
 
-    const editAction = element(by.id('shopping-item-edit-button'));
+    const editAction = element(by.id(shoppingListTestIDs.itemDetailEditButton));
     await waitFor(editAction).toBeVisible().withTimeout(TIMEOUTS.NETWORK);
     await editAction.tap();
 
     // Wait on the field itself rather than the modal wrapper, and allow more
     // than TIMEOUTS.NETWORK (5s): the editor is a lazily-loaded screen, so the
     // first navigation to it has to fetch and evaluate the chunk.
-    await waitFor(element(by.id('edit-item-price-input')))
+    await waitFor(element(by.id(editForm.priceInput)))
       .toBeVisible()
       .withTimeout(20000);
 
     // The comma, exactly as a Spanish/Italian keypad emits it.
-    await element(by.id('edit-item-price-input')).replaceText(PRICE);
+    await element(by.id(editForm.priceInput)).replaceText(PRICE);
 
     // Dismiss the keyboard via the return key, NOT by tapping the modal at
     // (10, 10) — that corner is the header's back button, which closes the
     // editor and makes the submit below miss entirely.
-    await element(by.id('edit-item-price-input')).tapReturnKey();
+    await element(by.id(editForm.priceInput)).tapReturnKey();
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    await waitFor(element(by.id('edit-item-submit-button')))
+    await waitFor(element(by.id(editForm.submitButton)))
       .toBeVisible()
       .withTimeout(TIMEOUTS.DEFAULT);
-    await element(by.id('edit-item-submit-button')).tap();
+    await element(by.id(editForm.submitButton)).tap();
 
-    // Assert on the price field, not on `edit-item-modal`: that id lands on
+    // Assert on the price field, not on `editItemForm.screen`: that id lands on
     // FormModal's full-screen container, and Detox counts an obscured element as
     // not visible, so `.not.toBeVisible()` is satisfied with the editor open.
     // KNOWN GAP — the run fails at the submit: the field shows `4,99` (so the
     // comma is accepted) but the editor does not close. Diagnose the submit
     // before trusting a pass.
-    await waitFor(element(by.id('edit-item-price-input')))
+    await waitFor(element(by.id(editForm.priceInput)))
       .not.toBeVisible()
       .withTimeout(TIMEOUTS.NETWORK);
     await new Promise(resolve => setTimeout(resolve, 2000));

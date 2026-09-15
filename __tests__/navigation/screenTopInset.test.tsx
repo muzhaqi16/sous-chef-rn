@@ -40,7 +40,7 @@ const insetPaddings = (json: unknown): number[] => {
     const style = el.props?.style;
     for (const entry of [style].flat(3)) {
       const pt = (entry as { paddingTop?: unknown } | undefined)?.paddingTop;
-      if (pt === STATUS_BAR) found.push(pt as number);
+      if (pt === STATUS_BAR) found.push(pt);
     }
     walk(el.children);
   };
@@ -77,7 +77,10 @@ describe('the top inset is applied exactly once', () => {
       'a standard header',
       { children: null, header: { variant: 'standard', title: 'T' } },
     ],
-    ['a tab header', { children: null, header: { variant: 'tab', title: 'T' } }],
+    [
+      'a tab header',
+      { children: null, header: { variant: 'tab', title: 'T' } },
+    ],
     ['no header', { children: null, header: { variant: 'none' } }],
     ['scroll="scroll"', { children: null, scroll: 'scroll' }],
     ['scroll="form"', { children: null, scroll: 'form' }],
@@ -85,19 +88,22 @@ describe('the top inset is applied exactly once', () => {
     ['scroll="list"', { children: null, scroll: 'list' }],
   ];
 
-  it.each(cases)('adds no second inset for a Screen with %s', (_label, props) => {
-    const tree = render(
-      topInsetScreenLayout({
-        children: (
-          <Screen {...props}>
-            <Text role="body">content</Text>
-          </Screen>
-        ),
-      }),
-    ).toJSON();
+  it.each(cases)(
+    'adds no second inset for a Screen with %s',
+    (_label, props) => {
+      const tree = render(
+        topInsetScreenLayout({
+          children: (
+            <Screen {...props}>
+              <Text role="body">content</Text>
+            </Screen>
+          ),
+        }),
+      ).toJSON();
 
-    expect(insetPaddings(tree)).toHaveLength(1);
-  });
+      expect(insetPaddings(tree)).toHaveLength(1);
+    },
+  );
 
   it('applies it once through a boundary-wrapping layout', () => {
     const Boundary = ({ children }: { children: React.ReactNode }) => (

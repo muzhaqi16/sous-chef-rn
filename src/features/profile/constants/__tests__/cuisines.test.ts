@@ -3,7 +3,6 @@ import { t } from '#/i18n';
 import {
   POPULAR_CUISINES,
   cuisineLabelKey,
-  getCuisineLabel,
   getAllCuisineOptions,
 } from '#features/profile/constants/cuisines';
 
@@ -24,26 +23,6 @@ describe('cuisines constants', () => {
       const italian = POPULAR_CUISINES.find(c => c.value === Cuisine.Italian);
       expect(italian).toBeDefined();
       expect(italian!.labelKey).toBe(cuisineLabelKey(Cuisine.Italian));
-    });
-  });
-
-  describe('getCuisineLabel', () => {
-    it('resolves a cuisine through the locale table', () => {
-      expect(getCuisineLabel(Cuisine.Italian, t)).toBe('Italian');
-      expect(getCuisineLabel(Cuisine.Mexican, t)).toBe('Mexican');
-      expect(getCuisineLabel(Cuisine.Japanese, t)).toBe('Japanese');
-    });
-
-    // Non-popular cuisines resolve through the same table now; the title-cased
-    // enum name is only the fallback for a key the locale file lacks.
-    it('resolves a non-popular cuisine too', () => {
-      expect(getCuisineLabel(Cuisine.French, t)).toBe('French');
-    });
-
-    it('falls back to the title-cased enum name for an unmapped cuisine', () => {
-      expect(getCuisineLabel('NOT_A_CUISINE' as Cuisine, t)).toBe(
-        'Not A Cuisine',
-      );
     });
   });
 

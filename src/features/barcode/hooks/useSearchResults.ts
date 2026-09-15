@@ -13,8 +13,10 @@ import {
   useSearchState,
   useBottomSheetState,
 } from '#features/barcode/store/barcodeScannerStore';
-import { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
-import { handleMutationError } from '#/utils/errorHandlers';
+import type { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { useTranslation } from '#/i18n';
 import { useImageUpload } from '#hooks/useImageUpload';
 import {
   mapFormToCreateItemInput,
@@ -24,6 +26,7 @@ import {
   type AddItemFormData,
 } from '#/utils/items/createItemMapping';
 import { errorService } from '#/services/errorService';
+import { isNetworkError } from '#/utils/isNetworkError';
 
 // Map Vision Camera barcode format to GraphQL UpcFormat enum.
 // Source: react-native-vision-camera-barcode-scanner's BarcodeFormat
@@ -42,6 +45,7 @@ const mapVisionCameraFormatToUpcFormat = (
       return UpcFormat.UpcA;
     case 'upc-e':
       return UpcFormat.UpcE;
+    case undefined:
     default:
       return undefined; // Let API auto-detect
   }
@@ -165,6 +169,7 @@ const uploadPendingImages = sharedUploadPendingImages;
 const cleanupPendingImageStorage = sharedCleanupPendingImageStorage;
 
 export const useSearchResults = (barcode: string, format?: string) => {
+  const { t } = useTranslation();
   const upcFormat = mapVisionCameraFormatToUpcFormat(format);
   const {
     searchResults,
@@ -192,8 +197,9 @@ export const useSearchResults = (barcode: string, format?: string) => {
     CreateItemDocument,
     {
       onCompleted: async (data: CreateItemMutation) => {
-        if (data.createItem?.__typename === 'CreateItemPayload') {
-          const createdItem = data.createItem.item;
+        const payload = appliedPayload(data);
+        if (payload) {
+          const createdItem = payload.item;
 
           // Upload pending images (module-level function avoids try-catch in hook)
           let result;
@@ -218,12 +224,6 @@ export const useSearchResults = (barcode: string, format?: string) => {
           hideBottomSheet();
         }
       },
-      onError: error => {
-        cleanupPendingImageStorage();
-        pendingBrandNameRef.current = undefined;
-
-        handleMutationError(error, { operation: 'Add Item' });
-      },
     },
   );
 
@@ -231,6 +231,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
     data: upcData,
     loading: upcLoading,
     error: upcError,
+    refetch: refetchUpc,
   } = useQuery(ItemByUpcFilterDocument, {
     variables: { upc: barcode, upcFormat },
     fetchPolicy: 'network-only', // Always fetch fresh - prevents stale data from previous scans
@@ -243,6 +244,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
     data: skuData,
     loading: skuLoading,
     error: skuError,
+    refetch: refetchSku,
   } = useQuery(ItemBySkuFilterDocument, {
     variables: { sku: barcode, skuStoreId: undefined },
     // Skip SKU search while UPC is loading OR if UPC found a result
@@ -320,31 +322,21 @@ export const useSearchResults = (barcode: string, format?: string) => {
     showBottomSheet,
   ]);
 
-  // Handle errors from both queries (including network errors and timeouts)
+  // `isNetworkError` covers the request timeout too. The server's own message is
+  // unlocalized English, so the copy is always the app's.
   useEffect(() => {
-    if (upcError || skuError) {
-      const error = upcError || skuError;
-      const hasNetworkError = error && 'networkError' in error;
-      const errorMessage = error?.message || '';
-      const isTimeoutError = errorMessage.toLowerCase().includes('timeout');
+    const error = upcError ?? skuError;
+    if (!error) return;
 
-      setSearching(false);
+    setSearching(false);
+    setSearchError(
+      isNetworkError(error)
+        ? t('errors.networkError')
+        : t('errors.codes.genericRetry'),
+    );
 
-      if (isTimeoutError) {
-        setSearchError('Search timed out. Please try again.');
-      } else if (hasNetworkError) {
-        setSearchError(
-          'Unable to search. Please check your connection and try again.',
-        );
-      } else {
-        // Show error message for any query failure
-        setSearchError(`Search failed: ${errorMessage || 'Unknown error'}`);
-      }
-
-      // Only show bottom sheet if we have an error and no results
-      if (!upcData?.items?.edges?.length && !skuData?.items?.edges?.length) {
-        showBottomSheet(1);
-      }
+    if (!upcData?.items?.edges?.length && !skuData?.items?.edges?.length) {
+      showBottomSheet(1);
     }
   }, [
     upcError,
@@ -354,6 +346,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
     setSearching,
     setSearchError,
     showBottomSheet,
+    t,
   ]);
 
   // Handle loading state from both queries
@@ -373,26 +366,38 @@ export const useSearchResults = (barcode: string, format?: string) => {
 
     stashPendingFormImages(formData);
 
-    try {
-      await addNewItem({
-        variables: { input: mapFormToCreateItemInput(formData) },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Error adding item:',
-      });
-    }
+    // A refusal leaves the stashed images and brand name behind, so both are
+    // dropped with it; `onCompleted` consumes them on success.
+    await settleMutation(
+      () =>
+        addNewItem({
+          variables: { input: mapFormToCreateItemInput(formData) },
+        }),
+      {
+        document: CreateItemDocument,
+        fallback: t('errors.addItemFailed'),
+        onFailed: () => {
+          cleanupPendingImageStorage();
+          pendingBrandNameRef.current = undefined;
+        },
+      },
+    );
   };
 
+  // Re-runs the query that failed; its outcome reaches the error effect above,
+  // so the promise carries nothing to handle.
   const handleRetry = () => {
     setSearchError(null);
-    // Add refetch logic here
+    if (upcError) {
+      refetchUpc().catch(() => {});
+    } else if (skuError) {
+      refetchSku().catch(() => {});
+    }
   };
 
   return {
     searchResults,
     loading: upcLoading || skuLoading,
-    error: upcError || skuError,
     addingItem,
     handleAddItem,
     handleRetry,

@@ -38,9 +38,9 @@ describe('getDeviceTimezone', () => {
   });
 
   it('returns null when the engine cannot resolve one', () => {
-    const spy = jest.spyOn(Intl, 'DateTimeFormat').mockImplementation((() => {
+    const spy = jest.spyOn(Intl, 'DateTimeFormat').mockImplementation(() => {
       throw new Error('no Intl');
-    }) as unknown as typeof Intl.DateTimeFormat);
+    });
 
     expect(getDeviceTimezone()).toBeNull();
     spy.mockRestore();

@@ -1,7 +1,11 @@
 'use no memo';
 
 import { storage } from '#storage/mmkv';
-import { optimisticDataPersistence } from '../OptimisticDataPersistence';
+import {
+  optimisticDataPersistence,
+  type PersistedEntityType,
+  type PersistedField,
+} from '../OptimisticDataPersistence';
 
 const DATA_KEY = 'apollo-optimistic-data-v1';
 
@@ -10,21 +14,33 @@ const DATA_KEY = 'apollo-optimistic-data-v1';
  * This avoids any issues with the in-memory cache being out of sync
  * with storage when we write directly via storage.set().
  */
-function seedData(
-  entries: Array<{
-    entityType: string;
+type SeedEntry = {
+  [T in PersistedEntityType]: {
+    entityType: T;
     entityId: string;
-    field: string;
+    field: PersistedField<T>;
     value: string | number;
-  }>,
-) {
+  };
+}[PersistedEntityType];
+
+// Each entry is checked against its own entity above; the loop cannot carry
+// that correlation, so it saves through the method's plain signature.
+const save: (
+  entityType: PersistedEntityType,
+  entityId: string,
+  field: string,
+  value: unknown,
+) => void = (entityType, entityId, field, value) =>
+  optimisticDataPersistence.save<PersistedEntityType>(
+    entityType,
+    entityId,
+    field as PersistedField<PersistedEntityType>,
+    value,
+  );
+
+function seedData(entries: SeedEntry[]) {
   for (const entry of entries) {
-    optimisticDataPersistence.save(
-      entry.entityType,
-      entry.entityId,
-      entry.field,
-      entry.value,
-    );
+    save(entry.entityType, entry.entityId, entry.field, entry.value);
   }
   // Drain the batched microtask synchronously
   optimisticDataPersistence.flush();
@@ -110,7 +126,7 @@ describe('OptimisticDataPersistence', () => {
         {
           entityType: 'ShoppingListItem',
           entityId: 'old',
-          field: 'field',
+          field: 'quantity',
           value: 'existing',
         },
       ]);
@@ -124,7 +140,7 @@ describe('OptimisticDataPersistence', () => {
       await Promise.resolve();
 
       const stored = JSON.parse(storage.getString(DATA_KEY)!);
-      expect(stored['ShoppingListItem:old:field']).toBeDefined();
+      expect(stored['ShoppingListItem:old:quantity']).toBeDefined();
       expect(stored['ShoppingListItem:new:sortOrder']).toBeDefined();
     });
 
@@ -300,7 +316,7 @@ describe('OptimisticDataPersistence', () => {
       optimisticDataPersistence.clear(
         'ShoppingListItem',
         'nonexistent',
-        'field',
+        'quantity',
       );
     });
   });

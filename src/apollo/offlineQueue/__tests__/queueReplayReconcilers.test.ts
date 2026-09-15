@@ -3,6 +3,9 @@ import {
   addPantryItemLocally,
   removePantryItemLocally,
 } from '#features/pantry/cache/items';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
 jest.mock('#/apollo/clientRegistry', () => ({
   getApolloClient: () => ({ cache: {} }),
@@ -25,6 +28,7 @@ jest.mock('#features/pantry/cache/items', () => ({
  * happened, so the comparison has to run again where the replay lands.
  */
 describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
+  const moveOperation = operationNameOf(MoveShoppingItemToPantryDocument);
   const variables = {
     input: {
       shoppingListItemId: 'sli-1',
@@ -43,7 +47,7 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
 
   it('withdraws the ghost when the server restocked a different row', () => {
     reconcileReplaySuccess(
-      'MoveShoppingItemToPantry',
+      moveOperation,
       variables,
       payloadWith('existing-99'),
     );
@@ -62,11 +66,7 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
   });
 
   it('leaves the row alone when the server used the minted id', () => {
-    reconcileReplaySuccess(
-      'MoveShoppingItemToPantry',
-      variables,
-      payloadWith('minted-1'),
-    );
+    reconcileReplaySuccess(moveOperation, variables, payloadWith('minted-1'));
 
     expect(removePantryItemLocally).not.toHaveBeenCalled();
     expect(addPantryItemLocally).not.toHaveBeenCalled();
@@ -75,7 +75,7 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
   it('does nothing when the payload carries no pantry item', () => {
     // A refusal reaches here only if it was not classified as rejected; either
     // way there is no id to compare, so guessing would evict a live row.
-    reconcileReplaySuccess('MoveShoppingItemToPantry', variables, {
+    reconcileReplaySuccess(moveOperation, variables, {
       moveShoppingItemToPantry: {
         __typename: 'ForbiddenError',
         code: 'FORBIDDEN',
@@ -87,7 +87,7 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
 
   it('does nothing when the move minted no id', () => {
     reconcileReplaySuccess(
-      'MoveShoppingItemToPantry',
+      moveOperation,
       { input: { shoppingListItemId: 'sli-1', pantryId: 'pantry-1' } },
       payloadWith('existing-99'),
     );
@@ -96,7 +96,11 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
   });
 
   it('has no reconciler for an ordinary replayed operation', () => {
-    reconcileReplaySuccess('CreatePantryItem', variables, payloadWith('x'));
+    reconcileReplaySuccess(
+      operationNameOf(CreatePantryItemDocument),
+      variables,
+      payloadWith('x'),
+    );
 
     expect(removePantryItemLocally).not.toHaveBeenCalled();
     expect(addPantryItemLocally).not.toHaveBeenCalled();
@@ -111,7 +115,7 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
 
     expect(() =>
       reconcileReplaySuccess(
-        'MoveShoppingItemToPantry',
+        moveOperation,
         variables,
         payloadWith('existing-99'),
       ),

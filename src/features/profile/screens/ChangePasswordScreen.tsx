@@ -7,7 +7,6 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
 import { localizedErrorMessage } from '#/services/errorService';
-import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import { PasswordInput } from '#components/molecules/PasswordInput';
 import { Button } from '#components/molecules/Button';
 import {
@@ -43,22 +42,15 @@ const asFormField = (
 };
 
 /**
- * Module-level so the throw does not bail the screen out of the React Compiler.
  * A failure that names one of our fields is reported ON it: a toast covers the
  * form, and a dismissed toast cannot say which input it meant.
  */
-async function reportChangePassword(
+function reportChangePassword(
   outcome: ChangePasswordOutcome,
   goBack: () => void,
   successMessage: string,
-  failedFallback: string,
   setFieldError: (field: keyof ChangePasswordForm, message: string) => void,
-): Promise<void> {
-  if (outcome.status === 'rateLimited') {
-    toastService.error(outcome.localizedMessage);
-    return;
-  }
-
+): void {
   if (outcome.status === 'completed') {
     toastService.success(successMessage);
     setTimeout(() => {
@@ -67,20 +59,12 @@ async function reportChangePassword(
     return;
   }
 
-  // Never `payload.message`: the server's prose is unlocalizable English by
-  // construction. A ValidationError names the field it refused.
-  const payload = outcome.payload;
-  const message = localizedRefusalMessage(payload, failedFallback);
-  const field =
-    payload?.__typename === 'ValidationError'
-      ? asFormField(payload.field)
-      : undefined;
-
+  const field = asFormField(outcome.field);
   if (field) {
-    setFieldError(field, message);
+    setFieldError(field, outcome.body);
     return;
   }
-  throw new Error(message);
+  toastService.error(outcome.body);
 }
 
 export const ChangePasswordScreen: React.FC = () => {
@@ -104,7 +88,7 @@ export const ChangePasswordScreen: React.FC = () => {
   const watchedValues = useWatch({ control: form.control });
 
   const onSubmit = (data: ChangePasswordForm) => {
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () =>
         reportChangePassword(
           await changePassword({
@@ -113,7 +97,6 @@ export const ChangePasswordScreen: React.FC = () => {
           }),
           goBack,
           t('changePassword.success'),
-          t('changePassword.failed'),
           (field, message) => form.setError(field, { message }),
         ),
       setIsSubmitting,
@@ -181,7 +164,9 @@ export const ChangePasswordScreen: React.FC = () => {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>{t('auth.newPassword')}</Text>
+            <Text role="bodyStrong" style={styles.label}>
+              {t('auth.newPassword')}
+            </Text>
             <PasswordInput
               value={watchedValues.newPassword}
               onChangeText={text => setField('newPassword', text)}
@@ -192,7 +177,7 @@ export const ChangePasswordScreen: React.FC = () => {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>
+            <Text role="bodyStrong" style={styles.label}>
               {t('changePassword.confirmPassword')}
             </Text>
             <PasswordInput
@@ -247,7 +232,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   label: {
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   buttonSpacing: {

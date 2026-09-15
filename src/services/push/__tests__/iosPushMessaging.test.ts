@@ -91,9 +91,7 @@ describe('registerIosPushTapHandlers', () => {
   });
 
   describe('InitialNotificationTap native cache', () => {
-    const { NativeModules } = jest.requireActual('react-native') as {
-      NativeModules: Record<string, unknown>;
-    };
+    const { NativeModules } = jest.requireActual('react-native');
 
     afterEach(() => {
       delete NativeModules.InitialNotificationTap;

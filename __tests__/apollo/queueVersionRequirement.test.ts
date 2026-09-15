@@ -34,7 +34,7 @@ function requiresVersion(
     if (!field) continue;
     for (const arg of field.args) {
       let type = arg.type;
-      while ('ofType' in type && type.ofType) type = type.ofType as typeof type;
+      while ('ofType' in type && type.ofType) type = type.ofType;
       if (!isInputObjectType(type)) continue;
       const version = type.getFields().version;
       if (version && isNonNullType(version.type)) return true;

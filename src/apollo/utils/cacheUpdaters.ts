@@ -145,8 +145,12 @@ function parseStoreFieldArgs(storeFieldName: string): ParsedStoreFieldArgs {
   } catch {
     return { unparseable: true };
   }
-  if (!parsed || typeof parsed !== 'object') return null;
-  return { args: parsed as Record<string, unknown> };
+  if (!isRecord(parsed)) return null;
+  return { args: parsed };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 /**

@@ -98,8 +98,7 @@ function declaresIdempotencyKey(type: GraphQLInputObjectType): boolean {
 
   return fields.some(field => {
     let inner = field.type;
-    while ('ofType' in inner && inner.ofType)
-      inner = inner.ofType as typeof inner;
+    while ('ofType' in inner && inner.ofType) inner = inner.ofType;
     if (!isInputObjectType(inner)) return false;
     return Object.keys(inner.getFields()).some(name =>
       IDEMPOTENCY_KEYS.includes(name),
@@ -123,7 +122,7 @@ function hasIdempotentInput(
     if (!field) continue;
     for (const arg of field.args) {
       let type = arg.type;
-      while ('ofType' in type && type.ofType) type = type.ofType as typeof type;
+      while ('ofType' in type && type.ofType) type = type.ofType;
       if (!isInputObjectType(type)) continue;
       if (declaresIdempotencyKey(type)) return true;
     }

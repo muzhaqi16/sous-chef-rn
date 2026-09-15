@@ -1,3 +1,4 @@
+import { errorService } from '#/services/errorService';
 import { useQuery, useFragment } from '@apollo/client/react';
 import {
   GetItemForEditDocument,
@@ -41,6 +42,10 @@ export function useItemForEdit(itemId: string): UseItemForEditResult {
     snapshot: result.complete ? itemToEditableSnapshot(result.data) : null,
     loading,
     error,
-    refetch,
+    refetch: () => {
+      void refetch().catch(error =>
+        errorService.reportError(error, { operation: 'ItemForEdit.refetch' }),
+      );
+    },
   };
 }

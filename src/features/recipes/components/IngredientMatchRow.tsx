@@ -1,5 +1,5 @@
-import React from 'react';
-import { useTranslation } from '#/i18n';
+import React, { useState } from 'react';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
@@ -11,7 +11,10 @@ import {
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { Text } from '#components/atoms/Text';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import { formatNumberForInput } from '#/utils/formatters/number';
+import {
+  formatQuantityForDisplay,
+  formatQuantityForInput,
+} from '#/utils/formatQuantity';
 
 interface IngredientMatchRowProps {
   editableMatch: EditableMatch;
@@ -25,15 +28,13 @@ interface IngredientMatchRowProps {
 type BadgeColor = 'success' | 'warning' | 'error';
 
 /** Key paths — module-level table, resolved by the row that renders it. */
-const MISSING_BADGE: { labelKey: string; color: BadgeColor } = {
-  labelKey: 'labels.missing',
-  color: 'error',
-};
-
-const BADGE_CONFIG: Record<string, { labelKey: string; color: BadgeColor }> = {
+const BADGE_CONFIG: Record<
+  ReturnType<typeof getAvailabilityStatus>,
+  { labelKey: TranslationKey; color: BadgeColor }
+> = {
   available: { labelKey: 'labels.available', color: 'success' },
   partial: { labelKey: 'labels.partial', color: 'warning' },
-  missing: MISSING_BADGE,
+  missing: { labelKey: 'labels.missing', color: 'error' },
 };
 
 /**
@@ -63,8 +64,21 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
   const { t } = useTranslation();
   const { match, ingredient, adjustedQuantity, isIncluded } = editableMatch;
   const status = getAvailabilityStatus(match);
-  const badge = BADGE_CONFIG[status] ?? MISSING_BADGE;
+  const badge = BADGE_CONFIG[status];
   const isOptional = ingredient.isOptional;
+
+  // The field keeps its own text so a half-typed decimal ("1.") survives; it is
+  // reseeded only when the quantity changes from outside the field.
+  const [quantityText, setQuantityText] = useState(() =>
+    formatQuantityForInput(adjustedQuantity, { notation: 'decimal' }),
+  );
+  const [syncedQuantity, setSyncedQuantity] = useState(adjustedQuantity);
+  if (adjustedQuantity !== syncedQuantity) {
+    setSyncedQuantity(adjustedQuantity);
+    setQuantityText(
+      formatQuantityForInput(adjustedQuantity, { notation: 'decimal' }),
+    );
+  }
 
   return (
     <View style={[styles.row, !isIncluded && styles.rowExcluded]}>
@@ -86,8 +100,10 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
           <Text role="caption" tone="secondary" numberOfLines={1}>
             {t('ingredientMatch.matchedPantryItem', {
               name: match.matchedPantryItem.itemName,
-              amount: `${match.matchedPantryItem.quantity}${
-                match.matchedPantryItem.unit?.symbol
+              amount: `${formatQuantityForDisplay(
+                match.matchedPantryItem.quantity,
+              )}${
+                match.matchedPantryItem.unit.symbol
                   ? ` ${match.matchedPantryItem.unit.symbol}`
                   : ''
               }`,
@@ -102,10 +118,12 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
             </Text>
             <ThemedTextInput
               style={styles.quantityInput}
-              value={formatNumberForInput(adjustedQuantity)}
+              value={quantityText}
               onChangeText={text => {
+                setQuantityText(text);
                 const num = parseDecimalInput(text);
                 if (!isNaN(num) && num >= 0) {
+                  setSyncedQuantity(num);
                   onUpdate(index, { adjustedQuantity: num });
                 }
               }}
@@ -158,7 +176,7 @@ const styles = StyleSheet.create(theme => ({
   },
   badge: {
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: theme.spacing['2xs'],
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
     variants: {

@@ -17,6 +17,7 @@ export type TextTone =
   | 'inverse'
   | 'onSurfaceVariant'
   | 'error'
+  | 'danger'
   | 'accent'
   | 'success'
   | 'warning';
@@ -114,6 +115,7 @@ const styles = StyleSheet.create(theme => ({
         inverse: { color: theme.colors.textInverse },
         onSurfaceVariant: { color: theme.colors.textOnSurfaceVariant },
         error: { color: theme.colors.error },
+        danger: { color: theme.colors.danger },
         accent: { color: theme.colors.primary },
         success: { color: theme.colors.success },
         warning: { color: theme.colors.warning },

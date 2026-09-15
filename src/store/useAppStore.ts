@@ -1,6 +1,8 @@
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { useShallow } from 'zustand/react/shallow';
-import { storeApi, RootState } from './index';
+import type { RootState } from './index';
+import { storeApi } from './index';
+import { UserRole } from '#/graphql/generated/schemaTypes';
 
 /** Core store hook. Prefer the named hooks below; use this for one-offs. */
 export function useAppStore<T>(
@@ -18,7 +20,8 @@ const selectHasStoredCredentials = (state: RootState) =>
 const selectIsLoggingOut = (state: RootState) => state.isLoggingOut;
 const selectHydrated = (state: RootState) => state.isHydrated;
 const selectIsAdminUser = (state: RootState) =>
-  state.user?.role === 'ADMIN' || state.user?.role === 'SUPER_ADMIN';
+  state.user?.role === UserRole.Admin ||
+  state.user?.role === UserRole.SuperAdmin;
 const selectCanAccessDevTools = (state: RootState) =>
   state.user?.canAccessDevTools === true;
 
@@ -42,7 +45,14 @@ const selectSetHomeAndPantry = (state: RootState) => state.setHomeAndPantry;
 
 const selectIsOnline = (state: RootState) => state.isOnline;
 
-const selectNavigationState = (state: RootState) => state.navigationState;
+// No user means the auth navigator, in the SAME render the user disappears: the
+// stored value only catches up in RootNavigator's effect, and that one commit
+// re-renders the signed-in tree signed-out (every control disabled, so opacity
+// flips un-flatten views) while the root stack is already animating it out.
+const selectNavigationState = (state: RootState) =>
+  state.user == null && state.navigationState !== 'loading'
+    ? 'auth'
+    : state.navigationState;
 
 // Plain boolean rather than the nav-state object, so consumers re-render only
 // when the "skip for now" flag itself flips.

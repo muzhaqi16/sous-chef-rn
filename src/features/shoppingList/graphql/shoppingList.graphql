@@ -938,7 +938,7 @@ mutation UpdateShoppingListItemQuantity(
     ... on UpdateShoppingListItemQuantityPayload {
       shoppingListItem {
         id
-        ...useShoppingListActions_updateQuantityResult
+        ...useQuantityEditModal_updateQuantityResult
       }
     }
     ... on Error {

@@ -11,7 +11,7 @@ import {
   ToggleReviewHelpfulDocument,
 } from '#features/recipes/graphql/recipeReview.generated';
 import { useRecipeReviews } from '../useRecipeReviews';
-import { RecipeStatus } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, RecipeStatus } from '#/graphql/generated/schemaTypes';
 import type { MaterializedRecipe } from '../useRecipeData';
 import type { toastService } from '#/services/toastService';
 
@@ -406,6 +406,38 @@ describe('useRecipeReviews', () => {
     });
 
     expect(mockToastSuccess).toHaveBeenCalledWith('Review submitted');
+  });
+
+  it('createReview reports a refusal in the app’s own words', async () => {
+    // Server-authored English: it reaches an es/it/sq reader verbatim if shown.
+    const serverMessage = 'You cannot review your own recipe';
+    const { mock } = recordMock(CreateRecipeReviewDocument, {
+      data: {
+        createRecipeReview: {
+          __typename: 'ForbiddenError' as const,
+          code: ErrorCode.Forbidden,
+          message: serverMessage,
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeReviews({
+          recipeId: 'recipe-1',
+          backendRecipe: makeBackendRecipe(),
+        }),
+      { operationMocks: [buildGetRecipeReviewsMock(), mock] },
+    );
+
+    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+
+    await act(async () => {
+      await result.current.actions.createReview(5, 'Mine');
+    });
+
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    expect(mockToastError).toHaveBeenCalledTimes(1);
+    expect(mockToastError).not.toHaveBeenCalledWith(serverMessage);
   });
 
   it('createReview mints a client id so a lost-response retry converges', async () => {

@@ -93,7 +93,7 @@ export const RecipeInstructions: React.FC<RecipeInstructionsProps> = ({
       {!hasBackendInstructions &&
         !hasAnalyzedInstructions &&
         !!hasHtmlInstructions &&
-        parseHtmlSteps(instructionsHtml!).map((step, index) => (
+        parseHtmlSteps(instructionsHtml).map((step, index) => (
           <Step key={index} num={index + 1} text={step} />
         ))}
     </View>

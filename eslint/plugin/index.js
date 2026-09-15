@@ -1,0 +1,44 @@
+/**
+ * The project's own lint rules, registered as `sous-chef/*`. Each rule has a
+ * page in docs/rules/ and a RuleTester spec in __tests__/lint/rules/;
+ * `__tests__/lint/ruleCatalog.test.ts` holds that.
+ */
+module.exports = {
+  meta: { name: 'eslint-plugin-sous-chef' },
+  rules: {
+    'no-parse-float': require('./rules/no-parse-float'),
+    'no-inline-import-type': require('./rules/no-inline-import-type'),
+    'no-imperative-sheet': require('./rules/no-imperative-sheet'),
+    'no-font-scale-override': require('./rules/no-font-scale-override'),
+    'no-hand-rolled-search': require('./rules/no-hand-rolled-search'),
+    'no-border-width-literal': require('./rules/no-border-width-literal'),
+    'no-untranslated-toast': require('./rules/no-untranslated-toast'),
+    'schedule-on-rn-callback': require('./rules/schedule-on-rn-callback'),
+    'no-rn-touchable-in-swipeable': require('./rules/no-rn-touchable-in-swipeable'),
+    'no-legacy-shadow-props': require('./rules/no-legacy-shadow-props'),
+    'no-shared-value-assignment': require('./rules/no-shared-value-assignment'),
+    'no-as-const': require('./rules/no-as-const'),
+    'no-unused-use-unistyles': require('./rules/no-unused-use-unistyles'),
+    'no-combined-unistyles': require('./rules/no-combined-unistyles'),
+    'no-modal-props-override': require('./rules/no-modal-props-override'),
+    'no-apollo-react-mock': require('./rules/no-apollo-react-mock'),
+    'no-optimistic-response-cast': require('./rules/no-optimistic-response-cast'),
+    'no-unsafe-cast': require('./rules/no-unsafe-cast'),
+    'pressable-needs-label': require('./rules/pressable-needs-label'),
+    'no-bare-in-memory-cache': require('./rules/no-bare-in-memory-cache'),
+    'no-module-level-t': require('./rules/no-module-level-t'),
+    'no-dated-comment': require('./rules/no-dated-comment'),
+    'no-operation-name-literal': require('./rules/no-operation-name-literal'),
+    'no-unchecked-domain-literal': require('./rules/no-unchecked-domain-literal'),
+    'no-error-message-branching': require('./rules/no-error-message-branching'),
+    'no-rendered-server-message': require('./rules/no-rendered-server-message'),
+    'testid-from-registry': require('./rules/testid-from-registry'),
+    'no-raw-color': require('./rules/no-raw-color'),
+    'no-raw-spacing': require('./rules/no-raw-spacing'),
+    'text-needs-role': require('./rules/text-needs-role'),
+    'quantity-through-formatter': require('./rules/quantity-through-formatter'),
+    'no-rendered-enum': require('./rules/no-rendered-enum'),
+    'no-t-default-value': require('./rules/no-t-default-value'),
+    'no-prose-literal': require('./rules/no-prose-literal'),
+  },
+};

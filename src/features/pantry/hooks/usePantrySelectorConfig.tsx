@@ -1,4 +1,5 @@
-import React, { RefObject } from 'react';
+import type { RefObject } from 'react';
+import React from 'react';
 import { useTranslation } from '#/i18n';
 
 import { StyleSheet } from 'react-native-unistyles';

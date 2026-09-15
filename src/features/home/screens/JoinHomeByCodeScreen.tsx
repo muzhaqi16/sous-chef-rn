@@ -17,7 +17,6 @@ import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { Screen } from '#components/templates/Screen';
 
 /**
@@ -68,15 +67,15 @@ export const JoinHomeByCodeScreen: React.FC<
     }
     if (!requireVerifiedEmail()) return;
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
-        const result = unwrapPayload(
-          await joinHome(code),
-          'JoinHomeByCodePayload',
-          t('joinHome.joinFailed'),
-        );
+        const outcome = await joinHome(code);
+        if (!outcome.joined) {
+          toastService.error(outcome.body);
+          return;
+        }
 
-        useStore.getState().setSelectedHomeId(result.membership.homeId);
+        useStore.getState().setSelectedHomeId(outcome.homeId);
         goBack();
         toPantryMain();
         toastService.success(
@@ -112,7 +111,12 @@ export const JoinHomeByCodeScreen: React.FC<
           <Text role="heading" align="center" style={styles.title}>
             {t('joinHome.enterCodeTitle')}
           </Text>
-          <Text tone="secondary" align="center" style={styles.description}>
+          <Text
+            role="body"
+            tone="secondary"
+            align="center"
+            style={styles.description}
+          >
             {t('joinHome.enterCodeDescription')}
           </Text>
           <BaseInput
@@ -157,7 +161,7 @@ export const JoinHomeByCodeScreen: React.FC<
         <View style={styles.iconContainer}>
           <Icon name="home" size={48} tone="primary" />
         </View>
-        <Text tone="secondary" align="center" style={styles.title}>
+        <Text role="body" tone="secondary" align="center" style={styles.title}>
           {t('joinHome.invitedToJoin')}
         </Text>
         <View style={styles.previewCard}>
@@ -232,7 +236,6 @@ const styles = StyleSheet.create(theme => ({
   },
   description: {
     marginBottom: theme.spacing.xl,
-    lineHeight: theme.typography.fontSize.md * 1.5,
   },
   inputContainer: {
     width: '100%',

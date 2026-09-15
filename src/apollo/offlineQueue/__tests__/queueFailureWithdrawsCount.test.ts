@@ -14,6 +14,12 @@
 import { gql, type InMemoryCache } from '@apollo/client';
 import { handleQueueFailure } from '../queueFailureHandler';
 import type { FailedMutationInfo } from '../types';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import {
+  CreatePantryItemDocument,
+  UpdatePantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
 jest.mock('#/apollo/client', () => {
   const { makeCache } = jest.requireActual('#/apollo/cache');
@@ -29,9 +35,9 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: { clearEntity: jest.fn() },
 }));
 
-const cache = (
-  jest.requireMock('#/apollo/client') as { client: { cache: InMemoryCache } }
-).client.cache;
+const { cache } = jest.requireMock<{ client: { cache: InMemoryCache } }>(
+  '#/apollo/client',
+).client;
 
 const PANTRY = gql`
   query SeedPantry($id: ID!) {
@@ -99,7 +105,7 @@ const failure = (
   overrides: Partial<FailedMutationInfo> = {},
 ): FailedMutationInfo => ({
   mutationId: 'q1',
-  operationName: 'CreatePantryItem',
+  operationName: operationNameOf(CreatePantryItemDocument),
   entityType: 'PantryItem',
   entityId: 'pi-local',
   variables: { input: { id: 'pi-local', pantryId: 'p-1' } },
@@ -114,9 +120,9 @@ const failure = (
 });
 
 describe('handleQueueFailure withdraws the eager pantry count', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
-    cache.reset();
+    await cache.reset();
     seed();
   });
 
@@ -129,7 +135,7 @@ describe('handleQueueFailure withdraws the eager pantry count', () => {
   it('uncounts a move the server permanently refused', () => {
     handleQueueFailure(
       failure({
-        operationName: 'MoveShoppingItemToPantry',
+        operationName: operationNameOf(MoveShoppingItemToPantryDocument),
         variables: {
           input: {
             pantryId: 'p-1',
@@ -145,7 +151,9 @@ describe('handleQueueFailure withdraws the eager pantry count', () => {
   });
 
   it('leaves the count alone for an operation that never counted', () => {
-    handleQueueFailure(failure({ operationName: 'UpdatePantryItem' }));
+    handleQueueFailure(
+      failure({ operationName: operationNameOf(UpdatePantryItemDocument) }),
+    );
 
     expect(totalItems()).toBe(2);
   });

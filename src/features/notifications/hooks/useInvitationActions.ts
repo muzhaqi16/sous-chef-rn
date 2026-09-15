@@ -17,6 +17,10 @@ import {
   createRemoveFromParentConnectionUpdater,
   safeEvict,
 } from '#/apollo/utils/cacheUpdaters';
+import {
+  appliedPayload,
+  extractMutationPayload,
+} from '#/utils/errors/mutationPayload';
 
 const addToHomes = createAddToQueryConnectionUpdater('homes', 'Home');
 const removePendingHomeInvite = createRemoveFromParentConnectionUpdater(
@@ -30,6 +34,11 @@ const removePendingCollaborationInvite =
     'pendingCollaborationInvitesConnection',
     'ShoppingListCollaborator',
   );
+
+const refused = (data: unknown): InvitationWriteResult => ({
+  accepted: false,
+  refusal: classifyInvitationRefusal(extractMutationPayload(data)?.__typename),
+});
 
 /** What a write returned. `error` is passed to the caller's copy resolver. */
 export interface InvitationWriteResult {
@@ -57,8 +66,8 @@ export function useInvitationActions(
       // A refusal is a completed mutation, so this runs for one too. Every
       // effect stays inside the payload check: the invite is still PENDING on
       // a refusal, and evicting it here leaves nothing to accept later.
-      const payload = data?.acceptHomeInvite;
-      if (payload?.__typename !== 'AcceptHomeInvitePayload') return;
+      const payload = appliedPayload(data);
+      if (!payload) return;
       addToHomes(cache, payload.membership.home, { position: 'end' });
       if (inviteId && userId) {
         removePendingHomeInvite(cache, userId, inviteId, { evictItem: true });
@@ -70,12 +79,7 @@ export function useInvitationActions(
     InvitationAcceptanceModalAcceptShoppingListInviteDocument,
     {
       update: (cache, { data }) => {
-        if (
-          data?.acceptShoppingListInvite?.__typename !==
-          'AcceptShoppingListInvitePayload'
-        ) {
-          return;
-        }
+        if (!appliedPayload(data)) return;
         // Not evicted: accepting transitions the pending collaborator record to
         // active, and Apollo has already normalized the response — only the
         // reference has to leave the pending list.
@@ -88,8 +92,8 @@ export function useInvitationActions(
 
   const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument, {
     update: (cache, { data }) => {
-      const payload = data?.declineHomeInvite;
-      if (payload?.__typename !== 'DeclineHomeInvitePayload') return;
+      const payload = appliedPayload(data);
+      if (!payload) return;
       const id = payload.homeInvite.id;
       if (id && userId) {
         removePendingHomeInvite(cache, userId, id, { evictItem: true });
@@ -103,12 +107,7 @@ export function useInvitationActions(
     InvitationAcceptanceModalDeclineShoppingListInviteDocument,
     {
       update: (cache, { data }) => {
-        if (
-          data?.declineShoppingListInvite?.__typename !==
-          'DeclineShoppingListInvitePayload'
-        ) {
-          return;
-        }
+        if (!appliedPayload(data)) return;
         if (inviteId && userId) {
           removePendingCollaborationInvite(cache, userId, inviteId, {
             evictItem: true,
@@ -133,13 +132,10 @@ export function useInvitationActions(
       variables: { input: { token: inviteToken } },
     });
     if (result.error) return { error: result.error };
-    const payload = result.data?.acceptHomeInvite;
-    return payload?.__typename === 'AcceptHomeInvitePayload'
-      ? { accepted: true, acceptedHomeId: payload.membership.homeId }
-      : {
-          accepted: false,
-          refusal: classifyInvitationRefusal(payload?.__typename),
-        };
+    const accepted = appliedPayload(result.data);
+    return accepted
+      ? { accepted: true, acceptedHomeId: accepted.membership.homeId }
+      : refused(result.data);
   };
 
   const acceptList = async (
@@ -149,13 +145,9 @@ export function useInvitationActions(
       variables: { input: { token: inviteToken } },
     });
     if (result.error) return { error: result.error };
-    const payload = result.data?.acceptShoppingListInvite;
-    return payload?.__typename === 'AcceptShoppingListInvitePayload'
+    return appliedPayload(result.data)
       ? { accepted: true }
-      : {
-          accepted: false,
-          refusal: classifyInvitationRefusal(payload?.__typename),
-        };
+      : refused(result.data);
   };
 
   const declineHome = async (
@@ -165,13 +157,9 @@ export function useInvitationActions(
       variables: { input: { token: inviteToken } },
     });
     if (result.error) return { error: result.error };
-    const payload = result.data?.declineHomeInvite;
-    return payload?.__typename === 'DeclineHomeInvitePayload'
+    return appliedPayload(result.data)
       ? { accepted: true }
-      : {
-          accepted: false,
-          refusal: classifyInvitationRefusal(payload?.__typename),
-        };
+      : refused(result.data);
   };
 
   const declineList = async (
@@ -181,13 +169,9 @@ export function useInvitationActions(
       variables: { input: { token: inviteToken } },
     });
     if (result.error) return { error: result.error };
-    const payload = result.data?.declineShoppingListInvite;
-    return payload?.__typename === 'DeclineShoppingListInvitePayload'
+    return appliedPayload(result.data)
       ? { accepted: true }
-      : {
-          accepted: false,
-          refusal: classifyInvitationRefusal(payload?.__typename),
-        };
+      : refused(result.data);
   };
 
   return { token, acceptHome, acceptList, declineHome, declineList };

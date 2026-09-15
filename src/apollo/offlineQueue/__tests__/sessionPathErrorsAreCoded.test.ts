@@ -16,12 +16,15 @@ const SESSION_PATH_FILES = [
 ];
 
 describe('errors on the session path carry a code', () => {
-  it.each(SESSION_PATH_FILES)('%s throws no bare Error', file => {
+  // Any construction, not only `throw`: a bare `Error` handed to an operation
+  // waiting on a shared refresh (`observer.error(new Error(…))`) destroys its
+  // queued write exactly as a thrown one does.
+  it.each(SESSION_PATH_FILES)('%s constructs no bare Error', file => {
     const src = readFileSync(join(process.cwd(), file), 'utf8');
     const bare = src
       .split('\n')
       .map((line, i) => ({ line: line.trim(), n: i + 1 }))
-      .filter(({ line }) => /throw new Error\(/.test(line));
+      .filter(({ line }) => /\bnew Error\(/.test(line));
 
     // `Apollo client not registered` is a wiring assertion that cannot be
     // reached with a queued mutation in flight — the client is what starts one.

@@ -7,6 +7,7 @@ import { toastService } from '#/services/toastService';
 import { TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
+import { kitTestIDs } from '#components/testIDs';
 
 interface OfflineStatusPillProps {
   size?: number;
@@ -32,7 +33,7 @@ export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
 
   return (
     <Pressable
-      testID="offline-banner"
+      testID={kitTestIDs.offlineBanner}
       onPress={handlePress}
       style={[styles.pressable, style]}
       hitSlop={8}

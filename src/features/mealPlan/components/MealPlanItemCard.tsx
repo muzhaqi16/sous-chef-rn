@@ -11,7 +11,7 @@ import { Text } from '#components/atoms/Text';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import { ListItem } from '#components/molecules/ListItem';
 import { commonStyles } from '#/styles/commonStyles';
-import { type SwipeableRef } from '#components/organisms/SwipeableItem/types';
+import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 import {
   MealPlanItemCard_ItemFragmentDoc,
   type MealPlanItemCard_ItemFragment,

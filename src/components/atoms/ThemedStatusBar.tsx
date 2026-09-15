@@ -11,9 +11,9 @@ export const ThemedStatusBar = () => {
   const isHydrated = useIsHydrated();
   const userThemePreference = useTheme();
 
-  // Derive theme from user preference + system color scheme directly.
-  // Avoids depending on rt.themeName which lags by one render cycle
-  // (useTheme's useEffect in App.tsx hasn't synced Unistyles yet).
+  // Resolved from the stored preference and the system scheme — the inputs
+  // `applyThemePreferenceToRuntime` resolves — rather than read back from
+  // `rt.themeName`.
   const resolvedTheme: 'light' | 'dark' =
     userThemePreference === ThemePreference.DARK
       ? 'dark'

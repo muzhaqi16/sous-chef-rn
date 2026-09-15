@@ -68,7 +68,7 @@ export function SuggestionDrilldown<T extends BaseSuggestionItem>({
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <View style={styles.emptyInset}>
-            <Text tone="secondary" align="center">
+            <Text role="body" tone="secondary" align="center">
               {emptyLabel}
             </Text>
           </View>

@@ -6,7 +6,14 @@ import {
   MembershipRole,
   TemplateCategory,
 } from '#/graphql/generated/schemaTypes';
+import { alertService } from '#/services/alertService';
+import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
+import { useMealTemplate } from '#features/mealPlan/hooks/useMealTemplate';
 import { TemplatePreviewSheet } from '../TemplatePreviewSheet';
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
   useSharedBottomSheetConfigs: () => ({ damping: 80, stiffness: 500 }),
@@ -76,11 +83,16 @@ jest.mock('#components/molecules/EditableCounter', () => {
   };
 });
 
+const mockLoadedEmptyTemplate = () => ({
+  groupedByDay: [],
+  loading: false,
+  error: undefined,
+  hasResult: true,
+  refetch: jest.fn(),
+});
+
 jest.mock('#features/mealPlan/hooks/useMealTemplate', () => ({
-  useMealTemplate: jest.fn(() => ({
-    groupedByDay: [],
-    loading: false,
-  })),
+  useMealTemplate: jest.fn(() => mockLoadedEmptyTemplate()),
 }));
 
 jest.mock('#utils/iconUtils', () => ({
@@ -132,6 +144,9 @@ describe('TemplatePreviewSheet', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest
+      .mocked(useMealTemplate)
+      .mockImplementation(() => mockLoadedEmptyTemplate());
   });
 
   it('renders the template name', () => {
@@ -198,9 +213,14 @@ describe('TemplatePreviewSheet', () => {
 
   it('renders loading indicator when template data is loading', () => {
     const {
-      useMealTemplate,
+      useMealTemplate: mockedTemplateRead,
     } = require('#features/mealPlan/hooks/useMealTemplate');
-    useMealTemplate.mockReturnValueOnce({ groupedByDay: [], loading: true });
+    mockedTemplateRead.mockReturnValueOnce({
+      groupedByDay: [],
+      loading: true,
+      hasResult: false,
+      refetch: jest.fn(),
+    });
     render(<TemplatePreviewSheet {...defaultProps} />);
     // ActivityIndicator should be rendered (no "No meals" text)
     expect(screen.queryByText('No meals in this template')).toBeNull();
@@ -208,9 +228,9 @@ describe('TemplatePreviewSheet', () => {
 
   it('renders day-by-day preview when groupedByDay has items', () => {
     const {
-      useMealTemplate,
+      useMealTemplate: mockedTemplateRead,
     } = require('#features/mealPlan/hooks/useMealTemplate');
-    useMealTemplate.mockReturnValueOnce({
+    mockedTemplateRead.mockReturnValueOnce({
       groupedByDay: [
         {
           dayOffset: 0,
@@ -231,6 +251,8 @@ describe('TemplatePreviewSheet', () => {
         },
       ],
       loading: false,
+      hasResult: true,
+      refetch: jest.fn(),
     });
     render(<TemplatePreviewSheet {...defaultProps} />);
     expect(screen.getByText('Day 1')).toBeTruthy();
@@ -238,6 +260,22 @@ describe('TemplatePreviewSheet', () => {
     expect(screen.getByText('Salad')).toBeTruthy();
     expect(screen.getByText('Breakfast')).toBeTruthy();
     expect(screen.getByText('Lunch')).toBeTruthy();
+  });
+
+  it('offers a retry, not "no meals", when the template fetch failed', async () => {
+    const user = userEvent.setup();
+    const refetch = jest.fn();
+    jest.mocked(useMealTemplate).mockReturnValue({
+      groupedByDay: [],
+      loading: false,
+      error: new Error('500'),
+      hasResult: false,
+      refetch,
+    });
+    render(<TemplatePreviewSheet {...defaultProps} />);
+    expect(screen.queryByText('No meals in this template')).toBeNull();
+    await user.press(screen.getByRole('button', { name: 'Try again' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   it('renders meta text without home name when home is null', () => {
@@ -258,5 +296,89 @@ describe('TemplatePreviewSheet', () => {
         startDate: expect.any(String),
       }),
     );
+  });
+
+  describe('management actions', () => {
+    it('offers none when no handler is passed', () => {
+      render(<TemplatePreviewSheet {...defaultProps} />);
+      expect(
+        screen.queryByTestId(mealPlanTestIDs.templatePreviewEditButton),
+      ).toBeNull();
+      expect(
+        screen.queryByTestId(mealPlanTestIDs.templatePreviewDuplicateButton),
+      ).toBeNull();
+      expect(
+        screen.queryByTestId(mealPlanTestIDs.templatePreviewDeleteButton),
+      ).toBeNull();
+    });
+
+    it('opens the builder for this template', async () => {
+      const user = userEvent.setup();
+      const onEdit = jest.fn();
+      render(<TemplatePreviewSheet {...defaultProps} onEdit={onEdit} />);
+      await user.press(
+        screen.getByTestId(mealPlanTestIDs.templatePreviewEditButton),
+      );
+      expect(onEdit).toHaveBeenCalledWith('tmpl-1');
+    });
+
+    it('deletes only once the confirmation is accepted', async () => {
+      const user = userEvent.setup();
+      const onDelete = jest.fn();
+      render(<TemplatePreviewSheet {...defaultProps} onDelete={onDelete} />);
+      await user.press(
+        screen.getByTestId(mealPlanTestIDs.templatePreviewDeleteButton),
+      );
+
+      expect(onDelete).not.toHaveBeenCalled();
+      const alert = jest.mocked(alertService.alert);
+      expect(alert).toHaveBeenCalledTimes(1);
+      const [title, message, buttons] = alert.mock.calls[0] ?? [];
+      expect(title).toBe('Delete Template');
+      expect(message).toContain('Weekly Healthy');
+
+      buttons?.find(b => b.style === 'cancel')?.onPress?.();
+      expect(onDelete).not.toHaveBeenCalled();
+
+      buttons?.find(b => b.style === 'destructive')?.onPress?.();
+      expect(onDelete).toHaveBeenCalledWith('tmpl-1');
+    });
+
+    it('duplicates under a default copy name the user can change', async () => {
+      const user = userEvent.setup();
+      const onDuplicate = jest.fn();
+      render(
+        <TemplatePreviewSheet {...defaultProps} onDuplicate={onDuplicate} />,
+      );
+      await user.press(
+        screen.getByTestId(mealPlanTestIDs.templatePreviewDuplicateButton),
+      );
+
+      const nameInput = screen.getByTestId('form-input-new-template-name');
+      expect(nameInput.props.value).toBe('Weekly Healthy (Copy)');
+
+      await user.clear(nameInput);
+      await user.type(nameInput, '  Spring Week ');
+      await user.press(
+        screen.getByTestId(mealPlanTestIDs.templateDuplicateConfirmButton),
+      );
+      expect(onDuplicate).toHaveBeenCalledWith('tmpl-1', 'Spring Week');
+    });
+
+    it('refuses a blank copy name', async () => {
+      const user = userEvent.setup();
+      const onDuplicate = jest.fn();
+      render(
+        <TemplatePreviewSheet {...defaultProps} onDuplicate={onDuplicate} />,
+      );
+      await user.press(
+        screen.getByTestId(mealPlanTestIDs.templatePreviewDuplicateButton),
+      );
+      await user.clear(screen.getByTestId('form-input-new-template-name'));
+      await user.press(
+        screen.getByTestId(mealPlanTestIDs.templateDuplicateConfirmButton),
+      );
+      expect(onDuplicate).not.toHaveBeenCalled();
+    });
   });
 });

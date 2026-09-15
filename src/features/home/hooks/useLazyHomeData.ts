@@ -14,30 +14,19 @@ export function useLazyHomeData() {
   const selectedHomeId = useSelectedHomeId();
   const selectedPantryId = useSelectedPantryId();
 
-  const [getHomes, { data: homesData, loading }] = useLazyQuery(
-    GetHomesDocument,
-    {
-      fetchPolicy: 'cache-first',
-      errorPolicy: 'ignore',
-    },
-  );
+  const [getHomes, { data: homesData }] = useLazyQuery(GetHomesDocument, {
+    fetchPolicy: 'cache-first',
+    errorPolicy: 'ignore',
+  });
 
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined
   // (preserve the connection BEFORE extracting — see usePreservedConnection).
   const homes = usePreservedNodes(homesData?.homes);
 
-  // Get pantries for the current home (connection edges → flat array).
-  let pantries: Array<{ id: string; name: string; isDefault: boolean }> = [];
-  if (selectedHomeId && homes.length) {
-    const currentHome = homes.find(h => h.id === selectedHomeId) as
-      | { pantriesConnection?: unknown }
-      | undefined;
-    pantries = extractNodes(currentHome?.pantriesConnection as never) as Array<{
-      id: string;
-      name: string;
-      isDefault: boolean;
-    }>;
-  }
+  // Pantries for the current home (connection edges → flat array).
+  const pantries = selectedHomeId
+    ? extractNodes(homes.find(h => h.id === selectedHomeId)?.pantriesConnection)
+    : [];
 
   const fetchHomeData = async () => {
     if (!homesData) {
@@ -48,9 +37,7 @@ export function useLazyHomeData() {
   return {
     homes,
     pantries,
-    selectedHomeId,
     selectedPantryId,
-    loading,
     isLoaded: !!homesData,
     fetchHomeData,
   };

@@ -3,9 +3,9 @@
  * new code should prefer those directly.
  */
 
-import {
-  type PantryItemFilters,
-  type PantryItemOrderBy,
+import type {
+  PantryItemFilters,
+  PantryItemOrderBy,
 } from '#/graphql/generated/schemaTypes';
 import { usePantryQuery, type PantryQueryOptions } from './usePantryQuery';
 import { usePantryStats } from './usePantryStats';
@@ -57,11 +57,11 @@ export function usePantryManagement(
     storageLocationCounts: stats?.storageLocationCounts ?? [],
   });
 
-  // Mutations hook - update/remove operations (adds go through the dedicated
-  // add surfaces, which own the duplicate-recovery flow)
-  const { updateItem, removeItem } = usePantryItemMutations({
+  const { removeItem } = usePantryItemMutations({
     pantryId,
-    refetch,
+    refetch: () => {
+      void refetch();
+    },
   });
 
   return {
@@ -81,7 +81,6 @@ export function usePantryManagement(
     },
     actions: {
       loadMore,
-      updateItem,
       removeItem,
       refetch,
     },

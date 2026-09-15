@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFragment } from '@apollo/client/react';
-import { type FragmentType } from '@apollo/client/masking';
+import type { FragmentType } from '@apollo/client/masking';
 import { MyRecipeCard_RecipeFragmentDoc } from './MyRecipeCard.generated';
 import { RecipeCardView, type RecipeCardAction } from './RecipeCardView';
 import { recipeTotalMinutes } from '#features/recipes/utils/recipeTime';

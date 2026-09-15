@@ -1,9 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import {
-  createPerformanceSlice,
-  PerformanceState,
-} from './slices/performanceSlice';
+import type { PerformanceState } from './slices/performanceSlice';
+import { createPerformanceSlice } from './slices/performanceSlice';
 
 /**
  * Kept out of the root store so metric writes cannot re-render the app. Immer

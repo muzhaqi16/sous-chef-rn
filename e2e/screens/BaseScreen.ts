@@ -1,4 +1,5 @@
 import { element, by, waitFor, device, expect } from 'detox';
+import { kitTestIDs } from '../../src/components/testIDs';
 
 export abstract class BaseScreen {
   protected abstract screenID: string;
@@ -21,25 +22,14 @@ export abstract class BaseScreen {
     return element(by.id(testID));
   }
 
+  /** Data the spec itself entered (an item name); app copy has a testID. */
   protected getElementByText(text: string) {
     return element(by.text(text));
-  }
-
-  /** `by.label` is the iOS accessibilityLabel, the Android contentDescription. */
-  protected getElementByLabel(label: string) {
-    return element(by.label(label));
   }
 
   async tapByID(testID: string) {
     await this.waitForElement(testID);
     await this.getElementById(testID).tap();
-  }
-
-  async tapByText(text: string) {
-    await waitFor(this.getElementByText(text))
-      .toBeVisible()
-      .withTimeout(5000);
-    await this.getElementByText(text).tap();
   }
 
   async typeIntoField(testID: string, text: string) {
@@ -88,16 +78,13 @@ export abstract class BaseScreen {
 
   /** Existence only — an element can exist while off-screen or covered. */
   async expectExists(testID: string) {
-    await waitFor(this.getElementById(testID))
-      .toExist()
-      .withTimeout(5000);
+    await waitFor(this.getElementById(testID)).toExist().withTimeout(5000);
     await expect(this.getElementById(testID)).toExist();
   }
 
+  /** For data the spec entered; see {@link getElementByText}. */
   async expectTextVisible(text: string) {
-    await waitFor(this.getElementByText(text))
-      .toBeVisible()
-      .withTimeout(5000);
+    await waitFor(this.getElementByText(text)).toBeVisible().withTimeout(5000);
     await expect(this.getElementByText(text)).toBeVisible();
   }
 
@@ -161,7 +148,7 @@ export abstract class BaseScreen {
 
   async goBack() {
     if (device.getPlatform() === 'ios') {
-      await this.tapByID('header-back-button');
+      await this.tapByID(kitTestIDs.headerBackButton);
     } else {
       await device.pressBack();
     }

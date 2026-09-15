@@ -3,6 +3,8 @@
  * Based on actual API response structure
  */
 
+import type { TranslationKey } from '#/i18n';
+
 // =============================================================================
 // NUTRITION TYPES
 // =============================================================================
@@ -76,7 +78,7 @@ export interface MacroSummary {
  */
 export interface NutritionHighlight {
   /** i18n key path — generateHighlights runs in module scope, no hook. */
-  labelKey: string;
+  labelKey: TranslationKey;
   type: 'positive' | 'neutral' | 'caution';
 }
 

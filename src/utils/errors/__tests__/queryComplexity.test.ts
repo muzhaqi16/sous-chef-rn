@@ -1,7 +1,7 @@
 import {
   isQueryComplexityError,
   getQueryComplexityDetails,
-  getQueryComplexityMessage,
+  describeQueryComplexity,
   handleQueryComplexityError,
   QueryComplexityErrorType,
 } from '../queryComplexity';
@@ -66,7 +66,6 @@ describe('getQueryComplexityDetails', () => {
     const details = getQueryComplexityDetails(error);
     expect(details).not.toBeNull();
     expect(details!.errorType).toBe(QueryComplexityErrorType.TOO_COMPLEX);
-    expect(details!.message).toBe('Query too complex');
     expect(details!.maxDepth).toBe(10);
     expect(details!.actualDepth).toBe(15);
   });
@@ -93,7 +92,7 @@ describe('getQueryComplexityDetails', () => {
   });
 });
 
-describe('getQueryComplexityMessage', () => {
+describe('describeQueryComplexity', () => {
   it('returns depth-specific message', () => {
     const error = {
       graphQLErrors: [
@@ -107,7 +106,7 @@ describe('getQueryComplexityMessage', () => {
         },
       ],
     };
-    const message = getQueryComplexityMessage(error);
+    const message = describeQueryComplexity(error);
     expect(message).toContain('depth');
     expect(message).toContain('15');
     expect(message).toContain('10');
@@ -126,7 +125,7 @@ describe('getQueryComplexityMessage', () => {
         },
       ],
     };
-    const message = getQueryComplexityMessage(error);
+    const message = describeQueryComplexity(error);
     expect(message).toContain('fields');
     expect(message).toContain('200');
   });
@@ -144,13 +143,13 @@ describe('getQueryComplexityMessage', () => {
         },
       ],
     };
-    const message = getQueryComplexityMessage(error);
+    const message = describeQueryComplexity(error);
     expect(message).toContain('500');
     expect(message).toContain('100');
   });
 
   it('returns default message for non-complexity error', () => {
-    const message = getQueryComplexityMessage({ message: 'other' });
+    const message = describeQueryComplexity({ message: 'other' });
     expect(message).toContain('too complex');
   });
 });

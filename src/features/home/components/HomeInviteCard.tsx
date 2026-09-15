@@ -1,32 +1,19 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
-import { type FragmentType } from '@apollo/client/masking';
+import type { FragmentType } from '@apollo/client/masking';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { formatInviteStatus } from '#features/home/utils/inviteFormatters';
+import {
+  formatInviteStatus,
+  getInviteStatusKey,
+  type InviteStatusKey,
+} from '#features/home/utils/inviteFormatters';
 import { Text } from '#components/atoms/Text';
 import { InviteStatus } from '#/graphql/generated/schemaTypes';
 import { HomeInviteCard_InviteFragmentDoc } from './HomeInviteCard.generated';
 import { useTranslation } from '#/i18n';
-
-type StatusKey = 'pending' | 'accepted' | 'declined' | 'expired';
-
-function getStatusKey(status: string): StatusKey {
-  switch (status) {
-    case 'PENDING':
-      return 'pending';
-    case 'ACCEPTED':
-      return 'accepted';
-    case 'DECLINED':
-      return 'declined';
-    case 'EXPIRED':
-    case 'REVOKED':
-    default:
-      return 'expired';
-  }
-}
 
 interface HomeInviteCardProps {
   inviteRef: FragmentType<typeof HomeInviteCard_InviteFragmentDoc>;
@@ -42,7 +29,7 @@ interface HomeInviteCardProps {
  * renders once per pending invite.
  */
 const InviteSurface: React.FC<{
-  status: StatusKey;
+  status: InviteStatusKey;
   children: React.ReactNode;
 }> = ({ status, children }) => {
   styles.useVariants({ status });
@@ -50,7 +37,7 @@ const InviteSurface: React.FC<{
 };
 
 const InviteStatusBadge: React.FC<{
-  status: StatusKey;
+  status: InviteStatusKey;
   children: React.ReactNode;
 }> = ({ status, children }) => {
   styles.useVariants({ status });
@@ -80,11 +67,10 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
     from: inviteRef,
   });
 
-  const statusKey = getStatusKey(invite.status ?? 'EXPIRED');
-
   if (!complete) return null;
 
-  const statusText = formatInviteStatus(invite.status);
+  const statusKey = getInviteStatusKey(invite.status);
+  const statusText = formatInviteStatus(invite.status, t);
 
   return (
     <InviteSurface status={statusKey}>
@@ -137,7 +123,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   inviteName: {
-    marginBottom: 2,
+    marginBottom: theme.spacing['2xs'],
   },
   inviteActions: {
     flexDirection: 'row',

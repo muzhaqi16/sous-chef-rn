@@ -11,6 +11,9 @@ import {
 } from '#operations/item/item.generated';
 import { useSearchResults } from '../useSearchResults';
 import { useStore } from '#store';
+import { t } from '#/i18n';
+import { TimeoutError } from '#/utils/errors/timeoutError';
+import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 
 // Partial item-node shapes for mock connection edges. Kept as a loose record
 // because the fixtures deliberately omit required Item fields (type,
@@ -64,7 +67,7 @@ jest.mock('#/utils/finallyHelpers', () => ({
         await fn();
         return true;
       } catch (e) {
-        if (typeof onError === 'function') onError(e);
+        if (typeof onError === 'function') await onError(e);
         return false;
       }
     },
@@ -113,9 +116,13 @@ function skuMock(items: MockItemNode[]): MockedResponse {
   }).mock;
 }
 
-function upcErrorMock(message: string): MockedResponse {
+function upcErrorMock(
+  error: Error,
+  options: { maxUsageCount?: number } = {},
+): MockedResponse {
   return recordMock(ItemByUpcFilterDocument, {
-    error: new Error(message),
+    error,
+    maxUsageCount: options.maxUsageCount,
   }).mock;
 }
 
@@ -286,27 +293,78 @@ describe('useSearchResults', () => {
   });
 
   describe('error mapping', () => {
-    it('maps timeout to user-friendly message', async () => {
+    it('shows the connection copy for a failed fetch', async () => {
       renderHookWithApollo(() => useSearchResults('1234567890'), {
-        operationMocks: [upcErrorMock('Request timeout')],
+        operationMocks: [
+          upcErrorMock(new NetworkRequestError('Network request failed')),
+        ],
       });
 
       await waitFor(() =>
         expect(mockSetSearchError).toHaveBeenCalledWith(
-          'Search timed out. Please try again.',
+          t('errors.networkError'),
         ),
       );
     });
 
-    it('maps generic errors via "Search failed:" prefix', async () => {
+    it('shows the connection copy for a request timeout', async () => {
       renderHookWithApollo(() => useSearchResults('1234567890'), {
-        operationMocks: [upcErrorMock('Server error')],
+        operationMocks: [
+          upcErrorMock(
+            new TimeoutError('Request timeout after 10000ms', 10000),
+          ),
+        ],
       });
 
       await waitFor(() =>
         expect(mockSetSearchError).toHaveBeenCalledWith(
-          expect.stringContaining('Server error'),
+          t('errors.networkError'),
         ),
+      );
+    });
+
+    it("shows the app's retry copy for a server failure, never its message", async () => {
+      renderHookWithApollo(() => useSearchResults('1234567890'), {
+        operationMocks: [upcErrorMock(new Error('Server error'))],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchError).toHaveBeenCalledWith(
+          t('errors.codes.genericRetry'),
+        ),
+      );
+      for (const [copy] of mockSetSearchError.mock.calls) {
+        expect(copy ?? '').not.toContain('Server error');
+      }
+    });
+  });
+
+  describe('retry', () => {
+    it('refetches the failed UPC query and shows its result', async () => {
+      const { result } = renderHookWithApollo(
+        () => useSearchResults('1234567890'),
+        {
+          operationMocks: [
+            upcErrorMock(new Error('Server error'), { maxUsageCount: 1 }),
+            upcMock([SAMPLE_UPC_ITEM]),
+          ],
+        },
+      );
+
+      await waitFor(() =>
+        expect(mockSetSearchError).toHaveBeenCalledWith(
+          t('errors.codes.genericRetry'),
+        ),
+      );
+
+      act(() => {
+        result.current.handleRetry();
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchResults).toHaveBeenCalledWith([
+          expect.objectContaining({ id: 'item-1' }),
+        ]),
       );
     });
   });

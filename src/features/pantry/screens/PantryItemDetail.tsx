@@ -1,3 +1,4 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
 import { DetailSection } from '#components/molecules/DetailSection';
@@ -28,7 +29,12 @@ import {
   getDaysInPantry,
   formatDaysInPantry,
 } from '#features/pantry/hooks/usePantryItemTransformation';
-import { getUnitDisplayText } from '#utils/formatQuantity';
+import {
+  formatQuantityForDisplay,
+  getUnitDisplayText,
+  resolveQuantityNotation,
+} from '#utils/formatQuantity';
+import { BatchStatus, ItemCondition } from '#/graphql/generated/schemaTypes';
 import { PantryDetailInfo } from '#features/pantry/components/PantryDetailInfo';
 import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHistory';
 import { parseNutritions, hasNutritionData } from '#domain/nutrition';
@@ -47,6 +53,7 @@ import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermission
 import { useRecipeSuggestionsForItem } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
 import { commonStyles } from '#/styles/commonStyles';
+import { ExternalSource } from '#/graphql/generated/schemaTypes';
 
 /**
  * Extracted so `styles.useVariants` is called once per instance.
@@ -100,7 +107,7 @@ export const PantryItemDetail: React.FC<
   } = usePantryItemDetailData(itemId);
 
   const handleRefresh = () => {
-    executeRefreshWithFinally(refreshAll, setRefreshing);
+    void executeRefreshWithFinally(refreshAll, setRefreshing);
   };
 
   const permissions = usePantryPermissions();
@@ -135,7 +142,7 @@ export const PantryItemDetail: React.FC<
 
   const handleRecipePress = (recipeId: number) => {
     toRecipeDetail({
-      externalSource: 'SPOONACULAR',
+      externalSource: ExternalSource.Spoonacular,
       externalId: String(recipeId),
     });
   };
@@ -188,7 +195,7 @@ export const PantryItemDetail: React.FC<
 
   if (!item || deletedOnServer) {
     return (
-      <CollapsingHeroDetail onBack={goBack} testID="pantry-item-detail">
+      <CollapsingHeroDetail onBack={goBack} testID={pantryTestIDs.itemDetail}>
         <View style={commonStyles.loadingContainer}>
           <DataStateView state={itemState} onRetry={handleRefresh} />
         </View>
@@ -196,11 +203,15 @@ export const PantryItemDetail: React.FC<
     );
   }
 
+  const quantityText = `${formatQuantityForDisplay(item.quantity, {
+    notation: resolveQuantityNotation(null, item.unit.displayAsFraction),
+  })} ${getUnitDisplayText(item.unit)}`;
+
   const hasExpiredBatches =
-    (item.condition === 'EXPIRED' && item.quantity > 0) ||
+    (item.condition === ItemCondition.Expired && item.quantity > 0) ||
     batches.some(
       batch =>
-        batch.status === 'ACTIVE' &&
+        batch.status === BatchStatus.Active &&
         !!batch.expiresAt &&
         new Date(batch.expiresAt) < new Date(),
     );
@@ -213,7 +224,7 @@ export const PantryItemDetail: React.FC<
             accessibilityLabel: t('labels.discard'),
             onPress: actions.handleDiscardExpired,
             variant: 'error',
-            testID: 'pantry-item-discard-button',
+            testID: pantryTestIDs.itemDiscardButton,
           },
         ]
       : [];
@@ -225,11 +236,13 @@ export const PantryItemDetail: React.FC<
             icon:
               actions.addToListStatus === 'success' ? 'cart' : 'cart-outline',
             accessibilityLabel: t('labels.addToShoppingList'),
-            onPress: actions.handleAddToShoppingList,
+            onPress: () => {
+              void actions.handleAddToShoppingList();
+            },
             variant:
               actions.addToListStatus === 'success' ? 'success' : 'primary',
             loading: actions.addToListStatus === 'loading',
-            testID: 'pantry-item-add-to-list-button',
+            testID: pantryTestIDs.itemAddToListButton,
           } satisfies HeaderAction,
         ]
       : []),
@@ -240,20 +253,20 @@ export const PantryItemDetail: React.FC<
             icon: 'swap-vertical-outline',
             accessibilityLabel: t('adjustQuantity.title'),
             onPress: () => actions.setAdjustModalVisible(true),
-            testID: 'pantry-item-adjust-button',
+            testID: pantryTestIDs.itemAdjustButton,
           },
           {
             icon: 'create-outline',
             accessibilityLabel: t('labels.edit'),
             onPress: handleEdit,
-            testID: 'pantry-item-edit-button',
+            testID: pantryTestIDs.itemEditButton,
           },
           {
             icon: 'trash-outline',
             accessibilityLabel: t('labels.delete'),
             onPress: actions.handleDelete,
             variant: 'error',
-            testID: 'pantry-item-delete-button',
+            testID: pantryTestIDs.itemDeleteButton,
           },
         ] satisfies HeaderAction[])
       : []),
@@ -262,7 +275,7 @@ export const PantryItemDetail: React.FC<
   return (
     <>
       <CollapsingHeroDetail
-        testID="pantry-item-detail"
+        testID={pantryTestIDs.itemDetail}
         onBack={goBack}
         actions={headerActions}
         title={item.itemName}
@@ -287,7 +300,7 @@ export const PantryItemDetail: React.FC<
           numberOfLines={2}
           trailing={
             <Text role="heading" style={styles.quantityBadge}>
-              {item.quantity} {getUnitDisplayText(item.unit)}
+              {quantityText}
             </Text>
           }
         />
@@ -312,12 +325,12 @@ export const PantryItemDetail: React.FC<
               <Text role="caption" style={styles.infoColumnLabel}>
                 {t('pantryItemDetail.inThePantry')}
               </Text>
-              <Text style={styles.infoColumnValue}>
-                {formatDaysInPantry(daysInPantry)}
+              <Text role="label" style={styles.infoColumnValue}>
+                {formatDaysInPantry(daysInPantry, t)}
               </Text>
             </View>
             <View style={styles.infoColumn}>
-              <Text style={styles.infoColumnLabel}>
+              <Text role="caption" style={styles.infoColumnLabel}>
                 {t('pantryItemDetail.expiring')}
               </Text>
               <ExpiryColumnText
@@ -327,11 +340,11 @@ export const PantryItemDetail: React.FC<
               />
             </View>
             <View style={styles.infoColumn}>
-              <Text style={styles.infoColumnLabel}>
+              <Text role="caption" style={styles.infoColumnLabel}>
                 {t('pantryItemDetail.amount')}
               </Text>
-              <Text style={styles.infoColumnValue}>
-                {item.quantity} {getUnitDisplayText(item.unit)}
+              <Text role="label" style={styles.infoColumnValue}>
+                {quantityText}
               </Text>
             </View>
           </View>
@@ -373,13 +386,13 @@ export const PantryItemDetail: React.FC<
           <DetailSection flush>
             <BatchSection
               batches={batches}
-              unitSymbol={item.unit?.symbol ?? undefined}
+              unitSymbol={item.unit.symbol}
               totalCount={batchTotalCount}
               onViewAll={() =>
                 toPantryBatchHistory({
                   pantryItemId: itemId,
                   itemName: item.itemName ?? '',
-                  unitSymbol: item.unit?.symbol ?? undefined,
+                  unitSymbol: item.unit.symbol,
                 })
               }
             />

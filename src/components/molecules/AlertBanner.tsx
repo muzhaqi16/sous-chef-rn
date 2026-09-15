@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { Pressable, ThemedIcon } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { IconLibrary } from '#utils/iconUtils';
+import type { IconLibrary } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
 export type AlertBannerVariant = 'error' | 'warning' | 'info' | 'success';
@@ -143,7 +143,7 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   subtitle: {
-    marginTop: 1,
+    marginTop: theme.spacing['3xs'],
     opacity: 0.8,
     variants: {
       variant: {

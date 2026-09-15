@@ -90,7 +90,7 @@ export function usePaginatedShoppingItems({
     refetch: uRefetch,
   } = useQuery(GetShoppingListItemsFilteredDocument, {
     variables: {
-      id: listId!,
+      id: listId ?? '',
       first: PAGINATION.ITEMS_PAGE_SIZE,
       isPurchased: false,
     },
@@ -105,15 +105,15 @@ export function usePaginatedShoppingItems({
     refetch: pRefetch,
   } = useQuery(GetShoppingListItemsFilteredDocument, {
     variables: {
-      id: listId!,
+      id: listId ?? '',
       first: PAGINATION.ITEMS_PAGE_SIZE,
       isPurchased: true,
     },
     skip: shouldSkip || !purchasedReady,
   });
 
-  useApolloErrorLogger('GetShoppingListItemsFiltered[unpurchased]', uError);
-  useApolloErrorLogger('GetShoppingListItemsFiltered[purchased]', pError);
+  useApolloErrorLogger(GetShoppingListItemsFilteredDocument, uError);
+  useApolloErrorLogger(GetShoppingListItemsFilteredDocument, pError);
 
   // The parent query selects inline scalar meta at `node` beside the masked ref,
   // so search/sort/modal lookups read it without a `cache.readFragment` hop.
@@ -166,7 +166,7 @@ export function usePaginatedShoppingItems({
       unpurchased,
       purchased,
       loading,
-      error: (uError ?? pError) as Error | undefined,
+      error: uError ?? pError,
       isTransitioning: listIdChanged && (uLoading || pLoading),
     },
     actions: {

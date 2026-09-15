@@ -18,6 +18,7 @@ import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle'
 
 import { ShoppingListMainContent } from '#features/shoppingList/components/ShoppingListMainContent';
 import { Screen } from '#components/templates/Screen';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
 /**
  * Inner component that runs all heavy hooks.
@@ -45,7 +46,7 @@ const ShoppingListMainInner: React.FC = () => {
   // --- Lifecycle: optimistic restoration, cache persistence, perf tracking ---
   useTabScreenLifecycle({
     screenName: 'ShoppingListMain',
-    optimisticTypes: ['ShoppingList', 'ShoppingListItem'],
+    optimisticTypes: ['ShoppingListItem'],
     telemetryProperties: () => ({
       list_id: screenData.state.currentListId,
       item_count:
@@ -85,7 +86,7 @@ const ShoppingListMainFallback: React.FC = () => {
   ];
   return (
     <Screen
-      testID="shopping-list-screen"
+      testID={shoppingListTestIDs.screen}
       header={{
         variant: 'tab',
         label: t('shoppingListScreen.label'),

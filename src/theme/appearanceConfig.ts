@@ -2,6 +2,7 @@ import {
   DensityPreference,
   FontScalePreference,
 } from '#store/slices/preferenceTypes';
+import type { TranslationKey } from '#/i18n';
 
 /**
  * The single source for each density / font-scale option's runtime multiplier and
@@ -10,7 +11,7 @@ import {
  */
 export const DENSITY_META: Record<
   DensityPreference,
-  { multiplier: number; labelKey: string }
+  { multiplier: number; labelKey: TranslationKey }
 > = {
   [DensityPreference.COMPACT]: {
     multiplier: 0.85,
@@ -28,7 +29,7 @@ export const DENSITY_META: Record<
 
 export const FONT_SCALE_META: Record<
   FontScalePreference,
-  { multiplier: number; labelKey: string }
+  { multiplier: number; labelKey: TranslationKey }
 > = {
   [FontScalePreference.SM]: {
     multiplier: 0.9,

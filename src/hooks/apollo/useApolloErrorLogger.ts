@@ -1,29 +1,25 @@
 import { useEffect } from 'react';
+import type { DocumentNode } from 'graphql';
+import { InvariantError } from '@apollo/client/utilities/invariant';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { Telemetry } from '#/services/telemetry';
 import { storeApi } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import { logger } from '#/utils/environment';
 
-const CACHE_ERROR_PATTERNS = [
-  'Missing field',
-  'Could not identify object',
-  'Cache data may be lost',
-  'keyFields',
-];
-
-function isCacheError(message: string): boolean {
-  return CACHE_ERROR_PATTERNS.some(p => message.includes(p));
-}
-
+// Apollo raises its own faults as `InvariantError`: a cache write its type
+// policies refuse, a store cleared under an in-flight query. Release builds
+// replace the message with a code URL, so the class is the only stable signal.
 export function useApolloErrorLogger(
-  operationName: string,
+  document: DocumentNode,
   error: { message: string } | undefined,
 ): void {
+  const operationName = operationNameOf(document);
   if (__DEV__ && error) {
-    if (isCacheError(error.message)) {
-      // A typePolicy bug, unrelated to reachability — always surface it.
+    if (error instanceof InvariantError) {
+      // Client-side, unrelated to reachability — always surface it.
       logger.warn(
-        `[${operationName}] Cache error — check typePolicies in cache.ts:`,
+        `[${operationName}] Apollo invariant — a client-side cache or link fault:`,
         error.message,
       );
     } else if (!isApiUnavailable(storeApi.getState())) {
@@ -36,18 +32,18 @@ export function useApolloErrorLogger(
 
   useEffect(() => {
     if (!error) return;
-    const cacheError = isCacheError(error.message);
+    const invariant = error instanceof InvariantError;
     Telemetry.error(
-      `Apollo ${cacheError ? 'cache' : 'query'} error: ${operationName}`,
+      `Apollo ${invariant ? 'invariant' : 'query'} error: ${operationName}`,
       {
         operation_name: operationName,
         error_message: error.message,
-        error_type: cacheError ? 'cache_normalization' : 'graphql',
+        error_type: invariant ? 'apollo_invariant' : 'graphql',
       },
     );
     Telemetry.increment('apollo_client_errors_total', 1, {
       operation: operationName,
-      type: cacheError ? 'cache' : 'graphql',
+      type: invariant ? 'invariant' : 'graphql',
     });
   }, [operationName, error]);
 }

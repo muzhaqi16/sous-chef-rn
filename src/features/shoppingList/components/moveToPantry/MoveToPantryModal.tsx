@@ -5,12 +5,16 @@ import { useTranslation } from '#/i18n';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
-import { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
 import { Header } from '#components/organisms/Header';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { parseFractionalInput } from '#/utils/fractionUtils';
+import {
+  formatQuantityForDisplay,
+  formatQuantityForInput,
+} from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 import { useMoveToPantryItem } from '#features/shoppingList/hooks/useMoveToPantryItem';
@@ -30,6 +34,7 @@ import { Sheet } from '#components/templates/Sheet';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { logValidationErrors } from '#/utils/validation/common';
+import { isOwnKey } from '#utils/isOwnKey';
 import {
   moveToPantryDefaults,
   moveToPantrySchema,
@@ -152,7 +157,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     setPrevSelectedPantryId(selectedPantryId);
     if (visible && shoppingListItem) {
       seedThisPass = {
-        quantityInput: formatNumberForInput(seedQuantity) || '1',
+        quantityInput: formatQuantityForInput(seedQuantity) || '1',
         unitValue: resolvedUnit.symbol,
         unitId: resolvedUnit.id,
         pantryId: selectedPantryId,
@@ -192,7 +197,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     if (!amountsTouched && purchasedQuantity != null) {
       seedThisPass = {
         ...seedThisPass,
-        quantityInput: formatNumberForInput(purchasedQuantity) || '1',
+        quantityInput: formatQuantityForInput(purchasedQuantity) || '1',
         actualPriceInput: formatNumberForInput(
           totalFromUnitPrice(purchasedUnitPrice, purchasedQuantity),
         ),
@@ -205,11 +210,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
 
   useEffect(() => {
     if (!pendingSeed) return;
-    for (const [field, value] of Object.entries(pendingSeed)) {
-      setValue(
-        field as keyof MoveToPantryFormValues,
-        value as MoveToPantryFormValues[keyof MoveToPantryFormValues],
-      );
+    for (const field of Object.keys(pendingSeed)) {
+      if (isOwnKey(pendingSeed, field)) setValue(field, pendingSeed[field]);
     }
   }, [pendingSeed, setValue]);
 
@@ -331,7 +333,9 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
           {
             icon: 'checkmark',
             accessibilityLabel: t('moveToPantry.title'),
-            onPress: handleSubmit(onValid, logValidationErrors),
+            onPress: () => {
+              void handleSubmit(onValid, logValidationErrors)();
+            },
             disabled: confirmDisabled,
           },
         ]}
@@ -344,15 +348,16 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             <Text role="heading" style={styles.itemName}>
               {shoppingListItem.itemName}
             </Text>
-            <Text tone="secondary">
+            <Text role="body" tone="secondary">
               {purchasedQuantity != null
                 ? t('moveToPantry.purchasedAmount', {
-                    amount: formatNumberForInput(purchasedQuantity),
+                    amount: formatQuantityForDisplay(purchasedQuantity),
                     unit: lineUnitLabel,
                   })
                 : t('moveToPantry.requestedAmount', {
-                    amount: formatNumberForInput(
-                      shoppingListItem.quantity || 1,
+                    // A missing or zero requested quantity reads as one.
+                    amount: formatQuantityForDisplay(
+                      (shoppingListItem.quantity ?? 0) || 1,
                     ),
                     unit: lineUnitLabel,
                   })}

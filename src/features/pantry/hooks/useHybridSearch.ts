@@ -9,6 +9,9 @@ import type { DocumentNode } from 'graphql';
 import { useDebouncedValue } from '#hooks/utils/useDebouncedValue';
 import { shouldUseServerSort } from '#features/pantry/utils/hybridSort';
 
+const isOperationVariables = (value: unknown): value is OperationVariables =>
+  typeof value === 'object' && value !== null;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -43,10 +46,10 @@ export interface UseHybridSearchConfig<TQuery, TItem extends { id: string }> {
 export interface UseHybridSearchReturn<TItem> {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
-  debouncedSearch: string;
   searchActive: boolean;
   useServerSort: boolean;
   activeItems: TItem[];
+  /** A server search for the current term has not answered yet. */
   isSearching: boolean;
   /** Optimistically remove an item from server search results by id */
   removeFromResults: (id: string) => void;
@@ -192,7 +195,8 @@ export function useHybridSearch<TQuery, TItem extends { id: string }>(
 
     // Reconstruct variables from the stable JSON key inside the effect,
     // avoiding the unstable object reference as a dependency.
-    const effectVariables = JSON.parse(variablesKey) as Record<string, unknown>;
+    const effectVariables: unknown = JSON.parse(variablesKey);
+    if (!isOperationVariables(effectVariables)) return;
     const currentExtract = extractItemsRef.current;
     let cancelled = false;
 
@@ -202,35 +206,33 @@ export function useHybridSearch<TQuery, TItem extends { id: string }>(
       // Parameterized on TQuery — `ReturnType<typeof client.query>` defaults
       // `TData` to `unknown`, which would type `extractItems` against nothing.
       let result: ApolloClient.QueryResult<TQuery> | undefined;
+      // The document is a plain `DocumentNode` (callers pass concrete operations
+      // whose variables types differ), so the result shape rides on this typed
+      // declaration rather than a generic — modern signatures reject those.
+      const typedDocument: TypedDocumentNode<TQuery, OperationVariables> =
+        searchDocument;
       try {
-        // The document is a plain `DocumentNode` here (callers pass concrete
-        // operations whose variables types differ), so the result shape rides
-        // on this cast rather than a generic — modern signatures reject those.
         result = await client.query({
-          query: searchDocument as TypedDocumentNode<
-            TQuery,
-            OperationVariables
-          >,
+          query: typedDocument,
           variables: effectVariables,
           fetchPolicy: 'network-only',
         });
       } catch {
         // A failed search leaves the previous results on screen rather than
-        // blanking them; the local source below still answers.
+        // blanking them.
       }
       const data: TQuery | null = result?.data ?? null;
 
       if (cancelled) return;
 
-      if (data) {
-        setServerState({
-          results: currentExtract(data),
-          resolvedKey: variablesKey,
-        });
-      }
+      // A failure still resolves the key, so `isSearching` cannot stick on.
+      setServerState(prev => ({
+        results: data ? currentExtract(data) : prev.results,
+        resolvedKey: variablesKey,
+      }));
     };
 
-    run();
+    void run();
 
     return () => {
       cancelled = true;
@@ -269,7 +271,6 @@ export function useHybridSearch<TQuery, TItem extends { id: string }>(
   return {
     searchQuery,
     setSearchQuery,
-    debouncedSearch,
     searchActive,
     useServerSort,
     activeItems,

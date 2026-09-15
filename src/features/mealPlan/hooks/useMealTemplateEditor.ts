@@ -27,10 +27,10 @@ import {
   createRemoveFromQueryConnectionUpdater,
   skipUnmatchedFilterVariants,
 } from '#/apollo/utils/cacheUpdaters';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { alertService } from '#/services/alertService';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import {
   snapshotFields,
   updateEntityFieldsLocalFirst,
@@ -102,16 +102,15 @@ export function useMealTemplateEditor() {
     CreateMealTemplateDocument,
     {
       update: (cache, { data }) => {
-        if (
-          data?.createMealTemplate?.__typename === 'CreateMealTemplatePayload'
-        ) {
-          addToMealTemplates(cache, data.createMealTemplate.mealTemplate, {
+        const payload = appliedPayload(data);
+        if (payload) {
+          addToMealTemplates(cache, payload.mealTemplate, {
             position: 'start',
             // Scope the write to variants this template belongs to: the
             // browser sheet caches one `mealTemplates` entry per category/search
             // the user has visited, and cache.modify fans out across all of them.
             skipStoreField: skipUnmatchedFilterVariants({
-              category: data.createMealTemplate.mealTemplate.category,
+              category: payload.mealTemplate.category,
             }),
           });
         }
@@ -121,9 +120,7 @@ export function useMealTemplateEditor() {
   const [updateMutation, { loading: updating }] = useMutation(
     UpdateMealTemplateDocument,
   );
-  const [addItemMutation, { loading: addingItem }] = useMutation(
-    AddTemplateItemDocument,
-  );
+  const [addItemMutation] = useMutation(AddTemplateItemDocument);
   const [updateItemMutation] = useMutation(UpdateTemplateItemDocument);
   const [removeItemMutation] = useMutation(RemoveTemplateItemDocument);
 
@@ -167,35 +164,31 @@ export function useMealTemplateEditor() {
       }
     }
 
-    let result;
-    try {
-      result = await createMutation({
-        variables: { input: { ...input, id } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Create Meal Template error:',
-      });
-    }
-
-    const rejected =
-      !result ||
-      alertIfRejected(result, t('mealTemplateBuilder.failedToCreate'));
-    if (rejected) {
-      if (optimisticTemplate) {
-        try {
-          removeFromMealTemplates(client.cache, id, { evictItem: true });
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert rejected Meal Template create',
-          });
-        }
+    const revertCreate = () => {
+      if (!optimisticTemplate) return;
+      try {
+        removeFromMealTemplates(client.cache, id, { evictItem: true });
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Revert rejected Meal Template create',
+        });
       }
-      return null;
-    }
-    // created (server) or queued (offline, replays keyed by the same id).
-    return id;
+    };
+
+    const settled = await settleMutation(
+      () =>
+        createMutation({
+          variables: { input: { ...input, id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: CreateMealTemplateDocument,
+        fallback: t('mealTemplateBuilder.failedToCreate'),
+        onFailed: revertCreate,
+      },
+    );
+    // Applied (server) or queued (offline, replays keyed by the same id).
+    return settled.status === 'failed' ? null : id;
   };
 
   const updateTemplate = async (
@@ -241,18 +234,6 @@ export function useMealTemplateEditor() {
       }
     }
 
-    let result;
-    try {
-      result = await updateMutation({
-        variables: { input: { ...input, id } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Update Meal Template error:',
-      });
-    }
-
     const revert = () => {
       if (snapshot) {
         try {
@@ -270,15 +251,19 @@ export function useMealTemplateEditor() {
       }
     };
 
-    if (!result) {
-      revert();
-      return false;
-    }
-    if (alertIfRejected(result, t('mealTemplateBuilder.failedToSave'))) {
-      revert();
-      return false;
-    }
-    return true;
+    const settled = await settleMutation(
+      () =>
+        updateMutation({
+          variables: { input: { ...input, id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: UpdateMealTemplateDocument,
+        fallback: t('mealTemplateBuilder.failedToSave'),
+        onFailed: revert,
+      },
+    );
+    return settled.status !== 'failed';
   };
 
   const addItem = async (input: AddTemplateItemInput): Promise<boolean> => {
@@ -293,19 +278,7 @@ export function useMealTemplateEditor() {
       });
     }
 
-    let result;
-    try {
-      result = await addItemMutation({
-        variables: { input: { ...input, id } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Add Template Item error:',
-      });
-    }
-
-    if (classifyCreateResult(result) === 'rejected') {
+    const revertAdd = () => {
       try {
         removeTemplateItemFromCache(client.cache, input.templateId, id);
       } catch (cacheError) {
@@ -313,10 +286,21 @@ export function useMealTemplateEditor() {
           operation: 'Revert rejected template-item add',
         });
       }
-      alertIfRejected(result, t('mealTemplateBuilder.failedToAddItem'));
-      return false;
-    }
-    return true;
+    };
+
+    const settled = await settleMutation(
+      () =>
+        addItemMutation({
+          variables: { input: { ...input, id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: AddTemplateItemDocument,
+        fallback: t('mealTemplateBuilder.failedToAddItem'),
+        onFailed: revertAdd,
+      },
+    );
+    return settled.status !== 'failed';
   };
 
   const updateItem = async (
@@ -338,7 +322,7 @@ export function useMealTemplateEditor() {
         : {}),
     };
 
-    const { persisted, result } = await updateEntityFieldsLocalFirst({
+    const { persisted } = await updateEntityFieldsLocalFirst({
       cache: client.cache,
       entity: previousItem ? { __typename: 'MealTemplateItem', id } : undefined,
       updates,
@@ -350,18 +334,26 @@ export function useMealTemplateEditor() {
       // and not to the query.
       previous: snapshotFields(previousItem, updates),
       logLabel: 'Update Template Item',
-      mutate: () =>
-        updateItemMutation({
-          variables: { input },
-          context: { localFirst: true },
-        }),
+      mutate: async () => {
+        const settled = await settleMutation(
+          () =>
+            updateItemMutation({
+              variables: { input },
+              context: { localFirst: true },
+            }),
+          {
+            document: UpdateTemplateItemDocument,
+            fallback: t('mealTemplateBuilder.failedToSaveItem'),
+          },
+        );
+        // A failure travels as `error`, which is what makes the helper revert.
+        return settled.failure
+          ? { error: settled.failure }
+          : { data: settled.data };
+      },
     });
 
-    if (!persisted) {
-      alertIfRejected(result, t('mealTemplateBuilder.failedToSaveItem'));
-      return false;
-    }
-    return true;
+    return persisted;
   };
 
   /**
@@ -402,33 +394,36 @@ export function useMealTemplateEditor() {
       }
     }
 
-    let result;
-    try {
-      result = await removeItemMutation({
-        variables: { input: { id: itemId } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Remove Template Item error:',
-      });
-    }
-
-    if (classifyCreateResult(result) === 'rejected') {
-      if (parentTemplateId) {
-        try {
-          addTemplateItemToCache(client.cache, parentTemplateId, removed);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert rejected template-item remove',
-          });
-        }
+    const restoreItem = () => {
+      if (!parentTemplateId) return;
+      try {
+        addTemplateItemToCache(client.cache, parentTemplateId, removed);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Revert rejected template-item remove',
+        });
       }
-      alertIfRejected(result, t('mealTemplateBuilder.failedToRemoveItem'));
-      return false;
-    }
-    return true;
+    };
+
+    const settled = await settleMutation(
+      () =>
+        removeItemMutation({
+          variables: { input: { id: itemId } },
+          context: { localFirst: true },
+        }),
+      {
+        document: RemoveTemplateItemDocument,
+        fallback: t('mealTemplateBuilder.failedToRemoveItem'),
+        removal: true,
+        onFailed: restoreItem,
+      },
+    );
+    return settled.status !== 'failed';
   };
+
+  /** Empty when the cache has not seen the recipe; the save response fills it. */
+  const readRecipeName = (recipeId: string): string =>
+    readRecipeRef(client.cache, recipeId)?.name ?? '';
 
   return {
     createTemplate,
@@ -436,9 +431,8 @@ export function useMealTemplateEditor() {
     addItem,
     updateItem,
     removeItem,
+    readRecipeName,
     creating,
     updating,
-    addingItem,
-    /** Template ITEM edits are online-only — disable the controls, don't fail the tap. */
   };
 }

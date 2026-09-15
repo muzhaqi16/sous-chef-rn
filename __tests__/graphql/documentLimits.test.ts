@@ -205,7 +205,7 @@ describe('subscription document limits', () => {
   it.each(subscriptions.map(s => [s.name, s]))(
     '%s is within the subscription depth and cost bounds',
     (_name, sub) => {
-      const { name, file, def } = sub as (typeof subscriptions)[number];
+      const { name, file, def } = sub;
       const depth = countDepth(def);
       const cost = computeCost(def);
 
@@ -257,7 +257,7 @@ describe('HTTP document limits', () => {
   it.each(httpOperations.map(o => [o.name, o]))(
     '%s is within the HTTP depth and cost bounds',
     (_name, operation) => {
-      const { name, file, def } = operation as Operation;
+      const { name, file, def } = operation;
       const depth = countDepth(def);
       const cost = computeCost(def);
 

@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, StyleProp, ViewStyle } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#components/molecules/Button';
-import { IconName, Icon, IconTone } from '#/utils/iconUtils';
+import type { IconName, IconTone } from '#/utils/iconUtils';
+import { Icon } from '#/utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
 export interface ErrorStateProps {
@@ -80,7 +82,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       return <Text style={[styles.emoji, { fontSize: iconSize }]}>{icon}</Text>;
     }
 
-    return <Icon name={icon as IconName} size={iconSize} tone={severityTone} />;
+    return <Icon name={icon} size={iconSize} tone={severityTone} />;
   };
 
   return (

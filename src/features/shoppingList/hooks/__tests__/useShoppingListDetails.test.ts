@@ -150,10 +150,10 @@ describe('useShoppingListDetails', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.shoppingList).not.toBeNull();
     expect(result.current.name).toBe('Groceries');
-    expect(result.current.isDefault).toBe(true);
     expect(result.current.collaborators).toHaveLength(1);
     expect(result.current.collaborators[0]!.email).toBe('alice@test.com');
     expect(result.current.isShared).toBe(true);
+    expect(result.current.hasResult).toBe(true);
   });
 
   it('returns default values when no shopping list data', async () => {
@@ -167,7 +167,6 @@ describe('useShoppingListDetails', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.shoppingList).toBeNull();
     expect(result.current.name).toBe('');
-    expect(result.current.isDefault).toBe(false);
     expect(result.current.collaborators).toEqual([]);
     expect(result.current.isShared).toBe(false);
   });
@@ -185,6 +184,7 @@ describe('useShoppingListDetails', () => {
     // falls back to null (default). Wait for the network cycle to complete.
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.shoppingList).toBeNull();
+    expect(result.current.hasResult).toBe(false);
   });
 
   it('exposes refetch function', async () => {

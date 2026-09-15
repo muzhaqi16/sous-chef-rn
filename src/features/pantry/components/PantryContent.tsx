@@ -1,3 +1,4 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useEffect, useRef, useState, useImperativeHandle } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -12,7 +13,7 @@ import {
 } from '#components/atoms/themedComponents';
 import { getScrollClearancePadding } from '#constants/layout';
 import { Icon } from '#utils/iconUtils';
-import { LocationFilter } from '#features/pantry/utils/pantryFilters';
+import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import {
   PantrySortDirection,
   PREFERENCE_DEFAULTS,
@@ -109,7 +110,9 @@ export const PantryContent = React.forwardRef<
       onEndReached,
       refreshing = false,
       loading = false,
+      itemsFailure,
       fetching = false,
+      searching = false,
       serverMode = false,
       noHomeSelected,
       noHomes,
@@ -249,7 +252,10 @@ export const PantryContent = React.forwardRef<
     // fast load is never delayed by presentation smoothing.
     const initialSkeletons = awaitingItems || (!hasShownContent && loading);
     const switchSkeletons = switching && fetching;
-    const showSkeletons = initialSkeletons || switchSkeletons;
+    // Until a server search answers, an empty list is not "no results".
+    const searchSkeletons = searching && items.length === 0;
+    const showSkeletons =
+      initialSkeletons || switchSkeletons || searchSkeletons;
 
     // While skeletons show, hand the list only the sticky tabs: chrome and tabs
     // stay visible, and stale rows from a previous tab can't flash through.
@@ -377,7 +383,7 @@ export const PantryContent = React.forwardRef<
               renderScrollComponent={SwipeAwareScrollComponent}
               ref={flashListRef}
               CellRendererComponent={perfCallbacks.CellRendererComponent}
-              testID="pantry-list"
+              testID={pantryTestIDs.list}
               data={listData}
               renderItem={renderPantryListItem}
               keyExtractor={pantryListKeyExtractor}
@@ -397,7 +403,7 @@ export const PantryContent = React.forwardRef<
               refreshControl={
                 onRefresh ? (
                   <ThemedRefreshControl
-                    testID="pantry-refresh-control"
+                    testID={pantryTestIDs.refreshControl}
                     refreshing={refreshing}
                     onRefresh={onRefresh}
                     // This screen's chrome scrolls INSIDE the list, so the
@@ -428,7 +434,7 @@ export const PantryContent = React.forwardRef<
                       onChangeText={onSearchChange}
                       placeholder={t('pantryScreen.searchPlaceholder')}
                       showSearchIcon={true}
-                      testID="pantry-search-input"
+                      testID={pantryTestIDs.searchInput}
                       innerRightIcon={
                         <View
                           ref={settingsIconRef}
@@ -501,6 +507,7 @@ export const PantryContent = React.forwardRef<
                     onSelectHome={onSelectHome}
                     onCreatePantry={onCreatePantry}
                     overallItemCount={locationCounts.all ?? 0}
+                    failure={itemsFailure}
                   />
                 ) : (
                   <PaginationFooter

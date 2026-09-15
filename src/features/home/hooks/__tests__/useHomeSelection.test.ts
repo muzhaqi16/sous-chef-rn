@@ -6,7 +6,6 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import { alertService } from '#/services/alertService';
-import { errorService } from '#/services/errorService';
 import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
 import type { GetHomesQuery } from '#operations/home/home.generated';
 import { useHomeSelection } from '../useHomeSelection';
@@ -26,6 +25,10 @@ const mockStoreState = {
 jest.mock('#store', () => ({
   useStore: {
     getState: () => mockStoreState,
+  },
+  // Read when a failed write is reported, to skip a known outage.
+  storeApi: {
+    getState: () => ({ isOnline: true, apiReachable: true }),
   },
 }));
 
@@ -174,7 +177,7 @@ function setDefaultFailureMock() {
 
 /**
  * What `queueLink` returns for a queued write: the payload field present but
- * null, and no error. `classifyCreateResult` reads that as `'queued'`.
+ * null, and no error. `settledStatus` reads that as `'queued'`.
  */
 function queuedMock() {
   return recordMock(MarkHomeAsDefaultDocument, {
@@ -190,17 +193,6 @@ function setDefaultErrorMock() {
 }
 
 describe('useHomeSelection', () => {
-  it('returns the selection', () => {
-    const { result } = renderHookWithApollo(() =>
-      useHomeSelection({
-        homes: createHomes(),
-        remoteDefaultHomeId: 'home-1',
-      }),
-    );
-
-    expect(result.current.selectedHomeId).toBeNull();
-  });
-
   describe('setDefaultHome', () => {
     it('returns true early when home is already default both locally and remotely', async () => {
       mockStoreState.selectedHomeId = 'home-1';
@@ -479,7 +471,7 @@ describe('useHomeSelection', () => {
       );
     });
 
-    it('rolls back when mutation returns success: false', async () => {
+    it('rolls back and says why when the server refuses', async () => {
       mockStoreState.selectedHomeId = 'home-1';
       mockStoreState.selectedPantryId = 'pantry-1';
       const m = setDefaultFailureMock();
@@ -500,17 +492,15 @@ describe('useHomeSelection', () => {
 
       expect(success!).toBe(false);
       // A resolved error member doesn't throw, so it must be surfaced here
-      // rather than swallowed (the executeMutation onError only fires on a throw).
+      // rather than swallowed. Its CODE selects the copy — never its message.
+      expect(alertService.alert).toHaveBeenCalledTimes(1);
       expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        'Failed to set default home',
+        'Not Found',
+        expect.any(String),
       );
-      // The fallback above is what the MOCKED errorService returns; this is
-      // what proves the server's code reached the resolver at all, so that the
-      // real service maps it to `errors.codes.*` copy in production.
-      expect(errorService.getUserFriendlyMessage).toHaveBeenCalledWith(
-        ErrorCode.NotFound,
-        'Failed to set default home',
+      expect(alertService.alert).not.toHaveBeenCalledWith(
+        expect.anything(),
+        'Home not found',
       );
     });
   });

@@ -1,15 +1,11 @@
 import { Kind } from 'graphql';
-import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import type { StoreObject } from '@apollo/client';
 import { QueueManager } from '../queueManager';
 import { queueStore } from '../queueStore';
 import { useStore } from '#store';
-import {
-  QueuedMutation,
-  QueueStatus,
-  QueueError,
-  ProcessingResult,
-} from '../types';
+import type { QueuedMutation, QueueError, ProcessingResult } from '../types';
+import { QueueStatus } from '../types';
 import {
   classifyError as classifyErrorFn,
   calculateRetryDelay as calculateRetryDelayFn,
@@ -19,6 +15,36 @@ import { makeCache } from '#/apollo/cache';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { Telemetry } from '#/services/telemetry';
 import { SessionError } from '#/utils/errors/sessionError';
+import { TimeoutError } from '#/utils/errors/timeoutError';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { queuedMutationFor } from '#/test-utils/queuedMutation';
+import {
+  CreateRecipeDocument,
+  ForkRecipeDocument,
+} from '#features/recipes/graphql/recipe.generated';
+import {
+  AddItemToShoppingListDocument,
+  CreateShoppingListDocument,
+  MoveShoppingListItemDocument,
+  ToggleShoppingListItemPurchasedDocument,
+  UpdateShoppingListDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  AdjustPantryItemQuantityDocument,
+  CreatePantryDocument,
+  CreatePantryItemDocument,
+  DeletePantryItemDocument,
+  OpenPantryItemBatchDocument,
+  SyncPantryItemDocument,
+  UpdatePantryItemDocument,
+  UpdatePantryItemQuantityDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/screens/FilteredPantryItems.generated';
+import {
+  CreateHomeDocument,
+  UpdateHomeDocument,
+} from '#operations/home/home.generated';
+import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 
 // Mock the store module
 jest.mock('#store', () => ({
@@ -30,6 +56,16 @@ jest.mock('#store', () => ({
     destroy: jest.fn(),
   },
 }));
+
+/** A non-2xx response as Apollo 4 throws it. */
+const serverError = (status: number) =>
+  new ServerError('Response not successful', {
+    response: new Response('', { status }),
+    bodyText: '',
+  });
+
+/** RN's fetch rejecting a request that never got an answer. */
+const fetchFailure = () => new NetworkRequestError('Network request failed');
 
 // Mock the Apollo client
 const mockClient = {
@@ -93,9 +129,7 @@ jest.mock('../../links/refreshToken', () => ({
 jest.mock('../refreshUnitVocabulary', () => ({
   refreshUnitVocabulary: jest.fn(),
 }));
-const { refreshUnitVocabulary } = jest.requireMock(
-  '../refreshUnitVocabulary',
-) as { refreshUnitVocabulary: jest.Mock };
+const { refreshUnitVocabulary } = jest.requireMock('../refreshUnitVocabulary');
 
 // Mock persisted optimistic-field storage — replay success/convergence must
 // clear entries so restoration can't re-apply stale values.
@@ -104,7 +138,7 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
 }));
 const { optimisticDataPersistence } = jest.requireMock(
   '#/apollo/offline/OptimisticDataPersistence',
-) as { optimisticDataPersistence: { clearEntity: jest.Mock } };
+);
 
 // Mock the logger
 const mockedGetState = useStore.getState as jest.Mock;
@@ -310,6 +344,7 @@ describe('QueueManager', () => {
           makeMutation({ id: 'm1' }),
           makeMutation({ id: 'm2' }),
         ]);
+        mockClient.mutate.mockResolvedValue({ data: {} });
 
         await manager.processQueue();
 
@@ -371,19 +406,19 @@ describe('QueueManager', () => {
       // entities still replay in the order the user acted.
       const createList = makeMutation({
         id: 'mut-create-list',
-        operationName: 'CreateShoppingList',
+        ...queuedMutationFor(CreateShoppingListDocument),
         variables: { input: { id: 'list-1', name: 'Offline list' } },
       });
       const addA = makeMutation({
         id: 'mut-add-a',
-        operationName: 'AddItemToShoppingList',
+        ...queuedMutationFor(AddItemToShoppingListDocument),
         variables: {
           input: { shoppingListId: 'list-1', items: [{ id: 'item-a' }] },
         },
       });
       const unrelatedPantryAdd = makeMutation({
         id: 'mut-pantry',
-        operationName: 'CreatePantryItem',
+        ...queuedMutationFor(CreatePantryItemDocument),
         variables: { input: { id: 'pantry-item-1' } },
       });
       (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
@@ -413,19 +448,19 @@ describe('QueueManager', () => {
       // refusal withdraws the row — a parent reference is a dependency too.
       const createList = makeMutation({
         id: 'mut-create-list',
-        operationName: 'CreateShoppingList',
+        ...queuedMutationFor(CreateShoppingListDocument),
         variables: { input: { id: 'list-1', name: 'Offline list' } },
       });
       const addA = makeMutation({
         id: 'mut-add-a',
-        operationName: 'AddItemToShoppingList',
+        ...queuedMutationFor(AddItemToShoppingListDocument),
         variables: {
           input: { shoppingListId: 'list-1', items: [{ id: 'item-a' }] },
         },
       });
       const unrelatedPantryAdd = makeMutation({
         id: 'mut-pantry',
-        operationName: 'CreatePantryItem',
+        ...queuedMutationFor(CreatePantryItemDocument),
         variables: { input: { id: 'pantry-item-1' } },
       });
       (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
@@ -454,6 +489,43 @@ describe('QueueManager', () => {
       expect(processed).toEqual(['mut-create-list', 'mut-pantry']);
       expect(processed).not.toContain('mut-add-a');
     });
+
+    it('holds a fork behind the deferred create of the recipe it forks from', async () => {
+      // The fork's subject is the recipe it mints; the source it names in `id`
+      // is still something it cannot be sent without.
+      const createSource = makeMutation({
+        id: 'mut-create-recipe',
+        ...queuedMutationFor(CreateRecipeDocument),
+        variables: { input: { id: 'recipe-src', name: 'Soup' } },
+      });
+      const fork = makeMutation({
+        id: 'mut-fork',
+        ...queuedMutationFor(ForkRecipeDocument),
+        variables: { input: { id: 'recipe-src', newRecipeId: 'recipe-fork' } },
+      });
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
+        createSource,
+        fork,
+      ]);
+      const processed: string[] = [];
+      manager['processMutation'] = jest.fn(
+        async (mutation: QueuedMutation): Promise<ProcessingResult> => {
+          processed.push(mutation.id);
+          return mutation.id === 'mut-create-recipe'
+            ? {
+                success: false,
+                deferred: true,
+                deferralScope: 'entry',
+                mutationId: mutation.id,
+              }
+            : { success: true, mutationId: mutation.id };
+        },
+      );
+
+      await manager.processQueue();
+
+      expect(processed).toEqual(['mut-create-recipe']);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -478,17 +550,17 @@ describe('QueueManager', () => {
       // un-synced createA would be out-of-order.
       const createA = makeMutation({
         id: 'mut-create-a',
-        operationName: 'CreatePantryItem',
+        ...queuedMutationFor(CreatePantryItemDocument),
         variables: { input: { id: 'a' } },
       });
       const updateA = makeMutation({
         id: 'mut-update-a',
-        operationName: 'AdjustPantryItemQuantity',
-        variables: { input: { itemId: 'a' } },
+        ...queuedMutationFor(AdjustPantryItemQuantityDocument),
+        variables: { input: { id: 'a', newQuantity: 2, reason: 'used' } },
       });
       const createB = makeMutation({
         id: 'mut-create-b',
-        operationName: 'CreatePantryItem',
+        ...queuedMutationFor(CreatePantryItemDocument),
         variables: { input: { id: 'b' } },
       });
       (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
@@ -526,17 +598,17 @@ describe('QueueManager', () => {
       // name the pantry. None carries the home's id as its own subject.
       const createHome = makeMutation({
         id: 'mut-home',
-        operationName: 'CreateHome',
+        ...queuedMutationFor(CreateHomeDocument),
         variables: { input: { id: 'home-1', name: 'Home' } },
       });
       const createPantry = makeMutation({
         id: 'mut-pantry',
-        operationName: 'CreatePantry',
+        ...queuedMutationFor(CreatePantryDocument),
         variables: { input: { id: 'pantry-1', homeId: 'home-1' } },
       });
       const createItem = makeMutation({
         id: 'mut-item',
-        operationName: 'CreatePantryItem',
+        ...queuedMutationFor(CreatePantryItemDocument),
         variables: { input: { id: 'item-1', pantryId: 'pantry-1' } },
       });
       const batchItems = makeMutation({
@@ -548,7 +620,7 @@ describe('QueueManager', () => {
       });
       const unrelated = makeMutation({
         id: 'mut-other',
-        operationName: 'CreateShoppingList',
+        ...queuedMutationFor(CreateShoppingListDocument),
         variables: { input: { id: 'list-9' } },
       });
       (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
@@ -586,7 +658,7 @@ describe('QueueManager', () => {
       const entries = ['a', 'b', 'c'].map(id =>
         makeMutation({
           id: `mut-${id}`,
-          operationName: 'UpdateHome',
+          ...queuedMutationFor(UpdateHomeDocument),
           variables: { input: { id } },
           maxRetries: 3,
         }),
@@ -594,10 +666,7 @@ describe('QueueManager', () => {
       (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue(
         entries,
       );
-      mockClient.mutate.mockRejectedValue({
-        message: 'Response not successful: Received status code 503',
-        networkError: { statusCode: 503 },
-      });
+      mockClient.mutate.mockRejectedValue(serverError(503));
 
       jest.useRealTimers();
       await manager.processQueue();
@@ -620,7 +689,7 @@ describe('QueueManager', () => {
       const entries = ['a', 'b', 'c'].map(id =>
         makeMutation({
           id: `mut-${id}`,
-          operationName: 'CreatePantryItem',
+          ...queuedMutationFor(CreatePantryItemDocument),
           variables: { input: { id } },
         }),
       );
@@ -720,37 +789,41 @@ describe('QueueManager', () => {
     });
 
     it('classifies network errors', () => {
-      const result = classifyError({ message: 'Network error occurred' });
+      const result = classifyError(fetchFailure());
       expect(result.type).toBe('network');
       expect(result.retryable).toBe(true);
     });
 
-    it('classifies timeout errors', () => {
-      const result = classifyError({ message: 'Request timeout' });
+    it.each([
+      [
+        'the request deadline',
+        new TimeoutError('Request timeout after 10000ms'),
+      ],
+      ['the processing deadline', new TimeoutError('Operation timed out')],
+    ])('classifies %s as a network error', (_label, error) => {
+      const result = classifyError(error);
       expect(result.type).toBe('network');
       expect(result.retryable).toBe(true);
     });
 
-    it('classifies ECONNREFUSED as network error', () => {
-      const result = classifyError({ message: 'connect ECONNREFUSED' });
-      expect(result.type).toBe('network');
-      expect(result.retryable).toBe(true);
+    it('does not read network words in a server refusal as a network error', () => {
+      const result = classifyError(
+        new CombinedGraphQLErrors({
+          errors: [{ message: 'Upstream network timeout, connection refused' }],
+        }),
+      );
+      expect(result.type).toBe('unknown');
+      expect(result.retryable).toBe(false);
     });
 
     it('classifies 5xx as server error', () => {
-      const result = classifyError({
-        message: 'Internal server error',
-        networkError: { statusCode: 500 },
-      });
+      const result = classifyError(serverError(500));
       expect(result.type).toBe('server');
       expect(result.retryable).toBe(true);
     });
 
     it('classifies 503 as server error', () => {
-      const result = classifyError({
-        message: 'Service unavailable',
-        networkError: { statusCode: 503 },
-      });
+      const result = classifyError(serverError(503));
       expect(result.type).toBe('server');
       expect(result.retryable).toBe(true);
     });
@@ -810,9 +883,7 @@ describe('QueueManager', () => {
         retryCount: 3,
         maxRetries: 3,
       });
-      const error = { message: 'Network error' };
-
-      const result = await handleMutationError(mutation, error);
+      const result = await handleMutationError(mutation, fetchFailure());
 
       expect(result.success).toBe(false);
       // The defer is signalled to the drain loop so it holds this entry's
@@ -843,9 +914,7 @@ describe('QueueManager', () => {
       });
 
       for (let drain = 0; drain < 20; drain++) {
-        const result = await handleMutationError(mutation, {
-          message: 'Network error',
-        });
+        const result = await handleMutationError(mutation, fetchFailure());
         expect(result.deferred).toBe(true);
       }
 
@@ -859,15 +928,8 @@ describe('QueueManager', () => {
     });
 
     it.each([
-      ['a network error', { message: 'Network error' }, 'transport'],
-      [
-        'a 503',
-        {
-          message: 'Response not successful',
-          networkError: { statusCode: 503 },
-        },
-        'transport',
-      ],
+      ['a network error', fetchFailure(), 'transport'],
+      ['a 503', serverError(503), 'transport'],
       [
         'SERVICE_UNAVAILABLE',
         new CombinedGraphQLErrors({
@@ -1102,7 +1164,7 @@ describe('QueueManager', () => {
     it('re-sends without the captured version after a version conflict', async () => {
       const mutation = makeMutation({
         id: 'conflict-1',
-        operationName: 'SyncPantryItem',
+        ...queuedMutationFor(SyncPantryItemDocument),
         variables: { input: { clientId: 'cuid-1', quantity: 3, version: 7 } },
       });
       mockClient.mutate
@@ -1142,7 +1204,7 @@ describe('QueueManager', () => {
       manager.setFailureHandler(failureHandler);
       const mutation = makeMutation({
         id: 'conflict-int-bang',
-        operationName: 'AdjustPantryItemQuantity',
+        ...queuedMutationFor(AdjustPantryItemQuantityDocument),
         variables: { input: { id: 'item-7', newQuantity: 2, version: 4 } },
       });
       mockClient.mutate.mockResolvedValueOnce({
@@ -1174,7 +1236,7 @@ describe('QueueManager', () => {
       expect(Telemetry.increment).toHaveBeenCalledWith(
         'offline_queue_conflicts_total',
         1,
-        { operation: 'AdjustPantryItemQuantity' },
+        { operation: operationNameOf(AdjustPantryItemQuantityDocument) },
       );
     });
 
@@ -1192,7 +1254,7 @@ describe('QueueManager', () => {
       };
       const mutation = makeMutation({
         id: 'conflict-2',
-        operationName: 'SyncPantryItem',
+        ...queuedMutationFor(SyncPantryItemDocument),
         variables: { input: { clientId: 'cuid-2', quantity: 3, version: 7 } },
       });
       mockClient.mutate.mockResolvedValue(conflict);
@@ -1217,7 +1279,7 @@ describe('QueueManager', () => {
       manager.setOverwriteReporter(reporter);
       const mutation = makeMutation({
         id: 'converged-1',
-        operationName: 'SyncPantryItem',
+        ...queuedMutationFor(SyncPantryItemDocument),
         variables: { input: { clientId: 'cuid-3', quantity: 3 } },
       });
       mockClient.mutate.mockResolvedValue({
@@ -1242,7 +1304,7 @@ describe('QueueManager', () => {
       expect(reporter).toHaveBeenCalledWith(
         expect.objectContaining({
           mutationId: 'converged-1',
-          operationName: 'SyncPantryItem',
+          operationName: operationNameOf(SyncPantryItemDocument),
         }),
       );
     });
@@ -1303,16 +1365,26 @@ describe('QueueManager', () => {
       it('clears every item entry of a batch-shaped create', async () => {
         const mutation = makeMutation({
           id: 'proc-clear-batch',
-          operationName: 'AddItemsToShoppingList',
+          ...queuedMutationFor(AddItemToShoppingListDocument),
           variables: {
             input: {
               shoppingListId: 'list-1',
-              items: [{ id: 'cuid-a' }, { id: 'cuid-b' }],
+              items: [
+                { id: 'cuid-a', item: { itemName: 'Milk' } },
+                { id: 'cuid-b', item: { itemName: 'Bread' } },
+              ],
             },
           },
         });
         mockClient.mutate.mockResolvedValue({
-          data: { addItemsToShoppingList: { results: [] } },
+          data: {
+            syncShoppingListItem: {
+              __typename: 'SyncShoppingListItemPayload',
+              clientId: 'cuid-a',
+              item: {},
+              converged: false,
+            },
+          },
         });
         mockClient.cache.extract.mockReturnValue(
           normalizedFixture([
@@ -1340,7 +1412,7 @@ describe('QueueManager', () => {
       it('clears on idempotent convergence too', async () => {
         const mutation = makeMutation({
           id: 'proc-clear-converged',
-          operationName: 'CreateShoppingList',
+          ...queuedMutationFor(CreateShoppingListDocument),
           variables: { input: { id: 'cuid-list-1' } },
         });
         mockClient.mutate.mockResolvedValue({
@@ -1406,12 +1478,12 @@ describe('QueueManager', () => {
 
     // Under errorPolicy 'all' a server refusal resolves as an error union
     // member instead of throwing — the replay path must classify resolved
-    // payloads the same way the foreground path does (classifyCreateResult).
+    // payloads the same way the foreground path does (settledStatus).
     describe('resolved error payloads on replay', () => {
       it('treats a ConflictError(code: IDEMPOTENT_REPLAY) as converged (success)', async () => {
         const mutation = makeMutation({
           id: 'proc-converged',
-          operationName: 'CreateShoppingList',
+          ...queuedMutationFor(CreateShoppingListDocument),
           variables: { input: { id: 'list-1' } },
         });
         mockClient.mutate.mockResolvedValue({
@@ -1441,7 +1513,7 @@ describe('QueueManager', () => {
         manager.setFailureHandler(failureHandler);
         const mutation = makeMutation({
           id: 'proc-rejected',
-          operationName: 'UpdateShoppingList',
+          ...queuedMutationFor(UpdateShoppingListDocument),
           variables: { input: { id: 'list-1' } },
         });
         mockClient.mutate.mockResolvedValue({
@@ -1470,7 +1542,7 @@ describe('QueueManager', () => {
         expect(failureHandler).toHaveBeenCalledWith(
           expect.objectContaining({
             mutationId: 'proc-rejected',
-            operationName: 'UpdateShoppingList',
+            operationName: operationNameOf(UpdateShoppingListDocument),
             entityId: 'list-1',
           }),
         );
@@ -1479,7 +1551,7 @@ describe('QueueManager', () => {
       it('treats a ConflictError on a replayed UPDATE as a rejection, not convergence', async () => {
         const mutation = makeMutation({
           id: 'proc-conflict-update',
-          operationName: 'UpdateShoppingList',
+          ...queuedMutationFor(UpdateShoppingListDocument),
           variables: { input: { id: 'list-1' } },
         });
         mockClient.mutate.mockResolvedValue({
@@ -1533,7 +1605,7 @@ describe('QueueManager', () => {
       expect(
         extractEntityInfo(
           makeMutation({
-            operationName: 'UpdateShoppingList',
+            ...queuedMutationFor(UpdateShoppingListDocument),
             variables: { input: { id: 'list-1' } },
           }),
         ),
@@ -1543,8 +1615,12 @@ describe('QueueManager', () => {
       expect(
         extractEntityInfo(
           makeMutation({
-            operationName: 'AddItemToShoppingListFromFilteredPantry',
-            variables: { input: { id: 'item-1' } },
+            ...queuedMutationFor(
+              AddItemToShoppingListFromFilteredPantryDocument,
+            ),
+            variables: {
+              input: { shoppingListId: 'list-1', items: [{ id: 'item-1' }] },
+            },
           }),
         ),
       ).toEqual({ entityType: 'ShoppingListItem', entityId: 'item-1' });
@@ -1555,18 +1631,40 @@ describe('QueueManager', () => {
       expect(
         extractEntityInfo(
           makeMutation({
-            operationName: 'DeletePantryItem',
+            ...queuedMutationFor(DeletePantryItemDocument),
             variables: { input: { id: 'pi-1' } },
           }),
         ),
       ).toEqual({ entityType: null, entityId: 'pi-1' });
     });
 
+    it('targets the recipe a fork creates, never the recipe it forks from', () => {
+      mockClient.cache.extract.mockReturnValue(
+        normalizedFixture([
+          { __typename: 'Recipe', id: 'recipe-src' },
+          { __typename: 'Recipe', id: 'recipe-fork' },
+        ]),
+      );
+
+      // `ForkRecipeInput.id` is the SOURCE; evicting it on a refusal would
+      // blank the recipe the user forked from and leave the copy behind.
+      expect(
+        extractEntityInfo(
+          makeMutation({
+            ...queuedMutationFor(ForkRecipeDocument),
+            variables: {
+              input: { id: 'recipe-src', newRecipeId: 'recipe-fork' },
+            },
+          }),
+        ),
+      ).toEqual({ entityType: 'Recipe', entityId: 'recipe-fork' });
+    });
+
     it('skips the cache lookup when the mutation has no entity id', () => {
       expect(
         extractEntityInfo(
           makeMutation({
-            operationName: 'AddItemsToShoppingList',
+            ...queuedMutationFor(AddItemToShoppingListDocument),
             variables: {},
           }),
         ),
@@ -1633,7 +1731,7 @@ describe('QueueManager', () => {
       });
       jest.useRealTimers();
       const mutation = makeMutation({
-        operationName: 'UpdatePantryItem',
+        ...queuedMutationFor(UpdatePantryItemDocument),
         variables: { input: { id: 'item-1' } },
       });
       const result = await executeSyncMutation(mutation);
@@ -1649,7 +1747,7 @@ describe('QueueManager', () => {
 
       jest.useRealTimers();
       const mutation = makeMutation({
-        operationName: 'CreatePantryItem',
+        ...queuedMutationFor(CreatePantryItemDocument),
         variables: { input: { id: 'item-1', pantryId: 'pan-1' } },
       });
       await expect(executeSyncMutation(mutation)).rejects.toThrow(
@@ -1739,7 +1837,7 @@ describe('QueueManager', () => {
         makeMutation({
           id: 'mut-1',
           userId: 'user-1',
-          operationName: 'CreatePantryItem',
+          ...queuedMutationFor(CreatePantryItemDocument),
           variables: { input: { id: 'item-1' } },
         }),
       ];
@@ -2066,7 +2164,7 @@ describe('QueueManager', () => {
 
       const mutation = makeMutation({
         id: 'fail-h-1',
-        operationName: 'UpdatePantryItem',
+        ...queuedMutationFor(UpdatePantryItemDocument),
         variables: { input: { id: 'item-1' } },
       });
       invokeFailureHandler(mutation, {
@@ -2080,7 +2178,7 @@ describe('QueueManager', () => {
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
           mutationId: 'fail-h-1',
-          operationName: 'UpdatePantryItem',
+          operationName: operationNameOf(UpdatePantryItemDocument),
           entityType: 'PantryItem',
           entityId: 'item-1',
         }),
@@ -2157,7 +2255,7 @@ describe('QueueManager', () => {
       };
       const mutation = makeMutation({
         id: 'err-pass-1',
-        operationName: 'CreatePantryItem',
+        ...queuedMutationFor(CreatePantryItemDocument),
         variables: { input: { id: 'p1' } },
       });
       invokeFailureHandler(mutation, error);
@@ -2165,35 +2263,38 @@ describe('QueueManager', () => {
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ error }));
     });
 
-    // --- extractEntityInfo: entity id extraction across variable shapes ---
+    // --- extractEntityInfo: the subject each input type names ---
     describe('extractEntityInfo', () => {
       it.each([
-        ['input.id', 'UpdatePantryItem', { input: { id: 'pi-1' } }, 'pi-1'],
-        ['top-level id', 'DeletePantryItem', { id: 'top-1' }, 'top-1'],
         [
-          'input.pantryItemId',
-          'AdjustPantryItemQuantity',
-          { input: { pantryItemId: 'pid-1' } },
+          'AdjustPantryItemQuantityInput.id',
+          AdjustPantryItemQuantityDocument,
+          { input: { id: 'pi-1', newQuantity: 1, reason: 'used' } },
+          'pi-1',
+        ],
+        [
+          'UpdatePantryItemQuantityInput.pantryItemId',
+          UpdatePantryItemQuantityDocument,
+          { input: { pantryItemId: 'pid-1', quantity: '2' } },
           'pid-1',
         ],
         [
-          'input.itemId',
-          'MoveShoppingListItem',
-          { input: { itemId: 'iid-1' } },
+          'MoveShoppingListItemInput.itemId',
+          MoveShoppingListItemDocument,
+          { input: { itemId: 'iid-1', afterItemId: 'iid-0' } },
           'iid-1',
         ],
         [
-          'input.batchId',
-          'OpenPantryItemBatch',
+          'OpenPantryItemBatchInput.batchId',
+          OpenPantryItemBatchDocument,
           { input: { batchId: 'b-1' } },
           'b-1',
         ],
-        ['clientId', 'CreatePantryItem', { clientId: 'cid-1' }, 'cid-1'],
       ])(
         'extracts the entity id from %s',
-        (_label, operationName, variables, expectedId) => {
+        (_label, mutation, variables, expectedId) => {
           const info = extractEntityInfo(
-            makeMutation({ operationName, variables }),
+            makeMutation({ ...queuedMutationFor(mutation), variables }),
           );
           expect(info.entityId).toBe(expectedId);
         },
@@ -2203,7 +2304,7 @@ describe('QueueManager', () => {
         expect(
           extractEntityInfo(
             makeMutation({
-              operationName: 'UpdatePantryItem',
+              ...queuedMutationFor(UpdatePantryItemDocument),
               variables: { foo: 'bar' },
             }),
           ),
@@ -2238,7 +2339,7 @@ describe('QueueManager', () => {
 
         const mutation = makeMutation({
           id: 'non-retry-1',
-          operationName: 'UpdatePantryItem',
+          ...queuedMutationFor(UpdatePantryItemDocument),
           variables: { input: { id: 'item-x' } },
         });
         const error = { message: 'Validation error: invalid' };
@@ -2249,7 +2350,7 @@ describe('QueueManager', () => {
         expect(handler).toHaveBeenCalledWith(
           expect.objectContaining({
             mutationId: 'non-retry-1',
-            operationName: 'UpdatePantryItem',
+            operationName: operationNameOf(UpdatePantryItemDocument),
             entityType: 'PantryItem',
             entityId: 'item-x',
           }),
@@ -2262,8 +2363,8 @@ describe('QueueManager', () => {
 
         const mutation = makeMutation({
           id: 'max-retry-1',
-          operationName: 'ToggleShoppingListItemPurchased',
-          variables: { id: 'sli-99' },
+          ...queuedMutationFor(ToggleShoppingListItemPurchasedDocument),
+          variables: { input: { id: 'sli-99', purchased: true } },
           retryCount: 0,
           maxRetries: 3,
         });
@@ -2292,7 +2393,7 @@ describe('QueueManager', () => {
           maxRetries: 3,
         });
 
-        await handleMutationError(mutation, { message: 'Network error' });
+        await handleMutationError(mutation, fetchFailure());
 
         expect(handler).not.toHaveBeenCalled();
         expect(queueStore.markMutationFailed).not.toHaveBeenCalled();
@@ -2317,7 +2418,7 @@ describe('QueueManager', () => {
         await handleMutationError(
           makeMutation({
             id: 'auth-fail-h',
-            operationName: 'UpdateShoppingList',
+            ...queuedMutationFor(UpdateShoppingListDocument),
             variables: { input: { id: 'list-10' } },
           }),
           { message: 'Unauthorized', extensions: { code: 'UNAUTHENTICATED' } },
@@ -2347,7 +2448,7 @@ describe('QueueManager', () => {
         await handleMutationError(
           makeMutation({
             id: 'session-throw',
-            operationName: 'UpdateShoppingList',
+            ...queuedMutationFor(UpdateShoppingListDocument),
             variables: { input: { id: 'list-12' } },
           }),
           new SessionError(
@@ -2387,7 +2488,7 @@ describe('QueueManager', () => {
 
         const expired = makeMutation({
           id: 'auth-expired',
-          operationName: 'UpdateShoppingList',
+          ...queuedMutationFor(UpdateShoppingListDocument),
           variables: { input: { id: 'list-11' } },
         });
         expired.status = QueueStatus.AUTH_ERROR;

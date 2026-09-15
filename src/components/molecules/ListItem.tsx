@@ -1,9 +1,9 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { View, TextStyle } from 'react-native';
+import { View } from 'react-native';
 import { ThemedIcon } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { Icon } from '#utils/iconUtils';
+import type { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
 import { Badge } from '#components/atoms/Badge';
 import type { RowThemeColors } from '#components/atoms/rowTheme';
@@ -203,7 +203,7 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       purchased: {
         true: {
-          textDecorationLine: 'line-through' as TextStyle['textDecorationLine'],
+          textDecorationLine: 'line-through',
           opacity: theme.opacity.disabled,
           color: theme.colors.textSecondary,
         },
@@ -216,7 +216,7 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       purchased: {
         true: {
-          textDecorationLine: 'line-through' as TextStyle['textDecorationLine'],
+          textDecorationLine: 'line-through',
           opacity: theme.opacity.disabled,
         },
       },

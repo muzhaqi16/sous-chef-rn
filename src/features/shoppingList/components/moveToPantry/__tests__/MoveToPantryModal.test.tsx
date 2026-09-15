@@ -184,13 +184,6 @@ jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#/utils/fractionUtils', () => ({
-  parseFractionalInput: (input: string) => {
-    const val = parseFloat(input);
-    return isNaN(val) ? null : val;
-  },
-}));
-
 jest.mock('@react-native-community/datetimepicker', () => {
   const RN = require('react-native');
   return {
@@ -484,6 +477,28 @@ describe('MoveToPantryModal', () => {
       expect(
         screen.getByTestId('move-to-pantry-field-Total price').props.value,
       ).toBe('2.95');
+    });
+
+    it('prefills a fractional purchased quantity as a cooking fraction', async () => {
+      openWithPurchase(1.25, 2);
+
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 1 1/4 gal')).toBeTruthy(),
+      );
+      expect(screen.getByTestId('move-to-pantry-quantity').props.value).toBe(
+        '1 1/4',
+      );
+    });
+
+    it('rounds a purchased quantity no fraction fits to three decimals', async () => {
+      openWithPurchase(177.4412, null);
+
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 177.441 gal')).toBeTruthy(),
+      );
+      expect(screen.getByTestId('move-to-pantry-quantity').props.value).toBe(
+        '177.441',
+      );
     });
 
     it('sends the per-unit price the API expects', async () => {

@@ -89,7 +89,7 @@ export const Icon: React.FC<IconProps> = ({
         name={name as IoniconsIconName}
         size={px}
         color={color}
-        uniProps={t => sizeProps(t as Theme)}
+        uniProps={t => sizeProps(t)}
       />
     );
   }
@@ -100,8 +100,8 @@ export const Icon: React.FC<IconProps> = ({
         name={name as IoniconsIconName}
         size={px}
         uniProps={t => ({
-          color: resolveColor(t as Theme),
-          ...sizeProps(t as Theme),
+          color: resolveColor(t),
+          ...sizeProps(t),
         })}
       />
     );
@@ -113,8 +113,8 @@ export const Icon: React.FC<IconProps> = ({
       name={name as IoniconsIconName}
       size={px}
       uniProps={t => ({
-        color: (t as Theme).colors.textPrimary,
-        ...sizeProps(t as Theme),
+        color: t.colors.textPrimary,
+        ...sizeProps(t),
       })}
     />
   );

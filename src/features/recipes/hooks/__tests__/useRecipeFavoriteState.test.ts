@@ -1,65 +1,13 @@
 import { act, waitFor } from '@testing-library/react-native';
-import { Difficulty, RecipeCategory } from '#/graphql/generated/schemaTypes';
+import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
-  seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { MyRecipesDocument } from '#features/recipes/graphql/recipe.generated';
 import type { RecipeInformation } from '#/services/spoonacular/types';
 import type { MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
 import { useRecipeFavoriteState } from '../useRecipeFavoriteState';
-import { UseRecipeFavoriteState_RecipeFragmentDoc } from '#features/recipes/hooks/useRecipeFavoriteState.generated';
-
-function seedRecipeCache(
-  recipes: Array<{
-    id: string;
-    externalSource: string;
-    externalId: string;
-    folder?: string;
-  }>,
-) {
-  return seedCache(
-    recipes.map(r => ({
-      // The production selection the consumer reads, so a thin fixture fails
-      // here instead of defining its own idea of complete.
-      fragment: UseRecipeFavoriteState_RecipeFragmentDoc,
-      data: {
-        __typename: 'Recipe' as const,
-        id: r.id,
-        name: `Recipe ${r.id}`,
-        description: null,
-        imageUrl: null,
-        servings: 1,
-        prepTimeMinutes: null,
-        cookTimeMinutes: null,
-        totalTimeMinutes: null,
-        difficulty: Difficulty.Easy,
-        category: RecipeCategory.Dinner,
-        cuisine: null,
-        status: 'PUBLISHED',
-        isExternal: true,
-        externalSource: r.externalSource,
-        externalId: r.externalId,
-        primarySource: null,
-        caloriesPerServing: null,
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-01-01T00:00:00Z',
-        savedDetails: r.folder
-          ? {
-              __typename: 'SavedRecipe' as const,
-              id: `sd-${r.id}`,
-              folder: r.folder,
-              tags: [],
-              notes: null,
-              personalRating: null,
-              cookedCount: 0,
-            }
-          : null,
-      },
-    })),
-  );
-}
 
 jest.mock('#/utils/finallyHelpers', () => ({
   executeWithLoadingState: jest.fn(
@@ -87,7 +35,7 @@ beforeEach(() => {
 function myRecipesMock(
   recipes: Array<{
     id: string;
-    externalSource: string;
+    externalSource: ExternalSource;
     externalId: string;
     folder?: string;
   }> = [],
@@ -95,41 +43,23 @@ function myRecipesMock(
   return recordMock(MyRecipesDocument, {
     data: {
       recipes: {
-        __typename: 'RecipeConnection' as const,
         edges: recipes.map((r, i) => ({
-          __typename: 'RecipeEdge' as const,
           cursor: `c${i}`,
-          // `MyRecipes` selects id, category, difficulty, name, description,
-          // `savedDetails { id folder }` and the eight `MyRecipeCard_recipe`
-          // fields. The external provenance the hook matches on is NOT on this
-          // query — it reads that through `cache.readFragment`, which is why
-          // the test seeds the cache separately.
+          // The provenance and folder the hook matches on arrive on this
+          // query's wire; nothing else seeds them.
           node: {
-            __typename: 'Recipe' as const,
             id: r.id,
-            name: `Recipe ${r.id}`,
-            description: null,
-            imageUrl: null,
-            servings: 1,
-            prepTimeMinutes: null,
-            cookTimeMinutes: null,
-            totalTimeMinutes: null,
-            difficulty: Difficulty.Easy,
-            category: RecipeCategory.Dinner,
+            externalSource: r.externalSource,
+            externalId: r.externalId,
             savedDetails: r.folder
               ? {
-                  __typename: 'SavedRecipe' as const,
                   id: `sd-${r.id}`,
                   folder: r.folder,
                 }
               : null,
           },
         })),
-        pageInfo: {
-          __typename: 'PageInfo' as const,
-          hasNextPage: false,
-          endCursor: null,
-        },
+        pageInfo: { hasNextPage: false, endCursor: null },
         totalCount: recipes.length,
       },
     },
@@ -187,18 +117,17 @@ describe('useRecipeFavoriteState', () => {
       const recipes = [
         {
           id: 'saved-1',
-          externalSource: 'SPOONACULAR',
+          externalSource: ExternalSource.Spoonacular,
           externalId: '12345',
           folder: 'Dinner',
         },
       ];
       const m = myRecipesMock(recipes);
-      const cache = seedRecipeCache(recipes);
 
       const { result } = renderHookWithApollo(
         () =>
           useRecipeFavoriteState({
-            externalSource: 'SPOONACULAR',
+            externalSource: ExternalSource.Spoonacular,
             externalId: '12345',
             externalRecipe: minimalExternalRecipe,
             isBackendRecipe: false,
@@ -206,7 +135,7 @@ describe('useRecipeFavoriteState', () => {
             saveRecipeToFavorites: noopSave,
             savingToFavorites: false,
           }),
-        { operationMocks: [m.mock], cache },
+        { operationMocks: [m.mock] },
       );
 
       await waitFor(() => expect(result.current.isSaved).toBe(true));
@@ -219,7 +148,7 @@ describe('useRecipeFavoriteState', () => {
       const { result } = renderHookWithApollo(
         () =>
           useRecipeFavoriteState({
-            externalSource: 'SPOONACULAR',
+            externalSource: ExternalSource.Spoonacular,
             externalId: '99999',
             externalRecipe: minimalExternalRecipe,
             isBackendRecipe: false,
@@ -240,7 +169,7 @@ describe('useRecipeFavoriteState', () => {
       const save = jest.fn().mockResolvedValue({ success: true });
       const { result } = renderHookWithApollo(() =>
         useRecipeFavoriteState({
-          externalSource: 'SPOONACULAR',
+          externalSource: ExternalSource.Spoonacular,
           externalId: '12345',
           externalRecipe: null,
           isBackendRecipe: false,
@@ -261,7 +190,7 @@ describe('useRecipeFavoriteState', () => {
       const save = jest.fn().mockResolvedValue({ success: true });
       const { result } = renderHookWithApollo(() =>
         useRecipeFavoriteState({
-          externalSource: 'SPOONACULAR',
+          externalSource: ExternalSource.Spoonacular,
           externalId: '12345',
           externalRecipe: minimalExternalRecipe,
           isBackendRecipe: false,
@@ -286,7 +215,7 @@ describe('useRecipeFavoriteState', () => {
       const save = jest.fn().mockResolvedValue({ success: true });
       const { result } = renderHookWithApollo(() =>
         useRecipeFavoriteState({
-          externalSource: 'SPOONACULAR',
+          externalSource: ExternalSource.Spoonacular,
           externalId: '12345',
           externalRecipe: minimalExternalRecipe,
           isBackendRecipe: false,
@@ -311,7 +240,7 @@ describe('useRecipeFavoriteState', () => {
       const save = jest.fn().mockResolvedValue({ success: true });
       const { result } = renderHookWithApollo(() =>
         useRecipeFavoriteState({
-          externalSource: 'SPOONACULAR',
+          externalSource: ExternalSource.Spoonacular,
           externalId: '12345',
           externalRecipe: minimalExternalRecipe,
           isBackendRecipe: false,
@@ -333,7 +262,7 @@ describe('useRecipeFavoriteState', () => {
       const save = jest.fn().mockResolvedValue({ success: false });
       const { result } = renderHookWithApollo(() =>
         useRecipeFavoriteState({
-          externalSource: 'SPOONACULAR',
+          externalSource: ExternalSource.Spoonacular,
           externalId: '12345',
           externalRecipe: minimalExternalRecipe,
           isBackendRecipe: false,
@@ -355,7 +284,7 @@ describe('useRecipeFavoriteState', () => {
     it('reflects savingToFavorites from props', () => {
       const { result } = renderHookWithApollo(() =>
         useRecipeFavoriteState({
-          externalSource: 'SPOONACULAR',
+          externalSource: ExternalSource.Spoonacular,
           externalId: '12345',
           externalRecipe: minimalExternalRecipe,
           isBackendRecipe: false,

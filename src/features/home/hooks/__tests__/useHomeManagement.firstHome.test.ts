@@ -27,6 +27,8 @@ import {
   JoinHomeByCodeDocument,
 } from '#operations/home/home.generated';
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
+import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -130,6 +132,24 @@ const createdHomeMock = () =>
     }),
   });
 
+/** Creating a home also mints its default pantry, whose failure is alerted. */
+const createdPantryMock = () =>
+  recordMock(CreatePantryDocument, {
+    data: (vars: Record<string, unknown>) => {
+      const input = vars.input as { id: string; homeId: string };
+      return {
+        createPantry: {
+          __typename: 'CreatePantryPayload' as const,
+          pantry: {
+            __typename: 'Pantry' as const,
+            id: input.id,
+            homeId: input.homeId,
+          },
+        },
+      };
+    },
+  });
+
 const markDefaultMock = (defaultPantryId: string) =>
   recordMock(MarkHomeAsDefaultDocument, {
     data: {
@@ -161,7 +181,12 @@ describe('first home becomes the default', () => {
     const markDefault = markDefaultRefusedMock();
 
     const { result } = renderHookWithApollo(() => useHomeManagement(), {
-      operationMocks: [homes.mock, create.mock, markDefault.mock],
+      operationMocks: [
+        homes.mock,
+        create.mock,
+        createdPantryMock().mock,
+        markDefault.mock,
+      ],
     });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -173,7 +198,9 @@ describe('first home becomes the default', () => {
     await waitFor(() =>
       expect(errorService.reportError).toHaveBeenCalledWith(
         expect.any(Error),
-        expect.objectContaining({ operation: 'Set First Home as Default' }),
+        expect.objectContaining({
+          operation: operationNameOf(MarkHomeAsDefaultDocument),
+        }),
       ),
     );
   });
@@ -184,7 +211,12 @@ describe('first home becomes the default', () => {
     const markDefault = markDefaultMock('pantry-new');
 
     const { result } = renderHookWithApollo(() => useHomeManagement(), {
-      operationMocks: [homes.mock, create.mock, markDefault.mock],
+      operationMocks: [
+        homes.mock,
+        create.mock,
+        createdPantryMock().mock,
+        markDefault.mock,
+      ],
     });
 
     await waitFor(() => expect(result.current.loading).toBe(false));

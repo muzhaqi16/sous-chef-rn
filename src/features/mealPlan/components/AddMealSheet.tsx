@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import {
@@ -41,6 +41,7 @@ import type { SearchRecipesResult } from '#/services/spoonacular/types';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { EmptyState } from '#components/molecules/EmptyState';
+import { Loading } from '#components/molecules/Loading';
 
 interface AddMealSheetProps {
   visible: boolean;
@@ -50,7 +51,7 @@ interface AddMealSheetProps {
   onAddCustomMeal: (name: string, mealType: MealType) => void;
 }
 
-const MEAL_TYPES: { type: MealType; labelKey: string }[] = [
+const MEAL_TYPES: { type: MealType; labelKey: TranslationKey }[] = [
   { type: MealType.Breakfast, labelKey: 'labels.breakfast' },
   { type: MealType.Lunch, labelKey: 'labels.lunch' },
   { type: MealType.Dinner, labelKey: 'labels.dinner' },
@@ -59,7 +60,7 @@ const MEAL_TYPES: { type: MealType; labelKey: string }[] = [
   { type: MealType.Dessert, labelKey: 'labels.dessert' },
 ];
 
-const DIET_TAG_LABEL_KEYS: Record<DietTag, string> = {
+const DIET_TAG_LABEL_KEYS: Record<DietTag, TranslationKey> = {
   vegan: 'addMealSheet.dietVegan',
   vegetarian: 'addMealSheet.dietVegetarian',
   glutenFree: 'addMealSheet.dietGlutenFree',
@@ -116,7 +117,7 @@ function searchSpoonacularWithCache(
 
   setSearching(true);
 
-  executeAsyncWithCleanup(
+  void executeAsyncWithCleanup(
     async () => {
       const response = await spoonacularService.searchRecipesWithInfo(
         { query, number: 10 },
@@ -176,11 +177,11 @@ const SavedRecipeRow: React.FC<SavedRecipeRowProps> = ({
         />
       )}
       <View style={styles.recipeInfo}>
-        <Text role="bodyStrong" style={styles.recipeName} numberOfLines={1}>
+        <Text role="bodyStrong" numberOfLines={1}>
           {recipe.name}
         </Text>
         {!!(recipe.servings || recipe.totalTimeMinutes) && (
-          <Text role="caption" style={styles.recipeMeta}>
+          <Text role="caption" tone="secondary" style={styles.recipeMeta}>
             {recipe.servings
               ? t('addMealSheet.servings', { count: recipe.servings })
               : ''}
@@ -215,10 +216,11 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     MealType.Dinner,
   );
   const [searchQuery, setSearchQuery] = useState('');
+  const hasQuery = searchQuery.trim().length > 0;
   const {
-    state: { recipes, hasMore },
+    state: { recipes, hasMore, isLoadingRemainingPages },
     actions: { loadMore },
-  } = useSavedRecipes();
+  } = useSavedRecipes({ loadAllPages: hasQuery });
 
   // Spoonacular search state
   const [spoonacularResults, setSpoonacularResults] = useState<
@@ -297,7 +299,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   const handleSelectSpoonacularRecipe = (item: TransformedRecipeItem) => {
     setLoadingItemId(item.spoonacularId);
 
-    executeAsyncWithCleanup(
+    void executeAsyncWithCleanup(
       async () => {
         const fullRecipe = await spoonacularService.getRecipeInformation({
           id: item.spoonacularId,
@@ -329,12 +331,10 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   // `loadMore` guards re-entry synchronously (usePagination's isFetchingMoreRef),
   // so onEndReached firing repeatedly during a fling is safe.
   const handleEndReached = () => {
-    if (hasMore && !searchQuery.trim()) {
-      loadMore();
+    if (hasMore) {
+      void loadMore();
     }
   };
-
-  const hasQuery = searchQuery.trim().length > 0;
 
   // Filtering moved up from the row so the list's item count matches what is
   // actually rendered — a virtualized list can't absorb rows that return null.
@@ -443,6 +443,14 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
           }
           ListFooterComponent={
             <>
+              {hasQuery && isLoadingRemainingPages ? (
+                <Loading
+                  size="small"
+                  message={t('recipes.savedRecipesSearchingAll')}
+                  style={styles.loadingRemaining}
+                />
+              ) : null}
+
               {/* Additional search results */}
               {hasQuery && (searchingApi || spoonacularResults.length > 0) ? (
                 <>
@@ -467,11 +475,16 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                         />
                       ) : null}
                       <View style={styles.recipeInfo}>
-                        <Text style={styles.recipeName} numberOfLines={1}>
+                        <Text role="bodyStrong" numberOfLines={1}>
                           {item.title}
                         </Text>
                         {item.subtitle ? (
-                          <Text style={styles.recipeMeta} numberOfLines={1}>
+                          <Text
+                            role="caption"
+                            tone="secondary"
+                            style={styles.recipeMeta}
+                            numberOfLines={1}
+                          >
                             {item.subtitle}
                           </Text>
                         ) : null}
@@ -511,6 +524,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
 
               {hasQuery &&
               filteredRecipes.length === 0 &&
+              !isLoadingRemainingPages &&
               !searchingApi &&
               spoonacularResults.length === 0 ? (
                 <EmptyState
@@ -583,12 +597,8 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     justifyContent: 'center',
   },
-  recipeName: {
-    color: theme.colors.textPrimary,
-  },
   recipeMeta: {
-    color: theme.colors.textSecondary,
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   dietTagsRow: {
     flexDirection: 'row',
@@ -598,7 +608,7 @@ const styles = StyleSheet.create(theme => ({
   dietTag: {
     backgroundColor: theme.colors.surfaceVariant,
     paddingHorizontal: theme.spacing.xsPlus,
-    paddingVertical: 1,
+    paddingVertical: theme.spacing['3xs'],
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
   },
@@ -607,6 +617,10 @@ const styles = StyleSheet.create(theme => ({
   },
   sectionHeaderSpacing: {
     paddingVertical: theme.spacing.sm,
+  },
+  loadingRemaining: {
+    flex: 0,
+    paddingVertical: theme.spacing.md,
   },
   centeredSpinner: {
     alignItems: 'center',

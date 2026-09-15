@@ -29,7 +29,7 @@ export const SavedRecipeMetadataPanel: React.FC<
   return (
     <View style={styles.container}>
       <View style={styles.detailRow}>
-        <Text role="caption" style={styles.detailLabel}>
+        <Text role="caption" tone="secondary">
           {t('recipes.rating')}
         </Text>
         <View style={styles.ratingStars}>
@@ -60,7 +60,9 @@ export const SavedRecipeMetadataPanel: React.FC<
       </View>
 
       <View style={styles.detailRow}>
-        <Text style={styles.detailLabel}>{t('labels.folder')}</Text>
+        <Text role="caption" tone="secondary">
+          {t('labels.folder')}
+        </Text>
         <View style={styles.detailValue}>
           <Icon
             name="folder"
@@ -81,7 +83,9 @@ export const SavedRecipeMetadataPanel: React.FC<
 
       {savedTags.length > 0 && (
         <View style={styles.tagsDisplayRow}>
-          <Text style={styles.detailLabel}>{t('recipes.tags')}</Text>
+          <Text role="caption" tone="secondary">
+            {t('recipes.tags')}
+          </Text>
           <View style={styles.tagsChipsContainer}>
             {savedTags.map((tag, index) => (
               <View key={`${tag}-${index}`} style={styles.tagChip}>
@@ -96,7 +100,9 @@ export const SavedRecipeMetadataPanel: React.FC<
 
       {!!savedNotes && (
         <View style={styles.notesDisplayRow}>
-          <Text style={styles.detailLabel}>{t('recipes.notes')}</Text>
+          <Text role="caption" tone="secondary">
+            {t('recipes.notes')}
+          </Text>
           <Text role="caption" style={styles.notesText}>
             {savedNotes}
           </Text>
@@ -117,9 +123,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.xs,
   },
-  detailLabel: {
-    color: theme.colors.textSecondary,
-  },
   detailValue: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -134,7 +137,7 @@ const styles = StyleSheet.create(theme => ({
   ratingStars: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: theme.spacing['2xs'],
   },
   tagsDisplayRow: {
     flexDirection: 'row',
@@ -153,7 +156,7 @@ const styles = StyleSheet.create(theme => ({
   tagChip: {
     backgroundColor: theme.colors.primary + '15',
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: theme.spacing['2xs'],
     borderRadius: theme.radii.full,
   },
   tagChipText: {

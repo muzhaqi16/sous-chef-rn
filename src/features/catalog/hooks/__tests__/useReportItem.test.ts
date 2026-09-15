@@ -7,6 +7,7 @@ import { MarkItemForReviewDocument } from '#operations/item/item.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useReportItem } from '#features/catalog/hooks/useReportItem';
 import { alertService } from '#/services/alertService';
+import { errorService } from '#/services/errorService';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -149,12 +150,12 @@ describe('useReportItem', () => {
 
     expect(succeeded).toBe(false);
     expect(alertService.alert).toHaveBeenCalledWith(
-      'Slow down a moment',
+      "Couldn't send that",
       expect.stringContaining('10 minute'),
     );
   });
 
-  it('falls back to the generic failure for an unexpected member', async () => {
+  it("shows an unexpected member's code copy, never its text", async () => {
     const { mock } = recordMock(MarkItemForReviewDocument, {
       data: {
         markItemForReview: {
@@ -171,7 +172,13 @@ describe('useReportItem', () => {
     expect(succeeded).toBe(false);
     expect(alertService.alert).toHaveBeenCalledWith(
       "Couldn't send that",
-      'Something went wrong sending your report. Please try again.',
+      errorService.getUserFriendlyMessage(
+        ErrorCode.Forbidden,
+        'Something went wrong sending your report. Please try again.',
+      ),
     );
+    expect(
+      JSON.stringify(jest.mocked(alertService.alert).mock.calls),
+    ).not.toContain('Not allowed');
   });
 });

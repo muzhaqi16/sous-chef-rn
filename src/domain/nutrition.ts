@@ -4,12 +4,14 @@
 
 import type {
   NutritionsData,
-  NutritionValue,
   MacroSummary,
   NutritionHighlight,
   NutrientEntry,
   NutrientCategory,
 } from '#/types/nutrition';
+import type { TranslationKey } from '#/i18n';
+import { isOwnKey } from '#utils/isOwnKey';
+import type { Translate } from '#/i18n/types';
 
 // =============================================================================
 // PARSING
@@ -45,7 +47,7 @@ export function hasNutritionData(nutritions: NutritionsData | null): boolean {
     key =>
       nutritions[key] &&
       typeof nutritions[key] === 'object' &&
-      (nutritions[key] as NutritionValue).amount !== undefined,
+      nutritions[key].amount !== undefined,
   );
 }
 
@@ -297,38 +299,83 @@ function categorizeNutrient(key: string): NutrientCategory {
   return 'other';
 }
 
+/** The nutrients the copy names; the API may send others. */
+type NamedNutrient =
+  | 'protein'
+  | 'totalFat'
+  | 'carbohydrates'
+  | 'fiber'
+  | 'sugar'
+  | 'calories'
+  | 'saturatedFat'
+  | 'transFat'
+  | 'cholesterol'
+  | 'vitaminA'
+  | 'vitaminC'
+  | 'vitaminD'
+  | 'vitaminE'
+  | 'vitaminK'
+  | 'vitaminB6'
+  | 'vitaminB12'
+  | 'thiamin'
+  | 'riboflavin'
+  | 'niacin'
+  | 'folate'
+  | 'sodium'
+  | 'calcium'
+  | 'iron'
+  | 'potassium'
+  | 'magnesium'
+  | 'phosphorus'
+  | 'zinc'
+  | 'copper'
+  | 'manganese'
+  | 'selenium';
+
+const NUTRIENT_LABEL_KEYS: Record<NamedNutrient, TranslationKey> = {
+  protein: 'recipes.macroProtein',
+  totalFat: 'nutrition.nutrient.totalFat',
+  carbohydrates: 'recipes.macroCarbohydrates',
+  fiber: 'recipes.macroFiber',
+  sugar: 'recipes.macroSugar',
+  calories: 'labels.calories',
+  saturatedFat: 'nutrition.nutrient.saturatedFat',
+  transFat: 'nutrition.nutrient.transFat',
+  cholesterol: 'nutrition.nutrient.cholesterol',
+  vitaminA: 'nutrition.nutrient.vitaminA',
+  vitaminC: 'nutritionHighlights.vitaminC',
+  vitaminD: 'nutrition.nutrient.vitaminD',
+  vitaminE: 'nutrition.nutrient.vitaminE',
+  vitaminK: 'nutrition.nutrient.vitaminK',
+  vitaminB6: 'nutrition.nutrient.vitaminB6',
+  vitaminB12: 'nutrition.nutrient.vitaminB12',
+  thiamin: 'nutrition.nutrient.thiamin',
+  riboflavin: 'nutrition.nutrient.riboflavin',
+  niacin: 'nutrition.nutrient.niacin',
+  folate: 'nutrition.nutrient.folate',
+  sodium: 'recipes.macroSodium',
+  calcium: 'nutritionHighlights.calcium',
+  iron: 'nutritionHighlights.iron',
+  potassium: 'nutritionHighlights.potassium',
+  magnesium: 'nutrition.nutrient.magnesium',
+  phosphorus: 'nutrition.nutrient.phosphorus',
+  zinc: 'nutrition.nutrient.zinc',
+  copper: 'nutrition.nutrient.copper',
+  manganese: 'nutrition.nutrient.manganese',
+  selenium: 'nutrition.nutrient.selenium',
+};
+
 /**
- * Get display name for a nutrient key
+ * A nutrient's label from local copy. A nutrient the copy does not name keeps
+ * the API's own name: it is the only label that exists for it.
  */
-function getNutrientDisplayName(key: string, name?: string): string {
-  // Use the name from API if available
-  if (name) {
-    // Clean up verbose USDA names
-    return name
-      .replace(', by difference', '')
-      .replace(', total dietary', '')
-      .replace(', total ascorbic acid', '')
-      .replace('Total lipid (fat)', 'Total Fat');
-  }
-
-  // Fallback to formatted key
-  const nameMap: Record<string, string> = {
-    protein: 'Protein',
-    totalFat: 'Total Fat',
-    carbohydrates: 'Carbohydrates',
-    fiber: 'Fiber',
-    sugar: 'Sugar',
-    calories: 'Calories',
-    sodium: 'Sodium',
-    calcium: 'Calcium',
-    iron: 'Iron',
-    potassium: 'Potassium',
-    vitaminA: 'Vitamin A',
-    vitaminC: 'Vitamin C',
-    vitaminD: 'Vitamin D',
-  };
-
-  return nameMap[key] || key;
+function getNutrientDisplayName(
+  key: string,
+  name: string | undefined,
+  t: Translate,
+): string {
+  if (isOwnKey(NUTRIENT_LABEL_KEYS, key)) return t(NUTRIENT_LABEL_KEYS[key]);
+  return name ?? key;
 }
 
 /**
@@ -338,7 +385,8 @@ function getNutrientDisplayName(key: string, name?: string): string {
  */
 export function getNutrientEntries(
   nutritions: NutritionsData | null,
-  actualServingGrams?: number | null,
+  actualServingGrams: number | null | undefined,
+  t: Translate,
 ): NutrientEntry[] {
   if (!nutritions) return [];
 
@@ -352,12 +400,12 @@ export function getNutrientEntries(
     if (skipKeys.includes(key)) continue;
     if (!value || typeof value !== 'object') continue;
 
-    const nutrientValue = value as NutritionValue;
+    const nutrientValue = value;
     if (nutrientValue.amount === undefined) continue;
 
     entries.push({
       key,
-      name: getNutrientDisplayName(key, nutrientValue.name),
+      name: getNutrientDisplayName(key, nutrientValue.name, t),
       amount: nutrientValue.amount * scale,
       unit: nutrientValue.unit,
       category: categorizeNutrient(key),
@@ -382,25 +430,30 @@ export function getNutrientEntries(
  */
 export function groupNutrientsByCategory(
   entries: NutrientEntry[],
-): Record<NutrientCategory, NutrientEntry[]> {
-  return entries.reduce((acc, entry) => {
-    if (!acc[entry.category]) {
-      acc[entry.category] = [];
+): Partial<Record<NutrientCategory, NutrientEntry[]>> {
+  const groups: Partial<Record<NutrientCategory, NutrientEntry[]>> = {};
+  for (const entry of entries) {
+    const group = groups[entry.category];
+    if (group) {
+      group.push(entry);
+    } else {
+      groups[entry.category] = [entry];
     }
-    acc[entry.category].push(entry);
-    return acc;
-  }, {} as Record<NutrientCategory, NutrientEntry[]>);
+  }
+  return groups;
 }
 
-/**
- * Get display label for a category
- */
-export function getCategoryLabel(category: NutrientCategory): string {
-  const labels: Record<NutrientCategory, string> = {
-    macro: 'Macronutrients',
-    vitamin: 'Vitamins',
-    mineral: 'Minerals',
-    other: 'Other',
-  };
-  return labels[category];
+const NUTRIENT_CATEGORY_LABEL_KEYS: Record<NutrientCategory, TranslationKey> = {
+  macro: 'nutrition.category.macro',
+  vitamin: 'nutrition.category.vitamin',
+  mineral: 'nutrition.category.mineral',
+  other: 'nutrition.category.other',
+};
+
+/** A nutrient category's section heading. */
+export function getCategoryLabel(
+  category: NutrientCategory,
+  t: Translate,
+): string {
+  return t(NUTRIENT_CATEGORY_LABEL_KEYS[category]);
 }

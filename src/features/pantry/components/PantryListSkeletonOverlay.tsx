@@ -1,3 +1,4 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import React from 'react';
 import { View } from 'react-native';
 import Animated, { FadeOut } from 'react-native-reanimated';
@@ -23,7 +24,7 @@ const SKELETON_ROWS = 8;
 // inside `PantryStickyTabsProvider`.
 export const PantryListSkeletonOverlay: React.FC = () => (
   <Animated.View
-    testID="pantry-list-skeleton-overlay"
+    testID={pantryTestIDs.listSkeletonOverlay}
     exiting={FadeOut.duration(motion.timing.STANDARD)}
     style={styles.flap}
     pointerEvents="none"

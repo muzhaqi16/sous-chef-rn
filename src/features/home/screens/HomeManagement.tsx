@@ -27,12 +27,14 @@ import {
 } from '#features/home/utils/homePermissions';
 import { commonStyles } from '#/styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { motion } from '#/theme/foundations/motion';
 import { Screen } from '#components/templates/Screen';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { homeTestIDs } from '#features/home/testIDs';
 
 export const HomeManagement: React.FC = () => {
   useScreenTransition('HomeManagement');
@@ -65,7 +67,8 @@ export const HomeManagement: React.FC = () => {
   const {
     homes,
     remoteDefaultHomeId,
-    initialLoading,
+    loading,
+    hasResult,
     creating,
     joiningByCode,
     loadingPreview,
@@ -119,12 +122,8 @@ export const HomeManagement: React.FC = () => {
     show({
       title: t('labels.inviteMemberToHome'),
       allowedRoles,
-      onSubmit: async (email, role) => {
-        // Just call the function and let any errors bubble up to the modal
-        // The modal will handle displaying the error and keeping itself open
-        await inviteUserToHome(homeId, email, role);
-        // If we reach here, the invitation was successful and the modal will close
-      },
+      // A refusal comes back as copy the modal shows inline, keeping it open.
+      onSubmit: (email, role) => inviteUserToHome(homeId, email, role),
     });
   };
 
@@ -194,7 +193,7 @@ export const HomeManagement: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         await refetchHomes();
       },
@@ -220,19 +219,8 @@ export const HomeManagement: React.FC = () => {
     });
   })();
 
-  // Only show loading screen on initial load (no cached data)
-  // Once we have data, show it immediately even if refetching
-  if (initialLoading) {
-    return (
-      <View style={commonStyles.loadingContainer}>
-        <SousChefLoader
-          size="small"
-          showBrand={false}
-          message={t('labels.loading')}
-        />
-      </View>
-    );
-  }
+  // Not empty-aware: with no homes the stats and the create form are the page.
+  const dataState = useDataState({ loading, hasResult, isEmpty: false });
 
   const headerActions: HeaderAction[] = [
     {
@@ -240,7 +228,7 @@ export const HomeManagement: React.FC = () => {
       accessibilityLabel: t('labels.addItem'),
       onPress: () => setShowCreateForm(true),
       variant: 'primary',
-      testID: 'home-management-add-button',
+      testID: homeTestIDs.managementAddButton,
     },
   ];
 
@@ -255,6 +243,7 @@ export const HomeManagement: React.FC = () => {
         }}
         scroll="scroll"
         refresh={{ refreshing, onRefresh: handleRefresh }}
+        state={{ value: dataState, onRetry: handleRefresh }}
         gutter="none"
       >
         {/* Stats Section */}
@@ -299,6 +288,7 @@ export const HomeManagement: React.FC = () => {
                 onPress={() => setMode('join')}
               >
                 <Text
+                  role="label"
                   style={[
                     styles.modeButtonText,
                     mode === 'join' && styles.modeButtonTextActive,
@@ -393,7 +383,8 @@ export const HomeManagement: React.FC = () => {
             // OWNER role, not the canManageHome flag (which ADMINs hold by
             // default). Gating on the flag showed ADMINs a Delete that could
             // only ever return FORBIDDEN.
-            const userCanDelete = home.myMembership?.role === 'OWNER';
+            const userCanDelete =
+              home.myMembership?.role === MembershipRole.Owner;
 
             return (
               <Animated.View

@@ -181,7 +181,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     flexDirection: 'row',
     justifyContent: 'center',
-    paddingVertical: 6,
+    paddingVertical: theme.spacing.xsPlus,
     paddingHorizontal: theme.spacing.sm,
     borderWidth: theme.borderWidth.thin,
   },

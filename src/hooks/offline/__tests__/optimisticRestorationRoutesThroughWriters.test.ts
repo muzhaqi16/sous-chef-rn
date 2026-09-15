@@ -44,9 +44,9 @@ jest
     if (typeof fn === 'function') fn();
   });
 
-const cache = (
-  jest.requireMock('#/apollo/client') as { client: { cache: InMemoryCache } }
-).client.cache;
+const { cache } = jest.requireMock<{ client: { cache: InMemoryCache } }>(
+  '#/apollo/client',
+).client;
 
 const ROW = gql`
   fragment RestoreProbe on ShoppingListItem {
@@ -93,9 +93,9 @@ const read = () =>
   })?.purchaseInfo;
 
 describe('optimistic restoration routes through the owning writer', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
-    cache.reset();
+    await cache.reset();
   });
 
   it('applies the record’s clear-on-flip rule to a restored patch', () => {

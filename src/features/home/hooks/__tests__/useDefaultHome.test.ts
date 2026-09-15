@@ -232,10 +232,6 @@ describe('useDefaultHome', () => {
 
     // Initial render before query resolves
     expect(result.current.state.selectedHomeId).toBeNull();
-    expect(result.current.state.homes).toEqual([]);
-    expect(result.current.state.hasDefaultHome).toBe(false);
-    expect(result.current.state.remoteDefaultHomeId).toBeNull();
-    expect(result.current.state.isHomeSelectionReady).toBe(false);
   });
 
   it('returns selectedHomeId from store', () => {
@@ -246,7 +242,6 @@ describe('useDefaultHome', () => {
     });
 
     expect(result.current.state.selectedHomeId).toBe('home-1');
-    expect(result.current.state.hasDefaultHome).toBe(true);
   });
 
   it('falls back to remoteDefaultHomeId when no selectedHomeId', async () => {
@@ -260,23 +255,8 @@ describe('useDefaultHome', () => {
     });
 
     await waitFor(() =>
-      expect(result.current.state.remoteDefaultHomeId).toBe('home-1'),
+      expect(result.current.state.selectedHomeId).toBe('home-1'),
     );
-    expect(result.current.state.selectedHomeId).toBe('home-1');
-  });
-
-  it('returns homes from query data', async () => {
-    const { result } = renderHookWithApollo(() => useDefaultHome(), {
-      operationMocks: [
-        buildGetHomesMock([
-          buildHomeNode({ id: 'home-1', isDefault: true }),
-          buildHomeNode({ id: 'home-2' }),
-        ]),
-        buildSetDefaultHomeMock('home-1'),
-      ],
-    });
-
-    await waitFor(() => expect(result.current.state.homes).toHaveLength(2));
   });
 
   it('refetches once when a home is selected but the list came back empty', async () => {
@@ -286,16 +266,26 @@ describe('useDefaultHome', () => {
     // that list shows its "no home" fallback for the rest of the session.
     mockStoreState.selectedHomeId = 'home-1';
 
-    const { result } = renderHookWithApollo(() => useDefaultHome(), {
+    renderHookWithApollo(() => useDefaultHome(), {
       operationMocks: [
         { ...buildGetHomesMock([]), maxUsageCount: 1 },
-        buildGetHomesMock([buildHomeNode({ id: 'home-1', isDefault: true })]),
+        buildGetHomesMock([
+          buildHomeNode({
+            id: 'home-1',
+            isDefault: true,
+            pantries: [{ id: 'pantry-1', isDefault: true }],
+          }),
+        ]),
         buildSetDefaultHomeMock('home-1'),
       ],
     });
 
-    await waitFor(() => expect(result.current.state.homes).toHaveLength(1));
-    expect(result.current.state.homes[0]!.id).toBe('home-1');
+    // Only the refetched list names the home's pantry.
+    await waitFor(() =>
+      expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
+        'pantry-1',
+      ),
+    );
   });
 
   it('does not keep refetching when the account genuinely has no homes', async () => {
@@ -316,26 +306,17 @@ describe('useDefaultHome', () => {
       },
     });
 
-    const { result } = renderHookWithApollo(() => useDefaultHome(), {
+    renderHookWithApollo(() => useDefaultHome(), {
       operationMocks: [mock],
     });
 
     // Initial fetch plus exactly one self-heal attempt — the empty result
     // must not feed back into another refetch.
     await waitFor(() => expect(fired).toHaveLength(2));
-    await waitFor(() => expect(result.current.state.loading).toBe(false));
+    await waitFor(() =>
+      expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(true),
+    );
     expect(fired).toHaveLength(2);
-  });
-
-  it('exposes loading state and error fields', async () => {
-    const { result } = renderHookWithApollo(() => useDefaultHome(), {
-      operationMocks: [buildGetHomesMock([])],
-    });
-
-    // The lazy query fires from a useEffect, so initial loading might be true
-    // momentarily. We just assert the field exists.
-    await waitFor(() => expect(result.current.state.loading).toBe(false));
-    expect(result.current.state.error).toBeFalsy();
   });
 
   describe('getDefaultPantry', () => {
@@ -430,17 +411,6 @@ describe('useDefaultHome', () => {
       const pantry = result.current.actions.getDefaultPantry(undefined);
       expect(pantry).toBeNull();
     });
-  });
-
-  it('exposes selectedPantryId and setSelectedPantryId', () => {
-    mockStoreState.selectedPantryId = 'pantry-1';
-
-    const { result } = renderHookWithApollo(() => useDefaultHome(), {
-      operationMocks: [buildGetHomesMock([])],
-    });
-
-    expect(result.current.state.selectedPantryId).toBe('pantry-1');
-    expect(typeof result.current.actions.setSelectedPantryId).toBe('function');
   });
 
   it('sets early ready when persisted home/pantry IDs exist', async () => {
@@ -582,7 +552,7 @@ describe('useDefaultHome', () => {
       // another home, and evicting it empties THAT home's connection.
       const { safeEvictMany } = jest.requireMock(
         '#/apollo/utils/cacheUpdaters',
-      ) as { safeEvictMany: jest.Mock };
+      );
       expect(safeEvictMany).not.toHaveBeenCalledWith(
         expect.anything(),
         expect.arrayContaining([
@@ -609,7 +579,7 @@ describe('useDefaultHome', () => {
 
   describe('default pantry extraction', () => {
     it('extracts default pantry from homes data', async () => {
-      const { result } = renderHookWithApollo(() => useDefaultHome(), {
+      renderHookWithApollo(() => useDefaultHome(), {
         operationMocks: [
           buildGetHomesMock([
             buildHomeNode({
@@ -626,12 +596,14 @@ describe('useDefaultHome', () => {
       });
 
       await waitFor(() =>
-        expect(result.current.state.remoteDefaultHomeId).toBe('home-1'),
+        expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
+          'pantry-2',
+        ),
       );
     });
 
     it('falls back to first pantry when no default marked', async () => {
-      const { result } = renderHookWithApollo(() => useDefaultHome(), {
+      renderHookWithApollo(() => useDefaultHome(), {
         operationMocks: [
           buildGetHomesMock([
             buildHomeNode({
@@ -645,26 +617,11 @@ describe('useDefaultHome', () => {
       });
 
       await waitFor(() =>
-        expect(result.current.state.remoteDefaultHomeId).toBe('home-1'),
+        expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
+          'pantry-1',
+        ),
       );
     });
-  });
-
-  it('returns hasDefaultHome as true when currentHomeId exists', () => {
-    mockStoreState.selectedHomeId = 'home-1';
-
-    const { result } = renderHookWithApollo(() => useDefaultHome(), {
-      operationMocks: [buildGetHomesMock([])],
-    });
-
-    expect(result.current.state.hasDefaultHome).toBe(true);
-  });
-
-  it('returns hasDefaultHome as false when no home is selected or default', () => {
-    const { result } = renderHookWithApollo(() => useDefaultHome(), {
-      operationMocks: [buildGetHomesMock([])],
-    });
-    expect(result.current.state.hasDefaultHome).toBe(false);
   });
 
   describe('sync remote defaults on mismatch (invitation acceptance restart)', () => {

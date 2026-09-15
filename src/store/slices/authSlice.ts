@@ -4,7 +4,7 @@
 // Implements proactive token refresh (best practice)
 // ============================================
 
-import { StateCreator } from 'zustand';
+import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
 import {
   cancelProactiveRefresh,
@@ -14,6 +14,7 @@ import {
 import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { saveSessionTokens, clearSessionTokens } from '#storage/keychain';
 import { logger } from '#/utils/environment';
+import type { UserRole } from '#/graphql/generated/schemaTypes';
 
 // ============================================
 // AppState Token Refresh
@@ -62,7 +63,7 @@ export interface User {
   email: string | null;
   emailVerified: boolean | null;
   onBoarded: boolean;
-  role?: string | null;
+  role?: UserRole | null;
   canAccessDevTools?: boolean;
   firstName?: string;
   lastName?: string;

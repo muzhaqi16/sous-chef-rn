@@ -2,8 +2,8 @@
  * The cache a test gets by default is the cache the app ships.
  *
  * **The migration is done.** Every user of the helper now gets the production
- * cache, and a `no-restricted-syntax` ban on `new InMemoryCache()` in tests
- * (`.eslintrc.js`) keeps it that way. The history below is why the guard
+ * cache, and `sous-chef/no-bare-in-memory-cache` (a ban on `new InMemoryCache()`
+ * in tests) keeps it that way. The history below is why the guard
  * exists, not work outstanding.
  *
  * A bare `InMemoryCache` is not a substitute for it. Production

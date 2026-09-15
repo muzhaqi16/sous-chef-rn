@@ -1,4 +1,5 @@
-import { useApolloClient, useQuery } from '@apollo/client/react';
+import { useApolloClient, useFragment, useQuery } from '@apollo/client/react';
+import { startOfDay } from 'date-fns';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
   SortOrder,
@@ -11,8 +12,21 @@ import {
   MealPlanDisplayFragmentDoc,
   type MealPlanDisplayFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import { resolveCurrentMealPlan } from '#features/mealPlan/utils/mealPlanFilters';
 
-export function useMealPlans(filters?: MealPlanFilters) {
+/** `useOfflineTabPreloading` warms the unfiltered list with these variables. */
+const PAGE_SIZE = 20;
+
+interface MealPlanListOptions {
+  skip?: boolean;
+  orderBy?: SortOrder;
+}
+
+/** One cursor-paged `mealPlans` variant, materialized as display plans. */
+export function useMealPlanList(
+  filters: MealPlanFilters | undefined,
+  { skip = false, orderBy = SortOrder.Desc }: MealPlanListOptions = {},
+) {
   const isLoggedOut = useIsLoggedOut();
   const client = useApolloClient();
 
@@ -20,15 +34,15 @@ export function useMealPlans(filters?: MealPlanFilters) {
     GetMealPlansDocument,
     {
       variables: {
-        first: 20,
-        filters: filters ?? undefined,
-        orderBy: { startDate: SortOrder.Desc },
+        first: PAGE_SIZE,
+        filters,
+        orderBy: { startDate: orderBy },
       },
-      skip: isLoggedOut,
+      skip: isLoggedOut || skip,
     },
   );
 
-  useApolloErrorLogger('GetMealPlans', error);
+  useApolloErrorLogger(GetMealPlansDocument, error);
 
   const connectionData = useConnectionData({
     data,
@@ -38,11 +52,8 @@ export function useMealPlans(filters?: MealPlanFilters) {
     refetch,
   });
 
-  // Edges arrive as masked refs (`{ __typename: 'MealPlan' } & { $fragmentRefs }`).
-  // Materialize via cache.readFragment so consumers see the full
-  // MealPlanDisplayFragment shape (startDate, endDate, name, …) without
-  // exposing raw refs. Use the cache-key form — the masked-ref `from` silently
-  // returns partial/null data under dataMasking.
+  // Edges arrive as masked refs. The cache-key `from` materializes the full
+  // display shape; the masked-ref `from` silently returns partial/null data.
   const mealPlans = connectionData.items
     .map(ref =>
       client.cache.readFragment<MealPlanDisplayFragment>({
@@ -53,58 +64,71 @@ export function useMealPlans(filters?: MealPlanFilters) {
     )
     .filter((p): p is MealPlanDisplayFragment => p !== null);
 
-  // Find the current meal plan (active > nearest upcoming > most recent past)
-  const now = new Date();
+  return {
+    mealPlans,
+    loading,
+    error,
+    refetch: async () => {
+      await refetch();
+    },
+    hasResult: data !== undefined,
+    skipped: isLoggedOut,
+    hasMore: connectionData.hasMore,
+    loadingMore: connectionData.isLoadingMore,
+    loadMore: connectionData.loadMore,
+  };
+}
 
-  // 1. Plan spanning today (active)
-  const activePlan = mealPlans.find(plan => {
-    const start = new Date(plan.startDate);
-    const end = new Date(plan.endDate);
-    return start <= now && end >= now;
+/** A plan's list-card shape from the cache, whichever page or query loaded it. */
+export function useMealPlanDisplay(
+  planId: string | null,
+): MealPlanDisplayFragment | null {
+  const { data, complete } = useFragment({
+    fragment: MealPlanDisplayFragmentDoc,
+    fragmentName: 'MealPlanDisplay',
+    from: planId ? { __typename: 'MealPlan', id: planId } : null,
   });
+  return planId && complete ? data : null;
+}
 
-  let currentPlan;
-  if (activePlan) {
-    currentPlan = activePlan;
-  } else {
-    // 2. Nearest upcoming plan
-    const upcoming = mealPlans
-      .filter(plan => new Date(plan.startDate) > now)
-      .sort(
-        (a, b) =>
-          new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
-      );
-    if (upcoming.length > 0) {
-      currentPlan = upcoming[0];
-    } else {
-      // 3. Most recent past plan (query already sorted by startDate DESC)
-      currentPlan = mealPlans[0] ?? null;
-    }
-  }
+export function useMealPlans() {
+  const list = useMealPlanList(undefined);
+
+  // `filters.startDate` keeps plans ending today or later; ascending, started
+  // plans lead and the nearest upcoming follows, so the current plan is on page
+  // one unless a full page of plans overlaps today.
+  const todayStart = startOfDay(new Date()).toISOString();
+  const current = useMealPlanList(
+    { startDate: todayStart },
+    { orderBy: SortOrder.Asc },
+  );
+
+  // The list takes part too: offline, a new day's variant has no cached page.
+  const now = new Date();
+  const currentPlan =
+    resolveCurrentMealPlan([...current.mealPlans, ...list.mealPlans], now) ??
+    list.mealPlans[0] ??
+    null;
 
   return {
     state: {
-      mealPlans,
+      mealPlans: list.mealPlans,
       currentPlan,
-      loading,
-      // True only while the very first response is in flight (nothing cached
-      // yet). A `cache-and-network` refetch over existing data keeps this
-      // false, so consumers can hold a skeleton on cold start without
-      // flashing it over already-rendered content.
-      initialLoading: loading && !data,
-      error: error as Error | undefined,
-      // `data !== undefined` — a response arrived, empty or not. Separates
-      // "you have no plans" from "we never got an answer".
-      hasResult: data !== undefined,
-      // Signed out, so the query above was never sent. Reported so the screen
-      // shows its empty state rather than accusing the network of a failure.
-      skipped: isLoggedOut,
-      totalCount: connectionData.totalCount,
-      hasMore: connectionData.hasMore,
+      loading: list.loading,
+      // True only while the very first response is in flight, so a
+      // `cache-and-network` refetch over rendered content never flashes a skeleton.
+      initialLoading: list.loading && !list.hasResult,
+      error: list.error,
+      // A response arrived, empty or not: "you have no plans" vs "no answer".
+      hasResult: list.hasResult,
+      // Signed out, so no query was sent: the screen shows its empty state.
+      skipped: list.skipped,
+      hasMore: list.hasMore,
+      loadingMore: list.loadingMore,
     },
     actions: {
-      refetch,
-      loadMore: connectionData.loadMore,
+      refetch: list.refetch,
+      loadMore: list.loadMore,
     },
   };
 }

@@ -8,10 +8,8 @@ import { DropdownStack } from '#components/atoms/DropdownStack';
 import { FormInput } from '#components/atoms/FormInput';
 import { StorageLocationAutocompleteField } from '#features/catalog/ui/autocomplete/StorageLocationAutocompleteField';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
-import {
-  ItemCondition,
-  type StorageLocation,
-} from '#/graphql/generated/schemaTypes';
+import type { ItemCondition } from '#/graphql/generated/schemaTypes';
+import type { StorageLocation } from '#/graphql/generated/schemaTypes';
 import {
   ITEM_CONDITION_OPTIONS,
   conditionLabelKey,

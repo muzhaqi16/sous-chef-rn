@@ -7,7 +7,8 @@ import React, {
   useState,
   type ReactNode,
 } from 'react';
-import { View, StyleProp, ViewStyle, TextInputProps } from 'react-native';
+import type { StyleProp, ViewStyle, TextInputProps } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import {
   StyleSheet,

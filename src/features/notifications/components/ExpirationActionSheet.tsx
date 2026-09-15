@@ -4,7 +4,8 @@
  */
 
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
+import type { Translate } from '#/i18n/types';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -31,7 +32,7 @@ interface ExpirationActionSheetProps {
 const EXPIRATION_ACTIONS: {
   action: ExpirationAction;
   /** i18n key path — this table is module-level, no hook. */
-  labelKey: string;
+  labelKey: TranslationKey;
   icon: IconName;
   destructive?: boolean;
 }[] = [
@@ -70,7 +71,7 @@ const EXPIRATION_ACTIONS: {
 
 const getExpirySubtitle = (
   daysUntilExpiry: number | null | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string,
+  t: Translate,
 ): string => {
   if (daysUntilExpiry == null) return t('expirationAction.expiringSoon');
   if (daysUntilExpiry <= 0) return t('expirationAction.alreadyExpired');
@@ -100,7 +101,7 @@ function OptionRow({
       accessibilityLabel={t(option.labelKey)}
     >
       <Icon
-        name={option.icon as string}
+        name={option.icon}
         size={24}
         tone={option.destructive ? 'error' : 'primary'}
       />

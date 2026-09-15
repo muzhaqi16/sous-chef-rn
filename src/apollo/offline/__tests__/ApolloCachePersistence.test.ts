@@ -15,7 +15,7 @@ const VERSION_KEY = 'apollo-cache-version';
 const LEGACY_KEYS = ['apollo-cache-v1-critical', 'apollo-cache-v1-deferred'];
 // Identifies the shape of a persisted blob, not the app version that wrote it
 // — `CURRENT_CACHE_VERSION` in ApolloCachePersistence. Keep in step with it.
-const CURRENT_VERSION = 'shape-2';
+const CURRENT_VERSION = 'shape-3';
 
 const schedule = (cache: NormalizedCacheObject) =>
   apolloCachePersistence.scheduleExtractAndSave(() => cache);
@@ -418,6 +418,52 @@ describe('ApolloCachePersistence', () => {
       apolloCachePersistence.clear();
 
       expect(apolloCachePersistence.load()).toBeNull();
+    });
+  });
+  describe('expeditePending', () => {
+    const entity = (id: string) =>
+      ({ [`Item:${id}`]: { __typename: 'Item', id } } as NormalizedCacheObject);
+
+    // A queued create is durable before its row is: a kill inside the debounce
+    // relaunched with the create queued and nothing on screen.
+    it('saves an owed write after the short delay, well before the debounce', () => {
+      schedule(entity('a'));
+      apolloCachePersistence.expeditePending(250);
+
+      jest.advanceTimersByTime(250);
+
+      expect(persisted()).toHaveProperty('Item:a');
+    });
+
+    it('is not pushed back by a write that lands after it', () => {
+      schedule(entity('a'));
+      apolloCachePersistence.expeditePending(250);
+      jest.advanceTimersByTime(100);
+      schedule(entity('b'));
+
+      jest.advanceTimersByTime(150);
+
+      expect(persisted()).toHaveProperty('Item:b');
+    });
+
+    it('does nothing when no save is owed', () => {
+      apolloCachePersistence.expeditePending(250);
+      jest.runAllTimers();
+
+      expect(storage.getString(CACHE_KEY)).toBeUndefined();
+    });
+
+    it('returns to the debounce once the expedited save has run', () => {
+      schedule(entity('a'));
+      apolloCachePersistence.expeditePending(250);
+      jest.advanceTimersByTime(250);
+      schedule(entity('b'));
+
+      jest.advanceTimersByTime(250);
+      expect(persisted()).not.toHaveProperty('Item:b');
+
+      settle();
+      expect(persisted()).toHaveProperty('Item:b');
     });
   });
 });

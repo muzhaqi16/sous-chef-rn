@@ -4,25 +4,26 @@ import {
   CreateStorageLocationDocument,
   type CreateStorageLocationMutation,
 } from '#features/catalog/graphql/storageLocation.generated';
-import { type CreateStorageLocationInput } from '#/graphql/generated/schemaTypes';
+import type { CreateStorageLocationInput } from '#/graphql/generated/schemaTypes';
 import {
   createAddToQueryConnectionUpdater,
   createAddToParentConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import {
+  appliedPayload,
+  type AppliedPayload,
+} from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { handleMutationError } from '#/utils/errorHandlers';
 import { alertService } from '#/services/alertService';
-import { t } from '#/i18n';
+import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
 
 /** The StorageLocation node shape returned by (and written for) the create. */
-type StorageLocationNode = Extract<
-  NonNullable<CreateStorageLocationMutation['createStorageLocation']>,
-  { __typename: 'CreateStorageLocationPayload' }
->['storageLocation'];
+type StorageLocationNode =
+  AppliedPayload<CreateStorageLocationMutation>['storageLocation'];
 
 type CreateLocationInput = Omit<CreateStorageLocationInput, 'homeId'>;
 
@@ -157,6 +158,7 @@ export function useCreateStorageLocation(
   homeId: string | undefined,
   pantryId: string | undefined,
 ) {
+  const { t } = useTranslation();
   const client = useApolloClient();
 
   const [createMutation, { loading: creating }] = useMutation(
@@ -166,13 +168,9 @@ export function useCreateStorageLocation(
         // On the server response, adopt the authoritative node fields. The
         // optimistic edge already exists (same id), so the dedup guard makes
         // this a field-merge rather than a duplicate edge.
-        if (
-          data?.createStorageLocation?.__typename !==
-          'CreateStorageLocationPayload'
-        ) {
-          return;
-        }
-        const newLocation = data.createStorageLocation.storageLocation;
+        const payload = appliedPayload(data);
+        if (!payload) return;
+        const newLocation = payload.storageLocation;
         try {
           addToStorageLocationsCache(cache, newLocation, { position: 'end' });
           if (pantryId) {
@@ -206,37 +204,23 @@ export function useCreateStorageLocation(
     );
     writeOptimisticLocation(client.cache, optimistic, pantryId);
 
-    const result = await createMutation({
-      variables: { input: { ...input, homeId, id } },
-      context: { localFirst: true },
-    });
-
-    const outcome = classifyCreateResult(result);
-
-    if (outcome === 'rejected') {
-      // The server refused the create — discard the location we showed and
-      // surface a real (non-network) error; a non-success payload has none.
-      revertOptimisticLocation(client.cache, id, pantryId);
-      if (result.error) {
-        handleMutationError(result.error, {
-          operation: 'Create Storage Location',
-        });
-      } else {
-        alertService.alert(
-          t('labels.error'),
-          t('errors.createStorageLocationFailed'),
-        );
-      }
-      return false;
-    }
+    const settled = await settleMutation(
+      () =>
+        createMutation({
+          variables: { input: { ...input, homeId, id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: CreateStorageLocationDocument,
+        fallback: t('errors.createStorageLocationFailed'),
+        onFailed: () => revertOptimisticLocation(client.cache, id, pantryId),
+      },
+    );
+    if (settled.status === 'failed') return false;
 
     // Created (server confirmed) or queued (offline / API down) — keep the
     // location. On 'created' the update callback adopted the server fields.
-    const payload = result.data?.createStorageLocation;
-    if (payload?.__typename === 'CreateStorageLocationPayload') {
-      return payload.storageLocation;
-    }
-    return optimistic;
+    return appliedPayload(settled.data)?.storageLocation ?? optimistic;
   };
 
   return { createLocation, creating };

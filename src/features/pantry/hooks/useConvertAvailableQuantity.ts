@@ -52,7 +52,7 @@ export function useConvertAvailableQuantity({
   const isDualTracked = remainingNetWeight != null && netWeightUnitId != null;
   const fromUnitId = isDualTracked ? netWeightUnitId : trackingUnitId;
   const fromQuantity = isDualTracked
-    ? remainingNetWeight!
+    ? remainingNetWeight
     : availableInTrackingUnit;
   const isSameUnit =
     selectedUnitId === fromUnitId || !selectedUnitId || !fromUnitId;
@@ -72,15 +72,15 @@ export function useConvertAvailableQuantity({
     } else {
       // Let the API handle the conversion
       setAvailableLoading(true);
-      queueMicrotask(async () => {
+      const convertAvailable = async () => {
         let result: Awaited<ReturnType<typeof convertQuantity>> | undefined;
         try {
           result = await convertQuantity({
             variables: {
               pantryItemId,
               quantity: fromQuantity,
-              fromUnitId: fromUnitId!,
-              toUnitId: selectedUnitId!,
+              fromUnitId: fromUnitId,
+              toUnitId: selectedUnitId,
             },
           });
         } catch (error) {
@@ -95,6 +95,9 @@ export function useConvertAvailableQuantity({
           result?.data?.convertQuantity?.value ?? null,
         );
         setAvailableLoading(false);
+      };
+      queueMicrotask(() => {
+        void convertAvailable();
       });
     }
   }

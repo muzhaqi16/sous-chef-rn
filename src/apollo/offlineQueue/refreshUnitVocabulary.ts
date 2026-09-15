@@ -1,15 +1,25 @@
 import { getApolloClient } from '#/apollo/clientRegistry';
+import { rootFieldOf } from '#/apollo/utils/documentOperation';
+import {
+  GetCommonUnitsDocument,
+  GetUnitBySymbolDocument,
+  SearchUnitsDocument,
+} from '#operations/item/unit.generated';
+import {
+  ConsumptionUnitsForPantryItemDocument,
+  RestockUnitsForPantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import { useStore } from '#store';
 import { logger } from '#/utils/environment';
 
 /** Root fields that answer with `Unit` rows, and so cache retired ones. */
 const UNIT_ROOT_FIELDS = [
-  'units',
-  'unitBySymbol',
-  'searchUnits',
-  'consumptionUnitsForPantryItem',
-  'restockUnitsForItem',
-];
+  GetCommonUnitsDocument,
+  GetUnitBySymbolDocument,
+  SearchUnitsDocument,
+  ConsumptionUnitsForPantryItemDocument,
+  RestockUnitsForPantryItemDocument,
+].map(rootFieldOf);
 
 /**
  * Send the next unit lookup to the network. The Zustand copy backs the one

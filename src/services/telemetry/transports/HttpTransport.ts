@@ -1,10 +1,10 @@
-import {
+import type {
   TelemetryTransport,
   LogEntry,
   MetricEntry,
   TelemetryConfig,
-  TransportSendError,
 } from '../types';
+import { TransportSendError } from '../types';
 import { logger } from '#/utils/environment';
 
 const HISTOGRAM_BOUNDS = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
@@ -167,7 +167,7 @@ export class HttpTransport implements TelemetryTransport {
       }
 
       const otlpUrl = `${this.ensureProtocol(
-        this.config.endpoints.logs!,
+        this.config.endpoints.logs,
       )}/v1/logs`;
 
       const response = await fetch(otlpUrl, {
@@ -218,7 +218,7 @@ export class HttpTransport implements TelemetryTransport {
         }
 
         if (metric.type === 'counter') {
-          const current = this.counterAccumulator.get(key) || 0;
+          const current = this.counterAccumulator.get(key) ?? 0;
           this.counterAccumulator.set(key, current + metric.value);
         } else if (metric.type === 'gauge') {
           this.gaugeAccumulator.set(key, metric.value);
@@ -228,7 +228,7 @@ export class HttpTransport implements TelemetryTransport {
             // First observation fixes this series' bounds (per metric, stable).
             const bounds = metric.bounds ?? HISTOGRAM_BOUNDS;
             agg = {
-              buckets: new Array(bounds.length + 1).fill(0),
+              buckets: Array.from({ length: bounds.length + 1 }, () => 0),
               sum: 0,
               count: 0,
               bounds,
@@ -270,7 +270,7 @@ export class HttpTransport implements TelemetryTransport {
       }
 
       const otlpUrl = `${this.ensureProtocol(
-        this.config.endpoints.metrics!,
+        this.config.endpoints.metrics,
       )}/v1/metrics`;
 
       logger.debug('📤 Sending metrics via OTLP:', {
@@ -433,7 +433,7 @@ export class HttpTransport implements TelemetryTransport {
       if (!meta) {
         continue;
       }
-      const existing = grouped.get(meta.name) || [];
+      const existing = grouped.get(meta.name) ?? [];
       existing.push({ value, labels: meta.labels });
       grouped.set(meta.name, existing);
     }
@@ -467,7 +467,7 @@ export class HttpTransport implements TelemetryTransport {
       if (!meta) {
         continue;
       }
-      const existing = grouped.get(meta.name) || [];
+      const existing = grouped.get(meta.name) ?? [];
       existing.push({
         buckets: agg.buckets,
         sum: agg.sum,

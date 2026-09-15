@@ -10,10 +10,7 @@ import { addToHomesCache, removeFromHomesCache } from '../homeCacheUpdaters';
 const {
   createAddToQueryConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
-} = jest.requireMock('#/apollo/utils/cacheUpdaters') as {
-  createAddToQueryConnectionUpdater: jest.Mock;
-  createRemoveFromQueryConnectionUpdater: jest.Mock;
-};
+} = jest.requireMock('#/apollo/utils/cacheUpdaters');
 
 describe('home hooks utils', () => {
   describe('addToHomesCache', () => {

@@ -1,7 +1,7 @@
 import { act } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
-import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { usePurchaseAmountModal } from '../usePurchaseAmountModal';
 
 const makeItem = (

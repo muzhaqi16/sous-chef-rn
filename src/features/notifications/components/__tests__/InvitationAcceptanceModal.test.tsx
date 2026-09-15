@@ -71,7 +71,7 @@ jest.mock('#/utils/finallyHelpers', () => ({
     try {
       return await fn();
     } catch (e) {
-      if (typeof onErrorOrLog === 'function') onErrorOrLog(e);
+      if (typeof onErrorOrLog === 'function') await onErrorOrLog(e);
     }
   },
   executeRefreshWithFinally: async (
@@ -100,19 +100,15 @@ jest.mock('#/apollo/links/refreshToken');
 const homeInvitation: InvitationData = {
   type: 'HOME_INVITE',
   id: 'inv-1',
-  title: 'Home Invitation',
-  description: 'You have been invited to join a home',
   inviterName: 'Alice',
   entityName: "Alice's Home",
   token: 'abc123',
-  payload: {},
+  payload: { inviterName: 'Alice', homeName: "Alice's Home" },
 };
 
 const shoppingListInvitation: InvitationData = {
   type: 'SHOPPING_LIST_INVITE',
   id: 'inv-2',
-  title: 'Shopping List Invitation',
-  description: 'You have been invited to collaborate on a shopping list',
   entityName: 'Weekly Groceries',
   token: 'def456',
   payload: {},
@@ -303,18 +299,18 @@ describe('InvitationAcceptanceModal', () => {
     renderWithApollo(
       <InvitationAcceptanceModal {...defaultProps} invitation={null} />,
     );
-    expect(screen.queryByText('Home Invitation')).toBeNull();
+    expect(screen.queryByText('Home invitation')).toBeNull();
   });
 
-  it('renders the invitation title', () => {
+  it('renders the invitation title from its type', () => {
     renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />);
-    expect(screen.getByText('Home Invitation')).toBeTruthy();
+    expect(screen.getByText('Home invitation')).toBeTruthy();
   });
 
-  it('renders the invitation description', () => {
+  it('builds the description from the payload names', () => {
     renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />);
     expect(
-      screen.getByText('You have been invited to join a home'),
+      screen.getByText("Alice invited you to join Alice's Home"),
     ).toBeTruthy();
   });
 
@@ -349,7 +345,12 @@ describe('InvitationAcceptanceModal', () => {
         invitation={shoppingListInvitation}
       />,
     );
-    expect(screen.getByText('Shopping List Invitation')).toBeTruthy();
+    expect(screen.getByText('Shopping list invitation')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'You have an invitation to collaborate on a shopping list',
+      ),
+    ).toBeTruthy();
     expect(screen.getByText('Weekly Groceries')).toBeTruthy();
   });
 
@@ -365,7 +366,7 @@ describe('InvitationAcceptanceModal', () => {
       <InvitationAcceptanceModal {...defaultProps} visible={false} />,
     );
     // Modal with visible=false does not render its content in test environment
-    expect(screen.queryByText('Home Invitation')).toBeNull();
+    expect(screen.queryByText('Home invitation')).toBeNull();
   });
 
   // --- Branch coverage tests ---
@@ -546,9 +547,7 @@ describe('InvitationAcceptanceModal', () => {
       );
 
       await user.press(screen.getByText('Reject'));
-      const confirm = jest.mocked(alertService.alert).mock.calls.at(-1)?.[2] as
-        | AlertButton[]
-        | undefined;
+      const confirm = jest.mocked(alertService.alert).mock.calls.at(-1)?.[2];
       await act(async () => {
         confirm?.find(b => b.style === 'destructive')?.onPress?.();
       });

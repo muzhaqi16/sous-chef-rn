@@ -170,7 +170,7 @@ export const ImageCropScreen: React.FC<
       });
     }
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         // Use dimensions captured during handleImageLoad — avoids a redundant
         // Image.getSize() call that can fail on Android when the content:// URI

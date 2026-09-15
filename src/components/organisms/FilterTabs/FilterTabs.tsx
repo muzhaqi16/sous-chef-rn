@@ -12,6 +12,7 @@ import type {
   FilterTabsProps,
 } from '#components/organisms/FilterTabs/types';
 import { Text } from '#components/atoms/Text';
+import { kitTestIDs } from '#components/testIDs';
 
 function FilterTabsComponent<T extends string = string>({
   tabs,
@@ -20,7 +21,7 @@ function FilterTabsComponent<T extends string = string>({
   counts,
   showCounts = true,
   variant = 'default',
-  testIDPrefix = 'filter-tab',
+  testIDPrefix = kitTestIDs.filterTabsPrefix,
   actionButton,
   filteredTabIds,
 }: FilterTabsProps<T>): React.ReactElement {
@@ -89,14 +90,16 @@ function FilterTabsComponent<T extends string = string>({
             showCounts={showCounts}
             isCompact={isCompact}
             onPress={handleTabPress}
-            testID={`${testIDPrefix}-${tab.id}`}
+            testID={kitTestIDs.filterTab(testIDPrefix, tab.id)}
             onLayout={(e: LayoutChangeEvent) => onItemLayout(tab.id, e)}
           />
         ))}
         {!!actionButton && (
           <Pressable
             onPress={actionButton.disabled ? undefined : actionButton.onPress}
-            testID={actionButton.testID || `${testIDPrefix}-action`}
+            testID={
+              actionButton.testID || kitTestIDs.filterTabAction(testIDPrefix)
+            }
             style={styles.tab}
             disabled={actionButton.disabled}
           >

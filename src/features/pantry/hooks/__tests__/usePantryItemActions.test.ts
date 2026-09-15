@@ -13,6 +13,9 @@ import {
 import { UsagePurpose, WasteReason } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
+import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
+import { t } from '#/i18n';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { usePantryItemActions } from '../usePantryItemActions';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -349,7 +352,7 @@ describe('usePantryItemActions', () => {
         expect.any(String),
       );
       expect(errorService.reportError).toHaveBeenCalledWith(expect.any(Error), {
-        operation: 'consumePantryItem',
+        operation: operationNameOf(CreatePantryItemUsageDocument),
       });
     });
   });
@@ -580,7 +583,7 @@ describe('usePantryItemActions', () => {
       expect(result.current.wasteModal.visible).toBe(true);
     });
 
-    it('shows version conflict alert on consume payload CONFLICT', async () => {
+    it('describes a consume payload CONFLICT by its code, not as a stale version', async () => {
       const m = consumeMock({
         __typename: 'ConflictError' as const,
         code: 'CONFLICT',
@@ -604,9 +607,15 @@ describe('usePantryItemActions', () => {
         );
       });
 
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Item Updated',
-        expect.stringContaining('Version conflict'),
+      // One alert in the app's words; the payload's `message` is server English.
+      expect(alertService.alert).toHaveBeenCalledTimes(1);
+      expect(alertService.alert).not.toHaveBeenCalledWith(
+        expect.anything(),
+        getVersionConflictMessage(),
+      );
+      expect(alertService.alert).not.toHaveBeenCalledWith(
+        expect.anything(),
+        'Version conflict: expected 3, found 4',
       );
     });
 
@@ -638,7 +647,7 @@ describe('usePantryItemActions', () => {
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Item Updated',
-        expect.stringContaining('updated by another device'),
+        getVersionConflictMessage(),
       );
     });
 
@@ -720,10 +729,87 @@ describe('usePantryItemActions', () => {
         );
       });
 
+      // `quantityUsed` has no field copy, so the action's shows — never the
+      // refusal's `message`.
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
-        'Cannot use more than available quantity',
+        t('errors.recordUsageFailedRetry'),
       );
+    });
+  });
+
+  describe('a write that is queued, or fails', () => {
+    it('keeps a queued consume, closes the modal and says nothing', async () => {
+      // The offline queue resolves with the payload field null and no error;
+      // that is an accepted write, not a failure to revert.
+      const queued = recordMock(CreatePantryItemUsageDocument, {
+        data: { createPantryItemUsage: null },
+      });
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { cache: seedPantryItems(), operationMocks: [queued.mock] },
+      );
+
+      act(() => {
+        result.current.handleConsumeItem('item-1');
+      });
+      await act(async () => {
+        await result.current.handleConfirmConsume(
+          2,
+          '2',
+          UsagePurpose.Cooking,
+          '',
+        );
+      });
+
+      expect(alertService.alert).not.toHaveBeenCalled();
+      expect(result.current.consumeModal.visible).toBe(false);
+    });
+
+    it('keeps the waste modal open and says so when the write fails', async () => {
+      const failing = recordMock(CreatePantryItemUsageDocument, {
+        error: new Error('Server error'),
+      });
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { cache: seedPantryItems(), operationMocks: [failing.mock] },
+      );
+
+      act(() => {
+        result.current.handleWasteItem('item-1');
+      });
+      await act(async () => {
+        await result.current.handleConfirmWaste(
+          1,
+          WasteReason.Expired,
+          false,
+          false,
+          '',
+        );
+      });
+
+      expect(alertService.alert).toHaveBeenCalledTimes(1);
+      expect(result.current.wasteModal.visible).toBe(true);
+    });
+
+    it('keeps the restock modal open and says so when the write fails', async () => {
+      const failing = recordMock(RestockPantryItemDocument, {
+        error: new Error('Server error'),
+      });
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { cache: seedPantryItems(), operationMocks: [failing.mock] },
+      );
+
+      act(() => {
+        result.current.handleRestockItem('item-1');
+      });
+      await act(async () => {
+        await result.current.handleConfirmRestock(2, '2', '');
+      });
+
+      expect(alertService.alert).toHaveBeenCalledTimes(1);
+      expect(result.current.restockModal.visible).toBe(true);
     });
   });
 

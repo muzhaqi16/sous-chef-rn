@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 
 import { Pressable } from '#components/atoms/themedComponents';
 import Animated, {
@@ -15,8 +15,9 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import type { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 import { Text } from '#components/atoms/Text';
-import type { TabIconPair } from './types';
+import type { TabIconPair } from '#features/types';
 import { motion } from '#/theme/foundations/motion';
+import { kitTestIDs } from '#components/testIDs';
 
 /** Shown when a route arrives with no appearance entry — a wiring mistake, not
  *  a state the app should reach, so it renders as one rather than crashing. */
@@ -32,13 +33,12 @@ interface TabItemProps {
     params?: object;
   };
   isFocused: boolean;
-  options: Pick<
-    BottomTabNavigationOptions,
-    'title' | 'tabBarAccessibilityLabel'
-  >;
+  options: Pick<BottomTabNavigationOptions, 'tabBarAccessibilityLabel'>;
   onPress: () => void;
   /** Icons for this tab, from the owning feature's manifest. */
   icon?: TabIconPair;
+  /** The label's i18n key, from the owning feature's manifest. */
+  titleKey?: TranslationKey;
   showLabel: boolean;
   activeTabIndex: SharedValue<number>;
   tabIndex: number;
@@ -50,6 +50,7 @@ export const TabItem: React.FC<TabItemProps> = ({
   options,
   onPress,
   icon = UNKNOWN_TAB_ICON,
+  titleKey,
   showLabel,
   activeTabIndex,
   tabIndex,
@@ -91,9 +92,8 @@ export const TabItem: React.FC<TabItemProps> = ({
     transform: [{ scale: iconScale.get() }],
   }));
 
-  // The manifest stores an i18n key in options.title; resolving it here is what
-  // makes the label re-render on a language change.
-  const label = options.title ? t(options.title) : route.name;
+  // Resolving the manifest's key here is what re-labels the tab on a language change.
+  const label = titleKey ? t(titleKey) : route.name;
   // `tone` routes through withUnistyles(Ionicons), so a theme change re-renders
   // only the Icon, not the whole tab.
   const renderIcon = () => (
@@ -106,7 +106,7 @@ export const TabItem: React.FC<TabItemProps> = ({
 
   return (
     <Pressable
-      testID={`tab-${route.name.toLowerCase().replace(/\s+/g, '-')}`}
+      testID={kitTestIDs.tab(route.name)}
       accessibilityRole="button"
       accessibilityState={isFocused ? { selected: true } : {}}
       accessibilityLabel={options.tabBarAccessibilityLabel}

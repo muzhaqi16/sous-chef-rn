@@ -146,6 +146,8 @@ export const lightTheme = {
 
     // Overlay
     overlay: colors.overlay,
+    // A wash over a card while it works, in the card's own tone.
+    veil: 'rgba(255, 255, 255, 0.8)',
 
     // Action colors for swipe actions
     consumeAction: colors.actions.consume.light,
@@ -320,6 +322,7 @@ export const darkTheme = {
 
     // Overlay
     overlay: colors.overlay,
+    veil: 'rgba(28, 27, 32, 0.8)',
 
     // Action colors for swipe actions (slightly adjusted for dark mode visibility)
     consumeAction: colors.actions.consume.dark,

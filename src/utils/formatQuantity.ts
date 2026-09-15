@@ -1,8 +1,10 @@
 import Fraction from 'fraction.js';
 import { parseFractionalInput } from '#/utils/fractionUtils';
+import { formatNumberForInput } from '#/utils/formatters/number';
+import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 
-/** Every quantity the app renders is at most this precise. */
-const MAX_DECIMALS = 2;
+/** Every quantity the app renders or seeds is at most this precise: 1/8 is 0.125. */
+const MAX_DECIMALS = 3;
 
 // Cooking-friendly denominators; anything else falls back to a decimal, so no
 // list reads "7/10 cup".
@@ -14,10 +16,10 @@ const TOLERANCE = 0.02;
 
 // Seeds the fraction as an integer PAIR: fraction.js's float constructor
 // searches for an exact rational, and that search costs 273 ms for 0.33333334
-// on device. Six digits is four orders past what this file displays.
+// on device. Six digits is three orders past what this file displays.
 const SCALE = 1e6;
 
-/** At most 2 decimals, trailing zeros stripped: 3 → "3", 0.333 → "0.33". */
+/** At most 3 decimals, trailing zeros stripped: 3 → "3", 0.3333 → "0.333". */
 export function formatQuantity(value: number): string {
   if (Number.isInteger(value)) return value.toString();
   return value.toFixed(MAX_DECIMALS).replace(/\.?0+$/, '') || '0';
@@ -25,14 +27,38 @@ export function formatQuantity(value: number): string {
 
 /**
  * How a fractional value is written. `mixed` is the cooking form ("1 1/4"),
- * `fraction` the improper one ("5/4"), `decimal` the 2-place number. The two
+ * `fraction` the improper one ("5/4"), `decimal` the 3-place number. The two
  * fraction notations still fall back to a decimal for a value no cooking
  * fraction fits, so nothing ever reads "7/10 cup".
  */
 export type QuantityNotation = 'mixed' | 'fraction' | 'decimal';
 
 /**
- * A cooking fraction when the value maps to one, else 2 decimals: 0.5 → "1/2",
+ * The item's `displayFormat` wins, then the unit's `displayAsFraction`; absent
+ * both, a cooking fraction wins over a decimal.
+ */
+export function resolveQuantityNotation(
+  displayFormat: DisplayFormat | null | undefined,
+  displayAsFraction: boolean | null | undefined,
+): QuantityNotation {
+  switch (displayFormat) {
+    case DisplayFormat.Fraction:
+      return 'fraction';
+    case DisplayFormat.Mixed:
+      return 'mixed';
+    case DisplayFormat.Decimal:
+      return 'decimal';
+    case DisplayFormat.Auto:
+    case null:
+    case undefined:
+    default:
+      // Only an explicit `false` — a unit nobody halves — opts out of fractions.
+      return displayAsFraction === false ? 'decimal' : 'mixed';
+  }
+}
+
+/**
+ * A cooking fraction when the value maps to one, else 3 decimals: 0.5 → "1/2",
  * 1.25 → "1 1/4", 2.7 → "2.7".
  */
 export function formatQuantityAsFraction(
@@ -43,16 +69,19 @@ export function formatQuantityAsFraction(
   if (Number.isInteger(qty)) return qty.toString();
   if (notation === 'decimal') return formatQuantity(qty);
 
+  const fraction = cookingFraction(qty);
+  return fraction
+    ? fraction.toFraction(notation === 'mixed')
+    : formatQuantity(qty);
+}
+
+/** The nearest cooking fraction within `TOLERANCE`, or null when none fits. */
+function cookingFraction(qty: number): Fraction | null {
   const scaled = Math.round(qty * SCALE);
   // A quantity this large has no cooking fraction to find anyway.
-  if (!Number.isSafeInteger(scaled)) return formatQuantity(qty);
-
+  if (!Number.isSafeInteger(scaled)) return null;
   const simplified = new Fraction(scaled, SCALE).simplify(TOLERANCE);
-  if (COOKING_DENOMINATORS.has(Number(simplified.d))) {
-    return simplified.toFraction(notation === 'mixed');
-  }
-
-  return formatQuantity(qty);
+  return COOKING_DENOMINATORS.has(Number(simplified.d)) ? simplified : null;
 }
 
 export interface QuantityDisplayOptions {
@@ -81,6 +110,31 @@ export function formatQuantityForDisplay(
   if (!Number.isFinite(value)) return '';
 
   return formatQuantityAsFraction(value, notation);
+}
+
+// Two quantities equal to `MAX_DECIMALS` places are the same quantity.
+const INPUT_ROUND_TRIP_TOLERANCE = 0.5 * 10 ** -MAX_DECIMALS;
+
+/**
+ * Seeds a text field the user edits: a cooking fraction only where it equals the
+ * value to `MAX_DECIMALS` places, else the number rounded there, written with
+ * the device's decimal separator.
+ */
+export function formatQuantityForInput(
+  quantity: number | null | undefined,
+  { notation = 'mixed' }: Pick<QuantityDisplayOptions, 'notation'> = {},
+): string {
+  if (quantity == null || !Number.isFinite(quantity)) return '';
+  if (notation !== 'decimal' && !Number.isInteger(quantity)) {
+    const fraction = cookingFraction(quantity);
+    if (
+      fraction &&
+      Math.abs(fraction.valueOf() - quantity) <= INPUT_ROUND_TRIP_TOLERANCE
+    ) {
+      return fraction.toFraction(notation === 'mixed');
+    }
+  }
+  return formatNumberForInput(Number(quantity.toFixed(MAX_DECIMALS)));
 }
 
 /**

@@ -9,6 +9,8 @@ import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 import { FolderPicker } from '#features/recipes/components/FolderPicker';
 import { TagPicker } from '#features/recipes/components/TagPicker';
 import { DataStateView } from '#components/organisms/DataStateView';
+import { Loading } from '#components/molecules/Loading';
+import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { useDataState } from '#hooks/data/useDataState';
 import { SavedRecipeCard } from '#features/recipes/components/SavedRecipeCard';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -23,13 +25,13 @@ import { useRecipeTags } from '#features/recipes/hooks/useRecipeTags';
 import { useFolderActions } from '#features/recipes/hooks/useFolderActions';
 import { PROTECTED_RECIPE_FOLDERS } from '#features/recipes/utils/folders';
 import { useUnfavoriteRecipe } from '#features/recipes/hooks/useUnfavoriteRecipe';
-import { alertService } from '#/services/alertService';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { Screen } from '#components/templates/Screen';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 
 const keyExtractor = (item: SavedRecipeNode) => item.id;
 // Every row is the same component, so one recycling pool is correct.
@@ -39,7 +41,7 @@ export const SavedRecipes: React.FC = () => {
   useScreenTransition('SavedRecipes');
   const { t } = useTranslation();
   const { toRecipeDetail, goBack } = useAppNavigation();
-  const { unfavoriteRecipe } = useUnfavoriteRecipe('removeSavedRecipe');
+  const { unfavoriteRecipe } = useUnfavoriteRecipe();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
@@ -47,11 +49,26 @@ export const SavedRecipes: React.FC = () => {
   const [showFolderPicker, setShowFolderPicker] = useState(false);
   const [showTagPicker, setShowTagPicker] = useState(false);
 
-  // Fetch saved recipes, folders, and tags
+  // Folder, tags and search filter on the device, so any of them needs every
+  // page; so does the open tag picker, whose tags derive from the loaded rows.
+  const needsAllPages =
+    searchQuery.trim().length > 0 ||
+    selectedFolder !== null ||
+    selectedTags.length > 0 ||
+    showTagPicker;
   const {
-    state: { recipes, loading, error, hasResult, skipped },
-    actions: { refetch },
-  } = useSavedRecipes();
+    state: {
+      recipes,
+      loading,
+      error,
+      hasResult,
+      skipped,
+      hasMore,
+      isLoadingMore,
+      isLoadingRemainingPages,
+    },
+    actions: { refetch, loadMore },
+  } = useSavedRecipes({ loadAllPages: needsAllPages });
 
   // Classified on the fetched set, not the filtered one: a search that matches
   // nothing is a different situation from a fetch that returned nothing, and
@@ -64,8 +81,11 @@ export const SavedRecipes: React.FC = () => {
     isEmpty: recipes.length === 0,
   });
 
-  const { folders } = useRecipeFolders();
+  const { folders, refetch: refetchFolders } = useRecipeFolders();
   const { tags: availableTags } = useRecipeTags();
+  // An unloaded page may hold the only tagged recipe, so the tab stays offered
+  // until every page is in.
+  const offersTagFilter = availableTags.length > 0 || hasMore;
   const {
     renameFolder,
     deleteFolder,
@@ -136,13 +156,21 @@ export const SavedRecipes: React.FC = () => {
   };
 
   const [refreshing, setRefreshing] = useState(false);
+  // Folder names derive from the saved rows, so a refresh re-reads both.
   const handleRefresh = () =>
-    executeRefreshWithFinally(() => refetch(), setRefreshing);
+    executeRefreshWithFinally(
+      () => Promise.all([refetch(), refetchFolders()]),
+      setRefreshing,
+    );
 
   const handleRemoveRecipe = async (recipeId: string) => {
-    await unfavoriteRecipe(recipeId, () =>
-      alertService.alert(t('labels.error'), t('recipes.removeRecipeFailed')),
-    );
+    await unfavoriteRecipe(recipeId);
+  };
+
+  const handleEndReached = () => {
+    if (hasMore) {
+      void loadMore();
+    }
   };
 
   const handleItemPress = (recipeId: string) => {
@@ -171,7 +199,7 @@ export const SavedRecipes: React.FC = () => {
       });
     }
 
-    if (availableTags.length > 0) {
+    if (offersTagFilter) {
       tabs.push({
         id: 'tags',
         label:
@@ -190,7 +218,7 @@ export const SavedRecipes: React.FC = () => {
   const filterCounts = {
     all: recipes.length,
     folder: folders.length,
-    tags: availableTags.length,
+    tags: hasMore ? undefined : availableTags.length,
   };
 
   const filteredTabs = (() => {
@@ -204,7 +232,7 @@ export const SavedRecipes: React.FC = () => {
 
   // Filter header - shown when folders or tags are available
   const FilterHeader = (() => {
-    if (folders.length === 0 && availableTags.length === 0) {
+    if (folders.length === 0 && !offersTagFilter) {
       return null;
     }
 
@@ -222,10 +250,10 @@ export const SavedRecipes: React.FC = () => {
         actionButton={{
           icon: 'close',
           onPress: handleClearFilters,
-          testID: 'saved-recipes-clear-filters',
+          testID: recipesTestIDs.savedRecipesClearFilters,
           disabled: !hasActiveFilters,
         }}
-        testIDPrefix="saved-recipes-filter-tab"
+        testIDPrefix={recipesTestIDs.savedRecipesFilterTabPrefix}
       />
     );
   })();
@@ -253,7 +281,11 @@ export const SavedRecipes: React.FC = () => {
         />
       </View>
       <View style={styles.gutter}>{FilterHeader}</View>
-      {dataState !== 'ready' || filteredRecipes.length === 0 ? (
+      {dataState === 'ready' &&
+      filteredRecipes.length === 0 &&
+      isLoadingRemainingPages ? (
+        <Loading size="small" message={t('recipes.savedRecipesSearchingAll')} />
+      ) : dataState !== 'ready' || filteredRecipes.length === 0 ? (
         <DataStateView
           state={dataState === 'ready' ? 'empty' : dataState}
           onRetry={handleRefresh}
@@ -275,6 +307,22 @@ export const SavedRecipes: React.FC = () => {
               refreshing={refreshing}
               onRefresh={handleRefresh}
             />
+          }
+          onEndReached={handleEndReached}
+          ListFooterComponent={
+            isLoadingRemainingPages ? (
+              <Loading
+                size="small"
+                message={t('recipes.savedRecipesSearchingAll')}
+                style={styles.loadingRemaining}
+              />
+            ) : (
+              <PaginationFooter
+                hasMore={hasMore}
+                isFetchingMore={isLoadingMore}
+                itemCount={filteredRecipes.length}
+              />
+            )
           }
           contentContainerStyle={styles.listContent}
           {...FLASHLIST_DEFAULTS.fullScreen}
@@ -319,6 +367,7 @@ export const SavedRecipes: React.FC = () => {
         selectedTags={selectedTags}
         onSelect={setSelectedTags}
         onCancel={() => setShowTagPicker(false)}
+        loading={isLoadingRemainingPages}
       />
     </Screen>
   );
@@ -336,6 +385,9 @@ const styles = StyleSheet.create(theme => ({
   },
   searchBarContainer: {
     paddingHorizontal: theme.spacing.md,
+  },
+  loadingRemaining: {
+    flex: 0,
   },
   listContent: {
     paddingHorizontal: theme.layout.pageGutter,

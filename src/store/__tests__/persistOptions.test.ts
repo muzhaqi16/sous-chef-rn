@@ -80,9 +80,7 @@ describe('store persist options', () => {
       const { partialize } = useStore.persist.getOptions();
       const source = { ...useStore.getState(), [key]: value };
 
-      const written = JSON.parse(
-        JSON.stringify(partialize!(source) as Record<string, unknown>),
-      );
+      const written = JSON.parse(JSON.stringify(partialize!(source)));
 
       expect(written).toHaveProperty(key, value);
     });

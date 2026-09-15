@@ -40,6 +40,30 @@ describe('CardRightSlot', () => {
     expect(screen.getByText('5')).toBeTruthy();
   });
 
+  it('renders a fractional counter quantity as a cooking fraction', () => {
+    render(
+      <CardRightSlot
+        type="counter"
+        quantity={1.25}
+        onIncrement={jest.fn()}
+        onDecrement={jest.fn()}
+      />,
+    );
+    expect(screen.getByText('1 1/4')).toBeTruthy();
+  });
+
+  it('rounds a counter quantity no fraction fits to three decimals', () => {
+    render(
+      <CardRightSlot
+        type="counter"
+        quantity={2.4567}
+        onIncrement={jest.fn()}
+        onDecrement={jest.fn()}
+      />,
+    );
+    expect(screen.getByText('2.457')).toBeTruthy();
+  });
+
   it('renders counter unit label', () => {
     render(
       <CardRightSlot
@@ -76,7 +100,7 @@ describe('CardRightSlot', () => {
   it('renders custom children when type is custom', () => {
     render(
       <CardRightSlot type="custom">
-        <Text>Custom right</Text>
+        <Text role="body">Custom right</Text>
       </CardRightSlot>,
     );
     expect(screen.getByText('Custom right')).toBeTruthy();

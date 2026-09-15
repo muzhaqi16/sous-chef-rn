@@ -24,11 +24,12 @@ import { DetailSection } from '#components/molecules/DetailSection';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import {
-  PRIORITY_OPTION_BY_VALUE,
+  priorityOptionOf,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
 import { totalFromUnitPrice } from '#features/shoppingList/utils/purchasePrice';
 import { formatMonthDayYear } from '#/utils/formatters/date';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
 type RouteParams = {
   listId: string;
@@ -101,12 +102,12 @@ export const ShoppingListItemDetail: React.FC<
   if (!item) {
     return (
       <CollapsingHeroDetail
-        testID="shopping-item-detail"
+        testID={shoppingListTestIDs.itemDetail}
         onBack={() => goBack()}
         title={t('shoppingListScreens.itemDetailsTitle')}
       >
         <View style={styles.centerMessage}>
-          <Text style={styles.centerMessageText}>
+          <Text role="body" tone="secondary" align="center">
             {hasLoaded
               ? t('errors.itemNotFound')
               : t('shoppingListScreens.loading')}
@@ -161,7 +162,7 @@ export const ShoppingListItemDetail: React.FC<
   // Priority is stored as an Int (0 low, 1 medium, 2 high); map it back to the
   // localized label so the detail matches the form's segmented control instead
   // of showing the raw number.
-  const priorityOption = PRIORITY_OPTION_BY_VALUE[item.priority];
+  const priorityOption = priorityOptionOf(item.priority);
   const priorityLabel = priorityOption
     ? t(priorityLabelKey(priorityOption))
     : null;
@@ -186,7 +187,7 @@ export const ShoppingListItemDetail: React.FC<
   return (
     <>
       <CollapsingHeroDetail
-        testID="shopping-item-detail"
+        testID={shoppingListTestIDs.itemDetail}
         onBack={() => goBack()}
         title={item.itemName ?? ''}
         actions={[
@@ -194,7 +195,7 @@ export const ShoppingListItemDetail: React.FC<
             icon: 'create-outline',
             accessibilityLabel: t('labels.edit'),
             onPress: handleEdit,
-            testID: 'shopping-item-edit-button',
+            testID: shoppingListTestIDs.itemDetailEditButton,
           },
         ]}
         renderHero={
@@ -214,7 +215,7 @@ export const ShoppingListItemDetail: React.FC<
                   />
                 ) : (
                   <CachedImage
-                    testID="shopping-item-hero-image"
+                    testID={shoppingListTestIDs.itemDetailHeroImage}
                     uri={imageUrl ?? ''}
                     style={[styles.heroFull, { height: heroHeight }]}
                     displaySize={heroHeight}
@@ -374,9 +375,7 @@ export const ShoppingListItemDetail: React.FC<
           )}
           {!!item.source?.isAutoAdded && (
             <DetailRow label={t('shoppingListScreens.autoAdded')}>
-              <Text role="label">
-                {item.source?.autoAddReason || t('labels.yes')}
-              </Text>
+              <Text role="label">{t('labels.yes')}</Text>
             </DetailRow>
           )}
           {!!item.source?.isFromMealPlan && (
@@ -413,10 +412,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     padding: theme.spacing.lg,
-  },
-  centerMessageText: {
-    textAlign: 'center',
-    color: theme.colors.textSecondary,
   },
   statusBadge: {
     flexDirection: 'row',

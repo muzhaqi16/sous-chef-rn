@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
-import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { useLazyHomeData } from '#features/home/hooks/useLazyHomeData';
 import { useMoveToPantry, type MoveToPantryInput } from './useMoveToPantry';
 
@@ -16,7 +16,6 @@ export interface UseMoveToPantryModalResult {
   selectedItemId: string | null;
   pantries: Array<{ id: string; name: string; isDefault: boolean }>;
   selectedPantryId: string | null;
-  isLoading: boolean;
   /** Lazy-loads the pantry list on first open. */
   openForItem: (itemId: string) => Promise<void>;
   close: () => void;
@@ -40,10 +39,9 @@ export function useMoveToPantryModal(
     selectedPantryId,
     isLoaded: homeDataLoaded,
     fetchHomeData,
-    loading: homeLoading,
   } = useLazyHomeData();
 
-  const { moveToPantry, loading: moveLoading } = useMoveToPantry({
+  const { moveToPantry } = useMoveToPantry({
     currentListId,
     onSuccess: () => {
       setVisible(false);
@@ -93,7 +91,6 @@ export function useMoveToPantryModal(
     selectedItemId,
     pantries,
     selectedPantryId: selectedPantryId ?? null,
-    isLoading: homeLoading || moveLoading,
     openForItem,
     close,
     confirm,

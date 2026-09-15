@@ -6,7 +6,6 @@ import { ProductResultCard } from './ProductResultCard';
 import { ActionButtons } from './ActionButtons';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAddScannedItem } from '#features/barcode/hooks/useAddScannedItem';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { promptPantryDuplicate } from '#domain/pantryItemDuplicate';
 import { useAppStore } from '#store/useAppStore';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
@@ -43,13 +42,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const setPendingPantryScrollToTop = useAppStore(
     s => s.setPendingPantryScrollToTop,
   );
-  const {
-    addToPantry,
-    restockDuplicate,
-    forceAddPending,
-    revertPending,
-    addToShoppingList,
-  } = useAddScannedItem({ pantryId, shoppingListId });
+  const { addToPantry, restockDuplicate, forceAddPending, addToShoppingList } =
+    useAddScannedItem({ pantryId, shoppingListId });
 
   const onPantryAdded = () => {
     setIsAdded(true);
@@ -62,7 +56,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       return;
     }
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         if (source === 'pantry' && pantryId) {
           const outcome = await addToPantry(item);
@@ -71,18 +65,12 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             setIsLoading(false);
             promptPantryDuplicate({
               onRestock: () => {
-                executeWithLoadingState(
+                void executeWithLoadingState(
                   async () => {
-                    const restockResult = await restockDuplicate(
-                      outcome.existingPantryItemId,
-                    );
-                    // A refusal RESOLVES, so an unread outcome flips the button
-                    // to "Added" over a restock the server never made.
+                    // A refusal RESOLVES; the hook has already said so, and
+                    // the button must not flip to "Added" over it.
                     if (
-                      alertIfRejected(
-                        restockResult,
-                        t('errors.restockFailedRetry'),
-                      )
+                      !(await restockDuplicate(outcome.existingPantryItemId))
                     ) {
                       return;
                     }
@@ -98,22 +86,11 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                 );
               },
               onAddAnyway: () => {
-                executeWithLoadingState(
+                void executeWithLoadingState(
                   async () => {
-                    const retryResult = await forceAddPending();
-                    // `alertIfRejected`, not a payload-typename check: a reused
-                    // id whose first attempt did commit returns
-                    // ConflictError(IDEMPOTENT_REPLAY), a successful no-op, and
-                    // a queued create must keep its row.
-                    if (
-                      alertIfRejected(
-                        retryResult,
-                        t('errors.addItemFailedRetry'),
-                      )
-                    ) {
-                      revertPending();
-                      return;
-                    }
+                    // A queued or replayed add counts as added; a refusal
+                    // has already been withdrawn and reported by the hook.
+                    if (!(await forceAddPending())) return;
                     onPantryAdded();
                   },
                   setIsLoading,
@@ -129,14 +106,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             return;
           }
 
-          if (outcome.status === 'rejected') {
-            // The document selects `... on ValidationError { field }`, so route
-            // the refusal to its localized `errors.field.*` copy instead of a
-            // fixed string. `alertIfRejected` because this mutation has no
-            // `onError` — the resolved-`error` case needs telling too.
-            alertIfRejected(outcome.result, t('errors.addItemFailedRetry'));
-            return;
-          }
+          // The hook has already told the user about a refusal.
+          if (outcome.status === 'rejected') return;
           onPantryAdded();
         } else if (source === 'shoppingList' && shoppingListId) {
           if ((await addToShoppingList(item)) === 'reverted') {

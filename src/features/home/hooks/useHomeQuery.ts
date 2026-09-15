@@ -13,7 +13,7 @@ import { getConnectionTotalCount } from '#/utils/connectionUtils';
  * `extractNodes(home.pantriesConnection)` itself.
  */
 export function useHomeQuery() {
-  const { data, loading, error, refetch } = useQuery(GetHomesDocument, {
+  const { data, loading, refetch } = useQuery(GetHomesDocument, {
     errorPolicy: 'ignore',
   });
 
@@ -32,16 +32,9 @@ export function useHomeQuery() {
   const validHomes = Array.isArray(homes) ? homes.filter(Boolean) : [];
 
   // Use totalCount from each home's connections.
-  type HomeWithCounts = (typeof validHomes)[number] & {
-    pantriesConnection?: { totalCount?: number | null };
-    membersConnection?: { totalCount?: number | null };
-  };
-
   const totalPantries = (() => {
     const sum = validHomes.reduce(
-      (acc, home) =>
-        acc +
-        getConnectionTotalCount((home as HomeWithCounts).pantriesConnection),
+      (acc, home) => acc + getConnectionTotalCount(home.pantriesConnection),
       0,
     );
     // Genuine empty state: no homes means no pantries. Without this guard the
@@ -63,9 +56,7 @@ export function useHomeQuery() {
   const stats = {
     totalHomes: validHomes.length,
     totalMembers: validHomes.reduce(
-      (acc, home) =>
-        acc +
-        getConnectionTotalCount((home as HomeWithCounts).membersConnection),
+      (acc, home) => acc + getConnectionTotalCount(home.membersConnection),
       0,
     ),
     totalPantries,
@@ -79,11 +70,9 @@ export function useHomeQuery() {
     homes,
     remoteDefaultHomeId,
     loading,
-    // Keyed off `data`, not `homes.length`, so a user who genuinely has zero
-    // homes settles to the empty list instead of showing the full-screen
-    // loader again on every cache-and-network fetch.
-    initialLoading: !data && loading,
-    error,
+    // A defined `data` with zero homes is still an answer. `errorPolicy:
+    // 'ignore'` discards the error, so a settled read with neither is the failure.
+    hasResult: data !== undefined || homes.length > 0,
     stats,
     refetch: memoizedRefetch,
   };

@@ -65,11 +65,10 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
   const handleShare = handleSubmit(values => {
     if (!requireVerifiedEmail()) return;
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         unwrapPayload(
           await inviteCollaborator(values.email.trim(), selectedRole),
-          'InviteToShoppingListPayload',
           t('errors.sendInviteFailed'),
         );
         resetField('email');

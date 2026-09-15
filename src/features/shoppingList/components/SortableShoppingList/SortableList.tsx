@@ -149,7 +149,6 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   };
 
   const contentContainerStyle = {
-    paddingTop: 8,
     paddingBottom: getScrollClearancePadding(insets.bottom),
     flexGrow: 1,
   };
@@ -221,6 +220,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   listContent: {
+    paddingTop: theme.spacing.sm,
     paddingHorizontal: theme.layout.pageGutter,
   },
   container: {

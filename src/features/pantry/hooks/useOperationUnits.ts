@@ -1,18 +1,15 @@
-import { useQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import type { PickableUnit } from '#features/pantry/components/unitPickerTypes';
 import {
   ConsumptionUnitsForPantryItemDocument,
-  RestockUnitsForItemDocument,
+  RestockUnitsForPantryItemDocument,
   type ConsumptionUnitsForPantryItemQuery,
-  type RestockUnitsForItemQuery,
+  type RestockUnitsForPantryItemQuery,
 } from '#features/pantry/graphql/pantry.generated';
-import {
-  UnitType,
-  UnitRole,
-  UnitSource,
-} from '#/graphql/generated/schemaTypes';
+import type { UnitRole } from '#/graphql/generated/schemaTypes';
+import { UnitType, UnitSource } from '#/graphql/generated/schemaTypes';
 export enum PantryOperation {
   Consume = 'CONSUME',
   Waste = 'WASTE',
@@ -67,7 +64,6 @@ interface UseOperationUnitsResult {
   defaultIncrement: number | null;
   defaultCommonFractions: number[] | null;
   loading: boolean;
-  error: Error | undefined;
 }
 
 const TYPE_ORDER: UnitType[] = [
@@ -81,7 +77,7 @@ const TYPE_ORDER: UnitType[] = [
 
 type ApiRankedUnit =
   | ConsumptionUnitsForPantryItemQuery['consumptionUnitsForPantryItem'][number]
-  | RestockUnitsForItemQuery['restockUnitsForItem'][number];
+  | RestockUnitsForPantryItemQuery['restockUnitsForPantryItem'][number];
 
 function toRankedUnitInfo(
   ru: ApiRankedUnit,
@@ -149,12 +145,13 @@ function buildGroups(
     }
   }
 
-  return orderedTypes.map(type => ({
-    type,
-    label: translate(`unitType.${type}`),
+  return orderedTypes.flatMap(type => {
     // Units arrive pre-sorted by rank from the API — preserve that order
-    units: byType.get(type)!,
-  }));
+    const typeUnits = byType.get(type);
+    return typeUnits
+      ? [{ type, label: translate(`unitType.${type}`), units: typeUnits }]
+      : [];
+  });
 }
 
 function toSelectedUnitInfo(unit: RankedUnitInfo): SelectedUnitInfo {
@@ -183,24 +180,25 @@ export function useOperationUnits({
 
   // Consume and waste: keyed by the STACK so the server reads its whole
   // measurement profile — the client holds only part of it.
-  const consumptionResult = useQuery(ConsumptionUnitsForPantryItemDocument, {
-    variables: { pantryItemId: pantryItemId! },
-    skip: !isConsumption || !pantryItemId,
-  });
+  const consumptionResult = useQuery(
+    ConsumptionUnitsForPantryItemDocument,
+    isConsumption && pantryItemId ? { variables: { pantryItemId } } : skipToken,
+  );
 
   // Restock query
-  const restockResult = useQuery(RestockUnitsForItemDocument, {
-    variables: { pantryItemId: pantryItemId! },
-    skip: isConsumption || !pantryItemId,
-  });
+  const restockResult = useQuery(
+    RestockUnitsForPantryItemDocument,
+    !isConsumption && pantryItemId
+      ? { variables: { pantryItemId } }
+      : skipToken,
+  );
 
   const rawUnits = isConsumption
     ? consumptionResult.data?.consumptionUnitsForPantryItem ?? []
-    : restockResult.data?.restockUnitsForItem ?? [];
+    : restockResult.data?.restockUnitsForPantryItem ?? [];
   const loading = isConsumption
     ? consumptionResult.loading
     : restockResult.loading;
-  const error = isConsumption ? consumptionResult.error : restockResult.error;
 
   const allUnits = rawUnits
     .map(ru => toRankedUnitInfo(ru, trackingUnitId))
@@ -223,6 +221,5 @@ export function useOperationUnits({
     defaultIncrement: defaultRankedUnit?.defaultIncrement ?? null,
     defaultCommonFractions: defaultRankedUnit?.commonFractions ?? null,
     loading,
-    error,
   };
 }

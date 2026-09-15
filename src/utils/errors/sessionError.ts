@@ -7,9 +7,6 @@
  * unknown permanent failure and DESTROYS the queued write. Device-verified: of
  * three writes queued across one revoked session, only the one whose failure
  * carried a code survived.
- *
- * The message stays app-authored. `classifyError`'s network branch matches on
- * substrings, so server prose containing "unreachable" would reclassify it.
  */
 export class SessionError extends Error {
   readonly code: string;

@@ -26,7 +26,7 @@ Re-check:
 cat node_modules/@gorhom/bottom-sheet/src/components/bottomSheetView/styles.ts
 ```
 
-Guarded by `src/components/molecules/__tests__/BottomSheetAutocompleteInput.test.tsx`
+Guarded by `src/features/catalog/components/__tests__/BottomSheetAutocompleteInput.test.tsx`
 ("keeps the list out of gorhom BottomSheetView").
 
 ### gorhom keyboard handling requires BottomSheetTextInput
@@ -368,9 +368,23 @@ proxies work natively.
 React Compiler bail out on the whole function: (1) any finalizer (`finally`,
 with or without `catch`; also a catch-less `try`), and (2) a value block —
 `?.`, `??`, `&&`, `||`, or a ternary — inside the `try` body. A `try/catch`
-whose body is plain statements only compiles fine.
+whose body is plain statements only compiles fine, so move the conditional out:
 
-**Verified against `babel-plugin-react-compiler@1.0.0`.** The compiler's own
+```ts
+// BAILS — `?? null` is a value block inside the try
+let data = null;
+try { data = (await client.query(…)).data ?? null; } catch {}
+
+// COMPILES — plain assignment in the try; the value block moved out
+let result;
+try { result = await client.query(…); } catch {}
+const data = result?.data ?? null;
+```
+
+For a `finally`, use the helpers in `src/utils/finallyHelpers.ts`.
+
+**Verified against `babel-plugin-react-compiler@1.0.0`** (re-run 2026-09-14,
+all eleven fixtures as claimed). The compiler's own
 diagnostics: `Handle TryStatement with a finalizer ('finally') clause`,
 `Support value blocks (conditional, logical, optional chaining, etc) within a
 try/catch statement`, `Unexpected terminal in optional`.
@@ -381,12 +395,14 @@ Re-check (compiles one fixture per shape and prints the diagnostic):
 node scripts/probe-compiler-try-forms.mjs
 ```
 
-The `react-compiler/react-compiler` ESLint rule has a
-[known bug](https://github.com/facebook/react/issues/35644) where it silently
-stops reporting ALL diagnostics on unsupported syntax like `finally` — zero
-warnings rather than a flagged bailout. `react-hooks/todo` catches these, and
-`node scripts/check-compiler-bailouts.mjs` is the backstop that actually
-compiles every file.
+Lint sees only half of this. `eslint-plugin-react-compiler` is not installed;
+`react-hooks/todo` (`eslint-plugin-react-hooks@7.1.1`) reports the finalizer
+shapes (`Handle TryStatement without a catch clause`) but reports NOTHING for a
+value block inside a `try/catch` — probed 2026-09-14 with one fixture of each.
+`node scripts/check-compiler-bailouts.mjs` compiles every file and is the only
+detector of the value-block shape. The standalone `react-compiler/react-compiler`
+rule has a [known bug](https://github.com/facebook/react/issues/35644) that
+silences every diagnostic on unsupported syntax, which is why it is not the gate.
 
 ### i18next plural category fallback
 
@@ -450,10 +466,10 @@ field that separates them.
 **Verified 2026-09-01 vs `graphql-ws@6.2.1` on Node's WebSocket** — re-check:
 `node scripts/probe-ws-refused-upgrade.mjs`. Measured event order:
 
-| upgrade  | events                                | `connectionParams` called |
-| -------- | ------------------------------------- | ------------------------- |
-| refused  | `connecting → error → closed(1006)`          | no                 |
-| accepted | `connecting → opened → error → closed(1006)` | yes                |
+| upgrade  | events                                       | `connectionParams` called |
+| -------- | -------------------------------------------- | ------------------------- |
+| refused  | `connecting → error → closed(1006)`          | no                        |
+| accepted | `connecting → opened → error → closed(1006)` | yes                       |
 
 Both legs close 1006; only the presence of `opened` separates them. The probe's
 accepting server completes the upgrade and then drops the socket, so the close
@@ -598,7 +614,7 @@ screen holds its byte size flat, here 776,027 bytes for seven seconds.
 ### jest.isolateModules cannot hold a Platform.OS override past its callback
 
 **Claim:** a test that sets `Platform.OS` inside `jest.isolateModules(...)` and
-then calls the code under test *outside* the callback silently gets the real
+then calls the code under test _outside_ the callback silently gets the real
 `Platform.OS` back.
 
 **Verified 2026-08-25 against `react-native@0.86.3`.** RN's index exports
@@ -685,9 +701,7 @@ change.
 **Verified against `@shopify/flash-list@2.3.2`**, and on-device
 (SM-S908U1, `localRelease`, 67 items): the gate is a 300–342 ms header-only
 blank frame between skeleton dismissal and rows, eliminated by releasing
-skeletons on the first `onCommitLayoutEffect` that lands with real content —
-numbers and protocol in
-[audits/perf-blank-window-2026-08-26.md](audits/perf-blank-window-2026-08-26.md).
+skeletons on the first `onCommitLayoutEffect` that lands with real content.
 Consumed by `useFlashListPerformance`'s `hasContentLayout` latch.
 
 Re-check:
@@ -748,11 +762,11 @@ has already analysed the file and the crawl is a silent no-op.
 **Verified against `react-native-unistyles@3.3.0` +
 `babel-plugin-react-compiler@1.0.0`.** Three orders, three outcomes:
 
-| plugin order | compiler | variant read |
-| --- | --- | --- |
-| `[unistyles, compiler]` (their docs) | function silently SKIPPED — the compiler catches its own `(BuildHIR::lowerAssignment) Could not find binding for declaration` and emits the original | correct, unmemoized |
-| `[compiler, unistyles]` | compiles | STALE — `if ($[2] !== style)`, the read is not a dependency |
-| `[unistyles, crawl, compiler]` (shipped) | compiles | fresh — `if ($[2] !== style \|\| $[3] !== styles$0.button)` |
+| plugin order                             | compiler                                                                                                                                             | variant read                                                |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `[unistyles, compiler]` (their docs)     | function silently SKIPPED — the compiler catches its own `(BuildHIR::lowerAssignment) Could not find binding for declaration` and emits the original | correct, unmemoized                                         |
+| `[compiler, unistyles]`                  | compiles                                                                                                                                             | STALE — `if ($[2] !== style)`, the read is not a dependency |
+| `[unistyles, crawl, compiler]` (shipped) | compiles                                                                                                                                             | fresh — `if ($[2] !== style \|\| $[3] !== styles$0.button)` |
 
 The middle row is the trap: zero bailouts and full memoization, while every
 variant style freezes at its first-render value.
@@ -805,12 +819,11 @@ Guarded by `src/apollo/utils/__tests__/localFirstFields.test.ts`.
 `cache.modify` remains the right tool where the field is known to exist and the
 write must NOT normalize — connection edges and counts.
 
-It is NOT the right tool for the `purchaseInfo` record, which used to be written
-that way. Two rules are documented on `writePurchaseInfo` and neither could run
-through `cache.modify`: the type policy's clear-on-flip never fires (no merge
-runs), and a field the cached record does not already carry cannot be
-introduced. The writer now goes through `cache.writeFragment` and carries the
-cached record forward explicitly, so the policy has nothing to clear on a local
+It is NOT the right tool for the `purchaseInfo` record. Two rules are documented
+on `writePurchaseInfo` and neither can run through `cache.modify`: the type
+policy's clear-on-flip never fires (no merge runs), and a field the cached record
+does not already carry cannot be introduced. The writer goes through
+`cache.writeFragment` and carries the cached record forward explicitly, so the policy has nothing to clear on a local
 flip — which is what the SDL describes, since it documents a clearing contract
 for `movedToPantryAt` alone and says nothing about the amounts. The policy still
 governs the narrow SERVER responses it was written for.
@@ -894,7 +907,7 @@ filters emissions AFTER the initial result.
 
 The third line is the other half. With `returnPartialData: false` an incomplete
 cache read yields `data === undefined` rather than a partial object, so
-`loading && !data` is precisely *"the read was incomplete"* — and one missing
+`loading && !data` is precisely _"the read was incomplete"_ — and one missing
 field of the selection is enough to trigger it. That is why every writer of an
 entity must write the full shape the reading query selects; see
 [cache.modify cannot add a field](#cachemodify-cannot-add-a-field) and
@@ -1003,7 +1016,7 @@ Re-check: connect the debugger (`argent-metro-debugger`) and evaluate
 
 ```js
 (async () => {
-  const res = await fetch(PICKED_URI);          // from the picker's response
+  const res = await fetch(PICKED_URI); // from the picker's response
   const head = (await res.blob()).slice(0, 12);
   const url = await new Promise(r => {
     const fr = new FileReader();
@@ -1012,7 +1025,7 @@ Re-check: connect the debugger (`argent-metro-debugger`) and evaluate
   });
   const bin = atob(url.slice(url.indexOf(',') + 1));
   return Array.from({ length: 12 }, (_, i) => bin.charCodeAt(i));
-})()
+})();
 ```
 
 Guarded by `src/utils/__tests__/imageValidation.test.ts` (`sniffImageMimeType`).
@@ -1029,15 +1042,15 @@ rational arithmetic instead, and produces identical output.
 runtime on an SM-S908U1** (Android 16, 96 Hz panel → 10.4 ms frame budget),
 debug bundle with the CDP debugger attached. Microseconds per call:
 
-| value | `new Fraction(v).simplify(0.02)` | `new Fraction(Math.round(v*1e6), 1e6).simplify(0.02)` |
-| --- | --- | --- |
-| `0.33333334` | **273,534** | 36 |
-| `0.66666667` | **290,297** | 70 |
-| `4.6` | **17,843** | 53 |
-| `1.1` | **9,051** | 17 |
-| `0.93` | 263 | 99 |
-| `2.7` | 73 | 62 |
-| `1/3` exact, `0.5`, `1.25` | 15–19 | 15–35 |
+| value                      | `new Fraction(v).simplify(0.02)` | `new Fraction(Math.round(v*1e6), 1e6).simplify(0.02)` |
+| -------------------------- | -------------------------------- | ----------------------------------------------------- |
+| `0.33333334`               | **273,534**                      | 36                                                    |
+| `0.66666667`               | **290,297**                      | 70                                                    |
+| `4.6`                      | **17,843**                       | 53                                                    |
+| `1.1`                      | **9,051**                        | 17                                                    |
+| `0.93`                     | 263                              | 99                                                    |
+| `2.7`                      | 73                               | 62                                                    |
+| `1/3` exact, `0.5`, `1.25` | 15–19                            | 15–35                                                 |
 
 The control rules out a debugger tax: 5,000,000 iterations of `s += i % 7` on
 the same runtime took 351 ms — 70 ns per iteration, ordinary Hermes-on-device
@@ -1058,18 +1071,21 @@ Re-check: connect the debugger (`argent-metro-debugger`), serve
 evaluate
 
 ```js
-fetch('http://localhost:8099/fraction.js').then(r => r.text()).then(src => {
-  const mod = { exports: {} };
-  new Function('module', 'exports', src)(mod, mod.exports);
-  globalThis.__Frac = mod.exports;
-});
+fetch('http://localhost:8099/fraction.js')
+  .then(r => r.text())
+  .then(src => {
+    const mod = { exports: {} };
+    new Function('module', 'exports', src)(mod, mod.exports);
+    globalThis.__Frac = mod.exports;
+  });
 // then, in a second evaluate:
 (() => {
-  const F = globalThis.__Frac, now = () => performance.now();
+  const F = globalThis.__Frac,
+    now = () => performance.now();
   const t0 = now();
   for (let i = 0; i < 2; i++) new F(0.33333334).simplify(0.02);
-  return Math.round((now() - t0) * 1000 / 2); // microseconds per call
-})()
+  return Math.round(((now() - t0) * 1000) / 2); // microseconds per call
+})();
 ```
 
 ### An Android biometric cancel is indistinguishable from an invalidated key by code

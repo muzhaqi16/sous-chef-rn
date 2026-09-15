@@ -18,14 +18,14 @@ import {
 } from '@apollo/client/errors';
 import {
   isQueryComplexityError,
-  getQueryComplexityMessage,
+  describeQueryComplexity,
 } from '#/utils/errors/queryComplexity';
 import {
   isVersionConflictError,
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { Telemetry } from '#/services/telemetry';
-import { t } from '#/i18n';
+import { t, type KeyUnder } from '#/i18n';
 
 export interface ErrorResult<T = unknown> {
   success: boolean;
@@ -56,6 +56,19 @@ export interface ErrorConfig {
   logError?: boolean;
 }
 
+// The server sends `validationErrors` as a field → message map; a non-string
+// entry is not a message this client can show.
+function toValidationErrors(
+  value: unknown,
+): Record<string, string> | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const messages: Record<string, string> = {};
+  for (const [field, message] of Object.entries(value)) {
+    if (typeof message === 'string') messages[field] = message;
+  }
+  return messages;
+}
+
 export class ErrorService {
   /**
    * Error code → i18n key SUFFIX, composed as `errors.codes.<suffix>` by
@@ -63,7 +76,10 @@ export class ErrorService {
    * static field, so calling `t()` here would freeze the language active at
    * module load. Codes warranting the same sentence share a suffix.
    */
-  private static readonly ERROR_MESSAGE_KEY_SUFFIXES: Record<string, string> = {
+  private static readonly ERROR_MESSAGE_KEY_SUFFIXES: Record<
+    string,
+    KeyUnder<'errors.codes'>
+  > = {
     // Authentication Errors
     AUTH_TOKEN_MISSING: 'signInRequired',
     AUTH_TOKEN_INVALID: 'sessionInvalid',
@@ -193,6 +209,12 @@ export class ErrorService {
   // SERVICE_TIMEOUT and SERVICE_OVERLOADED are in the API's internal registry
   // but absent from the published TopLevelErrorCode enum, which admits a code
   // only once something emits it — so they stay literals, kept defensively.
+  // Codes arrive as plain strings; these compare against them as strings.
+  private static readonly UNAUTHENTICATED: string =
+    TopLevelErrorCode.Unauthenticated;
+  private static readonly VALIDATION_FAILED: string =
+    ErrorCode.ValidationFailed;
+
   private static readonly RETRYABLE_ERRORS: string[] = [
     TopLevelErrorCode.ServiceUnavailable,
     'SERVICE_TIMEOUT',
@@ -241,11 +263,11 @@ export class ErrorService {
 
   getUserFriendlyMessage(errorCode: string, fallbackMessage?: string): string {
     const suffix = ErrorService.ERROR_MESSAGE_KEY_SUFFIXES[errorCode];
-    // An unmapped code falls back to the server's own message, which is at
-    // least accurate even though it arrives untranslated.
+    // An unmapped code takes the caller's own localized copy; the server's
+    // message never reaches here.
     if (!suffix) return fallbackMessage || t('errors.codes.unexpected');
     // The table holds suffixes; the whole key is composed here.
-    return t(`errors.codes.${suffix}`, fallbackMessage);
+    return t(`errors.codes.${suffix}`);
   }
 
   getErrorCategory(errorCode: string): string {
@@ -266,7 +288,7 @@ export class ErrorService {
   isAuthError(errorCode: string): boolean {
     return (
       errorCode.startsWith('AUTH_') ||
-      errorCode === TopLevelErrorCode.Unauthenticated
+      errorCode === ErrorService.UNAUTHENTICATED
     );
   }
 
@@ -289,16 +311,16 @@ export class ErrorService {
       logger.error(`[ErrorService] ${operation}:`, serialized);
     }
 
-    let errorMessage: string;
+    let diagnostic: string;
     if (error instanceof Error) {
-      errorMessage = error.message;
+      diagnostic = error.message;
     } else if (typeof error === 'string') {
-      errorMessage = error;
+      diagnostic = error;
     } else {
-      errorMessage = 'Unknown error';
+      diagnostic = 'Unknown error';
     }
 
-    Telemetry.trackError(errorMessage, {
+    Telemetry.trackError(diagnostic, {
       component: 'reported',
       operation,
       serialized_error: serialized,
@@ -313,19 +335,19 @@ export class ErrorService {
     const { operation = 'Unknown', customMessage, logError = true } = config;
 
     let errorCode = 'UNKNOWN_ERROR';
-    let errorMessage = 'An unexpected error occurred';
+    let diagnostic = 'An unexpected error occurred';
     let validationErrors: Record<string, string> | undefined;
 
     try {
       // Check for query complexity errors first
       if (isQueryComplexityError(error)) {
         errorCode = 'QUERY_TOO_COMPLEX';
-        errorMessage = getQueryComplexityMessage(error);
+        diagnostic = describeQueryComplexity(error);
       }
       // Check for version conflict errors
       else if (isVersionConflictError(error)) {
         errorCode = ErrorCode.VersionConflict;
-        errorMessage = getVersionConflictMessage();
+        diagnostic = getVersionConflictMessage();
       }
       // Apollo error types
       else if (CombinedGraphQLErrors.is(error)) {
@@ -333,14 +355,15 @@ export class ErrorService {
         if (graphQLError) {
           errorCode =
             (graphQLError.extensions?.code as string) || 'GRAPHQL_ERROR';
-          errorMessage = graphQLError.message;
+          diagnostic = graphQLError.message;
 
           if (
-            errorCode === ErrorCode.ValidationFailed &&
+            errorCode === ErrorService.VALIDATION_FAILED &&
             graphQLError.extensions?.validationErrors
           ) {
-            validationErrors = graphQLError.extensions
-              .validationErrors as Record<string, string>;
+            validationErrors = toValidationErrors(
+              graphQLError.extensions.validationErrors,
+            );
           }
         }
       } else if (ServerError.is(error)) {
@@ -358,32 +381,32 @@ export class ErrorService {
           errorCode = TopLevelErrorCode.ServiceUnavailable;
         else errorCode = 'NETWORK_ERROR';
 
-        errorMessage = error.message || `Unable to connect (${statusCode}).`;
+        diagnostic = error.message || `Unable to connect (${statusCode}).`;
       } else if (ServerParseError.is(error)) {
         errorCode = TopLevelErrorCode.ServiceUnavailable;
-        errorMessage = 'Server response could not be parsed';
+        diagnostic = 'Server response could not be parsed';
       } else if (CombinedProtocolErrors.is(error)) {
         errorCode = 'NETWORK_ERROR';
-        errorMessage = error.message || 'Unable to connect.';
+        diagnostic = error.message || 'Unable to connect.';
       }
       // A refusal `unwrapPayload` turned into a throw; it carries the server's
       // own `code`. MUST be tested before the `instanceof Error` arm, which it
       // also satisfies, or every thrown domain refusal reads as UNKNOWN_ERROR.
       else if (error instanceof GraphQLDomainError) {
         errorCode = error.code;
-        errorMessage = error.message;
+        diagnostic = error.message;
       } else if (error instanceof GraphQLNetworkError) {
         errorCode = 'NETWORK_ERROR';
-        errorMessage = error.message;
+        diagnostic = error.message;
       } else if (error instanceof Error) {
-        errorMessage = error.message;
+        diagnostic = error.message;
       } else if (typeof error === 'string') {
-        errorMessage = error;
+        diagnostic = error;
       }
 
       const category = this.getErrorCategory(errorCode);
       const userFriendlyMessage =
-        customMessage || this.getUserFriendlyMessage(errorCode, errorMessage);
+        customMessage || this.getUserFriendlyMessage(errorCode);
 
       const isExpectedUserError = this.isExpectedUserError(errorCode);
 
@@ -391,12 +414,12 @@ export class ErrorService {
         if (isExpectedUserError) {
           logger.warn(`Validation error in ${operation}:`, {
             code: errorCode,
-            message: errorMessage,
+            message: diagnostic,
           });
         } else {
           logger.error(`Error in ${operation}:`, {
             code: errorCode,
-            message: errorMessage,
+            message: diagnostic,
             originalError: serializeError(error),
           });
         }
@@ -410,7 +433,7 @@ export class ErrorService {
           code: errorCode,
         });
       } else {
-        Telemetry.trackError(errorMessage, {
+        Telemetry.trackError(diagnostic, {
           component: category,
           operation,
           code: errorCode,
@@ -450,7 +473,7 @@ export class ErrorService {
   ): ApolloErrorResult {
     const result = this.parseApolloError(error, config);
     return (
-      result.error || {
+      result.error ?? {
         code: 'UNKNOWN_ERROR',
         message: t('errors.codes.unexpected'),
         category: 'Unknown',

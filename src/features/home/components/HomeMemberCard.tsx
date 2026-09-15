@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { useFragment } from '@apollo/client/react';
-import { type FragmentType } from '@apollo/client/masking';
+import type { FragmentType } from '@apollo/client/masking';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -12,10 +12,11 @@ import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
 import type { MembershipPermissionKey } from '#features/home/hooks/useHomeDetailManagement';
 import { HomeMemberCard_MemberFragmentDoc } from './HomeMemberCard.generated';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
 const PERMISSION_ROWS: {
   key: MembershipPermissionKey;
-  labelKey: string;
+  labelKey: TranslationKey;
 }[] = [
   { key: 'canViewPantry', labelKey: 'homeDetail.permViewPantry' },
   { key: 'canAddItems', labelKey: 'labels.canAddItems' },
@@ -36,6 +37,7 @@ interface HomeMemberCardProps {
   onChangeRole: () => void;
   onRemove: () => void;
   onTransferOwnership?: () => void;
+  transferDisabled?: boolean;
   onUpdatePermission?: (
     permission: MembershipPermissionKey,
     value: boolean,
@@ -57,6 +59,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
   onChangeRole,
   onRemove,
   onTransferOwnership,
+  transferDisabled = false,
   onUpdatePermission,
 }) => {
   const { t } = useTranslation();
@@ -74,7 +77,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
   // 2. Target member is not the current user
   // 3. Target member is not OWNER (owners cannot be removed/demoted)
   const canManageMember =
-    canManageHome && !isCurrentUser && member.role !== 'OWNER';
+    canManageHome && !isCurrentUser && member.role !== MembershipRole.Owner;
   return (
     <View style={[commonStyles.card, commonStyles.shadow, styles.memberCard]}>
       <View style={styles.memberInfo}>
@@ -108,8 +111,13 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
           </AppPressable>
           {!!isOwner && !!onTransferOwnership && (
             <AppPressable
-              style={styles.actionButton}
+              style={[
+                styles.actionButton,
+                transferDisabled && styles.actionButtonDisabled,
+              ]}
               onPress={onTransferOwnership}
+              disabled={transferDisabled}
+              accessibilityState={{ disabled: transferDisabled }}
             >
               <Icon name="ribbon-outline" size={18} tone="primary" />
               <Text role="label" tone="accent" numberOfLines={1}>
@@ -137,7 +145,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
           )}
           <AppPressable style={styles.actionButton} onPress={onRemove}>
             <Icon name="person-remove" size={18} />
-            <Text role="label" tone="error" numberOfLines={1}>
+            <Text role="label" tone="danger" numberOfLines={1}>
               {t('labels.remove')}
             </Text>
           </AppPressable>
@@ -220,6 +228,9 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
     gap: theme.spacing.xs,
+  },
+  actionButtonDisabled: {
+    opacity: theme.opacity.disabled,
   },
   actionButtonText: {
     color: theme.colors.info,

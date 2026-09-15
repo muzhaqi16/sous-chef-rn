@@ -45,11 +45,10 @@ export const JoinByShareCodeScreen: React.FC<
       return;
     }
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         const result = unwrapPayload(
           await joinByShareCode(trimmed),
-          'JoinShoppingListByShareCodePayload',
           t('shoppingListScreens.joinFailed'),
         );
 
@@ -105,7 +104,12 @@ export const JoinByShareCodeScreen: React.FC<
         <Text role="heading" align="center" style={styles.title}>
           {t('shoppingListScreens.joinEnterCodeTitle')}
         </Text>
-        <Text tone="secondary" align="center" style={styles.description}>
+        <Text
+          role="body"
+          tone="secondary"
+          align="center"
+          style={styles.description}
+        >
           {t('shoppingListScreens.joinEnterCodeDescription')}
         </Text>
 
@@ -156,7 +160,6 @@ const styles = StyleSheet.create(theme => ({
   },
   description: {
     marginBottom: theme.spacing.xl,
-    lineHeight: theme.typography.fontSize.md * 1.5,
   },
   inputContainer: {
     width: '100%',

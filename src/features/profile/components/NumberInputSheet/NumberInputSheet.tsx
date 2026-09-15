@@ -69,7 +69,7 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
       return;
     }
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         const success = await onSave(numValue);
         if (success) {
@@ -132,7 +132,7 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
         />
 
         {!!error && (
-          <Text role="caption" tone="error" style={styles.errorText}>
+          <Text role="error" tone="error" style={styles.errorText}>
             {error}
           </Text>
         )}

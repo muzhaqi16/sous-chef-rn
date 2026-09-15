@@ -176,7 +176,11 @@
     "currentLabel": "Current: ",
     "newQuantity": "New Quantity",
     "reasonPlaceholder": "Why is the quantity being adjusted?",
-    "remainingWeightPlaceholder": "Leave blank to auto-adjust"
+    "remainingWeightPlaceholder": "Leave blank to auto-adjust",
+    "systemReason": {
+      "stackMerged": "Adjustment after merging items",
+      "stackPurged": "Administrative removal"
+    }
   },
   "recordWaste": {
     "wasteBy": "Waste by",
@@ -299,7 +303,8 @@
     "acquisitionMethod": "How acquired",
     "methodPurchased": "Purchased",
     "methodHomegrown": "Homegrown",
-    "methodGifted": "Gifted"
+    "methodGifted": "Gifted",
+    "methodBarcodeScan": "Barcode scan"
   },
   "pantryScreen": {
     "greetingFallback": "Good morning",

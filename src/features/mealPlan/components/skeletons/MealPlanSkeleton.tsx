@@ -122,7 +122,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   dayLabelLine: {
     minHeight: theme.type.label.lineHeight,
     justifyContent: 'center',
-    marginBottom: 2,
+    marginBottom: theme.spacing['2xs'],
   },
   dayNumberLine: {
     minHeight: theme.type.bodyStrong.lineHeight,
@@ -137,7 +137,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     height: 5,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.surface,
-    marginTop: 3,
+    marginTop: theme.spacing['2xsPlus'],
   },
   toggleBar: {
     flexDirection: 'row',

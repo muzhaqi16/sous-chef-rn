@@ -1,7 +1,8 @@
 import type { ComponentRef } from 'react';
 import type { SharedValue } from 'react-native-reanimated';
 import type Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { Icon } from '#/utils/iconUtils';
+import type { Icon } from '#/utils/iconUtils';
+import type { TranslationKey } from '#/i18n';
 
 export type SwipeableRef = React.RefObject<ComponentRef<
   typeof Swipeable
@@ -17,7 +18,7 @@ export interface SwipeAction {
   key: string;
   icon: React.ComponentProps<typeof Icon>['name'];
   /** i18n KEY for the accessibility label, resolved at render. */
-  labelKey: string;
+  labelKey: TranslationKey;
   onPress: () => void;
   testID?: string;
   /**

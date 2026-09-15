@@ -9,15 +9,14 @@ import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { Icon } from '#utils/iconUtils';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
-import { type ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import {
   useCollaboratorPermissions,
   type CollabPermissions,
 } from '#features/shoppingList/hooks/useCollaboratorPermissions';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { ROLE_PERMISSIONS } from '#features/shoppingList/constants/collaboratorRoles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
@@ -28,7 +27,10 @@ interface CollaboratorPermissionsBottomSheetProps {
   onSuccess?: () => void;
 }
 
-const PERMISSION_ROWS: { key: keyof CollabPermissions; labelKey: string }[] = [
+const PERMISSION_ROWS: {
+  key: keyof CollabPermissions;
+  labelKey: TranslationKey;
+}[] = [
   { key: 'canAddItems', labelKey: 'labels.canAddItems' },
   { key: 'canEditItems', labelKey: 'shoppingListScreens.permCanEditItems' },
   { key: 'canRemoveItems', labelKey: 'labels.canRemoveItems' },
@@ -142,15 +144,10 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
     const collaboratorId = collaborator.collaboratorId;
     const role = selectedRole;
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
-        const result = await updateRole(collaboratorId, role);
-
-        // A resolved error member doesn't throw under errorPolicy:'all' — keep
-        // the sheet open and surface it instead of reporting success.
-        if (alertIfRejected(result, t('errors.codes.genericRetry'))) {
-          return;
-        }
+        // A refusal was alerted by the hook; the sheet stays open.
+        if (!(await updateRole(collaboratorId, role))) return;
 
         setIsVisible(false);
         onSuccess?.();
@@ -177,14 +174,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
     setPermissions(next);
     const collaboratorId = collaborator.collaboratorId;
 
-    let result;
-    try {
-      result = await updatePermissions(collaboratorId, next);
-    } catch {
-      setPermissions(previous);
-      return;
-    }
-    if (alertIfRejected(result, t('errors.codes.genericRetry'))) {
+    if (!(await updatePermissions(collaboratorId, next))) {
       setPermissions(previous);
     }
   };
@@ -329,7 +319,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   emailCaption: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   rolesContainer: {
     gap: theme.spacing.md,
@@ -363,7 +353,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   roleDescription: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   radioOuter: {
     width: 20,

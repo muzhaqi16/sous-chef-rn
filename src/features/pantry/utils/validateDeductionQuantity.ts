@@ -1,7 +1,10 @@
 import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { formatQuantity } from '#/utils/formatQuantity';
+import {
+  formatQuantityForDisplay,
+  formatQuantityForInput,
+} from '#/utils/formatQuantity';
 import type { PantryActionSharedState } from '#features/pantry/components/modals/PantryActionModal';
 
 /**
@@ -39,18 +42,43 @@ export function validateDeductionQuantity(
     ? shared.availableInSelectedUnit ?? shared.trackingQuantity
     : Math.max(shared.availableInSelectedUnit ?? 0, shared.trackingQuantity);
 
-  if (value > cap) {
+  const deduction = snapDeductionToCap(value, cap);
+  if (deduction > cap) {
     alertService.alert(
       t('labels.error'),
       t(
         actionVerb === 'waste'
           ? 'deduction.exceedsAvailableWaste'
           : 'deduction.exceedsAvailableConsume',
-        { amount: formatQuantity(cap), unit: shared.activeUnitSymbol },
+        {
+          amount: formatQuantityForDisplay(cap),
+          unit: shared.activeUnitSymbol,
+        },
       ),
     );
     return null;
   }
 
-  return value;
+  return deduction;
 }
+
+/**
+ * A deduction that READS as the cap is the cap, whether read from a field seeded
+ * with the whole stock ("2.457" for 2.4566, "1/3" for 0.3338) or from the stock
+ * as displayed ("1 1/3" for 1.32). Only the seed's own two notations are exact
+ * round trips: the display's fraction tolerance can disagree with either.
+ */
+export function snapDeductionToCap(value: number, cap: number): number {
+  const capReadings = readings(cap);
+  return readings(value).some(
+    (reading, index) => reading === capReadings[index],
+  )
+    ? cap
+    : value;
+}
+
+const readings = (quantity: number): string[] => [
+  formatQuantityForInput(quantity, { notation: 'decimal' }),
+  formatQuantityForInput(quantity),
+  formatQuantityForDisplay(quantity),
+];

@@ -61,7 +61,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
 
     setError(null);
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         await onSave(editValue);
         setEditing(false);

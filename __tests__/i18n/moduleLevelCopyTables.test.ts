@@ -4,8 +4,8 @@ import path from 'path';
 /**
  * The one shape no lint rule in this repo can see.
  *
- * `i18next/no-literal-string` checks JSX text and copy-carrying attributes; the
- * `no-restricted-syntax` sink selectors check toasts and alerts. Both look at
+ * `i18next/no-literal-string` checks JSX text and copy-carrying attributes;
+ * `sous-chef/no-untranslated-toast` checks toasts and alerts. Both look at
  * the point where a string is *written*. A module-level table —
  *
  *   const STEPS = [{ instruction: 'Swipe right to see item actions' }];
@@ -52,7 +52,7 @@ const ALLOWED = [
 /**
  * Property names that carry copy.
  *
- * An include list, mirroring the `jsx-attributes.include` list in `.eslintrc.js`
+ * An include list, mirroring the `jsx-attributes.include` list in `eslint/i18n.js`
  * and for the same measured reason: scoping by property name is smaller and
  * more stable than excluding the open-ended set of properties that hold
  * enum-ish identifiers. Without it this scan also reports `operation: 'Add

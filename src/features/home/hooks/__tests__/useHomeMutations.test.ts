@@ -1,14 +1,13 @@
 import { act, waitFor } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
-import type {
-  CreateOperationConfig,
-  RemoveOperationConfig,
-} from '#/hooks/utils/useCrudOperations';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { CreateHomeDocument } from '#operations/home/home.generated';
+import {
+  CreateHomeDocument,
+  DeleteHomeDocument,
+} from '#operations/home/home.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { alertService } from '#/services/alertService';
 import { useHomeMutations } from '../useHomeMutations';
@@ -39,11 +38,6 @@ jest.mock('#store/useAppStore', () => ({
 
 jest.mock('#/services/errorService');
 
-jest.mock('#/utils/errors/versionConflict', () => ({
-  handleVersionConflict: jest.fn(() => false),
-  getVersionConflictMessage: jest.fn(() => 'Version conflict'),
-}));
-
 jest.mock('#/utils/connectionUtils', () => ({
   extractNodes: jest.fn(
     (conn?: { edges?: Array<{ node?: unknown } | null> | null } | null) =>
@@ -52,57 +46,6 @@ jest.mock('#/utils/connectionUtils', () => ({
   getConnectionTotalCount: jest.fn(
     (conn?: { totalCount?: number | null } | null) => conn?.totalCount ?? 0,
   ),
-}));
-
-const mockCreateAddOperation = jest.fn(
-  (config: CreateOperationConfig<unknown, unknown>) => {
-    return async (input: unknown) => {
-      const validation = config.validateInput?.(input);
-      if (typeof validation === 'string') {
-        alertService.alert('Validation Error', validation);
-        return false;
-      }
-      const transformedInput = config.transformInput
-        ? config.transformInput(input)
-        : input;
-      const result = await config.mutation({
-        variables: { input: transformedInput },
-      });
-      if (result.data) {
-        config.onSuccess?.(result.data);
-        return result.data;
-      }
-      return false;
-    };
-  },
-);
-
-const mockCreateRemoveOperation = jest.fn(
-  (config: RemoveOperationConfig<unknown>) => {
-    return async () => {
-      return new Promise(resolve => {
-        alertService.alert(config.operationName ?? '', 'Confirm?', [
-          { text: 'Cancel', onPress: () => resolve(false) },
-          {
-            text: 'Delete',
-            onPress: async () => {
-              const result = await config.mutation({
-                variables: { id: config.itemId },
-              });
-              resolve(result?.data || false);
-            },
-          },
-        ]);
-      });
-    };
-  },
-);
-
-jest.mock('#/hooks/utils/useCrudOperations', () => ({
-  useCrudOperations: () => ({
-    createAddOperation: mockCreateAddOperation,
-    createRemoveOperation: mockCreateRemoveOperation,
-  }),
 }));
 
 jest.mock('../homeCacheUpdaters', () => ({
@@ -163,7 +106,6 @@ describe('useHomeMutations', () => {
     expect(typeof result.current.createHome).toBe('function');
     expect(typeof result.current.deleteHome).toBe('function');
     expect(result.current.creating).toBe(false);
-    expect(result.current.deleting).toBe(false);
   });
 
   describe('createHome', () => {
@@ -335,7 +277,7 @@ describe('useHomeMutations', () => {
       );
 
       act(() => {
-        result.current.deleteHome('home-2', 'Home 2');
+        void result.current.deleteHome('home-2', 'Home 2');
       });
 
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -343,6 +285,33 @@ describe('useHomeMutations', () => {
         expect.any(String),
         expect.any(Array),
       );
+    });
+
+    // The mutation's own `onError` alerted beside the removal builder, which
+    // settles and alerts the same failure: one failure, two dialogs.
+    it('alerts a failed delete once', async () => {
+      const failed = recordMock(DeleteHomeDocument, {
+        error: new Error('Network error'),
+      });
+      const { result } = renderHookWithApollo(
+        () => useHomeMutations(createOptions()),
+        { operationMocks: [failed.mock] },
+      );
+
+      let deleted: Promise<unknown> | undefined;
+      act(() => {
+        deleted = result.current.deleteHome('home-2', 'Home 2');
+      });
+      const confirm = (alertService.alert as jest.Mock).mock.lastCall?.[2] as
+        | Array<{ style?: string; onPress?: () => unknown }>
+        | undefined;
+      await act(async () => {
+        await confirm?.find(b => b.style === 'destructive')?.onPress?.();
+      });
+
+      await expect(deleted).resolves.toBe(false);
+      // The confirmation, then exactly one failure.
+      expect(alertService.alert).toHaveBeenCalledTimes(2);
     });
   });
 });

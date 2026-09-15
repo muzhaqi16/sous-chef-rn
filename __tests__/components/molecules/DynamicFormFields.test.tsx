@@ -3,7 +3,8 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { useForm } from 'react-hook-form';
-import { DynamicFormFields, FieldDef } from '../../../src/components/molecules/DynamicFormFields';
+import type { FieldDef } from '../../../src/components/molecules/DynamicFormFields';
+import { DynamicFormFields } from '../../../src/components/molecules/DynamicFormFields';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
@@ -17,12 +18,18 @@ jest.mock('#features/catalog/ui/autocomplete/BrandAutocompleteField', () => ({
 jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
   UnitAutocompleteField: () => null,
 }));
-jest.mock('#features/catalog/ui/autocomplete/CategoryAutocompleteField', () => ({
-  CategoryAutocompleteField: () => null,
-}));
-jest.mock('#features/catalog/ui/autocomplete/StorageLocationAutocompleteField', () => ({
-  StorageLocationAutocompleteField: () => null,
-}));
+jest.mock(
+  '#features/catalog/ui/autocomplete/CategoryAutocompleteField',
+  () => ({
+    CategoryAutocompleteField: () => null,
+  }),
+);
+jest.mock(
+  '#features/catalog/ui/autocomplete/StorageLocationAutocompleteField',
+  () => ({
+    StorageLocationAutocompleteField: () => null,
+  }),
+);
 jest.mock('../../../src/components/atoms/FormInput', () => ({
   FormInput: (props: { label: string }) => {
     const { Text } = require('react-native');
@@ -33,10 +40,15 @@ jest.mock('../../../src/components/atoms/FormInput', () => ({
 type TestForm = { name: string };
 
 function Wrapper({ fields }: { fields: FieldDef<TestForm>[] }) {
-  const { control, formState: { errors } } = useForm<TestForm>({
+  const {
+    control,
+    formState: { errors },
+  } = useForm<TestForm>({
     defaultValues: { name: '' },
   });
-  return <DynamicFormFields fields={fields} control={control} errors={errors} />;
+  return (
+    <DynamicFormFields fields={fields} control={control} errors={errors} />
+  );
 }
 
 describe('DynamicFormFields', () => {

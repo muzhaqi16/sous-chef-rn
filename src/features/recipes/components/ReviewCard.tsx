@@ -179,7 +179,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xs,
   },
   date: {
-    marginTop: 1,
+    marginTop: theme.spacing['3xs'],
   },
   ownActions: {
     flexDirection: 'row',

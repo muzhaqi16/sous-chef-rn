@@ -11,12 +11,9 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { RecurringPattern } from '#/graphql/generated/schemaTypes';
 
-import {} from '#features/shoppingList/utils/ownershipHelpers';
-
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Text } from '#components/atoms/Text';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import {} from '#/utils/formatters/number';
 import { useListSettings } from '#features/shoppingList/hooks/useListSettings';
 import { listSettingsStyles as styles } from '#features/shoppingList/components/listSettings/styles';
 import { BudgetSection } from '#features/shoppingList/components/listSettings/BudgetSection';
@@ -159,7 +156,7 @@ export const ListSettings: React.FC<
           <>
             {/* Read-only view for collaborators */}
             <View style={commonStyles.settingsSection}>
-              <Text style={commonStyles.settingsSectionTitle}>
+              <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
                 {t('shoppingListScreens.listInformation')}
               </Text>
 
@@ -192,7 +189,7 @@ export const ListSettings: React.FC<
             </View>
 
             <View style={commonStyles.settingsSection}>
-              <Text style={commonStyles.settingsSectionTitle}>
+              <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
                 {t('labels.leaveList')}
               </Text>
 
@@ -230,7 +227,7 @@ export const ListSettings: React.FC<
                       onPress={() => toHomeDetail({ homeId: linkedHomeId })}
                     >
                       <Icon name="people-outline" size={20} tone="primary" />
-                      <Text tone="accent" style={styles.actionText}>
+                      <Text role="body" tone="accent" style={styles.actionText}>
                         {t('shoppingListScreens.manageHome')}
                       </Text>
                       <Icon
@@ -254,7 +251,7 @@ export const ListSettings: React.FC<
                     <Icon name="log-out-outline" size={20} tone="error" />
                     <Text
                       role="bodyStrong"
-                      tone="error"
+                      tone="danger"
                       style={styles.deleteButtonText}
                     >
                       {leaving
@@ -276,7 +273,7 @@ export const ListSettings: React.FC<
         ) : (
           // Editable view for owners
           <View style={commonStyles.settingsSection}>
-            <Text style={commonStyles.settingsSectionTitle}>
+            <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
               {t('labels.general')}
             </Text>
 
@@ -290,7 +287,7 @@ export const ListSettings: React.FC<
             {/* Home selector - only show for new lists. */}
             {!listId && (
               <View style={commonStyles.settingsInputGroup}>
-                <Text style={commonStyles.settingsLabel}>
+                <Text role="label" style={commonStyles.settingsLabel}>
                   {t('shoppingListScreens.linkToHome')}
                 </Text>
                 <Pressable
@@ -300,7 +297,7 @@ export const ListSettings: React.FC<
                   ]}
                   onPress={handleOpenHomePicker}
                 >
-                  <Text>
+                  <Text role="body">
                     {homes?.find(h => h.id === selectedHomeId)?.name ||
                       t('shoppingListScreens.personalNoHome')}
                   </Text>
@@ -311,10 +308,13 @@ export const ListSettings: React.FC<
 
             <View style={commonStyles.settingsRow}>
               <View style={commonStyles.settingsRowInfo}>
-                <Text style={commonStyles.settingsRowLabel}>
+                <Text role="bodyStrong">
                   {t('shoppingListScreens.defaultList')}
                 </Text>
-                <Text style={commonStyles.settingsRowDescription}>
+                <Text
+                  role="caption"
+                  style={commonStyles.settingsRowDescription}
+                >
                   {t('shoppingListScreens.defaultListDesc')}
                 </Text>
               </View>
@@ -332,12 +332,12 @@ export const ListSettings: React.FC<
             list's settings. */}
         {!listId && templates.length > 0 && (
           <View style={commonStyles.settingsSection}>
-            <Text style={commonStyles.settingsSectionTitle}>
+            <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
               {t('shoppingListScreens.templateSection')}
             </Text>
 
             <View style={commonStyles.settingsInputGroup}>
-              <Text style={commonStyles.settingsLabel}>
+              <Text role="label" style={commonStyles.settingsLabel}>
                 {t('shoppingListScreens.startFromTemplate')}
               </Text>
               <Pressable
@@ -347,7 +347,7 @@ export const ListSettings: React.FC<
                 ]}
                 onPress={() => setShowTemplatePicker(true)}
               >
-                <Text>
+                <Text role="body">
                   {selectedTemplate?.displayName ??
                     t('shoppingListScreens.noTemplateBlankList')}
                 </Text>
@@ -424,7 +424,7 @@ export const ListSettings: React.FC<
 
         {!!listId && !!isOwner && (
           <View style={commonStyles.settingsSection}>
-            <Text style={commonStyles.settingsSectionTitle}>
+            <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
               {t('shoppingListScreens.sharing')}
             </Text>
 
@@ -433,10 +433,10 @@ export const ListSettings: React.FC<
                 styles.actionRow,
                 pressed && styles.pressed,
               ]}
-              onPress={() => toShareList({ listId: listId! })}
+              onPress={() => toShareList({ listId: listId })}
             >
               <Icon name="person-add" size={20} tone="primary" />
-              <Text tone="accent" style={styles.actionText}>
+              <Text role="body" tone="accent" style={styles.actionText}>
                 {t('shoppingListScreens.manageMembers')}
               </Text>
               <Icon name="chevron-forward" size={20} tone="textSecondary" />
@@ -454,7 +454,7 @@ export const ListSettings: React.FC<
 
         {!!listId && !!isOwner && (
           <View style={commonStyles.settingsSection}>
-            <Text style={commonStyles.settingsSectionTitle}>
+            <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
               {t('labels.dangerZone')}
             </Text>
 
@@ -468,7 +468,7 @@ export const ListSettings: React.FC<
               <Icon name="trash-outline" size={20} tone="error" />
               <Text
                 role="bodyStrong"
-                tone="error"
+                tone="danger"
                 style={styles.deleteButtonText}
               >
                 {t('labels.deleteList')}

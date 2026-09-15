@@ -32,7 +32,8 @@ interface RecipeFilterSheetProps {
   /** Close the sheet (parent flips its `visible` state to false). */
   onRequestClose: () => void;
   activeFilters: RecipeFilters;
-  setActiveFilters: React.Dispatch<React.SetStateAction<RecipeFilters>>;
+  /** Commits a changed filter set; the parent re-runs the active search. */
+  onApplyFilters: (next: RecipeFilters) => void;
   onSheetChange: (index: number) => void;
   isIngredientSearch?: boolean;
 }
@@ -43,7 +44,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
   visible,
   onRequestClose,
   activeFilters,
-  setActiveFilters,
+  onApplyFilters,
   onSheetChange,
   isIngredientSearch = false,
 }) => {
@@ -71,8 +72,8 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
       if (!mounted) setMounted(true);
       setDraftFilters(activeFilters);
     } else {
-      // Sheet closing — commit draft to parent (single state update)
-      setActiveFilters(draftFilters);
+      // Sheet closing — commit a changed draft to parent
+      if (hasDraftChanges) onApplyFilters(draftFilters);
     }
     onSheetChange(index);
   };

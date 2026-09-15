@@ -11,6 +11,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { toastService } from '#/services/toastService';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useRecipeSavedMetadata } from '../useRecipeSavedMetadata';
 
 // Reads just enough off the cached Recipe to assert the optimistic un-save.
@@ -57,7 +58,11 @@ const unfavoriteMock = (
               __typename: 'RemoveRecipeFromFavoritesPayload',
               savedRecipe: { __typename: 'SavedRecipe', id: 'sr1' },
             }
-          : { __typename: 'ForbiddenError', code: 'FORBIDDEN', message: 'no' },
+          : {
+              __typename: 'ForbiddenError',
+              code: ErrorCode.Forbidden,
+              message: 'no',
+            },
     },
   },
 });

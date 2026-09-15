@@ -122,7 +122,7 @@ const styles = StyleSheet.create(theme => ({
     opacity: theme.opacity.disabled,
   },
   actionButtonText: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   primaryButtonText: {
     color: theme.colors.background,

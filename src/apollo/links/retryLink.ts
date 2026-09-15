@@ -2,10 +2,14 @@ import { RetryLink } from '@apollo/client/link/retry';
 import type { ApolloLink } from '@apollo/client/link';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { getMainDefinition } from '@apollo/client/utilities';
+import { Kind, OperationTypeNode } from 'graphql';
 
 const isMutation = (op: Pick<ApolloLink.Operation, 'query'>) => {
   const def = getMainDefinition(op.query);
-  return def.kind === 'OperationDefinition' && def.operation === 'mutation';
+  return (
+    def.kind === Kind.OPERATION_DEFINITION &&
+    def.operation === OperationTypeNode.MUTATION
+  );
 };
 
 export const retryLink = new RetryLink({

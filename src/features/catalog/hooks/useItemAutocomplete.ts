@@ -1,11 +1,12 @@
+import { logger } from '#/utils/environment';
 import { useEffect, useState } from 'react';
 import { useLazyQuery } from '@apollo/client/react';
+import type { SearchItemsSemanticQuery } from '#operations/item/item.generated';
 import {
   AutocompleteItemsDocument,
   SearchItemsSemanticDocument,
-  SearchItemsSemanticQuery,
 } from '#operations/item/item.generated';
-import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { useAppStore, useIsOnline } from '#store/useAppStore';
 import { filterByName } from '#features/catalog/utils/arrayUtils';
@@ -65,9 +66,9 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
 
   const search = (term: string) => {
     setActiveTerm(term);
-    fetchItems({
+    void fetchItems({
       variables: { input: { query: term, limit: 10 } },
-    });
+    }).catch(error => logger.warn('Item autocomplete failed', error));
   };
 
   // Fall back to semantic search when the tsvector autocomplete returns no
@@ -79,7 +80,9 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
   useEffect(() => {
     if (!activeTerm || loading || hasAutocompleteResults) return;
     if (!data) return;
-    fetchSemantic({ variables: { prompt: activeTerm, first: 10 } });
+    void fetchSemantic({ variables: { prompt: activeTerm, first: 10 } }).catch(
+      error => logger.warn('Semantic item search failed', error),
+    );
   }, [activeTerm, loading, hasAutocompleteResults, data, fetchSemantic]);
 
   const semanticSuggestions = (
@@ -87,7 +90,7 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
   ).map(edge => semanticItemToSuggestion(edge.node));
 
   const items: ItemSuggestion[] = hasAutocompleteResults
-    ? (autocompleteSuggestions as ItemSuggestion[])
+    ? autocompleteSuggestions
     : semanticSuggestions;
 
   // Deliberately NOT `useDeferredValue(items)`: this array becomes a FlashList

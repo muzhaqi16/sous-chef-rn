@@ -18,19 +18,24 @@ interface GraphQLErrorLike {
   message?: string;
 }
 
+const isGraphQLErrorLike = (value: unknown): value is GraphQLErrorLike =>
+  typeof value === 'object' && value !== null;
+
 function getGraphQLErrors(error: unknown): GraphQLErrorLike[] | null {
   if (error == null || typeof error !== 'object') return null;
 
   // CombinedGraphQLErrors (Apollo Client 4) — has .errors
   if ('errors' in error) {
-    const { errors } = error as { errors: unknown };
-    if (Array.isArray(errors)) return errors;
+    const { errors } = error;
+    if (Array.isArray(errors)) return errors.filter(isGraphQLErrorLike);
   }
 
   // Legacy ApolloError — has .graphQLErrors
   if ('graphQLErrors' in error) {
-    const { graphQLErrors } = error as { graphQLErrors: unknown };
-    if (Array.isArray(graphQLErrors)) return graphQLErrors;
+    const { graphQLErrors } = error;
+    if (Array.isArray(graphQLErrors)) {
+      return graphQLErrors.filter(isGraphQLErrorLike);
+    }
   }
 
   return null;

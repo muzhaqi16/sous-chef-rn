@@ -36,6 +36,7 @@ import { Text } from '#components/atoms/Text';
 import { getInviteDisplayName } from '#features/home/utils/inviteFormatters';
 import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
 import { buildJoinHomeUrl, shareUrl } from '#/utils/deepLinkUrls';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
 type RouteParams = {
   homeId: string;
@@ -74,11 +75,12 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     rotateJoinCode,
     rotatingJoinCode,
     transferOwnership,
+    transferringOwnership,
     updateMemberPermission,
   } = useHomeDetailManagement(homeId);
 
   const handleRefresh = () => {
-    executeRefreshWithFinally(() => refetch(), setRefreshing);
+    void executeRefreshWithFinally(() => refetch(), setRefreshing);
   };
 
   // Reset copied state after 2 seconds
@@ -144,7 +146,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     // A write, so the throw has to be surfaced: there is no query error state
     // behind this switch, and swallowing left the toggle snapping back with no
     // explanation.
-    executeWriteWithFinally(
+    void executeWriteWithFinally(
       () => toggleJoinCode(enabled),
       setJoinCodeLoading,
       error => {
@@ -155,7 +157,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
   };
 
   const currentUserMembership = home?.myMembership;
-  const isOwner = currentUserMembership?.role === 'OWNER';
+  const isOwner = currentUserMembership?.role === MembershipRole.Owner;
   const canManage = currentUserMembership?.canManageHome ?? false;
 
   const handleLeaveHome = async () => {
@@ -222,21 +224,10 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
 
   // Edges from masked connections; node refs flow into the section's card
   // components which call `useFragment` per row for cache-subscribed updates.
-  // `useFragment` types as `DeepPartialObject<...>` because writes may be
-  // incomplete; in practice the query selects every field so it's safe to
-  // narrow back to the section's expected node shape.
-  type SectionMemberNode = React.ComponentProps<
-    typeof HomeMembersSection
-  >['members'][number];
-  type SectionInviteNode = React.ComponentProps<
-    typeof HomeMembersSection
-  >['invites'][number];
-  const memberNodes = (home.membersConnection?.edges
-    ?.map(e => e?.node)
-    .filter(Boolean) ?? []) as SectionMemberNode[];
-  const inviteNodes = (home.invitesConnection?.edges
-    ?.map(e => e?.node)
-    .filter(Boolean) ?? []) as SectionInviteNode[];
+  const memberNodes =
+    home.membersConnection?.edges?.map(e => e?.node).filter(Boolean) ?? [];
+  const inviteNodes =
+    home.invitesConnection?.edges?.map(e => e?.node).filter(Boolean) ?? [];
 
   const sections = [
     {
@@ -338,11 +329,12 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
             };
           }}
           resolveInviteLabel={invite =>
-            getInviteDisplayName({ email: invite.email })
+            getInviteDisplayName({ email: invite.email }, t)
           }
           onChangeRole={changeRole}
           onRemove={removeMember}
           onTransferOwnership={handleTransferOwnership}
+          transferringOwnership={transferringOwnership}
           onUpdatePermission={updateMemberPermission}
           onRevokeInvite={revokeInvite}
         />

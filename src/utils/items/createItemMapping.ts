@@ -69,8 +69,8 @@ export function mapFormToCreateItemInput(
       data.primaryUpc || data.shelfLifeDays || data.shelfLifeOpenedDays
         ? {
             primaryUpc: data.primaryUpc || undefined,
-            shelfLifeDays: data.shelfLifeDays || undefined,
-            shelfLifeOpenedDays: data.shelfLifeOpenedDays || undefined,
+            shelfLifeDays: data.shelfLifeDays ?? undefined,
+            shelfLifeOpenedDays: data.shelfLifeOpenedDays ?? undefined,
           }
         : undefined,
     packageInfo:
@@ -79,7 +79,7 @@ export function mapFormToCreateItemInput(
       data.defaultConsumeUnitId
         ? {
             baseDimension: data.baseDimension || undefined,
-            defaultConsumeIncrement: data.defaultConsumeIncrement || undefined,
+            defaultConsumeIncrement: data.defaultConsumeIncrement ?? undefined,
             defaultConsumeUnitId: data.defaultConsumeUnitId || undefined,
           }
         : undefined,

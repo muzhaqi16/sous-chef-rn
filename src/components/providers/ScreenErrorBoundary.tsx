@@ -1,4 +1,5 @@
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import React from 'react';
 import { logger } from '#/utils/environment';
 import ErrorBoundary from './ErrorBoundary';
 import { Telemetry } from '#/services/telemetry';

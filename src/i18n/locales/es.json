@@ -99,8 +99,10 @@
       "contextPrefix": "Contexto: "
     },
     "rateLimitGeneric": "Demasiadas solicitudes. Inténtalo de nuevo más tarde.",
-    "rateLimitMinutes": "Demasiadas solicitudes. Inténtalo de nuevo en {{count}} minuto(s).",
-    "rateLimitSeconds": "Demasiadas solicitudes. Inténtalo de nuevo en {{count}} segundo(s).",
+    "rateLimitMinutes_one": "Demasiadas solicitudes. Inténtalo de nuevo en {{count}} minuto.",
+    "rateLimitMinutes_other": "Demasiadas solicitudes. Inténtalo de nuevo en {{count}} minutos.",
+    "rateLimitSeconds_one": "Demasiadas solicitudes. Inténtalo de nuevo en {{count}} segundo.",
+    "rateLimitSeconds_other": "Demasiadas solicitudes. Inténtalo de nuevo en {{count}} segundos.",
     "notFoundGeneric": "El elemento solicitado no se pudo encontrar. Es posible que haya sido eliminado.",
     "notFoundResource": "No se pudo encontrar {{resource}}. Quizá ya no exista.",
     "resourceNames": {
@@ -130,8 +132,6 @@
     "parentContextRequired": "Se requiere el contexto principal",
     "createStorageLocationFailed": "No se pudo crear la ubicación de almacenamiento",
     "missingRequiredInfo": "Falta información obligatoria",
-    "invalidInput": "Entrada no válida",
-    "invalidOperation": "Operación no válida",
     "invalidUnitTitle": "Unidad no válida",
     "addItemFailedRetry": "No se pudo añadir el artículo. Inténtalo de nuevo.",
     "restockFailedRetry": "No se pudo reponer el artículo. Inténtalo de nuevo.",
@@ -485,8 +485,8 @@
     "youReAllSet": "¡Todo listo!",
     "durationDays_one": "{{count}} día",
     "durationDays_other": "{{count}} días",
-    "finish": "Finalizar",
-    "currency": "Moneda"
+    "currency": "Moneda",
+    "today": "Hoy"
   },
   "instructions": {
     "pointCamera": "Apunta la cámara a un código de barras",
@@ -611,7 +611,6 @@
     "profileTooLargeBody": "La imagen es demasiado grande. Las imágenes de perfil deben pesar menos de {{size}} MB.",
     "updateFailedTitle": "Error al actualizar",
     "avatarUpdateFailedBody": "No se pudo actualizar el avatar del perfil",
-    "coverUpdateFailedBody": "No se pudo actualizar la portada del perfil",
     "itemImageUpdateFailedBody": "No se pudo actualizar la imagen del artículo",
     "itemTooLargeBody": "La imagen es demasiado grande. Las fotos de artículos deben pesar menos de {{size}} MB.",
     "unreadableBody": "No pudimos leer ese archivo de imagen. Prueba con otro.",
@@ -709,9 +708,6 @@
     "addedToMealPlan": "Añadido al plan de comidas",
     "mealPlanDuplicated": "¡Plan de comidas duplicado!",
     "itemToggleFailed": "No se pudo cambiar el artículo",
-    "selectShoppingListFirst": "Selecciona primero una lista de la compra",
-    "signInToVerifyEmail": "Inicia sesión para terminar de verificar tu correo.",
-    "signInToAcceptInvite": "Inicia sesión para aceptar esta invitación.",
     "folderProtected": "\"{{folder}}\" no se puede renombrar ni eliminar",
     "welcomeToEntity": "¡Te damos la bienvenida a {{name}}!",
     "canCollaborateOn": "Ya puedes colaborar en {{name}}",
@@ -720,10 +716,10 @@
     "addedItemsWithSkipped_one": "Se añadió {{count}} artículo a tu lista. {{skipped}} ya estaban.",
     "addedItemsWithSkipped_other": "Se añadieron {{count}} artículos a tu lista. {{skipped}} ya estaban.",
     "allLowStockAlreadyListed_one": "El {{count}} artículo con pocas existencias ya estaba en tu lista",
-    "allLowStockAlreadyListed_other": "Los {{count}} artículos con pocas existencias ya estaban en tu lista",
-    "verificationLinkInvalid": "Ese enlace de verificación no es válido o ha caducado.",
-    "resetLinkInvalid": "Ese enlace de restablecimiento no es válido o ha caducado.",
-    "invitationLinkInvalid": "Esa invitación no es válida o ha caducado.",
-    "linkInvalid": "Ese enlace no es válido o ha caducado."
+    "allLowStockAlreadyListed_other": "Los {{count}} artículos con pocas existencias ya estaban en tu lista"
+  },
+  "pushNotification": {
+    "title": "{{appName}}",
+    "body": "Tienes una notificación nueva"
   }
 }

@@ -12,14 +12,11 @@ import {
   RecipeReviewFragmentDoc,
   type RecipeReviewFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
-import { type MaterializedRecipe } from './useRecipeData';
+import type { MaterializedRecipe } from './useRecipeData';
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
-import { localizedErrorMessage } from '#/services/errorService';
-import {
-  getRateLimitMessage,
-  isRateLimitError,
-} from '#/utils/errors/rateLimit';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import {
   addReviewToRecipe,
   changeReviewRating,
@@ -91,70 +88,34 @@ export function useRecipeReviews({
     CreateRecipeReviewDocument,
     {
       update: (cache, { data }) => {
-        const payload = data?.createRecipeReview;
-        if (payload?.__typename === 'CreateRecipeReviewPayload') {
-          const review = payload.recipeReview;
-          addReviewToRecipe(cache, recipeId, {
-            id: review.id,
-            rating: review.rating,
-          });
-        }
-      },
-      // `err.message` is the server's English (or a transport error's
-      // developer text). `localizedErrorMessage` resolves the error's CODE to
-      // the app's own copy and falls back to the caller's — which has to be
-      // PASSED to it: the resolver is total, so applying copy to its result is
-      // unreachable, and a transport failure on a write then reports the
-      // read-oriented offline sentence instead of what did not save.
-      onError: err => {
-        toastService.error(
-          localizedErrorMessage(err, t('recipes.submitReviewFailed')),
-        );
+        const payload = appliedPayload(data);
+        if (!payload) return;
+        const review = payload.recipeReview;
+        addReviewToRecipe(cache, recipeId, {
+          id: review.id,
+          rating: review.rating,
+        });
       },
     },
   );
 
   const [updateReviewMutation, { loading: updateLoading }] = useMutation(
     UpdateRecipeReviewDocument,
-    {
-      onError: err => {
-        toastService.error(
-          localizedErrorMessage(err, t('recipes.updateReviewFailed')),
-        );
-      },
-    },
   );
 
   const [deleteReviewMutation, { loading: deleteLoading }] = useMutation(
     DeleteRecipeReviewDocument,
     {
       update: (cache, { data }, { variables }) => {
-        if (
-          data?.deleteRecipeReview?.__typename !==
-            'DeleteRecipeReviewPayload' ||
-          !variables?.input?.id
-        ) {
-          return;
-        }
+        if (!appliedPayload(data) || !variables?.input?.id) return;
         removeReviewFromRecipe(cache, recipeId, variables.input.id);
-      },
-      onError: err => {
-        toastService.error(
-          localizedErrorMessage(err, t('recipes.deleteReviewFailed')),
-        );
       },
     },
   );
 
   const [toggleHelpfulMutation] = useMutation(ToggleReviewHelpfulDocument, {
     update: (cache, { data }, { variables }) => {
-      if (
-        data?.toggleReviewHelpful?.__typename !==
-          'ToggleReviewHelpfulPayload' ||
-        !variables?.input
-      ) {
-        return;
-      }
+      if (!appliedPayload(data) || !variables?.input) return;
       const { reviewId, isHelpful } = variables.input;
       // Both fields are client-derived until the next GetRecipeReviews read —
       // see the mutation's selection for why the server's own values aren't
@@ -174,43 +135,37 @@ export function useRecipeReviews({
         },
       });
     },
-    onError: err => {
-      toastService.error(
-        localizedErrorMessage(err, t('recipes.helpfulVoteFailed')),
-      );
-    },
   });
 
   const submitting = createLoading || updateLoading || deleteLoading;
 
   // Actions
+  // Each write reports through one toast: the success copy, or the failure's
+  // localized body — never the server's `message`.
   const createReview = async (rating: number, comment?: string) => {
-    const result = await createReviewMutation({
-      variables: {
-        // Client-minted id: a lost-response retry replays with the same id and
-        // surfaces as IDEMPOTENT_REPLAY (converged) instead of an
-        // indistinguishable "already reviewed" CONFLICT.
-        input: {
-          id: generateEntityId(),
-          recipeId,
-          rating,
-          comment: comment || undefined,
-        },
+    const settled = await settleMutation(
+      () =>
+        createReviewMutation({
+          variables: {
+            // Client-minted id: a lost-response retry replays with the same id
+            // and surfaces as IDEMPOTENT_REPLAY (converged) instead of an
+            // indistinguishable "already reviewed" CONFLICT.
+            input: {
+              id: generateEntityId(),
+              recipeId,
+              rating,
+              comment: comment || undefined,
+            },
+          },
+        }),
+      {
+        document: CreateRecipeReviewDocument,
+        fallback: t('recipes.submitReviewFailed'),
+        present: 'none',
       },
-    });
-    const payload = result.data?.createRecipeReview;
-    if (payload?.__typename === 'CreateRecipeReviewPayload') {
-      toastService.success(t('recipes.reviewSubmitted'));
-      return;
-    }
-    // Rate-limit now arrives as a top-level GraphQL error, not a RateLimitError
-    // union variant.
-    if (isRateLimitError(result.error)) {
-      toastService.error(getRateLimitMessage(result.error));
-      return;
-    }
-    const message = payload && 'message' in payload ? payload.message : null;
-    toastService.error(message ?? t('recipes.submitReviewFailed'));
+    );
+    if (settled.failure) toastService.error(settled.failure.body);
+    else toastService.success(t('recipes.reviewSubmitted'));
   };
 
   const updateReview = async (
@@ -218,48 +173,66 @@ export function useRecipeReviews({
     input: { rating?: number; comment?: string },
   ) => {
     const prevRating = getReviewRating(apolloClient.cache, id);
-    const result = await updateReviewMutation({
-      variables: {
-        input: {
-          id,
-          rating: input.rating,
-          comment: input.comment,
-        },
+    const settled = await settleMutation(
+      () =>
+        updateReviewMutation({
+          variables: {
+            input: {
+              id,
+              rating: input.rating,
+              comment: input.comment,
+            },
+          },
+          update: (cache, { data }) => {
+            const payload = appliedPayload(data);
+            if (!payload || prevRating === null) return;
+            if (prevRating !== payload.recipeReview.rating) {
+              changeReviewRating(
+                cache,
+                recipeId,
+                prevRating,
+                payload.recipeReview.rating,
+              );
+            }
+          },
+        }),
+      {
+        document: UpdateRecipeReviewDocument,
+        fallback: t('recipes.updateReviewFailed'),
+        present: 'none',
       },
-      update: (cache, { data }) => {
-        const payload = data?.updateRecipeReview;
-        if (payload?.__typename !== 'UpdateRecipeReviewPayload') return;
-        const review = payload.recipeReview;
-        if (prevRating === null) return;
-        if (prevRating !== review.rating) {
-          changeReviewRating(cache, recipeId, prevRating, review.rating);
-        }
-      },
-    });
-    const payload = result.data?.updateRecipeReview;
-    if (payload?.__typename === 'UpdateRecipeReviewPayload') {
-      toastService.success(t('recipes.reviewUpdated'));
-      return;
-    }
-    const message = payload && 'message' in payload ? payload.message : null;
-    toastService.error(message ?? t('recipes.updateReviewFailed'));
+    );
+    if (settled.failure) toastService.error(settled.failure.body);
+    else toastService.success(t('recipes.reviewUpdated'));
   };
 
   const deleteReview = async (id: string) => {
-    const result = await deleteReviewMutation({ variables: { input: { id } } });
-    const payload = result.data?.deleteRecipeReview;
-    if (payload?.__typename === 'DeleteRecipeReviewPayload') {
-      toastService.success(t('recipes.reviewDeleted'));
-      return;
-    }
-    const message = payload && 'message' in payload ? payload.message : null;
-    toastService.error(message ?? t('recipes.deleteReviewFailed'));
+    const settled = await settleMutation(
+      () => deleteReviewMutation({ variables: { input: { id } } }),
+      {
+        document: DeleteRecipeReviewDocument,
+        fallback: t('recipes.deleteReviewFailed'),
+        removal: true,
+        present: 'none',
+      },
+    );
+    if (settled.failure) toastService.error(settled.failure.body);
+    else toastService.success(t('recipes.reviewDeleted'));
   };
 
   const toggleHelpful = async (reviewId: string, isHelpful: boolean) => {
-    await toggleHelpfulMutation({
-      variables: { input: { reviewId, isHelpful } },
-    });
+    const settled = await settleMutation(
+      () =>
+        toggleHelpfulMutation({
+          variables: { input: { reviewId, isHelpful } },
+        }),
+      {
+        document: ToggleReviewHelpfulDocument,
+        fallback: t('recipes.helpfulVoteFailed'),
+        present: 'none',
+      },
+    );
+    if (settled.failure) toastService.error(settled.failure.body);
   };
 
   // Server-computed per requesting user — never derive it from

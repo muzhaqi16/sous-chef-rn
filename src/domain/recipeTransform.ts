@@ -34,7 +34,7 @@ export function transformRecipeForDisplay(
 
   if (isIngredientSearch) {
     // RecipeSearchResult - ingredient-based search
-    const ingredientRecipe = recipe as RecipeSearchResult;
+    const ingredientRecipe = recipe;
     const totalIngredients =
       ingredientRecipe.usedIngredientCount +
       ingredientRecipe.missedIngredientCount;
@@ -55,7 +55,7 @@ export function transformRecipeForDisplay(
     }
   } else {
     // SearchRecipesResult - text-based search
-    const textRecipe = recipe as SearchRecipesResult;
+    const textRecipe = recipe;
 
     if (textRecipe.readyInMinutes) {
       subtitleParts.push(

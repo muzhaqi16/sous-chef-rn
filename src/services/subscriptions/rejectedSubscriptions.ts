@@ -5,6 +5,8 @@
  */
 
 import { useSyncExternalStore } from 'react';
+import type { DocumentNode } from 'graphql';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 
 const rejected = new Set<string>();
 const listeners = new Set<() => void>();
@@ -20,17 +22,18 @@ const subscribe = (listener: () => void): (() => void) => {
   };
 };
 
-/** Close the gate on `name`. Returns true the first time, so the caller can
+/** Close the gate on the subscription `document` declares. Returns true the first time, so the caller can
  *  report it once rather than once per reconnect. */
-export function markSubscriptionRejected(name: string): boolean {
+export function markSubscriptionRejected(document: DocumentNode): boolean {
+  const name = operationNameOf(document);
   if (rejected.has(name)) return false;
   rejected.add(name);
   emit();
   return true;
 }
 
-export function isSubscriptionRejected(name: string): boolean {
-  return rejected.has(name);
+export function isSubscriptionRejected(document: DocumentNode): boolean {
+  return rejected.has(operationNameOf(document));
 }
 
 /** Test / session-end hook. Not a retry path. */
@@ -42,7 +45,8 @@ export function resetRejectedSubscriptions(): void {
 
 /** Feeds `useSubscription`'s `skip`, so a rejection stops the resubscribe at
  *  the next render instead of repeating for the life of the session. */
-export function useSubscriptionRejected(name: string): boolean {
+export function useSubscriptionRejected(document: DocumentNode): boolean {
+  const name = operationNameOf(document);
   return useSyncExternalStore(
     subscribe,
     () => rejected.has(name),

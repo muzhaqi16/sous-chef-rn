@@ -6,6 +6,12 @@ import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { ChartSection } from '#features/pantry/components/analytics/ChartSection';
 import { PeriodGranularity } from '#/graphql/generated/schemaTypes';
+import { safeParseDate } from '#utils/dateUtils';
+import { formatMonthDay, formatMonthYear } from '#/utils/formatters/date';
+import {
+  formatQuantityDisplay,
+  formatQuantityForDisplay,
+} from '#/utils/formatQuantity';
 import {
   AnalyticsSummaryCard,
   GranularityButton,
@@ -15,6 +21,21 @@ import {
   styles,
 } from './shared';
 import type { AnalyticsResult, SharedTabProps } from './shared';
+
+/**
+ * `periodLabel` is the server's UTC bucket key (`2026-09-14`, `2026-09`), so it
+ * is parsed as a local calendar date and formatted in the interface language.
+ */
+const formatPeriod = (
+  label: string,
+  granularity: PeriodGranularity,
+): string => {
+  const date = safeParseDate(label);
+  if (!date) return '';
+  return granularity === PeriodGranularity.Monthly
+    ? formatMonthYear(date)
+    : formatMonthDay(date);
+};
 
 /** The pantry analytics tab for every movement, as a running log. */
 export const LedgerTab: React.FC<
@@ -41,7 +62,7 @@ export const LedgerTab: React.FC<
 
   const ledgerPeriodData =
     ledgerData?.periodData?.map(period => ({
-      date: period.periodLabel || period.periodStart,
+      date: formatPeriod(period.periodLabel, ledgerGranularity),
       added: period.added,
       consumed: period.consumed,
       wasted: period.wasted,
@@ -104,14 +125,16 @@ export const LedgerTab: React.FC<
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.added')}
-          value={ledgerData?.summary?.totalAdded ?? 0}
+          value={formatQuantityForDisplay(ledgerData?.summary?.totalAdded ?? 0)}
           icon="add-circle-outline"
           uniProps={theme => ({ color: theme.colors.success })}
           subtitle={t('pantryAnalytics.totalQuantity')}
         />
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.consumed')}
-          value={ledgerData?.summary?.totalConsumed ?? 0}
+          value={formatQuantityForDisplay(
+            ledgerData?.summary?.totalConsumed ?? 0,
+          )}
           icon="restaurant"
           uniProps={theme => ({ color: theme.colors.primary })}
           subtitle={t('pantryAnalytics.totalQuantity')}
@@ -121,14 +144,18 @@ export const LedgerTab: React.FC<
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.wasted')}
-          value={ledgerData?.summary?.totalWasted ?? 0}
+          value={formatQuantityForDisplay(
+            ledgerData?.summary?.totalWasted ?? 0,
+          )}
           icon="trash-outline"
           uniProps={theme => ({ color: theme.colors.error })}
           subtitle={t('pantryAnalytics.totalQuantity')}
         />
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.netChange')}
-          value={ledgerData?.summary?.netQuantity ?? 0}
+          value={formatQuantityForDisplay(
+            ledgerData?.summary?.netQuantity ?? 0,
+          )}
           icon="trending-up"
           uniProps={theme => ({
             color:
@@ -184,7 +211,7 @@ export const LedgerTab: React.FC<
       <ChartSection
         title={t('pantryAnalytics.activityOverTime')}
         loading={ledgerLoading}
-        error={ledgerError?.message}
+        error={ledgerError}
         isEmpty={!ledgerPeriodData.length}
       >
         <View style={styles.periodLegend}>
@@ -221,7 +248,7 @@ export const LedgerTab: React.FC<
                     align="right"
                     style={styles.periodValue}
                   >
-                    +{period.added}
+                    +{formatQuantityForDisplay(period.added)}
                   </Text>
                   <Text
                     role="label"
@@ -229,15 +256,15 @@ export const LedgerTab: React.FC<
                     align="right"
                     style={styles.periodValue}
                   >
-                    -{period.consumed}
+                    -{formatQuantityForDisplay(period.consumed)}
                   </Text>
                   <Text
                     role="label"
-                    tone="error"
+                    tone="danger"
                     align="right"
                     style={styles.periodValue}
                   >
-                    -{period.wasted}
+                    -{formatQuantityForDisplay(period.wasted)}
                   </Text>
                 </View>
               </View>
@@ -252,7 +279,7 @@ export const LedgerTab: React.FC<
           <ChartSection
             title={t('pantryAnalytics.additionsByUnit')}
             loading={ledgerLoading}
-            error={ledgerError?.message}
+            error={ledgerError}
             isEmpty={false}
           >
             <View style={styles.unitBreakdownList}>
@@ -262,7 +289,10 @@ export const LedgerTab: React.FC<
                   style={styles.unitBreakdownItem}
                 >
                   <Text role="bodyStrong">
-                    {unit.totalQuantity} {unit.unitSymbol || unit.unitName}
+                    {formatQuantityDisplay(
+                      unit.totalQuantity,
+                      unit.unitSymbol || unit.unitName,
+                    )}
                   </Text>
                   <Text role="caption" tone="secondary">
                     {t('pantryAnalytics.transactionCount', {
@@ -281,7 +311,7 @@ export const LedgerTab: React.FC<
           <ChartSection
             title={t('pantryAnalytics.consumptionByUnit')}
             loading={ledgerLoading}
-            error={ledgerError?.message}
+            error={ledgerError}
             isEmpty={false}
           >
             <View style={styles.unitBreakdownList}>
@@ -291,7 +321,10 @@ export const LedgerTab: React.FC<
                   style={styles.unitBreakdownItem}
                 >
                   <Text role="bodyStrong">
-                    {unit.totalQuantity} {unit.unitSymbol || unit.unitName}
+                    {formatQuantityDisplay(
+                      unit.totalQuantity,
+                      unit.unitSymbol || unit.unitName,
+                    )}
                   </Text>
                   <Text role="caption" tone="secondary">
                     {t('pantryAnalytics.transactionCount', {
@@ -308,7 +341,7 @@ export const LedgerTab: React.FC<
       <ChartSection
         title={t('pantryAnalytics.topRestockedItems')}
         loading={ledgerLoading}
-        error={ledgerError?.message}
+        error={ledgerError}
         isEmpty={!topRestockedItemsData.length}
       >
         <TopItemsBarChart

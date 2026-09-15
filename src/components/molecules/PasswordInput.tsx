@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  BaseInput,
-  BaseInputProps,
-} from '#components/molecules/BaseInput/BaseInput';
+import type { BaseInputProps } from '#components/molecules/BaseInput/BaseInput';
+import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#/utils/iconUtils';
 import { useTranslation } from '#/i18n';

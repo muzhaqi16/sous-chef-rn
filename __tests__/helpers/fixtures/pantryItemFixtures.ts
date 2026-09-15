@@ -38,19 +38,26 @@ export interface PantryItemFixture {
   storageLocationName?: string | null;
   unitName?: string;
   unitSymbol?: string;
+  unitDisplayAsFraction?: boolean;
+  minQuantity?: number | null;
+  restockQuantity?: number | null;
   /** The item's OWN cost fields — the first stock's, which a restock leaves be. */
   costPerUnit?: number | null;
   totalCost?: number | null;
 }
 
-function unit(symbol = 'L', name = 'liters'): UnitData {
+function unit(
+  symbol = 'L',
+  name = 'liters',
+  displayAsFraction = false,
+): UnitData {
   return {
     __typename: 'Unit',
     id: 'u1',
     name,
     symbol,
     type: UnitType.Volume,
-    displayAsFraction: false,
+    displayAsFraction,
   };
 }
 
@@ -78,7 +85,7 @@ export function pantryItemData(
       expiresAt: fixture.expiresAt ?? null,
       lowStockAlert: false,
       isLowStock: false,
-      minQuantity: null,
+      minQuantity: fixture.minQuantity ?? null,
       lastUsedAt: null,
       netWeight: null,
       remainingNetWeight: null,
@@ -115,7 +122,11 @@ export function pantryItemData(
             ]
           : [],
       },
-      unit: unit(fixture.unitSymbol, fixture.unitName),
+      unit: unit(
+        fixture.unitSymbol,
+        fixture.unitName,
+        fixture.unitDisplayAsFraction,
+      ),
       netWeightUnit: null,
       storageLocation: fixture.storageLocationName
         ? {
@@ -133,7 +144,7 @@ export function pantryItemData(
       tags,
       storageNotes: fixture.storageNotes ?? null,
       createdAt: fixture.createdAt ?? '2026-01-01T00:00:00Z',
-      restockQuantity: null,
+      restockQuantity: fixture.restockQuantity ?? null,
       store: null,
       condition:
         (fixture.condition as ItemCondition | undefined) ?? ItemCondition.Good,

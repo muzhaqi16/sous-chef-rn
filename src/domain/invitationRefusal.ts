@@ -1,3 +1,6 @@
+import type { AcceptHomeInviteMutation } from '#operations/home/home.generated';
+import type { AppliedPayload } from '#/utils/errors/mutationPayload';
+
 /**
  * An accept/decline result is a union of a payload and four refusal members,
  * and under `errorPolicy: 'all'` a refusal resolves as DATA — so the absence of
@@ -16,21 +19,23 @@ export type InvitationRefusal =
   /** A member this client does not know, or a transport failure. */
   | 'refused';
 
-const BY_TYPENAME: Record<string, InvitationRefusal> = {
+type RefusalTypename = Exclude<
+  AcceptHomeInviteMutation['acceptHomeInvite']['__typename'],
+  AppliedPayload<AcceptHomeInviteMutation>['__typename']
+>;
+
+// Keys are checked against the generated union; a member added to it later
+// lands on `refused` rather than passing as success.
+const BY_TYPENAME: { readonly [T in RefusalTypename]?: InvitationRefusal } = {
   ForbiddenError: 'inviteeMismatch',
   NotFoundError: 'unavailable',
   ConflictError: 'alreadyResolved',
   ValidationError: 'invalid',
 };
 
-/**
- * Success is the payload member; every other member is a refusal. A member
- * added to the union later lands on `refused` and is reported, rather than
- * passing as success.
- */
-export const isInvitationPayload = (typename: string | undefined): boolean =>
-  typeof typename === 'string' && typename.endsWith('Payload');
-
 export const classifyInvitationRefusal = (
   typename: string | undefined,
-): InvitationRefusal => (typename && BY_TYPENAME[typename]) || 'refused';
+): InvitationRefusal => {
+  const refusals: Partial<Record<string, InvitationRefusal>> = BY_TYPENAME;
+  return (typename && refusals[typename]) || 'refused';
+};

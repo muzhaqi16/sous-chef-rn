@@ -18,6 +18,7 @@ import { Icon } from '#utils/iconUtils';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
 import { Divider } from '#components/atoms/Divider';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 
 const AutocompleteSeparator = () => <Divider style={styles.rowDividerInset} />;
 // Every row is the same component, so one recycling pool is correct.
@@ -252,7 +253,7 @@ export function BottomSheetAutocompleteInput<T>({
       // Index-keyed off the field's testID: row content is per-field and often
       // translated. Selecting a suggestion hands back the ENTITY, where committing
       // the same text via return only calls `onChangeText` — different paths.
-      testID={testID ? `${testID}-suggestion-${index}` : undefined}
+      testID={testID ? catalogTestIDs.suggestion(testID, index) : undefined}
       onPress={() => handleSelectItem(item)}
       style={({ pressed }) => pressed && styles.pressed}
     >
@@ -262,7 +263,9 @@ export function BottomSheetAutocompleteInput<T>({
 
   const defaultLoadingComponent = () => (
     <View style={styles.messageContainer}>
-      <Text tone="secondary">{t('loading.loading')}</Text>
+      <Text role="body" tone="secondary">
+        {t('loading.loading')}
+      </Text>
     </View>
   );
 
@@ -301,7 +304,9 @@ export function BottomSheetAutocompleteInput<T>({
               autoFocus={showAutocomplete}
               returnKeyType="done"
               onSubmitEditing={handleSubmitCustomValue}
-              testID={testID ? `${testID}-search` : undefined}
+              testID={
+                testID ? catalogTestIDs.autocompleteSearch(testID) : undefined
+              }
               autoCapitalize={autoCapitalize}
             />
           </View>
@@ -318,8 +323,8 @@ export function BottomSheetAutocompleteInput<T>({
             ListFooterComponent={listFooterComponent}
             ListEmptyComponent={
               loading
-                ? renderLoadingComponent?.() || defaultLoadingComponent()
-                : renderEmptyComponent?.() || defaultEmptyComponent()
+                ? renderLoadingComponent?.() ?? defaultLoadingComponent()
+                : renderEmptyComponent?.() ?? defaultEmptyComponent()
             }
           />
         </View>

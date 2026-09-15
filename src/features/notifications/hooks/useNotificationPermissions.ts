@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { PermissionService } from '#/services/permissions/PermissionService';
+import { logger } from '#/utils/environment';
 
 export const useNotificationPermissions = () => {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -24,7 +25,9 @@ export const useNotificationPermissions = () => {
       const status = await PermissionService.check('notifications');
       setHasPermission(status === 'granted');
     };
-    check();
+    void check().catch(error =>
+      logger.warn('Notification permission check failed', error),
+    );
   }, []);
 
   return {

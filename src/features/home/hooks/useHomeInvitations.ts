@@ -9,11 +9,11 @@ import {
   type GetHomesQuery,
 } from '#operations/home/home.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
-import { unwrapPayload } from '#/utils/errors/mutationPayload';
-import { handleMutationError } from '#/utils/errorHandlers';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { t } from '#/i18n';
-import { errorService } from '#/services/errorService';
+import { errorService, localizedErrorMessage } from '#/services/errorService';
 
 const addInviteToHomeCache = createAddToParentConnectionUpdater(
   'Home',
@@ -36,85 +36,39 @@ export function useHomeInvitations({
   setDefaultHome,
   setSelectedHomeId,
 }: UseHomeInvitationsOptions) {
-  // Invite user to home mutation
-  const [inviteUserMutation, { loading: inviting }] = useMutation(
-    InviteToHomeDocument,
-    {
-      update: (cache, { data }, { variables }) => {
-        const payload = data?.inviteToHome;
-        if (payload?.__typename !== 'InviteToHomePayload' || !variables) {
-          return;
-        }
+  const [inviteUserMutation] = useMutation(InviteToHomeDocument, {
+    update: (cache, { data }, { variables }) => {
+      const payload = appliedPayload(data);
+      if (!payload || !variables) return;
 
-        try {
-          addInviteToHomeCache(
-            cache,
-            variables.input.homeId,
-            payload.homeInvite,
-            { position: 'end' },
-          );
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Cache update failed for inviteUser:',
-          });
-        }
-      },
-
-      // Error/rejection handling lives in inviteUserToHome below; the update
-      // callback (above) runs only on the success payload.
+      try {
+        addInviteToHomeCache(
+          cache,
+          variables.input.homeId,
+          payload.homeInvite,
+          { position: 'end' },
+        );
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Cache update failed for inviteUser:',
+        });
+      }
     },
-  );
+  });
 
-  // Join home by code mutation
+  // No optimistic write: the payload carries only the Membership, not the
+  // Home, so the homes list is refetched for the complete row.
   const [joinHomeByCodeMutation, { loading: joiningByCode }] = useMutation(
     JoinHomeByCodeDocument,
     {
-      // Note: No optimistic response or manual cache update
-      // The mutation returns only Membership data (not the full Home object)
-      // We refetch GetHomesQuery to get the complete home with all fields
       update: (_cache, { data }) => {
-        if (data?.joinHomeByCode?.__typename !== 'JoinHomeByCodePayload')
-          return;
+        if (!appliedPayload(data)) return;
 
-        try {
-          refetch();
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
+        refetch().catch((refetchError: unknown) => {
+          errorService.reportError(refetchError, {
             operation: 'Failed to refetch homes after join:',
           });
-        }
-      },
-      onCompleted: data => {
-        if (data?.joinHomeByCode?.__typename === 'JoinHomeByCodePayload') {
-          const homeId = data.joinHomeByCode.membership.homeId;
-
-          // The PROP, not a cache read: the question is whether the user had
-          // zero homes BEFORE this join, and the prop is that pre-join snapshot
-          // (a cache read would race the un-awaited `refetch()`). The joined
-          // home is in neither yet — `JoinHomeByCode` returns Membership only —
-          // so `setDefaultHome` must not require a local record to exist.
-          const homesBeforeJoin = homes || [];
-          if (homesBeforeJoin.length === 0) {
-            setSelectedHomeId(homeId);
-            // Resolves false on a refusal rather than rejecting.
-            void setDefaultHome(homeId).then(ok => {
-              if (!ok) {
-                handleMutationError(
-                  new Error('markHomeAsDefault refused after join'),
-                  {
-                    operation: 'Set Default Home After Join',
-                    showAlert: false,
-                  },
-                );
-              }
-            });
-          }
-
-          alertService.alert(t('labels.success'), t('home.joinSuccessBody'));
-        }
-      },
-      onError: error => {
-        handleMutationError(error, { operation: 'Join Home By Code' });
+        });
       },
     },
   );
@@ -125,31 +79,28 @@ export function useHomeInvitations({
       fetchPolicy: 'network-only', // Always fetch fresh data (one-time operation)
     });
 
+  /**
+   * The localized reason the invite was not sent, or null once it was. A
+   * refusal is returned rather than alerted so the invite modal shows it inline
+   * and stays open.
+   */
   const inviteUserToHome = async (
     homeId: string,
     email: string,
     role: MembershipRole = MembershipRole.Member,
-  ) => {
-    const result = await inviteUserMutation({
-      variables: {
-        input: {
-          homeId,
-          email: email.trim(),
-          role,
-        },
+  ): Promise<string | null> => {
+    const settled = await settleMutation(
+      () =>
+        inviteUserMutation({
+          variables: { input: { homeId, email: email.trim(), role } },
+        }),
+      {
+        document: InviteToHomeDocument,
+        fallback: t('errors.sendInviteFailed'),
+        present: 'none',
       },
-    });
-    // A resolved `*Error` union member and a transport error both resolve
-    // without throwing under errorPolicy:'all'. Throw here (via unwrapPayload)
-    // so the invite modal's screen-level catch surfaces the message inline and
-    // keeps itself open — instead of a native alert firing while the modal
-    // closes as though the invite succeeded.
-    unwrapPayload(
-      result.data?.inviteToHome,
-      'InviteToHomePayload',
-      t('errors.sendInviteFailed'),
     );
-    return result.data;
+    return settled.failure?.body ?? null;
   };
 
   const joinHomeByCode = async (joinCode: string) => {
@@ -158,21 +109,29 @@ export function useHomeInvitations({
       return false;
     }
 
-    let result;
-    try {
-      result = await joinHomeByCodeMutation({
-        variables: { input: { joinCode: joinCode.trim() } },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Join home by code error:',
-      });
-    }
-    if (!result) return false;
+    const settled = await settleMutation(
+      () =>
+        joinHomeByCodeMutation({
+          variables: { input: { joinCode: joinCode.trim() } },
+        }),
+      { document: JoinHomeByCodeDocument, fallback: t('joinHome.joinFailed') },
+    );
+    const payload = appliedPayload(settled.data);
+    if (!payload) return false;
 
-    return result.data?.joinHomeByCode?.__typename === 'JoinHomeByCodePayload'
-      ? result.data.joinHomeByCode.membership
-      : false;
+    // The PROP, not a cache read: the question is whether the user had zero
+    // homes BEFORE this join, and the prop is that pre-join snapshot (a cache
+    // read would race the un-awaited `refetch()`). `setDefaultHome` must not
+    // require a local record, since the joined home is in neither yet.
+    const { homeId } = payload.membership;
+    if ((homes ?? []).length === 0) {
+      setSelectedHomeId(homeId);
+      // Presents its own failure and rolls the selection back.
+      void setDefaultHome(homeId);
+    }
+
+    alertService.alert(t('labels.success'), t('home.joinSuccessBody'));
+    return payload.membership;
   };
 
   const previewHomeByCode = async (joinCode: string) => {
@@ -186,11 +145,15 @@ export function useHomeInvitations({
         variables: { joinCode: joinCode.trim() },
       });
     } catch (error) {
-      handleMutationError(error, { operation: 'Preview Home' });
+      errorService.reportError(error, { operation: 'Preview Home' });
+      alertService.alert(
+        t('labels.error'),
+        localizedErrorMessage(error, t('errors.codes.genericRetry')),
+      );
     }
     if (!result) return null;
 
-    return result.data?.homeByJoinCode || null;
+    return result.data?.homeByJoinCode ?? null;
   };
 
   const previewHome = previewData?.homeByJoinCode ?? null;
@@ -200,11 +163,7 @@ export function useHomeInvitations({
     joinHomeByCode,
     previewHomeByCode,
     previewHome,
-    inviting,
     joiningByCode,
     loadingPreview,
   };
 }
-
-// MembershipRole is available from '#generated' directly
-// import { MembershipRole } from '#/graphql/generated/schemaTypes';

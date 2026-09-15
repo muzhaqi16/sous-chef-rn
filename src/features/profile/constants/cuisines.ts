@@ -1,14 +1,15 @@
 import { Cuisine } from '#/graphql/generated/schemaTypes';
-import type { TranslateFn } from '#/i18n';
+import type { TranslationKey } from '#/i18n';
 
 export interface PopularCuisine {
   /** i18n key path — resolved by the consumer, which has the hook. */
-  labelKey: string;
+  labelKey: TranslationKey;
   value: Cuisine;
 }
 
 /** Every cuisine resolves through the same key path, popular or not. */
-export const cuisineLabelKey = (value: Cuisine): string => `cuisines.${value}`;
+export const cuisineLabelKey = (value: Cuisine): `cuisines.${Cuisine}` =>
+  `cuisines.${value}`;
 
 export const POPULAR_CUISINES: PopularCuisine[] = [
   { labelKey: cuisineLabelKey(Cuisine.Italian), value: Cuisine.Italian },
@@ -24,14 +25,6 @@ export const POPULAR_CUISINES: PopularCuisine[] = [
   { labelKey: cuisineLabelKey(Cuisine.American), value: Cuisine.American },
 ];
 
-/**
- * Display label for a cuisine. Takes `t` because this is module scope — the
- * fallback is the title-cased enum name, so an unmapped cuisine still reads
- * as words rather than LATIN_AMERICAN.
- */
-export const getCuisineLabel = (value: Cuisine, t: TranslateFn): string =>
-  t(cuisineLabelKey(value), formatCuisineLabel(value));
-
 // Helper function to get all cuisine options (popular + remaining)
 export const getAllCuisineOptions = () => {
   const popularValues: Cuisine[] = POPULAR_CUISINES.map(c => c.value);
@@ -45,13 +38,4 @@ export const getAllCuisineOptions = () => {
     }));
 
   return [...POPULAR_CUISINES, ...remainingCuisines];
-};
-
-// Helper function to format enum value to readable label
-const formatCuisineLabel = (value: Cuisine): string => {
-  // Convert LATIN_AMERICAN -> Latin American, EASTERN_EUROPEAN -> Eastern European, etc.
-  return value
-    .split('_')
-    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
-    .join(' ');
 };

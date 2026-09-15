@@ -1,8 +1,9 @@
-import type { DocumentNode } from 'graphql';
 import { storage, isRecoveryStorage } from '#/storage/mmkv';
 import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import type { QueueStore as QueueStoreType } from '#/apollo/offlineQueue/queueStore';
 import { QueueStatus, type QueuedMutation } from '#/apollo/offlineQueue/types';
+import { queuedMutationFor } from '#/test-utils/queuedMutation';
+import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 
 jest.mock('#/storage/mmkv');
 
@@ -17,8 +18,7 @@ function makeMutation(): QueuedMutation {
   return {
     id: 'mut-1',
     userId: 'user-1',
-    operationName: 'CreatePantryItem',
-    mutation: { kind: 'Document', definitions: [] } as unknown as DocumentNode,
+    ...queuedMutationFor(CreatePantryItemDocument),
     variables: { input: { name: 'Milk' }, email: 'someone@example.com' },
     status: QueueStatus.PENDING,
     createdAt: Date.now(),

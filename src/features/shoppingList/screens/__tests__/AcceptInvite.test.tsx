@@ -611,7 +611,7 @@ describe('AcceptInvite', () => {
     const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
     const buttons = alertCall[2] as AlertButton[];
     const declineBtn = buttons.find(b => b.text === 'Decline');
-    await declineBtn?.onPress?.();
+    declineBtn?.onPress?.();
     await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
   });
 
@@ -629,7 +629,7 @@ describe('AcceptInvite', () => {
     const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
     const buttons = alertCall[2] as AlertButton[];
     const declineBtn = buttons.find(b => b.text === 'Decline');
-    await declineBtn?.onPress?.();
+    declineBtn?.onPress?.();
     await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
   });
 
@@ -871,7 +871,7 @@ describe('AcceptInvite', () => {
     const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
     const buttons = alertCall[2] as AlertButton[];
     const declineBtn = buttons.find(b => b.text === 'Decline');
-    await declineBtn?.onPress?.();
+    declineBtn?.onPress?.();
     await waitFor(() => {
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',

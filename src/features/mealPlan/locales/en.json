@@ -18,7 +18,9 @@
     "startDateRequiredMessage": "Please select a start date.",
     "failedToCreate": "Failed to create meal plan.",
     "needsThePlan": "Open the plan first so its meals are available.",
-    "needsTheTemplate": "Open the template first so its meals are available."
+    "needsTheTemplate": "Open the template first so its meals are available.",
+    "daily": "Daily",
+    "custom": "Custom"
   },
   "addMealSheet": {
     "searchPlaceholder": "Search recipes or add a custom meal...",
@@ -74,7 +76,8 @@
   },
   "addToMealPlan": {
     "title": "Add to Meal Plan",
-    "dateLabel": "Date"
+    "dateLabel": "Date",
+    "morePlans": "More plans"
   },
   "duplicatePlan": {
     "duplicating": "Duplicating...",
@@ -146,7 +149,10 @@
     "emptyPreview": "No meals in this template",
     "day": "Day {{day}}",
     "customMeal": "Custom",
-    "metaLine": "{{days}} days · {{servings}} servings"
+    "metaLine": "{{days}} days · {{servings}} servings",
+    "duplicateTemplate": "Duplicate Template",
+    "deleteTemplate": "Delete Template",
+    "duplicateNameLabel": "New Template Name"
   },
   "mealPlanMain": {
     "label": "Plan your meals",
@@ -177,7 +183,10 @@
     "failedToSave": "Failed to save template",
     "failedToAddItem": "Failed to add meal",
     "failedToSaveItem": "Failed to save meal",
-    "failedToRemoveItem": "Failed to remove meal"
+    "failedToRemoveItem": "Failed to remove meal",
+    "savedRecipe": "Saved recipe",
+    "chooseRecipe": "Choose a saved recipe",
+    "changeRecipe": "Change recipe"
   },
   "mealPlanSelector": {
     "title": "Select Meal Plan",
@@ -185,7 +194,8 @@
     "createFromTemplate": "Template",
     "searchPlaceholder": "Search plans",
     "filterActive": "Active",
-    "personalSubtitle": "Personal"
+    "personalSubtitle": "Personal",
+    "loadMore": "Show more plans"
   },
   "macroTargets": {
     "caloriesRange": "Calories must be between {{min}} and {{max}}",
@@ -206,6 +216,7 @@
     "planCreated": "Meal plan created from template!",
     "savedAsTemplate": "Meal plan saved as template!",
     "templateDeleted": "Template deleted",
-    "templateDuplicated": "Template duplicated!"
+    "templateDuplicated": "Template duplicated!",
+    "deleteFailed": "Failed to delete template"
   }
 }

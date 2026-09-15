@@ -7,14 +7,15 @@ import {
 } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
-import { type UseShoppingListItemForm_ItemFragment } from './useShoppingListItemForm.generated';
-import {
-  type UpdateShoppingListItemInput,
-  type UnitSpecInput,
+import type { UseShoppingListItemForm_ItemFragment } from './useShoppingListItemForm.generated';
+import type {
+  UpdateShoppingListItemInput,
+  UnitSpecInput,
 } from '#/graphql/generated/schemaTypes';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatNumberForInput } from '#/utils/formatters/number';
+import { formatQuantityForInput } from '#/utils/formatQuantity';
 import {
   shoppingItemSchema,
   SHOPPING_ITEM_DEFAULTS,
@@ -57,10 +58,16 @@ export function useShoppingListItemForm(
    * and saving without touching it sends nothing.
    */
   const setFromItem = (item: UseShoppingListItemForm_ItemFragment) => {
+    // The API echoes `quantityInput` as a float string, so it is re-formatted;
+    // text no parser reads ("a pinch") stays as the person wrote it.
+    const typed = item.quantityInput?.trim();
+    const typedValue = typed ? parseFractionalInput(typed) : null;
     reset({
       itemName: item.itemName || '',
       quantityInput:
-        item.quantityInput || formatNumberForInput(item.quantity) || '1',
+        (typed && typedValue == null
+          ? typed
+          : formatQuantityForInput(typedValue ?? item.quantity)) || '1',
       unit: item.unitName || '',
       notes: item.notes || '',
       category: item.category || '',
@@ -90,7 +97,7 @@ export function useShoppingListItemForm(
     // Excluded at the SOURCE, not subtracted from `isDirty` after: react-hook-form
     // mutates `dirtyFields` in place, so anything derived from it memoizes on an
     // identity that never changes. `isDirty` is a subscribed primitive.
-    const tracked = (DIRTY_TRACKED_FIELDS as string[]).includes(field);
+    const tracked = DIRTY_TRACKED_FIELDS.includes(field);
     setValue(field, value, { shouldDirty: tracked, shouldValidate: true });
     // `shouldValidate` re-runs the rule on THIS field only, and the net-weight
     // rule lives on `netWeightUnit` while its inputs are `netWeight` and
@@ -151,10 +158,12 @@ export function useShoppingListItemForm(
       input.category = v.category;
     }
 
-    // Pricing — nest into PricingEstimatesInput
-    if (dirtyFields.estimatedPrice && v.estimatedPrice) {
+    // An emptied price is a clear: `PricingEstimatesInput.estimatedPrice` takes null.
+    if (dirtyFields.estimatedPrice) {
       input.pricing = {
-        estimatedPrice: parseDecimalInput(v.estimatedPrice),
+        estimatedPrice: v.estimatedPrice
+          ? parseDecimalInput(v.estimatedPrice)
+          : null,
       };
     }
 
@@ -219,7 +228,6 @@ export function useShoppingListItemForm(
     errors,
     /** Current values, subscribed — for logic and display, not for field wiring. */
     values,
-    dirtyFields,
     /** True when any SUBMITTED field changed — see `setFieldValue`. */
     hasDirtyFields: isDirty,
     setFieldValue,
