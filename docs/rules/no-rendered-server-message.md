@@ -26,7 +26,7 @@ It reports only when the value reaches output: a JSX child, a JSX attribute valu
 
 ## Why
 
-The client sends no `Accept-Language`, so a server `message` is English in every locale, and its wording is not a contract (`"1 active collaborator(s)"`). `sous-chef/no-error-message-branching` stops code branching on it and `sous-chef/no-untranslated-toast` covers toast arguments by syntax; this rule reads types, so it also sees JSX and a message that passes through a variable.
+The client sends no `Accept-Language`, so a server `message` is English in every locale, and its wording is not a contract (`"1 active collaborator(s)"`). `sous-chef/no-error-message-branching` stops code branching on it and `no-restricted-syntax`'s toast entries cover toast arguments; this rule reads types, so it also sees JSX and a message that passes through a variable.
 
 ## Server-copy fields
 

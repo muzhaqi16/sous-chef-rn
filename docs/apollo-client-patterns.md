@@ -1184,7 +1184,7 @@ Tests must wrap with `renderWithApollo` from `#/test-utils/apolloMockProvider`
 literal fixture. For hooks that read from cache via `cache.readFragment`, use
 `seedCache([...])` to pre-write the entity. Do not
 `jest.mock('@apollo/client/react', …)` directly — banned by lint
-(`sous-chef/no-apollo-react-mock`).
+(`no-restricted-syntax`: `apolloReactMock`).
 
 ### Why not `client-preset`
 

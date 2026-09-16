@@ -2,7 +2,7 @@
  * The cache a test gets by default is the cache the app ships.
  *
  * **The migration is done.** Every user of the helper now gets the production
- * cache, and `sous-chef/no-bare-in-memory-cache` (a ban on `new InMemoryCache()`
+ * cache, and `no-restricted-syntax`'s `bareInMemoryCache` (a ban on `new InMemoryCache()`
  * in tests) keeps it that way. The history below is why the guard
  * exists, not work outstanding.
  *

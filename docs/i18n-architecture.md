@@ -203,7 +203,7 @@ reading rather than attempting the judgement.
 | guard                                                                      | catches                                                                          |
 | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | `i18next/no-literal-string` (jsx-only)                                     | literals in JSX text and copy-carrying attributes                                |
-| `sous-chef/no-untranslated-toast`                                          | untranslated text reaching `alertService` / `toastService`                       |
+| `no-restricted-syntax` (`toast*`)                                          | untranslated text reaching `alertService` / `toastService`                       |
 | `sous-chef/no-module-level-t`                                              | module-scope `t` used where a component renders                                  |
 | `no-restricted-imports` on `getI18n`                                       | reaching the i18next instance to translate instead of `t`                        |
 | `TranslationKey` (`src/i18n/i18next.d.ts`)                                 | a key passed to `t`, or stored in a typed field, that `en.json` does not declare |

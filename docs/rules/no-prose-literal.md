@@ -27,7 +27,7 @@ Either branch of `?:` and both sides of `??` / `||` are checked.
 
 ## Why
 
-`i18next/no-literal-string` sees only JSX, and `sous-chef/no-untranslated-toast` only toast and alert arguments. English that reaches a screen through a hook's state, an options object or a formatter's return passes both; this rule names the targets that carry copy so the check stays precise.
+`i18next/no-literal-string` sees only JSX, and `no-restricted-syntax`'s toast entries only toast and alert arguments. English that reaches a screen through a hook's state, an options object or a formatter's return passes both; this rule names the targets that carry copy so the check stays precise.
 
 ## Exempt
 

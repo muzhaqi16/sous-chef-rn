@@ -16,6 +16,10 @@ const project = require('../../eslint/project.js') as {
   base: { rules: Record<string, unknown> };
   overrides: Array<{ rules?: Record<string, unknown> }>;
 };
+const syntax = require('../../eslint/restrictedSyntax.js') as {
+  PRODUCTION_SYNTAX: Array<{ id: string }>;
+  TEST_SYNTAX: Array<{ id: string }>;
+};
 
 const levelOf = (entry: unknown) => (Array.isArray(entry) ? entry[0] : entry);
 const isError = (entry: unknown) => {
@@ -28,6 +32,9 @@ const ruleSets = [
   ...project.overrides.map(o => o.rules ?? {}),
 ];
 const names = Object.keys(plugin.rules);
+
+// Pages in docs/rules/ that document a config mechanism rather than a rule.
+const CONFIG_PAGES = ['restricted-syntax'];
 
 describe('sous-chef rule catalog', () => {
   it('registers the rules', () => {
@@ -57,11 +64,29 @@ describe('sous-chef rule catalog', () => {
     const pages = fs
       .readdirSync(path.join(ROOT, 'docs/rules'))
       .filter(file => file !== 'README.md')
-      .map(file => file.replace(/\.md$/, ''));
+      .map(file => file.replace(/\.md$/, ''))
+      .filter(page => !CONFIG_PAGES.includes(page));
     const specs = fs
       .readdirSync(path.join(ROOT, '__tests__/lint/rules'))
       .map(file => file.replace(/\.test\.ts$/, ''));
     expect([...pages, ...specs].filter(n => !names.includes(n))).toEqual([]);
+
+    expect(
+      CONFIG_PAGES.filter(page => !readme.includes(`(${page}.md)`)),
+    ).toEqual([]);
+  });
+
+  it('documents every no-restricted-syntax entry', () => {
+    const page = fs.readFileSync(
+      path.join(ROOT, 'docs/rules/restricted-syntax.md'),
+      'utf8',
+    );
+    const ids = [...syntax.PRODUCTION_SYNTAX, ...syntax.TEST_SYNTAX].map(
+      entry => entry.id,
+    );
+
+    expect(ids.length).toBeGreaterThan(10);
+    expect(ids.filter(id => !page.includes(`\`${id}\``))).toEqual([]);
   });
 
   it('configures no rule as a warning, the preset included', () => {

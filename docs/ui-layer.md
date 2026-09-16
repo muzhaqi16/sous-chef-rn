@@ -87,7 +87,7 @@ they read it.
   merged with a caller style as `style={[styles.x, callerStyle]}`: Unistyles 3
   styles are proxies, and two of them spread through reanimated's
   `StyleSheet.flatten()` lose their native binding
-  ([`no-combined-unistyles`](rules/no-combined-unistyles.md)).
+  ([`combinedUnistyles`](rules/restricted-syntax.md)).
 - **`withUnistyles(Component)`** wraps a third-party component taking
   theme-derived props, so only the wrapper re-renders on a theme tick. Shared
   wrappers live in `src/components/atoms/themedComponents.tsx`
@@ -146,7 +146,7 @@ they read it.
   app's own 0.9–1.3 preference, which is already baked into the theme's numbers.
   So `theme.maxFontScaleMultiplier` is the remainder of `MAX_FONT_SCALE`, and the
   `Text` atom applies it. A per-element cap bounds only the OS half and leaves
-  the product unbounded ([`no-font-scale-override`](rules/no-font-scale-override.md)).
+  the product unbounded ([`maxFontSizeMultiplier`](rules/restricted-syntax.md)).
 
 ## Elevation & on-fill colour
 

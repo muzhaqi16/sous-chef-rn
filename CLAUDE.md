@@ -95,7 +95,8 @@ user's decision, never a way past a failing check.
 
 - Types come from codegen, never hand-written; `npm run codegen` after any `.graphql` change.
 - No `as any`, `as unknown as X`, `as never`, `as Record<…>` or key casts; fix the
-  data flow or widen the contract — `sous-chef/no-unsafe-cast`.
+  data flow or widen the contract — `no-restricted-syntax`,
+  `@typescript-eslint/no-explicit-any` and `sous-chef/no-schema-enum-cast`.
 - `Unmasked<>` ONLY as an `optimisticResponse` callback return type; never
   `@unmask`. HKT registration: `src/types/apollo-masking.d.ts`.
 - **A condition the types say cannot matter is an error** (`no-unnecessary-condition`),
@@ -228,36 +229,36 @@ Mechanism, evidence and traps for every rule below: `docs/ui-layer.md`, same hea
 
 Each row is solved ONCE; an alternative loses what the canonical path handles. "Held by" is what fails when you reach past it; "—" means no check can express it yet, not that it is optional.
 
-| Concern                                   | Mechanism                                                                                         | Held by                                                                                                                        |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| A list that can grow                      | `FlashList`, with an explicit `renderScrollComponent`                                             | `no-restricted-imports` on `FlatList`/`SectionList` · `flashListScrollComponents.test.ts`                                      |
-| A remote image                            | `CachedImage` (`LocalImage` for a file or bundled asset)                                          | `no-restricted-imports` on `react-native-turbo-image`                                                                          |
-| A modal surface                           | `BottomSheetModal` via `useStandardBottomSheet`, or `alertService`                                | `sous-chef/no-imperative-sheet` · `sous-chef/no-modal-props-override` · `no-restricted-imports` on gorhom's `BottomSheetModal` |
-| Rendering a date                          | the shared formatters in `src/utils` (`formatters/date`, `dateUtils`)                             | `no-restricted-imports` on `date-fns`'s formatters                                                                             |
-| Rendering a quantity                      | `formatQuantityForDisplay` (`#/utils/formatQuantity`)                                             | `sous-chef/quantity-through-formatter` · `no-restricted-imports` on `fraction.js`                                              |
-| Device storage                            | a persisted slice of the Zustand store                                                            | `no-restricted-imports` on `#storage/mmkv`                                                                                     |
-| This device's identity                    | `getDeviceId()` sync, `ensureDeviceId()` async (`#/storage/deviceId`)                             | `singleDeviceIdentity.test.ts`                                                                                                 |
-| A screen's chrome                         | `Screen` (`#components/templates/Screen`)                                                         | `screenTopInset.test.tsx` (the double inset); the rest is convention                                                           |
-| A sheet's shell                           | `Sheet` (`#components/templates/Sheet`)                                                           | `bottomSheetShell.test.ts` · `viewSheetScrollableIsBounded.test.ts`                                                            |
-| A list row                                | `commonStyles.rowWrapper` + `rowSurface` + `rowContent`, its text set by `rowType`                | —                                                                                                                              |
-| A loading indicator                       | `Loading` / `LoadingBranded` (`#components/molecules/Loading`)                                    | `no-restricted-imports` on `ActivityIndicator`                                                                                 |
-| A toast                                   | `toastService` — in and out of the React tree alike                                               | `sous-chef/no-untranslated-toast` on its arguments                                                                             |
-| A write's outcome and its failure copy    | `settleMutation`; `appliedPayload` for the success member                                         | `appliedPayload.test.ts` (every result union in the schema) · `settleMutation.test.ts`                                         |
-| Navigating                                | `useAppNavigation`                                                                                | `no-restricted-imports` on `useNavigation`                                                                                     |
-| Setting text                              | a typography ROLE (`<Text role="body">`)                                                          | `no-restricted-imports` on RN `Text` · `sous-chef/text-needs-role`                                                             |
-| A text input                              | `ThemedTextInput` / `ThemedBottomSheetTextInput` (`#components/atoms/themedComponents`)           | `no-restricted-imports` on RN `TextInput` and gorhom's `BottomSheetTextInput`                                                  |
-| An icon's colour                          | `<Icon tone="X" />` (`#utils/iconUtils`)                                                          | `no-restricted-imports` on `@react-native-vector-icons/ionicons`                                                               |
-| A colour, radius, z-index or spacing step | a `theme.*` token                                                                                 | `sous-chef/no-raw-color` · `sous-chef/no-raw-spacing` · `sous-chef/no-border-width-literal`; radius and z-index are convention |
-| Elevation                                 | a step of `theme.shadows`                                                                         | `sous-chef/no-legacy-shadow-props`; a raw `boxShadow` geometry is convention                                                   |
-| Text or an icon on a fill                 | that fill's `on*` token (`onScrim` over a ground the theme does not paint)                        | `onFillTextUsesItsToken.test.ts` · `sous-chef/no-raw-color`                                                                    |
-| A duration, spring or curve               | `theme.motion`                                                                                    | —                                                                                                                              |
-| A form's fields                           | react-hook-form + a yup schema beside the form                                                    | `validationMessagesAreRendered.test.ts`                                                                                        |
-| Searching a loaded list                   | `filterByTerm` / `useLocalSearch` (`#hooks/search/useLocalSearch`)                                | `sous-chef/no-hand-rolled-search`                                                                                              |
-| An icon-only control's name               | `accessibilityLabel` (RN names a pressable from its text children)                                | `sous-chef/pressable-needs-label`                                                                                              |
-| Reduce motion                             | nothing — Reanimated applies it itself                                                            | `no-restricted-imports` on `useReducedMotion` · `probe-reanimated-reduce-motion.mjs`                                           |
-| Memoization                               | nothing — the React Compiler does it                                                              | `no-restricted-imports` on `useMemo`/`useCallback` · `check-compiler-bailouts`                                                 |
-| A shared actions bag                      | `createActionsContext`                                                                            | —                                                                                                                              |
-| Where a value lives                       | Apollo if the server owns it, else a Zustand slice; a context only for what a subtree passes down | —                                                                                                                              |
+| Concern                                   | Mechanism                                                                                         | Held by                                                                                                                                  |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| A list that can grow                      | `FlashList`, with an explicit `renderScrollComponent`                                             | `no-restricted-imports` on `FlatList`/`SectionList` · `flashListScrollComponents.test.ts`                                                |
+| A remote image                            | `CachedImage` (`LocalImage` for a file or bundled asset)                                          | `no-restricted-imports` on `react-native-turbo-image`                                                                                    |
+| A modal surface                           | `BottomSheetModal` via `useStandardBottomSheet`, or `alertService`                                | `no-restricted-syntax` (`imperativeSheet`, `modalPropsOverride`) · `no-restricted-imports` on gorhom's `BottomSheetModal`                |
+| Rendering a date                          | the shared formatters in `src/utils` (`formatters/date`, `dateUtils`)                             | `no-restricted-imports` on `date-fns`'s formatters                                                                                       |
+| Rendering a quantity                      | `formatQuantityForDisplay` (`#/utils/formatQuantity`)                                             | `sous-chef/quantity-through-formatter` · `no-restricted-imports` on `fraction.js`                                                        |
+| Device storage                            | a persisted slice of the Zustand store                                                            | `no-restricted-imports` on `#storage/mmkv`                                                                                               |
+| This device's identity                    | `getDeviceId()` sync, `ensureDeviceId()` async (`#/storage/deviceId`)                             | `singleDeviceIdentity.test.ts`                                                                                                           |
+| A screen's chrome                         | `Screen` (`#components/templates/Screen`)                                                         | `screenTopInset.test.tsx` (the double inset); the rest is convention                                                                     |
+| A sheet's shell                           | `Sheet` (`#components/templates/Sheet`)                                                           | `bottomSheetShell.test.ts` · `viewSheetScrollableIsBounded.test.ts`                                                                      |
+| A list row                                | `commonStyles.rowWrapper` + `rowSurface` + `rowContent`, its text set by `rowType`                | —                                                                                                                                        |
+| A loading indicator                       | `Loading` / `LoadingBranded` (`#components/molecules/Loading`)                                    | `no-restricted-imports` on `ActivityIndicator`                                                                                           |
+| A toast                                   | `toastService` — in and out of the React tree alike                                               | `no-restricted-syntax` (`toast*`) on its arguments                                                                                       |
+| A write's outcome and its failure copy    | `settleMutation`; `appliedPayload` for the success member                                         | `appliedPayload.test.ts` (every result union in the schema) · `settleMutation.test.ts`                                                   |
+| Navigating                                | `useAppNavigation`                                                                                | `no-restricted-imports` on `useNavigation`                                                                                               |
+| Setting text                              | a typography ROLE (`<Text role="body">`)                                                          | `no-restricted-imports` on RN `Text` · `sous-chef/text-needs-role`                                                                       |
+| A text input                              | `ThemedTextInput` / `ThemedBottomSheetTextInput` (`#components/atoms/themedComponents`)           | `no-restricted-imports` on RN `TextInput` and gorhom's `BottomSheetTextInput`                                                            |
+| An icon's colour                          | `<Icon tone="X" />` (`#utils/iconUtils`)                                                          | `no-restricted-imports` on `@react-native-vector-icons/ionicons`                                                                         |
+| A colour, radius, z-index or spacing step | a `theme.*` token                                                                                 | `sous-chef/no-raw-color` · `sous-chef/no-raw-spacing` · `no-restricted-syntax` (`borderWidthLiteral`); radius and z-index are convention |
+| Elevation                                 | a step of `theme.shadows`                                                                         | `no-restricted-syntax` (`legacyShadowProp`); a raw `boxShadow` geometry is convention                                                    |
+| Text or an icon on a fill                 | that fill's `on*` token (`onScrim` over a ground the theme does not paint)                        | `onFillTextUsesItsToken.test.ts` · `sous-chef/no-raw-color`                                                                              |
+| A duration, spring or curve               | `theme.motion`                                                                                    | —                                                                                                                                        |
+| A form's fields                           | react-hook-form + a yup schema beside the form                                                    | `validationMessagesAreRendered.test.ts`                                                                                                  |
+| Searching a loaded list                   | `filterByTerm` / `useLocalSearch` (`#hooks/search/useLocalSearch`)                                | `no-restricted-syntax` (`handRolledSearch`)                                                                                              |
+| An icon-only control's name               | `accessibilityLabel` (RN names a pressable from its text children)                                | `no-restricted-syntax` (`missingPressableLabel`)                                                                                         |
+| Reduce motion                             | nothing — Reanimated applies it itself                                                            | `no-restricted-imports` on `useReducedMotion` · `probe-reanimated-reduce-motion.mjs`                                                     |
+| Memoization                               | nothing — the React Compiler does it                                                              | `no-restricted-imports` on `useMemo`/`useCallback` · `check-compiler-bailouts`                                                           |
+| A shared actions bag                      | `createActionsContext`                                                                            | —                                                                                                                                        |
+| Where a value lives                       | Apollo if the server owns it, else a Zustand slice; a context only for what a subtree passes down | —                                                                                                                                        |
 
 ### Screen scaffold and sheet shell
 
@@ -273,10 +274,10 @@ Each row is solved ONCE; an alternative loses what the canonical path handles. "
 
 ### Unistyles
 
-- **`StyleSheet.create(theme => …)`** styles RN primitives. `styles.useVariants` carries runtime flags. Merge a caller style as `style={[styles.x, callerStyle]}` (`sous-chef/no-combined-unistyles`).
+- **`StyleSheet.create(theme => …)`** styles RN primitives. `styles.useVariants` carries runtime flags. Merge a caller style as `style={[styles.x, callerStyle]}` (`no-restricted-syntax`: `combinedUnistyles`).
 - **`withUnistyles(Component)`** themes a third-party component's props. Add the wrapper to `src/components/atoms/themedComponents.tsx`, not per file. Switches use `BaseSwitch`.
 - **Never wrap `Pressable`/`TouchableX` with `withUnistyles`**: it drops a function-style `style`. Verified 2026-08-23 vs `react-native-unistyles@3.3.0` — `docs/verified-library-behaviour.md#unistyles-withunistyles-drops-function-styles`.
-- **`useUnistyles()` only for runtime metadata** (`rt.*`), never `theme.*`; a bare call is `sous-chef/no-unused-use-unistyles`. The cross-library exceptions are listed in the doc.
+- **`useUnistyles()` only for runtime metadata** (`rt.*`), never `theme.*`; a bare call is `no-restricted-syntax`'s `unusedUseUnistyles`. The cross-library exceptions are listed in the doc.
 - **Plugin order is Unistyles → `unistyles-scope-crawl` → React Compiler; don't reorder these three.** Any other order skips or silently freezes `useVariants`. Verified vs `react-native-unistyles@3.3.0` + `babel-plugin-react-compiler@1.0.0` — `docs/verified-library-behaviour.md#unistyles-usevariants-rewrite-needs-a-scope-re-crawl-before-the-compiler`.
 
 ### Typography roles
@@ -284,7 +285,7 @@ Each row is solved ONCE; an alternative loses what the canonical path handles. "
 - **Text is set by a ROLE, never by size and weight.** The eleven roles are in `src/theme/foundations/type.ts`: `<Text role="caption">`, never `<Text size="sm">`. **Colour is `tone`'s job.** An element that can't take the prop spreads `...theme.type.<role>`.
 - **Error copy is `<Text role="error" tone="error">`, kit included; a red label that is not error copy (a destructive action, an expired status) is `tone="danger"`** (`sous-chef/text-needs-role`).
 - **`size` / `weight` / `lineHeight` are kit-only escape hatches.** Outside `src/components/**`, every `<Text>` names a role (`sous-chef/text-needs-role`).
-- **The font-scale ceiling is global**, applied by `Text` as `theme.maxFontScaleMultiplier` (`sous-chef/no-font-scale-override`).
+- **The font-scale ceiling is global**, applied by `Text` as `theme.maxFontScaleMultiplier` (`no-restricted-syntax`: `maxFontSizeMultiplier`, `allowFontScaling`).
 
 ### Elevation & on-fill colour
 
@@ -299,14 +300,14 @@ Each row is solved ONCE; an alternative loses what the canonical path handles. "
 
 ### Pressable & gestures
 
-- **Default `Pressable` comes from `#components/atoms/themedComponents`.** Inside a `Swipeable`, a `GestureDetector` chain or `RectButton`-style coordination, use RNGH's (`sous-chef/no-rn-touchable-in-swipeable`). Use RNGH's `ScrollView` only when RNGH gestures sit inside it.
+- **Default `Pressable` comes from `#components/atoms/themedComponents`.** Inside a `Swipeable`, a `GestureDetector` chain or `RectButton`-style coordination, use RNGH's (`no-restricted-syntax`: `rnTouchableInSwipeable`). Use RNGH's `ScrollView` only when RNGH gestures sit inside it.
 - **A FlashList whose rows carry RNGH gestures MUST render `renderScrollComponent={SwipeAwareScrollComponent}`.** RNGH v3 handlers survive a plain RN scroll takeover, and no `dragOffset` fixes it (`flashListScrollComponents.test.ts`). Verified 2026-09-12 vs `react-native-gesture-handler@3.3.0` — `docs/verified-library-behaviour.md#rngh-v3-handlers-survive-a-native-scroll-takeover`.
 - **That list's pull-to-refresh passes an EXPLICIT `refreshControl={<ThemedRefreshControl … />}`**, never a bare `onRefresh`/`refreshing` pair: FlashList then builds RN's control, which drops RNGH's gesture. A plain RN scrollable host takes `PlainScrollRefreshControl`, so pick by host (same test). Verified 2026-09-12 on device vs `react-native-gesture-handler@3.3.0` + `@shopify/flash-list@2.3.2` + `react-native-unistyles@3.3.0` — `docs/verified-library-behaviour.md#rnghs-scroll-gesture-reaches-only-rnghs-refreshcontrol`.
 - **The rule is about the HOST.** A standalone RNGH scroller with pull-to-refresh renders `SwipeAwareScrollComponent` too, never a hand-rolled RNGH `<ScrollView>`, or the Android spinner parks (same test). Its `nestedScrollEnabled={false}` override stays until a real-finger A/B measures it. Verified 2026-09-05 on device — `docs/verified-library-behaviour.md#rngh-ends-the-nested-scroll-its-scrollview-opens`.
 
 ### Bottom sheets
 
-- **Always `BottomSheetModal` via `useStandardBottomSheet`, never inline `BottomSheet`**, which conflicts with the global backdrop. Drive it with `visible` + `onDismiss` (`sous-chef/no-imperative-sheet`, `sous-chef/no-modal-props-override`); design is in `docs/backdrop-lifecycle-design.md`.
+- **Always `BottomSheetModal` via `useStandardBottomSheet`, never inline `BottomSheet`**, which conflicts with the global backdrop. Drive it with `visible` + `onDismiss` (`no-restricted-syntax`: `imperativeSheet`, `modalPropsOverride`); design is in `docs/backdrop-lifecycle-design.md`.
 - **Every text input inside a sheet resolves to gorhom's `BottomSheetTextInput`**, picked from `useIsBottomSheetInput()` context, because it throws outside a sheet. Verified 2026-08-23 vs `@gorhom/bottom-sheet@5.2.14` — `docs/verified-library-behaviour.md#gorhom-keyboard-handling-requires-bottomsheettextinput`.
 - **A sheet sized to its content (`enableDynamicSizing`) takes NO keyboard-aware scrollable**: use `BottomSheetView` and gorhom's `interactive` lift. Verified 2026-09-04 vs `react-native-keyboard-controller@1.22.4` + `@gorhom/bottom-sheet@5.2.14` — `docs/verified-library-behaviour.md#a-keyboard-aware-scrollable-cannot-size-a-sheet`.
 - **A sheet with FIXED snap points and inputs uses `BottomSheetFormScrollView`.** The raw scroller lacks the input context and is an import ban. Never hardcode `bottomOffset` or pass it `undefined`, since it defaults to `theme.spacing.md` via a mapping. It measures from the input's bottom edge. Verified 2026-08-24 vs `react-native-keyboard-controller@1.22.4` — `docs/verified-library-behaviour.md#keyboard-controller-bottomoffset-measures-input-bottom`.
@@ -378,7 +379,7 @@ Each row is solved ONCE; an alternative loses what the canonical path handles. "
 
 A `scheduleOnRN` (the `runOnJS` replacement) callback is defined in RN scope, never
 inline, with only primitive extra args — capture functions by closure.
-`sous-chef/schedule-on-rn-callback`; mechanism: `docs/rules/schedule-on-rn-callback.md`.
+`no-restricted-syntax` (`scheduleOnRN*`); mechanism: `docs/rules/restricted-syntax.md`.
 
 ## i18n
 
@@ -406,7 +407,7 @@ Mechanism for each rule: `docs/i18n-architecture.md`.
 Patterns and examples: `docs/development.md` § Testing.
 
 - **Render through `renderHookWithApollo`/`renderWithApollo`**, never a `@apollo/client/react`
-  mock or bare cache (`sous-chef/no-apollo-react-mock`, `no-bare-in-memory-cache`); `MockedResponse` from the helper.
+  mock or bare cache (`no-restricted-syntax`: `apolloReactMock`, `bareInMemoryCache`); `MockedResponse` from the helper.
 - Assert a mutation on the **cache**. Drive a failure with a mock carrying `error`, never a stubbed throw.
 - **One mocking strategy**: `operationMocks` OR `mocks`/`resolvers`; `operationMocks: []` is not "answer from the schema".
 - A mock's `data` is completed from the SDL: state only what you assert on; `partial: true` is the one opt-out.

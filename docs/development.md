@@ -197,14 +197,14 @@ executable schema built from the real SDL, mocked by `addMocksToSchema`. The
 CACHE is the production one — `makeCache()`, so type policies, merge and read
 functions and `possibleTypes` are all loaded, and a test reads through the same
 rules the app does. Mocking `@apollo/client/react` directly is banned by lint
-(`sous-chef/no-apollo-react-mock`):
+(`no-restricted-syntax`: `apolloReactMock`):
 it couples tests to operation names and bypasses the very cache integration the
 tests exist to catch. Helper shortcuts: `recordMock()` to capture the variables
 Apollo actually observed, `seedCache()` to pre-write entities that hooks read
 with `cache.readFragment`.
 
 The default is kept by lint, not by a test: `new InMemoryCache()` in a test file
-is a `sous-chef/no-bare-in-memory-cache` error. Only the two behavioural
+is a `no-restricted-syntax` (`bareInMemoryCache`) error. Only the two behavioural
 assertions remain in `__tests__/apollo/testCacheIsTheProductionCache.test.ts`.
 
 Shared auto-mocks live in `__mocks__/` folders next to their modules

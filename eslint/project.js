@@ -9,6 +9,10 @@
 const path = require('node:path');
 const globals = require('globals');
 const { restrictedImports } = require('./restrictedImports');
+const {
+  restrictedSyntax,
+  restrictedSyntaxForTests,
+} = require('./restrictedSyntax');
 const { BOUNDARY_ZONES } = require('./boundaries');
 const { NO_LITERAL_STRING } = require('./i18n');
 
@@ -29,27 +33,7 @@ const TEST_FILES = ['**/__tests__/**/*.{ts,tsx}', '**/*.test.{ts,tsx}'];
 
 // The `sous-chef/*` bans on production code (docs/rules/). Test files and
 // GraphQL documents switch them off together.
-const PRODUCTION_RULES = [
-  'no-parse-float',
-  'no-inline-import-type',
-  'no-imperative-sheet',
-  'no-font-scale-override',
-  'no-hand-rolled-search',
-  'no-border-width-literal',
-  'no-untranslated-toast',
-  'schedule-on-rn-callback',
-  'no-rn-touchable-in-swipeable',
-  'no-legacy-shadow-props',
-  'no-shared-value-assignment',
-  'no-as-const',
-  'no-unused-use-unistyles',
-  'no-combined-unistyles',
-  'no-modal-props-override',
-  'no-optimistic-response-cast',
-  'no-unsafe-cast',
-  'pressable-needs-label',
-  'testid-from-registry',
-];
+const PRODUCTION_RULES = ['no-schema-enum-cast', 'testid-from-registry'];
 
 const productionRules = severity =>
   Object.fromEntries(
@@ -74,6 +58,7 @@ const base = {
     'react-hooks/todo': 'error',
 
     'no-restricted-imports': restrictedImports(),
+    'no-restricted-syntax': restrictedSyntax(),
 
     'import/no-restricted-paths': ['error', { zones: BOUNDARY_ZONES }],
     // `import {} from 'x'` is what an autofix leaves after removing every unused
@@ -144,7 +129,6 @@ const base = {
     ],
 
     ...productionRules('error'),
-    'sous-chef/no-apollo-react-mock': 'error',
   },
 };
 
@@ -163,7 +147,9 @@ const overrides = [
   {
     // This module IS the parseFloat replacement.
     files: ['src/utils/parseDecimalInput.ts'],
-    rules: { 'sous-chef/no-parse-float': 'off' },
+    rules: {
+      'no-restricted-syntax': restrictedSyntax({ allow: ['parseFloat'] }),
+    },
   },
   {
     // Evaluating the installed package's own source IS this probe's method.
@@ -209,8 +195,8 @@ const overrides = [
       'react-hooks/rules-of-hooks': 'off',
       'react-hooks/todo': 'off',
       ...productionRules('off'),
-      'sous-chef/no-apollo-react-mock': 'off',
       'no-restricted-imports': 'off',
+      'no-restricted-syntax': 'off',
       'import/no-restricted-paths': 'off',
     },
   },
@@ -227,7 +213,7 @@ const overrides = [
       // The boundary zones are about PRODUCTION dependency direction.
       'import/no-restricted-paths': 'off',
       ...productionRules('off'),
-      'sous-chef/no-bare-in-memory-cache': 'error',
+      'no-restricted-syntax': restrictedSyntaxForTests(),
       // Bracket access is the only type-safe way to reach a private member.
       'dot-notation': 'off',
     },
@@ -603,7 +589,9 @@ const overrides = [
       'src/components/templates/ActionTray/ActionTray.tsx',
       'src/features/recipes/components/FolderPicker.tsx',
     ],
-    rules: { 'sous-chef/no-imperative-sheet': 'off' },
+    rules: {
+      'no-restricted-syntax': restrictedSyntax({ allow: ['imperativeSheet'] }),
+    },
   },
   {
     // Every TypeScript file that has a program (APP_PROJECT or TEST_PROJECT

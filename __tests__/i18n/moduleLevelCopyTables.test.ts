@@ -5,7 +5,7 @@ import path from 'path';
  * The one shape no lint rule in this repo can see.
  *
  * `i18next/no-literal-string` checks JSX text and copy-carrying attributes;
- * `sous-chef/no-untranslated-toast` checks toasts and alerts. Both look at
+ * `no-restricted-syntax` checks toasts and alerts. Both look at
  * the point where a string is *written*. A module-level table —
  *
  *   const STEPS = [{ instruction: 'Swipe right to see item actions' }];
