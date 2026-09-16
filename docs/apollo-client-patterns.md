@@ -1151,8 +1151,9 @@ also select `id` directly** (e.g.
 `shoppingListItem(id: $id) { id ...ItemDetail_shoppingListItem }`). It's free —
 `id` is already fetched inside the fragment; selecting it at the parent level
 just keeps the key field visible after masking. Enforced for every operation
-and fragment by `@graphql-eslint/require-selections`, which asks it of any type
-carrying an `id`, spread or not.
+and fragment by `sous-chef/selects-key-field-directly`;
+`@graphql-eslint/require-selections` asks for the `id` of any type carrying one
+but accepts it inside a spread, so it cannot hold this alone.
 
 ### Mutation optimistic responses and `Unmasked<>`
 
@@ -1172,8 +1173,11 @@ spread/inline into the response shape. Two cases:
    `Unmasked<TData>` is still preferred for clarity. Example:
    `useToggleShoppingItem.ts`.
 
-`Unmasked<>` is reserved for `optimisticResponse` callbacks — nowhere else in
-feature code. Don't use `@unmask` (any mode): it's an Apollo migration tool,
+`Unmasked<>` appears only where Apollo's own signature carries it: an
+`optimisticResponse` callback's return, and the data a cache writer passes
+between `cache.readFragment` / `writeFragment` (both typed `Unmasked<TData>`,
+e.g. `applyOptimisticFragmentPatch`, `writePantryItemDetailStub.ts`). Never a
+prop, state or a hook's return that reaches what renders. Don't use `@unmask` (any mode): it's an Apollo migration tool,
 not a steady-state pattern. The HKT registration in
 `src/types/apollo-masking.d.ts` is required for `FragmentType<typeof Doc>` to
 resolve.

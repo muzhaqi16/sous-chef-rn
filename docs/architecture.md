@@ -323,9 +323,9 @@ pathspec names exactly those two — a gitignored path there would check nothing
 `@graphql-eslint`'s `flat/operations-recommended`, so a renamed or newly
 deprecated server field, an undefined variable, a missing required argument or an
 unspreadable fragment surfaces at lint time rather than as a surprise codegen
-failure later. Two of the preset's rules are off, each because adopting it is a
-source change rather than a config one: `require-selections` (a selection that
-omits an available `id`) and `no-unused-fragments`.
+failure later. `no-unused-fragments` is off: most fragments are read from
+TypeScript through `readFragment`, which it cannot see, and
+`fragmentsAreReachable.test.ts` holds that invariant instead.
 
 `naming-convention` keeps the preset's operation and variable casing but not its
 fragment rule: fragments here are `<consumer>_<entity>`, and its `Get` prefix ban
@@ -344,9 +344,10 @@ rules report nothing without it.
 queries spread the screen fragment. Components materialize data through
 `useFragment` rather than receiving deep prop trees.
 
-One rule worth internalizing, and `@graphql-eslint/require-selections` enforces
-it: **any selection set on a type that has an `id` must select it directly** —
-spreading a fragment that selects it is not enough. Masking hides the
+One rule worth internalizing: **any selection set on a type that has an `id`
+must select it directly** — spreading a fragment that selects it is not enough.
+`@graphql-eslint/require-selections` asks for the `id` but accepts one inside a
+spread; `sous-chef/selects-key-field-directly` holds the direct half. Masking hides the
 fragment's fields from the parent, including the key field — without an explicit
 `id`, `cache.identify` throws.
 

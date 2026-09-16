@@ -418,19 +418,18 @@ If the framework cache misbehaves: `npm run test:e2e:rebuild` or
 Run all three before opening a PR — CI runs the same:
 
 ```bash
-npm run typecheck   # tsc for the app AND the test project
+npm run typecheck   # tsc for the app, test and e2e projects
 npm run lint        # ESLint, including .graphql schema validation
 npm test
 ```
 
 `npm run lint:fix` and `npm run format` auto-fix what they can.
 
-The ratchets below run in `pre-commit`, `pre-push` or PR checks. One does not,
-and nothing runs it for you:
-
-```bash
-node scripts/check-bundled-secrets.mjs --self-test
-```
+Every whole-tree gate runs somewhere: the cheap ones in `pre-commit`, the
+expensive ones in `pre-push` (§ Git hooks), and all of them again in
+`pr-checks.yml`. Three run in CI only: `find-stale-cache-fields --check`,
+`check-bundled-secrets --self-test` (`pr-checks.yml`) and
+`check-build-provenance` (the build workflows).
 
 `check-compiler-bailouts` (pre-push) guards a file COUNT; separately, WHICH
 function bails in the files where a variant call was deliberately extracted into
