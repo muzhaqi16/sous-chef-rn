@@ -40,6 +40,7 @@ fragment queueManager_syncItem on ShoppingListItem {
     id
     imageUrl
     images {
+      id
       url
       kind
     }

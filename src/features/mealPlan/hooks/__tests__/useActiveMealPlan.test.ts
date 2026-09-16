@@ -20,7 +20,7 @@ const seedPlan = (id: string) =>
     {
       fragment: MealPlanDisplayFragmentDoc,
       data: {
-        __typename: 'MealPlan' as const,
+        __typename: 'MealPlan',
         id,
         name: 'Camping Trip',
         description: null,
@@ -36,7 +36,7 @@ const seedPlan = (id: string) =>
         budgetAmount: null,
         homeId: 'h1',
         home: null,
-        user: { __typename: 'User' as const, id: 'u1' },
+        user: { __typename: 'User', id: 'u1' },
         createdBy: null,
         version: 1,
         createdAt: '2025-01-01T00:00:00Z',

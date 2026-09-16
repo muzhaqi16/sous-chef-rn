@@ -37,6 +37,7 @@ fragment queueManager_syncPantryItem on PantryItem {
     id
     imageUrl
     images {
+      id
       url
       kind
     }

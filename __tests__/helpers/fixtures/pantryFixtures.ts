@@ -16,6 +16,21 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import type { GetPantryQuery } from '#features/pantry/graphql/pantry.generated';
 
+// The document's own shapes. Annotating a builder with one narrows every
+// `__typename` inside it, and fails the build when the selection gains a field
+// the fixture does not supply.
+type Pantry = NonNullable<Unmasked<GetPantryQuery>['pantry']>;
+type PantryItemNode = Pantry['itemsConnection']['edges'][number]['node'];
+type StorageLocationNode =
+  Pantry['storageLocationsConnection']['edges'][number]['node'];
+type PageInfo = Pantry['itemsConnection']['pageInfo'];
+
+const pageInfo = (): PageInfo => ({
+  __typename: 'PageInfo',
+  hasNextPage: false,
+  endCursor: null,
+});
+
 export interface PantryItemFixture {
   id: string;
   itemName?: string;
@@ -57,32 +72,24 @@ function connection<TN extends string, ET extends string, T>(
       cursor: `c${i}`,
       node,
     })),
-    pageInfo: {
-      __typename: 'PageInfo' as const,
-      hasNextPage: false,
-      endCursor: null as string | null,
-    },
+    pageInfo: pageInfo(),
     totalCount: totalCount ?? nodes.length,
   };
 }
 
 /** Build a single PantryItem node matching PantryItemDisplay fragment selection. */
-function pantryItemNode(item: PantryItemFixture) {
+function pantryItemNode(item: PantryItemFixture): PantryItemNode {
   return {
-    __typename: 'PantryItem' as const,
+    __typename: 'PantryItem',
     id: item.id,
-    pantryId: 'p1',
     itemId: `item-${item.id}`,
     itemName: item.itemName ?? `Item ${item.id}`,
     quantity: item.quantity ?? 1,
-    version: 1,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     storageState: StorageState.Ambient,
     expiresAt: null,
-    lowStockAlert: false,
     isLowStock: false,
-    minQuantity: null,
     lastUsedAt: null,
     netWeight: null,
     remainingNetWeight: null,
@@ -90,15 +97,14 @@ function pantryItemNode(item: PantryItemFixture) {
     portionUnit: null,
     remainingPortions: null,
     activeBatchCount: 0,
-    earliestBatchExpiration: null,
     item: {
-      __typename: 'Item' as const,
+      __typename: 'Item',
       id: `item-${item.id}`,
       imageUrl: null,
       images: [],
     },
     unit: {
-      __typename: 'Unit' as const,
+      __typename: 'Unit',
       id: 'unit-piece',
       name: 'piece',
       symbol: 'pc',
@@ -112,9 +118,11 @@ function pantryItemNode(item: PantryItemFixture) {
   };
 }
 
-function storageLocationNode(loc: StorageLocationFixture) {
+function storageLocationNode(
+  loc: StorageLocationFixture,
+): StorageLocationNode {
   return {
-    __typename: 'StorageLocation' as const,
+    __typename: 'StorageLocation',
     id: loc.id,
     name: loc.name ?? `Location ${loc.id}`,
     type: loc.type ?? StorageType.PantryShelf,

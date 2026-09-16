@@ -1,7 +1,11 @@
 'use no memo';
 
 import { act, waitFor } from '@testing-library/react-native';
-import type { MockFor } from '#/test-utils/apolloMockProvider';
+import type {
+  MockFor,
+  MockDataFor,
+  QueryDataFor,
+} from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   recordMock,
@@ -133,7 +137,7 @@ function buildNotificationSubscriptionMock(
     result: {
       data: {
         notificationEvents: {
-          __typename: 'NotificationEvent' as const,
+          __typename: 'NotificationEvent',
           subtype: isCreated
             ? NotificationSubtype.Created
             : NotificationSubtype.Updated,
@@ -141,7 +145,7 @@ function buildNotificationSubscriptionMock(
           timestamp: '2024-01-01T00:00:00Z',
           affectedCount: null,
           node: {
-            __typename: 'Notification' as const,
+            __typename: 'Notification',
             id: notification.id,
             type: notification.type,
             status: NotificationStatus.Pending,
@@ -178,7 +182,7 @@ function buildTransitionEventMock(
     result: {
       data: {
         notificationEvents: {
-          __typename: 'NotificationEvent' as const,
+          __typename: 'NotificationEvent',
           subtype,
           mutation: MutationType.Updated,
           timestamp: '2024-01-01T00:00:00Z',
@@ -187,7 +191,7 @@ function buildTransitionEventMock(
             nodeId === null
               ? null
               : {
-                  __typename: 'Notification' as const,
+                  __typename: 'Notification',
                   id: nodeId,
                   type: NotificationType.LowStock,
                   status: NotificationStatus.Read,
@@ -209,17 +213,17 @@ function buildTransitionEventMock(
   };
 }
 
-const unreadFeedData = {
+const unreadFeedData: MockDataFor<typeof GetUnreadNotificationsDocument> = {
   me: {
-    __typename: 'User' as const,
+    __typename: 'User',
     id: 'user-1',
     unreadNotificationCount: 0,
     hasUrgentNotifications: false,
     notificationsConnection: {
-      __typename: 'NotificationConnection' as const,
+      __typename: 'NotificationConnection',
       edges: [],
       pageInfo: {
-        __typename: 'PageInfo' as const,
+        __typename: 'PageInfo',
         hasNextPage: false,
         endCursor: null,
       },
@@ -239,51 +243,49 @@ const seededCache = (
   rows: Array<{ id: string; status: NotificationStatus }> = [],
 ) => {
   const cache = makeCache();
-  cache.writeQuery({
-    query: GetUnreadNotificationsDocument,
-    data: {
-      __typename: 'Query' as const,
-      me: {
-        __typename: 'User' as const,
-        id: 'user-1',
-        unreadNotificationCount: rows.filter(r =>
-          [NotificationStatus.Pending, NotificationStatus.Sent].includes(
-            r.status,
-          ),
-        ).length,
-        hasUrgentNotifications: false,
-        notificationsConnection: {
-          __typename: 'NotificationConnection' as const,
-          edges: rows.map(r => ({
-            __typename: 'NotificationEdge' as const,
-            node: {
-              __typename: 'Notification' as const,
-              id: r.id,
-              type: NotificationType.LowStock,
-              isAuthoredContent: false,
-              status: r.status,
-              priority: Priority.Normal,
-              title: 'Low Stock Alert',
-              message: 'Milk is running low',
-              payload: null,
-              category: NotificationCategory.System,
-              sentAt: '2024-01-01T00:00:00Z',
-              expiresAt: null,
-              sourceId: null,
-              sourceType: null,
-              actionUrl: null,
-              readAt: null,
-            },
-          })),
-          pageInfo: {
-            __typename: 'PageInfo' as const,
-            hasNextPage: false,
-            endCursor: null,
+  const data: QueryDataFor<typeof GetUnreadNotificationsDocument> = {
+    __typename: 'Query',
+    me: {
+      __typename: 'User',
+      id: 'user-1',
+      unreadNotificationCount: rows.filter(r =>
+        [NotificationStatus.Pending, NotificationStatus.Sent].includes(
+          r.status,
+        ),
+      ).length,
+      hasUrgentNotifications: false,
+      notificationsConnection: {
+        __typename: 'NotificationConnection',
+        edges: rows.map(r => ({
+          __typename: 'NotificationEdge',
+          node: {
+            __typename: 'Notification',
+            id: r.id,
+            type: NotificationType.LowStock,
+            isAuthoredContent: false,
+            status: r.status,
+            priority: Priority.Normal,
+            title: 'Low Stock Alert',
+            message: 'Milk is running low',
+            payload: null,
+            category: NotificationCategory.System,
+            sentAt: '2024-01-01T00:00:00Z',
+            expiresAt: null,
+            sourceId: null,
+            sourceType: null,
+            actionUrl: null,
+            readAt: null,
           },
+        })),
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: null,
         },
       },
     },
-  });
+  };
+  cache.writeQuery({ query: GetUnreadNotificationsDocument, data });
   return cache;
 };
 

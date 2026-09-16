@@ -9,6 +9,7 @@ import { MarkPrimaryItemImageDocument } from '#features/catalog/hooks/useMarkPri
 import { useMarkPrimaryItemImage } from '#features/catalog/hooks/useMarkPrimaryItemImage';
 import { alertService } from '#/services/alertService';
 import { ItemPhotoCarousel_ItemPhotoFragmentDoc } from '#features/catalog/ui/ItemPhotoCarousel.generated';
+import type { ItemPhotoCarousel_ItemPhotoFragment } from '#features/catalog/ui/ItemPhotoCarousel.generated';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -23,8 +24,11 @@ const renderHook = (operationMocks: MockedResponse[]) =>
   renderHookWithApollo(() => useMarkPrimaryItemImage(), { operationMocks });
 
 /** A photo complete for `ItemPhotoCarousel_itemPhoto`, which the payload spreads. */
-const photo = (id: string, isPrimary: boolean) => ({
-  __typename: 'ItemPhoto' as const,
+const photo = (
+  id: string,
+  isPrimary: boolean,
+): ItemPhotoCarousel_ItemPhotoFragment => ({
+  __typename: 'ItemPhoto',
   id,
   url: `https://cdn.test/${id}.jpg`,
   perspective: null,

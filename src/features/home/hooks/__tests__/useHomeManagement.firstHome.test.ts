@@ -17,6 +17,7 @@
  */
 import { act, waitFor } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -110,11 +111,13 @@ const noHomesMock = () =>
  */
 const createdHomeMock = () =>
   recordMock(CreateHomeDocument, {
-    data: (vars: Record<string, unknown>) => ({
+    dataFor: (
+      vars: Record<string, unknown>,
+    ): MockDataFor<typeof CreateHomeDocument> => ({
       createHome: {
-        __typename: 'CreateHomePayload' as const,
+        __typename: 'CreateHomePayload',
         home: {
-          __typename: 'Home' as const,
+          __typename: 'Home',
           id: (vars.input as { id: string }).id,
           name: 'First Home',
           // Not default server-side yet — that is what MarkHomeAsDefault is
@@ -123,7 +126,7 @@ const createdHomeMock = () =>
           // Empty so the only writer of the pantry selection is the
           // MarkHomeAsDefault response.
           pantriesConnection: {
-            __typename: 'PantryConnection' as const,
+            __typename: 'PantryConnection',
             edges: [],
             totalCount: 0,
           },
@@ -135,13 +138,15 @@ const createdHomeMock = () =>
 /** Creating a home also mints its default pantry, whose failure is alerted. */
 const createdPantryMock = () =>
   recordMock(CreatePantryDocument, {
-    data: (vars: Record<string, unknown>) => {
+    dataFor: (
+      vars: Record<string, unknown>,
+    ): MockDataFor<typeof CreatePantryDocument> => {
       const input = vars.input as { id: string; homeId: string };
       return {
         createPantry: {
-          __typename: 'CreatePantryPayload' as const,
+          __typename: 'CreatePantryPayload',
           pantry: {
-            __typename: 'Pantry' as const,
+            __typename: 'Pantry',
             id: input.id,
             homeId: input.homeId,
           },

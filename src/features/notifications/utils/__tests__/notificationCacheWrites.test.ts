@@ -14,7 +14,9 @@ import {
   NotificationType,
   Priority,
 } from '#/graphql/generated/schemaTypes';
+import type { QueryDataFor } from '#/test-utils/apolloMockProvider';
 import { UseNotificationsOnLaunch_NotificationFragmentDoc } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
+import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 import {
   applyAllNotificationsRead,
   addNotificationToFeed,
@@ -30,8 +32,11 @@ jest.mock('#/apollo/links/refreshToken');
 
 const USER = 'me';
 
-const node = (id: string, status: NotificationStatus) => ({
-  __typename: 'Notification' as const,
+const node = (
+  id: string,
+  status: NotificationStatus,
+): UseNotificationsOnLaunch_NotificationFragment => ({
+  __typename: 'Notification',
   id,
   type: NotificationType.CollaborationInvite,
   isAuthoredContent: false,
@@ -53,33 +58,35 @@ const seed = (
   cache: InMemoryCache,
   rows: Array<[string, NotificationStatus]>,
   unread: number,
-) =>
+) => {
+  const data: QueryDataFor<typeof GetNotificationsDocument> = {
+    __typename: 'Query',
+    me: {
+      __typename: 'User',
+      id: USER,
+      unreadNotificationCount: unread,
+      hasUrgentNotifications: false,
+      notificationsConnection: {
+        __typename: 'NotificationConnection',
+        edges: rows.map(([id, status]) => ({
+          __typename: 'NotificationEdge',
+          node: node(id, status),
+        })),
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: null,
+        },
+        totalCount: rows.length,
+      },
+    },
+  };
   cache.writeQuery({
     query: GetNotificationsDocument,
     variables: { filter: undefined, first: 30 },
-    data: {
-      __typename: 'Query' as const,
-      me: {
-        __typename: 'User',
-        id: USER,
-        unreadNotificationCount: unread,
-        hasUrgentNotifications: false,
-        notificationsConnection: {
-          __typename: 'NotificationConnection',
-          edges: rows.map(([id, status]) => ({
-            __typename: 'NotificationEdge' as const,
-            node: node(id, status),
-          })),
-          pageInfo: {
-            __typename: 'PageInfo',
-            hasNextPage: false,
-            endCursor: null,
-          },
-          totalCount: rows.length,
-        },
-      },
-    },
+    data,
   });
+};
 
 const badge = (cache: InMemoryCache): number =>
   (cache.extract() as Record<string, { unreadNotificationCount?: number }>)[

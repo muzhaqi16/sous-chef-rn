@@ -341,11 +341,11 @@ rules report nothing without it.
 queries spread the screen fragment. Components materialize data through
 `useFragment` rather than receiving deep prop trees.
 
-One rule worth internalizing: **any selection set that spreads a fragment
-identifying its type must also select `id` directly.** Masking hides the
+One rule worth internalizing, and `@graphql-eslint/require-selections` enforces
+it: **any selection set on a type that has an `id` must select it directly** —
+spreading a fragment that selects it is not enough. Masking hides the
 fragment's fields from the parent, including the key field — without an explicit
-`id`, `cache.identify` throws. `__tests__/graphql/maskingIdentity.test.ts`
-enforces this for every operation.
+`id`, `cache.identify` throws.
 
 Full guidance — fragment composition and masking templates
 ([§ Fragment Composition & Data Masking](apollo-client-patterns.md#fragment-composition--data-masking)),

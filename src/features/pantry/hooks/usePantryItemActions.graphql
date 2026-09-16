@@ -1,10 +1,12 @@
 fragment usePantryItemActions_trackingUnit on PantryItem {
+  id
   unit {
     id
   }
 }
 
 fragment usePantryItemActions_quantity on PantryItem {
+  id
   quantity
 }
 

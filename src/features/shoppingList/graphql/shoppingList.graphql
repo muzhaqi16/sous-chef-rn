@@ -217,6 +217,7 @@ query GetShoppingListItemsFiltered(
             id
             imageUrl
             images {
+              id
               url
               kind
             }

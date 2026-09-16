@@ -1,6 +1,7 @@
 'use no memo';
 
 import { act } from '@testing-library/react-native';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -43,10 +44,10 @@ const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
     // each of the three selections rather than to its own keys.
     ids.flatMap(id => {
       const data = {
-        __typename: 'PantryItem' as const,
+        __typename: 'PantryItem',
         id,
         quantity,
-        unit: { __typename: 'Unit' as const, id: 'unit-1', symbol: 'ea' },
+        unit: { __typename: 'Unit', id: 'unit-1', symbol: 'ea' },
       };
       return [
         { fragment: UsePantryItemActions_IdFragmentDoc, data },
@@ -70,10 +71,12 @@ const createOptions = () => ({
 });
 
 function consumeMock(payload?: Record<string, unknown>) {
-  const defaultPayload = {
-    __typename: 'CreatePantryItemUsagePayload' as const,
+  const defaultPayload: NonNullable<
+    MockDataFor<typeof CreatePantryItemUsageDocument>['createPantryItemUsage']
+  > = {
+    __typename: 'CreatePantryItemUsagePayload',
     pantryItemUsage: {
-      __typename: 'PantryItemUsage' as const,
+      __typename: 'PantryItemUsage',
       id: 'usage-1',
       quantityUsed: 1,
       usageUnitId: null,
@@ -85,7 +88,7 @@ function consumeMock(payload?: Record<string, unknown>) {
       isComposted: null,
       isRecycled: null,
       pantryItem: {
-        __typename: 'PantryItem' as const,
+        __typename: 'PantryItem',
         id: 'item-1',
         quantity: 4,
         version: 2,
@@ -97,25 +100,28 @@ function consumeMock(payload?: Record<string, unknown>) {
       usedBy: null,
     },
   };
+  const data: MockDataFor<typeof CreatePantryItemUsageDocument> = {
+    createPantryItemUsage: payload ?? defaultPayload,
+  };
   return recordMock(CreatePantryItemUsageDocument, {
-    data: {
-      createPantryItemUsage: payload ?? defaultPayload,
-    },
+    data,
   });
 }
 
 function restockMock(payload?: Record<string, unknown>) {
-  const defaultPayload = {
-    __typename: 'RestockPantryItemPayload' as const,
+  const defaultPayload: NonNullable<
+    MockDataFor<typeof RestockPantryItemDocument>['restockPantryItem']
+  > = {
+    __typename: 'RestockPantryItemPayload',
     pantryItemUsage: {
-      __typename: 'PantryItemUsage' as const,
+      __typename: 'PantryItemUsage',
       id: 'usage-1',
       quantityUsed: 1,
       purpose: UsagePurpose.Restock,
       costPerUnit: null,
       totalCost: null,
       pantryItem: {
-        __typename: 'PantryItem' as const,
+        __typename: 'PantryItem',
         id: 'item-1',
         version: 2,
         updatedAt: '2026-01-01T00:00:00.000Z',
@@ -131,10 +137,11 @@ function restockMock(payload?: Record<string, unknown>) {
       },
     },
   };
+  const data: MockDataFor<typeof RestockPantryItemDocument> = {
+    restockPantryItem: payload ?? defaultPayload,
+  };
   return recordMock(RestockPantryItemDocument, {
-    data: {
-      restockPantryItem: payload ?? defaultPayload,
-    },
+    data,
   });
 }
 
@@ -463,8 +470,11 @@ describe('usePantryItemActions', () => {
       expect(before).not.toBeNull();
 
       // A queued local-first write: `queueLink` resolves with a null payload.
+      const data: MockDataFor<typeof RestockPantryItemDocument> = {
+        restockPantryItem: null,
+      };
       const queued = recordMock(RestockPantryItemDocument, {
-        data: { restockPantryItem: null },
+        data,
       });
       const { result } = renderHookWithApollo(
         () => usePantryItemActions(createOptions()),
@@ -524,7 +534,7 @@ describe('usePantryItemActions', () => {
   describe('payload error handling', () => {
     it('shows invalid unit alert on consume payload UNIT_INVALID', async () => {
       const m = consumeMock({
-        __typename: 'ValidationError' as const,
+        __typename: 'ValidationError',
         code: 'UNIT_INVALID',
         message: "Cannot consume in 'jar'",
         field: 'usageUnitId',
@@ -559,7 +569,7 @@ describe('usePantryItemActions', () => {
 
     it('shows invalid unit alert on waste payload UNIT_INVALID', async () => {
       const m = consumeMock({
-        __typename: 'ValidationError' as const,
+        __typename: 'ValidationError',
         code: 'UNIT_INVALID',
         message: "Cannot waste in 'jar'",
         field: 'usageUnitId',
@@ -592,7 +602,7 @@ describe('usePantryItemActions', () => {
 
     it('describes a consume payload CONFLICT by its code, not as a stale version', async () => {
       const m = consumeMock({
-        __typename: 'ConflictError' as const,
+        __typename: 'ConflictError',
         code: 'CONFLICT',
         message: 'Version conflict: expected 3, found 4',
       });
@@ -630,7 +640,7 @@ describe('usePantryItemActions', () => {
       // The API emits VERSION_CONFLICT (not CONFLICT) for optimistic-lock
       // failures; matching only CONFLICT drops it into the generic Error alert.
       const m = consumeMock({
-        __typename: 'ConflictError' as const,
+        __typename: 'ConflictError',
         code: 'VERSION_CONFLICT',
         message: 'Item was updated by another device',
       });
@@ -660,7 +670,7 @@ describe('usePantryItemActions', () => {
 
     it('shows invalid unit alert on restock payload UNIT_INVALID', async () => {
       const m = restockMock({
-        __typename: 'ValidationError' as const,
+        __typename: 'ValidationError',
         code: 'UNIT_INVALID',
         message: "Cannot restock in 'slice'",
         field: 'unitId',
@@ -687,7 +697,7 @@ describe('usePantryItemActions', () => {
 
     it('shows alert on restock payload error', async () => {
       const m = restockMock({
-        __typename: 'ValidationError' as const,
+        __typename: 'ValidationError',
         code: 'UNIT_INVALID',
         message: 'Invalid unit',
         field: 'unitId',
@@ -713,7 +723,7 @@ describe('usePantryItemActions', () => {
 
     it('shows generic error for unknown payload failure codes', async () => {
       const m = consumeMock({
-        __typename: 'ValidationError' as const,
+        __typename: 'ValidationError',
         code: 'VALIDATION_FAILED',
         message: 'Cannot use more than available quantity',
         field: 'quantityUsed',
@@ -749,8 +759,11 @@ describe('usePantryItemActions', () => {
     it('keeps a queued consume, closes the modal and says nothing', async () => {
       // The offline queue resolves with the payload field null and no error;
       // that is an accepted write, not a failure to revert.
+      const data: MockDataFor<typeof CreatePantryItemUsageDocument> = {
+        createPantryItemUsage: null,
+      };
       const queued = recordMock(CreatePantryItemUsageDocument, {
-        data: { createPantryItemUsage: null },
+        data,
       });
       const cache = seedPantryItems();
       const { result } = renderHookWithApollo(
@@ -776,8 +789,11 @@ describe('usePantryItemActions', () => {
     });
 
     it('keeps a queued waste, closes the modal and says nothing', async () => {
+      const data: MockDataFor<typeof CreatePantryItemUsageDocument> = {
+        createPantryItemUsage: null,
+      };
       const queued = recordMock(CreatePantryItemUsageDocument, {
-        data: { createPantryItemUsage: null },
+        data,
       });
       const cache = seedPantryItems();
       const { result } = renderHookWithApollo(
@@ -893,7 +909,7 @@ describe('usePantryItemActions', () => {
     it('shows the app copy for a version conflict, never the server text', async () => {
       await consumeOne(
         consumeMock({
-          __typename: 'ConflictError' as const,
+          __typename: 'ConflictError',
           code: 'VERSION_CONFLICT',
           message: 'Item was updated by another device',
         }),

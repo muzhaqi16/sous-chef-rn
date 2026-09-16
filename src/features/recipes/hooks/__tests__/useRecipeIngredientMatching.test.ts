@@ -1,5 +1,6 @@
 import { act, waitFor } from '@testing-library/react-native';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -26,7 +27,7 @@ function seedIngredientCache(ids: string[]) {
       // here instead of defining its own idea of complete.
       fragment: RecipeIngredientFragmentDoc,
       data: {
-        __typename: 'RecipeIngredient' as const,
+        __typename: 'RecipeIngredient',
         id,
         name: `Ingredient ${id}`,
         quantity: 1,
@@ -42,7 +43,7 @@ function seedIngredientCache(ids: string[]) {
         section: null,
         item: null,
         unit: {
-          __typename: 'Unit' as const,
+          __typename: 'Unit',
           id: `u-${id}`,
           name: 'cup',
           symbol: 'cup',
@@ -88,13 +89,14 @@ function matchesMock(
   matches: Record<string, unknown>[],
   options: { partial?: boolean } = {},
 ) {
+  const data: MockDataFor<typeof MatchRecipeIngredientsToPantryDocument> = {
+    matchRecipeIngredientsToPantry: matches.map(m => ({
+      __typename: 'RecipeIngredientMatch',
+      ...m,
+    })),
+  };
   return recordMock(MatchRecipeIngredientsToPantryDocument, {
-    data: {
-      matchRecipeIngredientsToPantry: matches.map(m => ({
-        __typename: 'RecipeIngredientMatch' as const,
-        ...m,
-      })),
-    },
+    data,
     partial: options.partial,
   });
 }
@@ -172,11 +174,11 @@ describe('useRecipeIngredientMatching', () => {
     const matches = [
       {
         ingredient: {
-          __typename: 'RecipeIngredient' as const,
+          __typename: 'RecipeIngredient',
           id: 'ing-1',
           isOptional: false,
           unit: {
-            __typename: 'Unit' as const,
+            __typename: 'Unit',
             id: 'u-ing-1',
             name: 'cup',
             symbol: 'cup',
@@ -184,10 +186,10 @@ describe('useRecipeIngredientMatching', () => {
         },
         isAvailable: true,
         matchConfidence: 0.95,
-        matchedPantryItem: { __typename: 'PantryItem' as const, id: 'pi-1' },
+        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
         availableQuantity: 5,
         suggestedQuantity: 2,
-        suggestedUnit: { __typename: 'Unit' as const, id: 'su-1' },
+        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
       },
     ];
     const m = matchesMock(matches);
@@ -216,11 +218,11 @@ describe('useRecipeIngredientMatching', () => {
     const matches = [
       {
         ingredient: {
-          __typename: 'RecipeIngredient' as const,
+          __typename: 'RecipeIngredient',
           id: 'ing-1',
           isOptional: false,
           unit: {
-            __typename: 'Unit' as const,
+            __typename: 'Unit',
             id: 'u-ing-1',
             name: 'cup',
             symbol: 'cup',
@@ -228,10 +230,10 @@ describe('useRecipeIngredientMatching', () => {
         },
         isAvailable: true,
         matchConfidence: 0.95,
-        matchedPantryItem: { __typename: 'PantryItem' as const, id: 'pi-1' },
+        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
         availableQuantity: 5,
         suggestedQuantity: 2,
-        suggestedUnit: { __typename: 'Unit' as const, id: 'su-1' },
+        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
       },
     ];
     // The partial `ingredient` IS the subject: completing it from the SDL
@@ -260,11 +262,11 @@ describe('useRecipeIngredientMatching', () => {
     const matches = [
       {
         ingredient: {
-          __typename: 'RecipeIngredient' as const,
+          __typename: 'RecipeIngredient',
           id: 'ing-1',
           isOptional: false,
           unit: {
-            __typename: 'Unit' as const,
+            __typename: 'Unit',
             id: 'u-ing-1',
             name: 'cup',
             symbol: 'cup',
@@ -272,10 +274,10 @@ describe('useRecipeIngredientMatching', () => {
         },
         isAvailable: true,
         matchConfidence: 0.9,
-        matchedPantryItem: { __typename: 'PantryItem' as const, id: 'pi-1' },
+        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
         availableQuantity: 5,
         suggestedQuantity: 2,
-        suggestedUnit: { __typename: 'Unit' as const, id: 'su-1' },
+        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
       },
     ];
     const m = matchesMock(matches);
@@ -301,11 +303,11 @@ describe('useRecipeIngredientMatching', () => {
     const matches = [
       {
         ingredient: {
-          __typename: 'RecipeIngredient' as const,
+          __typename: 'RecipeIngredient',
           id: 'ing-1',
           isOptional: false,
           unit: {
-            __typename: 'Unit' as const,
+            __typename: 'Unit',
             id: 'u-ing-1',
             name: 'cup',
             symbol: 'cup',
@@ -313,10 +315,10 @@ describe('useRecipeIngredientMatching', () => {
         },
         isAvailable: true,
         matchConfidence: 0.9,
-        matchedPantryItem: { __typename: 'PantryItem' as const, id: 'pi-1' },
+        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
         availableQuantity: 5,
         suggestedQuantity: 2,
-        suggestedUnit: { __typename: 'Unit' as const, id: 'su-1' },
+        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
       },
     ];
     const m = matchesMock(matches);
@@ -343,11 +345,11 @@ describe('useRecipeIngredientMatching', () => {
     const matches = [
       {
         ingredient: {
-          __typename: 'RecipeIngredient' as const,
+          __typename: 'RecipeIngredient',
           id: 'ing-1',
           isOptional: false,
           unit: {
-            __typename: 'Unit' as const,
+            __typename: 'Unit',
             id: 'u-ing-1',
             name: 'cup',
             symbol: 'cup',
@@ -355,18 +357,18 @@ describe('useRecipeIngredientMatching', () => {
         },
         isAvailable: true,
         matchConfidence: 0.9,
-        matchedPantryItem: { __typename: 'PantryItem' as const, id: 'pi-1' },
+        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
         availableQuantity: 5,
         suggestedQuantity: 2,
-        suggestedUnit: { __typename: 'Unit' as const, id: 'su-1' },
+        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
       },
       {
         ingredient: {
-          __typename: 'RecipeIngredient' as const,
+          __typename: 'RecipeIngredient',
           id: 'ing-2',
           isOptional: false,
           unit: {
-            __typename: 'Unit' as const,
+            __typename: 'Unit',
             id: 'u-ing-2',
             name: 'cup',
             symbol: 'cup',
@@ -374,18 +376,18 @@ describe('useRecipeIngredientMatching', () => {
         },
         isAvailable: false,
         matchConfidence: 0.3,
-        matchedPantryItem: { __typename: 'PantryItem' as const, id: 'pi-2' },
+        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-2' },
         availableQuantity: 1,
         suggestedQuantity: 3,
         suggestedUnit: null,
       },
       {
         ingredient: {
-          __typename: 'RecipeIngredient' as const,
+          __typename: 'RecipeIngredient',
           id: 'ing-3',
           isOptional: true,
           unit: {
-            __typename: 'Unit' as const,
+            __typename: 'Unit',
             id: 'u-ing-3',
             name: 'cup',
             symbol: 'cup',
@@ -429,11 +431,11 @@ describe('useRecipeIngredientMatching', () => {
 // confirmConsumption builds a non-empty consumptions array and fires.
 const includedMatch = {
   ingredient: {
-    __typename: 'RecipeIngredient' as const,
+    __typename: 'RecipeIngredient',
     id: 'ing-1',
     isOptional: false,
     unit: {
-      __typename: 'Unit' as const,
+      __typename: 'Unit',
       id: 'u-ing-1',
       name: 'cup',
       symbol: 'cup',
@@ -442,13 +444,13 @@ const includedMatch = {
   isAvailable: true,
   matchConfidence: 0.95,
   matchedPantryItem: {
-    __typename: 'PantryItem' as const,
+    __typename: 'PantryItem',
     id: 'pi-1',
-    unit: { __typename: 'Unit' as const, id: 'u-ing-1' },
+    unit: { __typename: 'Unit', id: 'u-ing-1' },
   },
   availableQuantity: 5,
   suggestedQuantity: 2,
-  suggestedUnit: { __typename: 'Unit' as const, id: 'su-1' },
+  suggestedUnit: { __typename: 'Unit', id: 'su-1' },
 };
 
 function confirmMock(outcome: { kind: 'success' } | { kind: 'rejected' }) {
@@ -457,11 +459,11 @@ function confirmMock(outcome: { kind: 'success' } | { kind: 'rejected' }) {
       outcome.kind === 'success'
         ? {
             confirmRecipeConsumption: {
-              __typename: 'ConfirmRecipeConsumptionPayload' as const,
+              __typename: 'ConfirmRecipeConsumptionPayload',
               totalConsumed: 1,
               totalFailed: 0,
               cookingLog: {
-                __typename: 'CookingLog' as const,
+                __typename: 'CookingLog',
                 id: 'client-cooklog-1',
                 servingsMade: 4,
                 notes: null,
@@ -471,7 +473,7 @@ function confirmMock(outcome: { kind: 'success' } | { kind: 'rejected' }) {
           }
         : {
             confirmRecipeConsumption: {
-              __typename: 'ValidationError' as const,
+              __typename: 'ValidationError',
               code: ErrorCode.ValidationFailed,
               message: 'bad',
             },

@@ -61,6 +61,7 @@ does not lint.
 | ------------------- | --------------------------------------------------------------------- |
 | `apolloReactMock`   | `jest.mock('@apollo/client/react')`.                                  |
 | `bareInMemoryCache` | `new InMemoryCache()` in a suite that imports the Apollo mock helper. |
+| `typenameAsConst`   | `__typename: 'X' as const` in place of typing the fixture.            |
 
 ## Exemptions
 

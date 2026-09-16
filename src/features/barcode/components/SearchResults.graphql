@@ -1,9 +1,5 @@
-# The ids the search results read back off a barcode add. The mutations that
-# select them live beside their consumer, `hooks/useAddScannedItem.graphql`.
-fragment SearchResults_shoppingListItem on ShoppingListItem {
-  id
-}
-
+# The id the search results read back off a barcode add. The mutation that
+# selects it lives beside its consumer, `hooks/useAddScannedItem.graphql`.
 fragment SearchResults_pantryItem on PantryItem {
   id
 }

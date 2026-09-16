@@ -37,6 +37,34 @@ export type MockedResponse<
  */
 export type MockPart<TData> = DeepPartial<TData>;
 
+/**
+ * The `data` a mock may supply for a document — its result type, deep-partial
+ * and unmasked. Annotating a fixture with this narrows every `__typename` from
+ * the document, so none of them needs `as const`, and a field the selection
+ * gains that the fixture omits fails the build.
+ */
+export type MockDataFor<TDocument> = TDocument extends TypedDocumentNode<
+  infer TData,
+  infer TVariables
+>
+  ? TVariables extends OperationVariables
+    ? DeepPartial<Unmasked<TData>>
+    : never
+  : never;
+
+/**
+ * The COMPLETE result a document reads, for `cache.writeQuery` — which, unlike
+ * a mock, is not completed from the SDL and so takes every selected field.
+ */
+export type QueryDataFor<TDocument> = TDocument extends TypedDocumentNode<
+  infer TData,
+  infer TVariables
+>
+  ? TVariables extends OperationVariables
+    ? Unmasked<TData>
+    : never
+  : never;
+
 export type MockFor<TDocument> = TDocument extends TypedDocumentNode<
   infer TData,
   infer TVariables
@@ -695,10 +723,15 @@ type DeepPartial<T> = T extends (infer U)[]
   : T;
 
 export interface RecordMockOptions<TData = Record<string, unknown>> {
-  /** Static response data, OR a function of variables → data. */
-  data?:
-    | DeepPartial<Unmasked<TData>>
-    | ((vars: Record<string, unknown>) => DeepPartial<Unmasked<TData>>);
+  /**
+   * Static response data. Not a union with the function form: a union target
+   * stops TypeScript contextually typing the literal, so every nested
+   * `__typename` widens to `string` and each one needs an assertion. Pass
+   * `dataFor` when the response depends on the variables.
+   */
+  data?: DeepPartial<Unmasked<TData>>;
+  /** Response data as a function of the variables the operation fired with. */
+  dataFor?: (vars: Record<string, unknown>) => DeepPartial<Unmasked<TData>>;
   /** Simulate a network error instead of returning data. */
   error?: Error;
   /** Delay (ms) before resolving — useful for in-flight assertions. */
@@ -1278,7 +1311,7 @@ export function recordMock<
   options: RecordMockOptions<TData> = {},
 ): RecordedMock {
   const fired: Array<Record<string, unknown>> = [];
-  const { data, error, delay, maxUsageCount, partial } = options;
+  const { data, dataFor, error, delay, maxUsageCount, partial } = options;
 
   // Completion happens per invocation because it needs the variables the
   // operation actually fired with, so `result` is a function even when the
@@ -1286,14 +1319,10 @@ export function recordMock<
   // Completion is NOT applied here — `createApolloTestWrapper` does it for
   // every mock it serves, so there is one place that decides. `partial` only
   // records the caller's intent for that single place to honour.
-  const result = data
-    ? typeof data === 'function'
-      ? (vars: Record<string, unknown>) => ({
-          data: (
-            data as (v: Record<string, unknown>) => Record<string, unknown>
-          )(vars),
-        })
-      : { data }
+  const result = dataFor
+    ? (vars: Record<string, unknown>) => ({ data: dataFor(vars) })
+    : data
+    ? { data }
     : undefined;
 
   const mock: MockedResponse = {

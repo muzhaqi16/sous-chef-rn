@@ -10,7 +10,7 @@ import {
   GetPantryDocument,
   GetPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { homeNode } from '#/test-utils/fixtures/homeFixtures';
+import { homeDetailNode } from '#/test-utils/fixtures/homeFixtures';
 import { pantryData } from '#/test-utils/fixtures/pantryFixtures';
 import { pantryItemData } from '#/test-utils/fixtures/pantryItemFixtures';
 import { PantryItemForm } from '../PantryItemForm';
@@ -307,7 +307,7 @@ function buildCache(opts: {
     variables: { homeId: 'h1' },
     data: {
       __typename: 'Query',
-      home: homeNode({
+      home: homeDetailNode({
         id: 'h1',
         pantries: [{ id: 'p1', name: 'Main', isDefault: true }],
       }),

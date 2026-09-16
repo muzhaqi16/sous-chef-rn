@@ -45,7 +45,7 @@ function moveMock() {
   return recordMock(MoveShoppingListItemDocument, {
     data: {
       moveShoppingListItem: {
-        __typename: 'MoveShoppingListItemPayload' as const,
+        __typename: 'MoveShoppingListItemPayload',
         shoppingListItem: {
           __typename: 'ShoppingListItem',
           id: 'item-2',

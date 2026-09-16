@@ -812,17 +812,22 @@ describe('optimistic entity completeness', () => {
       it('never overwrites catalog fields an Item already has', async () => {
         const cache = await seedPantryCache();
         const realItem = {
-          __typename: 'Item' as const,
+          __typename: 'Item',
           id: 'catalog-item-1',
           name: 'Whole Milk',
           canEdit: true,
           imageUrl: 'https://example.test/milk.png',
           images: [
-            { __typename: 'ItemImage' as const, url: 'https://a', kind: null },
+            {
+              __typename: 'ItemImage',
+              id: 'image-1',
+              url: 'https://a',
+              kind: null,
+            },
           ],
           photos: [
             {
-              __typename: 'ItemPhoto' as const,
+              __typename: 'ItemPhoto',
               id: 'photo-1',
               url: 'https://p',
               perspective: 'FRONT',
@@ -834,7 +839,7 @@ describe('optimistic entity completeness', () => {
           shelfLifeDays: 7,
           shelfLifeOpenedDays: 3,
           nutritionFacts: {
-            __typename: 'NutritionFacts' as const,
+            __typename: 'NutritionFacts',
             id: 'facts-1',
             calories: 42,
             totalFat: 1,
@@ -856,10 +861,11 @@ describe('optimistic entity completeness', () => {
           },
           categories: [
             {
-              __typename: 'ItemCategory' as const,
+              __typename: 'ItemCategory',
+              id: 'item-cat-1',
               isPrimary: true,
               category: {
-                __typename: 'Category' as const,
+                __typename: 'Category',
                 id: 'cat-1',
                 name: 'Dairy',
               },
@@ -875,6 +881,7 @@ describe('optimistic entity completeness', () => {
               canEdit
               imageUrl
               images {
+                id
                 url
                 kind
               }
@@ -885,6 +892,7 @@ describe('optimistic entity completeness', () => {
                 isPrimary
                 status
                 variants {
+                  id
                   url
                   kind
                 }
@@ -912,6 +920,7 @@ describe('optimistic entity completeness', () => {
                 servingUnit
               }
               categories {
+                id
                 isPrimary
                 category {
                   id

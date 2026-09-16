@@ -151,10 +151,10 @@ describe('PantryDetailInfo', () => {
   });
 
   it('renders Storage row when storageLocation is set', () => {
-    const item = {
+    const item: PantryDetailInfo_PantryItemFragment = {
       ...baseItem,
       storageLocation: {
-        __typename: 'StorageLocation' as const,
+        __typename: 'StorageLocation',
         id: 'sl1',
         name: 'Top shelf',
       },
@@ -165,9 +165,9 @@ describe('PantryDetailInfo', () => {
   });
 
   it('renders Store row when store name exists', () => {
-    const item = {
+    const item: PantryDetailInfo_PantryItemFragment = {
       ...baseItem,
-      store: { __typename: 'Store' as const, id: 'st1', name: 'Whole Foods' },
+      store: { __typename: 'Store', id: 'st1', name: 'Whole Foods' },
     };
     render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Store')).toBeTruthy();

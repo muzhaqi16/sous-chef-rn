@@ -1,4 +1,5 @@
 import { waitFor } from '@testing-library/react-native';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -73,11 +74,13 @@ const form = (
   ...overrides,
 });
 
-const suggestionPayload = (note: string) => ({
+const suggestionPayload = (
+  note: string,
+): MockDataFor<typeof CreateItemSuggestionDocument> => ({
   createItemSuggestion: {
-    __typename: 'CreateItemSuggestionPayload' as const,
+    __typename: 'CreateItemSuggestionPayload',
     suggestion: {
-      __typename: 'ItemEditSuggestion' as const,
+      __typename: 'ItemEditSuggestion',
       id: 'sug-1',
       status: ItemSuggestionStatus.Pending,
       note,

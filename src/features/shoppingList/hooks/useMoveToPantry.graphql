@@ -48,6 +48,7 @@ fragment useMoveToPantry_pantryItem on PantryItem {
     id
     imageUrl
     images {
+      id
       url
       kind
     }

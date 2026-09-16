@@ -1,4 +1,5 @@
 import { act } from '@testing-library/react-native';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -44,7 +45,7 @@ function createItem(
   overrides: Partial<ShoppingListItemDisplayFragment> = {},
 ): ShoppingListItemDisplayFragment {
   return {
-    __typename: 'ShoppingListItem' as const,
+    __typename: 'ShoppingListItem',
     id: 'item-1',
     itemName: 'Milk',
     quantity: 2,
@@ -53,7 +54,7 @@ function createItem(
     // the cache holds. Seeding only `isPurchased` makes the carry-forward
     // write a partial record no server response could produce.
     purchaseInfo: {
-      __typename: 'ShoppingListItemPurchaseInfo' as const,
+      __typename: 'ShoppingListItemPurchaseInfo',
       isPurchased: true,
       movedToPantryAt: null,
       purchaseDate: null,
@@ -71,8 +72,8 @@ function moveMock() {
   return recordMock(MoveShoppingItemToPantryDocument, {
     data: {
       moveShoppingItemToPantry: {
-        __typename: 'MoveShoppingItemToPantryPayload' as const,
-        pantryItem: { __typename: 'PantryItem' as const, id: 'pantry-item-1' },
+        __typename: 'MoveShoppingItemToPantryPayload',
+        pantryItem: { __typename: 'PantryItem', id: 'pantry-item-1' },
       },
     },
   });
@@ -187,7 +188,7 @@ describe('useMoveToPantry', () => {
     const conflicted = recordMock(MoveShoppingItemToPantryDocument, {
       data: {
         moveShoppingItemToPantry: {
-          __typename: 'ConflictError' as const,
+          __typename: 'ConflictError',
           message: 'Pantry item was modified',
           code: ErrorCode.Conflict,
         },
@@ -413,9 +414,9 @@ describe('useMoveToPantry pantry item count', () => {
       id: 'Pantry:pantry-1',
       fragment: STATS_FRAGMENT,
       data: {
-        __typename: 'Pantry' as const,
+        __typename: 'Pantry',
         id: 'pantry-1',
-        stats: { __typename: 'PantryStats' as const, totalItems: 63 },
+        stats: { __typename: 'PantryStats', totalItems: 63 },
       },
     });
     return cache;
@@ -438,11 +439,13 @@ describe('useMoveToPantry pantry item count', () => {
    */
   function echoingMoveMock() {
     return recordMock(MoveShoppingItemToPantryDocument, {
-      data: (vars: Record<string, unknown>) => ({
+      dataFor: (
+        vars: Record<string, unknown>,
+      ): MockDataFor<typeof MoveShoppingItemToPantryDocument> => ({
         moveShoppingItemToPantry: {
-          __typename: 'MoveShoppingItemToPantryPayload' as const,
+          __typename: 'MoveShoppingItemToPantryPayload',
           pantryItem: {
-            __typename: 'PantryItem' as const,
+            __typename: 'PantryItem',
             id: (vars.input as { pantryItemId: string }).pantryItemId,
           },
         },
@@ -513,7 +516,7 @@ describe('useMoveToPantry pantry item count', () => {
     const rejected = recordMock(MoveShoppingItemToPantryDocument, {
       data: {
         moveShoppingItemToPantry: {
-          __typename: 'ValidationError' as const,
+          __typename: 'ValidationError',
           message: 'nope',
         },
       },
@@ -542,7 +545,7 @@ describe('useMoveToPantry pantry item count', () => {
     const rejected = recordMock(MoveShoppingItemToPantryDocument, {
       data: {
         moveShoppingItemToPantry: {
-          __typename: 'ValidationError' as const,
+          __typename: 'ValidationError',
           message: 'nope',
           field: 'shoppingListItemId',
         },
@@ -575,7 +578,7 @@ describe('useMoveToPantry pantry item count', () => {
     const rejected = recordMock(MoveShoppingItemToPantryDocument, {
       data: {
         moveShoppingItemToPantry: {
-          __typename: 'ValidationError' as const,
+          __typename: 'ValidationError',
           message: 'nope',
         },
       },
@@ -642,7 +645,7 @@ describe('useMoveToPantry pantry item count', () => {
     const rejected = recordMock(MoveShoppingItemToPantryDocument, {
       data: {
         moveShoppingItemToPantry: {
-          __typename: 'ValidationError' as const,
+          __typename: 'ValidationError',
           message: 'nope',
         },
       },

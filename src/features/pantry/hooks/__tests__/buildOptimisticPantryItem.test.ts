@@ -27,7 +27,7 @@ const ITEM_DISPLAY_UNIT = gql`
 `;
 
 const unit = (id: string, symbol: string) => ({
-  __typename: 'Unit' as const,
+  __typename: 'Unit',
   id,
   name: symbol,
   symbol,

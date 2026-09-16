@@ -145,8 +145,9 @@ break, a deliberate oddity); rationale goes in the PR or `docs/`, history in git
 - List cells are **strict** (`null` on `!complete`), detail panels and sheets
   **resilient fallback** with guarded scalar reads — templates:
   `docs/apollo-client-patterns.md` § Fragment Composition & Data Masking.
-- **A selection spreading a type-identifying fragment also selects `id`** —
-  `maskingIdentity.test.ts`.
+- **A selection set on a type that has an `id` selects it DIRECTLY** — a spread
+  fragment is masked, so the key field does not survive
+  (`@graphql-eslint/require-selections`).
 
 ### Mutations & cache updates
 

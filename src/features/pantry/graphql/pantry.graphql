@@ -621,6 +621,7 @@ mutation CreatePantryItem($input: CreatePantryItemInput!) {
           id
           imageUrl
           images {
+            id
             url
             kind
           }

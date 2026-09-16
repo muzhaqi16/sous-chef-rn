@@ -114,6 +114,7 @@ export function pantryItemData(
           ? [
               {
                 __typename: 'ItemCategory',
+                id: 'itemcat1',
                 isPrimary: true,
                 category: {
                   __typename: 'Category',

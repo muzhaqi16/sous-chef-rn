@@ -3,6 +3,7 @@
 import React from 'react';
 import { screen } from '@testing-library/react-native';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   GetPantryItemBatchesDocument,
@@ -134,25 +135,26 @@ function batchesMock(
     createdAt?: string;
   }>,
 ) {
-  return recordMock(GetPantryItemBatchesDocument, {
-    data: {
-      pantryItemBatchesConnection: {
-        __typename: 'PantryItemBatchConnection' as const,
-        edges: batches.map((b, index) => ({
-          __typename: 'PantryItemBatchEdge' as const,
-          node: {
-            __typename: 'PantryItemBatch' as const,
-            id: b.id,
-            batchNumber: index + 1,
-            quantity: b.quantity,
-            status: BatchStatus.Active,
-            costPerUnit: b.costPerUnit,
-            totalCost: b.totalCost ?? null,
-            createdAt: b.createdAt ?? '2026-08-01T00:00:00Z',
-          },
-        })),
-      },
+  const data: MockDataFor<typeof GetPantryItemBatchesDocument> = {
+    pantryItemBatchesConnection: {
+      __typename: 'PantryItemBatchConnection',
+      edges: batches.map((b, index) => ({
+        __typename: 'PantryItemBatchEdge',
+        node: {
+          __typename: 'PantryItemBatch',
+          id: b.id,
+          batchNumber: index + 1,
+          quantity: b.quantity,
+          status: BatchStatus.Active,
+          costPerUnit: b.costPerUnit,
+          totalCost: b.totalCost ?? null,
+          createdAt: b.createdAt ?? '2026-08-01T00:00:00Z',
+        },
+      })),
     },
+  };
+  return recordMock(GetPantryItemBatchesDocument, {
+    data,
   }).mock;
 }
 

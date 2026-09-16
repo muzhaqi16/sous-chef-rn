@@ -3,6 +3,7 @@
 import { act, waitFor } from '@testing-library/react-native';
 import type { Unmasked } from '@apollo/client/masking';
 import { makeCache } from '#/apollo/cache';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -36,9 +37,9 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
 
 const PANTRY_VARS = { id: 'p1', itemsFirst: 100 };
 // Completed from the SDL; only what the assertions read is stated.
-const PANTRY = {
+const PANTRY: MockDataFor<typeof GetPantryDocument> = {
   pantry: {
-    __typename: 'Pantry' as const,
+    __typename: 'Pantry',
     id: 'p1',
     stats: { totalItems: 1 },
     itemsConnection: {
@@ -99,8 +100,11 @@ async function setup(
 describe('usePantryItemSelection.addItem', () => {
   it('shows an offline (queued) create in the pantry list and keeps it', async () => {
     const cache = makeCache();
+    const data: MockDataFor<typeof CreatePantryItemDocument> = {
+      createPantryItem: null,
+    };
     const queued = recordMock(CreatePantryItemDocument, {
-      data: { createPantryItem: null },
+      data,
       partial: true,
     });
     const { result } = await setup(cache, queued);
@@ -129,14 +133,15 @@ describe('usePantryItemSelection.addItem', () => {
 
   it('withdraws the row, count included, when the server refuses the create', async () => {
     const cache = makeCache();
-    const refused = recordMock(CreatePantryItemDocument, {
-      data: {
-        createPantryItem: {
-          __typename: 'ValidationError',
-          code: ErrorCode.ValidationFailed,
-          field: 'itemId',
-        },
+    const data: MockDataFor<typeof CreatePantryItemDocument> = {
+      createPantryItem: {
+        __typename: 'ValidationError',
+        code: ErrorCode.ValidationFailed,
+        field: 'itemId',
       },
+    };
+    const refused = recordMock(CreatePantryItemDocument, {
+      data,
     });
     const { result } = await setup(cache, refused);
 
@@ -154,14 +159,15 @@ describe('usePantryItemSelection.addItem', () => {
 
   it('withdraws the row and reports a duplicate as a skip, not a failure', async () => {
     const cache = makeCache();
-    const duplicate = recordMock(CreatePantryItemDocument, {
-      data: {
-        createPantryItem: {
-          __typename: 'DuplicatePantryItemError',
-          code: ErrorCode.PantryItemAlreadyExists,
-          existingPantryItemIds: ['pi-1'],
-        },
+    const data: MockDataFor<typeof CreatePantryItemDocument> = {
+      createPantryItem: {
+        __typename: 'DuplicatePantryItemError',
+        code: ErrorCode.PantryItemAlreadyExists,
+        existingPantryItemIds: ['pi-1'],
       },
+    };
+    const duplicate = recordMock(CreatePantryItemDocument, {
+      data,
     });
     const { result } = await setup(cache, duplicate);
 
@@ -186,8 +192,11 @@ describe('usePantryItemSelection.addItem', () => {
 describe('usePantryItemSelection.removeItem', () => {
   it('removes the row before the delete settles and keeps the removal when it is queued', async () => {
     const cache = makeCache();
+    const data: MockDataFor<typeof DeletePantryItemDocument> = {
+      deletePantryItem: null,
+    };
     const queued = recordMock(DeletePantryItemDocument, {
-      data: { deletePantryItem: null },
+      data,
       partial: true,
     });
     const { result } = await setup(cache, queued);
@@ -205,13 +214,14 @@ describe('usePantryItemSelection.removeItem', () => {
 
   it('restores the row through a refetch when the server refuses the delete', async () => {
     const cache = makeCache();
-    const refused = recordMock(DeletePantryItemDocument, {
-      data: {
-        deletePantryItem: {
-          __typename: 'ForbiddenError',
-          code: ErrorCode.Forbidden,
-        },
+    const data: MockDataFor<typeof DeletePantryItemDocument> = {
+      deletePantryItem: {
+        __typename: 'ForbiddenError',
+        code: ErrorCode.Forbidden,
       },
+    };
+    const refused = recordMock(DeletePantryItemDocument, {
+      data,
     });
     const { result, getPantry } = await setup(cache, refused);
 

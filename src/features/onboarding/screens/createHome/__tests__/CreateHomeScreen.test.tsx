@@ -437,9 +437,9 @@ function buildCreatePantryMock(): MockFor<typeof CreatePantryDocument> {
     result: (variables: Record<string, unknown>) => ({
       data: {
         createPantry: {
-          __typename: 'CreatePantryPayload' as const,
+          __typename: 'CreatePantryPayload',
           pantry: {
-            __typename: 'Pantry' as const,
+            __typename: 'Pantry',
             id: (variables.input as { id: string }).id,
             name: 'Kitchen',
             isDefault: true,

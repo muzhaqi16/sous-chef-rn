@@ -252,7 +252,7 @@ describe('useRecipeCookingActions', () => {
     const cooked = cookedMock({
       kind: 'success',
       skipped: ['Garlic', 'Basil', 'Thyme', 'Sage', 'Dill'].map(itemName => ({
-        __typename: 'SkippedRecipeIngredient' as const,
+        __typename: 'SkippedRecipeIngredient',
         itemName,
         code: ErrorCode.UnitInvalid,
       })),

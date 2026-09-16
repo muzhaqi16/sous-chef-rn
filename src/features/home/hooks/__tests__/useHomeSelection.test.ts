@@ -1,5 +1,6 @@
 import { act } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -72,21 +73,22 @@ const createMockHomeNode = (
   overrides?: MockHomeNodeOverrides,
 ): MockHomeNode => {
   const { pantries, ...rest } = overrides ?? {};
-  const pantriesConnection = pantries
-    ? {
-        __typename: 'PantryConnection' as const,
-        totalCount: pantries.length,
-        edges: pantries.map(pantry => ({
-          __typename: 'PantryEdge' as const,
-          node: {
-            __typename: 'Pantry' as const,
-            id: pantry.id,
-            name: pantry.name ?? 'Test Pantry',
-            isDefault: pantry.isDefault ?? false,
-          },
-        })),
-      }
-    : undefined;
+  const pantriesConnection: MockHomeNode['pantriesConnection'] | undefined =
+    pantries
+      ? {
+          __typename: 'PantryConnection',
+          totalCount: pantries.length,
+          edges: pantries.map(pantry => ({
+            __typename: 'PantryEdge',
+            node: {
+              __typename: 'Pantry',
+              id: pantry.id,
+              name: pantry.name ?? 'Test Pantry',
+              isDefault: pantry.isDefault ?? false,
+            },
+          })),
+        }
+      : undefined;
 
   return {
     __typename: 'Home',
@@ -143,35 +145,37 @@ beforeEach(() => {
 });
 
 function setDefaultMock(defaultPantryId: string | null = null) {
-  return recordMock(MarkHomeAsDefaultDocument, {
-    data: {
-      markHomeAsDefault: {
-        __typename: 'MarkHomeAsDefaultPayload',
-        settings: {
-          __typename: 'UserSettings',
-          id: 'settings-1',
-        },
-        defaultPantry: defaultPantryId
-          ? { __typename: 'Pantry', id: defaultPantryId }
-          : null,
+  const data: MockDataFor<typeof MarkHomeAsDefaultDocument> = {
+    markHomeAsDefault: {
+      __typename: 'MarkHomeAsDefaultPayload',
+      settings: {
+        __typename: 'UserSettings',
+        id: 'settings-1',
       },
+      defaultPantry: defaultPantryId
+        ? { __typename: 'Pantry', id: defaultPantryId }
+        : null,
     },
+  };
+  return recordMock(MarkHomeAsDefaultDocument, {
+    data,
   });
 }
 
 function setDefaultFailureMock() {
-  return recordMock(MarkHomeAsDefaultDocument, {
-    data: {
-      markHomeAsDefault: {
-        __typename: 'NotFoundError',
-        // Stated, not left to SDL completion: completion pins the union member
-        // from `__typename` but fills `code` deterministically with the first
-        // `ErrorCode` value, which is not the refusal this test means. There is
-        // no `HOME_NOT_FOUND` in the enum — only `NOT_FOUND`.
-        code: ErrorCode.NotFound,
-        message: 'Home not found',
-      },
+  const data: MockDataFor<typeof MarkHomeAsDefaultDocument> = {
+    markHomeAsDefault: {
+      __typename: 'NotFoundError',
+      // Stated, not left to SDL completion: completion pins the union member
+      // from `__typename` but fills `code` deterministically with the first
+      // `ErrorCode` value, which is not the refusal this test means. There is
+      // no `HOME_NOT_FOUND` in the enum — only `NOT_FOUND`.
+      code: ErrorCode.NotFound,
+      message: 'Home not found',
     },
+  };
+  return recordMock(MarkHomeAsDefaultDocument, {
+    data,
   });
 }
 
@@ -180,8 +184,11 @@ function setDefaultFailureMock() {
  * null, and no error. `settledStatus` reads that as `'queued'`.
  */
 function queuedMock() {
+  const data: MockDataFor<typeof MarkHomeAsDefaultDocument> = {
+    markHomeAsDefault: null,
+  };
   return recordMock(MarkHomeAsDefaultDocument, {
-    data: { markHomeAsDefault: null },
+    data,
     partial: true,
   });
 }
@@ -302,28 +309,27 @@ describe('useHomeSelection', () => {
       // `GetHomes` returns `pantriesConnection`, never a flat `pantries` array,
       // so reading only `pantries` cleared the pantry on every real switch.
       const m = setDefaultMock(); // server returns no defaultPantry
-      const homes = [
+      const homes: MockHomeNode[] = [
         createMockHomeNode({ id: 'home-1', name: 'Home 1' }),
         {
           ...createMockHomeNode({ id: 'home-2', name: 'Home 2' }),
-          pantries: undefined,
           pantriesConnection: {
-            __typename: 'PantryConnection' as const,
+            __typename: 'PantryConnection',
             totalCount: 2,
             edges: [
               {
-                __typename: 'PantryEdge' as const,
+                __typename: 'PantryEdge',
                 node: {
-                  __typename: 'Pantry' as const,
+                  __typename: 'Pantry',
                   id: 'pantry-a',
                   name: 'A',
                   isDefault: false,
                 },
               },
               {
-                __typename: 'PantryEdge' as const,
+                __typename: 'PantryEdge',
                 node: {
-                  __typename: 'Pantry' as const,
+                  __typename: 'Pantry',
                   id: 'pantry-b',
                   name: 'B',
                   isDefault: true,

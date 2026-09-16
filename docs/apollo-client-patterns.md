@@ -1151,7 +1151,8 @@ also select `id` directly** (e.g.
 `shoppingListItem(id: $id) { id ...ItemDetail_shoppingListItem }`). It's free —
 `id` is already fetched inside the fragment; selecting it at the parent level
 just keeps the key field visible after masking. Enforced for every operation
-and fragment by `__tests__/graphql/maskingIdentity.test.ts`.
+and fragment by `@graphql-eslint/require-selections`, which asks it of any type
+carrying an `id`, spread or not.
 
 ### Mutation optimistic responses and `Unmasked<>`
 

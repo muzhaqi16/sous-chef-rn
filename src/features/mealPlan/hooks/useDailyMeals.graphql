@@ -4,6 +4,7 @@ fragment DailyMeals_item on MealPlanItem {
   mealType
   customMealName
   recipe {
+    id
     name
   }
 }

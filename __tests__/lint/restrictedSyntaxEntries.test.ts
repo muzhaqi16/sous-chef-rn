@@ -213,6 +213,14 @@ const TEST_FIXTURES: Fixture[] = [
     valid: ['jest.mock("#/services/haptic");'],
   },
   {
+    id: 'typenameAsConst',
+    invalid: ["const a = { __typename: 'Home' as const, id: 'h1' };"],
+    valid: [
+      "const a: HomeNode = { __typename: 'Home', id: 'h1' };",
+      'const steps = [1, 2] as const;',
+    ],
+  },
+  {
     id: 'bareInMemoryCache',
     invalid: [
       'import { renderWithApollo } from "#/test-utils/apolloMockProvider"; const cache = new InMemoryCache();',

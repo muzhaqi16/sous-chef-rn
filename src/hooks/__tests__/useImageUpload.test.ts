@@ -1,7 +1,7 @@
 'use no memo';
 
 import { act } from '@testing-library/react-native';
-import type { MockFor } from '#/test-utils/apolloMockProvider';
+import type { MockFor, MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   recordMock,
@@ -16,6 +16,7 @@ import { Telemetry } from '#/services/telemetry';
 import { ErrorCode, ProfileVisibility } from '#/graphql/generated/schemaTypes';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { useImageUpload } from '../useImageUpload';
+import type { UploadFormField } from '#/graphql/generated/schemaTypes';
 
 type ImageUploadApi = ReturnType<typeof useImageUpload>;
 type ProfileResult = Awaited<
@@ -135,11 +136,11 @@ beforeEach(() => {
 
 // The presigned POST the server hands back. `fields` is the storage policy and
 // is non-null on the payload — the upload is rejected without every entry.
-const PRESIGN_FIELDS = [
-  { __typename: 'UploadFormField' as const, name: 'key', value: 'items/i1/a' },
-  { __typename: 'UploadFormField' as const, name: 'policy', value: 'eyJ0' },
+const PRESIGN_FIELDS: UploadFormField[] = [
+  { __typename: 'UploadFormField', name: 'key', value: 'items/i1/a' },
+  { __typename: 'UploadFormField', name: 'policy', value: 'eyJ0' },
   {
-    __typename: 'UploadFormField' as const,
+    __typename: 'UploadFormField',
     name: 'x-amz-signature',
     value: 'sig',
   },
@@ -303,15 +304,16 @@ describe('useImageUpload', () => {
       // Some Android providers report the non-standard 'image/jpg'; the API
       // accepts only image/jpeg | image/png | image/webp and rejects the raw
       // value with a ValidationError.
-      const { mock, fired } = recordMock(CreateImageUploadUrlDocument, {
-        data: {
-          createImageUploadUrl: {
-            __typename: 'CreateImageUploadUrlPayload',
-            url: 'https://storage.test/bucket',
-            key: 'items/i1/a',
-            fields: PRESIGN_FIELDS,
-          },
+      const data: MockDataFor<typeof CreateImageUploadUrlDocument> = {
+        createImageUploadUrl: {
+          __typename: 'CreateImageUploadUrlPayload',
+          url: 'https://storage.test/bucket',
+          key: 'items/i1/a',
+          fields: PRESIGN_FIELDS,
         },
+      };
+      const { mock, fired } = recordMock(CreateImageUploadUrlDocument, {
+        data,
       });
 
       const { result } = renderHookWithApollo(() => useImageUpload(), {
@@ -350,13 +352,14 @@ describe('useImageUpload', () => {
     });
 
     function recordConfirm() {
-      return recordMock(ConfirmItemImageUploadDocument, {
-        data: {
-          confirmItemImageUpload: {
-            __typename: 'ConfirmItemImageUploadPayload',
-            url: 'https://cdn.test/a.jpg',
-          },
+      const data: MockDataFor<typeof ConfirmItemImageUploadDocument> = {
+        confirmItemImageUpload: {
+          __typename: 'ConfirmItemImageUploadPayload',
+          url: 'https://cdn.test/a.jpg',
         },
+      };
+      return recordMock(ConfirmItemImageUploadDocument, {
+        data,
         maxUsageCount: 10,
       });
     }

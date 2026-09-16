@@ -211,10 +211,11 @@ const overrides = [
           OperationDefinition: { style: 'PascalCase' },
         },
       ],
-      // Each needs source changes rather than config, and is adopted on its own:
-      // `require-selections` reports selections missing an available `id`, and
-      // `no-unused-fragments` reports fragments no operation spreads.
-      '@graphql-eslint/require-selections': 'off',
+      // Most fragments here are never spread: the cache writers pass the
+      // generated document to `readFragment` / `writeFragment` from
+      // TypeScript, which this rule cannot see, so it reports nearly all of
+      // them. `__tests__/graphql/fragmentsAreReachable.test.ts` holds the
+      // invariant instead, reading the generated exports.
       '@graphql-eslint/no-unused-fragments': 'off',
       // JS/TS rules that traverse the AST do not understand GraphQL's.
       'no-barrel-files/no-barrel-files': 'off',

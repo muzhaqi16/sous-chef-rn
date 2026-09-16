@@ -39,6 +39,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     canEdit
     imageUrl
     images {
+      id
       url
       kind
     }
@@ -70,6 +71,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
       servingUnit
     }
     categories {
+      id
       isPrimary
       category {
         id

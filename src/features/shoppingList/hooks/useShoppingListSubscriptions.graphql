@@ -38,31 +38,9 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
     id
     imageUrl
     images {
+      id
       url
       kind
-    }
-  }
-}
-
-fragment useShoppingListSubscriptions_collaborator on ShoppingListCollaborator {
-  id
-  email
-  role
-  status
-  collaboratorId
-  canAddItems
-  canRemoveItems
-  canEditItems
-  canMarkPurchased
-  invitedAt
-  collaborator {
-    id
-    email
-    displayName
-    profile {
-      id
-      displayName
-      avatar
     }
   }
 }

@@ -38,7 +38,7 @@ const writeCount = (count: number) =>
   mockCache.writeQuery({
     query: GetUnreadNotificationsDocument,
     data: {
-      __typename: 'Query' as const,
+      __typename: 'Query',
       me: {
         __typename: 'User',
         id: 'me',

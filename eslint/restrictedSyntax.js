@@ -195,6 +195,13 @@ const PRODUCTION_SYNTAX = [
 // for tests, and one rule id cannot carry both sets.
 const TEST_SYNTAX = [
   {
+    id: 'typenameAsConst',
+    selector:
+      "Property[key.name='__typename'] > TSAsExpression > TSTypeReference[typeName.name='const']",
+    message:
+      "Do not assert `__typename` with `as const`. Annotate the fixture with its document's type instead — `MockDataFor<typeof XDocument>`, `QueryDataFor<typeof XDocument>` or the generated fragment — which narrows every `__typename` inside it AND fails when the selection gains a field the fixture omits.",
+  },
+  {
     id: 'apolloReactMock',
     selector:
       'CallExpression[callee.object.name="jest"][callee.property.name="mock"][arguments.0.value="@apollo/client/react"]',

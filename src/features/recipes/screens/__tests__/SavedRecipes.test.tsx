@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   MySavedRecipesDocument,
@@ -65,7 +66,7 @@ function savedPage(
 describe('SavedRecipes tag filter', () => {
   it('loads the remaining pages when the tag picker opens, so a tag used only on page 2 is offered', async () => {
     const saved = recordMock(MySavedRecipesDocument, {
-      data: vars =>
+      dataFor: (vars): MockDataFor<typeof MySavedRecipesDocument> =>
         vars.after === 'page-1'
           ? savedPage([{ id: 'sr-2', tags: ['Vegan'] }], null)
           : savedPage([{ id: 'sr-1', tags: [] }], 'page-1'),

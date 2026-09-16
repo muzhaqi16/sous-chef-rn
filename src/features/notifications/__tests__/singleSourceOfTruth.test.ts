@@ -17,6 +17,8 @@ import {
   NotificationType,
   Priority,
 } from '#/graphql/generated/schemaTypes';
+import type { QueryDataFor } from '#/test-utils/apolloMockProvider';
+import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -24,8 +26,8 @@ jest.mock('#/apollo/links/refreshToken');
 const node = (
   id: string,
   status: NotificationStatus = NotificationStatus.Sent,
-) => ({
-  __typename: 'Notification' as const,
+): UseNotificationsOnLaunch_NotificationFragment => ({
+  __typename: 'Notification',
   id,
   type: NotificationType.CollaborationInvite,
   isAuthoredContent: false,
@@ -46,33 +48,31 @@ const node = (
 
 const VARS = { filter: undefined, first: 30 };
 
-const write = (cache: InMemoryCache, ids: string[], unread: number) =>
-  cache.writeQuery({
-    query: GetNotificationsDocument,
-    variables: VARS,
-    data: {
-      __typename: 'Query' as const,
-      me: {
-        __typename: 'User',
-        id: 'me',
-        unreadNotificationCount: unread,
-        hasUrgentNotifications: false,
-        notificationsConnection: {
-          __typename: 'NotificationConnection',
-          edges: ids.map(id => ({
-            __typename: 'NotificationEdge' as const,
-            node: node(id),
-          })),
-          pageInfo: {
-            __typename: 'PageInfo',
-            hasNextPage: false,
-            endCursor: null,
-          },
-          totalCount: ids.length,
+const write = (cache: InMemoryCache, ids: string[], unread: number) => {
+  const data: QueryDataFor<typeof GetNotificationsDocument> = {
+    __typename: 'Query',
+    me: {
+      __typename: 'User',
+      id: 'me',
+      unreadNotificationCount: unread,
+      hasUrgentNotifications: false,
+      notificationsConnection: {
+        __typename: 'NotificationConnection',
+        edges: ids.map(id => ({
+          __typename: 'NotificationEdge',
+          node: node(id),
+        })),
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: null,
         },
+        totalCount: ids.length,
       },
     },
-  });
+  };
+  cache.writeQuery({ query: GetNotificationsDocument, variables: VARS, data });
+};
 
 // The query's own generated type is masked; these assertions reach through
 // it deliberately, so the reads are shaped rather than typed.

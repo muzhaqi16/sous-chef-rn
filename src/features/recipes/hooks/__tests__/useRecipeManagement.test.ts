@@ -1,5 +1,6 @@
 import { act, waitFor } from '@testing-library/react-native';
 import { useApolloClient } from '@apollo/client/react';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -29,9 +30,15 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function buildRecipeNode(id: string, name: string) {
+type RecipeNode = NonNullable<
+  NonNullable<
+    NonNullable<MockDataFor<typeof MyRecipesDocument>['recipes']>['edges']
+  >[number]['node']
+>;
+
+function buildRecipeNode(id: string, name: string): RecipeNode {
   return {
-    __typename: 'Recipe' as const,
+    __typename: 'Recipe',
     id,
     name,
     description: null,
@@ -47,26 +54,26 @@ function recipesMock() {
   return recordMock(MyRecipesDocument, {
     data: {
       recipes: {
-        __typename: 'RecipeConnection' as const,
+        __typename: 'RecipeConnection',
         edges: [
           {
-            __typename: 'RecipeEdge' as const,
+            __typename: 'RecipeEdge',
             cursor: 'c1',
             node: buildRecipeNode('r1', 'Pasta'),
           },
           {
-            __typename: 'RecipeEdge' as const,
+            __typename: 'RecipeEdge',
             cursor: 'c2',
             node: buildRecipeNode('r2', 'Salad'),
           },
           {
-            __typename: 'RecipeEdge' as const,
+            __typename: 'RecipeEdge',
             cursor: 'c3',
             node: buildRecipeNode('r3', 'Soup'),
           },
         ],
         pageInfo: {
-          __typename: 'PageInfo' as const,
+          __typename: 'PageInfo',
           hasNextPage: false,
           endCursor: null,
         },
@@ -79,14 +86,16 @@ function recipesMock() {
 // Page one ends at `page-1`; asking past it returns the last recipe.
 function pagedRecipesMock() {
   return recordMock(MyRecipesDocument, {
-    data: (vars: Record<string, unknown>) => {
+    dataFor: (
+      vars: Record<string, unknown>,
+    ): MockDataFor<typeof MyRecipesDocument> => {
       const secondPage = vars.cursor === 'page-1';
       return {
         recipes: {
-          __typename: 'RecipeConnection' as const,
+          __typename: 'RecipeConnection',
           edges: [
             {
-              __typename: 'RecipeEdge' as const,
+              __typename: 'RecipeEdge',
               cursor: secondPage ? 'c2' : 'c1',
               node: secondPage
                 ? buildRecipeNode('r2', 'Lasagne')
@@ -94,7 +103,7 @@ function pagedRecipesMock() {
             },
           ],
           pageInfo: {
-            __typename: 'PageInfo' as const,
+            __typename: 'PageInfo',
             hasNextPage: !secondPage,
             endCursor: secondPage ? null : 'page-1',
           },

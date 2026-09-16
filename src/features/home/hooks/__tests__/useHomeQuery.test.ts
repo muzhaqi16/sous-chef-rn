@@ -1,4 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -32,15 +33,19 @@ type HomeFixture = {
   pantries?: Array<{ id: string; name?: string; isDefault?: boolean }>;
 };
 
-function homeNode(h: HomeFixture) {
+type HomeNode = NonNullable<
+  NonNullable<MockDataFor<typeof GetHomesDocument>['homes']>['edges']
+>[number]['node'];
+
+function homeNode(h: HomeFixture): HomeNode {
   return {
-    __typename: 'Home' as const,
+    __typename: 'Home',
     id: h.id,
     name: h.name ?? `Home ${h.id}`,
     isDefault: h.isDefault ?? false,
     version: h.version ?? 1,
     myMembership: {
-      __typename: 'Membership' as const,
+      __typename: 'Membership',
       id: `mm-${h.id}`,
       role: MembershipRole.Owner,
       canManageHome: true,
@@ -51,12 +56,12 @@ function homeNode(h: HomeFixture) {
       canInviteOthers: true,
     },
     pantriesConnection: {
-      __typename: 'PantryConnection' as const,
+      __typename: 'PantryConnection',
       totalCount: h.pantriesTotalCount ?? h.pantries?.length ?? 0,
       edges: (h.pantries ?? []).map(p => ({
-        __typename: 'PantryEdge' as const,
+        __typename: 'PantryEdge',
         node: {
-          __typename: 'Pantry' as const,
+          __typename: 'Pantry',
           id: p.id,
           name: p.name ?? `Pantry ${p.id}`,
           isDefault: p.isDefault ?? false,
@@ -64,12 +69,12 @@ function homeNode(h: HomeFixture) {
       })),
     },
     membersConnection: {
-      __typename: 'MembershipConnection' as const,
+      __typename: 'MembershipConnection',
       totalCount: h.membersTotalCount ?? 0,
       edges: [],
     },
     invitesConnection: {
-      __typename: 'HomeInviteConnection' as const,
+      __typename: 'HomeInviteConnection',
       totalCount: 0,
       edges: [],
     },
@@ -77,25 +82,26 @@ function homeNode(h: HomeFixture) {
 }
 
 function homesMock(homes: HomeFixture[] | null): MockedResponse {
+  const data: MockDataFor<typeof GetHomesDocument> = {
+    homes: homes
+      ? {
+          __typename: 'HomeConnection',
+          edges: homes.map((h, i) => ({
+            __typename: 'HomeEdge',
+            cursor: `c${i}`,
+            node: homeNode(h),
+          })),
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: false,
+            endCursor: null,
+          },
+          totalCount: homes.length,
+        }
+      : null,
+  };
   return recordMock(GetHomesDocument, {
-    data: {
-      homes: homes
-        ? {
-            __typename: 'HomeConnection' as const,
-            edges: homes.map((h, i) => ({
-              __typename: 'HomeEdge' as const,
-              cursor: `c${i}`,
-              node: homeNode(h),
-            })),
-            pageInfo: {
-              __typename: 'PageInfo' as const,
-              hasNextPage: false,
-              endCursor: null,
-            },
-            totalCount: homes.length,
-          }
-        : null,
-    },
+    data,
   }).mock;
 }
 

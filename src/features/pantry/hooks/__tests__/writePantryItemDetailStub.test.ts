@@ -33,7 +33,8 @@ function seedScannedItem(cache: ReturnType<typeof makeCache>, id: string) {
       shelfLifeOpenedDays: 5,
       categories: [
         {
-          __typename: 'ItemCategoryLink',
+          __typename: 'ItemCategory',
+          id: 'item-cat-1',
           isPrimary: true,
           category: { __typename: 'Category', id: 'cat-1', name: 'Dairy' },
         },
@@ -51,6 +52,7 @@ const gqlPartialItem = gql`
     shelfLifeDays
     shelfLifeOpenedDays
     categories {
+      id
       isPrimary
       category {
         id

@@ -85,6 +85,7 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
     canEdit
     imageUrl
     images {
+      id
       url
       kind
     }

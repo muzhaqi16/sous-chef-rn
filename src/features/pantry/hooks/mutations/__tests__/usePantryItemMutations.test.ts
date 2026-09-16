@@ -46,7 +46,7 @@ function deleteMock() {
   return recordMock(DeletePantryItemDocument, {
     data: {
       deletePantryItem: {
-        __typename: 'DeletePantryItemPayload' as const,
+        __typename: 'DeletePantryItemPayload',
         pantryItem: { __typename: 'PantryItem', id: 'item-1' },
       },
     },
@@ -57,7 +57,7 @@ function convergedDeleteMock() {
   return recordMock(DeletePantryItemDocument, {
     data: {
       deletePantryItem: {
-        __typename: 'DeletePantryItemPayload' as const,
+        __typename: 'DeletePantryItemPayload',
         converged: true,
         pantryItem: null,
       },

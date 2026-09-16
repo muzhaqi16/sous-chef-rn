@@ -1,4 +1,5 @@
 import { toDisplayNotification } from '../toDisplayNotification';
+import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 import {
   NotificationCategory,
   NotificationSourceType,
@@ -7,8 +8,8 @@ import {
   Priority,
 } from '#/graphql/generated/schemaTypes';
 
-const base = {
-  __typename: 'Notification' as const,
+const base: UseNotificationsOnLaunch_NotificationFragment = {
+  __typename: 'Notification',
   id: 'n-1',
   type: NotificationType.ExpiryReminder,
   isAuthoredContent: false,

@@ -1,5 +1,6 @@
 'use no memo';
 import { act, waitFor } from '@testing-library/react-native';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -20,7 +21,7 @@ function seedPlanCache(
       // fails here instead of defining its own idea of complete.
       fragment: MealPlanDisplayFragmentDoc,
       data: {
-        __typename: 'MealPlan' as const,
+        __typename: 'MealPlan',
         id: p.id,
         name: `Plan ${p.id}`,
         description: null,
@@ -36,7 +37,7 @@ function seedPlanCache(
         budgetAmount: null,
         homeId: 'h1',
         home: null,
-        user: { __typename: 'User' as const, id: `u-${p.id}` },
+        user: { __typename: 'User', id: `u-${p.id}` },
         createdBy: null,
         version: 1,
         createdAt: '2025-01-01T00:00:00Z',
@@ -67,32 +68,34 @@ beforeEach(() => {
 function planData(
   plans: Array<{ id: string; startDate: string; endDate: string }>,
 ): MockedResponse {
-  return recordMock(GetMealPlansDocument, {
-    data: {
-      mealPlans: {
-        __typename: 'MealPlanConnection' as const,
-        edges: plans.map(p => ({
-          __typename: 'MealPlanEdge' as const,
-          cursor: p.id,
-          node: {
-            __typename: 'MealPlan' as const,
-            ...p,
-          },
-        })),
-        totalCount: plans.length,
-        pageInfo: {
-          __typename: 'PageInfo' as const,
-          hasNextPage: false,
-          endCursor: null,
+  const data: MockDataFor<typeof GetMealPlansDocument> = {
+    mealPlans: {
+      __typename: 'MealPlanConnection',
+      edges: plans.map(p => ({
+        __typename: 'MealPlanEdge',
+        cursor: p.id,
+        node: {
+          __typename: 'MealPlan',
+          ...p,
         },
+      })),
+      totalCount: plans.length,
+      pageInfo: {
+        __typename: 'PageInfo',
+        hasNextPage: false,
+        endCursor: null,
       },
     },
+  };
+  return recordMock(GetMealPlansDocument, {
+    data,
   }).mock;
 }
 
 function emptyMock(): MockedResponse {
+  const data: MockDataFor<typeof GetMealPlansDocument> = { mealPlans: null };
   return recordMock(GetMealPlansDocument, {
-    data: { mealPlans: null },
+    data,
   }).mock;
 }
 
@@ -146,16 +149,19 @@ describe('useMealPlans', () => {
       startDate: new Date(Date.now() + startOffsetDays * DAY).toISOString(),
       endDate: new Date(Date.now() + (startOffsetDays + 6) * DAY).toISOString(),
     });
-    const connection = (plans: Plan[], endCursor: string | null) => ({
+    const connection = (
+      plans: Plan[],
+      endCursor: string | null,
+    ): MockDataFor<typeof GetMealPlansDocument> => ({
       mealPlans: {
-        __typename: 'MealPlanConnection' as const,
+        __typename: 'MealPlanConnection',
         edges: plans.map(p => ({
-          __typename: 'MealPlanEdge' as const,
+          __typename: 'MealPlanEdge',
           cursor: p.id,
-          node: { __typename: 'MealPlan' as const, ...p },
+          node: { __typename: 'MealPlan', ...p },
         })),
         pageInfo: {
-          __typename: 'PageInfo' as const,
+          __typename: 'PageInfo',
           hasNextPage: endCursor !== null,
           endCursor,
         },
@@ -171,7 +177,7 @@ describe('useMealPlans', () => {
 
     const serverMock = () =>
       recordMock(GetMealPlansDocument, {
-        data: vars => {
+        dataFor: (vars): MockDataFor<typeof GetMealPlansDocument> => {
           const filters = vars.filters as { startDate?: string } | undefined;
           if (filters?.startDate)
             return connection([nearest, ...farFuture], null);
