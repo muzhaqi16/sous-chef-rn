@@ -155,6 +155,14 @@ const overrides = [
     languageOptions: { globals: globals.jest },
   },
   {
+    // A hook's return type is the other half of the data-layer boundary: the
+    // import rule cannot see a screen coupled by TYPE alone.
+    files: ['src/features/*/hooks/**/*.{ts,tsx}'],
+    ignores: [...TEST_FILES, '**/__mocks__/**', '**/*.generated.ts'],
+    languageOptions: { parserOptions: TYPED },
+    rules: { 'sous-chef/hook-returns-no-library-type': 'error' },
+  },
+  {
     // The queue BUILDS and replays these writes; it is not one of their
     // callers, so the marker does not apply to it.
     files: ['src/apollo/offlineQueue/**/*.{ts,tsx}'],

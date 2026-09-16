@@ -132,7 +132,7 @@ break, a deliberate oddity); rationale goes in the PR or `docs/`, history in git
   `#/apollo/*`, Apollo's operation hooks, the client or a cache write
   (`import/no-restricted-paths`); `useFragment` and masking types stay allowed.
 - **A hook hands back plain values and callbacks, no library type**; a mutate
-  wrapper returns what `settleMutation` settled, or its own outcome — `hookReturnTypes.test.ts`
+  wrapper returns what `settleMutation` settled, or its own outcome — `sous-chef/hook-returns-no-library-type`
   (`docs/apollo-client-patterns.md` § The data layer stays out of what renders).
 
 ### Fragments & data masking

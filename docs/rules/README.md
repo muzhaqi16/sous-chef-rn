@@ -29,6 +29,7 @@ exemption is a file-scoped override in `eslint/project.js`, where review sees it
 | [`sous-chef/no-number-noun-concat`](no-number-noun-concat.md)                   | A count and its noun are one translated sentence, never a number joined to a string.            |
 | [`sous-chef/queueable-write-is-local-first`](queueable-write-is-local-first.md) | A write the offline queue can take writes the cache first and says so.                          |
 | [`sous-chef/recycling-list-host-is-bounded`](recycling-list-host-is-bounded.md) | A recycling list is bounded by the view that hosts it.                                          |
+| [`sous-chef/hook-returns-no-library-type`](hook-returns-no-library-type.md)     | A feature hook hands a screen no library type.                                                  |
 
 A ban that is one esquery selector and nothing else is an entry of the stock
 `no-restricted-syntax` rule instead of a rule of its own — the catalog of those

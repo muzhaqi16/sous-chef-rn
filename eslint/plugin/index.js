@@ -25,5 +25,6 @@ module.exports = {
     'no-number-noun-concat': require('./rules/no-number-noun-concat'),
     'queueable-write-is-local-first': require('./rules/queueable-write-is-local-first'),
     'recycling-list-host-is-bounded': require('./rules/recycling-list-host-is-bounded'),
+    'hook-returns-no-library-type': require('./rules/hook-returns-no-library-type'),
   },
 };

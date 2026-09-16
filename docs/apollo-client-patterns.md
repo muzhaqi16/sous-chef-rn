@@ -32,7 +32,7 @@ What a hook HANDS BACK matters as much as what a screen imports: a leaked
 returns plain values and callbacks — `loading` as a boolean, an outcome the
 caller branches on, named functions — and a mutate wrapper hands back what
 `settleMutation` settled (`Settled<TData>`), or its own outcome union, never
-Apollo's own result generic. `__tests__/architecture/hookReturnTypes.test.ts` resolves
+Apollo's own result generic. `sous-chef/hook-returns-no-library-type` resolves
 every feature hook's return type through the checker and fails on a library
 type in it or one property down.
 
