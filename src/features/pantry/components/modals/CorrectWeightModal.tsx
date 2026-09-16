@@ -24,6 +24,7 @@ import {
   parseWeight,
   type CorrectWeightFormValues,
 } from './correctWeightFormConfig';
+import { logValidationErrors } from '#/utils/validation/common';
 
 interface CorrectWeightModalProps {
   visible: boolean;
@@ -102,7 +103,7 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
         : undefined,
     );
     onClose();
-  });
+  }, logValidationErrors);
 
   const currentWeightText = formatNetWeightDisplay(
     pantryItem?.netWeight,

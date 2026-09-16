@@ -26,6 +26,7 @@ import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
+import { logValidationErrors } from '#/utils/validation/common';
 
 type InviteEntry = {
   id: string;
@@ -84,7 +85,7 @@ export const InviteMemberScreen = () => {
       { id: Date.now().toString(), email: normalizeInviteEmail(values.email) },
     ]);
     reset({ email: '' });
-  });
+  }, logValidationErrors);
 
   const removeInvite = (id: string) => {
     setInvites(invites.filter(invite => invite.id !== id));

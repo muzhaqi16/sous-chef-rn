@@ -25,6 +25,7 @@ import {
   shareInviteDefaults,
   type ShareInviteFormValues,
 } from './shareInviteFormConfig';
+import { logValidationErrors } from '#/utils/validation/common';
 
 const buildRoleOptions = (t: Translate) =>
   INVITE_ROLES.map(role => ({
@@ -72,7 +73,7 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
       );
       if (sent) resetField('email');
     }, setSharing);
-  });
+  }, logValidationErrors);
 
   return (
     <View style={styles.inviteSection}>

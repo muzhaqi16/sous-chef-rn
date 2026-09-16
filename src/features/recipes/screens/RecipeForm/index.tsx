@@ -32,6 +32,7 @@ import type { RecipeCreatedBy } from '#features/recipes/utils/recipeCacheWriters
 import { localizedErrorMessage } from '#/services/errorService';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { recipesTestIDs } from '#features/recipes/testIDs';
+import { logValidationErrors } from '#/utils/validation/common';
 
 /** The fields whose sections render their own validation message. */
 const FIELDS_WITH_MESSAGES: ReadonlyArray<keyof RecipeFormState> = [
@@ -126,7 +127,7 @@ export const RecipeFormScreen: React.FC<
 
   // A field the user can fix is reported ON the field: the list sections carry
   // their own message, and the basic fields render theirs under the input.
-  const handleSave = form.handleSubmit(onValid);
+  const handleSave = form.handleSubmit(onValid, logValidationErrors);
 
   // Ingredient handlers
   const handleEditIngredient = (ingredient: IngredientFormState) => {
