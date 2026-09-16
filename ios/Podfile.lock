@@ -7,7 +7,7 @@ PODS:
   - hermes-engine (250829098.0.17):
     - hermes-engine/Pre-built (= 250829098.0.17)
   - hermes-engine/Pre-built (250829098.0.17)
-  - LiquidGlass (0.7.1):
+  - LiquidGlass (0.8.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1774,7 +1774,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-skia (2.11.1):
+  - react-native-skia (2.11.2):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2290,7 +2290,7 @@ PODS:
     - Yoga
   - RNDeviceInfo (15.0.2):
     - React-Core
-  - RNGestureHandler (3.2.1):
+  - RNGestureHandler (3.3.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2340,7 +2340,7 @@ PODS:
     - RNNotifee/NotifeeCore (= 9.1.8)
   - RNNotifee/NotifeeCore (9.1.8):
     - React-Core
-  - RNPermissions (5.6.1):
+  - RNPermissions (5.6.2):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -3036,7 +3036,7 @@ SPEC CHECKSUMS:
   FBLazyVector: 2138c6c2ab66c31bf5754dc18097fbc498a49c7f
   Gifu: 9f7e52357d41c0739709019eb80a71ad9aab1b6d
   hermes-engine: 63c5db7d529c36335fada6582fd293ae2a105d77
-  LiquidGlass: 79edfdadba32c29aa45772a4684cfead35698e9a
+  LiquidGlass: 4418f983225b9cfd8ae81b2196088d91ef7b973d
   MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa
   NitroImage: 5daf897d2f37ed419186278d6b0fcdd8aab313b0
   NitroMmkv: 85a251e15c39d7c95fe58cf40786fa126b8d143c
@@ -3087,7 +3087,7 @@ SPEC CHECKSUMS:
   react-native-pager-view: 1c005017ae5f344608af076f9aa4eb984ee6ec1c
   react-native-performance: 3290079971f56838ae50f7f1d65d6e075d88b932
   react-native-safe-area-context: 8368d1052ccc8fe8725adfb6a83498c8bdb48250
-  react-native-skia: 9f1f9bfd9e3c6139711296c4ee6cb367931fb306
+  react-native-skia: f3206e12613b66534ee5d8026329485dcd1e2a28
   react-native-turbo-image: fdd359e61af800640d8a19daa5114be13ffba781
   react-native-vector-icons-ionicons: 7e633927db6ab96e0255b5920c053777cacca505
   React-NativeModulesApple: 2b658272ca69df0694cf5d54f9510aa7c33977bc
@@ -3130,10 +3130,10 @@ SPEC CHECKSUMS:
   RNCPushNotificationIOS: 85957a0534fd1309b4c028ccbe5b1baf9ab5cf57
   RNDateTimePicker: b9e20c2a3af26f4ab10646359777205bbad1fdac
   RNDeviceInfo: 4c852998208b60dc192ae3529e5867817719ad1e
-  RNGestureHandler: af5f7e95d350ef38c0997b5627970769c2a7f354
+  RNGestureHandler: fb2375bebca8d187e54a854cd4da9f5e0b9d5f81
   RNKeychain: 6778b35b5bd067c322f8479526ac09b1d61f31d0
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
-  RNPermissions: 3baa66b17260693643be9765bde555b4236d23df
+  RNPermissions: 60004134d572e7002ec21cc11c939e82e8b525dd
   RNReactNativeHapticFeedback: 16e5f7fd37e2acc5a33ea14f48bfd88ff43776ee
   RNReanimated: aec656f27f33212c0b6ee9dcf3d7bb66ab1c9c9e
   RNScreens: de068bbd7d91b820fedac25c597d4b14830de74b
