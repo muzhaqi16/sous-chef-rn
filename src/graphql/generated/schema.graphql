@@ -690,6 +690,21 @@ Always include a __typename so the variant can be discriminated.
 """
 union AdjustPantryItemWeightResult = AdjustPantryItemWeightPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
+"""
+Who or what corrected a pantry stack's recorded quantity, on a usage row that
+is a correction. Branch on this, not on adjustmentReason text.
+"""
+enum AdjustmentKind {
+  """Reconciliation written while merging duplicate stacks."""
+  STACK_MERGE
+  """An administrator destroyed the stack."""
+  STACK_PURGED
+  """The legacy stack-removal marker. Only historical rows carry it."""
+  STACK_REMOVED
+  """A person asked for the correction; adjustmentReason is their text."""
+  USER
+}
+
 """Result of quantity aggregation (add/subtract)"""
 type AggregationResult {
   displayText: String!
@@ -879,8 +894,21 @@ input BatchAddShoppingListItemInput {
 type BatchAddShoppingListItemResult {
   """Client ID if provided in input"""
   clientId: String
-  """Error message if failed"""
+  """
+  Why the entry failed, as the code a result-union member carries for the same
+  error. Set exactly when success is false. Branch on this, not on the text.
+  """
+  code: ErrorCode
+  """
+  Client-safe failure text, set exactly when success is false. An
+  unexpected fault is masked in production and carries errorId.
+  """
   error: String
+  """
+  Set only when the failure text was masked. Names the log entry holding the
+  real error, so support can look it up.
+  """
+  errorId: String
   """Index in the input array"""
   index: Int!
   """The created/updated item (null if failed)"""
@@ -912,8 +940,19 @@ input BatchUpsertItemInput {
 }
 
 type BatchUpsertItemResult {
+  """
+  Why the entry failed, as the code a result-union member carries for the same
+  error. Set exactly when success is false. Branch on this, not on the text.
+  """
+  code: ErrorCode
   created: Boolean
+  """Client-safe failure text, set exactly when success is false."""
   error: String
+  """
+  Set only when the failure text was masked. Names the log entry holding the
+  real error, so support can look it up.
+  """
+  errorId: String
   externalId: String!
   item: Item
   mapping: ExternalSourceMapping
@@ -1137,9 +1176,18 @@ Always include a __typename so the variant can be discriminated.
 union BulkDeletePurchasesResult = BulkDeletePurchasesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 type BulkDeviceFailure {
-  """The error code the single-device operation would have answered with."""
-  code: String!
+  """
+  Why this device was not updated, as the code a result-union member carries for the same error.
+  """
+  code: ErrorCode!
   deviceId: ID!
+  """
+  Set only when the message was masked. Names the log entry holding the real error.
+  """
+  errorId: String
+  """
+  Client-safe failure text. An unexpected fault is masked in production and carries errorId.
+  """
   message: String!
 }
 
@@ -1641,6 +1689,16 @@ input ConnectivityInput {
 
 type ConsumptionFailure {
   availableQuantity: Float!
+  """
+  Why this item failed, as the code a result-union member carries for the same
+  error. Branch on this, not on the reason text.
+  """
+  code: ErrorCode!
+  """
+  Set only when the reason was masked. Names the log entry holding the real
+  error, so support can look it up.
+  """
+  errorId: String
   pantryItemId: ID!
   reason: String!
   recipeIngredientId: ID!
@@ -2271,6 +2329,12 @@ Always include a __typename so the variant can be discriminated.
 union CreatePantryItemResult = ConflictError | CreatePantryItemPayload | DuplicatePantryItemError | ForbiddenError | NotFoundError | ValidationError
 
 input CreatePantryItemUsageInput {
+  """
+  True to use everything the stack holds, whatever it is: the record states that amount in
+  the tracking unit. Refused only when the stack is already empty. Send exactly one of
+  quantityUsed and consumeAll.
+  """
+  consumeAll: Boolean
   cookingLogId: ID
   idempotencyKey: ID
   isComposted: Boolean
@@ -2279,7 +2343,13 @@ input CreatePantryItemUsageInput {
   notes: String
   pantryItemId: ID!
   purpose: UsagePurpose!
-  quantityUsed: Float!
+  """
+  How much was used, in usageUnitId (the stack's tracking unit when omitted). A use larger
+  than the stack holds by no more than a hundredth of a gram or millilitre empties it; a
+  larger one is refused, stating what remains. Send exactly one of quantityUsed and
+  consumeAll.
+  """
+  quantityUsed: Float
   recipeId: ID
   targetBatchId: ID
   usageUnitId: ID
@@ -3336,6 +3406,14 @@ Always include a __typename so the variant can be discriminated.
 union DeleteUserAddressResult = ConflictError | DeleteUserAddressPayload | ForbiddenError | NotFoundError | ValidationError
 
 type DeletionBlocker {
+  """
+  Other active collaborators on the list, the count message states. Set on SHOPPING_LIST blockers only.
+  """
+  collaboratorCount: Int
+  """
+  Other active members of the home, the count message states. Set on HOME_OWNERSHIP blockers only.
+  """
+  memberCount: Int
   message: String!
   resourceId: ID!
   resourceName: String!
@@ -4236,11 +4314,10 @@ Counted in summary.failed.
 """
 type FailedMoveInfo {
   """
-  The registered error code for this line's failure — the same code the
-  single-line moveShoppingItemToPantry would carry in its error extensions.
-  Branch on this, not on the reason text.
+  Why this line failed, as the code a result-union member carries for the
+  same error. Branch on this, not on the reason text.
   """
-  code: String!
+  code: ErrorCode!
   """
   Present only when the reason was masked. Names the log entry holding the
   real error, so support can look it up.
@@ -5626,6 +5703,10 @@ type ItemUnit {
   updatedAt: DateTime!
   usageContext: [UnitUsageContext!]!
   version: Int!
+  """
+  True when this item is never used in a fraction of this unit (eggs in pieces).
+  """
+  wholeUnitsOnly: Boolean!
 }
 
 input ItemUnitConfigInput {
@@ -5700,6 +5781,11 @@ input ItemUnitInput {
   unitId: ID
   unitName: String
   usageContext: [UnitUsageContext!]
+  """
+  True when this item is never used in a fraction of this unit (eggs in pieces). A stack
+  whose portion unit this is inherits it at creation.
+  """
+  wholeUnitsOnly: Boolean
 }
 
 type ItemUnitSuggestion {
@@ -5734,12 +5820,28 @@ type ItemValidationReport {
 
 """A condition worth surfacing that does not make the Item invalid."""
 type ItemValidationWarning {
+  """Which condition this is. Branch on this, not on message or suggestion."""
+  code: ItemValidationWarningCode!
   """The Item field the warning is about."""
   field: String!
   """Human-readable description of the concern."""
   message: String!
   """Recommended remedy, when one can be suggested."""
   suggestion: String
+}
+
+"""
+Which condition an ItemValidationWarning reports; one member per condition.
+"""
+enum ItemValidationWarningCode {
+  """The item has no category."""
+  MISSING_CATEGORY
+  """The item has no description."""
+  MISSING_DESCRIPTION
+  """The item has no unit."""
+  MISSING_UNIT
+  """The item has no UPC barcode."""
+  MISSING_UPC
 }
 
 """
@@ -5812,6 +5914,11 @@ type LedgerPeriodData {
   consumed: Float!
   net: Float!
   periodEnd: DateTime!
+  """
+  The bucket's UTC key, not display text: YYYY-MM-DD for DAILY, YYYY-MM-DD of
+  the ISO week's Monday for WEEKLY, and YYYY-MM for MONTHLY. Format it for the
+  reader locally.
+  """
   periodLabel: String!
   periodStart: DateTime!
   wasted: Float!
@@ -6579,8 +6686,6 @@ union MealPlanEventNode = MealPlan | MealPlanItem | MealTemplate | MealTemplateI
 
 input MealPlanFilters {
   endDate: DateTime
-  """Filter by home ID to see only home-scoped meal plans"""
-  homeId: ID
   """Filter to only active meal plans (current date within start/end range)"""
   isActive: Boolean
   """Filter by meal plan type"""
@@ -6821,6 +6926,13 @@ input MeasurementProfileInput {
   densityOverride: Float
   portionUnitId: ID
   portionsPerTrackingUnit: Float
+  """
+  True when a portion of this stack is never split (an egg): a use, waste, restock or
+  correction recording a fraction of a portion is refused, and a recipe asking for a
+  fraction takes the next whole portion. Seeded from the item's unit row for the
+  portion unit when omitted.
+  """
+  wholePortionsOnly: Boolean
 }
 
 """Reusable sub-input for media assets (images)"""
@@ -6939,6 +7051,21 @@ enum MobilePlatform {
   MACOS
   OTHER
   WINDOWS
+}
+
+"""
+Who or what put a moderation state in force, for client copy. A value is
+listed only once some path emits it.
+"""
+enum ModerationReasonCode {
+  """
+  The failed-login lockout suspended the account. Temporary: it lifts when the lockout window lapses.
+  """
+  FAILED_LOGIN_ATTEMPTS
+  """
+  A moderator imposed it. The accompanying reason text, when present, is the moderator's own words.
+  """
+  MODERATOR
 }
 
 enum ModerationRestriction {
@@ -7987,15 +8114,21 @@ type MyModerationStatus {
   appealStatus: AppealStatus
   appealedAt: DateTime
   banReason: String
+  """Why the ban is in force; null when not banned."""
+  banReasonCode: ModerationReasonCode
   id: ID!
   isBanned: Boolean!
   isSuspended: Boolean!
   restrictedUntil: DateTime
   restrictionReason: String
+  """Why restrictions are in force; null when none are."""
+  restrictionReasonCode: ModerationReasonCode
   restrictions: [ModerationRestriction!]!
   status: ModerationStatus!
   suspendedUntil: DateTime
   suspensionReason: String
+  """Why the suspension is in force; null when not suspended."""
+  suspensionReasonCode: ModerationReasonCode
   trustLevel: TrustLevel!
   underReview: Boolean!
 }
@@ -8058,6 +8191,12 @@ type Notification {
   """When this notification expires. Null if it does not expire."""
   expiresAt: DateTime
   id: ID!
+  """
+  True when a person wrote title and message (an admin announcement, a
+  notification created through the API): show them as written. False when the
+  server built them from a template: render client copy from type and payload.
+  """
+  isAuthoredContent: Boolean!
   message: String
   payload: JSON!
   priority: Priority!
@@ -8783,12 +8922,10 @@ type PantryEventParents {
 }
 
 """
-Filters for querying pantries.
-userId and homeId filters have different behavior for admins vs regular users.
+Filters for querying pantries. The home a page covers is the query's own
+homeId argument — required on pantries, optional on adminPantries.
 """
 input PantryFilters {
-  """Filter by home ID - optional for admins, required for regular users"""
-  homeId: ID
   """Filter by default status"""
   isDefault: Boolean
   """Search by name, description, or location"""
@@ -8888,8 +9025,8 @@ type PantryItem {
   quantityBreakdown: QuantityBreakdown
   remainingNetWeight: Float
   """
-  Portions left, from the remaining net weight when the stack tracks one and
-  from the quantity otherwise. Null when the stack defines no portion.
+  Portions left, exact: from the remaining net weight when the stack tracks one and from
+  the quantity otherwise. Null when the stack defines no portion.
   """
   remainingPortions: Float
   restockQuantity: Float
@@ -8913,6 +9050,10 @@ type PantryItem {
   version: Int!
   wasteDate: DateTime
   wasteReason: WasteReason
+  """
+  True when a portion of this stack is never split; a fractional use is refused.
+  """
+  wholePortionsOnly: Boolean!
 }
 
 """
@@ -9200,6 +9341,11 @@ type PantryItemSuggestion {
 }
 
 type PantryItemUsage {
+  """
+  Who or what made this correction, on every row that corrects the stack's
+  quantity in either direction (a RESTOCK row included). Null on every other row.
+  """
+  adjustmentKind: AdjustmentKind
   adjustmentReason: String
   cookingLog: CookingLog
   cookingLogId: ID
@@ -9605,8 +9751,6 @@ input PurchaseFilters {
   fromDate: DateTime
   """Filter by item."""
   itemId: ID
-  """Filter by shopping list."""
-  shoppingListId: ID
   """Filter by specific shopping list item."""
   shoppingListItemId: ID
   """Filter by store."""
@@ -9904,8 +10048,13 @@ type Query {
   me: User
   """Fetch a single meal plan by its ID."""
   mealPlan(id: ID!): MealPlan
-  """List meal plans with filtering and cursor-based pagination."""
-  mealPlans(after: String, before: String, filters: MealPlanFilters, first: Int, last: Int, orderBy: MealPlanOrderBy): MealPlanConnection!
+  """
+  List meal plans with filtering and cursor-based pagination.
+  
+  Without homeId the page holds the caller's own plans plus those of every
+  home they are an active member of; with it, that one home's plans.
+  """
+  mealPlans(after: String, before: String, filters: MealPlanFilters, first: Int, homeId: ID, last: Int, orderBy: MealPlanOrderBy): MealPlanConnection!
   """Get a single meal template by ID"""
   mealTemplate(id: ID!): MealTemplate
   """List meal templates for the current user"""
@@ -9959,8 +10108,13 @@ type Query {
   parseQuantityInput(input: String!, unitId: ID!): QuantityDisplay!
   """Fetch a single purchase by its ID."""
   purchase(id: ID!): Purchase
-  """List purchases with filtering and cursor-based pagination."""
-  purchases(after: String, before: String, filters: PurchaseFilters, first: Int, last: Int, orderBy: PurchaseOrderBy): PurchaseConnection!
+  """
+  List purchases with filtering and cursor-based pagination.
+  
+  shoppingListId narrows the page to purchases made from one list; the page
+  is the caller's own purchases either way.
+  """
+  purchases(after: String, before: String, filters: PurchaseFilters, first: Int, last: Int, orderBy: PurchaseOrderBy, shoppingListId: ID): PurchaseConnection!
   """
   A single recipe by id. Anonymous callers see published recipes only;
   authenticated callers also see their own private recipes when they own them.
@@ -10058,8 +10212,11 @@ type Query {
   Replaces: defaultShoppingList (use filters: { isDefault: true }),
   searchShoppingLists (use filters: { search: "query" }),
   shoppingListCollaborators (use ShoppingList.collaboratorsConnection)
+  
+  homeId narrows the page to one home's lists; it never widens the
+  owner/collaborator/member scope the caller already has.
   """
-  shoppingLists(after: String, before: String, filters: ShoppingListFilters, first: Int, last: Int, orderBy: ShoppingListOrderBy): ShoppingListConnection!
+  shoppingLists(after: String, before: String, filters: ShoppingListFilters, first: Int, homeId: ID, last: Int, orderBy: ShoppingListOrderBy): ShoppingListConnection!
   """
   Get a single storage location by ID
   Requires user to be a member of the home
@@ -11370,13 +11527,39 @@ type ShoppingList {
 
 type ShoppingListActivity {
   action: ListActivityType!
+  """The list fields an update touched. Set on LIST_UPDATED."""
+  changedFields: [String!]
+  """
+  The collaborator the action names. Set on COLLABORATOR_ADDED, COLLABORATOR_REMOVED and COLLABORATOR_ROLE_CHANGED.
+  """
+  collaboratorEmail: String
+  """
+  The role a collaborator was invited with. Set on COLLABORATOR_ADDED when one was given.
+  """
+  collaboratorRole: CollaboratorRole
   createdAt: DateTime!
   description: String!
   id: ID!
+  """
+  How many items a bulk clear removed. Set on the ITEM_REMOVED row with no itemName.
+  """
+  itemCount: Int
   itemName: String
+  """The list's name. Set on LIST_CREATED, LIST_UPDATED and LIST_DELETED."""
+  listName: String
   metadata: JSON
+  """The role after a change. Set on COLLABORATOR_ROLE_CHANGED."""
+  newRole: CollaboratorRole
   newValue: String
   oldValue: String
+  """The role before a change. Set on COLLABORATOR_ROLE_CHANGED."""
+  previousRole: CollaboratorRole
+  """Whether a bulk clear removed only purchased items. Set with itemCount."""
+  purchasedOnly: Boolean
+  """
+  The quantity the description states. Set on ITEM_ADDED and ITEM_PURCHASED when one was recorded.
+  """
+  quantity: Float
   shoppingList: ShoppingList!
   shoppingListId: ID!
   source: String
@@ -11552,7 +11735,6 @@ which part of the list changed.
 union ShoppingListEventNode = ShoppingList | ShoppingListCollaborator | ShoppingListItem
 
 input ShoppingListFilters {
-  homeId: ID
   isArchived: Boolean
   isCompleted: Boolean
   isDefault: Boolean
@@ -11858,6 +12040,16 @@ type ShoppingListUsageStats {
 
 """Item that was skipped when adding to shopping list"""
 type SkippedLowStockItem {
+  """
+  Why this item failed, as the code a result-union member carries for the same
+  error. Branch on this, not on the reason text.
+  """
+  code: ErrorCode!
+  """
+  Set only when the reason was masked. Names the log entry holding the real
+  error, so support can look it up.
+  """
+  errorId: String
   itemName: String!
   pantryItemId: ID!
   reason: String!
@@ -11868,6 +12060,16 @@ A recipe ingredient the cook deduction could not express in a stack's unit.
 The stack was left untouched; nothing was deducted 1:1.
 """
 type SkippedRecipeIngredient {
+  """
+  Why this item failed, as the code a result-union member carries for the same
+  error. Branch on this, not on the reason text.
+  """
+  code: ErrorCode!
+  """
+  Set only when the reason was masked. Names the log entry holding the real
+  error, so support can look it up.
+  """
+  errorId: String
   fromUnitId: ID!
   itemName: String!
   reason: String!
@@ -14550,7 +14752,7 @@ type User {
   author) it nulled the list containing it.
   """
   purchaseStats: PurchaseStats
-  purchasesConnection(after: String, before: String, filters: PurchaseFilters, first: Int, last: Int, orderBy: PurchaseOrderBy): PurchaseConnection!
+  purchasesConnection(after: String, before: String, filters: PurchaseFilters, first: Int, last: Int, orderBy: PurchaseOrderBy, shoppingListId: ID): PurchaseConnection!
   """Null unless the caller is this user or an admin. See email."""
   role: UserRole
   savedRecipesConnection(after: String, before: String, first: Int, folder: String, last: Int, orderBy: SavedRecipeOrderBy): SavedRecipeConnection!
@@ -14627,6 +14829,10 @@ type UserEvent {
   """
   actorUserId: ID
   """
+  The failed password attempts that triggered a FAILED_LOGIN_ATTEMPTS suspension. Null otherwise.
+  """
+  failedLoginCount: Int
+  """
   Mutation kind for this event. UPDATED for ACCOUNT_UPDATED / PROFILE_CHANGED
   and the moderation subtypes (BANNED / UNBANNED / SUSPENDED / UNSUSPENDED /
   WARNED); CREATED for ADDED_TO_*; DELETED for REMOVED_FROM_*.
@@ -14641,7 +14847,16 @@ type UserEvent {
   """
   originatorClientId: ID
   parents: UserEventParents
+  """
+  The reason given for this moderation action, as written by the moderator.
+  Null when none was given; never internal moderator notes.
+  """
   reason: String
+  """
+  What caused a moderation event (BANNED / UNBANNED / SUSPENDED / UNSUSPENDED
+  / WARNED). Null for every other subtype.
+  """
+  reasonCode: ModerationReasonCode
   subtype: UserSubtype!
   timestamp: DateTime!
   updatedFields: [String!]
