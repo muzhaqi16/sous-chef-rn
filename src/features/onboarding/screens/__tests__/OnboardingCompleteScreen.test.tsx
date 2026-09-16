@@ -79,10 +79,7 @@ function buildCompleteOnboardingMock(): MockedResponse {
     result: {
       data: {
         completeOnboarding: {
-          __typename: 'UserPayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
+          __typename: 'CompleteOnboardingPayload',
           user: {
             __typename: 'User',
             id: 'u1',
