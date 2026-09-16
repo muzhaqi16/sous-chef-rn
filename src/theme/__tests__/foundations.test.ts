@@ -55,8 +55,8 @@ describe('theme foundations', () => {
     });
 
     it('exports expiration colors with matching shape for light and dark modes', () => {
-      expect(colors.expiration.expiredBg).toBeDefined();
-      expect(darkExpiration.expiredBg).toBeDefined();
+      expect(colors.expiration.expiredText).toBeDefined();
+      expect(darkExpiration.expiredText).toBeDefined();
       expect(Object.keys(darkExpiration).sort()).toEqual(
         Object.keys(colors.expiration).sort(),
       );

@@ -1,4 +1,5 @@
 import { act } from '@testing-library/react-native';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   type MockedResponse,
@@ -46,7 +47,7 @@ const mockUser = {
 const createMock = (outcome: {
   result?: MockedResponse['result'];
   error?: Error;
-}): MockedResponse => ({
+}): MockFor<typeof CreateShoppingListDocument> => ({
   request: { query: CreateShoppingListDocument, variables: () => true },
   ...outcome,
 });

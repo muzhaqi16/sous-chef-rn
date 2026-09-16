@@ -103,7 +103,8 @@
         "RECIPE_SAVED": "Recipe saved",
         "test": "Test notification",
         "listCompleted": "Shopping list completed",
-        "expiryDigest": "Expiring this week"
+        "expiryDigest": "Expiring this week",
+        "authored": "Announcement"
       },
       "message": {
         "homeInvitation": "{{inviterName}} invited you to join {{homeName}}",
@@ -119,6 +120,8 @@
         "collaboratorRemoved": "{{name}} removed your access to {{listName}}",
         "collaboratorRemovedGeneric": "Your access to a shopping list was removed",
         "collaboratorRoleChanged": "{{name}} changed your role on {{listName}}",
+        "collaboratorRoleChangedTo": "{{name}} changed your role on {{listName}} to {{role}}",
+        "collaboratorRoleChangedFromTo": "{{name}} changed your role on {{listName}} from {{previousRole}} to {{role}}",
         "collaboratorRoleChangedGeneric": "Your role on a shopping list changed",
         "collaboratorPermissionsUpdated": "{{name}} updated your permissions on {{listName}}",
         "collaboratorPermissionsUpdatedGeneric": "Your permissions on a shopping list changed",

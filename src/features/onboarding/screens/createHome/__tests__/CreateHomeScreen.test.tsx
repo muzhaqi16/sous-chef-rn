@@ -1,8 +1,13 @@
-'use no memo';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
+('use no memo');
 
 import React from 'react';
 import { userEvent, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type {
+  MockedResponse,
+  MockFor,
+  MockPart,
+} from '#/test-utils/apolloMockProvider';
 import {
   renderWithApollo,
   statesFutureSchemaValues,
@@ -17,6 +22,7 @@ import {
   type GetMyPendingInvitesQuery,
 } from '#operations/home/home.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
+import type { InviteCard_InviteFragment } from '../CreateHomeScreen.generated';
 import type { RootState } from '#store/index';
 import { CreateHomeScreen } from '../CreateHomeScreen';
 
@@ -262,14 +268,15 @@ jest.mock('#/services/alertService', () => ({
 }));
 
 // --- Mock state used by tests to control query responses ---
-type PendingInviteShape = {
-  id: string;
-  role: string;
-  home: { name: string } | null;
-  inviter: { email?: string; profile?: { displayName?: string } | null } | null;
-};
+/** The invite node the pending-invites query itself selects. */
+type PendingInviteShape = MockPart<
+  NonNullable<
+    GetMyPendingInvitesQuery['me']
+  >['pendingHomeInvitesConnection']['edges'][number]['node'] &
+    InviteCard_InviteFragment
+>;
 
-let mockHomesData: { edges: unknown[] } = { edges: [] };
+let mockHomesData: MockPart<GetHomesQuery['homes']> = { edges: [] };
 let mockHomesLoading = false;
 let mockPendingInvites: PendingInviteShape[] = [];
 
@@ -312,7 +319,7 @@ let mockDeclineHomeInviteResponse: Record<string, unknown> = {
   },
 };
 
-function buildGetHomesMock(): MockedResponse {
+function buildGetHomesMock(): MockFor<typeof GetHomesDocument> {
   return {
     request: { query: GetHomesDocument, variables: () => true },
     maxUsageCount: 100,
@@ -344,7 +351,9 @@ function buildGetHomesMock(): MockedResponse {
   };
 }
 
-function buildGetMyPendingInvitesMock(): MockedResponse {
+function buildGetMyPendingInvitesMock(): MockFor<
+  typeof GetMyPendingInvitesDocument
+> {
   return {
     request: { query: GetMyPendingInvitesDocument, variables: () => true },
     maxUsageCount: 100,
@@ -394,7 +403,7 @@ function buildGetMyPendingInvitesMock(): MockedResponse {
   };
 }
 
-function buildCreateHomeMock(): MockedResponse {
+function buildCreateHomeMock(): MockFor<typeof CreateHomeDocument> {
   // One case here states an `ErrorCode` the schema does not have, because every
   // member it does have is mapped to copy — so nothing valid reaches the
   // caller-fallback branch this screen relies on.
@@ -413,7 +422,7 @@ function buildCreateHomeMock(): MockedResponse {
   });
 }
 
-function buildCreatePantryMock(): MockedResponse {
+function buildCreatePantryMock(): MockFor<typeof CreatePantryDocument> {
   return {
     request: {
       query: CreatePantryDocument,
@@ -442,7 +451,7 @@ function buildCreatePantryMock(): MockedResponse {
   };
 }
 
-function buildAcceptHomeInviteMock(): MockedResponse {
+function buildAcceptHomeInviteMock(): MockFor<typeof AcceptHomeInviteDocument> {
   return {
     request: {
       query: AcceptHomeInviteDocument,
@@ -456,7 +465,9 @@ function buildAcceptHomeInviteMock(): MockedResponse {
   };
 }
 
-function buildDeclineHomeInviteMock(): MockedResponse {
+function buildDeclineHomeInviteMock(): MockFor<
+  typeof DeclineHomeInviteDocument
+> {
   return {
     request: {
       query: DeclineHomeInviteDocument,
@@ -627,7 +638,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: {
           email: 'john@test.com',
@@ -807,7 +818,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: {
           email: 'john@test.com',
@@ -826,7 +837,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: {
           email: 'john@test.com',
@@ -843,7 +854,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
       },
@@ -857,7 +868,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: null,
       },
@@ -874,7 +885,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
       },
@@ -931,7 +942,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
       },
@@ -979,7 +990,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
       },
@@ -1260,7 +1271,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'ADMIN',
+        role: MembershipRole.Admin,
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
       },
@@ -1274,7 +1285,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
       },
@@ -1380,7 +1391,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Home A' },
         inviter: {
           email: 'a@test.com',
@@ -1389,7 +1400,7 @@ describe('CreateHomeScreen', () => {
       },
       {
         id: 'invite-2',
-        role: 'ADMIN',
+        role: MembershipRole.Admin,
         home: { name: 'Home B' },
         inviter: { email: 'b@test.com', profile: { displayName: 'Bob' } },
       },

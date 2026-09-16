@@ -1,4 +1,5 @@
 import { waitFor } from '@testing-library/react-native';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -14,7 +15,9 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
  * the absence of an error as success puts the switch back on for a flag the
  * server refused to set.
  */
-const markDefault = (payload: Record<string, unknown>): MockedResponse => ({
+const markDefault = (
+  payload: Record<string, unknown>,
+): MockFor<typeof MarkPantryAsDefaultDocument> => ({
   request: {
     query: MarkPantryAsDefaultDocument,
     variables: { input: { id: 'pantry-1' } },

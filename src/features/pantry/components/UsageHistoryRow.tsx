@@ -1,9 +1,10 @@
 import React from 'react';
 import { isTranslationKey, useTranslation } from '#/i18n';
+import type { TranslationKey } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { UsagePurpose } from '#/graphql/generated/schemaTypes';
+import { AdjustmentKind, UsagePurpose } from '#/graphql/generated/schemaTypes';
 import { formatDate } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
@@ -13,23 +14,34 @@ export interface UsageRecord {
   usedAt: string;
   quantityUsed: number;
   purpose: UsagePurpose;
+  adjustmentKind?: AdjustmentKind | null;
   adjustmentReason?: string | null;
   usageUnit?: { symbol?: string | null } | null;
 }
 
+/** Local copy for the kinds the server writes itself. */
+const SYSTEM_REASON_KEY: Record<AdjustmentKind, TranslationKey | null> = {
+  // A person's own words; nothing to substitute.
+  [AdjustmentKind.User]: null,
+  [AdjustmentKind.StackMerge]: 'adjustQuantity.systemReason.stackMerged',
+  [AdjustmentKind.StackPurged]: 'adjustQuantity.systemReason.stackPurged',
+  [AdjustmentKind.StackRemoved]: 'adjustQuantity.systemReason.stackRemoved',
+};
+
 /**
- * An adjustment's reason is what a person typed, except for the two the server
- * writes itself in English; those render as local copy.
+ * The line a correction shows: local copy for a kind the server wrote, the
+ * person's own text for their own correction. Null when there is nothing to
+ * say — an unknown kind included, since its reason is then the server's.
  */
-const adjustmentReasonText = (reason: string, t: Translate): string => {
-  switch (reason) {
-    case 'PANTRY_STACK_PURGED':
-      return t('adjustQuantity.systemReason.stackPurged');
-    case 'stack merge reconciliation':
-      return t('adjustQuantity.systemReason.stackMerged');
-    default:
-      return reason;
-  }
+const correctionText = (usage: UsageRecord, t: Translate): string | null => {
+  const kind = usage.adjustmentKind;
+  if (!kind) return null;
+  const key = SYSTEM_REASON_KEY[kind];
+  if (key) return t(key);
+  // A kind this build does not know reaches neither arm: its reason is the
+  // server's, not a person's, so it stays off the screen.
+  if (kind !== AdjustmentKind.User) return null;
+  return usage.adjustmentReason ?? null;
 };
 
 /** One ledger line, shared by the detail summary and the full-history screen. */
@@ -39,6 +51,9 @@ export const UsageHistoryRow: React.FC<{ usage: UsageRecord }> = ({
   const { t } = useTranslation();
 
   const isAdjustment = usage.purpose === UsagePurpose.Adjustment;
+  // Gated on the KIND, not the purpose: a correction that finds stock is
+  // recorded as a RESTOCK row and still carries one.
+  const correction = correctionText(usage, t);
   const isRestock = usage.purpose === UsagePurpose.Restock;
   // `string`: the wire can carry a purpose this client's enum predates;
   // `enumKeyCoverage.test.ts` guards the members it does know.
@@ -67,9 +82,9 @@ export const UsageHistoryRow: React.FC<{ usage: UsageRecord }> = ({
             {purposeLabel}
           </Text>
         )}
-        {!!isAdjustment && !!usage.adjustmentReason && (
+        {!!correction && (
           <Text role="caption" tone="tertiary" style={styles.adjustmentReason}>
-            {adjustmentReasonText(usage.adjustmentReason, t)}
+            {correction}
           </Text>
         )}
       </View>

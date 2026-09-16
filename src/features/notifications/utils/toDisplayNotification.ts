@@ -35,12 +35,16 @@ const UNREAD_STATUSES: readonly NotificationStatus[] = [
 /**
  * A notification as the UI needs it: the server's fields plus the four derived
  * ones. Declared here rather than in a store slice, because it describes a
- * projection for rendering — nothing holds it. It carries no `title` or
- * `message`: the words come from `getNotificationCopy` at render.
+ * projection for rendering — nothing holds it. `title` and `message` are the
+ * server's and reach the screen only when `isAuthoredContent` says a person
+ * wrote them; otherwise the words come from `getNotificationCopy` at render.
  */
 export interface DisplayNotification {
   id: string;
   type: NotificationType;
+  isAuthoredContent: boolean;
+  title?: string | null;
+  message?: string | null;
   category: NotificationCategory;
   priority: Priority;
   payload: NotificationPayload;
@@ -84,6 +88,9 @@ export function toDisplayNotification(
   return {
     id: n.id,
     type,
+    isAuthoredContent: n.isAuthoredContent,
+    title: n.title,
+    message: n.message,
     category: n.category ?? NotificationCategory.System,
     priority: n.priority,
     payload,

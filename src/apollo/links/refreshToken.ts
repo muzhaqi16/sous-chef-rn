@@ -11,7 +11,10 @@ import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { SessionError } from '#/utils/errors/sessionError';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
-import { RefreshTokenDocument } from '#operations/auth/auth.generated';
+import {
+  RefreshTokenDocument,
+  type RefreshTokenMutation,
+} from '#operations/auth/auth.generated';
 import {
   reconnectWebSocket,
   registerRefreshInFlightCheck,
@@ -256,22 +259,24 @@ const performTokenRefresh = async (): Promise<string | null> => {
       throw new Error('Apollo client not registered for token refresh');
     }
 
-    const response = await apolloClient.mutate({
-      mutation: RefreshTokenDocument,
-      variables: { input: { token: refreshToken } },
-      // 'none' (not the global 'all') so the mutation REJECTS on error and the
-      // catch below can classify it. Under 'all', errors resolve into
-      // response.error and the generic "Missing tokens" throw loses the real
-      // error, collapsing every failure (including genuine 401s) into 'unknown'
-      // and never logging the user out on a real rejection.
-      errorPolicy: 'none',
-      context: { skipErrorLink: true },
-    });
+    // `errorPolicy: 'none'` types `data` as present, but a `{"data": null}`
+    // response carries no errors to reject on and resolves here, so the read
+    // below must still reach the CODED throw rather than a TypeError.
+    const response: { data?: RefreshTokenMutation } = await apolloClient.mutate(
+      {
+        mutation: RefreshTokenDocument,
+        variables: { input: { token: refreshToken } },
+        // 'none' (not the global 'all') so the mutation REJECTS on error and the
+        // catch below can classify it. Under 'all', errors resolve into
+        // response.error and the generic "Missing tokens" throw loses the real
+        // error, collapsing every failure (including genuine 401s) into 'unknown'
+        // and never logging the user out on a real rejection.
+        errorPolicy: 'none',
+        context: { skipErrorLink: true },
+      },
+    );
 
-    // Typed present, but a response with neither data nor errors also resolves
-    // here, and it must still end in the CODED throw below.
-    const { data } = response;
-    const payload = data ? data.refresh : undefined;
+    const payload = response.data?.refresh;
     if (payload && 'code' in payload) {
       // An error member of RefreshResult. Rethrow with its code so the catch
       // below can tell a dead session (log out) from a transient refusal

@@ -49,7 +49,6 @@ const darkValidation: typeof colors.validation = {
   error: darkSemantic.error,
   errorText: '#EF9A9A',
   errorBg: '#3D2A2A',
-  errorBorder: '#5C3A3A',
   success: darkSemantic.success,
   successBg: '#2A3D2A',
   warning: darkSemantic.warning,

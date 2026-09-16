@@ -4,7 +4,11 @@ import React from 'react';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { CompleteOnboardingDocument } from '#operations/auth/user.generated';
+import {
+  CompleteOnboardingDocument,
+  type CompleteOnboardingMutation,
+  type CompleteOnboardingMutationVariables,
+} from '#operations/auth/user.generated';
 import { UserRole } from '#/graphql/generated/schemaTypes';
 import { OnboardingCompleteScreen } from '../OnboardingCompleteScreen';
 
@@ -73,17 +77,24 @@ jest.mock('#components/molecules/Button', () => ({
   },
 }));
 
-function buildCompleteOnboardingMock(): MockedResponse {
+// Typed by the operation, so the payload member and its fields are the ones
+// codegen says the mutation can answer with.
+function buildCompleteOnboardingMock(): MockedResponse<
+  CompleteOnboardingMutation,
+  CompleteOnboardingMutationVariables
+> {
   return {
     request: { query: CompleteOnboardingDocument, variables: {} },
     result: {
       data: {
+        __typename: 'Mutation',
         completeOnboarding: {
           __typename: 'CompleteOnboardingPayload',
           user: {
             __typename: 'User',
             id: 'u1',
             email: 'a@b.com',
+            displayName: 'Chef',
             emailVerified: true,
             role: UserRole.User,
             canAccessDevTools: false,

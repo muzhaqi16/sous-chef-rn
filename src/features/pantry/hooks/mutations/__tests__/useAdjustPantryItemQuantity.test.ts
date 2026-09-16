@@ -1,5 +1,5 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
@@ -17,7 +17,7 @@ jest.mock('#/services/alertService', () => ({
 
 const successMock = (variables: {
   input: AdjustPantryItemQuantityInput;
-}): MockedResponse => ({
+}): MockFor<typeof AdjustPantryItemQuantityDocument> => ({
   // variables: () => true — the input carries a generated idempotencyKey, so
   // match on the operation, not an exact deep-equal (MockLink can't match the
   // generated value).
@@ -31,7 +31,7 @@ const successMock = (variables: {
           id: variables.input.id,
           version: 1,
           updatedAt: '2026-01-01T00:00:00.000Z',
-          quantity: String(variables.input.newQuantity),
+          quantity: variables.input.newQuantity,
           remainingNetWeight: variables.input.remainingNetWeight ?? null,
           lastUsedAt: null,
           activeBatchCount: 0,
@@ -44,12 +44,14 @@ const successMock = (variables: {
 // variables: () => true — the input carries a generated idempotencyKey, so match
 // on the operation, not an exact deep-equal (MockLink can't match the generated
 // value). These two builders ignore the input entirely (error / static payload).
-const errorMock = (): MockedResponse => ({
+const errorMock = (): MockFor<typeof AdjustPantryItemQuantityDocument> => ({
   request: { query: AdjustPantryItemQuantityDocument, variables: () => true },
   error: new Error('Network error'),
 });
 
-const validationErrorMock = (): MockedResponse => ({
+const validationErrorMock = (): MockFor<
+  typeof AdjustPantryItemQuantityDocument
+> => ({
   request: { query: AdjustPantryItemQuantityDocument, variables: () => true },
   result: {
     data: {
@@ -63,7 +65,9 @@ const validationErrorMock = (): MockedResponse => ({
   },
 });
 
-const refusalMock = (member: Record<string, unknown>): MockedResponse => ({
+const refusalMock = (
+  member: Record<string, unknown>,
+): MockFor<typeof AdjustPantryItemQuantityDocument> => ({
   request: { query: AdjustPantryItemQuantityDocument, variables: () => true },
   result: { data: { adjustPantryItemQuantity: member } },
 });

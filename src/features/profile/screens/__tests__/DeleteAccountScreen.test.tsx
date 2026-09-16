@@ -72,6 +72,8 @@ function canDeleteOk(): MockedResponse {
   }).mock;
 }
 
+// What the server's English says. The counts below are the same numbers, now
+// delivered as fields — so the copy can state them in the reader's language.
 const HOME_SERVER_MESSAGE =
   'You are the only owner of "My Home" which has 1 other member(s). Transfer ownership or remove members first.';
 const LIST_SERVER_MESSAGE =
@@ -89,14 +91,16 @@ function canDeleteBlocked(): MockedResponse {
             type: DeletionBlockerType.HomeOwnership,
             resourceId: 'home-1',
             resourceName: 'My Home',
-            message: HOME_SERVER_MESSAGE,
+            memberCount: 1,
+            collaboratorCount: null,
           },
           {
             __typename: 'DeletionBlocker',
             type: DeletionBlockerType.ShoppingList,
             resourceId: 'list-1',
             resourceName: 'Weekly',
-            message: LIST_SERVER_MESSAGE,
+            memberCount: null,
+            collaboratorCount: 2,
           },
         ],
       },
@@ -236,7 +240,7 @@ describe('DeleteAccountScreen - blocked state', () => {
     expect(screen.getByText('My Home')).toBeTruthy();
     expect(
       screen.getByText(
-        'Nobody else owns "My Home", and it still has other members.',
+        'Nobody else owns "My Home", and it still has 1 other member.',
       ),
     ).toBeTruthy();
     expect(
@@ -244,7 +248,7 @@ describe('DeleteAccountScreen - blocked state', () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        'Nobody else owns the shopping list "Weekly", and it still has collaborators.',
+        'Nobody else owns the shopping list "Weekly", and it still has 2 collaborators.',
       ),
     ).toBeTruthy();
     expect(
@@ -262,6 +266,35 @@ describe('DeleteAccountScreen - blocked state', () => {
     expect(screen.queryByText(/only owner|\(s\)/)).toBeNull();
   });
 
+  it('states the blocker without a number when the server sends no count', async () => {
+    // A count-free wording, never "and it still has 0 other members".
+    const mock = recordMock(CanDeleteAccountDocument, {
+      data: {
+        canDeleteAccount: {
+          __typename: 'CanDeleteAccountResult',
+          canDelete: false,
+          blockers: [
+            {
+              __typename: 'DeletionBlocker',
+              type: DeletionBlockerType.HomeOwnership,
+              resourceId: 'home-1',
+              resourceName: 'My Home',
+              memberCount: null,
+              collaboratorCount: null,
+            },
+          ],
+        },
+      },
+    }).mock;
+    renderWithApollo(<DeleteAccountScreen />, { operationMocks: [mock] });
+    await screen.findByText('Cannot Delete Account');
+    expect(
+      screen.getByText(
+        'Nobody else owns "My Home", and it still has other members.',
+      ),
+    ).toBeTruthy();
+  });
+
   it('gives an unclassified blocker its reason and no resolution steps', async () => {
     const mock = recordMock(CanDeleteAccountDocument, {
       data: {
@@ -274,7 +307,8 @@ describe('DeleteAccountScreen - blocked state', () => {
               type: DeletionBlockerType.Other,
               resourceId: 'thing-1',
               resourceName: 'Thing',
-              message: 'Resolve "Thing" first.',
+              memberCount: null,
+              collaboratorCount: null,
             },
           ],
         },

@@ -1,4 +1,5 @@
 import { waitFor } from '@testing-library/react-native';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   type MockedResponse,
@@ -18,12 +19,16 @@ import { t } from '#/i18n';
  */
 const RECIPE_ID = 'recipe-1';
 
-const updateMock = (payload: Record<string, unknown>): MockedResponse => ({
+const updateMock = (
+  payload: Record<string, unknown>,
+): MockFor<typeof UpdateRecipeDocument> => ({
   request: { query: UpdateRecipeDocument, variables: () => true },
   result: { data: { updateRecipe: payload } },
 });
 
-const ingredientsMock = (payload: Record<string, unknown>): MockedResponse => ({
+const ingredientsMock = (
+  payload: Record<string, unknown>,
+): MockFor<typeof UpdateRecipeIngredientsDocument> => ({
   request: { query: UpdateRecipeIngredientsDocument, variables: () => true },
   result: { data: { updateRecipeIngredients: payload } },
 });

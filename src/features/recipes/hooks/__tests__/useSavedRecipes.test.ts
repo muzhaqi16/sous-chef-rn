@@ -1,8 +1,11 @@
 import { waitFor } from '@testing-library/react-native';
 import { useApolloClient } from '@apollo/client/react';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import { MySavedRecipesDocument } from '#features/recipes/graphql/recipe.generated';
+import {
+  MySavedRecipesDocument,
+  type MySavedRecipesQuery,
+} from '#features/recipes/graphql/recipe.generated';
 import {
   SavedRecipeCard_SavedRecipeFragmentDoc,
   type SavedRecipeCard_SavedRecipeFragment,
@@ -21,11 +24,21 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
 // Break circular dependency
 jest.mock('#/apollo/links/tokenScheduler');
 
+/**
+ * The node on the wire: what the query selects plus what the card's fragment
+ * reads, since masking keeps a fragment's fields out of the query's own type
+ * while the response still has to carry them.
+ */
+type SavedRecipeNode = NonNullable<
+  MySavedRecipesQuery['me']
+>['savedRecipesConnection']['edges'][number]['node'] &
+  SavedRecipeCard_SavedRecipeFragment;
+
 function buildRecipe(
   id: string,
   name: string,
-  overrides: Record<string, unknown> = {},
-) {
+  overrides: MockPart<SavedRecipeNode['recipe']> = {},
+): MockPart<SavedRecipeNode['recipe']> {
   // Exactly what `MySavedRecipes` selects on the nested recipe: `id`, `name`
   // and `description` at the parent, plus the four card fields from
   // `SavedRecipeCard_savedRecipe`. The recipe's own category, status, external
@@ -52,7 +65,7 @@ function buildSavedRecipeNode(
     tags?: string[] | null;
     cookedCount?: number | null;
   } = {},
-) {
+): MockPart<SavedRecipeNode> {
   return {
     __typename: 'SavedRecipe',
     id,
@@ -78,7 +91,7 @@ function buildMySavedRecipesMock(
     hasNextPage?: boolean;
     error?: Error;
   } = {},
-): MockedResponse {
+): MockFor<typeof MySavedRecipesDocument> {
   if (options.error) {
     return {
       request: {
@@ -151,7 +164,7 @@ function buildPageMock(options: {
   }>;
   endCursor: string | null;
   error?: Error;
-}): MockedResponse {
+}): MockFor<typeof MySavedRecipesDocument> {
   const request = {
     query: MySavedRecipesDocument,
     variables: {

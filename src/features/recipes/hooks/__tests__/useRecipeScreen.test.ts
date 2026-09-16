@@ -1,5 +1,6 @@
 import { act, waitFor } from '@testing-library/react-native';
 
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   type MockedResponse,
@@ -194,7 +195,7 @@ function makeLocalRecipeNode(overrides: Record<string, unknown> = {}) {
 
 function searchRecipesMockWith(
   nodes: Record<string, unknown>[],
-): MockedResponse {
+): MockFor<typeof SearchRecipesDocument> {
   return {
     request: { query: SearchRecipesDocument, variables: () => true },
     maxUsageCount: Number.POSITIVE_INFINITY,
@@ -235,7 +236,7 @@ function searchRecipesPageMock(opts: {
   hasNextPage: boolean;
   endCursor: string | null;
   fired?: Record<string, unknown>[];
-}): MockedResponse {
+}): MockFor<typeof SearchRecipesDocument> {
   return {
     request: {
       query: SearchRecipesDocument,

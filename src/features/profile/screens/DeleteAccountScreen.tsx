@@ -18,6 +18,8 @@ import { Screen } from '#components/templates/Screen';
 interface BlockerCopy {
   icon: IconName;
   reason: TranslationKey;
+  /** The count-bearing wording, where the blocker type carries a count. */
+  reasonCounted?: TranslationKey;
   resolutions: TranslationKey[];
 }
 
@@ -25,6 +27,7 @@ const BLOCKER_COPY: Record<DeletionBlockerType, BlockerCopy> = {
   [DeletionBlockerType.HomeOwnership]: {
     icon: 'home-outline',
     reason: 'account.deleteBlocker.homeOwnership.reason',
+    reasonCounted: 'account.deleteBlocker.homeOwnership.reasonCounted',
     resolutions: [
       'account.deleteBlocker.homeOwnership.transferOwnership',
       'account.deleteBlocker.homeOwnership.removeMembers',
@@ -34,6 +37,7 @@ const BLOCKER_COPY: Record<DeletionBlockerType, BlockerCopy> = {
   [DeletionBlockerType.ShoppingList]: {
     icon: 'cart-outline',
     reason: 'account.deleteBlocker.shoppingList.reason',
+    reasonCounted: 'account.deleteBlocker.shoppingList.reasonCounted',
     resolutions: [
       'account.deleteBlocker.shoppingList.removeCollaborators',
       'account.deleteBlocker.shoppingList.deleteResource',
@@ -151,6 +155,10 @@ export const DeleteAccountScreen: React.FC = () => {
 
       {blockers.map(blocker => {
         const copy = BLOCKER_COPY[blocker.type];
+        // The server sends whichever count its own sentence states; a blocker
+        // that carries none takes the wording that needs no number, rather
+        // than one reading "and it still has 0 other members".
+        const count = blocker.memberCount ?? blocker.collaboratorCount;
         return (
           <View key={blocker.resourceId} style={styles.blockerCard}>
             <View style={styles.blockerHeader}>
@@ -160,7 +168,9 @@ export const DeleteAccountScreen: React.FC = () => {
               </Text>
             </View>
             <Text role="caption" style={styles.blockerMessage}>
-              {t(copy.reason, { name: blocker.resourceName })}
+              {copy.reasonCounted && count != null
+                ? t(copy.reasonCounted, { name: blocker.resourceName, count })
+                : t(copy.reason, { name: blocker.resourceName })}
             </Text>
             {copy.resolutions.length > 0 ? (
               <View style={styles.resolutionSection}>

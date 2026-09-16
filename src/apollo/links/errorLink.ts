@@ -48,10 +48,10 @@ const isResourceAccessError = (code: string) => code === FORBIDDEN;
 
 // A suspended, banned or deleted account has valid credentials but may not
 // transact, so it gets its own code rather than a resource-access denial.
-// `AUTH_ACCOUNT_SUSPENDED` is the signal; the prose-`reason` branch covers an
-// older API and can go once every environment serves the code.
-const isAccountInactiveError = (code: string, reason: string) =>
-  code === ACCOUNT_SUSPENDED || /suspended or deleted/i.test(reason);
+// Matched on the code alone: a reworded refusal must not fall through to the
+// auth branch, and prose that happens to read as a suspension must not end a
+// live session.
+const isAccountInactiveError = (code: string) => code === ACCOUNT_SUSPENDED;
 
 // An extension value is unvalidated JSON; only a scalar reads as text.
 const extensionText = (value: unknown, fallback: string): string =>
@@ -149,13 +149,9 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
         continue;
       }
 
-      // Before the resource-access branch: the prose fallback arrives as
-      // FORBIDDEN and would otherwise `continue` past it. `endSession`, not
-      // `clearAuth` — clearing tokens alone leaves this account's entities in
-      // the persisted cache for whoever signs in next.
-      if (
-        isAccountInactiveError(code, extensionText(err.extensions?.reason, ''))
-      ) {
+      // `endSession`, not `clearAuth` — clearing tokens alone leaves this
+      // account's entities in the persisted cache for whoever signs in next.
+      if (isAccountInactiveError(code)) {
         logger.error(
           `Account inactive (${operation.operationName}) — ending session`,
         );

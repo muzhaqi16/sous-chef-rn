@@ -19,12 +19,16 @@
     "deleteBlocker": {
       "homeOwnership": {
         "reason": "Nadie más posee «{{name}}», que todavía tiene otros miembros.",
+        "reasonCounted_one": "Nadie más posee «{{name}}», que todavía tiene {{count}} miembro más.",
+        "reasonCounted_other": "Nadie más posee «{{name}}», que todavía tiene {{count}} miembros más.",
         "transferOwnership": "Transfiere la propiedad a otro miembro",
         "removeMembers": "Elimina a los demás miembros del hogar",
         "deleteResource": "Elimina el hogar"
       },
       "shoppingList": {
         "reason": "Nadie más posee la lista de compras «{{name}}», que todavía tiene colaboradores.",
+        "reasonCounted_one": "Nadie más posee la lista de compras «{{name}}», que todavía tiene {{count}} colaborador.",
+        "reasonCounted_other": "Nadie más posee la lista de compras «{{name}}», que todavía tiene {{count}} colaboradores.",
         "removeCollaborators": "Elimina a todos los colaboradores de la lista",
         "deleteResource": "Elimina la lista de compras"
       },
@@ -238,6 +242,9 @@
     "addedToShoppingList": "Se te ha añadido a una lista de la compra",
     "accountBanned": "Tu cuenta ha sido bloqueada",
     "accountSuspended": "Tu cuenta ha sido suspendida",
+    "accountLockedAttempts_one": "Tu cuenta está bloqueada tras {{count}} intento de inicio de sesión fallido. Se desbloqueará sola en breve.",
+    "accountLockedAttempts_other": "Tu cuenta está bloqueada tras {{count}} intentos de inicio de sesión fallidos. Se desbloqueará sola en breve.",
+    "accountLocked": "Tu cuenta está bloqueada tras demasiados intentos de inicio de sesión fallidos. Se desbloqueará sola en breve.",
     "warningReceived": "Has recibido una advertencia de un moderador"
   },
   "biometrics": {

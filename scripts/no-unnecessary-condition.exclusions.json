@@ -1,4 +1,0 @@
-[
-  "src/apollo/links/refreshToken.ts",
-  "src/features/shoppingList/hooks/useShoppingListSubscriptions.ts"
-]

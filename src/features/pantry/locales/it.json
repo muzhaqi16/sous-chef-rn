@@ -179,7 +179,8 @@
     "remainingWeightPlaceholder": "Lascia vuoto per regolare automaticamente",
     "systemReason": {
       "stackMerged": "Rettifica dopo l'unione di articoli",
-      "stackPurged": "Rimozione amministrativa"
+      "stackPurged": "Rimozione amministrativa",
+      "stackRemoved": "Rimosso dalla dispensa"
     }
   },
   "recordWaste": {

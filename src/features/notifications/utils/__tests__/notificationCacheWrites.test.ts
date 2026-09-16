@@ -34,6 +34,7 @@ const node = (id: string, status: NotificationStatus) => ({
   __typename: 'Notification' as const,
   id,
   type: NotificationType.CollaborationInvite,
+  isAuthoredContent: false,
   priority: Priority.Normal,
   title: `T${id}`,
   message: `M${id}`,

@@ -3,10 +3,8 @@ import React from 'react';
 import { makeCache } from '#/apollo/cache';
 import { screen, waitFor } from '@testing-library/react-native';
 import { GraphQLError } from 'graphql';
-import {
-  renderWithApollo,
-  type MockedResponse,
-} from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetItemPurchaseHistoryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { PurchaseHistoryScreen } from '../PurchaseHistoryScreen';
@@ -65,7 +63,7 @@ const purchaser = (
 const historyMock = (
   nodes: PurchaseNode[],
   hasNextPage = false,
-): MockedResponse => ({
+): MockFor<typeof GetItemPurchaseHistoryDocument> => ({
   request: {
     query: GetItemPurchaseHistoryDocument,
     variables: () => true,
@@ -106,7 +104,7 @@ const purchase: PurchaseNode = {
 // up through `node!` → `edges!` → `purchasesConnection!` is non-null, so one
 // field error nulls `shoppingListItem` and the screen gets an error alongside
 // a response that contains nothing. Empty and failed must not render alike.
-const failingMock: MockedResponse = {
+const failingMock: MockFor<typeof GetItemPurchaseHistoryDocument> = {
   request: {
     query: GetItemPurchaseHistoryDocument,
     variables: () => true,

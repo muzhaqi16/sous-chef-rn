@@ -265,6 +265,15 @@ export class ErrorService {
     HOME_: 'Home Management',
   };
 
+  /**
+   * Whether the app has its own sentence for this code. A caller choosing
+   * between the code's copy and something more generic needs to know the code
+   * resolves to more than the fallback it was going to use anyway.
+   */
+  hasUserFriendlyMessage(errorCode: string): boolean {
+    return errorCode in ErrorService.ERROR_MESSAGE_KEY_SUFFIXES;
+  }
+
   getUserFriendlyMessage(errorCode: string, fallbackMessage?: string): string {
     const suffix = ErrorService.ERROR_MESSAGE_KEY_SUFFIXES[errorCode];
     // An unmapped code takes the caller's own localized copy; the server's

@@ -41,7 +41,7 @@ function moveMock(payload: {
   /** Lines that errored — `summary.failed`, itemised in `failedItems`. */
   failedItems?: {
     itemName: string;
-    code: string;
+    code: ErrorCode;
     errorId?: string | null;
   }[];
 }) {
@@ -302,7 +302,7 @@ describe('useBatchMoveToPantry', () => {
       skippedCount: 0,
       targetPantryName: 'My Pantry',
       movedItemIds: [],
-      failedItems: [{ itemName: 'bread', code: 'VALIDATION_FAILED' }],
+      failedItems: [{ itemName: 'bread', code: ErrorCode.ValidationFailed }],
     });
 
     const { result } = renderHookWithApollo(
@@ -329,7 +329,7 @@ describe('useBatchMoveToPantry', () => {
       failedItems: [
         {
           itemName: 'bread',
-          code: 'VALIDATION_FAILED',
+          code: ErrorCode.ValidationFailed,
           errorId: 'log-42',
         },
       ],
@@ -419,9 +419,17 @@ describe('useBatchMoveToPantry', () => {
       targetPantryName: 'My Pantry',
       movedItemIds: ['item-1'],
       failedItems: [
-        { itemName: 'bread', code: 'VALIDATION_FAILED', errorId: 'log-42' },
-        { itemName: 'milk', code: 'INTERNAL_ERROR', errorId: 'log-43' },
-        { itemName: 'eggs', code: 'VALIDATION_FAILED', errorId: null },
+        {
+          itemName: 'bread',
+          code: ErrorCode.ValidationFailed,
+          errorId: 'log-42',
+        },
+        {
+          itemName: 'milk',
+          code: ErrorCode.InternalServerError,
+          errorId: 'log-43',
+        },
+        { itemName: 'eggs', code: ErrorCode.ValidationFailed, errorId: null },
       ],
     });
 
@@ -442,7 +450,7 @@ describe('useBatchMoveToPantry', () => {
       expect.objectContaining({
         failed_count: 3,
         // Distinct and sorted: three failures, two causes.
-        failed_codes: 'INTERNAL_ERROR,VALIDATION_FAILED',
+        failed_codes: `${ErrorCode.InternalServerError},${ErrorCode.ValidationFailed}`,
         // Only the ids that exist, so a null cannot become an empty slot.
         failed_error_ids: 'log-42,log-43',
       }),

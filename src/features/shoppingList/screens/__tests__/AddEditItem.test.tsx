@@ -8,10 +8,10 @@ import {
   userEvent,
   waitFor,
 } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService, type AlertButton } from '#/services/alertService';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { DisplayFormat, ErrorCode } from '#/graphql/generated/schemaTypes';
 import { AddEditItem } from '../AddEditItem';
 import type { ShoppingItemFormData } from '#features/shoppingList/hooks/shoppingItemFormConfig';
 import {
@@ -19,6 +19,7 @@ import {
   UpdateShoppingListItemDocument,
   GetShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import type { AddedShoppingListItemFieldsFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -281,12 +282,12 @@ jest.mock('#components/atoms/FieldRow', () => ({
  * the schema-backed mock link fills whatever a fixture leaves out, so a fixture
  * states what the test asserts on rather than the whole selection.
  */
-const SHOPPING_LIST_ITEM_CORE = {
+const SHOPPING_LIST_ITEM_CORE: MockPart<AddedShoppingListItemFieldsFragment> = {
   __typename: 'ShoppingListItem',
   itemName: 'Milk',
-  quantity: '1',
+  quantity: 1,
   quantityInput: '1',
-  displayFormat: 'AUTO',
+  displayFormat: DisplayFormat.Auto,
   purchaseInfo: {
     __typename: 'ShoppingListItemPurchaseInfo',
     isPurchased: false,
@@ -340,7 +341,7 @@ function buildDetailShoppingListItem(id: string) {
   };
 }
 
-function buildAddItemMock(): MockedResponse {
+function buildAddItemMock(): MockFor<typeof AddItemToShoppingListDocument> {
   return {
     request: { query: AddItemToShoppingListDocument, variables: () => true },
     result: {
@@ -365,7 +366,9 @@ function buildAddItemMock(): MockedResponse {
   };
 }
 
-function buildAddItemRefusedMock(): MockedResponse {
+function buildAddItemRefusedMock(): MockFor<
+  typeof AddItemToShoppingListDocument
+> {
   return {
     request: { query: AddItemToShoppingListDocument, variables: () => true },
     result: {
@@ -382,7 +385,9 @@ function buildAddItemRefusedMock(): MockedResponse {
 }
 
 /** What `queueLink` emits for a queued mutation: the field present but null. */
-function buildAddItemQueuedMock(): MockedResponse {
+function buildAddItemQueuedMock(): MockFor<
+  typeof AddItemToShoppingListDocument
+> {
   return {
     request: { query: AddItemToShoppingListDocument, variables: () => true },
     result: { data: { addItemsToShoppingList: null } },
@@ -390,7 +395,9 @@ function buildAddItemQueuedMock(): MockedResponse {
   };
 }
 
-function buildAddItemErrorMock(): MockedResponse {
+function buildAddItemErrorMock(): MockFor<
+  typeof AddItemToShoppingListDocument
+> {
   return {
     request: { query: AddItemToShoppingListDocument, variables: () => true },
     error: new Error('Network error'),
@@ -398,7 +405,7 @@ function buildAddItemErrorMock(): MockedResponse {
   };
 }
 
-function buildUpdateItemMock(): MockedResponse {
+function buildUpdateItemMock(): MockFor<typeof UpdateShoppingListItemDocument> {
   return {
     request: { query: UpdateShoppingListItemDocument, variables: () => true },
     result: {
@@ -413,7 +420,9 @@ function buildUpdateItemMock(): MockedResponse {
   };
 }
 
-function buildUpdateItemRefusedMock(): MockedResponse {
+function buildUpdateItemRefusedMock(): MockFor<
+  typeof UpdateShoppingListItemDocument
+> {
   return {
     request: { query: UpdateShoppingListItemDocument, variables: () => true },
     result: {
@@ -430,7 +439,9 @@ function buildUpdateItemRefusedMock(): MockedResponse {
 }
 
 /** What `queueLink` emits for a queued mutation: the field present but null. */
-function buildUpdateItemQueuedMock(): MockedResponse {
+function buildUpdateItemQueuedMock(): MockFor<
+  typeof UpdateShoppingListItemDocument
+> {
   return {
     request: { query: UpdateShoppingListItemDocument, variables: () => true },
     result: { data: { updateShoppingListItem: null } },
@@ -438,7 +449,9 @@ function buildUpdateItemQueuedMock(): MockedResponse {
   };
 }
 
-function buildUpdateItemConflictMock(): MockedResponse {
+function buildUpdateItemConflictMock(): MockFor<
+  typeof UpdateShoppingListItemDocument
+> {
   return {
     request: { query: UpdateShoppingListItemDocument, variables: () => true },
     result: {
@@ -454,7 +467,9 @@ function buildUpdateItemConflictMock(): MockedResponse {
   };
 }
 
-function buildGetShoppingListItemMock(itemId: string): MockedResponse {
+function buildGetShoppingListItemMock(
+  itemId: string,
+): MockFor<typeof GetShoppingListItemDocument> {
   return {
     request: {
       query: GetShoppingListItemDocument,

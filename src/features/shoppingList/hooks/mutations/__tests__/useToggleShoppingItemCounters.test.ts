@@ -4,10 +4,10 @@
  */
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   seedCache,
-  type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { ToggleShoppingListItemPurchasedDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -139,7 +139,7 @@ const counts = (cache: ReturnType<typeof seedCache>) =>
     fragment: COUNTS,
   });
 
-const refusal: MockedResponse = {
+const refusal: MockFor<typeof ToggleShoppingListItemPurchasedDocument> = {
   request: {
     query: ToggleShoppingListItemPurchasedDocument,
     variables: () => true,

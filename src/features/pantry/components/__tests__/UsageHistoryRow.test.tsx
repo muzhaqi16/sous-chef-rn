@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { UsagePurpose } from '#/graphql/generated/schemaTypes';
+import { AdjustmentKind, UsagePurpose } from '#/graphql/generated/schemaTypes';
 import {
   UsageHistoryRow,
   type UsageRecord,
@@ -16,6 +16,7 @@ const makeRecord = (overrides: Partial<UsageRecord> = {}): UsageRecord => ({
   usedAt: '2024-01-01',
   quantityUsed: 1,
   purpose: UsagePurpose.General,
+  adjustmentKind: null,
   adjustmentReason: null,
   usageUnit: { symbol: 'L' },
   ...overrides,
@@ -62,11 +63,12 @@ describe('UsageHistoryRow', () => {
     expect(screen.getByText(/^\+/)).toBeTruthy();
   });
 
-  it('shows an adjustmentreason when the purpose is an adjustment', () => {
+  it("shows a person's correction reason when their kind says it is theirs", () => {
     render(
       <UsageHistoryRow
         usage={makeRecord({
           purpose: UsagePurpose.Adjustment,
+          adjustmentKind: AdjustmentKind.User,
           adjustmentReason: 'Miscounted',
         })}
       />,
@@ -78,28 +80,65 @@ describe('UsageHistoryRow', () => {
     render(<UsageHistoryRow usage={makeRecord({ usageUnit: null })} />);
     expect(screen.queryByText(/L/)).toBeNull();
   });
-  it('renders a reason the server writes as local copy, never its English', () => {
-    render(
-      <UsageHistoryRow
-        usage={makeRecord({
-          purpose: UsagePurpose.Adjustment,
-          adjustmentReason: 'stack merge reconciliation',
-        })}
-      />,
-    );
-    expect(screen.getByText('Adjustment after merging items')).toBeTruthy();
-    expect(screen.queryByText('stack merge reconciliation')).toBeNull();
-  });
+  it.each([
+    [AdjustmentKind.StackMerge, 'Adjustment after merging items'],
+    [AdjustmentKind.StackPurged, 'Administrative removal'],
+    [AdjustmentKind.StackRemoved, 'Removed from the pantry'],
+  ])(
+    'renders %s as local copy, never the server reason beside it',
+    (kind, copy) => {
+      render(
+        <UsageHistoryRow
+          usage={makeRecord({
+            purpose: UsagePurpose.Adjustment,
+            adjustmentKind: kind,
+            adjustmentReason: 'stack merge reconciliation',
+          })}
+        />,
+      );
+      expect(screen.getByText(copy)).toBeTruthy();
+      expect(screen.queryByText('stack merge reconciliation')).toBeNull();
+    },
+  );
 
   it('renders a reason a person typed as written', () => {
     render(
       <UsageHistoryRow
         usage={makeRecord({
           purpose: UsagePurpose.Adjustment,
+          adjustmentKind: AdjustmentKind.User,
           adjustmentReason: 'Spilled half',
         })}
       />,
     );
     expect(screen.getByText('Spilled half')).toBeTruthy();
+  });
+
+  it('renders a correction on a RESTOCK row, which carries a kind too', () => {
+    // A correction that FINDS stock is recorded against RESTOCK. Gating the
+    // line on the purpose would hide it.
+    render(
+      <UsageHistoryRow
+        usage={makeRecord({
+          purpose: UsagePurpose.Restock,
+          adjustmentKind: AdjustmentKind.User,
+          adjustmentReason: 'Found two more at the back',
+        })}
+      />,
+    );
+    expect(screen.getByText('Found two more at the back')).toBeTruthy();
+  });
+
+  it('shows no correction line on an ordinary row carrying no kind', () => {
+    render(
+      <UsageHistoryRow
+        usage={makeRecord({
+          purpose: UsagePurpose.Restock,
+          adjustmentReason: 'stack merge reconciliation',
+        })}
+      />,
+    );
+    expect(screen.queryByText('stack merge reconciliation')).toBeNull();
+    expect(screen.queryByText('Adjustment after merging items')).toBeNull();
   });
 });

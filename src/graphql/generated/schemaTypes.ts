@@ -387,6 +387,21 @@ export type AdjustPantryItemWeightPayload = {
  */
 export type AdjustPantryItemWeightResult = AdjustPantryItemWeightPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
+/**
+ * Who or what corrected a pantry stack's recorded quantity, on a usage row that
+ * is a correction. Branch on this, not on adjustmentReason text.
+ */
+export enum AdjustmentKind {
+  /** Reconciliation written while merging duplicate stacks. */
+  StackMerge = 'STACK_MERGE',
+  /** An administrator destroyed the stack. */
+  StackPurged = 'STACK_PURGED',
+  /** The legacy stack-removal marker. Only historical rows carry it. */
+  StackRemoved = 'STACK_REMOVED',
+  /** A person asked for the correction; adjustmentReason is their text. */
+  User = 'USER'
+}
+
 /** Result of quantity aggregation (add/subtract) */
 export type AggregationResult = {
   __typename: 'AggregationResult';
@@ -581,8 +596,21 @@ export type BatchAddShoppingListItemResult = {
   __typename: 'BatchAddShoppingListItemResult';
   /** Client ID if provided in input */
   clientId: Maybe<Scalars['String']['output']>;
-  /** Error message if failed */
+  /**
+   * Why the entry failed, as the code a result-union member carries for the same
+   * error. Set exactly when success is false. Branch on this, not on the text.
+   */
+  code: Maybe<ErrorCode>;
+  /**
+   * Client-safe failure text, set exactly when success is false. An
+   * unexpected fault is masked in production and carries errorId.
+   */
   error: Maybe<Scalars['String']['output']>;
+  /**
+   * Set only when the failure text was masked. Names the log entry holding the
+   * real error, so support can look it up.
+   */
+  errorId: Maybe<Scalars['String']['output']>;
   /** Index in the input array */
   index: Scalars['Int']['output'];
   /** The created/updated item (null if failed) */
@@ -615,8 +643,19 @@ export type BatchUpsertItemInput = {
 
 export type BatchUpsertItemResult = {
   __typename: 'BatchUpsertItemResult';
+  /**
+   * Why the entry failed, as the code a result-union member carries for the same
+   * error. Set exactly when success is false. Branch on this, not on the text.
+   */
+  code: Maybe<ErrorCode>;
   created: Maybe<Scalars['Boolean']['output']>;
+  /** Client-safe failure text, set exactly when success is false. */
   error: Maybe<Scalars['String']['output']>;
+  /**
+   * Set only when the failure text was masked. Names the log entry holding the
+   * real error, so support can look it up.
+   */
+  errorId: Maybe<Scalars['String']['output']>;
   externalId: Scalars['String']['output'];
   item: Maybe<Item>;
   mapping: Maybe<ExternalSourceMapping>;
@@ -855,9 +894,12 @@ export type BulkDeletePurchasesResult = BulkDeletePurchasesPayload | ConflictErr
 
 export type BulkDeviceFailure = {
   __typename: 'BulkDeviceFailure';
-  /** The error code the single-device operation would have answered with. */
-  code: Scalars['String']['output'];
+  /** Why this device was not updated, as the code a result-union member carries for the same error. */
+  code: ErrorCode;
   deviceId: Scalars['ID']['output'];
+  /** Set only when the message was masked. Names the log entry holding the real error. */
+  errorId: Maybe<Scalars['String']['output']>;
+  /** Client-safe failure text. An unexpected fault is masked in production and carries errorId. */
   message: Scalars['String']['output'];
 };
 
@@ -1382,6 +1424,16 @@ export type ConnectivityInput = {
 export type ConsumptionFailure = {
   __typename: 'ConsumptionFailure';
   availableQuantity: Scalars['Float']['output'];
+  /**
+   * Why this item failed, as the code a result-union member carries for the same
+   * error. Branch on this, not on the reason text.
+   */
+  code: ErrorCode;
+  /**
+   * Set only when the reason was masked. Names the log entry holding the real
+   * error, so support can look it up.
+   */
+  errorId: Maybe<Scalars['String']['output']>;
   pantryItemId: Scalars['ID']['output'];
   reason: Scalars['String']['output'];
   recipeIngredientId: Scalars['ID']['output'];
@@ -2024,6 +2076,12 @@ export type CreatePantryItemPayload = {
 export type CreatePantryItemResult = ConflictError | CreatePantryItemPayload | DuplicatePantryItemError | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreatePantryItemUsageInput = {
+  /**
+   * True to use everything the stack holds, whatever it is: the record states that amount in
+   * the tracking unit. Refused only when the stack is already empty. Send exactly one of
+   * quantityUsed and consumeAll.
+   */
+  consumeAll?: InputMaybe<Scalars['Boolean']['input']>;
   cookingLogId?: InputMaybe<Scalars['ID']['input']>;
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
@@ -2032,7 +2090,13 @@ export type CreatePantryItemUsageInput = {
   notes?: InputMaybe<Scalars['String']['input']>;
   pantryItemId: Scalars['ID']['input'];
   purpose: UsagePurpose;
-  quantityUsed: Scalars['Float']['input'];
+  /**
+   * How much was used, in usageUnitId (the stack's tracking unit when omitted). A use larger
+   * than the stack holds by no more than a hundredth of a gram or millilitre empties it; a
+   * larger one is refused, stating what remains. Send exactly one of quantityUsed and
+   * consumeAll.
+   */
+  quantityUsed?: InputMaybe<Scalars['Float']['input']>;
   recipeId?: InputMaybe<Scalars['ID']['input']>;
   targetBatchId?: InputMaybe<Scalars['ID']['input']>;
   usageUnitId?: InputMaybe<Scalars['ID']['input']>;
@@ -3127,6 +3191,10 @@ export type DeleteUserAddressResult = ConflictError | DeleteUserAddressPayload |
 
 export type DeletionBlocker = {
   __typename: 'DeletionBlocker';
+  /** Other active collaborators on the list, the count message states. Set on SHOPPING_LIST blockers only. */
+  collaboratorCount: Maybe<Scalars['Int']['output']>;
+  /** Other active members of the home, the count message states. Set on HOME_OWNERSHIP blockers only. */
+  memberCount: Maybe<Scalars['Int']['output']>;
   message: Scalars['String']['output'];
   resourceId: Scalars['ID']['output'];
   resourceName: Scalars['String']['output'];
@@ -4007,11 +4075,10 @@ export type FailedIpStat = {
 export type FailedMoveInfo = {
   __typename: 'FailedMoveInfo';
   /**
-   * The registered error code for this line's failure — the same code the
-   * single-line moveShoppingItemToPantry would carry in its error extensions.
-   * Branch on this, not on the reason text.
+   * Why this line failed, as the code a result-union member carries for the
+   * same error. Branch on this, not on the reason text.
    */
-  code: Scalars['String']['output'];
+  code: ErrorCode;
   /**
    * Present only when the reason was masked. Names the log entry holding the
    * real error, so support can look it up.
@@ -5543,6 +5610,8 @@ export type ItemUnit = {
   updatedAt: Scalars['DateTime']['output'];
   usageContext: Array<UnitUsageContext>;
   version: Scalars['Int']['output'];
+  /** True when this item is never used in a fraction of this unit (eggs in pieces). */
+  wholeUnitsOnly: Scalars['Boolean']['output'];
 };
 
 export type ItemUnitConfigInput = {
@@ -5618,6 +5687,11 @@ export type ItemUnitInput = {
   unitId?: InputMaybe<Scalars['ID']['input']>;
   unitName?: InputMaybe<Scalars['String']['input']>;
   usageContext?: InputMaybe<Array<UnitUsageContext>>;
+  /**
+   * True when this item is never used in a fraction of this unit (eggs in pieces). A stack
+   * whose portion unit this is inherits it at creation.
+   */
+  wholeUnitsOnly?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type ItemUnitSuggestion = {
@@ -5656,6 +5730,8 @@ export type ItemValidationReport = {
 /** A condition worth surfacing that does not make the Item invalid. */
 export type ItemValidationWarning = {
   __typename: 'ItemValidationWarning';
+  /** Which condition this is. Branch on this, not on message or suggestion. */
+  code: ItemValidationWarningCode;
   /** The Item field the warning is about. */
   field: Scalars['String']['output'];
   /** Human-readable description of the concern. */
@@ -5663,6 +5739,18 @@ export type ItemValidationWarning = {
   /** Recommended remedy, when one can be suggested. */
   suggestion: Maybe<Scalars['String']['output']>;
 };
+
+/** Which condition an ItemValidationWarning reports; one member per condition. */
+export enum ItemValidationWarningCode {
+  /** The item has no category. */
+  MissingCategory = 'MISSING_CATEGORY',
+  /** The item has no description. */
+  MissingDescription = 'MISSING_DESCRIPTION',
+  /** The item has no unit. */
+  MissingUnit = 'MISSING_UNIT',
+  /** The item has no UPC barcode. */
+  MissingUpc = 'MISSING_UPC'
+}
 
 export type JoinHomeByCodeInput = {
   joinCode: Scalars['String']['input'];
@@ -5734,6 +5822,11 @@ export type LedgerPeriodData = {
   consumed: Scalars['Float']['output'];
   net: Scalars['Float']['output'];
   periodEnd: Scalars['DateTime']['output'];
+  /**
+   * The bucket's UTC key, not display text: YYYY-MM-DD for DAILY, YYYY-MM-DD of
+   * the ISO week's Monday for WEEKLY, and YYYY-MM for MONTHLY. Format it for the
+   * reader locally.
+   */
   periodLabel: Scalars['String']['output'];
   periodStart: Scalars['DateTime']['output'];
   wasted: Scalars['Float']['output'];
@@ -6527,8 +6620,6 @@ export type MealPlanEventNode = MealPlan | MealPlanItem | MealTemplate | MealTem
 
 export type MealPlanFilters = {
   endDate?: InputMaybe<Scalars['DateTime']['input']>;
-  /** Filter by home ID to see only home-scoped meal plans */
-  homeId?: InputMaybe<Scalars['ID']['input']>;
   /** Filter to only active meal plans (current date within start/end range) */
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
   /** Filter by meal plan type */
@@ -6764,6 +6855,13 @@ export type MeasurementProfileInput = {
   densityOverride?: InputMaybe<Scalars['Float']['input']>;
   portionUnitId?: InputMaybe<Scalars['ID']['input']>;
   portionsPerTrackingUnit?: InputMaybe<Scalars['Float']['input']>;
+  /**
+   * True when a portion of this stack is never split (an egg): a use, waste, restock or
+   * correction recording a fraction of a portion is refused, and a recipe asking for a
+   * fraction takes the next whole portion. Seeded from the item's unit row for the
+   * portion unit when omitted.
+   */
+  wholePortionsOnly?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 /** Reusable sub-input for media assets (images) */
@@ -6886,6 +6984,17 @@ export enum MobilePlatform {
   Macos = 'MACOS',
   Other = 'OTHER',
   Windows = 'WINDOWS'
+}
+
+/**
+ * Who or what put a moderation state in force, for client copy. A value is
+ * listed only once some path emits it.
+ */
+export enum ModerationReasonCode {
+  /** The failed-login lockout suspended the account. Temporary: it lifts when the lockout window lapses. */
+  FailedLoginAttempts = 'FAILED_LOGIN_ATTEMPTS',
+  /** A moderator imposed it. The accompanying reason text, when present, is the moderator's own words. */
+  Moderator = 'MODERATOR'
 }
 
 export enum ModerationRestriction {
@@ -10667,15 +10776,21 @@ export type MyModerationStatus = {
   appealStatus: Maybe<AppealStatus>;
   appealedAt: Maybe<Scalars['DateTime']['output']>;
   banReason: Maybe<Scalars['String']['output']>;
+  /** Why the ban is in force; null when not banned. */
+  banReasonCode: Maybe<ModerationReasonCode>;
   id: Scalars['ID']['output'];
   isBanned: Scalars['Boolean']['output'];
   isSuspended: Scalars['Boolean']['output'];
   restrictedUntil: Maybe<Scalars['DateTime']['output']>;
   restrictionReason: Maybe<Scalars['String']['output']>;
+  /** Why restrictions are in force; null when none are. */
+  restrictionReasonCode: Maybe<ModerationReasonCode>;
   restrictions: Array<ModerationRestriction>;
   status: ModerationStatus;
   suspendedUntil: Maybe<Scalars['DateTime']['output']>;
   suspensionReason: Maybe<Scalars['String']['output']>;
+  /** Why the suspension is in force; null when not suspended. */
+  suspensionReasonCode: Maybe<ModerationReasonCode>;
   trustLevel: TrustLevel;
   underReview: Scalars['Boolean']['output'];
 };
@@ -10738,6 +10853,12 @@ export type Notification = {
   /** When this notification expires. Null if it does not expire. */
   expiresAt: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
+  /**
+   * True when a person wrote title and message (an admin announcement, a
+   * notification created through the API): show them as written. False when the
+   * server built them from a template: render client copy from type and payload.
+   */
+  isAuthoredContent: Scalars['Boolean']['output'];
   message: Maybe<Scalars['String']['output']>;
   payload: Scalars['JSON']['output'];
   priority: Priority;
@@ -11560,12 +11681,10 @@ export type PantryEventParents = {
 };
 
 /**
- * Filters for querying pantries.
- * userId and homeId filters have different behavior for admins vs regular users.
+ * Filters for querying pantries. The home a page covers is the query's own
+ * homeId argument — required on pantries, optional on adminPantries.
  */
 export type PantryFilters = {
-  /** Filter by home ID - optional for admins, required for regular users */
-  homeId?: InputMaybe<Scalars['ID']['input']>;
   /** Filter by default status */
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
   /** Search by name, description, or location */
@@ -11666,8 +11785,8 @@ export type PantryItem = {
   quantityBreakdown: Maybe<QuantityBreakdown>;
   remainingNetWeight: Maybe<Scalars['Float']['output']>;
   /**
-   * Portions left, from the remaining net weight when the stack tracks one and
-   * from the quantity otherwise. Null when the stack defines no portion.
+   * Portions left, exact: from the remaining net weight when the stack tracks one and from
+   * the quantity otherwise. Null when the stack defines no portion.
    */
   remainingPortions: Maybe<Scalars['Float']['output']>;
   restockQuantity: Maybe<Scalars['Float']['output']>;
@@ -11691,6 +11810,8 @@ export type PantryItem = {
   version: Scalars['Int']['output'];
   wasteDate: Maybe<Scalars['DateTime']['output']>;
   wasteReason: Maybe<WasteReason>;
+  /** True when a portion of this stack is never split; a fractional use is refused. */
+  wholePortionsOnly: Scalars['Boolean']['output'];
 };
 
 
@@ -11994,6 +12115,11 @@ export type PantryItemSuggestion = {
 
 export type PantryItemUsage = {
   __typename: 'PantryItemUsage';
+  /**
+   * Who or what made this correction, on every row that corrects the stack's
+   * quantity in either direction (a RESTOCK row included). Null on every other row.
+   */
+  adjustmentKind: Maybe<AdjustmentKind>;
   adjustmentReason: Maybe<Scalars['String']['output']>;
   cookingLog: Maybe<CookingLog>;
   cookingLogId: Maybe<Scalars['ID']['output']>;
@@ -12395,8 +12521,6 @@ export type PurchaseFilters = {
   fromDate?: InputMaybe<Scalars['DateTime']['input']>;
   /** Filter by item. */
   itemId?: InputMaybe<Scalars['ID']['input']>;
-  /** Filter by shopping list. */
-  shoppingListId?: InputMaybe<Scalars['ID']['input']>;
   /** Filter by specific shopping list item. */
   shoppingListItemId?: InputMaybe<Scalars['ID']['input']>;
   /** Filter by store. */
@@ -12677,7 +12801,12 @@ export type Query = {
   me: Maybe<User>;
   /** Fetch a single meal plan by its ID. */
   mealPlan: Maybe<MealPlan>;
-  /** List meal plans with filtering and cursor-based pagination. */
+  /**
+   * List meal plans with filtering and cursor-based pagination.
+   *
+   * Without homeId the page holds the caller's own plans plus those of every
+   * home they are an active member of; with it, that one home's plans.
+   */
   mealPlans: MealPlanConnection;
   /** Get a single meal template by ID */
   mealTemplate: Maybe<MealTemplate>;
@@ -12732,7 +12861,12 @@ export type Query = {
   parseQuantityInput: QuantityDisplay;
   /** Fetch a single purchase by its ID. */
   purchase: Maybe<Purchase>;
-  /** List purchases with filtering and cursor-based pagination. */
+  /**
+   * List purchases with filtering and cursor-based pagination.
+   *
+   * shoppingListId narrows the page to purchases made from one list; the page
+   * is the caller's own purchases either way.
+   */
   purchases: PurchaseConnection;
   /**
    * A single recipe by id. Anonymous callers see published recipes only;
@@ -12834,6 +12968,9 @@ export type Query = {
    * Replaces: defaultShoppingList (use filters: { isDefault: true }),
    * searchShoppingLists (use filters: { search: "query" }),
    * shoppingListCollaborators (use ShoppingList.collaboratorsConnection)
+   *
+   * homeId narrows the page to one home's lists; it never widens the
+   * owner/collaborator/member scope the caller already has.
    */
   shoppingLists: ShoppingListConnection;
   /**
@@ -13130,6 +13267,7 @@ export type QueryMealPlansArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   filters?: InputMaybe<MealPlanFilters>;
   first?: InputMaybe<Scalars['Int']['input']>;
+  homeId?: InputMaybe<Scalars['ID']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<MealPlanOrderBy>;
 };
@@ -13233,6 +13371,7 @@ export type QueryPurchasesArgs = {
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<PurchaseOrderBy>;
+  shoppingListId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 
@@ -13355,6 +13494,7 @@ export type QueryShoppingListsArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   filters?: InputMaybe<ShoppingListFilters>;
   first?: InputMaybe<Scalars['Int']['input']>;
+  homeId?: InputMaybe<Scalars['ID']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<ShoppingListOrderBy>;
 };
@@ -14845,13 +14985,31 @@ export type ShoppingListSuggestionsArgs = {
 export type ShoppingListActivity = {
   __typename: 'ShoppingListActivity';
   action: ListActivityType;
+  /** The list fields an update touched. Set on LIST_UPDATED. */
+  changedFields: Maybe<Array<Scalars['String']['output']>>;
+  /** The collaborator the action names. Set on COLLABORATOR_ADDED, COLLABORATOR_REMOVED and COLLABORATOR_ROLE_CHANGED. */
+  collaboratorEmail: Maybe<Scalars['String']['output']>;
+  /** The role a collaborator was invited with. Set on COLLABORATOR_ADDED when one was given. */
+  collaboratorRole: Maybe<CollaboratorRole>;
   createdAt: Scalars['DateTime']['output'];
   description: Scalars['String']['output'];
   id: Scalars['ID']['output'];
+  /** How many items a bulk clear removed. Set on the ITEM_REMOVED row with no itemName. */
+  itemCount: Maybe<Scalars['Int']['output']>;
   itemName: Maybe<Scalars['String']['output']>;
+  /** The list's name. Set on LIST_CREATED, LIST_UPDATED and LIST_DELETED. */
+  listName: Maybe<Scalars['String']['output']>;
   metadata: Maybe<Scalars['JSON']['output']>;
+  /** The role after a change. Set on COLLABORATOR_ROLE_CHANGED. */
+  newRole: Maybe<CollaboratorRole>;
   newValue: Maybe<Scalars['String']['output']>;
   oldValue: Maybe<Scalars['String']['output']>;
+  /** The role before a change. Set on COLLABORATOR_ROLE_CHANGED. */
+  previousRole: Maybe<CollaboratorRole>;
+  /** Whether a bulk clear removed only purchased items. Set with itemCount. */
+  purchasedOnly: Maybe<Scalars['Boolean']['output']>;
+  /** The quantity the description states. Set on ITEM_ADDED and ITEM_PURCHASED when one was recorded. */
+  quantity: Maybe<Scalars['Float']['output']>;
   shoppingList: ShoppingList;
   shoppingListId: Scalars['ID']['output'];
   source: Maybe<Scalars['String']['output']>;
@@ -15025,7 +15183,6 @@ export type ShoppingListEvent = {
 export type ShoppingListEventNode = ShoppingList | ShoppingListCollaborator | ShoppingListItem;
 
 export type ShoppingListFilters = {
-  homeId?: InputMaybe<Scalars['ID']['input']>;
   isArchived?: InputMaybe<Scalars['Boolean']['input']>;
   isCompleted?: InputMaybe<Scalars['Boolean']['input']>;
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
@@ -15348,6 +15505,16 @@ export type ShoppingListUsageStats = {
 /** Item that was skipped when adding to shopping list */
 export type SkippedLowStockItem = {
   __typename: 'SkippedLowStockItem';
+  /**
+   * Why this item failed, as the code a result-union member carries for the same
+   * error. Branch on this, not on the reason text.
+   */
+  code: ErrorCode;
+  /**
+   * Set only when the reason was masked. Names the log entry holding the real
+   * error, so support can look it up.
+   */
+  errorId: Maybe<Scalars['String']['output']>;
   itemName: Scalars['String']['output'];
   pantryItemId: Scalars['ID']['output'];
   reason: Scalars['String']['output'];
@@ -15359,6 +15526,16 @@ export type SkippedLowStockItem = {
  */
 export type SkippedRecipeIngredient = {
   __typename: 'SkippedRecipeIngredient';
+  /**
+   * Why this item failed, as the code a result-union member carries for the same
+   * error. Branch on this, not on the reason text.
+   */
+  code: ErrorCode;
+  /**
+   * Set only when the reason was masked. Names the log entry holding the real
+   * error, so support can look it up.
+   */
+  errorId: Maybe<Scalars['String']['output']>;
   fromUnitId: Scalars['ID']['output'];
   itemName: Scalars['String']['output'];
   reason: Scalars['String']['output'];
@@ -18334,6 +18511,7 @@ export type UserPurchasesConnectionArgs = {
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<PurchaseOrderBy>;
+  shoppingListId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 
@@ -18460,6 +18638,8 @@ export type UserEvent = {
    * two devices apart.
    */
   actorUserId: Maybe<Scalars['ID']['output']>;
+  /** The failed password attempts that triggered a FAILED_LOGIN_ATTEMPTS suspension. Null otherwise. */
+  failedLoginCount: Maybe<Scalars['Int']['output']>;
   /**
    * Mutation kind for this event. UPDATED for ACCOUNT_UPDATED / PROFILE_CHANGED
    * and the moderation subtypes (BANNED / UNBANNED / SUSPENDED / UNSUSPENDED /
@@ -18475,7 +18655,16 @@ export type UserEvent = {
    */
   originatorClientId: Maybe<Scalars['ID']['output']>;
   parents: Maybe<UserEventParents>;
+  /**
+   * The reason given for this moderation action, as written by the moderator.
+   * Null when none was given; never internal moderator notes.
+   */
   reason: Maybe<Scalars['String']['output']>;
+  /**
+   * What caused a moderation event (BANNED / UNBANNED / SUSPENDED / UNSUSPENDED
+   * / WARNED). Null for every other subtype.
+   */
+  reasonCode: Maybe<ModerationReasonCode>;
   subtype: UserSubtype;
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Maybe<Array<Scalars['String']['output']>>;

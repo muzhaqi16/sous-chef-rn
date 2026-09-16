@@ -7,11 +7,14 @@
  */
 
 import { act } from '@testing-library/react-native';
+import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import {
-  renderHookWithApollo,
-  type MockedResponse,
-} from '#/test-utils/apolloMockProvider';
-import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+  AddItemToShoppingListDocument,
+  type AddItemToShoppingListMutation,
+  type AddItemToShoppingListMutationVariables,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import type { AddedShoppingListItemFieldsFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import { useAddShoppingItem } from '../useAddShoppingItem';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
@@ -48,7 +51,20 @@ jest.mock('#/utils/generateEntityId', () => ({
 const mockGenerateEntityId = generateEntityId as jest.Mock;
 const mockSafeEvict = safeEvict as jest.Mock;
 
-const payloadItem = (id: string) => ({
+/** The success member of the batch add: the union's non-error arm. */
+type BatchPayload = MockPart<
+  Extract<
+    AddItemToShoppingListMutation['addItemsToShoppingList'],
+    { __typename: 'AddItemsToShoppingListPayload' }
+  >
+>;
+type BatchResult = NonNullable<BatchPayload['results']>[number];
+
+/** The row on the wire: the mutation's own selection plus the added-item fragment. */
+type PayloadItem = NonNullable<BatchResult>['item'] &
+  AddedShoppingListItemFieldsFragment;
+
+const payloadItem = (id: string): MockPart<PayloadItem> => ({
   __typename: 'ShoppingListItem',
   id,
   itemName: 'Milk',
@@ -75,7 +91,7 @@ const payloadItem = (id: string) => ({
 const batchPayload = (
   item: ReturnType<typeof payloadItem>,
   merged: boolean,
-) => ({
+): BatchPayload => ({
   __typename: 'AddItemsToShoppingListPayload',
   results: [
     {
@@ -91,13 +107,13 @@ const batchPayload = (
 });
 
 // Server echoes back the client-sent id (no catalog merge).
-const echoMock = (): MockedResponse => ({
+const echoMock = (): MockFor<typeof AddItemToShoppingListDocument> => ({
   request: { query: AddItemToShoppingListDocument, variables: () => true },
   maxUsageCount: Number.POSITIVE_INFINITY,
-  result: (vars: { input: { items: { id: string }[] } }) => ({
+  result: (vars: AddItemToShoppingListMutationVariables) => ({
     data: {
       addItemsToShoppingList: batchPayload(
-        payloadItem(vars.input.items[0]!.id),
+        payloadItem(vars.input.items[0]?.id ?? 'item-1'),
         false,
       ),
     },
@@ -105,7 +121,9 @@ const echoMock = (): MockedResponse => ({
 });
 
 // Server returns a different (canonical) id → a catalog merge happened.
-const mergeMock = (canonicalId: string): MockedResponse => ({
+const mergeMock = (
+  canonicalId: string,
+): MockFor<typeof AddItemToShoppingListDocument> => ({
   request: { query: AddItemToShoppingListDocument, variables: () => true },
   maxUsageCount: Number.POSITIVE_INFINITY,
   result: () => ({

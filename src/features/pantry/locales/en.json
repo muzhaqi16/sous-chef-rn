@@ -179,7 +179,8 @@
     "remainingWeightPlaceholder": "Leave blank to auto-adjust",
     "systemReason": {
       "stackMerged": "Adjustment after merging items",
-      "stackPurged": "Administrative removal"
+      "stackPurged": "Administrative removal",
+      "stackRemoved": "Removed from the pantry"
     }
   },
   "recordWaste": {

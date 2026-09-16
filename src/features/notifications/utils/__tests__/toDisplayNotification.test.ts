@@ -11,6 +11,7 @@ const base = {
   __typename: 'Notification' as const,
   id: 'n-1',
   type: NotificationType.ExpiryReminder,
+  isAuthoredContent: false,
   status: NotificationStatus.Sent,
   priority: Priority.Urgent,
   title: 'Expiring soon',
@@ -41,10 +42,20 @@ describe('toDisplayNotification', () => {
     expect(item.category).toBe(NotificationCategory.Pantry);
   });
 
-  it("carries none of the server's English copy", () => {
+  // The projection carries the server's title and message, because an ADMIN's
+  // announcement is content a person wrote and is shown as written. What keeps
+  // template English off the screen is the flag, which `getNotificationCopy`
+  // reads — not the projection dropping the fields.
+  it("carries the server's copy along with the flag that gates it", () => {
     const item = toDisplayNotification(base);
-    expect(Object.values(item)).not.toContain(base.title);
-    expect(Object.values(item)).not.toContain(base.message);
+    expect(item.isAuthoredContent).toBe(false);
+    expect(item.title).toBe(base.title);
+    expect(item.message).toBe(base.message);
+  });
+
+  it('marks an authored row as authored', () => {
+    const item = toDisplayNotification({ ...base, isAuthoredContent: true });
+    expect(item.isAuthoredContent).toBe(true);
   });
 
   // The server counts a notification as unread only while PENDING or SENT, so

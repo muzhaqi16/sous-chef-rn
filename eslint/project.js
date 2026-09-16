@@ -11,7 +11,6 @@ const globals = require('globals');
 const { restrictedImports } = require('./restrictedImports');
 const { BOUNDARY_ZONES } = require('./boundaries');
 const { NO_LITERAL_STRING } = require('./i18n');
-const UNNECESSARY_CONDITION_EXCLUSIONS = require('../scripts/no-unnecessary-condition.exclusions.json');
 
 const ROOT = path.join(__dirname, '..');
 
@@ -231,12 +230,11 @@ const overrides = [
   },
   {
     // A METHOD read without calling it is always truthy, and TS2774 cannot see
-    // `!fn`. The exclusion list is a debt list that may only shrink
-    // (`__tests__/lint/unnecessaryConditionRatchet.test.ts`); never delete a
-    // guard to satisfy the rule. Nothing else may declare this rule.
+    // `!fn`. Runs over every source file with no exclusions; never delete a
+    // guard to satisfy the rule — widen the over-promising type where it is
+    // DECLARED. Nothing else may declare this rule.
     files: ['src/**/*.{ts,tsx}'],
     ignores: [
-      ...UNNECESSARY_CONDITION_EXCLUSIONS,
       '**/__tests__/**',
       '**/__mocks__/**',
       '**/__perf__/**',

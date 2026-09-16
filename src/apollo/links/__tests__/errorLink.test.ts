@@ -429,14 +429,31 @@ describe('errorLink — CLIENT_UPGRADE_REQUIRED', () => {
       expect(mockEndSession).toHaveBeenCalledWith('account_inactive');
     });
 
-    // Servers predating the dedicated code send FORBIDDEN + a prose reason.
-    it('ends the session on the legacy FORBIDDEN + reason shape', async () => {
+    // The code is the whole signal. Prose reading as a suspension under any
+    // other code is a resource denial the user can recover from, and ending
+    // the session over it signs out someone who is still entitled to be here.
+    it('does NOT end the session on prose alone under another code', async () => {
       await runWithError([
         {
           message: 'User account is not active',
           extensions: {
             code: 'FORBIDDEN',
             reason: 'User account has been suspended or deleted',
+          },
+        },
+      ]).catch(() => undefined);
+
+      expect(mockEndSession).not.toHaveBeenCalled();
+      expect(mockClearAuth).not.toHaveBeenCalled();
+    });
+
+    it('ends the session on the code with prose that does not mention it', async () => {
+      await runWithError([
+        {
+          message: 'Nope',
+          extensions: {
+            code: 'AUTH_ACCOUNT_SUSPENDED',
+            reason: 'reworded entirely',
           },
         },
       ]).catch(() => undefined);

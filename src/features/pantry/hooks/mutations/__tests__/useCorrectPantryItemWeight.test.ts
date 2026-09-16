@@ -1,5 +1,5 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
@@ -19,7 +19,7 @@ jest.mock('#/services/alertService', () => ({
 
 const successMock = (variables: {
   input: AdjustPantryItemWeightInput;
-}): MockedResponse => ({
+}): MockFor<typeof AdjustPantryItemWeightDocument> => ({
   // variables: () => true — the input carries a generated idempotencyKey, so
   // match on the operation and assert the payload separately.
   request: { query: AdjustPantryItemWeightDocument, variables: () => true },
@@ -51,12 +51,14 @@ const successMock = (variables: {
 
 // These two take no argument — the generated idempotencyKey means the mock
 // matches on the operation, not the exact variables.
-const errorMock = (): MockedResponse => ({
+const errorMock = (): MockFor<typeof AdjustPantryItemWeightDocument> => ({
   request: { query: AdjustPantryItemWeightDocument, variables: () => true },
   error: new Error('Network error'),
 });
 
-const validationErrorMock = (): MockedResponse => ({
+const validationErrorMock = (): MockFor<
+  typeof AdjustPantryItemWeightDocument
+> => ({
   // variables: () => true — the input carries a generated idempotencyKey, so
   // match on the operation and assert the payload separately.
   request: { query: AdjustPantryItemWeightDocument, variables: () => true },
@@ -72,7 +74,9 @@ const validationErrorMock = (): MockedResponse => ({
   },
 });
 
-const refusalMock = (member: Record<string, unknown>): MockedResponse => ({
+const refusalMock = (
+  member: Record<string, unknown>,
+): MockFor<typeof AdjustPantryItemWeightDocument> => ({
   request: { query: AdjustPantryItemWeightDocument, variables: () => true },
   result: { data: { adjustPantryItemWeight: member } },
 });

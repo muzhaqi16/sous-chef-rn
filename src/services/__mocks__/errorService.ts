@@ -51,6 +51,10 @@ export const errorService: ErrorServiceModule['errorService'] = Object.assign(
     getUserFriendlyMessage: jest.fn(
       (_code: string, fallback?: string) => fallback ?? GENERIC,
     ),
+    // False, matching the mocked message above: it answers every code with the
+    // caller's fallback, so no code has copy of its own here. A suite asserting
+    // on a mapped code's sentence overrides both.
+    hasUserFriendlyMessage: jest.fn(() => false),
     getErrorCategory: jest.fn(() => 'General'),
     shouldRetry: jest.fn(() => false),
     isAuthError: jest.fn(() => false),
@@ -79,6 +83,7 @@ export const isTransportFailure = jest.fn(() => true);
 export const useErrorService = jest.fn(() => ({
   ...generated.useErrorService(),
   getUserFriendlyMessage: errorService.getUserFriendlyMessage,
+  hasUserFriendlyMessage: errorService.hasUserFriendlyMessage,
   getErrorCategory: errorService.getErrorCategory,
   shouldRetry: errorService.shouldRetry,
   isAuthError: errorService.isAuthError,

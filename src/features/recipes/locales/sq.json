@@ -154,6 +154,8 @@
     "markedCookedDeducted": "Receta u shënua si e gatuar! Përbërësit u zbritën nga qilari.",
     "markedCookedSkipped_one": "Receta u shënua si e gatuar. {{count}} përbërës nuk u zbrit.",
     "markedCookedSkipped_other": "Receta u shënua si e gatuar. {{count}} përbërës nuk u zbritën.",
+    "markedCookedSkippedUnit_one": "Receta u shënua si e gatuar. {{count}} përbërës nuk u zbrit: njësia e tij nuk shndërrohet në atë të qilarit.",
+    "markedCookedSkippedUnit_other": "Receta u shënua si e gatuar. {{count}} përbërës nuk u zbritën: njësitë e tyre nuk shndërrohen në ato të qilarit.",
     "markedCooked": "Receta u shënua si e gatuar!",
     "renameFolderFailedRetry": "Riemërtimi i dosjes dështoi. Provo përsëri.",
     "folderRenamed": "U riemërtua \"{{oldName}}\" në \"{{newName}}\"",

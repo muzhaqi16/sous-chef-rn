@@ -550,11 +550,16 @@ mutation MarkRecipeAsCooked($input: MarkRecipeAsCookedInput!) {
       # Replay signal: true = the client-minted cooking-log id already existed
       # (idempotent replay), false = a fresh log row was created.
       converged
-      # Ingredients the server could NOT deduct: no conversion reached the
-      # stack's unit. Without this the toast reports unqualified success.
+      # Ingredients the server could NOT deduct. Without this the toast reports
+      # unqualified success.
+      #
+      # `reason` is deliberately NOT selected: it is a server string, we never
+      # display it, and the schema's own guidance is to branch on `code`. The
+      # code says WHY — UNIT_INVALID for an ingredient no conversion reaches —
+      # so the toast can name the cause rather than only the count.
       skippedIngredients {
         itemName
-        reason
+        code
       }
       cookingLog {
         id

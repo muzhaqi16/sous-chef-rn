@@ -724,6 +724,8 @@
   },
   "pushNotification": {
     "title": "{{appName}}",
-    "body": "Tienes una notificación nueva"
+    "body": "Tienes una notificación nueva",
+    "coalesced_one": "{{count}} novedad mientras no estabas",
+    "coalesced_other": "{{count}} novedades mientras no estabas"
   }
 }

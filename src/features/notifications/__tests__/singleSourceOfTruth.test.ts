@@ -28,6 +28,7 @@ const node = (
   __typename: 'Notification' as const,
   id,
   type: NotificationType.CollaborationInvite,
+  isAuthoredContent: false,
   priority: Priority.Normal,
   title: `Title ${id}`,
   message: `Message ${id}`,

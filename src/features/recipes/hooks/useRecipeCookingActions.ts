@@ -8,6 +8,7 @@ import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 
 interface UseRecipeCookingActionsOptions {
@@ -28,6 +29,12 @@ interface FireMarkCookedVars {
   notes?: string;
 }
 
+/** What the cook left undeducted, and whether one cause covers all of it. */
+interface SkippedDeductions {
+  count: number;
+  allUnitConversion: boolean;
+}
+
 export function useRecipeCookingActions({
   recipeId,
 }: UseRecipeCookingActionsOptions) {
@@ -42,8 +49,8 @@ export function useRecipeCookingActions({
   /**
    * Fires the cook-log mutation with a client-minted id, so a queued replay
    * converges on the same log instead of re-deducting the pantry. `failure` is
-   * the message a refused or failed write shows; `skipped` counts ingredients
-   * NOT deducted, which a bare success toast would hide.
+   * the message a refused or failed write shows; `skipped` describes the
+   * ingredients NOT deducted, which a bare success toast would hide.
    */
   const fireMarkCooked = async (vars: FireMarkCookedVars) => {
     const id = generateEntityId();
@@ -71,16 +78,30 @@ export function useRecipeCookingActions({
       });
     }
 
-    const skipped = payload ? payload.skippedIngredients.length : 0;
+    const skippedIngredients = payload?.skippedIngredients ?? [];
+    const skipped = {
+      count: skippedIngredients.length,
+      // The one cause the copy can name: no conversion reaches the stack's
+      // unit. Reported only when it accounts for EVERY skip, since a mixed
+      // batch has no single reason to state.
+      allUnitConversion:
+        skippedIngredients.length > 0 &&
+        skippedIngredients.every(item => item.code === ErrorCode.UnitInvalid),
+    };
 
     return { failure: settled.failure, skipped };
   };
 
   /** Success copy that says so only when nothing was left undeducted. */
-  const deductionToast = (skipped: number) => {
-    if (skipped > 0) {
+  const deductionToast = (skipped: SkippedDeductions) => {
+    if (skipped.count > 0) {
       toastService.warning(
-        t('recipes.markedCookedSkipped', { count: skipped }),
+        t(
+          skipped.allUnitConversion
+            ? 'recipes.markedCookedSkippedUnit'
+            : 'recipes.markedCookedSkipped',
+          { count: skipped.count },
+        ),
       );
       return;
     }

@@ -724,6 +724,8 @@
   },
   "pushNotification": {
     "title": "{{appName}}",
-    "body": "You have a new notification"
+    "body": "You have a new notification",
+    "coalesced_one": "{{count}} update while you were away",
+    "coalesced_other": "{{count}} updates while you were away"
   }
 }

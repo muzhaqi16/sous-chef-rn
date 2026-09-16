@@ -724,6 +724,8 @@
   },
   "pushNotification": {
     "title": "{{appName}}",
-    "body": "Ke një njoftim të ri"
+    "body": "Ke një njoftim të ri",
+    "coalesced_one": "{{count}} përditësim sa ke munguar",
+    "coalesced_other": "{{count}} përditësime sa ke munguar"
   }
 }

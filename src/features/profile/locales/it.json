@@ -19,12 +19,16 @@
     "deleteBlocker": {
       "homeOwnership": {
         "reason": "Nessun altro possiede «{{name}}», che ha ancora altri membri.",
+        "reasonCounted_one": "Nessun altro possiede «{{name}}», che ha ancora {{count}} altro membro.",
+        "reasonCounted_other": "Nessun altro possiede «{{name}}», che ha ancora {{count}} altri membri.",
         "transferOwnership": "Trasferisci la proprietà a un altro membro",
         "removeMembers": "Rimuovi gli altri membri dalla casa",
         "deleteResource": "Elimina la casa"
       },
       "shoppingList": {
         "reason": "Nessun altro possiede la lista della spesa «{{name}}», che ha ancora dei collaboratori.",
+        "reasonCounted_one": "Nessun altro possiede la lista della spesa «{{name}}», che ha ancora {{count}} collaboratore.",
+        "reasonCounted_other": "Nessun altro possiede la lista della spesa «{{name}}», che ha ancora {{count}} collaboratori.",
         "removeCollaborators": "Rimuovi tutti i collaboratori dalla lista",
         "deleteResource": "Elimina la lista della spesa"
       },
@@ -238,6 +242,9 @@
     "addedToShoppingList": "Ora fai parte di una lista della spesa",
     "accountBanned": "Il tuo account è stato bannato",
     "accountSuspended": "Il tuo account è stato sospeso",
+    "accountLockedAttempts_one": "Il tuo account è bloccato dopo {{count}} tentativo di accesso fallito. Si sbloccherà da solo a breve.",
+    "accountLockedAttempts_other": "Il tuo account è bloccato dopo {{count}} tentativi di accesso falliti. Si sbloccherà da solo a breve.",
+    "accountLocked": "Il tuo account è bloccato dopo troppi tentativi di accesso falliti. Si sbloccherà da solo a breve.",
     "warningReceived": "Hai ricevuto un avviso da un moderatore"
   },
   "biometrics": {

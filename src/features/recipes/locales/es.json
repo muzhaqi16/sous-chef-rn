@@ -154,6 +154,8 @@
     "markedCookedDeducted": "¡Receta marcada como cocinada! Ingredientes descontados de la despensa.",
     "markedCookedSkipped_one": "Receta marcada como cocinada. No se pudo descontar {{count}} ingrediente.",
     "markedCookedSkipped_other": "Receta marcada como cocinada. No se pudieron descontar {{count}} ingredientes.",
+    "markedCookedSkippedUnit_one": "Receta marcada como cocinada. No se pudo descontar {{count}} ingrediente: su unidad no se convierte a la del inventario.",
+    "markedCookedSkippedUnit_other": "Receta marcada como cocinada. No se pudieron descontar {{count}} ingredientes: sus unidades no se convierten a las del inventario.",
     "markedCooked": "¡Receta marcada como cocinada!",
     "renameFolderFailedRetry": "No se pudo renombrar la carpeta. Inténtalo de nuevo.",
     "folderRenamed": "Se renombró \"{{oldName}}\" a \"{{newName}}\"",

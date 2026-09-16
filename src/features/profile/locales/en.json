@@ -19,12 +19,16 @@
     "deleteBlocker": {
       "homeOwnership": {
         "reason": "Nobody else owns \"{{name}}\", and it still has other members.",
+        "reasonCounted_one": "Nobody else owns \"{{name}}\", and it still has {{count}} other member.",
+        "reasonCounted_other": "Nobody else owns \"{{name}}\", and it still has {{count}} other members.",
         "transferOwnership": "Transfer ownership to another member",
         "removeMembers": "Remove all other members from the home",
         "deleteResource": "Delete the home"
       },
       "shoppingList": {
         "reason": "Nobody else owns the shopping list \"{{name}}\", and it still has collaborators.",
+        "reasonCounted_one": "Nobody else owns the shopping list \"{{name}}\", and it still has {{count}} collaborator.",
+        "reasonCounted_other": "Nobody else owns the shopping list \"{{name}}\", and it still has {{count}} collaborators.",
         "removeCollaborators": "Remove all collaborators from the list",
         "deleteResource": "Delete the shopping list"
       },
@@ -238,6 +242,9 @@
     "addedToShoppingList": "You were added to a shopping list",
     "accountBanned": "Your account has been banned",
     "accountSuspended": "Your account has been suspended",
+    "accountLockedAttempts_one": "Your account is locked after {{count}} failed sign-in attempt. It unlocks on its own shortly.",
+    "accountLockedAttempts_other": "Your account is locked after {{count}} failed sign-in attempts. It unlocks on its own shortly.",
+    "accountLocked": "Your account is locked after too many failed sign-in attempts. It unlocks on its own shortly.",
     "warningReceived": "You received a warning from a moderator"
   },
   "biometrics": {

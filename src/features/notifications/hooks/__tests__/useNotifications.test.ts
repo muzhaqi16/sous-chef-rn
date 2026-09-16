@@ -1,7 +1,7 @@
 'use no memo';
 
 import { act, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   recordMock,
@@ -124,7 +124,7 @@ function buildNotificationSubscriptionMock(
     sentAt?: string;
   },
   variant: 'created' | 'updated' = 'created',
-): MockedResponse {
+): MockFor<typeof NotificationEventsDocument> {
   const isCreated = variant === 'created';
   return {
     request: {
@@ -170,7 +170,7 @@ function buildTransitionEventMock(
   subtype: NotificationSubtype,
   nodeId: string | null,
   affectedCount: number | null = null,
-): MockedResponse {
+): MockFor<typeof NotificationEventsDocument> {
   return {
     request: {
       query: NotificationEventsDocument,
@@ -260,6 +260,7 @@ const seededCache = (
               __typename: 'Notification' as const,
               id: r.id,
               type: NotificationType.LowStock,
+              isAuthoredContent: false,
               status: r.status,
               priority: Priority.Normal,
               title: 'Low Stock Alert',
@@ -510,7 +511,9 @@ describe('useNotificationListener', () => {
   });
 
   describe('subscription errors', () => {
-    const erroringSubscription = (error: Error): MockedResponse => ({
+    const erroringSubscription = (
+      error: Error,
+    ): MockFor<typeof NotificationEventsDocument> => ({
       request: { query: NotificationEventsDocument },
       error,
     });

@@ -2,11 +2,8 @@ import React from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import type { ViewProps } from 'react-native';
 import { MoveToPantryModal } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal';
-import {
-  type MockedResponse,
-  renderWithApollo,
-  seedCache,
-} from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
+import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { MoveToPantryPurchaseInfoDocument } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal.generated';
 import { MoveToPantryModal_ShoppingListItemFragmentDoc } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal.generated';
 
@@ -393,7 +390,7 @@ describe('MoveToPantryModal', () => {
     const purchaseMock = (
       purchasedQuantity: number | null,
       purchasedPrice: number | null,
-    ): MockedResponse => ({
+    ): MockFor<typeof MoveToPantryPurchaseInfoDocument> => ({
       request: {
         query: MoveToPantryPurchaseInfoDocument,
         variables: { id: ITEM_ID },

@@ -57,6 +57,7 @@ const makeNotification = (
     __typename: 'Notification',
     id: 'n-1',
     type,
+    isAuthoredContent: false,
     status: NotificationStatus.Sent,
     priority: Priority.Normal,
     title: server.title,

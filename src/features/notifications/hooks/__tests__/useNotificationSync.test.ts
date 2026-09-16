@@ -1,6 +1,7 @@
 import { act, waitFor } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import type { InMemoryCache } from '@apollo/client';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   seedCache,
@@ -97,6 +98,7 @@ const seedFeed = (
       sentAt: '2026-01-01T00:00:00.000Z',
       readAt: null,
       expiresAt: null,
+      isAuthoredContent: false,
     })),
   ]);
 
@@ -114,7 +116,7 @@ const readBadge = (cache: InMemoryCache) =>
 
 const markReadMock = (
   outcome: 'success' | 'not-found' = 'success',
-): MockedResponse => ({
+): MockFor<typeof MarkNotificationAsReadDocument> => ({
   request: { query: MarkNotificationAsReadDocument, variables: () => true },
   result: {
     data: {
@@ -139,7 +141,7 @@ const markReadMock = (
   },
 });
 
-const deleteMock = (): MockedResponse => ({
+const deleteMock = (): MockFor<typeof DeleteNotificationDocument> => ({
   request: { query: DeleteNotificationDocument, variables: () => true },
   result: {
     data: {
@@ -151,7 +153,7 @@ const deleteMock = (): MockedResponse => ({
   },
 });
 
-const deleteRejectedMock = (): MockedResponse => ({
+const deleteRejectedMock = (): MockFor<typeof DeleteNotificationDocument> => ({
   request: { query: DeleteNotificationDocument, variables: () => true },
   result: {
     data: {
@@ -164,7 +166,9 @@ const deleteRejectedMock = (): MockedResponse => ({
   },
 });
 
-const deleteAlreadyGoneMock = (): MockedResponse => ({
+const deleteAlreadyGoneMock = (): MockFor<
+  typeof DeleteNotificationDocument
+> => ({
   request: { query: DeleteNotificationDocument, variables: () => true },
   result: {
     data: {
@@ -179,13 +183,13 @@ const deleteAlreadyGoneMock = (): MockedResponse => ({
   },
 });
 
-const markAllMock = (): MockedResponse => ({
+const markAllMock = (): MockFor<typeof MarkAllNotificationsAsReadDocument> => ({
   request: { query: MarkAllNotificationsAsReadDocument, variables: () => true },
   result: {
     data: {
       markAllNotificationsAsRead: {
         __typename: 'MarkAllNotificationsAsReadPayload',
-        summary: { __typename: 'BulkNotificationSummary', total: 3 },
+        summary: { __typename: 'BulkSummary', total: 3 },
       },
     },
   },

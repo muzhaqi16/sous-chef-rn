@@ -19,6 +19,32 @@ export type MockedResponse<
   TData = Record<string, unknown>,
   TVariables extends Record<string, unknown> = Record<string, unknown>,
 > = MockLink.MockedResponse<TData, TVariables>;
+
+/**
+ * A hand-built mock for ONE operation, typed by its own document:
+ * `MockFor<typeof GetPantryDocument>`. Every field and `__typename` is checked
+ * against codegen, while what the fixture omits is still completed from the SDL
+ * — so a fixture keeps stating only what it asserts on. A bare `MockedResponse`
+ * checks nothing, which is how a fixture naming a union member the schema
+ * dropped kept compiling.
+ */
+/**
+ * A piece of one operation's data, for a builder that returns part of a fixture
+ * (an edge, a node). Same checking as {@link MockFor} — every field and
+ * `__typename` is read off codegen — while what it omits is completed from the
+ * SDL. Without it a builder's `__typename` widens to `string` and stops being
+ * checked at all.
+ */
+export type MockPart<TData> = DeepPartial<TData>;
+
+export type MockFor<TDocument> = TDocument extends TypedDocumentNode<
+  infer TData,
+  infer TVariables
+>
+  ? TVariables extends OperationVariables
+    ? MockLink.MockedResponse<DeepPartial<TData>, TVariables>
+    : never
+  : never;
 import {
   addMocksToSchema,
   createMockStore,

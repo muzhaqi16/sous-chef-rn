@@ -1,4 +1,7 @@
-import { NotificationType } from '#/graphql/generated/schemaTypes';
+import {
+  CollaboratorRole,
+  NotificationType,
+} from '#/graphql/generated/schemaTypes';
 import type { Icon } from '#utils/iconUtils';
 import { safeParseDate } from '#utils/dateUtils';
 import type { NotificationPayload } from '#features/notifications/types';
@@ -159,11 +162,23 @@ const buildExpiryReminderMessage = (
 /**
  * What a notification says on screen, built from its `type` and structured
  * `payload`. The server's `title` and `message` are English in every locale,
- * so neither is read.
+ * so neither is read — unless `isAuthoredContent` says a person wrote them.
  */
 export interface NotificationCopy {
   title: string;
   message: string;
+}
+
+/**
+ * A notification as the copy builder reads it. `title` and `message` are the
+ * server's, and only an authored row may show them.
+ */
+export interface NotificationCopySource {
+  type: NotificationType;
+  payload: NotificationPayload;
+  isAuthoredContent?: boolean | null;
+  title?: string | null;
+  message?: string | null;
 }
 
 /** The names a digest shows before summarising the rest as a count. */
@@ -235,6 +250,66 @@ const buildCollaborationInviteMessage = (
       });
 };
 
+/**
+ * The role names, keyed the same way the collaborator screens key them: one
+ * concept, one string. `ADMIN` sits under `labels.*` because it names a
+ * membership role too.
+ */
+const ROLE_LABEL: Record<CollaboratorRole, TranslationKey> = {
+  [CollaboratorRole.Viewer]: 'collaboratorRoles.viewer',
+  [CollaboratorRole.Shopper]: 'collaboratorRoles.shopper',
+  [CollaboratorRole.Contributor]: 'collaboratorRoles.contributor',
+  [CollaboratorRole.Editor]: 'collaboratorRoles.editor',
+  [CollaboratorRole.Admin]: 'labels.admin',
+  [CollaboratorRole.Owner]: 'collaboratorRoles.owner',
+};
+
+/** A payload role, named in the reader's language; null for one we cannot name. */
+const readRole = (
+  payload: NotificationPayload,
+  key: string,
+  t: Translate,
+): string | null => {
+  const value = readText(payload, key);
+  // A wire string is not an enum member: a value this build predates has no
+  // name here, and rendering it raw would show the reader `CONTRIBUTOR`.
+  const label = Object.entries(ROLE_LABEL).find(([role]) => role === value);
+  return label ? t(label[1]) : null;
+};
+
+/**
+ * The role change, named when the payload says what it was. Falls back through
+ * the wordings that need less, down to the one that names nothing.
+ */
+const buildRoleChangedMessage = (
+  payload: NotificationPayload,
+  t: Translate,
+): string => {
+  const name = readText(payload, 'changerName');
+  const listName = readText(payload, 'listName');
+  const role = readRole(payload, 'newRole', t);
+  if (!name || !listName)
+    return t('notifications.copy.message.collaboratorRoleChangedGeneric');
+  if (!role)
+    return t('notifications.copy.message.collaboratorRoleChanged', {
+      name,
+      listName,
+    });
+  const previousRole = readRole(payload, 'previousRole', t);
+  return previousRole
+    ? t('notifications.copy.message.collaboratorRoleChangedFromTo', {
+        name,
+        listName,
+        previousRole,
+        role,
+      })
+    : t('notifications.copy.message.collaboratorRoleChangedTo', {
+        name,
+        listName,
+        role,
+      });
+};
+
 const buildListUpdatedCopy = (
   payload: NotificationPayload,
   t: Translate,
@@ -288,10 +363,19 @@ const buildActorListMessage = (
 };
 
 export const getNotificationCopy = (
-  notification: { type: NotificationType; payload: NotificationPayload },
+  notification: NotificationCopySource,
   t: Translate,
 ): NotificationCopy => {
   const { type, payload } = notification;
+  // An admin's announcement is content a person wrote, like a list's name —
+  // not copy the server generated from a template. Shown as written, and only
+  // on the server's own say-so: an empty payload does not make a row authored.
+  if (notification.isAuthoredContent === true) {
+    return {
+      title: notification.title ?? t('notifications.copy.title.authored'),
+      message: notification.message ?? '',
+    };
+  }
   if (payload.test === true) {
     return {
       title: t('notifications.copy.title.test'),
@@ -345,16 +429,7 @@ export const getNotificationCopy = (
         ),
       };
     case NotificationType.CollaboratorRoleChanged:
-      return {
-        title,
-        message: buildActorListMessage(
-          payload,
-          'changerName',
-          'notifications.copy.message.collaboratorRoleChanged',
-          'notifications.copy.message.collaboratorRoleChangedGeneric',
-          t,
-        ),
-      };
+      return { title, message: buildRoleChangedMessage(payload, t) };
     case NotificationType.CollaboratorPermissionsUpdated:
       return {
         title,

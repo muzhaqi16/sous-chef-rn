@@ -4,6 +4,7 @@ import {
   RemoveRecipeFromFavoritesDocument,
   UpdateFavoriteRecipeDocument,
 } from '#features/recipes/graphql/recipe.generated';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -48,7 +49,7 @@ const unfavoriteMock = (
   member:
     | { __typename: 'RemoveRecipeFromFavoritesPayload' }
     | { __typename: 'ForbiddenError' },
-): MockedResponse => ({
+): MockFor<typeof RemoveRecipeFromFavoritesDocument> => ({
   request: {
     query: RemoveRecipeFromFavoritesDocument,
     variables: () => true,

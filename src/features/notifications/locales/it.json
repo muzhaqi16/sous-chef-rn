@@ -103,7 +103,8 @@
         "RECIPE_SAVED": "Ricetta salvata",
         "test": "Notifica di prova",
         "listCompleted": "Lista della spesa completata",
-        "expiryDigest": "In scadenza questa settimana"
+        "expiryDigest": "In scadenza questa settimana",
+        "authored": "Annuncio"
       },
       "message": {
         "homeInvitation": "{{inviterName}} ti invita a unirti a {{homeName}}",
@@ -119,6 +120,8 @@
         "collaboratorRemoved": "{{name}} ha revocato il tuo accesso a {{listName}}",
         "collaboratorRemovedGeneric": "Il tuo accesso a una lista della spesa è stato revocato",
         "collaboratorRoleChanged": "{{name}} ha modificato il tuo ruolo in {{listName}}",
+        "collaboratorRoleChangedTo": "{{name}} ha cambiato il tuo ruolo in {{listName}} in {{role}}",
+        "collaboratorRoleChangedFromTo": "{{name}} ha cambiato il tuo ruolo in {{listName}} da {{previousRole}} a {{role}}",
         "collaboratorRoleChangedGeneric": "Il tuo ruolo in una lista della spesa è cambiato",
         "collaboratorPermissionsUpdated": "{{name}} ha aggiornato i tuoi permessi in {{listName}}",
         "collaboratorPermissionsUpdatedGeneric": "I tuoi permessi in una lista della spesa sono cambiati",

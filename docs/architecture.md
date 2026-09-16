@@ -606,24 +606,30 @@ i18n:check` (also a pre-push hook) fails on drift between locale files.
 
 ### Type-level gates
 
-`@typescript-eslint/no-unnecessary-condition` runs on `src/**` minus the files in
-`scripts/no-unnecessary-condition.exclusions.json`. It earns its place on one
-shape nothing else catches: a METHOD read without calling it. TypeScript's own
+`@typescript-eslint/no-unnecessary-condition` runs on all of `src/**`, with no
+exclusions. It earns its place on one shape nothing else catches: a METHOD read
+without calling it. TypeScript's own
 TS2774 is emitted only from an `if` condition, a ternary condition and the left
 operand of `&&`/`||`, and `!fn` types as `boolean`, which has no call signatures
 — so `!Environment.isProduction` is always `false`, and a gate written that way
 switches its branch off in every build while typecheck, lint and the full suite
 stay green.
 
-The exclusion list is debt that may only shrink:
-`__tests__/lint/unnecessaryConditionRatchet.test.ts` lints each excluded file
-with the rule forced on and holds it at its per-file count in
-`scripts/no-unnecessary-condition.baseline.json`. About three quarters of the
-excluded findings are `?.` and null guards on data that codegen types as
-non-nullable and the server does not guarantee. Deleting such a guard to satisfy
-the rule trades a lint finding for a runtime crash, which is why the fix is a
-dead branch deleted or the over-promising type widened where it is DECLARED, and
-otherwise the guard and its exclusion both stay.
+Most findings the rule raises are `?.` and null guards on data that codegen types
+as non-nullable and the server does not guarantee. Deleting such a guard to
+satisfy the rule trades a lint finding for a runtime crash, so the fix is a dead
+branch deleted or the over-promising type widened where it is DECLARED — never a
+cast at the call site, and never an exclusion.
+
+Two shapes cover it. Where a library's declared type is narrower than its runtime
+(`ApolloClient.mutate` under `errorPolicy: 'none'` types `data` as present, while
+`QueryManager` resolves `{ data: undefined }` for a `{"data": null}` response),
+annotate the receiving variable with the honest shape — `const response: { data?:
+T } = await client.mutate(…)`. Annotating a DESTRUCTURED binding instead does not
+work: control-flow analysis narrows the union straight back from the initializer.
+Where a closed codegen enum is dispatched on, a trailing `!== LastMember` guard
+reads as dead; a `switch` with a `default` keeps the unknown-subtype path without
+a condition the types can call unnecessary.
 
 `noUncheckedIndexedAccess` makes `arr[0]`, `record[key]` and a regex capture
 group read as `T | undefined`, so a guard on one is necessary rather than noise.

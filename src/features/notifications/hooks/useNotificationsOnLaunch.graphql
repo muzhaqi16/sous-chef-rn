@@ -2,6 +2,11 @@ fragment useNotificationsOnLaunch_notification on Notification {
   id
   type
   priority
+  # `title`/`message` reach the screen ONLY for an authored row — an admin's
+  # announcement, which is content a person wrote. Everything else renders
+  # `getNotificationCopy` from `type` + `payload`, because the server builds
+  # these two from a template, in English, in every locale.
+  isAuthoredContent
   title
   message
   payload

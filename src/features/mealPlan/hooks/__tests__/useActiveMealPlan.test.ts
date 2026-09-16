@@ -1,9 +1,9 @@
 import { waitFor } from '@testing-library/react-native';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
   seedCache,
-  type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
@@ -50,7 +50,7 @@ jest.mock('#/apollo/links/tokenScheduler');
 /** A by-id miss: null data, no entry in `errors[]`. */
 function missMock(id: string) {
   const fired: Array<Record<string, unknown>> = [];
-  const mock: MockedResponse = {
+  const mock: MockFor<typeof GetMealPlanDocument> = {
     request: {
       query: GetMealPlanDocument,
       variables: vars => {
@@ -68,7 +68,7 @@ function missMock(id: string) {
 /** A row that exists and is not the caller's: a top-level FORBIDDEN. */
 function forbiddenMock(id: string) {
   const fired: Array<Record<string, unknown>> = [];
-  const mock: MockedResponse = {
+  const mock: MockFor<typeof GetMealPlanDocument> = {
     request: {
       query: GetMealPlanDocument,
       variables: vars => {

@@ -28,6 +28,89 @@ describe('notificationHelpers', () => {
       }
     });
 
+    describe('an authored announcement', () => {
+      // An admin's free text is content a person wrote, like a list's name.
+      const authored = {
+        type: NotificationType.NewItemAdded,
+        payload: {},
+        isAuthoredContent: true,
+        title: 'Scheduled maintenance',
+        message: 'The app is read-only on Sunday morning.',
+      };
+
+      it('shows the words as written', () => {
+        expect(getNotificationCopy(authored, t)).toEqual({
+          title: 'Scheduled maintenance',
+          message: 'The app is read-only on Sunday morning.',
+        });
+      });
+
+      it('falls back to a local title when the author left none', () => {
+        const { title } = getNotificationCopy({ ...authored, title: null }, t);
+        expect(title).toBe('Announcement');
+      });
+
+      it('does NOT read the words when the row is not marked authored', () => {
+        const copy = getNotificationCopy(
+          { ...authored, isAuthoredContent: false },
+          t,
+        );
+        expect(copy.title).not.toBe('Scheduled maintenance');
+        expect(copy.message).not.toBe(
+          'The app is read-only on Sunday morning.',
+        );
+      });
+
+      it('does NOT read the words when the flag is absent', () => {
+        const { isAuthoredContent: _omitted, ...unflagged } = authored;
+        const copy = getNotificationCopy(unflagged, t);
+        expect(copy.title).not.toBe('Scheduled maintenance');
+      });
+    });
+
+    describe('a role change', () => {
+      const base = {
+        changerName: 'Ana',
+        listName: 'Weekly',
+      };
+
+      it('names both roles when the payload carries them', () => {
+        expect(
+          messageOf(NotificationType.CollaboratorRoleChanged, {
+            ...base,
+            previousRole: 'VIEWER',
+            newRole: 'EDITOR',
+          }),
+        ).toBe('Ana changed your role on Weekly from Viewer to Editor');
+      });
+
+      it('names the new role alone when there is no previous one', () => {
+        expect(
+          messageOf(NotificationType.CollaboratorRoleChanged, {
+            ...base,
+            newRole: 'SHOPPER',
+          }),
+        ).toBe('Ana changed your role on Weekly to Shopper');
+      });
+
+      it('omits a role value this build cannot name, never showing it raw', () => {
+        const message = messageOf(NotificationType.CollaboratorRoleChanged, {
+          ...base,
+          newRole: 'QUARTERMASTER',
+        });
+        expect(message).toBe('Ana changed your role on Weekly');
+        expect(message).not.toContain('QUARTERMASTER');
+      });
+
+      it('falls back to the generic wording without the actor or the list', () => {
+        expect(
+          messageOf(NotificationType.CollaboratorRoleChanged, {
+            newRole: 'EDITOR',
+          }),
+        ).toBe('Your role on a shopping list changed');
+      });
+    });
+
     it('builds an invitation from the payload names', () => {
       expect(
         messageOf(NotificationType.HomeInvitation, {

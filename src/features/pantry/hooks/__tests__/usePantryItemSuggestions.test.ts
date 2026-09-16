@@ -1,8 +1,6 @@
 import { act, waitFor } from '@testing-library/react-native';
-import {
-  renderHookWithApollo,
-  type MockedResponse,
-} from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { makeCache } from '#/apollo/cache';
 import { useStore } from '#store';
 import {
@@ -80,14 +78,14 @@ function buildData(suggestions: Suggestion[]): GetPantryItemSuggestionsQuery {
 function buildMock(
   suggestions: Suggestion[],
   variables = VARIABLES,
-): MockedResponse {
+): MockFor<typeof GetPantryItemSuggestionsDocument> {
   return {
     request: { query: GetPantryItemSuggestionsDocument, variables },
     result: { data: buildData(suggestions) },
   };
 }
 
-const failedMock = (): MockedResponse => ({
+const failedMock = (): MockFor<typeof GetPantryItemSuggestionsDocument> => ({
   request: { query: GetPantryItemSuggestionsDocument, variables: VARIABLES },
   error: new Error('Failed'),
 });

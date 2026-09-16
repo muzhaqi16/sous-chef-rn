@@ -44,7 +44,7 @@ beforeEach(() => {
 type SkippedIngredient = {
   __typename: 'SkippedRecipeIngredient';
   itemName: string;
-  reason: string;
+  code: ErrorCode;
 };
 
 function cookedMock(
@@ -141,14 +141,15 @@ describe('useRecipeCookingActions', () => {
 
   it('does not report full success when the server skipped an ingredient', async () => {
     // The server names what it could not deduct; reporting an unqualified
-    // success hides a pantry that is now wrong.
+    // success hides a pantry that is now wrong. A mixed batch has no single
+    // cause, so the copy states the count alone.
     const cooked = cookedMock({
       kind: 'success',
       skipped: [
         {
           __typename: 'SkippedRecipeIngredient',
           itemName: 'Garlic',
-          reason: 'No conversion from clove to head',
+          code: ErrorCode.InternalServerError,
         },
       ],
     });
@@ -171,6 +172,43 @@ describe('useRecipeCookingActions', () => {
       ),
     );
     expect(mockToastSuccess).not.toHaveBeenCalled();
+  });
+
+  it('names the cause when every skip is the same one', async () => {
+    // The code says WHY, so the toast can state it instead of a bare count.
+    const cooked = cookedMock({
+      kind: 'success',
+      skipped: [
+        {
+          __typename: 'SkippedRecipeIngredient',
+          itemName: 'Garlic',
+          code: ErrorCode.UnitInvalid,
+        },
+        {
+          __typename: 'SkippedRecipeIngredient',
+          itemName: 'Basil',
+          code: ErrorCode.UnitInvalid,
+        },
+      ],
+    });
+    const { result } = renderHookWithApollo(
+      () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
+      { operationMocks: [cooked.mock] },
+    );
+
+    await act(async () => {
+      result.current.handleMarkAsCooked({
+        servings: 4,
+        deductFromPantry: true,
+        useGranularDeduction: false,
+      });
+    });
+
+    await waitFor(() =>
+      expect(mockToastWarning).toHaveBeenCalledWith(
+        'Recipe marked as cooked. 2 ingredients could not be deducted: their units do not convert to the pantry stack.',
+      ),
+    );
   });
 
   it('shows the no-deduction success toast when deductFromPantry is false', async () => {

@@ -67,6 +67,7 @@ const inviteNotification = (
 ): NotificationItem => ({
   id: 'n-invite',
   type: NotificationType.ExpiryReminder,
+  isAuthoredContent: false,
   category: NotificationCategory.Pantry,
   priority: Priority.Normal,
   payload,

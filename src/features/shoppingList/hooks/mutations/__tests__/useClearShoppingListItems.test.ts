@@ -1,8 +1,7 @@
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { act } from '@testing-library/react-native';
-import {
-  renderHookWithApollo,
-  type MockedResponse,
-} from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { RemoveItemsFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { alertService } from '#/services/alertService';
 import { useClearShoppingListItems } from '../useClearShoppingListItems';
@@ -45,7 +44,7 @@ function createItem(overrides: Partial<TestClearItem> = {}): TestClearItem {
 function createClearMock(
   recorded: Array<Record<string, unknown>>,
   delay = 0,
-): MockedResponse {
+): MockFor<typeof RemoveItemsFromShoppingListDocument> {
   return {
     request: {
       query: RemoveItemsFromShoppingListDocument,
@@ -75,7 +74,9 @@ function createClearMock(
   };
 }
 
-function createRejectedClearMock(): MockedResponse {
+function createRejectedClearMock(): MockFor<
+  typeof RemoveItemsFromShoppingListDocument
+> {
   return {
     request: {
       query: RemoveItemsFromShoppingListDocument,
@@ -86,7 +87,7 @@ function createRejectedClearMock(): MockedResponse {
       data: {
         removeItemsFromShoppingList: {
           __typename: 'ValidationError',
-          code: 'VALIDATION_FAILED',
+          code: ErrorCode.ValidationFailed,
           message: 'nope',
           field: 'ids',
         },

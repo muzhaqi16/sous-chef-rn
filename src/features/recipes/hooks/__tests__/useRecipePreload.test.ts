@@ -2,7 +2,7 @@ import { act } from '@testing-library/react-native';
 import { ErrorCode, ExternalSource } from '#/graphql/generated/schemaTypes';
 import type { InMemoryCache } from '@apollo/client';
 import { gql } from '@apollo/client';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   recordMock,
@@ -114,7 +114,7 @@ const makeSpoonacularRecipe = (id = 123) =>
 function buildUpsertMock(
   recipe: { id: string; name: string; imageUrl?: string | null },
   created: boolean = true,
-): MockedResponse {
+): MockFor<typeof UpsertExternalRecipeDocument> {
   return {
     request: {
       query: UpsertExternalRecipeDocument,
@@ -538,7 +538,7 @@ const favoriteMock = (
     | { kind: 'created' }
     | { kind: 'divergent' }
     | { kind: 'rejected'; __typename: 'ValidationError' },
-): MockedResponse => ({
+): MockFor<typeof AddRecipeToFavoritesDocument> => ({
   request: {
     query: AddRecipeToFavoritesDocument,
     variables: () => true,

@@ -154,6 +154,8 @@
     "markedCookedDeducted": "Recipe marked as cooked! Ingredients deducted from pantry.",
     "markedCookedSkipped_one": "Recipe marked as cooked. {{count}} ingredient could not be deducted.",
     "markedCookedSkipped_other": "Recipe marked as cooked. {{count}} ingredients could not be deducted.",
+    "markedCookedSkippedUnit_one": "Recipe marked as cooked. {{count}} ingredient could not be deducted: its unit does not convert to the pantry stack.",
+    "markedCookedSkippedUnit_other": "Recipe marked as cooked. {{count}} ingredients could not be deducted: their units do not convert to the pantry stack.",
     "markedCooked": "Recipe marked as cooked!",
     "renameFolderFailedRetry": "Failed to rename folder. Please try again.",
     "folderRenamed": "Renamed \"{{oldName}}\" to \"{{newName}}\"",

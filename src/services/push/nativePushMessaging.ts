@@ -20,6 +20,7 @@ import { t } from '#/i18n';
 import { logger } from '#/utils/environment';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { showLocalNotification } from '#/services/notifications/localNotificationHelper';
+import { getPushTrayCopy } from '#features/notifications/pushCopy';
 import { routeNotificationTap } from './pushNotificationRouting';
 
 /**
@@ -49,14 +50,19 @@ const toDisplayableNotification = (
 
   // FCM delivers data values as strings; Notifee accepts nothing else.
   const data = stringEntries(message.data);
-  // A server title or body marks the message as meant to be seen, but its text
-  // is English in every locale, so the tray shows local copy instead.
+  // A server title or body marks the message as meant to be seen.
   if (!data.title && !data.body) return null;
+
+  // Built from `type` plus the payload names beside it, so the tray reads in
+  // the user's language. Falls back to the push's own English only for a type
+  // this build cannot word — the case the server keeps those fields for.
+  const copy = getPushTrayCopy(data, t);
+  if (!copy) return null;
 
   return {
     id: firstNonBlank(data.notificationId, message.messageId),
-    title: t('pushNotification.title'),
-    body: t('pushNotification.body'),
+    title: copy.title,
+    body: copy.body,
     data,
   };
 };

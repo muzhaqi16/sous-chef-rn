@@ -107,7 +107,6 @@ export const colors = {
     error: '#DC2626',
     errorText: '#B91C1C',
     errorBg: '#FEF2F2',
-    errorBorder: '#EF4444',
     success: '#16A34A',
     successBg: '#F0FDF4',
     warning: '#D97706',
@@ -118,12 +117,9 @@ export const colors = {
 
   // Light-mode canonical shape; `darkExpiration` below mirrors the keys exactly.
   expiration: {
-    expiredBg: '#FEF2F2',
     expiredBorder: '#FECACA',
     expiredText: '#DC2626',
-    expiredIconBg: '#FEE2E2',
     warningText: '#EA580C',
-    warningBg: '#FFFBEB',
     warningBorder: '#FDE68A',
   },
 
@@ -144,14 +140,11 @@ export const colors = {
   },
 
   avatar: {
-    gradientStart: jaffa['500'],
-    gradientEnd: jaffa['400'],
     shadow: 'rgba(245, 130, 52, 0.3)',
   },
 
   sectionHeader: {
     warningText: '#EA580C',
-    defaultText: '#6B7280',
     actionText: jaffa['500'],
   },
 
@@ -253,12 +246,9 @@ export const colors = {
 // Dark overrides for `colors.expiration`. Solid, no alpha, or the swipeable
 // container's background bleeds through.
 export const darkExpiration: typeof colors.expiration = {
-  expiredBg: '#3D2A2A',
   expiredBorder: '#5C3A3A',
   expiredText: '#FCA5A5',
-  expiredIconBg: '#4A3030',
   warningText: '#FDBA74',
-  warningBg: '#3D3225',
   warningBorder: '#5C4A35',
 };
 

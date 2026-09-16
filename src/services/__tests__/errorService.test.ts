@@ -71,6 +71,16 @@ describe('errorService', () => {
       );
     });
 
+    // settleMutation asks this to decide whether the code says more than the
+    // field it arrived with; a code answering only with the caller's fallback
+    // says nothing, so the field's copy must stay.
+    it('reports which codes have copy of their own', () => {
+      expect(errorService.hasUserFriendlyMessage('INSUFFICIENT_QUANTITY')).toBe(
+        true,
+      );
+      expect(errorService.hasUserFriendlyMessage('UNKNOWN_XYZ')).toBe(false);
+    });
+
     it('returns fallback message when error code is unknown', () => {
       expect(
         errorService.getUserFriendlyMessage('UNKNOWN_XYZ', 'Custom fallback'),

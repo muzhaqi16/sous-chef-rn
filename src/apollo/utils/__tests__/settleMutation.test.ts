@@ -161,6 +161,25 @@ describe('settleMutation', () => {
       ]);
     });
 
+    it("shows the code's own copy when it says more than the field does", async () => {
+      // Over-consuming reports INSUFFICIENT_QUANTITY on the quantity field. The
+      // number the user typed is a valid one, so the field's "that quantity
+      // isn't valid" is the wrong sentence; the pantry simply holds less.
+      const settled = await settleMutation(
+        create({
+          __typename: 'ValidationError',
+          code: ErrorCode.InsufficientQuantity,
+          field: 'input.quantity',
+        }),
+        options,
+      );
+
+      expect(settled.status).toBe('failed');
+      expect(alerts()).toEqual([
+        [t('labels.error'), t('errors.codes.insufficientQuantity')],
+      ]);
+    });
+
     it("falls back to the caller's copy when nothing more specific applies", async () => {
       await settleMutation(create({ __typename: 'ForbiddenError' }), options);
       expect(alerts()).toEqual([[t('labels.error'), FALLBACK]]);

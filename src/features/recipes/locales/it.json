@@ -154,6 +154,8 @@
     "markedCookedDeducted": "Ricetta segnata come cucinata! Ingredienti detratti dalla dispensa.",
     "markedCookedSkipped_one": "Ricetta segnata come cucinata. {{count}} ingrediente non è stato scalato.",
     "markedCookedSkipped_other": "Ricetta segnata come cucinata. {{count}} ingredienti non sono stati scalati.",
+    "markedCookedSkippedUnit_one": "Ricetta segnata come cucinata. {{count}} ingrediente non è stato scalato: la sua unità non si converte in quella della dispensa.",
+    "markedCookedSkippedUnit_other": "Ricetta segnata come cucinata. {{count}} ingredienti non sono stati scalati: le loro unità non si convertono in quelle della dispensa.",
     "markedCooked": "Ricetta segnata come cucinata!",
     "renameFolderFailedRetry": "Impossibile rinominare la cartella. Riprova.",
     "folderRenamed": "Rinominato \"{{oldName}}\" in \"{{newName}}\"",

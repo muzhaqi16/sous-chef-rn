@@ -67,6 +67,15 @@ const PASS_THROUGH_METHODS = new Set([
   'substring',
 ]);
 
+/**
+ * The server sets this when a PERSON wrote the title and message — an admin's
+ * announcement — rather than building them from a template. Such a row is
+ * content, like a list's name, so the two fields may be rendered where a
+ * reachable condition has established the flag.
+ */
+const AUTHORED_FLAG = 'isAuthoredContent';
+const AUTHORED_FIELDS = new Set(['title', 'message']);
+
 const SINK_SERVICES = /^(toastService|alertService)$/;
 const TRANSLATE_FUNCTIONS = /^(t|tGlobal)$/;
 
@@ -166,6 +175,97 @@ module.exports = {
 
     const typeOf = node =>
       checker.getTypeAtLocation(services.esTreeNodeToTSNodeMap.get(node));
+
+    const visitorKeys = sourceCode.visitorKeys ?? {};
+
+    /** Whether the expression tests the authored flag anywhere inside it. */
+    const testsAuthoredFlag = node => {
+      if (!node || typeof node.type !== 'string') return false;
+      if (node.type === 'Identifier' && node.name === AUTHORED_FLAG)
+        return true;
+      for (const key of visitorKeys[node.type] ?? []) {
+        const child = node[key];
+        if (Array.isArray(child)) {
+          if (child.some(testsAuthoredFlag)) return true;
+        } else if (testsAuthoredFlag(child)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    /** Whether every path through this statement leaves the enclosing function. */
+    const alwaysExits = node => {
+      if (!node) return false;
+      if (node.type === 'ReturnStatement' || node.type === 'ThrowStatement')
+        return true;
+      if (node.type === 'BlockStatement') return node.body.some(alwaysExits);
+      return false;
+    };
+
+    /**
+     * Whether an earlier sibling statement bailed out unless the flag held —
+     * `if (!n.isAuthoredContent) return null;`, the idiomatic React guard.
+     * Scoped to one block, so no path analysis is needed to know it dominates.
+     */
+    const precededByBailout = node => {
+      for (
+        let current = node, parent = node.parent;
+        parent;
+        current = parent, parent = parent.parent
+      ) {
+        if (parent.type !== 'BlockStatement' && parent.type !== 'Program')
+          continue;
+        const index = parent.body.indexOf(current);
+        if (index < 0) continue;
+        for (const statement of parent.body.slice(0, index)) {
+          if (
+            statement.type === 'IfStatement' &&
+            !statement.alternate &&
+            alwaysExits(statement.consequent) &&
+            statement.test.type === 'UnaryExpression' &&
+            statement.test.operator === '!' &&
+            testsAuthoredFlag(statement.test.argument)
+          ) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+
+    /**
+     * Whether `node` sits in the branch a test of the authored flag selects.
+     * Only the TRUTHY side: the else-branch of such a test is the templated
+     * row, whose copy is the English this rule exists to keep off the screen.
+     */
+    const isAuthoredGuarded = node => {
+      if (precededByBailout(node)) return true;
+      for (
+        let current = node, parent = node.parent;
+        parent;
+        current = parent, parent = parent.parent
+      ) {
+        const isIf = parent.type === 'IfStatement';
+        const isTernary = parent.type === 'ConditionalExpression';
+        const isAnd =
+          parent.type === 'LogicalExpression' && parent.operator === '&&';
+        if (isAnd && parent.right === current && testsAuthoredFlag(parent.left))
+          return true;
+        if (
+          (isIf || isTernary) &&
+          parent.consequent === current &&
+          testsAuthoredFlag(parent.test)
+        ) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    /** A field the authored flag may unlock, in a place the flag is established. */
+    const isAuthoredExempt = (fieldName, node) =>
+      AUTHORED_FIELDS.has(fieldName) && isAuthoredGuarded(node);
 
     const isSinkCall = call => {
       const callee = call.callee;
@@ -387,6 +487,7 @@ module.exports = {
         if (!isWatchedField(node.property.name)) return;
         const finding = findingFor(typeOf(node.object), node.property.name);
         if (!finding) return;
+        if (isAuthoredExempt(node.property.name, node)) return;
         const stored = [];
         if (reachesOutput(node, new Set(), stored)) {
           context.report({ node, ...finding });
@@ -410,6 +511,7 @@ module.exports = {
         for (const property of properties) {
           const finding = findingFor(initType, property.key.name);
           if (!finding) continue;
+          if (isAuthoredExempt(property.key.name, node)) continue;
           const stored = [];
           if (
             bindingReachesOutput(node, property.value.name, new Set(), stored)

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { userEvent, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import type { AlertButton } from '#/services/alertService';
@@ -23,6 +23,10 @@ import {
 import {
   GetHomeInviteByTokenDocument,
   GetShoppingListInviteByTokenDocument,
+  type AcceptInvite_HomeInviteFragment,
+  type AcceptInvite_ShoppingListInviteFragment,
+  type GetHomeInviteByTokenQuery,
+  type GetShoppingListInviteByTokenQuery,
 } from '../AcceptInvite.generated';
 
 // The screen resolves the invite straight from the deep-link token, so every
@@ -74,8 +78,15 @@ interface ShoppingListInviteInput {
 
 // Shapes exactly what GetShoppingListInviteByToken selects (id, role, invitedBy,
 // shoppingList) so useFragment reports `complete`.
-function buildShoppingListInvite(input: ShoppingListInviteInput = {}) {
-  const invitedBy =
+/** The invite on the wire: the query's own selection plus the screen's fragment. */
+type ShoppingListInvite =
+  GetShoppingListInviteByTokenQuery['shoppingListInviteByToken'] &
+    AcceptInvite_ShoppingListInviteFragment;
+
+function buildShoppingListInvite(
+  input: ShoppingListInviteInput = {},
+): MockPart<ShoppingListInvite> {
+  const invitedBy: MockPart<ShoppingListInvite['invitedBy']> =
     input.invitedByEmail === null
       ? null
       : {
@@ -113,7 +124,10 @@ interface HomeInviteInput {
 }
 
 // Shapes exactly what GetHomeInviteByToken selects.
-function buildHomeInvite(input: HomeInviteInput = {}) {
+type HomeInvite = GetHomeInviteByTokenQuery['homeInviteByToken'] &
+  AcceptInvite_HomeInviteFragment;
+
+function buildHomeInvite(input: HomeInviteInput = {}): MockPart<HomeInvite> {
   return {
     __typename: 'HomeInvite',
     id: input.id ?? 'invite-1',
@@ -141,7 +155,7 @@ function buildHomeInvite(input: HomeInviteInput = {}) {
 function shoppingTokenMock(
   invite: ReturnType<typeof buildShoppingListInvite> | null,
   token: string = TOKEN,
-): MockedResponse {
+): MockFor<typeof GetShoppingListInviteByTokenDocument> {
   return {
     request: {
       query: GetShoppingListInviteByTokenDocument,
@@ -155,7 +169,7 @@ function shoppingTokenMock(
 function homeTokenMock(
   invite: ReturnType<typeof buildHomeInvite> | null,
   token: string = TOKEN,
-): MockedResponse {
+): MockFor<typeof GetHomeInviteByTokenDocument> {
   return {
     request: { query: GetHomeInviteByTokenDocument, variables: { token } },
     result: { data: { homeInviteByToken: invite } },
@@ -163,7 +177,9 @@ function homeTokenMock(
   };
 }
 
-function buildAcceptShoppingListInviteMock(token: string): MockedResponse {
+function buildAcceptShoppingListInviteMock(
+  token: string,
+): MockFor<typeof AcceptShoppingListInviteDocument> {
   return {
     request: {
       query: AcceptShoppingListInviteDocument,
@@ -189,7 +205,7 @@ const REFUSAL_CODE = {
 function buildRefusedShoppingListInviteMock(
   token: string,
   typename: 'NotFoundError' | 'ForbiddenError' | 'ConflictError',
-): MockedResponse {
+): MockFor<typeof AcceptShoppingListInviteDocument> {
   return {
     request: {
       query: AcceptShoppingListInviteDocument,
@@ -207,7 +223,9 @@ function buildRefusedShoppingListInviteMock(
   };
 }
 
-function buildAcceptHomeInviteMock(token: string): MockedResponse {
+function buildAcceptHomeInviteMock(
+  token: string,
+): MockFor<typeof AcceptHomeInviteDocument> {
   return {
     request: {
       query: AcceptHomeInviteDocument,
@@ -224,7 +242,9 @@ function buildAcceptHomeInviteMock(token: string): MockedResponse {
   };
 }
 
-function buildDeclineShoppingListInviteMock(token: string): MockedResponse {
+function buildDeclineShoppingListInviteMock(
+  token: string,
+): MockFor<typeof DeclineShoppingListInviteDocument> {
   return {
     request: {
       query: DeclineShoppingListInviteDocument,
@@ -241,7 +261,9 @@ function buildDeclineShoppingListInviteMock(token: string): MockedResponse {
   };
 }
 
-function buildDeclineHomeInviteMock(token: string): MockedResponse {
+function buildDeclineHomeInviteMock(
+  token: string,
+): MockFor<typeof DeclineHomeInviteDocument> {
   return {
     request: {
       query: DeclineHomeInviteDocument,
@@ -258,7 +280,9 @@ function buildDeclineHomeInviteMock(token: string): MockedResponse {
   };
 }
 
-function buildAcceptShoppingListInviteErrorMock(token: string): MockedResponse {
+function buildAcceptShoppingListInviteErrorMock(
+  token: string,
+): MockFor<typeof AcceptShoppingListInviteDocument> {
   return {
     request: {
       query: AcceptShoppingListInviteDocument,
@@ -271,7 +295,7 @@ function buildAcceptShoppingListInviteErrorMock(token: string): MockedResponse {
 
 function buildDeclineShoppingListInviteErrorMock(
   token: string,
-): MockedResponse {
+): MockFor<typeof DeclineShoppingListInviteDocument> {
   return {
     request: {
       query: DeclineShoppingListInviteDocument,

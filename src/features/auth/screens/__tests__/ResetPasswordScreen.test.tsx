@@ -1,6 +1,7 @@
 import React from 'react';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import { useRoute } from '@react-navigation/native';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderWithApollo,
   type MockedResponse,
@@ -143,7 +144,7 @@ const TOKEN = 'valid-token-0123456789';
  */
 const validateMock = (
   status: PasswordActionStatus | 'error' = PasswordActionStatus.Sent,
-): MockedResponse => {
+): MockFor<typeof ValidatePasswordResetTokenDocument> => {
   const request = {
     query: ValidatePasswordResetTokenDocument,
     variables: { input: { token: TOKEN } },

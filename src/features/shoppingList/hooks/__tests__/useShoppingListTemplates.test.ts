@@ -1,16 +1,23 @@
 import { waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import { GetShoppingListTemplatesDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  GetShoppingListTemplatesDocument,
+  type GetShoppingListTemplatesQuery,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { COPYABLE_ITEM_LIMIT } from '#features/shoppingList/cache/copySource';
 import { useShoppingListTemplates } from '../useShoppingListTemplates';
+
+type TemplateEdge = MockPart<
+  GetShoppingListTemplatesQuery['shoppingLists']['edges'][number]
+>;
 
 function buildTemplate(
   id: string,
   name: string,
   templateName: string | null,
   totalItems = 0,
-) {
+): TemplateEdge {
   return {
     __typename: 'ShoppingListEdge',
     cursor: id,
@@ -24,7 +31,7 @@ function buildTemplate(
   };
 }
 
-const templatesMock: MockedResponse = {
+const templatesMock: MockFor<typeof GetShoppingListTemplatesDocument> = {
   request: {
     query: GetShoppingListTemplatesDocument,
     variables: { first: 50, copyableItemLimit: COPYABLE_ITEM_LIMIT },

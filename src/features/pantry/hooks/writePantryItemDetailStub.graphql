@@ -61,6 +61,7 @@ fragment writePantryItemDetailStub_pantryItem on PantryItem {
         usedAt
         purpose
         adjustmentReason
+        adjustmentKind
       }
     }
   }

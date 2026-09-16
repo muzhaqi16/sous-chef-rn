@@ -40,6 +40,7 @@ const makeNotification = (
     __typename: 'Notification',
     id: 'notif-1',
     type: NotificationType.HomeInvitation,
+    isAuthoredContent: false,
     status: NotificationStatus.Sent,
     priority: Priority.Normal,
     title: SERVER_TITLE,

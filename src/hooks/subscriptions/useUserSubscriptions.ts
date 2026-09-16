@@ -20,7 +20,10 @@ import {
   CacheStrategy,
   type SubscriptionApolloClient,
 } from '#/services/subscriptions/types';
-import { UserSubtype } from '#/graphql/generated/schemaTypes';
+import {
+  ModerationReasonCode,
+  UserSubtype,
+} from '#/graphql/generated/schemaTypes';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
@@ -92,10 +95,23 @@ function handleAddedToShoppingList() {
   toastService.success(t('accountEvents.addedToShoppingList'));
 }
 
-// The event's `reason` is a moderator's or the server's English, so no toast shows it.
-function handleBannedOrSuspended(subtype: UserSubtype) {
+/**
+ * The event's `reason` is a moderator's own English, so no toast shows it. The
+ * copy comes from `reasonCode`, which separates the two states the user needs
+ * told apart: the failed-login lockout lifts by itself, a moderator's decision
+ * does not.
+ */
+function handleBannedOrSuspended(payload: UserEventPayload) {
   const message =
-    subtype === UserSubtype.Banned
+    payload.reasonCode === ModerationReasonCode.FailedLoginAttempts
+      ? // The count is the server's; without it the sentence omits the number
+        // rather than stating a zero.
+        payload.failedLoginCount == null
+        ? t('accountEvents.accountLocked')
+        : t('accountEvents.accountLockedAttempts', {
+            count: payload.failedLoginCount,
+          })
+      : payload.subtype === UserSubtype.Banned
       ? t('accountEvents.accountBanned')
       : t('accountEvents.accountSuspended');
   toastService.error(message);
@@ -146,7 +162,7 @@ export function useUserSubscriptions(userId?: string) {
 
         case UserSubtype.Banned:
         case UserSubtype.Suspended:
-          handleBannedOrSuspended(payload.subtype);
+          handleBannedOrSuspended(payload);
           break;
 
         case UserSubtype.Warned:

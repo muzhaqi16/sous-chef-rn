@@ -169,7 +169,7 @@ describe('themes', () => {
 
     it('has dark-mode specific expiration colors', () => {
       expect(darkTheme.colors.expiration).toBeDefined();
-      expect(darkTheme.colors.expiration.expiredBg).toBeDefined();
+      expect(darkTheme.colors.expiration.expiredText).toBeDefined();
     });
 
     it('has dark-mode specific filter tab colors', () => {

@@ -2,7 +2,11 @@
 
 import React from 'react';
 import { userEvent, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import {
+  MembershipRole,
+  MembershipStatus,
+} from '#/graphql/generated/schemaTypes';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   GetHomeByJoinCodeDocument,
@@ -80,7 +84,7 @@ function buildPreviewMock(
     members?: number;
     pantries?: number;
   } | null,
-): MockedResponse {
+): MockFor<typeof GetHomeByJoinCodeDocument> {
   return {
     request: { query: GetHomeByJoinCodeDocument, variables: { joinCode } },
     result: {
@@ -118,7 +122,9 @@ function buildPreviewMock(
   };
 }
 
-function buildJoinMock(joinCode: string): MockedResponse {
+function buildJoinMock(
+  joinCode: string,
+): MockFor<typeof JoinHomeByCodeDocument> {
   return {
     request: {
       query: JoinHomeByCodeDocument,
@@ -133,8 +139,8 @@ function buildJoinMock(joinCode: string): MockedResponse {
             id: 'membership-1',
             homeId: 'home-1',
             userId: 'user-1',
-            role: 'MEMBER',
-            status: 'ACTIVE',
+            role: MembershipRole.Member,
+            status: MembershipStatus.Active,
             canManageHome: false,
             canViewPantry: true,
             canEditPantry: true,

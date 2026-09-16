@@ -133,8 +133,6 @@ export function applyAppearanceToRuntime(prefs: AppearancePreferences): void {
         },
         avatar: {
           ...next.colors.avatar,
-          gradientStart: palette['500'],
-          gradientEnd: palette['400'],
           shadow: withAlpha(palette['500'], '4D'),
         },
       };

@@ -102,6 +102,11 @@ type Classified =
   | { status: 'applied' | 'queued' }
   | { status: 'failed'; failure: Failure; error?: unknown };
 
+// Widened to `string`, like the codes in errorLink: a `Failure.code` is read
+// off an untyped channel, so comparing it to the enum member directly is an
+// unsafe-enum comparison.
+const VALIDATION_UMBRELLA: string = ErrorCode.ValidationFailed;
+
 const isGoneCode = (code: string | null): boolean =>
   code === ErrorCode.NotFound || code === TopLevelErrorCode.ResourceNotFound;
 
@@ -182,6 +187,23 @@ function describe(
       field,
       title: t('errors.notFoundTitle'),
       body: getNotFoundMessage(resource),
+    };
+  }
+  // Before the field branch: a mapped code names what the server refused, while
+  // the field only names where the refusal landed. Over-consuming reports both,
+  // and `errors.field.quantity` would call a perfectly valid number invalid
+  // when the pantry simply holds less than it asked for. VALIDATION_FAILED is
+  // the exception, being the umbrella the field exists to refine.
+  if (
+    code &&
+    code !== VALIDATION_UMBRELLA &&
+    errorService.hasUserFriendlyMessage(code)
+  ) {
+    return {
+      code,
+      field,
+      title,
+      body: errorService.getUserFriendlyMessage(code),
     };
   }
   if (field) {

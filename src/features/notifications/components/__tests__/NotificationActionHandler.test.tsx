@@ -82,6 +82,7 @@ function buildNotification(
   return {
     id: 'n1',
     type: NotificationType.ExpiryReminder,
+    isAuthoredContent: false,
     category: NotificationCategory.Pantry,
     priority: Priority.Normal,
     payload: { itemName: 'Milk', daysUntilExpiry: 1, pantryItemId: 'item-1' },

@@ -2,6 +2,7 @@ import { act, waitFor } from '@testing-library/react-native';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { makeCache } from '#/apollo/cache';
 import type { InMemoryCache } from '@apollo/client';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   type MockedResponse,
@@ -47,7 +48,9 @@ beforeEach(() => {
 });
 
 /** One complete default list so `getTargetShoppingList()` resolves a target. */
-const shoppingListsMock = (): MockedResponse => ({
+const shoppingListsMock = (): MockFor<
+  typeof GetShoppingListsLiteForRecipeDocument
+> => ({
   request: {
     query: GetShoppingListsLiteForRecipeDocument,
     variables: () => true,
@@ -138,7 +141,7 @@ const addItemsMock = (
     | { kind: 'success'; itemId?: string }
     | { kind: 'error-union' }
     | { kind: 'transport' },
-): MockedResponse => {
+): MockFor<typeof AddItemsToShoppingListFromRecipeDocument> => {
   if (member.kind === 'transport') {
     return {
       request: {
@@ -173,7 +176,7 @@ const addItemsMock = (
                     ]
                   : [],
                 summary: {
-                  __typename: 'BatchOperationSummary',
+                  __typename: 'BulkSummary',
                   succeeded: 1,
                   failed: 0,
                   skipped: 0,
@@ -378,7 +381,7 @@ describe('useRecipeShoppingList — addAll (external batch)', () => {
 
 const addRecipeIngredientMock = (
   member: { kind: 'error-union' } | { kind: 'queued' },
-): MockedResponse => ({
+): MockFor<typeof CreateShoppingListItemFromRecipeIngredientDocument> => ({
   request: {
     query: CreateShoppingListItemFromRecipeIngredientDocument,
     variables: () => true,

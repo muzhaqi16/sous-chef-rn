@@ -103,7 +103,8 @@
         "RECIPE_SAVED": "Receta guardada",
         "test": "Notificación de prueba",
         "listCompleted": "Lista de compras completada",
-        "expiryDigest": "Vencen esta semana"
+        "expiryDigest": "Vencen esta semana",
+        "authored": "Anuncio"
       },
       "message": {
         "homeInvitation": "{{inviterName}} te invitó a unirte a {{homeName}}",
@@ -119,6 +120,8 @@
         "collaboratorRemoved": "{{name}} te quitó el acceso a {{listName}}",
         "collaboratorRemovedGeneric": "Ya no tienes acceso a una lista de compras",
         "collaboratorRoleChanged": "{{name}} cambió tu rol en {{listName}}",
+        "collaboratorRoleChangedTo": "{{name}} cambió tu rol en {{listName}} a {{role}}",
+        "collaboratorRoleChangedFromTo": "{{name}} cambió tu rol en {{listName}} de {{previousRole}} a {{role}}",
         "collaboratorRoleChangedGeneric": "Tu rol en una lista de compras cambió",
         "collaboratorPermissionsUpdated": "{{name}} actualizó tus permisos en {{listName}}",
         "collaboratorPermissionsUpdatedGeneric": "Tus permisos en una lista de compras cambiaron",

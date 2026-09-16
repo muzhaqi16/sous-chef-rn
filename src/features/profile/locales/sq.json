@@ -19,12 +19,16 @@
     "deleteBlocker": {
       "homeOwnership": {
         "reason": "Askush tjetër nuk e zotëron «{{name}}», që ka ende anëtarë të tjerë.",
+        "reasonCounted_one": "Askush tjetër nuk e zotëron «{{name}}», që ka ende {{count}} anëtar tjetër.",
+        "reasonCounted_other": "Askush tjetër nuk e zotëron «{{name}}», që ka ende {{count}} anëtarë të tjerë.",
         "transferOwnership": "Transfero pronësinë te një anëtar tjetër",
         "removeMembers": "Hiq anëtarët e tjerë nga shtëpia",
         "deleteResource": "Fshi shtëpinë"
       },
       "shoppingList": {
         "reason": "Askush tjetër nuk e zotëron listën e blerjeve «{{name}}», që ka ende bashkëpunëtorë.",
+        "reasonCounted_one": "Askush tjetër nuk e zotëron listën e blerjeve «{{name}}», që ka ende {{count}} bashkëpunëtor.",
+        "reasonCounted_other": "Askush tjetër nuk e zotëron listën e blerjeve «{{name}}», që ka ende {{count}} bashkëpunëtorë.",
         "removeCollaborators": "Hiq të gjithë bashkëpunëtorët nga lista",
         "deleteResource": "Fshi listën e blerjeve"
       },
@@ -238,6 +242,9 @@
     "addedToShoppingList": "Je shtuar në një listë blerjesh",
     "accountBanned": "Llogaria jote është bllokuar",
     "accountSuspended": "Llogaria jote është pezulluar",
+    "accountLockedAttempts_one": "Llogaria jote është kyçur pas {{count}} përpjekjeje të dështuar hyrjeje. Shkyçet vetë së shpejti.",
+    "accountLockedAttempts_other": "Llogaria jote është kyçur pas {{count}} përpjekjesh të dështuara hyrjeje. Shkyçet vetë së shpejti.",
+    "accountLocked": "Llogaria jote është kyçur pas shumë përpjekjesh të dështuara hyrjeje. Shkyçet vetë së shpejti.",
     "warningReceived": "Ke marrë një paralajmërim nga një moderator"
   },
   "biometrics": {

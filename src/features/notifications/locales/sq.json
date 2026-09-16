@@ -103,7 +103,8 @@
         "RECIPE_SAVED": "Receta u ruajt",
         "test": "Njoftim provë",
         "listCompleted": "Lista e blerjeve u përfundua",
-        "expiryDigest": "Skadojnë këtë javë"
+        "expiryDigest": "Skadojnë këtë javë",
+        "authored": "Njoftim"
       },
       "message": {
         "homeInvitation": "{{inviterName}} të ftoi të bashkohesh me {{homeName}}",
@@ -119,6 +120,8 @@
         "collaboratorRemoved": "{{name}} të hoqi aksesin në {{listName}}",
         "collaboratorRemovedGeneric": "Aksesi yt në një listë blerjesh u hoq",
         "collaboratorRoleChanged": "{{name}} ndryshoi rolin tënd në {{listName}}",
+        "collaboratorRoleChangedTo": "{{name}} ndryshoi rolin tënd në {{listName}} në {{role}}",
+        "collaboratorRoleChangedFromTo": "{{name}} ndryshoi rolin tënd në {{listName}} nga {{previousRole}} në {{role}}",
         "collaboratorRoleChangedGeneric": "Roli yt në një listë blerjesh ndryshoi",
         "collaboratorPermissionsUpdated": "{{name}} përditësoi lejet e tua në {{listName}}",
         "collaboratorPermissionsUpdatedGeneric": "Lejet e tua në një listë blerjesh ndryshuan",

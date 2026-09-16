@@ -179,7 +179,8 @@
     "remainingWeightPlaceholder": "Lëre bosh për rregullim automatik",
     "systemReason": {
       "stackMerged": "Rregullim pas bashkimit të artikujve",
-      "stackPurged": "Heqje administrative"
+      "stackPurged": "Heqje administrative",
+      "stackRemoved": "Hequr nga qilari"
     }
   },
   "recordWaste": {

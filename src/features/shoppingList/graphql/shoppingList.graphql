@@ -93,7 +93,7 @@ query GetShoppingListDetails($id: ID!) {
 # Lightweight query for list selector - metadata only, no items/collaborators
 # Use this for dashboard/list views.
 query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
-  shoppingLists(filters: { homeId: $homeId }, first: $first, after: $after) {
+  shoppingLists(homeId: $homeId, first: $first, after: $after) {
     edges {
       cursor
       node {

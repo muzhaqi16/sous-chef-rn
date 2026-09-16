@@ -1,8 +1,9 @@
 import { renderHook, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import {
   ConsumptionUnitsForPantryItemDocument,
   RestockUnitsForPantryItemDocument,
+  type ConsumptionUnitsForPantryItemQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import {
   UnitType,
@@ -12,7 +13,12 @@ import {
 import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useOperationUnits, PantryOperation } from '../useOperationUnits';
 
-function makeRankedUnit(overrides: Record<string, unknown> = {}) {
+type RankedUnit =
+  ConsumptionUnitsForPantryItemQuery['consumptionUnitsForPantryItem'][number];
+
+function makeRankedUnit(
+  overrides: MockPart<RankedUnit> = {},
+): MockPart<RankedUnit> {
   return {
     __typename: 'RankedUnit',
     rank: 1,
@@ -38,7 +44,7 @@ function makeRankedUnit(overrides: Record<string, unknown> = {}) {
 function consumptionMock(
   units: ReturnType<typeof makeRankedUnit>[],
   variables = { pantryItemId: 'pantry-item-1' },
-): MockedResponse {
+): MockFor<typeof ConsumptionUnitsForPantryItemDocument> {
   return {
     request: { query: ConsumptionUnitsForPantryItemDocument, variables },
     result: { data: { consumptionUnitsForPantryItem: units } },
@@ -47,7 +53,7 @@ function consumptionMock(
 
 function consumptionErrorMock(
   variables = { pantryItemId: 'pantry-item-1' },
-): MockedResponse {
+): MockFor<typeof ConsumptionUnitsForPantryItemDocument> {
   return {
     request: { query: ConsumptionUnitsForPantryItemDocument, variables },
     error: new Error('Query failed'),
@@ -57,7 +63,7 @@ function consumptionErrorMock(
 function restockMock(
   units: ReturnType<typeof makeRankedUnit>[],
   variables = { pantryItemId: 'pantry-item-1' },
-): MockedResponse {
+): MockFor<typeof RestockUnitsForPantryItemDocument> {
   return {
     request: { query: RestockUnitsForPantryItemDocument, variables },
     result: { data: { restockUnitsForPantryItem: units } },
@@ -66,7 +72,7 @@ function restockMock(
 
 function restockErrorMock(
   variables = { pantryItemId: 'pantry-item-1' },
-): MockedResponse {
+): MockFor<typeof RestockUnitsForPantryItemDocument> {
   return {
     request: { query: RestockUnitsForPantryItemDocument, variables },
     error: new Error('Restock query failed'),

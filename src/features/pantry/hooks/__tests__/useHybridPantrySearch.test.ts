@@ -1,9 +1,9 @@
 import { act } from '@testing-library/react-native';
 import { StorageState } from '#/graphql/generated/schemaTypes';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
-  type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { useHybridPantrySearch } from '../useHybridPantrySearch';
@@ -195,7 +195,7 @@ describe('useHybridPantrySearch', () => {
     });
 
     it('stops searching when the server search fails', async () => {
-      const failure: MockedResponse = {
+      const failure: MockFor<typeof GetPantryDocument> = {
         request: { query: GetPantryDocument, variables: () => true },
         error: new Error('network down'),
       };

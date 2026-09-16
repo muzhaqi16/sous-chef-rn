@@ -98,10 +98,11 @@ user's decision, never a way past a failing check.
   data flow or widen the contract — `sous-chef/no-unsafe-cast`.
 - `Unmasked<>` ONLY as an `optimisticResponse` callback return type; never
   `@unmask`. HKT registration: `src/types/apollo-masking.d.ts`.
-- **A condition the types say cannot matter is an error** (`no-unnecessary-condition`);
-  its exclusion list only shrinks — `unnecessaryConditionRatchet.test.ts`. **Never
-  delete a runtime guard to satisfy it**: delete a dead branch or widen the type where
-  DECLARED (no cast, not at the call site); else it stays. Why:
+- **A condition the types say cannot matter is an error** (`no-unnecessary-condition`),
+  over all of `src/**` with no exclusions. **Never delete a runtime guard to satisfy
+  it**: delete a dead branch, or widen the type where DECLARED — annotate the
+  receiving variable (never a destructured binding, which CFA re-narrows), or
+  `switch` + `default` over a closed enum. No cast, not at the call site. Why:
   `docs/architecture.md` § Type-level gates.
 - **`noUncheckedIndexedAccess` is on.** Bind and guard
   (`const [first] = xs; if (!first) return;`); `!` only in tests. Key a lookup

@@ -116,9 +116,17 @@ const TRANSIENT_SERVER_CODES: readonly string[] = [
   TopLevelErrorCode.OperationRateLimited,
 ];
 
+/**
+ * A missing unit row is the ONLY unit refusal a vocabulary refresh can clear.
+ * `UNIT_INVALID` is deliberately absent: the API defines it as the unit being
+ * invalid for the requested operation — curation, no conversion route, a fact
+ * the food does not record, or a measure the stack cannot express. A refresh
+ * clears none of those, and a replay re-sends the same unit, so reading it as
+ * stale here buys a retry loop that ends in the same withdrawal several drains
+ * later. The interactive path refetches the ranked units on that code so the
+ * user can pick another; a replay has no user to pick.
+ */
 function isStaleUnitRefusal(error: ReplayRejectedError): boolean {
-  if (error.payloadCode === ErrorCode.UnitInvalid) return true;
-
   return (
     error.payloadTypename === 'NotFoundError' &&
     error.payloadResource?.toLowerCase() === UNIT_RESOURCE
@@ -162,8 +170,7 @@ export function classifyError(error: unknown): QueueError {
     }
 
     // The write names a unit the vocabulary repair merged away. The write is
-    // fine — its reference went stale — so it is re-sent, not reverted. Both
-    // spellings: a missing row, or a unit the server will not accept.
+    // fine — its reference went stale — so it is re-sent, not reverted.
     if (isStaleUnitRefusal(error)) {
       return {
         type: 'stale-reference',

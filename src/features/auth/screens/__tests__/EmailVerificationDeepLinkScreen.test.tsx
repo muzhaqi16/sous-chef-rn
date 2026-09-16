@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { VerifyEmailDocument } from '#operations/auth/auth.generated';
 import { UserRole, AppTheme, ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -104,7 +104,7 @@ jest.mock('#components/atoms/SousChefLoader', () => {
 
 function buildVerifyMock(
   recordedVariables: Record<string, unknown>[] = [],
-): MockedResponse {
+): MockFor<typeof VerifyEmailDocument> {
   return {
     request: {
       query: VerifyEmailDocument,
@@ -390,7 +390,7 @@ describe('EmailVerificationDeepLinkScreen - retry', () => {
     // Reusing the initial-verification flag for a retry swaps the whole screen
     // back to "Verifying…" and takes away the failure the user is reading.
     // Progress belongs in the button alone.
-    const failingMock: MockedResponse = {
+    const failingMock: MockFor<typeof VerifyEmailDocument> = {
       request: { query: VerifyEmailDocument, variables: () => true },
       result: {
         data: {

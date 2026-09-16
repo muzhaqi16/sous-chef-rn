@@ -1,7 +1,7 @@
 'use no memo';
 
 import { act, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -11,8 +11,10 @@ import {
   UpdateDietaryProfileDocument,
   AddDietaryRestrictionDocument,
   RemoveDietaryRestrictionDocument,
+  type GetDietaryProfileQuery,
 } from '#operations/user/user.generated';
 import {
+  Cuisine,
   Diet,
   ErrorCode,
   Intolerance,
@@ -54,11 +56,16 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-const mockProfileData = {
+/** The profile the query itself selects, so the fixture is checked against it. */
+type DietaryProfile = NonNullable<
+  NonNullable<GetDietaryProfileQuery['me']>['dietaryProfile']
+>;
+
+const mockProfileData: MockPart<DietaryProfile> = {
   __typename: 'DietaryProfile',
   id: 'dp-1',
   userId: 'user-1',
-  preferredCuisines: ['ITALIAN'],
+  preferredCuisines: [Cuisine.Italian],
   dislikedIngredients: ['cilantro'],
   favoriteIngredients: ['garlic'],
   calorieTarget: 2000,
@@ -88,13 +95,11 @@ const mockProfileData = {
   ],
 };
 
-type ProfileMockOverrides = {
-  [K in keyof typeof mockProfileData]: (typeof mockProfileData)[K] | null;
-};
+type ProfileMockOverrides = MockPart<DietaryProfile>;
 
 function buildGetProfileMock(
-  profile: Partial<ProfileMockOverrides> | null = mockProfileData,
-): MockedResponse {
+  profile: ProfileMockOverrides | null = mockProfileData,
+): MockFor<typeof GetDietaryProfileDocument> {
   return {
     request: { query: GetDietaryProfileDocument },
     result: {
@@ -109,7 +114,9 @@ function buildGetProfileMock(
   };
 }
 
-function buildUpdateProfileMock(): MockedResponse {
+function buildUpdateProfileMock(): MockFor<
+  typeof UpdateDietaryProfileDocument
+> {
   return {
     request: {
       query: UpdateDietaryProfileDocument,
@@ -126,7 +133,9 @@ function buildUpdateProfileMock(): MockedResponse {
   };
 }
 
-function buildAddRestrictionMock(): MockedResponse {
+function buildAddRestrictionMock(): MockFor<
+  typeof AddDietaryRestrictionDocument
+> {
   return {
     request: {
       query: AddDietaryRestrictionDocument,
@@ -153,7 +162,9 @@ function buildAddRestrictionMock(): MockedResponse {
   };
 }
 
-function buildRemoveRestrictionMock(): MockedResponse {
+function buildRemoveRestrictionMock(): MockFor<
+  typeof RemoveDietaryRestrictionDocument
+> {
   return {
     request: {
       query: RemoveDietaryRestrictionDocument,
@@ -360,7 +371,7 @@ describe('useDietaryProfile', () => {
   // A refusal member is `data`, so `!!result.data` read it as success: the
   // sheet closed on a change the server refused, and nothing was said.
   it('updateDietaryProfile reports a refusal as a failure, once', async () => {
-    const refused: MockedResponse = {
+    const refused: MockFor<typeof UpdateDietaryProfileDocument> = {
       request: { query: UpdateDietaryProfileDocument, variables: () => true },
       result: {
         data: {

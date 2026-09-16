@@ -16,6 +16,7 @@ function makeNotification(
   return {
     id: 'n-1',
     type: NotificationType.NewItemAdded,
+    isAuthoredContent: false,
     category: NotificationCategory.System,
     priority: Priority.Normal,
     payload: {},

@@ -161,16 +161,35 @@ const strandedOnFillComponents = FILES.flatMap(file => {
  */
 const AA_NORMAL = 4.5;
 
-/** Pairs below AA that predate this guard, each with the ratio it sits at. */
+/**
+ * The `<group>.<key>` fills some component actually paints. A `*Bg` token is
+ * only a ground for the `*Text` beside it once something renders it as one, and
+ * a `*Text` can sit on a surface no `*Bg` names at all — `expiration.expiredText`
+ * is painted on the alert bar's own ground. Pairing by NAME measures
+ * combinations that appear on no screen, so the fills are read from source:
+ * the palette cannot say which pairs meet.
+ */
+const paintedFills = new Set(
+  FILES.flatMap(file => [
+    ...readFileSync(file, 'utf8').matchAll(
+      /backgroundColor:\s*[\w.]*\bcolors\.(\w+)\.(\w+)/g,
+    ),
+  ]).map(m => `${m[1]}.${m[2]}`),
+);
+
+/**
+ * Painted pairs below AA, each a standing decision rather than a queue: the
+ * brand's own orange sets both, and darkening either to clear 4.5 would change
+ * the tab's colour. An entry states why the pairing stands; a NEW pair below AA
+ * still fails.
+ */
 const PALETTE_CONTRAST_EXEMPT: Record<string, string> = {
-  'colors.expiration.expiredBg + .expiredText':
-    '4.41 — pre-existing, marginal; expiration chrome is reviewed as a set',
-  'colors.expiration.warningBg + .warningText':
-    '3.43 — pre-existing; same set as expiredText',
   'colors.filterTab.activeBg + .activeText':
-    '2.58 — the brand pairing, white on the brand orange by decision',
+    '2.58 — white on the brand orange, the same pairing `applyAppearance` ' +
+    'derives for a custom brand; see `project_brand_color_white_on_primary`',
   'colors.filterTab.filteredBg + .filteredText':
-    '3.33 — pre-existing; the filtered state, not the active fill',
+    '3.33 — the brand orange tinted for the filtered state, which reads as ' +
+    'one ramp with the active fill above and moves only with it',
 };
 
 const palettePairs = Object.entries(colors).flatMap(([group, value]) => {
@@ -179,6 +198,7 @@ const palettePairs = Object.entries(colors).flatMap(([group, value]) => {
 
   return entries.flatMap(([key, fill]) => {
     if (typeof fill !== 'string' || !/Bg$/.test(key)) return [];
+    if (!paintedFills.has(`${group}.${key}`)) return [];
     const textKey = key.replace(/Bg$/, 'Text');
     const text = (value as Record<string, unknown>)[textKey];
     if (typeof text !== 'string') return [];
@@ -233,7 +253,10 @@ describe('text on a primary or danger fill', () => {
 describe('palette groups pairing a fill with its own text', () => {
   it('finds the pairs it exists to check', () => {
     // A scan matching nothing passes identically whether the contract holds or
-    // the palette was reshaped under it.
+    // the palette was reshaped under it. `paintedFills` is the half that can
+    // empty silently: a renamed token or a reshaped style block leaves the
+    // regex matching nothing and every pair unchecked.
+    expect(paintedFills.size).toBeGreaterThan(0);
     expect(palettePairs.length).toBeGreaterThan(0);
   });
 

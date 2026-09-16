@@ -5,6 +5,7 @@ const PRELUDE = `import type {
   LedgerPeriodData,
   ShoppingList,
   ShoppingListItemSource,
+  UserEvent,
 } from '#/graphql/generated/schemaTypes';
 import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 import type { UserEventsSubscription } from '#operations/auth/user.generated';
@@ -24,7 +25,8 @@ declare const combined: CombinedGraphQLErrors;
 declare const fieldError: FieldError | undefined;
 declare const local: Error;
 declare const notification: UseNotificationsOnLaunch_NotificationFragment;
-declare const userEvent: UserEventsSubscription['userEvents'];
+declare const userEvent: UserEvent;
+declare const blockers: DeletionBlocker[];
 declare const source: ShoppingListItemSource;
 declare const period: LedgerPeriodData;
 declare const list: ShoppingList;
@@ -96,6 +98,21 @@ testTypedRule(
         ),
         options: FOLLOW,
       },
+      // An ADMIN wrote this title and message, so they are content, like a
+      // list's name. The flag is the server's own say-so, and only the branch
+      // it selects may read them.
+      code(
+        'export const a = notification.isAuthoredContent ? <Text>{notification.title}</Text> : null;',
+      ),
+      code(
+        'export const a = <Text>{notification.isAuthoredContent && notification.message}</Text>;',
+      ),
+      code(
+        'export function A() {\n  if (notification.isAuthoredContent) return <Text>{notification.title}</Text>;\n  return null;\n}',
+      ),
+      code(
+        'export function A() {\n  if (!notification.isAuthoredContent) return null;\n  const { title } = notification;\n  return <Text>{title}</Text>;\n}',
+      ),
     ],
     invalid: [
       {
@@ -104,7 +121,7 @@ testTypedRule(
       },
       {
         code: code(
-          'export const a = result.canDeleteAccount.blockers.map(b => <Text>{b.message}</Text>);',
+          'export const a = blockers.map(b => <Text>{b.message}</Text>);',
         ),
         errors: ['renderedServerMessage'],
       },
@@ -148,6 +165,28 @@ testTypedRule(
       },
       {
         code: code('export const a = <Text>{notification.title}</Text>;'),
+        errors: ['renderedServerCopy'],
+      },
+      // The ELSE arm of the authored test is the templated row, whose title is
+      // the English this rule exists to keep off the screen.
+      {
+        code: code(
+          'export const a = notification.isAuthoredContent ? null : <Text>{notification.title}</Text>;',
+        ),
+        errors: ['renderedServerCopy'],
+      },
+      // A flag of another name establishes nothing.
+      {
+        code: code(
+          'export const a = notification.id ? <Text>{notification.title}</Text> : null;',
+        ),
+        errors: ['renderedServerCopy'],
+      },
+      // The exemption covers title and message only.
+      {
+        code: code(
+          'export const a = notification.isAuthoredContent ? <Text>{userEvent.reason}</Text> : null;',
+        ),
         errors: ['renderedServerCopy'],
       },
       {

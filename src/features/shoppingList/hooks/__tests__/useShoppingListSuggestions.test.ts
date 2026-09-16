@@ -1,8 +1,11 @@
 import { act, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useStore } from '#store';
-import { GetShoppingListSuggestionsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  GetShoppingListSuggestionsDocument,
+  type GetShoppingListSuggestionsQuery,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { SuggestionSource } from '#/graphql/generated/schemaTypes';
 import { useShoppingListSuggestions } from '../useShoppingListSuggestions';
 
@@ -25,7 +28,11 @@ interface SuggestionInput {
   itemName?: string;
 }
 
-function buildSuggestion(input: SuggestionInput) {
+type Suggestion = NonNullable<
+  GetShoppingListSuggestionsQuery['shoppingList']
+>['recentlyDeleted'][number];
+
+function buildSuggestion(input: SuggestionInput): MockPart<Suggestion> {
   return {
     __typename: 'ShoppingListSuggestion',
     id: input.id,
@@ -49,7 +56,7 @@ function buildSuggestionsMock(
   listId: string,
   suggestions: ReturnType<typeof buildSuggestion>[],
   limit = 20,
-): MockedResponse {
+): MockFor<typeof GetShoppingListSuggestionsDocument> {
   // Each source is fetched via its own aliased field; bucket the flat input.
   const bySource = (source: SuggestionSource) =>
     suggestions.filter(s => s.source === source);
@@ -77,7 +84,7 @@ function buildSuggestionsErrorMock(
   listId: string,
   error: Error,
   limit = 20,
-): MockedResponse {
+): MockFor<typeof GetShoppingListSuggestionsDocument> {
   return {
     request: {
       query: GetShoppingListSuggestionsDocument,

@@ -1,7 +1,7 @@
 'use no memo';
 
 import { act } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   recordMock,
@@ -13,7 +13,7 @@ import {
 } from '#operations/image/imageUpload.generated';
 import { alertService } from '#/services/alertService';
 import { Telemetry } from '#/services/telemetry';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, ProfileVisibility } from '#/graphql/generated/schemaTypes';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { useImageUpload } from '../useImageUpload';
 
@@ -81,7 +81,7 @@ function buildUpdateProfileMock(
     };
   },
   error?: Error,
-): MockedResponse {
+): MockFor<typeof UpdateUserProfileDocument> {
   if (error) {
     return {
       request: { query: UpdateUserProfileDocument, variables: { input } },
@@ -109,7 +109,7 @@ function buildUpdateProfileMock(
             website: null,
             dateOfBirth: null,
             gender: null,
-            profileVisibility: 'PUBLIC',
+            profileVisibility: ProfileVisibility.Public,
             showEmail: true,
             showPhone: true,
             createdAt: '2025-01-01T00:00:00.000Z',
@@ -145,7 +145,7 @@ const PRESIGN_FIELDS = [
   },
 ];
 
-function buildPresignMock(): MockedResponse {
+function buildPresignMock(): MockFor<typeof CreateImageUploadUrlDocument> {
   return {
     request: { query: CreateImageUploadUrlDocument, variables: () => true },
     result: {
@@ -162,7 +162,9 @@ function buildPresignMock(): MockedResponse {
   };
 }
 
-function buildConfirmItemMock(url: string): MockedResponse {
+function buildConfirmItemMock(
+  url: string,
+): MockFor<typeof ConfirmItemImageUploadDocument> {
   return {
     request: { query: ConfirmItemImageUploadDocument, variables: () => true },
     result: {

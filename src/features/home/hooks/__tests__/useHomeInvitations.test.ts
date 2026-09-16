@@ -1,5 +1,5 @@
 import { act } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   InviteToHomeDocument,
@@ -7,7 +7,11 @@ import {
   GetHomeByJoinCodeDocument,
 } from '#operations/home/home.generated';
 import { alertService } from '#/services/alertService';
-import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  MembershipRole,
+  MembershipStatus,
+} from '#/graphql/generated/schemaTypes';
 import { useHomeInvitations } from '../useHomeInvitations';
 
 type HomeInvitationsApi = ReturnType<typeof useHomeInvitations>;
@@ -52,7 +56,7 @@ const createOptions = () => ({
 function buildInviteMock(
   input: { homeId: string; email: string; role: MembershipRole },
   homeInviteId: string = 'invite-1',
-): MockedResponse {
+): MockFor<typeof InviteToHomeDocument> {
   return {
     request: {
       query: InviteToHomeDocument,
@@ -88,7 +92,7 @@ function buildInviteMock(
 function buildJoinByCodeMock(
   joinCode: string,
   membershipFields: { homeId: string; role: MembershipRole } | null,
-): MockedResponse {
+): MockFor<typeof JoinHomeByCodeDocument> {
   return {
     request: {
       query: JoinHomeByCodeDocument,
@@ -108,7 +112,7 @@ function buildJoinByCodeMock(
                 homeId: membershipFields.homeId,
                 userId: 'u-1',
                 role: membershipFields.role,
-                status: 'ACTIVE',
+                status: MembershipStatus.Active,
                 canManageHome: false,
                 canViewPantry: true,
                 canEditPantry: false,
@@ -134,7 +138,7 @@ function buildJoinByCodeMock(
 function buildHomeByJoinCodeMock(
   joinCode: string,
   home: { id: string; name: string } | null,
-): MockedResponse {
+): MockFor<typeof GetHomeByJoinCodeDocument> {
   return {
     request: {
       query: GetHomeByJoinCodeDocument,
@@ -240,7 +244,7 @@ describe('useHomeInvitations', () => {
     });
 
     it('hands a refusal back as localized copy for the modal to show inline', async () => {
-      const rejectionMock: MockedResponse = {
+      const rejectionMock: MockFor<typeof InviteToHomeDocument> = {
         request: {
           query: InviteToHomeDocument,
           variables: {

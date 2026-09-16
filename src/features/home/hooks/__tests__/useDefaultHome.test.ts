@@ -1,10 +1,14 @@
 import { waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { GetHomesDocument } from '#operations/home/home.generated';
+import {
+  GetHomesDocument,
+  type GetHomesQuery,
+} from '#operations/home/home.generated';
+import type { HomeCard_HomeFragment } from '#features/home/components/HomeCard.generated';
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import type { RootState } from '#store/index';
@@ -102,13 +106,17 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
 
 // Helper builders ----------------------------------------------------------
 
+/** The node on the wire: the query's own selection plus the card's fragment. */
+type HomeNode = GetHomesQuery['homes']['edges'][number]['node'] &
+  HomeCard_HomeFragment;
+
 function buildHomeNode(args: {
   id: string;
   isDefault?: boolean;
   pantries?: Array<{ id: string; isDefault?: boolean }>;
   /** Set above `pantries.length` to express a truncated page. */
   totalCount?: number;
-}) {
+}): MockPart<HomeNode> {
   return {
     __typename: 'Home',
     id: args.id,
@@ -159,7 +167,7 @@ function buildHomeNode(args: {
 
 function buildGetHomesMock(
   homes: Array<ReturnType<typeof buildHomeNode>>,
-): MockedResponse {
+): MockFor<typeof GetHomesDocument> {
   return {
     request: {
       query: GetHomesDocument,
@@ -190,19 +198,18 @@ function buildGetHomesMock(
   };
 }
 
-function buildSetDefaultHomeMock(homeId: string): MockedResponse {
+function buildSetDefaultHomeMock(
+  homeId: string,
+): MockFor<typeof MarkHomeAsDefaultDocument> {
   return {
     request: {
       query: MarkHomeAsDefaultDocument,
-      variables: { homeId },
+      variables: { input: { homeId } },
     },
     result: {
       data: {
         markHomeAsDefault: {
           __typename: 'MarkHomeAsDefaultPayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
           settings: { __typename: 'UserSettings', id: 'settings-1' },
           defaultPantry: null,
         },

@@ -206,7 +206,11 @@ describe('classifyError — a retired unit reference', () => {
     expect(classifyError(error).type).toBe('stale-reference');
   });
 
-  it('classifies a UNIT_INVALID refusal as retryable whatever the typename', () => {
+  it('leaves a UNIT_INVALID refusal permanently rejected', () => {
+    // The code says the unit is invalid FOR THE OPERATION — curation, no
+    // conversion route, a fact the food does not record. A vocabulary refresh
+    // clears none of those, and the replay re-sends the same unit, so retrying
+    // only reaches the same withdrawal several drains later.
     const error = new ReplayRejectedError(
       'ValidationError',
       'That unit cannot be used here',
@@ -215,9 +219,8 @@ describe('classifyError — a retired unit reference', () => {
 
     const queueError = classifyError(error);
 
-    expect(queueError.type).toBe('stale-reference');
-    expect(queueError.retryable).toBe(true);
-    expect(queueError.code).toBe('UNIT_INVALID');
+    expect(queueError.type).toBe('unknown');
+    expect(queueError.retryable).toBe(false);
   });
 
   it('leaves a NotFoundError about anything else permanently rejected', () => {

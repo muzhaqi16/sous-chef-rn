@@ -1,12 +1,11 @@
 'use no memo';
 
 import { act, waitFor } from '@testing-library/react-native';
-import {
-  renderHookWithApollo,
-  type MockedResponse,
-} from '#/test-utils/apolloMockProvider';
+import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   GetShoppingListItemsFilteredDocument,
+  type GetShoppingListItemsFilteredQuery,
   type GetShoppingListItemsFilteredQueryVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { PaginationConfig } from '#hooks/utils/usePagination';
@@ -52,7 +51,7 @@ function buildConnectionData(
   pageInfo = { hasNextPage: false, endCursor: null as string | null },
   totalCount?: number,
   isPurchased = false,
-) {
+): MockPart<GetShoppingListItemsFilteredQuery> {
   return {
     shoppingList: {
       __typename: 'ShoppingList',
@@ -81,20 +80,20 @@ function buildConnectionData(
 function buildListMock(
   isPurchased: boolean,
   data: ReturnType<typeof buildConnectionData>,
-): MockedResponse {
+): MockFor<typeof GetShoppingListItemsFilteredDocument> {
   return {
     request: {
       query: GetShoppingListItemsFilteredDocument,
-      variables: vars =>
-        (vars as GetShoppingListItemsFilteredQueryVariables).isPurchased ===
-        isPurchased,
+      variables: vars => vars.isPurchased === isPurchased,
     },
     maxUsageCount: Number.POSITIVE_INFINITY,
     result: { data },
   };
 }
 
-function emptyMock(isPurchased: boolean): MockedResponse {
+function emptyMock(
+  isPurchased: boolean,
+): MockFor<typeof GetShoppingListItemsFilteredDocument> {
   return buildListMock(
     isPurchased,
     buildConnectionData([], undefined, undefined, isPurchased),

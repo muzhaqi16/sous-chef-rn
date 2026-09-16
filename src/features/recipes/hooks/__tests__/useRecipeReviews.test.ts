@@ -1,5 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   recordMock,
@@ -74,7 +74,7 @@ function buildReviewNode(
 function buildGetRecipeReviewsMock(
   recipeId: string = 'recipe-1',
   reviewNodes?: Array<ReturnType<typeof buildReviewNode>>,
-): MockedResponse {
+): MockFor<typeof GetRecipeReviewsDocument> {
   const nodes = reviewNodes ?? [
     // rev-1 is someone else's review that the viewer has marked helpful;
     // rev-2 is the viewer's own, unvoted.
@@ -115,7 +115,7 @@ function buildGetRecipeReviewsMock(
 
 function buildEmptyRecipeReviewsMock(
   recipeId: string = 'recipe-1',
-): MockedResponse {
+): MockFor<typeof GetRecipeReviewsDocument> {
   return {
     request: {
       query: GetRecipeReviewsDocument,
@@ -129,7 +129,7 @@ function buildEmptyRecipeReviewsMock(
   };
 }
 
-function buildCreateReviewMock(): MockedResponse {
+function buildCreateReviewMock(): MockFor<typeof CreateRecipeReviewDocument> {
   return {
     request: {
       query: CreateRecipeReviewDocument,
@@ -155,7 +155,7 @@ function buildCreateReviewMock(): MockedResponse {
   };
 }
 
-function buildDeleteReviewMock(): MockedResponse {
+function buildDeleteReviewMock(): MockFor<typeof DeleteRecipeReviewDocument> {
   return {
     request: {
       query: DeleteRecipeReviewDocument,
