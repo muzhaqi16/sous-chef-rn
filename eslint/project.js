@@ -22,16 +22,12 @@ const { NO_LITERAL_STRING } = require('./i18n');
 
 const ROOT = path.join(__dirname, '..');
 
-// Pinned to the repo root: a relative `project` resolves against process.cwd(),
-// so a runner started elsewhere silently gets an inferred program with default
-// compiler options — no strictNullChecks.
-const APP_PROJECT = { project: './tsconfig.json', tsconfigRootDir: ROOT };
-// The root tsconfig's bare `__tests__` exclusion names that one directory, not
-// every directory of that name; this one adds the root test tree and `e2e/`.
-const TEST_PROJECT = {
-  project: './__tests__/tsconfig.json',
-  tsconfigRootDir: ROOT,
-};
+// `projectService` resolves each file against the tsconfig that owns it, so a
+// file the named project happened to exclude no longer falls through to an
+// inferred program — where a type-aware rule sees no program and returns
+// nothing, which reads as a clean file. Pinned to the repo root: a runner
+// started elsewhere would otherwise resolve against its own cwd.
+const TYPED = { projectService: true, tsconfigRootDir: ROOT };
 
 const TEST_FILES = ['**/__tests__/**/*.{ts,tsx}', '**/*.test.{ts,tsx}'];
 
@@ -249,7 +245,7 @@ const overrides = [
   },
   {
     files: ['src/**/*.ts', 'src/**/*.tsx', 'App.tsx'],
-    languageOptions: { parserOptions: APP_PROJECT },
+    languageOptions: { parserOptions: TYPED },
     rules: {
       '@typescript-eslint/no-deprecated': 'error',
     },
@@ -266,7 +262,7 @@ const overrides = [
       '**/__perf__/**',
       '**/*.test.{ts,tsx}',
     ],
-    languageOptions: { parserOptions: APP_PROJECT },
+    languageOptions: { parserOptions: TYPED },
     rules: {
       '@typescript-eslint/no-unnecessary-condition': 'error',
     },
@@ -310,11 +306,11 @@ const overrides = [
   },
   {
     files: ['e2e/**/*.ts'],
-    languageOptions: { parserOptions: TEST_PROJECT },
+    languageOptions: { parserOptions: TYPED },
   },
   {
     files: ['__tests__/**/*.ts', '__tests__/**/*.tsx'],
-    languageOptions: { parserOptions: TEST_PROJECT },
+    languageOptions: { parserOptions: TYPED },
     rules: {
       '@typescript-eslint/no-deprecated': 'error',
     },
@@ -623,7 +619,7 @@ const overrides = [
     },
   },
   {
-    // Every TypeScript file that has a program (APP_PROJECT or TEST_PROJECT
+    // Every TypeScript file that has a program (`TYPED`
     // above). A type-only import is `import type`, and an assertion the checker
     // already proves is dead weight that hides the next real type change.
     files: [

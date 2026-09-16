@@ -31,6 +31,16 @@ jobs:
       - name: Install dependencies and generate GraphQL types
         uses: ./.github/actions/setup-deps
 
+      # `incremental` is on with an explicit tsBuildInfoFile, so a warm cache
+      # rechecks only what changed. Keyed on the run so it always writes, and
+      # restored from the newest prefix match.
+      - name: Restore tsc build info
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/tsc
+          key: ${{ runner.os }}-tsbuildinfo-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-tsbuildinfo-
+
       - name: Run TypeScript check
         run: npm run typecheck
 
@@ -39,11 +49,10 @@ jobs:
     name: ESLint
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Type-aware linting (@typescript-eslint/no-deprecated + the import/resolver
-    # TS program) holds the full TypeScript program(s) in memory. A fresh,
-    # cacheless `eslint .` over the whole repo peaks at ~3.5GB RSS, which
-    # overruns Node's default old-space heap on the runner and aborts with
-    # "Ineffective mark-compacts near heap limit". Match the build-android jobs.
+    # Type-aware linting holds the TypeScript program in memory. A cacheless
+    # `eslint .` over the whole repo peaks near 4GB RSS, which overruns Node's
+    # default old-space heap on the runner and aborts with "Ineffective
+    # mark-compacts near heap limit". Match the build-android jobs.
     env:
       NODE_OPTIONS: --max-old-space-size=4096
 
@@ -59,6 +68,14 @@ jobs:
 
       - name: Install dependencies and generate GraphQL types
         uses: ./.github/actions/setup-deps
+
+      # `npm run lint` passes --cache; without this it is always cold.
+      - name: Restore ESLint cache
+        uses: actions/cache@v4
+        with:
+          path: .eslintcache
+          key: ${{ runner.os }}-eslintcache-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-eslintcache-
 
       - name: Run ESLint
         run: npm run lint

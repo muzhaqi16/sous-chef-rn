@@ -623,6 +623,16 @@ i18n:check` (also a pre-push hook) fails on drift between locale files.
 
 ### Type-level gates
 
+Three projects own the tree — `tsconfig.json` (app), `__tests__/tsconfig.json`
+(the root test tree) and `e2e/tsconfig.json` — and `npm run typecheck` runs all
+three. ESLint reaches them through `parserOptions.projectService`, which resolves
+each file against the project that owns it rather than a named one. That matters
+because a type-aware rule guards with `if (!services?.program) return {}`: a file
+no project claims reports nothing, which reads exactly like a clean file.
+`e2e/` was in that state until it got its own tsconfig.
+`__tests__/lint/typeAwareRulesHaveTypes.test.ts` asserts a type-aware rule fires
+in every tier.
+
 `@typescript-eslint/no-unnecessary-condition` runs on all of `src/**`, with no
 exclusions. It earns its place on one shape nothing else catches: a METHOD read
 without calling it. TypeScript's own

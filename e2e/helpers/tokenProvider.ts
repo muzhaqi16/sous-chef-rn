@@ -166,11 +166,16 @@ export async function getAuthTokens(): Promise<AuthTokens> {
     );
   }
 
-  const json = await response.json();
+  // `fetch` hands back `unknown`: this shape is the API's, not something the
+  // compiler can know, so it is stated once here rather than at each read.
+  const json = (await response.json()) as {
+    errors?: Array<{ message?: string }>;
+    data: { login: { __typename: string } & Partial<AuthTokens> };
+  };
 
   if (json.errors) {
     throw new Error(
-      `GraphQL login error: ${json.errors.map((e: { message?: string }) => e.message).join(', ')}`,
+      `GraphQL login error: ${json.errors.map(e => e.message).join(', ')}`,
     );
   }
 
@@ -178,16 +183,17 @@ export async function getAuthTokens(): Promise<AuthTokens> {
   // member with no `accessToken`, which would otherwise cache `undefined` and
   // fail later as an unauthenticated request rather than a login problem.
   const { __typename, accessToken, refreshToken, user } = json.data.login;
-  if (!accessToken) {
+  if (!accessToken || !refreshToken || !user) {
     throw new Error(
       `Login returned ${__typename} rather than AuthPayload — no access token. Check the test account (${TEST_USER.email}) exists and is not locked.`,
     );
   }
-  cachedTokens = { accessToken, refreshToken, user };
+  const tokens: AuthTokens = { accessToken, refreshToken, user };
+  cachedTokens = tokens;
   cacheTimestamp = now;
 
   console.log('✅ Auth tokens fetched successfully');
-  return cachedTokens;
+  return tokens;
 }
 
 export function clearTokenCache(): void {
