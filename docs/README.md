@@ -12,7 +12,7 @@ Developer documentation for the Sous Chef React Native app. For what the app
 | **[Architecture](architecture.md)** | How the app is built and organized — feature modules, state ownership, the data layer, offline-first, navigation, and the UI layer. Read this first. |
 | **[Development](development.md)** | Setup, environment files, build variants, codegen, testing, quality gates, and the full command reference. |
 | **[Contributing](../CONTRIBUTING.md)** | Contribution terms, PR guidelines, git hooks. |
-| **[CLAUDE.md](../CLAUDE.md)** | The enforced day-to-day conventions, one rule per line — commands, structure, Apollo, UI, React Compiler, i18n, testing. Backed by lint rules and tests; verified rules link into the probe record below. |
+| **[CLAUDE.md](../CLAUDE.md)** | The conventions no lint rule or test catches — structure, Apollo and session contracts, device-only UI gotchas, React Compiler, i18n, testing — and the enforcer's name where one exists. Verified rules link into the probe record below. |
 | **[Verified library behaviour](verified-library-behaviour.md)** | The probe record CLAUDE.md's one-line verification stamps link into — each entry pins a rule to the installed package's source, with a re-check command. |
 
 ---
