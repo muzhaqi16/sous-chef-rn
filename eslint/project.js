@@ -13,7 +13,11 @@ const {
   restrictedSyntax,
   restrictedSyntaxForTests,
 } = require('./restrictedSyntax');
-const { BOUNDARY_ZONES } = require('./boundaries');
+const {
+  BOUNDARY_ZONES,
+  BOUNDARY_ELEMENTS,
+  BOUNDARY_POLICIES,
+} = require('./boundaries');
 const { NO_LITERAL_STRING } = require('./i18n');
 
 const ROOT = path.join(__dirname, '..');
@@ -48,6 +52,7 @@ const base = {
         project: './tsconfig.json',
       },
     },
+    'boundaries/elements': BOUNDARY_ELEMENTS,
   },
   rules: {
     'no-barrel-files/no-barrel-files': 'error',
@@ -61,6 +66,10 @@ const base = {
     'no-restricted-syntax': restrictedSyntax(),
 
     'import/no-restricted-paths': ['error', { zones: BOUNDARY_ZONES }],
+    'boundaries/dependencies': [
+      'error',
+      { default: 'allow', policies: BOUNDARY_POLICIES },
+    ],
     // `import {} from 'x'` is what an autofix leaves after removing every unused
     // specifier; it still loads the module, so it reads as a side-effect import.
     'import/no-empty-named-blocks': 'error',
@@ -198,6 +207,7 @@ const overrides = [
       'no-restricted-imports': 'off',
       'no-restricted-syntax': 'off',
       'import/no-restricted-paths': 'off',
+      'boundaries/dependencies': 'off',
     },
   },
   {
@@ -210,8 +220,9 @@ const overrides = [
       '**/*.test.tsx',
     ],
     rules: {
-      // The boundary zones are about PRODUCTION dependency direction.
+      // The boundaries are about PRODUCTION dependency direction.
       'import/no-restricted-paths': 'off',
+      'boundaries/dependencies': 'off',
       ...productionRules('off'),
       'no-restricted-syntax': restrictedSyntaxForTests(),
       // Bracket access is the only type-safe way to reach a private member.

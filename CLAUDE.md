@@ -77,7 +77,8 @@ user's decision, never a way past a failing check.
   `components/`; 2+ screens adds `screens/registration.ts`; colocated `.graphql` is the norm.
 - **Feature API boundary** — public: `screens/`, `manifest.ts`, `testIDs.ts`,
   top-level `hooks/` files, `<feature>Fragments.generated.ts` type imports; the
-  rest is internal, both directions, via `eslint/` zones; tests exempt. Table and
+  rest is internal, both directions, via `boundaries/dependencies` (matched by
+  feature capture, so a new feature needs no config); tests exempt. Table and
   `graphql/` asymmetry: § The public API boundary.
 
 ## State ownership

@@ -108,7 +108,7 @@ adds an import of the screen-bearing registry to a launch-path module.
 ### The public API boundary
 
 A feature is a module with a small public surface. Reaching past it is blocked
-by ESLint (`no-restricted-imports` + `import/no-restricted-paths`) for **new**
+by ESLint (`no-restricted-imports` + `boundaries/dependencies`) for **new**
 imports:
 
 | Subfolder                         | Public? | Notes                                                                                                                                                                                                                                                                                                               |
@@ -138,11 +138,14 @@ Shared hooks live in `src/hooks/`. If two features need the same thing, it moves
 up — it doesn't get imported sideways, and it doesn't get imported _downwards_
 either: a hook owned by one feature lives in that feature, and `src/hooks/` holds
 only what more than one feature uses. Both directions are enforced by
-`import/no-restricted-paths` zones.
+`boundaries/dependencies` policies.
 
-A zone's `from` may name a directory that does not exist yet, and 18 do. That is
-deliberate: the boundary around `mealPlan/context/` is declared before anyone
-creates it, so the first import into it is blocked rather than grandfathered.
+The policy matches a feature by CAPTURE — "an element whose captured
+`featureName` differs from the importer's" — so it is one rule rather than a pair
+of zones per feature, a feature is covered the day its directory exists, and a
+directory that does not exist yet is already inside the boundary. A type-only
+import of a generated fragment is `dependency.kind`, not a per-feature
+exception list.
 
 `src/config/appConfig.ts` is the fork-point: identity, deep links, brand colour,
 the keychain namespace, which locales ship, and `features` — a per-feature
@@ -157,8 +160,8 @@ offline tab preloader. They are not reusable and a sibling app writes its own, s
 they sit outside the kit rather than being excused from its rule.
 
 `src/components/` and `src/hooks/` together are the **kit** — the layer a sibling
-app reuses wholesale. It does not import `#features/…` (an
-`import/no-restricted-paths` zone in `eslint/boundaries.js`), own a `.graphql`
+app reuses wholesale. It does not import `#features/…` (a
+`boundaries/dependencies` policy in `eslint/boundaries.js`), own a `.graphql`
 document, or carry a file named after a domain. Only the import direction has a
 gate; the `.graphql` and naming halves are held by review.
 
@@ -166,7 +169,8 @@ The **kernel** (`src/apollo/`, `src/store/`, `src/utils/`, …) carries no modul
 NAMED after a feature either. Its feature IMPORTS are load-bearing — the offline
 queue replays every feature's writes, i18n bundles every feature's copy, the
 subscription layer mounts every feature's events — and are governed by the same
-`eslint/boundaries.js` zones. The per-feature navigation stacks in
+`eslint/boundaries.js` policies: `graphql/` and `offline/` stay open to it,
+`context/`, `utils/`, `components/` and `hooks/mutations/` do not. The per-feature navigation stacks in
 `src/navigation/stacks/` are exempt by design.
 
 **A module in the shared layers is there because more than one feature uses it.**

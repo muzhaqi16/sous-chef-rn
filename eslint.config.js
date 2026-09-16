@@ -6,6 +6,7 @@ const graphqlPlugin = require('@graphql-eslint/eslint-plugin');
 const reactNativeConfig = require('@react-native/eslint-config/flat');
 const typescriptPlugin = require('@typescript-eslint/eslint-plugin');
 const espree = require('espree');
+const boundariesPlugin = require('eslint-plugin-boundaries');
 const importPlugin = require('eslint-plugin-import');
 const i18nextPlugin = require('eslint-plugin-i18next');
 const noBarrelFilesPlugin = require('eslint-plugin-no-barrel-files');
@@ -65,6 +66,7 @@ module.exports = [
       '@graphql-eslint': graphqlPlugin,
       i18next: i18nextPlugin,
       import: importPlugin,
+      boundaries: boundariesPlugin,
       'no-barrel-files': noBarrelFilesPlugin,
     },
     ...base,
