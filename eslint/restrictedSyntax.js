@@ -101,7 +101,7 @@ const PRODUCTION_SYNTAX = [
     selector:
       ':matches(Property[key.name="shadowColor"], Property[key.name="shadowOffset"], Property[key.name="shadowOpacity"], Property[key.name="shadowRadius"])',
     message:
-      'Use CSS boxShadow syntax instead of individual shadow properties. See src/styles/listStyles.ts for the correct pattern.',
+      'Use CSS boxShadow syntax instead of individual shadow properties. Elevation is a step of theme.shadows (src/theme/foundations/shadows.ts).',
   },
   {
     id: 'sharedValueAssignment',

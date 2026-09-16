@@ -95,7 +95,7 @@ const base = {
       { ignoreRestSiblings: true },
     ],
 
-    // `as any` and `as unknown` are additionally banned by sous-chef/no-unsafe-cast.
+    // `as unknown` and `as never` are additionally banned by no-restricted-syntax.
     '@typescript-eslint/no-explicit-any': 'error',
 
     'no-bitwise': 'off', // hash functions
@@ -263,6 +263,7 @@ const overrides = [
       // them. `__tests__/graphql/fragmentsAreReachable.test.ts` holds the
       // invariant instead, reading the generated exports.
       '@graphql-eslint/no-unused-fragments': 'off',
+      'sous-chef/selects-key-field-directly': 'error',
       // JS/TS rules that traverse the AST do not understand GraphQL's.
       'no-barrel-files/no-barrel-files': 'off',
       'react-hooks/rules-of-hooks': 'off',

@@ -34,6 +34,7 @@ exemption is a file-scoped override in `eslint/project.js`, where review sees it
 | [`sous-chef/no-scrollable-in-bottom-sheet-view`](no-scrollable-in-bottom-sheet-view.md)   | A scrollable is never nested inside a BottomSheetView.                                          |
 | [`sous-chef/rngh-refresh-control-matches-host`](rngh-refresh-control-matches-host.md)     | A pull-to-refresh control matches its scrollable host.                                          |
 | [`sous-chef/on-fill-text-uses-its-token`](on-fill-text-uses-its-token.md)                 | Text on a fill reads that fill's own `on*` token.                                               |
+| [`sous-chef/selects-key-field-directly`](selects-key-field-directly.md)                   | A selection that spreads a fragment on a type with an `id` selects `id` itself.                 |
 
 A ban that is one esquery selector and nothing else is an entry of the stock
 `no-restricted-syntax` rule instead of a rule of its own — the catalog of those
@@ -61,8 +62,8 @@ logger included.
 Type-checked rules the project turns on, each at zero when it was enabled. The
 exact options and file scopes are in `eslint/project.js`.
 
-| Rule                                                                          | Scope                        | What it holds                                                                                                                                                                  |
-| ----------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Rule                                                      | Scope                        | What it holds                                                                                                                                                                  |
+| --------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `no-explicit-any`                                         | everywhere                   | No `any`, including `as any`; `no-restricted-syntax` bans `as unknown` / `as never`                                                                                            |
 | --------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `no-unnecessary-condition`                                | production `src`             | A condition the types say cannot matter. No exclusions: widen the over-promising type where it is DECLARED, never delete the guard (`docs/architecture.md` § Type-level gates) |
