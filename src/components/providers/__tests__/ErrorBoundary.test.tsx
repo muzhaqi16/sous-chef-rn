@@ -9,13 +9,6 @@ import ErrorBoundary, {
 } from '../ErrorBoundary';
 
 // Mock Telemetry
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    trackError: jest.fn(),
-    increment: jest.fn(),
-  },
-}));
-
 // Suppress console.error for expected errors in tests
 const originalConsoleError = console.error;
 beforeAll(() => {

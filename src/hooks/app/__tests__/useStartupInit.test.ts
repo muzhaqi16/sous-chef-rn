@@ -20,17 +20,6 @@ jest.mock('#services/authService', () => ({
   authService: { registerDeviceInBackground: jest.fn() },
 }));
 
-jest.mock('#services/telemetry', () => ({
-  Telemetry: {
-    updateConfig: jest.fn(),
-    initialize: jest.fn(),
-    trackEvent: jest.fn(),
-    histogram: jest.fn(),
-    increment: jest.fn(),
-    gauge: jest.fn(),
-  },
-}));
-
 jest.mock('#services/haptic/HapticService', () => ({
   HapticService: { initialize: jest.fn() },
 }));

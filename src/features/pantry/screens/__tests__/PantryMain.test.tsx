@@ -181,10 +181,6 @@ jest.mock('#hooks/useFeatureHint', () => ({
     actions: { show: jest.fn(), dismiss: jest.fn() },
   }),
 }));
-jest.mock('#services/telemetry', () => ({
-  Telemetry: { trackEvent: jest.fn(), trackScreen: jest.fn() },
-}));
-
 // --- Error boundary & performance ---
 jest.mock('#components/providers/ScreenErrorBoundary', () => ({
   PantryErrorBoundary: ({ children }: { children: React.ReactNode }) => (
