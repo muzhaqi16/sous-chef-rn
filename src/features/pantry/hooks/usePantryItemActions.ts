@@ -18,9 +18,9 @@ import {
 import { Telemetry } from '#services/telemetry';
 import { generateEntityId } from '#/utils/generateEntityId';
 import {
-  _UsePantryItemActionsTrackingUnitFragmentDoc,
-  _UsePantryItemActionsQuantityFragmentDoc,
-  _UsePantryItemActionsIdFragmentDoc,
+  UsePantryItemActions_TrackingUnitFragmentDoc,
+  UsePantryItemActions_QuantityFragmentDoc,
+  UsePantryItemActions_IdFragmentDoc,
 } from './usePantryItemActions.generated';
 
 interface UsePantryItemActionsOptions {
@@ -84,7 +84,7 @@ export function usePantryItemActions({
       unit: { id: string } | null;
     }>({
       id: cacheId,
-      fragment: _UsePantryItemActionsTrackingUnitFragmentDoc,
+      fragment: UsePantryItemActions_TrackingUnitFragmentDoc,
     });
     return data?.unit?.id ?? undefined;
   };
@@ -100,7 +100,7 @@ export function usePantryItemActions({
     if (!cacheId) return 0;
     const data = client.cache.readFragment<{ quantity: number }>({
       id: cacheId,
-      fragment: _UsePantryItemActionsQuantityFragmentDoc,
+      fragment: UsePantryItemActions_QuantityFragmentDoc,
     });
     return data?.quantity ?? 0;
   };
@@ -375,7 +375,7 @@ export function usePantryItemActions({
     if (!cacheId) return false;
     const data = client.cache.readFragment<{ id: string }>({
       id: cacheId,
-      fragment: _UsePantryItemActionsIdFragmentDoc,
+      fragment: UsePantryItemActions_IdFragmentDoc,
     });
     return !!data?.id;
   };

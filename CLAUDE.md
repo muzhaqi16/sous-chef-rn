@@ -14,7 +14,8 @@ checked; change it only by re-running its probe (`docs/verified-library-behaviou
 npm start / npm run ios / npm run android    # dev loop
 npm run codegen      # re-pull schema + regenerate types (run before lint if schema is stale)
 npm run typecheck    # app AND test tsconfig — run after every code change
-npm run lint         # ESLint, incl. every .graphql operation vs the pulled schema;
+npm run lint         # ESLint, incl. every .graphql operation vs the pulled schema
+                     # (@graphql-eslint flat/operations-recommended);
                      # --max-warnings 0, so a rule is 'error' or 'off', never 'warn'
 npm test             # full Jest suite, unfiltered — ~800 suites; workers capped in jest.config.js
 node scripts/check-compiler-bailouts.mjs         # also in pre-push

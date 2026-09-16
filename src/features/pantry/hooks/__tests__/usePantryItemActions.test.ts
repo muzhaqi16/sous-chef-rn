@@ -20,9 +20,9 @@ import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { usePantryItemActions } from '../usePantryItemActions';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import {
-  _UsePantryItemActionsIdFragmentDoc,
-  _UsePantryItemActionsQuantityFragmentDoc,
-  _UsePantryItemActionsTrackingUnitFragmentDoc,
+  UsePantryItemActions_IdFragmentDoc,
+  UsePantryItemActions_QuantityFragmentDoc,
+  UsePantryItemActions_TrackingUnitFragmentDoc,
 } from '../usePantryItemActions.generated';
 
 jest.mock('#/utils/isNetworkError', () => ({
@@ -49,9 +49,9 @@ const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
         unit: { __typename: 'Unit' as const, id: 'unit-1', symbol: 'ea' },
       };
       return [
-        { fragment: _UsePantryItemActionsIdFragmentDoc, data },
-        { fragment: _UsePantryItemActionsQuantityFragmentDoc, data },
-        { fragment: _UsePantryItemActionsTrackingUnitFragmentDoc, data },
+        { fragment: UsePantryItemActions_IdFragmentDoc, data },
+        { fragment: UsePantryItemActions_QuantityFragmentDoc, data },
+        { fragment: UsePantryItemActions_TrackingUnitFragmentDoc, data },
       ];
     }),
   );
@@ -59,7 +59,7 @@ const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
 const cachedItem = (cache: ReturnType<typeof seedPantryItems>) =>
   cache.readFragment<{ quantity: number }>({
     id: cache.identify({ __typename: 'PantryItem', id: 'item-1' }),
-    fragment: _UsePantryItemActionsQuantityFragmentDoc,
+    fragment: UsePantryItemActions_QuantityFragmentDoc,
   });
 
 const createOptions = () => ({

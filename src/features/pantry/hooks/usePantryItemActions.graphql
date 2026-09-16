@@ -1,13 +1,13 @@
-fragment _UsePantryItemActionsTrackingUnit on PantryItem {
+fragment usePantryItemActions_trackingUnit on PantryItem {
   unit {
     id
   }
 }
 
-fragment _UsePantryItemActionsQuantity on PantryItem {
+fragment usePantryItemActions_quantity on PantryItem {
   quantity
 }
 
-fragment _UsePantryItemActionsId on PantryItem {
+fragment usePantryItemActions_id on PantryItem {
   id
 }

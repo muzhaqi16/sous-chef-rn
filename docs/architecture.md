@@ -312,14 +312,27 @@ PantryItemCard.graphql        # fragment PantryItemCard_pantryItem on PantryItem
 PantryItemCard.generated.ts   # generated — committed
 ```
 
-Generated files are committed, and a pre-push hook fails if they're stale.
-`npm run lint` also validates every `.graphql` file against the pulled schema,
-so a renamed or newly deprecated server field surfaces at lint time rather than
-as a surprise codegen failure later (`fields-on-correct-type` and
-`no-deprecated` are errors). The schema reaches the parser as
-`parserOptions.graphQLConfig` in `eslint/project.js`: graphql-eslint@4 has no
-flat `schema` option and errors at PARSE time when one is present, which reads
-as every document failing rather than as a config problem.
+`.generated.ts` outputs are gitignored and rebuilt in CI; `schema.graphql` and
+`persisted-query-manifest.json` are tracked, and a pre-push hook fails if either
+is stale.
+
+`npm run lint` validates every `.graphql` file against the pulled schema through
+`@graphql-eslint`'s `flat/operations-recommended`, so a renamed or newly
+deprecated server field, an undefined variable, a missing required argument or an
+unspreadable fragment surfaces at lint time rather than as a surprise codegen
+failure later. Two of the preset's rules are off, each because adopting it is a
+source change rather than a config one: `require-selections` (a selection that
+omits an available `id`) and `no-unused-fragments`.
+
+`naming-convention` keeps the preset's operation and variable casing but not its
+fragment rule: fragments here are `<consumer>_<entity>`, and its `Get` prefix ban
+does not apply.
+
+The schema reaches the parser as `parserOptions.graphQLConfig` in
+`eslint/project.js`: graphql-eslint@4 has no flat `schema` option and errors at
+PARSE time when one is present, which reads as every document failing rather than
+as a config problem. `documents` is set alongside it because the cross-document
+rules report nothing without it.
 
 ### Fragment colocation and data masking
 

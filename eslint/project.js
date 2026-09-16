@@ -193,12 +193,29 @@ const overrides = [
     files: ['**/*.graphql'],
     languageOptions: {
       parserOptions: {
-        graphQLConfig: { schema: './src/graphql/generated/schema.graphql' },
+        graphQLConfig: {
+          schema: './src/graphql/generated/schema.graphql',
+          // The cross-document rules (unused fragments, undefined variables,
+          // fragment spreads) need the whole operation set, not one file.
+          documents: ['src/**/*.graphql'],
+        },
       },
     },
     rules: {
-      '@graphql-eslint/fields-on-correct-type': 'error',
-      '@graphql-eslint/no-deprecated': 'error',
+      // Fragments are `<consumer>_<entity>`, so the preset's PascalCase check
+      // does not apply; operation names carry the `Get` prefix it forbids.
+      '@graphql-eslint/naming-convention': [
+        'error',
+        {
+          VariableDefinition: 'camelCase',
+          OperationDefinition: { style: 'PascalCase' },
+        },
+      ],
+      // Each needs source changes rather than config, and is adopted on its own:
+      // `require-selections` reports selections missing an available `id`, and
+      // `no-unused-fragments` reports fragments no operation spreads.
+      '@graphql-eslint/require-selections': 'off',
+      '@graphql-eslint/no-unused-fragments': 'off',
       // JS/TS rules that traverse the AST do not understand GraphQL's.
       'no-barrel-files/no-barrel-files': 'off',
       'react-hooks/rules-of-hooks': 'off',

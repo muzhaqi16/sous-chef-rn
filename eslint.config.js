@@ -14,6 +14,14 @@ const reactHooksPlugin = require('eslint-plugin-react-hooks');
 const sousChefPlugin = require('./eslint/plugin');
 const { base, overrides } = require('./eslint/project');
 
+// `flat/operations-recommended` flattened to a rule map.
+const graphqlPreset = graphqlPlugin.configs['flat/operations-recommended'];
+const graphqlOperationsConfig = {
+  rules: Array.isArray(graphqlPreset)
+    ? Object.assign({}, ...graphqlPreset.map(entry => entry.rules ?? {}))
+    : graphqlPreset.rules,
+};
+
 // Every rule is 'error' or 'off': lint passes --max-warnings 0, so a preset's
 // 'warn' already blocks and only reads as optional.
 const promoteWarning = entry => {
@@ -70,6 +78,13 @@ module.exports = [
       'no-barrel-files': noBarrelFilesPlugin,
     },
     ...base,
+  },
+  // The operations preset, composed here because it carries plugin objects:
+  // `eslint/project.js` stays pure data so the Jest guards can read it. The
+  // project's own `**/*.graphql` override follows, and so wins.
+  {
+    files: ['**/*.graphql'],
+    rules: errorsOnly(graphqlOperationsConfig).rules,
   },
   ...overrides,
 ];
