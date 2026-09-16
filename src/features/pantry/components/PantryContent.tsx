@@ -154,7 +154,7 @@ export const PantryContent = React.forwardRef<
     // Stats-backed: `pantry.stats` survives when `itemsConnection` reads empty
     // (dangling edge refs, offline cold start), where its `totalCount` is 0 —
     // so the connection's own count can't be the wait signal.
-    const expectedCount = locationCounts?.[locationFilter] ?? totalCount ?? 0;
+    const expectedCount = locationCounts[locationFilter] ?? totalCount ?? 0;
 
     // "Expected here but not arrived yet". Gating on `loading` is what stops
     // this sticking: once the query settles the list is authoritative, so an

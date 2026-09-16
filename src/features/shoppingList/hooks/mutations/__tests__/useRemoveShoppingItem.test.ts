@@ -173,9 +173,9 @@ describe('useRemoveShoppingItem', () => {
     });
   });
 
-  it('leaves counts it holds untouched rather than zeroing them when some are missing', async () => {
-    // Cached without `remainingItems` / `completionRate`, the stats read comes
-    // back null; the counts must not be rebuilt from an assumed zero.
+  it('adjusts the counts it holds when some are missing', async () => {
+    // Cached without `remainingItems` / `completionRate`: the held counts still
+    // move rather than all staying stale behind a null strict read.
     const cache = seedCache([
       {
         __typename: 'ShoppingList',
@@ -196,8 +196,71 @@ describe('useRemoveShoppingItem', () => {
     });
 
     expect(cache.extract()['ShoppingList:list-1']).toMatchObject({
-      totalItems: 3,
+      totalItems: 2,
       completedItems: 1,
+    });
+  });
+
+  it('derives no count from an input the cache does not hold', async () => {
+    const cache = seedCache([
+      {
+        __typename: 'ShoppingList',
+        id: 'list-1',
+        totalItems: 3,
+        remainingItems: 2,
+        completionRate: 1 / 3,
+      },
+    ]);
+    const gone = goneMock();
+    const { result } = renderHookWithApollo(
+      () => useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      { operationMocks: [gone.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.removeItem('item-1');
+    });
+
+    const list = cache.extract()['ShoppingList:list-1'];
+    expect(list).toMatchObject({
+      totalItems: 2,
+      remainingItems: 2,
+      completionRate: 1 / 3,
+    });
+    expect(list).not.toHaveProperty('completedItems');
+  });
+
+  it('keeps the row removed with no alert when the removal is queued', async () => {
+    const cache = seedCache([
+      {
+        __typename: 'ShoppingList',
+        id: 'list-1',
+        totalItems: 3,
+        completedItems: 1,
+        remainingItems: 2,
+        completionRate: 1 / 3,
+      },
+    ]);
+    const queued = recordMock(RemoveItemFromShoppingListDocument, {
+      data: { removeItemFromShoppingList: null },
+    });
+    const { result } = renderHookWithApollo(
+      () => useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      { operationMocks: [queued.mock], cache },
+    );
+
+    let removed: unknown;
+    await act(async () => {
+      removed = await result.current.removeItem('item-1');
+    });
+
+    expect(removed).toBe(true);
+    expect(removeFromShoppingListItemsCache).toHaveBeenCalledTimes(1);
+    expect(mockRefetch).not.toHaveBeenCalled();
+    expect(alertService.alert).not.toHaveBeenCalled();
+    expect(cache.extract()['ShoppingList:list-1']).toMatchObject({
+      totalItems: 2,
+      remainingItems: 1,
     });
   });
 });

@@ -17,6 +17,7 @@ import {
   useOverlayBackdropPresence,
 } from '#components/providers/OverlayBackdropProvider';
 import { toastService } from '#/services/toastService';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { useTranslation } from '#/i18n';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
@@ -59,7 +60,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   const handleAddPress = () => {
     if (isAddButtonDisabled) {
       toastService.info(
-        addButtonDisabledMessage || t('errors.codes.forbidden'),
+        firstNonBlank(addButtonDisabledMessage) ?? t('errors.codes.forbidden'),
       );
       return;
     }

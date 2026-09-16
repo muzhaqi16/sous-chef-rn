@@ -38,7 +38,7 @@ export const OnboardingCompleteScreen = () => {
     }
 
     // Success — RootNavigator auto-navigates to main_app once onBoarded = true.
-    if (user) updateUser({ ...user, onBoarded: true });
+    updateUser({ onBoarded: true });
     setIsCompleting(false);
   };
 
@@ -50,7 +50,7 @@ export const OnboardingCompleteScreen = () => {
     >
       <View style={styles.container}>
         <View style={styles.successIcon}>
-          <Icon name="checkmark" size={44} tone="onPrimary" />
+          <Icon name="checkmark" size={44} tone="onSuccess" />
         </View>
 
         <Text role="heading" align="center" style={styles.congratsText}>

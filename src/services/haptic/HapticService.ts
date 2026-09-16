@@ -46,12 +46,12 @@ class HapticFeedbackService {
   /** Caches the preference and subscribes to changes; idempotent. */
   initialize(): void {
     if (this.initialized) return;
-    this.enabledPreference = useStore.getState().hapticFeedbackEnabled ?? true;
+    this.enabledPreference = useStore.getState().hapticFeedbackEnabled;
     this.initialized = true;
     this.unsubscribe = useStore.subscribe(
       state => state.hapticFeedbackEnabled,
       enabled => {
-        this.enabledPreference = enabled ?? true;
+        this.enabledPreference = enabled;
       },
     );
   }

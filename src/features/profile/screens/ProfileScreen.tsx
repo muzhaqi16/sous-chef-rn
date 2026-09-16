@@ -32,6 +32,7 @@ import { Text } from '#components/atoms/Text';
 import { motion } from '#/theme/foundations/motion';
 import { Screen } from '#components/templates/Screen';
 import { profileTestIDs } from '#features/profile/testIDs';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 const HEADER_TIMING = {
   duration: motion.timing.SLOW,
@@ -115,6 +116,11 @@ export const ProfileScreen = () => {
     // No-op: Profile sits outside the tab bar context.
   };
 
+  const fullName = `${profile?.firstName ?? ''} ${
+    profile?.lastName ?? ''
+  }`.trim();
+  const headerName = firstNonBlank(profile?.displayName, fullName) ?? '';
+
   // Cached data renders immediately; only a total absence shows the skeleton.
   if (loading && !profile) {
     return <ProfileSkeleton />;
@@ -123,11 +129,8 @@ export const ProfileScreen = () => {
     <Screen scroll="list" gutter="none" testID={profileTestIDs.profileScreen}>
       <ProfileHeader
         avatarUrl={profile?.avatar}
-        name={
-          profile?.displayName ||
-          `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim()
-        }
-        subtitle={user?.email || ''}
+        name={headerName}
+        subtitle={user?.email ?? ''}
         onBack={() => goBack()}
         onMore={handleMorePress}
         onAvatarPress={handleAvatarPress}

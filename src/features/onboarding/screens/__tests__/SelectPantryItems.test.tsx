@@ -57,9 +57,6 @@ jest.mock('#/utils/connectionUtils', () => ({
       c?.edges?.map(e => e.node) || [],
   ),
 }));
-jest.mock('#features/pantry/cache/items', () => ({
-  removeFromPantryItemsCache: jest.fn(),
-}));
 jest.mock('#features/onboarding/hooks/useSelectableItems', () => ({
   useSelectableItems: jest.fn(
     ({

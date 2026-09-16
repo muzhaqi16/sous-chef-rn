@@ -1,10 +1,13 @@
+import { isOwnKey } from '#/utils/isOwnKey';
+
 /**
  * Region → currency, for the currencies the API offers. Keyed on REGION, never
  * on language: the app ships four languages against eleven currencies and the
  * mapping between them is many-to-many — Spanish spans USD and EUR, English
- * spans five, and only Albanian maps cleanly to one.
+ * spans five, and only Albanian maps cleanly to one. Unannotated, so its keys
+ * are the closed set of regions a lookup narrows to.
  */
-const REGION_CURRENCY: Record<string, string> = {
+const REGION_CURRENCY = {
   // EUR — the eurozone, plus the states that adopted it.
   AD: 'EUR',
   AT: 'EUR',
@@ -96,8 +99,8 @@ export function deviceRegion(): string | null {
  */
 export function deviceRegionCurrency(): string | null {
   const region = deviceRegion();
-  if (!region) return null;
-  return REGION_CURRENCY[region] ?? null;
+  if (!region || !isOwnKey(REGION_CURRENCY, region)) return null;
+  return REGION_CURRENCY[region];
 }
 
 /**

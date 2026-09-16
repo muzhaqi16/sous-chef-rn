@@ -68,13 +68,13 @@ export function useToggleShoppingItem({
       });
     if (!snapshot) return false;
 
-    const previousIsPurchased = snapshot.purchaseInfo?.isPurchased ?? false;
+    const previousIsPurchased = snapshot.purchaseInfo.isPurchased;
     const newStatus = !previousIsPurchased;
     const previousUpdatedAt = snapshot.updatedAt;
     // The flip clears this, so the snapshot is its only record — a refusal that
     // cannot put it back offers move-to-pantry for an already-stocked line.
     const previousMovedToPantryAt =
-      snapshot.purchaseInfo?.movedToPantryAt ?? null;
+      snapshot.purchaseInfo.movedToPantryAt ?? null;
 
     writePurchaseInfo(
       client.cache,
@@ -210,10 +210,10 @@ export function useToggleShoppingItem({
       });
     if (!snapshot) return false;
 
-    const previousIsPurchased = snapshot.purchaseInfo?.isPurchased ?? false;
+    const previousIsPurchased = snapshot.purchaseInfo.isPurchased;
     const previousUpdatedAt = snapshot.updatedAt;
     const previousMovedToPantryAt =
-      snapshot.purchaseInfo?.movedToPantryAt ?? null;
+      snapshot.purchaseInfo.movedToPantryAt ?? null;
     const now = new Date().toISOString();
 
     // The entered amounts ride on the mutation's purchaseTracking; the detail

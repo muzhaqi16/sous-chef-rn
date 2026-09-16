@@ -4,6 +4,7 @@ import { TelemetryService } from './TelemetryService';
 import type { LogEntry, TelemetryConfig } from './types';
 import { getVersion } from 'react-native-device-info';
 import { Environment } from '#/utils/environment';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 const createTelemetryConfig = (): TelemetryConfig => {
   const env = Environment.getConfig();
@@ -55,7 +56,10 @@ const createTelemetryConfig = (): TelemetryConfig => {
     transports: {
       http:
         (env.isDevelopment || env.isStaging || env.isProduction) &&
-        !!(buildEnv.OTLP_METRICS_ENDPOINT || buildEnv.OTLP_LOGS_ENDPOINT),
+        firstNonBlank(
+          buildEnv.OTLP_METRICS_ENDPOINT,
+          buildEnv.OTLP_LOGS_ENDPOINT,
+        ) !== undefined,
       console: false,
     },
   };

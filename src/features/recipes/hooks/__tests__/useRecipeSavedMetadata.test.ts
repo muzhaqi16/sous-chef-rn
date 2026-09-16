@@ -12,6 +12,9 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { toastService } from '#/services/toastService';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { getNotFoundMessage } from '#/utils/errors/notFoundMessage';
+import { Telemetry } from '#/services/telemetry';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { useRecipeSavedMetadata } from '../useRecipeSavedMetadata';
 
 // Reads just enough off the cached Recipe to assert the optimistic un-save.
@@ -223,5 +226,45 @@ describe('useRecipeSavedMetadata — clearing an optional field', () => {
 
     expect(successToast).not.toHaveBeenCalled();
     expect(errorToast).toHaveBeenCalledTimes(1);
+  });
+
+  it('names what refused the write and puts the folder back', async () => {
+    const errorToast = jest.spyOn(toastService, 'error');
+    const refused = recordMock(UpdateFavoriteRecipeDocument, {
+      data: {
+        updateFavoriteRecipe: {
+          __typename: 'NotFoundError',
+          code: ErrorCode.NotFound,
+          resource: null,
+        },
+      },
+    });
+    const cache = seedSavedRecipe();
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeSavedMetadata({
+          recipeId: 'r1',
+          preloadedRecipeId: undefined,
+          onUnfavoriteSuccess: jest.fn(),
+        }),
+      { cache, operationMocks: [refused.mock] },
+    );
+
+    await act(async () => {
+      await result.current.handleUpdateFolder('Sunday');
+    });
+
+    expect(errorToast).toHaveBeenCalledWith(getNotFoundMessage(null));
+    expect(cache.extract()['SavedRecipe:sr1']).toMatchObject({
+      folder: 'Weeknight',
+    });
+    expect(Telemetry.increment).toHaveBeenCalledWith(
+      'mutation_refused_total',
+      1,
+      {
+        operation: operationNameOf(UpdateFavoriteRecipeDocument),
+        code: ErrorCode.NotFound,
+      },
+    );
   });
 });

@@ -3,7 +3,6 @@
  */
 
 import type { UseUpdatePantryItem_PantryItemFragment } from './useUpdatePantryItem.generated';
-import type { UnitType } from '#/graphql/generated/schemaTypes';
 import {
   StorageState,
   type UpdatePantryItemInput,
@@ -11,8 +10,9 @@ import {
   type InventoryThresholdsInput,
   type NetWeightInput,
 } from '#/graphql/generated/schemaTypes';
-import type { UnitSelection, FormDataInput } from './types';
+import type { DirtyFieldFlags, UnitSelection, FormDataInput } from './types';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 // Cache updater for adding items to Pantry.itemsConnection
 
@@ -32,9 +32,9 @@ export function buildOptimisticUnit(
   return {
     __typename: 'Unit',
     id: newUnit.id,
-    symbol: newUnit.symbol || currentUnit.symbol,
-    name: newUnit.name || currentUnit.name || newUnit.symbol || '',
-    type: (newUnit.type as UnitType | null) || currentUnit.type,
+    symbol: firstNonBlank(newUnit.symbol) ?? currentUnit.symbol,
+    name: firstNonBlank(newUnit.name, currentUnit.name, newUnit.symbol) ?? '',
+    type: newUnit.type ?? currentUnit.type,
     displayAsFraction: currentUnit.displayAsFraction,
   };
 }
@@ -47,7 +47,7 @@ type DirtyUpdateInput = Omit<UpdatePantryItemInput, 'id' | 'version'>;
 
 export function buildDirtyUpdateInput(
   data: FormDataInput,
-  dirtyFields: Record<string, boolean>,
+  dirtyFields: DirtyFieldFlags,
   locationId: string | null,
   brandId: string | null,
   unitSymbol?: string | null,
@@ -116,7 +116,8 @@ export function buildDirtyUpdateInput(
       : null;
   }
   if (dirtyFields.netWeightUnit || dirtyFields.netWeightUnitId) {
-    netWeightInput.netWeightUnitId = data.netWeightUnitId || null;
+    netWeightInput.netWeightUnitId =
+      firstNonBlank(data.netWeightUnitId) ?? null;
   }
   // API rule on update: a value without a unit is allowed, but a unit without
   // a value is rejected. Setting a unit therefore always sends the effective

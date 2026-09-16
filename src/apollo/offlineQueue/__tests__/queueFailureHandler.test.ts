@@ -11,6 +11,9 @@ import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
 import { queueStore } from '../queueStore';
 import type { FailedMutationInfo } from '../types';
+import { classifyError } from '../queueErrorPolicy';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { client } from '#/apollo/client';
 import { errorService } from '#/services/errorService';
 import { removePantryItemLocally } from '#features/pantry/cache/items';
@@ -213,6 +216,24 @@ describe('queue failure handler', () => {
         },
       }),
     );
+
+    const [message] = (toastService.error as jest.Mock).mock.calls[0];
+    expect(message).toBe(t('errors.queuedChangeOverwritten'));
+  });
+
+  it('gives a RESOURCE_VERSION_CONFLICT refusal the overwrite copy', () => {
+    const error = classifyError(
+      new CombinedGraphQLErrors({
+        errors: [
+          {
+            message: 'Resource was modified by another request',
+            extensions: { code: TopLevelErrorCode.ResourceVersionConflict },
+          },
+        ],
+      }),
+    );
+
+    handleQueueFailure(failure({ entityType: null, entityId: null, error }));
 
     const [message] = (toastService.error as jest.Mock).mock.calls[0];
     expect(message).toBe(t('errors.queuedChangeOverwritten'));

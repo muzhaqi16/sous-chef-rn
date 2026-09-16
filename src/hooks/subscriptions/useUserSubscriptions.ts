@@ -110,7 +110,7 @@ function handleBannedOrSuspended(subtype: UserSubtype) {
  */
 export function useUserSubscriptions(userId?: string) {
   const client = useApolloClient();
-  const selectedHomeId = useSelectedHomeId() || null;
+  const selectedHomeId = useSelectedHomeId() ?? null;
 
   const userEventHandlers = subscriptionService.register<UserEventPayload>({
     document: UserEventsDocument,
@@ -120,8 +120,6 @@ export function useUserSubscriptions(userId?: string) {
     cacheUpdateStrategy: CacheStrategy.NONE,
     enableLogging: true,
     customOnData: (payload: UserEventPayload) => {
-      if (!payload) return;
-
       switch (payload.subtype) {
         // Apollo auto-normalizes the User / UserProfile node by id; no manual
         // cache work needed (mirrors the former userUpdated / userProfileChanged

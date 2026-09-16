@@ -452,13 +452,6 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
         'other context, so the distinction belongs in the key.',
     },
     {
-      keys: ['itemType.OTHER', 'nutrition.category.other'],
-      reason:
-        'The English is one word for two roles: an item type vs a section of ' +
-        'nutrients; es "Otro" vs "Otros"; it "Altro" vs "Altri"; sq "Tjetër" ' +
-        'vs "Të tjera". One form would be wrong in the other context.',
-    },
-    {
       keys: ['shoppingListScreens.membersCount', 'joinHome.memberCount_other'],
       reason:
         'Same string, but the keys are reached by different mechanisms ' +
@@ -879,9 +872,15 @@ const isIntentional = (keys: readonly string[]) =>
       keys.every(k => entry.keys.includes(k)),
   );
 
+// English does not inflect every plural, so `x_one` and `x_other` often share a
+// string; they are one declaration, not two homes for the same copy.
+const pluralBase = (key: string) =>
+  key.replace(/_(zero|one|two|few|many|other)$/, '');
+
 describe('shared copy has one canonical home', () => {
   const duplicated = [...keysByValue().entries()].filter(
-    ([value, keys]) => keys.length > 1 && isSharedVocabulary(value),
+    ([value, keys]) =>
+      new Set(keys.map(pluralBase)).size > 1 && isSharedVocabulary(value),
   );
 
   it('finds duplicate groups at all, so the checks below are not vacuous', () => {

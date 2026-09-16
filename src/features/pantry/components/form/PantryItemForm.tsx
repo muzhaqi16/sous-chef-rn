@@ -14,8 +14,8 @@ import { usePantryItemFormData } from '#features/pantry/hooks/usePantryItemFormD
 import {
   StorageState,
   ItemCondition,
-  type StorageLocation,
   type StorageType,
+  type UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { useUpdatePantryItem } from '#features/pantry/hooks/mutations/useUpdatePantryItem';
 import { useUpdatePantryItemQuantity } from '#features/pantry/hooks/mutations/useUpdatePantryItemQuantity';
@@ -47,8 +47,14 @@ import {
   type PageName,
 } from '#features/catalog/ui/AddItemForm/fields';
 import { formatNumberForInput } from '#/utils/formatters/number';
-import { formatQuantityForInput } from '#/utils/formatQuantity';
+import {
+  formatQuantityForInput,
+  getUnitDisplayText,
+} from '#/utils/formatQuantity';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { firstNonBlank } from '#/utils/firstNonBlank';
+import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
+import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
 
 export interface PantryItemFormData {
   itemName?: string;
@@ -84,6 +90,27 @@ interface PantryItemFormProps {
 // A `decimal-pad` field: its keypad has no `/`, so it is seeded without one.
 const decimalQuantityInput = (value: number | null | undefined): string =>
   formatQuantityForInput(value, { notation: 'decimal' });
+
+const formValuesFromItem = (
+  item: PantryItemForm_PantryItemFragment,
+): PantryItemFormData => ({
+  itemName: item.itemName,
+  quantityInput: formatQuantityForInput(item.quantity) || '1',
+  unit: item.unit.symbol, // Tracking unit
+  minQuantity: decimalQuantityInput(item.minQuantity),
+  restockQuantity: decimalQuantityInput(item.restockQuantity),
+  brand: item.brand?.name ?? '',
+  netWeight: formatNumberForInput(item.netWeight),
+  netWeightUnit: getUnitDisplayText(item.netWeightUnit),
+  netWeightUnitId: item.netWeightUnit?.id ?? '',
+  storageState: item.storageState,
+  condition: item.condition,
+  location: item.storageLocation?.name ?? '',
+  expirationDate: item.expiresAt ? new Date(item.expiresAt) : undefined,
+  notes: item.storageNotes ?? '',
+  category: item.item.categories[0]?.category.name ?? '',
+  tags: item.tags,
+});
 
 /**
  * Edits an existing pantry item. Edit-only, deliberately: adding goes through
@@ -147,30 +174,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   const getInitialValues = (): PantryItemFormData => {
     if (existingPantryItem) {
-      const item = existingPantryItem;
-      const trackingUnitSymbol = item.unit.symbol;
-      return {
-        itemName: item.itemName || '',
-        quantityInput: formatQuantityForInput(item.quantity) || '1',
-        unit: trackingUnitSymbol, // Tracking unit
-        minQuantity: decimalQuantityInput(item.minQuantity),
-        restockQuantity: decimalQuantityInput(item.restockQuantity),
-        brand: item.brand?.name || '',
-        netWeight: formatNumberForInput(item.netWeight),
-        netWeightUnit:
-          item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
-        netWeightUnitId: item.netWeightUnit?.id || '',
-        storageState: item.storageState || StorageState.Ambient,
-        condition: item.condition || ItemCondition.Good,
-        location:
-          typeof item.storageLocation === 'string'
-            ? item.storageLocation
-            : item.storageLocation?.name || '',
-        expirationDate: item.expiresAt ? new Date(item.expiresAt) : undefined,
-        notes: item.storageNotes || '',
-        category: item.item?.categories?.[0]?.category?.name || '',
-        tags: item.tags || [],
-      };
+      return formValuesFromItem(existingPantryItem);
     }
 
     // Not loaded yet — the form shows a spinner until it is.
@@ -213,34 +217,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   if (existingPantryItem && itemQueryData !== prevExistingItemData) {
     setPrevExistingItemData(itemQueryData);
     const item = existingPantryItem;
-    const trackingUnitSymbol = item.unit.symbol;
-    reset({
-      itemName: item.itemName || '',
-      quantityInput: formatQuantityForInput(item.quantity) || '1',
-      unit: trackingUnitSymbol,
-      minQuantity: decimalQuantityInput(item.minQuantity),
-      restockQuantity: decimalQuantityInput(item.restockQuantity),
-      brand: item.brand?.name || '',
-      netWeight: formatNumberForInput(item.netWeight),
-      netWeightUnit:
-        item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
-      netWeightUnitId: item.netWeightUnit?.id || '',
-      storageState: item.storageState || StorageState.Ambient,
-      condition: item.condition || ItemCondition.Good,
-      location:
-        typeof item.storageLocation === 'string'
-          ? item.storageLocation
-          : item.storageLocation?.name || '',
-      expirationDate: item.expiresAt ? new Date(item.expiresAt) : undefined,
-      notes: item.storageNotes || '',
-      category: item.item?.categories?.[0]?.category?.name || '',
-      tags: item.tags || [],
-    });
+    reset(formValuesFromItem(item));
     setTrackingUnit({
       id: item.unit.id,
       name: item.unit.name,
       symbol: item.unit.symbol,
-      type: item.unit.type ?? null,
+      type: item.unit.type,
     });
   }
 
@@ -250,7 +232,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   const handleStorageLocationSelect = (
     locationId: string | null,
-    location: StorageLocation | null,
+    location: StorageLocationOption | null,
   ) => {
     setSelectedLocationId(locationId);
     setSelectedStorageLocation(
@@ -258,18 +240,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         ? { id: locationId, name: location.name, type: location.type }
         : null,
     );
-
-    if (location?.temperature) {
-      const tempLower = location.temperature.toLowerCase();
-      if (tempLower === 'frozen') {
-        setValue('storageState', StorageState.Frozen, { shouldDirty: true });
-      } else if (tempLower === 'refrigerated') {
-        setValue('storageState', StorageState.Refrigerated, {
-          shouldDirty: true,
-        });
-      } else if (tempLower === 'ambient') {
-        setValue('storageState', StorageState.Ambient, { shouldDirty: true });
-      }
+    // `NONE` is "not applicable", so it leaves the chosen state alone.
+    if (location?.temperature && location.temperature !== StorageState.None) {
+      setValue('storageState', location.temperature, { shouldDirty: true });
     }
   };
 
@@ -284,7 +257,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const handleUnitSelected = (
     unitId: string | null,
     unitName: string | null,
-    unitType?: string | null,
+    unitType?: UnitType | null,
     unitSymbol?: string | null,
   ) => {
     setTrackingUnit(prev => ({
@@ -318,7 +291,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     existingPantryItem,
     dirtyFields: dirtyFields,
     trackingUnit,
-    netWeightUnitId: watchedValues.netWeightUnitId || null,
+    netWeightUnitId: firstNonBlank(watchedValues.netWeightUnitId) ?? null,
     selectedLocationId,
     selectedBrandId,
     selectedCategoryId,

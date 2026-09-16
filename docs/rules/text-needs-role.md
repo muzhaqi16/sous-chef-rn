@@ -13,7 +13,12 @@ Matched: a JSX element whose name is the local binding of the `Text` atom (`#com
 
 - `missingRole`: no `role` attribute and no spread attribute.
 - The pairing: the string literals `tone` and `role` can take (a literal, or the literal branches of a `?:`, `||` or `??`) — a `tone` that can be `'error'` needs a `role` that can be `'error'`, and the reverse. A spread attribute, or a non-literal on the side that must answer, skips the check.
-- `errorColourInStyle`: its `style` names an inline object, or a key of a `StyleSheet.create` in the same file, whose own `color` is `….colors.error` or `….colors.danger`. A shared style module and a nested `variants` colour are not read.
+- `errorColourInStyle`: its `style` names an inline object, or a key of a `StyleSheet.create` in the same file, whose own `color` is `….colors.error` or `….colors.danger`. A shared style module is not read.
+
+## Options
+
+- `requireRole` (default `true`) — report `missingRole`; the kit turns it off.
+- `readVariants` (default `false`; on in `eslint/project.js`) — `errorColourInStyle` also reads, for a key of a same-file `StyleSheet.create`, every `variants` branch (`label: { variants: { invalid: { true: { color: theme.colors.error } } } }`), every `compoundVariants` entry's `styles`, and the object a dynamic style function returns, and follows a called key (`style={styles.hint(bad)}`). Without it only the key's own `color` is read. The fix is the same: `tone="error"` with `role="error"`, or `tone="danger"`, driven by the flag the variant was, and the colour removed from the style.
 
 ## Use instead
 

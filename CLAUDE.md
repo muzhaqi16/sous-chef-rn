@@ -128,7 +128,7 @@ break, a deliberate oddity); rationale goes in the PR or `docs/`, history in git
   `#/apollo/*`, Apollo's operation hooks, the client or a cache write
   (`import/no-restricted-paths`); `useFragment` and masking types stay allowed.
 - **A hook hands back plain values and callbacks, no library type**; a mutate
-  wrapper returns `MutationOutcome<TData>` — `hookReturnTypes.test.ts`
+  wrapper returns what `settleMutation` settled, or its own outcome — `hookReturnTypes.test.ts`
   (`docs/apollo-client-patterns.md` § The data layer stays out of what renders).
 
 ### Fragments & data masking
@@ -164,6 +164,9 @@ from `cache.readFragment` + spread, never hand-rolled shapes.
   restoration pass uses `src/apollo/utils/fieldWriters.ts`.
 - **Never pair `optimisticResponse` with `context: { localFirst: true }`** — the
   queued completion reverts it on screen (`docs/local-first-architecture.md` § 2).
+- **A write in `SYNC_REGISTRY` writes the cache first and passes `localFirst: true`**:
+  `queueLink` queues it offline either way, so a caller that skips the local write
+  queues an invisible change. Both rules: `queueableWritesAreLocalFirst.test.ts`.
 
 ### Local-first & optimistic completeness
 

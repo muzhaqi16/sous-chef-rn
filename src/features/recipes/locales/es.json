@@ -73,7 +73,7 @@
     "recipeNotFoundDb": "Receta no encontrada en la base de datos",
     "recipeNotFound": "Receta no encontrada",
     "loadFailed": "No se pudo cargar la receta",
-    "percentHealthy": "% saludable",
+    "percentHealthy": "{{percent}}% saludable",
     "cookedCount": "Cocinada {{count}}x",
     "markCooked": "Marcar como cocinada",
     "nutritionTitle": "Nutrición",
@@ -347,6 +347,12 @@
     "confirmAndDeduct": "Confirmar y descontar",
     "confirmAndDeductCount": "Confirmar y descontar ({{count}})",
     "includedCount": "{{n}}/{{m}} incluidos",
+    "summaryAvailable_one": "{{count}} disponible",
+    "summaryAvailable_other": "{{count}} disponibles",
+    "summaryPartial_one": "{{count}} parcial",
+    "summaryPartial_other": "{{count}} parciales",
+    "summaryMissing_one": "{{count}} faltante",
+    "summaryMissing_other": "{{count}} faltantes",
     "skipReview": "Omitir revisión"
   },
   "markCookedModal": {
@@ -373,29 +379,14 @@
       "totalFat": "Grasas totales",
       "saturatedFat": "Grasas saturadas",
       "transFat": "Grasas trans",
+      "addedSugars": "Azúcares añadidos",
       "cholesterol": "Colesterol",
-      "vitaminA": "Vitamina A",
-      "vitaminD": "Vitamina D",
-      "vitaminE": "Vitamina E",
-      "vitaminK": "Vitamina K",
-      "vitaminB6": "Vitamina B6",
-      "vitaminB12": "Vitamina B12",
-      "thiamin": "Tiamina",
-      "riboflavin": "Riboflavina",
-      "niacin": "Niacina",
-      "folate": "Folato",
-      "magnesium": "Magnesio",
-      "phosphorus": "Fósforo",
-      "zinc": "Zinc",
-      "copper": "Cobre",
-      "manganese": "Manganeso",
-      "selenium": "Selenio"
+      "vitaminD": "Vitamina D"
     },
     "category": {
       "macro": "Macronutrientes",
       "vitamin": "Vitaminas",
-      "mineral": "Minerales",
-      "other": "Otros"
+      "mineral": "Minerales"
     }
   },
   "cuisineSelector": {
@@ -437,7 +428,6 @@
     "goodFiber": "Rico en fibra",
     "lowSugar": "Bajo en azúcar",
     "highSodium": "Alto en sodio",
-    "vitaminC": "Vitamina C",
     "iron": "Hierro",
     "calcium": "Calcio",
     "potassium": "Potasio"

@@ -92,7 +92,29 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
       id
       ...ItemPhotoCarousel_itemPhoto
     }
-    nutritions
+    # Every column, though the summary reads fewer: the pantry detail's offline
+    # stub reads a `NutritionFacts` cached with fewer as missing and writes
+    # `null` over it.
+    nutritionFacts {
+      id
+      calories
+      totalFat
+      saturatedFat
+      transFat
+      cholesterol
+      sodium
+      totalCarbs
+      dietaryFiber
+      totalSugars
+      addedSugars
+      protein
+      vitaminD
+      calcium
+      iron
+      potassium
+      servingSize
+      servingUnit
+    }
     displayUnit {
       id
       name

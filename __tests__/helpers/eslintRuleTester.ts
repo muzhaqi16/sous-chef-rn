@@ -10,22 +10,32 @@ const tester = new RuleTester({
   },
 });
 
+type RuleOptions = unknown[];
+
 interface RuleCases {
-  valid: string[];
-  invalid: Array<{ code: string; errors: string[] }>;
+  /** A bare string runs with the rule's default options. */
+  valid: Array<string | { code: string; options: RuleOptions }>;
+  invalid: Array<{ code: string; errors: string[]; options?: RuleOptions }>;
 }
+
+const casesFor = (cases: RuleCases, filename: string) => ({
+  valid: cases.valid.map(entry =>
+    typeof entry === 'string'
+      ? { code: entry, filename }
+      : { code: entry.code, options: entry.options, filename },
+  ),
+  invalid: cases.invalid.map(({ code, errors, options }) => ({
+    code,
+    filename,
+    ...(options ? { options } : {}),
+    errors: errors.map(messageId => ({ messageId })),
+  })),
+});
 
 /** Runs a `sous-chef/*` rule from eslint/plugin/rules; every case parses as `.tsx`. */
 export function testRule(name: string, cases: RuleCases) {
   const rule = require(`../../eslint/plugin/rules/${name}`) as Rule.RuleModule;
-  tester.run(name, rule, {
-    valid: cases.valid.map(code => ({ code, filename: 'case.tsx' })),
-    invalid: cases.invalid.map(({ code, errors }) => ({
-      code,
-      filename: 'case.tsx',
-      errors: errors.map(messageId => ({ messageId })),
-    })),
-  });
+  tester.run(name, rule, casesFor(cases, 'case.tsx'));
 }
 
 const ROOT = path.join(__dirname, '..', '..');
@@ -48,13 +58,9 @@ export function testTypedRule(
   extension: 'ts' | 'tsx' = 'ts',
 ) {
   const rule = require(`../../eslint/plugin/rules/${name}`) as Rule.RuleModule;
-  const filename = path.join(ROOT, `typed-rule-case.${extension}`);
-  typedTester.run(name, rule, {
-    valid: cases.valid.map(code => ({ code, filename })),
-    invalid: cases.invalid.map(({ code, errors }) => ({
-      code,
-      filename,
-      errors: errors.map(messageId => ({ messageId })),
-    })),
-  });
+  typedTester.run(
+    name,
+    rule,
+    casesFor(cases, path.join(ROOT, `typed-rule-case.${extension}`)),
+  );
 }

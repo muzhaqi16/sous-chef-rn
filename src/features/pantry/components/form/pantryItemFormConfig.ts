@@ -6,7 +6,7 @@ import { t, type TranslationKey } from '#/i18n';
 import type { PageName } from '#features/catalog/ui/AddItemForm/fields';
 import { StorageState, ItemCondition } from '#/graphql/generated/schemaTypes';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import type { PantryItemFormData } from './usePantryItemFormSubmit';
+import type { PantryItemFormData } from './PantryItemForm';
 
 // Messages resolve LAZILY: the schemas are built once at module scope, so an
 // eagerly resolved one freezes whichever language was active at import time.

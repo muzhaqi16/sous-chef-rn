@@ -95,9 +95,6 @@ function restoreLocationToCaches(
 function buildTreeFromFlatList(
   locations: FlatStorageLocation[],
 ): StorageLocationTreeNode[] {
-  if (!locations || locations.length === 0) return [];
-
-  // Create a map for quick lookup
   const locationMap = new Map<string, StorageLocationTreeNode>(
     locations.map(loc => [loc.id, { ...loc, childLocations: [] }]),
   );
@@ -132,10 +129,8 @@ function buildTreeFromFlatList(
   ) => a.sortOrder - b.sortOrder;
   roots.sort(sortBySortOrder);
   roots.forEach(function sortChildren(node) {
-    if (node.childLocations && node.childLocations.length > 0) {
-      node.childLocations.sort(sortBySortOrder);
-      node.childLocations.forEach(sortChildren);
-    }
+    node.childLocations.sort(sortBySortOrder);
+    node.childLocations.forEach(sortChildren);
   });
 
   return roots;

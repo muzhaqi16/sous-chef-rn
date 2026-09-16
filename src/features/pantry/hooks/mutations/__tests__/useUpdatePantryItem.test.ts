@@ -3,10 +3,10 @@ import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { StorageState, UnitType } from '#/graphql/generated/schemaTypes';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { UseUpdatePantryItem_PantryItemFragmentDoc } from '../useUpdatePantryItem.generated';
-import type { FormDataInput } from '../types';
+import type { DirtyFieldFlags, FormDataInput } from '../types';
 import { useUpdatePantryItem } from '../useUpdatePantryItem';
 
 jest.mock('#/services/errorService');
@@ -23,7 +23,7 @@ jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
 
 jest.mock('../utils', () => ({
   buildDirtyUpdateInput: jest.fn(
-    (data: FormDataInput, dirtyFields: Record<string, boolean>) => {
+    (data: FormDataInput, dirtyFields: DirtyFieldFlags) => {
       const input: Record<string, unknown> = {};
       if (dirtyFields.itemName) input.itemName = data.itemName;
       if (dirtyFields.notes) input.storageNotes = data.notes;
@@ -81,7 +81,7 @@ const buildPantryItem = (overrides: Record<string, unknown> = {}) => ({
     id: 'unit-1',
     name: 'Gram',
     symbol: 'g',
-    type: 'WEIGHT',
+    type: UnitType.Weight,
     displayAsFraction: false,
   },
   netWeightUnit: null,
@@ -192,7 +192,7 @@ describe('useUpdatePantryItem', () => {
         id: 'new-unit-id',
         name: 'Kilogram',
         symbol: 'kg',
-        type: 'WEIGHT',
+        type: UnitType.Weight,
       },
     });
 
@@ -211,7 +211,12 @@ describe('useUpdatePantryItem', () => {
       dirtyFields: { notes: true },
       selectedLocationId: null,
       selectedBrandId: null,
-      trackingUnit: { id: 'unit-1', name: 'Gram', symbol: 'g', type: 'WEIGHT' },
+      trackingUnit: {
+        id: 'unit-1',
+        name: 'Gram',
+        symbol: 'g',
+        type: UnitType.Weight,
+      },
     });
 
     const { buildOptimisticUnit } = jest.requireMock('../utils');

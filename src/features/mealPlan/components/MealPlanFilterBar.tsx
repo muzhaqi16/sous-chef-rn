@@ -17,7 +17,7 @@ const FilterChip: React.FC<{
   styles.useVariants({ active });
   return (
     <Pressable style={styles.chip} onPress={onPress}>
-      <Text role="label" tone={active ? 'inverse' : 'secondary'}>
+      <Text role="label" tone={active ? 'onPrimary' : 'secondary'}>
         {label}
       </Text>
     </Pressable>

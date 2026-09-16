@@ -1,8 +1,6 @@
 import { useMutation } from '@apollo/client/react';
-import {
-  classifyInvitationRefusal,
-  type InvitationRefusal,
-} from '#/domain/invitationRefusal';
+import type { DocumentNode } from 'graphql';
+import { invitationRefusalCopy } from '#/domain/invitationRefusal';
 import {
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
@@ -18,9 +16,13 @@ import {
   safeEvict,
 } from '#/apollo/utils/cacheUpdaters';
 import {
-  appliedPayload,
-  extractMutationPayload,
-} from '#/utils/errors/mutationPayload';
+  settleMutation,
+  type SettledFailure,
+  type SettleOptions,
+} from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { firstNonBlank } from '#/utils/firstNonBlank';
+import { useTranslation } from '#/i18n';
 
 const addToHomes = createAddToQueryConnectionUpdater('homes', 'Home');
 const removePendingHomeInvite = createRemoveFromParentConnectionUpdater(
@@ -35,19 +37,22 @@ const removePendingCollaborationInvite =
     'ShoppingListCollaborator',
   );
 
-const refused = (data: unknown): InvitationWriteResult => ({
-  accepted: false,
-  refusal: classifyInvitationRefusal(extractMutationPayload(data)?.__typename),
-});
+export type InvitationFailure = SettledFailure;
 
-/** What a write returned. `error` is passed to the caller's copy resolver. */
-export interface InvitationWriteResult {
-  error?: unknown;
-  /** Set only by `acceptHome`, and only when the server accepted. */
-  acceptedHomeId?: string;
-  accepted?: boolean;
-  refusal?: InvitationRefusal;
-}
+/** What a write did. `acceptedHomeId` is set only by an applied `acceptHome`. */
+export type InvitationWriteResult =
+  | { status: 'done'; acceptedHomeId?: string }
+  | { status: 'failed'; failure: InvitationFailure };
+
+const refusalOptions = (
+  document: DocumentNode,
+  fallback: string,
+): SettleOptions => ({
+  document,
+  fallback,
+  copy: invitationRefusalCopy(),
+  present: 'none',
+});
 
 /**
  * The four invite writes and the token they need. Each `update`
@@ -59,7 +64,8 @@ export function useInvitationActions(
   invitation: InvitationData | null,
   userId: string | null,
 ) {
-  const inviteId = invitation?.payload?.inviteId || invitation?.id;
+  const { t } = useTranslation();
+  const inviteId = firstNonBlank(invitation?.payload.inviteId, invitation?.id);
 
   const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument, {
     update: (cache, { data }) => {
@@ -128,50 +134,67 @@ export function useInvitationActions(
   const acceptHome = async (
     inviteToken: string,
   ): Promise<InvitationWriteResult> => {
-    const result = await acceptHomeInvite({
-      variables: { input: { token: inviteToken } },
-    });
-    if (result.error) return { error: result.error };
-    const accepted = appliedPayload(result.data);
-    return accepted
-      ? { accepted: true, acceptedHomeId: accepted.membership.homeId }
-      : refused(result.data);
+    const settled = await settleMutation(
+      () => acceptHomeInvite({ variables: { input: { token: inviteToken } } }),
+      refusalOptions(
+        AcceptHomeInviteDocument,
+        t('invitationAcceptance.acceptFailed'),
+      ),
+    );
+    if (settled.failure) return { status: 'failed', failure: settled.failure };
+    const accepted = appliedPayload(settled.data);
+    return { status: 'done', acceptedHomeId: accepted?.membership.homeId };
   };
 
   const acceptList = async (
     inviteToken: string,
   ): Promise<InvitationWriteResult> => {
-    const result = await acceptShoppingListInvite({
-      variables: { input: { token: inviteToken } },
-    });
-    if (result.error) return { error: result.error };
-    return appliedPayload(result.data)
-      ? { accepted: true }
-      : refused(result.data);
+    const settled = await settleMutation(
+      () =>
+        acceptShoppingListInvite({
+          variables: { input: { token: inviteToken } },
+        }),
+      refusalOptions(
+        InvitationAcceptanceModalAcceptShoppingListInviteDocument,
+        t('invitationAcceptance.acceptFailed'),
+      ),
+    );
+    return settled.failure
+      ? { status: 'failed', failure: settled.failure }
+      : { status: 'done' };
   };
 
   const declineHome = async (
     inviteToken: string,
   ): Promise<InvitationWriteResult> => {
-    const result = await declineHomeInvite({
-      variables: { input: { token: inviteToken } },
-    });
-    if (result.error) return { error: result.error };
-    return appliedPayload(result.data)
-      ? { accepted: true }
-      : refused(result.data);
+    const settled = await settleMutation(
+      () => declineHomeInvite({ variables: { input: { token: inviteToken } } }),
+      refusalOptions(
+        DeclineHomeInviteDocument,
+        t('invitationAcceptance.declineFailed'),
+      ),
+    );
+    return settled.failure
+      ? { status: 'failed', failure: settled.failure }
+      : { status: 'done' };
   };
 
   const declineList = async (
     inviteToken: string,
   ): Promise<InvitationWriteResult> => {
-    const result = await declineShoppingListInvite({
-      variables: { input: { token: inviteToken } },
-    });
-    if (result.error) return { error: result.error };
-    return appliedPayload(result.data)
-      ? { accepted: true }
-      : refused(result.data);
+    const settled = await settleMutation(
+      () =>
+        declineShoppingListInvite({
+          variables: { input: { token: inviteToken } },
+        }),
+      refusalOptions(
+        InvitationAcceptanceModalDeclineShoppingListInviteDocument,
+        t('invitationAcceptance.declineFailed'),
+      ),
+    );
+    return settled.failure
+      ? { status: 'failed', failure: settled.failure }
+      : { status: 'done' };
   };
 
   return { token, acceptHome, acceptList, declineHome, declineList };

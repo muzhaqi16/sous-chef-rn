@@ -11,7 +11,10 @@ import {
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
-import { errorService } from '#/services/errorService';
+import {
+  settleMutation,
+  type SettledFailure,
+} from '#/apollo/utils/settleMutation';
 import { t } from '#/i18n';
 
 export interface DuplicateMealPlanOptions {
@@ -64,18 +67,31 @@ export function useDuplicateMealPlan() {
     // queued create has no server row yet, which is why the minted id is used.
     if (created.status === 'failed') return null;
 
+    const failures: SettledFailure[] = [];
     for (const item of derived.items) {
-      try {
-        await createItem({
-          variables: { input: item },
-          context: { localFirst: true },
-        });
-      } catch (error) {
-        errorService.reportError(error, { operation: 'Duplicate meal plan' });
-      }
+      const settled = await settleMutation(
+        () =>
+          createItem({
+            variables: { input: item },
+            context: { localFirst: true },
+          }),
+        {
+          document: CreateMealPlanItemDocument,
+          fallback: t('mealTemplateBuilder.failedToAddItem'),
+          present: 'none',
+        },
+      );
+      if (settled.failure) failures.push(settled.failure);
     }
 
-    toastService.success(t('toasts.mealPlanDuplicated'));
+    // The plan exists either way, so a retry would copy it twice: report the
+    // first failed meal once, in place of the success.
+    const [failure] = failures;
+    if (failure) {
+      toastService.error(failure.body);
+    } else {
+      toastService.success(t('toasts.mealPlanDuplicated'));
+    }
     if (derived.skipped.length > 0) {
       toastService.info(
         t('duplicatePlan.someSkipped', {

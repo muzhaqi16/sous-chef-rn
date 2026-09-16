@@ -63,10 +63,11 @@ export const createConsoleLink = (
       return forward(operation);
     }
 
-    const operationName = operation.operationName || 'Unknown';
+    const operationName = operation.operationName ?? 'Unknown';
+    const [firstDefinition] = operation.query.definitions;
     const operationType =
-      operation.query.definitions[0]?.kind === Kind.OPERATION_DEFINITION
-        ? operation.query.definitions[0]?.operation?.toUpperCase()
+      firstDefinition?.kind === Kind.OPERATION_DEFINITION
+        ? firstDefinition.operation.toUpperCase()
         : 'UNKNOWN';
     const isSubscription = operationType === 'SUBSCRIPTION';
     const startTime = isSubscription ? 0 : performance.now();
@@ -111,11 +112,7 @@ export const createConsoleLink = (
           }
 
           // Log variables as expandable object
-          if (
-            logVariables &&
-            operation.variables &&
-            Object.keys(operation.variables).length > 0
-          ) {
+          if (logVariables && Object.keys(operation.variables).length > 0) {
             console.log('   📤 Variables:', maskVariables(operation.variables));
           }
 
@@ -129,7 +126,7 @@ export const createConsoleLink = (
               console.warn('   ⚠️ GraphQL errors (may have circular refs):');
               safeErrors?.forEach((err, i) => {
                 console.warn(
-                  `      [${i}] message: ${err?.message || 'No message'}`,
+                  `      [${i}] message: ${err.message || 'No message'}`,
                 );
               });
             } else {

@@ -81,6 +81,6 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.background,
   },
   badgeText: {
-    color: theme.colors.textInverse,
+    color: theme.colors.onWarning,
   },
 }));

@@ -13,6 +13,7 @@ import { errorService } from '#/services/errorService';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { useTranslation } from '#/i18n';
+import type { ShoppingList } from '#/graphql/generated/schemaTypes';
 
 // Minimal cache-read fragments — only the fields the optimistic-update path needs.
 const ShoppingListStatsFragment = gql`
@@ -32,29 +33,47 @@ const ShoppingListItemPurchaseFragment = gql`
   }
 `;
 
-interface ListStats {
-  totalItems: number;
-  completedItems: number;
-  remainingItems: number;
-  completionRate: number;
-}
+type ListStat = keyof Pick<
+  ShoppingList,
+  'totalItems' | 'completedItems' | 'remainingItems' | 'completionRate'
+>;
+type ListStats = Partial<Record<ListStat, number>>;
 
-/** The list's counters without one row; null when they are not all cached. */
+const LIST_STATS: ListStat[] = [
+  'totalItems',
+  'completedItems',
+  'remainingItems',
+  'completionRate',
+];
+
+/**
+ * The list's counters without one row: a held count moves, a derived one is
+ * written only from held inputs, and a count the cache lacks stays absent.
+ */
 function statsWithoutRow(
   stats: ListStats | null,
   wasPurchased: boolean,
-): ListStats | null {
-  if (!stats) return null;
-  const totalItems = Math.max(0, stats.totalItems - 1);
-  const completedItems = wasPurchased
-    ? Math.max(0, stats.completedItems - 1)
-    : stats.completedItems;
-  return {
-    totalItems,
-    completedItems,
-    remainingItems: Math.max(0, totalItems - completedItems),
-    completionRate: totalItems > 0 ? completedItems / totalItems : 0,
-  };
+): Partial<Record<ListStat, () => number>> {
+  const next: ListStats = {};
+  if (stats?.totalItems !== undefined) {
+    next.totalItems = Math.max(0, stats.totalItems - 1);
+  }
+  if (stats?.completedItems !== undefined) {
+    next.completedItems = wasPurchased
+      ? Math.max(0, stats.completedItems - 1)
+      : stats.completedItems;
+  }
+  const { totalItems, completedItems } = next;
+  if (totalItems !== undefined && completedItems !== undefined) {
+    next.remainingItems = Math.max(0, totalItems - completedItems);
+    next.completionRate = totalItems > 0 ? completedItems / totalItems : 0;
+  }
+  const fields: Partial<Record<ListStat, () => number>> = {};
+  for (const field of LIST_STATS) {
+    const value = next[field];
+    if (value !== undefined) fields[field] = () => value;
+  }
+  return fields;
 }
 
 interface UseRemoveShoppingItemOptions {
@@ -103,6 +122,7 @@ export function useRemoveShoppingItem({
       id: listCacheId,
       fragment: ShoppingListStatsFragment,
       fragmentName: '_RemoveShoppingItemStats',
+      returnPartialData: true,
     });
     const itemPurchase = client.cache.readFragment<{
       purchaseInfo: { isPurchased: boolean } | null;
@@ -125,19 +145,7 @@ export function useRemoveShoppingItem({
       removeFromShoppingListItemsCache(client.cache, listId, itemId, {
         evictItem: true,
       });
-      // A null read means some count is not cached: leave them all for the
-      // next read rather than rebuild them from an assumed zero.
-      if (nextStats) {
-        client.cache.modify({
-          id: listCacheId,
-          fields: {
-            totalItems: () => nextStats.totalItems,
-            completedItems: () => nextStats.completedItems,
-            remainingItems: () => nextStats.remainingItems,
-            completionRate: () => nextStats.completionRate,
-          },
-        });
-      }
+      client.cache.modify({ id: listCacheId, fields: nextStats });
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Remove Shopping List Item (optimistic evict + stats)',

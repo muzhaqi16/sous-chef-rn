@@ -60,8 +60,8 @@ export interface UseHybridSearchReturn<TItem> {
 // buildSearchVariables returns an identical-but-new object reference.
 // ---------------------------------------------------------------------------
 
-function stableStringify(value: unknown): string {
-  return JSON.stringify(value) ?? '';
+function stableStringify(value: Record<string, unknown> | null): string {
+  return JSON.stringify(value);
 }
 
 // Stable empty array reference for when server results are null (loading state)

@@ -24,6 +24,7 @@ import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateSho
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
+import type { CreateShoppingListOutcome } from '#features/shoppingList/hooks/useCreateShoppingList';
 
 /** Module-level async function for shopping list creation.
  *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
@@ -35,20 +36,22 @@ async function performCreateShoppingList(
     isDefault?: boolean;
     tags?: string[];
     homeId?: string;
-  }) => Promise<{ id: string }>,
+  }) => Promise<CreateShoppingListOutcome>,
   selectedHomeId: string | null,
   setSelectedShoppingListId: (id: string) => void,
   navigateToNextStep: (step: OnboardingStepId) => void,
 ): Promise<void> {
-  const shoppingList = await createShoppingList({
+  const outcome = await createShoppingList({
     name: data.shoppingListName.trim(),
     description: tGlobal('onBoarding.createdDuringOnboarding'),
     isDefault: true,
     tags: ['onboarding', 'groceries'],
-    homeId: selectedHomeId || undefined,
+    homeId: selectedHomeId ?? undefined,
   });
+  // `settleMutation` has already told the user what refused it.
+  if (outcome.status === 'failed') return;
 
-  setSelectedShoppingListId(shoppingList.id);
+  setSelectedShoppingListId(outcome.shoppingList.id);
   navigateToNextStep('CreateShoppingList');
 }
 

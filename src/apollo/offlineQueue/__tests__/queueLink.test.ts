@@ -61,7 +61,7 @@ jest.mock('#/utils/generateId', () => ({
 }));
 
 jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
-  apolloCachePersistence: { expeditePending: jest.fn() },
+  apolloCachePersistence: { flushPending: jest.fn() },
 }));
 
 // Mock the logger
@@ -342,9 +342,9 @@ describe('createQueueLink', () => {
   // Offline interception
   // -------------------------------------------------------------------------
   describe('offline interception', () => {
-    // The queue is durable at enqueue; the cache row it replays against waits
-    // out the save debounce, and a kill inside it relaunched with no row.
-    it('brings the owed cache save forward once the write is queued', done => {
+    // The queue is durable at enqueue, so the cache row it replays against must
+    // be too: a kill before a deferred save relaunched with no row.
+    it('writes the owed cache save in the same step that queues the write', done => {
       mockedGetState.mockReturnValue({
         isOnline: false,
         user: { id: 'user-1' },
@@ -358,8 +358,12 @@ describe('createQueueLink', () => {
       link.request(operation, makeForward()).subscribe({
         complete() {
           expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
-          expect(apolloCachePersistence.expeditePending).toHaveBeenCalledTimes(
-            1,
+          expect(apolloCachePersistence.flushPending).toHaveBeenCalledTimes(1);
+          expect(
+            jest.mocked(apolloCachePersistence.flushPending).mock
+              .invocationCallOrder[0],
+          ).toBeGreaterThan(
+            jest.mocked(queueStore.addMutation).mock.invocationCallOrder[0]!,
           );
           done();
         },
@@ -712,7 +716,7 @@ describe('createQueueLink', () => {
             expect.objectContaining({ retryable: false }),
           );
           // Nothing was queued, so no save is owed to a queued write.
-          expect(apolloCachePersistence.expeditePending).not.toHaveBeenCalled();
+          expect(apolloCachePersistence.flushPending).not.toHaveBeenCalled();
           done();
         },
       });

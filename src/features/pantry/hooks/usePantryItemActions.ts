@@ -298,7 +298,7 @@ export function usePantryItemActions({
         id: cacheIdForBatch,
         fields: {
           activeBatchCount(existing: number = 0) {
-            return (existing ?? 0) + 1;
+            return existing + 1;
           },
         },
       });
@@ -315,7 +315,7 @@ export function usePantryItemActions({
           id: cacheIdForBatch,
           fields: {
             activeBatchCount(existing: number = 0) {
-              return Math.max(0, (existing ?? 0) - 1);
+              return Math.max(0, existing - 1);
             },
           },
         });

@@ -156,7 +156,7 @@ function enqueueAndComplete(
     }
 
     const operationContext = operation.getContext();
-    const operationName = operation.operationName || 'UnknownMutation';
+    const operationName = operation.operationName ?? 'UnknownMutation';
 
     const queuedMutation: QueuedMutation = {
       id: generateId(),
@@ -189,9 +189,10 @@ function enqueueAndComplete(
       observer.error(error);
       return;
     }
-    // The write is durable now; the cache change it replays against is not
-    // until the debounced save, so bring that save forward.
-    apolloCachePersistence.expeditePending();
+    // The write is durable now, so the cache change it replays against must be
+    // in the same step: a kill before any deferred save relaunches with the
+    // create queued and its row gone.
+    apolloCachePersistence.flushPending();
 
     // Apollo writes a mutation result against its selection set, and a bare
     // `null`/`{}` makes InMemoryCache warn "Missing field <field>". A

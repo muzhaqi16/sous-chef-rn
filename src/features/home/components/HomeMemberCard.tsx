@@ -91,7 +91,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
             </Text>
           </View>
         </View>
-        {!!member.user?.email && !isCurrentUser && (
+        {!!member.user.email && !isCurrentUser && (
           <Text role="caption" tone="secondary">
             {member.user.email}
           </Text>

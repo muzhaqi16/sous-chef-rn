@@ -209,12 +209,10 @@ export class SubscriptionSuppression {
     payload: SubscriptionPayload<TData>,
     onFiltered?: (info: { itemId: string; recentReorder: boolean }) => void,
   ): boolean {
-    if (!payload) return false;
-
     // Filter sortOrder-only updates (handled by optimistic mutations)
     if (this.isSortOrderOnlyUpdate(payload)) {
       const itemId =
-        (payload.item as { id?: string } | undefined)?.id ||
+        (payload.item as { id?: string } | undefined)?.id ??
         (payload.node as { id?: string } | undefined)?.id;
 
       if (itemId) {

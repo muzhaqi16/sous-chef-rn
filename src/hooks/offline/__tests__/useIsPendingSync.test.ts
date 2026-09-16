@@ -8,7 +8,7 @@
  * any queue entry changed.
  */
 import { renderHook } from '@testing-library/react-native';
-import { useIsPendingSync } from '#features/pantry/hooks/useIsPendingSync';
+import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 
 jest.mock('#/apollo/offlineQueue/queueStore', () => ({

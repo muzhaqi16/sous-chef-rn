@@ -6,6 +6,7 @@
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import {
   GraphQLDomainError,
   GraphQLNetworkError,
@@ -194,6 +195,9 @@ export class ErrorService {
 
     // Pantry Errors
     PANTRY_ITEM_ALREADY_EXISTS: 'pantryItemAlreadyExists',
+    INSUFFICIENT_QUANTITY: 'insufficientQuantity',
+    // A low-stock line skipped because the target list already carries it.
+    ITEM_ALREADY_IN_LIST: 'shoppingItemAlreadyExists',
 
     // Application-Specific Errors
     SHOPPING_LIST_NOT_FOUND: 'shoppingListNotFound',
@@ -265,7 +269,9 @@ export class ErrorService {
     const suffix = ErrorService.ERROR_MESSAGE_KEY_SUFFIXES[errorCode];
     // An unmapped code takes the caller's own localized copy; the server's
     // message never reaches here.
-    if (!suffix) return fallbackMessage || t('errors.codes.unexpected');
+    if (!suffix) {
+      return firstNonBlank(fallbackMessage) ?? t('errors.codes.unexpected');
+    }
     // The table holds suffixes; the whole key is composed here.
     return t(`errors.codes.${suffix}`);
   }
@@ -304,7 +310,7 @@ export class ErrorService {
     error: unknown,
     context?: { operation?: string; [key: string]: unknown },
   ): void {
-    const operation = context?.operation || 'Unknown';
+    const operation = firstNonBlank(context?.operation) ?? 'Unknown';
     const serialized = serializeError(error);
 
     if (__DEV__) {
@@ -406,7 +412,7 @@ export class ErrorService {
 
       const category = this.getErrorCategory(errorCode);
       const userFriendlyMessage =
-        customMessage || this.getUserFriendlyMessage(errorCode);
+        firstNonBlank(customMessage) ?? this.getUserFriendlyMessage(errorCode);
 
       const isExpectedUserError = this.isExpectedUserError(errorCode);
 

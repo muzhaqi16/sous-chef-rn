@@ -91,8 +91,7 @@ export const StorageLocationsScreen: React.FC<
   const renderTreeNode = (
     node: StorageNode,
     depth: number = 0,
-  ): React.ReactElement | null => {
-    if (!node?.id) return null;
+  ): React.ReactElement => {
     return (
       <View key={node.id} style={styles.treeNode(depth)}>
         <StorageLocationCard

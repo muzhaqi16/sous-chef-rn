@@ -16,6 +16,7 @@ import { parseFractionalInput } from '#/utils/fractionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatNumberForInput } from '#/utils/formatters/number';
 import { formatQuantityForInput } from '#/utils/formatQuantity';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import {
   shoppingItemSchema,
   SHOPPING_ITEM_DEFAULTS,
@@ -62,26 +63,29 @@ export function useShoppingListItemForm(
     // text no parser reads ("a pinch") stays as the person wrote it.
     const typed = item.quantityInput?.trim();
     const typedValue = typed ? parseFractionalInput(typed) : null;
+    const netWeightUnitLabel = firstNonBlank(
+      item.netWeightUnit?.symbol,
+      item.netWeightUnit?.name,
+    );
     reset({
-      itemName: item.itemName || '',
+      itemName: item.itemName ?? '',
       quantityInput:
         (typed && typedValue == null
           ? typed
           : formatQuantityForInput(typedValue ?? item.quantity)) || '1',
-      unit: item.unitName || '',
-      notes: item.notes || '',
-      category: item.category || '',
-      selectedUnitId: item.unit?.id || null,
-      estimatedPrice: formatNumberForInput(item.priceEstimate?.estimated),
-      priority: item.priority ?? 0,
-      storeId: item.storeInfo?.preferredStore?.id || null,
-      storeName: item.storeInfo?.preferredStore?.name || '',
-      brand: item.brand?.name || '',
-      brandId: item.brand?.id || null,
+      unit: item.unitName ?? '',
+      notes: item.notes ?? '',
+      category: item.category ?? '',
+      selectedUnitId: item.unit?.id ?? null,
+      estimatedPrice: formatNumberForInput(item.priceEstimate.estimated),
+      priority: item.priority,
+      storeId: item.storeInfo.preferredStore?.id ?? null,
+      storeName: item.storeInfo.preferredStore?.name ?? '',
+      brand: item.brand?.name ?? '',
+      brandId: item.brand?.id ?? null,
       netWeight: formatNumberForInput(item.netWeight),
-      netWeightUnit:
-        item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
-      netWeightUnitId: item.netWeightUnit?.id || null,
+      netWeightUnit: netWeightUnitLabel ?? '',
+      netWeightUnitId: item.netWeightUnit?.id ?? null,
     });
   };
 
@@ -111,7 +115,7 @@ export function useShoppingListItemForm(
   /** Parsed net weight, or undefined when the field is empty or not a number. */
   const parseNetWeightInput = (): number | undefined => {
     const raw = getValues('netWeight');
-    if (!raw?.trim()) return undefined;
+    if (!raw.trim()) return undefined;
     const value = parseDecimalInput(raw);
     return Number.isFinite(value) ? value : undefined;
   };

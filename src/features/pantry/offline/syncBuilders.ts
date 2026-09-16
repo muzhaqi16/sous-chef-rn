@@ -49,7 +49,7 @@ const readPantryId = (
  */
 export const buildPantryItemSync: SyncBuilder = (mutation, cache) => {
   const input = getQueuedInput(mutation);
-  const clientId = getClientId(mutation, input);
+  const clientId = getClientId(mutation);
   const { id: _omitId, itemName, ...rest } = input;
 
   // Create inputs carry `pantryId`; `UpdatePantryItemInput` does not.
@@ -93,7 +93,7 @@ export const buildPantryItemSync: SyncBuilder = (mutation, cache) => {
  */
 export const buildPantryItemQuantitySync: SyncBuilder = (mutation, cache) => {
   const input = getQueuedInput(mutation);
-  const clientId = input.pantryItemId ?? getClientId(mutation, input);
+  const clientId = getClientId(mutation);
 
   const pantryId = input.pantryId ?? readPantryId(cache, clientId);
   if (!pantryId) {
@@ -105,7 +105,7 @@ export const buildPantryItemQuantitySync: SyncBuilder = (mutation, cache) => {
   // The queued mutation carries whatever was typed, which may be `1 1/4`.
   const quantity =
     typeof input.quantity === 'string'
-      ? parseFractionalInput(input.quantity) ?? NaN
+      ? parseFractionalInput(input.quantity)
       : input.quantity;
 
   // Carries the cached symbol beside the id: an id the vocabulary repair
@@ -127,10 +127,8 @@ export const buildPantryItemQuantitySync: SyncBuilder = (mutation, cache) => {
 
 /** PantryItem delete sync — idempotent by `clientId`. */
 export const buildDeletePantryItemSync: SyncBuilder = mutation => {
-  const input = getQueuedInput(mutation);
   const syncInput: SyncDeletePantryItemInput = {
-    clientId: getClientId(mutation, input) as string,
-    version: input.version,
+    clientId: getClientId(mutation) as string,
   };
   return {
     syncMutation: SyncDeletePantryItemDocument,

@@ -18,12 +18,13 @@ import { queueManager } from '#/apollo/offlineQueue/queueManager';
 let mockIsOnline = true;
 let mockUserId: string | undefined;
 let mockHasToken = false;
+let mockToken = 'token';
 
 jest.mock('#store/useAppStore', () => ({
   useIsOnline: () => mockIsOnline,
   useUserId: () => mockUserId,
   useAppStore: (selector: (s: unknown) => unknown) =>
-    selector({ accessToken: mockHasToken ? 'token' : null }),
+    selector({ accessToken: mockHasToken ? mockToken : null }),
 }));
 
 let mockNeedsRefresh = false;
@@ -38,7 +39,11 @@ jest.mock('#store', () => ({
 }));
 
 jest.mock('#/apollo/offlineQueue/queueManager', () => ({
-  queueManager: { onOnline: jest.fn(), onOffline: jest.fn() },
+  queueManager: {
+    onOnline: jest.fn(),
+    onOffline: jest.fn(),
+    onSessionToken: jest.fn(),
+  },
 }));
 jest.mock('#/apollo/links/apiReachabilityBreaker', () => ({
   apiReachabilityBreaker: { reset: jest.fn(), onDeviceOffline: jest.fn() },
@@ -57,7 +62,27 @@ describe('useOnlineQueueSync', () => {
     mockIsOnline = true;
     mockUserId = undefined;
     mockHasToken = false;
+    mockToken = 'token';
     mockNeedsRefresh = false;
+  });
+
+  // A write parked for re-auth is otherwise revived only by a sign-in, which a
+  // restored or rotated session never performs: it would age out unsent.
+  it('hands every new access token for the user to the queue', () => {
+    mockUserId = 'user-1';
+    mockHasToken = true;
+    const { rerender } = renderHook(() => useOnlineQueueSync());
+    expect(queueManager.onSessionToken).toHaveBeenCalledWith('user-1');
+
+    mockToken = 'rotated';
+    rerender({});
+    expect(queueManager.onSessionToken).toHaveBeenCalledTimes(2);
+  });
+
+  it('tells the queue nothing before there is a token', () => {
+    mockUserId = 'user-1';
+    renderHook(() => useOnlineQueueSync());
+    expect(queueManager.onSessionToken).not.toHaveBeenCalled();
   });
 
   it('drains once the user lands, even though connectivity never changed', () => {

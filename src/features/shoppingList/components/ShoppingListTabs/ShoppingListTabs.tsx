@@ -209,7 +209,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     tutorial.currentStep === ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB;
 
   const handleTabMeasure = (
-    key: string,
+    key: ShoppingListTabId,
     rect: { x: number; y: number; width: number; height: number },
   ) => {
     if (key === 'purchased') {
@@ -295,8 +295,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     purchased: purchasedCount,
   };
 
-  const jumpTo = (key: string) => {
-    const routeIndex = ROUTE_KEYS.indexOf(key as ShoppingListTabId);
+  const jumpTo = (key: ShoppingListTabId) => {
+    const routeIndex = ROUTE_KEYS.indexOf(key);
     if (routeIndex >= 0) handleIndexChange(routeIndex);
   };
 

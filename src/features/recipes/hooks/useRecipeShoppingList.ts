@@ -14,6 +14,7 @@ import {
 import type { BatchAddShoppingListItemInput } from '#/graphql/generated/schemaTypes';
 import { useAppStore, useSelectedShoppingListId } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import {
@@ -121,7 +122,9 @@ async function addIngredientToList(
           ? ingredient.quantity
           : null,
       unitName:
-        typeof unit === 'string' ? unit : unit?.symbol || unit?.name || null,
+        typeof unit === 'string'
+          ? unit
+          : firstNonBlank(unit?.symbol, unit?.name) ?? null,
       itemId: linkedItem?.id,
     });
 
@@ -401,6 +404,7 @@ export function useRecipeShoppingList({
       toastService.error(t('recipes.shoppingListNotFound'));
       return;
     }
+    const externalIngredients = externalRecipe?.extendedIngredients ?? [];
 
     void executeWithLoadingState(
       async () => {
@@ -451,9 +455,9 @@ export function useRecipeShoppingList({
                   }),
             );
           }
-        } else if (externalRecipe?.extendedIngredients) {
+        } else if (externalIngredients.length > 0) {
           const items: BatchAddShoppingListItemInput[] =
-            externalRecipe.extendedIngredients.map((ingredient, index) => {
+            externalIngredients.map((ingredient, index) => {
               // Amount and unit from ONE measure — see `addOneIngredient`.
               const measure = preferredMeasure(
                 ingredient.measures,
@@ -581,9 +585,7 @@ export function useRecipeShoppingList({
             // later; mark them all added and confirm so the recipe reflects it.
             setAddedIngredients(prev => {
               const next = new Set(prev);
-              externalRecipe.extendedIngredients.forEach(ing =>
-                next.add(ing.id),
-              );
+              externalIngredients.forEach(ing => next.add(ing.id));
               return next;
             });
             toastService.success(

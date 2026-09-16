@@ -52,6 +52,7 @@ jest.mock('#/apollo/offlineQueue/queueManager', () => ({
   queueManager: {
     onOnline: jest.fn(),
     onOffline: jest.fn(),
+    onSessionToken: jest.fn(),
     requestDrain: jest.fn(),
     withdrawUnqueueableWrite: jest.fn(),
   },

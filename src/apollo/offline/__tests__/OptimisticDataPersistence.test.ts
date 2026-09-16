@@ -23,30 +23,67 @@ type SeedEntry = {
   };
 }[PersistedEntityType];
 
-// Each entry is checked against its own entity above; the loop cannot carry
-// that correlation, so it saves through the method's plain signature.
-const save: (
-  entityType: PersistedEntityType,
-  entityId: string,
-  field: string,
-  value: unknown,
-) => void = (entityType, entityId, field, value) =>
-  optimisticDataPersistence.save<PersistedEntityType>(
-    entityType,
-    entityId,
-    field as PersistedField<PersistedEntityType>,
-    value,
-  );
+/** Narrowing on the typename keeps each entry's field checked against its entity. */
+function saveEntry(entry: SeedEntry): void {
+  const { entityId, value } = entry;
+  switch (entry.entityType) {
+    case 'MealPlanItem':
+      return optimisticDataPersistence.save(
+        entry.entityType,
+        entityId,
+        entry.field,
+        value,
+      );
+    case 'PantryItem':
+      return optimisticDataPersistence.save(
+        entry.entityType,
+        entityId,
+        entry.field,
+        value,
+      );
+    case 'PantryItemBatch':
+      return optimisticDataPersistence.save(
+        entry.entityType,
+        entityId,
+        entry.field,
+        value,
+      );
+    case 'ShoppingListItem':
+      return optimisticDataPersistence.save(
+        entry.entityType,
+        entityId,
+        entry.field,
+        value,
+      );
+  }
+}
 
 function seedData(entries: SeedEntry[]) {
-  for (const entry of entries) {
-    save(entry.entityType, entry.entityId, entry.field, entry.value);
-  }
+  for (const entry of entries) saveEntry(entry);
   // Drain the batched microtask synchronously
   optimisticDataPersistence.flush();
 }
 
 describe('OptimisticDataPersistence', () => {
+  // A withdrawal clears whatever typename the cache holds; most are never
+  // persisted, and rewriting storage for them is a wasted write per refusal.
+  it('does not rewrite storage to clear an entity type it never persists', () => {
+    seedData([
+      {
+        entityType: 'ShoppingListItem',
+        entityId: 'kept',
+        field: 'quantity',
+        value: 1,
+      },
+    ]);
+    const set = jest.spyOn(storage, 'set');
+
+    optimisticDataPersistence.clearEntity('SavedRecipe', 'kept');
+
+    expect(set).not.toHaveBeenCalled();
+    set.mockRestore();
+  });
+
   beforeEach(() => {
     // Clear underlying MMKV store and reset singleton state
     storage.clearAll();

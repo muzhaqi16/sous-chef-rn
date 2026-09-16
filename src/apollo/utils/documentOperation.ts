@@ -36,9 +36,15 @@ export function rootFieldOf(document: DocumentNode): string {
 export function byOperation<T>(
   entries: ReadonlyArray<readonly [DocumentNode, T]>,
 ): Record<string, T> {
-  return Object.fromEntries(
-    entries.map(([document, value]) => [operationNameOf(document), value]),
-  );
+  const table: Record<string, T> = {};
+  for (const [document, value] of entries) {
+    const name = operationNameOf(document);
+    if (name in table) {
+      throw new Error(`byOperation: ${name} is listed twice`);
+    }
+    table[name] = value;
+  }
+  return table;
 }
 
 function namedType(type: TypeNode): string {

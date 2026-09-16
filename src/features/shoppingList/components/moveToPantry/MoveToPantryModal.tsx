@@ -120,7 +120,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   // free-text `unitName` show "bag" while submitting the purchase's unit id.
   const resolvedUnit = shoppingListItem?.unit
     ? {
-        symbol: shoppingListItem.unit.symbol ?? '',
+        symbol: shoppingListItem.unit.symbol,
         id: shoppingListItem.unit.id,
       }
     : shoppingListItem?.unitName
@@ -288,7 +288,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     onConfirm({
       pantryId: confirmedPantryId ?? '',
       actualQuantity: quantityValue,
-      actualUnitId: confirmedUnitId || undefined,
+      actualUnitId: confirmedUnitId ?? undefined,
       storageState,
       expiresAt: confirmedExpiry?.toISOString(),
       removeFromList,

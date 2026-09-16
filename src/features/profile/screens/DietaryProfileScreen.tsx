@@ -483,10 +483,10 @@ export const DietaryProfileScreen: React.FC = () => {
         onClose={handleCloseCookingPrefs}
         onSave={handleSaveCookingPrefs}
         initialValues={{
-          cookingSkillLevel: profile?.cookingSkillLevel,
-          maxPrepTimeMinutes: profile?.maxPrepTimeMinutes,
-          maxCookTimeMinutes: profile?.maxCookTimeMinutes,
-          budgetPerMeal: profile?.budgetPerMeal,
+          cookingSkillLevel: profile.cookingSkillLevel,
+          maxPrepTimeMinutes: profile.maxPrepTimeMinutes,
+          maxCookTimeMinutes: profile.maxCookTimeMinutes,
+          budgetPerMeal: profile.budgetPerMeal,
         }}
       />
       {/* Macro Targets Sheet */}
@@ -495,10 +495,10 @@ export const DietaryProfileScreen: React.FC = () => {
         onClose={handleCloseMacros}
         onSave={handleSaveMacros}
         initialValues={{
-          calorieTarget: profile?.calorieTarget,
-          proteinTarget: profile?.proteinTarget,
-          carbsTarget: profile?.carbsTarget,
-          fatTarget: profile?.fatTarget,
+          calorieTarget: profile.calorieTarget,
+          proteinTarget: profile.proteinTarget,
+          carbsTarget: profile.carbsTarget,
+          fatTarget: profile.fatTarget,
         }}
       />
     </ProfileScreenWrapper>

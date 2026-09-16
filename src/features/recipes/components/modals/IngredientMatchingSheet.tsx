@@ -22,7 +22,7 @@ import type {
   EditableMatch,
   MatchSummary,
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
-import { Text } from '#components/atoms/Text';
+import { Text, type TextTone } from '#components/atoms/Text';
 
 const keyExtractor = (item: EditableMatch) => item.ingredient.id;
 
@@ -109,18 +109,21 @@ export const IngredientMatchingSheet: React.FC<
         {/* Summary bar */}
         <View style={styles.summaryBar}>
           <SummaryPill
-            label={t('labels.available')}
-            count={matchSummary.available}
+            text={t('ingredientMatching.summaryAvailable', {
+              count: matchSummary.available,
+            })}
             tone="success"
           />
           <SummaryPill
-            label={t('labels.partial')}
-            count={matchSummary.partial}
+            text={t('ingredientMatching.summaryPartial', {
+              count: matchSummary.partial,
+            })}
             tone="warning"
           />
           <SummaryPill
-            label={t('labels.missing')}
-            count={matchSummary.missing}
+            text={t('ingredientMatching.summaryMissing', {
+              count: matchSummary.missing,
+            })}
             tone="error"
           />
           <Text role="caption" tone="secondary" style={styles.includedText}>
@@ -186,16 +189,21 @@ export const IngredientMatchingSheet: React.FC<
 
 type SummaryTone = 'success' | 'warning' | 'error';
 
+const SUMMARY_TEXT_TONE: Record<SummaryTone, TextTone> = {
+  success: 'success',
+  warning: 'warning',
+  error: 'danger',
+};
+
 const SummaryPill: React.FC<{
-  label: string;
-  count: number;
+  text: string;
   tone: SummaryTone;
-}> = ({ label, count, tone }) => {
+}> = ({ text, tone }) => {
   styles.useVariants({ tone });
   return (
     <View style={styles.pill}>
-      <Text role="label" style={styles.pillText}>
-        {count} {label}
+      <Text role="label" tone={SUMMARY_TEXT_TONE[tone]}>
+        {text}
       </Text>
     </View>
   );
@@ -223,15 +231,6 @@ const styles = StyleSheet.create(theme => ({
         success: { backgroundColor: theme.colors.success + '20' },
         warning: { backgroundColor: theme.colors.warning + '20' },
         error: { backgroundColor: theme.colors.error + '20' },
-      },
-    },
-  },
-  pillText: {
-    variants: {
-      tone: {
-        success: { color: theme.colors.success },
-        warning: { color: theme.colors.warning },
-        error: { color: theme.colors.error },
       },
     },
   },

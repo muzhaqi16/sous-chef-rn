@@ -1,6 +1,11 @@
 import { string, number, array, object, boolean, type InferType } from 'yup';
 import { normalizeSmartPunctuation } from '#/utils/validation/common';
 import { t, type KeyUnder } from '#/i18n';
+import {
+  BaseDimension,
+  ItemType,
+  StorageState,
+} from '#/graphql/generated/schemaTypes';
 
 /**
  * These schemas are built once at module scope, so a message resolved eagerly
@@ -218,11 +223,18 @@ export const createItemSchema = object({
     .optional(),
 
   // Product Details
-  type: string().nullable().optional(),
-  storageState: string().nullable().optional(),
+  type: string().oneOf(Object.values(ItemType)).nullable().optional(),
+  storageState: string()
+    .oneOf(Object.values(StorageState))
+    .nullable()
+    .optional(),
   shelfLifeDays: shelfLifeDaysRule,
   shelfLifeOpenedDays: shelfLifeOpenedDaysRule,
-  baseDimension: string().nullable().optional(),
+  // `''` is the picker's "none" option.
+  baseDimension: string()
+    .oneOf([...Object.values(BaseDimension), ''])
+    .nullable()
+    .optional(),
   defaultConsumeIncrement: number()
     .transform((value: unknown, originalValue: unknown) =>
       String(originalValue).trim() === '' ? undefined : value,

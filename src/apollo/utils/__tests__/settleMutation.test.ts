@@ -14,6 +14,7 @@ import {
 import { operationNameOf } from '../documentOperation';
 import { settleMutation, settledStatus } from '../settleMutation';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { Telemetry } from '#/services/telemetry';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -94,6 +95,38 @@ describe('settleMutation', () => {
 
     expect(settled.status).toBe('applied');
     expect(alertService.alert).not.toHaveBeenCalled();
+  });
+
+  it('counts removing a row a thrown not-found says is already gone as applied', async () => {
+    const settled = await settleMutation(
+      throwing(graphQLError(TopLevelErrorCode.ResourceNotFound)),
+      { document: DeletePantryItemDocument, fallback: FALLBACK, removal: true },
+    );
+
+    expect(settled.status).toBe('applied');
+    expect(alertService.alert).not.toHaveBeenCalled();
+    expect(reportError).not.toHaveBeenCalled();
+  });
+
+  it('counts a refusal returned as data once, by operation and code, without reporting it as an error', async () => {
+    await settleMutation(
+      create({
+        __typename: 'ValidationError',
+        code: ErrorCode.ValidationFailed,
+      }),
+      options,
+    );
+
+    expect(Telemetry.increment).toHaveBeenCalledTimes(1);
+    expect(Telemetry.increment).toHaveBeenCalledWith(
+      'mutation_refused_total',
+      1,
+      {
+        operation: operationNameOf(CreatePantryItemDocument),
+        code: ErrorCode.ValidationFailed,
+      },
+    );
+    expect(reportError).not.toHaveBeenCalled();
   });
 
   it('reports a missing record as not found when the write is not a removal', async () => {

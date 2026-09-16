@@ -17,7 +17,7 @@ import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useTranslation } from '#/i18n';
 import { buildDirtyUpdateInput, buildOptimisticUnit } from './utils';
-import type { FormDataInput, UnitSelection } from './types';
+import type { DirtyFieldFlags, FormDataInput, UnitSelection } from './types';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { logger } from '#/utils/environment';
 
@@ -29,7 +29,7 @@ interface UseUpdatePantryItemOptions {
 interface UpdatePantryItemFieldsParams {
   itemId: string;
   input: FormDataInput;
-  dirtyFields: Record<string, boolean>;
+  dirtyFields: DirtyFieldFlags;
   selectedLocationId: string | null;
   selectedBrandId: string | null;
   trackingUnit?: UnitSelection;

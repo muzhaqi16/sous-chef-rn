@@ -142,8 +142,25 @@ describe('useAppNavigation', () => {
       const params = {
         itemId: 'i1',
         itemName: 'Apple',
-        nutritions: [],
-        actualServingGrams: 100,
+        nutritionFacts: {
+          calories: 52,
+          totalFat: 0.2,
+          saturatedFat: null,
+          transFat: null,
+          cholesterol: null,
+          sodium: 1,
+          totalCarbs: 14,
+          dietaryFiber: 2.4,
+          totalSugars: 10,
+          addedSugars: null,
+          protein: 0.3,
+          vitaminD: null,
+          calcium: 6,
+          iron: 0.1,
+          potassium: 107,
+          servingSize: 100,
+          servingUnit: 'g',
+        },
       };
       act(() => result.current.toNutritionScreen(params));
       expect(mockNavigate).toHaveBeenCalledWith('NutritionScreen', params);

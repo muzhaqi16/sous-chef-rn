@@ -42,7 +42,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const setPendingPantryScrollToTop = useAppStore(
     s => s.setPendingPantryScrollToTop,
   );
-  const { addToPantry, restockDuplicate, forceAddPending, addToShoppingList } =
+  const { addToPantry, restockDuplicate, addToShoppingList } =
     useAddScannedItem({ pantryId, shoppingListId });
 
   const onPantryAdded = () => {
@@ -81,23 +81,6 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                     alertService.alert(
                       t('labels.error'),
                       t('errors.restockFailedRetry'),
-                    );
-                  },
-                );
-              },
-              onAddAnyway: () => {
-                void executeWithLoadingState(
-                  async () => {
-                    // A queued or replayed add counts as added; a refusal
-                    // has already been withdrawn and reported by the hook.
-                    if (!(await forceAddPending())) return;
-                    onPantryAdded();
-                  },
-                  setIsLoading,
-                  () => {
-                    alertService.alert(
-                      t('labels.error'),
-                      t('errors.addItemFailedRetry'),
                     );
                   },
                 );

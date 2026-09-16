@@ -42,7 +42,7 @@ export function useHomeMutations({
   // One home create, wherever it is made — the local-first one, which writes
   // the home and the creator's membership before it fires.
   const { createHome: createHomeWrite, creating } = useCreateHome(() => {
-    void refetch?.();
+    void refetch();
   });
   // `createDefaultPantry` is forced off so no pantry carries a server-minted
   // id, which makes minting the home's first pantry this caller's job.
@@ -62,7 +62,7 @@ export function useHomeMutations({
           errorService.reportError(cacheError, {
             operation: 'Cache update failed for deleteHome:',
           });
-          void refetch?.();
+          void refetch();
         }
       },
       onCompleted: data => {
@@ -110,7 +110,7 @@ export function useHomeMutations({
         ? { name: nameOrInput, allowJoinCode: true }
         : nameOrInput;
 
-    if (!input.name?.trim()) {
+    if (!input.name.trim()) {
       alertService.alert(
         t('labels.validationError'),
         t('homeDetail.homeNameEmptyError'),

@@ -1,6 +1,8 @@
 'use no memo';
 
+import { gql } from '@apollo/client';
 import { act } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -23,12 +25,6 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
     registerPendingDelete: jest.fn(),
     unregisterPendingDelete: jest.fn(),
   },
-}));
-
-jest.mock('#features/pantry/cache/items', () => ({
-  addToPantryItemsCache: jest.fn(),
-  removeFromPantryItemsCache: jest.fn(),
-  adjustPantryItemCount: jest.fn(),
 }));
 
 jest.mock('#/utils/finallyHelpers');
@@ -55,6 +51,82 @@ function deleteMock() {
       },
     },
   });
+}
+
+function convergedDeleteMock() {
+  return recordMock(DeletePantryItemDocument, {
+    data: {
+      deletePantryItem: {
+        __typename: 'DeletePantryItemPayload' as const,
+        converged: true,
+        pantryItem: null,
+      },
+    },
+  });
+}
+
+const PANTRY = gql`
+  query SeedPantryForDelete($id: ID!) {
+    pantry(id: $id) {
+      __typename
+      id
+      stats {
+        __typename
+        totalItems
+      }
+      itemsConnection {
+        __typename
+        totalCount
+        edges {
+          __typename
+          cursor
+          node {
+            __typename
+            id
+          }
+        }
+      }
+    }
+  }
+`;
+
+interface SeededPantry {
+  pantry: {
+    stats: { totalItems: number };
+    itemsConnection: { edges: { node: { id: string } }[] };
+  } | null;
+}
+
+function seededCache(itemIds: string[]) {
+  const cache = makeCache();
+  cache.writeQuery({
+    query: PANTRY,
+    variables: { id: 'pantry-1' },
+    data: {
+      pantry: {
+        __typename: 'Pantry',
+        id: 'pantry-1',
+        stats: { __typename: 'PantryStats', totalItems: itemIds.length },
+        itemsConnection: {
+          __typename: 'PantryItemConnection',
+          totalCount: itemIds.length,
+          edges: itemIds.map(id => ({
+            __typename: 'PantryItemEdge',
+            cursor: id,
+            node: { __typename: 'PantryItem', id },
+          })),
+        },
+      },
+    },
+  });
+  return cache;
+}
+
+function readPantry(cache: ReturnType<typeof makeCache>) {
+  return cache.readQuery<SeededPantry>({
+    query: PANTRY,
+    variables: { id: 'pantry-1' },
+  })?.pantry;
 }
 
 function deleteErrorMock() {
@@ -176,5 +248,61 @@ describe('usePantryItemMutations', () => {
     expect(removed).toBe(true);
     expect(alertService.alert).not.toHaveBeenCalled();
     expect(defaultOptions.refetch).not.toHaveBeenCalled();
+  });
+
+  it('removeItem treats a converged delete as removed, with nothing to restore', async () => {
+    const { alertService } = require('#/services/alertService');
+    const cache = seededCache(['item-1', 'item-2']);
+    const m = convergedDeleteMock();
+
+    const { result } = renderHookWithApollo(
+      () => usePantryItemMutations(defaultOptions),
+      { operationMocks: [m.mock], cache },
+    );
+
+    let removed: boolean | undefined;
+    await act(async () => {
+      removed = await result.current.removeItem('item-1');
+    });
+
+    expect(removed).toBe(true);
+    expect(
+      readPantry(cache)?.itemsConnection.edges.map(e => e.node.id),
+    ).toEqual(['item-2']);
+    expect(alertService.alert).not.toHaveBeenCalled();
+    expect(defaultOptions.refetch).not.toHaveBeenCalled();
+  });
+
+  it('removeItem drops the pantry count by exactly one for a row it removes', async () => {
+    const cache = seededCache(['item-1', 'item-2']);
+    const m = convergedDeleteMock();
+
+    const { result } = renderHookWithApollo(
+      () => usePantryItemMutations(defaultOptions),
+      { operationMocks: [m.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.removeItem('item-1');
+    });
+
+    expect(readPantry(cache)?.stats.totalItems).toBe(1);
+  });
+
+  it('removeItem leaves the pantry count alone when the row is already gone', async () => {
+    // A realtime removal took the row, and its count, before the user's delete.
+    const cache = seededCache(['item-2']);
+    const m = convergedDeleteMock();
+
+    const { result } = renderHookWithApollo(
+      () => usePantryItemMutations(defaultOptions),
+      { operationMocks: [m.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.removeItem('item-1');
+    });
+
+    expect(readPantry(cache)?.stats.totalItems).toBe(1);
   });
 });

@@ -50,6 +50,42 @@
     "notAvailable": "La información de depuración solo está disponible en compilaciones de desarrollo y staging.",
     "header": "Información de depuración detallada para diagnosticar las conexiones con la API y la configuración de la app.",
     "copyAll": "Copiar toda la información",
-    "footer": "Esta información es útil para depurar problemas de conexión con la API o para reportar errores."
+    "footer": "Esta información es útil para depurar problemas de conexión con la API o para reportar errores.",
+    "sections": {
+      "environment": "Entorno",
+      "apiConfiguration": "Configuración de la API",
+      "telemetry": "Telemetría",
+      "deviceInfo": "Información del dispositivo",
+      "buildConfiguration": "Configuración de compilación"
+    },
+    "rows": {
+      "buildMode": "Modo de compilación",
+      "isDevelopment": "Compilación de desarrollo",
+      "isStaging": "Compilación de staging",
+      "isProduction": "Compilación de producción",
+      "isTesting": "Ejecución de pruebas",
+      "apiUrl": "URL de la API",
+      "webSocketUrl": "URL de WebSocket",
+      "apiKey": "Clave de API",
+      "timeout": "Tiempo de espera de solicitud",
+      "maxRetries": "Reintentos máximos",
+      "metricsEndpoint": "Endpoint de métricas",
+      "logsEndpoint": "Endpoint de registros",
+      "metricsAuth": "Autenticación de métricas",
+      "logsAuth": "Autenticación de registros",
+      "platform": "Plataforma",
+      "osVersion": "Versión del sistema",
+      "appVersion": "Versión de la app",
+      "buildNumber": "Número de compilación",
+      "bundleId": "ID del paquete",
+      "deviceBrand": "Marca del dispositivo",
+      "deviceModel": "Modelo del dispositivo",
+      "webAppUrl": "URL de la app web"
+    },
+    "values": {
+      "configured": "Configurada",
+      "notSet": "Sin configurar",
+      "milliseconds": "{{value}} ms"
+    }
   }
 }

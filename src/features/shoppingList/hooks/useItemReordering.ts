@@ -72,7 +72,7 @@ export function useItemReordering<T extends ShoppingListItem>(
 
     // after > before means the visual order and sortOrder order disagree, i.e.
     // the cache is out of sync.
-    let newSortOrder: string | undefined;
+    let duplicateBlockSortOrder: string | undefined;
 
     if (afterItem?.sortOrder && beforeItem?.sortOrder) {
       if (afterItem.sortOrder > beforeItem.sortOrder) {
@@ -102,22 +102,22 @@ export function useItemReordering<T extends ShoppingListItem>(
         const nextItem = items
           .filter(i => i.sortOrder && i.sortOrder > sharedSortOrder)
           .sort((a, b) =>
-            (a.sortOrder || '').localeCompare(b.sortOrder || ''),
+            (a.sortOrder ?? '').localeCompare(b.sortOrder ?? ''),
           )[0];
 
-        newSortOrder = generateKeyBetween(
+        duplicateBlockSortOrder = generateKeyBetween(
           afterItem.sortOrder,
           nextItem?.sortOrder ?? null,
         );
       }
     }
 
-    if (!newSortOrder) {
-      newSortOrder = generateKeyBetween(
+    const newSortOrder =
+      duplicateBlockSortOrder ??
+      generateKeyBetween(
         afterItem?.sortOrder ?? null,
         beforeItem?.sortOrder ?? null,
       );
-    }
 
     // Batched so FlashList sees one consistent state instead of two renders.
     client.cache.batch({

@@ -32,10 +32,9 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
     fragmentName: 'MealTemplateDisplay',
     from: templateSource,
   });
-  const template =
-    fragmentResult.complete && fragmentResult.data
-      ? fragmentResult.data
-      : templateSource;
+  const template = fragmentResult.complete
+    ? fragmentResult.data
+    : templateSource;
 
   const { getMappingKey } = useMappingHelper();
   return (

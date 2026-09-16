@@ -2,12 +2,6 @@ import { renderHook } from '@testing-library/react-native';
 import { useScreenTelemetry } from '../useScreenTelemetry';
 import { Telemetry } from '#/services/telemetry';
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    trackScreen: jest.fn(),
-  },
-}));
-
 // Mock requestIdleCallback / cancelIdleCallback for the test environment
 const mockRequestIdleCallback = jest.fn(
   (cb: (deadline: IdleDeadline) => void) => {

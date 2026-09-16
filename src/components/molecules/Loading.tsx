@@ -47,7 +47,7 @@ export const Loading: React.FC<LoadingProps> = ({
         <SousChefLoader
           size="small"
           showBrand={false}
-          message={message || t('labels.loading')}
+          message={message ?? t('labels.loading')}
         />
       ) : color != null ? (
         <ActivityIndicator size={size} color={color} style={styles.spinner} />

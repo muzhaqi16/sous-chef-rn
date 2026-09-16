@@ -72,7 +72,7 @@ export function useAddShoppingItem({
       id,
       item: { itemName: input.itemName },
       quantity: input.quantityInput ?? input.quantity ?? 1,
-      ...((input.unitName || input.unitId) && {
+      ...((!!input.unitName || !!input.unitId) && {
         unit: {
           ...(input.unitId && { unitId: input.unitId }),
           ...(input.unitName && { unitName: input.unitName }),
@@ -83,7 +83,7 @@ export function useAddShoppingItem({
       ...(input.estimatedPrice && {
         pricing: { estimatedPrice: parseDecimalInput(input.estimatedPrice) },
       }),
-      ...((input.brandName || input.brandId) && {
+      ...((!!input.brandName || !!input.brandId) && {
         brand: {
           ...(input.brandId && { brandId: input.brandId }),
           ...(input.brandName && { brandName: input.brandName }),
@@ -105,7 +105,7 @@ export function useAddShoppingItem({
 
     const optimisticItem = createOptimisticShoppingListItem(id, {
       shoppingListId: listId,
-      itemName: input.itemName ?? '',
+      itemName: input.itemName,
       quantity: optimisticQuantity,
       quantityInput: input.quantityInput ?? null,
       unitName: input.unitName ?? null,

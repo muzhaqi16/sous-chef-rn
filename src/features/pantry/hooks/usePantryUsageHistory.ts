@@ -24,11 +24,11 @@ export function usePantryUsageHistory(pantryItemId: string) {
   );
 
   const connection = data?.pantryItem?.usageRecords;
-  const records: UsageRecord[] = connection?.edges?.map(e => e.node) ?? [];
+  const records: UsageRecord[] = connection?.edges.map(e => e.node) ?? [];
 
   const totalCount = connection?.totalCount ?? records.length;
-  const hasNextPage = connection?.pageInfo?.hasNextPage ?? false;
-  const endCursor = connection?.pageInfo?.endCursor ?? null;
+  const hasNextPage = connection?.pageInfo.hasNextPage ?? false;
+  const endCursor = connection?.pageInfo.endCursor ?? null;
   const isFetchingMore = networkStatus === NetworkStatus.fetchMore;
 
   const loadMore = () => {

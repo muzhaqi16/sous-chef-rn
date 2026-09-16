@@ -27,6 +27,7 @@
       "offline": "You're currently offline. Showing cached data when available.",
       "operationNotAllowed": "This action isn't available right now.",
       "pantryItemAlreadyExists": "This item is already in your pantry",
+      "insufficientQuantity": "That is more than this pantry item holds",
       "quotaExceeded": "You've exceeded your quota limit",
       "rangeInvalid": "Value is outside allowed range",
       "rateLimitBlocked": "Too many requests. Please wait a moment and try again.",
@@ -698,7 +699,10 @@
     "choosePhoto": "Choose a photo",
     "openProfile": "Open your profile",
     "resetCrop": "Reset crop",
-    "notificationSettings": "Notification settings"
+    "notificationSettings": "Notification settings",
+    "requiredField": "{{label}}, required",
+    "fieldError": "Error: {{error}}",
+    "hintWithError": "{{hint}}. {{error}}"
   },
   "toasts": {
     "noLowStockItems": "No low stock items found",

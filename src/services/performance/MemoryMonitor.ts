@@ -4,6 +4,7 @@ import type { MemorySnapshot, MemoryWarning } from './types';
 import { MemoryWarningLevel, DEFAULT_PERFORMANCE_CONFIG } from './types';
 import { usePerformanceStore } from '#/store/performanceStore';
 import { logger } from '#/utils/environment';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /**
  * Memory Monitor Service
@@ -89,7 +90,7 @@ class MemoryMonitorService {
 
     // Report metrics
     Telemetry.gauge('app_memory_used_bytes', snapshot.usedBytes, {
-      context: context || 'unknown',
+      context: firstNonBlank(context) ?? 'unknown',
     });
 
     if (snapshot.limitBytes) {

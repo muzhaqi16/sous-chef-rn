@@ -75,7 +75,7 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
   // results — handles typos, OCR noise, and natural-language prompts that
   // exact-match search misses. Auth-gated and embedding-priced server-side,
   // so we only fire after autocomplete has finished returning empty.
-  const autocompleteSuggestions = data?.autocompleteItems?.suggestions ?? [];
+  const autocompleteSuggestions = data?.autocompleteItems.suggestions ?? [];
   const hasAutocompleteResults = autocompleteSuggestions.length > 0;
   useEffect(() => {
     if (!activeTerm || loading || hasAutocompleteResults) return;
@@ -86,7 +86,7 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
   }, [activeTerm, loading, hasAutocompleteResults, data, fetchSemantic]);
 
   const semanticSuggestions = (
-    semanticData?.searchItemsSemantic?.edges ?? []
+    semanticData?.searchItemsSemantic.edges ?? []
   ).map(edge => semanticItemToSuggestion(edge.node));
 
   const items: ItemSuggestion[] = hasAutocompleteResults

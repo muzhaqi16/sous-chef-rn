@@ -25,12 +25,6 @@ export class ConsoleTransport implements TelemetryTransport {
     }
 
     logs.forEach(log => {
-      // Guard against undefined level
-      if (!log || !log.level) {
-        console.warn('[TELEMETRY] Received log with undefined level:', log);
-        return;
-      }
-
       const emoji = this.getLogEmoji(log.level);
       const prefix = `${emoji} [TELEMETRY-${log.level.toUpperCase()}]`;
 

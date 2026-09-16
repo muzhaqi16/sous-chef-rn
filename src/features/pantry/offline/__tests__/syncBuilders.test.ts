@@ -153,12 +153,22 @@ describe('pantry sync builders', () => {
   it('converts DeletePantryItem → SyncDeletePantryItem', () => {
     const mutation = makeMutation({
       ...queuedMutationFor(DeletePantryItemDocument),
-      variables: { input: { id: 'item-3', version: 2 } },
+      variables: { input: { id: 'item-3' } },
     });
     const { syncVariables } = convertToSyncMutation(mutation);
     const input = wrapper(syncVariables);
     expect(input.clientId).toBe('item-3');
-    expect(input.version).toBe(2);
+  });
+
+  // `itemId` on a create is the CATALOG item. A row with no minted id must reach
+  // the server without one and be refused, not upsert a row keyed by the catalog.
+  it('names no client id for a create queued without its row id', () => {
+    const mutation = makeMutation({
+      ...queuedMutationFor(BarcodeCreatePantryItemDocument),
+      variables: { input: { pantryId: 'pan-1', itemId: 'cat-1' } },
+    });
+    const input = wrapper(convertToSyncMutation(mutation).syncVariables);
+    expect(input.clientId).toBeUndefined();
   });
 
   // Specialized single-item creates map onto the same sync mutations as their

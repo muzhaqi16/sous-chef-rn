@@ -16,12 +16,9 @@ import {
   ROLE_PERMISSIONS,
   INVITE_ROLES,
 } from '#features/shoppingList/constants/collaboratorRoles';
-import { alertService } from '#/services/alertService';
-import { localizedErrorMessage } from '#/services/errorService';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import type { Translate } from '#/i18n/types';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import {
   shareInviteSchema,
@@ -65,24 +62,16 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
   const handleShare = handleSubmit(values => {
     if (!requireVerifiedEmail()) return;
 
-    void executeWithLoadingState(
-      async () => {
-        unwrapPayload(
-          await inviteCollaborator(values.email.trim(), selectedRole),
-          t('errors.sendInviteFailed'),
-        );
-        resetField('email');
-      },
-      setSharing,
-      error => {
-        alertService.alert(
-          t('labels.error'),
-          // Resolved from the error's CODE. `error.message` is the server's
-          // English, which reaches an es/it/sq user verbatim.
-          localizedErrorMessage(error, t('errors.sendInviteFailed')),
-        );
-      },
-    );
+    // The settle reports a refusal in this section's copy, resolved from the
+    // failure's CODE — never the server's English.
+    void executeWithLoadingState(async () => {
+      const sent = await inviteCollaborator(
+        values.email.trim(),
+        selectedRole,
+        t('errors.sendInviteFailed'),
+      );
+      if (sent) resetField('email');
+    }, setSharing);
   });
 
   return (

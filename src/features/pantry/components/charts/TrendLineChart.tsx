@@ -40,10 +40,10 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
 }) => {
   const { t } = useTranslation();
   const { theme } = useUnistyles();
-  const lineColor = color || theme.colors.primary;
+  const lineColor = color ?? theme.colors.primary;
 
   const chartData = (() => {
-    if (!data || data.length === 0) return [];
+    if (data.length === 0) return [];
     return data.map((point, index) => ({
       x: index,
       y: point.count,

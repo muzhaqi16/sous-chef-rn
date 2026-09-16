@@ -26,19 +26,23 @@ export class SignUpScreen extends BaseScreen {
     confirmPassword?: string,
   ) {
     await this.waitForScreen();
-    await this.clearAndType(this.nameInput, name);
-    await this.clearAndType(this.emailInput, email);
-    await this.clearAndType(this.passwordInput, password);
-    await this.clearAndType(
-      this.confirmPasswordInput,
-      confirmPassword || password,
-    );
-    await this.dismissKeyboard();
-    await this.tapByID(this.submitButton);
+    await this.enterName(name);
+    await this.enterEmail(email);
+    await this.enterPassword(password);
+    await this.enterConfirmPassword(confirmPassword ?? password);
+    await this.submit();
   }
 
   async enterName(name: string) {
     await this.clearAndType(this.nameInput, name);
+  }
+
+  /**
+   * Sets the whole name at once. Android's `typeText` sends key events, and a
+   * character outside the keyboard's key map (`é`, `ü`) has none.
+   */
+  async pasteName(name: string) {
+    await this.getElementById(this.nameInput).replaceText(name);
   }
 
   async enterEmail(email: string) {
@@ -55,7 +59,7 @@ export class SignUpScreen extends BaseScreen {
 
   async submit() {
     await this.dismissKeyboard();
-    await this.tapByID(this.submitButton);
+    await this.tapPastKeyboard(this.submitButton);
   }
 
   async navigateToLogin() {
@@ -64,6 +68,10 @@ export class SignUpScreen extends BaseScreen {
 
   async expectNameFieldError() {
     await this.expectVisible(kitTestIDs.inputError(this.nameInput));
+  }
+
+  async expectNoNameFieldError() {
+    await this.expectNotVisible(kitTestIDs.inputError(this.nameInput));
   }
 
   async expectEmailFieldError() {

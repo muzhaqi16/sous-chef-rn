@@ -334,12 +334,39 @@ describe('QueueStore', () => {
         );
 
         const [survivor] = store.getMutationsForUser('user-1');
-        // The 90-day horizon counts from the first move the user made.
+        // The 90-day horizon counts from the first move the user made, while
+        // `createdAt` stays the moment this one was queued — the drain replays
+        // in `createdAt` order, and an older stamp would sort the surviving
+        // move ahead of a row created between the two moves.
         expect(survivor).toMatchObject({
           id: 'move-2',
-          createdAt: 1_000,
+          createdAt: 5_000,
+          agedFrom: 1_000,
           conflictCount: 1,
         });
+      });
+
+      it("expires the survivor on the first move's age, not its own", () => {
+        const ninetyOneDays = 91 * 24 * 60 * 60 * 1000;
+        const old = Date.now() - ninetyOneDays;
+        store.addMutation(
+          makeMutation({
+            id: 'move-1',
+            ...queuedMutationFor(MoveShoppingListItemDocument),
+            variables: { input: { itemId: 'item-A', afterItemId: 'item-Y' } },
+            createdAt: old,
+          }),
+        );
+        store.addMutation(
+          makeMutation({
+            id: 'move-2',
+            ...queuedMutationFor(MoveShoppingListItemDocument),
+            variables: { input: { itemId: 'item-A', afterItemId: 'item-Z' } },
+            createdAt: Date.now(),
+          }),
+        );
+
+        expect(store.expireStalePending('user-1')).toBe(1);
       });
     });
   });

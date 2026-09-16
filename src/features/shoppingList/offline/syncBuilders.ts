@@ -65,7 +65,7 @@ const readShoppingListId = (
     id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
     fragment: QUEUE_ITEM_DATA_FRAGMENT,
   });
-  return itemData?.shoppingList?.id;
+  return itemData?.shoppingList.id;
 };
 
 // Prefers the linked catalog item id; falls back to the row's free-text name
@@ -111,7 +111,7 @@ export const buildShoppingItemSync: SyncBuilder = (mutation, cache) => {
     Array.isArray(queued.items) && queued.items.length > 0
       ? { ...queued.items[0], shoppingListId: queued.shoppingListId }
       : queued;
-  const clientId = getClientId(mutation, input);
+  const clientId = getClientId(mutation);
 
   const shoppingListId =
     input.shoppingListId ?? readShoppingListId(cache, clientId);
@@ -186,10 +186,8 @@ export const buildShoppingItemSync: SyncBuilder = (mutation, cache) => {
 
 /** ShoppingListItem delete sync — idempotent by `clientId`. */
 export const buildDeleteShoppingItemSync: SyncBuilder = mutation => {
-  const input = getQueuedInput(mutation);
   const syncInput: SyncDeleteShoppingListItemInput = {
-    clientId: getClientId(mutation, input) as string,
-    version: input.version,
+    clientId: getClientId(mutation) as string,
   };
   return {
     syncMutation: SyncDeleteShoppingListItemDocument,
@@ -201,10 +199,9 @@ export const buildDeleteShoppingItemSync: SyncBuilder = mutation => {
 export const buildMoveShoppingItemSync: SyncBuilder = mutation => {
   const input = getQueuedInput(mutation);
   const syncInput: SyncMoveShoppingListItemInput = {
-    clientId: getClientId(mutation, input) as string,
+    clientId: getClientId(mutation) as string,
     afterId: input.afterItemId,
     beforeId: input.beforeItemId,
-    version: input.version,
   };
   return {
     syncMutation: SyncMoveShoppingListItemDocument,

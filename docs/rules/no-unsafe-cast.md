@@ -1,6 +1,6 @@
 # `sous-chef/no-unsafe-cast`
 
-No `as any`, `as any[]`, `as unknown`, `as never`, `as Record<…>`, `keyof` or translation-key casts.
+No `as any`, `any[]`, `unknown`, `never`, `Record<…>`, `keyof`, translation-key or schema-enum casts.
 
 ## Reports
 
@@ -10,6 +10,7 @@ No `as any`, `as any[]`, `as unknown`, `as never`, `as Record<…>`, `keyof` or 
 - `as Record<…>` — it asserts an object shape instead of proving it.
 - `as keyof …`, and a key list asserted as `(keyof …)[]`, `readonly (keyof …)[]`, `Array<keyof …>` or `Extract<keyof …, …>` — it indexes with a key the object may not have, so the read is `undefined` under a type that says it cannot (an inherited name like `toString` even resolves to a function). Narrow the key with `isOwnKey(obj, key)` from `#utils/isOwnKey`, iterate `Object.values`/`Object.entries` or a typed list of the keys, or type the key where it is declared. A value cast such as `as T[keyof T]` is not reported.
 - `as TranslationKey` / `as ParseKeys` — it compiles a key the copy may not declare, which renders as a raw dot-path. Type the storing field `TranslationKey`, or check runtime-built keys with `isTranslationKey`.
+- A cast to a generated schema enum (an `export enum` in `src/graphql/generated/schemaTypes.ts`): `as ProfileVisibility`, `as RecurringPattern | null`, `as UnitType | undefined`, `as Cuisine[]`, `as Array<Diet>`, `as ReadonlyArray<…>`, `as readonly (Diet | null)[]`, `as Types.UnitType` — any type built only from enums plus `null`/`undefined`. The cast lets through a string the schema has no member for, and the server refuses it on every write. Type the source as the enum where it is declared, make a generic picker carry the enum type, or narrow with a guard `(v: string): v is E => new Set<string>(Object.values(E)).has(v)`; build an enum list with `flatMap(r => (r.x ? [r.x] : []))`, not `.filter(Boolean) as E[]`. The match is by name, so a local type that shadows a generated enum's name is reported too — rename the local type.
 
 ## Use instead
 

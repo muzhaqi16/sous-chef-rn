@@ -10,6 +10,7 @@ import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAut
 import { FieldRow } from '#components/atoms/FieldRow';
 import type { PantryItemFormData } from './PantryItemForm';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import type { UnitType } from '#/graphql/generated/schemaTypes';
 
 interface QuantitySectionProps {
   control: Control<PantryItemFormData>;
@@ -17,7 +18,7 @@ interface QuantitySectionProps {
   onUnitSelected?: (
     unitId: string | null,
     unitName: string | null,
-    unitType?: string | null,
+    unitType?: UnitType | null,
     unitSymbol?: string | null,
   ) => void;
   testID?: string;
@@ -80,7 +81,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           render={({ field: { onChange, onBlur, value } }) => (
             <FormInput
               label={t('labels.alertWhenBelow')}
-              value={value?.toString() || ''}
+              value={value?.toString() ?? ''}
               onChangeText={onChange}
               onBlur={onBlur}
               placeholder={t('labels.eG2')}
@@ -95,7 +96,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           render={({ field: { onChange, onBlur, value } }) => (
             <FormInput
               label={t('labels.restockTo')}
-              value={value?.toString() || ''}
+              value={value?.toString() ?? ''}
               onChangeText={onChange}
               onBlur={onBlur}
               placeholder={t('labels.eG6')}

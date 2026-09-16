@@ -30,16 +30,26 @@ module.exports = {
         'A quantity reaches the screen through formatQuantityForDisplay, never as a raw number.',
       url: 'docs/rules/quantity-through-formatter.md',
     },
-    schema: [],
+    schema: [
+      {
+        type: 'object',
+        properties: { followVariables: { type: 'boolean' } },
+        additionalProperties: false,
+      },
+    ],
     messages: {
       rawQuantity:
         '`{{name}}` is a raw number reaching the screen, so 1.25 reads "1.25" and a converted 177.4412 reads "177.4412". Render it through `QuantityDisplay`, `formatQuantityForDisplay` or `formatQuantityDisplay` (`#/utils/formatQuantity`).',
+      rawQuantityVariable:
+        '`{{name}}` carries the raw number `{{source}}` to the screen, so 1.25 reads "1.25" and a converted 177.4412 reads "177.4412". Format it where the `const` is built: `formatQuantityForDisplay`, `formatQuantityDisplay` or `QuantityDisplay` (`#/utils/formatQuantity`).',
     },
   },
   create(context) {
     const services = context.sourceCode.parserServices;
     if (!services?.program) return {};
     const checker = services.program.getTypeChecker();
+    const followVariables = context.options[0]?.followVariables ?? false;
+    const sourceCode = context.sourceCode;
 
     const typeParts = node => {
       const type = checker.getTypeAtLocation(
@@ -71,49 +81,97 @@ module.exports = {
       context.report({
         node,
         messageId: 'rawQuantity',
-        data: { name: context.sourceCode.getText(node) },
+        data: { name: sourceCode.getText(node) },
       });
 
-    /** Reports each quantity-named number the rendered value is built from. */
-    const check = node => {
+    /** The `const` initializer an identifier reads, when it has exactly one. */
+    const constInitializer = identifier => {
+      let scope = sourceCode.getScope(identifier);
+      while (scope) {
+        const variable = scope.set.get(identifier.name);
+        if (variable) {
+          const [definition, ...others] = variable.defs;
+          if (
+            others.length > 0 ||
+            definition?.type !== 'Variable' ||
+            definition.parent.kind !== 'const' ||
+            definition.node.id.type !== 'Identifier'
+          ) {
+            return undefined;
+          }
+          return definition.node.init ?? undefined;
+        }
+        scope = scope.upper;
+      }
+      return undefined;
+    };
+
+    /**
+     * The quantity-named numbers the rendered value is built from, each with the
+     * rendered identifier it reached output through when a `const` was followed.
+     */
+    const sources = (node, seen) => {
       switch (node.type) {
         case 'Identifier':
         case 'MemberExpression': {
           const name = nameOf(node);
-          if (name && QUANTITY_NAME.test(name) && isNumber(node)) report(node);
-          return;
+          if (name && QUANTITY_NAME.test(name) && isNumber(node)) {
+            return [{ source: node, via: null }];
+          }
+          if (!followVariables || node.type !== 'Identifier') return [];
+          const init = constInitializer(node);
+          if (!init || seen.has(init)) return [];
+          seen.add(init);
+          return sources(init, seen)
+            .slice(0, 1)
+            .map(({ source }) => ({ source, via: node }));
         }
         case 'ChainExpression':
         case 'TSNonNullExpression':
         case 'TSAsExpression':
-          check(node.expression);
-          return;
+          return sources(node.expression, seen);
         case 'TemplateLiteral':
-          node.expressions.forEach(check);
-          return;
+          return node.expressions.flatMap(part => sources(part, seen));
         case 'ConditionalExpression':
-          check(node.consequent);
-          check(node.alternate);
-          return;
+          return [
+            ...sources(node.consequent, seen),
+            ...sources(node.alternate, seen),
+          ];
         case 'LogicalExpression':
           // `qty && <X />` renders the right side; the left is a guard.
-          if (node.operator !== '&&') check(node.left);
-          check(node.right);
-          return;
+          return [
+            ...(node.operator === '&&' ? [] : sources(node.left, seen)),
+            ...sources(node.right, seen),
+          ];
         case 'BinaryExpression':
-          if (ARITHMETIC.has(node.operator)) {
-            check(node.left);
-            check(node.right);
-          }
-          return;
+          return ARITHMETIC.has(node.operator)
+            ? [...sources(node.left, seen), ...sources(node.right, seen)]
+            : [];
         case 'UnaryExpression':
-          if (node.operator === '-' || node.operator === '+') {
-            check(node.argument);
-          }
-          return;
+          return node.operator === '-' || node.operator === '+'
+            ? sources(node.argument, seen)
+            : [];
         default:
           // A call's result is its own formatting; anything else is not text.
-          return;
+          return [];
+      }
+    };
+
+    /** Reports each quantity-named number the rendered value is built from. */
+    const check = node => {
+      for (const { source, via } of sources(node, new Set())) {
+        if (!via) {
+          report(source);
+          continue;
+        }
+        context.report({
+          node: via,
+          messageId: 'rawQuantityVariable',
+          data: {
+            name: sourceCode.getText(via),
+            source: sourceCode.getText(source),
+          },
+        });
       }
     };
 

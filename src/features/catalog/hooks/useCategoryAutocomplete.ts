@@ -38,7 +38,7 @@ export function useCategoryAutocomplete(
   };
 
   const getResults = (): CategorySuggestion[] => {
-    return (data?.autocompleteCategories?.suggestions ??
+    return (data?.autocompleteCategories.suggestions ??
       []) as CategorySuggestion[];
   };
 

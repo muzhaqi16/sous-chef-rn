@@ -1,96 +1,100 @@
 /**
- * Utility functions for parsing and displaying nutrition data
+ * Utility functions for displaying an item's `NutritionFacts`
  */
 
 import type {
-  NutritionsData,
   MacroSummary,
   NutritionHighlight,
   NutrientEntry,
   NutrientCategory,
 } from '#/types/nutrition';
 import type { TranslationKey } from '#/i18n';
-import { isOwnKey } from '#utils/isOwnKey';
 import type { Translate } from '#/i18n/types';
+import type { NutritionFacts } from '#/graphql/generated/schemaTypes';
+import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import { isOwnKey } from '#utils/isOwnKey';
+
+/** The columns the macro summary, its highlights and the data check read. */
+export type NutritionSummaryFacts = Pick<
+  NutritionFacts,
+  | 'calories'
+  | 'protein'
+  | 'totalCarbs'
+  | 'totalFat'
+  | 'dietaryFiber'
+  | 'totalSugars'
+  | 'sodium'
+  | 'calcium'
+  | 'iron'
+  | 'potassium'
+  | 'servingSize'
+  | 'servingUnit'
+>;
+
+type NutrientField =
+  | 'calories'
+  | 'totalFat'
+  | 'saturatedFat'
+  | 'transFat'
+  | 'cholesterol'
+  | 'sodium'
+  | 'totalCarbs'
+  | 'dietaryFiber'
+  | 'totalSugars'
+  | 'addedSugars'
+  | 'protein'
+  | 'vitaminD'
+  | 'calcium'
+  | 'iron'
+  | 'potassium';
+
+/** Every nutrient column of `NutritionFacts`, plus its serving. */
+export type NutritionFactsValues = Pick<
+  NutritionFacts,
+  NutrientField | 'servingSize' | 'servingUnit'
+>;
 
 // =============================================================================
-// PARSING
+// PRESENCE
 // =============================================================================
 
-/**
- * Parse JSON nutritions field to typed NutritionsData object
- */
-export function parseNutritions(
-  nutritionsJson: unknown,
-): NutritionsData | null {
-  if (!nutritionsJson || typeof nutritionsJson !== 'object') {
-    return null;
-  }
-  return nutritionsJson as NutritionsData;
+/** Whether the facts carry any macro the summary shows. */
+export function hasNutritionData<T extends NutritionSummaryFacts>(
+  facts: T | null,
+): facts is T {
+  if (!facts) return false;
+  return [
+    facts.calories,
+    facts.protein,
+    facts.totalCarbs,
+    facts.totalFat,
+    facts.dietaryFiber,
+  ].some(amount => amount !== null);
 }
 
-/**
- * Check if nutritions data has any meaningful values
- */
-export function hasNutritionData(nutritions: NutritionsData | null): boolean {
-  if (!nutritions) return false;
-
-  // Check for at least one nutrient value
-  const nutrientKeys = [
-    'protein',
-    'totalFat',
-    'carbohydrates',
-    'calories',
-    'fiber',
-  ];
-  return nutrientKeys.some(
-    key =>
-      nutritions[key] &&
-      typeof nutritions[key] === 'object' &&
-      nutritions[key].amount !== undefined,
-  );
-}
-
 // =============================================================================
-// SCALING
+// SERVING
 // =============================================================================
 
-/**
- * Calculate scale factor based on actual serving vs base serving
- */
-export function getScaleFactor(
-  nutritions: NutritionsData | null,
-  actualServingGrams?: number | null,
-): number {
-  if (!actualServingGrams || !nutritions?.servingSizeGrams) {
-    return 1;
-  }
-  return actualServingGrams / nutritions.servingSizeGrams;
-}
-
-/**
- * Format actual serving size for display
- */
-export function formatServingSize(grams: number): string {
-  if (grams >= 1000) {
-    return `${(grams / 1000).toFixed(1)}kg`;
-  }
-  return `${Math.round(grams)}g`;
+/** The serving the figures are stated for, or null when the row names none. */
+export function formatServing(
+  facts: Pick<NutritionFacts, 'servingSize' | 'servingUnit'>,
+): string | null {
+  const { servingSize, servingUnit } = facts;
+  const unit = servingUnit?.trim();
+  if (servingSize === null || servingSize <= 0 || !unit) return null;
+  return `${formatQuantityForDisplay(servingSize)} ${unit}`;
 }
 
 // =============================================================================
 // MACRO EXTRACTION
 // =============================================================================
 
-/**
- * Extract macro summary (Calories, Protein, Carbs, Fat) from nutritions
- * Optionally scales values based on actual serving size
- */
+/** Calories, protein, carbs and fat, as the API stores them. */
 export function extractMacroSummary(
-  nutritions: NutritionsData | null,
-  actualServingGrams?: number | null,
+  facts: NutritionSummaryFacts | null,
 ): MacroSummary {
-  if (!nutritions) {
+  if (!facts) {
     return {
       calories: null,
       protein: null,
@@ -100,29 +104,12 @@ export function extractMacroSummary(
     };
   }
 
-  const scale = getScaleFactor(nutritions, actualServingGrams);
-  const servingSize = actualServingGrams
-    ? formatServingSize(actualServingGrams)
-    : nutritions.servingSize ?? null;
-
   return {
-    calories:
-      nutritions.calories?.amount != null
-        ? nutritions.calories.amount * scale
-        : null,
-    protein:
-      nutritions.protein?.amount != null
-        ? nutritions.protein.amount * scale
-        : null,
-    carbs:
-      nutritions.carbohydrates?.amount != null
-        ? nutritions.carbohydrates.amount * scale
-        : null,
-    fat:
-      nutritions.totalFat?.amount != null
-        ? nutritions.totalFat.amount * scale
-        : null,
-    servingSize,
+    calories: facts.calories,
+    protein: facts.protein,
+    carbs: facts.totalCarbs,
+    fat: facts.totalFat,
+    servingSize: formatServing(facts),
   };
 }
 
@@ -130,19 +117,29 @@ export function extractMacroSummary(
 // HIGHLIGHTS GENERATION
 // =============================================================================
 
+// An absent amount meets no threshold, a `<=` one included.
+function meets(
+  amount: number | null,
+  comparison: '>=' | '<=',
+  threshold: number,
+): boolean {
+  if (amount === null) return false;
+  return comparison === '>=' ? amount >= threshold : amount <= threshold;
+}
+
 /**
  * Generate smart nutrition highlights based on values
  * e.g., "High Protein", "Low Fat", "Good Fiber"
  */
 export function generateHighlights(
-  nutritions: NutritionsData | null,
+  facts: NutritionSummaryFacts | null,
 ): NutritionHighlight[] {
-  if (!nutritions) return [];
+  if (!facts) return [];
 
   const highlights: NutritionHighlight[] = [];
 
   // High protein (>= 10g per serving)
-  if (nutritions.protein && nutritions.protein.amount >= 10) {
+  if (meets(facts.protein, '>=', 10)) {
     highlights.push({
       labelKey: 'recipes.healthGoal.HIGH_PROTEIN',
       type: 'positive',
@@ -150,7 +147,7 @@ export function generateHighlights(
   }
 
   // Low fat (<= 3g per serving)
-  if (nutritions.totalFat && nutritions.totalFat.amount <= 3) {
+  if (meets(facts.totalFat, '<=', 3)) {
     highlights.push({
       labelKey: 'nutritionHighlights.lowFat',
       type: 'positive',
@@ -158,7 +155,7 @@ export function generateHighlights(
   }
 
   // Good fiber (>= 3g per serving)
-  if (nutritions.fiber && nutritions.fiber.amount >= 3) {
+  if (meets(facts.dietaryFiber, '>=', 3)) {
     highlights.push({
       labelKey: 'nutritionHighlights.goodFiber',
       type: 'positive',
@@ -166,7 +163,7 @@ export function generateHighlights(
   }
 
   // Low sugar (<= 5g per serving)
-  if (nutritions.sugar && nutritions.sugar.amount <= 5) {
+  if (meets(facts.totalSugars, '<=', 5)) {
     highlights.push({
       labelKey: 'nutritionHighlights.lowSugar',
       type: 'positive',
@@ -174,28 +171,20 @@ export function generateHighlights(
   }
 
   // High sodium (>= 600mg per serving) - caution
-  if (nutritions.sodium && nutritions.sodium.amount >= 600) {
+  if (meets(facts.sodium, '>=', 600)) {
     highlights.push({
       labelKey: 'nutritionHighlights.highSodium',
       type: 'caution',
     });
   }
 
-  // Good source of Vitamin C (>= 10% DV, roughly 9mg)
-  if (nutritions.vitaminC && nutritions.vitaminC.amount >= 9) {
-    highlights.push({
-      labelKey: 'nutritionHighlights.vitaminC',
-      type: 'positive',
-    });
-  }
-
   // Good source of Iron (>= 10% DV, roughly 1.8mg)
-  if (nutritions.iron && nutritions.iron.amount >= 1.8) {
+  if (meets(facts.iron, '>=', 1.8)) {
     highlights.push({ labelKey: 'nutritionHighlights.iron', type: 'positive' });
   }
 
   // Good source of Calcium (>= 10% DV, roughly 130mg)
-  if (nutritions.calcium && nutritions.calcium.amount >= 130) {
+  if (meets(facts.calcium, '>=', 130)) {
     highlights.push({
       labelKey: 'nutritionHighlights.calcium',
       type: 'positive',
@@ -203,7 +192,7 @@ export function generateHighlights(
   }
 
   // Good source of Potassium (>= 10% DV, roughly 470mg)
-  if (nutritions.potassium && nutritions.potassium.amount >= 470) {
+  if (meets(facts.potassium, '>=', 470)) {
     highlights.push({
       labelKey: 'nutritionHighlights.potassium',
       type: 'positive',
@@ -252,176 +241,108 @@ export function formatCalories(amount: number | null | undefined): string {
 // DETAIL LIST ENTRIES
 // =============================================================================
 
-/**
- * Categorize a nutrient by its key
- */
-function categorizeNutrient(key: string): NutrientCategory {
-  const macros = [
-    'protein',
-    'totalFat',
-    'carbohydrates',
-    'fiber',
-    'sugar',
-    'calories',
-    'saturatedFat',
-    'transFat',
-    'cholesterol',
-  ];
-  const vitamins = [
-    'vitaminA',
-    'vitaminC',
-    'vitaminD',
-    'vitaminE',
-    'vitaminK',
-    'vitaminB6',
-    'vitaminB12',
-    'thiamin',
-    'riboflavin',
-    'niacin',
-    'folate',
-  ];
-  const minerals = [
-    'sodium',
-    'calcium',
-    'iron',
-    'potassium',
-    'magnesium',
-    'phosphorus',
-    'zinc',
-    'copper',
-    'manganese',
-    'selenium',
-  ];
-
-  if (macros.includes(key)) return 'macro';
-  if (vitamins.includes(key)) return 'vitamin';
-  if (minerals.includes(key)) return 'mineral';
-  return 'other';
+interface NutrientSpec {
+  labelKey: TranslationKey;
+  /** The canonical unit the API stores the column in. */
+  unit: 'kcal' | 'g' | 'mg' | 'mcg';
+  category: NutrientCategory;
 }
 
-/** The nutrients the copy names; the API may send others. */
-type NamedNutrient =
-  | 'protein'
-  | 'totalFat'
-  | 'carbohydrates'
-  | 'fiber'
-  | 'sugar'
-  | 'calories'
-  | 'saturatedFat'
-  | 'transFat'
-  | 'cholesterol'
-  | 'vitaminA'
-  | 'vitaminC'
-  | 'vitaminD'
-  | 'vitaminE'
-  | 'vitaminK'
-  | 'vitaminB6'
-  | 'vitaminB12'
-  | 'thiamin'
-  | 'riboflavin'
-  | 'niacin'
-  | 'folate'
-  | 'sodium'
-  | 'calcium'
-  | 'iron'
-  | 'potassium'
-  | 'magnesium'
-  | 'phosphorus'
-  | 'zinc'
-  | 'copper'
-  | 'manganese'
-  | 'selenium';
-
-const NUTRIENT_LABEL_KEYS: Record<NamedNutrient, TranslationKey> = {
-  protein: 'recipes.macroProtein',
-  totalFat: 'nutrition.nutrient.totalFat',
-  carbohydrates: 'recipes.macroCarbohydrates',
-  fiber: 'recipes.macroFiber',
-  sugar: 'recipes.macroSugar',
-  calories: 'labels.calories',
-  saturatedFat: 'nutrition.nutrient.saturatedFat',
-  transFat: 'nutrition.nutrient.transFat',
-  cholesterol: 'nutrition.nutrient.cholesterol',
-  vitaminA: 'nutrition.nutrient.vitaminA',
-  vitaminC: 'nutritionHighlights.vitaminC',
-  vitaminD: 'nutrition.nutrient.vitaminD',
-  vitaminE: 'nutrition.nutrient.vitaminE',
-  vitaminK: 'nutrition.nutrient.vitaminK',
-  vitaminB6: 'nutrition.nutrient.vitaminB6',
-  vitaminB12: 'nutrition.nutrient.vitaminB12',
-  thiamin: 'nutrition.nutrient.thiamin',
-  riboflavin: 'nutrition.nutrient.riboflavin',
-  niacin: 'nutrition.nutrient.niacin',
-  folate: 'nutrition.nutrient.folate',
-  sodium: 'recipes.macroSodium',
-  calcium: 'nutritionHighlights.calcium',
-  iron: 'nutritionHighlights.iron',
-  potassium: 'nutritionHighlights.potassium',
-  magnesium: 'nutrition.nutrient.magnesium',
-  phosphorus: 'nutrition.nutrient.phosphorus',
-  zinc: 'nutrition.nutrient.zinc',
-  copper: 'nutrition.nutrient.copper',
-  manganese: 'nutrition.nutrient.manganese',
-  selenium: 'nutrition.nutrient.selenium',
+/** In display order within each category. */
+const NUTRIENTS: Record<NutrientField, NutrientSpec> = {
+  calories: { labelKey: 'labels.calories', unit: 'kcal', category: 'macro' },
+  protein: { labelKey: 'recipes.macroProtein', unit: 'g', category: 'macro' },
+  totalFat: {
+    labelKey: 'nutrition.nutrient.totalFat',
+    unit: 'g',
+    category: 'macro',
+  },
+  saturatedFat: {
+    labelKey: 'nutrition.nutrient.saturatedFat',
+    unit: 'g',
+    category: 'macro',
+  },
+  transFat: {
+    labelKey: 'nutrition.nutrient.transFat',
+    unit: 'g',
+    category: 'macro',
+  },
+  cholesterol: {
+    labelKey: 'nutrition.nutrient.cholesterol',
+    unit: 'mg',
+    category: 'macro',
+  },
+  totalCarbs: {
+    labelKey: 'recipes.macroCarbohydrates',
+    unit: 'g',
+    category: 'macro',
+  },
+  dietaryFiber: {
+    labelKey: 'recipes.macroFiber',
+    unit: 'g',
+    category: 'macro',
+  },
+  totalSugars: {
+    labelKey: 'recipes.macroSugar',
+    unit: 'g',
+    category: 'macro',
+  },
+  addedSugars: {
+    labelKey: 'nutrition.nutrient.addedSugars',
+    unit: 'g',
+    category: 'macro',
+  },
+  vitaminD: {
+    labelKey: 'nutrition.nutrient.vitaminD',
+    unit: 'mcg',
+    category: 'vitamin',
+  },
+  sodium: {
+    labelKey: 'recipes.macroSodium',
+    unit: 'mg',
+    category: 'mineral',
+  },
+  calcium: {
+    labelKey: 'nutritionHighlights.calcium',
+    unit: 'mg',
+    category: 'mineral',
+  },
+  iron: {
+    labelKey: 'nutritionHighlights.iron',
+    unit: 'mg',
+    category: 'mineral',
+  },
+  potassium: {
+    labelKey: 'nutritionHighlights.potassium',
+    unit: 'mg',
+    category: 'mineral',
+  },
 };
 
-/**
- * A nutrient's label from local copy. A nutrient the copy does not name keeps
- * the API's own name: it is the only label that exists for it.
- */
-function getNutrientDisplayName(
-  key: string,
-  name: string | undefined,
-  t: Translate,
-): string {
-  if (isOwnKey(NUTRIENT_LABEL_KEYS, key)) return t(NUTRIENT_LABEL_KEYS[key]);
-  return name ?? key;
-}
+const CATEGORY_ORDER: Record<NutrientCategory, number> = {
+  macro: 0,
+  vitamin: 1,
+  mineral: 2,
+};
 
-/**
- * Get all nutrient entries for detail list display
- * Sorted by category: macros first, then vitamins, then minerals
- * Optionally scales values based on actual serving size
- */
+/** Every stored nutrient, macros first, then vitamins, then minerals. */
 export function getNutrientEntries(
-  nutritions: NutritionsData | null,
-  actualServingGrams: number | null | undefined,
+  facts: NutritionFactsValues | null,
   t: Translate,
 ): NutrientEntry[] {
-  if (!nutritions) return [];
+  if (!facts) return [];
 
-  const scale = getScaleFactor(nutritions, actualServingGrams);
   const entries: NutrientEntry[] = [];
-
-  // Skip non-nutrient keys
-  const skipKeys = ['servingSize', 'servingSizeGrams'];
-
-  for (const [key, value] of Object.entries(nutritions)) {
-    if (skipKeys.includes(key)) continue;
-    if (!value || typeof value !== 'object') continue;
-
-    const nutrientValue = value;
-    if (nutrientValue.amount === undefined) continue;
-
-    entries.push({
-      key,
-      name: getNutrientDisplayName(key, nutrientValue.name, t),
-      amount: nutrientValue.amount * scale,
-      unit: nutrientValue.unit,
-      category: categorizeNutrient(key),
-    });
+  for (const key of Object.keys(NUTRIENTS)) {
+    if (!isOwnKey(NUTRIENTS, key)) continue;
+    const amount = facts[key];
+    if (amount === null) continue;
+    const { labelKey, unit, category } = NUTRIENTS[key];
+    entries.push({ key, name: t(labelKey), amount, unit, category });
   }
 
-  // Sort by category priority
-  const categoryOrder: Record<NutrientCategory, number> = {
-    macro: 0,
-    vitamin: 1,
-    mineral: 2,
-    other: 3,
-  };
-
   return entries.sort(
-    (a, b) => categoryOrder[a.category] - categoryOrder[b.category],
+    (a, b) => CATEGORY_ORDER[a.category] - CATEGORY_ORDER[b.category],
   );
 }
 
@@ -447,7 +368,6 @@ const NUTRIENT_CATEGORY_LABEL_KEYS: Record<NutrientCategory, TranslationKey> = {
   macro: 'nutrition.category.macro',
   vitamin: 'nutrition.category.vitamin',
   mineral: 'nutrition.category.mineral',
-  other: 'nutrition.category.other',
 };
 
 /** A nutrient category's section heading. */

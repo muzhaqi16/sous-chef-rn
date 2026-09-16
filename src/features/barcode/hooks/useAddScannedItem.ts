@@ -1,4 +1,3 @@
-import { useRef } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   BarcodeAddItemToShoppingListDocument,
@@ -98,7 +97,7 @@ export function useAddScannedItem({
         cache,
         'PantryItem',
         maskedPantryItem.id,
-        variables?.input?.id,
+        variables?.input.id,
       );
     },
   });
@@ -128,14 +127,6 @@ export function useAddScannedItem({
       },
     },
   );
-
-  /** The add a duplicate prompt can still force through, kept off the screen. */
-  const pendingAdd = useRef<{
-    id: string;
-    input: CreatePantryItemInput;
-    apply: () => void;
-    revert: () => void;
-  } | null>(null);
 
   const addToPantry = async (
     item: ScannedItem,
@@ -178,9 +169,8 @@ export function useAddScannedItem({
       client.cache,
     );
 
-    // Publishing and withdrawing the row are a pair, and the force-add retry
-    // has to do both again after the duplicate branch has withdrawn it. Named
-    // so the halves cannot drift.
+    // Publishing and withdrawing the row are a pair; named so the halves
+    // cannot drift.
     const apply = () => {
       try {
         // Publishes the row AND counts it: the header's "N items" reads
@@ -204,7 +194,6 @@ export function useAddScannedItem({
     };
     const revert = () => revertOptimisticPantryItem(client.cache, pantryId, id);
 
-    pendingAdd.current = { id, input, apply, revert };
     apply();
 
     // `confirm` must run on every outcome, throws included, or the id stays
@@ -288,43 +277,6 @@ export function useAddScannedItem({
     return settled.status !== 'failed';
   };
 
-  /**
-   * Re-fire the refused add with `forceAdd`. The id is reused on purpose — the
-   * refusal committed no row, and reusing it is what makes the replay
-   * idempotent; re-marking is required because the first attempt's cleanup
-   * already confirmed it. Resolves whether the add stands.
-   */
-  const forceAddPending = async (): Promise<boolean> => {
-    const pending = pendingAdd.current;
-    if (!pending) return false;
-
-    unconfirmedCreates.mark(pending.id);
-    // The duplicate branch withdrew the row; put it back before firing, or a
-    // force-add that queues offline shows nothing until the replay lands.
-    pending.apply();
-
-    // A reused id whose first attempt did commit answers IDEMPOTENT_REPLAY,
-    // which the settle counts as applied.
-    const settled = await settleMutation(
-      () =>
-        addToPantryMutation({
-          // Same local-first contract as the first attempt: without it the
-          // force-add is the one add here that cannot queue.
-          variables: { input: { ...pending.input, forceAdd: true } },
-          context: { localFirst: true },
-        }),
-      {
-        document: BarcodeCreatePantryItemDocument,
-        fallback: t('errors.addItemFailedRetry'),
-        onFailed: pending.revert,
-      },
-    );
-    // Released on EVERY outcome — a mark left standing suppresses the detail
-    // query for a row the user can see.
-    unconfirmedCreates.confirm(pending.id);
-    return settled.status !== 'failed';
-  };
-
   const addToShoppingList = async (
     item: ScannedItem,
   ): Promise<ScannedListOutcome> => {
@@ -394,7 +346,6 @@ export function useAddScannedItem({
   return {
     addToPantry,
     restockDuplicate,
-    forceAddPending,
     addToShoppingList,
   };
 }

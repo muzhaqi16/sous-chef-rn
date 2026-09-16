@@ -13,12 +13,14 @@ import type { DisplayNotification as NotificationItem } from '#features/notifica
 import { formatDateTimeLong } from '#/utils/formatters/date';
 
 export const NotificationDetailScreen: React.FC<
+  // `notifications/:id` deep-links here with the id alone.
   StaticScreenProps<{
-    notification: NotificationItem;
+    id: string;
+    notification?: NotificationItem;
   }>
 > = ({ route }) => {
   const { t } = useTranslation();
-  const notification = route.params?.notification;
+  const notification = route.params.notification;
 
   if (!notification) {
     return (

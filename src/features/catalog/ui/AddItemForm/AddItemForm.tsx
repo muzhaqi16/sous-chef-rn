@@ -12,9 +12,9 @@ import {
   suggestItemEditSchema,
 } from '#features/catalog/utils/itemValidation';
 import {
+  BaseDimension,
   StorageState,
   ItemType,
-  type BaseDimension,
 } from '#/graphql/generated/schemaTypes';
 import {
   MultiImagePicker,
@@ -38,6 +38,7 @@ import { logValidationErrors } from '#utils/validation/common';
 import { BarcodeInfo } from './BarcodeInfo';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatNumberForInput } from '#/utils/formatters/number';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import {
   type PageName,
   PAGES,
@@ -57,6 +58,10 @@ import { catalogTestIDs } from '#features/catalog/testIDs';
  * differs.
  */
 export type AddItemFormMode = 'create' | 'edit' | 'variant' | 'directEdit';
+
+const ITEM_TYPES = Object.values(ItemType);
+const STORAGE_STATES = Object.values(StorageState);
+const BASE_DIMENSIONS = Object.values(BaseDimension);
 
 export interface AddItemFormInitialData {
   name?: string;
@@ -95,7 +100,7 @@ const toNetWeightInputs = (
   entries: NetWeightEntry[],
 ): NonNullable<CreateItemFormData['netWeights']> =>
   entries
-    .filter(entry => entry.value?.trim() || entry.unitName?.trim())
+    .filter(entry => firstNonBlank(entry.value, entry.unitName) !== undefined)
     .map(entry => ({
       value: parseDecimalInput(entry.value),
       unitName: entry.unitName?.trim() ?? '',
@@ -121,16 +126,16 @@ const toUnitInputs = (
   entries: UnitEntry[],
 ): NonNullable<CreateItemFormData['units']> =>
   entries
-    .filter(entry => entry.unitId || entry.unitName)
+    .filter(entry => firstNonBlank(entry.unitId, entry.unitName) !== undefined)
     .map((entry, index) => ({
-      unitId: entry.unitId || undefined,
-      unitName: entry.unitName || undefined,
+      unitId: firstNonBlank(entry.unitId),
+      unitName: firstNonBlank(entry.unitName),
       isDefault: index === 0,
       packageSize: entry.packageSize
         ? parseDecimalInput(entry.packageSize)
         : undefined,
-      contentUnitId: entry.contentUnitId || undefined,
-      contentUnitName: entry.contentUnitName || undefined,
+      contentUnitId: firstNonBlank(entry.contentUnitId),
+      contentUnitName: firstNonBlank(entry.contentUnitName),
     }));
 
 /**
@@ -157,7 +162,6 @@ interface AddItemFormProps {
   onSubmit: (formData: AddItemSubmitPayload) => void;
   onClose: () => void;
   loading?: boolean;
-  title?: string;
   enableAutocomplete?: boolean;
   mode?: AddItemFormMode;
   initialData?: AddItemFormInitialData;
@@ -175,7 +179,6 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   onSubmit,
   onClose,
   loading = false,
-  title,
   mode = 'create',
   initialData,
   onScanUpc,
@@ -248,15 +251,20 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       if (initialData.upc) values.upc = initialData.upc;
       if (initialData.vendor) values.vendor = initialData.vendor;
       if (initialData.imageUrl) values.imageUrl = initialData.imageUrl;
-      if (initialData.type) values.type = initialData.type;
-      if (initialData.storageState)
-        values.storageState = initialData.storageState;
+      const type = ITEM_TYPES.find(value => value === initialData.type);
+      if (type) values.type = type;
+      const storageState = STORAGE_STATES.find(
+        value => value === initialData.storageState,
+      );
+      if (storageState) values.storageState = storageState;
       if (initialData.shelfLifeDays != null)
         values.shelfLifeDays = initialData.shelfLifeDays;
       if (initialData.shelfLifeOpenedDays != null)
         values.shelfLifeOpenedDays = initialData.shelfLifeOpenedDays;
-      if (initialData.baseDimension)
-        values.baseDimension = initialData.baseDimension;
+      const baseDimension = BASE_DIMENSIONS.find(
+        value => value === initialData.baseDimension,
+      );
+      if (baseDimension) values.baseDimension = baseDimension;
       if (initialData.tags) values.tags = initialData.tags;
       if (initialData.categoryIds) values.categoryIds = initialData.categoryIds;
     }
@@ -359,28 +367,29 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
 
     const processedData: AddItemSubmitPayload = {
       name: data.name,
-      description: data.description || undefined,
-      type: (data.type as ItemType) || undefined,
-      brandId: brandId || undefined,
-      brandName: brandName || undefined,
-      storageState: (data.storageState as StorageState) || undefined,
+      description: firstNonBlank(data.description),
+      type: data.type ?? undefined,
+      brandId,
+      brandName: firstNonBlank(brandName),
+      storageState: data.storageState ?? undefined,
       categoryIds:
         data.categoryIds && data.categoryIds.length > 0
           ? data.categoryIds
           : undefined,
       tags: allTags,
-      primaryUpc: data.upc || undefined,
+      primaryUpc: firstNonBlank(data.upc),
       shelfLifeDays: data.shelfLifeDays ?? undefined,
       shelfLifeOpenedDays: data.shelfLifeOpenedDays ?? undefined,
-      imageUrl: data.imageUrl || undefined,
+      imageUrl: firstNonBlank(data.imageUrl),
       netWeights: netWeights.length > 0 ? netWeights : undefined,
       units: units.length > 0 ? units : undefined,
-      sku: data.sku || undefined,
-      storeId: selectedStoreId || undefined,
-      baseDimension: (data.baseDimension as BaseDimension) || undefined,
+      sku: firstNonBlank(data.sku),
+      storeId: selectedStoreId ?? undefined,
+      baseDimension:
+        data.baseDimension === '' ? undefined : data.baseDimension ?? undefined,
       defaultConsumeIncrement: data.defaultConsumeIncrement ?? undefined,
-      defaultConsumeUnitId: data.defaultConsumeUnitId || undefined,
-      editReason: data.editReason || undefined,
+      defaultConsumeUnitId: firstNonBlank(data.defaultConsumeUnitId),
+      editReason: firstNonBlank(data.editReason),
       selectedImages,
     };
 
@@ -413,7 +422,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     <>
       <View style={styles.header}>
         <Text role="title" style={styles.title}>
-          {title || t(modeConfig.title)}
+          {t(modeConfig.title)}
         </Text>
         <Text
           role="caption"

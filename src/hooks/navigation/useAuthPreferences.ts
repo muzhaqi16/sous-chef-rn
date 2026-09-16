@@ -7,7 +7,7 @@ export const useAuthPreferences = () => {
   );
 
   const markBiometricDeclined = (userId?: string) => {
-    const targetUserId = userId || user?.id;
+    const targetUserId = userId ?? user?.id;
     if (!targetUserId) return;
 
     setUserNavigationState(targetUserId, {
@@ -16,7 +16,7 @@ export const useAuthPreferences = () => {
   };
 
   const markBiometricEnabled = (userId?: string) => {
-    const targetUserId = userId || user?.id;
+    const targetUserId = userId ?? user?.id;
     if (!targetUserId) return;
 
     setUserNavigationState(targetUserId, {
@@ -28,7 +28,7 @@ export const useAuthPreferences = () => {
   };
 
   const markCredentialPromptDeclined = (userId?: string) => {
-    const targetUserId = userId || user?.id;
+    const targetUserId = userId ?? user?.id;
     if (!targetUserId) return;
 
     setUserNavigationState(targetUserId, {
@@ -38,7 +38,7 @@ export const useAuthPreferences = () => {
   };
 
   const resetBiometricDeclination = (userId?: string) => {
-    const targetUserId = userId || user?.id;
+    const targetUserId = userId ?? user?.id;
     if (!targetUserId) return;
 
     setUserNavigationState(targetUserId, {

@@ -46,6 +46,7 @@ import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { recipesTestIDs } from '#features/recipes/testIDs';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 const IngredientSeparator = () => <View style={styles.ingredientGap} />;
 
@@ -307,7 +308,7 @@ const RecipeDetailScreen: React.FC = () => {
   // cached recipe read as.
   if (!displayData) {
     const errorMessage =
-      error ||
+      error ??
       (recipeId && !backendRecipe
         ? t('recipes.recipeNotFoundDb')
         : t('recipes.recipeNotFound'));
@@ -332,7 +333,7 @@ const RecipeDetailScreen: React.FC = () => {
         testID={recipesTestIDs.recipeDetail}
         onBack={goBack}
         actions={headerActions}
-        title={displayData.title ?? ''}
+        title={displayData.title}
         contentStyle={styles.recipeContent}
         renderHero={
           heroImage
@@ -348,7 +349,7 @@ const RecipeDetailScreen: React.FC = () => {
       >
         <DetailTitleRow
           flush
-          title={displayData.title ?? ''}
+          title={displayData.title}
           style={styles.titleSpacing}
         />
 
@@ -370,8 +371,10 @@ const RecipeDetailScreen: React.FC = () => {
           {displayData.healthScore != null &&
             !isNaN(displayData.healthScore) && (
               <Text role="caption" tone="secondary">
-                💚 {Math.round(displayData.healthScore)}
-                {t('recipes.percentHealthy')}
+                💚{' '}
+                {t('recipes.percentHealthy', {
+                  percent: Math.round(displayData.healthScore),
+                })}
               </Text>
             )}
           {/* Cooked count - inline with metadata */}
@@ -483,7 +486,7 @@ const RecipeDetailScreen: React.FC = () => {
         )}
 
         {/* Ingredients */}
-        {!!displayData.ingredients && displayData.ingredients.length > 0 && (
+        {displayData.ingredients.length > 0 && (
           <View style={styles.ingredientsSection}>
             <View style={styles.ingredientsSectionHeader}>
               <SectionHeader style={styles.sectionTitleSpacing}>
@@ -531,7 +534,7 @@ const RecipeDetailScreen: React.FC = () => {
         )}
 
         {/* Source Attribution */}
-        {!!(displayData.sourceName || displayData.sourceUrl) && (
+        {!!firstNonBlank(displayData.sourceName, displayData.sourceUrl) && (
           <Pressable
             style={({ pressed }) => [
               styles.attribution,
@@ -542,7 +545,9 @@ const RecipeDetailScreen: React.FC = () => {
           >
             <Text role="caption" style={styles.attributionText}>
               {t('recipes.recipeFrom', {
-                source: displayData.sourceName || t('recipes.externalSource'),
+                source:
+                  firstNonBlank(displayData.sourceName) ??
+                  t('recipes.externalSource'),
               })}
             </Text>
             {!!displayData.sourceUrl && (
@@ -560,7 +565,7 @@ const RecipeDetailScreen: React.FC = () => {
       <ShoppingListPickerSheet
         visible={listPickerVisible}
         shoppingLists={shoppingLists}
-        defaultNewListName={displayData?.title ?? ''}
+        defaultNewListName={displayData.title}
         creatingList={creatingList}
         onListSelected={handleListSelected}
         onCreateListAndAdd={handleCreateListAndAddIngredients}
@@ -570,7 +575,7 @@ const RecipeDetailScreen: React.FC = () => {
       {/* Mark Cooked Modal */}
       <MarkCookedModal
         visible={cookedModalVisible}
-        recipeName={displayData.title || ''}
+        recipeName={displayData.title}
         defaultServings={
           displayData.servings === 0 ? 1 : displayData.servings ?? 1
         }
@@ -612,7 +617,7 @@ const RecipeDetailScreen: React.FC = () => {
         availableTags={availableTags}
         onSave={handleConfirmSave}
         saving={saving}
-        recipeName={displayData?.title}
+        recipeName={displayData.title}
       />
 
       {/* Add to Meal Plan Sheet — owned by mealPlan, reached through its
@@ -635,7 +640,7 @@ const RecipeDetailScreen: React.FC = () => {
         onUpdateRating={handleUpdateRating}
         onRemove={handleUnfavoriteRecipe}
         updating={updatingFolderTags}
-        recipeName={displayData?.title}
+        recipeName={displayData.title}
       />
     </>
   );

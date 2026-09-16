@@ -169,38 +169,44 @@ export const initializeSecureStorage = async (): Promise<MMKV> => {
  */
 export const getStorage = async (): Promise<MMKV> => initializeSecureStorage();
 
-/**
- * Synchronous storage proxy. After `initializeSecureStorage()` resolves, all
- * reads/writes route to the encrypted MMKV file. Accessed before then in
- * production code, this throws — `index.js` kicks off init before any React
- * code runs, and `zustandStorage` awaits it during Zustand hydration.
- */
-export const storage: MMKV = new Proxy({} as MMKV, {
-  get(_target, prop) {
-    if (!secureStorageInstance) {
-      throw new Error(
-        `Storage accessed before initialization (prop: ${String(prop)}). ` +
-          `Ensure initializeSecureStorage() is called in index.js before any sync storage access.`,
-      );
-    }
-    const value: unknown = Reflect.get(secureStorageInstance, prop);
-    if (typeof value !== 'function') return value;
-    // Preserve jest.fn() identity so tests can assert via toHaveBeenCalledWith.
-    if ('mock' in value && value.mock != null) return value;
-    return (value as (...args: unknown[]) => unknown).bind(
-      secureStorageInstance,
+/** The synchronous surface; the async getters hand out the whole instance. */
+export type SyncStorage = Pick<
+  MMKV,
+  | 'set'
+  | 'getString'
+  | 'getNumber'
+  | 'getBoolean'
+  | 'contains'
+  | 'remove'
+  | 'getAllKeys'
+  | 'clearAll'
+>;
+
+const initializedInstance = (member: keyof SyncStorage): MMKV => {
+  if (!secureStorageInstance) {
+    throw new Error(
+      `Storage accessed before initialization (${member}). ` +
+        `Ensure initializeSecureStorage() is called in index.js before any sync storage access.`,
     );
-  },
-  set(_target, prop, value) {
-    if (!secureStorageInstance) {
-      throw new Error(
-        `Storage written before initialization (prop: ${String(prop)}).`,
-      );
-    }
-    Reflect.set(secureStorageInstance, prop, value);
-    return true;
-  },
-});
+  }
+  return secureStorageInstance;
+};
+
+/**
+ * Synchronous storage. After `initializeSecureStorage()` resolves, every call
+ * routes to the encrypted MMKV file. Called before then it throws: `index.js`
+ * starts init before any React code runs, and `zustandStorage` awaits it.
+ */
+export const storage: SyncStorage = {
+  set: (key, value) => initializedInstance('set').set(key, value),
+  getString: key => initializedInstance('getString').getString(key),
+  getNumber: key => initializedInstance('getNumber').getNumber(key),
+  getBoolean: key => initializedInstance('getBoolean').getBoolean(key),
+  contains: key => initializedInstance('contains').contains(key),
+  remove: key => initializedInstance('remove').remove(key),
+  getAllKeys: () => initializedInstance('getAllKeys').getAllKeys(),
+  clearAll: () => initializedInstance('clearAll').clearAll(),
+};
 
 export function isStorageReady(): boolean {
   return secureStorageInstance !== null;

@@ -142,7 +142,7 @@ export const SearchResultsScreen: React.FC<
   // a cached scan carries neither flag, and the sheet loads the authoritative
   // snapshot anyway.
   const isReadOnly =
-    currentItem?.canEdit === false && currentItem?.canSuggest === false;
+    currentItem?.canEdit === false && currentItem.canSuggest === false;
 
   const renderContent = () => {
     if (isSearching || loading) {

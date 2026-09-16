@@ -222,12 +222,11 @@ describe('shopping-list sync builders', () => {
   it('converts RemoveItemFromShoppingList → SyncDeleteShoppingListItem', () => {
     const mutation = makeMutation({
       ...queuedMutationFor(RemoveItemFromShoppingListDocument),
-      variables: { input: { id: 'del-item', version: 5 } },
+      variables: { input: { id: 'del-item' } },
     });
     const { syncVariables } = convertToSyncMutation(mutation);
     const input = wrapper(syncVariables);
     expect(input.clientId).toBe('del-item');
-    expect(input.version).toBe(5);
   });
 
   it('converts MoveShoppingListItem → SyncMoveShoppingListItem (afterItemId → afterId)', () => {
@@ -238,7 +237,6 @@ describe('shopping-list sync builders', () => {
           itemId: 'mv-1',
           afterItemId: 'a',
           beforeItemId: 'b',
-          version: 2,
         },
       },
     });
@@ -247,7 +245,6 @@ describe('shopping-list sync builders', () => {
     expect(input.clientId).toBe('mv-1');
     expect(input.afterId).toBe('a');
     expect(input.beforeId).toBe('b');
-    expect(input.version).toBe(2);
   });
 
   it('converts BarcodeAddItemToShoppingList → SyncShoppingListItem (keeps brand + netWeight)', () => {

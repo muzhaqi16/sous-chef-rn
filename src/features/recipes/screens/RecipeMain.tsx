@@ -184,15 +184,20 @@ const RecipeMainInner: React.FC = () => {
   useFocusEffect(onRecipeFocus);
 
   type LayoutRect = { x: number; y: number; width: number; height: number };
+  type TutorialTarget =
+    | 'savedButton'
+    | 'myRecipesButton'
+    | 'dietaryButton'
+    | 'pantryButton';
   const savedButtonRef = useRef<View>(null);
   const myRecipesButtonRef = useRef<View>(null);
   const dietaryButtonRef = useRef<View>(null);
 
   // Single state for all layout rects — avoids 4 separate re-renders
   const [buttonRects, setButtonRects] = useState<
-    Record<string, LayoutRect | null>
+    Partial<Record<TutorialTarget, LayoutRect>>
   >({});
-  const setButtonRect = (key: string, rect: LayoutRect) => {
+  const setButtonRect = (key: TutorialTarget, rect: LayoutRect) => {
     setButtonRects(prev => {
       // Skip if already measured — button positions don't change after initial layout
       if (prev[key]) return prev;
@@ -534,9 +539,7 @@ const RecipeMainInner: React.FC = () => {
             <PaginationFooter
               hasMore={screen.searchHasMore || screen.discoveryHasMore}
               isFetchingMore={
-                screen.searchLoading ||
-                screen.searchLoadingMore ||
-                screen.pantryLoadingMore
+                screen.searchLoadingMore || screen.pantryLoadingMore
               }
               itemCount={screen.items.length}
               SkeletonComponent={RecipeItemSkeleton}

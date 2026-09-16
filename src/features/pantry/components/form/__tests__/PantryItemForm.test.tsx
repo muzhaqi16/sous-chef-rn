@@ -14,6 +14,8 @@ import { homeNode } from '#/test-utils/fixtures/homeFixtures';
 import { pantryData } from '#/test-utils/fixtures/pantryFixtures';
 import { pantryItemData } from '#/test-utils/fixtures/pantryItemFixtures';
 import { PantryItemForm } from '../PantryItemForm';
+import type { StorageState, UnitType } from '#/graphql/generated/schemaTypes';
+import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn(() => null),
@@ -106,12 +108,13 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
     onUnitSelected?: (
       unitId: string | null,
       unitName: string | null,
-      unitType?: string | null,
+      unitType?: UnitType | null,
       unitSymbol?: string | null,
     ) => void;
     error?: string;
   }) => {
     const { Text, View, Pressable } = require('react-native');
+    const { UnitType: UnitTypes } = require('#/graphql/generated/schemaTypes');
     return (
       <View testID="unit-autocomplete">
         {label ? <Text>{label}</Text> : null}
@@ -120,7 +123,7 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
           onPress={() => {
             // The real field's onSelect order: the symbol first, then the id.
             onChangeText?.('lb');
-            onUnitSelected?.('unit-lb', 'Pound', 'WEIGHT', 'lb');
+            onUnitSelected?.('unit-lb', 'Pound', UnitTypes.Weight, 'lb');
           }}
         >
           <Text>Pick lb</Text>
@@ -239,11 +242,39 @@ jest.mock('../QuantitySection', () => ({
 }));
 
 jest.mock('../StorageDetailsSection', () => ({
-  StorageDetailsSection: () => {
-    const { Text, View } = require('react-native');
+  StorageDetailsSection: ({
+    storageState,
+    onStorageLocationSelected,
+  }: {
+    storageState: StorageState;
+    onStorageLocationSelected?: (
+      locationId: string | null,
+      location: StorageLocationOption | null,
+    ) => void;
+  }) => {
+    const { Text, View, Pressable } = require('react-native');
+    const {
+      StorageState: StorageStates,
+      StorageType,
+    } = require('#/graphql/generated/schemaTypes');
     return (
       <View testID="storage-details-section">
         <Text>Storage Details</Text>
+        <Text testID="storage-state">{storageState}</Text>
+        <Pressable
+          testID="pick-frozen-location"
+          onPress={() =>
+            onStorageLocationSelected?.('loc-freezer', {
+              id: 'loc-freezer',
+              name: 'Freezer',
+              type: StorageType.Freezer,
+              isDefault: false,
+              temperature: StorageStates.Frozen,
+            })
+          }
+        >
+          <Text>Pick freezer</Text>
+        </Pressable>
       </View>
     );
   },
@@ -334,6 +365,22 @@ describe('PantryItemForm — sections', () => {
     await screen.findByText('Edit Pantry Item');
     await user.press(screen.getByText('Storage'));
     expect(screen.getByText('Storage Details')).toBeTruthy();
+  });
+
+  it("seeds the storage state from a picked location's temperature", async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<PantryItemForm itemId="item-1" />, {
+      cache: buildCache({ itemId: 'item-1' }),
+    });
+    await screen.findByText('Edit Pantry Item');
+    await user.press(screen.getByText('Storage'));
+    expect(screen.getByTestId('storage-state')).toHaveTextContent(
+      'REFRIGERATED',
+    );
+
+    await user.press(screen.getByTestId('pick-frozen-location'));
+
+    expect(screen.getByTestId('storage-state')).toHaveTextContent('FROZEN');
   });
 });
 

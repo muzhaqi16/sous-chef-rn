@@ -5,6 +5,7 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
+import { UnitType } from '#/graphql/generated/schemaTypes';
 import { useUpdatePantryItemQuantity } from '../useUpdatePantryItemQuantity';
 
 jest.mock('#/services/errorService');
@@ -24,7 +25,7 @@ const UNIT = {
   id: 'unit-1',
   name: 'piece',
   symbol: 'pc',
-  type: 'COUNT',
+  type: UnitType.Count,
   displayAsFraction: false,
 };
 

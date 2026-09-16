@@ -215,7 +215,7 @@ export function addPantryToHomeCache(
       ) {
         if (!existingConnection) return existingConnection;
         const exists = (existingConnection.edges ?? []).some(
-          edge => readField('id', edge?.node) === pantry.id,
+          edge => readField('id', edge.node) === pantry.id,
         );
         if (exists) return existingConnection;
         const newPantryRef = toReference(pantry);
@@ -265,7 +265,7 @@ export function removeOptimisticPantry(
         ) {
           if (!existingConnection) return existingConnection;
           const edges = (existingConnection.edges ?? []).filter(
-            edge => readField('id', edge?.node) !== pantryId,
+            edge => readField('id', edge.node) !== pantryId,
           );
           if (edges.length === (existingConnection.edges?.length ?? 0)) {
             return existingConnection;
@@ -315,7 +315,7 @@ export function restorePantryToHomeCache(
       ) {
         if (!existingConnection) return existingConnection;
         const edges = existingConnection.edges ?? [];
-        if (edges.some(edge => readField('id', edge?.node) === pantryId)) {
+        if (edges.some(edge => readField('id', edge.node) === pantryId)) {
           return existingConnection;
         }
         const node = toReference({ __typename: 'Pantry', id: pantryId });

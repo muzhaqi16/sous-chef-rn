@@ -148,7 +148,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {!!action && (
         <Button
           onPress={action.onPress}
-          variant={action.variant || 'primary'}
+          variant={action.variant ?? 'primary'}
           size="medium"
           icon={action.icon}
           style={styles.actionButton}

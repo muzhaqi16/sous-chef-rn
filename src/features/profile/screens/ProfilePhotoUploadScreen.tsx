@@ -206,7 +206,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
           <View style={styles.avatarPreview}>
             {croppedImage || selectedImage ? (
               <LocalImage
-                uri={(croppedImage?.uri || selectedImage?.uri) ?? ''}
+                uri={croppedImage?.uri ?? selectedImage?.uri ?? ''}
                 style={styles.avatarImage}
               />
             ) : (

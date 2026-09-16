@@ -9,6 +9,7 @@ import { useQuery } from '@apollo/client/react';
 import { GetShoppingListTemplatesDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { COPYABLE_ITEM_LIMIT } from '#features/shoppingList/cache/copySource';
 import { extractNodes } from '#/utils/connectionUtils';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 export interface ShoppingListTemplateOption {
@@ -32,7 +33,7 @@ export function useShoppingListTemplates(options: { skip?: boolean } = {}) {
     data?.shoppingLists,
   ).map(node => ({
     id: node.id,
-    displayName: node.templateName || node.name,
+    displayName: firstNonBlank(node.templateName) ?? node.name,
     totalItems: node.totalItems,
   }));
 

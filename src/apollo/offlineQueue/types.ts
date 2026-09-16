@@ -57,7 +57,14 @@ export interface QueuedMutation {
   context?: DefaultContext; // Allowlisted replay context (localFirst only).
 
   status: QueueStatus;
+  /** When this entry was queued. The drain replays in this order. */
   createdAt: number;
+  /**
+   * The age the 90-day horizon counts from, when it differs from `createdAt`:
+   * a coalesced move carries the first move's. Kept apart from `createdAt`
+   * because that one also decides delivery order.
+   */
+  agedFrom?: number;
   updatedAt: number;
   processedAt?: number;
 

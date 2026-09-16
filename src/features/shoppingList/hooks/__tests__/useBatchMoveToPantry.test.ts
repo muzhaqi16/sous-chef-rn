@@ -21,12 +21,6 @@ jest.mock('#/services/toastService', () => ({
   },
 }));
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    trackEvent: jest.fn(),
-  },
-}));
-
 const mockAlert = jest.fn();
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: (...args: unknown[]) => mockAlert(...args) },

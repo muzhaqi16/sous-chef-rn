@@ -68,7 +68,7 @@ export const useConfigurableSettings = () => {
       // The try body stays plain statements — a `&&`/`?.`/ternary inside a try
       // makes the React Compiler bail out of this whole hook. See
       // scripts/probe-compiler-try-forms.mjs.
-      const email = user?.email;
+      const email = user.email;
       let loaded:
         | [Awaited<ReturnType<typeof getBiometricInfo>>, boolean]
         | undefined;
@@ -179,7 +179,7 @@ export const useConfigurableSettings = () => {
         if (config.type === 'modal') {
           return {
             ...baseItem,
-            value: language || 'en',
+            value: language ?? 'en',
             options: [...SUPPORTED_LANGUAGES],
             onSave: (v: string) => {
               setLanguage(v);
@@ -340,7 +340,7 @@ export const useConfigurableSettings = () => {
     <BiometricSetupModal
       visible={showBiometricModal}
       onComplete={handleBiometricModalComplete}
-      userEmail={user?.email || ''}
+      userEmail={user?.email ?? ''}
       mode="settings"
     />
   );

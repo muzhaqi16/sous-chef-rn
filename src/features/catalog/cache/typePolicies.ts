@@ -21,14 +21,6 @@ export const catalogTypePolicies: TypePolicies = {
           return incoming;
         },
       },
-      nutritions: {
-        merge(existing: StoreValue, incoming: StoreValue) {
-          if (incoming === undefined) {
-            return existing;
-          }
-          return incoming;
-        },
-      },
       images: {
         merge(existing: StoreValue, incoming: StoreValue) {
           if (incoming === undefined) {

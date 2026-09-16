@@ -77,14 +77,6 @@ export const styles = StyleSheet.create(theme => {
       backgroundColor: 'transparent', // No fill - outlined style
     },
 
-    editButton: {
-      backgroundColor: theme.colors.success,
-    },
-
-    deleteButton: {
-      backgroundColor: theme.colors.error,
-    },
-
     deleteText: {
       // The label sits on the same `charade.950` underlay as the icon, not on
       // an error fill.

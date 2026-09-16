@@ -54,7 +54,7 @@ export function useAppStateLifecycle(): void {
     });
 
     return () => {
-      subscription?.remove();
+      subscription.remove();
     };
   }, [isHydrated]);
 }

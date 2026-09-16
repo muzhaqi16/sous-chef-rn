@@ -201,7 +201,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
             // priority back to it.
             priority,
             ...(storeId && { storePrefs: { preferredStoreId: storeId } }),
-            ...((brandId || brandName) && {
+            ...((!!brandId || !!brandName) && {
               brand: {
                 ...(brandId && { brandId }),
                 ...(brandName && { brandName }),

@@ -158,7 +158,7 @@ export function AddItemSheet<
   // second modal. The sheet keeps its current height (the search snap point) —
   // the user can still drag it up to the 95% max.
   const handleAddManually = () => {
-    const searchValue = searchBarRef.current?.getValue() || '';
+    const searchValue = searchBarRef.current?.getValue() ?? '';
     onAddManually(searchValue);
     if (renderDetails) {
       setStep('details');
@@ -258,13 +258,13 @@ export function AddItemSheet<
               id: item.id,
               name: item.name,
               imageUrl: item.imageUrl,
-              brandName: item.brands?.[0]?.name,
+              brandName: item.brands[0]?.name,
             }))}
             onClose={goBackToSearch}
           />
         ) : step === 'details' && renderDetails ? (
           renderDetails({ goBack: goBackToSearch })
-        ) : inDrilldown && activeGroup ? (
+        ) : inDrilldown ? (
           <SuggestionDrilldown
             title={t(activeGroup.titleKey)}
             items={activeItems}
@@ -379,21 +379,6 @@ export function AddItemSheet<
       </View>
     </BottomSheetModal>
   );
-}
-
-// Export ref getter function for wrapper components
-export function useAddItemSheetRefs() {
-  const searchBarRef = useRef<SearchBarRef>(null);
-
-  const getSearchValue = () => {
-    return searchBarRef.current?.getValue() || '';
-  };
-
-  const clearSearch = () => {
-    searchBarRef.current?.clear();
-  };
-
-  return { searchBarRef, getSearchValue, clearSearch };
 }
 
 const styles = StyleSheet.create(theme => ({

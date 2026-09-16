@@ -106,7 +106,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
         const pantryItem = payload.pantryItem;
         // Read outside the try: `?.` is a value block, and one inside a try
         // body bails the React Compiler out of the whole hook.
-        const clientId = variables?.input?.id;
+        const clientId = variables?.input.id;
 
         // Idempotent re-add (same cuid id) so the connection holds the
         // authoritative server entity.
@@ -149,15 +149,15 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       if (!isNaN(pkgSize) && pkgSize > 0) {
         itemUnits = [
           {
-            unitId: unitId || undefined,
+            unitId: unitId ?? undefined,
             unitName: !unitId && unit.trim() ? unit.trim() : undefined,
             packageSize: pkgSize,
-            contentUnitId: contentUnitId || undefined,
+            contentUnitId: contentUnitId ?? undefined,
             contentUnitName: !contentUnitId ? contentUnit.trim() : undefined,
             retailUnit: true,
           },
           {
-            unitId: contentUnitId || undefined,
+            unitId: contentUnitId ?? undefined,
             unitName: !contentUnitId ? contentUnit.trim() : undefined,
             isDefault: true,
           },
@@ -184,7 +184,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       ? parseDecimalInput(pantryNetWeight) || undefined
       : totalPackageNetWeight;
     const effectiveNetWeightUnitId =
-      pantryNetWeightUnitId ||
+      pantryNetWeightUnitId ??
       (totalPackageNetWeight ? displayUnitId : undefined);
 
     // Purchase info — send only when the user provided something. `storeId`
@@ -203,7 +203,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       costValue !== undefined ||
       acquisitionMethod !== AcquisitionMethod.Purchased
         ? {
-            storeId: storeId || undefined,
+            storeId: storeId ?? undefined,
             costPerUnit: costValue,
             acquisitionMethod,
           }
@@ -222,14 +222,14 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       unit:
         unitId || unit.trim()
           ? {
-              unitId: unitId || undefined,
+              unitId: unitId ?? undefined,
               unitName: !unitId && unit.trim() ? unit.trim() : undefined,
             }
           : undefined,
       storage: {
         storageState,
         condition,
-        storageLocationId: selectedStorageLocationId || undefined,
+        storageLocationId: selectedStorageLocationId ?? undefined,
         storageLocationName:
           !selectedStorageLocationId && storageLocation.trim()
             ? storageLocation.trim()
@@ -320,16 +320,14 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
             .filter(Boolean)
         : [],
     };
-    // Publishing and withdrawing the optimistic row are a pair, and the
-    // force-add retry below has to do both again after the duplicate branch
-    // has withdrawn it. Named here so the two halves cannot drift.
+    // Publishing and withdrawing the optimistic row are a pair; named here so
+    // the two halves cannot drift.
     const applyOptimisticItem = () => {
       try {
         // Publishes the row AND counts it. The count cannot live in the
         // mutation's `update:` callback — that only runs with a server
         // payload, so offline the row would appear while the header kept the
-        // old count. The helper counts only a row it actually added, so the
-        // force-add retry below cannot double-count.
+        // old count.
         addPantryItemLocally(client.cache, pantryId, optimisticItem);
         writePantryItemDetailStub(client.cache, id, detailStubFields);
       } catch (cacheError) {
@@ -378,61 +376,26 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
         if (settled.status === 'failed') return;
         onSuccess();
       };
-      const addAnyway = async () => {
-        // Nothing is on screen at this point — either no row was ever
-        // published, or the refusal branch withdrew it — so publish before
-        // firing, or a force-add that queues offline shows nothing until the
-        // replay lands. The id is reused deliberately: no row was committed
-        // under it, and reusing it is what makes the replay idempotent.
-        unconfirmedCreates.mark(id);
-        applyOptimisticItem();
-        // A retry whose first attempt did commit answers IDEMPOTENT_REPLAY,
-        // a successful no-op the settle counts as applied.
-        const settled = await settleMutation(
-          () =>
-            createPantryItem({
-              variables: {
-                input: { ...mutationInput, forceAdd: true },
-              },
-              // Same local-first contract as the first attempt: without it the
-              // force-add is the one add on this screen that cannot queue.
-              context: { localFirst: true },
-            }),
-          {
-            document: CreatePantryItemDocument,
-            fallback: t('errors.addItemFailedRetry'),
-            onFailed: revertOptimisticItem,
-          },
-        );
-        unconfirmedCreates.confirm(id);
-        if (settled.status === 'failed') return;
-        onSuccess();
-      };
-      // `settleMutation` never rejects, so neither write needs a catch here.
+      // `settleMutation` never rejects, so the restock needs no catch here.
       promptPantryDuplicate({
         onRestock: () => {
           void restockExisting();
-        },
-        onAddAnyway: () => {
-          void addAnyway();
         },
       });
     };
 
     // Offline-first: the pantry answers "do I already stock this?" itself, so
-    // nothing is published and no doomed create is queued. This form sends an
-    // inline item and has no catalog id, so it matches on the name — the same
-    // resolution the server does — and only ever prompts, never acts on it.
-    const cachedDuplicate = findCachedPantryItemDuplicate(
-      client.cache,
-      pantryId,
-      {
-        itemName: itemName.trim(),
-      },
-    );
+    // nothing is published and no doomed create is queued. The server refuses
+    // only the item IN THAT UNIT, so the match is name plus unit id; a unit
+    // typed as free text is resolved server-side, which alone can judge it.
+    const cachedDuplicate = unitId
+      ? findCachedPantryItemDuplicate(client.cache, pantryId, {
+          itemName: itemName.trim(),
+          unitId,
+        })
+      : null;
     if (cachedDuplicate) {
-      // Nothing was published under this id; release the detail-read gate the
-      // force-add path re-claims for itself.
+      // Nothing was published under this id; release the detail-read gate.
       unconfirmedCreates.confirm(id);
       promptDuplicateRecovery(cachedDuplicate.existingPantryItemId);
       return;

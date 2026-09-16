@@ -5,7 +5,11 @@ import { clearSessionTokens, loadSessionTokens } from '#/storage/keychain';
 
 jest.mock('#/services/errorService');
 jest.mock('#/storage/mmkv');
-jest.mock('#/storage/keychain');
+// The store rehydrates on import, before any `beforeEach` can seed the load.
+jest.mock('#/storage/keychain', () => ({
+  ...jest.createMockFromModule<object>('#/storage/keychain'),
+  loadSessionTokens: jest.fn(() => Promise.resolve({ status: 'absent' })),
+}));
 
 describe('handleStoreRehydration', () => {
   it('recovers isHydrated and reports to telemetry when rehydration fails', async () => {

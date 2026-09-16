@@ -9,15 +9,14 @@ import { Icon } from '#utils/iconUtils';
 import { useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useInviteByToken } from '#features/shoppingList/hooks/useInviteByToken';
-import type { InvitationRefusal } from '#/domain/invitationRefusal';
-import { errorService, localizedErrorMessage } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation } from '#/i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { commonStyles } from '#/styles/commonStyles';
 import { Screen } from '#components/templates/Screen';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 export const AcceptInvite: React.FC = () => {
   const { t } = useTranslation();
@@ -49,36 +48,6 @@ export const AcceptInvite: React.FC = () => {
   const resolveInviteToken = (): string | undefined =>
     invitationType === 'unknown' ? undefined : token;
 
-  /**
-   * Copy per refusal reason. The account-mismatch sentence is reserved for the
-   * permission refusal that means it; a spent or revoked invite gets the copy
-   * written for that, rather than a sentence naming a cause it did not carry.
-   */
-  const reportRefusal = (
-    refusal: InvitationRefusal,
-    fallbackKey: TranslationKey,
-  ) => {
-    if (refusal === 'inviteeMismatch') {
-      alertService.alert(
-        t('invitationAcceptance.wrongAccountTitle'),
-        t('invitationAcceptance.wrongAccount'),
-      );
-      return;
-    }
-    if (refusal === 'unavailable' || refusal === 'alreadyResolved') {
-      alertService.alert(t('labels.error'), t('errors.invitationUnavailable'));
-      return;
-    }
-    if (refusal === 'invalid') {
-      alertService.alert(
-        t('labels.error'),
-        t('invitationAcceptance.invalidInvitation'),
-      );
-      return;
-    }
-    alertService.alert(t('labels.error'), t(fallbackKey));
-  };
-
   const handleAccept = () => {
     const inviteToken = resolveInviteToken();
 
@@ -90,41 +59,16 @@ export const AcceptInvite: React.FC = () => {
       return;
     }
 
-    void executeWithLoadingState(
-      async () => {
-        if (invitationType === 'unknown') {
-          alertService.alert(
-            t('labels.error'),
-            t('invitationAcceptance.unknownType'),
-          );
-          return;
-        }
-        const outcome = await accept(inviteToken);
-        if (!outcome.ok) {
-          reportRefusal(outcome.refusal, 'invitationAcceptance.acceptFailed');
-          return;
-        }
-        alertService.alert(
-          t('labels.success'),
-          invitationType === 'home'
-            ? t('invitationAcceptance.homeAccepted')
-            : t('invitationAcceptance.shoppingListAccepted'),
-          [{ text: t('labels.ok'), onPress: () => goBack() }],
-        );
-      },
-      setProcessing,
-      (error: unknown) => {
-        errorService.reportError(error, {
-          operation: 'AcceptInvite.acceptInvitation',
-        });
-        // Code-resolved copy: the server's message is unlocalizable English,
-        // and the precise version is in the report above either way.
-        alertService.alert(
-          t('labels.error'),
-          localizedErrorMessage(error, t('errors.acceptInviteFailed')),
-        );
-      },
-    );
+    void executeWithLoadingState(async () => {
+      if (!(await accept(inviteToken))) return;
+      alertService.alert(
+        t('labels.success'),
+        invitationType === 'home'
+          ? t('invitationAcceptance.homeAccepted')
+          : t('invitationAcceptance.shoppingListAccepted'),
+        [{ text: t('labels.ok'), onPress: () => goBack() }],
+      );
+    }, setProcessing);
   };
 
   const handleDecline = async () => {
@@ -147,26 +91,9 @@ export const AcceptInvite: React.FC = () => {
           text: t('labels.decline'),
           style: 'destructive',
           onPress: () => {
-            void executeWithLoadingState(
-              async () => {
-                const outcome = await decline(inviteToken);
-                if (!outcome.ok) {
-                  reportRefusal(
-                    outcome.refusal,
-                    'invitationAcceptance.declineFailed',
-                  );
-                  return;
-                }
-                goBack();
-              },
-              setProcessing,
-              () => {
-                alertService.alert(
-                  t('labels.error'),
-                  t('errors.declineInviteFailed'),
-                );
-              },
-            );
+            void executeWithLoadingState(async () => {
+              if (await decline(inviteToken)) goBack();
+            }, setProcessing);
           },
         },
       ],
@@ -213,6 +140,16 @@ export const AcceptInvite: React.FC = () => {
     );
   }
 
+  const inviter =
+    invitationType === 'home'
+      ? homeInviteDisplay?.inviter
+      : shoppingListInviteDisplay?.invitedBy;
+  const inviterDisplayName = firstNonBlank(
+    inviter?.profile?.displayName,
+    inviter?.email,
+  );
+  const inviterName = inviterDisplayName ?? t('labels.someone');
+
   return (
     <Screen header={{ close: () => goBack() }} scroll="list" gutter="none">
       <View style={styles.content}>
@@ -236,25 +173,19 @@ export const AcceptInvite: React.FC = () => {
         >
           {invitationType === 'home'
             ? t('invitationAcceptance.homeInviteText', {
-                inviter:
-                  homeInviteDisplay?.inviter?.profile?.displayName ||
-                  homeInviteDisplay?.inviter?.email ||
-                  t('labels.someone'),
+                inviter: inviterName,
               })
             : t('invitationAcceptance.listInviteText', {
-                inviter:
-                  shoppingListInviteDisplay?.invitedBy?.profile?.displayName ||
-                  shoppingListInviteDisplay?.invitedBy?.email ||
-                  t('labels.someone'),
+                inviter: inviterName,
               })}
         </Text>
 
         <View style={styles.inviteDetails}>
           <Text role="heading">
             {invitationType === 'home'
-              ? homeInviteDisplay?.home?.name ||
+              ? homeInviteDisplay?.home.name ??
                 t('invitationAcceptance.resourceHome')
-              : shoppingListInviteDisplay?.shoppingList?.name ||
+              : shoppingListInviteDisplay?.shoppingList.name ??
                 t('labels.shoppingList')}
           </Text>
           <Text role="caption" tone="secondary" style={styles.inviteType}>
@@ -271,14 +202,14 @@ export const AcceptInvite: React.FC = () => {
 
         {!!(
           invitationType === 'shopping_list' &&
-          shoppingListInviteDisplay?.shoppingList?.description
+          shoppingListInviteDisplay?.shoppingList.description
         ) && (
           <View style={styles.messageContainer}>
             <Text role="label" tone="secondary" style={styles.messageLabel}>
               {t('invitationAcceptance.descriptionLabel')}
             </Text>
             <Text role="body">
-              {shoppingListInviteDisplay?.shoppingList?.description}
+              {shoppingListInviteDisplay.shoppingList.description}
             </Text>
           </View>
         )}

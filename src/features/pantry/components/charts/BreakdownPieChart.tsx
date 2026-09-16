@@ -38,7 +38,7 @@ export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
   const { theme } = useUnistyles();
   const colors = brandFirstColors(theme);
   const chartData = (() => {
-    if (!data || data.length === 0) return [];
+    if (data.length === 0) return [];
     return data.map((item, index) => ({
       label: item.label,
       value: item.value,

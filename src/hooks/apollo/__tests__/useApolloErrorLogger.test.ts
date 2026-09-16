@@ -1,12 +1,5 @@
 'use no memo';
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    error: jest.fn(),
-    increment: jest.fn(),
-  },
-}));
-
 // The dev console-warn branch suppresses the per-component network-error wall
 // once the API is known-unavailable — default to "available".
 jest.mock('#store', () => ({

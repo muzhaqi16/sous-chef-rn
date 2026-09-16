@@ -61,7 +61,7 @@ export const LedgerTab: React.FC<
   const preferredCurrency = usePreferredCurrency();
 
   const ledgerPeriodData =
-    ledgerData?.periodData?.map(period => ({
+    ledgerData?.periodData.map(period => ({
       date: formatPeriod(period.periodLabel, ledgerGranularity),
       added: period.added,
       consumed: period.consumed,
@@ -69,7 +69,7 @@ export const LedgerTab: React.FC<
       net: period.net,
     })) ?? [];
   const topRestockedItemsData =
-    ledgerData?.topRestockedItems?.map(item => ({
+    ledgerData?.topRestockedItems.map(item => ({
       label: item.itemName,
       value: item.totalQuantity,
     })) ?? [];
@@ -125,7 +125,7 @@ export const LedgerTab: React.FC<
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.added')}
-          value={formatQuantityForDisplay(ledgerData?.summary?.totalAdded ?? 0)}
+          value={formatQuantityForDisplay(ledgerData?.summary.totalAdded ?? 0)}
           icon="add-circle-outline"
           uniProps={theme => ({ color: theme.colors.success })}
           subtitle={t('pantryAnalytics.totalQuantity')}
@@ -133,7 +133,7 @@ export const LedgerTab: React.FC<
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.consumed')}
           value={formatQuantityForDisplay(
-            ledgerData?.summary?.totalConsumed ?? 0,
+            ledgerData?.summary.totalConsumed ?? 0,
           )}
           icon="restaurant"
           uniProps={theme => ({ color: theme.colors.primary })}
@@ -144,22 +144,18 @@ export const LedgerTab: React.FC<
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.wasted')}
-          value={formatQuantityForDisplay(
-            ledgerData?.summary?.totalWasted ?? 0,
-          )}
+          value={formatQuantityForDisplay(ledgerData?.summary.totalWasted ?? 0)}
           icon="trash-outline"
           uniProps={theme => ({ color: theme.colors.error })}
           subtitle={t('pantryAnalytics.totalQuantity')}
         />
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.netChange')}
-          value={formatQuantityForDisplay(
-            ledgerData?.summary?.netQuantity ?? 0,
-          )}
+          value={formatQuantityForDisplay(ledgerData?.summary.netQuantity ?? 0)}
           icon="trending-up"
           uniProps={theme => ({
             color:
-              (ledgerData?.summary?.netQuantity ?? 0) >= 0
+              (ledgerData?.summary.netQuantity ?? 0) >= 0
                 ? theme.colors.success
                 : theme.colors.error,
           })}
@@ -171,13 +167,13 @@ export const LedgerTab: React.FC<
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.additions')}
-          value={ledgerData?.summary?.additionCount ?? 0}
+          value={ledgerData?.summary.additionCount ?? 0}
           icon="add-circle-outline"
           subtitle={t('pantryAnalytics.transactions')}
         />
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.consumptions')}
-          value={ledgerData?.summary?.consumptionCount ?? 0}
+          value={ledgerData?.summary.consumptionCount ?? 0}
           icon="remove-circle-outline"
           subtitle={t('pantryAnalytics.transactions')}
         />
@@ -274,68 +270,60 @@ export const LedgerTab: React.FC<
       </ChartSection>
 
       {/* Unit Breakdown - Additions */}
-      {!!ledgerData?.summary?.additionsByUnit &&
-        ledgerData.summary.additionsByUnit.length > 0 && (
-          <ChartSection
-            title={t('pantryAnalytics.additionsByUnit')}
-            loading={ledgerLoading}
-            error={ledgerError}
-            isEmpty={false}
-          >
-            <View style={styles.unitBreakdownList}>
-              {ledgerData.summary.additionsByUnit.map((unit, index) => (
-                <View
-                  key={unit.unitId || index}
-                  style={styles.unitBreakdownItem}
-                >
-                  <Text role="bodyStrong">
-                    {formatQuantityDisplay(
-                      unit.totalQuantity,
-                      unit.unitSymbol || unit.unitName,
-                    )}
-                  </Text>
-                  <Text role="caption" tone="secondary">
-                    {t('pantryAnalytics.transactionCount', {
-                      count: unit.count,
-                    })}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </ChartSection>
-        )}
+      {!!ledgerData && ledgerData.summary.additionsByUnit.length > 0 && (
+        <ChartSection
+          title={t('pantryAnalytics.additionsByUnit')}
+          loading={ledgerLoading}
+          error={ledgerError}
+          isEmpty={false}
+        >
+          <View style={styles.unitBreakdownList}>
+            {ledgerData.summary.additionsByUnit.map((unit, index) => (
+              <View key={unit.unitId || index} style={styles.unitBreakdownItem}>
+                <Text role="bodyStrong">
+                  {formatQuantityDisplay(
+                    unit.totalQuantity,
+                    unit.unitSymbol || unit.unitName,
+                  )}
+                </Text>
+                <Text role="caption" tone="secondary">
+                  {t('pantryAnalytics.transactionCount', {
+                    count: unit.count,
+                  })}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </ChartSection>
+      )}
 
       {/* Unit Breakdown - Consumption */}
-      {!!ledgerData?.summary?.consumptionByUnit &&
-        ledgerData.summary.consumptionByUnit.length > 0 && (
-          <ChartSection
-            title={t('pantryAnalytics.consumptionByUnit')}
-            loading={ledgerLoading}
-            error={ledgerError}
-            isEmpty={false}
-          >
-            <View style={styles.unitBreakdownList}>
-              {ledgerData.summary.consumptionByUnit.map((unit, index) => (
-                <View
-                  key={unit.unitId || index}
-                  style={styles.unitBreakdownItem}
-                >
-                  <Text role="bodyStrong">
-                    {formatQuantityDisplay(
-                      unit.totalQuantity,
-                      unit.unitSymbol || unit.unitName,
-                    )}
-                  </Text>
-                  <Text role="caption" tone="secondary">
-                    {t('pantryAnalytics.transactionCount', {
-                      count: unit.count,
-                    })}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </ChartSection>
-        )}
+      {!!ledgerData && ledgerData.summary.consumptionByUnit.length > 0 && (
+        <ChartSection
+          title={t('pantryAnalytics.consumptionByUnit')}
+          loading={ledgerLoading}
+          error={ledgerError}
+          isEmpty={false}
+        >
+          <View style={styles.unitBreakdownList}>
+            {ledgerData.summary.consumptionByUnit.map((unit, index) => (
+              <View key={unit.unitId || index} style={styles.unitBreakdownItem}>
+                <Text role="bodyStrong">
+                  {formatQuantityDisplay(
+                    unit.totalQuantity,
+                    unit.unitSymbol || unit.unitName,
+                  )}
+                </Text>
+                <Text role="caption" tone="secondary">
+                  {t('pantryAnalytics.transactionCount', {
+                    count: unit.count,
+                  })}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </ChartSection>
+      )}
 
       {/* Top Restocked Items */}
       <ChartSection

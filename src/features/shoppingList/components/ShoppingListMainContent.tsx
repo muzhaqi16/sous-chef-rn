@@ -297,7 +297,7 @@ export const ShoppingListMainContent: React.FC<
   };
   const selectedListHeader: ScreenHeaderConfig = {
     ...tabHeader,
-    title: currentList?.name || tabHeader.title,
+    title: currentList?.name ?? tabHeader.title,
     headerRight,
   };
 
@@ -609,7 +609,7 @@ export const ShoppingListMainContent: React.FC<
           } else if (
             tutorial.currentStep === ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX
           ) {
-            const firstItemId = rawUnpurchasedItems?.[0]?.id;
+            const firstItemId = rawUnpurchasedItems[0]?.id;
             if (firstItemId) {
               void handleTogglePurchase(firstItemId);
               tutorial.notifyCheckboxTapped();
@@ -621,7 +621,7 @@ export const ShoppingListMainContent: React.FC<
             // Opens the purchase-amount sheet; the tutorial advances only
             // once that sheet actually closes (wired in
             // ShoppingListModalsContext), not immediately on open.
-            const firstItemId = rawUnpurchasedItems?.[0]?.id;
+            const firstItemId = rawUnpurchasedItems[0]?.id;
             if (firstItemId) {
               openPurchaseAmount(firstItemId);
             }
@@ -634,7 +634,7 @@ export const ShoppingListMainContent: React.FC<
             tutorial.currentStep ===
             ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY
           ) {
-            const firstItemId = rawPurchasedItems?.[0]?.id;
+            const firstItemId = rawPurchasedItems[0]?.id;
             if (firstItemId) {
               openMoveToPantry(firstItemId);
               tutorial.notifyMoveToPantryTapped();

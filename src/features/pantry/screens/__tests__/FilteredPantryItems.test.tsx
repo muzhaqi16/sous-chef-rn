@@ -172,7 +172,7 @@ const mockExpiredItems = [
   },
 ];
 
-let mockAllItems: MockPantryItem[] | null = mockLowStockItems;
+let mockAllItems: MockPantryItem[] = mockLowStockItems;
 let mockLoading = false;
 let mockError: Error | undefined;
 let mockHasResult = true;
@@ -384,7 +384,7 @@ describe('FilteredPantryItems', () => {
 
     it('renders without crashing during loading', () => {
       mockLoading = true;
-      mockAllItems = null;
+      mockAllItems = [];
       renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
       expect(screen.getByText('Low Stock Items')).toBeTruthy();
     });

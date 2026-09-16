@@ -98,7 +98,7 @@ function FilterTabsComponent<T extends string = string>({
           <Pressable
             onPress={actionButton.disabled ? undefined : actionButton.onPress}
             testID={
-              actionButton.testID || kitTestIDs.filterTabAction(testIDPrefix)
+              actionButton.testID ?? kitTestIDs.filterTabAction(testIDPrefix)
             }
             style={styles.tab}
             disabled={actionButton.disabled}

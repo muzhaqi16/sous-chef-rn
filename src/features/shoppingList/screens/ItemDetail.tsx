@@ -15,7 +15,7 @@ import { GalleryHero } from '#features/catalog/ui/GalleryHero';
 import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
 import { FormattedItemSubtitle } from '#components/molecules/FormattedItemSubtitle';
 import { resolveImageUrl, galleryPhotos } from '#utils/imageUtils';
-import { parseNutritions, hasNutritionData } from '#domain/nutrition';
+import { hasNutritionData } from '#domain/nutrition';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -30,6 +30,7 @@ import {
 import { totalFromUnitPrice } from '#features/shoppingList/utils/purchasePrice';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 type RouteParams = {
   listId: string;
@@ -95,9 +96,9 @@ export const ShoppingListItemDetail: React.FC<
   );
 
   const itemPhotos = galleryPhotos(item?.item?.photos);
-  const itemNutritions = parseNutritions(item?.item?.nutritions);
+  const nutritionFacts = item?.item?.nutritionFacts ?? null;
   const showImages = itemPhotos.length > 0;
-  const showNutrition = hasNutritionData(itemNutritions);
+  const showNutrition = hasNutritionData(nutritionFacts);
 
   if (!item) {
     return (
@@ -132,8 +133,8 @@ export const ShoppingListItemDetail: React.FC<
   // Purchase History — the lightweight summary (count / last date); the full
   // list is fetched on demand by the PurchaseHistory screen.
   const purchaseHistory = item.purchaseHistory;
-  const purchaseCount = purchaseHistory?.purchaseCount ?? 0;
-  const hasPurchases = purchaseHistory?.previouslyPurchased ?? false;
+  const purchaseCount = purchaseHistory.purchaseCount;
+  const hasPurchases = purchaseHistory.previouslyPurchased;
 
   const handleViewHistory = () => {
     toPurchaseHistory({
@@ -150,14 +151,17 @@ export const ShoppingListItemDetail: React.FC<
         },
         {
           label: t('shoppingListScreens.mostRecentPurchase'),
-          value: purchaseHistory?.lastPurchaseDate
+          value: purchaseHistory.lastPurchaseDate
             ? formatDate(purchaseHistory.lastPurchaseDate)
             : 'N/A',
         },
       ]
     : [];
 
-  const unitSymbol = item.unitName || item.item?.displayUnit?.symbol;
+  const unitSymbol = firstNonBlank(
+    item.unitName,
+    item.item?.displayUnit?.symbol,
+  );
 
   // Priority is stored as an Int (0 low, 1 medium, 2 high); map it back to the
   // localized label so the detail matches the form's segmented control instead
@@ -167,13 +171,13 @@ export const ShoppingListItemDetail: React.FC<
     ? t(priorityLabelKey(priorityOption))
     : null;
 
-  const estimatedPrice = item.priceEstimate?.estimated;
-  const preferredStoreName = item.storeInfo?.preferredStore?.name;
+  const estimatedPrice = item.priceEstimate.estimated;
+  const preferredStoreName = item.storeInfo.preferredStore?.name;
 
   // The API stores the price PER UNIT; the shopper entered the total. Show the
   // total they paid, with the split beneath it when it is not the same number.
-  const purchasedQuantity = item.purchaseInfo?.purchasedQuantity ?? null;
-  const perUnitPaid = item.purchaseInfo?.isPurchased
+  const purchasedQuantity = item.purchaseInfo.purchasedQuantity ?? null;
+  const perUnitPaid = item.purchaseInfo.isPurchased
     ? item.purchaseInfo.purchasedPrice ?? null
     : null;
   const purchasedTotal =
@@ -232,7 +236,7 @@ export const ShoppingListItemDetail: React.FC<
           style={styles.titleRow}
         />
 
-        {!!item.purchaseInfo?.isPurchased && (
+        {!!item.purchaseInfo.isPurchased && (
           <View style={styles.statusBadge}>
             <Icon name="checkmark-circle" size={18} tone="success" />
             <Text role="label" tone="success" style={styles.statusBadgeText}>
@@ -270,7 +274,7 @@ export const ShoppingListItemDetail: React.FC<
               <Text role="label">{money(estimatedPrice)}</Text>
             </DetailRow>
           )}
-          {!!item.purchaseInfo?.isPurchased &&
+          {!!item.purchaseInfo.isPurchased &&
             item.purchaseInfo.purchasedQuantity != null && (
               <DetailRow label={t('shoppingListScreens.purchased')}>
                 <FormattedItemSubtitle
@@ -299,12 +303,13 @@ export const ShoppingListItemDetail: React.FC<
               </View>
             </DetailRow>
           )}
-          {!!item.purchaseInfo?.isPurchased &&
+          {!!item.purchaseInfo.isPurchased &&
             !!item.purchaseInfo.purchasedBy && (
               <DetailRow label={t('shoppingListScreens.purchasedBy')}>
                 <Text role="label">
-                  {item.purchaseInfo.purchasedBy.profile?.displayName ||
-                    t('labels.someone')}
+                  {firstNonBlank(
+                    item.purchaseInfo.purchasedBy.profile?.displayName,
+                  ) ?? t('labels.someone')}
                 </Text>
               </DetailRow>
             )}
@@ -331,7 +336,7 @@ export const ShoppingListItemDetail: React.FC<
         {!!showNutrition && (
           <DetailSection title={t('dietary.nutritionGoals')}>
             <NutritionSummary
-              nutritions={itemNutritions}
+              nutritionFacts={nutritionFacts}
               showHighlights
               compact
             />
@@ -351,9 +356,10 @@ export const ShoppingListItemDetail: React.FC<
           {!!item.addedBy && (
             <DetailRow label={t('shoppingListScreens.addedBy')}>
               <Text role="label">
-                {item.addedBy.profile?.displayName ||
-                  item.addedBy.email ||
-                  t('labels.someone')}
+                {firstNonBlank(
+                  item.addedBy.profile?.displayName,
+                  item.addedBy.email,
+                ) ?? t('labels.someone')}
               </Text>
             </DetailRow>
           )}
@@ -373,12 +379,12 @@ export const ShoppingListItemDetail: React.FC<
               <Text role="label">{formatDate(item.updatedAt)}</Text>
             </DetailRow>
           )}
-          {!!item.source?.isAutoAdded && (
+          {!!item.source.isAutoAdded && (
             <DetailRow label={t('shoppingListScreens.autoAdded')}>
               <Text role="label">{t('labels.yes')}</Text>
             </DetailRow>
           )}
-          {!!item.source?.isFromMealPlan && (
+          {!!item.source.isFromMealPlan && (
             <DetailRow label={t('shoppingListScreens.fromMealPlan')}>
               <Text role="label">{t('labels.yes')}</Text>
             </DetailRow>

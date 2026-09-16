@@ -40,7 +40,7 @@ const mockedPerformance = performance as jest.Mocked<typeof performance>;
 
 // The mock operation/forward are intentionally partial fixtures.
 interface MockOperation {
-  operationName: string;
+  operationName: string | undefined;
   query: {
     definitions: Array<{ kind: string; operation: string }>;
   };
@@ -678,7 +678,7 @@ describe('createTelemetryLink', () => {
 
       const link = createTelemetryLink();
       const operation: MockOperation = {
-        operationName: '',
+        operationName: undefined,
         query: {
           definitions: [{ kind: 'OperationDefinition', operation: 'query' }],
         },

@@ -400,7 +400,10 @@
   },
   "storageLocationCard": {
     "default": "Default",
-    "insideParent": "Inside {{parent}}"
+    "insideParent": "Inside {{parent}}",
+    "capacityWithUnit": "/ {{capacity}} {{unit}}",
+    "capacity_one": "/ {{count}} unit",
+    "capacity_other": "/ {{count}} units"
   },
   "itemSubtitle": {
     "percentRemaining": "({{percent}}% remaining)",
@@ -437,6 +440,8 @@
     "VOLUME": "Volume"
   },
   "multiSelect": {
-    "noneSelected": "No items selected"
+    "noneSelected": "No items selected",
+    "selectedCount_one": "{{count}} item selected",
+    "selectedCount_other": "{{count}} items selected"
   }
 }

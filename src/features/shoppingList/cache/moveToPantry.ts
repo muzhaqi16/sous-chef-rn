@@ -55,9 +55,9 @@ export function removeItemFromShoppingListForMoveToPantry(
     // then the update callback) and `edges.filter` is idempotent while `-1` is not.
     // Two passes because `cache.modify` visits fields in the STORE's order.
     const change = recordListCounters(cache, listId, () => {
-      let removed = false;
-
-      cache.modify({
+      // `modify` reports true only when a modifier returned something other than
+      // `existing`, so every no-op path below must return `existing` itself.
+      const removed = cache.modify({
         id: parentCacheId,
         fields: {
           itemsConnection(
@@ -71,11 +71,10 @@ export function removeItemFromShoppingListForMoveToPantry(
               return existing;
 
             const edges = existing.edges.filter(
-              edge => readField<string>('id', edge?.node) !== itemId,
+              edge => readField<string>('id', edge.node) !== itemId,
             );
             if (edges.length === existing.edges.length) return existing;
 
-            removed = true;
             return {
               ...existing,
               edges,
@@ -159,9 +158,7 @@ export function restoreItemToShoppingListAfterMoveToPantry(
     // Same two-pass shape as the remove: the counters follow the edge insert
     // rather than assuming it, since this runs from the withdrawal AND the revert.
     const restore = () => {
-      let restored = false;
-
-      cache.modify({
+      const restored = cache.modify({
         id: parentCacheId,
         fields: {
           itemsConnection(
@@ -176,7 +173,7 @@ export function restoreItemToShoppingListAfterMoveToPantry(
 
             // Idempotent: a withdrawal that runs twice must not duplicate the row.
             const alreadyThere = existing.edges.some(
-              edge => readField<string>('id', edge?.node) === itemId,
+              edge => readField<string>('id', edge.node) === itemId,
             );
             if (alreadyThere) return existing;
 
@@ -186,7 +183,6 @@ export function restoreItemToShoppingListAfterMoveToPantry(
             });
             if (!node) return existing;
 
-            restored = true;
             return {
               ...existing,
               edges: [

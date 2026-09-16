@@ -18,7 +18,7 @@ import {
 /**
  * The shape `ItemByUpcFilter` normalizes after a barcode scan: real catalog
  * values for `imageUrl`, `shelfLifeDays`, `shelfLifeOpenedDays` and
- * `categories`, but no `images` and no `nutritions`.
+ * `categories`, but no `images` and no `nutritionFacts`.
  */
 function seedScannedItem(cache: ReturnType<typeof makeCache>, id: string) {
   cache.writeFragment({

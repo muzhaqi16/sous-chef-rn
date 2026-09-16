@@ -433,30 +433,4 @@ describe('useDietaryProfile', () => {
 
     expect(success).toBe(true);
   });
-
-  it('provides defaults for missing profile fields', async () => {
-    const sparseProfile: Partial<ProfileMockOverrides> = {
-      ...mockProfileData,
-      id: 'dp-2',
-      restrictions: null,
-      preferredCuisines: null,
-      dislikedIngredients: null,
-      favoriteIngredients: null,
-      mealsPerDay: null,
-      snacksPerDay: null,
-    };
-
-    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
-      operationMocks: [buildGetProfileMock(sparseProfile)],
-    });
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
-
-    expect(result.current.profile?.restrictions).toEqual([]);
-    expect(result.current.profile?.preferredCuisines).toEqual([]);
-    expect(result.current.profile?.mealsPerDay).toBe(3);
-    expect(result.current.profile?.snacksPerDay).toBe(1);
-  });
 });

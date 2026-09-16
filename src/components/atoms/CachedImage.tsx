@@ -51,6 +51,11 @@ const MAX_LOADED_URIS = 500;
 // doesn't flicker on recycle.
 const IMAGE_FADE_MS = 200;
 
+// `flatten` returns `undefined` for an absent style, which its type omits.
+const flattenImageStyle = (
+  style: StyleProp<ImageStyle>,
+): ImageStyle | undefined => StyleSheet.flatten(style);
+
 export const CachedImage = ({
   uri,
   style,
@@ -107,8 +112,9 @@ export const CachedImage = ({
   const source = { uri };
   const isPreloaded = loadedUris.has(uri);
 
-  const flat = StyleSheet.flatten(style);
-  const borderRadius = (flat?.borderRadius as number) ?? 0;
+  const flat = flattenImageStyle(style);
+  const borderRadius =
+    typeof flat?.borderRadius === 'number' ? flat.borderRadius : 0;
   const innerRadius =
     borderRadius > 0 ? Math.max(borderRadius - (flat?.borderWidth ?? 0), 0) : 0;
   const radiusOverride: ViewStyle | undefined =

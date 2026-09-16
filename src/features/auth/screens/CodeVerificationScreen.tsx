@@ -258,7 +258,7 @@ export function CodeVerificationScreen({
         subtitle={
           <>
             {t('auth.enterCodeSubtitlePrefix')}{' '}
-            <Text role="bodyStrong">{targetEmail || t('auth.yourEmail')}</Text>
+            <Text role="bodyStrong">{targetEmail ?? t('auth.yourEmail')}</Text>
             {t('auth.enterCodeSubtitleSuffix')}
           </>
         }

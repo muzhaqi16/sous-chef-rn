@@ -127,10 +127,6 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: { clearType: jest.fn() },
 }));
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: { trackEvent: jest.fn() },
-}));
-
 jest.mock('#features/shoppingList/utils/shoppingListPermissions', () => ({
   getShoppingListPermissionsWithOwner: jest.fn(() => ({
     canAddItems: true,

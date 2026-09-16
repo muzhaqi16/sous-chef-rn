@@ -9,6 +9,10 @@ import {
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseFractionalInput } from '#/utils/fractionUtils';
+import {
+  formatQuantityForInput,
+  type QuantityNotation,
+} from '#/utils/formatQuantity';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
@@ -24,6 +28,8 @@ interface EditableCounterProps {
   step?: number;
   disabled?: boolean;
   required?: boolean;
+  /** How a stepped value is written; `decimal` for a field whose parser rejects `/`. */
+  notation?: QuantityNotation;
   testID?: string;
 }
 
@@ -38,6 +44,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
   step = 1,
   disabled = false,
   required = false,
+  notation = 'mixed',
   testID,
 }) => {
   const { t } = useTranslation();
@@ -54,19 +61,19 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
   styles.useVariants({ focused: isFocused, disabled, error: !!error });
 
   const handleIncrement = (e?: GestureResponderEvent) => {
-    e?.stopPropagation?.();
+    e?.stopPropagation();
     if (disabled) return;
     const currentValue = parseFractionalInput(value) ?? 0;
-    const newValue = currentValue + step;
-    onChangeText(String(newValue));
+    onChangeText(formatQuantityForInput(currentValue + step, { notation }));
   };
 
   const handleDecrement = (e?: GestureResponderEvent) => {
-    e?.stopPropagation?.();
+    e?.stopPropagation();
     if (disabled) return;
     const currentValue = parseFractionalInput(value) ?? 0;
-    const newValue = Math.max(min, currentValue - step);
-    onChangeText(String(newValue));
+    onChangeText(
+      formatQuantityForInput(Math.max(min, currentValue - step), { notation }),
+    );
   };
 
   return (
@@ -77,7 +84,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
         accessible
         accessibilityRole="adjustable"
         accessibilityLabel={t('a11y.counterValue', {
-          label: label || t('labels.quantity'),
+          label: label ?? t('labels.quantity'),
           value,
         })}
         accessibilityValue={{

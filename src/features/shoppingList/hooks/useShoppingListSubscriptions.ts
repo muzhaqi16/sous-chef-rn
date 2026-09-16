@@ -109,9 +109,9 @@ function resortEdges(
             const nodeA = readField<Reference>('node', a);
             const nodeB = readField<Reference>('node', b);
             const sortA =
-              (nodeA ? readField<string>('sortOrder', nodeA) : '') || '';
+              (nodeA ? readField<string>('sortOrder', nodeA) : '') ?? '';
             const sortB =
-              (nodeB ? readField<string>('sortOrder', nodeB) : '') || '';
+              (nodeB ? readField<string>('sortOrder', nodeB) : '') ?? '';
             if (sortA < sortB) return -1;
             if (sortA > sortB) return 1;
             return 0;
@@ -166,7 +166,7 @@ export function useShoppingListSubscriptions(
   scheduleAnimation?: ScheduleAnimationFn,
   scheduleEntryAnimation?: ScheduleEntryAnimationFn,
 ) {
-  const selectedShoppingListId = useSelectedShoppingListId() || undefined;
+  const selectedShoppingListId = useSelectedShoppingListId() ?? undefined;
   const rejected = useSubscriptionRejected(MyShoppingListsEventsDocument);
 
   /**
@@ -332,8 +332,6 @@ export function useShoppingListSubscriptions(
         payload: MyShoppingListsEventsPayload,
         client: SubscriptionApolloClient,
       ) => {
-        if (!payload) return;
-
         if (__DEV__) {
           logger.debug(
             `📊 [Subscription] MyShoppingListsEvents: subtype=${payload.subtype} mutation=${payload.mutation} listId=${payload.listId}`,

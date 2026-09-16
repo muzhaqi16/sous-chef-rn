@@ -11,8 +11,8 @@ import { toastService } from '#/services/toastService';
 import {
   SuggestionSurface,
   type ItemSuggestion,
-  type StorageLocation,
 } from '#/graphql/generated/schemaTypes';
+import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
 import { AddItemSheet } from '#features/catalog/ui/AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '#features/catalog/ui/AddItemSheet/useAddItemSheetState';
@@ -72,9 +72,9 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   );
 
   // Storage locations read on-demand from cache (no active watcher)
-  const [storageLocations, setStorageLocations] = useState<StorageLocation[]>(
-    [],
-  );
+  const [storageLocations, setStorageLocations] = useState<
+    readonly StorageLocationOption[]
+  >([]);
 
   // Track items currently being added to prevent duplicate rapid-fire mutations
   const pendingItemIds = useRef(new Set<string>());

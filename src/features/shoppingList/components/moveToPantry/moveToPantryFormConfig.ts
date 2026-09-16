@@ -24,7 +24,7 @@ export const moveToPantrySchema: ObjectSchema<MoveToPantryFormValues> = object({
   quantityInput: string()
     .defined()
     .test('positive', msg('errors.invalidQuantity'), value => {
-      const parsed = parseFractionalInput(value ?? '');
+      const parsed = parseFractionalInput(value);
       return parsed !== null && !Number.isNaN(parsed) && parsed > 0;
     }),
   // A unit is chosen from the catalog OR typed; either satisfies the field, so

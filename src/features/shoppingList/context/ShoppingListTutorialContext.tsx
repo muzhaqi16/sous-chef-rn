@@ -117,7 +117,7 @@ export const TUTORIAL_STEP_CONFIG: Partial<
 interface ShoppingListTutorialStateContextValue {
   currentStep: ShoppingListTutorialStep;
   isActive: boolean;
-  rects: Record<string, TargetRect | null>;
+  rects: Partial<Record<TutorialRectKey, TargetRect | null>>;
 }
 
 interface ShoppingListTutorialActionsContextValue {
@@ -189,7 +189,9 @@ export function ShoppingListTutorialProvider({
   const [currentStep, setCurrentStep] = useState(ShoppingListTutorialStep.IDLE);
   const [hasStarted, setHasStarted] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [rects, setRects] = useState<Record<string, TargetRect | null>>({});
+  const [rects, setRects] = useState<
+    Partial<Record<TutorialRectKey, TargetRect | null>>
+  >({});
 
   // `advanceTo` schedules an 800ms timer to clear isTransitioning; hold it so
   // unmount can cancel it.

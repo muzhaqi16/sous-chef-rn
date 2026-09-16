@@ -8,5 +8,5 @@ export function useShoppingListsForMealPlan(skip: boolean) {
     skip,
   });
 
-  return { shoppingLists: data?.shoppingLists?.edges?.map(e => e.node) ?? [] };
+  return { shoppingLists: data?.shoppingLists.edges.map(e => e.node) ?? [] };
 }

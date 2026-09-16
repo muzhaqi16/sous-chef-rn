@@ -5,10 +5,8 @@ import {
   calculateExpiresIn,
   getLocation,
   getExpirationStatus,
-  getCategoryEmoji,
   formatPackageBreakdown,
   formatPackageBreakdownFull,
-  formatNetWeight,
   formatNetWeightDisplay,
   formatQuantityBreakdown,
 } from '../usePantryItemTransformation';
@@ -111,22 +109,6 @@ describe('getExpirationStatus', () => {
   });
 });
 
-describe('getCategoryEmoji', () => {
-  it('returns correct emoji for known categories', () => {
-    expect(getCategoryEmoji('dairy')).toBe('\uD83E\uDD5B');
-    expect(getCategoryEmoji('meat')).toBe('\uD83E\uDD69');
-  });
-  it('returns default emoji for unknown category', () => {
-    expect(getCategoryEmoji('unknown')).toBe('\uD83D\uDCE6');
-  });
-  it('returns default emoji for null', () => {
-    expect(getCategoryEmoji(null)).toBe('\uD83D\uDCE6');
-  });
-  it('is case-insensitive', () => {
-    expect(getCategoryEmoji('DAIRY')).toBe('\uD83E\uDD5B');
-  });
-});
-
 describe('formatPackageBreakdown', () => {
   it('returns null for null breakdown', () => {
     expect(formatPackageBreakdown(null)).toBeNull();
@@ -140,19 +122,21 @@ describe('formatPackageBreakdown', () => {
     });
     expect(result).toBe('12 x 12 oz cans');
   });
+  it('writes a fractional per-unit weight as a decimal', () => {
+    const result = formatPackageBreakdown({
+      count: 4,
+      contentUnit: { name: 'cans' },
+      perUnitNetWeight: 14.5,
+      perUnitNetWeightUnit: { symbol: 'oz' },
+    });
+    expect(result).toBe('4 x 14.5 oz cans');
+  });
   it('formats breakdown without per-unit weight', () => {
     const result = formatPackageBreakdown({
       count: 6,
       contentUnit: { name: 'bottles', symbol: 'btl' },
     });
     expect(result).toBe('6 btl');
-  });
-  it('uses remainingContentUnits when provided', () => {
-    const result = formatPackageBreakdown(
-      { count: 12, contentUnit: { name: 'cans' } },
-      9,
-    );
-    expect(result).toBe('9 cans');
   });
 });
 
@@ -169,15 +153,6 @@ describe('formatPackageBreakdownFull', () => {
       totalNetWeight: 144,
     });
     expect(result).toBe('12 x 12 oz cans (144 oz total)');
-  });
-});
-
-describe('formatNetWeight', () => {
-  it('returns null for no weight', () => {
-    expect(formatNetWeight(null)).toBeNull();
-  });
-  it('formats with unit symbol', () => {
-    expect(formatNetWeight(14.5, { symbol: 'oz' })).toBe('14.5oz ea');
   });
 });
 

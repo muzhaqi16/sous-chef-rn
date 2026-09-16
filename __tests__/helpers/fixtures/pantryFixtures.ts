@@ -25,7 +25,8 @@ export interface PantryItemFixture {
 export interface StorageLocationFixture {
   id: string;
   name?: string;
-  type?: string;
+  type?: StorageType;
+  temperature?: StorageState | null;
 }
 
 export interface PantryFixture {
@@ -116,9 +117,10 @@ function storageLocationNode(loc: StorageLocationFixture) {
     __typename: 'StorageLocation' as const,
     id: loc.id,
     name: loc.name ?? `Location ${loc.id}`,
-    type: (loc.type as StorageType | undefined) ?? StorageType.PantryShelf,
+    type: loc.type ?? StorageType.PantryShelf,
     icon: null,
     color: null,
+    temperature: loc.temperature ?? null,
     isDefault: false,
     currentItemCount: 0,
     parentLocation: null,

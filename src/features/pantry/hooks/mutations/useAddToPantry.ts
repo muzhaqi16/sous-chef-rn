@@ -7,7 +7,6 @@ import {
   type GetPantryQuery,
   type GetPantryItemSuggestionsQuery,
 } from '#features/pantry/graphql/pantry.generated';
-import type { StorageLocation } from '#/graphql/generated/schemaTypes';
 import {
   addPantryItemLocally,
   addToPantryItemsCache,
@@ -60,7 +59,7 @@ export function useAddToPantry({
       const pantryItem = payload.pantryItem;
       // Read outside the try: `?.` is a value block, and one inside a try body
       // bails the React Compiler out of the whole function.
-      const clientId = variables?.input?.id;
+      const clientId = variables?.input.id;
 
       try {
         // NOT the counting helper: the eager write already counted this row.
@@ -119,14 +118,12 @@ export function useAddToPantry({
   };
 
   /** The pantry's storage locations, read once from cache with no watcher. */
-  const readStorageLocations = (): StorageLocation[] => {
+  const readStorageLocations = () => {
     const cached = client.readQuery<GetPantryQuery>({
       query: GetPantryDocument,
       variables: { id: pantryId ?? '' },
     });
-    return extractNodes(
-      cached?.pantry?.storageLocationsConnection,
-    ) as StorageLocation[];
+    return extractNodes(cached?.pantry?.storageLocationsConnection);
   };
 
   /** Does this pantry already stock the item, as far as the cache knows? */

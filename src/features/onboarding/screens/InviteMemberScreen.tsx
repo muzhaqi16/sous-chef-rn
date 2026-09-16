@@ -115,7 +115,7 @@ export const InviteMemberScreen = () => {
               homeId: selectedHomeId,
               shoppingListId: selectedShoppingListId,
               message: t('inviteMembers.inviteHomeMessage', {
-                name: user?.email || t('labels.someone'),
+                name: user?.email ?? t('labels.someone'),
               }),
             },
           );

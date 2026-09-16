@@ -128,7 +128,7 @@ export function useUpdatePantryItemQuantity({
               // this string itself and rejects a comma decimal outright.
               quantity: normalizeNumericTextForApi(quantityText),
               unitId: unitId,
-              version: currentItem.version ?? undefined,
+              version: currentItem.version,
             },
           },
           // Queue offline / on API-down — replays via the idempotent SyncPantryItem.

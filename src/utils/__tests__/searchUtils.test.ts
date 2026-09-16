@@ -1,42 +1,24 @@
-import {
-  createItemNameSearch,
-  createCategorySearch,
-  pantryItemSearch,
-  shoppingListItemSearch,
-} from '../searchUtils';
-
-describe('createItemNameSearch', () => {
-  it('matches case-insensitively', () => {
-    expect(createItemNameSearch({ itemName: 'Apple' }, 'apple')).toBe(true);
-    expect(createItemNameSearch({ itemName: 'apple' }, 'APPLE')).toBe(true);
-  });
-
-  it('matches partial strings', () => {
-    expect(createItemNameSearch({ itemName: 'Green Apple' }, 'app')).toBe(true);
-  });
-
-  it('returns false for no match', () => {
-    expect(createItemNameSearch({ itemName: 'Apple' }, 'banana')).toBe(false);
-  });
-
-  it('returns false for null itemName', () => {
-    expect(createItemNameSearch({ itemName: null }, 'apple')).toBe(false);
-  });
-
-  it('returns false for empty query', () => {
-    expect(createItemNameSearch({ itemName: 'Apple' }, '')).toBe(false);
-  });
-});
-
-describe('createCategorySearch', () => {
-  it('matches category case-insensitively', () => {
-    expect(createCategorySearch({ category: 'Fruits' }, 'fruit')).toBe(true);
-  });
-});
+import { pantryItemSearch, shoppingListItemSearch } from '../searchUtils';
 
 describe('pantryItemSearch', () => {
   it('matches by itemName', () => {
     expect(pantryItemSearch({ itemName: 'Apple' }, 'app')).toBe(true);
+  });
+
+  it('matches case-insensitively', () => {
+    expect(pantryItemSearch({ itemName: 'apple' }, 'APPLE')).toBe(true);
+  });
+
+  it('matches a one-character typo', () => {
+    expect(pantryItemSearch({ itemName: 'Tomato' }, 'tomatoe')).toBe(true);
+  });
+
+  it('returns false for no match', () => {
+    expect(pantryItemSearch({ itemName: 'Apple' }, 'banana')).toBe(false);
+  });
+
+  it('returns false for a null itemName', () => {
+    expect(pantryItemSearch({ itemName: null }, 'apple')).toBe(false);
   });
 
   it('returns true for empty query', () => {

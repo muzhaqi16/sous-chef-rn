@@ -27,6 +27,7 @@
       "offline": "Jeni jashtë linje. Po shfaqen të dhënat e ruajtura kur janë të disponueshme.",
       "operationNotAllowed": "Ky veprim nuk është i disponueshëm tani.",
       "pantryItemAlreadyExists": "Ky artikull është tashmë në qilarin tuaj",
+      "insufficientQuantity": "Kjo është më shumë se sa ka mbetur nga ky artikull në qilar",
       "quotaExceeded": "Keni tejkaluar kufirin tuaj të përdorimit",
       "rangeInvalid": "Vlera është jashtë intervalit të lejuar",
       "rateLimitBlocked": "Shumë kërkesa. Prisni një moment dhe provoni sërish.",
@@ -698,7 +699,10 @@
     "choosePhoto": "Zgjidh një foto",
     "openProfile": "Hap profilin tënd",
     "resetCrop": "Rivendos prerjen",
-    "notificationSettings": "Cilësimet e njoftimeve"
+    "notificationSettings": "Cilësimet e njoftimeve",
+    "requiredField": "{{label}}, i detyrueshëm",
+    "fieldError": "Gabim: {{error}}",
+    "hintWithError": "{{hint}}. {{error}}"
   },
   "toasts": {
     "noLowStockItems": "Nuk u gjet asnjë artikull me stok të ulët",

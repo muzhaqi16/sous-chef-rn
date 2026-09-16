@@ -319,7 +319,7 @@ function handleTemplateItemChanged(
  * @param userId - Current user ID, for self-echo filtering and deduplication
  */
 export function useMealPlanSubscriptions(userId?: string) {
-  const selectedHomeId = useSelectedHomeId() || undefined;
+  const selectedHomeId = useSelectedHomeId() ?? undefined;
   const isHomeSelectionReady = useIsHomeSelectionReady();
   const rejected = useSubscriptionRejected(MealPlanEventsDocument);
 
@@ -335,8 +335,6 @@ export function useMealPlanSubscriptions(userId?: string) {
       payload: MealPlanEventsPayload,
       client: SubscriptionApolloClient,
     ) => {
-      if (!payload) return;
-
       // This device's own writes already updated the cache locally — replaying
       // them here would fight the local-first path (re-adding a row mid-delete,
       // say). Keyed on the device, so the user's other devices still update.

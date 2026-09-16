@@ -72,7 +72,9 @@ export function useTranslation(options?: UseTranslationOptions<undefined>) {
  */
 export function getResolvedLanguage(): string {
   const i18n = getI18n();
-  return (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0] ?? 'en';
+  // `init` runs synchronously with inline resources, so `language` is set by
+  // the time `getI18n()` is reachable.
+  return (i18n.resolvedLanguage ?? i18n.language).split('-')[0] ?? 'en';
 }
 
 /**

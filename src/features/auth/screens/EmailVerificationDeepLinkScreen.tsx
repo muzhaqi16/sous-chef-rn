@@ -220,7 +220,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
                   that account signs in from here. */}
               {!userId
                 ? t('auth.emailVerifiedSignIn')
-                : user?.onBoarded
+                : user.onBoarded
                 ? t('auth.emailVerifiedCanAccess')
                 : t('auth.emailVerifiedCompleteSetup')}
             </Text>

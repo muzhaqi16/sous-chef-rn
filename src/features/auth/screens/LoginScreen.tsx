@@ -349,7 +349,7 @@ export function LoginScreen(): React.JSX.Element {
         visible={showRememberMeModal}
         onAccept={handleRememberMeAccept}
         onDecline={handleRememberMeDecline}
-        email={pendingCredentials?.email || ''}
+        email={pendingCredentials?.email ?? ''}
       />
     </AuthWrapper>
   );

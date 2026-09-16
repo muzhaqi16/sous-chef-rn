@@ -42,12 +42,12 @@ export const useAppSettings = () => {
 
   const getAppSettings = (): AppSettings => {
     return {
-      theme: settings?.theme || AppTheme.System,
+      theme: settings?.theme ?? AppTheme.System,
       compactMode: settings?.compactMode ?? false,
       showTutorials: settings?.showTutorials ?? true,
       autoSync: settings?.autoSync ?? true,
       offlineMode: settings?.offlineMode ?? false,
-      preferredUnitSystem: settings?.preferredUnitSystem || UnitSystem.Metric,
+      preferredUnitSystem: settings?.preferredUnitSystem ?? UnitSystem.Metric,
       enabledFeatures: settings?.enabledFeatures ?? [],
       betaFeatures: settings?.betaFeatures ?? [],
     };

@@ -70,10 +70,6 @@ jest.mock('#/services/toastService', () => ({
   },
 }));
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: { trackEvent: jest.fn() },
-}));
-
 jest.mock('#/utils/finallyHelpers');
 
 // Deterministic client-minted cooking-log id so we can assert the consumption

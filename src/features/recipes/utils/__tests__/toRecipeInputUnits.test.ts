@@ -10,6 +10,8 @@ import type { RecipeInformation } from '#/services/spoonacular/types';
 const recipe = {
   id: 1,
   title: 'Inside-Out Lasagna',
+  summary: '',
+  cuisines: [],
   servings: 4,
   extendedIngredients: [
     {

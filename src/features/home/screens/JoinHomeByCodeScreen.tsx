@@ -18,6 +18,7 @@ import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Screen } from '#components/templates/Screen';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /**
  * Join a home via share link or a typed code. Mirrors
@@ -25,7 +26,7 @@ import { Screen } from '#components/templates/Screen';
  * user sees the home name and counts before committing.
  */
 export const JoinHomeByCodeScreen: React.FC<
-  StaticScreenProps<{ joinCode?: string }>
+  StaticScreenProps<{ joinCode?: string } | undefined>
 > = ({ route }) => {
   const { t } = useTranslation();
   const { goBack, toPantryMain } = useAppNavigation();
@@ -80,7 +81,7 @@ export const JoinHomeByCodeScreen: React.FC<
         toPantryMain();
         toastService.success(
           t('labels.joined', {
-            name: home?.name || t('joinHome.homeFallback'),
+            name: firstNonBlank(home?.name) ?? t('joinHome.homeFallback'),
           }),
         );
       },

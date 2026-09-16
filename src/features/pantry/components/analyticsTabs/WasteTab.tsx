@@ -35,16 +35,17 @@ export const WasteTab: React.FC<
   const money = useMoney();
 
   const wasteReasonData =
-    wasteData?.wasteByReason?.map(item => ({
+    wasteData?.wasteByReason.map(item => ({
       label: formatReason(item.reason, t),
       value: item.count,
       percentage: item.percentage,
     })) ?? [];
   const topWastedItemsData =
-    wasteData?.topWastedItems?.map(item => ({
+    wasteData?.topWastedItems.map(item => ({
       label: item.itemName,
       value: item.count,
-      secondaryValue: item.estimatedValue ?? undefined,
+      secondaryLabel:
+        item.estimatedValue == null ? undefined : money(item.estimatedValue),
     })) ?? [];
 
   if (wasteOffline) {
@@ -111,7 +112,7 @@ export const WasteTab: React.FC<
         title={t('pantryAnalytics.wasteTrend')}
         loading={wasteLoading}
         error={wasteError}
-        isEmpty={!wasteData?.wasteTrend?.length}
+        isEmpty={!wasteData?.wasteTrend.length}
       >
         <TrendLineChart
           data={wasteData?.wasteTrend ?? []}
@@ -141,8 +142,6 @@ export const WasteTab: React.FC<
         <TopItemsBarChart
           data={topWastedItemsData}
           uniProps={theme => ({ color: theme.colors.error })}
-          showSecondaryValue
-          secondaryValuePrefix="$"
         />
       </ChartSection>
     </ScrollView>

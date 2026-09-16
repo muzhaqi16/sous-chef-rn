@@ -10,7 +10,6 @@ import type {
   MoveShoppingListItemInput,
   OpenPantryItemBatchInput,
   RemoveRecipeFromFavoritesInput,
-  UpdateFavoriteRecipeInput,
   UpdatePantryItemQuantityInput,
   UpdateRecipeIngredientsInput,
   UpdateShoppingListItemQuantityInput,
@@ -29,7 +28,6 @@ interface SubjectInputs {
   MoveShoppingListItemInput: MoveShoppingListItemInput;
   OpenPantryItemBatchInput: OpenPantryItemBatchInput;
   RemoveRecipeFromFavoritesInput: RemoveRecipeFromFavoritesInput;
-  UpdateFavoriteRecipeInput: UpdateFavoriteRecipeInput;
   UpdatePantryItemQuantityInput: UpdatePantryItemQuantityInput;
   UpdateRecipeIngredientsInput: UpdateRecipeIngredientsInput;
   UpdateShoppingListItemQuantityInput: UpdateShoppingListItemQuantityInput;
@@ -40,6 +38,8 @@ interface SubjectInputs {
  * The field naming the entity a write creates or changes, per input type;
  * anything unlisted is `id`. Typed over the codegen inputs, so a field the API
  * renames fails typecheck. `ForkRecipeInput.id` is the SOURCE recipe.
+ * `UpdateFavoriteRecipeInput` stays unlisted: its edit lands on a SavedRecipe
+ * the input never names, and `recipeId` is only the recipe it hangs off.
  */
 const SUBJECT_KEYS: {
   readonly [K in keyof SubjectInputs]: keyof SubjectInputs[K] & string;
@@ -53,7 +53,6 @@ const SUBJECT_KEYS: {
   MoveShoppingListItemInput: 'itemId',
   OpenPantryItemBatchInput: 'batchId',
   RemoveRecipeFromFavoritesInput: 'recipeId',
-  UpdateFavoriteRecipeInput: 'recipeId',
   UpdatePantryItemQuantityInput: 'pantryItemId',
   UpdateRecipeIngredientsInput: 'recipeId',
   UpdateShoppingListItemQuantityInput: 'itemId',

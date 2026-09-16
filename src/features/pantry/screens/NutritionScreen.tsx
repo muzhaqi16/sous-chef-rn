@@ -6,19 +6,19 @@ import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { NutritionDetailList } from '#features/pantry/components/NutritionDetailList';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Screen } from '#components/templates/Screen';
+import type { NutritionFactsValues } from '#domain/nutrition';
 
 type NutritionScreenParams = {
   itemId: string;
   itemName: string;
-  nutritions: unknown;
-  actualServingGrams?: number;
+  nutritionFacts: NutritionFactsValues;
 };
 
 export const NutritionScreen: React.FC<
   StaticScreenProps<NutritionScreenParams>
 > = ({ route }) => {
   const { goBack } = useAppNavigation();
-  const { itemName, nutritions, actualServingGrams } = route.params;
+  const { itemName, nutritionFacts } = route.params;
 
   return (
     <Screen
@@ -33,19 +33,12 @@ export const NutritionScreen: React.FC<
       >
         {/* Macro Summary at top (without navigation) */}
         <View style={styles.section}>
-          <NutritionSummary
-            nutritions={nutritions}
-            actualServingGrams={actualServingGrams}
-            showHighlights
-          />
+          <NutritionSummary nutritionFacts={nutritionFacts} showHighlights />
         </View>
 
         {/* Full nutrition list */}
         <View style={styles.section}>
-          <NutritionDetailList
-            nutritions={nutritions}
-            actualServingGrams={actualServingGrams}
-          />
+          <NutritionDetailList nutritionFacts={nutritionFacts} />
         </View>
       </ScrollView>
     </Screen>

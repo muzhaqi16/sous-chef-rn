@@ -28,7 +28,7 @@ export const FormFieldWrapper: React.FC<FormFieldWrapperProps> = ({
   return (
     <View
       style={[styles.container, containerStyle]}
-      accessibilityLabel={accessibilityLabel || label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityRole="none"
     >
       <Text role="bodyStrong" style={styles.label}>

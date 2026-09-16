@@ -55,10 +55,11 @@ export const createTelemetryLink = () => {
     }
 
     const startTime = performance.now();
-    const operationName = operation.operationName || 'unnamed';
+    const operationName = operation.operationName ?? 'unnamed';
+    const [firstDefinition] = operation.query.definitions;
     const operationType =
-      operation.query.definitions[0]?.kind === Kind.OPERATION_DEFINITION
-        ? operation.query.definitions[0]?.operation || 'unknown'
+      firstDefinition?.kind === Kind.OPERATION_DEFINITION
+        ? firstDefinition.operation
         : 'unknown';
     // A subscription stays open for the life of the screen, so the elapsed
     // time at its first server push is a session length, not a request
@@ -97,7 +98,7 @@ export const createTelemetryLink = () => {
       Telemetry.debug(`GraphQL ${operationType}: ${operationName} started`, {
         operation_type: operationType,
         operation_name: operationName,
-        variables: operation.variables ? Object.keys(operation.variables) : [],
+        variables: Object.keys(operation.variables),
       });
     }
 

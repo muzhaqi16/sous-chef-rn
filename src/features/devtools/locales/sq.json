@@ -50,6 +50,42 @@
     "notAvailable": "Informacionet e debug-ut janë të disponueshme vetëm në versionet e zhvillimit dhe të testimit.",
     "header": "Informacione të hollësishme debug-u për zgjidhjen e problemeve me lidhjet e API-t dhe konfigurimin e aplikacionit.",
     "copyAll": "Kopjo të gjitha",
-    "footer": "Këto informacione janë të dobishme kur zgjidhen problemet me lidhjen e API-t ose kur raportohen defekte."
+    "footer": "Këto informacione janë të dobishme kur zgjidhen problemet me lidhjen e API-t ose kur raportohen defekte.",
+    "sections": {
+      "environment": "Mjedisi",
+      "apiConfiguration": "Konfigurimi i API-t",
+      "telemetry": "Telemetria",
+      "deviceInfo": "Informacioni i pajisjes",
+      "buildConfiguration": "Konfigurimi i versionit"
+    },
+    "rows": {
+      "buildMode": "Mënyra e ndërtimit",
+      "isDevelopment": "Version zhvillimi",
+      "isStaging": "Version testimi",
+      "isProduction": "Version prodhimi",
+      "isTesting": "Ekzekutim testesh",
+      "apiUrl": "URL-ja e API-t",
+      "webSocketUrl": "URL-ja e WebSocket",
+      "apiKey": "Çelësi i API-t",
+      "timeout": "Koha e pritjes së kërkesës",
+      "maxRetries": "Riprovime maksimale",
+      "metricsEndpoint": "Pika fundore e metrikave",
+      "logsEndpoint": "Pika fundore e regjistrave",
+      "metricsAuth": "Autentikimi i metrikave",
+      "logsAuth": "Autentikimi i regjistrave",
+      "platform": "Platforma",
+      "osVersion": "Versioni i sistemit",
+      "appVersion": "Versioni i aplikacionit",
+      "buildNumber": "Numri i ndërtimit",
+      "bundleId": "ID-ja e paketës",
+      "deviceBrand": "Marka e pajisjes",
+      "deviceModel": "Modeli i pajisjes",
+      "webAppUrl": "URL-ja e aplikacionit web"
+    },
+    "values": {
+      "configured": "I konfiguruar",
+      "notSet": "I pacaktuar",
+      "milliseconds": "{{value}} ms"
+    }
   }
 }

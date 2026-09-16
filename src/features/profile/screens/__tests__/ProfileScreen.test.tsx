@@ -109,13 +109,6 @@ jest.mock('#hooks/auth/useEmailVerification', () => ({
 
 jest.mock('#hooks/performance/useScreenTransition');
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    trackScreen: jest.fn(),
-    trackEvent: jest.fn(),
-  },
-}));
-
 // Environment is auto-mocked via jest.setup.js. ProfileScreen tests want
 // `shouldEnableDebugFeatures` to return false (debug section hidden in
 // non-dev contexts), so we override it below.

@@ -3,6 +3,7 @@ import {
   GraphQLNetworkError,
 } from '#/utils/errors/graphqlErrors';
 import { describeValue } from '#/utils/errorSerialization';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import type { Mutation } from '#/graphql/generated/schemaTypes';
 
 /**
@@ -81,7 +82,7 @@ export function validationFieldName(data: unknown): string | null {
   const { field } = payload as { field?: string | null };
   if (!field) return null;
   const segments = field.split('.');
-  return segments[segments.length - 1] || null;
+  return firstNonBlank(segments[segments.length - 1]) ?? null;
 }
 
 /**
@@ -105,7 +106,7 @@ export function unwrapPayload<TUnion extends { __typename: string }>(
   throw new GraphQLDomainError({
     __typename,
     code: describeValue(code ?? 'UNKNOWN'),
-    message: describeValue(message || fallbackMessage),
+    message: describeValue(message ?? fallbackMessage),
     ...extra,
   });
 }

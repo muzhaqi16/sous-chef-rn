@@ -1,3 +1,5 @@
+import { firstNonBlank } from '#/utils/firstNonBlank';
+
 // 'image/jpg' is accepted from pickers (some Android providers report it) but
 // is NOT a valid upload mime — the API accepts only jpeg/png/webp. Normalize
 // via normalizeImageMimeType before sending to createImageUploadUrl.
@@ -55,7 +57,8 @@ export const validateImageFile = (
   isProfile: boolean = false,
 ): void => {
   // Get the mime type from type or infer from fileName
-  const mimeType = file.type || inferMimeTypeFromFileName(file.fileName);
+  const mimeType =
+    firstNonBlank(file.type) ?? inferMimeTypeFromFileName(file.fileName);
 
   if (!mimeType || !ALLOWED_IMAGE_TYPES.includes(mimeType)) {
     throw createImageValidationError(
@@ -105,7 +108,7 @@ const inferMimeTypeFromFileName = (fileName?: string): string | null => {
 
 export const getMimeTypeFromUri = (uri: string): string => {
   const extension = uri.split('.').pop()?.toLowerCase();
-  return inferMimeTypeFromFileName(`file.${extension}`) || 'image/jpeg';
+  return inferMimeTypeFromFileName(`file.${extension}`) ?? 'image/jpeg';
 };
 
 /**

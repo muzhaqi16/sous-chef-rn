@@ -105,18 +105,6 @@ describe('ConsoleTransport', () => {
         '',
       );
     });
-
-    it('handles undefined level gracefully with console.warn', async () => {
-      mockIsDevelopment.mockReturnValue(true);
-
-      const badLog = { message: 'bad' } as unknown as LogEntry;
-      await transport.sendLogs([badLog]);
-
-      expect(console.warn).toHaveBeenCalledWith(
-        '[TELEMETRY] Received log with undefined level:',
-        badLog,
-      );
-    });
   });
 
   describe('sendMetrics()', () => {

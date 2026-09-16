@@ -7,7 +7,11 @@ import { SRC, walk } from '#/test-utils/queueableOperations';
  * A hook member no production code reads is either dead or a gap: a `loadMore`
  * nobody calls caps a list at its first page, an `error` nobody renders hides a
  * failure. knip sees only modules and exports, so this resolves each member of a
- * returned object literal through the language service.
+ * returned object literal through the language service. It also follows a
+ * returned identifier bound to a local object literal, a local literal spread
+ * into the returned one, and, for a hook that returns no local literal or
+ * declares its return type, each property of that type an interface in `src/`
+ * declares.
  */
 const ROOT = path.join(SRC, '..');
 
@@ -20,26 +24,79 @@ jest.setTimeout(600_000);
 const unwrap = (node: ts.Expression): ts.Expression =>
   ts.isParenthesizedExpression(node) ? unwrap(node.expression) : node;
 
-function returnedObjects(
-  fn: ts.FunctionLikeDeclaration,
-): ts.ObjectLiteralExpression[] {
+function returnedExpressions(fn: ts.FunctionLikeDeclaration): ts.Expression[] {
   const { body } = fn;
   if (!body) return [];
-  if (!ts.isBlock(body)) {
-    const expression = unwrap(body);
-    return ts.isObjectLiteralExpression(expression) ? [expression] : [];
-  }
-  const found: ts.ObjectLiteralExpression[] = [];
+  if (!ts.isBlock(body)) return [unwrap(body)];
+  const found: ts.Expression[] = [];
   const visit = (node: ts.Node) => {
     if (ts.isFunctionLike(node)) return;
     if (ts.isReturnStatement(node) && node.expression) {
-      const expression = unwrap(node.expression);
-      if (ts.isObjectLiteralExpression(expression)) found.push(expression);
+      found.push(unwrap(node.expression));
     }
     ts.forEachChild(node, visit);
   };
   ts.forEachChild(body, visit);
   return found;
+}
+
+function returnedObjects(
+  fn: ts.FunctionLikeDeclaration,
+): ts.ObjectLiteralExpression[] {
+  return returnedExpressions(fn).filter(ts.isObjectLiteralExpression);
+}
+
+/** The object literal a local `const` inside `fn` is initialized with. */
+function localObjectLiteral(
+  checker: ts.TypeChecker,
+  fn: ts.FunctionLikeDeclaration,
+  identifier: ts.Identifier,
+): ts.ObjectLiteralExpression | undefined {
+  const [declaration, ...others] =
+    checker.getSymbolAtLocation(identifier)?.declarations ?? [];
+  if (
+    !declaration ||
+    others.length > 0 ||
+    !ts.isVariableDeclaration(declaration) ||
+    !declaration.initializer ||
+    declaration.getStart() < fn.getStart() ||
+    declaration.getEnd() > fn.getEnd()
+  ) {
+    return undefined;
+  }
+  const value = unwrap(declaration.initializer);
+  return ts.isObjectLiteralExpression(value) ? value : undefined;
+}
+
+/** A returned literal or identifier-bound literal, plus the local literals spread into it. */
+function extendedReturnedObjects(
+  checker: ts.TypeChecker,
+  fn: ts.FunctionLikeDeclaration,
+): ts.ObjectLiteralExpression[] {
+  const found = new Set<ts.ObjectLiteralExpression>();
+  const add = (object: ts.ObjectLiteralExpression) => {
+    if (found.has(object)) return;
+    found.add(object);
+    for (const member of object.properties) {
+      if (!ts.isSpreadAssignment(member)) continue;
+      const spread = unwrap(member.expression);
+      const local = ts.isObjectLiteralExpression(spread)
+        ? spread
+        : ts.isIdentifier(spread)
+        ? localObjectLiteral(checker, fn, spread)
+        : undefined;
+      if (local) add(local);
+    }
+  };
+  for (const expression of returnedExpressions(fn)) {
+    const object = ts.isObjectLiteralExpression(expression)
+      ? expression
+      : ts.isIdentifier(expression)
+      ? localObjectLiteral(checker, fn, expression)
+      : undefined;
+    if (object) add(object);
+  }
+  return [...found];
 }
 
 function exportedHooks(
@@ -49,9 +106,7 @@ function exportedHooks(
   ts.forEachChild(source, node => {
     const exported =
       ts.canHaveModifiers(node) &&
-      ts
-        .getModifiers(node)
-        ?.some(m => m.kind === ts.SyntaxKind.ExportKeyword);
+      ts.getModifiers(node)?.some(m => m.kind === ts.SyntaxKind.ExportKeyword);
     if (!exported) return;
     if (ts.isFunctionDeclaration(node) && node.name) {
       hooks.push([node.name.text, node]);
@@ -77,7 +132,8 @@ describe('every member a hook returns is read by production code', () => {
   );
   const hookFiles = files.filter(
     file =>
-      (/\/features\/[^/]+\/hooks\//.test(file) || /\/src\/hooks\//.test(file)) &&
+      (/\/features\/[^/]+\/hooks\//.test(file) ||
+        /\/src\/hooks\//.test(file)) &&
       !file.endsWith('.generated.ts'),
   );
 
@@ -141,19 +197,45 @@ describe('every member a hook returns is read by production code', () => {
       visit(source);
     }
 
-    // A declared return type names every member, so its signatures are not reads.
-    const declaresType = (fileName: string, position: number) => {
+    const nodeAt = (fileName: string, position: number) => {
       const source = program.getSourceFile(fileName);
-      if (!source) return false;
+      if (!source) return undefined;
       const find = (node: ts.Node): ts.Node | undefined =>
         position >= node.getStart(source) && position < node.getEnd()
           ? (ts.forEachChild(node, find) ?? node)
           : undefined;
-      const node = find(source);
+      return find(source);
+    };
+
+    // A declared return type names every member, so its signatures are not reads.
+    const declaresType = (fileName: string, position: number) => {
+      const node = nodeAt(fileName, position);
       return (
         !!node &&
         (ts.isPropertySignature(node.parent) ||
           ts.isMethodSignature(node.parent))
+      );
+    };
+
+    // An object literal typed by the declared return type writes the member.
+    const writesObjectLiteral = (fileName: string, position: number) => {
+      const node = nodeAt(fileName, position);
+      return (
+        !!node &&
+        (ts.isPropertyAssignment(node.parent) ||
+          ts.isShorthandPropertyAssignment(node.parent)) &&
+        node.parent.name === node
+      );
+    };
+
+    const isSourceDeclaration = (
+      node: ts.Declaration,
+    ): node is ts.PropertySignature | ts.MethodSignature => {
+      const { fileName } = node.getSourceFile();
+      return (
+        fileName.startsWith(SRC) &&
+        !fileName.endsWith('.generated.ts') &&
+        (ts.isPropertySignature(node) || ts.isMethodSignature(node))
       );
     };
 
@@ -205,7 +287,71 @@ describe('every member a hook returns is read by production code', () => {
             }
           }
         };
-        for (const object of returnedObjects(fn)) check(object, '');
+        const direct = returnedObjects(fn);
+        if (!fn.type) {
+          const followed = extendedReturnedObjects(checker, fn);
+          for (const object of followed) check(object, '');
+          if (followed.length > 0) continue;
+        }
+        // A consumer's read resolves to the declared type's member, so only a
+        // direct literal's explicit members resolve back to the literal.
+        for (const object of direct) check(object, '');
+        const explicit = new Set(
+          direct.flatMap(object =>
+            object.properties.flatMap(member =>
+              !ts.isSpreadAssignment(member) &&
+              member.name &&
+              ts.isIdentifier(member.name)
+                ? [member.name.text]
+                : [],
+            ),
+          ),
+        );
+        const allLiteral =
+          direct.length > 0 &&
+          direct.length === returnedExpressions(fn).length &&
+          direct.every(object =>
+            object.properties.every(member => !ts.isSpreadAssignment(member)),
+          );
+        if (allLiteral) continue;
+        const signature = checker.getSignatureFromDeclaration(fn);
+        const type = fn.type
+          ? checker.getTypeFromTypeNode(fn.type)
+          : signature && checker.getReturnTypeOfSignature(signature);
+        if (!type) continue;
+        for (const property of checker.getPropertiesOfType(type)) {
+          if (explicit.has(property.getName())) continue;
+          for (const declaration of property.declarations ?? []) {
+            if (!isSourceDeclaration(declaration)) continue;
+            const { name } = declaration;
+            if (!ts.isIdentifier(name)) continue;
+            members += 1;
+            const declarationFile = declaration.getSourceFile().fileName;
+            const references =
+              service.findReferences(declarationFile, name.getStart()) ?? [];
+            const read = references.some(group =>
+              group.references.some(
+                ref =>
+                  !ref.isDefinition &&
+                  !(
+                    ref.fileName === file &&
+                    ref.textSpan.start >= start &&
+                    ref.textSpan.start < end
+                  ) &&
+                  !declaresType(ref.fileName, ref.textSpan.start) &&
+                  !writesObjectLiteral(ref.fileName, ref.textSpan.start),
+              ),
+            );
+            if (!read && !readBySpread.has(keyOf(declaration))) {
+              unread.add(
+                `${rel} ${hookName} → ${name.text} (declared ${path.relative(
+                  ROOT,
+                  declarationFile,
+                )})`,
+              );
+            }
+          }
+        }
       }
     }
 

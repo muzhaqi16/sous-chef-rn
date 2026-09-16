@@ -83,11 +83,9 @@ export const CreateMealPlanScreen: React.FC = () => {
 
   const homeOptions = (() => {
     const opts = [{ label: t('mealPlan.personal'), value: PERSONAL_VALUE }];
-    if (homes) {
-      for (const home of homes) {
-        if (home?.id && home?.name) {
-          opts.push({ label: home.name, value: home.id });
-        }
+    for (const home of homes) {
+      if (home.id && home.name) {
+        opts.push({ label: home.name, value: home.id });
       }
     }
     return opts;

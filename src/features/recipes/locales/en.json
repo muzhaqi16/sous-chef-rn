@@ -73,7 +73,7 @@
     "recipeNotFoundDb": "Recipe not found in database",
     "recipeNotFound": "Recipe not found",
     "loadFailed": "Couldn't load this recipe",
-    "percentHealthy": "% healthy",
+    "percentHealthy": "{{percent}}% healthy",
     "cookedCount": "Cooked {{count}}x",
     "markCooked": "Mark cooked",
     "nutritionTitle": "Nutrition",
@@ -347,6 +347,12 @@
     "confirmAndDeduct": "Confirm & Deduct",
     "confirmAndDeductCount": "Confirm & Deduct ({{count}})",
     "includedCount": "{{n}}/{{m}} included",
+    "summaryAvailable_one": "{{count}} available",
+    "summaryAvailable_other": "{{count}} available",
+    "summaryPartial_one": "{{count}} partial",
+    "summaryPartial_other": "{{count}} partial",
+    "summaryMissing_one": "{{count}} missing",
+    "summaryMissing_other": "{{count}} missing",
     "skipReview": "Skip Review"
   },
   "markCookedModal": {
@@ -373,29 +379,14 @@
       "totalFat": "Total fat",
       "saturatedFat": "Saturated fat",
       "transFat": "Trans fat",
+      "addedSugars": "Added sugars",
       "cholesterol": "Cholesterol",
-      "vitaminA": "Vitamin A",
-      "vitaminD": "Vitamin D",
-      "vitaminE": "Vitamin E",
-      "vitaminK": "Vitamin K",
-      "vitaminB6": "Vitamin B6",
-      "vitaminB12": "Vitamin B12",
-      "thiamin": "Thiamin",
-      "riboflavin": "Riboflavin",
-      "niacin": "Niacin",
-      "folate": "Folate",
-      "magnesium": "Magnesium",
-      "phosphorus": "Phosphorus",
-      "zinc": "Zinc",
-      "copper": "Copper",
-      "manganese": "Manganese",
-      "selenium": "Selenium"
+      "vitaminD": "Vitamin D"
     },
     "category": {
       "macro": "Macronutrients",
       "vitamin": "Vitamins",
-      "mineral": "Minerals",
-      "other": "Other"
+      "mineral": "Minerals"
     }
   },
   "cuisineSelector": {
@@ -437,7 +428,6 @@
     "goodFiber": "Good Fiber",
     "lowSugar": "Low Sugar",
     "highSodium": "High Sodium",
-    "vitaminC": "Vitamin C",
     "iron": "Iron",
     "calcium": "Calcium",
     "potassium": "Potassium"

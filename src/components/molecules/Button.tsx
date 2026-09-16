@@ -46,10 +46,9 @@ export const Button: React.FC<ButtonProps> = ({
   accessibilityLabel,
   accessibilityHint,
 }) => {
-  // Use title/children as fallback for accessibility label
   const buttonLabel =
-    accessibilityLabel ||
-    title ||
+    accessibilityLabel ??
+    title ??
     (typeof children === 'string' ? children : undefined);
 
   const useWhiteRipple = variant === 'primary' || variant === 'danger';
@@ -100,7 +99,7 @@ export const Button: React.FC<ButtonProps> = ({
             />
           )}
           <Text role="bodyStrong" style={[styles.text, txtStyle]}>
-            {title || children}
+            {title ?? children}
           </Text>
         </>
       )}

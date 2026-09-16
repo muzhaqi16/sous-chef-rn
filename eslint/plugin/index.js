@@ -40,5 +40,7 @@ module.exports = {
     'no-rendered-enum': require('./rules/no-rendered-enum'),
     'no-t-default-value': require('./rules/no-t-default-value'),
     'no-prose-literal': require('./rules/no-prose-literal'),
+    'no-string-keyed-lookup': require('./rules/no-string-keyed-lookup'),
+    'no-number-noun-concat': require('./rules/no-number-noun-concat'),
   },
 };

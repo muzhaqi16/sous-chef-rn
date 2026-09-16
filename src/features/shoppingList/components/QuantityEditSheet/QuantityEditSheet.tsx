@@ -14,11 +14,7 @@ import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import Chip from '#features/shoppingList/components/Chip';
 import { Icon } from '#utils/iconUtils';
-import {
-  formatQuantity,
-  formatQuantityAsFraction,
-  formatQuantityForDisplay,
-} from '#/utils/formatQuantity';
+import { formatQuantityForInput } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { localizeNumericHint } from '#/utils/formatters/number';
@@ -31,8 +27,6 @@ interface ItemUnit {
   name: string;
   isDefault?: boolean;
   isPreferred?: boolean;
-  displayNameSingular?: string | null;
-  displayNamePlural?: string | null;
 }
 
 interface QuantityEditSheetItem {
@@ -61,13 +55,15 @@ interface QuantityEditSheetProps {
 }
 
 /**
- * What the field opens on. The same text the row's badge shows, so stepping a
- * quantity the user never edited cannot read as a change they did not make.
+ * What the field opens on, in the device's decimal separator. Text no parser
+ * reads ("a pinch") stays as the person wrote it.
  */
-const seedText = (item: QuantityEditSheetItem): string =>
-  formatQuantityForDisplay(item.quantity ?? 0, {
-    quantityInput: item.quantityInput,
-  });
+const seedText = (item: QuantityEditSheetItem): string => {
+  const typed = item.quantityInput?.trim();
+  const typedValue = typed ? parseFractionalInput(typed) : null;
+  if (typed && typedValue === null) return typed;
+  return formatQuantityForInput(typedValue ?? item.quantity);
+};
 
 export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   visible,
@@ -149,9 +145,9 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
   const stepTo = (newValue: number) => {
     setQuantityInput(
-      quantityInput.includes('/')
-        ? formatQuantityAsFraction(newValue)
-        : formatQuantity(newValue),
+      formatQuantityForInput(newValue, {
+        notation: quantityInput.includes('/') ? 'mixed' : 'decimal',
+      }),
     );
   };
 
@@ -313,7 +309,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                 {itemUnits.map(unit => (
                   <Chip
                     key={unit.id}
-                    label={unit.displayNamePlural || unit.symbol}
+                    label={unit.symbol}
                     selected={unitName === unit.symbol}
                     onPress={() => handleUnitChipPress(unit)}
                   />
@@ -326,7 +322,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               // The sheet is sized to its content, so the absolutely-positioned
               // suggestion list would otherwise open past its bottom edge.
               reserveDropdownSpace
-              value={unitName || ''}
+              value={unitName ?? ''}
               onChangeText={text => {
                 setUnitName(text || null);
                 setUnitId(null);

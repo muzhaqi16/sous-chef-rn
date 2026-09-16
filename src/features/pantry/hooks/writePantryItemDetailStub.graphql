@@ -71,8 +71,8 @@ fragment writePantryItemDetailStub_pantryItem on PantryItem {
 # `addToPantryItemsCache` writes the entity through `toReference(item, true)`,
 # a shallow store merge that leaves nested objects EMBEDDED — so
 # `PantryItem:<cuid>.item` is a four-field stub and reads of
-# `item.name / photos / nutritions / categories` can never fall through to the
-# real catalog entity. `cache.writeFragment` uses the normalizing writer, so
+# `item.name / photos / nutritionFacts / categories` can never fall through to
+# the real catalog entity. `cache.writeFragment` uses the normalizing writer, so
 # writing just `{ __typename, id }` here converts that embedded object into a
 # reference without carrying any value that could clobber the catalog row.
 fragment writePantryItemDetailStub_itemRef on PantryItem {
@@ -123,7 +123,26 @@ fragment writePantryItemDetailStub_itemCatalog on Item {
   id
   shelfLifeDays
   shelfLifeOpenedDays
-  nutritions
+  nutritionFacts {
+    id
+    calories
+    totalFat
+    saturatedFat
+    transFat
+    cholesterol
+    sodium
+    totalCarbs
+    dietaryFiber
+    totalSugars
+    addedSugars
+    protein
+    vitaminD
+    calcium
+    iron
+    potassium
+    servingSize
+    servingUnit
+  }
   categories {
     isPrimary
     category {

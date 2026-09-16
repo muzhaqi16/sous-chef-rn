@@ -215,7 +215,7 @@ export const ProfilePictureUploadScreen = () => {
             <>
               <LocalImage
                 accessibilityLabel={t('a11y.profilePreview')}
-                uri={(croppedImage?.uri || selectedImage?.uri) ?? ''}
+                uri={croppedImage?.uri ?? selectedImage?.uri ?? ''}
                 style={styles.avatarImage}
               />
               <AppPressable

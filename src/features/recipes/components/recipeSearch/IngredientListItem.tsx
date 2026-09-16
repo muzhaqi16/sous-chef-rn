@@ -41,7 +41,7 @@ export const ingredientKeyExtractor = (item: IngredientListItemData) => item.id;
 
 const IngredientRenderItem = ({ item }: { item: IngredientListItemData }) => {
   const { selectedIngredients, toggleIngredient } = useIngredientSelection();
-  const itemName = item.itemName || '';
+  const itemName = item.itemName ?? '';
   return (
     <IngredientItem
       name={itemName}

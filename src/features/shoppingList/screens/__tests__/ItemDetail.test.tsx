@@ -30,7 +30,6 @@ jest.mock('#utils/imageUtils', () => ({
   resolveImageUrl: jest.fn(() => null),
 }));
 jest.mock('#domain/nutrition', () => ({
-  parseNutritions: jest.fn(() => []),
   hasNutritionData: jest.fn(() => false),
 }));
 jest.mock('#hooks/performance/useScreenTransition');
@@ -147,7 +146,12 @@ function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
       },
     },
     lastEditedBy: null,
-    source: null,
+    source: {
+      __typename: 'ShoppingListItemSource',
+      isAutoAdded: false,
+      autoAddReason: null,
+      isFromMealPlan: false,
+    },
     ...overrides,
   };
 }

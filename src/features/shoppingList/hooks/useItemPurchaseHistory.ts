@@ -36,11 +36,11 @@ export function useItemPurchaseHistory(itemId: string) {
 
   const connection = data?.shoppingListItem?.purchasesConnection;
   const purchases: PurchaseItem[] =
-    connection?.edges?.map(edge => edge.node) ?? [];
+    connection?.edges.map(edge => edge.node) ?? [];
 
   const totalCount = connection?.totalCount ?? purchases.length;
-  const hasNextPage = connection?.pageInfo?.hasNextPage ?? false;
-  const endCursor = connection?.pageInfo?.endCursor ?? null;
+  const hasNextPage = connection?.pageInfo.hasNextPage ?? false;
+  const endCursor = connection?.pageInfo.endCursor ?? null;
   const isFetchingMore = networkStatus === NetworkStatus.fetchMore;
 
   const loadMore = () => {

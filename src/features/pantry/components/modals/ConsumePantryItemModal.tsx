@@ -111,7 +111,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
           purpose={purpose}
           setPurpose={setPurpose}
           shared={shared}
-          showFifoHint={(pantryItem.activeBatchCount ?? 0) > 1}
+          showFifoHint={pantryItem.activeBatchCount > 1}
           purposeOptions={purposeOptions}
         />
       )}

@@ -15,12 +15,11 @@ import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { Text } from '#components/atoms/Text';
 import { Screen } from '#components/templates/Screen';
 
 export const JoinByShareCodeScreen: React.FC<
-  StaticScreenProps<{ shareCode?: string }>
+  StaticScreenProps<{ shareCode?: string } | undefined>
 > = ({ route }) => {
   const { t } = useTranslation();
   const { goBack, toShoppingListMain } = useAppNavigation();
@@ -45,27 +44,25 @@ export const JoinByShareCodeScreen: React.FC<
       return;
     }
 
-    void executeWithLoadingState(
-      async () => {
-        const result = unwrapPayload(
-          await joinByShareCode(trimmed),
-          t('shoppingListScreens.joinFailed'),
-        );
+    void executeWithLoadingState(async () => {
+      const joined = await joinByShareCode(
+        trimmed,
+        t('shoppingListScreens.joinFailed'),
+      );
+      if (!joined.shoppingList) {
+        toastService.error(joined.body ?? t('shoppingListScreens.joinFailed'));
+        return;
+      }
 
-        useStore.getState().setSelectedShoppingListId(result.shoppingList.id);
-        goBack();
-        toShoppingListMain();
-        toastService.success(
-          t('labels.joined', {
-            name: result.shoppingList.name || t('labels.shoppingList'),
-          }),
-        );
-      },
-      setJoining,
-      () => {
-        toastService.error(t('shoppingListScreens.joinFailed'));
-      },
-    );
+      useStore.getState().setSelectedShoppingListId(joined.shoppingList.id);
+      goBack();
+      toShoppingListMain();
+      toastService.success(
+        t('labels.joined', {
+          name: joined.shoppingList.name || t('labels.shoppingList'),
+        }),
+      );
+    }, setJoining);
   };
 
   if (isLoggedOut) {

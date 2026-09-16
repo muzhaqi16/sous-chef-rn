@@ -16,6 +16,8 @@ import { QuantityBadge } from '#features/shoppingList/components/QuantityBadge';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#utils/iconUtils';
+import { Text } from '#components/atoms/Text';
+import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 
 import { HIT_SLOP } from '#features/shoppingList/constants/touch';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
@@ -27,6 +29,7 @@ import {
   ShoppingListTutorialStep,
 } from '#features/shoppingList/context/ShoppingListTutorialContext';
 import { resolveImageUrl } from '#utils/imageUtils';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { SortableItem_ItemFragmentDoc } from './SortableItem.generated';
 import { useSortableListActions } from './SortableListActionsContext';
 import { useItemSwipeActions } from '#components/organisms/itemSwipeActionsContext';
@@ -49,17 +52,14 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   item: rowItem,
   index,
 }) => {
-  // FlashList v2 can call renderItem with an `undefined` item: a toggle/delete
-  // runs prepareForLayoutAnimationRender() and shrinks the data array, so a
-  // recycled cell briefly maps out of range. Read defensively (hooks stay
-  // unconditional) and render the empty cell below; the next commit fixes it.
-  const itemRef = rowItem?.itemRef;
+  // A recycled cell's undefined item is dropped by the list's `renderItem`.
+  const itemRef = rowItem.itemRef;
 
   // Per-entity subscription: this row re-renders only for its own cache record.
   const { data, complete } = useFragment({
     fragment: SortableItem_ItemFragmentDoc,
     fragmentName: 'SortableItem_item',
-    from: itemRef ?? null,
+    from: itemRef,
   });
 
   // One list-level useUnistyles, rather than a theme subscription per row.
@@ -77,7 +77,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   const screenWidth = themeColors?.screenWidth ?? 375;
 
   const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
-    itemId: rowItem?.id ?? '',
+    itemId: rowItem.id,
     slideDistance: screenWidth,
     duration: motion.timing.MODERATE,
   });
@@ -109,8 +109,8 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 
   // Forced to match the active tab, so a freshly toggled row paints the new
   // state before the cache propagates.
-  const isPurchased = rowItem?.isPurchased ?? false;
-  const itemId = rowItem?.id ?? '';
+  const isPurchased = rowItem.isPurchased;
+  const itemId = rowItem.id;
   // Read from its own context: the command bag publishes behind a ref children
   // see too late.
   const itemSwipeActions = useItemSwipeActions();
@@ -123,19 +123,32 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // Already in the pantry. The bulk move filters on the same stamp, so a
   // "move to pantry" here would do nothing — show it as stocked. Cleared
   // server-side when the line goes unpurchased again.
-  const isStocked = !!data?.purchaseInfo?.movedToPantryAt;
+  const isStocked = !!data.purchaseInfo?.movedToPantryAt;
 
-  // Safe defaults rather than null on a cache miss, so the cell keeps its
-  // FlashList slot during initial restore.
-  const itemName = data?.itemName ?? '';
-  const category = data?.category ?? null;
-  const subtitle = category?.split(',')[0]?.trim() || undefined;
-  const quantity = data?.quantity ?? 0;
-  const quantityInput = data?.quantityInput ?? null;
-  const unitDisplay = data?.unitName || data?.unit?.symbol || undefined;
+  // A miss reads as `{}` (useFragment never hands back null for a record ref),
+  // so every field gets a safe default and the cell keeps its FlashList slot.
+  const itemName = data.itemName ?? '';
+  const category = data.category ?? null;
+  const categoryLabel = firstNonBlank(category?.split(',')[0])?.trim();
+  const isPendingSync = useIsPendingSync(itemId);
+  const subtitle = isPendingSync ? (
+    <Text
+      role="footnote"
+      tone="secondary"
+      style={styles.pendingSync}
+      testID={shoppingListTestIDs.itemPendingSync(itemId)}
+    >
+      {t('status.syncing')}
+    </Text>
+  ) : (
+    categoryLabel
+  );
+  const quantity = data.quantity ?? 0;
+  const quantityInput = data.quantityInput ?? null;
+  const unitDisplay = firstNonBlank(data.unitName, data.unit?.symbol);
   // `resolveImageUrl` takes a structural { item?: { images, imageUrl } }, so the
   // fragment data feeds it directly.
-  const imageUrl = data ? resolveImageUrl(data) : null;
+  const imageUrl = resolveImageUrl(data);
   const { showImages } = useShoppingListRowOptions();
   const showImage = showImages && !!imageUrl;
 
@@ -353,8 +366,8 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   })();
 
   // An empty cell rather than nothing, so the FlashList slot stays stable while
-  // the fragment hydrates (or the recycled cell has no backing row).
-  if (!rowItem || (!complete && !data)) {
+  // the fragment hydrates; `id` is absent only when none of the entity is cached.
+  if (!complete && !data.id) {
     return <View style={commonStyles.rowWrapper} />;
   }
 
@@ -436,6 +449,9 @@ const styles = StyleSheet.create(theme => ({
   },
   pressed: {
     opacity: theme.opacity.pressed,
+  },
+  pendingSync: {
+    fontStyle: 'italic',
   },
 }));
 

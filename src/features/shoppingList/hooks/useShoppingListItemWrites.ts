@@ -93,7 +93,7 @@ export function useShoppingListItemWrites(
   const { t } = useTranslation();
 
   const { data, refetch } = useQuery(GetShoppingListItemDocument, {
-    variables: { id: itemId || '' },
+    variables: { id: itemId ?? '' },
     skip: !itemId,
   });
 

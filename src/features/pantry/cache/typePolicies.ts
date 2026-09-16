@@ -104,7 +104,7 @@ export const pantryTypePolicies: TypePolicies = {
         ) {
           if (!existing?.edges?.length) return existing;
           const validEdges = existing.edges.filter((edge: CachedEdge) =>
-            edge?.node ? canRead(edge.node) : false,
+            edge.node ? canRead(edge.node) : false,
           );
           if (validEdges.length === existing.edges.length) return existing;
           const dropped = existing.edges.length - validEdges.length;

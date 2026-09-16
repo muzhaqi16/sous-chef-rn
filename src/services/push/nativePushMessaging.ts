@@ -18,6 +18,7 @@ import {
 } from '@react-native-firebase/messaging';
 import { t } from '#/i18n';
 import { logger } from '#/utils/environment';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { showLocalNotification } from '#/services/notifications/localNotificationHelper';
 import { routeNotificationTap } from './pushNotificationRouting';
 
@@ -53,7 +54,7 @@ const toDisplayableNotification = (
   if (!data.title && !data.body) return null;
 
   return {
-    id: data.notificationId || message.messageId,
+    id: firstNonBlank(data.notificationId, message.messageId),
     title: t('pushNotification.title'),
     body: t('pushNotification.body'),
     data,
@@ -89,7 +90,7 @@ export const registerFcmTapHandlers = (): (() => void) => {
     const messaging = getMessaging();
 
     const unsubscribe = onNotificationOpenedApp(messaging, message => {
-      routeNotificationTap(message?.data);
+      routeNotificationTap(message.data);
     });
 
     getInitialNotification(messaging)

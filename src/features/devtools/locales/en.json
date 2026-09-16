@@ -50,6 +50,42 @@
     "notAvailable": "Debug info is only available in development and staging builds.",
     "header": "Detailed debug information for troubleshooting API connections and app configuration.",
     "copyAll": "Copy All Info",
-    "footer": "This information is useful when debugging API connection issues or reporting bugs."
+    "footer": "This information is useful when debugging API connection issues or reporting bugs.",
+    "sections": {
+      "environment": "Environment",
+      "apiConfiguration": "API Configuration",
+      "telemetry": "Telemetry",
+      "deviceInfo": "Device Info",
+      "buildConfiguration": "Build Configuration"
+    },
+    "rows": {
+      "buildMode": "Build Mode",
+      "isDevelopment": "Development build",
+      "isStaging": "Staging build",
+      "isProduction": "Production build",
+      "isTesting": "Test run",
+      "apiUrl": "API URL",
+      "webSocketUrl": "WebSocket URL",
+      "apiKey": "API key",
+      "timeout": "Request timeout",
+      "maxRetries": "Max retries",
+      "metricsEndpoint": "Metrics endpoint",
+      "logsEndpoint": "Logs endpoint",
+      "metricsAuth": "Metrics auth",
+      "logsAuth": "Logs auth",
+      "platform": "Platform",
+      "osVersion": "OS version",
+      "appVersion": "App version",
+      "buildNumber": "Build number",
+      "bundleId": "Bundle ID",
+      "deviceBrand": "Device brand",
+      "deviceModel": "Device model",
+      "webAppUrl": "Web app URL"
+    },
+    "values": {
+      "configured": "Configured",
+      "notSet": "Not set",
+      "milliseconds": "{{value}} ms"
+    }
   }
 }

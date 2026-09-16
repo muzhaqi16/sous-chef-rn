@@ -160,6 +160,17 @@ const canAttemptRefresh = (): boolean => {
   return true;
 };
 
+/**
+ * A refresh that failed on neither the credential nor the network: the session
+ * stands and the refresh is deferred. Transient, so every write waiting on it is
+ * deferred to the next drain — the raw error's code (or none) would withdraw it.
+ */
+const deferredRefreshError = () =>
+  new SessionError(
+    TopLevelErrorCode.ServiceUnavailable,
+    'Token refresh deferred',
+  );
+
 const calculateRetryDelay = (retryCount: number): number => {
   return (
     REFRESH_CONFIG.RETRY_DELAY_BASE *
@@ -257,7 +268,10 @@ const performTokenRefresh = async (): Promise<string | null> => {
       context: { skipErrorLink: true },
     });
 
-    const payload = response.data?.refresh;
+    // Typed present, but a response with neither data nor errors also resolves
+    // here, and it must still end in the CODED throw below.
+    const { data } = response;
+    const payload = data ? data.refresh : undefined;
     if (payload && 'code' in payload) {
       // An error member of RefreshResult. Rethrow with its code so the catch
       // below can tell a dead session (log out) from a transient refusal
@@ -265,7 +279,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
       // unknown-error path and strand the user on an unusable access token.
       throw new RefreshRejectedError(payload.code, payload.message);
     }
-    if (!payload?.accessToken || !payload?.refreshToken) {
+    if (!payload?.accessToken || !payload.refreshToken) {
       // A refresh that returned no tokens cannot continue the session. Coded
       // so a queued write parks rather than being destroyed by a malformed
       // response the server never judged it on.
@@ -323,7 +337,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
         `Refresh rejected by the server (${error.code}), deferring token refresh`,
       );
       void state.tokenRefreshFailed('unknown');
-      throw error;
+      throw deferredRefreshError();
     }
 
     // IMPORTANT: Check network errors FIRST before auth errors
@@ -372,7 +386,8 @@ const performTokenRefresh = async (): Promise<string | null> => {
       'Max token refresh retries exceeded for unknown error, deferring token refresh',
     );
     void state.tokenRefreshFailed('unknown');
-    throw error;
+    // A SessionError was coded above, inside the try; keep its verdict.
+    throw error instanceof SessionError ? error : deferredRefreshError();
   }
 };
 

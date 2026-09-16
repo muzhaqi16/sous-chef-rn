@@ -50,7 +50,7 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
             render={({ field: { onChange, onBlur, value }, fieldState }) => (
               <FormInput
                 label={t('labels.netWeight')}
-                value={value || ''}
+                value={value ?? ''}
                 onChangeText={text => {
                   onChange(text);
                   onNetWeightChanged();
@@ -73,7 +73,7 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
               <UnitAutocompleteField
                 variant="modal"
                 label={t('storageLocationForm.unit')}
-                value={value || ''}
+                value={value ?? ''}
                 onChangeText={onChange}
                 onUnitSelected={onNetWeightUnitSelected}
                 placeholder={t('labels.ozGMl')}

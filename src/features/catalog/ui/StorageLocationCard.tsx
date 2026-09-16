@@ -14,6 +14,7 @@ import {
   StorageState,
   type StorageType,
 } from '#/graphql/generated/schemaTypes';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /** Key paths, not resolved strings — `t` is only available inside the
  *  component, and resolving at module load would freeze the language. */
@@ -71,7 +72,17 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
   const temperatureLabelKey = location.temperature
     ? TEMPERATURE_LABEL_KEYS[location.temperature]
     : null;
-  const hasCapacity = location.capacity != null && location.capacity > 0;
+  const { capacity } = location;
+  const capacityUnit = firstNonBlank(location.capacityUnit);
+  let capacityText: string | null = null;
+  if (capacity != null && capacity > 0) {
+    capacityText = capacityUnit
+      ? t('storageLocationCard.capacityWithUnit', {
+          capacity,
+          unit: capacityUnit,
+        })
+      : t('storageLocationCard.capacity', { count: capacity });
+  }
 
   return (
     <View style={[commonStyles.card, commonStyles.shadow, styles.card]}>
@@ -122,11 +133,10 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                     // schema has `currentItemCount: Int!`.
                     count: location.currentItemCount ?? 0,
                   })}
-                  {hasCapacity ? (
+                  {capacityText ? (
                     <Text role="caption" tone="secondary">
                       {' '}
-                      / {location.capacity}{' '}
-                      {location.capacityUnit || t('labels.units')}
+                      {capacityText}
                     </Text>
                   ) : null}
                   {!!location.parentLocation?.name && (

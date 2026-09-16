@@ -41,7 +41,7 @@ export async function fetchEventEntity<
     return null;
   }
 
-  const data = result?.data ?? null;
+  const data = result.data ?? null;
   if (!data && __DEV__) {
     logger.debug(`📡 [Subscription] ${label} read-back returned no entity`);
   }

@@ -1,20 +1,21 @@
 import { renderHook } from '@testing-library/react-native';
-import { useStorageLocationAutocomplete } from '#features/catalog/hooks/useStorageLocationAutocomplete';
-import type { StorageLocation } from '#/graphql/generated/schemaTypes';
+import {
+  useStorageLocationAutocomplete,
+  type StorageLocationOption,
+} from '#features/catalog/hooks/useStorageLocationAutocomplete';
 import { StorageType } from '#/graphql/generated/schemaTypes';
 
 const makeLocation = (
-  overrides: Partial<StorageLocation> = {},
-): StorageLocation =>
-  ({
-    id: 'loc-1',
-    name: 'Fridge',
-    type: StorageType.Refrigerator,
-    isDefault: false,
-    ...overrides,
-  } as StorageLocation);
+  overrides: Partial<StorageLocationOption> = {},
+): StorageLocationOption => ({
+  id: 'loc-1',
+  name: 'Fridge',
+  type: StorageType.Refrigerator,
+  isDefault: false,
+  ...overrides,
+});
 
-const storageLocations: StorageLocation[] = [
+const storageLocations: StorageLocationOption[] = [
   makeLocation({
     id: '1',
     name: 'Fridge',

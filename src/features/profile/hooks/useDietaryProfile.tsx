@@ -144,7 +144,7 @@ export const useDietaryProfile = () => {
   const [removeRestriction] = useMutation(RemoveDietaryRestrictionDocument, {
     // No optimistic response for deletes — the cache removal runs on the response
     update: (cache, { data }, { variables }) => {
-      if (!appliedPayload(data) || !variables?.input?.id || !profile?.id) {
+      if (!appliedPayload(data) || !variables?.input.id || !profile?.id) {
         return;
       }
 
@@ -176,19 +176,18 @@ export const useDietaryProfile = () => {
     return {
       id: profile.id,
       userId: profile.userId,
-      restrictions:
-        profile.restrictions?.map(r => ({
-          id: r.id,
-          diet: r.diet,
-          intolerance: r.intolerance,
-          healthGoal: r.healthGoal,
-          severity: r.severity,
-          notes: r.notes,
-          appliesToHomeId: r.appliesToHomeId,
-        })) || [],
-      preferredCuisines: profile.preferredCuisines ?? [],
-      dislikedIngredients: profile.dislikedIngredients || [],
-      favoriteIngredients: profile.favoriteIngredients || [],
+      restrictions: profile.restrictions.map(r => ({
+        id: r.id,
+        diet: r.diet,
+        intolerance: r.intolerance,
+        healthGoal: r.healthGoal,
+        severity: r.severity,
+        notes: r.notes,
+        appliesToHomeId: r.appliesToHomeId,
+      })),
+      preferredCuisines: profile.preferredCuisines,
+      dislikedIngredients: profile.dislikedIngredients,
+      favoriteIngredients: profile.favoriteIngredients,
       calorieTarget: profile.calorieTarget,
       proteinTarget: profile.proteinTarget,
       carbsTarget: profile.carbsTarget,

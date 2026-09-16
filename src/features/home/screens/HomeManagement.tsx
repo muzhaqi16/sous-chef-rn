@@ -91,7 +91,7 @@ export const HomeManagement: React.FC = () => {
   const { show, InviteModalComponent } = useInviteUserModal();
   const inviteUserPrompt = (homeId: string) => {
     // Find the home and user's membership
-    const home = homes?.find(h => h.id === homeId);
+    const home = homes.find(h => h.id === homeId);
     if (!home) {
       toastService.error(t('errors.codes.homeNotFound'));
       return;
@@ -210,14 +210,11 @@ export const HomeManagement: React.FC = () => {
   // `Home.isDefault` (via `remoteDefaultHomeId`), not the local selection —
   // the two are allowed to differ, and only one of them is what this screen's
   // "Default" chip claims.
-  const sortedHomes = (() => {
-    if (!homes) return [];
-    return [...homes].sort((a, b) => {
-      if (a.id === remoteDefaultHomeId) return -1;
-      if (b.id === remoteDefaultHomeId) return 1;
-      return 0;
-    });
-  })();
+  const sortedHomes = [...homes].sort((a, b) => {
+    if (a.id === remoteDefaultHomeId) return -1;
+    if (b.id === remoteDefaultHomeId) return 1;
+    return 0;
+  });
 
   // Not empty-aware: with no homes the stats and the create form are the page.
   const dataState = useDataState({ loading, hasResult, isEmpty: false });
@@ -334,7 +331,7 @@ export const HomeManagement: React.FC = () => {
                     </Text>
                     <Text role="caption" style={styles.previewSubtitle}>
                       {t('joinHome.memberCount', {
-                        count: previewHome.membersConnection?.totalCount ?? 0,
+                        count: previewHome.membersConnection.totalCount,
                       })}
                     </Text>
                   </View>

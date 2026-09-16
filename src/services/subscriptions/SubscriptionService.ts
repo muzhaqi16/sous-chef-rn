@@ -31,6 +31,7 @@ import {
 import { markSubscriptionRejected } from './rejectedSubscriptions';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { SubscriptionSuppression } from './SubscriptionSuppression';
 
 /** `StoreObject` (so `toReference` accepts it) plus the `id` the service reads. */
@@ -42,7 +43,7 @@ type RegisteredConfig<TData> = SubscriptionConfig<TData> & {
 };
 
 export class SubscriptionService {
-  private static instance: SubscriptionService;
+  private static instance: SubscriptionService | undefined;
 
   // Active subscription registry
   private subscriptions = new Map<string, SubscriptionEntry>();
@@ -126,9 +127,7 @@ export class SubscriptionService {
   private constructor() {}
 
   static getInstance(): SubscriptionService {
-    if (!SubscriptionService.instance) {
-      SubscriptionService.instance = new SubscriptionService();
-    }
+    SubscriptionService.instance ??= new SubscriptionService();
     return SubscriptionService.instance;
   }
   register<TData = unknown>(
@@ -138,17 +137,17 @@ export class SubscriptionService {
       document: config.document,
       subscriptionName: operationNameOf(config.document),
       entityType: config.entityType,
-      mutation: config.mutation || MutationType.Updated,
+      mutation: config.mutation ?? MutationType.Updated,
       enableDeduplication: config.enableDeduplication ?? true,
       userId: config.userId,
       cacheUpdateStrategy:
-        config.cacheUpdateStrategy || CacheStrategy.AUTOMATIC,
-      cacheFieldName: config.cacheFieldName || '',
+        config.cacheUpdateStrategy ?? CacheStrategy.AUTOMATIC,
+      cacheFieldName: config.cacheFieldName ?? '',
       customOnData: config.customOnData,
       customOnError: config.customOnError,
       customOnComplete: config.customOnComplete,
       enableLogging: config.enableLogging ?? __DEV__,
-      logLevel: config.logLevel || LogLevel.INFO,
+      logLevel: config.logLevel ?? LogLevel.INFO,
       entityId: config.entityId,
     };
 
@@ -196,7 +195,7 @@ export class SubscriptionService {
         }
 
         // Extract payload from subscription data
-        const subscriptionData = data?.data;
+        const subscriptionData = data.data;
         if (!subscriptionData) {
           this.log(
             config,
@@ -208,9 +207,9 @@ export class SubscriptionService {
         }
 
         // Get the actual payload (first property of subscription data)
-        const payload = Object.values(
-          subscriptionData,
-        )[0] as SubscriptionPayload<TData>;
+        const payload = Object.values(subscriptionData)[0] as
+          | SubscriptionPayload<TData>
+          | undefined;
 
         if (!payload) {
           this.log(
@@ -258,7 +257,7 @@ export class SubscriptionService {
         if (config.cacheUpdateStrategy !== CacheStrategy.NONE) {
           // For AUTOMATIC: Apollo normalization handles UPDATE, but we need to manually handle CREATE/DELETE
           // For MANUAL: We handle all mutations manually
-          const mutation = payload.mutation || config.mutation;
+          const mutation = payload.mutation ?? config.mutation;
           const shouldUpdateCache =
             config.cacheUpdateStrategy === CacheStrategy.MANUAL ||
             // CREATE operations - add to arrays
@@ -308,7 +307,7 @@ export class SubscriptionService {
     config: RegisteredConfig<TData>,
   ): SubscriptionHandlers['onError'] {
     return (error: ErrorLike) => {
-      const errorMessage = error?.message?.toLowerCase() || '';
+      const errorMessage = error.message.toLowerCase();
 
       // A document the server will never accept — over the depth or cost bound.
       // Not connection churn: the socket's other subscriptions keep delivering.
@@ -408,7 +407,7 @@ export class SubscriptionService {
     }
 
     const item = this.getPayloadEntity(payload);
-    const mutation = payload.mutation || config.mutation;
+    const mutation = payload.mutation ?? config.mutation;
     const itemId = item?.id;
 
     if (!item || !itemId) {
@@ -505,12 +504,13 @@ export class SubscriptionService {
                   id: parentCacheId,
                   fields: {
                     [pendingDelete.connectionField]: (
-                      existingConnection: ConnectionData = {},
+                      // A connection the server returned as `null` is stored as `null`.
+                      existingConnection: ConnectionData | null = {},
                       { readField }: ModifierDetails,
                     ) => {
                       const existingEdges = existingConnection?.edges ?? [];
                       const edges = existingEdges.filter(
-                        edge => readField('id', edge?.node) !== itemId,
+                        edge => readField('id', edge.node) !== itemId,
                       );
 
                       // If edges didn't change, no need to update
@@ -646,12 +646,12 @@ export class SubscriptionService {
       LogLevel.WARN,
       LogLevel.ERROR,
     ];
-    const configLogLevel = config.logLevel || LogLevel.INFO;
+    const configLogLevel = config.logLevel ?? LogLevel.INFO;
     if (logLevels.indexOf(level) < logLevels.indexOf(configLogLevel)) {
       return;
     }
 
-    const actualData = data || '';
+    const actualData = data ?? '';
 
     const emoji = {
       [LogLevel.DEBUG]: '🔍',
@@ -690,7 +690,7 @@ export class SubscriptionService {
       if (type === 'update') {
         entry.updateCount++;
         entry.lastUpdate = new Date();
-      } else if (type === 'error') {
+      } else {
         entry.errorCount++;
       }
     }
@@ -700,9 +700,9 @@ export class SubscriptionService {
    * Generate unique subscription key
    */
   private getSubscriptionKey<TData>(config: RegisteredConfig<TData>): string {
-    return `${config.subscriptionName}-${config.entityId || 'default'}-${
-      config.userId || 'anonymous'
-    }`;
+    return `${config.subscriptionName}-${
+      firstNonBlank(config.entityId) ?? 'default'
+    }-${firstNonBlank(config.userId) ?? 'anonymous'}`;
   }
 
   /**

@@ -6,6 +6,7 @@ import type {
 } from '../types';
 import { TransportSendError } from '../types';
 import { logger } from '#/utils/environment';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 const HISTOGRAM_BOUNDS = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
 
@@ -60,7 +61,10 @@ export class HttpTransport implements TelemetryTransport {
   isAvailable(): boolean {
     return (
       this.config.transports.http &&
-      !!(this.config.endpoints.metrics || this.config.endpoints.logs)
+      firstNonBlank(
+        this.config.endpoints.metrics,
+        this.config.endpoints.logs,
+      ) !== undefined
     );
   }
 
@@ -159,7 +163,7 @@ export class HttpTransport implements TelemetryTransport {
         'Content-Type': 'application/json',
       };
 
-      if (this.config.logsAuth?.username && this.config.logsAuth?.password) {
+      if (this.config.logsAuth?.username && this.config.logsAuth.password) {
         const credentials = btoa(
           `${this.config.logsAuth.username}:${this.config.logsAuth.password}`,
         );
@@ -217,28 +221,34 @@ export class HttpTransport implements TelemetryTransport {
           });
         }
 
-        if (metric.type === 'counter') {
-          const current = this.counterAccumulator.get(key) ?? 0;
-          this.counterAccumulator.set(key, current + metric.value);
-        } else if (metric.type === 'gauge') {
-          this.gaugeAccumulator.set(key, metric.value);
-        } else if (metric.type === 'histogram') {
-          let agg = this.histogramAccumulator.get(key);
-          if (!agg) {
-            // First observation fixes this series' bounds (per metric, stable).
-            const bounds = metric.bounds ?? HISTOGRAM_BOUNDS;
-            agg = {
-              buckets: Array.from({ length: bounds.length + 1 }, () => 0),
-              sum: 0,
-              count: 0,
-              bounds,
-            };
-            this.histogramAccumulator.set(key, agg);
+        switch (metric.type) {
+          case 'counter': {
+            const current = this.counterAccumulator.get(key) ?? 0;
+            this.counterAccumulator.set(key, current + metric.value);
+            break;
           }
-          const bucket = this.bucketIndex(metric.value, agg.bounds);
-          agg.buckets[bucket] = (agg.buckets[bucket] ?? 0) + 1;
-          agg.sum += metric.value;
-          agg.count += 1;
+          case 'gauge':
+            this.gaugeAccumulator.set(key, metric.value);
+            break;
+          case 'histogram': {
+            let agg = this.histogramAccumulator.get(key);
+            if (!agg) {
+              // First observation fixes this series' bounds (per metric, stable).
+              const bounds = metric.bounds ?? HISTOGRAM_BOUNDS;
+              agg = {
+                buckets: Array.from({ length: bounds.length + 1 }, () => 0),
+                sum: 0,
+                count: 0,
+                bounds,
+              };
+              this.histogramAccumulator.set(key, agg);
+            }
+            const bucket = this.bucketIndex(metric.value, agg.bounds);
+            agg.buckets[bucket] = (agg.buckets[bucket] ?? 0) + 1;
+            agg.sum += metric.value;
+            agg.count += 1;
+            break;
+          }
         }
       }
 
@@ -261,7 +271,7 @@ export class HttpTransport implements TelemetryTransport {
 
       if (
         this.config.metricsAuth?.username &&
-        this.config.metricsAuth?.password
+        this.config.metricsAuth.password
       ) {
         const credentials = btoa(
           `${this.config.metricsAuth.username}:${this.config.metricsAuth.password}`,
@@ -311,7 +321,6 @@ export class HttpTransport implements TelemetryTransport {
 
   private buildKey(name: string, labels: Record<string, string>): string {
     const labelStr = Object.entries(labels)
-      .filter(([, v]) => v !== undefined && v !== null)
       .sort()
       .map(([k, v]) => `${k}="${v}"`)
       .join(',');
@@ -498,7 +507,6 @@ export class HttpTransport implements TelemetryTransport {
     labels: Record<string, string>,
   ): { key: string; value: { stringValue: string } }[] {
     return Object.entries(labels)
-      .filter(([, v]) => v !== undefined && v !== null)
       .sort()
       .map(([key, value]) => ({
         key,

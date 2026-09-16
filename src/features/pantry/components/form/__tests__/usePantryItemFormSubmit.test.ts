@@ -1,10 +1,10 @@
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { alertService } from '#/services/alertService';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { ItemCondition, StorageState } from '#/graphql/generated/schemaTypes';
 import type { PantryItemForm_PantryItemFragment } from '../PantryItemForm.generated';
+import type { PantryItemFormData } from '../PantryItemForm';
 import {
   usePantryItemFormSubmit,
-  type PantryItemFormData,
   type UsePantryItemFormSubmitParams,
 } from '../usePantryItemFormSubmit';
 
@@ -45,6 +45,7 @@ const baseData: PantryItemFormData = {
   quantityInput: '2',
   unit: 'L',
   storageState: StorageState.Ambient,
+  condition: ItemCondition.Good,
   location: '',
   notes: '',
   category: '',

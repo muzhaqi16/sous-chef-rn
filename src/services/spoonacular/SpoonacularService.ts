@@ -36,7 +36,7 @@ class SpoonacularService {
   private dailyLimit: number = 150;
 
   constructor() {
-    this.apiKey = env.SPOONACULAR_API_KEY || '';
+    this.apiKey = env.SPOONACULAR_API_KEY ?? '';
     if (!this.apiKey) {
       logger.warn('Spoonacular API key not configured');
     }

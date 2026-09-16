@@ -5,6 +5,7 @@ import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 interface SavedRecipeMetadataPanelProps {
   savedFolder: string | null;
@@ -26,6 +27,7 @@ export const SavedRecipeMetadataPanel: React.FC<
   onUpdateRating,
 }) => {
   const { t } = useTranslation();
+  const folderName = firstNonBlank(savedFolder);
   return (
     <View style={styles.container}>
       <View style={styles.detailRow}>
@@ -67,16 +69,10 @@ export const SavedRecipeMetadataPanel: React.FC<
           <Icon
             name="folder"
             size={14}
-            tone={savedFolder ? 'primary' : 'textSecondary'}
+            tone={folderName ? 'primary' : 'textSecondary'}
           />
-          <Text
-            role="caption"
-            style={[
-              styles.detailValueText,
-              savedFolder && styles.detailValueTextActive,
-            ]}
-          >
-            {savedFolder || t('recipes.none')}
+          <Text role="caption" tone={folderName ? 'accent' : 'secondary'}>
+            {folderName ?? t('recipes.none')}
           </Text>
         </View>
       </View>
@@ -127,12 +123,6 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
-  },
-  detailValueText: {
-    color: theme.colors.textSecondary,
-  },
-  detailValueTextActive: {
-    color: theme.colors.primary,
   },
   ratingStars: {
     flexDirection: 'row',

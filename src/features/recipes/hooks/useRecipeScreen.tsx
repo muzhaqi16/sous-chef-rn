@@ -61,7 +61,7 @@ export function useRecipeScreen() {
   const reconciledDietValues = [
     ...(firstLifestyleDiet ? [firstLifestyleDiet] : []),
     ...profileDietRestrictions.filter(r => !isLifestyleDiet(r.diet)),
-  ].map(r => DIET_ENUM_TO_SPOONACULAR[r.diet] ?? r.diet.toLowerCase());
+  ].map(r => DIET_ENUM_TO_SPOONACULAR[r.diet]);
 
   // Discovery (random recipe API) takes a comma-separated tag string (AND).
   const dietaryTags =
@@ -142,15 +142,11 @@ export function useRecipeScreen() {
   const profileFilters: RecipeFilters | null = dietaryProfile
     ? {
         diet: reconciledDietValues,
-        intolerances: (dietaryProfile.restrictions ?? [])
+        intolerances: dietaryProfile.restrictions
           .filter((r): r is typeof r & { intolerance: Intolerance } =>
             Boolean(r.intolerance),
           )
-          .map(
-            r =>
-              INTOLERANCE_ENUM_TO_SPOONACULAR[r.intolerance] ??
-              r.intolerance.toLowerCase(),
-          ),
+          .map(r => INTOLERANCE_ENUM_TO_SPOONACULAR[r.intolerance]),
         mealType: null,
         maxReadyTime: dietaryProfile.maxCookTimeMinutes ?? null,
       }

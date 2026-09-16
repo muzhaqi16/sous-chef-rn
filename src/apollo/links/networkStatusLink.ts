@@ -22,7 +22,7 @@ const describeError = (error: unknown): string => {
  */
 export const createNetworkStatusLink = () =>
   new ApolloLink((operation, forward) => {
-    const operationName = operation.operationName || 'unnamed';
+    const operationName = operation.operationName ?? 'unnamed';
     const definition = getMainDefinition(operation.query);
     if (
       definition.kind === Kind.OPERATION_DEFINITION &&

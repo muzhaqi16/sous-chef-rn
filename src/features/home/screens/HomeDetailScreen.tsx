@@ -173,7 +173,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
       return;
     }
 
-    const success = await leaveHome(home.name ?? '');
+    const success = await leaveHome(home.name);
     if (success) {
       goBack();
     }
@@ -224,10 +224,8 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
 
   // Edges from masked connections; node refs flow into the section's card
   // components which call `useFragment` per row for cache-subscribed updates.
-  const memberNodes =
-    home.membersConnection?.edges?.map(e => e?.node).filter(Boolean) ?? [];
-  const inviteNodes =
-    home.invitesConnection?.edges?.map(e => e?.node).filter(Boolean) ?? [];
+  const memberNodes = home.membersConnection.edges.map(e => e.node);
+  const inviteNodes = home.invitesConnection.edges.map(e => e.node);
 
   const sections = [
     {
@@ -236,7 +234,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
         <>
           <EditableField
             label={t('labels.homeName')}
-            value={home.name ?? ''}
+            value={home.name}
             onSave={saveName}
             placeholder={t('labels.enterHomeName')}
             readOnly={!canManage}
@@ -251,7 +249,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
             <SettingSwitch
               title={t('homeDetail.labelAllowJoinCode')}
               description={t('homeDetail.descriptionAllowJoinCode')}
-              value={home.allowJoinCode ?? false}
+              value={home.allowJoinCode}
               onValueChange={handleToggleJoinCode}
               disabled={joinCodeLoading}
               loading={joinCodeLoading}

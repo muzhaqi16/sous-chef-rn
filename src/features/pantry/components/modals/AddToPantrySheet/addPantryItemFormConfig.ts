@@ -1,4 +1,4 @@
-import { object, string, boolean, date } from 'yup';
+import { object, string, boolean, date, mixed, type ObjectSchema } from 'yup';
 import { t, type TranslationKey } from '#/i18n';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
@@ -125,7 +125,7 @@ const isPositiveQuantity = (value: string | undefined): boolean => {
   return parsed !== null && parsed > 0;
 };
 
-export const addPantryItemSchema = object({
+export const addPantryItemSchema: ObjectSchema<AddPantryItemFormData> = object({
   itemName: string().trim().required(msg('errors.itemNameRequired')),
   quantityInput: string()
     .trim()
@@ -138,68 +138,82 @@ export const addPantryItemSchema = object({
   // ALL-OR-NOTHING in BOTH directions: the create contract rejects a unit id
   // with no weight, and the submit path drops a weight with no resolved unit
   // id. Each direction reports on the field the user has to fill.
-  pantryNetWeight: string().test(
-    'net-weight-needs-value',
-    msg('errors.field.netWeight'),
-    (value, context: { parent: NetWeightSiblings }) => {
-      if ((value ?? '').trim()) return true;
-      return !context.parent.pantryNetWeightUnitId;
-    },
-  ),
-  pantryNetWeightUnit: string().test(
-    'net-weight-needs-unit',
-    msg('labels.pleaseSelectAUnitForTheNetWeight'),
-    (_value, context: { parent: NetWeightSiblings }) => {
-      const weight = (context.parent.pantryNetWeight ?? '').trim();
-      if (!weight) return true;
-      return Boolean(context.parent.pantryNetWeightUnitId);
-    },
-  ),
+  pantryNetWeight: string()
+    .test(
+      'net-weight-needs-value',
+      msg('errors.field.netWeight'),
+      (value, context: { parent: NetWeightSiblings }) => {
+        if ((value ?? '').trim()) return true;
+        return !context.parent.pantryNetWeightUnitId;
+      },
+    )
+    .defined(),
+  pantryNetWeightUnit: string()
+    .defined()
+    .test(
+      'net-weight-needs-unit',
+      msg('labels.pleaseSelectAUnitForTheNetWeight'),
+      (_value, context: { parent: NetWeightSiblings }) => {
+        const weight = (context.parent.pantryNetWeight ?? '').trim();
+        if (!weight) return true;
+        return Boolean(context.parent.pantryNetWeightUnitId);
+      },
+    ),
   // The same all-or-nothing rule one level down, on the per-container weight
   // that feeds `item.netWeight` + `item.displayUnitId`: without it a unitless
   // weight is silently dropped. Scoped to `showPackageDetails` so a collapsed
   // section can never block Save.
-  itemNetWeight: string().test(
-    'item-net-weight-needs-value',
-    msg('errors.field.netWeight'),
-    (value, context: { parent: NetWeightSiblings }) => {
-      if (!context.parent.showPackageDetails) return true;
-      if ((value ?? '').trim()) return true;
-      return !context.parent.weightUnitId;
-    },
-  ),
-  weightUnit: string().test(
-    'item-net-weight-needs-unit',
-    msg('labels.pleaseSelectAUnitForTheNetWeight'),
-    (_value, context: { parent: NetWeightSiblings }) => {
-      if (!context.parent.showPackageDetails) return true;
-      const weight = (context.parent.itemNetWeight ?? '').trim();
-      if (!weight) return true;
-      return Boolean(context.parent.weightUnitId);
-    },
-  ),
+  itemNetWeight: string()
+    .test(
+      'item-net-weight-needs-value',
+      msg('errors.field.netWeight'),
+      (value, context: { parent: NetWeightSiblings }) => {
+        if (!context.parent.showPackageDetails) return true;
+        if ((value ?? '').trim()) return true;
+        return !context.parent.weightUnitId;
+      },
+    )
+    .defined(),
+  weightUnit: string()
+    .defined()
+    .test(
+      'item-net-weight-needs-unit',
+      msg('labels.pleaseSelectAUnitForTheNetWeight'),
+      (_value, context: { parent: NetWeightSiblings }) => {
+        if (!context.parent.showPackageDetails) return true;
+        const weight = (context.parent.itemNetWeight ?? '').trim();
+        if (!weight) return true;
+        return Boolean(context.parent.weightUnitId);
+      },
+    ),
   // Everything else is free-form; the mutation input builder handles shaping.
-  brand: string(),
-  category: string(),
-  expirationDate: date().nullable(),
-  storageState: string().oneOf(Object.values(StorageState)),
-  unit: string(),
-  unitId: string().nullable(),
-  pantryNetWeightUnitId: string().nullable(),
-  showPackageDetails: boolean(),
-  packageSize: string(),
-  contentUnit: string(),
-  contentUnitId: string().nullable(),
-  weightUnitId: string().nullable(),
-  storageLocation: string(),
-  selectedStorageLocationId: string().nullable(),
-  storageNotes: string(),
-  condition: string().oneOf(Object.values(ItemCondition)),
-  tags: string(),
-  minQuantity: string(),
-  restockQuantity: string(),
-  storeName: string(),
-  storeId: string().nullable(),
-  costPerUnit: string(),
-  acquisitionMethod: string().oneOf(ACQUISITION_METHOD_OPTIONS),
+  brand: string().defined(),
+  category: string().defined(),
+  expirationDate: date().nullable().defined(),
+  storageState: mixed<StorageState>()
+    .oneOf(Object.values(StorageState))
+    .defined(),
+  unit: string().defined(),
+  unitId: string().nullable().defined(),
+  pantryNetWeightUnitId: string().nullable().defined(),
+  showPackageDetails: boolean().defined(),
+  packageSize: string().defined(),
+  contentUnit: string().defined(),
+  contentUnitId: string().nullable().defined(),
+  weightUnitId: string().nullable().defined(),
+  storageLocation: string().defined(),
+  selectedStorageLocationId: string().nullable().defined(),
+  storageNotes: string().defined(),
+  condition: mixed<ItemCondition>()
+    .oneOf(Object.values(ItemCondition))
+    .defined(),
+  tags: string().defined(),
+  minQuantity: string().defined(),
+  restockQuantity: string().defined(),
+  storeName: string().defined(),
+  storeId: string().nullable().defined(),
+  costPerUnit: string().defined(),
+  acquisitionMethod: mixed<OfferedAcquisitionMethod>()
+    .oneOf(ACQUISITION_METHOD_OPTIONS)
+    .defined(),
 });

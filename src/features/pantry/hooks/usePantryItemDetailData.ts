@@ -61,17 +61,17 @@ export function usePantryItemDetailData(itemId: string) {
 
   // Materializes the masked ref into the unmasked entity. `readFragment` reads
   // the mutable cache during render, so the compiler memoizes it against the
-  // reactive values named here — the `livePantryItem.data` guard is load-bearing:
-  // gating on the masked ref instead would pin this to a stale snapshot until a
+  // reactive values named here — gating on `liveData` is load-bearing: gating
+  // on the masked ref instead would pin this to a stale snapshot until a
   // refetch, hiding in-place edits.
-  const item =
-    livePantryItem.complete && livePantryItem.data
-      ? client.cache.readFragment<PantryItemDetail_PantryItemFragment>({
-          fragment: PantryItemDetail_PantryItemFragmentDoc,
-          fragmentName: 'PantryItemDetail_pantryItem',
-          from: { __typename: 'PantryItem', id: itemId },
-        }) ?? null
-      : null;
+  const liveData = livePantryItem.complete ? livePantryItem.data : null;
+  const item = liveData
+    ? client.cache.readFragment<PantryItemDetail_PantryItemFragment>({
+        fragment: PantryItemDetail_PantryItemFragmentDoc,
+        fragmentName: 'PantryItemDetail_pantryItem',
+        from: { __typename: 'PantryItem', id: itemId },
+      }) ?? null
+    : null;
 
   // The pantry resolver throws rather than returning null, so a row deleted on
   // another device arrives as RESOURCE_NOT_FOUND. Only trust it once the create
@@ -81,8 +81,8 @@ export function usePantryItemDetailData(itemId: string) {
   // Edges arrive masked; materialize each so status/expiresAt reads and
   // BatchSection's sort/filter work directly.
   const batches: PantryItemBatchFragment[] =
-    batchesData?.pantryItemBatchesConnection?.edges
-      ?.map(edge =>
+    batchesData?.pantryItemBatchesConnection.edges
+      .map(edge =>
         client.cache.readFragment<PantryItemBatchFragment>({
           fragment: PantryItemBatchFragmentDoc,
           fragmentName: 'PantryItemBatchFragment',
@@ -101,7 +101,7 @@ export function usePantryItemDetailData(itemId: string) {
     // values from these same batches.
     batchPricing: summarizeBatchPricing(batches),
     batchTotalCount:
-      batchesData?.pantryItemBatchesConnection?.totalCount ?? undefined,
+      batchesData?.pantryItemBatchesConnection.totalCount ?? undefined,
     deletedOnServer,
     itemLoading,
     itemError,

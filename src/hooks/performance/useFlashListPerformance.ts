@@ -260,10 +260,7 @@ export function useFlashListPerformance<T>(
     const list = flashListRef.current;
     // Guarded as a function: test doubles of FlashList expose a bare instance.
     if (!list || typeof list.computeVisibleIndices !== 'function') return;
-    const visibleIndices = list.computeVisibleIndices();
-    if (!visibleIndices) return;
-
-    const { startIndex, endIndex } = visibleIndices;
+    const { startIndex, endIndex } = list.computeVisibleIndices();
     const expectedCount = endIndex - startIndex + 1;
     if (expectedCount <= 0) return;
     const mountedCount = cellRegistry.countMountedInRange(startIndex, endIndex);
@@ -310,7 +307,7 @@ export function useFlashListPerformance<T>(
       if (dedupeRAFRef.current !== null) return;
       dedupeRAFRef.current = requestAnimationFrame(() => {
         const pending = pendingMetricRef.current;
-        if (pending && diagnostics) {
+        if (pending) {
           diagnostics.recordScrollFrame(pending);
 
           // Streak start, complete blanks and streak end only.

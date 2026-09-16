@@ -8,6 +8,7 @@ import {
 import { Text } from '#components/atoms/Text';
 import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
 import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 interface StoreAutocompleteFieldProps {
   variant: 'inline' | 'modal';
@@ -62,7 +63,7 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
         renderItem={item => (
           <AutocompleteRow
             title={item.name}
-            subtitle={item.address || undefined}
+            subtitle={firstNonBlank(item.address)}
           />
         )}
         keyExtractor={item => item.id}

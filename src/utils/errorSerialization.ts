@@ -171,7 +171,7 @@ export function serializeError(error: unknown, maxDepth = 4): SerializedError {
         message:
           typeof gqlErr.message === 'string'
             ? gqlErr.message
-            : describeValue(gqlErr.message || ''),
+            : describeValue(gqlErr.message ?? ''),
         path: Array.isArray(gqlErr.path)
           ? gqlErr.path.map((p: unknown) =>
               typeof p === 'string' || typeof p === 'number' ? p : String(p),
@@ -189,11 +189,11 @@ export function serializeError(error: unknown, maxDepth = 4): SerializedError {
       name:
         typeof networkError.name === 'string'
           ? networkError.name
-          : describeValue(networkError.name || 'NetworkError'),
+          : describeValue(networkError.name ?? 'NetworkError'),
       message:
         typeof networkError.message === 'string'
           ? networkError.message
-          : describeValue(networkError.message || ''),
+          : describeValue(networkError.message ?? ''),
       statusCode: networkError.statusCode,
       result: safeSerialize(networkError.result, 1),
     };
@@ -206,7 +206,7 @@ export function serializeError(error: unknown, maxDepth = 4): SerializedError {
       operationName:
         typeof operation.operationName === 'string'
           ? operation.operationName
-          : describeValue(operation.operationName || ''),
+          : describeValue(operation.operationName ?? ''),
       variables: safeSerialize(operation.variables, 1),
     };
   }

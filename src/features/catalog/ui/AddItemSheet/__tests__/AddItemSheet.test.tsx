@@ -5,9 +5,8 @@ import { screen, userEvent } from '@testing-library/react-native';
 // The report step renders ReportItemForm, whose useReportItem calls useMutation,
 // so the tree needs an Apollo context even though this suite mocks the data hooks.
 import { renderWithApollo as render } from '#/test-utils/apolloMockProvider';
-import { AddItemSheet, useAddItemSheetRefs } from '../AddItemSheet';
+import { AddItemSheet } from '../AddItemSheet';
 import { pantrySheetConfig } from '#features/pantry/components/modals/AddToPantrySheet/pantrySheetConfig';
-import { renderHook } from '@testing-library/react-native';
 import { kitTestIDs } from '#components/testIDs';
 import type {
   AddItemSheetConfig,
@@ -476,7 +475,7 @@ describe('AddItemSheet', () => {
     } = require('#features/catalog/hooks/useItemAutocomplete');
     useItemAutocomplete.mockReturnValue({
       searchTerm: 'mi',
-      displayItems: [{ id: '1', name: 'Milk' }],
+      displayItems: [{ id: '1', name: 'Milk', brands: [] }],
       isLoading: false,
       handleSearchTermChange: mockHandleSearchTermChange,
       reset: mockResetAutocomplete,
@@ -494,7 +493,7 @@ describe('AddItemSheet', () => {
     } = require('#features/catalog/hooks/useItemAutocomplete');
     useItemAutocomplete.mockReturnValue({
       searchTerm: 'mi',
-      displayItems: [{ id: '1', name: 'Milk' }],
+      displayItems: [{ id: '1', name: 'Milk', brands: [] }],
       isLoading: false,
       handleSearchTermChange: mockHandleSearchTermChange,
       reset: mockResetAutocomplete,
@@ -517,25 +516,5 @@ describe('AddItemSheet', () => {
     render(<AddItemSheet {...defaultProps} visible={false} />);
     // Still renders the modal structure, but sheet behavior is controlled by ref
     expect(screen.getByText('Add to Pantry')).toBeTruthy();
-  });
-});
-
-describe('useAddItemSheetRefs', () => {
-  it('returns searchBarRef, getSearchValue, and clearSearch', () => {
-    const { result } = renderHook(() => useAddItemSheetRefs());
-
-    expect(result.current.searchBarRef).toBeDefined();
-    expect(typeof result.current.getSearchValue).toBe('function');
-    expect(typeof result.current.clearSearch).toBe('function');
-  });
-
-  it('getSearchValue returns empty string when ref is not attached', () => {
-    const { result } = renderHook(() => useAddItemSheetRefs());
-    expect(result.current.getSearchValue()).toBe('');
-  });
-
-  it('clearSearch does not throw when ref is not attached', () => {
-    const { result } = renderHook(() => useAddItemSheetRefs());
-    expect(() => result.current.clearSearch()).not.toThrow();
   });
 });

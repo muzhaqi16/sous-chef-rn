@@ -187,10 +187,9 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
             pantryItemId: pantryItem.id,
             quantity: em.adjustedQuantity,
             unitId:
-              em.adjustedUnitId ||
-              em.match.suggestedUnit?.id ||
-              pantryItem.unit.id ||
-              '',
+              em.adjustedUnitId ??
+              em.match.suggestedUnit?.id ??
+              pantryItem.unit.id,
           },
         ];
       });

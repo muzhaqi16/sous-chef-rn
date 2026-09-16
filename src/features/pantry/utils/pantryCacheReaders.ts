@@ -23,6 +23,9 @@ const CACHED_PANTRY_ITEMS_FRAGMENT = gql`
           item {
             id
           }
+          unit {
+            id
+          }
         }
       }
     }
@@ -37,6 +40,7 @@ interface CachedPantryItemsForDuplicateCheck {
         itemName: string | null;
         quantity: number | null;
         item: { id: string } | null;
+        unit: { id: string } | null;
       } | null;
     } | null)[];
   } | null;
@@ -53,11 +57,18 @@ const isStoreRecord = (value: unknown): value is Record<string, unknown> =>
 const normalizeName = (name: string | null | undefined): string =>
   (name ?? '').trim().toLowerCase();
 
+/** `{ __ref: 'Item:abc' }` → `{ id: 'abc' }`; anything else is uncached. */
+const refId = (value: unknown): { id: string } | null => {
+  const ref = (value as { __ref?: string } | null)?.__ref;
+  return ref ? { id: ref.split(':')[1] ?? '' } : null;
+};
+
 type CachedNode = {
   id: string;
   itemName: string | null;
   quantity: number | null;
   item: { id: string } | null;
+  unit: { id: string } | null;
 };
 
 /**
@@ -97,13 +108,8 @@ function scanCachedPantryItems(
         id: node.id as string,
         itemName: (node.itemName as string | null) ?? null,
         quantity: (node.quantity as number | null) ?? null,
-        item: (node.item as { __ref?: string } | null)?.__ref
-          ? {
-              id:
-                String((node.item as { __ref: string }).__ref).split(':')[1] ??
-                '',
-            }
-          : null,
+        item: refId(node.item),
+        unit: refId(node.unit),
       });
     }
   }
@@ -111,18 +117,24 @@ function scanCachedPantryItems(
 }
 
 /**
- * The server's key is `(pantryId, itemId)` among non-deleted rows, so `itemId`
- * reproduces it exactly. `itemName` is the fallback for the details form, which
- * has no catalog id; a name match only ever drives a prompt, never an action.
+ * The server's key is `(pantryId, itemId, unitId)` among active rows. `itemId`
+ * reproduces the item half; `itemName` is the fallback for the details form,
+ * which has no catalog id, and a name match only ever drives a prompt. Without
+ * a `unitId` any unit matches, which reads "stocks this item at all".
  */
 export function findCachedPantryItemDuplicate(
   cache: ApolloCache,
   pantryId: string | null | undefined,
-  match: { itemId?: string | null; itemName?: string | null },
+  match: {
+    itemId?: string | null;
+    itemName?: string | null;
+    unitId?: string | null;
+  },
 ): CachedPantryItemDuplicate | null {
   if (!pantryId) return null;
 
-  const itemId = match.itemId || null;
+  const itemId = match.itemId ?? null;
+  const unitId = match.unitId ?? null;
   const itemName = normalizeName(match.itemName);
   if (!itemId && !itemName) return null;
 
@@ -157,7 +169,7 @@ export function findCachedPantryItemDuplicate(
     const matched = itemId
       ? node.item?.id === itemId
       : normalizeName(node.itemName) === itemName;
-    if (matched) {
+    if (matched && (!unitId || node.unit?.id === unitId)) {
       return {
         existingPantryItemId: node.id,
         existingPantryItemIds: [node.id],

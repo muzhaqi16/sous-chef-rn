@@ -1,5 +1,6 @@
 import { Kind, type DocumentNode, type OperationDefinitionNode } from 'graphql';
 import {
+  byOperation,
   inputTypeNameOf,
   operationNameOf,
   rootFieldOf,
@@ -25,6 +26,16 @@ describe('documentOperation', () => {
       );
     },
   );
+
+  // A second entry for one operation would silently replace the first handler.
+  it('refuses a table that names one operation twice', () => {
+    expect(() =>
+      byOperation([
+        [ForkRecipeDocument, 'first'],
+        [ForkRecipeDocument, 'second'],
+      ]),
+    ).toThrow(operationNameOf(ForkRecipeDocument));
+  });
 
   it('throws for a document with no named operation', () => {
     expect(() => operationNameOf(EMPTY)).toThrow();

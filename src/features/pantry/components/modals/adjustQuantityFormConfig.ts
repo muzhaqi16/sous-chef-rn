@@ -20,7 +20,7 @@ export const adjustQuantitySchema: ObjectSchema<AdjustQuantityFormValues> =
     quantityInput: string()
       .defined()
       .test('is-quantity', msg('errors.invalidQuantity'), value => {
-        const parsed = parseFractionalInput(value ?? '');
+        const parsed = parseFractionalInput(value);
         return parsed !== null && !isNaN(parsed) && parsed >= 0;
       }),
     reason: string().trim().required(msg('adjustQuantity.reasonRequired')),

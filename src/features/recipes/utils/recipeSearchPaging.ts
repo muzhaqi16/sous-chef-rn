@@ -264,7 +264,7 @@ export async function fetchRecipeSearchPage(
           const data = await spoonacularService.searchRecipesWithInfo(
             searchParams,
           );
-          results = data.results || [];
+          results = data.results;
           total = data.totalResults;
           cacheStore.setCached(cacheKey, results, undefined, total);
         } catch (error) {

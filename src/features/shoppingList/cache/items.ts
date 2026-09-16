@@ -167,7 +167,7 @@ export function buildAddItemsReconcileUpdate({
         // that field is a response-matching token a call site picks freely (the
         // recipe add sends a Spoonacular ingredient id), never this row's
         // minted cuid. Array position is the fallback.
-        const clientId = variables.input.items?.[result?.index ?? position]?.id;
+        const clientId = variables.input.items?.[result.index ?? position]?.id;
         reconcileShoppingItemCreateUpdate(cache, targetListId, item, clientId);
       });
     if (wrap) {

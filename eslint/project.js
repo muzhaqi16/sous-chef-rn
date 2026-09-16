@@ -661,14 +661,9 @@ const overrides = [
         { checksVoidReturn: { attributes: false } },
       ],
       '@typescript-eslint/no-non-null-assertion': 'error',
-      // `allow-as-parameter` admits one shape: a typed target handed to a
-      // constructor such as `new Proxy({} as MMKV, handler)`.
       '@typescript-eslint/consistent-type-assertions': [
         'error',
-        {
-          assertionStyle: 'as',
-          objectLiteralTypeAssertions: 'allow-as-parameter',
-        },
+        { assertionStyle: 'as', objectLiteralTypeAssertions: 'never' },
       ],
       '@typescript-eslint/switch-exhaustiveness-check': [
         'error',
@@ -676,22 +671,26 @@ const overrides = [
       ],
       '@typescript-eslint/no-unsafe-enum-comparison': 'error',
       '@typescript-eslint/no-base-to-string': 'error',
-      // An empty string is a value the UI falls back from (a blank input, an
-      // unset label), so `||` stays legal there; for numbers, booleans and
-      // objects `||` also swallows `0` and `false`.
-      '@typescript-eslint/prefer-nullish-coalescing': [
-        'error',
-        { ignorePrimitives: { string: true } },
-      ],
+      // A blank string falls back through `firstNonBlank` (#/utils/firstNonBlank),
+      // never `||`, which also swallows `0` and `false`.
+      '@typescript-eslint/prefer-nullish-coalescing': 'error',
       'sous-chef/no-error-message-branching': 'error',
-      'sous-chef/no-rendered-server-message': 'error',
+      'sous-chef/no-rendered-server-message': [
+        'error',
+        { followProjections: true },
+      ],
       'sous-chef/no-raw-color': 'error',
       'sous-chef/no-raw-spacing': 'error',
-      'sous-chef/text-needs-role': 'error',
-      'sous-chef/quantity-through-formatter': 'error',
+      'sous-chef/text-needs-role': ['error', { readVariants: true }],
+      'sous-chef/quantity-through-formatter': [
+        'error',
+        { followVariables: true },
+      ],
       'sous-chef/no-rendered-enum': 'error',
       'sous-chef/no-t-default-value': 'error',
-      'sous-chef/no-prose-literal': 'error',
+      'sous-chef/no-prose-literal': ['error', { followRendered: true }],
+      'sous-chef/no-string-keyed-lookup': 'error',
+      'sous-chef/no-number-noun-concat': 'error',
     },
   },
   {
@@ -710,7 +709,10 @@ const overrides = [
     // wrapper passes its caller's role through. Error copy still pairs there.
     files: ['src/components/**/*.{ts,tsx}'],
     rules: {
-      'sous-chef/text-needs-role': ['error', { requireRole: false }],
+      'sous-chef/text-needs-role': [
+        'error',
+        { requireRole: false, readVariants: true },
+      ],
     },
   },
   {

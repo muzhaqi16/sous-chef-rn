@@ -20,6 +20,7 @@ import {
   getRateLimitMessage,
   isRateLimitError,
 } from '#/utils/errors/rateLimit';
+import { Telemetry } from '#/services/telemetry';
 import { operationNameOf } from './documentOperation';
 
 /**
@@ -101,6 +102,9 @@ type Classified =
   | { status: 'applied' | 'queued' }
   | { status: 'failed'; failure: Failure; error?: unknown };
 
+const isGoneCode = (code: string | null): boolean =>
+  code === ErrorCode.NotFound || code === TopLevelErrorCode.ResourceNotFound;
+
 function classify(
   result: MutationResult<unknown> | undefined,
   thrown: unknown,
@@ -108,7 +112,10 @@ function classify(
 ): Classified {
   if (!result || result.error) {
     const error = result ? result.error : thrown;
-    return { status: 'failed', failure: failureFromError(error), error };
+    const failure = failureFromError(error);
+    // Not queued: a write the queue takes resolves with a null payload instead.
+    if (removal && isGoneCode(failure.code)) return { status: 'applied' };
+    return { status: 'failed', failure, error };
   }
   // The offline queue resolves a queued write with its payload field null.
   const payload = extractMutationPayload(result.data);
@@ -119,7 +126,7 @@ function classify(
   const failure = failureFromPayload(payload);
   if (
     failure.code === ErrorCode.IdempotentReplay ||
-    (removal && failure.code === ErrorCode.NotFound)
+    (removal && isGoneCode(failure.code))
   ) {
     return { status: 'applied' };
   }
@@ -240,8 +247,15 @@ export async function settleMutation<TData>(
   }
 
   const failure = fail(classified.failure, classified.error, options);
+  const operation = operationNameOf(options.document);
   if ('error' in classified) {
-    reportMutationFailure(classified.error, operationNameOf(options.document));
+    reportMutationFailure(classified.error, operation);
+  } else {
+    // A refusal the server returned is a business outcome, not an app error.
+    Telemetry.increment('mutation_refused_total', 1, {
+      operation,
+      code: classified.failure.code ?? 'none',
+    });
   }
   return { status: 'failed', data: result?.data, failure };
 }

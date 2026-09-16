@@ -2,6 +2,7 @@ import Fraction from 'fraction.js';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { formatNumberForInput } from '#/utils/formatters/number';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /** Every quantity the app renders or seeds is at most this precise: 1/8 is 0.125. */
 const MAX_DECIMALS = 3;
@@ -65,7 +66,7 @@ export function formatQuantityAsFraction(
   qty: number,
   notation: QuantityNotation = 'mixed',
 ): string {
-  if (qty == null || qty === 0) return '0';
+  if (qty === 0) return '0';
   if (Number.isInteger(qty)) return qty.toString();
   if (notation === 'decimal') return formatQuantity(qty);
 
@@ -106,7 +107,7 @@ export function formatQuantityForDisplay(
   const typed = quantityInput?.trim();
   const value = typed ? parseFractionalInput(typed) : quantity;
 
-  if (value == null) return typed || '';
+  if (value == null) return typed ?? '';
   if (!Number.isFinite(value)) return '';
 
   return formatQuantityAsFraction(value, notation);
@@ -146,7 +147,7 @@ const isMillilitre = (symbol: string): boolean => symbol.toLowerCase() === 'ml';
 
 /** Primary display, with g→kg / mL→L upscaling: 1500g → "1.5kg". */
 export function formatQuantityDisplay(quantity: number, unit?: string): string {
-  const unitStr = unit || '';
+  const unitStr = unit ?? '';
   if (quantity >= 1000 && (unitStr === 'g' || isMillilitre(unitStr))) {
     return `${(quantity / 1000).toFixed(1)}${unitStr === 'g' ? 'kg' : 'L'}`;
   }
@@ -157,5 +158,5 @@ export function formatQuantityDisplay(quantity: number, unit?: string): string {
 export function getUnitDisplayText(
   unit?: { symbol?: string; name?: string } | null,
 ): string {
-  return unit?.symbol || unit?.name || '';
+  return firstNonBlank(unit?.symbol, unit?.name) ?? '';
 }

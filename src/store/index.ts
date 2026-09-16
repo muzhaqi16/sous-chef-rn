@@ -55,7 +55,6 @@ import {
   loadSessionTokens,
   pickFresherSessionTokens,
   clearSessionTokens,
-  type SessionTokenLoadResult,
 } from '#/storage/keychain';
 import { logger } from '#/utils/environment';
 // Type-only: a value import would close the telemetry→useStore cycle.
@@ -78,13 +77,10 @@ const hydrateSessionTokensThenFinish = async (
     return;
   }
 
-  // `?? { status: 'absent' }` tolerates legacy test mocks resolving null.
-  const result: SessionTokenLoadResult = (await loadSessionTokens()) ?? {
-    status: 'absent',
-  };
+  const result = await loadSessionTokens();
   if (result.status === 'ok') {
     const fallback =
-      state?.accessToken && state?.refreshToken
+      state?.accessToken && state.refreshToken
         ? { accessToken: state.accessToken, refreshToken: state.refreshToken }
         : null;
     const tokens = pickFresherSessionTokens(result.tokens, fallback);
@@ -93,7 +89,7 @@ const hydrateSessionTokensThenFinish = async (
     if (tokens === result.tokens) {
       state?.setSessionTokensInKeychain(true);
     }
-  } else if (state?.accessToken && state?.refreshToken) {
+  } else if (state?.accessToken && state.refreshToken) {
     // MMKV fallback: the write-through self-heals the keychain, and partialize
     // keeps this copy until `sessionTokensInKeychain` confirms.
     if (result.status === 'error') {
@@ -138,7 +134,7 @@ export const handleStoreRehydration = (
   // since this one last ran `setAuth` — would otherwise denominate every
   // figure on screen in a currency the account does not hold.
   const recordCurrency = state?.user?.preferredCurrency;
-  if (recordCurrency && recordCurrency !== state?.preferredCurrency) {
+  if (recordCurrency && recordCurrency !== state.preferredCurrency) {
     state.preferredCurrency = recordCurrency;
   }
 

@@ -18,6 +18,7 @@ import { useCopyShoppingList } from './useCopyShoppingList';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 export function useShoppingListTemplate() {
   const { t } = useTranslation();
@@ -77,7 +78,9 @@ export function useShoppingListTemplate() {
     }
 
     const derived = listFromTemplate(source, {
-      name: name?.trim() || t('labels.copyOfName', { name: source.name }),
+      name:
+        firstNonBlank(name)?.trim() ??
+        t('labels.copyOfName', { name: source.name }),
     });
 
     const listId = await copyList(derived, { homeId });

@@ -10,7 +10,6 @@ import {
  * that looks live and silently no-ops. A loaded membership still restricts.
  */
 const UNKNOWN_MEMBERSHIP_PERMISSIONS: PantryPermissions = {
-  canView: true,
   canAddItems: true,
   canEditItems: true,
   canCreatePantry: true,

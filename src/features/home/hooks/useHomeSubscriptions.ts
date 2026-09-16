@@ -39,7 +39,7 @@ const removeInviteFromCache = createRemoveFromParentConnectionUpdater(
  * in `AuthenticatedSubscriptions`. `userId` drives self-echo suppression.
  */
 export function useHomeSubscriptions(userId?: string) {
-  const selectedHomeId = useSelectedHomeId() || undefined;
+  const selectedHomeId = useSelectedHomeId() ?? undefined;
   const isHomeSelectionReady = useIsHomeSelectionReady();
   const rejected = useSubscriptionRejected(HomeEventsDocument);
 
@@ -55,8 +55,6 @@ export function useHomeSubscriptions(userId?: string) {
       payload: HomeEventsPayload,
       client: SubscriptionApolloClient,
     ) => {
-      if (!payload) return;
-
       // Skip this device's own echo — its mutation already updated the cache.
       // An admin acting on you reports the ADMIN, so the event that removed you
       // still gets through.

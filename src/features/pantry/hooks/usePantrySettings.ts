@@ -41,7 +41,7 @@ function buildDeletePantryUpdater(homeId: string | null | undefined) {
   ) {
     // Keyed off the VARIABLES: `DeletePantryPayload.pantry` is null when the
     // server converges a replay, exactly the case this has to handle.
-    if (!appliedPayload(data) || !variables?.input?.id || !homeId) return;
+    if (!appliedPayload(data) || !variables?.input.id || !homeId) return;
     try {
       removeOptimisticPantry(cache, homeId, variables.input.id);
     } catch (error) {
@@ -200,7 +200,7 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
 
   return {
     pantry,
-    pantryItemCount: pantry?.itemsConnection?.totalCount ?? 0,
+    pantryItemCount: pantry?.itemsConnection.totalCount ?? 0,
     loadingPantry,
     pantryError,
     setDefault,

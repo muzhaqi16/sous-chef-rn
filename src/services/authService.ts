@@ -64,7 +64,7 @@ import {
 function bootstrapUserStore(user: LoginUserFragment): void {
   const storeState = useStore.getState();
   if (user.defaultHomeId) {
-    const pantries = user.defaultHome?.pantriesConnection?.edges;
+    const pantries = user.defaultHome?.pantriesConnection.edges;
     const defaultPantry =
       pantries?.find(e => e.node.isDefault)?.node ?? pantries?.[0]?.node;
     const pantryId = defaultPantry?.id ?? null;
@@ -143,10 +143,8 @@ async function applyRegionCurrencyDefault(
 
 // --- User preferences helpers (direct Zustand access) ---
 
-function getUserPreferences(userId?: string) {
+function getUserPreferences(targetUserId: string) {
   const store = useStore.getState();
-  const targetUserId = userId || store.user?.id;
-  if (!targetUserId) return null;
 
   return {
     shouldShowCredentialPrompt: () => {
@@ -259,8 +257,6 @@ async function handleLogin(
   loginCredentials?: { email: string },
   showRememberPrompt = false,
 ): Promise<boolean> {
-  if (!loginResponse?.user) return false;
-
   const { user, accessToken, refreshToken } = loginResponse;
   const store = useStore.getState();
   const previousUserId = queueStore.getCurrentUserId();
@@ -310,7 +306,7 @@ async function handleLogin(
       );
       const prefs = getUserPreferences(user.id);
       showRememberMeGate =
-        !hasStoredCreds && !!prefs?.shouldShowCredentialPrompt();
+        !hasStoredCreds && prefs.shouldShowCredentialPrompt();
     }
   }
 
@@ -367,7 +363,7 @@ async function handleLogin(
   // from forcing main_app in the meantime).
   if (showRememberMeGate && loginCredentials) {
     store.setPostLoginCredentials(loginCredentials);
-    getUserPreferences(user.id)?.trackCredentialPromptShown();
+    getUserPreferences(user.id).trackCredentialPromptShown();
     return true;
   }
 
@@ -383,15 +379,15 @@ async function shouldShowPostLoginBiometricPrompt(targetUser: {
 }): Promise<{ shouldShow: boolean; reason?: string }> {
   // Keychain entries are namespaced by email, so an account with no readable
   // email can't be matched against stored credentials.
-  const accountEmail = targetUser?.email;
-  if (!targetUser?.id || !accountEmail) {
+  const accountEmail = targetUser.email;
+  if (!targetUser.id || !accountEmail) {
     return { shouldShow: false, reason: 'No user found' };
   }
 
   const store = useStore.getState();
   const navState = store.getUserNavigationState(targetUser.id);
 
-  if (navState?.isNewUser && !navState?.hasCompletedOnboarding) {
+  if (navState?.isNewUser && !navState.hasCompletedOnboarding) {
     return {
       shouldShow: false,
       reason: 'New user - biometric setup handled during onboarding',
@@ -603,8 +599,7 @@ async function logout(options?: LogoutOptions): Promise<void> {
     store.setNavigationState('auth');
 
     if (currentUserId) {
-      const prefs = getUserPreferences(currentUserId);
-      prefs?.trackLogout();
+      getUserPreferences(currentUserId).trackLogout();
     }
   } catch (error) {
     logger.error('Logout error:', error);
@@ -810,7 +805,7 @@ async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
       fetchPolicy: 'network-only',
       context: { allowDuringLogout: true },
     });
-    const mine = listed.data?.deviceCredentials?.find(
+    const mine = listed.data?.deviceCredentials.find(
       credential => credential.deviceId === deviceId,
     );
     if (!mine) return true;
@@ -824,7 +819,7 @@ async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
     // is not a revoke: the credential stays exchangeable while the local slot
     // is dropped.
     return (
-      revoked.data?.revokeDeviceCredential?.__typename ===
+      revoked.data?.revokeDeviceCredential.__typename ===
       'RevokeDeviceCredentialPayload'
     );
   } catch (error) {

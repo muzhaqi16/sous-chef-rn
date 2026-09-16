@@ -1,12 +1,8 @@
 import { useFragment, useMutation, useQuery } from '@apollo/client/react';
-import {
-  classifyInvitationRefusal,
-  type InvitationRefusal,
-} from '#/domain/invitationRefusal';
-import {
-  appliedPayload,
-  extractMutationPayload,
-} from '#/utils/errors/mutationPayload';
+import type { DocumentNode } from 'graphql';
+import { invitationRefusalCopy } from '#/domain/invitationRefusal';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { useTranslation } from '#/i18n';
 import {
   AcceptShoppingListInviteDocument,
   DeclineShoppingListInviteDocument,
@@ -26,20 +22,19 @@ import {
 
 export type InvitationType = 'shopping_list' | 'home' | 'unknown';
 
-export type InviteOutcome =
-  | { ok: true }
-  | { ok: false; refusal: InvitationRefusal };
-
-/** The payload member is the only success; everything else is a refusal. */
-const outcomeOf = (data: unknown): InviteOutcome =>
-  appliedPayload(data)
-    ? { ok: true }
-    : {
-        ok: false,
-        refusal: classifyInvitationRefusal(
-          extractMutationPayload(data)?.__typename,
-        ),
-      };
+/** False when the write failed; the failure is already alerted. */
+const settleInvite = async (
+  run: () => Promise<{ data?: unknown; error?: unknown }>,
+  document: DocumentNode,
+  fallback: string,
+): Promise<boolean> => {
+  const settled = await settleMutation(run, {
+    document,
+    fallback,
+    copy: invitationRefusalCopy(),
+  });
+  return settled.status !== 'failed';
+};
 
 /**
  * Resolve an invite straight from a deep-link token, and accept or decline it.
@@ -47,6 +42,7 @@ const outcomeOf = (data: unknown): InviteOutcome =>
  * cached pending list on a fresh device.
  */
 export function useInviteByToken(token: string | undefined) {
+  const { t } = useTranslation();
   const { data: homeInviteData, loading: homeInviteLoading } = useQuery(
     GetHomeInviteByTokenDocument,
     { variables: { token: token ?? '' }, skip: !token },
@@ -90,34 +86,41 @@ export function useInviteByToken(token: string | undefined) {
     ? 'home'
     : 'unknown';
 
-  const accept = async (inviteToken: string): Promise<InviteOutcome> => {
-    const input = { input: { token: inviteToken } };
-    if (invitationType === 'shopping_list') {
-      const result = await acceptShoppingListInvite({ variables: input });
-      if (result.error) return { ok: false, refusal: 'refused' };
-      return outcomeOf(result.data);
-    }
+  // An unresolved invite has nothing to send; the screen explains it first.
+  const accept = async (inviteToken: string): Promise<boolean> => {
+    if (invitationType === 'unknown') return false;
+    const variables = { input: { token: inviteToken } };
+    const fallback = t('invitationAcceptance.acceptFailed');
     if (invitationType === 'home') {
-      const result = await acceptHomeInvite({ variables: input });
-      if (result.error) return { ok: false, refusal: 'refused' };
-      return outcomeOf(result.data);
+      return settleInvite(
+        () => acceptHomeInvite({ variables }),
+        AcceptHomeInviteDocument,
+        fallback,
+      );
     }
-    return { ok: false, refusal: 'invalid' };
+    return settleInvite(
+      () => acceptShoppingListInvite({ variables }),
+      AcceptShoppingListInviteDocument,
+      fallback,
+    );
   };
 
-  const decline = async (inviteToken: string): Promise<InviteOutcome> => {
-    const input = { input: { token: inviteToken } };
-    if (invitationType === 'shopping_list') {
-      const result = await declineShoppingListInvite({ variables: input });
-      if (result.error) return { ok: false, refusal: 'refused' };
-      return outcomeOf(result.data);
-    }
+  const decline = async (inviteToken: string): Promise<boolean> => {
+    if (invitationType === 'unknown') return false;
+    const variables = { input: { token: inviteToken } };
+    const fallback = t('invitationAcceptance.declineFailed');
     if (invitationType === 'home') {
-      const result = await declineHomeInvite({ variables: input });
-      if (result.error) return { ok: false, refusal: 'refused' };
-      return outcomeOf(result.data);
+      return settleInvite(
+        () => declineHomeInvite({ variables }),
+        DeclineHomeInviteDocument,
+        fallback,
+      );
     }
-    return { ok: false, refusal: 'invalid' };
+    return settleInvite(
+      () => declineShoppingListInvite({ variables }),
+      DeclineShoppingListInviteDocument,
+      fallback,
+    );
   };
 
   const shoppingListInviteDisplay: AcceptInvite_ShoppingListInviteFragment | null =

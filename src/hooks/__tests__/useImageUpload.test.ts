@@ -12,6 +12,9 @@ import {
   CreateImageUploadUrlDocument,
 } from '#operations/image/imageUpload.generated';
 import { alertService } from '#/services/alertService';
+import { Telemetry } from '#/services/telemetry';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { useImageUpload } from '../useImageUpload';
 
 type ImageUploadApi = ReturnType<typeof useImageUpload>;
@@ -431,6 +434,41 @@ describe('useImageUpload', () => {
     expect(alertService.alert).toHaveBeenCalledWith(
       'Update Failed',
       'Failed to update profile avatar',
+    );
+  });
+
+  it('updateProfileAvatarUrl counts a refusal by its code and says so once', async () => {
+    const { result } = renderHookWithApollo(() => useImageUpload(), {
+      operationMocks: [
+        recordMock(UpdateUserProfileDocument, {
+          data: {
+            updateProfile: {
+              __typename: 'ForbiddenError',
+              code: ErrorCode.Forbidden,
+            },
+          },
+        }).mock,
+      ],
+    });
+
+    let profile: ProfileResult | undefined;
+    await act(async () => {
+      profile = await result.current.updateProfileAvatarUrl('http://img.jpg');
+    });
+
+    expect(profile).toBeNull();
+    expect(Telemetry.increment).toHaveBeenCalledWith(
+      'mutation_refused_total',
+      1,
+      {
+        operation: operationNameOf(UpdateUserProfileDocument),
+        code: ErrorCode.Forbidden,
+      },
+    );
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Update Failed',
+      expect.any(String),
     );
   });
 

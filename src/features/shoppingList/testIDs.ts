@@ -31,6 +31,9 @@ export const shoppingListTestIDs = {
   itemMoveToPantry: (itemId: string) =>
     `shopping-list-item-${itemId}-move-to-pantry`,
   itemStocked: (itemId: string) => `shopping-list-item-${itemId}-stocked`,
+  /** The row's "still waiting to sync" marker. */
+  itemPendingSync: (itemId: string) =>
+    `shopping-list-item-${itemId}-pending-sync`,
   itemCheckbox: (itemId: string) => `shopping-item-checkbox-${itemId}`,
   /**
    * Any row's control by the suffix after the item id — a swipe action key or

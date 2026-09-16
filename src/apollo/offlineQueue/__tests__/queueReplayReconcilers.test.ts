@@ -5,12 +5,19 @@ import {
 } from '#features/pantry/cache/items';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  AddItemToShoppingListDocument,
+  MoveShoppingItemToPantryDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import { revertOptimisticShoppingListItem } from '#features/shoppingList/cache/items';
 
 jest.mock('#/apollo/clientRegistry', () => ({
   getApolloClient: () => ({ cache: {} }),
   registerApolloClient: jest.fn(),
   clearApolloClient: jest.fn(),
+}));
+jest.mock('#features/shoppingList/cache/items', () => ({
+  revertOptimisticShoppingListItem: jest.fn(),
 }));
 jest.mock('#features/pantry/cache/items', () => ({
   addPantryItemLocally: jest.fn(),
@@ -120,5 +127,46 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
         payloadWith('existing-99'),
       ),
     ).not.toThrow();
+  });
+});
+
+/**
+ * A multi-row batch replays as itself, and the server can accept the batch
+ * while refusing some of its rows inside `results`. Each refused row was shown
+ * locally and has nothing left to send it, so it is withdrawn; the rest stay.
+ */
+describe('reconcileReplaySuccess — AddItemToShoppingList batch', () => {
+  const addOperation = operationNameOf(AddItemToShoppingListDocument);
+  const variables = {
+    input: {
+      shoppingListId: 'list-1',
+      items: [{ id: 'row-a' }, { id: 'row-b' }],
+    },
+  };
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('withdraws only the rows the server refused inside the batch', () => {
+    reconcileReplaySuccess(addOperation, variables, {
+      addItemsToShoppingList: {
+        __typename: 'AddItemsToShoppingListPayload',
+        results: [{ success: true }, { success: false }],
+      },
+    });
+
+    expect(revertOptimisticShoppingListItem).toHaveBeenCalledTimes(1);
+    expect(revertOptimisticShoppingListItem).toHaveBeenCalledWith(
+      {},
+      'list-1',
+      'row-b',
+    );
+  });
+
+  it('leaves a single-row replay, answered in the sync shape, alone', () => {
+    reconcileReplaySuccess(addOperation, variables, {
+      syncShoppingListItem: { __typename: 'SyncShoppingListItemPayload' },
+    });
+
+    expect(revertOptimisticShoppingListItem).not.toHaveBeenCalled();
   });
 });

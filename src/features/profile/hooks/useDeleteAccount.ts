@@ -29,8 +29,8 @@ export function useDeleteAccount() {
   };
 
   return {
-    canDelete: data?.canDeleteAccount?.canDelete ?? false,
-    blockers: data?.canDeleteAccount?.blockers ?? [],
+    canDelete: data?.canDeleteAccount.canDelete ?? false,
+    blockers: data?.canDeleteAccount.blockers ?? [],
     checkingEligibility,
     eligibilityErrorMessage: eligibilityError
       ? localizedErrorMessage(eligibilityError, t('account.deleteGenericError'))

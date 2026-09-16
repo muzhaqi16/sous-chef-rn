@@ -6,6 +6,7 @@ import {
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isAuthRefusalCode } from '#/utils/authErrorCodes';
 import { isNetworkError } from '#/utils/isNetworkError';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { VERSION_CONFLICT_CODES } from '#/utils/errors/versionConflict';
 import {
   isErrorTypename,
@@ -182,8 +183,14 @@ export function classifyError(error: unknown): QueueError {
     };
   }
 
-  const err = (error ?? {}) as { message?: string };
-  const message = err.message || String(error);
+  const thrownMessage =
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof error.message === 'string'
+      ? error.message
+      : undefined;
+  const message = firstNonBlank(thrownMessage) ?? String(error);
   const code = readErrorCode(error);
 
   // The thrown spelling of the same condition as the union member above.

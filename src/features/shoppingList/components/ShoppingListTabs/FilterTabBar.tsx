@@ -10,34 +10,34 @@ import { Text } from '#components/atoms/Text';
 import { kitTestIDs } from '#components/testIDs';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
-interface FilterTabBarRoute extends Route {
-  key: string;
+interface FilterTabBarRoute<TKey extends string> extends Route {
+  key: TKey;
   title: string;
 }
 
-interface FilterTabBarProps {
-  navigationState: NavigationState<FilterTabBarRoute>;
-  jumpTo: (key: string) => void;
-  counts?: Record<string, number>;
+interface FilterTabBarProps<TKey extends string> {
+  navigationState: NavigationState<FilterTabBarRoute<TKey>>;
+  jumpTo: (key: TKey) => void;
+  counts?: Partial<Record<TKey, number>>;
   actionButtons?: FilterTabActionButton[];
   /** Optional: measure a specific tab's rect for tutorial spotlight */
   onTabMeasure?: (
-    key: string,
+    key: TKey,
     rect: { x: number; y: number; width: number; height: number },
   ) => void;
   /** Which tab key(s) should be measured */
-  measureTabKeys?: string[];
+  measureTabKeys?: TKey[];
 }
 
-const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
+export function FilterTabBar<TKey extends string>({
   navigationState,
   jumpTo,
   counts,
   actionButtons,
   onTabMeasure,
   measureTabKeys,
-}) => {
-  const handleTabPress = (key: string) => {
+}: FilterTabBarProps<TKey>) {
+  const handleTabPress = (key: TKey) => {
     jumpTo(key);
   };
 
@@ -73,9 +73,9 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
         <View style={styles.actionsRow}>
           {actionButtons.map((btn, idx) => (
             <Pressable
-              key={btn.testID || shoppingListTestIDs.tabBarAction(idx)}
+              key={btn.testID ?? shoppingListTestIDs.tabBarAction(idx)}
               onPress={btn.disabled ? undefined : btn.onPress}
-              testID={btn.testID || shoppingListTestIDs.tabBarAction(idx)}
+              testID={btn.testID ?? shoppingListTestIDs.tabBarAction(idx)}
               style={[
                 btn.label ? styles.actionLabelButton : styles.actionButton,
                 !btn.label && styles.actionButtonWithBg,
@@ -100,10 +100,7 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
       )}
     </View>
   );
-};
-
-export const FilterTabBar = FilterTabBarComponent;
-FilterTabBar.displayName = 'FilterTabBar';
+}
 
 const styles = StyleSheet.create(theme => ({
   container: {

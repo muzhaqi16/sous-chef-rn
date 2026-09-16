@@ -8,6 +8,7 @@ import {
 } from '@testing-library/react-native';
 import { QuantityEditSheet } from '../QuantityEditSheet';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
+import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 
 type QuantityEditSheetProps = React.ComponentProps<typeof QuantityEditSheet>;
 type QuantityEditSheetItem = NonNullable<QuantityEditSheetProps['item']>;
@@ -37,6 +38,11 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
     },
   })),
   BottomSheetModal: ({ children }: ChildrenProps) => children,
+}));
+
+jest.mock('#/utils/deviceLocale', () => ({
+  ...jest.requireActual('#/utils/deviceLocale'),
+  getDeviceDecimalSeparator: jest.fn(() => '.'),
 }));
 
 jest.mock('#/utils/iconUtils', () => ({
@@ -159,6 +165,7 @@ const renderWithInit = (props: QuantityEditSheetProps = defaultProps) => {
 describe('QuantityEditSheet', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.');
   });
 
   it('renders the header with Edit Quantity title', () => {
@@ -267,22 +274,6 @@ describe('QuantityEditSheet', () => {
     expect(screen.getByText('tbsp (selected)')).toBeTruthy();
   });
 
-  it('renders item with displayNamePlural on chips', () => {
-    const item = makeItem({
-      unitName: 'count',
-      itemUnits: [
-        {
-          id: 'u1',
-          symbol: 'count',
-          name: 'Count',
-          displayNamePlural: 'pieces',
-        },
-      ],
-    });
-    renderWithInit({ ...defaultProps, item });
-    expect(screen.getByText('pieces (selected)')).toBeTruthy();
-  });
-
   it('renders null when item is null', () => {
     render(<QuantityEditSheet {...defaultProps} item={null} />);
     // BottomSheetModal still renders (mocked as View) but header shows
@@ -362,17 +353,17 @@ describe('QuantityEditSheet', () => {
   });
 
   describe('a quantity the user did not touch', () => {
-    // The display formatter snaps within a 0.02 tolerance, so the seeded text
-    // is an APPROXIMATION of the stored value. Writing it back would store the
-    // approximation, and repeating that drifts the quantity a little each time
-    // — on a value the user never edited.
-    it('cannot be saved, so the display approximation never reaches the server', async () => {
+    // The seed is rounded to three places, so the text is an APPROXIMATION of
+    // the stored value. Writing it back would store the approximation, and
+    // repeating that drifts the quantity on a value the user never edited.
+    it('cannot be saved, so the seeded approximation never reaches the server', async () => {
       const user = userEvent.setup();
-      // 0.34 is inside the tolerance of 1/3, so it seeds the field as "1/3".
+      // 0.3334 is within three places of 1/3, so it seeds the field as "1/3".
       renderWithInit({
         ...defaultProps,
-        item: makeItem({ quantity: 0.34 }),
+        item: makeItem({ quantity: 0.3334 }),
       });
+      expect(screen.getByText('1/3')).toBeTruthy();
 
       await user.press(screen.getByTestId('header-action-0'));
 
@@ -470,6 +461,28 @@ describe('QuantityEditSheet', () => {
     await user.press(screen.getByTestId('quantity-edit-increment'));
 
     expect(screen.getByTestId('quantity-edit-input').props.value).toBe('1');
+  });
+
+  describe('on a comma-decimal device', () => {
+    beforeEach(() => {
+      jest.mocked(getDeviceDecimalSeparator).mockReturnValue(',');
+    });
+
+    it('seeds a decimal quantity with the comma', () => {
+      renderWithInit({ ...defaultProps, item: makeItem({ quantity: 1.3 }) });
+      expect(screen.getByText('1,3')).toBeTruthy();
+    });
+
+    it('steps a comma-typed value and writes the comma back', async () => {
+      const user = userEvent.setup();
+      renderWithInit();
+      await user.press(screen.getByTestId('quantity-edit-value'));
+      fireEvent.changeText(screen.getByTestId('quantity-edit-input'), '1,3');
+
+      await user.press(screen.getByTestId('quantity-edit-increment'));
+
+      expect(screen.getByTestId('quantity-edit-input').props.value).toBe('2,3');
+    });
   });
 
   it('resets editing state when item becomes not visible', () => {

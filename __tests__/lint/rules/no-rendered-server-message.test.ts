@@ -33,6 +33,10 @@ declare const draft: { __typename: 'Notification'; title: string };
 
 const code = (body: string) => `${PRELUDE}${body}\n`;
 
+const FOLLOW = [{ followProjections: true }];
+const PROJECTED_ROWS =
+  'const rows = [notification].map(n => ({ heading: n.title, id: n.id }));\n';
+
 testTypedRule(
   'no-rendered-server-message',
   {
@@ -67,6 +71,31 @@ testTypedRule(
       code(
         "export const a = <Text>{notification.title ? t('a') : t('b')}</Text>;",
       ),
+      // Without the option a projection is not followed.
+      code(
+        `${PROJECTED_ROWS}export const a = rows.map(r => <Text>{r.heading}</Text>);`,
+      ),
+      // Projected, but only logged or used as a key.
+      {
+        code: code(
+          `${PROJECTED_ROWS}console.warn(rows[0]?.heading);\nexport const a = rows.map(r => <Text key={r.heading}>{r.id}</Text>);`,
+        ),
+        options: FOLLOW,
+      },
+      // The same property name on another object is not the projection.
+      {
+        code: code(
+          `${PROJECTED_ROWS}const other = { heading: t('x') };\nconsole.warn(rows);\nexport const a = <Text>{other.heading}</Text>;`,
+        ),
+        options: FOLLOW,
+      },
+      // A projection built from localized copy.
+      {
+        code: code(
+          "const rows = [notification].map(n => ({ heading: t('notifications.title', { name: n.id }) }));\nexport const a = rows.map(r => <Text>{r.heading}</Text>);",
+        ),
+        options: FOLLOW,
+      },
     ],
     invalid: [
       {
@@ -138,6 +167,27 @@ testTypedRule(
           "export const a = <Text>{t('period', { label: period.periodLabel })}</Text>;",
         ),
         errors: ['renderedServerCopy'],
+      },
+      {
+        code: code(
+          `${PROJECTED_ROWS}export const a = rows.map(r => <Text>{r.heading}</Text>);`,
+        ),
+        options: FOLLOW,
+        errors: ['renderedServerCopyProjected'],
+      },
+      {
+        code: code(
+          'interface Row { body: string }\nfunction project(b: DeletionBlocker): Row { return { body: b.message ?? "" }; }\ndeclare const row: Row;\nexport const a = <Banner message={row.body} />;\nexport const rows = [blocker].map(project);',
+        ),
+        options: FOLLOW,
+        errors: ['renderedServerMessageProjected'],
+      },
+      {
+        code: code(
+          'const toRow = (e: typeof userEvent) => ({ why: e.reason });\nexport const Row = ({ why }: ReturnType<typeof toRow>) => <Text>{why}</Text>;',
+        ),
+        options: FOLLOW,
+        errors: ['renderedServerCopyProjected'],
       },
     ],
   },

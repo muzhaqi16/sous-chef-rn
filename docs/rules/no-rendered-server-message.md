@@ -13,6 +13,10 @@ The same read of a field in [the server-copy table](#server-copy-fields) (`SERVE
 
 It reports only when the value reaches output: a JSX child, a JSX attribute value (`key` aside), an argument to `toastService.*` / `alertService.*`, or an interpolation value passed to `t(…)`. The read is followed through `?.`, `!`, `||` / `??`, either branch of a `?:`, the right side of `&&`, a template literal, `+`, `String(…)`, `trim()`-style string methods, an object or array literal, and a `const` it is assigned to.
 
+## Options
+
+- `followProjections` (default `false`; on in `eslint/project.js`) — also follow a read that is stored, through the same operators, as a property of an object literal that does not itself reach output (`.map(n => ({ heading: n.title }))`, `return { body: b.message }`, a setter's argument). The read is reported as `renderedServerCopyProjected` / `renderedServerMessageProjected` when the same file renders a read of that property: `row.heading`, or a destructured `{ heading }` binding (a parameter included), whose property resolves to the literal's own property or to the app-declared property the literal is typed by (`function project(b): Row`). One level: a projection copied into a second object is not followed.
+
 ## Use instead
 
 - A refusal or blocker: build the copy from its typed fields (`code`, `field`, an enum such as `DeletionBlocker.type`) through `t(key, { name })`.
@@ -60,7 +64,7 @@ Every schema `String` field was classified against `sous-chef-api`. A row is a f
 
 - react-hook-form's `fieldState.error?.message` / `formState.errors.x?.message`: typed `FieldError` from react-hook-form, carrying the form's own yup copy.
 - An `Error` the app built itself, and any value typed `Error` or `unknown`. A hook that widens Apollo's `ErrorLike` to `Error` in its return type hides the source from this rule, so resolve the copy inside the hook.
-- A server-copy field copied into an app-declared type (`{ title: n.title }` returned from a projection) is no longer seen. Build the copy where the generated type is still in hand.
+- A server-copy field or `message` copied into an app-declared object (`{ title: n.title }` returned from a projection), unless `followProjections` is on; either way a projection rendered in another file is not seen. Build the copy where the generated type is still in hand.
 - Logging and reporting: a read that reaches no output.
 - Test files and `.graphql` documents.
 - Files without type information.

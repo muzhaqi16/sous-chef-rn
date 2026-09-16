@@ -1,5 +1,4 @@
 import { act } from '@testing-library/react-native';
-import { useApolloClient } from '@apollo/client/react';
 import {
   recordMock,
   renderHookWithApollo,
@@ -197,6 +196,37 @@ describe('useItemReordering', () => {
     expect(refetch).toHaveBeenCalled();
   });
 
+  describe('a move queued offline', () => {
+    afterEach(() => optimisticDataPersistence.clearAll());
+
+    it('keeps the persisted sortOrder, with no refetch and no alert', async () => {
+      const refetch = jest.fn();
+      const queued = recordMock(MoveShoppingListItemDocument, {
+        data: { moveShoppingListItem: null },
+      });
+      const { result } = renderHookWithApollo(
+        () => useItemReordering({ listId: 'list-1', items, refetch }),
+        { operationMocks: [queued.mock] },
+      );
+
+      await act(async () => {
+        await result.current.handleSortOrderUpdate(
+          'item-2',
+          'item-1',
+          'item-3',
+        );
+      });
+      optimisticDataPersistence.flush();
+
+      expect(queued.fired).toHaveLength(1);
+      expect(
+        optimisticDataPersistence.get('ShoppingListItem', 'item-2'),
+      ).toEqual({ sortOrder: 'bbb' });
+      expect(refetch).not.toHaveBeenCalled();
+      expect(alertService.alert).not.toHaveBeenCalled();
+    });
+  });
+
   describe('a move that does not take effect', () => {
     let clearPersisted: jest.SpyInstance;
 
@@ -234,18 +264,18 @@ describe('useItemReordering', () => {
       );
     });
 
-    it('restores the server order when the move throws', async () => {
+    it('restores the server order when the move fails', async () => {
       const refetch = jest.fn();
-      const { result } = renderHookWithApollo(() => ({
-        reordering: useItemReordering({ listId: 'list-1', items, refetch }),
-        client: useApolloClient(),
-      }));
-      jest
-        .spyOn(result.current.client, 'mutate')
-        .mockRejectedValueOnce(new Error('socket closed'));
+      const failed = recordMock(MoveShoppingListItemDocument, {
+        error: new Error('socket closed'),
+      });
+      const { result } = renderHookWithApollo(
+        () => useItemReordering({ listId: 'list-1', items, refetch }),
+        { operationMocks: [failed.mock] },
+      );
 
       await act(async () => {
-        await result.current.reordering.handleSortOrderUpdate(
+        await result.current.handleSortOrderUpdate(
           'item-2',
           'item-1',
           'item-3',

@@ -19,14 +19,6 @@ import { t } from '#/i18n';
 import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
 import { useMoveToPantry } from '../useMoveToPantry';
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    trackEvent: jest.fn(),
-    // errorService.reportError routes through this on the failure path.
-    trackError: jest.fn(),
-  },
-}));
-
 // Spread the real module: a partial factory silently omits whatever the hook
 // imports NEXT — the local-first move added two more updaters, and a trimmed
 // mock fails at import time with "is not a function" rather than at the

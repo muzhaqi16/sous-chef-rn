@@ -961,15 +961,6 @@ describe('SubscriptionService', () => {
       expect(customOnError).toHaveBeenCalledTimes(1);
       expect(service.getStats().totalErrors).toBe(1);
     });
-
-    it('handles null error message gracefully', () => {
-      const customOnError = jest.fn();
-      const handlers = reg(createConfig({ customOnError }));
-
-      handlers.onError({ message: undefined });
-
-      expect(customOnError).toHaveBeenCalledTimes(1);
-    });
   });
 
   describe('onData handler - node field in payload', () => {

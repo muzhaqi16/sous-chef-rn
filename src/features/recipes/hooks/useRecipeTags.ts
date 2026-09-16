@@ -13,7 +13,7 @@ export function useRecipeTags() {
   });
 
   const savedRecipes =
-    data?.me?.savedRecipesConnection?.edges?.map(e => e.node) ?? [];
+    data?.me?.savedRecipesConnection.edges.map(e => e.node) ?? [];
 
   // Only the pages loaded so far: the connection is shared with the saved list,
   // so a caller needing every tag pages that list to the end.
@@ -21,11 +21,9 @@ export function useRecipeTags() {
   if (savedRecipes.length > 0) {
     const tagSet = new Set<string>();
     savedRecipes.forEach(savedRecipe => {
-      if (savedRecipe.tags && savedRecipe.tags.length > 0) {
-        savedRecipe.tags.forEach(tag => {
-          tagSet.add(tag);
-        });
-      }
+      savedRecipe.tags.forEach(tag => {
+        tagSet.add(tag);
+      });
     });
 
     // Return sorted array of unique tags

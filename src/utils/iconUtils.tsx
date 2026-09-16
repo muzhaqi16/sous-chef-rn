@@ -41,6 +41,7 @@ export const TONE_TO_COLOR = {
   iconTertiary: (t: Theme) => t.colors.iconTertiary,
   onPrimary: (t: Theme) => t.colors.onPrimary,
   onError: (t: Theme) => t.colors.onError,
+  onSuccess: (t: Theme) => t.colors.onSuccess,
   onScrim: (t: Theme) => t.colors.onScrim,
   background: (t: Theme) => t.colors.background,
   favorite: (t: Theme) => t.colors.favorite,

@@ -7,6 +7,7 @@ import {
   userEvent,
 } from '@testing-library/react-native';
 import { EditableCounter } from '../EditableCounter';
+import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 
 jest.mock('@react-native-vector-icons/ionicons', () => ({
   __esModule: true,
@@ -14,11 +15,9 @@ jest.mock('@react-native-vector-icons/ionicons', () => ({
   Ionicons: 'Icon',
 }));
 
-jest.mock('#/utils/fractionUtils', () => ({
-  parseFractionalInput: (input: string) => {
-    const val = parseFloat(input);
-    return isNaN(val) ? null : val;
-  },
+jest.mock('#/utils/deviceLocale', () => ({
+  ...jest.requireActual('#/utils/deviceLocale'),
+  getDeviceDecimalSeparator: jest.fn(() => '.'),
 }));
 
 jest.mock('#components/atoms/Label', () => ({
@@ -36,6 +35,7 @@ describe('EditableCounter', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.');
   });
 
   it('renders with the correct value', () => {
@@ -83,6 +83,40 @@ describe('EditableCounter', () => {
     const incrementBtn = screen.getByLabelText('Increase quantity');
     await user.press(incrementBtn);
     expect(defaultProps.onChangeText).not.toHaveBeenCalled();
+  });
+
+  describe('on a comma-decimal device', () => {
+    beforeEach(() => {
+      jest.mocked(getDeviceDecimalSeparator).mockReturnValue(',');
+    });
+
+    it('steps a comma-typed value and writes the comma back', async () => {
+      const user = userEvent.setup();
+      render(
+        <EditableCounter
+          {...defaultProps}
+          value="0,2"
+          step={0.1}
+          notation="decimal"
+        />,
+      );
+      await user.press(screen.getByLabelText('Increase quantity'));
+      expect(defaultProps.onChangeText).toHaveBeenCalledWith('0,3');
+    });
+
+    it('writes a cooking fraction where one equals the stepped value', async () => {
+      const user = userEvent.setup();
+      render(<EditableCounter {...defaultProps} value="1,25" step={0.25} />);
+      await user.press(screen.getByLabelText('Increase quantity'));
+      expect(defaultProps.onChangeText).toHaveBeenCalledWith('1 1/2');
+    });
+
+    it('rounds a stepped value to three places', async () => {
+      const user = userEvent.setup();
+      render(<EditableCounter {...defaultProps} value="0,1" step={0.2} />);
+      await user.press(screen.getByLabelText('Increase quantity'));
+      expect(defaultProps.onChangeText).toHaveBeenCalledWith('0,3');
+    });
   });
 
   it('updates value on direct text input', () => {

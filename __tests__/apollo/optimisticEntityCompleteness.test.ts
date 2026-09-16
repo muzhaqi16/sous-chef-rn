@@ -805,9 +805,9 @@ describe('optimistic entity completeness', () => {
 
       // The stub supplies neutral values for catalog fields the client cannot
       // know. It must never supply them for an item that HAS them: the user
-      // usually picks from the catalog, and defaulting `photos`/`nutritions`
-      // onto a real `Item` would blank the detail screen's carousel and
-      // nutrition panel until a refetch. Group-at-a-time reads are what make
+      // usually picks from the catalog, and defaulting `photos` or
+      // `nutritionFacts` onto a real `Item` would blank the detail screen's
+      // carousel and nutrition panel until a refetch. Group-at-a-time reads are what make
       // that safe, so this is the test that keeps the grouping honest.
       it('never overwrites catalog fields an Item already has', async () => {
         const cache = await seedPantryCache();
@@ -833,7 +833,27 @@ describe('optimistic entity completeness', () => {
           ],
           shelfLifeDays: 7,
           shelfLifeOpenedDays: 3,
-          nutritions: { calories: 42 },
+          nutritionFacts: {
+            __typename: 'NutritionFacts' as const,
+            id: 'facts-1',
+            calories: 42,
+            totalFat: 1,
+            saturatedFat: null,
+            transFat: null,
+            cholesterol: null,
+            sodium: null,
+            totalCarbs: 5,
+            dietaryFiber: null,
+            totalSugars: null,
+            addedSugars: null,
+            protein: 3,
+            vitaminD: null,
+            calcium: null,
+            iron: null,
+            potassium: null,
+            servingSize: 100,
+            servingUnit: 'ml',
+          },
           categories: [
             {
               __typename: 'ItemCategory' as const,
@@ -871,7 +891,26 @@ describe('optimistic entity completeness', () => {
               }
               shelfLifeDays
               shelfLifeOpenedDays
-              nutritions
+              nutritionFacts {
+                id
+                calories
+                totalFat
+                saturatedFat
+                transFat
+                cholesterol
+                sodium
+                totalCarbs
+                dietaryFiber
+                totalSugars
+                addedSugars
+                protein
+                vitaminD
+                calcium
+                iron
+                potassium
+                servingSize
+                servingUnit
+              }
               categories {
                 isPrimary
                 category {
@@ -919,7 +958,7 @@ describe('optimistic entity completeness', () => {
         expect(readItem?.imageUrl).toBe('https://example.test/milk.png');
         expect(readItem?.photos).toHaveLength(1);
         expect(readItem?.shelfLifeDays).toBe(7);
-        expect(readItem?.nutritions).toEqual({ calories: 42 });
+        expect(readItem?.nutritionFacts?.calories).toBe(42);
         expect(readItem?.categories?.[0]?.category?.name).toBe('Dairy');
       });
     });
@@ -1464,6 +1503,22 @@ describe('optimistic entity completeness', () => {
         'storageLocation',
         GetStorageLocationsDocument,
         'StorageLocation',
+      );
+      // The pantry's own connection feeds the add/edit storage picker, and a
+      // refused delete restores the `GetStorageLocations` node into it.
+      expectWriterCoversReader(
+        CreateStorageLocationDocument,
+        'storageLocation',
+        GetPantryDocument,
+        'StorageLocation in Pantry.storageLocationsConnection',
+        'storageLocationsConnection',
+      );
+      expectWriterCoversReader(
+        GetStorageLocationsDocument,
+        'node',
+        GetPantryDocument,
+        'restored StorageLocation in Pantry.storageLocationsConnection',
+        'storageLocationsConnection',
       );
       expectWriterCoversReader(
         InviteToHomeDocument,

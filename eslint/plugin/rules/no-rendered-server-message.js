@@ -84,12 +84,22 @@ module.exports = {
         "A server error's `message`, or other copy the server writes, never reaches the screen.",
       url: 'docs/rules/no-rendered-server-message.md',
     },
-    schema: [],
+    schema: [
+      {
+        type: 'object',
+        properties: { followProjections: { type: 'boolean' } },
+        additionalProperties: false,
+      },
+    ],
     messages: {
       renderedServerMessage:
         'This `message` comes from the server (a generated schema type or an Apollo/GraphQL error) and reaches rendered output. It is unlocalized English. Build the copy from the typed fields (`code`, `field`, an enum like `type`) through `t(…)`, or resolve an error with `localizedErrorMessage(error, fallback)` / `settleMutation`.',
       renderedServerCopy:
         '`{{typeName}}.{{fieldName}}` is copy the server writes in English, and it reaches rendered output. Build the text from the structured fields beside it (a `type` or `code` enum, names, counts, dates) through `t(…)`.',
+      renderedServerMessageProjected:
+        'This `message` comes from the server and is stored in an object property that this file renders. It is unlocalized English. Build the copy from the typed fields (`code`, `field`, an enum like `type`) through `t(…)` where the projection is built, or resolve an error with `localizedErrorMessage(error, fallback)`.',
+      renderedServerCopyProjected:
+        '`{{typeName}}.{{fieldName}}` is copy the server writes in English, stored in an object property that this file renders. Build the text from the structured fields beside it (a `type` or `code` enum, names, counts, dates) through `t(…)` where the projection is built.',
     },
   },
   create(context) {
@@ -97,6 +107,11 @@ module.exports = {
     if (!services?.program) return {};
     const checker = services.program.getTypeChecker();
     const sourceCode = context.sourceCode;
+    const followProjections = context.options[0]?.followProjections ?? false;
+    // Server copy stored as an object literal's property: `{ title: n.title }`.
+    const projections = [];
+    // Every non-computed property read, by name, to match against a projection.
+    const propertyReads = new Map();
 
     const declaredInServerFile = symbol =>
       (symbol?.declarations ?? []).some(declaration => {
@@ -172,8 +187,8 @@ module.exports = {
       );
     };
 
-    /** Whether the value at `start` flows, unchanged or composed, into output. */
-    const reachesOutput = (start, seen) => {
+    /** Whether the value at `start` flows, unchanged or composed, into output; the object properties it is stored in on the way are pushed to `projectionTarget`. */
+    const reachesOutput = (start, seen, projectionTarget) => {
       let current = start;
       for (;;) {
         const parent = current.parent;
@@ -198,6 +213,15 @@ module.exports = {
             break;
           case 'Property':
             if (parent.value !== current) return false;
+            if (
+              followProjections &&
+              projectionTarget &&
+              parent.parent.type === 'ObjectExpression' &&
+              !parent.computed &&
+              parent.key.type === 'Identifier'
+            ) {
+              projectionTarget.push(parent);
+            }
             break;
           case 'ObjectExpression':
             break;
@@ -239,7 +263,12 @@ module.exports = {
             return (
               parent.init === current &&
               parent.id.type === 'Identifier' &&
-              bindingReachesOutput(parent, parent.id.name, seen)
+              bindingReachesOutput(
+                parent,
+                parent.id.name,
+                seen,
+                projectionTarget,
+              )
             );
           default:
             return false;
@@ -248,7 +277,7 @@ module.exports = {
       }
     };
 
-    const bindingReachesOutput = (declarator, name, seen) => {
+    const bindingReachesOutput = (declarator, name, seen, projectionTarget) => {
       const variable = sourceCode
         .getDeclaredVariables(declarator)
         .find(candidate => candidate.name === name);
@@ -256,9 +285,78 @@ module.exports = {
       seen.add(variable);
       return variable.references.some(
         reference =>
-          !reference.init && reachesOutput(reference.identifier, seen),
+          !reference.init &&
+          reachesOutput(reference.identifier, seen, projectionTarget),
       );
     };
+
+    const declarationsOf = symbol => new Set(symbol?.declarations ?? []);
+
+    /**
+     * The declarations a read of the projected property resolves to: the
+     * literal's own property, and the app-declared property it is typed by.
+     */
+    const projectedDeclarations = property => {
+      const tsProperty = services.esTreeNodeToTSNodeMap.get(property);
+      const declarations = new Set([tsProperty]);
+      const contextual = checker.getContextualType(
+        services.esTreeNodeToTSNodeMap.get(property.parent),
+      );
+      const parts = contextual?.isUnion() ? contextual.types : [contextual];
+      for (const part of parts) {
+        if (!part) continue;
+        for (const declaration of declarationsOf(
+          checker.getPropertyOfType(part, property.key.name),
+        )) {
+          const fileName = declaration.getSourceFile().fileName;
+          if (
+            !isGeneratedFile(fileName) &&
+            !fileName.includes('node_modules')
+          ) {
+            declarations.add(declaration);
+          }
+        }
+      }
+      return declarations;
+    };
+
+    const variableReachesOutput = identifier => {
+      let scope = sourceCode.getScope(identifier);
+      while (scope) {
+        const variable = scope.set.get(identifier.name);
+        if (variable) {
+          return variable.references.some(
+            reference =>
+              !reference.init &&
+              reachesOutput(reference.identifier, new Set([variable]), null),
+          );
+        }
+        scope = scope.upper;
+      }
+      return false;
+    };
+
+    /** A read of `name` that resolves to one of `declarations` and reaches output. */
+    const projectionIsRendered = (name, declarations) =>
+      (propertyReads.get(name) ?? []).some(read => {
+        const symbol =
+          read.type === 'MemberExpression'
+            ? checker.getSymbolAtLocation(
+                services.esTreeNodeToTSNodeMap.get(read.property),
+              )
+            : checker.getPropertyOfType(typeOf(read.parent), name);
+        if (![...declarationsOf(symbol)].some(d => declarations.has(d))) {
+          return false;
+        }
+        if (read.type === 'MemberExpression') {
+          return reachesOutput(read, new Set(), null);
+        }
+        const binding =
+          read.value.type === 'AssignmentPattern'
+            ? read.value.left
+            : read.value;
+        return binding.type === 'Identifier' && variableReachesOutput(binding);
+      });
 
     /** The report for reading `fieldName` off `object`'s type, or null. */
     const findingFor = (objectType, fieldName) => {
@@ -273,16 +371,27 @@ module.exports = {
         : null;
     };
 
+    const addRead = (name, read) => {
+      const reads = propertyReads.get(name) ?? [];
+      reads.push(read);
+      propertyReads.set(name, reads);
+    };
+
     const isWatchedField = name =>
       name === 'message' || SERVER_COPY_TYPES_BY_FIELD.has(name);
 
     return {
       MemberExpression(node) {
         if (node.computed || node.property.type !== 'Identifier') return;
+        if (followProjections) addRead(node.property.name, node);
         if (!isWatchedField(node.property.name)) return;
         const finding = findingFor(typeOf(node.object), node.property.name);
-        if (finding && reachesOutput(node, new Set())) {
+        if (!finding) return;
+        const stored = [];
+        if (reachesOutput(node, new Set(), stored)) {
           context.report({ node, ...finding });
+        } else if (stored.length > 0) {
+          projections.push({ node, finding, properties: stored });
         }
       },
       // `const { message } = error`, then rendered.
@@ -300,11 +409,43 @@ module.exports = {
         const initType = typeOf(node.init);
         for (const property of properties) {
           const finding = findingFor(initType, property.key.name);
+          if (!finding) continue;
+          const stored = [];
           if (
-            finding &&
-            bindingReachesOutput(node, property.value.name, new Set())
+            bindingReachesOutput(node, property.value.name, new Set(), stored)
           ) {
             context.report({ node: property, ...finding });
+          } else if (stored.length > 0) {
+            projections.push({ node: property, finding, properties: stored });
+          }
+        }
+      },
+      ObjectPattern(node) {
+        if (!followProjections) return;
+        for (const property of node.properties) {
+          if (
+            property.type === 'Property' &&
+            !property.computed &&
+            property.key.type === 'Identifier'
+          ) {
+            addRead(property.key.name, property);
+          }
+        }
+      },
+      'Program:exit'() {
+        for (const { node, finding, properties } of projections) {
+          const rendered = properties.some(property =>
+            projectionIsRendered(
+              property.key.name,
+              projectedDeclarations(property),
+            ),
+          );
+          if (rendered) {
+            context.report({
+              node,
+              messageId: `${finding.messageId}Projected`,
+              data: finding.data,
+            });
           }
         }
       },

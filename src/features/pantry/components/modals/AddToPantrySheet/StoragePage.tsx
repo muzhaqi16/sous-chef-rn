@@ -9,7 +9,7 @@ import { FormInput } from '#components/atoms/FormInput';
 import { StorageLocationAutocompleteField } from '#features/catalog/ui/autocomplete/StorageLocationAutocompleteField';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import type { ItemCondition } from '#/graphql/generated/schemaTypes';
-import type { StorageLocation } from '#/graphql/generated/schemaTypes';
+import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
 import {
   ITEM_CONDITION_OPTIONS,
   conditionLabelKey,
@@ -18,10 +18,10 @@ import {
 export interface StoragePageProps {
   storageLocation: string;
   setStorageLocation: (value: string) => void;
-  storageLocations: StorageLocation[];
+  storageLocations: readonly StorageLocationOption[];
   handleStorageLocationSelected: (
     locationId: string | null,
-    location: StorageLocation | null,
+    location: StorageLocationOption | null,
   ) => void;
   handleAddNewLocation: (name: string) => void;
   condition: ItemCondition;

@@ -175,7 +175,7 @@ export function getShoppingListRole(
   );
 
   // Fall back to home membership role for home-linked lists
-  return collaboration?.role || homeMyMembership?.role || null;
+  return collaboration?.role ?? homeMyMembership?.role ?? null;
 }
 
 /**

@@ -21,6 +21,7 @@ import {
 import { StorageLocationAdvancedSection } from '#features/catalog/components/StorageLocationAdvancedSection';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatNumberForInput } from '#/utils/formatters/number';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 export interface StorageLocationFormRef {
   submit: () => void;
@@ -66,6 +67,22 @@ interface StorageLocationFormProps {
   hideActions?: boolean;
 }
 
+/** A blank colour the server stored reads as "no colour", the swatch it selects. */
+const seedFormData = (
+  initialData: StorageLocationFormInitialData | null | undefined,
+) => ({
+  name: initialData?.name ?? '',
+  type: initialData?.type ?? StorageType.PantryShelf,
+  parentLocationId: initialData?.parentLocationId ?? undefined,
+  description: initialData?.description ?? '',
+  temperature: initialData?.temperature ?? StorageState.None,
+  color: firstNonBlank(initialData?.color) ?? null,
+  isClimateControlled: initialData?.isClimateControlled ?? false,
+  capacity: formatNumberForInput(initialData?.capacity),
+  capacityUnit: initialData?.capacityUnit ?? '',
+  isDefault: initialData?.isDefault ?? false,
+});
+
 export const StorageLocationForm = forwardRef<
   StorageLocationFormRef,
   StorageLocationFormProps
@@ -83,36 +100,14 @@ export const StorageLocationForm = forwardRef<
   ) => {
     const { t } = useTranslation();
 
-    const [formData, setFormData] = useState({
-      name: initialData?.name || '',
-      type: initialData?.type || StorageType.PantryShelf,
-      parentLocationId: initialData?.parentLocationId || undefined,
-      description: initialData?.description || '',
-      temperature: initialData?.temperature || StorageState.None,
-      color: initialData?.color || (null as string | null),
-      isClimateControlled: initialData?.isClimateControlled ?? false,
-      capacity: formatNumberForInput(initialData?.capacity),
-      capacityUnit: initialData?.capacityUnit || '',
-      isDefault: initialData?.isDefault ?? false,
-    });
+    const [formData, setFormData] = useState(() => seedFormData(initialData));
 
     // Sync form data when initialData changes (render-time state update)
     const [prevInitialData, setPrevInitialData] = useState(initialData);
     if (initialData !== prevInitialData) {
       setPrevInitialData(initialData);
       if (initialData) {
-        setFormData({
-          name: initialData.name || '',
-          type: initialData.type || StorageType.PantryShelf,
-          parentLocationId: initialData.parentLocationId || undefined,
-          description: initialData.description || '',
-          temperature: initialData.temperature || StorageState.None,
-          color: initialData.color || null,
-          isClimateControlled: initialData.isClimateControlled ?? false,
-          capacity: formatNumberForInput(initialData.capacity),
-          capacityUnit: initialData.capacityUnit || '',
-          isDefault: initialData.isDefault ?? false,
-        });
+        setFormData(seedFormData(initialData));
       }
     }
 
@@ -134,13 +129,13 @@ export const StorageLocationForm = forwardRef<
         name: formData.name.trim(),
         type: formData.type,
         icon: null,
-        parentLocationId: formData.parentLocationId || null,
+        parentLocationId: formData.parentLocationId ?? null,
         description: formData.description.trim() || null,
         temperature:
           formData.temperature !== StorageState.None
             ? formData.temperature
             : null,
-        color: formData.color || null,
+        color: formData.color,
         isClimateControlled: formData.isClimateControlled || null,
         capacity: capacityFloat && !isNaN(capacityFloat) ? capacityFloat : null,
         capacityUnit: formData.capacityUnit || null,

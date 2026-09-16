@@ -27,6 +27,7 @@ import {
 } from '#/utils/items/createItemMapping';
 import { errorService } from '#/services/errorService';
 import { isNetworkError } from '#/utils/isNetworkError';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 // Map Vision Camera barcode format to GraphQL UpcFormat enum.
 // Source: react-native-vision-camera-barcode-scanner's BarcodeFormat
@@ -130,30 +131,31 @@ const convertToScannedItem = (
   const effectiveBrandName =
     brandNameOverride ??
     item.matchedVariation?.brandInfo?.name ??
-    item.brands?.[0]?.brand?.name ??
+    item.brands?.[0]?.brand.name ??
     item.variationBrand?.name ??
     undefined;
 
-  // For brand ID, only use matchedVariation.brandInfo.id if it's a non-null string
   const effectiveBrandId =
-    (item.matchedVariation?.brandInfo?.id ?? null) ||
-    (item.brands?.[0]?.brand?.id ?? item.variationBrand?.id ?? undefined);
+    item.matchedVariation?.brandInfo?.id ??
+    item.brands?.[0]?.brand.id ??
+    item.variationBrand?.id ??
+    undefined;
 
   return {
     id: item.id,
     name: item.name,
-    description: item.description || undefined,
-    imageUrl: item.imageUrl || undefined,
+    description: firstNonBlank(item.description),
+    imageUrl: firstNonBlank(item.imageUrl),
     canEdit: item.canEdit ?? undefined,
     canSuggest: item.canSuggest ?? undefined,
-    upc: item.primaryUpc || fallbackBarcode,
-    unitId: item.units?.find(u => u.isDefault)?.unitId || undefined,
+    upc: firstNonBlank(item.primaryUpc) ?? fallbackBarcode,
+    unitId: item.units.find(u => u.isDefault)?.unitId,
     netWeight: effectiveNetWeight,
     displayUnit: effectiveDisplayUnit,
     brandName: effectiveBrandName,
     brandId: effectiveBrandId,
-    type: item.type || undefined,
-    storageState: item.storageState || undefined,
+    type: item.type ?? undefined,
+    storageState: item.storageState ?? undefined,
     shelfLifeDays: item.shelfLifeDays ?? undefined,
     shelfLifeOpenedDays: item.shelfLifeOpenedDays ?? undefined,
     tags: item.tags ?? undefined,
@@ -238,7 +240,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
   });
 
   // Get first item from UPC filter results
-  const upcItem = upcData?.items?.edges?.[0]?.node;
+  const upcItem = upcData?.items.edges[0]?.node;
 
   const {
     data: skuData,
@@ -284,7 +286,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
       return;
     }
 
-    const skuItem = skuData?.items?.edges?.[0]?.node;
+    const skuItem = skuData?.items.edges[0]?.node;
 
     // Only process after loading completes to avoid acting on stale data
     // Apollo's data field retains previous values during loading
@@ -335,7 +337,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
         : t('errors.codes.genericRetry'),
     );
 
-    if (!upcData?.items?.edges?.length && !skuData?.items?.edges?.length) {
+    if (!upcData?.items.edges.length && !skuData?.items.edges.length) {
       showBottomSheet(1);
     }
   }, [
@@ -353,9 +355,8 @@ export const useSearchResults = (barcode: string, format?: string) => {
   useEffect(() => {
     if (upcLoading || skuLoading) {
       setSearching(true);
-    } else if (!upcLoading && !skuLoading) {
-      // Both queries are done, ensure searching is false
-      // This handles the case where queries complete but don't find results
+    } else {
+      // Also covers queries that complete without finding a result.
       setSearching(false);
     }
   }, [upcLoading, skuLoading, setSearching]);

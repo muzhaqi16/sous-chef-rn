@@ -1,5 +1,10 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { queuedSubject } from '../queuedSubject';
-import { ForkRecipeDocument } from '#features/recipes/graphql/recipe.generated';
+import {
+  ForkRecipeDocument,
+  UpdateFavoriteRecipeDocument,
+} from '#features/recipes/graphql/recipe.generated';
 import {
   AddItemToShoppingListDocument,
   MoveShoppingListItemDocument,
@@ -57,6 +62,34 @@ describe('queuedSubject', () => {
         variables: { input: { shoppingListId: 'list-1', items: [] } },
       }).subjectIds,
     ).toEqual([]);
+  });
+
+  it('gives a saved-recipe edit no subject, so its refusal never evicts the recipe it names', () => {
+    expect(
+      queuedSubject({
+        mutation: UpdateFavoriteRecipeDocument,
+        variables: { input: { recipeId: 'recipe-1', notes: 'less salt' } },
+      }),
+    ).toEqual({ subjectIds: [], sourceIds: [] });
+  });
+
+  // The field names are typed against codegen; the input-type names are keys
+  // the typechecker cannot see. A misspelt one never matches and falls to `id`.
+  it('names only input types the schema declares', () => {
+    const read = (path: string) =>
+      readFileSync(join(process.cwd(), path), 'utf8');
+    const schema = read('src/graphql/generated/schema.graphql');
+    const table = /const SUBJECT_KEYS[^=]*=\s*\{([^}]*)\}/.exec(
+      read('src/apollo/offlineQueue/queuedSubject.ts'),
+    )?.[1];
+    const names = [...(table ?? '').matchAll(/^\s*(\w+):/gm)].flatMap(m =>
+      m[1] ? [m[1]] : [],
+    );
+    expect(names.length).toBeGreaterThan(5);
+    const undeclared = names.filter(
+      name => !new RegExp(`^input ${name} \\{`, 'm').test(schema),
+    );
+    expect(undeclared).toEqual([]);
   });
 
   it('gives an input with no subject field no subject', () => {

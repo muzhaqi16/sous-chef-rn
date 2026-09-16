@@ -178,7 +178,7 @@ function buildBackendDisplayData(
     originalAuthor: recipe.originalAuthor ?? undefined,
     tips: recipe.tips ?? undefined,
     videoUrl: recipe.videoUrl ?? undefined,
-    tags: recipe.tags ?? undefined,
+    tags: recipe.tags,
   };
 }
 
@@ -192,7 +192,7 @@ function buildExternalDisplayData(
     readyInMinutes: recipe.readyInMinutes,
     healthScore: recipe.healthScore,
     summary: recipe.summary,
-    ingredients: recipe.extendedIngredients || [],
+    ingredients: recipe.extendedIngredients ?? [],
     instructions: recipe.analyzedInstructions,
     instructionsHtml: recipe.instructions,
     vegetarian: recipe.vegetarian,
@@ -265,7 +265,7 @@ export function useRecipeData({
   };
 
   const displayData: RecipeDisplayData | null = (() => {
-    if (isBackendRecipe && backendRecipe) {
+    if (isBackendRecipe) {
       return buildBackendDisplayData(backendRecipe);
     }
     if (externalRecipe) {

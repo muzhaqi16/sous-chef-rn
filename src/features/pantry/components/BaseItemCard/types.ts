@@ -45,19 +45,7 @@ export interface BaseItemCardProps {
 }
 
 export interface CardLeftSlotProps {
-  type: 'emoji' | 'image' | 'icon' | 'custom';
-  /** For type='emoji'. */
-  emoji?: string;
-  /** For type='image'. */
   imageUrl?: string | null;
-  /** For type='icon'. */
-  icon?: string;
-  iconLibrary?: string;
-  backgroundColor?: string;
-  variant?: CardVariant;
-  dimmed?: boolean;
-  /** For type='custom'. */
-  children?: React.ReactNode;
 }
 
 export interface CardContentProps {
@@ -69,24 +57,11 @@ export interface CardContentProps {
 }
 
 export interface CardRightSlotProps {
-  type: 'meta' | 'counter' | 'dragHandle' | 'custom';
   /**
-   * testID for the PRIMARY value (type='meta') — the item's quantity, which a
-   * parsing test must read back without going through locale-dependent text.
+   * testID for the PRIMARY value — the item's quantity, which a parsing test
+   * must read back without going through locale-dependent text.
    */
   testID?: string;
-  /** For type='meta'. */
   primary?: string;
   secondary?: string;
-  tertiary?: string;
-  /** For type='counter'. */
-  quantity?: number;
-  unit?: string;
-  onIncrement?: () => void;
-  onDecrement?: () => void;
-  disabled?: boolean;
-  /** For type='dragHandle'. */
-  onDrag?: () => void;
-  /** For type='custom'. */
-  children?: React.ReactNode;
 }

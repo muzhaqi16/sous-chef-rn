@@ -30,7 +30,7 @@ export const GlassSurface: React.FC<GlassSurfaceProps> = ({
 }) => {
   const { rt } = useUnistyles();
   if (!isLiquidGlassSupported) return null;
-  const scheme = (rt.themeName || rt.colorScheme) === 'dark' ? 'dark' : 'light';
+  const scheme = (rt.themeName ?? rt.colorScheme) === 'dark' ? 'dark' : 'light';
   return (
     <LiquidGlassView
       effect="regular"

@@ -27,6 +27,7 @@
       "offline": "Sei offline. Vengono mostrati i dati salvati quando disponibili.",
       "operationNotAllowed": "Questa azione non è disponibile al momento.",
       "pantryItemAlreadyExists": "Questo articolo è già nella tua dispensa",
+      "insufficientQuantity": "È più di quanto resta di questo articolo in dispensa",
       "quotaExceeded": "Hai superato il tuo limite di utilizzo",
       "rangeInvalid": "Il valore è fuori dall’intervallo consentito",
       "rateLimitBlocked": "Troppe richieste. Attendi un momento e riprova.",
@@ -698,7 +699,10 @@
     "choosePhoto": "Scegli una foto",
     "openProfile": "Apri il tuo profilo",
     "resetCrop": "Reimposta ritaglio",
-    "notificationSettings": "Impostazioni notifiche"
+    "notificationSettings": "Impostazioni notifiche",
+    "requiredField": "{{label}}, obbligatorio",
+    "fieldError": "Errore: {{error}}",
+    "hintWithError": "{{hint}}. {{error}}"
   },
   "toasts": {
     "noLowStockItems": "Nessun articolo in esaurimento",

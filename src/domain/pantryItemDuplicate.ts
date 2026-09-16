@@ -147,17 +147,15 @@ export function getPantryItemDuplicateFromResult(
 
 /**
  * The shared "Item Already in Pantry" prompt: copy lives here once so it cannot
- * drift across the add surfaces. Restock and Add Anyway are site-specific
- * (different mutations and success UX), so the caller supplies them.
+ * drift across the add surfaces. Restock is the only recovery — a forced add
+ * lands on the same held stack — and is site-specific, so the caller supplies it.
  */
 export function promptPantryDuplicate(opts: {
   onRestock: () => void;
-  onAddAnyway: () => void;
   onCancel?: () => void;
 }): void {
   alertService.alert(t('duplicateItem.title'), t('duplicateItem.body'), [
     { text: t('labels.cancel'), style: 'cancel', onPress: opts.onCancel },
     { text: t('duplicateItem.restock'), onPress: opts.onRestock },
-    { text: t('duplicateItem.addAnyway'), onPress: opts.onAddAnyway },
   ]);
 }

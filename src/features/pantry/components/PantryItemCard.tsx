@@ -24,7 +24,7 @@ import { SLIDE_PRESETS } from '#/constants/animations';
 import { usePantryActions } from './PantryActionsContext';
 import { Text } from '#components/atoms/Text';
 import { resolveImageUrl } from '#utils/imageUtils';
-import { useIsPendingSync } from '#features/pantry/hooks/useIsPendingSync';
+import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 import { getExpirationStatus } from '#features/pantry/hooks/usePantryItemTransformation';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
@@ -161,12 +161,12 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
 
   // BEFORE the `!complete` early return: a hook after it is conditional, which
   // bails the whole component out of the React Compiler.
-  const isPendingSync = useIsPendingSync(pantryItem?.id);
+  const isPendingSync = useIsPendingSync(pantryItem.id);
 
   if (!complete) return null;
 
   const id = pantryItem.id;
-  const name = pantryItem.itemName || 'Unknown Item';
+  const name = pantryItem.itemName;
   const imageUrl = resolveImageUrl(pantryItem);
 
   const expiresAt = pantryItem.expiresAt;
@@ -198,7 +198,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   // Each of the row's four text slots has ONE owner, and an absent value leaves
   // its slot empty rather than letting another value move in. Amounts and
   // breakdowns belong to the detail screen.
-  const rightSecondary = location || undefined;
+  const rightSecondary = location ?? undefined;
 
   const { onItemEdit, onItemConsume, onItemWaste, onItemRestock } = actions;
   const itemActions = {
@@ -213,9 +213,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
 
   // Always rendered: the placeholder tile keeps rows aligned when there is no
   // image.
-  const leftElement = (
-    <CardLeftSlot type="image" imageUrl={imageUrl} variant={cardVariant} />
-  );
+  const leftElement = <CardLeftSlot imageUrl={imageUrl} />;
 
   const expirationBold = !!expirationVariant && expirationVariant !== 'normal';
 
@@ -270,7 +268,6 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
         leftElement={leftElement}
         rightElement={
           <CardRightSlot
-            type="meta"
             // Keyed by item id, matching the row's own `pantry-item-${id}` and
             // shopping list's `shopping-list-item-${itemId}-quantity`.
             testID={pantryTestIDs.itemQuantity(id)}

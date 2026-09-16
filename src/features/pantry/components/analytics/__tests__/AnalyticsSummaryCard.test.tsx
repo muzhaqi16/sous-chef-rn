@@ -34,18 +34,6 @@ describe('AnalyticsSummaryCard', () => {
     expect(getByText('Active')).toBeTruthy();
   });
 
-  it('renders trend info when provided', () => {
-    const { getByText } = render(
-      <AnalyticsSummaryCard
-        title="Items"
-        value={42}
-        trend="up"
-        trendValue="+5%"
-      />,
-    );
-    expect(getByText('+5%')).toBeTruthy();
-  });
-
   it('renders without optional props', () => {
     const { getByText } = render(
       <AnalyticsSummaryCard title="Count" value={0} />,

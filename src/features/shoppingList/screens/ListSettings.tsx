@@ -22,6 +22,7 @@ import { RecurringSection } from '#features/shoppingList/components/listSettings
 import { ReminderSection } from '#features/shoppingList/components/listSettings/ReminderSection';
 import { TemplateSection } from '#features/shoppingList/components/listSettings/TemplateSection';
 import { Screen } from '#components/templates/Screen';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 export const ListSettings: React.FC<
   StaticScreenProps<
@@ -171,8 +172,7 @@ export const ListSettings: React.FC<
                 <InfoRow
                   label={t('shoppingListScreens.owner')}
                   value={
-                    ownerInfo.displayName ||
-                    ownerInfo.email ||
+                    firstNonBlank(ownerInfo.displayName, ownerInfo.email) ??
                     t('labels.unknown')
                   }
                 />
@@ -298,7 +298,7 @@ export const ListSettings: React.FC<
                   onPress={handleOpenHomePicker}
                 >
                   <Text role="body">
-                    {homes?.find(h => h.id === selectedHomeId)?.name ||
+                    {homes.find(h => h.id === selectedHomeId)?.name ??
                       t('shoppingListScreens.personalNoHome')}
                   </Text>
                   <Icon name="chevron-down" size={20} tone="textSecondary" />
@@ -483,12 +483,12 @@ export const ListSettings: React.FC<
         label={t('shoppingListScreens.selectHome')}
         options={[
           { label: t('shoppingListScreens.personalNoHome'), value: '' },
-          ...(homes?.map(home => ({
+          ...homes.map(home => ({
             label: home.name,
             value: home.id,
-          })) || []),
+          })),
         ]}
-        selected={selectedHomeId || ''}
+        selected={selectedHomeId ?? ''}
         onSelect={value => {
           setSelectedHomeId(value || null);
           setShowHomePicker(false);
@@ -532,8 +532,8 @@ export const ListSettings: React.FC<
             value: RecurringPattern.Monthly,
           },
         ]}
-        selected={recurringPattern ?? ''}
-        onSelect={value => handleSelectPattern(value as RecurringPattern)}
+        selected={recurringPattern}
+        onSelect={handleSelectPattern}
         onCancel={() => setShowPatternPicker(false)}
       />
     </Screen>

@@ -53,7 +53,7 @@ jest.mock('#components/organisms/ItemList', () => {
                 key={item.id}
                 testID={testIDPrefix ? `${testIDPrefix}-${index}` : undefined}
               >
-                {item.title || item.id}
+                {item.title ?? item.id}
               </RNText>
             ))
           )}
@@ -131,7 +131,7 @@ describe('ListTemplate', () => {
 
   it('does not show loading empty state when custom component provided', () => {
     const CustomList = ({ emptyState }: { emptyState?: TestEmptyState }) => (
-      <Text role="body">{emptyState?.title || 'custom'}</Text>
+      <Text role="body">{emptyState?.title ?? 'custom'}</Text>
     );
     render(
       <ListTemplate

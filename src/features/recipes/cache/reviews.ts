@@ -71,7 +71,7 @@ const addReviewEdge = (
         if (!newRef) return existing;
         const existingEdges = existing.edges ?? [];
         const alreadyPresent = existingEdges.some(
-          edge => readField('id', edge?.node) === reviewId,
+          edge => readField('id', edge.node) === reviewId,
         );
         if (alreadyPresent) return existing;
         const newEdge = {
@@ -102,7 +102,7 @@ const removeReviewEdge = (
       reviews(existing: ConnectionData = {}, { readField }) {
         const existingEdges = existing.edges ?? [];
         const edges = existingEdges.filter(
-          edge => readField('id', edge?.node) !== reviewId,
+          edge => readField('id', edge.node) !== reviewId,
         );
         if (edges.length === existingEdges.length) return existing;
         return {

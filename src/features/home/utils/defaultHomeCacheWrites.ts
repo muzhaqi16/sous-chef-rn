@@ -42,11 +42,10 @@ const cachedHomes = (cache: ApolloCache) => {
         existingHomes: { edges?: HomeEdge[]; readonly __ref?: string },
         { readField },
       ) {
-        if (!existingHomes || !existingHomes.edges) return existingHomes;
+        if (!existingHomes.edges) return existingHomes;
 
         existingHomes.edges.forEach((edge: HomeEdge) => {
           const homeRef = 'node' in edge ? edge.node ?? edge : edge;
-          if (!homeRef) return;
           const cacheId = cache.identify(homeRef);
           if (cacheId)
             found.push({ cacheId, homeId: readField('id', homeRef) });

@@ -24,7 +24,16 @@ function asRecord(x: unknown): Record<string, unknown> | null {
 // Keys are the Spoonacular nutrient `name` values (matched against the blob);
 // values are the i18n keys whose label is resolved at render time so the macro
 // names follow the active language.
-const MACRO_LABEL_KEYS: Record<string, TranslationKey> = {
+type MacroNutrient =
+  | 'Calories'
+  | 'Protein'
+  | 'Carbohydrates'
+  | 'Fat'
+  | 'Fiber'
+  | 'Sugar'
+  | 'Sodium';
+
+const MACRO_LABEL_KEYS: Record<MacroNutrient, TranslationKey> = {
   Calories: 'labels.calories',
   Protein: 'recipes.macroProtein',
   Carbohydrates: 'recipes.macroCarbohydrates',
@@ -33,7 +42,15 @@ const MACRO_LABEL_KEYS: Record<string, TranslationKey> = {
   Sugar: 'recipes.macroSugar',
   Sodium: 'recipes.macroSodium',
 };
-const MACRO_ORDER = Object.keys(MACRO_LABEL_KEYS);
+const MACRO_ORDER: MacroNutrient[] = [
+  'Calories',
+  'Protein',
+  'Carbohydrates',
+  'Fat',
+  'Fiber',
+  'Sugar',
+  'Sodium',
+];
 
 /** Pull the common macros out of a Spoonacular-style `{ nutrients: [...] }` blob. */
 function parseNutrition(data: unknown): NutrientRow[] {
@@ -48,10 +65,8 @@ function parseNutrition(data: unknown): NutrientRow[] {
       typeof rec.amount === 'number' ? rec.amount : Number(rec.amount);
     if (Number.isNaN(amount)) continue;
     const unit = typeof rec.unit === 'string' ? rec.unit : '';
-    const labelKey = MACRO_LABEL_KEYS[name];
-    if (!labelKey) continue;
     rows.push({
-      labelKey,
+      labelKey: MACRO_LABEL_KEYS[name],
       value: `${Math.round(amount)}${unit ? ` ${unit}` : ''}`,
     });
   }

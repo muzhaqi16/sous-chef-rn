@@ -270,7 +270,7 @@ export function BottomSheetAutocompleteInput<T>({
   );
 
   return (
-    <FormFieldWrapper label={label || ''} error={error} required={required}>
+    <FormFieldWrapper label={label ?? ''} error={error} required={required}>
       <InputComponent
         style={[styles.fieldInput, error && styles.fieldInputError]}
         value={value}

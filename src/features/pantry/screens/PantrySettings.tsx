@@ -40,8 +40,8 @@ function syncPantryFormState(
   setIsDefault: (v: boolean) => void,
 ) {
   if (pantry && pantryId) {
-    setName(pantry.name || '');
-    setDescription(pantry.description || '');
+    setName(pantry.name ?? '');
+    setDescription(pantry.description ?? '');
     setIsDefault(pantry.isDefault ?? false);
   } else if (!pantryId) {
     setName('');

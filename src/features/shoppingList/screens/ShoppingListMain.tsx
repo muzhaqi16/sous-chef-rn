@@ -50,9 +50,9 @@ const ShoppingListMainInner: React.FC = () => {
     telemetryProperties: () => ({
       list_id: screenData.state.currentListId,
       item_count:
-        (screenData.state.totalCountUnpurchased ?? 0) +
-        (screenData.state.totalCountPurchased ?? 0),
-      purchased_count: screenData.state.totalCountPurchased ?? 0,
+        screenData.state.totalCountUnpurchased +
+        screenData.state.totalCountPurchased,
+      purchased_count: screenData.state.totalCountPurchased,
       has_lists: screenData.state.lists.length > 0,
     }),
   });
@@ -62,8 +62,8 @@ const ShoppingListMainInner: React.FC = () => {
       <ShoppingListModalsProvider
         currentListId={screenData.state.currentListId}
         items={[
-          ...(screenData.state.rawUnpurchasedItems ?? []),
-          ...(screenData.state.rawPurchasedItems ?? []),
+          ...screenData.state.rawUnpurchasedItems,
+          ...screenData.state.rawPurchasedItems,
         ]}
         recordPurchase={screenData.actions.recordPurchase}
         searchQuery={screenData.state.searchQuery}

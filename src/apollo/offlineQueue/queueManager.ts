@@ -698,7 +698,7 @@ export class QueueManager {
         if (typeof value === 'string' && value) ids.add(value);
       }
     };
-    const input: unknown = mutation.variables?.input;
+    const input: unknown = mutation.variables.input;
     collect(input);
     const items = isRecord(input) ? input.items : undefined;
     if (Array.isArray(items)) items.forEach(collect);
@@ -855,6 +855,14 @@ export class QueueManager {
     // draining it hands back that same promise, which is what we want to await.
     await this.processQueue().catch(() => {});
     await this.processingPromise?.catch(() => {});
+  }
+
+  /**
+   * A new access token for the signed-in user. A write parked for re-auth is
+   * replayable again, and a restored or rotated session never signs in to say so.
+   */
+  onSessionToken(userId: string): void {
+    if (queueStore.revivePendingAuthErrors(userId) > 0) this.requestDrain();
   }
 
   onOnline(): void {

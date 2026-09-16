@@ -17,7 +17,7 @@ import { Screen } from '#components/templates/Screen';
  * `resolveShareLink` is `@optionalAuth`, so it works while logged out.
  */
 export const JoinByLinkScreen: React.FC<
-  StaticScreenProps<{ code?: string }>
+  StaticScreenProps<{ code?: string } | undefined>
 > = ({ route }) => {
   const { t } = useTranslation();
   const { goBack, replaceWithJoinHomeByCode, replaceWithJoinByShareCode } =
@@ -38,10 +38,13 @@ export const JoinByLinkScreen: React.FC<
     routedRef.current = true;
     // `replace` (not navigate): this screen is a transparent resolver and must
     // not linger in the back stack once it routes to the per-type join screen.
-    if (result.targetType === ShareLinkTargetType.HomeJoin) {
-      replaceWithJoinHomeByCode(code);
-    } else if (result.targetType === ShareLinkTargetType.ListJoin) {
-      replaceWithJoinByShareCode(code);
+    switch (result.targetType) {
+      case ShareLinkTargetType.HomeJoin:
+        replaceWithJoinHomeByCode(code);
+        break;
+      case ShareLinkTargetType.ListJoin:
+        replaceWithJoinByShareCode(code);
+        break;
     }
   }, [result, code, replaceWithJoinHomeByCode, replaceWithJoinByShareCode]);
 

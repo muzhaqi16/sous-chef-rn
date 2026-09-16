@@ -12,17 +12,12 @@ jest.mock('#services/haptic/HapticService', () => ({
 
 describe('ActionButton', () => {
   const defaultProps = {
+    name: 'add',
     onPress: jest.fn(),
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  it('renders with default icon name', () => {
-    render(<ActionButton {...defaultProps} />);
-    // Default accessibility label uses the icon name "add"
-    expect(screen.getByLabelText('Add button')).toBeTruthy();
   });
 
   it('renders with custom icon name', () => {

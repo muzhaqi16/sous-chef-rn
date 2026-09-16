@@ -15,6 +15,7 @@ import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import { getDeviceId } from '#/storage/deviceId';
 import { generateId } from '#/utils/generateId';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { getVersion, isEmulatorSync } from 'react-native-device-info';
 import { env as buildEnv } from '#/config/env';
 import { useStore } from '#store';
@@ -351,15 +352,15 @@ export class TelemetryService {
         ...error.context,
       },
       {
-        type: error.name || 'Error',
+        type: firstNonBlank(error.name) ?? 'Error',
         message: error.message,
         stacktrace: error.stack,
       },
     );
 
     this.incrementCounter('app_errors_total', 1, {
-      component: error.component || 'unknown',
-      operation: error.operation || 'unknown',
+      component: firstNonBlank(error.component) ?? 'unknown',
+      operation: firstNonBlank(error.operation) ?? 'unknown',
       is_fatal: String(error.isFatal ?? false),
     });
   }

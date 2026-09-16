@@ -8,6 +8,7 @@ import {
   formatInviteStatus,
   getInviteDisplayName,
   getInviteStatusKey,
+  INVITE_STATUS_TONE,
 } from '#features/home/utils/inviteFormatters';
 import {
   getMemberDisplayName,
@@ -24,13 +25,14 @@ const InviteChip: React.FC<{ invite: ListInvite }> = ({ invite }) => {
   const { t } = useTranslation();
   const statusKey = getInviteStatusKey(invite.status);
   const displayName = getInviteDisplayName(invite, t);
+  const tone = INVITE_STATUS_TONE[invite.status];
   styles.useVariants({ status: statusKey });
   return (
     <View style={styles.inviteChip}>
-      <Text role="bodyStrong" style={styles.inviteChipText}>
+      <Text role="bodyStrong" tone={tone}>
         {displayName}
       </Text>
-      <Text role="bodyStrong" style={styles.inviteStatus}>
+      <Text role="bodyStrong" tone={tone} align="center">
         {formatInviteStatus(invite.status, t)}
       </Text>
     </View>
@@ -67,14 +69,10 @@ export const MembersList: React.FC<MembersListProps> = ({
   const { t } = useTranslation();
   const currentUser = useUser();
 
-  // API now only returns pending invites, so no client-side filtering needed
+  // The API returns only pending invites.
   const pendingInvites = invites;
 
-  if (
-    (!members || members.length === 0) &&
-    (!pendingInvites || pendingInvites.length === 0)
-  )
-    return null;
+  if (members.length === 0 && pendingInvites.length === 0) return null;
 
   return (
     <View style={styles.membersSection}>
@@ -175,27 +173,6 @@ const styles = StyleSheet.create(theme => ({
         accepted: { borderColor: theme.colors.status.accepted },
         declined: { borderColor: theme.colors.status.declined },
         expired: { borderColor: theme.colors.status.expired },
-      },
-    },
-  },
-  inviteChipText: {
-    variants: {
-      status: {
-        pending: { color: theme.colors.status.pending },
-        accepted: { color: theme.colors.status.accepted },
-        declined: { color: theme.colors.status.declined },
-        expired: { color: theme.colors.status.expired },
-      },
-    },
-  },
-  inviteStatus: {
-    textAlign: 'center',
-    variants: {
-      status: {
-        pending: { color: theme.colors.status.pending },
-        accepted: { color: theme.colors.status.accepted },
-        declined: { color: theme.colors.status.declined },
-        expired: { color: theme.colors.status.expired },
       },
     },
   },

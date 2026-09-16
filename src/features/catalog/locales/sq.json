@@ -400,7 +400,10 @@
   },
   "storageLocationCard": {
     "default": "Parazgjedhur",
-    "insideParent": "Ndodhet te {{parent}}"
+    "insideParent": "Ndodhet te {{parent}}",
+    "capacityWithUnit": "/ {{capacity}} {{unit}}",
+    "capacity_one": "/ {{count}} njësi",
+    "capacity_other": "/ {{count}} njësi"
   },
   "itemSubtitle": {
     "percentRemaining": "({{percent}}% e mbetur)",
@@ -437,6 +440,8 @@
     "VOLUME": "Vëllim"
   },
   "multiSelect": {
-    "noneSelected": "Asnjë element i zgjedhur"
+    "noneSelected": "Asnjë element i zgjedhur",
+    "selectedCount_one": "{{count}} element i zgjedhur",
+    "selectedCount_other": "{{count}} elemente të zgjedhura"
   }
 }

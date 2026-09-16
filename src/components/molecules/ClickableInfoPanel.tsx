@@ -70,7 +70,7 @@ export const ClickableInfoPanel: React.FC<ClickableInfoPanelProps> = ({
         ) : (
           <EmptyState
             size="compact"
-            title={emptyMessage || t('labels.noDataAvailable')}
+            title={emptyMessage ?? t('labels.noDataAvailable')}
           />
         )}
       </Card>

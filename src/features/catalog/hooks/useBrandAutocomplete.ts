@@ -44,7 +44,7 @@ export function useBrandAutocomplete(
   };
 
   const getResults = (): BrandItem[] => {
-    const searchedBrands = brandsData?.brands?.edges?.map(e => e.node) ?? [];
+    const searchedBrands = brandsData?.brands.edges.map(e => e.node) ?? [];
     return searchedBrands.map(brand => ({
       id: brand.id,
       name: brand.name,

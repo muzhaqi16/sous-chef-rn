@@ -173,7 +173,7 @@ function setupCachePersistence(
   const originalWrite = cache.write.bind(cache);
   const originalEvict = cache.evict.bind(cache);
   const originalModify = cache.modify.bind(cache);
-  const originalGc = cache.gc ? cache.gc.bind(cache) : null;
+  const originalGc = cache.gc.bind(cache);
 
   // `write`/`modify` keep their generic signatures so the wrappers stay
   // assignable; `evict` is non-generic and typed via Parameters<>. None report
@@ -204,18 +204,16 @@ function setupCachePersistence(
     return result;
   };
 
-  if (originalGc) {
-    cache.gc = function (gcOptions?: { resetResultCache?: boolean }) {
-      // Always reset the result cache so stale query results referencing
-      // evicted entities are discarded immediately. Without this, components
-      // can read dangling __ref pointers and crash (production-only because
-      // dev mode's loadDevMessages() masks the error).
-      const options = { resetResultCache: true, ...gcOptions };
-      const result = originalGc(options);
-      schedulePersistence();
-      return result;
-    };
-  }
+  cache.gc = function (gcOptions?: { resetResultCache?: boolean }) {
+    // Always reset the result cache so stale query results referencing
+    // evicted entities are discarded immediately. Without this, components
+    // can read dangling __ref pointers and crash (production-only because
+    // dev mode's loadDevMessages() masks the error).
+    const options = { resetResultCache: true, ...gcOptions };
+    const result = originalGc(options);
+    schedulePersistence();
+    return result;
+  };
 
   logger.info('✅ Apollo: Cache persistence enabled');
 }

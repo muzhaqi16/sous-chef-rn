@@ -19,7 +19,7 @@ const MOVE_SHOPPING_LIST_ITEM = operationNameOf(MoveShoppingListItemDocument);
 
 /** The item a queued move targets; entries are persisted JSON, read structurally. */
 const movedItemIdOf = (mutation: QueuedMutation): string | undefined => {
-  const input: unknown = mutation.variables?.input;
+  const input: unknown = mutation.variables.input;
   return typeof input === 'object' &&
     input !== null &&
     'itemId' in input &&
@@ -146,7 +146,7 @@ export class QueueStore {
 
   getCurrentUserId(): string | null {
     if (this.currentUserId === undefined) {
-      this.currentUserId = storage.getString(CURRENT_USER_KEY) || null;
+      this.currentUserId = storage.getString(CURRENT_USER_KEY) ?? null;
     }
     return this.currentUserId;
   }
@@ -172,7 +172,9 @@ export class QueueStore {
   /**
    * Repeated MoveShoppingListItem ops for one item coalesce into the last
    * position, so a drag only ever replays where the item finally landed. The
-   * merged move keeps the first one's age, which the expiry horizon counts from.
+   * merged move keeps the first one's age in `agedFrom` — not in `createdAt`,
+   * which orders the drain: an older stamp there would sort the surviving move
+   * ahead of a row created between the two moves, and the move names that row.
    */
   addMutation(mutation: QueuedMutation): void {
     const queue = this.loadQueue();
@@ -199,7 +201,7 @@ export class QueueStore {
           // order, and the final position can name a row created since.
           queue.push({
             ...mutation,
-            createdAt: superseded.createdAt,
+            agedFrom: superseded.agedFrom ?? superseded.createdAt,
             conflictCount: superseded.conflictCount,
           });
           this.saveQueue(queue);
@@ -329,7 +331,7 @@ export class QueueStore {
       if (
         m.userId !== userId ||
         m.status !== QueueStatus.PENDING ||
-        m.createdAt > cutoff
+        (m.agedFrom ?? m.createdAt) > cutoff
       ) {
         return m;
       }

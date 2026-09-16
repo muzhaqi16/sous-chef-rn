@@ -299,13 +299,6 @@ describe('useShoppingListSubscriptions', () => {
     expect(clearAllPurchasedItemsFromCache).not.toHaveBeenCalled();
   });
 
-  it('does nothing for null payload (MyShoppingListsEvents)', () => {
-    const getOnData = captureCustomOnData();
-    renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
-
-    expect(() => getOnData()(null, {})).not.toThrow();
-  });
-
   it('evicts list entity when parent is deleting (LIST_UPDATED)', () => {
     // The LIST_UPDATED branch calls isParentDeleting(node.id) which returns
     // true → safeEvict is invoked.

@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, fireEvent, screen } from '@testing-library/react-native';
 import { StorageType } from '#/graphql/generated/schemaTypes';
-import type { StorageLocation } from '#/graphql/generated/schemaTypes';
+import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
 import { StorageLocationAutocompleteField } from '../StorageLocationAutocompleteField';
 
 /**
@@ -15,16 +15,16 @@ import { StorageLocationAutocompleteField } from '../StorageLocationAutocomplete
  * shared home, and the next member to open the picker saw it.
  */
 
-const location = (over: Partial<StorageLocation>): StorageLocation =>
-  ({
-    __typename: 'StorageLocation',
-    id: 'loc-1',
-    name: 'Freezer',
-    type: StorageType.Freezer,
-    isDefault: false,
-    parentLocation: null,
-    ...over,
-  } as StorageLocation);
+const location = (
+  over: Partial<StorageLocationOption>,
+): StorageLocationOption => ({
+  id: 'loc-1',
+  name: 'Freezer',
+  type: StorageType.Freezer,
+  isDefault: false,
+  parentLocation: null,
+  ...over,
+});
 
 const nested = location({
   id: 'loc-nested',

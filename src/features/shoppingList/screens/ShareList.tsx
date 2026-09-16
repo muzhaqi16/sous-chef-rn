@@ -182,7 +182,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
             <View style={styles.homeLinkedSection}>
               <AlertBanner
                 title={t('shoppingListScreens.shareHomeLinkedNotice', {
-                  name: shoppingList?.home?.name ?? t('labels.unknown'),
+                  name: shoppingList.home?.name ?? t('labels.unknown'),
                 })}
                 icon="home-outline"
                 iconLibrary="Ionicons"
@@ -193,7 +193,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                   title={t('shoppingListScreens.manageHome')}
                   onPress={() =>
                     toHomeDetail({
-                      homeId: shoppingList?.homeId ?? '',
+                      homeId: shoppingList.homeId ?? '',
                     })
                   }
                   variant="secondary"

@@ -35,6 +35,8 @@ import {
   validationFieldName,
 } from '#/utils/errors/mutationPayload';
 import type { Translate } from '#/i18n/types';
+import { firstNonBlank } from '#/utils/firstNonBlank';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 
 /**
  * An upload failure whose message is already localized and safe to show. Used
@@ -188,7 +190,7 @@ export const useImageUpload = () => {
     form.append('file', {
       uri: file.uri,
       type: mimeType,
-      name: file.fileName || 'image.jpg',
+      name: firstNonBlank(file.fileName) ?? 'image.jpg',
     });
 
     return new Promise((resolve, reject) => {
@@ -227,7 +229,7 @@ export const useImageUpload = () => {
         reject(new Error('Upload was cancelled'));
       };
 
-      if (onProgress && xhr.upload) {
+      if (onProgress) {
         xhr.upload.onprogress = event => {
           if (event.lengthComputable) {
             const uploadProgress = event.loaded / event.total;
@@ -310,7 +312,8 @@ export const useImageUpload = () => {
       const mimeType =
         sniffed ??
         normalizeImageMimeType(
-          fileToUpload.type || getMimeTypeFromUri(fileToUpload.uri),
+          firstNonBlank(fileToUpload.type) ??
+            getMimeTypeFromUri(fileToUpload.uri),
         );
       const { data: uploadData, error: uploadUrlError } = await createUploadUrl(
         {
@@ -403,7 +406,7 @@ export const useImageUpload = () => {
       options.onError?.(new Error(userErrorMessage));
       alertService.alert(t('errors.uploadFailedTitle'), userErrorMessage);
     }
-    return result || null;
+    return result ?? null;
   };
 
   const uploadItemImage = async (
@@ -449,7 +452,7 @@ export const useImageUpload = () => {
         alertService.alert(t('errors.uploadFailedTitle'), errorMessage);
       }
     }
-    return result || null;
+    return result ?? null;
   };
 
   /**
@@ -464,24 +467,26 @@ export const useImageUpload = () => {
     options: ImageUploadOptions = {},
   ): Promise<Array<{ imageUrl: string; perspective: string }>> => {
     const results: Array<{ imageUrl: string; perspective: string }> = [];
-    let fatal: UserFacingUploadError | null = null;
+    // Written from `onError`, which control-flow narrowing cannot see into.
+    const stop: { fatal: UserFacingUploadError | null } = { fatal: null };
 
     for (const [index, file] of files.entries()) {
       const imageUrl = await uploadItemImage(file, itemId, {
-        onProgress: p => options?.onProgress?.((index + p) / files.length),
+        onProgress: p => options.onProgress?.((index + p) / files.length),
         perspective: file.perspective,
         makePrimary: file.isPrimary,
         suppressAlert: true,
         onError: error => {
-          if (error instanceof UserFacingUploadError) fatal = error;
+          if (error instanceof UserFacingUploadError) stop.fatal = error;
         },
       });
       if (imageUrl) {
-        results.push({ imageUrl, perspective: file.perspective || 'front' });
+        results.push({ imageUrl, perspective: file.perspective ?? 'front' });
       }
-      if (fatal) break;
+      if (stop.fatal) break;
     }
 
+    const { fatal } = stop;
     if (fatal) {
       const remaining = files.length - results.length;
       options.onError?.(fatal);
@@ -489,7 +494,7 @@ export const useImageUpload = () => {
         t('errors.uploadFailedTitle'),
         t('imageUpload.batchThrottledBody', {
           count: remaining,
-          reason: (fatal as UserFacingUploadError).userMessage,
+          reason: fatal.userMessage,
         }),
       );
     } else if (results.length < files.length) {
@@ -506,31 +511,16 @@ export const useImageUpload = () => {
   };
 
   const updateProfileAvatarUrl = async (avatarUrl: string) => {
-    let result;
-    try {
-      result = await updateProfile({
-        variables: { input: { avatar: avatarUrl } },
-      });
-    } catch (error) {
-      logger.error('Update profile avatar failed:', error);
-    }
-
-    // `errorPolicy: 'all'` means a failed mutation RESOLVES with `error` set and
-    // a non-success union member — it does not reject. The catch above only
-    // fires when a link itself throws. Both outcomes land here, so the failure
-    // is reported once, in the one place that sees every failure.
-    const payload = appliedPayload(result?.data);
-    if (!payload) {
-      logger.error(
-        'Update profile avatar failed:',
-        result?.error ?? result?.data,
-      );
-      alertService.alert(
-        t('imageUpload.updateFailedTitle'),
-        t('imageUpload.avatarUpdateFailedBody'),
-      );
-      return null;
-    }
+    const settled = await settleMutation(
+      () => updateProfile({ variables: { input: { avatar: avatarUrl } } }),
+      {
+        document: UpdateUserProfileDocument,
+        title: t('imageUpload.updateFailedTitle'),
+        fallback: t('imageUpload.avatarUpdateFailedBody'),
+      },
+    );
+    const payload = appliedPayload(settled.data);
+    if (!payload) return null;
 
     // Sync avatar to Zustand store so screens reading from the store
     // (e.g. Pantry header) reflect the change immediately.

@@ -49,7 +49,26 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     name
     shelfLifeDays
     shelfLifeOpenedDays
-    nutritions
+    nutritionFacts {
+      id
+      calories
+      totalFat
+      saturatedFat
+      transFat
+      cholesterol
+      sodium
+      totalCarbs
+      dietaryFiber
+      totalSugars
+      addedSugars
+      protein
+      vitaminD
+      calcium
+      iron
+      potassium
+      servingSize
+      servingUnit
+    }
     categories {
       isPrimary
       category {

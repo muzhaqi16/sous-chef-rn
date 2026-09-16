@@ -3,6 +3,7 @@ import {
   formatInviteStatus,
   getInviteDisplayName,
   getInviteStatusKey,
+  INVITE_STATUS_TONE,
 } from '#features/home/utils/inviteFormatters';
 import { getI18n } from '#/i18n/config';
 
@@ -36,6 +37,19 @@ describe('inviteFormatters', () => {
     });
   });
 
+  describe('INVITE_STATUS_TONE', () => {
+    it.each([
+      [InviteStatus.Pending, 'warning'],
+      [InviteStatus.Accepted, 'success'],
+      [InviteStatus.Declined, 'danger'],
+      [InviteStatus.Expired, 'tertiary'],
+      [InviteStatus.Revoked, 'tertiary'],
+      [InviteStatus.Used, 'tertiary'],
+    ])('sets %s status text in the %s tone', (input, expected) => {
+      expect(INVITE_STATUS_TONE[input]).toBe(expected);
+    });
+  });
+
   describe('getInviteDisplayName', () => {
     it('prefers recipientName', () => {
       expect(
@@ -51,6 +65,12 @@ describe('inviteFormatters', () => {
 
     it('falls back to full email when username is empty', () => {
       expect(getInviteDisplayName({ email: '@bad' }, t)).toBe('@bad');
+    });
+
+    it('skips a blank recipientName', () => {
+      expect(
+        getInviteDisplayName({ recipientName: ' ', email: 'alice@b.com' }, t),
+      ).toBe('alice');
     });
 
     it('returns Unknown when no data available', () => {

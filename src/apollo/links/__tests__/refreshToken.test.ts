@@ -56,6 +56,7 @@ import { reconnectWebSocket } from '../wsLink';
 import { registerApolloClient } from '#/apollo/clientRegistry';
 import { isAuthRefusalCode } from '#/utils/authErrorCodes';
 import { classifyError } from '#/apollo/offlineQueue/queueErrorPolicy';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 
 const mockedJwtDecode = jwtDecode as jest.MockedFunction<typeof jwtDecode>;
 const mockedClient = client as jest.Mocked<typeof client>;
@@ -731,10 +732,13 @@ describe('refreshToken', () => {
       });
 
       it('classifies every waiter as the refresh itself when it fails on the network', async () => {
-        (mockedClient.mutate as jest.Mock).mockRejectedValue(
-          new Error('Network request failed'),
+        const networkFailure = new Error('Network request failed');
+        (mockedClient.mutate as jest.Mock).mockRejectedValue(networkFailure);
+        // Only the transport failure reads as network: an uncoded error handed
+        // to a waiter must not pass for one.
+        (mockedIsNetworkError as jest.Mock).mockImplementation(
+          (error: unknown) => error === networkFailure,
         );
-        (mockedIsNetworkError as jest.Mock).mockReturnValue(true);
 
         const verdicts = (await collectErrors(3)).map(classifyError);
 
@@ -745,6 +749,42 @@ describe('refreshToken', () => {
           ['network', true],
         ]);
       }, 30000);
+
+      it('defers every waiter when the refresh fails on neither the credential nor the network', async () => {
+        (mockedClient.mutate as jest.Mock).mockRejectedValue(
+          new Error('setTokens threw'),
+        );
+        (mockedIsNetworkError as jest.Mock).mockReturnValue(false);
+
+        const verdicts = (await collectErrors(3)).map(classifyError);
+
+        expect(verdicts.map(v => [v.type, v.retryable])).toEqual([
+          ['server', true],
+          ['server', true],
+          ['server', true],
+        ]);
+      });
+
+      it('defers every waiter when the server refuses the refresh for a reason that keeps the session', async () => {
+        (mockedClient.mutate as jest.Mock).mockResolvedValue({
+          data: {
+            refresh: {
+              __typename: 'ForbiddenError',
+              code: ErrorCode.Forbidden,
+              message: 'Refresh not allowed from this client',
+            },
+          },
+        });
+        (mockedIsNetworkError as jest.Mock).mockReturnValue(false);
+
+        const verdicts = (await collectErrors(3)).map(classifyError);
+
+        expect(verdicts.map(v => [v.type, v.retryable])).toEqual([
+          ['server', true],
+          ['server', true],
+          ['server', true],
+        ]);
+      });
 
       it('classifies every waiter as auth when the server refuses the refresh', async () => {
         (mockedClient.mutate as jest.Mock).mockRejectedValue(

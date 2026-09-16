@@ -16,6 +16,7 @@ import {
   formatNumberForInput,
   localizeNumericHint,
 } from '#/utils/formatters/number';
+import { getUnitDisplayText } from '#/utils/formatQuantity';
 import { Sheet } from '#components/templates/Sheet';
 import {
   correctWeightSchema,
@@ -69,11 +70,8 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
       nextSeedKey && pantryItem
         ? {
             weightInput: formatNumberForInput(pantryItem.netWeight),
-            unitDisplay:
-              pantryItem.netWeightUnit?.symbol ||
-              pantryItem.netWeightUnit?.name ||
-              '',
-            selectedUnitId: pantryItem.netWeightUnit?.id || null,
+            unitDisplay: getUnitDisplayText(pantryItem.netWeightUnit),
+            selectedUnitId: pantryItem.netWeightUnit?.id ?? null,
             reason: '',
           }
         : null,

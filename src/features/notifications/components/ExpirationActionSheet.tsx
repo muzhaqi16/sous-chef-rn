@@ -17,6 +17,7 @@ import type { DisplayNotification as NotificationItem } from '#features/notifica
 import { Icon, type IconName } from '#utils/iconUtils';
 import { Title } from '#components/atoms/Title';
 import { Text } from '#components/atoms/Text';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 interface ExpirationActionSheetProps {
   visible: boolean;
@@ -89,10 +90,7 @@ function OptionRow({
   onPress: () => void;
 }) {
   const { t } = useTranslation();
-  styles.useVariants({
-    notLast: !isLast,
-    destructive: option.destructive ?? false,
-  });
+  styles.useVariants({ notLast: !isLast });
   return (
     <AppPressable
       style={styles.optionButton}
@@ -105,7 +103,11 @@ function OptionRow({
         size={24}
         tone={option.destructive ? 'error' : 'primary'}
       />
-      <Text role="bodyStrong" style={styles.optionLabel}>
+      <Text
+        role="bodyStrong"
+        tone={option.destructive ? 'danger' : undefined}
+        style={styles.optionLabel}
+      >
         {t(option.labelKey)}
       </Text>
     </AppPressable>
@@ -127,7 +129,8 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
   });
 
   const itemName =
-    notification?.pantryItemName || t('expirationAction.thisItem');
+    firstNonBlank(notification?.pantryItemName) ??
+    t('expirationAction.thisItem');
   const subtitle = notification
     ? getExpirySubtitle(notification.daysUntilExpiry, t)
     : '';
@@ -219,10 +222,5 @@ const styles = StyleSheet.create(theme => ({
 
   optionLabel: {
     flex: 1,
-    variants: {
-      destructive: {
-        true: { color: theme.colors.error },
-      },
-    },
   },
 }));

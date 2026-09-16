@@ -34,19 +34,19 @@ export const UsageTab: React.FC<
   const { t } = useTranslation();
 
   const usagePurposeData =
-    usageData?.usageByPurpose?.map(item => ({
+    usageData?.usageByPurpose.map(item => ({
       label: formatPurpose(item.purpose, t),
       value: item.count,
       percentage: item.percentage,
     })) ?? [];
   const usageSourceData =
-    usageData?.usageBySource?.map(item => ({
+    usageData?.usageBySource.map(item => ({
       label: formatSource(item.source, t),
       value: item.count,
       percentage: item.percentage,
     })) ?? [];
   const topUsedItemsData =
-    usageData?.topUsedItems?.map(item => ({
+    usageData?.topUsedItems.map(item => ({
       label: item.itemName,
       value: item.count,
     })) ?? [];
@@ -87,7 +87,7 @@ export const UsageTab: React.FC<
         title={t('pantryAnalytics.usageTrend')}
         loading={usageLoading}
         error={usageError}
-        isEmpty={!usageData?.usageTrend?.length}
+        isEmpty={!usageData?.usageTrend.length}
       >
         <TrendLineChart
           data={usageData?.usageTrend ?? []}

@@ -34,6 +34,7 @@ import {
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import { localItemIdFor } from '#features/pantry/cache/items';
 import { releaseEntity } from '#/apollo/utils/cacheUpdaters';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /** The detail-only facts a create site can supply. All optional. */
 export interface PantryItemDetailStubFields {
@@ -209,7 +210,7 @@ function singleFieldFragment(
 const resolveItemId = (
   pantryItemId: string,
   itemId: string | null | undefined,
-): string => itemId || localItemIdFor(pantryItemId);
+): string => firstNonBlank(itemId) ?? localItemIdFor(pantryItemId);
 
 /**
  * The id of the Unit the optimistic builder just linked, or null when the row

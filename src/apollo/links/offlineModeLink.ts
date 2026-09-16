@@ -35,7 +35,7 @@ export const createOfflineModeLink = () => {
     }
 
     // Allow-listed operations always pass through
-    const operationName = operation.operationName || '';
+    const operationName = operation.operationName ?? '';
     if (ALWAYS_ALLOW.includes(operationName)) {
       return forward(operation);
     }

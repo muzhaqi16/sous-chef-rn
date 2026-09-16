@@ -15,6 +15,12 @@ A string literal or template literal that reads as prose — two words with lett
 
 Either branch of `?:` and both sides of `??` / `||` are checked.
 
+## Options
+
+- `followRendered` (default `false`; on in `eslint/project.js`) — also report copy whose target is not copy-named but is rendered in the same file, where "rendered" is a JSX child or a copy prop (the `i18next/no-literal-string` include list, or a copy name), reached through `?.`, `!`, `?:` branches, `||` / `??`, the right side of `&&`, a template literal or `+`:
+  - the initial value of `const [x, setX] = useState('…')` and every `setX('…')`, when `x` is rendered in that component;
+  - the return of a function the file declares (`function f` or `const f = () => …`), when a call to it is rendered: `function statusOf(ok) { return ok ? 'Up to date' : 'Pending'; }` then `<Text>{statusOf(ok)}</Text>`.
+
 ## Use instead
 
 `t(key)` in a component or hook; the module-level `t` (lazily, `() => t(key)`, for a yup schema) elsewhere; a `Translate` parameter for a pure formatter. A kit component's default copy is `prop ?? t('shared.key')`, not a default parameter.

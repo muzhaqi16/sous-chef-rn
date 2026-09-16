@@ -7,10 +7,6 @@ jest.mock('#/services/toastService', () => ({
   toastService: { success: jest.fn(), error: jest.fn(), info: jest.fn() },
 }));
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: { trackEvent: jest.fn(), trackError: jest.fn() },
-}));
-
 import {
   recordMock,
   renderHookWithApollo,

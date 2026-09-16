@@ -94,7 +94,7 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
       <View style={styles.memberInfo}>
         <View style={styles.avatar}>
           <Text role="bodyStrong" style={styles.avatarText}>
-            {displayName[0]?.toUpperCase() || '?'}
+            {displayName[0]?.toUpperCase() ?? '?'}
           </Text>
         </View>
         <View style={styles.memberDetails}>

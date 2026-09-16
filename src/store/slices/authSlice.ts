@@ -56,7 +56,8 @@ export const handleTokenRefreshOnResume = async (
 /**
  * The signed-in user as persisted. `email` / `emailVerified` / `role` are
  * API-gated (null unless the caller is that user or an admin), so they stay
- * nullable — read defensively (`user?.email || fallback`), never assert.
+ * nullable — read defensively, never assert: `user?.email ?? fallback`, or
+ * `firstNonBlank(user?.email) ?? fallback` where a blank string must fall through.
  */
 export interface User {
   id: string;

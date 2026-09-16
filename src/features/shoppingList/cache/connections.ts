@@ -156,7 +156,7 @@ function clearItemsFromCache(
           ),
         );
         const edges = (existing.edges ?? []).filter(
-          edge => !cleared.has(edge?.node?.__ref),
+          edge => !cleared.has(edge.node.__ref),
         );
         return {
           ...existing,
@@ -240,14 +240,14 @@ function updateItemsConnectionForPurchaseStatusChange(
           const removeItemEdges = () => ({
             ...existing,
             edges: edges.filter(
-              edge => readField<string>('id', edge?.node) !== itemId,
+              edge => readField<string>('id', edge.node) !== itemId,
             ),
             totalCount: Math.max(0, (existing.totalCount ?? 0) - 1),
           });
 
           const addItemEdge = () => {
             const alreadyExists = edges.some(
-              edge => readField<string>('id', edge?.node) === itemId,
+              edge => readField<string>('id', edge.node) === itemId,
             );
             if (alreadyExists) return existing;
             const node = toReference({
@@ -282,14 +282,16 @@ function updateItemsConnectionForPurchaseStatusChange(
         },
         // Keep the derived stats in sync with the new completedItems so the
         // progress header doesn't go stale until the next refetch.
-        remainingItems(_existing: number, { readField }) {
-          const total = readField<number>('totalItems') ?? 0;
-          const completed = readField<number>('completedItems') ?? 0;
+        remainingItems(existing: number, { readField }) {
+          const total = readField<number>('totalItems');
+          const completed = readField<number>('completedItems');
+          if (total === undefined || completed === undefined) return existing;
           return Math.max(0, total - nextCompleted(completed));
         },
-        completionRate(_existing: number, { readField }) {
-          const total = readField<number>('totalItems') ?? 0;
-          const completed = readField<number>('completedItems') ?? 0;
+        completionRate(existing: number, { readField }) {
+          const total = readField<number>('totalItems');
+          const completed = readField<number>('completedItems');
+          if (total === undefined || completed === undefined) return existing;
           return total > 0 ? nextCompleted(completed) / total : 0;
         },
       },
@@ -351,20 +353,20 @@ export function addNewItemToShoppingListCache(
           if (isPurchasedVariant(storeFieldName)) {
             // Re-adding a purchased row: drop it from the purchased variant.
             const hadItem = existing.edges.some(
-              edge => readField<string>('id', edge?.node) === item.id,
+              edge => readField<string>('id', edge.node) === item.id,
             );
             if (!hadItem) return existing;
             return {
               ...existing,
               edges: existing.edges.filter(
-                edge => readField<string>('id', edge?.node) !== item.id,
+                edge => readField<string>('id', edge.node) !== item.id,
               ),
               totalCount: Math.max(0, (existing.totalCount ?? 0) - 1),
             };
           }
 
           const alreadyExists = existing.edges.some(
-            edge => readField<string>('id', edge?.node) === item.id,
+            edge => readField<string>('id', edge.node) === item.id,
           );
           if (alreadyExists) return existing;
 

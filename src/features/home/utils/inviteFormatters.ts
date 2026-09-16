@@ -1,7 +1,9 @@
 import { InviteStatus } from '#/graphql/generated/schemaTypes';
 import type { Translate } from '#/i18n/types';
+import type { TextTone } from '#components/atoms/Text';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
-/** The `theme.colors.status` tone an invite status is drawn in. */
+/** The `theme.colors.status` key an invite's border and badge fill are drawn in. */
 export type InviteStatusKey = 'pending' | 'accepted' | 'declined' | 'expired';
 
 export function getInviteStatusKey(status: InviteStatus): InviteStatusKey {
@@ -19,6 +21,15 @@ export function getInviteStatusKey(status: InviteStatus): InviteStatusKey {
   }
 }
 
+export const INVITE_STATUS_TONE: Record<InviteStatus, TextTone> = {
+  [InviteStatus.Pending]: 'warning',
+  [InviteStatus.Accepted]: 'success',
+  [InviteStatus.Declined]: 'danger',
+  [InviteStatus.Expired]: 'tertiary',
+  [InviteStatus.Revoked]: 'tertiary',
+  [InviteStatus.Used]: 'tertiary',
+};
+
 export function formatInviteStatus(status: InviteStatus, t: Translate): string {
   return t(`inviteStatus.${status}`);
 }
@@ -31,10 +42,11 @@ export function getInviteDisplayName(
   },
   t: Translate,
 ): string {
-  if (invite.recipientName) return invite.recipientName;
-  if (invite.email) {
-    const emailParts = invite.email.split('@');
-    return emailParts[0] || invite.email;
-  }
-  return t('labels.unknown');
+  return (
+    firstNonBlank(
+      invite.recipientName,
+      invite.email?.split('@')[0],
+      invite.email,
+    ) ?? t('labels.unknown')
+  );
 }

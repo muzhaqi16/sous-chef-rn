@@ -1,11 +1,3 @@
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    trackError: jest.fn(),
-    increment: jest.fn(),
-    warn: jest.fn(),
-  },
-}));
-
 jest.mock('#/utils/errorSerialization', () => ({
   serializeError: jest.fn((e: unknown) => ({ message: String(e) })),
 }));

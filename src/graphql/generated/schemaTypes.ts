@@ -327,7 +327,13 @@ export type AdjustPantryItemQuantityInput = {
   newQuantity: Scalars['Float']['input'];
   /** Why the adjustment was made (required for audit trail) */
   reason: Scalars['String']['input'];
-  /** Explicit remaining net weight override for full recount scenarios (dual-tracked items only) */
+  /**
+   * The remaining net weight a full recount found (dual-tracked items only). On a stack
+   * holding batches it is spread over the batches that record a weight, in proportion to
+   * what each holds: a lower weight lowers the stack's value at cost, a higher weight does
+   * not raise it, and no consumption is recorded. Refused with a ValidationError on this
+   * field when no held batch records a weight.
+   */
   remainingNetWeight?: InputMaybe<Scalars['Float']['input']>;
   /**
    * Optimistic concurrency control. REQUIRED: the caller is updating a row it
@@ -3719,6 +3725,11 @@ export type Error = {
  * Both are typed by `TopLevelErrorCode`, which names that channel's whole
  * vocabulary.
  *
+ * This enum also types the `code` of a per-item failure inside a
+ * partial-success payload, which reports the same value a union member would
+ * for the same error. A per-item failure is the one place an internal failure
+ * arrives in `data`, as `INTERNAL_SERVER_ERROR`; no union member carries it.
+ *
  * A value here without an emitter is a false promise; see the
  * `error-code-contract` spec.
  */
@@ -3746,6 +3757,12 @@ export enum ErrorCode {
   HomeAccessDenied = 'HOME_ACCESS_DENIED',
   /** An idempotency-keyed operation was already applied (a safe replay). Clients should treat this as success, not a hard failure. */
   IdempotentReplay = 'IDEMPOTENT_REPLAY',
+  /** More was requested from a pantry item than it holds. The failure reports the requested and available quantities where it has them. */
+  InsufficientQuantity = 'INSUFFICIENT_QUANTITY',
+  /** An unexpected server fault behind one item of a partial-success payload. Reported only on a per-item failure, whose reason is masked in production and carries an errorId. */
+  InternalServerError = 'INTERNAL_SERVER_ERROR',
+  /** A low-stock item was skipped because it is already on the target shopping list. Reported only on a per-item failure. */
+  ItemAlreadyInList = 'ITEM_ALREADY_IN_LIST',
   NotFound = 'NOT_FOUND',
   PantryItemAlreadyExists = 'PANTRY_ITEM_ALREADY_EXISTS',
   ResourceAlreadyExists = 'RESOURCE_ALREADY_EXISTS',
@@ -16470,6 +16487,8 @@ export enum TopLevelErrorCode {
   Forbidden = 'FORBIDDEN',
   /** The caller is not a member of the home. Distinct from the union member's HOME_ACCESS_DENIED, which a mutation returns. */
   HomeNotAMember = 'HOME_NOT_A_MEMBER',
+  /** More was requested from a pantry item than it holds. A mutation reports this as a ValidationError union member carrying the same code. */
+  InsufficientQuantity = 'INSUFFICIENT_QUANTITY',
   /** An unexpected server fault. Masked in production, so only the code survives. */
   InternalServerError = 'INTERNAL_SERVER_ERROR',
   /** Per-operation limit. Names the operation that was limited and carries operation, limit, duration and retryAfter. */

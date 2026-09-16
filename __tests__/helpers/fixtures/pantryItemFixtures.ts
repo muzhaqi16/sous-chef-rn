@@ -21,6 +21,7 @@ import {
 type UnmaskedGetPantryItemQuery = Unmasked<GetPantryItemQuery>;
 type PantryItemNode = NonNullable<UnmaskedGetPantryItemQuery['pantryItem']>;
 type UnitData = PantryItemNode['unit'];
+type NutritionFactsData = PantryItemNode['item']['nutritionFacts'];
 
 export interface PantryItemFixture {
   id?: string;
@@ -44,6 +45,7 @@ export interface PantryItemFixture {
   /** The item's OWN cost fields — the first stock's, which a restock leaves be. */
   costPerUnit?: number | null;
   totalCost?: number | null;
+  nutritionFacts?: NutritionFactsData;
 }
 
 function unit(
@@ -107,7 +109,7 @@ export function pantryItemData(
         photos: [],
         shelfLifeDays: null,
         shelfLifeOpenedDays: null,
-        nutritions: null,
+        nutritionFacts: fixture.nutritionFacts ?? null,
         categories: fixture.categoryName
           ? [
               {

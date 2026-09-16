@@ -19,13 +19,13 @@ export const toRecipeInput = (
   priceBreakdown?: RecipePriceBreakdown | null,
 ) => {
   // Extract calories from nutrition data
-  const caloriesPerServing = spoonacularRecipe.nutrition?.nutrients?.find(
+  const caloriesPerServing = spoonacularRecipe.nutrition?.nutrients.find(
     n => n.name === 'Calories',
   )?.amount;
 
   // Transform instructions to JSON format (matches user-created format: { step, text })
   const instructions =
-    spoonacularRecipe.analyzedInstructions?.[0]?.steps?.map(step => ({
+    spoonacularRecipe.analyzedInstructions?.[0]?.steps.map(step => ({
       step: step.number,
       text: step.step,
     })) ?? [];
@@ -57,14 +57,14 @@ export const toRecipeInput = (
   return {
     // Basic recipe info
     name: spoonacularRecipe.title,
-    description: spoonacularRecipe.summary?.replace(/<[^>]*>/g, ''),
+    description: spoonacularRecipe.summary.replace(/<[^>]*>/g, ''),
     instructions,
 
     // Structured attributes — the API rejects flat servings/cuisine/time/
     // nutrition/image fields; each lives under its typed sub-input.
     metadata: {
       servings: spoonacularRecipe.servings,
-      cuisine: spoonacularRecipe.cuisines?.length
+      cuisine: spoonacularRecipe.cuisines.length
         ? spoonacularRecipe.cuisines.join(', ')
         : undefined,
     },
@@ -189,6 +189,6 @@ export const toRecipeInput = (
             },
           ],
         };
-      }) || [],
+      }) ?? [],
   } satisfies CreateRecipeInput;
 };

@@ -20,7 +20,7 @@ const ActionButton: React.FC<{
   action: ActionButtonConfig;
   index: number;
 }> = ({ action, index }) => {
-  const variant = action.variant || 'secondary';
+  const variant = action.variant ?? 'secondary';
 
   return (
     <Animated.View

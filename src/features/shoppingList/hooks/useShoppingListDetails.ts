@@ -39,7 +39,7 @@ export function useShoppingListDetails(listId: string | undefined) {
   // fields directly without each call site re-doing the lookup.
   const isNonNull = <T>(v: T | null): v is T => v !== null;
   const collaborators: ShoppingListCollaboratorFragment[] =
-    shoppingList?.collaboratorsConnection?.edges
+    shoppingList?.collaboratorsConnection.edges
       .map(edge =>
         client.cache.readFragment<ShoppingListCollaboratorFragment>({
           fragment: ShoppingListCollaboratorFragmentDoc,
@@ -50,7 +50,7 @@ export function useShoppingListDetails(listId: string | undefined) {
       .filter(isNonNull) ?? [];
   const ownerships: ShoppingListOwnershipFragment[] =
     shoppingList?.ownerships
-      ?.map(o =>
+      .map(o =>
         client.cache.readFragment<ShoppingListOwnershipFragment>({
           fragment: ShoppingListOwnershipFragmentDoc,
           fragmentName: 'ShoppingListOwnershipFragment',
@@ -67,7 +67,7 @@ export function useShoppingListDetails(listId: string | undefined) {
     hasResult: shoppingList !== null,
     isRefetching,
     refetch,
-    name: shoppingList?.name || '',
+    name: shoppingList?.name ?? '',
     collaborators,
     ownerships,
     isShared: collaborators.length > 0,

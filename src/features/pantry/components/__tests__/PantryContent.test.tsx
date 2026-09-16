@@ -238,21 +238,16 @@ jest.mock('../PantrySortModal', () => ({
 }));
 
 jest.mock('../PantryItemCard', () => ({
-  // PantryItemCard now accepts an opaque fragment ref and unmasks via
-  // useFragment internally. The ref is the raw cache entity at runtime, so
-  // reading `id` / `itemName` off it works directly in tests. Mirror the
-  // production "Unknown Item" fallback so the corresponding test still asserts
-  // the same behavior.
+  // The ref is the raw cache entity at runtime, so `id` / `itemName` read off it directly.
   PantryItemCard: ({
     pantryItemRef,
   }: {
     pantryItemRef?: Pick<PantryItemCard_PantryItemFragment, 'id' | 'itemName'>;
   }) => {
     const { Text, View } = require('react-native');
-    const name = pantryItemRef?.itemName || 'Unknown Item';
     return (
       <View testID={`pantry-item-${pantryItemRef?.id}`}>
-        <Text>{name}</Text>
+        <Text>{pantryItemRef?.itemName}</Text>
       </View>
     );
   },
@@ -822,14 +817,6 @@ describe('PantryContent', () => {
     ];
     render(<PantryContent {...defaultProps} items={items} />);
     expect(screen.getByText('Old Milk')).toBeTruthy();
-  });
-
-  it('renders items without itemName as Unknown Item', () => {
-    const items = [
-      createMockPantryItem({ id: '1', itemName: '', quantity: 1 }),
-    ];
-    render(<PantryContent {...defaultProps} items={items} />);
-    expect(screen.getByText('Unknown Item')).toBeTruthy();
   });
 
   it('renders items with zero quantity (out of stock)', () => {

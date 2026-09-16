@@ -1,13 +1,6 @@
 import { setupGlobalErrorHandler } from '../globalErrorHandler';
 import { Telemetry } from '#/services/telemetry';
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    trackError: jest.fn(),
-    increment: jest.fn(),
-  },
-}));
-
 describe('globalErrorHandler', () => {
   const originalGetGlobalHandler = ErrorUtils.getGlobalHandler;
   const originalSetGlobalHandler = ErrorUtils.setGlobalHandler;

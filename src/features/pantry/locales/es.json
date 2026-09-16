@@ -365,9 +365,8 @@
   },
   "duplicateItem": {
     "title": "El artículo ya está en la despensa",
-    "body": "Este artículo ya está en tu despensa. ¿Quieres reponerlo o añadir una entrada aparte?",
-    "restock": "Reponer",
-    "addAnyway": "Añadir igualmente"
+    "body": "Este artículo ya está en tu despensa en esta unidad. ¿Quieres reponerlo?",
+    "restock": "Reponer"
   },
   "expirationAction": {
     "cooked": "Cocinado",
@@ -422,6 +421,9 @@
   "pantryItemCard": {
     "remainingAmount": "Quedan {{amount}}",
     "portionsLeft_one": "Queda {{count}} {{unit}}",
-    "portionsLeft_other": "Quedan {{count}} {{unit}}"
+    "portionsLeft_other": "Quedan {{count}} {{unit}}",
+    "packageContents_one": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
+    "packageContents_other": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
+    "packageWithTotal": "{{breakdown}} ({{total}} {{weightUnit}} en total)"
   }
 }

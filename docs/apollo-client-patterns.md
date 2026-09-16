@@ -30,9 +30,9 @@ bans the `src/apollo/**` import.
 What a hook HANDS BACK matters as much as what a screen imports: a leaked
 `ApolloError` or `NetworkStatus` couples a screen that imports nothing. A hook
 returns plain values and callbacks — `loading` as a boolean, an outcome the
-caller branches on, named functions — and a mutate wrapper returns
-`MutationOutcome<TData>` (`src/utils/errors/mutationOutcome.ts`), never Apollo's
-own result generic. `__tests__/architecture/hookReturnTypes.test.ts` resolves
+caller branches on, named functions — and a mutate wrapper hands back what
+`settleMutation` settled (`Settled<TData>`), or its own outcome union, never
+Apollo's own result generic. `__tests__/architecture/hookReturnTypes.test.ts` resolves
 every feature hook's return type through the checker and fails on a library
 type in it or one property down.
 
@@ -354,7 +354,7 @@ Compared to an `optimisticResponse` callback, the cache.modify form skips readin
 
 **When NOT to Use This Pattern**:
 
-- Creating new entities (use optimistic response with `createOptimisticEntity`)
+- Creating new entities (write the entity to the cache permanently before firing — `docs/local-first-architecture.md` § 2)
 - Complex updates involving multiple related entities (use optimistic response)
 - When mutation returns incomplete data and you need to preserve existing fields (use optimistic response)
 - Array operations (use cache.modify with `readField`/`toReference` pattern instead)
@@ -413,711 +413,19 @@ const [updateMutation] = useUpdateMutation({
 
 ### Pattern: New Entity (Create/Add)
 
-```typescript
-import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
-import { generateId } from '#/utils/generateId';
-
-optimisticResponse: variables => {
-  const tempId = `temp-${generateId()}`;
-
-  return {
-    __typename: 'Mutation',
-    addItem: {
-      ...createOptimisticEntity('Item', tempId, {
-        name: variables.input.name,
-        quantity: variables.input.quantity || 1,
-        isPurchased: false,
-        // ... other required fields
-      }),
-      __typename: 'Item',
-    },
-  };
-};
-```
-
-### Pattern: Update Existing Entity
-
-```typescript
-import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
-
-optimisticResponse: variables => {
-  const currentItem = items.find(item => item.id === variables.id);
-
-  if (!currentItem) {
-    // Fallback for edge case
-    return {
-      __typename: 'Mutation',
-      updateItem: {
-        __typename: 'Item',
-        id: variables.id,
-        version: 1,
-        updatedAt: new Date().toISOString(),
-        ...variables.input,
-      },
-    };
-  }
-
-  // Use version-aware helper (keeps current version, updates timestamp)
-  return {
-    __typename: 'Mutation',
-    updateItem: enhanceWithVersion(currentItem, variables.input),
-  };
-};
-```
-
-### Pattern: Toggle/Boolean Update
-
-```typescript
-optimisticResponse: variables => {
-  const currentItem = items.find(item => item.id === variables.id);
-
-  return {
-    __typename: 'Mutation',
-    togglePurchased: enhanceWithVersion(currentItem, {
-      isPurchased: variables.purchased,
-    }),
-  };
-};
-```
-
-### Pattern: Delete Entity (No Optimistic Response)
-
-**Recommended**: Use manual cache updates without optimistic response
-
-```typescript
-const [deleteItemMutation] = useDeleteItemMutation({
-  errorPolicy: 'all',
-  // No optimisticResponse - avoids cache normalization warnings
-  // The cache update below provides instant UI feedback
-  update: (cache: any, { data }: any, { variables }: any) => {
-    if (!data?.deleteItem || !variables) return;
-
-    try {
-      const itemId = variables.id;
-
-      // Step 1: Remove from parent array
-      cache.modify({
-        fields: {
-          items(existingItems = [], { readField }: any) {
-            return existingItems.filter(
-              (itemRef: any) => readField('id', itemRef) !== itemId,
-            );
-          },
-        },
-      });
-
-      // Step 2: Evict the entity from cache
-      cache.evict({
-        id: cache.identify({ __typename: 'Item', id: itemId }),
-      });
-
-      // Step 3: CRITICAL - Garbage collect orphaned data
-      cache.gc();
-    } catch (error) {
-      console.warn('Cache update failed, will refetch:', error);
-      refetch();
-    }
-  },
-});
-```
-
-**Why this works**:
-
-- Manual cache updates execute immediately (both online and offline)
-- Item disappears from UI instantly via cache.modify()
-- Entity is fully removed via cache.evict() + cache.gc()
-- Avoids cache normalization warnings from incomplete optimistic responses
-- Works seamlessly with offline queue (mutations are queued, cache updates happen immediately)
-
----
-
-## Error Handling
-
-### Result-union mutations (errors-as-data) ⭐ PRIMARY PATTERN
-
-Every domain mutation returns a **result union** — one success `*Payload` member
-plus typed error members (`ValidationError | ForbiddenError | NotFoundError |
-ConflictError`, all named `*Error`). Under the global `errorPolicy: 'all'`
-(`src/apollo/client.ts`) these error members **resolve as data — they do not
-throw**, and a transport or GraphQL error resolves too, as
-`{ data: undefined, error }`. A hook that reads only `result.data` sees a truthy
-payload and treats a refusal as success.
-
-**Settle every write through `settleMutation`.** One call reads all three failure
-forms — a throw, a resolved `error`, a refusal member — and nothing else
-classifies, alerts on or reports a write's failure:
-
-| Helper                               | File                                  | Role                                                                                                                                                                               |
-| ------------------------------------ | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `settleMutation(run, options)`       | `src/apollo/utils/settleMutation.ts`  | runs the write; returns `{ status: 'applied' \| 'queued' \| 'failed', data, failure? }`; on a failure calls `onFailed` once, alerts once (unless `present: 'none'`) and reports it |
-| `settledStatus(result, { removal })` | `src/apollo/utils/settleMutation.ts`  | the classification alone, for a reconciler that neither alerts nor reports                                                                                                         |
-| `appliedPayload(data)`               | `src/utils/errors/mutationPayload.ts` | the success member, typed as the union minus its `*Error` members; `null` for a refusal or a queued write                                                                          |
-| `unwrapPayload(payload, fallback)`   | `src/utils/errors/mutationPayload.ts` | the success member, or a thrown `GraphQLDomainError` carrying the refusal's code — only where a screen-level catch reports it                                                      |
-
-**Canonical shape** — identical online and local-first; `queued` keeps the local
-write:
-
-```ts
-const settled = await settleMutation(
-  () => someMutation({ variables, context: { localFirst: true } }),
-  {
-    document: SomeMutationDocument,
-    fallback: t('errors.updateMemberRoleFailed'),
-    onFailed: revertSnapshot,
-    onConflictRefresh: refetch,
-  },
-);
-if (settled.status === 'failed') return false;
-const member = appliedPayload(settled.data)?.member; // null while queued
-```
-
-The options, by need: `copy` replaces the description for one code; `on` runs
-extra handling for one code (a `UNIT_INVALID` refetching the ranked units);
-`removal` counts `NOT_FOUND` as applied, since the row is already gone;
-`present: 'none'` hands `failure` (`{ code, field, title, body }`) back to a
-caller that shows it itself — a toast, or a message on a form field.
-
-> **Nothing takes the field name or the success typename.** Both are derived
-> from the result: the payload is the mutation's single top-level field, and it
-> is the success member when its `__typename` does not end in `Error`
-> (`src/utils/errors/mutationPayload.ts`, shared with the offline queue's
-> `classifyReplayResult`, so the foreground and replay paths cannot disagree).
-> `__tests__/graphql/mutationResultInvariants.test.ts` asserts both rules against
-> the generated SDL and every authored operation, and
-> `src/utils/errors/__tests__/appliedPayload.test.ts` runs the helper over every
-> result union in the schema.
-
-**Rules:**
-
-- **A queued write is not a failure.** `status: 'queued'` keeps the local write
-  and shows nothing.
-- **Guard every `update()` / `onCompleted` side effect on `appliedPayload(data)`.**
-  Cache eviction, `logout()`, navigation, marking a user onboarded — a refusal
-  member reaches these callbacks, so an unguarded one fires on a refusal. Never
-  compare `__typename` to a string.
-- **One message per failure.** Do not pair `settleMutation` with a `useMutation`
-  `onError`: it already reads the resolved error.
-- **i18n:** user-facing copy comes from `t('...')` and the server's `message` is
-  never displayed (see
-  [Localizing refusals](#localizing-refusals--field-routes-the-servers-message-never-displays)).
-  The report is labelled with the document's operation name (`operationNameOf`),
-  never a hand-written string.
-
-**Reference implementations:** `useRemoveShoppingItem.ts`,
-`usePantryItemActions.ts`, `useToggleShoppingItem.ts`, `useRecipeReviews.ts`.
-
-### Localizing refusals — `field` routes, the server's `message` never displays
-
-A refusal that names a `field` routes to LOCALIZED copy. `field` says which
-input was refused — the actionable part when one mutation carries four
-sub-inputs — and `settleMutation` turns it into copy from `errors.field.*`,
-falling back to the caller's `fallback` for an unmapped field or an unattributed
-refusal. A refusal's `code` resolves the same way (code, rate-limit,
-version-conflict, not-found and invalid-unit copy). Callers pass their generic
-copy and get the specific version for free; do not re-implement the rule at a
-call site.
-
-`message` is server-authored **English**: the client sends no `Accept-Language`
-and its token carries no locale, so there is nothing for the server to localize
-against, and the API says so itself — _"use error codes for programmatic
-handling, not message strings"_ and _"map error codes to localized messages in
-your client"_ (`sous-chef-api/docs/api/errors.md`, Best Practices). Displaying
-it puts English in front of every es / it / sq user and skips the
-plural-category, addressee-gender and canonical-vocabulary guards the app
-enforces on all its own copy. Never branch on `message` text either — route on
-`code` and `field` only.
-
-The cost is recorded rather than hidden: one field can carry several rules —
-`unit` refuses both "batches still exist" and "no conversion path" — so its
-string names both remedies. Adding a mapping to `errors.field.*` is opt-in; a
-field with none simply keeps the caller's copy.
-
-**Pass the caller's copy INTO `localizedErrorMessage`, never after it.**
-`localizedErrorMessage` (`src/services/errorService.ts`) is total —
-`fallback ?? t('errors.codes.unexpected')` with no code, else
-`getUserFriendlyMessage(code, fallback)` — so it never returns a falsy string and
-`localizedErrorMessage(err) || t('…')`, which type-checks and reads as a
-fallback, is unreachable. It also disables the resolver's escape hatch,
-`if (fallback && TRANSPORT_CODES.has(code)) return fallback`: a write that never
-left the device is then reported with the read-oriented offline sentence
-("Showing cached data when available"), which is untrue for a write.
-`__tests__/i18n/callerFallbackReachesResolver.test.ts` pins the behaviour and
-scans for the shape.
-
-### Standard Error Pattern
-
-A write's failure is settled through `settleMutation` (see
-[Result-union mutations](#result-union-mutations-errors-as-data--primary-pattern));
-a `useMutation` `onError` that alerts is a second message for the same failure.
-`useErrorService` below is for reads and for code outside a mutation.
-
-### `useErrorService` Full API
-
-The `useErrorService()` hook exposes the following methods:
-
-| Method                                          | Description                                                                       |
-| ----------------------------------------------- | --------------------------------------------------------------------------------- |
-| `handleApolloError(error, config)`              | Parse Apollo error → flat `{ code, message, category, shouldRetry, isAuthError }` |
-| `parseApolloError(error, config)`               | Parse Apollo error → structured `ErrorResult` with `success` flag                 |
-| `handleMutation(fn, config)`                    | Wrap an async mutation with try/catch, returns `ErrorResult<T>`                   |
-| `handleMutationWithVersionConflict(fn, config)` | Like `handleMutation` but adds `isVersionConflict` flag                           |
-| `getUserFriendlyMessage(errorCode)`             | Map error code to user-facing string                                              |
-| `getErrorCategory(errorCode)`                   | Map error code prefix to category (e.g., `AUTH_` → `"Authentication"`)            |
-| `shouldRetry(errorCode)`                        | Whether the error is retryable (timeouts, rate limits, etc.)                      |
-| `isAuthError(errorCode)`                        | Whether the error is auth/authz related                                           |
-| `reportError(error, context)`                   | Log a non-Apollo error to console + Telemetry                                     |
-| `getErrorMessage(error)`                        | Extract a user-friendly message from any error                                    |
-
-### Version Conflict Handling
-
-`settleMutation` recognises `VERSION_CONFLICT` and `RESOURCE_VERSION_CONFLICT`
-on either channel and, given `onConflictRefresh`, shows the "updated elsewhere"
-alert with a Refresh action. `CONFLICT` is a state refusal and takes its code's
-own copy.
-
-```typescript
-await settleMutation(
-  () => updateItemMutation({ variables: { input: { ...updates, version } } }),
-  {
-    document: UpdateItemDocument,
-    fallback: t('errors.updateItemFailed'),
-    onConflictRefresh: refetch,
-  },
-);
-```
-
----
-
-## Subscriptions
-
-All real-time subscriptions go through the singleton `SubscriptionService` at
-`src/services/subscriptions/SubscriptionService.ts`. It handles deduplication,
-cache update strategy selection, pending-delete race conditions, parent-deletion
-filtering, and dev-mode logging — all in one place. Hooks call
-`subscriptionService.register(...)` to get `{ onData, onError, onComplete }`
-handlers and spread them into `useSubscription`.
-
-- **An event subscription whose payload is an envelope + `node { id }` runs with
-  `fetchPolicy: 'no-cache'`** (`PantryEvents`, `MyShoppingListsEvents`,
-  `HomeEvents`, `MealPlanEvents`). Cached, the envelope re-creates a just-deleted
-  row as a bare `{ id }`, the list query goes incomplete, and Apollo refetches
-  the whole page per delete — [flashlist-performance-analysis.md § Refetch after
-  every write](flashlist-performance-analysis.md#refetch-after-every-write--root-cause-and-fix).
-- **`useSubscriptionTransportRecovery` goes on the line after every
-  `useSubscription`.** A library-fatal WebSocket close errors every
-  subscription's sink and Apollo does not re-subscribe; this hook does. Verdicts
-  per close code: [session-and-transport.md § WebSocket close codes](session-and-transport.md#websocket-close-codes).
-
-### Pattern: Standard Subscription
-
-```typescript
-import { useSubscription } from '@apollo/client/react';
-import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { CacheStrategy } from '#/services/subscriptions/types';
-
-const handlers = subscriptionService.register({
-  document: ShoppingListItemsChangedDocument,
-  entityType: 'ShoppingListItem',
-  enableDeduplication: true,
-  userId: user?.id,
-  cacheUpdateStrategy: CacheStrategy.AUTOMATIC,
-});
-
-useSubscription(ShoppingListItemsChangedDocument, {
-  variables: { listId },
-  skip: !listId,
-  ...handlers,
-});
-```
-
-### Pattern: Subscription with custom cache logic
-
-When the subscription needs to move items between filtered connections, set
-`cacheUpdateStrategy: CacheStrategy.NONE` and provide a `customOnData` callback.
-See `usePantrySubscriptions.ts` and `useShoppingListSubscriptions.ts` for
-reference implementations.
-
-```typescript
-const handlers = subscriptionService.register<PantryChangesPayload>({
-  document: PantryChangesDocument,
-  entityType: 'PantryItem',
-  enableDeduplication: true,
-  userId: user?.id,
-  entityId: pantryId,
-  cacheUpdateStrategy: CacheStrategy.NONE,
-  customOnData: (payload, client) => {
-    // Custom cache update logic — e.g., move between filtered connections
-    // based on payload.mutation type
-  },
-});
-```
-
-### Pending-delete tracking
-
-When deleting an entity optimistically, register the pending delete so a
-subscription echo doesn't re-add it via auto-normalization:
-
-```typescript
-subscriptionService.registerPendingDelete(
-  itemId,
-  parentId,
-  'PantryItem',
-  'Pantry',
-  'itemsConnection',
-);
-await deleteItemMutation({ variables: { id: itemId } });
-```
-
-The service re-evicts the entity if the subscription arrives after the optimistic delete.
-
----
-
-## Fetch Policies
-
-### Global Defaults (Set in `src/apollo/defaultOptions.ts`)
-
-`APOLLO_DEFAULT_OPTIONS` is passed to the client in `src/apollo/client.ts` and to
-every test client, so both behave alike:
-
-```typescript
-defaultOptions: {
-  watchQuery: {
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-    errorPolicy: 'all',
-    returnPartialData: false,
-  },
-  query:  { fetchPolicy: 'cache-first', errorPolicy: 'all' },
-  mutate: {                             errorPolicy: 'all' },
-},
-```
-
-A one-shot `query` is `cache-first` so an imperative read works offline unless
-its caller opts into fresh data; `defaultOptions.test.ts` pins this and lists the
-callers that opt out.
-
-**Most `useQuery` call sites do not need to set these explicitly.** Set per-query
-only when the policy needs to differ from the default (e.g. autocomplete +
-`cache-first`, login + `network-only`).
-
-### Gate a screen on "is there anything to show", never on `loading` alone
-
-Under the `watchQuery` default, `loading` is `true` on the FIRST result whatever
-the cache holds — Apollo hard-codes it for `cache-and-network` — and
-`nextFetchPolicy` lives on the ObservableQuery, which `useQuery` rebuilds per
-mount, so it never survives a navigation and every visit is a fresh network leg.
-`notifyOnNetworkStatusChange: false` changes neither. So `if (loading)` blanks the
-screen for the whole request on every visit: against a stalled API that is
-httpLink's 10s abort (`Environment.getApiConfig().timeout`) and up to ~30s across
-`retryLink`'s three attempts.
-
-- Write `loading && !data` — `ProfileScreen` gates on `loading && !profile`.
-- A hook whose value is always defined because it fills in defaults
-  (`useAppSettings`, `useNotificationSettings`) cannot answer the question; it
-  returns a separate `hasLoadedSettings` / `hasPreferences` flag.
-- Keep the loading branch INSIDE the screen's header wrapper: rendered outside
-  `ProfileScreenWrapper` it has no back button, so the screen cannot be left
-  while it waits.
-
-**`returnPartialData: false` makes `!data` mean "the cache read was
-INCOMPLETE"** — one missing field of the selection yields no data at all, not a
-partial object. Hence the completeness invariant: every writer of an entity
-writes the full shape the reading query selects. `LoginUser`, `PartialUser` and
-`UserEvents` each write the profile shape `GetUserProfile` reads;
-`__tests__/apollo/userProfileCompleteness.test.ts` derives the shape from
-`GetUserProfileDocument` and fails if a writer drifts. Probe and mechanism:
-[`verified-library-behaviour.md` § Apollo reports `loading: true` on every mount](verified-library-behaviour.md#apollo-reports-loading-true-on-every-mount-warm-cache-or-not).
-
-**Do not introduce dynamic, store-subscribed fetch policies.** A hook that
-returns a fetchPolicy string derived from `store.isOnline` causes Apollo to
-see "options changed" on every network-state flip, which re-fires every active
-query (the documented cascade that motivated removing `useOfflinePresetPolicy`).
-Handle offline gracefully via the existing defaults instead — `errorPolicy: 'all'`
-keeps cached data on network failures, and `usePreservedArrayData` preserves
-the last good array across refetch errors.
-
-#### Why NOT `client.prioritizeCacheValues`
-
-Apollo 4.2 added `client.prioritizeCacheValues`, which looks like a built-in
-replacement for `offlineModeLink`. It is not, and the reasons are non-obvious
-from its docstring — recorded here so the question is not re-litigated.
-
-It **rewrites `network-only` and `cache-and-network` to `cache-first`** and
-nothing else (`core/QueryManager.js`, `fetchObservableWithInfo`). It is a
-_freshness_ knob; `offlineModeLink` is a _network gate_. They overlap only on
-the cache-HIT branch, which already works.
-
-Four specifics that make adoption a regression:
-
-- **`cache-first` on a cache MISS still goes to the network.** The miss cases are
-  the entire point of the link — the localized "not available offline yet" error,
-  the organic probe when the breaker is open, and the `ALWAYS_ALLOW` list.
-- **No per-operation escape hatch.** `GetUserSettings` is allow-listed precisely
-  so the server-side offline-mode toggle can be synced off. Rewritten to
-  `cache-first` and served from a complete cache, it never reaches the server —
-  the toggle becomes a one-way door.
-- **`refetch()` gets rewritten** (it forces `network-only`), so pull-to-refresh
-  silently serves cache and reports success. **`fetchMore` does not** (it is
-  `no-cache`), so pagination still fires doomed requests offline.
-- **It is not reactive.** It is a plain mutable field with no notification path,
-  so flipping it mid-session does not affect anything already mounted. Note the
-  symmetry with the paragraph above: `useOfflinePresetPolicy` was removed for
-  being _too_ reactive (the cascade); this fails for not being reactive at all.
-  Neither is a network gate.
-
-#### Why NOT `extensions`-based provenance in the connection merge
-
-`src/apollo/cache.ts`'s `preservePendingEdges` / `mergeArrayByIdIntelligent` call
-`queueStore.getPendingClientIds()` from inside a field policy. Apollo 4.1's
-`extensions` option on `cache.write*` looks like the way to pass that in as
-provenance instead. It cannot work:
-
-- **Category mismatch.** `extensions` is one value per write; the guard needs a
-  per-edge predicate over a set the writer does not own — those edges came from
-  an earlier, unrelated transaction. Inverting it ("preserve unless tagged
-  authoritative") breaks cross-device deletion, which arrives as an ordinary
-  authoritative page.
-- **The channel is absent where it matters.** The triggering write is Apollo's
-  own watched-query write, which passes the SERVER's `result.extensions`; there
-  is no per-query cache-write extensions option. `writeFragment` — used by the
-  optimistic seeding paths — has no `extensions` option at all.
-- **Staleness.** The guard exists for the race where a refetch lands _after_ an
-  offline create was enqueued. Read at merge time it is always current; any set
-  marshalled into `extensions` is snapshotted before that enqueue.
-
-If the import direction (`cache.ts` → `offlineQueue/`) is worth removing, the
-change that actually helps is dependency injection — `makeCache({ getPendingIds })`
-wired from `client.ts` — which keeps the read-time call and makes the merge
-testable with a plain closure. Note the testability argument is weaker than it
-looks: four of the six tests covering this merge already run without the queue,
-via a one-line `jest.spyOn`.
-
-### `nextFetchPolicy` — String vs Function Form
-
-Apollo Client 4.x supports both a string and a function for `nextFetchPolicy`.
-
-**String form** (simple cases):
-
-```typescript
-nextFetchPolicy: 'cache-first',
-```
-
-After the first fetch, all re-renders use `cache-first`. On variable changes, Apollo automatically reverts to `initialFetchPolicy` (`cache-and-network`). Suitable for most queries.
-
-**Function form** (fine-grained control):
-
-```typescript
-nextFetchPolicy(currentFetchPolicy, context) {
-  if (context.reason === 'variables-changed') {
-    return context.initialFetchPolicy; // cache-and-network for fresh data
-  }
-  return 'cache-first'; // cache-first after fetch completes
-},
-```
-
-The function receives a `context` with:
-
-- `reason: 'after-fetch'` — query just completed a network request
-- `reason: 'variables-changed'` — query variables changed (filter/sort/ID)
-- `initialFetchPolicy` — the original `fetchPolicy` value
-- `observable` / `options` — the query observable and current options
-
-Use the function form when you need different behavior for variable changes vs post-fetch re-renders. For offline-first queries with filters/sort, the function form makes the intent explicit: fresh data on user-initiated changes, cached data for re-renders.
-
-### Skip Toggle Pitfall & Query Activation Latch
-
-**Problem:** When a query uses `skip` and the skip value toggles (`true → false → true → false`) during initialization, Apollo resets the `fetchPolicy` to its initial value on each `true → false` transition. With `cache-and-network`, this fires a duplicate network request every time.
-
-This commonly occurs when the skip condition depends on multiple upstream states that settle at different times during app startup (e.g., `isHomeSelectionReady`, `selectedPantryId`).
-
-```typescript
-// ❌ PROBLEM: hasValidId flickers during startup → duplicate requests
-const hasValidId = !!id && isReady && !isLoggedOut;
-const { data } = useQuery(QUERY, {
-  skip: !hasValidId, // toggles during init
-  fetchPolicy: 'cache-and-network', // re-applied on each skip→unskip
-  nextFetchPolicy: 'cache-first', // ← ignored when skip resets the policy
-});
-```
-
-**Solution — Query Activation Latch:** Once the query activates for a given entity ID, latch it active so transient state churn doesn't re-skip it. The latch resets when the ID changes or the user logs out.
-
-```typescript
-// ✅ CORRECT: Latch prevents skip flickering
-const [activatedForId, setActivatedForId] = useState<string | null>(null);
-
-// Latch: once validation passes, keep query active for this ID
-if (hasValidId && entityId && activatedForId !== entityId) {
-  setActivatedForId(entityId);
-}
-
-// Release: clear on logout
-if (activatedForId && isLoggedOut) {
-  setActivatedForId(null);
-}
-
-const isLatched = activatedForId === entityId && !!entityId;
-const shouldSkip = !hasValidId && !isLatched;
-
-const { data } = useQuery(QUERY, {
-  skip: shouldSkip,
-  fetchPolicy: 'cache-and-network',
-  nextFetchPolicy: 'cache-first',
-});
-```
-
-**How the latch auto-resets:**
-
-- **Entity ID changes** (e.g., user switches pantries): `activatedForId !== entityId` → latch doesn't match → `isLatched = false` → skip depends on `hasValidId` again → fresh fetch when ready
-- **Logout**: explicitly clears the latch
-- **Home deletion**: entity ID becomes `undefined` → `isLatched = false` → query skips
-
-**Important:** Uses the "adjusting state during render" pattern (`useState` + conditional `setState`) to stay compatible with the React Compiler. Do not use `useRef` for this — reading `ref.current` during render causes compiler bailout.
-
-**Reference implementation:** `src/features/pantry/hooks/usePantryQuery.ts`
-
-### Avoid Redundant `refetch()` on Variable Changes
-
-Apollo automatically re-executes a query when its variables change. Calling `refetch()` explicitly in addition to a variable change causes a **double network request**.
-
-```typescript
-// ❌ WRONG: Double fetch on ID change
-if (prevId !== currentId) {
-  setPrevId(currentId);
-  refetch(); // Apollo already refetches because variables.id changed
-}
-
-// ✅ CORRECT: Let Apollo handle variable-change refetches
-if (prevId !== currentId) {
-  setPrevId(currentId);
-  // Reset UI state only — Apollo handles the refetch
-  setFilter('all');
-  setSearch('');
-}
-```
-
-Use `refetch()` only for user-initiated actions (pull-to-refresh) or when you need to re-fetch with the **same** variables.
-
----
-
-## Query Data Preservation
-
-### Problem: Cascade Failures on Network Errors
-
-When queries with `errorPolicy: 'ignore'` fail, they return `undefined` instead of preserving cached data. This causes **cascade failures** where dependent components lose their data and become unusable.
-
-**Example of the Problem**:
-
-```typescript
-// Query fails due to network error
-const { data } = useGetHomesQuery({
-  errorPolicy: 'ignore', // Intended to return cached data
-});
-
-// ❌ data?.homes is undefined (not cached data!)
-const homes = data?.homes; // undefined
-
-// Cascade failure: all dependent code breaks
-const defaultHome = homes?.find(h => h.isDefault); // undefined
-const pantryId = defaultHome?.pantries[0]?.id; // undefined
-// Result: entire screen becomes empty
-```
-
-> **AC 4.0 Improvement**: In Apollo Client 4.0, network errors now respect `errorPolicy`. With `errorPolicy: 'ignore'`, network errors are **suppressed** (not thrown), which partially addresses the cascade failure described above. However, `usePreservedArrayData` remains valuable as a defensive fallback for the **initial-load-failure** case — where no cached data exists yet and the first network request fails, `data` is still `undefined` regardless of `errorPolicy`.
-
-### Solution: usePreservedArrayData Hook
-
-The `usePreservedArrayData` hook preserves the last successful query result using a ref, preventing cascade failures.
-
-```typescript
-import { usePreservedArrayData } from '#/hooks/apollo';
-
-const { data } = useGetHomesQuery({
-  fetchPolicy: 'cache-and-network',
-  errorPolicy: 'ignore', // Return cached data on network errors
-});
-
-// ✅ Preserve the last successful value
-const homes = usePreservedArrayData(data?.homes);
-// homes will NEVER be undefined after first load
-// On network errors, it keeps the last successful value
-```
-
-### How It Works
-
-```typescript
-// Implementation (you don't need to write this, it's already available
-// at src/hooks/apollo/usePreservedQueryData.ts)
-export function usePreservedQueryData<T>(
-  currentData: T | undefined,
-  initialValue: T,
-): T {
-  // "Adjusting state during render" pattern — the React-recommended way to
-  // sync state with props without an effect. No useRef/useMemo: the React
-  // Compiler auto-memoizes, and reading ref.current during render bails out
-  // of compilation (see CLAUDE.md "React Compiler Conventions").
-  const [lastSuccessfulValue, setLastSuccessfulValue] =
-    useState<T>(initialValue);
-  const [prevData, setPrevData] = useState<T | undefined>(currentData);
-
-  if (currentData !== prevData) {
-    setPrevData(currentData);
-    if (currentData !== undefined) {
-      setLastSuccessfulValue(currentData);
-    }
-  }
-
-  return currentData !== undefined ? currentData : lastSuccessfulValue;
-}
-
-export function usePreservedArrayData<T>(
-  currentData: T[] | undefined | null,
-): T[] {
-  return usePreservedQueryData(currentData ?? undefined, [] as T[]);
-}
-```
-
-### When to Use
-
-**ALWAYS** use `usePreservedArrayData` for queries that:
-
-- Have `errorPolicy: 'ignore'` (prevents cascade failures)
-- Return array data (homes, items, lists, etc.)
-- Are used by dependent components/hooks
-- Need to work reliably during network issues
-
-### Pattern: Standard Query Hook
-
-```typescript
-import { usePreservedArrayData } from '#/hooks/apollo';
-
-export function useShoppingListManagement(listId: string | undefined) {
-  const { data, loading, error, refetch } = useGetShoppingListItemsQuery({
-    variables: { shoppingListId: listId ?? '' },
-    skip: !listId,
-    fetchPolicy: 'cache-and-network',
-    errorPolicy: 'ignore', // Return cached data on network errors
-  });
-
-  // ✅ Preserve items even when query fails
-  const items = usePreservedArrayData(data?.shoppingListItems);
-
-  // Now items is ALWAYS an array (never undefined)
-  return {
-    items,
-    loading,
-    error,
-    refetch,
-  };
-}
-```
+A create writes its entity to the cache PERMANENTLY before firing, under a
+client-minted id, and reverts only on a refusal — never an `optimisticResponse`,
+which the offline queue's null result tears down (`docs/local-first-architecture.md`
+§ 2). `useAddToPantry.addItem` is the worked example: `generateEntityId`, then
+`buildOptimisticPantryItem` + `addPantryItemLocally`, then `settleMutation` with
+`onFailed` reverting.
 
 ### Pattern: Selector Hook (Multiple Queries)
 
 ```typescript
 import { usePreservedArrayData } from '#/hooks/apollo';
 
-export const useItemSelector = ({ type }: { type: 'pantry' | 'home' }) => {
+export const useSourceSelector = ({ type }: { type: 'pantry' | 'home' }) => {
   const { data: pantryData } = useGetPantriesQuery({
     skip: type !== 'pantry',
     errorPolicy: 'ignore',
@@ -1164,7 +472,7 @@ across refetch errors. Run `grep -rn "usePreservedArrayData\|usePreservedQueryDa
 to find current consumers — at the time of writing this includes
 `useDefaultHome`, `useHomeQuery`, `useLazyHomeData`, `useHomeDetailManagement`,
 `usePantryQuery`, `useCurrentPantry`, `useStorageLocationManagement`,
-`useItemSelector`, `useShoppingListDetails`, `useDietaryProfile`, and
+`useShoppingListDetails`, `useDietaryProfile`, and
 `ShareList`.
 
 ### For Non-Array Data
@@ -1318,10 +626,7 @@ import { useApolloClient } from '@apollo/client';
 import { usePreservedArrayData, usePreservedQueryData } from '#/hooks/apollo';
 
 // Optimistic response helpers
-import {
-  createOptimisticEntity,
-  enhanceWithVersion,
-} from '#/apollo/utils/createOptimisticResponse';
+import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { generateId } from '#/utils/generateId';
 
 // A write's outcome
@@ -1357,8 +662,9 @@ import { CacheStrategy } from '#/services/subscriptions/types';
 ❌ **Don't**: Call `refetch()` when query variables already changed (double network request)
 ✅ **Do**: Let Apollo handle variable-change refetches automatically; use `refetch()` only for same-variable refreshes
 
-❌ **Don't**: Skip optimistic responses on frequently-used mutations
-✅ **Do**: Add optimistic responses for instant UI feedback
+❌ **Don't**: Leave a write's change invisible until the server answers
+✅ **Do**: Write the change to the cache permanently before firing, and revert it
+only on a refusal — never an `optimisticResponse`, which a queued write tears down
 
 ❌ **Don't**: Ignore version conflicts
 ✅ **Do**: Handle version conflicts with user-friendly messages
@@ -1370,38 +676,31 @@ import { CacheStrategy } from '#/services/subscriptions/types';
 ### Example 1: Simple List Item Addition
 
 ```typescript
-const [addItemMutation] = useAddItemMutation({
-  errorPolicy: 'all',
-  // Optimistic response for instant feedback
-  optimisticResponse: variables => ({
-    __typename: 'Mutation',
-    addItem: {
-      ...createOptimisticEntity('Item', `temp-${generateId()}`, {
-        name: variables.input.name,
-        isPurchased: false,
-      }),
-      __typename: 'Item',
-    },
-  }),
-  // Cache update to add to array
+const [addItemMutation] = useMutation(AddItemDocument, {
+  // The server's row replaces the local one, matched by the id it was minted
+  // with, so the edge is never duplicated.
   update: (cache, { data }) => {
-    if (!data?.addItem) return;
-
-    cache.modify({
-      fields: {
-        items(existingItems = [], { readField, toReference }) {
-          const newItemRef = toReference(data.addItem);
-          const exists = existingItems.some(
-            ref => readField('id', ref) === data.addItem.id,
-          );
-          if (exists) return existingItems;
-          return [...existingItems, newItemRef];
-        },
-      },
-    });
+    const added = appliedPayload(data)?.item;
+    if (added) addItemToCache(cache, listId, added);
   },
 });
-// Fired through settleMutation — its failure is alerted once, there.
+
+const id = generateEntityId();
+// Permanent, before firing: a queued create shows now and survives a restart.
+addOptimisticItem(client.cache, listId, buildOptimisticItem(id, input));
+
+const settled = await settleMutation(
+  () =>
+    addItemMutation({
+      variables: { input: { ...input, id } },
+      context: { localFirst: true },
+    }),
+  {
+    document: AddItemDocument,
+    fallback: t('errors.addItemFailed'),
+    onFailed: () => revertOptimisticItem(client.cache, listId, id),
+  },
+);
 ```
 
 ### Example 2: Update with Version Conflict Handling
@@ -1649,10 +948,9 @@ update: (cache, { data }) => {
 
 ### Optimistic Response Helpers (`src/apollo/utils/createOptimisticResponse.ts`)
 
-| Utility                                            | Use Case                                  |
-| -------------------------------------------------- | ----------------------------------------- |
-| `createOptimisticEntity(typename, tempId, fields)` | Create temp entity for add mutations      |
-| `enhanceWithVersion(currentItem, updates)`         | Add version/timestamp to update mutations |
+| Utility                                    | Use Case                                  |
+| ------------------------------------------ | ----------------------------------------- |
+| `enhanceWithVersion(currentItem, updates)` | Add version/timestamp to update mutations |
 
 ### Mutation failure reporting (`src/utils/errorHandlers.ts`)
 
@@ -1667,13 +965,12 @@ here directly.
 
 ### CRUD Operations (`src/hooks/utils/useCrudOperations.ts`)
 
-Provides standardized CRUD operation wrappers with built-in validation and error handling.
+`useCrudOperations()` builds one wrapper: a remove that confirms first when
+given a `confirmMessage`, then settles the write.
 
-| Helper                  | Provides                                             |
-| ----------------------- | ---------------------------------------------------- |
-| `createAddOperation`    | Input validation, parent ID validation, error alerts |
-| `createUpdateOperation` | Version conflict handling, refetch on conflict       |
-| `createRemoveOperation` | Confirmation dialogs, cleanup                        |
+| Helper                          | Provides                                      |
+| ------------------------------- | --------------------------------------------- |
+| `createRemoveOperation(config)` | Confirmation dialog, then the settled removal |
 
 ---
 
@@ -1709,13 +1006,13 @@ replaces contents wholesale, so it must not run once queries are watching.
 
 ### `apolloCachePersistence` API surface
 
-| Method                              | Use when                                                                                                                                  |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `load()`                            | Read the blob at restore; null when absent or of another shape                                                                            |
-| `scheduleExtractAndSave(extractor)` | Debounced persist after every cache write (wired in `setupCachePersistence`); the extractor runs once per window, at idle                 |
-| `flushPending()`                    | Write an owed save now — the app-background transition (`useAppStateLifecycle` → `flushCachePersistence()`); a no-op when nothing is owed |
-| `cancel()`                          | Drop an owed save — sign-out, so the previous account's last seconds never reach disk                                                     |
-| `clear()`                           | Remove everything a later `load()` could restore — session end, version mismatch, parse failure                                           |
+| Method                              | Use when                                                                                                                                                                                                                 |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `load()`                            | Read the blob at restore; null when absent or of another shape                                                                                                                                                           |
+| `scheduleExtractAndSave(extractor)` | Debounced persist after every cache write (wired in `setupCachePersistence`); the extractor runs once per window, at idle                                                                                                |
+| `flushPending()`                    | Write an owed save now, synchronously — the app-background transition (`useAppStateLifecycle` → `flushCachePersistence()`) and every queued write (`queueLink`, right after `addMutation`); a no-op when nothing is owed |
+| `cancel()`                          | Drop an owed save — sign-out, so the previous account's last seconds never reach disk                                                                                                                                    |
+| `clear()`                           | Remove everything a later `load()` could restore — session end, version mismatch, parse failure                                                                                                                          |
 
 Rules the module holds:
 

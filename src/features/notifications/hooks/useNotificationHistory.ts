@@ -61,8 +61,8 @@ export function useNotificationHistory(
     )
     .map(n => toDisplayNotification(n, pendingExpirationLinks[n.id]));
 
-  const hasMore = connection?.pageInfo?.hasNextPage ?? false;
-  const endCursor = connection?.pageInfo?.endCursor ?? null;
+  const hasMore = connection?.pageInfo.hasNextPage ?? false;
+  const endCursor = connection?.pageInfo.endCursor ?? null;
 
   const loadMore = () => {
     if (!hasMore || !endCursor || loading) return;

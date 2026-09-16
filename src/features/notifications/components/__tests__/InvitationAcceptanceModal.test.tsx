@@ -855,4 +855,37 @@ describe('InvitationAcceptanceModal', () => {
     expect(toastService.error).not.toHaveBeenCalledWith('Invalid invite token');
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
+
+  it('tells a throttled accept how long to wait, not that accepting failed', async () => {
+    const user = userEvent.setup();
+    const { toastService } = require('#/services/toastService');
+    const onAccept = jest.fn();
+    const rateLimited = Object.assign(new Error('rate limited'), {
+      errors: [
+        {
+          message: 'Too many requests',
+          extensions: { code: 'OPERATION_RATE_LIMITED', retryAfter: 600 },
+        },
+      ],
+    });
+
+    renderWithApollo(
+      <InvitationAcceptanceModal {...defaultProps} onAccept={onAccept} />,
+      {
+        operationMocks: [
+          recordMock(AcceptHomeInviteDocument, { error: rateLimited }).mock,
+        ],
+      },
+    );
+
+    await user.press(screen.getByText('Accept'));
+
+    await waitFor(() => {
+      expect(toastService.error).toHaveBeenCalledWith(
+        'Too many requests. Please try again in 10 minutes.',
+      );
+    });
+    expect(onAccept).not.toHaveBeenCalled();
+    expect(defaultProps.onClose).toHaveBeenCalled();
+  });
 });

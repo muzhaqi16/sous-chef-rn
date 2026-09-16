@@ -18,8 +18,6 @@ import { Button } from '#components/molecules/Button';
 import { AnimatedChip } from '#components/molecules/AnimatedChip';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
 import { logger } from '#/utils/environment';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
@@ -124,10 +122,7 @@ export const SelectPantryItems = () => {
         async () => {
           await Promise.all([
             ...itemsToAdd.map(async item => {
-              const id = generateEntityId();
-              const result = await addItem({
-                id,
-                pantryId: selectedPantryId,
+              const outcome = await addItem(item.name, {
                 itemId: item.id,
                 ...(item.displayUnit?.id && {
                   unit: { unitId: item.displayUnit.id },
@@ -141,21 +136,15 @@ export const SelectPantryItems = () => {
                   acquisitionMethod: AcquisitionMethod.Purchased,
                 },
               });
-              // A race with another device can still surface
-              // DuplicatePantryItemError. The item is already in the pantry, which
-              // is the onboarding goal, so it counts as a per-item success-skip.
-              if (
-                getPantryItemDuplicateFromResult(
-                  result.data?.createPantryItem,
-                  result.error,
-                )
-              ) {
+              // A race with another device can still find the item stocked. It
+              // is already in the pantry, the onboarding goal, so it is a skip.
+              if (outcome.status === 'duplicate') {
                 logger.info(
                   'SelectPantryItems: item already in pantry — skipped',
                   { itemId: item.id },
                 );
               }
-              return result;
+              return outcome;
             }),
             // `itemsToRemove` is drawn from the same index as the map.
             ...itemsToRemove.flatMap(catalogId => {

@@ -1,17 +1,27 @@
 import { Dimensions } from 'react-native';
 import type { FlashListProps } from '@shopify/flash-list';
 
-type FlashListPerformanceProps = Pick<
-  FlashListProps<unknown>,
-  'drawDistance' | 'maxItemsInRecyclePool' | 'onEndReachedThreshold'
+type FlashListPerformanceProps = Required<
+  Pick<
+    FlashListProps<unknown>,
+    'drawDistance' | 'maxItemsInRecyclePool' | 'onEndReachedThreshold'
+  >
 >;
+
+type FlashListPreset =
+  | 'fullScreen'
+  | 'bottomSheet'
+  | 'analyticsHeavyFullScreen';
 
 // onEndReachedThreshold: 0.5 fires pagination when the user is half a viewport
 // away from the end — early enough to hide network latency, late enough to
 // avoid double-fetches on rubber-banding scrolls. The "analyticsHeavy" preset
 // uses 0.8 for screens whose next-page render is expensive (Skia charts) and
 // benefits from earlier prefetch.
-export const FLASHLIST_DEFAULTS = {
+export const FLASHLIST_DEFAULTS: Record<
+  FlashListPreset,
+  FlashListPerformanceProps
+> = {
   fullScreen: {
     drawDistance: Math.round(Dimensions.get('window').height * 2),
     maxItemsInRecyclePool: 15,
@@ -27,7 +37,7 @@ export const FLASHLIST_DEFAULTS = {
     maxItemsInRecyclePool: 15,
     onEndReachedThreshold: 0.8,
   },
-} satisfies Record<string, FlashListPerformanceProps>;
+};
 
 // Sticky header sentinel: prepended to a FlashList's data so
 // stickyHeaderIndices pins it natively (UI thread, no JS bridge). A screen's

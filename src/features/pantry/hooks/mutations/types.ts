@@ -3,6 +3,7 @@
  */
 
 import type {
+  UnitType,
   StorageState,
   ItemCondition,
 } from '#/graphql/generated/schemaTypes';
@@ -11,7 +12,7 @@ export interface UnitSelection {
   id: string | null;
   name: string | null;
   symbol: string | null;
-  type: string | null;
+  type: UnitType | null;
 }
 
 export const emptyUnitSelection: UnitSelection = {
@@ -44,6 +45,9 @@ export interface FormDataInput {
   netWeightUnit?: string;
   netWeightUnitId?: string;
 }
+
+/** Which form fields the user changed; a clean field is absent or false. */
+export type DirtyFieldFlags = Partial<Record<keyof FormDataInput, boolean>>;
 
 export interface CreatePantryItemParams<
   T extends FormDataInput = FormDataInput,

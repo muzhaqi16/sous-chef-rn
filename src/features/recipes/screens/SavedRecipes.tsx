@@ -106,8 +106,7 @@ export const SavedRecipes: React.FC = () => {
 
     if (selectedTags.length > 0) {
       result = result.filter(recipe => {
-        const recipeTags = recipe.tags ?? [];
-        return selectedTags.some(tag => recipeTags.includes(tag));
+        return selectedTags.some(tag => recipe.tags.includes(tag));
       });
     }
 
@@ -192,7 +191,7 @@ export const SavedRecipes: React.FC = () => {
     if (folders.length > 0) {
       tabs.push({
         id: 'folder',
-        label: selectedFolder || t('recipes.folders'),
+        label: selectedFolder ?? t('recipes.folders'),
         icon: 'folder',
         onPress: () => setShowFolderPicker(true),
         showDropdownIndicator: true,

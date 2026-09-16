@@ -320,7 +320,7 @@ function buildDetailShoppingListItem(id: string) {
   return {
     ...SHOPPING_LIST_ITEM_CORE,
     id,
-    priceEstimate: null,
+    priceEstimate: { __typename: 'PriceEstimate', estimated: null },
     source: {
       __typename: 'ShoppingListItemSource',
       isAutoAdded: false,

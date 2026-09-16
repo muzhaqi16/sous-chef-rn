@@ -149,7 +149,7 @@ export const useListSettings = (listId: string | undefined) => {
   const isHomeMember = !!shoppingList?.home?.myMembership;
   const linkedHomeId = shoppingList?.homeId ?? null;
 
-  const { leaveList, leaving } = useLeaveShoppingList(listId || '');
+  const { leaveList, leaving } = useLeaveShoppingList(listId ?? '');
   const { updateShoppingList } = useUpdateShoppingList(
     t('errors.saveSettingsFailed'),
   );
@@ -268,7 +268,7 @@ export const useListSettings = (listId: string | undefined) => {
           const newListId = await createFromTemplate(
             selectedTemplateId,
             name.trim(),
-            selectedHomeId || undefined,
+            selectedHomeId ?? undefined,
           );
           if (!newListId) return;
           if (isDefault) {
@@ -282,9 +282,11 @@ export const useListSettings = (listId: string | undefined) => {
             description: t('shoppingListScreens.createdFromSettings'),
             isDefault,
             tags: ['user-created'],
-            homeId: selectedHomeId || undefined,
+            homeId: selectedHomeId ?? undefined,
           });
-          setSelectedShoppingListId(newList.id);
+          // The settle already said what refused it; the sheet stays open.
+          if (newList.status === 'failed') return;
+          setSelectedShoppingListId(newList.shoppingList.id);
           goBack();
         } else {
           // Local-first: a queued offline save keeps its cache write and

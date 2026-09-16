@@ -44,7 +44,6 @@ export function useCreatePantry() {
       const payload = appliedPayload(data);
       if (!payload) return;
       const newPantry = payload.pantry;
-      if (!newPantry?.homeId) return;
       // Idempotent by pantry id: the pre-fire write already inserted this one,
       // so the server row confirms it rather than duplicating it.
       addPantryToHomeCache(cache, newPantry.homeId, newPantry);

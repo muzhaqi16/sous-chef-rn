@@ -74,7 +74,7 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
             {item.displayUnit?.name ? ` ${item.displayUnit.name}` : ''}
           </Text>
         )}
-        {item?.price != null && (
+        {item.price != null && (
           <Text role="subheading" tone="success">
             {money(item.price)}
           </Text>

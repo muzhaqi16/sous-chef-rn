@@ -30,7 +30,6 @@ jest.mock('#features/barcode/hooks/useAddScannedItem', () => ({
   useAddScannedItem: () => ({
     addToPantry: (...args: unknown[]) => mockAddToPantry(...args),
     restockDuplicate: (...args: unknown[]) => mockRestockDuplicate(...args),
-    forceAddPending: jest.fn(),
     addToShoppingList: jest.fn(),
   }),
 }));

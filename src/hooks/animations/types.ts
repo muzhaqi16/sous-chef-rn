@@ -1,4 +1,7 @@
-import type { withTiming, useAnimatedStyle } from 'react-native-reanimated';
+import type {
+  WithTimingConfig,
+  useAnimatedStyle,
+} from 'react-native-reanimated';
 
 // Slide Animation Types
 export type SlideDirection = 1 | -1; // 1 = right, -1 = left
@@ -14,9 +17,7 @@ export interface SlideAnimationConfig {
   /** Animation duration in ms (default: 200) */
   duration?: number;
   /** Custom easing function (default: standard cubic bezier) */
-  easing?: Parameters<typeof withTiming>[1] extends { easing?: infer E }
-    ? E
-    : never;
+  easing?: WithTimingConfig['easing'];
   /** Enable opacity fade during slide (default: false) */
   withOpacity?: boolean;
   /** Final opacity value when withOpacity is true (default: 0) */

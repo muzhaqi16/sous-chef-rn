@@ -28,7 +28,7 @@ export const POPULAR_CUISINES: PopularCuisine[] = [
 // Helper function to get all cuisine options (popular + remaining)
 export const getAllCuisineOptions = () => {
   const popularValues: Cuisine[] = POPULAR_CUISINES.map(c => c.value);
-  const allCuisines = Object.values(Cuisine) as Cuisine[];
+  const allCuisines = Object.values(Cuisine);
 
   const remainingCuisines = allCuisines
     .filter(c => !popularValues.includes(c))

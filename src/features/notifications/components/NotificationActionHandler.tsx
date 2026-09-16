@@ -13,6 +13,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAppStore } from '#store/useAppStore';
 import { useNotificationActionData } from '#features/notifications/hooks/useNotificationActionData';
 import { useExpirationNotificationSync } from '#features/notifications/hooks/useExpirationNotificationSync';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 interface NotificationActionHandlerProps {
   children: (props: {
@@ -63,13 +64,17 @@ export const NotificationActionHandler: React.FC<
         // HomeInvite / Membership id; sourceType labels which). Fall back to the
         // JSON payload for notifications minted before the source fields existed.
         id:
-          notification.sourceId ||
-          notification.payload.inviteId ||
-          notification.payload.membershipId ||
-          '',
+          firstNonBlank(
+            notification.sourceId,
+            notification.payload.inviteId,
+            notification.payload.membershipId,
+          ) ?? '',
         inviterName: notification.payload.inviterName,
         entityName:
-          notification.payload.homeName || notification.payload.listName || '',
+          firstNonBlank(
+            notification.payload.homeName,
+            notification.payload.listName,
+          ) ?? '',
         token: notification.payload.token,
         payload: notification.payload,
       };

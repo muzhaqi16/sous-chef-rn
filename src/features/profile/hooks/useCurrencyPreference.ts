@@ -34,7 +34,7 @@ export function useCurrencyPreference() {
 
   // The picker needs the full name to tell two dollars apart; a settings row
   // has one line beside its label, where the name only truncates.
-  const selected = data?.currencies?.find(c => c.code === preferredCurrency);
+  const selected = data?.currencies.find(c => c.code === preferredCurrency);
   const currentLabel = selected
     ? `${selected.code} (${selected.symbol})`
     : preferredCurrency;

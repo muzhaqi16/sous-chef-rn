@@ -291,9 +291,8 @@ describe('PersonalInformationScreen', () => {
     const renderWith = (operationMocks: MockedResponse[]) =>
       renderWithApollo(<PersonalInformationScreen />, { operationMocks });
 
-    // The screen casts the picked string with `as ProfileVisibility`, so tsc
-    // cannot catch a value the schema has no member for. FRIENDS_ONLY shipped
-    // that way and the server refused every selection.
+    // The picker hands back a plain string, so tsc cannot catch an option
+    // value the schema has no member for; the server refuses such a selection.
     it('sends a value the schema defines', async () => {
       const { mock, fired } = recordMock(UpdateUserProfileDocument, {
         data: {

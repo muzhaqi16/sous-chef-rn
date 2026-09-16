@@ -119,7 +119,8 @@ export const useDefaultHome = () => {
     setSelectedPantryId,
   } = usePantryState();
   const canAttemptQueries = useAppStore(
-    state => !!(state.accessToken || state.refreshToken) && !state.isLoggingOut,
+    state =>
+      (!!state.accessToken || !!state.refreshToken) && !state.isLoggingOut,
   );
 
   // Track if we've already initialized defaults to prevent cascading re-renders
@@ -224,20 +225,20 @@ export const useDefaultHome = () => {
   };
 
   // Derive default home from isDefault field (no separate query needed)
-  const remoteDefaultHomeId = homesList?.find(h => h.isDefault)?.id ?? null;
+  const remoteDefaultHomeId = homesList.find(h => h.isDefault)?.id ?? null;
 
   // Extract default pantry ID (React Compiler auto-memoizes this derivation)
   const defaultPantryId = (() => {
-    const defaultHome = homesList?.find(h => h.isDefault);
+    const defaultHome = homesList.find(h => h.isDefault);
     const pantries = pantriesOf(defaultHome);
     if (!pantries.length) return null;
     const defaultPantry = pantries.find(p => p.isDefault) ?? pantries[0];
-    return defaultPantry?.id || null;
+    return defaultPantry?.id ?? null;
   })();
 
   // Validate that selectedHomeId still exists in the homes list
   const isSelectedHomeValid = (() => {
-    if (!selectedHomeId || !homesList || homesList.length === 0) return false;
+    if (!selectedHomeId || homesList.length === 0) return false;
     return homesList.some(h => h.id === selectedHomeId);
   })();
 
@@ -246,7 +247,7 @@ export const useDefaultHome = () => {
   // the ready flag opens `usePantryQuery`'s gate on a valid HOME alone, sending
   // `GetPantry` for a pantry the account cannot read. Judged only against a
   // connection known complete: empty means "not loaded", not "absent".
-  const selectedHome = homesList?.find(h => h.id === selectedHomeId);
+  const selectedHome = homesList.find(h => h.id === selectedHomeId);
   const selectedHomePantries = pantriesOf(selectedHome);
   const selectedHomeHasCompletePantries = !!(
     selectedHome?.pantriesConnection &&
@@ -262,7 +263,6 @@ export const useDefaultHome = () => {
   // True when the selected home is absent from a list that can convict it.
   const needsClearing = !!(
     selectedHomeId &&
-    homesList &&
     homesList.length > 0 &&
     !isSelectedHomeValid
   );
@@ -398,7 +398,7 @@ export const useDefaultHome = () => {
   // AUTO-SELECT FIRST HOME: homes exist but none is the account default.
   useEffect(() => {
     if (hasAutoSelectedRef.current || loading || !called) return;
-    if (!homesList || homesList.length === 0 || selectedHomeId) return;
+    if (homesList.length === 0 || selectedHomeId) return;
     // A default written locally but not yet confirmed does not count as the
     // server having one.
     if (remoteDefaultHomeId && !isDefaultHomeSyncPending(remoteDefaultHomeId)) {
@@ -439,7 +439,7 @@ export const useDefaultHome = () => {
   // FIRST HOME VIA INVITATION: a single home is selected but is not the
   // account default, which is what accepting a first invitation leaves behind.
   useEffect(() => {
-    if (!homesList || homesList.length !== 1) return;
+    if (homesList.length !== 1) return;
     if (!selectedHomeId || selectedHomeId !== homesList[0]?.id) return;
     if (remoteDefaultHomeId && !isDefaultHomeSyncPending(remoteDefaultHomeId)) {
       return;
@@ -482,7 +482,7 @@ export const useDefaultHome = () => {
     // Case 1: no homes. `errorPolicy: 'ignore'` makes "no homes" and "the list
     // failed to load" the same empty array, so a selection this list cannot
     // convict waits only until the refetch below settles.
-    if (!homesList || homesList.length === 0) {
+    if (homesList.length === 0) {
       // Nothing can validate a pantry with no home, and `usePantryQuery` gates
       // on this flag alone.
       if (selectedPantryId && !selectedHomeId) {
@@ -535,7 +535,6 @@ export const useDefaultHome = () => {
     if (
       isHomeSelectionReady &&
       !selectedHomeId &&
-      homesList &&
       homesList.length > 0 &&
       !remoteDefaultHomeId &&
       !needsClearing

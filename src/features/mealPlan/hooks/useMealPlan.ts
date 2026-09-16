@@ -44,8 +44,9 @@ export function useMealPlan(id: string | null) {
   // returns partial data. The `liveMealPlan.data` guard is the load-bearing
   // dependency the compiler memoizes against; gating on the stable masked
   // `data.mealPlan` pins this read to a stale snapshot until a refetch.
+  const liveData = liveMealPlan.complete ? liveMealPlan.data : null;
   const mealPlan =
-    id && liveMealPlan.complete && liveMealPlan.data
+    id && liveData
       ? client.cache.readFragment<MealPlanMain_MealPlanFragment>({
           fragment: MealPlanMain_MealPlanFragmentDoc,
           fragmentName: 'MealPlanMain_mealPlan',

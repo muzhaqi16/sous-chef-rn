@@ -6,7 +6,6 @@ import ErrorBoundary, {
   NavigationErrorBoundary,
   AuthErrorBoundary,
   AppErrorBoundary,
-  useErrorHandler,
 } from '../ErrorBoundary';
 
 // Mock Telemetry
@@ -186,20 +185,5 @@ describe('AppErrorBoundary', () => {
     );
     expect(screen.getByText('Something went wrong')).toBeTruthy();
     expect(useSafeAreaInsets).not.toHaveBeenCalled();
-  });
-});
-
-describe('useErrorHandler', () => {
-  it('returns a function', () => {
-    const TestComponent: React.FC = () => {
-      const handleError = useErrorHandler();
-      return (
-        <Text>
-          {typeof handleError === 'function' ? 'is function' : 'not function'}
-        </Text>
-      );
-    };
-    render(<TestComponent />);
-    expect(screen.getByText('is function')).toBeTruthy();
   });
 });

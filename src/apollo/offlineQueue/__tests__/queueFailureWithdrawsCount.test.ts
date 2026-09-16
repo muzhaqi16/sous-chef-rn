@@ -20,6 +20,7 @@ import {
   UpdatePantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { BarcodeCreatePantryItemDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 
 jest.mock('#/apollo/client', () => {
   const { makeCache } = jest.requireActual('#/apollo/cache');
@@ -128,6 +129,16 @@ describe('handleQueueFailure withdraws the eager pantry count', () => {
 
   it('uncounts a create the server permanently refused', () => {
     handleQueueFailure(failure());
+
+    expect(totalItems()).toBe(1);
+  });
+
+  it('uncounts a scanned create the server permanently refused', () => {
+    handleQueueFailure(
+      failure({
+        operationName: operationNameOf(BarcodeCreatePantryItemDocument),
+      }),
+    );
 
     expect(totalItems()).toBe(1);
   });

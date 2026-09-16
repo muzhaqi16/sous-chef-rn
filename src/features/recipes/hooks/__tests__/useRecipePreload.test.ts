@@ -221,7 +221,7 @@ describe('useRecipePreload', () => {
 
     const dirty = makeSpoonacularRecipe(777);
     dirty.extendedIngredients = [
-      { ...dirty.extendedIngredients[0]!, name: 'pasta $1.50' },
+      { ...dirty.extendedIngredients![0]!, name: 'pasta $1.50' },
     ];
 
     const { result } = renderHookWithApollo(() => useRecipePreload(), {
@@ -310,7 +310,7 @@ describe('useRecipePreload', () => {
     // Ingredient id 999 has no entry in nutrition.ingredients (only id 1).
     const recipe = makeSpoonacularRecipe();
     recipe.extendedIngredients = [
-      { ...recipe.extendedIngredients[0]!, id: 999 },
+      { ...recipe.extendedIngredients![0]!, id: 999 },
     ];
 
     const { result } = renderHookWithApollo(() => useRecipePreload(), {

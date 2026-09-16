@@ -37,7 +37,7 @@ import {
 import { BatchStatus, ItemCondition } from '#/graphql/generated/schemaTypes';
 import { PantryDetailInfo } from '#features/pantry/components/PantryDetailInfo';
 import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHistory';
-import { parseNutritions, hasNutritionData } from '#domain/nutrition';
+import { hasNutritionData } from '#domain/nutrition';
 import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { GalleryHero } from '#features/catalog/ui/GalleryHero';
 import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
@@ -62,15 +62,15 @@ const ExpiryColumnText: React.FC<{
   text: string;
   isUrgent: boolean;
   isExpired: boolean;
-}> = ({ text, isUrgent, isExpired }) => {
-  const status = isExpired ? 'expired' : isUrgent ? 'urgent' : 'normal';
-  styles.useVariants({ expiryStatus: status });
-  return (
-    <Text role="label" style={styles.infoColumnValue}>
-      {text}
-    </Text>
-  );
-};
+}> = ({ text, isUrgent, isExpired }) => (
+  <Text
+    role="label"
+    tone={isExpired ? 'danger' : isUrgent ? 'warning' : 'primary'}
+    align="center"
+  >
+    {text}
+  </Text>
+);
 
 export const PantryItemDetail: React.FC<
   StaticScreenProps<{
@@ -151,12 +151,12 @@ export const PantryItemDetail: React.FC<
   const expiryInfo = getExpiryInfo(item?.expiresAt);
   const daysInPantry = getDaysInPantry(item?.createdAt);
   const storageStateDisplay = formatStorageState(item?.storageState, t);
-  const brandName = item?.brand?.name || null;
-  const categoryName = item?.item?.categories?.[0]?.category?.name || null;
-  const itemPhotos = galleryPhotos(item?.item?.photos);
-  const itemNutritions = parseNutritions(item?.item?.nutritions);
+  const brandName = item?.brand?.name ?? null;
+  const categoryName = item?.item.categories[0]?.category.name ?? null;
+  const itemPhotos = galleryPhotos(item?.item.photos);
+  const nutritionFacts = item?.item.nutritionFacts ?? null;
   const showImages = itemPhotos.length > 0 || !!imageUrl;
-  const showNutrition = hasNutritionData(itemNutritions);
+  const showNutrition = hasNutritionData(nutritionFacts);
   const packageBreakdownText = formatPackageBreakdownFull(
     item?.packageBreakdown,
   );
@@ -172,7 +172,7 @@ export const PantryItemDetail: React.FC<
     item?.quantityBreakdown,
   );
   const portionsLeftText =
-    item?.remainingPortions != null && item?.portionUnit
+    item?.remainingPortions != null && item.portionUnit
       ? t('pantryItemCard.portionsLeft', {
           count: item.remainingPortions,
           unit: item.portionUnit.symbol || item.portionUnit.name,
@@ -305,11 +305,11 @@ export const PantryItemDetail: React.FC<
           }
         />
 
-        {!!(categoryName || storageStateDisplay) && (
+        {(!!categoryName || !!storageStateDisplay) && (
           <View style={styles.categoryBadge}>
             <Icon name="restaurant-outline" size={16} tone="primary" />
             <Text role="label" style={styles.categoryText}>
-              {categoryName || t('labels.item')}
+              {categoryName ?? t('labels.item')}
               {storageStateDisplay
                 ? t('pantryItemDetail.inLocation', {
                     location: storageStateDisplay,
@@ -334,7 +334,7 @@ export const PantryItemDetail: React.FC<
                 {t('pantryItemDetail.expiring')}
               </Text>
               <ExpiryColumnText
-                text={expiryInfo?.text || t('pantryItemDetail.noExpiry')}
+                text={expiryInfo?.text ?? t('pantryItemDetail.noExpiry')}
                 isUrgent={!!expiryInfo?.isUrgent}
                 isExpired={!!expiryInfo?.isExpired}
               />
@@ -353,13 +353,13 @@ export const PantryItemDetail: React.FC<
         {!!showNutrition && (
           <DetailSection title={t('pantryItemDetail.nutrition')}>
             <NutritionSummary
-              nutritions={itemNutritions}
+              nutritionFacts={nutritionFacts}
               showHighlights
               onPress={() =>
                 toNutritionScreen({
                   itemId: item.id,
                   itemName: item.itemName,
-                  nutritions: item.item?.nutritions,
+                  nutritionFacts,
                 })
               }
             />
@@ -375,8 +375,8 @@ export const PantryItemDetail: React.FC<
             quantityBreakdownText={quantityBreakdownText}
             portionsLeftText={portionsLeftText}
             packageBreakdownText={packageBreakdownText}
-            shelfLifeDays={item.item?.shelfLifeDays}
-            shelfLifeOpenedDays={item.item?.shelfLifeOpenedDays}
+            shelfLifeDays={item.item.shelfLifeDays}
+            shelfLifeOpenedDays={item.item.shelfLifeOpenedDays}
             onCorrectWeight={() => actions.setCorrectWeightVisible(true)}
             pricing={batchPricing}
           />
@@ -391,7 +391,7 @@ export const PantryItemDetail: React.FC<
               onViewAll={() =>
                 toPantryBatchHistory({
                   pantryItemId: itemId,
-                  itemName: item.itemName ?? '',
+                  itemName: item.itemName,
                   unitSymbol: item.unit.symbol,
                 })
               }
@@ -399,7 +399,7 @@ export const PantryItemDetail: React.FC<
           </DetailSection>
         )}
 
-        {!!item.usageRecords && item.usageRecords.edges.length > 0 && (
+        {item.usageRecords.edges.length > 0 && (
           <DetailSection>
             <PantryUsageHistory
               usageRecords={item.usageRecords.edges}
@@ -407,7 +407,7 @@ export const PantryItemDetail: React.FC<
               onViewAll={() =>
                 toPantryUsageHistory({
                   pantryItemId: itemId,
-                  itemName: item.itemName ?? '',
+                  itemName: item.itemName,
                 })
               }
             />
@@ -477,7 +477,7 @@ export const PantryItemDetail: React.FC<
           photos={itemPhotos}
           initialIndex={viewerIndex ?? 0}
           onClose={() => setViewerIndex(null)}
-          canEdit={!!item.item?.canEdit}
+          canEdit={item.item.canEdit}
         />
       )}
     </>
@@ -515,13 +515,6 @@ const styles = StyleSheet.create(theme => ({
   infoColumnValue: {
     color: theme.colors.textPrimary,
     textAlign: 'center',
-    variants: {
-      expiryStatus: {
-        normal: {},
-        urgent: { color: theme.colors.warning },
-        expired: { color: theme.colors.error },
-      },
-    },
   },
   recipesLoading: {
     marginTop: theme.spacing.sm,

@@ -17,6 +17,7 @@ import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import {
   addReviewToRecipe,
   changeReviewRating,
@@ -58,7 +59,7 @@ export function useRecipeReviews({
   // sort/filter by `helpful`, `createdAt`, and inspect `user`.
   const reviews = (() => {
     const rawRefs =
-      reviewsData?.recipe?.reviews?.edges?.map(edge => edge.node) ?? [];
+      reviewsData?.recipe?.reviews.edges.map(edge => edge.node) ?? [];
     const materialized = rawRefs
       .map(ref =>
         apolloClient.cache.readFragment<RecipeReviewFragment>({
@@ -107,7 +108,7 @@ export function useRecipeReviews({
     DeleteRecipeReviewDocument,
     {
       update: (cache, { data }, { variables }) => {
-        if (!appliedPayload(data) || !variables?.input?.id) return;
+        if (!appliedPayload(data) || !variables?.input.id) return;
         removeReviewFromRecipe(cache, recipeId, variables.input.id);
       },
     },
@@ -124,8 +125,7 @@ export function useRecipeReviews({
         id: cache.identify({ __typename: 'RecipeReview', id: reviewId }),
         fields: {
           helpful(existing: number = 0) {
-            const current = existing ?? 0;
-            return isHelpful ? current + 1 : Math.max(0, current - 1);
+            return isHelpful ? existing + 1 : Math.max(0, existing - 1);
           },
           // Drives the button's state. Nothing updated it before, so the
           // button stayed put until the next refetch.
@@ -154,7 +154,7 @@ export function useRecipeReviews({
               id: generateEntityId(),
               recipeId,
               rating,
-              comment: comment || undefined,
+              comment: firstNonBlank(comment),
             },
           },
         }),

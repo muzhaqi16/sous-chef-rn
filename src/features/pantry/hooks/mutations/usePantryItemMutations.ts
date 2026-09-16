@@ -8,10 +8,11 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   removeFromPantryItemsCache,
-  adjustPantryItemCount,
+  removePantryItemLocally,
 } from '#features/pantry/cache/items';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
@@ -31,7 +32,8 @@ export function usePantryItemMutations({
   // REMOVE MUTATION. `removeItem` evicts the item before this fires and leaves
   // it evicted, so a queued delete keeps the removal (an `optimisticResponse`
   // would roll back on the queue's null result). `update` re-evicts the entity
-  // Apollo re-normalizes from the `deletePantryItem.pantryItem { id }` payload.
+  // Apollo re-normalizes from `pantryItem { id }`; a converged delete carries no
+  // item, and evicting by the input id keeps both answers on one path.
   const [removeItemMutation] = useMutation(DeletePantryItemDocument, {
     update: (cache, { data }, { variables }) => {
       if (!appliedPayload(data) || !pantryId || !variables) {
@@ -39,9 +41,9 @@ export function usePantryItemMutations({
       }
 
       const itemId = variables.input.id;
-      // Connection removal only. The count is adjusted beside the pre-fire
-      // evict below, which runs whether or not the delete reaches the server —
-      // doing it here as well double-counted online, where both paths run.
+      // Connection removal only. The count is adjusted by the pre-fire removal
+      // below, which runs whether or not the delete reaches the server — doing
+      // it here as well double-counted online, where both paths run.
       removeFromPantryItemsCache(cache, pantryId, itemId, { evictItem: true });
     },
   });
@@ -54,12 +56,12 @@ export function usePantryItemMutations({
 
     // Evict the item from the cache before firing, and leave it evicted, so the
     // removal persists if the delete is queued offline (the queue replays it,
-    // idempotent by this id).
+    // idempotent by this id). Edge first, then evict: an evict always reports a
+    // removal, so only the edge removal can tell whether a realtime event took
+    // the row, and its count, first.
     try {
-      removeFromPantryItemsCache(client.cache, pantryId, itemId, {
-        evictItem: true,
-      });
-      adjustPantryItemCount(client.cache, pantryId, -1);
+      removePantryItemLocally(client.cache, pantryId, itemId);
+      safeEvict(client.cache, 'PantryItem', itemId);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Remove Pantry Item (optimistic evict)',

@@ -1,8 +1,21 @@
-import type { StorageLocation } from '#/graphql/generated/schemaTypes';
+import type {
+  StorageState,
+  StorageType,
+} from '#/graphql/generated/schemaTypes';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
 
+/** What the storage-location picker reads off a location, and hands back on select. */
+export interface StorageLocationOption {
+  id: string;
+  name: string;
+  type: StorageType;
+  isDefault: boolean;
+  temperature?: StorageState | null;
+  parentLocation?: { id: string; name: string } | null;
+}
+
 interface UseStorageLocationAutocompleteOptions {
-  storageLocations: StorageLocation[];
+  storageLocations: readonly StorageLocationOption[];
   searchTerm: string;
 }
 

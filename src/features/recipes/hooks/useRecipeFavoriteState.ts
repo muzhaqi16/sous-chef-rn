@@ -11,6 +11,7 @@ import type { MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
 import { extractNodes } from '#/utils/connectionUtils';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import type { ExternalSource } from '#/graphql/generated/schemaTypes';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import type {
   SaveToFavoritesOptions,
   UseRecipePreloadReturn,
@@ -95,7 +96,7 @@ export function useRecipeFavoriteState({
           .find(
             r =>
               r?.externalSource === externalSource &&
-              r?.externalId === externalId,
+              r.externalId === externalId,
           )
       : undefined;
 
@@ -124,7 +125,7 @@ export function useRecipeFavoriteState({
     const options: SaveToFavoritesOptions = {
       folder: folder ?? undefined,
       tags: tags && tags.length > 0 ? tags : undefined,
-      notes: notes || undefined,
+      notes: firstNonBlank(notes),
     };
 
     void executeWithLoadingState(

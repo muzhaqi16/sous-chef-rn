@@ -75,7 +75,7 @@ export const unwrapPayload = jest.fn(
     throw new GraphQLDomainError({
       __typename,
       code: String(code ?? 'UNKNOWN'),
-      message: String(message || fallbackMessage),
+      message: String(message ?? fallbackMessage),
       ...extra,
     });
   },

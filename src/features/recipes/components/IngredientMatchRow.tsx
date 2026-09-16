@@ -9,7 +9,7 @@ import {
   type EditableMatch,
   getAvailabilityStatus,
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
-import { Text } from '#components/atoms/Text';
+import { Text, type TextTone } from '#components/atoms/Text';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
   formatQuantityForDisplay,
@@ -26,6 +26,12 @@ interface IngredientMatchRowProps {
 }
 
 type BadgeColor = 'success' | 'warning' | 'error';
+
+const BADGE_TEXT_TONE: Record<BadgeColor, TextTone> = {
+  success: 'success',
+  warning: 'warning',
+  error: 'danger',
+};
 
 /** Key paths — module-level table, resolved by the row that renders it. */
 const BADGE_CONFIG: Record<
@@ -49,7 +55,7 @@ const AvailabilityBadge: React.FC<{
   styles.useVariants({ badgeColor });
   return (
     <View style={styles.badge}>
-      <Text role="label" style={styles.badgeText}>
+      <Text role="label" tone={BADGE_TEXT_TONE[badgeColor]}>
         {children}
       </Text>
     </View>
@@ -184,15 +190,6 @@ const styles = StyleSheet.create(theme => ({
         success: { backgroundColor: theme.colors.success + '20' },
         warning: { backgroundColor: theme.colors.warning + '20' },
         error: { backgroundColor: theme.colors.error + '20' },
-      },
-    },
-  },
-  badgeText: {
-    variants: {
-      badgeColor: {
-        success: { color: theme.colors.success },
-        warning: { color: theme.colors.warning },
-        error: { color: theme.colors.error },
       },
     },
   },

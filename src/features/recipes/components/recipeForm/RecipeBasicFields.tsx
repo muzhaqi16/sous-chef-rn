@@ -67,6 +67,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
             onChangeText={v => updateField('caloriesPerServing', v)}
             min={0}
             step={10}
+            notation="decimal"
           />
         </View>
       </View>

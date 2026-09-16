@@ -13,6 +13,7 @@ import { Text } from '#components/atoms/Text';
 import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
 import { kitTestIDs } from '#components/testIDs';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /** A single option for a `modal`/`radio` setting row. */
 export interface SettingOption {
@@ -91,7 +92,8 @@ export const SettingRow: React.FC<SettingRowProps> = ({
     setTextEditVisible(false);
   };
 
-  // Build accessibility label based on setting type
+  const textValue = typeof item.value === 'string' ? item.value : undefined;
+
   const getAccessibilityLabel = () => {
     const baseLabel = item.label;
     if (item.type === 'switch') {
@@ -100,16 +102,16 @@ export const SettingRow: React.FC<SettingRowProps> = ({
       }`;
     } else if (item.type === 'modal' && item.options) {
       const selectedOption =
-        item.options?.find(opt => opt.value === item.value)?.label ||
+        item.options.find(opt => opt.value === item.value)?.label ??
         t('labels.select');
       return t('settingRow.currentlySelected', {
         label: baseLabel,
         selected: selectedOption,
       });
-    } else if (item.type === 'text') {
-      return `${baseLabel}, ${item.value || t('settingRow.notSet')}`;
-    } else if (item.type === 'info') {
-      return `${baseLabel}, ${item.value || t('settingRow.notSet')}`;
+    } else if (item.type === 'text' || item.type === 'info') {
+      return `${baseLabel}, ${
+        firstNonBlank(textValue) ?? t('settingRow.notSet')
+      }`;
     }
     return baseLabel;
   };
@@ -136,7 +138,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   return (
     <>
       <AppPressable
-        testID={item.testID || kitTestIDs.settingButton(item.key)}
+        testID={item.testID ?? kitTestIDs.settingButton(item.key)}
         onPress={isInert ? undefined : handlePress}
         // Selection tick on rows that do something on press. Info rows aren't
         // pressable; switch rows toggle via the switch widget (a row-level
@@ -175,13 +177,11 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           </View>
           <View style={styles.rowSpacer} />
 
-          {item.type === 'info' && (
-            <ValueText>{item.value as string}</ValueText>
-          )}
+          {item.type === 'info' && <ValueText>{textValue}</ValueText>}
 
           {item.type === 'text' && (
             <>
-              <ValueText>{item.value as string}</ValueText>
+              <ValueText>{textValue}</ValueText>
               <Icon name="pencil" size={16} tone="textSecondary" />
             </>
           )}
@@ -190,7 +190,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
             <BaseSwitch
               testID={item.testID ?? kitTestIDs.settingSwitch(item.key)}
               accessibilityLabel={item.label}
-              value={item.value as boolean}
+              value={item.value === true}
               onValueChange={handleSwitchChange}
               disabled={item.disabled}
               loading={item.loading}
@@ -212,8 +212,8 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           {item.type === 'modal' && (
             <View style={styles.modalValueContainer}>
               <Text tone="secondary" numberOfLines={1} ellipsizeMode="tail">
-                {item.valueLabel ||
-                  item.options?.find(opt => opt.value === item.value)?.label ||
+                {item.valueLabel ??
+                  item.options?.find(opt => opt.value === item.value)?.label ??
                   t('labels.select')}
               </Text>
               <Icon name="chevron-forward" size={20} tone="textSecondary" />

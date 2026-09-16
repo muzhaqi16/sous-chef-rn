@@ -222,6 +222,7 @@ both sides.
 | `offline_queue_drain_started_total` | | A queue drain actually began. |
 | `offline_queue_drain_skipped_total` | `reason` | A drain was requested and declined - `already_processing`, no authenticated user, API unavailable. Pair with `_started_total` to see whether writes are replaying at all. |
 | `offline_queue_conflicts_total` | `operation` | A replayed mutation came back as a conflict. |
+| `mutation_refused_total` | `operation`, `code` | The server REFUSED a write and said so in the payload - a business outcome, not an app error, so it is counted here rather than reported to error tracking. |
 | `offline_queue_auth_parked_total` | `operation` | A queued write was parked because the token could not be refreshed. NOT a rejection - the server never saw it; it is revived on the next sign-in. |
 | `reconnect_backfill_queries_total` | | Active queries refetched after an outage ended. Incremented by the number refetched, so it is a volume, not an event count. |
 | `storage_recovery_instance_used` | | The device key was unavailable and the session fell back to unencrypted recovery storage. Any non-zero value means encrypted data was not readable that launch. |

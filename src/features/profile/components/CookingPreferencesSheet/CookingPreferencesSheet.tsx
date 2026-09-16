@@ -78,9 +78,9 @@ export const CookingPreferencesSheet: React.FC<
     setPrevVisible(visible);
     setPrevInitialValues(initialValues);
     if (visible) {
-      setSkillLevel(initialValues?.cookingSkillLevel || '');
-      setPrepTime(initialValues?.maxPrepTimeMinutes?.toString() || '');
-      setCookTime(initialValues?.maxCookTimeMinutes?.toString() || '');
+      setSkillLevel(initialValues?.cookingSkillLevel ?? '');
+      setPrepTime(initialValues?.maxPrepTimeMinutes?.toString() ?? '');
+      setCookTime(initialValues?.maxCookTimeMinutes?.toString() ?? '');
       setBudget(formatNumberForInput(initialValues?.budgetPerMeal));
     }
   }

@@ -1,6 +1,7 @@
 import type { DocumentNode } from 'graphql';
 import { gql, type ApolloCache } from '@apollo/client';
 import type { QueuedMutation } from './types';
+import { queuedSubject } from './queuedSubject';
 
 /**
  * The contract between the queue and the features whose writes it replays: the
@@ -57,16 +58,13 @@ export const getQueuedInput = (mutation: QueuedMutation): QueuedInput =>
   (mutation.variables.input ?? {}) as QueuedInput;
 
 /**
- * The client-minted permanent cuid IS the sync `clientId`. A malformed input
- * with no id yields `undefined` on purpose, so the server refuses it rather
- * than it being back-filled with a fabricated id; builders cast to
- * `Sync*Input`'s required `clientId: ID`, and a cast does not coerce.
+ * The client-minted permanent cuid IS the sync `clientId`, read from the input
+ * type's subject — never a guess that could land on a catalog `itemId`. A
+ * malformed input with no id yields `undefined`, so the server refuses it;
+ * builders cast to `Sync*Input`'s required `clientId: ID`, which does not coerce.
  */
-export const getClientId = (
-  mutation: QueuedMutation,
-  input: QueuedInput,
-): string | undefined =>
-  input.id ?? input.itemId ?? (mutation.variables.id as string | undefined);
+export const getClientId = (mutation: QueuedMutation): string | undefined =>
+  queuedSubject(mutation).subjectIds[0];
 
 const QUEUE_UNIT_FRAGMENT = gql`
   fragment QueueUnitData on Unit {

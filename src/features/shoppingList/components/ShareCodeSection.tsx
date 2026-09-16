@@ -10,9 +10,6 @@ import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
 import { useShareShoppingList } from '#features/shoppingList/hooks/useShareShoppingList';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { unwrapPayload } from '#/utils/errors/mutationPayload';
-import { alertService } from '#/services/alertService';
-import { localizedErrorMessage } from '#/services/errorService';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { getFormAnimationPreset } from '#/constants/animations';
 import { buildJoinListUrl, shareUrl } from '#/utils/deepLinkUrls';
@@ -63,26 +60,15 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
     // allowed, so an unverified account is never stuck sharing something.
     if (!isPublic && !requireVerifiedEmail()) return;
 
-    void executeWithLoadingState(
-      async () => {
-        unwrapPayload(
-          await setListPublic(listId, !isPublic),
-          t('shoppingListScreens.failedToUpdateShareSettings'),
-        );
-      },
-      setTogglingShareCode,
-      error => {
-        alertService.alert(
-          t('labels.error'),
-          // Resolved from the error's CODE. `error.message` is the server's
-          // English, which reaches an es/it/sq user verbatim.
-          localizedErrorMessage(
-            error,
-            t('shoppingListScreens.failedToUpdateShareSettings'),
-          ),
-        );
-      },
-    );
+    // The settle reports a refusal in this section's copy, resolved from the
+    // failure's CODE — never the server's English.
+    void executeWithLoadingState(async () => {
+      await setListPublic(
+        listId,
+        !isPublic,
+        t('shoppingListScreens.failedToUpdateShareSettings'),
+      );
+    }, setTogglingShareCode);
   };
 
   const handleCopyShareCode = () => {

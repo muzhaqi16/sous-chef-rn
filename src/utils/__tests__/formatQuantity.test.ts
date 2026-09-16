@@ -4,6 +4,7 @@ import {
   formatQuantityAsFraction,
   formatQuantityForDisplay,
   formatQuantityForInput,
+  getUnitDisplayText,
 } from '../formatQuantity';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 
@@ -80,11 +81,22 @@ describe('formatQuantityDisplay', () => {
   });
 });
 
+describe('getUnitDisplayText', () => {
+  it('prefers the symbol over the name', () => {
+    expect(getUnitDisplayText({ symbol: 'g', name: 'gram' })).toBe('g');
+  });
+
+  it('falls back to the name when the symbol is blank', () => {
+    expect(getUnitDisplayText({ symbol: '', name: 'pinch' })).toBe('pinch');
+  });
+
+  it('returns empty for no unit', () => {
+    expect(getUnitDisplayText(null)).toBe('');
+  });
+});
+
 describe('formatQuantityAsFraction', () => {
-  it('returns "0" for null/undefined/zero', () => {
-    expect(
-      (formatQuantityAsFraction as (qty: number | null) => string)(null),
-    ).toBe('0');
+  it('returns "0" for zero', () => {
     expect(formatQuantityAsFraction(0)).toBe('0');
   });
 

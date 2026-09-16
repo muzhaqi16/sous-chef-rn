@@ -84,7 +84,7 @@ export function usePantryQuery(
     GetPantryDocument,
     {
       variables: {
-        id: pantryId || '',
+        id: pantryId ?? '',
         itemsFirst,
         itemsFilter: itemsFilter ?? undefined,
         itemsOrderBy: itemsOrderBy ?? undefined,

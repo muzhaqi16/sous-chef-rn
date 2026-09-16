@@ -1053,7 +1053,7 @@ mutation RemoveItemsFromShoppingList(
       code
       message
     }
-    # `alertIfRejected` routes a refusal that names a field to `errors.field.*`
+    # `settleMutation` routes a refusal that names a field to `errors.field.*`
     # and shows the server's unlocalizable English only as a last resort. It
     # reads `field` off the payload, so not selecting it here made that branch
     # unreachable: every rejection of this mutation fell back to the generic

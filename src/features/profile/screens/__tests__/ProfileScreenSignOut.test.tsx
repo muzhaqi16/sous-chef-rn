@@ -101,10 +101,6 @@ jest.mock('#hooks/auth/useEmailVerification', () => ({
 
 jest.mock('#hooks/performance/useScreenTransition');
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: { trackScreen: jest.fn(), trackEvent: jest.fn() },
-}));
-
 jest.mock('#/utils/iconUtils', () => ({ Icon: 'Icon' }));
 
 jest.mock('#features/profile/components/ProfileHeader', () => {

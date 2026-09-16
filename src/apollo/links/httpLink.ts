@@ -15,9 +15,11 @@ import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 const createTimeoutFetch = (timeoutMs: number): typeof fetch => {
   return async (input, init) => {
     const controller = new AbortController();
-    let timedOut = false;
+    // A property, not a `let`: the timer callback writes it, and TS narrows a
+    // `let false` to `false` for the rest of the body.
+    const timeout = { fired: false };
     const timeoutId = setTimeout(() => {
-      timedOut = true;
+      timeout.fired = true;
       controller.abort();
     }, timeoutMs);
 
@@ -40,7 +42,7 @@ const createTimeoutFetch = (timeoutMs: number): typeof fetch => {
       return response;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        if (timedOut) {
+        if (timeout.fired) {
           throw new TimeoutError(
             `Request timeout after ${timeoutMs}ms`,
             timeoutMs,
@@ -60,7 +62,7 @@ const createTimeoutFetch = (timeoutMs: number): typeof fetch => {
 
 const apiConfig = Environment.getApiConfig();
 const baseOptions = {
-  uri: env.API_URL || apiConfig.baseUrl,
+  uri: env.API_URL ?? apiConfig.baseUrl,
   headers: { 'Content-Type': 'application/json' },
   fetch: createTimeoutFetch(apiConfig.timeout),
 };

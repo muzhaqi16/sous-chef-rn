@@ -161,7 +161,7 @@ async function handleItemChanged(
  * subscription count under the server's cluster-wide cap.
  */
 export function usePantrySubscriptions(userId?: string) {
-  const selectedPantryId = useSelectedPantryId() || undefined;
+  const selectedPantryId = useSelectedPantryId() ?? undefined;
   const isHomeSelectionReady = useIsHomeSelectionReady();
   const linkExpirationData = useLinkExpirationData();
   const rejected = useSubscriptionRejected(PantryEventsDocument);
@@ -192,8 +192,8 @@ export function usePantrySubscriptions(userId?: string) {
       expirationNotificationId: notification.id,
       expirationAction: notification.actionTaken ?? undefined,
       daysUntilExpiry: notification.daysUntilExpiry,
-      pantryItemName: notification.pantryItem?.item?.name,
-      pantryItemImageUrl: notification.pantryItem?.item?.imageUrl,
+      pantryItemName: notification.pantryItem.item.name,
+      pantryItemImageUrl: notification.pantryItem.item.imageUrl,
     });
   };
 
@@ -209,7 +209,7 @@ export function usePantrySubscriptions(userId?: string) {
       payload: PantryEventsPayload,
       client: SubscriptionApolloClient,
     ) => {
-      if (!payload || !selectedPantryId) return;
+      if (!selectedPantryId) return;
 
       // Expiration notifications (folded in from the former
       // expirationNotificationCreated / expirationNotificationActionTaken

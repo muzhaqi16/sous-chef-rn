@@ -130,7 +130,7 @@ function buildOptimisticRecipeEntity(
     createdBy,
     ingredientsConnection: {
       __typename: 'RecipeIngredientConnection',
-      edges: (input.ingredients ?? []).map((ing, index) => ({
+      edges: input.ingredients.map((ing, index) => ({
         __typename: 'RecipeIngredientEdge',
         node: {
           __typename: 'RecipeIngredient',

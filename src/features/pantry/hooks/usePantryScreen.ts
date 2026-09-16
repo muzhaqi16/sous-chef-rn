@@ -21,7 +21,7 @@ import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 import type { PantryItemsFailure } from '#features/pantry/components/pantryDisplay/types';
 import { StorageLocationIcon } from '#features/catalog/ui/StorageLocationIcon';
 import { StorageType } from '#/graphql/generated/schemaTypes';
-import { PREFERENCE_DEFAULTS } from '#store/slices/preferenceTypes';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import type {
   PantrySortOption,
   PantrySortDirection,
@@ -52,10 +52,8 @@ export function usePantryScreen() {
     setPantrySortDirection,
   } = useAppStore(
     useShallow(s => ({
-      pantrySortOption:
-        s.pantrySortOption ?? PREFERENCE_DEFAULTS.pantrySortOption,
-      pantrySortDirection:
-        s.pantrySortDirection ?? PREFERENCE_DEFAULTS.pantrySortDirection,
+      pantrySortOption: s.pantrySortOption,
+      pantrySortDirection: s.pantrySortDirection,
       setPantrySortOption: s.setPantrySortOption,
       setPantrySortDirection: s.setPantrySortDirection,
     })),
@@ -247,8 +245,11 @@ export function usePantryScreen() {
   // `undefined` rather than a fallback word: the header picks a whole no-name
   // greeting instead of interpolating one into "Hello, {{name}}!", which no
   // locale can express (Spanish would read "¡Hola, hola!").
-  const userName =
-    authUser?.name || authUser?.firstName || authUser?.lastName || undefined;
+  const userName = firstNonBlank(
+    authUser?.name,
+    authUser?.firstName,
+    authUser?.lastName,
+  );
 
   // These were hardcoded English reaching JSX through a variable — invisible to
   // `i18next/no-literal-string`, which only sees literals in JSX.
@@ -256,15 +257,15 @@ export function usePantryScreen() {
     ? t('pantryHeader.homePromptSelect')
     : noHomes
     ? t('pantryHeader.homeNoneYet')
-    : currentHome?.name || t('pantryHeader.homeFallback');
+    : firstNonBlank(currentHome?.name) ?? t('pantryHeader.homeFallback');
 
   // 7. Sort change handler
   const handleSortChange = (
     option: PantrySortOption,
     direction: PantrySortDirection,
   ) => {
-    setPantrySortOption?.(option);
-    setPantrySortDirection?.(direction);
+    setPantrySortOption(option);
+    setPantrySortDirection(direction);
   };
 
   // 8. handleRemoveItem (wraps removeItem + removeFromResults)

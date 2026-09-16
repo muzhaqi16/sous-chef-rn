@@ -85,10 +85,6 @@ jest.mock('#components/organisms/Header', () => ({
   },
 }));
 
-jest.mock('#features/catalog/ui/NutritionSummary', () => ({
-  NutritionSummary: () => null,
-}));
-
 jest.mock('#features/catalog/ui/ItemPhotoCarousel', () => ({
   ItemPhotoCarousel: () => null,
 }));
@@ -369,6 +365,45 @@ describe('PantryItemDetail (integration)', () => {
     });
     expect(screen.getByTestId('pantry-item-detail')).toBeTruthy();
     expect(screen.queryByText('Milk')).toBeNull();
+  });
+
+  it("renders the item's nutritionFacts in the nutrition section", async () => {
+    // Read as nested `{ amount, unit }` objects, the flat `Item.nutritions`
+    // Json yields no amount, and the section never renders.
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [
+        itemMock({
+          ...fullItem,
+          nutritionFacts: {
+            __typename: 'NutritionFacts',
+            id: 'nf1',
+            calories: 64,
+            totalFat: 3.6,
+            saturatedFat: 2.3,
+            transFat: null,
+            cholesterol: 12,
+            sodium: 44,
+            totalCarbs: 4.8,
+            dietaryFiber: null,
+            totalSugars: 5.1,
+            addedSugars: null,
+            protein: 3.3,
+            vitaminD: 1.3,
+            calcium: 120,
+            iron: null,
+            potassium: 150,
+            servingSize: 100,
+            servingUnit: 'ml',
+          },
+        }),
+      ],
+    });
+    expect(await screen.findByText('Nutrition')).toBeTruthy();
+    expect(screen.getByText('64')).toBeTruthy();
+    expect(screen.getByText('3.3')).toBeTruthy();
+    expect(screen.getByText('4.8')).toBeTruthy();
+    expect(screen.getByText('3.6')).toBeTruthy();
+    expect(screen.getByText('Per 100 ml')).toBeTruthy();
   });
 
   it('hides nutrition section when item has no nutrition data', async () => {

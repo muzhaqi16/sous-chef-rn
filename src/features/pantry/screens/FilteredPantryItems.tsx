@@ -353,7 +353,7 @@ export const FilteredPantryItems: React.FC<
     error,
     hasResult,
     skipped,
-    isEmpty: !allItems?.length,
+    isEmpty: allItems.length === 0,
   });
 
   // Progressively load all pages so the filter sees every item
@@ -364,7 +364,6 @@ export const FilteredPantryItems: React.FC<
   }, [hasMore, isLoadingMore, loading, loadMore]);
 
   const filteredItems = (() => {
-    if (!allItems) return [];
     const filtered = allItems.filter(config.filter);
     if (config.sort) {
       return filtered.sort(config.sort);

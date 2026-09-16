@@ -17,13 +17,6 @@ jest.mock('#/services/toastService', () => ({
   },
 }));
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    trackEvent: jest.fn(),
-    trackError: jest.fn(),
-  },
-}));
-
 jest.mock('#/utils/finallyHelpers', () => ({
   executeWithLoadingState: jest.fn(
     async (fn: () => Promise<void>, setLoading: (value: boolean) => void) => {

@@ -4,6 +4,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { InviteToHomeDocument } from '#operations/home/home.generated';
+import { AddCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useSendOnboardingInvites } from '#features/onboarding/hooks/useSendOnboardingInvites';
 
@@ -43,6 +44,20 @@ describe('useSendOnboardingInvites', () => {
     const { refusedCount } = await result.current.sendInvites(
       ['taken@example.com'],
       TARGET,
+    );
+
+    expect(refusedCount).toBe(1);
+  });
+
+  it('counts a list invite that never reached the server', async () => {
+    const { mock } = recordMock(AddCollaboratorDocument, {
+      error: new Error('Network request failed'),
+    });
+    const { result } = renderHook([mock]);
+
+    const { refusedCount } = await result.current.sendInvites(
+      ['friend@example.com'],
+      { homeId: null, shoppingListId: 'list-1', message: 'Join my list' },
     );
 
     expect(refusedCount).toBe(1);

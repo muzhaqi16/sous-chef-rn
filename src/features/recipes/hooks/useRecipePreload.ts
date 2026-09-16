@@ -140,7 +140,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
         );
       }
 
-      const clientId = variables?.input?.id;
+      const clientId = variables?.input.id;
       if (clientId && savedRecipe.id !== clientId) {
         adoptServerFavoriteId(
           cache,

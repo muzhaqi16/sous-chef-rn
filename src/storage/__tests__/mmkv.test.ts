@@ -120,6 +120,17 @@ describe('mmkv storage', () => {
       };
     };
 
+    it('throws on synchronous access before initialization', () => {
+      const { mmkvModule, createMMKV } = loadIsolated(() =>
+        Promise.resolve({ key: 'a-key', encryptionType: 'AES-256' as const }),
+      );
+
+      expect(() => mmkvModule.storage.getString('any')).toThrow(
+        'Storage accessed before initialization (getString)',
+      );
+      expect(createMMKV).not.toHaveBeenCalled();
+    });
+
     it('quarantines to the recovery instance when the key never resolves — primary id is not opened keyless', async () => {
       jest.useFakeTimers();
       const { mmkvModule, createMMKV, getKey } = loadIsolated(() =>

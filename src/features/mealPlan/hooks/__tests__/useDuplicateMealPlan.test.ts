@@ -7,10 +7,6 @@ jest.mock('#/services/toastService', () => ({
   toastService: { success: jest.fn(), error: jest.fn(), info: jest.fn() },
 }));
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: { trackEvent: jest.fn(), trackError: jest.fn() },
-}));
-
 import {
   recordMock,
   renderHookWithApollo,
@@ -183,6 +179,23 @@ describe('duplicating a meal plan', () => {
       '2026-01-12T00:00:00.000Z',
       '2026-01-14T00:00:00.000Z',
     ]);
+  });
+
+  it('does not report success when a copied meal fails to save', async () => {
+    const plan = createPlanMock();
+    const failedItem = recordMock(CreateMealPlanItemDocument, {
+      error: new Error('boom'),
+    });
+    const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
+      operationMocks: [plan.mock, failedItem.mock],
+      cache: seeded(),
+    });
+
+    await result.current.duplicatePlan(nextWeek);
+
+    expect(failedItem.fired).toHaveLength(2);
+    expect(toastService.success).not.toHaveBeenCalled();
+    expect(toastService.error).toHaveBeenCalledTimes(1);
   });
 
   it('does not expose an offline gate', () => {

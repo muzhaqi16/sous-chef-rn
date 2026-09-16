@@ -1,13 +1,12 @@
 import { useForm, useWatch, type PathValue } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import {
-  RecipeStatus,
-  type CreateRecipeInput,
-  type UpdateRecipeInput,
-  type RecipeIngredientInput,
-  type Diet,
-  type HealthGoal,
-  type Intolerance,
+import type {
+  CreateRecipeInput,
+  UpdateRecipeInput,
+  RecipeIngredientInput,
+  Diet,
+  HealthGoal,
+  Intolerance,
 } from '#/graphql/generated/schemaTypes';
 import type { RecipeForm_RecipeFragment } from './RecipeForm.generated';
 import type {
@@ -20,6 +19,7 @@ import { stripPriceFromName } from '#features/recipes/utils/stripPriceFromName';
 import { extractNodes } from '#/utils/connectionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatNumberForInput } from '#/utils/formatters/number';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 let nextTempId = 1;
 function generateTempId(): string {
@@ -177,9 +177,9 @@ export function useRecipeForm() {
       quantity: ing.quantity,
       unitId: ing.unitId ?? undefined,
       itemId: ing.itemId ?? undefined,
-      preparation: ing.preparation?.trim() || undefined,
-      section: ing.section?.trim() || undefined,
-      notes: ing.notes?.trim() || undefined,
+      preparation: firstNonBlank(ing.preparation)?.trim(),
+      section: firstNonBlank(ing.section)?.trim(),
+      notes: firstNonBlank(ing.notes)?.trim(),
       isOptional: ing.isOptional,
       sortOrder: index,
     }));
@@ -279,10 +279,10 @@ export function useRecipeForm() {
   // Populate from existing recipe (edit mode)
   const populateFromRecipe = (recipe: RecipeForm_RecipeFragment) => {
     const formState: RecipeFormState = {
-      name: recipe.name ?? '',
+      name: recipe.name,
       description: recipe.description ?? '',
       imageUrl: recipe.imageUrl ?? '',
-      servings: String(recipe.servings ?? 4),
+      servings: String(recipe.servings),
       prepTimeMinutes: recipe.prepTimeMinutes
         ? String(recipe.prepTimeMinutes)
         : '',
@@ -290,24 +290,24 @@ export function useRecipeForm() {
         ? String(recipe.cookTimeMinutes)
         : '',
       caloriesPerServing: formatNumberForInput(recipe.caloriesPerServing),
-      difficulty: recipe.difficulty ?? null,
-      category: recipe.category ?? null,
+      difficulty: recipe.difficulty,
+      category: recipe.category,
       cuisine: recipe.cuisine ?? '',
-      status: recipe.status ?? RecipeStatus.Draft,
-      diets: recipe.diets ?? [],
-      healthGoals: recipe.healthGoals ?? [],
-      intolerances: recipe.intolerances ?? [],
+      status: recipe.status,
+      diets: recipe.diets,
+      healthGoals: recipe.healthGoals,
+      intolerances: recipe.intolerances,
       ingredients: extractNodes(recipe.ingredientsConnection).map(ing => ({
         id: generateTempId(),
         name: ing.name,
-        quantity: ing.quantity ?? 1,
+        quantity: ing.quantity,
         unitId: ing.unit?.id ?? null,
         itemId: ing.item?.id ?? null,
         preparation: ing.preparation ?? '',
         section: ing.section ?? '',
         notes: ing.notes ?? '',
-        isOptional: ing.isOptional ?? false,
-        sortOrder: ing.sortOrder ?? 0,
+        isOptional: ing.isOptional,
+        sortOrder: ing.sortOrder,
       })),
       steps: Array.isArray(recipe.instructions)
         ? recipe.instructions.map((step: unknown, i: number) => ({
@@ -319,7 +319,7 @@ export function useRecipeForm() {
       notes: recipe.notes ?? '',
       tips: recipe.tips ?? '',
       originalAuthor: recipe.originalAuthor ?? '',
-      tags: (recipe.tags ?? []).join(', '),
+      tags: recipe.tags.join(', '),
     };
     // `reset` re-baselines `isDirty`, so loading a recipe does not read as an
     // edit — which is what the hand-rolled initial-state snapshot was for.

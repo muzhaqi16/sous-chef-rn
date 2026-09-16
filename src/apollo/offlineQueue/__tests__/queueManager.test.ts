@@ -2468,6 +2468,31 @@ describe('QueueManager', () => {
         );
       });
 
+      it('revives auth-parked writes and drains when the session gets a new token', () => {
+        (queueStore.revivePendingAuthErrors as jest.Mock).mockReturnValueOnce(
+          2,
+        );
+        const drain = jest.spyOn(manager, 'requestDrain');
+
+        manager.onSessionToken('user-1');
+
+        expect(queueStore.revivePendingAuthErrors).toHaveBeenCalledWith(
+          'user-1',
+        );
+        expect(drain).toHaveBeenCalledTimes(1);
+      });
+
+      it('does not drain on a new token when nothing was parked', () => {
+        (queueStore.revivePendingAuthErrors as jest.Mock).mockReturnValueOnce(
+          0,
+        );
+        const drain = jest.spyOn(manager, 'requestDrain');
+
+        manager.onSessionToken('user-1');
+
+        expect(drain).not.toHaveBeenCalled();
+      });
+
       it('revives auth-parked writes when a user signs in', () => {
         manager.onUserChange('user-1', null);
         expect(queueStore.revivePendingAuthErrors).toHaveBeenCalledWith(

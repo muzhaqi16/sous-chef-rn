@@ -53,7 +53,7 @@ export function getTopLevelGraphQLError(
   if (!first) return null;
   return {
     code: describeValue(first.extensions?.code ?? ''),
-    message: String(first.message ?? ''),
+    message: first.message,
   };
 }
 

@@ -125,14 +125,14 @@ export const createPerformanceSlice: StateCreator<
           let oldestKey: string | null = null;
           let oldestTime = Infinity;
 
-          state.componentMetrics.forEach((metrics, key) => {
+          for (const [key, metrics] of state.componentMetrics) {
             if (metrics.lastRenderTimestamp < oldestTime) {
               oldestTime = metrics.lastRenderTimestamp;
               oldestKey = key;
             }
-          });
+          }
 
-          if (oldestKey) {
+          if (oldestKey !== null) {
             state.componentMetrics.delete(oldestKey);
           }
         }
@@ -179,14 +179,14 @@ export const createPerformanceSlice: StateCreator<
           let oldestKey: string | null = null;
           let oldestTime = Infinity;
 
-          state.screenMetrics.forEach((metrics, key) => {
+          for (const [key, metrics] of state.screenMetrics) {
             if (metrics.lastTransitionTimestamp < oldestTime) {
               oldestTime = metrics.lastTransitionTimestamp;
               oldestKey = key;
             }
-          });
+          }
 
-          if (oldestKey) {
+          if (oldestKey !== null) {
             state.screenMetrics.delete(oldestKey);
           }
         }

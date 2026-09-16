@@ -101,6 +101,24 @@ describe('laying a template onto dates', () => {
     ).toBe('My week');
   });
 
+  it('takes the template name when the given one is blank, and trims a real one', () => {
+    const opts = {
+      startDate: '2026-02-02T00:00:00.000Z',
+      planType: MealPlanType.Weekly,
+      mintId,
+    };
+
+    expect(planFromTemplate(source, { ...opts, name: '' }).plan.name).toBe(
+      'Weeknights',
+    );
+    expect(planFromTemplate(source, { ...opts, name: '   ' }).plan.name).toBe(
+      'Weeknights',
+    );
+    expect(
+      planFromTemplate(source, { ...opts, name: '  My week ' }).plan.name,
+    ).toBe('My week');
+  });
+
   it('parents every meal to the minted plan', () => {
     const { plan, items } = planFromTemplate(source, {
       startDate: '2026-02-02T00:00:00.000Z',

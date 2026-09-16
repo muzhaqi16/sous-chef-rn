@@ -38,7 +38,7 @@ const PERSISTED_TYPENAMES: KeyedByTypename = {
   ShoppingListItem: 'ShoppingListItem',
 };
 
-export const isPersistedEntityType = (
+const isPersistedEntityType = (
   typename: string,
 ): typename is PersistedEntityType => typename in PERSISTED_TYPENAMES;
 
@@ -239,6 +239,7 @@ class OptimisticDataPersistence {
    * Takes the typename as read from the cache, which the caller cannot narrow.
    */
   clearEntity(entityType: string, entityId: string): void {
+    if (!isPersistedEntityType(entityType)) return;
     try {
       const all = this.loadAll();
       const filtered = Object.fromEntries(

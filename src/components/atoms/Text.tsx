@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import type { TypeRoleName } from '#/theme/foundations/type';
+import type { ThemeColors } from '#/theme/themes';
 
 export type TextRole = TypeRoleName;
 
@@ -14,13 +15,33 @@ export type TextTone =
   | 'primary'
   | 'secondary'
   | 'tertiary'
-  | 'inverse'
+  | 'onPrimary'
   | 'onSurfaceVariant'
   | 'error'
   | 'danger'
   | 'accent'
   | 'success'
-  | 'warning';
+  | 'warning'
+  | 'info';
+
+type ColorToken = {
+  [K in keyof ThemeColors]: ThemeColors[K] extends string ? K : never;
+}[keyof ThemeColors];
+
+/** The token each tone paints; `toneContrast.test.ts` holds every one to AA. */
+export const TONE_COLOR: Record<TextTone, ColorToken> = {
+  primary: 'textPrimary',
+  secondary: 'textSecondary',
+  tertiary: 'textTertiary',
+  onPrimary: 'onPrimary',
+  onSurfaceVariant: 'textOnSurfaceVariant',
+  error: 'error',
+  danger: 'danger',
+  accent: 'primary',
+  success: 'success',
+  warning: 'warning',
+  info: 'info',
+};
 
 export type TextWeight = 'regular' | 'medium' | 'semibold' | 'bold';
 
@@ -109,16 +130,17 @@ const styles = StyleSheet.create(theme => ({
         error: theme.type.error,
       },
       tone: {
-        primary: { color: theme.colors.textPrimary },
-        secondary: { color: theme.colors.textSecondary },
-        tertiary: { color: theme.colors.textTertiary },
-        inverse: { color: theme.colors.textInverse },
-        onSurfaceVariant: { color: theme.colors.textOnSurfaceVariant },
-        error: { color: theme.colors.error },
-        danger: { color: theme.colors.danger },
-        accent: { color: theme.colors.primary },
-        success: { color: theme.colors.success },
-        warning: { color: theme.colors.warning },
+        primary: { color: theme.colors[TONE_COLOR.primary] },
+        secondary: { color: theme.colors[TONE_COLOR.secondary] },
+        tertiary: { color: theme.colors[TONE_COLOR.tertiary] },
+        onPrimary: { color: theme.colors[TONE_COLOR.onPrimary] },
+        onSurfaceVariant: { color: theme.colors[TONE_COLOR.onSurfaceVariant] },
+        error: { color: theme.colors[TONE_COLOR.error] },
+        danger: { color: theme.colors[TONE_COLOR.danger] },
+        accent: { color: theme.colors[TONE_COLOR.accent] },
+        success: { color: theme.colors[TONE_COLOR.success] },
+        warning: { color: theme.colors[TONE_COLOR.warning] },
+        info: { color: theme.colors[TONE_COLOR.info] },
       },
       align: {
         left: { textAlign: 'left' },

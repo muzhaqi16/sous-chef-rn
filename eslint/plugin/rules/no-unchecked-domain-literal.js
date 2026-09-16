@@ -7,6 +7,7 @@ const {
   isObjectType,
   isUnionType,
 } = require('graphql');
+const { readCodegenEnums } = require('../codegenEnums');
 
 const ROOT = path.join(__dirname, '..', '..', '..');
 const GENERATED = path.join(ROOT, 'src', 'graphql', 'generated');
@@ -21,16 +22,11 @@ let domain;
 function readDomain() {
   if (domain) return domain;
   const enumMembers = new Map();
-  const source = fs.readFileSync(
-    path.join(GENERATED, 'schemaTypes.ts'),
-    'utf8',
-  );
-  // Closed by a brace at line start: member JSDoc can hold `{@link …}`.
-  for (const block of source.matchAll(/export enum (\w+) \{([\s\S]*?)\n\}/g)) {
-    for (const member of block[2].matchAll(/^\s*(\w+) = '([^']*)'/gm)) {
-      const list = enumMembers.get(member[2]) ?? [];
-      list.push(`${block[1]}.${member[1]}`);
-      enumMembers.set(member[2], list);
+  for (const [name, members] of readCodegenEnums()) {
+    for (const { member, value } of members) {
+      const list = enumMembers.get(value) ?? [];
+      list.push(`${name}.${member}`);
+      enumMembers.set(value, list);
     }
   }
   const schema = buildSchema(

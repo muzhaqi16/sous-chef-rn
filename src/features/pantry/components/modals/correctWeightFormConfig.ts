@@ -20,7 +20,7 @@ export const correctWeightSchema: ObjectSchema<CorrectWeightFormValues> =
     weightInput: string()
       .defined()
       .test('is-positive-weight', msg('correctWeight.invalidWeight'), value => {
-        const parsed = parseDecimalInput(value ?? '');
+        const parsed = parseDecimalInput(value);
         return !isNaN(parsed) && parsed > 0;
       }),
     unitDisplay: string().defined(),

@@ -48,7 +48,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
     setPrevVisible(visible);
     setPrevDefaultServings(defaultServings);
     if (visible) {
-      setServingsInput(defaultServings?.toString() || '1');
+      setServingsInput(String(defaultServings));
       setDeductFromPantry(true);
       setUseGranularDeduction(true);
       setNotes('');
@@ -78,7 +78,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
     if (servingsError) return;
 
     onConfirm({
-      servings: parsedServings ?? defaultServings ?? 1,
+      servings: parsedServings ?? defaultServings,
       deductFromPantry,
       useGranularDeduction:
         deductFromPantry && hasPantry && useGranularDeduction,

@@ -39,7 +39,7 @@ export const BarcodeScannerScreen: React.FC<
 > = ({ route }) => {
   const { t } = useTranslation();
   const { toSearchResults, goBack, navigation } = useAppNavigation();
-  const { source, pantryId, shoppingListId } = route?.params ?? {};
+  const { source, pantryId, shoppingListId } = route.params ?? {};
   const devices = useCameraDevices();
   const device = devices.find(d => d.position === 'back');
 

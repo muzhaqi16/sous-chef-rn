@@ -97,6 +97,7 @@ query GetPantry(
           type
           icon
           color
+          temperature
           isDefault
           currentItemCount
           parentLocation {
@@ -753,6 +754,7 @@ mutation DeletePantryItem($input: DeletePantryItemInput!) {
   deletePantryItem(input: $input) {
     __typename
     ... on DeletePantryItemPayload {
+      converged
       pantryItem {
         id
         pantry {

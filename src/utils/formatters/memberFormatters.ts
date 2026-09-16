@@ -4,6 +4,7 @@ import type {
   MembershipStatus,
 } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /**
  * Loose `Membership` shape: different queries select different subsets, so every
@@ -43,12 +44,13 @@ export function getMemberDisplayName(
   }
 
   return (
-    member.displayName ||
-    member.user?.displayName ||
-    member.user?.profile?.displayName ||
-    member.user?.email?.split('@')[0] ||
-    member.user?.email ||
-    t('labels.unknown')
+    firstNonBlank(
+      member.displayName,
+      member.user?.displayName,
+      member.user?.profile?.displayName,
+      member.user?.email?.split('@')[0],
+      member.user?.email,
+    ) ?? t('labels.unknown')
   );
 }
 
@@ -75,10 +77,11 @@ export function getCollaboratorDisplayName(
   const email = collaborator.collaborator?.email ?? collaborator.email ?? null;
 
   return (
-    collaborator.collaborator?.displayName ||
-    collaborator.collaborator?.profile?.displayName ||
-    email?.split('@')[0] ||
-    email ||
-    t('labels.unknown')
+    firstNonBlank(
+      collaborator.collaborator?.displayName,
+      collaborator.collaborator?.profile?.displayName,
+      email?.split('@')[0],
+      email,
+    ) ?? t('labels.unknown')
   );
 }

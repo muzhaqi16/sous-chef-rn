@@ -9,6 +9,13 @@ testRule('no-unsafe-cast', {
     'const d = value as T[keyof T];',
     'const e = [] as readonly string[];',
     'if (isOwnKey(table, key)) use(table[key]);',
+    'const f = value as Profile;',
+    'const g = value as string | null;',
+    'const h = value as Array<RecipeRow>;',
+    'const i = value as Cuisine | RecipeRow;',
+    'const j = value as Partial<Cuisine>;',
+    'const k = { visibility: ProfileVisibility.Public } as const;',
+    'const l = (v: string): v is Diet => new Set<string>(Object.values(Diet)).has(v);',
   ],
   invalid: [
     { code: 'const a = value as any;', errors: ['asAny'] },
@@ -49,6 +56,30 @@ testRule('no-unsafe-cast', {
     {
       code: 'const key = `errors.field.${field}` as TranslationKey;',
       errors: ['asTranslationKey'],
+    },
+    { code: 'save(v as ProfileVisibility);', errors: ['asSchemaEnum'] },
+    {
+      code: 'const p = value as RecurringPattern | null;',
+      errors: ['asSchemaEnum'],
+    },
+    { code: 'const c = values as Cuisine[];', errors: ['asSchemaEnum'] },
+    { code: 'const d = values as Array<Diet>;', errors: ['asSchemaEnum'] },
+    {
+      code: 'const d = values as ReadonlyArray<Diet | Cuisine>;',
+      errors: ['asSchemaEnum'],
+    },
+    {
+      code: 'const d = values as readonly (Diet | null)[];',
+      errors: ['asSchemaEnum'],
+    },
+    {
+      code: 'const u = unit as UnitType | undefined;',
+      errors: ['asSchemaEnum'],
+    },
+    { code: 'const u = unit as Types.UnitType;', errors: ['asSchemaEnum'] },
+    {
+      code: 'const c = rows.map(r => r.cuisine).filter(Boolean) as Cuisine[];',
+      errors: ['asSchemaEnum'],
     },
   ],
 });

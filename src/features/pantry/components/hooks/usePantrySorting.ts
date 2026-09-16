@@ -57,7 +57,7 @@ function cachedSort<T extends SortableItem>(
     let comparison = 0;
     switch (option) {
       case PantrySortOption.NAME:
-        comparison = (a.itemName || '').localeCompare(b.itemName || '');
+        comparison = (a.itemName ?? '').localeCompare(b.itemName ?? '');
         break;
       case PantrySortOption.EXPIRY:
         comparison =

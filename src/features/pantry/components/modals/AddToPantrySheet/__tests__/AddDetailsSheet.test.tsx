@@ -8,6 +8,8 @@ import {
   waitFor,
 } from '@testing-library/react-native';
 import { AddDetailsSheet } from '../AddDetailsSheet';
+import type { StoragePageProps } from '../StoragePage';
+import type { StorageState as StorageStateType } from '#/graphql/generated/schemaTypes';
 
 type PagerViewMockProps = {
   children?: React.ReactNode;
@@ -56,11 +58,18 @@ jest.mock('../MainDetailsPage', () => ({
   // Renders `itemNameError` so the sheet's contract with the page — that a
   // validation failure reaches the field — is assertable here. Whether the
   // page paints it as a red border is FormInput's own test.
-  MainDetailsPage: ({ itemNameError }: { itemNameError?: string }) => {
+  MainDetailsPage: ({
+    itemNameError,
+    storageState,
+  }: {
+    itemNameError?: string;
+    storageState: string;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="main-details-page">
         <Text>Main Details Page</Text>
+        <Text testID="main-details-page-storage-state">{storageState}</Text>
         {itemNameError ? (
           <Text testID="main-details-page-name-error">{itemNameError}</Text>
         ) : null}
@@ -112,11 +121,38 @@ jest.mock('../DetailsPage', () => ({
 }));
 
 jest.mock('../StoragePage', () => ({
-  StoragePage: () => {
-    const { View, Text } = require('react-native');
+  // Picks a location the way the autocomplete does: its id, then the option.
+  StoragePage: ({
+    handleStorageLocationSelected,
+  }: Pick<StoragePageProps, 'handleStorageLocationSelected'>) => {
+    const { View, Text, Pressable } = require('react-native');
+    const {
+      StorageState,
+      StorageType,
+    } = require('#/graphql/generated/schemaTypes');
+    const pick = (id: string, temperature: StorageStateType | null) =>
+      handleStorageLocationSelected(id, {
+        id,
+        name: id,
+        type: StorageType.Freezer,
+        isDefault: false,
+        temperature,
+      });
     return (
       <View testID="storage-page">
         <Text>Storage Page</Text>
+        <Pressable
+          testID="pick-frozen-location"
+          onPress={() => pick('loc-freezer', StorageState.Frozen)}
+        >
+          <Text>Pick freezer</Text>
+        </Pressable>
+        <Pressable
+          testID="pick-unrated-location"
+          onPress={() => pick('loc-shelf', StorageState.None)}
+        >
+          <Text>Pick shelf</Text>
+        </Pressable>
       </View>
     );
   },
@@ -265,6 +301,38 @@ describe('AddDetailsSheet — the net-weight pair', () => {
 
     await waitFor(() =>
       expect(screen.queryByTestId('details-page-unit-error')).toBeNull(),
+    );
+  });
+});
+
+describe('AddDetailsSheet — a picked location seeds the storage state', () => {
+  it("takes the location's temperature", async () => {
+    const user = userEvent.setup();
+    render(<AddDetailsSheet {...defaultProps} />);
+    expect(
+      screen.getByTestId('main-details-page-storage-state'),
+    ).toHaveTextContent('AMBIENT');
+
+    await user.press(screen.getByTestId('pick-frozen-location'));
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('main-details-page-storage-state'),
+      ).toHaveTextContent('FROZEN'),
+    );
+  });
+
+  it('leaves the chosen state alone for a location with no temperature control', async () => {
+    const user = userEvent.setup();
+    render(<AddDetailsSheet {...defaultProps} />);
+
+    await user.press(screen.getByTestId('pick-frozen-location'));
+    await user.press(screen.getByTestId('pick-unrated-location'));
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('main-details-page-storage-state'),
+      ).toHaveTextContent('FROZEN'),
     );
   });
 });

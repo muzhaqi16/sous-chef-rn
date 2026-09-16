@@ -57,7 +57,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
   }
 
   const duration = (() => {
-    if (!mealPlan?.startDate || !mealPlan?.endDate) return 7;
+    if (!mealPlan?.startDate || !mealPlan.endDate) return 7;
     return differenceInDays(
       parseISO(mealPlan.endDate),
       parseISO(mealPlan.startDate),

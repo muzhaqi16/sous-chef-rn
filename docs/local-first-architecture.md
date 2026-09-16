@@ -21,7 +21,9 @@ notes; where the implementation diverged from the plan, the divergence is called
   start paints from disk. On app **background**, `useAppStateLifecycle` calls `flushCachePersistence()`
   (`ApolloCachePersistence.flushPending`) to write the pending debounced snapshot immediately — so the
   last few seconds of writes (including optimistic creates) survive a fast app-kill; no-op when nothing is
-  pending (see §6).
+  pending (see §6). `queueLink` calls the same `flushPending()` right after it queues a write, so the
+  queue entry and the cache change it replays against reach disk in one synchronous step and a kill
+  with no background transition (force-stop, crash) cannot leave a queued create with no row.
 - Default fetch policy `cache-and-network` → instant cache read + background refresh.
 - A transient API failure does not wipe cached lists: `usePreservedConnection` /
   `usePreservedQueryData` keep the last good value, and the `itemsConnection.merge` guard only honors an
@@ -90,7 +92,7 @@ deciding that centrally is what produces double alerts. See §10 for what uses i
 Rather than temp-ids + server reconciliation, **the client mints the real id at create time** and sends
 it as the create input's `id`. `generateEntityId()` (`src/utils/generateEntityId.ts`, backed by
 `@paralleldrive/cuid2`) returns a **cuid2** matching the backend's current `@default(cuid(2))` format.
-The server's id validator (`sous-chef-api/src/utils/common/validateId.ts`,
+The server's id validator (`sous-chef-api/packages/core/src/utils/common/validateId.ts`,
 `/^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/`) accepts both cuid2 **and** the older cuid v1
 (`c` + 24 chars), so ids minted by a previous app version stay valid; only new ids use cuid2.
 
@@ -523,7 +525,7 @@ drain reads the parent reference off the input, so no per-feature special-casing
 | Pending-changes count (banner) | `src/hooks/offline/usePendingMutationCount.ts` |
 | Queue triggers / failure toast | `src/hooks/app/useOnlineQueueSync.ts` |
 | Field-level persistence | `src/apollo/offline/OptimisticDataPersistence.ts`, `src/hooks/offline/useOptimisticDataRestoration.ts` |
-| Cache persistence (debounce + `flushPending`) | `src/apollo/offline/ApolloCachePersistence.ts`, `src/apollo/client.ts` (`flushCachePersistence`) |
+| Cache persistence (debounce + `flushPending`) | `src/apollo/offline/ApolloCachePersistence.ts`, `src/apollo/client.ts` (`flushCachePersistence`), `src/apollo/offlineQueue/queueLink.ts` (flush on enqueue) |
 | Background flush trigger | `src/hooks/app/useAppStateLifecycle.ts` |
 | Pending-aware connection merge | `src/apollo/cache.ts` (`itemsConnectionFieldPolicy`) + `queueStore.getPendingClientIds()` |
 | Shared shopping writers/reconcilers | `src/features/shoppingList/cache/items.ts` (`createOptimisticShoppingListItem`, `addOptimisticShoppingListItem`, `reconcileShoppingCreate`, `revertOptimisticShoppingListItem`) |

@@ -48,7 +48,7 @@ export const alertVersionConflict = (
 
   alertService.alert(
     t('errors.entityUpdatedTitle', { entity }),
-    customMessage || getVersionConflictMessage(),
+    customMessage ?? getVersionConflictMessage(),
     [
       { text: t('labels.refresh'), onPress: () => onRefresh?.() },
       { text: t('labels.cancel'), style: 'cancel' },

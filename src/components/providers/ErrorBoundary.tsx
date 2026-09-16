@@ -221,19 +221,6 @@ export const AppErrorBoundary: React.FC<{ children: ReactNode }> = ({
   </ErrorBoundary>
 );
 
-// Hook for programmatic error handling
-export const useErrorHandler = () => {
-  return (error: Error, context?: string) => {
-    logger.error(`Error in ${context || 'unknown context'}:`, error);
-
-    Telemetry.trackError(error, {
-      error_handler_context: context,
-      error_source: 'use_error_handler',
-      is_fatal: false,
-    });
-  };
-};
-
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,

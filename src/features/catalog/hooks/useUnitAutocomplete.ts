@@ -8,12 +8,13 @@ import {
 import { useAppStore } from '#store/useAppStore';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
+import type { UnitType } from '#/graphql/generated/schemaTypes';
 
 export interface UnitItem {
   id: string;
   name: string;
   symbol: string;
-  type?: string;
+  type?: UnitType;
   abbreviation?: string;
 }
 
@@ -84,10 +85,10 @@ export function useUnitAutocomplete() {
     return [];
   };
 
-  const fallbackItems = cachedUnits as UnitItem[];
+  const fallbackItems: UnitItem[] = cachedUnits;
 
   const filterFallback = (term: string, items: UnitItem[]): UnitItem[] => {
-    return filterByTerm(items, term, ['symbol', 'name']) as UnitItem[];
+    return [...filterByTerm(items, term, ['symbol', 'name'])];
   };
 
   const autocomplete = useAutocompleteSearch<UnitItem>({

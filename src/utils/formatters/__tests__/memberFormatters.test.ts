@@ -55,6 +55,16 @@ describe('getMemberDisplayName', () => {
     expect(getMemberDisplayName(member)).toBe('Tani');
   });
 
+  // The server accepts a blank display name, so `''` must not win over a real one.
+  it('skips a blank member displayName', () => {
+    const member = makeMember({
+      displayName: '',
+      user: { id: 'u1', email: 'test@example.com', displayName: '  ' },
+    });
+
+    expect(getMemberDisplayName(member)).toBe('test');
+  });
+
   it('falls back to profile displayName', () => {
     const member = makeMember({
       user: {
@@ -172,6 +182,18 @@ describe('getCollaboratorDisplayName', () => {
     });
 
     expect(getCollaboratorDisplayName(collaborator)).toBe('Tani');
+  });
+
+  it('skips a blank collaborator displayName', () => {
+    const collab = makeCollaborator({
+      email: 'invite@example.com',
+      collaborator: makeUser({
+        email: null,
+        displayName: '',
+        profile: makeProfile({ displayName: 'Artan M' }),
+      }),
+    });
+    expect(getCollaboratorDisplayName(collab)).toBe('Artan M');
   });
 
   it('prefers collaborator.profile.displayName', () => {

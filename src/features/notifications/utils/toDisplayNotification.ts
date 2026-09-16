@@ -10,11 +10,13 @@ import {
   type ExpirationLinkData,
   type NotificationPayload,
 } from '#features/notifications/types';
-import type { NotificationType } from '#/graphql/generated/schemaTypes';
+import type {
+  NotificationType,
+  Priority,
+} from '#/graphql/generated/schemaTypes';
 import {
   NotificationCategory,
   NotificationStatus,
-  Priority,
 } from '#/graphql/generated/schemaTypes';
 import { getNotificationAction } from '#features/notifications/utils/notificationHelpers';
 import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
@@ -83,7 +85,7 @@ export function toDisplayNotification(
     id: n.id,
     type,
     category: n.category ?? NotificationCategory.System,
-    priority: n.priority ?? Priority.Normal,
+    priority: n.priority,
     payload,
     sentAt: n.sentAt,
     expiresAt: n.expiresAt,

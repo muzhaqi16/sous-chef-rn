@@ -32,7 +32,7 @@ export function useStoreAutocomplete() {
   };
 
   const getResults = (): StoreItem[] => {
-    const searchedStores = storesData?.stores?.edges?.map(e => e.node) ?? [];
+    const searchedStores = storesData?.stores.edges.map(e => e.node) ?? [];
     if (searchedStores.length === 0) return [];
     return searchedStores.map(store => ({
       id: store.id,

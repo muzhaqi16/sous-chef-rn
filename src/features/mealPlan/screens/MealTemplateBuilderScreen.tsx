@@ -127,10 +127,10 @@ export const MealTemplateBuilderScreen: React.FC<
     hydratedTemplateId.current = loaded.id;
     templateForm.reset({
       name: loaded.name,
-      category: loaded.category ?? TemplateCategory.Weekly,
+      category: loaded.category,
       description: loaded.description ?? '',
-      defaultServings: String(loaded.defaultServings ?? 2),
-      tags: (loaded.tags ?? []).join(', '),
+      defaultServings: String(loaded.defaultServings),
+      tags: loaded.tags.join(', '),
     });
   }, [loaded, templateForm]);
 

@@ -17,7 +17,6 @@ export const retryLink = new RetryLink({
   attempts: {
     max: 3,
     retryIf: (error, operation) => {
-      if (!error) return false;
       if (operation.getContext().skipRetryLink) return false;
       if (isMutation(operation)) return false;
       return isNetworkError(error);

@@ -35,13 +35,6 @@ jest.mock('react-native-performance', () => {
   };
 });
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    histogram: jest.fn(),
-    increment: jest.fn(),
-  },
-}));
-
 jest.mock('#/native/StartupMark', () => ({
   StartupMark: {
     reportFullyDrawn: jest.fn(),

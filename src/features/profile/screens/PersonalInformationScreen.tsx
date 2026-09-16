@@ -17,6 +17,14 @@ import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { useDataState } from '#hooks/data/useDataState';
 import { DataStateView } from '#components/organisms/DataStateView';
 
+const PROFILE_VISIBILITIES: ReadonlySet<string> = new Set(
+  Object.values(ProfileVisibility),
+);
+
+// The picker hands back a string; only a member the schema defines is sent.
+const isProfileVisibility = (value: string): value is ProfileVisibility =>
+  PROFILE_VISIBILITIES.has(value);
+
 export const PersonalInformationScreen: React.FC = () => {
   const { t } = useTranslation();
   const { profile, loading, error, refetch } = useProfileData();
@@ -51,12 +59,12 @@ export const PersonalInformationScreen: React.FC = () => {
 
     switch (config.key) {
       case 'email':
-        return { ...baseItem, value: user?.email || '' };
+        return { ...baseItem, value: user?.email ?? '' };
 
       case 'firstName':
         return {
           ...baseItem,
-          value: profile?.firstName || '',
+          value: profile?.firstName ?? '',
           onSave: (v: string) => {
             void updateProfile({ firstName: v });
           },
@@ -65,7 +73,7 @@ export const PersonalInformationScreen: React.FC = () => {
       case 'lastName':
         return {
           ...baseItem,
-          value: profile?.lastName || '',
+          value: profile?.lastName ?? '',
           onSave: (v: string) => {
             void updateProfile({ lastName: v });
           },
@@ -74,7 +82,7 @@ export const PersonalInformationScreen: React.FC = () => {
       case 'displayName':
         return {
           ...baseItem,
-          value: profile?.displayName || '',
+          value: profile?.displayName ?? '',
           onSave: (v: string) => {
             void updateProfile({ displayName: v });
           },
@@ -83,7 +91,7 @@ export const PersonalInformationScreen: React.FC = () => {
       case 'bio':
         return {
           ...baseItem,
-          value: profile?.bio || '',
+          value: profile?.bio ?? '',
           onSave: (v: string) => {
             void updateProfile({ bio: v });
           },
@@ -92,7 +100,7 @@ export const PersonalInformationScreen: React.FC = () => {
       case 'phone':
         return {
           ...baseItem,
-          value: profile?.phone || '',
+          value: profile?.phone ?? '',
           onSave: (v: string) => {
             void updateProfile({ phone: v });
           },
@@ -111,7 +119,7 @@ export const PersonalInformationScreen: React.FC = () => {
       case 'gender':
         return {
           ...baseItem,
-          value: profile?.gender || '',
+          value: profile?.gender ?? '',
           options: translateOptions(config.options),
           onSave: (v: string) => {
             void updateProfile({ gender: v });
@@ -121,10 +129,12 @@ export const PersonalInformationScreen: React.FC = () => {
       case 'profileVisibility':
         return {
           ...baseItem,
-          value: profile?.profileVisibility || ProfileVisibility.Public,
+          value: profile?.profileVisibility ?? ProfileVisibility.Public,
           options: translateOptions(config.options),
           onSave: (v: string) => {
-            void updateProfile({ profileVisibility: v as ProfileVisibility });
+            if (isProfileVisibility(v)) {
+              void updateProfile({ profileVisibility: v });
+            }
           },
         };
 

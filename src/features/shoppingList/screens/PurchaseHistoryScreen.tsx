@@ -17,6 +17,7 @@ import { formatCurrency } from '#/utils/formatters/number';
 import { usePreferredCurrency } from '#/domain/money';
 import { formatDateTime } from '#/utils/formatters/date';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 const keyExtractor = (item: { id: string }) => item.id;
 
@@ -144,9 +145,10 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
           {/* displayName -> email -> "Someone": `email` is null for anyone but
               the caller themself, and a profile is optional. */}
           <Text role="label" style={styles.purchaseDetailValue}>
-            {purchase.user.profile?.displayName ||
-              purchase.user.email ||
-              t('labels.someone')}
+            {firstNonBlank(
+              purchase.user.profile?.displayName,
+              purchase.user.email,
+            ) ?? t('labels.someone')}
           </Text>
         </View>
       </View>

@@ -4,6 +4,9 @@ import * as typescriptParser from '@typescript-eslint/parser';
 import { testRule } from '#/test-utils/eslintRuleTester';
 
 const IMPORT = "import { Text } from '#components/atoms/Text';\n";
+const VARIANTS = [{ readVariants: true }];
+const variantSheet = (body: string) =>
+  `\nconst styles = StyleSheet.create(theme => ({ ${body} }));`;
 
 testRule('text-needs-role', {
   valid: [
@@ -24,6 +27,23 @@ testRule('text-needs-role', {
     `${IMPORT}const n = <Text role="error" {...props} />;`,
     `${IMPORT}const o = <Text role="caption" style={styles.hint} />;\nconst styles = StyleSheet.create(theme => ({ hint: { color: theme.colors.textSecondary } }));`,
     `${IMPORT}const p = <Text role="caption" style={shared.errorText} />;`,
+    // Without the option a variant's colour is not read.
+    `${IMPORT}const q = <Text role="caption" style={styles.label} />;${variantSheet(
+      'label: { variants: { invalid: { true: { color: theme.colors.error } } } }',
+    )}`,
+    {
+      code: `${IMPORT}const r = <Text role="caption" style={styles.label} />;${variantSheet(
+        'label: { variants: { muted: { true: { color: theme.colors.textSecondary } } } }',
+      )}`,
+      options: VARIANTS,
+    },
+    // A red variant on a style no Text reads.
+    {
+      code: `${IMPORT}const s = <View style={styles.badge} />;${variantSheet(
+        'badge: { variants: { expired: { true: { color: theme.colors.danger } } } }',
+      )}`,
+      options: VARIANTS,
+    },
   ],
   invalid: [
     { code: `${IMPORT}const a = <Text>x</Text>;`, errors: ['missingRole'] },
@@ -73,6 +93,34 @@ testRule('text-needs-role', {
     },
     {
       code: `${IMPORT}const m = <Text role="body" style={{ color: theme.colors.error }} />;`,
+      errors: ['errorColourInStyle'],
+    },
+    {
+      code: `${IMPORT}const n = <Text role="caption" style={styles.label} />;${variantSheet(
+        'label: { marginTop: 4, variants: { invalid: { true: { color: theme.colors.error }, false: {} } } }',
+      )}`,
+      options: VARIANTS,
+      errors: ['errorColourInStyle'],
+    },
+    {
+      code: `${IMPORT}const o = <Text role="label" style={[styles.row, styles.status]} />;${variantSheet(
+        'row: {}, status: { compoundVariants: [{ expired: true, styles: { color: theme.colors.danger } }] }',
+      )}`,
+      options: VARIANTS,
+      errors: ['errorColourInStyle'],
+    },
+    {
+      code: `${IMPORT}const p = <Text role="caption" style={styles.hint(bad)} />;${variantSheet(
+        'hint: (bad: boolean) => ({ color: theme.colors.error })',
+      )}`,
+      options: VARIANTS,
+      errors: ['errorColourInStyle'],
+    },
+    {
+      code: `${IMPORT}const q = <Text tone="secondary" style={styles.label} />;${variantSheet(
+        'label: { variants: { tone: { error: { color: theme.colors.error }, default: {} } } }',
+      )}`,
+      options: [{ requireRole: false, readVariants: true }],
       errors: ['errorColourInStyle'],
     },
   ],

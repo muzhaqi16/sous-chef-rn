@@ -147,21 +147,20 @@ export const DietaryRestrictionSelector: React.FC<
   const existingConstraintRows = existingRestrictions.filter(
     r => r.diet && !isLifestyleDiet(r.diet),
   );
-  const existingIntolerances = existingRestrictions
-    .map(r => r.intolerance)
-    .filter(Boolean) as Intolerance[];
-  const existingHealthGoals = existingRestrictions
-    .map(r => r.healthGoal)
-    .filter(Boolean) as HealthGoal[];
+  const existingIntolerances = existingRestrictions.flatMap(r =>
+    r.intolerance ? [r.intolerance] : [],
+  );
+  const existingHealthGoals = existingRestrictions.flatMap(r =>
+    r.healthGoal ? [r.healthGoal] : [],
+  );
 
-  // Resolve an option's localized label, falling back to the raw enum value so
-  // an unrecognized restriction still renders something readable.
+  // A value the client enum does not list yet reads as unknown, never raw.
   const labelFor = <T extends string>(
     options: { labelKey: TranslationKey; value: T }[],
     value: T,
   ): string => {
     const match = options.find(o => o.value === value);
-    return match ? t(match.labelKey) : value;
+    return t(match ? match.labelKey : 'labels.unknown');
   };
 
   // Map existing restrictions to display items
@@ -193,9 +192,9 @@ export const DietaryRestrictionSelector: React.FC<
     label: t(d.labelKey),
   }));
 
-  const existingConstraintValues = existingConstraintRows
-    .map(r => r.diet)
-    .filter(Boolean) as Diet[];
+  const existingConstraintValues = existingConstraintRows.flatMap(r =>
+    r.diet ? [r.diet] : [],
+  );
   const availableConstraints = CONSTRAINT_DIETS.filter(
     d => !existingConstraintValues.includes(d.value),
   ).map(d => ({ id: d.value, label: t(d.labelKey) }));

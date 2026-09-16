@@ -32,7 +32,7 @@ describe('pantry mutations utils', () => {
         id: 'unit-1',
         name: 'Kilogram',
         symbol: 'kg',
-        type: 'WEIGHT',
+        type: UnitType.Weight,
       };
 
       const result = buildOptimisticUnit(newUnit, CURRENT);
@@ -43,7 +43,7 @@ describe('pantry mutations utils', () => {
           id: 'unit-1',
           name: 'Kilogram',
           symbol: 'kg',
-          type: 'WEIGHT',
+          type: UnitType.Weight,
         }),
       );
     });
@@ -71,7 +71,7 @@ describe('pantry mutations utils', () => {
           id: 'unit-2',
           name: 'Gram',
           symbol: 'g',
-          type: 'WEIGHT',
+          type: UnitType.Weight,
           displayAsFraction: false,
         }),
       );
@@ -93,7 +93,7 @@ describe('pantry mutations utils', () => {
         id: 'unit-5',
         name: 'Liter',
         symbol: 'L',
-        type: 'VOLUME',
+        type: UnitType.Volume,
       };
 
       expect(buildOptimisticUnit(newUnit, CURRENT).displayAsFraction).toBe(
@@ -109,7 +109,7 @@ describe('pantry mutations utils', () => {
           id: 'unit-6',
           name: 'Cup',
           symbol: 'cup',
-          type: 'VOLUME',
+          type: UnitType.Volume,
         },
         CURRENT,
       );

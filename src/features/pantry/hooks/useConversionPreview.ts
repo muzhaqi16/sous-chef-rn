@@ -138,7 +138,7 @@ export function useConversionPreview({
     if (!shouldShowPreview) return;
 
     let cancelled = false;
-    void (async () => {
+    const checkCertainty = async () => {
       let result;
       try {
         result = await checkConversion({
@@ -156,7 +156,8 @@ export function useConversionPreview({
       if (cancelled) return;
       const availability = result?.data?.canConvert;
       setConfidence(availability?.available ? availability.confidence : null);
-    })();
+    };
+    void checkCertainty();
 
     return () => {
       cancelled = true;

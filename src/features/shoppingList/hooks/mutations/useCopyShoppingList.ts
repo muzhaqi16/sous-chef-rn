@@ -39,16 +39,9 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
       }),
     };
 
-    // `createShoppingList` THROWS a refusal rather than returning one. Assign
-    // in the try and read outside it, for the same reason.
-    let created;
-    try {
-      created = await createShoppingList(input);
-    } catch (error) {
-      errorService.reportError(error, { operation: 'Copy shopping list' });
-    }
-    const listId = created?.id ?? null;
-    if (!listId) return null;
+    const created = await createShoppingList(input);
+    if (created.status === 'failed') return null;
+    const listId = created.shoppingList.id;
 
     for (const line of derived.items) {
       writeLineToCache(listId, line.id, derived);

@@ -29,7 +29,7 @@ import { createHash } from 'crypto';
  *
  * Re-record by running this test: the failure message prints the new hash.
  */
-const REVIEWED_CACHE_POLICY_HASH = '0933c3beb2dfc647';
+const REVIEWED_CACHE_POLICY_HASH = 'd56c79c6017628d7';
 
 const FEATURES = join('src', 'features');
 

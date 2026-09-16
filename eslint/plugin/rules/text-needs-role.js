@@ -81,6 +81,61 @@ const setsErrorColour = objectNode =>
       isErrorColour(property.value),
   );
 
+const keyNamed = (property, name) =>
+  property.type === 'Property' &&
+  !property.computed &&
+  ((property.key.type === 'Identifier' && property.key.name === name) ||
+    (property.key.type === 'Literal' && property.key.value === name));
+
+const objectValues = objectNode =>
+  objectNode?.type === 'ObjectExpression'
+    ? objectNode.properties
+        .filter(property => property.type === 'Property')
+        .map(property => property.value)
+    : [];
+
+/** The object a dynamic style function (`(size) => ({ … })`) returns. */
+const styleBodyOf = value => {
+  if (
+    value.type !== 'ArrowFunctionExpression' &&
+    value.type !== 'FunctionExpression'
+  ) {
+    return value;
+  }
+  if (value.body.type !== 'BlockStatement') return value.body;
+  const returned = value.body.body.find(s => s.type === 'ReturnStatement');
+  return returned?.argument ?? null;
+};
+
+/** A style's own colour, any `variants` branch, or any `compoundVariants` entry's `styles`. */
+const setsErrorColourInAnyVariant = value => {
+  const style = styleBodyOf(value);
+  if (style?.type !== 'ObjectExpression') return false;
+  if (setsErrorColour(style)) return true;
+  return style.properties.some(property => {
+    if (keyNamed(property, 'variants')) {
+      return objectValues(property.value).some(group =>
+        objectValues(group).some(setsErrorColour),
+      );
+    }
+    if (keyNamed(property, 'compoundVariants')) {
+      return (
+        property.value.type === 'ArrayExpression' &&
+        property.value.elements.some(entry =>
+          entry?.type === 'ObjectExpression'
+            ? entry.properties.some(
+                candidate =>
+                  keyNamed(candidate, 'styles') &&
+                  setsErrorColour(candidate.value),
+              )
+            : false,
+        )
+      );
+    }
+    return false;
+  });
+};
+
 const stylesObjectOf = call => {
   const [argument] = call.arguments;
   if (!argument) return null;
@@ -119,7 +174,10 @@ module.exports = {
     schema: [
       {
         type: 'object',
-        properties: { requireRole: { type: 'boolean' } },
+        properties: {
+          requireRole: { type: 'boolean' },
+          readVariants: { type: 'boolean' },
+        },
         additionalProperties: false,
       },
     ],
@@ -132,6 +190,7 @@ module.exports = {
   },
   create(context) {
     const requireRole = context.options[0]?.requireRole ?? true;
+    const readVariants = context.options[0]?.readVariants ?? false;
     const locals = new Set();
     const errorStyleKeys = new Map();
     const styleReferences = [];
@@ -151,6 +210,8 @@ module.exports = {
         if (setsErrorColour(node)) {
           context.report({ node: element, messageId: 'errorColourInStyle' });
         }
+      } else if (readVariants && node.type === 'CallExpression') {
+        collectStyleReferences(node.callee, element);
       } else if (
         node.type === 'MemberExpression' &&
         !node.computed &&
@@ -192,7 +253,9 @@ module.exports = {
             property.type === 'Property' &&
             !property.computed &&
             property.key.type === 'Identifier' &&
-            setsErrorColour(property.value)
+            (readVariants
+              ? setsErrorColourInAnyVariant(property.value)
+              : setsErrorColour(property.value))
           ) {
             keys.add(property.key.name);
           }

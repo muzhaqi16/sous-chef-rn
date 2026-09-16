@@ -129,8 +129,6 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
 
   // Check if notification type is enabled in user preferences
   const isNotificationTypeEnabled = (type: NotificationType): boolean => {
-    if (!userPreferences) return true;
-
     switch (type) {
       case NotificationType.ItemUpdated:
         return userPreferences.pantryChanges;
@@ -194,7 +192,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       return;
     }
 
-    const resolvedType = notification.type || NotificationType.HomeJoined;
+    const resolvedType = notification.type ?? NotificationType.HomeJoined;
 
     // Check if notification type is enabled in user preferences
     if (!isNotificationTypeEnabled(resolvedType)) {
@@ -204,12 +202,12 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
     const { requiresAction, actionType } = getNotificationAction(resolvedType);
 
     const processedNotification = {
-      id: notification.id || Date.now().toString(),
+      id: notification.id ?? Date.now().toString(),
       type: resolvedType,
       category,
       priority: notification.priority ?? Priority.Normal,
       payload,
-      sentAt: notification.sentAt || new Date().toISOString(),
+      sentAt: notification.sentAt ?? new Date().toISOString(),
       expiresAt: notification.expiresAt,
       isRead: false,
       sourceId: notification.sourceId,
@@ -318,36 +316,40 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
         });
       if (!rawNotification) return;
 
-      if (event.subtype === NotificationSubtype.Created) {
-        processNotification(
-          {
-            id: rawNotification.id,
-            type: rawNotification.type,
-            priority: rawNotification.priority ?? Priority.Normal,
-            payload: rawNotification.payload,
-            sentAt: rawNotification.sentAt,
-            expiresAt: rawNotification.expiresAt,
-            sourceId: rawNotification.sourceId,
-            sourceType: rawNotification.sourceType,
-            actionUrl: rawNotification.actionUrl,
-            readAt: rawNotification.readAt,
-          },
-          rawNotification.category ?? NotificationCategory.System,
-        );
-      } else if (event.subtype === NotificationSubtype.Updated) {
-        // Read/dismiss arrive as the dedicated subtypes handled above; the
-        // only statuses still delivered as UPDATED are CLICKED and EXPIRED.
-        const status = rawNotification.status;
-        if (status === NotificationStatus.Clicked) {
-          writeNotificationStatus(
-            client.cache,
-            rawNotification.id,
-            NotificationStatus.Read,
+      switch (event.subtype) {
+        case NotificationSubtype.Created:
+          processNotification(
+            {
+              id: rawNotification.id,
+              type: rawNotification.type,
+              priority: rawNotification.priority,
+              payload: rawNotification.payload,
+              sentAt: rawNotification.sentAt,
+              expiresAt: rawNotification.expiresAt,
+              sourceId: rawNotification.sourceId,
+              sourceType: rawNotification.sourceType,
+              actionUrl: rawNotification.actionUrl,
+              readAt: rawNotification.readAt,
+            },
+            rawNotification.category ?? NotificationCategory.System,
           );
-          reseedUnreadCount();
-        } else if (status === NotificationStatus.Expired) {
-          evictNotification(client.cache, rawNotification.id);
-          reseedUnreadCount();
+          break;
+        case NotificationSubtype.Updated: {
+          // Read/dismiss arrive as the dedicated subtypes handled above; the
+          // only statuses still delivered as UPDATED are CLICKED and EXPIRED.
+          const status = rawNotification.status;
+          if (status === NotificationStatus.Clicked) {
+            writeNotificationStatus(
+              client.cache,
+              rawNotification.id,
+              NotificationStatus.Read,
+            );
+            reseedUnreadCount();
+          } else if (status === NotificationStatus.Expired) {
+            evictNotification(client.cache, rawNotification.id);
+            reseedUnreadCount();
+          }
+          break;
         }
       }
     },

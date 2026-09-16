@@ -12,6 +12,10 @@ An expression typed `number` (nullish members aside) whose identifier or propert
 
 Logical, conditional and arithmetic operands are followed, so `{item.minQuantity ?? 0}` and `-{qty * 2}` report too.
 
+## Options
+
+- `followVariables` (default `false`; on in `eslint/project.js`) — also follow an identifier in those positions to the `const` it reads (a single definition, not a `let` or a parameter), through any chain of `const`s, and report it as `rawQuantityVariable` when that initializer is built from a quantity-named number by the same operators: `const shown = item.quantity * 2; … <Text>{shown}</Text>`. The report lands on the rendered identifier and names the quantity it carries. A `const` initialized from a call is trusted like any call.
+
 ## Use instead
 
 ```tsx
@@ -34,7 +38,8 @@ A stored quantity is a float: the API echoes 1/3 back as `0.33333334`, and a con
 - The left side of `&&`: a guard, not text.
 - The `count` key of a `t(...)` call: i18next picks the plural form from it, so it stays a number.
 - Money (`price`, `cost`) and counts named otherwise: the name decides.
-- A quantity that reaches JSX through an intermediate variable or a number-typed prop the child renders raw: review's.
+- A quantity that reaches JSX through an intermediate variable, unless `followVariables` is on.
+- A number-typed prop the child renders raw: review's.
 - Test files and files without type information.
 
 Source: [`eslint/plugin/rules/quantity-through-formatter.js`](../../eslint/plugin/rules/quantity-through-formatter.js) · spec: [`__tests__/lint/rules/quantity-through-formatter.test.ts`](../../__tests__/lint/rules/quantity-through-formatter.test.ts)

@@ -29,6 +29,7 @@ import { Text } from '#components/atoms/Text';
 import { useStore } from '#store';
 import { LocalImage } from '#components/atoms/LocalImage';
 import { Screen } from '#components/templates/Screen';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CROP_SIZE = Math.min(screenWidth * 0.8, 300);
@@ -292,9 +293,11 @@ export const ImageCropScreen: React.FC<
 
         const croppedImage: ImageFile = {
           uri: croppedUri,
-          fileName: `cropped_${imageFile.fileName || 'profile.jpg'}`,
+          fileName: `cropped_${
+            firstNonBlank(imageFile.fileName) ?? 'profile.jpg'
+          }`,
           fileSize: estimatedFileSize,
-          type: imageFile.type || 'image/jpeg',
+          type: firstNonBlank(imageFile.type) ?? 'image/jpeg',
         };
 
         useStore.getState().setPendingCroppedImage(croppedImage);

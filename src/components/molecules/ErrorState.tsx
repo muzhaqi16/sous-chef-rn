@@ -6,7 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#components/molecules/Button';
 import type { IconName, IconTone } from '#/utils/iconUtils';
 import { Icon } from '#/utils/iconUtils';
-import { Text } from '#components/atoms/Text';
+import { Text, type TextTone } from '#components/atoms/Text';
 
 export interface ErrorStateProps {
   /** Icon to display (can be IconName or emoji string) */
@@ -64,7 +64,13 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   testID,
 }) => {
   const { t } = useTranslation();
-  styles.useVariants({ severity });
+  // The heading of an error state is not error copy, so it takes `danger`.
+  const titleTone: TextTone =
+    severity === 'error'
+      ? 'danger'
+      : severity === 'warning'
+      ? 'warning'
+      : 'info';
 
   const severityTone: IconTone =
     severity === 'error'
@@ -91,7 +97,12 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       testID={testID}
     >
       {renderIcon()}
-      <Text role="subheading" align="center" style={styles.title}>
+      <Text
+        role="subheading"
+        align="center"
+        tone={titleTone}
+        style={styles.title}
+      >
         {title}
       </Text>
       <Text
@@ -151,13 +162,6 @@ const styles = StyleSheet.create(theme => ({
 
   title: {
     marginBottom: theme.spacing.xs,
-    variants: {
-      severity: {
-        error: { color: theme.colors.error },
-        warning: { color: theme.colors.warning },
-        info: { color: theme.colors.info },
-      },
-    },
   },
 
   message: {

@@ -102,14 +102,6 @@ const styles = StyleSheet.create(theme => ({
   container: {
     marginBottom: theme.spacing.lg,
   },
-  label: {
-    ...theme.type.bodyStrong,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
-  },
-  required: {
-    color: theme.colors.error,
-  },
   input: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -79,7 +79,7 @@ const SuggestionRow = ({
         <Text role="bodyStrong" numberOfLines={1}>
           {item.name}
         </Text>
-        {!!showBrands && !!item.brands && item.brands.length > 0 && (
+        {!!showBrands && item.brands.length > 0 && (
           <Text
             role="caption"
             tone="secondary"

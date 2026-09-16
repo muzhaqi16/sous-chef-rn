@@ -1,8 +1,11 @@
 import { act } from '@testing-library/react-native';
+import { gql } from '@apollo/client';
 import {
   recordMock,
   renderHookWithApollo,
+  seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { DisplayFormat, ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -19,19 +22,28 @@ function updateMock() {
   });
 }
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    trackEvent: jest.fn(),
-    trackError: jest.fn(),
-  },
-}));
-
 const mockAlert = jest.fn();
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: (...args: unknown[]) => mockAlert(...args) },
 }));
 
 jest.mock('#/utils/finallyHelpers');
+
+jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
+  optimisticDataPersistence: {
+    save: jest.fn(),
+    clear: jest.fn(),
+    track: jest.fn(() => jest.fn()),
+  },
+}));
+
+const QUANTITY = gql`
+  fragment QuantityEditProbe on ShoppingListItem {
+    id
+    quantity
+    quantityInput
+  }
+`;
 
 jest.mock('#utils/imageUtils', () => ({
   resolveImageUrl: jest.fn(() => null),
@@ -380,6 +392,86 @@ describe('useQuantityEditModal', () => {
     expect(mockAlert).not.toHaveBeenCalled();
     expect(result.current.visible).toBe(false);
     expect(result.current.selectedItem).toBeNull();
+  });
+
+  describe('the quantity is written locally before the server answers', () => {
+    function setup(member: object | null) {
+      const cache = seedCache([
+        {
+          __typename: 'ShoppingListItem',
+          id: 'item-1',
+          quantity: 2,
+          quantityInput: '2',
+          version: 3,
+        },
+      ]);
+      const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+        data: { updateShoppingListItemQuantity: member },
+      });
+      const rendered = renderHookWithApollo(
+        () => useQuantityEditModal({ items: [createItem()] }),
+        { cache, operationMocks: [m.mock] },
+      );
+      const readQuantity = () =>
+        cache.readFragment<{ quantity: number; quantityInput: string }>({
+          id: cache.identify({ __typename: 'ShoppingListItem', id: 'item-1' }),
+          fragment: QUANTITY,
+        });
+      return { ...rendered, readQuantity };
+    }
+
+    // Offline the write is queued: the list must show the new quantity, and
+    // keep showing it after a restart, until the replay lands.
+    it('shows a queued quantity at once and records it for a restart', async () => {
+      const { result, readQuantity } = setup(null);
+      act(() => {
+        result.current.openForItem('item-1');
+      });
+
+      await act(async () => {
+        await result.current.save('1 1/2', null, 'unit-1');
+      });
+
+      expect(readQuantity()).toMatchObject({
+        quantity: 1.5,
+        quantityInput: '1 1/2',
+      });
+      expect(optimisticDataPersistence.save).toHaveBeenCalledWith(
+        'ShoppingListItem',
+        'item-1',
+        'quantity',
+        1.5,
+      );
+      expect(optimisticDataPersistence.save).toHaveBeenCalledWith(
+        'ShoppingListItem',
+        'item-1',
+        'quantityInput',
+        '1 1/2',
+      );
+    });
+
+    it('puts the previous quantity back and drops the record when the server refuses', async () => {
+      const { result, readQuantity } = setup({
+        __typename: 'ValidationError',
+        code: ErrorCode.ValidationFailed,
+        message: 'refused',
+        field: 'quantity',
+      });
+      act(() => {
+        result.current.openForItem('item-1');
+      });
+
+      await act(async () => {
+        await result.current.save('5', null, 'unit-1');
+      });
+
+      expect(readQuantity()).toMatchObject({ quantity: 2, quantityInput: '2' });
+      expect(optimisticDataPersistence.clear).toHaveBeenCalledWith(
+        'ShoppingListItem',
+        'item-1',
+        'quantity',
+      );
+    });
   });
 
   it('closes modal after successful save', async () => {

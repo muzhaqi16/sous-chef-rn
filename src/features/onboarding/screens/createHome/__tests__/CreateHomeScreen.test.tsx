@@ -867,20 +867,6 @@ describe('CreateHomeScreen', () => {
     expect(await findByText('Someone')).toBeTruthy();
   });
 
-  it('shows "Unknown Home" when home name is missing from invite', async () => {
-    mockPendingInvites = [
-      {
-        id: 'invite-1',
-        role: 'MEMBER',
-        home: null,
-        inviter: { email: 'john@test.com', profile: null },
-      },
-    ];
-
-    const { findByText } = renderScreen();
-    expect(await findByText('Unknown Home')).toBeTruthy();
-  });
-
   it('offers no accept or decline, and says where the invite can be opened', async () => {
     // Redeeming needs the invite's bearer token, which the API discloses once
     // to the inviter and stores only as a digest — so this list cannot supply

@@ -9,7 +9,6 @@ import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { Icon } from '#utils/iconUtils';
 import { ShoppingListAvatar } from '#features/shoppingList/components/ShoppingListAvatar';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
-import type { IconLibrary } from '#/utils/iconUtils';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
@@ -21,6 +20,7 @@ import type {
 import { SelectorItemContainer } from '#components/organisms/AnimatedItemSelector/SelectorItemContainer';
 import type { ShoppingListFromQuery } from './useShoppingListsQuery';
 import { Text } from '#components/atoms/Text';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 export type ShoppingListSelectorItem = ShoppingListFromQuery & {
   _isOwner: boolean;
@@ -202,20 +202,19 @@ export function useShoppingListSelectorModal({
 
     // Group by home
     const homeGroups = new Map<string, ShoppingListSelectorItem[]>();
-    listDataWithOwnership
-      .filter(l => l.homeId)
-      .forEach(list => {
-        const homeId = list.homeId as string;
-        const group = homeGroups.get(homeId);
-        if (group) {
-          group.push(list);
-        } else {
-          homeGroups.set(homeId, [list]);
-        }
-      });
+    listDataWithOwnership.forEach(list => {
+      const { homeId } = list;
+      if (!homeId) return;
+      const group = homeGroups.get(homeId);
+      if (group) {
+        group.push(list);
+      } else {
+        homeGroups.set(homeId, [list]);
+      }
+    });
 
     homeGroups.forEach((lists, homeId) => {
-      const homeName = lists[0]?.home?.name || t('labels.unknownHome');
+      const homeName = lists[0]?.home?.name ?? t('labels.unknownHome');
       result.push({
         _isHeader: true,
         id: `header-${homeId}`,
@@ -234,7 +233,7 @@ export function useShoppingListSelectorModal({
     isSelected: boolean,
     onPress: () => void,
   ) => {
-    if ('_isHeader' in item && item._isHeader) {
+    if ('_isHeader' in item) {
       return (
         <View style={styles.sectionHeader}>
           <Icon
@@ -249,8 +248,12 @@ export function useShoppingListSelectorModal({
       );
     }
 
-    // Narrowed by the header guard above.
-    const list = item as ShoppingListSelectorItem;
+    const list = item;
+    const [ownership] = list.ownerships;
+    const ownerName = firstNonBlank(
+      ownership?.user.profile?.displayName,
+      ownership?.user.email,
+    );
 
     if (isDeleteMode) {
       const isSelectedForDelete = selectedForDeletion.has(list.id);
@@ -304,10 +307,7 @@ export function useShoppingListSelectorModal({
           {!list._isOwner && (
             <Text role="caption" tone="secondary" numberOfLines={1}>
               {t('shoppingListSelector.sharedBy', {
-                name:
-                  list.ownerships?.[0]?.user?.profile?.displayName ||
-                  list.ownerships?.[0]?.user?.email ||
-                  t('shoppingListSelector.sharedBySomeone'),
+                name: ownerName ?? t('shoppingListSelector.sharedBySomeone'),
               })}
             </Text>
           )}
@@ -335,7 +335,7 @@ export function useShoppingListSelectorModal({
         selectorRef.current?.close();
         toListSettings();
       },
-      iconLibrary: 'Ionicons' as IconLibrary,
+      iconLibrary: 'Ionicons',
     },
     ...(currentListId
       ? [
@@ -347,7 +347,7 @@ export function useShoppingListSelectorModal({
               selectorRef.current?.close();
               toShareList({ listId: currentListId });
             },
-            iconLibrary: 'Ionicons' as IconLibrary,
+            iconLibrary: 'Ionicons',
           },
           {
             icon: 'settings-outline',
@@ -357,7 +357,7 @@ export function useShoppingListSelectorModal({
               selectorRef.current?.close();
               toListSettings({ listId: currentListId });
             },
-            iconLibrary: 'Ionicons' as IconLibrary,
+            iconLibrary: 'Ionicons',
           },
         ]
       : []),

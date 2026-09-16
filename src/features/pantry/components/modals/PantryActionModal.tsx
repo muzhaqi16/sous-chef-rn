@@ -15,6 +15,10 @@ import {
 import { useConvertAvailableQuantity } from '#features/pantry/hooks/useConvertAvailableQuantity';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
+import {
+  formatQuantityForDisplay,
+  getUnitDisplayText,
+} from '#/utils/formatQuantity';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import type { PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
 import { usePantryActionItem } from '#features/pantry/hooks/usePantryActionItem';
@@ -54,7 +58,7 @@ interface PantryActionModalProps {
   onClose: () => void;
   title: string;
   confirmLabel: string;
-  confirmColor?: 'primary' | 'success' | 'warning' | 'error';
+  confirmColor?: React.ComponentProps<typeof BottomSheetHeader>['confirmColor'];
   snapPoints?: (string | number)[];
   unitToggleLabel?: string;
   currentQuantityLabel?: string;
@@ -137,8 +141,8 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   // Same unit both sides makes the tracking count redundant ("1 g (100 g
   // remaining)") — collapse to the net weight alone.
   const isSingleUnitDualTracked =
-    isDualTracked && pantryItem?.unit.id === pantryItem?.netWeightUnit?.id;
-  const contentBreakdown = isDualTracked ? pantryItem?.packageBreakdown : null;
+    isDualTracked && pantryItem.unit.id === pantryItem.netWeightUnit?.id;
+  const contentBreakdown = isDualTracked ? pantryItem.packageBreakdown : null;
   const perUnitNetWeight = contentBreakdown?.perUnitNetWeight ?? null;
   const hasContentUnit = perUnitNetWeight != null && perUnitNetWeight > 0;
   const contentUnitCount =
@@ -149,14 +153,15 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
       : 0;
 
   const trackingQuantity = pantryItem?.quantity ?? 0;
-  const trackingUnitSymbol = pantryItem?.unit.symbol || '';
+  const trackingUnitSymbol = pantryItem?.unit.symbol ?? '';
   const trackingUnitId = pantryItem?.unit.id;
 
-  const fallbackUnitSymbol =
-    pantryItem?.netWeightUnit?.symbol || trackingUnitSymbol;
-  const fallbackUnitId = pantryItem?.netWeightUnit?.id || trackingUnitId;
-  const activeUnitSymbol = selectedUnitInfo?.unitSymbol || fallbackUnitSymbol;
-  const activeUnitId = selectedUnitInfo?.unitId || fallbackUnitId;
+  const fallbackUnitSymbol = pantryItem?.netWeightUnit
+    ? getUnitDisplayText(pantryItem.netWeightUnit)
+    : trackingUnitSymbol;
+  const fallbackUnitId = pantryItem?.netWeightUnit?.id ?? trackingUnitId;
+  const activeUnitSymbol = selectedUnitInfo?.unitSymbol ?? fallbackUnitSymbol;
+  const activeUnitId = selectedUnitInfo?.unitId ?? fallbackUnitId;
   const isConvertedUnit =
     selectedUnitInfo != null && !selectedUnitInfo.isTrackingUnit;
 
@@ -286,7 +291,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
                             ),
                             unit:
                               pantryItem.quantityBreakdown.contentUnit
-                                ?.symbol || '',
+                                ?.symbol ?? '',
                           })
                         : contentBreakdown && hasContentUnit
                         ? t('pantryAction.amountWithUnit', {
@@ -296,7 +301,10 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
                               contentBreakdown.contentUnit.name,
                           })
                         : t('pantryAction.amountWithUnit', {
-                            amount: effectiveNetWeight,
+                            amount: formatQuantityForDisplay(
+                              effectiveNetWeight,
+                              { notation: 'decimal' },
+                            ),
                             unit: pantryItem.netWeightUnit?.symbol ?? '',
                           }),
                     })}

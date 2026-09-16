@@ -13,6 +13,7 @@ import {
   type RecipeReviewFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
 import { formatRelativeToNow } from '#/utils/formatters/date';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 interface ReviewCardProps {
   review: RecipeReviewFragment;
@@ -50,7 +51,8 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
   // `user.email` only resolves for the viewer's own record, so it's null on
   // every other author's review — the literal fallback is what actually renders.
   const displayName = user
-    ? user.profile?.displayName || user.email || t('labels.someone')
+    ? firstNonBlank(user.profile?.displayName, user.email) ??
+      t('labels.someone')
     : t('labels.deletedUser');
   const avatar = user?.profile?.avatar;
 
