@@ -29,9 +29,13 @@ interface FireMarkCookedVars {
   notes?: string;
 }
 
+/** Names shown before the rest become a count, as the expiry digest does. */
+const SKIPPED_NAME_CAP = 3;
+
 /** What the cook left undeducted, and whether one cause covers all of it. */
 interface SkippedDeductions {
   count: number;
+  names: string[];
   allUnitConversion: boolean;
 }
 
@@ -81,6 +85,11 @@ export function useRecipeCookingActions({
     const skippedIngredients = payload?.skippedIngredients ?? [];
     const skipped = {
       count: skippedIngredients.length,
+      // Which lines, so the user knows what to fix. A blank name would read as
+      // a gap in the list, so it drops out and the count still covers it.
+      names: skippedIngredients
+        .map(item => item.itemName)
+        .filter(name => name.trim() !== ''),
       // The one cause the copy can name: no conversion reaches the stack's
       // unit. Reported only when it accounts for EVERY skip, since a mixed
       // batch has no single reason to state.
@@ -92,17 +101,45 @@ export function useRecipeCookingActions({
     return { failure: settled.failure, skipped };
   };
 
+  /**
+   * What the cook left undeducted: the lines by name, and the cause when one
+   * accounts for all of them. Falls back to the count where no name survived.
+   */
+  const skippedCopy = ({
+    count,
+    names,
+    allUnitConversion,
+  }: SkippedDeductions): string => {
+    if (names.length === 0) {
+      return t(
+        allUnitConversion
+          ? 'recipes.markedCookedSkippedUnit'
+          : 'recipes.markedCookedSkipped',
+        { count },
+      );
+    }
+    const shown = names.slice(0, SKIPPED_NAME_CAP).join(', ');
+    const remainder = count - Math.min(SKIPPED_NAME_CAP, names.length);
+    if (remainder > 0) {
+      return t(
+        allUnitConversion
+          ? 'recipes.markedCookedSkippedUnitNamesMore'
+          : 'recipes.markedCookedSkippedNamesMore',
+        { names: shown, count: remainder },
+      );
+    }
+    return t(
+      allUnitConversion
+        ? 'recipes.markedCookedSkippedUnitNames'
+        : 'recipes.markedCookedSkippedNames',
+      { names: shown, count },
+    );
+  };
+
   /** Success copy that says so only when nothing was left undeducted. */
   const deductionToast = (skipped: SkippedDeductions) => {
     if (skipped.count > 0) {
-      toastService.warning(
-        t(
-          skipped.allUnitConversion
-            ? 'recipes.markedCookedSkippedUnit'
-            : 'recipes.markedCookedSkipped',
-          { count: skipped.count },
-        ),
-      );
+      toastService.warning(skippedCopy(skipped));
       return;
     }
     toastService.success(t('recipes.markedCookedDeducted'));

@@ -168,7 +168,7 @@ describe('useRecipeCookingActions', () => {
 
     await waitFor(() =>
       expect(mockToastWarning).toHaveBeenCalledWith(
-        'Recipe marked as cooked. 1 ingredient could not be deducted.',
+        'Recipe marked as cooked. Garlic could not be deducted.',
       ),
     );
     expect(mockToastSuccess).not.toHaveBeenCalled();
@@ -206,7 +206,106 @@ describe('useRecipeCookingActions', () => {
 
     await waitFor(() =>
       expect(mockToastWarning).toHaveBeenCalledWith(
-        'Recipe marked as cooked. 2 ingredients could not be deducted: their units do not convert to the pantry stack.',
+        'Recipe marked as cooked. Garlic, Basil could not be deducted: their units do not convert to the pantry stack.',
+      ),
+    );
+  });
+
+  it('names the lines but claims no cause when the causes differ', async () => {
+    const cooked = cookedMock({
+      kind: 'success',
+      skipped: [
+        {
+          __typename: 'SkippedRecipeIngredient',
+          itemName: 'Garlic',
+          code: ErrorCode.UnitInvalid,
+        },
+        {
+          __typename: 'SkippedRecipeIngredient',
+          itemName: 'Basil',
+          code: ErrorCode.InternalServerError,
+        },
+      ],
+    });
+    const { result } = renderHookWithApollo(
+      () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
+      { operationMocks: [cooked.mock] },
+    );
+
+    await act(async () => {
+      result.current.handleMarkAsCooked({
+        servings: 4,
+        deductFromPantry: true,
+        useGranularDeduction: false,
+      });
+    });
+
+    // Naming the unit cause here would be true of Garlic and false of Basil.
+    await waitFor(() =>
+      expect(mockToastWarning).toHaveBeenCalledWith(
+        'Recipe marked as cooked. Garlic, Basil could not be deducted.',
+      ),
+    );
+  });
+
+  it('caps the names and counts the rest', async () => {
+    const cooked = cookedMock({
+      kind: 'success',
+      skipped: ['Garlic', 'Basil', 'Thyme', 'Sage', 'Dill'].map(itemName => ({
+        __typename: 'SkippedRecipeIngredient' as const,
+        itemName,
+        code: ErrorCode.UnitInvalid,
+      })),
+    });
+    const { result } = renderHookWithApollo(
+      () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
+      { operationMocks: [cooked.mock] },
+    );
+
+    await act(async () => {
+      result.current.handleMarkAsCooked({
+        servings: 4,
+        deductFromPantry: true,
+        useGranularDeduction: false,
+      });
+    });
+
+    await waitFor(() =>
+      expect(mockToastWarning).toHaveBeenCalledWith(
+        'Recipe marked as cooked. Garlic, Basil, Thyme and 2 more could not be deducted: their units do not convert to the pantry stack.',
+      ),
+    );
+  });
+
+  it('states the count alone when no name survives', async () => {
+    // itemName is non-null on the wire, but a blank one would read as a gap in
+    // the list, so it drops out and the count still accounts for it.
+    const cooked = cookedMock({
+      kind: 'success',
+      skipped: [
+        {
+          __typename: 'SkippedRecipeIngredient',
+          itemName: '  ',
+          code: ErrorCode.UnitInvalid,
+        },
+      ],
+    });
+    const { result } = renderHookWithApollo(
+      () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
+      { operationMocks: [cooked.mock] },
+    );
+
+    await act(async () => {
+      result.current.handleMarkAsCooked({
+        servings: 4,
+        deductFromPantry: true,
+        useGranularDeduction: false,
+      });
+    });
+
+    await waitFor(() =>
+      expect(mockToastWarning).toHaveBeenCalledWith(
+        'Recipe marked as cooked. 1 ingredient could not be deducted: its unit does not convert to the pantry stack.',
       ),
     );
   });
