@@ -152,7 +152,6 @@ export const lightTheme = {
     danger: lightSemantic.error,
 
     // Components specific
-    white: colors.neutral[0],
     black: colors.neutral[1000],
     transparent: colors.transparent,
     chipBackground: colors.neutral[200],
@@ -290,7 +289,6 @@ export const darkTheme = {
     danger: darkSemantic.error,
 
     // Components specific
-    white: colors.neutral[0],
     black: colors.neutral[1000],
     transparent: colors.transparent,
     chipBackground: colors.neutral[700],

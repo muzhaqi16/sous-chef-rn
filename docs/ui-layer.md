@@ -107,7 +107,9 @@ they read it.
   hand-off:
   - `useTheme` / `ThemedStatusBar`;
   - `RootNavigator.Navigation`, which builds React Navigation's `Theme`;
-  - `TrendLineChart`, which passes colours into Skia draw calls;
+  - `TrendLineChart` and `SpotlightCoachMark`, which pass colours into Skia
+    draw calls;
+  - `BreakdownPieChart`, which hands colours to the chart library as data;
   - `RecipeMain` and `SortableShoppingList`, which put theme colours into data
     structures.
 - **Plugin order is Unistyles → `unistyles-scope-crawl` → React Compiler**
