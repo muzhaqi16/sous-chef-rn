@@ -34,6 +34,7 @@ import {
 import {
   ItemListActionsProvider,
   useItemListActions,
+  useItemListTestIDPrefix,
   type ItemListActions,
 } from './ItemListActionsContext';
 import { kitTestIDs } from '#components/testIDs';
@@ -59,9 +60,9 @@ const ItemListRenderItemComponent: React.FC<ListRenderItemInfo<Item>> = ({
   item,
   index,
 }) => {
-  const { actions } = useItemListActions();
-  const { onItemPress, onSwipeableWillOpen, testIDPrefix, onBeforeRowRemoved } =
-    actions;
+  const { onItemPress, onSwipeableWillOpen, onBeforeRowRemoved } =
+    useItemListActions();
+  const testIDPrefix = useItemListTestIDPrefix();
   // A derivation, so it comes from its own context and is always the current
   // one — the command bag stabilises behind a ref that publishes too late.
   const itemSwipeActions = useItemSwipeActions();
@@ -246,7 +247,6 @@ export const ItemList: React.FC<ItemListProps> = ({
   const actions: ItemListActions = {
     onItemPress,
     onSwipeableWillOpen,
-    testIDPrefix,
     // A command, so it belongs in this bag — the row calls it before a
     // row-removing action, and the list is what knows how to prepare itself.
     onBeforeRowRemoved: () => {
@@ -293,7 +293,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   }
 
   return (
-    <ItemListActionsProvider actions={actions}>
+    <ItemListActionsProvider actions={actions} testIDPrefix={testIDPrefix}>
       <ItemSwipeActionsProvider value={itemSwipeActions}>
         <FlashList
           renderScrollComponent={SwipeAwareScrollComponent}
