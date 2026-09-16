@@ -307,7 +307,7 @@ they read it.
   which is why swapping one for the other empties a picker that worked. gorhom's
   `BottomSheetView` is the same trap from the other direction (absolute, no
   height). A bounded option set belongs in a scroll container that sizes to its
-  content. `__tests__/ui/recyclingListHostIsBounded.test.ts` holds the rule.
+  content. `sous-chef/recycling-list-host-is-bounded` holds the rule.
 - **`data` never comes from `useDeferredValue` or `startTransition`.** FlashList
   truncates its layout table during render and re-indexes cells only at commit.
   Only a transition render can be interrupted between the two, and a native

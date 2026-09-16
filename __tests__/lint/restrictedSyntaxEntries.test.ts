@@ -169,6 +169,17 @@ const PRODUCTION_FIXTURES: Fixture[] = [
     ],
   },
   {
+    id: 'callerFallbackAfterResolver',
+    invalid: [
+      "const m = localizedErrorMessage(err) || t('errors.generic');",
+      "const m = localizedErrorMessage(err) ?? t('errors.generic');",
+    ],
+    valid: [
+      "const m = localizedErrorMessage(err, t('errors.generic'));",
+      "const m = other(err) || t('errors.generic');",
+    ],
+  },
+  {
     id: 'asUnknown',
     invalid: ['const a = value as unknown as T;'],
     valid: ['const f = value as Profile;'],

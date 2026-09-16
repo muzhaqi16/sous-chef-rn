@@ -153,6 +153,13 @@ const PRODUCTION_SYNTAX = [
       'A control with no text child needs an `accessibilityLabel` — a screen reader announces it as "button" and nothing else. Give it a label, put a `<Text>` in it, or mark it `accessible={false}` if it is decorative.',
   },
   {
+    id: 'callerFallbackAfterResolver',
+    selector:
+      'LogicalExpression[operator=/^(\\|\\||\\?\\?)$/] > CallExpression.left[callee.name="localizedErrorMessage"]',
+    message:
+      "Pass the caller's copy INTO `localizedErrorMessage(err, fallback)`, not after it. The resolver always returns a non-empty string, so copy behind `||` or `??` is unreachable — and the resolver never saw the fallback you meant it to use.",
+  },
+  {
     id: 'asUnknown',
     selector: 'TSAsExpression[typeAnnotation.type="TSUnknownKeyword"]',
     message:

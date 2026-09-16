@@ -43,6 +43,7 @@ property, so the helper strips it before ESLint sees the entry.
 | `modalPropsOverride`           | `onChange` / `animatedIndex` after `{...modalProps}`.                       |
 | `optimisticResponseCast`       | A hand-rolled, asserted `optimisticResponse` literal.                       |
 | `missingPressableLabel`        | A pressable with no text child and no `accessibilityLabel`.                 |
+| `callerFallbackAfterResolver`  | `localizedErrorMessage(err) || t(…)` — copy behind the operator is dead. |
 | `asUnknown`                    | `as unknown`, typically the `x as unknown as T` double cast.                |
 | `asNever`                      | `as never`.                                                                 |
 | `asRecord`                     | `as Record<…>`.                                                             |

@@ -163,7 +163,7 @@ from `cache.readFragment` + spread, never hand-rolled shapes.
 - **Never display or branch on the server's `message`** — a refusal is its `code`
   and `field` (`sous-chef/no-error-message-branching`, `sous-chef/no-rendered-server-message`).
 - **Pass caller copy INTO `localizedErrorMessage(err, fallback)`, never `|| t(…)`
-  after it** — `callerFallbackReachesResolver.test.ts`.
+  after it** — `no-restricted-syntax`'s `callerFallbackAfterResolver`.
 - **A field with a write-time invariant goes through its ONE writer** —
   `cache.writeFragment` (`writePurchaseInfo`), never `cache.modify`; the
   restoration pass uses `src/apollo/utils/fieldWriters.ts`.
@@ -171,7 +171,7 @@ from `cache.readFragment` + spread, never hand-rolled shapes.
   queued completion reverts it on screen (`docs/local-first-architecture.md` § 2).
 - **A write in `SYNC_REGISTRY` writes the cache first and passes `localFirst: true`**:
   `queueLink` queues it offline either way, so a caller that skips the local write
-  queues an invisible change. Both rules: `queueableWritesAreLocalFirst.test.ts`.
+  queues an invisible change. Both rules: `sous-chef/queueable-write-is-local-first`.
 
 ### Local-first & optimistic completeness
 
@@ -319,7 +319,7 @@ Each row is solved ONCE; an alternative loses what the canonical path handles. "
 ### Lists (FlashList v2)
 
 - **No `estimatedItemSize`.** It is gone from 2.3.2's props, so it is a type error; don't add a workalike.
-- **A FlashList must be given a height by its host.** It is `flexBasis: 0`, so a content-sized container renders no rows (`recyclingListHostIsBounded.test.ts`).
+- **A FlashList must be given a height by its host.** It is `flexBasis: 0`, so a content-sized container renders no rows (`sous-chef/recycling-list-host-is-bounded`).
 - **Never feed FlashList `data` from `useDeferredValue` or inside `startTransition`**: it causes the production fatal `not enough layouts`. See `docs/flashlist-layout-index-race.md`.
 - **Every FlashList using `useFlashListPerformance` passes `perfCallbacks.CellRendererComponent` AND `onCommitLayoutEffect`.** The renderer is per-session sampled, so `undefined` is normal. See `docs/flashlist-performance-analysis.md` § Reading the instrumentation.
 - **A skeleton over a mounting FlashList releases on `hasContentLayout`**, never on loading flags or `onLoad`. Its cover exists from the list's FIRST commit, and a settled EMPTY list releases on `rowCount: 0`. Verified 2026-08-26 vs `@shopify/flash-list@2.3.2` — `docs/verified-library-behaviour.md#flashlist-v2-first-layout-opacity-gate`.
@@ -396,7 +396,7 @@ Mechanism for each rule: `docs/i18n-architecture.md`.
 - **Keys are typed** (`TranslationKey`, `KeyUnder<'prefix'>`, an enum template
   literal; `isTranslationKey` for server data). Never cast a string to a key.
 - **Shared copy has one home** — `errors.*`, `empty.*`, `labels.*` (`canonicalVocabulary.test.ts`).
-- **Never concatenate a number with a noun, or append `'s'`** — `t('key', { count })` (`numberNounConcatenation.test.ts`).
+- **Never concatenate a number with a noun, or append `'s'`** — `t('key', { count })` (`sous-chef/no-number-noun-concat`).
 - **Plural categories are derived** (`completePluralCategories`); a missing one falls to `fallbackLng` (verified vs `i18next@26.4.0`).
 - **Never inflect for the reader's gender** (`addresseeGender.test.ts`); noun agreement lives in per-context keys.
 - **An interpolated `{{resource}}`/`{{entity}}` takes a frame nothing agrees with** (`entityLabelAgreement.test.ts`).

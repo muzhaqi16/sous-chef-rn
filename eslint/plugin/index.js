@@ -23,5 +23,7 @@ module.exports = {
     'no-prose-literal': require('./rules/no-prose-literal'),
     'no-string-keyed-lookup': require('./rules/no-string-keyed-lookup'),
     'no-number-noun-concat': require('./rules/no-number-noun-concat'),
+    'queueable-write-is-local-first': require('./rules/queueable-write-is-local-first'),
+    'recycling-list-host-is-bounded': require('./rules/recycling-list-host-is-bounded'),
   },
 };

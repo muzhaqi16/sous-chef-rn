@@ -137,7 +137,7 @@ t('recipes.ingredientCount', { count }); // ✓
 
 Concatenation loses plural agreement, bakes English word order into code, and
 skips locale number formatting. Give each plural form its own whole sentence.
-`__tests__/i18n/numberNounConcatenation.test.ts` enforces it, and also bans
+`sous-chef/no-number-noun-concat` enforces it, and also bans
 appending a literal `'s'` — that shape produced "2 lattinas" in Italian and
 "2 kgs" in English.
 
@@ -211,7 +211,7 @@ reading rather than attempting the judgement.
 | `__tests__/i18n/localeParity.test.ts`                                      | keys missing from a locale                                                       |
 | `__tests__/i18n/moduleLevelCopyTables.test.ts`                             | copy held in module-level tables                                                 |
 | `__tests__/i18n/canonicalVocabulary.test.ts`                               | the same string declared in two namespaces (drift)                               |
-| `__tests__/i18n/numberNounConcatenation.test.ts`                           | `${count} ${t('noun')}` shapes and literal `'s'` appends                         |
+| `sous-chef/no-number-noun-concat`                                           | `${count} ${t('noun')}` shapes and literal `'s'` appends                          |
 | `__tests__/i18n/pluralCategories.test.ts`                                  | a locale missing a CLDR plural category it needs                                 |
 | `__tests__/i18n/addresseeGender.test.ts`                                   | copy inflected for the reader's gender                                           |
 | `__tests__/i18n/entityLabelAgreement.test.ts`                              | a determiner before an interpolated entity noun, and unreviewed new slots        |

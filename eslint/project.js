@@ -33,7 +33,12 @@ const TEST_FILES = ['**/__tests__/**/*.{ts,tsx}', '**/*.test.{ts,tsx}'];
 
 // The `sous-chef/*` bans on production code (docs/rules/). Test files and
 // GraphQL documents switch them off together.
-const PRODUCTION_RULES = ['no-schema-enum-cast', 'testid-from-registry'];
+const PRODUCTION_RULES = [
+  'no-schema-enum-cast',
+  'testid-from-registry',
+  'queueable-write-is-local-first',
+  'recycling-list-host-is-bounded',
+];
 
 const productionRules = severity =>
   Object.fromEntries(
@@ -148,6 +153,12 @@ const overrides = [
       '__tests__/setup/**/*.js',
     ],
     languageOptions: { globals: globals.jest },
+  },
+  {
+    // The queue BUILDS and replays these writes; it is not one of their
+    // callers, so the marker does not apply to it.
+    files: ['src/apollo/offlineQueue/**/*.{ts,tsx}'],
+    rules: { 'sous-chef/queueable-write-is-local-first': 'off' },
   },
   {
     // This module IS the parseFloat replacement.
