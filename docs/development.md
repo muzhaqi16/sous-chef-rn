@@ -648,7 +648,9 @@ rm -rf android/app/build android/app/.cxx
 **iOS clean build** — `npm run ios:clean` (clears `ios/build`, re-runs
 `pod install`).
 
-**"codegen produced changes — your committed generated files are stale"** — run
+**"codegen produced changes — your committed generated files are stale"** — the
+two tracked artifacts (`schema.graphql`, `persisted-query-manifest.json`) have
+drifted; run
 `npm run codegen`, commit the result, push again.
 
 **ProGuard/R8 issues in release builds** —

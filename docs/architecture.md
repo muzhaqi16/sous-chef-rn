@@ -312,9 +312,12 @@ PantryItemCard.graphql        # fragment PantryItemCard_pantryItem on PantryItem
 PantryItemCard.generated.ts   # generated — committed
 ```
 
-`.generated.ts` outputs are gitignored and rebuilt in CI; `schema.graphql` and
-`persisted-query-manifest.json` are tracked, and a pre-push hook fails if either
-is stale.
+Codegen output is gitignored and rebuilt — by CI, and by the `npm run codegen`
+that setup already asks for. Two artifacts are tracked because nothing else
+carries what they hold: `schema.graphql`, where a live server change lands in
+the branch, and `persisted-query-manifest.json`, which is what the server
+matches an operation against. A pre-push hook fails if either is stale, and its
+pathspec names exactly those two — a gitignored path there would check nothing.
 
 `npm run lint` validates every `.graphql` file against the pulled schema through
 `@graphql-eslint`'s `flat/operations-recommended`, so a renamed or newly
