@@ -1,12 +1,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { parse, Kind } = require('graphql');
 const ts = require('typescript');
 
 const ROOT = path.join(__dirname, '..', '..', '..');
-// Same-line only: `\s` would read a `mutation` field followed by a `timestamp`
-// field as an operation named `timestamp`.
-const OPERATION =
-  /^[ \t]*(?:query|mutation|subscription)[ \t]+([A-Za-z_]\w*)[ \t]*[({]/gm;
 
 let operationNames;
 
@@ -19,13 +16,23 @@ function readOperationNames() {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
       else if (entry.name.endsWith('.graphql') && !full.includes('generated')) {
-        for (const match of fs.readFileSync(full, 'utf8').matchAll(OPERATION)) {
-          operationNames.add(match[1]);
+        const document = parse(fs.readFileSync(full, 'utf8'));
+        for (const definition of document.definitions) {
+          if (
+            definition.kind === Kind.OPERATION_DEFINITION &&
+            definition.name
+          ) {
+            operationNames.add(definition.name.value);
+          }
         }
       }
     }
   };
   walk(path.join(ROOT, 'src'));
+  // Fail closed: an empty set would make this rule pass on every file.
+  if (operationNames.size === 0) {
+    throw new Error(`No GraphQL operations found under ${ROOT}/src.`);
+  }
   return operationNames;
 }
 

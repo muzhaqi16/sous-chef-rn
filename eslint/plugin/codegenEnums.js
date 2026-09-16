@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const ts = require('typescript');
 
 const SCHEMA_TYPES = path.join(
   __dirname,
@@ -20,15 +21,32 @@ let enums;
 function readCodegenEnums() {
   if (enums) return enums;
   enums = new Map();
-  const source = fs.readFileSync(SCHEMA_TYPES, 'utf8');
-  // Closed by a brace at line start: member JSDoc can hold `{@link …}`.
-  for (const block of source.matchAll(/export enum (\w+) \{([\s\S]*?)\n\}/g)) {
+  const source = ts.createSourceFile(
+    SCHEMA_TYPES,
+    fs.readFileSync(SCHEMA_TYPES, 'utf8'),
+    ts.ScriptTarget.Latest,
+    /* setParentNodes */ false,
+    ts.ScriptKind.TS,
+  );
+
+  for (const statement of source.statements) {
+    if (!ts.isEnumDeclaration(statement)) continue;
     enums.set(
-      block[1],
-      [...block[2].matchAll(/^\s*(\w+) = '([^']*)'/gm)].map(member => ({
-        member: member[1],
-        value: member[2],
-      })),
+      statement.name.text,
+      statement.members.flatMap(member =>
+        ts.isIdentifier(member.name) &&
+        member.initializer &&
+        ts.isStringLiteral(member.initializer)
+          ? [{ member: member.name.text, value: member.initializer.text }]
+          : [],
+      ),
+    );
+  }
+
+  // Fail closed: an empty map would make every consuming rule pass silently.
+  if (enums.size === 0) {
+    throw new Error(
+      `No enums found in ${SCHEMA_TYPES}; run \`npm run codegen\`.`,
     );
   }
   return enums;
