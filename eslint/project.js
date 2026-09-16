@@ -18,7 +18,8 @@ const ROOT = path.join(__dirname, '..');
 // so a runner started elsewhere silently gets an inferred program with default
 // compiler options — no strictNullChecks.
 const APP_PROJECT = { project: './tsconfig.json', tsconfigRootDir: ROOT };
-// The root tsconfig excludes `e2e` and `__tests__`; this one compiles both.
+// The root tsconfig's bare `__tests__` exclusion names that one directory, not
+// every directory of that name; this one adds the root test tree and `e2e/`.
 const TEST_PROJECT = {
   project: './__tests__/tsconfig.json',
   tsconfigRootDir: ROOT,
@@ -56,7 +57,6 @@ const productionRules = severity =>
   );
 
 const base = {
-  languageOptions: { globals: globals.jest },
   // Resolves the `#` aliases so import/no-restricted-paths can match them.
   settings: {
     'import/resolver': {
@@ -126,7 +126,7 @@ const base = {
       },
     ],
 
-    // Disable comments are banned; an exemption lives in an override below.
+    // Disable comments are banned outright; a rule comes off per glob here.
     'eslint-comments/no-use': 'error',
 
     radix: ['error', 'as-needed'],
@@ -149,6 +149,17 @@ const base = {
 };
 
 const overrides = [
+  {
+    // Repo-wide, Jest's globals let a stray `describe()` in `src/` pass
+    // `no-undef`. The RN preset covers `*.test.*` and `__{mocks,tests}__/`.
+    files: [
+      '**/__perf__/**/*.{ts,tsx}',
+      'e2e/**/*.ts',
+      '**/jest.setup.js',
+      '__tests__/setup/**/*.js',
+    ],
+    languageOptions: { globals: globals.jest },
+  },
   {
     // This module IS the parseFloat replacement.
     files: ['src/utils/parseDecimalInput.ts'],
@@ -309,9 +320,9 @@ const overrides = [
     // The exclusions are the modules whose OUTPUT is the console.
     files: ['src/**/*.ts', 'src/**/*.tsx'],
     ignores: [
-      '**/__tests__/**',
-      '**/*.test.ts',
-      '**/*.test.tsx',
+      ...TEST_FILES,
+      '**/__mocks__/**',
+      '**/__perf__/**',
       'src/utils/environment.ts',
       'src/apollo/links/consoleLink.ts',
       'src/services/telemetry/transports/**',
@@ -541,9 +552,7 @@ const overrides = [
       ...TEST_FILES,
       'src/components/atoms/themedComponents.tsx',
       'src/components/atoms/Text.tsx',
-      'src/components/organisms/SwipeableItem/**/*.{ts,tsx}',
       'src/components/atoms/ThemedStatusBar.tsx',
-      'src/components/molecules/BottomSheetAutocompleteInput.tsx',
       'src/components/molecules/Loading.tsx',
       'src/components/atoms/CachedImage.tsx',
       'src/components/molecules/Toast.tsx',
@@ -705,7 +714,9 @@ const overrides = [
   {
     // The kit: `size` / `weight` / `lineHeight` are its escape hatches, and a
     // wrapper passes its caller's role through. Error copy still pairs there.
+    // A later block decides the rule for every file it matches, exclusions included.
     files: ['src/components/**/*.{ts,tsx}'],
+    ignores: [...TEST_FILES, '**/__mocks__/**', '**/__perf__/**'],
     rules: {
       'sous-chef/text-needs-role': [
         'error',
