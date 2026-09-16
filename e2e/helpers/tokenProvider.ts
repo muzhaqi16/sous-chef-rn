@@ -65,7 +65,6 @@ function isConnectionFailure(error: unknown): boolean {
 
 /** Turns the abort into a message that says what happened. */
 async function fetchWithAbortMessage(
-  controller: AbortController,
   abortTimer: ReturnType<typeof setTimeout>,
   init: RequestInit,
 ): Promise<Response> {
@@ -110,7 +109,7 @@ export async function getAuthTokens(): Promise<AuthTokens> {
     TOKEN_FETCH_TIMEOUT_MS,
   );
 
-  const response = await fetchWithAbortMessage(controller, abortTimer, {
+  const response = await fetchWithAbortMessage(abortTimer, {
     method: 'POST',
     signal: controller.signal,
     headers: { 'Content-Type': 'application/json' },

@@ -437,7 +437,7 @@ describe('FilteredPantryItems', () => {
     // per-mode flag that hid this had no stated reason.
     it('shows the add-all button in header', () => {
       renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
-      expect(screen.queryByTestId('add-all-low-stock')).not.toBeNull();
+      expect(screen.getByTestId('add-all-low-stock')).not.toBeNull();
     });
 
     it('renders expiring item names', () => {

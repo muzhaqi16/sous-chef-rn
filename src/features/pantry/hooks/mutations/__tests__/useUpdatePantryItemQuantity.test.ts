@@ -67,6 +67,8 @@ it('writes and sends nothing for a quantity no parser can read', async () => {
     })?.quantity,
   ).toBe(3);
   // Nothing was sent, so nothing can come back refused.
-  await act(async () => {});
+  await act(async () => {
+    await Promise.resolve();
+  });
   expect(alertService.alert).not.toHaveBeenCalled();
 });

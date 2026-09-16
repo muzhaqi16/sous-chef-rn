@@ -274,7 +274,7 @@ describe('MealPlanMain', () => {
 
     const tree = renderWithApollo(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
-    expect(tree.queryByTestId('meal-plan-empty-state')).toBeTruthy();
+    expect(tree.getByTestId('meal-plan-empty-state')).toBeTruthy();
   });
 
   it('offers a retry, not "create a plan", when the plan fetch failed', () => {
@@ -330,7 +330,7 @@ describe('MealPlanMain', () => {
     );
 
     const tree = renderWithApollo(<MealPlanMain />);
-    expect(tree.queryByTestId('meal-plan-skeleton')).toBeTruthy();
+    expect(tree.getByTestId('meal-plan-skeleton')).toBeTruthy();
     expect(tree.queryByTestId('meal-plan-empty-state')).toBeNull();
   });
 
@@ -347,7 +347,7 @@ describe('MealPlanMain', () => {
     );
 
     const tree = renderWithApollo(<MealPlanMain />);
-    expect(tree.queryByTestId('meal-plan-empty-state')).toBeTruthy();
+    expect(tree.getByTestId('meal-plan-empty-state')).toBeTruthy();
     expect(tree.queryByTestId('meal-plan-skeleton')).toBeNull();
   });
 

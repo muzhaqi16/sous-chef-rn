@@ -95,7 +95,7 @@ export function usePantryQuery(
       // After the initial network fetch, use cache-first for re-renders to avoid
       // duplicate requests. On variable changes (filter/sort), revert to the
       // initial policy so the user gets fresh data.
-      nextFetchPolicy(currentFetchPolicy, context) {
+      nextFetchPolicy(_currentFetchPolicy, context) {
         if (context.reason === 'variables-changed') {
           return context.initialFetchPolicy;
         }

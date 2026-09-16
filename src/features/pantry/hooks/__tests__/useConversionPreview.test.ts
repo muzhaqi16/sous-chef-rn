@@ -1,4 +1,3 @@
-import { act } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useConversionPreview } from '../useConversionPreview';
 
@@ -30,9 +29,7 @@ describe('useConversionPreview', () => {
       },
     );
 
-    await act(async () => {
-      rerender({ inputQuantity: 1.25 });
-    });
+    rerender({ inputQuantity: 1.25 });
 
     expect(result.current.previewText).toBe('1 1/4 cup ≈ 177.441 g');
   });

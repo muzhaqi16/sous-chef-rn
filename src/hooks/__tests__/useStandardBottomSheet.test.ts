@@ -570,7 +570,7 @@ describe('useStandardBottomSheet', () => {
       attachRefMocks(result.current.ref);
       act(() => result.current.modalProps.onAnimate?.(-1, 0, 0, 0));
 
-      act(() => rerender({ visible: false }));
+      rerender({ visible: false });
 
       // Still on screen and fading; gorhom's onChange(-1) / onDismiss release it.
       expect(mockBackdropRelease).not.toHaveBeenCalled();

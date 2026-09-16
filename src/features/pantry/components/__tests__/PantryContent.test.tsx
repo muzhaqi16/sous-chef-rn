@@ -999,9 +999,7 @@ describe('PantryContent', () => {
       expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
 
       // Switch tabs: setSwitching(true) commits before fetching becomes true.
-      act(() => {
-        fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
-      });
+      fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
       // No skeleton yet — fetching hasn't started (switching=true, fetching=false).
       expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
 
@@ -1043,9 +1041,7 @@ describe('PantryContent', () => {
       expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
 
       // Instant client-side switch — no fetch, so no skeleton.
-      act(() => {
-        fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
-      });
+      fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
       expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
     });
 
@@ -1116,9 +1112,7 @@ describe('PantryContent', () => {
           locationCounts={counts}
         />,
       );
-      act(() => {
-        fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
-      });
+      fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
       expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
 
       // The pantry later qualifies for server mode and a background fetch

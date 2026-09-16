@@ -9,7 +9,7 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { findByKey } from '#/test-utils/findByKey';
+import { itemByKey } from '#/test-utils/itemByKey';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import type { RootState } from '#store/index';
 import { useConfigurableSettings } from '../useConfigurableSettings';
@@ -260,7 +260,7 @@ describe('useConfigurableSettings', () => {
       result.current.sections,
       'appearanceAndLanguage',
     );
-    const appearanceItem = findByKey(appearanceSection.items, 'appearance');
+    const appearanceItem = itemByKey(appearanceSection.items, 'appearance');
 
     expect(appearanceItem).toBeDefined();
     expect(appearanceItem.type).toBe('navigation');
@@ -273,7 +273,7 @@ describe('useConfigurableSettings', () => {
     });
 
     const accountSection = sectionById(result.current.sections, 'logout');
-    const logoutItem = findByKey(accountSection.items, 'logout');
+    const logoutItem = itemByKey(accountSection.items, 'logout');
 
     act(() => {
       logoutItem.onPress?.();
@@ -291,7 +291,7 @@ describe('useConfigurableSettings', () => {
       operationMocks: [settings.mock],
     });
 
-    const logoutItem = findByKey(
+    const logoutItem = itemByKey(
       sectionById(result.current.sections, 'logout').items,
       'logout',
     );
@@ -324,7 +324,7 @@ describe('useConfigurableSettings', () => {
       operationMocks: [settings.mock],
     });
 
-    const logoutItem = findByKey(
+    const logoutItem = itemByKey(
       sectionById(result.current.sections, 'logout').items,
       'logout',
     );
@@ -345,7 +345,7 @@ describe('useConfigurableSettings', () => {
     });
 
     const securitySection = sectionById(result.current.sections, 'security');
-    const biometricItem = findByKey(
+    const biometricItem = itemByKey(
       securitySection.items,
       'biometricAuthentication',
     );
@@ -359,7 +359,7 @@ describe('useConfigurableSettings', () => {
     const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
       operationMocks: [settings.mock],
     });
-    const langItem = findByKey(
+    const langItem = itemByKey(
       sectionById(result.current.sections, 'appearanceAndLanguage').items,
       'language',
     );
@@ -373,7 +373,7 @@ describe('useConfigurableSettings', () => {
     const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
       operationMocks: [settings.mock],
     });
-    const langItem = findByKey(
+    const langItem = itemByKey(
       sectionById(result.current.sections, 'appearanceAndLanguage').items,
       'language',
     );
@@ -404,7 +404,7 @@ describe('useConfigurableSettings', () => {
     });
     rerender(undefined);
 
-    const biometricItem = findByKey(
+    const biometricItem = itemByKey(
       sectionById(result.current.sections, 'security').items,
       'biometricAuthentication',
     );
@@ -433,7 +433,7 @@ describe('useConfigurableSettings', () => {
     });
     rerender(undefined);
 
-    const biometricItem = findByKey(
+    const biometricItem = itemByKey(
       sectionById(result.current.sections, 'security').items,
       'biometricAuthentication',
     );
@@ -447,7 +447,7 @@ describe('useConfigurableSettings', () => {
     const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
       operationMocks: [settings.mock],
     });
-    const biometricItem = findByKey(
+    const biometricItem = itemByKey(
       sectionById(result.current.sections, 'security').items,
       'biometricAuthentication',
     );
@@ -473,7 +473,7 @@ describe('useConfigurableSettings', () => {
       await new Promise(resolve => setTimeout(resolve, 0));
     });
 
-    const biometricItem = findByKey(
+    const biometricItem = itemByKey(
       sectionById(result.current.sections, 'security').items,
       'biometricAuthentication',
     );
@@ -578,7 +578,7 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      const biometricItem = findByKey(
+      const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
@@ -606,7 +606,7 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      const biometricItem = findByKey(
+      const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
@@ -634,7 +634,7 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      const biometricItem = findByKey(
+      const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
@@ -665,7 +665,7 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      const biometricItem = findByKey(
+      const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
@@ -708,7 +708,7 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      const biometricItem = findByKey(
+      const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
@@ -729,7 +729,7 @@ describe('useConfigurableSettings', () => {
         'Error',
         expect.any(String),
       );
-      const stillOn = findByKey(
+      const stillOn = itemByKey(
         sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
@@ -751,7 +751,7 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      const biometricItem = findByKey(
+      const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
@@ -785,7 +785,7 @@ describe('useConfigurableSettings', () => {
       const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
         operationMocks: [settings.mock],
       });
-      const biometricItem = findByKey(
+      const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
@@ -834,7 +834,7 @@ describe('useConfigurableSettings', () => {
       });
 
       // Trigger the modal open
-      const biometricItem = findByKey(
+      const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
@@ -897,7 +897,7 @@ describe('useConfigurableSettings', () => {
 
       // An unreadable keychain must not present biometrics as set up. The row
       // is the observable surface: off, and not togglable.
-      const biometricItem = findByKey(
+      const biometricItem = itemByKey(
         result.current.sections.flatMap(section => section.items),
         'biometricAuthentication',
       );

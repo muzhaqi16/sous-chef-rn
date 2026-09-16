@@ -127,7 +127,7 @@ jest.mock('#components/templates/ActionTray/ActionTray', () => {
   const R = require('react');
   const RN = require('react-native');
   const ActionTray = R.forwardRef(function MockActionTray(
-    props: ActionTrayProps,
+    _props: ActionTrayProps,
     ref: React.Ref<ActionTrayRef>,
   ) {
     R.useImperativeHandle(ref, () => ({ open: jest.fn(), close: jest.fn() }));

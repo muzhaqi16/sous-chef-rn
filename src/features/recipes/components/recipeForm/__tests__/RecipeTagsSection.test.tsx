@@ -92,7 +92,7 @@ describe('RecipeTagsSection', () => {
 
   it('opens diets sheet when diets group is pressed', async () => {
     const user = userEvent.setup();
-    const { getByText, queryByTestId } = render(
+    const { getByText, getByTestId, queryByTestId } = render(
       <RecipeTagsSection {...defaultProps} />,
     );
 
@@ -100,27 +100,27 @@ describe('RecipeTagsSection', () => {
 
     await user.press(getByText('Diets'));
 
-    expect(queryByTestId('sheet-Diets')).toBeTruthy();
+    expect(getByTestId('sheet-Diets')).toBeTruthy();
   });
 
   it('opens health goals sheet when pressed', async () => {
     const user = userEvent.setup();
-    const { getByText, queryByTestId } = render(
+    const { getByText, getByTestId } = render(
       <RecipeTagsSection {...defaultProps} />,
     );
 
     await user.press(getByText('Health Goals'));
-    expect(queryByTestId('sheet-Health Goals')).toBeTruthy();
+    expect(getByTestId('sheet-Health Goals')).toBeTruthy();
   });
 
   it('opens intolerances sheet when pressed', async () => {
     const user = userEvent.setup();
-    const { getByText, queryByTestId } = render(
+    const { getByText, getByTestId } = render(
       <RecipeTagsSection {...defaultProps} />,
     );
 
     await user.press(getByText('Intolerances'));
-    expect(queryByTestId('sheet-Intolerances')).toBeTruthy();
+    expect(getByTestId('sheet-Intolerances')).toBeTruthy();
   });
 
   it('labels an enum value from its key', () => {

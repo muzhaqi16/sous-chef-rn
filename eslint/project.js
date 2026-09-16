@@ -234,6 +234,35 @@ const overrides = [
       '**/*.test.tsx',
     ],
     rules: {
+      // Each is a deliberate pattern here, not a defect: a `done` callback in a
+      // subscription test (65), a test whose assertion is a spy check the rule
+      // cannot see (43), an assertion inside a catch (17), a hand-imported
+      // `__mocks__` module (3), and a test file exporting a shared type (2).
+      'jest/no-done-callback': 'off',
+      'jest/expect-expect': 'off',
+      'jest/no-conditional-expect': 'off',
+      'jest/no-mocks-import': 'off',
+      'jest/no-export': 'off',
+
+      // Bug classes RNTL cannot report at runtime: an unawaited async query
+      // asserts on a promise, a `waitFor` with several assertions retries the
+      // ones that already passed, a side effect inside one runs on every retry.
+      // `no-debugging-utils` is absent: it matches any `.debug(`, including the
+      // app's own logger. The preference rules (`prefer-screen-queries`,
+      // `render-result-naming-convention`, `prefer-find-by`) are absent too —
+      // together they report ~700 findings and catch no defect.
+      'testing-library/await-async-queries': 'error',
+      'testing-library/await-async-utils': 'error',
+      'testing-library/no-await-sync-queries': 'error',
+      'testing-library/no-promise-in-fire-event': 'error',
+      'testing-library/no-wait-for-multiple-assertions': 'error',
+      'testing-library/no-wait-for-side-effects': 'error',
+      'testing-library/no-node-access': 'error',
+      'testing-library/no-container': 'error',
+      'testing-library/no-global-regexp-flag-in-query': 'error',
+      'testing-library/no-unnecessary-act': 'error',
+      'testing-library/prefer-presence-queries': 'error',
+
       // The boundaries are about PRODUCTION dependency direction.
       'import/no-restricted-paths': 'off',
       'boundaries/dependencies': 'off',
@@ -699,6 +728,11 @@ const overrides = [
         'error',
         { followProjections: true },
       ],
+      // Registered by the RN preset and never switched on. `no-color-literals`
+      // reads style objects, where `sous-chef/no-raw-color` reads every literal
+      // and `/colou?r$/i`-keyed prop, so they overlap rather than duplicate.
+      'react-native/no-color-literals': 'error',
+      'react-native/no-unused-styles': 'error',
       'sous-chef/no-raw-color': 'error',
       'sous-chef/no-raw-spacing': 'error',
       'sous-chef/text-needs-role': ['error', { readVariants: true }],

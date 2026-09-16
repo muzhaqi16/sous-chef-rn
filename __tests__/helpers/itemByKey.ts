@@ -1,5 +1,7 @@
 /**
- * Find an item by its `key` field, throwing if absent.
+ * The item with this `key`, throwing if absent. Not named `findBy…`: that
+ * prefix is Testing Library's async-query convention, and this is a synchronous
+ * array lookup.
  *
  * `Array.prototype.find` returns `T | undefined`, forcing every test that
  * looks up a config-driven item (settings rows, menu entries, …) to either
@@ -8,13 +10,13 @@
  * downstream "Cannot read property of undefined" that an unguarded `.find()`
  * produces at runtime.
  */
-export function findByKey<T extends { key: string }>(
+export function itemByKey<T extends { key: string }>(
   items: readonly T[],
   key: string,
 ): T {
   const found = items.find(item => item.key === key);
   if (!found) {
-    throw new Error(`findByKey: no item with key "${key}"`);
+    throw new Error(`itemByKey: no item with key "${key}"`);
   }
   return found;
 }

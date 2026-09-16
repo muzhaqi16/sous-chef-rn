@@ -334,7 +334,7 @@ describe('useShoppingListSubscriptions', () => {
     } = require('#features/shoppingList/cache/connections');
 
     const getOnData = captureCustomOnData();
-    const scheduleAnimation = jest.fn((id, dir, onComplete) => onComplete());
+    const scheduleAnimation = jest.fn((_id, _dir, onComplete) => onComplete());
     renderHookWithApollo(() =>
       useShoppingListSubscriptions('user-1', scheduleAnimation),
     );

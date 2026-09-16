@@ -11,6 +11,8 @@ const importPlugin = require('eslint-plugin-import');
 const i18nextPlugin = require('eslint-plugin-i18next');
 const noBarrelFilesPlugin = require('eslint-plugin-no-barrel-files');
 const reactHooksPlugin = require('eslint-plugin-react-hooks');
+const jestPlugin = require('eslint-plugin-jest');
+const testingLibraryPlugin = require('eslint-plugin-testing-library');
 const sousChefPlugin = require('./eslint/plugin');
 const { base, overrides } = require('./eslint/project');
 
@@ -75,9 +77,17 @@ module.exports = [
       i18next: i18nextPlugin,
       import: importPlugin,
       boundaries: boundariesPlugin,
+      'testing-library': testingLibraryPlugin,
       'no-barrel-files': noBarrelFilesPlugin,
     },
     ...base,
+  },
+  // `eslint-plugin-jest`'s recommended set, composed here for the same reason
+  // as the GraphQL one below, and promoted to errors like every other preset.
+  // The project's own test-file override follows, and so wins.
+  {
+    files: ['**/__tests__/**/*.{ts,tsx}', '**/*.test.{ts,tsx}'],
+    rules: errorsOnly(jestPlugin.configs['flat/recommended']).rules,
   },
   // The operations preset, composed here because it carries plugin objects:
   // `eslint/project.js` stays pure data so the Jest guards can read it. The

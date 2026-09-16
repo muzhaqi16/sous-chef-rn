@@ -32,6 +32,23 @@ A ban that is one esquery selector and nothing else is an entry of the stock
 `no-restricted-syntax` rule instead of a rule of its own — the catalog of those
 is [`restricted-syntax.md`](restricted-syntax.md).
 
+## Library rule sets
+
+Three presets carry rules this project would otherwise hand-write, each with the
+entries that do not fit named and switched off in `eslint/project.js`:
+
+| Preset                                          | Scope          | Off, and why                                                                                                                |
+| ----------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `@graphql-eslint` `flat/operations-recommended` | `**/*.graphql` | `naming-convention`'s fragment casing and `Get` prefix; `no-unused-fragments` (a fragment read from TypeScript)             |
+| `eslint-plugin-jest` `flat/recommended`         | test files     | `no-done-callback`, `expect-expect`, `no-conditional-expect`, `no-mocks-import`, `no-export` — deliberate patterns here     |
+| `eslint-plugin-testing-library`                 | test files     | the preference half (`prefer-screen-queries`, `render-result-naming-convention`, `prefer-find-by`) and `no-debugging-utils` |
+
+Only the bug-class half of testing-library is on: an unawaited async query
+asserts on a promise, a `waitFor` holding several assertions retries the ones
+that already passed, and a side effect inside one runs on every retry.
+`no-debugging-utils` is absent because it matches any `.debug(`, the app's own
+logger included.
+
 ## typescript-eslint rules
 
 Type-checked rules the project turns on, each at zero when it was enabled. The
@@ -66,6 +83,7 @@ exact options and file scopes are in `eslint/project.js`.
 | `noUncheckedIndexedAccess`         | `arr[0]`, `record[key]` and a regex capture read as `T \| undefined`, so a guard on one is real |
 | `noImplicitOverride`               | An overriding method says `override`, so a renamed base method fails the build                  |
 | `noFallthroughCasesInSwitch`       | A `case` cannot silently run into the next                                                      |
+| `noUnusedParameters`               | A parameter nothing reads is dead weight or a signature that drifted                            |
 | `forceConsistentCasingInFileNames` | An import's casing matches the file, as the case-sensitive CI filesystem requires               |
 
 Typed keys and generated symbols carry more than lint does: `t` takes a
