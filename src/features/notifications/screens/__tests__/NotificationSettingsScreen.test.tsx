@@ -23,11 +23,8 @@ jest.mock('#/services/authService', () => ({
   authService: { registerDeviceInBackground: jest.fn() },
 }));
 
-const registerDeviceInBackground = (
-  jest.requireMock('#/services/authService') as {
-    authService: { registerDeviceInBackground: jest.Mock };
-  }
-).authService.registerDeviceInBackground;
+const registerDeviceInBackground = jest.requireMock('#/services/authService')
+  .authService.registerDeviceInBackground;
 
 const mockUpdateNotificationSetting = jest.fn().mockResolvedValue(true);
 const mockResetToDefaults = jest.fn().mockResolvedValue(true);

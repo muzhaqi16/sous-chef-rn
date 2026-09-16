@@ -1,15 +1,22 @@
 import { useState } from 'react';
-import { useFragment, useMutation } from '@apollo/client/react';
-import { handleMutationError } from '#/utils/errorHandlers';
+import {
+  useApolloClient,
+  useFragment,
+  useMutation,
+} from '@apollo/client/react';
 import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { UseQuantityEditModal_ItemFragmentDoc } from './useQuantityEditModal.generated';
 import { Telemetry } from '#/services/telemetry';
-import { t } from '#/i18n';
+import { useTranslation } from '#/i18n';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { setCachedFields } from '#/apollo/utils/cacheUpdaters';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { parseFractionalInput } from '#/utils/fractionUtils';
 
 export interface QuantityEditItem {
   id: string;
@@ -26,8 +33,6 @@ export interface QuantityEditItem {
     name: string;
     isDefault: boolean;
     isPreferred: boolean;
-    displayNameSingular?: string | null;
-    displayNamePlural?: string | null;
   }>;
 }
 
@@ -57,18 +62,14 @@ export function useQuantityEditModal(
   options: UseQuantityEditModalOptions,
 ): UseQuantityEditModalResult {
   const { items } = options;
+  const { t } = useTranslation();
+  const client = useApolloClient();
 
   const [visible, setVisible] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [updateQuantity] = useMutation(UpdateShoppingListItemQuantityDocument, {
-    onError: error => {
-      handleMutationError(error, {
-        operation: 'Update Shopping Item Quantity',
-      });
-    },
-  });
+  const [updateQuantity] = useMutation(UpdateShoppingListItemQuantityDocument);
 
   // `from: null` makes `useFragment` return `complete: false`.
   const { data: liveItem, complete: liveItemComplete } = useFragment({
@@ -89,13 +90,16 @@ export function useQuantityEditModal(
   const selectedItem: QuantityEditItem | null = selectedItemRaw
     ? {
         id: selectedItemRaw.id,
-        itemName: selectedItemRaw.itemName || t('labels.item'),
+        itemName: firstNonBlank(selectedItemRaw.itemName) ?? t('labels.item'),
         quantity: selectedItemRaw.quantity ?? 0,
         unitName:
-          selectedItemRaw.unit?.symbol || selectedItemRaw.unitName || null,
-        unitId: selectedItemRaw.unit?.id || null,
-        category: selectedItemRaw.category || null,
-        imageUrl: resolveImageUrl(selectedItemRaw) || null,
+          firstNonBlank(
+            selectedItemRaw.unit?.symbol,
+            selectedItemRaw.unitName,
+          ) ?? null,
+        unitId: selectedItemRaw.unit?.id ?? null,
+        category: firstNonBlank(selectedItemRaw.category) ?? null,
+        imageUrl: resolveImageUrl(selectedItemRaw),
         version: selectedItemRaw.version,
         // Units are available on the Full fragment (detail view) but not the Display
         // fragment used in list views. Provide the current unit as the only option.
@@ -107,8 +111,6 @@ export function useQuantityEditModal(
                 name: selectedItemRaw.unit.name,
                 isDefault: true,
                 isPreferred: true,
-                displayNameSingular: null,
-                displayNamePlural: null,
               },
             ]
           : [],
@@ -137,43 +139,80 @@ export function useQuantityEditModal(
 
     setIsLoading(true);
 
-    let result;
-    try {
-      result = await updateQuantity({
-        variables: {
-          input: {
-            itemId: selectedItemRaw.id,
-            // Separators normalized, fraction preserved: the server parses this
-            // string itself and rejects a comma decimal outright, so a
-            // comma-decimal keypad would otherwise lose every fractional edit.
-            quantity: normalizeNumericTextForApi(quantity),
-            unitId,
-            version: selectedItemRaw.version,
-          },
-        },
-      });
-    } catch {
-      // Silent by design: the mutation's own `onError` already reported the
-      // throw, and reporting again here would double-report.
+    const itemId = selectedItemRaw.id;
+    // Separators normalized, fraction preserved: the server parses this string
+    // itself and rejects a comma decimal outright.
+    const quantityInput = normalizeNumericTextForApi(quantity);
+    const parsed = parseFractionalInput(quantityInput);
+    const row = items.find(i => i.id === itemId);
+    const previous = {
+      quantity: row?.quantity ?? selectedItemRaw.quantity,
+      quantityInput: row?.quantityInput ?? null,
+    };
+
+    // Local-first: the write can be queued, so the list shows the new quantity
+    // now and after a restart, not only once the replay lands.
+    const next = {
+      quantityInput,
+      ...(parsed !== null && { quantity: parsed }),
+    };
+    setCachedFields(client.cache, 'ShoppingListItem', itemId, next);
+    optimisticDataPersistence.save(
+      'ShoppingListItem',
+      itemId,
+      'quantityInput',
+      quantityInput,
+    );
+    if (parsed !== null) {
+      optimisticDataPersistence.save(
+        'ShoppingListItem',
+        itemId,
+        'quantity',
+        parsed,
+      );
     }
+    const clearPersisted = () => {
+      optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity');
+      optimisticDataPersistence.clear(
+        'ShoppingListItem',
+        itemId,
+        'quantityInput',
+      );
+    };
+
+    const settled = await settleMutation(
+      () =>
+        updateQuantity({
+          variables: {
+            input: {
+              itemId,
+              quantity: quantityInput,
+              unitId,
+              version: selectedItemRaw.version,
+            },
+          },
+          context: { localFirst: true },
+          onCompleted: result => {
+            if (appliedPayload(result)) clearPersisted();
+          },
+        }),
+      {
+        document: UpdateShoppingListItemQuantityDocument,
+        fallback: t('errors.adjustQuantityFailed'),
+        onFailed: () => {
+          clearPersisted();
+          setCachedFields(client.cache, 'ShoppingListItem', itemId, previous);
+        },
+      },
+    );
 
     setIsLoading(false);
 
-    // A link-level throw leaves `result` undefined, which classifies as
-    // 'rejected' while `alertRejectedMutation` suppresses only on `result.error`
-    // — without this guard one failure alerts twice. The sheet stays open.
-    if (!result) return;
-
-    // A refused quantity resolves as a ValidationError payload with no `error`,
-    // so `onError` never fires; closing here would read as a save that took and
-    // silently drop what the user typed. 'queued' (offline) closes as a success.
-    if (classifyCreateResult(result) === 'rejected') {
-      alertRejectedMutation(result, t('errors.adjustQuantityFailed'));
-      return;
-    }
+    // The sheet stays open on a failure, so what the user typed survives it.
+    if (settled.status === 'failed') return;
 
     Telemetry.trackEvent('shopping_item_quantity_updated', {
-      item_id: selectedItemRaw.id,
+      item_id: itemId,
       quantity,
     });
 

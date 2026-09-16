@@ -18,9 +18,7 @@ jest.mock('#hooks/app/useIsApiUnavailable', () => ({
   useIsApiUnavailable: jest.fn(() => false),
 }));
 
-const mockedNetworkBlocked = jest.requireMock(
-  '#hooks/app/useIsApiUnavailable',
-) as { useIsApiUnavailable: jest.Mock };
+const mockedNetworkBlocked = jest.requireMock('#hooks/app/useIsApiUnavailable');
 
 const setNetworkBlocked = (blocked: boolean) =>
   mockedNetworkBlocked.useIsApiUnavailable.mockReturnValue(blocked);
@@ -128,6 +126,13 @@ function failingMocks(pantryId = 'pantry-1'): MockedResponse[] {
   ];
 }
 
+const anyLoading = (analytics: {
+  usageLoading: boolean;
+  wasteLoading: boolean;
+  ledgerLoading: boolean;
+}) =>
+  analytics.usageLoading || analytics.wasteLoading || analytics.ledgerLoading;
+
 describe('usePantryAnalytics', () => {
   it('returns analytics data when pantryId is provided', async () => {
     const { result } = renderHook(
@@ -135,7 +140,7 @@ describe('usePantryAnalytics', () => {
       { wrapper: createApolloTestWrapper({ operationMocks: defaultMocks() }) },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await waitFor(() => expect(anyLoading(result.current)).toBe(false));
 
     // Fixtures state the fields under test; the rest of each selection set is
     // filled from the SDL, so this checks the hook routes each query to the
@@ -231,8 +236,8 @@ describe('usePantryAnalytics', () => {
         },
       );
 
-      expect(result.current.loading).toBe(true);
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(anyLoading(result.current)).toBe(true);
+      await waitFor(() => expect(anyLoading(result.current)).toBe(false));
     });
 
     /**
@@ -255,7 +260,7 @@ describe('usePantryAnalytics', () => {
           }),
         },
       );
-      await waitFor(() => expect(first.result.current.loading).toBe(false));
+      await waitFor(() => expect(anyLoading(first.result.current)).toBe(false));
       first.unmount();
 
       // Same cache, fresh mocks — a second visit to the tab.
@@ -273,7 +278,7 @@ describe('usePantryAnalytics', () => {
       expect(second.result.current.usageLoading).toBe(false);
       expect(second.result.current.wasteLoading).toBe(false);
       expect(second.result.current.ledgerLoading).toBe(false);
-      expect(second.result.current.loading).toBe(false);
+      expect(anyLoading(second.result.current)).toBe(false);
     });
 
     it('is false when pantryId is invalid (queries skipped)', () => {
@@ -282,7 +287,7 @@ describe('usePantryAnalytics', () => {
         { wrapper: createApolloTestWrapper({ operationMocks: [] }) },
       );
 
-      expect(result.current.loading).toBe(false);
+      expect(anyLoading(result.current)).toBe(false);
     });
   });
 
@@ -381,7 +386,7 @@ describe('usePantryAnalytics', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await waitFor(() => expect(anyLoading(result.current)).toBe(false));
 
       expect(typeof result.current.refetch).toBe('function');
     });
@@ -394,7 +399,7 @@ describe('usePantryAnalytics', () => {
         { wrapper: createApolloTestWrapper({ operationMocks: [] }) },
       );
 
-      expect(result.current.loading).toBe(false);
+      expect(anyLoading(result.current)).toBe(false);
       expect(result.current.usageData).toBeNull();
     });
 
@@ -404,7 +409,7 @@ describe('usePantryAnalytics', () => {
         { wrapper: createApolloTestWrapper({ operationMocks: [] }) },
       );
 
-      expect(result.current.loading).toBe(false);
+      expect(anyLoading(result.current)).toBe(false);
       expect(result.current.usageData).toBeNull();
     });
   });

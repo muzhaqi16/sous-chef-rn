@@ -68,31 +68,6 @@
     "createdDuringOnboarding": "Creato durante la configurazione",
     "defaultPantryDescription": "Dispensa predefinita"
   },
-  "onboardingSteps": {
-    "CreateHome": {
-      "title": "Crea casa",
-      "subtitle": "Configura la tua casa"
-    },
-    "CreateShoppingList": {
-      "subtitle": "Crea la tua prima lista"
-    },
-    "SelectPantryItems": {
-      "title": "Articoli dispensa",
-      "subtitle": "Seleziona cosa hai"
-    },
-    "ProfilePictureUpload": {
-      "subtitle": "Aggiungi la tua foto"
-    },
-    "InviteMembers": {
-      "subtitle": "Condividi con la famiglia"
-    },
-    "BiometricSetup": {
-      "subtitle": "Configura la biometria"
-    },
-    "OnboardingComplete": {
-      "title": "Completato"
-    }
-  },
   "onboardingValidation": {
     "homeRequired": "Il nome della casa è obbligatorio",
     "homeMin": "Il nome della casa deve contenere almeno {{count}} caratteri",
@@ -103,7 +78,8 @@
     "listRequired": "Il nome della lista è obbligatorio",
     "listMin": "Il nome della lista deve contenere almeno {{count}} caratteri",
     "listMax": "Il nome della lista deve contenere meno di {{count}} caratteri",
-    "itemsMax": "Puoi selezionare fino a {{count}} articoli"
+    "itemsMax": "Puoi selezionare fino a {{count}} articoli",
+    "homeChars": "Il nome della casa può contenere solo lettere, numeri, spazi, trattini, apostrofi e virgolette"
   },
   "onboarding": {
     "progress": "Passaggio {{step}} di {{total}}"

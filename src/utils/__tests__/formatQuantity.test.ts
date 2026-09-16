@@ -3,7 +3,15 @@ import {
   formatQuantityDisplay,
   formatQuantityAsFraction,
   formatQuantityForDisplay,
+  formatQuantityForInput,
+  getUnitDisplayText,
 } from '../formatQuantity';
+import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
+
+jest.mock('#/utils/deviceLocale', () => ({
+  ...jest.requireActual('#/utils/deviceLocale'),
+  getDeviceDecimalSeparator: jest.fn(() => '.'),
+}));
 
 describe('formatQuantity', () => {
   it('formats integers without decimals', () => {
@@ -17,10 +25,11 @@ describe('formatQuantity', () => {
     expect(formatQuantity(1.1)).toBe('1.1');
   });
 
-  it('rounds to 2 decimal places', () => {
-    expect(formatQuantity(0.333)).toBe('0.33');
-    expect(formatQuantity(1.999)).toBe('2');
-    expect(formatQuantity(2.456)).toBe('2.46');
+  it('keeps three decimal places and rounds past them', () => {
+    expect(formatQuantity(0.125)).toBe('0.125');
+    expect(formatQuantity(0.3333)).toBe('0.333');
+    expect(formatQuantity(1.9999)).toBe('2');
+    expect(formatQuantity(2.4567)).toBe('2.457');
   });
 
   it('handles negative numbers', () => {
@@ -60,9 +69,11 @@ describe('formatQuantityDisplay', () => {
     expect(formatQuantityDisplay(10.5, 'oz')).toBe('10 1/2 oz');
   });
 
-  it('trims a value no fraction fits to 2 decimals', () => {
+  it('rounds a value no fraction fits to three decimals', () => {
     expect(formatQuantityDisplay(2.7, 'oz')).toBe('2.7 oz');
     expect(formatQuantityDisplay(0.07, 'oz')).toBe('0.07 oz');
+    expect(formatQuantityDisplay(2.456, 'oz')).toBe('2.456 oz');
+    expect(formatQuantityDisplay(177.4412, 'oz')).toBe('177.441 oz');
   });
 
   it('formats integers cleanly', () => {
@@ -70,11 +81,22 @@ describe('formatQuantityDisplay', () => {
   });
 });
 
+describe('getUnitDisplayText', () => {
+  it('prefers the symbol over the name', () => {
+    expect(getUnitDisplayText({ symbol: 'g', name: 'gram' })).toBe('g');
+  });
+
+  it('falls back to the name when the symbol is blank', () => {
+    expect(getUnitDisplayText({ symbol: '', name: 'pinch' })).toBe('pinch');
+  });
+
+  it('returns empty for no unit', () => {
+    expect(getUnitDisplayText(null)).toBe('');
+  });
+});
+
 describe('formatQuantityAsFraction', () => {
-  it('returns "0" for null/undefined/zero', () => {
-    expect(
-      (formatQuantityAsFraction as (qty: number | null) => string)(null),
-    ).toBe('0');
+  it('returns "0" for zero', () => {
     expect(formatQuantityAsFraction(0)).toBe('0');
   });
 
@@ -138,7 +160,7 @@ describe('formatQuantityForDisplay', () => {
     expect(formatQuantityForDisplay(0.33333334)).toBe('1/3');
     expect(formatQuantityForDisplay(0.25)).toBe('1/4');
     expect(formatQuantityForDisplay(0.125)).toBe('1/8');
-    expect(formatQuantityForDisplay(2.456)).toBe('2.46');
+    expect(formatQuantityForDisplay(2.4567)).toBe('2.457');
   });
 
   it("keeps the user's own notation", () => {
@@ -201,5 +223,37 @@ describe('the value set the fraction seeding was verified against', () => {
     expect(formatQuantityAsFraction(1e12 + 0.5)).toBe(
       formatQuantity(1e12 + 0.5),
     );
+  });
+});
+
+describe('formatQuantityForInput', () => {
+  afterEach(() => jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.'));
+
+  it('seeds a cooking fraction that reads back as the same value', () => {
+    expect(formatQuantityForInput(1.25)).toBe('1 1/4');
+    // The API's float32 echo of a third is still a third.
+    expect(formatQuantityForInput(0.33333334)).toBe('1/3');
+  });
+
+  it('keeps three decimals and rounds past them', () => {
+    expect(formatQuantityForInput(2.456)).toBe('2.456');
+    expect(formatQuantityForInput(177.4412)).toBe('177.441');
+    // Equal to a third at three places is a third.
+    expect(formatQuantityForInput(0.333)).toBe('1/3');
+  });
+
+  it('writes the device decimal separator', () => {
+    jest.mocked(getDeviceDecimalSeparator).mockReturnValue(',');
+    expect(formatQuantityForInput(2.456)).toBe('2,456');
+    expect(formatQuantityForInput(1.25)).toBe('1 1/4');
+  });
+
+  it('seeds a decimal-pad field without a fraction', () => {
+    expect(formatQuantityForInput(1.25, { notation: 'decimal' })).toBe('1.25');
+  });
+
+  it('seeds nothing for an absent quantity', () => {
+    expect(formatQuantityForInput(null)).toBe('');
+    expect(formatQuantityForInput(Number.NaN)).toBe('');
   });
 });

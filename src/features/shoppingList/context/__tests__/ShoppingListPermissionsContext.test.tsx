@@ -31,7 +31,7 @@ describe('the shopping list permission answer', () => {
     const seen: ShoppingListPermissions[] = [];
     const Reader = () => {
       seen.push(useShoppingListItemPermissions());
-      return <Text>read</Text>;
+      return <Text role="body">read</Text>;
     };
 
     render(

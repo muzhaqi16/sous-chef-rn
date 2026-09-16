@@ -18,14 +18,8 @@ import {
   useResetPassword,
   type ResetPasswordFn,
 } from '#features/auth/hooks/useResetPassword';
-import { PasswordActionStatus } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
-import { localizedErrorMessage, errorService } from '#/services/errorService';
-import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
-import {
-  getRateLimitMessage,
-  isRateLimitError,
-} from '#/utils/errors/rateLimit';
+import { localizedErrorMessage } from '#/services/errorService';
 import { logValidationErrors } from '#/utils/validation/common';
 import { getResetPasswordValidationSchema } from '#/utils/validation/auth';
 import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
@@ -34,63 +28,50 @@ import { Text } from '#components/atoms/Text';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Screen } from '#components/templates/Screen';
 import { toastService } from '#services/toastService';
+import { authTestIDs } from '#features/auth/testIDs';
 
-/** Module-level async function for password reset submission.
- *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
+/** Module-level so the await chain does not bail the screen out of the compiler. */
 async function performPasswordReset(
   token: string,
   newPassword: string,
   resetPassword: ResetPasswordFn,
   navigateToLogin: () => void,
   successMessage: string,
-  defaultErrorMessage: string,
   rejectedMessage: string,
   onTokenRejected: () => void,
   setNewPasswordError: (message: string) => void,
 ): Promise<void> {
   logger.info('Attempting password reset');
 
-  const result = await resetPassword(token, newPassword);
+  const outcome = await resetPassword(token, newPassword);
 
-  const payload = result.data?.resetPassword;
+  if (outcome.status === 'completed') {
+    logger.info('Password reset successful');
 
-  if (payload?.__typename === 'ResetPasswordPayload') {
-    if (payload.status === PasswordActionStatus.Completed) {
-      logger.info('Password reset successful');
+    toastService.success(successMessage);
 
-      toastService.success(successMessage);
-
-      setTimeout(() => {
-        navigateToLogin();
-      }, 1500);
-      return;
-    }
-
-    // A spent or bad link is reported as a status on the success payload, not
-    // as an error member, so it has to be read here. Switching the screen to
-    // the invalid-link view matters: the form itself can never succeed with
-    // this token, and leaving the user on it invites them to keep retrying.
-    if (payload.status === PasswordActionStatus.InvalidOrExpired) {
-      onTokenRejected();
-      throw new Error(rejectedMessage);
-    }
-
-    throw new Error(defaultErrorMessage);
-  }
-
-  // Never `payload.message` — unlocalizable English by construction.
-  const message = localizedRefusalMessage(payload, defaultErrorMessage);
-
-  // A password the server refuses is a field the user can fix, so the message
-  // belongs on the input. Thrown instead it reaches `localizedErrorMessage`,
-  // which resolves a plain Error to UNKNOWN_ERROR and shows the generic
-  // fallback — losing the one sentence that says what to change.
-  if (payload?.__typename === 'ValidationError') {
-    setNewPasswordError(message);
+    setTimeout(() => {
+      navigateToLogin();
+    }, 1500);
     return;
   }
 
-  throw new Error(message);
+  // The form can never succeed with a spent link, and leaving the user on it
+  // invites them to keep retrying — so the screen switches to the invalid view.
+  if (outcome.status === 'linkRejected') {
+    onTokenRejected();
+    toastService.error(rejectedMessage);
+    return;
+  }
+
+  // A password the server refuses is a field the user can fix, so the message
+  // belongs on the input rather than in a toast that says nothing about which.
+  if (outcome.field === 'newPassword') {
+    setNewPasswordError(outcome.body);
+    return;
+  }
+
+  toastService.error(outcome.body);
 }
 
 interface ResetPasswordRouteParams {
@@ -132,6 +113,17 @@ export const ResetPasswordScreen: React.FC = () => {
 
   const watchedValues = useWatch({ control: form.control });
 
+  // `shouldValidate` re-runs the rule on THIS field only, and the match rule
+  // reports on `confirmPassword` while reading `newPassword`. It re-runs only
+  // once the confirmation has been reached — a mismatch under an empty field
+  // is feedback on nothing the user did. Submit still waits on `isValid`.
+  const setField = (field: keyof ResetPasswordForm, value: string) => {
+    form.setValue(field, value, { shouldValidate: true });
+    if (field === 'newPassword' && form.getValues('confirmPassword') !== '') {
+      void form.trigger('confirmPassword');
+    }
+  };
+
   // Opening a link must not, by itself, end a session — any web page can
   // present one. So the token is checked against the server FIRST, and only a
   // token the server accepts clears the current session (which the reset then
@@ -146,22 +138,10 @@ export const ResetPasswordScreen: React.FC = () => {
     let cancelled = false;
 
     const check = async () => {
-      let result;
-      try {
-        result = await validateToken(token);
-      } catch (error) {
-        // Unreachable server is NOT proof the link is good. Fail closed: keep
-        // the session, show the invalid-link view, let them try again.
-        errorService.reportError(error, {
-          operation: 'ResetPassword.validateToken',
-        });
-      }
+      // An unreachable server is NOT proof the link is good. Fail closed: keep
+      // the session, show the invalid-link view, let them try again.
+      const accepted = await validateToken(token);
       if (cancelled) return;
-
-      const payload = result?.data?.validatePasswordResetToken;
-      const accepted =
-        payload?.__typename === 'ValidatePasswordResetTokenPayload' &&
-        payload.status !== PasswordActionStatus.InvalidOrExpired;
 
       if (!accepted) {
         setIsTokenRejected(true);
@@ -174,7 +154,8 @@ export const ResetPasswordScreen: React.FC = () => {
       setTokenCheck('valid');
     };
 
-    check();
+    // `validateToken` settles a failure as `false`, so the check never rejects.
+    void check();
 
     return () => {
       cancelled = true;
@@ -191,7 +172,7 @@ export const ResetPasswordScreen: React.FC = () => {
       return;
     }
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       () =>
         performPasswordReset(
           token,
@@ -199,7 +180,6 @@ export const ResetPasswordScreen: React.FC = () => {
           resetPassword,
           navigateToLogin,
           t('auth.resetPasswordSuccess'),
-          t('errors.resetPasswordFailed'),
           t('auth.resetPasswordFailedFallback'),
           handleTokenRejected,
           message => form.setError('newPassword', { message }),
@@ -207,18 +187,8 @@ export const ResetPasswordScreen: React.FC = () => {
       setIsSubmitting,
       (error: unknown) => {
         logger.error('Password reset failed', { error });
-
-        // resetPassword is capped at 5/hour server-side, and it arrives as a
-        // top-level GraphQL error rather than a payload status. Without this
-        // the user is told the reset "failed" and retries immediately, which
-        // only pushes the window further out — they need the wait time.
         toastService.error(
-          isRateLimitError(error)
-            ? getRateLimitMessage(error)
-            : localizedErrorMessage(
-                error,
-                t('auth.resetPasswordFailedFallback'),
-              ),
+          localizedErrorMessage(error, t('auth.resetPasswordFailedFallback')),
         );
       },
     );
@@ -243,7 +213,7 @@ export const ResetPasswordScreen: React.FC = () => {
   if (!hasValidTokenFormat || isTokenRejected) {
     return (
       <Screen
-        testID="reset-password-invalid-link"
+        testID={authTestIDs.resetPasswordInvalidLinkView}
         header={{
           close: handleGoBack,
         }}
@@ -281,7 +251,7 @@ export const ResetPasswordScreen: React.FC = () => {
   if (tokenCheck === 'checking') {
     return (
       <Screen
-        testID="reset-password-checking"
+        testID={authTestIDs.resetPasswordCheckingView}
         header={{
           close: handleGoBack,
         }}
@@ -297,7 +267,7 @@ export const ResetPasswordScreen: React.FC = () => {
 
   return (
     <Screen
-      testID="reset-password-screen"
+      testID={authTestIDs.resetPasswordScreen}
       header={{
         close: handleGoBack,
       }}
@@ -335,13 +305,11 @@ export const ResetPasswordScreen: React.FC = () => {
             </Text>
             <PasswordInput
               value={watchedValues.newPassword}
-              onChangeText={text =>
-                form.setValue('newPassword', text, { shouldValidate: true })
-              }
+              onChangeText={text => setField('newPassword', text)}
               placeholder={t('auth.newPasswordPlaceholder')}
               errorMessage={form.formState.errors.newPassword?.message}
               editable={!isSubmitting}
-              testID="reset-password-new-input"
+              testID={authTestIDs.resetPasswordNewInput}
               returnKeyType="next"
               // Hand focus straight to the confirmation without letting the
               // keyboard drop and re-open in between.
@@ -358,13 +326,11 @@ export const ResetPasswordScreen: React.FC = () => {
               ref={confirmPasswordRef}
               returnKeyType="done"
               value={watchedValues.confirmPassword}
-              onChangeText={text =>
-                form.setValue('confirmPassword', text, { shouldValidate: true })
-              }
+              onChangeText={text => setField('confirmPassword', text)}
               placeholder={t('auth.confirmPasswordPlaceholder')}
               errorMessage={form.formState.errors.confirmPassword?.message}
               editable={!isSubmitting}
-              testID="reset-password-confirm-input"
+              testID={authTestIDs.resetPasswordConfirmInput}
             />
           </View>
 
@@ -374,7 +340,7 @@ export const ResetPasswordScreen: React.FC = () => {
             disabled={!form.formState.isValid}
             loading={isSubmitting}
             style={styles.buttonSpacing}
-            testID="reset-password-submit-button"
+            testID={authTestIDs.resetPasswordSubmitButton}
           >
             {t('auth.resetPasswordButton')}
           </Button>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView } from 'react-native';
+import { ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { ShoppingListItemSkeleton } from '#features/shoppingList/components/skeletons/ShoppingListItemSkeleton';
 
@@ -16,11 +16,9 @@ export const ShoppingListSkeleton: React.FC = () => (
     contentContainerStyle={styles.container}
     showsVerticalScrollIndicator={false}
   >
-    <View style={styles.itemList}>
-      {Array.from({ length: ITEM_COUNT }, (_, index) => (
-        <ShoppingListItemSkeleton key={index} />
-      ))}
-    </View>
+    {Array.from({ length: ITEM_COUNT }, (_, index) => (
+      <ShoppingListItemSkeleton key={index} />
+    ))}
   </ScrollView>
 );
 
@@ -28,9 +26,5 @@ const styles = StyleSheet.create(theme => ({
   container: {
     paddingHorizontal: theme.layout.pageGutter,
     paddingTop: theme.spacing.sm,
-    gap: theme.spacing.sm,
-  },
-  itemList: {
-    gap: theme.spacing.sm,
   },
 }));

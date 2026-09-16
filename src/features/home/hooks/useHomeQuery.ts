@@ -13,7 +13,7 @@ import { getConnectionTotalCount } from '#/utils/connectionUtils';
  * `extractNodes(home.pantriesConnection)` itself.
  */
 export function useHomeQuery() {
-  const { data, loading, error, refetch } = useQuery(GetHomesDocument, {
+  const { data, loading, refetch } = useQuery(GetHomesDocument, {
     errorPolicy: 'ignore',
   });
 
@@ -23,31 +23,22 @@ export function useHomeQuery() {
   const homes = usePreservedNodes(data?.homes);
 
   // Derive default home from isDefault field (no separate query needed)
-  const remoteDefaultHomeId = homes?.find(h => h.isDefault)?.id ?? null;
+  const remoteDefaultHomeId = homes.find(h => h.isDefault)?.id ?? null;
 
   // Track the last known pantries count to avoid flickering to 0 during refetch
   const [lastKnownPantriesCount, setLastKnownPantriesCount] =
     useState<number>(0);
 
-  const validHomes = Array.isArray(homes) ? homes.filter(Boolean) : [];
-
   // Use totalCount from each home's connections.
-  type HomeWithCounts = (typeof validHomes)[number] & {
-    pantriesConnection?: { totalCount?: number | null };
-    membersConnection?: { totalCount?: number | null };
-  };
-
   const totalPantries = (() => {
-    const sum = validHomes.reduce(
-      (acc, home) =>
-        acc +
-        getConnectionTotalCount((home as HomeWithCounts).pantriesConnection),
+    const sum = homes.reduce(
+      (acc, home) => acc + getConnectionTotalCount(home.pantriesConnection),
       0,
     );
     // Genuine empty state: no homes means no pantries. Without this guard the
     // anti-flicker fallback below would keep showing the stale last-known
     // count after the user deletes their last home.
-    if (validHomes.length === 0) {
+    if (homes.length === 0) {
       if (lastKnownPantriesCount !== 0) setLastKnownPantriesCount(0);
       return 0;
     }
@@ -61,11 +52,9 @@ export function useHomeQuery() {
   })();
 
   const stats = {
-    totalHomes: validHomes.length,
-    totalMembers: validHomes.reduce(
-      (acc, home) =>
-        acc +
-        getConnectionTotalCount((home as HomeWithCounts).membersConnection),
+    totalHomes: homes.length,
+    totalMembers: homes.reduce(
+      (acc, home) => acc + getConnectionTotalCount(home.membersConnection),
       0,
     ),
     totalPantries,
@@ -79,11 +68,9 @@ export function useHomeQuery() {
     homes,
     remoteDefaultHomeId,
     loading,
-    // Keyed off `data`, not `homes.length`, so a user who genuinely has zero
-    // homes settles to the empty list instead of showing the full-screen
-    // loader again on every cache-and-network fetch.
-    initialLoading: !data && loading,
-    error,
+    // A defined `data` with zero homes is still an answer. `errorPolicy:
+    // 'ignore'` discards the error, so a settled read with neither is the failure.
+    hasResult: data !== undefined || homes.length > 0,
     stats,
     refetch: memoizedRefetch,
   };

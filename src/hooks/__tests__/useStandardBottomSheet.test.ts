@@ -70,17 +70,14 @@ describe('useStandardBottomSheet', () => {
     snapPoints: ['50%'],
   };
 
-  it('returns ref, modalProps, contentContainerStyle, insets, and imperative helpers', () => {
+  it('returns ref, modalProps, contentContainerStyle, insets, and dismiss', () => {
     const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 
     expect(result.current.ref).toBeDefined();
     expect(result.current.modalProps).toBeDefined();
     expect(result.current.contentContainerStyle).toBeDefined();
     expect(result.current.insets).toBeDefined();
-    expect(typeof result.current.present).toBe('function');
     expect(typeof result.current.dismiss).toBe('function');
-    expect(typeof result.current.close).toBe('function');
-    expect(typeof result.current.snapToIndex).toBe('function');
   });
 
   it('includes snap points in modalProps', () => {
@@ -573,7 +570,7 @@ describe('useStandardBottomSheet', () => {
       attachRefMocks(result.current.ref);
       act(() => result.current.modalProps.onAnimate?.(-1, 0, 0, 0));
 
-      act(() => rerender({ visible: false }));
+      rerender({ visible: false });
 
       // Still on screen and fading; gorhom's onChange(-1) / onDismiss release it.
       expect(mockBackdropRelease).not.toHaveBeenCalled();

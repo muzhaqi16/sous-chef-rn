@@ -3,11 +3,21 @@ import {
   addPantryItemLocally,
   removePantryItemLocally,
 } from '#features/pantry/cache/items';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  AddItemToShoppingListDocument,
+  MoveShoppingItemToPantryDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import { revertOptimisticShoppingListItem } from '#features/shoppingList/cache/items';
 
 jest.mock('#/apollo/clientRegistry', () => ({
   getApolloClient: () => ({ cache: {} }),
   registerApolloClient: jest.fn(),
   clearApolloClient: jest.fn(),
+}));
+jest.mock('#features/shoppingList/cache/items', () => ({
+  revertOptimisticShoppingListItem: jest.fn(),
 }));
 jest.mock('#features/pantry/cache/items', () => ({
   addPantryItemLocally: jest.fn(),
@@ -25,6 +35,7 @@ jest.mock('#features/pantry/cache/items', () => ({
  * happened, so the comparison has to run again where the replay lands.
  */
 describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
+  const moveOperation = operationNameOf(MoveShoppingItemToPantryDocument);
   const variables = {
     input: {
       shoppingListItemId: 'sli-1',
@@ -43,7 +54,7 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
 
   it('withdraws the ghost when the server restocked a different row', () => {
     reconcileReplaySuccess(
-      'MoveShoppingItemToPantry',
+      moveOperation,
       variables,
       payloadWith('existing-99'),
     );
@@ -62,11 +73,7 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
   });
 
   it('leaves the row alone when the server used the minted id', () => {
-    reconcileReplaySuccess(
-      'MoveShoppingItemToPantry',
-      variables,
-      payloadWith('minted-1'),
-    );
+    reconcileReplaySuccess(moveOperation, variables, payloadWith('minted-1'));
 
     expect(removePantryItemLocally).not.toHaveBeenCalled();
     expect(addPantryItemLocally).not.toHaveBeenCalled();
@@ -75,7 +82,7 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
   it('does nothing when the payload carries no pantry item', () => {
     // A refusal reaches here only if it was not classified as rejected; either
     // way there is no id to compare, so guessing would evict a live row.
-    reconcileReplaySuccess('MoveShoppingItemToPantry', variables, {
+    reconcileReplaySuccess(moveOperation, variables, {
       moveShoppingItemToPantry: {
         __typename: 'ForbiddenError',
         code: 'FORBIDDEN',
@@ -87,7 +94,7 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
 
   it('does nothing when the move minted no id', () => {
     reconcileReplaySuccess(
-      'MoveShoppingItemToPantry',
+      moveOperation,
       { input: { shoppingListItemId: 'sli-1', pantryId: 'pantry-1' } },
       payloadWith('existing-99'),
     );
@@ -96,7 +103,11 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
   });
 
   it('has no reconciler for an ordinary replayed operation', () => {
-    reconcileReplaySuccess('CreatePantryItem', variables, payloadWith('x'));
+    reconcileReplaySuccess(
+      operationNameOf(CreatePantryItemDocument),
+      variables,
+      payloadWith('x'),
+    );
 
     expect(removePantryItemLocally).not.toHaveBeenCalled();
     expect(addPantryItemLocally).not.toHaveBeenCalled();
@@ -111,10 +122,51 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
 
     expect(() =>
       reconcileReplaySuccess(
-        'MoveShoppingItemToPantry',
+        moveOperation,
         variables,
         payloadWith('existing-99'),
       ),
     ).not.toThrow();
+  });
+});
+
+/**
+ * A multi-row batch replays as itself, and the server can accept the batch
+ * while refusing some of its rows inside `results`. Each refused row was shown
+ * locally and has nothing left to send it, so it is withdrawn; the rest stay.
+ */
+describe('reconcileReplaySuccess — AddItemToShoppingList batch', () => {
+  const addOperation = operationNameOf(AddItemToShoppingListDocument);
+  const variables = {
+    input: {
+      shoppingListId: 'list-1',
+      items: [{ id: 'row-a' }, { id: 'row-b' }],
+    },
+  };
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('withdraws only the rows the server refused inside the batch', () => {
+    reconcileReplaySuccess(addOperation, variables, {
+      addItemsToShoppingList: {
+        __typename: 'AddItemsToShoppingListPayload',
+        results: [{ success: true }, { success: false }],
+      },
+    });
+
+    expect(revertOptimisticShoppingListItem).toHaveBeenCalledTimes(1);
+    expect(revertOptimisticShoppingListItem).toHaveBeenCalledWith(
+      {},
+      'list-1',
+      'row-b',
+    );
+  });
+
+  it('leaves a single-row replay, answered in the sync shape, alone', () => {
+    reconcileReplaySuccess(addOperation, variables, {
+      syncShoppingListItem: { __typename: 'SyncShoppingListItemPayload' },
+    });
+
+    expect(revertOptimisticShoppingListItem).not.toHaveBeenCalled();
   });
 });

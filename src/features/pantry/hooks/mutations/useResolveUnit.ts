@@ -16,7 +16,7 @@ export function useResolveUnit() {
     const result = await unitQuery({
       variables: { symbol: unitSymbol.trim() },
     });
-    return result.data?.unitBySymbol?.id || null;
+    return result.data?.unitBySymbol?.id ?? null;
   };
 
   return { resolveUnitId };

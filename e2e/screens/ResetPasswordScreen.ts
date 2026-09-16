@@ -4,20 +4,21 @@
  */
 
 import { BaseScreen } from './BaseScreen';
+import { authTestIDs } from '../../src/features/auth/testIDs';
 
 export class ResetPasswordScreen extends BaseScreen {
-  protected screenID = 'reset-password-screen';
+  protected screenID = authTestIDs.resetPasswordScreen;
 
-  private readonly newPasswordInput = 'reset-password-new-input';
-  private readonly confirmPasswordInput = 'reset-password-confirm-input';
+  private readonly newPasswordInput = authTestIDs.resetPasswordNewInput;
+  private readonly confirmPasswordInput = authTestIDs.resetPasswordConfirmInput;
 
   /** Last field filled here, so it is the one holding the keyboard. */
-  protected keyboardInput = this.confirmPasswordInput;
+  protected override keyboardInput = this.confirmPasswordInput;
 
   /** `AuthFormTemplate`'s title row — above the keyboard on every auth screen. */
-  protected blurTarget = 'auth-title-row';
-  private readonly submitButton = 'reset-password-submit-button';
-  private readonly invalidLinkView = 'reset-password-invalid-link';
+  protected override blurTarget = authTestIDs.formTitleRow;
+  private readonly submitButton = authTestIDs.resetPasswordSubmitButton;
+  private readonly invalidLinkView = authTestIDs.resetPasswordInvalidLinkView;
 
   async enterNewPassword(password: string) {
     await this.clearAndType(this.newPasswordInput, password);

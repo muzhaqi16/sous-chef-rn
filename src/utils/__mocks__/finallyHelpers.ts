@@ -75,7 +75,7 @@ export const unwrapPayload = jest.fn(
     throw new GraphQLDomainError({
       __typename,
       code: String(code ?? 'UNKNOWN'),
-      message: String(message || fallbackMessage),
+      message: String(message ?? fallbackMessage),
       ...extra,
     });
   },
@@ -95,14 +95,5 @@ export const executeWithLoadingState = jest.fn(
     } finally {
       setLoading(false);
     }
-  },
-);
-
-export const isSuccessPayload = jest.fn(
-  <TUnion extends { __typename: string }, TName extends TUnion['__typename']>(
-    payload: TUnion | null | undefined,
-    successTypename: TName,
-  ): payload is Extract<TUnion, { __typename: TName }> => {
-    return payload != null && payload.__typename === successTypename;
   },
 );

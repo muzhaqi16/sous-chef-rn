@@ -7,6 +7,9 @@ import {
   markSubscriptionRejected,
   resetRejectedSubscriptions,
 } from '../rejectedSubscriptions';
+import { PantryEventsDocument } from '#features/pantry/graphql/pantry.generated';
+import { HomeEventsDocument } from '#operations/home/home.generated';
+import { NotificationEventsDocument } from '#features/notifications/graphql/notifications.generated';
 
 beforeEach(() => {
   resetRejectedSubscriptions();
@@ -14,26 +17,26 @@ beforeEach(() => {
 
 describe('rejectedSubscriptions', () => {
   it('reports the first mark only, so the error is logged once', () => {
-    expect(markSubscriptionRejected('PantryEvents')).toBe(true);
-    expect(markSubscriptionRejected('PantryEvents')).toBe(false);
+    expect(markSubscriptionRejected(PantryEventsDocument)).toBe(true);
+    expect(markSubscriptionRejected(PantryEventsDocument)).toBe(false);
   });
 
   it('closes the gate for the marked subscription alone', () => {
-    markSubscriptionRejected('PantryEvents');
+    markSubscriptionRejected(PantryEventsDocument);
 
-    expect(isSubscriptionRejected('PantryEvents')).toBe(true);
+    expect(isSubscriptionRejected(PantryEventsDocument)).toBe(true);
     // The connection is fine — every other operation on the socket keeps going.
-    expect(isSubscriptionRejected('NotificationEvents')).toBe(false);
+    expect(isSubscriptionRejected(NotificationEventsDocument)).toBe(false);
   });
 
   it('notifies subscribers so `skip` flips on the next render', () => {
     const { useSubscriptionRejected } = require('../rejectedSubscriptions');
     expect(typeof useSubscriptionRejected).toBe('function');
 
-    markSubscriptionRejected('HomeEvents');
-    expect(isSubscriptionRejected('HomeEvents')).toBe(true);
+    markSubscriptionRejected(HomeEventsDocument);
+    expect(isSubscriptionRejected(HomeEventsDocument)).toBe(true);
 
     resetRejectedSubscriptions();
-    expect(isSubscriptionRejected('HomeEvents')).toBe(false);
+    expect(isSubscriptionRejected(HomeEventsDocument)).toBe(false);
   });
 });

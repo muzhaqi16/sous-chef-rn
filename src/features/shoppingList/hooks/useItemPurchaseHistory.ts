@@ -1,3 +1,4 @@
+import { NetworkStatus } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import {
   GetItemPurchaseHistoryDocument,
@@ -35,13 +36,12 @@ export function useItemPurchaseHistory(itemId: string) {
 
   const connection = data?.shoppingListItem?.purchasesConnection;
   const purchases: PurchaseItem[] =
-    connection?.edges?.map(edge => edge.node) ?? [];
+    connection?.edges.map(edge => edge.node) ?? [];
 
   const totalCount = connection?.totalCount ?? purchases.length;
-  const hasNextPage = connection?.pageInfo?.hasNextPage ?? false;
-  const endCursor = connection?.pageInfo?.endCursor ?? null;
-  // networkStatus 3 = fetchMore in flight.
-  const isFetchingMore = networkStatus === 3;
+  const hasNextPage = connection?.pageInfo.hasNextPage ?? false;
+  const endCursor = connection?.pageInfo.endCursor ?? null;
+  const isFetchingMore = networkStatus === NetworkStatus.fetchMore;
 
   const loadMore = () => {
     if (!hasNextPage || !endCursor || loading || isFetchingMore) return;
@@ -73,5 +73,13 @@ export function useItemPurchaseHistory(itemId: string) {
     );
   };
 
-  return { purchases, totalCount, state, loadMore, isFetchingMore, retry };
+  return {
+    purchases,
+    totalCount,
+    state,
+    loadMore,
+    hasNextPage,
+    isFetchingMore,
+    retry,
+  };
 }

@@ -57,8 +57,6 @@ describe('useDailyMeals', () => {
     const { result } = renderHook(() => useDailyMeals(items, today));
 
     expect(result.current.dailyMeals).toEqual([]);
-    expect(result.current.totalMeals).toBe(0);
-    expect(result.current.totalCalories).toBe(0);
     expect(result.current.isEmpty).toBe(true);
   });
 
@@ -88,6 +86,7 @@ describe('useDailyMeals', () => {
 
     // Core slots are always shown once a day has any meal — the empty Snack
     // slot appears between Lunch and Dinner per MEAL_TYPE_ORDER.
+    expect(result.current.isEmpty).toBe(false);
     expect(result.current.dailyMeals.map(g => g.mealType)).toEqual([
       'BREAKFAST',
       'LUNCH',
@@ -133,30 +132,6 @@ describe('useDailyMeals', () => {
     expect(result.current.dailyMeals[0]!.items[1]!.id).toBe('i1');
   });
 
-  it('computes totalMeals and totalCalories', () => {
-    const items = [
-      makeItem({ id: 'i1', mealType: MealType.Breakfast, calories: 300 }),
-      makeItem({
-        id: 'i2',
-        mealType: MealType.Lunch,
-        recipe: { name: 'Salad' },
-        calories: 200,
-      }),
-      makeItem({
-        id: 'i3',
-        mealType: MealType.Dinner,
-        recipe: { name: 'Steak' },
-        calories: null,
-      }),
-    ];
-
-    const { result } = renderHook(() => useDailyMeals(items, today));
-
-    expect(result.current.totalMeals).toBe(3);
-    expect(result.current.totalCalories).toBe(500); // 300 + 200 + 0
-    expect(result.current.isEmpty).toBe(false);
-  });
-
   it('shows core meal slots (even empty) once a day has any meal', () => {
     const items = [
       makeItem({
@@ -171,6 +146,7 @@ describe('useDailyMeals', () => {
     // Core slots Breakfast/Lunch/Snack/Dinner all render (Dinner holds the meal,
     // the rest are empty add-affordances); non-core empties (Brunch/Dessert) stay
     // hidden.
+    expect(result.current.isEmpty).toBe(false);
     expect(result.current.dailyMeals.map(g => g.mealType)).toEqual([
       'BREAKFAST',
       'LUNCH',
@@ -197,7 +173,6 @@ describe('useDailyMeals', () => {
 
     const { result } = renderHook(() => useDailyMeals(items, today));
 
-    expect(result.current.totalMeals).toBe(1);
     expect(
       result.current.dailyMeals.find(g => g.mealType === 'LUNCH')?.items,
     ).toHaveLength(1);

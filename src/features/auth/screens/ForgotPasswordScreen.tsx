@@ -11,15 +11,9 @@ import { AuthWrapper } from '#features/auth/components/AuthWrapper';
 import { useRequestPasswordReset } from '#features/auth/hooks/useRequestPasswordReset';
 import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
 import { useResendBackoff } from '#features/auth/hooks/useResendBackoff';
-import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import { toastService } from '#services/toastService';
-import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
-import {
-  getRateLimitMessage,
-  isRateLimitError,
-} from '#/utils/errors/rateLimit';
+import { authTestIDs } from '#features/auth/testIDs';
 
 type ForgotPasswordValues = {
   email: string;
@@ -45,41 +39,11 @@ export function ForgotPasswordScreen() {
     defaultValues: { email: '' },
   });
 
-  /**
-   * True only when the server CONFIRMED the send: `requestPasswordReset` returns a
-   * union, so a refusal resolves 200 with an error member and no transport error.
-   */
+  /** True only when the server CONFIRMED the send; anything else is toasted. */
   const requestResetLink = async (email: string): Promise<boolean> => {
-    let response;
-    try {
-      response = await requestPasswordReset(email);
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'ForgotPassword.requestPasswordReset',
-      });
-    }
-    if (!response) {
-      toastService.error(t('errors.codes.genericRetry'));
-      return false;
-    }
-
-    if (isRateLimitError(response.error)) {
-      toastService.error(getRateLimitMessage(response.error));
-      return false;
-    }
-
-    const payload = response.data?.requestPasswordReset;
-
-    if (isSuccessPayload(payload, 'RequestPasswordResetPayload')) return true;
-
-    if (payload) {
-      toastService.error(
-        localizedRefusalMessage(payload, t('errors.codes.genericRetry')),
-      );
-      return false;
-    }
-
-    toastService.error(t('errors.codes.genericRetry'));
+    const refusal = await requestPasswordReset(email);
+    if (refusal === null) return true;
+    toastService.error(refusal);
     return false;
   };
 
@@ -107,7 +71,7 @@ export function ForgotPasswordScreen() {
 
   if (sentTo !== null) {
     return (
-      <AuthWrapper testID="forgot-password-sent">
+      <AuthWrapper testID={authTestIDs.forgotPasswordSentView}>
         <AuthFormTemplate<ForgotPasswordValues>
           title={t('auth.resetLinkSentTitle')}
           // Existence-blind by contract: the API returns SENT whether or not the
@@ -124,12 +88,12 @@ export function ForgotPasswordScreen() {
           errors={errors}
           contentPlacement="top"
           submitText={t('auth.backToSignIn')}
-          submitButtonTestID="forgot-password-back-to-login-button"
+          submitButtonTestID={authTestIDs.forgotPasswordBackToLoginButton}
           onSubmit={() => navigateToLogin()}
           isLoading={submitting}
           footerText={t('auth.didntGetEmail')}
           footerLinkText={t('auth.resendResetLink')}
-          footerLinkTestID="forgot-password-resend-link"
+          footerLinkTestID={authTestIDs.forgotPasswordResendLink}
           onFooterLinkPress={onResend}
           footerLinkDisabled={!canResend || submitting}
           footerLinkCountdown={countdown}
@@ -139,7 +103,7 @@ export function ForgotPasswordScreen() {
   }
 
   return (
-    <AuthWrapper testID="forgot-password-screen">
+    <AuthWrapper testID={authTestIDs.forgotPasswordScreen}>
       <AuthFormTemplate<ForgotPasswordValues>
         title={t('auth.forgotPasswordTitle')}
         subtitle={t('auth.forgotPasswordSubtitle')}
@@ -148,19 +112,19 @@ export function ForgotPasswordScreen() {
             name: 'email',
             label: t('auth.emailAddress'),
             component: EmailInput,
-            props: { testID: 'forgot-password-email-input' },
+            props: { testID: authTestIDs.forgotPasswordEmailInput },
           },
         ]}
         control={control}
         errors={errors}
         contentPlacement="top"
         submitText={t('auth.sendResetLink')}
-        submitButtonTestID="forgot-password-submit-button"
+        submitButtonTestID={authTestIDs.forgotPasswordSubmitButton}
         onSubmit={handleSubmit(onSendResetLink, logValidationErrors)}
         isLoading={submitting}
         footerText={t('auth.rememberedIt')}
         footerLinkText={t('auth.signIn')}
-        footerLinkTestID="forgot-password-login-link"
+        footerLinkTestID={authTestIDs.forgotPasswordLoginLink}
         onFooterLinkPress={() => navigateToLogin()}
       />
     </AuthWrapper>

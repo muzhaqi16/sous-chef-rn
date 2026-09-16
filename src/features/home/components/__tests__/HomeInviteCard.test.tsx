@@ -12,6 +12,7 @@ import {
   type HomeInviteCard_InviteFragment,
 } from '../HomeInviteCard.generated';
 import { InviteStatus, MembershipRole } from '#/graphql/generated/schemaTypes';
+import { Text as AppText } from '#components/atoms/Text';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -20,10 +21,6 @@ jest.mock('#utils/iconUtils', () => ({
     const { Text } = require('react-native');
     return <Text>{name}</Text>;
   },
-}));
-jest.mock('#features/home/utils/inviteFormatters', () => ({
-  formatInviteStatus: (status: string) => status.toLowerCase(),
-  getInviteStatusColor: () => '#FF0000',
 }));
 
 function buildInvite(
@@ -125,4 +122,31 @@ describe('HomeInviteCard', () => {
     );
     expect(screen.queryByText('close')).toBeNull();
   });
+
+  it.each([
+    [InviteStatus.Pending, 'Invited', 'warning'],
+    [InviteStatus.Accepted, 'Accepted', 'success'],
+    [InviteStatus.Declined, 'Declined', 'danger'],
+    [InviteStatus.Expired, 'Expired', 'tertiary'],
+  ])(
+    'colours the %s status text through tone, not a style',
+    (status, label, tone) => {
+      const invite = buildInvite({ status });
+      renderWithApollo(
+        <HomeInviteCard
+          inviteRef={toFragmentRef<typeof HomeInviteCard_InviteFragmentDoc>(
+            invite,
+          )}
+          displayName="Test User"
+          onRevoke={onRevoke}
+        />,
+        { cache: buildCache(invite) },
+      );
+      const statusText = screen
+        .UNSAFE_getAllByType(AppText)
+        .find(node => node.props.children === label);
+      expect(statusText?.props.tone).toBe(tone);
+      expect(statusText?.props.style).toBeUndefined();
+    },
+  );
 });

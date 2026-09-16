@@ -1,41 +1,29 @@
 /**
  * Local-first: the list leaves the cache PERMANENTLY before firing, so the delete
- * survives an offline queue — a duplicate replay surfaces as NotFound, which the
- * queue drops. A rejection restores the snapshot (items repopulate on refetch).
+ * survives an offline queue — a list already gone counts as deleted. A failure
+ * restores the snapshot (items repopulate on refetch).
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import {
-  DeleteShoppingListDocument,
-  type DeleteShoppingListMutation,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   addOptimisticShoppingList,
   readShoppingListSnapshot,
   removeShoppingListFromCache,
 } from '#features/shoppingList/cache/list';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import type { MutationOutcome } from '#/utils/errors/mutationOutcome';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { toastService } from '#/services/toastService';
-import { errorService, localizedErrorMessage } from '#/services/errorService';
-import { t } from '#/i18n';
+import { errorService } from '#/services/errorService';
+import { useTranslation } from '#/i18n';
 
 export function useDeleteShoppingList() {
+  const { t } = useTranslation();
   const client = useApolloClient();
 
-  const [mutate, { loading }] = useMutation(DeleteShoppingListDocument, {
-    onError: error => {
-      // Resolved from the error's CODE: the server's `message` is unlocalizable
-      // English by construction and must never be displayed.
-      toastService.error(
-        localizedErrorMessage(error, t('errors.deleteShoppingListFailed')),
-      );
-    },
-  });
+  const [mutate] = useMutation(DeleteShoppingListDocument);
 
-  const deleteShoppingList = async (
-    id: string,
-  ): Promise<MutationOutcome<DeleteShoppingListMutation> | undefined> => {
+  /** `true` once the list is gone or its delete is queued; `false` when refused. */
+  const deleteShoppingList = async (id: string): Promise<boolean> => {
     // Snapshot first so a server rejection can restore the list.
     const snapshot = readShoppingListSnapshot(client.cache, id);
 
@@ -47,22 +35,8 @@ export function useDeleteShoppingList() {
       });
     }
 
-    let result;
-    try {
-      result = await mutate({
-        variables: { input: { id } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Delete Shopping List error:',
-      });
-    }
-
-    // 'queued' (null payload, no error) keeps the removal and replays later. A
-    // rejection restores the snapshot, or the next overview refetch does.
-    const rejected = classifyCreateResult(result) === 'rejected';
-    if (rejected && snapshot) {
+    const restore = () => {
+      if (!snapshot) return;
       try {
         addOptimisticShoppingList(client.cache, snapshot);
       } catch (cacheError) {
@@ -70,9 +44,26 @@ export function useDeleteShoppingList() {
           operation: 'Restore refused Shopping List delete',
         });
       }
-    }
-    return result;
+    };
+
+    // Toasted rather than alerted: the list simply reappears where it was.
+    const settled = await settleMutation(
+      () =>
+        mutate({
+          variables: { input: { id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: DeleteShoppingListDocument,
+        fallback: t('errors.deleteShoppingListFailed'),
+        removal: true,
+        onFailed: restore,
+        present: 'none',
+      },
+    );
+    if (settled.failure) toastService.error(settled.failure.body);
+    return settled.status !== 'failed';
   };
 
-  return { deleteShoppingList, loading };
+  return { deleteShoppingList };
 }

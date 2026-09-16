@@ -33,7 +33,7 @@ import {
   type BottomTabBarProps,
 } from '@react-navigation/bottom-tabs';
 import { FloatingTabBar } from '../FloatingTabBar';
-import type { TabAppearance } from '../types';
+import type { TabAppearance } from '#features/types';
 
 // Mock TabBarActionsContext
 const mockSetActiveTab = jest.fn();
@@ -143,18 +143,22 @@ const TAB_APPEARANCE: TabAppearance = {
   Pantry: {
     icon: { active: 'home', inactive: 'home-outline' },
     mainScreen: 'PantryMain',
+    titleKey: 'navigation.tabs.pantry',
   },
   ShoppingList: {
     icon: { active: 'list', inactive: 'list-outline' },
     mainScreen: 'ShoppingListMain',
+    titleKey: 'navigation.tabs.shoppingList',
   },
   Recipe: {
     icon: { active: 'book', inactive: 'book-outline' },
     mainScreen: 'RecipeMain',
+    titleKey: 'labels.recipes',
   },
   MealPlan: {
     icon: { active: 'calendar', inactive: 'calendar-outline' },
     mainScreen: 'MealPlanMain',
+    titleKey: 'labels.mealPlan',
   },
 };
 

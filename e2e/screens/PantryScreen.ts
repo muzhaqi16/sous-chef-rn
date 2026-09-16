@@ -1,25 +1,39 @@
 /** Screen object model for the Pantry screen. */
 
 import { BaseScreen } from './BaseScreen';
-import { element, by, waitFor, expect } from 'detox';
+import { element, by, waitFor } from 'detox';
+import { isOnScreen } from '../helpers/waitFor';
+import { pantryTestIDs } from '../../src/features/pantry/testIDs';
+import { catalogTestIDs } from '../../src/features/catalog/testIDs';
+import { kitTestIDs } from '../../src/components/testIDs';
+
+const ADD_ITEM_SHEET_MODAL = catalogTestIDs.addItemSheetModal(
+  pantryTestIDs.addItemSheetPrefix,
+);
+const ADD_ITEM_SEARCH_INPUT = catalogTestIDs.addItemSheetSearchInput(
+  pantryTestIDs.addItemSheetPrefix,
+);
+const ADD_MANUALLY_BUTTON = catalogTestIDs.addManuallyButton(
+  pantryTestIDs.addItemSheetPrefix,
+);
 
 export class PantryScreen extends BaseScreen {
-  protected screenID = 'pantry-screen';
+  protected screenID = pantryTestIDs.screen;
 
   // Element IDs
-  private readonly addButton = 'tab-bar-add-button';
-  private readonly listContainer = 'pantry-list';
-  private readonly searchInput = 'pantry-search-input';
+  private readonly addButton = kitTestIDs.tabBarAddButton;
+  private readonly listContainer = pantryTestIDs.list;
+  private readonly searchInput = pantryTestIDs.searchInput;
 
   /** Last field filled here, so it is the one holding the keyboard. */
-  protected keyboardInput = this.searchInput;
+  protected override keyboardInput = this.searchInput;
 
   /** The greeting row: above the keyboard and carries no press handler. */
-  protected blurTarget = 'pantry-greeting-row';
-  private readonly sortButton = 'pantry-sort-button';
-  private readonly emptyState = 'pantry-empty-state';
-  private readonly loadingIndicator = 'pantry-loading';
-  private readonly refreshControl = 'pantry-refresh-control';
+  protected override blurTarget = pantryTestIDs.greetingRow;
+  private readonly sortButton = pantryTestIDs.sortButton;
+  private readonly emptyState = pantryTestIDs.emptyState;
+  private readonly loadingIndicator = pantryTestIDs.loading;
+  private readonly refreshControl = pantryTestIDs.refreshControl;
 
   /**
    * Page index of the add-details sheet's "Details" tab. Quantity and unit live
@@ -37,44 +51,43 @@ export class PantryScreen extends BaseScreen {
     await this.tapAddButton();
 
     try {
-      await waitFor(element(by.id('add-pantry-item-search-input')))
+      await waitFor(element(by.id(ADD_ITEM_SEARCH_INPUT)))
         .toBeVisible()
         .withTimeout(3000);
     } catch {
       await this.tapAddButton();
-      await waitFor(element(by.id('add-pantry-item-search-input')))
+      await waitFor(element(by.id(ADD_ITEM_SEARCH_INPUT)))
         .toBeVisible()
         .withTimeout(3000);
     }
 
     // The search bar debounces 250ms before the results (and the row below)
     // render, so the wait that follows is what settles it.
-    await element(by.id('add-pantry-item-search-input')).replaceText('zz');
-    await waitFor(element(by.id('add-pantry-item-add-manually-button')))
+    await element(by.id(ADD_ITEM_SEARCH_INPUT)).replaceText('zz');
+    await waitFor(element(by.id(ADD_MANUALLY_BUTTON)))
       .toBeVisible()
       .withTimeout(5000);
 
-    await element(by.id('add-pantry-item-add-manually-button')).tap();
+    await element(by.id(ADD_MANUALLY_BUTTON)).tap();
     try {
-      await waitFor(element(by.id('add-pantry-item-name-input')))
+      await waitFor(element(by.id(pantryTestIDs.addDetailsNameInput)))
         .toBeVisible()
         .withTimeout(5000);
     } catch {
-      await element(by.id('add-pantry-item-add-manually-button')).tap();
-      await waitFor(element(by.id('add-pantry-item-name-input')))
+      await element(by.id(ADD_MANUALLY_BUTTON)).tap();
+      await waitFor(element(by.id(pantryTestIDs.addDetailsNameInput)))
         .toBeVisible()
         .withTimeout(5000);
     }
   }
 
   /**
-   * Close the item-name autocomplete dropdown if open. Tapping the sheet's own
-   * container is the reliable dismissal — always present, and a tap near its
-   * top-left lands on chrome, not a field. Harmless when nothing is open.
+   * Close the item-name autocomplete dropdown if open, by tapping the sheet's
+   * header title: always present, never a field. Harmless when nothing is open.
    */
   async dismissNameAutocomplete() {
     try {
-      await element(by.id('add-pantry-item-details-modal')).tap({ x: 10, y: 10 });
+      await element(by.id(pantryTestIDs.addDetailsTitle)).tap();
     } catch {
       // Nothing open, or the container moved — the caller's own waits will
       // report anything that actually matters.
@@ -87,16 +100,16 @@ export class PantryScreen extends BaseScreen {
    * still covers the list — both have to go or the next test starts with a sheet up.
    */
   async cancelAddDetailsForm() {
-    await element(by.id('add-pantry-item-cancel-button')).tap();
+    await element(by.id(pantryTestIDs.addDetailsCancelButton)).tap();
 
     // Whether cancel also closes the picker sheet depends on how the two dismiss
     // animations overlap, so dismiss it only if present and let `waitForScreen`
     // be the assertion either way.
     try {
-      await waitFor(element(by.id('add-pantry-item-modal')))
+      await waitFor(element(by.id(ADD_ITEM_SHEET_MODAL)))
         .toBeVisible()
         .withTimeout(2000);
-      await element(by.id('add-pantry-item-modal')).swipe('down', 'fast', 0.9);
+      await element(by.id(ADD_ITEM_SHEET_MODAL)).swipe('down', 'fast', 0.9);
     } catch {
       // Already gone.
     }
@@ -111,14 +124,16 @@ export class PantryScreen extends BaseScreen {
    */
   async deleteItemByName(name: string) {
     // Two attempts: a swipe can spring back instead of latching, leaving the tap
-    // on a closed row; and `by.id(/^pantry-item-.+-delete$/).atIndex(0)` takes the
-    // first match in the hierarchy, which is not necessarily the row just swiped
-    // — FlashList decides what is mounted. Both no-op and report identically.
+    // on a closed row; and `atIndex(0)` takes the first match in the hierarchy,
+    // which is not necessarily the row just swiped — FlashList decides what is
+    // mounted. Both no-op and report identically.
     for (let attempt = 0; attempt < 2; attempt++) {
       await this.expectItemInPantry(name);
       await element(by.text(name)).swipe('left', 'fast', 0.7);
 
-      const deleteButton = element(by.id(/^pantry-item-.+-delete$/)).atIndex(0);
+      const deleteButton = element(
+        by.id(pantryTestIDs.anyItemSwipeAction('delete')),
+      ).atIndex(0);
       await waitFor(deleteButton).toBeVisible().withTimeout(5000);
       await deleteButton.tap();
 
@@ -143,7 +158,7 @@ export class PantryScreen extends BaseScreen {
    * and fails in every other locale.
    */
   async goToFormPage(index: number) {
-    await element(by.id(`add-pantry-item-page-${index}`)).tap();
+    await element(by.id(pantryTestIDs.addDetailsPage(index))).tap();
   }
 
   /**
@@ -172,47 +187,22 @@ export class PantryScreen extends BaseScreen {
       .toBeVisible()
       .whileElement(by.id(this.listContainer))
       .scroll(400, 'down', NaN, 0.85);
-    await waitFor(element(by.text(name))).toBeVisible().withTimeout(timeout);
-  }
-
-  /** By text: the app keys rows `pantry-item-${databaseId}`, unpredictable in tests. */
-  getItemByText(name: string) {
-    return element(by.text(name));
-  }
-
-  private getItemByIndex(index: number) {
-    return element(by.id(`pantry-item-${index}`));
-  }
-
-  private getItemDeleteButtonByIndex(index: number) {
-    return element(by.id(`pantry-item-${index}-delete`));
-  }
-
-  private getItemExpirationByIndex(index: number) {
-    return element(by.id(`pantry-item-${index}-expiration`));
-  }
-
-  /**
-   * NOTE: index-keyed, which the app does not render — rows are
-   * `pantry-item-<itemId>`. Kept only for `expectItemQuantity`'s existing
-   * signature; prefer `expectQuantityRendered`, which matches by rendered text.
-   */
-  private getItemQuantityByIndex(index: number) {
-    return element(by.id(`pantry-item-${index}-quantity`));
+    await waitFor(element(by.text(name)))
+      .toBeVisible()
+      .withTimeout(timeout);
   }
 
   async navigateToTab() {
     // Generous timeouts: the tab bar settles slowly after a relaunch, and the
     // screen then has to load data.
-    await waitFor(element(by.id('tab-pantry')))
+    await waitFor(element(by.id(kitTestIDs.tab('Pantry'))))
       .toBeVisible()
       .withTimeout(10000);
-    await element(by.id('tab-pantry')).tap();
+    await element(by.id(kitTestIDs.tab('Pantry'))).tap();
     await this.waitForScreen(10000);
   }
 
   async tapAddButton() {
-
     await waitFor(element(by.id(this.addButton)))
       .toBeVisible()
       .withTimeout(3000);
@@ -220,24 +210,19 @@ export class PantryScreen extends BaseScreen {
   }
 
   /** `quantity` accepts a number, a fraction ("1 1/4"), or a decimal ("0.25"). */
-  async addItem(
-    name: string,
-    quantity?: string | number,
-    unit?: string,
-    expirationDate?: string,
-  ) {
+  async addItem(name: string, quantity?: string | number, unit?: string) {
     await this.openAddDetailsForm();
 
     // `replaceText`, not typing: typing raises the Android stylus popup.
-    const nameInput = element(by.id('add-pantry-item-name-input'));
+    const nameInput = element(by.id(pantryTestIDs.addDetailsNameInput));
     await nameInput.replaceText(name);
 
     // Let the autocomplete sheet animation settle.
-    await waitFor(element(by.id('add-pantry-item-name-input')))
+    await waitFor(element(by.id(pantryTestIDs.addDetailsNameInput)))
       .toBeVisible()
       .withTimeout(1000);
 
-    await element(by.id('add-pantry-item-name-input')).tapReturnKey();
+    await element(by.id(pantryTestIDs.addDetailsNameInput)).tapReturnKey();
 
     // The name field's dropdown overlays the page indicator and Cancel, so while
     // it is open Cancel reports "not hittable at its visible point" and a page tap
@@ -252,30 +237,33 @@ export class PantryScreen extends BaseScreen {
 
       // Wait for the page to mount: `PagerView` animates the change, and the
       // incoming page's fields do not exist until it settles.
-      await waitFor(element(by.id('add-pantry-item-quantity-input')))
+      await waitFor(element(by.id(pantryTestIDs.addDetailsQuantityInput)))
         .toBeVisible()
         .withTimeout(5000);
     }
 
     if (quantity !== undefined) {
-      const quantityStr = typeof quantity === 'number' ? quantity.toString() : quantity;
-      const quantityInput = element(by.id('add-pantry-item-quantity-input'));
+      const quantityStr =
+        typeof quantity === 'number' ? quantity.toString() : quantity;
+      const quantityInput = element(
+        by.id(pantryTestIDs.addDetailsQuantityInput),
+      );
 
       await quantityInput.replaceText(quantityStr);
     }
 
     if (unit) {
       // `replaceText` again, to avoid the Android stylus popup.
-      const unitInput = element(by.id('add-pantry-item-unit-picker'));
+      const unitInput = element(by.id(pantryTestIDs.addDetailsUnitPicker));
       await unitInput.replaceText(unit);
 
-      await element(by.id('add-pantry-item-unit-picker')).tapReturnKey();
+      await element(by.id(pantryTestIDs.addDetailsUnitPicker)).tapReturnKey();
 
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Tap the modal background to clear any dropdown still up.
+      // Tap the inert header title to clear any dropdown still up.
       try {
-        await element(by.id('add-pantry-item-details-modal')).tap({ x: 10, y: 10 });
+        await element(by.id(pantryTestIDs.addDetailsTitle)).tap();
       } catch {
         // Nothing to dismiss.
       }
@@ -284,39 +272,24 @@ export class PantryScreen extends BaseScreen {
       await new Promise(resolve => setTimeout(resolve, 500));
     }
 
-    if (expirationDate) {
-      await this.tapByID('add-pantry-item-expiration-picker');
-      // A real date-picker interaction would be platform-specific.
-      await this.tapByText(expirationDate);
-    }
+    await this.tapByID(pantryTestIDs.addDetailsSubmitButton);
 
-    await this.tapByID('add-pantry-item-submit-button');
-
-    // Check if error modal appeared (e.g., "Please enter a valid quantity")
-    try {
-      await waitFor(element(by.text('Please enter a valid quantity')))
-        .toBeVisible()
-        .withTimeout(2000);
-
-      await element(by.text('OK')).tap();
+    // An alert after submit is the form refusing the save (an invalid quantity).
+    if (await isOnScreen(kitTestIDs.alertModal, 2000)) {
+      await element(by.id(kitTestIDs.alertButton(0))).tap();
       throw new Error(
-        `Failed to add pantry item: Invalid quantity "${quantity}". ` +
-        `Expected formats: "1", "1.5", "1/4", or "1 1/4"`
+        `Failed to add pantry item: the form refused quantity "${quantity}". ` +
+          `Expected formats: "1", "1.5", "1/4", or "1 1/4"`,
       );
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('Failed to add pantry item')) {
-        throw error;
-      }
-      // Otherwise, error modal didn't appear (good!), continue
     }
 
     // Wait on the name input, which only the form renders; 15s covers the
     // mutation plus the Apollo cache update.
-    await waitFor(element(by.id('add-pantry-item-name-input')))
+    await waitFor(element(by.id(pantryTestIDs.addDetailsNameInput)))
       .not.toBeVisible()
       .withTimeout(15000);
 
-    await waitFor(element(by.id('pantry-screen')))
+    await waitFor(element(by.id(pantryTestIDs.screen)))
       .toBeVisible()
       .withTimeout(5000);
 
@@ -325,54 +298,12 @@ export class PantryScreen extends BaseScreen {
     // through it, and its animation keeps Detox from reporting the app idle.
     // Best-effort: the toast auto-dismisses, so a miss means it already went.
     try {
-      await waitFor(element(by.id('toast-success')))
+      await waitFor(element(by.id(kitTestIDs.toast('success'))))
         .not.toBeVisible()
         .withTimeout(6000);
     } catch {
       // Still up after 6s, or never rendered. Neither says the add failed.
     }
-  }
-
-  async editItemByIndex(
-    index: number,
-    updates: {
-      name?: string;
-      quantity?: number;
-      expirationDate?: string;
-    },
-  ) {
-    await this.getItemByIndex(index).tap();
-
-    await waitFor(element(by.id('edit-pantry-item-modal')))
-      .toBeVisible()
-      .withTimeout(3000);
-
-    if (updates.name) {
-      await this.clearAndType('edit-pantry-item-name-input', updates.name);
-    }
-
-    if (updates.quantity !== undefined) {
-      await this.clearAndType(
-        'edit-pantry-item-quantity-input',
-        updates.quantity.toString(),
-      );
-    }
-
-    if (updates.expirationDate) {
-      await this.tapByID('edit-pantry-item-expiration-picker');
-      await this.tapByText(updates.expirationDate);
-    }
-
-    await this.tapByID('edit-pantry-item-submit-button');
-
-    await waitFor(element(by.id('edit-pantry-item-modal')))
-      .not.toBeVisible()
-      .withTimeout(3000);
-  }
-
-  async swipeToDeleteItem(index: number) {
-    await this.getItemByIndex(index).swipe('left', 'fast');
-    await this.getItemDeleteButtonByIndex(index).tap();
   }
 
   async searchFor(query: string) {
@@ -409,26 +340,6 @@ export class PantryScreen extends BaseScreen {
     await this.expectVisible(this.loadingIndicator);
   }
 
-  async expectItemExists(index: number) {
-    await expect(this.getItemByIndex(index)).toExist();
-  }
-
-  async expectItemVisible(index: number) {
-    await expect(this.getItemByIndex(index)).toBeVisible();
-  }
-
-  async expectItemName(index: number, name: string) {
-    await expect(this.getItemByIndex(index)).toHaveText(name);
-  }
-
-  async expectItemExpiration(index: number, date: string) {
-    await expect(this.getItemExpirationByIndex(index)).toHaveText(date);
-  }
-
-  async expectItemQuantity(index: number, quantity: string) {
-    await expect(this.getItemQuantityByIndex(index)).toHaveText(quantity);
-  }
-
   /**
    * Assert the app RENDERED this quantity: a row-exists check alone passes just as
    * happily when "1 1/4" parses as `1`. Matched by TEXT — FlashList RECYCLES
@@ -441,40 +352,7 @@ export class PantryScreen extends BaseScreen {
       .withTimeout(5000);
   }
 
-  async expectItemExpiringSoon(index: number) {
-    await this.expectVisible(`pantry-item-${index}-expiring-warning`);
-  }
-
-  async expectItemLowStock(index: number) {
-    await this.expectVisible(`pantry-item-${index}-low-stock-warning`);
-  }
-
-  async expectItemCount(count: number) {
-    for (let i = 0; i < count; i++) {
-      await this.expectItemExists(i);
-    }
-
-    // Verify next item doesn't exist
-    try {
-      await expect(this.getItemByIndex(count)).not.toExist();
-    } catch {
-      throw new Error(`Expected ${count} items, but found more`);
-    }
-  }
-
   async waitForListToLoad(timeout: number = 10000) {
     await this.waitForElementToDisappear(this.loadingIndicator, timeout);
-  }
-
-  async longPressItem(index: number, duration: number = 1000) {
-    await this.getItemByIndex(index).longPress(duration);
-  }
-
-  async increaseQuantity(index: number) {
-    await this.tapByID(`pantry-item-${index}-increase-quantity`);
-  }
-
-  async decreaseQuantity(index: number) {
-    await this.tapByID(`pantry-item-${index}-decrease-quantity`);
   }
 }

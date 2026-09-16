@@ -10,7 +10,6 @@ import {
   PantryItemForm_HomeFragmentDoc,
   type PantryItemForm_HomeFragment,
 } from '#features/pantry/components/form/PantryItemForm.generated';
-import type { StorageLocation } from '#/graphql/generated/schemaTypes';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { extractNodes } from '#/utils/connectionUtils';
 
@@ -74,7 +73,7 @@ export function usePantryItemFormData({
     : null;
   const pantry = getDefaultPantry(home);
   const currentPantryId =
-    selectedPantryId || pantry?.id || existingPantryItem?.pantryId;
+    selectedPantryId ?? pantry?.id ?? existingPantryItem?.pantryId;
 
   const { data: pantryData } = useQuery(GetPantryDocument, {
     variables: { id: currentPantryId ?? '' },
@@ -84,7 +83,7 @@ export function usePantryItemFormData({
 
   const storageLocations = extractNodes(
     pantryData?.pantry?.storageLocationsConnection,
-  ) as StorageLocation[];
+  );
 
   return {
     existingPantryItem,

@@ -26,7 +26,7 @@ Re-check:
 cat node_modules/@gorhom/bottom-sheet/src/components/bottomSheetView/styles.ts
 ```
 
-Guarded by `src/components/molecules/__tests__/BottomSheetAutocompleteInput.test.tsx`
+Guarded by `src/features/catalog/components/__tests__/BottomSheetAutocompleteInput.test.tsx`
 ("keeps the list out of gorhom BottomSheetView").
 
 ### gorhom keyboard handling requires BottomSheetTextInput
@@ -114,25 +114,29 @@ cancel v3 gesture handlers when a native scrollable takes the touch stream, so t
 row's pan keeps accumulating horizontal travel for the whole drag and crosses any
 threshold eventually.
 
-**Verified against `react-native-gesture-handler@3.2.1`.** The chain:
+**Verified against `react-native-gesture-handler@3.3.0`.** The chain:
 
-1. `ReanimatedSwipeable.tsx:27` imports `GestureDetector` from `'../../v3/detectors'`,
+1. `ReanimatedSwipeable.tsx:28` imports `GestureDetector` from `'../../v3/detectors'`,
    so its pan registers as `ACTION_TYPE_NATIVE_DETECTOR` / `ACTION_TYPE_VIRTUAL_DETECTOR`
    (5 / 6 in `GestureHandler.kt:1034-1035`, assigned in
-   `RNGestureHandlerDetectorView.kt:106,189,227`).
+   `RNGestureHandlerDetectorView.kt:104,187,222`).
 2. A native view grabbing the touch calls
-   `RNGestureHandlerRootHelper.requestDisallowInterceptTouchEvent()` (`:117`), whose
-   only cancellation is `orchestrator.cancelAllLegacyHandlers()`.
-3. `GestureHandlerOrchestrator.kt:371` — docblock: _"Cancels all handlers created
-   using API v1 and v2"_ — matches only action types 1–4. **Types 5 and 6 are not in
-   the list**, so the swipe pan is never cancelled.
+   `RNGestureHandlerRootHelper.requestDisallowInterceptTouchEvent()` (`:119`), which
+   cancels through `orchestrator.cancelAllLegacyHandlers()` and, for a view that opts
+   in, `cancelHandlersOnNativeTouchGrab()` deferred to `onNativeDispatchEnd`.
+3. `GestureHandlerOrchestrator.kt:385` — `cancelAllLegacyHandlers` matches only action
+   types 1–4. **Types 5 and 6 are not in the list**, so the swipe pan is never
+   cancelled. `cancelHandlersOnNativeTouchGrab` (`:395`) is gated on
+   `it is NativeViewGestureHandler`, and the sole override of
+   `shouldCancelOnNativeTouchGrab` is `RNGestureHandlerButtonViewManager.kt:835` — so
+   it covers buttons, not a detector pan.
 
 Distance cannot compensate: `activeOffsetX` is measured from touch-down with no time
 limit and no cancellation, so a long scroll crosses 10, 16, 24 — and the 40 that
 failed for the reporter of upstream
 [#2380](https://github.com/software-mansion/react-native-gesture-handler/issues/2380).
-`ReanimatedSwipeable` also exposes no `failOffsetY` in 2.30.0, 3.1.0, 3.2.1 **or
-`3.3.0-nightly-20260824`**, and the legacy non-Reanimated `Swipeable` is gone in 3.x.
+`ReanimatedSwipeable` also exposes no `failOffsetY` anywhere in 2.30.0 through 3.3.0,
+and the legacy non-Reanimated `Swipeable` is gone in 3.x.
 
 **The fix is to make the scrollable an RNGH handler.**
 `GestureHandlerOrchestrator.makeActive()` (`:234-247`) cancels every handler for which
@@ -145,7 +149,7 @@ takes it via `renderScrollComponent` (`FlashListProps.d.ts:101`); RNGH's root
 It forwards `ref={props.ref}` and re-clones `refreshControl` with `block: scrollGesture`
 (`GestureComponents.tsx:56-115`), so FlashList's scroll ref and pull-to-refresh
 survive the swap. `src/components/atoms/SwipeAwareScrollComponent.tsx` is the single
-place this is wired; `__tests__/gestures/flashListScrollComponents.test.ts` guards it.
+place this is wired; `sous-chef/rngh-refresh-control-matches-host` guards it.
 
 **Confirmed on device by controlled A/B (2026-08-24), not just by reading source.**
 With the fix in place the bug was gone; removing `renderScrollComponent` from
@@ -200,7 +204,8 @@ non-positive, which is why the component takes one positive number and applies t
 Re-check:
 
 ```
-grep -n "cancelAllLegacyHandlers" -A 12 node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/GestureHandlerOrchestrator.kt
+node scripts/probe-rngh-nested-scroll.mjs
+grep -n "cancelAllLegacyHandlers" -A 8 node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/GestureHandlerOrchestrator.kt
 grep -rn "renderScrollComponent" src --include=*.tsx
 grep -n -A 12 "requestDisallowInterceptTouchEvent" node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerDetectorView.kt
 grep -rn "touchAction" node_modules/react-native-gesture-handler/android/src/main/java   # no hits = still web-only
@@ -212,7 +217,7 @@ grep -rn "touchAction" node_modules/react-native-gesture-handler/android/src/mai
 `RefreshControl` gets no scroll↔refresh arbitration. The prop RNGH uses to wire
 them together is accepted and discarded, silently.
 
-**Verified against `react-native-gesture-handler@3.2.1` +
+**Verified against `react-native-gesture-handler@3.3.0` +
 `react-native-unistyles@3.3.0`.** The chain:
 
 1. `v3/components/GestureComponents.tsx:97-105` — RNGH's `ScrollView` renders
@@ -274,7 +279,65 @@ node scripts/probe-withunistyles-prop-passthrough.mjs
 grep -n "cloneElement" -A 8 node_modules/react-native-gesture-handler/src/v3/components/GestureComponents.tsx
 grep -n -A 14 "const refreshControl = useMemo" node_modules/@shopify/flash-list/src/recyclerview/hooks/useSecondaryProps.tsx
 grep -n -B 4 "'block'" node_modules/react-native-gesture-handler/src/v3/hooks/utils/propsWhiteList.ts
-npx jest __tests__/gestures/flashListScrollComponents.test.ts
+npx eslint src --rule '{"sous-chef/rngh-refresh-control-matches-host":"error"}'
+```
+
+### RNGH ends the nested scroll its ScrollView opens
+
+**Claim:** RNGH ends the nested scroll its `ScrollView` opens, which is the
+retraction path androidx's `SwipeRefreshLayout` needs. This is the upstream fix
+for the parked Android refresh spinner — but the app still forces
+`nestedScrollEnabled={false}`, because nothing here has measured the removal.
+
+**Verified against `react-native-gesture-handler@3.3.0` +
+`react-native@0.86.3`.** The chain:
+
+1. `ScrollView.js:1861` — under a `refreshControl` on Android, RN renders
+   `nestedScrollEnabled={props.nestedScrollEnabled ?? true}`, with the comment
+   _"Nested scroll should always be enabled to allow the child scroll view to
+   handle events before passing them to the refresh control parent"_. It is a
+   default, not a force: an explicit `false` survives
+   (facebook/react-native#55189).
+2. The ScrollView opens a nested scroll on DOWN. Once RNGH's
+   `NativeViewGestureHandler` is `STATE_ACTIVE` it feeds touches straight to
+   `onTouchEvent`, bypassing `View.dispatchTouchEvent` — which is what would
+   normally close that nested scroll.
+3. `NativeViewGestureHandler.kt:543-549` — `ScrollViewHook` overrides
+   `shouldStopNestedScroll() = true`, so the handler calls
+   `view.stopNestedScroll()` when the active gesture ends (`:164`, `:212`).
+   androidx's `SwipeRefreshLayout` gets `onStopNestedScroll` → `finishSpinner()`
+   and the indicator retracts.
+
+Without step 3 the spinner has no retraction path: the hook's own mid-pull
+`fail()` dispatches ACTION_CANCEL, and androidx ignores it outright — no
+`finishSpinner()`, `mIsBeingDragged` left true. `SwipeRefreshLayoutHook` does
+not opt into `shouldStopNestedScroll`, so the retraction comes from the child
+ScrollView's handler, over the nested-scroll protocol rather than the touch
+protocol.
+
+**Why the override stays anyway.** `nestedScrollEnabled={false}` in
+`SwipeAwareScrollComponent` keeps the nested-scroll protocol out of the picture
+entirely, which also avoids the park. It costs the nesting step 1 exists to
+provide, so removing it is a real candidate — but a candidate is not a
+measurement, and **a mechanism is not a cause**. A controlled A/B on the meal
+plan (the surface the park shipped on), 3.2.1 vs 3.3.0, both with the override
+removed, could not reproduce the park on EITHER build: five synthetic pull
+profiles, plus `gesture-custom` pulls with a genuine stationary hold mid-gesture
+and a drift-back-before-release, all showed the spinner appear and retract
+cleanly. The spinner is demonstrably reached — it is visible in the frames — so
+the gesture engages the control; what synthetic input does not reproduce is the
+park. That matches the repo's standing finding that this class of gesture bug
+needs a real finger. Until a real-finger A/B says otherwise, the override stays.
+
+`SwipeAwareScrollComponent` is where a change here would land.
+
+Re-check:
+
+```
+node scripts/probe-rngh-nested-scroll.mjs
+grep -n -A 4 "private class ScrollViewHook" node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/NativeViewGestureHandler.kt
+grep -n "nestedScrollEnabled" node_modules/react-native/Libraries/Components/ScrollView/ScrollView.js
+npx eslint src --rule '{"sous-chef/rngh-refresh-control-matches-host":"error"}'
 ```
 
 ### unistyles withUnistyles drops function styles
@@ -305,9 +368,23 @@ proxies work natively.
 React Compiler bail out on the whole function: (1) any finalizer (`finally`,
 with or without `catch`; also a catch-less `try`), and (2) a value block —
 `?.`, `??`, `&&`, `||`, or a ternary — inside the `try` body. A `try/catch`
-whose body is plain statements only compiles fine.
+whose body is plain statements only compiles fine, so move the conditional out:
 
-**Verified against `babel-plugin-react-compiler@1.0.0`.** The compiler's own
+```ts
+// BAILS — `?? null` is a value block inside the try
+let data = null;
+try { data = (await client.query(…)).data ?? null; } catch {}
+
+// COMPILES — plain assignment in the try; the value block moved out
+let result;
+try { result = await client.query(…); } catch {}
+const data = result?.data ?? null;
+```
+
+For a `finally`, use the helpers in `src/utils/finallyHelpers.ts`.
+
+**Verified against `babel-plugin-react-compiler@1.0.0`** (re-run 2026-09-14,
+all eleven fixtures as claimed). The compiler's own
 diagnostics: `Handle TryStatement with a finalizer ('finally') clause`,
 `Support value blocks (conditional, logical, optional chaining, etc) within a
 try/catch statement`, `Unexpected terminal in optional`.
@@ -318,12 +395,14 @@ Re-check (compiles one fixture per shape and prints the diagnostic):
 node scripts/probe-compiler-try-forms.mjs
 ```
 
-The `react-compiler/react-compiler` ESLint rule has a
-[known bug](https://github.com/facebook/react/issues/35644) where it silently
-stops reporting ALL diagnostics on unsupported syntax like `finally` — zero
-warnings rather than a flagged bailout. `react-hooks/todo` catches these, and
-`node scripts/check-compiler-bailouts.mjs` is the backstop that actually
-compiles every file.
+Lint sees only half of this. `eslint-plugin-react-compiler` is not installed;
+`react-hooks/todo` (`eslint-plugin-react-hooks@7.1.1`) reports the finalizer
+shapes (`Handle TryStatement without a catch clause`) but reports NOTHING for a
+value block inside a `try/catch` — probed 2026-09-14 with one fixture of each.
+`node scripts/check-compiler-bailouts.mjs` compiles every file and is the only
+detector of the value-block shape. The standalone `react-compiler/react-compiler`
+rule has a [known bug](https://github.com/facebook/react/issues/35644) that
+silences every diagnostic on unsupported syntax, which is why it is not the gate.
 
 ### i18next plural category fallback
 
@@ -387,10 +466,10 @@ field that separates them.
 **Verified 2026-09-01 vs `graphql-ws@6.2.1` on Node's WebSocket** — re-check:
 `node scripts/probe-ws-refused-upgrade.mjs`. Measured event order:
 
-| upgrade  | events                                | `connectionParams` called |
-| -------- | ------------------------------------- | ------------------------- |
-| refused  | `connecting → error → closed(1006)`          | no                 |
-| accepted | `connecting → opened → error → closed(1006)` | yes                |
+| upgrade  | events                                       | `connectionParams` called |
+| -------- | -------------------------------------------- | ------------------------- |
+| refused  | `connecting → error → closed(1006)`          | no                        |
+| accepted | `connecting → opened → error → closed(1006)` | yes                       |
 
 Both legs close 1006; only the presence of `opened` separates them. The probe's
 accepting server completes the upgrade and then drops the socket, so the close
@@ -500,7 +579,7 @@ node scripts/check-startup-origin.mjs
 
 Guarded by that script, which transforms `index.js` with the real plugin and
 asserts the clock module is the first emitted `require` AND that it is
-dependency-free. Wired into `pre-push` and `npm run check:startup-origin`.
+dependency-free. Wired into `pre-commit` and `npm run check:startup-origin`.
 Pinned to a Metro internal path on purpose: if an upgrade moves the plugin the
 check fails loudly, because the guarantee is a property of that transform.
 
@@ -535,7 +614,7 @@ screen holds its byte size flat, here 776,027 bytes for seven seconds.
 ### jest.isolateModules cannot hold a Platform.OS override past its callback
 
 **Claim:** a test that sets `Platform.OS` inside `jest.isolateModules(...)` and
-then calls the code under test *outside* the callback silently gets the real
+then calls the code under test _outside_ the callback silently gets the real
 `Platform.OS` back.
 
 **Verified 2026-08-25 against `react-native@0.86.3`.** RN's index exports
@@ -622,9 +701,7 @@ change.
 **Verified against `@shopify/flash-list@2.3.2`**, and on-device
 (SM-S908U1, `localRelease`, 67 items): the gate is a 300–342 ms header-only
 blank frame between skeleton dismissal and rows, eliminated by releasing
-skeletons on the first `onCommitLayoutEffect` that lands with real content —
-numbers and protocol in
-[audits/perf-blank-window-2026-08-26.md](audits/perf-blank-window-2026-08-26.md).
+skeletons on the first `onCommitLayoutEffect` that lands with real content.
 Consumed by `useFlashListPerformance`'s `hasContentLayout` latch.
 
 Re-check:
@@ -685,11 +762,11 @@ has already analysed the file and the crawl is a silent no-op.
 **Verified against `react-native-unistyles@3.3.0` +
 `babel-plugin-react-compiler@1.0.0`.** Three orders, three outcomes:
 
-| plugin order | compiler | variant read |
-| --- | --- | --- |
-| `[unistyles, compiler]` (their docs) | function silently SKIPPED — the compiler catches its own `(BuildHIR::lowerAssignment) Could not find binding for declaration` and emits the original | correct, unmemoized |
-| `[compiler, unistyles]` | compiles | STALE — `if ($[2] !== style)`, the read is not a dependency |
-| `[unistyles, crawl, compiler]` (shipped) | compiles | fresh — `if ($[2] !== style \|\| $[3] !== styles$0.button)` |
+| plugin order                             | compiler                                                                                                                                             | variant read                                                |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `[unistyles, compiler]` (their docs)     | function silently SKIPPED — the compiler catches its own `(BuildHIR::lowerAssignment) Could not find binding for declaration` and emits the original | correct, unmemoized                                         |
+| `[compiler, unistyles]`                  | compiles                                                                                                                                             | STALE — `if ($[2] !== style)`, the read is not a dependency |
+| `[unistyles, crawl, compiler]` (shipped) | compiles                                                                                                                                             | fresh — `if ($[2] !== style \|\| $[3] !== styles$0.button)` |
 
 The middle row is the trap: zero bailouts and full memoization, while every
 variant style freezes at its first-render value.
@@ -742,12 +819,11 @@ Guarded by `src/apollo/utils/__tests__/localFirstFields.test.ts`.
 `cache.modify` remains the right tool where the field is known to exist and the
 write must NOT normalize — connection edges and counts.
 
-It is NOT the right tool for the `purchaseInfo` record, which used to be written
-that way. Two rules are documented on `writePurchaseInfo` and neither could run
-through `cache.modify`: the type policy's clear-on-flip never fires (no merge
-runs), and a field the cached record does not already carry cannot be
-introduced. The writer now goes through `cache.writeFragment` and carries the
-cached record forward explicitly, so the policy has nothing to clear on a local
+It is NOT the right tool for the `purchaseInfo` record. Two rules are documented
+on `writePurchaseInfo` and neither can run through `cache.modify`: the type
+policy's clear-on-flip never fires (no merge runs), and a field the cached record
+does not already carry cannot be introduced. The writer goes through
+`cache.writeFragment` and carries the cached record forward explicitly, so the policy has nothing to clear on a local
 flip — which is what the SDL describes, since it documents a clearing contract
 for `movedToPantryAt` alone and says nothing about the amounts. The policy still
 governs the narrow SERVER responses it was written for.
@@ -770,6 +846,11 @@ at all on an array-`keyArgs` field. `skipUnmatchedArgVariants` was written that
 way, so it returned "do not skip" for every variant and the cross-home leak it
 exists to prevent — a storage location restored after a refused delete in home A
 appearing in home B's list — was still live under a passing suite.
+`skipUnmatchedFilterVariants` is the same guard for the nested `filters`
+argument, and its consumers (`mealTemplates`, `User.notificationsConnection`)
+are array-`keyArgs` fields, so it has to read the colon form too: both helpers
+share `parseStoreFieldArgs`, and `cacheUpdaters.test.ts` captures the real store
+key off `makeCache()` so a fixture cannot drift from Apollo's form.
 
 Parse by whichever delimiter comes FIRST: the paren form also contains a `:`
 inside its JSON (at index 17 in the sample above), so testing for `:` alone
@@ -826,7 +907,7 @@ filters emissions AFTER the initial result.
 
 The third line is the other half. With `returnPartialData: false` an incomplete
 cache read yields `data === undefined` rather than a partial object, so
-`loading && !data` is precisely *"the read was incomplete"* — and one missing
+`loading && !data` is precisely _"the read was incomplete"_ — and one missing
 field of the selection is enough to trigger it. That is why every writer of an
 entity must write the full shape the reading query selects; see
 [cache.modify cannot add a field](#cachemodify-cannot-add-a-field) and
@@ -935,7 +1016,7 @@ Re-check: connect the debugger (`argent-metro-debugger`) and evaluate
 
 ```js
 (async () => {
-  const res = await fetch(PICKED_URI);          // from the picker's response
+  const res = await fetch(PICKED_URI); // from the picker's response
   const head = (await res.blob()).slice(0, 12);
   const url = await new Promise(r => {
     const fr = new FileReader();
@@ -944,7 +1025,7 @@ Re-check: connect the debugger (`argent-metro-debugger`) and evaluate
   });
   const bin = atob(url.slice(url.indexOf(',') + 1));
   return Array.from({ length: 12 }, (_, i) => bin.charCodeAt(i));
-})()
+})();
 ```
 
 Guarded by `src/utils/__tests__/imageValidation.test.ts` (`sniffImageMimeType`).
@@ -961,15 +1042,15 @@ rational arithmetic instead, and produces identical output.
 runtime on an SM-S908U1** (Android 16, 96 Hz panel → 10.4 ms frame budget),
 debug bundle with the CDP debugger attached. Microseconds per call:
 
-| value | `new Fraction(v).simplify(0.02)` | `new Fraction(Math.round(v*1e6), 1e6).simplify(0.02)` |
-| --- | --- | --- |
-| `0.33333334` | **273,534** | 36 |
-| `0.66666667` | **290,297** | 70 |
-| `4.6` | **17,843** | 53 |
-| `1.1` | **9,051** | 17 |
-| `0.93` | 263 | 99 |
-| `2.7` | 73 | 62 |
-| `1/3` exact, `0.5`, `1.25` | 15–19 | 15–35 |
+| value                      | `new Fraction(v).simplify(0.02)` | `new Fraction(Math.round(v*1e6), 1e6).simplify(0.02)` |
+| -------------------------- | -------------------------------- | ----------------------------------------------------- |
+| `0.33333334`               | **273,534**                      | 36                                                    |
+| `0.66666667`               | **290,297**                      | 70                                                    |
+| `4.6`                      | **17,843**                       | 53                                                    |
+| `1.1`                      | **9,051**                        | 17                                                    |
+| `0.93`                     | 263                              | 99                                                    |
+| `2.7`                      | 73                               | 62                                                    |
+| `1/3` exact, `0.5`, `1.25` | 15–19                            | 15–35                                                 |
 
 The control rules out a debugger tax: 5,000,000 iterations of `s += i % 7` on
 the same runtime took 351 ms — 70 ns per iteration, ordinary Hermes-on-device
@@ -990,18 +1071,21 @@ Re-check: connect the debugger (`argent-metro-debugger`), serve
 evaluate
 
 ```js
-fetch('http://localhost:8099/fraction.js').then(r => r.text()).then(src => {
-  const mod = { exports: {} };
-  new Function('module', 'exports', src)(mod, mod.exports);
-  globalThis.__Frac = mod.exports;
-});
+fetch('http://localhost:8099/fraction.js')
+  .then(r => r.text())
+  .then(src => {
+    const mod = { exports: {} };
+    new Function('module', 'exports', src)(mod, mod.exports);
+    globalThis.__Frac = mod.exports;
+  });
 // then, in a second evaluate:
 (() => {
-  const F = globalThis.__Frac, now = () => performance.now();
+  const F = globalThis.__Frac,
+    now = () => performance.now();
   const t0 = now();
   for (let i = 0; i < 2; i++) new F(0.33333334).simplify(0.02);
-  return Math.round((now() - t0) * 1000 / 2); // microseconds per call
-})()
+  return Math.round(((now() - t0) * 1000) / 2); // microseconds per call
+})();
 ```
 
 ### An Android biometric cancel is indistinguishable from an invalidated key by code

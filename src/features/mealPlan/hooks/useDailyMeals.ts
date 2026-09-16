@@ -1,8 +1,9 @@
 import { isSameDay } from 'date-fns';
 import { useTranslation } from '#/i18n';
+import { MEAL_TYPE_LABEL_KEYS } from '#features/mealPlan/utils/mealPlanEnumLabels';
 import { MealType } from '#/graphql/generated/schemaTypes';
-import { type DailyMeals_ItemFragment } from './useDailyMeals.generated';
-import { type MealPlanItemCard_ItemFragment } from '#features/mealPlan/components/MealPlanItemCard.generated';
+import type { DailyMeals_ItemFragment } from './useDailyMeals.generated';
+import type { MealPlanItemCard_ItemFragment } from '#features/mealPlan/components/MealPlanItemCard.generated';
 
 // Hook input items must satisfy this hook's own fragment AND the downstream
 // MealPlanItemCard fragment (since items flow through MealTypeSection → MealPlanItemCard).
@@ -36,17 +37,6 @@ export interface MealTypeGroup {
   items: DailyMealsItem[];
 }
 
-// i18n keys for meal-type section headers (reuses the AddMealSheet set, which
-// is complete and present in every locale).
-const MEAL_TYPE_LABEL_KEYS: Partial<Record<MealType, string>> = {
-  [MealType.Breakfast]: 'labels.breakfast',
-  [MealType.Brunch]: 'labels.brunch',
-  [MealType.Lunch]: 'labels.lunch',
-  [MealType.Snack]: 'usagePurpose.SNACK',
-  [MealType.Dinner]: 'labels.dinner',
-  [MealType.Dessert]: 'labels.dessert',
-};
-
 export function useDailyMeals(items: DailyMealsItem[], selectedDate: Date) {
   const { t } = useTranslation();
   const dailyMeals = (() => {
@@ -61,7 +51,7 @@ export function useDailyMeals(items: DailyMealsItem[], selectedDate: Date) {
     // Group by meal type, maintaining defined order
     const groups: MealTypeGroup[] = MEAL_TYPE_ORDER.map(mealType => ({
       mealType,
-      label: t(MEAL_TYPE_LABEL_KEYS[mealType] ?? mealType),
+      label: t(MEAL_TYPE_LABEL_KEYS[mealType]),
       items: dayItems
         .filter(item => item.mealType === mealType)
         .sort((a, b) => {
@@ -79,21 +69,9 @@ export function useDailyMeals(items: DailyMealsItem[], selectedDate: Date) {
     return groups;
   })();
 
-  const totalMeals = dailyMeals.reduce(
-    (sum, group) => sum + group.items.length,
-    0,
-  );
-
-  const totalCalories = dailyMeals.reduce(
-    (sum, group) =>
-      sum + group.items.reduce((s, item) => s + (item.calories ?? 0), 0),
-    0,
-  );
-
   return {
     dailyMeals,
-    totalMeals,
-    totalCalories,
-    isEmpty: totalMeals === 0,
+    // A day with no meal yields no groups, core slots included.
+    isEmpty: dailyMeals.length === 0,
   };
 }

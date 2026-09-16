@@ -18,6 +18,7 @@ import { print } from 'graphql';
 import { sha256 } from 'js-sha256';
 import { Observable } from 'rxjs';
 import { persistedQueryLink } from '../persistedQueryLink';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetHomeDocument } from '#operations/home/home.generated';
@@ -81,24 +82,23 @@ describe('persistedQueryLink ↔ manifest identity', () => {
     variables: OperationVariables;
   }> = [
     {
-      operationName: 'GetUnreadNotifications',
-      document:
-        GetUnreadNotificationsDocument as import('graphql').DocumentNode,
+      operationName: operationNameOf(GetUnreadNotificationsDocument),
+      document: GetUnreadNotificationsDocument,
       variables: {},
     },
     {
       // Deep fragment composition — exercises fragment ordering, which
       // sortTopLevelDefinitions must neutralize on both sides.
-      operationName: 'GetPantry',
-      document: GetPantryDocument as import('graphql').DocumentNode,
+      operationName: operationNameOf(GetPantryDocument),
+      document: GetPantryDocument,
       variables: { id: 'pantry-1' },
     },
     {
       // Codegen emits this one's fragments in an order that differs from the
       // sorted order, so it only agrees with the manifest once the document
       // reaching HttpLink has been sorted.
-      operationName: 'GetHome',
-      document: GetHomeDocument as import('graphql').DocumentNode,
+      operationName: operationNameOf(GetHomeDocument),
+      document: GetHomeDocument,
       variables: { id: 'home-1' },
     },
   ];

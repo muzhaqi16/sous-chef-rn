@@ -4,7 +4,6 @@ import {
   type MealTemplateItemFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import type { AddTemplateItemInput } from '#/graphql/generated/schemaTypes';
-import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
 
 /**
  * Local-first writes for a template's items: the item mutations return the whole
@@ -57,18 +56,16 @@ export function buildOptimisticTemplateItem(
   id: string,
   input: AddTemplateItemInput,
 ): MealTemplateItemFragment {
-  return createOptimisticEntity<MealTemplateItemFragment>(
-    'MealTemplateItem',
+  return {
+    __typename: 'MealTemplateItem',
     id,
-    {
-      dayOffset: input.dayOffset,
-      mealType: input.mealType,
-      customMealName: input.meal.customMealName ?? null,
-      servings: input.servings ?? null,
-      notes: input.notes ?? null,
-      recipe: readRecipeRef(cache, input.meal.recipeId),
-    },
-  );
+    dayOffset: input.dayOffset,
+    mealType: input.mealType,
+    customMealName: input.meal.customMealName ?? null,
+    servings: input.servings ?? null,
+    notes: input.notes ?? null,
+    recipe: readRecipeRef(cache, input.meal.recipeId),
+  };
 }
 
 /** Append an item to the template's `items` list. */

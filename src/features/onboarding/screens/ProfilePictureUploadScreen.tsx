@@ -13,18 +13,15 @@ import { Button } from '#components/molecules/Button';
 import { Link } from '#components/atoms/Link';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  launchCamera,
-  launchImageLibrary,
+import type {
   ImagePickerResponse,
   MediaType,
   CameraOptions,
   ImageLibraryOptions,
 } from 'react-native-image-picker';
-import {
-  validateImageFile,
-  ImageValidationError,
-} from '#utils/imageValidation';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import type { ImageValidationError } from '#utils/imageValidation';
+import { validateImageFile } from '#utils/imageValidation';
 import { imageErrorMessage, useImageUpload } from '#hooks/useImageUpload';
 import { useOnboardingNavigation } from '#features/onboarding/hooks/useOnboardingNavigation';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -81,7 +78,7 @@ export const ProfilePictureUploadScreen = () => {
   // leg — gating them on it removes the only way forward for its duration.
   const avatarLoading = loading && !profile;
 
-  const hasLocalImage = !!(croppedImage || selectedImage);
+  const hasLocalImage = !!(croppedImage ?? selectedImage);
   const hasExistingAvatar = !!existingAvatarUrl && !hasLocalImage;
   const hasAnyImage = hasExistingAvatar || hasLocalImage;
 
@@ -106,8 +103,9 @@ export const ProfilePictureUploadScreen = () => {
     }
 
     const asset = response.assets[0];
+    if (!asset.uri) return;
     const imageFile: ImageFile = {
-      uri: asset.uri!,
+      uri: asset.uri,
       fileName: asset.fileName,
       fileSize: asset.fileSize,
       type: asset.type,
@@ -132,12 +130,13 @@ export const ProfilePictureUploadScreen = () => {
     try {
       permission = await PermissionService.request('camera');
     } catch {
-      launchCamera(DEFAULT_OPTIONS, handleImageResponse);
+      // The picker reports through the callback; its promise only resolves.
+      void launchCamera(DEFAULT_OPTIONS, handleImageResponse);
       return;
     }
 
     if (permission === 'granted') {
-      launchCamera(DEFAULT_OPTIONS, handleImageResponse);
+      void launchCamera(DEFAULT_OPTIONS, handleImageResponse);
     } else {
       alertService.alert(
         t('labels.cameraPermission'),
@@ -149,7 +148,7 @@ export const ProfilePictureUploadScreen = () => {
   const handleSelectPhoto = () => {
     // Android Photo Picker doesn't require permissions
     // iOS also allows launching without explicit permission on modern versions
-    launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
+    void launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
   };
 
   const handleCropImage = () => {
@@ -161,10 +160,10 @@ export const ProfilePictureUploadScreen = () => {
   };
 
   const handleUpload = () => {
-    const imageToUpload = croppedImage || selectedImage;
+    const imageToUpload = croppedImage ?? selectedImage;
     if (!imageToUpload) return;
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         const imageUrl = await uploadProfileImage(
           imageToUpload,
@@ -216,7 +215,7 @@ export const ProfilePictureUploadScreen = () => {
             <>
               <LocalImage
                 accessibilityLabel={t('a11y.profilePreview')}
-                uri={(croppedImage?.uri || selectedImage?.uri) ?? ''}
+                uri={croppedImage?.uri ?? selectedImage?.uri ?? ''}
                 style={styles.avatarImage}
               />
               <AppPressable
@@ -287,7 +286,7 @@ export const ProfilePictureUploadScreen = () => {
                   {t('onBoarding.chooseFromGallery')}
                 </Text>
 
-                <Text role="caption" style={styles.uploadOptionDescription}>
+                <Text role="caption" tone="secondary">
                   {t('onBoarding.chooseFromGalleryDescription')}
                 </Text>
               </View>
@@ -305,11 +304,11 @@ export const ProfilePictureUploadScreen = () => {
               </View>
 
               <View style={styles.uploadOptionContent}>
-                <Text style={styles.uploadOptionLabel}>
+                <Text role="bodyStrong" style={styles.uploadOptionLabel}>
                   {t('onBoarding.takeAPhoto')}
                 </Text>
 
-                <Text style={styles.uploadOptionDescription}>
+                <Text role="caption" tone="secondary">
                   {t('onBoarding.takeAPhotoDescription')}
                 </Text>
               </View>
@@ -320,7 +319,7 @@ export const ProfilePictureUploadScreen = () => {
         )}
 
         <View style={styles.formFooter}>
-          <Text role="caption" style={styles.formFooterText}>
+          <Text role="caption" tone="secondary" align="center">
             {t('onBoarding.legalNotice')}
           </Text>
 
@@ -337,7 +336,7 @@ export const ProfilePictureUploadScreen = () => {
               {t('onBoarding.termsOfService')}
             </Link>
 
-            <Text style={styles.formFooterText}>
+            <Text role="caption" tone="secondary" align="center">
               {' '}
               {t('auth.legalAnd')}
               {'   '}
@@ -468,11 +467,6 @@ const styles = StyleSheet.create(theme => ({
   },
   uploadOptionLabel: {
     marginBottom: theme.spacing.xs,
-    color: theme.colors.textPrimary,
-  },
-  uploadOptionDescription: {
-    letterSpacing: 0.16,
-    color: theme.colors.textSecondary,
   },
   formFooter: {
     marginTop: 'auto',
@@ -480,10 +474,6 @@ const styles = StyleSheet.create(theme => ({
     ...theme.type.body,
     textAlign: 'center',
     alignItems: 'center',
-  },
-  formFooterText: {
-    textAlign: 'center',
-    color: theme.colors.textSecondary,
   },
   formFooterLinks: {
     flexDirection: 'row',

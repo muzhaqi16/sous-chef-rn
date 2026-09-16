@@ -3,12 +3,14 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
+import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { EmptyState } from '#components/molecules/EmptyState';
 
 interface DataItem {
   label: string;
   value: number;
-  secondaryValue?: number;
+  /** Already formatted, e.g. a money amount in its own currency. */
+  secondaryLabel?: string;
 }
 
 interface TopItemsBarChartProps {
@@ -16,9 +18,6 @@ interface TopItemsBarChartProps {
   height?: number;
   title?: string;
   color?: string;
-  valueLabel?: string;
-  showSecondaryValue?: boolean;
-  secondaryValuePrefix?: string;
 }
 
 export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
@@ -26,11 +25,9 @@ export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
   height = 250,
   title,
   color,
-  showSecondaryValue = false,
-  secondaryValuePrefix = '$',
 }) => {
   const { t } = useTranslation();
-  if (!data || data.length === 0) {
+  if (data.length === 0) {
     return (
       <View style={[styles.container, { minHeight: height }]}>
         {!!title && (
@@ -73,15 +70,10 @@ export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
                   />
                 </View>
                 <Text role="caption" tone="secondary" style={styles.barValue}>
-                  {item.value}
-                  {!!showSecondaryValue &&
-                    item.secondaryValue !== undefined && (
-                      <Text role="body">
-                        {` (${secondaryValuePrefix}${item.secondaryValue.toFixed(
-                          2,
-                        )})`}
-                      </Text>
-                    )}
+                  {formatQuantityForDisplay(item.value)}
+                  {item.secondaryLabel === undefined ? null : (
+                    <Text role="body">{` (${item.secondaryLabel})`}</Text>
+                  )}
                 </Text>
               </View>
             </View>

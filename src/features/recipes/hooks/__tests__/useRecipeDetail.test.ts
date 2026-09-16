@@ -1,3 +1,4 @@
+import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import type { useRecipeData } from '../useRecipeData';
 import type { useRecipeFavoriteState } from '../useRecipeFavoriteState';
@@ -24,7 +25,6 @@ const mockRecipeDataReturn = {
   displayData: null,
   loading: false,
   error: null,
-  backendError: undefined,
   backendRecipe: undefined as BackendRecipe,
   isBackendRecipe: false,
   externalRecipe: null,
@@ -57,7 +57,6 @@ jest.mock('../useRecipeFavoriteState', () => ({
 }));
 
 const mockPreloadReturn = {
-  preloading: false,
   preloadedRecipe: null as PreloadedRecipe,
   preloadRecipe: jest.fn(),
   saveRecipeToFavorites: jest.fn(),
@@ -113,9 +112,7 @@ jest.mock('../useRecipeSavedMetadata', () => ({
   ) => mockUseRecipeSavedMetadata(...args),
 }));
 
-const { useRoute } = jest.requireMock('@react-navigation/native') as {
-  useRoute: jest.Mock;
-};
+const { useRoute } = jest.requireMock('@react-navigation/native');
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -125,7 +122,11 @@ beforeEach(() => {
 describe('useRecipeDetail (orchestrator wiring)', () => {
   it('threads route params to useRecipeData', () => {
     useRoute.mockReturnValueOnce({
-      params: { recipeId: 'r1', externalSource: 'X', externalId: '99' },
+      params: {
+        recipeId: 'r1',
+        externalSource: ExternalSource.Spoonacular,
+        externalId: '99',
+      },
     });
 
     renderHookWithApollo(() => useRecipeDetail());
@@ -133,7 +134,7 @@ describe('useRecipeDetail (orchestrator wiring)', () => {
     expect(mockUseRecipeData).toHaveBeenCalledWith(
       expect.objectContaining({
         recipeId: 'r1',
-        externalSource: 'X',
+        externalSource: ExternalSource.Spoonacular,
         externalId: '99',
       }),
     );
@@ -259,20 +260,5 @@ describe('useRecipeDetail (orchestrator wiring)', () => {
     const { result } = renderHookWithApollo(() => useRecipeDetail());
 
     expect(result.current.savedFolder).toBe('Local Folder');
-  });
-
-  it('exposes preload state', () => {
-    mockUseRecipePreload.mockReturnValueOnce({
-      ...mockPreloadReturn,
-      preloading: true,
-      preloadedRecipe: {
-        id: 'preloaded-1',
-      } as Partial<NonNullable<PreloadedRecipe>> as PreloadedRecipe,
-    });
-
-    const { result } = renderHookWithApollo(() => useRecipeDetail());
-
-    expect(result.current.preloading).toBe(true);
-    expect(result.current.preloadedRecipe).toEqual({ id: 'preloaded-1' });
   });
 });

@@ -68,9 +68,7 @@ describe('InlineAutocomplete', () => {
 
     // Before it fires, a sibling control replaces the rows array. The pending
     // timer still closes over the pre-add array.
-    act(() => {
-      fireEvent.press(screen.getByTestId('add-row'));
-    });
+    fireEvent.press(screen.getByTestId('add-row'));
 
     act(() => {
       jest.advanceTimersByTime(300);

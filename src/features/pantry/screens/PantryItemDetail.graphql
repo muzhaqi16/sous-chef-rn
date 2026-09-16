@@ -39,6 +39,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     canEdit
     imageUrl
     images {
+      id
       url
       kind
     }
@@ -49,8 +50,28 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     name
     shelfLifeDays
     shelfLifeOpenedDays
-    nutritions
+    nutritionFacts {
+      id
+      calories
+      totalFat
+      saturatedFat
+      transFat
+      cholesterol
+      sodium
+      totalCarbs
+      dietaryFiber
+      totalSugars
+      addedSugars
+      protein
+      vitaminD
+      calcium
+      iron
+      potassium
+      servingSize
+      servingUnit
+    }
     categories {
+      id
       isPrimary
       category {
         id
@@ -158,6 +179,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
         usedAt
         purpose
         adjustmentReason
+        adjustmentKind
       }
     }
   }

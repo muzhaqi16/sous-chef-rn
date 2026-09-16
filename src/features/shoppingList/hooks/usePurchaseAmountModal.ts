@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useFragment } from '@apollo/client/react';
-import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { UsePurchaseAmountModal_ItemFragmentDoc } from './usePurchaseAmountModal.generated';
 import { t } from '#/i18n';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { unitPriceFromTotal } from '#features/shoppingList/utils/purchasePrice';
 
 export interface PurchaseAmountItem {
@@ -74,17 +75,20 @@ export function usePurchaseAmountModal(
     : null;
   const useLive = !!selectedItemId && liveItemComplete;
   const liveEstimatedPrice = useLive
-    ? liveItem.priceEstimate?.estimated ?? null
+    ? liveItem.priceEstimate.estimated ?? null
     : null;
   const selectedItemRaw = useLive ? liveItem : fallbackItem;
 
   const selectedItem: PurchaseAmountItem | null = selectedItemRaw
     ? {
         id: selectedItemRaw.id,
-        itemName: selectedItemRaw.itemName || t('labels.item'),
+        itemName: firstNonBlank(selectedItemRaw.itemName) ?? t('labels.item'),
         requestedQuantity: selectedItemRaw.quantity ?? 1,
         unitName:
-          selectedItemRaw.unit?.symbol || selectedItemRaw.unitName || null,
+          firstNonBlank(
+            selectedItemRaw.unit?.symbol,
+            selectedItemRaw.unitName,
+          ) ?? null,
         estimatedPrice: liveEstimatedPrice,
       }
     : null;

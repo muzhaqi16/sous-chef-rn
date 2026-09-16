@@ -5,6 +5,8 @@ import {
   useSubscriptionTransportRecovery,
 } from '../useSubscriptionTransportRecovery';
 import { errorService } from '#/services/errorService';
+import { PantryEventsDocument } from '#features/pantry/graphql/pantry.generated';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 
 // Typed through the module mock rather than the factory, so the listener
 // argument is used rather than declared-and-ignored.
@@ -46,7 +48,7 @@ const renderRecovery = (initial: {
   renderHook(
     (props: { error?: Error; restart: () => void; skip?: boolean }) =>
       useSubscriptionTransportRecovery(
-        'TestEvents',
+        PantryEventsDocument,
         { error: props.error, restart: props.restart },
         props.skip ?? false,
       ),
@@ -184,7 +186,7 @@ describe('useSubscriptionTransportRecovery', () => {
     expect(errorService.reportError).toHaveBeenCalledTimes(1);
     expect(errorService.reportError).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.stringContaining('TestEvents'),
+        message: expect.stringContaining(operationNameOf(PantryEventsDocument)),
       }),
       expect.objectContaining({
         operation: 'subscriptionTransportRecoveryExhausted',

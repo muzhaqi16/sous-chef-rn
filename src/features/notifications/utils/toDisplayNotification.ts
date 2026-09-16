@@ -10,16 +10,15 @@ import {
   type ExpirationLinkData,
   type NotificationPayload,
 } from '#features/notifications/types';
-import {
-  NotificationCategory,
-  NotificationStatus,
+import type {
   NotificationType,
   Priority,
 } from '#/graphql/generated/schemaTypes';
 import {
-  getNotificationAction,
-  getNotificationTitle,
-} from '#features/notifications/utils/notificationHelpers';
+  NotificationCategory,
+  NotificationStatus,
+} from '#/graphql/generated/schemaTypes';
+import { getNotificationAction } from '#features/notifications/utils/notificationHelpers';
 import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 
 /**
@@ -36,13 +35,16 @@ const UNREAD_STATUSES: readonly NotificationStatus[] = [
 /**
  * A notification as the UI needs it: the server's fields plus the four derived
  * ones. Declared here rather than in a store slice, because it describes a
- * projection for rendering — nothing holds it.
+ * projection for rendering — nothing holds it. `title` and `message` are the
+ * server's and reach the screen only when `isAuthoredContent` says a person
+ * wrote them; otherwise the words come from `getNotificationCopy` at render.
  */
 export interface DisplayNotification {
   id: string;
   type: NotificationType;
-  title: string;
-  message: string;
+  isAuthoredContent: boolean;
+  title?: string | null;
+  message?: string | null;
   category: NotificationCategory;
   priority: Priority;
   payload: NotificationPayload;
@@ -86,10 +88,11 @@ export function toDisplayNotification(
   return {
     id: n.id,
     type,
-    title: n.title ?? getNotificationTitle(type),
-    message: n.message ?? '',
+    isAuthoredContent: n.isAuthoredContent,
+    title: n.title,
+    message: n.message,
     category: n.category ?? NotificationCategory.System,
-    priority: n.priority ?? Priority.Normal,
+    priority: n.priority,
     payload,
     sentAt: n.sentAt,
     expiresAt: n.expiresAt,

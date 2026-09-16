@@ -105,10 +105,10 @@ export const ListTemplate = <TItem extends { id: string } = { id: string }>({
   // and a generic template must not flash one feature's glyph on another's list.
   const effectiveEmptyState = isLoading
     ? {
-        icon: emptyState?.icon || 'ellipsis-horizontal',
+        icon: emptyState?.icon ?? 'ellipsis-horizontal',
         title: t('listTemplate.loading'),
         description:
-          emptyState?.loadingDescription || t('listTemplate.loadingItems'),
+          emptyState?.loadingDescription ?? t('listTemplate.loadingItems'),
       }
     : emptyState;
 
@@ -117,7 +117,7 @@ export const ListTemplate = <TItem extends { id: string } = { id: string }>({
       {CustomListComponent ? (
         <CustomListComponent
           {...customListProps}
-          items={items || []}
+          items={items}
           onItemPress={isLoading ? () => {} : onItemPress}
           itemSwipeActions={isLoading ? undefined : itemSwipeActions}
           onRefresh={onRefresh}

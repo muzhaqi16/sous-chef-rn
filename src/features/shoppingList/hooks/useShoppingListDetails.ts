@@ -16,7 +16,7 @@ export function useShoppingListDetails(listId: string | undefined) {
   // - nextFetchPolicy: cache-first prevents re-fetch on re-render/tab switch
   // - notifyOnNetworkStatusChange: lets Apollo emit a re-render when the
   //   network status transitions (used by RefreshControl in ShareList).
-  const { data, loading, error, refetch, networkStatus } = useQuery(
+  const { data, loading, refetch, networkStatus } = useQuery(
     GetShoppingListDetailsDocument,
     {
       variables: { id: listId ?? '' },
@@ -39,7 +39,7 @@ export function useShoppingListDetails(listId: string | undefined) {
   // fields directly without each call site re-doing the lookup.
   const isNonNull = <T>(v: T | null): v is T => v !== null;
   const collaborators: ShoppingListCollaboratorFragment[] =
-    shoppingList?.collaboratorsConnection?.edges
+    shoppingList?.collaboratorsConnection.edges
       .map(edge =>
         client.cache.readFragment<ShoppingListCollaboratorFragment>({
           fragment: ShoppingListCollaboratorFragmentDoc,
@@ -50,7 +50,7 @@ export function useShoppingListDetails(listId: string | undefined) {
       .filter(isNonNull) ?? [];
   const ownerships: ShoppingListOwnershipFragment[] =
     shoppingList?.ownerships
-      ?.map(o =>
+      .map(o =>
         client.cache.readFragment<ShoppingListOwnershipFragment>({
           fragment: ShoppingListOwnershipFragmentDoc,
           fragmentName: 'ShoppingListOwnershipFragment',
@@ -62,12 +62,12 @@ export function useShoppingListDetails(listId: string | undefined) {
   return {
     shoppingList,
     loading,
+    // `errorPolicy: 'ignore'` drops the error, so a missing list with nothing
+    // preserved is the only sign a read failed.
+    hasResult: shoppingList !== null,
     isRefetching,
-    error,
     refetch,
-    // Convenience properties
-    name: shoppingList?.name || '',
-    isDefault: shoppingList?.isDefault || false,
+    name: shoppingList?.name ?? '',
     collaborators,
     ownerships,
     isShared: collaborators.length > 0,

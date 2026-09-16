@@ -7,7 +7,12 @@ import { Kind, type DocumentNode } from 'graphql';
 import {
   makeQueuedMutation as makeMutation,
   makeSyncCacheStub,
+  queuedMutationFor,
 } from '#/test-utils/queuedMutation';
+import {
+  AdjustPantryItemQuantityDocument,
+  CreatePantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import type { QueuedMutation } from '#/apollo/offlineQueue/types';
 import { convertToSyncMutation as convertToSyncMutationFn } from '#/apollo/offlineQueue/convertToSyncMutation';
 
@@ -34,7 +39,7 @@ describe('convertToSyncMutation dispatch', () => {
   // the server dedups on (returning ConflictError(IDEMPOTENT_REPLAY)).
   it('replays a granular delta as the original canonical mutation (no sync conversion)', () => {
     const mutation = makeMutation({
-      operationName: 'AdjustPantryItemQuantity',
+      ...queuedMutationFor(AdjustPantryItemQuantityDocument),
       variables: {
         input: {
           id: 'item-1',
@@ -70,7 +75,7 @@ describe('convertToSyncMutation dispatch', () => {
     // temp- ids are rejected by the server now (client mints permanent cuids);
     // a missing id surfaces as undefined rather than a fabricated temp- id.
     const mutation = makeMutation({
-      operationName: 'CreatePantryItem',
+      ...queuedMutationFor(CreatePantryItemDocument),
       variables: {
         input: { pantryId: 'pan-1', item: { name: 'No ID item' } },
       },

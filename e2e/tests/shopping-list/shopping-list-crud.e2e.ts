@@ -10,6 +10,14 @@ import { generateItemName } from '../../helpers/data';
 import { TIMEOUTS } from '../../helpers/waitFor';
 import { tapByID } from '../../helpers/actions';
 import { expectDisappearsAfter } from '../../helpers/assertions';
+import { shoppingListTestIDs } from '../../../src/features/shoppingList/testIDs';
+import { catalogTestIDs } from '../../../src/features/catalog/testIDs';
+import { kitTestIDs } from '../../../src/components/testIDs';
+
+const editForm = shoppingListTestIDs.editItemForm;
+const ADD_MANUALLY_BUTTON = catalogTestIDs.addManuallyButton(
+  shoppingListTestIDs.addSheetPrefix,
+);
 
 describe('Shopping List CRUD', () => {
   const shoppingListScreen = new ShoppingListScreen();
@@ -62,12 +70,12 @@ describe('Shopping List CRUD', () => {
 
     it('should add item via quick add modal', async () => {
       // Through the screen object, which dismisses the feature-hint overlay
-      // first and retries the tap. A bare `tapByID('tab-bar-add-button')` lands
+      // first and retries the tap. A bare `tapByID(kitTestIDs.tabBarAddButton)` lands
       // on the overlay whenever it is up and the sheet never opens.
       await shoppingListScreen.tapAddButton();
 
       // The "Add Manually" button appearing is how the modal announces itself.
-      await waitFor(element(by.id('add-shopping-item-add-manually-button')))
+      await waitFor(element(by.id(ADD_MANUALLY_BUTTON)))
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
@@ -81,20 +89,20 @@ describe('Shopping List CRUD', () => {
       await shoppingListScreen.openAddDetailsForm();
 
       // TWO add/edit surfaces here, not interchangeable: "Add Manually" opens
-      // the BOTTOM SHEET (`ShoppingListDetailsStep`, ids prefixed
-      // `add-shopping-item-`), while `add-item-modal` belongs to the
-      // `AddEditItem` SCREEN this flow never reaches. Asserted on the NAME INPUT
-      // — the `add-shopping-item-details` container does not reliably clear
+      // the BOTTOM SHEET (`ShoppingListDetailsStep`, the `addSheet*` ids),
+      // while `addItemForm` belongs to the `AddEditItem` SCREEN this flow
+      // never reaches. Asserted on the NAME INPUT — the `addSheetDetails`
+      // container does not reliably clear
       // Detox's visibility threshold while the picker sheet is still unwinding.
-      await waitFor(element(by.id('add-shopping-item-name-input')))
+      await waitFor(element(by.id(shoppingListTestIDs.addSheetNameInput)))
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
-      await tapByID('add-shopping-item-submit-button');
+      await tapByID(shoppingListTestIDs.addSheetSubmitButton);
 
       // Whatever shape the complaint takes, the invariant is that the item was
       // NOT created: the form is still up.
-      await waitFor(element(by.id('add-shopping-item-name-input')))
+      await waitFor(element(by.id(shoppingListTestIDs.addSheetNameInput)))
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
@@ -104,11 +112,11 @@ describe('Shopping List CRUD', () => {
       // only if its provider is unmounted), so Detox's system matchers do not
       // reach it: `system.element(by.system.label('OK'))` finds nothing and
       // blocks. Matched by testID, since the button's text is translated.
-      await waitFor(element(by.id('alert-modal')))
+      await waitFor(element(by.id(kitTestIDs.alertModal)))
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
-      await element(by.id('alert-button-0')).tap();
-      await waitFor(element(by.id('alert-modal')))
+      await element(by.id(kitTestIDs.alertButton(0))).tap();
+      await waitFor(element(by.id(kitTestIDs.alertModal)))
         .not.toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
@@ -132,28 +140,27 @@ describe('Shopping List CRUD', () => {
       // the answer either; that opens the item detail screen.
       await element(by.text(originalName)).swipe('right', 'fast', 0.7);
 
-      // The prefix is `shopping-list-item-<id>` and the action appends `-edit`,
-      // so the item's id sits in the MIDDLE — the bare `shopping-list-item-edit`
-      // is never rendered. Hence the regex.
-      const editButton = element(by.id(/^shopping-list-item-.+-edit$/)).atIndex(
-        0,
-      );
+      // The row prefix ends in the item id and the action appends `-edit`, so
+      // the id sits in the MIDDLE and only a pattern finds an unknown row's edit.
+      const editButton = element(
+        by.id(shoppingListTestIDs.anyItemControl('edit')),
+      ).atIndex(0);
       await waitFor(editButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
       await editButton.tap();
 
-      await waitFor(element(by.id('edit-item-modal')))
+      await waitFor(element(by.id(editForm.screen)))
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
-      const nameInput = element(by.id('edit-item-name-input'));
+      const nameInput = element(by.id(editForm.nameInput));
       await nameInput.clearText();
       await nameInput.typeText(originalName + ' Edited');
 
       // Save. The editor is gone when its name field is gone — that field was
       // just typed into, so it is proven matchable, and the check cannot pass
       // because the matcher found nothing.
-      await expectDisappearsAfter('edit-item-name-input', () =>
-        tapByID('edit-item-submit-button'),
+      await expectDisappearsAfter(editForm.nameInput, () =>
+        tapByID(editForm.submitButton),
       );
 
       await waitFor(element(by.text(originalName + ' Edited')))
@@ -169,14 +176,14 @@ describe('Shopping List CRUD', () => {
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
-      // The quantity badge on the row opens the edit sheet — there is no
-      // `quantity-button`, and tapping the row itself opens the detail screen.
-      // `QuantityBadge`'s testID is keyed by item id, hence the regex.
-      await element(by.id(/^shopping-list-item-.+-quantity$/))
+      // The quantity badge on the row opens the edit sheet; tapping the row
+      // itself opens the detail screen. `QuantityBadge`'s testID is keyed by
+      // item id, hence the pattern.
+      await element(by.id(shoppingListTestIDs.anyItemControl('quantity')))
         .atIndex(0)
         .tap();
 
-      await waitFor(element(by.id('quantity-edit-increment')))
+      await waitFor(element(by.id(shoppingListTestIDs.quantityEditIncrement)))
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
@@ -187,11 +194,13 @@ describe('Shopping List CRUD', () => {
       // is long because the sheet closes on the mutation's response: it covers
       // the round trip plus the Apollo cache write, not just an animation.
       for (let attempt = 0; attempt < 2; attempt++) {
-        await element(by.id('quantity-edit-increment')).tap();
-        await element(by.id('quantity-edit-save')).tap();
+        await element(by.id(shoppingListTestIDs.quantityEditIncrement)).tap();
+        await element(by.id(shoppingListTestIDs.quantityEditSaveButton)).tap();
 
         try {
-          await waitFor(element(by.id('quantity-edit-increment')))
+          await waitFor(
+            element(by.id(shoppingListTestIDs.quantityEditIncrement)),
+          )
             .not.toBeVisible()
             .withTimeout(15000);
           break;
@@ -220,7 +229,7 @@ describe('Shopping List CRUD', () => {
       // `testIDPrefix` of `shopping-list-item-<id>`, so the item id sits in the
       // middle — same shape as the edit button above.
       const deleteButton = element(
-        by.id(/^shopping-list-item-.+-delete$/),
+        by.id(shoppingListTestIDs.anyItemControl('delete')),
       ).atIndex(0);
       await waitFor(deleteButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
       await deleteButton.tap();

@@ -123,12 +123,7 @@
     "updatedTitle": "Artikulli u përditësua",
     "updatedBody": "Ndryshimet e tua janë publikuar.",
     "failedBody": "Diçka shkoi keq gjatë dërgimit të sugjerimit. Provo përsëri.",
-    "photoNotice": "Fotot shtohen menjëherë. Ndryshimet e tjera shqyrtohen më parë nga një administrator.",
-    "notFoundTitle": "Artikulli nuk u gjet",
-    "notFoundBody": "Ky artikull nuk është më në katalog — mund të jetë hequr.",
-    "rejectedTitle": "Nuk u dërgua dot",
-    "failedTitle": "Nuk u dërgua dot",
-    "rateLimitedTitle": "Prit një moment"
+    "photoNotice": "Fotot shtohen menjëherë. Ndryshimet e tjera shqyrtohen më parë nga një administrator."
   },
   "reportItem": {
     "footer": "Të dhëna të gabuara te ndonjë prej tyre?",
@@ -142,12 +137,7 @@
     "sentBody": "Faleminderit — një administrator do ta shohë këtë artikull.",
     "failedBody": "Diçka shkoi keq gjatë dërgimit të raportit. Provo përsëri.",
     "alreadyReportedTitle": "Tashmë e raportuar",
-    "alreadyReportedBody": "Ky artikull është raportuar tashmë dhe pret të shihet nga një administrator, prandaj nuk dërguam një dublikatë.",
-    "notFoundTitle": "Artikulli nuk u gjet",
-    "notFoundBody": "Ky artikull nuk është më në katalog — mund të jetë hequr.",
-    "failedTitle": "Nuk u dërgua dot",
-    "rejectedTitle": "Nuk u dërgua dot",
-    "rateLimitedTitle": "Prit një moment"
+    "alreadyReportedBody": "Ky artikull është raportuar tashmë dhe pret të shihet nga një administrator, prandaj nuk dërguam një dublikatë."
   },
   "addItemForm": {
     "modes": {
@@ -298,10 +288,7 @@
     "setPrimary": {
       "notFoundTitle": "Fotoja nuk u gjet",
       "notFoundBody": "Kjo foto nuk gjendet më te artikulli — mund të jetë hequr.",
-      "failedBody": "Diçka shkoi keq gjatë përditësimit të fotos kryesore. Provo përsëri.",
-      "rateLimitedTitle": "Prit një moment",
-      "rejectedTitle": "Fotoja nuk u vendos dot",
-      "failedTitle": "Fotoja nuk u vendos dot"
+      "failedBody": "Diçka shkoi keq gjatë përditësimit të fotos kryesore. Provo përsëri."
     },
     "perspective": {
       "front": "Para",
@@ -413,7 +400,10 @@
   },
   "storageLocationCard": {
     "default": "Parazgjedhur",
-    "insideParent": "Ndodhet te {{parent}}"
+    "insideParent": "Ndodhet te {{parent}}",
+    "capacityWithUnit": "/ {{capacity}} {{unit}}",
+    "capacity_one": "/ {{count}} njësi",
+    "capacity_other": "/ {{count}} njësi"
   },
   "itemSubtitle": {
     "percentRemaining": "({{percent}}% e mbetur)",
@@ -427,7 +417,8 @@
   },
   "tagInput": {
     "maxTagsReached_one": "U arrit kufiri prej {{count}} etikete",
-    "maxTagsReached_other": "U arrit kufiri prej {{count}} etiketash"
+    "maxTagsReached_other": "U arrit kufiri prej {{count}} etiketash",
+    "placeholder": "Shto një etiketë..."
   },
   "usagePurpose": {
     "ADJUSTMENT": "Inventari u rregullua",
@@ -449,6 +440,8 @@
     "VOLUME": "Vëllim"
   },
   "multiSelect": {
-    "noneSelected": "Asnjë element i zgjedhur"
+    "noneSelected": "Asnjë element i zgjedhur",
+    "selectedCount_one": "{{count}} element i zgjedhur",
+    "selectedCount_other": "{{count}} elemente të zgjedhura"
   }
 }

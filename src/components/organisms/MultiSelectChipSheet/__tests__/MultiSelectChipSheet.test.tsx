@@ -115,7 +115,7 @@ describe('MultiSelectChipSheet', () => {
     render(
       <MultiSelectChipSheet {...defaultProps} selectedItems={['a', 'b']} />,
     );
-    expect(screen.getByText('2 selected')).toBeTruthy();
+    expect(screen.getByText('2 items selected')).toBeTruthy();
   });
 
   it('shows Clear all when items are selected', () => {

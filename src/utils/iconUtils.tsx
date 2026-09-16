@@ -41,6 +41,7 @@ export const TONE_TO_COLOR = {
   iconTertiary: (t: Theme) => t.colors.iconTertiary,
   onPrimary: (t: Theme) => t.colors.onPrimary,
   onError: (t: Theme) => t.colors.onError,
+  onSuccess: (t: Theme) => t.colors.onSuccess,
   onScrim: (t: Theme) => t.colors.onScrim,
   background: (t: Theme) => t.colors.background,
   favorite: (t: Theme) => t.colors.favorite,
@@ -89,7 +90,7 @@ export const Icon: React.FC<IconProps> = ({
         name={name as IoniconsIconName}
         size={px}
         color={color}
-        uniProps={t => sizeProps(t as Theme)}
+        uniProps={t => sizeProps(t)}
       />
     );
   }
@@ -100,8 +101,8 @@ export const Icon: React.FC<IconProps> = ({
         name={name as IoniconsIconName}
         size={px}
         uniProps={t => ({
-          color: resolveColor(t as Theme),
-          ...sizeProps(t as Theme),
+          color: resolveColor(t),
+          ...sizeProps(t),
         })}
       />
     );
@@ -113,8 +114,8 @@ export const Icon: React.FC<IconProps> = ({
       name={name as IoniconsIconName}
       size={px}
       uniProps={t => ({
-        color: (t as Theme).colors.textPrimary,
-        ...sizeProps(t as Theme),
+        color: t.colors.textPrimary,
+        ...sizeProps(t),
       })}
     />
   );

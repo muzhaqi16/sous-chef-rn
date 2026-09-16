@@ -63,7 +63,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
     onChangeText(text);
   };
 
-  const hasError = !!(error || (value && !isValidFormat(value)));
+  const hasError = !!error || (!!value && !isValidFormat(value));
   // Same vocabulary as the hint below, with the device's separator substituted.
   const formatsHint = localizeNumericHint(t('fractionInput.formatsHint'));
 
@@ -75,8 +75,8 @@ export const FractionInput: React.FC<FractionInputProps> = ({
 
   return (
     <FormFieldWrapper
-      label={label || ''}
-      error={hasError ? error || formatsHint : undefined}
+      label={label ?? ''}
+      error={hasError ? error ?? formatsHint : undefined}
       required={required}
     >
       <InputComponent

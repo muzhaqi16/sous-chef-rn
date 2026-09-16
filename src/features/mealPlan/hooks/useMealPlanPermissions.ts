@@ -3,8 +3,8 @@ import {
   getMealPlanPermissions,
   type MealPlanPermissions,
 } from '#features/mealPlan/utils/mealPlanPermissions';
-import { type MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import { type MealPlanMain_MealPlanFragment } from '#features/mealPlan/screens/MealPlanMain.generated';
+import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import type { MealPlanMain_MealPlanFragment } from '#features/mealPlan/screens/MealPlanMain.generated';
 
 type MealPlanLike = MealPlanDisplayFragment | MealPlanMain_MealPlanFragment;
 

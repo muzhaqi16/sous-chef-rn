@@ -5,8 +5,13 @@ import {
 } from '@apollo/client/errors';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isAuthRefusalCode } from '#/utils/authErrorCodes';
+import { isNetworkError } from '#/utils/isNetworkError';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { VERSION_CONFLICT_CODES } from '#/utils/errors/versionConflict';
-import { isErrorTypename } from '#/utils/errors/mutationPayload';
+import {
+  isErrorTypename,
+  type MutationErrorTypename,
+} from '#/utils/errors/mutationPayload';
 import type { QueueError } from './types';
 
 /**
@@ -16,7 +21,7 @@ import type { QueueError } from './types';
  * through the string heuristics below becomes an auth error retried forever.
  */
 export class ReplayRejectedError extends Error {
-  readonly payloadTypename: string;
+  readonly payloadTypename: MutationErrorTypename;
   readonly payloadCode: string | null;
   /**
    * `NotFoundError.resource` — which row was missing. A bare `NotFoundError`
@@ -26,7 +31,7 @@ export class ReplayRejectedError extends Error {
   readonly payloadResource: string | null;
 
   constructor(
-    payloadTypename: string,
+    payloadTypename: MutationErrorTypename,
     message: string,
     payloadCode?: string | null,
     payloadResource?: string | null,
@@ -45,28 +50,30 @@ export class ReplayRejectedError extends Error {
  * coded `IDEMPOTENT_REPLAY` — already committed, so dequeue as success. Match
  * on the CODE: a generic `ConflictError` is a real conflict, so `'rejected'`.
  */
-export type ReplayOutcome = 'applied' | 'converged' | 'rejected';
+export type ReplayOutcome =
+  | { status: 'applied' | 'converged' }
+  | { status: 'rejected'; typename: MutationErrorTypename };
 
 export function classifyReplayResult(payload: unknown): ReplayOutcome {
-  if (!payload || typeof payload !== 'object') return 'applied';
+  if (!payload || typeof payload !== 'object') return { status: 'applied' };
 
   const { __typename: typename, code } = payload as {
     __typename?: string;
     code?: string;
   };
-  if (!typename || !isErrorTypename(typename)) return 'applied';
+  if (!typename || !isErrorTypename(typename)) return { status: 'applied' };
 
   if (typename === 'ConflictError' && code === ErrorCode.IdempotentReplay) {
-    return 'converged';
+    return { status: 'converged' };
   }
-  return 'rejected';
+  return { status: 'rejected', typename };
 }
 
 /**
  * The API sets codes per-error inside `errors[i]`, while
  * `CombinedGraphQLErrors.extensions` is the RESPONSE-level bag — a flat
- * `extensions.code` read sees `undefined` for every real refusal. Flat shapes
- * are read last: `queueStore` persists `lastError` and replays it back here.
+ * `extensions.code` read sees `undefined` for every real refusal. A flat `code`
+ * comes from the session path's own errors (`SessionError`, refresh refusals).
  */
 function readErrorCode(error: unknown): string | undefined {
   if (CombinedGraphQLErrors.is(error) || CombinedProtocolErrors.is(error)) {
@@ -86,19 +93,9 @@ function readErrorCode(error: unknown): string | undefined {
   return flat?.extensions?.code ?? flat?.code;
 }
 
-/**
- * Apollo 4 throws `ServerError` carrying `statusCode` directly. Reading only
- * the Apollo 3 `networkError.statusCode` nesting kills the 5xx branch, which
- * dequeues a transient outage as a permanent client fault and loses the write.
- */
+/** Apollo 4 throws `ServerError` for a non-2xx response, carrying `statusCode`. */
 function readStatusCode(error: unknown): number | undefined {
-  if (ServerError.is(error)) return error.statusCode;
-
-  const legacy = error as
-    | { networkError?: { statusCode?: number } }
-    | null
-    | undefined;
-  return legacy?.networkError?.statusCode;
+  return ServerError.is(error) ? error.statusCode : undefined;
 }
 
 /**
@@ -119,9 +116,17 @@ const TRANSIENT_SERVER_CODES: readonly string[] = [
   TopLevelErrorCode.OperationRateLimited,
 ];
 
+/**
+ * A missing unit row is the ONLY unit refusal a vocabulary refresh can clear.
+ * `UNIT_INVALID` is deliberately absent: the API defines it as the unit being
+ * invalid for the requested operation — curation, no conversion route, a fact
+ * the food does not record, or a measure the stack cannot express. A refresh
+ * clears none of those, and a replay re-sends the same unit, so reading it as
+ * stale here buys a retry loop that ends in the same withdrawal several drains
+ * later. The interactive path refetches the ranked units on that code so the
+ * user can pick another; a replay has no user to pick.
+ */
 function isStaleUnitRefusal(error: ReplayRejectedError): boolean {
-  if (error.payloadCode === ErrorCode.UnitInvalid) return true;
-
   return (
     error.payloadTypename === 'NotFoundError' &&
     error.payloadResource?.toLowerCase() === UNIT_RESOURCE
@@ -165,8 +170,7 @@ export function classifyError(error: unknown): QueueError {
     }
 
     // The write names a unit the vocabulary repair merged away. The write is
-    // fine — its reference went stale — so it is re-sent, not reverted. Both
-    // spellings: a missing row, or a unit the server will not accept.
+    // fine — its reference went stale — so it is re-sent, not reverted.
     if (isStaleUnitRefusal(error)) {
       return {
         type: 'stale-reference',
@@ -186,8 +190,14 @@ export function classifyError(error: unknown): QueueError {
     };
   }
 
-  const err = (error ?? {}) as { message?: string };
-  const message = err.message || String(error);
+  const thrownMessage =
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof error.message === 'string'
+      ? error.message
+      : undefined;
+  const message = firstNonBlank(thrownMessage) ?? String(error);
   const code = readErrorCode(error);
 
   // The thrown spelling of the same condition as the union member above.
@@ -254,14 +264,9 @@ export function classifyError(error: unknown): QueueError {
     };
   }
 
-  // 'timed out' as well as 'timeout': the processing-timeout rejects with
-  // 'Operation timed out', which does not contain the substring "timeout".
-  if (
-    message.toLowerCase().includes('network') ||
-    message.toLowerCase().includes('timeout') ||
-    message.toLowerCase().includes('timed out') ||
-    message.toLowerCase().includes('econnrefused')
-  ) {
+  // A fetch failure, a socket close, or a deadline: the request never got an
+  // answer, so nothing about the write was judged.
+  if (isNetworkError(error)) {
     return {
       type: 'network',
       message,

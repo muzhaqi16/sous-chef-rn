@@ -100,7 +100,7 @@ describe('clientReleaseLink', () => {
     ['an empty recommended', { clientRelease: { recommended: '' } }],
     ['a null clientRelease', { clientRelease: null }],
   ])('ignores %s', async (_label, extensions) => {
-    await run(extensions as Record<string, unknown>);
+    await run(extensions);
 
     expect(announce).not.toHaveBeenCalled();
   });

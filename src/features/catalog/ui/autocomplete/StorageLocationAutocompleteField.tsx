@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { useTranslation } from '#/i18n';
-import { useStorageLocationAutocomplete } from '#features/catalog/hooks/useStorageLocationAutocomplete';
-import { type StorageLocation } from '#/graphql/generated/schemaTypes';
+import {
+  useStorageLocationAutocomplete,
+  type StorageLocationOption,
+} from '#features/catalog/hooks/useStorageLocationAutocomplete';
 import { StorageLocationIcon } from '#features/catalog/ui/StorageLocationIcon';
 import { AutocompleteField } from '#features/catalog/components/AutocompleteField/AutocompleteField';
 import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
@@ -15,10 +17,10 @@ interface StorageLocationAutocompleteFieldProps {
   required?: boolean;
   error?: string;
   testID?: string;
-  storageLocations: StorageLocation[];
+  storageLocations: readonly StorageLocationOption[];
   onStorageLocationSelected?: (
     locationId: string | null,
-    location: StorageLocation | null,
+    location: StorageLocationOption | null,
   ) => void;
   onAddNewLocation?: (name: string) => void;
 }
@@ -62,7 +64,7 @@ export const StorageLocationAutocompleteField: React.FC<
    * resolves at ROOT level only — a decorated `"Freezer (Kitchen Fridge)"`
    * find-or-creates a permanent root location of that name.
    */
-  const handleSelect = (item: StorageLocation) => {
+  const handleSelect = (item: StorageLocationOption) => {
     hasSelectionRef.current = true;
     onChangeText(item.name);
     setSearchTerm('');
@@ -77,7 +79,7 @@ export const StorageLocationAutocompleteField: React.FC<
     onAddNewLocation?.(searchTerm);
   };
 
-  const renderItem = (item: StorageLocation) => (
+  const renderItem = (item: StorageLocationOption) => (
     <AutocompleteRow
       iconElement={<StorageLocationIcon type={item.type} size={24} />}
       title={item.name}
@@ -92,11 +94,11 @@ export const StorageLocationAutocompleteField: React.FC<
     />
   );
 
-  const keyExtractor = (item: StorageLocation) => item.id;
+  const keyExtractor = (item: StorageLocationOption) => item.id;
 
   if (variant === 'inline') {
     return (
-      <AutocompleteField<StorageLocation>
+      <AutocompleteField<StorageLocationOption>
         variant="inline"
         label={label}
         value={value}
@@ -122,7 +124,7 @@ export const StorageLocationAutocompleteField: React.FC<
   }
 
   return (
-    <AutocompleteField<StorageLocation>
+    <AutocompleteField<StorageLocationOption>
       variant="modal"
       label={label}
       value={value}

@@ -24,6 +24,39 @@ import { zIndex } from './foundations/zIndex';
 import { motion } from './foundations/motion';
 import { type, MAX_FONT_SCALE } from './foundations/type';
 
+/**
+ * The status hues as TEXT, so each clears AA body contrast on every page ground
+ * of its theme (`toneContrast.test.ts`). The foundation 600s do not: light
+ * green and amber sit near 3:1, dark red and blue under 3:1 on `surface`.
+ */
+const lightSemantic = {
+  error: colors.validation.errorText,
+  success: '#007D28',
+  warning: '#AD5400',
+  info: colors.info,
+};
+
+const darkSemantic = {
+  error: '#FF6F68',
+  success: '#81C784',
+  warning: '#FFB74D',
+  info: '#64B5F6',
+};
+
+// Solid, like the light pastels they mirror: a translucent tint over `surface`
+// takes red and blue copy under AA.
+const darkValidation: typeof colors.validation = {
+  error: darkSemantic.error,
+  errorText: '#EF9A9A',
+  errorBg: '#3D2A2A',
+  success: darkSemantic.success,
+  successBg: '#2A3D2A',
+  warning: darkSemantic.warning,
+  warningBg: '#3D3225',
+  info: darkSemantic.info,
+  infoBg: '#2A303D',
+};
+
 const commonTheme = {
   spacing,
   layout,
@@ -55,10 +88,22 @@ export const lightTheme = {
     primaryLight: brand[100],
     primaryDark: brand[700],
     onPrimary: onBrand,
-    onError: onColor(colors.error, colors.neutral[0], colors.neutral[900]),
-    onSuccess: onColor(colors.success, colors.neutral[0], colors.neutral[900]),
-    onWarning: onColor(colors.warning, colors.neutral[0], colors.neutral[900]),
-    onInfo: onColor(colors.info, colors.neutral[0], colors.neutral[900]),
+    onError: onColor(
+      lightSemantic.error,
+      colors.neutral[0],
+      colors.neutral[900],
+    ),
+    onSuccess: onColor(
+      lightSemantic.success,
+      colors.neutral[0],
+      colors.neutral[900],
+    ),
+    onWarning: onColor(
+      lightSemantic.warning,
+      colors.neutral[0],
+      colors.neutral[900],
+    ),
+    onInfo: onColor(lightSemantic.info, colors.neutral[0], colors.neutral[900]),
     // Over a photo, a camera preview or a dark scrim — a ground the theme
     // does not paint, so this stays light in both appearances.
     onScrim: colors.neutral[0],
@@ -96,18 +141,17 @@ export const lightTheme = {
     divider: colors.neutral[200],
 
     // Semantic
-    success: colors.success,
+    success: lightSemantic.success,
     successLight: colors.validation.successBg,
-    warning: colors.warning,
+    warning: lightSemantic.warning,
     warningLight: colors.validation.warningBg,
-    error: colors.error,
+    error: lightSemantic.error,
     errorLight: colors.validation.errorBg,
-    info: colors.info,
+    info: lightSemantic.info,
     infoLight: colors.validation.infoBg,
-    danger: colors.error,
+    danger: lightSemantic.error,
 
     // Components specific
-    white: colors.neutral[0],
     black: colors.neutral[1000],
     transparent: colors.transparent,
     chipBackground: colors.neutral[200],
@@ -146,6 +190,8 @@ export const lightTheme = {
 
     // Overlay
     overlay: colors.overlay,
+    // A wash over a card while it works, in the card's own tone.
+    veil: 'rgba(255, 255, 255, 0.8)',
 
     // Action colors for swipe actions
     consumeAction: colors.actions.consume.light,
@@ -181,10 +227,22 @@ export const darkTheme = {
     primaryLight: brand[400] + '20',
     primaryDark: brand[600],
     onPrimary: onBrand,
-    onError: onColor(colors.error, colors.neutral[0], colors.neutral[900]),
-    onSuccess: onColor(colors.success, colors.neutral[0], colors.neutral[900]),
-    onWarning: onColor(colors.warning, colors.neutral[0], colors.neutral[900]),
-    onInfo: onColor(colors.info, colors.neutral[0], colors.neutral[900]),
+    onError: onColor(
+      darkSemantic.error,
+      colors.neutral[0],
+      colors.neutral[900],
+    ),
+    onSuccess: onColor(
+      darkSemantic.success,
+      colors.neutral[0],
+      colors.neutral[900],
+    ),
+    onWarning: onColor(
+      darkSemantic.warning,
+      colors.neutral[0],
+      colors.neutral[900],
+    ),
+    onInfo: onColor(darkSemantic.info, colors.neutral[0], colors.neutral[900]),
     // Over a photo, a camera preview or a dark scrim — a ground the theme
     // does not paint, so this stays light in both appearances.
     onScrim: colors.neutral[0],
@@ -220,18 +278,17 @@ export const darkTheme = {
     divider: colors.neutral[700],
 
     // Semantic
-    success: colors.success,
-    successLight: colors.success + '20', // 20% opacity on dark bg
-    warning: colors.warning,
-    warningLight: colors.warning + '20',
-    error: colors.error,
-    errorLight: colors.error + '20',
-    info: colors.info,
-    infoLight: colors.info + '20',
-    danger: colors.error,
+    success: darkSemantic.success,
+    successLight: darkValidation.successBg,
+    warning: darkSemantic.warning,
+    warningLight: darkValidation.warningBg,
+    error: darkSemantic.error,
+    errorLight: darkValidation.errorBg,
+    info: darkSemantic.info,
+    infoLight: darkValidation.infoBg,
+    danger: darkSemantic.error,
 
     // Components specific
-    white: colors.neutral[0],
     black: colors.neutral[1000],
     transparent: colors.transparent,
     chipBackground: colors.neutral[700],
@@ -253,11 +310,11 @@ export const darkTheme = {
 
     // Status colors — dark-adapted for visibility on dark surfaces
     status: {
-      pending: '#FFB74D',
-      accepted: '#81C784',
-      declined: '#EF5350',
+      pending: darkSemantic.warning,
+      accepted: darkSemantic.success,
+      declined: darkSemantic.error,
       expired: '#9E9E9E',
-      active: '#64B5F6',
+      active: darkSemantic.info,
       inactive: '#757575',
     },
 
@@ -270,18 +327,7 @@ export const darkTheme = {
     },
 
     // Validation colors — solid dark backgrounds (no light-mode pastels)
-    validation: {
-      error: '#EF5350',
-      errorText: '#EF9A9A',
-      errorBg: '#3D2A2A',
-      errorBorder: '#5C3A3A',
-      success: '#81C784',
-      successBg: '#2A3D2A',
-      warning: '#FFB74D',
-      warningBg: '#3D3225',
-      info: '#64B5F6',
-      infoBg: '#2A303D',
-    },
+    validation: darkValidation,
 
     // Pantry redesign colors — dark-mode override values (same key shape as light).
     // Solid backgrounds prevent swipeable container background bleed-through.
@@ -320,6 +366,7 @@ export const darkTheme = {
 
     // Overlay
     overlay: colors.overlay,
+    veil: 'rgba(28, 27, 32, 0.8)',
 
     // Action colors for swipe actions (slightly adjusted for dark mode visibility)
     consumeAction: colors.actions.consume.dark,

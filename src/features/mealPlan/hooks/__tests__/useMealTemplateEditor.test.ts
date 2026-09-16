@@ -285,6 +285,36 @@ describe('updateItem maps the @oneOf meal ref onto BOTH fields', () => {
     expect(item?.recipe?.id).toBe('recipe-1');
     expect(item?.recipe?.name).toBe('Carbonara');
   });
+
+  it('keeps the recipe when an edit omits the meal', async () => {
+    const cache = seedCache([RECIPE, RECIPE_BACKED_ITEM]);
+    const { result } = renderHookWithApollo(() => useMealTemplateEditor(), {
+      cache,
+      operationMocks: [queuedUpdate],
+    });
+
+    await act(async () => {
+      await result.current.updateItem({ id: 'item-1', servings: 5 });
+    });
+
+    const item = readItem(cache, 'item-1') as {
+      servings: number;
+      recipe: { id: string } | null;
+    } | null;
+    expect(item?.servings).toBe(5);
+    expect(item?.recipe?.id).toBe('recipe-1');
+  });
+
+  it('reads a picked recipe name from the cache, empty when unseen', () => {
+    const cache = seedCache([RECIPE]);
+    const { result } = renderHookWithApollo(() => useMealTemplateEditor(), {
+      cache,
+      operationMocks: [],
+    });
+
+    expect(result.current.readRecipeName('recipe-1')).toBe('Carbonara');
+    expect(result.current.readRecipeName('recipe-unknown')).toBe('');
+  });
 });
 
 describe("a row loaded by the editor's own query", () => {

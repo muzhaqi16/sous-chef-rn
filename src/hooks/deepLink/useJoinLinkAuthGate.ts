@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useStore } from '#store';
+import type { DeepLinkAction } from '#store/slices/navigationSlice';
 import { toastService } from '#/services/toastService';
 
-type JoinLinkType = 'join_home' | 'join_list';
+type JoinLinkType = DeepLinkAction['type'];
 
-const SIGN_IN_MESSAGE_KEY: Record<JoinLinkType, string> = {
+const SIGN_IN_MESSAGE_KEY: Record<JoinLinkType, TranslationKey> = {
   join_home: 'joinLink.signInHome',
   join_list: 'joinLink.signInList',
 };

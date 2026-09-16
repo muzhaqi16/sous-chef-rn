@@ -8,7 +8,7 @@ import { addDays, differenceInDays, parseISO } from 'date-fns';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { FormInput } from '#components/atoms/FormInput';
 import { Icon } from '#utils/iconUtils';
-import { type MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { Text } from '#components/atoms/Text';
 import {
   formatMonthDay,
@@ -57,7 +57,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
   }
 
   const duration = (() => {
-    if (!mealPlan?.startDate || !mealPlan?.endDate) return 7;
+    if (!mealPlan?.startDate || !mealPlan.endDate) return 7;
     return differenceInDays(
       parseISO(mealPlan.endDate),
       parseISO(mealPlan.startDate),
@@ -211,7 +211,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   dateSubtext: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   infoCard: {
     flexDirection: 'row',

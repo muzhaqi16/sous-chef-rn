@@ -43,14 +43,14 @@ const MAX_WINDOW_EDGES = 100;
 export function mergeArrayByIdIntelligent<
   T extends { id: string; __ref?: string },
 >(
-  existing: T[] = [],
-  incoming: T[] = [],
+  // A cache write is not schema-validated, so either side can arrive as `null`.
+  existing: T[] | null = [],
+  incoming: T[] | null = [],
   { readField }: Pick<FieldFunctionOptions, 'readField'>,
 ): T[] {
-  // If incoming is null/undefined, keep existing (preserves cache on network errors)
-  // But if incoming is an explicit empty array [], the user genuinely has no items
+  // A null incoming keeps existing; an explicit [] means the list is genuinely empty.
   if (incoming == null) {
-    return existing || [];
+    return existing ?? [];
   }
 
   if (incoming.length === 0) {
@@ -72,8 +72,8 @@ export function mergeArrayByIdIntelligent<
     if (id) {
       existingMap.set(id, {
         item,
-        version: readField<number>('version', item) || 0,
-        updatedAt: readField<string>('updatedAt', item) || '',
+        version: readField<number>('version', item) ?? 0,
+        updatedAt: readField<string>('updatedAt', item) ?? '',
       });
     }
   });
@@ -88,8 +88,8 @@ export function mergeArrayByIdIntelligent<
     if (id) {
       incomingMap.set(id, {
         item,
-        version: readField<number>('version', item) || 0,
-        updatedAt: readField<string>('updatedAt', item) || '',
+        version: readField<number>('version', item) ?? 0,
+        updatedAt: readField<string>('updatedAt', item) ?? '',
       });
     }
   });
@@ -165,27 +165,6 @@ function readEdgeNodeId(
 }
 
 /**
- * Decides whether to preserve `existing.pageInfo` instead of overwriting it
- * with `incoming.pageInfo`. Existing wins on a background refetch (no cursor)
- * when the server returned fewer edges than the cache already has — a common
- * pattern when only page 1 refreshes while cache holds pages 1+2.
- */
-function shouldPreservePageInfo(
-  existing: CachedConnection,
-  incoming: CachedConnection,
-  args: { after?: string | null } | null,
-): boolean {
-  const isBackgroundRefetch = !args?.after;
-  const existingEdgeCount = (existing.edges || []).length;
-  const incomingEdgeCount = (incoming.edges || []).length;
-  return (
-    isBackgroundRefetch &&
-    existingEdgeCount > incomingEdgeCount &&
-    !!existing.pageInfo
-  );
-}
-
-/**
  * Preserve un-replayed local creates when an authoritative first page replaces a
  * connection: keeps only edges whose `node.id` still has a PENDING queue
  * mutation and is absent from the incoming page. Falls straight through once
@@ -199,11 +178,11 @@ function preservePendingEdges(
   const pendingIds = queueStore.getPendingClientIds();
   if (pendingIds.size === 0) return incoming;
   const incomingIds = new Set<string>();
-  for (const edge of incoming.edges || []) {
+  for (const edge of incoming.edges ?? []) {
     const id = readEdgeNodeId(edge, readField);
     if (id) incomingIds.add(id);
   }
-  const preservedEdges = (existing.edges || []).filter(edge => {
+  const preservedEdges = (existing.edges ?? []).filter(edge => {
     const id = readEdgeNodeId(edge, readField);
     return id != null && pendingIds.has(id) && !incomingIds.has(id);
   });
@@ -215,7 +194,7 @@ function preservePendingEdges(
   }
   return {
     ...incoming,
-    edges: [...preservedEdges, ...(incoming.edges || [])],
+    edges: [...preservedEdges, ...(incoming.edges ?? [])],
     totalCount: (incoming.totalCount ?? 0) + preservedEdges.length,
   };
 }
@@ -231,8 +210,8 @@ function mergeAuthoritativeFirstPage(
   incoming: CachedConnection,
   readField: ReadField,
 ): CachedConnection {
-  const incomingEdges = incoming.edges || [];
-  const existingEdges = existing.edges || [];
+  const incomingEdges = incoming.edges ?? [];
+  const existingEdges = existing.edges ?? [];
 
   const authoritativeEmpty = incoming.totalCount === 0;
   if (
@@ -293,7 +272,7 @@ export function mergeConnectionByNodeId(keyArgs: string[] = ['filters']) {
     ) {
       if (!existing?.edges?.length) return existing;
       const validEdges = existing.edges.filter((edge: CachedEdge) =>
-        edge?.node ? canRead(edge.node) : false,
+        edge.node ? canRead(edge.node) : false,
       );
       if (validEdges.length === existing.edges.length) return existing;
       const dropped = existing.edges.length - validEdges.length;
@@ -322,33 +301,22 @@ export function mergeConnectionByNodeId(keyArgs: string[] = ['filters']) {
       }
 
       const edgeMap = new Map<string, CachedEdge>();
-      const existingEdges = existing.edges || [];
+      const existingEdges = existing.edges ?? [];
       existingEdges.forEach((edge: CachedEdge) => {
         const id = readEdgeNodeId(edge, readField);
         if (id) edgeMap.set(id, edge);
       });
       const existingCount = edgeMap.size;
-      (incoming.edges || []).forEach((edge: CachedEdge) => {
+      (incoming.edges ?? []).forEach((edge: CachedEdge) => {
         const id = readEdgeNodeId(edge, readField);
         if (id) edgeMap.set(id, edge);
       });
 
-      const preservePageInfo = shouldPreservePageInfo(existing, incoming, args);
-
-      if (__DEV__ && preservePageInfo) {
-        logger.debug(
-          `📊 [Cache] preserved existing pageInfo (existing=${
-            existingEdges.length
-          } incoming=${(incoming.edges || []).length})`,
-        );
-      }
-
       // If no new edges were added, return stable reference when possible
       if (edgeMap.size === existingCount) {
         const pageInfoUnchanged =
-          preservePageInfo ||
-          (incoming.pageInfo?.hasNextPage === existing.pageInfo?.hasNextPage &&
-            incoming.pageInfo?.endCursor === existing.pageInfo?.endCursor);
+          incoming.pageInfo?.hasNextPage === existing.pageInfo?.hasNextPage &&
+          incoming.pageInfo?.endCursor === existing.pageInfo?.endCursor;
         const totalCountUnchanged =
           incoming.totalCount === undefined ||
           incoming.totalCount === existing.totalCount;
@@ -356,18 +324,10 @@ export function mergeConnectionByNodeId(keyArgs: string[] = ['filters']) {
         if (pageInfoUnchanged && totalCountUnchanged) {
           return existing;
         }
-        return {
-          ...incoming,
-          ...(preservePageInfo ? { pageInfo: existing.pageInfo } : {}),
-          edges: existingEdges,
-        };
+        return { ...incoming, edges: existingEdges };
       }
 
-      return {
-        ...incoming,
-        ...(preservePageInfo ? { pageInfo: existing.pageInfo } : {}),
-        edges: Array.from(edgeMap.values()),
-      };
+      return { ...incoming, edges: Array.from(edgeMap.values()) };
     },
   };
 }
@@ -391,7 +351,7 @@ export function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
     ) {
       if (!existing?.edges?.length) return existing;
       const validEdges = existing.edges.filter((edge: CachedEdge) =>
-        edge?.node ? canRead(edge.node) : false,
+        edge.node ? canRead(edge.node) : false,
       );
       if (validEdges.length === existing.edges.length) return existing;
       const dropped = existing.edges.length - validEdges.length;
@@ -426,64 +386,42 @@ export function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
 
       // Append-only: keep existing edges in place, add only new incoming edges
       const existingIds = new Set<string>();
-      for (const edge of existing.edges || []) {
+      for (const edge of existing.edges ?? []) {
         const id = readEdgeNodeId(edge, readField);
         if (id) existingIds.add(id);
       }
 
-      const newEdges = (incoming.edges || []).filter((edge: CachedEdge) => {
+      const newEdges = (incoming.edges ?? []).filter((edge: CachedEdge) => {
         const id = readEdgeNodeId(edge, readField);
         return id && !existingIds.has(id);
       });
 
-      // Determine authoritative pageInfo once.
-      // Existing pageInfo wins when:
-      //   1. Background refetch (no cursor) returned fewer edges than cache has
-      //   2. Cursor-based request returned all duplicates — we already advanced past that cursor
-      const keepExistingPageInfo =
-        shouldPreservePageInfo(existing, incoming, args) ||
-        (!!args?.after && newEdges.length === 0);
-      const pageInfo = keepExistingPageInfo
-        ? existing.pageInfo
-        : incoming.pageInfo;
-
-      if (__DEV__ && keepExistingPageInfo) {
-        logger.debug(
-          `📊 [Cache] preserved existing pageInfo (existing=${
-            (existing.edges || []).length
-          } incoming=${(incoming.edges || []).length})`,
-        );
-      }
-
-      // When no new edges, return stable reference when possible
+      // A page of only already-cached ids leaves the cursor where the cache
+      // already advanced past it, so existing pageInfo wins.
       if (newEdges.length === 0) {
-        const pageInfoUnchanged =
-          pageInfo === existing.pageInfo &&
-          incoming.pageInfo?.hasNextPage === existing.pageInfo?.hasNextPage &&
-          incoming.pageInfo?.endCursor === existing.pageInfo?.endCursor;
         const totalCountUnchanged =
           incoming.totalCount === undefined ||
           incoming.totalCount === existing.totalCount;
 
-        if (
-          (keepExistingPageInfo || pageInfoUnchanged) &&
-          totalCountUnchanged
-        ) {
+        if (totalCountUnchanged) {
           return existing;
         }
 
         if (__DEV__) {
-          const existingCount = existing?.edges?.length ?? 0;
-          const incomingCount = incoming?.edges?.length ?? 0;
-          const hasCursor = !!args?.after;
+          const existingCount = existing.edges?.length ?? 0;
+          const incomingCount = incoming.edges?.length ?? 0;
           logger.debug(
-            `📊 [Cache] itemsConnection merge (stable): existing=${existingCount} incoming=${incomingCount} merged=${existingCount} cursor=${hasCursor}`,
+            `📊 [Cache] itemsConnection merge (stable): existing=${existingCount} incoming=${incomingCount} merged=${existingCount}`,
           );
         }
-        return { ...incoming, pageInfo, edges: existing.edges };
+        return {
+          ...incoming,
+          pageInfo: existing.pageInfo,
+          edges: existing.edges,
+        };
       }
 
-      let mergedEdges = [...(existing.edges || []), ...newEdges];
+      let mergedEdges = [...(existing.edges ?? []), ...newEdges];
 
       // Evict oldest edges when exceeding the window limit
       if (mergedEdges.length > MAX_WINDOW_EDGES) {
@@ -508,15 +446,14 @@ export function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
         .catch(() => {});
 
       if (__DEV__) {
-        const existingCount = existing?.edges?.length ?? 0;
-        const incomingCount = incoming?.edges?.length ?? 0;
-        const hasCursor = !!args?.after;
+        const existingCount = existing.edges?.length ?? 0;
+        const incomingCount = incoming.edges?.length ?? 0;
         logger.debug(
-          `📊 [Cache] itemsConnection merge: existing=${existingCount} incoming=${incomingCount} merged=${mergedEdges.length} cursor=${hasCursor}`,
+          `📊 [Cache] itemsConnection merge: existing=${existingCount} incoming=${incomingCount} merged=${mergedEdges.length}`,
         );
       }
 
-      return { ...incoming, pageInfo, edges: mergedEdges };
+      return { ...incoming, edges: mergedEdges };
     },
   };
 }

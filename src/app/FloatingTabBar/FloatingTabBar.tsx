@@ -17,6 +17,7 @@ import {
   useOverlayBackdropPresence,
 } from '#components/providers/OverlayBackdropProvider';
 import { toastService } from '#/services/toastService';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { useTranslation } from '#/i18n';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
@@ -27,6 +28,7 @@ import { SHEET, TAB_BAR } from '#/constants/animations';
 import { GlassSurface, supportsGlass } from '#components/atoms/GlassSurface';
 import { motion } from '#/theme/foundations/motion';
 import { TAB_BAR_HEIGHT, FLOATING_BUTTON_GAP } from '#constants/layout';
+import { kitTestIDs } from '#components/testIDs';
 
 /** Between the bar's top edge and the floating action button above it. */
 
@@ -58,7 +60,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   const handleAddPress = () => {
     if (isAddButtonDisabled) {
       toastService.info(
-        addButtonDisabledMessage || t('errors.codes.forbidden'),
+        firstNonBlank(addButtonDisabledMessage) ?? t('errors.codes.forbidden'),
       );
       return;
     }
@@ -171,7 +173,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
         supportsGlass && styles.containerGlass,
         animatedStyle,
       ]}
-      testID="tab-bar"
+      testID={kitTestIDs.tabBar}
     >
       <GlassSurface style={styles.glassFill} />
       <View style={styles.tabsRow}>
@@ -186,6 +188,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
               options={options}
               onPress={() => handleTabPress(route, isFocused, index)}
               icon={tabs[route.name]?.icon}
+              titleKey={tabs[route.name]?.titleKey}
               showLabel={showNavigationLabels}
               activeTabIndex={activeTabIndex}
               tabIndex={index}

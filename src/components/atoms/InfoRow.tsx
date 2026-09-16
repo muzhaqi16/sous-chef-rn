@@ -6,9 +6,8 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { commonStyles } from '#/styles/commonStyles';
-import { Icon } from '#/utils/iconUtils';
-import { Text } from '#components/atoms/Text';
+import { Icon, type IconTone } from '#/utils/iconUtils';
+import { Text, type TextTone } from '#components/atoms/Text';
 
 export interface InfoRowProps {
   label: string;
@@ -25,7 +24,13 @@ export interface InfoRowProps {
 
   labelStyle?: StyleProp<TextStyle>;
 
+  /** Default `primary`. */
+  labelTone?: TextTone;
+
   valueStyle?: StyleProp<TextStyle>;
+
+  /** Default `secondary`; the default value text only, never `children`. */
+  valueTone?: TextTone;
 
   containerStyle?: StyleProp<ViewStyle>;
 
@@ -34,7 +39,10 @@ export interface InfoRowProps {
 
   icon?: string;
 
-  /** Defaults to `textSecondary`. */
+  /** Default `textSecondary`. */
+  iconTone?: IconTone;
+
+  /** A static colour; wins over `iconTone`. */
   iconColor?: string;
 
   /** Rendered instead of the default value text. */
@@ -48,10 +56,13 @@ export const InfoRow: React.FC<InfoRowProps> = ({
   formatter,
   showBorder = true,
   labelStyle,
+  labelTone,
   valueStyle,
+  valueTone = 'secondary',
   containerStyle,
   showColon = true,
   icon,
+  iconTone = 'textSecondary',
   iconColor,
   children,
 }) => {
@@ -67,7 +78,7 @@ export const InfoRow: React.FC<InfoRowProps> = ({
   }
 
   const valueContent = children ?? (
-    <Text align="right" style={[commonStyles.subtitle, valueStyle]}>
+    <Text role="bodyStrong" tone={valueTone} align="right" style={valueStyle}>
       {formattedValue}
     </Text>
   );
@@ -80,18 +91,14 @@ export const InfoRow: React.FC<InfoRowProps> = ({
         containerStyle,
       ]}
     >
-      <Text style={[commonStyles.body, styles.label, labelStyle]}>
+      <Text role="body" tone={labelTone} style={[styles.label, labelStyle]}>
         {label}
         {showColon ? ':' : ''}
       </Text>
       {icon ? (
         <View style={styles.valueWithIcon}>
           <View style={styles.iconContainer}>
-            <Icon
-              name={icon}
-              size={16}
-              color={iconColor ?? styles.iconDefaultColor.color}
-            />
+            <Icon name={icon} size={16} color={iconColor} tone={iconTone} />
           </View>
           {valueContent}
         </View>
@@ -122,8 +129,5 @@ const styles = StyleSheet.create(theme => ({
   },
   iconContainer: {
     marginRight: theme.spacing.xs,
-  },
-  iconDefaultColor: {
-    color: theme.colors.textSecondary,
   },
 }));

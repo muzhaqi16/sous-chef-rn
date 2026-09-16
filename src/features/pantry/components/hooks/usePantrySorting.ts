@@ -57,16 +57,17 @@ function cachedSort<T extends SortableItem>(
     let comparison = 0;
     switch (option) {
       case PantrySortOption.NAME:
-        comparison = (a.itemName || '').localeCompare(b.itemName || '');
+        comparison = (a.itemName ?? '').localeCompare(b.itemName ?? '');
         break;
       case PantrySortOption.EXPIRY:
-        comparison = expiryMap.get(a.id)! - expiryMap.get(b.id)!;
+        comparison =
+          (expiryMap.get(a.id) ?? Infinity) - (expiryMap.get(b.id) ?? Infinity);
         break;
       case PantrySortOption.QUANTITY:
         comparison = a.quantity - b.quantity;
         break;
       case PantrySortOption.RECENT:
-        comparison = createdMap.get(b.id)! - createdMap.get(a.id)!;
+        comparison = (createdMap.get(b.id) ?? 0) - (createdMap.get(a.id) ?? 0);
         break;
     }
     return direction === PantrySortDirection.ASC ? comparison : -comparison;

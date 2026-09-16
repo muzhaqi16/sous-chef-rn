@@ -14,8 +14,8 @@
  * so it cannot fall behind.
  *
  * The overrides below exist because an automocked function returns `undefined`,
- * and these five return STRINGS that end up on screen. A suite asserting on an
- * alert body needs something to assert.
+ * and these return what reaches the screen: STRINGS, and the parse result a
+ * failure's copy is chosen from. A suite asserting on an alert body needs both.
  *
  *   ```ts
  *   jest.mock('#/services/errorService');
@@ -32,6 +32,7 @@
  */
 
 import type * as ErrorServiceModuleShape from '../errorService';
+import type { ErrorResult } from '../errorService';
 
 type ErrorServiceModule = typeof ErrorServiceModuleShape;
 
@@ -50,18 +51,39 @@ export const errorService: ErrorServiceModule['errorService'] = Object.assign(
     getUserFriendlyMessage: jest.fn(
       (_code: string, fallback?: string) => fallback ?? GENERIC,
     ),
+    // False, matching the mocked message above: it answers every code with the
+    // caller's fallback, so no code has copy of its own here. A suite asserting
+    // on a mapped code's sentence overrides both.
+    hasUserFriendlyMessage: jest.fn(() => false),
     getErrorCategory: jest.fn(() => 'General'),
     shouldRetry: jest.fn(() => false),
     isAuthError: jest.fn(() => false),
     isExpectedUserError: jest.fn(() => false),
+    // Unclassified, as the real parse reports an error it cannot read.
+    parseApolloError: jest.fn(
+      (): ErrorResult<never> => ({
+        success: false,
+        error: {
+          code: 'UNKNOWN_ERROR',
+          message: GENERIC,
+          category: 'General',
+          shouldRetry: false,
+          isAuthError: false,
+        },
+      }),
+    ),
   },
 );
 
 export const localizedErrorMessage = jest.fn((): string => GENERIC);
 
+// True for an unclassified failure, as the real check is.
+export const isTransportFailure = jest.fn(() => true);
+
 export const useErrorService = jest.fn(() => ({
   ...generated.useErrorService(),
   getUserFriendlyMessage: errorService.getUserFriendlyMessage,
+  hasUserFriendlyMessage: errorService.hasUserFriendlyMessage,
   getErrorCategory: errorService.getErrorCategory,
   shouldRetry: errorService.shouldRetry,
   isAuthError: errorService.isAuthError,

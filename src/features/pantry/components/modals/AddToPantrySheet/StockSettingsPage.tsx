@@ -10,10 +10,10 @@ import { FormInput } from '#components/atoms/FormInput';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { Text } from '#components/atoms/Text';
-import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
 import {
   ACQUISITION_METHOD_OPTIONS,
   acquisitionMethodLabelKey,
+  type OfferedAcquisitionMethod,
 } from '#features/pantry/utils/itemEnumLabels';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { SectionHeader } from '#components/atoms/SectionHeader';
@@ -31,8 +31,8 @@ export interface StockSettingsPageProps {
   ) => void;
   costPerUnit: string;
   setCostPerUnit: (value: string) => void;
-  acquisitionMethod: AcquisitionMethod;
-  setAcquisitionMethod: (value: AcquisitionMethod) => void;
+  acquisitionMethod: OfferedAcquisitionMethod;
+  setAcquisitionMethod: (value: OfferedAcquisitionMethod) => void;
   insets: { bottom: number };
 }
 
@@ -51,7 +51,7 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
   insets,
 }) => {
   const { t } = useTranslation();
-  const formatMethodLabel = (value: AcquisitionMethod) =>
+  const formatMethodLabel = (value: OfferedAcquisitionMethod) =>
     t(acquisitionMethodLabelKey(value));
   return (
     <BottomSheetFormScrollView

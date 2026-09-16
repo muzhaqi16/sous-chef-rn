@@ -94,7 +94,7 @@ describe('cache.ts', () => {
 
   // ─── Item.imageUrl merge ───────────────────────────────────────
 
-  describe('Item field merges (imageUrl, nutritions, images)', () => {
+  describe('Item field merges (imageUrl, images)', () => {
     let cache: InMemoryCache;
 
     beforeEach(() => {

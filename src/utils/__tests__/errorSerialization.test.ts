@@ -1,9 +1,4 @@
-import {
-  serializeError,
-  isCircularStructureError,
-  isTimerCircularStructureError,
-  safeStringifyError,
-} from '../errorSerialization';
+import { serializeError, safeStringifyError } from '../errorSerialization';
 
 describe('errorSerialization', () => {
   describe('serializeError', () => {
@@ -149,78 +144,13 @@ describe('errorSerialization', () => {
     });
   });
 
-  describe('isCircularStructureError', () => {
-    it('detects circular structure in error message', () => {
-      const error = new Error('Converting circular structure to JSON');
-      expect(isCircularStructureError(error)).toBe(true);
-    });
-
-    it('detects from string', () => {
-      expect(
-        isCircularStructureError('Converting circular structure to JSON'),
-      ).toBe(true);
-    });
-
-    it('detects partial match', () => {
-      expect(isCircularStructureError('circular structure detected')).toBe(
-        true,
-      );
-    });
-
-    it('returns false for non-circular errors', () => {
-      expect(isCircularStructureError(new Error('Regular error'))).toBe(false);
-    });
-
-    it('returns false for null', () => {
-      expect(isCircularStructureError(null)).toBe(false);
-    });
-
-    it('returns false for undefined', () => {
-      expect(isCircularStructureError(undefined)).toBe(false);
-    });
-  });
-
-  describe('isTimerCircularStructureError', () => {
-    it('detects timer circular structure error', () => {
-      const error = new Error(
-        'Converting circular structure to JSON\n --> starting at object Timeout',
-      );
-      expect(isTimerCircularStructureError(error)).toBe(true);
-    });
-
-    it('detects TimersList variant', () => {
-      const error = new Error(
-        'Converting circular structure to JSON\n --> TimersList reference',
-      );
-      expect(isTimerCircularStructureError(error)).toBe(true);
-    });
-
-    it('detects _idlePrev variant', () => {
-      const error = new Error(
-        'Converting circular structure to JSON _idlePrev',
-      );
-      expect(isTimerCircularStructureError(error)).toBe(true);
-    });
-
-    it('returns false for non-timer circular error', () => {
-      const error = new Error('Converting circular structure to JSON');
-      expect(isTimerCircularStructureError(error)).toBe(false);
-    });
-
-    it('returns false for regular errors', () => {
-      expect(isTimerCircularStructureError(new Error('Regular'))).toBe(false);
-    });
-
-    it('returns false for null', () => {
-      expect(isTimerCircularStructureError(null)).toBe(false);
-    });
-  });
-
   describe('safeStringifyError', () => {
     it('stringifies a simple error', () => {
       const result = safeStringifyError({ key: 'value' });
       expect(result.isCircular).toBe(false);
-      expect(result.stringified).toContain('key');
+      expect(result.stringified).toBe(
+        JSON.stringify({ key: 'value' }, null, 2),
+      );
     });
 
     it('handles string input', () => {
@@ -229,38 +159,44 @@ describe('errorSerialization', () => {
       expect(result.isCircular).toBe(false);
     });
 
-    it('handles error with circular structure message', () => {
-      const error = new Error('Converting circular structure to JSON');
-      const result = safeStringifyError(error);
-      expect(result.isCircular).toBe(true);
-      expect(result.stringified).toContain('[Circular structure detected]');
+    it('stringifies a message that merely mentions a circular structure', () => {
+      const result = safeStringifyError({
+        message: 'Converting circular structure to JSON',
+      });
+      expect(result.isCircular).toBe(false);
+      expect(result.stringified).toContain('Converting circular structure');
     });
 
-    it('handles circular structure string', () => {
-      const result = safeStringifyError(
-        'Converting circular structure to JSON',
-      );
-      expect(result.isCircular).toBe(true);
-    });
-
-    it('handles array with circular errors', () => {
-      const errors = [new Error('Converting circular structure to JSON')];
-      const result = safeStringifyError(errors);
-      expect(result.isCircular).toBe(true);
-    });
-
-    it('handles array with circular string', () => {
-      const errors = ['Converting circular structure to JSON'];
-      const result = safeStringifyError(errors);
-      expect(result.isCircular).toBe(true);
-      expect(result.message).toBe('Converting circular structure to JSON');
-    });
-
-    it('handles actual circular objects', () => {
-      const obj: Record<string, unknown> = {};
+    it('reports an actual circular object with its message', () => {
+      const obj: Record<string, unknown> = { message: 'Socket failed' };
       obj.self = obj;
       const result = safeStringifyError(obj);
+      expect(result).toEqual({
+        stringified: '[Circular structure detected] Socket failed',
+        isCircular: true,
+        message: 'Socket failed',
+      });
+    });
+
+    it('takes the message from the array entry that holds the cycle', () => {
+      const detail: Record<string, unknown> = {};
+      const cyclic = Object.assign(new Error('Second'), { detail });
+      detail.back = cyclic;
+      const result = safeStringifyError([{ message: 'First' }, cyclic]);
       expect(result.isCircular).toBe(true);
+      expect(result.message).toBe('Second');
+    });
+
+    it('falls back when the cyclic value carries no message', () => {
+      const obj: Record<string, unknown> = {};
+      obj.self = obj;
+      expect(safeStringifyError(obj).message).toBe('Unknown error');
+    });
+
+    it('reports a non-cycle stringify failure without calling it circular', () => {
+      const result = safeStringifyError({ big: BigInt(1) });
+      expect(result.isCircular).toBe(false);
+      expect(result.stringified).toMatch(/^\[Error serializing: .+\]$/);
     });
   });
 });

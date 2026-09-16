@@ -7,6 +7,7 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { DeleteRecipeFolderDocument } from '#features/recipes/graphql/recipe.generated';
+import { getNotFoundMessage } from '#/utils/errors/notFoundMessage';
 import { useFolderActions } from '../useFolderActions';
 
 // Inline fragments on the Error interface require possibleTypes for the
@@ -100,6 +101,7 @@ describe('useFolderActions', () => {
             __typename: 'NotFoundError',
             code: ErrorCode.NotFound,
             message: 'Folder not found',
+            resource: null,
           },
         },
       });
@@ -118,9 +120,8 @@ describe('useFolderActions', () => {
       // The app's own copy for the code the server sent — never the server's
       // `message`, which is English by construction.
       expect(mockToastError).not.toHaveBeenCalledWith('Folder not found');
-      expect(mockToastError).toHaveBeenCalledWith(
-        'The requested item was not found',
-      );
+      expect(mockToastError).toHaveBeenCalledTimes(1);
+      expect(mockToastError).toHaveBeenCalledWith(getNotFoundMessage(null));
     });
   });
 
@@ -168,6 +169,7 @@ describe('useFolderActions', () => {
             __typename: 'NotFoundError',
             code: ErrorCode.NotFound,
             message: 'Folder not found',
+            resource: null,
           },
         },
       });
@@ -187,9 +189,8 @@ describe('useFolderActions', () => {
       // The app's own copy for the code the server sent — never the server's
       // `message`, which is English by construction.
       expect(mockToastError).not.toHaveBeenCalledWith('Folder not found');
-      expect(mockToastError).toHaveBeenCalledWith(
-        'The requested item was not found',
-      );
+      expect(mockToastError).toHaveBeenCalledTimes(1);
+      expect(mockToastError).toHaveBeenCalledWith(getNotFoundMessage(null));
     });
   });
 
@@ -236,12 +237,10 @@ describe('folder actions move the recipes, not just the folder list', () => {
   }
 
   const readFolder = (cache: InMemoryCache, id: string) =>
-    (
-      cache.readFragment({
-        id: `SavedRecipe:${id}`,
-        fragment: SAVED_RECIPE,
-      }) as { folder: string | null } | null
-    )?.folder;
+    cache.readFragment<{ folder: string | null }>({
+      id: `SavedRecipe:${id}`,
+      fragment: SAVED_RECIPE,
+    })?.folder;
 
   // Queued: the response that would reconcile `savedRecipes` never arrives,
   // so the local write is all the user has. This is the offline case.

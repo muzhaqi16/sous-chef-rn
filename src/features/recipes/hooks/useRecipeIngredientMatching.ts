@@ -14,13 +14,13 @@ import {
   RecipeIngredientFragmentDoc,
   type RecipeIngredientFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
-import { type ConfirmedIngredientConsumptionInput } from '#/graphql/generated/schemaTypes';
+import type { ConfirmedIngredientConsumptionInput } from '#/graphql/generated/schemaTypes';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { handleMutationError } from '#/utils/errorHandlers';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { logger } from '#/utils/environment';
 import { errorService } from '#/services/errorService';
 
@@ -68,7 +68,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
   const [editableMatches, setEditableMatches] = useState<EditableMatch[]>([]);
   const [isSheetVisible, setIsSheetVisible] = useState(false);
 
-  const [loadMatchesQuery, { loading: matchesLoading }] = useLazyQuery(
+  const [loadMatchesQuery] = useLazyQuery(
     MatchRecipeIngredientsToPantryDocument,
     {
       fetchPolicy: 'network-only',
@@ -77,11 +77,6 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
 
   const [confirmMutation, { loading: confirmLoading }] = useMutation(
     ConfirmRecipeConsumptionDocument,
-    {
-      onError: error => {
-        handleMutationError(error, { operation: 'Confirm Recipe Consumption' });
-      },
-    },
   );
 
   const loadMatches = async (servings: number) => {
@@ -182,18 +177,22 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
   const confirmConsumption = async () => {
     if (!recipeId || !pantryId) return;
 
-    const consumptions: ConfirmedIngredientConsumptionInput[] = editableMatches
-      .filter(em => em.isIncluded && em.match.matchedPantryItem)
-      .map(em => ({
-        recipeIngredientId: em.ingredient.id,
-        pantryItemId: em.match.matchedPantryItem!.id,
-        quantity: em.adjustedQuantity,
-        unitId:
-          em.adjustedUnitId ||
-          em.match.suggestedUnit?.id ||
-          em.match.matchedPantryItem!.unit?.id ||
-          '',
-      }));
+    const consumptions: ConfirmedIngredientConsumptionInput[] =
+      editableMatches.flatMap(em => {
+        const pantryItem = em.match.matchedPantryItem;
+        if (!em.isIncluded || !pantryItem) return [];
+        return [
+          {
+            recipeIngredientId: em.ingredient.id,
+            pantryItemId: pantryItem.id,
+            quantity: em.adjustedQuantity,
+            unitId:
+              em.adjustedUnitId ??
+              em.match.suggestedUnit?.id ??
+              pantryItem.unit.id,
+          },
+        ];
+      });
 
     if (consumptions.length === 0) {
       toastService.info(t('recipes.noIngredientsForDeduction'));
@@ -204,37 +203,30 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     // the API is unreachable. The shared id means a re-synced consumption
     // converges on the same cooking log instead of creating a duplicate and
     // re-consuming the pantry.
-    let result;
-    try {
-      result = await confirmMutation({
-        variables: {
-          input: { id: generateEntityId(), recipeId, pantryId, consumptions },
-        },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Confirm recipe consumption error:',
-      });
-    }
-    if (!result) return;
-
-    // A resolved refusal (error union member / transport error) under
-    // errorPolicy:'all' RESOLVES rather than throws — bail before the success
-    // toast / sheet-close. 'created' and 'queued' both succeed (a queued
-    // consumption replays later).
-    if (classifyCreateResult(result) === 'rejected') {
-      toastService.error(t('recipes.markCookedFailed'));
+    const settled = await settleMutation(
+      () =>
+        confirmMutation({
+          variables: {
+            input: { id: generateEntityId(), recipeId, pantryId, consumptions },
+          },
+          context: { localFirst: true },
+        }),
+      {
+        document: ConfirmRecipeConsumptionDocument,
+        fallback: t('recipes.markCookedFailed'),
+        // The review sheet reports the cook as a toast and stays open to retry.
+        present: 'none',
+      },
+    );
+    // Applied and queued both succeed; a queued consumption replays later.
+    if (settled.failure) {
+      toastService.error(settled.failure.body);
       return;
     }
 
-    const payload = result.data?.confirmRecipeConsumption;
     // The success union member carries no `success` flag — reaching it IS the
     // success case; partial failures surface via `totalFailed`.
-    const data =
-      payload?.__typename === 'ConfirmRecipeConsumptionPayload'
-        ? payload
-        : null;
+    const data = appliedPayload(settled.data);
     // Replay diagnostics: `converged: true` means this whole confirmation had
     // already committed (idempotent replay). A fresh commit — including one
     // that healed leftover items from a partially-crashed earlier attempt —
@@ -283,7 +275,6 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     updateMatch,
     matchSummary,
     confirmConsumption,
-    matchesLoading,
     confirmLoading,
     isSheetVisible,
     closeSheet,

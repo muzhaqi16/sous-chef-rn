@@ -1,10 +1,10 @@
+import type { ReactNode } from 'react';
 import React, {
   createContext,
   useContext,
   useState,
   useRef,
   useEffect,
-  ReactNode,
 } from 'react';
 import { useSharedValue, type SharedValue } from 'react-native-reanimated';
 import type { IconLibrary } from '#/utils/iconUtils';
@@ -108,7 +108,7 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   ) => {
     setOnScanPress(prev => {
       if (prev === scanPress) return prev;
-      return scanPress || undefined;
+      return scanPress;
     });
     setShowScannerButton(prev => {
       if (prev === showButton) return prev;
@@ -133,7 +133,7 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
 
     setOnAddPress(prev => {
       if (prev === handler) return prev;
-      return handler || undefined;
+      return handler;
     });
     setIsAddButtonDisabled(prev => {
       if (prev === disabled) return prev;
@@ -170,7 +170,7 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   const shouldShowAdd = allowedAddTabs.includes(activeTab);
 
   const effectiveAddPress =
-    onAddPress || (activeTab ? tabHandlers[activeTab] : undefined);
+    onAddPress ?? (activeTab ? tabHandlers[activeTab] : undefined);
 
   const addButtonConfig: AddButtonConfig = {
     icon: 'add',

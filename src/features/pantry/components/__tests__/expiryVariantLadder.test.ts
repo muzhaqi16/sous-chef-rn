@@ -27,7 +27,7 @@ describe('the expiry ladder', () => {
     [4, 'normal', 'normal'],
     [null, 'normal', 'normal'],
   ])('expiresIn %s is %s, shown as %s', (expiresIn, type, variant) => {
-    const status = getExpirationStatus(expiresIn as number | null);
+    const status = getExpirationStatus(expiresIn);
     expect(status.type).toBe(type);
     expect(toItemVariant(status.type)).toBe(variant);
   });

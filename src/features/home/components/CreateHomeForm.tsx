@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { Button } from '#components/molecules/Button';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
+import { homeTestIDs } from '#features/home/testIDs';
 
 interface CreateHomeFormProps {
   isVisible: boolean;
@@ -33,7 +34,7 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
   return (
     <View style={styles.createForm}>
       <BaseInput
-        testID="create-home-name-input"
+        testID={homeTestIDs.createHomeNameInput}
         value={homeName}
         onChangeText={onHomeNameChange}
         placeholder={t('labels.enterHomeName')}
@@ -47,7 +48,7 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
       />
       <View style={styles.formActions}>
         <Button
-          testID="create-home-cancel-button"
+          testID={homeTestIDs.createHomeCancelButton}
           variant="secondary"
           onPress={onCancel}
           fullWidth
@@ -55,7 +56,7 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
           {t('labels.cancel')}
         </Button>
         <Button
-          testID="create-home-submit-button"
+          testID={homeTestIDs.createHomeSubmitButton}
           loading={isCreating}
           disabled={!homeName.trim()}
           onPress={onSubmit}

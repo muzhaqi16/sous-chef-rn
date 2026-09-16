@@ -54,9 +54,8 @@ require('./src/i18n/config');
 // globally. Without this, modules that read Environment at load time (e.g.
 // `telemetrySlice.ts:initialTelemetryState`) crash whenever a test pulls them
 // in transitively without first writing a per-suite factory mock. The shared
-// mock provides safe defaults; tests that need bespoke values can still
-// override via their own `jest.mock('#/utils/environment', factory)` or
-// `(Environment.x as jest.Mock).mockReturnValue(...)`.
+// mock provides safe defaults; a test that needs bespoke values overrides
+// one with `(Environment.x as jest.Mock).mockReturnValue(...)`, never a factory.
 // ---------------------------------------------------------------------------
 jest.mock('#/utils/environment');
 

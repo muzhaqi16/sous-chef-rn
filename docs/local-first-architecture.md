@@ -21,13 +21,15 @@ notes; where the implementation diverged from the plan, the divergence is called
   start paints from disk. On app **background**, `useAppStateLifecycle` calls `flushCachePersistence()`
   (`ApolloCachePersistence.flushPending`) to write the pending debounced snapshot immediately — so the
   last few seconds of writes (including optimistic creates) survive a fast app-kill; no-op when nothing is
-  pending (see §6).
+  pending (see §6). `queueLink` calls the same `flushPending()` right after it queues a write, so the
+  queue entry and the cache change it replays against reach disk in one synchronous step and a kill
+  with no background transition (force-stop, crash) cannot leave a queued create with no row.
 - Default fetch policy `cache-and-network` → instant cache read + background refresh.
 - A transient API failure does not wipe cached lists: `usePreservedConnection` /
   `usePreservedQueryData` keep the last good value, and the `itemsConnection.merge` guard only honors an
   **authoritative** `totalCount: 0` (see the cache-connection-resilience note).
-- A first-page background refetch that lands **before** the queue replays an offline create no longer
-  drops that item. The `itemsConnection.merge` first-page branch preserves existing edges whose id still
+- A first-page background refetch that lands **before** the queue replays an offline create keeps that
+  item. The `itemsConnection.merge` first-page branch preserves existing edges whose id still
   has a PENDING mutation in the queue (`queueStore.getPendingClientIds()`), then falls straight through to
   the authoritative page once the queue drains. A genuinely **server-deleted** item (no pending op) is
   still dropped, so the page stays authoritative.
@@ -58,18 +60,18 @@ Lifecycle of a local-first mutation:
                            leave the list header inflated until the next stats refetch).
 ```
 
-Every add site — **including the primary `useAddShoppingItem` / `usePantryItemMutations.addItem`** —
+Every add site — **including the primary `useAddShoppingItem`** —
 classifies the resolved result and reverts on a non-success payload. This matters because under the
 global `errorPolicy: 'all'` a `ValidationError` / `ConflictError` **resolves** (it's a valid union member,
 not a thrown error), so `onError` never fires; only inspecting `result` catches it. Skipping this is what
 would leave a permanent phantom row. Shopping sites do this through `reconcileShoppingCreate` (§4); pantry
-sites call `classifyCreateResult` directly and evict.
+sites settle the write with `settleMutation` and evict on a failure.
 
 **There is no unified `useLocalFirstMutation` primitive.** The original plan proposed one; in practice
 each hook applies this lifecycle directly, sharing only the helpers where the logic is genuinely
-identical: the cache-write helpers (§3, §5) and `classifyCreateResult(result) → 'created' | 'queued' |
-'rejected'` (`apollo/utils/classifyCreateResult.ts`), which centralizes the "queued create is success /
-non-success payload is a rejection" decision so it can't drift between sites. It takes the result and
+identical: the cache-write helpers (§3, §5) and `settleMutation` / `settledStatus(result) → 'applied' |
+'queued' | 'failed'` (`apollo/utils/settleMutation.ts`), which centralizes the "queued write is not a
+failure / refusal member is a failure" decision so it can't drift between sites. It takes the result and
 nothing else — the payload field and the success member are derived structurally via
 `utils/errors/mutationPayload.ts`, shared with `classifyReplayResult` (§ replay) so the foreground and
 replay paths apply one rule. What stays per-site — input construction and success UX (navigate / close / toast /
@@ -80,7 +82,7 @@ restock) — is irreducibly site-specific, so a single primitive would be the wr
 normalized entity whose GraphQL field names are the flat setting names (`UserSettings`,
 `NotificationPreferences`), updated a field or two at a time. It writes the fields with `cache.modify`,
 fires with `context: { localFirst: true }`, and reverts from the caller's `previous` snapshot only when
-`classifyCreateResult` says `'rejected'`. It qualifies where the create sites don't because there is no
+`settledStatus` says `'failed'`. It qualifies where the create sites don't because there is no
 per-site input construction (the change *is* the fields) and no success UX (the control already moved).
 It returns the outcome rather than reporting it — the two call sites surface a refusal differently, and
 deciding that centrally is what produces double alerts. See §10 for what uses it.
@@ -90,7 +92,7 @@ deciding that centrally is what produces double alerts. See §10 for what uses i
 Rather than temp-ids + server reconciliation, **the client mints the real id at create time** and sends
 it as the create input's `id`. `generateEntityId()` (`src/utils/generateEntityId.ts`, backed by
 `@paralleldrive/cuid2`) returns a **cuid2** matching the backend's current `@default(cuid(2))` format.
-The server's id validator (`sous-chef-api/src/utils/common/validateId.ts`,
+The server's id validator (`sous-chef-api/packages/core/src/utils/common/validateId.ts`,
 `/^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/`) accepts both cuid2 **and** the older cuid v1
 (`c` + 24 chars), so ids minted by a previous app version stay valid; only new ids use cuid2.
 
@@ -108,15 +110,33 @@ So a newly-added item is visible immediately and survives a fully-offline create
 the item into the cache before firing. Two shared writers keep this DRY:
 
 - **`createOptimisticShoppingListItem(id, fields)` + `addOptimisticShoppingListItem(cache, listId, item)`**
-  (both `apollo/utils/shoppingListCacheUpdaters.ts`) — the builder mints the **full** display entity with
+  (both `features/shoppingList/cache/items.ts`) — the builder mints the **full** display entity with
   the client cuid baked in (mandatory offline, where no server response arrives to materialise it; without
   it the row renders blank); the writer `writeFragment`s it, adds the connection edge, and recomputes list
-  stats. The builder lives in the shared apollo util (not the shoppingList feature) so add surfaces in
-  other features (barcode, pantry-detail, filtered-pantry) build the same entity without crossing a
-  feature boundary.
-- **`buildOptimisticPantryItem(id, fields)`** (`src/hooks/home/pantry/buildOptimisticPantryItem.ts`) —
+  stats. A feature's `cache/` is outside the closed internals (`context/`, `hooks/mutations/`, `utils/`,
+  `components/`, `offline/`), so add surfaces in other features (barcode, pantry-detail,
+  filtered-pantry) build the same entity from it.
+- **`buildOptimisticPantryItem(id, fields)`** (`src/features/pantry/hooks/buildOptimisticPantryItem.ts`) —
   builds the complete `PantryItem` shape that `addToPantryItemsCache` writes (an incomplete shape makes a
   list cell's `useFragment` report `complete: false` and blank the row).
+
+**An optimistic entity is COMPLETE for every query that reads it.** With
+`returnPartialData: false`, one missing field makes the whole cache read
+incomplete and `useQuery` returns nothing; online a refetch hides it, offline
+there is none, so the row stays invisible for the rest of the session. A field
+added to a list query (or a fragment it spreads) must therefore reach EVERY
+writer that links the entity into a read connection: the optimistic builder, the
+create mutation's selection, the queue's `Sync*` replay fragment, a move/restock
+payload, and the subscription read-back fragment a collaborator's change arrives
+through. `__tests__/apollo/optimisticEntityCompleteness.test.ts` executes the
+real schema and asserts `cache.diff` completeness for each, and DERIVES the
+writer list from the tree: every module using `createAddTo*ConnectionUpdater`
+must appear there with a case or a reason, so a new writer cannot ship
+uncovered.
+
+A nested entity reference (`unit`, `item`) is resolved with `cache.readFragment`
+selecting **every** field the query needs — it returns null on a partially
+cached entity exactly as on a missing one.
 
 Three shared reconcilers keep the response path DRY across all shopping add sites:
 - **`reconcileShoppingCreate(cache, listId, id, result) → 'kept' | 'reverted'`** — the keep/revert
@@ -131,7 +151,7 @@ Three shared reconcilers keep the response path DRY across all shopping add site
   `reconcileShoppingCreate` calls; also used directly on the thrown-error (`.catch` / `onError`) path,
   where there's no result to classify (§2).
 
-The primary hooks (`useAddShoppingItem`, `usePantryItemMutations`) and the secondary add sites all route
+The primary shopping hook (`useAddShoppingItem`), `AddToPantrySheet` and the secondary add sites all route
 through these.
 
 **Success is decoupled from `result.data`.** A queued create resolves with `data: null` and no error —
@@ -156,11 +176,16 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
   enqueue). Cumulative-op idempotency rides on `input.idempotencyKey` inside the persisted variables, not
   on the context. The store also exposes `subscribe()` + `getPendingCount()` (`useSyncExternalStore`-compatible)
   so UI — the offline banner's pending-changes count — reads live queue state without polling.
-- **`queueManager`** replays **strictly in insertion order** — the queue is append-only from one
-  user's actions, so insertion order IS causal order: a parent create (offline-created
-  list/pantry/plan) always lands before any dependent referencing its client-minted id, with no
-  grouping or dependency analysis. Move-coalescing happens at **enqueue time** in
-  `queueStore.addMutation` (latest move per item wins). Retries use exponential backoff + jitter;
+- **`queueManager`** replays **in insertion order, holding back only dependents** — the queue is
+  append-only from one user's actions, so insertion order IS causal order, and an entry the server
+  did not accept holds back every later entry that names its subject or its parent
+  (`PARENT_REFERENCE_KEYS`: the home a pantry joins, the pantry or list an item joins, …) while
+  unrelated entries continue. A transport-class deferral (unreachable, 5xx, pacing,
+  `CLIENT_UPGRADE_REQUIRED`) pauses the pass instead, since every later entry would meet it too;
+  only a row-scoped one (DEADLOCK) lets the rest replay. Nothing counts passes: the sole lifetime
+  bound on a pending entry is `expireStalePending`'s 90-day age horizon. Move-coalescing happens at
+  **enqueue time** in `queueStore.addMutation` (latest move per item wins). Retries use exponential
+  backoff + jitter;
   an auth error forces ONE token refresh and then retries through the same bounded counter (a
   failed refresh → AUTH_ERROR + failure handler — never an unbounded auth-retry loop). Triggers:
   `useOnlineQueueSync` (offline→online), `useAppStateLifecycle` (background→active), `onUserChange`,
@@ -173,7 +198,7 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
   the source of truth. No per-operation map exists; an entity that isn't cached (already evicted,
   or no single entity) yields null and the handler skips the evict — the next refetch heals.
 - **Replayed results are payload-classified** (`classifyReplayResult`, `queueErrorPolicy.ts`) — the
-  replay-side counterpart of the foreground `classifyCreateResult` rule. Under `errorPolicy: 'all'` a
+  replay-side counterpart of the foreground `settledStatus` rule. Under `errorPolicy: 'all'` a
   server refusal RESOLVES as an error union member (`ValidationError` / `ConflictError` / …) rather than
   throwing; without classification a rejected replay would be marked SUCCESS and dequeued while the
   optimistic cache write lingers. A rejected payload routes through the permanent-failure pipeline
@@ -262,7 +287,7 @@ while backfilling the required `pantryId` from cache.
   `NEVER_MASK_ERROR_CODES`, so production strips `existingPantryItemIds` from it. Nothing downstream can
   learn which row to restock, which is why the decision cannot live on the response.
   So the add sites ask the CACHE first, via `findCachedPantryItemDuplicate`
-  (`apollo/utils/pantryCacheReaders.ts`): the list query already caches `item { id }` and `itemName` on every
+  (`features/pantry/utils/pantryCacheReaders.ts`): the list query already caches `item { id }` and `itemName` on every
   node, so the server's key is reproducible locally with no round trip. Quick-add matches on the catalog id
   and restocks (bumping `quantity` through `optimisticFieldUpdate`, because offline the restock's `update`
   never runs); the details form has no catalog id, so it matches on the name and only ever PROMPTS on that
@@ -279,7 +304,7 @@ while backfilling the required `pantryId` from cache.
   When the backstop fires, the add sites withdraw the optimistic row and then differ:
   the details form and the barcode scanner prompt restock / add-anyway, while the sheet's **quick-add
   silently restocks the existing row by 1** and corrects its eager "added" toast. The withdrawal is
-  `revertOptimisticPantryItem` (`apollo/utils/pantryCacheUpdaters.ts`), the enforced mirror of
+  `revertOptimisticPantryItem` (`features/pantry/cache/items.ts`), the enforced mirror of
   `addPantryItemLocally` — it must reverse BOTH counters the publish moved. Only the connection's
   `totalCount` self-heals (the field policy drops a dangling edge on read); `Pantry.stats.totalItems`
   does not, and the header, the "All" tab badge and `usePantryScreen`'s server/client sort mode all read
@@ -315,35 +340,36 @@ query-blocking, orthogonal to connectivity.
 
 ## 9. Failure handling & UX
 
-- **Offline banner.** `OfflineBanner` (`components/atoms/OfflineBanner.tsx`) is mounted in `App.tsx`
-  (inside the SafeAreaView, above `<Navigation />`). It covers **both** unreachable cases — device
-  offline AND API-down-while-online (`apiReachable === false`, the reachability breaker) — plus the
-  user-toggled offline mode, with distinct i18n'd messages (`offlineBanner.*` keys, pluralized). When
-  the queue has PENDING entries it shows the **pending-changes count** ("You're offline — 3 changes
-  will sync when reconnected"), read live via `usePendingMutationCount()`
-  (`useSyncExternalStore` over `queueStore.subscribe`).
-- **Permanent failure.** `setFailureHandler` is registered exactly once, at module scope in `App.tsx`
-  (`handleFailedMutation`): it evicts the stale optimistic entity, clears persisted optimistic fields,
-  toasts the user, and **removes the entry from the queue**. `useOnlineQueueSync` intentionally does
-  **not** register a handler (a comment there documents why — it mounts after `App.tsx`, so registering
-  one would shadow the full handler). So a permanently-failed (validation/4xx) mutation is fully
-  reverted and dequeued — **as long as it names an entity**. The revert keys off
-  `entityType` + `entityId`; a settings mutation (§10) carries neither, so the toast fires and the
-  entry is dequeued but the `cache.modify` stands. That corrects itself on the next
-  `GetUserSettings` / `GetNotificationPreferences` network read (both `cache-and-network`), so the
-  window is one screen visit, not forever.
+- **Offline indicator.** `OfflineStatusPill` (`components/molecules/OfflineStatusPill.tsx`) sits inline
+  in each screen's header, and `OfflineTransitionToaster` (`components/atoms/`, mounted once in
+  `App.tsx`) announces each offline/online transition with a toast. Both read `useOfflineStatus`, so
+  they cannot disagree. They cover **both** unreachable cases — device offline AND API-down-while-online
+  (the reachability breaker) — plus the user-toggled offline mode, with distinct i18n'd messages
+  (`offlineBanner.*` keys, pluralized). When the queue has PENDING entries the message carries the
+  **pending-changes count**, read live via `usePendingMutationCount()` (`useSyncExternalStore` over
+  `queueStore.subscribe`). The cause is the store's debounced `offlineBannerCause`, so a message does
+  not rewrite itself mid-display.
+- **Permanent failure.** `registerQueueFailureHandler` (`apollo/offlineQueue/queueFailureHandler.ts`)
+  is the one registration, made from `useStartupInit`. `handleQueueFailure` withdraws the count or
+  unlink its operation registered, evicts the entity the write created or changed — its subject, read
+  from the operation's input type (`queuedSubject.ts`), never a parent or source it merely names —
+  clears that entity's persisted optimistic fields, toasts the user in the app's own copy and **removes
+  the entry from the queue**. Once the drain pass settles it re-reads the active queries, so a refused
+  update's row comes back with the server's value and a refused create's row stays gone. A write whose
+  input names no subject (a settings mutation, §10) evicts nothing: the re-read replaces its local value
+  if its screen is open, and the next `cache-and-network` read does otherwise.
 - **Reconnect ordering.** The queue drain and the settings queries' `cache-and-network` refetch both
   fire on reconnect and are not ordered against each other. If the refetch lands first, a queued
   toggle visibly snaps to the server value and back when the replay lands. Cosmetic and self-correcting;
   not worth serializing.
-- **Network errors** no longer raise a blocking alert for opted-in mutations — they queue silently.
+- **Network errors** on an opted-in mutation queue silently; they raise no alert.
 - **Not yet shipped:** a uniform offline-degraded affordance for online-only features.
 
 ## 10. Scope
 
 **Local-first today (opted in via `context.localFirst`, with a permanent cache write):**
-- **Pantry:** create (every add surface — `usePantryItemMutations.addItem`, `useCreatePantryItem`,
-  `usePantryItemSubmission`, `AddToPantrySheet`, `SelectPantryItems` onboarding, barcode), delete.
+- **Pantry:** create (every add surface — `usePantryItemSubmission`, `AddToPantrySheet`,
+  `SelectPantryItems` onboarding, barcode), delete.
 - **Shopping:** add (every add surface — `useAddShoppingItem`, `AddToShoppingListSheet`, `AddEditItem`,
   barcode, filtered-pantry, pantry-item-detail, recipe single + batch), remove, toggle-purchased, update,
   quantity ±, reorder/move.
@@ -365,7 +391,7 @@ query-blocking, orthogonal to connectivity.
   `storageLocationsConnection(first: PAGE_SIZE.COMPACT)` variants, plus the home's `pantries` /
   `pantriesConnection` membership, and the `Query.pantry` cache redirect serves by-id reads — so a
   pantry created offline is immediately usable and items added to it queue behind its create
-  (strict FIFO replay orders the pantry create before its items).
+  (the drain holds an item behind the create of the pantry it names).
 - **Shopping list update / delete / clear** (`useUpdateShoppingList`, `useDeleteShoppingList`,
   `useClearShoppingListItems`) — update merges over a snapshot; delete removes edge + entity up front
   and restores the snapshot on rejection; clear keeps its eager cache eviction and refetches on a
@@ -417,10 +443,10 @@ This is **enforced in code**, not just convention: `queueLink` only queues allow
 a network error so the hook's normal error path shows a truthful failure and nothing ghost-replays.
 
 **Out of current scope (own server work pending):** profile (name / avatar / dietary profile — the
-*settings* half is local-first, see above). Replay is strictly FIFO
-for the whole queue, so dependents queued behind a parent-entity create (items in a new list, meals
-in a new plan, meals referencing a new recipe, items in a new pantry) always replay after their
-parent exists — ordering is correct by construction, no special-casing.
+*settings* half is local-first, see above). Replay is insertion-ordered and dependency-aware, so
+dependents queued behind a parent-entity create (items in a new list, meals in a new plan, meals
+referencing a new recipe, items in a new pantry) replay only after their parent has landed — the
+drain reads the parent reference off the input, so no per-feature special-casing.
 
 ## 11. Server contract (verified)
 
@@ -474,7 +500,7 @@ parent exists — ordering is correct by construction, no special-casing.
 ## 13. Divergences from the original plan (for the record)
 
 - **No `useLocalFirstMutation` primitive** (planned §3.1). Replaced by per-site Pattern B + the shared
-  cache-writers (§2, §4) and the `classifyCreateResult` helper.
+  cache-writers (§2, §4) and `settleMutation`.
 - **Identity is client-generated cuid2** (planned §8), not temp-id + reconciliation. This removed the
   largest planned subsystem — the `idMapping` / `resolveIds` / temp-id machinery has been fully deleted
   (no references remain in the codebase).
@@ -499,16 +525,16 @@ parent exists — ordering is correct by construction, no special-casing.
 | Pending-changes count (banner) | `src/hooks/offline/usePendingMutationCount.ts` |
 | Queue triggers / failure toast | `src/hooks/app/useOnlineQueueSync.ts` |
 | Field-level persistence | `src/apollo/offline/OptimisticDataPersistence.ts`, `src/hooks/offline/useOptimisticDataRestoration.ts` |
-| Cache persistence (debounce + `flushPending`) | `src/apollo/offline/ApolloCachePersistence.ts`, `src/apollo/client.ts` (`flushCachePersistence`) |
+| Cache persistence (debounce + `flushPending`) | `src/apollo/offline/ApolloCachePersistence.ts`, `src/apollo/client.ts` (`flushCachePersistence`), `src/apollo/offlineQueue/queueLink.ts` (flush on enqueue) |
 | Background flush trigger | `src/hooks/app/useAppStateLifecycle.ts` |
 | Pending-aware connection merge | `src/apollo/cache.ts` (`itemsConnectionFieldPolicy`) + `queueStore.getPendingClientIds()` |
-| Shared shopping writers/reconcilers | `src/apollo/utils/shoppingListCacheUpdaters.ts` (`createOptimisticShoppingListItem`, `addOptimisticShoppingListItem`, `reconcileShoppingCreate`, `adoptServerShoppingListItemId`, `revertOptimisticShoppingListItem`) |
-| Shared pantry builder | `src/hooks/home/pantry/buildOptimisticPantryItem.ts` |
+| Shared shopping writers/reconcilers | `src/features/shoppingList/cache/items.ts` (`createOptimisticShoppingListItem`, `addOptimisticShoppingListItem`, `reconcileShoppingCreate`, `revertOptimisticShoppingListItem`) |
+| Shared pantry builder | `src/features/pantry/hooks/buildOptimisticPantryItem.ts` |
 | Settings-shaped field writer | `src/apollo/utils/localFirstFields.ts` (`updateEntityFieldsLocalFirst`, `writeEntityFields`) |
-| Create-result classifier | `src/apollo/utils/classifyCreateResult.ts` |
+| Write-outcome settling and classification | `src/apollo/utils/settleMutation.ts` (`settleMutation`, `settledStatus`) |
 | Optimistic-entity completeness guard | `__tests__/apollo/optimisticEntityCompleteness.test.ts` |
-| Offline banner (mounted in `App.tsx`) | `src/components/atoms/OfflineBanner.tsx` |
+| Offline indicator | `src/components/molecules/OfflineStatusPill.tsx` (in each screen header), `src/components/atoms/OfflineTransitionToaster.tsx` (mounted in `App.tsx`), both reading `src/hooks/app/useOfflineStatus.ts` |
 | Query short-circuit when offline | `src/apollo/links/offlineModeLink.ts` |
 | API-reachability circuit breaker | `src/apollo/links/apiReachabilityBreaker.ts`, `networkStatusLink.ts` |
 | Unified `isApiUnavailable` predicate | `src/store/slices/networkSlice.ts` |
-| Primary add hooks | `src/features/shoppingList/hooks/mutations/useAddShoppingItem.ts`, `src/hooks/home/pantry/usePantryItemMutations.ts` |
+| Primary add hooks | `src/features/shoppingList/hooks/mutations/useAddShoppingItem.ts`, `src/features/pantry/components/modals/AddToPantrySheet/AddToPantrySheet.tsx` |

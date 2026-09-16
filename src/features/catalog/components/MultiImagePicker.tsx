@@ -145,7 +145,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
         >
           <View style={styles.placeholderContainer}>
             <Icon name="camera-outline" size={32} tone="textSecondary" />
-            <Text tone="secondary" align="center">
+            <Text role="body" tone="secondary" align="center">
               {t('imagePicker.addPhotos')}
             </Text>
             <Text role="caption" tone="secondary" align="center">
@@ -307,7 +307,7 @@ const styles = StyleSheet.create(theme => ({
     position: 'absolute',
     top: 2,
     right: 2,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: theme.colors.overlays.dark,
     borderRadius: theme.radii.full,
     width: 22,
     height: 22,
@@ -319,7 +319,7 @@ const styles = StyleSheet.create(theme => ({
     position: 'absolute',
     bottom: 2,
     left: 2,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: theme.colors.overlays.dark,
     borderRadius: theme.radii.full,
     width: 22,
     height: 22,

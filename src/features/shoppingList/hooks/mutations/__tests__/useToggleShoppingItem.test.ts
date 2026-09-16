@@ -1,9 +1,10 @@
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   seedCache,
-  type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import {
   ToggleShoppingListItemPurchasedDocument,
@@ -54,7 +55,7 @@ beforeEach(() => {
 function createToggleMock(
   recorded: Array<Record<string, unknown>>,
   responseItem: Record<string, unknown>,
-): MockedResponse {
+): MockFor<typeof ToggleShoppingListItemPurchasedDocument> {
   return {
     request: {
       query: ToggleShoppingListItemPurchasedDocument,
@@ -68,9 +69,6 @@ function createToggleMock(
       data: {
         toggleShoppingListItemPurchased: {
           __typename: 'ToggleShoppingListItemPurchasedPayload',
-          success: true,
-          message: '',
-          code: 'SUCCESS',
           shoppingListItem: responseItem,
         },
       },
@@ -210,7 +208,9 @@ const NAMELESS_ROW_MESSAGE =
 const ITEM_NAME_COPY = 'Enter a name for this item.';
 
 // Toggle twin of updatePurchaseMock's 'fieldRefusal' outcome.
-function toggleFieldRefusalMock(): MockedResponse {
+function toggleFieldRefusalMock(): MockFor<
+  typeof ToggleShoppingListItemPurchasedDocument
+> {
   return {
     request: {
       query: ToggleShoppingListItemPurchasedDocument,
@@ -221,7 +221,7 @@ function toggleFieldRefusalMock(): MockedResponse {
       data: {
         toggleShoppingListItemPurchased: {
           __typename: 'ValidationError',
-          code: 'VALIDATION_FAILED',
+          code: ErrorCode.ValidationFailed,
           message: NAMELESS_ROW_MESSAGE,
           field: 'itemName',
         },
@@ -233,7 +233,7 @@ function toggleFieldRefusalMock(): MockedResponse {
 function updatePurchaseMock(
   recorded: Array<Record<string, unknown>>,
   outcome: 'success' | 'reject' | 'fieldRefusal',
-): MockedResponse {
+): MockFor<typeof UpdateShoppingListItemDocument> {
   return {
     request: {
       query: UpdateShoppingListItemDocument,
@@ -284,13 +284,13 @@ function updatePurchaseMock(
             : outcome === 'fieldRefusal'
             ? {
                 __typename: 'ValidationError',
-                code: 'VALIDATION_FAILED',
+                code: ErrorCode.ValidationFailed,
                 message: NAMELESS_ROW_MESSAGE,
                 field: 'itemName',
               }
             : {
                 __typename: 'ConflictError',
-                code: 'CONFLICT',
+                code: ErrorCode.Conflict,
                 message: 'conflict',
               },
       },
@@ -472,7 +472,7 @@ describe('the stocked stamp follows the purchased flag', () => {
    * won. These tests are about what the local write leaves behind, and queued
    * is the case where that is all there is.
    */
-  const queued: MockedResponse = {
+  const queued: MockFor<typeof UpdateShoppingListItemDocument> = {
     request: {
       query: UpdateShoppingListItemDocument,
       variables: () => true,
@@ -489,14 +489,15 @@ describe('the stocked stamp follows the purchased flag', () => {
    * claiming to describe the flip, and passes only if the revert clears the
    * stamp too, which is the defect they were written to catch.
    */
-  const toggleQueued: MockedResponse = {
-    request: {
-      query: ToggleShoppingListItemPurchasedDocument,
-      variables: () => true,
-    },
-    result: { data: { toggleShoppingListItemPurchased: null } },
-    maxUsageCount: Number.POSITIVE_INFINITY,
-  };
+  const toggleQueued: MockFor<typeof ToggleShoppingListItemPurchasedDocument> =
+    {
+      request: {
+        query: ToggleShoppingListItemPurchasedDocument,
+        variables: () => true,
+      },
+      result: { data: { toggleShoppingListItemPurchased: null } },
+      maxUsageCount: Number.POSITIVE_INFINITY,
+    };
 
   /** A line that was purchased AND already moved into the pantry. */
   function seedStockedItem() {

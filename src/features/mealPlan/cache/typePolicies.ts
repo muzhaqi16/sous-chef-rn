@@ -4,6 +4,8 @@ import {
   mergeArrayByIdIntelligent,
 } from '#/apollo/cacheFieldPolicies';
 
+type MergeableItems = Parameters<typeof mergeArrayByIdIntelligent>[0];
+
 /**
  * A plan's items merge by entity id rather than being replaced, so a partial write cannot drop the rest of the day.
  *
@@ -15,7 +17,11 @@ export const mealPlanTypePolicies: TypePolicies = {
     merge: true,
     fields: {
       mealPlanItems: {
-        merge(existing, incoming, { readField }) {
+        merge(
+          existing: MergeableItems,
+          incoming: MergeableItems,
+          { readField },
+        ) {
           return mergeArrayByIdIntelligent(existing, incoming, {
             readField,
           });

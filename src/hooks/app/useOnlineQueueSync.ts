@@ -20,6 +20,7 @@ export function useOnlineQueueSync(): void {
   // different times. A boolean, so a token ROTATION does not re-run this.
   const userId = useUserId();
   const hasAccessToken = useAppStore(state => !!state.accessToken);
+  const accessToken = useAppStore(state => state.accessToken);
 
   // The permanent-failure handler is registered by `useStartupInit`, not here —
   // `setFailureHandler` is last-write-wins and one owner is the whole point.
@@ -63,4 +64,10 @@ export function useOnlineQueueSync(): void {
 
     queueManager.onOnline();
   }, [isOnline, userId, hasAccessToken]);
+
+  // Every token, rotations included: a write parked for re-auth replays once the
+  // session holds a credential again.
+  useEffect(() => {
+    if (userId && accessToken) queueManager.onSessionToken(userId);
+  }, [userId, accessToken]);
 }

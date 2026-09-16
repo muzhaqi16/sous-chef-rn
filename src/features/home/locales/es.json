@@ -182,5 +182,13 @@
   "homeRoles": {
     "owner": "Propietario",
     "member": "Miembro"
+  },
+  "inviteStatus": {
+    "PENDING": "Pendiente",
+    "ACCEPTED": "Aceptada",
+    "DECLINED": "Rechazada",
+    "EXPIRED": "Caducada",
+    "REVOKED": "Revocada",
+    "USED": "Usada"
   }
 }

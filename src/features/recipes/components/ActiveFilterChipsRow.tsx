@@ -11,7 +11,9 @@ import {
   INTOLERANCE_OPTIONS,
   MEAL_TYPES,
   filterOptionLabelKey,
+  type RecipeFilterOption,
 } from '#features/recipes/utils/recipeFilterOptions';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 
 export type RemovableFilterKind =
   | 'diet'
@@ -45,11 +47,17 @@ export const ActiveFilterChipsRow: React.FC<ActiveFilterChipsRowProps> = ({
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
+  // Filters are free strings, so a value no option lists shows as written.
+  const labelFor = (options: RecipeFilterOption[], value: string) => {
+    const labelKey = filterOptionLabelKey(options, value);
+    return labelKey ? t(labelKey) : value;
+  };
+
   const chips: ChipDescriptor[] = [
     ...filters.diet.map(
       (value): ChipDescriptor => ({
         key: `diet-${value}`,
-        label: t(filterOptionLabelKey(DIET_OPTIONS, value)),
+        label: labelFor(DIET_OPTIONS, value),
         kind: 'diet',
         value,
       }),
@@ -57,7 +65,7 @@ export const ActiveFilterChipsRow: React.FC<ActiveFilterChipsRowProps> = ({
     ...filters.intolerances.map(
       (value): ChipDescriptor => ({
         key: `intolerance-${value}`,
-        label: t(filterOptionLabelKey(INTOLERANCE_OPTIONS, value)),
+        label: labelFor(INTOLERANCE_OPTIONS, value),
         kind: 'intolerance',
         value,
       }),
@@ -66,7 +74,7 @@ export const ActiveFilterChipsRow: React.FC<ActiveFilterChipsRowProps> = ({
       ? [
           {
             key: `mealType-${filters.mealType}`,
-            label: t(filterOptionLabelKey(MEAL_TYPES, filters.mealType)),
+            label: labelFor(MEAL_TYPES, filters.mealType),
             kind: 'mealType',
           } satisfies ChipDescriptor,
         ]
@@ -94,7 +102,7 @@ export const ActiveFilterChipsRow: React.FC<ActiveFilterChipsRowProps> = ({
         accessibilityLabel={t('recipes.filtersActiveSummary', {
           count: chips.length,
         })}
-        testID="active-filters-summary"
+        testID={recipesTestIDs.activeFiltersSummary}
       >
         <Icon name="options-outline" size={14} tone="primary" />
         <Text role="label" tone="secondary">

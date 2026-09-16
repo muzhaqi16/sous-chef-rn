@@ -4,10 +4,10 @@ import { yupResolver } from '@hookform/resolvers/yup';
 
 import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
-import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import { localizedErrorMessage } from '#/services/errorService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
+import { MEAL_PLAN_TYPE_LABEL_KEYS } from '#features/mealPlan/utils/mealPlanEnumLabels';
 import { Icon } from '#utils/iconUtils';
 import { FormScreen } from '#components/templates/FormScreen';
 import { FormInput } from '#components/atoms/FormInput';
@@ -27,7 +27,7 @@ import { useHomeQuery } from '#features/home/hooks/useHomeQuery';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { addDays, addWeeks, addMonths } from 'date-fns';
 import { MealPlanType } from '#/graphql/generated/schemaTypes';
-import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { Text } from '#components/atoms/Text';
 import type { Translate } from '#/i18n/types';
 import { logValidationErrors } from '#/utils/validation/common';
@@ -37,15 +37,18 @@ import {
   PERSONAL_VALUE,
   type CreateMealPlanFormValues,
 } from './createMealPlanFormConfig';
+import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 
 const PLAN_TYPES = [MealPlanType.Weekly, MealPlanType.Monthly];
 
+/** The fields that render their own validation message. */
+const FIELDS_WITH_MESSAGES: ReadonlyArray<keyof CreateMealPlanFormValues> = [
+  'name',
+  'startDate',
+];
+
 function getPlanTypeFormatter(t: Translate) {
-  return (value: string): string => {
-    if (value === MealPlanType.Weekly) return t('mealPlan.weekly');
-    if (value === MealPlanType.Monthly) return t('mealPlan.monthly');
-    return value.charAt(0) + value.slice(1).toLowerCase();
-  };
+  return (value: MealPlanType): string => t(MEAL_PLAN_TYPE_LABEL_KEYS[value]);
 }
 
 function computeEndDate(startDate: Date, planType: MealPlanType): Date {
@@ -54,7 +57,8 @@ function computeEndDate(startDate: Date, planType: MealPlanType): Date {
       return addDays(startDate, 6);
     case MealPlanType.Monthly:
       return addDays(addMonths(startDate, 1), -1);
-    default:
+    case MealPlanType.Custom:
+    case MealPlanType.Daily:
       return addWeeks(startDate, 1);
   }
 }
@@ -69,19 +73,19 @@ export const CreateMealPlanScreen: React.FC = () => {
   const { profile: dietaryProfile } = useDietaryProfile();
   const selectedHomeId = useSelectedHomeId();
 
-  const { control, handleSubmit } = useForm<CreateMealPlanFormValues>({
-    resolver: yupResolver(createMealPlanSchema),
-    defaultValues: createMealPlanDefaults(selectedHomeId),
-    mode: 'onTouched',
-  });
+  const { control, handleSubmit, setError } = useForm<CreateMealPlanFormValues>(
+    {
+      resolver: yupResolver(createMealPlanSchema),
+      defaultValues: createMealPlanDefaults(selectedHomeId),
+      mode: 'onTouched',
+    },
+  );
 
   const homeOptions = (() => {
     const opts = [{ label: t('mealPlan.personal'), value: PERSONAL_VALUE }];
-    if (homes) {
-      for (const home of homes) {
-        if (home?.id && home?.name) {
-          opts.push({ label: home.name, value: home.id });
-        }
+    for (const home of homes) {
+      if (home.id && home.name) {
+        opts.push({ label: home.name, value: home.id });
       }
     }
     return opts;
@@ -135,7 +139,7 @@ export const CreateMealPlanScreen: React.FC = () => {
         ? parsedBudget
         : undefined;
 
-    let result;
+    let outcome;
     const createMealPlanOptions = {
       name: name.trim(),
       description: descriptionValue,
@@ -149,27 +153,29 @@ export const CreateMealPlanScreen: React.FC = () => {
       homeId,
     };
     try {
-      result = await createMealPlan(createMealPlanOptions);
+      outcome = await createMealPlan(createMealPlanOptions, {
+        present: 'none',
+      });
     } catch (error) {
       alertService.alert(
         t('labels.error'),
         localizedErrorMessage(error, t('mealPlan.failedToCreate')),
       );
+      return;
     }
-    // `false` means the mutation threw — the onError above already alerted.
-    if (!result) return;
 
-    if (result) {
+    if (outcome.status !== 'failed') {
       goBack();
-    } else {
-      // Resolved from the refusal's CODE, never `result.message` — that is
-      // unlocalizable English by construction, so a Spanish user read the
-      // server's own wording.
-      alertService.alert(
-        t('labels.error'),
-        localizedRefusalMessage(result, t('mealPlan.failedToCreate')),
-      );
+      return;
     }
+    // A refusal naming a field the form shows a message for lands on it.
+    const { failure } = outcome;
+    const field = FIELDS_WITH_MESSAGES.find(key => key === failure.field);
+    if (field) {
+      setError(field, { type: 'server', message: failure.body });
+      return;
+    }
+    alertService.alert(failure.title, failure.body);
   };
 
   return (
@@ -178,7 +184,7 @@ export const CreateMealPlanScreen: React.FC = () => {
       onClose={goBack}
       onSave={handleSubmit(onValid, logValidationErrors)}
       loading={creating}
-      testID="create-meal-plan-screen"
+      testID={mealPlanTestIDs.createScreen}
     >
       <Controller
         control={control}
@@ -192,7 +198,7 @@ export const CreateMealPlanScreen: React.FC = () => {
             error={fieldState.error?.message}
             placeholder={t('mealPlan.namePlaceholder')}
             required
-            testID="meal-plan-name-input"
+            testID={mealPlanTestIDs.createNameInput}
           />
         )}
       />
@@ -206,7 +212,7 @@ export const CreateMealPlanScreen: React.FC = () => {
             value={field.value}
             onChangeText={field.onChange}
             placeholder={t('mealPlan.descriptionPlaceholder')}
-            testID="meal-plan-description-input"
+            testID={mealPlanTestIDs.createDescriptionInput}
           />
         )}
       />
@@ -265,7 +271,7 @@ export const CreateMealPlanScreen: React.FC = () => {
             onChangeText={field.onChange}
             placeholder={t('mealPlan.budgetPlaceholder')}
             keyboardType="numeric"
-            testID="meal-plan-budget-input"
+            testID={mealPlanTestIDs.createBudgetInput}
           />
         )}
       />

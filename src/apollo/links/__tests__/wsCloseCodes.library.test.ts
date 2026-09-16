@@ -143,7 +143,7 @@ const observeClose = (
       done = true;
       clearTimeout(window);
       resolve({ ended, connects });
-      client.dispose();
+      void client.dispose();
     };
     // A retryable close never settles on its own — sample a fixed window and
     // report how many dials it took.

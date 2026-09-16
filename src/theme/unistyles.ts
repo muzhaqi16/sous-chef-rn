@@ -18,10 +18,13 @@ declare module 'react-native-unistyles' {
 StyleSheet.configure({
   settings: {
     // Runs synchronously at config time — UnistylesRuntime.colorScheme is
-    // available immediately from the C++ native layer before any component renders.
-    // useTheme() takes full ownership of adaptive theme changes after hydration.
-    initialTheme: () =>
-      UnistylesRuntime.colorScheme === 'dark' ? 'dark' : 'light',
+    // available from the native layer before any component renders. After
+    // rehydration the stored preference drives it (`applyThemePreferenceToRuntime`).
+    initialTheme: () => {
+      // The library does not export its ColorScheme enum; compare the string it holds.
+      const scheme: string = UnistylesRuntime.colorScheme;
+      return scheme === 'dark' ? 'dark' : 'light';
+    },
   },
   breakpoints,
   themes: appThemes,

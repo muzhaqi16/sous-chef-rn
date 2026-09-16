@@ -6,10 +6,11 @@ import {
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import { removeFromPantryItemsCache } from '#features/pantry/cache/items';
+import { removePantryItemLocally } from '#features/pantry/cache/items';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { alertService } from '#/services/alertService';
+import { revertOptimisticShoppingListItem } from '#features/shoppingList/cache/items';
 import { usePantryItemDetailActions } from '../usePantryItemDetailActions';
 
 const mockNavigateTo = {
@@ -33,7 +34,7 @@ jest.mock('#/services/errorService');
 
 jest.mock('#features/pantry/cache/items', () => ({
   removeFromPantryItemsCache: jest.fn(),
-  adjustPantryItemCount: jest.fn(),
+  removePantryItemLocally: jest.fn(),
 }));
 
 jest.mock('#features/shoppingList/cache/connections', () => ({
@@ -41,12 +42,10 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
 }));
 
 jest.mock('#features/shoppingList/cache/items', () => {
-  const { classifyCreateResult } = jest.requireActual(
-    '#/apollo/utils/classifyCreateResult',
-  );
-  const revertOptimisticShoppingListItem = jest.fn();
+  const { settledStatus } = jest.requireActual('#/apollo/utils/settleMutation');
+  const revert = jest.fn();
   return {
-    revertOptimisticShoppingListItem,
+    revertOptimisticShoppingListItem: revert,
     addOptimisticShoppingListItem: jest.fn(),
     buildAddItemsReconcileUpdate: jest.fn(() => jest.fn()),
     createOptimisticShoppingListItem: jest.fn((id: string) => ({
@@ -57,8 +56,8 @@ jest.mock('#features/shoppingList/cache/items', () => {
     // keep/revert decision under test matches production.
     reconcileShoppingCreate: jest.fn(
       (cache: unknown, listId: string, id: string, result: unknown) => {
-        if (classifyCreateResult(result) === 'rejected') {
-          revertOptimisticShoppingListItem(cache, listId, id);
+        if (settledStatus(result) === 'failed') {
+          revert(cache, listId, id);
           return 'reverted';
         }
         return 'kept';
@@ -218,11 +217,10 @@ describe('usePantryItemDetailActions', () => {
       });
 
       await waitFor(() =>
-        expect(removeFromPantryItemsCache).toHaveBeenCalledWith(
+        expect(removePantryItemLocally).toHaveBeenCalledWith(
           expect.anything(),
           'pantry-1',
           'item-1',
-          { evictItem: true },
         ),
       );
     });
@@ -257,19 +255,44 @@ describe('usePantryItemDetailActions', () => {
       });
 
       await waitFor(() =>
-        expect(removeFromPantryItemsCache).toHaveBeenCalledWith(
+        expect(removePantryItemLocally).toHaveBeenCalledWith(
           expect.anything(),
           'pantry-OWNING',
           'item-1',
-          { evictItem: true },
         ),
       );
-      expect(removeFromPantryItemsCache).not.toHaveBeenCalledWith(
+      expect(removePantryItemLocally).not.toHaveBeenCalledWith(
         expect.anything(),
         'pantry-OTHER',
         expect.anything(),
-        expect.anything(),
       );
+    });
+
+    it('returns to the list when the server answers the delete as already done', async () => {
+      // Another member removed the stack first: the payload converges with no
+      // item, and the screen treats it as any other completed delete.
+      const converged = recordMock(DeletePantryItemDocument, {
+        data: {
+          deletePantryItem: {
+            __typename: 'DeletePantryItemPayload',
+            converged: true,
+            pantryItem: null,
+          },
+        },
+      });
+
+      const restore = jest.spyOn(ApolloClient.prototype, 'refetchQueries');
+      const { result } = setup({}, { operationMocks: [converged.mock] });
+
+      act(() => result.current.handleDelete());
+      const alertCalls = (alertService.alert as jest.Mock).mock.calls;
+      await act(async () => {
+        alertCalls[alertCalls.length - 1][2][1].onPress();
+      });
+
+      await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
+      expect(restore).not.toHaveBeenCalled();
+      restore.mockRestore();
     });
 
     it('still deletes when no pantry is selected', async () => {
@@ -346,11 +369,10 @@ describe('usePantryItemDetailActions', () => {
       const refused = recordMock(DeletePantryItemDocument, {
         data: {
           deletePantryItem: {
-            __typename: 'NotFoundError',
-            code: ErrorCode.NotFound,
+            // Not a NotFoundError: a delete answered "not found" is already done.
+            __typename: 'ConflictError',
+            code: ErrorCode.Conflict,
             message: 'Item is referenced by an active meal plan',
-            resource: 'PantryItem',
-            resourceId: 'item-1',
           },
         },
       });
@@ -403,11 +425,12 @@ describe('usePantryItemDetailActions', () => {
     });
 
     it('keeps the local removal when the delete only failed to reach the server', async () => {
-      // The offline case: `queueLink` has taken the delete for replay, so the
-      // eviction must STAND. Restoring here would resurrect a row the user
-      // already deleted, and the replay would delete it again later.
+      // The offline case: `queueLink` has taken the delete for replay and
+      // resolves it with a null payload, so the eviction must STAND. Restoring
+      // here would resurrect a row the user already deleted.
       const offline = recordMock(DeletePantryItemDocument, {
-        error: new Error('Network request failed'),
+        data: { deletePantryItem: null },
+        partial: true,
       });
 
       const restore = jest.spyOn(ApolloClient.prototype, 'refetchQueries');
@@ -420,13 +443,15 @@ describe('usePantryItemDetailActions', () => {
       });
 
       await waitFor(() =>
-        expect(removeFromPantryItemsCache).toHaveBeenCalledWith(
+        expect(removePantryItemLocally).toHaveBeenCalledWith(
           expect.anything(),
           'pantry-1',
           'item-1',
-          { evictItem: true },
         ),
       );
+      // Leaving the screen is the settled outcome; asserting before it passes
+      // whether or not the refusal path restores.
+      await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
       expect(restore).not.toHaveBeenCalled();
       restore.mockRestore();
     });
@@ -562,6 +587,66 @@ describe('usePantryItemDetailActions', () => {
         }),
       );
     });
+
+    it('tells the user and discards the row when the server refuses the add', async () => {
+      const refused = recordMock(AddItemToShoppingListFromPantryItemDocument, {
+        data: {
+          addItemsToShoppingList: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+          },
+        },
+      });
+      const { result } = setup({}, { operationMocks: [refused.mock] });
+
+      await act(async () => {
+        await result.current.handleAddToShoppingList();
+      });
+
+      expect(revertOptimisticShoppingListItem).toHaveBeenCalledWith(
+        expect.anything(),
+        'list-1',
+        expect.any(String),
+      );
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        expect.any(String),
+      );
+      expect(result.current.addToListStatus).toBe('error');
+    });
+
+    it('tells the user when the add resolves with an error', async () => {
+      const failed = recordMock(AddItemToShoppingListFromPantryItemDocument, {
+        error: new Error('boom'),
+      });
+      const { result } = setup({}, { operationMocks: [failed.mock] });
+
+      await act(async () => {
+        await result.current.handleAddToShoppingList();
+      });
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        expect.any(String),
+      );
+      expect(result.current.addToListStatus).toBe('error');
+    });
+
+    it('keeps a queued add on the list without an alert', async () => {
+      const queued = recordMock(AddItemToShoppingListFromPantryItemDocument, {
+        data: { addItemsToShoppingList: null },
+        partial: true,
+      });
+      const { result } = setup({}, { operationMocks: [queued.mock] });
+
+      await act(async () => {
+        await result.current.handleAddToShoppingList();
+      });
+
+      expect(revertOptimisticShoppingListItem).not.toHaveBeenCalled();
+      expect(alertService.alert).not.toHaveBeenCalled();
+      expect(result.current.addToListStatus).toBe('success');
+    });
   });
 
   describe('handleDiscardExpired', () => {
@@ -591,7 +676,43 @@ describe('usePantryItemDetailActions', () => {
       );
     });
 
-    it('calls convertExpiredBatches on batch-discard confirm', () => {
+    it('formats the discarded quantity in the item-discard alert', () => {
+      const { result } = setup({
+        item: {
+          ...baseItem,
+          quantity: 1.25,
+          unit: { ...baseItem.unit, displayAsFraction: true },
+        },
+      });
+
+      act(() => result.current.handleDiscardExpired());
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Discard Expired Item',
+        expect.stringContaining('remaining 1 1/4 cups'),
+        expect.any(Array),
+      );
+    });
+
+    it('rounds to three decimals for a unit that opts out of fractions', () => {
+      const { result } = setup({
+        item: {
+          ...baseItem,
+          quantity: 1.3333334,
+          unit: { ...baseItem.unit, displayAsFraction: false },
+        },
+      });
+
+      act(() => result.current.handleDiscardExpired());
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Discard Expired Item',
+        expect.stringContaining('remaining 1.333 cups'),
+        expect.any(Array),
+      );
+    });
+
+    it('calls convertExpiredBatches on batch-discard confirm', async () => {
       const { result } = setup({
         item: { ...baseItem, activeBatchCount: 2 },
       });
@@ -600,7 +721,7 @@ describe('usePantryItemDetailActions', () => {
 
       const discardButton = (alertService.alert as jest.Mock).mock
         .calls[0][2][1];
-      act(() => discardButton.onPress());
+      await act(async () => discardButton.onPress());
 
       expect(mockConvertExpiredBatches).toHaveBeenCalledWith('item-1');
     });

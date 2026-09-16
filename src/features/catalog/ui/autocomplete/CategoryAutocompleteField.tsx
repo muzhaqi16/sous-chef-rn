@@ -1,9 +1,7 @@
 import { useTranslation } from '#/i18n';
 import React from 'react';
-import {
-  CategorySuggestion,
-  CategoryType,
-} from '#/graphql/generated/schemaTypes';
+import type { CategorySuggestion } from '#/graphql/generated/schemaTypes';
+import { CategoryType } from '#/graphql/generated/schemaTypes';
 import { useCategoryAutocomplete } from '#features/catalog/hooks/useCategoryAutocomplete';
 import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
 import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';

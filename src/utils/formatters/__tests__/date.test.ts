@@ -5,7 +5,6 @@ import {
   formatFullWeekdayMonthDay,
   formatMonthDay,
   formatMonthDayYear,
-  formatMonthYear,
   formatWeekdayMonthDay,
   formatWeekdayShort,
 } from '../date';
@@ -35,32 +34,31 @@ describe('display date formatters', () => {
     expect(formatMonthDayYear(date)).toBe('Nov 4, 2026');
     expect(formatWeekdayMonthDay(date)).toBe('Wed, Nov 4');
     expect(formatFullWeekdayMonthDay(date)).toBe('Wednesday, November 4');
-    expect(formatMonthYear(date)).toBe('November 2026');
     expect(formatWeekdayShort(date)).toBe('Wed');
     expect(formatDayOfMonth(date)).toBe('4');
   });
 
   it('follows a language change, which is the whole point', () => {
     speak('es');
-    expect(formatMonthYear(date)).toBe('noviembre 2026');
+    expect(formatFullWeekdayMonthDay(date)).toBe('miércoles, noviembre 4');
     expect(formatWeekdayShort(date)).toBe('mié');
 
     speak('it');
-    expect(formatMonthYear(date)).toBe('novembre 2026');
+    expect(formatFullWeekdayMonthDay(date)).toBe('mercoledì, novembre 4');
 
     speak('sq');
-    expect(formatMonthYear(date)).not.toBe('November 2026');
+    expect(formatFullWeekdayMonthDay(date)).not.toBe('Wednesday, November 4');
   });
 
   it('reads the language on EVERY call, not once at import', () => {
     // A formatter that captured the locale at module scope would return the
     // first language forever — which is what a module-level `format` bound to
     // a locale constant would do.
-    expect(formatMonthYear(date)).toBe('November 2026');
+    expect(formatFullWeekdayMonthDay(date)).toBe('Wednesday, November 4');
     speak('es');
-    expect(formatMonthYear(date)).toBe('noviembre 2026');
+    expect(formatFullWeekdayMonthDay(date)).toBe('miércoles, noviembre 4');
     speak('en');
-    expect(formatMonthYear(date)).toBe('November 2026');
+    expect(formatFullWeekdayMonthDay(date)).toBe('Wednesday, November 4');
   });
 
   it('falls back to English for a language it does not ship', () => {
@@ -70,7 +68,7 @@ describe('display date formatters', () => {
 
   it('ignores a region suffix', () => {
     speak('es-MX');
-    expect(formatMonthYear(date)).toBe('noviembre 2026');
+    expect(formatFullWeekdayMonthDay(date)).toBe('miércoles, noviembre 4');
   });
 
   it('joins a range with an en dash', () => {

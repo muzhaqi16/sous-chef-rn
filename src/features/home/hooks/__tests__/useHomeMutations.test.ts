@@ -1,14 +1,14 @@
-import { act } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
-import type {
-  CreateOperationConfig,
-  RemoveOperationConfig,
-} from '#/hooks/utils/useCrudOperations';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { CreateHomeDocument } from '#operations/home/home.generated';
+import {
+  CreateHomeDocument,
+  DeleteHomeDocument,
+} from '#operations/home/home.generated';
+import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { alertService } from '#/services/alertService';
 import { useHomeMutations } from '../useHomeMutations';
 
@@ -38,11 +38,6 @@ jest.mock('#store/useAppStore', () => ({
 
 jest.mock('#/services/errorService');
 
-jest.mock('#/utils/errors/versionConflict', () => ({
-  handleVersionConflict: jest.fn(() => false),
-  getVersionConflictMessage: jest.fn(() => 'Version conflict'),
-}));
-
 jest.mock('#/utils/connectionUtils', () => ({
   extractNodes: jest.fn(
     (conn?: { edges?: Array<{ node?: unknown } | null> | null } | null) =>
@@ -51,57 +46,6 @@ jest.mock('#/utils/connectionUtils', () => ({
   getConnectionTotalCount: jest.fn(
     (conn?: { totalCount?: number | null } | null) => conn?.totalCount ?? 0,
   ),
-}));
-
-const mockCreateAddOperation = jest.fn(
-  (config: CreateOperationConfig<unknown, unknown>) => {
-    return async (input: unknown) => {
-      const validation = config.validateInput?.(input);
-      if (typeof validation === 'string') {
-        alertService.alert('Validation Error', validation);
-        return false;
-      }
-      const transformedInput = config.transformInput
-        ? config.transformInput(input)
-        : input;
-      const result = await config.mutation({
-        variables: { input: transformedInput },
-      });
-      if (result.data) {
-        config.onSuccess?.(result.data);
-        return result.data;
-      }
-      return false;
-    };
-  },
-);
-
-const mockCreateRemoveOperation = jest.fn(
-  (config: RemoveOperationConfig<unknown>) => {
-    return async () => {
-      return new Promise(resolve => {
-        alertService.alert(config.operationName ?? '', 'Confirm?', [
-          { text: 'Cancel', onPress: () => resolve(false) },
-          {
-            text: 'Delete',
-            onPress: async () => {
-              const result = await config.mutation({
-                variables: { id: config.itemId },
-              });
-              resolve(result?.data || false);
-            },
-          },
-        ]);
-      });
-    };
-  },
-);
-
-jest.mock('#/hooks/utils/useCrudOperations', () => ({
-  useCrudOperations: () => ({
-    createAddOperation: mockCreateAddOperation,
-    createRemoveOperation: mockCreateRemoveOperation,
-  }),
 }));
 
 jest.mock('../homeCacheUpdaters', () => ({
@@ -138,6 +82,21 @@ function createHomeMock(home: { id: string; name: string }) {
   });
 }
 
+function createPantryMock(pantry: { id: string; homeId: string }) {
+  return recordMock(CreatePantryDocument, {
+    data: {
+      createPantry: {
+        __typename: 'CreatePantryPayload',
+        pantry: {
+          __typename: 'Pantry',
+          id: pantry.id,
+          homeId: pantry.homeId,
+        },
+      },
+    },
+  });
+}
+
 describe('useHomeMutations', () => {
   it('returns mutation functions and loading states', () => {
     const { result } = renderHookWithApollo(() =>
@@ -147,7 +106,6 @@ describe('useHomeMutations', () => {
     expect(typeof result.current.createHome).toBe('function');
     expect(typeof result.current.deleteHome).toBe('function');
     expect(result.current.creating).toBe(false);
-    expect(result.current.deleting).toBe(false);
   });
 
   describe('createHome', () => {
@@ -191,6 +149,88 @@ describe('useHomeMutations', () => {
       expect(m.fired[0]).toMatchObject({
         input: { name: 'Test', allowJoinCode: false },
       });
+    });
+
+    it('mints the new home a default pantry, since the create asks for none', async () => {
+      // `createDefaultPantry` is forced off, so without this second write a
+      // home made here would have no pantry for any later write to name.
+      const home = createHomeMock({ id: 'new-home', name: 'My Home' });
+      const pantry = createPantryMock({ id: 'new-pantry', homeId: 'new-home' });
+      const { result } = renderHookWithApollo(
+        () => useHomeMutations(createOptions()),
+        { operationMocks: [home.mock, pantry.mock] },
+      );
+
+      await act(async () => {
+        await result.current.createHome('My Home');
+      });
+
+      expect(pantry.fired[0]).toMatchObject({
+        input: { name: 'Kitchen Pantry', isDefault: true },
+      });
+      const pantryInput = (pantry.fired[0] as { input: { homeId: string } })
+        .input;
+      const homeInput = (home.fired[0] as { input: { id: string } }).input;
+      expect(pantryInput.homeId).toBe(homeInput.id);
+    });
+
+    it('stays creating until the default pantry has settled', async () => {
+      // The home resolves at once; the pantry's request is held open. The
+      // submit control reads `creating`, so a second tap during that window
+      // must find it disabled — a duplicate home is what it would create.
+      const home = createHomeMock({ id: 'new-home', name: 'My Home' });
+      const pantry = createPantryMock({ id: 'new-pantry', homeId: 'new-home' });
+      pantry.mock.delay = 200;
+      const { result } = renderHookWithApollo(
+        () => useHomeMutations(createOptions()),
+        { operationMocks: [home.mock, pantry.mock] },
+      );
+
+      let settled = false;
+      await act(async () => {
+        void result.current.createHome('My Home').then(() => {
+          settled = true;
+        });
+        await Promise.resolve();
+      });
+      await waitFor(() => expect(home.fired).toHaveLength(1));
+      expect(settled).toBe(false);
+      expect(result.current.creating).toBe(true);
+
+      await waitFor(() => expect(settled).toBe(true));
+      expect(result.current.creating).toBe(false);
+    });
+
+    it('reports a refused default pantry and keeps the home', async () => {
+      // A refusal resolves as a union member; it never throws, so a `catch`
+      // around the create sees nothing and the user would learn of the missing
+      // pantry only from an empty pantry tab.
+      const home = createHomeMock({ id: 'new-home', name: 'My Home' });
+      const refused = recordMock(CreatePantryDocument, {
+        data: {
+          createPantry: {
+            __typename: 'ForbiddenError',
+            message: 'Pantries are capped on this plan',
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(
+        () => useHomeMutations(createOptions()),
+        { operationMocks: [home.mock, refused.mock] },
+      );
+
+      let created: boolean | undefined;
+      await act(async () => {
+        created = await result.current.createHome('My Home');
+      });
+
+      expect(created).toBe(true);
+      expect(refused.fired).toHaveLength(1);
+      // The caller's LOCALIZED copy, never the server's English message.
+      expect(alertService.alert).toHaveBeenCalledWith(
+        expect.any(String),
+        'Failed to create pantry',
+      );
     });
 
     it('creates the home without a join code when the email is unverified', async () => {
@@ -237,7 +277,7 @@ describe('useHomeMutations', () => {
       );
 
       act(() => {
-        result.current.deleteHome('home-2', 'Home 2');
+        void result.current.deleteHome('home-2', 'Home 2');
       });
 
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -245,6 +285,33 @@ describe('useHomeMutations', () => {
         expect.any(String),
         expect.any(Array),
       );
+    });
+
+    // The mutation's own `onError` alerted beside the removal builder, which
+    // settles and alerts the same failure: one failure, two dialogs.
+    it('alerts a failed delete once', async () => {
+      const failed = recordMock(DeleteHomeDocument, {
+        error: new Error('Network error'),
+      });
+      const { result } = renderHookWithApollo(
+        () => useHomeMutations(createOptions()),
+        { operationMocks: [failed.mock] },
+      );
+
+      let deleted: Promise<unknown> | undefined;
+      act(() => {
+        deleted = result.current.deleteHome('home-2', 'Home 2');
+      });
+      const confirm = (alertService.alert as jest.Mock).mock.lastCall?.[2] as
+        | Array<{ style?: string; onPress?: () => unknown }>
+        | undefined;
+      await act(async () => {
+        await confirm?.find(b => b.style === 'destructive')?.onPress?.();
+      });
+
+      await expect(deleted).resolves.toBe(false);
+      // The confirmation, then exactly one failure.
+      expect(alertService.alert).toHaveBeenCalledTimes(2);
     });
   });
 });

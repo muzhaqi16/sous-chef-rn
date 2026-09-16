@@ -16,11 +16,11 @@ import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/atoms/FieldRow';
 import { Header } from '#components/organisms/Header';
 import { generateId } from '#/utils/generateId';
-import { type ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import type { IngredientFormState } from '#features/recipes/screens/RecipeForm/formState';
 import { Text } from '#components/atoms/Text';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import { formatNumberForInput } from '#/utils/formatters/number';
+import { parseFractionalInput } from '#/utils/fractionUtils';
+import { formatQuantityForInput } from '#/utils/formatQuantity';
 
 export interface RecipeIngredientEditorRef {
   open: (ingredient?: IngredientFormState) => void;
@@ -66,7 +66,7 @@ export const RecipeIngredientEditor = forwardRef<
         setEditingId(ingredient.id);
         setName(ingredient.name);
         setItemId(ingredient.itemId ?? null);
-        setQuantity(formatNumberForInput(ingredient.quantity));
+        setQuantity(formatQuantityForInput(ingredient.quantity));
         setUnit(''); // Unit display text not stored - user can re-select
         setUnitId(ingredient.unitId ?? null);
         setPreparation(ingredient.preparation ?? '');
@@ -111,10 +111,13 @@ export const RecipeIngredientEditor = forwardRef<
 
   const handleSave = () => {
     if (!name.trim()) return;
+    // The counter reads and steps fractions ("1 1/4"), so the save does too.
+    const parsedQuantity = parseFractionalInput(quantity);
     onSave({
       id: editingId ?? `temp-ing-${generateId()}`,
       name: name.trim(),
-      quantity: parseDecimalInput(quantity) || 1,
+      quantity:
+        parsedQuantity !== null && parsedQuantity > 0 ? parsedQuantity : 1,
       itemId,
       unitId,
       preparation: preparation.trim(),
@@ -214,7 +217,7 @@ export const RecipeIngredientEditor = forwardRef<
           />
 
           <View style={styles.switchRow}>
-            <Text>{t('recipes.optional')}</Text>
+            <Text role="body">{t('recipes.optional')}</Text>
             <BaseSwitch
               accessibilityLabel={t('recipes.optional')}
               value={isOptional}

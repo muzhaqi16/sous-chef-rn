@@ -1,4 +1,5 @@
 import { toDisplayNotification } from '../toDisplayNotification';
+import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 import {
   NotificationCategory,
   NotificationSourceType,
@@ -7,10 +8,11 @@ import {
   Priority,
 } from '#/graphql/generated/schemaTypes';
 
-const base = {
-  __typename: 'Notification' as const,
+const base: UseNotificationsOnLaunch_NotificationFragment = {
+  __typename: 'Notification',
   id: 'n-1',
   type: NotificationType.ExpiryReminder,
+  isAuthoredContent: false,
   status: NotificationStatus.Sent,
   priority: Priority.Urgent,
   title: 'Expiring soon',
@@ -29,22 +31,32 @@ describe('toDisplayNotification', () => {
   it('passes the server fragment through and derives the display fields', () => {
     const item = toDisplayNotification(base);
     expect(item.id).toBe('n-1');
-    expect(item.title).toBe('Expiring soon');
     expect(item.category).toBe(NotificationCategory.Pantry);
     expect(item.priority).toBe(Priority.Urgent);
     expect(item.sourceId).toBe('item-9');
     expect(item.isRead).toBe(false);
   });
 
-  it('defaults an absent priority to NORMAL and derives a missing title', () => {
-    const item = toDisplayNotification({
-      ...base,
-      priority: Priority.Normal,
-      title: null,
-    });
+  it('keeps the NORMAL priority and the category', () => {
+    const item = toDisplayNotification({ ...base, priority: Priority.Normal });
     expect(item.priority).toBe(Priority.Normal);
-    expect(item.title).toBeTruthy(); // derived from type
     expect(item.category).toBe(NotificationCategory.Pantry);
+  });
+
+  // The projection carries the server's title and message, because an ADMIN's
+  // announcement is content a person wrote and is shown as written. What keeps
+  // template English off the screen is the flag, which `getNotificationCopy`
+  // reads — not the projection dropping the fields.
+  it("carries the server's copy along with the flag that gates it", () => {
+    const item = toDisplayNotification(base);
+    expect(item.isAuthoredContent).toBe(false);
+    expect(item.title).toBe(base.title);
+    expect(item.message).toBe(base.message);
+  });
+
+  it('marks an authored row as authored', () => {
+    const item = toDisplayNotification({ ...base, isAuthoredContent: true });
+    expect(item.isAuthoredContent).toBe(true);
   });
 
   // The server counts a notification as unread only while PENDING or SENT, so

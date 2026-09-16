@@ -49,10 +49,14 @@ import { useShoppingListPermissions } from '#features/shoppingList/hooks/useShop
 import { discardOptimisticShoppingItems } from '#features/shoppingList/utils/optimisticItemCache';
 import { Telemetry } from '#/services/telemetry';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { errorService } from '#/services/errorService';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { ShoppingListPermissionsProvider } from '#features/shoppingList/context/ShoppingListPermissionsContext';
 import { useDataState } from '#hooks/data/useDataState';
-import { Screen } from '#components/templates/Screen';
+import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { Screen, type ScreenHeaderConfig } from '#components/templates/Screen';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
 /**
  * Inner content component that uses modal context.
@@ -94,11 +98,11 @@ export const ShoppingListMainContent: React.FC<
       hasMorePurchased,
       isLoadingMorePurchased,
       isTransitioning,
+      error,
       showImages,
     },
     actions: {
       setSearchQuery,
-      addItem,
       toggleItem,
       removeItem,
       refetch: refetchItems,
@@ -176,11 +180,9 @@ export const ShoppingListMainContent: React.FC<
     currentListId,
     unpurchasedItems: rawUnpurchasedItems,
     purchasedItems: rawPurchasedItems,
-    addItem,
     toggleItem,
     removeItem,
     refetchItems,
-    setSearchQuery,
   });
 
   // A plain checkbox tap marks the item purchased with default values (or
@@ -199,7 +201,7 @@ export const ShoppingListMainContent: React.FC<
       if (isUnpurchased) openPurchaseAmount(itemId);
       return;
     }
-    handleTogglePurchase(itemId);
+    void handleTogglePurchase(itemId);
   };
 
   // --- Batch Move to Pantry Hook ---
@@ -210,7 +212,13 @@ export const ShoppingListMainContent: React.FC<
   const { handleSortOrderUpdate: reorderItem } = useItemReordering({
     listId: currentListId,
     items: rawUnpurchasedItems,
-    refetch: refetchItems,
+    refetch: () => {
+      void refetchItems().catch(error =>
+        errorService.reportError(error, {
+          operation: 'ShoppingListMainContent.reorderRefetch',
+        }),
+      );
+    },
   });
 
   const handleSortOrderUpdate = (
@@ -218,7 +226,7 @@ export const ShoppingListMainContent: React.FC<
     afterItemId: string | null,
     beforeItemId: string | null,
   ) => {
-    reorderItem(itemId, afterItemId, beforeItemId);
+    void reorderItem(itemId, afterItemId, beforeItemId);
   };
 
   // --- Selector Hook ---
@@ -257,14 +265,22 @@ export const ShoppingListMainContent: React.FC<
     isEmpty: lists.length === 0,
   });
 
+  // A failed item read with nothing cached is not an empty list, and saying so
+  // invites re-adding what is already on it.
+  const itemsFailure = useOfflineAwareError(
+    error,
+    rawUnpurchasedItems.length > 0 || rawPurchasedItems.length > 0,
+  );
+
   const permissions = useShoppingListPermissions(currentListDetails, user?.id);
+  const networkWithheld = useIsApiUnavailable();
 
   // Header right action - list selector button
   const headerRight = (
     <Pressable
       onPress={handleOpenSelector}
       hitSlop={8}
-      testID="shopping-list-selector"
+      testID={shoppingListTestIDs.listSelectorButton}
       accessibilityRole="button"
       accessibilityLabel={t('shoppingListScreen.switchListAccessibility')}
     >
@@ -272,11 +288,24 @@ export const ShoppingListMainContent: React.FC<
     </Pressable>
   );
 
+  // One declaration of this screen's tab header. The no-lists branch has no list
+  // to name, so it shows the generic one.
+  const tabHeader: ScreenHeaderConfig = {
+    variant: 'tab',
+    label: t('shoppingListScreen.label'),
+    title: t('labels.shoppingList'),
+  };
+  const selectedListHeader: ScreenHeaderConfig = {
+    ...tabHeader,
+    title: currentList?.name ?? tabHeader.title,
+    headerRight,
+  };
+
   // SearchBar rendered above tab pills (positioned above TabView in ShoppingListTabs)
   const searchBarHeader = (
     <View style={styles.searchBarContainer}>
       <SearchBar
-        testID="shopping-list-search-input"
+        testID={shoppingListTestIDs.searchInput}
         value={searchQuery}
         onChangeText={setSearchQuery}
         placeholder={t('shoppingListScreen.searchPlaceholder')}
@@ -382,12 +411,8 @@ export const ShoppingListMainContent: React.FC<
   if (!isLoadingInitial && lists.length === 0) {
     return (
       <Screen
-        testID="shopping-list-screen"
-        header={{
-          variant: 'tab',
-          label: t('shoppingListScreen.label'),
-          title: t('labels.shoppingList'),
-        }}
+        testID={shoppingListTestIDs.screen}
+        header={tabHeader}
         scroll="list"
         gutter="none"
       >
@@ -422,17 +447,36 @@ export const ShoppingListMainContent: React.FC<
   ) {
     return (
       <Screen
-        testID="shopping-list-screen"
-        header={{
-          variant: 'tab',
-          label: t('shoppingListScreen.label'),
-          title: currentList?.name || t('labels.shoppingList'),
-          headerRight: headerRight,
-        }}
+        testID={shoppingListTestIDs.screen}
+        header={selectedListHeader}
         scroll="list"
         gutter="none"
       >
-        <DataStateView state="error" onRetry={handleRefresh} />
+        <DataStateView
+          state={networkWithheld ? 'offline' : 'error'}
+          onRetry={handleRefresh}
+        />
+      </Screen>
+    );
+  }
+
+  if (
+    !isLoadingInitial &&
+    rawUnpurchasedItems.length === 0 &&
+    rawPurchasedItems.length === 0 &&
+    (itemsFailure.offline || itemsFailure.error)
+  ) {
+    return (
+      <Screen
+        testID={shoppingListTestIDs.screen}
+        header={selectedListHeader}
+        scroll="list"
+        gutter="none"
+      >
+        <DataStateView
+          state={itemsFailure.offline ? 'offline' : 'error'}
+          onRetry={handleRefresh}
+        />
       </Screen>
     );
   }
@@ -449,13 +493,8 @@ export const ShoppingListMainContent: React.FC<
 
   return (
     <Screen
-      testID="shopping-list-screen"
-      header={{
-        variant: 'tab',
-        label: t('shoppingListScreen.label'),
-        title: currentList?.name || t('labels.shoppingList'),
-        headerRight: headerRight,
-      }}
+      testID={shoppingListTestIDs.screen}
+      header={selectedListHeader}
       scroll="list"
       gutter="none"
     >
@@ -478,11 +517,15 @@ export const ShoppingListMainContent: React.FC<
               }),
             ],
             right: [
-              { ...deleteAction(() => handleDeleteItem(id)), removesRow: true },
+              {
+                ...deleteAction(() => {
+                  void handleDeleteItem(id);
+                }),
+                removesRow: true,
+              },
             ],
           })}
           onRefresh={handleRefresh}
-          testIDPrefix="shopping-list-item"
           emptyState={emptyStateConfig}
           customListComponent={ShoppingListTabs}
           customListProps={{
@@ -566,9 +609,9 @@ export const ShoppingListMainContent: React.FC<
           } else if (
             tutorial.currentStep === ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX
           ) {
-            const firstItemId = rawUnpurchasedItems?.[0]?.id;
+            const firstItemId = rawUnpurchasedItems[0]?.id;
             if (firstItemId) {
-              handleTogglePurchase(firstItemId);
+              void handleTogglePurchase(firstItemId);
               tutorial.notifyCheckboxTapped();
             }
           } else if (
@@ -578,7 +621,7 @@ export const ShoppingListMainContent: React.FC<
             // Opens the purchase-amount sheet; the tutorial advances only
             // once that sheet actually closes (wired in
             // ShoppingListModalsContext), not immediately on open.
-            const firstItemId = rawUnpurchasedItems?.[0]?.id;
+            const firstItemId = rawUnpurchasedItems[0]?.id;
             if (firstItemId) {
               openPurchaseAmount(firstItemId);
             }
@@ -591,7 +634,7 @@ export const ShoppingListMainContent: React.FC<
             tutorial.currentStep ===
             ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY
           ) {
-            const firstItemId = rawPurchasedItems?.[0]?.id;
+            const firstItemId = rawPurchasedItems[0]?.id;
             if (firstItemId) {
               openMoveToPantry(firstItemId);
               tutorial.notifyMoveToPantryTapped();

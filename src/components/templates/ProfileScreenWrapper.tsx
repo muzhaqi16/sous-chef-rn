@@ -1,16 +1,21 @@
 import React from 'react';
-import type { RefreshControlProps } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { Screen } from './Screen';
+import { Screen, type ScreenRefresh } from './Screen';
 
-interface ProfileScreenWrapperProps {
+interface ProfileScreenWrapperBaseProps {
   children: React.ReactNode;
   title?: string;
   showBackButton?: boolean;
   testID?: string;
-  scrollEnabled?: boolean;
-  refreshControl?: React.ReactElement<RefreshControlProps>;
 }
+
+// Pull-to-refresh needs a scroll host, so the two are declared together rather
+// than left to be passed in a combination the scaffold would drop.
+type ProfileScreenWrapperProps = ProfileScreenWrapperBaseProps &
+  (
+    | { scrollEnabled?: true; refresh?: ScreenRefresh }
+    | { scrollEnabled: false; refresh?: never }
+  );
 
 /**
  * A settings sub-screen: the standard header with a back control, and a plain
@@ -23,7 +28,7 @@ export const ProfileScreenWrapper: React.FC<ProfileScreenWrapperProps> = ({
   showBackButton = true,
   testID,
   scrollEnabled = true,
-  refreshControl,
+  refresh,
 }) => {
   const { goBack } = useAppNavigation();
 
@@ -32,14 +37,7 @@ export const ProfileScreenWrapper: React.FC<ProfileScreenWrapperProps> = ({
       testID={testID}
       gutter="none"
       scroll={scrollEnabled ? 'scroll' : 'none'}
-      refresh={
-        refreshControl
-          ? {
-              refreshing: Boolean(refreshControl.props.refreshing),
-              onRefresh: () => refreshControl.props.onRefresh?.(),
-            }
-          : undefined
-      }
+      refresh={refresh}
       header={
         showBackButton
           ? {

@@ -1,7 +1,7 @@
 'use no memo';
 
 import { act } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor, MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   recordMock,
@@ -12,7 +12,11 @@ import {
   CreateImageUploadUrlDocument,
 } from '#operations/image/imageUpload.generated';
 import { alertService } from '#/services/alertService';
+import { Telemetry } from '#/services/telemetry';
+import { ErrorCode, ProfileVisibility } from '#/graphql/generated/schemaTypes';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { useImageUpload } from '../useImageUpload';
+import type { UploadFormField } from '#/graphql/generated/schemaTypes';
 
 type ImageUploadApi = ReturnType<typeof useImageUpload>;
 type ProfileResult = Awaited<
@@ -21,7 +25,6 @@ type ProfileResult = Awaited<
 type ProfileUploadResult = Awaited<
   ReturnType<ImageUploadApi['uploadProfileImage']>
 >;
-type ItemUploadResult = Awaited<ReturnType<ImageUploadApi['uploadItemImage']>>;
 type ItemImagesResult = Awaited<ReturnType<ImageUploadApi['uploadItemImages']>>;
 jest.mock('../../apollo/links/tokenScheduler');
 jest.mock('../../apollo/links/refreshToken');
@@ -70,24 +73,23 @@ const mockXhr = {
 // Helper builders for MockedResponse — these avoid spelling out the full
 // generated payload shape inline at every test.
 function buildUpdateProfileMock(
-  input: { avatar?: string; coverImage?: string },
+  input: { avatar: string },
   payload: {
     success?: boolean;
     userProfile: {
       id: string;
       avatar?: string | null;
-      coverImage?: string | null;
     };
   },
   error?: Error,
-): MockedResponse {
+): MockFor<typeof UpdateUserProfileDocument> {
   if (error) {
     return {
       request: { query: UpdateUserProfileDocument, variables: { input } },
       error,
     };
   }
-  const { id, avatar, coverImage } = payload.userProfile;
+  const { id, avatar } = payload.userProfile;
   return {
     request: { query: UpdateUserProfileDocument, variables: { input } },
     result: {
@@ -103,12 +105,12 @@ function buildUpdateProfileMock(
             displayName: null,
             bio: null,
             avatar: avatar ?? null,
-            coverImage: coverImage ?? null,
+            coverImage: null,
             phone: null,
             website: null,
             dateOfBirth: null,
             gender: null,
-            profileVisibility: 'PUBLIC',
+            profileVisibility: ProfileVisibility.Public,
             showEmail: true,
             showPhone: true,
             createdAt: '2025-01-01T00:00:00.000Z',
@@ -134,17 +136,17 @@ beforeEach(() => {
 
 // The presigned POST the server hands back. `fields` is the storage policy and
 // is non-null on the payload — the upload is rejected without every entry.
-const PRESIGN_FIELDS = [
-  { __typename: 'UploadFormField' as const, name: 'key', value: 'items/i1/a' },
-  { __typename: 'UploadFormField' as const, name: 'policy', value: 'eyJ0' },
+const PRESIGN_FIELDS: UploadFormField[] = [
+  { __typename: 'UploadFormField', name: 'key', value: 'items/i1/a' },
+  { __typename: 'UploadFormField', name: 'policy', value: 'eyJ0' },
   {
-    __typename: 'UploadFormField' as const,
+    __typename: 'UploadFormField',
     name: 'x-amz-signature',
     value: 'sig',
   },
 ];
 
-function buildPresignMock(): MockedResponse {
+function buildPresignMock(): MockFor<typeof CreateImageUploadUrlDocument> {
   return {
     request: { query: CreateImageUploadUrlDocument, variables: () => true },
     result: {
@@ -161,7 +163,9 @@ function buildPresignMock(): MockedResponse {
   };
 }
 
-function buildConfirmItemMock(url: string): MockedResponse {
+function buildConfirmItemMock(
+  url: string,
+): MockFor<typeof ConfirmItemImageUploadDocument> {
   return {
     request: { query: ConfirmItemImageUploadDocument, variables: () => true },
     result: {
@@ -177,10 +181,9 @@ function buildConfirmItemMock(url: string): MockedResponse {
 }
 
 describe('useImageUpload', () => {
-  it('initializes with uploading false and progress 0', () => {
+  it('initializes with uploading false', () => {
     const { result } = renderHookWithApollo(() => useImageUpload());
     expect(result.current.uploading).toBe(false);
-    expect(result.current.progress).toBe(0);
   });
 
   // The server issues a presigned POST, not a PUT. Storage rejects the upload
@@ -205,7 +208,7 @@ describe('useImageUpload', () => {
       mockXhr.send.mockReset();
     });
 
-    async function runUpload(): Promise<ItemUploadResult> {
+    async function runUpload(): Promise<ItemImagesResult> {
       const { result } = renderHookWithApollo(() => useImageUpload(), {
         operationMocks: [
           buildPresignMock(),
@@ -213,9 +216,12 @@ describe('useImageUpload', () => {
         ],
       });
 
-      let uploaded: ItemUploadResult = null;
+      let uploaded: ItemImagesResult = [];
       await act(async () => {
-        uploaded = await result.current.uploadItemImage(file, 'item-1');
+        uploaded = await result.current.uploadItemImages(
+          [{ ...file, perspective: 'front' }],
+          'item-1',
+        );
       });
       return uploaded;
     }
@@ -249,7 +255,9 @@ describe('useImageUpload', () => {
     it('returns the confirmed url', async () => {
       const uploaded = await runUpload();
 
-      expect(uploaded).toBe('https://cdn.test/a.jpg');
+      expect(uploaded).toEqual([
+        { imageUrl: 'https://cdn.test/a.jpg', perspective: 'front' },
+      ]);
     });
 
     // Creating an upload target is rate limited per user. That refusal is a
@@ -275,16 +283,16 @@ describe('useImageUpload', () => {
                 },
               ],
             },
-          } as MockedResponse,
+          },
         ],
       });
 
-      let uploaded: ItemUploadResult = null;
+      let uploaded: ItemImagesResult | undefined;
       await act(async () => {
-        uploaded = await result.current.uploadItemImage(file, 'item-1');
+        uploaded = await result.current.uploadItemImages([file], 'item-1');
       });
 
-      expect(uploaded).toBeNull();
+      expect(uploaded).toEqual([]);
       expect(mockXhr.open).not.toHaveBeenCalled();
       expect(alertService.alert).toHaveBeenCalledWith(
         expect.anything(),
@@ -296,15 +304,16 @@ describe('useImageUpload', () => {
       // Some Android providers report the non-standard 'image/jpg'; the API
       // accepts only image/jpeg | image/png | image/webp and rejects the raw
       // value with a ValidationError.
-      const { mock, fired } = recordMock(CreateImageUploadUrlDocument, {
-        data: {
-          createImageUploadUrl: {
-            __typename: 'CreateImageUploadUrlPayload',
-            url: 'https://storage.test/bucket',
-            key: 'items/i1/a',
-            fields: PRESIGN_FIELDS,
-          },
+      const data: MockDataFor<typeof CreateImageUploadUrlDocument> = {
+        createImageUploadUrl: {
+          __typename: 'CreateImageUploadUrlPayload',
+          url: 'https://storage.test/bucket',
+          key: 'items/i1/a',
+          fields: PRESIGN_FIELDS,
         },
+      };
+      const { mock, fired } = recordMock(CreateImageUploadUrlDocument, {
+        data,
       });
 
       const { result } = renderHookWithApollo(() => useImageUpload(), {
@@ -312,8 +321,8 @@ describe('useImageUpload', () => {
       });
 
       await act(async () => {
-        await result.current.uploadItemImage(
-          { ...file, type: 'image/jpg' },
+        await result.current.uploadItemImages(
+          [{ ...file, type: 'image/jpg' }],
           'item-1',
         );
       });
@@ -343,54 +352,17 @@ describe('useImageUpload', () => {
     });
 
     function recordConfirm() {
-      return recordMock(ConfirmItemImageUploadDocument, {
-        data: {
-          confirmItemImageUpload: {
-            __typename: 'ConfirmItemImageUploadPayload',
-            url: 'https://cdn.test/a.jpg',
-          },
+      const data: MockDataFor<typeof ConfirmItemImageUploadDocument> = {
+        confirmItemImageUpload: {
+          __typename: 'ConfirmItemImageUploadPayload',
+          url: 'https://cdn.test/a.jpg',
         },
+      };
+      return recordMock(ConfirmItemImageUploadDocument, {
+        data,
         maxUsageCount: 10,
       });
     }
-
-    it('forwards makePrimary to confirmItemImageUpload', async () => {
-      const { mock, fired } = recordConfirm();
-      const { result } = renderHookWithApollo(() => useImageUpload(), {
-        operationMocks: [buildPresignMock(), mock],
-      });
-
-      await act(async () => {
-        await result.current.uploadItemImage(file, 'item-1', {
-          perspective: 'front',
-          makePrimary: true,
-        });
-      });
-
-      expect(fired).toContainEqual({
-        input: expect.objectContaining({ makePrimary: true }),
-      });
-    });
-
-    // Unset must stay unset rather than becoming `false`: an item's first photo
-    // is promoted automatically, and sending false on every other upload is the
-    // caller asserting a choice it did not make.
-    it('leaves makePrimary undefined when the caller does not ask', async () => {
-      const { mock, fired } = recordConfirm();
-      const { result } = renderHookWithApollo(() => useImageUpload(), {
-        operationMocks: [buildPresignMock(), mock],
-      });
-
-      await act(async () => {
-        await result.current.uploadItemImage(file, 'item-1', {
-          perspective: 'front',
-        });
-      });
-
-      expect(fired[0]).toMatchObject({
-        input: { makePrimary: undefined },
-      });
-    });
 
     // The batch carries the flag per file, so the starred photo is promoted no
     // matter where it sits in the run.
@@ -421,10 +393,8 @@ describe('useImageUpload', () => {
   it('exposes all expected functions', () => {
     const { result } = renderHookWithApollo(() => useImageUpload());
     expect(typeof result.current.uploadProfileImage).toBe('function');
-    expect(typeof result.current.uploadItemImage).toBe('function');
     expect(typeof result.current.uploadItemImages).toBe('function');
     expect(typeof result.current.updateProfileAvatarUrl).toBe('function');
-    expect(typeof result.current.updateProfileCoverUrl).toBe('function');
   });
 
   it('updateProfileAvatarUrl calls updateProfile mutation', async () => {
@@ -472,22 +442,39 @@ describe('useImageUpload', () => {
     );
   });
 
-  it('updateProfileCoverUrl calls updateProfile mutation with coverImage', async () => {
+  it('updateProfileAvatarUrl counts a refusal by its code and says so once', async () => {
     const { result } = renderHookWithApollo(() => useImageUpload(), {
       operationMocks: [
-        buildUpdateProfileMock(
-          { coverImage: 'http://cover.jpg' },
-          { userProfile: { id: 'u1', coverImage: 'http://cover.jpg' } },
-        ),
+        recordMock(UpdateUserProfileDocument, {
+          data: {
+            updateProfile: {
+              __typename: 'ForbiddenError',
+              code: ErrorCode.Forbidden,
+            },
+          },
+        }).mock,
       ],
     });
 
     let profile: ProfileResult | undefined;
     await act(async () => {
-      profile = await result.current.updateProfileCoverUrl('http://cover.jpg');
+      profile = await result.current.updateProfileAvatarUrl('http://img.jpg');
     });
 
-    expect(profile?.coverImage).toBe('http://cover.jpg');
+    expect(profile).toBeNull();
+    expect(Telemetry.increment).toHaveBeenCalledWith(
+      'mutation_refused_total',
+      1,
+      {
+        operation: operationNameOf(UpdateUserProfileDocument),
+        code: ErrorCode.Forbidden,
+      },
+    );
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Update Failed',
+      expect.any(String),
+    );
   });
 
   it('uploadProfileImage returns null when offline', async () => {
@@ -513,23 +500,6 @@ describe('useImageUpload', () => {
     );
   });
 
-  it('uploadItemImage returns null when offline', async () => {
-    const { useStore } = require('#store');
-    useStore.getState = () => ({ isOnline: false });
-
-    const { result } = renderHookWithApollo(() => useImageUpload());
-
-    let returnVal: ItemUploadResult | undefined;
-    await act(async () => {
-      returnVal = await result.current.uploadItemImage(
-        { uri: 'file://img.jpg', fileSize: 1000, type: 'image/jpeg' },
-        'item1',
-      );
-    });
-
-    expect(returnVal).toBeNull();
-  });
-
   it('uploadItemImages returns empty array when all uploads fail', async () => {
     const { useStore } = require('#store');
     useStore.getState = () => ({ isOnline: false });
@@ -551,25 +521,6 @@ describe('useImageUpload', () => {
     const { unmount } = renderHookWithApollo(() => useImageUpload());
     unmount();
     // Just verifying no error thrown during cleanup
-  });
-
-  it('updateProfileCoverUrl reports and returns null when the mutation fails', async () => {
-    const { result } = renderHookWithApollo(() => useImageUpload(), {
-      operationMocks: [
-        buildUpdateProfileMock(
-          { coverImage: 'http://cover.jpg' },
-          { userProfile: { id: 'u1' } },
-          new Error('network down'),
-        ),
-      ],
-    });
-
-    let profile: ProfileResult | undefined;
-    await act(async () => {
-      profile = await result.current.updateProfileCoverUrl('http://cover.jpg');
-    });
-
-    expect(profile).toBeNull();
   });
 
   // These throw what the real `validateImageFile` throws — the code on
@@ -667,7 +618,7 @@ describe('useImageUpload', () => {
 
   // The transport errors carry no code, and their messages are internal
   // control-flow signals ('Upload request timed out') that must never surface.
-  it('falls back to translated copy for an uncoded failure', async () => {
+  it('reports an uncoded batch failure with translated copy', async () => {
     const { validateImageFile } = require('#utils/imageValidation');
     validateImageFile.mockImplementation(() => {
       throw new Error('Network request failed during upload');
@@ -676,43 +627,19 @@ describe('useImageUpload', () => {
     const { result } = renderHookWithApollo(() => useImageUpload());
 
     await act(async () => {
-      await result.current.uploadItemImage(
-        { uri: 'file://img.jpg', fileSize: 1000, type: 'image/jpeg' },
+      await result.current.uploadItemImages(
+        [{ uri: 'file://img.jpg', fileSize: 1000, type: 'image/jpeg' }],
         'item-1',
       );
     });
 
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
     expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
-      'Something went wrong uploading your image. Please try again.',
+      '1 photo(s) could not be uploaded.',
     );
 
     restoreValidation();
-  });
-
-  it('uploadItemImage shows error alert on failure', async () => {
-    const { validateImageFile } = require('#utils/imageValidation');
-    validateImageFile.mockImplementation(() => {
-      throw new Error('Upload failed');
-    });
-
-    const { result } = renderHookWithApollo(() => useImageUpload());
-
-    await act(async () => {
-      await result.current.uploadItemImage(
-        { uri: 'file://img.jpg', fileSize: 1000, type: 'image/jpeg' },
-        'item1',
-      );
-    });
-
-    // 'Upload failed' is an internal signal, not copy — an uncoded failure gets
-    // translated text.
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Upload Failed',
-      'Something went wrong uploading your image. Please try again.',
-    );
-
-    validateImageFile.mockImplementation(jest.fn());
   });
 
   it('uploadProfileImage generic error message for unknown errors', async () => {

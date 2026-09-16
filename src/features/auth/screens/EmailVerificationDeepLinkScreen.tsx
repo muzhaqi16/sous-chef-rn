@@ -14,17 +14,11 @@ import {
   type VerifyEmailFn,
 } from '#features/auth/hooks/useVerifyEmail';
 import { logger } from '#/utils/environment';
-import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
-import {
-  getRateLimitMessage,
-  isRateLimitError,
-} from '#/utils/errors/rateLimit';
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { errorService } from '#/services/errorService';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 import { Screen } from '#components/templates/Screen';
 import { toastService } from '#services/toastService';
+import { authTestIDs } from '#features/auth/testIDs';
 
 interface EmailVerificationRouteParams {
   token: string;
@@ -70,65 +64,32 @@ async function performVerificationImpl({
     setErrorMessage('');
   }
 
-  // A local runner so the try holds one plain call: the React Compiler bails out
-  // when a value block sits inside a try body. The catch still covers it.
-  const runVerification = async () => {
-    logger.info('Attempting email verification', { userId });
+  logger.info('Attempting email verification', { userId });
 
-    const result = await verifyEmail(token);
+  // A link opened twice is a verified address, not a failure. A refused link is
+  // spent or unknown, and the copy says so — never the server's own text.
+  const outcome = await verifyEmail(
+    token,
+    undefined,
+    tGlobal('auth.verificationFailedExpired'),
+  );
 
-    const payload = result.data?.verifyEmail;
-    const topLevelError = getTopLevelGraphQLError(result.error);
+  if (outcome.status === 'verified') {
+    logger.info('Email verification successful');
 
-    // A link opened twice is a verified address, not a failure; the API reports it
-    // on whichever channel the refusal arrived.
-    const alreadyVerified =
-      (payload &&
-        'code' in payload &&
-        payload.code === ErrorCode.EmailAlreadyVerified) ||
-      topLevelError?.code === TopLevelErrorCode.EmailAlreadyVerified;
+    // A patch: the store's updateUser assigns these onto the existing user, and
+    // re-assigning every field republishes an identical object each call.
+    updateUser({ emailVerified: true });
 
-    if (payload?.__typename === 'VerifyEmailPayload' || alreadyVerified) {
-      logger.info('Email verification successful', { alreadyVerified });
+    setVerificationResult('success');
 
-      // A patch: the store's updateUser assigns these onto the existing user, and
-      // re-assigning every field republishes an identical object each call.
-      updateUser({ emailVerified: true });
-
-      setVerificationResult('success');
-
-      toastService.success(tGlobal('auth.emailVerifiedToast'));
-    } else {
-      // A throttled request says how long to wait; the server's raw text is not a
-      // user message.
-      if (isRateLimitError(result.error)) {
-        throw new Error(getRateLimitMessage(result.error));
-      }
-      // Auth failures arrive as top-level GraphQL errors, not an AuthError variant.
-      if (topLevelError) {
-        throw new Error(
-          errorService.getUserFriendlyMessage(
-            topLevelError.code,
-            topLevelError.message,
-          ),
-        );
-      }
-      const message = payload && 'message' in payload ? payload.message : null;
-      throw new Error(message ?? tGlobal('errors.verificationFailed'));
-    }
-  };
-
-  try {
-    await runVerification();
-  } catch (error: unknown) {
-    const err = error as Error;
-    logger.error('Email verification failed', { error });
-
-    const errorMsg = err.message || tGlobal('auth.verificationFailedExpired');
-    setErrorMessage(errorMsg);
+    toastService.success(tGlobal('auth.emailVerifiedToast'));
+  } else {
+    logger.error('Email verification failed', { status: outcome.status });
+    setErrorMessage(outcome.body);
     setVerificationResult('error');
 
-    toastService.error(errorMsg);
+    toastService.error(outcome.body);
   }
 
   setBusy(false);
@@ -165,8 +126,9 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   const sentTokenRef = useRef<string | null>(null);
   const userId = user?.id;
 
+  // `verifyEmail` settles a refusal as an outcome, so the run never rejects.
   const performVerification = () => {
-    performVerificationImpl({
+    void performVerificationImpl({
       token,
       verifyEmail,
       userId,
@@ -183,7 +145,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
     if (sentTokenRef.current === requestedToken) return;
     sentTokenRef.current = requestedToken;
 
-    performVerificationImpl({
+    void performVerificationImpl({
       token,
       verifyEmail,
       userId,
@@ -258,7 +220,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
                   that account signs in from here. */}
               {!userId
                 ? t('auth.emailVerifiedSignIn')
-                : user?.onBoarded
+                : user.onBoarded
                 ? t('auth.emailVerifiedCanAccess')
                 : t('auth.emailVerifiedCompleteSetup')}
             </Text>
@@ -268,7 +230,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
                 <Button
                   title={t('auth.signIn')}
                   onPress={navigateToLogin}
-                  testID="email-verified-sign-in"
+                  testID={authTestIDs.emailVerifiedSignInButton}
                 />
               </View>
             )}
@@ -297,7 +259,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
                 title={t('auth.tryAgain')}
                 onPress={performVerification}
                 loading={isRetrying}
-                testID="verification-retry"
+                testID={authTestIDs.emailVerificationRetryButton}
               />
             </View>
           </>

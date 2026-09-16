@@ -54,8 +54,6 @@ const INITIAL_DISCOVERY_STATE: DiscoveryState = {
   loading: true,
 };
 
-const EMPTY_PANTRY_ITEMS: PantryListItemNode[] = [];
-
 interface UseRecipeDiscoveryResult {
   mode: DiscoveryMode;
   items: DiscoveryItem[];
@@ -107,8 +105,12 @@ function transformPantryResult(
   if (info?.servings) {
     subtitleParts.push(t('recipes.servingsCount', { count: info.servings }));
   }
-  const totalTime =
-    info?.readyInMinutes || info?.preparationMinutes || info?.cookingMinutes;
+  // Spoonacular reports an unknown duration as 0, so a zero falls through.
+  const totalTime = [
+    info?.readyInMinutes,
+    info?.preparationMinutes,
+    info?.cookingMinutes,
+  ].find(minutes => minutes !== undefined && minutes !== 0);
   if (totalTime) {
     subtitleParts.push(t('labels.min', { count: totalTime }));
   }
@@ -312,7 +314,7 @@ export function useRecipeDiscovery(
     fetchPolicy: 'cache-first',
   });
 
-  const hasPantryItems = (pantryItems?.length ?? 0) > 0;
+  const hasPantryItems = pantryItems.length > 0;
 
   // All raw results from the API (pantry mode only)
   const allResultsRef = useRef<RecipeSearchResult[]>([]);
@@ -486,7 +488,7 @@ export function useRecipeDiscovery(
 
   const shouldFetch = !pantryLoading;
 
-  const currentKey = shouldFetch ? `fetch|${pantryItems?.length ?? 0}` : '';
+  const currentKey = shouldFetch ? `fetch|${pantryItems.length}` : '';
 
   // Adjusting state during render: trigger fetch when conditions are met and key changed
   if (currentKey && currentKey !== fetchKey) {
@@ -509,21 +511,21 @@ export function useRecipeDiscovery(
 
     const controller = new AbortController();
 
-    const ingredientNames = (pantryItemsRef.current ?? [])
+    const ingredientNames = pantryItemsRef.current
       .map(item => item.itemName)
       .filter(Boolean)
       .slice(0, 20)
       .join(',');
 
     if (ingredientNames) {
-      fetchPantryDiscovery(
+      void fetchPantryDiscovery(
         ingredientNames,
         handlePantryResultsRef.current,
         updateState,
         controller.signal,
       );
     } else {
-      fetchRandomDiscovery(
+      void fetchRandomDiscovery(
         handleRandomResultsRef.current,
         updateState,
         controller.signal,
@@ -539,22 +541,17 @@ export function useRecipeDiscovery(
     if (discoveryState.loading) return;
 
     // Clear cache for this search so we get fresh results
-    const ingredientNames = (pantryItems ?? [])
+    const ingredientNames = pantryItems
       .map(item => item.itemName)
       .filter(Boolean)
       .slice(0, 20)
       .join(',');
 
     if (ingredientNames) {
-      // Remove from cache so fetchPantryDiscovery fetches fresh
-      const cacheKey = ingredientCacheKey(ingredientNames);
-      const cacheStore = useRecipeCacheStore.getState();
-      const newCache = { ...cacheStore.cache };
-      delete newCache[cacheKey];
-      cacheStore.clearAllCache(); // Simple: clear all on refresh
-      // Re-use the same setCached pattern on fresh fetch
+      // Clears every cached discovery so fetchPantryDiscovery fetches fresh.
+      useRecipeCacheStore.getState().clearAllCache();
 
-      fetchPantryDiscovery(
+      void fetchPantryDiscovery(
         ingredientNames,
         handlePantryResultsRef.current,
         updateState,
@@ -567,7 +564,7 @@ export function useRecipeDiscovery(
       delete newCache[cacheKey];
       useRecipeCacheStore.setState({ cache: newCache });
 
-      fetchRandomDiscovery(
+      void fetchRandomDiscovery(
         handleRandomResultsRef.current,
         updateState,
         undefined,
@@ -581,11 +578,14 @@ export function useRecipeDiscovery(
     items: discoveryState.items,
     loading: discoveryState.loading,
     refresh,
-    pantryItems: pantryItems ?? EMPTY_PANTRY_ITEMS,
+    pantryItems,
     hasPantryItems,
     pantryHasMore,
     pantryLoadingMore,
-    loadMorePantryItems,
+    // `usePagination` catches a failed page itself.
+    loadMorePantryItems: () => {
+      void loadMorePantryItems();
+    },
     discoveryHasMore,
     loadMoreDiscovery,
   };

@@ -5,7 +5,7 @@
  * an id the server does not have yet. Values are neutral, never invented.
  */
 
-import { type ApolloCache } from '@apollo/client';
+import type { ApolloCache } from '@apollo/client';
 import { Kind, type DocumentNode, type FragmentDefinitionNode } from 'graphql';
 import type { TypedDocumentNode } from '@graphql-typed-document-node/core';
 import type { Unmasked } from '@apollo/client/masking';
@@ -33,6 +33,8 @@ import {
 } from './writePantryItemDetailStub.generated';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import { localItemIdFor } from '#features/pantry/cache/items';
+import { releaseEntity } from '#/apollo/utils/cacheUpdaters';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /** The detail-only facts a create site can supply. All optional. */
 export interface PantryItemDetailStubFields {
@@ -208,7 +210,7 @@ function singleFieldFragment(
 const resolveItemId = (
   pantryItemId: string,
   itemId: string | null | undefined,
-): string => itemId || localItemIdFor(pantryItemId);
+): string => firstNonBlank(itemId) ?? localItemIdFor(pantryItemId);
 
 /**
  * The id of the Unit the optimistic builder just linked, or null when the row
@@ -241,6 +243,16 @@ export function writePantryItemDetailStub(
 
   const itemId = resolveItemId(pantryItemId, fields.itemId);
   const itemCacheId = cache.identify({ __typename: 'Item', id: itemId });
+
+  if (fields.itemId) {
+    // The catalog id supersedes the stub. Writing the stub retained it, and a
+    // retained root is one `gc()` skips — release it so the note above is true.
+    const stubCacheId = cache.identify({
+      __typename: 'Item',
+      id: localItemIdFor(pantryItemId),
+    });
+    if (stubCacheId) releaseEntity(cache, stubCacheId);
+  }
 
   if (itemCacheId) {
     topUpEntityGroup(

@@ -50,6 +50,42 @@
     "notAvailable": "Le info di debug sono disponibili solo nelle build di sviluppo e staging.",
     "header": "Informazioni di debug dettagliate per risolvere problemi di connessione all'API e di configurazione dell'app.",
     "copyAll": "Copia tutte le info",
-    "footer": "Queste informazioni sono utili per risolvere problemi di connessione all'API o per segnalare bug."
+    "footer": "Queste informazioni sono utili per risolvere problemi di connessione all'API o per segnalare bug.",
+    "sections": {
+      "environment": "Ambiente",
+      "apiConfiguration": "Configurazione dell'API",
+      "telemetry": "Telemetria",
+      "deviceInfo": "Info dispositivo",
+      "buildConfiguration": "Configurazione della build"
+    },
+    "rows": {
+      "buildMode": "Modalità di build",
+      "isDevelopment": "Build di sviluppo",
+      "isStaging": "Build di staging",
+      "isProduction": "Build di produzione",
+      "isTesting": "Esecuzione di test",
+      "apiUrl": "URL dell'API",
+      "webSocketUrl": "URL WebSocket",
+      "apiKey": "Chiave API",
+      "timeout": "Timeout richiesta",
+      "maxRetries": "Tentativi massimi",
+      "metricsEndpoint": "Endpoint metriche",
+      "logsEndpoint": "Endpoint log",
+      "metricsAuth": "Autenticazione metriche",
+      "logsAuth": "Autenticazione log",
+      "platform": "Piattaforma",
+      "osVersion": "Versione del sistema",
+      "appVersion": "Versione dell'app",
+      "buildNumber": "Numero di build",
+      "bundleId": "ID bundle",
+      "deviceBrand": "Marca del dispositivo",
+      "deviceModel": "Modello del dispositivo",
+      "webAppUrl": "URL dell'app web"
+    },
+    "values": {
+      "configured": "Configurato",
+      "notSet": "Non impostato",
+      "milliseconds": "{{value}} ms"
+    }
   }
 }

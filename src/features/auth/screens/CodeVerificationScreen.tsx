@@ -3,16 +3,17 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useTranslation } from '#/i18n';
 import { Text } from '#components/atoms/Text';
-import { GraphQLError } from 'graphql';
 import { AuthWrapper } from '#features/auth/components/AuthWrapper';
 import { AuthFormTemplate } from '#features/auth/components/AuthFormTemplate';
 import { CodeInputAdapter } from '#features/auth/components/CodeInputAdapter';
 import { useUpdateUser, useUser } from '#store/useAppStore';
-import { useVerifyEmail } from '#features/auth/hooks/useVerifyEmail';
-import { errorService } from '#/services/errorService';
+import {
+  useVerifyEmail,
+  type ResendVerificationOutcome,
+  type VerifyEmailOutcome,
+} from '#features/auth/hooks/useVerifyEmail';
 import { alertService } from '#/services/alertService';
 import { authService } from '#/services/authService';
-import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import { useEmailVerificationActions } from '#hooks/auth/useEmailVerification';
 import { useResendBackoff } from '#features/auth/hooks/useResendBackoff';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -20,9 +21,8 @@ import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
 import { logger } from '#/utils/environment';
 import { logValidationErrors } from '#/utils/validation/common';
 import { getEmailVerificationValidationSchema } from '#/utils/validation/auth';
-import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#services/toastService';
+import { authTestIDs } from '#features/auth/testIDs';
 
 type CodeVerificationValues = {
   code: string;
@@ -48,93 +48,40 @@ interface CodeVerificationScreenProps {
 }
 
 /**
- * The interpreters are module-level because their bodies are full of value blocks,
- * which bail the React Compiler out of the whole component when they sit inside a
- * try. Calling them from the try keeps the catch's coverage with plain statements.
+ * A refusal of the code goes under the field, where the user can act on it.
+ * Rate limits and transport failures are not a field anyone can correct, so
+ * they stay in a toast — and a failure is always said, or the button reads dead.
  */
-interface VerificationResponseDeps {
-  onVerified: () => void;
-  /** Puts a refusal under the code field, where the user can act on it. */
-  reportCodeError: (message: string) => void;
-  t: (key: string) => string;
-}
-
-function interpretVerifyEmailResponse(
-  response: { data?: unknown; error?: unknown },
-  { onVerified, reportCodeError, t }: VerificationResponseDeps,
+function presentVerifyOutcome(
+  outcome: VerifyEmailOutcome,
+  onVerified: () => void,
+  reportCodeError: (message: string) => void,
 ): void {
-  const payload = (response.data as { verifyEmail?: unknown } | undefined)
-    ?.verifyEmail as
-    | { __typename?: string; code?: string | null; field?: string | null }
-    | undefined;
-  if (payload?.__typename === 'VerifyEmailPayload') {
+  if (outcome.status === 'verified') {
     onVerified();
     return;
   }
-  // Auth failures arrive as top-level GraphQL errors, not an AuthError union
-  // variant. Rate limits and transport failures are not a field the user can
-  // correct, so they stay in a toast.
-  const topLevelError = getTopLevelGraphQLError(response.error);
-  if (topLevelError) {
-    toastService.error(
-      errorService.getUserFriendlyMessage(
-        topLevelError.code,
-        t('errors.codes.genericRetry'),
-      ),
-    );
-  } else if (payload) {
-    // The payload's `message` is never displayed — unlocalizable English by
-    // construction. A ValidationError takes this screen's own sentence, not the
-    // code map's generic "check your input": the only one `verifyEmail` returns
-    // IS a bad code, and the server collapses wrong/spent/expired into it, so the
-    // sentence must be true of all three and name the resend.
-    reportCodeError(
-      payload.__typename === 'ValidationError'
-        ? t('auth.codeInvalidOrExpired')
-        : localizedRefusalMessage(payload, t('auth.codeInvalidOrExpired')),
-    );
-  } else {
-    // A transport failure resolves with neither a payload nor a top-level
-    // error, so without this the submit button does nothing at all — on every
-    // retry, with no way to tell it apart from a dead control.
-    toastService.error(t('errors.codes.genericRetry'));
+  if (outcome.status === 'refused') {
+    reportCodeError(outcome.body);
+    return;
   }
+  toastService.error(outcome.body);
 }
 
-function interpretResendResponse(
-  response: { error?: unknown },
-  { onVerified, t }: VerificationResponseDeps,
+function presentResendOutcome(
+  outcome: ResendVerificationOutcome,
+  onVerified: () => void,
 ): void {
-  const error = response.error;
-  if (!error) {
+  if (outcome.status === 'sent') {
     logger.debug('Verification email resent');
     return;
   }
-
-  if (!(typeof error === 'object' && 'errors' in error)) {
-    // A transport failure carries no `errors` array, so its absence does not
-    // mean the email went out — and the cooldown is already running.
-    errorService.reportError(error, {
-      operation: 'CodeVerification.resendEmail.transport',
-    });
-    toastService.error(t('auth.resendVerificationFailed'));
-    return;
-  }
-
-  const graphQLErrors = (error as { errors: ReadonlyArray<GraphQLError> })
-    .errors;
-  const alreadyVerified = graphQLErrors.some(
-    err => err.extensions?.code === TopLevelErrorCode.EmailAlreadyVerified,
-  );
-  if (alreadyVerified) {
+  if (outcome.status === 'alreadyVerified') {
     onVerified();
     return;
   }
-
-  errorService.reportError(error, {
-    operation: 'CodeVerification.resendEmail.graphqlError',
-  });
-  toastService.error(t('auth.resendVerificationFailed'));
+  // The cooldown is already running, so the failure has to be said.
+  toastService.error(outcome.body);
 }
 
 export function CodeVerificationScreen({
@@ -226,23 +173,17 @@ export function CodeVerificationScreen({
 
   const onVerifyCode = async (data: CodeVerificationValues) => {
     setRefusal(null);
-    try {
-      // The server picks the code index over the token index by testing
-      // `length === 6`, so a stray space silently becomes a token lookup that
-      // returns "invalid". Defence in depth; CodeInput already strips non-digits.
-      const code = data.code.replace(/\D/g, '');
-      const response = await verifyEmail(code, targetEmail);
-      interpretVerifyEmailResponse(response, {
-        onVerified,
-        reportCodeError,
-        t,
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'CodeVerification.verifyEmail',
-      });
-      toastService.error(t('errors.codes.genericRetry'));
-    }
+    // The server picks the code index over the token index by testing
+    // `length === 6`, so a stray space silently becomes a token lookup that
+    // returns "invalid". Defence in depth; CodeInput already strips non-digits.
+    const code = data.code.replace(/\D/g, '');
+    // The sentence must be true of a wrong, spent and expired code, and name the resend.
+    const outcome = await verifyEmail(
+      code,
+      targetEmail,
+      t('auth.codeInvalidOrExpired'),
+    );
+    presentVerifyOutcome(outcome, onVerified, reportCodeError);
   };
 
   // The only way off the sign-in GATE without a working code: RootNavigator
@@ -258,7 +199,7 @@ export function CodeVerificationScreen({
           text: t('auth.exitVerificationConfirm'),
           style: 'destructive',
           onPress: () => {
-            authService.logout();
+            void authService.logout();
           },
         },
       ],
@@ -286,19 +227,10 @@ export function CodeVerificationScreen({
     // tap lands on a disabled link, and a throw cannot leave the window open.
     registerAttempt();
 
-    try {
-      const response = await resendVerificationEmail(targetEmail);
-      interpretResendResponse(response, {
-        onVerified,
-        reportCodeError,
-        t,
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'CodeVerification.resendEmail',
-      });
-      toastService.error(t('errors.codes.genericRetry'));
-    }
+    presentResendOutcome(
+      await resendVerificationEmail(targetEmail),
+      onVerified,
+    );
   };
 
   // Straight after registering there is nothing behind this screen, so the
@@ -318,7 +250,7 @@ export function CodeVerificationScreen({
   };
 
   return (
-    <AuthWrapper testID="code-verification-screen">
+    <AuthWrapper testID={authTestIDs.codeVerificationScreen}>
       <AuthFormTemplate
         contentPlacement="top"
         onBackPress={onBackPress}
@@ -326,7 +258,7 @@ export function CodeVerificationScreen({
         subtitle={
           <>
             {t('auth.enterCodeSubtitlePrefix')}{' '}
-            <Text role="bodyStrong">{targetEmail || t('auth.yourEmail')}</Text>
+            <Text role="bodyStrong">{targetEmail ?? t('auth.yourEmail')}</Text>
             {t('auth.enterCodeSubtitleSuffix')}
           </>
         }
@@ -358,7 +290,11 @@ export function CodeVerificationScreen({
             ? onSkip
             : undefined
         }
-        linkTestID={isSignup ? 'resend-code' : 'skip-verification'}
+        linkTestID={
+          isSignup
+            ? authTestIDs.codeVerificationResendLink
+            : authTestIDs.codeVerificationSkipLink
+        }
         linkDisabled={isSignup ? !canResend : undefined}
         linkCountdown={isSignup ? countdown : undefined}
         submitText={t('labels.submit')}
@@ -378,7 +314,9 @@ export function CodeVerificationScreen({
             : undefined
         }
         footerLinkTestID={
-          isSignup ? 'code-verification-sign-in' : 'resend-code'
+          isSignup
+            ? authTestIDs.codeVerificationSignInLink
+            : authTestIDs.codeVerificationResendLink
         }
         onFooterLinkPress={
           isSignup ? leaveToSignIn : targetEmail ? onResend : undefined

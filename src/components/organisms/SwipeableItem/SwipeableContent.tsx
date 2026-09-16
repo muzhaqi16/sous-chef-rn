@@ -53,7 +53,7 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
         android_ripple={RIPPLE.SUBTLE}
         accessibilityRole={onPress ? 'button' : undefined}
         accessibilityLabel={accessibilityLabel}
-        accessibilityHint={accessibilityHint || t('a11y.swipeForActions')}
+        accessibilityHint={accessibilityHint ?? t('a11y.swipeForActions')}
       >
         {children}
       </Pressable>

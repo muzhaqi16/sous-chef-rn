@@ -27,7 +27,6 @@ describe('usePantryPermissions', () => {
       withHome(undefined);
       const { result } = renderHook(() => usePantryPermissions());
       expect(result.current).toEqual({
-        canView: true,
         canAddItems: true,
         canEditItems: true,
         canCreatePantry: true,
@@ -58,7 +57,6 @@ describe('usePantryPermissions', () => {
       withHome({ id: 'h1', myMembership: { role: MembershipRole.Guest } });
       const { result } = renderHook(() => usePantryPermissions());
       expect(result.current).toEqual({
-        canView: false,
         canAddItems: false,
         canEditItems: false,
         canCreatePantry: false,

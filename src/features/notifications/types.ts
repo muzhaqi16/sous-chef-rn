@@ -45,8 +45,6 @@ export function isNotificationPayload(
 export interface InvitationData {
   type: 'HOME_INVITE' | 'SHOPPING_LIST_INVITE';
   id: string;
-  title: string;
-  description: string;
   inviterName?: string;
   /** Home name or shopping list name. */
   entityName: string;

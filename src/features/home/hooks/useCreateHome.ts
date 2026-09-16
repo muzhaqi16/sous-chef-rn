@@ -1,8 +1,5 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import {
-  CreateHomeDocument,
-  type CreateHomeMutation,
-} from '#operations/home/home.generated';
+import { CreateHomeDocument } from '#operations/home/home.generated';
 import {
   adoptServerMembership,
   buildOptimisticHome,
@@ -10,25 +7,22 @@ import {
   writeOptimisticHome,
 } from '#features/home/cache/optimisticHome';
 import { addToHomesCache } from '#features/home/hooks/homeCacheUpdaters';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import {
+  settleMutation,
+  type SettledFailure,
+} from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import type { CreateHomeInput } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
+import { useTranslation } from '#/i18n';
 
 /** A create's verdict, plus the id it minted — the home's id, queued or not. */
-export interface CreateHomeOutcome {
-  status: 'ok' | 'rejected';
-  id: string;
-  /**
-   * The refusal itself, so the caller can throw the precise domain error
-   * (`unwrapPayload`) or resolve copy from its CODE. Never its `message`, which
-   * is unlocalizable English by construction.
-   */
-  payload: CreateHomeMutation['createHome'] | null | undefined;
-  /** Carried so the caller can resolve LOCALIZED copy from `errors.field.*`. */
-  result: { data?: unknown; error?: unknown };
-}
+export type CreateHomeOutcome =
+  | { status: 'ok'; id: string }
+  /** `failure` is localized copy the caller presents; never the server's `message`. */
+  | { status: 'rejected'; id: string; failure: SettledFailure };
 
 /**
  * The one home create. Local-first: the home, the creator's Owner membership
@@ -37,16 +31,17 @@ export interface CreateHomeOutcome {
  * offline pantry write could name as its parent.
  */
 export function useCreateHome(onHomesCacheMiss?: () => void) {
+  const { t } = useTranslation();
   const client = useApolloClient();
   const user = useUser();
   const [createHomeMutation, { loading: creating }] = useMutation(
     CreateHomeDocument,
     {
       update: (cache, { data }) => {
-        // Bound first: the queue answers a queued create with a null payload,
-        // which the schema's non-null result type does not admit.
-        const payload = data?.createHome;
-        if (payload?.__typename !== 'CreateHomePayload') return;
+        // The queue answers a queued create with a null payload, which the
+        // schema's non-null result type does not admit.
+        const payload = appliedPayload(data);
+        if (!payload) return;
         // Idempotent by home id: the pre-fire write already inserted this one,
         // so the server row confirms it rather than duplicating it.
         addToHomesCache(cache, payload.home, { position: 'end' });
@@ -64,8 +59,10 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
     },
   );
 
+  /** `fallback` is the copy for a failure its code does not describe. */
   const createHome = async (
     fields: Omit<CreateHomeInput, 'id' | 'createDefaultPantry'>,
+    fallback: string = t('errors.createHomeFailed'),
   ): Promise<CreateHomeOutcome> => {
     const id = generateEntityId();
     const input = { ...fields, id, createDefaultPantry: false };
@@ -92,29 +89,35 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
     // miss here leaves the new home out of an otherwise authoritative empty list.
     if (!linked) onHomesCacheMiss?.();
 
-    const result = await createHomeMutation({
-      variables: { input },
-      context: { localFirst: true },
-    });
-
-    if (classifyCreateResult(result) === 'rejected') {
-      if (user) {
-        try {
-          revertOptimisticHome(client.cache, id);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert rejected Home create',
-          });
-        }
+    const revert = () => {
+      if (!user) return;
+      try {
+        revertOptimisticHome(client.cache, id);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Revert rejected Home create',
+        });
       }
-      return {
-        status: 'rejected',
-        payload: result.data?.createHome,
-        result,
-        id,
-      };
+    };
+
+    const settled = await settleMutation(
+      () =>
+        createHomeMutation({
+          variables: { input },
+          context: { localFirst: true },
+        }),
+      {
+        document: CreateHomeDocument,
+        fallback,
+        onFailed: revert,
+        present: 'none',
+      },
+    );
+
+    if (settled.failure) {
+      return { status: 'rejected', id, failure: settled.failure };
     }
-    return { status: 'ok', payload: null, result, id };
+    return { status: 'ok', id };
   };
 
   return { createHome, creating };

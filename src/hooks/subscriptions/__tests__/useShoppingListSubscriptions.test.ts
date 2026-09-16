@@ -63,7 +63,6 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
   safeEvict: jest.fn(),
   safeEvictMany: jest.fn(),
-  gcResetResultCache: jest.fn(),
 }));
 
 jest.mock('#/utils/finallyHelpers');
@@ -82,15 +81,12 @@ beforeEach(() => {
   );
 });
 
-// Captures the customOnData for a specific subscription so tests can drive it
-// directly with simulated payloads. The hook registers two subscriptions
-// (MyShoppingListsEvents, CollaborationChanges); pass the desired
-// subscriptionName.
-function captureCustomOnData(subscriptionName: string) {
+// Captures the registered customOnData so tests can drive it directly with
+// simulated payloads.
+function captureCustomOnData() {
   let customOnData: CapturedOnData | undefined;
   mockRegister.mockImplementation((config: SubscriptionConfig) => {
-    if (config.subscriptionName === subscriptionName)
-      customOnData = config.customOnData as CapturedOnData | undefined;
+    customOnData = config.customOnData as CapturedOnData | undefined;
     return {};
   });
   return (): CapturedOnData => {
@@ -105,7 +101,7 @@ describe('useShoppingListSubscriptions', () => {
 
     expect(mockRegister).toHaveBeenCalledWith(
       expect.objectContaining({
-        subscriptionName: 'MyShoppingListsEvents',
+        document: MyShoppingListsEventsDocument,
         entityType: 'ShoppingList',
         enableDeduplication: true,
         userId: 'user-1',
@@ -130,7 +126,7 @@ describe('useShoppingListSubscriptions', () => {
 
     expect(mockRegister).toHaveBeenCalledWith(
       expect.objectContaining({
-        subscriptionName: 'MyShoppingListsEvents',
+        document: MyShoppingListsEventsDocument,
       }),
     );
   });
@@ -140,7 +136,7 @@ describe('useShoppingListSubscriptions', () => {
       addNewItemToShoppingListCache,
     } = require('#features/shoppingList/cache/connections');
 
-    const getOnData = captureCustomOnData('MyShoppingListsEvents');
+    const getOnData = captureCustomOnData();
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
 
     const mockCache: MockBatchCache = {
@@ -184,7 +180,7 @@ describe('useShoppingListSubscriptions', () => {
       addNewItemToShoppingListCache,
     } = require('#features/shoppingList/cache/connections');
 
-    const getOnData = captureCustomOnData('MyShoppingListsEvents');
+    const getOnData = captureCustomOnData();
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
 
     const mockClient = { cache: { batch: jest.fn() } };
@@ -207,7 +203,7 @@ describe('useShoppingListSubscriptions', () => {
       addNewItemToShoppingListCache,
     } = require('#features/shoppingList/cache/connections');
 
-    const getOnData = captureCustomOnData('MyShoppingListsEvents');
+    const getOnData = captureCustomOnData();
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
 
     const mockClient = { cache: { batch: jest.fn() } };
@@ -230,7 +226,7 @@ describe('useShoppingListSubscriptions', () => {
       removeFromShoppingListItemsConnection,
     } = require('#features/shoppingList/cache/connections');
 
-    const getOnData = captureCustomOnData('MyShoppingListsEvents');
+    const getOnData = captureCustomOnData();
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
 
     const mockCache: MockBatchCache = {
@@ -260,7 +256,7 @@ describe('useShoppingListSubscriptions', () => {
       clearAllPurchasedItemsFromCache,
     } = require('#features/shoppingList/cache/connections');
 
-    const getOnData = captureCustomOnData('MyShoppingListsEvents');
+    const getOnData = captureCustomOnData();
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
 
     const mockClient = { cache: {} };
@@ -286,7 +282,7 @@ describe('useShoppingListSubscriptions', () => {
       clearAllPurchasedItemsFromCache,
     } = require('#features/shoppingList/cache/connections');
 
-    const getOnData = captureCustomOnData('MyShoppingListsEvents');
+    const getOnData = captureCustomOnData();
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
 
     const mockClient = { cache: {} };
@@ -303,19 +299,12 @@ describe('useShoppingListSubscriptions', () => {
     expect(clearAllPurchasedItemsFromCache).not.toHaveBeenCalled();
   });
 
-  it('does nothing for null payload (MyShoppingListsEvents)', () => {
-    const getOnData = captureCustomOnData('MyShoppingListsEvents');
-    renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
-
-    expect(() => getOnData()(null, {})).not.toThrow();
-  });
-
   it('evicts list entity when parent is deleting (LIST_UPDATED)', () => {
     // The LIST_UPDATED branch calls isParentDeleting(node.id) which returns
     // true → safeEvict is invoked.
     mockIsParentDeleting.mockReturnValue(true);
 
-    const getOnData = captureCustomOnData('MyShoppingListsEvents');
+    const getOnData = captureCustomOnData();
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
 
     const mockCache = {
@@ -344,8 +333,8 @@ describe('useShoppingListSubscriptions', () => {
       removeFromShoppingListItemsConnection,
     } = require('#features/shoppingList/cache/connections');
 
-    const getOnData = captureCustomOnData('MyShoppingListsEvents');
-    const scheduleAnimation = jest.fn((id, dir, onComplete) => onComplete());
+    const getOnData = captureCustomOnData();
+    const scheduleAnimation = jest.fn((_id, _dir, onComplete) => onComplete());
     renderHookWithApollo(() =>
       useShoppingListSubscriptions('user-1', scheduleAnimation),
     );

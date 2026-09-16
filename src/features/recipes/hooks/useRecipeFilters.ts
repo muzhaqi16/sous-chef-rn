@@ -16,7 +16,7 @@ interface UseRecipeFiltersArgs {
 }
 
 /**
- * Owns recipe filter state and the operations on it (count, clear, remove,
+ * Owns recipe filter state and the operations on it (count, apply, remove,
  * clear-and-research). The dietary-profile → filter normalization and the
  * search pipeline both live in the caller; this hook just holds the state and
  * the pure transitions, so it can be exercised in isolation.
@@ -48,8 +48,9 @@ export function useRecipeFilters({
     (activeFilters.mealType ? 1 : 0) +
     (activeFilters.maxReadyTime ? 1 : 0);
 
-  const clearFilters = () => {
-    setActiveFilters(DEFAULT_FILTERS);
+  const applyFilters = (next: RecipeFilters) => {
+    setActiveFilters(next);
+    onApplyFilters(next);
   };
 
   const removeFilter = (
@@ -68,20 +69,17 @@ export function useRecipeFilters({
       mealType: kind === 'mealType' ? null : activeFilters.mealType,
       maxReadyTime: kind === 'maxReadyTime' ? null : activeFilters.maxReadyTime,
     };
-    setActiveFilters(next);
-    onApplyFilters(next);
+    applyFilters(next);
   };
 
   const clearFiltersAndSearchAgain = () => {
-    setActiveFilters(DEFAULT_FILTERS);
-    onApplyFilters(DEFAULT_FILTERS);
+    applyFilters(DEFAULT_FILTERS);
   };
 
   return {
     activeFilters,
-    setActiveFilters,
     activeFilterCount,
-    clearFilters,
+    applyFilters,
     removeFilter,
     clearFiltersAndSearchAgain,
   };

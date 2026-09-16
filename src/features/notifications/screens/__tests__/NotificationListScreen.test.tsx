@@ -24,10 +24,7 @@ jest.mock('#features/notifications/hooks/useNotifications', () => ({
 jest.mock('#features/notifications/hooks/useNotificationHistory', () => ({
   useNotificationHistory: jest.fn(() => ({
     notifications: [],
-    unreadCount: 0,
-    hasUrgent: false,
     loadMore: jest.fn(),
-    hasMore: false,
     loadingMore: false,
     loading: false,
     error: undefined,
@@ -151,8 +148,6 @@ describe('NotificationListScreen', () => {
       today: [
         {
           id: 'n1',
-          title: 'Test',
-          message: 'msg',
           category: 'PANTRY',
           isRead: false,
         },
@@ -165,8 +160,6 @@ describe('NotificationListScreen', () => {
         kind: 'item',
         notification: {
           id: 'n1',
-          title: 'Test',
-          message: 'msg',
           category: 'PANTRY',
           isRead: false,
         },
@@ -179,18 +172,13 @@ describe('NotificationListScreen', () => {
     const notifications = [
       {
         id: 'n1',
-        title: 'Test',
-        message: 'msg',
         category: 'PANTRY',
         isRead: false,
       },
     ] as Partial<NotificationItem>[] as NotificationItem[];
     jest.mocked(useNotificationHistory).mockReturnValue({
       notifications,
-      unreadCount: 1,
-      hasUrgent: false,
       loadMore: jest.fn(),
-      hasMore: false,
       loadingMore: false,
       loading: false,
       error: undefined,

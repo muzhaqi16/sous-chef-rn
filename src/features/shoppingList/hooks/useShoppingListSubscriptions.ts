@@ -109,9 +109,9 @@ function resortEdges(
             const nodeA = readField<Reference>('node', a);
             const nodeB = readField<Reference>('node', b);
             const sortA =
-              (nodeA ? readField<string>('sortOrder', nodeA) : '') || '';
+              (nodeA ? readField<string>('sortOrder', nodeA) : '') ?? '';
             const sortB =
-              (nodeB ? readField<string>('sortOrder', nodeB) : '') || '';
+              (nodeB ? readField<string>('sortOrder', nodeB) : '') ?? '';
             if (sortA < sortB) return -1;
             if (sortA > sortB) return 1;
             return 0;
@@ -166,8 +166,8 @@ export function useShoppingListSubscriptions(
   scheduleAnimation?: ScheduleAnimationFn,
   scheduleEntryAnimation?: ScheduleEntryAnimationFn,
 ) {
-  const selectedShoppingListId = useSelectedShoppingListId() || undefined;
-  const rejected = useSubscriptionRejected('MyShoppingListsEvents');
+  const selectedShoppingListId = useSelectedShoppingListId() ?? undefined;
+  const rejected = useSubscriptionRejected(MyShoppingListsEventsDocument);
 
   /**
    * Apply an ITEMS_CHANGED event to the active list. A delete is the id and
@@ -322,7 +322,7 @@ export function useShoppingListSubscriptions(
   // no fragment spread fits under it.
   const myListsEventsHandlers =
     subscriptionService.register<MyShoppingListsEventsPayload>({
-      subscriptionName: 'MyShoppingListsEvents',
+      document: MyShoppingListsEventsDocument,
       entityType: 'ShoppingList',
       enableDeduplication: true,
       userId,
@@ -332,8 +332,6 @@ export function useShoppingListSubscriptions(
         payload: MyShoppingListsEventsPayload,
         client: SubscriptionApolloClient,
       ) => {
-        if (!payload) return;
-
         if (__DEV__) {
           logger.debug(
             `📊 [Subscription] MyShoppingListsEvents: subtype=${payload.subtype} mutation=${payload.mutation} listId=${payload.listId}`,
@@ -396,37 +394,46 @@ export function useShoppingListSubscriptions(
         // nothing else; an add or permission change is a connection change with
         // no `shoppingListCollaborator(id)` root field to read, so the details
         // query that owns `collaboratorsConnection` is refetched.
-        if (payload.subtype === ShoppingListSubtype.CollaborationChanged) {
-          if (payload.node?.__typename !== 'ShoppingListCollaborator') return;
+        // A switch, not a trailing `!== ItemsChanged` guard: the enum is closed
+        // in the pulled schema, so that comparison reads as dead while the
+        // server can still send a subtype this client has not regenerated.
+        // `default` ignores such an event instead of treating it as an item
+        // change.
+        switch (payload.subtype) {
+          case ShoppingListSubtype.CollaborationChanged: {
+            if (payload.node?.__typename !== 'ShoppingListCollaborator') return;
 
-          if (payload.mutation === MutationType.Deleted) {
-            removeCollaborator(
-              client.cache,
-              selectedShoppingListId,
-              payload.node.id,
-              { evictItem: true },
-            );
+            if (payload.mutation === MutationType.Deleted) {
+              removeCollaborator(
+                client.cache,
+                selectedShoppingListId,
+                payload.node.id,
+                { evictItem: true },
+              );
+              return;
+            }
+
+            void client.refetchQueries({
+              include: [GetShoppingListDetailsDocument],
+            });
             return;
           }
 
-          void client.refetchQueries({
-            include: [GetShoppingListDetailsDocument],
-          });
-          return;
+          case ShoppingListSubtype.ItemsBatchCleared:
+            clearAllPurchasedItemsFromCache(
+              client.cache,
+              selectedShoppingListId,
+              payload.clearedItemIds ?? [],
+            );
+            return;
+
+          case ShoppingListSubtype.ItemsChanged:
+            void applyItemChange(payload, client, selectedShoppingListId);
+            return;
+
+          default:
+            return;
         }
-
-        if (payload.subtype === ShoppingListSubtype.ItemsBatchCleared) {
-          clearAllPurchasedItemsFromCache(
-            client.cache,
-            selectedShoppingListId,
-            payload.clearedItemIds || [],
-          );
-          return;
-        }
-
-        if (payload.subtype !== ShoppingListSubtype.ItemsChanged) return;
-
-        void applyItemChange(payload, client, selectedShoppingListId);
       },
     });
 
@@ -440,7 +447,7 @@ export function useShoppingListSubscriptions(
     ...myListsEventsHandlers,
   });
   useSubscriptionTransportRecovery(
-    'MyShoppingListsEvents',
+    MyShoppingListsEventsDocument,
     myListsEvents,
     myListsSkip,
   );

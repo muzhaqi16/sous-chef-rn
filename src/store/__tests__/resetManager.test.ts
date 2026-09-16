@@ -10,7 +10,7 @@ jest.mock('../../apollo/links/refreshToken');
 jest.mock('#/storage/keychain', () => ({
   clearTempRegistrationPassword: jest.fn(() => Promise.resolve()),
   clearSessionTokens: jest.fn(() => Promise.resolve()),
-  loadSessionTokens: jest.fn(() => Promise.resolve(null)),
+  loadSessionTokens: jest.fn(() => Promise.resolve({ status: 'absent' })),
   saveSessionTokens: jest.fn(() => Promise.resolve()),
   clearCredentials: jest.fn(() => Promise.resolve()),
 }));
@@ -267,6 +267,8 @@ describe('resetManager', () => {
       });
 
       it('clears auth from storage when auth is true', async () => {
+        storage.set('accessToken', 'stale-access');
+        storage.set('refreshToken', 'stale-refresh');
         await resetManager.resetStore({
           auth: true,
           ui: false,
@@ -274,8 +276,8 @@ describe('resetManager', () => {
           clearApolloCache: false,
         });
         expect(clearTempRegistrationPassword).toHaveBeenCalled();
-        expect(storage.remove).toHaveBeenCalledWith('accessToken');
-        expect(storage.remove).toHaveBeenCalledWith('refreshToken');
+        expect(storage.contains('accessToken')).toBe(false);
+        expect(storage.contains('refreshToken')).toBe(false);
       });
 
       it('handles missing zustand data gracefully', async () => {
@@ -424,6 +426,8 @@ describe('resetManager', () => {
       it.each(REASONS)(
         'performs the full cleanup for reason %s',
         async reason => {
+          storage.set('accessToken', 'stale-access');
+          storage.set('refreshToken', 'stale-refresh');
           await resetManager.endSession(reason);
 
           const authCall = findAuthResetCall(mockSet);
@@ -447,8 +451,8 @@ describe('resetManager', () => {
           // Scheduled refresh, keychain tier, and persisted tokens
           expect(apolloReset.cancelTokenRefresh).toHaveBeenCalled();
           expect(clearTempRegistrationPassword).toHaveBeenCalled();
-          expect(storage.remove).toHaveBeenCalledWith('accessToken');
-          expect(storage.remove).toHaveBeenCalledWith('refreshToken');
+          expect(storage.contains('accessToken')).toBe(false);
+          expect(storage.contains('refreshToken')).toBe(false);
 
           // Persisted Apollo cache
           expectPersistedCacheCleared();

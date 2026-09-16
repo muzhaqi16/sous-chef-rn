@@ -5,7 +5,7 @@ import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
 import type { DisplayNotification as NotificationType } from '#features/notifications/utils/toDisplayNotification';
 import {
-  getNotificationDisplayMessage,
+  getNotificationCopy,
   getNotificationIcon,
 } from '#features/notifications/utils/notificationHelpers';
 import { safeParseDate } from '#utils/dateUtils';
@@ -40,7 +40,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
     return date ? formatRelativeToNow(date) : t('notifications.recently');
   })();
 
-  const displayMessage = getNotificationDisplayMessage(notification, t);
+  const copy = getNotificationCopy(notification, t);
 
   return (
     <AppPressable
@@ -64,16 +64,16 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
           role={notification.isRead ? 'bodyStrong' : 'bodyStrong'}
           style={styles.title}
         >
-          {notification.title}
+          {copy.title}
         </Text>
-        {!!displayMessage && (
+        {!!copy.message && (
           <Text
             role="caption"
             tone="secondary"
             style={styles.message}
             numberOfLines={2}
           >
-            {displayMessage}
+            {copy.message}
           </Text>
         )}
         <Text role="caption" tone="tertiary">

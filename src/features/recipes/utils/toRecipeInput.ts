@@ -2,10 +2,8 @@ import {
   ExternalSource,
   type CreateRecipeInput,
 } from '#/graphql/generated/schemaTypes';
-import {
-  RecipeInformation,
-  type RecipePriceBreakdown,
-} from '#/services/spoonacular/types';
+import type { RecipeInformation } from '#/services/spoonacular/types';
+import type { RecipePriceBreakdown } from '#/services/spoonacular/types';
 import { stripPriceFromName } from '#features/recipes/utils/stripPriceFromName';
 
 /** Ingredient names are matched case- and whitespace-insensitively. */
@@ -21,16 +19,16 @@ export const toRecipeInput = (
   priceBreakdown?: RecipePriceBreakdown | null,
 ) => {
   // Extract calories from nutrition data
-  const caloriesPerServing = spoonacularRecipe.nutrition?.nutrients?.find(
+  const caloriesPerServing = spoonacularRecipe.nutrition?.nutrients.find(
     n => n.name === 'Calories',
   )?.amount;
 
   // Transform instructions to JSON format (matches user-created format: { step, text })
   const instructions =
-    spoonacularRecipe.analyzedInstructions?.[0]?.steps?.map(step => ({
+    spoonacularRecipe.analyzedInstructions?.[0]?.steps.map(step => ({
       step: step.number,
       text: step.step,
-    })) || [];
+    })) ?? [];
 
   // Per-ingredient nutrition is already present in the recipe response when
   // it's fetched with `includeNutrition: true` (see useRecipeData) — index it
@@ -59,14 +57,14 @@ export const toRecipeInput = (
   return {
     // Basic recipe info
     name: spoonacularRecipe.title,
-    description: spoonacularRecipe.summary?.replace(/<[^>]*>/g, ''),
+    description: spoonacularRecipe.summary.replace(/<[^>]*>/g, ''),
     instructions,
 
     // Structured attributes — the API rejects flat servings/cuisine/time/
     // nutrition/image fields; each lives under its typed sub-input.
     metadata: {
       servings: spoonacularRecipe.servings,
-      cuisine: spoonacularRecipe.cuisines?.length
+      cuisine: spoonacularRecipe.cuisines.length
         ? spoonacularRecipe.cuisines.join(', ')
         : undefined,
     },
@@ -191,6 +189,6 @@ export const toRecipeInput = (
             },
           ],
         };
-      }) || [],
+      }) ?? [],
   } satisfies CreateRecipeInput;
 };

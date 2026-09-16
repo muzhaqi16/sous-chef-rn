@@ -6,18 +6,6 @@ import {
 import { useCreateHome } from '#features/home/hooks/useCreateHome';
 import { extractNodes } from '#/utils/connectionUtils';
 
-interface HomeSummary {
-  id: string;
-  name?: string;
-  pantriesConnection?: unknown;
-}
-
-interface PantrySummary {
-  id: string;
-  name: string;
-  isDefault?: boolean;
-}
-
 interface CreateHomeFlowArgs {
   userId: string | undefined;
 }
@@ -46,19 +34,16 @@ export function useCreateHomeFlow({ userId }: CreateHomeFlowArgs) {
     void refetchHomes();
   });
 
-  const homes = extractNodes(homesData?.homes) as HomeSummary[];
+  const homes = extractNodes(homesData?.homes);
   const pendingInvites = extractNodes(
     pendingInvitesData?.me?.pendingHomeInvitesConnection,
   );
   const existingHome = homes[0];
-  const existingHomePantries = extractNodes(
-    existingHome?.pantriesConnection as never,
-  ) as PantrySummary[];
+  const existingHomePantries = extractNodes(existingHome?.pantriesConnection);
   const existingPantry =
     existingHomePantries.find(p => p.isDefault) ?? existingHomePantries[0];
 
   return {
-    homes,
     pendingInvites,
     existingHome,
     existingPantry,

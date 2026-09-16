@@ -9,6 +9,8 @@ import { gql, InMemoryCache } from '@apollo/client';
 import { makeCache } from '../cache';
 import { queueStore } from '../offlineQueue/queueStore';
 import { QueueStatus } from '../offlineQueue/types';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { queuedMutationFor } from '#/test-utils/queuedMutation';
 
 type NodeRef = { __typename: string; id: string; name?: string };
 type Edge = { __typename: string; node: NodeRef };
@@ -751,12 +753,7 @@ describe('cache', () => {
       queueStore.addMutation({
         id: 'cross-seam-batch-add',
         userId: 'cross-seam-user',
-        operationName: 'AddItemsToShoppingList',
-        mutation: gql`
-          mutation AddItemsToShoppingList {
-            __typename
-          }
-        `,
+        ...queuedMutationFor(AddItemToShoppingListDocument),
         variables: {
           input: {
             shoppingListId: 'list-1',

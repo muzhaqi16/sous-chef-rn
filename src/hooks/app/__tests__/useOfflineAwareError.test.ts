@@ -5,9 +5,7 @@ jest.mock('#hooks/app/useIsApiUnavailable', () => ({
   useIsApiUnavailable: jest.fn(() => false),
 }));
 
-const mocked = jest.requireMock('#hooks/app/useIsApiUnavailable') as {
-  useIsApiUnavailable: jest.Mock;
-};
+const mocked = jest.requireMock('#hooks/app/useIsApiUnavailable');
 
 const setNetworkBlocked = (blocked: boolean) =>
   mocked.useIsApiUnavailable.mockReturnValue(blocked);

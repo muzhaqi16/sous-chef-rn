@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import {
@@ -13,7 +13,10 @@ import { Text } from '#components/atoms/Text';
 import { TemplateCategory } from '#/graphql/generated/schemaTypes';
 import { Sheet } from '#components/templates/Sheet';
 
-const CATEGORY_OPTION_KEYS: { key: TemplateCategory; labelKey: string }[] = [
+const CATEGORY_OPTION_KEYS: {
+  key: TemplateCategory;
+  labelKey: TranslationKey;
+}[] = [
   { key: TemplateCategory.Weekly, labelKey: 'saveAsTemplate.categoryWeekly' },
   { key: TemplateCategory.Monthly, labelKey: 'saveAsTemplate.categoryMonthly' },
   {

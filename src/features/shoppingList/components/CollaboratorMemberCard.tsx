@@ -7,40 +7,32 @@ import { useTranslation } from '#/i18n';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#/utils/iconUtils';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
-import { type ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import type { Translate } from '#/i18n/types';
 import { formatShortDate } from '#/utils/formatters/date';
+import { CollaboratorStatus } from '#/graphql/generated/schemaTypes';
 
-type StatusVariant = 'active' | 'pending' | 'declined' | 'expired' | 'owner';
+type StatusVariant = 'active' | 'pending' | 'removed' | 'owner';
 
-const getStatusVariant = (status: string): StatusVariant => {
-  switch (status?.toUpperCase()) {
-    case 'ACCEPTED':
-    case 'ACTIVE':
+const getStatusVariant = (status: CollaboratorStatus): StatusVariant => {
+  switch (status) {
+    case CollaboratorStatus.Active:
       return 'active';
-    case 'PENDING':
+    case CollaboratorStatus.Pending:
       return 'pending';
-    case 'DECLINED':
-      return 'declined';
-    case 'EXPIRED':
-    default:
-      return 'expired';
+    case CollaboratorStatus.Removed:
+      return 'removed';
   }
 };
 
-const getFormatStatus = (t: Translate) => (status: string) => {
-  switch (status?.toUpperCase()) {
-    case 'ACCEPTED':
-    case 'ACTIVE':
+const getFormatStatus = (t: Translate) => (status: CollaboratorStatus) => {
+  switch (status) {
+    case CollaboratorStatus.Active:
       return t('shoppingListScreens.statusActive');
-    case 'PENDING':
+    case CollaboratorStatus.Pending:
       return t('shoppingListScreens.statusInvited');
-    case 'DECLINED':
-      return t('shoppingListScreens.statusDeclined');
-    case 'EXPIRED':
-      return t('shoppingListScreens.statusExpired');
-    default:
-      return status || t('labels.unknown');
+    case CollaboratorStatus.Removed:
+      return t('shoppingListScreens.statusRemoved');
   }
 };
 
@@ -102,7 +94,7 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
       <View style={styles.memberInfo}>
         <View style={styles.avatar}>
           <Text role="bodyStrong" style={styles.avatarText}>
-            {displayName[0]?.toUpperCase() || '?'}
+            {displayName[0]?.toUpperCase() ?? '?'}
           </Text>
         </View>
         <View style={styles.memberDetails}>
@@ -181,7 +173,7 @@ const styles = StyleSheet.create(theme => ({
   },
   memberEmail: {
     color: theme.colors.textSecondary,
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   statusContainer: {
     flexDirection: 'row',
@@ -206,11 +198,7 @@ const styles = StyleSheet.create(theme => ({
           backgroundColor: theme.colors.warning + '20',
           borderColor: theme.colors.warning,
         },
-        declined: {
-          backgroundColor: theme.colors.error + '20',
-          borderColor: theme.colors.error,
-        },
-        expired: {
+        removed: {
           backgroundColor: theme.colors.textTertiary + '20',
           borderColor: theme.colors.textTertiary,
         },
@@ -226,8 +214,7 @@ const styles = StyleSheet.create(theme => ({
       status: {
         active: { color: theme.colors.success },
         pending: { color: theme.colors.warning },
-        declined: { color: theme.colors.error },
-        expired: { color: theme.colors.textTertiary },
+        removed: { color: theme.colors.textTertiary },
         owner: { color: theme.colors.primary },
       },
     },

@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { VerifyEmailDocument } from '#operations/auth/auth.generated';
 import { UserRole, AppTheme, ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -104,7 +104,7 @@ jest.mock('#components/atoms/SousChefLoader', () => {
 
 function buildVerifyMock(
   recordedVariables: Record<string, unknown>[] = [],
-): MockedResponse {
+): MockFor<typeof VerifyEmailDocument> {
   return {
     request: {
       query: VerifyEmailDocument,
@@ -390,7 +390,7 @@ describe('EmailVerificationDeepLinkScreen - retry', () => {
     // Reusing the initial-verification flag for a retry swaps the whole screen
     // back to "Verifying…" and takes away the failure the user is reading.
     // Progress belongs in the button alone.
-    const failingMock: MockedResponse = {
+    const failingMock: MockFor<typeof VerifyEmailDocument> = {
       request: { query: VerifyEmailDocument, variables: () => true },
       result: {
         data: {
@@ -420,8 +420,41 @@ describe('EmailVerificationDeepLinkScreen - retry', () => {
     // Still the failure state — no full-page loader, no lost error message.
     expect(screen.getByText('Verification Failed')).toBeTruthy();
     expect(
-      screen.getByText('Verification code is invalid or expired'),
-    ).toBeTruthy();
+      screen.getAllByText(
+        'Verification failed. The link may be expired or invalid.',
+      ).length,
+    ).toBeGreaterThan(0);
     expect(screen.queryByTestId('loader')).toBeNull();
+  });
+
+  // The refusal's `message` is English by construction; the screen rendered it.
+  it('shows the app’s own sentence for a refused link, never the server’s', async () => {
+    renderWithApollo(<EmailVerificationDeepLinkScreen />, {
+      operationMocks: [
+        {
+          request: { query: VerifyEmailDocument, variables: () => true },
+          result: {
+            data: {
+              verifyEmail: {
+                __typename: 'ValidationError',
+                code: ErrorCode.ValidationFailed,
+                message: 'SERVER PROSE',
+                field: 'code',
+              },
+            },
+          },
+        },
+      ],
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Verification Failed')).toBeTruthy();
+    });
+    expect(screen.queryByText('SERVER PROSE')).toBeNull();
+    expect(
+      screen.getAllByText(
+        'Verification failed. The link may be expired or invalid.',
+      ).length,
+    ).toBeGreaterThan(0);
   });
 });

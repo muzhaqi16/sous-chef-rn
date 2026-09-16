@@ -1,8 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
-import {
-  useDeferredSearch,
-  useDeferredSearchWithSort,
-} from '#features/recipes/hooks/useDeferredSearch';
+import { useDeferredSearch } from '#features/recipes/hooks/useDeferredSearch';
 
 interface TestItem {
   id: number;
@@ -74,30 +71,6 @@ describe('useDeferredSearch', () => {
     ]);
   });
 
-  it('returns deferredQuery matching searchQuery in synchronous test env', () => {
-    const { result } = renderHook(() =>
-      useDeferredSearch({
-        items,
-        searchQuery: 'cherry',
-        searchFn,
-      }),
-    );
-
-    expect(result.current.deferredQuery).toBe('cherry');
-  });
-
-  it('returns isStale as false in synchronous test env', () => {
-    const { result } = renderHook(() =>
-      useDeferredSearch({
-        items,
-        searchQuery: 'banana',
-        searchFn,
-      }),
-    );
-
-    expect(result.current.isStale).toBe(false);
-  });
-
   it('trims whitespace from query before filtering', () => {
     const { result } = renderHook(() =>
       useDeferredSearch({
@@ -132,14 +105,12 @@ describe('useDeferredSearch', () => {
 
       // Results lag the query on purpose: the array feeds a FlashList `data`
       // prop, so it must not change during an interruptible render.
-      expect(result.current.isStale).toBe(true);
       expect(result.current.results).toEqual([{ id: 1, name: 'Apple' }]);
 
       act(() => {
         jest.advanceTimersByTime(200);
       });
 
-      expect(result.current.isStale).toBe(false);
       expect(result.current.results).toEqual([
         { id: 2, name: 'Banana' },
         { id: 4, name: 'Blueberry' },
@@ -147,64 +118,5 @@ describe('useDeferredSearch', () => {
     } finally {
       jest.useRealTimers();
     }
-  });
-});
-
-describe('useDeferredSearchWithSort', () => {
-  it('sorts results when sortFn is provided', () => {
-    const sortFn = (a: TestItem, b: TestItem) => b.name.localeCompare(a.name); // reverse alphabetical
-
-    const { result } = renderHook(() =>
-      useDeferredSearchWithSort({
-        items,
-        searchQuery: 'b',
-        searchFn,
-        sortFn,
-      }),
-    );
-
-    expect(result.current.results).toEqual([
-      { id: 4, name: 'Blueberry' },
-      { id: 2, name: 'Banana' },
-    ]);
-  });
-
-  it('returns unsorted results when no sortFn is provided', () => {
-    const { result } = renderHook(() =>
-      useDeferredSearchWithSort({
-        items,
-        searchQuery: 'a',
-        searchFn,
-      }),
-    );
-
-    // Matches Apple, Banana, Avocado — original order preserved
-    expect(result.current.results).toEqual([
-      { id: 1, name: 'Apple' },
-      { id: 2, name: 'Banana' },
-      { id: 3, name: 'Avocado' },
-    ]);
-  });
-
-  it('returns all items sorted when query is empty and sortFn is provided', () => {
-    const sortFn = (a: TestItem, b: TestItem) => a.name.localeCompare(b.name); // alphabetical
-
-    const { result } = renderHook(() =>
-      useDeferredSearchWithSort({
-        items,
-        searchQuery: '',
-        searchFn,
-        sortFn,
-        minQueryLength: 1,
-      }),
-    );
-
-    expect(result.current.results).toEqual([
-      { id: 1, name: 'Apple' },
-      { id: 3, name: 'Avocado' },
-      { id: 2, name: 'Banana' },
-      { id: 4, name: 'Blueberry' },
-      { id: 5, name: 'Cherry' },
-    ]);
   });
 });

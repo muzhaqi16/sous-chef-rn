@@ -72,7 +72,6 @@
     "deleteWarning": "Fshirja e këtij qilari do të heqë përgjithmonë të gjithë artikujt brenda tij. Ky veprim nuk mund të zhbëhet.",
     "deleteConfirmMessage": "Vërtet dëshiron ta fshish këtë qilar? Ky veprim nuk mund të zhbëhet dhe do të heqë të gjithë artikujt.",
     "nameEmptyError": "Emri i qilarit nuk mund të jetë bosh",
-    "createFailed": "Nuk u krijua dot qilari",
     "loadErrorTitle": "Gabim ngarkimi qilari",
     "loadErrorMessage": "Nuk u ngarkuan dot të dhënat. Provoje sërish.",
     "userCreatedDescription": "Qilar i krijuar nga përdoruesi"
@@ -177,7 +176,12 @@
     "currentLabel": "Aktualisht: ",
     "newQuantity": "Sasia e re",
     "reasonPlaceholder": "Pse po rregullohet sasia?",
-    "remainingWeightPlaceholder": "Lëre bosh për rregullim automatik"
+    "remainingWeightPlaceholder": "Lëre bosh për rregullim automatik",
+    "systemReason": {
+      "stackMerged": "Rregullim pas bashkimit të artikujve",
+      "stackPurged": "Heqje administrative",
+      "stackRemoved": "Hequr nga qilari"
+    }
   },
   "recordWaste": {
     "wasteBy": "Mbeturina nga",
@@ -300,7 +304,8 @@
     "acquisitionMethod": "Si u sigurua",
     "methodPurchased": "Blerë",
     "methodHomegrown": "Rritur në shtëpi",
-    "methodGifted": "Dhuratë"
+    "methodGifted": "Dhuratë",
+    "methodBarcodeScan": "Skanim i barkodit"
   },
   "pantryScreen": {
     "greetingFallback": "Mirëmëngjes",
@@ -361,9 +366,8 @@
   },
   "duplicateItem": {
     "title": "Artikulli është tashmë në qilar",
-    "body": "Ky artikull është tashmë në qilarin tënd. Dëshiron ta riplotësosh apo ta shtosh veçmas?",
-    "restock": "Riplotëso",
-    "addAnyway": "Shto gjithsesi"
+    "body": "Ky artikull është tashmë në qilarin tënd në këtë njësi. Dëshiron ta riplotësosh?",
+    "restock": "Riplotëso"
   },
   "expirationAction": {
     "cooked": "Gatuar",
@@ -418,6 +422,9 @@
   "pantryItemCard": {
     "remainingAmount": "Mbeten {{amount}}",
     "portionsLeft_one": "Mbetet {{count}} {{unit}}",
-    "portionsLeft_other": "Mbeten {{count}} {{unit}}"
+    "portionsLeft_other": "Mbeten {{count}} {{unit}}",
+    "packageContents_one": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
+    "packageContents_other": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
+    "packageWithTotal": "{{breakdown}} ({{total}} {{weightUnit}} gjithsej)"
   }
 }

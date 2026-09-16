@@ -1,4 +1,5 @@
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { ThemedKeyboardAwareScrollView } from '#components/atoms/themedComponents';

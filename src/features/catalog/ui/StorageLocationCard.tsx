@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -9,29 +9,28 @@ import { StorageLocationIcon } from '#features/catalog/ui/StorageLocationIcon';
 import { commonStyles } from '#/styles/commonStyles';
 import { Badge } from '#components/atoms/Badge';
 import { Text } from '#components/atoms/Text';
-import { STORAGE_TYPE_VALUES } from '#features/catalog/components/storageLocationFormConfig';
+import { STORAGE_TYPE_LABEL_KEYS } from '#features/catalog/components/storageLocationFormConfig';
+import {
+  StorageState,
+  type StorageType,
+} from '#/graphql/generated/schemaTypes';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /** Key paths, not resolved strings — `t` is only available inside the
  *  component, and resolving at module load would freeze the language. */
-const TEMPERATURE_LABEL_KEYS: Record<string, string> = {
-  REFRIGERATED: 'storageState.REFRIGERATED',
-  FROZEN: 'storageState.FROZEN',
-  AMBIENT: 'storageState.AMBIENT',
+const TEMPERATURE_LABEL_KEYS: Record<StorageState, TranslationKey | null> = {
+  [StorageState.Refrigerated]: 'storageState.REFRIGERATED',
+  [StorageState.Frozen]: 'storageState.FROZEN',
+  [StorageState.Ambient]: 'storageState.AMBIENT',
+  [StorageState.None]: null,
 };
-
-const STORAGE_TYPE_LABEL_KEYS: Record<string, string> = Object.fromEntries(
-  STORAGE_TYPE_VALUES.map(({ value, key }) => [
-    value,
-    `storageLocationForm.${key}`,
-  ]),
-);
 
 /** The storage-location fields this card renders. */
 interface StorageLocationCardLocation {
-  type: string;
+  type: StorageType;
   name: string;
   color?: string | null;
-  temperature?: string | null;
+  temperature?: StorageState | null;
   capacity?: number | null;
   capacityUnit?: string | null;
   currentItemCount?: number | null;
@@ -65,21 +64,25 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
   actionsDisabled = false,
 }) => {
   const { t } = useTranslation();
-  /** Fallback for a type the schema gained after this table was written. */
-  const formatType = (type: string): string => {
-    return type
-      .split('_')
-      .map(word => word.charAt(0) + word.slice(1).toLowerCase())
-      .join(' ');
-  };
 
   const hasColor = !!location.color;
-  const typeLabelKey = STORAGE_TYPE_LABEL_KEYS[location.type];
-  const typeLabel = typeLabelKey ? t(typeLabelKey) : formatType(location.type);
+  const typeLabel = t(
+    `storageLocationForm.${STORAGE_TYPE_LABEL_KEYS[location.type]}`,
+  );
   const temperatureLabelKey = location.temperature
     ? TEMPERATURE_LABEL_KEYS[location.temperature]
-    : undefined;
-  const hasCapacity = location.capacity != null && location.capacity > 0;
+    : null;
+  const { capacity } = location;
+  const capacityUnit = firstNonBlank(location.capacityUnit);
+  let capacityText: string | null = null;
+  if (capacity != null && capacity > 0) {
+    capacityText = capacityUnit
+      ? t('storageLocationCard.capacityWithUnit', {
+          capacity,
+          unit: capacityUnit,
+        })
+      : t('storageLocationCard.capacity', { count: capacity });
+  }
 
   return (
     <View style={[commonStyles.card, commonStyles.shadow, styles.card]}>
@@ -105,7 +108,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
               <StorageLocationIcon type={location.type} size={20} />
               <View style={styles.info}>
                 <View style={commonStyles.rowSpaceBetween}>
-                  <Text style={commonStyles.title}>{location.name}</Text>
+                  <Text role="heading">{location.name}</Text>
                   <View style={styles.badges}>
                     {!!isDefault && (
                       <Badge variant="primary">
@@ -117,8 +120,12 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                     )}
                   </View>
                 </View>
-                <Text style={[commonStyles.caption, styles.subtitle]}>
-                  {!location.parentLocation && <Text>{typeLabel} • </Text>}
+                <Text role="caption" tone="secondary" style={styles.subtitle}>
+                  {!location.parentLocation && (
+                    <Text role="caption" tone="secondary">
+                      {typeLabel} •{' '}
+                    </Text>
+                  )}
                   {t('labels.itemCount', {
                     // i18next selects the plural form from `count`, and a
                     // non-number silently lands on the wrong one. The prop is
@@ -126,15 +133,18 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                     // schema has `currentItemCount: Int!`.
                     count: location.currentItemCount ?? 0,
                   })}
-                  {hasCapacity ? (
-                    <Text>
+                  {capacityText ? (
+                    <Text role="caption" tone="secondary">
                       {' '}
-                      / {location.capacity}{' '}
-                      {location.capacityUnit || t('labels.units')}
+                      {capacityText}
                     </Text>
                   ) : null}
                   {!!location.parentLocation?.name && (
-                    <Text tone="secondary" style={styles.parentInfo}>
+                    <Text
+                      role="caption"
+                      tone="secondary"
+                      style={styles.parentInfo}
+                    >
                       {' • '}
                       {t('storageLocationCard.insideParent', {
                         parent: location.parentLocation.name,
@@ -203,7 +213,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                 size={18}
                 tone={actionsDisabled ? 'textSecondary' : 'error'}
               />
-              <Text role="label" tone={actionsDisabled ? 'tertiary' : 'error'}>
+              <Text role="label" tone={actionsDisabled ? 'tertiary' : 'danger'}>
                 {t('labels.delete')}
               </Text>
             </AppPressable>

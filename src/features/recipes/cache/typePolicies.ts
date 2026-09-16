@@ -29,10 +29,6 @@ export const recipesTypePolicies: TypePolicies = {
       },
       recipes: {
         ...mergeConnectionByNodeId(),
-        // MyRecipes passes category/difficulty nested inside `filters:` —
-        // keying on the whole input object keeps each filter set in its
-        // own entry (variable-less cache.updateQuery writers collapse to
-        // the same `filters: {}` key on both write and read paths).
         keyArgs: ['filters'],
       },
     },

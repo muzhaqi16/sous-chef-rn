@@ -33,8 +33,6 @@ export interface AutocompleteSearchReturn<TItem> {
   searchTerm: string;
   /** Whether search is loading */
   isLoading: boolean;
-  /** Whether device is online */
-  isOnline: boolean;
   /** Whether search should be triggered (meets min chars and online) */
   shouldSearch: boolean;
   /** Handle search term change (call from onChangeText) */
@@ -203,7 +201,6 @@ export function useAutocompleteSearch<TItem>(
     displayItems,
     searchTerm,
     isLoading: loading,
-    isOnline,
     shouldSearch,
     handleSearchTermChange,
     setSearchTerm,

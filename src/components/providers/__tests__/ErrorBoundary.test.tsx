@@ -6,17 +6,9 @@ import ErrorBoundary, {
   NavigationErrorBoundary,
   AuthErrorBoundary,
   AppErrorBoundary,
-  useErrorHandler,
 } from '../ErrorBoundary';
 
 // Mock Telemetry
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    trackError: jest.fn(),
-    increment: jest.fn(),
-  },
-}));
-
 // Suppress console.error for expected errors in tests
 const originalConsoleError = console.error;
 beforeAll(() => {
@@ -186,20 +178,5 @@ describe('AppErrorBoundary', () => {
     );
     expect(screen.getByText('Something went wrong')).toBeTruthy();
     expect(useSafeAreaInsets).not.toHaveBeenCalled();
-  });
-});
-
-describe('useErrorHandler', () => {
-  it('returns a function', () => {
-    const TestComponent: React.FC = () => {
-      const handleError = useErrorHandler();
-      return (
-        <Text>
-          {typeof handleError === 'function' ? 'is function' : 'not function'}
-        </Text>
-      );
-    };
-    render(<TestComponent />);
-    expect(screen.getByText('is function')).toBeTruthy();
   });
 });

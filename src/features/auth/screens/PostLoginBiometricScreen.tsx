@@ -9,6 +9,7 @@ import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { BiometricSetupView } from '#components/organisms/biometric/BiometricSetupView';
 import { useBiometricSetup } from '#components/organisms/biometric/useBiometricSetup';
+import { authTestIDs } from '#features/auth/testIDs';
 
 /**
  * Post-login biometric enrollment, as its OWN screen between login and the main
@@ -54,7 +55,7 @@ export const PostLoginBiometricScreen = () => {
   return (
     <ThemedSafeAreaView
       style={styles.safeArea}
-      testID="post-login-biometric-screen"
+      testID={authTestIDs.postLoginBiometricScreen}
     >
       <ThemedKeyboardAwareScrollView
         contentContainerStyle={styles.scrollContent}
@@ -73,7 +74,7 @@ export const PostLoginBiometricScreen = () => {
             skipLabel={bio.skipLabel}
             onEnable={bio.handleEnable}
             onSkip={bio.handleSkip}
-            testID="post-login-biometric"
+            testID={authTestIDs.postLoginBiometricView}
           />
         </View>
       </ThemedKeyboardAwareScrollView>

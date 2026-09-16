@@ -6,7 +6,8 @@ import {
   userEvent,
   fireEvent,
 } from '@testing-library/react-native';
-import { NetWeightEntryList, NetWeightEntry } from '../NetWeightEntryList';
+import type { NetWeightEntry } from '../NetWeightEntryList';
+import { NetWeightEntryList } from '../NetWeightEntryList';
 
 jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,

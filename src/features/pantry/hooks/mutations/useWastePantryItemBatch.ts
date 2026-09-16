@@ -10,10 +10,8 @@ import { gql } from '@apollo/client';
 import { WastePantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
 import { BatchStatus, type WasteReason } from '#/graphql/generated/schemaTypes';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { handleMutationError } from '#/utils/errorHandlers';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
-import { t } from '#/i18n';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { useTranslation } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
 
@@ -33,15 +31,9 @@ const BATCH_STATUS_FRAGMENT = gql`
 export function useWastePantryItemBatch({
   onSuccess,
 }: UseWastePantryItemBatchOptions = {}) {
+  const { t } = useTranslation();
   const client = useApolloClient();
-  const [wasteMutation, { loading }] = useMutation(
-    WastePantryItemBatchDocument,
-    {
-      onError: error => {
-        handleMutationError(error, { operation: 'Waste Batch' });
-      },
-    },
-  );
+  const [wasteMutation] = useMutation(WastePantryItemBatchDocument);
 
   const wasteBatch = async (
     batchId: string,
@@ -65,8 +57,7 @@ export function useWastePantryItemBatch({
     });
 
     // Wasting empties the batch, so the server returns it at zero with a
-    // `depletedAt`. Writing only `status` left the row reading "3 bunch" with
-    // no date under a Wasted badge until a refetch — and offline, for good.
+    // `depletedAt`; writing `status` alone leaves the row showing its old amount.
     const writeState = (
       status: BatchStatus,
       quantity: number | null,
@@ -96,23 +87,7 @@ export function useWastePantryItemBatch({
       });
     }
 
-    const result = await wasteMutation({
-      variables: {
-        input: {
-          batchId,
-          wasteReason,
-          isComposted,
-          isRecycled,
-          notes,
-          idempotencyKey: generateEntityId(),
-        },
-      },
-      context: { localFirst: true },
-    });
-
-    const outcome = classifyCreateResult(result);
-
-    if (outcome === 'rejected') {
+    const revert = () => {
       // Resolved before the try — a `??` inside a try body makes the React
       // Compiler bail out of this hook.
       const revertedStatus = snapshot?.status ?? BatchStatus.Active;
@@ -126,19 +101,39 @@ export function useWastePantryItemBatch({
         });
       }
       clearPersistence();
-      // onError covers transport errors; a non-success union payload has none.
-      alertRejectedMutation(result, t('errors.wasteBatchFailed'));
-      return false;
-    }
+    };
 
-    // created (response normalized the authoritative batches) or queued
-    // (replays the canonical mutation, deduped by its idempotencyKey).
-    if (outcome === 'created') {
+    const settled = await settleMutation(
+      () =>
+        wasteMutation({
+          variables: {
+            input: {
+              batchId,
+              wasteReason,
+              isComposted,
+              isRecycled,
+              notes,
+              idempotencyKey: generateEntityId(),
+            },
+          },
+          context: { localFirst: true },
+        }),
+      {
+        document: WastePantryItemBatchDocument,
+        fallback: t('errors.wasteBatchFailed'),
+        onFailed: revert,
+      },
+    );
+    if (settled.status === 'failed') return false;
+
+    // Applied: the response normalized the authoritative batches. Queued: the
+    // persisted value stands until the replay lands.
+    if (settled.status === 'applied') {
       clearPersistence();
     }
     onSuccess?.();
     return true;
   };
 
-  return { wasteBatch, loading };
+  return { wasteBatch };
 }

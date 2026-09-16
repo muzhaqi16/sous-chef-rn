@@ -15,7 +15,23 @@ import {
   MembershipRole,
   MembershipStatus,
 } from '#/graphql/generated/schemaTypes';
-import type { GetHomesQuery } from '#operations/home/home.generated';
+import type {
+  GetHomeQuery,
+  GetHomesQuery,
+} from '#operations/home/home.generated';
+
+// The document's own shapes. Annotating a builder with one narrows every
+// `__typename` inside it, and fails the build when the selection gains a field
+// the fixture does not supply.
+type HomeConnection = Unmasked<GetHomesQuery>['homes'];
+type HomeNode = HomeConnection['edges'][number]['node'];
+type PageInfo = HomeConnection['pageInfo'];
+
+const pageInfo = (): PageInfo => ({
+  __typename: 'PageInfo',
+  hasNextPage: false,
+  endCursor: null,
+});
 
 export interface PantryFixture {
   id: string;
@@ -59,11 +75,7 @@ function connection<TN extends string, ET extends string, T>(
       cursor: `c${i}`,
       node,
     })),
-    pageInfo: {
-      __typename: 'PageInfo' as const,
-      hasNextPage: false,
-      endCursor: null as string | null,
-    },
+    pageInfo: pageInfo(),
     totalCount: nodes.length,
   };
 }
@@ -73,28 +85,18 @@ function connection<TN extends string, ET extends string, T>(
  * Pantries, members, and invites are emitted as proper Connection wrappers
  * so `normalizeHome` (production code) extracts them correctly.
  */
-export function homeNode(home: HomeFixture) {
+export function homeNode(home: HomeFixture): HomeNode {
   return {
-    __typename: 'Home' as const,
+    __typename: 'Home',
     id: home.id,
     name: home.name ?? `Home ${home.id}`,
-    description: null,
-    timezone: 'UTC',
-    currency: 'USD',
-    isPublic: false,
-    joinCode: null,
-    allowJoinCode: false,
-    joinLink: null,
-    maxMembers: 10,
     isDefault: home.isDefault ?? false,
     version: home.version ?? 1,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
     membersConnection: connection(
       'MembershipConnection',
       'MembershipEdge',
       (home.members ?? []).map(m => ({
-        __typename: 'Membership' as const,
+        __typename: 'Membership',
         id: m.id,
         homeId: home.id,
         userId: m.userId ?? `user-${m.id}`,
@@ -109,7 +111,7 @@ export function homeNode(home: HomeFixture) {
         canRemoveItems: true,
         canInviteOthers: false,
         user: {
-          __typename: 'User' as const,
+          __typename: 'User',
           id: m.userId ?? `user-${m.id}`,
           email: `${m.userId ?? `user-${m.id}`}@example.com`,
           // The sharing-gated name a housemate reads; null here so a caller
@@ -122,7 +124,7 @@ export function homeNode(home: HomeFixture) {
       'HomeInviteConnection',
       'HomeInviteEdge',
       (home.invites ?? []).map(i => ({
-        __typename: 'HomeInvite' as const,
+        __typename: 'HomeInvite',
         id: i.id,
         email: i.email ?? `invite-${i.id}@example.com`,
         recipientName: i.recipientName ?? null,
@@ -136,18 +138,16 @@ export function homeNode(home: HomeFixture) {
       'PantryConnection',
       'PantryEdge',
       (home.pantries ?? []).map(p => ({
-        __typename: 'Pantry' as const,
+        __typename: 'Pantry',
         id: p.id,
         name: p.name ?? `Pantry ${p.id}`,
         isDefault: p.isDefault ?? false,
       })),
     ),
     myMembership: {
-      __typename: 'Membership' as const,
+      __typename: 'Membership',
       id: `mm-${home.id}`,
       role: MembershipRole.Owner,
-      status: MembershipStatus.Active,
-      displayName: null,
       canManageHome: true,
       canViewPantry: true,
       canEditPantry: true,
@@ -155,6 +155,39 @@ export function homeNode(home: HomeFixture) {
       canRemoveItems: true,
       canInviteOthers: true,
     },
+  };
+}
+
+type HomeDetailNode = NonNullable<Unmasked<GetHomeQuery>['home']>;
+
+/**
+ * `GetHome` spreads the detail fragment, so it selects more than the list does.
+ * Built from the list node rather than beside it, so the shared fields cannot
+ * drift apart.
+ */
+export function homeDetailNode(home: HomeFixture): HomeDetailNode {
+  const listNode = homeNode(home);
+  return {
+    ...listNode,
+    myMembership: listNode.myMembership && {
+      ...listNode.myMembership,
+      status: MembershipStatus.Active,
+      displayName: null,
+    },
+    // The detail fragment selects more per member than the list does; an empty
+    // connection satisfies either, and no consumer of this fixture reads them.
+    membersConnection: { ...listNode.membersConnection, edges: [] },
+    invitesConnection: { ...listNode.invitesConnection, edges: [] },
+    description: null,
+    timezone: 'UTC',
+    currency: 'USD',
+    isPublic: false,
+    joinCode: null,
+    allowJoinCode: false,
+    joinLink: null,
+    maxMembers: 10,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
   };
 }
 

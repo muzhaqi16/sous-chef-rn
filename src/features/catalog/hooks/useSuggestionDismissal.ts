@@ -6,6 +6,7 @@ import {
 } from '#operations/item/item.generated';
 import type { SuggestionSurface } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 
 interface DismissTarget {
   itemId: string;
@@ -26,46 +27,47 @@ export function useSuggestionDismissal(
   const [dismiss] = useMutation(MarkSuggestionDismissedDocument);
   const [undismiss] = useMutation(MarkSuggestionActiveDocument);
 
-  const undo = (itemId: string) => {
-    undismiss({ variables: { input: { itemId, surface } } })
-      .then(result => {
-        // Union error variants resolve in `.then` (not `.catch`) — mirror
-        // dismissSuggestion and only act on the success payload. On success the
-        // item comes back via the resync refetch (if it still qualifies). A
-        // rejected undo surfaces an error instead of silently doing nothing.
-        if (
-          result.data?.markSuggestionActive?.__typename ===
-          'MarkSuggestionActivePayload'
-        ) {
-          refetch();
-        } else {
-          toastService.error(t('addItemSheet.undoFailed'));
-        }
-      })
-      .catch(() => toastService.error(t('addItemSheet.undoFailed')));
+  const undo = async (itemId: string) => {
+    const settled = await settleMutation(
+      () => undismiss({ variables: { input: { itemId, surface } } }),
+      {
+        document: MarkSuggestionActiveDocument,
+        fallback: t('addItemSheet.undoFailed'),
+        present: 'none',
+      },
+    );
+    // A failed undo leaves the item dismissed server-side, so nothing refetches.
+    if (settled.failure) {
+      toastService.error(settled.failure.body);
+      return;
+    }
+    refetch();
+  };
+
+  const settleDismissal = async (itemId: string) => {
+    // Success needs no refetch: the caller's optimistic removal already hid it.
+    const settled = await settleMutation(
+      () => dismiss({ variables: { input: { itemId, surface } } }),
+      {
+        document: MarkSuggestionDismissedDocument,
+        fallback: t('addItemSheet.dismissFailed'),
+        onFailed: refetch,
+        present: 'none',
+      },
+    );
+    if (settled.failure) toastService.error(settled.failure.body);
   };
 
   const dismissSuggestion = ({ itemId, name }: DismissTarget) => {
     toastService.success(t('addItemSheet.dismissed', { name }), {
-      action: { label: t('addItemSheet.undo'), onPress: () => undo(itemId) },
+      action: {
+        label: t('addItemSheet.undo'),
+        onPress: () => {
+          void undo(itemId);
+        },
+      },
     });
-
-    dismiss({ variables: { input: { itemId, surface } } })
-      .then(result => {
-        const payload = result.data?.markSuggestionDismissed;
-        // Union error variants resolve in `.then` (not `.catch`) — restore on
-        // anything that isn't the success payload. Success needs no refetch: the
-        // caller's optimistic removal already hid it, and the server-side
-        // dismissal keeps it hidden on the next cache-and-network load.
-        if (payload?.__typename !== 'MarkSuggestionDismissedPayload') {
-          refetch();
-          toastService.error(t('addItemSheet.dismissFailed'));
-        }
-      })
-      .catch(() => {
-        refetch();
-        toastService.error(t('addItemSheet.dismissFailed'));
-      });
+    void settleDismissal(itemId);
   };
 
   return { dismissSuggestion };

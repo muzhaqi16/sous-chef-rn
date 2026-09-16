@@ -42,7 +42,7 @@ mutation AddItemsToShoppingListFromRecipe(
 # the persisted-query manifest keys by, so it held one entry for three
 # definitions.
 query GetShoppingListsLiteForRecipe($homeId: ID, $first: Int, $after: String) {
-  shoppingLists(filters: { homeId: $homeId }, first: $first, after: $after) {
+  shoppingLists(homeId: $homeId, first: $first, after: $after) {
     edges {
       cursor
       node {

@@ -208,7 +208,7 @@ both sides.
 | `component_render_count` | `component` | Commits per component (re-render churn) |
 | `slow_screen_transitions_total` | `screen` | Transitions > 500ms. Threshold-gated: read durations from `screen_interactive_duration_ms`, never from this counter's labels. |
 | `offline_queue_permanent_failures_total` | | Queued writes the client gave up on |
-| `apollo_client_errors_total` | `operation`, `type` | Apollo error surfaced to a hook. `type` is `cache` or `graphql`. |
+| `apollo_client_errors_total` | `operation`, `type` | Apollo error surfaced to a hook. `type` is `invariant` for Apollo's own `InvariantError` (a cache write the type policies refuse, a store cleared under an in-flight query), `graphql` for everything else. |
 | `app_level_errors_total` | | Error caught by the outermost `AppErrorBoundary`. |
 | `auth_errors_total` | | Error caught by the auth-screen error boundary. |
 | `navigation_errors_total` | | Error caught by the navigation error boundary. |
@@ -222,6 +222,7 @@ both sides.
 | `offline_queue_drain_started_total` | | A queue drain actually began. |
 | `offline_queue_drain_skipped_total` | `reason` | A drain was requested and declined - `already_processing`, no authenticated user, API unavailable. Pair with `_started_total` to see whether writes are replaying at all. |
 | `offline_queue_conflicts_total` | `operation` | A replayed mutation came back as a conflict. |
+| `mutation_refused_total` | `operation`, `code` | The server REFUSED a write and said so in the payload - a business outcome, not an app error, so it is counted here rather than reported to error tracking. |
 | `offline_queue_auth_parked_total` | `operation` | A queued write was parked because the token could not be refreshed. NOT a rejection - the server never saw it; it is revived on the next sign-in. |
 | `reconnect_backfill_queries_total` | | Active queries refetched after an outage ended. Incremented by the number refetched, so it is a volume, not an event count. |
 | `storage_recovery_instance_used` | | The device key was unavailable and the session fell back to unencrypted recovery storage. Any non-zero value means encrypted data was not readable that launch. |
@@ -258,6 +259,7 @@ both sides.
 | `app_js_entry_to_store_ready_ms` | | JS-bundle entry to the Zustand rehydrate callback. NOT hydration cost - the window is dominated by module evaluation; the blob read + parse + rehydrate is ~5 ms of it. Renamed from `app_zustand_hydration_ms`, whose name implied the opposite. |
 | `cache_persist_extract_ms` | | `cache.extract()` cost |
 | `cache_persist_stringify_ms` | | Cache `JSON.stringify` cost |
+| `cache_persist_write_ms` | | The two MMKV `set` calls that store the serialized cache and its shape version. With extract and stringify, the whole synchronous cost of one persist |
 | `resort_edges_duration_ms` | | Cost of re-sorting a cached `itemsConnection` after a subscription event |
 | `flashlist_initial_load_ms` | `component` | FlashList `onLoad` - mount to first layout complete, measured to the rAF after layout settles. Device-sensitive: measured 40 ms on the Pixel_9a emulator and 301-934 ms on an SM-S908U1. Do not read an emulator value as a device value. Since 2026-08-26 the tail of the window also contains the skeleton-overlay teardown that the first-content-layout latch schedules at exactly that boundary (SortableShoppingList ~200 → ~300 ms from this alone) - compare within eras, not across them (`perf-blank-window-2026-08-26.md`). |
 | `flashlist_scroll_coverage_ratio` | `component` | Mounted cells / expected visible cells during scroll, custom bounds. 1.0 is full coverage. Since 2026-08-26, emitted only by sampled sessions - see `flashlist_blank_cells_total`. |
@@ -392,7 +394,7 @@ counter and keep the log for the anomalous branch, as
 | Logs not appearing | Logs endpoint not configured or token missing `logs:write` scope | Check `OTLP_LOGS_ENDPOINT` is set and `OTLP_LOGS_AUTH_*` token has the correct scopes |
 | A whole run emits nothing, with no error | No `.env`, so `OTLP_METRICS_ENDPOINT` is `undefined` and `transports.http` resolves false | Create `.env`; verify with `npm run genenv && grep OTLP src/config/env.generated.ts` — the values must be strings |
 | A Detox run emits nothing, but a hand-run build works | `e2e/init.ts` sets `detoxDisableBackgroundServices`, which switches telemetry off | Prefix the run with `E2E_TELEMETRY=1`, which adds `detoxEnableTelemetry` |
-| A Detox **release** run ignores `E2E_TELEMETRY` and the injected auth tokens | `useStartupInit` reads launch args only when `Environment.allowsLaunchArgAuth()`, which is a named, default-off build flag | Build through `scripts/run-ios.sh` / `scripts/run-android.sh`, which export `ALLOW_LAUNCH_ARG_AUTH=true` for `debug`/`release`/`localRelease`. Never set it in a committed env file: `scripts/check-launch-arg-auth.mjs` fails any CI or production/staging build that has it |
+| A Detox **release** run ignores `E2E_TELEMETRY` and the injected auth tokens | `useStartupInit` reads launch args only when `Environment.allowsLaunchArgAuth()`, which is a named, default-off build flag | Build through `scripts/run-ios.sh` / `scripts/run-android.sh`, which export `ALLOW_LAUNCH_ARG_AUTH=true` for `debug`/`localRelease` on Android and `debug`/`release`/`localRelease` for the iOS simulator. Never set it in a committed env file: `scripts/check-launch-arg-auth.mjs` fails any CI or production/staging build that has it |
 | 404 on `/v1/metrics/v1/metrics` | `OTLP_*_ENDPOINT` was given a full path | The transport appends `/v1/metrics` and `/v1/logs` itself, so configure the BASE path only |
 | iOS emits nothing against a plaintext collector | App Transport Security | `NSAllowsLocalNetworking` permits plaintext to private-range and `.local` hosts; any other plaintext host is blocked on iOS and needs TLS |
 

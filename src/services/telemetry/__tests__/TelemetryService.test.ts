@@ -210,24 +210,24 @@ describe('TelemetryService', () => {
 
   // ------------------------------------------------------------------ log
   describe('log', () => {
-    it('is a no-op when enabled is false', () => {
+    it('is a no-op when enabled is false', async () => {
       const service = new TelemetryService({
         enabled: false,
         enableLogs: true,
       });
       service.log('info', 'ignored');
       // Nothing buffered, flush should send nothing
-      service.flush();
+      await service.flush();
       expect(mockSendLogs).not.toHaveBeenCalled();
     });
 
-    it('is a no-op when enableLogs is false', () => {
+    it('is a no-op when enableLogs is false', async () => {
       const service = new TelemetryService({
         enabled: true,
         enableLogs: false,
       });
       service.log('info', 'ignored');
-      service.flush();
+      await service.flush();
       expect(mockSendLogs).not.toHaveBeenCalled();
     });
 

@@ -6,11 +6,10 @@ import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWra
 import { Button } from '#components/molecules/Button';
 import { useUpdateUser, useUser } from '#store/useAppStore';
 import { useCompleteOnboarding } from '#features/onboarding/hooks/useCompleteOnboarding';
-import { handleMutationError } from '#/utils/errorHandlers';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
+import { onboardingTestIDs } from '#features/onboarding/testIDs';
 
 export const OnboardingCompleteScreen = () => {
   const { t } = useTranslation();
@@ -31,26 +30,15 @@ export const OnboardingCompleteScreen = () => {
     setIsCompleting(true);
     setError(null);
 
-    let result;
-    try {
-      result = await completeOnboarding();
-    } catch (error) {
-      handleMutationError(error, { operation: 'Complete Onboarding' });
-      setError(t('onBoarding.completeOnboardingError'));
-      setIsCompleting(false);
-    }
-    if (!result) return; // transport error — already surfaced above
-
-    // A resolved error member doesn't throw under errorPolicy:'all' — inspect
-    // the union before marking the user onboarded and navigating to the app.
-    if (alertIfRejected(result, t('onBoarding.completeOnboardingError'))) {
+    // A failure is alerted by the hook; the inline copy keeps it on screen.
+    if (!(await completeOnboarding())) {
       setError(t('onBoarding.completeOnboardingError'));
       setIsCompleting(false);
       return;
     }
 
     // Success — RootNavigator auto-navigates to main_app once onBoarded = true.
-    if (user) updateUser({ ...user, onBoarded: true });
+    updateUser({ onBoarded: true });
     setIsCompleting(false);
   };
 
@@ -58,11 +46,11 @@ export const OnboardingCompleteScreen = () => {
     <OnBoardingWrapper
       title={t('onBoarding.completeTitle')}
       subtitle={t('onBoarding.completeSubtitle')}
-      testID="onboarding-complete-screen"
+      testID={onboardingTestIDs.completeScreen}
     >
       <View style={styles.container}>
         <View style={styles.successIcon}>
-          <Icon name="checkmark" size={44} tone="onPrimary" />
+          <Icon name="checkmark" size={44} tone="onSuccess" />
         </View>
 
         <Text role="heading" align="center" style={styles.congratsText}>
@@ -70,16 +58,16 @@ export const OnboardingCompleteScreen = () => {
         </Text>
 
         <View style={styles.summaryList}>
-          <Text tone="secondary" style={styles.summaryItem}>
+          <Text role="body" tone="secondary" style={styles.summaryItem}>
             {`• ${t('onBoarding.summaryHomeAndPantry')}`}
           </Text>
-          <Text tone="secondary" style={styles.summaryItem}>
+          <Text role="body" tone="secondary" style={styles.summaryItem}>
             {`• ${t('onBoarding.summaryShoppingList')}`}
           </Text>
-          <Text tone="secondary" style={styles.summaryItem}>
+          <Text role="body" tone="secondary" style={styles.summaryItem}>
             {`• ${t('onBoarding.summaryInitialPantryItems')}`}
           </Text>
-          <Text tone="secondary" style={styles.summaryItem}>
+          <Text role="body" tone="secondary" style={styles.summaryItem}>
             {`• ${t('onBoarding.summaryInvitedFamily')}`}
           </Text>
         </View>
@@ -95,7 +83,7 @@ export const OnboardingCompleteScreen = () => {
 
         {!!error && (
           <View style={styles.errorContainer}>
-            <Text role="caption" tone="error" align="center">
+            <Text role="error" tone="error" align="center">
               {error}
             </Text>
           </View>

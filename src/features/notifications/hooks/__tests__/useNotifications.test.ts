@@ -1,7 +1,11 @@
 'use no memo';
 
 import { act, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type {
+  MockFor,
+  MockDataFor,
+  QueryDataFor,
+} from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   recordMock,
@@ -21,6 +25,8 @@ import {
 import { makeCache } from '#/apollo/cache';
 import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotifications, useNotificationListener } from '../useNotifications';
+import { handleSubscriptionError } from '#utils/subscriptionErrorHandler';
+import { logger } from '#/utils/environment';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -79,6 +85,7 @@ jest.mock('#/services/notifications/localNotificationHelper', () => ({
 }));
 
 jest.mock('#utils/subscriptionErrorHandler', () => ({
+  ...jest.requireActual<object>('#utils/subscriptionErrorHandler'),
   handleSubscriptionError: jest.fn(),
   clearAllRetryStates: jest.fn(),
 }));
@@ -90,7 +97,6 @@ const mockSyncMarkAllAsRead = jest.fn();
 jest.mock('../useNotificationSync', () => ({
   useNotificationSync: () => ({
     syncMarkAsRead: mockSyncMarkAsRead,
-    syncMarkUnread: jest.fn(),
     syncDelete: mockSyncDelete,
     syncMarkAllAsRead: mockSyncMarkAllAsRead,
     syncClearRead: jest.fn(),
@@ -122,7 +128,7 @@ function buildNotificationSubscriptionMock(
     sentAt?: string;
   },
   variant: 'created' | 'updated' = 'created',
-): MockedResponse {
+): MockFor<typeof NotificationEventsDocument> {
   const isCreated = variant === 'created';
   return {
     request: {
@@ -131,7 +137,7 @@ function buildNotificationSubscriptionMock(
     result: {
       data: {
         notificationEvents: {
-          __typename: 'NotificationEvent' as const,
+          __typename: 'NotificationEvent',
           subtype: isCreated
             ? NotificationSubtype.Created
             : NotificationSubtype.Updated,
@@ -139,7 +145,7 @@ function buildNotificationSubscriptionMock(
           timestamp: '2024-01-01T00:00:00Z',
           affectedCount: null,
           node: {
-            __typename: 'Notification' as const,
+            __typename: 'Notification',
             id: notification.id,
             type: notification.type,
             status: NotificationStatus.Pending,
@@ -168,7 +174,7 @@ function buildTransitionEventMock(
   subtype: NotificationSubtype,
   nodeId: string | null,
   affectedCount: number | null = null,
-): MockedResponse {
+): MockFor<typeof NotificationEventsDocument> {
   return {
     request: {
       query: NotificationEventsDocument,
@@ -176,7 +182,7 @@ function buildTransitionEventMock(
     result: {
       data: {
         notificationEvents: {
-          __typename: 'NotificationEvent' as const,
+          __typename: 'NotificationEvent',
           subtype,
           mutation: MutationType.Updated,
           timestamp: '2024-01-01T00:00:00Z',
@@ -185,7 +191,7 @@ function buildTransitionEventMock(
             nodeId === null
               ? null
               : {
-                  __typename: 'Notification' as const,
+                  __typename: 'Notification',
                   id: nodeId,
                   type: NotificationType.LowStock,
                   status: NotificationStatus.Read,
@@ -207,17 +213,17 @@ function buildTransitionEventMock(
   };
 }
 
-const unreadFeedData = {
+const unreadFeedData: MockDataFor<typeof GetUnreadNotificationsDocument> = {
   me: {
-    __typename: 'User' as const,
+    __typename: 'User',
     id: 'user-1',
     unreadNotificationCount: 0,
     hasUrgentNotifications: false,
     notificationsConnection: {
-      __typename: 'NotificationConnection' as const,
+      __typename: 'NotificationConnection',
       edges: [],
       pageInfo: {
-        __typename: 'PageInfo' as const,
+        __typename: 'PageInfo',
         hasNextPage: false,
         endCursor: null,
       },
@@ -237,50 +243,49 @@ const seededCache = (
   rows: Array<{ id: string; status: NotificationStatus }> = [],
 ) => {
   const cache = makeCache();
-  cache.writeQuery({
-    query: GetUnreadNotificationsDocument,
-    data: {
-      __typename: 'Query' as const,
-      me: {
-        __typename: 'User' as const,
-        id: 'user-1',
-        unreadNotificationCount: rows.filter(r =>
-          [NotificationStatus.Pending, NotificationStatus.Sent].includes(
-            r.status,
-          ),
-        ).length,
-        hasUrgentNotifications: false,
-        notificationsConnection: {
-          __typename: 'NotificationConnection' as const,
-          edges: rows.map(r => ({
-            __typename: 'NotificationEdge' as const,
-            node: {
-              __typename: 'Notification' as const,
-              id: r.id,
-              type: NotificationType.LowStock,
-              status: r.status,
-              priority: Priority.Normal,
-              title: 'Low Stock Alert',
-              message: 'Milk is running low',
-              payload: null,
-              category: NotificationCategory.System,
-              sentAt: '2024-01-01T00:00:00Z',
-              expiresAt: null,
-              sourceId: null,
-              sourceType: null,
-              actionUrl: null,
-              readAt: null,
-            },
-          })),
-          pageInfo: {
-            __typename: 'PageInfo' as const,
-            hasNextPage: false,
-            endCursor: null,
+  const data: QueryDataFor<typeof GetUnreadNotificationsDocument> = {
+    __typename: 'Query',
+    me: {
+      __typename: 'User',
+      id: 'user-1',
+      unreadNotificationCount: rows.filter(r =>
+        [NotificationStatus.Pending, NotificationStatus.Sent].includes(
+          r.status,
+        ),
+      ).length,
+      hasUrgentNotifications: false,
+      notificationsConnection: {
+        __typename: 'NotificationConnection',
+        edges: rows.map(r => ({
+          __typename: 'NotificationEdge',
+          node: {
+            __typename: 'Notification',
+            id: r.id,
+            type: NotificationType.LowStock,
+            isAuthoredContent: false,
+            status: r.status,
+            priority: Priority.Normal,
+            title: 'Low Stock Alert',
+            message: 'Milk is running low',
+            payload: null,
+            category: NotificationCategory.System,
+            sentAt: '2024-01-01T00:00:00Z',
+            expiresAt: null,
+            sourceId: null,
+            sourceType: null,
+            actionUrl: null,
+            readAt: null,
           },
+        })),
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: null,
         },
       },
     },
-  });
+  };
+  cache.writeQuery({ query: GetUnreadNotificationsDocument, data });
   return cache;
 };
 
@@ -304,11 +309,11 @@ describe('useNotifications', () => {
     expect(result.current).not.toHaveProperty('unreadCount');
   });
 
-  it('handleMarkAllAsRead calls syncMarkAllAsRead', () => {
+  it('handleMarkAllAsRead calls syncMarkAllAsRead', async () => {
     const { result } = renderHookWithApollo(() => useNotifications());
 
-    act(() => {
-      result.current.handleMarkAllAsRead();
+    await act(async () => {
+      await result.current.handleMarkAllAsRead();
     });
 
     expect(mockSyncMarkAllAsRead).toHaveBeenCalled();
@@ -505,5 +510,49 @@ describe('useNotificationListener', () => {
     });
     expect(mockRegisterFcmTapHandlers).not.toHaveBeenCalled();
     expect(mockRegisterIosPushTapHandlers).not.toHaveBeenCalled();
+  });
+
+  describe('subscription errors', () => {
+    const erroringSubscription = (
+      error: Error,
+    ): MockFor<typeof NotificationEventsDocument> => ({
+      request: { query: NotificationEventsDocument },
+      error,
+    });
+    const warnedAboutSubscription = () =>
+      jest
+        .mocked(logger.warn)
+        .mock.calls.some(
+          ([first]) =>
+            typeof first === 'string' && first.includes('subscription error'),
+        );
+
+    it('does not warn about a socket close, which reconnects on its own', async () => {
+      renderHookWithApollo(() => useNotificationListener(), {
+        operationMocks: [
+          erroringSubscription(new Error('Socket closed with event 1006 ')),
+        ],
+      });
+
+      await waitFor(() => {
+        expect(handleSubscriptionError).toHaveBeenCalled();
+      });
+      expect(warnedAboutSubscription()).toBe(false);
+    });
+
+    it('warns about a server error whose message mentions a connection', async () => {
+      renderHookWithApollo(() => useNotificationListener(), {
+        operationMocks: [
+          erroringSubscription(
+            new Error('Database connection lost while resolving the stream'),
+          ),
+        ],
+      });
+
+      await waitFor(() => {
+        expect(handleSubscriptionError).toHaveBeenCalled();
+      });
+      expect(warnedAboutSubscription()).toBe(true);
+    });
   });
 });

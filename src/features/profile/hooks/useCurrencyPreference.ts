@@ -3,7 +3,7 @@ import { UpdateAccountDocument } from '#operations/auth/user.generated';
 import { GetCurrenciesDocument } from '#features/profile/graphql/currency.generated';
 import { useAppStore } from '#store/useAppStore';
 import { usePreferredCurrency } from '#/domain/money';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 
@@ -23,9 +23,7 @@ export function useCurrencyPreference() {
   const preferredCurrency = usePreferredCurrency();
   const setPreferredCurrency = useAppStore(state => state.setPreferredCurrency);
   const { data } = useQuery(GetCurrenciesDocument);
-  const [updateAccount, { loading: saving }] = useMutation(
-    UpdateAccountDocument,
-  );
+  const [updateAccount] = useMutation(UpdateAccountDocument);
 
   const options: CurrencyOption[] = (data?.currencies ?? []).map(currency => ({
     value: currency.code,
@@ -36,7 +34,7 @@ export function useCurrencyPreference() {
 
   // The picker needs the full name to tell two dollars apart; a settings row
   // has one line beside its label, where the name only truncates.
-  const selected = data?.currencies?.find(c => c.code === preferredCurrency);
+  const selected = data?.currencies.find(c => c.code === preferredCurrency);
   const currentLabel = selected
     ? `${selected.code} (${selected.symbol})`
     : preferredCurrency;
@@ -44,19 +42,19 @@ export function useCurrencyPreference() {
   const writeCurrency = async (code: string): Promise<boolean> => {
     const previous = preferredCurrency;
     // Ahead of the round trip so the money on screen re-denominates at once;
-    // reverted below if the server refuses.
+    // reverted if the write fails.
     setPreferredCurrency(code);
 
-    const result = await updateAccount({
-      variables: { input: { preferredCurrency: code } },
-    });
-
-    const payload = result.data?.updateAccount;
-    if (payload?.__typename === 'UpdateAccountPayload') return true;
-
-    setPreferredCurrency(previous);
-    alertIfRejected(result, t('settings.updateFailed'));
-    return false;
+    const settled = await settleMutation(
+      () =>
+        updateAccount({ variables: { input: { preferredCurrency: code } } }),
+      {
+        document: UpdateAccountDocument,
+        fallback: t('settings.updateFailed'),
+        onFailed: () => setPreferredCurrency(previous),
+      },
+    );
+    return settled.status !== 'failed';
   };
 
   /**
@@ -84,5 +82,5 @@ export function useCurrencyPreference() {
     );
   };
 
-  return { preferredCurrency, currentLabel, options, selectCurrency, saving };
+  return { preferredCurrency, currentLabel, options, selectCurrency };
 }

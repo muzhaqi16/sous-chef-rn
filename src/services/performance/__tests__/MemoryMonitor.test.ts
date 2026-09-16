@@ -3,13 +3,6 @@ import { Telemetry } from '#/services/telemetry';
 import { MemoryMonitor } from '../MemoryMonitor';
 import { logger } from '#/utils/environment';
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    gauge: jest.fn(),
-    increment: jest.fn(),
-  },
-}));
-
 jest.mock('react-native-device-info', () => ({
   getUsedMemory: jest.fn(),
   getTotalMemory: jest.fn(),

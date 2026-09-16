@@ -11,6 +11,8 @@ import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
 import { preferredMeasure } from '#features/recipes/utils/preferredMeasure';
 import type { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { Card } from '#components/atoms/Card';
+import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 interface IngredientCardProps {
   ingredient: DisplayIngredient;
@@ -28,7 +30,7 @@ const isBackendIngredient = (
 ): ingredient is Extract<
   DisplayIngredient,
   { __typename: 'RecipeIngredient' }
-> => '__typename' in ingredient && ingredient.__typename === 'RecipeIngredient';
+> => '__typename' in ingredient;
 
 export const IngredientCard: React.FC<IngredientCardProps> = ({
   ingredient,
@@ -48,13 +50,15 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
   const measure = isBackend
     ? null
     : preferredMeasure(ingredient.measures, unitSystem);
-  const quantity =
-    (isBackend
-      ? converted?.value ?? ingredient.quantity
-      : measure?.amount ?? ingredient.amount) || '';
-  const unit = isBackend
-    ? converted?.unit.symbol || ingredient.unit?.symbol || ''
-    : measure?.unit || '';
+  const amount = isBackend
+    ? converted?.value ?? ingredient.quantity
+    : measure?.amount ?? ingredient.amount;
+  // A zero amount is an unmeasured ingredient ("salt to taste"): show none.
+  const quantity = amount ? formatQuantityForDisplay(amount) : '';
+  const unitSymbol = isBackend
+    ? firstNonBlank(converted?.unit.symbol, ingredient.unit?.symbol)
+    : measure?.unit;
+  const unit = unitSymbol ?? '';
   // Backend-only: the estimated ingredient price (US dollars), surfaced on its
   // own line. Never derived from the name — only the dedicated field is shown.
   const estimatedPrice = isBackend ? ingredient.estimatedPrice : null;
@@ -105,7 +109,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
       ) : null}
       {isAdded ? (
         <View style={styles.addedBadge}>
-          <Icon name="checkmark" size={12} tone="onPrimary" />
+          <Icon name="checkmark" size={12} tone="onSuccess" />
         </View>
       ) : (
         <View style={styles.addButton}>
@@ -140,10 +144,10 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
   },
   quantity: {
-    marginBottom: 2,
+    marginBottom: theme.spacing['2xs'],
   },
   price: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   addedBadge: {
     position: 'absolute',

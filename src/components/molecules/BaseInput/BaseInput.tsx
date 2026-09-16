@@ -1,6 +1,8 @@
-import React, { ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { View, TextInputProps, StyleProp, ViewStyle } from 'react-native';
+import type { TextInputProps, StyleProp, ViewStyle } from 'react-native';
+import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
 
 /** The event passed to TextInput's onFocus/onBlur, derived from RN's own prop type. */
@@ -21,6 +23,7 @@ import {
   type ThemedBottomSheetTextInputRef,
 } from '#components/atoms/themedComponents';
 import { motion } from '#/theme/foundations/motion';
+import { kitTestIDs } from '#components/testIDs';
 
 export interface BaseInputProps extends TextInputProps {
   label?: string;
@@ -159,9 +162,11 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           exiting={FadeOut.duration(motion.timing.FAST)}
         >
           <Text
+            role="error"
+            tone="error"
             testID={
               textInputProps.testID
-                ? `${textInputProps.testID}-error`
+                ? kitTestIDs.inputError(textInputProps.testID)
                 : undefined
             }
             style={styles.errorText}

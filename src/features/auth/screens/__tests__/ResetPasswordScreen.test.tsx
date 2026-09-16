@@ -1,6 +1,7 @@
 import React from 'react';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import { useRoute } from '@react-navigation/native';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderWithApollo,
   type MockedResponse,
@@ -143,7 +144,7 @@ const TOKEN = 'valid-token-0123456789';
  */
 const validateMock = (
   status: PasswordActionStatus | 'error' = PasswordActionStatus.Sent,
-): MockedResponse => {
+): MockFor<typeof ValidatePasswordResetTokenDocument> => {
   const request = {
     query: ValidatePasswordResetTokenDocument,
     variables: { input: { token: TOKEN } },
@@ -193,6 +194,37 @@ describe('ResetPasswordScreen', () => {
   it('renders the reset password form when token is valid', async () => {
     await renderOnForm();
     expect(screen.getByText('Reset Your Password')).toBeTruthy();
+  });
+
+  it('shows no mismatch under a confirmation the user has not reached', async () => {
+    await renderOnForm();
+    const user = userEvent.setup();
+
+    await user.type(NEW_PASSWORD_INPUT(), 'N');
+    await waitFor(() => expect(NEW_PASSWORD_INPUT().props.value).toBe('N'));
+
+    expect(CONFIRM_PASSWORD_INPUT().props.accessibilityHint).toBeUndefined();
+  });
+
+  it('reports the mismatch under the confirmation once it has been reached', async () => {
+    await renderOnForm();
+    const user = userEvent.setup();
+
+    await user.type(NEW_PASSWORD_INPUT(), 'NewPass123');
+    await user.type(CONFIRM_PASSWORD_INPUT(), 'NewPass123');
+    await waitFor(() =>
+      expect(CONFIRM_PASSWORD_INPUT().props.accessibilityHint).toBeUndefined(),
+    );
+
+    // The fix belongs to the OTHER field: the rule reports on the
+    // confirmation while reading the new password.
+    await user.type(NEW_PASSWORD_INPUT(), '4');
+
+    await waitFor(() =>
+      expect(CONFIRM_PASSWORD_INPUT().props.accessibilityHint).toBe(
+        'Passwords must match',
+      ),
+    );
   });
 
   it('renders password fields', async () => {

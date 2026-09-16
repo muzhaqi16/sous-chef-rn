@@ -3,11 +3,14 @@ import { render, screen, userEvent } from '@testing-library/react-native';
 import { NotificationItem } from '../NotificationItem';
 import {
   NotificationCategory,
+  NotificationStatus,
   NotificationType,
   Priority,
 } from '#/graphql/generated/schemaTypes';
-import {} from '#features/notifications/types';
-import type { DisplayNotification as NotificationItemData } from '#features/notifications/utils/toDisplayNotification';
+import {
+  toDisplayNotification,
+  type DisplayNotification as NotificationItemData,
+} from '#features/notifications/utils/toDisplayNotification';
 
 jest.mock('#utils/iconUtils', () => {
   const R = require('react');
@@ -18,13 +21,6 @@ jest.mock('#utils/iconUtils', () => {
   };
 });
 
-jest.mock('#features/notifications/utils/notificationHelpers', () => ({
-  getNotificationIcon: jest.fn(() => 'notifications'),
-  getNotificationDisplayMessage: jest.fn(
-    (notification: { message: string }) => notification.message,
-  ),
-}));
-
 jest.mock('#utils/dateUtils', () => ({
   safeParseDate: jest.fn(() => new Date('2026-03-01T12:00:00Z')),
 }));
@@ -33,18 +29,31 @@ jest.mock('date-fns/formatDistanceToNow', () => ({
   formatDistanceToNow: jest.fn(() => '1 day ago'),
 }));
 
-const makeNotification = (overrides?: Partial<NotificationItemData>) => ({
-  id: 'notif-1',
-  type: NotificationType.HomeInvitation,
-  category: NotificationCategory.Shopping,
-  priority: Priority.Normal,
-  title: 'New Invitation',
-  message: 'You have been invited to join a home.',
-  payload: {},
-  sentAt: '2026-03-01T12:00:00Z',
-  isRead: false,
-  requiresAction: false,
-  actionData: {},
+// The server's English title and message ride along, as they do on the wire.
+const SERVER_TITLE = 'You have a new Home Invitation';
+const SERVER_MESSAGE = 'Alice invited you to join "The Smiths"';
+
+const makeNotification = (
+  overrides?: Partial<NotificationItemData>,
+): NotificationItemData => ({
+  ...toDisplayNotification({
+    __typename: 'Notification',
+    id: 'notif-1',
+    type: NotificationType.HomeInvitation,
+    isAuthoredContent: false,
+    status: NotificationStatus.Sent,
+    priority: Priority.Normal,
+    title: SERVER_TITLE,
+    message: SERVER_MESSAGE,
+    payload: { inviterName: 'Alice', homeName: 'The Smiths' },
+    category: NotificationCategory.Home,
+    sentAt: '2026-03-01T12:00:00Z',
+    expiresAt: null,
+    sourceId: null,
+    sourceType: null,
+    actionUrl: null,
+    readAt: null,
+  }),
   ...overrides,
 });
 
@@ -59,16 +68,22 @@ describe('NotificationItem', () => {
     jest.clearAllMocks();
   });
 
-  it('renders notification title', () => {
+  it('renders the title built from the notification type', () => {
     render(<NotificationItem {...defaultProps} />);
-    expect(screen.getByText('New Invitation')).toBeTruthy();
+    expect(screen.getByText('Home invitation')).toBeTruthy();
   });
 
-  it('renders notification message', () => {
+  it('renders the message built from the payload names', () => {
     render(<NotificationItem {...defaultProps} />);
     expect(
-      screen.getByText('You have been invited to join a home.'),
+      screen.getByText('Alice invited you to join The Smiths'),
     ).toBeTruthy();
+  });
+
+  it("never renders the server's English title or message", () => {
+    render(<NotificationItem {...defaultProps} />);
+    expect(screen.queryByText(SERVER_TITLE)).toBeNull();
+    expect(screen.queryByText(SERVER_MESSAGE)).toBeNull();
   });
 
   it('renders formatted timestamp', () => {
@@ -79,7 +94,7 @@ describe('NotificationItem', () => {
   it('calls onPress with notification when pressed', async () => {
     const user = userEvent.setup();
     render(<NotificationItem {...defaultProps} />);
-    await user.press(screen.getByText('New Invitation'));
+    await user.press(screen.getByText('Home invitation'));
     expect(defaultProps.onPress).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'notif-1' }),
     );

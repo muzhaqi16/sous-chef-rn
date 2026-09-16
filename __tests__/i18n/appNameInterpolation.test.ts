@@ -1,4 +1,5 @@
 import { getI18n } from '#/i18n/config';
+import { isTranslationKey } from '#/i18n';
 import { appConfig } from '#/config/appConfig';
 import { mergedLocale } from '#/test-utils/mergedLocales';
 
@@ -51,6 +52,8 @@ describe('appName interpolation', () => {
     expect(withVariable.length).toBeGreaterThan(0);
 
     for (const [key] of withVariable) {
+      expect(isTranslationKey(key)).toBe(true);
+      if (!isTranslationKey(key)) continue;
       const rendered = getI18n().t(key);
       expect(rendered).toContain(appConfig.identity.displayName);
       expect(rendered).not.toContain('{{appName}}');

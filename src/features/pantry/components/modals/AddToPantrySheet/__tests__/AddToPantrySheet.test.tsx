@@ -1,11 +1,8 @@
 'use no memo';
 import React from 'react';
 import { screen, waitFor } from '@testing-library/react-native';
-import {
-  renderWithApollo,
-  recordMock,
-  type MockedResponse,
-} from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
+import { renderWithApollo, recordMock } from '#/test-utils/apolloMockProvider';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
@@ -25,8 +22,7 @@ jest.mock('#features/pantry/hooks/usePantryItemSuggestions', () => ({
   PANTRY_SUGGESTIONS_LIMIT: 20,
   usePantryItemSuggestions: jest.fn(() => ({
     grouped: [],
-    loading: false,
-    hasSuggestions: false,
+    state: 'empty',
     refetch: jest.fn(),
   })),
 }));
@@ -153,8 +149,7 @@ describe('AddToPantrySheet', () => {
     );
     usePantryItemSuggestions.mockReturnValue({
       grouped: [{ title: 'Recent', items: [{ id: '1', name: 'Milk' }] }],
-      loading: false,
-      hasSuggestions: true,
+      state: 'ready',
       refetch: jest.fn(),
     });
 
@@ -168,8 +163,7 @@ describe('AddToPantrySheet', () => {
     );
     usePantryItemSuggestions.mockReturnValue({
       grouped: [],
-      loading: true,
-      hasSuggestions: false,
+      state: 'loading',
       refetch: jest.fn(),
     });
 
@@ -193,7 +187,7 @@ describe('AddToPantrySheet', () => {
    * read the union member.
    */
   describe('a resolved refusal is not a success', () => {
-    const forbidden: MockedResponse = {
+    const forbidden: MockFor<typeof CreatePantryItemDocument> = {
       request: {
         query: CreatePantryItemDocument,
         // The input carries a freshly minted cuid, so match on the operation.
@@ -305,7 +299,7 @@ describe('AddToPantrySheet', () => {
       };
     };
 
-    const duplicate: MockedResponse = {
+    const duplicate: MockFor<typeof CreatePantryItemDocument> = {
       request: {
         query: CreatePantryItemDocument,
         variables: () => true,
@@ -321,7 +315,7 @@ describe('AddToPantrySheet', () => {
       },
     };
 
-    const restocked: MockedResponse = {
+    const restocked: MockFor<typeof RestockPantryItemDocument> = {
       request: {
         query: RestockPantryItemDocument,
         variables: () => true,
@@ -481,7 +475,7 @@ describe('AddToPantrySheet', () => {
       },
     };
 
-    const restocked: MockedResponse = {
+    const restocked: MockFor<typeof RestockPantryItemDocument> = {
       request: { query: RestockPantryItemDocument, variables: () => true },
       result: {
         data: {

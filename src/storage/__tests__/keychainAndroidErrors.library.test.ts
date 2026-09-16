@@ -6,7 +6,7 @@
  * discards them on a key the device refuses to unlock ever again. Android
  * delivers both as `E_CRYPTO_FAILED`, so the discriminator is a string in the
  * Kotlin — which no JS test can execute and no type can hold. Asserting
- * `isPermanentlyInvalidated(...) === false` on a fixture we wrote only compares
+ * `isKeychainKeyInvalidated(...) === false` on a fixture we wrote only compares
  * our constant to our constant: it would keep passing through an upgrade that
  * changed the format, and the failure mode of that drift is deleting a user's
  * credentials when they tap "Use manual login".

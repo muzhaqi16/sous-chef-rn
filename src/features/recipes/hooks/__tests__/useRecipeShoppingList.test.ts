@@ -1,7 +1,8 @@
 import { act, waitFor } from '@testing-library/react-native';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { makeCache } from '#/apollo/cache';
-import { InMemoryCache } from '@apollo/client';
+import type { InMemoryCache } from '@apollo/client';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   type MockedResponse,
@@ -47,7 +48,9 @@ beforeEach(() => {
 });
 
 /** One complete default list so `getTargetShoppingList()` resolves a target. */
-const shoppingListsMock = (): MockedResponse => ({
+const shoppingListsMock = (): MockFor<
+  typeof GetShoppingListsLiteForRecipeDocument
+> => ({
   request: {
     query: GetShoppingListsLiteForRecipeDocument,
     variables: () => true,
@@ -138,7 +141,7 @@ const addItemsMock = (
     | { kind: 'success'; itemId?: string }
     | { kind: 'error-union' }
     | { kind: 'transport' },
-): MockedResponse => {
+): MockFor<typeof AddItemsToShoppingListFromRecipeDocument> => {
   if (member.kind === 'transport') {
     return {
       request: {
@@ -173,7 +176,7 @@ const addItemsMock = (
                     ]
                   : [],
                 summary: {
-                  __typename: 'BatchOperationSummary',
+                  __typename: 'BulkSummary',
                   succeeded: 1,
                   failed: 0,
                   skipped: 0,
@@ -197,7 +200,7 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (external branch)'
     });
 
     await act(async () => {
-      result.current.handleAddSingleIngredient(externalIngredient());
+      await result.current.handleAddSingleIngredient(externalIngredient());
     });
 
     await waitFor(() => expect(mockToastError).toHaveBeenCalled());
@@ -212,12 +215,17 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (external branch)'
     });
 
     await act(async () => {
-      result.current.handleAddSingleIngredient(externalIngredient());
+      await result.current.handleAddSingleIngredient(externalIngredient());
     });
 
     await waitFor(() => expect(mockToastError).toHaveBeenCalled());
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(result.current.addedIngredients.size).toBe(0);
+    // One message, in the app's own words — never the transport's text.
+    expect(mockToastError).toHaveBeenCalledTimes(1);
+    expect(mockToastError).not.toHaveBeenCalledWith(
+      expect.stringContaining('network down'),
+    );
   });
 
   it('toasts success and marks the ingredient added on a success payload', async () => {
@@ -227,7 +235,9 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (external branch)'
     });
 
     await act(async () => {
-      result.current.handleAddSingleIngredient(externalIngredient({ id: 7 }));
+      await result.current.handleAddSingleIngredient(
+        externalIngredient({ id: 7 }),
+      );
     });
 
     // Wait on the rendered state, not on the toast mock: the toast is called
@@ -255,7 +265,9 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (external branch)'
     });
 
     await act(async () => {
-      result.current.handleAddSingleIngredient(externalIngredient({ id: 9 }));
+      await result.current.handleAddSingleIngredient(
+        externalIngredient({ id: 9 }),
+      );
     });
 
     await waitFor(() =>
@@ -279,7 +291,9 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (external branch)'
     });
 
     await act(async () => {
-      result.current.handleAddSingleIngredient(externalIngredient({ id: 11 }));
+      await result.current.handleAddSingleIngredient(
+        externalIngredient({ id: 11 }),
+      );
     });
 
     await waitFor(() =>
@@ -304,7 +318,9 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (external branch)'
     });
 
     await act(async () => {
-      result.current.handleAddSingleIngredient(externalIngredient({ id: 12 }));
+      await result.current.handleAddSingleIngredient(
+        externalIngredient({ id: 12 }),
+      );
     });
 
     await waitFor(() =>
@@ -319,11 +335,53 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (external branch)'
   });
 });
 
+// --- external (Spoonacular) "Add All" batch -----------------------------------
+
+describe('useRecipeShoppingList — addAll (external batch)', () => {
+  it('reports a refused batch as a failure, not as queued', async () => {
+    // A refusal resolves with an error member and no `error`; read as "no
+    // payload", it took the queued branch and confirmed every ingredient.
+    const cache = makeCache();
+    const rendered = renderHookWithApollo(
+      () =>
+        useRecipeShoppingList({
+          recipeId: 'recipe-1',
+          isBackendRecipe: false,
+          backendRecipe: null,
+          externalRecipe: {
+            extendedIngredients: [externalIngredient({ id: 21 })],
+          } as Parameters<typeof useRecipeShoppingList>[0]['externalRecipe'],
+        }),
+      {
+        operationMocks: [
+          shoppingListsMock(),
+          addItemsMock({ kind: 'error-union' }),
+        ],
+        cache,
+      },
+    );
+    const { result } = rendered;
+    await waitFor(() => expect(result.current.shoppingLists).toHaveLength(1));
+
+    act(() => {
+      result.current.handleAddAll();
+    });
+    await act(async () => {
+      result.current.handleListSelected('sl-1');
+    });
+
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(1));
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    expect(result.current.addedIngredients.size).toBe(0);
+    expect(cache.extract()).not.toHaveProperty('ShoppingListItem:gen-id-1');
+  });
+});
+
 // --- backend recipe-ingredient branch ---------------------------------------
 
 const addRecipeIngredientMock = (
   member: { kind: 'error-union' } | { kind: 'queued' },
-): MockedResponse => ({
+): MockFor<typeof CreateShoppingListItemFromRecipeIngredientDocument> => ({
   request: {
     query: CreateShoppingListItemFromRecipeIngredientDocument,
     variables: () => true,
@@ -353,7 +411,7 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (backend branch)',
     });
 
     await act(async () => {
-      result.current.handleAddSingleIngredient(externalIngredient());
+      await result.current.handleAddSingleIngredient(externalIngredient());
     });
 
     await waitFor(() => expect(mockToastError).toHaveBeenCalled());
@@ -368,7 +426,9 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (backend branch)',
     });
 
     await act(async () => {
-      result.current.handleAddSingleIngredient(externalIngredient({ id: 9 }));
+      await result.current.handleAddSingleIngredient(
+        externalIngredient({ id: 9 }),
+      );
     });
 
     await waitFor(() =>

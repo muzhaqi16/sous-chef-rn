@@ -1,32 +1,20 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
-import { type FragmentType } from '@apollo/client/masking';
+import type { FragmentType } from '@apollo/client/masking';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { formatInviteStatus } from '#features/home/utils/inviteFormatters';
-import { Text } from '#components/atoms/Text';
+import {
+  formatInviteStatus,
+  getInviteStatusKey,
+  INVITE_STATUS_TONE,
+  type InviteStatusKey,
+} from '#features/home/utils/inviteFormatters';
+import { Text, type TextTone } from '#components/atoms/Text';
 import { InviteStatus } from '#/graphql/generated/schemaTypes';
 import { HomeInviteCard_InviteFragmentDoc } from './HomeInviteCard.generated';
 import { useTranslation } from '#/i18n';
-
-type StatusKey = 'pending' | 'accepted' | 'declined' | 'expired';
-
-function getStatusKey(status: string): StatusKey {
-  switch (status) {
-    case 'PENDING':
-      return 'pending';
-    case 'ACCEPTED':
-      return 'accepted';
-    case 'DECLINED':
-      return 'declined';
-    case 'EXPIRED':
-    case 'REVOKED':
-    default:
-      return 'expired';
-  }
-}
 
 interface HomeInviteCardProps {
   inviteRef: FragmentType<typeof HomeInviteCard_InviteFragmentDoc>;
@@ -42,7 +30,7 @@ interface HomeInviteCardProps {
  * renders once per pending invite.
  */
 const InviteSurface: React.FC<{
-  status: StatusKey;
+  status: InviteStatusKey;
   children: React.ReactNode;
 }> = ({ status, children }) => {
   styles.useVariants({ status });
@@ -50,13 +38,14 @@ const InviteSurface: React.FC<{
 };
 
 const InviteStatusBadge: React.FC<{
-  status: StatusKey;
+  status: InviteStatusKey;
+  tone: TextTone;
   children: React.ReactNode;
-}> = ({ status, children }) => {
+}> = ({ status, tone, children }) => {
   styles.useVariants({ status });
   return (
     <View style={styles.inviteStatusBadge}>
-      <Text role="label" style={styles.inviteStatusText}>
+      <Text role="label" tone={tone}>
         {children}
       </Text>
     </View>
@@ -80,11 +69,10 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
     from: inviteRef,
   });
 
-  const statusKey = getStatusKey(invite.status ?? 'EXPIRED');
-
   if (!complete) return null;
 
-  const statusText = formatInviteStatus(invite.status);
+  const statusKey = getInviteStatusKey(invite.status);
+  const statusText = formatInviteStatus(invite.status, t);
 
   return (
     <InviteSurface status={statusKey}>
@@ -97,7 +85,12 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
         </Text>
       </View>
       <View style={styles.inviteActions}>
-        <InviteStatusBadge status={statusKey}>{statusText}</InviteStatusBadge>
+        <InviteStatusBadge
+          status={statusKey}
+          tone={INVITE_STATUS_TONE[invite.status]}
+        >
+          {statusText}
+        </InviteStatusBadge>
         {!!canRevoke && invite.status === InviteStatus.Pending && (
           <AppPressable
             style={styles.revokeButton}
@@ -137,7 +130,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   inviteName: {
-    marginBottom: 2,
+    marginBottom: theme.spacing['2xs'],
   },
   inviteActions: {
     flexDirection: 'row',
@@ -155,16 +148,6 @@ const styles = StyleSheet.create(theme => ({
         accepted: { backgroundColor: theme.colors.status.accepted + '20' },
         declined: { backgroundColor: theme.colors.status.declined + '20' },
         expired: { backgroundColor: theme.colors.status.expired + '20' },
-      },
-    },
-  },
-  inviteStatusText: {
-    variants: {
-      status: {
-        pending: { color: theme.colors.status.pending },
-        accepted: { color: theme.colors.status.accepted },
-        declined: { color: theme.colors.status.declined },
-        expired: { color: theme.colors.status.expired },
       },
     },
   },

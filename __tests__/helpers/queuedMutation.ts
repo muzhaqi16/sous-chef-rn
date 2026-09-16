@@ -1,5 +1,6 @@
-import { Kind } from 'graphql';
+import { Kind, type DocumentNode } from 'graphql';
 import type { ApolloCache, StoreObject } from '@apollo/client';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { QueueStatus } from '#/apollo/offlineQueue/types';
 import type { QueuedMutation } from '#/apollo/offlineQueue/types';
 
@@ -26,6 +27,14 @@ export function makeQueuedMutation(
     requiresAuth: true,
     ...overrides,
   };
+}
+
+/** A fixture's operation fields, named by the document the app really sends. */
+export function queuedMutationFor(
+  document: DocumentNode,
+  overrides: Partial<QueuedMutation> = {},
+): Pick<QueuedMutation, 'operationName' | 'mutation'> & Partial<QueuedMutation> {
+  return { operationName: operationNameOf(document), mutation: document, ...overrides };
 }
 
 export interface SyncCacheStub extends ApolloCache {

@@ -17,6 +17,7 @@ fragment MealPlanItemActions_item on MealPlanItem {
 # `MealPlanFull` already selects all four fragments on `mealPlanItems`,
 # so callers (e.g. MealPlanMain) hold the matching shape.
 fragment MealPlanItemActions_optimisticFullItem on MealPlanItem {
+  id
   ...MealPlanItemCard_item
   ...DailyMeals_item
   ...MealPlanMain_item

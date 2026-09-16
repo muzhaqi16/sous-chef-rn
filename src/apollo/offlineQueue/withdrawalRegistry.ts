@@ -1,17 +1,25 @@
 /**
  * Every feature that has something to withdraw when a queued write is
- * permanently rejected. Its own list rather than a manifest field, for the same
- * reason as {@link SYNC_REGISTRY}: i18n iterates the static registry on the
- * LAUNCH PATH, so a manifest carrying these would pull the queue into it.
+ * permanently rejected, keyed by the operation its document declares. Its own
+ * list rather than a manifest field, for the same reason as {@link SYNC_REGISTRY}.
  */
-import { PANTRY_COUNT_WITHDRAWALS } from '#features/pantry/offline/queueWithdrawals';
-import { SHOPPING_LIST_UNLINK_WITHDRAWALS } from '#features/shoppingList/offline/queueWithdrawals';
+import { byOperation } from '#/apollo/utils/documentOperation';
+import {
+  withdrawCreatedPantryItem,
+  withdrawMovedPantryItem,
+} from '#features/pantry/offline/queueWithdrawals';
+import { restoreMovedShoppingListItem } from '#features/shoppingList/offline/queueWithdrawals';
+import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { BarcodeCreatePantryItemDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import type { CountWithdrawalTable, UnlinkWithdrawalTable } from './types';
 
-export const COUNT_WITHDRAWALS: CountWithdrawalTable = {
-  ...PANTRY_COUNT_WITHDRAWALS,
-};
+export const COUNT_WITHDRAWALS: CountWithdrawalTable = byOperation([
+  [CreatePantryItemDocument, withdrawCreatedPantryItem],
+  [BarcodeCreatePantryItemDocument, withdrawCreatedPantryItem],
+  [MoveShoppingItemToPantryDocument, withdrawMovedPantryItem],
+]);
 
-export const UNLINK_WITHDRAWALS: UnlinkWithdrawalTable = {
-  ...SHOPPING_LIST_UNLINK_WITHDRAWALS,
-};
+export const UNLINK_WITHDRAWALS: UnlinkWithdrawalTable = byOperation([
+  [MoveShoppingItemToPantryDocument, restoreMovedShoppingListItem],
+]);

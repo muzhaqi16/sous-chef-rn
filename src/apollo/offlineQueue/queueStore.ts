@@ -1,13 +1,11 @@
 import type { DocumentNode } from 'graphql';
 import { storage, isRecoveryStorage } from '#storage/mmkv';
-import {
-  QueueCapacityError,
-  QueuedMutation,
-  QueueError,
-  QueueStats,
-  QueueStatus,
-} from './types';
+import type { QueuedMutation, QueueError, QueueStats } from './types';
+import { QueueCapacityError, QueueStatus } from './types';
 import { logger } from '#/utils/environment';
+import { queuedSubject } from './queuedSubject';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
 const QUEUE_STORAGE_KEY = 'apollo-mutation-queue';
 const CURRENT_USER_KEY = 'apollo-queue-current-user';
@@ -16,6 +14,19 @@ const CURRENT_USER_KEY = 'apollo-queue-current-user';
 // (SUCCESS/FAILED) entries are evicted first; a queue full of un-synced work
 // rejects the enqueue rather than dropping a PENDING op mid dependency chain.
 const MAX_QUEUE_SIZE = 100;
+
+const MOVE_SHOPPING_LIST_ITEM = operationNameOf(MoveShoppingListItemDocument);
+
+/** The item a queued move targets; entries are persisted JSON, read structurally. */
+const movedItemIdOf = (mutation: QueuedMutation): string | undefined => {
+  const input: unknown = mutation.variables.input;
+  return typeof input === 'object' &&
+    input !== null &&
+    'itemId' in input &&
+    typeof input.itemId === 'string'
+    ? input.itemId
+    : undefined;
+};
 
 /**
  * Terminal = the queue will not replay it as things stand. AUTH_ERROR counts
@@ -42,14 +53,6 @@ const MAX_PENDING_AGE_MS = 90 * 24 * 60 * 60 * 1000;
  */
 type SerializedQueuedMutation = Omit<QueuedMutation, 'mutation'> & {
   mutation: string;
-};
-
-/**
- * Queued variables are duck-typed and ride a persistence boundary, so client-id
- * extraction guards at runtime instead of trusting a compile-time shape.
- */
-const addIfClientId = (ids: Set<string>, value: unknown): void => {
-  if (typeof value === 'string' && value) ids.add(value);
 };
 
 /** User-scoped mutation queue persisted to MMKV. */
@@ -143,7 +146,7 @@ export class QueueStore {
 
   getCurrentUserId(): string | null {
     if (this.currentUserId === undefined) {
-      this.currentUserId = storage.getString(CURRENT_USER_KEY) || null;
+      this.currentUserId = storage.getString(CURRENT_USER_KEY) ?? null;
     }
     return this.currentUserId;
   }
@@ -168,28 +171,39 @@ export class QueueStore {
 
   /**
    * Repeated MoveShoppingListItem ops for one item coalesce into the last
-   * position, so a drag only ever replays where the item finally landed.
+   * position, so a drag only ever replays where the item finally landed. The
+   * merged move keeps the first one's age in `agedFrom` — not in `createdAt`,
+   * which orders the drain: an older stamp there would sort the surviving move
+   * ahead of a row created between the two moves, and the move names that row.
    */
   addMutation(mutation: QueuedMutation): void {
     const queue = this.loadQueue();
 
-    if (mutation.operationName === 'MoveShoppingListItem') {
-      const itemId = mutation.variables?.input?.itemId;
+    if (mutation.operationName === MOVE_SHOPPING_LIST_ITEM) {
+      const itemId = movedItemIdOf(mutation);
 
       if (itemId) {
         const existingIndex = queue.findIndex(
           m =>
-            m.operationName === 'MoveShoppingListItem' &&
-            m.variables?.input?.itemId === itemId &&
+            m.operationName === MOVE_SHOPPING_LIST_ITEM &&
+            movedItemIdOf(m) === itemId &&
             m.userId === mutation.userId &&
             m.status === QueueStatus.PENDING, // Only coalesce pending mutations
         );
 
-        if (existingIndex !== -1) {
+        const [superseded] =
+          existingIndex === -1 ? [] : queue.splice(existingIndex, 1);
+        if (superseded) {
           logger.debug(
             `🔄 Queue: Coalescing move mutations for item ${itemId} - keeping final position`,
           );
-          queue[existingIndex] = mutation;
+          // Appended, not written into the old slot: the drain replays in queue
+          // order, and the final position can name a row created since.
+          queue.push({
+            ...mutation,
+            agedFrom: superseded.agedFrom ?? superseded.createdAt,
+            conflictCount: superseded.conflictCount,
+          });
           this.saveQueue(queue);
           return;
         }
@@ -317,7 +331,7 @@ export class QueueStore {
       if (
         m.userId !== userId ||
         m.status !== QueueStatus.PENDING ||
-        m.createdAt > cutoff
+        (m.agedFrom ?? m.createdAt) > cutoff
       ) {
         return m;
       }
@@ -359,17 +373,8 @@ export class QueueStore {
     const ids = new Set<string>();
     const userId = this.getCurrentUserId();
     if (userId) {
-      for (const { variables } of this.getPendingMutationsForUser(userId)) {
-        addIfClientId(
-          ids,
-          variables?.input?.id ?? variables?.input?.itemId ?? variables?.id,
-        );
-        // Batch creates mint one client id per item; the isArray guard covers
-        // persisted entries whose shape predates the current enqueue path.
-        const items = variables?.input?.items;
-        if (Array.isArray(items)) {
-          for (const item of items) addIfClientId(ids, item?.id);
-        }
+      for (const mutation of this.getPendingMutationsForUser(userId)) {
+        for (const id of queuedSubject(mutation).subjectIds) ids.add(id);
       }
     }
     this.pendingClientIds = ids;
@@ -378,7 +383,7 @@ export class QueueStore {
 
   getMutation(mutationId: string): QueuedMutation | null {
     const queue = this.loadQueue();
-    return queue.find(m => m.id === mutationId) || null;
+    return queue.find(m => m.id === mutationId) ?? null;
   }
 
   clearQueueForUser(userId: string): number {
@@ -518,6 +523,8 @@ export class QueueStore {
     this.cache = null;
     this.pendingClientIds = null;
     this.currentUserId = undefined;
+    // A pending-write badge reads through the cache; it must re-read now.
+    this.notifyListeners();
     if (__DEV__) {
       logger.debug('🔄 Queue: Cache invalidated');
     }

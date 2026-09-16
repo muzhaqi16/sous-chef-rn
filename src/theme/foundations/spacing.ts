@@ -4,6 +4,10 @@
  * it stops tracking density: add the missing step here, never at the call site.
  */
 export const spacing = {
+  // Optical steps: a caption nudged onto a baseline, a hairline chip inset.
+  '3xs': 1,
+  '2xs': 2,
+  '2xsPlus': 3,
   xs: 4,
   xsPlus: 6,
   sm: 8,

@@ -5,6 +5,7 @@ import {
   CanConvertDocument,
 } from '#operations/item/conversions.generated';
 import { errorService } from '#/services/errorService';
+import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 
 interface UseConversionPreviewOptions {
   pantryItemId: string | undefined;
@@ -36,6 +37,20 @@ interface ConversionPreviewResult {
 }
 
 const DEBOUNCE_MS = 500;
+
+/** "1 1/4 cup ≈ 295.74 mL": both sides through the one quantity formatter. */
+function formatPreview(
+  inputQuantity: number,
+  selectedUnitSymbol: string,
+  trackingValue: number,
+  trackingUnitSymbol: string,
+): string {
+  return `${formatQuantityForDisplay(
+    inputQuantity,
+  )} ${selectedUnitSymbol} \u2248 ${formatQuantityForDisplay(
+    trackingValue,
+  )} ${trackingUnitSymbol}`;
+}
 
 /**
  * Generates a stable "request key" for debounce identity.
@@ -99,13 +114,15 @@ export function useConversionPreview({
       setConfidence(null);
     } else if (conversionRatio != null) {
       // Local computation — instant, no debounce
-      const trackingValue = inputQuantity! / conversionRatio;
+      const trackingValue = inputQuantity / conversionRatio;
       setConvertedValue(trackingValue);
-      const formattedValue = Number.isInteger(trackingValue)
-        ? trackingValue.toString()
-        : trackingValue.toFixed(2).replace(/\.?0+$/, '');
       setPreviewText(
-        `${inputQuantity} ${selectedUnitSymbol} \u2248 ${formattedValue} ${trackingUnitSymbol}`,
+        formatPreview(
+          inputQuantity,
+          selectedUnitSymbol,
+          trackingValue,
+          trackingUnitSymbol,
+        ),
       );
       setPreviewLoading(false);
     } else {
@@ -121,14 +138,14 @@ export function useConversionPreview({
     if (!shouldShowPreview) return;
 
     let cancelled = false;
-    void (async () => {
+    const checkCertainty = async () => {
       let result;
       try {
         result = await checkConversion({
           variables: {
             pantryItemId,
-            fromUnitId: selectedUnitId!,
-            toUnitId: trackingUnitId!,
+            fromUnitId: selectedUnitId,
+            toUnitId: trackingUnitId,
           },
         });
       } catch (error) {
@@ -139,7 +156,8 @@ export function useConversionPreview({
       if (cancelled) return;
       const availability = result?.data?.canConvert;
       setConfidence(availability?.available ? availability.confidence : null);
-    })();
+    };
+    void checkCertainty();
 
     return () => {
       cancelled = true;
@@ -163,15 +181,15 @@ export function useConversionPreview({
     // Clearing the timer does not recall a request already in flight, so a
     // superseded conversion would land after the current one and overwrite it.
     let cancelled = false;
-    debounceTimer.current = setTimeout(async () => {
+    const runConversion = async () => {
       let result: Awaited<ReturnType<typeof convertQuantity>> | undefined;
       try {
         result = await convertQuantity({
           variables: {
             pantryItemId: pantryItemId,
-            quantity: inputQuantity!,
-            fromUnitId: selectedUnitId!,
-            toUnitId: trackingUnitId!,
+            quantity: inputQuantity,
+            fromUnitId: selectedUnitId,
+            toUnitId: trackingUnitId,
           },
         });
       } catch (error) {
@@ -186,11 +204,13 @@ export function useConversionPreview({
 
       const converted = result?.data?.convertQuantity;
       if (converted) {
-        const formattedValue = Number.isInteger(converted.value)
-          ? converted.value.toString()
-          : converted.value.toFixed(2).replace(/\.?0+$/, '');
         setPreviewText(
-          `${inputQuantity} ${selectedUnitSymbol} \u2248 ${formattedValue} ${trackingUnitSymbol}`,
+          formatPreview(
+            inputQuantity,
+            selectedUnitSymbol,
+            converted.value,
+            trackingUnitSymbol,
+          ),
         );
         setConvertedValue(converted.value);
       } else {
@@ -198,6 +218,9 @@ export function useConversionPreview({
         setConvertedValue(null);
       }
       setPreviewLoading(false);
+    };
+    debounceTimer.current = setTimeout(() => {
+      void runConversion();
     }, DEBOUNCE_MS);
 
     return () => {

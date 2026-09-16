@@ -6,24 +6,26 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { NotificationActionHandler } from '#features/notifications/components/NotificationActionHandler';
-import { getNotificationDisplayMessage } from '#features/notifications/utils/notificationHelpers';
+import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
 
 import type { StaticScreenProps } from '@react-navigation/native';
 import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
 import { formatDateTimeLong } from '#/utils/formatters/date';
 
 export const NotificationDetailScreen: React.FC<
+  // `notifications/:id` deep-links here with the id alone.
   StaticScreenProps<{
-    notification: NotificationItem;
+    id: string;
+    notification?: NotificationItem;
   }>
 > = ({ route }) => {
   const { t } = useTranslation();
-  const notification = route.params?.notification;
+  const notification = route.params.notification;
 
   if (!notification) {
     return (
       <View style={styles.container}>
-        <Text role="body" tone="error" align="center" style={styles.errorText}>
+        <Text role="error" tone="error" align="center" style={styles.errorText}>
           {t('notifications.notFound')}
         </Text>
       </View>
@@ -33,6 +35,7 @@ export const NotificationDetailScreen: React.FC<
   // payload is always a NotificationPayload object (narrowed at the ingestion
   // boundary), so it can be read directly.
   const payload = notification.payload;
+  const copy = getNotificationCopy(notification, t);
 
   return (
     <NotificationActionHandler>
@@ -43,7 +46,7 @@ export const NotificationDetailScreen: React.FC<
               <Icon name="notifications" size={32} tone="primary" />
             </View>
             <Text role="title" style={styles.title}>
-              {notification.title || t('notifications.titleFallback')}
+              {copy.title}
             </Text>
             <Text role="caption" tone="secondary">
               {formatDateTimeLong(new Date(notification.sentAt))}
@@ -52,9 +55,7 @@ export const NotificationDetailScreen: React.FC<
 
           <View style={styles.content}>
             <Text role="body" style={styles.message}>
-              {getNotificationDisplayMessage(notification, t) ||
-                payload.message ||
-                t('notifications.noMessageAvailable')}
+              {copy.message}
             </Text>
 
             {!!payload.details && (

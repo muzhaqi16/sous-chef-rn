@@ -433,6 +433,33 @@ describe('moveShoppingListItemToPurchased', () => {
     expect(result).toBe(4);
   });
 
+  // Only counts the app holds may move: a missing total is not zero, and
+  // treating it as zero wipes the progress the header last read.
+  it('leaves the derived counts alone when the list total is not held', () => {
+    const cache = createMockCache();
+    moveShoppingListItemToPurchased(cache, 'sl-1', { id: 'sli-1' });
+    const readField = jest.fn((field: string) =>
+      field === 'completedItems' ? 3 : undefined,
+    );
+
+    expect(
+      invokeFieldModifier(
+        cache,
+        'remainingItems',
+        7,
+        createFieldHelpers({ readField }),
+      ),
+    ).toBe(7);
+    expect(
+      invokeFieldModifier(
+        cache,
+        'completionRate',
+        0.3,
+        createFieldHelpers({ readField }),
+      ),
+    ).toBe(0.3);
+  });
+
   it('returns existing for unfiltered connection variant', () => {
     const cache = createMockCache();
 

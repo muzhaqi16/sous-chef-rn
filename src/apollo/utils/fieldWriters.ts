@@ -5,6 +5,10 @@
  */
 
 import type { ApolloCache } from '@apollo/client';
+import type {
+  PersistedEntityType,
+  PersistedField,
+} from '#/apollo/offline/OptimisticDataPersistence';
 import { SHOPPING_LIST_FIELD_WRITERS } from '#features/shoppingList/offline/fieldWriters';
 
 /** Applies a persisted patch for one field of one entity. */
@@ -14,8 +18,12 @@ export type FieldWriter = (
   value: unknown,
 ) => void;
 
-/** Keyed `<typename>.<field>`, the shape {@link fieldWriterFor} looks up. */
-export type FieldWriterTable = Record<string, FieldWriter>;
+/** Writers by generated typename, then field — both checked against codegen. */
+export type FieldWriterTable = {
+  readonly [T in PersistedEntityType]?: {
+    readonly [F in PersistedField<T>]?: FieldWriter;
+  };
+};
 
 const WRITERS: FieldWriterTable = {
   ...SHOPPING_LIST_FIELD_WRITERS,
@@ -26,8 +34,10 @@ const WRITERS: FieldWriterTable = {
  * is correct — which is the case for the great majority of fields.
  */
 export function fieldWriterFor(
-  typename: string,
+  typename: PersistedEntityType,
   field: string,
 ): FieldWriter | undefined {
-  return WRITERS[`${typename}.${field}`];
+  const writers: Readonly<Record<string, FieldWriter | undefined>> =
+    WRITERS[typename] ?? {};
+  return writers[field];
 }

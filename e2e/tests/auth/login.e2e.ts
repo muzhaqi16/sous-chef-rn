@@ -10,8 +10,14 @@ import { launchAppWithFabricWorkaround } from '../../init';
 import { LandingAuthScreen } from '../../screens/LandingAuthScreen';
 import { LoginScreen } from '../../screens/LoginScreen';
 import { dismissBiometricPromptIfPresent } from '../../helpers/auth';
-import { TIMEOUTS, isOnScreen, waitForNetworkIdle } from '../../helpers/waitFor';
+import {
+  TIMEOUTS,
+  isOnScreen,
+  waitForNetworkIdle,
+} from '../../helpers/waitFor';
 import { TEST_USER } from '../../fixtures/testData';
+import { authTestIDs } from '../../../src/features/auth/testIDs';
+import { kitTestIDs } from '../../../src/components/testIDs';
 
 describe('Login', () => {
   const landingScreen = new LandingAuthScreen();
@@ -39,7 +45,7 @@ describe('Login', () => {
    * screen check a drifted test clears nothing and runs against the wrong view.
    */
   async function ensureEmptyLoginForm() {
-    if (await isOnScreen('login-screen')) {
+    if (await isOnScreen(authTestIDs.loginScreen)) {
       await loginScreen.clearForm();
       return;
     }
@@ -72,10 +78,10 @@ describe('Login', () => {
 
     it('should show all login form elements', async () => {
       await loginScreen.waitForScreen();
-      await loginScreen.expectVisible('login-email-input');
-      await loginScreen.expectVisible('login-password-input');
-      await loginScreen.expectVisible('login-submit-button');
-      await loginScreen.expectVisible('login-forgot-password-link');
+      await loginScreen.expectVisible(authTestIDs.loginEmailInput);
+      await loginScreen.expectVisible(authTestIDs.loginPasswordInput);
+      await loginScreen.expectVisible(authTestIDs.loginSubmitButton);
+      await loginScreen.expectVisible(authTestIDs.loginForgotPasswordLink);
     });
 
     it('should login with valid credentials', async () => {
@@ -93,14 +99,13 @@ describe('Login', () => {
       // zIndex 9999) can cover the screen. The screenshot is diagnostic; the
       // rethrow is what lets the test fail.
       try {
-        await waitFor(element(by.id('tab-bar')))
+        await waitFor(element(by.id(kitTestIDs.tabBar)))
           .toExist()
           .withTimeout(20000);
       } catch (error) {
         await device.takeScreenshot('debug-no-main-screen');
         throw error;
       }
-
 
       await device.takeScreenshot('after-login');
     });
@@ -112,11 +117,10 @@ describe('Login', () => {
 
       await device.takeScreenshot('after-reload');
 
-
       // A dropped session lands back on landing/login with no tab bar.
       // toExist because the overlay may block visibility.
       try {
-        await waitFor(element(by.id('tab-bar')))
+        await waitFor(element(by.id(kitTestIDs.tabBar)))
           .toExist()
           .withTimeout(15000);
       } catch (error) {
@@ -146,7 +150,7 @@ describe('Login', () => {
     it('should show error for empty password', async () => {
       await loginScreen.enterEmail(TEST_USER.email);
 
-      await loginScreen.dismissKeyboard('login-email-input');
+      await loginScreen.dismissKeyboard(authTestIDs.loginEmailInput);
       await loginScreen.submit();
       await device.takeScreenshot('error-empty-password');
       await loginScreen.expectPasswordFieldError();
@@ -203,7 +207,7 @@ describe('Login', () => {
       await loginScreen.dismissKeyboard();
 
       // Rapid taps — first tap may log in and remove the button
-      const submitButton = element(by.id('login-submit-button'));
+      const submitButton = element(by.id(authTestIDs.loginSubmitButton));
       await submitButton.tap();
       try {
         await submitButton.tap();
@@ -219,7 +223,7 @@ describe('Login', () => {
 
       // Credentials are valid, so extra taps must not prevent login from
       // completing — one session, no wedged state.
-      await waitFor(element(by.id('tab-bar')))
+      await waitFor(element(by.id(kitTestIDs.tabBar)))
         .toExist()
         .withTimeout(TIMEOUTS.NETWORK);
     });
@@ -230,7 +234,7 @@ describe('Login', () => {
       await device.takeScreenshot('edge-clear-error-before-type');
 
       await loginScreen.enterEmail(TEST_USER.email);
-      await loginScreen.dismissKeyboard('login-email-input');
+      await loginScreen.dismissKeyboard(authTestIDs.loginEmailInput);
 
       await device.takeScreenshot('edge-clear-error-after-type');
       await loginScreen.expectNoEmailFieldError();
@@ -248,19 +252,18 @@ describe('Login', () => {
 
     it('should navigate to forgot password', async () => {
       await loginScreen.tapForgotPassword();
-      await waitFor(element(by.id('forgot-password-screen')))
+      await waitFor(element(by.id(authTestIDs.forgotPasswordScreen)))
         .toBeVisible()
         .withTimeout(10000);
     });
 
     it('should navigate to sign up', async () => {
-
       await loginScreen.tapSignUp();
 
       await device.takeScreenshot('nav-signup');
 
       // Use toExist() in case an overlay blocks visibility
-      await waitFor(element(by.id('signup-screen')))
+      await waitFor(element(by.id(authTestIDs.signUpScreen)))
         .toExist()
         .withTimeout(10000);
     });

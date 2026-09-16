@@ -106,24 +106,8 @@ export function useSlideAnimation({
     );
   };
 
-  const resetSlide = () => {
-    cancelAnimation(translateX);
-    cancelAnimation(opacity);
-    translateX.set(
-      withTiming(0, { duration: duration / 2, easing: defaultEasing }),
-    );
-    if (withOpacity) {
-      opacity.set(
-        withTiming(1, { duration: duration / 2, easing: defaultEasing }),
-      );
-    }
-    isAnimatingShared.set(false);
-  };
-
   return {
     animatedSlideStyle,
     triggerSlide,
-    resetSlide,
-    isAnimating: isAnimatingShared,
   };
 }

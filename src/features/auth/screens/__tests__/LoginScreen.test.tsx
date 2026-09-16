@@ -41,14 +41,6 @@ jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
   }),
 }));
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    trackScreen: jest.fn(),
-    trackEvent: jest.fn(),
-    trackError: jest.fn(),
-  },
-}));
-
 jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#features/auth/components/AuthWrapper', () => {

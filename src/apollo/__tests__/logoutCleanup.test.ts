@@ -25,7 +25,6 @@ jest.mock('../offline/ApolloCachePersistence', () => ({
     clear: jest.fn(),
     cancel: jest.fn(),
   },
-  cancelCachePersistence: jest.fn(),
 }));
 
 jest.mock('../offline/OptimisticDataPersistence', () => ({
@@ -65,12 +64,15 @@ jest.mock('../links/refreshToken', () => ({
 // ---------------------------------------------------------------------------
 
 import { LogoutCleanup } from '../logoutCleanup';
-import { cancelCachePersistence } from '../offline/ApolloCachePersistence';
 import { cancelTokenRefresh } from '../links/tokenScheduler';
 import { apolloCachePersistence } from '../offline/ApolloCachePersistence';
 import { optimisticDataPersistence } from '../offline/OptimisticDataPersistence';
 import { storage } from '#/storage/mmkv';
 import { useStore } from '#store';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { RefreshTokenDocument } from '#operations/auth/auth.generated';
+import { UpdateDeviceDocument } from '#operations/auth/device.generated';
+import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
 describe('LogoutCleanup', () => {
   beforeEach(() => {
@@ -115,7 +117,7 @@ describe('LogoutCleanup', () => {
 
     it('cancels cache persistence', async () => {
       await LogoutCleanup.performLogoutCleanup();
-      expect(cancelCachePersistence).toHaveBeenCalled();
+      expect(apolloCachePersistence.cancel).toHaveBeenCalled();
     });
 
     it('stops in-flight queries', async () => {
@@ -223,19 +225,21 @@ describe('LogoutCleanup', () => {
     it('returns true for non-allowed operations during logout', async () => {
       await LogoutCleanup.performLogoutCleanup();
 
-      expect(LogoutCleanup.shouldSkipOperation('GetShoppingList')).toBe(true);
+      expect(
+        LogoutCleanup.shouldSkipOperation(
+          operationNameOf(GetShoppingListsLiteDocument),
+        ),
+      ).toBe(true);
     });
 
     it('returns false for RefreshToken during logout', async () => {
       await LogoutCleanup.performLogoutCleanup();
 
-      expect(LogoutCleanup.shouldSkipOperation('RefreshToken')).toBe(false);
-    });
-
-    it('returns false for Logout operation during logout', async () => {
-      await LogoutCleanup.performLogoutCleanup();
-
-      expect(LogoutCleanup.shouldSkipOperation('Logout')).toBe(false);
+      expect(
+        LogoutCleanup.shouldSkipOperation(
+          operationNameOf(RefreshTokenDocument),
+        ),
+      ).toBe(false);
     });
 
     // `UpdateDevice` is BOTH the sign-out device delete and the push-token
@@ -245,66 +249,17 @@ describe('LogoutCleanup', () => {
     it('returns true for UpdateDevice — the name alone earns no exemption', async () => {
       await LogoutCleanup.performLogoutCleanup();
 
-      expect(LogoutCleanup.shouldSkipOperation('UpdateDevice')).toBe(true);
+      expect(
+        LogoutCleanup.shouldSkipOperation(
+          operationNameOf(UpdateDeviceDocument),
+        ),
+      ).toBe(true);
     });
 
     it('returns true when no operation name during logout', async () => {
       await LogoutCleanup.performLogoutCleanup();
 
       expect(LogoutCleanup.shouldSkipOperation()).toBe(true);
-    });
-  });
-
-  describe('handleLogoutError', () => {
-    it('returns false when not logging out', () => {
-      const error = new Error('some error');
-      expect(LogoutCleanup.handleLogoutError(error)).toBe(false);
-    });
-
-    it('suppresses "No access token available" errors during logout', async () => {
-      await LogoutCleanup.performLogoutCleanup();
-
-      const result = LogoutCleanup.handleLogoutError(
-        new Error('No access token available'),
-        'SomeQuery',
-      );
-      expect(result).toBe(true);
-    });
-
-    it('suppresses "Network error" during logout', async () => {
-      await LogoutCleanup.performLogoutCleanup();
-
-      const result = LogoutCleanup.handleLogoutError(
-        new Error('Network error: Failed to fetch'),
-      );
-      expect(result).toBe(true);
-    });
-
-    it('suppresses "Response not successful: Received status code 500"', async () => {
-      await LogoutCleanup.performLogoutCleanup();
-
-      const result = LogoutCleanup.handleLogoutError(
-        new Error('Response not successful: Received status code 500'),
-      );
-      expect(result).toBe(true);
-    });
-
-    it('suppresses "Request failed" during logout', async () => {
-      await LogoutCleanup.performLogoutCleanup();
-
-      const result = LogoutCleanup.handleLogoutError(
-        new Error('Request failed with status 403'),
-      );
-      expect(result).toBe(true);
-    });
-
-    it('does not suppress unknown errors during logout', async () => {
-      await LogoutCleanup.performLogoutCleanup();
-
-      const result = LogoutCleanup.handleLogoutError(
-        new Error('Unexpected error xyz'),
-      );
-      expect(result).toBe(false);
     });
   });
 });

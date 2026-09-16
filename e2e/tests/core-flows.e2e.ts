@@ -8,6 +8,7 @@ import { bootstrapAuthenticatedSession } from '../helpers/auth';
 import { PantryScreen } from '../screens/PantryScreen';
 import { RecipesScreen } from '../screens/RecipesScreen';
 import { ShoppingListScreen } from '../screens/ShoppingListScreen';
+import { kitTestIDs } from '../../src/components/testIDs';
 
 describe('Core app flows', () => {
   const pantryScreen = new PantryScreen();
@@ -24,7 +25,7 @@ describe('Core app flows', () => {
 
   it('lands on pantry after login', async () => {
     await pantryScreen.expectScreenVisible();
-    await pantryScreen.expectVisible('pantry-add-button');
+    await pantryScreen.expectVisible(kitTestIDs.tabBarAddButton);
   });
 
   it('adds a pantry item', async () => {

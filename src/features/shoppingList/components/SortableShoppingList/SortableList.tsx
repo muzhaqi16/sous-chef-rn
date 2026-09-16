@@ -40,11 +40,15 @@ const MVCP_DISABLED = { disabled: true };
 const keyExtractor = (item: ShoppingListRowItem) => item.id;
 // Every row is the same component, so one recycling pool is correct.
 const getItemType = () => 'item';
-const renderItem = (info: ListRenderItemInfo<ShoppingListRowItem>) => {
-  // FlashList v2 can transiently pass an undefined item while recycling cells
-  // through a data swap (switching the active list).
-  if (!info.item) return null;
-  return <SwipeableListItem {...info} />;
+// FlashList v2 can transiently pass an undefined item while recycling cells
+// through a data swap or a layout-animation render, whatever its type says.
+type RecycledRenderItemInfo = Omit<
+  ListRenderItemInfo<ShoppingListRowItem>,
+  'item'
+> & { item: ShoppingListRowItem | undefined };
+const renderItem = ({ item, ...info }: RecycledRenderItemInfo) => {
+  if (!item) return null;
+  return <SwipeableListItem {...info} item={item} />;
 };
 const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   items,
@@ -149,7 +153,6 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   };
 
   const contentContainerStyle = {
-    paddingTop: 8,
     paddingBottom: getScrollClearancePadding(insets.bottom),
     flexGrow: 1,
   };
@@ -221,6 +224,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   listContent: {
+    paddingTop: theme.spacing.sm,
     paddingHorizontal: theme.layout.pageGutter,
   },
   container: {

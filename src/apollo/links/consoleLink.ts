@@ -1,10 +1,7 @@
 import { ApolloLink, Observable } from '@apollo/client';
+import { Kind } from 'graphql';
 import performance from 'react-native-performance';
-import {
-  serializeError,
-  safeStringifyError,
-  isTimerCircularStructureError,
-} from '#/utils/errorSerialization';
+import { serializeError, safeStringifyError } from '#/utils/errorSerialization';
 
 // Enable detailed logging only in development
 const isDevelopment = __DEV__;
@@ -35,7 +32,7 @@ function maskValue(value: unknown, depth: number): unknown {
 }
 
 function maskVariables(variables: Record<string, unknown>) {
-  return maskValue(variables, 0) as Record<string, unknown>;
+  return maskValue(variables, 0);
 }
 
 // Cold-start detection: first N operations have inflated timing due to JS thread contention
@@ -66,10 +63,11 @@ export const createConsoleLink = (
       return forward(operation);
     }
 
-    const operationName = operation.operationName || 'Unknown';
+    const operationName = operation.operationName ?? 'Unknown';
+    const [firstDefinition] = operation.query.definitions;
     const operationType =
-      operation.query.definitions[0]?.kind === 'OperationDefinition'
-        ? operation.query.definitions[0]?.operation?.toUpperCase()
+      firstDefinition?.kind === Kind.OPERATION_DEFINITION
+        ? firstDefinition.operation.toUpperCase()
         : 'UNKNOWN';
     const isSubscription = operationType === 'SUBSCRIPTION';
     const startTime = isSubscription ? 0 : performance.now();
@@ -79,19 +77,6 @@ export const createConsoleLink = (
       const subscription = forward(operation).subscribe({
         next: result => {
           const hasErrors = result.errors && result.errors.length > 0;
-
-          // Check for timer errors FIRST - skip ALL logging for these
-          // These are expected during subscription teardown/setup due to graphql-ws internals
-          if (hasErrors) {
-            const safeErrors = result.errors?.map(serializeError);
-            const isTimerError = safeErrors?.some(err =>
-              isTimerCircularStructureError(err),
-            );
-            if (isTimerError) {
-              observer.next(result);
-              return; // Skip entire logging block
-            }
-          }
 
           // Determine status
           let emoji = '✅';
@@ -127,11 +112,7 @@ export const createConsoleLink = (
           }
 
           // Log variables as expandable object
-          if (
-            logVariables &&
-            operation.variables &&
-            Object.keys(operation.variables).length > 0
-          ) {
+          if (logVariables && Object.keys(operation.variables).length > 0) {
             console.log('   📤 Variables:', maskVariables(operation.variables));
           }
 
@@ -145,7 +126,7 @@ export const createConsoleLink = (
               console.warn('   ⚠️ GraphQL errors (may have circular refs):');
               safeErrors?.forEach((err, i) => {
                 console.warn(
-                  `      [${i}] message: ${err?.message || 'No message'}`,
+                  `      [${i}] message: ${err.message || 'No message'}`,
                 );
               });
             } else {

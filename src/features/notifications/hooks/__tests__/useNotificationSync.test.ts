@@ -1,6 +1,7 @@
 import { act, waitFor } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import type { InMemoryCache } from '@apollo/client';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   seedCache,
@@ -8,20 +9,25 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import {
   MarkNotificationAsReadDocument,
-  MarkNotificationUnreadDocument,
   DeleteNotificationDocument,
 } from '#features/notifications/graphql/notificationMutations.generated';
 import { MarkAllNotificationsAsReadDocument } from '#features/notifications/graphql/bulkNotificationMutations.generated';
 import {
+  ErrorCode,
   NotificationStatus,
   NotificationType,
 } from '#/graphql/generated/schemaTypes';
+import { alertService } from '#/services/alertService';
 import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotificationSync } from '../useNotificationSync';
 
 jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/errorService');
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 // The hook reads only the signed-in user from the store — whether a
 // notification is unread is read from the cache, which is also what renders
@@ -92,6 +98,7 @@ const seedFeed = (
       sentAt: '2026-01-01T00:00:00.000Z',
       readAt: null,
       expiresAt: null,
+      isAuthoredContent: false,
     })),
   ]);
 
@@ -109,7 +116,7 @@ const readBadge = (cache: InMemoryCache) =>
 
 const markReadMock = (
   outcome: 'success' | 'not-found' = 'success',
-): MockedResponse => ({
+): MockFor<typeof MarkNotificationAsReadDocument> => ({
   request: { query: MarkNotificationAsReadDocument, variables: () => true },
   result: {
     data: {
@@ -125,7 +132,7 @@ const markReadMock = (
             }
           : {
               __typename: 'NotFoundError',
-              code: 'NOT_FOUND',
+              code: ErrorCode.NotFound,
               message: 'gone',
               resource: 'Notification',
               resourceId: 'n1',
@@ -134,23 +141,7 @@ const markReadMock = (
   },
 });
 
-const markUnreadMock = (): MockedResponse => ({
-  request: { query: MarkNotificationUnreadDocument, variables: () => true },
-  result: {
-    data: {
-      markNotificationUnread: {
-        __typename: 'MarkNotificationUnreadPayload',
-        notification: {
-          __typename: 'Notification',
-          id: 'n1',
-          status: UNREAD,
-        },
-      },
-    },
-  },
-});
-
-const deleteMock = (): MockedResponse => ({
+const deleteMock = (): MockFor<typeof DeleteNotificationDocument> => ({
   request: { query: DeleteNotificationDocument, variables: () => true },
   result: {
     data: {
@@ -162,13 +153,28 @@ const deleteMock = (): MockedResponse => ({
   },
 });
 
-const deleteRejectedMock = (): MockedResponse => ({
+const deleteRejectedMock = (): MockFor<typeof DeleteNotificationDocument> => ({
+  request: { query: DeleteNotificationDocument, variables: () => true },
+  result: {
+    data: {
+      deleteNotification: {
+        __typename: 'ForbiddenError',
+        code: ErrorCode.Forbidden,
+        message: 'no',
+      },
+    },
+  },
+});
+
+const deleteAlreadyGoneMock = (): MockFor<
+  typeof DeleteNotificationDocument
+> => ({
   request: { query: DeleteNotificationDocument, variables: () => true },
   result: {
     data: {
       deleteNotification: {
         __typename: 'NotFoundError',
-        code: 'NOT_FOUND',
+        code: ErrorCode.NotFound,
         message: 'gone',
         resource: 'Notification',
         resourceId: 'n1',
@@ -177,13 +183,13 @@ const deleteRejectedMock = (): MockedResponse => ({
   },
 });
 
-const markAllMock = (): MockedResponse => ({
+const markAllMock = (): MockFor<typeof MarkAllNotificationsAsReadDocument> => ({
   request: { query: MarkAllNotificationsAsReadDocument, variables: () => true },
   result: {
     data: {
       markAllNotificationsAsRead: {
         __typename: 'MarkAllNotificationsAsReadPayload',
-        summary: { __typename: 'BulkNotificationSummary', total: 3 },
+        summary: { __typename: 'BulkSummary', total: 3 },
       },
     },
   },
@@ -198,7 +204,7 @@ describe('useNotificationSync — cached badge aggregates', () => {
     const { result } = renderSync(cache, [markReadMock()]);
 
     await act(async () => {
-      result.current.syncMarkAsRead('n1');
+      await result.current.syncMarkAsRead('n1');
     });
 
     await waitFor(() =>
@@ -213,32 +219,7 @@ describe('useNotificationSync — cached badge aggregates', () => {
     const { result } = renderSync(cache, []);
 
     await act(async () => {
-      result.current.syncMarkAsRead('n1');
-    });
-
-    expect(readBadge(cache)?.unreadNotificationCount).toBe(5);
-  });
-
-  it('mark-unread of a read notification increments the cached count', async () => {
-    const cache = seedFeed(5, [{ id: 'n1', status: READ }]);
-    const { result } = renderSync(cache, [markUnreadMock()]);
-
-    await act(async () => {
-      result.current.syncMarkUnread('n1');
-    });
-
-    await waitFor(() =>
-      expect(readBadge(cache)?.unreadNotificationCount).toBe(6),
-    );
-    expect(readNotificationStatus(cache, 'n1')).toBe(UNREAD);
-  });
-
-  it('mark-unread of an already-unread notification fires nothing', async () => {
-    const cache = seedFeed(5, [{ id: 'n1', status: UNREAD }]);
-    const { result } = renderSync(cache, []);
-
-    await act(async () => {
-      result.current.syncMarkUnread('n1');
+      await result.current.syncMarkAsRead('n1');
     });
 
     expect(readBadge(cache)?.unreadNotificationCount).toBe(5);
@@ -252,14 +233,14 @@ describe('useNotificationSync — cached badge aggregates', () => {
     const { result } = renderSync(cache, [deleteMock(), deleteMock()]);
 
     await act(async () => {
-      result.current.syncDelete('n1');
+      await result.current.syncDelete('n1');
     });
     await waitFor(() =>
       expect(readBadge(cache)?.unreadNotificationCount).toBe(4),
     );
 
     await act(async () => {
-      result.current.syncDelete('n2');
+      await result.current.syncDelete('n2');
     });
     await waitFor(() =>
       expect(readNotificationStatus(cache, 'n2')).toBeUndefined(),
@@ -277,7 +258,7 @@ describe('useNotificationSync — cached badge aggregates', () => {
     const { result } = renderSync(cache, [markAllMock()]);
 
     await act(async () => {
-      result.current.syncMarkAllAsRead();
+      await result.current.syncMarkAllAsRead();
     });
 
     await waitFor(() =>
@@ -300,13 +281,27 @@ describe('useNotificationSync — cached badge aggregates', () => {
     const { result } = renderSync(cache, [markReadMock('not-found')]);
 
     await act(async () => {
-      result.current.syncMarkAsRead('n1');
+      await result.current.syncMarkAsRead('n1');
     });
 
     await waitFor(() =>
       expect(readNotificationStatus(cache, 'n1')).toBe(UNREAD),
     );
     expect(readBadge(cache)?.unreadNotificationCount).toBe(5);
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+  });
+
+  it('a delete answered "not found" stays deleted, with nothing shown', async () => {
+    const cache = seedFeed(5, [{ id: 'n1', status: UNREAD }]);
+    const { result } = renderSync(cache, [deleteAlreadyGoneMock()]);
+
+    await act(async () => {
+      await result.current.syncDelete('n1');
+    });
+
+    expect(readNotificationStatus(cache, 'n1')).toBeUndefined();
+    expect(readBadge(cache)?.unreadNotificationCount).toBe(4);
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
   // The rollback must not be `cache.restore(cache.extract())`: that replaces
@@ -317,7 +312,7 @@ describe('useNotificationSync — cached badge aggregates', () => {
     const { result } = renderSync(cache, [deleteRejectedMock()]);
 
     await act(async () => {
-      result.current.syncDelete('n1');
+      const pending = result.current.syncDelete('n1');
       // Lands between the eviction and the refusal, exactly as an in-flight
       // query result or a subscription push would.
       cache.writeFragment({
@@ -330,6 +325,7 @@ describe('useNotificationSync — cached badge aggregates', () => {
         `,
         data: { __typename: 'Notification', id: 'n2', status: UNREAD },
       });
+      await pending;
     });
 
     await waitFor(() =>
@@ -344,7 +340,7 @@ describe('useNotificationSync — cached badge aggregates', () => {
     const { result } = renderSync(cache, [markReadMock()]);
 
     await act(async () => {
-      result.current.syncMarkAsRead('n1');
+      await result.current.syncMarkAsRead('n1');
     });
 
     await waitFor(() => expect(readNotificationStatus(cache, 'n1')).toBe(READ));
@@ -357,7 +353,7 @@ describe('useNotificationSync — cached badge aggregates', () => {
     const { result } = renderSync(cache, [markReadMock()]);
 
     await act(async () => {
-      result.current.syncMarkAsRead('n1');
+      await result.current.syncMarkAsRead('n1');
     });
 
     // The row still moves — it is identified by its own id. Only the badge,

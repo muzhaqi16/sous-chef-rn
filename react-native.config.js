@@ -22,5 +22,9 @@ module.exports = {
     '@react-native-firebase/messaging': {
       platforms: { ios: null },
     },
+    // Android-only for the same reason: iOS has no Firebase configuration.
+    '@react-native-firebase/crashlytics': {
+      platforms: { ios: null },
+    },
   },
 };

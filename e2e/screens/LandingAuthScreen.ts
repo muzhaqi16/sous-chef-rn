@@ -1,12 +1,13 @@
 /** The first screen an unauthenticated user sees. */
 
 import { BaseScreen } from './BaseScreen';
+import { authTestIDs } from '../../src/features/auth/testIDs';
 
 export class LandingAuthScreen extends BaseScreen {
-  protected screenID = 'landing-auth-screen';
+  protected screenID = authTestIDs.landingScreen;
 
-  private readonly loginButton = 'landing-login-button';
-  private readonly signupButton = 'landing-signup-button';
+  private readonly loginButton = authTestIDs.landingLoginButton;
+  private readonly signupButton = authTestIDs.landingSignUpButton;
 
   async tapLogin() {
     await this.tapByID(this.loginButton);

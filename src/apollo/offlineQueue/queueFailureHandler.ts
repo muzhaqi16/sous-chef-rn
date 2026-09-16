@@ -5,7 +5,8 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { COUNT_WITHDRAWALS, UNLINK_WITHDRAWALS } from './withdrawalRegistry';
 import { toastService } from '#/services/toastService';
-import { t } from '#/i18n';
+import { errorService } from '#/services/errorService';
+import { isTranslationKey, t } from '#/i18n';
 import { logger } from '#/utils/environment';
 import type {
   FailedMutationInfo,
@@ -16,8 +17,8 @@ import type {
 /**
  * Withdraws a locally-applied change the server permanently rejected. An evict
  * rather than a field-level revert, because the queue keeps no pre-change
- * snapshot: a create's row disappears, an update's entity is dropped so the
- * next read refetches. An unidentifiable entity is skipped and heals on refetch.
+ * snapshot: a create's row disappears, an update's entity is dropped and read
+ * back from the server. An unidentifiable entity is skipped and heals the same way.
  */
 export function handleQueueFailure(info: FailedMutationInfo): void {
   const { mutationId, entityType, entityId, operationName, error } = info;
@@ -32,10 +33,9 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
     try {
       withdrawCount(client.cache, info.variables, entityId);
     } catch (countError) {
-      logger.warn(
-        `Queue: could not withdraw ${operationName}'s count`,
-        countError,
-      );
+      errorService.reportError(countError, {
+        operation: `Withdraw ${operationName}'s count`,
+      });
     }
   }
 
@@ -53,10 +53,9 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
     try {
       withdrawUnlink(client.cache, info.variables);
     } catch (withdrawError) {
-      logger.warn(
-        `Queue: could not withdraw ${operationName}'s unlink`,
-        withdrawError,
-      );
+      errorService.reportError(withdrawError, {
+        operation: `Withdraw ${operationName}'s unlink`,
+      });
     }
   }
 
@@ -69,6 +68,32 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
   // Withdrawn, so it records nothing; left in place it would pad every drain
   // scan and persisted write until `cleanupTerminal` ages it out 24h later.
   queueStore.removeMutation(mutationId);
+
+  scheduleReread();
+}
+
+let rereadScheduled = false;
+
+/**
+ * One read of the screens per drain pass, AFTER it: a refused update's row is
+ * back with the server's value, a refused create's stays gone, and no row a
+ * later entry in the same pass replays is overwritten by a read that beat it.
+ */
+function scheduleReread(): void {
+  if (rereadScheduled) return;
+  rereadScheduled = true;
+  queueManager
+    .whenIdle()
+    .then(() => {
+      rereadScheduled = false;
+      return client.refetchQueries({ include: 'active' });
+    })
+    .catch((rereadError: unknown) => {
+      rereadScheduled = false;
+      errorService.reportError(rereadError, {
+        operation: 'Re-read after a queue withdrawal',
+      });
+    });
 }
 
 /**
@@ -92,11 +117,10 @@ function withdrawalMessage(
   if (type !== 'conflict') return t('errors.queuedChangeRejected');
   if (!entityType) return t('errors.queuedChangeOverwritten');
 
-  const resource = t(`errors.resourceNames.${entityType}`, {
-    defaultValue: '',
-  });
-  return resource
-    ? t('errors.queuedChangeOverwrittenResource', { resource })
+  // A persisted entry's typename; only the loaded copy knows which have a name.
+  const resourceKey = `errors.resourceNames.${entityType}`;
+  return isTranslationKey(resourceKey)
+    ? t('errors.queuedChangeOverwrittenResource', { resource: t(resourceKey) })
     : t('errors.queuedChangeOverwritten');
 }
 

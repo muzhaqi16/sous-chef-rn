@@ -236,7 +236,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
   },
   subtitleText: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   pressed: {
     opacity: theme.opacity.pressed,

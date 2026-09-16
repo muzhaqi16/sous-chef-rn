@@ -103,16 +103,17 @@ const savedRecipeNodes = [
 ];
 
 jest.mock('#features/recipes/hooks/useSavedRecipes', () => ({
-  useSavedRecipes: jest.fn(() => ({
-    state: {
-      recipes: savedRecipeNodes,
-      hasMore: false,
-    },
-    actions: {
-      loadMore: jest.fn(),
-    },
-  })),
+  useSavedRecipes: jest.fn(),
 }));
+
+const savedRecipesResult = (pagesRemain: boolean) => ({
+  state: {
+    recipes: savedRecipeNodes,
+    hasMore: pagesRemain,
+    isLoadingRemainingPages: pagesRemain,
+  },
+  actions: { loadMore: jest.fn() },
+});
 
 // AddMealSheet's saved-recipe row uses `useFragment` for its per-entity cache
 // subscription. The parent `useSavedRecipes` hook is mocked in this suite, but
@@ -189,9 +190,14 @@ const defaultProps = {
   onAddCustomMeal: jest.fn(),
 };
 
+const { useSavedRecipes: mockUseSavedRecipes } = jest.requireMock<{
+  useSavedRecipes: jest.Mock;
+}>('#features/recipes/hooks/useSavedRecipes');
+
 describe('AddMealSheet', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseSavedRecipes.mockImplementation(() => savedRecipesResult(false));
   });
 
   it('renders the header title', () => {
@@ -278,6 +284,36 @@ describe('AddMealSheet', () => {
     // itself, rather than rendering them as empty cells.
     expect(screen.getByText('Pasta Carbonara')).toBeTruthy();
     expect(screen.queryByText('Chicken Salad')).toBeNull();
+  });
+
+  it('asks for every saved-recipe page only while a search term is entered', () => {
+    renderWithApollo(<AddMealSheet {...defaultProps} />);
+    expect(mockUseSavedRecipes).toHaveBeenLastCalledWith({
+      loadAllPages: false,
+    });
+
+    fireEvent.changeText(
+      screen.getByPlaceholderText('Search recipes or add a custom meal...'),
+      'la',
+    );
+    expect(mockUseSavedRecipes).toHaveBeenLastCalledWith({
+      loadAllPages: true,
+    });
+  });
+
+  it('shows the loading indicator, not "no results", while pages remain', () => {
+    mockUseSavedRecipes.mockImplementation(() => savedRecipesResult(true));
+    renderWithApollo(<AddMealSheet {...defaultProps} />);
+
+    fireEvent.changeText(
+      screen.getByPlaceholderText('Search recipes or add a custom meal...'),
+      'zz',
+    );
+
+    expect(
+      screen.getByText('Searching all your saved recipes...'),
+    ).toBeTruthy();
+    expect(screen.queryByText('No recipes match your search')).toBeNull();
   });
 
   it('shows the no-results message when the query matches no saved recipe', async () => {

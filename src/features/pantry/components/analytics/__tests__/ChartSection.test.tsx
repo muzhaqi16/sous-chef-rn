@@ -7,7 +7,7 @@ describe('ChartSection', () => {
   it('keeps a drawn chart on screen while a refetch is in flight', () => {
     render(
       <ChartSection title="Spend" loading isEmpty={false}>
-        <Text>chart</Text>
+        <Text role="body">chart</Text>
       </ChartSection>,
     );
 
@@ -17,7 +17,7 @@ describe('ChartSection', () => {
   it('shows the loading state when there is nothing to draw', () => {
     render(
       <ChartSection title="Spend" loading isEmpty>
-        <Text>chart</Text>
+        <Text role="body">chart</Text>
       </ChartSection>,
     );
 

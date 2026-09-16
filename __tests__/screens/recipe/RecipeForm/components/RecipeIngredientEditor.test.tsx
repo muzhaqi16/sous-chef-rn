@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import { RecipeIngredientEditor } from '#features/recipes/components/recipeForm/RecipeIngredientEditor';
 
 jest.mock('../../../../../src/apollo/links/tokenScheduler');
@@ -22,32 +22,26 @@ jest.mock(
   },
 );
 
-jest.mock(
-  '#features/catalog/ui/autocomplete/ItemAutocompleteField',
-  () => ({
-    ItemAutocompleteField: (
-      props: React.ComponentProps<
-        typeof import('#features/catalog/ui/autocomplete/ItemAutocompleteField').ItemAutocompleteField
-      >,
-    ) => {
-      const { Text } = require('react-native');
-      return <Text>{props.label}</Text>;
-    },
-  }),
-);
-jest.mock(
-  '#features/catalog/ui/autocomplete/UnitAutocompleteField',
-  () => ({
-    UnitAutocompleteField: (
-      props: React.ComponentProps<
-        typeof import('#features/catalog/ui/autocomplete/UnitAutocompleteField').UnitAutocompleteField
-      >,
-    ) => {
-      const { Text } = require('react-native');
-      return <Text>{props.label}</Text>;
-    },
-  }),
-);
+jest.mock('#features/catalog/ui/autocomplete/ItemAutocompleteField', () => ({
+  ItemAutocompleteField: (
+    props: React.ComponentProps<
+      typeof import('#features/catalog/ui/autocomplete/ItemAutocompleteField').ItemAutocompleteField
+    >,
+  ) => {
+    const { Text } = require('react-native');
+    return <Text>{props.label}</Text>;
+  },
+}));
+jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
+  UnitAutocompleteField: (
+    props: React.ComponentProps<
+      typeof import('#features/catalog/ui/autocomplete/UnitAutocompleteField').UnitAutocompleteField
+    >,
+  ) => {
+    const { Text } = require('react-native');
+    return <Text>{props.label}</Text>;
+  },
+}));
 jest.mock('../../../../../src/components/atoms/FormInput', () => ({
   FormInput: (
     props: React.ComponentProps<
@@ -65,7 +59,7 @@ jest.mock('../../../../../src/components/molecules/EditableCounter', () => ({
     >,
   ) => {
     const { Text } = require('react-native');
-    return <Text>{props.label}</Text>;
+    return <Text>{`${props.label}:${props.value}`}</Text>;
   },
 }));
 jest.mock('../../../../../src/components/atoms/FieldRow', () => ({
@@ -84,8 +78,19 @@ jest.mock('../../../../../src/components/organisms/Header', () => ({
       typeof import('../../../../../src/components/organisms/Header').Header
     >,
   ) => {
-    const { Text } = require('react-native');
-    return <Text>{props.title}</Text>;
+    const { Pressable, Text, View } = require('react-native');
+    return (
+      <View>
+        <Text>{props.title}</Text>
+        {(props.rightActions ?? []).map((action, index) => (
+          <Pressable
+            key={index}
+            testID={`header-right-${index}`}
+            onPress={action.onPress}
+          />
+        ))}
+      </View>
+    );
   },
 }));
 
@@ -105,11 +110,55 @@ describe('RecipeIngredientEditor', () => {
   it('renders form fields', () => {
     const { getByText } = render(<RecipeIngredientEditor onSave={onSave} />);
     expect(getByText('Ingredient Name')).toBeTruthy();
-    expect(getByText('Quantity')).toBeTruthy();
+    expect(getByText(/^Quantity:/)).toBeTruthy();
   });
 
   it('renders Optional switch label', () => {
     const { getByText } = render(<RecipeIngredientEditor onSave={onSave} />);
     expect(getByText('Optional')).toBeTruthy();
+  });
+
+  it('seeds a fractional quantity as a cooking fraction and saves it back', () => {
+    const ref =
+      React.createRef<React.ComponentRef<typeof RecipeIngredientEditor>>();
+    const { getByText, getByTestId } = render(
+      <RecipeIngredientEditor ref={ref} onSave={onSave} />,
+    );
+
+    act(() => {
+      ref.current?.open({
+        id: 'ing-1',
+        name: 'Flour',
+        quantity: 1.25,
+        isOptional: false,
+        sortOrder: 0,
+      });
+    });
+
+    expect(getByText('Quantity:1 1/4')).toBeTruthy();
+    fireEvent.press(getByTestId('header-right-0'));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ quantity: 1.25 }),
+    );
+  });
+
+  it('seeds a quantity no fraction fits rounded to three decimals', () => {
+    const ref =
+      React.createRef<React.ComponentRef<typeof RecipeIngredientEditor>>();
+    const { getByText } = render(
+      <RecipeIngredientEditor ref={ref} onSave={onSave} />,
+    );
+
+    act(() => {
+      ref.current?.open({
+        id: 'ing-2',
+        name: 'Milk',
+        quantity: 177.4412,
+        isOptional: false,
+        sortOrder: 0,
+      });
+    });
+
+    expect(getByText('Quantity:177.441')).toBeTruthy();
   });
 });

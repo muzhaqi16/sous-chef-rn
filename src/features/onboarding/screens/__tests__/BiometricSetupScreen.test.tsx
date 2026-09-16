@@ -61,7 +61,7 @@ jest.mock('#hooks/navigation/useAuthPreferences', () => ({
 jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#/storage/keychain', () => ({
-  loadSessionTokens: jest.fn(() => Promise.resolve(null)),
+  loadSessionTokens: jest.fn(() => Promise.resolve({ status: 'absent' })),
   saveSessionTokens: jest.fn(() => Promise.resolve()),
   clearSessionTokens: jest.fn(() => Promise.resolve()),
 }));
@@ -91,10 +91,7 @@ describe('BiometricSetupScreen', () => {
     jest.clearAllMocks();
     mockBiometricInfo = { isAvailable: true, biometryType: 'Face ID' };
     // Restore mocks after clearAllMocks
-    const storeModule = jest.requireMock('#store/useAppStore') as {
-      useAppStore: jest.Mock;
-      useUser: jest.Mock;
-    };
+    const storeModule = jest.requireMock('#store/useAppStore');
     const mockState: Partial<RootState> = {
       user: { id: 'u1', email: 'test@test.com' } as RootState['user'],
       setUserNavigationState: jest.fn(),

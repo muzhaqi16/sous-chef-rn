@@ -37,7 +37,6 @@ jest.mock('../../../hooks/useRecipeDetail', () => ({
     externalId: '123',
     loading: false,
     error: 'Recipe not found',
-    backendError: null,
     displayData: null,
     isBackendRecipe: false,
     backendRecipe: null,
@@ -81,8 +80,6 @@ jest.mock('../../../hooks/useRecipeDetail', () => ({
     savedRating: null,
     cookedCount: 0,
     handleUnfavoriteRecipe: jest.fn(),
-    preloading: false,
-    preloadedRecipe: null,
   })),
 }));
 
@@ -184,13 +181,16 @@ jest.mock('@gorhom/bottom-sheet', () => ({
   useBottomSheetScrollableCreator: jest.fn(() => () => null),
 }));
 
+// The screen reads its params through `useRecipeDetail`, which is mocked here.
+const route = { params: {} };
+
 describe('RecipeDetail', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('renders error state when error exists', () => {
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('Recipe not found')).toBeTruthy();
   });
 
@@ -204,7 +204,6 @@ describe('RecipeDetail', () => {
       externalId: '123',
       loading: true,
       error: null,
-      backendError: null,
       displayData: null,
       isBackendRecipe: false,
       backendRecipe: null,
@@ -248,11 +247,9 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     // SousChefLoader is rendered during loading
     expect(tree.toJSON()).toBeTruthy();
   });
@@ -267,7 +264,6 @@ describe('RecipeDetail', () => {
       externalId: '123',
       loading: false,
       error: null,
-      backendError: null,
       displayData: {
         title: 'Spaghetti Carbonara',
         image: 'https://example.com/image.jpg',
@@ -325,11 +321,9 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('Spaghetti Carbonara')[0]).toBeTruthy();
     expect(tree.getByText('A classic Italian dish')).toBeTruthy();
   });
@@ -346,7 +340,6 @@ describe('RecipeDetail', () => {
       // Offline, a cached recipe's refresh fails. Checking `error` before
       // `displayData` blanked the screen and called it "recipe not found".
       error: 'Network request failed',
-      backendError: null,
       displayData: {
         title: 'Spaghetti Carbonara',
         image: 'https://example.com/image.jpg',
@@ -404,17 +397,15 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('Spaghetti Carbonara')[0]).toBeTruthy();
     expect(tree.getByText('A classic Italian dish')).toBeTruthy();
   });
 
   it('renders wrapped in error boundary', () => {
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.toJSON()).toBeTruthy();
   });
 
@@ -428,7 +419,6 @@ describe('RecipeDetail', () => {
       externalId: null,
       loading: false,
       error: null,
-      backendError: null,
       displayData: {
         title: 'Quick Soup',
         servings: 6,
@@ -478,18 +468,16 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText(/6 servings/)).toBeTruthy();
     expect(tree.getByText(/15 min/)).toBeTruthy();
   });
 
   // --- Branch coverage tests ---
 
-  it('renders backendError details when backendError exists', () => {
+  it('renders the hook error as the title', () => {
     const { useRecipeDetail } = jest.requireMock(
       '../../../hooks/useRecipeDetail',
     );
@@ -498,8 +486,7 @@ describe('RecipeDetail', () => {
       recipeId: 'r1',
       externalId: null,
       loading: false,
-      error: null,
-      backendError: { message: 'Network error' },
+      error: "Couldn't load this recipe",
       displayData: null,
       isBackendRecipe: false,
       backendRecipe: null,
@@ -543,12 +530,10 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
-    expect(tree.getByText('Network error')).toBeTruthy();
+    const tree = render(<RecipeDetail route={route} />);
+    expect(tree.getByText("Couldn't load this recipe")).toBeTruthy();
   });
 
   it('renders "Recipe not found in database" when recipeId but no backendRecipe and no error', () => {
@@ -561,7 +546,6 @@ describe('RecipeDetail', () => {
       externalId: null,
       loading: false,
       error: null,
-      backendError: null,
       displayData: null,
       isBackendRecipe: false,
       backendRecipe: null,
@@ -605,11 +589,9 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('Recipe not found in database')).toBeTruthy();
   });
 
@@ -623,7 +605,6 @@ describe('RecipeDetail', () => {
       externalId: '123',
       loading: false,
       error: null,
-      backendError: null,
       displayData: {
         title: 'Vegan Bowl',
         image: null,
@@ -680,11 +661,9 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('Vegetarian')).toBeTruthy();
     expect(tree.getByText('Vegan')).toBeTruthy();
     expect(tree.getByText('Gluten Free')).toBeTruthy();
@@ -702,7 +681,6 @@ describe('RecipeDetail', () => {
       externalId: null,
       loading: false,
       error: null,
-      backendError: null,
       displayData: {
         title: 'Saved Recipe',
         image: 'https://example.com/img.jpg',
@@ -753,11 +731,9 @@ describe('RecipeDetail', () => {
       savedRating: 3,
       cookedCount: 5,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('Dinner')).toBeTruthy();
     expect(tree.getByText('quick')).toBeTruthy();
     expect(tree.getByText('easy')).toBeTruthy();
@@ -779,7 +755,6 @@ describe('RecipeDetail', () => {
       externalId: null,
       loading: false,
       error: null,
-      backendError: null,
       displayData: {
         title: 'A Recipe',
         image: null,
@@ -829,11 +804,9 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('Mark cooked')).toBeTruthy();
   });
 
@@ -847,7 +820,6 @@ describe('RecipeDetail', () => {
       externalId: '123',
       loading: false,
       error: null,
-      backendError: null,
       displayData: {
         title: 'Test',
         image: null,
@@ -901,11 +873,9 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('Recipe from AllRecipes')).toBeTruthy();
     expect(tree.getByText('View Original Recipe')).toBeTruthy();
   });
@@ -920,7 +890,6 @@ describe('RecipeDetail', () => {
       externalId: null,
       loading: false,
       error: null,
-      backendError: null,
       displayData: null,
       isBackendRecipe: false,
       backendRecipe: null,
@@ -964,11 +933,9 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('Recipe not found')).toBeTruthy();
   });
 
@@ -982,7 +949,6 @@ describe('RecipeDetail', () => {
       externalId: null,
       loading: false,
       error: null,
-      backendError: null,
       displayData: {
         title: 'No Image Recipe',
         image: null,
@@ -1032,11 +998,9 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     // Title is rendered but there's no BackButton in image container
     expect(tree.getAllByText('No Image Recipe')[0]).toBeTruthy();
   });
@@ -1051,7 +1015,6 @@ describe('RecipeDetail', () => {
       externalId: '123',
       loading: false,
       error: null,
-      backendError: null,
       displayData: {
         title: 'Recipe',
         image: null,
@@ -1101,11 +1064,9 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('Adding...')).toBeTruthy();
   });
 
@@ -1119,7 +1080,6 @@ describe('RecipeDetail', () => {
       externalId: null,
       loading: false,
       error: null,
-      backendError: null,
       displayData: {
         title: 'Recipe',
         image: null,
@@ -1169,11 +1129,9 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('None')).toBeTruthy();
   });
 
@@ -1187,7 +1145,6 @@ describe('RecipeDetail', () => {
       externalId: '456',
       loading: false,
       error: null,
-      backendError: null,
       displayData: {
         title: 'Saving Recipe',
         image: 'https://example.com/img.jpg',
@@ -1238,74 +1195,10 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('Saving Recipe')[0]).toBeTruthy();
-  });
-
-  it('renders with preloading state', () => {
-    const { useRecipeDetail } = jest.requireMock(
-      '../../../hooks/useRecipeDetail',
-    );
-    useRecipeDetail.mockReturnValue({
-      goBack: jest.fn(),
-      recipeId: null,
-      externalId: '789',
-      loading: false,
-      error: null,
-      backendError: null,
-      displayData: null,
-      isBackendRecipe: false,
-      backendRecipe: null,
-      saving: false,
-      isSaved: false,
-      handleSaveRecipe: jest.fn(),
-      shoppingLists: [],
-      addingToList: false,
-      addedIngredients: new Set(),
-      handleAddSingleIngredient: jest.fn(),
-      handleAddAllIngredientsToList: jest.fn(),
-      handleAddAllIngredients: jest.fn(),
-      handleListSelected: jest.fn(),
-      listPickerVisible: false,
-      handleSheetDismiss: jest.fn(),
-      cookedModalVisible: false,
-      setCookedModalVisible: jest.fn(),
-      markingAsCooked: false,
-      handleMarkAsCooked: jest.fn(),
-      handleSkipReview: jest.fn(),
-      ingredientMatching: {
-        isSheetVisible: false,
-        editableMatches: [],
-        matchSummary: null,
-        updateMatch: jest.fn(),
-        confirmConsumption: jest.fn(),
-        confirmLoading: false,
-        hasPantry: false,
-        closeSheet: jest.fn(),
-      },
-      showFolderPicker: false,
-      setShowFolderPicker: jest.fn(),
-      updatingFolderTags: false,
-      handleUpdateFolder: jest.fn(),
-      handleUpdateTags: jest.fn(),
-      handleUpdateNotes: jest.fn(),
-      handleUpdateRating: jest.fn(),
-      savedFolder: null,
-      savedTags: [],
-      savedNotes: null,
-      savedRating: null,
-      cookedCount: 0,
-      handleUnfavoriteRecipe: jest.fn(),
-      preloading: true,
-      preloadedRecipe: null,
-    });
-
-    const tree = render(<RecipeDetail />);
-    expect(tree.toJSON()).toBeTruthy();
   });
 
   it('renders with instructions present', () => {
@@ -1318,7 +1211,6 @@ describe('RecipeDetail', () => {
       externalId: '123',
       loading: false,
       error: null,
-      backendError: null,
       displayData: {
         title: 'With Instructions',
         image: null,
@@ -1372,11 +1264,9 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('With Instructions')[0]).toBeTruthy();
     expect(tree.toJSON()).toBeTruthy();
   });
@@ -1391,7 +1281,6 @@ describe('RecipeDetail', () => {
       externalId: '123',
       loading: false,
       error: null,
-      backendError: null,
       displayData: {
         title: 'Recipe With Ingredients',
         image: null,
@@ -1444,11 +1333,9 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('Recipe With Ingredients')[0]).toBeTruthy();
   });
 
@@ -1462,7 +1349,6 @@ describe('RecipeDetail', () => {
       externalId: null,
       loading: false,
       error: null,
-      backendError: null,
       displayData: {
         title: 'Cooking Recipe',
         image: null,
@@ -1512,11 +1398,9 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 2,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('Cooking Recipe')[0]).toBeTruthy();
   });
 
@@ -1530,7 +1414,6 @@ describe('RecipeDetail', () => {
       externalId: null,
       loading: false,
       error: null,
-      backendError: null,
       displayData: {
         title: 'My Pasta Recipe',
         image: null,
@@ -1584,11 +1467,9 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getByText('Boil the water')).toBeTruthy();
     expect(tree.getByText('Cook the pasta')).toBeTruthy();
   });
@@ -1603,7 +1484,6 @@ describe('RecipeDetail', () => {
       externalId: null,
       loading: false,
       error: null,
-      backendError: null,
       displayData: {
         title: 'No Image Recipe',
         image: null,
@@ -1653,11 +1533,9 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('No Image Recipe')[0]).toBeTruthy();
     // No-image header renders with accessible meal plan button
     expect(tree.getByLabelText('Add to meal plan')).toBeTruthy();
@@ -1673,7 +1551,6 @@ describe('RecipeDetail', () => {
       externalId: null,
       loading: false,
       error: null,
-      backendError: null,
       displayData: {
         title: 'Zero Time Recipe',
         image: null,
@@ -1724,11 +1601,9 @@ describe('RecipeDetail', () => {
       savedRating: null,
       cookedCount: 0,
       handleUnfavoriteRecipe: jest.fn(),
-      preloading: false,
-      preloadedRecipe: null,
     });
 
-    const tree = render(<RecipeDetail />);
+    const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('Zero Time Recipe')[0]).toBeTruthy();
     expect(tree.queryByText(/0 min/)).toBeNull();
   });

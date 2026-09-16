@@ -2,7 +2,7 @@
 // Pure UI state management - no server data
 // ============================================
 
-import { StateCreator } from 'zustand';
+import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
 import type { ImageFile } from '#/types/media';
 

@@ -14,16 +14,19 @@ import {
   tapToggleOnce,
 } from '../../helpers/actions';
 import { TIMEOUTS } from '../../helpers/waitFor';
+import { kitTestIDs } from '../../../src/components/testIDs';
+import { notificationsTestIDs } from '../../../src/features/notifications/testIDs';
+import { profileTestIDs } from '../../../src/features/profile/testIDs';
 
-const TARGET = 'notification-switch-emailEnabled';
+const TARGET = notificationsTestIDs.settingSwitch('emailEnabled');
 
 describe('Notification settings — single tap', () => {
   beforeAll(async () => {
     await bootstrapAuthenticatedSession();
     await dismissSavePasswordPrompt();
     await relaunchToHomeTab();
-    await tapByID('tab-profile');
-    await tapByID('profile-menu-notifications');
+    await tapByID(kitTestIDs.tab('Profile'));
+    await tapByID(profileTestIDs.menuItem('notifications'));
     await waitFor(element(by.id(TARGET)))
       .toBeVisible()
       .withTimeout(TIMEOUTS.NETWORK);

@@ -5,7 +5,7 @@
  * `item`/`unit` links are nullable and resolve from the server on sync.
  */
 
-import { type ApolloCache } from '@apollo/client';
+import type { ApolloCache } from '@apollo/client';
 import {
   MyRecipesDocument,
   type MyRecipesQuery,
@@ -17,10 +17,9 @@ import {
 import { RecipeCacheWriters_FormFieldsFragmentDoc } from './recipeCacheWriters.generated';
 import { NEUTRAL_RECIPE_FORM_FIELDS } from './recipeFormFieldsNeutral.generated';
 import {
-  Difficulty,
-  RecipeCategory,
   RecipeStatus,
   type CreateRecipeInput,
+  type ExternalSource,
 } from '#/graphql/generated/schemaTypes';
 import { generateEntityId } from '#/utils/generateEntityId';
 
@@ -35,8 +34,8 @@ export type MyRecipesEdgeNode = {
   prepTimeMinutes: number | null;
   cookTimeMinutes: number | null;
   totalTimeMinutes: number | null;
-  category: RecipeCategory;
-  difficulty: Difficulty;
+  externalSource: ExternalSource | null;
+  externalId: string | null;
   savedDetails: {
     __typename: 'SavedRecipe';
     id: string;
@@ -78,10 +77,8 @@ function buildOptimisticRecipeNode(
     prepTimeMinutes: prep,
     cookTimeMinutes: cook,
     totalTimeMinutes: totalTime(prep, cook),
-    // The list node selects these non-null; mirror the server-side defaults
-    // when the form leaves them unset.
-    category: input.metadata?.category ?? RecipeCategory.MainCourse,
-    difficulty: input.metadata?.difficulty ?? Difficulty.Easy,
+    externalSource: null,
+    externalId: null,
     savedDetails: null,
   };
 }
@@ -133,7 +130,7 @@ function buildOptimisticRecipeEntity(
     createdBy,
     ingredientsConnection: {
       __typename: 'RecipeIngredientConnection',
-      edges: (input.ingredients ?? []).map((ing, index) => ({
+      edges: input.ingredients.map((ing, index) => ({
         __typename: 'RecipeIngredientEdge',
         node: {
           __typename: 'RecipeIngredient',

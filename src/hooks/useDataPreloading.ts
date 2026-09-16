@@ -112,7 +112,7 @@ export function useDataPreloading() {
       const result = await fetchUnits();
       const store = useStore.getState();
       commitWarm(
-        result?.data?.units,
+        result.data?.units,
         store.setCachedUnits,
         store.setLastUnitsFetchedAt,
       );
@@ -122,7 +122,7 @@ export function useDataPreloading() {
       const result = await fetchCategories();
       const store = useStore.getState();
       commitWarm(
-        result?.data?.categories.edges?.map(
+        result.data?.categories.edges.map(
           (edge): CategorySuggestion => ({
             __typename: 'CategorySuggestion',
             id: edge.node.id,
@@ -142,7 +142,7 @@ export function useDataPreloading() {
       const result = await fetchBrands();
       const store = useStore.getState();
       commitWarm(
-        result?.data?.brands.edges?.map(edge => ({
+        result.data?.brands.edges.map(edge => ({
           id: edge.node.id,
           name: edge.node.name,
         })),
@@ -155,7 +155,7 @@ export function useDataPreloading() {
       const result = await fetchStores();
       const store = useStore.getState();
       commitWarm(
-        result?.data?.stores.edges?.map(edge => ({
+        result.data?.stores.edges.map(edge => ({
           id: edge.node.id,
           name: edge.node.name,
           address: edge.node.address,

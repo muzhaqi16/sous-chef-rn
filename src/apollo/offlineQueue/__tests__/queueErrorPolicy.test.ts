@@ -8,6 +8,7 @@ import {
   classifyReplayResult,
   ReplayRejectedError,
 } from '../queueErrorPolicy';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
 describe('classifyReplayResult', () => {
   it('returns applied for a success payload', () => {
@@ -16,7 +17,7 @@ describe('classifyReplayResult', () => {
         __typename: 'CreateShoppingListPayload',
         shoppingList: { id: 'list-1' },
       }),
-    ).toBe('applied');
+    ).toEqual({ status: 'applied' });
   });
 
   it('returns applied for a converged success payload (favorites / cooking logs / sync ops)', () => {
@@ -27,21 +28,21 @@ describe('classifyReplayResult', () => {
         __typename: 'AddRecipeToFavoritesPayload',
         converged: true,
       }),
-    ).toBe('applied');
+    ).toEqual({ status: 'applied' });
     expect(
       classifyReplayResult({
         __typename: 'SyncPantryItemPayload',
         clientId: 'c1',
         converged: true,
       }),
-    ).toBe('applied');
+    ).toEqual({ status: 'applied' });
   });
 
   it('returns applied for scalar, null, and absent payloads', () => {
-    expect(classifyReplayResult(true)).toBe('applied');
-    expect(classifyReplayResult(null)).toBe('applied');
-    expect(classifyReplayResult(undefined)).toBe('applied');
-    expect(classifyReplayResult({})).toBe('applied');
+    expect(classifyReplayResult(true)).toEqual({ status: 'applied' });
+    expect(classifyReplayResult(null)).toEqual({ status: 'applied' });
+    expect(classifyReplayResult(undefined)).toEqual({ status: 'applied' });
+    expect(classifyReplayResult({})).toEqual({ status: 'applied' });
   });
 
   it('converges a ConflictError whose code is IDEMPOTENT_REPLAY (any op)', () => {
@@ -54,7 +55,7 @@ describe('classifyReplayResult', () => {
         code: 'IDEMPOTENT_REPLAY',
         message: 'already applied',
       }),
-    ).toBe('converged');
+    ).toEqual({ status: 'converged' });
   });
 
   it('rejects a generic ConflictError (a real version/uniqueness conflict)', () => {
@@ -66,14 +67,14 @@ describe('classifyReplayResult', () => {
         code: 'CONFLICT',
         message: 'version conflict',
       }),
-    ).toBe('rejected');
+    ).toEqual({ status: 'rejected', typename: 'ConflictError' });
     // No code at all → also rejected.
     expect(
       classifyReplayResult({
         __typename: 'ConflictError',
         message: 'version conflict',
       }),
-    ).toBe('rejected');
+    ).toEqual({ status: 'rejected', typename: 'ConflictError' });
   });
 
   it('returns rejected for other error payloads', () => {
@@ -87,7 +88,7 @@ describe('classifyReplayResult', () => {
           __typename: typename,
           message: 'refused',
         }),
-      ).toBe('rejected');
+      ).toEqual({ status: 'rejected', typename });
     }
   });
 });
@@ -142,6 +143,38 @@ describe('classifyError — ReplayRejectedError', () => {
   });
 });
 
+describe('classifyError — a version conflict on either channel', () => {
+  // A withdrawal shows the "overwritten" copy only for type `conflict`; each
+  // spelling of the conflict has to reach it, or the user reads a generic refusal.
+  it('classifies a refusal payload coded VERSION_CONFLICT as a conflict', () => {
+    const queueError = classifyError(
+      new ReplayRejectedError(
+        'ConflictError',
+        'stale version',
+        ErrorCode.VersionConflict,
+      ),
+    );
+    expect(queueError).toMatchObject({ type: 'conflict', retryable: true });
+  });
+
+  it('classifies a thrown RESOURCE_VERSION_CONFLICT as a conflict', () => {
+    const queueError = classifyError(
+      new CombinedGraphQLErrors({
+        errors: [
+          {
+            message: 'stale version',
+            extensions: { code: TopLevelErrorCode.ResourceVersionConflict },
+          },
+        ],
+      }),
+    );
+    expect(queueError).toMatchObject({
+      type: 'conflict',
+      code: TopLevelErrorCode.ResourceVersionConflict,
+    });
+  });
+});
+
 describe('classifyError — a retired unit reference', () => {
   // The API merged 46 alias `Unit` rows into their canonical row. A write
   // queued before that names an id the server cannot resolve; the write itself
@@ -173,7 +206,11 @@ describe('classifyError — a retired unit reference', () => {
     expect(classifyError(error).type).toBe('stale-reference');
   });
 
-  it('classifies a UNIT_INVALID refusal as retryable whatever the typename', () => {
+  it('leaves a UNIT_INVALID refusal permanently rejected', () => {
+    // The code says the unit is invalid FOR THE OPERATION — curation, no
+    // conversion route, a fact the food does not record. A vocabulary refresh
+    // clears none of those, and the replay re-sends the same unit, so retrying
+    // only reaches the same withdrawal several drains later.
     const error = new ReplayRejectedError(
       'ValidationError',
       'That unit cannot be used here',
@@ -182,9 +219,8 @@ describe('classifyError — a retired unit reference', () => {
 
     const queueError = classifyError(error);
 
-    expect(queueError.type).toBe('stale-reference');
-    expect(queueError.retryable).toBe(true);
-    expect(queueError.code).toBe('UNIT_INVALID');
+    expect(queueError.type).toBe('unknown');
+    expect(queueError.retryable).toBe(false);
   });
 
   it('leaves a NotFoundError about anything else permanently rejected', () => {
@@ -351,8 +387,7 @@ describe('classifyError — real Apollo error shapes', () => {
     expect(queueError.code).toBe('FORBIDDEN');
   });
 
-  // Apollo 4 throws ServerError with statusCode directly; the
-  // networkError.statusCode nesting is the Apollo 3 ApolloError shape.
+  // Apollo 4 throws ServerError with statusCode directly.
   it('defers a 5xx ServerError instead of failing it permanently', () => {
     const queueError = classifyError(
       new ServerError('Internal Server Error', {
@@ -377,8 +412,8 @@ describe('classifyError — real Apollo error shapes', () => {
     expect(queueError.retryable).toBe(false);
   });
 
-  // queueStore persists lastError and replays it back through here.
-  it('still reads the flat persisted shape', () => {
+  // The session path's errors carry their code on the error itself.
+  it('reads a code carried flat on the error', () => {
     expect(classifyError({ message: 'x', code: 'FORBIDDEN' }).code).toBe(
       'FORBIDDEN',
     );

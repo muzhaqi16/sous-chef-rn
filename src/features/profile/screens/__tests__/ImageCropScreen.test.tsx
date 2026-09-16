@@ -55,7 +55,7 @@ jest.mock('#/services/alertService', () => ({
 jest
   .spyOn(Image, 'getSize')
   .mockImplementation(
-    (uri: string, success: (width: number, height: number) => void) => {
+    (_uri: string, success: (width: number, height: number) => void) => {
       success(800, 600);
     },
   );

@@ -21,6 +21,7 @@ import {
 type UnmaskedGetPantryItemQuery = Unmasked<GetPantryItemQuery>;
 type PantryItemNode = NonNullable<UnmaskedGetPantryItemQuery['pantryItem']>;
 type UnitData = PantryItemNode['unit'];
+type NutritionFactsData = PantryItemNode['item']['nutritionFacts'];
 
 export interface PantryItemFixture {
   id?: string;
@@ -38,19 +39,27 @@ export interface PantryItemFixture {
   storageLocationName?: string | null;
   unitName?: string;
   unitSymbol?: string;
+  unitDisplayAsFraction?: boolean;
+  minQuantity?: number | null;
+  restockQuantity?: number | null;
   /** The item's OWN cost fields — the first stock's, which a restock leaves be. */
   costPerUnit?: number | null;
   totalCost?: number | null;
+  nutritionFacts?: NutritionFactsData;
 }
 
-function unit(symbol = 'L', name = 'liters'): UnitData {
+function unit(
+  symbol = 'L',
+  name = 'liters',
+  displayAsFraction = false,
+): UnitData {
   return {
     __typename: 'Unit',
     id: 'u1',
     name,
     symbol,
     type: UnitType.Volume,
-    displayAsFraction: false,
+    displayAsFraction,
   };
 }
 
@@ -78,7 +87,7 @@ export function pantryItemData(
       expiresAt: fixture.expiresAt ?? null,
       lowStockAlert: false,
       isLowStock: false,
-      minQuantity: null,
+      minQuantity: fixture.minQuantity ?? null,
       lastUsedAt: null,
       netWeight: null,
       remainingNetWeight: null,
@@ -100,11 +109,12 @@ export function pantryItemData(
         photos: [],
         shelfLifeDays: null,
         shelfLifeOpenedDays: null,
-        nutritions: null,
+        nutritionFacts: fixture.nutritionFacts ?? null,
         categories: fixture.categoryName
           ? [
               {
                 __typename: 'ItemCategory',
+                id: 'itemcat1',
                 isPrimary: true,
                 category: {
                   __typename: 'Category',
@@ -115,7 +125,11 @@ export function pantryItemData(
             ]
           : [],
       },
-      unit: unit(fixture.unitSymbol, fixture.unitName),
+      unit: unit(
+        fixture.unitSymbol,
+        fixture.unitName,
+        fixture.unitDisplayAsFraction,
+      ),
       netWeightUnit: null,
       storageLocation: fixture.storageLocationName
         ? {
@@ -133,7 +147,7 @@ export function pantryItemData(
       tags,
       storageNotes: fixture.storageNotes ?? null,
       createdAt: fixture.createdAt ?? '2026-01-01T00:00:00Z',
-      restockQuantity: null,
+      restockQuantity: fixture.restockQuantity ?? null,
       store: null,
       condition:
         (fixture.condition as ItemCondition | undefined) ?? ItemCondition.Good,

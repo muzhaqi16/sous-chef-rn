@@ -251,6 +251,18 @@ describe('deviceInfo', () => {
       expect(info.deviceId).not.toBe(info.deviceFingerprint);
     });
 
+    // The server withholds data-only pushes from a device whose registered
+    // appVersion is below PUSH_DATA_ONLY_MIN_ANDROID_VERSION, and reads a
+    // missing or non-semver version as below it. The value is the build's own
+    // version, so a non-semver one silently drops every install back to the
+    // OS-drawn English notification with nothing failing.
+    it('ships a semver version for the server to gate on', () => {
+      const { version } = require('../../../package.json') as {
+        version: string;
+      };
+      expect(version).toMatch(/^\d+\.\d+\.\d+(?:[-+].+)?$/);
+    });
+
     it('collects comprehensive device info on iOS', async () => {
       const info = await collectDeviceInformation();
       expect(info.deviceId).toBeTruthy();

@@ -26,8 +26,15 @@ export const PantryUsageHistoryScreen: React.FC<
 > = ({ route }) => {
   const { t } = useTranslation();
   const { pantryItemId, itemName } = route.params;
-  const { records, totalCount, state, loadMore, isFetchingMore, retry } =
-    usePantryUsageHistory(pantryItemId);
+  const {
+    records,
+    totalCount,
+    state,
+    loadMore,
+    hasNextPage,
+    isFetchingMore,
+    retry,
+  } = usePantryUsageHistory(pantryItemId);
 
   return (
     <PaginatedHistoryScreen
@@ -37,6 +44,7 @@ export const PantryUsageHistoryScreen: React.FC<
       state={state}
       onRetry={retry}
       onEndReached={loadMore}
+      hasNextPage={hasNextPage}
       isFetchingMore={isFetchingMore}
       keyExtractor={keyExtractor}
       renderItem={renderItem}

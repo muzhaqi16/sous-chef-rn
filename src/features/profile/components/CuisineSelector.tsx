@@ -9,9 +9,8 @@ import {
   POPULAR_CUISINES,
   getAllCuisineOptions,
 } from '#features/profile/constants/cuisines';
-import { Cuisine } from '#/graphql/generated/schemaTypes';
+import type { Cuisine } from '#/graphql/generated/schemaTypes';
 import { Icon } from '#/utils/iconUtils';
-import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
 
 type CuisineSelectorProps = {
@@ -50,8 +49,10 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={commonStyles.subtitle}>{t('cuisineSelector.title')}</Text>
-      <Text style={[commonStyles.bodySecondary, styles.subtitle]}>
+      <Text role="bodyStrong" tone="secondary">
+        {t('cuisineSelector.title')}
+      </Text>
+      <Text role="body" tone="secondary" style={styles.subtitle}>
         {t('cuisineSelector.subtitle')}
       </Text>
       {/* Cuisine Chips Grid */}
@@ -84,7 +85,7 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
             onPress={() => setShowAllCuisines(false)}
           >
             <Icon name="remove-circle-outline" size={18} tone="textSecondary" />
-            <Text style={styles.showMoreText}>
+            <Text role="body" style={styles.showMoreText}>
               {t('cuisineSelector.showLess')}
             </Text>
           </AppPressable>

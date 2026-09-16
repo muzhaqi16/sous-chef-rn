@@ -3,7 +3,7 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { QuantityDisplay } from '#components/atoms/QuantityDisplay';
-import { DisplayFormat } from '#/graphql/generated/schemaTypes';
+import type { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 
 interface FormattedItemSubtitleProps {
@@ -129,7 +129,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           <Text role="caption" tone="secondary">
             {' '}
             {t('itemSubtitle.percentRemaining', {
-              percent: Math.round(quantity! * 100),
+              percent: Math.round(quantity * 100),
             })}
           </Text>
         )}
@@ -184,7 +184,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           <Text role="caption" tone="secondary">
             {' '}
             {t('itemSubtitle.percentRemaining', {
-              percent: Math.round(quantity! * 100),
+              percent: Math.round(quantity * 100),
             })}
           </Text>
         )}

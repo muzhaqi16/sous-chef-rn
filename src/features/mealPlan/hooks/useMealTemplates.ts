@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GetMealTemplatesDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
-import { type TemplateCategory } from '#/graphql/generated/schemaTypes';
-import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import type { TemplateCategory } from '#/graphql/generated/schemaTypes';
+import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
 import type { HookReturn } from '#hooks/types';
 
@@ -22,7 +22,6 @@ interface MealTemplatesState {
    */
   hasResult: boolean;
   hasMore: boolean;
-  totalCount: number | undefined;
   searchQuery: string;
   selectedCategory: TemplateCategory | undefined;
 }
@@ -78,16 +77,17 @@ export function useMealTemplates(
     state: {
       templates,
       loading,
-      error: error as Error | undefined,
+      error: error,
       // `data !== undefined` — a response arrived, empty or not.
       hasResult: data !== undefined,
       hasMore: connectionData.hasMore,
-      totalCount: connectionData.totalCount,
       searchQuery,
       selectedCategory,
     },
     actions: {
-      refetch,
+      refetch: () => {
+        void refetch();
+      },
       loadMore: connectionData.loadMore,
       setSearchQuery,
       setSelectedCategory,

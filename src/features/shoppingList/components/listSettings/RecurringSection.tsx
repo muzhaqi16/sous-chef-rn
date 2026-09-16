@@ -6,7 +6,7 @@ import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
 import { commonStyles } from '#/styles/commonStyles';
 import { InfoRow } from '#components/atoms/InfoRow';
-import { RecurringPattern } from '#/graphql/generated/schemaTypes';
+import type { RecurringPattern } from '#/graphql/generated/schemaTypes';
 import { listSettingsStyles as styles } from './styles';
 
 interface RecurringSectionProps {
@@ -42,7 +42,7 @@ export const RecurringSection: React.FC<RecurringSectionProps> = ({
 
   return (
     <View style={commonStyles.settingsSection}>
-      <Text style={commonStyles.settingsSectionTitle}>
+      <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
         {t('shoppingListScreens.recurringSection')}
       </Text>
 
@@ -67,7 +67,7 @@ export const RecurringSection: React.FC<RecurringSectionProps> = ({
             disabled={generating}
           >
             <Icon name="add-circle-outline" size={20} tone="primary" />
-            <Text tone="accent" style={styles.actionText}>
+            <Text role="body" tone="accent" style={styles.actionText}>
               {t('shoppingListScreens.generateNextList')}
             </Text>
           </Pressable>
@@ -79,7 +79,7 @@ export const RecurringSection: React.FC<RecurringSectionProps> = ({
             onPress={handleStopRecurring}
           >
             <Icon name="close-circle-outline" size={20} tone="primary" />
-            <Text tone="accent" style={styles.actionText}>
+            <Text role="body" tone="accent" style={styles.actionText}>
               {t('shoppingListScreens.stopRecurring')}
             </Text>
           </Pressable>
@@ -90,7 +90,7 @@ export const RecurringSection: React.FC<RecurringSectionProps> = ({
           onPress={() => setShowPatternPicker(true)}
         >
           <Icon name="repeat-outline" size={20} tone="primary" />
-          <Text tone="accent" style={styles.actionText}>
+          <Text role="body" tone="accent" style={styles.actionText}>
             {t('shoppingListScreens.makeRecurring')}
           </Text>
         </Pressable>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { View, StyleProp, ViewStyle, ActivityIndicator } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
@@ -46,7 +47,7 @@ export const Loading: React.FC<LoadingProps> = ({
         <SousChefLoader
           size="small"
           showBrand={false}
-          message={message || t('labels.loading')}
+          message={message ?? t('labels.loading')}
         />
       ) : color != null ? (
         <ActivityIndicator size={size} color={color} style={styles.spinner} />

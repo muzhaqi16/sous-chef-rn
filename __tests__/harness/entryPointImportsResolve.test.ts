@@ -5,7 +5,7 @@ import { dirname, join, resolve } from 'node:path';
  * Every relative import in the app's ENTRY POINT resolves to a file.
  *
  * `index.js` sits at the repo root, which is the one place nothing else looks:
- * `check-dead-modules` scans `src/`, Jest never loads the entry point, and
+ * knip treats it as an entry, Jest never loads it, and
  * `tsconfig.json` lists `index.js` in `include` but leaves `allowJs` unset — so
  * TypeScript skips it and `npm run typecheck` passes over a broken import.
  *

@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { enableMapSet } from 'immer';
-import { createPerformanceSlice, PerformanceState } from '../performanceSlice';
+import type { PerformanceState } from '../performanceSlice';
+import { createPerformanceSlice } from '../performanceSlice';
 
 enableMapSet();
 

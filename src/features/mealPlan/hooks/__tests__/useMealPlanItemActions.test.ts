@@ -1,5 +1,6 @@
 import { act, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -14,9 +15,9 @@ import {
   ErrorCode,
   MealType,
   type CreateMealPlanItemInput,
-  type UpdateMealPlanItemInput,
 } from '#/graphql/generated/schemaTypes';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
 import { useMealPlanItemActions } from '../useMealPlanItemActions';
 import { MealPlanItemActions_OptimisticFullItemFragmentDoc } from '../useMealPlanItemActions.generated';
 
@@ -28,7 +29,7 @@ const seedToggleItem = (overrides: Record<string, unknown> = {}) =>
       fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
       fragmentName: 'MealPlanItemActions_optimisticFullItem',
       data: {
-        __typename: 'MealPlanItem' as const,
+        __typename: 'MealPlanItem',
         id: 'mpi-1',
         isCompleted: false,
         completedAt: null,
@@ -40,7 +41,7 @@ const seedToggleItem = (overrides: Record<string, unknown> = {}) =>
         mealType: 'DINNER',
         date: '2025-06-15',
         recipe: {
-          __typename: 'Recipe' as const,
+          __typename: 'Recipe',
           id: 'r-1',
           name: 'Pasta',
           servings: 1,
@@ -77,25 +78,24 @@ beforeEach(() => {
 });
 
 describe('useMealPlanItemActions', () => {
-  it('returns loading states all false initially', () => {
+  it('reports no create in flight initially', () => {
     const { result } = renderHookWithApollo(() =>
       useMealPlanItemActions('plan-1'),
     );
 
-    expect(result.current.loading).toBe(false);
     expect(result.current.creating).toBe(false);
-    expect(result.current.updating).toBe(false);
-    expect(result.current.deleting).toBe(false);
   });
 
   describe('createItem', () => {
-    it('returns payload on success', async () => {
-      const payload = {
-        __typename: 'CreateMealPlanItemPayload' as const,
-        mealPlanItem: { __typename: 'MealPlanItem' as const, id: 'mpi-1' },
+    it('returns true on success', async () => {
+      const data: MockDataFor<typeof CreateMealPlanItemDocument> = {
+        createMealPlanItem: {
+          __typename: 'CreateMealPlanItemPayload',
+          mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
+        },
       };
       const create = recordMock(CreateMealPlanItemDocument, {
-        data: { createMealPlanItem: payload },
+        data,
       });
 
       const { result } = renderHookWithApollo(
@@ -113,21 +113,19 @@ describe('useMealPlanItemActions', () => {
         } satisfies CreateMealPlanItemInput);
       });
 
-      // The served payload is completed from the SDL, so it carries every
-      // field the mutation selects; this asserts the hook returns THAT payload,
-      // not that the fixture happened to be exhaustive.
-      expect(created).toMatchObject(payload);
+      expect(created).toBe(true);
     });
 
-    it('shows error toast and returns null on failure', async () => {
-      const create = recordMock(CreateMealPlanItemDocument, {
-        data: {
-          createMealPlanItem: {
-            __typename: 'ConflictError' as const,
-            code: ErrorCode.Conflict,
-            message: 'Conflict',
-          },
+    it('shows one localized error toast and returns false on failure', async () => {
+      const data: MockDataFor<typeof CreateMealPlanItemDocument> = {
+        createMealPlanItem: {
+          __typename: 'ConflictError',
+          code: ErrorCode.Conflict,
+          message: 'Conflict',
         },
+      };
+      const create = recordMock(CreateMealPlanItemDocument, {
+        data,
       });
 
       // Inline fragments on the Error interface require possibleTypes for the
@@ -149,50 +147,31 @@ describe('useMealPlanItemActions', () => {
         } satisfies CreateMealPlanItemInput);
       });
 
-      expect(created).toBeNull();
-      expect(mockToastError).toHaveBeenCalledWith('Conflict');
-    });
-  });
-
-  describe('updateItem', () => {
-    it('returns payload on success', async () => {
-      const payload = {
-        __typename: 'UpdateMealPlanItemPayload' as const,
-        mealPlanItem: { __typename: 'MealPlanItem' as const, id: 'mpi-1' },
-      };
-      const update = recordMock(UpdateMealPlanItemDocument, {
-        data: { updateMealPlanItem: payload },
-      });
-
-      const { result } = renderHookWithApollo(
-        () => useMealPlanItemActions('plan-1'),
-        { operationMocks: [update.mock] },
+      expect(created).toBe(false);
+      // The app's copy for the code, never the server's `message`.
+      expect(mockToastError).toHaveBeenCalledTimes(1);
+      // `CONFLICT` is a state refusal, never "updated by another user".
+      expect(mockToastError).not.toHaveBeenCalledWith(
+        getVersionConflictMessage(),
       );
-
-      let updated!: Awaited<ReturnType<typeof result.current.updateItem>>;
-      await act(async () => {
-        updated = await result.current.updateItem('mpi-1', {
-          servings: 3,
-        } satisfies Omit<UpdateMealPlanItemInput, 'id'>);
-      });
-
-      expect(updated).toMatchObject(payload);
+      expect(mockToastError).not.toHaveBeenCalledWith('Conflict');
     });
   });
 
   describe('toggleCompleted', () => {
     it('marks item as completed and shows toast', async () => {
-      const update = recordMock(UpdateMealPlanItemDocument, {
-        data: {
-          updateMealPlanItem: {
-            __typename: 'UpdateMealPlanItemPayload' as const,
-            mealPlanItem: {
-              __typename: 'MealPlanItem' as const,
-              id: 'mpi-1',
-              isCompleted: true,
-            },
+      const data: MockDataFor<typeof UpdateMealPlanItemDocument> = {
+        updateMealPlanItem: {
+          __typename: 'UpdateMealPlanItemPayload',
+          mealPlanItem: {
+            __typename: 'MealPlanItem',
+            id: 'mpi-1',
+            isCompleted: true,
           },
         },
+      };
+      const update = recordMock(UpdateMealPlanItemDocument, {
+        data,
       });
 
       const cache = seedToggleItem();
@@ -217,17 +196,18 @@ describe('useMealPlanItemActions', () => {
     });
 
     it('shows deduction toast when deductFromPantry is true', async () => {
-      const update = recordMock(UpdateMealPlanItemDocument, {
-        data: {
-          updateMealPlanItem: {
-            __typename: 'UpdateMealPlanItemPayload' as const,
-            mealPlanItem: {
-              __typename: 'MealPlanItem' as const,
-              id: 'mpi-1',
-              isCompleted: true,
-            },
+      const data: MockDataFor<typeof UpdateMealPlanItemDocument> = {
+        updateMealPlanItem: {
+          __typename: 'UpdateMealPlanItemPayload',
+          mealPlanItem: {
+            __typename: 'MealPlanItem',
+            id: 'mpi-1',
+            isCompleted: true,
           },
         },
+      };
+      const update = recordMock(UpdateMealPlanItemDocument, {
+        data,
       });
 
       const cache = seedToggleItem();
@@ -248,17 +228,18 @@ describe('useMealPlanItemActions', () => {
     });
 
     it('does not show toast when un-completing', async () => {
-      const update = recordMock(UpdateMealPlanItemDocument, {
-        data: {
-          updateMealPlanItem: {
-            __typename: 'UpdateMealPlanItemPayload' as const,
-            mealPlanItem: {
-              __typename: 'MealPlanItem' as const,
-              id: 'mpi-1',
-              isCompleted: false,
-            },
+      const data: MockDataFor<typeof UpdateMealPlanItemDocument> = {
+        updateMealPlanItem: {
+          __typename: 'UpdateMealPlanItemPayload',
+          mealPlanItem: {
+            __typename: 'MealPlanItem',
+            id: 'mpi-1',
+            isCompleted: false,
           },
         },
+      };
+      const update = recordMock(UpdateMealPlanItemDocument, {
+        data,
       });
 
       const cache = seedToggleItem({ isCompleted: true });
@@ -280,13 +261,14 @@ describe('useMealPlanItemActions', () => {
       // The subscription handler's isPendingDelete guard is only reachable
       // because this registers; without it a stale ITEM_ADDED for the same id
       // re-adds the meal after the optimistic removal.
-      const del = recordMock(DeleteMealPlanItemDocument, {
-        data: {
-          deleteMealPlanItem: {
-            __typename: 'DeleteMealPlanItemPayload' as const,
-            mealPlanItem: { __typename: 'MealPlanItem' as const, id: 'mpi-1' },
-          },
+      const data: MockDataFor<typeof DeleteMealPlanItemDocument> = {
+        deleteMealPlanItem: {
+          __typename: 'DeleteMealPlanItemPayload',
+          mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
         },
+      };
+      const del = recordMock(DeleteMealPlanItemDocument, {
+        data,
         delay: 20,
       });
 
@@ -313,13 +295,14 @@ describe('useMealPlanItemActions', () => {
     });
 
     it('returns true on success', async () => {
-      const del = recordMock(DeleteMealPlanItemDocument, {
-        data: {
-          deleteMealPlanItem: {
-            __typename: 'DeleteMealPlanItemPayload' as const,
-            mealPlanItem: { __typename: 'MealPlanItem' as const, id: 'mpi-1' },
-          },
+      const data: MockDataFor<typeof DeleteMealPlanItemDocument> = {
+        deleteMealPlanItem: {
+          __typename: 'DeleteMealPlanItemPayload',
+          mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
         },
+      };
+      const del = recordMock(DeleteMealPlanItemDocument, {
+        data,
       });
 
       const { result } = renderHookWithApollo(
@@ -335,15 +318,42 @@ describe('useMealPlanItemActions', () => {
       expect(deleted).toBe(true);
     });
 
-    it('returns false on failure', async () => {
-      const del = recordMock(DeleteMealPlanItemDocument, {
-        data: {
-          deleteMealPlanItem: {
-            __typename: 'NotFoundError' as const,
-            code: ErrorCode.NotFound,
-            message: 'Meal plan item not found',
-          },
+    it('counts a meal that is already gone as deleted', async () => {
+      const data: MockDataFor<typeof DeleteMealPlanItemDocument> = {
+        deleteMealPlanItem: {
+          __typename: 'NotFoundError',
+          code: ErrorCode.NotFound,
+          message: 'Meal plan item not found',
         },
+      };
+      const del = recordMock(DeleteMealPlanItemDocument, {
+        data,
+      });
+
+      const { result } = renderHookWithApollo(
+        () => useMealPlanItemActions('plan-1'),
+        { operationMocks: [del.mock] },
+      );
+
+      let deleted: boolean | undefined;
+      await act(async () => {
+        deleted = await result.current.deleteItem('mpi-1');
+      });
+
+      expect(deleted).toBe(true);
+      expect(mockToastError).not.toHaveBeenCalled();
+    });
+
+    it('returns false on failure', async () => {
+      const data: MockDataFor<typeof DeleteMealPlanItemDocument> = {
+        deleteMealPlanItem: {
+          __typename: 'ForbiddenError',
+          code: ErrorCode.Forbidden,
+          message: 'raw server English',
+        },
+      };
+      const del = recordMock(DeleteMealPlanItemDocument, {
+        data,
       });
 
       const { result } = renderHookWithApollo(

@@ -1,0 +1,92 @@
+# Composed locally: pantry/graphql and shoppingList/graphql are internal to
+# their features. Each result selects only the ids the cache updaters read.
+# Barcode-prefixed so they do not collide with the richer same-mutation
+# operations those features own; the offline queue registers them by name.
+
+mutation BarcodeAddItemToShoppingList($input: AddItemsToShoppingListInput!) {
+  addItemsToShoppingList(input: $input) {
+    __typename
+    ... on AddItemsToShoppingListPayload {
+      results {
+        index
+        clientId
+        success
+        quantityIncremented
+        error
+        item {
+          id
+          ...AddedShoppingListItemFields
+        }
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation BarcodeCreatePantryItem($input: CreatePantryItemInput!) {
+  createPantryItem(input: $input) {
+    __typename
+    ... on CreatePantryItemPayload {
+      pantryItem {
+        id
+        ...SearchResults_pantryItem
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+    # A re-add of an item already stocked arrives as this union member; its ids
+    # route the user to a one-tap restock.
+    ... on DuplicatePantryItemError {
+      existingPantryItemIds
+    }
+  }
+}
+
+mutation BarcodeRestockPantryItem($input: RestockPantryItemInput!) {
+  restockPantryItem(input: $input) {
+    __typename
+    ... on RestockPantryItemPayload {
+      pantryItemUsage {
+        id
+        quantityUsed
+        purpose
+        costPerUnit
+        totalCost
+        pantryItem {
+          id
+          ...SearchResults_pantryItem
+        }
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

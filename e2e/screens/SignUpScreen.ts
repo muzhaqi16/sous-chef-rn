@@ -1,20 +1,23 @@
 import { BaseScreen } from './BaseScreen';
+import { authTestIDs } from '../../src/features/auth/testIDs';
+import { kitTestIDs } from '../../src/components/testIDs';
 
 export class SignUpScreen extends BaseScreen {
-  protected screenID = 'signup-screen';
+  protected screenID = authTestIDs.signUpScreen;
 
-  private readonly nameInput = 'signup-name-input';
-  private readonly emailInput = 'signup-email-input';
-  private readonly passwordInput = 'signup-password-input';
-  private readonly confirmPasswordInput = 'signup-confirm-password-input';
+  private readonly nameInput = authTestIDs.signUpNameInput;
+  private readonly emailInput = authTestIDs.signUpEmailInput;
+  private readonly passwordInput = authTestIDs.signUpPasswordInput;
+  private readonly confirmPasswordInput =
+    authTestIDs.signUpConfirmPasswordInput;
 
   /** Last field filled here, so it is the one holding the keyboard. */
-  protected keyboardInput = this.confirmPasswordInput;
+  protected override keyboardInput = this.confirmPasswordInput;
 
   /** `AuthFormTemplate`'s title row — above the keyboard on every auth screen. */
-  protected blurTarget = 'auth-title-row';
-  private readonly submitButton = 'signup-submit-button';
-  private readonly loginLink = 'signup-login-link';
+  protected override blurTarget = authTestIDs.formTitleRow;
+  private readonly submitButton = authTestIDs.signUpSubmitButton;
+  private readonly loginLink = authTestIDs.signUpLoginLink;
 
   async signUpWith(
     name: string,
@@ -23,19 +26,23 @@ export class SignUpScreen extends BaseScreen {
     confirmPassword?: string,
   ) {
     await this.waitForScreen();
-    await this.clearAndType(this.nameInput, name);
-    await this.clearAndType(this.emailInput, email);
-    await this.clearAndType(this.passwordInput, password);
-    await this.clearAndType(
-      this.confirmPasswordInput,
-      confirmPassword || password,
-    );
-    await this.dismissKeyboard();
-    await this.tapByID(this.submitButton);
+    await this.enterName(name);
+    await this.enterEmail(email);
+    await this.enterPassword(password);
+    await this.enterConfirmPassword(confirmPassword ?? password);
+    await this.submit();
   }
 
   async enterName(name: string) {
     await this.clearAndType(this.nameInput, name);
+  }
+
+  /**
+   * Sets the whole name at once. Android's `typeText` sends key events, and a
+   * character outside the keyboard's key map (`é`, `ü`) has none.
+   */
+  async pasteName(name: string) {
+    await this.getElementById(this.nameInput).replaceText(name);
   }
 
   async enterEmail(email: string) {
@@ -52,7 +59,7 @@ export class SignUpScreen extends BaseScreen {
 
   async submit() {
     await this.dismissKeyboard();
-    await this.tapByID(this.submitButton);
+    await this.tapPastKeyboard(this.submitButton);
   }
 
   async navigateToLogin() {
@@ -60,19 +67,23 @@ export class SignUpScreen extends BaseScreen {
   }
 
   async expectNameFieldError() {
-    await this.expectVisible(`${this.nameInput}-error`);
+    await this.expectVisible(kitTestIDs.inputError(this.nameInput));
+  }
+
+  async expectNoNameFieldError() {
+    await this.expectNotVisible(kitTestIDs.inputError(this.nameInput));
   }
 
   async expectEmailFieldError() {
-    await this.expectVisible(`${this.emailInput}-error`);
+    await this.expectVisible(kitTestIDs.inputError(this.emailInput));
   }
 
   async expectPasswordFieldError() {
-    await this.expectVisible(`${this.passwordInput}-error`);
+    await this.expectVisible(kitTestIDs.inputError(this.passwordInput));
   }
 
   async expectConfirmPasswordFieldError() {
-    await this.expectVisible(`${this.confirmPasswordInput}-error`);
+    await this.expectVisible(kitTestIDs.inputError(this.confirmPasswordInput));
   }
 
   async expectSubmitVisible() {

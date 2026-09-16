@@ -22,6 +22,7 @@ export function useShoppingListScreen() {
     loading: listsLoading,
     error: listsError,
     hasResult: listsHasResult,
+    refetch: refetchLists,
   } = useShoppingListsQuery();
 
   // Lists whose read came back FORBIDDEN, or null (deleted/unshared), this
@@ -35,8 +36,6 @@ export function useShoppingListScreen() {
     optimisticListId,
     currentListId,
     currentList,
-    defaultList,
-    selectedShoppingListId,
     setSelectedShoppingListId,
   } = useShoppingListSelection(lists, deniedListIds);
 
@@ -63,7 +62,6 @@ export function useShoppingListScreen() {
     isLoadingMorePurchased,
     searchQuery,
     setSearchQuery,
-    addItem,
     removeItem,
     toggleItem,
     recordPurchase,
@@ -105,9 +103,11 @@ export function useShoppingListScreen() {
     setDisplayedShowImages(true);
   }
 
-  const refetchWithImageSync = () => {
+  // Lists too: the no-lists state retries through here, and it is classified on
+  // the lists query.
+  const refetchWithImageSync = async () => {
     setDisplayedShowImages(showImagesPreference);
-    return refetch();
+    await Promise.all([refetchLists(), refetch()]);
   };
 
   // These reach FlashList as-is — NEVER through `useDeferredValue` or a
@@ -157,8 +157,6 @@ export function useShoppingListScreen() {
       currentList,
       currentListDetails,
       currentListId,
-      defaultList,
-      selectedShoppingListId,
 
       unpurchasedItems,
       purchasedItems,
@@ -190,7 +188,6 @@ export function useShoppingListScreen() {
     actions: {
       setSelectedShoppingListId,
       setSearchQuery,
-      addItem,
       removeItem,
       toggleItem,
       recordPurchase,

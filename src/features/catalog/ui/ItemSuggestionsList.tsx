@@ -6,7 +6,8 @@ import { CachedImage } from '#components/atoms/CachedImage';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
-import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 
 interface ItemSuggestionsListProps {
   /** Search query for the "Add manually" text */
@@ -78,7 +79,7 @@ const SuggestionRow = ({
         <Text role="bodyStrong" numberOfLines={1}>
           {item.name}
         </Text>
-        {!!showBrands && !!item.brands && item.brands.length > 0 && (
+        {!!showBrands && item.brands.length > 0 && (
           <Text
             role="caption"
             tone="secondary"
@@ -124,7 +125,7 @@ const AddManuallyOption = ({
       key="add-manually"
       style={styles.addManuallyOption}
       onPress={onPress}
-      testID={`${testIDPrefix}-add-manually-button`}
+      testID={catalogTestIDs.addManuallyButton(testIDPrefix)}
     >
       <Icon name="add-circle-outline" size={20} tone="primary" />
       <Text role="bodyStrong" tone="accent">
@@ -264,7 +265,7 @@ const styles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.md,
   },
   suggestionBrands: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   quickAddButton: {
     width: 36,

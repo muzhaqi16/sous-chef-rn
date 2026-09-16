@@ -57,15 +57,9 @@ jest.mock('#features/pantry/components/BaseItemCard/BaseItemCard', () => {
 jest.mock('#features/pantry/components/BaseItemCard/CardLeftSlot', () => {
   const RN = require('react-native');
   return {
-    CardLeftSlot: ({
-      type,
-      imageUrl,
-    }: {
-      type?: string;
-      imageUrl?: string | null;
-    }) =>
+    CardLeftSlot: ({ imageUrl }: { imageUrl?: string | null }) =>
       require('react').createElement(RN.View, {
-        testID: `card-left-${type}`,
+        testID: 'card-left-image',
         accessibilityLabel: imageUrl,
       }),
   };

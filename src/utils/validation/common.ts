@@ -1,15 +1,17 @@
 import { string } from 'yup';
 import type { FieldErrors, FieldValues } from 'react-hook-form';
 import { logger } from '#/utils/environment';
-import { t } from '#/i18n';
+import { t, type KeyUnder } from '#/i18n';
 
 /**
  * These rules are built once at module scope, so a message resolved eagerly
  * would freeze whichever language was active at import time. Yup calls the
  * function when the rule fails, so the lookup lands after any language change.
  */
-const msg = (key: string, options?: Record<string, unknown>) => (): string =>
-  t(`commonValidation.${key}`, options);
+const msg =
+  (key: KeyUnder<'commonValidation'>, options?: Record<string, unknown>) =>
+  (): string =>
+    t(`commonValidation.${key}`, options);
 
 // --- shared helpers ----------------------------------------------------------
 
@@ -25,7 +27,10 @@ export function normalizeSmartPunctuation(
 
 export function logValidationErrors(errors: FieldErrors<FieldValues>) {
   const fields = Object.entries(errors)
-    .map(([key, err]) => `${key}: ${err?.message}`)
+    .map(([key, err]) => {
+      const message = err?.message;
+      return `${key}: ${typeof message === 'string' ? message : 'undefined'}`;
+    })
     .join(', ');
   logger.warn('Form validation failed:', fields);
 }

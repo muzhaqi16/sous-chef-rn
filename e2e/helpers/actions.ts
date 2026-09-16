@@ -19,13 +19,6 @@ export async function tapByID(
   await waitForElementAndTap(element(by.id(testID)), timeout);
 }
 
-export async function tapByText(
-  text: string,
-  timeout: number = TIMEOUTS.DEFAULT,
-) {
-  await waitForElementAndTap(element(by.text(text)), timeout);
-}
-
 export async function typeIntoField(
   testID: string,
   text: string,
@@ -158,20 +151,6 @@ export async function longPress(testID: string, duration: number = 1000) {
   await targetElement.longPress(duration);
 }
 
-export async function scrollToTop(scrollViewID: string = 'scroll-view') {
-  const scrollView = element(by.id(scrollViewID));
-  await waitFor(scrollView).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-  await scrollView.scrollTo('top');
-  await delay(300); // Wait for scroll animation
-}
-
-export async function scrollToBottom(scrollViewID: string = 'scroll-view') {
-  const scrollView = element(by.id(scrollViewID));
-  await waitFor(scrollView).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-  await scrollView.scrollTo('bottom');
-  await delay(300); // Wait for scroll animation
-}
-
 export async function multiTap(testID: string, times: number) {
   const targetElement = element(by.id(testID));
   await waitFor(targetElement).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
@@ -196,17 +175,6 @@ export async function dismissKeyboardAction() {
   }
 
   await waitForKeyboardDismiss();
-}
-
-export async function pullToRefresh(scrollViewID: string = 'scroll-view') {
-  const scrollView = element(by.id(scrollViewID));
-  await waitFor(scrollView).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-
-  await scrollView.scrollTo('top');
-  await delay(300);
-
-  await scrollView.swipe('down', 'slow', 0.9);
-  await delay(500);
 }
 
 export async function scrollToPosition(
@@ -280,22 +248,6 @@ export async function setLocation(lat: number, lon: number) {
   console.log(`📍 Device location set to: ${lat}, ${lon}`);
 }
 
-export async function tapSystemAlertButton(buttonLabel: string) {
-  try {
-    if (device.getPlatform() === 'ios') {
-      await element(by.label(buttonLabel)).tap();
-    } else {
-      await element(by.text(buttonLabel)).tap();
-    }
-    await delay(500);
-  } catch (error) {
-    console.warn(
-      `⚠️  Could not tap system alert button "${buttonLabel}":`,
-      error,
-    );
-  }
-}
-
 /**
  * Read a switch's own value. iOS reports `'1'` / `'0'`; Android reports the
  * toggle state on `value` too. Lets a test assert that a tap actually changed
@@ -334,8 +286,8 @@ export async function waitForToggleChange(
 /**
  * iOS offers "Save Password?" after a bootstrap login. Being a system alert it
  * sits above the app and makes the tab bar unhittable, so dismiss it before
- * navigating. Unlike {@link tapSystemAlertButton}, which taps an in-app-hierarchy
- * label, this reaches the springboard alert via Detox's `system` matcher.
+ * navigating. The alert is outside the app's view tree, so it has no testID and
+ * Detox's `system` matcher is the only way to reach it.
  */
 export async function dismissSavePasswordPrompt(): Promise<void> {
   try {

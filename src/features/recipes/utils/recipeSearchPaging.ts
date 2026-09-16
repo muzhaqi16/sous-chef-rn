@@ -15,11 +15,8 @@ import {
   textSearchCacheKey,
   ingredientCacheKey,
 } from '#features/recipes/store/useRecipeCacheStore';
-import {
-  ExternalSource,
-  Diet,
-  Intolerance,
-} from '#/graphql/generated/schemaTypes';
+import type { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
+import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import {
   type RecipeFilters,
   SPOONACULAR_TO_DIET_ENUM,
@@ -267,7 +264,7 @@ export async function fetchRecipeSearchPage(
           const data = await spoonacularService.searchRecipesWithInfo(
             searchParams,
           );
-          results = data.results || [];
+          results = data.results;
           total = data.totalResults;
           cacheStore.setCached(cacheKey, results, undefined, total);
         } catch (error) {

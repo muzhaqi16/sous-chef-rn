@@ -14,7 +14,7 @@
 > The metric list below is also incomplete — `docs/telemetry-setup.md`
 > § Metric Reference is the contract, and
 > `__tests__/telemetry/metricContracts.test.ts` keeps it complete. For how to
-> take a measurement at all, see CLAUDE.md § Performance measurement.
+> take a measurement at all, see [§ Measurement protocol](#measurement-protocol).
 
 ## Overview
 
@@ -403,9 +403,9 @@ All performance data is reported to the Telemetry system:
 - Simple presentational components
 - Components that render very frequently (animations)
 
-(Note: this list once said to avoid production builds. That contradicts
-"Availability: All builds" above and the point of routing these metrics to OTLP —
-release is where the numbers are valid. Debug is for attribution only.)
+Do not avoid release builds: these metrics are available in all builds and
+routed to OTLP because release is where the numbers are valid. Debug is for
+attribution only.
 
 ### Performance Thresholds
 
@@ -457,16 +457,91 @@ release is where the numbers are valid. Debug is for attribution only.)
 - [ ] Test "Clear Performance Data" button
 - [ ] Verify dashboard shows empty state when no data
 
-### Performance Verification
+## Measurement protocol
 
-The protocol — build variant, device, run count, controls, which series to read —
-is CLAUDE.md § Performance measurement, which states each rule alongside the
-reading that produced it.
+CLAUDE.md § Performance measurement holds each rule as one line; this is the
+reading behind each. Measurement decides what to change; it is not the
+confirmation step. A check that names no build, no device and no sample size
+turns an emulator reading into a conclusion about hardware. Audit write-ups are
+scratch and untracked (`.gitignore`), so every number a rule rests on lives here.
 
-The four bullets that used to live here ("check console logs", "monitor memory",
-"verify transitions under 500ms", "confirm metrics are sent") named no build, no
-device and no sample size, which is how an emulator reading became a conclusion
-about hardware.
+**A mechanism is not a cause.** Confirming in library source HOW something works
+says nothing about its SHARE of the time. Measure the share first.
+
+**Read a metric's definition before reasoning from its name.** The contract table
+is `docs/telemetry-setup.md` § Metric Reference, kept complete by
+`__tests__/telemetry/metricContracts.test.ts`. `app_js_entry_to_store_ready_ms`
+spans JS entry → rehydrate, a module-evaluation window; the hydration inside it is
+~5 ms, so a name reading as "hydration" sends a whole optimisation pass after
+those 5 ms.
+
+**Numbers come from a release build; attribution may come from debug — never mix
+them in one comparison.** A debug build overstates mount and append cost. In a
+debug bundle the FIRST heavy `require` after a timing mark absorbs ~200 ms that
+belongs to no module: move an unrelated import in front of it and the cost
+follows the position, not the module. `localRelease` is the measuring build
+(`docs/development.md` § Android variants).
+
+**Emulator numbers understate hardware; re-measure on a device before acting.**
+`flashlist_initial_load_ms` for the same screen: 40 ms on the Pixel_9a emulator,
+301–934 ms on an SM-S908U1. Emulator frame stats cannot be used at all: its
+software GPU alone takes 16–20 ms per frame.
+
+**An iOS simulator OVERSTATES.** It does not emulate a CPU; it runs arm64 natively
+on the Mac's cores, so an iOS-sim number beside an Android-device number compares
+two host machines, not two platforms. Compare iOS to iOS, build over build. iOS
+has no OS-side fully-drawn marker (no API accepts an app-declared signal), so the
+two-method agreement that backs `app_fully_drawn_ms` on Android does not carry
+over; `scripts/ios-frame-sample.mjs` is the only cross-check.
+
+**A startup metric is bounded, and the drop is counted.** `app_fully_drawn_ms`
+latches on the first instrumented list showing real content, and `HomeTabs` is
+lazy — only the Pantry tab mounts at cold start, so the other two lists can only
+latch after a navigation. Past `STARTUP_WINDOW_MS` (10 s,
+`src/services/performance/startupProfiling.ts`, shared with the profiler's own
+fallback) nothing is emitted and `startup_window_exceeded_total` increments, so an
+EXCLUDED launch stays distinguishable from an unmeasured one. The bound is not
+defended by argument: a non-trivial rate on that counter is the evidence for
+changing it.
+
+**A terminating condition reads the UN-SMOOTHED signal.** The pantry's skeletons
+pass through a 280 ms `useMinimumVisible` anti-flicker hold; a latch reading it
+puts the hold under `app_fully_drawn_ms` as a floor, so any improvement below
+280 ms is structurally unmeasurable — the same defect as reading a
+threshold-gated `slow_*_total`. Measurement takes `initialSkeletons`, presentation
+keeps `showSkeletons`. Every `app_fully_drawn_ms` figure recorded before
+2026-08-26 is invalid: it predates both this fix and the profiler-suppression fix.
+
+**State the instrument's resolution.** A difference smaller than one sample is not
+a result: the phone's ~450 ms screenshot sampling cannot resolve a 100 ms change
+(an iOS simulator's simctl loop samples at ~176 ms —
+[verified-library-behaviour.md](verified-library-behaviour.md#simctl-screenshot-sampling-resolves-176-ms-no-finer)),
+and a series that returns the same value for two different builds is not
+measuring them.
+
+**Run a control before believing an attribution.** Vary something you do NOT
+believe in. If the cost follows it, the attribution was positional.
+
+**Never read a performance value from a `slow_*_total` counter's labels.** They
+are threshold-gated and structurally cannot show the fast half of the
+distribution. Read the `_bucket`/`_sum`/`_count` histogram series.
+
+**Judge an intermittent mode against a distribution, not a handful of samples.**
+Per-session counters plus lingering series make cross-session aggregation
+(`sum(...) by (screen)`) untrustworthy — read per session.
+
+**Match the instrument to the symptom.** HITCHING (occasional long frames) is a
+re-render problem: read React commit counts or
+`flashlist_data_reference_changes`. A FRAME-RATE CEILING (every frame uniformly
+over budget) is not: read `adb shell dumpsys gfxinfo <pkg> framestats` on a
+DEVICE and decompose per phase. On the pantry the UI thread — where per-row view
+count and Yoga layout live — is 1.5 ms of a 17 ms frame, so "reduce views per
+row" measures out false while React-render reasoning points the same wrong way.
+Per-phase table: `docs/flashlist-performance-analysis.md`.
+
+**Check the panel's refresh rate before calling a frame slow.**
+`adb shell dumpsys display | grep mActiveModeId` gives the active mode; read its
+`vsyncRate`. The SM-S908U1 runs at 96 Hz, so its budget is 10.4 ms, not 16.7 ms.
 
 ## References
 

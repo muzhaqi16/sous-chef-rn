@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { Text } from '#components/atoms/Text';
+import { Text, type TextTone } from '#components/atoms/Text';
 import { GoalStatus, type GoalProgress } from '#/graphql/generated/schemaTypes';
 import { ProgressBar } from '#components/atoms/ProgressBar';
 
@@ -14,16 +14,22 @@ interface NutritionGoalProgressProps {
   fatProgress: GoalProgress | null | undefined;
 }
 
-const STATUS_LABEL_KEYS: Record<GoalStatus, string> = {
+const STATUS_LABEL_KEYS: Record<GoalStatus, TranslationKey> = {
   [GoalStatus.OnTarget]: 'nutritionGoal.statusOnTarget',
   [GoalStatus.UnderTarget]: 'nutritionGoal.statusUnder',
   [GoalStatus.OverTarget]: 'nutritionGoal.statusOver',
 };
 
-const STATUS_TONE: Record<GoalStatus, 'success' | 'warning' | 'error'> = {
+const STATUS_BAR_TONE: Record<GoalStatus, 'success' | 'warning' | 'error'> = {
   [GoalStatus.OnTarget]: 'success',
   [GoalStatus.UnderTarget]: 'warning',
   [GoalStatus.OverTarget]: 'error',
+};
+
+const STATUS_TEXT_TONE: Record<GoalStatus, TextTone> = {
+  [GoalStatus.OnTarget]: 'success',
+  [GoalStatus.UnderTarget]: 'warning',
+  [GoalStatus.OverTarget]: 'danger',
 };
 
 function MacroProgressBar({
@@ -34,7 +40,6 @@ function MacroProgressBar({
   progress: GoalProgress | null | undefined;
 }) {
   const { t } = useTranslation();
-  barStyles.useVariants({ status: progress?.status });
   if (!progress) return null;
 
   const percentage = Math.min(progress.percentage, 100);
@@ -43,13 +48,13 @@ function MacroProgressBar({
     <View style={barStyles.container}>
       <View style={barStyles.labelRow}>
         <Text role="label">{label}</Text>
-        <Text role="label" style={barStyles.statusLabel}>
+        <Text role="label" tone={STATUS_TEXT_TONE[progress.status]}>
           {t(STATUS_LABEL_KEYS[progress.status])}
         </Text>
       </View>
       <ProgressBar
         value={percentage / 100}
-        tone={STATUS_TONE[progress.status]}
+        tone={STATUS_BAR_TONE[progress.status]}
         accessibilityLabel={label}
       />
       <View style={barStyles.valueRow}>
@@ -126,34 +131,6 @@ const barStyles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  barBackground: {
-    height: 6,
-    borderRadius: theme.radii.pill,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.border,
-    overflow: 'hidden',
-  },
-  barFill: {
-    height: '100%',
-    borderRadius: theme.radii.pill,
-    borderCurve: 'continuous',
-    variants: {
-      status: {
-        [GoalStatus.OnTarget]: { backgroundColor: theme.colors.success },
-        [GoalStatus.UnderTarget]: { backgroundColor: theme.colors.warning },
-        [GoalStatus.OverTarget]: { backgroundColor: theme.colors.error },
-      },
-    },
-  },
-  statusLabel: {
-    variants: {
-      status: {
-        [GoalStatus.OnTarget]: { color: theme.colors.success },
-        [GoalStatus.UnderTarget]: { color: theme.colors.warning },
-        [GoalStatus.OverTarget]: { color: theme.colors.error },
-      },
-    },
   },
   valueRow: {
     flexDirection: 'row',

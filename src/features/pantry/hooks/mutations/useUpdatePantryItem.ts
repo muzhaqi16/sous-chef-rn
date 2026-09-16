@@ -12,17 +12,12 @@ import {
   UseUpdatePantryItem_PantryItemFragmentDoc,
   type UseUpdatePantryItem_PantryItemFragment,
 } from './useUpdatePantryItem.generated';
-import { StorageType } from '#/graphql/generated/schemaTypes';
-import {
-  handleMutationError,
-  versionConflictCheck,
-} from '#/utils/errorHandlers';
+import type { StorageType } from '#/graphql/generated/schemaTypes';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
-import { t } from '#/i18n';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { useTranslation } from '#/i18n';
 import { buildDirtyUpdateInput, buildOptimisticUnit } from './utils';
-import type { FormDataInput, UnitSelection } from './types';
+import type { DirtyFieldFlags, FormDataInput, UnitSelection } from './types';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { logger } from '#/utils/environment';
 
@@ -34,11 +29,15 @@ interface UseUpdatePantryItemOptions {
 interface UpdatePantryItemFieldsParams {
   itemId: string;
   input: FormDataInput;
-  dirtyFields: Record<string, boolean>;
+  dirtyFields: DirtyFieldFlags;
   selectedLocationId: string | null;
   selectedBrandId: string | null;
   trackingUnit?: UnitSelection;
-  selectedStorageLocation?: { id: string; name: string; type: string } | null;
+  selectedStorageLocation?: {
+    id: string;
+    name: string;
+    type: StorageType;
+  } | null;
   unitSymbol?: string;
 }
 
@@ -46,16 +45,10 @@ export function useUpdatePantryItem({
   onSuccess,
   refetch,
 }: UseUpdatePantryItemOptions) {
+  const { t } = useTranslation();
   const client = useApolloClient();
 
-  const [updateMutation] = useMutation(UpdatePantryItemDocument, {
-    onError: error => {
-      handleMutationError(error, {
-        operation: 'Update Pantry Item',
-        checks: [versionConflictCheck({ onRefresh: refetch })],
-      });
-    },
-  });
+  const [updateMutation] = useMutation(UpdatePantryItemDocument);
 
   /**
    * Update non-quantity fields of a pantry item
@@ -109,7 +102,7 @@ export function useUpdatePantryItem({
     if (dirtyFields.expirationDate) {
       optimisticUpdate.expiresAt = input.expirationDate?.toISOString() ?? null;
     }
-    if (dirtyFields.tags) optimisticUpdate.tags = input.tags || [];
+    if (dirtyFields.tags) optimisticUpdate.tags = input.tags ?? [];
     if (dirtyFields.minQuantity) {
       optimisticUpdate.minQuantity = input.minQuantity
         ? parseDecimalInput(input.minQuantity)
@@ -130,7 +123,7 @@ export function useUpdatePantryItem({
         __typename: 'StorageLocation',
         id: selectedStorageLocation.id,
         name: selectedStorageLocation.name,
-        type: selectedStorageLocation.type as StorageType,
+        type: selectedStorageLocation.type,
       };
     }
     if (dirtyFields.notes) optimisticUpdate.storageNotes = input.notes;
@@ -142,7 +135,7 @@ export function useUpdatePantryItem({
 
     // Include new unit in optimistic response to prevent race condition
     // with updateQuantity mutation overwriting the unit
-    if (trackingUnit?.id && trackingUnit.id !== currentItem.unit?.id) {
+    if (trackingUnit?.id && trackingUnit.id !== currentItem.unit.id) {
       optimisticUpdate.unit = buildOptimisticUnit(
         trackingUnit,
         currentItem.unit,
@@ -175,43 +168,34 @@ export function useUpdatePantryItem({
       });
     }
 
-    updateMutation({
-      variables: {
-        input: { ...updateInput, id: itemId, version: currentItem.version },
+    const revert = () => {
+      try {
+        writeItem(currentItem);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Revert rejected Pantry Item update',
+        });
+      }
+    };
+
+    // A refusal naming `field: "unit"` (a unit change while the item has
+    // batches) reads as the localized `errors.field.unit` copy.
+    void settleMutation(
+      () =>
+        updateMutation({
+          variables: {
+            input: { ...updateInput, id: itemId, version: currentItem.version },
+          },
+          // Queue offline / on API-down — replays via the idempotent SyncPantryItem.
+          context: { localFirst: true },
+        }),
+      {
+        document: UpdatePantryItemDocument,
+        fallback: t('errors.updateItemFailed'),
+        onFailed: revert,
+        onConflictRefresh: refetch,
       },
-      // Queue offline / on API-down — replays via the idempotent SyncPantryItem.
-      context: { localFirst: true },
-    })
-      .then(result => {
-        // 'queued' (null payload, no error) keeps the permanent write; a
-        // rejection restores the pre-edit snapshot. A refused union payload
-        // (ValidationError, version conflict) resolves as DATA with no error, so
-        // `onError` never fires — without the alert below the edit snaps back
-        // unexplained. A `field: "unit"` refusal (unit change refused while the
-        // item has batches) routes to localized `errors.field.unit` copy.
-        const outcome = classifyCreateResult(result);
-        if (outcome === 'rejected') {
-          try {
-            writeItem(currentItem);
-          } catch (cacheError) {
-            errorService.reportError(cacheError, {
-              operation: 'Revert rejected Pantry Item update',
-            });
-          }
-          alertRejectedMutation(result, t('errors.updateItemFailed'));
-        }
-      })
-      .catch(error => {
-        try {
-          writeItem(currentItem);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert failed Pantry Item update',
-          });
-        }
-        errorService.reportError(error, { operation: 'updatePantryItem' });
-        // Error already handled by mutation's onError
-      });
+    );
 
     onSuccess?.();
   };

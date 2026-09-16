@@ -1,3 +1,4 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
 import { DetailSection } from '#components/molecules/DetailSection';
@@ -28,10 +29,15 @@ import {
   getDaysInPantry,
   formatDaysInPantry,
 } from '#features/pantry/hooks/usePantryItemTransformation';
-import { getUnitDisplayText } from '#utils/formatQuantity';
+import {
+  formatQuantityForDisplay,
+  getUnitDisplayText,
+  resolveQuantityNotation,
+} from '#utils/formatQuantity';
+import { BatchStatus, ItemCondition } from '#/graphql/generated/schemaTypes';
 import { PantryDetailInfo } from '#features/pantry/components/PantryDetailInfo';
 import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHistory';
-import { parseNutritions, hasNutritionData } from '#domain/nutrition';
+import { hasNutritionData } from '#domain/nutrition';
 import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { GalleryHero } from '#features/catalog/ui/GalleryHero';
 import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
@@ -47,6 +53,7 @@ import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermission
 import { useRecipeSuggestionsForItem } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
 import { commonStyles } from '#/styles/commonStyles';
+import { ExternalSource } from '#/graphql/generated/schemaTypes';
 
 /**
  * Extracted so `styles.useVariants` is called once per instance.
@@ -55,15 +62,15 @@ const ExpiryColumnText: React.FC<{
   text: string;
   isUrgent: boolean;
   isExpired: boolean;
-}> = ({ text, isUrgent, isExpired }) => {
-  const status = isExpired ? 'expired' : isUrgent ? 'urgent' : 'normal';
-  styles.useVariants({ expiryStatus: status });
-  return (
-    <Text role="label" style={styles.infoColumnValue}>
-      {text}
-    </Text>
-  );
-};
+}> = ({ text, isUrgent, isExpired }) => (
+  <Text
+    role="label"
+    tone={isExpired ? 'danger' : isUrgent ? 'warning' : 'primary'}
+    align="center"
+  >
+    {text}
+  </Text>
+);
 
 export const PantryItemDetail: React.FC<
   StaticScreenProps<{
@@ -100,7 +107,7 @@ export const PantryItemDetail: React.FC<
   } = usePantryItemDetailData(itemId);
 
   const handleRefresh = () => {
-    executeRefreshWithFinally(refreshAll, setRefreshing);
+    void executeRefreshWithFinally(refreshAll, setRefreshing);
   };
 
   const permissions = usePantryPermissions();
@@ -135,7 +142,7 @@ export const PantryItemDetail: React.FC<
 
   const handleRecipePress = (recipeId: number) => {
     toRecipeDetail({
-      externalSource: 'SPOONACULAR',
+      externalSource: ExternalSource.Spoonacular,
       externalId: String(recipeId),
     });
   };
@@ -144,12 +151,12 @@ export const PantryItemDetail: React.FC<
   const expiryInfo = getExpiryInfo(item?.expiresAt);
   const daysInPantry = getDaysInPantry(item?.createdAt);
   const storageStateDisplay = formatStorageState(item?.storageState, t);
-  const brandName = item?.brand?.name || null;
-  const categoryName = item?.item?.categories?.[0]?.category?.name || null;
-  const itemPhotos = galleryPhotos(item?.item?.photos);
-  const itemNutritions = parseNutritions(item?.item?.nutritions);
+  const brandName = item?.brand?.name ?? null;
+  const categoryName = item?.item.categories[0]?.category.name ?? null;
+  const itemPhotos = galleryPhotos(item?.item.photos);
+  const nutritionFacts = item?.item.nutritionFacts ?? null;
   const showImages = itemPhotos.length > 0 || !!imageUrl;
-  const showNutrition = hasNutritionData(itemNutritions);
+  const showNutrition = hasNutritionData(nutritionFacts);
   const packageBreakdownText = formatPackageBreakdownFull(
     item?.packageBreakdown,
   );
@@ -165,7 +172,7 @@ export const PantryItemDetail: React.FC<
     item?.quantityBreakdown,
   );
   const portionsLeftText =
-    item?.remainingPortions != null && item?.portionUnit
+    item?.remainingPortions != null && item.portionUnit
       ? t('pantryItemCard.portionsLeft', {
           count: item.remainingPortions,
           unit: item.portionUnit.symbol || item.portionUnit.name,
@@ -188,7 +195,7 @@ export const PantryItemDetail: React.FC<
 
   if (!item || deletedOnServer) {
     return (
-      <CollapsingHeroDetail onBack={goBack} testID="pantry-item-detail">
+      <CollapsingHeroDetail onBack={goBack} testID={pantryTestIDs.itemDetail}>
         <View style={commonStyles.loadingContainer}>
           <DataStateView state={itemState} onRetry={handleRefresh} />
         </View>
@@ -196,11 +203,15 @@ export const PantryItemDetail: React.FC<
     );
   }
 
+  const quantityText = `${formatQuantityForDisplay(item.quantity, {
+    notation: resolveQuantityNotation(null, item.unit.displayAsFraction),
+  })} ${getUnitDisplayText(item.unit)}`;
+
   const hasExpiredBatches =
-    (item.condition === 'EXPIRED' && item.quantity > 0) ||
+    (item.condition === ItemCondition.Expired && item.quantity > 0) ||
     batches.some(
       batch =>
-        batch.status === 'ACTIVE' &&
+        batch.status === BatchStatus.Active &&
         !!batch.expiresAt &&
         new Date(batch.expiresAt) < new Date(),
     );
@@ -213,7 +224,7 @@ export const PantryItemDetail: React.FC<
             accessibilityLabel: t('labels.discard'),
             onPress: actions.handleDiscardExpired,
             variant: 'error',
-            testID: 'pantry-item-discard-button',
+            testID: pantryTestIDs.itemDiscardButton,
           },
         ]
       : [];
@@ -225,11 +236,13 @@ export const PantryItemDetail: React.FC<
             icon:
               actions.addToListStatus === 'success' ? 'cart' : 'cart-outline',
             accessibilityLabel: t('labels.addToShoppingList'),
-            onPress: actions.handleAddToShoppingList,
+            onPress: () => {
+              void actions.handleAddToShoppingList();
+            },
             variant:
               actions.addToListStatus === 'success' ? 'success' : 'primary',
             loading: actions.addToListStatus === 'loading',
-            testID: 'pantry-item-add-to-list-button',
+            testID: pantryTestIDs.itemAddToListButton,
           } satisfies HeaderAction,
         ]
       : []),
@@ -240,20 +253,20 @@ export const PantryItemDetail: React.FC<
             icon: 'swap-vertical-outline',
             accessibilityLabel: t('adjustQuantity.title'),
             onPress: () => actions.setAdjustModalVisible(true),
-            testID: 'pantry-item-adjust-button',
+            testID: pantryTestIDs.itemAdjustButton,
           },
           {
             icon: 'create-outline',
             accessibilityLabel: t('labels.edit'),
             onPress: handleEdit,
-            testID: 'pantry-item-edit-button',
+            testID: pantryTestIDs.itemEditButton,
           },
           {
             icon: 'trash-outline',
             accessibilityLabel: t('labels.delete'),
             onPress: actions.handleDelete,
             variant: 'error',
-            testID: 'pantry-item-delete-button',
+            testID: pantryTestIDs.itemDeleteButton,
           },
         ] satisfies HeaderAction[])
       : []),
@@ -262,7 +275,7 @@ export const PantryItemDetail: React.FC<
   return (
     <>
       <CollapsingHeroDetail
-        testID="pantry-item-detail"
+        testID={pantryTestIDs.itemDetail}
         onBack={goBack}
         actions={headerActions}
         title={item.itemName}
@@ -287,16 +300,16 @@ export const PantryItemDetail: React.FC<
           numberOfLines={2}
           trailing={
             <Text role="heading" style={styles.quantityBadge}>
-              {item.quantity} {getUnitDisplayText(item.unit)}
+              {quantityText}
             </Text>
           }
         />
 
-        {!!(categoryName || storageStateDisplay) && (
+        {(!!categoryName || !!storageStateDisplay) && (
           <View style={styles.categoryBadge}>
             <Icon name="restaurant-outline" size={16} tone="primary" />
             <Text role="label" style={styles.categoryText}>
-              {categoryName || t('labels.item')}
+              {categoryName ?? t('labels.item')}
               {storageStateDisplay
                 ? t('pantryItemDetail.inLocation', {
                     location: storageStateDisplay,
@@ -312,26 +325,26 @@ export const PantryItemDetail: React.FC<
               <Text role="caption" style={styles.infoColumnLabel}>
                 {t('pantryItemDetail.inThePantry')}
               </Text>
-              <Text style={styles.infoColumnValue}>
-                {formatDaysInPantry(daysInPantry)}
+              <Text role="label" style={styles.infoColumnValue}>
+                {formatDaysInPantry(daysInPantry, t)}
               </Text>
             </View>
             <View style={styles.infoColumn}>
-              <Text style={styles.infoColumnLabel}>
+              <Text role="caption" style={styles.infoColumnLabel}>
                 {t('pantryItemDetail.expiring')}
               </Text>
               <ExpiryColumnText
-                text={expiryInfo?.text || t('pantryItemDetail.noExpiry')}
+                text={expiryInfo?.text ?? t('pantryItemDetail.noExpiry')}
                 isUrgent={!!expiryInfo?.isUrgent}
                 isExpired={!!expiryInfo?.isExpired}
               />
             </View>
             <View style={styles.infoColumn}>
-              <Text style={styles.infoColumnLabel}>
+              <Text role="caption" style={styles.infoColumnLabel}>
                 {t('pantryItemDetail.amount')}
               </Text>
-              <Text style={styles.infoColumnValue}>
-                {item.quantity} {getUnitDisplayText(item.unit)}
+              <Text role="label" style={styles.infoColumnValue}>
+                {quantityText}
               </Text>
             </View>
           </View>
@@ -340,13 +353,13 @@ export const PantryItemDetail: React.FC<
         {!!showNutrition && (
           <DetailSection title={t('pantryItemDetail.nutrition')}>
             <NutritionSummary
-              nutritions={itemNutritions}
+              nutritionFacts={nutritionFacts}
               showHighlights
               onPress={() =>
                 toNutritionScreen({
                   itemId: item.id,
                   itemName: item.itemName,
-                  nutritions: item.item?.nutritions,
+                  nutritionFacts,
                 })
               }
             />
@@ -362,8 +375,8 @@ export const PantryItemDetail: React.FC<
             quantityBreakdownText={quantityBreakdownText}
             portionsLeftText={portionsLeftText}
             packageBreakdownText={packageBreakdownText}
-            shelfLifeDays={item.item?.shelfLifeDays}
-            shelfLifeOpenedDays={item.item?.shelfLifeOpenedDays}
+            shelfLifeDays={item.item.shelfLifeDays}
+            shelfLifeOpenedDays={item.item.shelfLifeOpenedDays}
             onCorrectWeight={() => actions.setCorrectWeightVisible(true)}
             pricing={batchPricing}
           />
@@ -373,20 +386,20 @@ export const PantryItemDetail: React.FC<
           <DetailSection flush>
             <BatchSection
               batches={batches}
-              unitSymbol={item.unit?.symbol ?? undefined}
+              unitSymbol={item.unit.symbol}
               totalCount={batchTotalCount}
               onViewAll={() =>
                 toPantryBatchHistory({
                   pantryItemId: itemId,
-                  itemName: item.itemName ?? '',
-                  unitSymbol: item.unit?.symbol ?? undefined,
+                  itemName: item.itemName,
+                  unitSymbol: item.unit.symbol,
                 })
               }
             />
           </DetailSection>
         )}
 
-        {!!item.usageRecords && item.usageRecords.edges.length > 0 && (
+        {item.usageRecords.edges.length > 0 && (
           <DetailSection>
             <PantryUsageHistory
               usageRecords={item.usageRecords.edges}
@@ -394,7 +407,7 @@ export const PantryItemDetail: React.FC<
               onViewAll={() =>
                 toPantryUsageHistory({
                   pantryItemId: itemId,
-                  itemName: item.itemName ?? '',
+                  itemName: item.itemName,
                 })
               }
             />
@@ -464,7 +477,7 @@ export const PantryItemDetail: React.FC<
           photos={itemPhotos}
           initialIndex={viewerIndex ?? 0}
           onClose={() => setViewerIndex(null)}
-          canEdit={!!item.item?.canEdit}
+          canEdit={item.item.canEdit}
         />
       )}
     </>
@@ -502,13 +515,6 @@ const styles = StyleSheet.create(theme => ({
   infoColumnValue: {
     color: theme.colors.textPrimary,
     textAlign: 'center',
-    variants: {
-      expiryStatus: {
-        normal: {},
-        urgent: { color: theme.colors.warning },
-        expired: { color: theme.colors.error },
-      },
-    },
   },
   recipesLoading: {
     marginTop: theme.spacing.sm,

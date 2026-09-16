@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 import { useShoppingListItemWrites } from '#features/shoppingList/hooks/useShoppingListItemWrites';
-import { ItemSuggestion, CategoryType } from '#/graphql/generated/schemaTypes';
+import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import { CategoryType } from '#/graphql/generated/schemaTypes';
 import { FormScreen } from '#components/templates/FormScreen';
 import { FormInput } from '#components/atoms/FormInput';
 import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAutocompleteField';
@@ -16,22 +17,18 @@ import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   PRIORITY_OPTIONS,
-  PRIORITY_VALUES,
-  PRIORITY_OPTION_BY_VALUE,
+  priorityValueOf,
+  priorityOptionOf,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Controller } from 'react-hook-form';
 import { logValidationErrors } from '#/utils/validation/common';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
-import {
-  handleMutationError,
-  versionConflictCheck,
-} from '#/utils/errorHandlers';
-import { validationFieldName } from '#/utils/errors/mutationPayload';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { localizeNumericHint } from '#/utils/formatters/number';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
 type RouteParams = {
   listId: string;
@@ -76,6 +73,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     buildUnitInput,
     buildDirtyInput,
     parseNetWeightInput,
+    parseQuantityInput,
     hasDirtyFields,
   } = useShoppingListItemForm();
   const [saving, setSaving] = useState(false);
@@ -139,8 +137,6 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     setFieldValue('netWeightUnitId', id);
   };
 
-  const formatPriorityLabel = (option: string) => t(priorityLabelKey(option));
-
   // Wrapped in `handleSubmit` at the call site, not here: this body reads
   // `itemVersionRef.current`, and calling `handleSubmit` during render makes
   // that a render-time ref read (react-hooks/refs). Same shape as
@@ -152,7 +148,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       return;
     }
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         const unitData = buildUnitInput();
 
@@ -164,50 +160,28 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
           // Only send changed fields - sends raw quantityInput string
           const input = buildDirtyInput();
-          const outcome = await updateItem({
-            ...input,
-            id: itemId,
-            // Strict version checking (optimistic concurrency control).
-            version: itemVersion,
-          });
-
-          if (outcome.status !== 'rejected') {
-            navigation.goBack();
-          } else if (outcome.data) {
-            // A refusal that names a field gets copy for that field — this
-            // mutation carries `brand`, `netWeight`, `unit` and `storage` in
-            // one call, so "couldn't update" alone does not say which was
-            // refused. Localized, keyed off `field`; the server's own message
-            // is English and is not shown (see `validationFieldName`).
-            const refusedField = validationFieldName(outcome.data);
-            const generic = t('shoppingListScreens.serverNotUpdated', {
-              action: t('shoppingListScreens.updated'),
-            });
-            alertService.alert(
-              t('labels.error'),
-              refusedField
-                ? t(`errors.field.${refusedField}`, { defaultValue: generic })
-                : generic,
-            );
-          } else {
-            alertService.alert(
-              t('labels.error'),
-              t('shoppingListScreens.failedToUpdateAdd', {
-                action: t('shoppingListScreens.actionUpdate'),
-              }),
-            );
-          }
+          // A version conflict offers Refresh: leaving lets the list refetch.
+          const updated = await updateItem(
+            {
+              ...input,
+              id: itemId,
+              // Strict version checking (optimistic concurrency control).
+              version: itemVersion,
+            },
+            () => navigation.goBack(),
+          );
+          if (updated) navigation.goBack();
           return;
         }
 
         const netWeightValue = parseNetWeightInput();
         const brandName = brand.trim();
 
-        const outcome = await createItem(
+        const created = await createItem(
           {
             shoppingListId: listId,
             itemName,
-            quantity: parseDecimalInput(quantityInput) || 1,
+            quantity: parseQuantityInput() ?? 1,
             quantityInput,
             unitName: unit || null,
             category: category || null,
@@ -227,7 +201,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
             // priority back to it.
             priority,
             ...(storeId && { storePrefs: { preferredStoreId: storeId } }),
-            ...((brandId || brandName) && {
+            ...((!!brandId || !!brandName) && {
               brand: {
                 ...(brandId && { brandId }),
                 ...(brandName && { brandName }),
@@ -242,41 +216,27 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           },
         );
 
-        if (outcome === 'reverted') {
-          // The server refused the create — the reconciler fully reverted the
-          // optimistic item (entity + list-stat scalars a bare evict would leave
-          // inflated); surface the failure.
-          alertService.alert(
-            t('labels.error'),
-            t('shoppingListScreens.serverNotUpdated', {
-              action: t('shoppingListScreens.added'),
-            }),
-          );
-        } else {
-          // 'created' or 'queued' — the item is in the cache (and replays if it
-          // was queued offline); navigate back.
-          navigation.goBack();
-        }
+        // A refused create is reverted and alerted by the hook; a created or
+        // queued one is in the cache, so the form can close.
+        if (created) navigation.goBack();
       },
       setSaving,
-      (error: unknown) => {
-        handleMutationError(error, {
-          operation: 'ShoppingListItem.save',
-          checks: [
-            versionConflictCheck({
-              onRefresh: () => {
-                // Navigate back - the query will automatically refetch
-                // when returning to the list view
-                navigation.goBack();
-              },
-            }),
-          ],
-        });
+      () => {
+        alertService.alert(
+          t('labels.error'),
+          t('shoppingListScreens.failedToUpdateAdd', {
+            action: isEdit
+              ? t('shoppingListScreens.actionUpdate')
+              : t('shoppingListScreens.actionAdd'),
+          }),
+        );
       },
     );
   };
 
-  const modalTestID = isEdit ? 'edit-item-modal' : 'add-item-modal';
+  const formTestIDs = isEdit
+    ? shoppingListTestIDs.editItemForm
+    : shoppingListTestIDs.addItemForm;
 
   return (
     <FormScreen
@@ -288,10 +248,8 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         void handleSubmit(handleSave, logValidationErrors)();
       }}
       loading={saving}
-      testID={modalTestID}
-      submitButtonTestID={
-        isEdit ? 'edit-item-submit-button' : 'add-item-submit-button'
-      }
+      testID={formTestIDs.screen}
+      submitButtonTestID={formTestIDs.submitButton}
     >
       {/* Item Name Field - Use autocomplete for new items only */}
       <Controller
@@ -307,7 +265,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
               onChangeText={onChange}
               placeholder={t('shoppingListScreens.itemNamePlaceholder')}
               autoFocus
-              testID="edit-item-name-input"
+              testID={formTestIDs.nameInput}
             />
           ) : (
             <ItemAutocompleteField
@@ -320,7 +278,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
               placeholder={t('shoppingListScreens.itemNamePlaceholder')}
               required
               autoFocus
-              testID="add-item-name-input"
+              testID={formTestIDs.nameInput}
             />
           )
         }
@@ -334,7 +292,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         onChangeText={text => setFieldValue('brand', text)}
         onBrandSelected={handleBrandSelect}
         placeholder={t('shoppingListScreens.brandPlaceholder')}
-        testID={isEdit ? 'edit-item-brand-input' : 'add-item-brand-input'}
+        testID={formTestIDs.brandInput}
       />
 
       {/* Category Field */}
@@ -360,9 +318,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
               value={value}
               onChangeText={onChange}
               placeholder="1"
-              testID={
-                isEdit ? 'edit-item-quantity-input' : 'add-item-quantity-input'
-              }
+              testID={formTestIDs.quantityInput}
             />
           )}
         />
@@ -373,7 +329,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           onChangeText={text => setFieldValue('unit', text)}
           onUnitSelected={handleUnitSelect}
           placeholder={t('labels.pcsKgEtc')}
-          testID={isEdit ? 'edit-item-unit-picker' : 'add-item-unit-picker'}
+          testID={formTestIDs.unitPicker}
         />
       </FieldRow>
 
@@ -389,9 +345,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           error={errors.netWeight?.message}
           placeholder={t('shoppingListScreens.netWeightPlaceholder')}
           keyboardType="decimal-pad"
-          testID={
-            isEdit ? 'edit-item-net-weight-input' : 'add-item-net-weight-input'
-          }
+          testID={formTestIDs.netWeightInput}
         />
         <Controller
           control={control}
@@ -405,11 +359,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
               onChangeText={onChange}
               onUnitSelected={handleNetWeightUnitSelect}
               placeholder={t('labels.pcsKgEtc')}
-              testID={
-                isEdit
-                  ? 'edit-item-net-weight-unit-picker'
-                  : 'add-item-net-weight-unit-picker'
-              }
+              testID={formTestIDs.netWeightUnitPicker}
             />
           )}
         />
@@ -417,7 +367,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
       {/* Estimated Price Field */}
       <FormInput
-        testID={isEdit ? 'edit-item-price-input' : 'add-item-price-input'}
+        testID={formTestIDs.priceInput}
         label={t('shoppingListScreens.estimatedPrice')}
         value={estimatedPrice}
         onChangeText={text => setFieldValue('estimatedPrice', text)}
@@ -431,11 +381,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       <SegmentedControl
         label={t('shoppingListScreens.priority')}
         options={PRIORITY_OPTIONS}
-        value={PRIORITY_OPTION_BY_VALUE[priority] ?? 'low'}
-        onChange={option =>
-          setFieldValue('priority', PRIORITY_VALUES[option] ?? 0)
-        }
-        formatLabel={formatPriorityLabel}
+        value={priorityOptionOf(priority) ?? 'low'}
+        onChange={option => setFieldValue('priority', priorityValueOf(option))}
+        formatLabel={option => t(priorityLabelKey(option))}
       />
 
       {/* Preferred Store */}

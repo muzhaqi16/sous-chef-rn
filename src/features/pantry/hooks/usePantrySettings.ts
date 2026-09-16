@@ -1,5 +1,9 @@
-import { useApolloClient, useQuery, useMutation } from '@apollo/client/react';
-import { isSuccessPayload } from '#/utils/errors/mutationPayload';
+import {
+  skipToken,
+  useApolloClient,
+  useQuery,
+  useMutation,
+} from '@apollo/client/react';
 import type { ApolloCache } from '@apollo/client';
 import {
   GetPantryDocument,
@@ -15,16 +19,18 @@ import {
 } from '#features/pantry/hooks/useCreatePantry';
 import {
   snapshotFields,
-  updateEntityFieldsLocalFirst,
+  writeEntityFields,
 } from '#/apollo/utils/localFirstFields';
-import { classifyDeleteResult } from '#/apollo/utils/classifyCreateResult';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import {
   removeOptimisticPantry,
   restorePantryToHomeCache,
 } from '#features/pantry/utils/optimisticPantry';
-import { handleMutationError } from '#/utils/errorHandlers';
+import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
+import { useTranslation } from '#/i18n';
 
 /** Module-level so the try/catch does not bail the hook out of the compiler. */
 function buildDeletePantryUpdater(homeId: string | null | undefined) {
@@ -35,9 +41,7 @@ function buildDeletePantryUpdater(homeId: string | null | undefined) {
   ) {
     // Keyed off the VARIABLES: `DeletePantryPayload.pantry` is null when the
     // server converges a replay, exactly the case this has to handle.
-    const isDeletePayload =
-      data?.deletePantry?.__typename === 'DeletePantryPayload';
-    if (!isDeletePayload || !variables?.input?.id || !homeId) return;
+    if (!appliedPayload(data) || !variables?.input.id || !homeId) return;
     try {
       removeOptimisticPantry(cache, homeId, variables.input.id);
     } catch (error) {
@@ -53,20 +57,28 @@ interface UsePantrySettingsArgs {
 
 /** The pantry a settings screen reads, and every write it can make to it. */
 export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
+  const { t } = useTranslation();
   const client = useApolloClient();
   // The create is `useCreatePantry`'s — one pantry create, wherever it is made.
-  const { createPantry } = useCreatePantry();
-  // Gates the `pantryId!` assertion below.
+  const { createPantry: createPantryWrite } = useCreatePantry();
   const hasValidPantryId = !!pantryId?.trim();
 
   const {
     data: pantryData,
     loading: loadingPantry,
     error: pantryError,
-  } = useQuery(GetPantryDocument, {
-    variables: { id: pantryId!, itemsFirst: 25, storageLocationsFirst: 15 },
-    skip: !hasValidPantryId,
-  });
+  } = useQuery(
+    GetPantryDocument,
+    hasValidPantryId && pantryId
+      ? {
+          variables: {
+            id: pantryId,
+            itemsFirst: 25,
+            storageLocationsFirst: 15,
+          },
+        }
+      : skipToken,
+  );
 
   const pantry = pantryData?.pantry;
 
@@ -75,70 +87,68 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
     // lists are unchanged by an edit.
   });
 
-  const [markAsDefault] = useMutation(MarkPantryAsDefaultDocument, {
-    onError: error => {
-      handleMutationError(error, { operation: 'Set Default Pantry' });
-    },
-  });
+  const [markAsDefault] = useMutation(MarkPantryAsDefaultDocument);
 
   const [deletePantryMutation] = useMutation(DeletePantryDocument, {
-    onError: error => {
-      handleMutationError(error, { operation: 'Delete Pantry' });
-    },
     update: buildDeletePantryUpdater(homeId),
   });
 
   /** False when the flag did not stick, so the caller can put its switch back. */
   const setDefault = async (id: string): Promise<boolean> => {
-    let result;
-    let threw = false;
-    try {
-      result = await markAsDefault({
-        variables: { input: { id } },
-        // Absolute flag on an existing row, so a replay lands the same state.
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      threw = true;
-      errorService.reportError(error, {
-        operation: 'PantrySettings.setDefaultPantry',
-      });
-    }
-    // `errorPolicy: 'all'` puts a GraphQL error on `result.error`, but a REFUSAL
-    // arrives as a union member in `data` and sets no error at all — so the
-    // payload has to be discriminated or a refused write reports as saved.
-    return (
-      !threw &&
-      isSuccessPayload(
-        result?.data?.markPantryAsDefault,
-        'MarkPantryAsDefaultPayload',
-      )
+    const settled = await settleMutation(
+      () =>
+        markAsDefault({
+          variables: { input: { id } },
+          // Absolute flag on an existing row, so a replay lands the same state.
+          context: { localFirst: true },
+        }),
+      {
+        document: MarkPantryAsDefaultDocument,
+        fallback: t('errors.saveSettingsFailed'),
+      },
     );
+    return settled.status !== 'failed';
+  };
+
+  /** The one pantry create, with its refusal shown to the user. */
+  const createPantry = async (
+    fields: Parameters<typeof createPantryWrite>[0],
+  ) => {
+    const outcome = await createPantryWrite(fields);
+    if (outcome.failure) {
+      alertService.alert(outcome.failure.title, outcome.failure.body);
+    }
+    return outcome;
   };
 
   /**
    * Absolute field write on an existing row, so a replay lands the same state —
    * safe to queue, and the rename shows immediately.
    */
-  const savePantryFields = (
+  const savePantryFields = async (
     id: string,
     updates: { name: string; description: string },
-  ) =>
-    updateEntityFieldsLocalFirst({
-      cache: client.cache,
-      entity: { __typename: 'Pantry', id },
-      updates,
-      // Omits keys the read did not carry, so a refusal arriving before the
-      // query resolves reverts nothing. `pantry?.name ?? ''` would instead
-      // write an empty name over the real one.
-      previous: snapshotFields(pantry, updates),
-      logLabel: 'PantrySettings.updatePantry',
-      mutate: () =>
+  ): Promise<boolean> => {
+    const entity = { __typename: 'Pantry', id };
+    // Omits keys the read did not carry, so a refusal arriving before the
+    // query resolves reverts nothing rather than blanking the real name.
+    const previous = snapshotFields(pantry, updates);
+    writeEntityFields(client.cache, entity, updates);
+
+    const settled = await settleMutation(
+      () =>
         updatePantry({
           variables: { input: { id, ...updates } },
           context: { localFirst: true },
         }),
-    });
+      {
+        document: UpdatePantryDocument,
+        fallback: t('errors.saveSettingsFailed'),
+        onFailed: () => writeEntityFields(client.cache, entity, previous),
+      },
+    );
+    return settled.status !== 'failed';
+  };
 
   /** Unlinks without evicting, so a refusal can put the row back. */
   const deletePantry = async (id: string): Promise<PantryWriteOutcome> => {
@@ -157,22 +167,8 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
       }
     }
 
-    // Safe to queue: the delete converges server-side on replay
-    // (`converged: true` for an already-deleted row).
-    const result = await deletePantryMutation({
-      variables: { input: { id } },
-      context: { localFirst: true },
-    });
-
-    // A delete CONVERGES: an already-deleted pantry answers with a success
-    // payload, and an id the server never held with NotFoundError. Both leave
-    // the row gone, which is what was asked for — reverting the second would
-    // restore a pantry the server cannot send.
-    if (classifyDeleteResult(result) !== 'rejected') {
-      return { status: 'ok', rejectionMessage: null, result };
-    }
-
-    if (homeId) {
+    const restore = () => {
+      if (!homeId) return;
       try {
         restorePantryToHomeCache(client.cache, homeId, id);
       } catch (cacheError) {
@@ -180,13 +176,31 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
           operation: 'Revert rejected Pantry delete',
         });
       }
-    }
-    return { status: 'rejected', rejectionMessage: null, result };
+    };
+
+    // Safe to queue: a delete converges server-side, and an id the server
+    // never held leaves the row gone, which is what was asked for.
+    const settled = await settleMutation(
+      () =>
+        deletePantryMutation({
+          variables: { input: { id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: DeletePantryDocument,
+        fallback: t('errors.deletePantryFailed'),
+        removal: true,
+        onFailed: restore,
+      },
+    );
+    return settled.status === 'failed'
+      ? { status: 'rejected', failure: settled.failure }
+      : { status: 'ok' };
   };
 
   return {
     pantry,
-    pantryItemCount: pantry?.itemsConnection?.totalCount ?? 0,
+    pantryItemCount: pantry?.itemsConnection.totalCount ?? 0,
     loadingPantry,
     pantryError,
     setDefault,

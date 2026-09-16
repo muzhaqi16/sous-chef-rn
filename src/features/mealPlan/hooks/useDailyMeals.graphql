@@ -2,9 +2,9 @@ fragment DailyMeals_item on MealPlanItem {
   id
   date
   mealType
-  calories
   customMealName
   recipe {
+    id
     name
   }
 }

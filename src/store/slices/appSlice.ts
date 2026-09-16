@@ -1,10 +1,10 @@
-import { StateCreator } from 'zustand';
+import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
 import type {
   CategorySuggestion,
   ItemSuggestion,
 } from '#/graphql/generated/schemaTypes';
-import { dedupeById } from '#features/catalog/utils/arrayUtils';
+import { dedupeById } from '#utils/dedupeById';
 
 interface Unit {
   id: string;

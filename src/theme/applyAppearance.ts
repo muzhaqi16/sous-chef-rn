@@ -24,7 +24,7 @@ function scaleTypeRoles<T extends Record<string, TypeRole>>(
   roles: T,
   multiplier: number,
 ): T {
-  const scaled = {} as Record<string, TypeRole>;
+  const scaled: Record<string, TypeRole> = {};
   for (const [name, role] of Object.entries(roles)) {
     scaled[name] = {
       ...role,
@@ -39,7 +39,7 @@ function scaleObject<T extends Record<string, number>>(
   obj: T,
   multiplier: number,
 ): T {
-  const scaled = {} as Record<string, number>;
+  const scaled: Record<string, number> = {};
   for (const [key, value] of Object.entries(obj)) {
     scaled[key] = Math.round(value * multiplier);
   }
@@ -133,8 +133,6 @@ export function applyAppearanceToRuntime(prefs: AppearancePreferences): void {
         },
         avatar: {
           ...next.colors.avatar,
-          gradientStart: palette['500'],
-          gradientEnd: palette['400'],
           shadow: withAlpha(palette['500'], '4D'),
         },
       };

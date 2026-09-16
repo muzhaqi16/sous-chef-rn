@@ -10,11 +10,9 @@ import { gql } from '@apollo/client';
 import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
 import { ItemCondition } from '#/graphql/generated/schemaTypes';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { handleMutationError } from '#/utils/errorHandlers';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { t } from '#/i18n';
+import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
 
 interface UseConvertExpiredToWasteOptions {
@@ -32,15 +30,9 @@ const CONVERT_STATE_FRAGMENT = gql`
 export function useConvertExpiredToWaste({
   onSuccess,
 }: UseConvertExpiredToWasteOptions = {}) {
+  const { t } = useTranslation();
   const client = useApolloClient();
-  const [convertMutation, { loading }] = useMutation(
-    ConvertExpiredToWasteDocument,
-    {
-      onError: error => {
-        handleMutationError(error, { operation: 'Convert Expired To Waste' });
-      },
-    },
-  );
+  const [convertMutation] = useMutation(ConvertExpiredToWasteDocument);
 
   const convertExpiredToWaste = async (
     pantryItemId: string,
@@ -89,18 +81,9 @@ export function useConvertExpiredToWaste({
       });
     }
 
-    const result = await convertMutation({
-      variables: {
-        input: { pantryItemId, idempotencyKey: generateEntityId() },
-      },
-      context: { localFirst: true },
-    });
-
-    const outcome = classifyCreateResult(result);
-
-    if (outcome === 'rejected') {
-      // Only revert from a real snapshot — falling back to 0/SPOILED would
-      // re-apply the optimistic write instead of restoring the item.
+    const revert = () => {
+      // Only from a real snapshot — falling back to 0/SPOILED would re-apply
+      // the optimistic write instead of restoring the item.
       if (snapshot) {
         try {
           writeState(snapshot.quantity, snapshot.condition);
@@ -111,19 +94,32 @@ export function useConvertExpiredToWaste({
         }
       }
       clearPersistence();
-      // onError covers transport errors; a non-success union payload has none.
-      alertRejectedMutation(result, t('errors.discardExpiredFailed'));
-      return false;
-    }
+    };
 
-    // created (response normalized the authoritative item) or queued (replays
-    // the canonical mutation, deduped by its idempotencyKey).
-    if (outcome === 'created') {
+    const settled = await settleMutation(
+      () =>
+        convertMutation({
+          variables: {
+            input: { pantryItemId, idempotencyKey: generateEntityId() },
+          },
+          context: { localFirst: true },
+        }),
+      {
+        document: ConvertExpiredToWasteDocument,
+        fallback: t('errors.discardExpiredFailed'),
+        onFailed: revert,
+      },
+    );
+    if (settled.status === 'failed') return false;
+
+    // Applied: the response normalized the authoritative item. Queued: the
+    // persisted values stand until the replay lands.
+    if (settled.status === 'applied') {
       clearPersistence();
     }
     onSuccess?.();
     return true;
   };
 
-  return { convertExpiredToWaste, loading };
+  return { convertExpiredToWaste };
 }

@@ -1,10 +1,13 @@
 import { waitFor } from '@testing-library/react-native';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
+  recordMock,
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { usePantrySettings } from '#features/pantry/hooks/usePantrySettings';
 import { MarkPantryAsDefaultDocument } from '#features/pantry/graphql/pantry.generated';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 
 /**
  * `markPantryAsDefault` returns an errors-as-data union: a refusal arrives in
@@ -12,7 +15,9 @@ import { MarkPantryAsDefaultDocument } from '#features/pantry/graphql/pantry.gen
  * the absence of an error as success puts the switch back on for a flag the
  * server refused to set.
  */
-const markDefault = (payload: Record<string, unknown>): MockedResponse => ({
+const markDefault = (
+  payload: Record<string, unknown>,
+): MockFor<typeof MarkPantryAsDefaultDocument> => ({
   request: {
     query: MarkPantryAsDefaultDocument,
     variables: { input: { id: 'pantry-1' } },
@@ -31,7 +36,7 @@ describe('usePantrySettings.setDefault', () => {
     const { result } = renderSettings([
       markDefault({
         __typename: 'ValidationError',
-        code: 'VALIDATION_FAILED',
+        code: ErrorCode.ValidationFailed,
         message: 'not allowed',
         field: 'id',
       }),
@@ -45,7 +50,7 @@ describe('usePantrySettings.setDefault', () => {
     const { result } = renderSettings([
       markDefault({
         __typename: 'NotFoundError',
-        code: 'NOT_FOUND',
+        code: ErrorCode.NotFound,
         message: 'gone',
         resource: 'Pantry',
         resourceId: 'pantry-1',
@@ -54,6 +59,20 @@ describe('usePantrySettings.setDefault', () => {
 
     await waitFor(() => expect(result.current.setDefault).toBeDefined());
     await expect(result.current.setDefault('pantry-1')).resolves.toBe(false);
+  });
+
+  it('keeps the switch on for a write the offline queue took', async () => {
+    // The queue resolves a queued write with its payload field null. Reading
+    // that as a refusal put the switch back while the write stayed queued.
+    const { result } = renderSettings([
+      recordMock(MarkPantryAsDefaultDocument, {
+        data: { markPantryAsDefault: null },
+        partial: true,
+      }).mock,
+    ]);
+
+    await waitFor(() => expect(result.current.setDefault).toBeDefined());
+    await expect(result.current.setDefault('pantry-1')).resolves.toBe(true);
   });
 
   it('reports the success payload as success', async () => {

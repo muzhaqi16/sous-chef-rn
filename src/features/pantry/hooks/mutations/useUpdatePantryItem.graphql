@@ -28,6 +28,7 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
     id
     imageUrl
     images {
+      id
       url
       kind
     }

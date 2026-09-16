@@ -44,10 +44,7 @@ describe('useOptimisticDataRestorationMultiple', () => {
   it('processes multiple entity types', () => {
     mockGetAllForType.mockReturnValue(new Map());
     renderHook(() =>
-      useOptimisticDataRestorationMultiple([
-        'ShoppingList',
-        'ShoppingListItem',
-      ]),
+      useOptimisticDataRestorationMultiple(['ShoppingListItem', 'PantryItem']),
     );
     expect(mockBatch).toHaveBeenCalled();
   });

@@ -123,12 +123,7 @@
     "updatedTitle": "Item updated",
     "updatedBody": "Your changes are live.",
     "failedBody": "Something went wrong sending your suggestion. Please try again.",
-    "photoNotice": "Photos are added right away. Other changes are reviewed by an admin first.",
-    "notFoundTitle": "Item not found",
-    "notFoundBody": "This item isn't in the catalog any more — it may have been removed.",
-    "rejectedTitle": "Couldn't send that",
-    "failedTitle": "Couldn't send that",
-    "rateLimitedTitle": "Slow down a moment"
+    "photoNotice": "Photos are added right away. Other changes are reviewed by an admin first."
   },
   "reportItem": {
     "footer": "Wrong details on one of these?",
@@ -142,12 +137,7 @@
     "sentBody": "Thanks — an admin will take a look at this item.",
     "failedBody": "Something went wrong sending your report. Please try again.",
     "alreadyReportedTitle": "Already reported",
-    "alreadyReportedBody": "This item is already flagged and waiting for an admin to look at it, so we didn't send a duplicate.",
-    "notFoundTitle": "Item not found",
-    "notFoundBody": "This item isn't in the catalog any more — it may have been removed.",
-    "failedTitle": "Couldn't send that",
-    "rejectedTitle": "Couldn't send that",
-    "rateLimitedTitle": "Slow down a moment"
+    "alreadyReportedBody": "This item is already flagged and waiting for an admin to look at it, so we didn't send a duplicate."
   },
   "addItemForm": {
     "modes": {
@@ -298,10 +288,7 @@
     "setPrimary": {
       "notFoundTitle": "Photo not found",
       "notFoundBody": "This photo isn't on the item any more — it may have been removed.",
-      "failedBody": "Something went wrong updating the main photo. Please try again.",
-      "rateLimitedTitle": "Slow down a moment",
-      "rejectedTitle": "Couldn't set that photo",
-      "failedTitle": "Couldn't set that photo"
+      "failedBody": "Something went wrong updating the main photo. Please try again."
     },
     "perspective": {
       "front": "Front",
@@ -413,7 +400,10 @@
   },
   "storageLocationCard": {
     "default": "Default",
-    "insideParent": "Inside {{parent}}"
+    "insideParent": "Inside {{parent}}",
+    "capacityWithUnit": "/ {{capacity}} {{unit}}",
+    "capacity_one": "/ {{count}} unit",
+    "capacity_other": "/ {{count}} units"
   },
   "itemSubtitle": {
     "percentRemaining": "({{percent}}% remaining)",
@@ -427,7 +417,8 @@
   },
   "tagInput": {
     "maxTagsReached_one": "Maximum {{count}} tag reached",
-    "maxTagsReached_other": "Maximum {{count}} tags reached"
+    "maxTagsReached_other": "Maximum {{count}} tags reached",
+    "placeholder": "Add a tag..."
   },
   "usagePurpose": {
     "ADJUSTMENT": "Inventory adjusted",
@@ -449,6 +440,8 @@
     "VOLUME": "Volume"
   },
   "multiSelect": {
-    "noneSelected": "No items selected"
+    "noneSelected": "No items selected",
+    "selectedCount_one": "{{count}} item selected",
+    "selectedCount_other": "{{count}} items selected"
   }
 }

@@ -7,6 +7,7 @@ import {
   userEvent,
 } from '@testing-library/react-native';
 import { StorageLocationForm } from '#features/catalog/ui/StorageLocationForm';
+import { StorageType } from '#/graphql/generated/schemaTypes';
 
 describe('StorageLocationForm', () => {
   const defaultProps = {
@@ -49,7 +50,7 @@ describe('StorageLocationForm', () => {
         {...defaultProps}
         initialData={{
           name: 'My Fridge',
-          type: 'REFRIGERATOR',
+          type: StorageType.Refrigerator,
         }}
       />,
     );
@@ -74,7 +75,7 @@ describe('StorageLocationForm', () => {
         {...defaultProps}
         initialData={{
           name: 'Kitchen Fridge',
-          type: 'REFRIGERATOR',
+          type: StorageType.Refrigerator,
         }}
       />,
     );
@@ -92,8 +93,8 @@ describe('StorageLocationForm', () => {
       <StorageLocationForm
         {...defaultProps}
         availableLocations={[
-          { id: 'loc-1', name: 'Main Fridge', type: 'REFRIGERATOR' },
-          { id: 'loc-2', name: 'Pantry', type: 'PANTRY_SHELF' },
+          { id: 'loc-1', name: 'Main Fridge', type: StorageType.Refrigerator },
+          { id: 'loc-2', name: 'Pantry', type: StorageType.PantryShelf },
         ]}
       />,
     );
@@ -124,7 +125,7 @@ describe('StorageLocationForm', () => {
     expect(defaultProps.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'Test Location',
-        type: 'PANTRY_SHELF',
+        type: StorageType.PantryShelf,
       }),
     );
   });

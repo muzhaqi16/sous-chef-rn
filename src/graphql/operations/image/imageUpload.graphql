@@ -66,8 +66,5 @@ mutation ConfirmItemImageUpload($input: ConfirmItemImageUploadInput!) {
   }
 }
 
-# Profile avatar/cover operations consolidated into updateProfile mutation
-# Use: updateProfile(input: { avatar: $url }) to set avatar
-# Use: updateProfile(input: { avatar: null }) to remove avatar
-# Use: updateProfile(input: { coverImage: $url }) to set cover
-# Use: updateProfile(input: { coverImage: null }) to remove cover
+# A profile avatar is set or removed through updateProfile (user.graphql):
+# updateProfile(input: { avatar: $url }) or { avatar: null }.

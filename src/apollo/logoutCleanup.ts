@@ -1,6 +1,5 @@
 import { getApolloClient } from '#/apollo/clientRegistry';
-import { cancelCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
-import { InMemoryCache } from '@apollo/client';
+import type { InMemoryCache } from '@apollo/client';
 import { useStore } from '#store';
 import { storage } from '#/storage/mmkv';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
@@ -10,6 +9,8 @@ import { disposeWebSocket } from './links/wsLink';
 import { clearRefreshState } from './links/refreshToken';
 import { registerSessionTeardown } from '#store/sessionTeardown';
 import { logger } from '#/utils/environment';
+import { RefreshTokenDocument } from '#operations/auth/auth.generated';
+import { operationNameOf } from './utils/documentOperation';
 
 interface LogoutCleanupOptions {
   clearCache?: boolean;
@@ -75,7 +76,7 @@ export class LogoutCleanup {
       cancelTokenRefresh();
 
       // 2. Cancel pending cache persistence
-      cancelCachePersistence();
+      apolloCachePersistence.cancel();
 
       // 3. Cancel all active subscriptions
       if (cancelSubscriptions) {
@@ -213,38 +214,9 @@ export class LogoutCleanup {
     // Names only. A call that belongs to the sign-out but shares its name with
     // one that does not — `UpdateDevice` is both the device delete and the push
     // token rotation — opts in per call via `allowDuringLogout` instead.
-    const allowedOperations = ['RefreshToken', 'Logout'];
-
-    return operationName ? !allowedOperations.includes(operationName) : true;
-  }
-
-  /**
-   * Handle errors that occur during logout gracefully
-   */
-  static handleLogoutError(error: unknown, operationName?: string): boolean {
-    if (!LogoutCleanup.isLoggingOut) return false;
-
-    // Suppress common logout-related errors
-    const suppressibleErrors = [
-      'No access token available',
-      'Response not successful: Received status code 500',
-      'Network error',
-      'Request failed',
-    ];
-
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const shouldSuppress = suppressibleErrors.some(msg =>
-      errorMessage.includes(msg),
-    );
-
-    if (shouldSuppress) {
-      logger.info(
-        `🔇 Suppressed logout error for ${operationName}: ${errorMessage}`,
-      );
-      return true;
-    }
-
-    return false;
+    return operationName
+      ? operationName !== operationNameOf(RefreshTokenDocument)
+      : true;
   }
 }
 

@@ -10,7 +10,6 @@ import {
  * that looks live and silently no-ops. A loaded membership still restricts.
  */
 const UNKNOWN_MEMBERSHIP_PERMISSIONS: PantryPermissions = {
-  canView: true,
   canAddItems: true,
   canEditItems: true,
   canCreatePantry: true,
@@ -25,11 +24,7 @@ export function usePantryPermissions(): PantryPermissions {
   const { currentHome } = useCurrentHome();
 
   return (() => {
-    const membership = (
-      currentHome as {
-        myMembership?: Parameters<typeof getPantryPermissions>[0];
-      } | null
-    )?.myMembership;
+    const membership = currentHome?.myMembership;
     if (!membership) {
       return UNKNOWN_MEMBERSHIP_PERMISSIONS;
     }

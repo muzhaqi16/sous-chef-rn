@@ -1,12 +1,16 @@
 import { errorService } from '#/services/errorService';
 import { serializeError } from './errorSerialization';
 import { getTopLevelGraphQLError } from './errors/graphqlErrors';
+import {
+  isArmorRejection,
+  isNonIterableSubscriptionResolver,
+  socketCloseOf,
+} from './errors/libraryErrorMessages';
+import { isNetworkError } from './isNetworkError';
 import { isRetryableWebSocketClose } from '#/apollo/links/wsCloseCodes';
 
-// Define a simple error interface instead of importing ApolloError
 interface SubscriptionError {
   message?: string;
-  networkError?: { message?: string } | null;
 }
 
 interface RetryState {
@@ -21,44 +25,28 @@ const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 30000;
 
 /**
- * True for socket-closed / network-transition errors that auto-recover (app
- * backgrounding, network change, WebSocket churn). These are expected churn,
- * not failures — callers downgrade them to warn/debug rather than error.
+ * True for a transport failure that auto-recovers (app backgrounding, network
+ * change, WebSocket churn). Callers downgrade it to warn/debug; it picks a LOG
+ * LEVEL, never whether to re-subscribe.
  */
-export const isExpectedNetworkTransitionError = (message?: string): boolean => {
-  const m = (message || '').toLowerCase();
-  return (
-    m.includes('socket closed') ||
-    m.includes('network') ||
-    m.includes('connection') ||
-    m.includes('websocket')
-  );
-};
+export const isExpectedTransportError = (error: unknown): boolean =>
+  isNetworkError(error);
 
 /**
- * `GraphQLWsLink`'s message when the SOCKET ended a subscription. The close code
- * is in that message and NOWHERE else; a connection failure with no CloseEvent
- * (DNS, TCP) produces the bare `Socket closed`.
- */
-const SOCKET_CLOSED_MESSAGE = /^Socket closed(?: with event (\d+))?/i;
-
-/**
- * Did the transport end this subscription, and can re-subscribing work? Narrower
- * than {@link isExpectedNetworkTransitionError}, which only picks a LOG LEVEL.
- * The verdict comes from {@link isRetryableWebSocketClose}, the table the socket
+ * Did the transport end this subscription, and can re-subscribing work? The
+ * verdict comes from {@link isRetryableWebSocketClose}, the table the socket
  * itself reads, so a code that latched reconnection off is never restarted.
  */
 export const classifyTransportTermination = (
   error: SubscriptionError,
 ): { code?: number } | null => {
-  const match = SOCKET_CLOSED_MESSAGE.exec(error?.message ?? '');
-  if (!match) return null;
-
+  const close = socketCloseOf(error);
   // No code: a connection-level failure (DNS, TCP, an error event). Transient.
-  if (match[1] === undefined) return {};
+  if (!close || close.code === undefined) return close;
 
-  const code = Number(match[1]);
-  return isRetryableWebSocketClose({ code, reason: '' }) ? { code } : null;
+  return isRetryableWebSocketClose({ code: close.code, reason: '' })
+    ? close
+    : null;
 };
 
 /**
@@ -76,31 +64,19 @@ const PERMANENT_REJECTION_CODES = new Set([
 ]);
 
 /**
- * The rejection graphql-armor produces: "Syntax Error: Query depth limit of 5
- * exceeded, found 8." — worded as a syntax error, but the document parsed fine
- * and `found N` is its computed depth. Matched on the message as well as the
- * code, since the code an armor rejection maps to varies.
- */
-const ARMOR_REJECTION =
-  /(depth|cost) limit of \d+ exceeded|query validation error/i;
-
-/**
  * True when the server refused the DOCUMENT, not the request. Subscriptions are
  * validated against depth 5 / cost 500, and a document over that is refused
- * identically every time — "fix the document", never "retry".
+ * identically every time — "fix the document", never "retry". The code an
+ * armor rejection maps to varies, so it is recognised on its own as well.
  */
 export const isPermanentSubscriptionRejection = (
   error: SubscriptionError,
 ): boolean => {
-  const message = error?.message ?? '';
-  if (ARMOR_REJECTION.test(message)) return true;
+  if (isArmorRejection(error)) return true;
 
   const top = getTopLevelGraphQLError(error);
-  if (top) {
-    if (ARMOR_REJECTION.test(top.message)) return true;
-    return PERMANENT_REJECTION_CODES.has(top.code);
-  }
-  return false;
+  if (!top) return false;
+  return isArmorRejection(top) || PERMANENT_REJECTION_CODES.has(top.code);
 };
 
 export const handleSubscriptionError = (
@@ -108,19 +84,12 @@ export const handleSubscriptionError = (
   error: SubscriptionError,
   onRetry?: () => void,
 ): boolean => {
-  const errorMessage = (error.message || '').toLowerCase();
-
-  // Socket closed and network errors are expected during transitions - suppress them
-  if (isExpectedNetworkTransitionError(error.message)) {
+  // Transport churn recovers on its own.
+  if (isExpectedTransportError(error)) {
     return false;
   }
 
-  // Check if this is a server-side resolver issue
-  const isServerResolverError = errorMessage.includes(
-    'subscription field must return async iterable',
-  );
-
-  if (!isServerResolverError) {
+  if (!isNonIterableSubscriptionResolver(error)) {
     // For non-resolver errors, don't retry. Socket/network errors already
     // returned above, so anything reaching here is an unexpected failure worth
     // reporting to telemetry.
@@ -136,7 +105,7 @@ export const handleSubscriptionError = (
   }
 
   // Get or create retry state
-  const state = retryStates.get(operationName) || {
+  const state = retryStates.get(operationName) ?? {
     count: 0,
     lastAttempt: 0,
     backoffMs: INITIAL_BACKOFF_MS,
@@ -179,11 +148,6 @@ export const clearAllRetryStates = (): void => {
   retryStates.clear();
 };
 
-// Helper to check if error is a known server issue
-export const isKnownServerError = (error: SubscriptionError): boolean => {
-  const errorMessage = error.message || '';
-  return (
-    errorMessage.includes('Subscription field must return Async Iterable') ||
-    errorMessage.includes('Server-side resolver returned undefined')
-  );
-};
+/** A subscription resolver that returned no event stream. */
+export const isKnownServerError = (error: SubscriptionError): boolean =>
+  isNonIterableSubscriptionResolver(error);

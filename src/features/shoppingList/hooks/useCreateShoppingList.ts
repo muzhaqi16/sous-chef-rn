@@ -11,15 +11,19 @@ import {
   addOptimisticShoppingList,
   addShoppingListToQueryCache,
   buildOptimisticShoppingList,
-  reconcileShoppingListCreate,
   revertOptimisticShoppingList,
 } from '#features/shoppingList/cache/list';
-import { unwrapPayload } from '#/utils/errors/mutationPayload';
-import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import type { CreateShoppingListInput } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
+
+/** The created list — the server's when it answered, the local one when queued. */
+export type CreateShoppingListOutcome =
+  | { status: 'created'; shoppingList: { id: string; name: string } }
+  | { status: 'failed'; body: string };
 
 export function useCreateShoppingList(fallbackErrorMessage: string) {
   const client = useApolloClient();
@@ -27,18 +31,14 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
 
   const [mutate, { loading }] = useMutation(CreateShoppingListDocument, {
     update(cache, { data }) {
-      if (
-        data?.createShoppingList?.__typename === 'CreateShoppingListPayload'
-      ) {
-        addShoppingListToQueryCache(
-          cache,
-          data.createShoppingList.shoppingList,
-        );
-      }
+      const created = appliedPayload(data);
+      if (created) addShoppingListToQueryCache(cache, created.shoppingList);
     },
   });
 
-  const createShoppingList = async (input: CreateShoppingListInput) => {
+  const createShoppingList = async (
+    input: CreateShoppingListInput,
+  ): Promise<CreateShoppingListOutcome> => {
     const id = generateEntityId();
 
     // Materializing the ownership row needs an auth identity; without one the
@@ -56,50 +56,43 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
       }
     }
 
-    let result;
-    try {
-      result = await mutate({
-        variables: { input: { ...input, id } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Create Shopping List error:',
-      });
+    const settled = await settleMutation(
+      () =>
+        mutate({
+          variables: { input: { ...input, id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: CreateShoppingListDocument,
+        fallback: fallbackErrorMessage,
+        present: 'none',
+        onFailed: () => {
+          if (!optimisticList) return;
+          try {
+            revertOptimisticShoppingList(client.cache, id);
+          } catch (cacheError) {
+            errorService.reportError(cacheError, {
+              operation: 'Revert failed Shopping List create',
+            });
+          }
+        },
+      },
+    );
+
+    if (settled.status === 'failed') {
+      return {
+        status: 'failed',
+        body: settled.failure?.body ?? fallbackErrorMessage,
+      };
     }
 
-    if (!result) {
-      // mutate() itself threw (non-queueable transport failure) — drop the
-      // optimistic list and surface the failure to the caller.
-      if (optimisticList) {
-        try {
-          revertOptimisticShoppingList(client.cache, id);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert failed Shopping List create',
-          });
-        }
-      }
-      throw new GraphQLNetworkError(fallbackErrorMessage);
+    const created = appliedPayload(settled.data)?.shoppingList;
+    if (created) return { status: 'created', shoppingList: created };
+    // Queued: the local list stands and the create replays under the same id.
+    if (optimisticList) {
+      return { status: 'created', shoppingList: optimisticList };
     }
-
-    const reconciled = optimisticList
-      ? reconcileShoppingListCreate(client.cache, id, result)
-      : 'reverted';
-    const payload = result.data?.createShoppingList;
-
-    if (!optimisticList || reconciled === 'reverted' || payload != null) {
-      // Success unwraps the payload; a refusal throws the precise domain error.
-      const success = unwrapPayload(
-        payload,
-        'CreateShoppingListPayload',
-        fallbackErrorMessage,
-      );
-      return success.shoppingList;
-    }
-
-    // Queued: the optimistic list stands and the create replays under the same id.
-    return optimisticList;
+    return { status: 'failed', body: fallbackErrorMessage };
   };
 
   return { createShoppingList, loading };

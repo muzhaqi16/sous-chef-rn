@@ -1,4 +1,4 @@
-import { DocumentNode } from 'graphql';
+import type { DocumentNode } from 'graphql';
 import type {
   ApolloCache,
   DefaultContext,
@@ -57,7 +57,14 @@ export interface QueuedMutation {
   context?: DefaultContext; // Allowlisted replay context (localFirst only).
 
   status: QueueStatus;
+  /** When this entry was queued. The drain replays in this order. */
   createdAt: number;
+  /**
+   * The age the 90-day horizon counts from, when it differs from `createdAt`:
+   * a coalesced move carries the first move's. Kept apart from `createdAt`
+   * because that one also decides delivery order.
+   */
+  agedFrom?: number;
   updatedAt: number;
   processedAt?: number;
 
@@ -91,9 +98,12 @@ export interface ProcessingResult {
   mutationId: string;
   error?: QueueError;
   serverResponse?: Record<string, unknown>;
-  // A transient error returned the mutation to PENDING: the drain loop must
-  // stop rather than replay later mutations ahead of this un-synced one.
+  // A transient error returned the mutation to PENDING: the drain loop holds
+  // back the entries that depend on it rather than replaying ahead of it.
   deferred?: boolean;
+  // `transport`: the API's own state (unreachable, 5xx, pacing), so the drain
+  // pauses. `entry`: a verdict scoped to this row (DEADLOCK), so it alone waits.
+  deferralScope?: 'entry' | 'transport';
 }
 
 export interface FailedMutationInfo {

@@ -135,9 +135,6 @@ jest.mock('#features/pantry/hooks/useConversionPreview', () => ({
 jest.mock('#/utils/fractionUtils', () => ({
   parseFractionalInput: (v: string) => parseFloat(v) || null,
 }));
-jest.mock('#/utils/formatQuantity', () => ({
-  formatQuantity: (v: number) => v.toString(),
-}));
 
 describe('RecordWastePantryItemModal', () => {
   const defaultProps = {

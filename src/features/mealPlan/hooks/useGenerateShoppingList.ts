@@ -25,6 +25,7 @@ import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { errorService } from '#/services/errorService';
 import { t } from '#/i18n';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /** What the caller may choose; the plan and its lines come from the cache. */
 export interface GenerateShoppingListOptions {
@@ -94,7 +95,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     const pantryRows: PantryStock[] | null = pantry.state.hasResult
       ? pantry.state.pantryItems.map(row => ({
           itemId: row.itemId,
-          unitId: row.unit?.id,
+          unitId: row.unit.id,
           quantity: row.quantity,
         }))
       : null;
@@ -112,24 +113,15 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
       return null;
     }
 
-    const listName = options.name?.trim() || defaultListName(plan.name);
+    const listName =
+      firstNonBlank(options.name)?.trim() ?? defaultListName(plan.name);
     let listId = options.shoppingListId ?? null;
     if (!listId) {
-      // `createShoppingList` THROWS a refusal rather than returning one, so an
-      // unguarded call would surface a domain error at the screen. Assign in
-      // the try and read outside it: a value block inside bails the compiler.
-      let created;
-      try {
-        created = await createShoppingList({
-          name: listName,
-          homeId: plan.homeId,
-        });
-      } catch (error) {
-        errorService.reportError(error, {
-          operation: 'Generate shopping list',
-        });
-      }
-      listId = created?.id ?? null;
+      const created = await createShoppingList({
+        name: listName,
+        homeId: plan.homeId,
+      });
+      listId = created.status === 'created' ? created.shoppingList.id : null;
     }
     if (!listId) return null;
 

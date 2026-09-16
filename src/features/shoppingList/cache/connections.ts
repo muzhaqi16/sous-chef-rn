@@ -5,13 +5,93 @@
  * targets `itemsConnection` and tells variants apart by `storeFieldName`.
  */
 
-import { type ApolloCache } from '@apollo/client';
+import { gql, type ApolloCache } from '@apollo/client';
 import {
   type ConnectionData,
   createRemoveFromParentConnectionUpdater,
   safeEvictMany,
 } from '#/apollo/utils/cacheUpdaters';
+import type { ShoppingList } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
+
+type ListCounter = keyof Pick<
+  ShoppingList,
+  'totalItems' | 'completedItems' | 'remainingItems' | 'completionRate'
+>;
+type ListCounters = Partial<Record<ListCounter, number>>;
+
+const LIST_COUNTERS = [
+  'totalItems',
+  'completedItems',
+  'remainingItems',
+  'completionRate',
+] satisfies ListCounter[];
+
+const LIST_COUNTERS_FRAGMENT = gql`
+  fragment ListCounters on ShoppingList {
+    totalItems
+    completedItems
+    remainingItems
+    completionRate
+  }
+`;
+
+/** A list's counters before and after one local write. */
+export interface ListCounterChange {
+  listId: string;
+  before: ListCounters;
+  after: ListCounters;
+}
+
+function readListCounters(cache: ApolloCache, listCacheId: string) {
+  // Partial: a list cached without one counter still records the others.
+  const counters = cache.readFragment<ListCounters>({
+    id: listCacheId,
+    fragment: LIST_COUNTERS_FRAGMENT,
+    returnPartialData: true,
+  });
+  return { ...counters };
+}
+
+/** Runs `write`, recording the list counters it moves so a revert can restore them exactly. */
+export function recordListCounters(
+  cache: ApolloCache,
+  listId: string,
+  write: () => void,
+): ListCounterChange {
+  const id = cache.identify({ __typename: 'ShoppingList', id: listId });
+  const before = id ? readListCounters(cache, id) : {};
+  write();
+  return { listId, before, after: id ? readListCounters(cache, id) : {} };
+}
+
+/**
+ * Runs `undo`, then restores the counters `change` recorded — a `±1` undo is
+ * wrong wherever the write clamped at 0. False when another write moved them
+ * in between: the relative undo stands and the caller re-reads.
+ */
+export function undoListCounters(
+  cache: ApolloCache,
+  change: ListCounterChange,
+  undo: () => void,
+): boolean {
+  const id = cache.identify({ __typename: 'ShoppingList', id: change.listId });
+  const current = id ? readListCounters(cache, id) : {};
+  undo();
+  if (!id) return true;
+  if (LIST_COUNTERS.some(field => current[field] !== change.after[field])) {
+    return false;
+  }
+  const restored: Partial<Record<ListCounter, () => number>> = {};
+  for (const field of LIST_COUNTERS) {
+    const value = change.before[field];
+    if (value !== undefined) restored[field] = () => value;
+  }
+  if (Object.keys(restored).length > 0) {
+    cache.modify({ id, fields: restored });
+  }
+  return true;
+}
 
 export function matchesFilter(
   storeFieldName: string,
@@ -76,7 +156,7 @@ function clearItemsFromCache(
           ),
         );
         const edges = (existing.edges ?? []).filter(
-          edge => !cleared.has(edge?.node?.__ref),
+          edge => !cleared.has(edge.node.__ref),
         );
         return {
           ...existing,
@@ -155,18 +235,19 @@ function updateItemsConnectionForPurchaseStatusChange(
           const isPurchasedConnection = isPurchasedVariant(storeFieldName);
 
           if (!existing?.edges) return existing;
+          const edges = existing.edges;
 
           const removeItemEdges = () => ({
             ...existing,
-            edges: existing.edges!.filter(
-              edge => readField<string>('id', edge?.node) !== itemId,
+            edges: edges.filter(
+              edge => readField<string>('id', edge.node) !== itemId,
             ),
-            totalCount: Math.max(0, (existing.totalCount || 0) - 1),
+            totalCount: Math.max(0, (existing.totalCount ?? 0) - 1),
           });
 
           const addItemEdge = () => {
-            const alreadyExists = existing.edges!.some(
-              edge => readField<string>('id', edge?.node) === itemId,
+            const alreadyExists = edges.some(
+              edge => readField<string>('id', edge.node) === itemId,
             );
             if (alreadyExists) return existing;
             const node = toReference({
@@ -181,8 +262,8 @@ function updateItemsConnectionForPurchaseStatusChange(
             };
             return {
               ...existing,
-              edges: [newEdge, ...existing.edges!],
-              totalCount: (existing.totalCount || 0) + 1,
+              edges: [newEdge, ...edges],
+              totalCount: (existing.totalCount ?? 0) + 1,
             };
           };
 
@@ -201,14 +282,16 @@ function updateItemsConnectionForPurchaseStatusChange(
         },
         // Keep the derived stats in sync with the new completedItems so the
         // progress header doesn't go stale until the next refetch.
-        remainingItems(_existing: number, { readField }) {
-          const total = readField<number>('totalItems') ?? 0;
-          const completed = readField<number>('completedItems') ?? 0;
+        remainingItems(existing: number, { readField }) {
+          const total = readField<number>('totalItems');
+          const completed = readField<number>('completedItems');
+          if (total === undefined || completed === undefined) return existing;
           return Math.max(0, total - nextCompleted(completed));
         },
-        completionRate(_existing: number, { readField }) {
-          const total = readField<number>('totalItems') ?? 0;
-          const completed = readField<number>('completedItems') ?? 0;
+        completionRate(existing: number, { readField }) {
+          const total = readField<number>('totalItems');
+          const completed = readField<number>('completedItems');
+          if (total === undefined || completed === undefined) return existing;
           return total > 0 ? nextCompleted(completed) / total : 0;
         },
       },
@@ -270,20 +353,20 @@ export function addNewItemToShoppingListCache(
           if (isPurchasedVariant(storeFieldName)) {
             // Re-adding a purchased row: drop it from the purchased variant.
             const hadItem = existing.edges.some(
-              edge => readField<string>('id', edge?.node) === item.id,
+              edge => readField<string>('id', edge.node) === item.id,
             );
             if (!hadItem) return existing;
             return {
               ...existing,
               edges: existing.edges.filter(
-                edge => readField<string>('id', edge?.node) !== item.id,
+                edge => readField<string>('id', edge.node) !== item.id,
               ),
-              totalCount: Math.max(0, (existing.totalCount || 0) - 1),
+              totalCount: Math.max(0, (existing.totalCount ?? 0) - 1),
             };
           }
 
           const alreadyExists = existing.edges.some(
-            edge => readField<string>('id', edge?.node) === item.id,
+            edge => readField<string>('id', edge.node) === item.id,
           );
           if (alreadyExists) return existing;
 
@@ -300,7 +383,7 @@ export function addNewItemToShoppingListCache(
           return {
             ...existing,
             edges: [newEdge, ...existing.edges],
-            totalCount: (existing.totalCount || 0) + 1,
+            totalCount: (existing.totalCount ?? 0) + 1,
           };
         },
         ...(bumpTotalItems && {

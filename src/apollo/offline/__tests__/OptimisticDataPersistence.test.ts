@@ -1,7 +1,11 @@
 'use no memo';
 
 import { storage } from '#storage/mmkv';
-import { optimisticDataPersistence } from '../OptimisticDataPersistence';
+import {
+  optimisticDataPersistence,
+  type PersistedEntityType,
+  type PersistedField,
+} from '../OptimisticDataPersistence';
 
 const DATA_KEY = 'apollo-optimistic-data-v1';
 
@@ -10,27 +14,76 @@ const DATA_KEY = 'apollo-optimistic-data-v1';
  * This avoids any issues with the in-memory cache being out of sync
  * with storage when we write directly via storage.set().
  */
-function seedData(
-  entries: Array<{
-    entityType: string;
+type SeedEntry = {
+  [T in PersistedEntityType]: {
+    entityType: T;
     entityId: string;
-    field: string;
+    field: PersistedField<T>;
     value: string | number;
-  }>,
-) {
-  for (const entry of entries) {
-    optimisticDataPersistence.save(
-      entry.entityType,
-      entry.entityId,
-      entry.field,
-      entry.value,
-    );
+  };
+}[PersistedEntityType];
+
+/** Narrowing on the typename keeps each entry's field checked against its entity. */
+function saveEntry(entry: SeedEntry): void {
+  const { entityId, value } = entry;
+  switch (entry.entityType) {
+    case 'MealPlanItem':
+      return optimisticDataPersistence.save(
+        entry.entityType,
+        entityId,
+        entry.field,
+        value,
+      );
+    case 'PantryItem':
+      return optimisticDataPersistence.save(
+        entry.entityType,
+        entityId,
+        entry.field,
+        value,
+      );
+    case 'PantryItemBatch':
+      return optimisticDataPersistence.save(
+        entry.entityType,
+        entityId,
+        entry.field,
+        value,
+      );
+    case 'ShoppingListItem':
+      return optimisticDataPersistence.save(
+        entry.entityType,
+        entityId,
+        entry.field,
+        value,
+      );
   }
+}
+
+function seedData(entries: SeedEntry[]) {
+  for (const entry of entries) saveEntry(entry);
   // Drain the batched microtask synchronously
   optimisticDataPersistence.flush();
 }
 
 describe('OptimisticDataPersistence', () => {
+  // A withdrawal clears whatever typename the cache holds; most are never
+  // persisted, and rewriting storage for them is a wasted write per refusal.
+  it('does not rewrite storage to clear an entity type it never persists', () => {
+    seedData([
+      {
+        entityType: 'ShoppingListItem',
+        entityId: 'kept',
+        field: 'quantity',
+        value: 1,
+      },
+    ]);
+    const set = jest.spyOn(storage, 'set');
+
+    optimisticDataPersistence.clearEntity('SavedRecipe', 'kept');
+
+    expect(set).not.toHaveBeenCalled();
+    set.mockRestore();
+  });
+
   beforeEach(() => {
     // Clear underlying MMKV store and reset singleton state
     storage.clearAll();
@@ -110,7 +163,7 @@ describe('OptimisticDataPersistence', () => {
         {
           entityType: 'ShoppingListItem',
           entityId: 'old',
-          field: 'field',
+          field: 'quantity',
           value: 'existing',
         },
       ]);
@@ -124,7 +177,7 @@ describe('OptimisticDataPersistence', () => {
       await Promise.resolve();
 
       const stored = JSON.parse(storage.getString(DATA_KEY)!);
-      expect(stored['ShoppingListItem:old:field']).toBeDefined();
+      expect(stored['ShoppingListItem:old:quantity']).toBeDefined();
       expect(stored['ShoppingListItem:new:sortOrder']).toBeDefined();
     });
 
@@ -300,7 +353,7 @@ describe('OptimisticDataPersistence', () => {
       optimisticDataPersistence.clear(
         'ShoppingListItem',
         'nonexistent',
-        'field',
+        'quantity',
       );
     });
   });

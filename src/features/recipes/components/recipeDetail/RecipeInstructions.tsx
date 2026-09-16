@@ -16,7 +16,7 @@ interface RecipeInstructionsProps {
 // - Spoonacular "analyzed instructions": [{ steps: [{ number, step }] }]
 type DisplayStep = { step?: number | string; text?: string; number?: number };
 type AnalyzedInstruction = {
-  steps: Array<{ number: number; step: string }>;
+  steps?: Array<{ number: number; step: string }>;
 };
 
 const Step: React.FC<{ num: number | string; text: string }> = ({
@@ -87,13 +87,15 @@ export const RecipeInstructions: React.FC<RecipeInstructionsProps> = ({
           return <Step key={index} num={stepNum} text={stepText} />;
         })}
       {!!hasAnalyzedInstructions &&
-        (instructions as AnalyzedInstruction[])[0]?.steps.map((step, index) => (
-          <Step key={index} num={step.number} text={step.step} />
-        ))}
+        (instructions as AnalyzedInstruction[])[0]?.steps?.map(
+          (step, index) => (
+            <Step key={index} num={step.number} text={step.step} />
+          ),
+        )}
       {!hasBackendInstructions &&
         !hasAnalyzedInstructions &&
         !!hasHtmlInstructions &&
-        parseHtmlSteps(instructionsHtml!).map((step, index) => (
+        parseHtmlSteps(instructionsHtml).map((step, index) => (
           <Step key={index} num={index + 1} text={step} />
         ))}
     </View>

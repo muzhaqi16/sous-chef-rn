@@ -109,7 +109,7 @@ describe('PurchaseAmountSheet', () => {
     render(<PurchaseAmountSheet {...buildProps()} />);
     const { useStandardBottomSheet } = jest.requireMock(
       '#hooks/useStandardBottomSheet',
-    ) as { useStandardBottomSheet: jest.Mock };
+    );
     // A fixed detent stretches up the screen under the keyboard and pushes the
     // price field off the bottom edge; measured content seats on it instead.
     expect(useStandardBottomSheet).toHaveBeenCalledWith(

@@ -3,18 +3,13 @@ import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { StorageState, UnitType } from '#/graphql/generated/schemaTypes';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { UseUpdatePantryItem_PantryItemFragmentDoc } from '../useUpdatePantryItem.generated';
-import type { FormDataInput } from '../types';
+import type { DirtyFieldFlags, FormDataInput } from '../types';
 import { useUpdatePantryItem } from '../useUpdatePantryItem';
 
 jest.mock('#/services/errorService');
-
-jest.mock('#/utils/errors/versionConflict', () => ({
-  handleVersionConflict: jest.fn(() => false),
-  getVersionConflictMessage: jest.fn(() => 'Version conflict'),
-}));
 
 jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
   enhanceWithVersion: jest.fn((item, updates) => ({ ...item, ...updates })),
@@ -28,7 +23,7 @@ jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
 
 jest.mock('../utils', () => ({
   buildDirtyUpdateInput: jest.fn(
-    (data: FormDataInput, dirtyFields: Record<string, boolean>) => {
+    (data: FormDataInput, dirtyFields: DirtyFieldFlags) => {
       const input: Record<string, unknown> = {};
       if (dirtyFields.itemName) input.itemName = data.itemName;
       if (dirtyFields.notes) input.storageNotes = data.notes;
@@ -86,7 +81,7 @@ const buildPantryItem = (overrides: Record<string, unknown> = {}) => ({
     id: 'unit-1',
     name: 'Gram',
     symbol: 'g',
-    type: 'WEIGHT',
+    type: UnitType.Weight,
     displayAsFraction: false,
   },
   netWeightUnit: null,
@@ -197,7 +192,7 @@ describe('useUpdatePantryItem', () => {
         id: 'new-unit-id',
         name: 'Kilogram',
         symbol: 'kg',
-        type: 'WEIGHT',
+        type: UnitType.Weight,
       },
     });
 
@@ -216,7 +211,12 @@ describe('useUpdatePantryItem', () => {
       dirtyFields: { notes: true },
       selectedLocationId: null,
       selectedBrandId: null,
-      trackingUnit: { id: 'unit-1', name: 'Gram', symbol: 'g', type: 'WEIGHT' },
+      trackingUnit: {
+        id: 'unit-1',
+        name: 'Gram',
+        symbol: 'g',
+        type: UnitType.Weight,
+      },
     });
 
     const { buildOptimisticUnit } = jest.requireMock('../utils');
@@ -355,9 +355,8 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
   });
 
   it('tells the user which input the server refused (the unit)', async () => {
-    // Since 2026-08-22 the API resolves a bare `unit.unitSymbol` to a real unit
-    // and refuses the change while batches exist — a ValidationError with
-    // `field: "unit"` (docs/api/breaking-changes.md in the API repo). The edit
+    // The API resolves a bare `unit.unitSymbol` to a real unit and refuses the
+    // change while batches exist — a ValidationError with `field: "unit"`. The edit
     // must snap back AND say which of the four sub-inputs this call carries was
     // refused — in the app's own words, because `message` is English only.
     const cache = seedItem();

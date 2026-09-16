@@ -68,31 +68,6 @@
     "createdDuringOnboarding": "Created during onboarding",
     "defaultPantryDescription": "Default pantry"
   },
-  "onboardingSteps": {
-    "CreateHome": {
-      "title": "Create Home",
-      "subtitle": "Set up your household"
-    },
-    "CreateShoppingList": {
-      "subtitle": "Create your first list"
-    },
-    "SelectPantryItems": {
-      "title": "Pantry Items",
-      "subtitle": "Select what you have"
-    },
-    "ProfilePictureUpload": {
-      "subtitle": "Add your photo"
-    },
-    "InviteMembers": {
-      "subtitle": "Share with family"
-    },
-    "BiometricSetup": {
-      "subtitle": "Set up biometrics"
-    },
-    "OnboardingComplete": {
-      "title": "Complete"
-    }
-  },
   "onboardingValidation": {
     "homeRequired": "Home name is required",
     "homeMin": "Home name must be at least {{count}} characters",
@@ -103,7 +78,8 @@
     "listRequired": "Shopping list name is required",
     "listMin": "Shopping list name must be at least {{count}} characters",
     "listMax": "Shopping list name must be less than {{count}} characters",
-    "itemsMax": "You can select up to {{count}} items"
+    "itemsMax": "You can select up to {{count}} items",
+    "homeChars": "Home name can only contain letters, numbers, spaces, hyphens, apostrophes, and quotes"
   },
   "onboarding": {
     "progress": "Step {{step}} of {{total}}"

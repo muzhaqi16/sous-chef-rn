@@ -16,12 +16,8 @@ import { Text } from '#components/atoms/Text';
  * The top inset is applied by the NAVIGATOR, once per screen, and `Screen`
  * never applies it. Two writers are one status bar of dead space that only
  * shows on a device with a notch — invisible to typecheck, lint and every
- * other test.
- *
- * `check-screen-scaffold` holds the static half: a screen naming `insets.top`
- * or a bare `SafeAreaView` is a finding. What it cannot see is the COMPOSITION
- * — a layout and a template that each apply the inset correctly on their own
- * and twice together. That is what renders here.
+ * other test. A layout and a template can each apply the inset correctly on
+ * their own and twice together, so the COMPOSITION is what renders here.
  */
 
 jest.mock('#components/organisms/Header', () => {
@@ -44,7 +40,7 @@ const insetPaddings = (json: unknown): number[] => {
     const style = el.props?.style;
     for (const entry of [style].flat(3)) {
       const pt = (entry as { paddingTop?: unknown } | undefined)?.paddingTop;
-      if (pt === STATUS_BAR) found.push(pt as number);
+      if (pt === STATUS_BAR) found.push(pt);
     }
     walk(el.children);
   };
@@ -81,7 +77,10 @@ describe('the top inset is applied exactly once', () => {
       'a standard header',
       { children: null, header: { variant: 'standard', title: 'T' } },
     ],
-    ['a tab header', { children: null, header: { variant: 'tab', title: 'T' } }],
+    [
+      'a tab header',
+      { children: null, header: { variant: 'tab', title: 'T' } },
+    ],
     ['no header', { children: null, header: { variant: 'none' } }],
     ['scroll="scroll"', { children: null, scroll: 'scroll' }],
     ['scroll="form"', { children: null, scroll: 'form' }],
@@ -89,19 +88,22 @@ describe('the top inset is applied exactly once', () => {
     ['scroll="list"', { children: null, scroll: 'list' }],
   ];
 
-  it.each(cases)('adds no second inset for a Screen with %s', (_label, props) => {
-    const tree = render(
-      topInsetScreenLayout({
-        children: (
-          <Screen {...props}>
-            <Text role="body">content</Text>
-          </Screen>
-        ),
-      }),
-    ).toJSON();
+  it.each(cases)(
+    'adds no second inset for a Screen with %s',
+    (_label, props) => {
+      const tree = render(
+        topInsetScreenLayout({
+          children: (
+            <Screen {...props}>
+              <Text role="body">content</Text>
+            </Screen>
+          ),
+        }),
+      ).toJSON();
 
-    expect(insetPaddings(tree)).toHaveLength(1);
-  });
+      expect(insetPaddings(tree)).toHaveLength(1);
+    },
+  );
 
   it('applies it once through a boundary-wrapping layout', () => {
     const Boundary = ({ children }: { children: React.ReactNode }) => (

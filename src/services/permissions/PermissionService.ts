@@ -47,7 +47,11 @@ function getPlatformPermission(permission: 'camera' | 'photoLibrary') {
           : PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE,
     }),
   };
-  return map[permission]!;
+  const platformPermission = map[permission];
+  if (!platformPermission) {
+    throw new Error(`No ${permission} permission on ${Platform.OS}`);
+  }
+  return platformPermission;
 }
 
 class PermissionServiceClass {
@@ -90,6 +94,7 @@ class PermissionServiceClass {
           return 'granted';
         case AuthorizationStatus.DENIED:
           return 'blocked';
+        case AuthorizationStatus.NOT_DETERMINED:
         default:
           return 'undetermined';
       }

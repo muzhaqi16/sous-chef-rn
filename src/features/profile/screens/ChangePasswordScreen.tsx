@@ -7,7 +7,6 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
 import { localizedErrorMessage } from '#/services/errorService';
-import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import { PasswordInput } from '#components/molecules/PasswordInput';
 import { Button } from '#components/molecules/Button';
 import {
@@ -43,22 +42,15 @@ const asFormField = (
 };
 
 /**
- * Module-level so the throw does not bail the screen out of the React Compiler.
  * A failure that names one of our fields is reported ON it: a toast covers the
  * form, and a dismissed toast cannot say which input it meant.
  */
-async function reportChangePassword(
+function reportChangePassword(
   outcome: ChangePasswordOutcome,
   goBack: () => void,
   successMessage: string,
-  failedFallback: string,
   setFieldError: (field: keyof ChangePasswordForm, message: string) => void,
-): Promise<void> {
-  if (outcome.status === 'rateLimited') {
-    toastService.error(outcome.localizedMessage);
-    return;
-  }
-
+): void {
   if (outcome.status === 'completed') {
     toastService.success(successMessage);
     setTimeout(() => {
@@ -67,20 +59,12 @@ async function reportChangePassword(
     return;
   }
 
-  // Never `payload.message`: the server's prose is unlocalizable English by
-  // construction. A ValidationError names the field it refused.
-  const payload = outcome.payload;
-  const message = localizedRefusalMessage(payload, failedFallback);
-  const field =
-    payload?.__typename === 'ValidationError'
-      ? asFormField(payload.field)
-      : undefined;
-
+  const field = asFormField(outcome.field);
   if (field) {
-    setFieldError(field, message);
+    setFieldError(field, outcome.body);
     return;
   }
-  throw new Error(message);
+  toastService.error(outcome.body);
 }
 
 export const ChangePasswordScreen: React.FC = () => {
@@ -104,7 +88,7 @@ export const ChangePasswordScreen: React.FC = () => {
   const watchedValues = useWatch({ control: form.control });
 
   const onSubmit = (data: ChangePasswordForm) => {
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () =>
         reportChangePassword(
           await changePassword({
@@ -113,7 +97,6 @@ export const ChangePasswordScreen: React.FC = () => {
           }),
           goBack,
           t('changePassword.success'),
-          t('changePassword.failed'),
           (field, message) => form.setError(field, { message }),
         ),
       setIsSubmitting,
@@ -125,6 +108,24 @@ export const ChangePasswordScreen: React.FC = () => {
         toastService.error(errorMessage);
       },
     );
+  };
+
+  // `shouldValidate` re-runs the rule on THIS field only, and both cross-field
+  // rules report elsewhere: the match rule on `confirmPassword`, the
+  // must-differ rule on `newPassword`. Those re-run only for a sibling the
+  // user has reached — a "required" under a field they have not typed in is
+  // feedback on nothing they did. Submit still waits on whole-schema `isValid`.
+  const setField = (field: keyof ChangePasswordForm, value: string) => {
+    form.setValue(field, value, { shouldValidate: true });
+    if (field !== 'newPassword' && form.getValues('newPassword') !== '') {
+      void form.trigger('newPassword');
+    }
+    if (
+      field !== 'confirmPassword' &&
+      form.getValues('confirmPassword') !== ''
+    ) {
+      void form.trigger('confirmPassword');
+    }
   };
 
   const isFormValid = form.formState.isValid;
@@ -155,11 +156,7 @@ export const ChangePasswordScreen: React.FC = () => {
             </Text>
             <PasswordInput
               value={watchedValues.currentPassword}
-              onChangeText={text =>
-                form.setValue('currentPassword', text, {
-                  shouldValidate: true,
-                })
-              }
+              onChangeText={text => setField('currentPassword', text)}
               placeholder={t('changePassword.currentPasswordPlaceholder')}
               errorMessage={form.formState.errors.currentPassword?.message}
               editable={!isSubmitting}
@@ -167,12 +164,12 @@ export const ChangePasswordScreen: React.FC = () => {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>{t('auth.newPassword')}</Text>
+            <Text role="bodyStrong" style={styles.label}>
+              {t('auth.newPassword')}
+            </Text>
             <PasswordInput
               value={watchedValues.newPassword}
-              onChangeText={text =>
-                form.setValue('newPassword', text, { shouldValidate: true })
-              }
+              onChangeText={text => setField('newPassword', text)}
               placeholder={t('auth.newPasswordPlaceholder')}
               errorMessage={form.formState.errors.newPassword?.message}
               editable={!isSubmitting}
@@ -180,16 +177,12 @@ export const ChangePasswordScreen: React.FC = () => {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>
+            <Text role="bodyStrong" style={styles.label}>
               {t('changePassword.confirmPassword')}
             </Text>
             <PasswordInput
               value={watchedValues.confirmPassword}
-              onChangeText={text =>
-                form.setValue('confirmPassword', text, {
-                  shouldValidate: true,
-                })
-              }
+              onChangeText={text => setField('confirmPassword', text)}
               placeholder={t('auth.confirmPasswordPlaceholder')}
               errorMessage={form.formState.errors.confirmPassword?.message}
               editable={!isSubmitting}
@@ -239,7 +232,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   label: {
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   buttonSpacing: {

@@ -10,7 +10,7 @@ import {
   type UpdateNotificationPreferencesInput,
 } from '#/graphql/generated/schemaTypes';
 import type { ApolloCache } from '@apollo/client';
-import { handleMutationError } from '#/utils/errorHandlers';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import {
   snapshotFields,
   type FieldsEntityRef,
@@ -19,6 +19,7 @@ import {
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { computeIsQuietTime } from '#features/notifications/utils/quietHours';
 import { logger } from '#/utils/environment';
+import { t } from '#/i18n';
 
 export interface NotificationSettings {
   // Core toggles
@@ -55,72 +56,91 @@ export interface NotificationSettings {
   quietHoursTimezone: string | null;
 }
 
-const CHANNELS_KEYS = new Set(['emailEnabled', 'pushEnabled', 'smsEnabled']);
+type PreferencesInput = UpdateNotificationPreferencesInput;
+type ChannelsInput = NonNullable<PreferencesInput['channels']>;
+type ExpirationInput = NonNullable<PreferencesInput['expiration']>;
+type FeaturesInput = NonNullable<PreferencesInput['features']>;
+type QuietHoursInput = NonNullable<PreferencesInput['quietHours']>;
 
-const EXPIRATION_KEYS = new Set([
-  'expirationNotifications',
-  'expirationNotificationFrequency',
-  'expirationDaysThreshold',
-]);
+type FlatPreferencesInput = ChannelsInput &
+  ExpirationInput &
+  FeaturesInput &
+  QuietHoursInput;
+type FlatPreferenceKey = keyof FlatPreferencesInput;
 
-const QUIET_HOURS_KEYS = new Set([
-  'quietHoursEnabled',
-  'quietHoursStart',
-  'quietHoursEnd',
-  'quietHoursTimezone',
-]);
-
-/**
- * Maps flat notification setting keys to the nested UpdateNotificationPreferencesInput structure.
- * Keys not matching channels, expiration, or quietHours are placed under features.
- */
-function toNestedInput(
-  flat: Record<string, unknown>,
-): UpdateNotificationPreferencesInput {
-  const input: UpdateNotificationPreferencesInput = {};
-  const channels: Record<string, unknown> = {};
-  const expiration: Record<string, unknown> = {};
-  const features: Record<string, unknown> = {};
-  const quietHours: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(flat)) {
-    if (CHANNELS_KEYS.has(key)) {
-      channels[key] = value;
-    } else if (EXPIRATION_KEYS.has(key)) {
-      expiration[key] = value;
-    } else if (QUIET_HOURS_KEYS.has(key)) {
-      quietHours[key] = value;
-    } else {
-      features[key] = value;
-    }
-  }
-
-  if (Object.keys(channels).length > 0) input.channels = channels;
-  if (Object.keys(expiration).length > 0) input.expiration = expiration;
-  if (Object.keys(features).length > 0) input.features = features;
-  if (Object.keys(quietHours).length > 0) input.quietHours = quietHours;
-
-  return input;
+/** The table must name every key of `T`, so a schema key no bucket lists fails to compile. */
+function keysOf<T extends object>(table: {
+  [K in keyof T]-?: true;
+}): (keyof T)[] {
+  const keys: (keyof T)[] = [];
+  for (const key in table) keys.push(key);
+  return keys;
 }
 
-/**
- * A refusal resolves with a union-error member instead of the payload, so
- * `data` is truthy and `onError` never fires. This logs the server's reason for
- * that case; classification lives in `updateEntityFieldsLocalFirst`.
- */
-function reportRefusal(
-  result: { data?: unknown; error?: unknown } | undefined | null,
-): void {
-  if (!result || result.error) return;
+const CHANNELS_KEYS = keysOf<ChannelsInput>({
+  emailEnabled: true,
+  pushEnabled: true,
+  smsEnabled: true,
+});
 
-  const data = result.data as
-    | { updateNotificationPreferences?: unknown }
-    | null
-    | undefined;
-  logger.warn(
-    'UpdateNotificationPreferences rejected:',
-    data?.updateNotificationPreferences,
-  );
+const EXPIRATION_KEYS = keysOf<ExpirationInput>({
+  expirationNotifications: true,
+  expirationNotificationFrequency: true,
+  expirationDaysThreshold: true,
+});
+
+const FEATURES_KEYS = keysOf<FeaturesInput>({
+  lowStockAlerts: true,
+  pantryChanges: true,
+  shoppingListUpdates: true,
+  collaborationInvites: true,
+  homeInvites: true,
+  sharedListUpdates: true,
+  recipeRecommendations: true,
+  mealPlanReminders: true,
+  cookingReminders: true,
+  weeklyDigest: true,
+  monthlyReport: true,
+});
+
+const QUIET_HOURS_KEYS = keysOf<QuietHoursInput>({
+  quietHoursEnabled: true,
+  quietHoursStart: true,
+  quietHoursEnd: true,
+  quietHoursTimezone: true,
+});
+
+/** The keys of `flat` in `keys`, a null sent as omitted; `undefined` when none is present. */
+function pickBucket<K extends FlatPreferenceKey>(
+  flat: FlatPreferencesInput,
+  keys: readonly K[],
+): Partial<Pick<FlatPreferencesInput, K>> | undefined {
+  const bucket: Partial<Pick<FlatPreferencesInput, K>> = {};
+  let present = false;
+  for (const key of keys) {
+    if (!(key in flat)) continue;
+    bucket[key] = flat[key] ?? undefined;
+    present = true;
+  }
+  return present ? bucket : undefined;
+}
+
+/** A settings key with no home in the input schema makes the call site fail to compile. */
+function toNestedInput(
+  flat: FlatPreferencesInput & {
+    [K in Exclude<keyof NotificationSettings, FlatPreferenceKey>]?: never;
+  },
+): UpdateNotificationPreferencesInput {
+  const input: UpdateNotificationPreferencesInput = {};
+  const channels = pickBucket(flat, CHANNELS_KEYS);
+  if (channels) input.channels = channels;
+  const expiration = pickBucket(flat, EXPIRATION_KEYS);
+  if (expiration) input.expiration = expiration;
+  const features = pickBucket(flat, FEATURES_KEYS);
+  if (features) input.features = features;
+  const quietHours = pickBucket(flat, QUIET_HOURS_KEYS);
+  if (quietHours) input.quietHours = quietHours;
+  return input;
 }
 
 /**
@@ -144,15 +164,7 @@ export async function applySettingsUpdate({
     input: UpdateNotificationPreferencesInput,
   ) => Promise<{ data?: unknown; error?: unknown }>;
 }): Promise<boolean> {
-  // Convert null to undefined for GraphQL input
-  const cleanedUpdates = Object.fromEntries(
-    Object.entries(updates).map(([key, value]) => [
-      key,
-      value === null ? undefined : value,
-    ]),
-  );
-
-  const { persisted, result } =
+  const { persisted } =
     await updateEntityFieldsLocalFirst<NotificationSettings>({
       cache,
       entity,
@@ -160,17 +172,26 @@ export async function applySettingsUpdate({
       previous,
       // localFirst: an unreachable API queues the change for replay rather
       // than failing it, so the toggle the user just flipped isn't lost.
-      mutate: () => mutate(toNestedInput(cleanedUpdates)),
+      mutate: async () => {
+        const settled = await settleMutation(
+          () => mutate(toNestedInput(updates)),
+          {
+            document: UpdateNotificationPreferencesDocument,
+            fallback: t('notifications.updateFailed'),
+            // The screen alerts off the returned boolean; the timezone sync logs.
+            present: 'none',
+          },
+        );
+        // A failure travels as `error`, which is what makes the helper revert.
+        return settled.failure
+          ? { error: settled.failure }
+          : { data: settled.data };
+      },
       logLabel: 'Failed to update notification settings',
     });
 
-  // Queued counts as persisted — it replays later. `reportRefusal` logs the
-  // server's reason for the union-error case; the screen shows the alert.
-  if (!persisted) {
-    reportRefusal(result);
-    return false;
-  }
-  return true;
+  // Queued counts as persisted — it replays later.
+  return persisted;
 }
 
 export const useNotificationSettings = (options?: { skip?: boolean }) => {
@@ -193,7 +214,7 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
 
   const preferences = data?.me?.notificationPreferences;
 
-  useApolloErrorLogger('GetNotificationPreferences', error);
+  useApolloErrorLogger(GetNotificationPreferencesDocument, error);
 
   // `User.notificationPreferences` is NULLABLE: an account that has never
   // changed a setting has no row, and the defaults below are then the right
@@ -204,28 +225,17 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
     if (!loading && !skipped && !readUser) {
       logger.warn(
         'Notification preferences could not be read — settings screen is showing defaults.',
-        { hasUser: !!user?.id, hasError: !!error },
+        { hasError: !!error },
       );
     }
-  }, [loading, readUser, skipped, user?.id, error]);
+  }, [loading, readUser, skipped, error]);
 
+  // The mutation returns the full fragment, so normalization is the whole cache
+  // update. No `optimisticResponse`: callers write permanently before firing,
+  // and an optimistic layer is torn down on completion — offline that
+  // completion is `queueLink`'s null result, which snaps every toggle back.
   const [updatePreferences] = useMutation(
     UpdateNotificationPreferencesDocument,
-    {
-      // The mutation returns the full fragment, so normalization is the whole
-      // cache update. No `optimisticResponse`: callers write permanently before
-      // firing, and an optimistic layer is torn down on completion — offline
-      // that completion is `queueLink`'s null result, which snaps every toggle
-      // back while the change sits queued.
-      onError: error => {
-        // Telemetry only — every caller already surfaces one alert off the
-        // returned boolean, so alerting here too would double up.
-        handleMutationError(error, {
-          operation: 'Update Notification Preferences',
-          showAlert: false,
-        });
-      },
-    },
   );
 
   // PERFORMANCE: Memoize settings object to prevent recreating on every render
@@ -298,7 +308,7 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
   ) =>
     updateMultipleSettings({
       [key]: value,
-    } as Partial<NotificationSettings>);
+    });
 
   const resetToDefaults = async () => {
     const defaultSettings: Partial<NotificationSettings> = {
@@ -345,7 +355,6 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
     error,
     refetch,
     updateNotificationSetting,
-    updateMultipleSettings,
     resetToDefaults,
     isQuietTime,
   };

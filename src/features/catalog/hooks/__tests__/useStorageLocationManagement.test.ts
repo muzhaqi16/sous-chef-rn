@@ -21,15 +21,16 @@ globalThis.cancelIdleCallback = (handle: number): void => {
 
 import { makeCache } from '#/apollo/cache';
 import { act, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import type { GetStorageLocationsQuery } from '#features/catalog/graphql/storageLocation.generated';
 import {
   GetStorageLocationsDocument,
   UpdateStorageLocationDocument,
   DeleteStorageLocationDocument,
   MarkStorageLocationAsDefaultDocument,
 } from '#features/catalog/graphql/storageLocation.generated';
-import { StorageType } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, StorageType } from '#/graphql/generated/schemaTypes';
 import { useStorageLocationManagement } from '#features/catalog/hooks/useStorageLocationManagement';
 import { storeApi } from '#store';
 
@@ -95,7 +96,13 @@ jest.mock('#/services/toastService', () => ({
 // Mock builders
 // ----------------------------------------------------------------------
 
-function buildLocationNode(overrides: Record<string, unknown> = {}) {
+/** The node the storage-location query itself selects, so its `__typename` is that literal. */
+type StorageLocationNode =
+  GetStorageLocationsQuery['storageLocations']['edges'][number]['node'];
+
+function buildLocationNode(
+  overrides: Partial<StorageLocationNode> = {},
+): StorageLocationNode {
   return {
     __typename: 'StorageLocation',
     id: 'loc-1',
@@ -133,7 +140,9 @@ function buildUpdatedLocationNode(overrides: Record<string, unknown> = {}) {
   return node;
 }
 
-function buildGetLocationsMock(homeId: string = 'home-1'): MockedResponse {
+function buildGetLocationsMock(
+  homeId: string = 'home-1',
+): MockFor<typeof GetStorageLocationsDocument> {
   return {
     request: {
       query: GetStorageLocationsDocument,
@@ -177,7 +186,9 @@ function buildGetLocationsMock(homeId: string = 'home-1'): MockedResponse {
   };
 }
 
-function buildUpdateLocationMock(): MockedResponse {
+function buildUpdateLocationMock(): MockFor<
+  typeof UpdateStorageLocationDocument
+> {
   return {
     request: {
       query: UpdateStorageLocationDocument,
@@ -200,8 +211,8 @@ function buildUpdateLocationMock(): MockedResponse {
 function buildDeleteLocationMock(
   success: boolean = true,
   message: string = 'OK',
-  refusal: { code?: string; field?: string } = {},
-): MockedResponse {
+  refusal: { code?: ErrorCode; field?: string } = {},
+): MockFor<typeof DeleteStorageLocationDocument> {
   return {
     request: {
       query: DeleteStorageLocationDocument,
@@ -220,7 +231,7 @@ function buildDeleteLocationMock(
           : {
               __typename: 'ValidationError',
               message,
-              code: refusal.code ?? 'VALIDATION_FAILED',
+              code: refusal.code ?? ErrorCode.ValidationFailed,
               field: refusal.field ?? null,
             },
       },
@@ -228,7 +239,9 @@ function buildDeleteLocationMock(
   };
 }
 
-function buildSetDefaultMock(): MockedResponse {
+function buildSetDefaultMock(): MockFor<
+  typeof MarkStorageLocationAsDefaultDocument
+> {
   return {
     request: {
       query: MarkStorageLocationAsDefaultDocument,
@@ -272,7 +285,8 @@ describe('useStorageLocationManagement', () => {
       { operationMocks: [buildGetLocationsMock()] },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.initialLoading).toBe(true);
+    await waitFor(() => expect(result.current.locations).toHaveLength(2));
     expect(result.current.initialLoading).toBe(false);
   });
 
@@ -282,7 +296,7 @@ describe('useStorageLocationManagement', () => {
       useStorageLocationManagement(undefined),
     );
 
-    expect(result.current.loading).toBe(false);
+    expect(result.current.initialLoading).toBe(false);
     expect(result.current.locations).toEqual([]);
   });
 
@@ -530,7 +544,7 @@ describe('useStorageLocationManagement', () => {
       { operationMocks: [buildGetLocationsMock()] },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await waitFor(() => expect(result.current.locations).toHaveLength(2));
     expect(typeof result.current.refetch).toBe('function');
   });
 });
@@ -627,7 +641,7 @@ describe('updateLocation writes what consumers read', () => {
   it('clears the previous default when the edit sets one', async () => {
     // The server answers with the location that was EDITED. The shared mock
     // always echoes loc-1, which would re-normalize the very flag under test.
-    const updatedLoc2: MockedResponse = {
+    const updatedLoc2: MockFor<typeof UpdateStorageLocationDocument> = {
       request: { query: UpdateStorageLocationDocument, variables: () => true },
       result: {
         data: {
@@ -672,7 +686,7 @@ describe('updateLocation writes what consumers read', () => {
   });
 
   it('reverts a re-parent the server refuses', async () => {
-    const refusal: MockedResponse = {
+    const refusal: MockFor<typeof UpdateStorageLocationDocument> = {
       request: { query: UpdateStorageLocationDocument, variables: () => true },
       result: {
         data: {
@@ -708,7 +722,7 @@ describe('updateLocation writes what consumers read', () => {
   });
 
   it('restores a live parent link when the server refuses', async () => {
-    const refusal: MockedResponse = {
+    const refusal: MockFor<typeof UpdateStorageLocationDocument> = {
       request: { query: UpdateStorageLocationDocument, variables: () => true },
       result: {
         data: {

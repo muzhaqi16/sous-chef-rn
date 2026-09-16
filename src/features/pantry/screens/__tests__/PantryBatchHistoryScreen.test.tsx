@@ -1,6 +1,7 @@
 'use no memo';
 import React from 'react';
 import { screen } from '@testing-library/react-native';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetPantryItemBatchHistoryDocument } from '#features/pantry/graphql/pantry.generated';
 import { BatchStatus } from '#/graphql/generated/schemaTypes';
@@ -24,32 +25,33 @@ function historyMock(
   }>,
   page?: { totalCount?: number; hasNextPage?: boolean },
 ) {
-  return recordMock(GetPantryItemBatchHistoryDocument, {
-    data: {
-      pantryItemBatchesConnection: {
-        __typename: 'PantryItemBatchConnection' as const,
-        totalCount: page?.totalCount ?? batches.length,
-        pageInfo: {
-          __typename: 'PageInfo' as const,
-          hasNextPage: page?.hasNextPage ?? false,
-          endCursor: page?.hasNextPage ? 'c1' : null,
-        },
-        edges: batches.map(b => ({
-          __typename: 'PantryItemBatchEdge' as const,
-          node: {
-            __typename: 'PantryItemBatch' as const,
-            id: b.id,
-            batchNumber: b.batchNumber,
-            quantity: b.quantity,
-            status: b.status,
-            expiresAt: b.expiresAt ?? null,
-            depletedAt: b.depletedAt ?? null,
-            costPerUnit: null,
-            totalCost: null,
-          },
-        })),
+  const data: MockDataFor<typeof GetPantryItemBatchHistoryDocument> = {
+    pantryItemBatchesConnection: {
+      __typename: 'PantryItemBatchConnection',
+      totalCount: page?.totalCount ?? batches.length,
+      pageInfo: {
+        __typename: 'PageInfo',
+        hasNextPage: page?.hasNextPage ?? false,
+        endCursor: page?.hasNextPage ? 'c1' : null,
       },
+      edges: batches.map(b => ({
+        __typename: 'PantryItemBatchEdge',
+        node: {
+          __typename: 'PantryItemBatch',
+          id: b.id,
+          batchNumber: b.batchNumber,
+          quantity: b.quantity,
+          status: b.status,
+          expiresAt: b.expiresAt ?? null,
+          depletedAt: b.depletedAt ?? null,
+          costPerUnit: null,
+          totalCost: null,
+        },
+      })),
     },
+  };
+  return recordMock(GetPantryItemBatchHistoryDocument, {
+    data,
   }).mock;
 }
 

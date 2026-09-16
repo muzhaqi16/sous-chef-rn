@@ -159,7 +159,8 @@ export interface RecipeInformation {
   healthScore: number;
   spoonacularScore: number;
   pricePerServing: number;
-  analyzedInstructions: RecipeInstruction[];
+  /** Absent from a complexSearch result unless it also asked for instructions. */
+  analyzedInstructions?: RecipeInstruction[];
   cheap: boolean;
   creditsText: string;
   cuisines: string[];
@@ -179,7 +180,8 @@ export interface RecipeInformation {
   whole30: boolean;
   weightWatcherSmartPoints: number;
   dishTypes: string[];
-  extendedIngredients: RecipeIngredient[];
+  /** Carried by `/information`, `/informationBulk` and `/random`, not by a search result. */
+  extendedIngredients?: RecipeIngredient[];
   summary: string;
   winePairing?: {
     pairedWines: string[];
@@ -264,10 +266,9 @@ export interface SearchRecipesResponse {
 }
 
 /**
- * When `addRecipeInformation: true` is passed to `searchRecipes`, the
- * Spoonacular API returns full `RecipeInformation` objects in `results[]`
- * (extendedIngredients, analyzedInstructions, summary, nutrition, …) instead
- * of the lean `SearchRecipesResult` shape.
+ * With `addRecipeInformation: true`, `results[]` carries the recipe fields
+ * rather than the lean `SearchRecipesResult` shape. Instructions need
+ * `addRecipeInstructions` as well, and ingredients come only from `/information`.
  */
 export interface SearchRecipesResponseWithInfo {
   results: RecipeInformation[];

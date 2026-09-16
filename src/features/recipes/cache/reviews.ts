@@ -1,8 +1,6 @@
-import type { ApolloCache, Reference } from '@apollo/client';
+import type { ApolloCache } from '@apollo/client';
 import { gql } from '@apollo/client';
 import { safeEvict, type ConnectionData } from '#/apollo/utils/cacheUpdaters';
-
-const RATING_BUCKETS: readonly (1 | 2 | 3 | 4 | 5)[] = [1, 2, 3, 4, 5];
 
 const ratingCountField = (rating: number): string | null => {
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) return null;
@@ -39,13 +37,16 @@ const recomputeAverageRating = (cache: ApolloCache, recipeId: string): void => {
     rating5Count: number;
   }>({ id: cacheId, fragment: RecipeRatingCountsFragment });
   if (!counts) return;
-  const total = RATING_BUCKETS.reduce(
-    (sum, n) => sum + (counts[`rating${n}Count` as keyof typeof counts] ?? 0),
-    0,
-  );
-  const weighted = RATING_BUCKETS.reduce(
-    (sum, n) =>
-      sum + (counts[`rating${n}Count` as keyof typeof counts] ?? 0) * n,
+  const buckets = [
+    { rating: 1, count: counts.rating1Count },
+    { rating: 2, count: counts.rating2Count },
+    { rating: 3, count: counts.rating3Count },
+    { rating: 4, count: counts.rating4Count },
+    { rating: 5, count: counts.rating5Count },
+  ];
+  const total = buckets.reduce((sum, { count }) => sum + count, 0);
+  const weighted = buckets.reduce(
+    (sum, { rating, count }) => sum + count * rating,
     0,
   );
   const average = total === 0 ? 0 : weighted / total;
@@ -68,14 +69,14 @@ const addReviewEdge = (
           id: reviewId,
         });
         if (!newRef) return existing;
-        const existingEdges = existing.edges || [];
+        const existingEdges = existing.edges ?? [];
         const alreadyPresent = existingEdges.some(
-          edge => readField('id', edge?.node) === reviewId,
+          edge => readField('id', edge.node) === reviewId,
         );
         if (alreadyPresent) return existing;
         const newEdge = {
           __typename: 'RecipeReviewEdge',
-          node: newRef as Reference,
+          node: newRef,
           cursor: '',
         };
         return {
@@ -99,9 +100,9 @@ const removeReviewEdge = (
     id: cacheId,
     fields: {
       reviews(existing: ConnectionData = {}, { readField }) {
-        const existingEdges = existing.edges || [];
+        const existingEdges = existing.edges ?? [];
         const edges = existingEdges.filter(
-          edge => readField('id', edge?.node) !== reviewId,
+          edge => readField('id', edge.node) !== reviewId,
         );
         if (edges.length === existingEdges.length) return existing;
         return {

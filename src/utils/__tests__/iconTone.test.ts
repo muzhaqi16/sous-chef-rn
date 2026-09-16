@@ -12,9 +12,9 @@ describe('icon tones', () => {
     const tones = Object.keys(TONE_TO_COLOR);
     expect(tones.length).toBeGreaterThan(20);
 
-    for (const tone of tones) {
+    for (const resolveColor of Object.values(TONE_TO_COLOR)) {
       for (const theme of [lightTheme, darkTheme]) {
-        const colour = TONE_TO_COLOR[tone as keyof typeof TONE_TO_COLOR](theme);
+        const colour = resolveColor(theme);
         expect(typeof colour).toBe('string');
         expect(colour).not.toBe('');
       }
@@ -22,11 +22,9 @@ describe('icon tones', () => {
   });
 
   it('has no tone whose colour the theme does not define', () => {
-    const undefinedTones = Object.keys(TONE_TO_COLOR).filter(
-      tone =>
-        TONE_TO_COLOR[tone as keyof typeof TONE_TO_COLOR](lightTheme) ===
-        undefined,
-    );
+    const undefinedTones = Object.entries(TONE_TO_COLOR)
+      .filter(([, resolveColor]) => resolveColor(lightTheme) === undefined)
+      .map(([tone]) => tone);
 
     expect(undefinedTones).toEqual([]);
   });

@@ -60,6 +60,7 @@
     "myRecipesSubtitle": "Crea y gestiona tus propias recetas",
     "myRecipesTitle": "Mis recetas",
     "myRecipesSearchPlaceholder": "Buscar mis recetas...",
+    "myRecipesSearchingAll": "Buscando en todas tus recetas...",
     "myRecipesEmptyTitle": "Aún no hay recetas",
     "myRecipesEmptyDescription": "Crea tu primera receta",
     "createRecipe": "Crear receta",
@@ -71,7 +72,8 @@
     "loadingRecipe": "Cargando receta...",
     "recipeNotFoundDb": "Receta no encontrada en la base de datos",
     "recipeNotFound": "Receta no encontrada",
-    "percentHealthy": "% saludable",
+    "loadFailed": "No se pudo cargar la receta",
+    "percentHealthy": "{{percent}}% saludable",
     "cookedCount": "Cocinada {{count}}x",
     "markCooked": "Marcar como cocinada",
     "nutritionTitle": "Nutrición",
@@ -106,6 +108,7 @@
     "savedRecipesSearchPlaceholder": "Buscar recetas guardadas...",
     "savedRecipesEmptyTitle": "No hay recetas guardadas",
     "savedRecipesEmptyDescription": "Guarda recetas desde la búsqueda para verlas aquí",
+    "savedRecipesSearchingAll": "Buscando en todas tus recetas guardadas...",
     "removeRecipeFailed": "No se pudo quitar la receta. Inténtalo de nuevo.",
     "filterAll": "Todas",
     "folders": "Carpetas",
@@ -151,6 +154,14 @@
     "markedCookedDeducted": "¡Receta marcada como cocinada! Ingredientes descontados de la despensa.",
     "markedCookedSkipped_one": "Receta marcada como cocinada. No se pudo descontar {{count}} ingrediente.",
     "markedCookedSkipped_other": "Receta marcada como cocinada. No se pudieron descontar {{count}} ingredientes.",
+    "markedCookedSkippedUnit_one": "Receta marcada como cocinada. No se pudo descontar {{count}} ingrediente: su unidad no se convierte a la del inventario.",
+    "markedCookedSkippedUnit_other": "Receta marcada como cocinada. No se pudieron descontar {{count}} ingredientes: sus unidades no se convierten a las del inventario.",
+    "markedCookedSkippedNames_one": "Receta marcada como cocinada. No se pudo descontar {{names}}.",
+    "markedCookedSkippedNames_other": "Receta marcada como cocinada. No se pudieron descontar {{names}}.",
+    "markedCookedSkippedNamesMore_other": "Receta marcada como cocinada. No se pudieron descontar {{names}} ni {{count}} más.",
+    "markedCookedSkippedUnitNames_one": "Receta marcada como cocinada. No se pudo descontar {{names}}: su unidad no se convierte a la del inventario.",
+    "markedCookedSkippedUnitNames_other": "Receta marcada como cocinada. No se pudieron descontar {{names}}: sus unidades no se convierten a las del inventario.",
+    "markedCookedSkippedUnitNamesMore_other": "Receta marcada como cocinada. No se pudieron descontar {{names}} ni {{count}} más: sus unidades no se convierten a las del inventario.",
     "markedCooked": "¡Receta marcada como cocinada!",
     "renameFolderFailedRetry": "No se pudo renombrar la carpeta. Inténtalo de nuevo.",
     "folderRenamed": "Se renombró \"{{oldName}}\" a \"{{newName}}\"",
@@ -344,6 +355,12 @@
     "confirmAndDeduct": "Confirmar y descontar",
     "confirmAndDeductCount": "Confirmar y descontar ({{count}})",
     "includedCount": "{{n}}/{{m}} incluidos",
+    "summaryAvailable_one": "{{count}} disponible",
+    "summaryAvailable_other": "{{count}} disponibles",
+    "summaryPartial_one": "{{count}} parcial",
+    "summaryPartial_other": "{{count}} parciales",
+    "summaryMissing_one": "{{count}} faltante",
+    "summaryMissing_other": "{{count}} faltantes",
     "skipReview": "Omitir revisión"
   },
   "markCookedModal": {
@@ -365,7 +382,20 @@
   },
   "nutrition": {
     "noData": "No hay datos nutricionales disponibles",
-    "servingSize": "Tamaño de la ración"
+    "servingSize": "Tamaño de la ración",
+    "nutrient": {
+      "totalFat": "Grasas totales",
+      "saturatedFat": "Grasas saturadas",
+      "transFat": "Grasas trans",
+      "addedSugars": "Azúcares añadidos",
+      "cholesterol": "Colesterol",
+      "vitaminD": "Vitamina D"
+    },
+    "category": {
+      "macro": "Macronutrientes",
+      "vitamin": "Vitaminas",
+      "mineral": "Minerales"
+    }
   },
   "cuisineSelector": {
     "title": "Cocinas preferidas",
@@ -406,7 +436,6 @@
     "goodFiber": "Rico en fibra",
     "lowSugar": "Bajo en azúcar",
     "highSodium": "Alto en sodio",
-    "vitaminC": "Vitamina C",
     "iron": "Hierro",
     "calcium": "Calcio",
     "potassium": "Potasio"

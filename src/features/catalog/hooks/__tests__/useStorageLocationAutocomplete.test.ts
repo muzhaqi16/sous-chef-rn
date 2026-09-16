@@ -1,19 +1,21 @@
 import { renderHook } from '@testing-library/react-native';
-import { useStorageLocationAutocomplete } from '#features/catalog/hooks/useStorageLocationAutocomplete';
-import { StorageLocation, StorageType } from '#/graphql/generated/schemaTypes';
+import {
+  useStorageLocationAutocomplete,
+  type StorageLocationOption,
+} from '#features/catalog/hooks/useStorageLocationAutocomplete';
+import { StorageType } from '#/graphql/generated/schemaTypes';
 
 const makeLocation = (
-  overrides: Partial<StorageLocation> = {},
-): StorageLocation =>
-  ({
-    id: 'loc-1',
-    name: 'Fridge',
-    type: StorageType.Refrigerator,
-    isDefault: false,
-    ...overrides,
-  } as StorageLocation);
+  overrides: Partial<StorageLocationOption> = {},
+): StorageLocationOption => ({
+  id: 'loc-1',
+  name: 'Fridge',
+  type: StorageType.Refrigerator,
+  isDefault: false,
+  ...overrides,
+});
 
-const storageLocations: StorageLocation[] = [
+const storageLocations: StorageLocationOption[] = [
   makeLocation({
     id: '1',
     name: 'Fridge',
@@ -159,22 +161,6 @@ describe('useStorageLocationAutocomplete', () => {
     );
 
     expect(result.current.showAddNew).toBe(false);
-  });
-
-  it('isLoading is always false (fully local)', () => {
-    const { result } = renderHook(() =>
-      useStorageLocationAutocomplete({ storageLocations, searchTerm: 'test' }),
-    );
-
-    expect(result.current.isLoading).toBe(false);
-  });
-
-  it('isOnline is always true (fully local)', () => {
-    const { result } = renderHook(() =>
-      useStorageLocationAutocomplete({ storageLocations, searchTerm: '' }),
-    );
-
-    expect(result.current.isOnline).toBe(true);
   });
 
   it('handles empty storageLocations array', () => {

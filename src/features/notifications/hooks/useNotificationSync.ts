@@ -5,18 +5,13 @@
  * one fact read two ways, so they move together and revert together.
  */
 
-/*
- * Failure is read off the RESOLVED result, never a `catch` — under
- * `errorPolicy: 'all'` a `catch` sees only link-level throws.
- * `classifyCreateResult` gives `'rejected'` (revert), `'created'` and
- * `'queued'` (keep: `data` with a null payload, which `!data` would misread).
- */
+// A failure reverts whether it threw or resolved as a refusal under
+// `errorPolicy: 'all'`; a queued action keeps its write.
 
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   MarkNotificationAsReadDocument,
-  MarkNotificationUnreadDocument,
   DeleteNotificationDocument,
   SendTestNotificationDocument,
 } from '#features/notifications/graphql/notificationMutations.generated';
@@ -35,14 +30,14 @@ import {
   restoreNotifications,
   type CapturedNotification,
 } from '#features/notifications/utils/notificationCacheWrites';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useStore } from '#store';
-import { errorService } from '#/services/errorService';
+import { useTranslation } from '#/i18n';
 
 export function useNotificationSync() {
   const client = useApolloClient();
+  const { t } = useTranslation();
   const [markReadMutation] = useMutation(MarkNotificationAsReadDocument);
-  const [markUnreadMutation] = useMutation(MarkNotificationUnreadDocument);
   const [deleteMutation] = useMutation(DeleteNotificationDocument);
   const [markAllReadMutation] = useMutation(MarkAllNotificationsAsReadDocument);
   const [deleteMultipleMutation] = useMutation(
@@ -57,46 +52,18 @@ export function useNotificationSync() {
     // Optimistic: the row and the badge move together, or neither does.
     if (!applyNotificationRead(cache, userId(), id)) return;
 
-    let result;
-    try {
-      result = await markReadMutation({
-        variables: { input: { id } },
-        context: { localFirst: true },
-      });
-    } catch (error: unknown) {
-      // Only a link-level throw reaches here; the ordinary refusal path is the
-      // resolved result below.
-      errorService.reportError(error, {
-        operation: 'syncMarkAsRead',
-        notificationId: id,
-      });
-    }
-
-    if (classifyCreateResult(result) === 'rejected') {
-      applyNotificationUnread(cache, userId(), id);
-    }
-  };
-
-  const syncMarkUnread = async (id: string) => {
-    const cache = client.cache;
-    if (!applyNotificationUnread(cache, userId(), id)) return;
-
-    let result;
-    try {
-      result = await markUnreadMutation({
-        variables: { input: { id } },
-        context: { localFirst: true },
-      });
-    } catch (error: unknown) {
-      errorService.reportError(error, {
-        operation: 'syncMarkUnread',
-        notificationId: id,
-      });
-    }
-
-    if (classifyCreateResult(result) === 'rejected') {
-      applyNotificationRead(cache, userId(), id);
-    }
+    await settleMutation(
+      () =>
+        markReadMutation({
+          variables: { input: { id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: MarkNotificationAsReadDocument,
+        fallback: t('notifications.actionFailed'),
+        onFailed: () => applyNotificationUnread(cache, userId(), id),
+      },
+    );
   };
 
   const syncDelete = async (id: string) => {
@@ -105,22 +72,22 @@ export function useNotificationSync() {
     const restore = captureNotification(cache, id);
     if (!applyNotificationRemoved(cache, userId(), id)) return;
 
-    let result;
-    try {
-      result = await deleteMutation({
-        variables: { input: { id } },
-        context: { localFirst: true },
-      });
-    } catch (error: unknown) {
-      errorService.reportError(error, {
-        operation: 'syncDeleteNotification',
-        notificationId: id,
-      });
-    }
+    const settled = await settleMutation(
+      () =>
+        deleteMutation({
+          variables: { input: { id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: DeleteNotificationDocument,
+        fallback: t('notifications.deleteFailed'),
+        removal: true,
+        onFailed: () =>
+          restoreNotifications(cache, userId(), restore ? [restore] : []),
+      },
+    );
 
-    if (classifyCreateResult(result) === 'rejected') {
-      restoreNotifications(cache, userId(), restore ? [restore] : []);
-    } else {
+    if (settled.status !== 'failed') {
       // The row is gone for good; drop its client-side enrichment with it.
       useNotificationStore.getState().clearExpirationLink(id);
     }
@@ -133,16 +100,15 @@ export function useNotificationSync() {
     const flipped = applyAllNotificationsRead(cache, userId());
     if (flipped.length === 0) return;
 
-    let result;
-    try {
-      result = await markAllReadMutation({ context: { localFirst: true } });
-    } catch (error: unknown) {
-      errorService.reportError(error, { operation: 'syncMarkAllAsRead' });
-    }
-
-    if (classifyCreateResult(result) === 'rejected') {
-      flipped.forEach(id => applyNotificationUnread(cache, userId(), id));
-    }
+    await settleMutation(
+      () => markAllReadMutation({ context: { localFirst: true } }),
+      {
+        document: MarkAllNotificationsAsReadDocument,
+        fallback: t('notifications.actionFailed'),
+        onFailed: () =>
+          flipped.forEach(id => applyNotificationUnread(cache, userId(), id)),
+      },
+    );
   };
 
   /**
@@ -160,21 +126,21 @@ export function useNotificationSync() {
     ids.forEach(id => evictNotification(cache, id, false));
     cache.gc();
 
-    let result;
-    try {
-      result = await deleteMultipleMutation({
-        variables: { input: { ids } },
-        context: { localFirst: true },
-      });
-    } catch (error: unknown) {
-      errorService.reportError(error, {
-        operation: 'syncClearReadNotifications',
-      });
-    }
+    const settled = await settleMutation(
+      () =>
+        deleteMultipleMutation({
+          variables: { input: { ids } },
+          context: { localFirst: true },
+        }),
+      {
+        document: DeleteMultipleNotificationsDocument,
+        fallback: t('notifications.deleteFailed'),
+        removal: true,
+        onFailed: () => restoreNotifications(cache, userId(), captured),
+      },
+    );
 
-    if (classifyCreateResult(result) === 'rejected') {
-      restoreNotifications(cache, userId(), captured);
-    } else {
+    if (settled.status !== 'failed') {
       ids.forEach(id =>
         useNotificationStore.getState().clearExpirationLink(id),
       );
@@ -188,20 +154,20 @@ export function useNotificationSync() {
   const syncSendTest = async (
     type: NotificationType = NotificationType.ExpiryReminder,
   ): Promise<boolean> => {
-    let result;
-    try {
-      result = await sendTestMutation({ variables: { input: { type } } });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'syncSendTestNotification',
-      });
-    }
-    return classifyCreateResult(result) !== 'rejected';
+    const settled = await settleMutation(
+      () => sendTestMutation({ variables: { input: { type } } }),
+      {
+        document: SendTestNotificationDocument,
+        fallback: t('notifications.testFailedMessage'),
+        // The settings screen reports the outcome, sent or not.
+        present: 'none',
+      },
+    );
+    return settled.status !== 'failed';
   };
 
   return {
     syncMarkAsRead,
-    syncMarkUnread,
     syncDelete,
     syncMarkAllAsRead,
     syncClearRead,

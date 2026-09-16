@@ -159,7 +159,7 @@ export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
           accessibilityRole="button"
           accessibilityLabel={t('labels.close')}
         >
-          <Icon name="close" size={24} color="#fff" />
+          <Icon name="close" size={24} tone="onScrim" />
         </Pressable>
 
         {/* box-none so the photo keeps receiving the taps that close it, while
@@ -434,7 +434,7 @@ const SetPrimaryAction: React.FC<{ photoRef: ItemPhotoRef }> = ({
       accessibilityState={{ busy: loading }}
       accessibilityLabel={t('itemPhotos.setAsMain')}
     >
-      <Icon name="star-outline" size={14} color="#fff" />
+      <Icon name="star-outline" size={14} tone="onScrim" />
       <Text role="label" style={styles.captionText}>
         {t('itemPhotos.setAsMain')}
       </Text>
@@ -470,7 +470,7 @@ const PhotoCaption: React.FC<{ photoRef: ItemPhotoRef }> = ({ photoRef }) => {
       )}
       {photo.status === ItemImageStatus.Pending && (
         <View style={styles.pendingBadge}>
-          <Icon name="time-outline" size={12} color="#fff" />
+          <Icon name="time-outline" size={12} tone="onScrim" />
           <Text role="label" style={styles.captionText}>
             {t('itemPhotos.pendingReview')}
           </Text>
@@ -521,7 +521,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.xs,
     borderRadius: theme.radii.full,
     borderCurve: 'continuous',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: theme.colors.onScrimSubtle,
   },
   primaryBadge: {
     flexDirection: 'row',
@@ -532,7 +532,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.xs,
     borderRadius: theme.radii.full,
     borderCurve: 'continuous',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: theme.colors.overlays.medium,
   },
   captionRow: {
     flexDirection: 'row',
@@ -551,9 +551,9 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: theme.spacing['2xs'],
     borderRadius: theme.radii.full,
     borderCurve: 'continuous',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: theme.colors.onScrimSubtle,
   },
 }));

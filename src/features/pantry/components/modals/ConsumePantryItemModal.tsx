@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
 import { CollapsibleChipPicker } from '#features/pantry/components/CollapsibleChipPicker';
@@ -18,12 +18,10 @@ import {
   PantryActionModal,
   type PantryActionSharedState,
 } from '#features/pantry/components/modals/PantryActionModal';
-import { type PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
+import type { PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
 import { Text } from '#components/atoms/Text';
-import {
-  formatNumberForInput,
-  localizeNumericHint,
-} from '#/utils/formatters/number';
+import { localizeNumericHint } from '#/utils/formatters/number';
+import { formatQuantityForInput } from '#/utils/formatQuantity';
 
 interface ConsumePantryItemModalProps {
   visible: boolean;
@@ -38,7 +36,10 @@ interface ConsumePantryItemModalProps {
   ) => void;
 }
 
-const PURPOSE_OPTIONS: Array<{ labelKey: string; value: UsagePurpose }> = [
+const PURPOSE_OPTIONS: Array<{
+  labelKey: TranslationKey;
+  value: UsagePurpose;
+}> = [
   { labelKey: 'consumeItem.purposeCooking', value: UsagePurpose.Cooking },
   { labelKey: 'labels.mealPrep', value: UsagePurpose.MealPrep },
   { labelKey: 'usagePurpose.SNACK', value: UsagePurpose.Snack },
@@ -62,7 +63,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
     _defaultUnit: SelectedUnitInfo | null,
     increment: number | null,
   ) => {
-    setQuantityInput(increment ? formatNumberForInput(increment) : '1');
+    setQuantityInput(increment ? formatQuantityForInput(increment) : '1');
     setPurpose(UsagePurpose.General);
   };
 
@@ -110,7 +111,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
           purpose={purpose}
           setPurpose={setPurpose}
           shared={shared}
-          showFifoHint={(pantryItem.activeBatchCount ?? 0) > 1}
+          showFifoHint={pantryItem.activeBatchCount > 1}
           purposeOptions={purposeOptions}
         />
       )}
@@ -165,12 +166,12 @@ const ConsumeActionFields: React.FC<{
           conversionConfidence={conversion.confidence}
           commonFractions={shared.commonFractions}
           onFractionSelect={value =>
-            setQuantityInput(formatNumberForInput(value))
+            setQuantityInput(formatQuantityForInput(value))
           }
           selectedFractionValue={consumeAmount ?? undefined}
         />
         {showFifoHint ? (
-          <Text style={commonStyles.bottomSheetHelperText}>
+          <Text role="caption" style={commonStyles.bottomSheetHelperText}>
             {t('consumeItem.fifoHint')}
           </Text>
         ) : null}

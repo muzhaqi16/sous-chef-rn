@@ -1,5 +1,6 @@
 import {
   ActivityIndicator,
+  Platform,
   Pressable as RNPressable,
   RefreshControl as RNRefreshControl,
   TextInput,
@@ -176,6 +177,13 @@ export const SuccessActivityIndicator = withUnistyles(
   }),
 );
 
+/** Android starts the circle at `offset - diameter`, so at 0 it slides in clipped
+ *  by the host's top edge; iOS shifts the control's frame and needs none.
+ *  `chromeAbove` is for a host whose chrome scrolls inside it (the pantry list). */
+const REFRESH_CIRCLE_DIAMETER = 40;
+export const refreshSpinnerOffset = (chromeAbove = 0) =>
+  Platform.OS === 'android' ? chromeAbove + REFRESH_CIRCLE_DIAMETER : 0;
+
 // RNGH's ScrollView injects its scroll gesture as
 // `cloneElement(refreshControl, { block })`, and only a `createNativeWrapper`
 // control routes `block` into `useNativeGesture` — RN's own drops it silently.
@@ -185,6 +193,7 @@ export const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
   colors: [theme.colors.primary],
   tintColor: theme.colors.primary,
   progressBackgroundColor: theme.colors.surface,
+  progressViewOffset: refreshSpinnerOffset(),
 }));
 
 /** The same theming on RN's own control, for plain RN `ScrollView` hosts. RNGH's
@@ -195,6 +204,7 @@ export const PlainScrollRefreshControl = withUnistyles(
     colors: [theme.colors.primary],
     tintColor: theme.colors.primary,
     progressBackgroundColor: theme.colors.surface,
+    progressViewOffset: refreshSpinnerOffset(),
   }),
 );
 

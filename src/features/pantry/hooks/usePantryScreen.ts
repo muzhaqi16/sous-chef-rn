@@ -16,9 +16,12 @@ import {
 } from '#features/pantry/utils/pantryFilters';
 import { PAGE_SIZE } from '#features/pantry/constants/pagination';
 import { logger } from '#/utils/environment';
+import { useDataState } from '#hooks/data/useDataState';
 import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
+import type { PantryItemsFailure } from '#features/pantry/components/pantryDisplay/types';
 import { StorageLocationIcon } from '#features/catalog/ui/StorageLocationIcon';
-import { PREFERENCE_DEFAULTS } from '#store/slices/preferenceTypes';
+import { StorageType } from '#/graphql/generated/schemaTypes';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import type {
   PantrySortOption,
   PantrySortDirection,
@@ -47,18 +50,12 @@ export function usePantryScreen() {
     pantrySortDirection,
     setPantrySortOption,
     setPantrySortDirection,
-    pendingPantryScrollToTop,
-    setPendingPantryScrollToTop,
   } = useAppStore(
     useShallow(s => ({
-      pantrySortOption:
-        s.pantrySortOption ?? PREFERENCE_DEFAULTS.pantrySortOption,
-      pantrySortDirection:
-        s.pantrySortDirection ?? PREFERENCE_DEFAULTS.pantrySortDirection,
+      pantrySortOption: s.pantrySortOption,
+      pantrySortDirection: s.pantrySortDirection,
       setPantrySortOption: s.setPantrySortOption,
       setPantrySortDirection: s.setPantrySortDirection,
-      pendingPantryScrollToTop: s.pendingPantryScrollToTop,
-      setPendingPantryScrollToTop: s.setPendingPantryScrollToTop,
     })),
   );
 
@@ -88,6 +85,8 @@ export function usePantryScreen() {
       loading,
       isRefreshing,
       error: pantryError,
+      hasResult,
+      skipped,
       hasMore,
       isLoadingMore,
       locationCounts,
@@ -114,6 +113,7 @@ export function usePantryScreen() {
     searchQuery,
     setSearchQuery,
     searchActive,
+    isSearching,
     useServerSort,
     activeItems,
     removeFromResults,
@@ -142,7 +142,7 @@ export function usePantryScreen() {
       label: t('labels.storageRefrigerated'),
       icon: 'thermometer-outline',
       iconElement: React.createElement(StorageLocationIcon, {
-        type: 'REFRIGERATOR',
+        type: StorageType.Refrigerator,
         size: tabIconSize,
       }),
     },
@@ -151,7 +151,7 @@ export function usePantryScreen() {
       label: t('labels.storageFrozen'),
       icon: 'snow-outline',
       iconElement: React.createElement(StorageLocationIcon, {
-        type: 'FREEZER',
+        type: StorageType.Freezer,
         size: tabIconSize,
       }),
     },
@@ -160,7 +160,7 @@ export function usePantryScreen() {
       label: t('labels.storageAmbient'),
       icon: 'cube-outline',
       iconElement: React.createElement(StorageLocationIcon, {
-        type: 'PANTRY_SHELF',
+        type: StorageType.PantryShelf,
         size: tabIconSize,
       }),
     },
@@ -206,13 +206,11 @@ export function usePantryScreen() {
     ...customTabs,
   ];
 
-  // Ensure every custom location has a count entry (default 0) so badges always render
-  const completeCounts = { ...locationCounts } as typeof locationCounts;
-  for (const loc of pantryStorageLocations) {
-    if (completeCounts[loc.id] === undefined) {
-      completeCounts[loc.id] = 0;
-    }
-  }
+  // Every custom location gets a count entry (default 0) so badges always render
+  const completeCounts = {
+    ...Object.fromEntries(pantryStorageLocations.map(loc => [loc.id, 0])),
+    ...locationCounts,
+  };
 
   // 6. Derived states
   const noHomeSelected = isReady && !selectedHomeId && homeCount > 0;
@@ -226,6 +224,16 @@ export function usePantryScreen() {
   const noPantries =
     isReady && !!selectedHomeId && !!currentHome && pantries.length === 0;
 
+  // Classified on the FETCHED set: a failed read must not reach the
+  // "add your first item" empty state, which invites duplicates.
+  const itemsState = useDataState({
+    loading,
+    error: pantryError,
+    hasResult,
+    skipped,
+    isEmpty: rawPantryItems.length === 0,
+  });
+
   const isLoadingInitial =
     (!isReady || loading) && !pantryError && pantryItems.length === 0;
 
@@ -237,8 +245,11 @@ export function usePantryScreen() {
   // `undefined` rather than a fallback word: the header picks a whole no-name
   // greeting instead of interpolating one into "Hello, {{name}}!", which no
   // locale can express (Spanish would read "¡Hola, hola!").
-  const userName =
-    authUser?.name || authUser?.firstName || authUser?.lastName || undefined;
+  const userName = firstNonBlank(
+    authUser?.name,
+    authUser?.firstName,
+    authUser?.lastName,
+  );
 
   // These were hardcoded English reaching JSX through a variable — invisible to
   // `i18next/no-literal-string`, which only sees literals in JSX.
@@ -246,15 +257,15 @@ export function usePantryScreen() {
     ? t('pantryHeader.homePromptSelect')
     : noHomes
     ? t('pantryHeader.homeNoneYet')
-    : currentHome?.name || t('pantryHeader.homeFallback');
+    : firstNonBlank(currentHome?.name) ?? t('pantryHeader.homeFallback');
 
   // 7. Sort change handler
   const handleSortChange = (
     option: PantrySortOption,
     direction: PantrySortDirection,
   ) => {
-    setPantrySortOption?.(option);
-    setPantrySortDirection?.(direction);
+    setPantrySortOption(option);
+    setPantrySortDirection(direction);
   };
 
   // 8. handleRemoveItem (wraps removeItem + removeFromResults)
@@ -281,6 +292,16 @@ export function usePantryScreen() {
     }
   };
 
+  const itemsFailure: PantryItemsFailure | null =
+    itemsState === 'error' || itemsState === 'offline'
+      ? {
+          state: itemsState,
+          onRetry: () => {
+            void handleRefresh();
+          },
+        }
+      : null;
+
   // Reset UI state on pantry switch, via adjusting-state-during-render (no
   // ref.current read). No refetch() needed — Apollo re-executes on variables.id.
   const [prevPantryId, setPrevPantryId] = useState<string | undefined>(
@@ -302,11 +323,8 @@ export function usePantryScreen() {
     // Home / Pantry resolution
     pantry,
     pantries,
-    currentHome,
     selectedHomeId,
     setSelectedPantryId,
-    homeCount,
-    isReady,
     noHomeSelected,
     noHomes,
     noPantries,
@@ -314,16 +332,12 @@ export function usePantryScreen() {
     // Store state
     pantrySortOption,
     pantrySortDirection,
-    pendingPantryScrollToTop,
-    setPendingPantryScrollToTop,
 
     // Pantry data
     pantryItems,
-    rawPantryItems,
-    pantryStorageLocations,
     stats,
     totalCount,
-    pantryError,
+    itemsFailure,
 
     // Loading states
     loading,
@@ -336,6 +350,7 @@ export function usePantryScreen() {
     searchQuery,
     setSearchQuery,
     searchActive,
+    isSearching,
     useServerSort,
 
     // Pagination
@@ -354,13 +369,8 @@ export function usePantryScreen() {
 
     // Mutations / actions
     handleRemoveItem,
-    removeItem,
-    refetch,
     handleRefresh,
     createLocation,
     creatingLocation,
-
-    // Network
-    isOnline,
   };
 }

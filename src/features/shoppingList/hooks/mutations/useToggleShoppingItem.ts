@@ -13,9 +13,9 @@ import {
   type GetShoppingListItemsFilteredQuery,
   type GetShoppingListItemsFilteredQueryVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
-import { t } from '#/i18n';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { errorService } from '#/services/errorService';
+import { useTranslation } from '#/i18n';
 import {
   UseToggleShoppingItem_ItemFragmentDoc,
   type UseToggleShoppingItem_ItemFragment,
@@ -23,15 +23,13 @@ import {
 import {
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
+  recordListCounters,
+  undoListCounters,
 } from '#features/shoppingList/cache/connections';
 import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { isNetworkError } from '#/utils/isNetworkError';
-import { logger } from '#/utils/environment';
-import { isSuccessPayload } from '#/utils/errors/mutationPayload';
-import { handleMutationError } from '#/utils/errorHandlers';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
-import { errorService } from '#/services/errorService';
 
 interface UseToggleShoppingItemOptions {
   listId: string | null | undefined;
@@ -43,6 +41,7 @@ export function useToggleShoppingItem({
   refetch,
 }: UseToggleShoppingItemOptions) {
   const client = useApolloClient();
+  const { t } = useTranslation();
 
   const [togglePurchasedMutation] = useMutation(
     ToggleShoppingListItemPurchasedDocument,
@@ -69,13 +68,13 @@ export function useToggleShoppingItem({
       });
     if (!snapshot) return false;
 
-    const previousIsPurchased = snapshot.purchaseInfo?.isPurchased ?? false;
+    const previousIsPurchased = snapshot.purchaseInfo.isPurchased;
     const newStatus = !previousIsPurchased;
     const previousUpdatedAt = snapshot.updatedAt;
     // The flip clears this, so the snapshot is its only record — a refusal that
     // cannot put it back offers move-to-pantry for an already-stocked line.
     const previousMovedToPantryAt =
-      snapshot.purchaseInfo?.movedToPantryAt ?? null;
+      snapshot.purchaseInfo.movedToPantryAt ?? null;
 
     writePurchaseInfo(
       client.cache,
@@ -84,11 +83,13 @@ export function useToggleShoppingItem({
       { updatedAt: new Date().toISOString() },
     );
 
-    if (newStatus) {
-      moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
-    } else {
-      moveShoppingListItemToUnpurchased(client.cache, listId, { id: itemId });
-    }
+    const counterChange = recordListCounters(client.cache, listId, () => {
+      if (newStatus) {
+        moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
+      } else {
+        moveShoppingListItemToUnpurchased(client.cache, listId, { id: itemId });
+      }
+    });
 
     // Survives an app restart while offline. The tracked field must be one the
     // entity actually has (`isPurchased` lives inside `purchaseInfo`) — restoration
@@ -113,15 +114,19 @@ export function useToggleShoppingItem({
         // the stamp, which a flip would clear again over the snapshot's value.
         { updatedAt: previousUpdatedAt, restoring: true },
       );
-      if (previousIsPurchased) {
-        moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
-      } else {
-        moveShoppingListItemToUnpurchased(client.cache, listId, { id: itemId });
-      }
+      // Every failure refetches, which also settles counters that cannot be exact.
+      undoListCounters(client.cache, counterChange, () => {
+        if (previousIsPurchased) {
+          moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
+        } else {
+          moveShoppingListItemToUnpurchased(client.cache, listId, {
+            id: itemId,
+          });
+        }
+      });
       clearPersistence();
     };
 
-    let result;
     const togglePurchasedMutationOptions: Parameters<
       typeof togglePurchasedMutation
     >[0] = {
@@ -132,14 +137,7 @@ export function useToggleShoppingItem({
       onCompleted: data => {
         // Drop the offline marker only once the server confirms — a queued
         // completion resolves with a null payload and must keep it.
-        if (
-          isSuccessPayload(
-            data?.toggleShoppingListItemPurchased,
-            'ToggleShoppingListItemPurchasedPayload',
-          )
-        ) {
-          clearPersistence();
-        }
+        if (appliedPayload(data)) clearPersistence();
 
         // Depletion recovery: an empty source connection with totalCount > 0 means
         // the server holds unfetched items for the tab we toggled FROM.
@@ -156,45 +154,34 @@ export function useToggleShoppingItem({
         });
         const conn = sourceQuery?.shoppingList?.itemsConnection;
         if (conn && conn.edges.length === 0 && (conn.totalCount ?? 0) > 0) {
-          refetch();
+          void refetch().catch(error =>
+            errorService.reportError(error, {
+              operation: 'ToggleShoppingItem.refetch',
+            }),
+          );
         }
-      },
-      onError: error => {
-        // The queue handles the retry — keep the optimistic UI while offline.
-        if (isNetworkError(error)) {
-          logger.debug('Toggle purchase queued for retry (network error)');
-          return;
-        }
-
-        revert();
-        handleMutationError(error, { operation: 'Toggle Item Purchased' });
-        refetch();
       },
     };
-    try {
-      result = await togglePurchasedMutation(togglePurchasedMutationOptions);
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Toggle shopping list item purchased error:',
-      });
-    }
-    if (!result) return false;
+    // A queued toggle keeps the optimistic flip; a failure reverts it and
+    // refetches, since the server's state is the one to show.
+    const settled = await settleMutation(
+      () => togglePurchasedMutation(togglePurchasedMutationOptions),
+      {
+        document: ToggleShoppingListItemPurchasedDocument,
+        fallback: t('errors.updateItemFailed'),
+        onFailed: () => {
+          revert();
+          void refetch().catch(error =>
+            errorService.reportError(error, {
+              operation: 'ToggleShoppingItem.refetch',
+            }),
+          );
+        },
+      },
+    );
+    if (settled.status === 'failed') return false;
 
-    // A refusal arrives as DATA under errorPolicy:'all' and never fires `onError`,
-    // so revert it here. A set `result.error` was already routed by `onError`, and
-    // 'queued' (null payload, offline) keeps the optimistic flip.
-    if (!result.error && classifyCreateResult(result) === 'rejected') {
-      revert();
-      // A field-attributed ValidationError routes to LOCALIZED `errors.field.*`
-      // copy; the copy below is the fallback. The server's `message` is never shown.
-      alertRejectedMutation(result, t('errors.updateItemFailed'));
-      return false;
-    }
-
-    const payload = result.data?.toggleShoppingListItemPurchased;
-    return isSuccessPayload(payload, 'ToggleShoppingListItemPurchasedPayload')
-      ? payload.shoppingListItem
-      : false;
+    return appliedPayload(settled.data)?.shoppingListItem ?? false;
   };
 
   /**
@@ -223,10 +210,10 @@ export function useToggleShoppingItem({
       });
     if (!snapshot) return false;
 
-    const previousIsPurchased = snapshot.purchaseInfo?.isPurchased ?? false;
+    const previousIsPurchased = snapshot.purchaseInfo.isPurchased;
     const previousUpdatedAt = snapshot.updatedAt;
     const previousMovedToPantryAt =
-      snapshot.purchaseInfo?.movedToPantryAt ?? null;
+      snapshot.purchaseInfo.movedToPantryAt ?? null;
     const now = new Date().toISOString();
 
     // The entered amounts ride on the mutation's purchaseTracking; the detail
@@ -237,7 +224,9 @@ export function useToggleShoppingItem({
       { isPurchased: true },
       { updatedAt: now },
     );
-    moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
+    const counterChange = recordListCounters(client.cache, listId, () => {
+      moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
+    });
     const clearPersistence = optimisticDataPersistence.track(
       'ShoppingListItem',
       itemId,
@@ -255,13 +244,16 @@ export function useToggleShoppingItem({
         },
         { updatedAt: previousUpdatedAt, restoring: true },
       );
-      if (!previousIsPurchased) {
-        moveShoppingListItemToUnpurchased(client.cache, listId, { id: itemId });
-      }
+      undoListCounters(client.cache, counterChange, () => {
+        if (!previousIsPurchased) {
+          moveShoppingListItemToUnpurchased(client.cache, listId, {
+            id: itemId,
+          });
+        }
+      });
       clearPersistence();
     };
 
-    let result;
     const updatePurchaseMutationOptions: Parameters<
       typeof updatePurchaseMutation
     >[0] = {
@@ -280,42 +272,25 @@ export function useToggleShoppingItem({
       },
       context: { localFirst: true },
       onCompleted: data => {
-        if (
-          isSuccessPayload(
-            data?.updateShoppingListItem,
-            'UpdateShoppingListItemPayload',
-          )
-        ) {
-          clearPersistence();
-        }
-      },
-      onError: error => {
-        if (isNetworkError(error)) {
-          logger.debug('Record purchase queued for retry (network error)');
-          return;
-        }
-        revert();
-        handleMutationError(error, { operation: 'Record Purchase' });
-        refetch();
+        if (appliedPayload(data)) clearPersistence();
       },
     };
-    try {
-      result = await updatePurchaseMutation(updatePurchaseMutationOptions);
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Record purchase error:',
-      });
-    }
-    if (!result) return false;
-
-    // Same contract as toggleItem's guard: only the resolved refusal is handled
-    // here, and a field-specific ValidationError routes to `errors.field.*`.
-    if (!result.error && classifyCreateResult(result) === 'rejected') {
-      revert();
-      alertRejectedMutation(result, t('errors.updateItemFailed'));
-      return false;
-    }
-    return true;
+    const settled = await settleMutation(
+      () => updatePurchaseMutation(updatePurchaseMutationOptions),
+      {
+        document: UpdateShoppingListItemDocument,
+        fallback: t('errors.updateItemFailed'),
+        onFailed: () => {
+          revert();
+          void refetch().catch(error =>
+            errorService.reportError(error, {
+              operation: 'ToggleShoppingItem.refetch',
+            }),
+          );
+        },
+      },
+    );
+    return settled.status !== 'failed';
   };
 
   return { toggleItem, recordPurchase };

@@ -1,9 +1,9 @@
 /**
  * Shared plumbing for the checks in `scripts/`.
  *
- * Builtins only, deliberately: `check-i18n`, `audit-fragment-inlining` and
- * `check-bundled-secrets` run in CI jobs that skip `npm ci`, so anything they
- * reach must resolve with no install.
+ * Builtins only, deliberately: `check-i18n` and `check-bundled-secrets` run in
+ * CI jobs that skip `npm ci`, so anything they reach must resolve with no
+ * install.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
@@ -114,21 +114,6 @@ export function baselineFile(path) {
   };
 }
 
-/** What a set-membership ratchet needs: what appeared, and what went away. */
-export function diffSets(current, baseline) {
-  const known = new Set(baseline);
-  const present = new Set(current);
-  return {
-    added: current.filter(x => !known.has(x)),
-    removed: baseline.filter(x => !present.has(x)),
-  };
-}
-
-/**
- * Capture a subprocess's stdout. The measurement scripts drive `xcrun simctl`
- * and read its output; `stdio: 'pipe'` keeps a non-zero exit throwing rather
- * than leaking the tool's stderr into a captured timeline.
- */
 export const sh = (cmd, args, options = {}) =>
   execFileSync(cmd, args, { encoding: 'utf8', stdio: 'pipe', ...options });
 

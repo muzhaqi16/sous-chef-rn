@@ -13,8 +13,7 @@ function safeMeasureOrAbort(
   endMark: string,
 ): number | null {
   try {
-    const measure = performance.measure(measureName, startMark, endMark);
-    return measure?.duration ?? 0;
+    return performance.measure(measureName, startMark, endMark).duration;
   } catch {
     return null;
   }

@@ -18,19 +18,24 @@ interface GraphQLErrorLike {
   message?: string;
 }
 
+const isGraphQLErrorLike = (value: unknown): value is GraphQLErrorLike =>
+  typeof value === 'object' && value !== null;
+
 function getGraphQLErrors(error: unknown): GraphQLErrorLike[] | null {
   if (error == null || typeof error !== 'object') return null;
 
   // CombinedGraphQLErrors (Apollo Client 4) — has .errors
   if ('errors' in error) {
-    const { errors } = error as { errors: unknown };
-    if (Array.isArray(errors)) return errors;
+    const { errors } = error;
+    if (Array.isArray(errors)) return errors.filter(isGraphQLErrorLike);
   }
 
   // Legacy ApolloError — has .graphQLErrors
   if ('graphQLErrors' in error) {
-    const { graphQLErrors } = error as { graphQLErrors: unknown };
-    if (Array.isArray(graphQLErrors)) return graphQLErrors;
+    const { graphQLErrors } = error;
+    if (Array.isArray(graphQLErrors)) {
+      return graphQLErrors.filter(isGraphQLErrorLike);
+    }
   }
 
   return null;
@@ -142,17 +147,15 @@ export function getPantryItemDuplicateFromResult(
 
 /**
  * The shared "Item Already in Pantry" prompt: copy lives here once so it cannot
- * drift across the add surfaces. Restock and Add Anyway are site-specific
- * (different mutations and success UX), so the caller supplies them.
+ * drift across the add surfaces. Restock is the only recovery — a forced add
+ * lands on the same held stack — and is site-specific, so the caller supplies it.
  */
 export function promptPantryDuplicate(opts: {
   onRestock: () => void;
-  onAddAnyway: () => void;
   onCancel?: () => void;
 }): void {
   alertService.alert(t('duplicateItem.title'), t('duplicateItem.body'), [
     { text: t('labels.cancel'), style: 'cancel', onPress: opts.onCancel },
     { text: t('duplicateItem.restock'), onPress: opts.onRestock },
-    { text: t('duplicateItem.addAnyway'), onPress: opts.onAddAnyway },
   ]);
 }

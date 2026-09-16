@@ -25,7 +25,9 @@ interface UsePantryStatsOptions {
 /**
  * Prefers the server's O(1) counts, falling back to a single client-side pass.
  */
-export function usePantryStats(options: UsePantryStatsOptions) {
+export function usePantryStats(options: UsePantryStatsOptions): {
+  locationCounts: LocationCounts;
+} {
   const { pantryItems, totalCount, storageStateCounts, storageLocationCounts } =
     options;
 
@@ -47,7 +49,7 @@ export function usePantryStats(options: UsePantryStatsOptions) {
           pantry: storageStateCounts.ambient,
           unassigned: storageStateCounts.none,
           ...customLocationCounts,
-        } as LocationCounts,
+        },
       };
     }
 
@@ -60,7 +62,7 @@ export function usePantryStats(options: UsePantryStatsOptions) {
           freezer: 0,
           pantry: 0,
           unassigned: 0,
-        } as LocationCounts,
+        },
       };
     }
 
@@ -83,6 +85,9 @@ export function usePantryStats(options: UsePantryStatsOptions) {
           break;
         // Mirrors `filterByLocation`: `pantry` is strictly AMBIENT, so an
         // unassigned item is its own bucket rather than swelling that count.
+        case StorageState.None:
+        case null:
+        case undefined:
         default:
           unassigned++;
           break;
@@ -91,7 +96,7 @@ export function usePantryStats(options: UsePantryStatsOptions) {
       const customLocationId = item.storageLocation?.id;
       if (customLocationId) {
         customLocationCounts[customLocationId] =
-          (customLocationCounts[customLocationId] || 0) + 1;
+          (customLocationCounts[customLocationId] ?? 0) + 1;
       }
     }
 
@@ -103,7 +108,7 @@ export function usePantryStats(options: UsePantryStatsOptions) {
         pantry: pantryCount,
         unassigned,
         ...customLocationCounts,
-      } as LocationCounts,
+      },
     };
   })();
 }

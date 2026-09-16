@@ -5,6 +5,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UseUpdateShoppingList_ListFragmentDoc } from '../useUpdateShoppingList.generated';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useUpdateShoppingList } from '../useUpdateShoppingList';
 
 const LIST = {
@@ -62,7 +63,7 @@ describe('useUpdateShoppingList', () => {
     expect(readName(cache)).toBe('Weekly Run');
   });
 
-  it('restores the snapshot and throws the domain error on a rejection', async () => {
+  it('restores the snapshot and throws localized copy on a rejection', async () => {
     const cache = seedList();
     const { result } = renderHookWithApollo(
       () => useUpdateShoppingList('Failed to save'),
@@ -78,7 +79,7 @@ describe('useUpdateShoppingList', () => {
               data: {
                 updateShoppingList: {
                   __typename: 'ValidationError',
-                  code: 'VALIDATION_FAILED',
+                  code: ErrorCode.ValidationFailed,
                   message: 'Name too long',
                   field: 'name',
                 },
@@ -89,11 +90,17 @@ describe('useUpdateShoppingList', () => {
       },
     );
 
+    let thrown: unknown;
     await act(async () => {
-      await expect(
-        result.current.updateShoppingList('list-1', { name: 'x'.repeat(500) }),
-      ).rejects.toThrow('Name too long');
+      await result.current
+        .updateShoppingList('list-1', { name: 'x'.repeat(500) })
+        .catch((error: unknown) => {
+          thrown = error;
+        });
     });
+    // The caller's copy, never the server's English message.
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toBe('Failed to save');
 
     await waitFor(() => {
       expect(readName(cache)).toBe('Groceries');

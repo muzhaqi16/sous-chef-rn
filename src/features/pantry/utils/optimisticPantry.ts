@@ -43,6 +43,9 @@ const OptimisticPantryFragment = gql`
         refrigerated
         frozen
         ambient
+        # GetPantry selects none, and a field this fragment omits is dropped on
+        # write — leaving the pantry incomplete, which reads as no data at all.
+        none
       }
       storageLocationCounts {
         storageLocationId
@@ -55,12 +58,13 @@ const OptimisticPantryFragment = gql`
 `;
 
 /**
- * The no-args itemsConnection variant — `keyArgs: ['filters', 'orderBy']`, both
- * undefined on the default screen, so this writes the storeFieldName it reads.
+ * `keyArgs: ['filters', 'orderBy']` are both undefined on the default screen,
+ * but a selection with NO argument is a DIFFERENT store field from one with
+ * any argument — so this carries `first` to key where the screen reads.
  */
 const PantryEmptyItemsFragment = gql`
   fragment _PantryEmptyItems on Pantry {
-    itemsConnection {
+    itemsConnection(first: 50) {
       totalCount
       pageInfo {
         hasNextPage
@@ -211,7 +215,7 @@ export function addPantryToHomeCache(
       ) {
         if (!existingConnection) return existingConnection;
         const exists = (existingConnection.edges ?? []).some(
-          edge => readField('id', edge?.node) === pantry.id,
+          edge => readField('id', edge.node) === pantry.id,
         );
         if (exists) return existingConnection;
         const newPantryRef = toReference(pantry);
@@ -223,10 +227,11 @@ export function addPantryToHomeCache(
         };
         return {
           ...existingConnection,
-          edges: [...(existingConnection.edges || []), newEdge],
+          edges: [...(existingConnection.edges ?? []), newEdge],
           totalCount:
             (existingConnection.totalCount ??
-              (existingConnection.edges?.length || 0)) + 1,
+              existingConnection.edges?.length ??
+              0) + 1,
         };
       },
     },
@@ -260,7 +265,7 @@ export function removeOptimisticPantry(
         ) {
           if (!existingConnection) return existingConnection;
           const edges = (existingConnection.edges ?? []).filter(
-            edge => readField('id', edge?.node) !== pantryId,
+            edge => readField('id', edge.node) !== pantryId,
           );
           if (edges.length === (existingConnection.edges?.length ?? 0)) {
             return existingConnection;
@@ -310,7 +315,7 @@ export function restorePantryToHomeCache(
       ) {
         if (!existingConnection) return existingConnection;
         const edges = existingConnection.edges ?? [];
-        if (edges.some(edge => readField('id', edge?.node) === pantryId)) {
+        if (edges.some(edge => readField('id', edge.node) === pantryId)) {
           return existingConnection;
         }
         const node = toReference({ __typename: 'Pantry', id: pantryId });

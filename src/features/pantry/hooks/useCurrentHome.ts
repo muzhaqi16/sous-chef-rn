@@ -3,13 +3,6 @@ import { useSelectedHomeId, useIsHomeSelectionReady } from '#store/useAppStore';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 
-export type CurrentHomeNode = {
-  id: string;
-  name?: string;
-  pantriesConnection?: unknown;
-  myMembership?: unknown;
-};
-
 /**
  * Separate from `useCurrentPantry` so a home-only consumer does not also run its
  * pantry-resolution effect, which writes `selectedPantryId`. Reads `cache-only`:
@@ -28,7 +21,7 @@ export function useCurrentHome() {
   const homes = usePreservedNodes(homesData?.homes);
 
   const currentHome = isHomeSelectionReady
-    ? (homes.find(h => h.id === selectedHomeId) as CurrentHomeNode | undefined)
+    ? homes.find(h => h.id === selectedHomeId)
     : undefined;
 
   return {

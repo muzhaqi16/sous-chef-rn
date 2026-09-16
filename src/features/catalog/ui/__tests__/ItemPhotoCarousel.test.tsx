@@ -24,6 +24,7 @@ const photo = (
   variants: [
     {
       __typename: 'ItemImage',
+      id: 'image-1',
       url: 'https://cdn.example.com/front-512.jpg',
       kind: ImageKind.Size_512,
     },

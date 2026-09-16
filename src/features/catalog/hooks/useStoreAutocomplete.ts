@@ -1,3 +1,4 @@
+import { logger } from '#/utils/environment';
 import { useLazyQuery } from '@apollo/client/react';
 import { SearchStoresDocument } from '#operations/store/store.generated';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
@@ -25,11 +26,13 @@ export function useStoreAutocomplete() {
   const isOnline = useIsOnline();
 
   const search = (term: string) => {
-    searchStores({ variables: { search: term, limit: 20 } });
+    void searchStores({ variables: { search: term, limit: 20 } }).catch(error =>
+      logger.warn('Store autocomplete failed', error),
+    );
   };
 
   const getResults = (): StoreItem[] => {
-    const searchedStores = storesData?.stores?.edges?.map(e => e.node) || [];
+    const searchedStores = storesData?.stores.edges.map(e => e.node) ?? [];
     if (searchedStores.length === 0) return [];
     return searchedStores.map(store => ({
       id: store.id,

@@ -1,4 +1,4 @@
-import { RefObject } from 'react';
+import type { RefObject } from 'react';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 
 interface UseSelectorManagementOptions {

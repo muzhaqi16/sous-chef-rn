@@ -33,6 +33,7 @@ const biometryIcon = (type: string | null): string => {
     case 'Touch ID':
     case 'Fingerprint':
       return 'finger-print';
+    case null:
     default:
       return 'finger-print';
   }
@@ -90,7 +91,7 @@ export const useBiometricSetup = ({
   useEffect(() => {
     if (!active) return;
     let cancelled = false;
-    loadBiometricSnapshot(mode, userEmail).then(
+    void loadBiometricSnapshot(mode, userEmail).then(
       ({ info: probed, hasCredentials }) => {
         if (cancelled) return;
         setInfo(probed);
@@ -113,7 +114,7 @@ export const useBiometricSetup = ({
   const handleEnable = () => {
     if (isEnabling) return;
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         if (mode === 'settings' && hasExistingCredentials) {
           const credentials = await authService.loadStoredCredentials(

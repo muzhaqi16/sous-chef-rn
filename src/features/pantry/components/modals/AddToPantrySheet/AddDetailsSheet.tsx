@@ -1,34 +1,29 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useState, useRef } from 'react';
-import {
-  useForm,
-  useWatch,
-  type Resolver,
-  type Path,
-  type PathValue,
-} from 'react-hook-form';
+import { useForm, useWatch, type Path, type PathValue } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppPressable } from '#components/atoms/AppPressable';
 import PagerView from 'react-native-pager-view';
 import { StyleSheet } from 'react-native-unistyles';
 import { usePantryItemSubmission } from '#features/pantry/hooks/usePantryItemSubmission';
 import {
   StorageState,
-  ItemCondition,
-  AcquisitionMethod,
-  type StorageLocation,
+  type ItemCondition,
 } from '#/graphql/generated/schemaTypes';
+import type { OfferedAcquisitionMethod } from '#features/pantry/utils/itemEnumLabels';
+import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
 
 import { MainDetailsPage } from './MainDetailsPage';
 import { DetailsPage } from './DetailsPage';
 import { StoragePage } from './StoragePage';
 import { StockSettingsPage } from './StockSettingsPage';
-import { Text } from '#components/atoms/Text';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
+import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
 import { makeIdNameHandler } from '#components/organisms/makeIdNameHandler';
 import { logValidationErrors } from '#/utils/validation/common';
+import { isOwnKey } from '#utils/isOwnKey';
 import {
   addPantryItemSchema,
   addPantryItemDefaults,
@@ -39,106 +34,12 @@ import {
 interface AddDetailsSheetProps {
   pantryId: string | undefined;
   prefilledItemName?: string;
-  storageLocations?: StorageLocation[];
+  storageLocations?: readonly StorageLocationOption[];
   /** Return to the search step of the parent sheet (the "Back"/"Cancel" action). */
   onClose: () => void;
   /** Item was created — the parent closes the whole sheet. */
   onSuccess: () => void;
 }
-
-// Page Indicator Components
-function PageIndicatorItem({
-  label,
-  index,
-  isActive,
-  onPress,
-}: {
-  label: string;
-  index: number;
-  isActive: boolean;
-  onPress: () => void;
-}) {
-  indicatorStyles.useVariants({ active: isActive });
-  return (
-    <AppPressable
-      onPress={onPress}
-      // Indexed, not label-derived: the labels are translated, so a
-      // label-based matcher would pass in English and fail everywhere else.
-      // Without this the later pages of this sheet were unreachable from a
-      // test — the quantity field lives on the Stock page and is inside a
-      // PagerView, so it is UNMOUNTED until the page is selected, which Detox
-      // reports as "No elements found" rather than a visibility timeout.
-      testID={`add-pantry-item-page-${index}`}
-      style={indicatorStyles.item}
-    >
-      <View style={indicatorStyles.dot} />
-      <Text style={indicatorStyles.label}>{label}</Text>
-    </AppPressable>
-  );
-}
-
-const PageIndicator: React.FC<{
-  pages: readonly string[];
-  currentPage: number;
-  onPagePress: (index: number) => void;
-}> = ({ pages, currentPage, onPagePress }) => {
-  return (
-    <View style={indicatorStyles.container}>
-      {pages.map((label, index) => (
-        <PageIndicatorItem
-          key={label}
-          label={label}
-          index={index}
-          isActive={currentPage === index}
-          onPress={() => onPagePress(index)}
-        />
-      ))}
-    </View>
-  );
-};
-
-const indicatorStyles = StyleSheet.create(theme => ({
-  container: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: theme.spacing.xl,
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: theme.borderWidth.hairline,
-    borderBottomColor: theme.colors.border,
-    marginBottom: theme.spacing.md,
-  },
-  item: {
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.border,
-    variants: {
-      active: {
-        true: { backgroundColor: theme.colors.primary },
-      },
-    },
-  },
-  label: {
-    ...theme.type.caption,
-    fontWeight: '400',
-    color: theme.colors.textSecondary,
-    variants: {
-      active: {
-        true: {
-          color: theme.colors.primary,
-          fontWeight: '600',
-        },
-      },
-    },
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
 
 export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   pantryId,
@@ -171,9 +72,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     trigger,
     formState: { errors },
   } = useForm<AddPantryItemFormData>({
-    resolver: yupResolver(
-      addPantryItemSchema,
-    ) as Resolver<AddPantryItemFormData>,
+    resolver: yupResolver(addPantryItemSchema),
     defaultValues: addPantryItemDefaults(prefilledItemName),
     // Re-validates as the user edits, so a message retires on the keystroke
     // that fixes it rather than surviving until the next submit.
@@ -181,7 +80,10 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   });
 
   // Subscribed, because the pages render from these values.
-  const values = useWatch({ control }) as AddPantryItemFormData;
+  const values = useWatch({
+    control,
+    compute: (formValues: AddPantryItemFormData) => formValues,
+  });
   const {
     itemName,
     quantityInput,
@@ -277,7 +179,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const setStoreName = (v: string) => setField('storeName', v);
   const setStoreId = (v: string | null) => setField('storeId', v);
   const setCostPerUnit = (v: string) => setField('costPerUnit', v);
-  const setAcquisitionMethod = (v: AcquisitionMethod) =>
+  const setAcquisitionMethod = (v: OfferedAcquisitionMethod) =>
     setField('acquisitionMethod', v);
 
   // Store selection (PurchaseInfoInput stores by id; free text isn't sent)
@@ -296,19 +198,14 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     setWeightUnit,
   );
 
-  // Handle storage location selection
   const handleStorageLocationSelected = (
     locationId: string | null,
-    location: StorageLocation | null,
+    location: StorageLocationOption | null,
   ) => {
     setSelectedStorageLocationId(locationId);
-    // Auto-set storage state based on location temperature
-    if (location?.temperature) {
-      const temp = location.temperature.toLowerCase();
-      if (temp === 'frozen') setStorageState(StorageState.Frozen);
-      else if (temp === 'refrigerated')
-        setStorageState(StorageState.Refrigerated);
-      else setStorageState(StorageState.Ambient);
+    // `NONE` is "not applicable", so it leaves the chosen state alone.
+    if (location?.temperature && location.temperature !== StorageState.None) {
+      setStorageState(location.temperature);
     }
   };
 
@@ -357,7 +254,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   });
 
   return (
-    <View style={styles.container} testID="add-pantry-item-details-modal">
+    <View style={styles.container} testID={pantryTestIDs.addDetailsModal}>
       <BottomSheetHeader
         title={t('addToPantry.addItemDetails')}
         cancelLabel={t('labels.cancel')}
@@ -370,13 +267,17 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
         onConfirm={() => {
           void handleSubmit(handleConfirm, formErrors => {
             logValidationErrors(formErrors);
-            const firstField = Object.keys(formErrors)[0];
-            const page = FIELD_PAGE[firstField as keyof AddPantryItemFormData];
+            const [firstField] = Object.keys(formErrors);
+            if (firstField === undefined || !isOwnKey(FIELD_PAGE, firstField))
+              return;
+            const page = FIELD_PAGE[firstField];
             if (page !== undefined) handlePageChange(page);
           })();
         }}
         saving={loading}
-        confirmTestID="add-pantry-item-submit-button"
+        cancelTestID={pantryTestIDs.addDetailsCancelButton}
+        confirmTestID={pantryTestIDs.addDetailsSubmitButton}
+        titleTestID={pantryTestIDs.addDetailsTitle}
       />
 
       {/* Page Indicators */}
@@ -384,6 +285,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
         pages={pages}
         currentPage={currentPage}
         onPagePress={handlePageChange}
+        testIDFor={pantryTestIDs.addDetailsPage}
       />
 
       {/* Swipeable Pages */}

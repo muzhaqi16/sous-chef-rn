@@ -2,7 +2,13 @@ import {
   isPantryItemDuplicateError,
   getPantryItemDuplicateInfo,
   getPantryItemDuplicateFromResult,
+  promptPantryDuplicate,
 } from '#domain/pantryItemDuplicate';
+import { alertService } from '#/services/alertService';
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 const CODE = 'PANTRY_ITEM_ALREADY_EXISTS';
 
@@ -160,6 +166,33 @@ describe('pantryItemDuplicate', () => {
           undefined,
         ),
       ).toBeNull();
+    });
+  });
+
+  describe('promptPantryDuplicate', () => {
+    type Button = { text: string; style?: string; onPress?: () => void };
+    const buttons = (): Button[] =>
+      (alertService.alert as jest.Mock).mock.lastCall?.[2] ?? [];
+
+    it('offers Cancel and Restock, and nothing that adds a second stack', () => {
+      // A forced add lands on the stack already held in that unit, so a
+      // separate "add anyway" would offer restock twice under two names.
+      promptPantryDuplicate({ onRestock: jest.fn() });
+
+      expect(buttons().map(b => b.text)).toEqual(['Cancel', 'Restock']);
+    });
+
+    it('routes each button to its callback', () => {
+      const onRestock = jest.fn();
+      const onCancel = jest.fn();
+      promptPantryDuplicate({ onRestock, onCancel });
+
+      const [cancel, restock] = buttons();
+      restock?.onPress?.();
+      expect(onRestock).toHaveBeenCalledTimes(1);
+      expect(onCancel).not.toHaveBeenCalled();
+      cancel?.onPress?.();
+      expect(onCancel).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   VerifyEmailDocument,
@@ -90,11 +90,9 @@ jest.mock('#hooks/auth/useEmailVerification', () => ({
 }));
 
 jest.mock('#hooks/navigation/useAppNavigation');
-const mockNav = (
-  jest.requireMock('#hooks/navigation/useAppNavigation') as {
-    useAppNavigation: jest.Mock;
-  }
-).useAppNavigation();
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
 
 const mockNavigateToLogin = jest.fn();
 jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
@@ -208,7 +206,7 @@ jest.mock('#components/atoms/SousChefLoader', () => ({
 
 function buildResendMock(
   recordedVariables: Record<string, unknown>[],
-): MockedResponse {
+): MockFor<typeof ResendVerificationEmailDocument> {
   return {
     request: {
       query: ResendVerificationEmailDocument,
@@ -233,7 +231,7 @@ function buildResendMock(
 
 function buildVerifyMock(
   recordedVariables?: Record<string, unknown>[],
-): MockedResponse {
+): MockFor<typeof VerifyEmailDocument> {
   return {
     request: {
       query: VerifyEmailDocument,

@@ -105,12 +105,10 @@ describe('mmkv storage', () => {
       jest.resetModules();
       const { DeviceKeyManager } = jest.requireMock(
         '#/utils/security/deviceKey',
-      ) as { DeviceKeyManager: { getDeviceEncryptionKey: jest.Mock } };
+      );
       DeviceKeyManager.getDeviceEncryptionKey.mockReset();
       DeviceKeyManager.getDeviceEncryptionKey.mockImplementation(keyImpl);
-      const { createMMKV, existsMMKV } = jest.requireMock(
-        'react-native-mmkv',
-      ) as { createMMKV: jest.Mock; existsMMKV: jest.Mock };
+      const { createMMKV, existsMMKV } = jest.requireMock('react-native-mmkv');
       createMMKV.mockClear();
       existsMMKV.mockReset();
       existsMMKV.mockReturnValue(true);
@@ -121,6 +119,17 @@ describe('mmkv storage', () => {
         getKey: DeviceKeyManager.getDeviceEncryptionKey,
       };
     };
+
+    it('throws on synchronous access before initialization', () => {
+      const { mmkvModule, createMMKV } = loadIsolated(() =>
+        Promise.resolve({ key: 'a-key', encryptionType: 'AES-256' as const }),
+      );
+
+      expect(() => mmkvModule.storage.getString('any')).toThrow(
+        'Storage accessed before initialization (getString)',
+      );
+      expect(createMMKV).not.toHaveBeenCalled();
+    });
 
     it('quarantines to the recovery instance when the key never resolves — primary id is not opened keyless', async () => {
       jest.useFakeTimers();
@@ -192,15 +201,13 @@ describe('mmkv storage', () => {
       jest.resetModules();
       const { DeviceKeyManager } = jest.requireMock(
         '#/utils/security/deviceKey',
-      ) as { DeviceKeyManager: { getDeviceEncryptionKey: jest.Mock } };
+      );
       DeviceKeyManager.getDeviceEncryptionKey.mockReset();
       DeviceKeyManager.getDeviceEncryptionKey.mockResolvedValue({
         key: 'a-key',
         encryptionType: 'AES-256' as const,
       });
-      const { createMMKV, existsMMKV } = jest.requireMock(
-        'react-native-mmkv',
-      ) as { createMMKV: jest.Mock; existsMMKV: jest.Mock };
+      const { createMMKV, existsMMKV } = jest.requireMock('react-native-mmkv');
       createMMKV.mockClear();
       existsMMKV.mockReset();
       existsMMKV.mockReturnValue(true);

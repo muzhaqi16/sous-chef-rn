@@ -1,3 +1,5 @@
+import { firstNonBlank } from '#/utils/firstNonBlank';
+
 // 'image/jpg' is accepted from pickers (some Android providers report it) but
 // is NOT a valid upload mime — the API accepts only jpeg/png/webp. Normalize
 // via normalizeImageMimeType before sending to createImageUploadUrl.
@@ -34,7 +36,7 @@ export interface ImageValidationError extends Error {
  * `message` is LOG text, deliberately English — it goes to
  * `errorService.reportError` and must NEVER be displayed. `code` is the half
  * that maps to copy, via `imageErrorMessage` in `#hooks/useImageUpload`. A
- * display site reading `.message` is caught by the `.eslintrc.js` sink selector.
+ * display site reading `.message` is caught by `no-restricted-syntax`.
  */
 export const createImageValidationError = (
   message: string,
@@ -55,7 +57,8 @@ export const validateImageFile = (
   isProfile: boolean = false,
 ): void => {
   // Get the mime type from type or infer from fileName
-  const mimeType = file.type || inferMimeTypeFromFileName(file.fileName);
+  const mimeType =
+    firstNonBlank(file.type) ?? inferMimeTypeFromFileName(file.fileName);
 
   if (!mimeType || !ALLOWED_IMAGE_TYPES.includes(mimeType)) {
     throw createImageValidationError(
@@ -65,7 +68,8 @@ export const validateImageFile = (
   }
 
   // Get file size - react-native-image-picker uses fileSize, web uses size
-  const fileSize = file.fileSize || file.size;
+  // A zero `fileSize` is unreported rather than an empty file, so `size` decides.
+  const fileSize = file.fileSize === 0 ? file.size : file.fileSize ?? file.size;
   if (!fileSize) {
     throw createImageValidationError(
       'Unable to determine file size',
@@ -96,6 +100,7 @@ const inferMimeTypeFromFileName = (fileName?: string): string | null => {
       return 'image/png';
     case 'webp':
       return 'image/webp';
+    case undefined:
     default:
       return null;
   }
@@ -103,7 +108,7 @@ const inferMimeTypeFromFileName = (fileName?: string): string | null => {
 
 export const getMimeTypeFromUri = (uri: string): string => {
   const extension = uri.split('.').pop()?.toLowerCase();
-  return inferMimeTypeFromFileName(`file.${extension}`) || 'image/jpeg';
+  return inferMimeTypeFromFileName(`file.${extension}`) ?? 'image/jpeg';
 };
 
 /**
@@ -184,7 +189,8 @@ export const sniffImageMimeType = async (
     dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onerror = () => reject(reader.error);
-      reader.onloadend = () => resolve(String(reader.result ?? ''));
+      reader.onloadend = () =>
+        resolve(typeof reader.result === 'string' ? reader.result : '');
       reader.readAsDataURL(head);
     });
   } catch {

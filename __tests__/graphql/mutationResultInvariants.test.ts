@@ -1,13 +1,12 @@
 /**
- * Guard the two schema invariants `classifyCreateResult` derives its answer
- * from, plus the operation-shape rule that keeps refusals visible.
+ * Guard the two schema invariants `appliedPayload` and `settleMutation` derive
+ * their answer from, plus the operation-shape rule that keeps refusals visible.
  *
- * `src/apollo/utils/classifyCreateResult.ts` takes ONLY the mutation result. It
+ * `src/utils/errors/mutationPayload.ts` takes ONLY the mutation result. It
  * takes neither the payload field name nor the expected success `__typename` as
  * a string, because neither is checkable against the schema — and a stale one
- * fails in the worst direction, silently classifying every create as
- * `'rejected'` and reverting its optimistic write forever. Both facts are
- * derivable instead:
+ * fails in the worst direction, silently classifying every write as failed and
+ * reverting its optimistic change forever. Both facts are derivable instead:
  *
  *   1. WHICH FIELD holds the payload — every mutation operation selects exactly
  *      one top-level field, so it's the single non-`__typename` entry in `data`.
@@ -156,10 +155,10 @@ describe('mutation result invariants', () => {
     if (violations.length > 0) {
       throw new Error(
         `${violations.length} mutation result union(s) break the single-success-member rule.\n` +
-          `classifyCreateResult treats "__typename does not end in Error" as success, so a union ` +
+          `appliedPayload treats "__typename does not end in Error" as success, so a union ` +
           `with two payload members would classify the wrong one as the create's result, and one ` +
           `with none would classify every outcome as a refusal. Either restore the convention in ` +
-          `the API, or give classifyCreateResult an explicit success typename again for these:\n` +
+          `the API, or give appliedPayload an explicit success typename again for these:\n` +
           fmt(violations),
       );
     }
@@ -179,7 +178,7 @@ describe('mutation result invariants', () => {
     if (violations.length > 0) {
       throw new Error(
         `${violations.length} mutation operation(s) select more than one top-level field.\n` +
-          `classifyCreateResult locates the payload as the single non-__typename entry in ` +
+          `appliedPayload locates the payload as the single non-__typename entry in ` +
           `\`data\`; with two, it can't tell which one carries the outcome and reports 'queued'. ` +
           `Split these into separate operations:\n` + fmt(violations),
       );

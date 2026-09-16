@@ -1,4 +1,5 @@
-import React, { Component, ReactNode, useContext } from 'react';
+import type { ReactNode } from 'react';
+import React, { Component, useContext } from 'react';
 import { View } from 'react-native';
 import {
   SafeAreaInsetsContext,
@@ -10,11 +11,9 @@ import { Telemetry } from '#/services/telemetry';
 import { Text } from '#components/atoms/Text';
 import { logger } from '#/utils/environment';
 // Aliased, not `useTranslation`: this is the app's last-resort UI, rendered
-// precisely when something upstream has already thrown. It deliberately takes
-// no hook subscriptions it doesn't need, so it can still paint when app
-// context is broken. Every call below passes an English default, so it renders
-// readable text even if i18n never initialised. Language reactivity on a
-// terminal error screen is worth nothing against that.
+// precisely when something upstream has already thrown, so it takes no hook
+// subscriptions it doesn't need. i18n is initialised with bundled resources in
+// `index.js` before App loads, so the keys resolve here too.
 import { t as tGlobal } from '#/i18n';
 
 interface ErrorBoundaryState {
@@ -31,9 +30,9 @@ interface ErrorBoundaryProps {
 }
 
 // Top-level crash fallback — it can render with no providers above it, since
-// the boundary may have replaced SafeAreaProvider (and i18n may be the failure).
+// the boundary may have replaced SafeAreaProvider.
 // So read insets via SafeAreaInsetsContext (null-safe; useSafeAreaInsets() throws
-// without a provider) and use t() with literal fallbacks (never throws/suspends).
+// without a provider).
 const DefaultErrorFallback: React.FC<{
   error: Error;
   retry: () => void;
@@ -48,10 +47,10 @@ const DefaultErrorFallback: React.FC<{
         <Text
           role="subheading"
           align="center"
-          tone="error"
+          tone="danger"
           style={styles.title}
         >
-          {tGlobal('errors.boundary.title', 'Something went wrong')}
+          {tGlobal('errors.boundary.title')}
         </Text>
         <Text
           role="body"
@@ -60,12 +59,7 @@ const DefaultErrorFallback: React.FC<{
           tone="secondary"
           style={styles.message}
         >
-          {__DEV__
-            ? error.message
-            : tGlobal(
-                'errors.codes.unexpected',
-                'An unexpected error occurred',
-              )}
+          {__DEV__ ? error.message : tGlobal('errors.codes.unexpected')}
         </Text>
         {!!context && !!__DEV__ && (
           <Text
@@ -74,13 +68,13 @@ const DefaultErrorFallback: React.FC<{
             tone="tertiary"
             style={styles.context}
           >
-            {tGlobal('errors.boundary.contextPrefix', 'Context: ')}
+            {tGlobal('errors.boundary.contextPrefix')}
             {context}
           </Text>
         )}
         <AppPressable style={styles.retryButton} onPress={retry}>
           <Text role="bodyStrong" style={styles.retryButtonText}>
-            {tGlobal('auth.tryAgain', 'Try Again')}
+            {tGlobal('auth.tryAgain')}
           </Text>
         </AppPressable>
       </View>
@@ -105,7 +99,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     this.setState({
       error,
       errorInfo,
@@ -150,7 +144,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     });
   };
 
-  render() {
+  override render() {
     if (this.state.hasError && this.state.error) {
       if (this.props.fallback) {
         return this.props.fallback(this.state.error, this.retry);
@@ -226,19 +220,6 @@ export const AppErrorBoundary: React.FC<{ children: ReactNode }> = ({
     {children}
   </ErrorBoundary>
 );
-
-// Hook for programmatic error handling
-export const useErrorHandler = () => {
-  return (error: Error, context?: string) => {
-    logger.error(`Error in ${context || 'unknown context'}:`, error);
-
-    Telemetry.trackError(error, {
-      error_handler_context: context,
-      error_source: 'use_error_handler',
-      is_fatal: false,
-    });
-  };
-};
 
 const styles = StyleSheet.create(theme => ({
   container: {

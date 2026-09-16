@@ -1,7 +1,10 @@
-import { ApolloLink, HttpLink } from '@apollo/client';
+import type { ApolloLink } from '@apollo/client';
+import { HttpLink } from '@apollo/client';
 import { BatchHttpLink } from '@apollo/client/link/batch-http';
 import { env } from '#/config/env';
 import { Environment } from '#/utils/environment';
+import { TimeoutError } from '#/utils/errors/timeoutError';
+import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 
 /**
  * A fetch with timeout support. Apollo's HttpLink passes its own `signal`,
@@ -12,9 +15,11 @@ import { Environment } from '#/utils/environment';
 const createTimeoutFetch = (timeoutMs: number): typeof fetch => {
   return async (input, init) => {
     const controller = new AbortController();
-    let timedOut = false;
+    // A property, not a `let`: the timer callback writes it, and TS narrows a
+    // `let false` to `false` for the rest of the body.
+    const timeout = { fired: false };
     const timeoutId = setTimeout(() => {
-      timedOut = true;
+      timeout.fired = true;
       controller.abort();
     }, timeoutMs);
 
@@ -37,8 +42,16 @@ const createTimeoutFetch = (timeoutMs: number): typeof fetch => {
       return response;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        if (timedOut) throw new Error(`Request timeout after ${timeoutMs}ms`);
+        if (timeout.fired) {
+          throw new TimeoutError(
+            `Request timeout after ${timeoutMs}ms`,
+            timeoutMs,
+          );
+        }
         throw error; // cancelled by Apollo (query torn down), not a timeout
+      }
+      if (error instanceof TypeError) {
+        throw new NetworkRequestError(error.message);
       }
       throw error;
     } finally {
@@ -49,7 +62,7 @@ const createTimeoutFetch = (timeoutMs: number): typeof fetch => {
 
 const apiConfig = Environment.getApiConfig();
 const baseOptions = {
-  uri: env.API_URL || apiConfig.baseUrl,
+  uri: env.API_URL ?? apiConfig.baseUrl,
   headers: { 'Content-Type': 'application/json' },
   fetch: createTimeoutFetch(apiConfig.timeout),
 };

@@ -9,7 +9,7 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { findByKey } from '#/test-utils/findByKey';
+import { itemByKey } from '#/test-utils/itemByKey';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import type { RootState } from '#store/index';
 import { useConfigurableSettings } from '../useConfigurableSettings';
@@ -18,7 +18,7 @@ import { logger } from '#/utils/environment';
 // Shape of a single section entry in PROFILE_SETTINGS_CONFIG.
 interface ConfigSection {
   id: string;
-  titleKey: string;
+  titleKey?: string;
   items: SettingItem[];
 }
 
@@ -129,7 +129,6 @@ jest.mock('#/config/settingsConfig', () => ({
     },
     {
       id: 'logout',
-      titleKey: '',
       items: [
         { key: 'logout', labelKey: 'profile.labels.logout', type: 'action' },
       ],
@@ -261,7 +260,7 @@ describe('useConfigurableSettings', () => {
       result.current.sections,
       'appearanceAndLanguage',
     );
-    const appearanceItem = findByKey(appearanceSection.items, 'appearance');
+    const appearanceItem = itemByKey(appearanceSection.items, 'appearance');
 
     expect(appearanceItem).toBeDefined();
     expect(appearanceItem.type).toBe('navigation');
@@ -274,7 +273,7 @@ describe('useConfigurableSettings', () => {
     });
 
     const accountSection = sectionById(result.current.sections, 'logout');
-    const logoutItem = findByKey(accountSection.items, 'logout');
+    const logoutItem = itemByKey(accountSection.items, 'logout');
 
     act(() => {
       logoutItem.onPress?.();
@@ -292,7 +291,7 @@ describe('useConfigurableSettings', () => {
       operationMocks: [settings.mock],
     });
 
-    const logoutItem = findByKey(
+    const logoutItem = itemByKey(
       sectionById(result.current.sections, 'logout').items,
       'logout',
     );
@@ -308,8 +307,8 @@ describe('useConfigurableSettings', () => {
     const buttons = alertCalls[alertCalls.length - 1][2] as AlertButton[];
     const confirm = buttons.find(b => b.style === 'destructive');
 
-    await act(async () => {
-      await confirm?.onPress?.();
+    act(() => {
+      confirm?.onPress?.();
     });
 
     expect(mockLogout).toHaveBeenCalled();
@@ -325,7 +324,7 @@ describe('useConfigurableSettings', () => {
       operationMocks: [settings.mock],
     });
 
-    const logoutItem = findByKey(
+    const logoutItem = itemByKey(
       sectionById(result.current.sections, 'logout').items,
       'logout',
     );
@@ -346,7 +345,7 @@ describe('useConfigurableSettings', () => {
     });
 
     const securitySection = sectionById(result.current.sections, 'security');
-    const biometricItem = findByKey(
+    const biometricItem = itemByKey(
       securitySection.items,
       'biometricAuthentication',
     );
@@ -360,7 +359,7 @@ describe('useConfigurableSettings', () => {
     const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
       operationMocks: [settings.mock],
     });
-    const langItem = findByKey(
+    const langItem = itemByKey(
       sectionById(result.current.sections, 'appearanceAndLanguage').items,
       'language',
     );
@@ -374,7 +373,7 @@ describe('useConfigurableSettings', () => {
     const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
       operationMocks: [settings.mock],
     });
-    const langItem = findByKey(
+    const langItem = itemByKey(
       sectionById(result.current.sections, 'appearanceAndLanguage').items,
       'language',
     );
@@ -405,7 +404,7 @@ describe('useConfigurableSettings', () => {
     });
     rerender(undefined);
 
-    const biometricItem = findByKey(
+    const biometricItem = itemByKey(
       sectionById(result.current.sections, 'security').items,
       'biometricAuthentication',
     );
@@ -434,7 +433,7 @@ describe('useConfigurableSettings', () => {
     });
     rerender(undefined);
 
-    const biometricItem = findByKey(
+    const biometricItem = itemByKey(
       sectionById(result.current.sections, 'security').items,
       'biometricAuthentication',
     );
@@ -443,17 +442,17 @@ describe('useConfigurableSettings', () => {
   });
 
   it('biometric loading state shows checking message', () => {
-    // The initial biometricLoading is true when user has email
+    // A signed-in account starts by reading the keychain.
     const { settings } = buildMocks();
     const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
       operationMocks: [settings.mock],
     });
-    const biometricItem = findByKey(
+    const biometricItem = itemByKey(
       sectionById(result.current.sections, 'security').items,
       'biometricAuthentication',
     );
-    // biometricLoading starts as true when user?.email is set
     expect(biometricItem.disabled).toBe(true);
+    expect(biometricItem.subtitle).toBe('Checking availability...');
   });
 
   it('biometric shows wasDeclined subtitle when permanently declined', async () => {
@@ -474,19 +473,11 @@ describe('useConfigurableSettings', () => {
       await new Promise(resolve => setTimeout(resolve, 0));
     });
 
-    const biometricItem = findByKey(
+    const biometricItem = itemByKey(
       sectionById(result.current.sections, 'security').items,
       'biometricAuthentication',
     );
     expect(biometricItem.subtitle).toContain('Tap to enable');
-  });
-
-  it('returns biometricLoading state', () => {
-    const { settings } = buildMocks();
-    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
-      operationMocks: [settings.mock],
-    });
-    expect(typeof result.current.biometricLoading).toBe('boolean');
   });
 
   describe('navigation items', () => {
@@ -544,65 +535,6 @@ describe('useConfigurableSettings', () => {
     });
   });
 
-  describe('testID assignments', () => {
-    it('assigns correct testIDs to navigation items', () => {
-      const { PROFILE_SETTINGS_CONFIG } = require('#/config/settingsConfig');
-      const original = [...PROFILE_SETTINGS_CONFIG];
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      PROFILE_SETTINGS_CONFIG.push({
-        title: 'Nav',
-        items: [
-          { key: 'personalInformation', label: 'PI', type: 'navigation' },
-          { key: 'notifications', label: 'N', type: 'navigation' },
-          { key: 'dietaryProfile', label: 'DP', type: 'navigation' },
-          { key: 'appSettings', label: 'AS', type: 'navigation' },
-          { key: 'debugInfo', label: 'DI', type: 'navigation' },
-          { key: 'performanceDashboard', label: 'PD', type: 'navigation' },
-          { key: 'logout', label: 'Logout', type: 'action' },
-          { key: 'privacy', label: 'Privacy', type: 'navigation' },
-          { key: 'help', label: 'Help', type: 'navigation' },
-          { key: 'about', label: 'About', type: 'navigation' },
-          { key: 'feedback', label: 'Feedback', type: 'navigation' },
-        ],
-      });
-
-      const { settings } = buildMocks();
-      const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
-        operationMocks: [settings.mock],
-      });
-      const items = result.current.sections[0]!.items;
-
-      expect(findByKey(items, 'personalInformation').testID).toBe(
-        'profile-menu-personalInformation',
-      );
-      expect(findByKey(items, 'notifications').testID).toBe(
-        'profile-menu-notifications',
-      );
-      expect(findByKey(items, 'dietaryProfile').testID).toBe(
-        'profile-menu-dietaryProfile',
-      );
-      expect(findByKey(items, 'appSettings').testID).toBe(
-        'profile-menu-appSettings',
-      );
-      expect(findByKey(items, 'debugInfo').testID).toBe(
-        'profile-menu-debugInfo',
-      );
-      expect(findByKey(items, 'performanceDashboard').testID).toBe(
-        'profile-menu-performanceDashboard',
-      );
-      expect(findByKey(items, 'logout').testID).toBe('profile-logout-button');
-      expect(findByKey(items, 'privacy').testID).toBe('profile-menu-privacy');
-      expect(findByKey(items, 'help').testID).toBe('profile-menu-help');
-      expect(findByKey(items, 'about').testID).toBe('profile-menu-about');
-      expect(findByKey(items, 'feedback').testID).toBe('profile-menu-feedback');
-
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: ConfigSection) =>
-        PROFILE_SETTINGS_CONFIG.push(item),
-      );
-    });
-  });
-
   describe('default/unknown config key', () => {
     it('logs warning for unhandled setting key', () => {
       const { PROFILE_SETTINGS_CONFIG } = require('#/config/settingsConfig');
@@ -610,7 +542,6 @@ describe('useConfigurableSettings', () => {
       PROFILE_SETTINGS_CONFIG.length = 0;
       PROFILE_SETTINGS_CONFIG.push({
         id: 'unknown',
-        titleKey: '',
         items: [
           { key: 'unknownKey', labelKey: 'labels.unknown', type: 'text' },
         ],
@@ -647,13 +578,13 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      const biometricItem = findByKey(
+      const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
 
       await act(async () => {
-        await biometricItem.onPress?.();
+        biometricItem.onPress?.();
       });
 
       // Should not show modal or alert
@@ -675,13 +606,13 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      const biometricItem = findByKey(
+      const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
 
       await act(async () => {
-        await biometricItem.onPress?.();
+        biometricItem.onPress?.();
       });
 
       // The modal state should be set (no alert, but modal opened)
@@ -703,13 +634,13 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      const biometricItem = findByKey(
+      const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
 
       await act(async () => {
-        await biometricItem.onPress?.();
+        biometricItem.onPress?.();
       });
 
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -734,13 +665,13 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      const biometricItem = findByKey(
+      const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
 
       await act(async () => {
-        await biometricItem.onPress?.();
+        biometricItem.onPress?.();
       });
 
       // Get the 'Disable' button from the alert
@@ -749,8 +680,10 @@ describe('useConfigurableSettings', () => {
       const buttons = lastCall[2] as AlertButton[];
       const disableButton = buttons.find(b => b.text === 'Disable');
 
+      // The button starts the disable and returns; one tick lets it settle.
       await act(async () => {
-        await disableButton?.onPress?.();
+        disableButton?.onPress?.();
+        await new Promise(resolve => setTimeout(resolve, 0));
       });
 
       expect(mockRemoveCredentials).toHaveBeenCalledWith('test@example.com');
@@ -775,12 +708,12 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      const biometricItem = findByKey(
+      const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
       await act(async () => {
-        await biometricItem.onPress?.();
+        biometricItem.onPress?.();
       });
 
       const alertCalls = (alertService.alert as jest.Mock).mock.calls;
@@ -788,14 +721,15 @@ describe('useConfigurableSettings', () => {
       (alertService.alert as jest.Mock).mockClear();
 
       await act(async () => {
-        await buttons.find(button => button.text === 'Disable')?.onPress?.();
+        buttons.find(button => button.text === 'Disable')?.onPress?.();
+        await new Promise(resolve => setTimeout(resolve, 0));
       });
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
         expect.any(String),
       );
-      const stillOn = findByKey(
+      const stillOn = itemByKey(
         sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
@@ -817,7 +751,7 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      const biometricItem = findByKey(
+      const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
@@ -851,7 +785,11 @@ describe('useConfigurableSettings', () => {
       const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
         operationMocks: [settings.mock],
       });
-      expect(result.current.biometricLoading).toBe(false);
+      const biometricItem = itemByKey(
+        sectionById(result.current.sections, 'security').items,
+        'biometricAuthentication',
+      );
+      expect(biometricItem.subtitle).toBe('Not available on this device');
 
       // Restore mock
       storeModule.useAppStore.mockImplementation(
@@ -896,12 +834,12 @@ describe('useConfigurableSettings', () => {
       });
 
       // Trigger the modal open
-      const biometricItem = findByKey(
+      const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
       await act(async () => {
-        await biometricItem.onPress?.();
+        biometricItem.onPress?.();
       });
 
       // Simulate BiometricSetupModal completing with enabled = true
@@ -957,16 +895,15 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      expect(result.current.biometricLoading).toBe(false);
-
       // An unreadable keychain must not present biometrics as set up. The row
       // is the observable surface: off, and not togglable.
-      const biometricItem = findByKey(
+      const biometricItem = itemByKey(
         result.current.sections.flatMap(section => section.items),
         'biometricAuthentication',
       );
       expect(biometricItem.value).toBe(false);
       expect(biometricItem.disabled).toBe(true);
+      expect(biometricItem.subtitle).toBe('Not available on this device');
     });
   });
 });

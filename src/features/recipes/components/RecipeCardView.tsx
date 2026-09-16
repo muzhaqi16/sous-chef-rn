@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -16,7 +16,7 @@ export interface RecipeCardAction {
   icon: React.ComponentProps<typeof Icon>['name'];
   tone: React.ComponentProps<typeof Icon>['tone'];
   /** i18n key for the accessibility label, resolved here. */
-  labelKey: string;
+  labelKey: TranslationKey;
   onPress: () => void;
 }
 

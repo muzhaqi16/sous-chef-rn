@@ -6,15 +6,10 @@ import { SavedRecipeFoldersDocument } from '#features/recipes/graphql/recipe.gen
  * Uses the dedicated savedRecipeFolders query for efficiency
  */
 export function useRecipeFolders() {
-  const { data, loading, error, refetch } = useQuery(
-    SavedRecipeFoldersDocument,
-    {},
-  );
+  const { data, refetch } = useQuery(SavedRecipeFoldersDocument, {});
 
   return {
     folders: data?.savedRecipeFolders ?? [],
-    loading,
-    error,
     refetch,
   };
 }

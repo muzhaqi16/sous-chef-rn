@@ -1,4 +1,5 @@
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
+import type { TranslationKey } from '#/i18n';
 import type { IconName } from '#utils/iconUtils';
 
 /**
@@ -7,10 +8,10 @@ import type { IconName } from '#utils/iconUtils';
  * visibly wrong string rather than a silently English one.
  */
 export interface RoleInfo {
-  labelKey: string;
-  descriptionKey: string;
+  labelKey: TranslationKey;
+  descriptionKey: TranslationKey;
   icon: IconName;
-  permissions: Array<{ labelKey: string; granted: boolean }>;
+  permissions: Array<{ labelKey: TranslationKey; granted: boolean }>;
 }
 
 export const ROLE_PERMISSIONS: Record<CollaboratorRole, RoleInfo> = {

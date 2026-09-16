@@ -55,28 +55,18 @@ describe('HomeTabs', () => {
     );
   });
 
-  it('labels each tab with its manifest i18n key', () => {
-    const titles = Object.fromEntries(
-      Object.entries(screens()).map(([name, config]) => [
-        name,
-        config.options?.title,
-      ]),
-    );
-    expect(titles).toEqual(
-      Object.fromEntries(
-        TAB_FEATURES.map(f => [f.tab.screenName, f.tab.titleKey]),
-      ),
-    );
-  });
-
-  // The tab bar gets its icons and reset-to-root targets from here, so a
+  // The tab bar gets its icons, labels and reset-to-root targets from here, so a
   // manifest that forgets one would silently render a `help-circle` tab.
   it('derives tab appearance from every tab feature', () => {
     expect(TAB_APPEARANCE).toEqual(
       Object.fromEntries(
         TAB_FEATURES.map(f => [
           f.tab.screenName,
-          { icon: f.tab.icon, mainScreen: f.tab.mainScreen },
+          {
+            icon: f.tab.icon,
+            mainScreen: f.tab.mainScreen,
+            titleKey: f.tab.titleKey,
+          },
         ]),
       ),
     );

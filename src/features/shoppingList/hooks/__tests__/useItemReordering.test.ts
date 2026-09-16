@@ -5,8 +5,13 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { handleMutationError } from '#/utils/errorHandlers';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { alertService } from '#/services/alertService';
 import { useItemReordering } from '../useItemReordering';
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 const mockGenerateKeyBetween = jest.fn<string, [string | null, string | null]>(
   () => 'bbb',
@@ -14,14 +19,6 @@ const mockGenerateKeyBetween = jest.fn<string, [string | null, string | null]>(
 jest.mock('fractional-indexing', () => ({
   generateKeyBetween: (a: string | null, b: string | null) =>
     mockGenerateKeyBetween(a, b),
-}));
-
-jest.mock('#/utils/errorHandlers', () => ({
-  handleMutationError: jest.fn(),
-  versionConflictCheck: jest.fn(() => ({
-    detect: jest.fn(),
-    handle: jest.fn(),
-  })),
 }));
 
 jest.mock('#/utils/finallyHelpers');
@@ -48,7 +45,7 @@ function moveMock() {
   return recordMock(MoveShoppingListItemDocument, {
     data: {
       moveShoppingListItem: {
-        __typename: 'MoveShoppingListItemPayload' as const,
+        __typename: 'MoveShoppingListItemPayload',
         shoppingListItem: {
           __typename: 'ShoppingListItem',
           id: 'item-2',
@@ -195,13 +192,103 @@ describe('useItemReordering', () => {
       await result.current.handleSortOrderUpdate('item-2', 'item-1', 'item-3');
     });
 
-    expect(handleMutationError).toHaveBeenCalledWith(
-      expect.any(Error),
-      expect.objectContaining({
-        operation: 'Move Item',
-        checks: expect.any(Array),
-      }),
-    );
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
     expect(refetch).toHaveBeenCalled();
+  });
+
+  describe('a move queued offline', () => {
+    afterEach(() => optimisticDataPersistence.clearAll());
+
+    it('keeps the persisted sortOrder, with no refetch and no alert', async () => {
+      const refetch = jest.fn();
+      const queued = recordMock(MoveShoppingListItemDocument, {
+        data: { moveShoppingListItem: null },
+      });
+      const { result } = renderHookWithApollo(
+        () => useItemReordering({ listId: 'list-1', items, refetch }),
+        { operationMocks: [queued.mock] },
+      );
+
+      await act(async () => {
+        await result.current.handleSortOrderUpdate(
+          'item-2',
+          'item-1',
+          'item-3',
+        );
+      });
+      optimisticDataPersistence.flush();
+
+      expect(queued.fired).toHaveLength(1);
+      expect(
+        optimisticDataPersistence.get('ShoppingListItem', 'item-2'),
+      ).toEqual({ sortOrder: 'bbb' });
+      expect(refetch).not.toHaveBeenCalled();
+      expect(alertService.alert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a move that does not take effect', () => {
+    let clearPersisted: jest.SpyInstance;
+
+    beforeEach(() => {
+      clearPersisted = jest.spyOn(optimisticDataPersistence, 'clear');
+    });
+    afterEach(() => clearPersisted.mockRestore());
+
+    it('restores the server order and says so when the move is refused', async () => {
+      // A refusal resolves as data: the row would sit in its unsaved position
+      // with the hook logging it as a server update.
+      const refetch = jest.fn();
+      const refused = recordMock(MoveShoppingListItemDocument, {
+        data: { moveShoppingListItem: { __typename: 'ForbiddenError' } },
+      });
+      const { result } = renderHookWithApollo(
+        () => useItemReordering({ listId: 'list-1', items, refetch }),
+        { operationMocks: [refused.mock] },
+      );
+
+      await act(async () => {
+        await result.current.handleSortOrderUpdate(
+          'item-2',
+          'item-1',
+          'item-3',
+        );
+      });
+
+      expect(refetch).toHaveBeenCalledTimes(1);
+      expect(alertService.alert).toHaveBeenCalledTimes(1);
+      expect(clearPersisted).toHaveBeenCalledWith(
+        'ShoppingListItem',
+        'item-2',
+        'sortOrder',
+      );
+    });
+
+    it('restores the server order when the move fails', async () => {
+      const refetch = jest.fn();
+      const failed = recordMock(MoveShoppingListItemDocument, {
+        error: new Error('socket closed'),
+      });
+      const { result } = renderHookWithApollo(
+        () => useItemReordering({ listId: 'list-1', items, refetch }),
+        { operationMocks: [failed.mock] },
+      );
+
+      await act(async () => {
+        await result.current.handleSortOrderUpdate(
+          'item-2',
+          'item-1',
+          'item-3',
+        );
+      });
+
+      expect(refetch).toHaveBeenCalledTimes(1);
+      expect(alertService.alert).toHaveBeenCalledTimes(1);
+      expect(clearPersisted).toHaveBeenCalledWith(
+        'ShoppingListItem',
+        'item-2',
+        'sortOrder',
+      );
+    });
   });
 });

@@ -5,9 +5,9 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { MealPlanItemCard } from './MealPlanItemCard';
 import { Text } from '#components/atoms/Text';
-import { type MealType } from '#/graphql/generated/schemaTypes';
-import { type MealPlanItemCard_ItemFragment } from './MealPlanItemCard.generated';
-import { type SwipeableRef } from '#components/organisms/SwipeableItem/types';
+import type { MealType } from '#/graphql/generated/schemaTypes';
+import type { MealPlanItemCard_ItemFragment } from './MealPlanItemCard.generated';
+import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 import { useTranslation } from '#/i18n';
 
 interface MealTypeSectionProps {

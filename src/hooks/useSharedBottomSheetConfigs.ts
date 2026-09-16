@@ -1,4 +1,5 @@
 import { useBottomSheetSpringConfigs } from '@gorhom/bottom-sheet';
+import { motion } from '#/theme/foundations/motion';
 
 /**
  * Shared animation configuration for all bottom sheet modals.
@@ -6,8 +7,7 @@ import { useBottomSheetSpringConfigs } from '@gorhom/bottom-sheet';
  */
 export const useSharedBottomSheetConfigs = () => {
   return useBottomSheetSpringConfigs({
-    damping: 20,
+    ...motion.spring.EXPAND,
     overshootClamping: true,
-    stiffness: 200,
   });
 };

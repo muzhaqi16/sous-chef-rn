@@ -1,5 +1,6 @@
 import { act, waitFor } from '@testing-library/react-native';
 
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   type MockedResponse,
@@ -194,7 +195,7 @@ function makeLocalRecipeNode(overrides: Record<string, unknown> = {}) {
 
 function searchRecipesMockWith(
   nodes: Record<string, unknown>[],
-): MockedResponse {
+): MockFor<typeof SearchRecipesDocument> {
   return {
     request: { query: SearchRecipesDocument, variables: () => true },
     maxUsageCount: Number.POSITIVE_INFINITY,
@@ -235,7 +236,7 @@ function searchRecipesPageMock(opts: {
   hasNextPage: boolean;
   endCursor: string | null;
   fired?: Record<string, unknown>[];
-}): MockedResponse {
+}): MockFor<typeof SearchRecipesDocument> {
   return {
     request: {
       query: SearchRecipesDocument,
@@ -310,7 +311,6 @@ describe('useRecipeScreen', () => {
   it('exposes initial state shape', () => {
     const { result } = renderRecipeScreen();
 
-    expect(result.current.userId).toBe('user-123');
     expect(result.current.searchQuery).toBe('');
     expect(result.current.searchResults).toEqual([]);
     expect(result.current.searchPerformed).toBe(false);
@@ -378,32 +378,6 @@ describe('useRecipeScreen', () => {
 
     // Contradictory second lifestyle diet dropped; constraint stacked on.
     expect(result.current.activeFilters.diet).toEqual(['vegan', 'gluten free']);
-  });
-
-  it('clearFilters resets active filters to defaults', () => {
-    mockUseDietaryProfile.mockReturnValue({
-      profile: {
-        restrictions: [{ id: 'r1', diet: 'VEGAN' }],
-        maxCookTimeMinutes: 30,
-      },
-      loading: false,
-    });
-
-    const { result } = renderRecipeScreen();
-
-    expect(result.current.activeFilterCount).toBe(2);
-
-    act(() => {
-      result.current.clearFilters();
-    });
-
-    expect(result.current.activeFilterCount).toBe(0);
-    expect(result.current.activeFilters).toEqual({
-      diet: [],
-      intolerances: [],
-      mealType: null,
-      maxReadyTime: null,
-    });
   });
 
   it('toggleIngredient adds and removes ingredients from the selection', () => {
@@ -1176,6 +1150,37 @@ describe('useRecipeScreen', () => {
       expect(secondCall.intolerances).toBeUndefined();
       expect(secondCall.maxReadyTime).toBeUndefined();
       expect(result.current.activeFilterCount).toBe(0);
+    });
+
+    it('applyFilters commits the sheet draft and re-runs the active search', async () => {
+      mockUseDietaryProfile.mockReturnValue(veganProfile);
+      mockSearchRecipes.mockResolvedValue(sampleTextSearchResponse);
+
+      const { result } = renderRecipeScreen();
+
+      await act(async () => {
+        await result.current.handleTextSearch('pasta');
+      });
+
+      await act(async () => {
+        result.current.applyFilters({
+          diet: [],
+          intolerances: [],
+          mealType: null,
+          maxReadyTime: 15,
+        });
+      });
+
+      await waitFor(() => {
+        expect(mockSearchRecipes).toHaveBeenCalledTimes(2);
+      });
+      const secondCall = mockSearchRecipes.mock.calls[1][0] as Record<
+        string,
+        unknown
+      >;
+      expect(secondCall.diet).toBeUndefined();
+      expect(secondCall.maxReadyTime).toBe(15);
+      expect(result.current.activeFilterCount).toBe(1);
     });
 
     it('does not re-run a search when filters change before any search', async () => {

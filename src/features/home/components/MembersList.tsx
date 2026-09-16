@@ -7,48 +7,33 @@ import { formatRole } from '#/utils/formatters/roleFormatters';
 import {
   formatInviteStatus,
   getInviteDisplayName,
+  getInviteStatusKey,
+  INVITE_STATUS_TONE,
 } from '#features/home/utils/inviteFormatters';
 import {
   getMemberDisplayName,
   type Member,
 } from '#/utils/formatters/memberFormatters';
 import { Text } from '#components/atoms/Text';
+import type { MembershipRole } from '#/graphql/generated/schemaTypes';
+import type { HomeCard_HomeFragment } from './HomeCard.generated';
 
-interface ListInvite {
-  id: string;
-  email: string | null;
-  recipientName: string | null;
-  status: string;
-}
-
-type StatusKey = 'pending' | 'accepted' | 'declined' | 'expired';
-
-function getStatusKey(status: string): StatusKey {
-  switch (status) {
-    case 'PENDING':
-      return 'pending';
-    case 'ACCEPTED':
-      return 'accepted';
-    case 'DECLINED':
-      return 'declined';
-    case 'EXPIRED':
-    case 'REVOKED':
-    default:
-      return 'expired';
-  }
-}
+type ListInvite =
+  HomeCard_HomeFragment['invitesConnection']['edges'][number]['node'];
 
 const InviteChip: React.FC<{ invite: ListInvite }> = ({ invite }) => {
-  const statusKey = getStatusKey(invite.status);
-  const displayName = getInviteDisplayName(invite);
+  const { t } = useTranslation();
+  const statusKey = getInviteStatusKey(invite.status);
+  const displayName = getInviteDisplayName(invite, t);
+  const tone = INVITE_STATUS_TONE[invite.status];
   styles.useVariants({ status: statusKey });
   return (
     <View style={styles.inviteChip}>
-      <Text role="bodyStrong" style={styles.inviteChipText}>
+      <Text role="bodyStrong" tone={tone}>
         {displayName}
       </Text>
-      <Text role="bodyStrong" style={styles.inviteStatus}>
-        {formatInviteStatus(invite.status)}
+      <Text role="bodyStrong" tone={tone} align="center">
+        {formatInviteStatus(invite.status, t)}
       </Text>
     </View>
   );
@@ -56,7 +41,7 @@ const InviteChip: React.FC<{ invite: ListInvite }> = ({ invite }) => {
 
 const MemberChip: React.FC<{
   displayName: string;
-  role: string;
+  role: MembershipRole;
   isCurrentUser: boolean;
 }> = ({ displayName, role, isCurrentUser }) => {
   styles.useVariants({ currentUser: isCurrentUser });
@@ -84,14 +69,10 @@ export const MembersList: React.FC<MembersListProps> = ({
   const { t } = useTranslation();
   const currentUser = useUser();
 
-  // API now only returns pending invites, so no client-side filtering needed
+  // The API returns only pending invites.
   const pendingInvites = invites;
 
-  if (
-    (!members || members.length === 0) &&
-    (!pendingInvites || pendingInvites.length === 0)
-  )
-    return null;
+  if (members.length === 0 && pendingInvites.length === 0) return null;
 
   return (
     <View style={styles.membersSection}>
@@ -192,27 +173,6 @@ const styles = StyleSheet.create(theme => ({
         accepted: { borderColor: theme.colors.status.accepted },
         declined: { borderColor: theme.colors.status.declined },
         expired: { borderColor: theme.colors.status.expired },
-      },
-    },
-  },
-  inviteChipText: {
-    variants: {
-      status: {
-        pending: { color: theme.colors.status.pending },
-        accepted: { color: theme.colors.status.accepted },
-        declined: { color: theme.colors.status.declined },
-        expired: { color: theme.colors.status.expired },
-      },
-    },
-  },
-  inviteStatus: {
-    textAlign: 'center',
-    variants: {
-      status: {
-        pending: { color: theme.colors.status.pending },
-        accepted: { color: theme.colors.status.accepted },
-        declined: { color: theme.colors.status.declined },
-        expired: { color: theme.colors.status.expired },
       },
     },
   },

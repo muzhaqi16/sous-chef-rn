@@ -1,5 +1,7 @@
 import React from 'react';
-import { TextInputProps, View, ViewStyle } from 'react-native';
+import type { TextInputProps, ViewStyle } from 'react-native';
+import { View } from 'react-native';
+import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import {
@@ -42,14 +44,17 @@ export const FormInput: React.FC<FormInputProps> = ({
 
   styles.useVariants({ error: !!error, hasTrailing: !!trailing });
 
-  // Generate accessibility label with required indicator if needed
-  const inputLabel = accessibilityLabel || label;
-  const fullLabel = required ? `${inputLabel}, required` : inputLabel;
-  const fullHint = error
-    ? `${accessibilityHint || ''}${
-        accessibilityHint ? '. ' : ''
-      }Error: ${error}`
-    : accessibilityHint;
+  const { t } = useTranslation();
+  const inputLabel = accessibilityLabel ?? label;
+  const fullLabel =
+    required && inputLabel
+      ? t('a11y.requiredField', { label: inputLabel })
+      : inputLabel;
+  const errorHint = error ? t('a11y.fieldError', { error }) : undefined;
+  const fullHint =
+    accessibilityHint && errorHint
+      ? t('a11y.hintWithError', { hint: accessibilityHint, error: errorHint })
+      : errorHint ?? accessibilityHint;
 
   return (
     <FormFieldWrapper
@@ -94,7 +99,7 @@ const styles = StyleSheet.create(theme => ({
         true: { borderColor: theme.colors.error },
       },
       hasTrailing: {
-        true: { paddingRight: 52 },
+        true: { paddingRight: theme.sizes.button.md + theme.spacing.sm },
       },
     },
   },

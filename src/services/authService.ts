@@ -16,7 +16,7 @@ import { useStore } from '#store';
 import { runSessionTeardown } from '#store/sessionTeardown';
 import { logger } from '#/utils/environment';
 import { isDeadCredentialCode } from '#/utils/authErrorCodes';
-import { isSuccessPayload } from '#/utils/errors/mutationPayload';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { incrementLoginCount } from '#/hooks/useFeatureHint';
 import { UpdateAccountDocument } from '#operations/auth/user.generated';
 import {
@@ -36,19 +36,18 @@ import {
   LoginUserFragmentDoc,
   type LoginUserFragment,
 } from '#operations/auth/userFragments.generated';
-import {} from '#operations/auth/device.generated';
-import {
-  type LoginInput,
-  type RegisterInput,
+import type {
+  LoginInput,
+  RegisterInput,
 } from '#/graphql/generated/schemaTypes';
-import {} from '#/services/push/pushTokenProvider';
 import {
   hasCredentials,
   getBiometricCapability,
   getLastBiometricEmail,
 } from '#/storage/keychain';
 import { t } from '#/i18n';
-import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { registerDeviceInBackground } from '#/services/auth/deviceRegistration';
 import {
   checkStoredCredentials,
@@ -65,7 +64,7 @@ import {
 function bootstrapUserStore(user: LoginUserFragment): void {
   const storeState = useStore.getState();
   if (user.defaultHomeId) {
-    const pantries = user.defaultHome?.pantriesConnection?.edges;
+    const pantries = user.defaultHome?.pantriesConnection.edges;
     const defaultPantry =
       pantries?.find(e => e.node.isDefault)?.node ?? pantries?.[0]?.node;
     const pantryId = defaultPantry?.id ?? null;
@@ -130,7 +129,7 @@ async function applyRegionCurrencyDefault(
     return;
   }
 
-  if (result.data?.updateAccount?.__typename === 'UpdateAccountPayload') {
+  if (appliedPayload(result.data)) {
     store.setUserNavigationState(user.id, { currencyDefaultApplied: true });
     return;
   }
@@ -144,14 +143,10 @@ async function applyRegionCurrencyDefault(
 
 // --- User preferences helpers (direct Zustand access) ---
 
-function getUserPreferences(userId?: string) {
+function getUserPreferences(targetUserId: string) {
   const store = useStore.getState();
-  const targetUserId = userId || store.user?.id;
-  if (!targetUserId) return null;
 
   return {
-    userId: targetUserId,
-    navState: store.getUserNavigationState(targetUserId),
     shouldShowCredentialPrompt: () => {
       const navState = store.getUserNavigationState(targetUserId);
       return !navState?.credentialPromptDeclined;
@@ -159,12 +154,6 @@ function getUserPreferences(userId?: string) {
     trackCredentialPromptShown: () => {
       store.setUserNavigationState(targetUserId, {
         lastCredentialPromptShown: Date.now(),
-      });
-    },
-    clearRegistrationPreferences: () => {
-      store.setUserNavigationState(targetUserId, {
-        credentialPromptDeclined: false,
-        biometricDeclinedPermanently: false,
       });
     },
     trackLogout: () => {
@@ -207,6 +196,13 @@ function unmaskAuthPayload<
 
 // --- Core auth operations ---
 
+// `handleApolloError` reports the code as a plain string, so membership is
+// tested against the enum members read as strings.
+const AUTH_CLEARING_CODES: ReadonlySet<string> = new Set([
+  ErrorCode.AuthTokenExpired,
+  ErrorCode.AuthRefreshTokenInvalid,
+]);
+
 function handleAuthError(error: unknown, operation = 'Authentication'): void {
   try {
     const { message, code, isAuthError } = errorService.handleApolloError(
@@ -222,11 +218,7 @@ function handleAuthError(error: unknown, operation = 'Authentication'): void {
     // `clearAuth`, deliberately NOT `endSession` as the link layer does for the
     // same codes: this is a refused attempt to START a session, so a full reset
     // would drop selected-entity ids (breaking verification resume) for nothing.
-    if (
-      isAuthError &&
-      (code === ErrorCode.AuthTokenExpired ||
-        code === ErrorCode.AuthRefreshTokenInvalid)
-    ) {
+    if (isAuthError && AUTH_CLEARING_CODES.has(code)) {
       useStore.getState().clearAuth();
     }
   } catch {
@@ -265,8 +257,6 @@ async function handleLogin(
   loginCredentials?: { email: string },
   showRememberPrompt = false,
 ): Promise<boolean> {
-  if (!loginResponse?.user) return false;
-
   const { user, accessToken, refreshToken } = loginResponse;
   const store = useStore.getState();
   const previousUserId = queueStore.getCurrentUserId();
@@ -316,7 +306,7 @@ async function handleLogin(
       );
       const prefs = getUserPreferences(user.id);
       showRememberMeGate =
-        !hasStoredCreds && !!prefs?.shouldShowCredentialPrompt();
+        !hasStoredCreds && prefs.shouldShowCredentialPrompt();
     }
   }
 
@@ -373,7 +363,7 @@ async function handleLogin(
   // from forcing main_app in the meantime).
   if (showRememberMeGate && loginCredentials) {
     store.setPostLoginCredentials(loginCredentials);
-    getUserPreferences(user.id)?.trackCredentialPromptShown();
+    getUserPreferences(user.id).trackCredentialPromptShown();
     return true;
   }
 
@@ -389,15 +379,15 @@ async function shouldShowPostLoginBiometricPrompt(targetUser: {
 }): Promise<{ shouldShow: boolean; reason?: string }> {
   // Keychain entries are namespaced by email, so an account with no readable
   // email can't be matched against stored credentials.
-  const accountEmail = targetUser?.email;
-  if (!targetUser?.id || !accountEmail) {
+  const accountEmail = targetUser.email;
+  if (!targetUser.id || !accountEmail) {
     return { shouldShow: false, reason: 'No user found' };
   }
 
   const store = useStore.getState();
   const navState = store.getUserNavigationState(targetUser.id);
 
-  if (navState?.isNewUser && !navState?.hasCompletedOnboarding) {
+  if (navState?.isNewUser && !navState.hasCompletedOnboarding) {
     return {
       shouldShow: false,
       reason: 'New user - biometric setup handled during onboarding',
@@ -452,9 +442,9 @@ async function login(
       variables: { input },
     });
 
-    const payload = result.data?.login;
+    const payload = appliedPayload(result.data);
 
-    if (isSuccessPayload(payload, 'AuthPayload')) {
+    if (payload) {
       // Only the email travels past the mutation: every downstream gate
       // identifies the account, and enrolment authorises off the session.
       const loginCredentials = { email: input.email };
@@ -484,9 +474,10 @@ async function login(
       return true;
     }
 
-    if (payload) {
-      handleRejectedAuthPayload(payload, 'Login');
-      options?.onRefusal?.(payload.code);
+    const refusal = result.data?.login;
+    if (refusal && 'code' in refusal) {
+      handleRejectedAuthPayload(refusal, operationNameOf(LoginDocument));
+      options?.onRefusal?.(refusal.code);
       return false;
     }
 
@@ -512,51 +503,38 @@ async function register(
   const store = useStore.getState();
   store.setAuthIsLoading(true);
 
-  try {
-    const result = await client.mutate({
-      mutation: RegisterDocument,
-      variables: { input },
-    });
+  // A refusal, a resolved error and a throw all toast the app's own copy and
+  // keep the user on the sign-up screen. A refused attempt to START a session
+  // clears a dead token rather than ending a session, as `handleAuthError` does.
+  const clearAuth = () => {
+    store.clearAuth();
+  };
+  const settled = await settleMutation(
+    () => client.mutate({ mutation: RegisterDocument, variables: { input } }),
+    {
+      document: RegisterDocument,
+      fallback: t('errors.codes.genericRetry'),
+      present: 'none',
+      on: {
+        [ErrorCode.AuthTokenExpired]: clearAuth,
+        [ErrorCode.AuthRefreshTokenInvalid]: clearAuth,
+      },
+    },
+  );
+  store.setAuthIsLoading(false);
 
-    const payload = result.data?.register;
-
-    if (isSuccessPayload(payload, 'RegisterPayload')) {
-      // Registration is verification-first and existence-blind: the API sends
-      // an activation email and issues NO tokens. Do NOT set auth here — the
-      // user activates via the emailed link, then logs in.
-      store.setRememberMe(shouldRemember);
-
-      logger.info('Registration successful: verification email sent');
-      store.setAuthIsLoading(false);
-      return true;
-    }
-
-    if (payload) {
-      // Non-success union member (ValidationError / ConflictError /
-      // ForbiddenError / NotFoundError). It resolves 200 with no transport
-      // error, so surface it the way handleAuthError surfaces transport
-      // failures — a toast — and stay on the sign-up screen. In the app's own
-      // words: the payload's `message` is unlocalizable English.
-      toastService.error(
-        localizedRefusalMessage(payload, t('errors.codes.genericRetry')),
-      );
-      store.setAuthIsLoading(false);
-      return false;
-    }
-
-    if (result.error) {
-      handleAuthError(result.error, 'Register');
-      store.setAuthIsLoading(false);
-      return false;
-    }
-
-    store.setAuthIsLoading(false);
-    return false;
-  } catch (error) {
-    handleAuthError(error, 'Register');
-    store.setAuthIsLoading(false);
+  if (settled.failure) {
+    toastService.error(settled.failure.body);
     return false;
   }
+  if (settled.status !== 'applied') return false;
+
+  // Registration is verification-first and existence-blind: the API sends an
+  // activation email and issues NO tokens. Do NOT set auth here — the user
+  // activates via the emailed link, then logs in.
+  store.setRememberMe(shouldRemember);
+  logger.info('Registration successful: verification email sent');
+  return true;
 }
 
 /** Longest a best-effort revoke may hold the sign-out. */
@@ -621,8 +599,7 @@ async function logout(options?: LogoutOptions): Promise<void> {
     store.setNavigationState('auth');
 
     if (currentUserId) {
-      const prefs = getUserPreferences(currentUserId);
-      prefs?.trackLogout();
+      getUserPreferences(currentUserId).trackLogout();
     }
   } catch (error) {
     logger.error('Logout error:', error);
@@ -703,9 +680,9 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
       variables: { input: { credential, deviceId } },
     });
 
-    const payload = result.data?.exchangeDeviceCredential;
+    const payload = appliedPayload(result.data);
 
-    if (isSuccessPayload(payload, 'DeviceCredentialSessionPayload')) {
+    if (payload) {
       const unmaskedLogin = unmaskAuthPayload(payload);
       if (!unmaskedLogin) {
         // The exchange spent one of the server's attempts and opened no
@@ -724,15 +701,16 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
       return true;
     }
 
-    if (payload) {
+    const refusal = result.data?.exchangeDeviceCredential;
+    if (refusal && 'code' in refusal) {
       // Drop the stored credentials only when the server says THESE
       // credentials will never authenticate — the password changed elsewhere,
       // or the account is gone. Token-side refusals end the session but leave
       // the credentials good, so they are deliberately not in this set; see
       // isDeadCredentialCode for how the two lists relate.
-      if (isDeadCredentialCode(payload.code)) {
+      if (isDeadCredentialCode(refusal.code)) {
         logger.warn(
-          `Auto-login rejected (${payload.code}), clearing stored credentials`,
+          `Auto-login rejected (${refusal.code}), clearing stored credentials`,
         );
         await removeCredentials(email);
         forgetBiometricSlot();
@@ -741,7 +719,7 @@ async function signInWithDeviceCredential(email: string): Promise<boolean> {
         // every tap spends another of the server's attempts for nothing.
         useStore.getState().registerBiometricRefusal();
       }
-      handleRejectedAuthPayload(payload, 'Auto-login');
+      handleRejectedAuthPayload(refusal, 'Auto-login');
       return false;
     }
 
@@ -827,7 +805,7 @@ async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
       fetchPolicy: 'network-only',
       context: { allowDuringLogout: true },
     });
-    const mine = listed.data?.deviceCredentials?.find(
+    const mine = listed.data?.deviceCredentials.find(
       credential => credential.deviceId === deviceId,
     );
     if (!mine) return true;
@@ -841,7 +819,7 @@ async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
     // is not a revoke: the credential stays exchangeable while the local slot
     // is dropped.
     return (
-      revoked.data?.revokeDeviceCredential?.__typename ===
+      revoked.data?.revokeDeviceCredential.__typename ===
       'RevokeDeviceCredentialPayload'
     );
   } catch (error) {
@@ -887,10 +865,11 @@ async function enrolDeviceCredential(email: string): Promise<boolean> {
       variables: { input: { deviceId } },
     });
 
-    const payload = result.data?.issueDeviceCredential;
-    if (!isSuccessPayload(payload, 'DeviceCredentialPayload')) {
-      if (payload)
-        handleRejectedAuthPayload(payload, 'Enrol device credential');
+    const payload = appliedPayload(result.data);
+    if (!payload) {
+      const refusal = result.data?.issueDeviceCredential;
+      if (refusal && 'code' in refusal)
+        handleRejectedAuthPayload(refusal, 'Enrol device credential');
       else if (result.error)
         handleAuthError(result.error, 'Enrol device credential');
       return false;

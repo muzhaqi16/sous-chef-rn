@@ -23,7 +23,7 @@ export function useShoppingListSelection(
     ? allLists.filter(l => !deniedListIds.has(l.id))
     : allLists;
 
-  const defaultList = lists.find(list => list.isDefault) || lists[0];
+  const defaultList = lists.find(list => list.isDefault) ?? lists[0];
 
   const isInLists =
     !!selectedShoppingListId &&
@@ -59,7 +59,7 @@ export function useShoppingListSelection(
   const currentListId = isInLists ? selectedShoppingListId : defaultList?.id;
 
   const currentList =
-    lists.find(list => list.id === currentListId) || defaultList;
+    lists.find(list => list.id === currentListId) ?? defaultList;
 
   // Auto-select when lists load and current selection is invalid
   useEffect(() => {
@@ -73,7 +73,7 @@ export function useShoppingListSelection(
       lists.some(l => l.id === selectedShoppingListId);
     if (hasValidSelection) return;
 
-    const listToSelect = lists.find(l => l.isDefault) || lists[0];
+    const listToSelect = lists.find(l => l.isDefault) ?? lists[0];
     if (listToSelect?.id) {
       setSelectedShoppingListId(listToSelect.id);
     }
@@ -88,8 +88,6 @@ export function useShoppingListSelection(
     optimisticListId,
     currentListId,
     currentList,
-    defaultList,
-    selectedShoppingListId,
     setSelectedShoppingListId,
   };
 }

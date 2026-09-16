@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import {
+  MEAL_TYPE_LABEL_KEYS,
+  TEMPLATE_CATEGORY_LABEL_KEYS,
+} from '#features/mealPlan/utils/mealPlanEnumLabels';
+import {
   Pressable,
   PrimaryActivityIndicator,
   OnPrimaryActivityIndicator,
@@ -16,9 +20,13 @@ import { FormInput } from '#components/atoms/FormInput';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { useMealTemplate } from '#features/mealPlan/hooks/useMealTemplate';
-import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { alertService } from '#/services/alertService';
+import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
+import { DataStateView } from '#components/organisms/DataStateView';
+import { useDataState } from '#hooks/data/useDataState';
 
 interface TemplatePreviewSheetProps {
   visible: boolean;
@@ -33,8 +41,12 @@ interface TemplatePreviewSheetProps {
   confirmLoading: boolean;
   /** Server unreachable (offline / API down) — disables confirm (no replay path). */
   disabled?: boolean;
-  /** When provided, shows an "Edit template" link that opens the builder. */
+  /** Each management action renders only when its handler is passed. */
   onEdit?: (templateId: string) => void;
+  /** Called after the user confirms the deletion. */
+  onDelete?: (templateId: string) => void;
+  onDuplicate?: (templateId: string, newName: string) => void;
+  duplicating?: boolean;
 }
 
 export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
@@ -45,6 +57,9 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
   confirmLoading,
   disabled = false,
   onEdit,
+  onDelete,
+  onDuplicate,
+  duplicating = false,
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -56,11 +71,24 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
     snapPoints: ['85%'],
   });
 
-  const { groupedByDay, loading } = useMealTemplate(template?.id);
+  const { groupedByDay, loading, error, hasResult, refetch } = useMealTemplate(
+    template?.id,
+  );
+  const previewState = useDataState({
+    loading,
+    error,
+    hasResult,
+    isEmpty: groupedByDay.length === 0,
+    skipped: !template,
+  });
+  // The copy is derived from the loaded items.
+  const itemsLoaded = previewState === 'ready' || previewState === 'empty';
 
   const [nameOverride, setNameOverride] = useState('');
   const [startDate, setStartDate] = useState<Date | null>(new Date());
   const [servings, setServings] = useState('');
+  // Null while the duplicate form is closed.
+  const [duplicateName, setDuplicateName] = useState<string | null>(null);
 
   // Reset state when sheet opens (render-time conditional state update)
   const [prevVisible, setPrevVisible] = useState(visible);
@@ -72,6 +100,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
       setNameOverride('');
       setStartDate(new Date());
       setServings(template.defaultServings.toString());
+      setDuplicateName(null);
     }
   }
 
@@ -88,6 +117,25 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
   };
 
   if (!template) return null;
+
+  const handleDelete = (confirmDelete: (templateId: string) => void) => {
+    alertService.alert(
+      t('templatePreview.deleteTemplate'),
+      t('labels.areYouSureYouWantToDeleteThisCannotBeUndone', {
+        name: template.name,
+      }),
+      [
+        { text: t('labels.cancel'), style: 'cancel' },
+        {
+          text: t('labels.delete'),
+          style: 'destructive',
+          onPress: () => confirmDelete(template.id),
+        },
+      ],
+    );
+  };
+
+  const trimmedDuplicateName = duplicateName?.trim() ?? '';
 
   return (
     <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
@@ -127,8 +175,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
               {template.home?.name ? ` · ${template.home.name}` : ''}
             </Text>
             <Text role="label" tone="primary">
-              {template.category.charAt(0) +
-                template.category.slice(1).toLowerCase()}
+              {t(TEMPLATE_CATEGORY_LABEL_KEYS[template.category])}
             </Text>
           </View>
         </View>
@@ -165,9 +212,11 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
           <SectionHeader variant="title" style={styles.sectionTitle}>
             {t('templatePreview.preview')}
           </SectionHeader>
-          {loading ? (
+          {previewState === 'loading' ? (
             <PrimaryActivityIndicator size="small" />
-          ) : groupedByDay.length === 0 ? (
+          ) : previewState === 'error' || previewState === 'offline' ? (
+            <DataStateView state={previewState} onRetry={refetch} />
+          ) : previewState === 'empty' ? (
             <Text
               role="caption"
               tone="tertiary"
@@ -185,8 +234,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
                 {day.items.map(item => (
                   <View key={item.id} style={styles.mealRow}>
                     <Text role="label" tone="tertiary" style={styles.mealType}>
-                      {item.mealType.charAt(0) +
-                        item.mealType.slice(1).toLowerCase()}
+                      {t(MEAL_TYPE_LABEL_KEYS[item.mealType])}
                     </Text>
                     <Text
                       role="caption"
@@ -226,17 +274,95 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
           )}
         </Pressable>
 
-        {!!onEdit && !!template && (
+        {!!onDuplicate && duplicateName !== null && (
+          <View style={styles.duplicateForm}>
+            <FormInput
+              label={t('templatePreview.duplicateNameLabel')}
+              value={duplicateName}
+              onChangeText={setDuplicateName}
+              testID={mealPlanTestIDs.templateDuplicateNameInput}
+            />
+            <View style={styles.duplicateActions}>
+              <Pressable
+                onPress={() => setDuplicateName(null)}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  pressed && styles.buttonPressed,
+                ]}
+              >
+                <Text role="bodyStrong" tone="secondary">
+                  {t('labels.cancel')}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => onDuplicate(template.id, trimmedDuplicateName)}
+                disabled={duplicating || !trimmedDuplicateName}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  pressed && styles.buttonPressed,
+                  (duplicating || !trimmedDuplicateName) &&
+                    styles.buttonDisabled,
+                ]}
+                testID={mealPlanTestIDs.templateDuplicateConfirmButton}
+              >
+                <Text role="bodyStrong" tone="primary">
+                  {duplicating
+                    ? t('duplicatePlan.duplicating')
+                    : t('duplicatePlan.duplicate')}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+
+        {!!onEdit && (
           <Pressable
             onPress={() => onEdit(template.id)}
             style={({ pressed }) => [
               styles.editButton,
               pressed && styles.buttonPressed,
             ]}
+            testID={mealPlanTestIDs.templatePreviewEditButton}
           >
             <Icon name="create-outline" size={18} tone="primary" />
             <Text role="bodyStrong" tone="primary" style={styles.editText}>
               {t('labels.editTemplate')}
+            </Text>
+          </Pressable>
+        )}
+
+        {!!onDuplicate && duplicateName === null && (
+          <Pressable
+            onPress={() =>
+              setDuplicateName(t('labels.copyOfName', { name: template.name }))
+            }
+            disabled={!itemsLoaded}
+            style={({ pressed }) => [
+              styles.editButton,
+              pressed && styles.buttonPressed,
+              !itemsLoaded && styles.buttonDisabled,
+            ]}
+            testID={mealPlanTestIDs.templatePreviewDuplicateButton}
+          >
+            <Icon name="copy-outline" size={18} tone="primary" />
+            <Text role="bodyStrong" tone="primary" style={styles.editText}>
+              {t('templatePreview.duplicateTemplate')}
+            </Text>
+          </Pressable>
+        )}
+
+        {!!onDelete && (
+          <Pressable
+            onPress={() => handleDelete(onDelete)}
+            style={({ pressed }) => [
+              styles.editButton,
+              pressed && styles.buttonPressed,
+            ]}
+            testID={mealPlanTestIDs.templatePreviewDeleteButton}
+          >
+            <Icon name="trash-outline" size={18} tone="error" />
+            <Text role="bodyStrong" tone="danger" style={styles.editText}>
+              {t('templatePreview.deleteTemplate')}
             </Text>
           </Pressable>
         )}
@@ -324,6 +450,19 @@ const styles = StyleSheet.create(theme => ({
   },
   editText: {
     marginLeft: theme.spacing.xs,
+  },
+  duplicateForm: {
+    marginTop: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  duplicateActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: theme.spacing.sm,
+  },
+  secondaryButton: {
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
   },
   buttonPressed: {
     opacity: theme.opacity.pressed,

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "index.js",
+    "App.tsx",
+    "src/features/*/manifest.ts",
+    "src/features/*/manifest.static.ts",
+    "src/features/*/screens/registration.ts",
+    "src/i18n/**/*.ts",
+    "src/types/**",
+    "src/native/**",
+    "src/theme/unistyles.ts",
+    "src/apollo/config.ts",
+    "src/services/performance/startupClock.ts",
+    "src/services/performance/armStartupProfiling.ts",
+    "src/**/*.{ios,android}.{ts,tsx}"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "!src/**/__tests__/**",
+    "!src/**/*.test.*",
+    "!src/**/__mocks__/**",
+    "!src/**/__perf__/**",
+    "!src/**/*.generated.ts",
+    "!src/**/*.d.ts"
+  ],
+  "jest": false,
+  "babel": false,
+  "metro": false,
+  "eslint": false,
+  "prettier": false,
+  "husky": false,
+  "lint-staged": false,
+  "commitlint": false,
+  "graphql-codegen": false,
+  "storybook": false
+}

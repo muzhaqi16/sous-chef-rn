@@ -1,4 +1,5 @@
 import { act } from '@testing-library/react-native';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -18,13 +19,15 @@ const SERVER_ID_REGEX = /^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/;
 
 function successMock() {
   return recordMock(CreateStorageLocationDocument, {
-    data: (vars: Record<string, unknown>) => {
+    dataFor: (
+      vars: Record<string, unknown>,
+    ): MockDataFor<typeof CreateStorageLocationDocument> => {
       const input = vars.input as { id: string; name: string };
       return {
         createStorageLocation: {
-          __typename: 'CreateStorageLocationPayload' as const,
+          __typename: 'CreateStorageLocationPayload',
           storageLocation: {
-            __typename: 'StorageLocation' as const,
+            __typename: 'StorageLocation',
             id: input.id,
             name: input.name,
             type: StorageType.PantryShelf,

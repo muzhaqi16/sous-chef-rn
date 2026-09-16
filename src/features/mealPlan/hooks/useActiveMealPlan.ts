@@ -7,7 +7,7 @@ import { useMealPlan } from '#features/mealPlan/hooks/useMealPlan';
 interface UseActiveMealPlanArgs {
   /** Plan the list hook considers current: active > nearest upcoming > latest. */
   currentPlanId: string | null;
-  /** Every plan id the overview holds, in display order. */
+  /** The plan ids the overview has loaded, in display order. */
   planIds: string[];
 }
 
@@ -22,7 +22,8 @@ interface UseActiveMealPlanArgs {
  * Only null data (a by-id miss is not an error) and FORBIDDEN retire an id;
  * both drop the pick, exclude it and evict the entity. Null means "gone" only
  * because `useMealPlan` skips unacknowledged creates. A network error is not a
- * deletion, and `planIds` is one page of 20, so absence there is no evidence.
+ * deletion, and `planIds` holds only the pages loaded so far, so absence there
+ * is no evidence.
  */
 export function useActiveMealPlan({
   currentPlanId,

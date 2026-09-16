@@ -118,7 +118,6 @@ jest.mock('#features/pantry/hooks/useOperationUnits', () => ({
     defaultIncrement: null,
     defaultCommonFractions: null,
     loading: false,
-    error: undefined,
   }),
 }));
 

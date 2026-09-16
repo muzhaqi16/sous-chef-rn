@@ -1,11 +1,11 @@
 import { ApolloLink, Observable } from '@apollo/client';
-import type { GraphQLFormattedError } from 'graphql';
+import { Kind, OperationTypeNode, type GraphQLFormattedError } from 'graphql';
 import performance from 'react-native-performance';
 import { env as buildEnv } from '#/config/env';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
-import { isExpectedNetworkTransitionError } from '#/utils/subscriptionErrorHandler';
+import { isExpectedTransportError } from '#/utils/subscriptionErrorHandler';
 import { isOfflineRejectedError } from '../offlineQueue/OfflineRejectedError';
 import { useStore } from '#store';
 
@@ -55,17 +55,18 @@ export const createTelemetryLink = () => {
     }
 
     const startTime = performance.now();
-    const operationName = operation.operationName || 'unnamed';
+    const operationName = operation.operationName ?? 'unnamed';
+    const [firstDefinition] = operation.query.definitions;
     const operationType =
-      operation.query.definitions[0]?.kind === 'OperationDefinition'
-        ? operation.query.definitions[0]?.operation || 'unknown'
+      firstDefinition?.kind === Kind.OPERATION_DEFINITION
+        ? firstDefinition.operation
         : 'unknown';
     // A subscription stays open for the life of the screen, so the elapsed
     // time at its first server push is a session length, not a request
     // latency. Keep those observations out of the latency metrics entirely —
     // a single PantryEvents socket has reported 194s, which alone drags every
     // percentile in graphql_request_duration_ms past the top bucket.
-    const isSubscription = operationType === 'subscription';
+    const isSubscription = operationType === OperationTypeNode.SUBSCRIPTION;
 
     // Only a `CONFIGURED_SAMPLE_RATE` share of operations reach this point (see
     // the gate above), so each one stands in for 1/rate real operations. Weight
@@ -97,7 +98,7 @@ export const createTelemetryLink = () => {
       Telemetry.debug(`GraphQL ${operationType}: ${operationName} started`, {
         operation_type: operationType,
         operation_name: operationName,
-        variables: operation.variables ? Object.keys(operation.variables) : [],
+        variables: Object.keys(operation.variables),
       });
     }
 
@@ -214,8 +215,8 @@ export const createTelemetryLink = () => {
             // Log it at warn and keep it out of graphql_network_errors_total so
             // the error dashboards stay meaningful.
             const isExpectedSubscriptionDrop =
-              operationType === 'subscription' &&
-              isExpectedNetworkTransitionError(serializedError.message);
+              operationType === OperationTypeNode.SUBSCRIPTION &&
+              isExpectedTransportError(error);
 
             if (isExpectedSubscriptionDrop) {
               Telemetry.warn(`Subscription ${operationName} disconnected`, {

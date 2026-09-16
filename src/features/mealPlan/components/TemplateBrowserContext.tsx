@@ -5,7 +5,7 @@ import React, {
   useRef,
   type ReactNode,
 } from 'react';
-import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 
 interface TemplateBrowserContextValue {
   onSelectTemplate: (template: MealTemplateDisplayFragment) => void;

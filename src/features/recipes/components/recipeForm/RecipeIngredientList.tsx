@@ -8,6 +8,7 @@ import { Icon } from '#utils/iconUtils';
 import type { IngredientFormState } from '#features/recipes/screens/RecipeForm/formState';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 
 interface RecipeIngredientListProps {
   ingredients: IngredientFormState[];
@@ -42,7 +43,7 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
               {ingredient.name || t('recipes.unnamedIngredient')}
             </Text>
             <Text role="caption" tone="secondary" style={styles.ingredientMeta}>
-              {ingredient.quantity}
+              {formatQuantityForDisplay(ingredient.quantity)}
               {ingredient.preparation
                 ? ` \u00B7 ${ingredient.preparation}`
                 : ''}
@@ -100,7 +101,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   ingredientMeta: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   removeButton: {
     padding: theme.spacing.xs,

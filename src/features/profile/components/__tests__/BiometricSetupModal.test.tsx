@@ -25,14 +25,7 @@ jest.mock('#/services/authService', () => ({
 // Get references to mock functions after the module mock is created
 const { authService: mockAuthService } = jest.requireMock(
   '#/services/authService',
-) as {
-  authService: {
-    getBiometricInfo: jest.Mock;
-    enrolDeviceCredential: jest.Mock;
-    loadStoredCredentials: jest.Mock;
-    checkStoredCredentials: jest.Mock;
-  };
-};
+);
 const mockGetBiometricInfo = mockAuthService.getBiometricInfo;
 const mockEnrol = mockAuthService.enrolDeviceCredential;
 const mockCheckStoredCredentials = mockAuthService.checkStoredCredentials;
@@ -45,7 +38,7 @@ jest.mock('#/utils/finallyHelpers', () => ({
     try {
       return await fn();
     } catch (error) {
-      if (typeof onError === 'function') onError(error);
+      if (typeof onError === 'function') await onError(error);
       return false;
     }
   },

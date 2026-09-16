@@ -8,13 +8,13 @@ import {
 } from './useItemReordering.generated';
 import { generateKeyBetween } from 'fractional-indexing';
 import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
-import {
-  handleMutationError,
-  versionConflictCheck,
-} from '#/utils/errorHandlers';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isUnpurchasedVariant } from '#features/shoppingList/cache/connections';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { useTranslation } from '#/i18n';
 import { logger } from '#/utils/environment';
+import type { ConnectionData } from '#/apollo/utils/cacheUpdaters';
 
 interface ShoppingListItem {
   id: string;
@@ -39,6 +39,7 @@ export function useItemReordering<T extends ShoppingListItem>(
 ) {
   const { listId, items, refetch } = options;
   const client = useApolloClient();
+  const { t } = useTranslation();
 
   const [moveItem] = useMutation(MoveShoppingListItemDocument, {
     // No optimisticResponse and no update callback: cache.modify runs BEFORE the
@@ -71,7 +72,7 @@ export function useItemReordering<T extends ShoppingListItem>(
 
     // after > before means the visual order and sortOrder order disagree, i.e.
     // the cache is out of sync.
-    let newSortOrder: string | undefined;
+    let duplicateBlockSortOrder: string | undefined;
 
     if (afterItem?.sortOrder && beforeItem?.sortOrder) {
       if (afterItem.sortOrder > beforeItem.sortOrder) {
@@ -97,25 +98,26 @@ export function useItemReordering<T extends ShoppingListItem>(
           },
         );
 
+        const sharedSortOrder = afterItem.sortOrder;
         const nextItem = items
-          .filter(i => i.sortOrder && i.sortOrder > afterItem.sortOrder!)
+          .filter(i => i.sortOrder && i.sortOrder > sharedSortOrder)
           .sort((a, b) =>
-            (a.sortOrder || '').localeCompare(b.sortOrder || ''),
+            (a.sortOrder ?? '').localeCompare(b.sortOrder ?? ''),
           )[0];
 
-        newSortOrder = generateKeyBetween(
+        duplicateBlockSortOrder = generateKeyBetween(
           afterItem.sortOrder,
           nextItem?.sortOrder ?? null,
         );
       }
     }
 
-    if (!newSortOrder) {
-      newSortOrder = generateKeyBetween(
+    const newSortOrder =
+      duplicateBlockSortOrder ??
+      generateKeyBetween(
         afterItem?.sortOrder ?? null,
         beforeItem?.sortOrder ?? null,
       );
-    }
 
     // Batched so FlashList sees one consistent state instead of two renders.
     client.cache.batch({
@@ -133,7 +135,7 @@ export function useItemReordering<T extends ShoppingListItem>(
         });
 
         const sortEdges = (
-          edges: readonly Reference[],
+          edges: NonNullable<ConnectionData['edges']>,
           readField: ModifierDetails['readField'],
         ) => {
           return [...edges].sort((a, b) => {
@@ -158,7 +160,10 @@ export function useItemReordering<T extends ShoppingListItem>(
         cache.modify({
           id: cache.identify({ __typename: 'ShoppingList', id: listId }),
           fields: {
-            itemsConnection(existing, { storeFieldName, readField }) {
+            itemsConnection(
+              existing: ConnectionData | undefined,
+              { storeFieldName, readField },
+            ) {
               // cache.modify runs for every cached variant; only the unpurchased
               // one is ordered by sortOrder.
               if (!isUnpurchasedVariant(storeFieldName)) {
@@ -167,7 +172,7 @@ export function useItemReordering<T extends ShoppingListItem>(
 
               return {
                 ...existing,
-                edges: sortEdges(existing?.edges || [], readField),
+                edges: sortEdges(existing?.edges ?? [], readField),
               };
             },
           },
@@ -185,51 +190,42 @@ export function useItemReordering<T extends ShoppingListItem>(
 
     const moveAfterItemId = afterItemId ?? undefined;
     const moveBeforeItemId = beforeItemId ?? undefined;
-    let result;
-    try {
-      result = await moveItem({
-        variables: {
-          input: {
-            itemId,
-            afterItemId: moveAfterItemId,
-            beforeItemId: moveBeforeItemId,
+    const settled = await settleMutation(
+      () =>
+        moveItem({
+          variables: {
+            input: {
+              itemId,
+              afterItemId: moveAfterItemId,
+              beforeItemId: moveBeforeItemId,
+            },
           },
+          // Local-first: queue on an API-down-while-online failure (moves are
+          // coalesced latest-wins on replay via SyncMoveShoppingListItem).
+          context: { localFirst: true },
+        }),
+      {
+        document: MoveShoppingListItemDocument,
+        fallback: t('errors.updateShoppingItemFailed'),
+        onFailed: () => {
+          // The persisted sortOrder carries no version, so the restoration hook
+          // would re-apply the failed move on every cold start.
+          optimisticDataPersistence.clear(
+            'ShoppingListItem',
+            itemId,
+            'sortOrder',
+          );
+          refetch?.();
         },
-        // Local-first: queue on an API-down-while-online failure (moves are
-        // coalesced latest-wins on replay via SyncMoveShoppingListItem).
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      handleMutationError(error, {
-        operation: 'Move Item',
-        checks: [versionConflictCheck({ onRefresh: () => refetch?.() })],
-      });
-    }
-    if (!result) {
-      // Drop the persisted sortOrder — it carries no version, so the restoration
-      // hook would re-apply the failed move on every cold start.
-      optimisticDataPersistence.clear('ShoppingListItem', itemId, 'sortOrder');
-      return;
-    }
-
-    // errorPolicy: 'all' — a failing mutation resolves rather than throwing.
-    if (result.error) {
-      handleMutationError(result.error, {
-        operation: 'Move Item',
-        checks: [versionConflictCheck({ onRefresh: () => refetch?.() })],
-      });
-      optimisticDataPersistence.clear('ShoppingListItem', itemId, 'sortOrder');
-      refetch?.();
-      return;
-    }
+      },
+    );
+    // Queued offline, the local order stands until the replay lands; a failure
+    // has already been reverted and reported.
+    if (settled.status !== 'applied') return;
 
     // serverItem is a masked ref — materialize it through a narrow fragment
     // selecting only what is read here (version, sortOrder).
-    const serverItemRef =
-      result.data?.moveShoppingListItem?.__typename ===
-      'MoveShoppingListItemPayload'
-        ? result.data.moveShoppingListItem.shoppingListItem
-        : null;
+    const serverItemRef = appliedPayload(settled.data)?.shoppingListItem;
     const serverItem = serverItemRef
       ? client.cache.readFragment<UseItemReordering_ServerItemFragment>({
           fragment: UseItemReordering_ServerItemFragmentDoc,

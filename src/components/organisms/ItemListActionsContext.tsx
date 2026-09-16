@@ -1,4 +1,6 @@
-import React, { createContext, useContext, type ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
+import { createActionsContext } from '#hooks/utils/createActionsContext';
+import { createValueContext } from '#hooks/utils/createValueContext';
 import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 
 export interface ItemListActions {
@@ -6,41 +8,33 @@ export interface ItemListActions {
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   /** Run by a row before a `removesRow` action fires. */
   onBeforeRowRemoved?: () => void;
-  testIDPrefix?: string;
 }
 
-interface ItemListActionsContextValue {
-  actions: ItemListActions;
-}
+const actionsContext = createActionsContext<ItemListActions>(
+  'ItemListActionsProvider',
+);
 
-const ItemListActionsContext =
-  createContext<ItemListActionsContextValue | null>(null);
+// A row reads the prefix while rendering, so it is a value, not a command.
+const testIDPrefixContext = createValueContext<string | undefined>(
+  'ItemListTestIDPrefixProvider',
+);
 
 interface ItemListActionsProviderProps {
   children: ReactNode;
   actions: ItemListActions;
+  testIDPrefix: string | undefined;
 }
 
 export const ItemListActionsProvider: React.FC<
   ItemListActionsProviderProps
-> = ({ children, actions }) => {
-  // The compiler memoizes `value` on `actions` identity. An absent action stays
-  // `undefined`, so downstream truthiness checks still gate rendering.
-  const value: ItemListActionsContextValue = { actions };
-
-  return (
-    <ItemListActionsContext.Provider value={value}>
+> = ({ children, actions, testIDPrefix }) => (
+  <actionsContext.Provider actions={actions}>
+    <testIDPrefixContext.Provider value={testIDPrefix}>
       {children}
-    </ItemListActionsContext.Provider>
-  );
-};
+    </testIDPrefixContext.Provider>
+  </actionsContext.Provider>
+);
 
-export const useItemListActions = (): ItemListActionsContextValue => {
-  const context = useContext(ItemListActionsContext);
-  if (!context) {
-    throw new Error(
-      'useItemListActions must be used within an ItemListActionsProvider',
-    );
-  }
-  return context;
-};
+export const useItemListActions = actionsContext.useActions;
+
+export const useItemListTestIDPrefix = testIDPrefixContext.useValue;

@@ -134,7 +134,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                 <View style={styles.packageSizeField}>
                   <FormInput
                     label={t('unitEntryList.size')}
-                    value={entry.packageSize || ''}
+                    value={entry.packageSize ?? ''}
                     onChangeText={(text: string) =>
                       handleEntryChange(index, 'packageSize', text)
                     }
@@ -150,7 +150,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                         ? t('unitEntryList.unitDefaultLabel')
                         : t('storageLocationForm.unit')
                     }
-                    value={entry.unitName || ''}
+                    value={entry.unitName ?? ''}
                     onChangeText={(text: string) =>
                       handleUnitTextChange(index, 'unitName', text)
                     }
@@ -175,7 +175,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                     <UnitAutocompleteField
                       variant="inline"
                       label={t('unitEntryList.contains')}
-                      value={entry.contentUnitName || ''}
+                      value={entry.contentUnitName ?? ''}
                       onChangeText={(text: string) =>
                         handleUnitTextChange(index, 'contentUnitName', text)
                       }

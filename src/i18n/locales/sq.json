@@ -27,6 +27,7 @@
       "offline": "Jeni jashtë linje. Po shfaqen të dhënat e ruajtura kur janë të disponueshme.",
       "operationNotAllowed": "Ky veprim nuk është i disponueshëm tani.",
       "pantryItemAlreadyExists": "Ky artikull është tashmë në qilarin tuaj",
+      "insufficientQuantity": "Kjo është më shumë se sa ka mbetur nga ky artikull në qilar",
       "quotaExceeded": "Keni tejkaluar kufirin tuaj të përdorimit",
       "rangeInvalid": "Vlera është jashtë intervalit të lejuar",
       "rateLimitBlocked": "Shumë kërkesa. Prisni një moment dhe provoni sërish.",
@@ -62,6 +63,7 @@
     "deleteItemFailed": "Nuk u fshi dot artikulli",
     "fetchItemFailed": "Nuk u morën dot detajet e artikullit",
     "createHomeFailed": "Nuk u krijua dot shtëpia",
+    "createPantryFailed": "Nuk u krijua dot qilari",
     "updateHomeFailed": "Nuk u përditësua dot shtëpia",
     "setDefaultHomeFailed": "Nuk u caktua dot shtëpia e parazgjedhur",
     "updateHomeNameFailed": "Nuk u përditësua dot emri i shtëpisë",
@@ -98,8 +100,10 @@
       "contextPrefix": "Konteksti: "
     },
     "rateLimitGeneric": "Shumë kërkesa. Provoje sërish më vonë.",
-    "rateLimitMinutes": "Shumë kërkesa. Provoje sërish pas {{count}} minute(sh).",
-    "rateLimitSeconds": "Shumë kërkesa. Provoje sërish pas {{count}} sekonde(sh).",
+    "rateLimitMinutes_one": "Shumë kërkesa. Provoje sërish pas {{count}} minute.",
+    "rateLimitMinutes_other": "Shumë kërkesa. Provoje sërish pas {{count}} minutash.",
+    "rateLimitSeconds_one": "Shumë kërkesa. Provoje sërish pas {{count}} sekonde.",
+    "rateLimitSeconds_other": "Shumë kërkesa. Provoje sërish pas {{count}} sekondash.",
     "notFoundGeneric": "Artikulli i kërkuar nuk u gjet. Mund të jetë fshirë.",
     "notFoundResource": "{{resource}} nuk u gjet. Mund të jetë fshirë ose zhvendosur.",
     "resourceNames": {
@@ -129,8 +133,6 @@
     "parentContextRequired": "Kërkohet konteksti prind",
     "createStorageLocationFailed": "Krijimi i vendndodhjes së ruajtjes dështoi",
     "missingRequiredInfo": "Mungojnë informacionet e kërkuara",
-    "invalidInput": "Hyrje e pavlefshme",
-    "invalidOperation": "Veprim i pavlefshëm",
     "invalidUnitTitle": "Njësi e pavlefshme",
     "addItemFailedRetry": "Artikulli nuk u shtua dot. Provo përsëri.",
     "restockFailedRetry": "Artikulli nuk u rifurnizua dot. Provo përsëri.",
@@ -484,8 +486,8 @@
     "youReAllSet": "Gjithçka gati!",
     "durationDays_one": "{{count}} ditë",
     "durationDays_other": "{{count}} ditë",
-    "finish": "Përfundo",
-    "currency": "Monedha"
+    "currency": "Monedha",
+    "today": "Sot"
   },
   "instructions": {
     "pointCamera": "Drejtoje kamerën nga një barkod",
@@ -610,7 +612,6 @@
     "profileTooLargeBody": "Imazhi është shumë i madh. Imazhet e profilit duhet të jenë nën {{size}}MB.",
     "updateFailedTitle": "Përditësimi dështoi",
     "avatarUpdateFailedBody": "Nuk u përditësua dot avatari i profilit",
-    "coverUpdateFailedBody": "Nuk u përditësua dot kopertina e profilit",
     "itemImageUpdateFailedBody": "Nuk u përditësua dot imazhi i artikullit",
     "itemTooLargeBody": "Imazhi është shumë i madh. Fotot e artikujve duhet të jenë nën {{size}} MB.",
     "unreadableBody": "Nuk arritëm ta lexojmë atë skedar imazhi. Provo një tjetër.",
@@ -698,7 +699,10 @@
     "choosePhoto": "Zgjidh një foto",
     "openProfile": "Hap profilin tënd",
     "resetCrop": "Rivendos prerjen",
-    "notificationSettings": "Cilësimet e njoftimeve"
+    "notificationSettings": "Cilësimet e njoftimeve",
+    "requiredField": "{{label}}, i detyrueshëm",
+    "fieldError": "Gabim: {{error}}",
+    "hintWithError": "{{hint}}. {{error}}"
   },
   "toasts": {
     "noLowStockItems": "Nuk u gjet asnjë artikull me stok të ulët",
@@ -708,9 +712,6 @@
     "addedToMealPlan": "U shtua në planin e vakteve",
     "mealPlanDuplicated": "Plani i vakteve u dyfishua!",
     "itemToggleFailed": "Ndryshimi i artikullit dështoi",
-    "selectShoppingListFirst": "Zgjidh së pari një listë blerjesh",
-    "signInToVerifyEmail": "Hyr për të përfunduar verifikimin e emailit.",
-    "signInToAcceptInvite": "Hyr për të pranuar këtë ftesë.",
     "folderProtected": "\"{{folder}}\" nuk mund të riemërtohet ose fshihet",
     "welcomeToEntity": "Mirë se erdhe në {{name}}!",
     "canCollaborateOn": "Tani mund të bashkëpunosh në {{name}}",
@@ -719,10 +720,12 @@
     "addedItemsWithSkipped_one": "U shtua {{count}} artikull në listë. {{skipped}} ishin tashmë aty.",
     "addedItemsWithSkipped_other": "U shtuan {{count}} artikuj në listë. {{skipped}} ishin tashmë aty.",
     "allLowStockAlreadyListed_one": "{{count}} artikulli me stok të ulët ishte tashmë në listë",
-    "allLowStockAlreadyListed_other": "Të gjithë {{count}} artikujt me stok të ulët ishin tashmë në listë",
-    "verificationLinkInvalid": "Ajo lidhje verifikimi është e pavlefshme ose ka skaduar.",
-    "resetLinkInvalid": "Ajo lidhje rivendosjeje është e pavlefshme ose ka skaduar.",
-    "invitationLinkInvalid": "Ajo ftesë është e pavlefshme ose ka skaduar.",
-    "linkInvalid": "Ajo lidhje është e pavlefshme ose ka skaduar."
+    "allLowStockAlreadyListed_other": "Të gjithë {{count}} artikujt me stok të ulët ishin tashmë në listë"
+  },
+  "pushNotification": {
+    "title": "{{appName}}",
+    "body": "Ke një njoftim të ri",
+    "coalesced_one": "{{count}} përditësim sa ke munguar",
+    "coalesced_other": "{{count}} përditësime sa ke munguar"
   }
 }

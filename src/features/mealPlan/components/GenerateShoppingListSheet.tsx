@@ -270,7 +270,7 @@ const styles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.md,
   },
   toggleDescription: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   section: {
     gap: theme.spacing.sm,

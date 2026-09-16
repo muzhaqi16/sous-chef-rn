@@ -59,7 +59,7 @@ const renderStep = (
 describe('ShoppingListDetailsStep', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockAddItem.mockResolvedValue(undefined);
+    mockAddItem.mockResolvedValue(true);
   });
 
   it('pre-fills the item name from the search term', () => {
@@ -102,6 +102,21 @@ describe('ShoppingListDetailsStep', () => {
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
     expect(mockAddItem).toHaveBeenCalledWith(
       expect.objectContaining({ itemName: 'Bananas', quantityInput: '2' }),
+    );
+  });
+
+  it('stays open with the typed input when the add is refused', async () => {
+    // The hook has already alerted the refusal; closing would drop the input.
+    mockAddItem.mockResolvedValue(false);
+    const onSuccess = jest.fn();
+    renderStep({ onSuccess, prefilledItemName: 'Bananas' });
+
+    fireEvent.press(screen.getByTestId('add-shopping-item-submit-button'));
+
+    await waitFor(() => expect(mockAddItem).toHaveBeenCalled());
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(screen.getByTestId('add-shopping-item-name-input').props.value).toBe(
+      'Bananas',
     );
   });
 });

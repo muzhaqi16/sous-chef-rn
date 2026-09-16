@@ -9,10 +9,8 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import { gql } from '@apollo/client';
 import { OpenPantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { handleMutationError } from '#/utils/errorHandlers';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
-import { t } from '#/i18n';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { useTranslation } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
 
@@ -31,12 +29,9 @@ const BATCH_OPEN_STATE_FRAGMENT = gql`
 export function useOpenPantryItemBatch({
   onSuccess,
 }: UseOpenPantryItemBatchOptions = {}) {
+  const { t } = useTranslation();
   const client = useApolloClient();
-  const [openMutation, { loading }] = useMutation(OpenPantryItemBatchDocument, {
-    onError: error => {
-      handleMutationError(error, { operation: 'Open Batch' });
-    },
-  });
+  const [openMutation] = useMutation(OpenPantryItemBatchDocument);
 
   const openBatch = async (batchId: string): Promise<boolean> => {
     const now = new Date().toISOString();
@@ -77,14 +72,7 @@ export function useOpenPantryItemBatch({
       });
     }
 
-    const result = await openMutation({
-      variables: { input: { batchId, idempotencyKey: generateEntityId() } },
-      context: { localFirst: true },
-    });
-
-    const outcome = classifyCreateResult(result);
-
-    if (outcome === 'rejected') {
+    const revert = () => {
       // Resolved before the try — a `??` inside a try body makes the React
       // Compiler bail out of this hook.
       const revertedIsOpened = snapshot?.isOpened ?? false;
@@ -97,19 +85,30 @@ export function useOpenPantryItemBatch({
         });
       }
       clearPersistence();
-      // onError covers transport errors; a non-success union payload has none.
-      alertRejectedMutation(result, t('errors.openBatchFailed'));
-      return false;
-    }
+    };
 
-    // created (response normalized the authoritative batch) or queued (replays
-    // the canonical mutation, deduped by its idempotencyKey).
-    if (outcome === 'created') {
+    const settled = await settleMutation(
+      () =>
+        openMutation({
+          variables: { input: { batchId, idempotencyKey: generateEntityId() } },
+          context: { localFirst: true },
+        }),
+      {
+        document: OpenPantryItemBatchDocument,
+        fallback: t('errors.openBatchFailed'),
+        onFailed: revert,
+      },
+    );
+    if (settled.status === 'failed') return false;
+
+    // Applied: the response normalized the authoritative batch. Queued: the
+    // persisted value stands until the replay lands.
+    if (settled.status === 'applied') {
       clearPersistence();
     }
     onSuccess?.();
     return true;
   };
 
-  return { openBatch, loading };
+  return { openBatch };
 }

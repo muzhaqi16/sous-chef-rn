@@ -3,46 +3,47 @@ import {
   MyRecipesDocument,
   type MyRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
-import { RecipeCategory, Difficulty } from '#/graphql/generated/schemaTypes';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-
-export interface RecipeFilters {
-  category?: RecipeCategory;
-  difficulty?: Difficulty;
-}
+import { useLoadRemainingPages } from '#features/recipes/hooks/useLoadRemainingPages';
 
 /**
  * Connection node type emitted by the MyRecipes query. The cell renders via
- * `useFragment(MyRecipeCard_recipe)` so the parent only needs the id +
- * filterable scalars (category/difficulty) and the fragment ref.
+ * `useFragment(MyRecipeCard_recipe)`; the parent reads only the id and the
+ * scalars its local search matches on.
  */
 export type MyRecipeNode = NonNullable<
   MyRecipesQuery['recipes']
 >['edges'][number]['node'];
+
+interface RecipeManagementOptions {
+  /**
+   * Page through the whole connection while true. The API cannot search the
+   * user's recipes, so a local search covers every one only once all pages load.
+   */
+  loadAllPages?: boolean;
+}
 
 /**
  * Cursor-paginated recipe management. Returns connection nodes as REFS —
  * consumers render them through `<MyRecipeCard recipeRef={node} />`, which
  * takes its own per-entity `useFragment` subscription.
  */
-export function useRecipeManagement(filters?: RecipeFilters) {
+export function useRecipeManagement({
+  loadAllPages = false,
+}: RecipeManagementOptions = {}) {
   const isLoggedOut = useIsLoggedOut();
 
   const { data, loading, error, refetch, fetchMore } = useQuery(
     MyRecipesDocument,
     {
-      variables: {
-        first: 25,
-        category: filters?.category,
-        difficulty: filters?.difficulty,
-      },
+      variables: { first: 25 },
       skip: isLoggedOut,
     },
   );
 
-  useApolloErrorLogger('MyRecipes', error);
+  useApolloErrorLogger(MyRecipesDocument, error);
 
   const connectionData = useConnectionData({
     data,
@@ -53,11 +54,15 @@ export function useRecipeManagement(filters?: RecipeFilters) {
     refetch,
   });
 
-  const recipes = connectionData.items as MyRecipeNode[];
+  const isLoadingRemainingPages = useLoadRemainingPages(
+    loadAllPages,
+    loading,
+    connectionData,
+  );
 
   return {
     state: {
-      recipes,
+      recipes: connectionData.items,
       loading,
       error,
       // `data !== undefined` — a response arrived, empty or not. Screens need
@@ -67,19 +72,13 @@ export function useRecipeManagement(filters?: RecipeFilters) {
       // Signed out, so the query above was never sent. Reported so the screen
       // shows its empty state rather than accusing the network of a failure.
       skipped: isLoggedOut,
-      totalCount: connectionData.totalCount ?? 0,
       hasMore: connectionData.hasMore,
       isLoadingMore: connectionData.isLoadingMore,
+      isLoadingRemainingPages,
     },
     actions: {
       loadMore: connectionData.loadMore,
       refetch,
-      getRecipeById: (recipeId: string) =>
-        recipes.find(recipe => recipe.id === recipeId),
-      getRecipesByCategory: (category: RecipeCategory) =>
-        recipes.filter(recipe => recipe.category === category),
-      getRecipesByDifficulty: (difficulty: Difficulty) =>
-        recipes.filter(recipe => recipe.difficulty === difficulty),
     },
   };
 }

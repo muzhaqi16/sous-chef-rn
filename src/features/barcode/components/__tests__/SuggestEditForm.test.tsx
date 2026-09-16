@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { screen, waitFor, fireEvent } from '@testing-library/react-native';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   renderWithApollo,
   recordMock,
@@ -27,9 +28,11 @@ jest.mock('#hooks/useImageUpload', () => ({
 
 // Defaults to the common target: a public catalog item this user may propose
 // edits to but not write through.
-const itemData = ({ canEdit = false, canSuggest = true } = {}) => ({
+const itemData = ({ canEdit = false, canSuggest = true } = {}): MockDataFor<
+  typeof GetItemForEditDocument
+> => ({
   item: {
-    __typename: 'Item' as const,
+    __typename: 'Item',
     id: 'item-1',
     name: 'Whole Milk',
     description: null,

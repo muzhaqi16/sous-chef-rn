@@ -1,3 +1,5 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
+import { kitTestIDs } from '#components/testIDs';
 import React, { useRef } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -68,7 +70,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
             accent-colored name span goes stale on App Color changes until a
             remount. Standalone host <Text> nodes update via the ShadowTree
             without any re-render. */}
-        <View style={styles.greetingTextRow} testID="pantry-greeting-row">
+        <View style={styles.greetingTextRow} testID={pantryTestIDs.greetingRow}>
           {!!greetingBefore && (
             <Text role="heading" style={styles.greeting}>
               {greetingBefore}
@@ -149,7 +151,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
         onPress={onAvatarPress}
         accessibilityLabel={t('a11y.openProfile')}
         style={styles.avatarContainer}
-        testID="tab-profile"
+        testID={kitTestIDs.tab('Profile')}
         accessibilityRole="button"
       >
         {avatarUrl ? (

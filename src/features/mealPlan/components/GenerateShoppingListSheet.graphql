@@ -7,7 +7,7 @@ query GetShoppingListsLiteForMealPlan(
   $first: Int
   $after: String
 ) {
-  shoppingLists(filters: { homeId: $homeId }, first: $first, after: $after) {
+  shoppingLists(homeId: $homeId, first: $first, after: $after) {
     edges {
       cursor
       node {

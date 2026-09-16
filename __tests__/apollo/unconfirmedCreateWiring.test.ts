@@ -81,9 +81,9 @@ const OPTIMISTIC_PUBLISHERS = [
  * The risk condition is not "creates a pantry item" — it is "publishes a
  * client-minted id into the cache before the server has the row". A plain
  * awaited create writes nothing until the payload lands, so no phantom id ever
- * becomes tappable and there is no window to gate. That is why onboarding's
- * `SelectPantryItems` is legitimately absent below rather than exempted by
- * name: add an optimistic write there and it joins this list automatically.
+ * becomes tappable and there is no window to gate, so such a path is absent
+ * below rather than exempted by name: add an optimistic write there and it
+ * joins this list automatically.
  *
  * `useMutation(` and the document name are matched across whitespace because
  * prettier splits the call when the options object is long.
@@ -141,39 +141,14 @@ describe('unconfirmed-create wiring (pantry items)', () => {
   );
 
   /**
-   * File-level `toContain` cannot see a SECOND publish path inside a file that
-   * already marks somewhere. The force-add retry is exactly that: it republishes
-   * the same client-minted row after a duplicate refusal, by which point the
-   * first attempt's cleanup has already confirmed the id — so the row is
-   * tappable, the server does not have it, and the detail screen parks in a
-   * `RESOURCE_NOT_FOUND` that never retries.
-   *
-   * Scoped to the retry block rather than the file, which is the granularity the
-   * defect lives at. The block is named by whichever anchor the path uses: the
-   * prompt's own callback where the retry is inline, or the hook function the
-   * prompt calls.
+   * A forced add lands on the stack the pantry already holds in that unit and
+   * answers with ITS id, so a retry that republishes the minted row leaves a
+   * ghost edge no reconciliation on the online path removes. Restock is the
+   * duplicate recovery; no optimistic create path sends `forceAdd`.
    */
-  const retryPaths = creators.filter(file =>
-    stripComments(readFileSync(join(process.cwd(), file), 'utf8')).includes(
-      'forceAdd: true',
-    ),
-  );
-
-  it('finds the force-add retries, so the check below is not vacuous', () => {
-    expect(retryPaths.length).toBeGreaterThanOrEqual(2);
-  });
-
-  const RETRY_ANCHORS = ['onAddAnyway', 'forceAddPending'];
-
-  it.each(retryPaths)('%s re-claims the id on its force-add retry', file => {
+  it.each(creators)('%s never re-sends a create with forceAdd', file => {
     const code = stripComments(readFileSync(join(process.cwd(), file), 'utf8'));
-    const start = Math.max(
-      ...RETRY_ANCHORS.map(anchor => code.indexOf(anchor)),
-    );
-    const end = code.indexOf('forceAdd: true', start);
-    expect(start).toBeGreaterThanOrEqual(0);
-    expect(end).toBeGreaterThan(start);
-    expect(code.slice(start, end)).toContain('unconfirmedCreates.mark(');
+    expect(code).not.toMatch(/\bforceAdd\b/);
   });
 
   // The other half of the contract: the screens that read by that id.

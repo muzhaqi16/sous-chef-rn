@@ -51,9 +51,6 @@ jest.mock('#components/molecules/DatePickerField', () => ({
 jest.mock('#/utils/fractionUtils', () => ({
   parseFractionalInput: (v: string) => parseFloat(v) || null,
 }));
-jest.mock('#/utils/formatQuantity', () => ({
-  formatQuantity: (v: number) => v.toString(),
-}));
 jest.mock('#features/pantry/components/modals/PantryActionModal', () => ({
   PantryActionModal: ({
     title,

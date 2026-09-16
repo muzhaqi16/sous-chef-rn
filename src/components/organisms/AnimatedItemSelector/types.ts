@@ -14,6 +14,14 @@ export interface ActionButtonConfig {
   color?: string;
 }
 
+export interface SelectorPagination {
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
+  /** The caller's copy for the trailing load-more row. */
+  loadMoreLabel: string;
+}
+
 export interface SelectorConfig<T extends SelectableItem> {
   title: string;
   data: T[];
@@ -26,6 +34,9 @@ export interface SelectorConfig<T extends SelectableItem> {
   // filter UI stays reachable when a filter yields no matches).
   listHeader?: React.ReactNode;
   loading?: boolean;
+  // `data` is one page of more: a trailing row fetches the next. A row, not an
+  // end-reached callback, because the tray's scroll view reports no position.
+  pagination?: SelectorPagination;
   emptyMessage?: string;
   keyExtractor?: (item: T) => string;
   renderCustomItem?: (
