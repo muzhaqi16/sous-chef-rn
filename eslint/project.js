@@ -38,6 +38,10 @@ const PRODUCTION_RULES = [
   'testid-from-registry',
   'queueable-write-is-local-first',
   'recycling-list-host-is-bounded',
+  'flashlist-declares-scroll-component',
+  'no-scrollable-in-bottom-sheet-view',
+  'rngh-refresh-control-matches-host',
+  'on-fill-text-uses-its-token',
 ];
 
 const productionRules = severity =>
@@ -153,6 +157,33 @@ const overrides = [
       '__tests__/setup/**/*.js',
     ],
     languageOptions: { globals: globals.jest },
+  },
+  {
+    // The palette itself: these ARE the tokens.
+    files: ['src/theme/**/*.{ts,tsx}'],
+    rules: { 'sous-chef/on-fill-text-uses-its-token': 'off' },
+  },
+  {
+    // Rows carrying no RNGH gesture: recipe cards use RN `Pressable` only, and
+    // the history screens pass inert rows through `AppPressable`. A consumer
+    // with RNGH rows passes `renderScrollComponent` instead.
+    files: [
+      'src/features/recipes/screens/MyRecipes.tsx',
+      'src/features/recipes/screens/SavedRecipes.tsx',
+      'src/components/templates/PaginatedHistoryScreen.tsx',
+    ],
+    rules: { 'sous-chef/flashlist-declares-scroll-component': 'off' },
+  },
+  {
+    // The list carries an explicit `maxHeight`, so it is bounded without the
+    // container — the variant CLAUDE.md records as getting away with it.
+    files: ['src/features/recipes/components/FolderPicker.tsx'],
+    rules: { 'sous-chef/no-scrollable-in-bottom-sheet-view': 'off' },
+  },
+  {
+    // This module IS where the RNGH-vs-RN choice is made for every list.
+    files: ['src/components/atoms/themedComponents.tsx'],
+    rules: { 'sous-chef/rngh-refresh-control-matches-host': 'off' },
   },
   {
     // A hook's return type is the other half of the data-layer boundary: the

@@ -8,28 +8,32 @@ fails on a rule without a page here, a spec, or a place in the config.
 A disable comment is itself an error (`eslint-comments/no-use`). A justified
 exemption is a file-scoped override in `eslint/project.js`, where review sees it.
 
-| Rule                                                                            | Enforces                                                                                        |
-| ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| [`sous-chef/no-schema-enum-cast`](no-schema-enum-cast.md)                       | No casts to a generated schema enum.                                                            |
-| [`sous-chef/no-module-level-t`](no-module-level-t.md)                           | A file that renders translates with the hook's t, not the module-level one.                     |
-| [`sous-chef/no-dated-comment`](no-dated-comment.md)                             | A comment describes the code as it is, so it carries no date.                                   |
-| [`sous-chef/no-operation-name-literal`](no-operation-name-literal.md)           | An operation name comes from its generated document, not a string.                              |
-| [`sous-chef/no-unchecked-domain-literal`](no-unchecked-domain-literal.md)       | A schema enum value or typename is compared and keyed through its generated symbol.             |
-| [`sous-chef/no-error-message-branching`](no-error-message-branching.md)         | An error is classified by its code, never by its message text.                                  |
-| [`sous-chef/no-rendered-server-message`](no-rendered-server-message.md)         | A server error's `message`, or other copy the server writes, never reaches the screen.          |
-| [`sous-chef/testid-from-registry`](testid-from-registry.md)                     | A testID comes from its registry; e2e selects by it, never by fixed copy or a screen point.     |
-| [`sous-chef/no-raw-color`](no-raw-color.md)                                     | A colour is a theme token, never a hex, rgb() or named literal.                                 |
-| [`sous-chef/no-raw-spacing`](no-raw-spacing.md)                                 | Padding, margin and gap are spacing tokens, never a non-zero number.                            |
-| [`sous-chef/text-needs-role`](text-needs-role.md)                               | A `<Text>` outside the kit names its role; error copy is `role="error"` + `tone="error"`.       |
-| [`sous-chef/quantity-through-formatter`](quantity-through-formatter.md)         | A quantity reaches the screen through formatQuantityForDisplay, never as a raw number.          |
-| [`sous-chef/no-rendered-enum`](no-rendered-enum.md)                             | A schema enum value reaches the screen through a translation table, never raw or string-munged. |
-| [`sous-chef/no-t-default-value`](no-t-default-value.md)                         | A translation call carries no inline fallback copy: the key resolves in every locale.           |
-| [`sous-chef/no-prose-literal`](no-prose-literal.md)                             | Copy handed to the UI through a variable, property, setter or return is translated.             |
-| [`sous-chef/no-string-keyed-lookup`](no-string-keyed-lookup.md)                 | A closed lookup table is keyed by the real key type, never by string.                           |
-| [`sous-chef/no-number-noun-concat`](no-number-noun-concat.md)                   | A count and its noun are one translated sentence, never a number joined to a string.            |
-| [`sous-chef/queueable-write-is-local-first`](queueable-write-is-local-first.md) | A write the offline queue can take writes the cache first and says so.                          |
-| [`sous-chef/recycling-list-host-is-bounded`](recycling-list-host-is-bounded.md) | A recycling list is bounded by the view that hosts it.                                          |
-| [`sous-chef/hook-returns-no-library-type`](hook-returns-no-library-type.md)     | A feature hook hands a screen no library type.                                                  |
+| Rule                                                                                      | Enforces                                                                                        |
+| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [`sous-chef/no-schema-enum-cast`](no-schema-enum-cast.md)                                 | No casts to a generated schema enum.                                                            |
+| [`sous-chef/no-module-level-t`](no-module-level-t.md)                                     | A file that renders translates with the hook's t, not the module-level one.                     |
+| [`sous-chef/no-dated-comment`](no-dated-comment.md)                                       | A comment describes the code as it is, so it carries no date.                                   |
+| [`sous-chef/no-operation-name-literal`](no-operation-name-literal.md)                     | An operation name comes from its generated document, not a string.                              |
+| [`sous-chef/no-unchecked-domain-literal`](no-unchecked-domain-literal.md)                 | A schema enum value or typename is compared and keyed through its generated symbol.             |
+| [`sous-chef/no-error-message-branching`](no-error-message-branching.md)                   | An error is classified by its code, never by its message text.                                  |
+| [`sous-chef/no-rendered-server-message`](no-rendered-server-message.md)                   | A server error's `message`, or other copy the server writes, never reaches the screen.          |
+| [`sous-chef/testid-from-registry`](testid-from-registry.md)                               | A testID comes from its registry; e2e selects by it, never by fixed copy or a screen point.     |
+| [`sous-chef/no-raw-color`](no-raw-color.md)                                               | A colour is a theme token, never a hex, rgb() or named literal.                                 |
+| [`sous-chef/no-raw-spacing`](no-raw-spacing.md)                                           | Padding, margin and gap are spacing tokens, never a non-zero number.                            |
+| [`sous-chef/text-needs-role`](text-needs-role.md)                                         | A `<Text>` outside the kit names its role; error copy is `role="error"` + `tone="error"`.       |
+| [`sous-chef/quantity-through-formatter`](quantity-through-formatter.md)                   | A quantity reaches the screen through formatQuantityForDisplay, never as a raw number.          |
+| [`sous-chef/no-rendered-enum`](no-rendered-enum.md)                                       | A schema enum value reaches the screen through a translation table, never raw or string-munged. |
+| [`sous-chef/no-t-default-value`](no-t-default-value.md)                                   | A translation call carries no inline fallback copy: the key resolves in every locale.           |
+| [`sous-chef/no-prose-literal`](no-prose-literal.md)                                       | Copy handed to the UI through a variable, property, setter or return is translated.             |
+| [`sous-chef/no-string-keyed-lookup`](no-string-keyed-lookup.md)                           | A closed lookup table is keyed by the real key type, never by string.                           |
+| [`sous-chef/no-number-noun-concat`](no-number-noun-concat.md)                             | A count and its noun are one translated sentence, never a number joined to a string.            |
+| [`sous-chef/queueable-write-is-local-first`](queueable-write-is-local-first.md)           | A write the offline queue can take writes the cache first and says so.                          |
+| [`sous-chef/recycling-list-host-is-bounded`](recycling-list-host-is-bounded.md)           | A recycling list is bounded by the view that hosts it.                                          |
+| [`sous-chef/hook-returns-no-library-type`](hook-returns-no-library-type.md)               | A feature hook hands a screen no library type.                                                  |
+| [`sous-chef/flashlist-declares-scroll-component`](flashlist-declares-scroll-component.md) | Every FlashList declares which scroll component it renders through.                             |
+| [`sous-chef/no-scrollable-in-bottom-sheet-view`](no-scrollable-in-bottom-sheet-view.md)   | A scrollable is never nested inside a BottomSheetView.                                          |
+| [`sous-chef/rngh-refresh-control-matches-host`](rngh-refresh-control-matches-host.md)     | A pull-to-refresh control matches its scrollable host.                                          |
+| [`sous-chef/on-fill-text-uses-its-token`](on-fill-text-uses-its-token.md)                 | Text on a fill reads that fill's own `on*` token.                                               |
 
 A ban that is one esquery selector and nothing else is an entry of the stock
 `no-restricted-syntax` rule instead of a rule of its own — the catalog of those

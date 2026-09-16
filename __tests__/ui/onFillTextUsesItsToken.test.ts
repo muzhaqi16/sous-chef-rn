@@ -10,8 +10,11 @@ import { colors } from '#/theme/foundations/colors';
  * foreground follows the fill's luminance and the fill is user-overridable, so
  * a hardcoded white is wrong for four of the seven pickable brand colours.
  *
- * A hardcoded white is one of four ways the pairing breaks; the other three
- * read as correct, and each gets its own scan below.
+ * Two of the four ways the pairing breaks are per-file and belong to
+ * `sous-chef/on-fill-text-uses-its-token`: a hardcoded white, and an `on*`
+ * token naming a fill other than the one beside it. What stays here needs more
+ * than one file — a shared fill overridden locally under a shared foreground —
+ * or needs the palette itself, to check the contrast the pairing exists for.
  */
 const FILES = globSync('src/**/*.{ts,tsx}', {
   exclude: (p: string) =>
@@ -43,43 +46,15 @@ const FILL_GROUP = FILL_NAMES.join('|');
 const FILLS = new RegExp(
   `backgroundColor:\\s*theme\\.colors\\.(${FILL_GROUP})\\b`,
 );
-/**
- * A hardcoded white. `theme.colors.white` is gone — text over a photo, a
- * camera preview or a dark scrim reads `onScrim` — so what is left to catch is
- * a raw literal, which no type error can.
- */
-const WHITE =
-  /\bcolor:\s*['"`](?:#fff(?:fff)?|white|rgba?\(\s*255\s*,\s*255\s*,\s*255[^)]*\))['"`]/i;
-
 /** The fill an `on*` token names — `onPrimary` belongs to `primary`. */
 const fillOfOnToken = (token: string): string =>
   token.slice(2, 3).toLowerCase() + token.slice(3);
-
-const suspects = FILES.flatMap(file => {
-  const blocks = styleBlocks(readFileSync(file, 'utf8'));
-  const fills = [...blocks.values()].some(b => FILLS.test(b));
-  if (!fills) return [];
-
-  return [...blocks.entries()]
-    .filter(([, body]) => WHITE.test(body))
-    .map(([name]) => `${file}#${name}`);
-});
 
 /**
  * An `on*` token in the same block as a fill it does not name. Reads as
  * correct — it is a token, not a literal — and inverts with whichever fill it
  * IS named for.
  */
-const misTokened = FILES.flatMap(file => {
-  const blocks = styleBlocks(readFileSync(file, 'utf8'));
-
-  return [...blocks.entries()].flatMap(([name, body]) => {
-    const fill = FILLS.exec(body)?.[1];
-    const onToken = /\bcolor:\s*theme\.colors\.(on[A-Z]\w*)/.exec(body)?.[1];
-    if (!fill || !onToken) return [];
-    return fillOfOnToken(onToken) === fill ? [] : [`${file}#${name}`];
-  });
-});
 
 /**
  * A shared fill overridden locally, under a shared foreground naming the
@@ -217,28 +192,6 @@ describe('text on a primary or danger fill', () => {
   it('scans the files it claims to scan', () => {
     // A sweep that reads nothing passes vacuously.
     expect(FILES.length).toBeGreaterThan(400);
-  });
-
-  it('still recognises a hardcoded white', () => {
-    // `suspects` is empty across the tree, so an inert pattern would pass here
-    // for the wrong reason.
-    for (const literal of [
-      "'#fff'",
-      '"#FFFFFF"',
-      "'white'",
-      "'rgba(255, 255, 255, 0.8)'",
-    ]) {
-      expect(WHITE.test(`color: ${literal},`)).toBe(true);
-    }
-    expect(WHITE.test('color: theme.colors.onPrimary,')).toBe(false);
-  });
-
-  it('reads onPrimary/onError/onScrim rather than a hardcoded white', () => {
-    expect(suspects).toEqual([]);
-  });
-
-  it('never paints an on-token over a fill it does not name', () => {
-    expect(misTokened).toEqual([]);
   });
 
   it('does not let a caller override a shared fill under its foreground', () => {

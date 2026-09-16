@@ -26,5 +26,9 @@ module.exports = {
     'queueable-write-is-local-first': require('./rules/queueable-write-is-local-first'),
     'recycling-list-host-is-bounded': require('./rules/recycling-list-host-is-bounded'),
     'hook-returns-no-library-type': require('./rules/hook-returns-no-library-type'),
+    'flashlist-declares-scroll-component': require('./rules/flashlist-declares-scroll-component'),
+    'no-scrollable-in-bottom-sheet-view': require('./rules/no-scrollable-in-bottom-sheet-view'),
+    'rngh-refresh-control-matches-host': require('./rules/rngh-refresh-control-matches-host'),
+    'on-fill-text-uses-its-token': require('./rules/on-fill-text-uses-its-token'),
   },
 };

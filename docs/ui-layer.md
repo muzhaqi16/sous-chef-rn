@@ -164,9 +164,10 @@ they read it.
   role for a ground the theme does NOT paint — over a photo, a camera preview, a
   dark overlay — and it stays light in both appearances. There is no
   `colors.white`.
-- **`__tests__/ui/onFillTextUsesItsToken.test.ts`** catches three things: a raw
-  literal, an `on*` token over a fill it does not name, and a locally overridden
-  shared fill.
+- **`sous-chef/on-fill-text-uses-its-token`** catches the two per-file shapes: a
+  raw white literal, and an `on*` token over a fill it does not name.
+  **`__tests__/ui/onFillTextUsesItsToken.test.ts`** keeps what needs more than
+  one file — a shared fill overridden locally — and the contrast maths.
 - **`src/theme/__tests__/foundations.test.ts`** asserts light and dark declare the
   same colour, shadow and motion keys. A token defined in one theme only is
   invisible until someone switches appearance, and then the style silently drops.
@@ -209,7 +210,7 @@ they read it.
   the on-device A/B and the `dragOffset` sign constraint are in
   [RNGH v3 handlers survive a native scroll takeover](verified-library-behaviour.md#rngh-v3-handlers-survive-a-native-scroll-takeover).
 - **Every FlashList must decide its scroll host.**
-  `__tests__/gestures/flashListScrollComponents.test.ts` makes every FlashList
+  `sous-chef/flashlist-declares-scroll-component` makes every FlashList
   declare a `renderScrollComponent` — RNGH's, or gorhom's
   `BottomSheetScrollable` inside a sheet — or sit on an allowlist with a reason.
   It derives its file list from the tree, so a new list cannot skip the decision.

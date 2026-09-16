@@ -149,7 +149,7 @@ takes it via `renderScrollComponent` (`FlashListProps.d.ts:101`); RNGH's root
 It forwards `ref={props.ref}` and re-clones `refreshControl` with `block: scrollGesture`
 (`GestureComponents.tsx:56-115`), so FlashList's scroll ref and pull-to-refresh
 survive the swap. `src/components/atoms/SwipeAwareScrollComponent.tsx` is the single
-place this is wired; `__tests__/gestures/flashListScrollComponents.test.ts` guards it.
+place this is wired; `sous-chef/rngh-refresh-control-matches-host` guards it.
 
 **Confirmed on device by controlled A/B (2026-08-24), not just by reading source.**
 With the fix in place the bug was gone; removing `renderScrollComponent` from
@@ -279,7 +279,7 @@ node scripts/probe-withunistyles-prop-passthrough.mjs
 grep -n "cloneElement" -A 8 node_modules/react-native-gesture-handler/src/v3/components/GestureComponents.tsx
 grep -n -A 14 "const refreshControl = useMemo" node_modules/@shopify/flash-list/src/recyclerview/hooks/useSecondaryProps.tsx
 grep -n -B 4 "'block'" node_modules/react-native-gesture-handler/src/v3/hooks/utils/propsWhiteList.ts
-npx jest __tests__/gestures/flashListScrollComponents.test.ts
+npx eslint src --rule '{"sous-chef/rngh-refresh-control-matches-host":"error"}'
 ```
 
 ### RNGH ends the nested scroll its ScrollView opens
@@ -337,7 +337,7 @@ Re-check:
 node scripts/probe-rngh-nested-scroll.mjs
 grep -n -A 4 "private class ScrollViewHook" node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/NativeViewGestureHandler.kt
 grep -n "nestedScrollEnabled" node_modules/react-native/Libraries/Components/ScrollView/ScrollView.js
-npx jest __tests__/gestures/flashListScrollComponents.test.ts
+npx eslint src --rule '{"sous-chef/rngh-refresh-control-matches-host":"error"}'
 ```
 
 ### unistyles withUnistyles drops function styles
