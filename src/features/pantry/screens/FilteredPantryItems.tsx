@@ -50,7 +50,8 @@ import { Text } from '#components/atoms/Text';
 import type { Translate } from '#/i18n/types';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { EmptyState } from '#components/molecules/EmptyState';
-import { Screen } from '#components/templates/Screen';
+import { SubScreen } from '#components/templates/SubScreen';
+import { useScreenListInset } from '#components/templates/useScreenListInset';
 
 export type FilteredPantryItemsMode = 'lowStock' | 'expiring' | 'expired';
 
@@ -302,7 +303,8 @@ export const FilteredPantryItems: React.FC<
   const mode = route.params?.mode ?? 'lowStock';
   const config = buildModeConfig(t)[mode];
 
-  const { goBack, toPantryItemDetail } = useAppNavigation();
+  const { toPantryItemDetail } = useAppNavigation();
+  const listInset = useScreenListInset();
 
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -459,12 +461,9 @@ export const FilteredPantryItems: React.FC<
     : undefined;
 
   return (
-    <Screen
-      header={{
-        title: config.title,
-        back: goBack,
-        actions: headerRightActions,
-      }}
+    <SubScreen
+      title={config.title}
+      actions={headerRightActions}
       scroll="list"
       gutter="none"
     >
@@ -477,7 +476,7 @@ export const FilteredPantryItems: React.FC<
           onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
           renderScrollComponent={SwipeAwareScrollComponent}
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, listInset]}
           data={filteredItems}
           keyExtractor={keyExtractor}
           {...FLASHLIST_DEFAULTS.fullScreen}
@@ -534,7 +533,7 @@ export const FilteredPantryItems: React.FC<
         onCreateListAndAdd={picker.handleCreateListAndAdd}
         onDismiss={picker.dismissPicker}
       />
-    </Screen>
+    </SubScreen>
   );
 };
 

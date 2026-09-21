@@ -27,7 +27,7 @@ optional:
 ## Screen scaffold and sheet shell
 
 - **`Screen`** (`src/components/templates/Screen.tsx`) takes `header`
-  (`standard | tab | collapsing | none`, plus title, actions, back, close and the
+  (`standard | tab | none`, plus title, actions, back, close and the
   offline pill), `scroll` (`none | scroll | form | list`), `gutter`, `refresh`,
   `state`, `footer`, and — in `scroll` mode — `onScroll` (an animated scroll
   handler) and `scrollTestID`. It never applies the top inset: the navigator
@@ -52,9 +52,10 @@ optional:
   screen; `FormScreen` a full-screen form (close + save); `DetailTemplate` a
   screen of card sections; `PaginatedHistoryScreen` a `SubScreen` over one
   paginated list; `AuthWrapper` and `OnBoardingWrapper` the auth and onboarding
-  shells. `__tests__/ui/screenUsesTheScaffold.test.ts` holds that every screen
-  renders one of these and assembles no header, back control or safe area of
-  its own.
+  shells. A pushed screen whose back is plain `goBack` is `SubScreen`, never
+  `Screen` with a hand-built `back`. A form sheet's header is `SheetHeader`
+  (close, centred title, primary confirm); only templates render `Header`.
+  `__tests__/ui/screenUsesTheScaffold.test.ts` holds all of this.
 - **`Sheet`** (`src/components/templates/Sheet.tsx`) takes
   `view | form | action | list`. `form` supplies both the keyboard offset and
   the input context, so inputs inside resolve to gorhom's `BottomSheetTextInput`.
@@ -77,7 +78,7 @@ they read it.
 - **Geometry** is `commonStyles.rowWrapper` (the row's place in the list),
   `rowSurface` (its card) and `rowContent` (the slot layout inside it), in
   `src/styles/commonStyles.ts`. Their steps are the named `theme.layout.row*`
-  tokens (`rowInset`, `rowSlotGap`, `rowTextGap`, `rowGap`, `rowGutter`), so
+  tokens (`rowInset`, `rowSlotGap`, `rowTextGap`, `rowGap`), so
   density scales them. Held in four separate copies, the steps drift into three
   paddings, three row gaps and two radii; one definition cannot drift.
 - **Text** is `rowType` (`src/theme/foundations/type.ts`): `title` for the row's

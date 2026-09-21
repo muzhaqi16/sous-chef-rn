@@ -28,7 +28,8 @@ import { useUnfavoriteRecipe } from '#features/recipes/hooks/useUnfavoriteRecipe
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
-import { Screen } from '#components/templates/Screen';
+import { SubScreen } from '#components/templates/SubScreen';
+import { useScreenListInset } from '#components/templates/useScreenListInset';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { recipesTestIDs } from '#features/recipes/testIDs';
@@ -41,7 +42,8 @@ const getItemType = () => 'item';
 export const SavedRecipes: React.FC = () => {
   useScreenTransition('SavedRecipes');
   const { t } = useTranslation();
-  const { toRecipeDetail, goBack } = useAppNavigation();
+  const { toRecipeDetail } = useAppNavigation();
+  const listInset = useScreenListInset();
   const { unfavoriteRecipe } = useUnfavoriteRecipe();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -281,8 +283,8 @@ export const SavedRecipes: React.FC = () => {
   );
 
   return (
-    <Screen
-      header={{ title: t('recipes.savedRecipesTitle'), back: goBack }}
+    <SubScreen
+      title={t('recipes.savedRecipesTitle')}
       scroll="list"
       gutter="none"
     >
@@ -343,7 +345,7 @@ export const SavedRecipes: React.FC = () => {
               />
             )
           }
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, listInset]}
           {...FLASHLIST_DEFAULTS.fullScreen}
         />
       )}
@@ -388,7 +390,7 @@ export const SavedRecipes: React.FC = () => {
         onCancel={() => setShowTagPicker(false)}
         loading={isLoadingRemainingPages}
       />
-    </Screen>
+    </SubScreen>
   );
 };
 

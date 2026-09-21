@@ -30,10 +30,10 @@ const NO_AUTOMATIC_INSET: ScrollViewProps['contentInsetAdjustmentBehavior'] =
 export interface ScreenHeaderConfig {
   /**
    * `standard` is the titled bar with a back control; `tab` is a root tab's
-   * bar; `collapsing` means the screen draws its own hero and the scaffold
-   * stays out of the way; `none` is a screen with no chrome.
+   * bar; `none` is a screen with no chrome. A hero screen is
+   * `CollapsingHeroDetail`, not a variant.
    */
-  variant?: 'standard' | 'tab' | 'collapsing' | 'none';
+  variant?: 'standard' | 'tab' | 'none';
   title?: string;
   /** `tab` only: the small label above the title. */
   label?: string;

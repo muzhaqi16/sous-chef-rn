@@ -27,7 +27,7 @@ import {
 } from '#store/useAppStore';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { Text } from '#components/atoms/Text';
-import { Screen } from '#components/templates/Screen';
+import { SubScreen } from '#components/templates/SubScreen';
 import { profileTestIDs } from '#features/profile/testIDs';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
@@ -36,20 +36,8 @@ export const ProfileScreen = () => {
   useScreenTransition('ProfileScreen');
   const canAccessDevTools = useCanAccessDevTools();
   const hasUnverifiedEmail = useHasUnverifiedEmail();
-  const {
-    toProfilePhotoUpload,
-    toDeleteAccount,
-    toPersonalInformation,
-    toAppearance,
-    toNotificationSettings,
-    toDietaryProfile,
-    toAppSettings,
-    toDebugInfo,
-    toPerformanceDashboard,
-    toChangePassword,
-    toVerifyEmail,
-    goBack,
-  } = useAppNavigation();
+  const { toProfilePhotoUpload, toDeleteAccount, toVerifyEmail, goBack } =
+    useAppNavigation();
   const { profile, user, loading } = useProfileData();
   const { sections, BiometricModal } = useConfigurableSettings();
   const actionTrayRef = useRef<ActionTrayRef>(null);
@@ -92,14 +80,6 @@ export const ProfileScreen = () => {
     toDeleteAccount();
   };
 
-  const handleOverlayOpen = () => {
-    // No-op: Profile sits outside the tab bar context.
-  };
-
-  const handleOverlayClose = () => {
-    // No-op: Profile sits outside the tab bar context.
-  };
-
   const fullName = `${profile?.firstName ?? ''} ${
     profile?.lastName ?? ''
   }`.trim();
@@ -110,22 +90,18 @@ export const ProfileScreen = () => {
     return <ProfileSkeleton onBack={() => goBack()} />;
   }
   return (
-    <Screen
-      scroll="scroll"
+    <SubScreen
       onScroll={scrollHandler}
       scrollTestID={profileTestIDs.profileScrollView}
       testID={profileTestIDs.profileScreen}
-      header={{
-        back: () => goBack(),
-        actions: [
-          {
-            icon: 'ellipsis-vertical',
-            onPress: handleMorePress,
-            accessibilityLabel: t('labels.moreOptions'),
-            testID: profileTestIDs.moreButton,
-          },
-        ],
-      }}
+      actions={[
+        {
+          icon: 'ellipsis-vertical',
+          onPress: handleMorePress,
+          accessibilityLabel: t('labels.moreOptions'),
+          testID: profileTestIDs.moreButton,
+        },
+      ]}
     >
       <ProfileHero
         avatarUrl={profile?.avatar}
@@ -172,42 +148,15 @@ export const ProfileScreen = () => {
                   onPress: () => handleLogout(item.onPress),
                 };
               }
-              // Handle navigation items
               if (item.type === 'navigation') {
-                return {
-                  ...item,
-                  testID: profileTestIDs.menuItem(item.key),
-                  onPress: () => {
-                    if (item.key === 'personalInformation') {
-                      toPersonalInformation();
-                    } else if (item.key === 'appearance') {
-                      toAppearance();
-                    } else if (item.key === 'notifications') {
-                      toNotificationSettings();
-                    } else if (item.key === 'dietaryProfile') {
-                      toDietaryProfile();
-                    } else if (item.key === 'appSettings') {
-                      toAppSettings();
-                    } else if (item.key === 'debugInfo') {
-                      toDebugInfo();
-                    } else if (item.key === 'performanceDashboard') {
-                      toPerformanceDashboard();
-                    } else if (item.key === 'changePassword') {
-                      toChangePassword();
-                    }
-                  },
-                };
+                return { ...item, testID: profileTestIDs.menuItem(item.key) };
               }
               return item;
             })}
           />
         ))}
       {BiometricModal}
-      <ActionTray
-        ref={actionTrayRef}
-        onOpen={handleOverlayOpen}
-        onClose={handleOverlayClose}
-      >
+      <ActionTray ref={actionTrayRef}>
         <AppPressable style={styles.menuItem} onPress={handleDeleteAccount}>
           <Icon name="trash-outline" size={20} tone="error" />
           <Text
@@ -219,7 +168,7 @@ export const ProfileScreen = () => {
           </Text>
         </AppPressable>
       </ActionTray>
-    </Screen>
+    </SubScreen>
   );
 };
 
