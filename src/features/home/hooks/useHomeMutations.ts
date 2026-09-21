@@ -69,10 +69,11 @@ export function useHomeMutations({
           void refetch();
         }
       },
-      onCompleted: data => {
-        // If the deleted home was the selected one, clear it or pick another.
-        const payload = appliedPayload(data);
-        if (!payload || payload.home.id !== selectedHomeId) return;
+      onCompleted: (data, clientOptions) => {
+        // If the deleted home was the selected one, clear it or pick another —
+        // including one `update` removed as already gone.
+        if (!appliedPayload(data) && !isAlreadyGone(data)) return;
+        if (clientOptions?.variables?.input?.id !== selectedHomeId) return;
 
         // Read fresh data from Apollo cache (no refetch needed!)
         const cachedData = deleteClient.cache.readQuery({

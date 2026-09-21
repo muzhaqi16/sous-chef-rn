@@ -172,9 +172,11 @@ Mechanism: `docs/session-and-transport.md`. No gate holds these.
 - **`authService.logout()` is the only sign-out**; `SESSION_SCOPED_STATE` lists
   what it removes (`sessionEndLeavesNoData.test.ts`).
 - **A session end STOPS things before clearing**: `runSessionTeardown()` first,
-  `completeLogout()` after `performLogoutCleanup()`, `queueManager.onLogout()` only
-  on deliberate sign-out, `/health` keeps probing. Every path clears the push
-  token (a `registerSessionTeardown` step).
+  the sign-out gate is one counted `whileSessionEnds` scope held through the
+  store reset, `queueManager.onLogout()` only on deliberate sign-out, `/health`
+  keeps probing. Every path clears the push token (a `registerSessionTeardown` step).
+- **A session end mints nothing**: `setTokens` refuses a pair inside the scope,
+  and a refresh that outlives its session is discarded (`refreshToken.ts`).
 - **A session end DROPS the socket client** (`disposeWebSocket()`), not just
   disposes it; no second reconnect loop; reconnect pacing goes in `url()`.
 - **`AUTH_REFRESH_TOKEN_SUPERSEDED` ≠ `_INVALID`** — never sign out on the first;

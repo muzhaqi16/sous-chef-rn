@@ -10,6 +10,7 @@ import {
 } from '#operations/home/home.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { alertService } from '#/services/alertService';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useHomeMutations } from '../useHomeMutations';
 
 const mockStoreState = {
@@ -295,6 +296,33 @@ describe('useHomeMutations', () => {
       await expect(deleted).resolves.toBe(false);
       // The confirmation, then exactly one failure.
       expect(alertService.alert).toHaveBeenCalledTimes(2);
+    });
+
+    it('moves the selection off a selected home the server says is already gone', async () => {
+      const gone = recordMock(DeleteHomeDocument, {
+        data: {
+          deleteHome: { __typename: 'NotFoundError', code: ErrorCode.NotFound },
+        },
+      });
+      const options = createOptions();
+      const { result } = renderHookWithApollo(() => useHomeMutations(options), {
+        operationMocks: [gone.mock],
+      });
+
+      let deleted: Promise<unknown> | undefined;
+      act(() => {
+        deleted = result.current.deleteHome('home-1', 'Home 1');
+      });
+      const confirm = (alertService.alert as jest.Mock).mock.lastCall?.[2] as
+        | Array<{ style?: string; onPress?: () => unknown }>
+        | undefined;
+      await act(async () => {
+        await confirm?.find(b => b.style === 'destructive')?.onPress?.();
+      });
+
+      await expect(deleted).resolves.toBeTruthy();
+      expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(null);
+      expect(options.setSelectedPantryId).toHaveBeenCalledWith(null);
     });
   });
 });

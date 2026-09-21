@@ -11,6 +11,7 @@ import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { SessionError } from '#/utils/errors/sessionError';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
+import { isSessionEnding } from '#store/sessionEnding';
 import {
   RefreshTokenDocument,
   type RefreshTokenMutation,
@@ -296,7 +297,16 @@ const performTokenRefresh = async (): Promise<string | null> => {
 
     const { accessToken: newToken, refreshToken: newRefreshToken } = payload;
 
-    // Update tokens in store
+    // The session that presented `refreshToken` ended or was replaced while
+    // the rotation was in flight, so the pair belongs to no one.
+    if (useStore.getState().refreshToken !== refreshToken) {
+      logger.info('Discarded a token pair that outlived its session');
+      return null;
+    }
+    // Started before the sign-out: the pair serves only the request awaiting
+    // it, and a re-dial would reopen the socket the teardown drops.
+    if (isSessionEnding()) return newToken;
+
     state.setTokens({ accessToken: newToken, refreshToken: newRefreshToken });
 
     // Re-dial so the socket presents the token just stored.
@@ -510,6 +520,8 @@ export const proactiveTokenRefresh = async (
     }
     return joined;
   }
+
+  if (isSessionEnding()) return null;
 
   // Only a caller opening a NEW rotation is throttled. RECOVERY is exempt: the
   // socket's 4403 path cannot tell a throttled `null` from a failed one.

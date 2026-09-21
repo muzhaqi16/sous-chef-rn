@@ -1,6 +1,7 @@
 import { createTestStore } from '#/test-utils/createTestStore';
 import type { AuthUserInput } from '#store/slices/authSlice';
 import { registerTokenRefreshBridge } from '#store/tokenRefreshBridge';
+import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';
 
 // Mock external dependencies that authSlice imports
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -190,6 +191,24 @@ describe('authSlice', () => {
       const store = createTestStore();
       store.getState().setTokens({ accessToken: 'new' });
       expect(schedule).toHaveBeenCalledWith('new');
+    });
+
+    it('refuses a credential while a session ends', async () => {
+      const store = createTestStore();
+      store.getState().setAuth(testUser, 'old-access', 'old-refresh');
+      schedule.mockClear();
+
+      await whileSessionEnds(async () => {
+        store.getState().setTokens({
+          accessToken: 'late-access',
+          refreshToken: 'late-refresh',
+        });
+      });
+      resetSessionEndingGate();
+
+      expect(store.getState().accessToken).toBe('old-access');
+      expect(store.getState().refreshToken).toBe('old-refresh');
+      expect(schedule).not.toHaveBeenCalled();
     });
   });
 

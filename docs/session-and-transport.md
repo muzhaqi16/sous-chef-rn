@@ -39,9 +39,12 @@ its own step at module init — `logoutCleanup` the Apollo teardown,
 `queueManager` the drain cancel — the same hand-off `registerApolloClient` and
 `registerTokenRefresh` use. Four things about it are load-bearing:
 
-- **`completeLogout()` must run after `performLogoutCleanup()`.** That latch
-  makes `authLink` and `errorLink` refuse every operation; left set, the next
-  sign-in cannot send its login mutation.
+- **The sign-out gate is one counted scope.** `whileSessionEnds`
+  (`src/store/sessionEnding.ts`) holds it across the teardown AND the store
+  reset, on both paths, and releases it however they exit; `authLink` and
+  `errorLink` refuse every operation while it is held. A gate left latched by a
+  throw would refuse the next sign-in's login mutation. `endSession` is
+  single-flight, so N failing operations join one teardown.
 - **`queueManager.onLogout()` is deliberately NOT called.** It deletes the
   user's queued writes, and a rejected refresh token is not the user choosing
   to discard unsynced work. Only the pending drain is cancelled; the entries
@@ -51,9 +54,10 @@ its own step at module init — `logoutCleanup` the Apollo teardown,
   unauthenticated, and the sign-in screen needs to know whether the API is up.
 - **`devicePushToken` clears the server's delivery target.** `updateDevice`
   removes only the token; the device row survives, because deleting it revokes
-  the device credential biometric sign-in exchanges. It resolves the row with
-  `deviceByDeviceId` when this launch never registered, skips the lookup while
-  offline, and is fire-and-forget so a round trip cannot hold the teardown. On
+  the device credential biometric sign-in exchanges. It clears the row id
+  persisted at registration (`saveDeviceRow`), so no lookup — a query the
+  `apollo` step would cancel — stands in front of it; it skips while offline,
+  and is fire-and-forget so a round trip cannot hold the teardown. On
   `refresh_token_dead` the access token is already refused, so a `ForbiddenError`
   here is the expected outcome and is logged at `warn`, not treated as an
   incident.
@@ -75,6 +79,15 @@ Where the identity that names the device comes from, and why it is keychain-
 primary: `docs/subscriptions-echo-and-budget.md` § The device identity.
 
 ## Token rotation
+
+**A session end mints nothing.** A credential landing after the teardown cleared
+storage is written back and re-arms the refresh, leaving a signed-out device a
+live session — and `client.stop()` does not cancel an in-flight refresh
+mutation. So `setTokens` refuses a pair while the scope is held, the refresh
+opens no rotation inside it, and a rotation that completes after its session
+was cleared or replaced (the stored refresh token is no longer the one it
+presented) is discarded. One begun before the sign-out still answers the
+request waiting on it, unstored and without re-dialling the socket.
 
 **Both transports can rotate, and a lost race is survivable** — the server
 tells one apart from a dead session. Rotation is single-use; when an HTTP

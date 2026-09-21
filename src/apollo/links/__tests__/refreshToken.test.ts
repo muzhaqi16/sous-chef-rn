@@ -57,6 +57,7 @@ import { registerApolloClient } from '#/apollo/clientRegistry';
 import { isAuthRefusalCode } from '#/utils/authErrorCodes';
 import { classifyError } from '#/apollo/offlineQueue/queueErrorPolicy';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';
 
 const mockedJwtDecode = jwtDecode as jest.MockedFunction<typeof jwtDecode>;
 const mockedClient = client as jest.Mocked<typeof client>;
@@ -990,6 +991,80 @@ describe('refreshToken', () => {
       await proactiveTokenRefresh({ reason: 'recovery' });
 
       expect(await proactiveTokenRefresh()).toBeNull();
+    });
+  });
+
+  describe('a rotation that outlives its session', () => {
+    const rotated = {
+      data: {
+        refresh: {
+          __typename: 'RefreshTokenPayload',
+          accessToken: 'rotated-token',
+          refreshToken: 'rotated-refresh',
+        },
+      },
+    };
+
+    const seedStore = () => {
+      const state = {
+        refreshToken: 'mock-refresh-token' as string | null,
+        tokenRefreshFailed: jest.fn(),
+        setTokens: jest.fn(),
+        setNeedsTokenRefresh: jest.fn(),
+      };
+      (mockedUseStore.getState as jest.Mock).mockImplementation(() => state);
+      return state;
+    };
+
+    beforeEach(() => {
+      clearRefreshState();
+    });
+
+    afterEach(() => {
+      resetSessionEndingGate();
+    });
+
+    it('discards a pair whose session was cleared while it was in flight', async () => {
+      const state = seedStore();
+      (mockedClient.mutate as jest.Mock).mockImplementation(async () => {
+        state.refreshToken = null;
+        return rotated;
+      });
+
+      await expect(proactiveTokenRefresh()).resolves.toBeNull();
+      expect(state.setTokens).not.toHaveBeenCalled();
+      expect(mockedReconnectWebSocket).not.toHaveBeenCalled();
+    });
+
+    it('hands a rotation begun before the sign-out to its caller, unstored and without re-dialling', async () => {
+      const state = seedStore();
+      let answer: (value: typeof rotated) => void = () => undefined;
+      (mockedClient.mutate as jest.Mock).mockImplementation(
+        () =>
+          new Promise(resolve => {
+            answer = resolve;
+          }),
+      );
+
+      const inFlight = proactiveTokenRefresh();
+      const token = await whileSessionEnds(async () => {
+        answer(rotated);
+        return inFlight;
+      });
+
+      expect(token).toBe('rotated-token');
+      expect(state.setTokens).not.toHaveBeenCalled();
+      expect(mockedReconnectWebSocket).not.toHaveBeenCalled();
+    });
+
+    it('opens no rotation while a session ends', async () => {
+      seedStore();
+      (mockedClient.mutate as jest.Mock).mockResolvedValue(rotated);
+
+      const token = await whileSessionEnds(() => proactiveTokenRefresh());
+
+      expect(token).toBeNull();
+      expect(mockedClient.mutate).not.toHaveBeenCalled();
     });
   });
 

@@ -11,6 +11,7 @@ import {
   refreshTokenNow,
   scheduleProactiveRefresh,
 } from '../tokenRefreshBridge';
+import { isSessionEnding } from '../sessionEnding';
 import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { saveSessionTokens, clearSessionTokens } from '#storage/keychain';
 import { logger } from '#/utils/environment';
@@ -269,6 +270,14 @@ export const createAuthSlice: StateCreator<
     },
 
     setTokens: ({ accessToken, refreshToken }) => {
+      // Landing mid sign-out, a credential outlives it and re-arms the refresh
+      // the teardown cancelled.
+      if (isSessionEnding()) {
+        logger.warn(
+          'Discarded a token pair that arrived while the session ended',
+        );
+        return;
+      }
       set(state => {
         if (accessToken !== undefined) state.accessToken = accessToken;
         if (refreshToken !== undefined) state.refreshToken = refreshToken;
