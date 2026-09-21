@@ -13371,7 +13371,7 @@ type UpcValidation {
 Self-service account update: the caller updating their own User row. Exposes
 ONLY non-privileged, self-editable fields — privileged fields (email, role,
 emailVerified, deletedAt) are deliberately absent so a caller cannot submit
-them at all (schema-surface mass-assignment prevention, finding C1). Admin
+them at all (schema-surface mass-assignment prevention). Admin
 changes go through adminUpdateUser. Profile (name/bio/avatar) lives on
 updateProfile; app settings on updateSettings.
 """

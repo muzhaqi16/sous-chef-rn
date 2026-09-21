@@ -77,9 +77,9 @@ export type ScreenProps = ScreenBaseProps &
 /**
  * The one screen scaffold. It NEVER applies the top inset — the navigator's
  * `screenLayout` already does, and applying it twice is what pushed six profile
- * screens down by a status bar. The bottom inset is applied to every mode:
- * `contentInsetAdjustmentBehavior` supplies it on iOS only, and under Android
- * gesture navigation a scroll view's last row otherwise sits under the bar.
+ * screens down by a status bar. The bottom inset is applied to every mode as
+ * padding, so the `scroll` host turns off iOS's automatic inset, which would
+ * reserve it a second time.
  */
 export const Screen: React.FC<ScreenProps> = ({
   children,
@@ -168,7 +168,7 @@ export const Screen: React.FC<ScreenProps> = ({
             styles.scrollContent,
             { paddingBottom: insets.bottom },
           ]}
-          contentInsetAdjustmentBehavior="automatic"
+          contentInsetAdjustmentBehavior="never"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps={KEYBOARD_PERSIST_TAPS}
           keyboardDismissMode={KEYBOARD_DISMISS_MODE}
