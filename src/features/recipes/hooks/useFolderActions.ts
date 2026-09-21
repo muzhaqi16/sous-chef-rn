@@ -9,6 +9,7 @@ import {
 } from '#features/recipes/graphql/recipe.generated';
 import { toastService } from '#/services/toastService';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { isRecord } from '#/utils/isRecord';
 
 /**
  * Read / write the folder list. Module-level so each caller's try body stays a
@@ -21,10 +22,6 @@ function readFolders(cache: ApolloCache): string[] | undefined {
       query: SavedRecipeFoldersDocument,
     })?.savedRecipeFolders ?? undefined
   );
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
 }
 
 function writeFolders(cache: ApolloCache, folders: string[]): void {

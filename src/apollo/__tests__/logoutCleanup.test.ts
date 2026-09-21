@@ -63,6 +63,7 @@ jest.mock('../links/refreshToken', () => ({
 // Imports – after all mocks are declared
 // ---------------------------------------------------------------------------
 
+import { whileSessionEnds } from '#store/sessionEnding';
 import { LogoutCleanup } from '../logoutCleanup';
 import { cancelTokenRefresh } from '../links/tokenScheduler';
 import { apolloCachePersistence } from '../offline/ApolloCachePersistence';
@@ -208,9 +209,10 @@ describe('LogoutCleanup', () => {
   });
 
   describe('completeLogout', () => {
-    it('resets the isLoggingOut flag', async () => {
-      await LogoutCleanup.performLogoutCleanup();
-      expect(LogoutCleanup.isInLogoutProcess()).toBe(true);
+    it('drops a gate a test left open', async () => {
+      await whileSessionEnds(async () => {
+        expect(LogoutCleanup.isInLogoutProcess()).toBe(true);
+      });
 
       LogoutCleanup.completeLogout();
       expect(LogoutCleanup.isInLogoutProcess()).toBe(false);
@@ -223,23 +225,23 @@ describe('LogoutCleanup', () => {
     });
 
     it('returns true for non-allowed operations during logout', async () => {
-      await LogoutCleanup.performLogoutCleanup();
-
-      expect(
-        LogoutCleanup.shouldSkipOperation(
-          operationNameOf(GetShoppingListsLiteDocument),
-        ),
-      ).toBe(true);
+      await whileSessionEnds(async () => {
+        expect(
+          LogoutCleanup.shouldSkipOperation(
+            operationNameOf(GetShoppingListsLiteDocument),
+          ),
+        ).toBe(true);
+      });
     });
 
     it('returns false for RefreshToken during logout', async () => {
-      await LogoutCleanup.performLogoutCleanup();
-
-      expect(
-        LogoutCleanup.shouldSkipOperation(
-          operationNameOf(RefreshTokenDocument),
-        ),
-      ).toBe(false);
+      await whileSessionEnds(async () => {
+        expect(
+          LogoutCleanup.shouldSkipOperation(
+            operationNameOf(RefreshTokenDocument),
+          ),
+        ).toBe(false);
+      });
     });
 
     // `UpdateDevice` is BOTH the sign-out device delete and the push-token
@@ -247,19 +249,19 @@ describe('LogoutCleanup', () => {
     // and leave the server pushing to a signed-out account; the delete opts in
     // per call with `allowDuringLogout` instead.
     it('returns true for UpdateDevice — the name alone earns no exemption', async () => {
-      await LogoutCleanup.performLogoutCleanup();
-
-      expect(
-        LogoutCleanup.shouldSkipOperation(
-          operationNameOf(UpdateDeviceDocument),
-        ),
-      ).toBe(true);
+      await whileSessionEnds(async () => {
+        expect(
+          LogoutCleanup.shouldSkipOperation(
+            operationNameOf(UpdateDeviceDocument),
+          ),
+        ).toBe(true);
+      });
     });
 
     it('returns true when no operation name during logout', async () => {
-      await LogoutCleanup.performLogoutCleanup();
-
-      expect(LogoutCleanup.shouldSkipOperation()).toBe(true);
+      await whileSessionEnds(async () => {
+        expect(LogoutCleanup.shouldSkipOperation()).toBe(true);
+      });
     });
   });
 });

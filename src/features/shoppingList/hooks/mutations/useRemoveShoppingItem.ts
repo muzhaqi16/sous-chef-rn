@@ -76,6 +76,18 @@ function statsWithoutRow(
   return fields;
 }
 
+/** Writes each stat the snapshot held back as it was. */
+function statsAsBefore(
+  stats: ListStats | null,
+): Partial<Record<ListStat, () => number>> {
+  const fields: Partial<Record<ListStat, () => number>> = {};
+  for (const field of LIST_STATS) {
+    const value = stats?.[field];
+    if (value !== undefined) fields[field] = () => value;
+  }
+  return fields;
+}
+
 interface UseRemoveShoppingItemOptions {
   listId: string | null | undefined;
   refetch: () => Promise<unknown>;
@@ -162,8 +174,13 @@ export function useRemoveShoppingItem({
         document: RemoveItemFromShoppingListDocument,
         fallback: t('errors.deleteItemFailed'),
         removal: true,
-        // The item still exists server-side; a refetch restores it and its counts.
+        // The item still exists server-side. The refetch brings the row back,
+        // but its selection carries no counters, so those come from the snapshot.
         onFailed: () => {
+          client.cache.modify({
+            id: listCacheId,
+            fields: statsAsBefore(listStats),
+          });
           void refetch().catch(error =>
             errorService.reportError(error, {
               operation: 'RemoveShoppingItem.refetch',

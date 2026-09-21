@@ -21,9 +21,12 @@ import {
   validateDeviceInformation,
 } from '#/utils/deviceInfo';
 import {
+  clearDeviceRow,
   clearLegacyDeviceFingerprint,
   ensureDeviceId,
+  readDeviceRow,
   readLegacyDeviceFingerprint,
+  saveDeviceRow,
 } from '#/storage/deviceId';
 import { registerSessionTeardown } from '#/store/sessionTeardown';
 import { useStore } from '#store';
@@ -209,33 +212,6 @@ export async function pushRotatedTokenToServer(
   logger.error('Failed to update rotated push token:', outcome);
 }
 
-/** This device's server row, for a session that ends before it registered. */
-async function findDeviceRowId(): Promise<string | null> {
-  // Offline the lookup cannot succeed, and httpLink's abort plus retryLink's
-  // attempts would spend ~30s establishing that.
-  if (useStore.getState().isOnline === false) return null;
-
-  // This lookup already awaits a round trip, so it can wait for the durable
-  // identity: the synchronous accessor answers `null` whenever the mirror is
-  // unusable, and a null here clears no push token at all.
-  const deviceId = await ensureDeviceId();
-  if (!deviceId) return null;
-
-  let found;
-  try {
-    found = await client.query({
-      query: DeviceByDeviceIdDocument,
-      variables: { deviceId },
-      fetchPolicy: 'network-only',
-      context: { allowDuringLogout: true },
-    });
-  } catch (error) {
-    logger.warn('Could not resolve this device row:', error);
-    return null;
-  }
-  return found.data?.deviceByDeviceId?.id ?? null;
-}
-
 /**
  * Stops the server pushing to a session that has ended. The device row itself
  * survives: removing it revokes the device credential that lets biometric
@@ -247,13 +223,22 @@ async function clearDevicePushToken(): Promise<void> {
   pushTokenRefreshUnsubscribe = null;
   registeredDeviceId = null;
 
-  // A shared device is a delivery target whether or not THIS launch got as far
-  // as registering, so the row is resolved rather than assumed.
-  const rowId = registered ?? (await findDeviceRowId());
+  // Read before any await: the store still holds the session here, and the
+  // mutation must be ISSUED before `resetStore` nulls the token `authLink`
+  // reads. A lookup in front of it would lose both.
+  const state = useStore.getState();
+  const ownerId = state.user?.id;
+  const rowId = registered ?? (ownerId ? readDeviceRow(ownerId) : null);
+  clearDeviceRow();
   if (!rowId) return;
 
-  // This lands AFTER `performLogoutCleanup` has cleared the store, so a cache
-  // write here outlives the session it is ending.
+  // Nothing can replay this: clearing account A's row needs account A's
+  // credential, and the sign-out is about to delete it.
+  if (state.isOnline === false) {
+    logger.warn('Offline session end: the device stays a push target');
+    return;
+  }
+
   const outcome = await updateDevice(
     { id: rowId, clearPushToken: true },
     { allowDuringLogout: true },
@@ -269,7 +254,9 @@ async function clearDevicePushToken(): Promise<void> {
 
 // Every path that ends a session, not only the sign-out the user asked for: a
 // server-ended session leaves the same live delivery target behind.
-// Fire-and-forget, so a round trip cannot hold the rest of the teardown.
+// Fire-and-forget is safe because the clear is a MUTATION and the `apollo`
+// step's `client.stop()` cancels only queries — which is why it must not wait
+// on a lookup. Verified: `#apollo-client-stop-cancels-queries-not-mutations`.
 registerSessionTeardown('devicePushToken', () => {
   void clearDevicePushToken().catch(error =>
     logger.warn('Device push-token teardown failed:', error),
@@ -295,6 +282,13 @@ async function retireLegacyDeviceRow(): Promise<void> {
     });
   } catch (error) {
     logger.warn('Could not look up the superseded device row:', error);
+    return;
+  }
+
+  // `errorPolicy: 'all'` RESOLVES a refused lookup with no data, so an absent
+  // row only means "no such device" once the query itself succeeded.
+  if (found.error) {
+    logger.warn('Could not look up the superseded device row:', found.error);
     return;
   }
 
@@ -370,6 +364,9 @@ async function registerDeviceOnce(): Promise<RegistrationOutcome> {
     const serverDeviceId = registerPayload.device?.id;
     if (serverDeviceId) {
       registeredDeviceId = serverDeviceId;
+      // Survives the process, so a session end needs no lookup to find the row.
+      const ownerId = useStore.getState().user?.id;
+      if (ownerId) saveDeviceRow(ownerId, serverDeviceId);
       pushTokenRefreshUnsubscribe?.();
       pushTokenRefreshUnsubscribe = onPushTokenRefresh(token => {
         void pushRotatedTokenToServer(serverDeviceId, token);

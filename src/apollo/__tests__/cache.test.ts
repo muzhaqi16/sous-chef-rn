@@ -532,7 +532,7 @@ describe('cache', () => {
 
     it('preserves an offline-created edge over an authoritative first-page refetch', () => {
       const spy = jest
-        .spyOn(queueStore, 'getPendingClientIds')
+        .spyOn(queueStore, 'getUnconfirmedCreateIds')
         .mockReturnValue(new Set(['cuid-pending']));
       const cache = makeCache();
 
@@ -553,7 +553,7 @@ describe('cache', () => {
 
     it('does not force-preserve a non-pending edge (server-removed node is dropped)', () => {
       const spy = jest
-        .spyOn(queueStore, 'getPendingClientIds')
+        .spyOn(queueStore, 'getUnconfirmedCreateIds')
         .mockReturnValue(new Set()); // nothing queued
       const cache = makeCache();
 
@@ -705,7 +705,7 @@ describe('cache', () => {
 
     it('preserves an un-replayed local edge over an authoritative single-page refetch', () => {
       const spy = jest
-        .spyOn(queueStore, 'getPendingClientIds')
+        .spyOn(queueStore, 'getUnconfirmedCreateIds')
         .mockReturnValue(new Set(['cuid-pending']));
       const cache = makeCache();
 
@@ -727,7 +727,7 @@ describe('cache', () => {
 
     it('drops a server-removed edge that has no pending mutation', () => {
       const spy = jest
-        .spyOn(queueStore, 'getPendingClientIds')
+        .spyOn(queueStore, 'getUnconfirmedCreateIds')
         .mockReturnValue(new Set()); // nothing queued
       const cache = makeCache();
 
@@ -1932,7 +1932,7 @@ describe('cache', () => {
 
     it('preserves an un-replayed local meal item over an authoritative refetch', () => {
       const spy = jest
-        .spyOn(queueStore, 'getPendingClientIds')
+        .spyOn(queueStore, 'getUnconfirmedCreateIds')
         .mockReturnValue(new Set(['mpi-local']));
       const cache = makeCache();
 
@@ -1952,7 +1952,7 @@ describe('cache', () => {
 
     it('drops a server-removed meal item with no pending mutation', () => {
       const spy = jest
-        .spyOn(queueStore, 'getPendingClientIds')
+        .spyOn(queueStore, 'getUnconfirmedCreateIds')
         .mockReturnValue(new Set());
       const cache = makeCache();
 

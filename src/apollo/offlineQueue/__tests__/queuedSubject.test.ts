@@ -11,7 +11,10 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import { UpdateDietaryProfileDocument } from '#operations/user/user.generated';
-import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  CreatePantryItemDocument,
+  DeletePantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
 
 describe('queuedSubject', () => {
   it('reads a fork as creating the new recipe and deriving from the source', () => {
@@ -20,7 +23,11 @@ describe('queuedSubject', () => {
         mutation: ForkRecipeDocument,
         variables: { input: { id: 'recipe-src', newRecipeId: 'recipe-fork' } },
       }),
-    ).toEqual({ subjectIds: ['recipe-fork'], sourceIds: ['recipe-src'] });
+    ).toEqual({
+      subjectIds: ['recipe-fork'],
+      sourceIds: ['recipe-src'],
+      mintedIds: ['recipe-fork'],
+    });
   });
 
   it.each([
@@ -29,17 +36,20 @@ describe('queuedSubject', () => {
       MoveShoppingListItemDocument,
       { itemId: 'row-1', afterItemId: 'row-0' },
       ['row-1'],
+      [],
     ],
     [
       'a quantity update names the pantry item',
       UpdatePantryItemQuantityDocument,
       { pantryItemId: 'pi-1', quantity: '2' },
       ['pi-1'],
+      [],
     ],
     [
       'a batch add names every row it mints',
       AddItemToShoppingListDocument,
       { shoppingListId: 'list-1', items: [{ id: 'row-a' }, { id: 'row-b' }] },
+      ['row-a', 'row-b'],
       ['row-a', 'row-b'],
     ],
     [
@@ -47,11 +57,13 @@ describe('queuedSubject', () => {
       DeletePantryItemDocument,
       { id: 'pi-9' },
       ['pi-9'],
+      [],
     ],
-  ])('%s', (_label, mutation, input, expected) => {
+  ])('%s', (_label, mutation, input, expected, minted) => {
     expect(queuedSubject({ mutation, variables: { input } })).toEqual({
       subjectIds: expected,
       sourceIds: [],
+      mintedIds: minted,
     });
   });
 
@@ -70,7 +82,7 @@ describe('queuedSubject', () => {
         mutation: UpdateFavoriteRecipeDocument,
         variables: { input: { recipeId: 'recipe-1', notes: 'less salt' } },
       }),
-    ).toEqual({ subjectIds: [], sourceIds: [] });
+    ).toEqual({ subjectIds: [], sourceIds: [], mintedIds: [] });
   });
 
   // The field names are typed against codegen; the input-type names are keys
@@ -98,6 +110,35 @@ describe('queuedSubject', () => {
         mutation: UpdateDietaryProfileDocument,
         variables: { input: { mealsPerDay: 3 } },
       }),
-    ).toEqual({ subjectIds: [], sourceIds: [] });
+    ).toEqual({ subjectIds: [], sourceIds: [], mintedIds: [] });
+  });
+});
+
+describe('which subjects the server has never seen', () => {
+  // `unconfirmedCreates` and the connection merges ask "does the server have
+  // this row yet?". A pending usage or quantity change names a row it owns.
+  it('does not count a row a pending quantity change names', () => {
+    const subject = queuedSubject({
+      mutation: UpdatePantryItemQuantityDocument,
+      variables: { input: { pantryItemId: 'pi-owned', quantity: 2 } },
+    });
+    expect(subject.subjectIds).toEqual(['pi-owned']);
+    expect(subject.mintedIds).toEqual([]);
+  });
+
+  it('counts the id a create minted', () => {
+    const subject = queuedSubject({
+      mutation: CreatePantryItemDocument,
+      variables: { input: { id: 'pi-new', itemName: 'Oats' } },
+    });
+    expect(subject.mintedIds).toEqual(['pi-new']);
+  });
+
+  it('does not count the row an update names', () => {
+    const subject = queuedSubject({
+      mutation: DeletePantryItemDocument,
+      variables: { input: { id: 'pi-owned' } },
+    });
+    expect(subject.mintedIds).toEqual([]);
   });
 });

@@ -110,6 +110,44 @@ describe('revertOptimisticShoppingListItem', () => {
     expect(invokeFieldModifier(cache, 'totalItems', 0, {})).toBe(0);
     expect(invokeFieldModifier(cache, 'completionRate', 0, {})).toBe(0);
   });
+
+  // Without a partial read, a list missing either stat reads as null, and the
+  // fallback wrote a total of zero over a list of any size.
+  it('leaves the total alone when the cache does not hold it', () => {
+    const cache = {
+      ...createMockCache(),
+      readFragment: jest.fn(() => ({ completedItems: 2 })),
+    } as MockedCache & { readFragment: jest.Mock };
+
+    revertOptimisticShoppingListItem(cache, 'list-1', 'cuid-1');
+
+    expect(cache.evict).toHaveBeenCalled();
+    expect(cache.modify).not.toHaveBeenCalled();
+  });
+
+  it('adjusts only the total when the completed count is missing', () => {
+    const cache = {
+      ...createMockCache(),
+      readFragment: jest.fn(() => ({ totalItems: 5 })),
+    } as MockedCache & { readFragment: jest.Mock };
+
+    revertOptimisticShoppingListItem(cache, 'list-1', 'cuid-1');
+
+    expect(invokeFieldModifier(cache, 'totalItems', 5, {})).toBe(4);
+    const fields = (cache.modify as jest.Mock).mock.calls[0]?.[0]?.fields ?? {};
+    expect(Object.keys(fields)).toEqual(['totalItems']);
+  });
+
+  it('leaves the counters alone when the response already settled them', () => {
+    const cache = createCacheWithStats({ totalItems: 5, completedItems: 2 });
+
+    revertOptimisticShoppingListItem(cache, 'list-1', 'cuid-1', {
+      countsSettled: true,
+    });
+
+    expect(cache.evict).toHaveBeenCalled();
+    expect(cache.modify).not.toHaveBeenCalled();
+  });
 });
 
 describe('reconcileShoppingItemCreateUpdate', () => {

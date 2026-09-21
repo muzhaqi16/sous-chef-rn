@@ -1,3 +1,4 @@
+import { unknownMember } from '#/utils/closedEnum';
 import {
   CollaboratorRole,
   NotificationType,
@@ -100,8 +101,9 @@ export interface ExpiryReminderFields {
 export const readExpiryReminderFields = (
   payload: NotificationPayload,
 ): ExpiryReminderFields | null => {
-  const { itemName, daysUntilExpiry, pantryItemId } = payload;
-  if (typeof itemName !== 'string' || typeof daysUntilExpiry !== 'number') {
+  const { daysUntilExpiry, pantryItemId } = payload;
+  const itemName = readText(payload, 'itemName');
+  if (itemName === null || typeof daysUntilExpiry !== 'number') {
     return null;
   }
   return {
@@ -184,9 +186,12 @@ export interface NotificationCopySource {
 /** The names a digest shows before summarising the rest as a count. */
 const DIGEST_NAME_CAP = 3;
 
+// Push data arrives stringified and is re-coerced, so an all-digit name comes
+// back a number; it is still the name.
 const readText = (payload: NotificationPayload, key: string): string | null => {
   const value = payload[key];
-  return typeof value === 'string' && value.trim() !== '' ? value : null;
+  const text = typeof value === 'number' ? String(value) : value;
+  return typeof text === 'string' && text.trim() !== '' ? text : null;
 };
 
 const readNames = (payload: NotificationPayload, key: string): string[] => {
@@ -460,5 +465,14 @@ export const getNotificationCopy = (
     case NotificationType.RecipeSaved:
     case NotificationType.RecipeCooked:
       return { title, message: t(`notifications.copy.message.${type}`) };
+    default: {
+      unknownMember(type, 'notification type');
+      // Its own words if the server sent any, never the lookup key the
+      // template would render.
+      return {
+        title: notification.title ?? t('notifications.copy.title.unknown'),
+        message: notification.message ?? '',
+      };
+    }
   }
 };

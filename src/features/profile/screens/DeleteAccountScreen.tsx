@@ -1,3 +1,4 @@
+import { knownEntry } from '#/utils/closedEnum';
 import React, { useState } from 'react';
 import { View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Text } from '#components/atoms/Text';
@@ -154,7 +155,11 @@ export const DeleteAccountScreen: React.FC = () => {
       </Text>
 
       {blockers.map(blocker => {
-        const copy = BLOCKER_COPY[blocker.type];
+        // A blocker type the server added after this build takes the catch-all
+        // copy; read unguarded it is undefined and the screen throws.
+        const copy =
+          knownEntry(BLOCKER_COPY, blocker.type) ??
+          BLOCKER_COPY[DeletionBlockerType.Other];
         // The server sends whichever count its own sentence states; a blocker
         // that carries none takes the wording that needs no number, rather
         // than one reading "and it still has 0 other members".

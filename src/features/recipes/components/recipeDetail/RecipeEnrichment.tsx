@@ -5,16 +5,11 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { isRecord } from '#/utils/isRecord';
 
 interface NutrientRow {
   labelKey: TranslationKey;
   value: string;
-}
-
-// nutritionData is an untyped JSON blob (Spoonacular-shaped). Narrow to a record
-// after a runtime typeof check — no `any`, just defensive structural access.
-function isRecord(x: unknown): x is Record<string, unknown> {
-  return x !== null && typeof x === 'object';
 }
 
 function asRecord(x: unknown): Record<string, unknown> | null {

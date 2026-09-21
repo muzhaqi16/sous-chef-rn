@@ -15,8 +15,13 @@ import {
   GetShoppingListItemsFilteredDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { handleQueueFailure } from '../queueFailureHandler';
+import {
+  handleQueueFailure,
+  registerQueueFailureHandler,
+} from '../queueFailureHandler';
 import { queueManager } from '../queueManager';
+import { queueStore } from '../queueStore';
+import { makeQueuedMutation } from '#/test-utils/queuedMutation';
 
 const mockClientHolder: { client: ApolloClient | null } = { client: null };
 jest.mock('#/apollo/client', () => ({
@@ -100,5 +105,64 @@ describe('withdrawing a refused queued update', () => {
 
     await waitFor(() => expect(list.fired.length).toBeGreaterThan(readsBefore));
     await waitFor(() => expect(rowNames(client)).toEqual(['Milk']));
+  });
+
+  // The reread is network-only for every active query. Run while another write
+  // is still queued, it replaces that write's local value with the server's
+  // older one, and the person watches their change revert.
+  describe('while other writes are still queued', () => {
+    const refusal = () =>
+      handleQueueFailure({
+        mutationId: 'q-1',
+        operationName: operationNameOf(UpdateShoppingListItemDocument),
+        entityType: 'ShoppingListItem',
+        entityId: 'sli-1',
+        variables: { input: { id: 'sli-1', itemName: 'Oat milk' } },
+        error: {
+          type: 'server',
+          message: 'refused',
+          code: 'VALIDATION_ERROR',
+          timestamp: 0,
+          retryable: false,
+        },
+      });
+
+    afterEach(() => {
+      queueStore.clearAllQueues();
+      queueStore.clearCurrentUserId();
+    });
+
+    it('waits, and rereads once a later pass drains the queue', async () => {
+      const list = recordMock(GetShoppingListItemsFilteredDocument, {
+        data: serverList,
+      });
+      const { result } = renderHookWithApollo(
+        () => ({
+          client: useApolloClient(),
+          query: useQuery(GetShoppingListItemsFilteredDocument, { variables }),
+        }),
+        { operationMocks: [list.mock, list.mock] },
+      );
+      await waitFor(() => expect(result.current.query.data).toBeDefined());
+      mockClientHolder.client = result.current.client;
+      registerQueueFailureHandler();
+
+      queueStore.setCurrentUserId('user-1');
+      queueStore.addMutation(
+        makeQueuedMutation({ id: 'still-queued', userId: 'user-1' }),
+      );
+      const readsBefore = list.fired.length;
+
+      refusal();
+      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(list.fired.length).toBe(readsBefore);
+
+      queueStore.removeMutation('still-queued');
+      queueManager['drainedHandler']?.('user-1');
+
+      await waitFor(() =>
+        expect(list.fired.length).toBeGreaterThan(readsBefore),
+      );
+    });
   });
 });

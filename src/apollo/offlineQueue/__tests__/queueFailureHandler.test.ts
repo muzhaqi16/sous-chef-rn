@@ -53,13 +53,27 @@ jest.mock('#features/shoppingList/cache/moveToPantry', () => ({
   restoreItemToShoppingListAfterMoveToPantry: jest.fn(),
 }));
 jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: { clearEntity: jest.fn() },
+  optimisticDataPersistence: {
+    clearEntity: jest.fn(),
+    clearEntityById: jest.fn(),
+  },
 }));
 jest.mock('#/services/toastService', () => ({
   toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
 }));
 jest.mock('../queueStore', () => ({
-  queueStore: { removeMutation: jest.fn() },
+  queueStore: {
+    removeMutation: jest.fn(),
+    // No signed-in queue, so nothing is pending and the reread runs.
+    getCurrentUserId: jest.fn(() => null),
+    getQueueStats: jest.fn(() => ({
+      total: 0,
+      pending: 0,
+      processing: 0,
+      failed: 0,
+      authErrors: 0,
+    })),
+  },
 }));
 
 const failure = (
@@ -237,6 +251,17 @@ describe('queue failure handler', () => {
 
     const [message] = (toastService.error as jest.Mock).mock.calls[0];
     expect(message).toBe(t('errors.queuedChangeOverwritten'));
+  });
+
+  it('clears what the withdrawn write persisted even with no typename', () => {
+    // The cache was purged, so the typename cannot be read back — but the id
+    // came off the queue entry. Left behind, the optimistic value is re-applied
+    // over the server's on the next restoration pass.
+    handleQueueFailure(failure({ entityType: null, entityId: 'item-7' }));
+
+    expect(optimisticDataPersistence.clearEntityById).toHaveBeenCalledWith(
+      'item-7',
+    );
   });
 
   it('still tells the person when the entity cannot be identified', () => {

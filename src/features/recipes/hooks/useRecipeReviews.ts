@@ -207,6 +207,15 @@ export function useRecipeReviews({
   };
 
   const deleteReview = async (id: string) => {
+    // Removed before the write, so "already gone" and "queued" both leave the
+    // row absent — the `update` callback runs on a success payload only.
+    const snapshot = apolloClient.cache.readFragment<RecipeReviewFragment>({
+      fragment: RecipeReviewFragmentDoc,
+      fragmentName: 'RecipeReviewFragment',
+      from: { __typename: 'RecipeReview', id },
+    });
+    removeReviewFromRecipe(apolloClient.cache, recipeId, id);
+
     const settled = await settleMutation(
       () => deleteReviewMutation({ variables: { input: { id } } }),
       {
@@ -214,6 +223,18 @@ export function useRecipeReviews({
         fallback: t('recipes.deleteReviewFailed'),
         removal: true,
         present: 'none',
+        onFailed: () => {
+          if (!snapshot) return;
+          apolloClient.cache.writeFragment({
+            fragment: RecipeReviewFragmentDoc,
+            fragmentName: 'RecipeReviewFragment',
+            data: snapshot,
+          });
+          addReviewToRecipe(apolloClient.cache, recipeId, {
+            id: snapshot.id,
+            rating: snapshot.rating,
+          });
+        },
       },
     );
     if (settled.failure) toastService.error(settled.failure.body);

@@ -4,7 +4,8 @@ Every FlashList declares which scroll component it renders through.
 
 ## Reports
 
-A `<FlashList>` with no `renderScrollComponent` prop.
+- A `<FlashList>` with no `renderScrollComponent` prop.
+- One whose `renderScrollComponent` names anything but the two hosts below — `renderScrollComponent={ScrollView}` loses the gesture exactly as an absent prop does.
 
 ## Why
 
@@ -19,7 +20,9 @@ The failure is silent: the prop is simply absent and nothing throws. That is exa
 
 ## What it does not catch
 
-An exempted list later gaining a gesture-bearing row. The row→list relation runs through context providers and `renderItem` factories, so no static check follows it; CLAUDE.md covers that by convention.
+- An exempted list later gaining a gesture-bearing row. The row→list relation runs through context providers and `renderItem` factories, so no static check follows it; CLAUDE.md covers that by convention.
+- A FlashList imported under another name, or rendered through a member expression — the selector matches the literal `FlashList` element.
+- A `renderScrollComponent` passed through a `{...props}` spread, which reads as absent.
 
 ## Exempt
 

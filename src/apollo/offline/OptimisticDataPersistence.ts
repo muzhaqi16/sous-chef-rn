@@ -234,6 +234,15 @@ class OptimisticDataPersistence {
     }
   }
 
+  /** For a withdrawal whose typename the purged cache cannot answer. */
+  clearEntityById(entityId: string): void {
+    const all = this.loadAll();
+    const entityType = Object.values(all).find(
+      data => data.entityId === entityId,
+    )?.entityType;
+    if (entityType) this.clearEntity(entityType, entityId);
+  }
+
   /**
    * Drops every persisted field of one entity — deleted, or fully synced.
    * Takes the typename as read from the cache, which the caller cannot narrow.
@@ -314,27 +323,6 @@ class OptimisticDataPersistence {
     } catch (error) {
       logger.error('Failed to clear all optimistic data:', error);
     }
-  }
-
-  getStats(): {
-    totalUpdates: number;
-    entityTypes: string[];
-    oldestTimestamp: number | null;
-    newestTimestamp: number | null;
-  } {
-    const all = this.loadAll();
-    const entries = Object.values(all);
-
-    const entityTypes = Array.from(new Set(entries.map(e => e.entityType)));
-
-    const timestamps = entries.map(e => e.timestamp);
-
-    return {
-      totalUpdates: entries.length,
-      entityTypes,
-      oldestTimestamp: timestamps.length > 0 ? Math.min(...timestamps) : null,
-      newestTimestamp: timestamps.length > 0 ? Math.max(...timestamps) : null,
-    };
   }
 
   private loadAll(): Record<string, OptimisticFieldUpdate> {

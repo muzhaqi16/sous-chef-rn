@@ -32,7 +32,7 @@ import {
   safeEvict,
 } from '#/apollo/utils/cacheUpdaters';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { appliedPayload, isAlreadyGone } from '#/utils/errors/mutationPayload';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
@@ -136,7 +136,8 @@ export function useHomeDetailManagement(homeId: string) {
 
   const [revokeInviteMutation] = useMutation(DeleteHomeInviteDocument, {
     update(cache, { data }, { variables }) {
-      if (!appliedPayload(data) || !variables) return;
+      // An invite the server says is already gone converges too.
+      if ((!appliedPayload(data) && !isAlreadyGone(data)) || !variables) return;
 
       try {
         const removeFromInvitesCache = createRemoveFromParentConnectionUpdater(

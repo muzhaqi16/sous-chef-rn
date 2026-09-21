@@ -13934,7 +13934,6 @@ input UpdatePantryItemInput {
   isComposted: Boolean
   isRecycled: Boolean
   itemName: String
-  lastUsedAt: DateTime
   lowStockAlert: Boolean
   measurementProfile: MeasurementProfileInput
   netWeight: NetWeightInput

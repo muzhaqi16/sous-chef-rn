@@ -4,6 +4,7 @@ import { generateId } from '#/utils/generateId';
 
 const DEVICE_ID_KEY = 'device_id';
 const LEGACY_FINGERPRINT_KEY = 'device_fingerprint';
+const DEVICE_ROW_KEY = 'device_row';
 
 let cachedDeviceId: string | null = null;
 let hydration: Promise<string | null> | null = null;
@@ -91,4 +92,44 @@ export function readLegacyDeviceFingerprint(): string | null {
 /** Called only once the server confirms the row is gone. */
 export function clearLegacyDeviceFingerprint(): void {
   if (mirrorIsUsable()) storage.remove(LEGACY_FINGERPRINT_KEY);
+}
+
+/**
+ * The SERVER's `Device` row id for this install, remembered so a session end can
+ * clear the push token without a lookup: that lookup is a query, and the Apollo
+ * teardown's `client.stop()` cancels queries. Scoped by user — rows are per
+ * (user, device). Mirror only; the row id is not a secret.
+ */
+export function saveDeviceRow(userId: string, rowId: string): void {
+  if (mirrorIsUsable()) {
+    storage.set(DEVICE_ROW_KEY, JSON.stringify({ userId, rowId }));
+  }
+}
+
+/** Null unless the remembered row belongs to `userId`. */
+export function readDeviceRow(userId: string): string | null {
+  if (!mirrorIsUsable()) return null;
+  const stored = storage.getString(DEVICE_ROW_KEY);
+  if (!stored) return null;
+  try {
+    const parsed: unknown = JSON.parse(stored);
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      'userId' in parsed &&
+      'rowId' in parsed &&
+      parsed.userId === userId &&
+      typeof parsed.rowId === 'string'
+    ) {
+      return parsed.rowId;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/** Dropped on session end, so the next account never reads the previous row. */
+export function clearDeviceRow(): void {
+  if (mirrorIsUsable()) storage.remove(DEVICE_ROW_KEY);
 }

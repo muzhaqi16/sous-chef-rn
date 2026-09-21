@@ -18,6 +18,10 @@ import { Icon } from '#utils/iconUtils';
 import { useFragment } from '@apollo/client/react';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import {
+  MEAL_TYPE_LABEL_KEYS,
+  MEAL_TYPE_ORDER,
+} from '#features/mealPlan/utils/mealPlanEnumLabels';
+import {
   useSavedRecipes,
   type SavedRecipeNode,
 } from '#features/recipes/hooks/useSavedRecipes';
@@ -50,15 +54,6 @@ interface AddMealSheetProps {
   onAddRecipe: (recipeId: string, mealType: MealType) => void;
   onAddCustomMeal: (name: string, mealType: MealType) => void;
 }
-
-const MEAL_TYPES: { type: MealType; labelKey: TranslationKey }[] = [
-  { type: MealType.Breakfast, labelKey: 'labels.breakfast' },
-  { type: MealType.Lunch, labelKey: 'labels.lunch' },
-  { type: MealType.Dinner, labelKey: 'labels.dinner' },
-  { type: MealType.Snack, labelKey: 'usagePurpose.SNACK' },
-  { type: MealType.Brunch, labelKey: 'labels.brunch' },
-  { type: MealType.Dessert, labelKey: 'labels.dessert' },
-];
 
 const DIET_TAG_LABEL_KEYS: Record<DietTag, TranslationKey> = {
   vegan: 'addMealSheet.dietVegan',
@@ -342,9 +337,10 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     r => r.recipe.name,
   ]);
 
-  const mealTypeOptions: ChipOption<MealType>[] = MEAL_TYPES.map(
-    ({ type, labelKey }) => ({ key: type, label: t(labelKey) }),
-  );
+  const mealTypeOptions: ChipOption<MealType>[] = MEAL_TYPE_ORDER.map(type => ({
+    key: type,
+    label: t(MEAL_TYPE_LABEL_KEYS[type]),
+  }));
 
   return (
     <BottomSheetModal

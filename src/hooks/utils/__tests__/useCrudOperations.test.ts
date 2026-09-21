@@ -76,6 +76,30 @@ describe('useCrudOperations', () => {
       expect(alertService.alert).not.toHaveBeenCalled();
     });
 
+    it('does not hand a refusal member to onSuccess', async () => {
+      // The row is gone, so the removal converged — but `onSuccess` reads the
+      // payload's own fields, and this one is a NotFoundError.
+      const gone = {
+        deletePantryItem: {
+          __typename: 'NotFoundError',
+          code: ErrorCode.NotFound,
+        },
+      };
+      const onSuccess = jest.fn();
+      const { result } = renderHookWithApollo(() => useCrudOperations());
+
+      const removeOp = result.current.createRemoveOperation({
+        ...remove,
+        mutation: jest.fn().mockResolvedValue({ data: gone }),
+        itemId: 'item-1',
+        onSuccess,
+      });
+
+      await removeOp();
+
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+
     it('shows confirmation dialog when confirmMessage is provided', async () => {
       const mockMutation = jest.fn().mockResolvedValue({ data: {} });
 

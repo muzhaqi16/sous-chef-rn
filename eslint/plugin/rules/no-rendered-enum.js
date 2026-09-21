@@ -1,13 +1,17 @@
 const path = require('node:path');
 const ts = require('typescript');
-const { COPY_ATTRIBUTES } = require('../../i18n');
+const {
+  COPY_ATTRIBUTES,
+  SINK_SERVICES,
+  TRANSLATE_FUNCTIONS,
+  COPY_VARIABLE,
+  DISPLAY_FUNCTION,
+} = require('../../i18n');
 const { isDeveloperFacing } = require('../developerFacing');
 
 const SCHEMA_TYPES = `${path.sep}src${path.sep}graphql${path.sep}generated${path.sep}schemaTypes.ts`;
 
 const COPY_NAMES = new Set(COPY_ATTRIBUTES);
-const SINK_SERVICES = /^(toastService|alertService)$/;
-const TRANSLATE_FUNCTIONS = /^(t|tGlobal|translate)$/;
 // Cutting an identifier apart to re-case it is display munging wherever it runs.
 const RECASING_TRANSFORMS = new Set(['charAt', 'slice', 'substring', 'substr']);
 const STRING_TRANSFORMS = new Set([
@@ -24,11 +28,7 @@ const STRING_TRANSFORMS = new Set([
   'padEnd',
 ]);
 const NULLISH = ts.TypeFlags.Undefined | ts.TypeFlags.Null;
-const COPY_VARIABLE =
-  /^(label|text|title|subtitle|message|description|caption|hint|placeholder)$|[a-z0-9](Label|Text|Title|Subtitle|Message|Description|Caption|Hint|Placeholder|Display)$/;
 const COMPARISONS = new Set(['===', '!==', '==', '!=']);
-const DISPLAY_FUNCTION =
-  /^format|(Label|Text|Title|Subtitle|Message|Description|Caption|Display)$/;
 
 /** @type {import('eslint').Rule.RuleModule} */
 module.exports = {

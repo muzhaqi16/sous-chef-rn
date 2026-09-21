@@ -12,5 +12,15 @@ testRule('flashlist-declares-scroll-component', {
       code: 'const C = () => <FlashList data={rows} renderItem={renderItem} />;',
       errors: ['undeclared'],
     },
+    // Declared, but through RN's own ScrollView: the rows lose RNGH's gesture
+    // exactly as if nothing were declared.
+    {
+      code: 'const C = () => <FlashList data={rows} renderScrollComponent={ScrollView} />;',
+      errors: ['wrongHost'],
+    },
+    {
+      code: 'const C = () => <FlashList data={rows} renderScrollComponent={props => <ScrollView {...props} />} />;',
+      errors: ['wrongHost'],
+    },
   ],
 });

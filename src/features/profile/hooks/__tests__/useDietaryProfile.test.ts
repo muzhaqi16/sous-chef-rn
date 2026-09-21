@@ -407,6 +407,42 @@ describe('useDietaryProfile', () => {
     await waitFor(() => expect(result.current.profile?.mealsPerDay).toBe(3));
   });
 
+  // Both callers alert on the false return, and a bulk add would stack one
+  // alert per restriction on top of theirs.
+  it('addDietaryRestriction leaves the alert to its caller', async () => {
+    const refused: MockFor<typeof AddDietaryRestrictionDocument> = {
+      request: { query: AddDietaryRestrictionDocument, variables: () => true },
+      result: {
+        data: {
+          addRestriction: {
+            __typename: 'ValidationError',
+            code: ErrorCode.ValidationFailed,
+            message: 'SERVER PROSE',
+            field: null,
+          },
+        },
+      },
+    };
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [buildGetProfileMock(), refused],
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    let success = true;
+    await act(async () => {
+      success = await result.current.addDietaryRestriction(
+        { diet: Diet.Vegan },
+        RestrictionSeverity.Preference,
+      );
+    });
+
+    expect(success).toBe(false);
+    expect(alertService.alert).not.toHaveBeenCalled();
+  });
+
   it('addDietaryRestriction calls mutation with correct params', async () => {
     const { result } = renderHookWithApollo(() => useDietaryProfile(), {
       operationMocks: [buildGetProfileMock(), buildAddRestrictionMock()],

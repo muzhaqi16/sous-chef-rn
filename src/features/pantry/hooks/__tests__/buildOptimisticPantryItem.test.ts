@@ -49,9 +49,14 @@ function cacheWithItemDisplayUnit(
 }
 
 describe('buildOptimisticPantryItem unit', () => {
-  it("takes the catalog item's display unit when the add states none", () => {
-    const bottle = unit('unit-bottle', 'btl');
-    const cache = cacheWithItemDisplayUnit('item-1', bottle);
+  // The server resolves an unstated unit from data the device does not hold,
+  // and never from the catalog item's display unit. A guess here is later
+  // sent as an explicit `usageUnitId` the server did not choose.
+  it("does not guess the catalog item's display unit when the add states none", () => {
+    const cache = cacheWithItemDisplayUnit(
+      'item-1',
+      unit('unit-bottle', 'btl'),
+    );
 
     const row = buildOptimisticPantryItem(
       'pi-1',
@@ -59,7 +64,7 @@ describe('buildOptimisticPantryItem unit', () => {
       cache,
     );
 
-    expect(row.unit).toEqual(bottle);
+    expect(row.unit.id).toBe('');
   });
 
   it('prefers the unit the add states', () => {

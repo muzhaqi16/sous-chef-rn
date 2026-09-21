@@ -175,6 +175,9 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       sourceType?: string | null;
       actionUrl?: string | null;
       readAt?: string | null;
+      isAuthoredContent?: boolean | null;
+      title?: string | null;
+      message?: string | null;
     },
     category: NotificationCategory,
     sourceUserId?: string,
@@ -214,6 +217,11 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       sourceType: notification.sourceType,
       actionUrl: notification.actionUrl,
       readAt: notification.readAt,
+      // An admin's announcement is drawn in their words; without these the
+      // tray falls back to the template for its type.
+      isAuthoredContent: notification.isAuthoredContent,
+      title: notification.title,
+      message: notification.message,
       requiresAction,
       actionType,
       actionData: payload,
@@ -330,6 +338,9 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
               sourceType: rawNotification.sourceType,
               actionUrl: rawNotification.actionUrl,
               readAt: rawNotification.readAt,
+              isAuthoredContent: rawNotification.isAuthoredContent,
+              title: rawNotification.title,
+              message: rawNotification.message,
             },
             rawNotification.category ?? NotificationCategory.System,
           );

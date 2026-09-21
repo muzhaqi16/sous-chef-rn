@@ -13,7 +13,7 @@
  * every case below pass against a store that does not exist, and the reader then
  * matches nothing on a device — which is exactly what happened.
  */
-import { gql } from '@apollo/client';
+import { gql, type NormalizedCacheObject } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { findCachedPantryItemDuplicate } from '../pantryCacheReaders';
 
@@ -358,6 +358,46 @@ describe('server mode, where the field is keyed on the live filter and sort', ()
         itemId: 'item-flour',
       }),
     ).toBeNull();
+  });
+
+  // `toReference(item, true)` normalizes a re-merged PantryItem but leaves its
+  // nested objects EMBEDDED (`writePantryItemDetailStub.ts` documents it). The
+  // store scan reads raw records, so it has to recognise both shapes.
+  const embedNested = (cache: ReturnType<typeof seedServerMode>) => {
+    const store: NormalizedCacheObject = cache.extract();
+    const row = store['PantryItem:pi-2'];
+    store['PantryItem:pi-2'] = {
+      ...row,
+      item: { __typename: 'Item', id: 'item-apples' },
+      unit: { __typename: 'Unit', id: 'unit-piece' },
+    };
+    cache.restore(store);
+    return cache;
+  };
+
+  it('finds a row whose catalog item is embedded, not referenced', () => {
+    expect(
+      findCachedPantryItemDuplicate(embedNested(seedServerMode()), 'p-1', {
+        itemId: 'item-apples',
+      }),
+    ).toEqual({
+      existingPantryItemId: 'pi-2',
+      existingPantryItemIds: ['pi-2'],
+      quantity: 1,
+    });
+  });
+
+  it('matches the unit of a row whose unit is embedded', () => {
+    expect(
+      findCachedPantryItemDuplicate(embedNested(seedServerMode()), 'p-1', {
+        itemName: 'tart apples',
+        unitId: 'unit-piece',
+      }),
+    ).toEqual({
+      existingPantryItemId: 'pi-2',
+      existingPantryItemIds: ['pi-2'],
+      quantity: 1,
+    });
   });
 
   it('answers the same either side of the client/server-mode threshold', () => {

@@ -514,6 +514,87 @@ describe('useRecipeReviews', () => {
     expect(mockToastSuccess).toHaveBeenCalledWith('Review deleted');
   });
 
+  it('takes the review off the list when the server says it is already gone', async () => {
+    // `removal: true` counts NOT_FOUND as applied, so the success toast fires.
+    // The row has to be gone with it — the mutation's `update` runs on a
+    // success payload only, and would leave it on screen.
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeReviews({
+          recipeId: 'recipe-1',
+          backendRecipe: makeBackendRecipe(),
+        }),
+      {
+        operationMocks: [
+          buildGetRecipeReviewsMock(),
+          {
+            request: {
+              query: DeleteRecipeReviewDocument,
+              variables: { input: { id: 'rev-2' } },
+            },
+            result: {
+              data: {
+                deleteRecipeReview: {
+                  __typename: 'NotFoundError',
+                  code: ErrorCode.NotFound,
+                },
+              },
+            },
+          },
+        ],
+      },
+    );
+
+    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+
+    await act(async () => {
+      await result.current.actions.deleteReview('rev-2');
+    });
+
+    expect(mockToastSuccess).toHaveBeenCalledWith('Review deleted');
+    expect(result.current.state.reviews.map(r => r.id)).not.toContain('rev-2');
+  });
+
+  it('puts the review back when the server refuses the delete', async () => {
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeReviews({
+          recipeId: 'recipe-1',
+          backendRecipe: makeBackendRecipe(),
+        }),
+      {
+        operationMocks: [
+          buildGetRecipeReviewsMock(),
+          {
+            request: {
+              query: DeleteRecipeReviewDocument,
+              variables: { input: { id: 'rev-2' } },
+            },
+            result: {
+              data: {
+                deleteRecipeReview: {
+                  __typename: 'ForbiddenError',
+                  code: ErrorCode.Forbidden,
+                },
+              },
+            },
+          },
+        ],
+      },
+    );
+
+    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+
+    await act(async () => {
+      await result.current.actions.deleteReview('rev-2');
+    });
+
+    expect(mockToastError).toHaveBeenCalled();
+    await waitFor(() =>
+      expect(result.current.state.reviews.map(r => r.id)).toContain('rev-2'),
+    );
+  });
+
   it('returns defaults when backendRecipe is null', async () => {
     const { result } = renderHookWithApollo(
       () => useRecipeReviews({ recipeId: 'recipe-1', backendRecipe: null }),

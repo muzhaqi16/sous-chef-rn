@@ -40,6 +40,7 @@ async function performCreateShoppingList(
   selectedHomeId: string | null,
   setSelectedShoppingListId: (id: string) => void,
   navigateToNextStep: (step: OnboardingStepId) => void,
+  reportFailure: (message: string) => void,
 ): Promise<void> {
   const outcome = await createShoppingList({
     name: data.shoppingListName.trim(),
@@ -48,8 +49,10 @@ async function performCreateShoppingList(
     tags: ['onboarding', 'groceries'],
     homeId: selectedHomeId ?? undefined,
   });
-  // `settleMutation` has already told the user what refused it.
-  if (outcome.status === 'failed') return;
+  if (outcome.status === 'failed') {
+    reportFailure(outcome.body);
+    return;
+  }
 
   setSelectedShoppingListId(outcome.shoppingList.id);
   navigateToNextStep('CreateShoppingList');
@@ -131,6 +134,7 @@ export const CreateShoppingListScreen = () => {
           selectedHomeId,
           setSelectedShoppingListId,
           navigateToNextStep,
+          setGraphqlError,
         ),
       setIsCreating,
       (error: unknown) => {

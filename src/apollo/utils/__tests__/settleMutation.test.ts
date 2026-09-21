@@ -1,4 +1,4 @@
-import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import { alertService, type AlertButton } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import { storeApi } from '#store';
@@ -309,6 +309,77 @@ describe('settleMutation', () => {
       errorService.getUserFriendlyMessage(ErrorCode.Forbidden, FALLBACK),
     );
     expect(message).not.toContain(SERVER_TEXT);
+  });
+
+  describe('a committed write whose response also carries an error', () => {
+    // Apollo 4.2 resolves `{ data, error }` together when a mutation commits
+    // and a field in its selection errors. The payload is the server's verdict.
+    const committedWithFieldError = () =>
+      Promise.resolve({
+        data: { createPantryItem: { __typename: 'CreatePantryItemPayload' } },
+        error: graphQLError(TopLevelErrorCode.InternalServerError),
+      });
+
+    it('is applied, not reverted', async () => {
+      const onFailed = jest.fn();
+      const settled = await settleMutation(committedWithFieldError, {
+        ...options,
+        onFailed,
+      });
+
+      expect(settled.status).toBe('applied');
+      expect(onFailed).not.toHaveBeenCalled();
+      expect(alerts()).toEqual([]);
+    });
+
+    it('still fails when the error comes with no usable payload', async () => {
+      const settled = await settleMutation(
+        () =>
+          Promise.resolve({
+            data: { createPantryItem: null },
+            error: graphQLError(TopLevelErrorCode.InternalServerError),
+          }),
+        options,
+      );
+
+      expect(settled.status).toBe('failed');
+    });
+  });
+
+  describe('a removal that never reached the service', () => {
+    // A bare HTTP 404 — a misrouted endpoint or a proxy — carries no GraphQL
+    // verdict, so it cannot mean "the row is already gone".
+    const httpNotFound = () =>
+      new ServerError('Response not successful', {
+        response: new Response('', { status: 404 }),
+        bodyText: '',
+      });
+
+    it('is not reported as removed', async () => {
+      const onFailed = jest.fn();
+      const settled = await settleMutation(throwing(httpNotFound()), {
+        document: DeletePantryItemDocument,
+        fallback: FALLBACK,
+        removal: true,
+        onFailed,
+      });
+
+      expect(settled.status).toBe('failed');
+      expect(onFailed).toHaveBeenCalledTimes(1);
+    });
+
+    it('still converges when the service itself says it is gone', async () => {
+      const settled = await settleMutation(
+        remove({ __typename: 'NotFoundError', code: ErrorCode.NotFound }),
+        {
+          document: DeletePantryItemDocument,
+          fallback: FALLBACK,
+          removal: true,
+        },
+      );
+
+      expect(settled.status).toBe('applied');
+    });
   });
 
   describe('settledStatus', () => {

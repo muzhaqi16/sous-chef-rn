@@ -115,7 +115,16 @@ export const DietaryProfileScreen: React.FC = () => {
       RestrictionSeverity.Preference,
     );
     if (added) {
-      await Promise.all(replaceIds.map(id => removeDietaryRestriction(id)));
+      const removed = await Promise.all(
+        replaceIds.map(id => removeDietaryRestriction(id)),
+      );
+      // A silent failure here leaves the person holding two lifestyle diets.
+      if (!removed.every(Boolean)) {
+        alertService.alert(
+          t('labels.error'),
+          t('dietary.removeRestrictionFailed'),
+        );
+      }
     }
     return added;
   };

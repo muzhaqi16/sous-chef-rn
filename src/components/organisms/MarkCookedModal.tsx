@@ -122,7 +122,6 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
           placeholder={t('markCookedModal.servingsPlaceholderPrefix', {
             count: defaultServings || 1,
           })}
-          keyboardType="numeric"
           error={servingsError}
         />
       </View>

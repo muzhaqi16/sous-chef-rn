@@ -104,7 +104,8 @@
         "test": "Notifica di prova",
         "listCompleted": "Lista della spesa completata",
         "expiryDigest": "In scadenza questa settimana",
-        "authored": "Annuncio"
+        "authored": "Annuncio",
+        "unknown": "Notifica"
       },
       "message": {
         "homeInvitation": "{{inviterName}} ti invita a unirti a {{homeName}}",

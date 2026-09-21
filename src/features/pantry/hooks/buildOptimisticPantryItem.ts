@@ -70,44 +70,17 @@ function readCachedUnit(
   });
 }
 
-const OptimisticItemDisplayUnitFragment = gql`
-  fragment _OptimisticPantryItemDisplayUnit on Item {
-    id
-    displayUnit {
-      id
-      name
-      symbol
-      type
-      displayAsFraction
-    }
-  }
-`;
-
 /**
- * The stated unit, else the catalog item's display unit. The API falls back
- * further on data the device does not hold, so an unknown unit is a neutral
- * placeholder the replayed entity replaces — `PantryItem.unit` is never null.
+ * The stated unit, else a neutral placeholder the replayed entity replaces —
+ * `PantryItem.unit` is never null. Never the catalog's display unit: the API
+ * resolves an unstated unit from data the device does not hold, and a guess
+ * would later be sent as an explicit `usageUnitId` the server did not choose.
  */
 function resolveOptimisticUnit(
   cache: ApolloCache | undefined,
   fields: OptimisticPantryItemFields,
 ): OptimisticPantryItem['unit'] {
-  const stated = readCachedUnit(cache, fields.unitId);
-  if (stated) return stated;
-  const itemCacheId =
-    cache && fields.itemId
-      ? cache.identify({ __typename: 'Item', id: fields.itemId })
-      : undefined;
-  const displayUnit = itemCacheId
-    ? cache?.readFragment<{
-        displayUnit: OptimisticPantryItem['unit'] | null;
-      }>({
-        id: itemCacheId,
-        fragment: OptimisticItemDisplayUnitFragment,
-        fragmentName: '_OptimisticPantryItemDisplayUnit',
-      })?.displayUnit
-    : null;
-  return displayUnit ?? { ...NEUTRAL_UNIT };
+  return readCachedUnit(cache, fields.unitId) ?? { ...NEUTRAL_UNIT };
 }
 
 /**

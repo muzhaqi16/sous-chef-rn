@@ -15,7 +15,7 @@ import {
   useHomeState,
   useHasUnverifiedEmail,
 } from '#store/useAppStore';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { appliedPayload, isAlreadyGone } from '#/utils/errors/mutationPayload';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { removeFromHomesCache } from './homeCacheUpdaters';
@@ -52,7 +52,11 @@ export function useHomeMutations({
     DeleteHomeDocument,
     {
       update: (cache, { data }, { variables }) => {
-        if (!appliedPayload(data) || !variables) return;
+        // A home the server says is already gone converges too: the settle
+        // reports that as applied, so the row has to go with it.
+        if ((!appliedPayload(data) && !isAlreadyGone(data)) || !variables) {
+          return;
+        }
 
         try {
           removeFromHomesCache(cache, variables.input.id, {
@@ -93,7 +97,7 @@ export function useHomeMutations({
   );
 
   /**
-   * Validates, writes, then adopts the new home: its own default flag and its
+   * Writes, then adopts the new home: its own default flag and its
    * default pantry. Adoption is keyed off the MINTED id, so it happens whether
    * the server answered or the create is queued.
    */
@@ -109,14 +113,6 @@ export function useHomeMutations({
       typeof nameOrInput === 'string'
         ? { name: nameOrInput, allowJoinCode: true }
         : nameOrInput;
-
-    if (!input.name.trim()) {
-      alertService.alert(
-        t('labels.validationError'),
-        t('homeDetail.homeNameEmptyError'),
-      );
-      return false;
-    }
 
     const outcome = await createHomeWrite({
       name: input.name.trim(),

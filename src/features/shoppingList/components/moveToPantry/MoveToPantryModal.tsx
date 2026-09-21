@@ -382,7 +382,6 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                     value={quantityInput}
                     onChangeText={handleQuantityChange}
                     placeholder={t('labels.eG1114')}
-                    keyboardType="numeric"
                     required
                     error={errors.quantityInput?.message}
                   />

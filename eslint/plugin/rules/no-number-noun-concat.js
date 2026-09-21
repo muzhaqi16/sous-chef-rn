@@ -1,14 +1,14 @@
 const ts = require('typescript');
-const { COPY_ATTRIBUTES } = require('../../i18n');
+const {
+  COPY_ATTRIBUTES,
+  SINK_SERVICES,
+  TRANSLATE_FUNCTIONS,
+  COPY_VARIABLE,
+  DISPLAY_FUNCTION,
+} = require('../../i18n');
 const { isDeveloperFacing } = require('../developerFacing');
 
 const COPY_NAMES = new Set(COPY_ATTRIBUTES);
-const SINK_SERVICES = /^(toastService|alertService)$/;
-const TRANSLATE_FUNCTIONS = /^(t|tGlobal)$/;
-const COPY_VARIABLE =
-  /^(label|text|title|subtitle|message|description|caption|hint|placeholder)$|[a-z0-9](Label|Text|Title|Subtitle|Message|Description|Caption|Hint|Placeholder)$/;
-const DISPLAY_FUNCTION =
-  /^format|(Label|Text|Title|Subtitle|Message|Description|Caption)$/;
 
 const LEADING_WORD = /^\s*(\p{L}+)/u;
 const TRAILING_WORD = /(\p{L}+)\s*$/u;

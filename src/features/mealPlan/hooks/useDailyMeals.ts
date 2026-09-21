@@ -1,6 +1,9 @@
 import { isSameDay } from 'date-fns';
 import { useTranslation } from '#/i18n';
-import { MEAL_TYPE_LABEL_KEYS } from '#features/mealPlan/utils/mealPlanEnumLabels';
+import {
+  MEAL_TYPE_LABEL_KEYS,
+  MEAL_TYPE_ORDER,
+} from '#features/mealPlan/utils/mealPlanEnumLabels';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import type { DailyMeals_ItemFragment } from './useDailyMeals.generated';
 import type { MealPlanItemCard_ItemFragment } from '#features/mealPlan/components/MealPlanItemCard.generated';
@@ -10,15 +13,6 @@ import type { MealPlanItemCard_ItemFragment } from '#features/mealPlan/component
 // The page-level GetMealPlan query spreads both, so its result naturally satisfies this.
 export type DailyMealsItem = DailyMeals_ItemFragment &
   MealPlanItemCard_ItemFragment;
-
-const MEAL_TYPE_ORDER: MealType[] = [
-  MealType.Breakfast,
-  MealType.Brunch,
-  MealType.Lunch,
-  MealType.Snack,
-  MealType.Dinner,
-  MealType.Dessert,
-];
 
 // Core daily slots always shown (even empty) once a day has any meal planned,
 // so the day reads as a structured plan with per-slot "add" affordances instead

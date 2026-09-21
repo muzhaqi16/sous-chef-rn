@@ -24,10 +24,8 @@
  * Structural rather than behavioural on purpose: asserting the copy for one
  * refusal proves one refusal. Reading every document proves the class.
  *
- * The baseline is EMPTY — 155 of 155 comply — which makes this an invariant
- * rather than a worklist. It was 109 of 155; the other 46 were brought into
- * line rather than recorded as debt, because a shrink-only list of 46 is a list
- * nobody shrinks.
+ * The baseline is EMPTY — every audited mutation complies — so this is an
+ * invariant rather than a worklist.
  */
 import { readdirSync, readFileSync } from 'fs';
 import { join, relative, resolve } from 'path';
@@ -123,6 +121,6 @@ describe('a refusable mutation selects ValidationError.field', () => {
     // The check above passes vacuously if the walk stops finding documents —
     // a moved directory, a parse regression, a schema without a Mutation type.
     // A floor makes "nothing to report" distinguishable from "nothing read".
-    expect(compliant.length).toBeGreaterThanOrEqual(140);
+    expect(compliant.length).toBeGreaterThanOrEqual(149);
   });
 });

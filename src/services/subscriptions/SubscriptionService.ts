@@ -17,7 +17,6 @@ import type {
   SubscriptionHandlers,
   SubscriptionPayload,
   SubscriptionEntry,
-  SubscriptionStats,
 } from './types';
 import { CacheStrategy, LogLevel } from './types';
 import { MutationType } from '#/graphql/generated/schemaTypes';
@@ -47,14 +46,6 @@ export class SubscriptionService {
 
   // Active subscription registry
   private subscriptions = new Map<string, SubscriptionEntry>();
-
-  // Statistics
-  private stats = {
-    totalUpdates: 0,
-    totalErrors: 0,
-    dedupedUpdates: 0,
-    filteredSortOrderUpdates: 0,
-  };
 
   /**
    * The suppression policy — what an event must be ignored FOR. Delegated
@@ -159,8 +150,6 @@ export class SubscriptionService {
       entityId: finalConfig.entityId,
       userId: finalConfig.userId,
       connectedAt: new Date(),
-      updateCount: 0,
-      errorCount: 0,
     });
 
     return {
@@ -226,7 +215,6 @@ export class SubscriptionService {
           config.enableDeduplication &&
           !this.shouldProcessUpdate(payload, config)
         ) {
-          this.stats.dedupedUpdates++;
           this.log(
             config,
             LogLevel.DEBUG,
@@ -239,11 +227,7 @@ export class SubscriptionService {
           return;
         }
 
-        // Step 2: Update statistics
-        this.stats.totalUpdates++;
-        this.updateSubscriptionStats(config, 'update');
-
-        // Step 3: Log subscription update
+        // Step 2: Log subscription update
         const item = this.getPayloadEntity(payload);
 
         this.log(config, LogLevel.INFO, 'Subscription update received', {
@@ -348,9 +332,6 @@ export class SubscriptionService {
         });
         return; // Don't count as error or call custom handler for expected disconnects
       }
-
-      this.stats.totalErrors++;
-      this.updateSubscriptionStats(config, 'error');
 
       this.log(
         config,
@@ -677,26 +658,6 @@ export class SubscriptionService {
   }
 
   /**
-   * Update subscription statistics
-   */
-  private updateSubscriptionStats<TData>(
-    config: RegisteredConfig<TData>,
-    type: 'update' | 'error',
-  ): void {
-    const key = this.getSubscriptionKey(config);
-    const entry = this.subscriptions.get(key);
-
-    if (entry) {
-      if (type === 'update') {
-        entry.updateCount++;
-        entry.lastUpdate = new Date();
-      } else {
-        entry.errorCount++;
-      }
-    }
-  }
-
-  /**
    * Generate unique subscription key
    */
   private getSubscriptionKey<TData>(config: RegisteredConfig<TData>): string {
@@ -706,31 +667,12 @@ export class SubscriptionService {
   }
 
   /**
-   * Get subscription statistics
-   */
-  getStats(): SubscriptionStats {
-    return {
-      totalSubscriptions: this.subscriptions.size,
-      activeSubscriptions: Array.from(this.subscriptions.values()),
-      totalUpdates: this.stats.totalUpdates,
-      totalErrors: this.stats.totalErrors,
-      dedupedUpdates: this.stats.dedupedUpdates,
-    };
-  }
-
-  /**
    * Cleanup all subscriptions
    * Should be called on logout
    */
   cleanup(): void {
     this.subscriptions.clear();
     this.suppression.cleanup();
-    this.stats = {
-      totalUpdates: 0,
-      totalErrors: 0,
-      dedupedUpdates: 0,
-      filteredSortOrderUpdates: 0,
-    };
   }
 
   /**

@@ -1,3 +1,5 @@
+import { gql } from '@apollo/client';
+import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   BarcodeAddItemToShoppingListDocument,
@@ -49,6 +51,13 @@ const addToPantryItemsConnection =
 
 /** A scanned item is always one container: the per-container weight is separate. */
 const SCANNED_QUANTITY = 1;
+
+const RESTOCKED_QUANTITY = gql`
+  fragment _ScannedRestockQuantity on PantryItem {
+    id
+    quantity
+  }
+`;
 
 /** Whether the shopping-list row survived the create. */
 export type ScannedListOutcome = 'kept' | 'reverted';
@@ -255,6 +264,26 @@ export function useAddScannedItem({
   const restockDuplicate = async (
     existingPantryItemId: string,
   ): Promise<boolean> => {
+    // The payload selects only `id`, so the row keeps its old count unless it
+    // is bumped here — offline until the replay, and online for good.
+    const cacheId = client.cache.identify({
+      __typename: 'PantryItem',
+      id: existingPantryItemId,
+    });
+    const cached = cacheId
+      ? client.cache.readFragment<{ quantity: number }>({
+          id: cacheId,
+          fragment: RESTOCKED_QUANTITY,
+        })
+      : null;
+    const optimistic = optimisticFieldUpdate(
+      client.cache,
+      cacheId,
+      cached ? { quantity: cached.quantity } : null,
+      { quantity: (cached?.quantity ?? 0) + SCANNED_QUANTITY },
+      'Restock scanned Pantry Item',
+    );
+
     const settled = await settleMutation(
       () =>
         restockPantryItem({
@@ -272,6 +301,7 @@ export function useAddScannedItem({
       {
         document: BarcodeRestockPantryItemDocument,
         fallback: t('errors.restockFailedRetry'),
+        onFailed: optimistic.revert,
       },
     );
     return settled.status !== 'failed';

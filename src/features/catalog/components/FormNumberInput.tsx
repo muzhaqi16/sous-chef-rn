@@ -27,13 +27,16 @@ export const FormNumberInput: React.FC<FormNumberInputProps> = ({
   styles.useVariants({ error: !!error });
 
   const handleChangeText = (text: string) => {
-    // Allow only numbers and decimal point for decimal-pad
     if (keyboardType === 'decimal-pad') {
-      const sanitized = text.replace(/[^0-9.]/g, '');
-      // Ensure only one decimal point
-      const parts = sanitized.split('.');
+      // Both separators: a comma keypad offers no period, so whitelisting one
+      // of them deletes the only decimal key the person has.
+      const sanitized = text.replace(/[^0-9.,]/g, '');
+      const firstSeparator = sanitized.search(/[.,]/);
       const result =
-        parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : sanitized;
+        firstSeparator === -1
+          ? sanitized
+          : sanitized.slice(0, firstSeparator + 1) +
+            sanitized.slice(firstSeparator + 1).replace(/[.,]/g, '');
       onChangeText?.(result);
     } else {
       // For numeric/number-pad, only allow digits

@@ -5,12 +5,10 @@
 
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
+import { isNetworkError } from '#/utils/isNetworkError';
 import { serializeError } from '#/utils/errorSerialization';
 import { firstNonBlank } from '#/utils/firstNonBlank';
-import {
-  GraphQLDomainError,
-  GraphQLNetworkError,
-} from '#/utils/errors/graphqlErrors';
+import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
 import {
   CombinedGraphQLErrors,
   CombinedProtocolErrors,
@@ -403,14 +401,12 @@ export class ErrorService {
       } else if (CombinedProtocolErrors.is(error)) {
         errorCode = 'NETWORK_ERROR';
         diagnostic = error.message || 'Unable to connect.';
-      }
-      // A refusal `unwrapPayload` turned into a throw; it carries the server's
-      // own `code`. MUST be tested before the `instanceof Error` arm, which it
-      // also satisfies, or every thrown domain refusal reads as UNKNOWN_ERROR.
-      else if (error instanceof GraphQLDomainError) {
-        errorCode = error.code;
-        diagnostic = error.message;
       } else if (error instanceof GraphQLNetworkError) {
+        errorCode = 'NETWORK_ERROR';
+        diagnostic = error.message;
+      } else if (error instanceof Error && isNetworkError(error)) {
+        // Before the plain `instanceof Error` arm, which a fetch failure also
+        // satisfies: read there it is UNKNOWN_ERROR, "an unexpected error".
         errorCode = 'NETWORK_ERROR';
         diagnostic = error.message;
       } else if (error instanceof Error) {

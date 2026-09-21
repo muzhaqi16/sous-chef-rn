@@ -11,7 +11,7 @@ import {
 import { Header } from '#components/organisms/Header';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
-import { formatQuantity } from '#/utils/formatQuantity';
+import { formatQuantityForInput } from '#/utils/formatQuantity';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
   formatNumberForInput,
@@ -95,7 +95,11 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
     setPrevVisible(visible);
     setPrevItemId(item?.id);
     if (visible && item) {
-      setQuantityInput(formatQuantity(item.requestedQuantity));
+      // The seed is read back by `parseNumberInput`, so it must carry the
+      // device's separator; a period reads as grouping on a comma device.
+      setQuantityInput(
+        formatQuantityForInput(item.requestedQuantity, { notation: 'decimal' }),
+      );
       setPriceInput(
         formatPrice(
           totalFromUnitPrice(item.estimatedPrice, item.requestedQuantity),

@@ -104,7 +104,8 @@
         "test": "Test notification",
         "listCompleted": "Shopping list completed",
         "expiryDigest": "Expiring this week",
-        "authored": "Announcement"
+        "authored": "Announcement",
+        "unknown": "Notification"
       },
       "message": {
         "homeInvitation": "{{inviterName}} invited you to join {{homeName}}",

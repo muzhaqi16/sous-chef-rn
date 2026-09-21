@@ -121,7 +121,11 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
         name: listName,
         homeId: plan.homeId,
       });
-      listId = created.status === 'created' ? created.shoppingList.id : null;
+      if (created.status === 'failed') {
+        toastService.error(created.body);
+        return null;
+      }
+      listId = created.shoppingList.id;
     }
     if (!listId) return null;
 

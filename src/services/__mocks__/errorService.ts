@@ -77,8 +77,19 @@ export const errorService: ErrorServiceModule['errorService'] = Object.assign(
 
 export const localizedErrorMessage = jest.fn((): string => GENERIC);
 
-// True for an unclassified failure, as the real check is.
-export const isTransportFailure = jest.fn(() => true);
+// Derived from the mocked parse the way the real check derives it, so a suite
+// that overrides `parseApolloError` with a code gets that code's verdict. A
+// constant `true` nulled every thrown refusal's code in every suite.
+const TRANSPORT_CODES = new Set([
+  'UNKNOWN_ERROR',
+  'NETWORK_ERROR',
+  'CIRCUIT_OPEN',
+]);
+export const isTransportFailure = jest.fn((error: unknown): boolean => {
+  const code = errorService.parseApolloError(error, { logError: false }).error
+    ?.code;
+  return !code || TRANSPORT_CODES.has(code);
+});
 
 export const useErrorService = jest.fn(() => ({
   ...generated.useErrorService(),

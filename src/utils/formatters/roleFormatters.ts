@@ -1,5 +1,6 @@
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n';
+import { unknownMember } from '#/utils/closedEnum';
 
 export function formatRole(role: MembershipRole): string {
   switch (role) {
@@ -11,5 +12,8 @@ export function formatRole(role: MembershipRole): string {
       return t('roles.member');
     case MembershipRole.Guest:
       return t('labels.guest');
+    default:
+      unknownMember(role, 'membership role');
+      return t('roles.member');
   }
 }

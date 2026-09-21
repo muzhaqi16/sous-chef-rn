@@ -99,15 +99,4 @@ export interface SubscriptionEntry {
   entityId?: string;
   userId?: string;
   connectedAt: Date;
-  lastUpdate?: Date;
-  updateCount: number;
-  errorCount: number;
-}
-
-export interface SubscriptionStats {
-  totalSubscriptions: number;
-  activeSubscriptions: SubscriptionEntry[];
-  totalUpdates: number;
-  totalErrors: number;
-  dedupedUpdates: number;
 }

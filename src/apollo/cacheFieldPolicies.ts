@@ -137,7 +137,7 @@ export function mergeArrayByIdIntelligent<
   // offline create survives a refetch that beats the queue drain. Once the
   // queue empties the server page wins, and a genuinely deleted item (no
   // pending op) is dropped. Mirrors the guard in itemsConnectionFieldPolicy.
-  const pendingIds = queueStore.getPendingClientIds();
+  const pendingIds = queueStore.getUnconfirmedCreateIds();
   existingMap.forEach(({ item }, id) => {
     if (incomingMap.has(id)) {
       return; // Already processed above
@@ -175,7 +175,7 @@ function preservePendingEdges(
   incoming: CachedConnection,
   readField: ReadField,
 ): CachedConnection {
-  const pendingIds = queueStore.getPendingClientIds();
+  const pendingIds = queueStore.getUnconfirmedCreateIds();
   if (pendingIds.size === 0) return incoming;
   const incomingIds = new Set<string>();
   for (const edge of incoming.edges ?? []) {

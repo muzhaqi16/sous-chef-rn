@@ -152,7 +152,6 @@ const ConsumeActionFields: React.FC<{
           value={quantityInput}
           onChangeText={setQuantityInput}
           placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
-          keyboardType="numeric"
           useBottomSheetInput
         />
         <QuantityInputFeedback

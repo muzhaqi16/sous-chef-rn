@@ -143,7 +143,9 @@ export function useQuantityEditModal(
     // Separators normalized, fraction preserved: the server parses this string
     // itself and rejects a comma decimal outright.
     const quantityInput = normalizeNumericTextForApi(quantity);
-    const parsed = parseFractionalInput(quantityInput);
+    // The RAW text: normalizing is not idempotent on a comma device, and a
+    // second pass reads the period it just wrote as thousands grouping.
+    const parsed = parseFractionalInput(quantity);
     const row = items.find(i => i.id === itemId);
     const previous = {
       quantity: row?.quantity ?? selectedItemRaw.quantity,

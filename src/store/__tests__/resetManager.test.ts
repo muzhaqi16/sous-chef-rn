@@ -48,12 +48,14 @@ import { storage } from '#/storage/mmkv';
 import {
   clearTempRegistrationPassword,
   clearCredentials,
+  clearSessionTokens,
 } from '#/storage/keychain';
 import { cancelTokenRefresh } from '#/apollo/links/tokenScheduler';
 import {
   registerSessionTeardown,
   clearSessionTeardown,
 } from '../sessionTeardown';
+import { isSessionEnding } from '../sessionEnding';
 import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import { logger } from '#/utils/environment';
 
@@ -415,6 +417,35 @@ describe('resetManager', () => {
       );
     });
 
+    describe('endSession runs once', () => {
+      // Several in-flight operations can each report a dead session, and
+      // `errorLink` / `wsLink` / `tokenRefreshFailed` all fire it unawaited. A
+      // second teardown clears the flags the first is still running under.
+      it('joins a teardown already in progress instead of starting another', async () => {
+        const step = jest.fn(
+          () => new Promise<void>(resolve => setTimeout(resolve, 10)),
+        );
+        registerSessionTeardown('counted', step);
+
+        await Promise.all([
+          resetManager.endSession('account_inactive'),
+          resetManager.endSession('session_revoked'),
+        ]);
+
+        expect(step).toHaveBeenCalledTimes(1);
+      });
+
+      it('ends the session again once the first has finished', async () => {
+        const step = jest.fn();
+        registerSessionTeardown('counted', step);
+
+        await resetManager.endSession('account_inactive');
+        await resetManager.endSession('session_revoked');
+
+        expect(step).toHaveBeenCalledTimes(2);
+      });
+    });
+
     describe('endSession', () => {
       const REASONS = [
         'refresh_rejected',
@@ -538,6 +569,23 @@ describe('resetManager', () => {
 
           expect(findAuthResetCall(mockSet)?.[0]?.accessToken).toBeNull();
           expectPersistedCacheCleared();
+          expect(isSessionEnding()).toBe(false);
+        });
+
+        it('keeps the gate closed for the whole of the store reset', async () => {
+          // Operations admitted here would fire against a session whose tokens
+          // are still in the store but whose transports are already stopped.
+          const gate: boolean[] = [];
+          apolloReset.clearStore.mockImplementation(async () => {
+            gate.push(isSessionEnding());
+          });
+          (clearSessionTokens as jest.Mock).mockImplementation(async () => {
+            gate.push(isSessionEnding());
+          });
+
+          await resetManager.endSession('refresh_rejected');
+
+          expect(gate).toEqual([true, true]);
         });
       });
 

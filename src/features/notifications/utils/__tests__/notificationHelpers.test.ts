@@ -4,6 +4,7 @@ import {
   getNotificationIcon,
 } from '#features/notifications/utils/notificationHelpers';
 import { getI18n } from '#/i18n/config';
+import { getPushTrayCopy } from '#features/notifications/pushCopy';
 import type { NotificationPayload } from '#features/notifications/types';
 
 // Real i18n instance (auto-initialized on config import) so the test exercises
@@ -19,6 +20,55 @@ const messageOf = (type: NotificationType, payload: NotificationPayload) =>
   getNotificationCopy({ type, payload }, t).message;
 
 describe('notificationHelpers', () => {
+  // FCM stringifies every value and the push path re-coerces numeric-looking
+  // ones, so a home or item called "1234" arrives as the number 1234.
+  describe('a name that is all digits, through the push path', () => {
+    it('still names the home', () => {
+      const copy = getPushTrayCopy(
+        {
+          type: NotificationType.HomeInvitation,
+          inviterName: 'Ana',
+          homeName: '1234',
+        },
+        t,
+      );
+      expect(copy?.body).toContain('1234');
+    });
+
+    it('still names the expiring item', () => {
+      const copy = getPushTrayCopy(
+        {
+          type: NotificationType.ExpiryReminder,
+          itemName: '7',
+          daysUntilExpiry: '2',
+        },
+        t,
+      );
+      expect(copy?.body).toContain('7');
+    });
+  });
+
+  describe('a notification type this build does not know', () => {
+    // The server ships new types independently of the app. Rendered through
+    // the template branch, an unknown type shows its raw lookup key.
+    const unknown = 'SOMETHING_NEWER' as NotificationType;
+
+    it('uses the words the server sent', () => {
+      expect(
+        getNotificationCopy(
+          { type: unknown, payload: {}, title: 'Weekly recap', message: 'Hi' },
+          t,
+        ),
+      ).toEqual({ title: 'Weekly recap', message: 'Hi' });
+    });
+
+    it('falls back to a generic title, never the key', () => {
+      const copy = getNotificationCopy({ type: unknown, payload: {} }, t);
+      expect(copy.title).toBe(t('notifications.copy.title.unknown'));
+      expect(copy.title).not.toContain('notifications.');
+    });
+  });
+
   describe('getNotificationCopy', () => {
     it('titles every type in local copy', () => {
       for (const type of Object.values(NotificationType)) {

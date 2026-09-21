@@ -103,10 +103,10 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
     fragmentName: 'MealPlanSettingsSheet_mealPlan',
     from: mealPlanRef,
   });
-  const mealPlan: MealPlanSettingsSheet_MealPlanFragment | null =
-    fragmentResult.complete
-      ? fragmentResult.data
-      : (mealPlanRef as MealPlanSettingsSheet_MealPlanFragment | null);
+  // The ref production passes is masked to `{ __typename, id }`. Cast to the
+  // full fragment it has none of the fields the render reads, so an incomplete
+  // read — the plan just deleted — is absent, not a partial plan.
+  const mealPlan = fragmentResult.complete ? fragmentResult.data : null;
 
   const [showNutrition, setShowNutrition] = useState(false);
 

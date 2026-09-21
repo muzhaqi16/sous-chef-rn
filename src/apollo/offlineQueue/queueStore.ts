@@ -66,6 +66,7 @@ export class QueueStore {
   // (cache.ts), so without these each write costs an MMKV read and a rebuild.
   private currentUserId: string | null | undefined = undefined;
   private pendingClientIds: Set<string> | null = null;
+  private unconfirmedCreateIds: Set<string> | null = null;
 
   // Lets UI read live queue state (the offline banner's pending count) through
   // useSyncExternalStore instead of polling MMKV.
@@ -141,6 +142,7 @@ export class QueueStore {
       logger.error('Failed to save queue to storage:', error);
     }
     this.pendingClientIds = null;
+    this.unconfirmedCreateIds = null;
     this.notifyListeners();
   }
 
@@ -157,6 +159,7 @@ export class QueueStore {
     }
     this.currentUserId = userId;
     this.pendingClientIds = null;
+    this.unconfirmedCreateIds = null;
     // The pending count is user-scoped, so a user switch changes it even
     // though the queue contents didn't.
     this.notifyListeners();
@@ -166,6 +169,7 @@ export class QueueStore {
     storage.remove(CURRENT_USER_KEY);
     this.currentUserId = null;
     this.pendingClientIds = null;
+    this.unconfirmedCreateIds = null;
     this.notifyListeners();
   }
 
@@ -381,6 +385,26 @@ export class QueueStore {
     return ids;
   }
 
+  /**
+   * Ids the device minted for a create still PENDING — rows the server has
+   * never seen. Narrower than {@link getPendingClientIds}: a pending usage or
+   * update names a row the server owns, and treating it as unconfirmed skips
+   * that row's detail queries and pins it into lists it has left.
+   */
+  getUnconfirmedCreateIds(): Set<string> {
+    if (this.unconfirmedCreateIds) return this.unconfirmedCreateIds;
+
+    const ids = new Set<string>();
+    const userId = this.getCurrentUserId();
+    if (userId) {
+      for (const mutation of this.getPendingMutationsForUser(userId)) {
+        for (const id of queuedSubject(mutation).mintedIds) ids.add(id);
+      }
+    }
+    this.unconfirmedCreateIds = ids;
+    return ids;
+  }
+
   getMutation(mutationId: string): QueuedMutation | null {
     const queue = this.loadQueue();
     return queue.find(m => m.id === mutationId) ?? null;
@@ -408,6 +432,7 @@ export class QueueStore {
     storage.remove(QUEUE_STORAGE_KEY);
     this.cache = null;
     this.pendingClientIds = null;
+    this.unconfirmedCreateIds = null;
     logger.debug('🧹 Queue: Cleared all mutations');
     this.notifyListeners();
   }
@@ -522,6 +547,7 @@ export class QueueStore {
   invalidateCache(): void {
     this.cache = null;
     this.pendingClientIds = null;
+    this.unconfirmedCreateIds = null;
     this.currentUserId = undefined;
     // A pending-write badge reads through the cache; it must re-read now.
     this.notifyListeners();

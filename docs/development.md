@@ -615,6 +615,7 @@ iOS to iOS, build over build — never against an Android device figure.
 | `android:build:bundle`          | Release AAB                                |
 | `android:clean`                 | `gradlew clean`                            |
 | `ios:clean`                     | Clear `ios/build` and re-run `pod install` |
+| `build:prune`                   | Prune native build output; runs pre-build  |
 | `bundle:ios` / `bundle:android` | Produce a production JS bundle + sourcemap |
 | `bundle:analyze`                | `source-map-explorer` over the bundle      |
 
@@ -646,6 +647,13 @@ rm -rf android/app/build android/app/.cxx
 
 **iOS clean build** — `npm run ios:clean` (clears `ios/build`, re-runs
 `pod install`).
+
+**Disk full mid-build** (`No space left on device`, often inside `pod install`)
+— Xcode and Gradle never delete native build output; it reached 34 GB in one
+checkout. Every build script runs `build:prune` first: it deletes derived data
+unused for 14 days or written by an older Xcode, Android native output (app and
+`node_modules/*/android`) with no Gradle build for 14 days, and stops the build
+below 15 GB free. `npm run build:prune -- --max-age-days 0` removes all of it.
 
 **"codegen produced changes — your committed generated files are stale"** — the
 two tracked artifacts (`schema.graphql`, `persisted-query-manifest.json`) have

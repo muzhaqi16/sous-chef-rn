@@ -286,6 +286,9 @@ export const useDietaryProfile = () => {
       {
         document: AddDietaryRestrictionDocument,
         fallback: t('errors.codes.genericRetry'),
+        // Both callers alert on the false return; a second alert stacks, and
+        // a bulk add stacks one per restriction.
+        present: 'none',
       },
     );
     return settled.status !== 'failed';

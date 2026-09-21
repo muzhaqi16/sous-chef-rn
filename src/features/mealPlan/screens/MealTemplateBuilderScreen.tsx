@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import {
   MEAL_TYPE_LABEL_KEYS,
+  MEAL_TYPE_ORDER,
   TEMPLATE_CATEGORY_LABEL_KEYS,
 } from '#features/mealPlan/utils/mealPlanEnumLabels';
 import { StyleSheet } from 'react-native-unistyles';
@@ -46,15 +47,6 @@ const CATEGORY_OPTIONS = [
   TemplateCategory.Holiday,
   TemplateCategory.SpecialDiet,
   TemplateCategory.Custom,
-];
-
-const MEAL_TYPE_OPTIONS = [
-  MealType.Breakfast,
-  MealType.Brunch,
-  MealType.Lunch,
-  MealType.Dinner,
-  MealType.Snack,
-  MealType.Dessert,
 ];
 
 // A meal held in the builder before it becomes a server item (create mode) or
@@ -485,7 +477,7 @@ export const MealTemplateBuilderScreen: React.FC<
               label={t('labels.mealType')}
               value={field.value}
               onValueChange={value => field.onChange(value)}
-              options={MEAL_TYPE_OPTIONS.map(value => ({
+              options={MEAL_TYPE_ORDER.map(value => ({
                 label: t(MEAL_TYPE_LABEL_KEYS[value]),
                 value,
               }))}

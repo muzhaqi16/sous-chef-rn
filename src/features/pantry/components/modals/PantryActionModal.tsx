@@ -115,6 +115,12 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     useState<SelectedUnitInfo | null>(null);
   const [notes, setNotes] = useState('');
 
+  // A row created offline holds a neutral unit with an empty id. Sent as
+  // `usageUnitId` it names no unit; omitted, the server uses the stack's own.
+  const placeholderOrUnitId = pantryItem?.unit.id;
+  const trackingUnitId =
+    placeholderOrUnitId === '' ? undefined : placeholderOrUnitId;
+
   const {
     groups,
     allUnits,
@@ -124,7 +130,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     loading: unitsLoading,
   } = useOperationUnits({
     pantryItemId: pantryItem?.id,
-    trackingUnitId: pantryItem?.unit.id,
+    trackingUnitId,
     trackingUnitType: pantryItem?.unit.type,
     netWeightUnitId: pantryItem?.netWeightUnit?.id,
     operation,
@@ -154,7 +160,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
 
   const trackingQuantity = pantryItem?.quantity ?? 0;
   const trackingUnitSymbol = pantryItem?.unit.symbol ?? '';
-  const trackingUnitId = pantryItem?.unit.id;
 
   const fallbackUnitSymbol = pantryItem?.netWeightUnit
     ? getUnitDisplayText(pantryItem.netWeightUnit)

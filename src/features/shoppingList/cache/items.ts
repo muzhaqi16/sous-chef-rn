@@ -99,9 +99,11 @@ export function reconcileShoppingItemCreateUpdate(
 ): void {
   if (clientId && serverItem.id !== clientId) {
     // Catalog merge: the server folded the line into an EXISTING row, so the
-    // optimistic add counted a row that never came to exist. Withdrawing it
-    // takes `totalItems` back with the entity; evicting alone strands the count.
-    revertOptimisticShoppingListItem(cache, listId, clientId);
+    // optimistic add counted a row that never came to exist. Its count comes
+    // back relatively only when the response did not bring the totals.
+    revertOptimisticShoppingListItem(cache, listId, clientId, {
+      countsSettled: carriesListTotals(serverItem, listId),
+    });
   }
   addNewItemToShoppingListCache(cache, listId, serverItem, false);
 }
@@ -248,8 +250,12 @@ export function revertOptimisticShoppingListItem(
   cache: ApolloCache,
   listId: string,
   clientId: string,
+  { countsSettled = false }: { countsSettled?: boolean } = {},
 ): void {
   safeEvict(cache, 'ShoppingListItem', clientId);
+  // A response carrying the list's totals already wrote the server's count;
+  // a relative decrement on top counts the same row twice.
+  if (countsSettled) return;
 
   const parentCacheId = cache.identify({
     __typename: 'ShoppingList',
@@ -257,25 +263,51 @@ export function revertOptimisticShoppingListItem(
   });
   if (!parentCacheId) return;
 
+  // Partial: without it a list missing either stat reads as null, and the
+  // fallback below would write a total of zero over a list of any size.
   const stats = cache.readFragment<{
-    totalItems: number;
-    completedItems: number;
+    totalItems?: number;
+    completedItems?: number;
   }>({
     id: parentCacheId,
     fragment: ShoppingListStatsForOptimisticAddFragment,
     fragmentName: '_ShoppingListStatsForOptimisticAdd',
+    returnPartialData: true,
   });
-  const newTotal = Math.max(0, (stats?.totalItems ?? 0) - 1);
-  const completed = stats?.completedItems ?? 0;
+  const total = stats?.totalItems;
+  if (total === undefined) return;
 
+  const newTotal = Math.max(0, total - 1);
+  const completed = stats?.completedItems;
   cache.modify({
     id: parentCacheId,
     fields: {
       totalItems: () => newTotal,
-      remainingItems: () => Math.max(0, newTotal - completed),
-      completionRate: () => (newTotal > 0 ? completed / newTotal : 0),
+      ...(completed !== undefined && {
+        remainingItems: () => Math.max(0, newTotal - completed),
+        completionRate: () => (newTotal > 0 ? completed / newTotal : 0),
+      }),
     },
   });
+}
+
+/**
+ * Whether an add result carried THIS list's totals, which Apollo has already
+ * written over the local count. Totals for another list settle nothing here.
+ */
+export function carriesListTotals(item: unknown, listId: string): boolean {
+  if (typeof item !== 'object' || item === null || !('shoppingList' in item)) {
+    return false;
+  }
+  const list: unknown = item.shoppingList;
+  return (
+    typeof list === 'object' &&
+    list !== null &&
+    'id' in list &&
+    list.id === listId &&
+    'totalItems' in list &&
+    typeof list.totalItems === 'number'
+  );
 }
 
 /**

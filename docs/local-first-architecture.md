@@ -363,6 +363,15 @@ query-blocking, orthogonal to connectivity.
   toggle visibly snaps to the server value and back when the replay lands. Cosmetic and self-correcting;
   not worth serializing.
 - **Network errors** on an opted-in mutation queue silently; they raise no alert.
+- **The replay reads the CODE.** `queueErrorPolicy.classifyError` decides withdraw-vs-park from a
+  failure's code, so anything thrown on the session path is a `SessionError` carrying one: a bare
+  `Error` reads as an unknown permanent failure and withdraws the write. Measured on a device — of
+  three writes queued across one revoked session, only the one whose failure carried a code survived.
+- **Only a missing unit row is stale.** A `NotFoundError` on the unit resource triggers a vocabulary
+  refresh and a retry; `UNIT_INVALID` does not. The API defines it as the unit being invalid for the
+  operation (curation, no conversion route, a fact the food does not record, a measure the stack cannot
+  express), none of which a refresh clears — and the replay re-sends the same unit, so retrying only
+  delays the withdrawal. The interactive path refetches the ranked units so the user can pick another.
 - **Not yet shipped:** a uniform offline-degraded affordance for online-only features.
 
 ## 10. Scope

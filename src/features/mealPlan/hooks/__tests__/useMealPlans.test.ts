@@ -141,6 +141,39 @@ describe('useMealPlans', () => {
     );
   });
 
+  // Resolving the current plan needs the few plans that can overlap today, not
+  // a second full page of display nodes on every mount.
+  it('asks for only the plans that can overlap today', async () => {
+    const recorded = recordMock(GetMealPlansDocument, {
+      data: {
+        mealPlans: {
+          __typename: 'MealPlanConnection',
+          edges: [],
+          totalCount: 0,
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: false,
+            endCursor: null,
+          },
+        },
+      },
+    });
+    renderHookWithApollo(() => useMealPlans(), {
+      operationMocks: [recorded.mock, recorded.mock],
+    });
+
+    const isCurrentVariant = (variables: unknown) =>
+      (variables as { filters?: { startDate?: string } }).filters?.startDate !==
+      undefined;
+    await waitFor(() =>
+      expect(recorded.fired.some(isCurrentVariant)).toBe(true),
+    );
+    const currentVariant = recorded.fired.find(isCurrentVariant) as {
+      first: number;
+    };
+    expect(currentVariant.first).toBeLessThanOrEqual(3);
+  });
+
   describe('beyond the first page', () => {
     const DAY = 86400000;
     type Plan = { id: string; startDate: string; endDate: string };

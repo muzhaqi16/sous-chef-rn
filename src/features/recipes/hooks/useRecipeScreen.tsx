@@ -1,3 +1,4 @@
+import { knownEntry } from '#/utils/closedEnum';
 import { useRef, useState } from 'react';
 
 import { useTranslation } from '#/i18n';
@@ -33,6 +34,19 @@ import {
 
 // ── Facade hook ──
 
+/**
+ * The search term for a restriction, or none. A member the server added after
+ * this build has no entry, and sending `undefined` along silently changes the
+ * search rather than leaving that restriction out.
+ */
+function spoonacularTerm<K extends string>(
+  table: Record<K, string>,
+  key: K,
+): string[] {
+  const term = knownEntry(table, key);
+  return term ? [term] : [];
+}
+
 export function useRecipeScreen() {
   const { t } = useTranslation();
   const apiUnavailable = useAppStore(isApiUnavailable);
@@ -61,7 +75,7 @@ export function useRecipeScreen() {
   const reconciledDietValues = [
     ...(firstLifestyleDiet ? [firstLifestyleDiet] : []),
     ...profileDietRestrictions.filter(r => !isLifestyleDiet(r.diet)),
-  ].map(r => DIET_ENUM_TO_SPOONACULAR[r.diet]);
+  ].flatMap(r => spoonacularTerm(DIET_ENUM_TO_SPOONACULAR, r.diet));
 
   // Discovery (random recipe API) takes a comma-separated tag string (AND).
   const dietaryTags =
@@ -146,7 +160,9 @@ export function useRecipeScreen() {
           .filter((r): r is typeof r & { intolerance: Intolerance } =>
             Boolean(r.intolerance),
           )
-          .map(r => INTOLERANCE_ENUM_TO_SPOONACULAR[r.intolerance]),
+          .flatMap(r =>
+            spoonacularTerm(INTOLERANCE_ENUM_TO_SPOONACULAR, r.intolerance),
+          ),
         mealType: null,
         maxReadyTime: dietaryProfile.maxCookTimeMinutes ?? null,
       }

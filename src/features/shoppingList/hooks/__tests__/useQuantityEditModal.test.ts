@@ -6,6 +6,7 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { DisplayFormat, ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -80,6 +81,11 @@ function createItem(
     ...overrides,
   };
 }
+
+jest.mock('#/utils/deviceLocale', () => ({
+  ...jest.requireActual('#/utils/deviceLocale'),
+  getDeviceDecimalSeparator: jest.fn(() => '.'),
+}));
 
 describe('useQuantityEditModal', () => {
   it('returns initial state with modal closed', () => {
@@ -258,6 +264,50 @@ describe('useQuantityEditModal', () => {
       input: {
         itemId: 'item-1',
         quantity: '1.5',
+        unitId: 'unit-1',
+        version: 3,
+      },
+    });
+  });
+
+  // `normalizeNumericTextForApi` is not idempotent on a comma device: it turns
+  // `1,125` into `1.125`, and a second pass reads that period as grouping. The
+  // parsed value goes to the cache AND to offline persistence, so a wrong one
+  // survives a restart.
+  it('stores the quantity the person typed, not a thousand-fold of it', async () => {
+    (getDeviceDecimalSeparator as jest.Mock).mockReturnValue(',');
+
+    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+      data: {
+        updateShoppingListItemQuantity: {
+          __typename: 'UpdateShoppingListItemQuantityPayload',
+          shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+        },
+      },
+    });
+    const items = [createItem()];
+
+    const { result } = renderHookWithApollo(
+      () => useQuantityEditModal({ items }),
+      { operationMocks: [m.mock] },
+    );
+
+    act(() => {
+      result.current.openForItem('item-1');
+    });
+
+    await act(async () => {
+      await result.current.save('1,125', 'gal', 'unit-1');
+    });
+
+    const saved = (optimisticDataPersistence.save as jest.Mock).mock.calls.find(
+      call => call[2] === 'quantity',
+    );
+    expect(saved?.[3]).toBeCloseTo(1.125, 3);
+    expect(m.fired[0]).toEqual({
+      input: {
+        itemId: 'item-1',
+        quantity: '1.125',
         unitId: 'unit-1',
         version: 3,
       },

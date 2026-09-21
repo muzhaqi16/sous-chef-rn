@@ -460,41 +460,4 @@ describe('OptimisticDataPersistence', () => {
       expect(storage.getString(DATA_KEY)).toBeUndefined();
     });
   });
-
-  describe('getStats', () => {
-    it('returns zero stats when no data exists', () => {
-      const stats = optimisticDataPersistence.getStats();
-      expect(stats).toEqual({
-        totalUpdates: 0,
-        entityTypes: [],
-        oldestTimestamp: null,
-        newestTimestamp: null,
-      });
-    });
-
-    it('returns correct stats for stored data', () => {
-      seedData([
-        {
-          entityType: 'ShoppingListItem',
-          entityId: '1',
-          field: 'sortOrder',
-          value: 'a1',
-        },
-        {
-          entityType: 'PantryItem',
-          entityId: '2',
-          field: 'quantity',
-          value: 5,
-        },
-      ]);
-
-      const stats = optimisticDataPersistence.getStats();
-      expect(stats.totalUpdates).toBe(2);
-      expect(stats.entityTypes).toEqual(
-        expect.arrayContaining(['ShoppingListItem', 'PantryItem']),
-      );
-      expect(stats.oldestTimestamp).toEqual(expect.any(Number));
-      expect(stats.newestTimestamp).toEqual(expect.any(Number));
-    });
-  });
 });

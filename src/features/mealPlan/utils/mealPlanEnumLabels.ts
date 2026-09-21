@@ -19,6 +19,20 @@ export const MEAL_TYPE_LABEL_KEYS: Record<MealType, TranslationKey> = {
   [MealType.Dessert]: 'labels.dessert',
 };
 
+const MEAL_TYPE_RANK: Record<MealType, number> = {
+  [MealType.Breakfast]: 0,
+  [MealType.Brunch]: 1,
+  [MealType.Lunch]: 2,
+  [MealType.Snack]: 3,
+  [MealType.Dinner]: 4,
+  [MealType.Dessert]: 5,
+};
+
+/** Every meal type in the day's order. */
+export const MEAL_TYPE_ORDER: readonly MealType[] = Object.values(
+  MealType,
+).sort((a, b) => MEAL_TYPE_RANK[a] - MEAL_TYPE_RANK[b]);
+
 export const TEMPLATE_CATEGORY_LABEL_KEYS: Record<
   TemplateCategory,
   TranslationKey

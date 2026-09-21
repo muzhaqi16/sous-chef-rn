@@ -44,6 +44,26 @@ export class ReplayRejectedError extends Error {
   }
 }
 
+export const REPLAY_NOT_PREPARED_CODE = 'REPLAY_NOT_PREPARED';
+
+/**
+ * The replay could not be BUILT on the device — a value it reads was missing,
+ * typically because the persisted cache was discarded while the queue survived.
+ * The server never saw the write, so this is a deferral, never a refusal.
+ */
+export class ReplayNotPreparedError extends Error {
+  readonly operationName: string;
+  readonly cause: unknown;
+
+  constructor(operationName: string, cause: unknown) {
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    super(`Cannot prepare replay of ${operationName}: ${detail}`);
+    this.name = 'ReplayNotPreparedError';
+    this.operationName = operationName;
+    this.cause = cause;
+  }
+}
+
 /**
  * Outcome of a replay that RESOLVED with data: under `errorPolicy: 'all'` a
  * refusal resolves instead of throwing. `'converged'` is a `ConflictError`
@@ -117,14 +137,8 @@ const TRANSIENT_SERVER_CODES: readonly string[] = [
 ];
 
 /**
- * A missing unit row is the ONLY unit refusal a vocabulary refresh can clear.
- * `UNIT_INVALID` is deliberately absent: the API defines it as the unit being
- * invalid for the requested operation — curation, no conversion route, a fact
- * the food does not record, or a measure the stack cannot express. A refresh
- * clears none of those, and a replay re-sends the same unit, so reading it as
- * stale here buys a retry loop that ends in the same withdrawal several drains
- * later. The interactive path refetches the ranked units on that code so the
- * user can pick another; a replay has no user to pick.
+ * A missing unit row is the only unit refusal a vocabulary refresh can clear;
+ * `UNIT_INVALID` is absent on purpose, since a retry re-sends the same unit.
  */
 function isStaleUnitRefusal(error: ReplayRejectedError): boolean {
   return (
@@ -140,6 +154,18 @@ function isStaleUnitRefusal(error: ReplayRejectedError): boolean {
  * stateful retry orchestration so the heuristics are testable in isolation.
  */
 export function classifyError(error: unknown): QueueError {
+  // `retryable: false` skips the in-run loop (every attempt reads the same
+  // missing value); QueueManager defers `server` regardless of the flag.
+  if (error instanceof ReplayNotPreparedError) {
+    return {
+      type: 'server',
+      message: error.message,
+      code: REPLAY_NOT_PREPARED_CODE,
+      timestamp: Date.now(),
+      retryable: false,
+    };
+  }
+
   // Classified by typename/code, never by the server-authored free-text message.
   if (error instanceof ReplayRejectedError) {
     // DEADLOCK is the one ConflictError code the API documents as transient and

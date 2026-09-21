@@ -251,23 +251,6 @@ describe('useHomeMutations', () => {
         input: { name: 'My Home', allowJoinCode: false },
       });
     });
-
-    it('shows validation error for empty name', async () => {
-      const { result } = renderHookWithApollo(() =>
-        useHomeMutations(createOptions()),
-      );
-
-      let returnValue!: Awaited<ReturnType<typeof result.current.createHome>>;
-      await act(async () => {
-        returnValue = await result.current.createHome('   ');
-      });
-
-      expect(returnValue).toBe(false);
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Validation Error',
-        'Home name cannot be empty',
-      );
-    });
   });
 
   describe('deleteHome', () => {

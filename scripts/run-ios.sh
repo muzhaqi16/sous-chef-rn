@@ -23,6 +23,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 # shellcheck source=scripts/build-mode.sh
 . scripts/build-mode.sh
+node scripts/prune-build-output.mjs
 
 MODE="${MODE:-debug}"
 

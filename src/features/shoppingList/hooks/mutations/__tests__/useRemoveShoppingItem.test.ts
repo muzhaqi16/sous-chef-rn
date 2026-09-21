@@ -139,6 +139,34 @@ describe('useRemoveShoppingItem', () => {
       expect(alertService.alert).toHaveBeenCalledTimes(1);
     });
 
+    // The refetch threaded here is the items query, whose selection carries
+    // none of the list's counters — so without restoring them the header
+    // keeps reporting one row fewer than the list now shows.
+    it('puts the counters back as they were', async () => {
+      const cache = seedCache([
+        {
+          __typename: 'ShoppingList',
+          id: 'list-1',
+          totalItems: 3,
+          completedItems: 1,
+        },
+      ]);
+      const refused = refusalMock({ __typename: 'ForbiddenError' });
+      const { result } = renderHookWithApollo(
+        () => useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+        { operationMocks: [refused.mock], cache },
+      );
+
+      await act(async () => {
+        await result.current.removeItem('item-1');
+      });
+
+      expect(cache.extract()['ShoppingList:list-1']).toMatchObject({
+        totalItems: 3,
+        completedItems: 1,
+      });
+    });
+
     it('keeps the removal when the row is already gone', async () => {
       const gone = goneMock();
       const { result } = renderHookWithApollo(

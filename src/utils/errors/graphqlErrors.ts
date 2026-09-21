@@ -1,32 +1,8 @@
-/**
- * `unwrapPayload()` throws these rather than a generic Error, so callers and
- * error boundaries can tell a transport failure (GraphQLNetworkError) from a
- * server-rejected domain error (GraphQLDomainError).
- */
-
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { describeValue } from '#/utils/errorSerialization';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
-export class GraphQLDomainError extends Error {
-  override readonly name = 'GraphQLDomainError';
-  readonly __typename: string;
-  readonly code: string;
-  readonly payload: Record<string, unknown>;
-
-  constructor(payload: {
-    __typename: string;
-    code: string;
-    message: string;
-    [k: string]: unknown;
-  }) {
-    super(payload.message);
-    this.__typename = payload.__typename;
-    this.code = payload.code;
-    this.payload = payload;
-  }
-}
-
+/** A write that never reached a verdict, told apart from a generic Error. */
 export class GraphQLNetworkError extends Error {
   override readonly name = 'GraphQLNetworkError';
 

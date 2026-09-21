@@ -44,6 +44,8 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
     // Otherwise the optimistic value is replayed over the server's on the next
     // restoration pass and the change comes back from the dead.
     optimisticDataPersistence.clearEntity(entityType, entityId);
+  } else if (entityId) {
+    optimisticDataPersistence.clearEntityById(entityId);
   }
 
   // After the evict, so a move's pantry row is gone before its shopping row
@@ -73,11 +75,32 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
 }
 
 let rereadScheduled = false;
+let rereadOwed = false;
+
+/** Queued work the reread would overwrite: pending, or parked for re-auth. */
+function hasQueuedWork(): boolean {
+  const userId = queueStore.getCurrentUserId();
+  if (!userId) return false;
+  const { pending, authErrors } = queueStore.getQueueStats(userId);
+  return pending > 0 || authErrors > 0;
+}
+
+function reread(): Promise<unknown> {
+  rereadOwed = false;
+  return client
+    .refetchQueries({ include: 'active' })
+    .catch((rereadError: unknown) => {
+      errorService.reportError(rereadError, {
+        operation: 'Re-read after a queue withdrawal',
+      });
+    });
+}
 
 /**
- * One read of the screens per drain pass, AFTER it: a refused update's row is
- * back with the server's value, a refused create's stays gone, and no row a
- * later entry in the same pass replays is overwritten by a read that beat it.
+ * One read of the screens once the queue has drained: a refused update's row
+ * is back with the server's value and a refused create's stays gone. The read
+ * is network-only for every active query, so while any write is still queued
+ * it is owed rather than run — it would put the server's older value over it.
  */
 function scheduleReread(): void {
   if (rereadScheduled) return;
@@ -86,7 +109,11 @@ function scheduleReread(): void {
     .whenIdle()
     .then(() => {
       rereadScheduled = false;
-      return client.refetchQueries({ include: 'active' });
+      if (hasQueuedWork()) {
+        rereadOwed = true;
+        return;
+      }
+      return reread();
     })
     .catch((rereadError: unknown) => {
       rereadScheduled = false;
@@ -94,6 +121,11 @@ function scheduleReread(): void {
         operation: 'Re-read after a queue withdrawal',
       });
     });
+}
+
+/** A later pass emptied the queue: run the reread a withdrawal left owed. */
+function onQueueDrained(): void {
+  if (rereadOwed && !hasQueuedWork()) void reread();
 }
 
 /**
@@ -132,4 +164,5 @@ function withdrawalMessage(
 export function registerQueueFailureHandler(): void {
   queueManager.setFailureHandler(handleQueueFailure);
   queueManager.setOverwriteReporter(reportQueueOverwrite);
+  queueManager.setDrainedHandler(onQueueDrained);
 }

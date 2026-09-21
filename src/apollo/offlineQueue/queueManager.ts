@@ -26,12 +26,15 @@ import {
 import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UpdateHomeDocument } from '#operations/home/home.generated';
 import { proactiveTokenRefresh } from '../links/refreshToken';
+import { LogoutCleanup } from '../logoutCleanup';
 import { refreshUnitVocabulary } from './refreshUnitVocabulary';
 import {
   classifyError,
   calculateRetryDelay,
   classifyReplayResult,
   ReplayRejectedError,
+  ReplayNotPreparedError,
+  REPLAY_NOT_PREPARED_CODE,
 } from './queueErrorPolicy';
 import { extractMutationPayload } from '#/utils/errors/mutationPayload';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -40,6 +43,7 @@ import { TimeoutError } from '#/utils/errors/timeoutError';
 import { Telemetry } from '#/services/telemetry';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { registerSessionTeardown } from '#store/sessionTeardown';
+import { isRecord } from '#/utils/isRecord';
 
 /**
  * The queue only ever runs after `client.ts` has evaluated — it is the link
@@ -61,6 +65,12 @@ const DEFAULT_CONFIG: QueueConfig = {
 
 /** One version-free re-send. A second conflict is a race, not a stale read. */
 const MAX_CONFLICT_RESENDS = 1;
+
+/** Deferrals that belong to one row, so the rest of the pass still runs. */
+const ENTRY_SCOPED_DEFERRALS: ReadonlySet<string> = new Set([
+  ErrorCode.Deadlock,
+  REPLAY_NOT_PREPARED_CODE,
+]);
 
 /**
  * Queued operations that replay their ORIGINAL document against an input whose
@@ -122,11 +132,6 @@ const withoutVersion = (variables: OperationVariables): OperationVariables => {
   return { ...variables, input: rest };
 };
 
-// Queued variables are persisted JSON, so their shape is read structurally.
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
 /**
  * Replays offline-queued mutations for the signed-in user: auth-aware,
  * user-scoped, dependency-ordered, with bounded retries.
@@ -147,6 +152,7 @@ export class QueueManager {
   private processingPromise: Promise<void> | null = null;
   private failureHandler: FailureHandler | null = null;
   private overwriteReporter: OverwriteReporter | null = null;
+  private drainedHandler: ((userId: string) => void) | null = null;
   private drainTimer: ReturnType<typeof setTimeout> | null = null;
   /** Whether this drain has already re-fetched the unit vocabulary. */
   private hasRefreshedUnits = false;
@@ -165,6 +171,11 @@ export class QueueManager {
   /** Invoked when the server accepted a replay but kept its own value. */
   setOverwriteReporter(reporter: OverwriteReporter): void {
     this.overwriteReporter = reporter;
+  }
+
+  /** Invoked when a pass ends with nothing left pending for the user. */
+  setDrainedHandler(handler: (userId: string) => void): void {
+    this.drainedHandler = handler;
   }
 
   async processQueue(): Promise<void> {
@@ -294,6 +305,11 @@ export class QueueManager {
         break;
       }
 
+      if (useStore.getState().user?.id !== userId) {
+        logger.info('🙅 Queue: Signed-in user changed mid-drain, stopping');
+        break;
+      }
+
       const entityIds = this.getAllEntityIds(mutation);
       const dependencyIds = this.getDependencyIds(mutation);
       if ([...entityIds, ...dependencyIds].some(id => blockedIds.has(id))) {
@@ -311,16 +327,19 @@ export class QueueManager {
         if (result.success) succeeded++;
         else failed++;
 
-        if (result.deferred) {
-          if (result.deferralScope === 'transport') {
-            // The API's own state, not this entry's: every later entry would
-            // meet it too, and each attempt costs a retry cycle.
-            logger.info('🕓 Queue: server-side deferral, pausing the drain');
-            break;
-          }
+        if (result.deferred && result.deferralScope === 'transport') {
+          // The API's own state, not this entry's: every later entry would
+          // meet it too, and each attempt costs a retry cycle.
+          logger.info('🕓 Queue: server-side deferral, pausing the drain');
+          break;
+        }
+
+        // A park or a withdrawal leaves the server without the row a child
+        // names, so the child is withdrawn rather than delayed.
+        if (!result.success) {
           for (const id of entityIds) blockedIds.add(id);
           logger.info(
-            '🕓 Queue: Mutation deferred (transient), holding its dependents',
+            '🕓 Queue: Mutation did not land, holding its dependents',
           );
         }
       } catch (error) {
@@ -332,6 +351,9 @@ export class QueueManager {
     logger.info(
       `📦 Queue: Drain complete — ${succeeded} succeeded, ${failed} failed`,
     );
+    if (queueStore.getPendingMutationsForUser(userId).length === 0) {
+      this.drainedHandler?.(userId);
+    }
   }
 
   private async processMutation(
@@ -387,10 +409,15 @@ export class QueueManager {
     mutation: QueuedMutation,
   ): Promise<Record<string, unknown> | undefined> {
     const client = requireApolloClient();
-    const { syncMutation, syncVariables } = convertToSyncMutation(
-      mutation,
-      client.cache,
-    );
+    // A cache miss while building is this device's state, not a verdict: a
+    // bare Error here classifies as a refusal and withdraws the write.
+    let conversion;
+    try {
+      conversion = convertToSyncMutation(mutation, client.cache);
+    } catch (error) {
+      throw new ReplayNotPreparedError(mutation.operationName, error);
+    }
+    const { syncMutation, syncVariables } = conversion;
 
     logger.info(`🔄 Queue: Replaying ${mutation.operationName} via sync`);
 
@@ -475,6 +502,16 @@ export class QueueManager {
     // counter as every other retryable error — re-validating the existing token
     // instead would loop forever on a revoked session.
     if (queueError.type === 'auth') {
+      // Rotating during teardown re-arms the refresh it just cancelled;
+      // `revivePendingAuthErrors` picks the entry up at the next sign-in.
+      if (LogoutCleanup.isInLogoutProcess()) {
+        logger.info(
+          `🔒 Queue: ${mutation.id} parked — the session is ending, not expiring`,
+        );
+        queueStore.markMutationFailed(mutation.id, queueError);
+        return { success: false, mutationId: mutation.id, error: queueError };
+      }
+
       const newToken = await proactiveTokenRefresh();
       if (!newToken) {
         // Parked, not withdrawn: the server never saw this write, so nothing
@@ -583,10 +620,11 @@ export class QueueManager {
     // resets so that drain gets a fresh attempt. The only lifetime bound is
     // `queueStore.expireStalePending`'s age horizon.
     if (queueError.type === 'network' || queueError.type === 'server') {
-      // DEADLOCK is the one deferral the API scopes to the row; every other
+      // DEADLOCK and an unbuildable replay are scoped to the row; every other
       // network/server verdict is the API's own state, which pauses the drain.
-      const deferralScope =
-        queueError.code === ErrorCode.Deadlock ? 'entry' : 'transport';
+      const deferralScope = ENTRY_SCOPED_DEFERRALS.has(queueError.code ?? '')
+        ? 'entry'
+        : 'transport';
       queueStore.updateMutation(mutation.id, {
         status: QueueStatus.PENDING,
         retryCount: 0,
@@ -673,9 +711,8 @@ export class QueueManager {
   } {
     const entityId = this.getEntityId(mutation);
     if (!entityId) return { entityType: null, entityId: null };
-    const snapshot = this.extractCacheSnapshot();
     return {
-      entityType: this.findCachedTypename(entityId, snapshot),
+      entityType: this.typenamesById().get(entityId) ?? null,
       entityId,
     };
   }
@@ -712,10 +749,10 @@ export class QueueManager {
   private clearPersistedOptimisticFields(mutation: QueuedMutation): void {
     const entityIds = this.getAllEntityIds(mutation);
     if (entityIds.length === 0) return;
-    // One snapshot for the whole batch rather than one extract per id.
-    const snapshot = this.extractCacheSnapshot();
+    // One index for the whole batch rather than a keyspace scan per id.
+    const typenames = this.typenamesById();
     for (const entityId of entityIds) {
-      const entityType = this.findCachedTypename(entityId, snapshot);
+      const entityType = typenames.get(entityId);
       if (entityType) {
         optimisticDataPersistence.clearEntity(entityType, entityId);
       }
@@ -731,14 +768,17 @@ export class QueueManager {
     return isRecord(snapshot) ? snapshot : {};
   }
 
-  private findCachedTypename(
-    entityId: string | null,
-    snapshot: Record<string, unknown>,
-  ): string | null {
-    if (!entityId) return null;
-    const suffix = `:${entityId}`;
-    const key = Object.keys(snapshot).find(k => k.endsWith(suffix));
-    return key ? key.slice(0, key.length - suffix.length) : null;
+  /**
+   * The cache's `TypeName:id` keys indexed by id. Client ids are globally
+   * unique cuids and typenames hold no colon, so the first colon splits them.
+   */
+  private typenamesById(): Map<string, string> {
+    const index = new Map<string, string>();
+    for (const key of Object.keys(this.extractCacheSnapshot())) {
+      const colon = key.indexOf(':');
+      if (colon > 0) index.set(key.slice(colon + 1), key.slice(0, colon));
+    }
+    return index;
   }
 
   /**
@@ -850,11 +890,16 @@ export class QueueManager {
    * server the queued writes have not reached, overwriting their rows.
    */
   async whenIdle(): Promise<void> {
+    const cancelledDrain = this.drainTimer !== null;
+    const joinedPass = this.isProcessing;
     this.cancelPendingDrain();
     // No-ops when offline, empty or already draining — and when it is already
     // draining it hands back that same promise, which is what we want to await.
     await this.processQueue().catch(() => {});
     await this.processingPromise?.catch(() => {});
+    // A drain scheduled during the pass we joined was for entries that pass
+    // never snapshotted; cancelling it without a replacement strands them.
+    if (cancelledDrain && joinedPass) await this.processQueue().catch(() => {});
   }
 
   /**
@@ -927,10 +972,6 @@ export class QueueManager {
     logger.info(`👋 Queue: User ${userId} logged out, clearing queue`);
     queueStore.clearQueueForUser(userId);
     queueStore.clearCurrentUserId();
-  }
-
-  getStats(userId?: string) {
-    return queueStore.getQueueStats(userId);
   }
 }
 

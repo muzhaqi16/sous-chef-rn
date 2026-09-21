@@ -2,6 +2,7 @@ import type { ApolloCache, Cache, Reference } from '@apollo/client';
 import { InMemoryCache } from '@apollo/client';
 import type { TypedDocumentNode } from '@apollo/client';
 import type { ModifierDetails } from '@apollo/client/cache';
+import { isRecord } from '#/utils/isRecord';
 // The GraphQLCodegenDataMasking variant matches what the project's HKT
 // registration (src/types/apollo-masking.d.ts) makes read/writeFragment use.
 import type { GraphQLCodegenDataMasking } from '@apollo/client/masking';
@@ -147,10 +148,6 @@ function parseStoreFieldArgs(storeFieldName: string): ParsedStoreFieldArgs {
   }
   if (!isRecord(parsed)) return null;
   return { args: parsed };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
 }
 
 /**

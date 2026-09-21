@@ -12,20 +12,31 @@ import {
   MealPlanDisplayFragmentDoc,
   type MealPlanDisplayFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import { resolveCurrentMealPlan } from '#features/mealPlan/utils/mealPlanFilters';
+import {
+  isPlanActiveAt,
+  resolveCurrentMealPlan,
+} from '#features/mealPlan/utils/mealPlanFilters';
 
 /** `useOfflineTabPreloading` warms the unfiltered list with these variables. */
 const PAGE_SIZE = 20;
 
+/** Plans overlapping today, nearest first: a handful covers every real case. */
+const CURRENT_PLAN_PAGE_SIZE = 3;
+
 interface MealPlanListOptions {
   skip?: boolean;
   orderBy?: SortOrder;
+  first?: number;
 }
 
 /** One cursor-paged `mealPlans` variant, materialized as display plans. */
 export function useMealPlanList(
   filters: MealPlanFilters | undefined,
-  { skip = false, orderBy = SortOrder.Desc }: MealPlanListOptions = {},
+  {
+    skip = false,
+    orderBy = SortOrder.Desc,
+    first = PAGE_SIZE,
+  }: MealPlanListOptions = {},
 ) {
   const isLoggedOut = useIsLoggedOut();
   const client = useApolloClient();
@@ -34,7 +45,7 @@ export function useMealPlanList(
     GetMealPlansDocument,
     {
       variables: {
-        first: PAGE_SIZE,
+        first,
         filters,
         orderBy: { startDate: orderBy },
       },
@@ -97,14 +108,21 @@ export function useMealPlans() {
   // `filters.startDate` keeps plans ending today or later; ascending, started
   // plans lead and the nearest upcoming follows, so the current plan is on page
   // one unless a full page of plans overlaps today.
-  const todayStart = startOfDay(new Date()).toISOString();
+  // Skipped only when the list's page holds a plan ACTIVE today: that beats any
+  // upcoming one. A merely upcoming plan on page one may not be the nearest.
+  const now = new Date();
+  const listActive = list.mealPlans.some(plan => isPlanActiveAt(plan, now));
+  const todayStart = startOfDay(now).toISOString();
   const current = useMealPlanList(
     { startDate: todayStart },
-    { orderBy: SortOrder.Asc },
+    {
+      orderBy: SortOrder.Asc,
+      first: CURRENT_PLAN_PAGE_SIZE,
+      skip: listActive,
+    },
   );
 
   // The list takes part too: offline, a new day's variant has no cached page.
-  const now = new Date();
   const currentPlan =
     resolveCurrentMealPlan([...current.mealPlans, ...list.mealPlans], now) ??
     list.mealPlans[0] ??

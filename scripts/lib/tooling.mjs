@@ -6,7 +6,14 @@
  * install.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  globSync,
+  lstatSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -116,6 +123,32 @@ export function baselineFile(path) {
 
 export const sh = (cmd, args, options = {}) =>
   execFileSync(cmd, args, { encoding: 'utf8', stdio: 'pipe', ...options });
+
+export const bytes = n => {
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let v = n;
+  let u = 0;
+  while (v >= 1024 && u < units.length - 1) {
+    v /= 1024;
+    u += 1;
+  }
+  return `${v.toFixed(1)} ${units[u]}`;
+};
+
+/** Bytes under `path`, file or directory; a symlink counts as itself. */
+export function sizeOf(path) {
+  try {
+    const stat = lstatSync(path);
+    if (!stat.isDirectory()) return stat.size;
+    return readdirSync(path).reduce(
+      (sum, name) => sum + sizeOf(join(path, name)),
+      0,
+    );
+  } catch {
+    // Raced with something else deleting it.
+    return 0;
+  }
+}
 
 /** Median, not mean: startup samples have outliers that a mean hides. */
 export const median = xs => {

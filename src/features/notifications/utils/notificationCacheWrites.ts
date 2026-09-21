@@ -19,9 +19,7 @@ import {
   UseNotificationsOnLaunch_NotificationFragmentDoc,
   type UseNotificationsOnLaunch_NotificationFragment,
 } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
+import { isRecord } from '#/utils/isRecord';
 
 /** A notification is awaiting the user only while PENDING or SENT. */
 export const isUnreadStatus = (s: unknown): boolean =>

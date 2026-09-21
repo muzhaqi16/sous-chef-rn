@@ -1,14 +1,47 @@
 'use no memo';
 import React from 'react';
 import { screen } from '@testing-library/react-native';
-import { renderWithApollo as render } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  seedCache,
+  toFragmentRef,
+} from '#/test-utils/apolloMockProvider';
 import { MealPlanSettingsSheet } from '../MealPlanSettingsSheet';
-import type { MealPlanSettingsSheet_MealPlanFragment } from '../MealPlanSettingsSheet.generated';
+import {
+  MealPlanSettingsSheet_MealPlanFragmentDoc,
+  type MealPlanSettingsSheet_MealPlanFragment,
+} from '../MealPlanSettingsSheet.generated';
 import type { MealPlanPermissions } from '#features/mealPlan/utils/mealPlanPermissions';
 
 type MealPlanSettingsSheetProps = React.ComponentProps<
   typeof MealPlanSettingsSheet
 >;
+
+/**
+ * Production hands the sheet a masked `{ __typename, id }` ref and keeps the
+ * fields in the cache. A fixture passing the full object with an empty cache
+ * passes only because of a fallback that crashes in production.
+ */
+function render(element: React.ReactElement<MealPlanSettingsSheetProps>) {
+  const plan = element.props
+    .mealPlanRef as MealPlanSettingsSheet_MealPlanFragment | null;
+  if (!plan) return renderWithApollo(element);
+  const cache = seedCache([
+    {
+      fragment: MealPlanSettingsSheet_MealPlanFragmentDoc,
+      fragmentName: 'MealPlanSettingsSheet_mealPlan',
+      data: plan,
+    },
+  ]);
+  return renderWithApollo(
+    React.cloneElement(element, {
+      mealPlanRef: toFragmentRef<
+        typeof MealPlanSettingsSheet_MealPlanFragmentDoc
+      >({ __typename: 'MealPlan', id: plan.id }),
+    }),
+    { cache },
+  );
+}
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -130,6 +163,23 @@ describe('MealPlanSettingsSheet', () => {
 
   it('renders null when mealPlan is null', () => {
     render(<MealPlanSettingsSheet {...defaultProps} mealPlanRef={null} />);
+    expect(screen.queryByText('Plan Settings')).toBeNull();
+  });
+
+  // Deleting the selected plan evicts it while this sheet is still mounted and
+  // the query still hands it the masked ref. Reading `generatedShoppingLists`
+  // off that ref threw and took the Meal Plan screen down with it.
+  it('renders nothing for a plan evicted from the cache, rather than crashing', () => {
+    expect(() =>
+      renderWithApollo(
+        <MealPlanSettingsSheet
+          {...defaultProps}
+          mealPlanRef={toFragmentRef<
+            typeof MealPlanSettingsSheet_MealPlanFragmentDoc
+          >({ __typename: 'MealPlan', id: 'mp-deleted' })}
+        />,
+      ),
+    ).not.toThrow();
     expect(screen.queryByText('Plan Settings')).toBeNull();
   });
 

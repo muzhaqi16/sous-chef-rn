@@ -96,6 +96,16 @@ export interface QuantityDisplayOptions {
 }
 
 /**
+ * `quantityInput` is the API's own text, so its separator is a period whatever
+ * the device uses. Reading it with the device-aware parser makes `1.125` a
+ * thousand-and-change on a comma device.
+ */
+function parseStoredQuantityText(text: string): number | null {
+  if (/^-?\d+(\.\d+)?$/.test(text)) return Number(text);
+  return parseFractionalInput(text);
+}
+
+/**
  * The one way a stored quantity reaches the screen. Text no parser can read is
  * the user's own note ("a pinch") and is kept as written; '' when there is
  * nothing to show, so a caller can pick its own placeholder.
@@ -105,7 +115,7 @@ export function formatQuantityForDisplay(
   { quantityInput, notation = 'mixed' }: QuantityDisplayOptions = {},
 ): string {
   const typed = quantityInput?.trim();
-  const value = typed ? parseFractionalInput(typed) : quantity;
+  const value = typed ? parseStoredQuantityText(typed) : quantity;
 
   if (value == null) return typed ?? '';
   if (!Number.isFinite(value)) return '';
@@ -115,6 +125,11 @@ export function formatQuantityForDisplay(
 
 // Two quantities equal to `MAX_DECIMALS` places are the same quantity.
 const INPUT_ROUND_TRIP_TOLERANCE = 0.5 * 10 ** -MAX_DECIMALS;
+
+/** Whether an edited quantity is the one that seeded it, as far as the field can show. */
+export function isUnchangedQuantity(edited: number, stored: number): boolean {
+  return Math.abs(edited - stored) <= INPUT_ROUND_TRIP_TOLERANCE;
+}
 
 /**
  * Seeds a text field the user edits: a cooking fraction only where it equals the

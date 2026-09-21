@@ -103,31 +103,45 @@ export function useShoppingListSelectorModal({
     });
   };
 
-  const deleteSelected = async (count: number) => {
+  const deleteSelected = async () => {
     const idsToDelete = Array.from(selectedForDeletion);
 
     // Register parent deletions to prevent subscription race conditions
     idsToDelete.forEach(id => subscriptionService.registerParentDeletion(id));
 
-    let result;
+    let outcomes: boolean[] = [];
     try {
-      result = await Promise.all(idsToDelete.map(id => deleteShoppingList(id)));
+      outcomes = await Promise.all(
+        idsToDelete.map(id => deleteShoppingList(id)),
+      );
     } catch {
       // Deletion failed — unregister immediately
       idsToDelete.forEach(id =>
         subscriptionService.unregisterParentDeletion(id),
       );
       toastService.error(t('shoppingListSelector.deleteFailed'));
+      return;
     }
 
-    if (!result) return;
+    const deletedIds = idsToDelete.filter((_, index) => outcomes[index]);
+    idsToDelete
+      .filter((_, index) => !outcomes[index])
+      .forEach(id => subscriptionService.unregisterParentDeletion(id));
+
+    if (deletedIds.length === 0) {
+      exitDeleteMode();
+      return;
+    }
 
     // Clear selection — useShoppingListSelection auto-selects the next list
-    if (currentListId && idsToDelete.includes(currentListId)) {
+    if (currentListId && deletedIds.includes(currentListId)) {
       useStore.getState().setSelectedShoppingListId(null);
     }
 
-    toastService.success(t('shoppingListSelector.deletedToast', { count }));
+    // The hook already toasted each refusal, so this counts what actually went.
+    toastService.success(
+      t('shoppingListSelector.deletedToast', { count: deletedIds.length }),
+    );
     exitDeleteMode();
   };
 
@@ -144,7 +158,7 @@ export function useShoppingListSelectorModal({
           text: t('labels.delete'),
           style: 'destructive',
           onPress: () => {
-            void deleteSelected(count);
+            void deleteSelected();
           },
         },
       ],

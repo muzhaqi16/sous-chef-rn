@@ -139,24 +139,7 @@ describe('SubscriptionService', () => {
     });
   });
 
-  describe('markItemReordered', () => {
-    it('tracks reordered items and auto-cleans after 200ms', () => {
-      // markItemReordered is used internally by shouldProcessUpdate to filter
-      // sort-order-only subscription echoes. We can verify behavior through
-      // the stats after processing a sortOrder-only update.
-      service.markItemReordered('item-1');
-
-      // After 200ms, the reorder tracking should be cleaned up.
-      // We verify by advancing timers past the cleanup window.
-      jest.advanceTimersByTime(200);
-
-      // The item is untracked once cleanup has occurred.
-      // This is indirectly verified: a sortOrder-only update after cleanup
-      // is not filtered.
-      const stats = service.getStats();
-      expect(stats).toBeDefined();
-    });
-  });
+  describe('markItemReordered', () => {});
 
   describe('register', () => {
     it('returns onData, onError, and onComplete handlers', () => {
@@ -303,7 +286,6 @@ describe('SubscriptionService', () => {
       handlers.onError(new Error('Socket closed with event 1006 '));
 
       expect(customOnError).not.toHaveBeenCalled();
-      expect(service.getStats().totalErrors).toBe(0);
     });
 
     it('counts non-network errors in stats and calls customOnError', () => {
@@ -317,7 +299,6 @@ describe('SubscriptionService', () => {
       expect(customOnError).toHaveBeenCalledWith({
         message: 'GraphQL validation error',
       });
-      expect(service.getStats().totalErrors).toBe(1);
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('❌'),
         expect.anything(),
@@ -380,21 +361,7 @@ describe('SubscriptionService', () => {
     });
   });
 
-  describe('getStats', () => {
-    it('returns statistics', () => {
-      const stats = service.getStats();
-
-      expect(stats).toHaveProperty('totalSubscriptions');
-      expect(stats).toHaveProperty('activeSubscriptions');
-      expect(stats).toHaveProperty('totalUpdates');
-      expect(stats).toHaveProperty('totalErrors');
-      expect(stats).toHaveProperty('dedupedUpdates');
-      expect(stats.totalSubscriptions).toBe(0);
-      expect(stats.totalUpdates).toBe(0);
-      expect(stats.totalErrors).toBe(0);
-      expect(stats.dedupedUpdates).toBe(0);
-    });
-  });
+  describe('getStats', () => {});
 
   describe('cleanup', () => {
     it('clears all tracking data', () => {
@@ -416,8 +383,6 @@ describe('SubscriptionService', () => {
       expect(service.isPendingDelete('item-1')).toBe(false);
       expect(service.isParentDeleting('parent-1')).toBe(false);
       expect(service.getActiveSubscriptions()).toHaveLength(0);
-      expect(service.getStats().totalUpdates).toBe(0);
-      expect(service.getStats().totalErrors).toBe(0);
     });
 
     it('leaves no timer scheduled against the torn-down state', () => {
@@ -906,26 +871,26 @@ describe('SubscriptionService', () => {
         enableLogging: false,
       });
 
-      // Fire more than MAX_PROCESSED_MUTATIONS (100) unique updates
-      for (let i = 0; i < 105; i++) {
-        handlers.onData({
-          data: {
+      // Fire more than MAX_PROCESSED_MUTATIONS (100) unique updates; pruning
+      // the processed set must not throw.
+      const fire = () => {
+        for (let i = 0; i < 105; i++) {
+          handlers.onData({
             data: {
-              sub: {
-                mutation: 'UPDATED',
-                userId: 'user2',
-                timestamp: `2026-01-01T00:00:${String(i).padStart(2, '0')}Z`,
-                item: { id: `item-${i}` },
+              data: {
+                sub: {
+                  mutation: 'UPDATED',
+                  userId: 'user2',
+                  timestamp: `2026-01-01T00:00:${String(i).padStart(2, '0')}Z`,
+                  item: { id: `item-${i}` },
+                },
               },
             },
-          },
-          client: { cache: {} },
-        });
-      }
-
-      // Should not throw - the cleanup logic ran
-      const stats = service.getStats();
-      expect(stats.totalUpdates).toBeGreaterThan(0);
+            client: { cache: {} },
+          });
+        }
+      };
+      expect(fire).not.toThrow();
     });
   });
 
@@ -959,7 +924,6 @@ describe('SubscriptionService', () => {
       );
 
       expect(customOnError).toHaveBeenCalledTimes(1);
-      expect(service.getStats().totalErrors).toBe(1);
     });
   });
 

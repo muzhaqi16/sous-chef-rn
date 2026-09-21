@@ -157,15 +157,17 @@ export function useStorageLocationManagement(
       skip: shouldSkip,
       fetchPolicy: 'cache-first', // Show cached data instantly
       nextFetchPolicy: 'cache-and-network', // Background refresh on subsequent fetches
-      errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
+      // `'all'` keeps cached data beside the error. `'ignore'` never sets
+      // `error` for either a GraphQL or a transport failure, so the error
+      // state below could not render.
+      errorPolicy: 'all',
     },
   );
 
-  // `errorPolicy: 'ignore'` swallows offlineModeLink's synthetic cache-miss
-  // error, so "we never tried and have nothing" has to be read from the absence
-  // of data rather than from an error. Without it an offline user sees the
-  // ordinary empty state, which invites them to create a location that may
-  // already exist on the server.
+  // Offline, "we never tried and have nothing" is read from the absence of
+  // data, and offlineModeLink's synthetic cache-miss error is not an error to
+  // show. Without it an offline user sees the ordinary empty state, which
+  // invites them to create a location that may already exist on the server.
   const networkBlocked = useBlocksCacheMissQueries();
 
   // Reuse the lightweight create hook — it handles both ROOT_QUERY and
@@ -408,9 +410,10 @@ export function useStorageLocationManagement(
     offline: networkBlocked && !data,
     creating,
     updating,
-    errorMessage: error
-      ? localizedErrorMessage(error, t('errors.codes.genericRetry'))
-      : null,
+    errorMessage:
+      error && !networkBlocked
+        ? localizedErrorMessage(error, t('errors.codes.genericRetry'))
+        : null,
 
     // Actions
     createLocation,

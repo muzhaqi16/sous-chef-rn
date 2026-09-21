@@ -1,4 +1,5 @@
 import type { DocumentNode } from 'graphql';
+import { ServerError } from '@apollo/client/errors';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { errorService, isTransportFailure } from '#/services/errorService';
@@ -116,10 +117,21 @@ function classify(
   removal: boolean,
 ): Classified {
   if (!result || result.error) {
+    // Apollo resolves `{ data, error }` together when a mutation commits and a
+    // field in its selection errors; the payload is the server's verdict.
+    const committed = result ? extractMutationPayload(result.data) : null;
+    if (committed?.__typename && !isErrorTypename(committed.__typename)) {
+      return { status: 'applied' };
+    }
+
     const error = result ? result.error : thrown;
     const failure = failureFromError(error);
-    // Not queued: a write the queue takes resolves with a null payload instead.
-    if (removal && isGoneCode(failure.code)) return { status: 'applied' };
+    // A gone-code the service never issued — a bare HTTP 404 from a proxy —
+    // says nothing about the row. Not queued: a write the queue takes resolves
+    // with a null payload instead.
+    if (removal && isGoneCode(failure.code) && !ServerError.is(error)) {
+      return { status: 'applied' };
+    }
     return { status: 'failed', failure, error };
   }
   // The offline queue resolves a queued write with its payload field null.

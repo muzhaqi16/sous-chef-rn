@@ -71,6 +71,16 @@ const unfavoriteMock = (
   },
 });
 
+// Spies on the shared toast service and the global Telemetry auto-mock
+// outlive a test otherwise, so an assertion could be satisfied by a call an
+// earlier test made.
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 describe('useRecipeSavedMetadata — offline unfavorite', () => {
   it('optimistically clears Recipe.savedDetails and calls onUnfavoriteSuccess', async () => {
     const cache = seedRecipeWithSavedDetails();

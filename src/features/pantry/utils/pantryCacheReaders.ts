@@ -57,10 +57,17 @@ const isStoreRecord = (value: unknown): value is Record<string, unknown> =>
 const normalizeName = (name: string | null | undefined): string =>
   (name ?? '').trim().toLowerCase();
 
-/** `{ __ref: 'Item:abc' }` → `{ id: 'abc' }`; anything else is uncached. */
+/**
+ * `{ __ref: 'Item:abc' }` or an embedded `{ id: 'abc' }` → `{ id: 'abc' }`.
+ * `toReference(item, true)` leaves a re-merged row's nested objects embedded,
+ * so reading only references misses a record that is present.
+ */
 const refId = (value: unknown): { id: string } | null => {
-  const ref = (value as { __ref?: string } | null)?.__ref;
-  return ref ? { id: ref.split(':')[1] ?? '' } : null;
+  if (!isStoreRecord(value)) return null;
+  if (typeof value.__ref === 'string') {
+    return { id: value.__ref.split(':')[1] ?? '' };
+  }
+  return typeof value.id === 'string' ? { id: value.id } : null;
 };
 
 type CachedNode = {

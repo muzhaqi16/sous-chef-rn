@@ -104,7 +104,8 @@
         "test": "Njoftim provë",
         "listCompleted": "Lista e blerjeve u përfundua",
         "expiryDigest": "Skadojnë këtë javë",
-        "authored": "Njoftim"
+        "authored": "Njoftim",
+        "unknown": "Njoftim"
       },
       "message": {
         "homeInvitation": "{{inviterName}} të ftoi të bashkohesh me {{homeName}}",

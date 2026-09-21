@@ -12,6 +12,7 @@ import {
   persist,
   subscribeWithSelector,
 } from 'zustand/middleware';
+import { isRecord } from '#/utils/isRecord';
 
 enableMapSet();
 import type { AuthState } from './slices/authSlice';
@@ -302,9 +303,6 @@ const PERSISTED_KEY_SET: ReadonlySet<string> = new Set(PERSISTED_KEYS);
 // persisted store maps. Read once by the v16 migration, then removed.
 const LEGACY_HINT_PREFIX = 'feature_hint_shown_';
 const LEGACY_LOGIN_COUNT_PREFIX = 'login_count_';
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
 
 const legacyTutorialKeys = (): string[] => {
   try {

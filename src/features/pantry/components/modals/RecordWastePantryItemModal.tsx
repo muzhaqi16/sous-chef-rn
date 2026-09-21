@@ -176,7 +176,6 @@ const WasteActionFields: React.FC<{
           value={wasteAmountInput}
           onChangeText={setWasteAmountInput}
           placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
-          keyboardType="numeric"
           useBottomSheetInput
         />
         <QuantityInputFeedback

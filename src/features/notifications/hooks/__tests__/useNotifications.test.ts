@@ -364,6 +364,49 @@ describe('useNotificationListener', () => {
     expect(badgeCount(cache)).toBe(0);
   });
 
+  // Android draws the tray entry itself from this event. An admin's
+  // announcement has to reach it in the admin's words — dropped from the
+  // copy source, it was drawn with the template for its notification type.
+  it("draws an authored announcement in its author's words", async () => {
+    const { Platform } = require('react-native');
+    const platform = jest.replaceProperty(Platform, 'OS', 'android');
+    const {
+      showLocalNotification,
+    } = require('#/services/notifications/localNotificationHelper');
+
+    const event = buildNotificationSubscriptionMock({
+      id: 'notif-authored',
+      type: NotificationType.HomeJoined,
+      title: 'Scheduled maintenance',
+      message: 'The app is offline tonight from 2 to 3.',
+    });
+    const node = (
+      event.result as {
+        data: { notificationEvents: { node: Record<string, unknown> } };
+      }
+    ).data.notificationEvents.node;
+    node.isAuthoredContent = true;
+
+    renderHookWithApollo(() => useNotificationListener(), {
+      cache: seededCache(),
+      operationMocks: [
+        event,
+        recordMock(GetUnreadNotificationsDocument, { data: unreadFeedData })
+          .mock,
+      ],
+    });
+
+    await waitFor(() =>
+      expect(showLocalNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Scheduled maintenance',
+          body: 'The app is offline tonight from 2 to 3.',
+        }),
+      ),
+    );
+    platform.restore();
+  });
+
   it('a CREATED event lands in the cache and re-reads the count', async () => {
     const cache = seededCache();
     const { mock, fired } = recordMock(GetUnreadNotificationsDocument, {

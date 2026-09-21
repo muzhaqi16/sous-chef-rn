@@ -284,8 +284,10 @@ export const useListSettings = (listId: string | undefined) => {
             tags: ['user-created'],
             homeId: selectedHomeId ?? undefined,
           });
-          // The settle already said what refused it; the sheet stays open.
-          if (newList.status === 'failed') return;
+          if (newList.status === 'failed') {
+            toastService.error(newList.body);
+            return;
+          }
           setSelectedShoppingListId(newList.shoppingList.id);
           goBack();
         } else {
@@ -335,17 +337,19 @@ export const useListSettings = (listId: string | undefined) => {
     // Suppresses subscription races; the service auto-cleans after 10s.
     subscriptionService.registerParentDeletion(id);
 
-    try {
-      await deleteShoppingList(id);
-
-      // useShoppingListSelection then auto-selects the next list.
-      setSelectedShoppingListId(null);
-      // Unmounts this screen's query watcher, so a late subscription
-      // update cannot trigger a refetch of the deleted list.
-      goBack();
-    } catch {
+    // The hook reports a refusal by returning false and has already said so;
+    // leaving the screen anyway strands the person on a list that still exists.
+    const deleted = await deleteShoppingList(id);
+    if (!deleted) {
       subscriptionService.unregisterParentDeletion(id);
+      return;
     }
+
+    // useShoppingListSelection then auto-selects the next list.
+    setSelectedShoppingListId(null);
+    // Unmounts this screen's query watcher, so a late subscription
+    // update cannot trigger a refetch of the deleted list.
+    goBack();
   };
 
   const handleDelete = () => {

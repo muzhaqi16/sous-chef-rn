@@ -89,4 +89,19 @@ const NO_LITERAL_STRING = [
   },
 ];
 
-module.exports = { NO_LITERAL_STRING, COPY_ATTRIBUTES };
+// Shared by the i18n rules: a copy that under-matches passes what it should catch.
+const SINK_SERVICES = /^(toastService|alertService)$/;
+const TRANSLATE_FUNCTIONS = /^(t|tGlobal|translate)$/;
+const COPY_VARIABLE =
+  /^(label|text|title|subtitle|message|description|caption|hint|placeholder)$|[a-z0-9](Label|Text|Title|Subtitle|Message|Description|Caption|Hint|Placeholder|Display)$/;
+const DISPLAY_FUNCTION =
+  /^format|(Label|Text|Title|Subtitle|Message|Description|Caption|Display)$/;
+
+module.exports = {
+  NO_LITERAL_STRING,
+  COPY_ATTRIBUTES,
+  SINK_SERVICES,
+  TRANSLATE_FUNCTIONS,
+  COPY_VARIABLE,
+  DISPLAY_FUNCTION,
+};

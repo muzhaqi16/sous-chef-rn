@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation } from '#/i18n';
 import {
   Pressable,
   ThemedActivityIndicator,
@@ -12,6 +12,10 @@ import { parseISO, startOfDay } from 'date-fns';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { MealType } from '#/graphql/generated/schemaTypes';
+import {
+  MEAL_TYPE_LABEL_KEYS,
+  MEAL_TYPE_ORDER,
+} from '#features/mealPlan/utils/mealPlanEnumLabels';
 import { useAddRecipeToMealPlan } from '#features/mealPlan/hooks/useAddRecipeToMealPlan';
 import { useMealPlanCalendar } from '#features/mealPlan/hooks/useMealPlanCalendar';
 import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
@@ -28,15 +32,6 @@ interface AddToMealPlanSheetProps {
   recipeId: string;
   initialMealType?: MealType;
 }
-
-const MEAL_TYPE_KEYS: { type: MealType; labelKey: TranslationKey }[] = [
-  { type: MealType.Breakfast, labelKey: 'labels.breakfast' },
-  { type: MealType.Brunch, labelKey: 'labels.brunch' },
-  { type: MealType.Lunch, labelKey: 'labels.lunch' },
-  { type: MealType.Snack, labelKey: 'usagePurpose.SNACK' },
-  { type: MealType.Dinner, labelKey: 'labels.dinner' },
-  { type: MealType.Dessert, labelKey: 'labels.dessert' },
-];
 
 export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
   visible,
@@ -222,7 +217,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
         </SectionHeader>
 
         <View style={styles.mealTypeRow}>
-          {MEAL_TYPE_KEYS.map(({ type, labelKey }) => (
+          {MEAL_TYPE_ORDER.map(type => (
             <Pressable
               key={type}
               onPress={() => setSelectedMealType(type)}
@@ -238,7 +233,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
                   selectedMealType === type && styles.mealTypeTextSelected,
                 ]}
               >
-                {t(labelKey)}
+                {t(MEAL_TYPE_LABEL_KEYS[type])}
               </Text>
             </Pressable>
           ))}

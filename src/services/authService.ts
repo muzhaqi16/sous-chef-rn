@@ -6,7 +6,6 @@
 
 import { client } from '#/apollo/client';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { LogoutCleanup } from '#/apollo/logoutCleanup';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { errorService, isTransportFailure } from '#/services/errorService';
@@ -14,6 +13,7 @@ import { toastService } from '#/services/toastService';
 import { getRateLimitDetails } from '#/utils/errors/rateLimit';
 import { useStore } from '#store';
 import { runSessionTeardown } from '#store/sessionTeardown';
+import { whileSessionEnds } from '#store/sessionEnding';
 import { logger } from '#/utils/environment';
 import { isDeadCredentialCode } from '#/utils/authErrorCodes';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -580,23 +580,25 @@ async function logout(options?: LogoutOptions): Promise<void> {
     // push state is torn down: two exits from a session otherwise leave two
     // different resting states, and the deliberate one was the exit that
     // skipped it.
-    await runSessionTeardown();
+    // One scope over the whole descent, released however it exits: a throw
+    // between here and the last write would otherwise leave the gate latched,
+    // and the next sign-in's Login is refused until the app restarts.
+    await whileSessionEnds(async () => {
+      await runSessionTeardown();
 
-    await LogoutCleanup.performLogoutCleanup();
+      if (currentUserId) {
+        queueManager.onLogout(currentUserId);
+      }
 
-    if (currentUserId) {
-      queueManager.onLogout(currentUserId);
-    }
-
-    // `resetStore` rather than `clearAuth`: clearAuth only nulls the user and
-    // tokens, leaving the selected home/pantry/list ids, the notification
-    // inbox, the scanner's recent list and the item-suggestion LRU persisted
-    // for whoever signs in next. The auth branch of resetStore clears all of
-    // it, plus the on-disk copy. Apollo is already cleared by
-    // performLogoutCleanup above, so this pass skips it.
-    await store.resetStore({ auth: true, ui: true, clearApolloCache: false });
-    LogoutCleanup.completeLogout();
-    store.setNavigationState('auth');
+      // `resetStore` rather than `clearAuth`: clearAuth only nulls the user and
+      // tokens, leaving the selected home/pantry/list ids, the notification
+      // inbox, the scanner's recent list and the item-suggestion LRU persisted
+      // for whoever signs in next. The auth branch of resetStore clears all of
+      // it, plus the on-disk copy. Apollo is already cleared by the teardown's
+      // `apollo` step, so this pass skips it.
+      await store.resetStore({ auth: true, ui: true, clearApolloCache: false });
+      store.setNavigationState('auth');
+    });
 
     if (currentUserId) {
       getUserPreferences(currentUserId).trackLogout();

@@ -4,6 +4,7 @@
  * offline shows immediately and replays parent-before-children.
  */
 
+import { toastService } from '#/services/toastService';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
@@ -40,7 +41,10 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
     };
 
     const created = await createShoppingList(input);
-    if (created.status === 'failed') return null;
+    if (created.status === 'failed') {
+      toastService.error(created.body);
+      return null;
+    }
     const listId = created.shoppingList.id;
 
     for (const line of derived.items) {

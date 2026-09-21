@@ -1,4 +1,5 @@
-'use no memo';
+import { GraphQLError } from 'graphql';
+('use no memo');
 
 // Polyfill requestIdleCallback / cancelIdleCallback for test env
 let idleHandleSeq = 0;
@@ -277,6 +278,33 @@ describe('useStorageLocationManagement', () => {
     await waitFor(() => expect(result.current.locations).toHaveLength(2));
     expect(result.current.locations[0]!.name).toBe('Fridge');
     expect(result.current.locations[1]!.name).toBe('Pantry');
+  });
+
+  // `errorPolicy: 'ignore'` never populates `error`, for a GraphQL error or a
+  // transport failure alike, so the banner the screen renders could not show.
+  it('reports a failed load in its error state', async () => {
+    const { result } = renderHookWithApollo(
+      () => useStorageLocationManagement('home-1'),
+      {
+        operationMocks: [
+          {
+            request: {
+              query: GetStorageLocationsDocument,
+              variables: { homeId: 'home-1' },
+            },
+            result: {
+              errors: [
+                new GraphQLError('boom', {
+                  extensions: { code: 'INTERNAL_SERVER_ERROR' },
+                }),
+              ],
+            },
+          },
+        ],
+      },
+    );
+
+    await waitFor(() => expect(result.current.errorMessage).not.toBeNull());
   });
 
   it('returns loading state', async () => {

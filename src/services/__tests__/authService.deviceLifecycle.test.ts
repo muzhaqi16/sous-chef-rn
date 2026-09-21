@@ -444,38 +444,57 @@ describe('a server-ended session stops push delivery too', () => {
     );
   });
 
-  // The two accessors are picked by whether the caller can wait. This lookup
-  // already awaits a round trip, so an unusable mirror must not decide the
-  // answer: taking the synchronous null clears no token at all.
-  it('waits for the durable identity when the fast copy is unavailable', async () => {
-    const { getDeviceId } = require('#/storage/deviceId');
-    (getDeviceId as jest.Mock).mockReturnValue(null);
-    mockQuery.mockResolvedValue({
-      data: { deviceByDeviceId: { id: 'srv-7', deviceId: MOCK_DEVICE_ID } },
-    });
+  // The row a PREVIOUS launch registered. Resolving it with a lookup instead
+  // would put a query in front of the clear, and the Apollo teardown step's
+  // `client.stop()` cancels queries.
+  it('clears the row a previous launch registered, with no lookup', async () => {
+    const { readDeviceRow } = require('#/storage/deviceId');
+    (readDeviceRow as jest.Mock).mockReturnValue('srv-9');
+    // The store still holds the session while the teardown runs.
+    mockStoreState.user = { id: 'u1' };
 
     await teardown();
     await flush();
 
-    expect(updateCallsWith('clearPushToken')).toContainEqual(
-      expect.objectContaining({ id: 'srv-7', clearPushToken: true }),
-    );
-  });
-
-  it('resolves this device row when the session ends before registration', async () => {
-    mockQuery.mockResolvedValue({
-      data: { deviceByDeviceId: { id: 'srv-9', deviceId: MOCK_DEVICE_ID } },
-    });
-
-    await teardown();
-    await flush();
-
-    expect(mockQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ variables: { deviceId: MOCK_DEVICE_ID } }),
-    );
+    expect(mockQuery).not.toHaveBeenCalled();
     expect(updateCallsWith('clearPushToken')).toContainEqual(
       expect.objectContaining({ id: 'srv-9', clearPushToken: true }),
     );
+  });
+
+  it('sends the clear while the access token is still there to sign it', async () => {
+    const { readDeviceRow } = require('#/storage/deviceId');
+    (readDeviceRow as jest.Mock).mockReturnValue('srv-9');
+    mockStoreState.user = { id: 'u1' };
+    mockStoreState.accessToken = 'live-token';
+    const tokensAtSend: (string | null)[] = [];
+    mockMutate.mockImplementation(() => {
+      tokensAtSend.push(
+        typeof mockStoreState.accessToken === 'string'
+          ? mockStoreState.accessToken
+          : null,
+      );
+      return Promise.resolve({
+        data: { updateDevice: { __typename: 'UpdateDevicePayload' } },
+      });
+    });
+
+    await teardown();
+    await flush();
+
+    expect(tokensAtSend.length).toBeGreaterThan(0);
+    expect(tokensAtSend.every(Boolean)).toBe(true);
+  });
+
+  it('forgets the row so the next account never clears it', async () => {
+    const { readDeviceRow, clearDeviceRow } = require('#/storage/deviceId');
+    (readDeviceRow as jest.Mock).mockReturnValue('srv-9');
+    mockStoreState.user = { id: 'u1' };
+
+    await teardown();
+    await flush();
+
+    expect(clearDeviceRow).toHaveBeenCalled();
   });
 
   it('cannot skip the rest of the teardown by failing', async () => {

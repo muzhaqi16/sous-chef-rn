@@ -1170,3 +1170,35 @@ Re-check: the format string is pinned by
 installed Kotlin. On device, connect the debugger and call
 `getGenericPassword({ service, authenticationPrompt })`, tap the negative
 button, and read the rejection's `code`/`name`/`message`.
+
+### Apollo `client.stop()` cancels queries, not mutations
+
+**Claim:** `client.stop()` aborts in-flight `client.query` calls but leaves
+in-flight `client.mutate` calls running to completion. A teardown step that
+stops the client therefore cannot cancel a mutation issued before it — but it
+does cancel any query in front of that mutation.
+
+**Verified 2026-09-20 against `@apollo/client@4.2.12`** with a hanging link, by
+opening one query and one mutation, then calling `stop()` and `clearStore()`
+while both were open:
+
+```
+operations that reached the link: [ 'UpdateDevice', 'DeviceByDeviceId' ]
+AFTER client.stop()  mutation: PENDING
+AFTER client.stop()  query   : REJECTED  "message":90
+AFTER clearStore()   mutation: PENDING
+AFTER answering the mutation: RESOLVED
+```
+
+Invariant 90 is "QueryManager stopped while query was in flight"; `clearStore`
+cancels with 92. The mechanism: `QueryManager.stop()` iterates `obsQueries` and
+`fetchCancelFns`, and `fetchCancelFns` is written in exactly one place —
+`fetchObservableWithInfo`, the query path. `QueryManager.mutate()` registers
+nothing in either, so a mutation is invisible to both halves.
+
+**What depends on it:** the session-end push-token clear
+(`src/services/auth/deviceRegistration.ts`) is fire-and-forget and runs before
+the `apollo` teardown step stops the client. That is safe only because the clear
+is a mutation AND needs no lookup first — resolving the device row with a query
+would put a cancellable operation in front of it, and the retry would then be
+built after `resetStore` had nulled the token `authLink` signs it with.

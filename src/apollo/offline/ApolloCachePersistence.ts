@@ -33,8 +33,8 @@ function hasCacheChanged(
   cache: NormalizedCacheObject,
   snapshot: NormalizedCacheObject,
 ): boolean {
-  const keys = Object.keys(cache).filter(k => k !== META_KEY);
-  const snapshotKeys = Object.keys(snapshot).filter(k => k !== META_KEY);
+  const keys = Object.keys(cache).filter(isDurableKey);
+  const snapshotKeys = Object.keys(snapshot).filter(isDurableKey);
   if (keys.length !== snapshotKeys.length) return true;
   for (const key of keys) {
     if (cache[key] !== snapshot[key]) return true;
@@ -45,6 +45,14 @@ function hasCacheChanged(
   // sorted by `extract()`, which makes length a sound cheap proxy.
   return metaPinCount(cache) !== metaPinCount(snapshot);
 }
+
+/**
+ * `ROOT_MUTATION` holds each mutation's result, written right after a queued
+ * write's flush; nothing on it survives to matter, so it alone never earns a
+ * persist. `__META` is compared by content instead, below.
+ */
+const isDurableKey = (key: string): boolean =>
+  key !== META_KEY && key !== 'ROOT_MUTATION';
 
 function metaPinCount(cache: NormalizedCacheObject): number {
   return cache[META_KEY]?.extraRootIds.length ?? 0;
@@ -69,6 +77,8 @@ function pruneExtraRootIds(cache: NormalizedCacheObject): void {
 }
 
 class ApolloCachePersistence {
+  private burstOpen = false;
+  private burstOwed = false;
   private saveTimeout: ReturnType<typeof setTimeout> | null = null;
   private idleCallbackId: number | null = null;
   /** Non-null exactly while a write is owed; `persist` and `cancel` clear it. */
@@ -137,8 +147,22 @@ class ApolloCachePersistence {
    */
   flushPending(): void {
     if (!this.pendingExtractor) return;
+    // A bulk add queues its writes inside one macrotask — offline it awaits no
+    // timer or I/O. The first write persists now; the rest ride one trailing
+    // persist when the task ends, rather than a full serialize per row.
+    if (this.burstOpen) {
+      this.burstOwed = true;
+      return;
+    }
+    this.burstOpen = true;
     this.clearHandles();
     this.persist();
+    setTimeout(() => {
+      this.burstOpen = false;
+      if (!this.burstOwed) return;
+      this.burstOwed = false;
+      this.flushPending();
+    }, 0);
   }
 
   cancel(): void {

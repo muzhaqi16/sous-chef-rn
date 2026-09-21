@@ -15,6 +15,7 @@ import { AdjustQuantityModal_PantryItemFragmentDoc } from './AdjustQuantityModal
 import { localizeNumericHint } from '#/utils/formatters/number';
 import {
   formatQuantityForInput,
+  isUnchangedQuantity,
   resolveQuantityNotation,
 } from '#/utils/formatQuantity';
 import { Sheet } from '#components/templates/Sheet';
@@ -90,8 +91,14 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
   // Reaching here means the schema passed; a refusal renders under its field.
   const handleConfirm = handleSubmit(values => {
     if (!pantryItem) return;
+    // The seed is rounded to what the field can show. Sent back unedited, it
+    // rewrites the stock and books an adjustment for the rounding; the exact
+    // stored value moves nothing, so the server records nothing.
+    const edited = parseQuantity(values);
     onConfirm(
-      parseQuantity(values),
+      isUnchangedQuantity(edited, pantryItem.quantity)
+        ? pantryItem.quantity
+        : edited,
       values.reason.trim(),
       parseRemainingWeight(values),
     );
@@ -156,7 +163,6 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
                   onChangeText={field.onChange}
                   error={fieldState.error?.message}
                   placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
-                  keyboardType="numeric"
                   useBottomSheetInput
                 />
               )}

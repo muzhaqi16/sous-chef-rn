@@ -1,4 +1,5 @@
 const path = require('node:path');
+const { SINK_SERVICES, TRANSLATE_FUNCTIONS } = require('../../i18n');
 
 const GENERATED_DIR = `${path.sep}src${path.sep}graphql${path.sep}generated${path.sep}`;
 const LIBRARY_DIRS = [
@@ -75,9 +76,6 @@ const PASS_THROUGH_METHODS = new Set([
  */
 const AUTHORED_FLAG = 'isAuthoredContent';
 const AUTHORED_FIELDS = new Set(['title', 'message']);
-
-const SINK_SERVICES = /^(toastService|alertService)$/;
-const TRANSLATE_FUNCTIONS = /^(t|tGlobal)$/;
 
 const isGeneratedFile = fileName =>
   fileName.includes(GENERATED_DIR) || fileName.endsWith('.generated.ts');

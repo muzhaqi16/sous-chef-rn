@@ -9,7 +9,10 @@ import {
   AddItemToShoppingListDocument,
   MoveShoppingItemToPantryDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { revertOptimisticShoppingListItem } from '#features/shoppingList/cache/items';
+import {
+  reconcileShoppingItemCreateUpdate,
+  revertOptimisticShoppingListItem,
+} from '#features/shoppingList/cache/items';
 
 jest.mock('#/apollo/clientRegistry', () => ({
   getApolloClient: () => ({ cache: {} }),
@@ -17,7 +20,9 @@ jest.mock('#/apollo/clientRegistry', () => ({
   clearApolloClient: jest.fn(),
 }));
 jest.mock('#features/shoppingList/cache/items', () => ({
+  ...jest.requireActual('#features/shoppingList/cache/items'),
   revertOptimisticShoppingListItem: jest.fn(),
+  reconcileShoppingItemCreateUpdate: jest.fn(),
 }));
 jest.mock('#features/pantry/cache/items', () => ({
   addPantryItemLocally: jest.fn(),
@@ -159,6 +164,70 @@ describe('reconcileReplaySuccess — AddItemToShoppingList batch', () => {
       {},
       'list-1',
       'row-b',
+      { countsSettled: false },
+    );
+  });
+
+  // Each accepted row's payload carries the list's totals, resolved after the
+  // whole batch — so the refused row is already out of the count, and a
+  // relative decrement on top would take it out twice.
+  it('leaves the count alone when an accepted row brought the totals', () => {
+    reconcileReplaySuccess(addOperation, variables, {
+      addItemsToShoppingList: {
+        __typename: 'AddItemsToShoppingListPayload',
+        results: [
+          {
+            success: true,
+            item: {
+              id: 'row-a',
+              shoppingList: { id: 'list-1', totalItems: 4 },
+            },
+          },
+          { success: false },
+        ],
+      },
+    });
+
+    expect(revertOptimisticShoppingListItem).toHaveBeenCalledWith(
+      {},
+      'list-1',
+      'row-b',
+      { countsSettled: true },
+    );
+  });
+
+  it('pairs a result to its row by the index the server echoes', () => {
+    reconcileReplaySuccess(addOperation, variables, {
+      addItemsToShoppingList: {
+        __typename: 'AddItemsToShoppingListPayload',
+        results: [
+          { success: false, index: 1 },
+          { success: true, index: 0 },
+        ],
+      },
+    });
+
+    expect(revertOptimisticShoppingListItem).toHaveBeenCalledWith(
+      {},
+      'list-1',
+      'row-b',
+      expect.anything(),
+    );
+  });
+
+  it('folds a row the server merged into an existing one', () => {
+    reconcileReplaySuccess(addOperation, variables, {
+      addItemsToShoppingList: {
+        __typename: 'AddItemsToShoppingListPayload',
+        results: [{ success: true, item: { id: 'existing-row' } }],
+      },
+    });
+
+    expect(reconcileShoppingItemCreateUpdate).toHaveBeenCalledWith(
+      {},
+      'list-1',
+      expect.objectContaining({ id: 'existing-row' }),
+      'row-a',
     );
   });
 

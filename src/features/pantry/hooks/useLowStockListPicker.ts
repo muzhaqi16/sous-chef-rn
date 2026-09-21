@@ -87,8 +87,10 @@ export function useLowStockListPicker({ addToList, rows, homeId }: Options) {
       // offline the rows below have a list to name before the server has one.
       const created = await createShoppingList({ name: trimmed, homeId });
       setBusy(false);
-      // The settle reported the refusal in the caller's copy already.
-      if (created.status === 'failed') return;
+      if (created.status === 'failed') {
+        toastService.error(created.body);
+        return;
+      }
       await addTo(created.shoppingList.id, picked);
     })();
   };

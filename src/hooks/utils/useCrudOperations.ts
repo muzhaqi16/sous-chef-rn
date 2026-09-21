@@ -10,6 +10,7 @@ import {
   settleMutation,
   type SettleOptions,
 } from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { t } from '#/i18n';
 
 /** What the builder reads off a mutate call: `data`, and a resolved `error`. */
@@ -79,7 +80,9 @@ async function settleAndDeliver<TResult>(
 ): Promise<TResult | false> {
   const settled = await settleMutation(run, options);
   if (settled.status === 'failed' || !settled.data) return false;
-  onSuccess?.(settled.data);
+  // `settled.data` holds whichever union member came back, so a converged
+  // removal carries an error member — not something `onSuccess` may read.
+  if (appliedPayload(settled.data)) onSuccess?.(settled.data);
   return settled.data;
 }
 
@@ -98,7 +101,9 @@ function createRemoveOperationImpl<TResult>(
 
     if (!hasParentContext(parentId)) return false;
 
-    // A row that is already gone is the outcome a removal asked for.
+    // A row that is already gone is the outcome a removal asked for — which
+    // obliges each caller's `update` to take it out of the cache on that
+    // refusal too, or the row stays on screen under a silent success.
     const execute = () =>
       settleAndDeliver(
         () => mutation({ variables: { input: { id: itemId } } }),

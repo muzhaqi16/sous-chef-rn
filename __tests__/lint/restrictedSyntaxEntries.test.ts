@@ -162,7 +162,10 @@ const PRODUCTION_FIXTURES: Fixture[] = [
   },
   {
     id: 'missingPressableLabel',
-    invalid: ['const a = <Pressable onPress={f}><Icon /></Pressable>;'],
+    invalid: [
+      'const a = <Pressable onPress={f}><Icon /></Pressable>;',
+      'const b = <PressableScale onPress={f}><Icon /></PressableScale>;',
+    ],
     valid: [
       'const a = <Pressable onPress={f} accessibilityLabel={t("close")}><Icon /></Pressable>;',
       'const b = <Pressable onPress={f}><Text>{label}</Text></Pressable>;',

@@ -1,4 +1,5 @@
 import React from 'react';
+import { knownEntry } from '#/utils/closedEnum';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
@@ -10,10 +11,7 @@ import { commonStyles } from '#/styles/commonStyles';
 import { Badge } from '#components/atoms/Badge';
 import { Text } from '#components/atoms/Text';
 import { STORAGE_TYPE_LABEL_KEYS } from '#features/catalog/components/storageLocationFormConfig';
-import {
-  StorageState,
-  type StorageType,
-} from '#/graphql/generated/schemaTypes';
+import { StorageState, StorageType } from '#/graphql/generated/schemaTypes';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /** Key paths, not resolved strings — `t` is only available inside the
@@ -66,9 +64,12 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
   const { t } = useTranslation();
 
   const hasColor = !!location.color;
-  const typeLabel = t(
-    `storageLocationForm.${STORAGE_TYPE_LABEL_KEYS[location.type]}`,
-  );
+  // A type added server-side after this build reads as the catch-all, not as
+  // the raw `storageLocationForm.undefined` key.
+  const typeKey =
+    knownEntry(STORAGE_TYPE_LABEL_KEYS, location.type) ??
+    STORAGE_TYPE_LABEL_KEYS[StorageType.Custom];
+  const typeLabel = t(`storageLocationForm.${typeKey}`);
   const temperatureLabelKey = location.temperature
     ? TEMPERATURE_LABEL_KEYS[location.temperature]
     : null;

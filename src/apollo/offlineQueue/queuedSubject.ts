@@ -16,6 +16,7 @@ import type {
   WastePantryItemBatchInput,
 } from '#/graphql/generated/schemaTypes';
 import type { QueuedMutation } from './types';
+import { isRecord } from '#/utils/isRecord';
 
 /** The input types whose subject is a field other than `id`. */
 interface SubjectInputs {
@@ -64,16 +65,32 @@ export interface QueuedSubject {
   subjectIds: string[];
   /** What the write is derived from: a dependency, never a target. */
   sourceIds: string[];
+  /** The subset of `subjectIds` minted on the device, which the server has never seen. */
+  mintedIds: string[];
 }
+
+/** Inputs keyed by something other than `id` whose subject is minted by the device. */
+const MINTING_SUBJECT_INPUTS: ReadonlySet<keyof SubjectInputs> = new Set([
+  'AddItemsToShoppingListInput',
+  'ForkRecipeInput',
+  'MoveShoppingItemToPantryInput',
+]);
+
+/**
+ * `Create*Input.id` is the device's cuid; an update's `id` and a usage's
+ * `pantryItemId` name a row the server already owns.
+ */
+const mintsItsSubject = (typeName: string | null, key: string): boolean =>
+  typeName !== null &&
+  (isSubjectInput(typeName)
+    ? MINTING_SUBJECT_INPUTS.has(typeName)
+    : key === 'id' && typeName.startsWith('Create'));
 
 const isSubjectInput = (name: string): name is keyof SubjectInputs =>
   name in SUBJECT_KEYS;
 
 const isId = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
 
 /**
  * Reads a queued write's subject from the input type its document declares.
@@ -88,7 +105,7 @@ export function queuedSubject({
 }): QueuedSubject {
   const fields: unknown = variables?.input;
   if (!isRecord(fields)) {
-    return { subjectIds: [], sourceIds: [] };
+    return { subjectIds: [], sourceIds: [], mintedIds: [] };
   }
 
   const typeName = inputTypeNameOf(mutation);
@@ -106,6 +123,7 @@ export function queuedSubject({
         .filter(isId)
     : [value].filter(isId);
   const sourceIds = key !== 'id' && isId(fields.id) ? [fields.id] : [];
+  const mintedIds = mintsItsSubject(typeName ?? null, key) ? subjectIds : [];
 
-  return { subjectIds, sourceIds };
+  return { subjectIds, sourceIds, mintedIds };
 }

@@ -271,6 +271,30 @@ describe('PantryActionModal', () => {
     expect(shared.trackingUnitId).toBe('u1');
   });
 
+  // A row created offline holds a neutral unit with an empty id. Passed on as
+  // the unit a consume is measured in, it becomes an explicit `usageUnitId`
+  // that names nothing; omitted, the server uses the stack's own unit.
+  it('names no unit for a row whose unit is still the offline placeholder', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<PantryActionModal {...defaultProps} />, {
+      cache: makeCache({
+        unit: {
+          __typename: 'Unit',
+          id: '',
+          symbol: '',
+          name: '',
+          type: 'COUNT',
+          displayAsFraction: false,
+        },
+      }),
+    });
+
+    await user.press(screen.getByTestId('confirm-button'));
+    const shared = defaultProps.onConfirm.mock.calls[0][0];
+    expect(shared.trackingUnitId).toBeUndefined();
+    expect(shared.activeUnitId).toBeUndefined();
+  });
+
   it('returns 0 for trackingQuantity when pantryItemId is null', async () => {
     const user = userEvent.setup();
     renderWithApollo(

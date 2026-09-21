@@ -1,13 +1,9 @@
+import { isRecord } from './isRecord';
 /**
  * Serializes any Apollo / Network / JS error to a JSON-friendly object without
  * throwing. A WeakSet tracks visited objects against circular references, and
  * depth is capped so a huge Apollo context object is not walked whole.
  */
-
-/** Narrows an opaque value to an indexable object, so no `any` is needed. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
 
 /** `String(value)` for a primitive; an object reads as its tag, never through its own `toString`. */
 export function describeValue(value: unknown): string {

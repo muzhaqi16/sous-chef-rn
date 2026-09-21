@@ -400,6 +400,12 @@ describe('QueueManager', () => {
       manager['validateTokenBeforeReplay'] = jest.fn().mockResolvedValue(true);
     });
 
+    // `clearAllMocks` keeps implementations, so a stubbed rejection left by a
+    // test that failed before its own reset would reject for every later test.
+    afterEach(() => {
+      mockClient.mutate.mockReset();
+    });
+
     it('replays every mutation strictly in insertion order', async () => {
       // Insertion order is causal order: a list created offline must land
       // before the items that reference its client-minted id, and unrelated
@@ -682,7 +688,6 @@ describe('QueueManager', () => {
         expect.anything(),
       );
       expect(queueStore.markMutationFailed).not.toHaveBeenCalled();
-      mockClient.mutate.mockReset();
     });
 
     it('lets unrelated entries past a row-scoped deferral', async () => {
@@ -1114,11 +1119,6 @@ describe('QueueManager', () => {
 
       expect(queueStore.clearQueueForUser).not.toHaveBeenCalled();
       expect(queueStore.setCurrentUserId).toHaveBeenCalledWith('user-1');
-    });
-
-    it('getStats delegates to queueStore.getQueueStats', () => {
-      manager.getStats('user-1');
-      expect(queueStore.getQueueStats).toHaveBeenCalledWith('user-1');
     });
   });
 
@@ -1809,16 +1809,6 @@ describe('QueueManager', () => {
 
       // Should not try to set current user id
       expect(queueStore.setCurrentUserId).not.toHaveBeenCalled();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // getStats without userId
-  // -------------------------------------------------------------------------
-  describe('getStats without userId', () => {
-    it('calls getQueueStats with undefined', () => {
-      manager.getStats();
-      expect(queueStore.getQueueStats).toHaveBeenCalledWith(undefined);
     });
   });
 

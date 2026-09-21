@@ -24,12 +24,10 @@ import {
   localizedErrorMessage,
   useErrorService,
 } from '../errorService';
-import {
-  GraphQLDomainError,
-  GraphQLNetworkError,
-} from '#/utils/errors/graphqlErrors';
+import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
 import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
+import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import {
   isQueryComplexityError,
   describeQueryComplexity,
@@ -255,6 +253,21 @@ describe('errorService', () => {
   // parseApolloError
   // -----------------------------------------------------------------------
   describe('parseApolloError', () => {
+    // Signing in without a connection: the fetch rejects with our own
+    // `NetworkRequestError`. Read by the plain `instanceof Error` arm it was
+    // UNKNOWN_ERROR, and the person was told "an unexpected error occurred".
+    it('reads a fetch that never got an answer as a network error', () => {
+      const result = errorService.parseApolloError(
+        new NetworkRequestError('Network request failed'),
+        { logError: false },
+      );
+
+      expect(result.error?.code).toBe('NETWORK_ERROR');
+      expect(result.error?.message).toBe(
+        errorService.getUserFriendlyMessage('NETWORK_ERROR'),
+      );
+    });
+
     it('detects query complexity errors first', () => {
       const error = new Error('query too complex');
       (isQueryComplexityError as jest.Mock).mockReturnValue(true);
@@ -268,28 +281,6 @@ describe('errorService', () => {
 
       expect(result.success).toBe(false);
       expect(result.error?.code).toBe('QUERY_TOO_COMPLEX');
-    });
-
-    it('keeps the code of a refusal that arrived as a thrown domain error', () => {
-      // `unwrapPayload` turns an error-union member into a throw carrying its
-      // `code`. With no branch for it the error fell through to the plain
-      // `instanceof Error` arm, `errorCode` stayed 'UNKNOWN_ERROR', and every
-      // refusal reaching a caller this way read "An unexpected error occurred".
-      (isQueryComplexityError as jest.Mock).mockReturnValue(false);
-      (isVersionConflictError as jest.Mock).mockReturnValue(false);
-
-      const result = errorService.parseApolloError(
-        new GraphQLDomainError({
-          __typename: 'ConflictError',
-          code: 'CONFLICT',
-          message: 'Item already exists',
-        }),
-      );
-
-      expect(result.error?.code).toBe('CONFLICT');
-      // Localized from the CODE, not the server's sentence.
-      expect(result.error?.message).not.toBe('Item already exists');
-      expect(result.error?.message).not.toBe('An unexpected error occurred');
     });
 
     it('detects version conflict errors', () => {
