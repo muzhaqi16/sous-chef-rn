@@ -8,6 +8,7 @@ import type {
   ActionTrayRef,
 } from '#components/templates/ActionTray/types';
 import { ProfileScreen } from '../ProfileScreen';
+import { kitTestIDs } from '#components/testIDs';
 
 // --- Mocks ---
 
@@ -121,31 +122,21 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
 }));
 
-jest.mock('#features/profile/components/ProfileHeader', () => {
+jest.mock('#features/profile/components/ProfileHero', () => {
   const { View, Text, Pressable } = require('react-native');
   return {
-    ProfileHeader: ({
+    ProfileHero: ({
       name,
       subtitle,
-      onBack,
-      onMore,
       onAvatarPress,
     }: {
       name?: string;
       subtitle?: string;
-      onBack?: () => void;
-      onMore?: () => void;
       onAvatarPress?: () => void;
     }) => (
-      <View testID="profile-header">
+      <View testID="profile-hero">
         <Text>{name}</Text>
         {subtitle ? <Text>{subtitle}</Text> : null}
-        <Pressable testID="back-button" onPress={onBack}>
-          <Text>Back</Text>
-        </Pressable>
-        <Pressable testID="more-button" onPress={onMore}>
-          <Text>More</Text>
-        </Pressable>
         <Pressable testID="avatar-button" onPress={onAvatarPress}>
           <Text>Avatar</Text>
         </Pressable>
@@ -219,7 +210,7 @@ describe('ProfileScreen', () => {
 
   it('renders the profile screen', () => {
     render(<ProfileScreen />);
-    expect(screen.getByTestId('profile-header')).toBeTruthy();
+    expect(screen.getByTestId('profile-hero')).toBeTruthy();
   });
 
   it('renders the profile header with user name', () => {
@@ -277,7 +268,7 @@ describe('ProfileScreen', () => {
   it('calls goBack when back button is pressed', async () => {
     const user = userEvent.setup();
     render(<ProfileScreen />);
-    await user.press(screen.getByTestId('back-button'));
+    await user.press(screen.getByTestId(kitTestIDs.headerBackButton));
     expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
 

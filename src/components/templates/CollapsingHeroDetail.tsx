@@ -11,6 +11,9 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
+import { commonStyles } from '#/styles/commonStyles';
+import { sizes } from '#/theme/foundations/sizes';
+import { spacing } from '#/theme/foundations/spacing';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
@@ -23,8 +26,10 @@ import {
 // inset so it fills edge-to-edge behind it.
 export const HERO_IMAGE_HEIGHT = 280;
 
-const HEADER_TOP_GAP = 8;
-const BUTTON_SIZE = 40;
+const HEADER_TOP_GAP = spacing.sm;
+// The same target and glyph as `Header`'s actions, so both bars put the back
+// arrow on the page gutter through `commonStyles.barInset`.
+const BUTTON_SIZE = sizes.touchTarget.md;
 // Action-button band below the status-bar inset; also reserved above the title
 // when there is no hero.
 export const HEADER_BAND_HEIGHT = HEADER_TOP_GAP + BUTTON_SIZE + HEADER_TOP_GAP;
@@ -62,7 +67,7 @@ const HeroChip: React.FC<{ action: HeaderAction }> = ({ action }) => (
     accessibilityRole="button"
     accessibilityLabel={action.accessibilityLabel}
   >
-    <HeaderActionIcon action={action} defaultSize={22} />
+    <HeaderActionIcon action={action} defaultSize={sizes.icon.md} />
   </AppPressable>
 );
 
@@ -207,7 +212,13 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
           pointerEvents="none"
           style={[styles.barSolid, barBgStyle]}
         />
-        <View style={[styles.barRow, { top: insets.top + HEADER_TOP_GAP }]}>
+        <View
+          style={[
+            styles.barRow,
+            commonStyles.barInset,
+            { top: insets.top + HEADER_TOP_GAP },
+          ]}
+        >
           <HeroChip
             action={{
               icon: 'arrow-back',
@@ -259,7 +270,8 @@ const styles = StyleSheet.create(theme => ({
     flexGrow: 1,
   },
   // Opaque card that rides up over the hero as you scroll; rounded top + slight
-  // overlap make the image-to-content transition.
+  // overlap make the image-to-content transition. It is the page, so it owns
+  // the gutter the bar's back glyph sits on.
   contentCard: {
     flexGrow: 1,
     backgroundColor: theme.colors.background,
@@ -267,6 +279,7 @@ const styles = StyleSheet.create(theme => ({
     borderTopRightRadius: theme.radii.xl,
     marginTop: -theme.spacing.mdPlus,
     paddingTop: theme.spacing.sm,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   contentCardNoHero: {
     marginTop: 0,
@@ -290,8 +303,8 @@ const styles = StyleSheet.create(theme => ({
   },
   barRow: {
     position: 'absolute',
-    left: theme.spacing.base,
-    right: theme.spacing.base,
+    left: 0,
+    right: 0,
     height: BUTTON_SIZE,
     flexDirection: 'row',
     alignItems: 'center',

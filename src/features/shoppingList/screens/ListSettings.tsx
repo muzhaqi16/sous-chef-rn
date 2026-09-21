@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
 import { useTranslation } from '#/i18n';
@@ -22,7 +22,7 @@ import { ListStatusSection } from '#features/shoppingList/components/listSetting
 import { RecurringSection } from '#features/shoppingList/components/listSettings/RecurringSection';
 import { ReminderSection } from '#features/shoppingList/components/listSettings/ReminderSection';
 import { TemplateSection } from '#features/shoppingList/components/listSettings/TemplateSection';
-import { Screen } from '#components/templates/Screen';
+import { SubScreen } from '#components/templates/SubScreen';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
 export const ListSettings: React.FC<
@@ -35,7 +35,7 @@ export const ListSettings: React.FC<
 > = ({ route }) => {
   useScreenTransition('ListSettings');
   const { t } = useTranslation();
-  const { toShareList, toHomeDetail, goBack } = useAppNavigation();
+  const { toShareList, toHomeDetail } = useAppNavigation();
   const {
     basedOnTemplate,
     budgetInput,
@@ -113,28 +113,26 @@ export const ListSettings: React.FC<
   // read-only version at the list's owner.
   if (listId && ownership === 'unknown') {
     return (
-      <Screen
-        header={{
-          title: t('shoppingListScreens.listSettings'),
-          back: goBack,
-        }}
+      <SubScreen
+        title={t('shoppingListScreens.listSettings')}
         state={{ value: 'loading', onRetry: retryOwnership }}
       >
         <></>
-      </Screen>
+      </SubScreen>
     );
   }
 
   return (
-    <Screen
-      header={{
-        title: !listId
+    <SubScreen
+      title={
+        !listId
           ? t('shoppingListScreens.createNewList')
           : isOwner
           ? t('shoppingListScreens.listSettings')
-          : t('shoppingListScreens.listInfo'),
-        back: goBack,
-        rightElement: isOwner ? (
+          : t('shoppingListScreens.listInfo')
+      }
+      rightElement={
+        isOwner ? (
           <Pressable
             onPress={handleSave}
             disabled={saving}
@@ -148,337 +146,327 @@ export const ListSettings: React.FC<
                 : t('labels.save')}
             </Text>
           </Pressable>
-        ) : undefined,
-      }}
-      scroll="list"
-      gutter="none"
+        ) : undefined
+      }
+      scroll="form"
     >
-      <ScrollView style={styles.content}>
-        {!isOwner && listId ? (
-          <>
-            {/* Read-only view for collaborators */}
-            <View style={commonStyles.settingsSection}>
-              <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
-                {t('shoppingListScreens.listInformation')}
-              </Text>
+      {!isOwner && listId ? (
+        <>
+          {/* Read-only view for collaborators */}
+          <View style={commonStyles.settingsSection}>
+            <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
+              {t('shoppingListScreens.listInformation')}
+            </Text>
 
-              <InfoRow label={t('shoppingListScreens.listName')} value={name} />
+            <InfoRow label={t('shoppingListScreens.listName')} value={name} />
 
+            <InfoRow
+              label={t('shoppingListScreens.yourRole')}
+              value={roleDisplay}
+            />
+
+            {!!ownerInfo && (
               <InfoRow
-                label={t('shoppingListScreens.yourRole')}
-                value={roleDisplay}
+                label={t('shoppingListScreens.owner')}
+                value={
+                  firstNonBlank(ownerInfo.displayName, ownerInfo.email) ??
+                  t('labels.unknown')
+                }
               />
+            )}
 
-              {!!ownerInfo && (
-                <InfoRow
-                  label={t('shoppingListScreens.owner')}
-                  value={
-                    firstNonBlank(ownerInfo.displayName, ownerInfo.email) ??
-                    t('labels.unknown')
-                  }
-                />
-              )}
+            {!!isShared && (
+              <InfoRow
+                label={t('shoppingListScreens.sharedWith')}
+                value={t('shoppingListScreens.membersCount', {
+                  count: collaborators.length,
+                })}
+              />
+            )}
+          </View>
 
-              {!!isShared && (
-                <InfoRow
-                  label={t('shoppingListScreens.sharedWith')}
-                  value={t('shoppingListScreens.membersCount', {
-                    count: collaborators.length,
+          <View style={commonStyles.settingsSection}>
+            <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
+              {t('labels.leaveList')}
+            </Text>
+
+            {isHomeMember ? (
+              <>
+                <View style={styles.disabledLeaveButton}>
+                  <Icon name="log-out-outline" size={20} tone="textSecondary" />
+                  <Text
+                    role="bodyStrong"
+                    tone="secondary"
+                    style={styles.disabledButtonText}
+                  >
+                    {t('labels.leaveList')}
+                  </Text>
+                </View>
+                <Text
+                  role="caption"
+                  tone="secondary"
+                  style={styles.leaveDescription}
+                >
+                  {t('shoppingListScreens.cantLeaveHomeLinkedMessage', {
+                    name: shoppingList?.home?.name ?? '',
                   })}
-                />
-              )}
-            </View>
-
-            <View style={commonStyles.settingsSection}>
-              <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
-                {t('labels.leaveList')}
-              </Text>
-
-              {isHomeMember ? (
-                <>
-                  <View style={styles.disabledLeaveButton}>
+                </Text>
+                {!!linkedHomeId && (
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.actionRow,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() => toHomeDetail({ homeId: linkedHomeId })}
+                  >
+                    <Icon name="people-outline" size={20} tone="primary" />
+                    <Text role="body" tone="accent" style={styles.actionText}>
+                      {t('shoppingListScreens.manageHome')}
+                    </Text>
                     <Icon
-                      name="log-out-outline"
+                      name="chevron-forward"
                       size={20}
                       tone="textSecondary"
                     />
-                    <Text
-                      role="bodyStrong"
-                      tone="secondary"
-                      style={styles.disabledButtonText}
-                    >
-                      {t('labels.leaveList')}
-                    </Text>
-                  </View>
-                  <Text
-                    role="caption"
-                    tone="secondary"
-                    style={styles.leaveDescription}
-                  >
-                    {t('shoppingListScreens.cantLeaveHomeLinkedMessage', {
-                      name: shoppingList?.home?.name ?? '',
-                    })}
-                  </Text>
-                  {!!linkedHomeId && (
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.actionRow,
-                        pressed && styles.pressed,
-                      ]}
-                      onPress={() => toHomeDetail({ homeId: linkedHomeId })}
-                    >
-                      <Icon name="people-outline" size={20} tone="primary" />
-                      <Text role="body" tone="accent" style={styles.actionText}>
-                        {t('shoppingListScreens.manageHome')}
-                      </Text>
-                      <Icon
-                        name="chevron-forward"
-                        size={20}
-                        tone="textSecondary"
-                      />
-                    </Pressable>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.deleteButton,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={handleLeaveList}
-                    disabled={leaving}
-                  >
-                    <Icon name="log-out-outline" size={20} tone="error" />
-                    <Text
-                      role="bodyStrong"
-                      tone="danger"
-                      style={styles.deleteButtonText}
-                    >
-                      {leaving
-                        ? t('shoppingListScreens.leaving')
-                        : t('labels.leaveList')}
-                    </Text>
                   </Pressable>
-                  <Text
-                    role="caption"
-                    tone="secondary"
-                    style={styles.leaveDescription}
-                  >
-                    {t('shoppingListScreens.leaveDescription')}
-                  </Text>
-                </>
-              )}
-            </View>
-          </>
-        ) : (
-          // Editable view for owners
-          <View style={commonStyles.settingsSection}>
-            <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
-              {t('labels.general')}
-            </Text>
-
-            <BaseInput
-              label={t('shoppingListScreens.listName')}
-              value={name}
-              onChangeText={setName}
-              placeholder={t('shoppingListScreens.listNamePlaceholder')}
-              maxLength={LIST_NAME_MAX_LENGTH}
-            />
-
-            {/* Home selector - only show for new lists. */}
-            {!listId && (
-              <View style={commonStyles.settingsInputGroup}>
-                <Text role="label" style={commonStyles.settingsLabel}>
-                  {t('shoppingListScreens.linkToHome')}
-                </Text>
+                )}
+              </>
+            ) : (
+              <>
                 <Pressable
                   style={({ pressed }) => [
-                    styles.pickerButton,
+                    styles.deleteButton,
                     pressed && styles.pressed,
                   ]}
-                  onPress={handleOpenHomePicker}
+                  onPress={handleLeaveList}
+                  disabled={leaving}
                 >
-                  <Text role="body">
-                    {homes.find(h => h.id === selectedHomeId)?.name ??
-                      t('shoppingListScreens.personalNoHome')}
+                  <Icon name="log-out-outline" size={20} tone="error" />
+                  <Text
+                    role="bodyStrong"
+                    tone="danger"
+                    style={styles.deleteButtonText}
+                  >
+                    {leaving
+                      ? t('shoppingListScreens.leaving')
+                      : t('labels.leaveList')}
                   </Text>
-                  <Icon name="chevron-down" size={20} tone="textSecondary" />
                 </Pressable>
-              </View>
-            )}
-
-            <View style={commonStyles.settingsRow}>
-              <View style={commonStyles.settingsRowInfo}>
-                <Text role="bodyStrong">
-                  {t('shoppingListScreens.defaultList')}
-                </Text>
                 <Text
                   role="caption"
-                  style={commonStyles.settingsRowDescription}
+                  tone="secondary"
+                  style={styles.leaveDescription}
                 >
-                  {t('shoppingListScreens.defaultListDesc')}
+                  {t('shoppingListScreens.leaveDescription')}
                 </Text>
-              </View>
-              <BaseSwitch
-                accessibilityLabel={t('shoppingListScreens.defaultList')}
-                value={isDefault}
-                onValueChange={setIsDefault}
-              />
-            </View>
+              </>
+            )}
           </View>
-        )}
+        </>
+      ) : (
+        // Editable view for owners
+        <View style={commonStyles.settingsSection}>
+          <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
+            {t('labels.general')}
+          </Text>
 
-        {/* Start a new list from a saved template (create mode). Hidden when
-            the user has no templates yet — they're created from an existing
-            list's settings. */}
-        {!listId && templates.length > 0 && (
-          <View style={commonStyles.settingsSection}>
-            <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
-              {t('shoppingListScreens.templateSection')}
-            </Text>
+          <BaseInput
+            label={t('shoppingListScreens.listName')}
+            value={name}
+            onChangeText={setName}
+            placeholder={t('shoppingListScreens.listNamePlaceholder')}
+            maxLength={LIST_NAME_MAX_LENGTH}
+          />
 
+          {/* Home selector - only show for new lists. */}
+          {!listId && (
             <View style={commonStyles.settingsInputGroup}>
               <Text role="label" style={commonStyles.settingsLabel}>
-                {t('shoppingListScreens.startFromTemplate')}
+                {t('shoppingListScreens.linkToHome')}
               </Text>
               <Pressable
                 style={({ pressed }) => [
                   styles.pickerButton,
                   pressed && styles.pressed,
                 ]}
-                onPress={() => setShowTemplatePicker(true)}
+                onPress={handleOpenHomePicker}
               >
                 <Text role="body">
-                  {selectedTemplate?.displayName ??
-                    t('shoppingListScreens.noTemplateBlankList')}
+                  {homes.find(h => h.id === selectedHomeId)?.name ??
+                    t('shoppingListScreens.personalNoHome')}
                 </Text>
                 <Icon name="chevron-down" size={20} tone="textSecondary" />
               </Pressable>
-              <Text role="caption" tone="secondary" style={styles.fieldNote}>
-                {t('shoppingListScreens.startFromTemplateDesc')}
+            </View>
+          )}
+
+          <View style={commonStyles.settingsRow}>
+            <View style={commonStyles.settingsRowInfo}>
+              <Text role="bodyStrong">
+                {t('shoppingListScreens.defaultList')}
+              </Text>
+              <Text role="caption" style={commonStyles.settingsRowDescription}>
+                {t('shoppingListScreens.defaultListDesc')}
               </Text>
             </View>
+            <BaseSwitch
+              accessibilityLabel={t('shoppingListScreens.defaultList')}
+              value={isDefault}
+              onValueChange={setIsDefault}
+            />
           </View>
-        )}
+        </View>
+      )}
 
-        <ListStatusSection
-          completedShopDate={completedShopDate}
-          completing={completing}
-          formatDate={formatDate}
-          handleArchiveToggle={handleArchiveToggle}
-          handleToggleComplete={handleToggleComplete}
-          isArchived={isArchived}
-          isCompleted={isCompleted}
-          isOwner={isOwner}
-          listId={listId}
-          reactivating={reactivating}
-          statusDisplay={statusDisplay}
-        />
+      {/* Start a new list from a saved template (create mode). Hidden when
+            the user has no templates yet — they're created from an existing
+            list's settings. */}
+      {!listId && templates.length > 0 && (
+        <View style={commonStyles.settingsSection}>
+          <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
+            {t('shoppingListScreens.templateSection')}
+          </Text>
 
-        <RecurringSection
-          formatDate={formatDate}
-          generating={generating}
-          handleGenerateNext={handleGenerateNext}
-          handleStopRecurring={handleStopRecurring}
-          isOwner={isOwner}
-          isRecurring={isRecurring}
-          listId={listId}
-          nextRecurringDate={nextRecurringDate}
-          patternLabel={patternLabel}
-          recurringPattern={recurringPattern}
-          setShowPatternPicker={setShowPatternPicker}
-        />
-
-        <TemplateSection
-          basedOnTemplate={basedOnTemplate}
-          creating={creating}
-          handleCreateFromTemplate={handleCreateFromTemplate}
-          handleSaveAsTemplate={handleSaveAsTemplate}
-          isOwner={isOwner}
-          isTemplate={isTemplate}
-          listId={listId}
-          marking={marking}
-          name={name}
-          templateName={templateName}
-        />
-
-        <BudgetSection
-          budgetInput={budgetInput}
-          currency={currency}
-          estimatedTotal={estimatedTotal}
-          handleTogglePriceTracking={handleTogglePriceTracking}
-          isOwner={isOwner}
-          listId={listId}
-          priceTracking={priceTracking}
-          setBudgetInput={setBudgetInput}
-          totalCost={totalCost}
-        />
-
-        <ReminderSection
-          handleClearReminder={handleClearReminder}
-          handleSetReminderDate={handleSetReminderDate}
-          isOwner={isOwner}
-          listId={listId}
-          reminderDate={reminderDate}
-          reminderEnabled={reminderEnabled}
-        />
-
-        {!!listId && !!isOwner && (
-          <View style={commonStyles.settingsSection}>
-            <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
-              {t('shoppingListScreens.sharing')}
+          <View style={commonStyles.settingsInputGroup}>
+            <Text role="label" style={commonStyles.settingsLabel}>
+              {t('shoppingListScreens.startFromTemplate')}
             </Text>
-
             <Pressable
               style={({ pressed }) => [
-                styles.actionRow,
+                styles.pickerButton,
                 pressed && styles.pressed,
               ]}
-              onPress={() => toShareList({ listId: listId })}
+              onPress={() => setShowTemplatePicker(true)}
             >
-              <Icon name="person-add" size={20} tone="primary" />
-              <Text role="body" tone="accent" style={styles.actionText}>
-                {t('shoppingListScreens.manageMembers')}
+              <Text role="body">
+                {selectedTemplate?.displayName ??
+                  t('shoppingListScreens.noTemplateBlankList')}
               </Text>
-              <Icon name="chevron-forward" size={20} tone="textSecondary" />
+              <Icon name="chevron-down" size={20} tone="textSecondary" />
             </Pressable>
-
-            {!!isShared && (
-              <Text role="caption" tone="secondary" style={styles.sharedInfo}>
-                {t('shoppingListScreens.sharedWithMembers', {
-                  count: collaborators.length,
-                })}
-              </Text>
-            )}
-          </View>
-        )}
-
-        {!!listId && !!isOwner && (
-          <View style={commonStyles.settingsSection}>
-            <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
-              {t('labels.dangerZone')}
+            <Text role="caption" tone="secondary" style={styles.fieldNote}>
+              {t('shoppingListScreens.startFromTemplateDesc')}
             </Text>
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.deleteButton,
-                pressed && styles.pressed,
-              ]}
-              onPress={handleDelete}
-            >
-              <Icon name="trash-outline" size={20} tone="error" />
-              <Text
-                role="bodyStrong"
-                tone="danger"
-                style={styles.deleteButtonText}
-              >
-                {t('labels.deleteList')}
-              </Text>
-            </Pressable>
           </View>
-        )}
-      </ScrollView>
+        </View>
+      )}
+
+      <ListStatusSection
+        completedShopDate={completedShopDate}
+        completing={completing}
+        formatDate={formatDate}
+        handleArchiveToggle={handleArchiveToggle}
+        handleToggleComplete={handleToggleComplete}
+        isArchived={isArchived}
+        isCompleted={isCompleted}
+        isOwner={isOwner}
+        listId={listId}
+        reactivating={reactivating}
+        statusDisplay={statusDisplay}
+      />
+
+      <RecurringSection
+        formatDate={formatDate}
+        generating={generating}
+        handleGenerateNext={handleGenerateNext}
+        handleStopRecurring={handleStopRecurring}
+        isOwner={isOwner}
+        isRecurring={isRecurring}
+        listId={listId}
+        nextRecurringDate={nextRecurringDate}
+        patternLabel={patternLabel}
+        recurringPattern={recurringPattern}
+        setShowPatternPicker={setShowPatternPicker}
+      />
+
+      <TemplateSection
+        basedOnTemplate={basedOnTemplate}
+        creating={creating}
+        handleCreateFromTemplate={handleCreateFromTemplate}
+        handleSaveAsTemplate={handleSaveAsTemplate}
+        isOwner={isOwner}
+        isTemplate={isTemplate}
+        listId={listId}
+        marking={marking}
+        name={name}
+        templateName={templateName}
+      />
+
+      <BudgetSection
+        budgetInput={budgetInput}
+        currency={currency}
+        estimatedTotal={estimatedTotal}
+        handleTogglePriceTracking={handleTogglePriceTracking}
+        isOwner={isOwner}
+        listId={listId}
+        priceTracking={priceTracking}
+        setBudgetInput={setBudgetInput}
+        totalCost={totalCost}
+      />
+
+      <ReminderSection
+        handleClearReminder={handleClearReminder}
+        handleSetReminderDate={handleSetReminderDate}
+        isOwner={isOwner}
+        listId={listId}
+        reminderDate={reminderDate}
+        reminderEnabled={reminderEnabled}
+      />
+
+      {!!listId && !!isOwner && (
+        <View style={commonStyles.settingsSection}>
+          <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
+            {t('shoppingListScreens.sharing')}
+          </Text>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.actionRow,
+              pressed && styles.pressed,
+            ]}
+            onPress={() => toShareList({ listId: listId })}
+          >
+            <Icon name="person-add" size={20} tone="primary" />
+            <Text role="body" tone="accent" style={styles.actionText}>
+              {t('shoppingListScreens.manageMembers')}
+            </Text>
+            <Icon name="chevron-forward" size={20} tone="textSecondary" />
+          </Pressable>
+
+          {!!isShared && (
+            <Text role="caption" tone="secondary" style={styles.sharedInfo}>
+              {t('shoppingListScreens.sharedWithMembers', {
+                count: collaborators.length,
+              })}
+            </Text>
+          )}
+        </View>
+      )}
+
+      {!!listId && !!isOwner && (
+        <View style={commonStyles.settingsSection}>
+          <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
+            {t('labels.dangerZone')}
+          </Text>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.deleteButton,
+              pressed && styles.pressed,
+            ]}
+            onPress={handleDelete}
+          >
+            <Icon name="trash-outline" size={20} tone="error" />
+            <Text
+              role="bodyStrong"
+              tone="danger"
+              style={styles.deleteButtonText}
+            >
+              {t('labels.deleteList')}
+            </Text>
+          </Pressable>
+        </View>
+      )}
 
       <ModalPicker
         visible={showHomePicker}
@@ -538,6 +526,6 @@ export const ListSettings: React.FC<
         onSelect={handleSelectPattern}
         onCancel={() => setShowPatternPicker(false)}
       />
-    </Screen>
+    </SubScreen>
   );
 };

@@ -1,7 +1,6 @@
 import React, { useRef } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
-import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 
@@ -23,7 +22,7 @@ import { CollaboratorMemberCard } from '#features/shoppingList/components/Collab
 import { ShareCodeSection } from '#features/shoppingList/components/ShareCodeSection';
 import { ShareInviteSection } from '#features/shoppingList/components/ShareInviteSection';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import { Screen } from '#components/templates/Screen';
+import { SubScreen } from '#components/templates/SubScreen';
 import { CollaboratorStatus } from '#/graphql/generated/schemaTypes';
 
 export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
@@ -150,14 +149,14 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   const dataState = useDataState({ loading, hasResult, isEmpty: false });
 
   return (
-    <Screen
-      header={{
-        title: t('shoppingListScreens.shareTitle'),
-        back: () => goBack(),
-        centerTitle: true,
+    <SubScreen
+      title={t('shoppingListScreens.shareTitle')}
+      refresh={{
+        refreshing: isRefetching,
+        onRefresh: () => {
+          void refetch();
+        },
       }}
-      scroll="list"
-      gutter="none"
       state={{
         value: dataState,
         onRetry: () => {
@@ -169,15 +168,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
         message={t('shoppingListScreens.sharingOfflineMessage')}
         description={t('shoppingListScreens.sharingOfflineDescription')}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <PlainScrollRefreshControl
-              refreshing={isRefetching}
-              onRefresh={refetch}
-            />
-          }
-        >
+        <View style={styles.content}>
           {isHomeLinked ? (
             <View style={styles.homeLinkedSection}>
               <AlertBanner
@@ -188,18 +179,16 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                 iconLibrary="Ionicons"
                 variant="warning"
               />
-              <View style={styles.homeLinkedButtonWrapper}>
-                <Button
-                  title={t('shoppingListScreens.manageHome')}
-                  onPress={() =>
-                    toHomeDetail({
-                      homeId: shoppingList.homeId ?? '',
-                    })
-                  }
-                  variant="secondary"
-                  icon="people-outline"
-                />
-              </View>
+              <Button
+                title={t('shoppingListScreens.manageHome')}
+                onPress={() =>
+                  toHomeDetail({
+                    homeId: shoppingList.homeId ?? '',
+                  })
+                }
+                variant="secondary"
+                icon="people-outline"
+              />
             </View>
           ) : (
             <>
@@ -256,7 +245,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
               />
             </View>
           )}
-        </ScrollView>
+        </View>
 
         <CollaboratorPermissionsBottomSheet
           ref={permissionsBottomSheetRef}
@@ -264,15 +253,11 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           onSuccess={refetch}
         />
       </OfflineGate>
-    </Screen>
+    </SubScreen>
   );
 };
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  scrollContent: {
+  content: {
     flexGrow: 1,
   },
   homeLinkedSection: {
@@ -280,14 +265,11 @@ const styles = StyleSheet.create(theme => ({
     borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
-  homeLinkedButtonWrapper: {
-    paddingHorizontal: theme.spacing.md,
-  },
   membersSection: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   leaveSection: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
     marginTop: 'auto',

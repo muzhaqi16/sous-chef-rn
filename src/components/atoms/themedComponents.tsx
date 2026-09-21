@@ -13,7 +13,6 @@ import DateTimePicker, {
   type IOSNativeProps,
 } from '@react-native-community/datetimepicker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 
 import type { Theme } from '#/theme/themes';
@@ -210,9 +209,3 @@ export const PlainScrollRefreshControl = withUnistyles(
 
 /** Theme-reactive Icon wrapper: re-renders so derived `tone`/`color` stay in sync. */
 export const ThemedIcon = withUnistyles(Icon);
-
-/** Theme-reactive SafeAreaView. safe-area-context's is third-party, so the babel
- * plugin does not bind it to the ShadowTree and a theme-derived background
- * passed to it resolves once and never updates. Use for any SafeAreaView whose
- * style reads theme values. */
-export const ThemedSafeAreaView = withUnistyles(SafeAreaView);

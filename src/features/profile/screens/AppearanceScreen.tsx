@@ -1,11 +1,10 @@
 import React from 'react';
-import { View, ScrollView } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { usePreferences, useThemePreferences } from '#store/useAppStore';
 import {
   ThemePreference,
@@ -15,7 +14,7 @@ import {
 import { DENSITY_META, FONT_SCALE_META } from '#/theme/appearanceConfig';
 import { appConfig } from '#/config/appConfig';
 import { Text } from '#components/atoms/Text';
-import { Screen } from '#components/templates/Screen';
+import { SubScreen } from '#components/templates/SubScreen';
 import { colors } from '#/theme/foundations/colors';
 
 const APP_COLORS: {
@@ -57,7 +56,6 @@ const FONT_SCALE_OPTIONS = Object.values(FontScalePreference);
 
 export default function AppearanceScreen() {
   const { t } = useTranslation();
-  const { navigation } = useAppNavigation();
   const { theme, setTheme } = usePreferences();
 
   const {
@@ -72,15 +70,8 @@ export default function AppearanceScreen() {
   } = useThemePreferences();
 
   return (
-    <Screen
-      header={{
-        title: t('labels.appearance'),
-        back: () => navigation.goBack(),
-      }}
-      scroll="list"
-      gutter="none"
-    >
-      <ScrollView contentContainerStyle={styles.content}>
+    <SubScreen title={t('labels.appearance')}>
+      <View style={styles.content}>
         {/* Theme */}
         <Text role="bodyStrong">{t('appearance.themeSection')}</Text>
         <SegmentedControl
@@ -155,18 +146,14 @@ export default function AppearanceScreen() {
             onValueChange={setHighContrast}
           />
         </View>
-      </ScrollView>
-    </Screen>
+      </View>
+    </SubScreen>
   );
 }
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   content: {
-    padding: theme.spacing.md,
+    paddingTop: theme.spacing.md,
     gap: theme.spacing.lg,
   },
   colorRow: {

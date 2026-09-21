@@ -13,11 +13,17 @@ const AUTHORS: Record<string, string> = {
   // The scroll container that IS the page: it gutters everything it renders,
   // its own header blocks and its rows alike.
   'src/components/organisms/ItemList.tsx': 'list owns its content inset',
-  'src/features/pantry/components/PantryContent.tsx': 'list owns its content inset',
-  'src/features/pantry/screens/FilteredPantryItems.tsx': 'list owns its content inset',
-  'src/features/mealPlan/components/DayMealList.tsx': 'list owns its content inset',
+  'src/components/templates/PaginatedHistoryScreen.tsx':
+    'list owns its content inset',
+  'src/features/pantry/components/PantryContent.tsx':
+    'list owns its content inset',
+  'src/features/pantry/screens/FilteredPantryItems.tsx':
+    'list owns its content inset',
+  'src/features/mealPlan/components/DayMealList.tsx':
+    'list owns its content inset',
   'src/features/recipes/screens/MyRecipes.tsx': 'list owns its content inset',
-  'src/features/recipes/screens/SavedRecipes.tsx': 'list owns its content inset',
+  'src/features/recipes/screens/SavedRecipes.tsx':
+    'list owns its content inset',
   'src/features/shoppingList/components/SortableShoppingList/SortableList.tsx':
     'list owns its content inset',
 
@@ -25,11 +31,25 @@ const AUTHORS: Record<string, string> = {
   'src/components/templates/Screen.tsx': 'the gutter prop itself',
   'src/components/templates/Sheet.tsx': 'the gutter prop itself',
 
+  // The collapsing-hero detail screens' content card.
+  'src/components/templates/CollapsingHeroDetail.tsx':
+    'the hero content card is the page',
+
+  // The header bars' inset, derived from the gutter so their glyphs sit on it.
+  'src/styles/commonStyles.ts': 'bar inset aligns the glyph to the gutter',
+
+  // A section whose rules bleed through the gutter it sits in.
+  'src/components/organisms/SettingsSection.tsx':
+    'deliberate negation, inset rules',
+  'src/features/recipes/screens/RecipeDetail/index.tsx':
+    'deliberate negation, edge-bleeding carousel',
+
   // A screen whose loading or skeleton branch renders its children bare under
   // `gutter="none"`, where no list content container exists to inset them.
   'src/features/pantry/screens/PantryMain.tsx': 'insets its bare children',
   'src/features/recipes/screens/RecipeMain.tsx': 'insets its bare children',
-  'src/features/shoppingList/screens/ShoppingListMain.tsx': 'insets its bare children',
+  'src/features/shoppingList/screens/ShoppingListMain.tsx':
+    'insets its bare children',
   'src/features/shoppingList/components/ShoppingListMainContent.tsx':
     'insets its bare children',
 
@@ -124,30 +144,37 @@ describe('the page gutter has one author per page', () => {
     // is responsible for. An empty-list variant is the easy place to do it by
     // accident, and the whole header goes flush to the screen edge with it.
     const optedOut = Object.keys(AUTHORS)
-      .filter(f => /\b(padding|margin)Horizontal:\s*0\b/.test(readFileSync(f, 'utf8')))
+      .filter(f =>
+        /\b(padding|margin)Horizontal:\s*0\b/.test(readFileSync(f, 'utf8')),
+      )
       .sort();
 
     expect(optedOut).toEqual([]);
   });
 
-  it.each(GUTTERLESS)('every host of %s supplies the inset it does not', name => {
-    // `<Name` followed by a tag character, so `<FilterTabsProps>` in a generic
-    // is not read as a render site.
-    const rendersIt = new RegExp(`<${name}[\\s<>/]`);
-    const hosts = sources.filter(f => {
-      if (f.includes('__tests__')) return false;
-      if (f in INHERITS_AN_INSET) return false;
-      return rendersIt.test(readFileSync(f, 'utf8')) && !f.includes(`/${name}/`);
-    });
+  it.each(GUTTERLESS)(
+    'every host of %s supplies the inset it does not',
+    name => {
+      // `<Name` followed by a tag character, so `<FilterTabsProps>` in a generic
+      // is not read as a render site.
+      const rendersIt = new RegExp(`<${name}[\\s<>/]`);
+      const hosts = sources.filter(f => {
+        if (f.includes('__tests__')) return false;
+        if (f in INHERITS_AN_INSET) return false;
+        return (
+          rendersIt.test(readFileSync(f, 'utf8')) && !f.includes(`/${name}/`)
+        );
+      });
 
-    expect(hosts.length).toBeGreaterThan(0);
+      expect(hosts.length).toBeGreaterThan(0);
 
-    const bare = hosts
-      .filter(f => !SUPPLIES_AN_INSET.test(readFileSync(f, 'utf8')))
-      .sort();
+      const bare = hosts
+        .filter(f => !SUPPLIES_AN_INSET.test(readFileSync(f, 'utf8')))
+        .sort();
 
-    expect(bare).toEqual([]);
-  });
+      expect(bare).toEqual([]);
+    },
+  );
 
   it('is read by every skeleton list that is not already inside one', () => {
     // Derived from the tree, not listed: a skeleton list is a file rendering a

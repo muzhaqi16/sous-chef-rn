@@ -16,7 +16,7 @@ import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
-import { Screen } from '#components/templates/Screen';
+import { SubScreen } from '#components/templates/SubScreen';
 
 export const JoinByShareCodeScreen: React.FC<
   StaticScreenProps<{ shareCode?: string } | undefined>
@@ -67,32 +67,16 @@ export const JoinByShareCodeScreen: React.FC<
 
   if (isLoggedOut) {
     return (
-      <Screen
-        header={{
-          title: t('shoppingListScreens.joinTitle'),
-          back: () => goBack(),
-          centerTitle: true,
-        }}
-        scroll="none"
-        gutter="none"
-      >
+      <SubScreen title={t('shoppingListScreens.joinTitle')} scroll="none">
         <View style={styles.loader}>
           <SousChefLoader size="small" showBrand={false} />
         </View>
-      </Screen>
+      </SubScreen>
     );
   }
 
   return (
-    <Screen
-      header={{
-        title: t('shoppingListScreens.joinTitle'),
-        back: () => goBack(),
-        centerTitle: true,
-      }}
-      scroll="none"
-      gutter="none"
-    >
+    <SubScreen title={t('shoppingListScreens.joinTitle')} scroll="none">
       <View style={styles.content}>
         <View style={styles.iconContainer}>
           <Icon name="link-outline" size={48} tone="primary" />
@@ -129,15 +113,11 @@ export const JoinByShareCodeScreen: React.FC<
           style={styles.joinButton}
         />
       </View>
-    </Screen>
+    </SubScreen>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   loader: {
     flex: 1,
     alignItems: 'center',
@@ -145,7 +125,7 @@ const styles = StyleSheet.create(theme => ({
   },
   content: {
     flex: 1,
-    padding: theme.spacing.xl,
+    paddingVertical: theme.spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },

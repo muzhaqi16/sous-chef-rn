@@ -463,7 +463,6 @@ export const FilteredPantryItems: React.FC<
       header={{
         title: config.title,
         back: goBack,
-        centerTitle: true,
         actions: headerRightActions,
       }}
       scroll="list"

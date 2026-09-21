@@ -8,7 +8,7 @@ import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { useResolveShareLink } from '#features/home/hooks/useResolveShareLink';
 import { ShareLinkTargetType } from '#/graphql/generated/schemaTypes';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { Screen } from '#components/templates/Screen';
+import { SubScreen } from '#components/templates/SubScreen';
 
 /**
  * Entry point for a link whose type is unknown up front (`join/:code`):
@@ -52,15 +52,7 @@ export const JoinByLinkScreen: React.FC<
   const invalid = !!code && !loading && !result;
 
   return (
-    <Screen
-      header={{
-        title: t('joinLink.title'),
-        back: goBack,
-        centerTitle: true,
-      }}
-      scroll="none"
-      gutter="none"
-    >
+    <SubScreen title={t('joinLink.title')} scroll="none">
       {invalid ? (
         <ErrorState
           icon="alert-circle-outline"
@@ -78,20 +70,16 @@ export const JoinByLinkScreen: React.FC<
           <SousChefLoader size="small" showBrand={false} />
         </View>
       )}
-    </Screen>
+    </SubScreen>
   );
 };
 
 export default JoinByLinkScreen;
 
-const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
+const styles = StyleSheet.create({
   loader: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-}));
+});

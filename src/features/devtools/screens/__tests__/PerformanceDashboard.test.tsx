@@ -118,8 +118,8 @@ jest.mock('#components/organisms/SettingsSection', () => ({
   },
 }));
 
-jest.mock('#components/templates/ProfileScreenWrapper', () => ({
-  ProfileScreenWrapper: ({
+jest.mock('#components/templates/SubScreen', () => ({
+  SubScreen: ({
     title,
     children,
   }: {

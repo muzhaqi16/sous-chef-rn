@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { usePantryAnalytics } from '#features/pantry/hooks/usePantryAnalytics';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import type { TabRoute } from '#features/pantry/components/TabView/TabView';
@@ -11,7 +10,7 @@ import { UsageTab } from '#features/pantry/components/analyticsTabs/UsageTab';
 import { WasteTab } from '#features/pantry/components/analyticsTabs/WasteTab';
 import { LedgerTab } from '#features/pantry/components/analyticsTabs/LedgerTab';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { Screen } from '#components/templates/Screen';
+import { SubScreen } from '#components/templates/SubScreen';
 
 type PantryAnalyticsProps = StaticScreenProps<{
   pantryId: string;
@@ -21,7 +20,6 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
   useScreenTransition('PantryAnalytics');
   const { t } = useTranslation();
   const { pantryId } = route.params;
-  const { goBack } = useAppNavigation();
 
   const {
     usageData,
@@ -102,13 +100,11 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
   };
 
   return (
-    <Screen
-      header={{
-        title: t('pantryAnalytics.title'),
-        back: goBack,
-        centerTitle: true,
-      }}
-      scroll="none"
+    <SubScreen
+      title={t('pantryAnalytics.title')}
+      // The chip row and every tab scene are the scrollables, each insetting its
+      // own content; a page gutter would clip them and double the inset.
+      scroll="list"
       gutter="none"
     >
       {/* Date Range Filter */}
@@ -116,6 +112,6 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
       {/* Tab View */}
       <TabView routes={routes} renderScene={renderScene} />
-    </Screen>
+    </SubScreen>
   );
 };

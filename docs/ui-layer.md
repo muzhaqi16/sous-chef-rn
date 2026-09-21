@@ -28,12 +28,33 @@ optional:
 
 - **`Screen`** (`src/components/templates/Screen.tsx`) takes `header`
   (`standard | tab | collapsing | none`, plus title, actions, back, close and the
-  offline pill), `scroll` (`none | scroll | form | list`), `gutter`, `refresh`
-  and `state`. It never applies the top inset: the navigator does, and
-  `__tests__/navigation/screenTopInset.test.tsx` renders the composition to
-  prove the inset lands once. A bare `<SafeAreaView>` with no `edges` insets all
-  four sides, and is the usual way a second inset happens. The rest of the
-  scaffold is convention.
+  offline pill), `scroll` (`none | scroll | form | list`), `gutter`, `refresh`,
+  `state`, `footer`, and — in `scroll` mode — `onScroll` (an animated scroll
+  handler) and `scrollTestID`. It never applies the top inset: the navigator
+  does, and `__tests__/navigation/screenTopInset.test.tsx` renders the
+  composition to prove the inset lands once. A bare `<SafeAreaView>` with no
+  `edges` insets all four sides, and is the usual way a second inset happens.
+- **One geometry.** A header bar's first and last glyphs sit on the page gutter:
+  `commonStyles.barInset` pads by `pageGutter − (touchTarget.md − icon.md) / 2`,
+  so a 24pt icon centred in its 44pt target starts where content does. `Header`
+  and `CollapsingHeroDetail`'s bar both use it and are both 60pt tall
+  (`__tests__/ui/headerGeometry.test.tsx`). Standard titles are always centred.
+- **One gutter.** `gutter="page"` (the default) is the only way a screen states
+  its horizontal inset; `gutter="none"` is for a `scroll="list"` screen whose
+  list owns its content inset. Content below the scaffold carries no edge inset
+  of its own (`__tests__/ui/pageGutterHasOneAuthor.test.ts`).
+- **Trailing space.** `scroll | form | none` pad by the bottom inset plus
+  `layout.pageBottom`; a `footer` takes the inset instead. A `list` child reads
+  the same value from `useScreenListInset()`.
+- **Back or close.** A pushed screen shows back; one presented from the bottom
+  (modal or `slide_from_bottom` card) shows close in the same slot.
+- **Presets.** `SubScreen` is a pushed screen whose back returns to the previous
+  screen; `FormScreen` a full-screen form (close + save); `DetailTemplate` a
+  screen of card sections; `PaginatedHistoryScreen` a `SubScreen` over one
+  paginated list; `AuthWrapper` and `OnBoardingWrapper` the auth and onboarding
+  shells. `__tests__/ui/screenUsesTheScaffold.test.ts` holds that every screen
+  renders one of these and assembles no header, back control or safe area of
+  its own.
 - **`Sheet`** (`src/components/templates/Sheet.tsx`) takes
   `view | form | action | list`. `form` supplies both the keyboard offset and
   the input context, so inputs inside resolve to gorhom's `BottomSheetTextInput`.

@@ -1,11 +1,10 @@
 import React from 'react';
-import { View, ScrollView } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { NutritionDetailList } from '#features/pantry/components/NutritionDetailList';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { Screen } from '#components/templates/Screen';
+import { SubScreen } from '#components/templates/SubScreen';
 import type { NutritionFactsValues } from '#domain/nutrition';
 
 type NutritionScreenParams = {
@@ -17,20 +16,11 @@ type NutritionScreenParams = {
 export const NutritionScreen: React.FC<
   StaticScreenProps<NutritionScreenParams>
 > = ({ route }) => {
-  const { goBack } = useAppNavigation();
   const { itemName, nutritionFacts } = route.params;
 
   return (
-    <Screen
-      header={{ title: itemName, back: goBack, centerTitle: true }}
-      scroll="list"
-      gutter="none"
-    >
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+    <SubScreen title={itemName}>
+      <View style={styles.content}>
         {/* Macro Summary at top (without navigation) */}
         <View style={styles.section}>
           <NutritionSummary nutritionFacts={nutritionFacts} showHighlights />
@@ -40,18 +30,14 @@ export const NutritionScreen: React.FC<
         <View style={styles.section}>
           <NutritionDetailList nutritionFacts={nutritionFacts} />
         </View>
-      </ScrollView>
-    </Screen>
+      </View>
+    </SubScreen>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  scrollView: {
-    flex: 1,
-  },
   content: {
-    padding: theme.spacing.md,
-    paddingBottom: theme.spacing['2xl'],
+    paddingTop: theme.spacing.md,
   },
   section: {
     marginBottom: theme.spacing.lg,

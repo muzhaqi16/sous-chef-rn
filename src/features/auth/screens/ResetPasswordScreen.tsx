@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View } from 'react-native';
-import {
-  ThemedKeyboardAwareScrollView,
-  type ThemedTextInputRef,
-} from '#components/atoms/themedComponents';
+import type { ThemedTextInputRef } from '#components/atoms/themedComponents';
 import { useRoute } from '@react-navigation/native';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -218,7 +215,6 @@ export const ResetPasswordScreen: React.FC = () => {
           close: handleGoBack,
         }}
         scroll="none"
-        gutter="none"
       >
         <View style={styles.content}>
           <View style={styles.iconContainer}>
@@ -256,7 +252,6 @@ export const ResetPasswordScreen: React.FC = () => {
           close: handleGoBack,
         }}
         scroll="none"
-        gutter="none"
       >
         <View style={styles.content}>
           <Loading />
@@ -271,14 +266,9 @@ export const ResetPasswordScreen: React.FC = () => {
       header={{
         close: handleGoBack,
       }}
-      scroll="none"
-      gutter="none"
+      scroll="form"
     >
-      <ThemedKeyboardAwareScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.content}>
         <View style={styles.iconContainer}>
           <Icon name="lock-closed-outline" size={64} tone="primary" />
         </View>
@@ -345,27 +335,17 @@ export const ResetPasswordScreen: React.FC = () => {
             {t('auth.resetPasswordButton')}
           </Button>
         </View>
-      </ThemedKeyboardAwareScrollView>
+      </View>
     </Screen>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: theme.spacing.xl,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: theme.spacing.xl,
+    paddingVertical: theme.spacing.xl,
   },
   iconContainer: {
     marginBottom: theme.spacing.xl,

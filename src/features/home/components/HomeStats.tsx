@@ -78,7 +78,7 @@ export const HomeStats: React.FC<HomeStatsProps> = ({
 const styles = StyleSheet.create(theme => ({
   statsContainer: {
     flexDirection: 'row',
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     gap: theme.spacing.base,
   },
   // The animated wrapper is what the row lays out, so the third goes HERE. On

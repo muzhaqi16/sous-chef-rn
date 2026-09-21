@@ -114,8 +114,6 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
         selected={selectedRole}
         onSelect={setSelectedRole}
         size="md"
-        style={styles.chipScroll}
-        contentContainerStyle={styles.chipRowContent}
         edgeFadeColor="background"
       />
     </View>
@@ -124,7 +122,7 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   inviteSection: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
@@ -148,12 +146,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.sm,
-  },
-  chipScroll: {
-    marginHorizontal: -theme.spacing.md,
-  },
-  chipRowContent: {
-    paddingHorizontal: theme.spacing.md,
   },
   sectionTitleSpacing: {
     marginBottom: theme.spacing.base,

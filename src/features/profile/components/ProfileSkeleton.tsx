@@ -1,12 +1,12 @@
 import React from 'react';
 import { View } from 'react-native';
-import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from '#/i18n';
+import { Screen } from '#components/templates/Screen';
 import { SkeletonCircle } from '#components/atoms/Skeleton/SkeletonCircle';
 import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';
 
-const AVATAR_SIZE = 80; // matches ProfileHeader.AVATAR_SIZE
-const USER_INFO_HEIGHT = 72; // matches ProfileHeader.USER_INFO_HEIGHT
+const AVATAR_SIZE = 80; // matches ProfileHero.AVATAR_SIZE
 
 // Mirrors `PROFILE_SETTINGS_CONFIG` in `src/config/settingsConfig.ts`, minus the
 // Developer section that `Environment.shouldEnableDebugFeatures()` gates out.
@@ -20,20 +20,31 @@ const SECTIONS: ReadonlyArray<{ rows: number; hasTitle: boolean }> = [
   { rows: 1, hasTitle: false }, // Logout
 ];
 
-// Dimensions mirror `ProfileHeader` and `SettingRow.rowWrapper` exactly, so the
-// layout doesn't shift when real data lands.
-export const ProfileSkeleton: React.FC = () => {
+// The real header, so back works before the profile lands; the hero and rows
+// mirror `ProfileHero` and `SettingRow.rowWrapper` so nothing shifts when it does.
+export const ProfileSkeleton: React.FC<{ onBack: () => void }> = ({
+  onBack,
+}) => {
+  const { t } = useTranslation();
   return (
-    <ThemedSafeAreaView style={styles.container} edges={['left', 'right']}>
-      <View style={styles.header}>
-        <SkeletonCircle size={44} />
+    <Screen
+      scroll="none"
+      header={{
+        back: onBack,
+        actions: [
+          {
+            icon: 'ellipsis-vertical',
+            onPress: onBack,
+            disabled: true,
+            accessibilityLabel: t('labels.moreOptions'),
+          },
+        ],
+      }}
+    >
+      <View style={styles.hero}>
         <SkeletonCircle size={AVATAR_SIZE} />
-        <SkeletonCircle size={44} />
-      </View>
-
-      {/* Fixed height matches ProfileHeader's expanded `userInfoStyle.height`. */}
-      <View style={styles.userInfo}>
-        <SkeletonLine width="55%" height={14} />
+        <SkeletonLine width="40%" height={16} />
+        <SkeletonLine width="55%" height={12} />
       </View>
 
       {SECTIONS.map((section, idx) => (
@@ -58,31 +69,18 @@ export const ProfileSkeleton: React.FC = () => {
           </View>
         </View>
       ))}
-    </ThemedSafeAreaView>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: 'row',
+  hero: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.xl,
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
-  },
-  userInfo: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: USER_INFO_HEIGHT,
+    gap: theme.spacing.sm,
+    paddingBottom: theme.spacing.md,
   },
   section: {
     marginBottom: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
   },
   sectionTitle: {
     marginBottom: theme.spacing.md,
