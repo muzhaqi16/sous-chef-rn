@@ -14092,7 +14092,6 @@ Always include a __typename so the variant can be discriminated.
 union UpdateRecipeIngredientsResult = ConflictError | ForbiddenError | NotFoundError | UpdateRecipeIngredientsPayload | ValidationError
 
 input UpdateRecipeInput {
-  addTags: [String!]
   attribution: RecipeAttributionInput
   description: String
   dietary: DietaryTagsInput
@@ -14103,7 +14102,6 @@ input UpdateRecipeInput {
   name: String
   notes: String
   nutrition: NutritionInfoInput
-  removeTags: [String!]
   status: RecipeStatus
   tags: [String!]
   timing: TimeEstimatesInput
