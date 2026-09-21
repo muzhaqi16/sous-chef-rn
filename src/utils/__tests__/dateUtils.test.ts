@@ -3,7 +3,6 @@ import {
   extractDateString,
   dateStringToISO,
   safeParseDate,
-  safeFormatDate,
 } from '../dateUtils';
 
 describe('extractDateString', () => {
@@ -109,21 +108,6 @@ describe('safeParseDate', () => {
 
   it('returns null for invalid string', () => {
     expect(safeParseDate('not-a-date')).toBeNull();
-  });
-});
-
-describe('safeFormatDate', () => {
-  it('formats valid date to ISO string', () => {
-    const result = safeFormatDate('2024-01-15T00:00:00.000Z');
-    expect(result).toBe('2024-01-15T00:00:00.000Z');
-  });
-
-  it('returns default fallback for invalid input', () => {
-    expect(safeFormatDate(null)).toBe('Recently');
-  });
-
-  it('returns custom fallback for invalid input', () => {
-    expect(safeFormatDate(null, 'Unknown')).toBe('Unknown');
   });
 });
 

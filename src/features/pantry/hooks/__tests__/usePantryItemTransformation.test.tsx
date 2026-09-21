@@ -2,8 +2,6 @@
 
 import {
   formatStorageState,
-  calculateExpiresIn,
-  getLocation,
   getExpirationStatus,
   formatPackageBreakdown,
   formatPackageBreakdownFull,
@@ -37,39 +35,6 @@ describe('formatStorageState', () => {
     // Arrives as wire JSON, which the generated enum cannot describe.
     const newerMember: StorageState = JSON.parse('"CRYOGENIC"');
     expect(formatStorageState(newerMember, t)).toBe('Unknown');
-  });
-});
-
-describe('calculateExpiresIn', () => {
-  it('returns null for null expiresAt', () => {
-    expect(calculateExpiresIn(null)).toBeNull();
-  });
-  it('returns negative for past dates', () => {
-    const pastDate = new Date();
-    pastDate.setDate(pastDate.getDate() - 3);
-    const result = calculateExpiresIn(pastDate.toISOString());
-    expect(result).toBeLessThan(0);
-  });
-  it('returns positive for future dates', () => {
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + 5);
-    const result = calculateExpiresIn(futureDate.toISOString());
-    expect(result).toBeGreaterThan(0);
-  });
-});
-
-describe('getLocation', () => {
-  it('returns fridge for REFRIGERATED', () => {
-    expect(getLocation('REFRIGERATED')).toBe('fridge');
-  });
-  it('returns freezer for FROZEN', () => {
-    expect(getLocation('FROZEN')).toBe('freezer');
-  });
-  it('returns pantry for AMBIENT', () => {
-    expect(getLocation('AMBIENT')).toBe('pantry');
-  });
-  it('returns pantry for null', () => {
-    expect(getLocation(null)).toBe('pantry');
   });
 });
 

@@ -1,5 +1,5 @@
 import { changeLanguage } from '#/i18n/config';
-import { createItemSchema, unitQtyRule, unitsRule } from '../itemValidation';
+import { createItemSchema, unitsRule } from '../itemValidation';
 
 /**
  * The units rows validate on every keystroke, so their number rules are the
@@ -43,10 +43,6 @@ describe('comma-decimal input', () => {
         defaultConsumeIncrement: '0,5',
       }),
     ).resolves.toBe(0.5);
-  });
-
-  it('accepts 0,5 as a unit quantity', async () => {
-    await expect(unitQtyRule.validate('0,5')).resolves.toBe(0.5);
   });
 
   it('accepts 1,5 as a net weight value', async () => {

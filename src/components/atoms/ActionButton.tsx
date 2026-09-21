@@ -114,5 +114,3 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
   },
 }));
-
-export default ActionButton;

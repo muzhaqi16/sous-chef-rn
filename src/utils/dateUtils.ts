@@ -99,12 +99,3 @@ export const dateStringToISO = (dateStr: string): string => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
   return `${dateStr}T00:00:00.000Z`;
 };
-
-/** Format a date-like value to an ISO string, with fallback. */
-export const safeFormatDate = (
-  value: unknown,
-  fallback = 'Recently',
-): string => {
-  const date = safeParseDate(value);
-  return date ? date.toISOString() : fallback;
-};

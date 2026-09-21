@@ -1,5 +1,5 @@
-import { object, string, array } from 'yup';
-import { emailRule, normalizeSmartPunctuation } from '#utils/validation/common';
+import { object, string } from 'yup';
+import { normalizeSmartPunctuation } from '#utils/validation/common';
 import { t, type KeyUnder } from '#/i18n';
 
 /**
@@ -38,9 +38,6 @@ const shoppingListNameRule = string()
   .max(50, msg('listMax', { count: 50 }))
   .trim();
 
-// member invitation email rule (reuses emailRule)
-const inviteEmailRule = emailRule.lowercase().trim();
-
 // ----------------------------------------------------------------------------
 
 export const getCreateHomeSchema = (needsHome: boolean = true) => {
@@ -50,42 +47,9 @@ export const getCreateHomeSchema = (needsHome: boolean = true) => {
   });
 };
 
-// usage in CreateHomeScreen:
-// const needsHome = homes.length === 0;
-// const { control, handleSubmit, formState } = useForm<FormValues>({
-//   resolver: yupResolver(getCreateHomeSchema(needsHome)),
-//   defaultValues: { homeName: '', pantryName: 'Kitchen Pantry' },
-// })
-
 // ----------------------------------------------------------------------------
 
-// 7) create shopping list schema
+// create shopping list schema
 export const createShoppingListSchema = object({
   shoppingListName: shoppingListNameRule,
 });
-
-export const getCreateShoppingListSchema = () => createShoppingListSchema;
-
-// usage in CreateShoppingListScreen:
-// const { control, handleSubmit, formState } = useForm<FormValues>({
-//   resolver: yupResolver(getCreateShoppingListSchema()),
-//   defaultValues: { shoppingListName: 'Weekly Groceries' },
-// })
-
-// ----------------------------------------------------------------------------
-
-// 8) invite members schema
-export const inviteMembersSchema = object({
-  email: inviteEmailRule,
-});
-
-export const getInviteMembersSchema = () => inviteMembersSchema;
-
-// 9) select pantry items schema (optional selection)
-export const selectPantryItemsSchema = object({
-  selectedItems: array()
-    .of(string())
-    .max(5, msg('itemsMax', { count: 5 })),
-});
-
-export const getSelectPantryItemsSchema = () => selectPantryItemsSchema;

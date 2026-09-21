@@ -145,12 +145,6 @@ jest.mock('#constants/animations', () => ({
   staggeredEntryAnimation: { duration: 300 },
 }));
 
-jest.mock('#features/shoppingList/context/StaggeredEntryContext', () => ({
-  useStaggeredEntry: jest.fn(() => ({
-    getEntryDelay: jest.fn(() => 0),
-  })),
-}));
-
 // The row reads its swipe-action factory from this context now: it is a
 // derivation the row calls while rendering, not a command.
 jest.mock('#components/organisms/itemSwipeActionsContext', () => ({

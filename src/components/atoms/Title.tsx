@@ -21,5 +21,3 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
   },
 }));
-
-export default Title;

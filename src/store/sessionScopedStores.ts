@@ -63,10 +63,8 @@ export const resetSessionScopedStores = (): void => {
   }
 };
 
-/** Test seam. */
-export const clearSessionScopedStores = (): void => {
-  stores.clear();
-};
-
-/** The names currently registered, for tests that assert coverage. */
+/**
+ * The names currently registered, for tests that assert coverage.
+ * @internal Test seam.
+ */
 export const registeredSessionScopedStores = (): string[] => [...stores.keys()];

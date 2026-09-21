@@ -82,8 +82,9 @@ Map and reasoning: `docs/architecture.md`.
 - **Aliases** are added ONLY in `tsconfig.json` `paths`. Each top-level `src/`
   folder is `#<name>`; irregular: `#/*` → `src/*`, `#operations`,
   `#generated`, `#/test-utils/*` → `__tests__/helpers/*`.
-- **A `src/` module needs a PRODUCTION importer** (`check:dead-modules`): a test
-  or `jest.mock()` does not count, so dead code goes with its test.
+- **A `src/` module or export needs a PRODUCTION importer** (`check:dead-modules`):
+  a test or `jest.mock()` does not count, so dead code goes with its test; a
+  deliberate test seam is tagged `@internal`.
 - **Every member a hook returns is read by production code**
   (`hookMembersAreConsumed.test.ts`). An unread one is a gap to wire or code to
   delete, never an allowlist entry.

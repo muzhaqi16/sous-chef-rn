@@ -197,5 +197,3 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
   },
 }));
-
-export default TextEditBottomSheet;

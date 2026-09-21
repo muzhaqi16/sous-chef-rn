@@ -78,7 +78,6 @@
     "listRequired": "Emri i listës është i detyrueshëm",
     "listMin": "Emri i listës duhet të ketë të paktën {{count}} karaktere",
     "listMax": "Emri i listës duhet të ketë më pak se {{count}} karaktere",
-    "itemsMax": "Mund të zgjedhësh deri në {{count}} artikuj",
     "homeChars": "Emri i shtëpisë mund të përmbajë vetëm shkronja, numra, hapësira, viza, apostrofa dhe thonjëza"
   },
   "onboarding": {

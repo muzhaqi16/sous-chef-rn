@@ -313,19 +313,6 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
   );
 };
 
-// Convenience exports
-export const SousChefLoaderSmall: React.FC<
-  Omit<SousChefLoaderProps, 'size'>
-> = props => <SousChefLoader size="small" {...props} />;
-
-export const SousChefLoaderMedium: React.FC<
-  Omit<SousChefLoaderProps, 'size'>
-> = props => <SousChefLoader size="medium" {...props} />;
-
-export const SousChefLoaderLarge: React.FC<
-  Omit<SousChefLoaderProps, 'size'>
-> = props => <SousChefLoader size="large" {...props} />;
-
 const componentStyles = StyleSheet.create(theme => ({
   container: {
     alignItems: 'center',

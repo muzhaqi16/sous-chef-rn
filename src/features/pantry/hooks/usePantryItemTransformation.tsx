@@ -1,7 +1,7 @@
+import type { StorageState } from '#/graphql/generated/schemaTypes';
 import {
   type AcquisitionMethod,
   ItemCondition,
-  StorageState,
 } from '#/graphql/generated/schemaTypes';
 import {
   acquisitionMethodLabelKey,
@@ -45,30 +45,6 @@ export const formatStorageState = (
   // `string`: the wire can carry a member the generated enum predates.
   const key: string = `storageStateShort.${state}`;
   return isTranslationKey(key) ? translate(key) : translate('labels.unknown');
-};
-
-// Helper to calculate days until expiry (negative if expired)
-export const calculateExpiresIn = (
-  expiresAt?: string | null,
-): number | null => {
-  if (!expiresAt) return null;
-  const now = new Date();
-  const expiry = new Date(expiresAt);
-  return Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-};
-
-// Helper to get location from storage state
-export const getLocation = (storageState?: string | null): PantryLocation => {
-  switch (storageState) {
-    case StorageState.Refrigerated:
-      return 'fridge';
-    case StorageState.Frozen:
-      return 'freezer';
-    case null:
-    case undefined:
-    default:
-      return 'pantry';
-  }
 };
 
 // Helper to get expiration status

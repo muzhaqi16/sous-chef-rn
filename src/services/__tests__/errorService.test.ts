@@ -19,11 +19,7 @@ jest.mock('@apollo/client/errors', () => ({
   CombinedProtocolErrors: { is: jest.fn() },
 }));
 
-import {
-  errorService,
-  localizedErrorMessage,
-  useErrorService,
-} from '../errorService';
+import { errorService, localizedErrorMessage } from '../errorService';
 import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
 import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
@@ -680,32 +676,6 @@ describe('errorService', () => {
   // -----------------------------------------------------------------------
   // useErrorService
   // -----------------------------------------------------------------------
-  describe('useErrorService', () => {
-    it('returns all expected methods', () => {
-      const service = useErrorService();
-
-      expect(typeof service.handleApolloError).toBe('function');
-      expect(typeof service.parseApolloError).toBe('function');
-      expect(typeof service.handleMutation).toBe('function');
-      expect(typeof service.handleMutationWithVersionConflict).toBe('function');
-      expect(typeof service.getUserFriendlyMessage).toBe('function');
-      expect(typeof service.getErrorCategory).toBe('function');
-      expect(typeof service.shouldRetry).toBe('function');
-      expect(typeof service.isAuthError).toBe('function');
-      expect(typeof service.reportError).toBe('function');
-    });
-
-    it('bound methods work correctly', () => {
-      const service = useErrorService();
-
-      expect(service.getUserFriendlyMessage('AUTH_TOKEN_EXPIRED')).toBe(
-        'Your session has expired. Please sign in again',
-      );
-      expect(service.getErrorCategory('VALIDATION_FAILED')).toBe('Validation');
-      expect(service.shouldRetry('SERVICE_TIMEOUT')).toBe(true);
-      expect(service.isAuthError('AUTH_TOKEN_INVALID')).toBe(true);
-    });
-  });
 });
 
 describe('localizedErrorMessage', () => {

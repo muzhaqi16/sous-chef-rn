@@ -28,10 +28,3 @@ export function usePreservedQueryData<T>(
 
   return lastSuccessfulValue;
 }
-
-/** Array form of `usePreservedQueryData` — always an array, never undefined. */
-export function usePreservedArrayData<T>(
-  currentData: T[] | undefined | null,
-): T[] {
-  return usePreservedQueryData(currentData ?? undefined, [] as T[]);
-}

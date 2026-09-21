@@ -3,21 +3,9 @@
  * Verifies they export expected values and structures.
  */
 
-import {
-  SHEET,
-  SLIDE_PRESETS,
-  staggeredEntryAnimation,
-  screenEntryAnimation,
-  listItemExitAnimation,
-  listItemFastExitAnimation,
-  listItemEntryAnimation,
-} from '../animations';
+import { SHEET, SLIDE_PRESETS } from '../animations';
 import { SKILL_LEVELS, DIETARY_LIMITS } from '#domain/dietary';
-import {
-  HIT_SLOP,
-  HIT_SLOP_SM,
-  HIT_SLOP_LG,
-} from '#features/shoppingList/constants/touch';
+import { HIT_SLOP } from '#features/shoppingList/constants/touch';
 import {
   getTabBarBottomPadding,
   getScrollClearancePadding,
@@ -54,31 +42,6 @@ describe('animations constants', () => {
     expect(SLIDE_PRESETS.subtle.slideDistance).toBe(50);
     expect(SLIDE_PRESETS.exitWithFade.withOpacity).toBe(true);
   });
-
-  it('exports staggeredEntryAnimation', () => {
-    expect(staggeredEntryAnimation.maxItems).toBe(6);
-    expect(staggeredEntryAnimation.initialDelay).toBe(30);
-  });
-
-  it('exports screenEntryAnimation', () => {
-    expect(screenEntryAnimation.delayPerItem).toBe(50);
-    expect(screenEntryAnimation.maxItems).toBe(5);
-  });
-
-  it('exports listItemExitAnimation', () => {
-    expect(listItemExitAnimation.slide.duration).toBe(300);
-    expect(listItemExitAnimation.removalDelay).toBe(300);
-  });
-
-  it('exports listItemFastExitAnimation', () => {
-    expect(listItemFastExitAnimation.slide.duration).toBe(200);
-    expect(listItemFastExitAnimation.removalDelay).toBe(200);
-  });
-
-  it('exports listItemEntryAnimation', () => {
-    expect(listItemEntryAnimation.fade.duration).toBe(250);
-    expect(listItemEntryAnimation.slide.distance).toBe(50);
-  });
 });
 
 describe('dietary constants', () => {
@@ -101,14 +64,6 @@ describe('dietary constants', () => {
 describe('touch constants', () => {
   it('exports HIT_SLOP with all sides', () => {
     expect(HIT_SLOP).toEqual({ top: 8, bottom: 8, left: 8, right: 8 });
-  });
-
-  it('exports HIT_SLOP_SM', () => {
-    expect(HIT_SLOP_SM).toEqual({ top: 4, bottom: 4, left: 4, right: 4 });
-  });
-
-  it('exports HIT_SLOP_LG', () => {
-    expect(HIT_SLOP_LG).toEqual({ top: 12, bottom: 12, left: 12, right: 12 });
   });
 });
 

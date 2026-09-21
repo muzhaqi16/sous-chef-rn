@@ -2,7 +2,6 @@ import {
   isQueryComplexityError,
   getQueryComplexityDetails,
   describeQueryComplexity,
-  handleQueryComplexityError,
   QueryComplexityErrorType,
 } from '../queryComplexity';
 
@@ -151,52 +150,5 @@ describe('describeQueryComplexity', () => {
   it('returns default message for non-complexity error', () => {
     const message = describeQueryComplexity({ message: 'other' });
     expect(message).toContain('too complex');
-  });
-});
-
-describe('handleQueryComplexityError', () => {
-  it('returns true for complexity error', () => {
-    const error = {
-      graphQLErrors: [
-        { extensions: { code: QueryComplexityErrorType.TOO_COMPLEX } },
-      ],
-    };
-    expect(handleQueryComplexityError(error)).toBe(true);
-  });
-
-  it('returns false for non-complexity error', () => {
-    expect(handleQueryComplexityError({ message: 'other' })).toBe(false);
-  });
-
-  it('calls retry callback for pagination limit errors', () => {
-    const retry = jest.fn();
-    const error = {
-      graphQLErrors: [
-        {
-          message: 'limit',
-          extensions: {
-            code: QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED,
-            maxPagination: 100,
-            requestedPagination: 500,
-          },
-        },
-      ],
-    };
-    handleQueryComplexityError(error, retry);
-    expect(retry).toHaveBeenCalled();
-  });
-
-  it('does not call retry for non-pagination errors', () => {
-    const retry = jest.fn();
-    const error = {
-      graphQLErrors: [
-        {
-          message: 'complex',
-          extensions: { code: QueryComplexityErrorType.TOO_COMPLEX },
-        },
-      ],
-    };
-    handleQueryComplexityError(error, retry);
-    expect(retry).not.toHaveBeenCalled();
   });
 });

@@ -164,9 +164,7 @@
   "createHome": {
     "allowJoinCode": "Allow others to join with a code",
     "pantryFailedTitle": "Notice",
-    "pantryFailedBody": "Pantry creation failed but you can create it later from settings.",
-    "skipPantryTitle": "Skip Pantry Creation?",
-    "skipPantryBody": "You have a home but no pantry. You can create one later from settings."
+    "pantryFailedBody": "Pantry creation failed but you can create it later from settings."
   },
   "homeMembers": {
     "noMembers": "No members"

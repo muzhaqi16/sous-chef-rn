@@ -42,7 +42,7 @@
     "check:launch-arg-auth": "node scripts/check-launch-arg-auth.mjs",
     "check:unistyles-variants": "node scripts/check-unistyles-variant-staleness.mjs",
     "check:compiler-bailouts": "node scripts/check-compiler-bailouts.mjs",
-    "check:dead-modules": "knip --include files --no-progress",
+    "check:dead-modules": "knip --include files,exports,nsExports --no-progress",
     "check:import-cycles": "madge --circular src",
     "e2e:prune": "node scripts/prune-e2e-artifacts.mjs",
     "build:prune": "node scripts/prune-build-output.mjs",

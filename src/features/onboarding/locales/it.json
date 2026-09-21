@@ -78,7 +78,6 @@
     "listRequired": "Il nome della lista è obbligatorio",
     "listMin": "Il nome della lista deve contenere almeno {{count}} caratteri",
     "listMax": "Il nome della lista deve contenere meno di {{count}} caratteri",
-    "itemsMax": "Puoi selezionare fino a {{count}} articoli",
     "homeChars": "Il nome della casa può contenere solo lettere, numeri, spazi, trattini, apostrofi e virgolette"
   },
   "onboarding": {

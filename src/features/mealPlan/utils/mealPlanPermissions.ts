@@ -30,10 +30,6 @@ export function isMealPlanOwner(
   return !!mealPlan.user?.id && !!userId && mealPlan.user.id === userId;
 }
 
-export function isPersonalPlan(mealPlan: MealPlanData): boolean {
-  return !mealPlan.homeId;
-}
-
 /** Via the shared HomeLinkedResource model: MEMBER edits but cannot delete. */
 export function getMealPlanPermissions(
   mealPlan: MealPlanData,

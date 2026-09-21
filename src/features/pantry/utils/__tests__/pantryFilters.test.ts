@@ -1,7 +1,6 @@
 import {
   filterByLocation,
   locationFilterToQueryFilter,
-  isBuiltInFilter,
   sortOptionToOrderBy,
 } from '../pantryFilters';
 import { StorageState, SortOrder } from '#/graphql/generated/schemaTypes';
@@ -9,28 +8,6 @@ import {
   PantrySortOption,
   PantrySortDirection,
 } from '#store/slices/preferenceTypes';
-
-describe('isBuiltInFilter', () => {
-  it('returns true for "all"', () => {
-    expect(isBuiltInFilter('all')).toBe(true);
-  });
-
-  it('returns true for "fridge"', () => {
-    expect(isBuiltInFilter('fridge')).toBe(true);
-  });
-
-  it('returns true for "freezer"', () => {
-    expect(isBuiltInFilter('freezer')).toBe(true);
-  });
-
-  it('returns true for "pantry"', () => {
-    expect(isBuiltInFilter('pantry')).toBe(true);
-  });
-
-  it('returns false for custom location ID', () => {
-    expect(isBuiltInFilter('custom-location-123')).toBe(false);
-  });
-});
 
 describe('filterByLocation', () => {
   const items = [

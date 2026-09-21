@@ -32,11 +32,15 @@ export function markSubscriptionRejected(document: DocumentNode): boolean {
   return true;
 }
 
+/** @internal Test seam: the registry read outside React. */
 export function isSubscriptionRejected(document: DocumentNode): boolean {
   return rejected.has(operationNameOf(document));
 }
 
-/** Test / session-end hook. Not a retry path. */
+/**
+ * Test / session-end hook. Not a retry path.
+ * @internal Test seam.
+ */
 export function resetRejectedSubscriptions(): void {
   if (rejected.size === 0) return;
   rejected.clear();

@@ -38,9 +38,6 @@ import { storeApi } from '#store';
 type ManagementApi = ReturnType<typeof useStorageLocationManagement>;
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
-  usePreservedArrayData: jest.fn(
-    <T>(data: T[] | null | undefined) => data || [],
-  ),
   // usePreservedNodes composes usePreservedQueryData internally — passthrough.
   usePreservedQueryData: jest.fn(
     <T>(data: T | undefined, initial: T): T => data ?? initial,

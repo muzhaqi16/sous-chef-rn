@@ -19,12 +19,6 @@ export const loginSchema = object({
   password: passwordRule,
 });
 
-// usage in your LoginForm:
-// const { control, handleSubmit, formState } = useForm<FormValues>({
-//   resolver: yupResolver(loginSchema),
-//   defaultValues: { email: '', password: '' },
-// })
-
 export const getLoginValidationSchema = () => loginSchema;
 
 // ----------------------------------------------------------------------------
@@ -39,12 +33,6 @@ export const signUpSchema = object({
     .required(msg('passwordConfirmRequired')),
 });
 
-// usage in SignUpForm:
-// const { control, handleSubmit, formState } = useForm<FormValues>({
-//   resolver: yupResolver(signUpSchema),
-//   defaultValues: { email: '', password: '', confirmPassword: '' },
-// })
-
 export const getSignUpValidationSchema = () => signUpSchema;
 
 // ----------------------------------------------------------------------------
@@ -54,22 +42,11 @@ export const forgotPasswordSchema = object({
   email: emailRule,
 });
 
-// usage in ForgotPasswordScreen:
-// const { control, handleSubmit, formState } = useForm<{email:string}>({
-//   resolver: yupResolver(forgotPasswordSchema),
-//   defaultValues: { email: '' },
-// })
-
 export const getForgotPasswordValidationSchema = () => forgotPasswordSchema;
 
 // ----------------------------------------------------------------------------
 
 // 4) email-verification (6-digit code)
-// usage in CodeVerificationScreen:
-// const { control, handleSubmit, formState } = useForm({
-//   resolver: yupResolver(getEmailVerificationValidationSchema()),
-//   defaultValues: { code: '' },
-// })
 
 export const getEmailVerificationValidationSchema = () =>
   object({
@@ -88,12 +65,6 @@ export const resetPasswordSchema = object({
     .required(msg('newPasswordConfirmRequired')),
 });
 
-// usage in ResetPasswordScreen:
-// const { control, handleSubmit, formState } = useForm<ResetPasswordForm>({
-//   resolver: yupResolver(resetPasswordSchema),
-//   defaultValues: { newPassword: '', confirmPassword: '' },
-// })
-
 export const getResetPasswordValidationSchema = () => resetPasswordSchema;
 
 // ----------------------------------------------------------------------------
@@ -109,11 +80,3 @@ export const changePasswordSchema = object({
     .oneOf([ref('newPassword')], msg('passwordsMustMatch'))
     .required(msg('newPasswordConfirmRequired')),
 });
-
-// usage in ChangePasswordScreen:
-// const { control, handleSubmit, formState } = useForm<ChangePasswordForm>({
-//   resolver: yupResolver(changePasswordSchema),
-//   defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
-// })
-
-export const getChangePasswordValidationSchema = () => changePasswordSchema;

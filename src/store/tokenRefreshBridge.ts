@@ -53,9 +53,3 @@ registerSessionTeardown('token-refresh', cancelProactiveRefresh);
 export const refreshTokenNow = async (): Promise<void> => {
   await bridge?.refreshNow();
 };
-
-/** Test seam: forget the registration and any pending schedule. */
-export const clearTokenRefreshBridge = (): void => {
-  bridge = null;
-  pendingToken = null;
-};

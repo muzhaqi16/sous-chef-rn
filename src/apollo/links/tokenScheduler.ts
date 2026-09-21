@@ -145,6 +145,7 @@ export function cancelTokenRefresh() {
 /**
  * Get current schedule state (for debugging and testing)
  * @returns Object with schedule status
+ * @internal Test seam.
  */
 export function getScheduleState() {
   return {

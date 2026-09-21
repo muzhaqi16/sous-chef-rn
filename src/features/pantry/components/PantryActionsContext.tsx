@@ -56,11 +56,3 @@ export const usePantryActions = (): PantryActionsContextValue => {
   }
   return { actions, swipeable };
 };
-
-/** Same, but returns null outside the provider instead of throwing. */
-export const usePantryActionsOptional =
-  (): PantryActionsContextValue | null => {
-    const actions = actionsContext.useOptionalActions();
-    const swipeable = useContext(SwipeableContext);
-    return actions && swipeable ? { actions, swipeable } : null;
-  };

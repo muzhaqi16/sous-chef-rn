@@ -140,6 +140,7 @@ export const handleSubscriptionError = (
   return true;
 };
 
+/** @internal Test seam. */
 export const clearRetryState = (operationName: string): void => {
   retryStates.delete(operationName);
 };

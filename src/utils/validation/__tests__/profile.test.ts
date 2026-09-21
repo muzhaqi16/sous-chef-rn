@@ -1,11 +1,6 @@
 import type { Schema } from 'yup';
 import { ValidationError } from 'yup';
-import {
-  profileFieldSchemas,
-  getValidationSchemaForField,
-  profileSchema,
-  getProfileValidationSchema,
-} from '../profile';
+import { profileFieldSchemas, getValidationSchemaForField } from '../profile';
 import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
 
 const validate = async (schema: Schema, data: Record<string, unknown>) => {
@@ -107,10 +102,6 @@ describe('profile validation', () => {
       expect(msg).toBeTruthy();
     });
 
-    it('allows undefined (optional via profileSchema)', async () => {
-      expect(await validate(profileSchema, {})).toBeNull();
-    });
-
     it('rejects invalid format', async () => {
       const msg = await validate(schema, { dateOfBirth: '06-15-1990' });
       expect(msg).toBeTruthy();
@@ -185,30 +176,6 @@ describe('profile validation', () => {
     it('treats an inherited property name as an unknown field', async () => {
       const schema = getValidationSchemaForField('toString');
       await expect(schema.validate({ toString: 'x' })).resolves.toBeTruthy();
-    });
-  });
-
-  describe('profileSchema', () => {
-    it('validates a complete profile', async () => {
-      const data = {
-        firstName: 'John',
-        lastName: 'Doe',
-        displayName: 'johndoe',
-        bio: 'Hi there',
-        gender: 'male',
-        profileVisibility: 'PUBLIC',
-      };
-      expect(await validate(profileSchema, data)).toBeNull();
-    });
-
-    it('allows all optional fields to be absent', async () => {
-      expect(await validate(profileSchema, {})).toBeNull();
-    });
-  });
-
-  describe('getProfileValidationSchema', () => {
-    it('returns the profile schema', () => {
-      expect(getProfileValidationSchema()).toBe(profileSchema);
     });
   });
 });

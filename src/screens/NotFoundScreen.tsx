@@ -51,5 +51,3 @@ const styles = StyleSheet.create(theme => ({
     maxWidth: 200,
   },
 }));
-
-export default NotFoundScreen;

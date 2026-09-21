@@ -122,26 +122,3 @@ export const getValidationSchemaForField = (fieldKey: string) => {
     [fieldKey]: string(),
   });
 };
-
-// Complete profile validation schema (for full form validation if needed)
-export const profileSchema = object({
-  firstName: nameRule.optional(),
-  lastName: nameRule.optional(),
-  displayName: displayNameRule.optional(),
-  bio: bioRule.optional(),
-  phone: phoneRule.optional(),
-  website: urlRule.optional(),
-  dateOfBirth: dateOfBirthRule.optional(),
-  avatar: urlRule.optional(),
-  coverImage: urlRule.optional(),
-  gender: genderRule.optional(),
-  profileVisibility: profileVisibilityRule.optional(),
-});
-
-// usage in profile editing:
-// const { control, handleSubmit, formState } = useForm<{firstName: string}>({
-//   resolver: yupResolver(getValidationSchemaForField('firstName')),
-//   defaultValues: { firstName: profile?.firstName || '' },
-// })
-
-export const getProfileValidationSchema = () => profileSchema;

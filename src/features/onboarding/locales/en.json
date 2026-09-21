@@ -78,7 +78,6 @@
     "listRequired": "Shopping list name is required",
     "listMin": "Shopping list name must be at least {{count}} characters",
     "listMax": "Shopping list name must be less than {{count}} characters",
-    "itemsMax": "You can select up to {{count}} items",
     "homeChars": "Home name can only contain letters, numbers, spaces, hyphens, apostrophes, and quotes"
   },
   "onboarding": {

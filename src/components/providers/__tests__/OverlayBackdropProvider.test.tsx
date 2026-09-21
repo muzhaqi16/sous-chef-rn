@@ -5,7 +5,7 @@ import { Text } from '#components/atoms/Text';
 import { Pressable } from '#components/atoms/themedComponents';
 import {
   OverlayBackdropProvider,
-  useOverlayBackdrop,
+  useOverlayBackdropOptional,
   useBackdropClaim,
   GlobalBackdrop,
 } from '../OverlayBackdropProvider';
@@ -45,7 +45,7 @@ beforeEach(() => {
 });
 
 const ImperativeConsumer: React.FC = () => {
-  const { claim, release } = useOverlayBackdrop();
+  const { claim, release } = useOverlayBackdropOptional();
   const idRef = React.useRef<string | null>(null);
   return (
     <View>
@@ -256,7 +256,7 @@ describe('OverlayBackdropProvider', () => {
     let dynamicOnPressFired = false;
 
     const MixedConsumer: React.FC = () => {
-      const { claim, release } = useOverlayBackdrop();
+      const { claim, release } = useOverlayBackdropOptional();
       useEffect(() => {
         releaseRef = release;
         staticId = claim({
@@ -324,7 +324,7 @@ describe('OverlayBackdropProvider', () => {
     let claimFn: ((opts?: { opacity: unknown }) => string) | null = null;
     let releaseFn: ((id: string) => void) | null = null;
     const Capture: React.FC = () => {
-      const ctx = useOverlayBackdrop();
+      const ctx = useOverlayBackdropOptional();
       useEffect(() => {
         claimFn = ctx.claim as typeof claimFn;
         releaseFn = ctx.release;
@@ -360,7 +360,7 @@ describe('OverlayBackdropProvider', () => {
   it('release is a no-op for unknown ids', () => {
     let releaseFn: ((id: string) => void) | null = null;
     const Capture: React.FC = () => {
-      const ctx = useOverlayBackdrop();
+      const ctx = useOverlayBackdropOptional();
       useEffect(() => {
         releaseFn = ctx.release;
       }, [ctx]);
@@ -375,19 +375,6 @@ describe('OverlayBackdropProvider', () => {
     );
 
     expect(() => releaseFn?.('nonexistent-id')).not.toThrow();
-  });
-});
-
-describe('useOverlayBackdrop', () => {
-  it('throws when used outside OverlayBackdropProvider', () => {
-    const BadConsumer: React.FC = () => {
-      useOverlayBackdrop();
-      return null;
-    };
-
-    expect(() => render(<BadConsumer />)).toThrow(
-      'useOverlayBackdrop must be used within OverlayBackdropProvider',
-    );
   });
 });
 

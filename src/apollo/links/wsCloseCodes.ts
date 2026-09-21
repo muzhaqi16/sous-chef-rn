@@ -7,8 +7,6 @@
 
 /** A clean close. Ours when we dispose; the server's over the per-user cap. */
 export const WS_CLOSE_NORMAL = 1000;
-/** No close frame arrived. RN synthesises it for every failed dial. */
-export const WS_CLOSE_ABNORMAL = 1006;
 /** graphql-ws's own code for `terminate()` — a close we asked for. */
 export const WS_CLOSE_TERMINATED = 4499;
 /** The access token expired, at connect or mid-stream. Recoverable — see below. */
@@ -70,7 +68,9 @@ export const isProtocolErrorCloseCode = (code: number): boolean =>
 
 /**
  * Whether graphql-ws will refuse to retry this close regardless of
- * {@link isRetryableWebSocketClose}.
+ * {@link isRetryableWebSocketClose}. The record the library probe pins
+ * (`wsCloseCodes.library.test.ts`); nothing in the app branches on it.
+ * @internal Test seam.
  */
 export const isLibraryFatalCloseCode = (code: number): boolean => {
   if (LIBRARY_FATAL_CODES.has(code)) return true;

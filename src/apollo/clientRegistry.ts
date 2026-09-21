@@ -14,7 +14,7 @@ export const registerApolloClient = (instance: ApolloClient): void => {
 /** Null only before `client.ts` has evaluated, which is before anything runs. */
 export const getApolloClient = (): ApolloClient | null => apolloClient;
 
-/** Test seam: forget the registration. */
+/** @internal Test seam: forget the registration. */
 export const clearApolloClient = (): void => {
   apolloClient = null;
 };

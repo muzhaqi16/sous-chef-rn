@@ -2,7 +2,6 @@ import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { useShallow } from 'zustand/react/shallow';
 import type { RootState } from './index';
 import { storeApi } from './index';
-import { UserRole } from '#/graphql/generated/schemaTypes';
 
 /** Core store hook. Prefer the named hooks below; use this for one-offs. */
 export function useAppStore<T>(
@@ -19,9 +18,6 @@ const selectHasStoredCredentials = (state: RootState) =>
   state.hasStoredCredentials;
 const selectIsLoggingOut = (state: RootState) => state.isLoggingOut;
 const selectHydrated = (state: RootState) => state.isHydrated;
-const selectIsAdminUser = (state: RootState) =>
-  state.user?.role === UserRole.Admin ||
-  state.user?.role === UserRole.SuperAdmin;
 const selectCanAccessDevTools = (state: RootState) =>
   state.user?.canAccessDevTools === true;
 
@@ -72,25 +68,6 @@ const selectShowNavigationLabels = (state: RootState) =>
 const selectShowTutorials = (state: RootState) => state.showTutorials;
 
 // Grouped selectors return fresh object literals — always via useShallow.
-const selectAuthTokens = (state: RootState) => ({
-  user: state.user,
-  accessToken: state.accessToken,
-  refreshToken: state.refreshToken,
-  isAutoLoggingIn: state.isAutoLoggingIn,
-  isLoggingOut: state.isLoggingOut,
-});
-
-const selectAuthActions = (state: RootState) => ({
-  setAuth: state.setAuth,
-  clearAuth: state.clearAuth,
-  setTokens: state.setTokens,
-  updateUser: state.updateUser,
-  setEmailVerified: state.setEmailVerified,
-  setOnboarded: state.setOnboarded,
-  setRememberMe: state.setRememberMe,
-  setIsAutoLoggingIn: state.setIsAutoLoggingIn,
-  setUserNavigationState: state.setUserNavigationState,
-});
 
 const selectPostLoginState = (state: RootState) => ({
   navigationState: state.navigationState,
@@ -132,11 +109,6 @@ const selectNavigationUtils = (state: RootState) => ({
   setOnboarded: state.setOnboarded,
 });
 
-const selectHapticSettings = (state: RootState) => ({
-  hapticFeedbackEnabled: state.hapticFeedbackEnabled,
-  setHapticFeedbackEnabled: state.setHapticFeedbackEnabled,
-});
-
 const selectThemePreferences = (state: RootState) => ({
   primaryColorOverride: state.primaryColorOverride,
   densityPreference: state.densityPreference,
@@ -164,7 +136,6 @@ export const useIsLoggingOut = () => useAppStore(selectIsLoggingOut);
 export const useIsHydrated = () => useAppStore(selectHydrated);
 export const useIsOnline = () => useAppStore(selectIsOnline);
 export const useCanAccessDevTools = () => useAppStore(selectCanAccessDevTools);
-export const useIsAdminUser = () => useAppStore(selectIsAdminUser);
 export const useIsHomeSelectionReady = () =>
   useAppStore(selectIsHomeSelectionReady);
 export const useSetIsHomeSelectionReady = () =>
@@ -184,8 +155,6 @@ export const useShowNavigationLabels = () =>
   useAppStore(selectShowNavigationLabels);
 export const useShowTutorials = () => useAppStore(selectShowTutorials);
 
-export const useAuthTokens = () => useAppStore(useShallow(selectAuthTokens));
-export const useAuthActions = () => useAppStore(useShallow(selectAuthActions));
 export const usePostLoginState = () =>
   useAppStore(useShallow(selectPostLoginState));
 export const usePantryState = () => useAppStore(useShallow(selectPantryState));
@@ -195,7 +164,5 @@ export const useHomeState = () => useAppStore(useShallow(selectHomeState));
 export const usePreferences = () => useAppStore(useShallow(selectPreferences));
 export const useNavigationUtils = () =>
   useAppStore(useShallow(selectNavigationUtils));
-export const useHapticSettings = () =>
-  useAppStore(useShallow(selectHapticSettings));
 export const useThemePreferences = () =>
   useAppStore(useShallow(selectThemePreferences));

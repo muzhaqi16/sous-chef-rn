@@ -8,11 +8,6 @@ import { StyleSheet } from 'react-native-unistyles';
  */
 
 export const commonStyles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
@@ -46,10 +41,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  center: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
 
   header: {
     flexDirection: 'row',
@@ -70,10 +61,6 @@ export const commonStyles = StyleSheet.create(theme => ({
       (theme.sizes.touchTarget.md - theme.sizes.icon.md) / 2,
   },
 
-  scrollContent: {
-    flexGrow: 1,
-  },
-
   input: {
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
@@ -87,11 +74,6 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
   inputGroup: {
     marginBottom: theme.spacing.lg,
-  },
-  label: {
-    ...theme.type.label,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
   },
 
   button: {
@@ -119,9 +101,6 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
   buttonTextPrimary: {
     color: theme.colors.onPrimary,
-  },
-  buttonTextSecondary: {
-    color: theme.colors.textPrimary,
   },
 
   settingsSection: {
@@ -151,10 +130,6 @@ export const commonStyles = StyleSheet.create(theme => ({
   settingsRowInfo: {
     flex: 1,
     marginRight: theme.spacing.base,
-  },
-  settingsRowLabel: {
-    ...theme.type.bodyStrong,
-    color: theme.colors.textPrimary,
   },
   settingsRowDescription: {
     ...theme.type.caption,
@@ -265,10 +240,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  bottomSheetItemLabel: {
-    ...theme.type.body,
-    color: theme.colors.textSecondary,
-  },
   bottomSheetSection: {
     marginBottom: theme.spacing.md,
   },
@@ -338,22 +309,6 @@ export const commonStyles = StyleSheet.create(theme => ({
   chipText: {
     ...theme.type.label,
     color: theme.colors.chipText,
-  },
-  body: {
-    ...theme.type.body,
-    color: theme.colors.textPrimary,
-  },
-  bodySecondary: {
-    ...theme.type.body,
-    color: theme.colors.textSecondary,
-  },
-  title: {
-    ...theme.type.heading,
-    color: theme.colors.textPrimary,
-  },
-  subtitle: {
-    ...theme.type.bodyStrong,
-    color: theme.colors.textSecondary,
   },
   caption: {
     ...theme.type.caption,

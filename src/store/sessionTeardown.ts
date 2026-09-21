@@ -56,7 +56,7 @@ export const runSessionTeardown = async (): Promise<void> => {
   }
 };
 
-/** Test seam: drop every registered step. */
+/** @internal Test seam: drop every registered step. */
 export const clearSessionTeardown = (): void => {
   steps.clear();
 };

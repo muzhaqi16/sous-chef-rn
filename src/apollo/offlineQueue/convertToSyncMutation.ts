@@ -18,7 +18,10 @@ export function hasSyncMapping(operationName: string): boolean {
   return SYNC_REGISTRY[operationName] != null;
 }
 
-/** Every operation the queue can replay through a `Sync*` upsert. */
+/**
+ * Every operation the queue can replay through a `Sync*` upsert.
+ * @internal Test seam: the queue invariant tests enumerate it.
+ */
 export function syncMappedOperations(): string[] {
   return Object.keys(SYNC_REGISTRY);
 }

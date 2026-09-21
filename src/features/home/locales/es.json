@@ -164,9 +164,7 @@
   "createHome": {
     "allowJoinCode": "Permitir que otros se unan con un código",
     "pantryFailedTitle": "Aviso",
-    "pantryFailedBody": "No se pudo crear la despensa, pero puedes crearla más tarde desde ajustes.",
-    "skipPantryTitle": "¿Omitir la creación de la despensa?",
-    "skipPantryBody": "Tienes un hogar pero ninguna despensa. Puedes crear una más tarde desde ajustes."
+    "pantryFailedBody": "No se pudo crear la despensa, pero puedes crearla más tarde desde ajustes."
   },
   "homeMembers": {
     "noMembers": "Sin miembros"

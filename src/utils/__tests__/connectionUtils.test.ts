@@ -1,9 +1,4 @@
-import {
-  extractNodes,
-  getConnectionTotalCount,
-  normalizeConnectionField,
-  normalizeConnection,
-} from '../connectionUtils';
+import { extractNodes, getConnectionTotalCount } from '../connectionUtils';
 
 describe('extractNodes', () => {
   it('extracts nodes from edges', () => {
@@ -78,73 +73,5 @@ describe('getConnectionTotalCount', () => {
 
   it('returns 0 for null connection', () => {
     expect(getConnectionTotalCount(null)).toBe(0);
-  });
-});
-
-describe('normalizeConnectionField', () => {
-  const entity = {
-    id: '1',
-    itemsConnection: {
-      edges: [{ node: { id: 'item-1' } }, { node: { id: 'item-2' } }],
-      totalCount: 5,
-      pageInfo: { hasNextPage: true, endCursor: 'cursor-1' },
-    },
-  };
-
-  it('normalizes array field', () => {
-    const result = normalizeConnectionField(entity, {
-      connectionField: 'itemsConnection',
-      arrayName: 'items',
-    });
-    expect(result.items).toEqual([{ id: 'item-1' }, { id: 'item-2' }]);
-    expect(result.itemsTotalCount).toBeUndefined();
-    expect(result.itemsPageInfo).toBeUndefined();
-  });
-
-  it('includes totalCount when configured', () => {
-    const result = normalizeConnectionField(entity, {
-      connectionField: 'itemsConnection',
-      arrayName: 'items',
-      includeTotalCount: true,
-    });
-    expect(result.itemsTotalCount).toBe(5);
-  });
-
-  it('includes pageInfo when configured', () => {
-    const result = normalizeConnectionField(entity, {
-      connectionField: 'itemsConnection',
-      arrayName: 'items',
-      includePageInfo: true,
-    });
-    expect(result.itemsPageInfo).toEqual({
-      hasNextPage: true,
-      endCursor: 'cursor-1',
-    });
-  });
-});
-
-describe('normalizeConnection', () => {
-  it('normalizes a standalone connection', () => {
-    const connection = {
-      edges: [{ node: { id: '1' } }, { node: { id: '2' } }],
-      totalCount: 10,
-      pageInfo: { hasNextPage: true, endCursor: 'c1' },
-    };
-    const result = normalizeConnection(connection, 'recipes');
-    expect(result).toEqual({
-      recipes: [{ id: '1' }, { id: '2' }],
-      totalCount: 10,
-      pageInfo: { hasNextPage: true, endCursor: 'c1' },
-    });
-  });
-
-  it('returns null for null connection', () => {
-    expect(normalizeConnection(null)).toBeNull();
-  });
-
-  it('defaults arrayName to items', () => {
-    const connection = { edges: [{ node: { id: '1' } }], totalCount: 1 };
-    const result = normalizeConnection(connection);
-    expect(result!.items).toEqual([{ id: '1' }]);
   });
 });

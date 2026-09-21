@@ -6,8 +6,10 @@ import {
   TabBarActionsProvider,
   useTabBarSetters,
   useTabBarState,
-  useTabBarActions,
 } from '../TabBarActionsContext';
+
+/** Both halves at once, so a test can act through setters and read state. */
+const useTabBarActions = () => ({ ...useTabBarSetters(), ...useTabBarState() });
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <TabBarActionsProvider>{children}</TabBarActionsProvider>
@@ -57,18 +59,6 @@ describe('TabBarActionsContext', () => {
       expect(result.current.activeTab).toBe('');
       expect(result.current.isOverlayOpen).toBe(false);
       expect(result.current.isAddButtonDisabled).toBe(false);
-    });
-  });
-
-  describe('useTabBarActions (combined)', () => {
-    it('combines setters and state', () => {
-      const { result } = renderHook(() => useTabBarActions(), { wrapper });
-      // Should have setters
-      expect(typeof result.current.setScannerProps).toBe('function');
-      expect(typeof result.current.setAddProps).toBe('function');
-      // Should have state
-      expect(result.current.activeTab).toBeDefined();
-      expect(result.current.showScannerButton).toBeDefined();
     });
   });
 

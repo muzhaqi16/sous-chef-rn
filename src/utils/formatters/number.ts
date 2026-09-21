@@ -154,7 +154,10 @@ export function localizeNumericHint(text: string): string {
   return text.replace(/(\d)\.(\d)/g, `$1${separator}$2`);
 }
 
-/** Test-only: the app has no reason to discard the memoized formatters. */
+/**
+ * Test-only: the app has no reason to discard the memoized formatters.
+ * @internal Test seam.
+ */
 export function resetNumberFormatterCache(): void {
   decimalFormatters.clear();
   currencyFormatters.clear();

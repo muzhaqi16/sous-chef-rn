@@ -164,9 +164,7 @@
   "createHome": {
     "allowJoinCode": "Lejo të tjerët të bashkohen me një kod",
     "pantryFailedTitle": "Njoftim",
-    "pantryFailedBody": "Krijimi i qilarit dështoi, por mund ta krijosh më vonë te cilësimet.",
-    "skipPantryTitle": "Ta kapërcesh krijimin e qilarit?",
-    "skipPantryBody": "Ke një shtëpi, por jo një qilar. Mund ta krijosh më vonë te cilësimet."
+    "pantryFailedBody": "Krijimi i qilarit dështoi, por mund ta krijosh më vonë te cilësimet."
   },
   "homeMembers": {
     "noMembers": "Asnjë anëtar"

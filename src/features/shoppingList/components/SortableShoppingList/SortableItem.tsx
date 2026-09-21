@@ -6,7 +6,7 @@ import { View } from 'react-native';
 // doesn't also fire the row's onPress (which would navigate to details).
 import { Pressable } from 'react-native-gesture-handler';
 import { useFragment } from '@apollo/client/react';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
@@ -21,8 +21,6 @@ import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 
 import { HIT_SLOP } from '#features/shoppingList/constants/touch';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
-import { staggeredEntryAnimation } from '#constants/animations';
-import { useStaggeredEntry } from '#features/shoppingList/context/StaggeredEntryContext';
 import {
   useShoppingListTutorialState,
   useShoppingListTutorialActions,
@@ -64,15 +62,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 
   // One list-level useUnistyles, rather than a theme subscription per row.
   const themeColors = useSortableListTheme();
-
-  const staggerCtx = useStaggeredEntry();
-  const entryDelay = staggerCtx?.getEntryDelay(index) ?? 0;
-  const entering = (() => {
-    if (entryDelay <= 0) return undefined;
-    return FadeIn.delay(entryDelay)
-      .duration(staggeredEntryAnimation.duration)
-      .easing(motion.easing.standard.factory());
-  })();
 
   const screenWidth = themeColors?.screenWidth ?? 375;
 
@@ -373,10 +362,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 
   // One Animated.View carries both the entry animation and the slide style.
   return (
-    <Animated.View
-      entering={entering}
-      style={[commonStyles.rowWrapper, animatedSlideStyle]}
-    >
+    <Animated.View style={[commonStyles.rowWrapper, animatedSlideStyle]}>
       {isTutorialItemCardTarget ? (
         <View
           ref={itemCardRef}

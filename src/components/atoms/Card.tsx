@@ -83,5 +83,3 @@ const styles = StyleSheet.create(theme => ({
     },
   },
 }));
-
-export default Card;
