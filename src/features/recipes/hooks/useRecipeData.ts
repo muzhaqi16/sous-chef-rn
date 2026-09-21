@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { errorService, localizedErrorMessage } from '#/services/errorService';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { useApolloClient, useQuery } from '@apollo/client/react';
-import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
+import { fetchRecipeInformation } from '#features/recipes/store/useRecipeCacheStore';
 import type {
   RecipeInformation,
   RecipeIngredient as ExternalRecipeIngredient,
@@ -132,11 +132,8 @@ async function fetchRecipeData(
     setError(null);
 
     if (params.externalSource === ExternalSource.Spoonacular) {
-      const data = await spoonacularService.getRecipeInformation(
-        {
-          id: Number(params.externalId),
-          includeNutrition: true,
-        },
+      const data = await fetchRecipeInformation(
+        Number(params.externalId),
         signal,
       );
       setExternalRecipe(data);
@@ -191,7 +188,7 @@ function buildExternalDisplayData(
     servings: recipe.servings,
     readyInMinutes: recipe.readyInMinutes,
     healthScore: recipe.healthScore,
-    summary: recipe.summary,
+    summary: recipe.summary ?? undefined,
     ingredients: recipe.extendedIngredients ?? [],
     instructions: recipe.analyzedInstructions,
     instructionsHtml: recipe.instructions,

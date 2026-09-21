@@ -14,7 +14,11 @@ import type {
   StepFormState,
   RecipeFormState,
 } from './formState';
-import { recipeFormSchema, recipeFormDefaults } from './recipeFormConfig';
+import {
+  recipeFormSchema,
+  recipeFormDefaults,
+  parseCommaTags,
+} from './recipeFormConfig';
 import { stripPriceFromName } from '#features/recipes/utils/stripPriceFromName';
 import { extractNodes } from '#/utils/connectionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
@@ -24,15 +28,6 @@ import { firstNonBlank } from '#/utils/firstNonBlank';
 let nextTempId = 1;
 function generateTempId(): string {
   return `temp-${nextTempId++}`;
-}
-
-/** Split a comma-separated tag field into a clean list (undefined when empty). */
-function parseCommaTags(raw: string): string[] | undefined {
-  const tags = raw
-    .split(',')
-    .map(tag => tag.trim())
-    .filter(Boolean);
-  return tags.length > 0 ? tags : undefined;
 }
 
 /**
@@ -233,45 +228,42 @@ export function useRecipeForm() {
     };
   };
 
-  // Build UpdateRecipeInput (without id — caller adds it)
+  // Without `id`, which the caller adds. An omitted field is left unchanged, so
+  // an emptied one is sent as null or []; the API refuses null for `name` and
+  // `servings` (NOT NULL), so those stay omitted when blank.
   const buildUpdateInput = (): Omit<UpdateRecipeInput, 'id'> => {
     return {
       name: state.name.trim() || undefined,
-      description: state.description.trim() || undefined,
+      description: state.description.trim() || null,
       status: state.status,
-      notes: state.notes.trim() || undefined,
-      tips: state.tips.trim() || undefined,
+      notes: state.notes.trim() || null,
+      tips: state.tips.trim() || null,
       tags: parseCommaTags(state.tags),
-      attribution: state.originalAuthor.trim()
-        ? { originalAuthor: state.originalAuthor.trim() }
-        : undefined,
+      attribution: { originalAuthor: state.originalAuthor.trim() || null },
       instructions: state.steps.map((step, index) => ({
         step: index + 1,
         text: step.instruction.trim(),
       })),
       media: {
-        imageUrl: state.imageUrl.trim() || undefined,
+        imageUrl: state.imageUrl.trim() || null,
       },
       metadata: {
         servings: parseInt(state.servings) || undefined,
         difficulty: state.difficulty ?? undefined,
         category: state.category ?? undefined,
-        cuisine: state.cuisine.trim() || undefined,
+        cuisine: state.cuisine.trim() || null,
       },
       timing: {
-        prepTimeMinutes: parseInt(state.prepTimeMinutes) || undefined,
-        cookTimeMinutes: parseInt(state.cookTimeMinutes) || undefined,
+        prepTimeMinutes: parseInt(state.prepTimeMinutes) || null,
+        cookTimeMinutes: parseInt(state.cookTimeMinutes) || null,
       },
       nutrition: {
-        caloriesPerServing:
-          parseDecimalInput(state.caloriesPerServing) || undefined,
+        caloriesPerServing: parseDecimalInput(state.caloriesPerServing) || null,
       },
       dietary: {
-        diets: state.diets.length > 0 ? state.diets : undefined,
-        healthGoals:
-          state.healthGoals.length > 0 ? state.healthGoals : undefined,
-        intolerances:
-          state.intolerances.length > 0 ? state.intolerances : undefined,
+        diets: state.diets,
+        healthGoals: state.healthGoals,
+        intolerances: state.intolerances,
       },
     };
   };

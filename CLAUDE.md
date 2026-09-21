@@ -176,7 +176,8 @@ Mechanism: `docs/session-and-transport.md`. No gate holds these.
   store reset, `queueManager.onLogout()` only on deliberate sign-out, `/health`
   keeps probing.
 - **A session end mints nothing**: `setTokens` refuses a pair inside the scope,
-  and a refresh that outlives its session is discarded (`refreshToken.ts`).
+  and a refresh that outlives its session is discarded (`refreshToken.ts`) —
+  `/revoke` retires the whole token family, its successor included.
 - **Push delivery follows the session**: every session end revokes its refresh
   token (`POST /revoke`, parked in the keychain until the API answers), never
   the push token. `login`/`register` await `ensureDeviceId()` or the session is

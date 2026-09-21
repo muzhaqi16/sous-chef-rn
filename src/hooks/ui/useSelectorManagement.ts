@@ -11,8 +11,11 @@ export function useSelectorManagement(options: UseSelectorManagementOptions) {
   const { selectorRef, setOverlayOpen } = options;
 
   const handleOpenSelector = () => {
+    const selector = selectorRef.current;
+    // An unmounted selector opens nothing, so the overlay must not be claimed.
+    if (!selector) return;
     setOverlayOpen(true);
-    selectorRef.current?.open();
+    selector.open();
   };
 
   const handleOverlayOpen = () => {

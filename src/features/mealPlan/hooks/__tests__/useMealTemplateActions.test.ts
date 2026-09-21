@@ -179,6 +179,35 @@ describe('useMealTemplateActions', () => {
     });
   });
 
+  describe('the new plan offline', () => {
+    it('shows every laid-out meal from the cache while queued', async () => {
+      useStore.setState({ apiReachable: false });
+      const queuedItem = recordMock(CreateMealPlanItemDocument, {
+        data: { createMealPlanItem: null },
+      });
+      const cache = seeded();
+      const { result } = renderHookWithApollo(() => useMealTemplateActions(), {
+        operationMocks: [queuedPlanMock().mock, queuedItem.mock],
+        cache,
+      });
+
+      const response = await result.current.createPlanFromTemplate({
+        templateId: TEMPLATE_ID,
+        startDate: '2026-02-02T12:00:00.000Z',
+      });
+
+      const sentIds = (
+        queuedItem.fired as Array<{ input: { id: string } }>
+      ).map(fired => fired.input.id);
+      const plan = cache.extract()[`MealPlan:${response?.mealPlanId}`] as {
+        mealPlanItems?: Array<{ __ref: string }>;
+      };
+      expect(plan.mealPlanItems?.map(ref => ref.__ref)).toEqual(
+        sentIds.map(id => `MealPlanItem:${id}`),
+      );
+    });
+  });
+
   describe('duplicating a template', () => {
     it('refuses when the template is not cached', async () => {
       const create = createTemplateMock();

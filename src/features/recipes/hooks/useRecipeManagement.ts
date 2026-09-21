@@ -23,6 +23,8 @@ interface RecipeManagementOptions {
    * user's recipes, so a local search covers every one only once all pages load.
    */
   loadAllPages?: boolean;
+  /** The local filter; a new one restarts a load-all that stopped. */
+  filterKey?: string;
 }
 
 /**
@@ -32,6 +34,7 @@ interface RecipeManagementOptions {
  */
 export function useRecipeManagement({
   loadAllPages = false,
+  filterKey = '',
 }: RecipeManagementOptions = {}) {
   const isLoggedOut = useIsLoggedOut();
 
@@ -54,10 +57,11 @@ export function useRecipeManagement({
     refetch,
   });
 
-  const isLoadingRemainingPages = useLoadRemainingPages(
+  const remainingPages = useLoadRemainingPages(
     loadAllPages,
     loading,
     connectionData,
+    filterKey,
   );
 
   return {
@@ -74,11 +78,13 @@ export function useRecipeManagement({
       skipped: isLoggedOut,
       hasMore: connectionData.hasMore,
       isLoadingMore: connectionData.isLoadingMore,
-      isLoadingRemainingPages,
+      isLoadingRemainingPages: remainingPages.isLoadingRemainingPages,
+      isSearchIncomplete: remainingPages.incomplete,
     },
     actions: {
       loadMore: connectionData.loadMore,
       refetch,
+      retryRemainingPages: remainingPages.retry,
     },
   };
 }

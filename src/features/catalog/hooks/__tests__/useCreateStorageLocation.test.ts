@@ -4,7 +4,11 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { CreateStorageLocationDocument } from '#features/catalog/graphql/storageLocation.generated';
+import {
+  CreateStorageLocationDocument,
+  GetStorageLocationsDocument,
+} from '#features/catalog/graphql/storageLocation.generated';
+import { makeCache } from '#/apollo/cache';
 import { StorageType } from '#/graphql/generated/schemaTypes';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
 
@@ -98,5 +102,51 @@ describe('useCreateStorageLocation', () => {
 
     expect(created).toBe(false);
     expect(fired).toHaveLength(0);
+  });
+
+  it("adds the new location to its own home's list only", async () => {
+    const cache = makeCache();
+    const seedEmpty = (homeId: string) =>
+      cache.writeQuery({
+        query: GetStorageLocationsDocument,
+        variables: { homeId },
+        data: {
+          __typename: 'Query',
+          storageLocations: {
+            __typename: 'StorageLocationConnection',
+            edges: [],
+            pageInfo: {
+              __typename: 'PageInfo',
+              hasNextPage: false,
+              endCursor: null,
+            },
+            totalCount: 0,
+          },
+        },
+      });
+    seedEmpty(HOME_ID);
+    seedEmpty('home-2');
+
+    const { mock } = successMock();
+    const { result } = renderHookWithApollo(
+      () => useCreateStorageLocation(HOME_ID, PANTRY_ID),
+      { cache, operationMocks: [mock] },
+    );
+    await act(async () => {
+      await result.current.createLocation({
+        name: 'Spice Rack',
+        type: StorageType.PantryShelf,
+      });
+    });
+
+    const namesIn = (homeId: string) =>
+      cache
+        .readQuery({
+          query: GetStorageLocationsDocument,
+          variables: { homeId },
+        })
+        ?.storageLocations.edges.map(edge => edge.node.name);
+    expect(namesIn(HOME_ID)).toEqual(['Spice Rack']);
+    expect(namesIn('home-2')).toEqual([]);
   });
 });

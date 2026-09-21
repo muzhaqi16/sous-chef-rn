@@ -19,7 +19,10 @@ import {
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
 import { useMealPlanItemActions } from '../useMealPlanItemActions';
-import { MealPlanItemActions_OptimisticFullItemFragmentDoc } from '../useMealPlanItemActions.generated';
+import {
+  MealPlanItemActions_OptimisticFullItemFragmentDoc,
+  MealPlanItemActions_PlanBoundsFragmentDoc,
+} from '../useMealPlanItemActions.generated';
 
 const seedToggleItem = (overrides: Record<string, unknown> = {}) =>
   seedCache([
@@ -114,6 +117,51 @@ describe('useMealPlanItemActions', () => {
       });
 
       expect(created).toBe(true);
+    });
+
+    // A plan stored before boundaries were sent at noon ends at local midnight
+    // of its last day, a UTC day the noon meal would fall after.
+    it('sends a last-day meal at the plan end the server holds, on the picked day', async () => {
+      const planEnd = new Date(2026, 8, 27, 0, 0).toISOString();
+      const pickedDay = new Date(2026, 8, 27, 12).toISOString();
+      const cache = seedCache([
+        {
+          fragment: MealPlanItemActions_PlanBoundsFragmentDoc,
+          fragmentName: 'MealPlanItemActions_planBounds',
+          data: {
+            __typename: 'MealPlan',
+            id: 'plan-1',
+            startDate: new Date(2026, 8, 21, 0, 0).toISOString(),
+            endDate: planEnd,
+          },
+        },
+      ]);
+      const create = recordMock(CreateMealPlanItemDocument, {
+        data: {
+          createMealPlanItem: {
+            __typename: 'CreateMealPlanItemPayload',
+            mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(
+        () => useMealPlanItemActions('plan-1'),
+        { operationMocks: [create.mock], cache },
+      );
+
+      await act(async () => {
+        await result.current.createItem({
+          mealPlanId: 'plan-1',
+          meal: { recipeId: 'r-1' },
+          mealType: MealType.Dinner,
+          date: pickedDay,
+        });
+      });
+
+      const [sent] = create.fired;
+      const sentDate = (sent?.input as { date: string } | undefined)?.date;
+      expect(sentDate).toBe(planEnd);
+      expect(new Date(sentDate ?? '').getDate()).toBe(27);
     });
 
     it('shows one localized error toast and returns false on failure', async () => {

@@ -25,6 +25,19 @@ const msgWith =
 const JSON_MAX_ITEMS = 1000;
 const JSON_MAX_BYTES = 64 * 1024;
 
+/** The API's recipe bounds, on create and update alike. */
+const TAGS_MAX = 10;
+const TAG_MAX_LENGTH = 50;
+const TIPS_MAX_LENGTH = 2000;
+
+/** Split the comma-separated tag field into its trimmed, non-blank tags. */
+export function parseCommaTags(raw: string): string[] {
+  return raw
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(Boolean);
+}
+
 /**
  * UTF-8 BYTES, not UTF-16 code units: `String.length` under-counts every
  * non-ASCII character, so measuring with it would pass exactly the accented and
@@ -108,9 +121,25 @@ export const recipeFormSchema: ObjectSchema<RecipeFormState> = object({
     )
     .defined(),
   notes: string().defined(),
-  tips: string().defined(),
+  tips: string()
+    .defined()
+    .max(
+      TIPS_MAX_LENGTH,
+      msgWith('recipes.tipsTooLong', { count: TIPS_MAX_LENGTH }),
+    ),
   originalAuthor: string().defined(),
-  tags: string().defined(),
+  tags: string()
+    .defined()
+    .test(
+      'tags-count',
+      msgWith('recipes.tagsTooMany', { count: TAGS_MAX }),
+      value => parseCommaTags(value).length <= TAGS_MAX,
+    )
+    .test(
+      'tag-length',
+      msgWith('recipes.tagTooLong', { count: TAG_MAX_LENGTH }),
+      value => parseCommaTags(value).every(tag => tag.length <= TAG_MAX_LENGTH),
+    ),
 });
 
 export const recipeFormDefaults = (): RecipeFormState => ({

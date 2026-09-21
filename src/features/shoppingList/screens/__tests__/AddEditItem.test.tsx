@@ -3,13 +3,15 @@
 import React from 'react';
 import type { TextInputProps } from 'react-native';
 import {
+  act,
   fireEvent,
   screen,
   userEvent,
   waitFor,
 } from '@testing-library/react-native';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 import { alertService, type AlertButton } from '#/services/alertService';
 import { DisplayFormat, ErrorCode } from '#/graphql/generated/schemaTypes';
 import { AddEditItem } from '../AddEditItem';
@@ -20,8 +22,14 @@ import {
   GetShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { AddedShoppingListItemFieldsFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { t } from '#/i18n';
 
 jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/utils/deviceLocale', () => ({
+  ...jest.requireActual('#/utils/deviceLocale'),
+  getDeviceDecimalSeparator: jest.fn(() => '.'),
+}));
 jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#hooks/navigation/useAppNavigation');
@@ -231,28 +239,32 @@ jest.mock(
     },
   }),
 );
-jest.mock('#components/molecules/EditableCounter', () => ({
-  // Renders `error` — validation now reports on the field, so a test asserting
-  // a refusal has to be able to see it. The real component paints it as a red
-  // border plus this message.
-  EditableCounter: ({
-    label,
-    testID,
-    error,
-  }: {
-    label?: string;
-    testID?: string;
-    error?: string;
-  }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID={testID}>
-        <Text>{label}</Text>
-        {error ? <Text>{error}</Text> : null}
-      </View>
-    );
-  },
-}));
+// The stub unless a test switches the real counter on to press its steppers.
+const mockRealCounter = { current: false };
+jest.mock('#components/molecules/EditableCounter', () => {
+  const Real = jest.requireActual(
+    '#components/molecules/EditableCounter',
+  ).EditableCounter;
+  return {
+    // Renders `error` — validation now reports on the field, so a test asserting
+    // a refusal has to be able to see it. The real component paints it as a red
+    // border plus this message.
+    EditableCounter: (props: {
+      label?: string;
+      testID?: string;
+      error?: string;
+    }) => {
+      if (mockRealCounter.current) return <Real {...props} />;
+      const { View, Text } = require('react-native');
+      return (
+        <View testID={props.testID}>
+          <Text>{props.label}</Text>
+          {props.error ? <Text>{props.error}</Text> : null}
+        </View>
+      );
+    },
+  };
+});
 jest.mock('#components/atoms/FieldRow', () => ({
   FieldRow: ({ children }: { children?: React.ReactNode }) => {
     const { View } = require('react-native');
@@ -542,6 +554,8 @@ describe('AddEditItem', () => {
   // form got one pre-filled with another test's values.
   afterEach(() => {
     jest.restoreAllMocks();
+    jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.');
+    mockRealCounter.current = false;
   });
 
   it('renders add item title', () => {
@@ -1081,6 +1095,114 @@ describe('AddEditItem', () => {
     );
     expect(alertService.alert).toHaveBeenCalledTimes(1);
     expect(mockNav.goBack).not.toHaveBeenCalled();
+  });
+
+  it('sends a comma-device quantity as API text', async () => {
+    jest.mocked(getDeviceDecimalSeparator).mockReturnValue(',');
+    const user = userEvent.setup();
+    const added = recordMock(AddItemToShoppingListDocument, {
+      data: { addItemsToShoppingList: null },
+    });
+    jest
+      .spyOn(
+        require('#features/shoppingList/hooks/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockImplementation(
+        mockUseShoppingListItemForm({
+          values: { itemName: 'Flour', quantityInput: '2,2' },
+        }),
+      );
+    const { createOptimisticShoppingListItem } = jest.requireMock(
+      '#features/shoppingList/cache/items',
+    );
+
+    renderWithApollo(<AddEditItem route={addRoute} />, {
+      operationMocks: [added.mock],
+    });
+    await user.press(screen.getByTestId('add-item-submit-button'));
+
+    await waitFor(() => expect(added.fired).toHaveLength(1));
+    expect(added.fired[0]).toEqual({
+      input: expect.objectContaining({
+        items: [expect.objectContaining({ quantity: '2.2' })],
+      }),
+    });
+    expect(createOptimisticShoppingListItem).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ quantity: 2.2, quantityInput: '2.2' }),
+    );
+  });
+
+  // The stepper writes the device's separator back into the field, so the
+  // stepped value reaches the API only through the same normalisation.
+  it('sends a comma-device quantity stepped with the increment control as API text', async () => {
+    jest.mocked(getDeviceDecimalSeparator).mockReturnValue(',');
+    mockRealCounter.current = true;
+    const user = userEvent.setup();
+    const added = recordMock(AddItemToShoppingListDocument, {
+      data: { addItemsToShoppingList: null },
+    });
+    jest
+      .spyOn(
+        require('#features/shoppingList/hooks/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockImplementation(
+        mockUseShoppingListItemForm({
+          values: { itemName: 'Flour', quantityInput: '2,2' },
+        }),
+      );
+
+    renderWithApollo(<AddEditItem route={addRoute} />, {
+      operationMocks: [added.mock],
+    });
+    await user.press(screen.getByLabelText(t('editableCounter.increase')));
+    expect(screen.getByTestId('add-item-quantity-input')).toHaveProp(
+      'value',
+      '3,2',
+    );
+    await user.press(screen.getByTestId('add-item-submit-button'));
+
+    await waitFor(() => expect(added.fired).toHaveLength(1));
+    expect(added.fired[0]).toEqual({
+      input: expect.objectContaining({
+        items: [expect.objectContaining({ quantity: '3.2' })],
+      }),
+    });
+  });
+
+  it('keeps what the user typed when the edit is refused', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<AddEditItem route={editRoute} />, {
+      operationMocks: [
+        buildGetShoppingListItemMock('item1'),
+        buildUpdateItemRefusedMock(),
+      ],
+    });
+    const nameInput = screen.getByTestId(
+      shoppingListTestIDs.editItemForm.nameInput,
+    );
+    await waitFor(() => expect(nameInput.props.value).toBe('Milk'));
+
+    fireEvent.changeText(nameInput, 'Oat Milk');
+    fireEvent.changeText(
+      screen.getByTestId(shoppingListTestIDs.editItemForm.priceInput),
+      '3.50',
+    );
+    await user.press(screen.getByTestId('edit-item-submit-button'));
+
+    await waitFor(() => expect(alertService.alert).toHaveBeenCalledTimes(1));
+    // Let the refusal's refetch re-deliver the stored item.
+    await act(() => new Promise<void>(resolve => setTimeout(resolve, 50)));
+    expect(
+      screen.getByTestId(shoppingListTestIDs.editItemForm.nameInput).props
+        .value,
+    ).toBe('Oat Milk');
+    expect(
+      screen.getByTestId(shoppingListTestIDs.editItemForm.priceInput).props
+        .value,
+    ).toBe('3.50');
   });
 
   it("names the input the server refused, in the app's own words", async () => {

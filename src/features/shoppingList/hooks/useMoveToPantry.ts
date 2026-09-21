@@ -16,12 +16,14 @@ import {
   removeFromPantryItemsCache,
   evictPantryItemDetailStub,
 } from '#features/pantry/cache/items';
-import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import type { ListCounterChange } from '#features/shoppingList/cache/connections';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import {
   removeItemFromShoppingListForMoveToPantry,
   restoreItemToShoppingListAfterMoveToPantry,
+  stampItemKeptOnListAfterMoveToPantry,
+  unstampItemKeptOnListAfterMoveToPantry,
+  type KeptOnListStamp,
 } from '#features/shoppingList/cache/moveToPantry';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useTranslation } from '#/i18n';
@@ -77,9 +79,9 @@ function readWasPurchased(cache: ApolloCache, itemId: string): boolean {
 
 /**
  * Cache side of a move-to-pantry: add the returned `PantryItem` to the pantry's
- * connection, then drop the shopping-list row or mark it unpurchased. Kept at
- * module level because its value blocks (`?.`/`??`/ternary) would bail the whole
- * hook out of the React Compiler from inside the caller's try body.
+ * connection, then drop the shopping-list row or mark it purchased and stamped.
+ * Kept at module level because its value blocks (`?.`/`??`/ternary) would bail
+ * the whole hook out of the React Compiler from inside the caller's try body.
  */
 function applyMoveToPantryCacheUpdate(
   cache: ApolloCache,
@@ -116,15 +118,13 @@ function applyMoveToPantryCacheUpdate(
       readWasPurchased(cache, shoppingListItemId),
     );
   } else {
-    // Kept in the list: the server marks it unpurchased, so mirror that here.
+    // Kept on the list: the purchase stamp was written before the move fired;
+    // this is the server's own bump of the line.
     const cacheId = cache.identify({
       __typename: 'ShoppingListItem',
       id: shoppingListItemId,
     });
     if (cacheId) {
-      // The purchase record goes through its own writer: it owns the rule that
-      // a flag flip clears the stocked stamp, which a spread here would keep.
-      writePurchaseInfo(cache, shoppingListItemId, { isPurchased: false });
       cache.modify<ShoppingListItemDisplayFragment>({
         id: cacheId,
         fields: {
@@ -218,6 +218,7 @@ export function useMoveToPantry({
     // Resolved BEFORE the try: `&&` is a value block, and the React Compiler
     // bails out of the whole hook when one appears inside a try body.
     const unlinkFromListId = input.removeFromList ? currentListId : undefined;
+    const keepOnListId = input.removeFromList ? undefined : currentListId;
     // Same reason. `actualPrice` is per unit, so the stub's own
     // `costPerUnit x quantity` reproduces what the server will compute.
     const detailStubFields = {
@@ -228,6 +229,7 @@ export function useMoveToPantry({
       quantity: input.actualQuantity,
     };
     let counterChange: ListCounterChange | undefined;
+    let keptStamp: KeptOnListStamp | undefined;
     try {
       // A detail read on a client-minted id 404s and renders the deleted
       // state; `useIsCreateUnconfirmed` skips it until the server confirms.
@@ -249,6 +251,14 @@ export function useMoveToPantry({
           { evictEntity: false },
         );
       }
+      if (keepOnListId) {
+        keptStamp = stampItemKeptOnListAfterMoveToPantry(
+          client.cache,
+          keepOnListId,
+          item.id,
+          wasPurchased,
+        );
+      }
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Move Item to Pantry (optimistic)',
@@ -265,21 +275,28 @@ export function useMoveToPantry({
         });
         adjustPantryItemCount(client.cache, input.pantryId, -1);
         evictPantryItemDetailStub(client.cache, pantryItemId);
+        let exact = true;
         if (input.removeFromList) {
-          const exact = restoreItemToShoppingListAfterMoveToPantry(
+          exact = restoreItemToShoppingListAfterMoveToPantry(
             client.cache,
             item.id,
             counterChange,
           );
-          // Counters another write moved in the meantime cannot be restored
-          // exactly, so the lists re-read them.
-          if (!exact) {
-            client.refetchQueries({ include: 'active' }).catch(error => {
-              errorService.reportError(error, {
-                operation: 'Re-read after a refused move to pantry',
-              });
+        }
+        if (keptStamp) {
+          exact = unstampItemKeptOnListAfterMoveToPantry(
+            client.cache,
+            keptStamp,
+          );
+        }
+        // Counters another write moved in the meantime cannot be restored
+        // exactly, so the lists re-read them.
+        if (!exact) {
+          client.refetchQueries({ include: 'active' }).catch(error => {
+            errorService.reportError(error, {
+              operation: 'Re-read after a refused move to pantry',
             });
-          }
+          });
         }
       } catch (cacheError) {
         errorService.reportError(cacheError, {

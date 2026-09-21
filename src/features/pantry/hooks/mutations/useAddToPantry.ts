@@ -126,10 +126,19 @@ export function useAddToPantry({
     return extractNodes(cached?.pantry?.storageLocationsConnection);
   };
 
-  /** Does this pantry already stock the item, as far as the cache knows? */
-  const findCachedDuplicate = (itemId: string) =>
-    pantryId
-      ? findCachedPantryItemDuplicate(client.cache, pantryId, { itemId })
+  /**
+   * Does this pantry already stock the item in the unit the add would create,
+   * as far as the cache knows? An unknown unit is the server's to resolve.
+   */
+  const findCachedDuplicate = (
+    itemId: string,
+    unitId: string | null | undefined,
+  ) =>
+    pantryId && unitId
+      ? findCachedPantryItemDuplicate(client.cache, pantryId, {
+          itemId,
+          unitId,
+        })
       : null;
 
   /**

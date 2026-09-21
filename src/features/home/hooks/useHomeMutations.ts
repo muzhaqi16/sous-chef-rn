@@ -15,7 +15,6 @@ import {
   useHomeState,
   useHasUnverifiedEmail,
 } from '#store/useAppStore';
-import { appliedPayload, isAlreadyGone } from '#/utils/errors/mutationPayload';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { removeFromHomesCache } from './homeCacheUpdaters';
@@ -48,54 +47,38 @@ export function useHomeMutations({
   // id, which makes minting the home's first pantry this caller's job.
   const { createPantry, creating: creatingPantry } = useCreatePantry();
 
-  const [deleteHomeMutation, { client: deleteClient }] = useMutation(
-    DeleteHomeDocument,
-    {
-      update: (cache, { data }, { variables }) => {
-        // A home the server says is already gone converges too: the settle
-        // reports that as applied, so the row has to go with it.
-        if ((!appliedPayload(data) && !isAlreadyGone(data)) || !variables) {
-          return;
-        }
+  const [deleteHomeMutation] = useMutation(DeleteHomeDocument);
 
-        try {
-          removeFromHomesCache(cache, variables.input.id, {
-            evictItem: true,
-          });
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Cache update failed for deleteHome:',
-          });
-          void refetch();
-        }
-      },
-      onCompleted: (data, clientOptions) => {
-        // If the deleted home was the selected one, clear it or pick another —
-        // including one `update` removed as already gone.
-        if (!appliedPayload(data) && !isAlreadyGone(data)) return;
-        if (clientOptions?.variables?.input?.id !== selectedHomeId) return;
+  /**
+   * Takes a deleted home out of the cache and, when it was the selection, moves
+   * the selection on. Run for every removal that did not fail — including a
+   * top-level gone code, which carries no payload for an `update` to read.
+   */
+  function removeDeletedHome(homeId: string) {
+    try {
+      removeFromHomesCache(client.cache, homeId, { evictItem: true });
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Cache update failed for deleteHome:',
+      });
+      void refetch();
+    }
+    if (homeId !== selectedHomeId) return;
 
-        // Read fresh data from Apollo cache (no refetch needed!)
-        const cachedData = deleteClient.cache.readQuery({
-          query: GetHomesDocument,
-        });
-        const remainingHomes = extractNodes(cachedData?.homes);
-
-        const [newDefaultHome] = remainingHomes;
-        if (newDefaultHome) {
-          setSelectedHomeId(newDefaultHome.id);
-          // Clear orphaned pantry selection - useDefaultHome will auto-select new home's default
-          setSelectedPantryId(null);
-          // Presents its own failure and rolls the selection back.
-          void setDefaultHome(newDefaultHome.id);
-        } else {
-          // No homes left, clear all selections
-          setSelectedHomeId(null);
-          setSelectedPantryId(null);
-        }
-      },
-    },
-  );
+    const cachedData = client.cache.readQuery({ query: GetHomesDocument });
+    const [newDefaultHome] = extractNodes(cachedData?.homes);
+    if (newDefaultHome) {
+      setSelectedHomeId(newDefaultHome.id);
+      // Clear orphaned pantry selection - useDefaultHome will auto-select new home's default
+      setSelectedPantryId(null);
+      // Presents its own failure and rolls the selection back.
+      void setDefaultHome(newDefaultHome.id);
+    } else {
+      // No homes left, clear all selections
+      setSelectedHomeId(null);
+      setSelectedPantryId(null);
+    }
+  }
 
   /**
    * Writes, then adopts the new home: its own default flag and its
@@ -187,6 +170,7 @@ export function useHomeMutations({
       document: DeleteHomeDocument,
       fallback: t('errors.deleteHomeFailed'),
       itemId: homeId,
+      onRemoved: () => removeDeletedHome(homeId),
       confirmTitle: t('confirmations.deleteHomeTitle'),
       confirmMessage: t('labels.areYouSureYouWantToDeleteThisCannotBeUndone', {
         name: homeName,

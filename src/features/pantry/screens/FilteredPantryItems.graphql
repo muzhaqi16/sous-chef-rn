@@ -10,6 +10,7 @@ mutation AddItemToShoppingListFromFilteredPantry(
         index
         clientId
         success
+        code
         quantityIncremented
         error
         item {

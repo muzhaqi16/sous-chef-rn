@@ -47,20 +47,24 @@ export function useUpdatePantryItemQuantity({
   );
 
   /**
-   * Update quantity and/or unit of a pantry item
-   * Fires mutation asynchronously - doesn't await to allow immediate navigation
+   * Updates quantity and/or unit. `onSuccess` runs as soon as the write is
+   * fired; the returned promise resolves once it settles, false on a refusal.
    */
-  const updateQuantity = ({
+  const updateQuantity = async ({
     itemId,
     quantityInput,
     quantityValue,
     unitId,
     trackingUnit,
-  }: UpdateQuantityParams): void => {
+  }: UpdateQuantityParams): Promise<boolean> => {
+    const cacheId = client.cache.identify({
+      __typename: 'PantryItem',
+      id: itemId,
+    });
     const currentItem =
       client.cache.readFragment<UseUpdatePantryItemQuantity_PantryItemFragment>(
         {
-          id: client.cache.identify({ __typename: 'PantryItem', id: itemId }),
+          id: cacheId,
           fragment: UseUpdatePantryItemQuantity_PantryItemFragmentDoc,
           fragmentName: 'useUpdatePantryItemQuantity_pantryItem',
         },
@@ -68,7 +72,7 @@ export function useUpdatePantryItemQuantity({
 
     if (!currentItem) {
       logger.warn('Item not found, cannot update quantity:', itemId);
-      return;
+      return false;
     }
 
     // The field accepts fractions ("1 1/4") as well as decimals, so it needs
@@ -78,10 +82,9 @@ export function useUpdatePantryItemQuantity({
     const newQuantity = parseFractionalInput(quantityText);
     if (newQuantity === null) {
       logger.warn('Unreadable quantity, nothing written:', itemId);
-      return;
+      return false;
     }
 
-    // Fire mutation asynchronously - don't await to allow immediate navigation
     const optimisticPantryItem = enhanceWithVersion(currentItem, {
       quantity: newQuantity,
       unit: buildOptimisticUnit(trackingUnit, currentItem.unit),
@@ -89,10 +92,6 @@ export function useUpdatePantryItemQuantity({
 
     // Permanent write BEFORE firing: survives an offline/API-down queue
     // (where no response ever arrives to materialize the change).
-    const cacheId = client.cache.identify({
-      __typename: 'PantryItem',
-      id: itemId,
-    });
     const writeItem = (data: UseUpdatePantryItemQuantity_PantryItemFragment) =>
       client.cache.writeFragment({
         id: cacheId,
@@ -118,7 +117,7 @@ export function useUpdatePantryItemQuantity({
       }
     };
 
-    void settleMutation(
+    const settled = settleMutation(
       () =>
         updateQuantityMutation({
           variables: {
@@ -143,6 +142,7 @@ export function useUpdatePantryItemQuantity({
     );
 
     onSuccess?.();
+    return (await settled).status !== 'failed';
   };
 
   return { updateQuantity };

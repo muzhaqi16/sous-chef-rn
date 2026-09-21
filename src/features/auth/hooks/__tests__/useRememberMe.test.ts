@@ -5,18 +5,6 @@ import { useRememberMe } from '../useRememberMe';
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
-const mockToastSuccess = jest.fn();
-const mockToastError = jest.fn();
-const mockToastInfo = jest.fn();
-const mockToastWarning = jest.fn();
-jest.mock('#services/toastService', () => ({
-  toastService: {
-    success: (...args: unknown[]) => mockToastSuccess(...args),
-    error: (...args: unknown[]) => mockToastError(...args),
-    info: (...args: unknown[]) => mockToastInfo(...args),
-    warning: (...args: unknown[]) => mockToastWarning(...args),
-  },
-}));
 // Mock useAuthPreferences
 const mockMarkCredentialPromptDeclined = jest.fn();
 jest.mock('#/hooks/navigation/useAuthPreferences', () => ({
@@ -92,29 +80,6 @@ describe('useRememberMe', () => {
     });
 
     expect(mockOnAccept).not.toHaveBeenCalled();
-    expect(result.current.showRememberMeModal).toBe(false);
-  });
-
-  it('handleRememberMeAccept shows error toast on onAccept failure', async () => {
-    mockOnAccept.mockRejectedValue(new Error('Store failed'));
-    const { result } = renderHook(() =>
-      useRememberMe({ onAccept: mockOnAccept, onDecline: mockOnDecline }),
-    );
-
-    act(() => {
-      result.current.showRememberMePrompt({
-        email: 'test@test.com',
-      });
-    });
-
-    await act(async () => {
-      await result.current.handleRememberMeAccept();
-    });
-
-    expect(mockToastError).toHaveBeenCalledWith(
-      'Failed to save login information',
-    );
-    // Modal should still be hidden after error
     expect(result.current.showRememberMeModal).toBe(false);
   });
 

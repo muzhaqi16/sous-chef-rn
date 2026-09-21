@@ -136,4 +136,27 @@ describe('StorageLocationForm', () => {
     await user.press(screen.getByText('Create'));
     expect(defaultProps.onSubmit).not.toHaveBeenCalled();
   });
+
+  it('sends false for a flag the user unticks', async () => {
+    const user = userEvent.setup();
+    render(
+      <StorageLocationForm
+        {...defaultProps}
+        initialData={{
+          name: 'Wine Cellar',
+          type: StorageType.Refrigerator,
+          isClimateControlled: true,
+          isDefault: true,
+        }}
+      />,
+    );
+    await user.press(screen.getByText('Advanced Settings'));
+    await user.press(screen.getByText('Climate Controlled'));
+    await user.press(screen.getByText('Set as Default Location'));
+    await user.press(screen.getByText('Update'));
+
+    expect(defaultProps.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ isClimateControlled: false, isDefault: false }),
+    );
+  });
 });

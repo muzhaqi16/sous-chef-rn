@@ -424,6 +424,10 @@ describe('AddToPantrySheet', () => {
                   __typename
                   id
                 }
+                unit {
+                  __typename
+                  id
+                }
               }
             }
           }
@@ -472,7 +476,15 @@ describe('AddToPantrySheet', () => {
         itemName: 'Milk',
         quantity: 3,
         item: { __typename: 'Item', id: 'item-1' },
+        unit: { __typename: 'Unit', id: 'unit-l' },
       },
+    };
+
+    // A search suggestion names the unit a one-tap add is created in.
+    const milkInLitres = {
+      id: 'item-1',
+      name: 'Milk',
+      defaultUnit: { __typename: 'ItemUnitSuggestion', id: 'unit-l' },
     };
 
     const restocked: MockFor<typeof RestockPantryItemDocument> = {
@@ -515,7 +527,7 @@ describe('AddToPantrySheet', () => {
       const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
         item: unknown,
       ) => void;
-      quickAdd({ id: 'item-1', name: 'Milk' });
+      quickAdd(milkInLitres);
 
       await waitFor(() =>
         expect(toastService.success).toHaveBeenCalledWith('Restocked Milk'),
@@ -540,7 +552,7 @@ describe('AddToPantrySheet', () => {
       const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
         item: unknown,
       ) => void;
-      quickAdd({ id: 'item-1', name: 'Milk' });
+      quickAdd(milkInLitres);
 
       expect(readQuantity(cache)).toBe(4);
     });
@@ -555,7 +567,7 @@ describe('AddToPantrySheet', () => {
       const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
         item: unknown,
       ) => void;
-      quickAdd({ id: 'item-1', name: 'Milk' });
+      quickAdd(milkInLitres);
 
       await waitFor(() => expect(toastService.success).toHaveBeenCalled());
       const read = cache.readQuery<{
@@ -570,6 +582,59 @@ describe('AddToPantrySheet', () => {
         },
       });
       expect(read?.pantry?.stats?.totalItems).toBe(1);
+    });
+
+    it('leaves a stack held in another unit alone', async () => {
+      // Held in litres, added in millilitres: restocking would add 1 L.
+      const cache = seedStocked([stockedEdge]);
+      const create = recordMock(CreatePantryItemDocument, {
+        data: {
+          createPantryItem: {
+            __typename: 'CreatePantryItemPayload',
+            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+          },
+        },
+      });
+      renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
+        cache,
+        operationMocks: [create.mock, restocked],
+      });
+
+      const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
+        item: unknown,
+      ) => void;
+      quickAdd({
+        ...milkInLitres,
+        defaultUnit: { __typename: 'ItemUnitSuggestion', id: 'unit-ml' },
+      });
+
+      await waitFor(() => expect(create.fired).toHaveLength(1));
+      expect(readQuantity(cache)).toBe(3);
+      expect(toastService.success).not.toHaveBeenCalledWith('Restocked Milk');
+    });
+
+    it('leaves an add whose unit it cannot know to the server', async () => {
+      const cache = seedStocked([stockedEdge]);
+      const create = recordMock(CreatePantryItemDocument, {
+        data: {
+          createPantryItem: {
+            __typename: 'CreatePantryItemPayload',
+            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+          },
+        },
+      });
+      renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
+        cache,
+        operationMocks: [create.mock, restocked],
+      });
+
+      const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
+        item: unknown,
+      ) => void;
+      quickAdd({ id: 'item-1', name: 'Milk', defaultUnit: null });
+
+      await waitFor(() => expect(create.fired).toHaveLength(1));
+      expect(readQuantity(cache)).toBe(3);
     });
 
     it('still fires the create for an item the cache does not stock', async () => {

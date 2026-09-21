@@ -1,5 +1,10 @@
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
 import { ProfileHeader } from '#features/profile/components/ProfileHeader';
 import type { IconButtonProps } from '#components/atoms/IconButton';
 import type { BackButtonProps } from '#components/atoms/BackButton';
@@ -41,10 +46,6 @@ jest.mock('#components/atoms/BackButton', () => {
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
-}));
-
-jest.mock('#components/atoms/CachedImage', () => ({
-  CachedImage: 'CachedImage',
 }));
 
 describe('ProfileHeader', () => {
@@ -101,5 +102,24 @@ describe('ProfileHeader', () => {
       />,
     );
     expect(toJSON()).toBeTruthy();
+  });
+
+  it('shows the fallback icon when the avatar fails to load', () => {
+    render(
+      <ProfileHeader
+        {...defaultProps}
+        avatarUrl="https://example.com/broken-avatar.jpg"
+      />,
+    );
+
+    const [image] = screen.UNSAFE_root.findAll(
+      node => typeof node.props.onFailure === 'function',
+    );
+    if (!image) throw new Error('no avatar image rendered');
+    fireEvent(image, 'failure');
+
+    expect(
+      screen.UNSAFE_getAllByProps({ name: 'image-outline' }).length,
+    ).toBeGreaterThan(0);
   });
 });

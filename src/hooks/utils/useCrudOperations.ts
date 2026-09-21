@@ -45,6 +45,12 @@ export interface RemoveOperationConfig<TResult> extends SettleConfig {
   /** Localized heading for the confirmation dialog; `labels.delete` when absent. */
   confirmTitle?: string;
   onSuccess?: (data: TResult) => void;
+  /**
+   * Takes the row out locally. Runs whenever the removal did not fail —
+   * applied, queued, or already gone, including a top-level gone code that
+   * carries no data for an `update` to read.
+   */
+  onRemoved?: () => void;
 }
 
 // --- Module-level factory implementations (outside hook body for React Compiler) ---
@@ -77,9 +83,12 @@ async function settleAndDeliver<TResult>(
   run: () => Promise<MutateResultLike<TResult>>,
   options: SettleOptions,
   onSuccess: ((data: TResult) => void) | undefined,
+  onRemoved: (() => void) | undefined,
 ): Promise<TResult | false> {
   const settled = await settleMutation(run, options);
-  if (settled.status === 'failed' || !settled.data) return false;
+  if (settled.status === 'failed') return false;
+  onRemoved?.();
+  if (!settled.data) return false;
   // `settled.data` holds whichever union member came back, so a converged
   // removal carries an error member — not something `onSuccess` may read.
   if (appliedPayload(settled.data)) onSuccess?.(settled.data);
@@ -97,18 +106,19 @@ function createRemoveOperationImpl<TResult>(
       confirmMessage,
       confirmTitle,
       onSuccess,
+      onRemoved,
     } = config;
 
     if (!hasParentContext(parentId)) return false;
 
-    // A row that is already gone is the outcome a removal asked for — which
-    // obliges each caller's `update` to take it out of the cache on that
-    // refusal too, or the row stays on screen under a silent success.
+    // A row that is already gone is the outcome a removal asked for, so the
+    // caller's `onRemoved` takes it out of the cache on that refusal too.
     const execute = () =>
       settleAndDeliver(
         () => mutation({ variables: { input: { id: itemId } } }),
         settleOptions(config, { removal: true }),
         onSuccess,
+        onRemoved,
       );
 
     if (!confirmMessage) return execute();

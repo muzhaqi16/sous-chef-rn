@@ -45,10 +45,11 @@ jest.mock('../queueStore', () => ({
     incrementRetry: jest.fn(() => true),
     markMutationFailed: jest.fn(() => true),
     getPendingMutationsForUser: jest.fn(() => []),
+    getMutationsForUser: jest.fn(() => []),
     resetProcessingToPending: jest.fn(() => 0),
     cleanupTerminal: jest.fn(() => []),
     revivePendingAuthErrors: jest.fn(() => 0),
-    expireStalePending: jest.fn(() => 0),
+    expireStalePending: jest.fn(() => []),
     getQueueStats: jest.fn(() => ({
       total: 0,
       pending: 0,

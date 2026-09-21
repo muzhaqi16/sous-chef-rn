@@ -12,6 +12,7 @@ import {
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
+import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -67,8 +68,14 @@ jest.mock('#features/shoppingList/cache/items', () => {
   };
 });
 
+jest.mock('#/utils/deviceLocale', () => ({
+  ...jest.requireActual('#/utils/deviceLocale'),
+  getDeviceDecimalSeparator: jest.fn(() => '.'),
+}));
+
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.');
 });
 
 describe('useAddShoppingItem', () => {
@@ -124,6 +131,27 @@ describe('useAddShoppingItem', () => {
       expect.any(String),
       expect.objectContaining({ quantity: 1.5, quantityInput: '1 1/2' }),
     );
+  });
+
+  it('sends a comma-device quantity as API text', async () => {
+    jest.mocked(getDeviceDecimalSeparator).mockReturnValue(',');
+    const created = addItemMock();
+    const { result } = renderHookWithApollo(
+      () => useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      { operationMocks: [created.mock] },
+    );
+
+    await act(async () => {
+      await result.current.addItem({ itemName: 'Flour', quantityInput: '2,2' });
+    });
+
+    expect(created.fired).toEqual([
+      expect.objectContaining({
+        input: expect.objectContaining({
+          items: [expect.objectContaining({ quantity: '2.2' })],
+        }),
+      }),
+    ]);
   });
 
   it('reports a queued add as added, so quick-add does not call it a failure', async () => {

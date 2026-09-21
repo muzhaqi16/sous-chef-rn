@@ -3,7 +3,8 @@
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService, type AlertButton } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { useCrudOperations } from '../useCrudOperations';
@@ -317,6 +318,85 @@ describe('useCrudOperations', () => {
       await expect(removeOp()).resolves.toEqual(queued);
       expect(onFailed).not.toHaveBeenCalled();
       expect(alertService.alert).not.toHaveBeenCalled();
+    });
+
+    describe('onRemoved', () => {
+      // A top-level code is read by the real parser; the module mock returns none.
+      beforeEach(() => {
+        const actual: typeof import('#/services/errorService') =
+          jest.requireActual('#/services/errorService');
+        jest
+          .mocked(errorService.parseApolloError)
+          .mockImplementation((...args) =>
+            actual.errorService.parseApolloError(...args),
+          );
+      });
+
+      const run = async (result: { data?: unknown; error?: unknown }) => {
+        const onRemoved = jest.fn();
+        const { result: hook } = renderHookWithApollo(() =>
+          useCrudOperations(),
+        );
+        await hook.current.createRemoveOperation({
+          ...remove,
+          mutation: jest.fn().mockResolvedValue(result),
+          itemId: 'item-1',
+          onRemoved,
+        })();
+        return onRemoved;
+      };
+
+      // Every outcome that leaves the row gone on the server removes it here.
+      it.each([
+        [
+          'applied',
+          {
+            data: {
+              deletePantryItem: { __typename: 'DeletePantryItemPayload' },
+            },
+          },
+        ],
+        ['queued', { data: { deletePantryItem: null } }],
+        [
+          'already gone, as data',
+          {
+            data: {
+              deletePantryItem: {
+                __typename: 'NotFoundError',
+                code: ErrorCode.NotFound,
+              },
+            },
+          },
+        ],
+        [
+          'already gone, as a top-level code',
+          {
+            data: undefined,
+            error: new CombinedGraphQLErrors({
+              errors: [
+                {
+                  message: 'gone',
+                  extensions: { code: TopLevelErrorCode.ResourceNotFound },
+                },
+              ],
+            }),
+          },
+        ],
+      ])('runs when the removal is %s', async (_label, result) => {
+        expect(await run(result)).toHaveBeenCalledTimes(1);
+      });
+
+      it('does not run when the removal is refused', async () => {
+        const onRemoved = await run({
+          data: {
+            deletePantryItem: {
+              __typename: 'ForbiddenError',
+              code: ErrorCode.Forbidden,
+            },
+          },
+        });
+        expect(onRemoved).not.toHaveBeenCalled();
+      });
     });
   });
 });

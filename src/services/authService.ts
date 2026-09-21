@@ -14,6 +14,7 @@ import { getRateLimitDetails } from '#/utils/errors/rateLimit';
 import { useStore } from '#store';
 import { runSessionTeardown } from '#store/sessionTeardown';
 import { whileSessionEnds } from '#store/sessionEnding';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 import { logger } from '#/utils/environment';
 import { isDeadCredentialCode } from '#/utils/authErrorCodes';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -791,10 +792,10 @@ async function autoLogin(): Promise<boolean> {
  * costs the server a stale row, not the person a working sign-in.
  */
 async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
-  // Offline there is nothing to revoke against, and httpLink's abort plus
-  // retryLink's attempts would otherwise hold the sign-out for ~30s on the one
-  // path where the person is trying to leave the device.
-  if (useStore.getState().isOnline === false) return false;
+  // With the API unreachable there is nothing to revoke against, and httpLink's
+  // abort plus retryLink's attempts would otherwise hold the sign-out for ~30s
+  // on the one path where the person is trying to leave the device.
+  if (isApiUnavailable(useStore.getState())) return false;
   try {
     // `DeviceCredential.deviceId` is non-null, so a null here matches nothing
     // and the revoke would resolve having done nothing at all.
@@ -812,7 +813,9 @@ async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
       fetchPolicy: 'network-only',
       context: { allowDuringLogout: true },
     });
-    const mine = listed.data?.deviceCredentials.find(
+    // A failed listing resolves with no data; it is not "nothing to revoke".
+    if (!listed.data) return false;
+    const mine = listed.data.deviceCredentials.find(
       credential => credential.deviceId === deviceId,
     );
     if (!mine) return true;
@@ -854,17 +857,23 @@ async function revokeWithinBudget(): Promise<void> {
 }
 
 /**
+ * `refused` was already reported by the auth handlers; `unsaved` (no device id,
+ * keychain failure) was not, so the caller says so in its own words.
+ */
+export type EnrolOutcome = 'enrolled' | 'refused' | 'unsaved';
+
+/**
  * Enrol biometric sign-in: ask the server for a device-bound credential and put
  * THAT behind biometry. Needs only the live session — the account password is
  * never passed in, so there is nothing to retain past the sign-in that enabled
  * this. Issuing supersedes any credential this device already held.
  */
-async function enrolDeviceCredential(email: string): Promise<boolean> {
+async function enrolDeviceCredential(email: string): Promise<EnrolOutcome> {
   try {
     const deviceId = await ensureDeviceId();
     if (!deviceId) {
       logger.warn('No device id available; not issuing a device credential');
-      return false;
+      return 'unsaved';
     }
 
     const result = await client.mutate({
@@ -879,13 +888,17 @@ async function enrolDeviceCredential(email: string): Promise<boolean> {
         handleRejectedAuthPayload(refusal, 'Enrol device credential');
       else if (result.error)
         handleAuthError(result.error, 'Enrol device credential');
-      return false;
+      return 'refused';
     }
 
-    return storeCredentials(email, markDeviceCredential(payload.credential));
+    const stored = await storeCredentials(
+      email,
+      markDeviceCredential(payload.credential),
+    );
+    return stored ? 'enrolled' : 'unsaved';
   } catch (error) {
     logger.error('Enrol device credential error:', error);
-    return false;
+    return 'unsaved';
   }
 }
 

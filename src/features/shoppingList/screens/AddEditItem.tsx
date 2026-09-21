@@ -26,7 +26,10 @@ import { Controller } from 'react-hook-form';
 import { logValidationErrors } from '#/utils/validation/common';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import {
+  normalizeNumericTextForApi,
+  parseDecimalInput,
+} from '#/utils/parseDecimalInput';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
@@ -86,13 +89,15 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     isEdit ? itemId : undefined,
   );
 
-  // Populate form when editing existing item
+  // Seeded once per item: the save's own cache write and a refusal's refetch
+  // both re-deliver `itemData`, and re-seeding would drop what the user typed.
+  const seededItemIdRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (itemData) {
-      setFromItem(itemData);
-      // Store version for optimistic concurrency control
-      itemVersionRef.current = itemData.version;
-    }
+    if (!itemData) return;
+    itemVersionRef.current = itemData.version;
+    if (seededItemIdRef.current === itemData.id) return;
+    seededItemIdRef.current = itemData.id;
+    setFromItem(itemData);
   }, [itemData, setFromItem]);
 
   // Pre-populate item name when adding new item with initial value
@@ -176,21 +181,23 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
         const netWeightValue = parseNetWeightInput();
         const brandName = brand.trim();
+        // API text: a comma device's "2,2" is refused as sent.
+        const apiQuantityText = normalizeNumericTextForApi(quantityInput);
 
         const created = await createItem(
           {
             shoppingListId: listId,
             itemName,
             quantity: parseQuantityInput() ?? 1,
-            quantityInput,
+            quantityInput: apiQuantityText,
             unitName: unit || null,
             category: category || null,
             unitId: 'unit' in unitData ? unitData.unit.unitId : undefined,
           },
           {
             item: { itemName },
-            // Raw string: the server accepts FlexibleQuantity ("1/3", "1 1/4").
-            quantity: quantityInput,
+            // FlexibleQuantity text: "1/3", "1 1/4", "0.5".
+            quantity: apiQuantityText,
             ...unitData,
             notes,
             category,

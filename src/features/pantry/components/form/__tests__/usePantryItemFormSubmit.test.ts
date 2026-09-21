@@ -1,6 +1,24 @@
 import { renderHook, waitFor } from '@testing-library/react-native';
+import { gql } from '@apollo/client';
+import {
+  recordMock,
+  renderHookWithApollo,
+  seedCache,
+  type MockDataFor,
+} from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
-import { ItemCondition, StorageState } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  ItemCondition,
+  StorageState,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
+import {
+  UpdatePantryItemDocument,
+  UpdatePantryItemQuantityDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import { useUpdatePantryItem } from '#features/pantry/hooks/mutations/useUpdatePantryItem';
+import { useUpdatePantryItemQuantity } from '#features/pantry/hooks/mutations/useUpdatePantryItemQuantity';
 import type { PantryItemForm_PantryItemFragment } from '../PantryItemForm.generated';
 import type { PantryItemFormData } from '../PantryItemForm';
 import {
@@ -11,6 +29,9 @@ import {
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
+
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#/utils/finallyHelpers', () => ({
   executeMutation: jest.fn(
@@ -76,7 +97,7 @@ function defaults(
     selectedCategoryId: null,
     selectedStorageLocation: null,
     updatePantryItemFields: jest.fn(),
-    updateQuantity: jest.fn(),
+    updateQuantity: jest.fn().mockResolvedValue(true),
     resolveUnitId: jest.fn(),
     onSuccess: jest.fn(),
     ...overrides,
@@ -86,7 +107,7 @@ function defaults(
 describe('usePantryItemFormSubmit', () => {
   describe('validation', () => {
     it('alerts when quantity is invalid', async () => {
-      const params = defaults();
+      const params = defaults({ dirtyFields: { quantityInput: true } });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
       await result.current.handleSave({ ...baseData, quantityInput: '' });
@@ -111,6 +132,84 @@ describe('usePantryItemFormSubmit', () => {
       );
       expect(params.updateQuantity).not.toHaveBeenCalled();
       expect(params.updatePantryItemFields).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('validation applies only to what changed', () => {
+    const emptyStack = {
+      id: 'item-1',
+      quantity: 0,
+      unit: { symbol: 'L' },
+    } as PantryItemForm_PantryItemFragment;
+
+    it('saves a notes edit on a stack whose quantity is 0', async () => {
+      const params = defaults({
+        existingPantryItem: emptyStack,
+        dirtyFields: { notes: true },
+      });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      await result.current.handleSave({
+        ...baseData,
+        quantityInput: '0',
+        notes: 'Top shelf',
+      });
+
+      expect(alertService.alert).not.toHaveBeenCalled();
+      expect(params.updatePantryItemFields).toHaveBeenCalled();
+      expect(params.updateQuantity).not.toHaveBeenCalled();
+    });
+
+    it('still refuses a quantity changed to 0', async () => {
+      const params = defaults({
+        existingPantryItem: emptyStack,
+        dirtyFields: { quantityInput: true, notes: true },
+      });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      await result.current.handleSave({ ...baseData, quantityInput: '0' });
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Please enter a valid quantity',
+      );
+      expect(params.updatePantryItemFields).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a unit-only edit keeps the stored quantity', () => {
+    it('sends the stored value, not the seed rounded to three places', async () => {
+      const params = defaults({
+        existingPantryItem: {
+          id: 'item-1',
+          quantity: 1.23456,
+          unit: { symbol: 'L' },
+        } as PantryItemForm_PantryItemFragment,
+        trackingUnit: {
+          id: 'unit-kg',
+          name: 'Kilogram',
+          symbol: 'kg',
+          type: null,
+        },
+        dirtyFields: { unit: true },
+      });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      await result.current.handleSave({
+        ...baseData,
+        quantityInput: '1.235',
+        unit: 'kg',
+      });
+
+      await waitFor(() =>
+        expect(params.updateQuantity).toHaveBeenCalledWith(
+          expect.objectContaining({
+            quantityInput: '1.23456',
+            quantityValue: 1.23456,
+            unitId: 'unit-kg',
+          }),
+        ),
+      );
     });
   });
 
@@ -289,6 +388,152 @@ describe('usePantryItemFormSubmit', () => {
           'Failed to update pantry item. Please try again.',
         ),
       );
+    });
+  });
+
+  describe('a combined edit is sent in order', () => {
+    const pantryItem = {
+      __typename: 'PantryItem',
+      id: 'item-1',
+      pantryId: 'pantry-1',
+      itemId: null,
+      itemName: 'Milk',
+      quantity: 2,
+      version: 1,
+      updatedAt: '2026-01-01T00:00:00Z',
+      storageState: StorageState.Ambient,
+      condition: ItemCondition.Good,
+      expiresAt: null,
+      lowStockAlert: false,
+      isLowStock: false,
+      minQuantity: null,
+      lastUsedAt: null,
+      netWeight: null,
+      remainingNetWeight: null,
+      activeBatchCount: 0,
+      earliestBatchExpiration: null,
+      restockQuantity: null,
+      storageNotes: null,
+      tags: [],
+      item: null,
+      unit: {
+        __typename: 'Unit',
+        id: 'unit-1',
+        name: 'Liter',
+        symbol: 'L',
+        type: UnitType.Volume,
+        displayAsFraction: false,
+      },
+      netWeightUnit: null,
+      storageLocation: null,
+      packageBreakdown: null,
+      quantityBreakdown: null,
+      brand: null,
+    };
+
+    const STORED = gql`
+      fragment StoredEdit on PantryItem {
+        quantity
+        storageNotes
+        version
+      }
+    `;
+
+    it('stores quantity and notes without a version conflict', async () => {
+      // The server bumps the version on every write and refuses a stale one.
+      let serverVersion = 1;
+      const quantity = recordMock(UpdatePantryItemQuantityDocument, {
+        dataFor: (
+          vars,
+        ): MockDataFor<typeof UpdatePantryItemQuantityDocument> => {
+          const input = vars.input as { version: number };
+          if (input.version !== serverVersion)
+            return {
+              updatePantryItemQuantity: {
+                __typename: 'ConflictError',
+                code: ErrorCode.VersionConflict,
+              },
+            };
+          serverVersion += 1;
+          return {
+            updatePantryItemQuantity: {
+              __typename: 'UpdatePantryItemQuantityPayload',
+              pantryItem: {
+                __typename: 'PantryItem',
+                id: 'item-1',
+                quantity: 3,
+                version: serverVersion,
+              },
+            },
+          };
+        },
+      });
+      const fields = recordMock(UpdatePantryItemDocument, {
+        dataFor: (vars): MockDataFor<typeof UpdatePantryItemDocument> => {
+          const input = vars.input as { version: number };
+          if (input.version !== serverVersion)
+            return {
+              updatePantryItem: {
+                __typename: 'ConflictError',
+                code: ErrorCode.VersionConflict,
+              },
+            };
+          serverVersion += 1;
+          return {
+            updatePantryItem: {
+              __typename: 'UpdatePantryItemPayload',
+              pantryItem: {
+                __typename: 'PantryItem',
+                id: 'item-1',
+                quantity: 3,
+                storageNotes: 'Top shelf',
+                version: serverVersion,
+              },
+            },
+          };
+        },
+      });
+
+      const cache = seedCache([pantryItem]);
+      const onSuccess = jest.fn();
+      const { result } = renderHookWithApollo(
+        () => {
+          const { updatePantryItemFields } = useUpdatePantryItem({ onSuccess });
+          const { updateQuantity } = useUpdatePantryItemQuantity({ onSuccess });
+          return usePantryItemFormSubmit(
+            defaults({
+              existingPantryItem: {
+                id: 'item-1',
+                quantity: 2,
+                unit: { symbol: 'L' },
+              } as PantryItemForm_PantryItemFragment,
+              dirtyFields: { quantityInput: true, notes: true },
+              updatePantryItemFields,
+              updateQuantity,
+            }),
+          );
+        },
+        { cache, operationMocks: [quantity.mock, fields.mock] },
+      );
+
+      await result.current.handleSave({
+        ...baseData,
+        quantityInput: '3',
+        notes: 'Top shelf',
+      });
+
+      await waitFor(() => expect(fields.fired).toHaveLength(1));
+      await waitFor(() =>
+        expect(
+          cache.readFragment({ id: 'PantryItem:item-1', fragment: STORED }),
+        ).toEqual({
+          __typename: 'PantryItem',
+          quantity: 3,
+          storageNotes: 'Top shelf',
+          version: 3,
+        }),
+      );
+      expect(alertService.alert).not.toHaveBeenCalled();
     });
   });
 });

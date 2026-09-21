@@ -78,7 +78,7 @@ describe('BiometricSetupModal', () => {
       biometryType: 'Face ID',
     });
     mockCheckStoredCredentials.mockResolvedValue(false);
-    mockEnrol.mockResolvedValue(true);
+    mockEnrol.mockResolvedValue('enrolled');
   });
 
   it('renders null when biometric is not available', async () => {
@@ -151,6 +151,28 @@ describe('BiometricSetupModal', () => {
       expect(mockEnrol).toHaveBeenCalledWith('test@example.com');
       expect(defaultProps.onComplete).toHaveBeenCalledWith(true);
     });
+  });
+
+  // The enrolment reports nothing itself, so this alert is the only message.
+  it('says setup failed exactly once when the credential cannot be saved', async () => {
+    mockEnrol.mockResolvedValue('unsaved');
+    const alert = jest.spyOn(
+      jest.requireActual('#/services/alertService').alertService,
+      'alert',
+    );
+    const toastError = jest.spyOn(
+      jest.requireActual('#/services/toastService').toastService,
+      'error',
+    );
+    const user = userEvent.setup();
+    render(<BiometricSetupModal {...defaultProps} mode="settings" />);
+
+    await user.press(await screen.findByText('Enable Now'));
+
+    await waitFor(() => expect(alert).toHaveBeenCalledTimes(1));
+    expect(toastError).not.toHaveBeenCalled();
+    alert.mockRestore();
+    toastError.mockRestore();
   });
 
   // A field that gates on non-empty and is then discarded reads as a security

@@ -6,7 +6,6 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import type { ApolloCache } from '@apollo/client';
 import {
   CreateMealPlanItemDocument,
   UpdateMealPlanItemDocument,
@@ -14,87 +13,24 @@ import {
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
   MealPlanItemActions_OptimisticFullItemFragmentDoc,
-  MealPlanItemActions_RecipeRefFragmentDoc,
-  type MealPlanItemActions_RecipeRefFragment,
+  MealPlanItemActions_PlanBoundsFragmentDoc,
 } from './useMealPlanItemActions.generated';
-import type { MealPlanItemCard_ItemFragment } from '#features/mealPlan/components/MealPlanItemCard.generated';
 import type { CreateMealPlanItemInput } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import {
-  createAddToParentArrayUpdater,
-  createRemoveFromParentArrayUpdater,
-} from '#/apollo/utils/cacheUpdaters';
+  addToMealPlanItems,
+  removeFromMealPlanItems,
+  writeMealPlanItem,
+  writeOptimisticMealPlanItem,
+} from '#features/mealPlan/cache/mealPlanItem';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
-
-const addToMealPlanItems = createAddToParentArrayUpdater<{ id: string }>(
-  'MealPlan',
-  'mealPlanItems',
-);
-const removeFromMealPlanItems = createRemoveFromParentArrayUpdater(
-  'MealPlan',
-  'mealPlanItems',
-  'MealPlanItem',
-);
-
-/** The flat field union of the five item display fragments. */
-type OptimisticMealPlanItem = {
-  __typename: 'MealPlanItem';
-  id: string;
-  date: string;
-  mealType: CreateMealPlanItemInput['mealType'];
-  customMealName: string | null;
-  servings: number | null;
-  calories: number | null;
-  usedPantryItems: MealPlanItemCard_ItemFragment['usedPantryItems'];
-  notes: string | null;
-  isCompleted: boolean;
-  completedAt: string | null;
-  recipe: MealPlanItemActions_RecipeRefFragment | null;
-};
-
-/**
- * Materialize a complete optimistic MealPlanItem for a local-first create.
- * The recipe ref resolves from the cache's canonical Recipe entity (the user
- * just picked it, so it's cached); a miss degrades to a recipe-less card that
- * the post-replay refetch heals.
- */
-function buildOptimisticMealPlanItem(
-  cache: ApolloCache,
-  id: string,
-  input: CreateMealPlanItemInput,
-): OptimisticMealPlanItem {
-  const recipeCacheId = input.meal.recipeId
-    ? cache.identify({ __typename: 'Recipe', id: input.meal.recipeId })
-    : undefined;
-  const recipe = recipeCacheId
-    ? cache.readFragment<MealPlanItemActions_RecipeRefFragment>({
-        id: recipeCacheId,
-        fragment: MealPlanItemActions_RecipeRefFragmentDoc,
-        fragmentName: 'MealPlanItemActions_recipeRef',
-      })
-    : null;
-
-  return {
-    __typename: 'MealPlanItem',
-    id,
-    date: input.date,
-    mealType: input.mealType,
-    customMealName: input.meal.customMealName ?? null,
-    servings: input.servings ?? null,
-    calories: input.calories ?? null,
-    usedPantryItems: [],
-    notes: input.notes ?? null,
-    isCompleted: false,
-    completedAt: null,
-    recipe,
-  };
-}
+import { keepMealInsidePlan } from '#/utils/dateUtils';
 
 export function useMealPlanItemActions(mealPlanId: string | null) {
   const client = useApolloClient();
@@ -118,14 +54,6 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
 
   const [deleteItemMutation] = useMutation(DeleteMealPlanItemDocument);
 
-  const writeItem = (data: OptimisticMealPlanItem) =>
-    client.cache.writeFragment({
-      id: client.cache.identify(data),
-      fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
-      fragmentName: 'MealPlanItemActions_optimisticFullItem',
-      data,
-    });
-
   const readItemSnapshot = (id: string) =>
     client.cache.readFragment({
       fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
@@ -137,41 +65,24 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
   const createItem = async (
     input: CreateMealPlanItemInput,
   ): Promise<boolean> => {
+    const bounds = client.cache.readFragment({
+      fragment: MealPlanItemActions_PlanBoundsFragmentDoc,
+      fragmentName: 'MealPlanItemActions_planBounds',
+      from: { __typename: 'MealPlan', id: input.mealPlanId },
+    });
     // Local-first: mint the permanent cuid (the row's real PK) and write the
     // meal into the cache before firing, so adding works fully offline.
-    const id = generateEntityId();
-    const optimisticItem = buildOptimisticMealPlanItem(client.cache, id, input);
-    try {
-      writeItem(optimisticItem);
-      if (mealPlanId) {
-        addToMealPlanItems(client.cache, mealPlanId, optimisticItem, {
-          position: 'end',
-        });
-      }
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Add Meal (optimistic)',
-      });
-    }
-
-    const revertCreate = () => {
-      try {
-        if (mealPlanId) {
-          removeFromMealPlanItems(client.cache, mealPlanId, id, {
-            evictItem: true,
-          });
-        }
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Revert rejected Meal Plan Item',
-        });
-      }
+    const itemInput = {
+      ...input,
+      id: generateEntityId(),
+      date: keepMealInsidePlan(input.date, bounds ?? undefined),
     };
+    const revertCreate = writeOptimisticMealPlanItem(client.cache, itemInput);
 
     const settled = await settleMutation(
       () =>
         createItemMutation({
-          variables: { input: { ...input, id } },
+          variables: { input: itemInput },
           context: { localFirst: true },
         }),
       {
@@ -229,7 +140,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       ...(options?.notes != null && { notes: options.notes }),
     };
     try {
-      writeItem(completedItem);
+      writeMealPlanItem(client.cache, completedItem);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Toggle Meal completed (optimistic)',
@@ -259,7 +170,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     };
     const revertToggle = () => {
       try {
-        writeItem(fullItem);
+        writeMealPlanItem(client.cache, fullItem);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Revert rejected Meal toggle',
@@ -345,7 +256,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     const restoreItem = () => {
       if (!snapshot) return;
       try {
-        writeItem(snapshot);
+        writeMealPlanItem(client.cache, snapshot);
         if (mealPlanId) {
           addToMealPlanItems(client.cache, mealPlanId, snapshot, {
             position: 'end',

@@ -14,6 +14,10 @@ import { useAnyShoppingListSheetVisible } from '#features/shoppingList/context/S
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { getShoppingListPermissionsWithOwner } from '#features/shoppingList/utils/shoppingListPermissions';
+import * as selectorModalModule from '#features/shoppingList/hooks/useShoppingListSelectorModal';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { useStore } from '#store';
+import { userEvent } from '@testing-library/react-native';
 
 type ScreenData = ShoppingListMainContentProps['screenData'];
 
@@ -138,11 +142,49 @@ jest.mock('#features/shoppingList/utils/shoppingListPermissions', () => ({
 
 jest.mock('#/utils/finallyHelpers');
 
+// Opens through its imperative handle, as the real tray does, and then lists
+// the config's rows so a test can pick one.
 jest.mock(
   '#components/organisms/AnimatedItemSelector/AnimatedItemSelector',
   () => {
-    const { forwardRef } = require('react');
-    return { AnimatedItemSelector: forwardRef(() => null) };
+    const { forwardRef, useImperativeHandle, useState } = require('react');
+    const { Pressable, View } = require('react-native');
+    return {
+      AnimatedItemSelector: forwardRef(
+        (
+          {
+            config,
+          }: {
+            config: {
+              data?: Array<{ id: string }>;
+              onSelect?: (id: string, item: { id: string }) => void;
+            };
+          },
+          ref: unknown,
+        ) => {
+          const [open, setOpen] = useState(false);
+          useImperativeHandle(ref, () => ({
+            open: () => setOpen(true),
+            close: () => setOpen(false),
+            isActive: () => open,
+            toggle: () => setOpen((wasOpen: boolean) => !wasOpen),
+          }));
+          return (
+            <View testID="list-selector">
+              {open
+                ? (config.data ?? []).map(item => (
+                    <Pressable
+                      key={item.id}
+                      testID={`list-selector-row-${item.id}`}
+                      onPress={() => config.onSelect?.(item.id, item)}
+                    />
+                  ))
+                : null}
+            </View>
+          );
+        },
+      ),
+    };
   },
 );
 
@@ -151,7 +193,18 @@ jest.mock('#features/shoppingList/components/ListTemplate', () => ({
 }));
 
 jest.mock('#components/molecules/TabScreenHeader', () => ({
-  TabScreenHeader: ({ title }: { title: string }) => title,
+  TabScreenHeader: ({
+    title,
+    headerRight,
+  }: {
+    title: string;
+    headerRight?: React.ReactNode;
+  }) => (
+    <>
+      {title}
+      {headerRight}
+    </>
+  ),
 }));
 
 jest.mock('#components/molecules/SearchBar', () => ({
@@ -391,6 +444,11 @@ describe('ShoppingListMainContent', () => {
   });
 
   describe('when the item read fails', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+      useStore.getState().setSelectedShoppingListId(null);
+    });
+
     it('offers a retry rather than calling the list empty', () => {
       const { getByTestId } = render(
         <ShoppingListMainContent
@@ -417,6 +475,52 @@ describe('ShoppingListMainContent', () => {
 
       expect(queryByTestId('state-error')).toBeNull();
     });
+
+    // The header's switch-list button opens this; without it the person is
+    // held on the failing list.
+    it('keeps the list switcher mounted', () => {
+      const { getByTestId } = render(
+        <ShoppingListMainContent
+          screenData={makeScreenData({
+            state: { error: new Error('Network request failed') },
+          })}
+        />,
+      );
+
+      expect(getByTestId('list-selector')).toBeTruthy();
+    });
+    it('opens the switcher from the header and switches to the picked list', async () => {
+      jest
+        .spyOn(selectorModalModule, 'useShoppingListSelectorModal')
+        .mockImplementation(
+          jest.requireActual(
+            '#features/shoppingList/hooks/useShoppingListSelectorModal',
+          ).useShoppingListSelectorModal,
+        );
+      const user = userEvent.setup();
+      const lists = [
+        { id: 'list-1', name: 'Groceries', homeId: null, _isOwner: true },
+        { id: 'list-2', name: 'Hardware', homeId: null, _isOwner: true },
+      ];
+      const { getByTestId, queryByTestId } = render(
+        <ShoppingListMainContent
+          screenData={makeScreenData({
+            state: {
+              error: new Error('Network request failed'),
+              lists,
+              listDataWithOwnership: lists,
+            },
+          })}
+        />,
+      );
+      expect(getByTestId('state-error')).toBeTruthy();
+      expect(queryByTestId('list-selector-row-list-2')).toBeNull();
+
+      await user.press(getByTestId(shoppingListTestIDs.listSelectorButton));
+      await user.press(getByTestId('list-selector-row-list-2'));
+
+      expect(useStore.getState().selectedShoppingListId).toBe('list-2');
+    });
   });
 
   describe('when the app cannot say what this person may do', () => {
@@ -434,6 +538,14 @@ describe('ShoppingListMainContent', () => {
       );
 
       expect(getByTestId('state-error')).toBeTruthy();
+    });
+
+    it('keeps the list switcher mounted', () => {
+      const { getByTestId } = render(
+        <ShoppingListMainContent screenData={withoutDetails()} />,
+      );
+
+      expect(getByTestId('list-selector')).toBeTruthy();
     });
 
     it('calls an unreachable server offline, not a failed load', () => {

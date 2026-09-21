@@ -34,7 +34,7 @@ jest.mock('#/services/authService', () => ({
     getBiometricInfo: jest.fn(() =>
       Promise.resolve({ isAvailable: true, biometryType: 'Face ID' }),
     ),
-    enrolDeviceCredential: jest.fn(() => Promise.resolve(true)),
+    enrolDeviceCredential: jest.fn(() => Promise.resolve('enrolled')),
     checkStoredCredentials: jest.fn(() => Promise.resolve(false)),
     loadStoredCredentials: jest.fn(),
   },

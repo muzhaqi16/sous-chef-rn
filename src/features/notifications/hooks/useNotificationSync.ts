@@ -30,7 +30,8 @@ import {
   restoreNotifications,
   type CapturedNotification,
 } from '#features/notifications/utils/notificationCacheWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { isGoneCode, settleMutation } from '#/apollo/utils/settleMutation';
+import { alertService } from '#/services/alertService';
 import { useStore } from '#store';
 import { useTranslation } from '#/i18n';
 
@@ -52,7 +53,7 @@ export function useNotificationSync() {
     // Optimistic: the row and the badge move together, or neither does.
     if (!applyNotificationRead(cache, userId(), id)) return;
 
-    await settleMutation(
+    const { failure } = await settleMutation(
       () =>
         markReadMutation({
           variables: { input: { id } },
@@ -61,9 +62,18 @@ export function useNotificationSync() {
       {
         document: MarkNotificationAsReadDocument,
         fallback: t('notifications.actionFailed'),
-        onFailed: () => applyNotificationUnread(cache, userId(), id),
+        present: 'none',
       },
     );
+    if (!failure) return;
+    // Deleted on another device: already read here, so only the row goes.
+    if (isGoneCode(failure.code)) {
+      applyNotificationRemoved(cache, userId(), id);
+      useNotificationStore.getState().clearExpirationLink(id);
+      return;
+    }
+    applyNotificationUnread(cache, userId(), id);
+    alertService.alert(failure.title, failure.body);
   };
 
   const syncDelete = async (id: string) => {

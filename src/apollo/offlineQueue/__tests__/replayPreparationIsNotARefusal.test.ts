@@ -11,8 +11,12 @@ import {
 } from '#/test-utils/queuedMutation';
 import {
   AddItemToShoppingListDocument,
+  RemoveItemFromShoppingListDocument,
+  SyncDeleteShoppingListItemDocument,
+  SyncShoppingListItemDocument,
   ToggleShoppingListItemPurchasedDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import type { QueueStore } from '../queueStore';
 
 /**
  * A replay the device could not BUILD is not a refusal. The server never saw
@@ -45,6 +49,10 @@ jest.mock('../queueStore', () => ({
     incrementRetry: jest.fn(() => true),
     markMutationFailed: jest.fn(() => true),
     getPendingMutationsForUser: jest.fn(() => []),
+    getMutationsForUser: jest.fn(() => []),
+    resetProcessingToPending: jest.fn(() => 0),
+    expireStalePending: jest.fn(() => []),
+    cleanupTerminal: jest.fn(() => []),
     getQueueStats: jest.fn(() => ({
       total: 0,
       pending: 0,
@@ -178,5 +186,122 @@ describe('a replay that cannot be prepared on the device', () => {
     });
 
     await expect(executeMutation(create)).resolves.toBeDefined();
+  });
+});
+
+describe('a delete after a write that can no longer be built', () => {
+  it('reaches the server instead of waiting behind that write', async () => {
+    jest.clearAllMocks();
+    (useStore.getState as jest.Mock).mockReturnValue({
+      user: { id: 'user-1' },
+      isOnline: true,
+      apiReachable: true,
+      accessToken: 'token',
+    });
+    mockClient.cache = makeCache();
+    mockClient.mutate.mockResolvedValue({ data: {} });
+    const { QueueStore: RealQueueStore } = jest.requireActual<{
+      QueueStore: new () => QueueStore;
+    }>('../queueStore');
+    const store = new RealQueueStore();
+    store.clearAllQueues();
+    // Offline: the tick queues, then the delete evicts the row the tick's
+    // replay would read its list from.
+    store.addMutation({ ...toggleEntry(), createdAt: 1_000 });
+    store.addMutation(
+      makeQueuedMutation({
+        id: 'delete-1',
+        ...queuedMutationFor(RemoveItemFromShoppingListDocument),
+        variables: { input: { id: 'sli-1' } },
+        createdAt: 2_000,
+      }),
+    );
+    (queueStore.getPendingMutationsForUser as jest.Mock).mockImplementation(
+      (userId: string) => store.getPendingMutationsForUser(userId),
+    );
+
+    await new QueueManager().processQueue();
+
+    expect(mockClient.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mutation: SyncDeleteShoppingListItemDocument,
+        variables: { input: { clientId: 'sli-1' } },
+      }),
+    );
+    // Nothing the drain did brought the deleted row back.
+    const rowKey = mockClient.cache.identify({
+      __typename: 'ShoppingListItem',
+      id: 'sli-1',
+    });
+    expect(rowKey).toBeDefined();
+    expect(mockClient.cache.extract()).not.toHaveProperty([rowKey]);
+  });
+});
+
+describe('a write that captured what its replay reads', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockClient.cache = makeCache();
+    mockClient.mutate.mockResolvedValue({ data: {} });
+    (useStore.getState as jest.Mock).mockReturnValue({
+      user: { id: 'user-1' },
+      isOnline: true,
+      apiReachable: true,
+      accessToken: 'token',
+    });
+  });
+
+  const capturedToggle = (id: string, purchased: boolean) =>
+    makeQueuedMutation({
+      id,
+      ...queuedMutationFor(ToggleShoppingListItemPurchasedDocument),
+      variables: { input: { id: 'sli-1', purchased, version: 3 } },
+      replayInputs: { shoppingListId: 'list-1', refItemName: 'Milk' },
+    });
+
+  it('is sent although its row has left the cache', async () => {
+    const manager = new QueueManager();
+
+    await manager['executeMutation'](capturedToggle('t-1', true));
+
+    expect(mockClient.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mutation: SyncShoppingListItemDocument,
+        variables: {
+          input: {
+            clientId: 'sli-1',
+            item: expect.objectContaining({
+              shoppingListId: 'list-1',
+              item: { itemName: 'Milk' },
+              purchaseTracking: { isPurchased: true },
+            }),
+          },
+        },
+      }),
+    );
+  });
+
+  it('sends two edits to the same uncached row in the order they were made', async () => {
+    const { QueueStore: RealQueueStore } = jest.requireActual<{
+      QueueStore: new () => QueueStore;
+    }>('../queueStore');
+    const store = new RealQueueStore();
+    store.clearAllQueues();
+    store.addMutation({ ...capturedToggle('t-1', true), createdAt: 1_000 });
+    store.addMutation({ ...capturedToggle('t-2', false), createdAt: 2_000 });
+    (queueStore.getPendingMutationsForUser as jest.Mock).mockImplementation(
+      (userId: string) => store.getPendingMutationsForUser(userId),
+    );
+
+    await new QueueManager().processQueue();
+
+    const sent = mockClient.mutate.mock.calls.map(
+      ([options]: [{ variables: { input: { item: unknown } } }]) =>
+        options.variables.input.item,
+    );
+    expect(sent).toEqual([
+      expect.objectContaining({ purchaseTracking: { isPurchased: true } }),
+      expect.objectContaining({ purchaseTracking: { isPurchased: false } }),
+    ]);
   });
 });

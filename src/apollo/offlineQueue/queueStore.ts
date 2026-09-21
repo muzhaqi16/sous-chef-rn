@@ -3,7 +3,7 @@ import { storage, isRecoveryStorage } from '#storage/mmkv';
 import type { QueuedMutation, QueueError, QueueStats } from './types';
 import { QueueCapacityError, QueueStatus } from './types';
 import { logger } from '#/utils/environment';
-import { queuedSubject } from './queuedSubject';
+import { deletesItsSubject, queuedSubject } from './queuedSubject';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
@@ -214,6 +214,13 @@ export class QueueStore {
       }
     }
 
+    if (
+      deletesItsSubject(mutation) &&
+      this.supersedeByDelete(queue, mutation)
+    ) {
+      return;
+    }
+
     // Enforce the cap without ever dropping a PENDING op: that would break a
     // create→update chain, replaying the update against a create that never
     // happened. Prefer an entry already reconciled (SUCCESS replayed, FAILED
@@ -243,6 +250,49 @@ export class QueueStore {
     logger.debug(
       `📥 Queue: Added mutation ${mutation.operationName} (${mutation.id}) for user ${mutation.userId}`,
     );
+  }
+
+  /**
+   * Drops the pending (or re-auth-parked, non-minting) writes to the row a delete
+   * removes: left queued, each holds the delete behind it. A row the server never
+   * had takes the delete with it. Returns whether it settled the enqueue.
+   */
+  private supersedeByDelete(
+    queue: QueuedMutation[],
+    deletion: QueuedMutation,
+  ): boolean {
+    const [deletedId] = queuedSubject(deletion).subjectIds;
+    if (!deletedId) return false;
+
+    const kept: QueuedMutation[] = [];
+    let oldest = Infinity;
+    let mintedHere = false;
+    for (const m of queue) {
+      const { subjectIds, mintedIds } = queuedSubject(m);
+      const superseded =
+        m.userId === deletion.userId &&
+        (m.status === QueueStatus.PENDING ||
+          (m.status === QueueStatus.AUTH_ERROR && mintedIds.length === 0)) &&
+        subjectIds.length > 0 &&
+        subjectIds.every(id => id === deletedId);
+      if (!superseded) {
+        kept.push(m);
+        continue;
+      }
+      oldest = Math.min(oldest, m.agedFrom ?? m.createdAt);
+      mintedHere ||= mintedIds.length > 0;
+    }
+    const supersededCount = queue.length - kept.length;
+    if (supersededCount === 0) return false;
+
+    logger.debug(
+      `🔄 Queue: ${deletion.operationName} supersedes ${supersededCount} pending write(s) to ${deletedId}`,
+    );
+    if (!mintedHere) {
+      kept.push({ ...deletion, agedFrom: deletion.agedFrom ?? oldest });
+    }
+    this.saveQueue(kept);
+    return true;
   }
 
   removeMutation(mutationId: string): boolean {
@@ -325,12 +375,15 @@ export class QueueStore {
    * PENDING entries past the 90-day dedup horizon become FAILED so they surface
    * through the normal failure UX instead of double-applying. Expiry is
    * age-based, so a FIFO queue can only expire a prefix, never punch a hole
-   * mid dependency chain.
+   * mid dependency chain. Returns the expired entries for withdrawal.
    */
-  expireStalePending(userId: string): number {
+  expireStalePending(
+    userId: string,
+  ): Array<QueuedMutation & { lastError: QueueError }> {
     const queue = this.loadQueue();
-    const cutoff = Date.now() - MAX_PENDING_AGE_MS;
-    let expired = 0;
+    const now = Date.now();
+    const cutoff = now - MAX_PENDING_AGE_MS;
+    const expired: Array<QueuedMutation & { lastError: QueueError }> = [];
     const updated = queue.map(m => {
       if (
         m.userId !== userId ||
@@ -339,27 +392,29 @@ export class QueueStore {
       ) {
         return m;
       }
-      expired++;
       const lastError: QueueError = {
         type: 'unknown',
         message:
           'Queued change expired: older than the 90-day offline sync window',
         code: 'OFFLINE_SYNC_WINDOW_EXPIRED',
-        timestamp: Date.now(),
+        timestamp: now,
         retryable: false,
       };
-      return {
+      const failed = {
         ...m,
         status: QueueStatus.FAILED,
-        updatedAt: Date.now(),
+        updatedAt: now,
+        processedAt: now,
         lastError,
       };
+      expired.push(failed);
+      return failed;
     });
 
-    if (expired > 0) {
+    if (expired.length > 0) {
       this.saveQueue(updated);
       logger.warn(
-        `🧹 Queue: Expired ${expired} PENDING mutation(s) past the 90-day sync window`,
+        `🧹 Queue: Expired ${expired.length} PENDING mutation(s) past the 90-day sync window`,
       );
     }
     return expired;

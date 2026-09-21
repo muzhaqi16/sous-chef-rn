@@ -82,6 +82,7 @@
     "budgetPerMeal": "Budget per Meal",
     "minutes": "minutes",
     "macroTargets": "Macro Targets (Advanced)",
+    "macroTargetsEmpty": "No targets set yet",
     "dailyCalories": "Daily Calories",
     "protein": "Protein",
     "fat": "Fat",

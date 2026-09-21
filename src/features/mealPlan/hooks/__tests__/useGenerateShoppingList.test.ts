@@ -25,6 +25,8 @@ import { toastService } from '#/services/toastService';
 import { seedCache } from '#/test-utils/apolloMockProvider';
 import { UseGenerateShoppingList_MealPlanFragmentDoc } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { useStore } from '#store';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n';
 import { useGenerateShoppingList } from '../useGenerateShoppingList';
 
 /**
@@ -312,7 +314,12 @@ describe('generating a shopping list from a cached meal plan', () => {
       const { result } = renderHookWithApollo(
         () => useGenerateShoppingList(PLAN_ID),
         {
-          operationMocks: [refetch.mock, createMock().mock, add.mock],
+          operationMocks: [
+            refetch.mock,
+            createMock().mock,
+            add.mock,
+            linkMock().mock,
+          ],
           cache: seedUnlinked(),
         },
       );
@@ -348,6 +355,103 @@ describe('generating a shopping list from a cached meal plan', () => {
 
       expect(refetch.fired).toHaveLength(0);
       expect(response).toEqual({ shoppingListId: 'list-1', lineCount: 1 });
+    });
+  });
+
+  describe('a derive the API takes in more than one batch', () => {
+    const bigPlan = (lines: number) => ({
+      ...plan,
+      mealPlanItems: [
+        {
+          ...plan.mealPlanItems[0],
+          servings: 2,
+          recipe: {
+            ...plan.mealPlanItems[0]?.recipe,
+            ingredientsConnection: {
+              __typename: 'RecipeIngredientConnection',
+              edges: Array.from({ length: lines }, (_, i) =>
+                ingredient(`ri-${i}`, `item-${i}`, 1),
+              ),
+            },
+          },
+        },
+      ],
+    });
+    const seedBig = (lines: number) =>
+      seedCache([
+        {
+          data: bigPlan(lines),
+          fragment: UseGenerateShoppingList_MealPlanFragmentDoc,
+          fragmentName: 'useGenerateShoppingList_mealPlan',
+        },
+      ]);
+    const cachedRows = (cache: ReturnType<typeof seedCache>) =>
+      Object.keys(cache.extract()).filter(key =>
+        key.startsWith('ShoppingListItem:'),
+      );
+
+    it('sends 63 lines as batches the API accepts and reports all of them', async () => {
+      useStore.setState({ apiReachable: false });
+      const add = addMock();
+
+      const { result } = renderHookWithApollo(
+        () => useGenerateShoppingList(PLAN_ID),
+        {
+          operationMocks: [createMock().mock, add.mock, linkMock().mock],
+          cache: seedBig(63),
+        },
+      );
+
+      const response = await result.current.generateShoppingList({
+        checkPantry: false,
+      });
+
+      const sizes = (add.fired as Array<{ input: { items: unknown[] } }>).map(
+        fired => fired.input.items.length,
+      );
+      expect(sizes).toEqual([50, 13]);
+      expect(response).toEqual({ shoppingListId: 'list-1', lineCount: 63 });
+      expect(toastService.success).toHaveBeenCalledTimes(1);
+      expect(toastService.success).toHaveBeenCalledWith(
+        t('generateShoppingList.createdSuccess', {
+          name: t('generateShoppingList.defaultName', { name: plan.name }),
+          count: 63,
+          shared: '',
+        }),
+      );
+    });
+
+    it('takes back the rows of a refused batch and reports no success', async () => {
+      useStore.setState({ apiReachable: false });
+      const refused = recordMock(AddDerivedItemsToShoppingListDocument, {
+        data: {
+          addItemsToShoppingList: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+            message: 'guest',
+          },
+        },
+      });
+      const cache = seedBig(3);
+
+      const { result } = renderHookWithApollo(
+        () => useGenerateShoppingList(PLAN_ID),
+        {
+          operationMocks: [createMock().mock, refused.mock, linkMock().mock],
+          cache,
+        },
+      );
+
+      const response = await result.current.generateShoppingList({
+        checkPantry: false,
+        shoppingListId: 'list-1',
+      });
+
+      expect(refused.fired).toHaveLength(1);
+      expect(cachedRows(cache)).toEqual([]);
+      expect(response).toBeNull();
+      expect(toastService.success).not.toHaveBeenCalled();
+      expect(toastService.error).toHaveBeenCalled();
     });
   });
 });

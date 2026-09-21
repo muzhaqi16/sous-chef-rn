@@ -353,7 +353,7 @@ describe('logout and biometric credentials', () => {
       });
 
       expect(await authService.enrolDeviceCredential('chef@example.com')).toBe(
-        true,
+        'enrolled',
       );
       expect(setHasStoredCredentials()).toHaveBeenCalledWith(true);
     });
@@ -373,9 +373,42 @@ describe('logout and biometric credentials', () => {
       });
 
       expect(await authService.enrolDeviceCredential('chef@example.com')).toBe(
-        false,
+        'unsaved',
       );
       expect(setHasStoredCredentials()).not.toHaveBeenCalled();
+    });
+
+    // `unsaved` is the caller's to report: biometric setup has its own alert,
+    // so a toast here would say it twice.
+    it('reports a keychain refusal as unsaved and shows nothing itself', async () => {
+      mockToastError.mockClear();
+      keychainMock().saveCredentials.mockRejectedValueOnce(
+        new Error('keystore unavailable'),
+      );
+      mockMutate.mockResolvedValueOnce({
+        data: {
+          issueDeviceCredential: {
+            __typename: 'DeviceCredentialPayload',
+            credential: 'secret',
+          },
+        },
+      });
+
+      expect(await authService.enrolDeviceCredential('chef@example.com')).toBe(
+        'unsaved',
+      );
+      expect(mockToastError).not.toHaveBeenCalled();
+    });
+
+    it('reports a missing device as unsaved without sending anything', async () => {
+      mockToastError.mockClear();
+      (ensureDeviceId as jest.Mock).mockResolvedValueOnce(null);
+
+      expect(await authService.enrolDeviceCredential('chef@example.com')).toBe(
+        'unsaved',
+      );
+      expect(mockMutate).not.toHaveBeenCalled();
+      expect(mockToastError).not.toHaveBeenCalled();
     });
   });
 

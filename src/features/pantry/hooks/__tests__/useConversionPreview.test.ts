@@ -33,4 +33,32 @@ describe('useConversionPreview', () => {
 
     expect(result.current.previewText).toBe('1 1/4 cup ≈ 177.441 g');
   });
+
+  it("writes each side in its own unit's notation", () => {
+    const { result, rerender } = renderHookWithApollo<
+      ReturnType<typeof useConversionPreview>,
+      Props
+    >(
+      ({ inputQuantity }) =>
+        useConversionPreview({
+          pantryItemId: 'pi1',
+          inputQuantity,
+          selectedUnitId: 'g',
+          selectedUnitSymbol: 'g',
+          selectedDisplayAsFraction: false,
+          trackingUnitId: 'kg',
+          trackingUnitSymbol: 'kg',
+          trackingDisplayAsFraction: false,
+          conversionRatio: 1000,
+        }),
+      {
+        operationMocks: [],
+        initialProps: { inputQuantity: null },
+      },
+    );
+
+    rerender({ inputQuantity: 250 });
+
+    expect(result.current.previewText).toBe('250 g ≈ 0.25 kg');
+  });
 });

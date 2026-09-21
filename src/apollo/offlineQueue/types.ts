@@ -49,6 +49,9 @@ export interface QueueError {
   retryAfterMs?: number;
 }
 
+/** Named values a sync builder reads from the cache, e.g. `shoppingListId`. */
+export type ReplayInputs = Readonly<Partial<Record<string, string>>>;
+
 export interface QueuedMutation {
   id: string; // UUID of the queue entry itself, not of any entity.
   userId: string; // Scopes replay; a queue is never drained for another user.
@@ -57,6 +60,11 @@ export interface QueuedMutation {
   mutation: DocumentNode;
   variables: OperationVariables;
   context?: DefaultContext; // Allowlisted replay context (localFirst only).
+  /**
+   * The cache values the replay reads, captured when queued so a row that
+   * leaves the cache stays replayable. Absent on entries queued before it.
+   */
+  replayInputs?: ReplayInputs;
 
   status: QueueStatus;
   /** When this entry was queued. The drain replays in this order. */

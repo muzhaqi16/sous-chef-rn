@@ -26,7 +26,7 @@ import {
   type SavedRecipeNode,
 } from '#features/recipes/hooks/useSavedRecipes';
 import { AddMealSheet_SavedRecipeFragmentDoc } from './AddMealSheet.generated';
-import { CachedImage } from '#components/atoms/CachedImage';
+import { CachedImage, warmImage } from '#components/atoms/CachedImage';
 import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
 import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
 import {
@@ -38,6 +38,7 @@ import { useRecipePreload } from '#features/recipes/hooks/useRecipePreload';
 import {
   useRecipeCacheStore,
   textSearchCacheKey,
+  fetchRecipeInformation,
 } from '#features/recipes/store/useRecipeCacheStore';
 import { toastService } from '#/services/toastService';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
@@ -63,6 +64,9 @@ const DIET_TAG_LABEL_KEYS: Record<DietTag, TranslationKey> = {
 };
 
 const MIN_QUERY_LENGTH = 3;
+
+/** How long an add waits for the recipe's image, on top of saving it. */
+const IMAGE_WARM_MAX_MS = 1500;
 
 /** Module-level helper to reset sheet state when it opens */
 function resetSheetState(
@@ -296,19 +300,20 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
 
     void executeAsyncWithCleanup(
       async () => {
-        const fullRecipe = await spoonacularService.getRecipeInformation({
-          id: item.spoonacularId,
-          // Carry per-ingredient nutrition so the ingest below populates the
-          // external-ingredient mirror (spoonacular.nutrition) — one call with
-          // a flag, no extra requests. Matches useRecipeData's detail fetch.
-          includeNutrition: true,
-        });
+        // With nutrition, so the ingest below fills the ingredient mirror; the
+        // same cached entry the detail screen reads.
+        const fullRecipe = await fetchRecipeInformation(item.spoonacularId);
 
         // Deliberate save (add to meal plan) → withCost re-ingests with the
         // recipe-scoped priceBreakdown so per-ingredient cost lands in the mirror.
         const preloaded = await preloadRecipe(fullRecipe, undefined, {
           withCost: true,
         });
+        // The saved recipe's image is the server's own copy, a URL this device
+        // has never loaded, so the new meal card would open on a shimmer.
+        if (preloaded?.imageUrl) {
+          await warmImage(preloaded.imageUrl, IMAGE_WARM_MAX_MS);
+        }
         if (preloaded) {
           onAddRecipe(preloaded.id, selectedMealType);
           onClose();

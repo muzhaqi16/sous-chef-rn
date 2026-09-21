@@ -109,6 +109,8 @@
     "savedRecipesEmptyTitle": "Asnjë recetë e ruajtur",
     "savedRecipesEmptyDescription": "Ruaj receta nga kërkimi për t'i parë këtu",
     "savedRecipesSearchingAll": "Po kërkohet në të gjitha recetat e ruajtura...",
+    "searchIncompleteTitle": "Nuk u ngarkuan dot të gjitha recetat e tua",
+    "searchIncompleteDescription": "Mund të mungojnë disa rezultate.",
     "removeRecipeFailed": "Heqja e recetës dështoi. Provo përsëri.",
     "filterAll": "Të gjitha",
     "folders": "Dosjet",
@@ -289,6 +291,9 @@
     "favoriteA11y": "Shto te të preferuarat",
     "unfavoriteA11y": "Hiq nga të preferuarat",
     "stepsTooMany": "Një recetë mund të ketë maksimumi {{count}} hapa",
+    "tagsTooMany": "Një recetë mund të ketë maksimumi {{count}} etiketa",
+    "tagTooLong": "Çdo etiketë mund të ketë maksimumi {{count}} karaktere",
+    "tipsTooLong": "Këshillat mund të kenë maksimumi {{count}} karaktere",
     "stepsTooLarge": "Këta hapa janë shumë të gjatë për t’u ruajtur. Shkurtoji dhe provo sërish."
   },
   "recipeFilters": {

@@ -1,5 +1,6 @@
 import { string, number, array, object, boolean, type InferType } from 'yup';
 import { normalizeSmartPunctuation } from '#/utils/validation/common';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { t, type KeyUnder } from '#/i18n';
 import {
   BaseDimension,
@@ -17,6 +18,17 @@ const msg =
   (key: KeyUnder<'itemValidation'>, options?: Record<string, unknown>) =>
   (): string =>
     t(`itemValidation.${key}`, options);
+
+/**
+ * yup's own number cast rejects "0,5", which a comma keypad types. Typed text is
+ * read with the decimal parser instead; blank is absent, unreadable is `NaN`.
+ */
+const decimalText = (value: unknown, originalValue: unknown): unknown => {
+  if (typeof originalValue !== 'string') return value;
+  return originalValue.trim() === ''
+    ? undefined
+    : parseDecimalInput(originalValue);
+};
 
 // --- item-specific validation rules ------------------------------------------
 
@@ -82,9 +94,7 @@ export const displayPricePerUnitRule = string()
 
 // Unit quantity validation
 export const unitQtyRule = number()
-  .transform((value: unknown, originalValue: unknown) =>
-    String(originalValue).trim() === '' ? undefined : value,
-  )
+  .transform(decimalText)
   .min(0.001, msg('unitQtyMin'))
   .optional();
 
@@ -211,6 +221,7 @@ export const createItemSchema = object({
         // it before `required` is reached, so the message has to be set here
         // too or yup's untranslated default reaches the screen.
         value: number()
+          .transform(decimalText)
           .typeError(msg('netWeightValueRequired'))
           .min(0.001, msg('netWeightMin'))
           .required(msg('netWeightValueRequired')),
@@ -236,9 +247,7 @@ export const createItemSchema = object({
     .nullable()
     .optional(),
   defaultConsumeIncrement: number()
-    .transform((value: unknown, originalValue: unknown) =>
-      String(originalValue).trim() === '' ? undefined : value,
-    )
+    .transform(decimalText)
     .typeError(msg('greaterThanZero'))
     .min(0.001, msg('greaterThanZero'))
     .optional(),

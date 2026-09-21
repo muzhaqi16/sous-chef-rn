@@ -18,7 +18,10 @@ import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
 import type { ShoppingListItemInput } from './types';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import {
+  normalizeNumericTextForApi,
+  parseDecimalInput,
+} from '#/utils/parseDecimalInput';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { errorService } from '#/services/errorService';
 
@@ -67,11 +70,17 @@ export function useAddShoppingItem({
         ? typedQuantity
         : input.quantity ?? 1;
 
+    // The typed text in API form: a comma device's "2,2" is refused as sent.
+    const apiQuantityText =
+      input.quantityInput == null
+        ? null
+        : normalizeNumericTextForApi(input.quantityInput);
+
     // `shoppingListId` rides on the batch input below, not on the item.
     const itemInput = {
       id,
       item: { itemName: input.itemName },
-      quantity: input.quantityInput ?? input.quantity ?? 1,
+      quantity: apiQuantityText ?? input.quantity ?? 1,
       ...((!!input.unitName || !!input.unitId) && {
         unit: {
           ...(input.unitId && { unitId: input.unitId }),
@@ -107,7 +116,7 @@ export function useAddShoppingItem({
       shoppingListId: listId,
       itemName: input.itemName,
       quantity: optimisticQuantity,
-      quantityInput: input.quantityInput ?? null,
+      quantityInput: apiQuantityText,
       unitName: input.unitName ?? null,
       category: input.category ?? null,
       itemId: undefined,

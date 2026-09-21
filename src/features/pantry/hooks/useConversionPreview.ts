@@ -5,18 +5,24 @@ import {
   CanConvertDocument,
 } from '#operations/item/conversions.generated';
 import { errorService } from '#/services/errorService';
-import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import {
+  formatQuantityForDisplay,
+  resolveQuantityNotation,
+} from '#/utils/formatQuantity';
 
-interface UseConversionPreviewOptions {
+export interface UseConversionPreviewOptions {
   pantryItemId: string | undefined;
   /** Quantity the user typed (parsed as number) */
   inputQuantity: number | null;
   /** The unit the user selected */
   selectedUnitId: string | undefined;
   selectedUnitSymbol: string;
+  /** Null when the unit's notation is unknown; a fraction then wins. */
+  selectedDisplayAsFraction?: boolean | null;
   /** The item's tracking unit */
   trackingUnitId: string | undefined;
   trackingUnitSymbol: string;
+  trackingDisplayAsFraction?: boolean | null;
   /** Conversion ratio: selectedUnit = trackingUnit * ratio */
   conversionRatio: number | null;
 }
@@ -38,19 +44,15 @@ interface ConversionPreviewResult {
 
 const DEBOUNCE_MS = 500;
 
-/** "1 1/4 cup ≈ 295.74 mL": both sides through the one quantity formatter. */
-function formatPreview(
-  inputQuantity: number,
-  selectedUnitSymbol: string,
-  trackingValue: number,
-  trackingUnitSymbol: string,
-): string {
-  return `${formatQuantityForDisplay(
-    inputQuantity,
-  )} ${selectedUnitSymbol} \u2248 ${formatQuantityForDisplay(
-    trackingValue,
-  )} ${trackingUnitSymbol}`;
-}
+/** One side of "1 1/4 cup ≈ 295.74 mL", in its own unit's notation. */
+const formatSide = (
+  quantity: number,
+  symbol: string,
+  displayAsFraction: boolean | null | undefined,
+): string =>
+  `${formatQuantityForDisplay(quantity, {
+    notation: resolveQuantityNotation(null, displayAsFraction),
+  })} ${symbol}`;
 
 /**
  * Generates a stable "request key" for debounce identity.
@@ -71,8 +73,10 @@ export function useConversionPreview({
   inputQuantity,
   selectedUnitId,
   selectedUnitSymbol,
+  selectedDisplayAsFraction,
   trackingUnitId,
   trackingUnitSymbol,
+  trackingDisplayAsFraction,
   conversionRatio,
 }: UseConversionPreviewOptions): ConversionPreviewResult {
   const [previewText, setPreviewText] = useState<string | null>(null);
@@ -117,12 +121,15 @@ export function useConversionPreview({
       const trackingValue = inputQuantity / conversionRatio;
       setConvertedValue(trackingValue);
       setPreviewText(
-        formatPreview(
+        `${formatSide(
           inputQuantity,
           selectedUnitSymbol,
+          selectedDisplayAsFraction,
+        )} \u2248 ${formatSide(
           trackingValue,
           trackingUnitSymbol,
-        ),
+          trackingDisplayAsFraction,
+        )}`,
       );
       setPreviewLoading(false);
     } else {
@@ -205,12 +212,15 @@ export function useConversionPreview({
       const converted = result?.data?.convertQuantity;
       if (converted) {
         setPreviewText(
-          formatPreview(
+          `${formatSide(
             inputQuantity,
             selectedUnitSymbol,
+            selectedDisplayAsFraction,
+          )} \u2248 ${formatSide(
             converted.value,
             trackingUnitSymbol,
-          ),
+            trackingDisplayAsFraction,
+          )}`,
         );
         setConvertedValue(converted.value);
       } else {
@@ -235,7 +245,9 @@ export function useConversionPreview({
     selectedUnitId,
     trackingUnitId,
     selectedUnitSymbol,
+    selectedDisplayAsFraction,
     trackingUnitSymbol,
+    trackingDisplayAsFraction,
     pantryItemId,
     convertQuantity,
     conversionRatio,

@@ -135,8 +135,8 @@ export const useBiometricSetup = ({
         // The live session authorises the enrolment: the server issues a
         // device-bound credential and the slot takes that, so no password is
         // read here or anywhere else on this path.
-        const success = await authService.enrolDeviceCredential(userEmail);
-        if (success) {
+        const outcome = await authService.enrolDeviceCredential(userEmail);
+        if (outcome === 'enrolled') {
           onComplete(true);
         } else {
           alertService.alert(

@@ -114,8 +114,8 @@ export const shoppingListTypePolicies: TypePolicies = {
       },
       // List-level queries (return collections of lists/homes)
       shoppingLists: {
-        // Different homes have different shopping lists - cache separately per filter
-        keyArgs: ['filters'],
+        // `cache.modify` by field name still reaches every stored variant.
+        keyArgs: ['filters', 'homeId', 'first'],
         merge(existing: StoreValue = [], incoming: StoreValue) {
           // Preserve existing cache only on network errors (null/undefined)
           // Allow empty arrays through - user may genuinely have no lists

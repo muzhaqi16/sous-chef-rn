@@ -405,6 +405,16 @@ export const ShoppingListMainContent: React.FC<
       : undefined,
   );
 
+  // Every screen whose header carries the switch-list button mounts this.
+  const listSelector = (
+    <AnimatedItemSelector
+      ref={selectorRef}
+      config={listConfig}
+      onOpen={handleOverlayOpen}
+      onClose={handleOverlayClose}
+    />
+  );
+
   // No lists on screen. Only a fetch that actually succeeded and returned
   // nothing may offer to create one — after a failure we do not know whether
   // this person already has lists, and "Create a list" would duplicate them.
@@ -456,6 +466,7 @@ export const ShoppingListMainContent: React.FC<
           state={networkWithheld ? 'offline' : 'error'}
           onRetry={handleRefresh}
         />
+        {listSelector}
       </Screen>
     );
   }
@@ -477,6 +488,7 @@ export const ShoppingListMainContent: React.FC<
           state={itemsFailure.offline ? 'offline' : 'error'}
           onRetry={handleRefresh}
         />
+        {listSelector}
       </Screen>
     );
   }
@@ -534,12 +546,7 @@ export const ShoppingListMainContent: React.FC<
         />
       </ShoppingListPermissionsProvider>
 
-      <AnimatedItemSelector
-        ref={selectorRef}
-        config={listConfig}
-        onOpen={handleOverlayOpen}
-        onClose={handleOverlayClose}
-      />
+      {listSelector}
 
       {/* Interactive tutorial spotlight coach-marks */}
       {(() => {

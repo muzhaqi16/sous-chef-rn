@@ -32,6 +32,8 @@ export interface PantryActionSharedState {
   trackingQuantity: number;
   trackingUnitSymbol: string;
   trackingUnitId: string | undefined;
+  /** A unit's own notation; null where its flag is unknown. */
+  displayAsFractionOf: (unitId: string | undefined) => boolean | null;
   /** Selected unit, falling back to the tracking unit. */
   activeUnitSymbol: string;
   activeUnitId: string | undefined;
@@ -214,6 +216,11 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     u => u.unitId === selectedUnitInfo?.unitId,
   );
 
+  const displayAsFractionOf = (unitId: string | undefined) =>
+    unitId === trackingUnitId
+      ? pantryItem?.unit.displayAsFraction ?? null
+      : allUnits.find(u => u.unitId === unitId)?.displayAsFraction ?? null;
+
   const shared: PantryActionSharedState = {
     selectedUnitInfo,
     setSelectedUnitInfo,
@@ -222,6 +229,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     trackingQuantity,
     trackingUnitSymbol,
     trackingUnitId,
+    displayAsFractionOf,
     activeUnitSymbol,
     activeUnitId,
     isConvertedUnit,

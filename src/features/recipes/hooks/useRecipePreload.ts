@@ -18,7 +18,7 @@ import {
 import { generateEntityId } from '#/utils/generateEntityId';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import type { RecipeInformation } from '#/services/spoonacular/types';
-import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
+import { fetchRecipePriceBreakdown } from '#features/recipes/store/useRecipeCacheStore';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import {
@@ -183,9 +183,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     let priceBreakdown = null;
     if (preloadOptions.withCost) {
       try {
-        priceBreakdown = await spoonacularService.getRecipePriceBreakdown(
-          Number(externalId),
-        );
+        priceBreakdown = await fetchRecipePriceBreakdown(Number(externalId));
       } catch (error) {
         // Best-effort: leaving it null lets the save proceed without cost.
         errorService.reportError(error, {

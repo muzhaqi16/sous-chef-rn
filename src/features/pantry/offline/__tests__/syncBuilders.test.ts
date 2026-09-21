@@ -7,7 +7,14 @@
  * that is correct but unregistered replays as the original mutation and
  * silently loses the idempotency the table exists to provide.
  */
-import type { DocumentNode } from 'graphql';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import {
+  buildSchema,
+  isInputObjectType,
+  isNonNullType,
+  type DocumentNode,
+} from 'graphql';
 import {
   makeQueuedMutation as makeMutation,
   makeSyncCacheStub,
@@ -21,17 +28,27 @@ import {
 } from '#features/pantry/graphql/pantry.generated';
 import { BarcodeCreatePantryItemDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import type { QueuedMutation } from '#/apollo/offlineQueue/types';
-import { convertToSyncMutation as convertToSyncMutationFn } from '#/apollo/offlineQueue/convertToSyncMutation';
+import {
+  captureReplayInputs,
+  convertToSyncMutation as convertToSyncMutationFn,
+} from '#/apollo/offlineQueue/convertToSyncMutation';
+import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
+
+jest.mock('#/utils/deviceLocale', () => ({
+  getDeviceDecimalSeparator: jest.fn(() => '.'),
+}));
 
 const mockClient = { cache: makeSyncCacheStub() };
 
 let convertToSyncMutation: (mutation: QueuedMutation) => {
   syncMutation: DocumentNode;
   syncVariables: Record<string, unknown>;
+  requiresVersion?: boolean;
 };
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (getDeviceDecimalSeparator as jest.Mock).mockReturnValue('.');
   // The builders read the cache themselves — the backfill fragments live with
   // the feature that owns the entity — so the stubbed cache is what the
   // `readFragment` stubs in each case drive.
@@ -61,10 +78,9 @@ describe('pantry sync builders', () => {
     expect(input.id).toBeUndefined();
   });
 
-  // UpdatePantryItemInput has no pantryId and sends a flat itemName, but
-  // SyncPantryItemInput requires pantryId and takes item:{name}. The converter
-  // backfills pantryId from the cached PantryItem and folds itemName into item.
-  it('converts UpdatePantryItem → SyncPantryItem (backfills pantryId, folds itemName→item)', () => {
+  // UpdatePantryItemInput has no pantryId, but SyncPantryItemInput requires it:
+  // the converter backfills it from the cached PantryItem.
+  it('converts UpdatePantryItem → SyncPantryItem (backfills pantryId)', () => {
     mockClient.cache.readFragment.mockReturnValue({
       id: 'item-2',
       pantryId: 'pan-2',
@@ -74,7 +90,6 @@ describe('pantry sync builders', () => {
       variables: {
         input: {
           id: 'item-2',
-          itemName: 'Eggs',
           storage: { storageState: 'OPENED' },
           version: 4,
         },
@@ -84,19 +99,108 @@ describe('pantry sync builders', () => {
     const input = wrapper(syncVariables);
     expect(input.clientId).toBe('item-2');
     expect(input.version).toBe(4);
-    // pantryId backfilled from cache (required by SyncPantryItemInput).
     expect(input.pantryId).toBe('pan-2');
-    // itemName folded into item:{name}; no flat itemName forwarded.
-    expect(input.item).toEqual({ name: 'Eggs' });
-    expect(input.itemName).toBeUndefined();
     expect(input.storage).toEqual({ storageState: 'OPENED' });
+  });
+
+  // The sync upsert's update branch ignores `item`, so a rename sent through it
+  // is dropped and the old name written back. The original document applies it.
+  it('replays a queued rename as its original UpdatePantryItem', () => {
+    const mutation = makeMutation({
+      ...queuedMutationFor(UpdatePantryItemDocument),
+      variables: { input: { id: 'item-2', itemName: 'Oat milk', version: 4 } },
+    });
+
+    const conversion = convertToSyncMutation(mutation);
+
+    expect(conversion.syncMutation).toBe(UpdatePantryItemDocument);
+    expect(conversion.syncVariables).toEqual(mutation.variables);
+    expect(conversion.requiresVersion).toBe(true);
+  });
+
+  it('pins the rename passthrough to the SDL: its input requires version', () => {
+    const schema = buildSchema(
+      readFileSync(
+        join(process.cwd(), 'src/graphql/generated/schema.graphql'),
+        'utf8',
+      ),
+    );
+    const input = schema.getType('UpdatePantryItemInput');
+    expect(
+      isInputObjectType(input) &&
+        isNonNullType(input.getFields().version?.type),
+    ).toBe(true);
+  });
+
+  describe('values captured when queued', () => {
+    it('builds an edit whose row has left the cache from what it captured', () => {
+      mockClient.cache.readFragment.mockReturnValue(null);
+      const mutation = makeMutation({
+        ...queuedMutationFor(UpdatePantryItemDocument),
+        variables: { input: { id: 'gone-item', notes: 'x', version: 2 } },
+        replayInputs: { pantryId: 'pan-7' },
+      });
+
+      expect(wrapper(convertToSyncMutation(mutation).syncVariables)).toEqual(
+        expect.objectContaining({ clientId: 'gone-item', pantryId: 'pan-7' }),
+      );
+    });
+
+    it('builds a quantity edit whose row has left the cache from what it captured', () => {
+      mockClient.cache.readFragment.mockReturnValue(null);
+      const mutation = makeMutation({
+        ...queuedMutationFor(UpdatePantryItemQuantityDocument),
+        variables: {
+          input: { pantryItemId: 'gone-item', quantity: '1.5', unitId: 'u-kg' },
+        },
+        replayInputs: { pantryId: 'pan-7', unitSymbol: 'kg' },
+      });
+
+      expect(wrapper(convertToSyncMutation(mutation).syncVariables)).toEqual({
+        clientId: 'gone-item',
+        pantryId: 'pan-7',
+        quantity: 1.5,
+        unit: { unitId: 'u-kg', unitSymbol: 'kg' },
+      });
+    });
+
+    it('prefers the pantry it captured over a later cache read', () => {
+      mockClient.cache.readFragment.mockReturnValue({
+        id: 'item-2',
+        pantryId: 'pan-later',
+      });
+      const mutation = makeMutation({
+        ...queuedMutationFor(UpdatePantryItemDocument),
+        variables: { input: { id: 'item-2', notes: 'x', version: 2 } },
+        replayInputs: { pantryId: 'pan-queued' },
+      });
+
+      expect(
+        wrapper(convertToSyncMutation(mutation).syncVariables).pantryId,
+      ).toBe('pan-queued');
+    });
+
+    it('captures the pantry an edit reads, while the row is cached', () => {
+      mockClient.cache.readFragment.mockReturnValue({
+        id: 'item-2',
+        pantryId: 'pan-2',
+      });
+      const mutation = makeMutation({
+        ...queuedMutationFor(UpdatePantryItemQuantityDocument),
+        variables: { input: { pantryItemId: 'item-2', quantity: '3' } },
+      });
+
+      expect(captureReplayInputs(mutation, mockClient.cache)).toEqual({
+        pantryId: 'pan-2',
+      });
+    });
   });
 
   it('throws when pantryId cannot be resolved for a pantry-item sync', () => {
     mockClient.cache.readFragment.mockReturnValue(null);
     const mutation = makeMutation({
       ...queuedMutationFor(UpdatePantryItemDocument),
-      variables: { input: { id: 'orphan-item', itemName: 'Ghost' } },
+      variables: { input: { id: 'orphan-item', notes: 'Ghost' } },
     });
     expect(() => convertToSyncMutation(mutation)).toThrow(
       'Cannot sync UpdatePantryItem: pantryId not found',
@@ -132,6 +236,24 @@ describe('pantry sync builders', () => {
     expect(input.pantryItemId).toBeUndefined();
   });
 
+  // The queued text is what the API was sent: already `.`-decimal, never
+  // device text, so a comma device must not read `1.250` as grouped thousands.
+  it('reads the queued quantity as API text on a comma-decimal device', () => {
+    (getDeviceDecimalSeparator as jest.Mock).mockReturnValue(',');
+    mockClient.cache.readFragment.mockReturnValue({
+      id: 'item-c',
+      pantryId: 'pan-c',
+    });
+    const mutation = makeMutation({
+      ...queuedMutationFor(UpdatePantryItemQuantityDocument),
+      variables: { input: { pantryItemId: 'item-c', quantity: '1.250' } },
+    });
+
+    const input = wrapper(convertToSyncMutation(mutation).syncVariables);
+
+    expect(input.quantity).toBe(1.25);
+  });
+
   it('omits quantity/unit from the quantity sync when absent or unparsable', () => {
     mockClient.cache.readFragment.mockReturnValue({
       id: 'item-q2',
@@ -148,6 +270,38 @@ describe('pantry sync builders', () => {
     expect(input.clientId).toBe('item-q2');
     expect(input.quantity).toBeUndefined();
     expect(input.unit).toBeUndefined();
+  });
+
+  // A pantry holds one stack per item and unit. A stack another member added
+  // while this create sat queued would refuse it as a duplicate; `forceAdd`
+  // joins it instead, and the replay lookup keeps a re-send idempotent.
+  it.each([CreatePantryItemDocument, BarcodeCreatePantryItemDocument])(
+    'replays a queued create with forceAdd (%#)',
+    document => {
+      const mutation = makeMutation({
+        ...queuedMutationFor(document),
+        variables: { input: { id: 'p-9', pantryId: 'pan-1', quantity: 12 } },
+      });
+
+      const input = wrapper(convertToSyncMutation(mutation).syncVariables);
+
+      expect(input.forceAdd).toBe(true);
+    },
+  );
+
+  it('sends no forceAdd on an update', () => {
+    mockClient.cache.readFragment.mockReturnValue({
+      id: 'item-u',
+      pantryId: 'pan-u',
+    });
+    const mutation = makeMutation({
+      ...queuedMutationFor(UpdatePantryItemDocument),
+      variables: { input: { id: 'item-u', notes: 'x', version: 2 } },
+    });
+
+    const input = wrapper(convertToSyncMutation(mutation).syncVariables);
+
+    expect(input.forceAdd).toBeUndefined();
   });
 
   it('converts DeletePantryItem → SyncDeletePantryItem', () => {

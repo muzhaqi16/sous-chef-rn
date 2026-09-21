@@ -197,6 +197,49 @@ describe('IngredientMatchRow', () => {
     expect(onUpdate).toHaveBeenLastCalledWith(0, { adjustedQuantity: 1.5 });
   });
 
+  it('clears the quantity when the field is emptied, so nothing is deducted', () => {
+    const onUpdate = jest.fn();
+    // The sheet owns the match, so the row's update lands in the same render.
+    const Sheet = () => {
+      const [editableMatch, setEditableMatch] = React.useState({
+        ...makeMatch('Flour'),
+        adjustedQuantity: 2,
+      });
+      return (
+        <IngredientMatchRow
+          editableMatch={editableMatch}
+          index={0}
+          onUpdate={(index, updates) => {
+            onUpdate(index, updates);
+            setEditableMatch(current => ({ ...current, ...updates }));
+          }}
+        />
+      );
+    };
+    render(<Sheet />);
+
+    fireEvent.changeText(screen.getByDisplayValue('2'), '');
+
+    expect(onUpdate).toHaveBeenLastCalledWith(0, { adjustedQuantity: 0 });
+    expect(screen.queryByDisplayValue('2')).toBeNull();
+    expect(screen.queryByDisplayValue('0')).toBeNull();
+  });
+
+  it('clears the quantity when the field holds no number', () => {
+    const onUpdate = jest.fn();
+    render(
+      <IngredientMatchRow
+        {...defaultProps}
+        onUpdate={onUpdate}
+        editableMatch={{ ...makeMatch('Flour'), adjustedQuantity: 2 }}
+      />,
+    );
+
+    fireEvent.changeText(screen.getByDisplayValue('2'), 'abc');
+
+    expect(onUpdate).toHaveBeenLastCalledWith(0, { adjustedQuantity: 0 });
+  });
+
   it('reseeds the field when the quantity changes from outside it', () => {
     const editableMatch = { ...makeMatch('Milk'), adjustedQuantity: 1 };
     const { rerender } = render(

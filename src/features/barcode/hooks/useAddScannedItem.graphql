@@ -11,6 +11,7 @@ mutation BarcodeAddItemToShoppingList($input: AddItemsToShoppingListInput!) {
         index
         clientId
         success
+        code
         quantityIncremented
         error
         item {
@@ -73,6 +74,10 @@ mutation BarcodeRestockPantryItem($input: RestockPantryItemInput!) {
         totalCost
         pantryItem {
           id
+          # A restock bumps the row's version; a stale one makes the next edit
+          # a spurious conflict.
+          version
+          quantity
           ...SearchResults_pantryItem
         }
       }

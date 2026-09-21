@@ -92,7 +92,8 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
   ) : undefined;
 
   const metaText = [
-    totalTime != null && t('labels.min', { count: totalTime }),
+    // A recipe with no known time stores 0, which is not "0 min".
+    totalTime != null && totalTime > 0 && t('labels.min', { count: totalTime }),
     item.servings != null &&
       t('mealPlanItem.servings', { count: item.servings }),
     item.calories != null &&

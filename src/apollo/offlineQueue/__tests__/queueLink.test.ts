@@ -1,4 +1,4 @@
-import { Observable } from '@apollo/client';
+import { InMemoryCache, Observable } from '@apollo/client';
 import type {
   ApolloClient,
   OperationVariables,
@@ -25,6 +25,7 @@ import {
 } from '#operations/auth/auth.generated';
 import { UpdateItemDocument } from '#features/catalog/hooks/useSuggestItemEdit.generated';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { ToggleShoppingListItemPurchasedDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CreateRecipeReviewDocument } from '#features/recipes/graphql/recipeReview.generated';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 
@@ -89,6 +90,7 @@ function makeOperation(options: {
   operationName?: string;
   variables?: OperationVariables;
   context?: ApolloLink.OperationContext;
+  cache?: InMemoryCache;
 }): ApolloLink.Operation {
   const contextMap: ApolloLink.OperationContext = options.context || {};
   return {
@@ -99,7 +101,10 @@ function makeOperation(options: {
     getContext: () => contextMap,
     setContext: jest.fn(),
     extensions: {},
-    client: {} as ApolloClient,
+    // The link reads only the cache, where the queued write's row is.
+    client: {
+      cache: options.cache ?? new InMemoryCache(),
+    } as Partial<ApolloClient> as ApolloClient,
   };
 }
 
@@ -365,6 +370,54 @@ describe('createQueueLink', () => {
           ).toBeGreaterThan(
             jest.mocked(queueStore.addMutation).mock.invocationCallOrder[0]!,
           );
+          done();
+        },
+      });
+    });
+
+    // The replay needs the row's list, which the toggle input does not carry;
+    // read now, while the hook's own write keeps the row cached.
+    it('records the cached values the replay reads when it queues', done => {
+      mockedGetState.mockReturnValue({
+        isOnline: false,
+        user: { id: 'user-1' },
+      });
+      const cache = new InMemoryCache();
+      cache.writeFragment({
+        id: cache.identify({ __typename: 'ShoppingListItem', id: 'row-1' }),
+        fragment: gql`
+          fragment QueuedRow on ShoppingListItem {
+            id
+            itemName
+            item {
+              id
+            }
+            shoppingList {
+              id
+            }
+          }
+        `,
+        data: {
+          __typename: 'ShoppingListItem',
+          id: 'row-1',
+          itemName: 'Milk',
+          item: { __typename: 'Item', id: 'item-1' },
+          shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
+        },
+      });
+      const operation = makeOperation({
+        query: ToggleShoppingListItemPurchasedDocument,
+        operationName: operationNameOf(ToggleShoppingListItemPurchasedDocument),
+        variables: { input: { id: 'row-1', purchased: true } },
+        context: { localFirst: true },
+        cache,
+      });
+
+      link.request(operation, makeForward()).subscribe({
+        complete() {
+          expect(
+            jest.mocked(queueStore.addMutation).mock.calls[0]?.[0].replayInputs,
+          ).toEqual({ shoppingListId: 'list-1', refItemId: 'item-1' });
           done();
         },
       });

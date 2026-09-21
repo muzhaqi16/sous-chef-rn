@@ -4,12 +4,17 @@
  */
 
 import { gql, type ApolloCache } from '@apollo/client';
+import type { DocumentNode } from 'graphql';
 import {
   ShoppingListItemDisplayFragmentDoc,
   type ShoppingListItemDisplayFragment,
 } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
-import { settledStatus } from '#/apollo/utils/settleMutation';
+import {
+  settleMutation,
+  settledStatus,
+  type SettledFailure,
+} from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { errorService } from '#/services/errorService';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
@@ -88,8 +93,6 @@ const ShoppingListStatsForOptimisticAddFragment = gql`
     completionRate
   }
 `;
-
-/** What a caller may change about a line's purchase record. */
 
 export function reconcileShoppingItemCreateUpdate(
   cache: ApolloCache,
@@ -353,4 +356,50 @@ export function reconcileShoppingCreate(
     return 'reverted';
   }
   return 'kept';
+}
+
+/** The API refuses a batch add of more lines than this. */
+const ADD_ITEMS_BATCH_LIMIT = 50;
+
+/**
+ * Sends optimistic lines as batch adds the API accepts, each slice settled on
+ * its own: a failed slice takes back its own rows. Returns the first failure,
+ * for the caller to present, or null when every slice applied or queued.
+ */
+export async function addItemsInSlices<TItem extends { id?: string | null }>(
+  cache: ApolloCache,
+  listId: string,
+  items: readonly TItem[],
+  send: (slice: TItem[]) => Promise<{ data?: unknown; error?: unknown }>,
+  settle: { document: DocumentNode; fallback: string },
+): Promise<SettledFailure | null> {
+  let firstFailure: SettledFailure | null = null;
+  // In order: a queued slice replays behind the one before it.
+  for (let start = 0; start < items.length; start += ADD_ITEMS_BATCH_LIMIT) {
+    const slice = items.slice(start, start + ADD_ITEMS_BATCH_LIMIT);
+    const settled = await settleMutation(() => send(slice), {
+      ...settle,
+      present: 'none',
+      onFailed: () => revertSlice(cache, listId, slice),
+    });
+    firstFailure ??= settled.failure ?? null;
+  }
+  return firstFailure;
+}
+
+function revertSlice(
+  cache: ApolloCache,
+  listId: string,
+  slice: readonly { id?: string | null }[],
+): void {
+  for (const line of slice) {
+    if (!line.id) continue;
+    try {
+      revertOptimisticShoppingListItem(cache, listId, line.id);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Revert refused shopping list batch',
+      });
+    }
+  }
 }

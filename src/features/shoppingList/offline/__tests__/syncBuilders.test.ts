@@ -26,7 +26,10 @@ import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/us
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/screens/FilteredPantryItems.generated';
 import type { QueuedMutation } from '#/apollo/offlineQueue/types';
-import { convertToSyncMutation as convertToSyncMutationFn } from '#/apollo/offlineQueue/convertToSyncMutation';
+import {
+  captureReplayInputs,
+  convertToSyncMutation as convertToSyncMutationFn,
+} from '#/apollo/offlineQueue/convertToSyncMutation';
 
 const mockClient = { cache: makeSyncCacheStub() };
 
@@ -217,6 +220,75 @@ describe('shopping-list sync builders', () => {
     expect(() => convertToSyncMutation(mutation)).toThrow(
       'Cannot sync UpdateShoppingListItemQuantity',
     );
+  });
+
+  describe('values captured when queued', () => {
+    it('builds a toggle whose row has left the cache from what it captured', () => {
+      mockClient.cache.readFragment.mockReturnValue(null);
+      const mutation = makeMutation({
+        ...queuedMutationFor(ToggleShoppingListItemPurchasedDocument),
+        variables: { input: { id: 'gone-row', purchased: true } },
+        replayInputs: { shoppingListId: 'list-9', refItemName: 'Milk' },
+      });
+
+      const item = wrapper(convertToSyncMutation(mutation).syncVariables)
+        .item as Record<string, unknown>;
+
+      expect(item.shoppingListId).toBe('list-9');
+      expect(item.item).toEqual({ itemName: 'Milk' });
+    });
+
+    it('keeps the captured unit symbol beside a unit id the cache no longer has', () => {
+      mockClient.cache.readFragment.mockReturnValue(null);
+      const mutation = makeMutation({
+        ...queuedMutationFor(UpdateShoppingListItemQuantityDocument),
+        variables: {
+          input: { itemId: 'gone-row', quantity: '2', unitId: 'unit-kg' },
+        },
+        replayInputs: {
+          shoppingListId: 'list-9',
+          refItemId: 'item-3',
+          unitSymbol: 'kg',
+        },
+      });
+
+      const item = wrapper(convertToSyncMutation(mutation).syncVariables)
+        .item as Record<string, unknown>;
+
+      expect(item.unit).toEqual({ unitId: 'unit-kg', unitSymbol: 'kg' });
+    });
+
+    it('captures the list and ref a toggle reads, while the row is cached', () => {
+      mockClient.cache.readFragment.mockReturnValue({
+        id: 'row-1',
+        shoppingList: { id: 'list-1' },
+        itemName: 'Milk',
+        item: { id: 'item-1' },
+      });
+      const mutation = makeMutation({
+        ...queuedMutationFor(ToggleShoppingListItemPurchasedDocument),
+        variables: { input: { id: 'row-1', purchased: true } },
+      });
+
+      expect(captureReplayInputs(mutation, mockClient.cache)).toEqual({
+        shoppingListId: 'list-1',
+        refItemId: 'item-1',
+      });
+    });
+
+    it('captures nothing for a create that carries its list and ref', () => {
+      const mutation = makeMutation({
+        ...queuedMutationFor(AddItemToShoppingListDocument),
+        variables: {
+          input: {
+            shoppingListId: 'list-1',
+            items: [{ id: 'new-row', item: { itemName: 'Eggs' } }],
+          },
+        },
+      });
+
+      expect(captureReplayInputs(mutation, mockClient.cache)).toBeUndefined();
+    });
   });
 
   it('converts RemoveItemFromShoppingList → SyncDeleteShoppingListItem', () => {

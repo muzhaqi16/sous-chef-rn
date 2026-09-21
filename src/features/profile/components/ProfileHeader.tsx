@@ -128,7 +128,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                   uri={avatarUrl}
                   style={styles.avatarImage}
                   displaySize={AVATAR_SIZE}
-                  onFailure={() =>
+                  onError={() =>
                     logger.warn('Avatar image failed to load:', avatarUrl)
                   }
                 />

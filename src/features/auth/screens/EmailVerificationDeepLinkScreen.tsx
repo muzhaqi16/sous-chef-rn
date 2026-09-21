@@ -78,8 +78,11 @@ async function performVerificationImpl({
     logger.info('Email verification successful');
 
     // A patch: the store's updateUser assigns these onto the existing user, and
-    // re-assigning every field republishes an identical object each call.
-    updateUser({ emailVerified: true });
+    // re-assigning every field republishes an identical object each call. A
+    // link can verify another account, so only a match is patched.
+    if (outcome.userId === userId) {
+      updateUser({ emailVerified: true });
+    }
 
     setVerificationResult('success');
 

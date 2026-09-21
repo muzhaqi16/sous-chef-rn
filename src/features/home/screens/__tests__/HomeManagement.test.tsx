@@ -1,8 +1,9 @@
 'use no memo';
 
 import React from 'react';
-import { act, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import { kitTestIDs } from '#components/testIDs';
+import { homeTestIDs } from '#features/home/testIDs';
 import { HomeManagement } from '../HomeManagement';
 
 // Mock token scheduler / refreshToken
@@ -54,7 +55,27 @@ jest.mock('#features/home/utils/homePermissions', () => ({
 }));
 
 jest.mock('#components/organisms/Header', () => ({
-  Header: ({ title }: { title?: string }) => title,
+  Header: ({
+    title,
+    rightActions,
+  }: {
+    title?: string;
+    rightActions?: { testID?: string; onPress: () => void }[];
+  }) => {
+    const { Pressable, Text, View } = require('react-native');
+    return (
+      <View>
+        <Text>{title}</Text>
+        {rightActions?.map(action => (
+          <Pressable
+            key={action.testID}
+            testID={action.testID}
+            onPress={action.onPress}
+          />
+        ))}
+      </View>
+    );
+  },
 }));
 
 jest.mock('#components/molecules/BaseInput/BaseInput', () => ({
@@ -70,7 +91,10 @@ jest.mock('#features/home/components/HomeStats', () => ({
 }));
 
 jest.mock('#features/home/components/CreateHomeForm', () => ({
-  CreateHomeForm: () => null,
+  CreateHomeForm: () => {
+    const { View } = require('react-native');
+    return <View testID="create-home-form" />;
+  },
 }));
 
 // Captures every render's props so tests can assert the gating computed by the
@@ -184,6 +208,17 @@ describe('HomeManagement', () => {
 
     expect(getByTestId(kitTestIDs.stateError)).toBeTruthy();
     expect(queryByText('My Home')).toBeNull();
+  });
+
+  // Creating and joining are local-first, so an unanswered first read must
+  // not hide the form they live in.
+  it('opens the create form offline with nothing cached', () => {
+    mockHook({ loading: false, hasResult: false });
+
+    const { getByTestId } = render(<HomeManagement />);
+    fireEvent.press(getByTestId(homeTestIDs.managementAddButton));
+
+    expect(getByTestId('create-home-form')).toBeTruthy();
   });
 
   it('keeps preserved homes on screen when a refetch fails', () => {

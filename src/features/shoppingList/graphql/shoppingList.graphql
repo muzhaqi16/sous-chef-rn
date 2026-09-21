@@ -751,6 +751,7 @@ mutation AddItemToShoppingList($input: AddItemsToShoppingListInput!) {
         index
         clientId
         success
+        code
         quantityIncremented
         error
         item {

@@ -109,6 +109,8 @@
     "savedRecipesEmptyTitle": "Nessuna ricetta salvata",
     "savedRecipesEmptyDescription": "Salva le ricette dalla ricerca per vederle qui",
     "savedRecipesSearchingAll": "Ricerca in tutte le tue ricette salvate...",
+    "searchIncompleteTitle": "Impossibile caricare tutte le tue ricette",
+    "searchIncompleteDescription": "Alcuni risultati potrebbero mancare.",
     "removeRecipeFailed": "Impossibile rimuovere la ricetta. Riprova.",
     "filterAll": "Tutte",
     "folders": "Cartelle",
@@ -289,6 +291,9 @@
     "favoriteA11y": "Aggiungi ai preferiti",
     "unfavoriteA11y": "Rimuovi dai preferiti",
     "stepsTooMany": "Una ricetta può avere al massimo {{count}} passaggi",
+    "tagsTooMany": "Una ricetta può avere al massimo {{count}} tag",
+    "tagTooLong": "Ogni tag può avere al massimo {{count}} caratteri",
+    "tipsTooLong": "I consigli possono avere al massimo {{count}} caratteri",
     "stepsTooLarge": "Questi passaggi sono troppo lunghi per essere salvati. Accorciali e riprova."
   },
   "recipeFilters": {

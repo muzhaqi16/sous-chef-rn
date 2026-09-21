@@ -14,6 +14,7 @@ import {
   formatQuantityForInput,
 } from '#/utils/formatQuantity';
 import { useConversionPreview } from '#features/pantry/hooks/useConversionPreview';
+import { actionConversionOptions } from '#features/pantry/hooks/useQuantityFeedback';
 import { commonStyles } from '#/styles/commonStyles';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import {
@@ -142,25 +143,9 @@ const RestockActionFields: React.FC<{
   const addAmount = parseFractionalInput(quantityInput);
 
   // For dual-tracked items, show conversion to net weight unit (e.g. cups → grams)
-  const conversion = useConversionPreview({
-    pantryItemId: shared.pantryItemId,
-    inputQuantity: addAmount,
-    selectedUnitId: shared.activeUnitId,
-    selectedUnitSymbol: shared.activeUnitSymbol,
-    trackingUnitId:
-      shared.isDualTracked && shared.isConvertedUnit
-        ? shared.netWeightUnitId
-        : shared.trackingUnitId,
-    trackingUnitSymbol:
-      shared.isDualTracked &&
-      shared.isConvertedUnit &&
-      shared.netWeightUnitSymbol !== undefined
-        ? shared.netWeightUnitSymbol
-        : shared.trackingUnitSymbol,
-    conversionRatio: shared.isDualTracked
-      ? null
-      : shared.selectedUnitInfo?.conversionRatio ?? null,
-  });
+  const conversion = useConversionPreview(
+    actionConversionOptions(addAmount, shared),
+  );
 
   // For dual-tracked items, show new total in net weight
   const currentInUnit =

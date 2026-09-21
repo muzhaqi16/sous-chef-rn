@@ -1,7 +1,7 @@
 import { act, waitFor } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import type { InMemoryCache } from '@apollo/client';
-import type { MockFor } from '#/test-utils/apolloMockProvider';
+import type { MockDataFor, MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   seedCache,
@@ -11,7 +11,10 @@ import {
   MarkNotificationAsReadDocument,
   DeleteNotificationDocument,
 } from '#features/notifications/graphql/notificationMutations.generated';
-import { MarkAllNotificationsAsReadDocument } from '#features/notifications/graphql/bulkNotificationMutations.generated';
+import {
+  DeleteMultipleNotificationsDocument,
+  MarkAllNotificationsAsReadDocument,
+} from '#features/notifications/graphql/bulkNotificationMutations.generated';
 import {
   ErrorCode,
   NotificationStatus,
@@ -114,31 +117,35 @@ const readBadge = (cache: InMemoryCache) =>
     hasUrgentNotifications: boolean;
   }>({ id: 'User:user-1', fragment: BADGE_FRAGMENT });
 
+type MarkReadOutcome = 'success' | 'not-found' | 'forbidden';
+
+const markReadOutcomes: Record<
+  MarkReadOutcome,
+  MockDataFor<typeof MarkNotificationAsReadDocument>['markNotificationAsRead']
+> = {
+  success: {
+    __typename: 'MarkNotificationAsReadPayload',
+    notification: { __typename: 'Notification', id: 'n1', status: READ },
+  },
+  'not-found': {
+    __typename: 'NotFoundError',
+    code: ErrorCode.NotFound,
+    message: 'gone',
+    resource: 'Notification',
+    resourceId: 'n1',
+  },
+  forbidden: {
+    __typename: 'ForbiddenError',
+    code: ErrorCode.Forbidden,
+    message: 'no',
+  },
+};
+
 const markReadMock = (
-  outcome: 'success' | 'not-found' = 'success',
+  outcome: MarkReadOutcome = 'success',
 ): MockFor<typeof MarkNotificationAsReadDocument> => ({
   request: { query: MarkNotificationAsReadDocument, variables: () => true },
-  result: {
-    data: {
-      markNotificationAsRead:
-        outcome === 'success'
-          ? {
-              __typename: 'MarkNotificationAsReadPayload',
-              notification: {
-                __typename: 'Notification',
-                id: 'n1',
-                status: READ,
-              },
-            }
-          : {
-              __typename: 'NotFoundError',
-              code: ErrorCode.NotFound,
-              message: 'gone',
-              resource: 'Notification',
-              resourceId: 'n1',
-            },
-    },
-  },
+  result: { data: { markNotificationAsRead: markReadOutcomes[outcome] } },
 });
 
 const deleteMock = (): MockFor<typeof DeleteNotificationDocument> => ({
@@ -147,7 +154,6 @@ const deleteMock = (): MockFor<typeof DeleteNotificationDocument> => ({
     data: {
       deleteNotification: {
         __typename: 'DeleteNotificationPayload',
-        notification: { __typename: 'Notification', id: 'n1' },
       },
     },
   },
@@ -178,6 +184,23 @@ const deleteAlreadyGoneMock = (): MockFor<
         message: 'gone',
         resource: 'Notification',
         resourceId: 'n1',
+      },
+    },
+  },
+});
+
+const deleteMultipleMock = (
+  ids: string[],
+): MockFor<typeof DeleteMultipleNotificationsDocument> => ({
+  request: {
+    query: DeleteMultipleNotificationsDocument,
+    variables: () => true,
+  },
+  result: {
+    data: {
+      deleteMultipleNotifications: {
+        __typename: 'DeleteMultipleNotificationsPayload',
+        summary: { __typename: 'BulkSummary', total: ids.length },
       },
     },
   },
@@ -278,7 +301,7 @@ describe('useNotificationSync — cached badge aggregates', () => {
   // catch that never runs.
   it('an error-union payload puts the row and the badge back', async () => {
     const cache = seedFeed(5, [{ id: 'n1', status: UNREAD }]);
-    const { result } = renderSync(cache, [markReadMock('not-found')]);
+    const { result } = renderSync(cache, [markReadMock('forbidden')]);
 
     await act(async () => {
       await result.current.syncMarkAsRead('n1');
@@ -289,6 +312,45 @@ describe('useNotificationSync — cached badge aggregates', () => {
     );
     expect(readBadge(cache)?.unreadNotificationCount).toBe(5);
     expect(alertService.alert).toHaveBeenCalledTimes(1);
+  });
+
+  it('a mark-read answered "not found" removes the row, with nothing shown', async () => {
+    const cache = seedFeed(5, [{ id: 'n1', status: UNREAD }]);
+    const { result } = renderSync(cache, [markReadMock('not-found')]);
+
+    await act(async () => {
+      await result.current.syncMarkAsRead('n1');
+    });
+
+    expect(readNotificationStatus(cache, 'n1')).toBeUndefined();
+    expect(readBadge(cache)?.unreadNotificationCount).toBe(4);
+    expect(alertService.alert).not.toHaveBeenCalled();
+  });
+
+  it('a delete leaves no record of the notification in the cache', async () => {
+    const cache = seedFeed(5, [{ id: 'n1', status: UNREAD }]);
+    const { result } = renderSync(cache, [deleteMock()]);
+
+    await act(async () => {
+      await result.current.syncDelete('n1');
+    });
+
+    expect(cache.extract()).not.toHaveProperty(['Notification:n1']);
+  });
+
+  it('clearing read notifications leaves no record of them in the cache', async () => {
+    const cache = seedFeed(5, [
+      { id: 'n1', status: READ },
+      { id: 'n2', status: READ },
+    ]);
+    const { result } = renderSync(cache, [deleteMultipleMock(['n1', 'n2'])]);
+
+    await act(async () => {
+      await result.current.syncClearRead(['n1', 'n2']);
+    });
+
+    expect(cache.extract()).not.toHaveProperty(['Notification:n1']);
+    expect(cache.extract()).not.toHaveProperty(['Notification:n2']);
   });
 
   it('a delete answered "not found" stays deleted, with nothing shown', async () => {

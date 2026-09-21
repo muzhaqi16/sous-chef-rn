@@ -2,9 +2,14 @@ import { reconcileReplaySuccess } from '../queueReplayReconcilers';
 import {
   addPantryItemLocally,
   removePantryItemLocally,
+  revertOptimisticPantryItem,
 } from '#features/pantry/cache/items';
+import { BarcodeCreatePantryItemDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  CreatePantryItemDocument,
+  UpdatePantryItemQuantityDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import {
   AddItemToShoppingListDocument,
   MoveShoppingItemToPantryDocument,
@@ -13,6 +18,8 @@ import {
   reconcileShoppingItemCreateUpdate,
   revertOptimisticShoppingListItem,
 } from '#features/shoppingList/cache/items';
+import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
+import { CreateShoppingListItemFromRecipeIngredientDocument } from '#features/recipes/graphql/recipe.generated';
 
 jest.mock('#/apollo/clientRegistry', () => ({
   getApolloClient: () => ({ cache: {} }),
@@ -27,6 +34,7 @@ jest.mock('#features/shoppingList/cache/items', () => ({
 jest.mock('#features/pantry/cache/items', () => ({
   addPantryItemLocally: jest.fn(),
   removePantryItemLocally: jest.fn(),
+  revertOptimisticPantryItem: jest.fn(),
 }));
 
 /**
@@ -109,7 +117,7 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
 
   it('has no reconciler for an ordinary replayed operation', () => {
     reconcileReplaySuccess(
-      operationNameOf(CreatePantryItemDocument),
+      operationNameOf(UpdatePantryItemQuantityDocument),
       variables,
       payloadWith('x'),
     );
@@ -237,5 +245,131 @@ describe('reconcileReplaySuccess — AddItemToShoppingList batch', () => {
     });
 
     expect(revertOptimisticShoppingListItem).not.toHaveBeenCalled();
+  });
+});
+
+describe('reconcileReplaySuccess — recipe copies of the shopping adds', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('withdraws a row the server refused inside a replayed recipe batch', () => {
+    reconcileReplaySuccess(
+      operationNameOf(AddItemsToShoppingListFromRecipeDocument),
+      {
+        input: {
+          shoppingListId: 'list-1',
+          items: [{ id: 'row-a' }, { id: 'row-b' }],
+        },
+      },
+      {
+        addItemsToShoppingList: {
+          __typename: 'AddItemsToShoppingListPayload',
+          results: [
+            { index: 0, success: true, item: { id: 'row-a' } },
+            { index: 1, success: false },
+          ],
+        },
+      },
+    );
+
+    expect(revertOptimisticShoppingListItem).toHaveBeenCalledWith(
+      {},
+      'list-1',
+      'row-b',
+      { countsSettled: false },
+    );
+  });
+
+  it('folds a merged single ingredient line into the row the server kept', () => {
+    reconcileReplaySuccess(
+      operationNameOf(CreateShoppingListItemFromRecipeIngredientDocument),
+      {
+        input: {
+          id: 'minted-1',
+          shoppingListId: 'list-1',
+          recipeIngredientId: 'ri-1',
+        },
+      },
+      {
+        createShoppingListItemFromRecipeIngredient: {
+          __typename: 'CreateShoppingListItemFromRecipeIngredientPayload',
+          wasUpdated: true,
+          shoppingListItem: { id: 'existing-row' },
+        },
+      },
+    );
+
+    expect(reconcileShoppingItemCreateUpdate).toHaveBeenCalledWith(
+      {},
+      'list-1',
+      expect.objectContaining({ id: 'existing-row' }),
+      'minted-1',
+    );
+  });
+
+  it('leaves a single ingredient line the server created under its id', () => {
+    reconcileReplaySuccess(
+      operationNameOf(CreateShoppingListItemFromRecipeIngredientDocument),
+      { input: { id: 'minted-1', shoppingListId: 'list-1' } },
+      {
+        createShoppingListItemFromRecipeIngredient: {
+          __typename: 'CreateShoppingListItemFromRecipeIngredientPayload',
+          shoppingListItem: { id: 'minted-1' },
+        },
+      },
+    );
+
+    expect(reconcileShoppingItemCreateUpdate).not.toHaveBeenCalled();
+    expect(revertOptimisticShoppingListItem).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * A queued pantry create replays with `forceAdd`, so a stack another member
+ * added meanwhile absorbs it and comes back under ITS id. The minted row is
+ * then a second row for the same stack.
+ */
+describe('reconcileReplaySuccess — a queued pantry create joining a held stack', () => {
+  const syncVariables = {
+    input: { clientId: 'minted-1', pantryId: 'pantry-1', forceAdd: true },
+  };
+  const syncPayload = (id: string) => ({
+    syncPantryItem: {
+      __typename: 'SyncPantryItemPayload',
+      item: { __typename: 'PantryItem', id },
+    },
+  });
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it.each([CreatePantryItemDocument, BarcodeCreatePantryItemDocument])(
+    'swaps the minted row for the held stack (%#)',
+    document => {
+      reconcileReplaySuccess(
+        operationNameOf(document),
+        syncVariables,
+        syncPayload('held-9'),
+      );
+
+      expect(revertOptimisticPantryItem).toHaveBeenCalledWith(
+        {},
+        'pantry-1',
+        'minted-1',
+      );
+      expect(addPantryItemLocally).toHaveBeenCalledWith({}, 'pantry-1', {
+        __typename: 'PantryItem',
+        id: 'held-9',
+      });
+    },
+  );
+
+  it('leaves a row the server created under the minted id', () => {
+    reconcileReplaySuccess(
+      operationNameOf(CreatePantryItemDocument),
+      syncVariables,
+      syncPayload('minted-1'),
+    );
+
+    expect(revertOptimisticPantryItem).not.toHaveBeenCalled();
+    expect(addPantryItemLocally).not.toHaveBeenCalled();
   });
 });

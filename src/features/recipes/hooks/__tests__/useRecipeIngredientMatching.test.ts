@@ -521,6 +521,23 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     expect(result.current.editableMatches).toEqual([]);
   });
 
+  it('does not deduct a row whose quantity was cleared', async () => {
+    const confirm = confirmMock({ kind: 'success' });
+    const { result } = await loadOneMatch(confirm);
+
+    act(() => {
+      result.current.updateMatch(0, { adjustedQuantity: 0 });
+    });
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    expect(confirm.fired).toEqual([]);
+    expect(mockToastInfo).toHaveBeenCalledWith(
+      'No ingredients selected for deduction',
+    );
+  });
+
   it('toasts an error and keeps the sheet open when the server rejects', async () => {
     const confirm = confirmMock({ kind: 'rejected' });
     const { result } = await loadOneMatch(confirm);

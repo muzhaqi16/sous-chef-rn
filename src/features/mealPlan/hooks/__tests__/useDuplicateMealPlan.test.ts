@@ -17,7 +17,11 @@ import {
   CreateMealPlanItemDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import { UseDuplicateMealPlan_MealPlanFragmentDoc } from '#features/mealPlan/hooks/useDuplicateMealPlan.generated';
-import { MealPlanType, MealType } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  MealPlanType,
+  MealType,
+} from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
 import { useDuplicateMealPlan } from '../useDuplicateMealPlan';
@@ -179,6 +183,63 @@ describe('duplicating a meal plan', () => {
       '2026-01-12T00:00:00.000Z',
       '2026-01-14T00:00:00.000Z',
     ]);
+  });
+
+  it('puts every copied meal on the new plan in the cache while queued', async () => {
+    useStore.setState({ apiReachable: false });
+    const queuedItem = recordMock(CreateMealPlanItemDocument, {
+      data: { createMealPlanItem: null },
+    });
+    const cache = seeded();
+    const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
+      operationMocks: [createPlanMock().mock, queuedItem.mock],
+      cache,
+    });
+
+    const response = await result.current.duplicatePlan(nextWeek);
+
+    const sentIds = (queuedItem.fired as Array<{ input: { id: string } }>).map(
+      fired => fired.input.id,
+    );
+    const copy = cache.extract()[`MealPlan:${response?.mealPlanId}`] as {
+      mealPlanItems?: Array<{ __ref: string }>;
+    };
+    expect(copy.mealPlanItems?.map(ref => ref.__ref)).toEqual(
+      sentIds.map(id => `MealPlanItem:${id}`),
+    );
+    for (const id of sentIds) {
+      expect(cache.extract()[`MealPlanItem:${id}`]).toMatchObject({
+        mealType: expect.any(String),
+      });
+    }
+  });
+
+  it('takes a refused meal back off the new plan', async () => {
+    const refusedItem = recordMock(CreateMealPlanItemDocument, {
+      data: {
+        createMealPlanItem: {
+          __typename: 'ValidationError',
+          code: ErrorCode.ValidationFailed,
+          message: 'out of range',
+          field: 'date',
+        },
+      },
+    });
+    const cache = seeded();
+    const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
+      operationMocks: [createPlanMock().mock, refusedItem.mock],
+      cache,
+    });
+
+    await result.current.duplicatePlan(nextWeek);
+
+    const refused = (refusedItem.fired as Array<{ input: { id: string } }>).map(
+      fired => fired.input.id,
+    );
+    expect(refused).toHaveLength(2);
+    for (const id of refused) {
+      expect(cache.extract()[`MealPlanItem:${id}`]).toBeUndefined();
+    }
   });
 
   it('does not report success when a copied meal fails to save', async () => {

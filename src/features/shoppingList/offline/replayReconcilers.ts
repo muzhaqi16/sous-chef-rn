@@ -61,3 +61,33 @@ export const reconcileShoppingBatchReplay: ReplayReconcilerTable[string] = (
     }
   });
 };
+
+/**
+ * A single created row whose payload names the row the server kept. A
+ * different id means the server merged the line into an existing one, so the
+ * minted row is folded onto it.
+ */
+export const reconcileShoppingRowReplay: ReplayReconcilerTable[string] = (
+  cache,
+  variables,
+  data,
+) => {
+  const input: unknown = variables.input;
+  if (!isRecord(input)) return;
+  const { id: mintedId, shoppingListId } = input;
+  if (typeof mintedId !== 'string' || typeof shoppingListId !== 'string') {
+    return;
+  }
+
+  const payload: unknown = extractMutationPayload(data);
+  const item = isRecord(payload) ? payload.shoppingListItem : undefined;
+  if (!isRecord(item) || typeof item.id !== 'string' || item.id === mintedId) {
+    return;
+  }
+  reconcileShoppingItemCreateUpdate(
+    cache,
+    shoppingListId,
+    { ...item, id: item.id },
+    mintedId,
+  );
+};

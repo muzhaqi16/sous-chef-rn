@@ -102,8 +102,12 @@ live session — and `client.stop()` does not cancel an in-flight refresh
 mutation. So `setTokens` refuses a pair while the scope is held, the refresh
 opens no rotation inside it, and a rotation that completes after its session
 was cleared or replaced (the stored refresh token is no longer the one it
-presented) is discarded. One begun before the sign-out still answers the
-request waiting on it, unstored and without re-dialling the socket.
+presented) is discarded. Dropping it is safe because `/revoke` retires the
+whole token family under the issuance lock: the teardown's revoke of the
+consumed predecessor also retires a successor the rotation already minted, and
+a rotation that loses the lock to it is refused. One begun before the sign-out
+still answers the request waiting on it, unstored and without re-dialling the
+socket.
 
 **Both transports can rotate, and a lost race is survivable** — the server
 tells one apart from a dead session. Rotation is single-use; when an HTTP

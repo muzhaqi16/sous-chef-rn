@@ -16,7 +16,7 @@ import { useAppStore, useSelectedShoppingListId } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
-import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { addShoppingListToQueryCache } from '#features/shoppingList/cache/list';
 import {
   settleMutation,
   type SettledFailure,
@@ -268,16 +268,12 @@ export function useRecipeShoppingList({
   };
 
   // Mutations
-  const addToShoppingListsCache = createAddToQueryConnectionUpdater(
-    'shoppingLists',
-    'ShoppingList',
-  );
   const [createShoppingListMutation] = useMutation(
     CreateShoppingListForRecipeDocument,
     {
       update(cache, { data }) {
         const payload = appliedPayload(data);
-        if (payload) addToShoppingListsCache(cache, payload.shoppingList);
+        if (payload) addShoppingListToQueryCache(cache, payload.shoppingList);
       },
     },
   );

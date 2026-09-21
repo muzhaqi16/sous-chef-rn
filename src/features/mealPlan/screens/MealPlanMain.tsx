@@ -58,6 +58,7 @@ import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { toDateKey } from '#/utils/dateUtils';
 import { Screen, type ScreenHeaderConfig } from '#components/templates/Screen';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
+import { toMealDateTime } from '#/utils/dateUtils';
 
 /** The chrome a plan-less Meal Plan shows, before the DeferredScreen gate and
  *  again while the plan list is still arriving. */
@@ -312,7 +313,7 @@ const MealPlanMainInner: React.FC = () => {
       mealPlanId: activePlanId,
       meal: { recipeId },
       mealType,
-      date: calendar.selectedDate.toISOString(),
+      date: toMealDateTime(calendar.selectedDate),
     });
     if (result) {
       setAddMealVisible(false);
@@ -325,7 +326,7 @@ const MealPlanMainInner: React.FC = () => {
       mealPlanId: activePlanId,
       meal: { customMealName: name },
       mealType,
-      date: calendar.selectedDate.toISOString(),
+      date: toMealDateTime(calendar.selectedDate),
     });
     if (result) {
       setAddMealVisible(false);

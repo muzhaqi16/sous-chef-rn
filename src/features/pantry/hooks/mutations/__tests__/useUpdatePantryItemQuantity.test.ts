@@ -44,8 +44,8 @@ it('writes and sends nothing for a quantity no parser can read', async () => {
     { cache, operationMocks: [] },
   );
 
-  act(() => {
-    result.current.updateQuantity({
+  await act(async () => {
+    await result.current.updateQuantity({
       itemId: 'pi-1',
       quantityInput: 'abc',
       quantityValue: Number.NaN,

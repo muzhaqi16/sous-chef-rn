@@ -11,7 +11,13 @@ import {
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 import { useShoppingListItemWrites } from '../useShoppingListItemWrites';
+
+jest.mock('#/utils/deviceLocale', () => ({
+  ...jest.requireActual('#/utils/deviceLocale'),
+  getDeviceDecimalSeparator: jest.fn(() => '.'),
+}));
 
 jest.mock('#/services/errorService');
 jest.mock('#/services/alertService', () => ({
@@ -94,6 +100,7 @@ function setup(outcome: 'applied' | 'refused') {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.');
 });
 
 describe('useShoppingListItemWrites.updateItem', () => {
@@ -126,6 +133,24 @@ describe('useShoppingListItemWrites.updateItem', () => {
         value,
       );
     }
+  });
+
+  it('reads the API text it sends as API text on a comma device', async () => {
+    jest.mocked(getDeviceDecimalSeparator).mockReturnValue(',');
+    const { result, readItem } = setup('applied');
+    await waitFor(() => expect(result.current.itemData).not.toBeNull());
+
+    let written: Item | null = null;
+    await act(async () => {
+      const pending = result.current.updateItem(
+        { id: 'item-1', version: 3, quantity: '1.250' },
+        jest.fn(),
+      );
+      written = readItem();
+      await pending;
+    });
+
+    expect(written).toMatchObject({ quantity: 1.25, quantityInput: '1.250' });
   });
 
   it('drops the recorded edit and re-reads the item when the server refuses it', async () => {

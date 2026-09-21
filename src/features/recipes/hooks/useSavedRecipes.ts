@@ -33,12 +33,16 @@ interface SavedRecipesState {
   isLoadingMore: boolean;
   /** `loadAllPages` is on and pages remain that have not failed to load. */
   isLoadingRemainingPages: boolean;
+  /** `loadAllPages` stopped short of the last page, so a filter may miss rows. */
+  isSearchIncomplete: boolean;
 }
 
 interface SavedRecipesActions {
   /** Resolves when the refetch settles, so a caller can drive a spinner. */
   refetch: () => Promise<void>;
   loadMore: () => Promise<void>;
+  /** Restarts a load-all that stopped on a failed page. */
+  retryRemainingPages: () => void;
 }
 
 type UseSavedRecipesResult = HookReturn<SavedRecipesState, SavedRecipesActions>;
@@ -49,6 +53,8 @@ interface SavedRecipesOptions {
    * recipes, so a local search covers every one only once all pages are loaded.
    */
   loadAllPages?: boolean;
+  /** The local filter; a new one restarts a load-all that stopped. */
+  filterKey?: string;
 }
 
 /**
@@ -58,6 +64,7 @@ interface SavedRecipesOptions {
  */
 export function useSavedRecipes({
   loadAllPages = false,
+  filterKey = '',
 }: SavedRecipesOptions = {}): UseSavedRecipesResult {
   const isLoggedOut = useIsLoggedOut();
 
@@ -81,10 +88,11 @@ export function useSavedRecipes({
 
   const recipes = connectionData.items;
   const { hasMore, isLoadingMore, loadMore } = connectionData;
-  const isLoadingRemainingPages = useLoadRemainingPages(
+  const remainingPages = useLoadRemainingPages(
     loadAllPages,
     loading,
     connectionData,
+    filterKey,
   );
 
   return {
@@ -98,13 +106,15 @@ export function useSavedRecipes({
       skipped: isLoggedOut,
       hasMore,
       isLoadingMore,
-      isLoadingRemainingPages,
+      isLoadingRemainingPages: remainingPages.isLoadingRemainingPages,
+      isSearchIncomplete: remainingPages.incomplete,
     },
     actions: {
       refetch: async () => {
         await refetch();
       },
       loadMore,
+      retryRemainingPages: remainingPages.retry,
     },
   };
 }

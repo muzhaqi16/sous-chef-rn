@@ -10,6 +10,7 @@ import { alertService } from '#/services/alertService';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 import { useMealTemplate } from '#features/mealPlan/hooks/useMealTemplate';
 import { TemplatePreviewSheet } from '../TemplatePreviewSheet';
+import { toMealDateTime } from '#/utils/dateUtils';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -293,7 +294,8 @@ describe('TemplatePreviewSheet', () => {
     expect(defaultProps.onConfirm).toHaveBeenCalledWith(
       expect.objectContaining({
         templateId: 'tmpl-1',
-        startDate: expect.any(String),
+        // The plan's first day for the server is the local day picked.
+        startDate: toMealDateTime(new Date()),
       }),
     );
   });

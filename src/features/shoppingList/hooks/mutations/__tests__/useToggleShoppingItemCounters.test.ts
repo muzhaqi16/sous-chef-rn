@@ -203,3 +203,35 @@ describe('useToggleShoppingItem counters on a refused toggle', () => {
     expect(refetch).toHaveBeenCalled();
   });
 });
+
+describe('useToggleShoppingItem recording a purchase', () => {
+  it('leaves the counters alone on a row already purchased', async () => {
+    const cache = seed(1);
+    const before = counts(cache);
+    const { result } = renderHookWithApollo(
+      () =>
+        useToggleShoppingItem({
+          listId: 'list-1',
+          refetch: jest.fn().mockResolvedValue(undefined),
+        }),
+      { cache, operationMocks: [] },
+    );
+
+    let pending: Promise<boolean> | undefined;
+    act(() => {
+      pending = result.current.recordPurchase('item-1', {
+        purchasedQuantity: 1,
+        purchasedPrice: null,
+      });
+    });
+
+    expect(counts(cache)).toEqual(before);
+    const purchased = cache.readQuery<{
+      shoppingList: { itemsConnection: { totalCount: number } };
+    }>({ query: LIST, variables: { id: 'list-1', isPurchased: true } });
+    expect(purchased?.shoppingList.itemsConnection.totalCount).toBe(1);
+    await act(async () => {
+      await pending;
+    });
+  });
+});

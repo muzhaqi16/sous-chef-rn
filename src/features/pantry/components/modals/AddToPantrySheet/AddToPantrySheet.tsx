@@ -127,7 +127,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     // Offline-first: the pantry answers "do I already stock this?" itself. The
     // server would refuse the create anyway, and offline it never gets asked —
     // so route to the restock now rather than queueing a doomed create.
-    const cachedDuplicate = findCachedDuplicate(item.id);
+    const cachedDuplicate = findCachedDuplicate(item.id, item.defaultUnit?.id);
     if (cachedDuplicate) {
       removeSuggestion(item.id);
       await runRestock(
@@ -173,7 +173,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     state.startExitAnimation(pantryItem.itemId);
 
     // Same local-first check as the search handler above.
-    const cachedDuplicate = findCachedDuplicate(pantryItem.itemId);
+    const cachedDuplicate = findCachedDuplicate(
+      pantryItem.itemId,
+      pantryItem.defaultUnitId,
+    );
     if (cachedDuplicate) {
       await runRestock(
         cachedDuplicate.existingPantryItemId,

@@ -8,6 +8,8 @@ import { ForkRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   AddItemToShoppingListDocument,
   MoveShoppingListItemDocument,
+  RemoveItemFromShoppingListDocument,
+  ToggleShoppingListItemPurchasedDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 
 // The global jest.setup.js already mocks react-native-mmkv with an in-memory Map,
@@ -366,7 +368,131 @@ describe('QueueStore', () => {
           }),
         );
 
-        expect(store.expireStalePending('user-1')).toBe(1);
+        expect(store.expireStalePending('user-1')).toHaveLength(1);
+      });
+    });
+
+    describe('a delete supersedes pending writes to its subject', () => {
+      const toggle = (id: string, itemId: string, createdAt: number) =>
+        makeMutation({
+          id,
+          ...queuedMutationFor(ToggleShoppingListItemPurchasedDocument),
+          variables: { input: { id: itemId, purchased: true, version: 2 } },
+          createdAt,
+        });
+      const remove = (id: string, itemId: string) =>
+        makeMutation({
+          id,
+          ...queuedMutationFor(RemoveItemFromShoppingListDocument),
+          variables: { input: { id: itemId } },
+          createdAt: 9_000,
+        });
+
+      it('drops a pending update to the deleted row and keeps its age', () => {
+        store.addMutation(toggle('tick', 'sli-1', 1_000));
+        store.addMutation(toggle('other', 'sli-2', 2_000));
+
+        store.addMutation(remove('delete', 'sli-1'));
+
+        const queue = store.getPendingMutationsForUser('user-1');
+        expect(queue.map(m => m.id)).toEqual(['other', 'delete']);
+        expect(store.getMutation('delete')?.agedFrom).toBe(1_000);
+      });
+
+      // An in-flight write may already have reached the server; the drain
+      // settles it, and the delete waits its turn.
+      it('leaves a write that is already in flight alone', () => {
+        store.addMutation({
+          ...toggle('tick', 'sli-1', 1_000),
+          status: QueueStatus.PROCESSING,
+        });
+
+        store.addMutation(remove('delete', 'sli-1'));
+
+        expect(store.getMutation('tick')?.status).toBe(QueueStatus.PROCESSING);
+        expect(store.getMutation('delete')?.agedFrom).toBeUndefined();
+      });
+
+      it('drops an update parked for re-auth to the deleted row', () => {
+        store.addMutation({
+          ...toggle('tick', 'sli-1', 1_000),
+          status: QueueStatus.AUTH_ERROR,
+        });
+
+        store.addMutation(remove('delete', 'sli-1'));
+
+        expect(store.getMutation('tick')).toBeNull();
+        expect(store.getMutation('delete')?.agedFrom).toBe(1_000);
+      });
+
+      it('keeps a create parked for re-auth, so the delete follows it', () => {
+        store.addMutation({
+          ...makeMutation({
+            id: 'create',
+            ...queuedMutationFor(AddItemToShoppingListDocument),
+            variables: {
+              input: {
+                shoppingListId: 'list-1',
+                items: [{ id: 'sli-new', itemName: 'Milk' }],
+              },
+            },
+            createdAt: 1_000,
+          }),
+          status: QueueStatus.AUTH_ERROR,
+        });
+
+        store.addMutation(remove('delete', 'sli-new'));
+
+        expect(store.getMutationsForUser('user-1').map(m => m.id)).toEqual([
+          'create',
+          'delete',
+        ]);
+      });
+
+      it('drops a pending device-minted create together with the delete', () => {
+        store.addMutation(
+          makeMutation({
+            id: 'create',
+            ...queuedMutationFor(AddItemToShoppingListDocument),
+            variables: {
+              input: {
+                shoppingListId: 'list-1',
+                items: [{ id: 'sli-new', itemName: 'Milk' }],
+              },
+            },
+            createdAt: 1_000,
+          }),
+        );
+        store.addMutation(toggle('tick', 'sli-new', 2_000));
+
+        store.addMutation(remove('delete', 'sli-new'));
+
+        expect(store.getMutationsForUser('user-1')).toEqual([]);
+      });
+
+      it('keeps a multi-row create that also minted other rows', () => {
+        store.addMutation(
+          makeMutation({
+            id: 'batch',
+            ...queuedMutationFor(AddItemToShoppingListDocument),
+            variables: {
+              input: {
+                shoppingListId: 'list-1',
+                items: [
+                  { id: 'sli-a', itemName: 'Milk' },
+                  { id: 'sli-b', itemName: 'Eggs' },
+                ],
+              },
+            },
+            createdAt: 1_000,
+          }),
+        );
+
+        store.addMutation(remove('delete', 'sli-a'));
+
+        expect(
+          store.getPendingMutationsForUser('user-1').map(m => m.id),
+        ).toEqual(['batch', 'delete']);
       });
     });
   });
@@ -1036,12 +1162,27 @@ describe('QueueStore', () => {
 
       const expired = store.expireStalePending('user-1');
 
-      expect(expired).toBe(1);
+      expect(expired.map(m => m.id)).toEqual(['stale-1']);
       expect(store.getPendingMutationsForUser('user-1')).toEqual([]);
       const failed = store.getMutation('stale-1');
       expect(failed?.status).toBe(QueueStatus.FAILED);
       expect(failed?.lastError?.code).toBe('OFFLINE_SYNC_WINDOW_EXPIRED');
       expect(failed?.lastError?.retryable).toBe(false);
+    });
+
+    it('stamps the expired entry so routine cleanup removes it', () => {
+      store.addMutation(
+        makeMutation({ id: 'stale-2', createdAt: NINETY_ONE_DAYS_AGO }),
+      );
+      const now = Date.now();
+      store.expireStalePending('user-1');
+
+      jest.spyOn(Date, 'now').mockReturnValue(now + 25 * 60 * 60 * 1000);
+      const discarded = store.cleanupTerminal();
+      jest.restoreAllMocks();
+
+      expect(discarded.map(m => m.id)).toEqual(['stale-2']);
+      expect(store.getMutation('stale-2')).toBeNull();
     });
 
     it('keeps an entry one second under the horizon', () => {
@@ -1054,7 +1195,7 @@ describe('QueueStore', () => {
         }),
       );
 
-      expect(store.expireStalePending('user-1')).toBe(0);
+      expect(store.expireStalePending('user-1')).toEqual([]);
       expect(store.getMutation('edge')?.status).toBe(QueueStatus.PENDING);
     });
 
@@ -1069,7 +1210,7 @@ describe('QueueStore', () => {
 
       const expired = store.expireStalePending('user-1');
 
-      expect(expired).toBe(0);
+      expect(expired).toEqual([]);
       expect(store.getPendingMutationsForUser('user-1')).toHaveLength(2);
     });
 
@@ -1091,7 +1232,7 @@ describe('QueueStore', () => {
 
       const expired = store.expireStalePending('user-1');
 
-      expect(expired).toBe(0);
+      expect(expired).toEqual([]);
       expect(store.getMutation('other-user')?.status).toBe(QueueStatus.PENDING);
       expect(store.getMutation('already-failed')?.lastError).toBeUndefined();
     });

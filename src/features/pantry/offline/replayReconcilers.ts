@@ -5,47 +5,65 @@
 import {
   addPantryItemLocally,
   removePantryItemLocally,
+  revertOptimisticPantryItem,
 } from '#features/pantry/cache/items';
 import { extractMutationPayload } from '#/utils/errors/mutationPayload';
 import type { ReplayReconcilerTable } from '#/apollo/offlineQueue/types';
+import { isRecord } from '#/utils/isRecord';
+import type { ApolloCache } from '@apollo/client';
+
+type Withdraw = (cache: ApolloCache, pantryId: string, itemId: string) => void;
+
+/**
+ * A replay whose payload names a different row than the one minted locally:
+ * the ghost is withdrawn AND the server's row linked, since withdrawing alone
+ * leaves neither. Both helpers are membership-gated, so a re-drain is a no-op.
+ */
+const adoptServerRow =
+  (
+    mintedKey: 'pantryItemId' | 'clientId',
+    returnedKey: 'pantryItem' | 'item',
+    withdraw: Withdraw,
+  ): ReplayReconcilerTable[string] =>
+  (cache, variables, data) => {
+    const input: unknown = variables.input;
+    if (!isRecord(input)) return;
+    const mintedId = input[mintedKey];
+    const { pantryId } = input;
+    if (typeof mintedId !== 'string' || typeof pantryId !== 'string') return;
+
+    const payload: unknown = extractMutationPayload(data);
+    const returned = isRecord(payload) ? payload[returnedKey] : undefined;
+    const serverId = isRecord(returned) ? returned.id : undefined;
+    // No id back (a refusal, or a shape without one): nothing to compare.
+    if (typeof serverId !== 'string' || !serverId || serverId === mintedId) {
+      return;
+    }
+
+    withdraw(cache, pantryId, mintedId);
+    addPantryItemLocally(cache, pantryId, {
+      __typename: 'PantryItem',
+      id: serverId,
+    });
+  };
 
 /**
  * `pantryItemId` is a HINT, honoured only when the move creates a row: if the
  * pantry already stocks that catalog item the server restocks the existing
- * stack and returns ITS id, leaving the locally minted row a ghost edge that
- * 404s when tapped. Compare the returned `pantryItem.id` against the id sent.
+ * stack and returns ITS id, leaving the minted row a ghost that 404s when tapped.
  */
-export const reconcileMoveToPantryReplay: ReplayReconcilerTable[string] = (
-  cache,
-  variables,
-  data,
-) => {
-  const input = variables.input as
-    | { pantryItemId?: string; pantryId?: string }
-    | undefined;
-  const mintedId = input?.pantryItemId;
-  const pantryId = input?.pantryId;
-  if (!mintedId || !pantryId) return;
+export const reconcileMoveToPantryReplay = adoptServerRow(
+  'pantryItemId',
+  'pantryItem',
+  removePantryItemLocally,
+);
 
-  // The payload is only knowable structurally; this names the one field read.
-  const payload:
-    | {
-        __typename?: string;
-        pantryItem?: { id?: string } | null;
-      }
-    | null
-    | undefined = extractMutationPayload(data);
-  const serverId = payload?.pantryItem?.id;
-  // No id back (a refusal, or a payload shape without one) means there is
-  // nothing to compare — leave the row for the failure handler or a refetch.
-  if (!serverId || serverId === mintedId) return;
-
-  // Withdraw the ghost AND link the row the server returned; withdrawing
-  // alone leaves the user with neither. Both helpers are membership-gated, so
-  // a re-drain changes nothing.
-  removePantryItemLocally(cache, pantryId, mintedId);
-  addPantryItemLocally(cache, pantryId, {
-    __typename: 'PantryItem',
-    id: serverId,
-  });
-};
+/**
+ * A queued create replays with `forceAdd`, so a stack for the same item and
+ * unit that another member added meanwhile absorbs it under its own id.
+ */
+export const reconcileCreatePantryItemReplay = adoptServerRow(
+  'clientId',
+  'item',
+  revertOptimisticPantryItem,
+);

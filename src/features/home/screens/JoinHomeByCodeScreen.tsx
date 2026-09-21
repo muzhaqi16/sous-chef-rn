@@ -76,7 +76,11 @@ export const JoinHomeByCodeScreen: React.FC<
           return;
         }
 
-        useStore.getState().setSelectedHomeId(outcome.homeId);
+        // An unknown home would read as one the user left, and be swapped
+        // back out; it is selected once the homes list next has it.
+        if (outcome.homeKnown) {
+          useStore.getState().setSelectedHomeId(outcome.homeId);
+        }
         goBack();
         toPantryMain();
         toastService.success(

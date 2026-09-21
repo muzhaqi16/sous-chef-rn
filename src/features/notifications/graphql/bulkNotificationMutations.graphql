@@ -21,7 +21,8 @@ mutation MarkAllNotificationsAsRead {
 }
 
 # Bulk delete by id — used by "Clear read" to remove only the already-read
-# notifications (pass their ids), preserving unread ones.
+# notifications (pass their ids), preserving unread ones. No `notifications
+# { id }`: written back, they would restore the evicted rows as stubs.
 mutation DeleteMultipleNotifications(
   $input: DeleteMultipleNotificationsInput!
 ) {
@@ -30,9 +31,6 @@ mutation DeleteMultipleNotifications(
     ... on DeleteMultipleNotificationsPayload {
       summary {
         total
-      }
-      notifications {
-        id
       }
     }
     ... on Error {

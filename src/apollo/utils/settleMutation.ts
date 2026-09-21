@@ -108,7 +108,7 @@ type Classified =
 // unsafe-enum comparison.
 const VALIDATION_UMBRELLA: string = ErrorCode.ValidationFailed;
 
-const isGoneCode = (code: string | null): boolean =>
+export const isGoneCode = (code: string | null): boolean =>
   code === ErrorCode.NotFound || code === TopLevelErrorCode.ResourceNotFound;
 
 function classify(
@@ -190,10 +190,7 @@ function describe(
       body: t('errors.codes.unitInvalid'),
     };
   }
-  if (
-    code === ErrorCode.NotFound ||
-    code === TopLevelErrorCode.ResourceNotFound
-  ) {
+  if (isGoneCode(code)) {
     return {
       code,
       field,

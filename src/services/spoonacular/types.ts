@@ -128,7 +128,8 @@ export interface RecipeInstructionStep {
 
 export interface RecipeInstruction {
   name: string;
-  steps: RecipeInstructionStep[];
+  /** Payloads are cast, not validated, so a documented field may be null. */
+  steps: RecipeInstructionStep[] | null;
 }
 
 export interface WineProductMatch {
@@ -163,7 +164,7 @@ export interface RecipeInformation {
   analyzedInstructions?: RecipeInstruction[];
   cheap: boolean;
   creditsText: string;
-  cuisines: string[];
+  cuisines: string[] | null;
   dairyFree: boolean;
   diets: string[];
   gaps: string;
@@ -182,7 +183,7 @@ export interface RecipeInformation {
   dishTypes: string[];
   /** Carried by `/information`, `/informationBulk` and `/random`, not by a search result. */
   extendedIngredients?: RecipeIngredient[];
-  summary: string;
+  summary: string | null;
   winePairing?: {
     pairedWines: string[];
     pairingText: string;

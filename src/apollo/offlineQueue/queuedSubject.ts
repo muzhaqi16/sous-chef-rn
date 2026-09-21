@@ -76,6 +76,11 @@ const MINTING_SUBJECT_INPUTS: ReadonlySet<keyof SubjectInputs> = new Set([
   'MoveShoppingItemToPantryInput',
 ]);
 
+/** `id`-keyed inputs outside the `Create*` names whose `id` the device mints. */
+const MINTING_ID_INPUTS: ReadonlySet<string> = new Set([
+  'AddRecipeToFavoritesInput',
+]);
+
 /**
  * `Create*Input.id` is the device's cuid; an update's `id` and a usage's
  * `pantryItemId` name a row the server already owns.
@@ -84,13 +89,32 @@ const mintsItsSubject = (typeName: string | null, key: string): boolean =>
   typeName !== null &&
   (isSubjectInput(typeName)
     ? MINTING_SUBJECT_INPUTS.has(typeName)
-    : key === 'id' && typeName.startsWith('Create'));
+    : key === 'id' &&
+      (typeName.startsWith('Create') || MINTING_ID_INPUTS.has(typeName)));
 
 const isSubjectInput = (name: string): name is keyof SubjectInputs =>
   name in SUBJECT_KEYS;
 
 const isId = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
+
+/** `RemoveItemFromShoppingListInput.id` is the row it deletes, as a `Delete*Input.id` is. */
+const DELETING_INPUTS: ReadonlySet<string> = new Set([
+  'RemoveItemFromShoppingListInput',
+]);
+
+/** Whether a queued write deletes the entity its subject names. */
+export const deletesItsSubject = ({
+  mutation,
+}: {
+  mutation: DocumentNode;
+}): boolean => {
+  const typeName = inputTypeNameOf(mutation);
+  return (
+    typeName !== null &&
+    (typeName.startsWith('Delete') || DELETING_INPUTS.has(typeName))
+  );
+};
 
 /**
  * Reads a queued write's subject from the input type its document declares.

@@ -170,6 +170,23 @@ export function skipUnmatchedArgVariants(
   };
 }
 
+/**
+ * Skip cached variants scoped to a home other than `homeId`. A variant with no
+ * or a null `homeId` reads as every home and takes the write; a null `homeId`
+ * (a personal entity) skips every home-scoped variant.
+ */
+export function skipOtherHomeVariants(
+  homeId: string | null,
+): (storeFieldName: string) => boolean {
+  return storeFieldName => {
+    const parsed = parseStoreFieldArgs(storeFieldName);
+    if (!parsed) return false;
+    if ('unparseable' in parsed) return true;
+    const variantHome = parsed.args.homeId;
+    return variantHome != null && variantHome !== homeId;
+  };
+}
+
 function isActiveFilter(value: unknown): boolean {
   return (
     value !== null &&

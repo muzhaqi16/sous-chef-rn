@@ -2,8 +2,15 @@ import {
   useRecipeCacheStore,
   textSearchCacheKey,
   ingredientCacheKey,
+  fetchRecipeInformation,
+  fetchRecipePriceBreakdown,
 } from '../useRecipeCacheStore';
-import type { SearchRecipesResult } from '#/services/spoonacular/types';
+import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
+import type {
+  RecipeInformation,
+  RecipePriceBreakdown,
+  SearchRecipesResult,
+} from '#/services/spoonacular/types';
 
 const sampleResults: SearchRecipesResult[] = [
   {
@@ -145,6 +152,134 @@ describe('useRecipeCacheStore', () => {
       expect(ingredientCacheKey('Tomato, basil')).toBe(
         'ingredient:basil,tomato',
       );
+    });
+  });
+
+  // Every Spoonacular request is billed.
+  describe('recipe detail and price lookups', () => {
+    const recipe = (id: number): RecipeInformation =>
+      ({
+        id,
+        title: `Recipe ${id}`,
+        image: '',
+        imageType: 'jpg',
+        servings: 2,
+        readyInMinutes: 20,
+        extendedIngredients: [],
+      } as unknown as RecipeInformation);
+    const breakdown: RecipePriceBreakdown = {
+      ingredients: [],
+      totalCost: 120,
+      totalCostPerServing: 60,
+    };
+    let getInfo: jest.SpyInstance;
+    let getPrice: jest.SpyInstance;
+
+    beforeEach(() => {
+      getInfo = jest
+        .spyOn(spoonacularService, 'getRecipeInformation')
+        .mockImplementation(({ id }) => Promise.resolve(recipe(id)));
+      getPrice = jest
+        .spyOn(spoonacularService, 'getRecipePriceBreakdown')
+        .mockResolvedValue(breakdown);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('fetches a recipe once, with nutrition, and serves repeats from the cache', async () => {
+      await fetchRecipeInformation(716429);
+      const again = await fetchRecipeInformation(716429);
+
+      expect(again.id).toBe(716429);
+      expect(getInfo).toHaveBeenCalledTimes(1);
+      expect(getInfo).toHaveBeenCalledWith({
+        id: 716429,
+        includeNutrition: true,
+      });
+    });
+
+    it('shares one request between concurrent callers', async () => {
+      await Promise.all([fetchRecipeInformation(1), fetchRecipeInformation(1)]);
+
+      expect(getInfo).toHaveBeenCalledTimes(1);
+    });
+
+    it('fetches again once the entry is past the TTL', async () => {
+      await fetchRecipeInformation(2);
+      useRecipeCacheStore.setState(state => ({
+        details: {
+          ...state.details,
+          '2': { data: recipe(2), cachedAt: Date.now() - 25 * 60 * 60 * 1000 },
+        },
+      }));
+
+      await fetchRecipeInformation(2);
+
+      expect(getInfo).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not cache a failure, so the next call retries', async () => {
+      getInfo.mockRejectedValueOnce(new Error('quota'));
+
+      await expect(fetchRecipeInformation(3)).rejects.toThrow('quota');
+      await expect(fetchRecipeInformation(3)).resolves.toMatchObject({
+        id: 3,
+      });
+      expect(getInfo).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps every entry below the cap', async () => {
+      for (let id = 1; id <= 30; id++) await fetchRecipeInformation(id);
+
+      expect(Object.keys(useRecipeCacheStore.getState().details)).toHaveLength(
+        30,
+      );
+    });
+
+    it('evicts the oldest entries past the cap', async () => {
+      const now = jest.spyOn(Date, 'now');
+      for (let id = 1; id <= 42; id++) {
+        now.mockReturnValue(1_000_000 + id);
+        await fetchRecipeInformation(id);
+      }
+
+      const kept = Object.keys(useRecipeCacheStore.getState().details);
+      expect(kept).toHaveLength(40);
+      expect(kept).not.toContain('1');
+      expect(kept).not.toContain('2');
+      expect(kept).toContain('42');
+    });
+
+    it('rejects an aborted caller but still caches the result', async () => {
+      const controller = new AbortController();
+      const pending = fetchRecipeInformation(4, controller.signal);
+      controller.abort();
+
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+      await fetchRecipeInformation(4);
+      expect(getInfo).toHaveBeenCalledTimes(1);
+    });
+
+    it('fetches a price breakdown once per recipe', async () => {
+      await fetchRecipePriceBreakdown(716429);
+      const again = await fetchRecipePriceBreakdown(716429);
+
+      expect(again).toEqual(breakdown);
+      expect(getPrice).toHaveBeenCalledTimes(1);
+    });
+
+    it('forgets both on a full reset', async () => {
+      await fetchRecipeInformation(5);
+      await fetchRecipePriceBreakdown(5);
+
+      useRecipeCacheStore.getState().clearAllCache();
+      await fetchRecipeInformation(5);
+      await fetchRecipePriceBreakdown(5);
+
+      expect(getInfo).toHaveBeenCalledTimes(2);
+      expect(getPrice).toHaveBeenCalledTimes(2);
     });
   });
 });

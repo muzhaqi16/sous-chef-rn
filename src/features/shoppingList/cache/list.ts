@@ -13,6 +13,7 @@ import {
   createAddToQueryConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
   safeEvict,
+  skipOtherHomeVariants,
 } from '#/apollo/utils/cacheUpdaters';
 import { matchesFilter } from './connections';
 
@@ -142,18 +143,21 @@ const isTemplateListVariant = (storeFieldName: string) =>
   matchesFilter(storeFieldName, 'isTemplate', true);
 
 /**
- * Adds a list to `Query.shoppingLists` (every cached filter variant except the
- * templates-only one).
+ * Adds a list to `Query.shoppingLists`: every cached variant except the
+ * templates-only one and those scoped to another home.
  */
 export const addShoppingListToQueryCache = (
   cache: ApolloCache,
-  list: { id: string },
+  list: { id: string; homeId: string | null },
   options: AddToConnectionOptions = {},
-): boolean =>
-  addToShoppingListsQueryCache(cache, list, {
+): boolean => {
+  const isOtherHome = skipOtherHomeVariants(list.homeId);
+  return addToShoppingListsQueryCache(cache, list, {
     ...options,
-    skipStoreField: isTemplateListVariant,
+    skipStoreField: storeFieldName =>
+      isTemplateListVariant(storeFieldName) || isOtherHome(storeFieldName),
   });
+};
 
 const removeShoppingListFromQueryCache = createRemoveFromQueryConnectionUpdater(
   'shoppingLists',

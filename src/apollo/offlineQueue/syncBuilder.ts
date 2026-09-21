@@ -1,6 +1,6 @@
 import type { DocumentNode } from 'graphql';
 import { gql, type ApolloCache } from '@apollo/client';
-import type { QueuedMutation } from './types';
+import type { QueuedMutation, ReplayInputs } from './types';
 import { queuedSubject } from './queuedSubject';
 
 /**
@@ -12,12 +12,54 @@ import { queuedSubject } from './queuedSubject';
 export interface SyncConversion {
   syncMutation: DocumentNode;
   syncVariables: Record<string, unknown>;
+  /** Replays an original document whose input's `version` is non-null. */
+  requiresVersion?: boolean;
 }
 
-export type SyncBuilder = (
+export type ReplayInputReader = (
   mutation: QueuedMutation,
   cache: ApolloCache,
-) => SyncConversion;
+) => ReplayInputs;
+
+export type SyncBuilder = ((
+  mutation: QueuedMutation,
+  cache: ApolloCache,
+) => SyncConversion) & {
+  /** Run when the write is queued; its result is stored as `replayInputs`. */
+  captureReplayInputs?: ReplayInputReader;
+};
+
+/**
+ * A builder whose cache reads are all in `read`. Values captured at enqueue win
+ * over a replay-time read, which only fills what an older entry lacks.
+ */
+export function withCapturedReads(
+  read: ReplayInputReader,
+  build: (
+    mutation: QueuedMutation,
+    inputs: ReplayInputs,
+    cache: ApolloCache,
+  ) => SyncConversion,
+): SyncBuilder {
+  const builder: SyncBuilder = (mutation, cache) =>
+    build(
+      mutation,
+      { ...read(mutation, cache), ...mutation.replayInputs },
+      cache,
+    );
+  builder.captureReplayInputs = read;
+  return builder;
+}
+
+/** Drops the reads that found nothing, so a stored miss never masks a hit. */
+export const definedInputs = (
+  inputs: Record<string, string | null | undefined>,
+): ReplayInputs =>
+  Object.fromEntries(
+    Object.entries(inputs).filter(
+      (entry): entry is [string, string] => entry[1] != null,
+    ),
+  );
 
 /** op-name → builder, the shape a feature's `offline/syncBuilders.ts` exports. */
 export type SyncBuilderTable = Record<string, SyncBuilder>;
@@ -101,3 +143,12 @@ export const readUnitSpec = (
 
   return unit?.symbol ? { ...spec, unitSymbol: unit.symbol } : spec;
 };
+
+/** The unit spec with a captured symbol beside its id, unless it has one. */
+export const withUnitSymbol = (
+  spec: UnitSpec,
+  unitSymbol: string | undefined,
+): UnitSpec =>
+  spec.unitSymbol || !unitSymbol || !spec.unitId
+    ? spec
+    : { ...spec, unitSymbol };

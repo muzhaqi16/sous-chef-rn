@@ -68,6 +68,7 @@ jest.mock('#store/useAppStore', () => {
     useAppStore: <T,>(selector: (state: RootState) => T): T =>
       selector(getState() as Partial<RootState> as RootState),
     useUser: () => getState().user,
+    useUserId: () => getState().user.id,
     useUpdateUser: () => getState().updateUser,
   };
 });

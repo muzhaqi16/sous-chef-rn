@@ -17,7 +17,7 @@ import type {
 import { setCachedFields } from '#/apollo/utils/cacheUpdaters';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { parseStoredQuantityText } from '#/utils/formatQuantity';
 import { UseShoppingListItemForm_ItemFragmentDoc } from '#features/shoppingList/hooks/useShoppingListItemForm.generated';
 import {
   addOptimisticShoppingListItem,
@@ -60,8 +60,9 @@ const LOCAL_ITEM_FIELDS = [
  */
 function localItemFields(input: UpdateShoppingListItemInput): LocalItemFields {
   const quantity: unknown = input.quantity;
+  // The input carries API text, so "1.250" is one and a quarter on any device.
   const parsed =
-    typeof quantity === 'string' ? parseFractionalInput(quantity) : null;
+    typeof quantity === 'string' ? parseStoredQuantityText(quantity) : null;
   return {
     ...(input.itemName !== undefined && { itemName: input.itemName }),
     ...(input.notes !== undefined && { notes: input.notes }),

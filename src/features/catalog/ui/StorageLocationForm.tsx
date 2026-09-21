@@ -136,10 +136,11 @@ export const StorageLocationForm = forwardRef<
             ? formData.temperature
             : null,
         color: formData.color,
-        isClimateControlled: formData.isClimateControlled || null,
+        // `null` reads as "unchanged" to the API, so an unticked box sends false.
+        isClimateControlled: formData.isClimateControlled,
         capacity: capacityFloat && !isNaN(capacityFloat) ? capacityFloat : null,
         capacityUnit: formData.capacityUnit || null,
-        isDefault: formData.isDefault || null,
+        isDefault: formData.isDefault,
       };
 
       onSubmit(finalData);

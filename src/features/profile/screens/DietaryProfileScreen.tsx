@@ -257,6 +257,13 @@ export const DietaryProfileScreen: React.FC = () => {
     );
   }
 
+  const hasMacroTarget = [
+    profile.calorieTarget,
+    profile.proteinTarget,
+    profile.carbsTarget,
+    profile.fatTarget,
+  ].some(target => !!target);
+
   return (
     <ProfileScreenWrapper title={t('dietary.title')}>
       {/* Dietary Restrictions Section */}
@@ -407,64 +414,62 @@ export const DietaryProfileScreen: React.FC = () => {
         </View>
       </Animated.View>
       {/* Macro Targets Section (Advanced) */}
-      {[
-        profile.calorieTarget,
-        profile.proteinTarget,
-        profile.carbsTarget,
-        profile.fatTarget,
-      ].some(target => !!target) && (
-        <Animated.View
-          entering={FadeIn.duration(motion.timing.SLOW).delay(400)}
-          layout={LinearTransition}
-          style={styles.sectionContainer}
-        >
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeaderRow}>
-              <Text role="bodyStrong" tone="secondary">
-                {t('dietary.macroTargets')}
-              </Text>
-              <AppPressable
-                onPress={handleOpenMacros}
-                accessibilityLabel={t('a11y.editNamed', {
-                  name: t('macroTargets.title'),
-                })}
-                style={styles.editButton}
-              >
-                <Icon name="create-outline" size={20} tone="primary" />
-              </AppPressable>
-            </View>
-            {!!profile.calorieTarget && (
-              <InfoRow
-                label={t('dietary.dailyCalories')}
-                value={profile.calorieTarget}
-                unit="kcal"
-              />
-            )}
-            {!!profile.proteinTarget && (
-              <InfoRow
-                label={t('dietary.protein')}
-                value={profile.proteinTarget}
-                unit="g"
-              />
-            )}
-            {!!profile.carbsTarget && (
-              <InfoRow
-                label={t('labels.carbs')}
-                value={profile.carbsTarget}
-                unit="g"
-              />
-            )}
-            {!!profile.fatTarget && (
-              <InfoRow
-                label={t('dietary.fat')}
-                value={profile.fatTarget}
-                unit="g"
-                showBorder={false}
-              />
-            )}
+      <Animated.View
+        entering={FadeIn.duration(motion.timing.SLOW).delay(400)}
+        layout={LinearTransition}
+        style={styles.sectionContainer}
+      >
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeaderRow}>
+            <Text role="bodyStrong" tone="secondary">
+              {t('dietary.macroTargets')}
+            </Text>
+            <AppPressable
+              onPress={handleOpenMacros}
+              accessibilityLabel={t('a11y.editNamed', {
+                name: t('macroTargets.title'),
+              })}
+              style={styles.editButton}
+            >
+              <Icon name="create-outline" size={20} tone="primary" />
+            </AppPressable>
           </View>
-        </Animated.View>
-      )}
+          {!hasMacroTarget && (
+            <Text role="caption" tone="secondary">
+              {t('dietary.macroTargetsEmpty')}
+            </Text>
+          )}
+          {!!profile.calorieTarget && (
+            <InfoRow
+              label={t('dietary.dailyCalories')}
+              value={profile.calorieTarget}
+              unit="kcal"
+            />
+          )}
+          {!!profile.proteinTarget && (
+            <InfoRow
+              label={t('dietary.protein')}
+              value={profile.proteinTarget}
+              unit="g"
+            />
+          )}
+          {!!profile.carbsTarget && (
+            <InfoRow
+              label={t('labels.carbs')}
+              value={profile.carbsTarget}
+              unit="g"
+            />
+          )}
+          {!!profile.fatTarget && (
+            <InfoRow
+              label={t('dietary.fat')}
+              value={profile.fatTarget}
+              unit="g"
+              showBorder={false}
+            />
+          )}
+        </View>
+      </Animated.View>
       {/* Nutrition Goals Sheets */}
       <NumberInputSheet
         visible={editingMeals}

@@ -386,14 +386,16 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
 
     // Offline-first: the pantry answers "do I already stock this?" itself, so
     // nothing is published and no doomed create is queued. The server refuses
-    // only the item IN THAT UNIT, so the match is name plus unit id; a unit
-    // typed as free text is resolved server-side, which alone can judge it.
-    const cachedDuplicate = unitId
-      ? findCachedPantryItemDuplicate(client.cache, pantryId, {
-          itemName: itemName.trim(),
-          unitId,
-        })
-      : null;
+    // only the item IN THAT UNIT, so the match is name plus unit id. A blank
+    // unit resolves server-side to the item's tracking unit, which a held stack
+    // almost always is, so it matches any held unit; free text is the server's.
+    const cachedDuplicate =
+      unitId || !unit.trim()
+        ? findCachedPantryItemDuplicate(client.cache, pantryId, {
+            itemName: itemName.trim(),
+            unitId,
+          })
+        : null;
     if (cachedDuplicate) {
       // Nothing was published under this id; release the detail-read gate.
       unconfirmedCreates.confirm(id);

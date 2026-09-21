@@ -12,6 +12,7 @@ import {
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { useRecipeData } from '../useRecipeData';
 import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
+import { useRecipeCacheStore } from '#features/recipes/store/useRecipeCacheStore';
 
 jest.mock('#/services/spoonacular/SpoonacularService', () => ({
   spoonacularService: {
@@ -23,6 +24,8 @@ const noopPreload = jest.fn().mockResolvedValue(undefined);
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Recipe details are cached by id; each test states its own Spoonacular answer.
+  useRecipeCacheStore.getState().clearAllCache();
 });
 
 function backendRecipeMock(

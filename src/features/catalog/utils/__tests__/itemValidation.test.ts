@@ -1,5 +1,5 @@
 import { changeLanguage } from '#/i18n/config';
-import { unitsRule } from '../itemValidation';
+import { createItemSchema, unitQtyRule, unitsRule } from '../itemValidation';
 
 /**
  * The units rows validate on every keystroke, so their number rules are the
@@ -29,5 +29,39 @@ describe('unitsRule messages', () => {
     await expect(
       unitsRule.validate([{ unitName: 'bag', conversionRatio: 0 }]),
     ).rejects.toThrow('Must be greater than 0');
+  });
+});
+
+/**
+ * A comma keypad types "0,5". The number rules read the typed text through the
+ * decimal parser, so either separator validates and yields the number.
+ */
+describe('comma-decimal input', () => {
+  it('accepts 0,5 as the consume increment and yields 0.5', async () => {
+    await expect(
+      createItemSchema.validateAt('defaultConsumeIncrement', {
+        defaultConsumeIncrement: '0,5',
+      }),
+    ).resolves.toBe(0.5);
+  });
+
+  it('accepts 0,5 as a unit quantity', async () => {
+    await expect(unitQtyRule.validate('0,5')).resolves.toBe(0.5);
+  });
+
+  it('accepts 1,5 as a net weight value', async () => {
+    await expect(
+      createItemSchema.validateAt('netWeights', {
+        netWeights: [{ value: '1,5', unitName: 'kg' }],
+      }),
+    ).resolves.toEqual([{ value: 1.5, unitName: 'kg' }]);
+  });
+
+  it('still treats a blank increment as absent', async () => {
+    await expect(
+      createItemSchema.validateAt('defaultConsumeIncrement', {
+        defaultConsumeIncrement: '',
+      }),
+    ).resolves.toBeUndefined();
   });
 });

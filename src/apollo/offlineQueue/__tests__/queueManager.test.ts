@@ -5,6 +5,7 @@ import { QueueManager } from '../queueManager';
 import { queueStore } from '../queueStore';
 import { useStore } from '#store';
 import type { QueuedMutation, QueueError, ProcessingResult } from '../types';
+import type { QueueStore } from '../queueStore';
 import { QueueStatus } from '../types';
 import {
   classifyError as classifyErrorFn,
@@ -19,13 +20,19 @@ import { TimeoutError } from '#/utils/errors/timeoutError';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import {
+  AddRecipeToFavoritesDocument,
+  ConfirmRecipeConsumptionDocument,
   CreateRecipeDocument,
   ForkRecipeDocument,
+  MarkRecipeAsCookedDocument,
 } from '#features/recipes/graphql/recipe.generated';
+import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
   AddItemToShoppingListDocument,
   CreateShoppingListDocument,
   MoveShoppingListItemDocument,
+  RemoveItemFromShoppingListDocument,
+  SyncDeleteShoppingListItemDocument,
   ToggleShoppingListItemPurchasedDocument,
   UpdateShoppingListDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -87,7 +94,7 @@ jest.mock('../queueStore', () => ({
   queueStore: {
     getPendingMutationsForUser: jest.fn(() => []),
     resetProcessingToPending: jest.fn(() => 0),
-    expireStalePending: jest.fn(() => 0),
+    expireStalePending: jest.fn(() => []),
     updateMutation: jest.fn(() => true),
     removeMutation: jest.fn(() => true),
     incrementRetry: jest.fn(() => true),
@@ -496,6 +503,40 @@ describe('QueueManager', () => {
       expect(processed).not.toContain('mut-add-a');
     });
 
+    it('holds an item behind a list create parked for re-authentication', async () => {
+      const parkedList = makeMutation({
+        id: 'mut-create-list',
+        ...queuedMutationFor(CreateShoppingListDocument),
+        variables: { input: { id: 'list-1', name: 'Offline list' } },
+        status: QueueStatus.AUTH_ERROR,
+      });
+      const addA = makeMutation({
+        id: 'mut-add-a',
+        ...queuedMutationFor(AddItemToShoppingListDocument),
+        variables: {
+          input: { shoppingListId: 'list-1', items: [{ id: 'item-a' }] },
+        },
+      });
+      (queueStore.getMutationsForUser as jest.Mock).mockImplementationOnce(
+        (_userId: string, status?: QueueStatus) =>
+          status === QueueStatus.AUTH_ERROR ? [parkedList] : [],
+      );
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
+        addA,
+      ]);
+      const processed: string[] = [];
+      manager['processMutation'] = jest.fn(
+        async (mutation: QueuedMutation): Promise<ProcessingResult> => {
+          processed.push(mutation.id);
+          return { success: true, mutationId: mutation.id };
+        },
+      );
+
+      await manager.processQueue();
+
+      expect(processed).toEqual([]);
+    });
+
     it('holds a fork behind the deferred create of the recipe it forks from', async () => {
       // The fork's subject is the recipe it mints; the source it names in `id`
       // is still something it cannot be sent without.
@@ -532,6 +573,81 @@ describe('QueueManager', () => {
 
       expect(processed).toEqual(['mut-create-recipe']);
     });
+  });
+
+  describe('writes that name an offline-created recipe', () => {
+    beforeEach(() => {
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: 'token',
+        isOnline: true,
+        apiReachable: true,
+      });
+      manager['validateTokenBeforeReplay'] = jest.fn().mockResolvedValue(true);
+    });
+
+    it.each([
+      [
+        'a cooked log',
+        MarkRecipeAsCookedDocument,
+        { id: 'log-1', recipeId: 'recipe-new', deductFromPantry: false },
+      ],
+      [
+        'a favourite',
+        AddRecipeToFavoritesDocument,
+        { id: 'saved-1', recipeId: 'recipe-new' },
+      ],
+      [
+        'a consumption',
+        ConfirmRecipeConsumptionDocument,
+        { recipeId: 'recipe-new', pantryId: 'pan-1', consumptions: [] },
+      ],
+      [
+        'a planned meal',
+        CreateMealPlanItemDocument,
+        {
+          id: 'meal-1',
+          mealPlanId: 'plan-1',
+          meal: { recipeId: 'recipe-new' },
+        },
+      ],
+    ])(
+      'holds %s behind the deferred recipe create',
+      async (_label, document, input) => {
+        const createRecipe = makeMutation({
+          id: 'mut-create-recipe',
+          ...queuedMutationFor(CreateRecipeDocument),
+          variables: { input: { id: 'recipe-new', name: 'Soup' } },
+        });
+        const child = makeMutation({
+          id: 'mut-child',
+          ...queuedMutationFor(document),
+          variables: { input },
+        });
+        (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
+          createRecipe,
+          child,
+        ]);
+        const processed: string[] = [];
+        manager['processMutation'] = jest.fn(
+          async (mutation: QueuedMutation): Promise<ProcessingResult> => {
+            processed.push(mutation.id);
+            return mutation.id === 'mut-create-recipe'
+              ? {
+                  success: false,
+                  deferred: true,
+                  deferralScope: 'entry',
+                  mutationId: mutation.id,
+                }
+              : { success: true, mutationId: mutation.id };
+          },
+        );
+
+        await manager.processQueue();
+
+        expect(processed).toEqual(['mut-create-recipe']);
+      },
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -1318,6 +1434,42 @@ describe('QueueManager', () => {
       );
     });
 
+    it('reports a conflict on a queued rename instead of re-sending it without its version', async () => {
+      // A rename replays as its original `UpdatePantryItem`, whose input's
+      // `version` is `Int!`, so it cannot be re-sent version-free.
+      const failureHandler = jest.fn();
+      manager.setFailureHandler(failureHandler);
+      const mutation = makeMutation({
+        id: 'conflict-rename',
+        ...queuedMutationFor(UpdatePantryItemDocument),
+        variables: {
+          input: { id: 'item-8', itemName: 'Oat milk', version: 2 },
+        },
+      });
+      mockClient.mutate.mockResolvedValueOnce({
+        data: {
+          updatePantryItem: {
+            __typename: 'ConflictError',
+            code: 'VERSION_CONFLICT',
+            message: 'Version conflict',
+          },
+        },
+      });
+
+      jest.useRealTimers();
+      const result = await processMutation(mutation);
+      jest.useFakeTimers();
+
+      expect(result.success).toBe(false);
+      expect(mockClient.mutate).toHaveBeenCalledTimes(1);
+      expect(failureHandler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mutationId: 'conflict-rename',
+          error: expect.objectContaining({ type: 'conflict' }),
+        }),
+      );
+    });
+
     it('withdraws a write that conflicts again without its version', async () => {
       const failureHandler = jest.fn();
       manager.setFailureHandler(failureHandler);
@@ -1817,6 +1969,95 @@ describe('QueueManager', () => {
 
       expect(result).toBeDefined();
     });
+
+    it('keeps a write the server committed when a field in its selection errors', async () => {
+      // Apollo resolves `{ data, error }` together when the mutation commits
+      // and a nullable field under it fails to resolve.
+      const failureHandler = jest.fn();
+      manager.setFailureHandler(failureHandler);
+      const data = {
+        syncPantryItem: {
+          __typename: 'SyncPantryItemPayload',
+          clientId: 'item-c',
+          converged: false,
+          item: { __typename: 'PantryItem', id: 'item-c', brand: null },
+        },
+      };
+      mockClient.mutate.mockResolvedValue({
+        data,
+        error: new CombinedGraphQLErrors({
+          data,
+          errors: [
+            {
+              message: 'brand failed to resolve',
+              path: ['syncPantryItem', 'item', 'brand'],
+            },
+          ],
+        }),
+      });
+
+      jest.useRealTimers();
+      const result = await manager['processMutation'](
+        makeMutation({
+          id: 'committed-1',
+          ...queuedMutationFor(CreatePantryItemDocument),
+          variables: { input: { id: 'item-c', pantryId: 'pan-1' } },
+        }),
+      );
+      jest.useFakeTimers();
+
+      expect(result.success).toBe(true);
+      expect(failureHandler).not.toHaveBeenCalled();
+    });
+
+    it.each([ErrorCode.InternalServerError, ErrorCode.Deadlock])(
+      'defers a batch whose row failed with the transient %s',
+      async code => {
+        const failureHandler = jest.fn();
+        manager.setFailureHandler(failureHandler);
+        mockClient.mutate.mockResolvedValue({
+          data: {
+            batchAddShoppingListItems: {
+              __typename: 'BatchAddShoppingListItemsPayload',
+              results: [
+                {
+                  __typename: 'BatchAddShoppingListItemResult',
+                  index: 0,
+                  success: true,
+                  code: null,
+                  item: { __typename: 'ShoppingListItem', id: 'row-1' },
+                },
+                {
+                  __typename: 'BatchAddShoppingListItemResult',
+                  index: 1,
+                  success: false,
+                  code,
+                  item: null,
+                },
+              ],
+            },
+          },
+        });
+
+        jest.useRealTimers();
+        const result = await manager['processMutation'](
+          makeMutation({
+            id: 'batch-transient',
+            ...queuedMutationFor(AddItemToShoppingListDocument),
+            variables: {
+              input: {
+                shoppingListId: 'list-1',
+                items: [{ id: 'row-1' }, { id: 'row-2' }],
+              },
+            },
+          }),
+        );
+        jest.useFakeTimers();
+
+        expect(result).toMatchObject({ success: false, deferred: true });
+        expect(failureHandler).not.toHaveBeenCalled();
+      },
+    );
 
     it('throws when mutate returns an error', async () => {
       mockClient.mutate.mockResolvedValue({
@@ -2550,6 +2791,119 @@ describe('QueueManager', () => {
         expect(drain).toHaveBeenCalledTimes(1);
       });
 
+      it('runs another pass for writes revived while a pass is running', async () => {
+        mockedGetState.mockReturnValue({
+          user: { id: 'user-1' },
+          accessToken: 'token',
+          isOnline: true,
+          apiReachable: true,
+        });
+        const first = makeMutation({ id: 'in-flight' });
+        const revived = makeMutation({ id: 'revived' });
+        (queueStore.getPendingMutationsForUser as jest.Mock)
+          .mockReturnValueOnce([first])
+          .mockReturnValueOnce([])
+          .mockReturnValueOnce([revived])
+          .mockReturnValue([]);
+        let release: () => void = () => {};
+        const processed: string[] = [];
+        manager['processMutation'] = jest.fn(
+          async (mutation: QueuedMutation): Promise<ProcessingResult> => {
+            processed.push(mutation.id);
+            if (mutation.id === 'in-flight') {
+              await new Promise<void>(resolve => {
+                release = resolve;
+              });
+            }
+            return { success: true, mutationId: mutation.id };
+          },
+        );
+
+        jest.useRealTimers();
+        const pass = manager.processQueue();
+        await new Promise(resolve => setImmediate(resolve));
+        (queueStore.revivePendingAuthErrors as jest.Mock).mockReturnValueOnce(
+          1,
+        );
+        manager.onSessionToken('user-1');
+        manager.cancelPendingDrain();
+        release();
+        await pass;
+        jest.useFakeTimers();
+
+        expect(processed).toEqual(['in-flight', 'revived']);
+      });
+
+      it('sends a delete queued behind a write parked for sign-in once the session returns', async () => {
+        mockedGetState.mockReturnValue({
+          user: { id: 'user-1' },
+          accessToken: 'token',
+          isOnline: true,
+          apiReachable: true,
+        });
+        const { QueueStore: RealQueueStore } = jest.requireActual<{
+          QueueStore: new () => QueueStore;
+        }>('../queueStore');
+        const store = new RealQueueStore();
+        store.clearAllQueues();
+        const delegated = [
+          'getPendingMutationsForUser',
+          'getMutationsForUser',
+          'resetProcessingToPending',
+          'expireStalePending',
+          'updateMutation',
+          'removeMutation',
+          'incrementRetry',
+          'markMutationFailed',
+          'cleanupTerminal',
+          'revivePendingAuthErrors',
+        ] as const;
+        // The module mock's fns are shared by every test, so each keeps its
+        // own implementation to hand back afterwards.
+        const restores = delegated.map(name => {
+          const fn = queueStore[name] as jest.Mock;
+          const original = fn.getMockImplementation();
+          fn.mockImplementation((...args: unknown[]) =>
+            Reflect.apply(store[name], store, args),
+          );
+          return () => fn.mockImplementation(original);
+        });
+        mockClient.mutate.mockResolvedValue({ data: {} });
+
+        store.addMutation(
+          makeMutation({
+            id: 'tick',
+            ...queuedMutationFor(ToggleShoppingListItemPurchasedDocument),
+            variables: { input: { id: 'sli-1', purchased: true, version: 2 } },
+            status: QueueStatus.AUTH_ERROR,
+          }),
+        );
+        store.addMutation(
+          makeMutation({
+            id: 'delete',
+            ...queuedMutationFor(RemoveItemFromShoppingListDocument),
+            variables: { input: { id: 'sli-1' } },
+          }),
+        );
+
+        jest.useRealTimers();
+        manager.onSessionToken('user-1');
+        await manager.whenIdle();
+        jest.useFakeTimers();
+        restores.forEach(restore => restore());
+
+        expect(mockClient.mutate).toHaveBeenCalledTimes(1);
+        expect(mockClient.mutate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            mutation: SyncDeleteShoppingListItemDocument,
+            variables: { input: { clientId: 'sli-1' } },
+          }),
+        );
+        expect(
+          store.getMutationsForUser('user-1').map(m => [m.id, m.status]),
+        ).toEqual([['delete', QueueStatus.SUCCESS]]);
+      });
+
       it('does not drain on a new token when nothing was parked', () => {
         (queueStore.revivePendingAuthErrors as jest.Mock).mockReturnValueOnce(
           0,
@@ -2605,6 +2959,49 @@ describe('QueueManager', () => {
         );
       });
 
+      it('withdraws a pending write that passed the age limit and tells the user', async () => {
+        mockedGetState.mockReturnValue({
+          user: { id: 'user-1' },
+          accessToken: 'token',
+          isOnline: true,
+        });
+        const handler = jest.fn();
+        manager.setFailureHandler(handler);
+        const aged = makeMutation({
+          id: 'aged-out',
+          ...queuedMutationFor(UpdateShoppingListDocument),
+          variables: { input: { id: 'list-13' } },
+          status: QueueStatus.FAILED,
+          lastError: {
+            type: 'unknown',
+            message: 'expired',
+            code: 'OFFLINE_SYNC_WINDOW_EXPIRED',
+            timestamp: 0,
+            retryable: false,
+          },
+        });
+        (queueStore.expireStalePending as jest.Mock).mockReturnValueOnce([
+          aged,
+        ]);
+        (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue(
+          [],
+        );
+
+        jest.useRealTimers();
+        await manager.processQueue();
+        jest.useFakeTimers();
+
+        expect(handler).toHaveBeenCalledWith(
+          expect.objectContaining({
+            mutationId: 'aged-out',
+            entityId: 'list-13',
+            error: expect.objectContaining({
+              code: 'OFFLINE_SYNC_WINDOW_EXPIRED',
+            }),
+          }),
+        );
+      });
+
       it('leaves an aged-out SUCCESS entry alone', async () => {
         mockedGetState.mockReturnValue({
           user: { id: 'user-1' },
@@ -2645,10 +3042,12 @@ describe('session teardown step', () => {
     (queueStore.clearQueueForUser as jest.Mock).mockClear();
 
     queueManager.requestDrain(600);
+    queueManager['rerunAfterPass'] = true;
     await runSessionTeardown();
     jest.advanceTimersByTime(5000);
 
     expect(processQueue).not.toHaveBeenCalled();
+    expect(queueManager['rerunAfterPass']).toBe(false);
     // The entries stay: a rejected refresh token is not the user choosing to
     // discard unsynced work. Only `onLogout` deletes them.
     expect(queueStore.clearQueueForUser).not.toHaveBeenCalled();

@@ -19,6 +19,7 @@ import {
   ErrorCode,
   Intolerance,
   RestrictionSeverity,
+  TopLevelErrorCode,
 } from '#/graphql/generated/schemaTypes';
 import type { RootState } from '#store/index';
 import { alertService } from '#/services/alertService';
@@ -480,4 +481,62 @@ describe('useDietaryProfile', () => {
 
     expect(success).toBe(true);
   });
+
+  // RESOURCE_NOT_FOUND arrives top-level with no payload for an `update`.
+  const goneResults: Array<
+    [string, MockFor<typeof RemoveDietaryRestrictionDocument>['result']]
+  > = [
+    [
+      'as a top-level code',
+      {
+        data: null,
+        errors: [
+          {
+            message: 'gone',
+            extensions: { code: TopLevelErrorCode.ResourceNotFound },
+          },
+        ],
+      },
+    ],
+    [
+      'as data',
+      {
+        data: {
+          removeRestriction: {
+            __typename: 'NotFoundError',
+            code: ErrorCode.NotFound,
+          },
+        },
+      },
+    ],
+  ];
+  it.each(goneResults)(
+    'takes off a restriction the server says is already gone %s',
+    async (_label, result) => {
+      const gone: MockFor<typeof RemoveDietaryRestrictionDocument> = {
+        request: {
+          query: RemoveDietaryRestrictionDocument,
+          variables: () => true,
+        },
+        result,
+      };
+      const { result: hook } = renderHookWithApollo(() => useDietaryProfile(), {
+        operationMocks: [buildGetProfileMock(), gone],
+      });
+      await waitFor(() => {
+        expect(hook.current.profile?.restrictions).toHaveLength(1);
+      });
+
+      let success = false;
+      await act(async () => {
+        success = await hook.current.removeDietaryRestriction('r1');
+      });
+
+      expect(success).toBe(true);
+      await waitFor(() => {
+        expect(hook.current.profile?.restrictions).toHaveLength(0);
+      });
+      expect(alertService.alert).not.toHaveBeenCalled();
+    },
+  );
 });

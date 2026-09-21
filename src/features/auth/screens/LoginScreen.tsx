@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { errorService } from '#/services/errorService';
+import { toastService } from '#/services/toastService';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { useForm } from 'react-hook-form';
@@ -107,7 +108,9 @@ export function LoginScreen(): React.JSX.Element {
     // The password is not stored: enrolment asks the server for a device-bound
     // credential and puts that behind biometry instead.
     onAccept: async ({ email }) => {
-      await authService.enrolDeviceCredential(email);
+      if ((await authService.enrolDeviceCredential(email)) === 'unsaved') {
+        toastService.error(t('errors.saveLoginFailed'));
+      }
       finishRememberMe();
     },
     onDecline: finishRememberMe,

@@ -240,7 +240,12 @@ export const HomeManagement: React.FC = () => {
         }}
         scroll="scroll"
         refresh={{ refreshing, onRefresh: handleRefresh }}
-        state={{ value: dataState, onRetry: handleRefresh }}
+        // Create and join are local-first; an open form outranks an unanswered read.
+        state={
+          showCreateForm
+            ? undefined
+            : { value: dataState, onRetry: handleRefresh }
+        }
         gutter="none"
       >
         {/* Stats Section */}

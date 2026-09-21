@@ -182,9 +182,16 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
   (`PARENT_REFERENCE_KEYS`: the home a pantry joins, the pantry or list an item joins, …) while
   unrelated entries continue. A transport-class deferral (unreachable, 5xx, pacing,
   `CLIENT_UPGRADE_REQUIRED`) pauses the pass instead, since every later entry would meet it too;
-  only a row-scoped one (DEADLOCK) lets the rest replay. Nothing counts passes: the sole lifetime
-  bound on a pending entry is `expireStalePending`'s 90-day age horizon. Move-coalescing happens at
-  **enqueue time** in `queueStore.addMutation` (latest move per item wins). Retries use exponential
+  only a row-scoped one (DEADLOCK, an unbuildable replay, a batch row that failed transiently) lets
+  the rest replay. An entry parked for re-authentication still holds its dependents, and a session
+  token that revives parked entries during a pass triggers one more pass. Nothing counts passes: the
+  sole lifetime bound on a pending entry is `expireStalePending`'s 90-day age horizon, and an entry
+  that reaches it is withdrawn through the failure handler (the user is told) and then cleaned up.
+  Two rewrites happen at **enqueue time** in `queueStore.addMutation`: the latest move per item wins,
+  and a delete supersedes the pending or parked non-create writes whose only subject is the deleted
+  row (a create minted on the device goes with it, and neither is sent). Writes to one entity queued
+  from the same base `version` are replayed in turn: once one lands, the next is sent against the
+  version the server returned instead of conflicting with its sibling. Retries use exponential
   backoff + jitter;
   an auth error forces ONE token refresh and then retries through the same bounded counter (a
   failed refresh → AUTH_ERROR + failure handler — never an unbounded auth-retry loop). Triggers:
@@ -209,6 +216,17 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
   the message; a generic `ConflictError` is a real version/uniqueness conflict → rejected. A converged
   SUCCESS payload (`converged: true` on favorites, cooking logs, and the `Sync*` resource ops) never
   reaches the converged branch here — it doesn't end in `Error`, so it's already treated as applied.
+  A batch that applies with a row refused as `INTERNAL_SERVER_ERROR` or `DEADLOCK` is deferred whole
+  (`BatchRowDeferredError`): each row converges on its id, so the re-send is safe, while reverting that
+  row would discard a write the server never refused.
+- **A replay refused because its row is gone can settle silently.** An operation listed in
+  `GONE_REPLAYS` (`replayRegistry.ts`: notification mark-read and delete) treats a replayed
+  `NotFoundError` as settled: its reconciler removes the row locally and the entry dequeues with no
+  failure toast, since the user's intent (read or gone) already holds.
+- **Replay reconcilers read the UNMASKED result.** Data masking applies only to the value
+  `client.mutate` returns, so `executeMutation` captures the payload in an `update` callback and hands
+  that to `reconcileReplaySuccess`; a reconciler reading the returned value sees fragment spreads as
+  `{ id }` only (list totals included).
 - **Queue-health telemetry** at each drain: `offline_queue_depth` + `offline_queue_oldest_age_ms`
   gauges, `offline_queue_conflicts_total` (server-wins version conflicts) and
   `offline_queue_permanent_failures_total` counters.
@@ -282,16 +300,19 @@ while backfilling the required `pantryId` from cache.
 - **Pantry duplicates — decided locally.** `createPantryItem` never merges: it REFUSES with
   `DuplicatePantryItemError` and writes nothing. The key is `(pantryId, itemId, deletedAt: null)` — location,
   unit, expiry and brand are not part of it, and `forceAdd` skips the guard. **`SyncPantryItem` runs the same
-  guard on its create branch**, but its result union cannot carry the typed error, so on replay the refusal
+  guard on its create branch**, but its result union cannot carry the typed error, so a refusal there
   escapes as top-level `PANTRY_ITEM_ALREADY_EXISTS` — and that code is not in the API's
   `NEVER_MASK_ERROR_CODES`, so production strips `existingPantryItemIds` from it. Nothing downstream can
-  learn which row to restock, which is why the decision cannot live on the response.
+  learn which row to restock, which is why the decision cannot live on the response. A queued create
+  therefore replays with `forceAdd: true`: a stack another device added meanwhile absorbs the quantity,
+  and the replay reconciler swaps the minted row for the returned stack.
   So the add sites ask the CACHE first, via `findCachedPantryItemDuplicate`
   (`features/pantry/utils/pantryCacheReaders.ts`): the list query already caches `item { id }` and `itemName` on every
   node, so the server's key is reproducible locally with no round trip. Quick-add matches on the catalog id
-  and restocks (bumping `quantity` through `optimisticFieldUpdate`, because offline the restock's `update`
-  never runs); the details form has no catalog id, so it matches on the name and only ever PROMPTS on that
-  match. A match means no create is fired at all — nothing to undo on reconnect.
+  and the unit the add would create, and restocks (bumping `quantity` through `optimisticFieldUpdate`,
+  because offline the restock's `update` never runs); an add whose unit is unknown is left to the server.
+  The details form has no catalog id, so it matches on the name (and on the unit when one is picked, since a
+  blank unit resolves to the held stack's) and only ever PROMPTS on that match. A match means no create is fired at all — nothing to undo on reconnect.
   **The read must carry the connection's key args.** `itemsConnection` is keyed on `filters`/`orderBy`, and
   client mode sends neither — which stores it as **`itemsConnection:{}`**, not a bare `itemsConnection`. A
   fragment that omits the args resolves a store key that does not exist and matches nothing, with no error:

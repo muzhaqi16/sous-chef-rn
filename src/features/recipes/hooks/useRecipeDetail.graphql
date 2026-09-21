@@ -12,6 +12,7 @@ mutation AddItemsToShoppingListFromRecipe(
         index
         clientId
         success
+        code
         item {
           id
           ...useRecipeShoppingList_addedItem

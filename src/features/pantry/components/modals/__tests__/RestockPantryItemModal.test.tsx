@@ -11,6 +11,7 @@ type RestockMockSharedState = {
   trackingUnitId: string;
   activeUnitSymbol: string;
   activeUnitId: string;
+  displayAsFractionOf: () => boolean | null;
   isConvertedUnit: boolean;
   selectedUnitInfo: {
     unitId: string;
@@ -71,6 +72,7 @@ jest.mock('#features/pantry/components/modals/PantryActionModal', () => ({
       trackingUnitId: 'unit-1',
       activeUnitSymbol: 'oz',
       activeUnitId: 'unit-1',
+      displayAsFractionOf: () => null,
       isConvertedUnit: false,
       selectedUnitInfo: {
         unitId: 'unit-1',

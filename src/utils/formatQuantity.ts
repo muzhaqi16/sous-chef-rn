@@ -1,5 +1,4 @@
 import Fraction from 'fraction.js';
-import { parseFractionalInput } from '#/utils/fractionUtils';
 import { formatNumberForInput } from '#/utils/formatters/number';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import { firstNonBlank } from '#/utils/firstNonBlank';
@@ -96,13 +95,19 @@ export interface QuantityDisplayOptions {
 }
 
 /**
- * `quantityInput` is the API's own text, so its separator is a period whatever
- * the device uses. Reading it with the device-aware parser makes `1.125` a
- * thousand-and-change on a comma device.
+ * Reads text the API was sent or returned (`1.250`, `1 1/4`). Its separator is
+ * a period whatever the device uses, so it never goes through the device-aware
+ * parser, which reads `1.250` as a thousand on a comma device. Null if unreadable.
  */
-function parseStoredQuantityText(text: string): number | null {
-  if (/^-?\d+(\.\d+)?$/.test(text)) return Number(text);
-  return parseFractionalInput(text);
+export function parseStoredQuantityText(text: string): number | null {
+  const trimmed = text.trim();
+  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
+  if (!trimmed) return null;
+  try {
+    return new Fraction(trimmed).valueOf();
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -164,7 +169,7 @@ const isMillilitre = (symbol: string): boolean => symbol.toLowerCase() === 'ml';
 export function formatQuantityDisplay(quantity: number, unit?: string): string {
   const unitStr = unit ?? '';
   if (quantity >= 1000 && (unitStr === 'g' || isMillilitre(unitStr))) {
-    return `${(quantity / 1000).toFixed(1)}${unitStr === 'g' ? 'kg' : 'L'}`;
+    return `${formatQuantity(quantity / 1000)}${unitStr === 'g' ? 'kg' : 'L'}`;
   }
   return `${formatQuantityForDisplay(quantity)} ${unitStr}`.trim();
 }

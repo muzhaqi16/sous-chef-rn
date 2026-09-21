@@ -17,8 +17,8 @@ jest.mock('#/services/alertService', () => ({
 }));
 
 /**
- * The restock payload selects only the row's `id`, so without a local write the
- * row keeps its old count — offline until the replay lands, and online for good.
+ * Offline no payload arrives, so the row is bumped locally; online the payload
+ * carries the server's count and the version the restock bumped.
  */
 
 const QUANTITY = gql`
@@ -69,7 +69,11 @@ describe('restocking the row a scan duplicated', () => {
               __typename: 'RestockPantryItemPayload',
               pantryItemUsage: {
                 __typename: 'PantryItemUsage',
-                pantryItem: { __typename: 'PantryItem', id: ROW_ID },
+                pantryItem: {
+                  __typename: 'PantryItem',
+                  id: ROW_ID,
+                  quantity: 4,
+                },
               },
             },
           }),
@@ -106,5 +110,53 @@ describe('restocking the row a scan duplicated', () => {
     });
 
     expect(readQuantity(cache)).toBe(3);
+  });
+
+  it('takes the version the restock returns, so the next edit is not a conflict', async () => {
+    const VERSION = gql`
+      fragment _RestockVersionProbe on PantryItem {
+        id
+        version
+      }
+    `;
+    const cache = cacheWithRow(3);
+    cache.writeFragment({
+      id: cache.identify({ __typename: 'PantryItem', id: ROW_ID }),
+      fragment: VERSION,
+      data: { __typename: 'PantryItem', id: ROW_ID, version: 4 },
+    });
+    const { result } = renderHookWithApollo(
+      () => useAddScannedItem({ pantryId: 'p-1', shoppingListId: undefined }),
+      {
+        cache,
+        operationMocks: [
+          restockAnswer({
+            restockPantryItem: {
+              __typename: 'RestockPantryItemPayload',
+              pantryItemUsage: {
+                __typename: 'PantryItemUsage',
+                pantryItem: {
+                  __typename: 'PantryItem',
+                  id: ROW_ID,
+                  quantity: 4,
+                  version: 5,
+                },
+              },
+            },
+          }),
+        ],
+      },
+    );
+
+    await act(async () => {
+      await result.current.restockDuplicate(ROW_ID);
+    });
+
+    expect(
+      cache.readFragment<{ version: number }>({
+        id: cache.identify({ __typename: 'PantryItem', id: ROW_ID }),
+        fragment: VERSION,
+      })?.version,
+    ).toBe(5);
   });
 });

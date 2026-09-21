@@ -10,6 +10,8 @@ import {
   createAddToParentConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
+  skipUnmatchedArgVariants,
+  type AddToConnectionOptions,
 } from '#/apollo/utils/cacheUpdaters';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import {
@@ -109,13 +111,19 @@ function buildOptimisticStorageLocation(
   };
 }
 
+/** `storageLocations` is keyed by `homeId`; a location joins its own home's list only. */
+const ownHomeOnly = (homeId: string): AddToConnectionOptions => ({
+  position: 'end',
+  skipStoreField: skipUnmatchedArgVariants({ homeId }),
+});
+
 function writeOptimisticLocation(
   cache: ApolloCache,
   location: StorageLocationNode,
   pantryId: string | undefined,
 ): void {
   try {
-    addToStorageLocationsCache(cache, location, { position: 'end' });
+    addToStorageLocationsCache(cache, location, ownHomeOnly(location.homeId));
     if (pantryId) {
       addToPantryLocations(cache, pantryId, location, { position: 'end' });
     }
@@ -172,7 +180,11 @@ export function useCreateStorageLocation(
         if (!payload) return;
         const newLocation = payload.storageLocation;
         try {
-          addToStorageLocationsCache(cache, newLocation, { position: 'end' });
+          addToStorageLocationsCache(
+            cache,
+            newLocation,
+            ownHomeOnly(newLocation.homeId),
+          );
           if (pantryId) {
             addToPantryLocations(cache, pantryId, newLocation, {
               position: 'end',

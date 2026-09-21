@@ -13,6 +13,7 @@ import {
   isErrorTypename,
   type MutationErrorTypename,
 } from '#/utils/errors/mutationPayload';
+import { isRecord } from '#/utils/isRecord';
 import type { QueueError } from './types';
 
 /**
@@ -63,6 +64,43 @@ export class ReplayNotPreparedError extends Error {
     this.operationName = operationName;
     this.cause = cause;
   }
+}
+
+export const BATCH_ROW_TRANSIENT_CODE = 'BATCH_ROW_TRANSIENT';
+
+/** Row codes the API reports for a fault that clears on its own. */
+const TRANSIENT_ROW_CODES: readonly string[] = [
+  ErrorCode.InternalServerError,
+  ErrorCode.Deadlock,
+];
+
+/**
+ * A batch applied but a row inside `results` failed transiently. The API
+ * converges each row on its id, so re-sending the whole entry later is safe;
+ * reverting that row would discard a write the server never refused.
+ */
+export class BatchRowDeferredError extends Error {
+  constructor(operationName: string, rowCode: string) {
+    super(`${operationName} has a row that failed transiently (${rowCode})`);
+    this.name = 'BatchRowDeferredError';
+  }
+}
+
+/** The first transient code among a batch payload's failed rows, if any. */
+export function transientBatchRowCode(payload: unknown): string | null {
+  const results: unknown = isRecord(payload) ? payload.results : undefined;
+  if (!Array.isArray(results)) return null;
+  for (const result of results as unknown[]) {
+    if (
+      isRecord(result) &&
+      result.success === false &&
+      typeof result.code === 'string' &&
+      TRANSIENT_ROW_CODES.includes(result.code)
+    ) {
+      return result.code;
+    }
+  }
+  return null;
 }
 
 /**
@@ -169,6 +207,16 @@ export function classifyError(error: unknown): QueueError {
       type: 'server',
       message: error.message,
       code: REPLAY_NOT_PREPARED_CODE,
+      timestamp: Date.now(),
+      retryable: false,
+    };
+  }
+
+  if (error instanceof BatchRowDeferredError) {
+    return {
+      type: 'server',
+      message: error.message,
+      code: BATCH_ROW_TRANSIENT_CODE,
       timestamp: Date.now(),
       retryable: false,
     };

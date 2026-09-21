@@ -82,6 +82,7 @@
     "budgetPerMeal": "Budget per pasto",
     "minutes": "minuti",
     "macroTargets": "Obiettivi macro (avanzato)",
+    "macroTargetsEmpty": "Nessun obiettivo impostato",
     "dailyCalories": "Calorie giornaliere",
     "protein": "Proteine",
     "fat": "Grassi",

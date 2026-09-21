@@ -723,6 +723,35 @@ describe('usePantryItemSubmission', () => {
       expect(mockOnSuccess).toHaveBeenCalled();
     });
 
+    it('offers the restock for a blank unit, which the server resolves to the held stack', async () => {
+      const m = createMock();
+      const { result } = renderHookWithApollo(
+        () =>
+          usePantryItemSubmission({
+            ...defaultParams,
+            itemName: 'Eggs',
+            unit: '',
+            unitId: null,
+          }),
+        {
+          cache: seedStocked('Eggs', 'unit-piece'),
+          operationMocks: [m.mock],
+        },
+      );
+
+      await act(async () => {
+        await result.current.handleConfirm();
+      });
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Item Already in Pantry',
+        expect.stringContaining('already in your pantry'),
+        expect.any(Array),
+      );
+      expect(m.fired).toHaveLength(0);
+      expect(mockOnSuccess).not.toHaveBeenCalled();
+    });
+
     it('leaves a free-text unit to the server', async () => {
       const m = createMock();
       const { result } = renderHookWithApollo(

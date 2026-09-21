@@ -13,9 +13,15 @@ import type {
   UnitSpecInput,
 } from '#/graphql/generated/schemaTypes';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import {
+  normalizeNumericTextForApi,
+  parseDecimalInput,
+} from '#/utils/parseDecimalInput';
 import { formatNumberForInput } from '#/utils/formatters/number';
-import { formatQuantityForInput } from '#/utils/formatQuantity';
+import {
+  formatQuantityForInput,
+  parseStoredQuantityText,
+} from '#/utils/formatQuantity';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import {
   shoppingItemSchema,
@@ -62,7 +68,7 @@ export function useShoppingListItemForm(
     // The API echoes `quantityInput` as a float string, so it is re-formatted;
     // text no parser reads ("a pinch") stays as the person wrote it.
     const typed = item.quantityInput?.trim();
-    const typedValue = typed ? parseFractionalInput(typed) : null;
+    const typedValue = typed ? parseStoredQuantityText(typed) : null;
     const netWeightUnitLabel = firstNonBlank(
       item.netWeightUnit?.symbol,
       item.netWeightUnit?.name,
@@ -142,8 +148,8 @@ export function useShoppingListItemForm(
     }
 
     if (dirtyFields.quantityInput) {
-      // Raw string: the server's FlexibleQuantity accepts "1/3", "1 1/4", "0.5".
-      input.quantity = v.quantityInput;
+      // FlexibleQuantity reads "1/3", "1 1/4", "0.5" — a period decimal only.
+      input.quantity = normalizeNumericTextForApi(v.quantityInput);
     }
 
     // Unit — nest into UnitSpecInput

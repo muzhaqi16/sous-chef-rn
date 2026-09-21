@@ -8,16 +8,21 @@ import {
   withdrawCreatedPantryItem,
   withdrawMovedPantryItem,
 } from '#features/pantry/offline/queueWithdrawals';
-import { restoreMovedShoppingListItem } from '#features/shoppingList/offline/queueWithdrawals';
+import {
+  restoreMovedShoppingListItem,
+  withdrawAddedShoppingListItems,
+} from '#features/shoppingList/offline/queueWithdrawals';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { BarcodeCreatePantryItemDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
+import { forEachBatchAdd } from './replayRegistry';
 import type { CountWithdrawalTable, UnlinkWithdrawalTable } from './types';
 
 export const COUNT_WITHDRAWALS: CountWithdrawalTable = byOperation([
   [CreatePantryItemDocument, withdrawCreatedPantryItem],
   [BarcodeCreatePantryItemDocument, withdrawCreatedPantryItem],
   [MoveShoppingItemToPantryDocument, withdrawMovedPantryItem],
+  ...forEachBatchAdd(withdrawAddedShoppingListItems),
 ]);
 
 export const UNLINK_WITHDRAWALS: UnlinkWithdrawalTable = byOperation([

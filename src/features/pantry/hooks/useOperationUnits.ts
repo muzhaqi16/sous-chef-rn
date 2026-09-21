@@ -9,7 +9,7 @@ import {
   type RestockUnitsForPantryItemQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import type { UnitRole } from '#/graphql/generated/schemaTypes';
-import { UnitType, UnitSource } from '#/graphql/generated/schemaTypes';
+import { UnitType, type UnitSource } from '#/graphql/generated/schemaTypes';
 export enum PantryOperation {
   Consume = 'CONSUME',
   Waste = 'WASTE',
@@ -36,7 +36,6 @@ export interface RankedUnitInfo {
   commonFractions: number[] | null;
   isWholeContainer: boolean;
   displayAsFraction: boolean;
-  hasStandardCountFactor: boolean;
   // For useConversionPreview compatibility (not available from ranked queries)
   conversionRatio: number | null;
   conversionConfidence: number | null;
@@ -96,27 +95,9 @@ function toRankedUnitInfo(
     commonFractions: ru.commonFractions,
     isWholeContainer: ru.isWholeContainer,
     displayAsFraction: ru.unit.displayAsFraction,
-    hasStandardCountFactor: ru.unit.hasStandardCountFactor,
     conversionRatio: null,
     conversionConfidence: null,
   };
-}
-
-/**
- * Two COUNT units convert only when both declare a universal factor (dozen =
- * 12); a clove and a head each carry a factor of 1 to "piece" that means
- * nothing. Applied ONLY to `AUTO` — derived from role and convertibility alone.
- * `CURATED` and `TRACKING_UNIT` carry an item-scoped relationship and stand.
- */
-function convertsFromTracking(
-  unit: RankedUnitInfo,
-  trackingUnitType: UnitType | undefined,
-): boolean {
-  if (unit.source !== UnitSource.Auto) return true;
-  if (trackingUnitType !== UnitType.Count || unit.unitType !== UnitType.Count) {
-    return true;
-  }
-  return unit.hasStandardCountFactor;
 }
 
 function buildGroups(
@@ -200,9 +181,8 @@ export function useOperationUnits({
     ? consumptionResult.loading
     : restockResult.loading;
 
-  const allUnits = rawUnits
-    .map(ru => toRankedUnitInfo(ru, trackingUnitId))
-    .filter(unit => convertsFromTracking(unit, trackingUnitType));
+  // The server's per-stack list is the eligibility; it accepts every unit it lists.
+  const allUnits = rawUnits.map(ru => toRankedUnitInfo(ru, trackingUnitId));
   const groups = buildGroups(allUnits, trackingUnitType, t);
 
   // Default unit = first in ranked list (rank 1), prefer net weight unit for dual-tracked items

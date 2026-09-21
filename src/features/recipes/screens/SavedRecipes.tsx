@@ -32,6 +32,7 @@ import { Screen } from '#components/templates/Screen';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { recipesTestIDs } from '#features/recipes/testIDs';
+import { SearchIncompleteNotice } from '#features/recipes/components/SearchIncompleteNotice';
 
 const keyExtractor = (item: SavedRecipeNode) => item.id;
 // Every row is the same component, so one recycling pool is correct.
@@ -66,9 +67,17 @@ export const SavedRecipes: React.FC = () => {
       hasMore,
       isLoadingMore,
       isLoadingRemainingPages,
+      isSearchIncomplete,
     },
-    actions: { refetch, loadMore },
-  } = useSavedRecipes({ loadAllPages: needsAllPages });
+    actions: { refetch, loadMore, retryRemainingPages },
+  } = useSavedRecipes({
+    loadAllPages: needsAllPages,
+    filterKey: JSON.stringify([
+      searchQuery.trim(),
+      selectedFolder,
+      selectedTags,
+    ]),
+  });
 
   // Classified on the fetched set, not the filtered one: a search that matches
   // nothing is a different situation from a fetch that returned nothing, and
@@ -121,19 +130,25 @@ export const SavedRecipes: React.FC = () => {
   // filter. `isEmpty` above reads the UNFILTERED list; the two cases are told
   // apart here.
   const savedSearchTerm = searchQuery.trim();
-  const emptyProps =
-    recipes.length > 0
-      ? {
-          icon: 'search-outline',
-          title: savedSearchTerm
-            ? t('empty.noResultsFor', { query: savedSearchTerm })
-            : t('empty.noResults'),
-        }
-      : {
-          icon: 'bookmark-outline',
-          title: t('recipes.savedRecipesEmptyTitle'),
-          description: t('recipes.savedRecipesEmptyDescription'),
-        };
+  const emptyProps = isSearchIncomplete
+    ? {
+        icon: 'warning-outline',
+        title: t('recipes.searchIncompleteTitle'),
+        description: t('recipes.searchIncompleteDescription'),
+        action: { label: t('labels.retry'), onPress: retryRemainingPages },
+      }
+    : recipes.length > 0
+    ? {
+        icon: 'search-outline',
+        title: savedSearchTerm
+          ? t('empty.noResultsFor', { query: savedSearchTerm })
+          : t('empty.noResults'),
+      }
+    : {
+        icon: 'bookmark-outline',
+        title: t('recipes.savedRecipesEmptyTitle'),
+        description: t('recipes.savedRecipesEmptyDescription'),
+      };
 
   const flashListRef = useRef<FlashListRef<SavedRecipeNode>>(null);
   const perfCallbacks = useFlashListPerformance(flashListRef, {
@@ -308,6 +323,11 @@ export const SavedRecipes: React.FC = () => {
             />
           }
           onEndReached={handleEndReached}
+          ListHeaderComponent={
+            isSearchIncomplete ? (
+              <SearchIncompleteNotice onRetry={retryRemainingPages} />
+            ) : null
+          }
           ListFooterComponent={
             isLoadingRemainingPages ? (
               <Loading

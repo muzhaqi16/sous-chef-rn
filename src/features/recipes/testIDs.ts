@@ -14,6 +14,8 @@ export const recipesTestIDs = {
   savedRecipesClearFilters: 'saved-recipes-clear-filters',
   /** `FilterTabs` builds each tab's id under this prefix. */
   savedRecipesFilterTabPrefix: 'saved-recipes-filter-tab',
+  searchIncompleteNotice: 'recipes-search-incomplete-notice',
+  searchIncompleteRetry: 'recipes-search-incomplete-retry',
 
   recipeFormScreen: 'recipe-form-screen',
 

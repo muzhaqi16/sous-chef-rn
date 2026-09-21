@@ -1410,16 +1410,14 @@ describe('optimistic entity completeness', () => {
       'src/features/notifications/hooks/useInvitationActions.ts':
         'covered: AcceptHomeInvite is compared below',
       'src/features/shoppingList/cache/list.ts':
-        'covered: the optimistic list create case above, and CreateShoppingList is compared below against all three lite readers',
-      'src/features/recipes/hooks/useRecipeShoppingList.ts':
-        'covered: CreateShoppingListForRecipe is compared below, and pinned to its twin',
+        'covered: the optimistic list create case above, and CreateShoppingList (and its recipe twin) is compared below against all three lite readers',
       'src/features/mealPlan/hooks/useMealPlanActions.ts':
         'covered: CreateMealPlan is compared below against GetMealPlans',
       'src/features/mealPlan/hooks/useMealTemplateActions.ts':
         'covered: CreateMealTemplate is compared below — the same document useMealTemplateEditor writes',
       'src/features/mealPlan/hooks/useMealTemplateEditor.ts':
         'covered: writes the same CreateMealTemplate document compared below',
-      'src/features/mealPlan/hooks/useMealPlanItemActions.ts':
+      'src/features/mealPlan/cache/mealPlanItem.ts':
         'covered: CreateMealPlanItem is compared below against the mealPlanItems array GetMealPlan reads',
       'src/features/mealPlan/hooks/useMealPlanSubscriptions.ts':
         'covered: both event read-backs (MealPlanForEvent, MealTemplateForEvent) are compared below — it links a bare ref, so completeness rests entirely on the read-back',

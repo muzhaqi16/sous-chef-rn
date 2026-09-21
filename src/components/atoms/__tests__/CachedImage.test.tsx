@@ -1,10 +1,10 @@
 'use no memo';
 
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import TurboImage from 'react-native-turbo-image';
 import type { Theme } from '../../../theme/themes';
-import { CachedImage, preloadImages } from '../CachedImage';
+import { CachedImage, preloadImages, warmImage } from '../CachedImage';
 
 type StyleSheetArg = object | ((theme: Theme) => object);
 
@@ -217,6 +217,29 @@ describe('CachedImage', () => {
     expect(screen.getByTestId('skeleton')).toBeTruthy();
   });
 
+  // A caller's own handlers must not replace the ones that end the shimmer.
+  it('shows the fallback after a failed load, whatever handlers the caller passes', () => {
+    const onError = jest.fn();
+    const callerProps: Record<string, unknown> = {
+      onFailure: jest.fn(),
+      onSuccess: jest.fn(),
+    };
+    render(
+      <CachedImage
+        uri="https://example.com/failing.jpg"
+        testID="image"
+        onError={onError}
+        {...callerProps}
+      />,
+    );
+
+    fireEvent(screen.getByTestId('image'), 'failure');
+
+    expect(screen.queryByTestId('skeleton')).toBeNull();
+    expect(screen.getByTestId('icon-image-outline')).toBeTruthy();
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+
   it('renders error overlay (hidden by default)', () => {
     const { toJSON } = render(
       <CachedImage uri="https://example.com/image.jpg" />,
@@ -311,5 +334,43 @@ describe('preloadImages', () => {
       [{ uri: 'https://example.com/single.jpg' }],
       'dataCache',
     );
+  });
+});
+
+describe('warmImage', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('shows the image without a loading shimmer once it has downloaded', async () => {
+    TurboImage.prefetch = jest
+      .fn<
+        ReturnType<typeof TurboImage.prefetch>,
+        Parameters<typeof TurboImage.prefetch>
+      >()
+      .mockResolvedValue(true);
+
+    await warmImage('https://example.com/warmed.jpg', 1500);
+    render(<CachedImage uri="https://example.com/warmed.jpg" />);
+
+    expect(screen.queryByTestId('skeleton')).toBeNull();
+  });
+
+  it('stops waiting at its cap when the download hangs', async () => {
+    jest.useFakeTimers();
+    TurboImage.prefetch = jest
+      .fn<
+        ReturnType<typeof TurboImage.prefetch>,
+        Parameters<typeof TurboImage.prefetch>
+      >()
+      .mockReturnValue(new Promise(() => {}));
+
+    const waiting = warmImage('https://example.com/hanging.jpg', 1500);
+    jest.advanceTimersByTime(1500);
+    await waiting;
+    jest.useRealTimers();
+
+    render(<CachedImage uri="https://example.com/hanging.jpg" />);
+    expect(screen.getByTestId('skeleton')).toBeTruthy();
   });
 });

@@ -263,7 +263,56 @@ describe('logout — session teardown and pacing', () => {
     expect(mockStoreState.resetStore).toHaveBeenCalledWith(
       expect.objectContaining({ auth: true }),
     );
-    mockStoreState.isOnline = true;
+  });
+});
+
+describe('revoking this device’s credential', () => {
+  // Restored here, not after the assertions, which a failing one skips.
+  afterEach(() => {
+    Object.assign(mockStoreState, { isOnline: true, apiReachable: null });
+  });
+
+  const listed = {
+    data: {
+      deviceCredentials: [
+        {
+          __typename: 'DeviceCredential',
+          id: 'dc-1',
+          deviceId: MOCK_DEVICE_ID,
+        },
+      ],
+    },
+  };
+
+  it('is sent when the API answers although the network flag reads offline', async () => {
+    Object.assign(mockStoreState, { isOnline: false, apiReachable: true });
+    mockQuery.mockResolvedValueOnce(listed);
+    mockMutate.mockResolvedValueOnce({
+      data: {
+        revokeDeviceCredential: {
+          __typename: 'RevokeDeviceCredentialPayload',
+        },
+      },
+    });
+
+    const revoked = await authService.revokeDeviceCredentialForThisDevice();
+
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ variables: { input: { id: 'dc-1' } } }),
+    );
+    expect(revoked).toBe(true);
+  });
+
+  it('is reported as not done when the listing fails', async () => {
+    mockQuery.mockResolvedValueOnce({
+      data: undefined,
+      error: new Error('listing failed'),
+    });
+
+    const revoked = await authService.revokeDeviceCredentialForThisDevice();
+
+    expect(revoked).toBe(false);
+    expect(mockMutate).not.toHaveBeenCalled();
   });
 });
 

@@ -1,4 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
+import { gql } from '@apollo/client';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { makeCache } from '#/apollo/cache';
 import type { InMemoryCache } from '@apollo/client';
@@ -10,6 +11,7 @@ import {
 import { CreateShoppingListItemFromRecipeIngredientDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   AddItemsToShoppingListFromRecipeDocument,
+  CreateShoppingListForRecipeDocument,
   GetShoppingListsLiteForRecipeDocument,
 } from '../useRecipeDetail.generated';
 import type { RecipeIngredient as ExternalRecipeIngredient } from '#/services/spoonacular/types';
@@ -436,5 +438,91 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (backend branch)',
     );
     expect(mockToastSuccess).toHaveBeenCalled();
     expect(mockToastError).not.toHaveBeenCalled();
+  });
+});
+
+// --- creating a list from the picker ----------------------------------------
+
+describe('useRecipeShoppingList — handleCreateListAndAddIngredients', () => {
+  const LISTS_QUERY = gql`
+    query TestRecipeShoppingLists($homeId: ID, $filters: ShoppingListFilters) {
+      shoppingLists(homeId: $homeId, filters: $filters) {
+        totalCount
+        edges {
+          cursor
+          node {
+            id
+          }
+        }
+      }
+    }
+  `;
+  type Variant = { homeId?: string | null; filters?: { isTemplate: boolean } };
+  const seed = (cache: InMemoryCache, variables: Variant) =>
+    cache.writeQuery({
+      query: LISTS_QUERY,
+      variables,
+      data: {
+        shoppingLists: {
+          __typename: 'ShoppingListConnection',
+          totalCount: 0,
+          edges: [],
+        },
+      },
+    });
+  const readIds = (cache: InMemoryCache, variables: Variant) =>
+    cache
+      .readQuery<{
+        shoppingLists: { edges: Array<{ node: { id: string } }> };
+      }>({ query: LISTS_QUERY, variables })
+      ?.shoppingLists.edges.map(edge => edge.node.id);
+
+  const createListMock: MockFor<typeof CreateShoppingListForRecipeDocument> = {
+    request: {
+      query: CreateShoppingListForRecipeDocument,
+      variables: () => true,
+    },
+    result: {
+      data: {
+        createShoppingList: {
+          __typename: 'CreateShoppingListPayload',
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'sl-new',
+            name: 'Dinner',
+            homeId: 'home-a',
+            home: { __typename: 'Home', id: 'home-a', name: 'Home A' },
+            ownerships: [],
+          },
+        },
+      },
+    },
+  };
+
+  it("adds the new list to its own home's and the unscoped variants only", async () => {
+    const cache = makeCache();
+    const variants: Variant[] = [
+      { homeId: 'home-a' },
+      { homeId: 'home-b' },
+      { homeId: null },
+      { filters: { isTemplate: true } },
+    ];
+    variants.forEach(variables => seed(cache, variables));
+    const { result } = await renderForSingleAdd({
+      isBackendRecipe: false,
+      operationMocks: [createListMock],
+      cache,
+    });
+
+    await act(async () => {
+      result.current.handleCreateListAndAddIngredients('Dinner');
+    });
+
+    await waitFor(() =>
+      expect(readIds(cache, { homeId: 'home-a' })).toEqual(['sl-new']),
+    );
+    expect(readIds(cache, { homeId: null })).toEqual(['sl-new']);
+    expect(readIds(cache, { homeId: 'home-b' })).toEqual([]);
+    expect(readIds(cache, { filters: { isTemplate: true } })).toEqual([]);
   });
 });

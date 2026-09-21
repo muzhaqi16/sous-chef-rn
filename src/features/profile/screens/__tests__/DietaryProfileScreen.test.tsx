@@ -356,6 +356,13 @@ describe('DietaryProfileScreen - partial profile', () => {
       });
   });
 
+  it('offers to set macro targets when none is set yet', () => {
+    render(<DietaryProfileScreen />);
+    expect(screen.getByText('Macro Targets (Advanced)')).toBeTruthy();
+    expect(screen.getByText('No targets set yet')).toBeTruthy();
+    expect(screen.getByLabelText('Edit Macro Targets')).toBeTruthy();
+  });
+
   it('renders with restrictions but no cuisines or ingredients', () => {
     render(<DietaryProfileScreen />);
     expect(screen.getByText('Dietary Restrictions')).toBeTruthy();

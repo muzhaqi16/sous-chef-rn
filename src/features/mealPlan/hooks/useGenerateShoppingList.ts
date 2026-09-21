@@ -16,10 +16,12 @@ import {
   type PantryStock,
 } from '#features/mealPlan/utils/deriveShoppingListFromMealPlan';
 import {
+  addItemsInSlices,
   addOptimisticShoppingListItem,
   buildAddItemsReconcileUpdate,
   createOptimisticShoppingListItem,
 } from '#features/shoppingList/cache/items';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
 import { usePantryQuery } from '#features/pantry/hooks/usePantryQuery';
 import { useAppStore, useSelectedPantryId } from '#store/useAppStore';
@@ -153,46 +155,49 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
 
     const listName =
       firstNonBlank(options.name)?.trim() ?? defaultListName(source.name);
-    let listId = options.shoppingListId ?? null;
-    if (!listId) {
-      const created = await createShoppingList({
-        name: listName,
-        homeId: source.homeId,
-      });
-      if (created.status === 'failed') {
-        toastService.error(created.body);
-        return null;
-      }
-      listId = created.shoppingList.id;
-    }
+    const listId =
+      options.shoppingListId ?? (await createList(listName, source.homeId));
     if (!listId) return null;
 
     for (const line of inputs) {
       writeLineToCache(listId, line, displayNames);
     }
 
-    try {
-      await addItems({
-        variables: { input: { shoppingListId: listId, items: inputs } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, { operation: 'Generate shopping list' });
-    }
+    const addFailure = await addItemsInSlices(
+      client.cache,
+      listId,
+      inputs,
+      slice =>
+        addItems({
+          variables: { input: { shoppingListId: listId, items: slice } },
+          context: { localFirst: true },
+        }),
+      {
+        document: AddDerivedItemsToShoppingListDocument,
+        fallback: t('generateShoppingList.generateFailed'),
+      },
+    );
 
     // Queued like the writes above: the list carries no plan of its own until
     // this lands, so the plan's generated-lists section fills in on replay.
-    if (!options.shoppingListId) {
-      try {
-        await linkToPlan({
-          variables: { input: { id: listId, mealPlanId } },
-          context: { localFirst: true },
-        });
-      } catch (error) {
-        errorService.reportError(error, {
-          operation: 'Link derived list to meal plan',
-        });
-      }
+    const linked = options.shoppingListId
+      ? null
+      : await settleMutation(
+          () =>
+            linkToPlan({
+              variables: { input: { id: listId, mealPlanId } },
+              context: { localFirst: true },
+            }),
+          {
+            document: LinkDerivedListToMealPlanDocument,
+            fallback: t('generateShoppingList.generateFailed'),
+            present: 'none',
+          },
+        );
+    const failure = addFailure ?? linked?.failure;
+    if (failure) {
+      toastService.error(failure.body);
+      return null;
     }
 
     report({
@@ -211,6 +216,14 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     });
     return { shoppingListId: listId, lineCount: inputs.length };
   };
+
+  /** The new list's id, or null once its refusal is presented. */
+  async function createList(name: string, homeId: string | null) {
+    const created = await createShoppingList({ name, homeId });
+    if (created.status === 'created') return created.shoppingList.id;
+    toastService.error(created.body);
+    return null;
+  }
 
   function writeLineToCache(
     listId: string,

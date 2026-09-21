@@ -84,7 +84,8 @@ export function useShoppingListTemplate() {
     });
 
     const listId = await copyList(derived, { homeId });
-    if (listId && derived.skipped.length > 0) {
+    if (!listId) return null;
+    if (derived.skipped.length > 0) {
       toastService.info(
         t('shoppingListScreens.copyLinesSkipped', {
           count: derived.skipped.length,

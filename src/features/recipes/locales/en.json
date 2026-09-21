@@ -109,6 +109,8 @@
     "savedRecipesEmptyTitle": "No saved recipes",
     "savedRecipesEmptyDescription": "Save recipes from search to see them here",
     "savedRecipesSearchingAll": "Searching all your saved recipes...",
+    "searchIncompleteTitle": "Couldn't load all your recipes",
+    "searchIncompleteDescription": "Some matches may be missing.",
     "removeRecipeFailed": "Failed to remove recipe. Please try again.",
     "filterAll": "All",
     "folders": "Folders",
@@ -289,6 +291,9 @@
     "favoriteA11y": "Add to favourites",
     "unfavoriteA11y": "Remove from favourites",
     "stepsTooMany": "A recipe can have at most {{count}} steps",
+    "tagsTooMany": "A recipe can have at most {{count}} tags",
+    "tagTooLong": "Each tag can be at most {{count}} characters",
+    "tipsTooLong": "Tips can be at most {{count}} characters",
     "stepsTooLarge": "These steps are too long to save. Shorten them and try again."
   },
   "recipeFilters": {

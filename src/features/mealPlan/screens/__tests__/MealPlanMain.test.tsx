@@ -4,6 +4,8 @@ import React from 'react';
 import { fireEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { MealPlanMain } from '../MealPlanMain';
+import { toMealDateTime } from '#/utils/dateUtils';
+import { MealType } from '#/graphql/generated/schemaTypes';
 
 // Mock token scheduler / refreshToken
 jest.mock('#/apollo/links/tokenScheduler');
@@ -181,8 +183,12 @@ jest.mock('#features/mealPlan/components/MealPlanEmptyState', () => {
     MealPlanEmptyState: () => <View testID="meal-plan-empty-state" />,
   };
 });
+const addMealProps: Record<string, unknown>[] = [];
 jest.mock('#features/mealPlan/components/AddMealSheet', () => ({
-  AddMealSheet: () => null,
+  AddMealSheet: (props: Record<string, unknown>) => {
+    addMealProps.push(props);
+    return null;
+  },
 }));
 const saveTemplateProps: Record<string, unknown>[] = [];
 jest.mock('#features/mealPlan/components/SaveAsTemplateSheet', () => ({
@@ -612,5 +618,48 @@ describe('MealPlanMain', () => {
 
     const tree = renderWithApollo(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
+  });
+
+  it('sends a meal on the picked day as that day for the server', async () => {
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: DeferredScreenMockProps) => <Component />,
+    );
+    const { useMealPlans } = jest.requireMock(
+      '#features/mealPlan/hooks/useMealPlans',
+    );
+    useMealPlans.mockReturnValue(
+      mockMealPlansState({
+        currentPlan: { id: 'plan-1', name: 'My Plan' },
+        mealPlans: [{ id: 'plan-1', name: 'My Plan' }],
+      }),
+    );
+    const createItem = jest.fn().mockResolvedValue(true);
+    const { useMealPlanItemActions } = jest.requireMock(
+      '#features/mealPlan/hooks/useMealPlanItemActions',
+    );
+    useMealPlanItemActions.mockReturnValue({
+      createItem,
+      toggleCompleted: jest.fn(),
+      deleteItem: jest.fn(),
+    });
+    addMealProps.length = 0;
+
+    renderWithApollo(<MealPlanMain />);
+    const props = addMealProps[addMealProps.length - 1] as {
+      onAddRecipe: (recipeId: string, mealType: MealType) => Promise<void>;
+      onAddCustomMeal: (name: string, mealType: MealType) => Promise<void>;
+    };
+    await props.onAddRecipe('recipe-1', MealType.Dinner);
+    await props.onAddCustomMeal('Leftovers', MealType.Lunch);
+
+    const day = toMealDateTime(new Date('2026-03-01'));
+    expect(createItem).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ date: day }),
+    );
+    expect(createItem).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ date: day }),
+    );
   });
 });

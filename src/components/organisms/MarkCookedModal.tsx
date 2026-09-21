@@ -68,9 +68,11 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
   // uses, so the two are separated here: substituting the default for text
   // nobody could read cooks — and deducts — a number never entered.
   const servingsUnreadable = !!typedServings && parsedServings == null;
+  // `servingsMade` is an Int, so a fraction refuses the whole request.
   const servingsError =
     servingsUnreadable ||
-    (parsedServings != null && (isNaN(parsedServings) || parsedServings <= 0))
+    (parsedServings != null &&
+      (!Number.isInteger(parsedServings) || parsedServings <= 0))
       ? t('errors.field.servingsMade')
       : undefined;
 

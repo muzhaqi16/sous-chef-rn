@@ -15,6 +15,7 @@ import {
   formatMonthDayYear,
   formatWeekdayMonthDay,
 } from '#/utils/formatters/date';
+import { toMealDateTime } from '#/utils/dateUtils';
 
 interface DuplicatePlanSheetProps {
   visible: boolean;
@@ -78,8 +79,8 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
     onDuplicate({
       mealPlanId: mealPlan.id,
       newName: name.trim(),
-      newStartDate: newStartDate.toISOString(),
-      newEndDate: newEndDate.toISOString(),
+      newStartDate: toMealDateTime(newStartDate),
+      newEndDate: toMealDateTime(newEndDate),
     });
   };
 

@@ -17,14 +17,27 @@ const mockHandleRememberMeDecline = jest.fn();
 
 // LoginScreen drives login/biometric through `authService` directly; it only
 // consumes `useRememberMe` for the RememberMe modal.
+// `mockRealRememberMe` swaps the real hook in for the enrolment cases.
+let mockRealRememberMe = false;
 jest.mock('#features/auth/hooks/useRememberMe', () => ({
-  useRememberMe: () => ({
-    showRememberMeModal: false,
-    pendingCredentials: null,
-    handleRememberMeAccept: mockHandleRememberMeAccept,
-    handleRememberMeDecline: mockHandleRememberMeDecline,
-    showRememberMePrompt: jest.fn(),
-  }),
+  useRememberMe: (
+    events: Parameters<
+      typeof import('#features/auth/hooks/useRememberMe').useRememberMe
+    >[0],
+  ) =>
+    mockRealRememberMe
+      ? jest
+          .requireActual<typeof import('#features/auth/hooks/useRememberMe')>(
+            '#features/auth/hooks/useRememberMe',
+          )
+          .useRememberMe(events)
+      : {
+          showRememberMeModal: false,
+          pendingCredentials: null,
+          handleRememberMeAccept: mockHandleRememberMeAccept,
+          handleRememberMeDecline: mockHandleRememberMeDecline,
+          showRememberMePrompt: jest.fn(),
+        },
 }));
 
 const mockNavigateToForgotPassword = jest.fn();
@@ -109,10 +122,20 @@ jest.mock('#features/auth/components/AuthFormTemplate', () => {
 });
 
 jest.mock('#features/auth/components/RememberMeModal', () => {
-  const { View } = require('react-native');
+  const { Pressable, Text } = require('react-native');
   return {
-    RememberMeModal: ({ visible }: { visible?: boolean }) =>
-      visible ? <View testID="remember-me-modal" /> : null,
+    RememberMeModal: ({
+      visible,
+      onAccept,
+    }: {
+      visible?: boolean;
+      onAccept: () => void;
+    }) =>
+      visible ? (
+        <Pressable testID="remember-me-modal" onPress={onAccept}>
+          <Text>Remember me</Text>
+        </Pressable>
+      ) : null,
   };
 });
 
@@ -285,5 +308,37 @@ describe('LoginScreen', () => {
     expect(screen.queryByTestId('code-verification-screen')).toBeNull();
     expect(screen.getByTestId('login-screen')).toBeTruthy();
     loginSpy.mockRestore();
+  });
+});
+
+describe('LoginScreen remembering the sign-in', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockRealRememberMe = true;
+  });
+  afterEach(() => {
+    mockRealRememberMe = false;
+    jest.restoreAllMocks();
+  });
+
+  it('says so when the sign-in could not be saved, and still enters the app', async () => {
+    jest
+      .spyOn(jest.requireActual('#/storage/deviceId'), 'ensureDeviceId')
+      .mockResolvedValue(null);
+    const toastError = jest.spyOn(
+      jest.requireActual('#/services/toastService').toastService,
+      'error',
+    );
+    useStore.getState().setPostLoginCredentials({ email: 'chef@example.com' });
+
+    render(<LoginScreen />);
+    await userEvent.press(await screen.findByTestId('remember-me-modal'));
+
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith(
+        'Failed to save login information',
+      ),
+    );
+    expect(useStore.getState().navigationState).toBe('main_app');
   });
 });

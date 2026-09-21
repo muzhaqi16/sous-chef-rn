@@ -127,11 +127,11 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
               value={quantityText}
               onChangeText={text => {
                 setQuantityText(text);
-                const num = parseDecimalInput(text);
-                if (!isNaN(num) && num >= 0) {
-                  setSyncedQuantity(num);
-                  onUpdate(index, { adjustedQuantity: num });
-                }
+                const parsed = parseDecimalInput(text);
+                // A field holding no amount deducts nothing, never the last one.
+                const num = !isNaN(parsed) && parsed >= 0 ? parsed : 0;
+                setSyncedQuantity(num);
+                onUpdate(index, { adjustedQuantity: num });
               }}
               keyboardType="decimal-pad"
               editable={isIncluded}

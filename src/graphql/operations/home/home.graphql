@@ -479,6 +479,38 @@ mutation JoinHomeByCode($input: JoinHomeByCodeInput!) {
         homeId
         ...HomeMemberCard_member
       }
+      # Written into the cached homes list, so it selects what a GetHomes node
+      # does; a thinner node makes that list read incomplete.
+      home {
+        id
+        name
+        isDefault
+        version
+        myMembership {
+          id
+          role
+          canManageHome
+          canViewPantry
+          canEditPantry
+          canAddItems
+          canRemoveItems
+          canInviteOthers
+        }
+        pantriesConnection(first: 10) {
+          edges {
+            node {
+              id
+              name
+              isDefault
+            }
+          }
+          totalCount
+        }
+        membersConnection(first: 5) {
+          totalCount
+        }
+        ...HomeCard_home
+      }
     }
     ... on Error {
       code

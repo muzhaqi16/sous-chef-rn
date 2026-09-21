@@ -7,9 +7,10 @@ import {
   MembershipStatus,
 } from '#/graphql/generated/schemaTypes';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import {
   GetHomeByJoinCodeDocument,
+  GetHomesDocument,
   JoinHomeByCodeDocument,
 } from '#operations/home/home.generated';
 import { JoinHomeByCodeScreen } from '../JoinHomeByCodeScreen';
@@ -122,8 +123,10 @@ function buildPreviewMock(
   };
 }
 
+/** `home: null` is an answer without the home; omitted, the SDL fills one in. */
 function buildJoinMock(
   joinCode: string,
+  { home }: { home?: null } = {},
 ): MockFor<typeof JoinHomeByCodeDocument> {
   return {
     request: {
@@ -153,6 +156,7 @@ function buildJoinMock(
               email: 'me@test.com',
             },
           },
+          ...(home === null && { home }),
         },
       },
     },
@@ -230,5 +234,80 @@ describe('JoinHomeByCodeScreen', () => {
     );
     expect(mockToPantryMain).toHaveBeenCalled();
     expect(toastService.success).toHaveBeenCalledWith('Joined "Family Home"');
+  });
+
+  // The default-home guard clears a selected home missing from the cached homes
+  // list and reselects the account default, so the joined home has to be in
+  // that list by the time it is selected — with no screen watching the list.
+  // An answer without the home falls back to reading the list.
+  it('selects the joined home only once the cached homes list holds it', async () => {
+    const user = userEvent.setup();
+    const cache = seedCache([]);
+    const homesMock: MockFor<typeof GetHomesDocument> = {
+      request: { query: GetHomesDocument, variables: () => true },
+      result: {
+        data: {
+          homes: {
+            __typename: 'HomeConnection',
+            edges: [
+              {
+                __typename: 'HomeEdge',
+                cursor: 'home-1',
+                node: { __typename: 'Home', id: 'home-1', name: 'Family Home' },
+              },
+            ],
+          },
+        },
+      },
+    };
+    let cachedHomeIdsAtSelection: string[] | undefined;
+    mockSetSelectedHomeId.mockImplementation(() => {
+      cachedHomeIdsAtSelection = cache
+        .readQuery({ query: GetHomesDocument })
+        ?.homes.edges.map(edge => edge.node.id);
+    });
+
+    const tree = renderWithApollo(
+      <JoinHomeByCodeScreen route={makeRoute('ABC123')} />,
+      {
+        cache,
+        operationMocks: [
+          buildPreviewMock('ABC123', { members: 2, pantries: 1 }),
+          buildJoinMock('ABC123', { home: null }),
+          homesMock,
+        ],
+      },
+    );
+    await waitFor(() => expect(tree.getByText('Join Home')).toBeTruthy());
+    await user.press(tree.getByText('Join Home'));
+
+    await waitFor(() =>
+      expect(mockSetSelectedHomeId).toHaveBeenCalledWith('home-1'),
+    );
+    expect(mockSetSelectedHomeId).toHaveBeenCalledTimes(1);
+    expect(cachedHomeIdsAtSelection).toEqual(['home-1']);
+  });
+
+  it('keeps the current home when the joined home cannot be loaded', async () => {
+    const user = userEvent.setup();
+    const failingHomes: MockFor<typeof GetHomesDocument> = {
+      request: { query: GetHomesDocument, variables: () => true },
+      error: new Error('network down'),
+    };
+    const tree = renderWithApollo(
+      <JoinHomeByCodeScreen route={makeRoute('ABC123')} />,
+      {
+        operationMocks: [
+          buildPreviewMock('ABC123', { members: 2, pantries: 1 }),
+          buildJoinMock('ABC123', { home: null }),
+          failingHomes,
+        ],
+      },
+    );
+    await waitFor(() => expect(tree.getByText('Join Home')).toBeTruthy());
+    await user.press(tree.getByText('Join Home'));
+
+    await waitFor(() => expect(mockToPantryMain).toHaveBeenCalled());
+    expect(mockSetSelectedHomeId).not.toHaveBeenCalled();
   });
 });

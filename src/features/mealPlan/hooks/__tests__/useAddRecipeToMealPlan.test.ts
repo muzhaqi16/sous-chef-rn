@@ -1,6 +1,7 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import type { toastService } from '#/services/toastService';
+import { toMealDateTime } from '#/utils/dateUtils';
 import { useAddRecipeToMealPlan } from '../useAddRecipeToMealPlan';
 
 const mockCreateItem = jest.fn();
@@ -105,6 +106,7 @@ describe('useAddRecipeToMealPlan', () => {
         mealPlanId: 'plan-1',
         meal: { recipeId: 'r-1' },
         mealType: 'DINNER',
+        date: toMealDateTime(new Date('2025-06-03')),
       }),
     );
     expect(mockToastSuccess).toHaveBeenCalledWith('Added to meal plan');

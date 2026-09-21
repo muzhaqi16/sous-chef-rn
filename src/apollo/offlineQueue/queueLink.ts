@@ -8,7 +8,7 @@ import { useStore } from '#store';
 import { shouldTreatAsOffline } from '#store/slices/networkSlice';
 import { queueStore } from './queueStore';
 import { queueManager } from './queueManager';
-import { hasSyncMapping } from './convertToSyncMutation';
+import { captureReplayInputs, hasSyncMapping } from './convertToSyncMutation';
 import { OfflineRejectedError } from './OfflineRejectedError';
 import { QueueCapacityError } from './types';
 import type { QueuedMutation } from './types';
@@ -172,6 +172,12 @@ function enqueueAndComplete(
       maxRetries: 3,
       requiresAuth: !NEVER_QUEUE_OPERATIONS.includes(operationName),
     };
+    // The hook's permanent write already landed, so the row is cached now.
+    const replayInputs = captureReplayInputs(
+      queuedMutation,
+      operation.client.cache,
+    );
+    if (replayInputs) queuedMutation.replayInputs = replayInputs;
 
     try {
       queueStore.addMutation(queuedMutation);

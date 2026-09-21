@@ -357,6 +357,77 @@ describe('useRecurringShoppingList', () => {
       expect(pointer).toBe(RECURRING.nextRecurringDate);
     });
 
+    it('advances the pointer when some copied lines are refused', async () => {
+      const refusedAdd = recordMock(AddItemToShoppingListDocument, {
+        data: {
+          addItemsToShoppingList: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+          },
+        },
+      });
+      const schedule = queuedSchedule();
+      const cache = seedRecurring();
+      const { result } = renderHookWithApollo(
+        () => useRecurringShoppingList(),
+        {
+          cache,
+          operationMocks: [queuedCreate().mock, refusedAdd.mock, schedule.mock],
+        },
+      );
+
+      let newId: string | null = null;
+      await act(async () => {
+        newId = await result.current.generateNext('list-1');
+      });
+
+      // The list for this occurrence exists; only its lines were refused.
+      expect(newId).not.toBeNull();
+      expect(refusedAdd.fired).toHaveLength(1);
+      expect(schedule.fired).toHaveLength(1);
+      const pointer = cache.readFragment<{ nextRecurringDate: string | null }>({
+        id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
+        fragment: UseRecurringShoppingList_ListFragmentDoc,
+        fragmentName: 'useRecurringShoppingList_list',
+      })?.nextRecurringDate;
+      expect(pointer).not.toBe(RECURRING.nextRecurringDate);
+    });
+
+    it('rolls the following occurrence on a second generate after a partly refused roll', async () => {
+      const refusedAdd = recordMock(AddItemToShoppingListDocument, {
+        data: {
+          addItemsToShoppingList: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+          },
+        },
+      });
+      const schedule = queuedSchedule();
+      const { result } = renderHookWithApollo(
+        () => useRecurringShoppingList(),
+        {
+          cache: seedRecurring(),
+          operationMocks: [queuedCreate().mock, refusedAdd.mock, schedule.mock],
+        },
+      );
+
+      await act(async () => {
+        await result.current.generateNext('list-1');
+      });
+      await act(async () => {
+        await result.current.generateNext('list-1');
+      });
+
+      const rolledTo = (
+        schedule.fired as Array<{ input: { nextRecurringDate: string } }>
+      ).map(fired => fired.input.nextRecurringDate);
+      expect(rolledTo).toHaveLength(2);
+      const [first, second] = rolledTo;
+      expect(new Date(second ?? '').getTime()).toBeGreaterThan(
+        new Date(first ?? '').getTime(),
+      );
+    });
+
     it('keeps the pointer when the list repeats without a pattern to advance by', async () => {
       const create = queuedCreate();
       const add = queuedAdd();

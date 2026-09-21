@@ -14,6 +14,7 @@ const shared = (trackingQuantity: number): PantryActionSharedState => ({
   trackingQuantity,
   trackingUnitSymbol: 'cup',
   trackingUnitId: 'u1',
+  displayAsFractionOf: () => true,
   activeUnitSymbol: 'cup',
   activeUnitId: 'u1',
   isConvertedUnit: false,
@@ -37,6 +38,25 @@ describe('validateDeductionQuantity', () => {
     expect(alertService.alert).toHaveBeenCalledWith(
       expect.any(String),
       expect.stringContaining('1 1/4 cup'),
+    );
+  });
+
+  it('names the cap in decimals for a unit not shown as a fraction', () => {
+    expect(
+      validateDeductionQuantity(
+        '1',
+        {
+          ...shared(0.25),
+          trackingUnitSymbol: 'kg',
+          activeUnitSymbol: 'kg',
+          displayAsFractionOf: () => false,
+        },
+        'consume',
+      ),
+    ).toBeNull();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.stringContaining('0.25 kg'),
     );
   });
 
@@ -71,6 +91,14 @@ describe('validateDeductionQuantity', () => {
     // 0.2695 displays as "1/4" but seeds as "0.27".
     expect(validateDeductionQuantity('0.27', shared(0.2695), 'waste')).toBe(
       0.2695,
+    );
+    expect(alertService.alert).not.toHaveBeenCalled();
+  });
+
+  it('records an amount below the stock as typed, even where both display alike', () => {
+    // 0.315 and 0.34 both display as "1/3".
+    expect(validateDeductionQuantity('0.315', shared(0.34), 'consume')).toBe(
+      0.315,
     );
     expect(alertService.alert).not.toHaveBeenCalled();
   });

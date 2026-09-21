@@ -180,7 +180,9 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     const consumptions: ConfirmedIngredientConsumptionInput[] =
       editableMatches.flatMap(em => {
         const pantryItem = em.match.matchedPantryItem;
-        if (!em.isIncluded || !pantryItem) return [];
+        if (!em.isIncluded || !pantryItem || em.adjustedQuantity <= 0) {
+          return [];
+        }
         return [
           {
             recipeIngredientId: em.ingredient.id,

@@ -109,6 +109,8 @@
     "savedRecipesEmptyTitle": "No hay recetas guardadas",
     "savedRecipesEmptyDescription": "Guarda recetas desde la búsqueda para verlas aquí",
     "savedRecipesSearchingAll": "Buscando en todas tus recetas guardadas...",
+    "searchIncompleteTitle": "No se pudieron cargar todas tus recetas",
+    "searchIncompleteDescription": "Puede que falten algunas coincidencias.",
     "removeRecipeFailed": "No se pudo quitar la receta. Inténtalo de nuevo.",
     "filterAll": "Todas",
     "folders": "Carpetas",
@@ -289,6 +291,9 @@
     "favoriteA11y": "Añadir a favoritos",
     "unfavoriteA11y": "Quitar de favoritos",
     "stepsTooMany": "Una receta puede tener como máximo {{count}} pasos",
+    "tagsTooMany": "Una receta puede tener como máximo {{count}} etiquetas",
+    "tagTooLong": "Cada etiqueta puede tener como máximo {{count}} caracteres",
+    "tipsTooLong": "Los consejos pueden tener como máximo {{count}} caracteres",
     "stepsTooLarge": "Estos pasos son demasiado largos para guardarlos. Acórtalos e inténtalo de nuevo."
   },
   "recipeFilters": {

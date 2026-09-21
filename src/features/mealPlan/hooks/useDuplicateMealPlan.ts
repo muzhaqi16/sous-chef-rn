@@ -9,6 +9,7 @@ import {
   type SourcePlan,
 } from '#features/mealPlan/utils/duplicatePlan';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
+import { writeOptimisticMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import {
@@ -69,6 +70,8 @@ export function useDuplicateMealPlan() {
 
     const failures: SettledFailure[] = [];
     for (const item of derived.items) {
+      // Offline the new plan shows its meals only from this write.
+      const revert = writeOptimisticMealPlanItem(client.cache, item);
       const settled = await settleMutation(
         () =>
           createItem({
@@ -79,6 +82,7 @@ export function useDuplicateMealPlan() {
           document: CreateMealPlanItemDocument,
           fallback: t('mealTemplateBuilder.failedToAddItem'),
           present: 'none',
+          onFailed: revert,
         },
       );
       if (settled.failure) failures.push(settled.failure);

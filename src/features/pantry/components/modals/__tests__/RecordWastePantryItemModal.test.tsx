@@ -14,6 +14,7 @@ type MockSharedState = Pick<
   | 'trackingUnitId'
   | 'activeUnitSymbol'
   | 'activeUnitId'
+  | 'displayAsFractionOf'
   | 'isConvertedUnit'
   | 'setSelectedUnitInfo'
   | 'notes'
@@ -96,6 +97,7 @@ jest.mock('#features/pantry/components/modals/PantryActionModal', () => ({
       trackingUnitId: 'unit-1',
       activeUnitSymbol: 'oz',
       activeUnitId: 'unit-1',
+      displayAsFractionOf: () => null,
       isConvertedUnit: false,
       selectedUnitInfo: {
         unitId: 'unit-1',

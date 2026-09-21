@@ -39,6 +39,8 @@ const FIELDS_WITH_MESSAGES: ReadonlyArray<keyof RecipeFormState> = [
   'name',
   'ingredients',
   'steps',
+  'tips',
+  'tags',
 ];
 
 export const RecipeFormScreen: React.FC<

@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { useUser } from '#store/useAppStore';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
-import type { Reference } from '@apollo/client';
+import type { ApolloCache, Reference } from '@apollo/client';
 import {
   GetDietaryProfileDocument,
   UpdateDietaryProfileDocument,
@@ -141,34 +141,8 @@ export const useDietaryProfile = () => {
   });
 
   // ===== MUTATION 3: Remove Dietary Restriction =====
-  const [removeRestriction] = useMutation(RemoveDietaryRestrictionDocument, {
-    // No optimistic response for deletes — the cache removal runs on the response
-    update: (cache, { data }, { variables }) => {
-      if (!appliedPayload(data) || !variables?.input.id || !profile?.id) {
-        return;
-      }
-
-      const restrictionId = variables.input.id;
-
-      // Step 1: Remove the restriction reference from DietaryProfile.restrictions
-      cache.modify({
-        id: cache.identify({ __typename: 'DietaryProfile', id: profile.id }),
-        fields: {
-          restrictions(
-            existingRestrictions: readonly Reference[] = [],
-            { readField },
-          ) {
-            return existingRestrictions.filter(
-              ref => readField('id', ref) !== restrictionId,
-            );
-          },
-        },
-      });
-
-      // Step 2: Evict the entity and garbage collect
-      safeEvict(cache, 'DietaryRestriction', restrictionId);
-    },
-  });
+  // The cache removal runs after the settle, for every outcome but a failure.
+  const [removeRestriction] = useMutation(RemoveDietaryRestrictionDocument);
 
   const getDietaryProfile = (): DietaryProfileData | null => {
     if (!profile) return null;
@@ -310,7 +284,11 @@ export const useDietaryProfile = () => {
         present: 'none',
       },
     );
-    return settled.status !== 'failed';
+    if (settled.status === 'failed') return false;
+    // Applied, queued, or already gone — a top-level gone code included, which
+    // carries no payload an `update` could read.
+    if (profile) removeRestrictionFromCache(client.cache, profile.id, id);
+    return true;
   };
 
   const dietaryProfile = getDietaryProfile();
@@ -327,3 +305,25 @@ export const useDietaryProfile = () => {
     removeDietaryRestriction,
   };
 };
+
+/** Takes a removed restriction off its profile and out of the cache. */
+function removeRestrictionFromCache(
+  cache: ApolloCache,
+  profileId: string,
+  restrictionId: string,
+): void {
+  cache.modify({
+    id: cache.identify({ __typename: 'DietaryProfile', id: profileId }),
+    fields: {
+      restrictions(
+        existingRestrictions: readonly Reference[] = [],
+        { readField },
+      ) {
+        return existingRestrictions.filter(
+          ref => readField('id', ref) !== restrictionId,
+        );
+      },
+    },
+  });
+  safeEvict(cache, 'DietaryRestriction', restrictionId);
+}

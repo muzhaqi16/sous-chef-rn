@@ -5,6 +5,7 @@ import {
   formatQuantityForDisplay,
   formatQuantityForInput,
   getUnitDisplayText,
+  parseStoredQuantityText,
 } from '../formatQuantity';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 
@@ -50,13 +51,18 @@ describe('formatQuantityDisplay', () => {
 
   it('upscales grams to kilograms at 1000', () => {
     expect(formatQuantityDisplay(1500, 'g')).toBe('1.5kg');
-    expect(formatQuantityDisplay(1000, 'g')).toBe('1.0kg');
-    expect(formatQuantityDisplay(2000, 'g')).toBe('2.0kg');
+    expect(formatQuantityDisplay(1000, 'g')).toBe('1kg');
+    expect(formatQuantityDisplay(2000, 'g')).toBe('2kg');
+  });
+
+  it('keeps up to three decimals when upscaling', () => {
+    expect(formatQuantityDisplay(1250, 'g')).toBe('1.25kg');
+    expect(formatQuantityDisplay(1333, 'mL')).toBe('1.333L');
   });
 
   it('upscales milliliters to liters at 1000', () => {
     expect(formatQuantityDisplay(1500, 'ml')).toBe('1.5L');
-    expect(formatQuantityDisplay(3000, 'ml')).toBe('3.0L');
+    expect(formatQuantityDisplay(3000, 'ml')).toBe('3L');
   });
 
   it('does not upscale below 1000', () => {
@@ -223,6 +229,22 @@ describe('the value set the fraction seeding was verified against', () => {
     expect(formatQuantityAsFraction(1e12 + 0.5)).toBe(
       formatQuantity(1e12 + 0.5),
     );
+  });
+});
+
+describe('parseStoredQuantityText', () => {
+  afterEach(() => jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.'));
+
+  it('reads API text with a period on a comma device', () => {
+    jest.mocked(getDeviceDecimalSeparator).mockReturnValue(',');
+    expect(parseStoredQuantityText('1.250')).toBe(1.25);
+    expect(parseStoredQuantityText('1 1/4')).toBe(1.25);
+    expect(parseStoredQuantityText(' 3 ')).toBe(3);
+  });
+
+  it('is null for text that is not a quantity', () => {
+    expect(parseStoredQuantityText('')).toBeNull();
+    expect(parseStoredQuantityText('abc')).toBeNull();
   });
 });
 

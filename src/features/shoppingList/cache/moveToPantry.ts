@@ -9,10 +9,13 @@ import { type ConnectionData, safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { logger } from '#/utils/environment';
 import {
   matchesFilter,
+  moveShoppingListItemToPurchased,
+  moveShoppingListItemToUnpurchased,
   recordListCounters,
   undoListCounters,
   type ListCounterChange,
 } from './connections';
+import { readMovedToPantryAt, writePurchaseInfo } from './purchase';
 
 /**
  * What {@link restoreItemToShoppingListAfterMoveToPantry} needs at withdrawal time:
@@ -224,6 +227,70 @@ export function restoreItemToShoppingListAfterMoveToPantry(
     );
     return false;
   }
+}
+
+/** What {@link unstampItemKeptOnListAfterMoveToPantry} restores. */
+export interface KeptOnListStamp {
+  listId: string;
+  itemId: string;
+  wasPurchased: boolean;
+  previousMovedToPantryAt: string | null;
+  counterChange: ListCounterChange | undefined;
+}
+
+/**
+ * A move that keeps the line on the list leaves it purchased and stamped, as the
+ * server does. Written before the move fires: a queued move runs no `update`.
+ */
+export function stampItemKeptOnListAfterMoveToPantry(
+  cache: ApolloCache,
+  listId: string,
+  itemId: string,
+  wasPurchased: boolean,
+): KeptOnListStamp {
+  const previousMovedToPantryAt = readMovedToPantryAt(cache, itemId);
+  // Two writes: the writer clears the stamp on the flip itself.
+  writePurchaseInfo(cache, itemId, { isPurchased: true });
+  writePurchaseInfo(cache, itemId, {
+    movedToPantryAt: new Date().toISOString(),
+  });
+  const counterChange = wasPurchased
+    ? undefined
+    : recordListCounters(cache, listId, () =>
+        moveShoppingListItemToPurchased(cache, listId, { id: itemId }),
+      );
+  return {
+    listId,
+    itemId,
+    wasPurchased,
+    previousMovedToPantryAt,
+    counterChange,
+  };
+}
+
+/**
+ * Reverse {@link stampItemKeptOnListAfterMoveToPantry} for a refused move. False
+ * when another write moved the list counters in between, so the caller re-reads.
+ */
+export function unstampItemKeptOnListAfterMoveToPantry(
+  cache: ApolloCache,
+  stamp: KeptOnListStamp,
+): boolean {
+  writePurchaseInfo(
+    cache,
+    stamp.itemId,
+    {
+      isPurchased: stamp.wasPurchased,
+      movedToPantryAt: stamp.previousMovedToPantryAt,
+    },
+    { restoring: true },
+  );
+  if (!stamp.counterChange) return true;
+  return undoListCounters(cache, stamp.counterChange, () =>
+    moveShoppingListItemToUnpurchased(cache, stamp.listId, {
+      id: stamp.itemId,
+    }),
+  );
 }
 
 /**

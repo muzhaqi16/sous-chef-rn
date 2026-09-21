@@ -24,6 +24,7 @@ import { Screen } from '#components/templates/Screen';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { recipesTestIDs } from '#features/recipes/testIDs';
+import { SearchIncompleteNotice } from '#features/recipes/components/SearchIncompleteNotice';
 
 const keyExtractor = (item: MyRecipeNode) => item.id;
 // Every row is the same component, so one recycling pool is correct.
@@ -48,9 +49,13 @@ export const MyRecipes: React.FC = () => {
       hasMore,
       isLoadingMore,
       isLoadingRemainingPages,
+      isSearchIncomplete,
     },
-    actions: { refetch, loadMore },
-  } = useRecipeManagement({ loadAllPages: searchTerm.length > 0 });
+    actions: { refetch, loadMore, retryRemainingPages },
+  } = useRecipeManagement({
+    loadAllPages: searchTerm.length > 0,
+    filterKey: searchTerm,
+  });
 
   // Filtered at the parent, never inside the cell: a virtualized list cannot
   // absorb rows that return null — the cell, its layout slot and its fragment
@@ -89,21 +94,27 @@ export const MyRecipes: React.FC = () => {
   // `dataState` at 'ready' and the list rendered an empty array — a blank
   // screen with no explanation. Offering "create your first recipe" to someone
   // who has ten would be the other half of the same mistake.
-  const emptyProps =
-    myRecipes.length > 0
-      ? {
-          icon: 'search-outline',
-          title: t('empty.noResultsFor', { query: searchTerm }),
-        }
-      : {
-          icon: 'create-outline',
-          title: t('recipes.myRecipesEmptyTitle'),
-          description: t('recipes.myRecipesEmptyDescription'),
-          action: {
-            label: t('recipes.createRecipe'),
-            onPress: toRecipeCreate,
-          },
-        };
+  const emptyProps = isSearchIncomplete
+    ? {
+        icon: 'warning-outline',
+        title: t('recipes.searchIncompleteTitle'),
+        description: t('recipes.searchIncompleteDescription'),
+        action: { label: t('labels.retry'), onPress: retryRemainingPages },
+      }
+    : myRecipes.length > 0
+    ? {
+        icon: 'search-outline',
+        title: t('empty.noResultsFor', { query: searchTerm }),
+      }
+    : {
+        icon: 'create-outline',
+        title: t('recipes.myRecipesEmptyTitle'),
+        description: t('recipes.myRecipesEmptyDescription'),
+        action: {
+          label: t('recipes.createRecipe'),
+          onPress: toRecipeCreate,
+        },
+      };
 
   const { deleteRecipe } = useDeleteRecipe();
 
@@ -184,6 +195,11 @@ export const MyRecipes: React.FC = () => {
             />
           }
           onEndReached={handleEndReached}
+          ListHeaderComponent={
+            isSearchIncomplete ? (
+              <SearchIncompleteNotice onRetry={retryRemainingPages} />
+            ) : null
+          }
           ListFooterComponent={
             isLoadingRemainingPages ? (
               <Loading

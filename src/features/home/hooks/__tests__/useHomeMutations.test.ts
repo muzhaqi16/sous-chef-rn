@@ -10,7 +10,10 @@ import {
 } from '#operations/home/home.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { alertService } from '#/services/alertService';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { errorService } from '#/services/errorService';
+import { removeFromHomesCache } from '../homeCacheUpdaters';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { useHomeMutations } from '../useHomeMutations';
 
 const mockStoreState = {
@@ -323,6 +326,55 @@ describe('useHomeMutations', () => {
       await expect(deleted).resolves.toBeTruthy();
       expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(null);
       expect(options.setSelectedPantryId).toHaveBeenCalledWith(null);
+    });
+
+    // RESOURCE_NOT_FOUND arrives as a top-level error with no payload, so no
+    // `update` can read it — the removal still has to take the card away.
+    it('removes a home the server says is gone with a top-level code', async () => {
+      const actual: typeof import('#/services/errorService') =
+        jest.requireActual('#/services/errorService');
+      jest
+        .mocked(errorService.parseApolloError)
+        .mockImplementation((...args) =>
+          actual.errorService.parseApolloError(...args),
+        );
+      const gone: MockFor<typeof DeleteHomeDocument> = {
+        request: { query: DeleteHomeDocument, variables: () => true },
+        result: {
+          data: null,
+          errors: [
+            {
+              message: 'gone',
+              extensions: { code: TopLevelErrorCode.ResourceNotFound },
+            },
+          ],
+        },
+      };
+      const options = createOptions();
+      const { result } = renderHookWithApollo(() => useHomeMutations(options), {
+        operationMocks: [gone],
+      });
+
+      act(() => {
+        void result.current.deleteHome('home-1', 'Home 1');
+      });
+      const confirm = (alertService.alert as jest.Mock).mock.lastCall?.[2] as
+        | Array<{ style?: string; onPress?: () => unknown }>
+        | undefined;
+      await act(async () => {
+        await confirm?.find(b => b.style === 'destructive')?.onPress?.();
+      });
+
+      await waitFor(() =>
+        expect(removeFromHomesCache).toHaveBeenCalledWith(
+          expect.anything(),
+          'home-1',
+          { evictItem: true },
+        ),
+      );
+      expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(null);
+      // The confirmation only: a converged removal says nothing more.
+      expect(alertService.alert).toHaveBeenCalledTimes(1);
     });
   });
 });

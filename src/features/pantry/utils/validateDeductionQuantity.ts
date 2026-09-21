@@ -4,6 +4,7 @@ import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   formatQuantityForDisplay,
   formatQuantityForInput,
+  resolveQuantityNotation,
 } from '#/utils/formatQuantity';
 import type { PantryActionSharedState } from '#features/pantry/components/modals/PantryActionModal';
 
@@ -51,7 +52,12 @@ export function validateDeductionQuantity(
           ? 'deduction.exceedsAvailableWaste'
           : 'deduction.exceedsAvailableConsume',
         {
-          amount: formatQuantityForDisplay(cap),
+          amount: formatQuantityForDisplay(cap, {
+            notation: resolveQuantityNotation(
+              null,
+              shared.displayAsFractionOf(shared.activeUnitId),
+            ),
+          }),
           unit: shared.activeUnitSymbol,
         },
       ),
@@ -63,22 +69,18 @@ export function validateDeductionQuantity(
 }
 
 /**
- * A deduction that READS as the cap is the cap, whether read from a field seeded
- * with the whole stock ("2.457" for 2.4566, "1/3" for 0.3338) or from the stock
- * as displayed ("1 1/3" for 1.32). Only the seed's own two notations are exact
- * round trips: the display's fraction tolerance can disagree with either.
+ * A deduction that READS as the cap is the cap. The seed's two notations
+ * ("2.457" for 2.4566, "1/3" for 0.3338) are exact round trips and snap either
+ * way; the display ("1 1/3" for 1.32) is ±0.02 wide, so it snaps only an amount
+ * above the cap, never one below it.
  */
 export function snapDeductionToCap(value: number, cap: number): number {
-  const capReadings = readings(cap);
-  return readings(value).some(
-    (reading, index) => reading === capReadings[index],
-  )
-    ? cap
-    : value;
+  const readsAsCap =
+    value === cap ||
+    formatQuantityForInput(value, { notation: 'decimal' }) ===
+      formatQuantityForInput(cap, { notation: 'decimal' }) ||
+    formatQuantityForInput(value) === formatQuantityForInput(cap) ||
+    (value > cap &&
+      formatQuantityForDisplay(value) === formatQuantityForDisplay(cap));
+  return readsAsCap ? cap : value;
 }
-
-const readings = (quantity: number): string[] => [
-  formatQuantityForInput(quantity, { notation: 'decimal' }),
-  formatQuantityForInput(quantity),
-  formatQuantityForDisplay(quantity),
-];

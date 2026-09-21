@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { queuedSubject } from '../queuedSubject';
 import {
+  AddRecipeToFavoritesDocument,
   ForkRecipeDocument,
   UpdateFavoriteRecipeDocument,
 } from '#features/recipes/graphql/recipe.generated';
@@ -132,6 +133,14 @@ describe('which subjects the server has never seen', () => {
       variables: { input: { id: 'pi-new', itemName: 'Oats' } },
     });
     expect(subject.mintedIds).toEqual(['pi-new']);
+  });
+
+  it('counts the saved-recipe id a favourite minted', () => {
+    const subject = queuedSubject({
+      mutation: AddRecipeToFavoritesDocument,
+      variables: { input: { id: 'saved-new', recipeId: 'recipe-1' } },
+    });
+    expect(subject.mintedIds).toEqual(['saved-new']);
   });
 
   it('does not count the row an update names', () => {

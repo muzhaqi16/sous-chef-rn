@@ -48,14 +48,11 @@ mutation SendTestNotification($input: SendTestNotificationInput!) {
   }
 }
 
+# No `notification { id }`: written back, it would restore the evicted row as a
+# stub, and a queued replay writes its result to the cache.
 mutation DeleteNotification($input: DeleteNotificationInput!) {
   deleteNotification(input: $input) {
     __typename
-    ... on DeleteNotificationPayload {
-      notification {
-        id
-      }
-    }
     ... on Error {
       code
       message

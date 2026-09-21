@@ -1196,12 +1196,30 @@ cancels with 92. The mechanism: `QueryManager.stop()` iterates `obsQueries` and
 `fetchObservableWithInfo`, the query path. `QueryManager.mutate()` registers
 nothing in either, so a mutation is invisible to both halves.
 
-**What depends on it:** the session-end push-token clear
-(`src/services/auth/deviceRegistration.ts`) is fire-and-forget and runs before
-the `apollo` teardown step stops the client. That is safe only because the clear
-is a mutation AND needs no lookup first — resolving the device row with a query
-would put a cancellable operation in front of it, and the retry would then be
-built after `resetStore` had nulled the token `authLink` signs it with.
+**What depends on it:** the sign-out teardown stops the client, but a token
+refresh mutation already in flight still completes. `setTokens` therefore
+refuses a pair inside the session-end scope, and `refreshToken.ts` discards a
+rotation that outlived its session; the server's family revoke retires that
+successor — see `docs/session-and-transport.md` § A session end mints nothing.
+
+### Apollo masks a mutation's returned data, not what `update` receives
+
+**Claim:** with `dataMasking: true`, `client.mutate` resolves with data whose
+fragment spreads are masked (a spread object reads as `{ __typename, id }`),
+while the `update` callback of the same call receives the full, unmasked
+payload. Code that reads fields inside a fragment spread after a mutation must
+take them from `update`.
+
+**Verified 2026-09-21 against `@apollo/client@4.2.12`** by
+`src/apollo/offlineQueue/__tests__/replayReadsUnmaskedData.test.ts`: a real
+`ApolloClient` with `dataMasking: true` replays a queued shopping add whose
+item carries `shoppingList { totalItems }` inside `AddedShoppingListItemFields`.
+Read from the returned value, the total is absent and the list count drifts
+(3); read from `update`, it is the server's (4).
+
+**What depends on it:** `queueManager.executeMutation` hands the `update`
+payload to `reconcileReplaySuccess`; every replay reconciler that reads list
+totals or a merged row's id relies on it.
 
 ### An iOS 27 SDK build launches only with the UIScene lifecycle
 

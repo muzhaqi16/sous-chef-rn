@@ -861,6 +861,46 @@ describe('cache', () => {
       });
       expect(result?.shoppingLists).toEqual([]);
     });
+
+    it('Query.shoppingLists keeps a read per home and page size', () => {
+      const cache = makeCache();
+      const QUERY = gql`
+        query GetLists($homeId: ID, $first: Int) {
+          shoppingLists(homeId: $homeId, first: $first) {
+            id
+            name
+          }
+        }
+      `;
+      const lists = (count: number) =>
+        Array.from({ length: count }, (_, i) => ({
+          __typename: 'ShoppingList',
+          id: `sl-${i}`,
+          name: `List ${i}`,
+        }));
+
+      cache.writeQuery({
+        query: QUERY,
+        variables: { homeId: 'h1', first: 50 },
+        data: { shoppingLists: lists(30) },
+      });
+      cache.writeQuery({
+        query: QUERY,
+        variables: { homeId: 'h1', first: 20 },
+        data: { shoppingLists: lists(20) },
+      });
+      cache.writeQuery({
+        query: QUERY,
+        variables: { homeId: 'h2', first: 50 },
+        data: { shoppingLists: lists(1) },
+      });
+
+      const overview = cache.readQuery<ShoppingListsResult>({
+        query: QUERY,
+        variables: { homeId: 'h1', first: 50 },
+      });
+      expect(overview?.shoppingLists).toHaveLength(30);
+    });
   });
 
   describe('Query-level pantries merge policy', () => {

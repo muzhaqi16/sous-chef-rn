@@ -227,10 +227,7 @@ describe('useOperationUnits', () => {
     });
   });
 
-  describe('count-to-count conversion', () => {
-    // A clove and a head each carry a factor of 1 to "piece" that means
-    // nothing, so an AUTO-derived count unit without a universal factor only
-    // earns a UNIT_INVALID once the amount is typed.
+  describe("the server's per-stack list", () => {
     const countUnit = (
       id: string,
       hasStandardCountFactor: boolean,
@@ -266,19 +263,21 @@ describe('useOperationUnits', () => {
         },
       );
 
-    it('drops an AUTO count unit with no universal factor', async () => {
+    it('offers an AUTO portion unit the server lists, universal factor or not', async () => {
+      // The server lists bulb for a garlic stack and accepts it.
       const { result } = renderConsume([
         countUnit('dozen', true),
-        countUnit('head', false),
+        countUnit('bulb', false),
       ]);
 
       await waitFor(() => expect(result.current.loading).toBe(false));
-      expect(result.current.allUnits.map(u => u.unitId)).toEqual(['dozen']);
+      expect(result.current.allUnits.map(u => u.unitId)).toEqual([
+        'dozen',
+        'bulb',
+      ]);
     });
 
-    it('keeps a CURATED count unit, which carries an item-scoped relationship', async () => {
-      // The stack's own "1 bulb = 10 cloves" arrives this way; filtering it out
-      // would remove exactly what the measurement profile makes possible.
+    it('keeps a CURATED count unit', async () => {
       const { result } = renderConsume([
         countUnit('clove', false, UnitSource.Curated),
       ]);
@@ -287,20 +286,13 @@ describe('useOperationUnits', () => {
       expect(result.current.allUnits.map(u => u.unitId)).toEqual(['clove']);
     });
 
-    it('keeps the tracking unit whatever its factor', async () => {
+    it('keeps the tracking unit', async () => {
       const { result } = renderConsume([
         countUnit('head', false, UnitSource.TrackingUnit),
       ]);
 
       await waitFor(() => expect(result.current.loading).toBe(false));
       expect(result.current.allUnits.map(u => u.unitId)).toEqual(['head']);
-    });
-
-    it('leaves a weight unit alone — the rule is count-to-count only', async () => {
-      const { result } = renderConsume([makeRankedUnit()]);
-
-      await waitFor(() => expect(result.current.loading).toBe(false));
-      expect(result.current.allUnits).toHaveLength(1);
     });
   });
 

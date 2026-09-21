@@ -16,8 +16,12 @@ import { Icon } from '#utils/iconUtils';
 import { logger } from '#/utils/environment';
 import { SkeletonBase } from '#components/atoms/Skeleton/SkeletonBase';
 
+// The load handlers end the shimmer, so a caller reacts through `onError`.
 export interface CachedImageProps
-  extends Omit<TurboImageProps, 'source' | 'style'> {
+  extends Omit<
+    TurboImageProps,
+    'source' | 'style' | 'onFailure' | 'onSuccess'
+  > {
   uri: string | null | undefined;
   style?: StyleProp<ImageStyle>;
   cachePolicy?: CachePolicy;
@@ -47,6 +51,21 @@ const AnimatedTurboImage = Animated.createAnimatedComponent(TurboImage);
 const loadedUris = new Set<string>();
 const MAX_LOADED_URIS = 500;
 
+function rememberLoaded(uri: string): void {
+  loadedUris.add(uri);
+  if (loadedUris.size > MAX_LOADED_URIS) {
+    // Set iterates in insertion order, so dropping the first half evicts the
+    // oldest scroll positions and keeps what is on or near screen.
+    const deleteCount = Math.floor(MAX_LOADED_URIS / 2);
+    let i = 0;
+    for (const key of loadedUris) {
+      if (i >= deleteCount) break;
+      loadedUris.delete(key);
+      i++;
+    }
+  }
+}
+
 // First decode only; images already in `loadedUris` render instantly so the list
 // doesn't flicker on recycle.
 const IMAGE_FADE_MS = 200;
@@ -75,20 +94,7 @@ export const CachedImage = ({
   );
 
   const handleSuccess = () => {
-    if (uri) {
-      loadedUris.add(uri);
-      if (loadedUris.size > MAX_LOADED_URIS) {
-        // Set iterates in insertion order, so dropping the first half evicts the
-        // oldest scroll positions and keeps what is on or near screen.
-        const deleteCount = Math.floor(MAX_LOADED_URIS / 2);
-        let i = 0;
-        for (const key of loadedUris) {
-          if (i >= deleteCount) break;
-          loadedUris.delete(key);
-          i++;
-        }
-      }
-    }
+    if (uri) rememberLoaded(uri);
     setLoadState('success', true);
   };
 
@@ -133,10 +139,10 @@ export const CachedImage = ({
         cachePolicy={cachePolicy}
         resizeMode={resizeMode}
         resize={displaySize ? displaySize * 2 : undefined}
-        onSuccess={handleSuccess}
-        onFailure={handleFailure}
         sharedTransitionTag={sharedTransitionTag}
         {...rest}
+        onSuccess={handleSuccess}
+        onFailure={handleFailure}
       />
       {/* Both overlays are absolutely positioned, so mounting them only in their
           own state is layout-neutral and saves two views per settled row. */}
@@ -200,4 +206,23 @@ export function preloadImages(uris: string[]): void {
       logger.warn('Image prefetch failed', error),
     );
   }
+}
+
+/**
+ * Downloads one image before anything shows it, waiting at most `maxWaitMs`,
+ * so a view that mounts next renders it with no loading shimmer. A slow or
+ * failed download only ends the wait; the view then loads it as usual.
+ */
+export async function warmImage(uri: string, maxWaitMs: number): Promise<void> {
+  if (loadedUris.has(uri)) return;
+  const downloaded = TurboImage.prefetch([{ uri }], 'dataCache').then(
+    ok => {
+      if (ok) rememberLoaded(uri);
+    },
+    (error: unknown) => logger.warn('Image prefetch failed', error),
+  );
+  await Promise.race([
+    downloaded,
+    new Promise(resolve => setTimeout(resolve, maxWaitMs)),
+  ]);
 }

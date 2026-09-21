@@ -144,6 +144,8 @@ export function useRecurringShoppingList() {
     const listId = await copyList(derived);
     if (!listId) return null;
 
+    // The occurrence is the list, not its lines: refused lines are already
+    // taken back and reported, and holding the pointer would roll it twice.
     await advancePointer(id, recurrence, derived.nextRecurringDate);
 
     if (derived.skipped.length > 0) {

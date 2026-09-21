@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useLoadRemainingPages } from '../useLoadRemainingPages';
 
 /**
@@ -26,8 +26,9 @@ const page = (
 describe('loading the rest of a collection', () => {
   it('stops when a page settles without adding anything', async () => {
     const state = page({});
-    const { result } = renderHook(() =>
-      useLoadRemainingPages(true, false, state),
+    const { result } = renderHook(
+      () =>
+        useLoadRemainingPages(true, false, state, '').isLoadingRemainingPages,
     );
 
     await waitFor(() => expect(result.current).toBe(false), { timeout: 3000 });
@@ -51,7 +52,7 @@ describe('loading the rest of a collection', () => {
     });
     const { result, rerender } = renderHook(
       ({ current }: { current: PageState }) =>
-        useLoadRemainingPages(true, false, current),
+        useLoadRemainingPages(true, false, current, '').isLoadingRemainingPages,
       { initialProps: { current: state } },
     );
 
@@ -65,7 +66,8 @@ describe('loading the rest of a collection', () => {
     const state = page({});
     const { result, rerender } = renderHook(
       ({ enabled }: { enabled: boolean }) =>
-        useLoadRemainingPages(enabled, false, state),
+        useLoadRemainingPages(enabled, false, state, '')
+          .isLoadingRemainingPages,
       { initialProps: { enabled: true } },
     );
     await waitFor(() => expect(result.current).toBe(false), { timeout: 3000 });
@@ -74,5 +76,69 @@ describe('loading the rest of a collection', () => {
     rerender({ enabled: true });
 
     expect(result.current).toBe(true);
+  });
+});
+
+describe('a load-all that stops on a failed page', () => {
+  it('reports the results as incomplete', () => {
+    const state = page({ loadMoreError: true });
+    const { result } = renderHook(() =>
+      useLoadRemainingPages(true, false, state, 'term'),
+    );
+
+    expect(result.current).toEqual(
+      expect.objectContaining({
+        isLoadingRemainingPages: false,
+        incomplete: true,
+      }),
+    );
+  });
+
+  it('is not incomplete once every page has loaded', () => {
+    const state = page({ hasMore: false, loadMoreError: true });
+    const { result } = renderHook(() =>
+      useLoadRemainingPages(true, false, state, 'term'),
+    );
+
+    expect(result.current.incomplete).toBe(false);
+  });
+
+  it('starts again for a new search term', async () => {
+    const state = page({ loadMoreError: true });
+    const { rerender } = renderHook(
+      ({ term }: { term: string }) =>
+        useLoadRemainingPages(true, false, state, term),
+      { initialProps: { term: 'app' } },
+    );
+    expect(state.loadMore).not.toHaveBeenCalled();
+
+    rerender({ term: 'apple' });
+
+    await waitFor(() => expect(state.loadMore).toHaveBeenCalled());
+  });
+
+  it('starts again on retry', async () => {
+    const state = page({ loadMoreError: true });
+    const { result } = renderHook(() =>
+      useLoadRemainingPages(true, false, state, 'term'),
+    );
+    expect(state.loadMore).not.toHaveBeenCalled();
+
+    act(() => result.current.retry());
+
+    await waitFor(() => expect(state.loadMore).toHaveBeenCalled());
+  });
+
+  it('stops again when the retried page fails too', async () => {
+    const state = page({ loadMoreError: true });
+    const { result } = renderHook(() =>
+      useLoadRemainingPages(true, false, state, 'term'),
+    );
+
+    act(() => result.current.retry());
+    await waitFor(() => expect(result.current.incomplete).toBe(true));
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    expect(state.loadMore).toHaveBeenCalledTimes(1);
   });
 });

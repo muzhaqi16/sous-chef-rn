@@ -7,6 +7,7 @@ import { queueManager } from '../queueManager';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { restoreItemToShoppingListAfterMoveToPantry } from '#features/shoppingList/cache/moveToPantry';
+import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
 import { queueStore } from '../queueStore';
@@ -51,6 +52,9 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
 }));
 jest.mock('#features/shoppingList/cache/moveToPantry', () => ({
   restoreItemToShoppingListAfterMoveToPantry: jest.fn(),
+}));
+jest.mock('#features/shoppingList/cache/purchase', () => ({
+  writePurchaseInfo: jest.fn(),
 }));
 jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: {
@@ -148,7 +152,7 @@ describe('queue failure handler', () => {
       );
     });
 
-    it('leaves the list alone when the move never unlinked anything', () => {
+    it('only un-stamps the row when the move kept it on the list', () => {
       handleQueueFailure(
         failure({
           operationName: operationNameOf(MoveShoppingItemToPantryDocument),
@@ -159,6 +163,11 @@ describe('queue failure handler', () => {
       );
 
       expect(restoreItemToShoppingListAfterMoveToPantry).not.toHaveBeenCalled();
+      expect(writePurchaseInfo).toHaveBeenCalledWith(
+        expect.anything(),
+        'sli-1',
+        { movedToPantryAt: null },
+      );
     });
 
     it('has no unlink to withdraw for an ordinary create', () => {

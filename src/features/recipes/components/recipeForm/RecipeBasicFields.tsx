@@ -48,6 +48,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
         placeholder={t('recipes.imageUrlPlaceholder')}
         keyboardType="url"
         autoCapitalize="none"
+        error={errors?.imageUrl?.message}
       />
 
       <View style={styles.row}>
@@ -98,6 +99,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
         value={state.tips}
         onChangeText={v => updateField('tips', v)}
         placeholder={t('recipes.tipsPlaceholder')}
+        error={errors?.tips?.message}
       />
 
       <FormInput
@@ -106,6 +108,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
         onChangeText={v => updateField('tags', v)}
         placeholder={t('labels.commaSeparated')}
         autoCapitalize="none"
+        error={errors?.tags?.message}
       />
 
       <FormInput

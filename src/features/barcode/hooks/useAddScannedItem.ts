@@ -264,8 +264,8 @@ export function useAddScannedItem({
   const restockDuplicate = async (
     existingPantryItemId: string,
   ): Promise<boolean> => {
-    // The payload selects only `id`, so the row keeps its old count unless it
-    // is bumped here — offline until the replay, and online for good.
+    // Offline no payload arrives, so the row keeps its old count until the
+    // replay unless it is bumped here.
     const cacheId = client.cache.identify({
       __typename: 'PantryItem',
       id: existingPantryItemId,

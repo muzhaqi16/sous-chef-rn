@@ -1,7 +1,9 @@
 'use no memo';
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { addDays } from 'date-fns';
+import { toMealDateTime } from '#/utils/dateUtils';
 import { CreateMealPlanScreen } from '../CreateMealPlanScreen';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 
@@ -45,19 +47,36 @@ jest.mock('#components/templates/FormScreen', () => ({
   FormScreen: ({
     children,
     testID,
+    onSave,
   }: {
     children?: React.ReactNode;
     testID?: string;
+    onSave?: () => void;
   }) => {
-    const { View } = require('react-native');
-    return <View testID={testID}>{children}</View>;
+    const { Pressable, View } = require('react-native');
+    return (
+      <View testID={testID}>
+        {children}
+        <Pressable testID="form-save" onPress={onSave} />
+      </View>
+    );
   },
 }));
 
 jest.mock('#components/atoms/FormInput', () => ({
-  FormInput: ({ testID }: { testID?: string }) => {
-    const { View } = require('react-native');
-    return <View testID={testID} />;
+  FormInput: ({
+    testID,
+    value,
+    onChangeText,
+  }: {
+    testID?: string;
+    value?: string;
+    onChangeText?: (text: string) => void;
+  }) => {
+    const { TextInput } = require('react-native');
+    return (
+      <TextInput testID={testID} value={value} onChangeText={onChangeText} />
+    );
   },
 }));
 
@@ -76,8 +95,18 @@ jest.mock('#components/molecules/SegmentedControl', () => ({
   SegmentedControl: () => null,
 }));
 
+// A picked day arrives as local midnight; the pick itself is the test's input.
+const mockPickedDay = new Date(2026, 9, 5);
 jest.mock('#components/molecules/DatePickerField', () => ({
-  DatePickerField: () => null,
+  DatePickerField: ({ onChange }: { onChange: (date: Date) => void }) => {
+    const { Pressable } = require('react-native');
+    return (
+      <Pressable
+        testID="start-date-pick"
+        onPress={() => onChange(mockPickedDay)}
+      />
+    );
+  },
 }));
 
 jest.mock('#components/molecules/EditableCounter', () => ({
@@ -142,5 +171,23 @@ describe('CreateMealPlanScreen', () => {
     });
     const { getByText } = render(<CreateMealPlanScreen />);
     expect(getByText('Track nutrition goals')).toBeTruthy();
+  });
+  // The API compares a meal to its plan by UTC day, so the boundaries are sent
+  // as local noon of the picked days; local midnight lands on the previous UTC
+  // day east of UTC.
+  it('sends the plan boundaries as local noon of the picked days', async () => {
+    const { getByTestId } = render(<CreateMealPlanScreen />);
+    fireEvent.changeText(getByTestId('meal-plan-name-input'), 'Week one');
+    fireEvent.press(getByTestId('start-date-pick'));
+    fireEvent.press(getByTestId('form-save'));
+
+    await waitFor(() => expect(mockCreateMealPlan).toHaveBeenCalled());
+    expect(mockCreateMealPlan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        startDate: toMealDateTime(mockPickedDay),
+        endDate: toMealDateTime(addDays(mockPickedDay, 6)),
+      }),
+      expect.anything(),
+    );
   });
 });

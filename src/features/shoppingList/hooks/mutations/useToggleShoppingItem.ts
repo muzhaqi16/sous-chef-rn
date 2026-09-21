@@ -224,8 +224,11 @@ export function useToggleShoppingItem({
       { isPurchased: true },
       { updatedAt: now },
     );
+    // A row a collaborator already ticked is in the purchased counts.
     const counterChange = recordListCounters(client.cache, listId, () => {
-      moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
+      if (!previousIsPurchased) {
+        moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
+      }
     });
     const clearPersistence = optimisticDataPersistence.track(
       'ShoppingListItem',

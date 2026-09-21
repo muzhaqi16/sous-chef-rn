@@ -35,6 +35,10 @@ const NETWORK_ONLY_CALLERS: Record<string, string> = {
     'reseeds the unread count from the server, which owns it',
   'features/mealPlan/hooks/useGenerateShoppingList.ts':
     'picks up ingredient links a server job wrote after the plan was cached',
+  'features/auth/hooks/useVerifyEmail.ts':
+    "confirms the signed-in account's verification, which the cache holds stale",
+  'features/home/hooks/useJoinHomeByCode.ts':
+    'loads the joined home into a list no screen may be watching',
   'features/recipes/utils/recipeSearchPaging.ts':
     'a search is the server answering, not the cache',
   'features/pantry/hooks/useHybridSearch.ts':

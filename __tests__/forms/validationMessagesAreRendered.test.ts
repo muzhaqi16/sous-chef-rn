@@ -8,6 +8,10 @@ import {
 } from '#features/pantry/components/modals/AddToPantrySheet/addPantryItemFormConfig';
 import { editItemSchema } from '#features/pantry/components/form/pantryItemFormConfig';
 import { createItemSchema } from '#features/catalog/utils/itemValidation';
+import {
+  recipeFormSchema,
+  recipeFormDefaults,
+} from '#features/recipes/screens/RecipeForm/recipeFormConfig';
 
 /**
  * Every validation message has a place on screen.
@@ -48,7 +52,7 @@ function featureSource(dir: string): string {
 /** Field paths that carry a message for at least one of `inputs`. */
 async function failingPaths(
   schema: AnySchema,
-  inputs: Record<string, unknown>[],
+  inputs: readonly object[],
 ): Promise<string[]> {
   const paths = new Set<string>();
   for (const input of inputs) {
@@ -150,6 +154,20 @@ const CASES = [
       { quantityInput: '1', netWeightUnitId: 'unit-1' },
     ],
   },
+  {
+    name: 'recipeFormSchema',
+    schema: recipeFormSchema as unknown as AnySchema,
+    feature: 'recipes',
+    inputs: [
+      recipeFormDefaults(),
+      {
+        ...recipeFormDefaults(),
+        imageUrl: 'example.com',
+        tips: 'x'.repeat(2001),
+        tags: Array.from({ length: 11 }, (_, i) => `tag${i}`).join(','),
+      },
+    ],
+  },
 ] as const;
 
 describe('validation messages have a rendering consumer', () => {
@@ -177,7 +195,7 @@ describe('validation messages have a rendering consumer', () => {
         // the row index stops addressing an editor row once empty rows drop out.
         const root = field.split(/[.[]/)[0] ?? field;
         const viaErrorsObject = new RegExp(
-          `errors\\.${root}(?![A-Za-z0-9_])`,
+          `errors\\??\\.${root}(?![A-Za-z0-9_])`,
           'u',
         ).test(source);
         const viaFieldState = renderedThroughController(source, root);

@@ -173,7 +173,7 @@
       "pantryId": "Non hai il permesso di aggiungere articoli a questa dispensa.",
       "newPassword": "Quella password non rispetta le regole: da 8 a 72 caratteri, con una maiuscola, una minuscola e un numero.",
       "currentPassword": "La password attuale non è corretta. Controllala e riprova.",
-      "servingsMade": "Inserisci un numero di porzioni maggiore di zero",
+      "servingsMade": "Inserisci un numero intero di porzioni maggiore di zero",
       "key": "Non è stato possibile confermare quell'immagine. Selezionala di nuovo e riprova.",
       "imageUrl": "L'URL dell'immagine deve iniziare con http:// o https://",
       "website": "Il sito web deve iniziare con http:// o https://"
