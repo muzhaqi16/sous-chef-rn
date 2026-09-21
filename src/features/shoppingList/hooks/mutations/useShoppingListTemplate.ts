@@ -33,7 +33,6 @@ export function useShoppingListTemplate() {
   const markAsTemplate = async (
     id: string,
     templateName: string,
-    saveItems = true,
   ): Promise<boolean> => {
     const revert =
       applyOptimisticFragmentPatch<UseShoppingListTemplate_ListFragment>(
@@ -50,7 +49,7 @@ export function useShoppingListTemplate() {
     const settled = await settleMutation(
       () =>
         markMutation({
-          variables: { input: { id, templateName, saveItems } },
+          variables: { input: { id, templateName } },
           context: { localFirst: true },
         }),
       {
