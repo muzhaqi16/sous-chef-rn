@@ -16,6 +16,7 @@ cd "$(dirname "$0")/.."
 . scripts/android-target.sh
 # shellcheck source=scripts/build-mode.sh
 . scripts/build-mode.sh
+node scripts/prune-build-output.mjs
 
 MODE="${MODE:-debug}"
 

@@ -8,6 +8,10 @@ import { AppSettingsScreen } from '../AppSettingsScreen';
 const mockUpdateAppSetting = jest.fn().mockResolvedValue(true);
 const mockResetToDefaults = jest.fn().mockResolvedValue(true);
 
+// A function, not a const: a const initialised to `undefined` narrows to it, and
+// a case below returns an Error in its place.
+const noError = (): Error | undefined => undefined;
+
 const mockAppSettings = jest.fn(() => ({
   settings: {
     preferredUnitSystem: 'METRIC',
@@ -18,7 +22,7 @@ const mockAppSettings = jest.fn(() => ({
   },
   loading: false,
   hasLoadedSettings: true,
-  error: undefined as unknown,
+  error: noError(),
   refetch: jest.fn(),
   updateAppSetting: mockUpdateAppSetting,
   resetToDefaults: mockResetToDefaults,

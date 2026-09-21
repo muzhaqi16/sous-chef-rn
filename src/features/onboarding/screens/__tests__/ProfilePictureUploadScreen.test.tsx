@@ -136,7 +136,7 @@ describe('ProfilePictureUploadScreen', () => {
 
       render(<ProfilePictureUploadScreen />);
 
-      expect(screen.queryByText('Choose from Gallery')).toBeTruthy();
+      expect(screen.getByText('Choose from Gallery')).toBeTruthy();
     });
 
     it('keeps them available while refreshing an answer it already has', () => {
@@ -144,7 +144,7 @@ describe('ProfilePictureUploadScreen', () => {
 
       render(<ProfilePictureUploadScreen />);
 
-      expect(screen.queryByText('Choose from Gallery')).toBeTruthy();
+      expect(screen.getByText('Choose from Gallery')).toBeTruthy();
     });
   });
 });

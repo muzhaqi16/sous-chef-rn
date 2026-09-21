@@ -18,7 +18,9 @@
     "startDateRequiredMessage": "Zgjidh një datë fillimi.",
     "failedToCreate": "Nuk u krijua dot plani i vakteve.",
     "needsThePlan": "Hap fillimisht planin, që vaktet e tij të jenë të disponueshme.",
-    "needsTheTemplate": "Hap fillimisht modelin, që vaktet e tij të jenë të disponueshme."
+    "needsTheTemplate": "Hap fillimisht modelin, që vaktet e tij të jenë të disponueshme.",
+    "daily": "Ditor",
+    "custom": "I personalizuar"
   },
   "addMealSheet": {
     "searchPlaceholder": "Kërko receta ose shto një vakt të personalizuar...",
@@ -74,7 +76,8 @@
   },
   "addToMealPlan": {
     "title": "Shto në planin e vakteve",
-    "dateLabel": "Data"
+    "dateLabel": "Data",
+    "morePlans": "Më shumë plane"
   },
   "duplicatePlan": {
     "duplicating": "Po dublohet...",
@@ -146,7 +149,10 @@
     "emptyPreview": "Asnjë vakt në këtë model",
     "day": "Dita {{day}}",
     "customMeal": "I personalizuar",
-    "metaLine": "{{days}} ditë · {{servings}} racione"
+    "metaLine": "{{days}} ditë · {{servings}} racione",
+    "duplicateTemplate": "Dublo modelin",
+    "deleteTemplate": "Fshi modelin",
+    "duplicateNameLabel": "Emri i modelit të ri"
   },
   "mealPlanMain": {
     "label": "Planifiko vaktet e tua",
@@ -177,7 +183,10 @@
     "failedToSave": "Modeli nuk u ruajt",
     "failedToAddItem": "Vakti nuk u shtua",
     "failedToSaveItem": "Vakti nuk u ruajt",
-    "failedToRemoveItem": "Vakti nuk u hoq"
+    "failedToRemoveItem": "Vakti nuk u hoq",
+    "savedRecipe": "Recetë e ruajtur",
+    "chooseRecipe": "Zgjidh një recetë të ruajtur",
+    "changeRecipe": "Ndrysho recetën"
   },
   "mealPlanSelector": {
     "title": "Zgjidh planin e vakteve",
@@ -185,7 +194,8 @@
     "createFromTemplate": "Modeli",
     "searchPlaceholder": "Kërko plane",
     "filterActive": "Aktivë",
-    "personalSubtitle": "Personal"
+    "personalSubtitle": "Personal",
+    "loadMore": "Shfaq më shumë plane"
   },
   "macroTargets": {
     "caloriesRange": "Kaloritë duhet të jenë midis {{min}} dhe {{max}}",
@@ -206,6 +216,7 @@
     "planCreated": "Plani i vakteve u krijua nga modeli!",
     "savedAsTemplate": "Plani i vakteve u ruajt si model!",
     "templateDeleted": "Modeli u fshi",
-    "templateDuplicated": "Modeli u dyfishua!"
+    "templateDuplicated": "Modeli u dyfishua!",
+    "deleteFailed": "Fshirja e modelit dështoi"
   }
 }

@@ -60,6 +60,7 @@
     "myRecipesSubtitle": "Crea e gestisci le tue ricette",
     "myRecipesTitle": "Le mie ricette",
     "myRecipesSearchPlaceholder": "Cerca le mie ricette...",
+    "myRecipesSearchingAll": "Ricerca in tutte le tue ricette...",
     "myRecipesEmptyTitle": "Ancora nessuna ricetta",
     "myRecipesEmptyDescription": "Crea la tua prima ricetta",
     "createRecipe": "Crea ricetta",
@@ -71,7 +72,8 @@
     "loadingRecipe": "Caricamento ricetta...",
     "recipeNotFoundDb": "Ricetta non trovata nel database",
     "recipeNotFound": "Ricetta non trovata",
-    "percentHealthy": "% sana",
+    "loadFailed": "Impossibile caricare la ricetta",
+    "percentHealthy": "{{percent}}% sana",
     "cookedCount": "Cucinata {{count}}x",
     "markCooked": "Segna come cucinata",
     "nutritionTitle": "Valori nutrizionali",
@@ -106,6 +108,9 @@
     "savedRecipesSearchPlaceholder": "Cerca ricette salvate...",
     "savedRecipesEmptyTitle": "Nessuna ricetta salvata",
     "savedRecipesEmptyDescription": "Salva le ricette dalla ricerca per vederle qui",
+    "savedRecipesSearchingAll": "Ricerca in tutte le tue ricette salvate...",
+    "searchIncompleteTitle": "Impossibile caricare tutte le tue ricette",
+    "searchIncompleteDescription": "Alcuni risultati potrebbero mancare.",
     "removeRecipeFailed": "Impossibile rimuovere la ricetta. Riprova.",
     "filterAll": "Tutte",
     "folders": "Cartelle",
@@ -151,6 +156,14 @@
     "markedCookedDeducted": "Ricetta segnata come cucinata! Ingredienti detratti dalla dispensa.",
     "markedCookedSkipped_one": "Ricetta segnata come cucinata. {{count}} ingrediente non è stato scalato.",
     "markedCookedSkipped_other": "Ricetta segnata come cucinata. {{count}} ingredienti non sono stati scalati.",
+    "markedCookedSkippedUnit_one": "Ricetta segnata come cucinata. {{count}} ingrediente non è stato scalato: la sua unità non si converte in quella della dispensa.",
+    "markedCookedSkippedUnit_other": "Ricetta segnata come cucinata. {{count}} ingredienti non sono stati scalati: le loro unità non si convertono in quelle della dispensa.",
+    "markedCookedSkippedNames_one": "Ricetta segnata come cucinata. {{names}} non è stato scalato.",
+    "markedCookedSkippedNames_other": "Ricetta segnata come cucinata. {{names}} non sono stati scalati.",
+    "markedCookedSkippedNamesMore_other": "Ricetta segnata come cucinata. {{names}} e altri {{count}} non sono stati scalati.",
+    "markedCookedSkippedUnitNames_one": "Ricetta segnata come cucinata. {{names}} non è stato scalato: la sua unità non si converte in quella della dispensa.",
+    "markedCookedSkippedUnitNames_other": "Ricetta segnata come cucinata. {{names}} non sono stati scalati: le loro unità non si convertono in quelle della dispensa.",
+    "markedCookedSkippedUnitNamesMore_other": "Ricetta segnata come cucinata. {{names}} e altri {{count}} non sono stati scalati: le loro unità non si convertono in quelle della dispensa.",
     "markedCooked": "Ricetta segnata come cucinata!",
     "renameFolderFailedRetry": "Impossibile rinominare la cartella. Riprova.",
     "folderRenamed": "Rinominato \"{{oldName}}\" in \"{{newName}}\"",
@@ -278,6 +291,9 @@
     "favoriteA11y": "Aggiungi ai preferiti",
     "unfavoriteA11y": "Rimuovi dai preferiti",
     "stepsTooMany": "Una ricetta può avere al massimo {{count}} passaggi",
+    "tagsTooMany": "Una ricetta può avere al massimo {{count}} tag",
+    "tagTooLong": "Ogni tag può avere al massimo {{count}} caratteri",
+    "tipsTooLong": "I consigli possono avere al massimo {{count}} caratteri",
     "stepsTooLarge": "Questi passaggi sono troppo lunghi per essere salvati. Accorciali e riprova."
   },
   "recipeFilters": {
@@ -344,6 +360,12 @@
     "confirmAndDeduct": "Conferma e sottrai",
     "confirmAndDeductCount": "Conferma e sottrai ({{count}})",
     "includedCount": "{{n}}/{{m}} inclusi",
+    "summaryAvailable_one": "{{count}} disponibile",
+    "summaryAvailable_other": "{{count}} disponibili",
+    "summaryPartial_one": "{{count}} parziale",
+    "summaryPartial_other": "{{count}} parziali",
+    "summaryMissing_one": "{{count}} mancante",
+    "summaryMissing_other": "{{count}} mancanti",
     "skipReview": "Salta revisione"
   },
   "markCookedModal": {
@@ -365,7 +387,20 @@
   },
   "nutrition": {
     "noData": "Nessun dato nutrizionale disponibile",
-    "servingSize": "Dimensione porzione"
+    "servingSize": "Dimensione porzione",
+    "nutrient": {
+      "totalFat": "Grassi totali",
+      "saturatedFat": "Grassi saturi",
+      "transFat": "Grassi trans",
+      "addedSugars": "Zuccheri aggiunti",
+      "cholesterol": "Colesterolo",
+      "vitaminD": "Vitamina D"
+    },
+    "category": {
+      "macro": "Macronutrienti",
+      "vitamin": "Vitamine",
+      "mineral": "Minerali"
+    }
   },
   "cuisineSelector": {
     "title": "Cucine preferite",
@@ -406,7 +441,6 @@
     "goodFiber": "Ricco di fibre",
     "lowSugar": "Pochi zuccheri",
     "highSodium": "Molto sodio",
-    "vitaminC": "Vitamina C",
     "iron": "Ferro",
     "calcium": "Calcio",
     "potassium": "Potassio"

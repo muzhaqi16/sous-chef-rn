@@ -1,8 +1,6 @@
 import { act } from '@testing-library/react-native';
-import {
-  renderHookWithApollo,
-  type MockedResponse,
-} from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { AutocompleteCategoriesDocument } from '#operations/item/item.generated';
 import { CategoryType } from '#/graphql/generated/schemaTypes';
 import type { RootState } from '#store/index';
@@ -31,7 +29,9 @@ jest.mock('#store/useAppStore', () => {
  * `variables: () => true` matcher that records each invocation into a
  * closure array.
  */
-function createMock(recorded: Array<Record<string, unknown>>): MockedResponse {
+function createMock(
+  recorded: Array<Record<string, unknown>>,
+): MockFor<typeof AutocompleteCategoriesDocument> {
   return {
     request: {
       query: AutocompleteCategoriesDocument,
@@ -41,7 +41,15 @@ function createMock(recorded: Array<Record<string, unknown>>): MockedResponse {
       },
     },
     maxUsageCount: Number.POSITIVE_INFINITY,
-    result: { data: { autocompleteCategories: [] } },
+    result: {
+      data: {
+        autocompleteCategories: {
+          __typename: 'AutocompleteCategoryResult',
+          totalCount: 0,
+          suggestions: [],
+        },
+      },
+    },
   };
 }
 

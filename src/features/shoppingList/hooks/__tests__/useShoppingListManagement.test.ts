@@ -1,12 +1,12 @@
-import { renderHook } from '@testing-library/react-native';
+import { act, renderHook } from '@testing-library/react-native';
 import { useShoppingListManagement } from '../useShoppingListManagement';
 
 // --- Mocks ---
 
-const mockAddItem = jest.fn();
 const mockRemoveItem = jest.fn();
 const mockToggleItem = jest.fn();
 const mockRefetch = jest.fn().mockResolvedValue(undefined);
+const mockRefetchDetails = jest.fn().mockResolvedValue(undefined);
 
 interface MockShoppingItem {
   id: string;
@@ -64,6 +64,7 @@ jest.mock('../useShoppingListItemsQuery', () => ({
   useShoppingListItemsQuery: () => ({
     shoppingList: mockShoppingListResult,
     error: null,
+    refetch: mockRefetchDetails,
   }),
 }));
 
@@ -98,7 +99,6 @@ jest.mock('../usePaginatedShoppingItems', () => ({
 
 jest.mock('../mutations/useShoppingListItemMutations', () => ({
   useShoppingListItemMutations: () => ({
-    addItem: mockAddItem,
     removeItem: mockRemoveItem,
     toggleItem: mockToggleItem,
   }),
@@ -135,10 +135,9 @@ describe('useShoppingListManagement', () => {
     expect(result.current.totalCountPurchased).toBe(1);
 
     // Actions
-    expect(result.current.addItem).toBe(mockAddItem);
     expect(result.current.removeItem).toBe(mockRemoveItem);
     expect(result.current.toggleItem).toBe(mockToggleItem);
-    expect(result.current.refetch).toBe(mockRefetch);
+    expect(typeof result.current.refetch).toBe('function');
 
     // Search
     expect(typeof result.current.searchQuery).toBe('string');
@@ -149,6 +148,17 @@ describe('useShoppingListManagement', () => {
     expect(typeof result.current.loadMorePurchased).toBe('function');
     expect(result.current.hasMoreUnpurchased).toBe(false);
     expect(result.current.hasMorePurchased).toBe(false);
+  });
+
+  it('refetches the list details beside the items, so a retry recovers permissions', async () => {
+    const { result } = renderHook(() => useShoppingListManagement('list-1'));
+
+    await act(async () => {
+      await result.current.refetch();
+    });
+
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
+    expect(mockRefetchDetails).toHaveBeenCalledTimes(1);
   });
 
   it('returns unpurchasedItems and purchasedItems separately', () => {

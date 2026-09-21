@@ -1,12 +1,19 @@
 /**
  * Shared plumbing for the checks in `scripts/`.
  *
- * Builtins only, deliberately: `check-i18n`, `audit-fragment-inlining` and
- * `check-bundled-secrets` run in CI jobs that skip `npm ci`, so anything they
- * reach must resolve with no install.
+ * Builtins only, deliberately: `check-i18n` and `check-bundled-secrets` run in
+ * CI jobs that skip `npm ci`, so anything they reach must resolve with no
+ * install.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  globSync,
+  lstatSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -114,23 +121,34 @@ export function baselineFile(path) {
   };
 }
 
-/** What a set-membership ratchet needs: what appeared, and what went away. */
-export function diffSets(current, baseline) {
-  const known = new Set(baseline);
-  const present = new Set(current);
-  return {
-    added: current.filter(x => !known.has(x)),
-    removed: baseline.filter(x => !present.has(x)),
-  };
-}
-
-/**
- * Capture a subprocess's stdout. The measurement scripts drive `xcrun simctl`
- * and read its output; `stdio: 'pipe'` keeps a non-zero exit throwing rather
- * than leaking the tool's stderr into a captured timeline.
- */
 export const sh = (cmd, args, options = {}) =>
   execFileSync(cmd, args, { encoding: 'utf8', stdio: 'pipe', ...options });
+
+export const bytes = n => {
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let v = n;
+  let u = 0;
+  while (v >= 1024 && u < units.length - 1) {
+    v /= 1024;
+    u += 1;
+  }
+  return `${v.toFixed(1)} ${units[u]}`;
+};
+
+/** Bytes under `path`, file or directory; a symlink counts as itself. */
+export function sizeOf(path) {
+  try {
+    const stat = lstatSync(path);
+    if (!stat.isDirectory()) return stat.size;
+    return readdirSync(path).reduce(
+      (sum, name) => sum + sizeOf(join(path, name)),
+      0,
+    );
+  } catch {
+    // Raced with something else deleting it.
+    return 0;
+  }
+}
 
 /** Median, not mean: startup samples have outliers that a mean hides. */
 export const median = xs => {

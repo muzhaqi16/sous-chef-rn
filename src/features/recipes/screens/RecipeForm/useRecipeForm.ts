@@ -1,38 +1,50 @@
 import { useForm, useWatch, type PathValue } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import {
-  RecipeStatus,
-  type CreateRecipeInput,
-  type UpdateRecipeInput,
-  type RecipeIngredientInput,
-  type Diet,
-  type HealthGoal,
-  type Intolerance,
+import type {
+  CreateRecipeInput,
+  UpdateRecipeInput,
+  RecipeIngredientInput,
+  Diet,
+  HealthGoal,
+  Intolerance,
 } from '#/graphql/generated/schemaTypes';
-import { type RecipeForm_RecipeFragment } from './RecipeForm.generated';
+import type { RecipeForm_RecipeFragment } from './RecipeForm.generated';
 import type {
   IngredientFormState,
   StepFormState,
   RecipeFormState,
 } from './formState';
-import { recipeFormSchema, recipeFormDefaults } from './recipeFormConfig';
+import {
+  recipeFormSchema,
+  recipeFormDefaults,
+  parseCommaTags,
+} from './recipeFormConfig';
 import { stripPriceFromName } from '#features/recipes/utils/stripPriceFromName';
 import { extractNodes } from '#/utils/connectionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatNumberForInput } from '#/utils/formatters/number';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 let nextTempId = 1;
 function generateTempId(): string {
   return `temp-${nextTempId++}`;
 }
 
-/** Split a comma-separated tag field into a clean list (undefined when empty). */
-function parseCommaTags(raw: string): string[] | undefined {
-  const tags = raw
-    .split(',')
-    .map(tag => tag.trim())
-    .filter(Boolean);
-  return tags.length > 0 ? tags : undefined;
+/**
+ * A stored step is a string, `{ text }` or `{ step }` (untyped JSON). A `text`
+ * that is present wins; a non-scalar one has no readable instruction.
+ */
+function stepInstruction(step: unknown): string {
+  if (typeof step === 'string') return step;
+  if (!step || typeof step !== 'object') return '';
+  const text = 'text' in step ? step.text : null;
+  if (text == null) {
+    return 'step' in step && typeof step.step === 'string' ? step.step : '';
+  }
+  if (typeof text === 'string') return text;
+  return typeof text === 'number' || typeof text === 'boolean'
+    ? String(text)
+    : '';
 }
 
 export function useRecipeForm() {
@@ -160,9 +172,9 @@ export function useRecipeForm() {
       quantity: ing.quantity,
       unitId: ing.unitId ?? undefined,
       itemId: ing.itemId ?? undefined,
-      preparation: ing.preparation?.trim() || undefined,
-      section: ing.section?.trim() || undefined,
-      notes: ing.notes?.trim() || undefined,
+      preparation: firstNonBlank(ing.preparation)?.trim(),
+      section: firstNonBlank(ing.section)?.trim(),
+      notes: firstNonBlank(ing.notes)?.trim(),
       isOptional: ing.isOptional,
       sortOrder: index,
     }));
@@ -216,45 +228,42 @@ export function useRecipeForm() {
     };
   };
 
-  // Build UpdateRecipeInput (without id — caller adds it)
+  // Without `id`, which the caller adds. An omitted field is left unchanged, so
+  // an emptied one is sent as null or []; the API refuses null for `name` and
+  // `servings` (NOT NULL), so those stay omitted when blank.
   const buildUpdateInput = (): Omit<UpdateRecipeInput, 'id'> => {
     return {
       name: state.name.trim() || undefined,
-      description: state.description.trim() || undefined,
+      description: state.description.trim() || null,
       status: state.status,
-      notes: state.notes.trim() || undefined,
-      tips: state.tips.trim() || undefined,
+      notes: state.notes.trim() || null,
+      tips: state.tips.trim() || null,
       tags: parseCommaTags(state.tags),
-      attribution: state.originalAuthor.trim()
-        ? { originalAuthor: state.originalAuthor.trim() }
-        : undefined,
+      attribution: { originalAuthor: state.originalAuthor.trim() || null },
       instructions: state.steps.map((step, index) => ({
         step: index + 1,
         text: step.instruction.trim(),
       })),
       media: {
-        imageUrl: state.imageUrl.trim() || undefined,
+        imageUrl: state.imageUrl.trim() || null,
       },
       metadata: {
         servings: parseInt(state.servings) || undefined,
         difficulty: state.difficulty ?? undefined,
         category: state.category ?? undefined,
-        cuisine: state.cuisine.trim() || undefined,
+        cuisine: state.cuisine.trim() || null,
       },
       timing: {
-        prepTimeMinutes: parseInt(state.prepTimeMinutes) || undefined,
-        cookTimeMinutes: parseInt(state.cookTimeMinutes) || undefined,
+        prepTimeMinutes: parseInt(state.prepTimeMinutes) || null,
+        cookTimeMinutes: parseInt(state.cookTimeMinutes) || null,
       },
       nutrition: {
-        caloriesPerServing:
-          parseDecimalInput(state.caloriesPerServing) || undefined,
+        caloriesPerServing: parseDecimalInput(state.caloriesPerServing) || null,
       },
       dietary: {
-        diets: state.diets.length > 0 ? state.diets : undefined,
-        healthGoals:
-          state.healthGoals.length > 0 ? state.healthGoals : undefined,
-        intolerances:
-          state.intolerances.length > 0 ? state.intolerances : undefined,
+        diets: state.diets,
+        healthGoals: state.healthGoals,
+        intolerances: state.intolerances,
       },
     };
   };
@@ -262,10 +271,10 @@ export function useRecipeForm() {
   // Populate from existing recipe (edit mode)
   const populateFromRecipe = (recipe: RecipeForm_RecipeFragment) => {
     const formState: RecipeFormState = {
-      name: recipe.name ?? '',
+      name: recipe.name,
       description: recipe.description ?? '',
       imageUrl: recipe.imageUrl ?? '',
-      servings: String(recipe.servings ?? 4),
+      servings: String(recipe.servings),
       prepTimeMinutes: recipe.prepTimeMinutes
         ? String(recipe.prepTimeMinutes)
         : '',
@@ -273,52 +282,36 @@ export function useRecipeForm() {
         ? String(recipe.cookTimeMinutes)
         : '',
       caloriesPerServing: formatNumberForInput(recipe.caloriesPerServing),
-      difficulty: recipe.difficulty ?? null,
-      category: recipe.category ?? null,
+      difficulty: recipe.difficulty,
+      category: recipe.category,
       cuisine: recipe.cuisine ?? '',
-      status: recipe.status ?? RecipeStatus.Draft,
-      diets: recipe.diets ?? [],
-      healthGoals: recipe.healthGoals ?? [],
-      intolerances: recipe.intolerances ?? [],
+      status: recipe.status,
+      diets: recipe.diets,
+      healthGoals: recipe.healthGoals,
+      intolerances: recipe.intolerances,
       ingredients: extractNodes(recipe.ingredientsConnection).map(ing => ({
         id: generateTempId(),
         name: ing.name,
-        quantity: ing.quantity ?? 1,
+        quantity: ing.quantity,
         unitId: ing.unit?.id ?? null,
         itemId: ing.item?.id ?? null,
         preparation: ing.preparation ?? '',
         section: ing.section ?? '',
         notes: ing.notes ?? '',
-        isOptional: ing.isOptional ?? false,
-        sortOrder: ing.sortOrder ?? 0,
+        isOptional: ing.isOptional,
+        sortOrder: ing.sortOrder,
       })),
       steps: Array.isArray(recipe.instructions)
-        ? (recipe.instructions as unknown[]).map(
-            (step: unknown, i: number) => ({
-              id: generateTempId(),
-              instruction:
-                typeof step === 'string'
-                  ? step
-                  : step && typeof step === 'object'
-                  ? String(
-                      ('text' in step
-                        ? (step as { text: unknown }).text
-                        : null) ??
-                        ('step' in step &&
-                        typeof (step as { step: unknown }).step === 'string'
-                          ? (step as { step: string }).step
-                          : null) ??
-                        '',
-                    )
-                  : '',
-              sortOrder: i,
-            }),
-          )
+        ? recipe.instructions.map((step: unknown, i: number) => ({
+            id: generateTempId(),
+            instruction: stepInstruction(step),
+            sortOrder: i,
+          }))
         : [],
       notes: recipe.notes ?? '',
       tips: recipe.tips ?? '',
       originalAuthor: recipe.originalAuthor ?? '',
-      tags: (recipe.tags ?? []).join(', '),
+      tags: recipe.tags.join(', '),
     };
     // `reset` re-baselines `isDirty`, so loading a recipe does not read as an
     // edit — which is what the hand-rolled initial-state snapshot was for.
@@ -329,6 +322,7 @@ export function useRecipeForm() {
     state,
     errors: form.formState.errors,
     handleSubmit: form.handleSubmit,
+    setError: form.setError,
     updateField,
     addIngredient,
     updateIngredient,

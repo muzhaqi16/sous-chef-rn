@@ -1,3 +1,4 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import React from 'react';
 import { ScrollView, View } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -5,7 +6,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import GroceryBasket from '#assets/icons/svg/grocery-basket.svg';
-import { type PantryStats } from '#/graphql/generated/schemaTypes';
+import type { PantryStats } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 
 const ThemedGroceryBasket = withUnistyles(GroceryBasket, theme => ({
@@ -121,7 +122,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
           <AppPressable
             onPress={onSortPress}
             hitSlop={8}
-            testID="pantry-sort-button"
+            testID={pantryTestIDs.sortButton}
           >
             <Text role="label" style={styles.sortLabel}>
               {sortLabel}
@@ -158,7 +159,7 @@ const styles = StyleSheet.create(theme => ({
   statLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: theme.spacing['2xsPlus'],
   },
   sortLabel: {
     color: theme.colors.sectionHeader.actionText,

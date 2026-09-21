@@ -13,7 +13,7 @@
  * every case below pass against a store that does not exist, and the reader then
  * matches nothing on a device — which is exactly what happened.
  */
-import { gql } from '@apollo/client';
+import { gql, type NormalizedCacheObject } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { findCachedPantryItemDuplicate } from '../pantryCacheReaders';
 
@@ -46,6 +46,10 @@ const PANTRY = gql`
               __typename
               id
             }
+            unit {
+              __typename
+              id
+            }
           }
         }
       }
@@ -65,6 +69,7 @@ const edge = (
   itemName: string,
   catalogItemId: string | null,
   quantity = 1,
+  unitId = 'unit-piece',
 ) => ({
   __typename: 'PantryItemEdge',
   cursor: id,
@@ -74,6 +79,7 @@ const edge = (
     itemName,
     quantity,
     item: catalogItemId ? { __typename: 'Item', id: catalogItemId } : null,
+    unit: { __typename: 'Unit', id: unitId },
   },
 });
 
@@ -153,6 +159,90 @@ describe('findCachedPantryItemDuplicate', () => {
       existingPantryItemId: 'pi-1',
       existingPantryItemIds: ['pi-1'],
       quantity: 3,
+    });
+  });
+
+  describe('a unit narrows the match to the stack the server would refuse', () => {
+    // One active stack per item per unit: the same item in another unit is a
+    // separate stack the server accepts, so it is not a duplicate.
+    const cartonAndMillilitre = () =>
+      seedWith([
+        edge('pi-carton', 'Oat Milk', 'item-oat', 2, 'unit-carton'),
+        edge('pi-ml', 'Oat Milk', 'item-oat', 500, 'unit-ml'),
+      ]);
+
+    it('matches the stack held in that unit', () => {
+      expect(
+        findCachedPantryItemDuplicate(cartonAndMillilitre(), 'p-1', {
+          itemName: 'oat milk',
+          unitId: 'unit-ml',
+        }),
+      ).toEqual({
+        existingPantryItemId: 'pi-ml',
+        existingPantryItemIds: ['pi-ml'],
+        quantity: 500,
+      });
+    });
+
+    it('returns null when the item is held only in other units', () => {
+      expect(
+        findCachedPantryItemDuplicate(cartonAndMillilitre(), 'p-1', {
+          itemId: 'item-oat',
+          unitId: 'unit-gram',
+        }),
+      ).toBeNull();
+    });
+
+    it('matches any unit when none is given', () => {
+      expect(
+        findCachedPantryItemDuplicate(cartonAndMillilitre(), 'p-1', {
+          itemId: 'item-oat',
+        }),
+      ).toEqual({
+        existingPantryItemId: 'pi-carton',
+        existingPantryItemIds: ['pi-carton'],
+        quantity: 2,
+      });
+    });
+
+    it('answers the same from the store scan in server mode', () => {
+      const cache = makeCache();
+      cache.writeQuery({
+        query: PANTRY,
+        variables: {
+          itemsFirst: 100,
+          itemsFilter: { search: 'oat' },
+          itemsOrderBy: { itemName: 'ASC' },
+          id: 'p-1',
+        },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p-1',
+            itemsConnection: {
+              __typename: 'PantryItemConnection',
+              totalCount: 2,
+              edges: [
+                edge('pi-carton', 'Oat Milk', 'item-oat', 2, 'unit-carton'),
+                edge('pi-ml', 'Oat Milk', 'item-oat', 500, 'unit-ml'),
+              ],
+            },
+          },
+        },
+      });
+
+      expect(
+        findCachedPantryItemDuplicate(cache, 'p-1', {
+          itemId: 'item-oat',
+          unitId: 'unit-ml',
+        })?.existingPantryItemId,
+      ).toBe('pi-ml');
+      expect(
+        findCachedPantryItemDuplicate(cache, 'p-1', {
+          itemId: 'item-oat',
+          unitId: 'unit-gram',
+        }),
+      ).toBeNull();
     });
   });
 
@@ -268,6 +358,46 @@ describe('server mode, where the field is keyed on the live filter and sort', ()
         itemId: 'item-flour',
       }),
     ).toBeNull();
+  });
+
+  // `toReference(item, true)` normalizes a re-merged PantryItem but leaves its
+  // nested objects EMBEDDED (`writePantryItemDetailStub.ts` documents it). The
+  // store scan reads raw records, so it has to recognise both shapes.
+  const embedNested = (cache: ReturnType<typeof seedServerMode>) => {
+    const store: NormalizedCacheObject = cache.extract();
+    const row = store['PantryItem:pi-2'];
+    store['PantryItem:pi-2'] = {
+      ...row,
+      item: { __typename: 'Item', id: 'item-apples' },
+      unit: { __typename: 'Unit', id: 'unit-piece' },
+    };
+    cache.restore(store);
+    return cache;
+  };
+
+  it('finds a row whose catalog item is embedded, not referenced', () => {
+    expect(
+      findCachedPantryItemDuplicate(embedNested(seedServerMode()), 'p-1', {
+        itemId: 'item-apples',
+      }),
+    ).toEqual({
+      existingPantryItemId: 'pi-2',
+      existingPantryItemIds: ['pi-2'],
+      quantity: 1,
+    });
+  });
+
+  it('matches the unit of a row whose unit is embedded', () => {
+    expect(
+      findCachedPantryItemDuplicate(embedNested(seedServerMode()), 'p-1', {
+        itemName: 'tart apples',
+        unitId: 'unit-piece',
+      }),
+    ).toEqual({
+      existingPantryItemId: 'pi-2',
+      existingPantryItemIds: ['pi-2'],
+      quantity: 1,
+    });
   });
 
   it('answers the same either side of the client/server-mode threshold', () => {

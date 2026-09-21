@@ -16,7 +16,6 @@ interface UseSelectableItemsReturn<T extends SelectableItem> {
   selectedItems: T[];
   toggleItem: (itemId: string) => void;
   isMaxReached: boolean;
-  clearSelection: () => void;
 }
 
 /** Shared empty map so the untouched case never allocates. */
@@ -43,7 +42,7 @@ export function useSelectableItems<T extends SelectableItem>({
           const chosen = overrides.get(item.id);
           return chosen === undefined || chosen === item.selected
             ? item
-            : ({ ...item, selected: chosen } as T);
+            : { ...item, selected: chosen };
         });
 
   const selectedItems = items.filter(item => item.selected);
@@ -71,21 +70,10 @@ export function useSelectableItems<T extends SelectableItem>({
     });
   };
 
-  const clearSelection = () => {
-    setOverrides(() => {
-      const next = new Map<string, boolean>();
-      for (const item of initialItems) {
-        next.set(item.id, false);
-      }
-      return next;
-    });
-  };
-
   return {
     items,
     selectedItems,
     toggleItem,
     isMaxReached,
-    clearSelection,
   };
 }

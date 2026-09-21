@@ -6,6 +6,7 @@ import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { MealPlanSubtype, MutationType } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
 import { useMealPlanSubscriptions } from '#features/mealPlan/hooks/useMealPlanSubscriptions';
+import { MealPlanEventsDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 
 type CapturedOnData = (data: unknown, client: unknown) => void;
 
@@ -120,7 +121,7 @@ describe('useMealPlanSubscriptions', () => {
 
     expect(mockRegister).toHaveBeenCalledWith(
       expect.objectContaining({
-        subscriptionName: 'MealPlanEvents',
+        document: MealPlanEventsDocument,
         entityType: 'MealPlan',
         userId: 'user-1',
         entityId: 'home-1',

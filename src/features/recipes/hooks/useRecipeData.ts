@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import type { ErrorLike } from '@apollo/client';
-import { errorService } from '#/services/errorService';
+import { errorService, localizedErrorMessage } from '#/services/errorService';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { useApolloClient, useQuery } from '@apollo/client/react';
-import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
+import { fetchRecipeInformation } from '#features/recipes/store/useRecipeCacheStore';
 import type {
   RecipeInformation,
   RecipeIngredient as ExternalRecipeIngredient,
@@ -15,6 +15,7 @@ import {
   type UseRecipeData_RecipeFragment,
 } from './useRecipeData.generated';
 import { extractNodes } from '#/utils/connectionUtils';
+import { ExternalSource } from '#/graphql/generated/schemaTypes';
 
 export type MaterializedRecipe = NonNullable<
   ReturnType<typeof readRecipeFragment>
@@ -83,7 +84,7 @@ export interface RecipeDisplayData {
 
 export interface UseRecipeDataParams {
   recipeId: string | undefined;
-  externalSource: string | undefined;
+  externalSource: ExternalSource | undefined;
   externalId: string | undefined;
   /** Fire-and-forget preload — when an external recipe loads, send it to the
    *  backend so the next visit can use the backend recipe instead. */
@@ -93,11 +94,8 @@ export interface UseRecipeDataParams {
 export interface UseRecipeDataResult {
   displayData: RecipeDisplayData | null;
   loading: boolean;
+  /** Localized: why neither source produced a recipe. */
   error: string | null;
-  // Modern signatures (see src/types/apollo-default-options.d.ts) reject
-  // generics on `useQuery`, including in a type position. `ErrorLike` is what
-  // the hook's `error` actually is, and it does not vary by operation.
-  backendError: ErrorLike | undefined;
   backendRecipe: MaterializedRecipe | undefined;
   isBackendRecipe: boolean;
   externalRecipe: RecipeInformation | null;
@@ -108,13 +106,13 @@ export interface UseRecipeDataResult {
 async function fetchRecipeData(
   params: {
     recipeId: string | undefined;
-    externalSource: string | undefined;
+    externalSource: ExternalSource | undefined;
     externalId: string | undefined;
     backendLoading: boolean;
   },
   signal: AbortSignal,
   setExternalRecipe: (recipe: RecipeInformation) => void,
-  setError: (error: string | null) => void,
+  setError: (error: TranslationKey | null) => void,
   setLoading: (loading: boolean) => void,
   preloadRecipe: (recipe: RecipeInformation) => Promise<unknown>,
 ): Promise<void> {
@@ -124,7 +122,7 @@ async function fetchRecipeData(
   }
 
   if (!params.externalSource || !params.externalId) {
-    setError('Recipe not available.');
+    setError('recipes.recipeNotFound');
     setLoading(false);
     return;
   }
@@ -133,12 +131,9 @@ async function fetchRecipeData(
     setLoading(true);
     setError(null);
 
-    if (params.externalSource === 'SPOONACULAR') {
-      const data = await spoonacularService.getRecipeInformation(
-        {
-          id: Number(params.externalId),
-          includeNutrition: true,
-        },
+    if (params.externalSource === ExternalSource.Spoonacular) {
+      const data = await fetchRecipeInformation(
+        Number(params.externalId),
         signal,
       );
       setExternalRecipe(data);
@@ -152,7 +147,7 @@ async function fetchRecipeData(
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') return;
     errorService.reportError(err, { operation: 'fetchRecipe' });
-    setError('Failed to load recipe. Please try again.');
+    setError('recipes.loadFailed');
   } finally {
     setLoading(false);
   }
@@ -180,7 +175,7 @@ function buildBackendDisplayData(
     originalAuthor: recipe.originalAuthor ?? undefined,
     tips: recipe.tips ?? undefined,
     videoUrl: recipe.videoUrl ?? undefined,
-    tags: recipe.tags ?? undefined,
+    tags: recipe.tags,
   };
 }
 
@@ -193,8 +188,8 @@ function buildExternalDisplayData(
     servings: recipe.servings,
     readyInMinutes: recipe.readyInMinutes,
     healthScore: recipe.healthScore,
-    summary: recipe.summary,
-    ingredients: recipe.extendedIngredients || [],
+    summary: recipe.summary ?? undefined,
+    ingredients: recipe.extendedIngredients ?? [],
     instructions: recipe.analyzedInstructions,
     instructionsHtml: recipe.instructions,
     vegetarian: recipe.vegetarian,
@@ -217,10 +212,11 @@ export function useRecipeData({
   externalId,
   preloadRecipe,
 }: UseRecipeDataParams): UseRecipeDataResult {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [externalRecipe, setExternalRecipe] =
     useState<RecipeInformation | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<TranslationKey | null>(null);
 
   const apolloClient = useApolloClient();
   const {
@@ -243,11 +239,11 @@ export function useRecipeData({
   useEffect(() => {
     const controller = new AbortController();
 
-    fetchRecipeData(
+    void fetchRecipeData(
       { recipeId, externalSource, externalId, backendLoading },
       controller.signal,
       setExternalRecipe,
-      setError,
+      setErrorKey,
       setLoading,
       preloadRecipe,
     );
@@ -257,8 +253,16 @@ export function useRecipeData({
 
   const isBackendRecipe = !!recipeId && !!backendRecipe;
 
+  const resolveError = () => {
+    if (errorKey) return t(errorKey);
+    if (backendError) {
+      return localizedErrorMessage(backendError, t('recipes.loadFailed'));
+    }
+    return null;
+  };
+
   const displayData: RecipeDisplayData | null = (() => {
-    if (isBackendRecipe && backendRecipe) {
+    if (isBackendRecipe) {
       return buildBackendDisplayData(backendRecipe);
     }
     if (externalRecipe) {
@@ -270,8 +274,7 @@ export function useRecipeData({
   return {
     displayData,
     loading: loading || backendLoading,
-    error,
-    backendError,
+    error: resolveError(),
     backendRecipe,
     isBackendRecipe,
     externalRecipe,

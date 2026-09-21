@@ -1,11 +1,21 @@
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import {
+  type AcquisitionMethod,
+  ItemCondition,
+  StorageState,
+} from '#/graphql/generated/schemaTypes';
+import {
+  acquisitionMethodLabelKey,
+  conditionLabelKey,
+} from '#features/pantry/utils/itemEnumLabels';
 // Aliased: despite the `use` prefix this module exports plain functions, not a
 // hook, so there is no component to call `useTranslation` in. Callers that
 // render the result are responsible for re-running these on a language change.
-import { t as tGlobal } from '#/i18n';
+import { isTranslationKey, t as tGlobal } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import { formatCurrency as formatMoney } from '#/utils/formatters/number';
 import { formatMonthDayYear } from '#/utils/formatters/date';
+import { firstNonBlank } from '#/utils/firstNonBlank';
+import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 
 // Location type for filtering
 export type PantryLocation = 'fridge' | 'freezer' | 'pantry';
@@ -28,9 +38,14 @@ export interface ExpirationStatus {
  * is a parameter — resolving at module load freezes the first-loaded language.
  */
 export const formatStorageState = (
-  state: string | null | undefined,
+  state: StorageState | null | undefined,
   translate: Translate,
-): string => (state ? translate(`storageStateShort.${state}`, state) : '');
+): string => {
+  if (!state) return '';
+  // `string`: the wire can carry a member the generated enum predates.
+  const key: string = `storageStateShort.${state}`;
+  return isTranslationKey(key) ? translate(key) : translate('labels.unknown');
+};
 
 // Helper to calculate days until expiry (negative if expired)
 export const calculateExpiresIn = (
@@ -49,6 +64,8 @@ export const getLocation = (storageState?: string | null): PantryLocation => {
       return 'fridge';
     case StorageState.Frozen:
       return 'freezer';
+    case null:
+    case undefined:
     default:
       return 'pantry';
   }
@@ -87,85 +104,55 @@ export const getExpirationStatus = (
   };
 };
 
-// Default category emojis
-const CATEGORY_EMOJIS: Record<string, string> & { default: string } = {
-  vegetables: '🥬',
-  fruits: '🍎',
-  meat: '🥩',
-  poultry: '🍗',
-  seafood: '🐟',
-  dairy: '🥛',
-  grains: '🌾',
-  bakery: '🍞',
-  beverages: '🥤',
-  snacks: '🍿',
-  condiments: '🧂',
-  frozen: '❄️',
-  prepared: '🍲',
-  default: '📦',
-};
+interface PackageBreakdown {
+  count: number;
+  contentUnit: { name: string; symbol?: string | null };
+  perUnitNetWeight?: number | null;
+  perUnitNetWeightUnit?: { symbol?: string | null } | null;
+  totalNetWeight?: number | null;
+}
 
-// Helper to get emoji from category
-export const getCategoryEmoji = (categoryName?: string | null): string => {
-  if (!categoryName) return CATEGORY_EMOJIS.default;
-  const lowerName = categoryName.toLowerCase();
-  return CATEGORY_EMOJIS[lowerName] || CATEGORY_EMOJIS.default;
-};
-
-// Helper to format package breakdown for display
+// Unit labels are server data with no plural form, so they pass through as-is.
 export const formatPackageBreakdown = (
-  breakdown:
-    | {
-        count: number;
-        contentUnit: { name: string; symbol?: string | null };
-        perUnitNetWeight?: number | null;
-        perUnitNetWeightUnit?: { symbol?: string | null } | null;
-        totalNetWeight?: number | null;
-      }
-    | null
-    | undefined,
-  remainingContentUnits?: number | null,
+  breakdown: PackageBreakdown | null | undefined,
 ): string | null => {
   if (!breakdown) return null;
-  const displayCount = remainingContentUnits ?? breakdown.count;
-  const contentDisplay =
-    breakdown.contentUnit.symbol || breakdown.contentUnit.name;
-  if (breakdown.perUnitNetWeight && breakdown.perUnitNetWeightUnit?.symbol) {
-    return `${displayCount} x ${breakdown.perUnitNetWeight} ${breakdown.perUnitNetWeightUnit.symbol} ${contentDisplay}`;
+  const unit =
+    firstNonBlank(breakdown.contentUnit.symbol) ?? breakdown.contentUnit.name;
+  const weightUnit = breakdown.perUnitNetWeightUnit?.symbol;
+  if (breakdown.perUnitNetWeight && weightUnit) {
+    return tGlobal('pantryItemCard.packageContents', {
+      count: breakdown.count,
+      weight: formatQuantityForDisplay(breakdown.perUnitNetWeight, {
+        notation: 'decimal',
+      }),
+      weightUnit,
+      unit,
+    });
   }
-  return `${displayCount} ${contentDisplay}`;
+  return tGlobal('itemSubtitle.contentUnitCount', {
+    count: breakdown.count,
+    unit,
+  });
 };
 
-// Helper to format full package breakdown with total for detail views
+/** The package breakdown plus its total weight, for detail views. */
 export const formatPackageBreakdownFull = (
-  breakdown:
-    | {
-        count: number;
-        contentUnit: { name: string; symbol?: string | null };
-        perUnitNetWeight?: number | null;
-        perUnitNetWeightUnit?: { symbol?: string | null } | null;
-        totalNetWeight?: number | null;
-      }
-    | null
-    | undefined,
+  breakdown: PackageBreakdown | null | undefined,
 ): string | null => {
-  if (!breakdown) return null;
   const short = formatPackageBreakdown(breakdown);
-  if (!short) return null;
-  if (breakdown.totalNetWeight && breakdown.perUnitNetWeightUnit?.symbol) {
-    return `${short} (${breakdown.totalNetWeight} ${breakdown.perUnitNetWeightUnit.symbol} total)`;
+  if (!breakdown || !short) return null;
+  const weightUnit = breakdown.perUnitNetWeightUnit?.symbol;
+  if (breakdown.totalNetWeight && weightUnit) {
+    return tGlobal('pantryItemCard.packageWithTotal', {
+      breakdown: short,
+      total: formatQuantityForDisplay(breakdown.totalNetWeight, {
+        notation: 'decimal',
+      }),
+      weightUnit,
+    });
   }
   return short;
-};
-
-// Helper to format net weight for display (e.g., "14.5 oz ea")
-export const formatNetWeight = (
-  netWeight?: number | null,
-  netWeightUnit?: { symbol?: string | null; name?: string | null } | null,
-): string | null => {
-  if (!netWeight) return null;
-  const unitStr = netWeightUnit?.symbol || netWeightUnit?.name || '';
-  return `${netWeight}${unitStr} ea`;
 };
 
 // Helper to format net weight for primary display (no "ea" suffix, with g→kg / ml→L upscaling)
@@ -174,7 +161,8 @@ export const formatNetWeightDisplay = (
   netWeightUnit?: { symbol?: string | null; name?: string | null } | null,
 ): string | null => {
   if (!netWeight) return null;
-  const unitStr = netWeightUnit?.symbol || netWeightUnit?.name || '';
+  const unitStr =
+    firstNonBlank(netWeightUnit?.symbol, netWeightUnit?.name) ?? '';
 
   // Same g→kg, mL→L upscaling as formatQuantityDisplay — and the same
   // case-insensitive match, the canonical symbol being `mL`.
@@ -211,8 +199,10 @@ export const formatQuantityBreakdown = (
   // The unit label is server data (`Unit.symbol` / `Unit.name`) with no plural
   // form, so it passes through untouched — never append an English "s" to it.
   // The count/unit order lives in the key so a locale can change it.
-  const contentLabel =
-    breakdown.contentUnit?.symbol || breakdown.contentUnit?.name;
+  const contentLabel = firstNonBlank(
+    breakdown.contentUnit?.symbol,
+    breakdown.contentUnit?.name,
+  );
   if (!contentLabel) return null;
   return tGlobal('itemSubtitle.contentUnitCount', {
     count: total,
@@ -267,30 +257,28 @@ export const getDaysInPantry = (createdAt: string | null | undefined) => {
   );
 };
 
-// Format days in pantry for display
-export const formatDaysInPantry = (days: number | null): string => {
+export const formatDaysInPantry = (
+  days: number | null,
+  t: Translate,
+): string => {
   if (days === null) return '-';
-  if (days === 0) return 'Today';
-  if (days === 1) return '1 day';
-  return `${days} days`;
+  if (days === 0) return t('labels.today');
+  return t('labels.durationDays', { count: days });
 };
 
-// Format condition enum for display
-export const formatCondition = (condition?: string | null): string | null => {
-  if (!condition || condition === 'GOOD') return null;
-  return condition.charAt(0) + condition.slice(1).toLowerCase();
-};
-
-// Format acquisition method enum for display
-export const formatAcquisitionMethod = (
-  method?: string | null,
+/** Null for `GOOD`: the detail screen shows a condition only when it is a concern. */
+export const formatCondition = (
+  condition: ItemCondition | null | undefined,
+  t: Translate,
 ): string | null => {
-  if (!method) return null;
-  return method
-    .split('_')
-    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
-    .join(' ');
+  if (!condition || condition === ItemCondition.Good) return null;
+  return t(conditionLabelKey(condition));
 };
+
+export const formatAcquisitionMethod = (
+  method: AcquisitionMethod | null | undefined,
+  t: Translate,
+): string | null => (method ? t(acquisitionMethodLabelKey(method)) : null);
 
 // A cost, or null when the server recorded none — callers omit the row rather
 // than render an em dash beside populated ones. A cost recorded AS zero is a

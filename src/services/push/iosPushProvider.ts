@@ -59,8 +59,10 @@ export const iosPushProvider: PushTokenProvider = {
       // requestPermissions() also triggers registerForRemoteNotifications, so
       // the APNs token is delivered via the `register` event shortly after.
       const permissions = await PushNotificationIOS.requestPermissions();
-      return Boolean(
-        permissions.alert || permissions.badge || permissions.sound,
+      return (
+        permissions.alert === true ||
+        permissions.badge === true ||
+        permissions.sound === true
       );
     } catch (error) {
       logger.error('APNs requestPermissions failed:', error);

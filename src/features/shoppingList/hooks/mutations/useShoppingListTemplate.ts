@@ -15,10 +15,10 @@ import {
 import { readCopyableList } from '#features/shoppingList/cache/copySource';
 import { listFromTemplate } from '#features/shoppingList/utils/listFromTemplate';
 import { useCopyShoppingList } from './useCopyShoppingList';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
-import { errorService } from '#/services/errorService';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 export function useShoppingListTemplate() {
   const { t } = useTranslation();
@@ -33,7 +33,6 @@ export function useShoppingListTemplate() {
   const markAsTemplate = async (
     id: string,
     templateName: string,
-    saveItems = true,
   ): Promise<boolean> => {
     const revert =
       applyOptimisticFragmentPatch<UseShoppingListTemplate_ListFragment>(
@@ -47,29 +46,19 @@ export function useShoppingListTemplate() {
         'Mark As Template',
       );
 
-    let result;
-    try {
-      result = await markMutation({
-        variables: { input: { id, templateName, saveItems } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Mark As Template error:',
-      });
-    }
-
-    if (!result) {
-      revert();
-      return false;
-    }
-    if (
-      alertIfRejected(result, t('shoppingListScreens.failedToSaveTemplate'))
-    ) {
-      revert();
-      return false;
-    }
-    return true;
+    const settled = await settleMutation(
+      () =>
+        markMutation({
+          variables: { input: { id, templateName } },
+          context: { localFirst: true },
+        }),
+      {
+        document: MarkAsTemplateDocument,
+        fallback: t('shoppingListScreens.failedToSaveTemplate'),
+        onFailed: revert,
+      },
+    );
+    return settled.status !== 'failed';
   };
 
   /**
@@ -88,11 +77,14 @@ export function useShoppingListTemplate() {
     }
 
     const derived = listFromTemplate(source, {
-      name: name?.trim() || t('labels.copyOfName', { name: source.name }),
+      name:
+        firstNonBlank(name)?.trim() ??
+        t('labels.copyOfName', { name: source.name }),
     });
 
     const listId = await copyList(derived, { homeId });
-    if (listId && derived.skipped.length > 0) {
+    if (!listId) return null;
+    if (derived.skipped.length > 0) {
       toastService.info(
         t('shoppingListScreens.copyLinesSkipped', {
           count: derived.skipped.length,

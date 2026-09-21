@@ -61,7 +61,11 @@ query CanDeleteAccount {
       type
       resourceId
       resourceName
-      message
+      # The count the English `message` states, as a number the copy can
+      # pluralize. `message` is deliberately NOT selected: it was fetched and
+      # discarded, since BLOCKER_COPY builds the sentence from `type`.
+      memberCount
+      collaboratorCount
     }
   }
 }
@@ -257,7 +261,11 @@ subscription UserEvents($userId: ID!) {
     updatedFields
     timestamp
     userId
-    reason
+    # Why the action was taken, as an enum. `reason` is deliberately NOT
+    # selected: it is a moderator's own English words, and the copy is built
+    # from the code and the count instead.
+    reasonCode
+    failedLoginCount
     warningCount
     parents {
       homeId

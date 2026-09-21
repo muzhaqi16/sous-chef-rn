@@ -1,4 +1,5 @@
 import type { RootState } from '#store/index';
+import { UserRole } from '#/graphql/generated/schemaTypes';
 
 /**
  * Creates a mock module for `jest.mock('#store/useAppStore', () => mockAppStore({...}))`.
@@ -19,7 +20,9 @@ export function mockAppStore(state: Partial<RootState>) {
     setState: jest.Mock;
     subscribe: jest.Mock;
   } = Object.assign(
-    jest.fn(<T>(selector: (s: RootState) => T): T => selector(state as RootState)),
+    jest.fn(
+      <T>(selector: (s: RootState) => T): T => selector(state as RootState),
+    ),
     {
       getState: jest.fn(() => state),
       setState: jest.fn(),
@@ -34,29 +37,19 @@ export function mockAppStore(state: Partial<RootState>) {
     useUser: jest.fn(() => state.user),
     useSelectedHomeId: jest.fn(() => state.selectedHomeId),
     useSelectedPantryId: jest.fn(() => state.selectedPantryId),
-    useSelectedShoppingListId: jest.fn(
-      () => state.selectedShoppingListId,
-    ),
+    useSelectedShoppingListId: jest.fn(() => state.selectedShoppingListId),
     useIsLoggingOut: jest.fn(() => state.isLoggingOut),
     useIsHydrated: jest.fn(() => state.isHydrated),
     useIsOnline: jest.fn(() => state.isOnline),
-    useCanAccessDevTools: jest.fn(
-      () => state.user?.canAccessDevTools === true,
-    ),
+    useCanAccessDevTools: jest.fn(() => state.user?.canAccessDevTools === true),
     useIsAdminUser: jest.fn(
       () =>
-        state.user?.role === 'ADMIN' ||
-        state.user?.role === 'SUPER_ADMIN',
+        state.user?.role === UserRole.Admin ||
+        state.user?.role === UserRole.SuperAdmin,
     ),
-    useIsHomeSelectionReady: jest.fn(
-      () => state.isHomeSelectionReady,
-    ),
-    useSetIsHomeSelectionReady: jest.fn(
-      () => state.setIsHomeSelectionReady,
-    ),
-    useSetIsPantryQueryComplete: jest.fn(
-      () => state.setIsPantryQueryComplete,
-    ),
+    useIsHomeSelectionReady: jest.fn(() => state.isHomeSelectionReady),
+    useSetIsHomeSelectionReady: jest.fn(() => state.setIsHomeSelectionReady),
+    useSetIsPantryQueryComplete: jest.fn(() => state.setIsPantryQueryComplete),
     useSetHomeAndPantry: jest.fn(() => state.setHomeAndPantry),
 
     // ── Grouped hooks ────────────────────────────────────────────────────

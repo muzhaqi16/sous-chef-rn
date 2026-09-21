@@ -4,7 +4,7 @@ import { View, Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { CartesianChart, Line, Area } from 'victory-native';
 import { matchFont, Circle } from '@shopify/react-native-skia';
-import { type TimeSeriesDataPoint } from '#/graphql/generated/schemaTypes';
+import type { TimeSeriesDataPoint } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 import { typography } from '#/theme/foundations/typography';
 import { motion } from '#/theme/foundations/motion';
@@ -40,10 +40,10 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
 }) => {
   const { t } = useTranslation();
   const { theme } = useUnistyles();
-  const lineColor = color || theme.colors.primary;
+  const lineColor = color ?? theme.colors.primary;
 
   const chartData = (() => {
-    if (!data || data.length === 0) return [];
+    if (data.length === 0) return [];
     return data.map((point, index) => ({
       x: index,
       y: point.count,

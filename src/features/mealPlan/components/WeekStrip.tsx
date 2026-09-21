@@ -169,7 +169,7 @@ const styles = StyleSheet.create(theme => ({
   },
   dayLabel: {
     color: theme.colors.textSecondary,
-    marginBottom: 2,
+    marginBottom: theme.spacing['2xs'],
   },
   dayLabelSelected: {
     color: theme.colors.onPrimary,
@@ -197,7 +197,7 @@ const styles = StyleSheet.create(theme => ({
     height: 5,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.primary,
-    marginTop: 3,
+    marginTop: theme.spacing['2xsPlus'],
   },
   mealDotSelected: {
     backgroundColor: theme.colors.surface,

@@ -1,4 +1,4 @@
-import { StateCreator } from 'zustand';
+import type { StateCreator } from 'zustand';
 import { UnistylesRuntime } from 'react-native-unistyles';
 import { changeLanguage } from '#/i18n';
 import { applyAppearanceToRuntime } from '#/theme/applyAppearance';

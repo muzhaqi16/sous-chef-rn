@@ -10,13 +10,12 @@ import {
   RemoveItemsFromShoppingListDocument,
   type RemoveItemsFromShoppingListMutationVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import { t } from '#/i18n';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { useTranslation } from '#/i18n';
 import {
   clearAllPurchasedItemsFromCache,
   clearAllUnpurchasedItemsFromCache,
 } from '#features/shoppingList/cache/connections';
-import { logger } from '#/utils/environment';
 
 // Just the subset of Apollo's mutate options this hook ever passes.
 type ClearMutationFn = (options: {
@@ -44,7 +43,7 @@ async function executeClearItems(
   purchased: boolean,
   itemIds: string[],
   refetch: () => Promise<unknown>,
-  isClearingRef: React.RefObject<boolean>,
+  failureMessage: string,
 ): Promise<void> {
   if (purchased) {
     clearAllPurchasedItemsFromCache(client.cache, listId, itemIds);
@@ -55,31 +54,19 @@ async function executeClearItems(
   // The EXACT ids captured at tap time, not a purchased filter: a queued replay
   // then deletes only those and never a row another member added meanwhile.
   // Removing an already-removed id is a server-side no-op, so the replay is safe.
-  let result;
-  try {
-    result = await clearMutation({
-      variables: { input: { shoppingListId: listId, ids: itemIds } },
-      update: () => {}, // Cache already cleared optimistically
-      context: { localFirst: true },
-    });
-  } catch (error) {
-    logger.warn(
-      `Failed to clear ${purchased ? 'purchased' : 'shopping'} items:`,
-      error,
-    );
-    // Items were evicted from cache — refetch to restore authoritative state
-    await refetch();
-    isClearingRef.current = false;
-  }
+  const settled = await settleMutation(
+    () =>
+      clearMutation({
+        variables: { input: { shoppingListId: listId, ids: itemIds } },
+        update: () => {}, // Cache already cleared optimistically
+        context: { localFirst: true },
+      }),
+    { document: RemoveItemsFromShoppingListDocument, fallback: failureMessage },
+  );
 
-  isClearingRef.current = false;
-  if (!result) return;
-
-  // 'queued' (null payload, no error) keeps the cleared cache and replays later.
-  // A rejection means the items still exist server-side — alert, then refetch.
-  if (alertIfRejected(result, t('shoppingListScreens.failedToClear'))) {
-    await refetch();
-  }
+  // A queued clear keeps the cleared cache and replays later. A failure means
+  // the items still exist server-side, so the refetch restores them.
+  if (settled.status === 'failed') await refetch();
 }
 
 export function useClearShoppingListItems({
@@ -88,6 +75,7 @@ export function useClearShoppingListItems({
   purchasedItems,
   refetch,
 }: UseClearShoppingListItemsOptions) {
+  const { t } = useTranslation();
   const client = useApolloClient();
   const isClearingRef = useRef(false);
 
@@ -109,8 +97,9 @@ export function useClearShoppingListItems({
       purchased,
       itemIds,
       refetch,
-      isClearingRef,
+      t('shoppingListScreens.failedToClear'),
     );
+    isClearingRef.current = false;
   };
 
   return { clearItems };

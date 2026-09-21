@@ -76,7 +76,7 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
       ]}
     >
       {/* UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View */}
-      {!!animated && (
+      {!!shouldAnimate && (
         <View style={styles.shimmer}>
           <Animated.View style={[styles.shimmerFill, animatedStyle]} />
         </View>
@@ -89,15 +89,15 @@ const styles = StyleSheet.create(theme => ({
   shimmerFill: {
     width: '100%',
     height: '100%',
+    backgroundColor: theme.colors.surface,
+    opacity: 0.3,
   },
   skeleton: {
-    backgroundColor: theme.colors.surfaceVariant,
+    backgroundColor: theme.colors.borderLight,
     overflow: 'hidden',
   },
   shimmer: {
     width: '100%',
     height: '100%',
-    backgroundColor: theme.colors.surface,
-    opacity: 0.3,
   },
 }));

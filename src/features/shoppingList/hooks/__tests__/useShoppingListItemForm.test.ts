@@ -132,6 +132,42 @@ describe('useShoppingListItemForm', () => {
       expect(result.current.values.quantityInput).toBe('2');
     });
 
+    it('re-formats the float the API echoes back as quantityInput', () => {
+      const { result } = renderHook(() => useShoppingListItemForm());
+
+      act(() => {
+        result.current.setFromItem(
+          createFragment({ quantity: 1.25, quantityInput: '1.25' }),
+        );
+      });
+
+      expect(result.current.values.quantityInput).toBe('1 1/4');
+    });
+
+    it('seeds a quantity no fraction fits rounded to three decimals', () => {
+      const { result } = renderHook(() => useShoppingListItemForm());
+
+      act(() => {
+        result.current.setFromItem(
+          createFragment({ quantity: 177.4412, quantityInput: null }),
+        );
+      });
+
+      expect(result.current.values.quantityInput).toBe('177.441');
+    });
+
+    it('keeps text no parser can read as the user wrote it', () => {
+      const { result } = renderHook(() => useShoppingListItemForm());
+
+      act(() => {
+        result.current.setFromItem(
+          createFragment({ quantity: null, quantityInput: 'a pinch' }),
+        );
+      });
+
+      expect(result.current.values.quantityInput).toBe('a pinch');
+    });
+
     it('defaults to "1" when both quantityInput and quantity are missing', () => {
       const { result } = renderHook(() => useShoppingListItemForm());
 
@@ -198,15 +234,12 @@ describe('useShoppingListItemForm', () => {
     });
   });
 
-  describe('dirtyFields and hasDirtyFields', () => {
-    it('returns all false when no initial state saved', () => {
+  describe('dirty tracking', () => {
+    it('reports nothing dirty when no initial state saved', () => {
       const { result } = renderHook(() => useShoppingListItemForm());
 
       expect(result.current.hasDirtyFields).toBe(false);
-      // react-hook-form OMITS clean fields rather than marking them `false`;
-      // `buildDirtyInput` reads them for truthiness, so the behaviour is the
-      // same and this is the honest assertion of the new shape.
-      expect(result.current.dirtyFields.itemName).toBeUndefined();
+      expect(result.current.buildDirtyInput()).toEqual({});
     });
 
     it('detects dirty fields after setFromItem + change', () => {
@@ -244,10 +277,10 @@ describe('useShoppingListItemForm', () => {
         result.current.setFieldValue('itemName', 'Whole Milk');
       });
 
-      expect(result.current.dirtyFields.itemName).toBe(true);
       expect(result.current.hasDirtyFields).toBe(true);
-      // Other fields should not be dirty — react-hook-form omits clean keys.
-      expect(result.current.dirtyFields.quantityInput).toBeUndefined();
+      expect(result.current.buildDirtyInput()).toEqual({
+        itemName: 'Whole Milk',
+      });
     });
 
     // `storeName` is the display label for `storeId` and no submit path sends
@@ -262,7 +295,6 @@ describe('useShoppingListItemForm', () => {
 
       // Never marked dirty at all — excluded in `setFieldValue`, not
       // subtracted afterwards.
-      expect(result.current.dirtyFields.storeName).toBeUndefined();
       expect(result.current.hasDirtyFields).toBe(false);
       expect(result.current.buildDirtyInput()).toEqual({});
     });
@@ -516,6 +548,30 @@ describe('useShoppingListItemForm', () => {
         result.current.setFieldValue('brand', '');
       });
       expect(result.current.buildDirtyInput().brand).toEqual({ brandId: null });
+    });
+
+    it('clears the estimated price when the field is emptied', () => {
+      // `PricingEstimatesInput.estimatedPrice` is nullable: an emptied field is
+      // a clear, and leaving `pricing` out would keep the old price on the server.
+      const result = seed({
+        priceEstimate: { __typename: 'PriceEstimate', estimated: 5.99 },
+      });
+      act(() => {
+        result.current.setFieldValue('estimatedPrice', '');
+      });
+      expect(result.current.buildDirtyInput().pricing).toEqual({
+        estimatedPrice: null,
+      });
+    });
+
+    it('leaves the price out of the input when it is not touched', () => {
+      const result = seed({
+        priceEstimate: { __typename: 'PriceEstimate', estimated: 5.99 },
+      });
+      act(() => {
+        result.current.setFieldValue('notes', 'organic');
+      });
+      expect(result.current.buildDirtyInput()).not.toHaveProperty('pricing');
     });
 
     it('leaves brand and net weight out when they did not change', () => {

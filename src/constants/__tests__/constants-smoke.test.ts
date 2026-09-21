@@ -12,15 +12,6 @@ import {
   listItemFastExitAnimation,
   listItemEntryAnimation,
 } from '../animations';
-import {
-  DRAG_ITEM_HEIGHT,
-  DRAG_SCALE,
-  DRAG_SHADOW_OPACITY,
-  ITEM_VERTICAL_MARGIN,
-  LONG_PRESS_DURATION,
-  EDGE_THRESHOLD,
-  MAX_SCROLL_SPEED,
-} from '../drag';
 import { SKILL_LEVELS, DIETARY_LIMITS } from '#domain/dietary';
 import {
   HIT_SLOP,
@@ -87,18 +78,6 @@ describe('animations constants', () => {
   it('exports listItemEntryAnimation', () => {
     expect(listItemEntryAnimation.fade.duration).toBe(250);
     expect(listItemEntryAnimation.slide.distance).toBe(50);
-  });
-});
-
-describe('drag constants', () => {
-  it('exports expected values', () => {
-    expect(DRAG_ITEM_HEIGHT).toBe(95);
-    expect(DRAG_SCALE).toBe(1.03);
-    expect(DRAG_SHADOW_OPACITY).toBe(0.25);
-    expect(ITEM_VERTICAL_MARGIN).toBe(8);
-    expect(LONG_PRESS_DURATION).toBe(200);
-    expect(EDGE_THRESHOLD).toBe(80);
-    expect(MAX_SCROLL_SPEED).toBe(10);
   });
 });
 

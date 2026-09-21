@@ -7,24 +7,30 @@ import {
   AddDerivedItemsToShoppingListDocument,
   LinkDerivedListToMealPlanDocument,
   UseGenerateShoppingList_MealPlanFragmentDoc,
+  type UseGenerateShoppingList_MealPlanFragment,
 } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
+import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
   deriveShoppingListFromMealPlan,
   type PlannedMeal,
   type PantryStock,
 } from '#features/mealPlan/utils/deriveShoppingListFromMealPlan';
 import {
+  addItemsInSlices,
   addOptimisticShoppingListItem,
   buildAddItemsReconcileUpdate,
   createOptimisticShoppingListItem,
 } from '#features/shoppingList/cache/items';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
 import { usePantryQuery } from '#features/pantry/hooks/usePantryQuery';
-import { useSelectedPantryId } from '#store/useAppStore';
+import { useAppStore, useSelectedPantryId } from '#store/useAppStore';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { errorService } from '#/services/errorService';
 import { t } from '#/i18n';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /** What the caller may choose; the plan and its lines come from the cache. */
 export interface GenerateShoppingListOptions {
@@ -64,6 +70,39 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
   );
 
   const [linkToPlan] = useMutation(LinkDerivedListToMealPlanDocument);
+  const apiUnavailable = useAppStore(isApiUnavailable);
+
+  // An imported recipe's ingredients link to catalog items on a server job, so
+  // a plan cached straight after the import holds `item: null` and the derive
+  // would skip them. One network read picks up whatever has linked since.
+  const withLinkedIngredients = async (
+    id: string,
+    cached: UseGenerateShoppingList_MealPlanFragment,
+  ): Promise<UseGenerateShoppingList_MealPlanFragment> => {
+    const unlinked = cached.mealPlanItems.some(item =>
+      item.recipe?.ingredientsConnection.edges.some(edge => !edge.node.item),
+    );
+    if (!unlinked || apiUnavailable) return cached;
+
+    const fetched = await client
+      .query({
+        query: GetMealPlanDocument,
+        variables: { id },
+        fetchPolicy: 'network-only',
+      })
+      .catch(() => null);
+    if (!fetched || fetched.error) return cached;
+
+    const cacheId = client.cache.identify({ __typename: 'MealPlan', id });
+    if (!cacheId) return cached;
+    return (
+      client.cache.readFragment<UseGenerateShoppingList_MealPlanFragment>({
+        id: cacheId,
+        fragment: UseGenerateShoppingList_MealPlanFragmentDoc,
+        fragmentName: 'useGenerateShoppingList_mealPlan',
+      }) ?? cached
+    );
+  };
 
   const generateShoppingList = async (
     options: GenerateShoppingListOptions = {},
@@ -73,7 +112,9 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
       return null;
     }
 
-    const meals: PlannedMeal[] = plan.mealPlanItems.map(item => ({
+    const source = await withLinkedIngredients(mealPlanId, plan);
+
+    const meals: PlannedMeal[] = source.mealPlanItems.map(item => ({
       id: item.id,
       servings: item.servings,
       recipe: item.recipe
@@ -94,7 +135,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     const pantryRows: PantryStock[] | null = pantry.state.hasResult
       ? pantry.state.pantryItems.map(row => ({
           itemId: row.itemId,
-          unitId: row.unit?.id,
+          unitId: row.unit.id,
           quantity: row.quantity,
         }))
       : null;
@@ -102,7 +143,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     const { inputs, displayNames, skipped, pantryChecked } =
       deriveShoppingListFromMealPlan(meals, {
         mealPlanId,
-        mealPlanName: plan.name,
+        mealPlanName: source.name,
         checkPantry: options.checkPantry ?? true,
         pantryRows,
       });
@@ -112,53 +153,51 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
       return null;
     }
 
-    const listName = options.name?.trim() || defaultListName(plan.name);
-    let listId = options.shoppingListId ?? null;
-    if (!listId) {
-      // `createShoppingList` THROWS a refusal rather than returning one, so an
-      // unguarded call would surface a domain error at the screen. Assign in
-      // the try and read outside it: a value block inside bails the compiler.
-      let created;
-      try {
-        created = await createShoppingList({
-          name: listName,
-          homeId: plan.homeId,
-        });
-      } catch (error) {
-        errorService.reportError(error, {
-          operation: 'Generate shopping list',
-        });
-      }
-      listId = created?.id ?? null;
-    }
+    const listName =
+      firstNonBlank(options.name)?.trim() ?? defaultListName(source.name);
+    const listId =
+      options.shoppingListId ?? (await createList(listName, source.homeId));
     if (!listId) return null;
 
     for (const line of inputs) {
       writeLineToCache(listId, line, displayNames);
     }
 
-    try {
-      await addItems({
-        variables: { input: { shoppingListId: listId, items: inputs } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, { operation: 'Generate shopping list' });
-    }
+    const addFailure = await addItemsInSlices(
+      client.cache,
+      listId,
+      inputs,
+      slice =>
+        addItems({
+          variables: { input: { shoppingListId: listId, items: slice } },
+          context: { localFirst: true },
+        }),
+      {
+        document: AddDerivedItemsToShoppingListDocument,
+        fallback: t('generateShoppingList.generateFailed'),
+      },
+    );
 
     // Queued like the writes above: the list carries no plan of its own until
     // this lands, so the plan's generated-lists section fills in on replay.
-    if (!options.shoppingListId) {
-      try {
-        await linkToPlan({
-          variables: { input: { id: listId, mealPlanId } },
-          context: { localFirst: true },
-        });
-      } catch (error) {
-        errorService.reportError(error, {
-          operation: 'Link derived list to meal plan',
-        });
-      }
+    const linked = options.shoppingListId
+      ? null
+      : await settleMutation(
+          () =>
+            linkToPlan({
+              variables: { input: { id: listId, mealPlanId } },
+              context: { localFirst: true },
+            }),
+          {
+            document: LinkDerivedListToMealPlanDocument,
+            fallback: t('generateShoppingList.generateFailed'),
+            present: 'none',
+          },
+        );
+    const failure = addFailure ?? linked?.failure;
+    if (failure) {
+      toastService.error(failure.body);
+      return null;
     }
 
     report({
@@ -177,6 +216,14 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     });
     return { shoppingListId: listId, lineCount: inputs.length };
   };
+
+  /** The new list's id, or null once its refusal is presented. */
+  async function createList(name: string, homeId: string | null) {
+    const created = await createShoppingList({ name, homeId });
+    if (created.status === 'created') return created.shoppingList.id;
+    toastService.error(created.body);
+    return null;
+  }
 
   function writeLineToCache(
     listId: string,

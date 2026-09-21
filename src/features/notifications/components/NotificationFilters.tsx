@@ -1,11 +1,12 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
 import { NOTIFICATION_CATEGORIES } from '#features/notifications/types';
+import { notificationsTestIDs } from '#features/notifications/testIDs';
 
 interface NotificationFiltersProps {
   selectedCategory: NotificationCategory | null;
@@ -19,7 +20,7 @@ type FilterTabId = NotificationCategory | typeof ALL_TAB;
 
 // Static category → locale key map so the label lookup can't drift from the
 // enum (a new category is a compile error until it gets a key).
-const CATEGORY_LABEL_KEYS: Record<NotificationCategory, string> = {
+const CATEGORY_LABEL_KEYS: Record<NotificationCategory, TranslationKey> = {
   [NotificationCategory.Home]: 'notifications.categoryHome',
   [NotificationCategory.Pantry]: 'notifications.categoryPantry',
   [NotificationCategory.Recipe]: 'notifications.categoryRecipe',
@@ -53,11 +54,9 @@ export const NotificationFilters: React.FC<NotificationFiltersProps> = ({
       <FilterTabs<FilterTabId>
         tabs={tabs}
         activeTabId={selectedCategory ?? ALL_TAB}
-        onTabChange={id =>
-          onCategoryChange(id === ALL_TAB ? null : (id as NotificationCategory))
-        }
+        onTabChange={id => onCategoryChange(id === ALL_TAB ? null : id)}
         showCounts={false}
-        testIDPrefix="notification-filter-tab"
+        testIDPrefix={notificationsTestIDs.filterTabs}
       />
     </View>
   );

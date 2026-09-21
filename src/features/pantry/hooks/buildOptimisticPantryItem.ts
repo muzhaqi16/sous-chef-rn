@@ -8,8 +8,8 @@
 import { gql, type ApolloCache } from '@apollo/client';
 import type { Unmasked } from '@apollo/client/masking';
 import { StorageState, StorageType } from '#/graphql/generated/schemaTypes';
-import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
 import type { CreatePantryItemMutation } from '#features/pantry/graphql/pantry.generated';
+import { NEUTRAL_UNIT } from './pantryItemDetailNeutral.generated';
 
 type CreatePantryItemSuccessShape = Extract<
   Unmasked<CreatePantryItemMutation>['createPantryItem'],
@@ -59,7 +59,7 @@ const OptimisticUnitFragment = gql`
 function readCachedUnit(
   cache: ApolloCache | undefined,
   unitId: string | null | undefined,
-): OptimisticPantryItem['unit'] {
+): OptimisticPantryItem['unit'] | null {
   if (!cache || !unitId) return null;
   const cacheId = cache.identify({ __typename: 'Unit', id: unitId });
   if (!cacheId) return null;
@@ -68,6 +68,19 @@ function readCachedUnit(
     fragment: OptimisticUnitFragment,
     fragmentName: '_OptimisticPantryUnit',
   });
+}
+
+/**
+ * The stated unit, else a neutral placeholder the replayed entity replaces —
+ * `PantryItem.unit` is never null. Never the catalog's display unit: the API
+ * resolves an unstated unit from data the device does not hold, and a guess
+ * would later be sent as an explicit `usageUnitId` the server did not choose.
+ */
+function resolveOptimisticUnit(
+  cache: ApolloCache | undefined,
+  fields: OptimisticPantryItemFields,
+): OptimisticPantryItem['unit'] {
+  return readCachedUnit(cache, fields.unitId) ?? { ...NEUTRAL_UNIT };
 }
 
 /**
@@ -82,7 +95,13 @@ export function buildOptimisticPantryItem(
   cache?: ApolloCache,
 ): OptimisticPantryItem {
   const catalogItemId = fields.itemId ?? '';
-  return createOptimisticEntity<OptimisticPantryItem>('PantryItem', id, {
+  // The return type checks every selected field; `version` starts at 1 and the
+  // server's response carries the real one.
+  return {
+    __typename: 'PantryItem',
+    id,
+    version: 1,
+    updatedAt: new Date().toISOString(),
     // Selected by GetPantry on every node and read by the local sort
     // comparators — omitting it strands the whole list offline.
     createdAt: new Date().toISOString(),
@@ -111,7 +130,7 @@ export function buildOptimisticPantryItem(
       imageUrl: null,
       images: [],
     },
-    unit: readCachedUnit(cache, fields.unitId),
+    unit: resolveOptimisticUnit(cache, fields),
     netWeightUnit: null,
     storageLocation: fields.location
       ? {
@@ -131,5 +150,5 @@ export function buildOptimisticPantryItem(
         totalItems: 0,
       },
     },
-  });
+  };
 }

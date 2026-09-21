@@ -7,6 +7,7 @@ import { t } from '#/i18n';
 // src/utils/errorHandlers.ts.
 import { errorService } from '#/services/errorService';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -20,6 +21,10 @@ import { useConvertExpiredBatchesToWaste } from '#features/pantry/hooks/mutation
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
 import { useCorrectPantryItemWeight } from '#features/pantry/hooks/mutations/useCorrectPantryItemWeight';
 import { usePantryItemMutations } from '#features/pantry/hooks/mutations/usePantryItemMutations';
+import {
+  formatQuantityForDisplay,
+  resolveQuantityNotation,
+} from '#/utils/formatQuantity';
 
 type PantryItemForActions =
   | {
@@ -39,6 +44,7 @@ type PantryItemForActions =
         id: string;
         name?: string | null;
         symbol?: string | null;
+        displayAsFraction?: boolean | null;
       } | null;
       item?: { id?: string | null } | null;
       itemName?: string | null;
@@ -66,7 +72,7 @@ export interface UsePantryItemDetailActionsResult {
   setCorrectWeightVisible: (v: boolean) => void;
   /** Server unreachable — correcting net weight has no offline replay path. */
   handleDelete: () => void;
-  handleAddToShoppingList: () => void;
+  handleAddToShoppingList: () => Promise<void>;
   handleDiscardExpired: () => void;
   handleConfirmAdjust: (
     newQuantity: number,
@@ -154,6 +160,29 @@ export function usePantryItemDetailActions({
   const { adjustQuantity } = useAdjustPantryItemQuantity();
   const { correctWeight } = useCorrectPantryItemWeight();
 
+  const confirmDelete = async () => {
+    if (!resolvedPantryId) {
+      // Neither source resolved: there is nothing to delete from. Say so rather
+      // than dismissing the screen as though it worked.
+      alertService.alert(t('labels.error'), t('errors.deleteItemFailed'));
+      return;
+    }
+    try {
+      // Only leave the screen if the item is actually gone. A refusal resolves
+      // normally (it is DATA, not an error), and `removeItem` has already told
+      // the user and restored the row — navigating away here would report a
+      // success that did not happen.
+      if (await removeItem(itemId)) {
+        goBack();
+      }
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'PantryItemDetail.deleteItem',
+      });
+      alertService.alert(t('labels.error'), t('errors.deleteItemFailed'));
+    }
+  };
+
   const handleDelete = () => {
     alertService.alert(
       t('pantryItemDetail.deleteTitle'),
@@ -163,33 +192,8 @@ export function usePantryItemDetailActions({
         {
           text: t('labels.delete'),
           style: 'destructive',
-          onPress: async () => {
-            if (!resolvedPantryId) {
-              // Neither source resolved: there is nothing to delete from. Say
-              // so rather than dismissing the screen as though it worked.
-              alertService.alert(
-                t('labels.error'),
-                t('errors.deleteItemFailed'),
-              );
-              return;
-            }
-            try {
-              // Only leave the screen if the item is actually gone. A refusal
-              // resolves normally (it is DATA, not an error), and `removeItem`
-              // has already told the user and restored the row — navigating
-              // away here would report a success that did not happen.
-              if (await removeItem(itemId)) {
-                goBack();
-              }
-            } catch (error) {
-              errorService.reportError(error, {
-                operation: 'PantryItemDetail.deleteItem',
-              });
-              alertService.alert(
-                t('labels.error'),
-                t('errors.deleteItemFailed'),
-              );
-            }
+          onPress: () => {
+            void confirmDelete();
           },
         },
       ],
@@ -208,10 +212,11 @@ export function usePantryItemDetailActions({
 
     setAddToListStatus('loading');
 
-    const catalogItemId = item?.item?.id || '';
-    const quantity = item?.quantity || 1;
+    const catalogItemId = item?.item?.id ?? '';
+    // An out-of-stock item (quantity 0) still adds one to the list.
+    const quantity = item?.quantity === 0 ? 1 : item?.quantity ?? 1;
     const unitInput = item?.unit?.id ? { unitId: item.unit.id } : undefined;
-    const itemName = item?.itemName || '';
+    const itemName = item?.itemName ?? '';
     // Generate the new item's id so a create that gets queued (offline / API
     // down) replays idempotently, keyed by this id.
     const id = generateEntityId();
@@ -219,7 +224,7 @@ export function usePantryItemDetailActions({
     // Write the item into the cache before firing so it's on the list when it
     // comes into view — and survives a queued (offline / API-down) create that
     // replays later.
-    // Built before the try: the `||`/`?.` below are value blocks, and the React
+    // Built before the try: the `??`/`?.` below are value blocks, and the React
     // Compiler bails out of a hook when one appears inside a try body.
     const optimisticListItem = createOptimisticShoppingListItem(id, {
       shoppingListId: selectedShoppingListId,
@@ -241,46 +246,52 @@ export function usePantryItemDetailActions({
       });
     }
 
-    // Built before the try — the ternary is a value block, and the React
-    // Compiler bails out of this hook when one sits inside a try body.
-    const addItemsOptions: Parameters<typeof addToShoppingList>[0] = {
-      variables: {
-        input: {
-          shoppingListId: selectedShoppingListId,
-          items: [
-            {
-              id,
-              item: catalogItemId ? { itemId: catalogItemId } : { itemName },
-              quantity,
-              unit: unitInput,
+    const settled = await settleMutation(
+      () =>
+        addToShoppingList({
+          variables: {
+            input: {
+              shoppingListId: selectedShoppingListId,
+              items: [
+                {
+                  id,
+                  item: catalogItemId
+                    ? { itemId: catalogItemId }
+                    : { itemName },
+                  quantity,
+                  unit: unitInput,
+                },
+              ],
             },
-          ],
+          },
+          context: { localFirst: true },
+        }),
+      {
+        document: AddItemToShoppingListFromPantryItemDocument,
+        fallback: t('errors.addItemFailed'),
+        onFailed: () => {
+          reconcileShoppingCreate(
+            client.cache,
+            selectedShoppingListId,
+            id,
+            undefined,
+          );
         },
       },
-      context: { localFirst: true },
-    };
+    );
 
-    let result;
-    try {
-      result = await addToShoppingList(addItemsOptions);
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'PantryItemDetail.addToShoppingList',
-      });
+    let reverted = settled.status === 'failed';
+    // The batch can apply while refusing its only item; that refusal carries no
+    // code to classify, so it takes the caller's copy.
+    if (
+      !reverted &&
+      reconcileShoppingCreate(client.cache, selectedShoppingListId, id, {
+        data: settled.data,
+      }) === 'reverted'
+    ) {
+      alertService.alert(t('labels.error'), t('errors.addItemFailed'));
+      reverted = true;
     }
-
-    // Queued (offline / API down) counts as success — it replays. Only a real
-    // rejection is an error; don't show the success check on a refused create
-    // (and discard the item we wrote). errorPolicy:'all' resolves rejections,
-    // so the reconciler classifies the result rather than relying on a throw.
-    const reverted =
-      !result ||
-      reconcileShoppingCreate(
-        client.cache,
-        selectedShoppingListId,
-        id,
-        result,
-      ) === 'reverted';
     setAddToListStatus(reverted ? 'error' : 'success');
     statusTimeoutRef.current = setTimeout(
       () => setAddToListStatus('idle'),
@@ -302,7 +313,9 @@ export function usePantryItemDetailActions({
           {
             text: t('labels.discard'),
             style: 'destructive',
-            onPress: () => convertExpiredBatches(item.id),
+            onPress: () => {
+              void convertExpiredBatches(item.id);
+            },
           },
         ],
       );
@@ -310,15 +323,22 @@ export function usePantryItemDetailActions({
       alertService.alert(
         t('pantryItemDetail.discardItemTitle'),
         t('pantryItemDetail.discardItemBody', {
-          quantity: item.quantity,
-          unit: item.unit?.name || '',
+          quantity: formatQuantityForDisplay(item.quantity, {
+            notation: resolveQuantityNotation(
+              null,
+              item.unit?.displayAsFraction,
+            ),
+          }),
+          unit: item.unit?.name ?? '',
         }),
         [
           { text: t('labels.cancel'), style: 'cancel' },
           {
             text: t('labels.discard'),
             style: 'destructive',
-            onPress: () => convertExpiredToWaste(item.id),
+            onPress: () => {
+              void convertExpiredToWaste(item.id);
+            },
           },
         ],
       );
@@ -331,7 +351,7 @@ export function usePantryItemDetailActions({
     remainingNetWeight?: number,
   ) => {
     if (!item) return;
-    adjustQuantity(
+    void adjustQuantity(
       item.id,
       newQuantity,
       reason,
@@ -346,7 +366,13 @@ export function usePantryItemDetailActions({
     netWeightUnitId?: string,
   ) => {
     if (!item) return;
-    correctWeight(item.id, netWeight, reason, item.version, netWeightUnitId);
+    void correctWeight(
+      item.id,
+      netWeight,
+      reason,
+      item.version,
+      netWeightUnitId,
+    );
   };
 
   return {

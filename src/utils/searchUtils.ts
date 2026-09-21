@@ -23,16 +23,6 @@ const fuzzyMatch = (
   return fuse.search(query).length > 0;
 };
 
-export const createItemNameSearch = <T extends { itemName?: string | null }>(
-  item: T,
-  query: string,
-): boolean => fuzzyMatch(item?.itemName, query);
-
-export const createCategorySearch = <T extends { category?: string | null }>(
-  item: T,
-  query: string,
-): boolean => fuzzyMatch(item?.category, query);
-
 export const shoppingListItemSearch = <
   T extends { itemName?: string | null; category?: string | null },
 >(
@@ -42,7 +32,7 @@ export const shoppingListItemSearch = <
   const trimmed = query.trim();
   if (!trimmed) return true;
   return (
-    fuzzyMatch(item?.itemName, trimmed) || fuzzyMatch(item?.category, trimmed)
+    fuzzyMatch(item.itemName, trimmed) || fuzzyMatch(item.category, trimmed)
   );
 };
 
@@ -52,5 +42,5 @@ export const pantryItemSearch = <T extends { itemName?: string | null }>(
 ): boolean => {
   const trimmed = query.trim();
   if (!trimmed) return true;
-  return fuzzyMatch(item?.itemName, trimmed);
+  return fuzzyMatch(item.itemName, trimmed);
 };

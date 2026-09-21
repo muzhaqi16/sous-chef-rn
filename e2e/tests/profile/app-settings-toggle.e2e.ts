@@ -14,10 +14,15 @@ import {
   tapToggleOnce,
 } from '../../helpers/actions';
 import { TIMEOUTS } from '../../helpers/waitFor';
+import { kitTestIDs } from '../../../src/components/testIDs';
+import { profileTestIDs } from '../../../src/features/profile/testIDs';
 
 const SWITCHES = [
-  { testID: 'settings-auto-sync-switch', label: 'Auto Sync' },
-  { testID: 'settings-show-tutorials-switch', label: 'Show Tutorials' },
+  { testID: profileTestIDs.settingsAutoSyncSwitch, label: 'Auto Sync' },
+  {
+    testID: profileTestIDs.settingsShowTutorialsSwitch,
+    label: 'Show Tutorials',
+  },
 ];
 
 describe('App settings — single tap', () => {
@@ -27,8 +32,8 @@ describe('App settings — single tap', () => {
     await bootstrapAuthenticatedSession();
     await dismissSavePasswordPrompt();
     await relaunchToHomeTab();
-    await tapByID('tab-profile');
-    await tapByID('profile-menu-appSettings');
+    await tapByID(kitTestIDs.tab('Profile'));
+    await tapByID(profileTestIDs.menuItem('appSettings'));
     // The screen renders a loading branch (no testID) until GetUserSettings
     // resolves, so wait for a switch rather than the container.
     await waitFor(element(by.id(SWITCHES[0]!.testID)))

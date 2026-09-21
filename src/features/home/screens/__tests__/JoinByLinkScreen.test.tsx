@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import { ShareLinkTargetType } from '#/graphql/generated/schemaTypes';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { ResolveShareLinkDocument } from '../JoinByLinkScreen.generated';
 import { JoinByLinkScreen } from '../JoinByLinkScreen';
@@ -37,11 +38,11 @@ const makeRoute = (code?: string) => ({
 function buildResolveMock(
   code: string,
   result: {
-    targetType: 'HOME_JOIN' | 'LIST_JOIN';
+    targetType: ShareLinkTargetType;
     homeId?: string;
     listId?: string;
   } | null,
-): MockedResponse {
+): MockFor<typeof ResolveShareLinkDocument> {
   return {
     request: { query: ResolveShareLinkDocument, variables: { code } },
     result: {
@@ -67,7 +68,9 @@ describe('JoinByLinkScreen', () => {
 
   it('routes a HOME_JOIN code to the JoinHomeByCode screen', async () => {
     renderWithApollo(<JoinByLinkScreen route={makeRoute('HOME9')} />, {
-      operationMocks: [buildResolveMock('HOME9', { targetType: 'HOME_JOIN' })],
+      operationMocks: [
+        buildResolveMock('HOME9', { targetType: ShareLinkTargetType.HomeJoin }),
+      ],
     });
     await waitFor(() =>
       expect(mockReplace).toHaveBeenCalledWith('JoinHomeByCode', {
@@ -79,7 +82,9 @@ describe('JoinByLinkScreen', () => {
 
   it('routes a LIST_JOIN code to the JoinByShareCode screen', async () => {
     renderWithApollo(<JoinByLinkScreen route={makeRoute('LIST9')} />, {
-      operationMocks: [buildResolveMock('LIST9', { targetType: 'LIST_JOIN' })],
+      operationMocks: [
+        buildResolveMock('LIST9', { targetType: ShareLinkTargetType.ListJoin }),
+      ],
     });
     await waitFor(() =>
       expect(mockReplace).toHaveBeenCalledWith('JoinByShareCode', {

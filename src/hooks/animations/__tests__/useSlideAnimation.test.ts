@@ -17,28 +17,9 @@ describe('useSlideAnimation', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // The global mock fires the completion callback synchronously, which would
-    // immediately reset isAnimating to false inside triggerSlide. These tests
-    // assert on the mid-animation state, so suppress the synchronous callback.
+    // end every slide inside triggerSlide. These tests assert on the
+    // mid-animation state, so suppress the synchronous callback.
     (withTiming as jest.Mock).mockImplementation(toValue => toValue);
-  });
-
-  it('returns animatedSlideStyle, triggerSlide, resetSlide and isAnimating', () => {
-    const { result } = renderHook(() =>
-      useSlideAnimation({ itemId: 'item-1' }),
-    );
-
-    expect(result.current).toHaveProperty('animatedSlideStyle');
-    expect(result.current).toHaveProperty('triggerSlide');
-    expect(result.current).toHaveProperty('resetSlide');
-    expect(result.current).toHaveProperty('isAnimating');
-  });
-
-  it('isAnimating starts as false', () => {
-    const { result } = renderHook(() =>
-      useSlideAnimation({ itemId: 'item-1' }),
-    );
-
-    expect(result.current.isAnimating.value).toBe(false);
   });
 
   it('triggerSlide calls onComplete immediately when disabled', () => {
@@ -52,6 +33,7 @@ describe('useSlideAnimation', () => {
     });
 
     expect(onComplete).toHaveBeenCalled();
+    expect(withTiming).not.toHaveBeenCalled();
   });
 
   it('triggerSlide does nothing for left direction when allowedDirections is right', () => {
@@ -64,9 +46,8 @@ describe('useSlideAnimation', () => {
       result.current.triggerSlide(-1, onComplete);
     });
 
-    // Should not call onComplete since the direction is blocked
     expect(onComplete).not.toHaveBeenCalled();
-    expect(result.current.isAnimating.value).toBe(false);
+    expect(withTiming).not.toHaveBeenCalled();
   });
 
   it('triggerSlide does nothing for right direction when allowedDirections is left', () => {
@@ -78,10 +59,10 @@ describe('useSlideAnimation', () => {
       result.current.triggerSlide(1);
     });
 
-    expect(result.current.isAnimating.value).toBe(false);
+    expect(withTiming).not.toHaveBeenCalled();
   });
 
-  it('triggerSlide sets isAnimating to true', () => {
+  it('a second triggerSlide mid-animation does not restart the slide', () => {
     const { result } = renderHook(() =>
       useSlideAnimation({ itemId: 'item-1' }),
     );
@@ -89,27 +70,14 @@ describe('useSlideAnimation', () => {
     act(() => {
       result.current.triggerSlide(1);
     });
-
-    expect(result.current.isAnimating.value).toBe(true);
-  });
-
-  it('resetSlide resets isAnimating to false', () => {
-    const { result } = renderHook(() =>
-      useSlideAnimation({ itemId: 'item-1' }),
-    );
-
     act(() => {
       result.current.triggerSlide(1);
     });
-    expect(result.current.isAnimating.value).toBe(true);
 
-    act(() => {
-      result.current.resetSlide();
-    });
-    expect(result.current.isAnimating.value).toBe(false);
+    expect(withTiming).toHaveBeenCalledTimes(1);
   });
 
-  it('resets animation state when itemId changes (view recycling)', () => {
+  it('a recycled view can slide again (itemId change resets the slide)', () => {
     const { result, rerender } = renderHook(
       ({ itemId }: { itemId: string }) => useSlideAnimation({ itemId }),
       { initialProps: { itemId: 'item-1' } },
@@ -118,10 +86,13 @@ describe('useSlideAnimation', () => {
     act(() => {
       result.current.triggerSlide(1);
     });
-    expect(result.current.isAnimating.value).toBe(true);
+    expect(withTiming).toHaveBeenCalledTimes(1);
 
-    // Rerender with a new itemId (simulating FlashList recycling)
     rerender({ itemId: 'item-2' });
-    expect(result.current.isAnimating.value).toBe(false);
+    act(() => {
+      result.current.triggerSlide(1);
+    });
+
+    expect(withTiming).toHaveBeenCalledTimes(2);
   });
 });

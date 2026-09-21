@@ -1,11 +1,10 @@
-import { ApolloLink, Observable, gql } from '@apollo/client';
-import type { ApolloClient } from '@apollo/client';
+import { Observable, gql } from '@apollo/client';
+import type { ApolloClient, ApolloLink } from '@apollo/client';
 import { OperationTypeNode, type DocumentNode } from 'graphql';
 import { createNetworkStatusLink } from '../networkStatusLink';
 import { apiReachabilityBreaker } from '../apiReachabilityBreaker';
 import { OfflineRejectedError } from '../../offlineQueue/OfflineRejectedError';
 import { useStore } from '#store';
-import { isApiUnavailable } from '#store/slices/networkSlice';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { logger } from '#/utils/environment';
 
@@ -23,11 +22,14 @@ jest.mock('#/utils/isNetworkError', () => ({
 // Network-error logging now lives here (above retryLink). Default to
 // "reachable" so the surprising-case path that warns stays exercised.
 jest.mock('#store', () => ({
-  useStore: { getState: jest.fn(() => ({ offlineModeEnabled: false })) },
+  useStore: { getState: jest.fn() },
 }));
-jest.mock('#store/slices/networkSlice', () => ({
-  isApiUnavailable: jest.fn(() => false),
-}));
+
+const REACHABLE = {
+  isOnline: true,
+  apiReachable: true,
+  offlineModeEnabled: false,
+};
 
 const QUERY = gql`
   query GetItems {
@@ -77,13 +79,11 @@ describe('createNetworkStatusLink', () => {
   const recordSuccess = apiReachabilityBreaker.recordSuccess as jest.Mock;
   const recordFailure = apiReachabilityBreaker.recordFailure as jest.Mock;
   const getState = useStore.getState as jest.Mock;
-  const mockedIsApiUnavailable = isApiUnavailable as jest.Mock;
   const warn = logger.warn as jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    getState.mockReturnValue({ offlineModeEnabled: false });
-    mockedIsApiUnavailable.mockReturnValue(false);
+    getState.mockReturnValue(REACHABLE);
   });
 
   function run(forward: ApolloLink.ForwardFunction) {
@@ -169,7 +169,7 @@ describe('createNetworkStatusLink', () => {
   });
 
   it('suppresses the network-error warning while offline mode is enabled', () => {
-    getState.mockReturnValue({ offlineModeEnabled: true });
+    getState.mockReturnValue({ ...REACHABLE, offlineModeEnabled: true });
     run(
       forwardEmitting(o => {
         o.error({ network: true, message: 'Network request failed' });
@@ -180,7 +180,7 @@ describe('createNetworkStatusLink', () => {
   });
 
   it('suppresses the network-error warning once the API is known-unavailable', () => {
-    mockedIsApiUnavailable.mockReturnValue(true);
+    getState.mockReturnValue({ ...REACHABLE, apiReachable: false });
     run(
       forwardEmitting(o => {
         o.error({ network: true, message: 'Network request failed' });
@@ -234,10 +234,7 @@ describe('createNetworkStatusLink', () => {
       o.error({ network: true, message: 'WebSocket connection lost' });
     });
     link
-      .request(
-        operation(SUBSCRIPTION as DocumentNode, OperationTypeNode.SUBSCRIPTION),
-        forward,
-      )
+      .request(operation(SUBSCRIPTION, OperationTypeNode.SUBSCRIPTION), forward)
       ?.subscribe({ next: () => {}, error: () => {}, complete: () => {} });
 
     expect(forward).toHaveBeenCalledTimes(1);
@@ -247,7 +244,7 @@ describe('createNetworkStatusLink', () => {
   it('excludes subscriptions from success recording too (WS push ≠ HTTP reachability)', () => {
     link
       .request(
-        operation(SUBSCRIPTION as DocumentNode, OperationTypeNode.SUBSCRIPTION),
+        operation(SUBSCRIPTION, OperationTypeNode.SUBSCRIPTION),
         forwardEmitting(o => {
           o.next({ data: { itemChanged: { id: '1' } } });
           o.complete();

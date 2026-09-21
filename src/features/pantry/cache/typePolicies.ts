@@ -18,15 +18,14 @@ export const pantryTypePolicies: TypePolicies = {
       itemsConnection: itemsConnectionFieldPolicy(['filters', 'orderBy']),
       storageLocationsConnection: mergeConnectionByNodeId(),
       suggestions: {
-        merge(existing = [], incoming) {
+        merge(existing: unknown = [], incoming: unknown) {
           if (incoming == null) return existing;
           return incoming;
         },
       },
+      // `true` is Apollo's shorthand for `mergeObjects(existing, incoming)`.
       stats: {
-        merge(existing, incoming, { mergeObjects }) {
-          return mergeObjects(existing, incoming);
-        },
+        merge: true,
       },
     },
   },
@@ -78,7 +77,7 @@ export const pantryTypePolicies: TypePolicies = {
       pantries: {
         // Different homes have different pantries - cache separately
         keyArgs: ['homeId'],
-        merge(existing = [], incoming) {
+        merge(existing: unknown = [], incoming: unknown) {
           if (incoming == null) {
             return existing;
           }
@@ -105,7 +104,7 @@ export const pantryTypePolicies: TypePolicies = {
         ) {
           if (!existing?.edges?.length) return existing;
           const validEdges = existing.edges.filter((edge: CachedEdge) =>
-            edge?.node ? canRead(edge.node) : false,
+            edge.node ? canRead(edge.node) : false,
           );
           if (validEdges.length === existing.edges.length) return existing;
           const dropped = existing.edges.length - validEdges.length;
@@ -118,7 +117,7 @@ export const pantryTypePolicies: TypePolicies = {
                 : existing.totalCount,
           };
         },
-        merge(existing = [], incoming) {
+        merge(existing: unknown = [], incoming: unknown) {
           if (incoming == null) {
             return existing;
           }
@@ -128,7 +127,7 @@ export const pantryTypePolicies: TypePolicies = {
       storageLocationTree: {
         // Different homes have different storage location trees - cache separately
         keyArgs: ['homeId'],
-        merge(existing = [], incoming) {
+        merge(existing: unknown = [], incoming: unknown) {
           if (incoming == null) {
             return existing;
           }
@@ -139,7 +138,7 @@ export const pantryTypePolicies: TypePolicies = {
         // Different pantries have different suggestions - cache separately
         // Note: 'limit' excluded from keyArgs to avoid unnecessary cache fragmentation
         keyArgs: ['pantryId'],
-        merge(existing = [], incoming) {
+        merge(existing: unknown = [], incoming: unknown) {
           if (incoming == null) {
             return existing;
           }

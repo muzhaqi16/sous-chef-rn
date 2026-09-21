@@ -11,7 +11,7 @@ import {
 } from '#features/catalog/ui/StorageLocationForm';
 import { Text } from '#components/atoms/Text';
 
-import { StorageLocation } from '#/graphql/generated/schemaTypes';
+import type { StorageLocation } from '#/graphql/generated/schemaTypes';
 import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
 
@@ -44,7 +44,11 @@ interface StorageLocationSheetProps {
   onClose: () => void;
   onSubmit: (data: StorageLocationFormValues) => Promise<boolean | void>;
   initialData?: StorageLocationInitialData | null;
-  availableLocations: Array<{ id: string; name: string; type: string }>;
+  availableLocations: Array<{
+    id: string;
+    name: string;
+    type: StorageLocation['type'];
+  }>;
   isSubmitting?: boolean;
 }
 
@@ -93,7 +97,9 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
           accessibilityLabel={t('labels.cancel')}
           disabled={isSubmitting}
         >
-          <Text tone="secondary">{t('labels.cancel')}</Text>
+          <Text role="body" tone="secondary">
+            {t('labels.cancel')}
+          </Text>
         </AppPressable>
 
         <Text role="heading" align="center" style={styles.title}>

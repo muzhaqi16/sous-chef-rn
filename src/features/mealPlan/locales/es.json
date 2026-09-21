@@ -18,7 +18,9 @@
     "startDateRequiredMessage": "Selecciona una fecha de inicio.",
     "failedToCreate": "No se pudo crear el plan de comidas.",
     "needsThePlan": "Abre primero el plan para tener sus comidas.",
-    "needsTheTemplate": "Abre primero la plantilla para tener sus comidas."
+    "needsTheTemplate": "Abre primero la plantilla para tener sus comidas.",
+    "daily": "Diario",
+    "custom": "Personalizado"
   },
   "addMealSheet": {
     "searchPlaceholder": "Busca recetas o añade una comida personalizada...",
@@ -74,7 +76,8 @@
   },
   "addToMealPlan": {
     "title": "Añadir al plan de comidas",
-    "dateLabel": "Fecha"
+    "dateLabel": "Fecha",
+    "morePlans": "Más planes"
   },
   "duplicatePlan": {
     "duplicating": "Duplicando...",
@@ -146,7 +149,10 @@
     "emptyPreview": "No hay comidas en esta plantilla",
     "day": "Día {{day}}",
     "customMeal": "Personalizada",
-    "metaLine": "{{days}} días · {{servings}} raciones"
+    "metaLine": "{{days}} días · {{servings}} raciones",
+    "duplicateTemplate": "Duplicar plantilla",
+    "deleteTemplate": "Eliminar plantilla",
+    "duplicateNameLabel": "Nombre de la nueva plantilla"
   },
   "mealPlanMain": {
     "label": "Planifica tus comidas",
@@ -177,7 +183,10 @@
     "failedToSave": "No se pudo guardar la plantilla",
     "failedToAddItem": "No se pudo añadir la comida",
     "failedToSaveItem": "No se pudo guardar la comida",
-    "failedToRemoveItem": "No se pudo eliminar la comida"
+    "failedToRemoveItem": "No se pudo eliminar la comida",
+    "savedRecipe": "Receta guardada",
+    "chooseRecipe": "Elegir una receta guardada",
+    "changeRecipe": "Cambiar receta"
   },
   "mealPlanSelector": {
     "title": "Seleccionar plan de comidas",
@@ -185,7 +194,8 @@
     "createFromTemplate": "Plantilla",
     "searchPlaceholder": "Buscar planes",
     "filterActive": "Activos",
-    "personalSubtitle": "Personal"
+    "personalSubtitle": "Personal",
+    "loadMore": "Mostrar más planes"
   },
   "macroTargets": {
     "caloriesRange": "Las calorías deben estar entre {{min}} y {{max}}",
@@ -206,6 +216,7 @@
     "planCreated": "¡Plan de comidas creado a partir de la plantilla!",
     "savedAsTemplate": "¡Plan de comidas guardado como plantilla!",
     "templateDeleted": "Plantilla eliminada",
-    "templateDuplicated": "¡Plantilla duplicada!"
+    "templateDuplicated": "¡Plantilla duplicada!",
+    "deleteFailed": "No se pudo eliminar la plantilla"
   }
 }

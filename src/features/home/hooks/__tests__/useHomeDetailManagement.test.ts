@@ -1,5 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
@@ -12,10 +12,10 @@ import {
   UpdateHomeJoinCodeDocument,
   TransferHomeOwnershipDocument,
   UpdateMembershipDocument,
+  RemoveMemberDocument,
 } from '#operations/home/home.generated';
 import { alertService } from '#/services/alertService';
 import type { RootState } from '#store/index';
-import type { RemoveOperationConfig } from '#/hooks/utils/useCrudOperations';
 import { useHomeDetailManagement } from '../useHomeDetailManagement';
 
 const mockStoreState = {
@@ -67,48 +67,23 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
 
 jest.mock('#/utils/finallyHelpers');
 
-jest.mock('#/utils/errors/versionConflict', () => ({
-  handleVersionConflict: jest.fn(() => false),
-  getVersionConflictMessage: jest.fn(() => 'Version conflict'),
-}));
-
 jest.mock('#utils/formatters/roleFormatters', () => ({
   formatRole: jest.fn((role: string) => role),
-}));
-
-const mockCreateRemoveOperation = jest.fn(
-  (config: RemoveOperationConfig<{ data?: unknown }>) => {
-    return async () => {
-      const {
-        alertService: mockAlertService,
-      } = require('#/services/alertService');
-      return new Promise(resolve => {
-        mockAlertService.alert(config.operationName, 'Confirm?', [
-          { text: 'Cancel', onPress: () => resolve(false) },
-          {
-            text: 'Delete',
-            onPress: async () => {
-              const result = await config.mutation({
-                variables: { id: config.itemId },
-              });
-              resolve(result?.data || false);
-            },
-          },
-        ]);
-      });
-    };
-  },
-);
-
-jest.mock('#/hooks/utils/useCrudOperations', () => ({
-  useCrudOperations: () => ({
-    createRemoveOperation: mockCreateRemoveOperation,
-  }),
 }));
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
+
+type AlertButton = { style?: string; onPress?: () => unknown };
+
+/** Presses the destructive button of the most recent confirmation dialog. */
+const confirmLastAlert = async () => {
+  const buttons = (alertService.alert as jest.Mock).mock.lastCall?.[2] as
+    | AlertButton[]
+    | undefined;
+  await buttons?.find(button => button.style === 'destructive')?.onPress?.();
+};
 
 const DEFAULT_HOME_DATA = {
   home: {
@@ -252,7 +227,6 @@ describe('useHomeDetailManagement', () => {
       expect.objectContaining({ id: 'home-1', name: 'Test Home' }),
     );
     expect(result.current.loading).toBe(false);
-    expect(result.current.updating).toBe(false);
     expect(result.current.leaving).toBe(false);
     expect(typeof result.current.saveName).toBe('function');
     expect(typeof result.current.changeRole).toBe('function');
@@ -289,6 +263,38 @@ describe('useHomeDetailManagement', () => {
       expect(update.fired).toContainEqual({
         input: { id: 'home-1', name: 'New Name', version: 1 },
       });
+    });
+
+    // A refusal resolves as a union member, so nothing threw and nothing
+    // alerted: the name snapped back with no word said.
+    it('says so once, in the app’s own words, when the server refuses', async () => {
+      const refused = recordMock(UpdateHomeDocument, {
+        data: {
+          updateHome: {
+            __typename: 'ValidationError',
+            code: ErrorCode.ValidationFailed,
+            message: 'SERVER PROSE',
+            field: null,
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(
+        () => useHomeDetailManagement('home-1'),
+        { operationMocks: [getHomeMock(), refused.mock] },
+      );
+
+      await waitFor(() => expect(result.current.home).toBeTruthy());
+
+      await act(async () => {
+        await result.current.saveName('New Name');
+      });
+
+      expect(alertService.alert).toHaveBeenCalledTimes(1);
+      expect(alertService.alert).not.toHaveBeenCalledWith(
+        expect.anything(),
+        'SERVER PROSE',
+      );
+      await waitFor(() => expect(result.current.home?.name).toBe('Test Home'));
     });
   });
 
@@ -377,6 +383,45 @@ describe('useHomeDetailManagement', () => {
         input: { homeId: 'home-1', newOwnerId: 'user-2' },
       });
     });
+
+    it('refuses a second transfer while the first is in flight', async () => {
+      const transfer = recordMock(TransferHomeOwnershipDocument, {
+        delay: 50,
+        data: {
+          transferHomeOwnership: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+            message: 'not owner',
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(
+        () => useHomeDetailManagement('home-1'),
+        { operationMocks: [getHomeMock(), transfer.mock] },
+      );
+
+      await waitFor(() => expect(result.current.home).toBeTruthy());
+      expect(result.current.transferringOwnership).toBe(false);
+
+      let first: Promise<boolean> | undefined;
+      let second: boolean | undefined;
+      await act(async () => {
+        first = result.current.transferOwnership('user-2');
+        second = await result.current.transferOwnership('user-3');
+      });
+
+      expect(second).toBe(false);
+      expect(result.current.transferringOwnership).toBe(true);
+
+      await act(async () => {
+        await first;
+      });
+
+      expect(result.current.transferringOwnership).toBe(false);
+      expect(transfer.fired).toEqual([
+        { input: { homeId: 'home-1', newOwnerId: 'user-2' } },
+      ]);
+    });
   });
 
   describe('updateMemberPermission', () => {
@@ -417,20 +462,20 @@ describe('useHomeDetailManagement', () => {
       await waitFor(() => expect(result.current.home).toBeTruthy());
 
       act(() => {
-        result.current.changeRole('m-1', 'MEMBER', 'Alice');
+        result.current.changeRole('m-1', MembershipRole.Member, 'Alice');
       });
 
       expect(result.current.rolePickerState).toEqual({
         visible: true,
         membershipId: 'm-1',
-        currentRole: 'MEMBER',
+        currentRole: MembershipRole.Member,
         memberName: 'Alice',
       });
     });
   });
 
   describe('removeMember', () => {
-    it('shows confirmation dialog via createRemoveOperation', async () => {
+    it('asks for confirmation naming the member', async () => {
       const { result } = renderHookWithApollo(
         () => useHomeDetailManagement('home-1'),
         { operationMocks: [getHomeMock()] },
@@ -439,19 +484,49 @@ describe('useHomeDetailManagement', () => {
       await waitFor(() => expect(result.current.home).toBeTruthy());
 
       act(() => {
-        result.current.removeMember('m-1', 'Alice');
+        void result.current.removeMember('m-1', 'Alice');
       });
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Remove Member',
-        'Confirm?',
+        expect.stringContaining('Alice'),
         expect.any(Array),
       );
+    });
+
+    // `RemoveMemberInput` keys the member as `membershipId`; the shared removal
+    // builder sends `{ id }`, which the schema refuses outright.
+    it('sends the input its mutation names once confirmed', async () => {
+      const remove = recordMock(RemoveMemberDocument, {
+        data: {
+          removeMember: {
+            __typename: 'RemoveMemberPayload',
+            membership: { __typename: 'Membership', id: 'm-1' },
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(
+        () => useHomeDetailManagement('home-1'),
+        { operationMocks: [getHomeMock(), remove.mock] },
+      );
+
+      await waitFor(() => expect(result.current.home).toBeTruthy());
+
+      let removed: Promise<boolean> | undefined;
+      act(() => {
+        removed = result.current.removeMember('m-1', 'Alice');
+      });
+      await act(async () => {
+        await confirmLastAlert();
+      });
+
+      await expect(removed).resolves.toBe(true);
+      expect(remove.fired).toEqual([{ input: { membershipId: 'm-1' } }]);
     });
   });
 
   describe('revokeInvite', () => {
-    it('shows confirmation dialog via createRemoveOperation', async () => {
+    it('asks for confirmation naming the invitee', async () => {
       const { result } = renderHookWithApollo(
         () => useHomeDetailManagement('home-1'),
         { operationMocks: [getHomeMock()] },
@@ -460,12 +535,12 @@ describe('useHomeDetailManagement', () => {
       await waitFor(() => expect(result.current.home).toBeTruthy());
 
       act(() => {
-        result.current.revokeInvite('inv-1', 'user@test.com');
+        void result.current.revokeInvite('inv-1', 'user@test.com');
       });
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Revoke Invitation',
-        'Confirm?',
+        expect.stringContaining('user@test.com'),
         expect.any(Array),
       );
     });
@@ -481,7 +556,8 @@ describe('useHomeDetailManagement', () => {
       await waitFor(() => expect(result.current.home).toBeTruthy());
 
       act(() => {
-        result.current.leaveHome('Test Home');
+        // Settles only when a dialog button is pressed, which this case never does.
+        void result.current.leaveHome('Test Home');
       });
 
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -522,13 +598,13 @@ describe('useHomeDetailManagement', () => {
       await waitFor(() => expect(result.current.home).toBeTruthy());
 
       act(() => {
-        result.current.changeRole('m-2', 'ADMIN', 'Bob');
+        result.current.changeRole('m-2', MembershipRole.Admin, 'Bob');
       });
 
       expect(result.current.rolePickerState).toEqual({
         visible: true,
         membershipId: 'm-2',
-        currentRole: 'ADMIN',
+        currentRole: MembershipRole.Admin,
         memberName: 'Bob',
       });
     });
@@ -544,12 +620,12 @@ describe('useHomeDetailManagement', () => {
       await waitFor(() => expect(result.current.home).toBeTruthy());
 
       act(() => {
-        result.current.revokeInvite('inv-2', 'bob@test.com');
+        void result.current.revokeInvite('inv-2', 'bob@test.com');
       });
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Revoke Invitation',
-        'Confirm?',
+        expect.stringContaining('bob@test.com'),
         expect.any(Array),
       );
     });

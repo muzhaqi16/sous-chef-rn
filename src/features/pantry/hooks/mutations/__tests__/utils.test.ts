@@ -1,20 +1,30 @@
 import { buildOptimisticUnit, buildDirtyUpdateInput } from '../utils';
 import type { UnitSelection, FormDataInput } from '../types';
-import { StorageState, UnitType } from '#/graphql/generated/schemaTypes';
+import type { StorageState } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#/graphql/generated/schemaTypes';
 
-type CurrentUnit = NonNullable<Parameters<typeof buildOptimisticUnit>[1]>;
+type CurrentUnit = Parameters<typeof buildOptimisticUnit>[1];
+
+const CURRENT: CurrentUnit = {
+  __typename: 'Unit',
+  id: 'unit-current',
+  name: 'Piece',
+  symbol: 'pc',
+  type: UnitType.Count,
+  displayAsFraction: true,
+};
 
 describe('pantry mutations utils', () => {
   describe('buildOptimisticUnit', () => {
-    it('returns null when newUnit has no id', () => {
+    // `PantryItem.unit` is never null, so no pick keeps the row's own unit.
+    it('keeps the current unit when no unit is picked', () => {
       const newUnit: UnitSelection = {
         id: null,
         name: null,
         symbol: null,
         type: null,
       };
-      const result = buildOptimisticUnit(newUnit);
-      expect(result).toBeNull();
+      expect(buildOptimisticUnit(newUnit, CURRENT)).toBe(CURRENT);
     });
 
     it('builds unit with newUnit fields when provided', () => {
@@ -22,10 +32,10 @@ describe('pantry mutations utils', () => {
         id: 'unit-1',
         name: 'Kilogram',
         symbol: 'kg',
-        type: 'WEIGHT',
+        type: UnitType.Weight,
       };
 
-      const result = buildOptimisticUnit(newUnit);
+      const result = buildOptimisticUnit(newUnit, CURRENT);
 
       expect(result).toEqual(
         expect.objectContaining({
@@ -33,7 +43,7 @@ describe('pantry mutations utils', () => {
           id: 'unit-1',
           name: 'Kilogram',
           symbol: 'kg',
-          type: 'WEIGHT',
+          type: UnitType.Weight,
         }),
       );
     });
@@ -61,13 +71,13 @@ describe('pantry mutations utils', () => {
           id: 'unit-2',
           name: 'Gram',
           symbol: 'g',
-          type: 'WEIGHT',
+          type: UnitType.Weight,
           displayAsFraction: false,
         }),
       );
     });
 
-    it('uses COUNT as default type when no type provided', () => {
+    it("takes the current unit's type when the pick carries none", () => {
       const newUnit: UnitSelection = {
         id: 'unit-3',
         name: 'Each',
@@ -75,48 +85,36 @@ describe('pantry mutations utils', () => {
         type: null,
       };
 
-      const result = buildOptimisticUnit(newUnit);
-
-      expect(result?.type).toBe('COUNT');
+      expect(buildOptimisticUnit(newUnit, CURRENT).type).toBe(CURRENT.type);
     });
 
-    it('uses symbol as name fallback when name is null', () => {
-      const newUnit: UnitSelection = {
-        id: 'unit-4',
-        name: null,
-        symbol: 'oz',
-        type: 'WEIGHT',
-      };
-
-      const result = buildOptimisticUnit(newUnit);
-
-      expect(result?.name).toBe('oz');
-    });
-
-    it('preserves defaults when no currentUnit provided', () => {
+    it("keeps the current unit's fraction display", () => {
       const newUnit: UnitSelection = {
         id: 'unit-5',
         name: 'Liter',
         symbol: 'L',
-        type: 'VOLUME',
+        type: UnitType.Volume,
       };
 
-      const result = buildOptimisticUnit(newUnit);
-
-      expect(result?.displayAsFraction).toBe(false);
+      expect(buildOptimisticUnit(newUnit, CURRENT).displayAsFraction).toBe(
+        CURRENT.displayAsFraction,
+      );
     });
 
     it('writes exactly the fields a PantryItem.unit selection names', () => {
       // One field short and the whole cache read is INCOMPLETE; one field over
       // and the optimistic entity retains a value the server may have redefined.
-      const result = buildOptimisticUnit({
-        id: 'unit-6',
-        name: 'Cup',
-        symbol: 'cup',
-        type: 'VOLUME',
-      });
+      const result = buildOptimisticUnit(
+        {
+          id: 'unit-6',
+          name: 'Cup',
+          symbol: 'cup',
+          type: UnitType.Volume,
+        },
+        CURRENT,
+      );
 
-      expect(Object.keys(result ?? {}).sort()).toEqual([
+      expect(Object.keys(result).sort()).toEqual([
         '__typename',
         'displayAsFraction',
         'id',
@@ -359,7 +357,7 @@ describe('pantry mutations utils', () => {
      * The one `UnitSpecInput` the pantry update path builds.
      *
      * It is deliberately id-less: the caller reaches it exactly when the typed
-     * unit could NOT be resolved to a catalog id. Since 2026-08-22 the server
+     * unit could NOT be resolved to a catalog id. The server
      * resolves a bare `unitSymbol` to a real unit and repoints `unitId` with
      * it, so this is a tracking-unit CHANGE — subject to the batch and
      * conversion guards, whose refusal arrives as

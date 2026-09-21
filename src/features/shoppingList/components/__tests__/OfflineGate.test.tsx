@@ -26,7 +26,7 @@ describe('OfflineGate', () => {
   it('renders children when online', () => {
     render(
       <OfflineGate>
-        <Text>Online Content</Text>
+        <Text role="body">Online Content</Text>
       </OfflineGate>,
     );
     expect(screen.getByText('Online Content')).toBeTruthy();
@@ -36,7 +36,7 @@ describe('OfflineGate', () => {
     mockUseIsEffectivelyOffline.mockReturnValue(true);
     render(
       <OfflineGate message="Custom offline message">
-        <Text>Online Content</Text>
+        <Text role="body">Online Content</Text>
       </OfflineGate>,
     );
     expect(screen.getByText('Custom offline message')).toBeTruthy();
@@ -47,7 +47,7 @@ describe('OfflineGate', () => {
     mockUseIsEffectivelyOffline.mockReturnValue(true);
     const { toJSON } = render(
       <OfflineGate mode="hide">
-        <Text>Online Content</Text>
+        <Text role="body">Online Content</Text>
       </OfflineGate>,
     );
     expect(toJSON()).toBeNull();
@@ -57,7 +57,7 @@ describe('OfflineGate', () => {
     mockUseIsEffectivelyOffline.mockReturnValue(true);
     render(
       <OfflineGate compact message="Search unavailable">
-        <Text>Online Content</Text>
+        <Text role="body">Online Content</Text>
       </OfflineGate>,
     );
     expect(screen.getByText('Search unavailable')).toBeTruthy();

@@ -60,7 +60,8 @@ describe('useSelectorManagement', () => {
       });
     }).not.toThrow();
 
-    expect(setOverlayOpen).toHaveBeenCalledWith(true);
+    // Nothing opened, so no overlay may be left marked open.
+    expect(setOverlayOpen).not.toHaveBeenCalled();
   });
 
   it('handleOverlayOpen calls setOverlayOpen(true)', () => {
@@ -129,7 +130,7 @@ describe('useSelectorManagement', () => {
     act(() => {
       result.current.handleOpenSelector();
     });
-    expect(setOverlayOpen).toHaveBeenCalledWith(true);
+    expect(setOverlayOpen).not.toHaveBeenCalled();
 
     // Now set the ref
     const mockOpen = jest.fn();

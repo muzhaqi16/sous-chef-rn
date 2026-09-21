@@ -7,6 +7,7 @@ import { toastService } from '#/services/toastService';
 import { TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
+import { kitTestIDs } from '#components/testIDs';
 
 interface OfflineStatusPillProps {
   size?: number;
@@ -32,7 +33,7 @@ export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
 
   return (
     <Pressable
-      testID="offline-banner"
+      testID={kitTestIDs.offlineBanner}
       onPress={handlePress}
       style={[styles.pressable, style]}
       hitSlop={8}
@@ -43,7 +44,7 @@ export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
       <Icon name={iconName} size={size} tone="alertBannerWarning" />
       {pendingCount > 0 && (
         <View style={styles.badge}>
-          <Text role="label" style={styles.badgeText}>
+          <Text role="footnoteStrong" style={styles.badgeText}>
             {pendingCount > 9 ? '9+' : pendingCount}
           </Text>
         </View>
@@ -53,26 +54,33 @@ export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  // The same action box every header button gets: without it the pill sits
+  // flush against the header's edge and the badge overflows the screen.
   pressable: {
     position: 'relative',
+    padding: theme.spacing.xs,
+    minWidth: theme.sizes.touchTarget.md,
+    minHeight: theme.sizes.touchTarget.md,
     justifyContent: 'center',
     alignItems: 'center',
   },
   badge: {
     position: 'absolute',
-    top: -6,
-    right: -8,
-    minWidth: 16,
-    height: 16,
-    paddingHorizontal: 3,
+    // Anchored on the action box's corner, as the header's own badge is.
+    top: -theme.spacing.xs,
+    right: -theme.spacing.xs,
+    minWidth: theme.spacing.mdPlus,
+    minHeight: theme.spacing.mdPlus,
+    paddingVertical: 0,
+    paddingHorizontal: theme.spacing.xs,
     borderRadius: theme.radii.full,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.warning,
-    borderWidth: theme.borderWidth.medium,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.background,
   },
   badgeText: {
-    color: theme.colors.textInverse,
+    color: theme.colors.onWarning,
   },
 }));

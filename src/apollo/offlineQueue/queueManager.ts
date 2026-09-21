@@ -3,31 +3,56 @@ import type { OperationVariables, TypedDocumentNode } from '@apollo/client';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import { queueStore } from './queueStore';
-import {
+import type {
   QueuedMutation,
-  QueueStatus,
   ProcessingResult,
   QueueConfig,
   QueueError,
+} from './types';
+import {
+  QueueStatus,
   type FailedMutationInfo,
   type FailureHandler,
   type OverwriteReporter,
 } from './types';
-import { convertToSyncMutation } from './convertToSyncMutation';
-import { reconcileReplaySuccess } from './queueReplayReconcilers';
+import { convertToSyncMutation, hasSyncMapping } from './convertToSyncMutation';
+import {
+  reconcileReplaySuccess,
+  settleGoneReplay,
+} from './queueReplayReconcilers';
+import { queuedSubject } from './queuedSubject';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import {
+  AdjustPantryItemQuantityDocument,
+  AdjustPantryItemWeightDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdateHomeDocument } from '#operations/home/home.generated';
 import { proactiveTokenRefresh } from '../links/refreshToken';
+import { LogoutCleanup } from '../logoutCleanup';
 import { refreshUnitVocabulary } from './refreshUnitVocabulary';
 import {
   classifyError,
   calculateRetryDelay,
   classifyReplayResult,
   ReplayRejectedError,
+  ReplayNotPreparedError,
+  REPLAY_NOT_PREPARED_CODE,
+  BatchRowDeferredError,
+  BATCH_ROW_TRANSIENT_CODE,
+  transientBatchRowCode,
 } from './queueErrorPolicy';
-import { extractMutationPayload } from '#/utils/errors/mutationPayload';
+import {
+  extractMutationPayload,
+  isErrorTypename,
+} from '#/utils/errors/mutationPayload';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
+import { TimeoutError } from '#/utils/errors/timeoutError';
 import { Telemetry } from '#/services/telemetry';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { registerSessionTeardown } from '#store/sessionTeardown';
+import { isRecord } from '#/utils/isRecord';
 
 /**
  * The queue only ever runs after `client.ts` has evaluated — it is the link
@@ -50,32 +75,109 @@ const DEFAULT_CONFIG: QueueConfig = {
 /** One version-free re-send. A second conflict is a race, not a stale read. */
 const MAX_CONFLICT_RESENDS = 1;
 
+/** Deferrals that belong to one row, so the rest of the pass still runs. */
+const ENTRY_SCOPED_DEFERRALS: ReadonlySet<string> = new Set([
+  ErrorCode.Deadlock,
+  REPLAY_NOT_PREPARED_CODE,
+  BATCH_ROW_TRANSIENT_CODE,
+]);
+
+/**
+ * Queued operations that replay their ORIGINAL document against an input whose
+ * `version` is non-null. A version-free re-send of one is refused as malformed,
+ * so the conflict is reported instead. Pinned to the SDL by
+ * `__tests__/apollo/queueVersionRequirement.test.ts`.
+ */
+export const VERSION_REQUIRED_OPERATIONS: ReadonlySet<string> = new Set(
+  [
+    AdjustPantryItemQuantityDocument,
+    AdjustPantryItemWeightDocument,
+    UpdateShoppingListDocument,
+    UpdateHomeDocument,
+  ].map(operationNameOf),
+);
+
+/**
+ * Input keys that name the PARENT a queued write attaches to. A deferred
+ * parent holds these children back; the keys stay out of
+ * {@link QueueManager.getAllEntityIds} so a refused child never evicts its parent.
+ */
+export const PARENT_REFERENCE_KEYS: readonly string[] = [
+  'homeId',
+  'appliesToHomeId',
+  'pantryId',
+  'shoppingListId',
+  'shoppingListItemId',
+  'afterItemId',
+  'beforeItemId',
+  'storageLocationId',
+  'parentLocationId',
+  'mealPlanId',
+  'mealPlanItemId',
+  'templateId',
+  'recipeIngredientId',
+  'cookingLogId',
+  'targetBatchId',
+  'purchaseId',
+  'recipeId',
+];
+
 /**
  * Drops the `version` a write captured when the user acted. Covers the batch
  * shape too: single-add shopping ops send `input.items[]`, each line carrying
  * its own version.
  */
 const withoutVersion = (variables: OperationVariables): OperationVariables => {
-  const input = variables.input as Record<string, unknown> | undefined;
-  if (!input || typeof input !== 'object') return variables;
+  const input: unknown = variables.input;
+  if (!isRecord(input)) return variables;
 
   const { version: _version, ...rest } = input;
   const items = rest.items;
   if (Array.isArray(items)) {
-    rest.items = items.map(line =>
-      line && typeof line === 'object'
-        ? (({ version: _lineVersion, ...lineRest }) => lineRest)(
-            line as Record<string, unknown>,
-          )
+    rest.items = items.map((line: unknown) =>
+      isRecord(line)
+        ? (({ version: _lineVersion, ...lineRest }) => lineRest)(line)
         : line,
     );
   }
   return { ...variables, input: rest };
 };
 
+/** The `version` a record carries, if it is a number. */
+const versionOf = (record: unknown): number | undefined =>
+  isRecord(record) && typeof record.version === 'number'
+    ? record.version
+    : undefined;
+
+/** The version the server returned for `entityId`, on the payload or one level down. */
+const returnedVersionOf = (
+  payload: unknown,
+  entityId: string,
+): number | undefined => {
+  if (!isRecord(payload)) return undefined;
+  const returned = [payload, ...Object.values(payload)].find(
+    candidate =>
+      isRecord(candidate) &&
+      candidate.id === entityId &&
+      versionOf(candidate) !== undefined,
+  );
+  return versionOf(returned);
+};
+
+/** The fields a replay reads off whichever union member the server returned. */
+interface ReplayPayload {
+  __typename?: string;
+  code?: string;
+  message?: string;
+  // `NotFoundError.resource`: without it a refusal over a merged-away Unit is
+  // indistinguishable from one over the record itself.
+  resource?: string;
+  conflict?: { message?: string };
+}
+
 /**
  * Replays offline-queued mutations for the signed-in user: auth-aware,
- * user-scoped, strict FIFO, with bounded retries.
+ * user-scoped, dependency-ordered, with bounded retries.
  */
 export class QueueManager {
   private config: QueueConfig;
@@ -83,11 +185,24 @@ export class QueueManager {
   private processingPromise: Promise<void> | null = null;
   private failureHandler: FailureHandler | null = null;
   private overwriteReporter: OverwriteReporter | null = null;
+  private drainedHandler: ((userId: string) => void) | null = null;
   private drainTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Epoch ms before which no drain replays: the server's rate-limit window. */
+  private drainNotBefore = 0;
   /** Whether this drain has already re-fetched the unit vocabulary. */
   private hasRefreshedUnits = false;
+  /** A new session revived parked writes while a pass was running. */
+  private rerunAfterPass = false;
   /** Entries that have already spent their one re-resolution attempt. */
   private staleReferenceRetried = new Set<string>();
+  /** Entries whose replay document this drain built requires `version`. */
+  private versionBoundReplays = new Set<string>();
+  /**
+   * Per entity, the version its last replayed write captured and the one the
+   * server returned. A later write captured at the same base was made in the
+   * same offline stretch, so it is sent against the returned version.
+   */
+  private versionRebases = new Map<string, { from: number; to: number }>();
 
   constructor(config: Partial<QueueConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -103,6 +218,11 @@ export class QueueManager {
     this.overwriteReporter = reporter;
   }
 
+  /** Invoked when a pass ends with nothing left pending for the user. */
+  setDrainedHandler(handler: (userId: string) => void): void {
+    this.drainedHandler = handler;
+  }
+
   async processQueue(): Promise<void> {
     // Telemetry level is the contract: `queueLink` drains after every successful
     // response, so production's `warn` floor carries only branches that MEAN
@@ -116,7 +236,7 @@ export class QueueManager {
         reason: 'already_processing',
       });
       Telemetry.warn('Queue drain skipped: already processing');
-      return this.processingPromise || Promise.resolve();
+      return this.processingPromise ?? Promise.resolve();
     }
 
     const state = useStore.getState();
@@ -146,6 +266,17 @@ export class QueueManager {
       return;
     }
 
+    // Every trigger lands here, so one check holds them all; the wake-up drain
+    // is the only one that runs once the window has passed.
+    const holdMs = this.drainNotBefore - Date.now();
+    if (holdMs > 0) {
+      Telemetry.increment('offline_queue_drain_skipped_total', 1, {
+        reason: 'rate_limited',
+      });
+      this.requestDrain(holdMs);
+      return;
+    }
+
     const userId = state.user.id;
     logger.info(`🔄 Queue: Starting processing for user ${userId}`);
 
@@ -162,13 +293,19 @@ export class QueueManager {
       this.isProcessing = false;
       this.processingPromise = null;
     }
+
+    // Writes revived mid-pass were not in the list this pass took.
+    if (this.rerunAfterPass) {
+      this.rerunAfterPass = false;
+      await this.processQueue();
+    }
   }
 
   /**
-   * Replay all pending mutations strictly in insertion order. The queue is
-   * append-only from one user's actions, so insertion order IS causal order —
-   * a parent create precedes any dependent referencing its client-minted id.
-   * No grouping or dependency analysis: FIFO is correct by construction.
+   * Replay pending mutations in insertion order, holding back only what
+   * depends on an undelivered entry: a write waits behind the write that
+   * minted its subject OR its parent. A transport-class deferral pauses the
+   * pass; a row-scoped one (DEADLOCK) holds that entry and its dependents.
    */
   private async _processQueueInternal(userId: string): Promise<void> {
     const hasValidToken = await this.validateTokenBeforeReplay();
@@ -181,6 +318,7 @@ export class QueueManager {
     // unit draws one refresh between them, and an entry gets one re-resolution.
     this.hasRefreshedUnits = false;
     this.staleReferenceRetried.clear();
+    this.versionBoundReplays.clear();
 
     // Recover entries a killed process left mid-replay: drains are serialized
     // by isProcessing, so any PROCESSING entry visible here is stranded debris,
@@ -189,8 +327,10 @@ export class QueueManager {
 
     // Never replay past the server's 90-day idempotency-dedup horizon — the
     // dedup record is pruned by then, so a replay would double-apply instead
-    // of classifying as IDEMPOTENT_REPLAY. Expired entries surface as FAILED.
-    queueStore.expireStalePending(userId);
+    // of classifying as IDEMPOTENT_REPLAY. An expired entry is withdrawn.
+    for (const expired of queueStore.expireStalePending(userId)) {
+      this.invokeFailureHandler(expired, expired.lastError);
+    }
 
     this.reconcileDiscardedEntries();
 
@@ -218,6 +358,16 @@ export class QueueManager {
 
     let succeeded = 0;
     let failed = 0;
+    // Client ids belonging to an entry that did not deliver this drain. Only
+    // entries touching one of them wait; the rest of the queue drains, so a
+    // create→update chain keeps its order without blocking unrelated entities.
+    // A write parked for re-auth has not landed either, so what it minted or
+    // changes holds its dependents like a pending one does.
+    const blockedIds = new Set<string>(
+      queueStore
+        .getMutationsForUser(userId, QueueStatus.AUTH_ERROR)
+        .flatMap(parked => this.getAllEntityIds(parked)),
+    );
     for (const mutation of mutations) {
       // Stop replaying the moment the server becomes unreachable — the rest
       // of the queue stays PENDING for the next drain.
@@ -226,18 +376,42 @@ export class QueueManager {
         break;
       }
 
+      if (useStore.getState().user?.id !== userId) {
+        logger.info('🙅 Queue: Signed-in user changed mid-drain, stopping');
+        break;
+      }
+
+      const entityIds = this.getAllEntityIds(mutation);
+      const dependencyIds = this.getDependencyIds(mutation);
+      if ([...entityIds, ...dependencyIds].some(id => blockedIds.has(id))) {
+        // Depends on an entry that has not landed; blocked itself, so anything
+        // downstream of IT waits too.
+        for (const id of entityIds) blockedIds.add(id);
+        logger.info(
+          `⏭️ Queue: ${mutation.id} waits behind an undelivered dependency`,
+        );
+        continue;
+      }
+
       try {
         const result = await this.processMutation(mutation);
         if (result.success) succeeded++;
         else failed++;
 
-        // A transient defer left this mutation PENDING; stop the drain so a
-        // later, possibly dependent mutation can't replay ahead of it.
-        if (result.deferred) {
-          logger.info(
-            '🕓 Queue: Mutation deferred (transient), pausing drain to preserve order',
-          );
+        if (result.deferred && result.deferralScope === 'transport') {
+          // The API's own state, not this entry's: every later entry would
+          // meet it too, and each attempt costs a retry cycle.
+          logger.info('🕓 Queue: server-side deferral, pausing the drain');
           break;
+        }
+
+        // A park or a withdrawal leaves the server without the row a child
+        // names, so the child is withdrawn rather than delayed.
+        if (!result.success) {
+          for (const id of entityIds) blockedIds.add(id);
+          logger.info(
+            '🕓 Queue: Mutation did not land, holding its dependents',
+          );
         }
       } catch (error) {
         failed++;
@@ -248,6 +422,9 @@ export class QueueManager {
     logger.info(
       `📦 Queue: Drain complete — ${succeeded} succeeded, ${failed} failed`,
     );
+    if (queueStore.getPendingMutationsForUser(userId).length === 0) {
+      this.drainedHandler?.(userId);
+    }
   }
 
   private async processMutation(
@@ -303,54 +480,71 @@ export class QueueManager {
     mutation: QueuedMutation,
   ): Promise<Record<string, unknown> | undefined> {
     const client = requireApolloClient();
-    const { syncMutation, syncVariables } = convertToSyncMutation(
-      mutation,
-      client.cache,
-    );
+    // A cache miss while building is this device's state, not a verdict: a
+    // bare Error here classifies as a refusal and withdraws the write.
+    let conversion;
+    try {
+      conversion = convertToSyncMutation(mutation, client.cache);
+    } catch (error) {
+      throw new ReplayNotPreparedError(mutation.operationName, error);
+    }
+    if (conversion.requiresVersion) this.versionBoundReplays.add(mutation.id);
+    const [entityId, ...otherSubjects] = queuedSubject(mutation).subjectIds;
+    const rebaseKey = otherSubjects.length === 0 ? entityId : undefined;
+    const capturedVersion = versionOf(mutation.variables.input);
+    const syncVariables = this.rebased(conversion.syncVariables, rebaseKey);
+    const { syncMutation } = conversion;
 
     logger.info(`🔄 Queue: Replaying ${mutation.operationName} via sync`);
 
     // Apollo 4.2's signatures reject a manually-passed generic, so the
-    // structural payload type arrives on the document instead — a local cast
-    // rather than widening `SyncConversion`, whose `TypedDocumentNode` params
-    // are invariant and would reject every concrete builder's return.
+    // structural payload type arrives on the document: `SyncConversion` carries
+    // a plain `DocumentNode`, which this declaration types.
+    const typedMutation: TypedDocumentNode<
+      Record<string, unknown>,
+      OperationVariables
+    > = syncMutation;
+    // Masking applies only to what `mutate` returns; `update` sees the fields
+    // inside fragment spreads, which the reconcilers read.
+    let unmaskedData: Record<string, unknown> | null | undefined;
     const result = await client.mutate({
-      mutation: syncMutation as TypedDocumentNode<
-        Record<string, unknown>,
-        OperationVariables
-      >,
+      mutation: typedMutation,
       variables: syncVariables,
       context: {
         ...mutation.context,
         skipQueueLink: true,
       },
+      update: (_cache, { data }) => {
+        unmaskedData = data;
+      },
     });
-
-    if (result.error) {
-      throw result.error;
-    }
 
     // The mutation field name varies per queued operation, so the payload is
     // only knowable structurally; shares the foreground path's reader.
-    const payload = extractMutationPayload(result.data) as
-      | {
-          __typename?: string;
-          code?: string;
-          message?: string;
-          // `NotFoundError.resource` — which row the server could not find.
-          // Without it a refusal over a merged-away Unit is indistinguishable
-          // from one over the record itself, and cannot be re-resolved.
-          resource?: string;
-          conflict?: { message?: string };
-        }
-      | null
-      | undefined;
+    const data = unmaskedData ?? result.data;
+    const payload: ReplayPayload | null | undefined =
+      extractMutationPayload(data);
+
+    // Apollo resolves `{ data, error }` together when the mutation commits and
+    // a field under it errors; a success payload is the server's verdict.
+    const committed =
+      payload?.__typename !== undefined && !isErrorTypename(payload.__typename);
+    if (result.error && !committed) {
+      throw result.error;
+    }
 
     // Under errorPolicy 'all' a server refusal RESOLVES as an error union
     // member instead of throwing; without this a rejected replay is marked
     // SUCCESS and dequeued while the optimistic cache write lingers.
     const outcome = classifyReplayResult(payload);
-    if (outcome === 'converged') {
+    const transientRowCode = transientBatchRowCode(payload);
+    if (outcome.status === 'applied' && transientRowCode !== null) {
+      throw new BatchRowDeferredError(mutation.operationName, transientRowCode);
+    }
+    if (outcome.status !== 'rejected') {
+      this.recordRebase(rebaseKey, capturedVersion, payload);
+    }
+    if (outcome.status === 'converged') {
       // IDEMPOTENT_REPLAY: an earlier attempt already committed this op, so the
       // change is on the server. Dequeue as success.
       logger.info(
@@ -358,9 +552,19 @@ export class QueueManager {
       );
       return result.data;
     }
-    if (outcome === 'rejected') {
+    if (
+      outcome.status === 'rejected' &&
+      outcome.typename === 'NotFoundError' &&
+      settleGoneReplay(mutation.operationName, syncVariables)
+    ) {
+      logger.info(
+        `✅ Queue: ${mutation.operationName}'s subject is gone — settled locally`,
+      );
+      return result.data;
+    }
+    if (outcome.status === 'rejected') {
       throw new ReplayRejectedError(
-        payload?.__typename ?? 'Error',
+        outcome.typename,
         payload?.message ??
           `${mutation.operationName} was rejected by the server on replay`,
         payload?.code ?? null,
@@ -386,7 +590,7 @@ export class QueueManager {
     // nothing else. An operation whose server answer may name a DIFFERENT row
     // than the one written locally is settled here: the foreground path's own
     // reconciliation returned when the call classified as `'queued'`.
-    reconcileReplaySuccess(mutation.operationName, syncVariables, result.data);
+    reconcileReplaySuccess(mutation.operationName, syncVariables, data);
 
     return result.data;
   }
@@ -401,6 +605,16 @@ export class QueueManager {
     // counter as every other retryable error — re-validating the existing token
     // instead would loop forever on a revoked session.
     if (queueError.type === 'auth') {
+      // Rotating during teardown re-arms the refresh it just cancelled;
+      // `revivePendingAuthErrors` picks the entry up at the next sign-in.
+      if (LogoutCleanup.isInLogoutProcess()) {
+        logger.info(
+          `🔒 Queue: ${mutation.id} parked — the session is ending, not expiring`,
+        );
+        queueStore.markMutationFailed(mutation.id, queueError);
+        return { success: false, mutationId: mutation.id, error: queueError };
+      }
+
       const newToken = await proactiveTokenRefresh();
       if (!newToken) {
         // Parked, not withdrawn: the server never saw this write, so nothing
@@ -442,20 +656,27 @@ export class QueueManager {
       }
     }
 
-    // The entity changed since the write was made. The captured `version` is
-    // knowingly stale, so re-checking it can only fail again: strip it and
-    // re-send the value the user actually entered, once. `version` is optional
-    // on every input that carries it, and omitting it means "apply against the
-    // current row" — the last-write-wins the API implements. A second conflict
-    // is a race the client cannot win; it falls through to revert-and-inform.
+    // The captured `version` is knowingly stale, so it is stripped and the
+    // user's value re-sent once. That needs a replay document whose input lets
+    // `version` be omitted: a Sync twin, or an original not listed above.
     if (queueError.type === 'conflict') {
       const conflictCount = (mutation.conflictCount ?? 0) + 1;
       queueStore.updateMutation(mutation.id, { conflictCount });
 
-      if (conflictCount > MAX_CONFLICT_RESENDS) {
+      const canResendVersionFree =
+        !this.versionBoundReplays.has(mutation.id) &&
+        (hasSyncMapping(mutation.operationName) ||
+          !VERSION_REQUIRED_OPERATIONS.has(mutation.operationName));
+
+      if (conflictCount > MAX_CONFLICT_RESENDS || !canResendVersionFree) {
         logger.warn(
-          `❌ Queue: ${mutation.id} still conflicts after a version-free re-send`,
+          canResendVersionFree
+            ? `❌ Queue: ${mutation.id} still conflicts after a version-free re-send`
+            : `❌ Queue: ${mutation.id} conflicts and its input requires a version — reporting`,
         );
+        Telemetry.increment('offline_queue_conflicts_total', 1, {
+          operation: mutation.operationName,
+        });
         queueError.retryable = false;
       } else {
         const variables = withoutVersion(mutation.variables);
@@ -500,18 +721,29 @@ export class QueueManager {
 
     // Transient errors that exhausted the in-run retries stay PENDING so the
     // change survives to the next drain rather than being dropped; retryCount
-    // resets so that drain gets a fresh attempt.
+    // resets so that drain gets a fresh attempt. The only lifetime bound is
+    // `queueStore.expireStalePending`'s age horizon.
     if (queueError.type === 'network' || queueError.type === 'server') {
+      // DEADLOCK and an unbuildable replay are scoped to the row; every other
+      // network/server verdict is the API's own state, which pauses the drain.
+      const deferralScope = ENTRY_SCOPED_DEFERRALS.has(queueError.code ?? '')
+        ? 'entry'
+        : 'transport';
       queueStore.updateMutation(mutation.id, {
         status: QueueStatus.PENDING,
         retryCount: 0,
       });
+      if (queueError.retryAfterMs !== undefined) {
+        this.drainNotBefore = Date.now() + queueError.retryAfterMs;
+        this.requestDrain(queueError.retryAfterMs);
+      }
       logger.info(
         `🕓 Queue: ${mutation.id} deferred (transient ${queueError.type}) — stays PENDING for next drain`,
       );
       return {
         success: false,
         deferred: true,
+        deferralScope,
         mutationId: mutation.id,
         error: queueError,
       };
@@ -543,6 +775,31 @@ export class QueueManager {
     };
   }
 
+  /** Moves a write captured at a rebased entity's old base onto its new version. */
+  private rebased(
+    variables: OperationVariables,
+    entityId: string | undefined,
+  ): OperationVariables {
+    const rebase =
+      entityId === undefined ? undefined : this.versionRebases.get(entityId);
+    const input: unknown = variables.input;
+    if (!rebase || !isRecord(input) || input.version !== rebase.from) {
+      return variables;
+    }
+    return { ...variables, input: { ...input, version: rebase.to } };
+  }
+
+  private recordRebase(
+    entityId: string | undefined,
+    capturedVersion: number | undefined,
+    payload: unknown,
+  ): void {
+    if (entityId === undefined || capturedVersion === undefined) return;
+    const returned = returnedVersionOf(payload, entityId);
+    if (returned === undefined) return;
+    this.versionRebases.set(entityId, { from: capturedVersion, to: returned });
+  }
+
   private async validateTokenBeforeReplay(): Promise<boolean> {
     const state = useStore.getState();
 
@@ -570,26 +827,9 @@ export class QueueManager {
     return true;
   }
 
-  /**
-   * The client entity id a queued mutation targets, across every variable shape
-   * the app enqueues. Feeds the failure handler's evict target.
-   */
+  /** The entity a queued write creates or changes: the failure handler's evict target. */
   private getEntityId(mutation: QueuedMutation): string | null {
-    const vars = mutation.variables ?? {};
-    return (
-      vars.id ??
-      vars.input?.id ??
-      // Single adds ride the batch AddItemsToShoppingListInput shape.
-      vars.input?.items?.[0]?.id ??
-      vars.input?.pantryItemId ??
-      vars.input?.itemId ??
-      vars.itemId ??
-      vars.input?.recipeId ??
-      vars.input?.mealPlanId ??
-      vars.input?.batchId ??
-      vars.clientId ??
-      null
-    );
+    return queuedSubject(mutation).subjectIds[0] ?? null;
   }
 
   /**
@@ -604,27 +844,37 @@ export class QueueManager {
   } {
     const entityId = this.getEntityId(mutation);
     if (!entityId) return { entityType: null, entityId: null };
-    const snapshot = this.extractCacheSnapshot();
     return {
-      entityType: this.findCachedTypename(entityId, snapshot),
+      entityType: this.typenamesById().get(entityId) ?? null,
       entityId,
     };
   }
 
-  /**
-   * getEntityId's single candidate plus every `input.items[].id` of a
-   * batch-shaped create, which carries one client-minted id per row.
-   */
+  /** Every entity a queued write creates or changes — one per row of a batch. */
   private getAllEntityIds(mutation: QueuedMutation): string[] {
-    const ids = new Set<string>();
-    const single = this.getEntityId(mutation);
-    if (single) ids.add(single);
+    return queuedSubject(mutation).subjectIds;
+  }
 
-    const items = mutation.variables?.input?.items;
-    if (Array.isArray(items)) {
-      for (const item of items) {
-        if (typeof item?.id === 'string' && item.id) ids.add(item.id);
+  /**
+   * What a write waits on: the parents it attaches to, top-level and one level
+   * down (a batch row, `meal.recipeId`), and the entity it is derived from (a
+   * fork's source recipe).
+   */
+  private getDependencyIds(mutation: QueuedMutation): string[] {
+    const ids = new Set<string>(queuedSubject(mutation).sourceIds);
+    const collect = (record: unknown) => {
+      if (!isRecord(record)) return;
+      for (const key of PARENT_REFERENCE_KEYS) {
+        const value = record[key];
+        if (typeof value === 'string' && value) ids.add(value);
       }
+    };
+    const input: unknown = mutation.variables.input;
+    if (!isRecord(input)) return [...ids];
+    collect(input);
+    for (const nested of Object.values(input)) {
+      if (Array.isArray(nested)) nested.forEach(collect);
+      else collect(nested);
     }
     return [...ids];
   }
@@ -636,10 +886,10 @@ export class QueueManager {
   private clearPersistedOptimisticFields(mutation: QueuedMutation): void {
     const entityIds = this.getAllEntityIds(mutation);
     if (entityIds.length === 0) return;
-    // One snapshot for the whole batch rather than one extract per id.
-    const snapshot = this.extractCacheSnapshot();
+    // One index for the whole batch rather than a keyspace scan per id.
+    const typenames = this.typenamesById();
     for (const entityId of entityIds) {
-      const entityType = this.findCachedTypename(entityId, snapshot);
+      const entityType = typenames.get(entityId);
       if (entityType) {
         optimisticDataPersistence.clearEntity(entityType, entityId);
       }
@@ -651,17 +901,21 @@ export class QueueManager {
    * the generic ApolloCache type erases that to `unknown`.
    */
   private extractCacheSnapshot(): Record<string, unknown> {
-    return requireApolloClient().cache.extract() as Record<string, unknown>;
+    const snapshot = requireApolloClient().cache.extract();
+    return isRecord(snapshot) ? snapshot : {};
   }
 
-  private findCachedTypename(
-    entityId: string | null,
-    snapshot: Record<string, unknown>,
-  ): string | null {
-    if (!entityId) return null;
-    const suffix = `:${entityId}`;
-    const key = Object.keys(snapshot).find(k => k.endsWith(suffix));
-    return key ? key.slice(0, key.length - suffix.length) : null;
+  /**
+   * The cache's `TypeName:id` keys indexed by id. Client ids are globally
+   * unique cuids and typenames hold no colon, so the first colon splits them.
+   */
+  private typenamesById(): Map<string, string> {
+    const index = new Map<string, string>();
+    for (const key of Object.keys(this.extractCacheSnapshot())) {
+      const colon = key.indexOf(':');
+      if (colon > 0) index.set(key.slice(colon + 1), key.slice(0, colon));
+    }
+    return index;
   }
 
   /**
@@ -749,7 +1003,13 @@ export class QueueManager {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<never>((_, reject) => {
       timer = setTimeout(
-        () => reject(new Error('Operation timed out')),
+        () =>
+          reject(
+            new TimeoutError(
+              'Operation timed out',
+              this.config.processingTimeoutMs,
+            ),
+          ),
         this.config.processingTimeoutMs,
       );
     });
@@ -761,12 +1021,32 @@ export class QueueManager {
   }
 
   /**
-   * Resolves once no drain is in flight. The reconnect backfill sequences
-   * itself behind this: replayed mutations write their own responses into the
-   * cache, so refetching alongside doubles the burst and races the results.
+   * Resolves once nothing is in flight and nothing is scheduled. It DRAINS
+   * rather than observes: a scheduled drain has no `processingPromise`, so a
+   * caller would read "idle" during `requestDrain`'s debounce and refetch a
+   * server the queued writes have not reached, overwriting their rows.
    */
   async whenIdle(): Promise<void> {
+    const cancelledDrain = this.drainTimer !== null;
+    const joinedPass = this.isProcessing;
+    this.cancelPendingDrain();
+    // No-ops when offline, empty or already draining — and when it is already
+    // draining it hands back that same promise, which is what we want to await.
+    await this.processQueue().catch(() => {});
     await this.processingPromise?.catch(() => {});
+    // A drain scheduled during the pass we joined was for entries that pass
+    // never snapshotted; cancelling it without a replacement strands them.
+    if (cancelledDrain && joinedPass) await this.processQueue().catch(() => {});
+  }
+
+  /**
+   * A new access token for the signed-in user. A write parked for re-auth is
+   * replayable again, and a restored or rotated session never signs in to say so.
+   */
+  onSessionToken(userId: string): void {
+    if (queueStore.revivePendingAuthErrors(userId) === 0) return;
+    if (this.isProcessing) this.rerunAfterPass = true;
+    this.requestDrain();
   }
 
   onOnline(): void {
@@ -799,6 +1079,11 @@ export class QueueManager {
     this.drainTimer = null;
   }
 
+  /** Lifts a rate-limit hold; the budget it tracked belonged to the old session. */
+  releaseDrainHold(): void {
+    this.drainNotBefore = 0;
+  }
+
   onOffline(): void {
     logger.info('📴 Queue: Network offline, queue processing paused');
   }
@@ -820,7 +1105,9 @@ export class QueueManager {
 
       const state = useStore.getState();
       if (state.isOnline) {
-        this.processQueue();
+        this.processQueue().catch(error => {
+          logger.error('Failed to process queue on user change:', error);
+        });
       }
     }
   }
@@ -829,10 +1116,13 @@ export class QueueManager {
     logger.info(`👋 Queue: User ${userId} logged out, clearing queue`);
     queueStore.clearQueueForUser(userId);
     queueStore.clearCurrentUserId();
+    this.forgetSessionState();
   }
 
-  getStats(userId?: string) {
-    return queueStore.getQueueStats(userId);
+  /** Drops what a pass carried for the ended session; queue entries stay. */
+  forgetSessionState(): void {
+    this.versionRebases.clear();
+    this.rerunAfterPass = false;
   }
 }
 
@@ -843,4 +1133,9 @@ export const queueManager = new QueueManager();
 // `onLogout`'s job, on the deliberate sign-out path.
 registerSessionTeardown('offline-queue', () => {
   queueManager.cancelPendingDrain();
+  queueManager.releaseDrainHold();
+  queueManager.forgetSessionState();
+  // The store is write-through over an in-RAM mirror. Dropping the mirror keeps
+  // it from outliving the blob and answering the next session from memory.
+  queueStore.invalidateCache();
 });

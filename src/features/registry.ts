@@ -48,7 +48,7 @@ export const TAB_FEATURES: TabbedFeature[] = ENABLED_FEATURES.filter(
 ).sort((a, b) => a.tab.order - b.tab.order);
 
 /**
- * Tab icons and reset-to-root targets, keyed by screen name.
+ * Tab icons, title keys and reset-to-root targets, keyed by screen name.
  *
  * `FloatingTabBar` and `TabItem` live in the kit and must not import this
  * module; `HomeTabs` passes this down to them as a prop.
@@ -56,6 +56,10 @@ export const TAB_FEATURES: TabbedFeature[] = ENABLED_FEATURES.filter(
 export const TAB_APPEARANCE: TabAppearance = Object.fromEntries(
   TAB_FEATURES.map(f => [
     f.tab.screenName,
-    { icon: f.tab.icon, mainScreen: f.tab.mainScreen },
+    {
+      icon: f.tab.icon,
+      mainScreen: f.tab.mainScreen,
+      titleKey: f.tab.titleKey,
+    },
   ]),
 );

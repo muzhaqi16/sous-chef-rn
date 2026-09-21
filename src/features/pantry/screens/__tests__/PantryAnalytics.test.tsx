@@ -37,8 +37,8 @@ jest.mock('#features/pantry/hooks/usePantryAnalytics', () => ({
         netQuantity: 15,
         additionCount: 50,
         consumptionCount: 40,
-        additionsByUnit: null,
-        consumptionByUnit: null,
+        additionsByUnit: [],
+        consumptionByUnit: [],
       },
       periodData: [],
       costAnalytics: null,
@@ -280,8 +280,8 @@ describe('PantryAnalytics', () => {
             netQuantity: 4,
             additionCount: 5,
             consumptionCount: 3,
-            additionsByUnit: null,
-            consumptionByUnit: null,
+            additionsByUnit: [],
+            consumptionByUnit: [],
           },
           periodData: [],
           costAnalytics: { totalSpent: 45.99, averageCostPerUnit: 4.6 },
@@ -340,12 +340,12 @@ describe('PantryAnalytics', () => {
             netQuantity: 4,
             additionCount: 5,
             consumptionCount: 3,
-            additionsByUnit: null,
-            consumptionByUnit: null,
+            additionsByUnit: [],
+            consumptionByUnit: [],
           },
           periodData: [
             {
-              periodLabel: 'Mon',
+              periodLabel: '2024-01-01',
               periodStart: '2024-01-01',
               added: 5,
               consumed: 3,
@@ -353,7 +353,7 @@ describe('PantryAnalytics', () => {
               net: 1,
             },
             {
-              periodLabel: 'Tue',
+              periodLabel: '2024-01-08',
               periodStart: '2024-01-02',
               added: 3,
               consumed: 2,
@@ -378,8 +378,10 @@ describe('PantryAnalytics', () => {
       });
 
     render(<PantryAnalytics route={route} />);
-    expect(screen.getByText('Mon')).toBeTruthy();
-    expect(screen.getByText('Tue')).toBeTruthy();
+    // `periodLabel` is the API's bucket key, formatted as a local date.
+    expect(screen.getByText('Jan 1')).toBeTruthy();
+    expect(screen.getByText('Jan 8')).toBeTruthy();
+    expect(screen.queryByText('2024-01-01')).toBeNull();
   });
 
   it('renders with additionsByUnit data', () => {
@@ -492,8 +494,8 @@ describe('PantryAnalytics', () => {
             netQuantity: -8,
             additionCount: 2,
             consumptionCount: 5,
-            additionsByUnit: null,
-            consumptionByUnit: null,
+            additionsByUnit: [],
+            consumptionByUnit: [],
           },
           periodData: [],
           costAnalytics: null,
@@ -514,5 +516,95 @@ describe('PantryAnalytics', () => {
 
     render(<PantryAnalytics route={route} />);
     expect(screen.getByText('-8')).toBeTruthy();
+  });
+
+  it('renders ledger quantities through the quantity formatter', () => {
+    jest
+      .spyOn(
+        require('#features/pantry/hooks/usePantryAnalytics'),
+        'usePantryAnalytics',
+      )
+      .mockReturnValue({
+        usageData: {
+          totalUsageCount: 0,
+          averageUsagePerDay: 0,
+          usageTrend: [],
+          usageByPurpose: [],
+          usageBySource: [],
+          topUsedItems: [],
+        },
+        wasteData: {
+          totalWasteCount: 0,
+          wasteRate: 0,
+          totalWasteValue: 0,
+          composted: 0,
+          recycled: 0,
+          wasteTrend: [],
+          wasteByReason: [],
+          topWastedItems: [],
+        },
+        ledgerData: {
+          summary: {
+            totalAdded: 1.25,
+            totalConsumed: 3.14159,
+            totalWasted: 0.33333334,
+            netQuantity: -177.4412,
+            additionCount: 2,
+            consumptionCount: 5,
+            additionsByUnit: [
+              {
+                unitId: 'u1',
+                unitSymbol: 'g',
+                unitName: 'Grams',
+                totalQuantity: 1500,
+                count: 3,
+              },
+            ],
+            consumptionByUnit: [
+              {
+                unitId: 'u2',
+                unitSymbol: 'cup',
+                unitName: 'Cups',
+                totalQuantity: 0.75,
+                count: 2,
+              },
+            ],
+          },
+          periodData: [
+            {
+              periodLabel: '2024-01-01',
+              periodStart: '2024-01-01',
+              added: 0.5,
+              consumed: 1.6667,
+              wasted: 2.456,
+              net: 0,
+            },
+          ],
+          costAnalytics: null,
+          topRestockedItems: [],
+        },
+        usageLoading: false,
+        wasteLoading: false,
+        ledgerLoading: false,
+        usageError: null,
+        wasteError: null,
+        ledgerError: null,
+        dateRange: '7d',
+        setDateRange: jest.fn(),
+        ledgerGranularity: 'WEEKLY',
+        setLedgerGranularity: jest.fn(),
+        refetch: jest.fn(() => Promise.resolve()),
+      });
+
+    render(<PantryAnalytics route={route} />);
+    expect(screen.getByText('1 1/4')).toBeTruthy();
+    expect(screen.getByText('3.142')).toBeTruthy();
+    expect(screen.getByText('1/3')).toBeTruthy();
+    expect(screen.getByText('-177.441')).toBeTruthy();
+    expect(screen.getByText('+1/2')).toBeTruthy();
+    expect(screen.getByText('-1 2/3')).toBeTruthy();
+    expect(screen.getByText('-2.456')).toBeTruthy();
+    expect(screen.getByText('1.5kg')).toBeTruthy();
+    expect(screen.getByText('3/4 cup')).toBeTruthy();
   });
 });

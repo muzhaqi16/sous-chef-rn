@@ -11,7 +11,7 @@ export function useBottomSheetBackHandler(
     if (!enabled) return;
 
     const handleBackPress = () => {
-      if (enabled && ref.current) {
+      if (ref.current) {
         ref.current.dismiss();
         return true;
       }

@@ -1,5 +1,5 @@
 import { array, mixed, number, object, string, type ObjectSchema } from 'yup';
-import { t } from '#/i18n';
+import { t, type TranslationKey } from '#/i18n';
 import {
   RecipeStatus,
   type Difficulty,
@@ -16,13 +16,27 @@ import type {
 
 // Messages resolve LAZILY: the schema is built once at module scope, so an
 // eagerly resolved one freezes whichever language was active at import time.
-const msg = (key: string) => (): string => t(key);
-const msgWith = (key: string, options: Record<string, unknown>) => (): string =>
-  t(key, options);
+const msg = (key: TranslationKey) => (): string => t(key);
+const msgWith =
+  (key: TranslationKey, options: Record<string, unknown>) => (): string =>
+    t(key, options);
 
 /** The API's JSON-scalar bounds. */
 const JSON_MAX_ITEMS = 1000;
 const JSON_MAX_BYTES = 64 * 1024;
+
+/** The API's recipe bounds, on create and update alike. */
+const TAGS_MAX = 10;
+const TAG_MAX_LENGTH = 50;
+const TIPS_MAX_LENGTH = 2000;
+
+/** Split the comma-separated tag field into its trimmed, non-blank tags. */
+export function parseCommaTags(raw: string): string[] {
+  return raw
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(Boolean);
+}
 
 /**
  * UTF-8 BYTES, not UTF-16 code units: `String.length` under-counts every
@@ -107,9 +121,25 @@ export const recipeFormSchema: ObjectSchema<RecipeFormState> = object({
     )
     .defined(),
   notes: string().defined(),
-  tips: string().defined(),
+  tips: string()
+    .defined()
+    .max(
+      TIPS_MAX_LENGTH,
+      msgWith('recipes.tipsTooLong', { count: TIPS_MAX_LENGTH }),
+    ),
   originalAuthor: string().defined(),
-  tags: string().defined(),
+  tags: string()
+    .defined()
+    .test(
+      'tags-count',
+      msgWith('recipes.tagsTooMany', { count: TAGS_MAX }),
+      value => parseCommaTags(value).length <= TAGS_MAX,
+    )
+    .test(
+      'tag-length',
+      msgWith('recipes.tagTooLong', { count: TAG_MAX_LENGTH }),
+      value => parseCommaTags(value).every(tag => tag.length <= TAG_MAX_LENGTH),
+    ),
 });
 
 export const recipeFormDefaults = (): RecipeFormState => ({

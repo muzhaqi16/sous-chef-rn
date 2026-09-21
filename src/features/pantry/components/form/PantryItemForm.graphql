@@ -3,6 +3,7 @@
 # `GetHome`/`HomeDetailScreen_home`) so the masked `home` ref resolves to the
 # pantry ids the form needs.
 fragment PantryItemForm_home on Home {
+  id
   pantriesConnection(first: 20) {
     edges {
       node {
@@ -54,6 +55,7 @@ fragment PantryItemForm_pantryItem on PantryItem {
   item {
     id
     categories {
+      id
       isPrimary
       category {
         id

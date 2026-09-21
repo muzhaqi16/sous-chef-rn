@@ -34,19 +34,19 @@ export const UsageTab: React.FC<
   const { t } = useTranslation();
 
   const usagePurposeData =
-    usageData?.usageByPurpose?.map(item => ({
+    usageData?.usageByPurpose.map(item => ({
       label: formatPurpose(item.purpose, t),
       value: item.count,
       percentage: item.percentage,
     })) ?? [];
   const usageSourceData =
-    usageData?.usageBySource?.map(item => ({
+    usageData?.usageBySource.map(item => ({
       label: formatSource(item.source, t),
       value: item.count,
       percentage: item.percentage,
     })) ?? [];
   const topUsedItemsData =
-    usageData?.topUsedItems?.map(item => ({
+    usageData?.topUsedItems.map(item => ({
       label: item.itemName,
       value: item.count,
     })) ?? [];
@@ -86,8 +86,8 @@ export const UsageTab: React.FC<
       <ChartSection
         title={t('pantryAnalytics.usageTrend')}
         loading={usageLoading}
-        error={usageError?.message}
-        isEmpty={!usageData?.usageTrend?.length}
+        error={usageError}
+        isEmpty={!usageData?.usageTrend.length}
       >
         <TrendLineChart
           data={usageData?.usageTrend ?? []}
@@ -101,7 +101,7 @@ export const UsageTab: React.FC<
       <ChartSection
         title={t('pantryAnalytics.usageByPurpose')}
         loading={usageLoading}
-        error={usageError?.message}
+        error={usageError}
         isEmpty={!usagePurposeData.length}
       >
         <BreakdownPieChart data={usagePurposeData} height={150} />
@@ -111,7 +111,7 @@ export const UsageTab: React.FC<
       <ChartSection
         title={t('pantryAnalytics.usageBySource')}
         loading={usageLoading}
-        error={usageError?.message}
+        error={usageError}
         isEmpty={!usageSourceData.length}
       >
         <BreakdownPieChart data={usageSourceData} height={150} />
@@ -121,7 +121,7 @@ export const UsageTab: React.FC<
       <ChartSection
         title={t('pantryAnalytics.topUsedItems')}
         loading={usageLoading}
-        error={usageError?.message}
+        error={usageError}
         isEmpty={!topUsedItemsData.length}
       >
         <TopItemsBarChart

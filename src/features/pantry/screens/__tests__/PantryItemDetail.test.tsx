@@ -3,6 +3,7 @@
 import React from 'react';
 import { screen } from '@testing-library/react-native';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   GetPantryItemBatchesDocument,
@@ -85,10 +86,6 @@ jest.mock('#components/organisms/Header', () => ({
   },
 }));
 
-jest.mock('#features/catalog/ui/NutritionSummary', () => ({
-  NutritionSummary: () => null,
-}));
-
 jest.mock('#features/catalog/ui/ItemPhotoCarousel', () => ({
   ItemPhotoCarousel: () => null,
 }));
@@ -138,25 +135,26 @@ function batchesMock(
     createdAt?: string;
   }>,
 ) {
-  return recordMock(GetPantryItemBatchesDocument, {
-    data: {
-      pantryItemBatchesConnection: {
-        __typename: 'PantryItemBatchConnection' as const,
-        edges: batches.map((b, index) => ({
-          __typename: 'PantryItemBatchEdge' as const,
-          node: {
-            __typename: 'PantryItemBatch' as const,
-            id: b.id,
-            batchNumber: index + 1,
-            quantity: b.quantity,
-            status: BatchStatus.Active,
-            costPerUnit: b.costPerUnit,
-            totalCost: b.totalCost ?? null,
-            createdAt: b.createdAt ?? '2026-08-01T00:00:00Z',
-          },
-        })),
-      },
+  const data: MockDataFor<typeof GetPantryItemBatchesDocument> = {
+    pantryItemBatchesConnection: {
+      __typename: 'PantryItemBatchConnection',
+      edges: batches.map((b, index) => ({
+        __typename: 'PantryItemBatchEdge',
+        node: {
+          __typename: 'PantryItemBatch',
+          id: b.id,
+          batchNumber: index + 1,
+          quantity: b.quantity,
+          status: BatchStatus.Active,
+          costPerUnit: b.costPerUnit,
+          totalCost: b.totalCost ?? null,
+          createdAt: b.createdAt ?? '2026-08-01T00:00:00Z',
+        },
+      })),
     },
+  };
+  return recordMock(GetPantryItemBatchesDocument, {
+    data,
   }).mock;
 }
 
@@ -271,6 +269,27 @@ describe('PantryItemDetail (integration)', () => {
     await screen.findAllByText('Milk');
   });
 
+  it('renders a fractional quantity as a cooking fraction', async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [
+        itemMock({
+          ...fullItem,
+          quantity: 1.25,
+          unitSymbol: 'cup',
+          unitDisplayAsFraction: true,
+        }),
+      ],
+    });
+    expect(await screen.findAllByText('1 1/4 cup')).toHaveLength(3);
+  });
+
+  it('keeps decimals, rounded to three places, for a unit that opts out of fractions', async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [itemMock({ ...fullItem, quantity: 177.4412 })],
+    });
+    expect(await screen.findAllByText('177.441 L')).toHaveLength(3);
+  });
+
   it('shows the category and storage state', async () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
@@ -348,6 +367,45 @@ describe('PantryItemDetail (integration)', () => {
     });
     expect(screen.getByTestId('pantry-item-detail')).toBeTruthy();
     expect(screen.queryByText('Milk')).toBeNull();
+  });
+
+  it("renders the item's nutritionFacts in the nutrition section", async () => {
+    // Read as nested `{ amount, unit }` objects, the flat `Item.nutritions`
+    // Json yields no amount, and the section never renders.
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [
+        itemMock({
+          ...fullItem,
+          nutritionFacts: {
+            __typename: 'NutritionFacts',
+            id: 'nf1',
+            calories: 64,
+            totalFat: 3.6,
+            saturatedFat: 2.3,
+            transFat: null,
+            cholesterol: 12,
+            sodium: 44,
+            totalCarbs: 4.8,
+            dietaryFiber: null,
+            totalSugars: 5.1,
+            addedSugars: null,
+            protein: 3.3,
+            vitaminD: 1.3,
+            calcium: 120,
+            iron: null,
+            potassium: 150,
+            servingSize: 100,
+            servingUnit: 'ml',
+          },
+        }),
+      ],
+    });
+    expect(await screen.findByText('Nutrition')).toBeTruthy();
+    expect(screen.getByText('64')).toBeTruthy();
+    expect(screen.getByText('3.3')).toBeTruthy();
+    expect(screen.getByText('4.8')).toBeTruthy();
+    expect(screen.getByText('3.6')).toBeTruthy();
+    expect(screen.getByText('Per 100 ml')).toBeTruthy();
   });
 
   it('hides nutrition section when item has no nutrition data', async () => {

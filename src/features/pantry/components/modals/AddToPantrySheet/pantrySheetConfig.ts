@@ -1,9 +1,10 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import type { PantryItemSuggestion } from '#features/pantry/hooks/usePantryItemSuggestions';
 import type { AddItemSheetConfig } from '#features/catalog/ui/AddItemSheet/types';
 
 export const pantrySheetConfig: AddItemSheetConfig<PantryItemSuggestion> = {
   titleKey: 'addItemSheet.addToPantry',
-  testIDPrefix: 'add-pantry-item',
+  testIDPrefix: pantryTestIDs.addItemSheetPrefix,
   placeholderIcon: 'cube-outline',
   searchPlaceholderKey: 'addItemSheet.searchPlaceholder',
   suggestionGroups: [

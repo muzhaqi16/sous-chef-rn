@@ -6,16 +6,15 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#components/molecules/Button';
 import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
+import type { CreateItemFormData } from '#features/catalog/utils/itemValidation';
 import {
   createItemSchema,
   suggestItemEditSchema,
-  CreateItemFormData,
 } from '#features/catalog/utils/itemValidation';
 import {
+  BaseDimension,
   StorageState,
   ItemType,
-  type BaseDimension,
-  type ItemUnitInput,
 } from '#/graphql/generated/schemaTypes';
 import {
   MultiImagePicker,
@@ -31,13 +30,15 @@ import {
   type NetWeightEntry,
 } from '#features/catalog/ui/NetWeightEntryList/NetWeightEntryList';
 import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
-import { type AddItemFormData } from '#/utils/items/createItemMapping';
+import type { AddItemFormData } from '#/utils/items/createItemMapping';
 import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
 import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 import { Text } from '#components/atoms/Text';
 import { logValidationErrors } from '#utils/validation/common';
 import { BarcodeInfo } from './BarcodeInfo';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { formatNumberForInput } from '#/utils/formatters/number';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import {
   type PageName,
   PAGES,
@@ -48,6 +49,7 @@ import {
   requiresEditNote,
   MODE_CONFIG,
 } from './fields';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 
 /**
  * `edit` proposes changes for admin review (createItemSuggestion); `directEdit`
@@ -56,6 +58,10 @@ import {
  * differs.
  */
 export type AddItemFormMode = 'create' | 'edit' | 'variant' | 'directEdit';
+
+const ITEM_TYPES = Object.values(ItemType);
+const STORAGE_STATES = Object.values(StorageState);
+const BASE_DIMENSIONS = Object.values(BaseDimension);
 
 export interface AddItemFormInitialData {
   name?: string;
@@ -84,6 +90,71 @@ export type AddItemSubmitPayload = AddItemFormData & {
   selectedImages: SelectedImage[];
 };
 
+/**
+ * Editor rows → the shape `createItemSchema` validates. An entirely empty row
+ * is the one "Add" just created and is dropped; a half-filled one is KEPT so
+ * the schema can refuse it rather than the submit path discarding what the user
+ * typed. A blank weight becomes `NaN`, which the number rule reports.
+ */
+const toNetWeightInputs = (
+  entries: NetWeightEntry[],
+): NonNullable<CreateItemFormData['netWeights']> =>
+  entries
+    .filter(entry => firstNonBlank(entry.value, entry.unitName) !== undefined)
+    .map(entry => ({
+      value: parseDecimalInput(entry.value),
+      unitName: entry.unitName?.trim() ?? '',
+      ...(entry.unitId ? { unitId: entry.unitId } : {}),
+    }));
+
+/** The rows an edit opens with. Seeds the editor AND the form field: a value
+ *  only the editor holds is dropped from the payload by an untouched save.
+ *  Seeded in the DEVICE separator — `parseDecimalInput` reads it back with
+ *  that separator, and on a comma device a "." is a thousands group. */
+const seedNetWeightRows = (
+  initialData: AddItemFormInitialData | undefined,
+): NetWeightEntry[] =>
+  (initialData?.netWeights ?? []).map((netWeight, index) => ({
+    id: `nw-initial-${index}`,
+    value: formatNumberForInput(netWeight.value),
+    unitName: netWeight.unitName,
+    unitId: netWeight.unitId,
+  }));
+
+/** The first row carries `isDefault`, so order is the declaration. */
+const toUnitInputs = (
+  entries: UnitEntry[],
+): NonNullable<CreateItemFormData['units']> =>
+  entries
+    .filter(entry => firstNonBlank(entry.unitId, entry.unitName) !== undefined)
+    .map((entry, index) => ({
+      unitId: firstNonBlank(entry.unitId),
+      unitName: firstNonBlank(entry.unitName),
+      isDefault: index === 0,
+      packageSize: entry.packageSize
+        ? parseDecimalInput(entry.packageSize)
+        : undefined,
+      contentUnitId: firstNonBlank(entry.contentUnitId),
+      contentUnitName: firstNonBlank(entry.contentUnitName),
+    }));
+
+/**
+ * The first message inside an array field's error tree. The rows are few and
+ * adjacent, and the array error's index stops addressing an editor row once
+ * empty rows are dropped — so the list reports one message, not one per row.
+ */
+const firstMessage = (error: unknown): string | undefined => {
+  if (!error || typeof error !== 'object') return undefined;
+  if ('message' in error && typeof error.message === 'string') {
+    return error.message;
+  }
+  for (const value of Object.values(error)) {
+    const found = firstMessage(value);
+    if (found) return found;
+  }
+  return undefined;
+};
+
 interface AddItemFormProps {
   barcode?: string;
   format?: string;
@@ -91,7 +162,6 @@ interface AddItemFormProps {
   onSubmit: (formData: AddItemSubmitPayload) => void;
   onClose: () => void;
   loading?: boolean;
-  title?: string;
   enableAutocomplete?: boolean;
   mode?: AddItemFormMode;
   initialData?: AddItemFormInitialData;
@@ -109,7 +179,6 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   onSubmit,
   onClose,
   loading = false,
-  title,
   mode = 'create',
   initialData,
   onScanUpc,
@@ -123,13 +192,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [unitEntries, setUnitEntries] = useState<UnitEntry[]>([]);
   const [netWeightEntries, setNetWeightEntries] = useState<NetWeightEntry[]>(
-    () =>
-      (initialData?.netWeights ?? []).map((nw, i) => ({
-        id: `nw-initial-${i}`,
-        value: String(nw.value),
-        unitName: nw.unitName,
-        unitId: nw.unitId,
-      })),
+    () => seedNetWeightRows(initialData),
   );
 
   const [currentPage, setCurrentPage] = useState(0);
@@ -154,6 +217,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       upc: '',
       categoryIds: [],
       units: [],
+      netWeights: toNetWeightInputs(seedNetWeightRows(initialData)),
       imageUrl: '',
       tags: [],
       storageState: StorageState.Ambient,
@@ -187,15 +251,20 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       if (initialData.upc) values.upc = initialData.upc;
       if (initialData.vendor) values.vendor = initialData.vendor;
       if (initialData.imageUrl) values.imageUrl = initialData.imageUrl;
-      if (initialData.type) values.type = initialData.type;
-      if (initialData.storageState)
-        values.storageState = initialData.storageState;
+      const type = ITEM_TYPES.find(value => value === initialData.type);
+      if (type) values.type = type;
+      const storageState = STORAGE_STATES.find(
+        value => value === initialData.storageState,
+      );
+      if (storageState) values.storageState = storageState;
       if (initialData.shelfLifeDays != null)
         values.shelfLifeDays = initialData.shelfLifeDays;
       if (initialData.shelfLifeOpenedDays != null)
         values.shelfLifeOpenedDays = initialData.shelfLifeOpenedDays;
-      if (initialData.baseDimension)
-        values.baseDimension = initialData.baseDimension;
+      const baseDimension = BASE_DIMENSIONS.find(
+        value => value === initialData.baseDimension,
+      );
+      if (baseDimension) values.baseDimension = baseDimension;
       if (initialData.tags) values.tags = initialData.tags;
       if (initialData.categoryIds) values.categoryIds = initialData.categoryIds;
     }
@@ -240,6 +309,24 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     }
   }, [initialData?.upc, setValue]);
 
+  // The editor rows are the form's `netWeights` / `units` fields. Written on
+  // every change rather than at submit: a field the resolver cannot see makes
+  // its rules unreachable, and Save is gated on whole-schema `isValid`.
+  const handleNetWeightEntriesChanged = (entries: NetWeightEntry[]) => {
+    setNetWeightEntries(entries);
+    setValue('netWeights', toNetWeightInputs(entries), {
+      shouldValidate: true,
+    });
+  };
+
+  const handleUnitEntriesChanged = (entries: UnitEntry[]) => {
+    setUnitEntries(entries);
+    setValue('units', toUnitInputs(entries), { shouldValidate: true });
+  };
+
+  const netWeightsError = firstMessage(errors.netWeights);
+  const unitsError = firstMessage(errors.units);
+
   const handleFormSubmit = (data: CreateItemFormData) => {
     let tags: string[] = [];
     if (data.tags) {
@@ -270,28 +357,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       brandName = data.vendor;
     }
 
-    const netWeights = netWeightEntries
-      .filter(entry => entry.value && entry.unitName)
-      .map(entry => ({
-        value: parseDecimalInput(entry.value!),
-        unitName: entry.unitName!,
-        // Pass the resolved unit id when the user picked a known unit, so the
-        // server links it directly instead of re-resolving by name.
-        ...(entry.unitId ? { unitId: entry.unitId } : {}),
-      }));
-
-    const units: ItemUnitInput[] = unitEntries
-      .filter(entry => entry.unitId || entry.unitName)
-      .map((entry, index) => ({
-        unitId: entry.unitId || undefined,
-        unitName: entry.unitName || undefined,
-        isDefault: index === 0,
-        packageSize: entry.packageSize
-          ? parseDecimalInput(entry.packageSize)
-          : undefined,
-        contentUnitId: entry.contentUnitId || undefined,
-        contentUnitName: entry.contentUnitName || undefined,
-      }));
+    const netWeights = data.netWeights ?? [];
+    const units = data.units ?? [];
 
     const allTags =
       tags.length > 0 || systemTags.length > 0
@@ -300,28 +367,29 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
 
     const processedData: AddItemSubmitPayload = {
       name: data.name,
-      description: data.description || undefined,
-      type: (data.type as ItemType) || undefined,
-      brandId: brandId || undefined,
-      brandName: brandName || undefined,
-      storageState: (data.storageState as StorageState) || undefined,
+      description: firstNonBlank(data.description),
+      type: data.type ?? undefined,
+      brandId,
+      brandName: firstNonBlank(brandName),
+      storageState: data.storageState ?? undefined,
       categoryIds:
         data.categoryIds && data.categoryIds.length > 0
           ? data.categoryIds
           : undefined,
       tags: allTags,
-      primaryUpc: data.upc || undefined,
-      shelfLifeDays: data.shelfLifeDays || undefined,
-      shelfLifeOpenedDays: data.shelfLifeOpenedDays || undefined,
-      imageUrl: data.imageUrl || undefined,
+      primaryUpc: firstNonBlank(data.upc),
+      shelfLifeDays: data.shelfLifeDays ?? undefined,
+      shelfLifeOpenedDays: data.shelfLifeOpenedDays ?? undefined,
+      imageUrl: firstNonBlank(data.imageUrl),
       netWeights: netWeights.length > 0 ? netWeights : undefined,
       units: units.length > 0 ? units : undefined,
-      sku: data.sku || undefined,
-      storeId: selectedStoreId || undefined,
-      baseDimension: (data.baseDimension as BaseDimension) || undefined,
-      defaultConsumeIncrement: data.defaultConsumeIncrement || undefined,
-      defaultConsumeUnitId: data.defaultConsumeUnitId || undefined,
-      editReason: data.editReason || undefined,
+      sku: firstNonBlank(data.sku),
+      storeId: selectedStoreId ?? undefined,
+      baseDimension:
+        data.baseDimension === '' ? undefined : data.baseDimension ?? undefined,
+      defaultConsumeIncrement: data.defaultConsumeIncrement ?? undefined,
+      defaultConsumeUnitId: firstNonBlank(data.defaultConsumeUnitId),
+      editReason: firstNonBlank(data.editReason),
       selectedImages,
     };
 
@@ -335,8 +403,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
 
   // Per-tab error detection — drives the red dot on PageIndicator and
   // auto-expansion of "More options" when an errored field lives inside it.
-  const fieldHasError = (name: string) =>
-    !!(errors as Record<string, unknown>)[name];
+  // react-hook-form deletes a field's key when its error clears.
+  const fieldHasError = (name: string) => name in errors;
   const tabHasError = (page: PageName) => {
     const { primary, advanced } = TAB_FIELDS[page];
     return [...primary, ...advanced].some(f => fieldHasError(String(f.name)));
@@ -354,9 +422,13 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     <>
       <View style={styles.header}>
         <Text role="title" style={styles.title}>
-          {title || t(modeConfig.title)}
+          {t(modeConfig.title)}
         </Text>
-        <Text role="caption" tone="secondary" testID="add-item-form-subtitle">
+        <Text
+          role="caption"
+          tone="secondary"
+          testID={catalogTestIDs.addItemFormSubtitle}
+        >
           {t(modeConfig.subtitle(!!barcode))}
         </Text>
       </View>
@@ -413,10 +485,15 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
             <View style={styles.section}>
               <NetWeightEntryList
                 entries={netWeightEntries}
-                onEntriesChanged={setNetWeightEntries}
+                onEntriesChanged={handleNetWeightEntriesChanged}
                 disabled={loading}
                 maxEntries={editing ? 1 : undefined}
               />
+              {!!netWeightsError && (
+                <Text role="error" tone="error">
+                  {netWeightsError}
+                </Text>
+              )}
             </View>
             {/* Units are hidden while editing: Item.units can't be round-tripped
                 into UnitEntry rows, so an empty list would read as "remove every
@@ -425,9 +502,14 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
               <View style={styles.section}>
                 <UnitEntryList
                   entries={unitEntries}
-                  onEntriesChanged={setUnitEntries}
+                  onEntriesChanged={handleUnitEntriesChanged}
                   disabled={loading}
                 />
+                {!!unitsError && (
+                  <Text role="error" tone="error">
+                    {unitsError}
+                  </Text>
+                )}
               </View>
             )}
           </DropdownStack>

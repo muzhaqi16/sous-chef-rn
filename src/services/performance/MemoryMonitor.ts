@@ -1,13 +1,10 @@
 import { Telemetry } from '#/services/telemetry';
 import DeviceInfo from 'react-native-device-info';
-import {
-  MemorySnapshot,
-  MemoryWarning,
-  MemoryWarningLevel,
-  DEFAULT_PERFORMANCE_CONFIG,
-} from './types';
+import type { MemorySnapshot, MemoryWarning } from './types';
+import { MemoryWarningLevel, DEFAULT_PERFORMANCE_CONFIG } from './types';
 import { usePerformanceStore } from '#/store/performanceStore';
 import { logger } from '#/utils/environment';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /**
  * Memory Monitor Service
@@ -39,11 +36,11 @@ class MemoryMonitorService {
     this.enabled = true;
 
     // Take initial snapshot
-    this.takeSnapshot('monitor_start');
+    void this.takeSnapshot('monitor_start');
 
     // Set up periodic sampling
     this.intervalId = setInterval(() => {
-      this.takeSnapshot('periodic_sample');
+      void this.takeSnapshot('periodic_sample');
     }, intervalMs);
   }
 
@@ -93,7 +90,7 @@ class MemoryMonitorService {
 
     // Report metrics
     Telemetry.gauge('app_memory_used_bytes', snapshot.usedBytes, {
-      context: context || 'unknown',
+      context: firstNonBlank(context) ?? 'unknown',
     });
 
     if (snapshot.limitBytes) {

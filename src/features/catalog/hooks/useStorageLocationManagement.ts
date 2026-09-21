@@ -8,7 +8,7 @@ import {
   MarkStorageLocationAsDefaultDocument,
   type GetStorageLocationsQuery,
 } from '#features/catalog/graphql/storageLocation.generated';
-import { type UpdateStorageLocationInput } from '#/graphql/generated/schemaTypes';
+import type { UpdateStorageLocationInput } from '#/graphql/generated/schemaTypes';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import {
   createAddToQueryConnectionUpdater,
@@ -18,32 +18,14 @@ import {
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 import {
-  updateEntityFieldsLocalFirst,
   writeEntityFields,
   snapshotFields,
 } from '#/apollo/utils/localFirstFields';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
 import { useBlocksCacheMissQueries } from '#features/catalog/hooks/useBlocksCacheMissQueries';
-import { t } from '#/i18n';
-import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
-import { errorService } from '#/services/errorService';
-
-/**
- * Toasts a resolved errors-as-data member in the user's own language, field →
- * code → localized generic. Never display `payload.message`: it is the server's
- * English by construction (no `Accept-Language`, no locale on the token).
- */
-function toastResolvedError(
-  payload:
-    | { __typename?: string; code?: string | null; field?: string | null }
-    | null
-    | undefined,
-): void {
-  toastService.error(
-    localizedRefusalMessage(payload, t('errors.codes.genericRetry')),
-  );
-}
+import { useTranslation } from '#/i18n';
+import { errorService, localizedErrorMessage } from '#/services/errorService';
 
 /** Flat storage-location node as returned by `GetStorageLocations`. */
 type FlatStorageLocation =
@@ -113,9 +95,6 @@ function restoreLocationToCaches(
 function buildTreeFromFlatList(
   locations: FlatStorageLocation[],
 ): StorageLocationTreeNode[] {
-  if (!locations || locations.length === 0) return [];
-
-  // Create a map for quick lookup
   const locationMap = new Map<string, StorageLocationTreeNode>(
     locations.map(loc => [loc.id, { ...loc, childLocations: [] }]),
   );
@@ -150,10 +129,8 @@ function buildTreeFromFlatList(
   ) => a.sortOrder - b.sortOrder;
   roots.sort(sortBySortOrder);
   roots.forEach(function sortChildren(node) {
-    if (node.childLocations && node.childLocations.length > 0) {
-      node.childLocations.sort(sortBySortOrder);
-      node.childLocations.forEach(sortChildren);
-    }
+    node.childLocations.sort(sortBySortOrder);
+    node.childLocations.forEach(sortChildren);
   });
 
   return roots;
@@ -167,6 +144,7 @@ export function useStorageLocationManagement(
   homeId: string | undefined,
   pantryId?: string,
 ) {
+  const { t } = useTranslation();
   const shouldSkip = !homeId;
 
   // PERFORMANCE OPTIMIZATION:
@@ -179,15 +157,17 @@ export function useStorageLocationManagement(
       skip: shouldSkip,
       fetchPolicy: 'cache-first', // Show cached data instantly
       nextFetchPolicy: 'cache-and-network', // Background refresh on subsequent fetches
-      errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
+      // `'all'` keeps cached data beside the error. `'ignore'` never sets
+      // `error` for either a GraphQL or a transport failure, so the error
+      // state below could not render.
+      errorPolicy: 'all',
     },
   );
 
-  // `errorPolicy: 'ignore'` swallows offlineModeLink's synthetic cache-miss
-  // error, so "we never tried and have nothing" has to be read from the absence
-  // of data rather than from an error. Without it an offline user sees the
-  // ordinary empty state, which invites them to create a location that may
-  // already exist on the server.
+  // Offline, "we never tried and have nothing" is read from the absence of
+  // data, and offlineModeLink's synthetic cache-miss error is not an error to
+  // show. Without it an offline user sees the ordinary empty state, which
+  // invites them to create a location that may already exist on the server.
   const networkBlocked = useBlocksCacheMissQueries();
 
   // Reuse the lightweight create hook — it handles both ROOT_QUERY and
@@ -205,20 +185,17 @@ export function useStorageLocationManagement(
   // already gone, `NotFoundError` only for a target that never existed), so a
   // replayed delete is a success rather than a permanent failure.
 
-  // Errors surfaced via toast in updateLocation below (toastResolvedError for a
-  // resolved error member/transport error; the executeMutation handler for a
-  // rare throw) — no mutation onError, so there is a single toast.
+  // Each write below settles its own failure and toasts it — no `onError`.
   const [updateMutation, { loading: updating }] = useMutation(
     UpdateStorageLocationDocument,
   );
 
   // No `update` callback: the removal happens eagerly in `deleteLocation` so it
   // is visible offline too, and running it again on the response would just
-  // re-evict an already-evicted entity. Errors surface via toast there.
+  // re-evict an already-evicted entity.
   const [deleteMutation] = useMutation(DeleteStorageLocationDocument);
 
-  // SetDefault returns the updated location; Apollo auto-normalizes by id. Errors
-  // surfaced via toast in setDefaultLocation below — no onError.
+  // SetDefault returns the updated location; Apollo auto-normalizes by id.
   const [setDefaultMutation] = useMutation(
     MarkStorageLocationAsDefaultDocument,
   );
@@ -282,44 +259,41 @@ export function useStorageLocationManagement(
         ? locations.find(location => location.isDefault && location.id !== id)
         : undefined;
 
-    const { persisted, result } = await updateEntityFieldsLocalFirst({
-      cache: client.cache,
-      entity: current ? { __typename: 'StorageLocation', id } : undefined,
-      updates,
-      previous,
-      logLabel: 'Update Storage Location',
-      mutate: () => {
-        if (displacedDefault) {
-          writeEntityFields(
-            client.cache,
-            { __typename: 'StorageLocation', id: displacedDefault.id },
-            { isDefault: false },
-          );
-        }
-        return updateMutation({
+    const entity = current ? locationRef(id) : undefined;
+    writeEntityFields(client.cache, entity, updates);
+    if (displacedDefault) {
+      writeEntityFields(client.cache, locationRef(displacedDefault.id), {
+        isDefault: false,
+      });
+    }
+
+    const settled = await settleMutation(
+      () =>
+        updateMutation({
           variables: { input: { ...input, id } },
           context: { localFirst: true },
-        });
+        }),
+      {
+        document: UpdateStorageLocationDocument,
+        fallback: t('errors.codes.genericRetry'),
+        present: 'none',
+        onFailed: () => {
+          writeEntityFields(client.cache, entity, previous);
+          if (displacedDefault) {
+            writeEntityFields(client.cache, locationRef(displacedDefault.id), {
+              isDefault: true,
+            });
+          }
+        },
       },
-    });
-
-    if (!persisted) {
-      if (displacedDefault) {
-        writeEntityFields(
-          client.cache,
-          { __typename: 'StorageLocation', id: displacedDefault.id },
-          { isDefault: true },
-        );
-      }
-      toastResolvedError(
-        (result?.data as { updateStorageLocation?: unknown } | undefined)
-          ?.updateStorageLocation as Parameters<typeof toastResolvedError>[0],
-      );
+    );
+    if (settled.failure) {
+      toastService.error(settled.failure.body);
       return false;
     }
 
-    // Persisted covers BOTH outcomes that keep the edit: the server confirmed
-    // it, or the queue took it. The only consumer reads truthiness.
+    // Covers BOTH outcomes that keep the edit: the server confirmed it, or the
+    // queue took it. The only consumer reads truthiness.
     return true;
   };
 
@@ -336,29 +310,34 @@ export function useStorageLocationManagement(
       });
     }
 
-    let result;
-    try {
-      result = await deleteMutation({
-        variables: { input: { id } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Delete Storage Location',
-      });
-    }
-
-    if (classifyCreateResult(result) === 'rejected') {
-      if (removed) {
-        try {
-          restoreLocationToCaches(client.cache, removed, pantryId, homeId);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert rejected storage-location delete',
-          });
-        }
+    const restore = () => {
+      if (!removed) return;
+      try {
+        restoreLocationToCaches(client.cache, removed, pantryId, homeId);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Revert rejected storage-location delete',
+        });
       }
-      toastResolvedError(result?.data?.deleteStorageLocation);
+    };
+
+    // A delete converges: a row already gone is the outcome asked for.
+    const settled = await settleMutation(
+      () =>
+        deleteMutation({
+          variables: { input: { id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: DeleteStorageLocationDocument,
+        fallback: t('errors.codes.genericRetry'),
+        removal: true,
+        present: 'none',
+        onFailed: restore,
+      },
+    );
+    if (settled.failure) {
+      toastService.error(settled.failure.body);
       return false;
     }
 
@@ -373,41 +352,40 @@ export function useStorageLocationManagement(
       location => location.isDefault && location.id !== id,
     );
 
-    const { persisted, result } = await updateEntityFieldsLocalFirst({
-      cache: client.cache,
-      entity: { __typename: 'StorageLocation', id },
-      updates: { isDefault: true },
-      previous: { isDefault: false },
-      logLabel: 'Set Default Storage Location',
-      mutate: async () => {
-        if (previousDefault) {
-          writeEntityFields(
-            client.cache,
-            { __typename: 'StorageLocation', id: previousDefault.id },
-            { isDefault: false },
-          );
-        }
-        return setDefaultMutation({
+    const entity = { __typename: 'StorageLocation', id };
+    writeEntityFields(client.cache, entity, { isDefault: true });
+    if (previousDefault) {
+      writeEntityFields(
+        client.cache,
+        { __typename: 'StorageLocation', id: previousDefault.id },
+        { isDefault: false },
+      );
+    }
+
+    const settled = await settleMutation(
+      () =>
+        setDefaultMutation({
           variables: { input: { id } },
           context: { localFirst: true },
-        });
+        }),
+      {
+        document: MarkStorageLocationAsDefaultDocument,
+        fallback: t('errors.codes.genericRetry'),
+        present: 'none',
+        onFailed: () => {
+          writeEntityFields(client.cache, entity, { isDefault: false });
+          if (previousDefault) {
+            writeEntityFields(
+              client.cache,
+              { __typename: 'StorageLocation', id: previousDefault.id },
+              { isDefault: true },
+            );
+          }
+        },
       },
-    });
-
-    if (!persisted) {
-      if (previousDefault) {
-        writeEntityFields(
-          client.cache,
-          { __typename: 'StorageLocation', id: previousDefault.id },
-          { isDefault: true },
-        );
-      }
-      toastResolvedError(
-        (result?.data as { markStorageLocationAsDefault?: unknown } | undefined)
-          ?.markStorageLocationAsDefault as Parameters<
-          typeof toastResolvedError
-        >[0],
-      );
+    );
+    if (settled.failure) {
+      toastService.error(settled.failure.body);
       return false;
     }
     return true;
@@ -428,12 +406,14 @@ export function useStorageLocationManagement(
     // Data
     locations,
     tree,
-    loading,
     initialLoading: !data && loading,
     offline: networkBlocked && !data,
     creating,
     updating,
-    error,
+    errorMessage:
+      error && !networkBlocked
+        ? localizedErrorMessage(error, t('errors.codes.genericRetry'))
+        : null,
 
     // Actions
     createLocation,

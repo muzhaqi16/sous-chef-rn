@@ -11,30 +11,11 @@
  * reported with the read-oriented offline sentence — "Showing cached data when
  * available" — which is not merely vague there but untrue.
  *
- * Two halves: the behaviour, and a scan that stops the shape coming back. The
- * shape type-checks and reads as correct, so nothing else can catch it.
+ * The behaviour half. The shape that produces it — `localizedErrorMessage(err)
+ * || t(…)` — is `no-restricted-syntax`'s `callerFallbackAfterResolver`, since a
+ * dead operand is a syntax question rather than a runtime one.
  */
-import { readFileSync } from 'fs';
-import { join, relative } from 'path';
-import { readdirSync, statSync } from 'fs';
 import { localizedErrorMessage } from '#/services/errorService';
-
-const SRC = join(process.cwd(), 'src');
-
-const collect = (dir: string, found: string[] = []): string[] => {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      if (entry !== '__tests__') collect(full, found);
-    } else if (
-      (entry.endsWith('.ts') || entry.endsWith('.tsx')) &&
-      !entry.endsWith('.generated.ts')
-    ) {
-      found.push(full);
-    }
-  }
-  return found;
-};
 
 describe('localizedErrorMessage receives the caller’s copy', () => {
   it('prefers the caller’s copy over the read-oriented transport sentence', () => {
@@ -58,20 +39,5 @@ describe('localizedErrorMessage receives the caller’s copy', () => {
       expect(localizedErrorMessage(error)).not.toBe('');
       expect(localizedErrorMessage(error, 'caller copy')).not.toBe('');
     }
-  });
-
-  it('is never called with its result short-circuited into a fallback', () => {
-    // `localizedErrorMessage(err) || t('…')` and `?? t('…')`: the copy after the
-    // operator can never be reached, and the resolver never saw it.
-    const offenders: string[] = [];
-    for (const file of collect(SRC)) {
-      const code = readFileSync(file, 'utf8');
-      if (!code.includes('localizedErrorMessage(')) continue;
-      // Tolerates the line break prettier inserts before the operator.
-      if (/localizedErrorMessage\([^;]*?\)\s*(\|\||\?\?)\s/u.test(code)) {
-        offenders.push(relative(process.cwd(), file));
-      }
-    }
-    expect(offenders).toEqual([]);
   });
 });

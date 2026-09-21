@@ -1,18 +1,10 @@
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    trackError: jest.fn(),
-    increment: jest.fn(),
-    warn: jest.fn(),
-  },
-}));
-
 jest.mock('#/utils/errorSerialization', () => ({
   serializeError: jest.fn((e: unknown) => ({ message: String(e) })),
 }));
 
 jest.mock('#/utils/errors/queryComplexity', () => ({
   isQueryComplexityError: jest.fn(),
-  getQueryComplexityMessage: jest.fn(),
+  describeQueryComplexity: jest.fn(),
 }));
 
 jest.mock('#/utils/errors/versionConflict', () => ({
@@ -32,15 +24,13 @@ import {
   localizedErrorMessage,
   useErrorService,
 } from '../errorService';
-import {
-  GraphQLDomainError,
-  GraphQLNetworkError,
-} from '#/utils/errors/graphqlErrors';
+import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
 import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
+import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import {
   isQueryComplexityError,
-  getQueryComplexityMessage,
+  describeQueryComplexity,
 } from '#/utils/errors/queryComplexity';
 import {
   isVersionConflictError,
@@ -52,6 +42,10 @@ import {
   ServerParseError,
   CombinedProtocolErrors,
 } from '@apollo/client/errors';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { RegisterDocument } from '#operations/auth/auth.generated';
+import { CreateItemDocument } from '#operations/item/item.generated';
+import { UpdateItemDocument } from '#features/catalog/hooks/useSuggestItemEdit.generated';
 
 const mockCombinedGraphQLErrorsIs =
   CombinedGraphQLErrors.is as unknown as jest.Mock;
@@ -73,6 +67,16 @@ describe('errorService', () => {
       expect(errorService.getUserFriendlyMessage('AUTH_TOKEN_EXPIRED')).toBe(
         'Your session has expired. Please sign in again',
       );
+    });
+
+    // settleMutation asks this to decide whether the code says more than the
+    // field it arrived with; a code answering only with the caller's fallback
+    // says nothing, so the field's copy must stay.
+    it('reports which codes have copy of their own', () => {
+      expect(errorService.hasUserFriendlyMessage('INSUFFICIENT_QUANTITY')).toBe(
+        true,
+      );
+      expect(errorService.hasUserFriendlyMessage('UNKNOWN_XYZ')).toBe(false);
     });
 
     it('returns fallback message when error code is unknown', () => {
@@ -249,10 +253,25 @@ describe('errorService', () => {
   // parseApolloError
   // -----------------------------------------------------------------------
   describe('parseApolloError', () => {
+    // Signing in without a connection: the fetch rejects with our own
+    // `NetworkRequestError`. Read by the plain `instanceof Error` arm it was
+    // UNKNOWN_ERROR, and the person was told "an unexpected error occurred".
+    it('reads a fetch that never got an answer as a network error', () => {
+      const result = errorService.parseApolloError(
+        new NetworkRequestError('Network request failed'),
+        { logError: false },
+      );
+
+      expect(result.error?.code).toBe('NETWORK_ERROR');
+      expect(result.error?.message).toBe(
+        errorService.getUserFriendlyMessage('NETWORK_ERROR'),
+      );
+    });
+
     it('detects query complexity errors first', () => {
       const error = new Error('query too complex');
       (isQueryComplexityError as jest.Mock).mockReturnValue(true);
-      (getQueryComplexityMessage as jest.Mock).mockReturnValue(
+      (describeQueryComplexity as jest.Mock).mockReturnValue(
         'Query too complex message',
       );
 
@@ -262,28 +281,6 @@ describe('errorService', () => {
 
       expect(result.success).toBe(false);
       expect(result.error?.code).toBe('QUERY_TOO_COMPLEX');
-    });
-
-    it('keeps the code of a refusal that arrived as a thrown domain error', () => {
-      // `unwrapPayload` turns an error-union member into a throw carrying its
-      // `code`. With no branch for it the error fell through to the plain
-      // `instanceof Error` arm, `errorCode` stayed 'UNKNOWN_ERROR', and every
-      // refusal reaching a caller this way read "An unexpected error occurred".
-      (isQueryComplexityError as jest.Mock).mockReturnValue(false);
-      (isVersionConflictError as jest.Mock).mockReturnValue(false);
-
-      const result = errorService.parseApolloError(
-        new GraphQLDomainError({
-          __typename: 'ConflictError',
-          code: 'CONFLICT',
-          message: 'Item already exists',
-        }),
-      );
-
-      expect(result.error?.code).toBe('CONFLICT');
-      // Localized from the CODE, not the server's sentence.
-      expect(result.error?.message).not.toBe('Item already exists');
-      expect(result.error?.message).not.toBe('An unexpected error occurred');
     });
 
     it('detects version conflict errors', () => {
@@ -434,7 +431,8 @@ describe('errorService', () => {
       const result = errorService.parseApolloError(error);
 
       expect(result.error?.code).toBe('UNKNOWN_ERROR');
-      expect(result.error?.message).toBe('Something unexpected');
+      // The thrown text is a diagnostic; the user reads localized copy.
+      expect(result.error?.message).toBe('An unexpected error occurred');
     });
 
     it('handles string errors', () => {
@@ -448,7 +446,7 @@ describe('errorService', () => {
       const result = errorService.parseApolloError('a string error');
 
       expect(result.error?.code).toBe('UNKNOWN_ERROR');
-      expect(result.error?.message).toBe('a string error');
+      expect(result.error?.message).toBe('An unexpected error occurred');
     });
 
     it('respects customMessage in config', () => {
@@ -532,19 +530,20 @@ describe('errorService', () => {
       (isVersionConflictError as jest.Mock).mockReturnValue(false);
       mockCombinedGraphQLErrorsIs.mockReturnValue(true);
 
-      errorService.parseApolloError(error, { operation: 'Register' });
+      const register = operationNameOf(RegisterDocument);
+      errorService.parseApolloError(error, { operation: register });
 
       expect(Telemetry.warn).toHaveBeenCalledWith(
-        'Validation: EMAIL_ALREADY_EXISTS in Register',
+        `Validation: EMAIL_ALREADY_EXISTS in ${register}`,
         expect.objectContaining({
           component: 'Email',
           code: 'EMAIL_ALREADY_EXISTS',
-          operation: 'Register',
+          operation: register,
         }),
       );
       expect(Telemetry.trackError).not.toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalledWith(
-        'Validation error in Register:',
+        `Validation error in ${register}:`,
         expect.objectContaining({ code: 'EMAIL_ALREADY_EXISTS' }),
       );
       expect(logger.error).not.toHaveBeenCalled();
@@ -584,7 +583,7 @@ describe('errorService', () => {
       });
 
       expect(result.code).toBe('UNKNOWN_ERROR');
-      expect(result.message).toBe('flat error');
+      expect(result.message).toBe('An unexpected error occurred');
       expect(result.category).toBe('Unknown');
       expect(result.shouldRetry).toBe(false);
       expect(result.isAuthError).toBe(false);
@@ -598,7 +597,7 @@ describe('errorService', () => {
     it('returns success result when mutation succeeds', async () => {
       const result = await errorService.handleMutation(
         async () => ({ id: '1', name: 'Test' }),
-        { operation: 'CreateItem' },
+        { operation: operationNameOf(CreateItemDocument) },
       );
 
       expect(result.success).toBe(true);
@@ -618,12 +617,12 @@ describe('errorService', () => {
         async () => {
           throw new Error('Mutation failed');
         },
-        { operation: 'UpdateItem' },
+        { operation: operationNameOf(UpdateItemDocument) },
       );
 
       expect(result.success).toBe(false);
       expect(result.error?.code).toBe('UNKNOWN_ERROR');
-      expect(result.error?.message).toBe('Mutation failed');
+      expect(result.error?.message).toBe('An unexpected error occurred');
     });
   });
 

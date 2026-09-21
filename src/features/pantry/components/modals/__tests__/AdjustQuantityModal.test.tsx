@@ -1,7 +1,8 @@
 import React from 'react';
-import { screen, userEvent } from '@testing-library/react-native';
+import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import { AdjustQuantityModal } from '#features/pantry/components/modals/AdjustQuantityModal';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
+import { t } from '#/i18n';
 import { AdjustQuantityModal_PantryItemFragmentDoc } from '#features/pantry/components/modals/AdjustQuantityModal.generated';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -240,6 +241,71 @@ describe('AdjustQuantityModal', () => {
       { cache: makeCache() },
     );
     expect(screen.queryByText('Sugar')).toBeNull();
+  });
+
+  it('seeds the new quantity with a cooking fraction for a fraction unit', () => {
+    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
+      cache: makeCache({
+        quantity: 0.33333334,
+        unit: {
+          __typename: 'Unit',
+          id: 'u1',
+          symbol: 'cups',
+          displayAsFraction: true,
+        },
+      }),
+    });
+    expect(screen.getByDisplayValue('1/3')).toBeTruthy();
+  });
+
+  it('seeds a decimal rounded to three places for a unit that opts out of fractions', () => {
+    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
+      cache: makeCache({ quantity: 0.33333334 }),
+    });
+    expect(screen.getByDisplayValue('0.333')).toBeTruthy();
+  });
+
+  // The seed rounds to three places, and confirm submits the seed. Sent as-is,
+  // opening the sheet to record a reason rewrites the stock and books an
+  // ADJUSTMENT for a difference nobody asked for.
+  it('sends the stored quantity untouched when the person did not change it', async () => {
+    const onConfirm = jest.fn();
+    renderWithApollo(
+      <AdjustQuantityModal {...defaultProps} onConfirm={onConfirm} />,
+      { cache: makeCache({ quantity: 2.7182818 }) },
+    );
+    expect(screen.getByDisplayValue('2.718')).toBeTruthy();
+
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByPlaceholderText(t('adjustQuantity.reasonPlaceholder')),
+      'Recount',
+    );
+    await user.press(screen.getByTestId('confirm-btn'));
+
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    expect(onConfirm.mock.calls[0]?.[0]).toBe(2.7182818);
+  });
+
+  it('sends the new quantity when the person changed it', async () => {
+    const onConfirm = jest.fn();
+    renderWithApollo(
+      <AdjustQuantityModal {...defaultProps} onConfirm={onConfirm} />,
+      { cache: makeCache({ quantity: 2.7182818 }) },
+    );
+
+    const user = userEvent.setup();
+    const quantity = screen.getByDisplayValue('2.718');
+    await user.clear(quantity);
+    await user.type(quantity, '5');
+    await user.type(
+      screen.getByPlaceholderText(t('adjustQuantity.reasonPlaceholder')),
+      'Recount',
+    );
+    await user.press(screen.getByTestId('confirm-btn'));
+
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    expect(onConfirm.mock.calls[0]?.[0]).toBe(5);
   });
 
   it('shows current quantity info', () => {

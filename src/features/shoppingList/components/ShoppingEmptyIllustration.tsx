@@ -66,13 +66,15 @@ function buildCartPaths(cx: number, cy: number, scale: number) {
   return { cartBodyPath, cartHandlePath, cartGridLines };
 }
 
+const buildForSize = ({ canvas, scale }: (typeof SIZES)[keyof typeof SIZES]) =>
+  buildCartPaths(canvas / 2, canvas / 2, scale);
+
 // Pre-build cart paths for each size at module scope (only 3 variants, created once)
-const CART_PATH_CACHE = Object.fromEntries(
-  Object.entries(SIZES).map(([key, { canvas, scale }]) => [
-    key,
-    buildCartPaths(canvas / 2, canvas / 2, scale),
-  ]),
-) as Record<keyof typeof SIZES, ReturnType<typeof buildCartPaths>>;
+const CART_PATH_CACHE = {
+  small: buildForSize(SIZES.small),
+  medium: buildForSize(SIZES.medium),
+  large: buildForSize(SIZES.large),
+};
 
 interface ShoppingEmptyIllustrationProps {
   size?: 'small' | 'medium' | 'large';

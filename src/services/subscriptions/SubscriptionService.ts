@@ -12,47 +12,40 @@ import type {
 } from '@apollo/client';
 import type { NormalizedCacheObject } from '@apollo/client';
 import type { ModifierDetails } from '@apollo/client/cache';
-import {
+import type {
   SubscriptionConfig,
   SubscriptionHandlers,
   SubscriptionPayload,
   SubscriptionEntry,
-  SubscriptionStats,
-  CacheStrategy,
-  LogLevel,
 } from './types';
+import { CacheStrategy, LogLevel } from './types';
 import { MutationType } from '#/graphql/generated/schemaTypes';
-import {
-  serializeError,
-  isCircularStructureError,
-  isTimerCircularStructureError,
-} from '#/utils/errorSerialization';
+import { serializeError } from '#/utils/errorSerialization';
 import { safeEvict, type ConnectionData } from '#/apollo/utils/cacheUpdaters';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import {
-  isExpectedNetworkTransitionError,
+  isExpectedTransportError,
   isPermanentSubscriptionRejection,
 } from '#/utils/subscriptionErrorHandler';
 import { markSubscriptionRejected } from './rejectedSubscriptions';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { SubscriptionSuppression } from './SubscriptionSuppression';
 
 /** `StoreObject` (so `toReference` accepts it) plus the `id` the service reads. */
 type PayloadEntity = StoreObject & { id?: string };
 
+/** A config after `register` has read its operation name off the document. */
+type RegisteredConfig<TData> = SubscriptionConfig<TData> & {
+  subscriptionName: string;
+};
+
 export class SubscriptionService {
-  private static instance: SubscriptionService;
+  private static instance: SubscriptionService | undefined;
 
   // Active subscription registry
   private subscriptions = new Map<string, SubscriptionEntry>();
-
-  // Statistics
-  private stats = {
-    totalUpdates: 0,
-    totalErrors: 0,
-    dedupedUpdates: 0,
-    filteredSortOrderUpdates: 0,
-  };
 
   /**
    * The suppression policy — what an event must be ignored FOR. Delegated
@@ -111,7 +104,7 @@ export class SubscriptionService {
 
   private shouldProcessUpdate<TData>(
     payload: SubscriptionPayload<TData>,
-    config: SubscriptionConfig<TData>,
+    config: RegisteredConfig<TData>,
   ): boolean {
     return this.suppression.shouldProcessUpdate<TData>(payload, info =>
       this.log(config, LogLevel.DEBUG, 'Filtered sortOrder-only update', {
@@ -125,28 +118,27 @@ export class SubscriptionService {
   private constructor() {}
 
   static getInstance(): SubscriptionService {
-    if (!SubscriptionService.instance) {
-      SubscriptionService.instance = new SubscriptionService();
-    }
+    SubscriptionService.instance ??= new SubscriptionService();
     return SubscriptionService.instance;
   }
   register<TData = unknown>(
     config: SubscriptionConfig<TData>,
   ): SubscriptionHandlers {
     const finalConfig = {
-      subscriptionName: config.subscriptionName,
+      document: config.document,
+      subscriptionName: operationNameOf(config.document),
       entityType: config.entityType,
-      mutation: config.mutation || MutationType.Updated,
+      mutation: config.mutation ?? MutationType.Updated,
       enableDeduplication: config.enableDeduplication ?? true,
       userId: config.userId,
       cacheUpdateStrategy:
-        config.cacheUpdateStrategy || CacheStrategy.AUTOMATIC,
-      cacheFieldName: config.cacheFieldName || '',
+        config.cacheUpdateStrategy ?? CacheStrategy.AUTOMATIC,
+      cacheFieldName: config.cacheFieldName ?? '',
       customOnData: config.customOnData,
       customOnError: config.customOnError,
       customOnComplete: config.customOnComplete,
       enableLogging: config.enableLogging ?? __DEV__,
-      logLevel: config.logLevel || LogLevel.INFO,
+      logLevel: config.logLevel ?? LogLevel.INFO,
       entityId: config.entityId,
     };
 
@@ -158,8 +150,6 @@ export class SubscriptionService {
       entityId: finalConfig.entityId,
       userId: finalConfig.userId,
       connectedAt: new Date(),
-      updateCount: 0,
-      errorCount: 0,
     });
 
     return {
@@ -173,7 +163,7 @@ export class SubscriptionService {
    * Create unified onData handler
    */
   private createOnDataHandler<TData>(
-    config: SubscriptionConfig<TData>,
+    config: RegisteredConfig<TData>,
   ): SubscriptionHandlers['onData'] {
     return ({ data, client }) => {
       try {
@@ -194,7 +184,7 @@ export class SubscriptionService {
         }
 
         // Extract payload from subscription data
-        const subscriptionData = data?.data;
+        const subscriptionData = data.data;
         if (!subscriptionData) {
           this.log(
             config,
@@ -206,9 +196,9 @@ export class SubscriptionService {
         }
 
         // Get the actual payload (first property of subscription data)
-        const payload = Object.values(
-          subscriptionData,
-        )[0] as SubscriptionPayload<TData>;
+        const payload = Object.values(subscriptionData)[0] as
+          | SubscriptionPayload<TData>
+          | undefined;
 
         if (!payload) {
           this.log(
@@ -225,7 +215,6 @@ export class SubscriptionService {
           config.enableDeduplication &&
           !this.shouldProcessUpdate(payload, config)
         ) {
-          this.stats.dedupedUpdates++;
           this.log(
             config,
             LogLevel.DEBUG,
@@ -238,11 +227,7 @@ export class SubscriptionService {
           return;
         }
 
-        // Step 2: Update statistics
-        this.stats.totalUpdates++;
-        this.updateSubscriptionStats(config, 'update');
-
-        // Step 3: Log subscription update
+        // Step 2: Log subscription update
         const item = this.getPayloadEntity(payload);
 
         this.log(config, LogLevel.INFO, 'Subscription update received', {
@@ -256,7 +241,7 @@ export class SubscriptionService {
         if (config.cacheUpdateStrategy !== CacheStrategy.NONE) {
           // For AUTOMATIC: Apollo normalization handles UPDATE, but we need to manually handle CREATE/DELETE
           // For MANUAL: We handle all mutations manually
-          const mutation = payload.mutation || config.mutation;
+          const mutation = payload.mutation ?? config.mutation;
           const shouldUpdateCache =
             config.cacheUpdateStrategy === CacheStrategy.MANUAL ||
             // CREATE operations - add to arrays
@@ -303,16 +288,16 @@ export class SubscriptionService {
    * Create unified onError handler
    */
   private createOnErrorHandler<TData>(
-    config: SubscriptionConfig<TData>,
+    config: RegisteredConfig<TData>,
   ): SubscriptionHandlers['onError'] {
     return (error: ErrorLike) => {
-      const errorMessage = error?.message?.toLowerCase() || '';
+      const errorMessage = error.message.toLowerCase();
 
       // A document the server will never accept — over the depth or cost bound.
       // Not connection churn: the socket's other subscriptions keep delivering.
       // Close the gate so `skip` stops the resubscribe, and report once.
       if (isPermanentSubscriptionRejection(error)) {
-        const firstTime = markSubscriptionRejected(config.subscriptionName);
+        const firstTime = markSubscriptionRejected(config.document);
         if (firstTime) {
           this.log(
             config,
@@ -340,16 +325,13 @@ export class SubscriptionService {
       // identical lines per disconnect (wsLink already warns once per socket
       // event). Uses the shared predicate so the "expected transition" rule
       // stays in one place.
-      if (isExpectedNetworkTransitionError(error?.message)) {
+      if (isExpectedTransportError(error)) {
         this.log(config, LogLevel.DEBUG, 'WebSocket connection interrupted', {
           error: errorMessage,
           hint: 'WebSocket will attempt auto-reconnect if enabled',
         });
         return; // Don't count as error or call custom handler for expected disconnects
       }
-
-      this.stats.totalErrors++;
-      this.updateSubscriptionStats(config, 'error');
 
       this.log(
         config,
@@ -370,7 +352,7 @@ export class SubscriptionService {
    * Also removes the subscription entry from the registry when the subscription ends
    */
   private createOnCompleteHandler<TData>(
-    config: SubscriptionConfig<TData>,
+    config: RegisteredConfig<TData>,
   ): () => void {
     const key = this.getSubscriptionKey(config);
     return () => {
@@ -393,7 +375,7 @@ export class SubscriptionService {
 
   private updateCache<TData>(
     cache: ApolloCache,
-    config: SubscriptionConfig<TData>,
+    config: RegisteredConfig<TData>,
     payload: SubscriptionPayload<TData>,
   ): void {
     if (!config.cacheFieldName) {
@@ -406,7 +388,7 @@ export class SubscriptionService {
     }
 
     const item = this.getPayloadEntity(payload);
-    const mutation = payload.mutation || config.mutation;
+    const mutation = payload.mutation ?? config.mutation;
     const itemId = item?.id;
 
     if (!item || !itemId) {
@@ -503,12 +485,13 @@ export class SubscriptionService {
                   id: parentCacheId,
                   fields: {
                     [pendingDelete.connectionField]: (
-                      existingConnection: ConnectionData = {},
+                      // A connection the server returned as `null` is stored as `null`.
+                      existingConnection: ConnectionData | null = {},
                       { readField }: ModifierDetails,
                     ) => {
-                      const existingEdges = existingConnection?.edges || [];
+                      const existingEdges = existingConnection?.edges ?? [];
                       const edges = existingEdges.filter(
-                        edge => readField('id', edge?.node) !== itemId,
+                        edge => readField('id', edge.node) !== itemId,
                       );
 
                       // If edges didn't change, no need to update
@@ -521,7 +504,7 @@ export class SubscriptionService {
                         edges,
                         totalCount: Math.max(
                           0,
-                          (existingConnection?.totalCount || 0) - 1,
+                          (existingConnection?.totalCount ?? 0) - 1,
                         ),
                       };
                     },
@@ -585,6 +568,7 @@ export class SubscriptionService {
           break;
         }
 
+        case undefined:
         default:
           this.log(config, LogLevel.WARN, 'Unknown mutation type', mutation);
       }
@@ -627,18 +611,12 @@ export class SubscriptionService {
    * Unified logging
    */
   private log<TData>(
-    config: SubscriptionConfig<TData>,
+    config: RegisteredConfig<TData>,
     level: LogLevel,
     message: string,
     data?: unknown,
   ): void {
     if (!config.enableLogging && level !== LogLevel.ERROR) {
-      return;
-    }
-
-    // Silently skip timer-related circular structure errors
-    // These are expected during subscription teardown/setup due to graphql-ws internals
-    if (level === LogLevel.ERROR && isTimerCircularStructureError(data)) {
       return;
     }
 
@@ -649,106 +627,43 @@ export class SubscriptionService {
       LogLevel.WARN,
       LogLevel.ERROR,
     ];
-    const configLogLevel = config.logLevel || LogLevel.INFO;
+    const configLogLevel = config.logLevel ?? LogLevel.INFO;
     if (logLevels.indexOf(level) < logLevels.indexOf(configLogLevel)) {
       return;
     }
 
-    // Extract a `message` string from `data` when present (errors, payloads)
-    const dataMessage =
-      typeof data === 'object' &&
-      data !== null &&
-      'message' in data &&
-      typeof (data as { message: unknown }).message === 'string'
-        ? (data as { message: string }).message
-        : undefined;
-
-    // Check if this is a circular structure error - downgrade to warning
-    const isCircular =
-      level === LogLevel.ERROR &&
-      Boolean(data) &&
-      (isCircularStructureError(data) ||
-        (dataMessage !== undefined && isCircularStructureError(dataMessage)));
-
-    // Extract raw error message for visibility even when circular refs detected
-    const rawErrorMessage =
-      dataMessage !== undefined
-        ? dataMessage
-        : typeof data === 'string'
-        ? data
-        : 'Unknown error';
-
-    const actualLevel = isCircular ? LogLevel.WARN : level;
-    const actualMessage = isCircular
-      ? `${message} (may have circular refs - raw: ${rawErrorMessage})`
-      : message;
-
-    // For circular errors, still log raw message but skip full data object to avoid serialization issues
-    const actualData = isCircular ? '' : data || '';
+    const actualData = data ?? '';
 
     const emoji = {
       [LogLevel.DEBUG]: '🔍',
       [LogLevel.INFO]: '🔔',
       [LogLevel.WARN]: '⚠️',
       [LogLevel.ERROR]: '❌',
-    }[actualLevel];
+    }[level];
 
     const prefix = `${emoji} [${config.subscriptionName}]`;
 
-    switch (actualLevel) {
+    switch (level) {
       case LogLevel.ERROR:
-        logger.error(prefix, actualMessage, actualData);
+        logger.error(prefix, message, actualData);
         break;
       case LogLevel.WARN:
-        logger.warn(prefix, actualMessage, actualData);
+        logger.warn(prefix, message, actualData);
         break;
       case LogLevel.DEBUG:
       case LogLevel.INFO:
       default:
-        logger.debug(prefix, actualMessage, actualData);
-    }
-  }
-
-  /**
-   * Update subscription statistics
-   */
-  private updateSubscriptionStats<TData>(
-    config: SubscriptionConfig<TData>,
-    type: 'update' | 'error',
-  ): void {
-    const key = this.getSubscriptionKey(config);
-    const entry = this.subscriptions.get(key);
-
-    if (entry) {
-      if (type === 'update') {
-        entry.updateCount++;
-        entry.lastUpdate = new Date();
-      } else if (type === 'error') {
-        entry.errorCount++;
-      }
+        logger.debug(prefix, message, actualData);
     }
   }
 
   /**
    * Generate unique subscription key
    */
-  private getSubscriptionKey<TData>(config: SubscriptionConfig<TData>): string {
-    return `${config.subscriptionName}-${config.entityId || 'default'}-${
-      config.userId || 'anonymous'
-    }`;
-  }
-
-  /**
-   * Get subscription statistics
-   */
-  getStats(): SubscriptionStats {
-    return {
-      totalSubscriptions: this.subscriptions.size,
-      activeSubscriptions: Array.from(this.subscriptions.values()),
-      totalUpdates: this.stats.totalUpdates,
-      totalErrors: this.stats.totalErrors,
-      dedupedUpdates: this.stats.dedupedUpdates,
-    };
+  private getSubscriptionKey<TData>(config: RegisteredConfig<TData>): string {
+    return `${config.subscriptionName}-${
+      firstNonBlank(config.entityId) ?? 'default'
+    }-${firstNonBlank(config.userId) ?? 'anonymous'}`;
   }
 
   /**
@@ -758,12 +673,6 @@ export class SubscriptionService {
   cleanup(): void {
     this.subscriptions.clear();
     this.suppression.cleanup();
-    this.stats = {
-      totalUpdates: 0,
-      totalErrors: 0,
-      dedupedUpdates: 0,
-      filteredSortOrderUpdates: 0,
-    };
   }
 
   /**

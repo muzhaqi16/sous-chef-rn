@@ -15,7 +15,7 @@
 const mockMutate = jest.fn();
 jest.mock('#/apollo/client', () => ({
   client: { mutate: (...args: unknown[]) => mockMutate(...args) },
-  cancelCachePersistence: jest.fn(),
+  restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
 
@@ -131,6 +131,27 @@ describe('authService.login — LoginResult union', () => {
     expect(mockToastError).toHaveBeenCalledWith(
       'Something went wrong. Please try again.',
     );
+  });
+});
+
+// The server pushes only to a session bound to the device, and `authLink`
+// sends the id it already holds — null on a cold identity.
+describe('authService.login — device binding', () => {
+  it('resolves the device id before the session is minted', async () => {
+    const { ensureDeviceId } = require('#/storage/deviceId');
+    const order: string[] = [];
+    (ensureDeviceId as jest.Mock).mockImplementationOnce(() => {
+      order.push('ensureDeviceId');
+      return Promise.resolve('device_test');
+    });
+    mockMutate.mockImplementationOnce(() => {
+      order.push('Login');
+      return Promise.resolve(rejection('AUTH_CREDENTIALS_INVALID', 'x'));
+    });
+
+    await authService.login(INPUT);
+
+    expect(order).toEqual(['ensureDeviceId', 'Login']);
   });
 });
 

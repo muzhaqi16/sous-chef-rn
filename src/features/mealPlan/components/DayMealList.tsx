@@ -6,7 +6,7 @@ import { MealTypeSection } from './MealTypeSection';
 import { EmptyDayState } from './EmptyDayState';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import type { MealTypeGroup } from '#features/mealPlan/hooks/useDailyMeals';
-import { type MealType } from '#/graphql/generated/schemaTypes';
+import type { MealType } from '#/graphql/generated/schemaTypes';
 import { getScrollClearancePadding } from '#constants/layout';
 
 interface DayMealListProps {

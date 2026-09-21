@@ -31,6 +31,8 @@ import { AlertBanner } from '#components/molecules/AlertBanner';
 import { Text } from '#components/atoms/Text';
 import { motion } from '#/theme/foundations/motion';
 import { Screen } from '#components/templates/Screen';
+import { profileTestIDs } from '#features/profile/testIDs';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 const HEADER_TIMING = {
   duration: motion.timing.SLOW,
@@ -114,28 +116,31 @@ export const ProfileScreen = () => {
     // No-op: Profile sits outside the tab bar context.
   };
 
+  const fullName = `${profile?.firstName ?? ''} ${
+    profile?.lastName ?? ''
+  }`.trim();
+  const headerName = firstNonBlank(profile?.displayName, fullName) ?? '';
+
   // Cached data renders immediately; only a total absence shows the skeleton.
   if (loading && !profile) {
     return <ProfileSkeleton />;
   }
   return (
-    <Screen scroll="list" gutter="none" testID="profile-screen">
+    <Screen scroll="list" gutter="none" testID={profileTestIDs.profileScreen}>
       <ProfileHeader
         avatarUrl={profile?.avatar}
-        name={
-          profile?.displayName ||
-          `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim()
-        }
-        subtitle={user?.email || ''}
+        name={headerName}
+        subtitle={user?.email ?? ''}
         onBack={() => goBack()}
         onMore={handleMorePress}
         onAvatarPress={handleAvatarPress}
         progress={headerProgress}
       />
       <Animated.ScrollView
-        testID="profile-scroll-view"
+        testID={profileTestIDs.profileScrollView}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scrollContent,
           { paddingBottom: safeBottom + 16 },
@@ -149,7 +154,7 @@ export const ProfileScreen = () => {
             iconLibrary="Ionicons"
             variant="warning"
             onPress={toVerifyEmail}
-            testID="verify-email-banner"
+            testID={profileTestIDs.verifyEmailBanner}
           />
         )}
         {sections
@@ -177,7 +182,7 @@ export const ProfileScreen = () => {
                 if (item.key === 'logout') {
                   return {
                     ...item,
-                    testID: 'profile-logout-button',
+                    testID: profileTestIDs.logoutButton,
                     onPress: () => handleLogout(item.onPress),
                   };
                 }
@@ -185,7 +190,7 @@ export const ProfileScreen = () => {
                 if (item.type === 'navigation') {
                   return {
                     ...item,
-                    testID: `profile-menu-${item.key}`,
+                    testID: profileTestIDs.menuItem(item.key),
                     onPress: () => {
                       if (item.key === 'personalInformation') {
                         toPersonalInformation();
@@ -222,7 +227,7 @@ export const ProfileScreen = () => {
           <Icon name="trash-outline" size={20} tone="error" />
           <Text
             role="bodyStrong"
-            tone="error"
+            tone="danger"
             style={styles.menuItemTextDestructive}
           >
             {t('account.deleteTitle')}

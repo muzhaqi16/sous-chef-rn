@@ -10,8 +10,10 @@ credential setup and the auth model aren't rediscovered later.
 - **iOS → APNs** (Apple Push Notification service), directly. **No Firebase on
   iOS** — the Firebase pods are excluded from iOS autolinking in
   `react-native.config.js`.
-- **Android → FCM** (Firebase Cloud Messaging), messaging module only — there is
-  no Firebase-free background push on stock Android.
+- **Android → FCM** (Firebase Cloud Messaging) — there is no Firebase-free
+  background push on stock Android. The only other Firebase module on Android is
+  Crashlytics, for crash reporting (see
+  [Android ProGuard debugging](android-proguard-debugging.md#crash-reporting)).
 
 The server routes by `device.platform` (the client sends `IOS` / `ANDROID` in
 `registerDevice`): **IOS → APNs**, **ANDROID → FCM**.

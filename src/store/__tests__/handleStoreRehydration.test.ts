@@ -1,11 +1,19 @@
 import { handleStoreRehydration, useStore } from '../index';
 import { errorService } from '#/services/errorService';
 import { openedWithEmptyStore } from '#/storage/mmkv';
-import { clearSessionTokens, loadSessionTokens } from '#/storage/keychain';
+import {
+  addPendingRevocation,
+  clearSessionTokens,
+  loadSessionTokens,
+} from '#/storage/keychain';
 
 jest.mock('#/services/errorService');
 jest.mock('#/storage/mmkv');
-jest.mock('#/storage/keychain');
+// The store rehydrates on import, before any `beforeEach` can seed the load.
+jest.mock('#/storage/keychain', () => ({
+  ...jest.createMockFromModule<object>('#/storage/keychain'),
+  loadSessionTokens: jest.fn(() => Promise.resolve({ status: 'absent' })),
+}));
 
 describe('handleStoreRehydration', () => {
   it('recovers isHydrated and reports to telemetry when rehydration fails', async () => {
@@ -98,7 +106,7 @@ describe('a fresh install does not resume a session', () => {
     loadTokens.mockResolvedValue({ status: 'absent' });
   });
 
-  it('clears stored tokens and never reads them back', async () => {
+  it('clears stored tokens and never resumes them', async () => {
     emptyStore.mockReturnValue(true);
     const setTokens = jest.fn();
     useStore.setState({ isHydrated: false });
@@ -109,6 +117,21 @@ describe('a fresh install does not resume a session', () => {
     expect(clearTokens).toHaveBeenCalled();
     expect(setTokens).not.toHaveBeenCalled();
     expect(useStore.getState().isHydrated).toBe(true);
+  });
+
+  // Its lineage is still live server-side, and the server pushes to a live one.
+  it('parks the abandoned session for revocation before clearing it', async () => {
+    emptyStore.mockReturnValue(true);
+    const tokens = { accessToken: 'a', refreshToken: 'r' };
+    loadTokens.mockResolvedValue({ status: 'ok', tokens });
+    const setTokens = jest.fn();
+
+    handleStoreRehydration({ ...useStore.getState(), setTokens }, undefined);
+    await new Promise(resolve => setImmediate(resolve));
+
+    expect(addPendingRevocation).toHaveBeenCalledWith(tokens);
+    expect(clearTokens).toHaveBeenCalled();
+    expect(setTokens).not.toHaveBeenCalled();
   });
 
   it('restores the session normally when the store has data', async () => {

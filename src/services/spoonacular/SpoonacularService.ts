@@ -6,7 +6,6 @@ import type {
   GetRecipeInformationParams,
   RecipeInformation,
   SearchRecipesParams,
-  SearchRecipesParamsWithInfo,
   SearchRecipesParamsWithoutInfo,
   SearchRecipesResponse,
   SearchRecipesResponseWithInfo,
@@ -18,6 +17,18 @@ import type {
 
 const BASE_URL = 'https://api.spoonacular.com';
 
+// A list goes comma-joined, which is how Spoonacular reads multi-value params.
+const toQueryValue = (value: unknown): string => {
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return String(value);
+  }
+  return Array.isArray(value) ? value.join(',') : JSON.stringify(value);
+};
+
 /** Spoonacular API client. Free tier allows 150 requests/day. */
 class SpoonacularService {
   private apiKey: string;
@@ -25,7 +36,7 @@ class SpoonacularService {
   private dailyLimit: number = 150;
 
   constructor() {
-    this.apiKey = env.SPOONACULAR_API_KEY || '';
+    this.apiKey = env.SPOONACULAR_API_KEY ?? '';
     if (!this.apiKey) {
       logger.warn('Spoonacular API key not configured');
     }
@@ -53,7 +64,7 @@ class SpoonacularService {
 
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
-        url.searchParams.append(key, String(value));
+        url.searchParams.append(key, toQueryValue(value));
       }
     });
 
@@ -88,7 +99,7 @@ class SpoonacularService {
         throw error;
       }
 
-      const data = await response.json();
+      const data: unknown = await response.json();
       // A shape summary, not the raw payload: serializing a 25-result
       // findByIngredients response can block the JS thread for seconds.
       logger.debug(
@@ -168,7 +179,7 @@ class SpoonacularService {
     signal?: AbortSignal,
   ): Promise<SearchRecipesResponseWithInfo> {
     return this.complexSearch<SearchRecipesResponseWithInfo>(
-      { ...params, addRecipeInformation: true } as SearchRecipesParamsWithInfo,
+      { ...params, addRecipeInformation: true },
       signal,
     );
   }

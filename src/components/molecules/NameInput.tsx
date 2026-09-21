@@ -1,8 +1,6 @@
 import React from 'react';
-import {
-  BaseInput,
-  BaseInputProps,
-} from '#components/molecules/BaseInput/BaseInput';
+import type { BaseInputProps } from '#components/molecules/BaseInput/BaseInput';
+import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 
 // Name Input Component
 export const NameInput: React.FC<

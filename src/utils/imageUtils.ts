@@ -1,5 +1,11 @@
-import { ImagePerspective } from '#/graphql/generated/schemaTypes';
+import {
+  ImageKind,
+  ImagePerspective,
+  type ItemImage,
+} from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
+import { isTranslationKey } from '#/i18n';
+import type { Translate } from '#/i18n/types';
 
 // =============================================================================
 // IMAGE SIZE SELECTION
@@ -12,13 +18,13 @@ export type PreferredSize =
   | 'small'
   | 'thumbnail';
 
-type ImageVariant = { url: string; kind?: string | null };
+type ImageVariant = Pick<ItemImage, 'url' | 'kind'>;
 
-const PREFERRED_SIZE_TO_KIND: Partial<Record<PreferredSize, string>> = {
-  thumbnail: 'THUMBNAIL',
-  small: 'THUMBNAIL',
-  medium: 'SIZE_512',
-  large: 'SIZE_512',
+const PREFERRED_SIZE_TO_KIND: Partial<Record<PreferredSize, ImageKind>> = {
+  thumbnail: ImageKind.Thumbnail,
+  small: ImageKind.Thumbnail,
+  medium: ImageKind.Size_512,
+  large: ImageKind.Size_512,
 };
 
 /**
@@ -27,12 +33,12 @@ const PREFERRED_SIZE_TO_KIND: Partial<Record<PreferredSize, string>> = {
  */
 export function pickImageUrl(
   images: ImageVariant[] | null | undefined,
-  preferredKind: string,
+  preferredKind: ImageKind,
 ): string | null {
   if (!images || images.length === 0) return null;
   return (
     images.find(img => img.kind === preferredKind)?.url ??
-    images.find(img => img.kind === 'MAIN')?.url ??
+    images.find(img => img.kind === ImageKind.Main)?.url ??
     null
   );
 }
@@ -211,16 +217,6 @@ export const CAPTURE_PERSPECTIVES: string[] = [
   'ingredient_list',
 ];
 
-const PERSPECTIVE_TO_ENUM: Record<string, ImagePerspective> = {
-  front: ImagePerspective.Front,
-  back: ImagePerspective.Back,
-  left: ImagePerspective.Left,
-  right: ImagePerspective.Right,
-  top: ImagePerspective.Top,
-  nutrition_label: ImagePerspective.NutritionLabel,
-  ingredient_list: ImagePerspective.IngredientList,
-};
-
 /**
  * Map the lower-cased perspective the picker works in to the `ImagePerspective`
  * enum `confirmItemImageUpload` takes. Unknown values return undefined so the
@@ -230,7 +226,10 @@ export function toImagePerspective(
   perspective: string | null | undefined,
 ): ImagePerspective | undefined {
   if (!perspective) return undefined;
-  return PERSPECTIVE_TO_ENUM[perspective.toLowerCase()];
+  const lowerCased = perspective.toLowerCase();
+  return Object.values(ImagePerspective).find(
+    value => value.toLowerCase() === lowerCased,
+  );
 }
 
 /**
@@ -238,11 +237,10 @@ export function toImagePerspective(
  * hardcoded table puts "Nutrition" inside otherwise-Spanish UI. An unrecognised
  * provider perspective falls back to its capitalized raw form.
  */
-export function getPerspectiveLabel(
-  perspective: string,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string {
-  return t(`itemPhotos.perspective.${perspective}`, {
-    defaultValue: perspective.charAt(0).toUpperCase() + perspective.slice(1),
-  });
+export function getPerspectiveLabel(perspective: string, t: Translate): string {
+  // `ItemPhoto.perspective` is a server String, so only the copy knows the set.
+  const key = `itemPhotos.perspective.${perspective}`;
+  return isTranslationKey(key)
+    ? t(key)
+    : perspective.charAt(0).toUpperCase() + perspective.slice(1);
 }

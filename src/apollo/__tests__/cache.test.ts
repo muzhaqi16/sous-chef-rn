@@ -9,6 +9,8 @@ import { gql, InMemoryCache } from '@apollo/client';
 import { makeCache } from '../cache';
 import { queueStore } from '../offlineQueue/queueStore';
 import { QueueStatus } from '../offlineQueue/types';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { queuedMutationFor } from '#/test-utils/queuedMutation';
 
 type NodeRef = { __typename: string; id: string; name?: string };
 type Edge = { __typename: string; node: NodeRef };
@@ -530,7 +532,7 @@ describe('cache', () => {
 
     it('preserves an offline-created edge over an authoritative first-page refetch', () => {
       const spy = jest
-        .spyOn(queueStore, 'getPendingClientIds')
+        .spyOn(queueStore, 'getUnconfirmedCreateIds')
         .mockReturnValue(new Set(['cuid-pending']));
       const cache = makeCache();
 
@@ -551,7 +553,7 @@ describe('cache', () => {
 
     it('does not force-preserve a non-pending edge (server-removed node is dropped)', () => {
       const spy = jest
-        .spyOn(queueStore, 'getPendingClientIds')
+        .spyOn(queueStore, 'getUnconfirmedCreateIds')
         .mockReturnValue(new Set()); // nothing queued
       const cache = makeCache();
 
@@ -703,7 +705,7 @@ describe('cache', () => {
 
     it('preserves an un-replayed local edge over an authoritative single-page refetch', () => {
       const spy = jest
-        .spyOn(queueStore, 'getPendingClientIds')
+        .spyOn(queueStore, 'getUnconfirmedCreateIds')
         .mockReturnValue(new Set(['cuid-pending']));
       const cache = makeCache();
 
@@ -725,7 +727,7 @@ describe('cache', () => {
 
     it('drops a server-removed edge that has no pending mutation', () => {
       const spy = jest
-        .spyOn(queueStore, 'getPendingClientIds')
+        .spyOn(queueStore, 'getUnconfirmedCreateIds')
         .mockReturnValue(new Set()); // nothing queued
       const cache = makeCache();
 
@@ -751,12 +753,7 @@ describe('cache', () => {
       queueStore.addMutation({
         id: 'cross-seam-batch-add',
         userId: 'cross-seam-user',
-        operationName: 'AddItemsToShoppingList',
-        mutation: gql`
-          mutation AddItemsToShoppingList {
-            __typename
-          }
-        `,
+        ...queuedMutationFor(AddItemToShoppingListDocument),
         variables: {
           input: {
             shoppingListId: 'list-1',
@@ -863,6 +860,46 @@ describe('cache', () => {
         variables: { filters: { homeId: 'h1' } },
       });
       expect(result?.shoppingLists).toEqual([]);
+    });
+
+    it('Query.shoppingLists keeps a read per home and page size', () => {
+      const cache = makeCache();
+      const QUERY = gql`
+        query GetLists($homeId: ID, $first: Int) {
+          shoppingLists(homeId: $homeId, first: $first) {
+            id
+            name
+          }
+        }
+      `;
+      const lists = (count: number) =>
+        Array.from({ length: count }, (_, i) => ({
+          __typename: 'ShoppingList',
+          id: `sl-${i}`,
+          name: `List ${i}`,
+        }));
+
+      cache.writeQuery({
+        query: QUERY,
+        variables: { homeId: 'h1', first: 50 },
+        data: { shoppingLists: lists(30) },
+      });
+      cache.writeQuery({
+        query: QUERY,
+        variables: { homeId: 'h1', first: 20 },
+        data: { shoppingLists: lists(20) },
+      });
+      cache.writeQuery({
+        query: QUERY,
+        variables: { homeId: 'h2', first: 50 },
+        data: { shoppingLists: lists(1) },
+      });
+
+      const overview = cache.readQuery<ShoppingListsResult>({
+        query: QUERY,
+        variables: { homeId: 'h1', first: 50 },
+      });
+      expect(overview?.shoppingLists).toHaveLength(30);
     });
   });
 
@@ -1935,7 +1972,7 @@ describe('cache', () => {
 
     it('preserves an un-replayed local meal item over an authoritative refetch', () => {
       const spy = jest
-        .spyOn(queueStore, 'getPendingClientIds')
+        .spyOn(queueStore, 'getUnconfirmedCreateIds')
         .mockReturnValue(new Set(['mpi-local']));
       const cache = makeCache();
 
@@ -1955,7 +1992,7 @@ describe('cache', () => {
 
     it('drops a server-removed meal item with no pending mutation', () => {
       const spy = jest
-        .spyOn(queueStore, 'getPendingClientIds')
+        .spyOn(queueStore, 'getUnconfirmedCreateIds')
         .mockReturnValue(new Set());
       const cache = makeCache();
 

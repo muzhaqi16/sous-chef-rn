@@ -1,4 +1,4 @@
-import { StateCreator } from 'zustand';
+import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
 import { storage } from '#/storage/mmkv';
 
@@ -86,6 +86,11 @@ export const isApiUnavailable = (
 export const shouldTreatAsOffline = (
   state: Pick<NetworkState, 'isOnline' | 'apiReachable'>,
 ): boolean => !state.isOnline && state.apiReachable !== true;
+
+/** No request should reach the server: it is unavailable, or offline mode is on. */
+export const isNetworkWithheld = (
+  state: Pick<NetworkState, 'isOnline' | 'apiReachable' | 'offlineModeEnabled'>,
+): boolean => state.offlineModeEnabled || isApiUnavailable(state);
 
 /**
  * Whether a cache-missing query is answered with an offline error rather than

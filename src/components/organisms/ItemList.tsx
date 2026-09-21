@@ -3,12 +3,8 @@ import {
   View,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
-  ScrollView,
 } from 'react-native';
-import {
-  PlainScrollRefreshControl,
-  ThemedRefreshControl,
-} from '#components/atoms/themedComponents';
+import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import {
   FlashList,
   type FlashListRef,
@@ -19,7 +15,7 @@ import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { ItemCard } from './ItemCard';
-import { IconName } from '#/utils/iconUtils';
+import type { IconName } from '#/utils/iconUtils';
 import { getScrollClearancePadding } from '#constants/layout';
 import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 
@@ -38,8 +34,10 @@ import {
 import {
   ItemListActionsProvider,
   useItemListActions,
+  useItemListTestIDPrefix,
   type ItemListActions,
 } from './ItemListActionsContext';
+import { kitTestIDs } from '#components/testIDs';
 
 // Module-scope keyExtractor — zero runtime overhead
 const keyExtractor = (item: Item) => item.id;
@@ -62,9 +60,9 @@ const ItemListRenderItemComponent: React.FC<ListRenderItemInfo<Item>> = ({
   item,
   index,
 }) => {
-  const { actions } = useItemListActions();
-  const { onItemPress, onSwipeableWillOpen, testIDPrefix, onBeforeRowRemoved } =
-    actions;
+  const { onItemPress, onSwipeableWillOpen, onBeforeRowRemoved } =
+    useItemListActions();
+  const testIDPrefix = useItemListTestIDPrefix();
   // A derivation, so it comes from its own context and is always the current
   // one — the command bag stabilises behind a ref that publishes too late.
   const itemSwipeActions = useItemSwipeActions();
@@ -99,7 +97,9 @@ const ItemListRenderItemComponent: React.FC<ListRenderItemInfo<Item>> = ({
       leftActions={swipe?.left}
       rightActions={swipe?.right}
       onSwipeableWillOpen={onSwipeableWillOpen}
-      testID={testIDPrefix ? `${testIDPrefix}-${index}` : undefined}
+      testID={
+        testIDPrefix ? kitTestIDs.listItem(testIDPrefix, index) : undefined
+      }
     />
   );
 };
@@ -233,8 +233,12 @@ export const ItemList: React.FC<ItemListProps> = ({
   // Apollo's `refetch()` does on any network error.
   const handleRefresh = () => {
     if (!onRefresh) return;
-    executeRefreshWithFinally(onRefresh, setRefreshing);
+    void executeRefreshWithFinally(onRefresh, setRefreshing);
   };
+
+  const refreshControl = onRefresh ? (
+    <ThemedRefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+  ) : undefined;
 
   // Bundle actions for context provider
   // A row-removing action needs FlashList told before it fires, or the removal
@@ -243,7 +247,6 @@ export const ItemList: React.FC<ItemListProps> = ({
   const actions: ItemListActions = {
     onItemPress,
     onSwipeableWillOpen,
-    testIDPrefix,
     // A command, so it belongs in this bag — the row calls it before a
     // row-removing action, and the list is what knows how to prepare itself.
     onBeforeRowRemoved: () => {
@@ -264,7 +267,7 @@ export const ItemList: React.FC<ItemListProps> = ({
 
   if (items.length === 0 && emptyState) {
     return (
-      <ScrollView
+      <SwipeAwareScrollComponent
         contentContainerStyle={[styles.listContent, emptyContentStyle]}
         onScroll={onScroll}
         onScrollBeginDrag={onScrollBeginDrag}
@@ -276,14 +279,7 @@ export const ItemList: React.FC<ItemListProps> = ({
         // keyboard, forcing a second tap on the search button). Taps on empty
         // space still dismiss the keyboard.
         keyboardShouldPersistTaps="handled"
-        refreshControl={
-          onRefresh ? (
-            <PlainScrollRefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-            />
-          ) : undefined
-        }
+        refreshControl={refreshControl}
       >
         {!!ListHeaderComponent &&
           (typeof ListHeaderComponent === 'function' ? (
@@ -292,12 +288,12 @@ export const ItemList: React.FC<ItemListProps> = ({
             ListHeaderComponent
           ))}
         <EmptyState {...emptyState} />
-      </ScrollView>
+      </SwipeAwareScrollComponent>
     );
   }
 
   return (
-    <ItemListActionsProvider actions={actions}>
+    <ItemListActionsProvider actions={actions} testIDPrefix={testIDPrefix}>
       <ItemSwipeActionsProvider value={itemSwipeActions}>
         <FlashList
           renderScrollComponent={SwipeAwareScrollComponent}
@@ -318,14 +314,7 @@ export const ItemList: React.FC<ItemListProps> = ({
           // keyboard, forcing a second tap on the search button). Taps on empty
           // space still dismiss the keyboard.
           keyboardShouldPersistTaps="handled"
-          refreshControl={
-            onRefresh ? (
-              <ThemedRefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-              />
-            ) : undefined
-          }
+          refreshControl={refreshControl}
           renderItem={renderItem}
           drawDistance={FLASHLIST_DEFAULTS.fullScreen.drawDistance}
           maintainVisibleContentPosition={MVCP_DISABLED}

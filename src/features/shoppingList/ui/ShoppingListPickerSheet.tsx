@@ -14,6 +14,7 @@ import type {
   ItemSelectorRef,
   SelectorConfig,
 } from '#components/organisms/AnimatedItemSelector/types';
+import { LIST_NAME_MAX_LENGTH } from '#features/shoppingList/utils/shoppingListConstants';
 
 interface ShoppingList {
   id: string;
@@ -122,7 +123,7 @@ export const ShoppingListPickerSheet: React.FC<
           onChangeText={setNewListName}
           placeholder={t('shoppingListPicker.newListNamePlaceholder')}
           autoCapitalize="words"
-          maxLength={100}
+          maxLength={LIST_NAME_MAX_LENGTH}
         />
         <Pressable
           style={({ pressed }) => [

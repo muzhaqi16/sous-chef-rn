@@ -39,7 +39,7 @@ export const TemplateSection: React.FC<TemplateSectionProps> = ({
 
   return (
     <View style={commonStyles.settingsSection}>
-      <Text style={commonStyles.settingsSectionTitle}>
+      <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
         {t('shoppingListScreens.templateSection')}
       </Text>
 
@@ -65,7 +65,7 @@ export const TemplateSection: React.FC<TemplateSectionProps> = ({
             disabled={creating}
           >
             <Icon name="duplicate-outline" size={20} tone="primary" />
-            <Text tone="accent" style={styles.actionText}>
+            <Text role="body" tone="accent" style={styles.actionText}>
               {t('shoppingListScreens.createFromTemplate')}
             </Text>
           </Pressable>
@@ -77,7 +77,7 @@ export const TemplateSection: React.FC<TemplateSectionProps> = ({
           disabled={marking}
         >
           <Icon name="bookmark-outline" size={20} tone="primary" />
-          <Text tone="accent" style={styles.actionText}>
+          <Text role="body" tone="accent" style={styles.actionText}>
             {t('labels.saveAsTemplate')}
           </Text>
         </Pressable>

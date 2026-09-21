@@ -10,6 +10,7 @@ import {
 import { ItemImageStatus } from '#/graphql/generated/schemaTypes';
 import { MarkPrimaryItemImageDocument } from '#features/catalog/hooks/useMarkPrimaryItemImage.generated';
 import { ItemPhotoViewer } from '../ItemPhotoViewer';
+import type { ItemPhotoCarousel_ItemPhotoFragment } from '#features/catalog/ui/ItemPhotoCarousel.generated';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -29,8 +30,8 @@ const photo = (
     status: ItemImageStatus;
     perspective: string | null;
   }> = {},
-) => ({
-  __typename: 'ItemPhoto' as const,
+): ItemPhotoCarousel_ItemPhotoFragment => ({
+  __typename: 'ItemPhoto',
   id,
   url: `https://cdn.test/${id}.jpg`,
   perspective: null,

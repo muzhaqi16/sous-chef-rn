@@ -128,7 +128,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                   uri={avatarUrl}
                   style={styles.avatarImage}
                   displaySize={AVATAR_SIZE}
-                  onFailure={() =>
+                  onError={() =>
                     logger.warn('Avatar image failed to load:', avatarUrl)
                   }
                 />
@@ -236,7 +236,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
   },
   subtitleText: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   pressed: {
     opacity: theme.opacity.pressed,

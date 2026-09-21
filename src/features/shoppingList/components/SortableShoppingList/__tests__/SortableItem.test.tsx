@@ -58,7 +58,7 @@ jest.mock('#components/molecules/ListItem', () => ({
         {checkboxElement}
         {leftElement}
         <Text>{title}</Text>
-        {typeof subtitle === 'string' && <Text>{subtitle}</Text>}
+        {typeof subtitle === 'string' ? <Text>{subtitle}</Text> : subtitle}
         {rightElement}
       </View>
     );
@@ -105,7 +105,7 @@ jest.mock('#features/shoppingList/components/QuantityBadge', () => ({
         onPress={onPress}
         disabled={disabled}
       >
-        <Text>{`${quantity} ${unit || ''}`}</Text>
+        <Text>{`${quantity} ${unit ?? ''}`}</Text>
       </Pressable>
     );
   },
@@ -217,6 +217,11 @@ import {
   useShoppingListTutorialActions,
   ShoppingListTutorialStep,
 } from '#features/shoppingList/context/ShoppingListTutorialContext';
+import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import { QueueStatus } from '#/apollo/offlineQueue/types';
+import { queuedMutationFor } from '#/test-utils/queuedMutation';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
 // Build a ShoppingListItem cache entry that satisfies the SortableItem_item
 // fragment selection. Passing the entry's `__typename`/`id` ref as `itemRef`
@@ -285,6 +290,14 @@ describe('SwipeableListItem (SortableItem)', () => {
       notifyMoveToPantryTapped: jest.fn(),
       notifySwipeActionsSeen: jest.fn(),
     });
+  });
+
+  it('renders an empty cell while the entity is not in the cache', () => {
+    renderWithApollo(
+      <SwipeableListItem item={rowItem(seedItem())} index={0} target="Cell" />,
+    );
+    expect(screen.queryByTestId('list-item')).toBeNull();
+    expect(screen.queryByTestId('swipeable-item')).toBeNull();
   });
 
   it('renders the item title from the fragment', () => {
@@ -366,17 +379,54 @@ describe('SwipeableListItem (SortableItem)', () => {
     expect(screen.getByText('3 pcs')).toBeTruthy();
   });
 
-  it('renders a stable empty cell without crashing when FlashList recycles an undefined item', () => {
-    // FlashList v2 can transiently call renderItem with item === undefined while
-    // recycling cells during a layout-animation render (toggle/delete shrinks
-    // the data array). The row must degrade to an empty cell, not throw.
-    renderWithApollo(
-      // @ts-expect-error — intentionally simulating FlashList's recycled
-      // undefined item, which violates the ListRenderItemInfo type at runtime.
-      <SwipeableListItem item={undefined} index={0} target="Cell" />,
-    );
-    expect(screen.queryByTestId('list-item')).toBeNull();
-    expect(screen.queryByTestId('swipeable-item')).toBeNull();
+  describe('an edit still waiting in the offline queue', () => {
+    afterEach(() => {
+      queueStore.clearAllQueues();
+      queueStore.clearCurrentUserId();
+    });
+
+    const queueEdit = (itemId: string) => {
+      queueStore.setCurrentUserId('user-1');
+      queueStore.addMutation({
+        id: `mut-${itemId}`,
+        userId: 'user-1',
+        ...queuedMutationFor(UpdateShoppingListItemDocument),
+        variables: { input: { id: itemId, quantity: 4 } },
+        status: QueueStatus.PENDING,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        retryCount: 0,
+        maxRetries: 3,
+        requiresAuth: true,
+      });
+    };
+
+    it('marks the row as pending delivery', () => {
+      const entry = seedItem();
+      queueEdit(entry.id);
+      renderWithApollo(
+        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+        { cache: seedRow(entry) },
+      );
+
+      expect(
+        screen.getByTestId(shoppingListTestIDs.itemPendingSync(entry.id)),
+      ).toBeTruthy();
+    });
+
+    it('leaves a row with nothing queued unmarked', () => {
+      const entry = seedItem();
+      queueEdit('another-item');
+      renderWithApollo(
+        <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+        { cache: seedRow(entry) },
+      );
+
+      expect(
+        screen.queryByTestId(shoppingListTestIDs.itemPendingSync(entry.id)),
+      ).toBeNull();
+      expect(screen.getByText('2 liters')).toBeTruthy();
+    });
   });
 
   describe('swipe actions reach the row', () => {

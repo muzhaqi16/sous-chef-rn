@@ -1,6 +1,7 @@
 import { waitFor } from '@testing-library/react-native';
 import {
   Difficulty,
+  ExternalSource,
   RecipeCategory,
   RecipeStatus,
 } from '#/graphql/generated/schemaTypes';
@@ -11,6 +12,7 @@ import {
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { useRecipeData } from '../useRecipeData';
 import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
+import { useRecipeCacheStore } from '#features/recipes/store/useRecipeCacheStore';
 
 jest.mock('#/services/spoonacular/SpoonacularService', () => ({
   spoonacularService: {
@@ -22,6 +24,8 @@ const noopPreload = jest.fn().mockResolvedValue(undefined);
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Recipe details are cached by id; each test states its own Spoonacular answer.
+  useRecipeCacheStore.getState().clearAllCache();
 });
 
 function backendRecipeMock(
@@ -164,7 +168,7 @@ describe('useRecipeData', () => {
       const { result } = renderHookWithApollo(() =>
         useRecipeData({
           recipeId: undefined,
-          externalSource: 'SPOONACULAR',
+          externalSource: ExternalSource.Spoonacular,
           externalId: '12345',
           preloadRecipe: noopPreload,
         }),
@@ -199,7 +203,7 @@ describe('useRecipeData', () => {
       renderHookWithApollo(() =>
         useRecipeData({
           recipeId: undefined,
-          externalSource: 'SPOONACULAR',
+          externalSource: ExternalSource.Spoonacular,
           externalId: '99',
           preloadRecipe: preload,
         }),
@@ -216,40 +220,36 @@ describe('useRecipeData', () => {
       const { result } = renderHookWithApollo(() =>
         useRecipeData({
           recipeId: undefined,
-          externalSource: 'SPOONACULAR',
+          externalSource: ExternalSource.Spoonacular,
           externalId: '12345',
           preloadRecipe: noopPreload,
         }),
       );
 
       await waitFor(() =>
-        expect(result.current.error).toBe(
-          'Failed to load recipe. Please try again.',
-        ),
+        expect(result.current.error).toBe("Couldn't load this recipe"),
       );
       expect(result.current.displayData).toBeNull();
     });
 
-    it('rejects unknown external sources', async () => {
+    it('rejects an external source it has no client for', async () => {
       const { result } = renderHookWithApollo(() =>
         useRecipeData({
           recipeId: undefined,
-          externalSource: 'UNKNOWN',
+          externalSource: ExternalSource.Edamam,
           externalId: '1',
           preloadRecipe: noopPreload,
         }),
       );
 
       await waitFor(() =>
-        expect(result.current.error).toBe(
-          'Failed to load recipe. Please try again.',
-        ),
+        expect(result.current.error).toBe("Couldn't load this recipe"),
       );
     });
   });
 
   describe('with no recipeId and no external source', () => {
-    it('reports "Recipe not available."', async () => {
+    it('reports "Recipe not found"', async () => {
       const { result } = renderHookWithApollo(() =>
         useRecipeData({
           recipeId: undefined,
@@ -260,7 +260,7 @@ describe('useRecipeData', () => {
       );
 
       await waitFor(() =>
-        expect(result.current.error).toBe('Recipe not available.'),
+        expect(result.current.error).toBe('Recipe not found'),
       );
       expect(result.current.displayData).toBeNull();
     });
@@ -313,7 +313,7 @@ describe('useRecipeData', () => {
         () =>
           useRecipeData({
             recipeId: 'r1',
-            externalSource: 'SPOONACULAR',
+            externalSource: ExternalSource.Spoonacular,
             externalId: '1',
             preloadRecipe: noopPreload,
           }),

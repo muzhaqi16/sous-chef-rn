@@ -10,6 +10,7 @@ import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
 import { GlassSurface, supportsGlass } from '#components/atoms/GlassSurface';
 import { HeaderActionIcon } from '#components/molecules/HeaderActionIcon';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
+import { kitTestIDs } from '#components/testIDs';
 
 // ============================================
 // Types
@@ -116,7 +117,7 @@ export const Header: React.FC<HeaderProps> = ({
         key={action.onMeasure ? undefined : index}
         style={styles.action}
         onPress={action.onPress}
-        disabled={action.disabled || action.loading}
+        disabled={!!action.disabled || !!action.loading}
         testID={action.testID}
         accessibilityRole="button"
         accessibilityLabel={action.accessibilityLabel}
@@ -160,7 +161,7 @@ export const Header: React.FC<HeaderProps> = ({
             accessibilityRole="button"
             accessibilityLabel={t('labels.close')}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            testID="header-close-button"
+            testID={kitTestIDs.headerCloseButton}
           >
             <Icon name="close" size={24} tone="textPrimary" />
           </AppPressable>
@@ -172,7 +173,7 @@ export const Header: React.FC<HeaderProps> = ({
             accessibilityRole="button"
             accessibilityLabel={t('labels.goBack')}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            testID="header-back-button"
+            testID={kitTestIDs.headerBackButton}
           >
             <Icon name="arrow-back" size={24} tone="textPrimary" />
           </AppPressable>

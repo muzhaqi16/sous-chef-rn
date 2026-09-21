@@ -1,12 +1,25 @@
+import { isRecord } from './isRecord';
 /**
  * Serializes any Apollo / Network / JS error to a JSON-friendly object without
  * throwing. A WeakSet tracks visited objects against circular references, and
  * depth is capped so a huge Apollo context object is not walked whole.
  */
 
-/** Narrows an opaque value to an indexable object, so no `any` is needed. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+/** `String(value)` for a primitive; an object reads as its tag, never through its own `toString`. */
+export function describeValue(value: unknown): string {
+  switch (typeof value) {
+    case 'string':
+      return value;
+    case 'number':
+    case 'boolean':
+    case 'bigint':
+    case 'symbol':
+    case 'undefined':
+      return String(value);
+    case 'function':
+    case 'object':
+      return value === null ? 'null' : Object.prototype.toString.call(value);
+  }
 }
 
 /** '' when the value carries no string `message`. */
@@ -76,11 +89,15 @@ export function serializeError(error: unknown, maxDepth = 4): SerializedError {
   // undefined/''/0" are distinguishable in logs.
   if (!error) {
     const description =
-      error === null ? 'null' : error === '' ? 'empty string' : String(error);
+      error === null
+        ? 'null'
+        : error === ''
+        ? 'empty string'
+        : describeValue(error);
     return { message: `Unknown error (${description})` };
   }
   if (typeof error === 'string') return { message: error };
-  if (!isRecord(error)) return { message: String(error) };
+  if (!isRecord(error)) return { message: describeValue(error) };
 
   const visited = new WeakSet<object>();
 
@@ -110,12 +127,11 @@ export function serializeError(error: unknown, maxDepth = 4): SerializedError {
     }
 
     // Objects
-    const record = value as Record<string, unknown>;
     const output: Record<string, unknown> = {};
 
-    for (const key of Object.keys(record)) {
+    for (const key of Object.keys(value)) {
       try {
-        output[key] = safeSerialize(record[key], depth + 1);
+        output[key] = safeSerialize(Reflect.get(value, key), depth + 1);
       } catch {
         output[key] = '[Unserializable]';
       }
@@ -151,7 +167,7 @@ export function serializeError(error: unknown, maxDepth = 4): SerializedError {
         message:
           typeof gqlErr.message === 'string'
             ? gqlErr.message
-            : String(gqlErr.message || ''),
+            : describeValue(gqlErr.message ?? ''),
         path: Array.isArray(gqlErr.path)
           ? gqlErr.path.map((p: unknown) =>
               typeof p === 'string' || typeof p === 'number' ? p : String(p),
@@ -169,11 +185,11 @@ export function serializeError(error: unknown, maxDepth = 4): SerializedError {
       name:
         typeof networkError.name === 'string'
           ? networkError.name
-          : String(networkError.name || 'NetworkError'),
+          : describeValue(networkError.name ?? 'NetworkError'),
       message:
         typeof networkError.message === 'string'
           ? networkError.message
-          : String(networkError.message || ''),
+          : describeValue(networkError.message ?? ''),
       statusCode: networkError.statusCode,
       result: safeSerialize(networkError.result, 1),
     };
@@ -186,7 +202,7 @@ export function serializeError(error: unknown, maxDepth = 4): SerializedError {
       operationName:
         typeof operation.operationName === 'string'
           ? operation.operationName
-          : String(operation.operationName || ''),
+          : describeValue(operation.operationName ?? ''),
       variables: safeSerialize(operation.variables, 1),
     };
   }
@@ -230,115 +246,85 @@ export function serializeError(error: unknown, maxDepth = 4): SerializedError {
   return serialized;
 }
 
-/**
- * Check if an error message indicates a circular structure issue
- * These errors are expected during WebSocket reconnection and can be safely downgraded to warnings
- */
-export function isCircularStructureError(error: unknown): boolean {
-  if (!error) return false;
+/** Aborts `JSON.stringify` at the first reference cycle, carrying the path to it. */
+class ReferenceCycle extends Error {
+  override readonly name = 'ReferenceCycle';
 
-  const message = getErrorMessage(error);
-
-  return (
-    message.includes('Converting circular structure to JSON') ||
-    message.includes('circular structure')
-  );
+  constructor(
+    readonly path: readonly object[],
+    readonly cycle: readonly object[],
+  ) {
+    super('reference cycle');
+  }
 }
 
-/**
- * graphql-ws keepalive pings use setTimeout, and a Timer object is a circular
- * linked list — so during subscription teardown/setup an error event can carry
- * one. Expected and not actionable, so callers suppress it silently.
- */
-export function isTimerCircularStructureError(error: unknown): boolean {
-  if (!error) return false;
-
-  const message = getErrorMessage(error);
-
-  // Must be a circular structure error AND involve timer objects
-  return (
-    message.includes('Converting circular structure to JSON') &&
-    (message.includes('Timeout') ||
-      message.includes('TimersList') ||
-      message.includes('_idlePrev') ||
-      message.includes('_idleNext'))
-  );
+// `JSON.stringify` calls a replacer with the holder as `this`; unwinding the
+// stack to it leaves exactly the ancestors of `value`, so a repeat is a cycle
+// and a reference shared between siblings is not.
+function cycleGuard(): (this: unknown, key: string, value: unknown) => unknown {
+  const ancestors: object[] = [];
+  return function guard(this: unknown, _key: string, value: unknown) {
+    while (ancestors.length > 0 && ancestors[ancestors.length - 1] !== this) {
+      ancestors.pop();
+    }
+    if (typeof value === 'object' && value !== null) {
+      const at = ancestors.indexOf(value);
+      if (at !== -1) {
+        throw new ReferenceCycle([...ancestors], ancestors.slice(at));
+      }
+      ancestors.push(value);
+    }
+    return value;
+  };
 }
 
-/**
- * Safely stringify errors with circular structure detection
- * Returns a brief warning message for circular structure errors instead of throwing
- */
+type Stringified =
+  | { outcome: 'ok'; text: string }
+  | { outcome: 'cycle'; found: ReferenceCycle }
+  | { outcome: 'failed'; thrown: unknown };
+
+function stringify(value: unknown, space?: number): Stringified {
+  try {
+    return { outcome: 'ok', text: JSON.stringify(value, cycleGuard(), space) };
+  } catch (thrown) {
+    return thrown instanceof ReferenceCycle
+      ? { outcome: 'cycle', found: thrown }
+      : { outcome: 'failed', thrown };
+  }
+}
+
+/** Stringifies an error, reporting a reference cycle instead of throwing. */
 export function safeStringifyError(error: unknown): {
   stringified: string;
   isCircular: boolean;
   message: string;
 } {
-  // Short-circuit when the error message already indicates a circular structure
-  const hasCircularMessage =
-    isCircularStructureError(error) ||
-    (Array.isArray(error) &&
-      error.some(item => isCircularStructureError(item)));
-
-  if (hasCircularMessage) {
-    const message = (() => {
-      if (Array.isArray(error)) {
-        const circularError = error.find(item =>
-          isCircularStructureError(item),
-        );
-        if (typeof circularError === 'string') {
-          return circularError;
-        }
-        if (circularError instanceof Error) {
-          return circularError.message;
-        }
-      } else if (typeof error === 'string') {
-        return error;
-      } else if (error instanceof Error) {
-        return error.message;
-      }
-      return 'Unknown error';
-    })();
-
-    return {
-      stringified: `[Circular structure detected] ${message}`,
-      isCircular: true,
-      message,
-    };
+  if (typeof error === 'string') {
+    return { stringified: error, isCircular: false, message: '' };
   }
 
-  try {
-    const stringified =
-      typeof error === 'string' ? error : JSON.stringify(error, null, 2);
-    return {
-      stringified,
-      isCircular: false,
-      message: '',
-    };
-  } catch (stringifyError: unknown) {
-    const stringifyMessage =
-      stringifyError instanceof Error ? stringifyError.message : '';
-    const isCircular =
-      stringifyMessage.includes('Converting circular structure to JSON') ||
-      stringifyMessage.includes('circular');
-
-    if (isCircular) {
-      // Extract error message if available
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-
+  const result = stringify(error, 2);
+  switch (result.outcome) {
+    case 'ok':
+      return { stringified: result.text, isCircular: false, message: '' };
+    case 'cycle': {
+      // Within an array, the message is the entry that holds the cycle.
+      const [root, entry] = result.found.path;
+      const subject = Array.isArray(root) ? entry : error;
+      const message = getErrorMessage(subject) || 'Unknown error';
       return {
-        stringified: `[Circular structure detected] ${errorMessage}`,
+        stringified: `[Circular structure detected] ${message}`,
         isCircular: true,
-        message: errorMessage,
+        message,
       };
     }
-
-    // Some other JSON.stringify error
-    return {
-      stringified: `[Error serializing: ${stringifyMessage}]`,
-      isCircular: false,
-      message: stringifyMessage,
-    };
+    case 'failed': {
+      const message = getErrorMessage(result.thrown);
+      return {
+        stringified: `[Error serializing: ${message}]`,
+        isCircular: false,
+        message,
+      };
+    }
   }
 }

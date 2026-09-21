@@ -33,7 +33,9 @@ export const PantrySelector: React.FC<PantrySelectorProps> = ({
     <View style={styles.section}>
       <SectionHeader variant="title" style={styles.sectionLabel}>
         {t('labels.selectPantry')}
-        <Text tone="error">{t('moveToPantry.requiredAsterisk')}</Text>
+        <Text role="body" tone="danger">
+          {t('moveToPantry.requiredAsterisk')}
+        </Text>
       </SectionHeader>
       <View style={styles.pantryList}>
         {pantries.map(pantry => (

@@ -11,10 +11,6 @@ jest.mock('#/services/toastService', () => ({
   },
 }));
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: { trackEvent: jest.fn(), trackError: jest.fn() },
-}));
-
 import {
   recordMock,
   renderHookWithApollo,
@@ -24,10 +20,13 @@ import {
   LinkDerivedListToMealPlanDocument,
 } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { toastService } from '#/services/toastService';
 import { seedCache } from '#/test-utils/apolloMockProvider';
 import { UseGenerateShoppingList_MealPlanFragmentDoc } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { useStore } from '#store';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n';
 import { useGenerateShoppingList } from '../useGenerateShoppingList';
 
 /**
@@ -213,6 +212,246 @@ describe('generating a shopping list from a cached meal plan', () => {
     expect(link.fired).toHaveLength(1);
     expect(link.fired[0]).toMatchObject({
       input: { id: 'list-1', mealPlanId: PLAN_ID },
+    });
+  });
+
+  describe('an ingredient the server has not linked yet', () => {
+    // Straight after an import the plan caches the recipe with `item: null`;
+    // the server links it on a background job.
+    const unlinked = {
+      ...ingredient('ri-2', 'item-2', 1),
+      node: { ...ingredient('ri-2', 'item-2', 1).node, item: null },
+    };
+    const withRecipeEdges = (edges: unknown[]) => ({
+      ...plan,
+      mealPlanItems: [
+        {
+          ...plan.mealPlanItems[0],
+          recipe: {
+            ...plan.mealPlanItems[0]?.recipe,
+            ingredientsConnection: {
+              __typename: 'RecipeIngredientConnection',
+              edges,
+            },
+          },
+        },
+      ],
+    });
+    const seedUnlinked = () =>
+      seedCache([
+        {
+          data: withRecipeEdges([ingredient('ri-1', 'item-1', 3), unlinked]),
+          fragment: UseGenerateShoppingList_MealPlanFragmentDoc,
+          fragmentName: 'useGenerateShoppingList_mealPlan',
+        },
+      ]);
+    // The server's answer, now linked, in the shape GetMealPlan selects.
+    const planMock = () =>
+      recordMock(GetMealPlanDocument, {
+        data: {
+          mealPlan: {
+            __typename: 'MealPlan',
+            id: PLAN_ID,
+            name: plan.name,
+            homeId: plan.homeId,
+            mealPlanItems: [
+              {
+                __typename: 'MealPlanItem',
+                id: 'mpi-1',
+                servings: 4,
+                recipe: {
+                  __typename: 'Recipe',
+                  id: 'recipe-1',
+                  servings: 2,
+                  ingredientsConnection: {
+                    __typename: 'RecipeIngredientConnection',
+                    edges: [
+                      {
+                        __typename: 'RecipeIngredientEdge',
+                        node: {
+                          __typename: 'RecipeIngredient',
+                          id: 'ri-1',
+                          name: 'Ingredient ri-1',
+                          quantity: 3,
+                          isOptional: false,
+                          unit: { __typename: 'Unit', id: 'unit-1' },
+                          item: {
+                            __typename: 'Item',
+                            id: 'item-1',
+                            name: 'Item item-1',
+                          },
+                        },
+                      },
+                      {
+                        __typename: 'RecipeIngredientEdge',
+                        node: {
+                          __typename: 'RecipeIngredient',
+                          id: 'ri-2',
+                          name: 'Ingredient ri-2',
+                          quantity: 1,
+                          isOptional: false,
+                          unit: { __typename: 'Unit', id: 'unit-1' },
+                          item: {
+                            __typename: 'Item',
+                            id: 'item-2',
+                            name: 'Item item-2',
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      });
+
+    it('re-reads the plan online and includes the linked ingredient', async () => {
+      const refetch = planMock();
+      const add = addMock();
+
+      const { result } = renderHookWithApollo(
+        () => useGenerateShoppingList(PLAN_ID),
+        {
+          operationMocks: [
+            refetch.mock,
+            createMock().mock,
+            add.mock,
+            linkMock().mock,
+          ],
+          cache: seedUnlinked(),
+        },
+      );
+
+      const response = await result.current.generateShoppingList({
+        checkPantry: false,
+      });
+
+      expect(refetch.fired).toHaveLength(1);
+      expect(response).toEqual({ shoppingListId: 'list-1', lineCount: 2 });
+    });
+
+    it('builds from the cache offline and leaves it out', async () => {
+      useStore.setState({ apiReachable: false });
+      const refetch = planMock();
+
+      const { result } = renderHookWithApollo(
+        () => useGenerateShoppingList(PLAN_ID),
+        {
+          operationMocks: [
+            refetch.mock,
+            createMock().mock,
+            addMock().mock,
+            linkMock().mock,
+          ],
+          cache: seedUnlinked(),
+        },
+      );
+
+      const response = await result.current.generateShoppingList({
+        checkPantry: false,
+      });
+
+      expect(refetch.fired).toHaveLength(0);
+      expect(response).toEqual({ shoppingListId: 'list-1', lineCount: 1 });
+    });
+  });
+
+  describe('a derive the API takes in more than one batch', () => {
+    const bigPlan = (lines: number) => ({
+      ...plan,
+      mealPlanItems: [
+        {
+          ...plan.mealPlanItems[0],
+          servings: 2,
+          recipe: {
+            ...plan.mealPlanItems[0]?.recipe,
+            ingredientsConnection: {
+              __typename: 'RecipeIngredientConnection',
+              edges: Array.from({ length: lines }, (_, i) =>
+                ingredient(`ri-${i}`, `item-${i}`, 1),
+              ),
+            },
+          },
+        },
+      ],
+    });
+    const seedBig = (lines: number) =>
+      seedCache([
+        {
+          data: bigPlan(lines),
+          fragment: UseGenerateShoppingList_MealPlanFragmentDoc,
+          fragmentName: 'useGenerateShoppingList_mealPlan',
+        },
+      ]);
+    const cachedRows = (cache: ReturnType<typeof seedCache>) =>
+      Object.keys(cache.extract()).filter(key =>
+        key.startsWith('ShoppingListItem:'),
+      );
+
+    it('sends 63 lines as batches the API accepts and reports all of them', async () => {
+      useStore.setState({ apiReachable: false });
+      const add = addMock();
+
+      const { result } = renderHookWithApollo(
+        () => useGenerateShoppingList(PLAN_ID),
+        {
+          operationMocks: [createMock().mock, add.mock, linkMock().mock],
+          cache: seedBig(63),
+        },
+      );
+
+      const response = await result.current.generateShoppingList({
+        checkPantry: false,
+      });
+
+      const sizes = (add.fired as Array<{ input: { items: unknown[] } }>).map(
+        fired => fired.input.items.length,
+      );
+      expect(sizes).toEqual([50, 13]);
+      expect(response).toEqual({ shoppingListId: 'list-1', lineCount: 63 });
+      expect(toastService.success).toHaveBeenCalledTimes(1);
+      expect(toastService.success).toHaveBeenCalledWith(
+        t('generateShoppingList.createdSuccess', {
+          name: t('generateShoppingList.defaultName', { name: plan.name }),
+          count: 63,
+          shared: '',
+        }),
+      );
+    });
+
+    it('takes back the rows of a refused batch and reports no success', async () => {
+      useStore.setState({ apiReachable: false });
+      const refused = recordMock(AddDerivedItemsToShoppingListDocument, {
+        data: {
+          addItemsToShoppingList: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+            message: 'guest',
+          },
+        },
+      });
+      const cache = seedBig(3);
+
+      const { result } = renderHookWithApollo(
+        () => useGenerateShoppingList(PLAN_ID),
+        {
+          operationMocks: [createMock().mock, refused.mock, linkMock().mock],
+          cache,
+        },
+      );
+
+      const response = await result.current.generateShoppingList({
+        checkPantry: false,
+        shoppingListId: 'list-1',
+      });
+
+      expect(refused.fired).toHaveLength(1);
+      expect(cachedRows(cache)).toEqual([]);
+      expect(response).toBeNull();
+      expect(toastService.success).not.toHaveBeenCalled();
+      expect(toastService.error).toHaveBeenCalled();
     });
   });
 });

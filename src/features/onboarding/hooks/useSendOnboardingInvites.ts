@@ -1,6 +1,5 @@
 import { useInviteToHome } from '#features/onboarding/hooks/useInviteToHome';
 import { useAddCollaborator } from '#features/shoppingList/hooks/useAddCollaborator';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import {
   CollaboratorRole,
   MembershipRole,
@@ -18,13 +17,12 @@ export interface OnboardingInviteResult {
 }
 
 /**
- * Send the first household invitations. Both underlying mutations pass an
- * `onError`, so a transport failure RESOLVES like a refusal does and no caller
- * can learn from a rejected promise how many addresses actually went out.
+ * Send the first household invitations. Every send RESOLVES, refused or not,
+ * so the count is the only signal of how many addresses actually went out.
  */
-export function useSendOnboardingInvites(onError: (error: Error) => void) {
-  const { inviteToHome } = useInviteToHome(onError);
-  const { addCollaborator } = useAddCollaborator(onError);
+export function useSendOnboardingInvites() {
+  const { inviteToHome } = useInviteToHome();
+  const { addCollaborator } = useAddCollaborator();
 
   const sendInvites = async (
     emails: readonly string[],
@@ -51,12 +49,8 @@ export function useSendOnboardingInvites(onError: (error: Error) => void) {
       return null;
     });
 
-    const outcomes = await Promise.all(sends.filter(send => send !== null));
-    const refusedCount = outcomes.filter(
-      outcome => classifyCreateResult(outcome) === 'rejected',
-    ).length;
-
-    return { refusedCount };
+    const sent = await Promise.all(sends.filter(send => send !== null));
+    return { refusedCount: sent.filter(ok => !ok).length };
   };
 
   return { sendInvites };

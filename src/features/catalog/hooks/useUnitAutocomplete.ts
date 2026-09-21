@@ -1,3 +1,4 @@
+import { logger } from '#/utils/environment';
 import { useEffect, useRef, useState } from 'react';
 import { useLazyQuery, useQuery } from '@apollo/client/react';
 import {
@@ -7,12 +8,13 @@ import {
 import { useAppStore } from '#store/useAppStore';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
+import type { UnitType } from '#/graphql/generated/schemaTypes';
 
 export interface UnitItem {
   id: string;
   name: string;
   symbol: string;
-  type?: string;
+  type?: UnitType;
   abbreviation?: string;
 }
 
@@ -48,12 +50,14 @@ export function useUnitAutocomplete() {
     if (isCacheFresh) return;
 
     requestIdleCallback(() => {
-      fetchCommonUnits().then(result => {
-        if (result.data?.units && result.data.units.length > 0) {
-          setCachedUnits(result.data.units);
-          setLastUnitsFetchedAt(Date.now());
-        }
-      });
+      void fetchCommonUnits()
+        .then(result => {
+          if (result.data?.units && result.data.units.length > 0) {
+            setCachedUnits(result.data.units);
+            setLastUnitsFetchedAt(Date.now());
+          }
+        })
+        .catch(error => logger.warn('Common units preload failed', error));
     });
   }, [
     cachedUnits.length,
@@ -76,15 +80,15 @@ export function useUnitAutocomplete() {
 
   const getResults = (): UnitItem[] => {
     if (debouncedSearchTerm && debouncedSearchTerm.length >= 2) {
-      return (searchData?.searchUnits || []) as UnitItem[];
+      return searchData?.searchUnits ?? [];
     }
     return [];
   };
 
-  const fallbackItems = cachedUnits as UnitItem[];
+  const fallbackItems: UnitItem[] = cachedUnits;
 
   const filterFallback = (term: string, items: UnitItem[]): UnitItem[] => {
-    return filterByTerm(items, term, ['symbol', 'name']) as UnitItem[];
+    return [...filterByTerm(items, term, ['symbol', 'name'])];
   };
 
   const autocomplete = useAutocompleteSearch<UnitItem>({

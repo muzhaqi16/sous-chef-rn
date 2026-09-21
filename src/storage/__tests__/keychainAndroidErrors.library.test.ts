@@ -6,7 +6,7 @@
  * discards them on a key the device refuses to unlock ever again. Android
  * delivers both as `E_CRYPTO_FAILED`, so the discriminator is a string in the
  * Kotlin — which no JS test can execute and no type can hold. Asserting
- * `isPermanentlyInvalidated(...) === false` on a fixture we wrote only compares
+ * `isKeychainKeyInvalidated(...) === false` on a fixture we wrote only compares
  * our constant to our constant: it would keep passing through an upgrade that
  * changed the format, and the failure mode of that drift is deleting a user's
  * credentials when they tap "Use manual login".
@@ -45,6 +45,46 @@ describe('react-native-keychain Android error surface', () => {
     expect(module).toMatch(
       /catch \(e: CryptoFailedException\)[\s\S]{0,160}promise\.reject\(\s*Errors\.E_CRYPTO_FAILED/,
     );
+  });
+
+  it('rejects a failed tag check with a message naming it, unwrapped', () => {
+    const base = read('cipherStorage/CipherStorageBase.kt');
+    const exception = read('exceptions/CryptoFailedException.kt');
+
+    expect(base).toMatch(
+      /e is javax\.crypto\.AEADBadTagException -> \{\s*throw CryptoFailedException\(\s*"Decryption failed: Authentication tag verification failed\. "/,
+    );
+    // Already a CryptoFailedException, so it reaches JS without the
+    // "Wrapped error: " prefix other failures get.
+    expect(exception).toContain(
+      'if (error is CryptoFailedException) throw (error as CryptoFailedException?)!!',
+    );
+  });
+
+  it('generates a fresh key under an alias the keystore no longer holds', () => {
+    const base = read('cipherStorage/CipherStorageBase.kt');
+
+    // Why a screen-lock reset surfaces as a failed tag check rather than an
+    // invalidated key: the stored ciphertext meets a key made after it.
+    expect(base).toMatch(
+      /if \(!keyStore\.containsAlias\(safeAlias\)\) \{[\s\S]{0,120}generateKeyAndStoreUnderAlias\(safeAlias, level\)/,
+    );
+  });
+
+  // Android applies `setInvalidatedByBiometricEnrollment` only to a key with no
+  // validity window, so this is why a newly enrolled finger unlocks a
+  // `BIOMETRY_CURRENT_SET` entry there. A per-use key would need the prompt to
+  // carry a CryptoObject, which it does not.
+  it('authorises a biometric key for a 5 s window, exempting it from enrolment invalidation', () => {
+    const gcm = read('cipherStorage/CipherStorageKeystoreAesGcm.kt');
+    const handler = read('resultHandler/ResultHandlerInteractiveBiometric.kt');
+
+    expect(gcm).toContain('val validityDuration = 5');
+    expect(gcm).toMatch(
+      /setUserAuthenticationParameters\(\s*validityDuration,/,
+    );
+    expect(gcm).not.toContain('setInvalidatedByBiometricEnrollment');
+    expect(handler).toContain('prompt.authenticate(this.promptInfo)');
   });
 
   it('has no separate code for a permanently invalidated key', () => {

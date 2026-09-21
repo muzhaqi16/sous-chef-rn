@@ -33,11 +33,8 @@ jest.mock('#features/home/hooks/useHomeDetailManagement', () => ({
       name: 'My Home',
       allowJoinCode: true,
       joinCode: 'ABC123',
-      members: [
-        { userId: 'user-1', role: 'OWNER', profile: { displayName: 'John' } },
-        { userId: 'user-2', role: 'MEMBER', profile: { displayName: 'Jane' } },
-      ],
-      invites: [],
+      membersConnection: { edges: [], totalCount: 0 },
+      invitesConnection: { edges: [], totalCount: 0 },
       myMembership: {
         id: 'membership-1',
         role: 'OWNER',
@@ -215,11 +212,8 @@ beforeEach(() => {
       name: 'My Home',
       allowJoinCode: true,
       joinCode: 'ABC123',
-      members: [
-        { userId: 'user-1', role: 'OWNER', profile: { displayName: 'John' } },
-        { userId: 'user-2', role: 'MEMBER', profile: { displayName: 'Jane' } },
-      ],
-      invites: [],
+      membersConnection: { edges: [], totalCount: 0 },
+      invitesConnection: { edges: [], totalCount: 0 },
       myMembership: {
         id: 'membership-1',
         role: 'OWNER',
@@ -340,15 +334,8 @@ describe('HomeDetailScreen', () => {
         name: 'My Home',
         allowJoinCode: true,
         joinCode: 'ABC123',
-        members: [
-          { userId: 'user-1', role: 'OWNER', profile: { displayName: 'John' } },
-          {
-            userId: 'user-2',
-            role: 'MEMBER',
-            profile: { displayName: 'Jane' },
-          },
-        ],
-        invites: [],
+        membersConnection: { edges: [], totalCount: 0 },
+        invitesConnection: { edges: [], totalCount: 0 },
         myMembership: {
           id: 'membership-2',
           role: 'MEMBER',

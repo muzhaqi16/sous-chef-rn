@@ -12,7 +12,7 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CopyableShoppingListFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { UseRecurringShoppingList_ListFragmentDoc } from '../useRecurringShoppingList.generated';
-import { RecurringPattern } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, RecurringPattern } from '#/graphql/generated/schemaTypes';
 import { useRecurringShoppingList } from '../useRecurringShoppingList';
 import { useStore } from '#store';
 
@@ -319,6 +319,113 @@ describe('useRecurringShoppingList', () => {
       expect(newId).toBeNull();
       expect(create.fired).toHaveLength(0);
       expect(schedule.fired).toHaveLength(0);
+    });
+
+    it('puts the pointer back when the server refuses to advance it', async () => {
+      const refusedSchedule = recordMock(CreateRecurringShoppingListDocument, {
+        data: {
+          createRecurringShoppingList: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+          },
+        },
+      });
+      const cache = seedRecurring();
+      const { result } = renderHookWithApollo(
+        () => useRecurringShoppingList(),
+        {
+          cache,
+          operationMocks: [
+            queuedCreate().mock,
+            queuedAdd().mock,
+            refusedSchedule.mock,
+          ],
+        },
+      );
+
+      await act(async () => {
+        await result.current.generateNext('list-1');
+      });
+
+      // A refusal resolves as data, not a throw; the advanced date must not stand.
+      expect(refusedSchedule.fired).toHaveLength(1);
+      const pointer = cache.readFragment<{ nextRecurringDate: string | null }>({
+        id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
+        fragment: UseRecurringShoppingList_ListFragmentDoc,
+        fragmentName: 'useRecurringShoppingList_list',
+      })?.nextRecurringDate;
+      expect(pointer).toBe(RECURRING.nextRecurringDate);
+    });
+
+    it('advances the pointer when some copied lines are refused', async () => {
+      const refusedAdd = recordMock(AddItemToShoppingListDocument, {
+        data: {
+          addItemsToShoppingList: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+          },
+        },
+      });
+      const schedule = queuedSchedule();
+      const cache = seedRecurring();
+      const { result } = renderHookWithApollo(
+        () => useRecurringShoppingList(),
+        {
+          cache,
+          operationMocks: [queuedCreate().mock, refusedAdd.mock, schedule.mock],
+        },
+      );
+
+      let newId: string | null = null;
+      await act(async () => {
+        newId = await result.current.generateNext('list-1');
+      });
+
+      // The list for this occurrence exists; only its lines were refused.
+      expect(newId).not.toBeNull();
+      expect(refusedAdd.fired).toHaveLength(1);
+      expect(schedule.fired).toHaveLength(1);
+      const pointer = cache.readFragment<{ nextRecurringDate: string | null }>({
+        id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
+        fragment: UseRecurringShoppingList_ListFragmentDoc,
+        fragmentName: 'useRecurringShoppingList_list',
+      })?.nextRecurringDate;
+      expect(pointer).not.toBe(RECURRING.nextRecurringDate);
+    });
+
+    it('rolls the following occurrence on a second generate after a partly refused roll', async () => {
+      const refusedAdd = recordMock(AddItemToShoppingListDocument, {
+        data: {
+          addItemsToShoppingList: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+          },
+        },
+      });
+      const schedule = queuedSchedule();
+      const { result } = renderHookWithApollo(
+        () => useRecurringShoppingList(),
+        {
+          cache: seedRecurring(),
+          operationMocks: [queuedCreate().mock, refusedAdd.mock, schedule.mock],
+        },
+      );
+
+      await act(async () => {
+        await result.current.generateNext('list-1');
+      });
+      await act(async () => {
+        await result.current.generateNext('list-1');
+      });
+
+      const rolledTo = (
+        schedule.fired as Array<{ input: { nextRecurringDate: string } }>
+      ).map(fired => fired.input.nextRecurringDate);
+      expect(rolledTo).toHaveLength(2);
+      const [first, second] = rolledTo;
+      expect(new Date(second ?? '').getTime()).toBeGreaterThan(
+        new Date(first ?? '').getTime(),
+      );
     });
 
     it('keeps the pointer when the list repeats without a pattern to advance by', async () => {

@@ -4,13 +4,18 @@
  */
 
 import { gql, type ApolloCache } from '@apollo/client';
+import type { DocumentNode } from 'graphql';
 import {
   ShoppingListItemDisplayFragmentDoc,
   type ShoppingListItemDisplayFragment,
 } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
-import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import {
+  settleMutation,
+  settledStatus,
+  type SettledFailure,
+} from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { errorService } from '#/services/errorService';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { addNewItemToShoppingListCache } from './connections';
@@ -40,39 +45,40 @@ export function createOptimisticShoppingListItem(
   id: string,
   fields: OptimisticShoppingListItemFields,
 ): ShoppingListItemDisplayFragment {
-  return createOptimisticEntity<ShoppingListItemDisplayFragment>(
-    'ShoppingListItem',
+  return {
+    __typename: 'ShoppingListItem',
     id,
-    {
-      shoppingList: {
-        __typename: 'ShoppingList',
-        id: fields.shoppingListId,
-      },
-      itemName: fields.itemName,
-      quantity: fields.quantity ?? 1,
-      quantityInput: fields.quantityInput ?? null,
-      displayFormat: DisplayFormat.Auto,
-      unitName: fields.unitName ?? null,
-      category: fields.category ?? null,
-      notes: null,
-      sortOrder: '',
-      // Built whole rather than through `writePurchaseInfo`, which patches an
-      // existing record. A just-created line has no prior purchase to preserve.
-      purchaseInfo: {
-        __typename: 'ShoppingListItemPurchaseInfo',
-        isPurchased: false,
-        // Present rather than omitted: the row reads it, and one absent field
-        // makes the whole list read incomplete.
-        movedToPantryAt: null,
-      },
-      item: fields.itemId
-        ? { __typename: 'Item', id: fields.itemId, imageUrl: null, images: [] }
-        : null,
-      unit: fields.unitId
-        ? { __typename: 'Unit', id: fields.unitId, name: '', symbol: '' }
-        : null,
+    // The server owns the version; its response carries the real one.
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    shoppingList: {
+      __typename: 'ShoppingList',
+      id: fields.shoppingListId,
     },
-  );
+    itemName: fields.itemName,
+    quantity: fields.quantity ?? 1,
+    quantityInput: fields.quantityInput ?? null,
+    displayFormat: DisplayFormat.Auto,
+    unitName: fields.unitName ?? null,
+    category: fields.category ?? null,
+    notes: null,
+    sortOrder: '',
+    // Built whole rather than through `writePurchaseInfo`, which patches an
+    // existing record. A just-created line has no prior purchase to preserve.
+    purchaseInfo: {
+      __typename: 'ShoppingListItemPurchaseInfo',
+      isPurchased: false,
+      // Present rather than omitted: the row reads it, and one absent field
+      // makes the whole list read incomplete.
+      movedToPantryAt: null,
+    },
+    item: fields.itemId
+      ? { __typename: 'Item', id: fields.itemId, imageUrl: null, images: [] }
+      : null,
+    unit: fields.unitId
+      ? { __typename: 'Unit', id: fields.unitId, name: '', symbol: '' }
+      : null,
+  };
 }
 
 /**
@@ -88,8 +94,6 @@ const ShoppingListStatsForOptimisticAddFragment = gql`
   }
 `;
 
-/** What a caller may change about a line's purchase record. */
-
 export function reconcileShoppingItemCreateUpdate(
   cache: ApolloCache,
   listId: string,
@@ -98,9 +102,11 @@ export function reconcileShoppingItemCreateUpdate(
 ): void {
   if (clientId && serverItem.id !== clientId) {
     // Catalog merge: the server folded the line into an EXISTING row, so the
-    // optimistic add counted a row that never came to exist. Withdrawing it
-    // takes `totalItems` back with the entity; evicting alone strands the count.
-    revertOptimisticShoppingListItem(cache, listId, clientId);
+    // optimistic add counted a row that never came to exist. Its count comes
+    // back relatively only when the response did not bring the totals.
+    revertOptimisticShoppingListItem(cache, listId, clientId, {
+      countsSettled: carriesListTotals(serverItem, listId),
+    });
   }
   addNewItemToShoppingListCache(cache, listId, serverItem, false);
 }
@@ -135,7 +141,7 @@ interface BuildAddItemsReconcileUpdateOptions {
    * When set, run the reconcile inside a try/catch reporting this failure
    * message and optional refetch fallback. Omit to apply the reconcile directly.
    */
-  wrap?: { message: string; refetch?: () => void };
+  wrap?: { operation: string; refetch?: () => void };
 }
 
 /**
@@ -152,15 +158,9 @@ export function buildAddItemsReconcileUpdate({
     { data }: { data?: AddItemsReconcileDataLike | null },
     { variables }: { variables?: AddItemsReconcileVariablesLike },
   ): void => {
-    const payload = data?.addItemsToShoppingList;
+    const payload = appliedPayload(data);
     const targetListId = listId ?? variables?.input.shoppingListId;
-    if (
-      payload?.__typename !== 'AddItemsToShoppingListPayload' ||
-      !targetListId ||
-      !variables
-    ) {
-      return;
-    }
+    if (!payload || !targetListId || !variables) return;
     const results = payload.results;
     if (!results?.length) return;
     const run = () =>
@@ -172,14 +172,14 @@ export function buildAddItemsReconcileUpdate({
         // that field is a response-matching token a call site picks freely (the
         // recipe add sends a Spoonacular ingredient id), never this row's
         // minted cuid. Array position is the fallback.
-        const clientId = variables.input.items?.[result?.index ?? position]?.id;
+        const clientId = variables.input.items?.[result.index ?? position]?.id;
         reconcileShoppingItemCreateUpdate(cache, targetListId, item, clientId);
       });
     if (wrap) {
       try {
         run();
       } catch (cacheError) {
-        errorService.reportError(cacheError, { operation: wrap.message });
+        errorService.reportError(cacheError, { operation: wrap.operation });
         wrap.refetch?.();
       }
     } else {
@@ -253,8 +253,12 @@ export function revertOptimisticShoppingListItem(
   cache: ApolloCache,
   listId: string,
   clientId: string,
+  { countsSettled = false }: { countsSettled?: boolean } = {},
 ): void {
   safeEvict(cache, 'ShoppingListItem', clientId);
+  // A response carrying the list's totals already wrote the server's count;
+  // a relative decrement on top counts the same row twice.
+  if (countsSettled) return;
 
   const parentCacheId = cache.identify({
     __typename: 'ShoppingList',
@@ -262,30 +266,56 @@ export function revertOptimisticShoppingListItem(
   });
   if (!parentCacheId) return;
 
+  // Partial: without it a list missing either stat reads as null, and the
+  // fallback below would write a total of zero over a list of any size.
   const stats = cache.readFragment<{
-    totalItems: number;
-    completedItems: number;
+    totalItems?: number;
+    completedItems?: number;
   }>({
     id: parentCacheId,
     fragment: ShoppingListStatsForOptimisticAddFragment,
     fragmentName: '_ShoppingListStatsForOptimisticAdd',
+    returnPartialData: true,
   });
-  const newTotal = Math.max(0, (stats?.totalItems ?? 0) - 1);
-  const completed = stats?.completedItems ?? 0;
+  const total = stats?.totalItems;
+  if (total === undefined) return;
 
+  const newTotal = Math.max(0, total - 1);
+  const completed = stats?.completedItems;
   cache.modify({
     id: parentCacheId,
     fields: {
       totalItems: () => newTotal,
-      remainingItems: () => Math.max(0, newTotal - completed),
-      completionRate: () => (newTotal > 0 ? completed / newTotal : 0),
+      ...(completed !== undefined && {
+        remainingItems: () => Math.max(0, newTotal - completed),
+        completionRate: () => (newTotal > 0 ? completed / newTotal : 0),
+      }),
     },
   });
 }
 
 /**
- * Reconcile a local-first item create once the mutation resolves: `'rejected'`
- * discards the optimistic row, `'created'` / `'queued'` keep it — a queued create
+ * Whether an add result carried THIS list's totals, which Apollo has already
+ * written over the local count. Totals for another list settle nothing here.
+ */
+export function carriesListTotals(item: unknown, listId: string): boolean {
+  if (typeof item !== 'object' || item === null || !('shoppingList' in item)) {
+    return false;
+  }
+  const list: unknown = item.shoppingList;
+  return (
+    typeof list === 'object' &&
+    list !== null &&
+    'id' in list &&
+    list.id === listId &&
+    'totalItems' in list &&
+    typeof list.totalItems === 'number'
+  );
+}
+
+/**
+ * Reconcile a local-first item create once the mutation resolves: `'failed'`
+ * discards the optimistic row, `'applied'` / `'queued'` keep it — a queued create
  * replays later, keyed by the same `id`. Returns which happened, so the caller can
  * drive its own success / error UX.
  */
@@ -295,27 +325,27 @@ export function reconcileShoppingCreate(
   optimisticId: string,
   result: { data?: unknown; error?: unknown } | null | undefined,
 ): 'kept' | 'reverted' {
-  const outcome = classifyCreateResult(result);
+  const failed = settledStatus(result ?? undefined) === 'failed';
   // The batch can resolve successfully while its single item fails
   // (`results[0].success === false` — a per-item validation error reported inside
   // the batch rather than as a top-level error member). Revert that too.
-  const payload = (
-    result as
-      | {
-          data?: {
-            addItemsToShoppingList?: {
-              __typename?: string;
-              results?: Array<{ success: boolean }>;
+  const applied = appliedPayload(
+    (
+      result as
+        | {
+            data?: {
+              addItemsToShoppingList?: {
+                __typename?: string;
+                results?: Array<{ success: boolean }>;
+              };
             };
-          };
-        }
-      | null
-      | undefined
-  )?.data?.addItemsToShoppingList;
-  const itemFailed =
-    payload?.__typename === 'AddItemsToShoppingListPayload' &&
-    payload.results?.[0]?.success === false;
-  if (outcome === 'rejected' || itemFailed) {
+          }
+        | null
+        | undefined
+    )?.data,
+  );
+  const itemFailed = applied?.results?.[0]?.success === false;
+  if (failed || itemFailed) {
     try {
       revertOptimisticShoppingListItem(cache, listId, optimisticId);
     } catch (cacheError) {
@@ -326,4 +356,50 @@ export function reconcileShoppingCreate(
     return 'reverted';
   }
   return 'kept';
+}
+
+/** The API refuses a batch add of more lines than this. */
+const ADD_ITEMS_BATCH_LIMIT = 50;
+
+/**
+ * Sends optimistic lines as batch adds the API accepts, each slice settled on
+ * its own: a failed slice takes back its own rows. Returns the first failure,
+ * for the caller to present, or null when every slice applied or queued.
+ */
+export async function addItemsInSlices<TItem extends { id?: string | null }>(
+  cache: ApolloCache,
+  listId: string,
+  items: readonly TItem[],
+  send: (slice: TItem[]) => Promise<{ data?: unknown; error?: unknown }>,
+  settle: { document: DocumentNode; fallback: string },
+): Promise<SettledFailure | null> {
+  let firstFailure: SettledFailure | null = null;
+  // In order: a queued slice replays behind the one before it.
+  for (let start = 0; start < items.length; start += ADD_ITEMS_BATCH_LIMIT) {
+    const slice = items.slice(start, start + ADD_ITEMS_BATCH_LIMIT);
+    const settled = await settleMutation(() => send(slice), {
+      ...settle,
+      present: 'none',
+      onFailed: () => revertSlice(cache, listId, slice),
+    });
+    firstFailure ??= settled.failure ?? null;
+  }
+  return firstFailure;
+}
+
+function revertSlice(
+  cache: ApolloCache,
+  listId: string,
+  slice: readonly { id?: string | null }[],
+): void {
+  for (const line of slice) {
+    if (!line.id) continue;
+    try {
+      revertOptimisticShoppingListItem(cache, listId, line.id);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Revert refused shopping list batch',
+      });
+    }
+  }
 }

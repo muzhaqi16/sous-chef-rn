@@ -5,6 +5,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
+import { authTestIDs } from '#features/auth/testIDs';
 
 export const RememberMeModal: React.FC<{
   visible: boolean;
@@ -23,7 +24,7 @@ export const RememberMeModal: React.FC<{
       navigationBarTranslucent
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent} testID="remember-me-modal">
+        <View style={styles.modalContent} testID={authTestIDs.rememberMeModal}>
           <Icon name="lock-closed-outline" size={48} tone="primary" />
 
           <Text role="subheading" style={styles.modalTitle}>
@@ -42,7 +43,7 @@ export const RememberMeModal: React.FC<{
             <AppPressable
               style={styles.modalButtonSecondary}
               onPress={onDecline}
-              testID="remember-me-decline"
+              testID={authTestIDs.rememberMeDeclineButton}
             >
               <Text role="bodyStrong">{t('rememberMe.notNow')}</Text>
             </AppPressable>
@@ -50,7 +51,7 @@ export const RememberMeModal: React.FC<{
             <AppPressable
               style={styles.modalButtonPrimary}
               onPress={onAccept}
-              testID="remember-me-accept"
+              testID={authTestIDs.rememberMeAcceptButton}
             >
               <Text role="bodyStrong" style={styles.modalButtonPrimaryText}>
                 {t('rememberMe.remember')}

@@ -23,26 +23,15 @@ const mockItem: ScannedItem = {
 
 describe('barcodeScannerStore', () => {
   describe('initial state', () => {
-    it('starts with null barcode and empty results', () => {
+    it('starts idle with empty results', () => {
       const store = createTestStore();
       const state = store.getState();
-      expect(state.scannedBarcode).toBeNull();
       expect(state.isScanning).toBe(false);
       expect(state.searchResults).toEqual([]);
       expect(state.isSearching).toBe(false);
       expect(state.searchError).toBeNull();
       expect(state.scannerSheetVisible).toBe(false);
       expect(state.recentlyScanned).toEqual([]);
-    });
-  });
-
-  describe('setScannedBarcode', () => {
-    it('sets barcode and clears errors', () => {
-      const store = createTestStore();
-      store.getState().setSearchError('old error');
-      store.getState().setScannedBarcode('1234');
-      expect(store.getState().scannedBarcode).toBe('1234');
-      expect(store.getState().searchError).toBeNull();
     });
   });
 
@@ -150,13 +139,11 @@ describe('barcodeScannerStore', () => {
   describe('resetScanner', () => {
     it('resets all scanner state', () => {
       const store = createTestStore();
-      store.getState().setScannedBarcode('123');
       store.getState().setScanning(true);
       store.getState().setSearchResults([mockItem]);
       store.getState().showBottomSheet();
       store.getState().resetScanner();
       const state = store.getState();
-      expect(state.scannedBarcode).toBeNull();
       expect(state.isScanning).toBe(false);
       expect(state.searchResults).toEqual([]);
       expect(state.scannerSheetVisible).toBe(false);

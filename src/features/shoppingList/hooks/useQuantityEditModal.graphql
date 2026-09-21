@@ -16,8 +16,26 @@ fragment useQuantityEditModal_item on ShoppingListItem {
     id
     imageUrl
     images {
+      id
       url
       kind
     }
+  }
+}
+
+# Narrow fragment for the UpdateShoppingListItemQuantity mutation response.
+# The mutation can change quantity, quantityInput, displayFormat, unit,
+# unitName, and version.
+fragment useQuantityEditModal_updateQuantityResult on ShoppingListItem {
+  id
+  quantity
+  quantityInput
+  displayFormat
+  unitName
+  version
+  unit {
+    id
+    name
+    symbol
   }
 }

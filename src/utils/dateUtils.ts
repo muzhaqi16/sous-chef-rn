@@ -59,6 +59,40 @@ export const extractDateString = (value: unknown): string => {
  */
 export const toDateKey = (date: Date): string => format(date, 'yyyy-MM-dd');
 
+/**
+ * A picked calendar day as the instant a meal or plan boundary is sent at:
+ * local noon, whose UTC day is the local day from UTC-11 to UTC+12. The API
+ * compares meals to their plan by UTC day.
+ */
+export const toMealDateTime = (day: Date): string =>
+  new Date(day.getFullYear(), day.getMonth(), day.getDate(), 12).toISOString();
+
+/** A plan's stored boundary instants, as ISO strings. */
+export interface PlanBounds {
+  startDate: string;
+  endDate: string;
+}
+
+/**
+ * A meal instant pulled inside its plan's stored instants, as long as it stays
+ * on the same local day. A plan stored before boundaries were sent at noon can
+ * put its first or last local day on another UTC day than a noon meal.
+ */
+export const keepMealInsidePlan = (
+  mealDate: string,
+  bounds: PlanBounds | undefined,
+): string => {
+  const meal = new Date(mealDate);
+  const start = bounds ? new Date(bounds.startDate).getTime() : NaN;
+  const end = bounds ? new Date(bounds.endDate).getTime() : NaN;
+  if ([meal.getTime(), start, end].some(Number.isNaN)) return mealDate;
+
+  const clamped = new Date(Math.min(Math.max(meal.getTime(), start), end));
+  return toDateKey(clamped) === toDateKey(meal)
+    ? clamped.toISOString()
+    : mealDate;
+};
+
 /** Convert YYYY-MM-DD to a UTC midnight ISO string. Pass-through for malformed input. */
 export const dateStringToISO = (dateStr: string): string => {
   if (!dateStr) return dateStr;

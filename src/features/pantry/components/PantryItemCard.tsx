@@ -1,3 +1,4 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import { pantrySwipeActions } from './pantrySwipeActions';
 import React from 'react';
 import { useTranslation } from '#/i18n';
@@ -13,7 +14,7 @@ import { useRecyclingState } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import { differenceInCalendarDays } from 'date-fns';
 import { useFragment } from '@apollo/client/react';
-import { type FragmentType } from '@apollo/client/masking';
+import type { FragmentType } from '@apollo/client/masking';
 import { BaseItemCard } from '#features/pantry/components/BaseItemCard/BaseItemCard';
 import { CardLeftSlot } from '#features/pantry/components/BaseItemCard/CardLeftSlot';
 import { CardContent } from '#features/pantry/components/BaseItemCard/CardContent';
@@ -23,7 +24,7 @@ import { SLIDE_PRESETS } from '#/constants/animations';
 import { usePantryActions } from './PantryActionsContext';
 import { Text } from '#components/atoms/Text';
 import { resolveImageUrl } from '#utils/imageUtils';
-import { useIsPendingSync } from '#features/pantry/hooks/useIsPendingSync';
+import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 import { getExpirationStatus } from '#features/pantry/hooks/usePantryItemTransformation';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
@@ -160,12 +161,12 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
 
   // BEFORE the `!complete` early return: a hook after it is conditional, which
   // bails the whole component out of the React Compiler.
-  const isPendingSync = useIsPendingSync(pantryItem?.id);
+  const isPendingSync = useIsPendingSync(pantryItem.id);
 
   if (!complete) return null;
 
   const id = pantryItem.id;
-  const name = pantryItem.itemName || 'Unknown Item';
+  const name = pantryItem.itemName;
   const imageUrl = resolveImageUrl(pantryItem);
 
   const expiresAt = pantryItem.expiresAt;
@@ -189,7 +190,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
 
   const quantity = formatQuantityDisplay(
     pantryItem.quantity,
-    pantryItem.unit?.symbol,
+    pantryItem.unit.symbol,
   );
   // Custom names only; the default locations are the filter tabs.
   const location = pantryItem.storageLocation?.name ?? null;
@@ -197,27 +198,22 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   // Each of the row's four text slots has ONE owner, and an absent value leaves
   // its slot empty rather than letting another value move in. Amounts and
   // breakdowns belong to the detail screen.
-  const rightSecondary = location || undefined;
+  const rightSecondary = location ?? undefined;
 
+  const { onItemEdit, onItemConsume, onItemWaste, onItemRestock } = actions;
   const itemActions = {
     onPress: () => actions.onItemPress(id),
-    onEdit: actions.onItemEdit ? () => actions.onItemEdit!(id) : undefined,
-    onConsume: actions.onItemConsume
-      ? () => actions.onItemConsume!(id)
-      : undefined,
-    onWaste: actions.onItemWaste ? () => actions.onItemWaste!(id) : undefined,
-    onRestock: actions.onItemRestock
-      ? () => actions.onItemRestock!(id)
-      : undefined,
+    onEdit: onItemEdit ? () => onItemEdit(id) : undefined,
+    onConsume: onItemConsume ? () => onItemConsume(id) : undefined,
+    onWaste: onItemWaste ? () => onItemWaste(id) : undefined,
+    onRestock: onItemRestock ? () => onItemRestock(id) : undefined,
   };
 
   const cardVariant: CardVariant = variant;
 
   // Always rendered: the placeholder tile keeps rows aligned when there is no
   // image.
-  const leftElement = (
-    <CardLeftSlot type="image" imageUrl={imageUrl} variant={cardVariant} />
-  );
+  const leftElement = <CardLeftSlot imageUrl={imageUrl} />;
 
   const expirationBold = !!expirationVariant && expirationVariant !== 'normal';
 
@@ -268,14 +264,13 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
         onSwipeableWillOpen={swipeable.onSwipeableWillOpen}
         leftThreshold={80}
         rightThreshold={80}
-        testID={`pantry-item-${id}`}
+        testID={pantryTestIDs.item(id)}
         leftElement={leftElement}
         rightElement={
           <CardRightSlot
-            type="meta"
             // Keyed by item id, matching the row's own `pantry-item-${id}` and
             // shopping list's `shopping-list-item-${itemId}-quantity`.
-            testID={`pantry-item-${id}-quantity`}
+            testID={pantryTestIDs.itemQuantity(id)}
             primary={quantity}
             secondary={rightSecondary}
           />

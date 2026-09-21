@@ -4,20 +4,18 @@ import {
   MyRecipesDocument,
   type MyRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { errorService } from '#/services/errorService';
-
-/** The result is carried so the caller can resolve LOCALIZED refusal copy. */
-export interface DeleteRecipeOutcome {
-  result: { data?: unknown; error?: unknown } | undefined;
-}
+import { useTranslation } from '#/i18n';
 
 /**
  * Delete a recipe local-first: the row leaves the list BEFORE the mutation
  * fires, so the deletion is visible immediately and survives an offline queue
- * (a duplicate replay surfaces as NotFound, which the queue drops).
+ * (a duplicate replay surfaces as NotFound, which counts as deleted).
  */
 export function useDeleteRecipe() {
   const client = useApolloClient();
+  const { t } = useTranslation();
   const [deleteRecipeMutation] = useMutation(DeleteRecipeDocument);
 
   const removeRecipeEdge = (id: string) => {
@@ -41,7 +39,8 @@ export function useDeleteRecipe() {
     );
   };
 
-  const deleteRecipe = async (id: string): Promise<DeleteRecipeOutcome> => {
+  /** `true` once the recipe is gone or its removal is queued; `false` when refused. */
+  const deleteRecipe = async (id: string): Promise<boolean> => {
     try {
       removeRecipeEdge(id);
     } catch (cacheError) {
@@ -50,16 +49,19 @@ export function useDeleteRecipe() {
       });
     }
 
-    let result;
-    try {
-      result = await deleteRecipeMutation({
-        variables: { input: { id } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, { operation: 'deleteRecipe' });
-    }
-    return { result };
+    const settled = await settleMutation(
+      () =>
+        deleteRecipeMutation({
+          variables: { input: { id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: DeleteRecipeDocument,
+        fallback: t('recipes.deleteRecipeFailed'),
+        removal: true,
+      },
+    );
+    return settled.status !== 'failed';
   };
 
   return { deleteRecipe };

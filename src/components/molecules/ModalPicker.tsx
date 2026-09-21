@@ -8,12 +8,13 @@ import type { ActionTrayRef } from '#components/templates/ActionTray/types';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 
-export interface ModalPickerProps {
+export interface ModalPickerProps<T extends string> {
   label: string;
   visible: boolean;
-  options: { label: string; value: string }[];
-  selected: string;
-  onSelect: (value: string) => void;
+  options: { label: string; value: T }[];
+  /** Null when nothing is selected yet. */
+  selected: T | null;
+  onSelect: (value: T) => void;
   onCancel: () => void;
   /** When set, tapping an option only highlights it; a button with this label confirms the selection. */
   confirmLabel?: string;
@@ -21,7 +22,7 @@ export interface ModalPickerProps {
   stackBehavior?: 'push' | 'switch' | 'replace';
 }
 
-export const ModalPicker: React.FC<ModalPickerProps> = ({
+export function ModalPicker<T extends string>({
   label,
   visible,
   options,
@@ -30,7 +31,7 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
   onCancel,
   confirmLabel,
   stackBehavior,
-}) => {
+}: ModalPickerProps<T>) {
   const trayRef = useRef<ActionTrayRef>(null);
 
   // Local pending selection for confirm mode
@@ -64,8 +65,10 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
         confirmLabel ? (
           <Button
             title={confirmLabel}
-            onPress={() => onSelect(pendingValue)}
-            disabled={pendingValue === selected}
+            onPress={() => {
+              if (pendingValue !== null) onSelect(pendingValue);
+            }}
+            disabled={pendingValue === null || pendingValue === selected}
             fullWidth
           />
         ) : undefined
@@ -93,7 +96,7 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
       </View>
     </ActionTray>
   );
-};
+}
 
 const styles = StyleSheet.create(theme => ({
   option: {

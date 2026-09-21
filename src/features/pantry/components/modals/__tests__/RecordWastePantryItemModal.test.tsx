@@ -14,6 +14,7 @@ type MockSharedState = Pick<
   | 'trackingUnitId'
   | 'activeUnitSymbol'
   | 'activeUnitId'
+  | 'displayAsFractionOf'
   | 'isConvertedUnit'
   | 'setSelectedUnitInfo'
   | 'notes'
@@ -96,6 +97,7 @@ jest.mock('#features/pantry/components/modals/PantryActionModal', () => ({
       trackingUnitId: 'unit-1',
       activeUnitSymbol: 'oz',
       activeUnitId: 'unit-1',
+      displayAsFractionOf: () => null,
       isConvertedUnit: false,
       selectedUnitInfo: {
         unitId: 'unit-1',
@@ -134,9 +136,6 @@ jest.mock('#features/pantry/hooks/useConversionPreview', () => ({
 }));
 jest.mock('#/utils/fractionUtils', () => ({
   parseFractionalInput: (v: string) => parseFloat(v) || null,
-}));
-jest.mock('#/utils/formatQuantity', () => ({
-  formatQuantity: (v: number) => v.toString(),
 }));
 
 describe('RecordWastePantryItemModal', () => {

@@ -13,6 +13,7 @@ import { Icon, type IconLibrary } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { SLIDE_PRESETS } from '#constants/animations';
 import { Text } from '#components/atoms/Text';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 
 export interface SuggestionListItemProps {
   imageUrl?: string | null;
@@ -163,7 +164,9 @@ export const SuggestionListItem = ({
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityRole="button"
             accessibilityLabel={t('labels.dismissNamed', { name: title })}
-            testID={testID ? `${testID}-dismiss` : undefined}
+            testID={
+              testID ? catalogTestIDs.suggestionDismiss(testID) : undefined
+            }
           >
             <Icon
               name="close"
@@ -226,7 +229,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   subtitle: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   dismissButton: {
     width: 36,

@@ -47,7 +47,7 @@ export function useRecipeSuggestionsForItem(
 
     const controller = new AbortController();
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         const recipes = await spoonacularService.searchRecipesWithInfo(
           { query: itemName, number: 5 },

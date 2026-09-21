@@ -44,7 +44,6 @@ export interface ConnectionData<TNode> {
   isLoadingMore: boolean;
   loadMore: () => Promise<void>;
   loadMoreError: boolean;
-  loadMoreOffline: boolean;
 }
 
 /**
@@ -89,6 +88,5 @@ export function useConnectionData<TData, C extends ConnectionResult>(
     isLoadingMore: pagination.isLoadingMore,
     loadMore: pagination.loadMore,
     loadMoreError: pagination.loadMoreError,
-    loadMoreOffline: pagination.loadMoreOffline,
   };
 }

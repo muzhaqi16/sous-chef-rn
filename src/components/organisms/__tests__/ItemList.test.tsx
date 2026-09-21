@@ -11,13 +11,6 @@ jest.mock('#hooks/performance/useFlashListPerformance', () => ({
     onLoad: jest.fn(),
     onViewableItemsChanged: jest.fn(),
     onDataReferenceChange: jest.fn(),
-    printReport: jest.fn(),
-    getBlankRisk: () => ({
-      level: 'none',
-      factors: [],
-      coverageRatio: 1,
-      scrollVelocity: 0,
-    }),
   }),
 }));
 jest.mock('#hooks/performance/useDataReferenceTracker', () => ({
@@ -203,7 +196,7 @@ describe('ItemList', () => {
             {
               key: 'delete',
               icon: 'trash-outline',
-              labelKey: 'actions.delete',
+              labelKey: 'labels.delete',
               onPress: jest.fn(),
             },
           ],

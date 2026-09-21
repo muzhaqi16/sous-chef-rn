@@ -65,6 +65,22 @@ const TEMPLATES_QUERY = gql`
   }
 `;
 
+const LISTS_BY_HOME_QUERY = gql`
+  query TestShoppingListsByHome($homeId: ID) {
+    shoppingLists(homeId: $homeId) {
+      totalCount
+      edges {
+        cursor
+        node {
+          id
+          name
+          isDefault
+        }
+      }
+    }
+  }
+`;
+
 const OWNER = { id: 'user-1', email: 'tani@example.com' };
 const LIST_ID = 'c0000000000000000000list1';
 
@@ -230,6 +246,60 @@ describe('addOptimisticShoppingList', () => {
     expect(overview?.shoppingLists.edges[0]!.node).toMatchObject({
       id: LIST_ID,
       name: 'Groceries',
+    });
+  });
+
+  describe('home-scoped overview variants', () => {
+    const seedHomeVariant = (
+      cache: ReturnType<typeof makeCache>,
+      homeId: string | null,
+    ) =>
+      cache.writeQuery({
+        query: LISTS_BY_HOME_QUERY,
+        variables: { homeId },
+        data: {
+          shoppingLists: {
+            __typename: 'ShoppingListConnection',
+            totalCount: 0,
+            edges: [],
+          },
+        },
+      });
+    const readHomeIds = (
+      cache: ReturnType<typeof makeCache>,
+      homeId: string | null,
+    ) =>
+      cache
+        .readQuery<{
+          shoppingLists: { edges: Array<{ node: { id: string } }> };
+        }>({ query: LISTS_BY_HOME_QUERY, variables: { homeId } })
+        ?.shoppingLists.edges.map(e => e.node.id);
+
+    it("adds a home's list to that home's and the unscoped variants, never another home's", () => {
+      const cache = makeCache();
+      seedHomeVariant(cache, 'home-a');
+      seedHomeVariant(cache, 'home-b');
+      seedHomeVariant(cache, null);
+
+      addOptimisticShoppingList(
+        cache,
+        buildList(cache, { name: 'Groceries', homeId: 'home-a' }),
+      );
+
+      expect(readHomeIds(cache, 'home-a')).toEqual([LIST_ID]);
+      expect(readHomeIds(cache, 'home-b')).toEqual([]);
+      expect(readHomeIds(cache, null)).toEqual([LIST_ID]);
+    });
+
+    it('adds a personal list to no home-scoped variant', () => {
+      const cache = makeCache();
+      seedHomeVariant(cache, 'home-a');
+      seedHomeVariant(cache, null);
+
+      addOptimisticShoppingList(cache, buildList(cache));
+
+      expect(readHomeIds(cache, 'home-a')).toEqual([]);
+      expect(readHomeIds(cache, null)).toEqual([LIST_ID]);
     });
   });
 

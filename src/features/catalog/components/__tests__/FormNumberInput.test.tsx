@@ -50,4 +50,27 @@ describe('FormNumberInput', () => {
     fireEvent.changeText(input, '12.5.6');
     expect(defaultProps.onChangeText).toHaveBeenCalledWith('12.56');
   });
+
+  // A comma keypad offers no period at all, so stripping the comma leaves the
+  // person unable to enter a decimal — `2,5` became `25`.
+  it('keeps the comma a European keypad produces', () => {
+    render(<FormNumberInput {...defaultProps} keyboardType="decimal-pad" />);
+    const input = screen.getByTestId('number-input');
+    fireEvent.changeText(input, '2,5');
+    expect(defaultProps.onChangeText).toHaveBeenCalledWith('2,5');
+  });
+
+  it('keeps only the first separator, whichever it is', () => {
+    render(<FormNumberInput {...defaultProps} keyboardType="decimal-pad" />);
+    const input = screen.getByTestId('number-input');
+    fireEvent.changeText(input, '12,5.6');
+    expect(defaultProps.onChangeText).toHaveBeenCalledWith('12,56');
+  });
+
+  it('still refuses letters', () => {
+    render(<FormNumberInput {...defaultProps} keyboardType="decimal-pad" />);
+    const input = screen.getByTestId('number-input');
+    fireEvent.changeText(input, '1a2,5kg');
+    expect(defaultProps.onChangeText).toHaveBeenCalledWith('12,5');
+  });
 });

@@ -319,12 +319,12 @@ function handleTemplateItemChanged(
  * @param userId - Current user ID, for self-echo filtering and deduplication
  */
 export function useMealPlanSubscriptions(userId?: string) {
-  const selectedHomeId = useSelectedHomeId() || undefined;
+  const selectedHomeId = useSelectedHomeId() ?? undefined;
   const isHomeSelectionReady = useIsHomeSelectionReady();
-  const rejected = useSubscriptionRejected('MealPlanEvents');
+  const rejected = useSubscriptionRejected(MealPlanEventsDocument);
 
   const eventHandlers = subscriptionService.register<MealPlanEventsPayload>({
-    subscriptionName: 'MealPlanEvents',
+    document: MealPlanEventsDocument,
     entityType: 'MealPlan',
     enableDeduplication: true,
     userId,
@@ -335,8 +335,6 @@ export function useMealPlanSubscriptions(userId?: string) {
       payload: MealPlanEventsPayload,
       client: SubscriptionApolloClient,
     ) => {
-      if (!payload) return;
-
       // This device's own writes already updated the cache locally — replaying
       // them here would fight the local-first path (re-adding a row mid-delete,
       // say). Keyed on the device, so the user's other devices still update.
@@ -369,7 +367,8 @@ export function useMealPlanSubscriptions(userId?: string) {
 
   const mealPlanSkip = !selectedHomeId || !isHomeSelectionReady || rejected;
   const mealPlanEvents = useSubscription(MealPlanEventsDocument, {
-    variables: { homeId: selectedHomeId! },
+    // `skip` holds while there is no home, so the empty id is never sent.
+    variables: { homeId: selectedHomeId ?? '' },
     skip: mealPlanSkip,
     // Same reason as `PantryEvents`: the envelope's `node` is `__typename` +
     // `id` only, and `MealPlanForEvent` / `GetMealPlan` read the entity back
@@ -380,7 +379,7 @@ export function useMealPlanSubscriptions(userId?: string) {
     ...eventHandlers,
   });
   useSubscriptionTransportRecovery(
-    'MealPlanEvents',
+    MealPlanEventsDocument,
     mealPlanEvents,
     mealPlanSkip,
   );

@@ -1,5 +1,6 @@
 import { ApolloLink } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
+import { Kind, OperationTypeNode } from 'graphql';
 import { authLink } from './authLink';
 import { createConsoleLink } from './consoleLink';
 import { createTelemetryLink } from './telemetryLink';
@@ -25,7 +26,8 @@ const transportLink = ApolloLink.split(
   ({ query }) => {
     const def = getMainDefinition(query);
     return (
-      def.kind === 'OperationDefinition' && def.operation === 'subscription'
+      def.kind === Kind.OPERATION_DEFINITION &&
+      def.operation === OperationTypeNode.SUBSCRIPTION
     );
   },
   wsLink,

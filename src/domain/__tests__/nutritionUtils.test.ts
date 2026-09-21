@@ -1,8 +1,6 @@
 import {
-  parseNutritions,
   hasNutritionData,
-  getScaleFactor,
-  formatServingSize,
+  formatServing,
   extractMacroSummary,
   generateHighlights,
   formatNutritionValue,
@@ -10,109 +8,110 @@ import {
   getNutrientEntries,
   groupNutrientsByCategory,
   getCategoryLabel,
+  type NutritionFactsValues,
 } from '#domain/nutrition';
-import type { NutrientCategory, NutritionsData } from '#/types/nutrition';
+import type { NutrientCategory } from '#/types/nutrition';
+import { getI18n } from '#/i18n/config';
 
-const mockNutritions: NutritionsData = {
-  servingSize: '100g',
-  servingSizeGrams: 100,
-  calories: { amount: 200, unit: 'kcal', name: 'Calories' },
-  protein: { amount: 15, unit: 'g', name: 'Protein' },
-  totalFat: { amount: 8, unit: 'g', name: 'Total Fat' },
-  carbohydrates: { amount: 25, unit: 'g', name: 'Carbohydrates' },
-  fiber: { amount: 4, unit: 'g', name: 'Fiber' },
-  sugar: { amount: 3, unit: 'g', name: 'Sugar' },
-  sodium: { amount: 700, unit: 'mg', name: 'Sodium' },
-  vitaminC: { amount: 10, unit: 'mg', name: 'Vitamin C' },
-  iron: { amount: 2, unit: 'mg', name: 'Iron' },
-  calcium: { amount: 150, unit: 'mg', name: 'Calcium' },
-  potassium: { amount: 500, unit: 'mg', name: 'Potassium' },
+// The real instance, so the assertions read the copy in en.json.
+const t = getI18n().t;
+
+const EMPTY_FACTS: NutritionFactsValues = {
+  calories: null,
+  totalFat: null,
+  saturatedFat: null,
+  transFat: null,
+  cholesterol: null,
+  sodium: null,
+  totalCarbs: null,
+  dietaryFiber: null,
+  totalSugars: null,
+  addedSugars: null,
+  protein: null,
+  vitaminD: null,
+  calcium: null,
+  iron: null,
+  potassium: null,
+  servingSize: null,
+  servingUnit: null,
 };
 
-describe('parseNutritions', () => {
-  it('returns null for null input', () => {
-    expect(parseNutritions(null)).toBeNull();
-  });
-
-  it('returns null for non-object input', () => {
-    expect(parseNutritions('string')).toBeNull();
-    expect(parseNutritions(123)).toBeNull();
-  });
-
-  it('returns the object for valid input', () => {
-    expect(parseNutritions(mockNutritions)).toBe(mockNutritions);
-  });
-});
+// `Item.nutritionFacts` as the API returns it: flat numbers in canonical units.
+const facts: NutritionFactsValues = {
+  ...EMPTY_FACTS,
+  calories: 200,
+  protein: 15,
+  totalFat: 8,
+  totalCarbs: 25,
+  dietaryFiber: 4,
+  totalSugars: 3,
+  sodium: 700,
+  vitaminD: 2.5,
+  iron: 2,
+  calcium: 150,
+  potassium: 500,
+  servingSize: 100,
+  servingUnit: 'g',
+};
 
 describe('hasNutritionData', () => {
   it('returns false for null', () => {
     expect(hasNutritionData(null)).toBe(false);
   });
 
-  it('returns true when protein has amount', () => {
-    expect(hasNutritionData(mockNutritions)).toBe(true);
+  it('returns true when a macro has a value', () => {
+    expect(hasNutritionData(facts)).toBe(true);
   });
 
-  it('returns false when no nutrient keys have amounts', () => {
-    expect(hasNutritionData({ servingSize: '100g' })).toBe(false);
-  });
-});
-
-describe('getScaleFactor', () => {
-  it('returns 1 when no actual serving grams', () => {
-    expect(getScaleFactor(mockNutritions)).toBe(1);
-    expect(getScaleFactor(mockNutritions, null)).toBe(1);
+  it('returns true for a stored zero', () => {
+    expect(hasNutritionData({ ...EMPTY_FACTS, totalFat: 0 })).toBe(true);
   });
 
-  it('returns 1 when no servingSizeGrams', () => {
-    expect(getScaleFactor({}, 200)).toBe(1);
-  });
-
-  it('scales correctly', () => {
-    expect(getScaleFactor(mockNutritions, 200)).toBe(2);
-    expect(getScaleFactor(mockNutritions, 50)).toBe(0.5);
+  it('returns false when only the serving is known', () => {
+    expect(
+      hasNutritionData({ ...EMPTY_FACTS, servingSize: 30, servingUnit: 'g' }),
+    ).toBe(false);
   });
 });
 
-describe('formatServingSize', () => {
-  it('formats grams', () => {
-    expect(formatServingSize(250)).toBe('250g');
+describe('formatServing', () => {
+  it('states the serving in its unit', () => {
+    expect(formatServing(facts)).toBe('100 g');
   });
 
-  it('formats kilograms at >= 1000', () => {
-    expect(formatServingSize(1500)).toBe('1.5kg');
-    expect(formatServingSize(1000)).toBe('1.0kg');
+  it('writes a fractional serving as a cooking fraction', () => {
+    expect(formatServing({ servingSize: 0.5, servingUnit: 'cup' })).toBe(
+      '1/2 cup',
+    );
   });
 
-  it('rounds grams to nearest integer', () => {
-    expect(formatServingSize(33.7)).toBe('34g');
+  it('returns null without a unit or a positive size', () => {
+    expect(formatServing({ servingSize: 30, servingUnit: null })).toBeNull();
+    expect(formatServing({ servingSize: 30, servingUnit: ' ' })).toBeNull();
+    expect(formatServing({ servingSize: 0, servingUnit: 'g' })).toBeNull();
+    expect(formatServing({ servingSize: null, servingUnit: 'g' })).toBeNull();
   });
 });
 
 describe('extractMacroSummary', () => {
-  it('returns all nulls for null nutritions', () => {
-    const result = extractMacroSummary(null);
-    expect(result.calories).toBeNull();
-    expect(result.protein).toBeNull();
-    expect(result.carbs).toBeNull();
-    expect(result.fat).toBeNull();
-    expect(result.servingSize).toBeNull();
+  it('returns all nulls for null facts', () => {
+    expect(extractMacroSummary(null)).toEqual({
+      calories: null,
+      protein: null,
+      carbs: null,
+      fat: null,
+      servingSize: null,
+    });
   });
 
-  it('extracts macros without scaling', () => {
-    const result = extractMacroSummary(mockNutritions);
-    expect(result.calories).toBe(200);
-    expect(result.protein).toBe(15);
-    expect(result.carbs).toBe(25);
-    expect(result.fat).toBe(8);
-    expect(result.servingSize).toBe('100g');
-  });
-
-  it('scales macros based on actual serving', () => {
-    const result = extractMacroSummary(mockNutritions, 200);
-    expect(result.calories).toBe(400);
-    expect(result.protein).toBe(30);
-    expect(result.servingSize).toBe('200g');
+  it('reads the flat NutritionFacts columns', () => {
+    expect(extractMacroSummary(facts)).toEqual({
+      calories: 200,
+      protein: 15,
+      carbs: 25,
+      fat: 8,
+      servingSize: '100 g',
+    });
   });
 });
 
@@ -121,75 +120,26 @@ describe('generateHighlights', () => {
     expect(generateHighlights(null)).toEqual([]);
   });
 
-  it('detects High Protein (>= 10g)', () => {
-    const highlights = generateHighlights(mockNutritions);
-    expect(highlights).toContainEqual({
-      labelKey: 'recipes.healthGoal.HIGH_PROTEIN',
-      type: 'positive',
-    });
-  });
-
-  it('detects Good Fiber (>= 3g)', () => {
-    const highlights = generateHighlights(mockNutritions);
-    expect(highlights).toContainEqual({
-      labelKey: 'nutritionHighlights.goodFiber',
-      type: 'positive',
-    });
-  });
-
-  it('detects Low Sugar (<= 5g)', () => {
-    const highlights = generateHighlights(mockNutritions);
-    expect(highlights).toContainEqual({
-      labelKey: 'nutritionHighlights.lowSugar',
-      type: 'positive',
-    });
-  });
-
-  it('detects High Sodium (>= 600mg) as caution', () => {
-    const highlights = generateHighlights(mockNutritions);
-    expect(highlights).toContainEqual({
-      labelKey: 'nutritionHighlights.highSodium',
-      type: 'caution',
-    });
-  });
-
-  it('detects Vitamin C (>= 9mg)', () => {
-    const highlights = generateHighlights(mockNutritions);
-    expect(highlights).toContainEqual({
-      labelKey: 'nutritionHighlights.vitaminC',
-      type: 'positive',
-    });
-  });
-
-  it('detects Iron (>= 1.8mg)', () => {
-    const highlights = generateHighlights(mockNutritions);
-    expect(highlights).toContainEqual({
-      labelKey: 'nutritionHighlights.iron',
-      type: 'positive',
-    });
-  });
-
-  it('detects Calcium (>= 130mg)', () => {
-    const highlights = generateHighlights(mockNutritions);
-    expect(highlights).toContainEqual({
-      labelKey: 'nutritionHighlights.calcium',
-      type: 'positive',
-    });
-  });
-
-  it('detects Potassium (>= 470mg)', () => {
-    const highlights = generateHighlights(mockNutritions);
-    expect(highlights).toContainEqual({
-      labelKey: 'nutritionHighlights.potassium',
-      type: 'positive',
-    });
+  it.each([
+    ['recipes.healthGoal.HIGH_PROTEIN', 'positive'],
+    ['nutritionHighlights.goodFiber', 'positive'],
+    ['nutritionHighlights.lowSugar', 'positive'],
+    ['nutritionHighlights.highSodium', 'caution'],
+    ['nutritionHighlights.iron', 'positive'],
+    ['nutritionHighlights.calcium', 'positive'],
+    ['nutritionHighlights.potassium', 'positive'],
+  ])('detects %s', (labelKey, type) => {
+    expect(generateHighlights(facts)).toContainEqual({ labelKey, type });
   });
 
   it('does not detect Low Fat when fat is > 3g', () => {
-    const highlights = generateHighlights(mockNutritions);
-    expect(highlights).not.toContainEqual(
+    expect(generateHighlights(facts)).not.toContainEqual(
       expect.objectContaining({ labelKey: 'nutritionHighlights.lowFat' }),
     );
+  });
+
+  it('meets no threshold with an absent value, a `<=` one included', () => {
+    expect(generateHighlights(EMPTY_FACTS)).toEqual([]);
   });
 });
 
@@ -228,46 +178,53 @@ describe('formatCalories', () => {
 
 describe('getNutrientEntries', () => {
   it('returns empty array for null', () => {
-    expect(getNutrientEntries(null)).toEqual([]);
+    expect(getNutrientEntries(null, t)).toEqual([]);
   });
 
-  it('returns entries sorted by category (macro first)', () => {
-    const entries = getNutrientEntries(mockNutritions);
-    expect(entries.length).toBeGreaterThan(0);
-
-    // First entry should be a macro
-    expect(entries[0]!.category).toBe('macro');
-
-    // Macros should come before vitamins/minerals
-    const firstVitaminIdx = entries.findIndex(e => e.category === 'vitamin');
-    const lastMacroIdx =
-      entries.length -
-      1 -
-      [...entries].reverse().findIndex(e => e.category === 'macro');
-    if (firstVitaminIdx !== -1) {
-      expect(lastMacroIdx).toBeLessThan(firstVitaminIdx);
-    }
+  it('lists each stored column with its canonical unit and label', () => {
+    const entries = getNutrientEntries(facts, t);
+    expect(entries.find(e => e.key === 'totalCarbs')).toEqual({
+      key: 'totalCarbs',
+      name: 'Carbohydrates',
+      amount: 25,
+      unit: 'g',
+      category: 'macro',
+    });
+    expect(entries.find(e => e.key === 'sodium')).toMatchObject({
+      amount: 700,
+      unit: 'mg',
+      category: 'mineral',
+    });
+    expect(entries.find(e => e.key === 'vitaminD')).toMatchObject({
+      amount: 2.5,
+      unit: 'mcg',
+      category: 'vitamin',
+    });
   });
 
-  it('scales entries with actual serving grams', () => {
-    const entries = getNutrientEntries(mockNutritions, 200);
-    const protein = entries.find(e => e.key === 'protein');
-    expect(protein?.amount).toBe(30); // 15 * 2
+  it('skips null columns and the serving', () => {
+    const keys = getNutrientEntries(facts, t).map(e => e.key);
+    expect(keys).not.toContain('saturatedFat');
+    expect(keys).not.toContain('servingSize');
+    expect(keys).not.toContain('servingUnit');
   });
 
-  it('skips servingSize and servingSizeGrams keys', () => {
-    const entries = getNutrientEntries(mockNutritions);
-    expect(entries.find(e => e.key === 'servingSize')).toBeUndefined();
-    expect(entries.find(e => e.key === 'servingSizeGrams')).toBeUndefined();
+  it('sorts macros, then vitamins, then minerals', () => {
+    const categories = getNutrientEntries(facts, t).map(e => e.category);
+    expect(categories).toEqual([
+      ...categories.filter(c => c === 'macro'),
+      ...categories.filter(c => c === 'vitamin'),
+      ...categories.filter(c => c === 'mineral'),
+    ]);
   });
 });
 
 describe('groupNutrientsByCategory', () => {
   it('groups entries correctly', () => {
-    const entries = getNutrientEntries(mockNutritions);
-    const grouped = groupNutrientsByCategory(entries);
+    const grouped = groupNutrientsByCategory(getNutrientEntries(facts, t));
     expect(grouped.macro?.length).toBeGreaterThan(0);
-    expect(grouped.mineral?.length).toBeGreaterThan(0);
+    expect(grouped.vitamin?.map(e => e.key)).toEqual(['vitaminD']);
+    expect(grouped.mineral?.length).toBe(4);
   });
 });
 
@@ -276,8 +233,7 @@ describe('getCategoryLabel', () => {
     ['macro', 'Macronutrients'],
     ['vitamin', 'Vitamins'],
     ['mineral', 'Minerals'],
-    ['other', 'Other'],
   ])('returns %s for %s', (cat, label) => {
-    expect(getCategoryLabel(cat)).toBe(label);
+    expect(getCategoryLabel(cat, t)).toBe(label);
   });
 });

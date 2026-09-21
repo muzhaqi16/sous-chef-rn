@@ -5,10 +5,8 @@
  * actually changed, which is what makes a repeated event safe.
  */
 import type { ApolloCache } from '@apollo/client';
-import {
-  NotificationCategory,
-  NotificationStatus,
-} from '#/graphql/generated/schemaTypes';
+import type { NotificationCategory } from '#/graphql/generated/schemaTypes';
+import { NotificationStatus } from '#/graphql/generated/schemaTypes';
 import {
   createAddToParentConnectionUpdater,
   skipUnmatchedFilterVariants,
@@ -21,9 +19,10 @@ import {
   UseNotificationsOnLaunch_NotificationFragmentDoc,
   type UseNotificationsOnLaunch_NotificationFragment,
 } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
+import { isRecord } from '#/utils/isRecord';
 
 /** A notification is awaiting the user only while PENDING or SENT. */
-export const isUnreadStatus = (s: NotificationStatus | undefined): boolean =>
+export const isUnreadStatus = (s: unknown): boolean =>
   s === NotificationStatus.Pending || s === NotificationStatus.Sent;
 
 /**
@@ -42,8 +41,8 @@ export function readNotificationStatus(
   cache.modify({
     id: cacheId,
     fields: {
-      status: existing => {
-        status = existing as NotificationStatus;
+      status: (existing: NotificationStatus) => {
+        status = existing;
         return existing;
       },
     },
@@ -204,19 +203,17 @@ export function addNotificationToFeed(
  * mutation returns a summary count and no ids, so the rows must be found here.
  */
 export function cachedUnreadNotificationIds(cache: ApolloCache): string[] {
-  const extracted = cache.extract() as Record<
-    string,
-    | { __typename?: string; id?: string; status?: NotificationStatus }
-    | undefined
-  >;
-  return Object.entries(extracted)
-    .filter(
-      ([key, value]) =>
-        key.startsWith('Notification:') &&
-        !!value?.id &&
-        isUnreadStatus(value.status),
-    )
-    .map(([, value]) => value!.id!);
+  const extracted = cache.extract();
+  if (!isRecord(extracted)) return [];
+  return Object.entries(extracted).flatMap(([key, value]) =>
+    key.startsWith('Notification:') &&
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    value.id !== '' &&
+    isUnreadStatus(value.status)
+      ? [value.id]
+      : [],
+  );
 }
 
 /**

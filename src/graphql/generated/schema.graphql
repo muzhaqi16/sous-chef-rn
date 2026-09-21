@@ -50,7 +50,7 @@ opposite axis — an object-type field whose VALUE only admins may read — use
 
 It is NOT an authorization posture and never substitutes for one: a field
 tagged `@adminSurface` MUST still carry `@auth`/`@optionalAuth`/`@public`/
-`@requireAccess`/`@requireMembershipRole`/`@ownerOnly`, and the default-deny
+`@requireAccess`/`@requireMembershipRole`/`@requireSystemRole`/`@ownerOnly`, and the default-deny
 audit (`assertRootFieldsHaveAuthPosture`) rejects a field whose only directive
 is `@adminSurface`. Its only effect is to include an already-authorized,
 already-existing operation in the admin view.
@@ -631,7 +631,11 @@ input AdjustPantryItemQuantityInput {
   """Why the adjustment was made (required for audit trail)"""
   reason: String!
   """
-  Explicit remaining net weight override for full recount scenarios (dual-tracked items only)
+  The remaining net weight a full recount found (dual-tracked items only). On a stack
+  holding batches it is spread over the batches that record a weight, in proportion to
+  what each holds: a lower weight lowers the stack's value at cost, a higher weight does
+  not raise it, and no consumption is recorded. Refused with a ValidationError on this
+  field when no held batch records a weight.
   """
   remainingNetWeight: Float
   """
@@ -685,6 +689,21 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union AdjustPantryItemWeightResult = AdjustPantryItemWeightPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
+"""
+Who or what corrected a pantry stack's recorded quantity, on a usage row that
+is a correction. Branch on this, not on adjustmentReason text.
+"""
+enum AdjustmentKind {
+  """Reconciliation written while merging duplicate stacks."""
+  STACK_MERGE
+  """An administrator destroyed the stack."""
+  STACK_PURGED
+  """The legacy stack-removal marker. Only historical rows carry it."""
+  STACK_REMOVED
+  """A person asked for the correction; adjustmentReason is their text."""
+  USER
+}
 
 """Result of quantity aggregation (add/subtract)"""
 type AggregationResult {
@@ -875,8 +894,21 @@ input BatchAddShoppingListItemInput {
 type BatchAddShoppingListItemResult {
   """Client ID if provided in input"""
   clientId: String
-  """Error message if failed"""
+  """
+  Why the entry failed, as the code a result-union member carries for the same
+  error. Set exactly when success is false. Branch on this, not on the text.
+  """
+  code: ErrorCode
+  """
+  Client-safe failure text, set exactly when success is false. An
+  unexpected fault is masked in production and carries errorId.
+  """
   error: String
+  """
+  Set only when the failure text was masked. Names the log entry holding the
+  real error, so support can look it up.
+  """
+  errorId: String
   """Index in the input array"""
   index: Int!
   """The created/updated item (null if failed)"""
@@ -908,8 +940,19 @@ input BatchUpsertItemInput {
 }
 
 type BatchUpsertItemResult {
+  """
+  Why the entry failed, as the code a result-union member carries for the same
+  error. Set exactly when success is false. Branch on this, not on the text.
+  """
+  code: ErrorCode
   created: Boolean
+  """Client-safe failure text, set exactly when success is false."""
   error: String
+  """
+  Set only when the failure text was masked. Names the log entry holding the
+  real error, so support can look it up.
+  """
+  errorId: String
   externalId: String!
   item: Item
   mapping: ExternalSourceMapping
@@ -1133,9 +1176,18 @@ Always include a __typename so the variant can be discriminated.
 union BulkDeletePurchasesResult = BulkDeletePurchasesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 type BulkDeviceFailure {
-  """The error code the single-device operation would have answered with."""
-  code: String!
+  """
+  Why this device was not updated, as the code a result-union member carries for the same error.
+  """
+  code: ErrorCode!
   deviceId: ID!
+  """
+  Set only when the message was masked. Names the log entry holding the real error.
+  """
+  errorId: String
+  """
+  Client-safe failure text. An unexpected fault is masked in production and carries errorId.
+  """
   message: String!
 }
 
@@ -1449,7 +1501,9 @@ enum ChangeType {
   LOCATION_UPDATED
   """The stack's portion definition or density override was edited"""
   MEASUREMENT_PROFILE
+  MERGED
   QUANTITY_UPDATED
+  RESTORED
   WEIGHT_CORRECTED
 }
 
@@ -1635,6 +1689,16 @@ input ConnectivityInput {
 
 type ConsumptionFailure {
   availableQuantity: Float!
+  """
+  Why this item failed, as the code a result-union member carries for the same
+  error. Branch on this, not on the reason text.
+  """
+  code: ErrorCode!
+  """
+  Set only when the reason was masked. Names the log entry holding the real
+  error, so support can look it up.
+  """
+  errorId: String
   pantryItemId: ID!
   reason: String!
   recipeIngredientId: ID!
@@ -1737,7 +1801,10 @@ type CookingLog {
   pantryDeducted: Boolean!
   pantryItemsUsed: [PantryItemUsage!]!
   rating: Int
-  recipe: Recipe!
+  """
+  Null once the recipe is no longer visible to the viewer, e.g. unpublished by its author.
+  """
+  recipe: Recipe
   servingsMade: Int
   user: User!
   wouldMakeAgain: Boolean
@@ -2222,6 +2289,13 @@ input CreatePantryInput {
 input CreatePantryItemInput {
   brand: BrandReferenceInput
   expiresAt: DateTime
+  """
+  When the pantry already holds this item in the resolved unit, add the quantity to that
+  stack and return it instead of refusing with DuplicatePantryItemError. A pantry holds one
+  active stack per item per unit. The added stock is measured by this input's own net weight
+  and records its linked purchase. Stack-level fields (brand, storage, tags, thresholds and
+  the item name) are not applied to the held stack.
+  """
   forceAdd: Boolean
   """
   Optional client-generated permanent ID (CUID2).
@@ -2258,6 +2332,12 @@ Always include a __typename so the variant can be discriminated.
 union CreatePantryItemResult = ConflictError | CreatePantryItemPayload | DuplicatePantryItemError | ForbiddenError | NotFoundError | ValidationError
 
 input CreatePantryItemUsageInput {
+  """
+  True to use everything the stack holds, whatever it is: the record states that amount in
+  the tracking unit. Refused only when the stack is already empty. Send exactly one of
+  quantityUsed and consumeAll.
+  """
+  consumeAll: Boolean
   cookingLogId: ID
   idempotencyKey: ID
   isComposted: Boolean
@@ -2266,7 +2346,13 @@ input CreatePantryItemUsageInput {
   notes: String
   pantryItemId: ID!
   purpose: UsagePurpose!
-  quantityUsed: Float!
+  """
+  How much was used, in usageUnitId (the stack's tracking unit when omitted). A use larger
+  than the stack holds by no more than a hundredth of a gram or millilitre empties it; a
+  larger one is refused, stating what remains. Send exactly one of quantityUsed and
+  consumeAll.
+  """
+  quantityUsed: Float
   recipeId: ID
   targetBatchId: ID
   usageUnitId: ID
@@ -3087,8 +3173,18 @@ input DeletePantryItemInput {
 }
 
 type DeletePantryItemPayload {
+  """
+  True when this call CONVERGED on a pre-existing state (the stack was
+  already removed) — a no-op success that did NOT re-remove or re-publish.
+  The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
-  pantryItem: PantryItem!
+  """
+  The removed stack, or null when it was already removed — an idempotent
+  replay (or second device) that converged as success. See converged.
+  """
+  pantryItem: PantryItem
 }
 
 """
@@ -3313,6 +3409,14 @@ Always include a __typename so the variant can be discriminated.
 union DeleteUserAddressResult = ConflictError | DeleteUserAddressPayload | ForbiddenError | NotFoundError | ValidationError
 
 type DeletionBlocker {
+  """
+  Other active collaborators on the list, the count message states. Set on SHOPPING_LIST blockers only.
+  """
+  collaboratorCount: Int
+  """
+  Other active members of the home, the count message states. Set on HOME_OWNERSHIP blockers only.
+  """
+  memberCount: Int
   message: String!
   resourceId: ID!
   resourceName: String!
@@ -3829,10 +3933,11 @@ Always include a __typename so the variant can be discriminated.
 union DuplicateMealPlanResult = ConflictError | DuplicateMealPlanPayload | ForbiddenError | NotFoundError | ValidationError
 
 """
-The pantry already has an active stack of this catalog item. Returned by
-`createPantryItem` (unless `forceAdd` is set) so the client can route the
-user to restock the existing item instead of creating a duplicate. The
-`code` is `PANTRY_ITEM_ALREADY_EXISTS`.
+The pantry already holds an active stack of this catalog item in this unit, and
+a pantry holds one. Returned by `createPantryItem` without `forceAdd`, and by
+`updatePantryItem` and `restorePantryItem` when the write would open a second,
+so the client can route the user to restock the existing stack. The `code` is
+`PANTRY_ITEM_ALREADY_EXISTS`.
 """
 type DuplicatePantryItemError implements Error {
   code: ErrorCode!
@@ -3915,6 +4020,11 @@ from a top-level error's `extensions` instead:
 Both are typed by `TopLevelErrorCode`, which names that channel's whole
 vocabulary.
 
+This enum also types the `code` of a per-item failure inside a
+partial-success payload, which reports the same value a union member would
+for the same error. A per-item failure is the one place an internal failure
+arrives in `data`, as `INTERNAL_SERVER_ERROR`; no union member carries it.
+
 A value here without an emitter is a false promise; see the
 `error-code-contract` spec.
 """
@@ -3956,6 +4066,18 @@ enum ErrorCode {
   An idempotency-keyed operation was already applied (a safe replay). Clients should treat this as success, not a hard failure.
   """
   IDEMPOTENT_REPLAY
+  """
+  More was requested from a pantry item than it holds. The failure reports the requested and available quantities where it has them.
+  """
+  INSUFFICIENT_QUANTITY
+  """
+  An unexpected server fault behind one item of a partial-success payload. Reported only on a per-item failure, whose reason is masked in production and carries an errorId.
+  """
+  INTERNAL_SERVER_ERROR
+  """
+  A low-stock item was skipped because it is already on the target shopping list. Reported only on a per-item failure.
+  """
+  ITEM_ALREADY_IN_LIST
   NOT_FOUND
   PANTRY_ITEM_ALREADY_EXISTS
   RESOURCE_ALREADY_EXISTS
@@ -4195,11 +4317,10 @@ Counted in summary.failed.
 """
 type FailedMoveInfo {
   """
-  The registered error code for this line's failure — the same code the
-  single-line moveShoppingItemToPantry would carry in its error extensions.
-  Branch on this, not on the reason text.
+  Why this line failed, as the code a result-union member carries for the
+  same error. Branch on this, not on the reason text.
   """
-  code: String!
+  code: ErrorCode!
   """
   Present only when the reason was masked. Names the log entry holding the
   real error, so support can look it up.
@@ -5332,7 +5453,12 @@ enum ItemMatchType {
 
 """
 Client-settable subset of an item's metadata. The stored column also carries
-server-written moderation and merge-audit keys, which are not settable here.
+server-written moderation, merge-audit and enrichment keys, which are not
+settable here and which an update never removes.
+
+On an update the object is MERGED into the stored metadata: a field set to a
+value overwrites it, a field set to null removes it, and an omitted field is
+kept. Passing null for the whole object removes every field listed here.
 """
 input ItemMetadataInput {
   isDairyFree: Boolean
@@ -5580,6 +5706,10 @@ type ItemUnit {
   updatedAt: DateTime!
   usageContext: [UnitUsageContext!]!
   version: Int!
+  """
+  True when this item is never used in a fraction of this unit (eggs in pieces).
+  """
+  wholeUnitsOnly: Boolean!
 }
 
 input ItemUnitConfigInput {
@@ -5654,6 +5784,11 @@ input ItemUnitInput {
   unitId: ID
   unitName: String
   usageContext: [UnitUsageContext!]
+  """
+  True when this item is never used in a fraction of this unit (eggs in pieces). A stack
+  whose portion unit this is inherits it at creation.
+  """
+  wholeUnitsOnly: Boolean
 }
 
 type ItemUnitSuggestion {
@@ -5688,12 +5823,28 @@ type ItemValidationReport {
 
 """A condition worth surfacing that does not make the Item invalid."""
 type ItemValidationWarning {
+  """Which condition this is. Branch on this, not on message or suggestion."""
+  code: ItemValidationWarningCode!
   """The Item field the warning is about."""
   field: String!
   """Human-readable description of the concern."""
   message: String!
   """Recommended remedy, when one can be suggested."""
   suggestion: String
+}
+
+"""
+Which condition an ItemValidationWarning reports; one member per condition.
+"""
+enum ItemValidationWarningCode {
+  """The item has no category."""
+  MISSING_CATEGORY
+  """The item has no description."""
+  MISSING_DESCRIPTION
+  """The item has no unit."""
+  MISSING_UNIT
+  """The item has no UPC barcode."""
+  MISSING_UPC
 }
 
 """
@@ -5766,6 +5917,11 @@ type LedgerPeriodData {
   consumed: Float!
   net: Float!
   periodEnd: DateTime!
+  """
+  The bucket's UTC key, not display text: YYYY-MM-DD for DAILY, YYYY-MM-DD of
+  the ISO week's Monday for WEEKLY, and YYYY-MM for MONTHLY. Format it for the
+  reader locally.
+  """
   periodLabel: String!
   periodStart: DateTime!
   wasted: Float!
@@ -6123,7 +6279,6 @@ union MarkAllNotificationsAsReadResult = ConflictError | ForbiddenError | MarkAl
 
 input MarkAsTemplateInput {
   id: ID!
-  saveItems: Boolean
   templateName: String!
 }
 
@@ -6533,8 +6688,6 @@ union MealPlanEventNode = MealPlan | MealPlanItem | MealTemplate | MealTemplateI
 
 input MealPlanFilters {
   endDate: DateTime
-  """Filter by home ID to see only home-scoped meal plans"""
-  homeId: ID
   """Filter to only active meal plans (current date within start/end range)"""
   isActive: Boolean
   """Filter by meal plan type"""
@@ -6775,6 +6928,13 @@ input MeasurementProfileInput {
   densityOverride: Float
   portionUnitId: ID
   portionsPerTrackingUnit: Float
+  """
+  True when a portion of this stack is never split (an egg): a use, waste, restock or
+  correction recording a fraction of a portion is refused, and a recipe asking for a
+  fraction takes the next whole portion. Seeded from the item's unit row for the
+  portion unit when omitted.
+  """
+  wholePortionsOnly: Boolean
 }
 
 """Reusable sub-input for media assets (images)"""
@@ -6893,6 +7053,21 @@ enum MobilePlatform {
   MACOS
   OTHER
   WINDOWS
+}
+
+"""
+Who or what put a moderation state in force, for client copy. A value is
+listed only once some path emits it.
+"""
+enum ModerationReasonCode {
+  """
+  The failed-login lockout suspended the account. Temporary: it lifts when the lockout window lapses.
+  """
+  FAILED_LOGIN_ATTEMPTS
+  """
+  A moderator imposed it. The accompanying reason text, when present, is the moderator's own words.
+  """
+  MODERATOR
 }
 
 enum ModerationRestriction {
@@ -7342,7 +7517,15 @@ type Mutation {
   already-deleted pantry before it could converge.
   """
   deletePantry(input: DeletePantryInput!): DeletePantryResult!
-  """Delete a pantry item (soft delete)."""
+  """
+  Remove a pantry item. Reversible: the stack stops being held and leaves the
+  pantry's inventory, keeping its quantity, batches, costs and change history
+  so restorePantryItem can put it back. It moves no stock, so it writes no
+  consumption record and changes no usage or waste total.
+  
+  There is no client-facing permanent delete — destroying a stack is
+  adminPurgePantryItems.
+  """
   deletePantryItem(input: DeletePantryItemInput!): DeletePantryItemResult!
   """Delete a purchase record."""
   deletePurchase(input: DeletePurchaseInput!): DeletePurchaseResult!
@@ -7635,6 +7818,13 @@ type Mutation {
   """Restore a soft-deleted item"""
   restoreItem(input: RestoreItemInput!): RestoreItemResult!
   """
+  Put back a pantry item removed by deletePantryItem, with the batches
+  retired alongside it. Refused with ConflictError when the stack is not
+  removed, and with DuplicatePantryItemError when the pantry already holds
+  that item in that unit.
+  """
+  restorePantryItem(input: RestorePantryItemInput!): RestorePantryItemResult!
+  """
   Revoke one device credential. The device's current session is unaffected -
   this ends the ability to sign back in on it, not the session running on it.
   """
@@ -7642,10 +7832,13 @@ type Mutation {
   """
   Sign one device out, leaving every other device signed in.
   
-  Ends every live session bound to that device, including each token in a
-  rotation lineage that started there. Deliberately narrower than a
-  revoke-all: it does not touch other devices' sessions, their access tokens,
-  or their device credentials.
+  Ends every live session bound to that device: each token in a rotation
+  lineage that started there, that device's stored credential, and the access
+  token it is already holding. A client signing out the device it runs on
+  MUST expect its own next request to be refused.
+  
+  Deliberately narrower than a revoke-all: it does not touch other devices'
+  sessions, their access tokens, or their device credentials.
   """
   revokeDeviceSessions(input: RevokeDeviceSessionsInput!): RevokeDeviceSessionsResult!
   """Send a test notification of a specific type to the current user."""
@@ -7923,15 +8116,21 @@ type MyModerationStatus {
   appealStatus: AppealStatus
   appealedAt: DateTime
   banReason: String
+  """Why the ban is in force; null when not banned."""
+  banReasonCode: ModerationReasonCode
   id: ID!
   isBanned: Boolean!
   isSuspended: Boolean!
   restrictedUntil: DateTime
   restrictionReason: String
+  """Why restrictions are in force; null when none are."""
+  restrictionReasonCode: ModerationReasonCode
   restrictions: [ModerationRestriction!]!
   status: ModerationStatus!
   suspendedUntil: DateTime
   suspensionReason: String
+  """Why the suspension is in force; null when not suspended."""
+  suspensionReasonCode: ModerationReasonCode
   trustLevel: TrustLevel!
   underReview: Boolean!
 }
@@ -7994,6 +8193,12 @@ type Notification {
   """When this notification expires. Null if it does not expire."""
   expiresAt: DateTime
   id: ID!
+  """
+  True when a person wrote title and message (an admin announcement, a
+  notification created through the API): show them as written. False when the
+  server built them from a template: render client copy from type and payload.
+  """
+  isAuthoredContent: Boolean!
   message: String
   payload: JSON!
   priority: Priority!
@@ -8614,6 +8819,12 @@ type Pantry {
   location: String
   metadata: JSON
   name: String!
+  """
+  Every stack removed from this pantry, most recently removed first. Each can
+  be put back with restorePantryItem, which refuses when the pantry already
+  holds that item in that unit. Bounded field: limit defaults to 10 and is
+  clamped server-side to a maximum of 50.
+  """
   recentlyDeletedItems(limit: Int = 10): [PantryItem!]!
   stats: PantryStats!
   storageLocationsConnection(after: String, before: String, first: Int, last: Int, orderBy: StorageLocationOrderBy): StorageLocationConnection!
@@ -8713,12 +8924,10 @@ type PantryEventParents {
 }
 
 """
-Filters for querying pantries.
-userId and homeId filters have different behavior for admins vs regular users.
+Filters for querying pantries. The home a page covers is the query's own
+homeId argument — required on pantries, optional on adminPantries.
 """
 input PantryFilters {
-  """Filter by home ID - optional for admins, required for regular users"""
-  homeId: ID
   """Filter by default status"""
   isDefault: Boolean
   """Search by name, description, or location"""
@@ -8818,8 +9027,8 @@ type PantryItem {
   quantityBreakdown: QuantityBreakdown
   remainingNetWeight: Float
   """
-  Portions left, from the remaining net weight when the stack tracks one and
-  from the quantity otherwise. Null when the stack defines no portion.
+  Portions left, exact: from the remaining net weight when the stack tracks one and from
+  the quantity otherwise. Null when the stack defines no portion.
   """
   remainingPortions: Float
   restockQuantity: Float
@@ -8836,13 +9045,17 @@ type PantryItem {
   whose price is known — null when that is none of it.
   """
   totalCost: Float
-  unit: Unit
-  unitId: ID
+  unit: Unit!
+  unitId: ID!
   updatedAt: DateTime!
   usageRecords(after: String, before: String, first: Int, last: Int, orderBy: PantryItemUsageOrderBy): PantryItemUsageConnection!
   version: Int!
   wasteDate: DateTime
   wasteReason: WasteReason
+  """
+  True when a portion of this stack is never split; a fractional use is refused.
+  """
+  wholePortionsOnly: Boolean!
 }
 
 """
@@ -8954,11 +9167,17 @@ type PantryItemChange {
   deviceId: String
   field: String
   id: ID!
+  """The stack's item name when the change was recorded."""
+  itemName: String
   metadata: JSON
   newValue: String
   oldValue: String
-  pantryItem: PantryItem!
-  pantryItemId: ID!
+  pantryId: ID
+  """
+  Null once the stack is destroyed by adminPurgePantryItems; pantryId and itemName still name it.
+  """
+  pantryItem: PantryItem
+  pantryItemId: ID
   source: ChangeSource!
 }
 
@@ -9112,7 +9331,7 @@ type PantryItemSuggestion {
   """Item name for display"""
   name: String!
   """
-  Pantry item ID - present for LOW_STOCK, EXPIRING_SOON, and RECENTLY_DELETED sources
+  Pantry item ID - present for LOW_STOCK, EXPIRING_SOON and RECENTLY_DELETED, where it names the removed stack restorePantryItem takes
   """
   pantryItemId: ID
   """Popularity ranking position (for POPULAR source)"""
@@ -9124,6 +9343,11 @@ type PantryItemSuggestion {
 }
 
 type PantryItemUsage {
+  """
+  Who or what made this correction, on every row that corrects the stack's
+  quantity in either direction (a RESTOCK row included). Null on every other row.
+  """
+  adjustmentKind: AdjustmentKind
   adjustmentReason: String
   cookingLog: CookingLog
   cookingLogId: ID
@@ -9529,8 +9753,6 @@ input PurchaseFilters {
   fromDate: DateTime
   """Filter by item."""
   itemId: ID
-  """Filter by shopping list."""
-  shoppingListId: ID
   """Filter by specific shopping list item."""
   shoppingListItemId: ID
   """Filter by store."""
@@ -9545,7 +9767,9 @@ type PurchaseHistorySummary {
   lastPurchaseDate: DateTime
   """Whether this item has been purchased before"""
   previouslyPurchased: Boolean!
-  """Total number of times purchased"""
+  """
+  Times any member purchased this line; purchasesConnection lists only the caller's own.
+  """
   purchaseCount: Int!
 }
 
@@ -9700,23 +9924,46 @@ type Query {
   """List compatible units for an item with conversion metadata."""
   compatibleUnitsForItem(currentUnitId: ID, itemId: ID!): [CompatibleUnit!]!
   """
-  Get ranked consumption-eligible units for a catalog item.
-  Returns units in priority order: the stack's own portion unit → default
-  consume unit → curated → auto measurement → tracking unit → portions.
-  Requires an itemId (catalog item) plus the pantry item's tracking unit context.
+  Ranked consumption-eligible units for a CATALOG item, for a stack described
+  by its unit ids. Amounts are optional: which units are offered does not
+  depend on them. A netWeight, portionsPerTrackingUnit or densityOverride of
+  zero or less is refused, and so is a portionsPerTrackingUnit without its
+  portionUnitId.
   """
   consumptionUnitsForItem(
+    """The stack's density in g/mL, when it overrides the item's."""
+    densityOverride: Float
     itemId: ID!
+    """The net weight of ONE tracking unit. Optional."""
+    netWeight: Float
+    """
+    The unit the stack's net weight is recorded in. Its measure is offered
+    whether or not netWeight is passed.
+    """
     netWeightUnitId: ID
     """
     The stack's own portion unit (PantryItem.portionUnitId), when it defines
-    one. Pass it and "clove" is offered first for a stack that says a bulb
-    holds ten; omit it and the list is what the catalog alone supports, which
-    is narrower than what createPantryItemUsage accepts for that stack.
+    one. Passed with or without its count it is read as the stack's portion,
+    so "clove" is offered first for a bulb stack.
     """
     portionUnitId: ID
+    """
+    How many portion units one tracking unit holds. Optional; requires
+    portionUnitId.
+    """
+    portionsPerTrackingUnit: Float
     trackingUnitId: ID!
-  ): [RankedUnit!]!
+  ): [RankedUnit!]! @deprecated(reason: "Use consumptionUnitsForPantryItem instead.")
+  """
+  Ranked units this pantry stack can be consumed in, best first: its own
+  portion unit → the item's default consume unit → curated → the net-weight
+  family → the tracking unit → portions.
+  
+  Every unit returned converts into what the stack measures, so each one is a
+  unit createPantryItemUsage accepts. Re-query after any edit to the stack's
+  unit, net weight, portion definition or density — all four change the answer.
+  """
+  consumptionUnitsForPantryItem(pantryItemId: ID!): [RankedUnit!]!
   """
   Convert quantity between units with item context
   Supports both same-type (cup→tbsp) and cross-type (cup→gram) conversions
@@ -9780,10 +10027,15 @@ type Query {
   itemConversions(includeStandard: Boolean, itemId: ID!): [ItemUnitConversion!]!
   """
   List items with filtering and cursor-based pagination (Relay spec).
-  Use filters for UPC, SKU, or external ID lookups:
-  - items(filters: { upc, upcFormat }) - UPC/barcode lookup
-  - items(filters: { sku, skuStoreId }) - SKU lookup
-  - items(filters: { externalId, externalProvider }) - External ID lookup
+  Use filters for UPC or SKU lookups:
+  - items(filters: { lookup: { upc, upcFormat } }) - UPC/barcode lookup
+  - items(filters: { lookup: { sku, skuStoreId } }) - SKU lookup
+  
+  A curated list (curation isPopular, isTrending, isRecent, showInOnboarding)
+  and a UPC/SKU lookup each return a single page, so after, before and last
+  are refused, and each applies a subset of the filters. A filter the
+  request's mode does not apply is refused with a validation error naming
+  it, never ignored.
   """
   items(after: String, before: String, filters: ItemFilters, first: Int, last: Int, orderBy: ItemOrderBy): ItemConnection!
   """
@@ -9800,8 +10052,13 @@ type Query {
   me: User
   """Fetch a single meal plan by its ID."""
   mealPlan(id: ID!): MealPlan
-  """List meal plans with filtering and cursor-based pagination."""
-  mealPlans(after: String, before: String, filters: MealPlanFilters, first: Int, last: Int, orderBy: MealPlanOrderBy): MealPlanConnection!
+  """
+  List meal plans with filtering and cursor-based pagination.
+  
+  Without homeId the page holds the caller's own plans plus those of every
+  home they are an active member of; with it, that one home's plans.
+  """
+  mealPlans(after: String, before: String, filters: MealPlanFilters, first: Int, homeId: ID, last: Int, orderBy: MealPlanOrderBy): MealPlanConnection!
   """Get a single meal template by ID"""
   mealTemplate(id: ID!): MealTemplate
   """List meal templates for the current user"""
@@ -9855,8 +10112,13 @@ type Query {
   parseQuantityInput(input: String!, unitId: ID!): QuantityDisplay!
   """Fetch a single purchase by its ID."""
   purchase(id: ID!): Purchase
-  """List purchases with filtering and cursor-based pagination."""
-  purchases(after: String, before: String, filters: PurchaseFilters, first: Int, last: Int, orderBy: PurchaseOrderBy): PurchaseConnection!
+  """
+  List purchases with filtering and cursor-based pagination.
+  
+  shoppingListId narrows the page to purchases made from one list; the page
+  is the caller's own purchases either way.
+  """
+  purchases(after: String, before: String, filters: PurchaseFilters, first: Int, last: Int, orderBy: PurchaseOrderBy, shoppingListId: ID): PurchaseConnection!
   """
   A single recipe by id. Anonymous callers see published recipes only;
   authenticated callers also see their own private recipes when they own them.
@@ -9883,16 +10145,28 @@ type Query {
   Reachable anonymously so a not-yet-signed-up recipient can preview.
   """
   resolveShareLink(code: String!): ResolveShareLinkResult
+  """The list restockUnitsForPantryItem returns."""
+  restockUnitsForItem(pantryItemId: ID!): [RankedUnit!]! @deprecated(reason: "Use restockUnitsForPantryItem instead.")
   """
-  Get ranked restock-eligible units for a pantry item.
-  Returns units in priority order: tracking unit → curated retail → auto measurement.
+  Ranked units this pantry stack can be restocked in, best first: the tracking
+  unit → its own portion unit → curated retail units → the net-weight family.
+  Every unit returned converts into what the stack measures, so each one is a
+  unit restockPantryItem accepts.
   """
-  restockUnitsForItem(pantryItemId: ID!): [RankedUnit!]!
+  restockUnitsForPantryItem(pantryItemId: ID!): [RankedUnit!]!
   """Fetch a single saved recipe by its ID."""
   savedRecipe(id: ID!): SavedRecipe
   """List all folder names the user has organized saved recipes into."""
   savedRecipeFolders: [String!]!
-  """Search items with cursor-based pagination (Relay spec)."""
+  """
+  Search items with cursor-based pagination (Relay spec).
+  
+  With an orderBy, every page is reachable through after, before and last.
+  Without one, matches are ranked by relevance (the caller's own private
+  items, then their frequent items, then by popularity). A ranked list has
+  no cursor, so only its first page is served: after, before and last are
+  refused with a validation error until an orderBy is named.
+  """
   searchItems(after: String, before: String, filters: ItemFilters, first: Int, last: Int, orderBy: ItemOrderBy, query: String!): ItemConnection!
   """
   Semantic (vector) search over the catalog. The prompt is embedded
@@ -9942,8 +10216,11 @@ type Query {
   Replaces: defaultShoppingList (use filters: { isDefault: true }),
   searchShoppingLists (use filters: { search: "query" }),
   shoppingListCollaborators (use ShoppingList.collaboratorsConnection)
+  
+  homeId narrows the page to one home's lists; it never widens the
+  owner/collaborator/member scope the caller already has.
   """
-  shoppingLists(after: String, before: String, filters: ShoppingListFilters, first: Int, last: Int, orderBy: ShoppingListOrderBy): ShoppingListConnection!
+  shoppingLists(after: String, before: String, filters: ShoppingListFilters, first: Int, homeId: ID, last: Int, orderBy: ShoppingListOrderBy): ShoppingListConnection!
   """
   Get a single storage location by ID
   Requires user to be a member of the home
@@ -10945,6 +11222,22 @@ Always include a __typename so the variant can be discriminated.
 """
 union RestoreItemResult = ConflictError | ForbiddenError | NotFoundError | RestoreItemPayload | ValidationError
 
+input RestorePantryItemInput {
+  id: ID!
+}
+
+type RestorePantryItemPayload {
+  pantry: Pantry
+  pantryItem: PantryItem!
+}
+
+"""
+Result of RestorePantryItem. Select on RestorePantryItemPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RestorePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | RestorePantryItemPayload | ValidationError
+
 enum RestrictionSeverity {
   ALLERGY
   GOAL
@@ -11238,13 +11531,39 @@ type ShoppingList {
 
 type ShoppingListActivity {
   action: ListActivityType!
+  """The list fields an update touched. Set on LIST_UPDATED."""
+  changedFields: [String!]
+  """
+  The collaborator the action names. Set on COLLABORATOR_ADDED, COLLABORATOR_REMOVED and COLLABORATOR_ROLE_CHANGED.
+  """
+  collaboratorEmail: String
+  """
+  The role a collaborator was invited with. Set on COLLABORATOR_ADDED when one was given.
+  """
+  collaboratorRole: CollaboratorRole
   createdAt: DateTime!
   description: String!
   id: ID!
+  """
+  How many items a bulk clear removed. Set on the ITEM_REMOVED row with no itemName.
+  """
+  itemCount: Int
   itemName: String
+  """The list's name. Set on LIST_CREATED, LIST_UPDATED and LIST_DELETED."""
+  listName: String
   metadata: JSON
+  """The role after a change. Set on COLLABORATOR_ROLE_CHANGED."""
+  newRole: CollaboratorRole
   newValue: String
   oldValue: String
+  """The role before a change. Set on COLLABORATOR_ROLE_CHANGED."""
+  previousRole: CollaboratorRole
+  """Whether a bulk clear removed only purchased items. Set with itemCount."""
+  purchasedOnly: Boolean
+  """
+  The quantity the description states. Set on ITEM_ADDED and ITEM_PURCHASED when one was recorded.
+  """
+  quantity: Float
   shoppingList: ShoppingList!
   shoppingListId: ID!
   source: String
@@ -11420,7 +11739,6 @@ which part of the list changed.
 union ShoppingListEventNode = ShoppingList | ShoppingListCollaborator | ShoppingListItem
 
 input ShoppingListFilters {
-  homeId: ID
   isArchived: Boolean
   isCompleted: Boolean
   isDefault: Boolean
@@ -11462,6 +11780,9 @@ type ShoppingListItem {
   priority: Int!
   purchaseHistory: PurchaseHistorySummary!
   purchaseInfo: ShoppingListItemPurchaseInfo!
+  """
+  The caller's own purchases of this line. purchaseHistory counts every member's.
+  """
   purchasesConnection(after: String, before: String, first: Int, last: Int, orderBy: PurchaseOrderBy): PurchaseConnection!
   quantity: Float
   quantityInput: String
@@ -11726,6 +12047,16 @@ type ShoppingListUsageStats {
 
 """Item that was skipped when adding to shopping list"""
 type SkippedLowStockItem {
+  """
+  Why this item failed, as the code a result-union member carries for the same
+  error. Branch on this, not on the reason text.
+  """
+  code: ErrorCode!
+  """
+  Set only when the reason was masked. Names the log entry holding the real
+  error, so support can look it up.
+  """
+  errorId: String
   itemName: String!
   pantryItemId: ID!
   reason: String!
@@ -11736,6 +12067,16 @@ A recipe ingredient the cook deduction could not express in a stack's unit.
 The stack was left untouched; nothing was deducted 1:1.
 """
 type SkippedRecipeIngredient {
+  """
+  Why this item failed, as the code a result-union member carries for the same
+  error. Branch on this, not on the reason text.
+  """
+  code: ErrorCode!
+  """
+  Set only when the reason was masked. Names the log entry holding the real
+  error, so support can look it up.
+  """
+  errorId: String
   fromUnitId: ID!
   itemName: String!
   reason: String!
@@ -12484,6 +12825,13 @@ input SyncPantryItemInput {
   clientId: ID!
   expirationAlert: Boolean
   expiresAt: DateTime
+  """
+  When the pantry already holds this item in the resolved unit, add the quantity to that
+  stack and return it instead of refusing with DuplicatePantryItemError. A pantry holds one
+  active stack per item per unit. The added stock is measured by this input's own net weight
+  and records its linked purchase. Stack-level fields (brand, storage, tags, thresholds and
+  the item name) are not applied to the held stack.
+  """
   forceAdd: Boolean
   isComposted: Boolean
   isRecycled: Boolean
@@ -12776,6 +13124,10 @@ enum TopLevelErrorCode {
   """
   HOME_NOT_A_MEMBER
   """
+  More was requested from a pantry item than it holds. A mutation reports this as a ValidationError union member carrying the same code.
+  """
+  INSUFFICIENT_QUANTITY
+  """
   An unexpected server fault. Masked in production, so only the code survives.
   """
   INTERNAL_SERVER_ERROR
@@ -12825,7 +13177,7 @@ enum TopLevelErrorCode {
   """
   UNAUTHENTICATED
   """
-  The unit is not valid for the requested operation. Carries no machine-readable list of the units that would be: a mutation reports this as a ValidationError union member, which has no extensions, and the message names the acceptable alternatives in prose. To present them as options, re-query consumptionUnitsForItem or restockUnitsForItem.
+  The unit is not valid for the requested operation. The message states why — curation, no conversion route, a fact the food does not record, or a measure the stack cannot express. Carries no machine-readable list of the units that would be: a mutation reports this as a ValidationError union member, which has no extensions, and the message names the acceptable alternatives in prose. To present them as options, re-query consumptionUnitsForPantryItem or restockUnitsForPantryItem.
   """
   UNIT_INVALID
   VALIDATION_FAILED
@@ -13026,7 +13378,7 @@ type UpcValidation {
 Self-service account update: the caller updating their own User row. Exposes
 ONLY non-privileged, self-editable fields — privileged fields (email, role,
 emailVerified, deletedAt) are deliberately absent so a caller cannot submit
-them at all (schema-surface mass-assignment prevention, finding C1). Admin
+them at all (schema-surface mass-assignment prevention). Admin
 changes go through adminUpdateUser. Profile (name/bio/avatar) lives on
 updateProfile; app settings on updateSettings.
 """
@@ -13393,7 +13745,6 @@ input UpdateLoginHistoryInput {
   id: ID!
   isMobileApp: Boolean
   network: NetworkLocationInput
-  reviewNotes: String
   reviewed: Boolean
   reviewerId: ID
   risk: RiskAssessmentInput
@@ -13589,7 +13940,6 @@ input UpdatePantryItemInput {
   isComposted: Boolean
   isRecycled: Boolean
   itemName: String
-  lastUsedAt: DateTime
   lowStockAlert: Boolean
   measurementProfile: MeasurementProfileInput
   netWeight: NetWeightInput
@@ -13655,14 +14005,14 @@ Result of UpdatePantryItemQuantity. Select on UpdatePantryItemQuantityPayload fo
 success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
-union UpdatePantryItemQuantityResult = ConflictError | ForbiddenError | NotFoundError | UpdatePantryItemQuantityPayload | ValidationError
+union UpdatePantryItemQuantityResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | UpdatePantryItemQuantityPayload | ValidationError
 
 """
 Result of UpdatePantryItem. Select on UpdatePantryItemPayload for the
 success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
-union UpdatePantryItemResult = ConflictError | ForbiddenError | NotFoundError | UpdatePantryItemPayload | ValidationError
+union UpdatePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | UpdatePantryItemPayload | ValidationError
 
 type UpdatePantryPayload {
   home: Home
@@ -13745,7 +14095,6 @@ Always include a __typename so the variant can be discriminated.
 union UpdateRecipeIngredientsResult = ConflictError | ForbiddenError | NotFoundError | UpdateRecipeIngredientsPayload | ValidationError
 
 input UpdateRecipeInput {
-  addTags: [String!]
   attribution: RecipeAttributionInput
   description: String
   dietary: DietaryTagsInput
@@ -13756,7 +14105,6 @@ input UpdateRecipeInput {
   name: String
   notes: String
   nutrition: NutritionInfoInput
-  removeTags: [String!]
   status: RecipeStatus
   tags: [String!]
   timing: TimeEstimatesInput
@@ -14407,7 +14755,7 @@ type User {
   author) it nulled the list containing it.
   """
   purchaseStats: PurchaseStats
-  purchasesConnection(after: String, before: String, filters: PurchaseFilters, first: Int, last: Int, orderBy: PurchaseOrderBy): PurchaseConnection!
+  purchasesConnection(after: String, before: String, filters: PurchaseFilters, first: Int, last: Int, orderBy: PurchaseOrderBy, shoppingListId: ID): PurchaseConnection!
   """Null unless the caller is this user or an admin. See email."""
   role: UserRole
   savedRecipesConnection(after: String, before: String, first: Int, folder: String, last: Int, orderBy: SavedRecipeOrderBy): SavedRecipeConnection!
@@ -14484,6 +14832,10 @@ type UserEvent {
   """
   actorUserId: ID
   """
+  The failed password attempts that triggered a FAILED_LOGIN_ATTEMPTS suspension. Null otherwise.
+  """
+  failedLoginCount: Int
+  """
   Mutation kind for this event. UPDATED for ACCOUNT_UPDATED / PROFILE_CHANGED
   and the moderation subtypes (BANNED / UNBANNED / SUSPENDED / UNSUSPENDED /
   WARNED); CREATED for ADDED_TO_*; DELETED for REMOVED_FROM_*.
@@ -14498,7 +14850,16 @@ type UserEvent {
   """
   originatorClientId: ID
   parents: UserEventParents
+  """
+  The reason given for this moderation action, as written by the moderator.
+  Null when none was given; never internal moderator notes.
+  """
   reason: String
+  """
+  What caused a moderation event (BANNED / UNBANNED / SUSPENDED / UNSUSPENDED
+  / WARNED). Null for every other subtype.
+  """
+  reasonCode: ModerationReasonCode
   subtype: UserSubtype!
   timestamp: DateTime!
   updatedFields: [String!]

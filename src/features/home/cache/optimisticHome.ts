@@ -206,12 +206,12 @@ function repointMemberEdge(
         const connection = existing as
           | { edges?: Array<{ node?: Reference }> }
           | undefined;
-        if (!connection?.edges) return existing;
+        if (!connection?.edges) return connection;
         const node = toReference({
           __typename: 'Membership',
           id: serverMembershipId,
         });
-        if (!node) return existing;
+        if (!node) return connection;
         return {
           ...connection,
           edges: connection.edges.map(edge =>

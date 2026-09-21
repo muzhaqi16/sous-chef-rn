@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, StyleProp, ViewStyle } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
+import { useTranslation } from '#/i18n';
 
 interface OfflineGateProps {
   children: React.ReactNode;
@@ -19,12 +21,13 @@ interface OfflineGateProps {
 /** Gates network-dependent content on `useIsEffectivelyOffline` (device offline OR offline mode on). */
 export const OfflineGate: React.FC<OfflineGateProps> = ({
   children,
-  message = 'Not available offline',
+  message,
   description,
   mode = 'replace',
   compact = false,
   style,
 }) => {
+  const { t } = useTranslation();
   const isOffline = useIsEffectivelyOffline();
 
   if (!isOffline) {
@@ -40,7 +43,7 @@ export const OfflineGate: React.FC<OfflineGateProps> = ({
       <View style={[styles.compactContainer, style]}>
         <Icon name="cloud-offline-outline" size={16} />
         <Text role="caption" tone="secondary">
-          {message}
+          {message ?? t('errors.notAvailableOffline')}
         </Text>
       </View>
     );
@@ -50,7 +53,7 @@ export const OfflineGate: React.FC<OfflineGateProps> = ({
     <View style={[styles.container, style]}>
       <Icon name="cloud-offline-outline" size={48} />
       <Text role="heading" tone="secondary" align="center">
-        {message}
+        {message ?? t('errors.notAvailableOffline')}
       </Text>
       {description ? (
         <Text

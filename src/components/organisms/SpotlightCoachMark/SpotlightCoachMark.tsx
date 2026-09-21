@@ -41,6 +41,7 @@ import {
 import { SpotlightTooltip } from './SpotlightTooltip';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
 import { motion } from '#/theme/foundations/motion';
+import { kitTestIDs } from '#components/testIDs';
 
 export interface TargetRect {
   x: number;
@@ -359,7 +360,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
             ]}
             onPress={onTargetPress}
             accessibilityLabel={title}
-            testID="spotlight-target"
+            testID={kitTestIDs.spotlightTarget}
           />
         )}
 
@@ -405,6 +406,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel={t('tutorial.skipTutorial')}
+          testID={kitTestIDs.spotlightSkipButton}
         >
           <Text role="bodyStrong" style={styles.skipText}>
             {totalSteps != null && totalSteps > 1
@@ -417,8 +419,8 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   );
 
   // Defense-in-depth: respect the user's "Show Tutorials" preference. Callers
-  // already gate via useFeatureHint / useTutorialSequence, but skipping here
-  // ensures the overlay never renders when tutorials are explicitly disabled.
+  // already gate via useTutorialSequence or their tutorial context, but skipping
+  // here ensures the overlay never renders when tutorials are disabled.
   if (!tutorialsEnabled) return null;
 
   // Refuse to render with a degenerate target rect. Tutorial state machines

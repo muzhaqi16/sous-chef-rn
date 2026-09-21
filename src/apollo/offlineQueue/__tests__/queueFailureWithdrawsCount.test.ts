@@ -14,6 +14,25 @@
 import { gql, type InMemoryCache } from '@apollo/client';
 import { handleQueueFailure } from '../queueFailureHandler';
 import type { FailedMutationInfo } from '../types';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import {
+  CreatePantryItemDocument,
+  UpdatePantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import {
+  AddItemToShoppingListDocument,
+  MoveShoppingItemToPantryDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  BarcodeAddItemToShoppingListDocument,
+  BarcodeCreatePantryItemDocument,
+} from '#features/barcode/hooks/useAddScannedItem.generated';
+import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
+import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/screens/FilteredPantryItems.generated';
+import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
+import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
+import { stampItemKeptOnListAfterMoveToPantry } from '#features/shoppingList/cache/moveToPantry';
+import { readMovedToPantryAt } from '#features/shoppingList/cache/purchase';
 
 jest.mock('#/apollo/client', () => {
   const { makeCache } = jest.requireActual('#/apollo/cache');
@@ -29,9 +48,9 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: { clearEntity: jest.fn() },
 }));
 
-const cache = (
-  jest.requireMock('#/apollo/client') as { client: { cache: InMemoryCache } }
-).client.cache;
+const { cache } = jest.requireMock<{ client: { cache: InMemoryCache } }>(
+  '#/apollo/client',
+).client;
 
 const PANTRY = gql`
   query SeedPantry($id: ID!) {
@@ -99,7 +118,7 @@ const failure = (
   overrides: Partial<FailedMutationInfo> = {},
 ): FailedMutationInfo => ({
   mutationId: 'q1',
-  operationName: 'CreatePantryItem',
+  operationName: operationNameOf(CreatePantryItemDocument),
   entityType: 'PantryItem',
   entityId: 'pi-local',
   variables: { input: { id: 'pi-local', pantryId: 'p-1' } },
@@ -114,9 +133,9 @@ const failure = (
 });
 
 describe('handleQueueFailure withdraws the eager pantry count', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
-    cache.reset();
+    await cache.reset();
     seed();
   });
 
@@ -126,10 +145,20 @@ describe('handleQueueFailure withdraws the eager pantry count', () => {
     expect(totalItems()).toBe(1);
   });
 
+  it('uncounts a scanned create the server permanently refused', () => {
+    handleQueueFailure(
+      failure({
+        operationName: operationNameOf(BarcodeCreatePantryItemDocument),
+      }),
+    );
+
+    expect(totalItems()).toBe(1);
+  });
+
   it('uncounts a move the server permanently refused', () => {
     handleQueueFailure(
       failure({
-        operationName: 'MoveShoppingItemToPantry',
+        operationName: operationNameOf(MoveShoppingItemToPantryDocument),
         variables: {
           input: {
             pantryId: 'p-1',
@@ -145,7 +174,9 @@ describe('handleQueueFailure withdraws the eager pantry count', () => {
   });
 
   it('leaves the count alone for an operation that never counted', () => {
-    handleQueueFailure(failure({ operationName: 'UpdatePantryItem' }));
+    handleQueueFailure(
+      failure({ operationName: operationNameOf(UpdatePantryItemDocument) }),
+    );
 
     expect(totalItems()).toBe(2);
   });
@@ -155,5 +186,142 @@ describe('handleQueueFailure withdraws the eager pantry count', () => {
     handleQueueFailure(failure());
 
     expect(totalItems()).toBe(1);
+  });
+});
+
+const LIST = gql`
+  query SeedList($id: ID!) {
+    shoppingList(id: $id) {
+      __typename
+      id
+      totalItems
+      completedItems
+      remainingItems
+      completionRate
+    }
+  }
+`;
+
+describe('handleQueueFailure withdraws every row of a refused batch add', () => {
+  const rows = ['row-a', 'row-b', 'row-c'];
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    await cache.reset();
+    cache.writeQuery({
+      query: LIST,
+      variables: { id: 'list-1' },
+      data: {
+        shoppingList: {
+          __typename: 'ShoppingList',
+          id: 'list-1',
+          totalItems: 5,
+          completedItems: 0,
+          remainingItems: 5,
+          completionRate: 0,
+        },
+      },
+    });
+    for (const id of rows) {
+      cache.writeFragment({
+        id: cache.identify({ __typename: 'ShoppingListItem', id }),
+        fragment: gql`
+          fragment SeedRow on ShoppingListItem {
+            id
+          }
+        `,
+        data: { __typename: 'ShoppingListItem', id },
+      });
+    }
+  });
+
+  it.each([
+    AddItemToShoppingListDocument,
+    AddItemsToShoppingListFromRecipeDocument,
+    BarcodeAddItemToShoppingListDocument,
+    AddItemToShoppingListFromFilteredPantryDocument,
+    AddItemToShoppingListFromPantryItemDocument,
+    AddDerivedItemsToShoppingListDocument,
+  ])('removes all three rows and restores the count (%#)', document => {
+    handleQueueFailure(
+      failure({
+        operationName: operationNameOf(document),
+        entityType: 'ShoppingListItem',
+        entityId: 'row-a',
+        variables: {
+          input: { shoppingListId: 'list-1', items: rows.map(id => ({ id })) },
+        },
+      }),
+    );
+
+    const snapshot = cache.extract();
+    expect(rows.filter(id => `ShoppingListItem:${id}` in snapshot)).toEqual([]);
+    expect(
+      (snapshot['ShoppingList:list-1'] as { totalItems?: number }).totalItems,
+    ).toBe(2);
+  });
+});
+
+describe('handleQueueFailure un-stamps a refused keep-on-list move', () => {
+  const ROW = gql`
+    fragment SeedStampedRow on ShoppingListItem {
+      id
+      purchaseInfo {
+        isPurchased
+        movedToPantryAt
+        purchaseDate
+        purchasedById
+        purchasedPrice
+        purchasedQuantity
+        purchasedBy {
+          id
+        }
+      }
+    }
+  `;
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    await cache.reset();
+    cache.writeFragment({
+      id: cache.identify({ __typename: 'ShoppingListItem', id: 'sli-1' }),
+      fragment: ROW,
+      data: {
+        __typename: 'ShoppingListItem',
+        id: 'sli-1',
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: true,
+          movedToPantryAt: null,
+          purchaseDate: null,
+          purchasedById: null,
+          purchasedPrice: null,
+          purchasedQuantity: null,
+          purchasedBy: null,
+        },
+      },
+    });
+    stampItemKeptOnListAfterMoveToPantry(cache, 'list-1', 'sli-1', true);
+  });
+
+  it('clears the moved-to-pantry stamp the server never recorded', () => {
+    expect(readMovedToPantryAt(cache, 'sli-1')).not.toBeNull();
+
+    handleQueueFailure(
+      failure({
+        operationName: operationNameOf(MoveShoppingItemToPantryDocument),
+        entityId: 'pi-local',
+        variables: {
+          input: {
+            pantryId: 'p-1',
+            pantryItemId: 'pi-local',
+            shoppingListItemId: 'sli-1',
+            removeFromList: false,
+          },
+        },
+      }),
+    );
+
+    expect(readMovedToPantryAt(cache, 'sli-1')).toBeNull();
   });
 });

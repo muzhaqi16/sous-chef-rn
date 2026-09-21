@@ -17,19 +17,16 @@ fragment MealPlanItemActions_item on MealPlanItem {
 # `MealPlanFull` already selects all four fragments on `mealPlanItems`,
 # so callers (e.g. MealPlanMain) hold the matching shape.
 fragment MealPlanItemActions_optimisticFullItem on MealPlanItem {
+  id
   ...MealPlanItemCard_item
   ...DailyMeals_item
   ...MealPlanMain_item
   ...MealPlanItemActions_item
 }
 
-# Recipe display fields an optimistic meal needs — the union of the `recipe`
-# selections across the item display fragments above, resolved from the
-# cache's canonical Recipe entity for a local-first create.
-fragment MealPlanItemActions_recipeRef on Recipe {
+# The plan's stored boundaries, which a new meal's instant must fall between.
+fragment MealPlanItemActions_planBounds on MealPlan {
   id
-  name
-  imageUrl
-  totalTimeMinutes
-  servings
+  startDate
+  endDate
 }

@@ -8,22 +8,65 @@ strings keep slipping through five separate sweeps.
 Two ways, differing only by whether you are in a component:
 
 ```ts
-import { useTranslation } from '#/i18n';   // components and hooks
+import { useTranslation } from '#/i18n'; // components and hooks
 const { t } = useTranslation();
 
-import { t } from '#/i18n';                // module scope: services, utilities,
-                                           // mutation onError handlers
+import { t } from '#/i18n'; // module scope: services, utilities,
+// mutation onError handlers
 ```
 
-The module-scope `t` does **not** subscribe to language changes. A
-`no-restricted-syntax` rule enforces the hook in any `src/**/*.tsx`; a file that
+The module-scope `t` does **not** subscribe to language changes.
+`sous-chef/no-module-level-t` enforces the hook in any `src/**/*.tsx`; a file that
 genuinely needs the module-scope one (a class component like `ErrorBoundary`, or
 module-level config) imports it aliased as `tGlobal`, which makes a bare `t(...)`
 in JSX unambiguously the hook's.
 
 Both are `TranslateFn` (`src/i18n/types.ts`) when passed across a function
 boundary. Both take i18next's full options — `t('key', { count })`,
-`t('key', 'English fallback')`.
+`t('key', 'English fallback')` — so nothing needs `getI18n().t(...)`; a
+`no-restricted-imports` entry bans `getI18n` outside `src/i18n` and the modules
+that read or change the language.
+
+### Where copy lives
+
+A feature owns its copy: `src/features/<name>/locales/{en,es,it,sq}.json` holds
+its namespaces, and `src/i18n/locales/` holds only what is shared (`errors`,
+`labels`, `empty`, `auth`, `navigation`, …). `src/i18n/featureLocales.ts` merges
+them at init, reading each feature's `locales` from its `manifest.static.ts`
+through `STATIC_FEATURE_REGISTRY` — never the screen-bearing `FEATURE_REGISTRY`,
+which would pull every screen onto the launch path, since `i18n/config` is
+imported near the top of `index.js`. Adding a feature's copy means `locales` in
+its `manifest.static.ts` plus its entry in `src/i18n/localeTypes.ts`
+(`featureLocaleRegistration.test.ts` fails without the second).
+`scripts/check-i18n.mjs` and `#/test-utils/mergedLocales` walk the MERGED tree,
+because a gate reading only the core file checks a third of the copy.
+
+The product name is `{{appName}}`, never typed into a translation: it is fed by
+`interpolation.defaultVariables` from `appConfig.identity.displayName`, so a
+rebrand edits one config value instead of six strings in each of four locale
+files. `__tests__/i18n/appNameInterpolation.test.ts` fails on a literal name and
+on a `{{appName}}` that renders raw.
+
+## Keys are typed
+
+`t` takes a `TranslationKey`: i18next's `ParseKeys` over the English copy,
+declared in `src/i18n/i18next.d.ts` from `src/i18n/localeTypes.ts` (core
+`en.json` intersected with every feature's). A misspelled or removed key does not
+compile; a plural key is named without its `_one`/`_other` suffix.
+
+- A field that stores a key for later (`labelKey`, `titleKey`, a
+  `Record<Enum, …>` of keys) is typed `TranslationKey` where it is declared, so
+  every literal in the table is checked.
+- A key under a known prefix takes `KeyUnder<'prefix'>`; a key built from an enum
+  uses a template literal over it (`` `storageStateShort.${StorageState}` ``),
+  which proves every value has copy.
+- A key built from data the types cannot see (a server `field`, a refusal code)
+  goes through `isTranslationKey(key)`, a runtime check against the loaded copy,
+  and takes the caller's fallback when it is false. Never a cast.
+
+`featureLocaleRegistration.test.ts` fails when a feature ships copy that
+`localeTypes.ts` leaves out. The check costs about 3 s of `tsc` check time
+(10.3 s → 13.4 s on 2026-09-14).
 
 ## Approach considered and rejected: branding the sink
 
@@ -34,7 +77,7 @@ removed.
 It works, and it is cheap to typecheck — **+64 type instantiations out of 1.82M
 (0.0035%), check time unchanged**. That number matters on its own, because
 `src/i18n/types.ts` had recorded branded types as "too costly" by conflating them
-with typed *keys* (`ParseKeys`), which builds a giant union from the whole
+with typed _keys_ (`ParseKeys`), which builds a giant union from the whole
 resource tree and genuinely is expensive. They are different techniques with
 opposite cost profiles and must not be rejected together.
 
@@ -57,33 +100,28 @@ a new capability.
 
 ## Copy rules, and why each one exists
 
-The one-line versions live in CLAUDE.md; this is the mechanism and history.
+The one-line versions live in CLAUDE.md; this is the mechanism behind each.
 
 **Shared copy has one home.** `errors.*`, `empty.*` and `labels.*` are
 canonical; no namespace — feature or canonical — may redeclare a string another
-already has. The guard (`__tests__/i18n/canonicalVocabulary.test.ts`) used to
-ask whether a string LOOKED like error or empty-state copy, which meant 323 of
-329 duplicate groups were never inspected: `Home`, `Item` and `Try Again` match
-none of those patterns, and all three had drifted into two translations by the
-time anyone looked. It now inspects every string that is more than one
-character and contains a letter, with an exemption list where each entry names
-its exact key set and must still describe a live duplicate.
+already has. The guard (`__tests__/i18n/canonicalVocabulary.test.ts`) inspects
+every string that is more than one character and contains a letter, not only
+strings that LOOK like error or empty-state copy: a pattern filter skips 323 of
+329 duplicate groups, and `Home`, `Item` and `Try Again` — none of which match
+such a pattern — each drift into two translations when unchecked. Each
+exemption names its exact key set and must still describe a live duplicate.
 
 Two duplicates are not duplicates, and one is:
 
 - **Runtime-composed keys.** A key under `usagePurpose.*`, `errors.codes.*`,
-  `commonValidation.*`, `recipes.diet.*` or `${keyPrefix}.${suffix}` only
-  exists once the enum value or prefix is substituted in, so no call site names
-  it and nothing can be re-pointed at it. Two of them holding the same string
-  is not collapsible — both must exist for their own lookup to resolve.
-  `enumKeyCoverage.test.ts` and `composedKeyNamespaces.test.ts` keep those
-  namespaces complete. **Adding a suffix to `alertMutationFailure` means adding
-  it to `ALERT_SUFFIXES` in both places** — `rateLimitedTitle` was missing from
-  one, and a key sweep removed three live keys with nothing failing until a
-  hook test did.
-- **One English word, two grammatical roles.** `Default` is *Predeterminado* or
-  *Predeterminada* depending on the noun; `Invite` is *Invitación* (the thing)
-  or *Invitar* (the button); `Back` is *Atrás* (direction) or *Reverso* (of a
+  `commonValidation.*` or `recipes.diet.*` only exists once the enum value is
+  substituted in, so no call site names it and nothing can be re-pointed at it.
+  Two of them holding the same string is not collapsible — both must exist for
+  their own lookup to resolve. `enumKeyCoverage.test.ts` and
+  `composedKeyNamespaces.test.ts` keep those namespaces complete.
+- **One English word, two grammatical roles.** `Default` is _Predeterminado_ or
+  _Predeterminada_ depending on the noun; `Invite` is _Invitación_ (the thing)
+  or _Invitar_ (the button); `Back` is _Atrás_ (direction) or _Reverso_ (of a
   package). Collapsing those makes one context ungrammatical. They go in
   `INTENTIONAL` with the variants named — a fact about the language belongs in
   the key, never in a runtime parameter.
@@ -99,7 +137,7 @@ t('recipes.ingredientCount', { count }); // ✓
 
 Concatenation loses plural agreement, bakes English word order into code, and
 skips locale number formatting. Give each plural form its own whole sentence.
-`__tests__/i18n/numberNounConcatenation.test.ts` enforces it, and also bans
+`sous-chef/no-number-noun-concat` enforces it, and also bans
 appending a literal `'s'` — that shape produced "2 lattinas" in Italian and
 "2 kgs" in English.
 
@@ -162,20 +200,22 @@ reading rather than attempting the judgement.
 
 ## Guards that exist today
 
-| guard | catches |
-| --- | --- |
-| `i18next/no-literal-string` (jsx-only) | literals in JSX text and copy-carrying attributes |
-| `no-restricted-syntax` selectors | untranslated text reaching `alertService` / `toastService` |
-| `no-restricted-syntax` on `#/i18n` `t` | module-scope `t` used where a component renders |
-| `__tests__/i18n/keysExist.test.ts` | keys that do not exist in `en.json` |
-| `__tests__/i18n/localeParity.test.ts` | keys missing from a locale |
-| `__tests__/i18n/moduleLevelCopyTables.test.ts` | copy held in module-level tables |
-| `__tests__/i18n/canonicalVocabulary.test.ts` | the same string declared in two namespaces (drift) |
-| `__tests__/i18n/numberNounConcatenation.test.ts` | `${count} ${t('noun')}` shapes and literal `'s'` appends |
-| `__tests__/i18n/pluralCategories.test.ts` | a locale missing a CLDR plural category it needs |
-| `__tests__/i18n/addresseeGender.test.ts` | copy inflected for the reader's gender |
-| `__tests__/i18n/entityLabelAgreement.test.ts` | a determiner before an interpolated entity noun, and unreviewed new slots |
-| `__tests__/i18n/enumKeyCoverage.test.ts` + `composedKeyNamespaces.test.ts` | runtime-composed key namespaces with holes |
+| guard                                                                      | catches                                                                          |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `i18next/no-literal-string` (jsx-only)                                     | literals in JSX text and copy-carrying attributes                                |
+| `no-restricted-syntax` (`toast*`)                                          | untranslated text reaching `alertService` / `toastService`                       |
+| `sous-chef/no-module-level-t`                                              | module-scope `t` used where a component renders                                  |
+| `no-restricted-imports` on `getI18n`                                       | reaching the i18next instance to translate instead of `t`                        |
+| `TranslationKey` (`src/i18n/i18next.d.ts`)                                 | a key passed to `t`, or stored in a typed field, that `en.json` does not declare |
+| `__tests__/i18n/keysExist.test.ts`                                         | a key literal stored in a plain-string slot that `en.json` does not declare      |
+| `__tests__/i18n/localeParity.test.ts`                                      | keys missing from a locale                                                       |
+| `__tests__/i18n/moduleLevelCopyTables.test.ts`                             | copy held in module-level tables                                                 |
+| `__tests__/i18n/canonicalVocabulary.test.ts`                               | the same string declared in two namespaces (drift)                               |
+| `sous-chef/no-number-noun-concat`                                           | `${count} ${t('noun')}` shapes and literal `'s'` appends                          |
+| `__tests__/i18n/pluralCategories.test.ts`                                  | a locale missing a CLDR plural category it needs                                 |
+| `__tests__/i18n/addresseeGender.test.ts`                                   | copy inflected for the reader's gender                                           |
+| `__tests__/i18n/entityLabelAgreement.test.ts`                              | a determiner before an interpolated entity noun, and unreviewed new slots        |
+| `__tests__/i18n/enumKeyCoverage.test.ts` + `composedKeyNamespaces.test.ts` | runtime-composed key namespaces with holes                                       |
 
 None of them proves completeness. A string reaching JSX through a variable is
 invisible to all of them — that is the gap pseudolocalization would close.
@@ -187,14 +227,14 @@ the app has ever been laid out for RTL. This section records what adding one
 would cost, so the decision is made against a number rather than an impression.
 **No migration is planned; do not treat this as a worklist.**
 
-| what | count | why it matters |
-| --- | --- | --- |
-| `marginLeft` / `marginRight` | 124 | a physical edge; RTL wants `marginStart`/`marginEnd` |
-| `paddingLeft` / `paddingRight` | 14 | same |
-| absolute `left:` / `right:` | 61 | positioned chrome — badges, close buttons, overlay handles |
-| `textAlign: 'left' \| 'right'` | 2 | `'auto'` follows the writing direction |
-| `marginStart` / `marginEnd` etc. | 0 | nothing uses the logical properties today |
-| `I18nManager` references | 0 | the direction is never read, so nothing branches on it |
+| what                             | count | why it matters                                             |
+| -------------------------------- | ----- | ---------------------------------------------------------- |
+| `marginLeft` / `marginRight`     | 124   | a physical edge; RTL wants `marginStart`/`marginEnd`       |
+| `paddingLeft` / `paddingRight`   | 14    | same                                                       |
+| absolute `left:` / `right:`      | 61    | positioned chrome — badges, close buttons, overlay handles |
+| `textAlign: 'left' \| 'right'`   | 2     | `'auto'` follows the writing direction                     |
+| `marginStart` / `marginEnd` etc. | 0     | nothing uses the logical properties today                  |
+| `I18nManager` references         | 0     | the direction is never read, so nothing branches on it     |
 
 Two things the numbers do not show, and which dominate the real cost:
 

@@ -1,8 +1,9 @@
 import { renderHook, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import {
-  ConsumptionUnitsForItemDocument,
-  RestockUnitsForItemDocument,
+  ConsumptionUnitsForPantryItemDocument,
+  RestockUnitsForPantryItemDocument,
+  type ConsumptionUnitsForPantryItemQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import {
   UnitType,
@@ -12,7 +13,12 @@ import {
 import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useOperationUnits, PantryOperation } from '../useOperationUnits';
 
-function makeRankedUnit(overrides: Record<string, unknown> = {}) {
+type RankedUnit =
+  ConsumptionUnitsForPantryItemQuery['consumptionUnitsForPantryItem'][number];
+
+function makeRankedUnit(
+  overrides: MockPart<RankedUnit> = {},
+): MockPart<RankedUnit> {
   return {
     __typename: 'RankedUnit',
     rank: 1,
@@ -37,27 +43,19 @@ function makeRankedUnit(overrides: Record<string, unknown> = {}) {
 
 function consumptionMock(
   units: ReturnType<typeof makeRankedUnit>[],
-  variables = {
-    itemId: 'item-1',
-    trackingUnitId: 'unit-1',
-    netWeightUnitId: null,
-  },
-): MockedResponse {
+  variables = { pantryItemId: 'pantry-item-1' },
+): MockFor<typeof ConsumptionUnitsForPantryItemDocument> {
   return {
-    request: { query: ConsumptionUnitsForItemDocument, variables },
-    result: { data: { consumptionUnitsForItem: units } },
+    request: { query: ConsumptionUnitsForPantryItemDocument, variables },
+    result: { data: { consumptionUnitsForPantryItem: units } },
   };
 }
 
 function consumptionErrorMock(
-  variables = {
-    itemId: 'item-1',
-    trackingUnitId: 'unit-1',
-    netWeightUnitId: null,
-  },
-): MockedResponse {
+  variables = { pantryItemId: 'pantry-item-1' },
+): MockFor<typeof ConsumptionUnitsForPantryItemDocument> {
   return {
-    request: { query: ConsumptionUnitsForItemDocument, variables },
+    request: { query: ConsumptionUnitsForPantryItemDocument, variables },
     error: new Error('Query failed'),
   };
 }
@@ -65,24 +63,23 @@ function consumptionErrorMock(
 function restockMock(
   units: ReturnType<typeof makeRankedUnit>[],
   variables = { pantryItemId: 'pantry-item-1' },
-): MockedResponse {
+): MockFor<typeof RestockUnitsForPantryItemDocument> {
   return {
-    request: { query: RestockUnitsForItemDocument, variables },
-    result: { data: { restockUnitsForItem: units } },
+    request: { query: RestockUnitsForPantryItemDocument, variables },
+    result: { data: { restockUnitsForPantryItem: units } },
   };
 }
 
 function restockErrorMock(
   variables = { pantryItemId: 'pantry-item-1' },
-): MockedResponse {
+): MockFor<typeof RestockUnitsForPantryItemDocument> {
   return {
-    request: { query: RestockUnitsForItemDocument, variables },
+    request: { query: RestockUnitsForPantryItemDocument, variables },
     error: new Error('Restock query failed'),
   };
 }
 
 const defaultOptions = {
-  itemId: 'item-1',
   pantryItemId: 'pantry-item-1',
   trackingUnitId: 'unit-1',
   trackingUnitType: UnitType.Weight,
@@ -127,6 +124,36 @@ describe('useOperationUnits', () => {
       expect(result.current.allUnits).toHaveLength(1);
     });
 
+    it('offers the measured unit the stack profile earns, keyed by the stack alone', async () => {
+      // A bag with a net weight is consumable in grams only because the
+      // SERVER reads the stack's net weight; the client sends nothing but the
+      // stack id, so a profile field it does not hold still reaches the picker.
+      const { result } = renderHook(
+        () =>
+          useOperationUnits({
+            ...defaultOptions,
+            trackingUnitId: 'bag',
+            trackingUnitType: UnitType.Count,
+            operation: PantryOperation.Consume,
+          }),
+        {
+          wrapper: createApolloTestWrapper({
+            operationMocks: [
+              consumptionMock([makeRankedUnit({ rank: 2 })], {
+                pantryItemId: 'pantry-item-1',
+              }),
+            ],
+          }),
+        },
+      );
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      const weight = result.current.groups.find(
+        group => group.type === UnitType.Weight,
+      );
+      expect(weight?.units.map(unit => unit.unitSymbol)).toEqual(['g']);
+    });
+
     it('uses restock query when operation is Restock', async () => {
       const { result } = renderHook(
         () =>
@@ -169,12 +196,12 @@ describe('useOperationUnits', () => {
   });
 
   describe('skip behavior', () => {
-    it('skips consumption query when itemId is undefined (no mock consumed)', () => {
+    it('skips consumption query when pantryItemId is undefined (no mock consumed)', () => {
       const { result } = renderHook(
         () =>
           useOperationUnits({
             ...defaultOptions,
-            itemId: undefined,
+            pantryItemId: undefined,
             operation: PantryOperation.Consume,
           }),
         { wrapper: createApolloTestWrapper({ operationMocks: [] }) },
@@ -200,10 +227,7 @@ describe('useOperationUnits', () => {
     });
   });
 
-  describe('count-to-count conversion', () => {
-    // A clove and a head each carry a factor of 1 to "piece" that means
-    // nothing, so an AUTO-derived count unit without a universal factor only
-    // earns a UNIT_INVALID once the amount is typed.
+  describe("the server's per-stack list", () => {
     const countUnit = (
       id: string,
       hasStandardCountFactor: boolean,
@@ -239,19 +263,21 @@ describe('useOperationUnits', () => {
         },
       );
 
-    it('drops an AUTO count unit with no universal factor', async () => {
+    it('offers an AUTO portion unit the server lists, universal factor or not', async () => {
+      // The server lists bulb for a garlic stack and accepts it.
       const { result } = renderConsume([
         countUnit('dozen', true),
-        countUnit('head', false),
+        countUnit('bulb', false),
       ]);
 
       await waitFor(() => expect(result.current.loading).toBe(false));
-      expect(result.current.allUnits.map(u => u.unitId)).toEqual(['dozen']);
+      expect(result.current.allUnits.map(u => u.unitId)).toEqual([
+        'dozen',
+        'bulb',
+      ]);
     });
 
-    it('keeps a CURATED count unit, which carries an item-scoped relationship', async () => {
-      // The stack's own "1 bulb = 10 cloves" arrives this way; filtering it out
-      // would remove exactly what the measurement profile makes possible.
+    it('keeps a CURATED count unit', async () => {
       const { result } = renderConsume([
         countUnit('clove', false, UnitSource.Curated),
       ]);
@@ -260,20 +286,13 @@ describe('useOperationUnits', () => {
       expect(result.current.allUnits.map(u => u.unitId)).toEqual(['clove']);
     });
 
-    it('keeps the tracking unit whatever its factor', async () => {
+    it('keeps the tracking unit', async () => {
       const { result } = renderConsume([
         countUnit('head', false, UnitSource.TrackingUnit),
       ]);
 
       await waitFor(() => expect(result.current.loading).toBe(false));
       expect(result.current.allUnits.map(u => u.unitId)).toEqual(['head']);
-    });
-
-    it('leaves a weight unit alone — the rule is count-to-count only', async () => {
-      const { result } = renderConsume([makeRankedUnit()]);
-
-      await waitFor(() => expect(result.current.loading).toBe(false));
-      expect(result.current.allUnits).toHaveLength(1);
     });
   });
 
@@ -456,8 +475,9 @@ describe('useOperationUnits', () => {
     });
   });
 
-  describe('error state', () => {
-    it('exposes error from consumption query', async () => {
+  // A failed read hides the picker; the modal falls back to the tracking unit.
+  describe('failed read', () => {
+    it('settles with no groups or default after a consumption query error', async () => {
       const { result } = renderHook(
         () =>
           useOperationUnits({
@@ -471,11 +491,12 @@ describe('useOperationUnits', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.error).toBeDefined());
-      expect(result.current.error?.message).toBe('Query failed');
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.groups).toEqual([]);
+      expect(result.current.defaultUnit).toBeNull();
     });
 
-    it('exposes error from restock query', async () => {
+    it('settles with no groups or default after a restock query error', async () => {
       const { result } = renderHook(
         () =>
           useOperationUnits({
@@ -489,8 +510,9 @@ describe('useOperationUnits', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.error).toBeDefined());
-      expect(result.current.error?.message).toBe('Restock query failed');
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.groups).toEqual([]);
+      expect(result.current.defaultUnit).toBeNull();
     });
   });
 });

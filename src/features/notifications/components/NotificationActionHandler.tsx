@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
-import { ExpirationAction } from '#/graphql/generated/schemaTypes';
+import { errorService } from '#/services/errorService';
+import type { ExpirationAction } from '#/graphql/generated/schemaTypes';
 import { InvitationAcceptanceModal } from './InvitationAcceptanceModal';
 import type { InvitationData } from '#features/notifications/types';
 import { ExpirationActionSheet } from './ExpirationActionSheet';
@@ -12,6 +13,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAppStore } from '#store/useAppStore';
 import { useNotificationActionData } from '#features/notifications/hooks/useNotificationActionData';
 import { useExpirationNotificationSync } from '#features/notifications/hooks/useExpirationNotificationSync';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 interface NotificationActionHandlerProps {
   children: (props: {
@@ -62,15 +64,17 @@ export const NotificationActionHandler: React.FC<
         // HomeInvite / Membership id; sourceType labels which). Fall back to the
         // JSON payload for notifications minted before the source fields existed.
         id:
-          notification.sourceId ||
-          notification.payload.inviteId ||
-          notification.payload.membershipId ||
-          '',
-        title: notification.title,
-        description: notification.message,
+          firstNonBlank(
+            notification.sourceId,
+            notification.payload.inviteId,
+            notification.payload.membershipId,
+          ) ?? '',
         inviterName: notification.payload.inviterName,
         entityName:
-          notification.payload.homeName || notification.payload.listName || '',
+          firstNonBlank(
+            notification.payload.homeName,
+            notification.payload.listName,
+          ) ?? '',
         token: notification.payload.token,
         payload: notification.payload,
       };
@@ -111,13 +115,13 @@ export const NotificationActionHandler: React.FC<
     action: ExpirationAction,
   ) => {
     if (notification.expirationNotificationId) {
-      syncMarkAction(
+      void syncMarkAction(
         notification.id,
         notification.expirationNotificationId,
         action,
       );
       // Also mark the expiration notification as read on the server
-      syncMarkRead(notification.expirationNotificationId);
+      void syncMarkRead(notification.expirationNotificationId);
     }
     setSelectedExpirationNotification(null);
   };
@@ -134,7 +138,11 @@ export const NotificationActionHandler: React.FC<
         break;
 
       case 'VIEW_EXPIRING_ITEMS':
-        showExpirationActionSheet(notification);
+        void showExpirationActionSheet(notification).catch(error =>
+          errorService.reportError(error, {
+            operation: 'NotificationActionHandler.showExpirationActionSheet',
+          }),
+        );
         break;
 
       default:

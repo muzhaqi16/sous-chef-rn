@@ -10,7 +10,8 @@ end
 node_require('react-native/scripts/react_native_pods.rb')
 node_require('react-native-permissions/scripts/setup.rb')
 
-platform :ios, '16.0'
+ios_deployment_target = '16.0'
+platform :ios, ios_deployment_target
 prepare_react_native_project!
 
 linkage = ENV['USE_FRAMEWORKS']
@@ -43,5 +44,16 @@ target 'SousChef' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => true
     )
+
+    # RN raises each pod's own target but not its resource bundles, which keep
+    # the podspec minimum; Xcode 27 fails the build below iOS 15.
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        current = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if current && current.to_f < ios_deployment_target.to_f
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = ios_deployment_target
+        end
+      end
+    end
   end
 end

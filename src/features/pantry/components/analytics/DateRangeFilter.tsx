@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { View, ScrollView } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -9,7 +9,7 @@ import { Text } from '#components/atoms/Text';
 interface DateRangeOption {
   value: DateRange;
   /** i18n key path — the options array is module-level, so no hook. */
-  labelKey: string;
+  labelKey: TranslationKey;
 }
 
 const DATE_RANGE_OPTIONS: DateRangeOption[] = [

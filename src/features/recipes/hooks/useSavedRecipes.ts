@@ -7,8 +7,10 @@ import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
 import type { HookReturn } from '#hooks/types';
+import { useLoadRemainingPages } from '#features/recipes/hooks/useLoadRemainingPages';
 
-const DEFAULT_PAGE_SIZE = 20;
+/** `useRecipeTags` watches the same page, so the first request is shared. */
+export const SAVED_RECIPES_PAGE_SIZE = 20;
 
 /**
  * Cells read fields via `useFragment(SavedRecipeCard_savedRecipe)` for a
@@ -27,40 +29,54 @@ interface SavedRecipesState {
   hasResult: boolean;
   /** The query was skipped, so no response was ever requested. */
   skipped: boolean;
-  totalCount: number | undefined;
   hasMore: boolean;
+  isLoadingMore: boolean;
+  /** `loadAllPages` is on and pages remain that have not failed to load. */
+  isLoadingRemainingPages: boolean;
+  /** `loadAllPages` stopped short of the last page, so a filter may miss rows. */
+  isSearchIncomplete: boolean;
 }
 
 interface SavedRecipesActions {
-  refetch: () => void;
+  /** Resolves when the refetch settles, so a caller can drive a spinner. */
+  refetch: () => Promise<void>;
   loadMore: () => Promise<void>;
-  getRecipeById: (recipeId: string) => SavedRecipeNode | undefined;
-  getRecipesByFolder: (folderName: string) => SavedRecipeNode[];
-  getRecipesByTag: (tag: string) => SavedRecipeNode[];
+  /** Restarts a load-all that stopped on a failed page. */
+  retryRemainingPages: () => void;
 }
 
 type UseSavedRecipesResult = HookReturn<SavedRecipesState, SavedRecipesActions>;
+
+interface SavedRecipesOptions {
+  /**
+   * Page through the whole connection while true. The API cannot search saved
+   * recipes, so a local search covers every one only once all pages are loaded.
+   */
+  loadAllPages?: boolean;
+  /** The local filter; a new one restarts a load-all that stopped. */
+  filterKey?: string;
+}
 
 /**
  * The user's saved recipes. Returns connection nodes as REFS — consumers render
  * them through `<SavedRecipeCard savedRecipeRef={node} />`, which takes its own
  * per-entity `useFragment` subscription.
  */
-export function useSavedRecipes(folder?: string | null): UseSavedRecipesResult {
+export function useSavedRecipes({
+  loadAllPages = false,
+  filterKey = '',
+}: SavedRecipesOptions = {}): UseSavedRecipesResult {
   const isLoggedOut = useIsLoggedOut();
 
   const { data, loading, error, refetch, fetchMore } = useQuery(
     MySavedRecipesDocument,
     {
-      variables: {
-        folder: folder ?? undefined,
-        first: DEFAULT_PAGE_SIZE,
-      },
+      variables: { first: SAVED_RECIPES_PAGE_SIZE },
       skip: isLoggedOut,
     },
   );
 
-  useApolloErrorLogger('MySavedRecipes', error);
+  useApolloErrorLogger(MySavedRecipesDocument, error);
 
   const connectionData = useConnectionData({
     data,
@@ -70,29 +86,35 @@ export function useSavedRecipes(folder?: string | null): UseSavedRecipesResult {
     refetch,
   });
 
-  const recipes = connectionData.items as SavedRecipeNode[];
+  const recipes = connectionData.items;
+  const { hasMore, isLoadingMore, loadMore } = connectionData;
+  const remainingPages = useLoadRemainingPages(
+    loadAllPages,
+    loading,
+    connectionData,
+    filterKey,
+  );
 
   return {
     state: {
       recipes,
       loading,
-      error: error as Error | undefined,
+      error: error,
       hasResult: data !== undefined,
       // Signed out, so the query above was never sent. Reported so the screen
       // shows its empty state rather than accusing the network of a failure.
       skipped: isLoggedOut,
-      totalCount: connectionData.totalCount,
-      hasMore: connectionData.hasMore,
+      hasMore,
+      isLoadingMore,
+      isLoadingRemainingPages: remainingPages.isLoadingRemainingPages,
+      isSearchIncomplete: remainingPages.incomplete,
     },
     actions: {
-      refetch,
-      loadMore: connectionData.loadMore,
-      getRecipeById: (recipeId: string) =>
-        recipes.find(recipe => recipe.recipe.id === recipeId),
-      getRecipesByFolder: (folderName: string) =>
-        recipes.filter(recipe => recipe.folder === folderName),
-      getRecipesByTag: (tag: string) =>
-        recipes.filter(recipe => (recipe.tags ?? []).includes(tag)),
+      refetch: async () => {
+        await refetch();
+      },
+      loadMore,
+      retryRemainingPages: remainingPages.retry,
     },
   };
 }

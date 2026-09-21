@@ -53,7 +53,7 @@ const observedMarks = new Map<string, number>();
 function getGraphQLHost(): string {
   const apiConfig = Environment.getApiConfig();
   try {
-    return new URL(env.API_URL || apiConfig.baseUrl).host;
+    return new URL(env.API_URL ?? apiConfig.baseUrl).host;
   } catch {
     return '';
   }

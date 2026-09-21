@@ -5,9 +5,9 @@ import { screen, userEvent } from '@testing-library/react-native';
 // The report step renders ReportItemForm, whose useReportItem calls useMutation,
 // so the tree needs an Apollo context even though this suite mocks the data hooks.
 import { renderWithApollo as render } from '#/test-utils/apolloMockProvider';
-import { AddItemSheet, useAddItemSheetRefs } from '../AddItemSheet';
+import { AddItemSheet } from '../AddItemSheet';
 import { pantrySheetConfig } from '#features/pantry/components/modals/AddToPantrySheet/pantrySheetConfig';
-import { renderHook } from '@testing-library/react-native';
+import { kitTestIDs } from '#components/testIDs';
 import type {
   AddItemSheetConfig,
   SuggestionsHookResult,
@@ -201,8 +201,7 @@ const createSuggestions = (
   overrides: Partial<SuggestionsHookResult> = {},
 ): SuggestionsHookResult => ({
   grouped: {},
-  loading: false,
-  hasSuggestions: false,
+  state: 'empty',
   refetch: jest.fn(),
   ...overrides,
 });
@@ -260,23 +259,42 @@ describe('AddItemSheet', () => {
     render(
       <AddItemSheet
         {...defaultProps}
-        suggestions={createSuggestions({
-          loading: true,
-          hasSuggestions: false,
-        })}
+        suggestions={createSuggestions({ state: 'loading' })}
       />,
     );
-    // ActivityIndicator should be present (loading)
-    const { toJSON } = render(
+    expect(screen.queryByText('No suggestions yet')).toBeNull();
+    expect(screen.queryByTestId(kitTestIDs.stateError)).toBeNull();
+  });
+
+  it('shows a failed read as a failure with a retry, not as no suggestions', async () => {
+    const user = userEvent.setup();
+    const refetch = jest.fn();
+    render(
       <AddItemSheet
         {...defaultProps}
-        suggestions={createSuggestions({
-          loading: true,
-          hasSuggestions: false,
-        })}
+        suggestions={createSuggestions({ state: 'error', refetch })}
       />,
     );
-    expect(toJSON()).toBeTruthy();
+
+    expect(screen.getByTestId(kitTestIDs.stateError)).toBeTruthy();
+    expect(screen.getByText("Couldn't load this")).toBeTruthy();
+    expect(screen.queryByText('No suggestions yet')).toBeNull();
+
+    await user.press(screen.getByText('Try again'));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows an offline miss as offline, not as no suggestions', () => {
+    render(
+      <AddItemSheet
+        {...defaultProps}
+        suggestions={createSuggestions({ state: 'offline' })}
+      />,
+    );
+
+    expect(screen.getByTestId(kitTestIDs.stateOffline)).toBeTruthy();
+    expect(screen.getByText('Not available offline')).toBeTruthy();
+    expect(screen.queryByText('No suggestions yet')).toBeNull();
   });
 
   it('renders suggestion sections when data is available', () => {
@@ -289,7 +307,7 @@ describe('AddItemSheet', () => {
       <AddItemSheet
         {...defaultProps}
         suggestions={createSuggestions({
-          hasSuggestions: true,
+          state: 'ready',
           grouped: { lowStock: items, addAgain: [] },
         })}
       />,
@@ -305,7 +323,7 @@ describe('AddItemSheet', () => {
       <AddItemSheet
         {...defaultProps}
         suggestions={createSuggestions({
-          hasSuggestions: true,
+          state: 'ready',
           grouped: { lowStock: [], addAgain: [] },
         })}
       />,
@@ -352,7 +370,7 @@ describe('AddItemSheet', () => {
       <AddItemSheet
         {...defaultProps}
         suggestions={createSuggestions({
-          hasSuggestions: true,
+          state: 'ready',
           grouped: { lowStock: [item], addAgain: [] },
         })}
       />,
@@ -396,7 +414,7 @@ describe('AddItemSheet', () => {
         {...defaultProps}
         exitingItems={exitingItems}
         suggestions={createSuggestions({
-          hasSuggestions: true,
+          state: 'ready',
           grouped: {
             lowStock: [
               { id: 's1', itemId: 'item-1', name: 'Milk', category: 'Dairy' },
@@ -433,7 +451,7 @@ describe('AddItemSheet', () => {
         {...defaultProps}
         config={config}
         suggestions={createSuggestions({
-          hasSuggestions: true,
+          state: 'ready',
           grouped: {
             lowStock: [
               { id: 's1', itemId: 'i1', name: 'Milk', category: 'Dairy' },
@@ -457,7 +475,7 @@ describe('AddItemSheet', () => {
     } = require('#features/catalog/hooks/useItemAutocomplete');
     useItemAutocomplete.mockReturnValue({
       searchTerm: 'mi',
-      displayItems: [{ id: '1', name: 'Milk' }],
+      displayItems: [{ id: '1', name: 'Milk', brands: [] }],
       isLoading: false,
       handleSearchTermChange: mockHandleSearchTermChange,
       reset: mockResetAutocomplete,
@@ -475,7 +493,7 @@ describe('AddItemSheet', () => {
     } = require('#features/catalog/hooks/useItemAutocomplete');
     useItemAutocomplete.mockReturnValue({
       searchTerm: 'mi',
-      displayItems: [{ id: '1', name: 'Milk' }],
+      displayItems: [{ id: '1', name: 'Milk', brands: [] }],
       isLoading: false,
       handleSearchTermChange: mockHandleSearchTermChange,
       reset: mockResetAutocomplete,
@@ -498,25 +516,5 @@ describe('AddItemSheet', () => {
     render(<AddItemSheet {...defaultProps} visible={false} />);
     // Still renders the modal structure, but sheet behavior is controlled by ref
     expect(screen.getByText('Add to Pantry')).toBeTruthy();
-  });
-});
-
-describe('useAddItemSheetRefs', () => {
-  it('returns searchBarRef, getSearchValue, and clearSearch', () => {
-    const { result } = renderHook(() => useAddItemSheetRefs());
-
-    expect(result.current.searchBarRef).toBeDefined();
-    expect(typeof result.current.getSearchValue).toBe('function');
-    expect(typeof result.current.clearSearch).toBe('function');
-  });
-
-  it('getSearchValue returns empty string when ref is not attached', () => {
-    const { result } = renderHook(() => useAddItemSheetRefs());
-    expect(result.current.getSearchValue()).toBe('');
-  });
-
-  it('clearSearch does not throw when ref is not attached', () => {
-    const { result } = renderHook(() => useAddItemSheetRefs());
-    expect(() => result.current.clearSearch()).not.toThrow();
   });
 });

@@ -3,6 +3,10 @@ fragment useNotifications_notification on Notification {
   type
   status
   priority
+  # Gates whether `title`/`message` may be shown as written. A subscription
+  # node missing it is an INCOMPLETE entity for the feed's own read, which
+  # blanks the whole list rather than adding a row.
+  isAuthoredContent
   title
   message
   payload

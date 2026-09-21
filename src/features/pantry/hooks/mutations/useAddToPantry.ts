@@ -7,7 +7,6 @@ import {
   type GetPantryQuery,
   type GetPantryItemSuggestionsQuery,
 } from '#features/pantry/graphql/pantry.generated';
-import type { StorageLocation } from '#/graphql/generated/schemaTypes';
 import {
   addPantryItemLocally,
   addToPantryItemsCache,
@@ -17,13 +16,15 @@ import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisti
 import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
 import { findCachedPantryItemDuplicate } from '#features/pantry/utils/pantryCacheReaders';
 import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
 import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { extractNodes } from '#/utils/connectionUtils';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
+import { useTranslation } from '#/i18n';
 
 /** What became of an add. The caller owns the toast and the animation. */
 export type AddPantryItemOutcome =
@@ -48,17 +49,17 @@ export function useAddToPantry({
   pantryId,
   suggestionsLimit,
 }: UseAddToPantryArgs) {
+  const { t } = useTranslation();
   const client = useApolloClient();
 
   const [createPantryItem] = useMutation(CreatePantryItemDocument, {
     update: (cache, { data }, { variables }) => {
-      const payload = data?.createPantryItem;
-      if (payload?.__typename !== 'CreatePantryItemPayload' || !pantryId)
-        return;
+      const payload = appliedPayload(data);
+      if (!payload || !pantryId) return;
       const pantryItem = payload.pantryItem;
       // Read outside the try: `?.` is a value block, and one inside a try body
       // bails the React Compiler out of the whole function.
-      const clientId = variables?.input?.id;
+      const clientId = variables?.input.id;
 
       try {
         // NOT the counting helper: the eager write already counted this row.
@@ -77,10 +78,8 @@ export function useAddToPantry({
 
   const [restockPantryItem] = useMutation(RestockPantryItemDocument, {
     update: (cache, { data }) => {
-      const payload = data?.restockPantryItem;
-      if (payload?.__typename !== 'RestockPantryItemPayload' || !pantryId) {
-        return;
-      }
+      const payload = appliedPayload(data);
+      if (!payload || !pantryId) return;
       const pantryItem = payload.pantryItemUsage.pantryItem;
       if (!pantryItem) return;
       // Forces the connection to broadcast: the row already exists, so the
@@ -119,20 +118,27 @@ export function useAddToPantry({
   };
 
   /** The pantry's storage locations, read once from cache with no watcher. */
-  const readStorageLocations = (): StorageLocation[] => {
+  const readStorageLocations = () => {
     const cached = client.readQuery<GetPantryQuery>({
       query: GetPantryDocument,
       variables: { id: pantryId ?? '' },
     });
-    return extractNodes(
-      cached?.pantry?.storageLocationsConnection,
-    ) as StorageLocation[];
+    return extractNodes(cached?.pantry?.storageLocationsConnection);
   };
 
-  /** Does this pantry already stock the item, as far as the cache knows? */
-  const findCachedDuplicate = (itemId: string) =>
-    pantryId
-      ? findCachedPantryItemDuplicate(client.cache, pantryId, { itemId })
+  /**
+   * Does this pantry already stock the item in the unit the add would create,
+   * as far as the cache knows? An unknown unit is the server's to resolve.
+   */
+  const findCachedDuplicate = (
+    itemId: string,
+    unitId: string | null | undefined,
+  ) =>
+    pantryId && unitId
+      ? findCachedPantryItemDuplicate(client.cache, pantryId, {
+          itemId,
+          unitId,
+        })
       : null;
 
   /**
@@ -152,30 +158,28 @@ export function useAddToPantry({
       'Restock Pantry Item',
     );
 
-    let result;
-    let threw = false;
-    try {
-      result = await restockPantryItem({
-        variables: {
-          input: {
-            id: pantryItemId,
-            quantity: 1,
-            // Dedupes the restock ledger row on replay.
-            idempotencyKey: generateEntityId(),
+    // The sheet tells the user; the settle classifies, reverts and reports.
+    const settled = await settleMutation(
+      () =>
+        restockPantryItem({
+          variables: {
+            input: {
+              id: pantryItemId,
+              quantity: 1,
+              // Dedupes the restock ledger row on replay.
+              idempotencyKey: generateEntityId(),
+            },
           },
-        },
-        context: { localFirst: true },
-      });
-    } catch {
-      threw = true;
-    }
-
-    // A refused mutation RESOLVES under `errorPolicy: 'all'`, so a refusal
-    // arrives as a payload to classify rather than as a thrown error.
-    if (threw || !result || classifyCreateResult(result) === 'rejected') {
-      optimistic.revert();
-      return { status: 'rejected' };
-    }
+          context: { localFirst: true },
+        }),
+      {
+        document: RestockPantryItemDocument,
+        fallback: t('addToPantry.restockFailed'),
+        onFailed: optimistic.revert,
+        present: 'none',
+      },
+    );
+    if (settled.status === 'failed') return { status: 'rejected' };
     return { status: 'restocked' };
   };
 
@@ -218,23 +222,24 @@ export function useAddToPantry({
     }
 
     let result;
-    let threw = false;
+    let thrown: unknown;
     try {
       result = await createPantryItem({
         variables: { input: { id, pantryId, itemId } },
         context: { localFirst: true },
       });
-    } catch {
-      threw = true;
+    } catch (error) {
+      thrown = error;
     }
 
     // A duplicate arrives as a typed member in `data` OR as the legacy
     // top-level code; reading one alone lets it fall through as success and
     // strands the row.
-    const duplicate = result
+    const answered = result;
+    const duplicate = answered
       ? getPantryItemDuplicateFromResult(
-          result.data?.createPantryItem,
-          result.error,
+          answered.data?.createPantryItem,
+          answered.error,
         )
       : null;
 
@@ -246,16 +251,20 @@ export function useAddToPantry({
         status: 'duplicate',
         existingPantryItemId: duplicate.existingPantryItemId,
       };
-    } else if (
-      threw ||
-      !result ||
-      classifyCreateResult(result) === 'rejected'
-    ) {
-      // Every other business failure is a resolved union member carrying no
-      // `error`, so classify the payload. That keeps the row for a queued
-      // create and for IDEMPOTENT_REPLAY.
-      revertOptimisticPantryItem(client.cache, pantryId, id);
-      outcome = { status: 'rejected' };
+    } else {
+      // Keeps the row for a queued create and for IDEMPOTENT_REPLAY; the
+      // sheet tells the user about a refusal.
+      const settled = await settleMutation(
+        () => (answered ? Promise.resolve(answered) : Promise.reject(thrown)),
+        {
+          document: CreatePantryItemDocument,
+          fallback: t('errors.addItemFailedRetry'),
+          onFailed: () =>
+            revertOptimisticPantryItem(client.cache, pantryId, id),
+          present: 'none',
+        },
+      );
+      if (settled.status === 'failed') outcome = { status: 'rejected' };
     }
 
     // Released on every outcome; a queued create is tracked by the offline

@@ -8,14 +8,18 @@ import type {
   SyncPantryItemInput,
 } from '#/graphql/generated/schemaTypes';
 import {
+  definedInputs,
   getClientId,
   getQueuedInput,
   readUnitSpec,
+  withCapturedReads,
+  withUnitSymbol,
+  type QueuedInput,
+  type ReplayInputReader,
   type SyncBuilder,
-  type SyncBuilderTable,
   type UnitSpec,
 } from '#/apollo/offlineQueue/syncBuilder';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { parseStoredQuantityText } from '#/utils/formatQuantity';
 
 // How the offline queue replays a pantry write; contract in
 // `#/apollo/offlineQueue/syncBuilder`.
@@ -43,114 +47,134 @@ const readPantryId = (
   return itemData?.pantryId ?? undefined;
 };
 
+/** The queued pantry id and unit symbol, for an input that lacks them. */
+const readPantryItemInputs =
+  (unitOf: (input: QueuedInput) => UnitSpec): ReplayInputReader =>
+  (mutation, cache) => {
+    const input = getQueuedInput(mutation);
+    const unit = unitOf(input);
+    return definedInputs({
+      pantryId: input.pantryId
+        ? undefined
+        : readPantryId(cache, getClientId(mutation)),
+      unitSymbol: unit.unitSymbol
+        ? undefined
+        : readUnitSpec(cache, unit)?.unitSymbol,
+    });
+  };
+
+// A create sends `unit: { unitId }`; an edit already sends `{ unitSymbol }`.
+const itemUnitOf = (input: QueuedInput): UnitSpec => input.unit ?? {};
+const quantityUnitOf = (input: QueuedInput): UnitSpec => ({
+  unitId: input.unitId,
+});
+
 /**
  * PantryItem create/update sync. `SyncPantryItemInput` mirrors
  * `CreatePantryItemInput` with `id` → `clientId`; remaining fields pass straight
  * through by name, loosely typed because the queued input is untyped persisted
  * data and a strict annotation would need per-field casts on the replay path.
  */
-const buildPantryItemSync: SyncBuilder = (mutation, cache) => {
-  const input = getQueuedInput(mutation);
-  const clientId = getClientId(mutation, input);
-  const { id: _omitId, itemName, ...rest } = input;
+export const buildPantryItemSync = withCapturedReads(
+  readPantryItemInputs(itemUnitOf),
+  (mutation, captured, cache) => {
+    const input = getQueuedInput(mutation);
+    const clientId = getClientId(mutation);
+    const { id: _omitId, itemName, ...rest } = input;
 
-  // Create inputs carry `pantryId`; `UpdatePantryItemInput` does not.
-  const pantryId =
-    (rest.pantryId as string | undefined) ?? readPantryId(cache, clientId);
-  if (!pantryId) {
-    throw new Error(
-      `Cannot sync ${mutation.operationName}: pantryId not found for item ${clientId}`,
+    // Only `UpdatePantryItemInput` carries `itemName`. The sync upsert's update
+    // branch ignores `item`, so a rename replays as the original (`version: Int!`).
+    if (itemName != null) {
+      return {
+        syncMutation: mutation.mutation,
+        syncVariables: mutation.variables,
+        requiresVersion: true,
+      };
+    }
+
+    // Create inputs carry `pantryId`; `UpdatePantryItemInput` does not.
+    const pantryId = rest.pantryId ?? captured.pantryId;
+    if (!pantryId) {
+      throw new Error(
+        `Cannot sync ${mutation.operationName}: pantryId not found for item ${clientId}`,
+      );
+    }
+
+    // The symbol is the half of the unit a retired id needs.
+    const unit = readUnitSpec(
+      cache,
+      withUnitSymbol(itemUnitOf(input), captured.unitSymbol),
     );
-  }
 
-  // `SyncPantryItemInput` takes `item: InlineItemInput`, not a flat `itemName`:
-  // fold `UpdatePantryItem`'s flat name in so a rename syncs.
-  const existingItem = rest.item as Record<string, unknown> | undefined;
-  const item =
-    itemName != null
-      ? { ...(existingItem ?? {}), name: itemName }
-      : existingItem;
+    // Only a create carries its `pantryId`. A stack for the same item and unit
+    // added while it sat queued absorbs it rather than refusing it.
+    const isCreate = rest.pantryId != null && rest.version == null;
 
-  // A create sends `unit: { unitId }`; an edit already sends `{ unitSymbol }`.
-  // Both come back carrying the symbol, which is the half a retired id needs.
-  const unit = readUnitSpec(cache, (rest.unit ?? {}) as UnitSpec);
-
-  return {
-    syncMutation: SyncPantryItemDocument,
-    syncVariables: {
-      input: {
-        ...rest,
-        pantryId,
-        ...(item != null && { item }),
-        ...(unit && { unit }),
-        clientId,
+    return {
+      syncMutation: SyncPantryItemDocument,
+      syncVariables: {
+        input: {
+          ...rest,
+          pantryId,
+          ...(unit && { unit }),
+          ...(isCreate && { forceAdd: true }),
+          clientId,
+        },
       },
-    },
-  };
-};
+    };
+  },
+);
 
 /**
  * `UpdatePantryItemQuantityInput` does not align with `SyncPantryItemInput`: the
  * id rides as `pantryItemId`, the quantity is the raw string from the quantity
  * box, and the unit is a flat `unitId`. Map each explicitly.
  */
-const buildPantryItemQuantitySync: SyncBuilder = (mutation, cache) => {
-  const input = getQueuedInput(mutation);
-  const clientId = input.pantryItemId ?? getClientId(mutation, input);
+export const buildPantryItemQuantitySync = withCapturedReads(
+  readPantryItemInputs(quantityUnitOf),
+  (mutation, captured, cache) => {
+    const input = getQueuedInput(mutation);
+    const clientId = getClientId(mutation);
 
-  const pantryId = input.pantryId ?? readPantryId(cache, clientId);
-  if (!pantryId) {
-    throw new Error(
-      `Cannot sync ${mutation.operationName}: pantryId not found for item ${clientId}`,
+    const pantryId = input.pantryId ?? captured.pantryId;
+    if (!pantryId) {
+      throw new Error(
+        `Cannot sync ${mutation.operationName}: pantryId not found for item ${clientId}`,
+      );
+    }
+
+    // The queued text is the API text the hook sent, which may be `1 1/4`.
+    const quantity =
+      typeof input.quantity === 'string'
+        ? parseStoredQuantityText(input.quantity)
+        : input.quantity;
+
+    const unit = readUnitSpec(
+      cache,
+      withUnitSymbol(quantityUnitOf(input), captured.unitSymbol),
     );
-  }
 
-  // The queued mutation carries whatever was typed, which may be `1 1/4`.
-  const quantity =
-    typeof input.quantity === 'string'
-      ? parseFractionalInput(input.quantity) ?? NaN
-      : input.quantity;
-
-  // Carries the cached symbol beside the id: an id the vocabulary repair
-  // retired cannot be re-resolved, a symbol can.
-  const unit = readUnitSpec(cache, { unitId: input.unitId });
-
-  const syncInput: SyncPantryItemInput = {
-    clientId: clientId as string,
-    pantryId,
-    ...(quantity != null && Number.isFinite(quantity) && { quantity }),
-    ...(unit && { unit }),
-    ...(input.version != null && { version: input.version }),
-  };
-  return {
-    syncMutation: SyncPantryItemDocument,
-    syncVariables: { input: syncInput },
-  };
-};
+    const syncInput: SyncPantryItemInput = {
+      clientId: clientId as string,
+      pantryId,
+      ...(quantity != null && Number.isFinite(quantity) && { quantity }),
+      ...(unit && { unit }),
+      ...(input.version != null && { version: input.version }),
+    };
+    return {
+      syncMutation: SyncPantryItemDocument,
+      syncVariables: { input: syncInput },
+    };
+  },
+);
 
 /** PantryItem delete sync — idempotent by `clientId`. */
-const buildDeletePantryItemSync: SyncBuilder = mutation => {
-  const input = getQueuedInput(mutation);
+export const buildDeletePantryItemSync: SyncBuilder = mutation => {
   const syncInput: SyncDeletePantryItemInput = {
-    clientId: getClientId(mutation, input) as string,
-    version: input.version,
+    clientId: getClientId(mutation) as string,
   };
   return {
     syncMutation: SyncDeletePantryItemDocument,
     syncVariables: { input: syncInput },
   };
-};
-
-/**
- * `BarcodeCreatePantryItem` shares the create builder — same entity, same fields.
- * The granular deltas (adjust / restock / consume / waste / …) have NO entry: they
- * queue via their own `context.localFirst` and replay as the original mutation,
- * made at-most-once by a client-minted `input.idempotencyKey`.
- */
-export const PANTRY_SYNC_BUILDERS: SyncBuilderTable = {
-  CreatePantryItem: buildPantryItemSync,
-  UpdatePantryItem: buildPantryItemSync,
-  UpdatePantryItemQuantity: buildPantryItemQuantitySync,
-  BarcodeCreatePantryItem: buildPantryItemSync,
-  DeletePantryItem: buildDeletePantryItemSync,
 };

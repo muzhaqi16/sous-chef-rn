@@ -11,7 +11,7 @@ import {
 import { Header } from '#components/organisms/Header';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
-import { formatQuantity } from '#/utils/formatQuantity';
+import { formatQuantityForInput } from '#/utils/formatQuantity';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
   formatNumberForInput,
@@ -22,6 +22,7 @@ import {
   unitPriceFromTotal,
 } from '#features/shoppingList/utils/purchasePrice';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
 interface PurchaseAmountSheetItem {
   id: string;
@@ -94,7 +95,11 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
     setPrevVisible(visible);
     setPrevItemId(item?.id);
     if (visible && item) {
-      setQuantityInput(formatQuantity(item.requestedQuantity));
+      // The seed is read back by `parseNumberInput`, so it must carry the
+      // device's separator; a period reads as grouping on a comma device.
+      setQuantityInput(
+        formatQuantityForInput(item.requestedQuantity, { notation: 'decimal' }),
+      );
       setPriceInput(
         formatPrice(
           totalFromUnitPrice(item.estimatedPrice, item.requestedQuantity),
@@ -169,20 +174,20 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
                 selectTextOnFocus
                 maxLength={10}
                 accessibilityLabel={t('labels.quantity')}
-                testID="purchase-quantity-input"
+                testID={shoppingListTestIDs.purchaseQuantityInput}
               />
               {item?.unitName ? (
-                <Text tone="secondary" style={styles.affix}>
+                <Text role="body" tone="secondary" style={styles.affix}>
                   {item.unitName}
                 </Text>
               ) : null}
             </View>
             {quantityError ? (
               <Text
-                role="caption"
+                role="error"
                 tone="error"
                 style={styles.fieldError}
-                testID="purchase-quantity-error"
+                testID={shoppingListTestIDs.purchaseQuantityError}
               >
                 {quantityError}
               </Text>
@@ -194,7 +199,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
               {t('purchaseAmountSheet.totalPrice')}
             </SectionHeader>
             <View style={styles.inputRow}>
-              <Text tone="secondary" style={styles.prefix}>
+              <Text role="body" tone="secondary" style={styles.prefix}>
                 {t('purchaseAmountSheet.currencySymbol')}
               </Text>
               <ThemedBottomSheetTextInput
@@ -208,7 +213,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
                   t('purchaseAmountSheet.pricePlaceholder'),
                 )}
                 accessibilityLabel={t('purchaseAmountSheet.totalPrice')}
-                testID="purchase-price-input"
+                testID={shoppingListTestIDs.purchasePriceInput}
               />
             </View>
             {perUnitPrice != null ? (

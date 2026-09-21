@@ -135,8 +135,9 @@ describe('IngredientMatchingSheet', () => {
 
   it('renders summary pills', () => {
     render(<IngredientMatchingSheet {...defaultProps} />);
-    expect(screen.getByText('1 Available')).toBeTruthy();
-    expect(screen.getByText('1 Missing')).toBeTruthy();
+    // One sentence per plural form, not a number glued to a noun label.
+    expect(screen.getByText('1 available')).toBeTruthy();
+    expect(screen.getByText('1 missing')).toBeTruthy();
   });
 
   it('renders included count', () => {

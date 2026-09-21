@@ -1,0 +1,8 @@
+# The signed-in account's verification as the server holds it, re-read when a
+# link reports "already verified" without naming the account it verified.
+query SignedInEmailVerification {
+  me {
+    id
+    emailVerified
+  }
+}

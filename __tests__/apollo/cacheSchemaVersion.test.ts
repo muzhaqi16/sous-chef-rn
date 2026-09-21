@@ -29,36 +29,7 @@ import { createHash } from 'crypto';
  *
  * Re-record by running this test: the failure message prints the new hash.
  */
-// Re-recorded 2026-09-10: `Query.home` gained a cache redirect, so a home the
-// device created reads back by id without a request the server cannot answer
-// yet. A redirect only READS, and it reads the same `Home` entity an old blob
-// already holds — a blob with no such entity simply misses, as before. No merge
-// changed. No version bump.
-//
-// Re-recorded 2026-09-04: `mergeTypePolicies` now refuses a collision on any
-// policy key, not just `fields`, and `registry.cache.ts` joined the file list
-// below. Both are guards over the assembly; no `merge` or `read` changed, so
-// an old blob restores exactly as before. No version bump.
-//
-// Bumped to 'shape-2' on 2026-09-04: the API merged 46 alias `Unit` rows into
-// their canonical row and rebased every `conversionFactor` onto millilitres. A
-// persisted blob parses exactly as before and is wrong — it holds unit ids the
-// server cannot resolve. Nothing in the policy modules changed, so the hash
-// below stands; the purge is what the version bump buys.
-//
-// Re-recorded 2026-09-02: the pre-commit hooks reformatted the policy modules
-// on commit (lint-staged runs Prettier), which changes the bytes and nothing
-// else — an old blob restores exactly as before. Also that day: `cache.ts`
-// reads the policies from
-// `features/registry.cache.ts` instead of the static manifests, which took them
-// off the i18n launch path. No merge or read changed. Earlier the same day:
-// dropped unused type imports from the policy modules
-// after the split; no merge or read changed, so an old blob restores exactly as
-// before. Earlier the same day: the type policies moved out of `cache.ts` into
-// `features/<name>/cache/typePolicies.ts`, byte-identical, and `cache.ts`
-// became the assembler. Nothing a `merge` or `read` does changed, so an old
-// blob restores exactly as before. No version bump.
-const REVIEWED_CACHE_POLICY_HASH = 'd49ec90a9e7336ae';
+const REVIEWED_CACHE_POLICY_HASH = 'da5d8ccb50e3926f';
 
 const FEATURES = join('src', 'features');
 
@@ -85,7 +56,7 @@ const shapeFiles = (): string[] => {
  * redefinition are different reasons to purge, and only the first moves the
  * hash above. Without this, a bump made for the second reason is invisible.
  */
-const REVIEWED_CACHE_VERSION = 'shape-2';
+const REVIEWED_CACHE_VERSION = 'shape-3';
 
 it('the persisted cache version matches the decision recorded here', () => {
   const source = readFileSync(

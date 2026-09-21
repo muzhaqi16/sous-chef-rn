@@ -2,7 +2,6 @@ import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import {
   getInvitableRoles,
   canInviteToHome,
-  findUserMembership,
 } from '#features/home/utils/homePermissions';
 
 describe('getInvitableRoles', () => {
@@ -108,34 +107,5 @@ describe('canInviteToHome', () => {
 
   it('returns true for Owner', () => {
     expect(canInviteToHome(MembershipRole.Owner)).toBe(true);
-  });
-});
-
-describe('findUserMembership', () => {
-  const members = [
-    { id: 'm1', userId: 'u1', role: 'OWNER', status: 'ACTIVE' },
-    { id: 'm2', userId: 'u2', role: 'MEMBER', status: 'ACTIVE' },
-    { id: 'm3', userId: 'u3', role: 'ADMIN', status: 'ACTIVE' },
-  ];
-
-  it('finds membership by userId', () => {
-    const result = findUserMembership(members, 'u2');
-    expect(result).toEqual({
-      id: 'm2',
-      role: MembershipRole.Member,
-      status: 'ACTIVE',
-    });
-  });
-
-  it('returns null when user not found', () => {
-    expect(findUserMembership(members, 'u99')).toBeNull();
-  });
-
-  it('returns null for undefined members', () => {
-    expect(findUserMembership(undefined, 'u1')).toBeNull();
-  });
-
-  it('returns null for undefined userId', () => {
-    expect(findUserMembership(members, undefined)).toBeNull();
   });
 });

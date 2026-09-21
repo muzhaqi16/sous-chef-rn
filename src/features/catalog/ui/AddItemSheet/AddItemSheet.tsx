@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
-import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { ItemSuggestionsList } from '#features/catalog/ui/ItemSuggestionsList';
 import { ReportItemForm } from '#features/catalog/ui/ReportItemForm/ReportItemForm';
 import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
@@ -24,6 +24,8 @@ import { useAddItemSheetState } from './useAddItemSheetState';
 import { SuggestionDrilldown } from './SuggestionDrilldown';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { DataStateView } from '#components/organisms/DataStateView';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 
 /**
  * How many rows each section shows in the overview before a "More" affordance
@@ -156,7 +158,7 @@ export function AddItemSheet<
   // second modal. The sheet keeps its current height (the search snap point) —
   // the user can still drag it up to the 95% max.
   const handleAddManually = () => {
-    const searchValue = searchBarRef.current?.getValue() || '';
+    const searchValue = searchBarRef.current?.getValue() ?? '';
     onAddManually(searchValue);
     if (renderDetails) {
       setStep('details');
@@ -244,22 +246,25 @@ export function AddItemSheet<
       ref={bottomSheetRef}
       {...modalProps}
       // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works
-      testID={`${config.testIDPrefix}-modal`}
+      testID={catalogTestIDs.addItemSheetModal(config.testIDPrefix)}
     >
-      <View style={styles.sheetBody} testID={`${config.testIDPrefix}-modal`}>
+      <View
+        style={styles.sheetBody}
+        testID={catalogTestIDs.addItemSheetModal(config.testIDPrefix)}
+      >
         {step === 'report' ? (
           <ReportItemForm
             candidates={autocomplete.displayItems.map(item => ({
               id: item.id,
               name: item.name,
               imageUrl: item.imageUrl,
-              brandName: item.brands?.[0]?.name,
+              brandName: item.brands[0]?.name,
             }))}
             onClose={goBackToSearch}
           />
         ) : step === 'details' && renderDetails ? (
           renderDetails({ goBack: goBackToSearch })
-        ) : inDrilldown && activeGroup ? (
+        ) : inDrilldown ? (
           <SuggestionDrilldown
             title={t(activeGroup.titleKey)}
             items={activeItems}
@@ -290,7 +295,9 @@ export function AddItemSheet<
               showSearchIcon
               ref={searchBarRef}
               containerStyle={styles.searchBar}
-              testID={`${config.testIDPrefix}-search-input`}
+              testID={catalogTestIDs.addItemSheetSearchInput(
+                config.testIDPrefix,
+              )}
               placeholder={t(config.searchPlaceholderKey)}
               onChangeText={handleSearchChange}
               onClear={() => setSearchQuery('')}
@@ -332,11 +339,17 @@ export function AddItemSheet<
             {/* Suggestions Sections - shown when search is empty, deferred until after animation */}
             {!!showSuggestions && !!state.shouldRenderSuggestions && (
               <>
-                {suggestions.loading && !suggestions.hasSuggestions ? (
+                {suggestions.state === 'loading' ? (
                   <View style={styles.centeredSpinner}>
                     <PrimaryActivityIndicator size="small" />
                   </View>
-                ) : !suggestions.hasSuggestions ? (
+                ) : suggestions.state === 'error' ||
+                  suggestions.state === 'offline' ? (
+                  <DataStateView
+                    state={suggestions.state}
+                    onRetry={suggestions.refetch}
+                  />
+                ) : suggestions.state === 'empty' ? (
                   <View style={styles.emptyInset}>
                     <Text
                       role="bodyStrong"
@@ -366,21 +379,6 @@ export function AddItemSheet<
       </View>
     </BottomSheetModal>
   );
-}
-
-// Export ref getter function for wrapper components
-export function useAddItemSheetRefs() {
-  const searchBarRef = useRef<SearchBarRef>(null);
-
-  const getSearchValue = () => {
-    return searchBarRef.current?.getValue() || '';
-  };
-
-  const clearSearch = () => {
-    searchBarRef.current?.clear();
-  };
-
-  return { searchBarRef, getSearchValue, clearSearch };
 }
 
 const styles = StyleSheet.create(theme => ({

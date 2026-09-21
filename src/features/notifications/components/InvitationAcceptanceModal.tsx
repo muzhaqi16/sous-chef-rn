@@ -10,18 +10,16 @@ import {
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
-import { localizedErrorMessage } from '#/services/errorService';
-import { useInvitationActions } from '#features/notifications/hooks/useInvitationActions';
-import type { InvitationRefusal } from '#/domain/invitationRefusal';
+import {
+  useInvitationActions,
+  type InvitationFailure,
+} from '#features/notifications/hooks/useInvitationActions';
 import { useUser } from '#store/useAppStore';
 import type { InvitationData } from '#features/notifications/types';
+import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
+import { ErrorCode, NotificationType } from '#/graphql/generated/schemaTypes';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
-
-// The caller's copy goes INTO the resolver, never after it: the resolver is
-// total and yields to this fallback on a transport code.
-const getInvitationErrorMessage = (error: unknown, fallback: string): string =>
-  localizedErrorMessage(error, fallback);
 
 interface InvitationAcceptanceModalProps {
   visible: boolean;
@@ -43,60 +41,30 @@ export const InvitationAcceptanceModal: React.FC<
   const { token, acceptHome, acceptList, declineHome, declineList } =
     useInvitationActions(invitation, userId);
 
-  /**
-   * Copy per refusal reason. The account-mismatch sentence belongs only to the
-   * permission refusal that means it; a spent or revoked invite gets copy
-   * written for that, and every remaining reason still reaches the reader.
-   */
-  const reportRefusal = (
-    refusal: InvitationRefusal | undefined,
-    fallbackKey: string,
-  ) => {
+  const reportFailure = (failure: InvitationFailure) => {
     onClose();
-    if (refusal === 'inviteeMismatch') {
-      // The link is good and the invite stays PENDING — the reader is signed
-      // in as somebody else, which no retry fixes and no eviction should hide.
-      alertService.alert(
-        t('invitationAcceptance.wrongAccountTitle'),
-        t('invitationAcceptance.wrongAccount'),
-      );
+    // The invite stays PENDING for a reader signed in as somebody else, which
+    // no retry fixes, so it is explained rather than toasted.
+    if (failure.code === ErrorCode.Forbidden) {
+      alertService.alert(failure.title, failure.body);
       return;
     }
-    if (refusal === 'unavailable' || refusal === 'alreadyResolved') {
-      toastService.error(t('errors.invitationUnavailable'));
-      return;
-    }
-    if (refusal === 'invalid') {
-      toastService.error(t('invitationAcceptance.invalidInvitation'));
-      return;
-    }
-    toastService.error(t(fallbackKey));
+    toastService.error(failure.body);
   };
 
   const handleAccept = () => {
     if (!invitation || !token) return;
 
     setAccepting(true);
-    executeAsyncWithCleanup(
+    void executeAsyncWithCleanup(
       async () => {
         const outcome =
           invitation.type === 'HOME_INVITE'
             ? await acceptHome(token)
             : await acceptList(token);
 
-        if (outcome.error) {
-          onClose();
-          toastService.error(
-            getInvitationErrorMessage(
-              outcome.error,
-              t('invitationAcceptance.acceptFailed'),
-            ),
-          );
-          return;
-        }
-
-        if (!outcome.accepted) {
-          reportRefusal(outcome.refusal, 'invitationAcceptance.acceptFailed');
+        if (outcome.status === 'failed') {
+          reportFailure(outcome.failure);
           return;
         }
 
@@ -109,14 +77,9 @@ export const InvitationAcceptanceModal: React.FC<
         onClose();
       },
       () => setAccepting(false),
-      (error: unknown) => {
+      () => {
         onClose();
-        toastService.error(
-          getInvitationErrorMessage(
-            error,
-            t('invitationAcceptance.acceptFailed'),
-          ),
-        );
+        toastService.error(t('invitationAcceptance.acceptFailed'));
       },
     );
   };
@@ -138,29 +101,15 @@ export const InvitationAcceptanceModal: React.FC<
           onPress: () => {
             if (!token) return;
             setRejecting(true);
-            executeAsyncWithCleanup(
+            void executeAsyncWithCleanup(
               async () => {
                 const outcome =
                   invitation.type === 'HOME_INVITE'
                     ? await declineHome(token)
                     : await declineList(token);
 
-                if (outcome.error) {
-                  onClose();
-                  toastService.error(
-                    getInvitationErrorMessage(
-                      outcome.error,
-                      t('invitationAcceptance.declineFailed'),
-                    ),
-                  );
-                  return;
-                }
-
-                if (!outcome.accepted) {
-                  reportRefusal(
-                    outcome.refusal,
-                    'invitationAcceptance.declineFailed',
-                  );
+                if (outcome.status === 'failed') {
+                  reportFailure(outcome.failure);
                   return;
                 }
 
@@ -173,14 +122,9 @@ export const InvitationAcceptanceModal: React.FC<
                 onClose();
               },
               () => setRejecting(false),
-              (error: unknown) => {
+              () => {
                 onClose();
-                toastService.error(
-                  getInvitationErrorMessage(
-                    error,
-                    t('invitationAcceptance.declineFailed'),
-                  ),
-                );
+                toastService.error(t('invitationAcceptance.declineFailed'));
               },
             );
           },
@@ -190,6 +134,17 @@ export const InvitationAcceptanceModal: React.FC<
   };
 
   if (!invitation) return null;
+
+  const copy = getNotificationCopy(
+    {
+      type:
+        invitation.type === 'HOME_INVITE'
+          ? NotificationType.HomeInvitation
+          : NotificationType.CollaborationInvite,
+      payload: invitation.payload,
+    },
+    t,
+  );
 
   return (
     <Modal
@@ -212,7 +167,7 @@ export const InvitationAcceptanceModal: React.FC<
               />
             </View>
             <Text role="heading" style={styles.title}>
-              {invitation.title}
+              {copy.title}
             </Text>
             <AppPressable
               style={styles.closeButton}
@@ -225,7 +180,9 @@ export const InvitationAcceptanceModal: React.FC<
 
           {/* Content */}
           <View style={styles.content}>
-            <Text style={styles.description}>{invitation.description}</Text>
+            <Text role="body" style={styles.description}>
+              {copy.message}
+            </Text>
 
             {!!invitation.inviterName && (
               <View style={styles.inviterContainer}>
@@ -274,7 +231,7 @@ export const InvitationAcceptanceModal: React.FC<
                 ) : (
                   <>
                     <Icon name="close" size={20} tone="error" />
-                    <Text role="bodyStrong" tone="error">
+                    <Text role="bodyStrong" tone="danger">
                       {t('labels.reject')}
                     </Text>
                   </>
@@ -349,7 +306,6 @@ const styles = StyleSheet.create(theme => ({
   },
   description: {
     marginBottom: theme.spacing.md,
-    lineHeight: 22,
   },
   inviterContainer: {
     flexDirection: 'row',

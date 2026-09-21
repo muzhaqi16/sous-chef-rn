@@ -1,6 +1,5 @@
 /** Create and delete mutations for homes. Renaming lives in the detail hook. */
 
-import type { ErrorLike } from '@apollo/client';
 import { t } from '#/i18n';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
@@ -8,15 +7,14 @@ import {
   GetHomesDocument,
 } from '#operations/home/home.generated';
 import { useCreateHome } from '#features/home/hooks/useCreateHome';
+import { useCreatePantry } from '#features/pantry/hooks/useCreatePantry';
 import { readDefaultPantryId } from '#features/home/utils/homePantries';
 import { alertService } from '#/services/alertService';
-import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import {
   useSelectedHomeId,
   useHomeState,
   useHasUnverifiedEmail,
 } from '#store/useAppStore';
-import { handleMutationError } from '#/utils/errorHandlers';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { removeFromHomesCache } from './homeCacheUpdaters';
@@ -43,72 +41,47 @@ export function useHomeMutations({
   // One home create, wherever it is made — the local-first one, which writes
   // the home and the creator's membership before it fires.
   const { createHome: createHomeWrite, creating } = useCreateHome(() => {
-    void refetch?.();
+    void refetch();
   });
+  // `createDefaultPantry` is forced off so no pantry carries a server-minted
+  // id, which makes minting the home's first pantry this caller's job.
+  const { createPantry, creating: creatingPantry } = useCreatePantry();
 
-  const [deleteHomeMutation, { loading: deleting, client: deleteClient }] =
-    useMutation(DeleteHomeDocument, {
-      update: (cache, { data }, { variables }) => {
-        if (
-          data?.deleteHome?.__typename !== 'DeleteHomePayload' ||
-          !variables
-        ) {
-          return;
-        }
-
-        try {
-          removeFromHomesCache(cache, variables.input.id, {
-            evictItem: true,
-          });
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Cache update failed for deleteHome:',
-          });
-          refetch?.();
-        }
-      },
-      onCompleted: async data => {
-        if (data?.deleteHome?.__typename === 'DeleteHomePayload') {
-          // If deleted home was the default, clear it or set another
-          if (data.deleteHome.home.id === selectedHomeId) {
-            // Read fresh data from Apollo cache (no refetch needed!)
-            const cachedData = deleteClient.cache.readQuery({
-              query: GetHomesDocument,
-            });
-            const remainingHomes = extractNodes(cachedData?.homes);
-
-            const [newDefaultHome] = remainingHomes;
-            if (newDefaultHome) {
-              // Set first remaining home as default
-              setSelectedHomeId(newDefaultHome.id);
-              // Clear orphaned pantry selection - useDefaultHome will auto-select new home's default
-              setSelectedPantryId(null);
-              void setDefaultHome(newDefaultHome.id).then(ok => {
-                if (!ok) {
-                  handleMutationError(
-                    new Error('markHomeAsDefault refused after delete'),
-                    {
-                      operation: 'Set Default Home After Delete',
-                      showAlert: false,
-                    },
-                  );
-                }
-              });
-            } else {
-              // No homes left, clear all selections
-              setSelectedHomeId(null);
-              setSelectedPantryId(null);
-            }
-          }
-        }
-      },
-      onError: (error: ErrorLike) => {
-        handleMutationError(error, { operation: 'Delete Home' });
-      },
-    });
+  const [deleteHomeMutation] = useMutation(DeleteHomeDocument);
 
   /**
-   * Validates, writes, then adopts the new home: its own default flag and its
+   * Takes a deleted home out of the cache and, when it was the selection, moves
+   * the selection on. Run for every removal that did not fail — including a
+   * top-level gone code, which carries no payload for an `update` to read.
+   */
+  function removeDeletedHome(homeId: string) {
+    try {
+      removeFromHomesCache(client.cache, homeId, { evictItem: true });
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Cache update failed for deleteHome:',
+      });
+      void refetch();
+    }
+    if (homeId !== selectedHomeId) return;
+
+    const cachedData = client.cache.readQuery({ query: GetHomesDocument });
+    const [newDefaultHome] = extractNodes(cachedData?.homes);
+    if (newDefaultHome) {
+      setSelectedHomeId(newDefaultHome.id);
+      // Clear orphaned pantry selection - useDefaultHome will auto-select new home's default
+      setSelectedPantryId(null);
+      // Presents its own failure and rolls the selection back.
+      void setDefaultHome(newDefaultHome.id);
+    } else {
+      // No homes left, clear all selections
+      setSelectedHomeId(null);
+      setSelectedPantryId(null);
+    }
+  }
+
+  /**
+   * Writes, then adopts the new home: its own default flag and its
    * default pantry. Adoption is keyed off the MINTED id, so it happens whether
    * the server answered or the create is queued.
    */
@@ -125,14 +98,6 @@ export function useHomeMutations({
         ? { name: nameOrInput, allowJoinCode: true }
         : nameOrInput;
 
-    if (!input.name?.trim()) {
-      alertService.alert(
-        t('labels.validationError'),
-        t('homeDetail.homeNameEmptyError'),
-      );
-      return false;
-    }
-
     const outcome = await createHomeWrite({
       name: input.name.trim(),
       // The server refuses `createHome` outright when `allowJoinCode` is true
@@ -143,15 +108,37 @@ export function useHomeMutations({
     });
 
     if (outcome.status === 'rejected') {
-      // The caller's copy is the FALLBACK; the refusal's own code selects the
-      // localized line.
-      alertRejectedMutation(outcome.result, t('errors.createHomeFailed'));
+      alertService.alert(outcome.failure.title, outcome.failure.body);
       return false;
     }
 
+    // The pantry is in the cache before its request leaves (the create writes
+    // it first), so adoption needs nothing from the round trip. The return DOES
+    // wait for it: the form closes and its button re-enables on this promise.
+    const pantrySettled = createDefaultPantry(outcome.id);
     adoptNewHome(outcome.id);
+    await pantrySettled;
     return true;
   };
+
+  /**
+   * Every home needs a pantry, and it is minted here so a pantry write made
+   * before reconnect has a parent it can name. A refusal leaves the home
+   * standing: the pantry can be added from the home's own settings.
+   */
+  async function createDefaultPantry(homeId: string) {
+    const outcome = await createPantry({
+      homeId,
+      name: t('onBoarding.defaultPantryName'),
+      isDefault: true,
+    });
+    if (outcome.status === 'rejected') {
+      alertService.alert(
+        outcome.failure?.title ?? t('labels.error'),
+        outcome.failure?.body ?? t('errors.createPantryFailed'),
+      );
+    }
+  }
 
   /**
    * A first home becomes the selection and the account default. Read from the
@@ -165,16 +152,8 @@ export function useHomeMutations({
     if (!isFirstHome) return;
 
     setSelectedHomeId(homeId);
-    // `setDefaultHome` resolves false on a refusal rather than rejecting, so
-    // the status is the only signal there is.
-    void setDefaultHome(homeId).then(ok => {
-      if (!ok) {
-        handleMutationError(
-          new Error('markHomeAsDefault refused for first home'),
-          { operation: 'Set First Home as Default', showAlert: false },
-        );
-      }
-    });
+    // Presents its own failure; a refused default is reported where it is written.
+    void setDefaultHome(homeId);
 
     // Adopt the new home's default pantry ONLY when we also switched to that
     // home. Unconditionally, creating a SECOND home points `selectedPantryId`
@@ -188,12 +167,14 @@ export function useHomeMutations({
   const deleteHome = (homeId: string, homeName: string) => {
     const operation = createRemoveOperation({
       mutation: deleteHomeMutation,
+      document: DeleteHomeDocument,
+      fallback: t('errors.deleteHomeFailed'),
       itemId: homeId,
+      onRemoved: () => removeDeletedHome(homeId),
       confirmTitle: t('confirmations.deleteHomeTitle'),
       confirmMessage: t('labels.areYouSureYouWantToDeleteThisCannotBeUndone', {
         name: homeName,
       }),
-      operationName: 'Delete Home',
     });
     return operation();
   };
@@ -201,7 +182,8 @@ export function useHomeMutations({
   return {
     createHome,
     deleteHome,
-    creating,
-    deleting,
+    // The default pantry's round trip is part of creating a home: the submit
+    // control stays disabled until both have settled.
+    creating: creating || creatingPantry,
   };
 }

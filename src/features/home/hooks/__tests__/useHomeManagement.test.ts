@@ -6,16 +6,12 @@ const mockHomeQuery = {
   homes: [{ id: 'home-1', name: 'Home 1' }],
   remoteDefaultHomeId: 'home-1',
   loading: false,
-  initialLoading: false,
-  error: undefined,
+  hasResult: true,
   stats: { totalHomes: 1, totalMembers: 2, totalPantries: 1 },
   refetch: jest.fn(),
 };
 
 const mockHomeSelection = {
-  selectedHomeId: 'home-1',
-  selectedHome: { id: 'home-1', name: 'Home 1' },
-  isSynced: true,
   setDefaultHome: jest.fn(),
   setSelectedHomeId: jest.fn(),
   setSelectedPantryId: jest.fn(),
@@ -26,8 +22,6 @@ const mockHomeMutations = {
   updateHome: jest.fn(),
   deleteHome: jest.fn(),
   creating: false,
-  updating: false,
-  deleting: false,
 };
 
 const mockHomeInvitations = {
@@ -35,7 +29,6 @@ const mockHomeInvitations = {
   joinHomeByCode: jest.fn(),
   previewHomeByCode: jest.fn(),
   previewHome: null,
-  inviting: false,
   joiningByCode: false,
   loadingPreview: false,
 };
@@ -66,19 +59,14 @@ describe('useHomeManagement', () => {
 
     // Data from useHomeQuery
     expect(result.current.homes).toEqual([{ id: 'home-1', name: 'Home 1' }]);
-    expect(result.current.allHomes).toEqual([{ id: 'home-1', name: 'Home 1' }]);
     expect(result.current.remoteDefaultHomeId).toBe('home-1');
     expect(result.current.loading).toBe(false);
-    expect(result.current.initialLoading).toBe(false);
-    expect(result.current.error).toBeUndefined();
+    expect(result.current.hasResult).toBe(true);
     expect(result.current.stats).toEqual({
       totalHomes: 1,
       totalMembers: 2,
       totalPantries: 1,
     });
-
-    // Data from useHomeSelection
-    expect(result.current.selectedHomeId).toBe('home-1');
 
     // Functions from useHomeMutations
     expect(result.current.createHome).toBe(mockHomeMutations.createHome);
@@ -86,8 +74,6 @@ describe('useHomeManagement', () => {
 
     // Loading states
     expect(result.current.creating).toBe(false);
-    expect(result.current.deleting).toBe(false);
-    expect(result.current.inviting).toBe(false);
     expect(result.current.joiningByCode).toBe(false);
     expect(result.current.loadingPreview).toBe(false);
 

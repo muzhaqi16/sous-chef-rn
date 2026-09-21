@@ -6,9 +6,9 @@ import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 import { hasFeatureHintBeenShown } from '#/hooks/useFeatureHint';
 import { storeApi } from '#store';
 
-// Same prefix used by useFeatureHint — keeps storage compatible with
-// resetAllFeatureHints() and hasFeatureHintBeenShown(). Per-account scoping
-// so tutorials reset and re-show when a different user logs in.
+// Same key shape as `#hooks/useFeatureHint`'s helpers, so resetAllFeatureHints()
+// and hasFeatureHintBeenShown() see these steps. Per-account scoping so
+// tutorials re-show when a different user logs in.
 const HINT_PREFIX = 'feature_hint_shown_';
 
 const buildStorageKey = (userId: string | undefined, featureId: string) =>
@@ -46,7 +46,6 @@ export interface TutorialStepConfig {
 }
 
 export interface UseTutorialSequenceReturn {
-  isActive: boolean;
   currentStep: TutorialStepConfig | null;
   /** Dismiss current step and advance to next */
   advance: () => void;
@@ -176,10 +175,11 @@ export const useTutorialSequence = ({
     activeStepIndex !== -1;
 
   const activeStep = steps[activeStepIndex];
+  const activeRect = activeStep ? targetRects[activeStep.rectKey] : null;
   const currentStep: TutorialStepConfig | null =
-    isActive && activeStep
+    isActive && activeStep && activeRect
       ? {
-          targetRect: targetRects[activeStep.rectKey]!,
+          targetRect: activeRect,
           title: activeStep.title,
           subtitle: activeStep.subtitle,
           stepIndex: activeStepIndex,
@@ -187,5 +187,5 @@ export const useTutorialSequence = ({
         }
       : null;
 
-  return { isActive, currentStep, advance, advanceInPlace, skipAll };
+  return { currentStep, advance, advanceInPlace, skipAll };
 };

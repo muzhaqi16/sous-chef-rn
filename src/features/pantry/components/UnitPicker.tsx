@@ -13,7 +13,7 @@ import { Icon } from '#/utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 
 import { Text } from '#components/atoms/Text';
-import { type UnitType } from '#/graphql/generated/schemaTypes';
+import type { UnitType } from '#/graphql/generated/schemaTypes';
 import type { PickableUnit } from '#features/pantry/components/unitPickerTypes';
 import { MutedActivityIndicator } from '#components/atoms/themedComponents';
 import { motion } from '#/theme/foundations/motion';
@@ -90,7 +90,9 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
     return (
       <View style={commonStyles.bottomSheetSection}>
         <View style={styles.collapsedRow}>
-          <Text style={commonStyles.bottomSheetSectionLabel}>{label}</Text>
+          <Text role="label" style={commonStyles.bottomSheetSectionLabel}>
+            {label}
+          </Text>
           <MutedActivityIndicator size="small" />
         </View>
       </View>
@@ -108,7 +110,9 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
         style={styles.collapsedRow}
         onPress={() => setExpanded(prev => !prev)}
       >
-        <Text style={commonStyles.bottomSheetSectionLabel}>{label}</Text>
+        <Text role="label" style={commonStyles.bottomSheetSectionLabel}>
+          {label}
+        </Text>
         <View style={styles.collapsedRight}>
           {selectedLabel ? (
             <Text role="bodyStrong" tone="accent">
@@ -163,6 +167,7 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
                       }
                     >
                       <Text
+                        role="caption"
                         style={[
                           commonStyles.bottomSheetOptionText,
                           selected &&

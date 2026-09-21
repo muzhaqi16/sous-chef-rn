@@ -18,7 +18,7 @@ import {
 /**
  * The shape `ItemByUpcFilter` normalizes after a barcode scan: real catalog
  * values for `imageUrl`, `shelfLifeDays`, `shelfLifeOpenedDays` and
- * `categories`, but no `images` and no `nutritions`.
+ * `categories`, but no `images` and no `nutritionFacts`.
  */
 function seedScannedItem(cache: ReturnType<typeof makeCache>, id: string) {
   cache.writeFragment({
@@ -33,7 +33,8 @@ function seedScannedItem(cache: ReturnType<typeof makeCache>, id: string) {
       shelfLifeOpenedDays: 5,
       categories: [
         {
-          __typename: 'ItemCategoryLink',
+          __typename: 'ItemCategory',
+          id: 'item-cat-1',
           isPrimary: true,
           category: { __typename: 'Category', id: 'cat-1', name: 'Dairy' },
         },
@@ -51,6 +52,7 @@ const gqlPartialItem = gql`
     shelfLifeDays
     shelfLifeOpenedDays
     categories {
+      id
       isPrimary
       category {
         id
@@ -88,6 +90,28 @@ const gqlNullShelfLife = gql`
 `;
 
 describe('writePantryItemDetailStub', () => {
+  it('releases the stub Item once a catalog id supersedes it', () => {
+    const cache = makeCache();
+    const pantryItemId = 'pantry-item-local-9';
+
+    // A free-text create first: no catalog id, so the synthesised stub stands
+    // in and the write retains it as a root.
+    writePantryItemDetailStub(cache, pantryItemId, { itemName: 'Loose tea' });
+    const stubId = `Item:local-item-${pantryItemId}`;
+    expect(cache.extract().__META?.extraRootIds).toContain(stubId);
+
+    // The create response brings the server's real Item.
+    writePantryItemDetailStub(cache, pantryItemId, {
+      itemId: 'item-real-9',
+      itemName: 'Loose tea',
+    });
+    cache.gc();
+
+    // A retained root is one gc() skips, so without the release the stub
+    // outlives every launch.
+    expect(cache.extract().__META?.extraRootIds ?? []).not.toContain(stubId);
+  });
+
   it('does not clobber catalog fields already cached by a narrower query', () => {
     const cache = makeCache();
     const itemId = 'item-scanned-1';

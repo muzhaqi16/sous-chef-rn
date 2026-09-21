@@ -142,13 +142,23 @@ export const IngredientSelectorSheet: React.FC<
           }
           ListEmptyComponent={
             screen.ingredientSearchQuery ? (
-              <Text tone="secondary" align="center" style={styles.emptyMessage}>
+              <Text
+                role="body"
+                tone="secondary"
+                align="center"
+                style={styles.emptyMessage}
+              >
                 {t('recipes.noIngredientsMatch', {
                   query: screen.ingredientSearchQuery,
                 })}
               </Text>
             ) : (
-              <Text tone="secondary" align="center" style={styles.emptyMessage}>
+              <Text
+                role="body"
+                tone="secondary"
+                align="center"
+                style={styles.emptyMessage}
+              >
                 {t('recipes.noPantryItemsAvailable')}
               </Text>
             )

@@ -1,5 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor, MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   recordMock,
@@ -11,9 +11,11 @@ import {
   ToggleReviewHelpfulDocument,
 } from '#features/recipes/graphql/recipeReview.generated';
 import { useRecipeReviews } from '../useRecipeReviews';
-import { RecipeStatus } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, RecipeStatus } from '#/graphql/generated/schemaTypes';
 import type { MaterializedRecipe } from '../useRecipeData';
 import type { toastService } from '#/services/toastService';
+import type { GetRecipeReviewsQuery } from '#features/recipes/graphql/recipe.generated';
+import type { Unmasked } from '@apollo/client/masking';
 
 jest.mock('#store/useAppStore', () => ({
   useUser: jest.fn(() => ({ id: 'user-1' })),
@@ -35,6 +37,10 @@ jest.mock('#/services/toastService', () => ({
 // Break circular dependency
 jest.mock('#/apollo/links/tokenScheduler');
 
+type ReviewNode = NonNullable<
+  Unmasked<GetRecipeReviewsQuery>['recipe']
+>['reviews']['edges'][number]['node'];
+
 function buildReviewNode(
   id: string,
   rating: number,
@@ -45,9 +51,9 @@ function buildReviewNode(
   // voter list — the API windows `helpfulVotes` and so cannot answer
   // "did I vote".
   viewerHasVotedHelpful: boolean = false,
-) {
+): ReviewNode {
   return {
-    __typename: 'RecipeReview' as const,
+    __typename: 'RecipeReview',
     id,
     rating,
     comment: id === 'rev-1' ? 'Great!' : 'Good',
@@ -56,12 +62,12 @@ function buildReviewNode(
     createdAt,
     updatedAt: createdAt,
     user: {
-      __typename: 'User' as const,
+      __typename: 'User',
       id: user.id,
       email: `${user.id}@test.com`,
       displayName: null,
       profile: {
-        __typename: 'UserProfile' as const,
+        __typename: 'UserProfile',
         id: `${user.id}-profile`,
         displayName: user.id,
         avatar: null,
@@ -74,7 +80,7 @@ function buildReviewNode(
 function buildGetRecipeReviewsMock(
   recipeId: string = 'recipe-1',
   reviewNodes?: Array<ReturnType<typeof buildReviewNode>>,
-): MockedResponse {
+): MockFor<typeof GetRecipeReviewsDocument> {
   const nodes = reviewNodes ?? [
     // rev-1 is someone else's review that the viewer has marked helpful;
     // rev-2 is the viewer's own, unvoted.
@@ -97,13 +103,13 @@ function buildGetRecipeReviewsMock(
     result: {
       data: {
         recipe: {
-          __typename: 'Recipe' as const,
+          __typename: 'Recipe',
           id: recipeId,
           reviews: {
-            __typename: 'RecipeReviewConnection' as const,
+            __typename: 'RecipeReviewConnection',
             totalCount: nodes.length,
             edges: nodes.map(node => ({
-              __typename: 'RecipeReviewEdge' as const,
+              __typename: 'RecipeReviewEdge',
               node,
             })),
           },
@@ -115,7 +121,7 @@ function buildGetRecipeReviewsMock(
 
 function buildEmptyRecipeReviewsMock(
   recipeId: string = 'recipe-1',
-): MockedResponse {
+): MockFor<typeof GetRecipeReviewsDocument> {
   return {
     request: {
       query: GetRecipeReviewsDocument,
@@ -129,7 +135,7 @@ function buildEmptyRecipeReviewsMock(
   };
 }
 
-function buildCreateReviewMock(): MockedResponse {
+function buildCreateReviewMock(): MockFor<typeof CreateRecipeReviewDocument> {
   return {
     request: {
       query: CreateRecipeReviewDocument,
@@ -141,7 +147,7 @@ function buildCreateReviewMock(): MockedResponse {
           // `CreateRecipeReviewPayload` has two fields — `recipe` and
           // `recipeReview`. `code`/`message` are selected on the ERROR members
           // of the union, and `success` is on none of them.
-          __typename: 'CreateRecipeReviewPayload' as const,
+          __typename: 'CreateRecipeReviewPayload',
           recipeReview: buildReviewNode(
             'rev-new',
             5,
@@ -155,7 +161,7 @@ function buildCreateReviewMock(): MockedResponse {
   };
 }
 
-function buildDeleteReviewMock(): MockedResponse {
+function buildDeleteReviewMock(): MockFor<typeof DeleteRecipeReviewDocument> {
   return {
     request: {
       query: DeleteRecipeReviewDocument,
@@ -164,9 +170,9 @@ function buildDeleteReviewMock(): MockedResponse {
     result: {
       data: {
         deleteRecipeReview: {
-          __typename: 'DeleteRecipeReviewPayload' as const,
+          __typename: 'DeleteRecipeReviewPayload',
           recipeReview: {
-            __typename: 'RecipeReview' as const,
+            __typename: 'RecipeReview',
             id: 'rev-2',
           },
         },
@@ -178,7 +184,7 @@ function buildDeleteReviewMock(): MockedResponse {
 const makeBackendRecipe = (
   overrides?: Partial<MaterializedRecipe>,
 ): MaterializedRecipe => ({
-  __typename: 'Recipe' as const,
+  __typename: 'Recipe',
   id: 'recipe-1',
   name: 'Test Recipe',
   description: null,
@@ -201,7 +207,7 @@ const makeBackendRecipe = (
   instructions: null,
   savedDetails: null,
   ingredientsConnection: {
-    __typename: 'RecipeIngredientConnection' as const,
+    __typename: 'RecipeIngredientConnection',
     edges: [],
   },
   totalReviews: 3,
@@ -212,7 +218,7 @@ const makeBackendRecipe = (
   rating4Count: 1,
   rating5Count: 1,
   createdBy: {
-    __typename: 'User' as const,
+    __typename: 'User',
     id: 'other-user',
     email: 'other@test.com',
     displayName: null,
@@ -282,7 +288,7 @@ describe('useRecipeReviews', () => {
           recipeId: 'recipe-1',
           backendRecipe: makeBackendRecipe({
             createdBy: {
-              __typename: 'User' as const,
+              __typename: 'User',
               id: 'user-1',
               email: 'user-1@test.com',
               displayName: null,
@@ -353,11 +359,11 @@ describe('useRecipeReviews', () => {
             result: {
               data: {
                 toggleReviewHelpful: {
-                  __typename: 'ToggleReviewHelpfulPayload' as const,
+                  __typename: 'ToggleReviewHelpfulPayload',
                   reviewHelpful: {
-                    __typename: 'ReviewHelpful' as const,
+                    __typename: 'ReviewHelpful',
                     id: 'vote-1',
-                    user: { __typename: 'User' as const, id: 'user-1' },
+                    user: { __typename: 'User', id: 'user-1' },
                   },
                 },
               },
@@ -408,20 +414,50 @@ describe('useRecipeReviews', () => {
     expect(mockToastSuccess).toHaveBeenCalledWith('Review submitted');
   });
 
-  it('createReview mints a client id so a lost-response retry converges', async () => {
-    const { mock, fired } = recordMock(CreateRecipeReviewDocument, {
-      data: {
-        createRecipeReview: {
-          __typename: 'CreateRecipeReviewPayload' as const,
-          recipeReview: buildReviewNode(
-            'rev-new',
-            5,
-            0,
-            '2025-01-03T00:00:00Z',
-            { id: 'user-1' },
-          ),
-        },
+  it('createReview reports a refusal in the app’s own words', async () => {
+    // Server-authored English: it reaches an es/it/sq reader verbatim if shown.
+    const serverMessage = 'You cannot review your own recipe';
+    const data: MockDataFor<typeof CreateRecipeReviewDocument> = {
+      createRecipeReview: {
+        __typename: 'ForbiddenError',
+        code: ErrorCode.Forbidden,
+        message: serverMessage,
       },
+    };
+    const { mock } = recordMock(CreateRecipeReviewDocument, {
+      data,
+    });
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeReviews({
+          recipeId: 'recipe-1',
+          backendRecipe: makeBackendRecipe(),
+        }),
+      { operationMocks: [buildGetRecipeReviewsMock(), mock] },
+    );
+
+    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+
+    await act(async () => {
+      await result.current.actions.createReview(5, 'Mine');
+    });
+
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    expect(mockToastError).toHaveBeenCalledTimes(1);
+    expect(mockToastError).not.toHaveBeenCalledWith(serverMessage);
+  });
+
+  it('createReview mints a client id so a lost-response retry converges', async () => {
+    const data: MockDataFor<typeof CreateRecipeReviewDocument> = {
+      createRecipeReview: {
+        __typename: 'CreateRecipeReviewPayload',
+        recipeReview: buildReviewNode('rev-new', 5, 0, '2025-01-03T00:00:00Z', {
+          id: 'user-1',
+        }),
+      },
+    };
+    const { mock, fired } = recordMock(CreateRecipeReviewDocument, {
+      data,
     });
 
     const { result } = renderHookWithApollo(
@@ -476,6 +512,87 @@ describe('useRecipeReviews', () => {
     });
 
     expect(mockToastSuccess).toHaveBeenCalledWith('Review deleted');
+  });
+
+  it('takes the review off the list when the server says it is already gone', async () => {
+    // `removal: true` counts NOT_FOUND as applied, so the success toast fires.
+    // The row has to be gone with it — the mutation's `update` runs on a
+    // success payload only, and would leave it on screen.
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeReviews({
+          recipeId: 'recipe-1',
+          backendRecipe: makeBackendRecipe(),
+        }),
+      {
+        operationMocks: [
+          buildGetRecipeReviewsMock(),
+          {
+            request: {
+              query: DeleteRecipeReviewDocument,
+              variables: { input: { id: 'rev-2' } },
+            },
+            result: {
+              data: {
+                deleteRecipeReview: {
+                  __typename: 'NotFoundError',
+                  code: ErrorCode.NotFound,
+                },
+              },
+            },
+          },
+        ],
+      },
+    );
+
+    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+
+    await act(async () => {
+      await result.current.actions.deleteReview('rev-2');
+    });
+
+    expect(mockToastSuccess).toHaveBeenCalledWith('Review deleted');
+    expect(result.current.state.reviews.map(r => r.id)).not.toContain('rev-2');
+  });
+
+  it('puts the review back when the server refuses the delete', async () => {
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeReviews({
+          recipeId: 'recipe-1',
+          backendRecipe: makeBackendRecipe(),
+        }),
+      {
+        operationMocks: [
+          buildGetRecipeReviewsMock(),
+          {
+            request: {
+              query: DeleteRecipeReviewDocument,
+              variables: { input: { id: 'rev-2' } },
+            },
+            result: {
+              data: {
+                deleteRecipeReview: {
+                  __typename: 'ForbiddenError',
+                  code: ErrorCode.Forbidden,
+                },
+              },
+            },
+          },
+        ],
+      },
+    );
+
+    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+
+    await act(async () => {
+      await result.current.actions.deleteReview('rev-2');
+    });
+
+    expect(mockToastError).toHaveBeenCalled();
+    await waitFor(() =>
+      expect(result.current.state.reviews.map(r => r.id)).toContain('rev-2'),
+    );
   });
 
   it('returns defaults when backendRecipe is null', async () => {

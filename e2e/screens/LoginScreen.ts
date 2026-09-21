@@ -1,22 +1,23 @@
 import { BaseScreen } from './BaseScreen';
 import { TEST_USER } from '../fixtures/testData';
+import { authTestIDs } from '../../src/features/auth/testIDs';
+import { kitTestIDs } from '../../src/components/testIDs';
 
 export class LoginScreen extends BaseScreen {
-  protected screenID = 'login-screen';
+  protected screenID = authTestIDs.loginScreen;
 
-  private readonly emailInput = 'login-email-input';
-  private readonly passwordInput = 'login-password-input';
+  private readonly emailInput = authTestIDs.loginEmailInput;
+  private readonly passwordInput = authTestIDs.loginPasswordInput;
 
   /** Last field filled here, so it is the one holding the keyboard. */
-  protected keyboardInput = this.passwordInput;
+  protected override keyboardInput = this.passwordInput;
 
   /** `AuthFormTemplate`'s title row — above the keyboard on every auth screen. */
-  protected blurTarget = 'auth-title-row';
-  private readonly submitButton = 'login-submit-button';
-  private readonly signupLink = 'login-signup-link';
-  private readonly forgotPasswordLink = 'login-forgot-password-link';
-  private readonly errorToast = 'toast-error'; // Global error toast
-  private readonly loadingIndicator = 'login-loading';
+  protected override blurTarget = authTestIDs.formTitleRow;
+  private readonly submitButton = authTestIDs.loginSubmitButton;
+  private readonly signupLink = authTestIDs.loginSignUpLink;
+  private readonly forgotPasswordLink = authTestIDs.loginForgotPasswordLink;
+  private readonly errorToast = kitTestIDs.toast('error');
 
   async loginWith(email: string, password: string) {
     await this.waitForScreen();
@@ -77,28 +78,13 @@ export class LoginScreen extends BaseScreen {
    * Detox cannot see Android's native ToastAndroid, so the toast assertion is
    * iOS-only; elsewhere this falls back to "still on the login screen".
    */
-  async expectErrorMessage(message?: string) {
+  async expectErrorMessage() {
     try {
       await this.waitForElement(this.errorToast, 3000);
       await this.expectVisible(this.errorToast);
-      if (message) {
-        await this.expectTextVisible(message);
-      }
     } catch {
       await this.expectScreenVisible();
     }
-  }
-
-  async expectLoadingVisible() {
-    await this.expectVisible(this.loadingIndicator);
-  }
-
-  async expectLoadingNotVisible() {
-    await this.expectNotVisible(this.loadingIndicator);
-  }
-
-  async waitForLoginComplete(timeout: number = 10000) {
-    await this.waitForElementToDisappear(this.loadingIndicator, timeout);
   }
 
   /** Detox has no `toBeEnabled()` matcher; visibility is the closest proxy. */
@@ -107,20 +93,14 @@ export class LoginScreen extends BaseScreen {
   }
 
   async expectEmailFieldError() {
-    await this.expectVisible(`${this.emailInput}-error`);
+    await this.expectVisible(kitTestIDs.inputError(this.emailInput));
   }
 
   async expectNoEmailFieldError() {
-    await this.expectNotVisible(`${this.emailInput}-error`);
+    await this.expectNotVisible(kitTestIDs.inputError(this.emailInput));
   }
 
   async expectPasswordFieldError() {
-    await this.expectVisible(`${this.passwordInput}-error`);
-  }
-
-  async loginAndWaitForHome(email: string, password: string) {
-    await this.loginWith(email, password);
-    await this.waitForLoginComplete();
-    await this.waitForElementToDisappear(this.screenID, 5000);
+    await this.expectVisible(kitTestIDs.inputError(this.passwordInput));
   }
 }

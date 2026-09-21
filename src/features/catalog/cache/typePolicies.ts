@@ -1,4 +1,5 @@
 import type { TypePolicies } from '@apollo/client';
+import type { StoreValue } from '@apollo/client/utilities';
 
 /**
  * A catalog item's media and nutrition survive a response that OMITS them, while an explicit null still clears — that is how an image is removed.
@@ -13,15 +14,7 @@ export const catalogTypePolicies: TypePolicies = {
       imageUrl: {
         // Preserve existing imageUrl only if the field was not included in the response
         // (incoming === undefined). Allow explicit null through so users can remove images.
-        merge(existing, incoming) {
-          if (incoming === undefined) {
-            return existing;
-          }
-          return incoming;
-        },
-      },
-      nutritions: {
-        merge(existing, incoming) {
+        merge(existing: StoreValue, incoming: StoreValue) {
           if (incoming === undefined) {
             return existing;
           }
@@ -29,7 +22,7 @@ export const catalogTypePolicies: TypePolicies = {
         },
       },
       images: {
-        merge(existing, incoming) {
+        merge(existing: StoreValue, incoming: StoreValue) {
           if (incoming === undefined) {
             return existing;
           }

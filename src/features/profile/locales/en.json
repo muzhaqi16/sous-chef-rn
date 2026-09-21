@@ -16,9 +16,26 @@
     "deleteBlockedTitle": "Cannot Delete Account",
     "deleteBlockedSubtitle": "Your account cannot be deleted until you resolve the following:",
     "deleteResolveTitle": "To resolve:",
-    "deleteResolveTransfer": "• Transfer ownership to another member",
-    "deleteResolveRemoveMembers": "• Remove all members from the home",
-    "deleteResolveDeleteHome": "• Delete the home",
+    "deleteBlocker": {
+      "homeOwnership": {
+        "reason": "Nobody else owns \"{{name}}\", and it still has other members.",
+        "reasonCounted_one": "Nobody else owns \"{{name}}\", and it still has {{count}} other member.",
+        "reasonCounted_other": "Nobody else owns \"{{name}}\", and it still has {{count}} other members.",
+        "transferOwnership": "Transfer ownership to another member",
+        "removeMembers": "Remove all other members from the home",
+        "deleteResource": "Delete the home"
+      },
+      "shoppingList": {
+        "reason": "Nobody else owns the shopping list \"{{name}}\", and it still has collaborators.",
+        "reasonCounted_one": "Nobody else owns the shopping list \"{{name}}\", and it still has {{count}} collaborator.",
+        "reasonCounted_other": "Nobody else owns the shopping list \"{{name}}\", and it still has {{count}} collaborators.",
+        "removeCollaborators": "Remove all collaborators from the list",
+        "deleteResource": "Delete the shopping list"
+      },
+      "other": {
+        "reason": "\"{{name}}\" has to be resolved before your account can be deleted."
+      }
+    },
     "deleteWarningTitle": "Warning: This is permanent!",
     "deleteWhatWillBeDeleted": "What will be deleted:",
     "deleteWipeProfile": "Your profile and account information",
@@ -65,12 +82,13 @@
     "budgetPerMeal": "Budget per Meal",
     "minutes": "minutes",
     "macroTargets": "Macro Targets (Advanced)",
+    "macroTargetsEmpty": "No targets set yet",
     "dailyCalories": "Daily Calories",
     "protein": "Protein",
     "fat": "Fat",
     "loadingProfile": "Loading dietary profile...",
-    "noProfileTitle": "No Dietary Profile",
-    "noProfileSubtitle": "Create your dietary profile to get personalized recipe recommendations"
+    "loadFailedTitle": "Couldn't load your dietary profile",
+    "loadFailedSubtitle": "Check your connection and try again."
   },
   "biometricSetup": {
     "authRequiredTitle": "Authentication Required",
@@ -210,16 +228,24 @@
     "visibilityFriendsOnly": "Friends Only",
     "visibilityPrivate": "Private",
     "showEmail": "Show Email",
-    "showPhone": "Show Phone"
+    "showPhone": "Show Phone",
+    "firstNamePlaceholder": "e.g. John",
+    "lastNamePlaceholder": "e.g. Doe",
+    "displayNamePlaceholder": "e.g. john_doe",
+    "bioPlaceholder": "Tell us about yourself...",
+    "phonePlaceholder": "e.g. +1 (555) 123-4567",
+    "dateOfBirthPlaceholder": "e.g. 1990-01-15"
   },
   "accountEvents": {
     "removedFromHome": "You were removed from a home",
     "addedToHome": "You were added to a new home",
     "removedFromShoppingList": "You were removed from a shopping list",
     "addedToShoppingList": "You were added to a shopping list",
-    "accountBanned": "Your account has been banned{{reason}}",
-    "accountSuspended": "Your account has been suspended{{reason}}",
-    "reasonSuffix": ": {{reason}}",
+    "accountBanned": "Your account has been banned",
+    "accountSuspended": "Your account has been suspended",
+    "accountLockedAttempts_one": "Your account is locked after {{count}} failed sign-in attempt. It unlocks on its own shortly.",
+    "accountLockedAttempts_other": "Your account is locked after {{count}} failed sign-in attempts. It unlocks on its own shortly.",
+    "accountLocked": "Your account is locked after too many failed sign-in attempts. It unlocks on its own shortly.",
     "warningReceived": "You received a warning from a moderator"
   },
   "biometrics": {
@@ -253,6 +279,18 @@
     "dateFormat": "Date must be in YYYY-MM-DD format",
     "dateInvalid": "Please enter a valid date",
     "dateUnreasonable": "Please enter a reasonable birth date",
-    "invalidVisibility": "Please select a valid visibility option"
+    "invalidVisibility": "Please select a valid visibility option",
+    "invalidGender": "Please select a valid gender"
+  },
+  "stringArrayManager": {
+    "inputPlaceholder": "Enter value...",
+    "empty": "No items added yet",
+    "valueRequired": "Please enter a value",
+    "duplicate": "This item already exists",
+    "maxItems_one": "You can add up to {{count}} item",
+    "maxItems_other": "You can add up to {{count}} items"
+  },
+  "restrictionSection": {
+    "empty": "None added yet"
   }
 }

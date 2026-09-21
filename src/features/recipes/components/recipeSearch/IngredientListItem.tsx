@@ -22,7 +22,9 @@ const IngredientItemComponent: React.FC<{
         size={24}
         tone={selected ? 'primary' : 'textSecondary'}
       />
-      <Text style={styles.ingredientText}>{name}</Text>
+      <Text role="body" style={styles.ingredientText}>
+        {name}
+      </Text>
     </AppPressable>
   );
 };
@@ -39,7 +41,7 @@ export const ingredientKeyExtractor = (item: IngredientListItemData) => item.id;
 
 const IngredientRenderItem = ({ item }: { item: IngredientListItemData }) => {
   const { selectedIngredients, toggleIngredient } = useIngredientSelection();
-  const itemName = item.itemName || '';
+  const itemName = item.itemName ?? '';
   return (
     <IngredientItem
       name={itemName}

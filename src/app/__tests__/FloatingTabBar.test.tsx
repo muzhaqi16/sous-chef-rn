@@ -88,10 +88,11 @@ describe('TabItem', () => {
     set: jest.fn(),
   } as Partial<SharedValue<number>> as SharedValue<number>;
 
-  const defaultTabProps = {
+  const defaultTabProps: React.ComponentProps<typeof TabItem> = {
     route: { key: 'pantry-key', name: 'Pantry' },
     isFocused: false,
-    options: { title: 'Pantry', tabBarAccessibilityLabel: 'Pantry tab' },
+    options: { tabBarAccessibilityLabel: 'Pantry tab' },
+    titleKey: 'navigation.tabs.pantry',
     onPress: jest.fn(),
     showLabel: true,
     activeTabIndex: mockSharedValue,
@@ -131,23 +132,21 @@ describe('TabItem', () => {
     expect(tab.props.accessibilityState).toEqual({ selected: true });
   });
 
-  it('uses title from options when available', () => {
+  it('labels the tab with its translated title key', () => {
     render(
-      <TabItem
-        {...defaultTabProps}
-        options={{ title: 'Custom Title', tabBarAccessibilityLabel: 'Custom' }}
-      />,
+      <TabItem {...defaultTabProps} titleKey="navigation.tabs.shoppingList" />,
     );
-    expect(screen.getByText('Custom Title')).toBeTruthy();
+    expect(screen.getByText('List')).toBeTruthy();
   });
 
-  it('falls back to route name when title is not provided', () => {
+  it('falls back to route name when no title key is provided', () => {
     render(
       <TabItem
         {...defaultTabProps}
-        options={{ tabBarAccessibilityLabel: 'Tab' }}
+        route={{ key: 'recipe-key', name: 'Recipe' }}
+        titleKey={undefined}
       />,
     );
-    expect(screen.getByText('Pantry')).toBeTruthy();
+    expect(screen.getByText('Recipe')).toBeTruthy();
   });
 });

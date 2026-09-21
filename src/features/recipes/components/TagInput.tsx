@@ -24,7 +24,7 @@ export const TagInput: React.FC<TagInputProps> = ({
   tags,
   onTagsChange,
   suggestions = [],
-  placeholder = 'Add a tag...',
+  placeholder,
   maxTags = 10,
   editable = true,
 }) => {
@@ -109,7 +109,9 @@ export const TagInput: React.FC<TagInputProps> = ({
             style={styles.input}
             defaultValue={inputValue}
             onChangeText={setInputValue}
-            placeholder={tags.length === 0 ? placeholder : ''}
+            placeholder={
+              tags.length === 0 ? placeholder ?? t('tagInput.placeholder') : ''
+            }
             onSubmitEditing={handleSubmit}
             onFocus={() => setIsFocused(true)}
             onBlur={() => {

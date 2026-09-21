@@ -1,6 +1,9 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
+import { t } from '#/i18n';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
 import type { AdjustPantryItemWeightInput } from '#/graphql/generated/schemaTypes';
@@ -10,19 +13,13 @@ import { useCorrectPantryItemWeight } from '../useCorrectPantryItemWeight';
 
 jest.mock('#/services/errorService');
 
-let mockHandleVersionConflict = false;
-jest.mock('#/utils/errors/versionConflict', () => ({
-  handleVersionConflict: jest.fn(() => mockHandleVersionConflict),
-  getVersionConflictMessage: jest.fn(() => 'Version conflict message'),
-}));
-
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
 const successMock = (variables: {
   input: AdjustPantryItemWeightInput;
-}): MockedResponse => ({
+}): MockFor<typeof AdjustPantryItemWeightDocument> => ({
   // variables: () => true — the input carries a generated idempotencyKey, so
   // match on the operation and assert the payload separately.
   request: { query: AdjustPantryItemWeightDocument, variables: () => true },
@@ -54,12 +51,14 @@ const successMock = (variables: {
 
 // These two take no argument — the generated idempotencyKey means the mock
 // matches on the operation, not the exact variables.
-const errorMock = (): MockedResponse => ({
+const errorMock = (): MockFor<typeof AdjustPantryItemWeightDocument> => ({
   request: { query: AdjustPantryItemWeightDocument, variables: () => true },
   error: new Error('Network error'),
 });
 
-const validationErrorMock = (): MockedResponse => ({
+const validationErrorMock = (): MockFor<
+  typeof AdjustPantryItemWeightDocument
+> => ({
   // variables: () => true — the input carries a generated idempotencyKey, so
   // match on the operation and assert the payload separately.
   request: { query: AdjustPantryItemWeightDocument, variables: () => true },
@@ -67,7 +66,7 @@ const validationErrorMock = (): MockedResponse => ({
     data: {
       adjustPantryItemWeight: {
         __typename: 'ValidationError',
-        code: 'VALIDATION_FAILED',
+        code: ErrorCode.ValidationFailed,
         message: 'Invalid weight',
         field: 'netWeight',
       },
@@ -75,21 +74,18 @@ const validationErrorMock = (): MockedResponse => ({
   },
 });
 
+const refusalMock = (
+  member: Record<string, unknown>,
+): MockFor<typeof AdjustPantryItemWeightDocument> => ({
+  request: { query: AdjustPantryItemWeightDocument, variables: () => true },
+  result: { data: { adjustPantryItemWeight: member } },
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
-  mockHandleVersionConflict = false;
 });
 
 describe('useCorrectPantryItemWeight', () => {
-  it('returns correctWeight function and loading state', () => {
-    const { result } = renderHook(() => useCorrectPantryItemWeight(), {
-      wrapper: createApolloTestWrapper({ operationMocks: [] }),
-    });
-
-    expect(typeof result.current.correctWeight).toBe('function');
-    expect(result.current.loading).toBe(false);
-  });
-
   it('returns true and calls onSuccess on successful mutation', async () => {
     const onSuccess = jest.fn();
     const variables = {
@@ -155,10 +151,15 @@ describe('useCorrectPantryItemWeight', () => {
   });
 
   it('returns false and shows version conflict alert', async () => {
-    mockHandleVersionConflict = true;
     const { result } = renderHook(() => useCorrectPantryItemWeight(), {
       wrapper: createApolloTestWrapper({
-        operationMocks: [errorMock()],
+        operationMocks: [
+          refusalMock({
+            __typename: 'ConflictError',
+            code: ErrorCode.VersionConflict,
+            message: 'Stale write',
+          }),
+        ],
       }),
     });
 
@@ -168,15 +169,9 @@ describe('useCorrectPantryItemWeight', () => {
     });
 
     expect(success).toBe(false);
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Item Updated',
-        'Version conflict message',
-        [
-          { text: 'Refresh', onPress: expect.any(Function) },
-          { text: 'Cancel', style: 'cancel' },
-        ],
-      ),
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('errors.entityUpdatedTitle', { entity: t('labels.item') }),
+      getVersionConflictMessage(),
     );
   });
 
@@ -197,7 +192,7 @@ describe('useCorrectPantryItemWeight', () => {
       // Localized copy, not the error's own text.
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
-        'Something went wrong.',
+        'Could not correct the weight.',
       ),
     );
   });
@@ -215,6 +210,31 @@ describe('useCorrectPantryItemWeight', () => {
     });
 
     expect(success).toBe(false);
+  });
+
+  it("explains a refused unit in the app's own copy", async () => {
+    const { result } = renderHook(() => useCorrectPantryItemWeight(), {
+      wrapper: createApolloTestWrapper({
+        operationMocks: [
+          refusalMock({
+            __typename: 'ValidationError',
+            code: TopLevelErrorCode.UnitInvalid,
+            message: 'raw server words',
+          }),
+        ],
+      }),
+    });
+
+    let success: boolean | undefined;
+    await act(async () => {
+      success = await result.current.correctWeight('item-1', 500, 'Reason', 1);
+    });
+
+    expect(success).toBe(false);
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('errors.invalidUnitTitle'),
+      t('errors.codes.unitInvalid'),
+    );
   });
 
   describe('when the API is unavailable', () => {

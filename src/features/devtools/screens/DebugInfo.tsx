@@ -13,81 +13,159 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { useCanAccessDevTools } from '#store/useAppStore';
 import { Text } from '#components/atoms/Text';
 
+interface DebugRow {
+  label: string;
+  value: string;
+}
+
+interface DebugSection {
+  title: string;
+  rows: readonly DebugRow[];
+}
+
+const formatRows = (rows: readonly DebugRow[]) =>
+  rows.map(({ label, value }) => `${label}: ${value}`).join('\n');
+
 export const DebugInfo: React.FC = () => {
   const { t } = useTranslation();
   const canAccessDevTools = useCanAccessDevTools();
   const config = Environment.getConfig();
   const apiConfig = Environment.getApiConfig();
 
-  // Get actual API URL being used
-  const actualApiUrl = env.API_URL || apiConfig.baseUrl;
-  const actualWsUrl = env.WEB_SOCKET_URL || apiConfig.wsUrl;
+  const yesNo = (flag: boolean) => (flag ? t('labels.yes') : t('labels.no'));
+  const presence = (value: string | undefined) =>
+    value ? t('debugInfo.values.configured') : t('debugInfo.values.notSet');
+  const orNotSet = (value: string | undefined) =>
+    value ?? t('debugInfo.values.notSet');
 
-  const debugData = {
-    Environment: {
-      'Build Mode': config.buildMode,
-      'Is Development': config.isDevelopment ? 'Yes' : 'No',
-      'Is Staging': config.isStaging ? 'Yes' : 'No',
-      'Is Production': config.isProduction ? 'Yes' : 'No',
-      'Is Testing': config.isTesting ? 'Yes' : 'No',
+  const debugData: readonly DebugSection[] = [
+    {
+      title: t('debugInfo.sections.environment'),
+      rows: [
+        { label: t('debugInfo.rows.buildMode'), value: config.buildMode },
+        {
+          label: t('debugInfo.rows.isDevelopment'),
+          value: yesNo(config.isDevelopment),
+        },
+        {
+          label: t('debugInfo.rows.isStaging'),
+          value: yesNo(config.isStaging),
+        },
+        {
+          label: t('debugInfo.rows.isProduction'),
+          value: yesNo(config.isProduction),
+        },
+        {
+          label: t('debugInfo.rows.isTesting'),
+          value: yesNo(config.isTesting),
+        },
+      ],
     },
-    'API Configuration': {
-      'API URL': actualApiUrl,
-      'WebSocket URL': actualWsUrl,
-      // Presence only. This screen is reachable by a production account with
-      // dev-tools access, and everything here is copyable to the clipboard, so
-      // no part of a credential appears — a prefix identifies the key too.
-      'API Key': env.API_KEY ? 'Configured' : 'Not set',
-      Timeout: `${apiConfig.timeout}ms`,
-      'Max Retries': apiConfig.retries.toString(),
+    {
+      title: t('debugInfo.sections.apiConfiguration'),
+      rows: [
+        {
+          label: t('debugInfo.rows.apiUrl'),
+          value: env.API_URL ?? apiConfig.baseUrl,
+        },
+        {
+          label: t('debugInfo.rows.webSocketUrl'),
+          value: env.WEB_SOCKET_URL ?? apiConfig.wsUrl,
+        },
+        // Presence only. This screen is reachable by a production account with
+        // dev-tools access and everything here is copyable, so no part of a
+        // credential appears; a prefix identifies the key too.
+        { label: t('debugInfo.rows.apiKey'), value: presence(env.API_KEY) },
+        {
+          label: t('debugInfo.rows.timeout'),
+          value: t('debugInfo.values.milliseconds', {
+            value: apiConfig.timeout,
+          }),
+        },
+        {
+          label: t('debugInfo.rows.maxRetries'),
+          value: apiConfig.retries.toString(),
+        },
+      ],
     },
-    Telemetry: {
-      'Metrics Endpoint': env.OTLP_METRICS_ENDPOINT || 'Not set',
-      'Logs Endpoint': env.OTLP_LOGS_ENDPOINT || 'Not set',
-      'Metrics Auth': env.OTLP_METRICS_AUTH_USERNAME ? 'Configured' : 'Not set',
-      'Logs Auth': env.OTLP_LOGS_AUTH_USERNAME ? 'Configured' : 'Not set',
+    {
+      title: t('debugInfo.sections.telemetry'),
+      rows: [
+        {
+          label: t('debugInfo.rows.metricsEndpoint'),
+          value: orNotSet(env.OTLP_METRICS_ENDPOINT),
+        },
+        {
+          label: t('debugInfo.rows.logsEndpoint'),
+          value: orNotSet(env.OTLP_LOGS_ENDPOINT),
+        },
+        {
+          label: t('debugInfo.rows.metricsAuth'),
+          value: presence(env.OTLP_METRICS_AUTH_USERNAME),
+        },
+        {
+          label: t('debugInfo.rows.logsAuth'),
+          value: presence(env.OTLP_LOGS_AUTH_USERNAME),
+        },
+      ],
     },
-    'Device Info': {
-      Platform: Platform.OS,
-      Version: Platform.Version.toString(),
-      'App Version': DeviceInfo.getVersion(),
-      'Build Number': DeviceInfo.getBuildNumber(),
-      'Bundle ID': DeviceInfo.getBundleId(),
-      'Device Brand': DeviceInfo.getBrand(),
-      'Device Model': DeviceInfo.getModel(),
+    {
+      title: t('debugInfo.sections.deviceInfo'),
+      rows: [
+        { label: t('debugInfo.rows.platform'), value: Platform.OS },
+        {
+          label: t('debugInfo.rows.osVersion'),
+          value: Platform.Version.toString(),
+        },
+        {
+          label: t('debugInfo.rows.appVersion'),
+          value: DeviceInfo.getVersion(),
+        },
+        {
+          label: t('debugInfo.rows.buildNumber'),
+          value: DeviceInfo.getBuildNumber(),
+        },
+        {
+          label: t('debugInfo.rows.bundleId'),
+          value: DeviceInfo.getBundleId(),
+        },
+        {
+          label: t('debugInfo.rows.deviceBrand'),
+          value: DeviceInfo.getBrand(),
+        },
+        {
+          label: t('debugInfo.rows.deviceModel'),
+          value: DeviceInfo.getModel(),
+        },
+      ],
     },
-    'Build Configuration': {
-      NODE_ENV: env.NODE_ENV || 'Not set',
-      'Web App URL': env.WEB_APP_URL || 'Not set',
+    {
+      title: t('debugInfo.sections.buildConfiguration'),
+      rows: [
+        // The variable's own name: a technical identifier, not copy.
+        { label: 'NODE_ENV', value: orNotSet(env.NODE_ENV) },
+        {
+          label: t('debugInfo.rows.webAppUrl'),
+          value: orNotSet(env.WEB_APP_URL),
+        },
+      ],
     },
-  };
+  ];
 
   const handleCopyAll = () => {
-    const allDebugInfo = Object.entries(debugData)
-      .map(([section, data]) => {
-        const items = Object.entries(data)
-          .map(([key, value]) => `${key}: ${value}`)
-          .join('\n');
-        return `=== ${section} ===\n${items}`;
-      })
+    const allDebugInfo = debugData
+      .map(({ title, rows }) => `=== ${title} ===\n${formatRows(rows)}`)
       .join('\n\n');
 
     Clipboard.setString(allDebugInfo);
     alertService.alert(t('labels.copied'), t('debugInfo.copiedAll'));
   };
 
-  const handleCopySection = (
-    sectionName: string,
-    data: Record<string, string>,
-  ) => {
-    const sectionInfo = Object.entries(data)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join('\n');
-
-    Clipboard.setString(sectionInfo);
+  const handleCopySection = ({ title, rows }: DebugSection) => {
+    Clipboard.setString(formatRows(rows));
     alertService.alert(
       t('labels.copied'),
-      t('debugInfo.copiedSection', { section: sectionName }),
+      t('debugInfo.copiedSection', { section: title }),
     );
   };
 
@@ -96,7 +174,7 @@ export const DebugInfo: React.FC = () => {
     return (
       <ProfileScreenWrapper title={t('labels.debugInfo')}>
         <View style={styles.notAvailableContainer}>
-          <Text tone="secondary" align="center">
+          <Text role="body" tone="secondary" align="center">
             {t('debugInfo.notAvailable')}
           </Text>
         </View>
@@ -118,13 +196,13 @@ export const DebugInfo: React.FC = () => {
           </AppPressable>
         </View>
 
-        {Object.entries(debugData).map(([sectionName, sectionData]) => (
-          <View key={sectionName} style={styles.section}>
+        {debugData.map(section => (
+          <View key={section.title} style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text role="heading">{sectionName}</Text>
+              <Text role="heading">{section.title}</Text>
               <AppPressable
                 style={styles.copySectionButton}
-                onPress={() => handleCopySection(sectionName, sectionData)}
+                onPress={() => handleCopySection(section)}
               >
                 <Text role="label" tone="accent">
                   {t('labels.copy')}
@@ -132,10 +210,10 @@ export const DebugInfo: React.FC = () => {
               </AppPressable>
             </View>
             <View style={styles.infoContainer}>
-              {Object.entries(sectionData).map(([key, value]) => (
-                <View key={key} style={styles.infoRow}>
+              {section.rows.map(({ label, value }) => (
+                <View key={label} style={styles.infoRow}>
                   <Text role="label" tone="secondary" style={styles.infoLabel}>
-                    {key}
+                    {label}
                   </Text>
                   <Text role="caption" style={styles.infoValue} selectable>
                     {value}

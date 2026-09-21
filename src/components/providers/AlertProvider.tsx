@@ -19,6 +19,7 @@ import { ALERT } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
 import { zIndex } from '#/theme/foundations/zIndex';
 import { motion } from '#/theme/foundations/motion';
+import { kitTestIDs } from '#components/testIDs';
 
 interface AlertCardProps {
   entry: AlertEntry;
@@ -87,7 +88,7 @@ const AlertCard: React.FC<AlertCardProps> = ({
       // Only the TOP card claims the stable id: `AlertStack` renders up to
       // ALERT.MAX_VISIBLE at once, and two matches fail a bare `by.id` with a
       // multiple-match error. The card behind is inert anyway.
-      testID={isTop ? 'alert-modal' : 'alert-modal-behind'}
+      testID={isTop ? kitTestIDs.alertModal : kitTestIDs.alertModalBehind}
       style={[
         styles.card,
         animatedStyle,
@@ -124,7 +125,7 @@ const AlertCard: React.FC<AlertCardProps> = ({
               // Index-keyed: the label is translated and `style` is optional, so
               // neither is a stable handle. Omitted on the stacked card, whose
               // unpressable buttons would still resolve for a Detox matcher.
-              testID={isTop ? `alert-button-${index}` : undefined}
+              testID={isTop ? kitTestIDs.alertButton(index) : undefined}
               accessibilityRole="button"
               style={[
                 styles.button,
@@ -291,7 +292,7 @@ const styles = StyleSheet.create(theme => ({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'black',
+    backgroundColor: theme.colors.black,
   },
   backdropPressable: {
     flex: 1,

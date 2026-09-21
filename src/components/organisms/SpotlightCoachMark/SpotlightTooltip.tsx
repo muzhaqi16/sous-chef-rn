@@ -2,7 +2,7 @@ import React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Pressable } from '#components/atoms/themedComponents';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Text } from '#components/atoms/Text';
 import { ARROW_SIZE } from './spotlightConstants';
@@ -39,18 +39,11 @@ export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
   onNext,
 }) => {
   const { t } = useTranslation();
-  const { theme } = useUnistyles();
 
   return (
     <Animated.View style={[styles.tooltip, containerStyle, animatedStyle]}>
       {/* Arrow */}
-      <View
-        style={[
-          styles.arrow,
-          { backgroundColor: theme.colors.surface },
-          arrowStyle,
-        ]}
-      />
+      <View style={[styles.arrow, arrowStyle]} />
 
       <Text role="heading" style={styles.tooltipTitle}>
         {title}
@@ -59,18 +52,7 @@ export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
       {totalSteps != null && stepIndex != null && totalSteps > 1 ? (
         <View style={styles.stepIndicator}>
           {Array.from({ length: totalSteps }, (_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.stepDot,
-                {
-                  backgroundColor:
-                    i === stepIndex
-                      ? theme.colors.primary
-                      : theme.colors.border,
-                },
-              ]}
-            />
+            <View key={i} style={styles.stepDot(i === stepIndex)} />
           ))}
         </View>
       ) : null}
@@ -107,6 +89,7 @@ const styles = StyleSheet.create(theme => ({
     width: ARROW_SIZE,
     height: ARROW_SIZE,
     transform: [{ rotate: '45deg' }],
+    backgroundColor: theme.colors.surface,
   },
   tooltipTitle: {
     marginBottom: theme.spacing.xs,
@@ -117,12 +100,13 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xs,
     marginTop: theme.spacing.md,
   },
-  stepDot: {
+  stepDot: (active: boolean) => ({
     width: 8,
     height: 8,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
-  },
+    backgroundColor: active ? theme.colors.primary : theme.colors.border,
+  }),
   nextButton: {
     alignSelf: 'flex-end',
     marginTop: theme.spacing.md,

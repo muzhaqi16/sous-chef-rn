@@ -1,15 +1,16 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { View, ViewStyle } from 'react-native';
+import type { ViewStyle } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import type { NutritionsData, NutrientCategory } from '#/types/nutrition';
+import type { NutrientCategory } from '#/types/nutrition';
 import {
-  parseNutritions,
+  type NutritionFactsValues,
   getNutrientEntries,
   groupNutrientsByCategory,
   getCategoryLabel,
   formatNutritionValue,
-  formatServingSize,
+  formatServing,
   hasNutritionData,
 } from '#domain/nutrition';
 import { Text } from '#components/atoms/Text';
@@ -17,35 +18,18 @@ import { SectionHeader } from '#components/atoms/SectionHeader';
 import { EmptyState } from '#components/molecules/EmptyState';
 
 interface NutritionDetailListProps {
-  /** Raw nutritions JSON from API or parsed NutritionsData */
-  nutritions: unknown;
-  /** Actual serving size in grams to scale values (optional) */
-  actualServingGrams?: number | null;
+  nutritionFacts: NutritionFactsValues | null;
   /** Container style */
   style?: ViewStyle;
 }
 
 export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
-  nutritions: nutritionsRaw,
-  actualServingGrams,
+  nutritionFacts,
   style,
 }) => {
   const { t } = useTranslation();
-  const nutritions =
-    typeof nutritionsRaw === 'object' && nutritionsRaw !== null
-      ? (nutritionsRaw as NutritionsData)
-      : parseNutritions(nutritionsRaw);
 
-  const entries = getNutrientEntries(nutritions, actualServingGrams);
-
-  const groupedEntries = groupNutrientsByCategory(entries);
-
-  // Display serving size - use actual if provided, otherwise use base
-  const displayServingSize = actualServingGrams
-    ? formatServingSize(actualServingGrams)
-    : nutritions?.servingSize;
-
-  if (!hasNutritionData(nutritions)) {
+  if (!hasNutritionData(nutritionFacts)) {
     return (
       <View style={[styles.container, style]}>
         <EmptyState size="compact" title={t('nutrition.noData')} />
@@ -53,13 +37,13 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
     );
   }
 
+  const groupedEntries = groupNutrientsByCategory(
+    getNutrientEntries(nutritionFacts, t),
+  );
+  const displayServingSize = formatServing(nutritionFacts);
+
   // Order categories for display
-  const categoryOrder: NutrientCategory[] = [
-    'macro',
-    'vitamin',
-    'mineral',
-    'other',
-  ];
+  const categoryOrder: NutrientCategory[] = ['macro', 'vitamin', 'mineral'];
 
   return (
     <View style={[styles.container, style]}>
@@ -81,7 +65,7 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
         return (
           <View key={category} style={styles.section}>
             <SectionHeader variant="overline" style={styles.sectionTitle}>
-              {getCategoryLabel(category)}
+              {getCategoryLabel(category, t)}
             </SectionHeader>
 
             {categoryEntries.map((entry, index) => (

@@ -193,11 +193,6 @@ describe('AddItemForm', () => {
     });
   });
 
-  it('renders a custom title when provided', () => {
-    render(<AddItemForm {...defaultProps} title="Custom Title" />);
-    expect(screen.getByText('Custom Title')).toBeTruthy();
-  });
-
   it('renders subtitle for non-barcode mode', () => {
     render(<AddItemForm {...defaultProps} />);
     expect(
@@ -346,11 +341,6 @@ describe('AddItemForm', () => {
     render(<AddItemForm {...defaultProps} />);
     await user.press(screen.getByText('Inventory'));
     expect(screen.getByTestId('net-weight-entry-list')).toBeTruthy();
-  });
-
-  it('renders custom title', () => {
-    render(<AddItemForm {...defaultProps} title="Add Scanned Item" />);
-    expect(screen.getByText('Add Scanned Item')).toBeTruthy();
   });
 
   // ========== Additional branch/function coverage tests ==========

@@ -1,10 +1,8 @@
 import { act } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import type { RootState } from '#store/index';
-import {
-  useUnitAutocomplete,
-  UnitItem,
-} from '#features/catalog/hooks/useUnitAutocomplete';
+import type { UnitItem } from '#features/catalog/hooks/useUnitAutocomplete';
+import { useUnitAutocomplete } from '#features/catalog/hooks/useUnitAutocomplete';
 
 const mockCachedUnits: UnitItem[] = [
   { id: 'u1', name: 'Cup', symbol: 'cup' },
@@ -153,15 +151,6 @@ describe('useUnitAutocomplete', () => {
 
     const names = result.current.displayItems.map(i => i.name);
     expect(names).toContain('Tablespoon');
-  });
-
-  it('returns isOnline from the store', () => {
-    const { result } = renderHookWithApollo(
-      () => useUnitAutocomplete(),
-      apolloMocks,
-    );
-
-    expect(result.current.isOnline).toBe(true);
   });
 
   it('sets shouldSearch to true when searchTerm meets minChars and is online', () => {

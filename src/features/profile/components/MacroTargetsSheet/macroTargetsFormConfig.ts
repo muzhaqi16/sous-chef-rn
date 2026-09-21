@@ -1,5 +1,5 @@
 import { object, string, type ObjectSchema } from 'yup';
-import { t } from '#/i18n';
+import { t, type TranslationKey } from '#/i18n';
 import { DIETARY_LIMITS } from '#domain/dietary';
 
 export interface MacroTargetsFormValues {
@@ -11,7 +11,7 @@ export interface MacroTargetsFormValues {
 
 type Macro = keyof MacroTargetsFormValues;
 
-const RANGE_KEY: Record<Macro, string> = {
+const RANGE_KEY: Record<Macro, TranslationKey> = {
   calories: 'macroTargets.caloriesRange',
   protein: 'macroTargets.proteinRange',
   carbs: 'macroTargets.carbsRange',

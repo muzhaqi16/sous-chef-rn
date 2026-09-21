@@ -11,6 +11,7 @@ import { Text } from '#components/atoms/Text';
 import { BiometricSetupView } from '#components/organisms/biometric/BiometricSetupView';
 import { useBiometricSetup } from '#components/organisms/biometric/useBiometricSetup';
 import { commonStyles } from '#/styles/commonStyles';
+import { onboardingTestIDs } from '#features/onboarding/testIDs';
 
 /**
  * Onboarding's biometric step. The card and logic are the shared
@@ -56,7 +57,7 @@ export const BiometricSetupScreen = () => {
     return (
       <OnBoardingWrapper subtitle={t('onBoarding.settingUpSecurity')}>
         <View style={commonStyles.loadingContainer}>
-          <Text tone="secondary" align="center">
+          <Text role="body" tone="secondary" align="center">
             {t('onBoarding.checkingBiometricAvailability')}
           </Text>
         </View>
@@ -69,7 +70,7 @@ export const BiometricSetupScreen = () => {
   return (
     <OnBoardingWrapper
       subtitle={t('onBoarding.secureYourAccount')}
-      testID="biometric-setup-screen"
+      testID={onboardingTestIDs.biometricSetupScreen}
     >
       <View style={styles.container}>
         <BiometricSetupView
@@ -83,7 +84,7 @@ export const BiometricSetupScreen = () => {
           skipLabel={bio.skipLabel}
           onEnable={bio.handleEnable}
           onSkip={bio.handleSkip}
-          testID="biometric-setup"
+          testID={onboardingTestIDs.biometricSetupView}
         />
       </View>
     </OnBoardingWrapper>

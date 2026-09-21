@@ -4,6 +4,22 @@ import type { BarcodeStackParams } from '#navigation/stacks/BarcodeStack';
 import type { NotificationStackParams } from '#navigation/stacks/NotificationStack';
 import type { OnboardingStackParams } from '#navigation/stacks/OnboardingStack';
 
+/** Root routes whose params are an object or absent: what `replace` can carry. */
+type ReplaceableRoute = {
+  [Name in keyof RootStackParamList]: RootStackParamList[Name] extends
+    | object
+    | undefined
+    ? Name
+    : never;
+}[keyof RootStackParamList];
+
+// `StackActions.replace` accepts any name and params; this checks both against
+// the root stack the way `navigate` is checked.
+const replaceAction = <Name extends ReplaceableRoute>(
+  name: Name,
+  params: RootStackParamList[Name],
+) => StackActions.replace(name, params);
+
 /**
  * The one place that knows screen names — always navigate through this hook, so
  * a rename surfaces here as a type error. Root screens use the flat form, nested
@@ -31,30 +47,23 @@ export function useAppNavigation() {
      * `Auth` group and resurface as the top route after sign-in.
      */
     replaceWithLogin: () =>
-      navigation.dispatch(StackActions.replace('Auth', { screen: 'Login' })),
+      navigation.dispatch(replaceAction('Auth', { screen: 'Login' })),
     toSignUp: () => navigation.navigate('Auth', { screen: 'SignUp' }),
     toForgotPassword: () =>
       navigation.navigate('Auth', { screen: 'ForgotPassword' }),
 
     // ─── Deep-link targets ────────────────────────────────────────────────
-    toEmailVerification: (token: string) =>
-      navigation.navigate('EmailVerification', { token }),
-    toResetPassword: (token: string) =>
-      navigation.navigate('ResetPassword', { token }),
-    toAcceptInvitation: (token: string) =>
-      navigation.navigate('AcceptInvitation', { token }),
     toJoinHomeByCode: (joinCode?: string) =>
       navigation.navigate('JoinHomeByCode', joinCode ? { joinCode } : {}),
     toJoinByShareCode: (shareCode: string) =>
       navigation.navigate('JoinByShareCode', { shareCode }),
+    /** A resolver screen hands off to the join screen and leaves the stack. */
+    replaceWithJoinHomeByCode: (joinCode: string) =>
+      navigation.dispatch(replaceAction('JoinHomeByCode', { joinCode })),
+    replaceWithJoinByShareCode: (shareCode: string) =>
+      navigation.dispatch(replaceAction('JoinByShareCode', { shareCode })),
 
     // ─── Onboarding sub-screens (nested) ──────────────────────────────────
-    toCreateHome: () =>
-      navigation.navigate('Onboarding', { screen: 'CreateHome' }),
-    toCreateShoppingList: () =>
-      navigation.navigate('Onboarding', { screen: 'CreateShoppingList' }),
-    toInviteMembers: () =>
-      navigation.navigate('Onboarding', { screen: 'InviteMembers' }),
     // Onboarding's own copy of ImageCrop, so cropping during onboarding stays
     // inside that flow rather than pushing the root-level `ImageCrop` below.
     toOnboardingImageCrop: (params: OnboardingStackParams['ImageCrop']) =>
@@ -64,7 +73,6 @@ export function useAppNavigation() {
     toPantryMain: () => navigation.navigate('Home', { screen: 'Pantry' }),
     toShoppingListMain: () =>
       navigation.navigate('Home', { screen: 'ShoppingList' }),
-    toMealPlanMain: () => navigation.navigate('Home', { screen: 'MealPlan' }),
 
     // ─── Profile / home management ────────────────────────────────────────
     toProfile: () => navigation.navigate('Profile'),
@@ -95,8 +103,7 @@ export function useAppNavigation() {
     toAppearance: () => navigation.navigate('Appearance'),
 
     // ─── Pantry detail/sub screens ────────────────────────────────────────
-    // `PantryItem` edits an existing item, so `itemId` is required. It was
-    // optional while the form carried an unreachable `add` mode.
+    // `PantryItem` edits an existing item, so `itemId` is required.
     toPantryItem: (params: RootStackParamList['PantryItem']) =>
       navigation.navigate('PantryItem', params),
     toPantryItemDetail: (params: RootStackParamList['PantryItemDetail']) =>

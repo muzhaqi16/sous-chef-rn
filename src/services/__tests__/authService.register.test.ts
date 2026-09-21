@@ -10,7 +10,7 @@
 const mockMutate = jest.fn();
 jest.mock('#/apollo/client', () => ({
   client: { mutate: (...args: unknown[]) => mockMutate(...args) },
-  cancelCachePersistence: jest.fn(),
+  restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
 
@@ -37,6 +37,8 @@ jest.mock(
       },
     ),
 );
+
+jest.mock('#/storage/deviceId');
 
 const mockToastError = jest.fn();
 jest.mock('#/services/toastService', () => ({

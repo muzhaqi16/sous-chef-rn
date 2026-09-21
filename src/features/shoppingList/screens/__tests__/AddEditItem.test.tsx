@@ -3,15 +3,17 @@
 import React from 'react';
 import type { TextInputProps } from 'react-native';
 import {
+  act,
   fireEvent,
   screen,
   userEvent,
   waitFor,
 } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { alertService } from '#/services/alertService';
-import { handleMutationError } from '#/utils/errorHandlers';
+import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
+import { alertService, type AlertButton } from '#/services/alertService';
+import { DisplayFormat, ErrorCode } from '#/graphql/generated/schemaTypes';
 import { AddEditItem } from '../AddEditItem';
 import type { ShoppingItemFormData } from '#features/shoppingList/hooks/shoppingItemFormConfig';
 import {
@@ -19,16 +21,21 @@ import {
   UpdateShoppingListItemDocument,
   GetShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import type { AddedShoppingListItemFieldsFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { t } from '#/i18n';
 
 jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/utils/deviceLocale', () => ({
+  ...jest.requireActual('#/utils/deviceLocale'),
+  getDeviceDecimalSeparator: jest.fn(() => '.'),
+}));
 jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#hooks/navigation/useAppNavigation');
-const mockNav = (
-  jest.requireMock('#hooks/navigation/useAppNavigation') as {
-    useAppNavigation: jest.Mock;
-  }
-).useAppNavigation();
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
 
 // Delegates to the REAL hook, recording writes on the way through.
 //
@@ -63,9 +70,7 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
 }));
 
 jest.mock('#features/shoppingList/cache/items', () => {
-  const { classifyCreateResult } = jest.requireActual(
-    '#/apollo/utils/classifyCreateResult',
-  );
+  const { settledStatus } = jest.requireActual('#/apollo/utils/settleMutation');
   const revertOptimisticShoppingListItem = jest.fn();
   return {
     buildAddItemsReconcileUpdate: jest.fn(() => jest.fn()),
@@ -79,7 +84,7 @@ jest.mock('#features/shoppingList/cache/items', () => {
     // keep/revert decision under test matches production.
     reconcileShoppingCreate: jest.fn(
       (cache: unknown, listId: string, id: string, result: unknown) => {
-        if (classifyCreateResult(result) === 'rejected') {
+        if (settledStatus(result) === 'failed') {
           revertOptimisticShoppingListItem(cache, listId, id);
           return 'reverted';
         }
@@ -88,13 +93,6 @@ jest.mock('#features/shoppingList/cache/items', () => {
     ),
   };
 });
-jest.mock('#/utils/errorHandlers', () => ({
-  handleMutationError: jest.fn(),
-  versionConflictCheck: jest.fn(() => ({
-    detect: jest.fn(),
-    handle: jest.fn(),
-  })),
-}));
 jest.mock('#/services/errorService');
 jest.mock('#/utils/finallyHelpers');
 
@@ -241,28 +239,32 @@ jest.mock(
     },
   }),
 );
-jest.mock('#components/molecules/EditableCounter', () => ({
-  // Renders `error` — validation now reports on the field, so a test asserting
-  // a refusal has to be able to see it. The real component paints it as a red
-  // border plus this message.
-  EditableCounter: ({
-    label,
-    testID,
-    error,
-  }: {
-    label?: string;
-    testID?: string;
-    error?: string;
-  }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID={testID}>
-        <Text>{label}</Text>
-        {error ? <Text>{error}</Text> : null}
-      </View>
-    );
-  },
-}));
+// The stub unless a test switches the real counter on to press its steppers.
+const mockRealCounter = { current: false };
+jest.mock('#components/molecules/EditableCounter', () => {
+  const Real = jest.requireActual(
+    '#components/molecules/EditableCounter',
+  ).EditableCounter;
+  return {
+    // Renders `error` — validation now reports on the field, so a test asserting
+    // a refusal has to be able to see it. The real component paints it as a red
+    // border plus this message.
+    EditableCounter: (props: {
+      label?: string;
+      testID?: string;
+      error?: string;
+    }) => {
+      if (mockRealCounter.current) return <Real {...props} />;
+      const { View, Text } = require('react-native');
+      return (
+        <View testID={props.testID}>
+          <Text>{props.label}</Text>
+          {props.error ? <Text>{props.error}</Text> : null}
+        </View>
+      );
+    },
+  };
+});
 jest.mock('#components/atoms/FieldRow', () => ({
   FieldRow: ({ children }: { children?: React.ReactNode }) => {
     const { View } = require('react-native');
@@ -292,12 +294,12 @@ jest.mock('#components/atoms/FieldRow', () => ({
  * the schema-backed mock link fills whatever a fixture leaves out, so a fixture
  * states what the test asserts on rather than the whole selection.
  */
-const SHOPPING_LIST_ITEM_CORE = {
+const SHOPPING_LIST_ITEM_CORE: MockPart<AddedShoppingListItemFieldsFragment> = {
   __typename: 'ShoppingListItem',
   itemName: 'Milk',
-  quantity: '1',
+  quantity: 1,
   quantityInput: '1',
-  displayFormat: 'AUTO',
+  displayFormat: DisplayFormat.Auto,
   purchaseInfo: {
     __typename: 'ShoppingListItemPurchaseInfo',
     isPurchased: false,
@@ -331,7 +333,7 @@ function buildDetailShoppingListItem(id: string) {
   return {
     ...SHOPPING_LIST_ITEM_CORE,
     id,
-    priceEstimate: null,
+    priceEstimate: { __typename: 'PriceEstimate', estimated: null },
     source: {
       __typename: 'ShoppingListItemSource',
       isAutoAdded: false,
@@ -351,7 +353,7 @@ function buildDetailShoppingListItem(id: string) {
   };
 }
 
-function buildAddItemMock(): MockedResponse {
+function buildAddItemMock(): MockFor<typeof AddItemToShoppingListDocument> {
   return {
     request: { query: AddItemToShoppingListDocument, variables: () => true },
     result: {
@@ -376,14 +378,16 @@ function buildAddItemMock(): MockedResponse {
   };
 }
 
-function buildAddItemNullMock(): MockedResponse {
+function buildAddItemRefusedMock(): MockFor<
+  typeof AddItemToShoppingListDocument
+> {
   return {
     request: { query: AddItemToShoppingListDocument, variables: () => true },
     result: {
       data: {
         addItemsToShoppingList: {
-          __typename: 'ConflictError',
-          code: 'CONFLICT',
+          __typename: 'ForbiddenError',
+          code: ErrorCode.Forbidden,
           message: 'No item',
         },
       },
@@ -393,7 +397,9 @@ function buildAddItemNullMock(): MockedResponse {
 }
 
 /** What `queueLink` emits for a queued mutation: the field present but null. */
-function buildAddItemQueuedMock(): MockedResponse {
+function buildAddItemQueuedMock(): MockFor<
+  typeof AddItemToShoppingListDocument
+> {
   return {
     request: { query: AddItemToShoppingListDocument, variables: () => true },
     result: { data: { addItemsToShoppingList: null } },
@@ -401,7 +407,9 @@ function buildAddItemQueuedMock(): MockedResponse {
   };
 }
 
-function buildAddItemErrorMock(): MockedResponse {
+function buildAddItemErrorMock(): MockFor<
+  typeof AddItemToShoppingListDocument
+> {
   return {
     request: { query: AddItemToShoppingListDocument, variables: () => true },
     error: new Error('Network error'),
@@ -409,7 +417,7 @@ function buildAddItemErrorMock(): MockedResponse {
   };
 }
 
-function buildUpdateItemMock(): MockedResponse {
+function buildUpdateItemMock(): MockFor<typeof UpdateShoppingListItemDocument> {
   return {
     request: { query: UpdateShoppingListItemDocument, variables: () => true },
     result: {
@@ -424,14 +432,16 @@ function buildUpdateItemMock(): MockedResponse {
   };
 }
 
-function buildUpdateItemNullMock(): MockedResponse {
+function buildUpdateItemRefusedMock(): MockFor<
+  typeof UpdateShoppingListItemDocument
+> {
   return {
     request: { query: UpdateShoppingListItemDocument, variables: () => true },
     result: {
       data: {
         updateShoppingListItem: {
-          __typename: 'ConflictError',
-          code: 'CONFLICT',
+          __typename: 'ForbiddenError',
+          code: ErrorCode.Forbidden,
           message: 'No item',
         },
       },
@@ -441,7 +451,9 @@ function buildUpdateItemNullMock(): MockedResponse {
 }
 
 /** What `queueLink` emits for a queued mutation: the field present but null. */
-function buildUpdateItemQueuedMock(): MockedResponse {
+function buildUpdateItemQueuedMock(): MockFor<
+  typeof UpdateShoppingListItemDocument
+> {
   return {
     request: { query: UpdateShoppingListItemDocument, variables: () => true },
     result: { data: { updateShoppingListItem: null } },
@@ -449,15 +461,27 @@ function buildUpdateItemQueuedMock(): MockedResponse {
   };
 }
 
-function buildUpdateItemErrorMock(): MockedResponse {
+function buildUpdateItemConflictMock(): MockFor<
+  typeof UpdateShoppingListItemDocument
+> {
   return {
     request: { query: UpdateShoppingListItemDocument, variables: () => true },
-    error: new Error('VERSION_CONFLICT'),
+    result: {
+      data: {
+        updateShoppingListItem: {
+          __typename: 'ConflictError',
+          code: ErrorCode.VersionConflict,
+          message: 'Stale version',
+        },
+      },
+    },
     maxUsageCount: 10,
   };
 }
 
-function buildGetShoppingListItemMock(itemId: string): MockedResponse {
+function buildGetShoppingListItemMock(
+  itemId: string,
+): MockFor<typeof GetShoppingListItemDocument> {
   return {
     request: {
       query: GetShoppingListItemDocument,
@@ -501,11 +525,8 @@ const mockUseShoppingListItemForm =
     return { ...actual, setFieldValue, ...rest };
   };
 
-// Force the next executeWithLoadingState invocation to immediately call its
-// onError callback with the supplied error. Exercises the catch path for
-// assertions that depend on hook-side error mapping (gotcha #1: Apollo
-// errorPolicy: 'all' swallows mutation errors so onError otherwise never
-// fires through the natural flow).
+// Force the next executeWithLoadingState invocation to call its onError with
+// the supplied error: a throw no write outcome describes.
 function forceExecuteWithLoadingStateOnError(error: unknown) {
   const { executeWithLoadingState } = require('#/utils/finallyHelpers');
   executeWithLoadingState.mockImplementationOnce(
@@ -533,6 +554,8 @@ describe('AddEditItem', () => {
   // form got one pre-filled with another test's values.
   afterEach(() => {
     jest.restoreAllMocks();
+    jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.');
+    mockRealCounter.current = false;
   });
 
   it('renders add item title', () => {
@@ -873,7 +896,7 @@ describe('AddEditItem', () => {
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 
-  it('shows error alert when mutation returns data but no item', async () => {
+  it('alerts a refused add once and stays on the form', async () => {
     const user = userEvent.setup();
     jest
       .spyOn(
@@ -887,7 +910,7 @@ describe('AddEditItem', () => {
       );
 
     renderWithApollo(<AddEditItem route={addRoute} />, {
-      operationMocks: [buildAddItemNullMock()],
+      operationMocks: [buildAddItemRefusedMock()],
     });
     await user.press(screen.getByTestId('add-item-submit-button'));
 
@@ -897,13 +920,12 @@ describe('AddEditItem', () => {
         expect.stringContaining('Server error'),
       ),
     );
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    expect(mockNav.goBack).not.toHaveBeenCalled();
   });
 
-  it('handles version conflict error in edit mode', async () => {
+  it('offers Refresh on a version conflict, which leaves the form', async () => {
     const user = userEvent.setup();
-    const versionError = new Error('VERSION_CONFLICT');
-    forceExecuteWithLoadingStateOnError(versionError);
-
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
@@ -920,27 +942,22 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={editRoute} />, {
       operationMocks: [
         buildGetShoppingListItemMock('item1'),
-        buildUpdateItemErrorMock(),
+        buildUpdateItemConflictMock(),
       ],
     });
     await user.press(screen.getByTestId('edit-item-submit-button'));
 
-    await waitFor(() => {
-      expect(handleMutationError).toHaveBeenCalledWith(versionError, {
-        operation: 'ShoppingListItem.save',
-        checks: expect.any(Array),
-      });
-    });
+    await waitFor(() => expect(alertService.alert).toHaveBeenCalledTimes(1));
+    expect(mockNav.goBack).not.toHaveBeenCalled();
+
+    const buttons = (alertService.alert as jest.Mock).mock
+      .calls[0][2] as AlertButton[];
+    buttons.find(button => button.style !== 'cancel')?.onPress?.();
+    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
 
-  it('handles network error in error handler', async () => {
+  it('alerts a failed add once and stays on the form', async () => {
     const user = userEvent.setup();
-    const networkError = {
-      networkError: new Error('timeout'),
-      message: 'Network error',
-    };
-    forceExecuteWithLoadingStateOnError(networkError);
-
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
@@ -957,23 +974,19 @@ describe('AddEditItem', () => {
     });
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    await waitFor(() => {
-      expect(handleMutationError).toHaveBeenCalledWith(networkError, {
-        operation: 'ShoppingListItem.save',
-        checks: expect.any(Array),
-      });
-    });
+    await waitFor(() =>
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        expect.stringContaining('Server error'),
+      ),
+    );
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    expect(mockNav.goBack).not.toHaveBeenCalled();
   });
 
-  it('handles VALIDATION_FAILED graphQL error', async () => {
+  it('alerts a throw during save that no write outcome describes', async () => {
     const user = userEvent.setup();
-    const validationError = {
-      graphQLErrors: [
-        { extensions: { code: 'VALIDATION_FAILED' }, message: 'Invalid' },
-      ],
-    };
-    forceExecuteWithLoadingStateOnError(validationError);
-
+    forceExecuteWithLoadingStateOnError(new Error('Unknown'));
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
@@ -986,111 +999,16 @@ describe('AddEditItem', () => {
       );
 
     renderWithApollo(<AddEditItem route={addRoute} />, {
-      operationMocks: [buildAddItemErrorMock()],
+      operationMocks: [buildAddItemMock()],
     });
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    await waitFor(() => {
-      expect(handleMutationError).toHaveBeenCalledWith(validationError, {
-        operation: 'ShoppingListItem.save',
-        checks: expect.any(Array),
-      });
-    });
-  });
-
-  it('handles UNAUTHENTICATED graphQL error', async () => {
-    const user = userEvent.setup();
-    const unauthError = {
-      graphQLErrors: [
-        { extensions: { code: 'UNAUTHENTICATED' }, message: 'Unauthorized' },
-      ],
-    };
-    forceExecuteWithLoadingStateOnError(unauthError);
-
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Milk', quantityInput: '1' },
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={addRoute} />, {
-      operationMocks: [buildAddItemErrorMock()],
-    });
-    await user.press(screen.getByTestId('add-item-submit-button'));
-
-    await waitFor(() => {
-      expect(handleMutationError).toHaveBeenCalledWith(unauthError, {
-        operation: 'ShoppingListItem.save',
-        checks: expect.any(Array),
-      });
-    });
-  });
-
-  it('handles generic graphQL error with message', async () => {
-    const user = userEvent.setup();
-    const genericError = {
-      graphQLErrors: [
-        { extensions: { code: 'INTERNAL_ERROR' }, message: 'Something broke' },
-      ],
-    };
-    forceExecuteWithLoadingStateOnError(genericError);
-
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Milk', quantityInput: '1' },
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={addRoute} />, {
-      operationMocks: [buildAddItemErrorMock()],
-    });
-    await user.press(screen.getByTestId('add-item-submit-button'));
-
-    await waitFor(() => {
-      expect(handleMutationError).toHaveBeenCalledWith(genericError, {
-        operation: 'ShoppingListItem.save',
-        checks: expect.any(Array),
-      });
-    });
-  });
-
-  it('handles generic error without graphQLErrors or networkError', async () => {
-    const user = userEvent.setup();
-    const unknownError = new Error('Unknown');
-    forceExecuteWithLoadingStateOnError(unknownError);
-
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Milk', quantityInput: '1' },
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={addRoute} />, {
-      operationMocks: [buildAddItemErrorMock()],
-    });
-    await user.press(screen.getByTestId('add-item-submit-button'));
-
-    await waitFor(() => {
-      expect(handleMutationError).toHaveBeenCalledWith(unknownError, {
-        operation: 'ShoppingListItem.save',
-        checks: expect.any(Array),
-      });
-    });
+    await waitFor(() =>
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        expect.stringContaining('Failed to add item'),
+      ),
+    );
   });
 
   it('includes estimatedPrice in add mutation when provided (success navigates back)', async () => {
@@ -1146,7 +1064,7 @@ describe('AddEditItem', () => {
     );
   });
 
-  it('shows server error alert when update returns no item data', async () => {
+  it('alerts a refused update once and stays on the form', async () => {
     const user = userEvent.setup();
     jest
       .spyOn(
@@ -1164,7 +1082,7 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={editRoute} />, {
       operationMocks: [
         buildGetShoppingListItemMock('item1'),
-        buildUpdateItemNullMock(),
+        buildUpdateItemRefusedMock(),
       ],
     });
     await user.press(screen.getByTestId('edit-item-submit-button'));
@@ -1175,6 +1093,116 @@ describe('AddEditItem', () => {
         expect.stringContaining('Server error'),
       ),
     );
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    expect(mockNav.goBack).not.toHaveBeenCalled();
+  });
+
+  it('sends a comma-device quantity as API text', async () => {
+    jest.mocked(getDeviceDecimalSeparator).mockReturnValue(',');
+    const user = userEvent.setup();
+    const added = recordMock(AddItemToShoppingListDocument, {
+      data: { addItemsToShoppingList: null },
+    });
+    jest
+      .spyOn(
+        require('#features/shoppingList/hooks/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockImplementation(
+        mockUseShoppingListItemForm({
+          values: { itemName: 'Flour', quantityInput: '2,2' },
+        }),
+      );
+    const { createOptimisticShoppingListItem } = jest.requireMock(
+      '#features/shoppingList/cache/items',
+    );
+
+    renderWithApollo(<AddEditItem route={addRoute} />, {
+      operationMocks: [added.mock],
+    });
+    await user.press(screen.getByTestId('add-item-submit-button'));
+
+    await waitFor(() => expect(added.fired).toHaveLength(1));
+    expect(added.fired[0]).toEqual({
+      input: expect.objectContaining({
+        items: [expect.objectContaining({ quantity: '2.2' })],
+      }),
+    });
+    expect(createOptimisticShoppingListItem).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ quantity: 2.2, quantityInput: '2.2' }),
+    );
+  });
+
+  // The stepper writes the device's separator back into the field, so the
+  // stepped value reaches the API only through the same normalisation.
+  it('sends a comma-device quantity stepped with the increment control as API text', async () => {
+    jest.mocked(getDeviceDecimalSeparator).mockReturnValue(',');
+    mockRealCounter.current = true;
+    const user = userEvent.setup();
+    const added = recordMock(AddItemToShoppingListDocument, {
+      data: { addItemsToShoppingList: null },
+    });
+    jest
+      .spyOn(
+        require('#features/shoppingList/hooks/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockImplementation(
+        mockUseShoppingListItemForm({
+          values: { itemName: 'Flour', quantityInput: '2,2' },
+        }),
+      );
+
+    renderWithApollo(<AddEditItem route={addRoute} />, {
+      operationMocks: [added.mock],
+    });
+    await user.press(screen.getByLabelText(t('editableCounter.increase')));
+    expect(screen.getByTestId('add-item-quantity-input')).toHaveProp(
+      'value',
+      '3,2',
+    );
+    await user.press(screen.getByTestId('add-item-submit-button'));
+
+    await waitFor(() => expect(added.fired).toHaveLength(1));
+    expect(added.fired[0]).toEqual({
+      input: expect.objectContaining({
+        items: [expect.objectContaining({ quantity: '3.2' })],
+      }),
+    });
+  });
+
+  it('keeps what the user typed when the edit is refused', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<AddEditItem route={editRoute} />, {
+      operationMocks: [
+        buildGetShoppingListItemMock('item1'),
+        buildUpdateItemRefusedMock(),
+      ],
+    });
+    const nameInput = screen.getByTestId(
+      shoppingListTestIDs.editItemForm.nameInput,
+    );
+    await waitFor(() => expect(nameInput.props.value).toBe('Milk'));
+
+    fireEvent.changeText(nameInput, 'Oat Milk');
+    fireEvent.changeText(
+      screen.getByTestId(shoppingListTestIDs.editItemForm.priceInput),
+      '3.50',
+    );
+    await user.press(screen.getByTestId('edit-item-submit-button'));
+
+    await waitFor(() => expect(alertService.alert).toHaveBeenCalledTimes(1));
+    // Let the refusal's refetch re-deliver the stored item.
+    await act(() => new Promise<void>(resolve => setTimeout(resolve, 50)));
+    expect(
+      screen.getByTestId(shoppingListTestIDs.editItemForm.nameInput).props
+        .value,
+    ).toBe('Oat Milk');
+    expect(
+      screen.getByTestId(shoppingListTestIDs.editItemForm.priceInput).props
+        .value,
+    ).toBe('3.50');
   });
 
   it("names the input the server refused, in the app's own words", async () => {
@@ -1206,7 +1234,7 @@ describe('AddEditItem', () => {
             data: {
               updateShoppingListItem: {
                 __typename: 'ValidationError',
-                code: 'VALIDATION_FAILED',
+                code: ErrorCode.ValidationFailed,
                 message:
                   'Provide a netWeight value when specifying netWeightUnitId.',
                 field: 'netWeight',

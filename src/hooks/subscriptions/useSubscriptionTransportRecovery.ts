@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ErrorLike } from '@apollo/client';
+import type { DocumentNode } from 'graphql';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { onWebSocketReconnected } from '#/apollo/links/wsLink';
 import { errorService } from '#/services/errorService';
 import { useIsOnline } from '#store/useAppStore';
@@ -48,11 +50,12 @@ export interface RecoverableSubscription {
 }
 
 export function useSubscriptionTransportRecovery(
-  subscriptionName: string,
+  document: DocumentNode,
   subscription: RecoverableSubscription,
   /** The same `skip` passed to `useSubscription`. */
   skip: boolean,
 ): void {
+  const subscriptionName = operationNameOf(document);
   const { error, restart } = subscription;
   const isOnline = useIsOnline();
 

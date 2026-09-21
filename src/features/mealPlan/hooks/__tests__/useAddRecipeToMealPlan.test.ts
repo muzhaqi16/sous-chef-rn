@@ -1,9 +1,11 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import type { toastService } from '#/services/toastService';
+import { toMealDateTime } from '#/utils/dateUtils';
 import { useAddRecipeToMealPlan } from '../useAddRecipeToMealPlan';
 
 const mockCreateItem = jest.fn();
+const mockLoadMore = jest.fn();
 
 const mockMealPlansState = (overrides: Record<string, unknown> = {}) => ({
   state: {
@@ -21,15 +23,26 @@ const mockMealPlansState = (overrides: Record<string, unknown> = {}) => ({
     ],
     loading: false,
     error: undefined,
-    totalCount: undefined,
     hasMore: false,
+    loadingMore: false,
     ...overrides,
   },
-  actions: { refetch: jest.fn(), loadMore: jest.fn() },
+  actions: { refetch: jest.fn(), loadMore: mockLoadMore },
 });
 
 jest.mock('../useMealPlans', () => ({
   useMealPlans: jest.fn(() => mockMealPlansState()),
+  // The cache read by id, which does not care which page loaded the plan.
+  useMealPlanDisplay: jest.fn((id: string | null) =>
+    id
+      ? {
+          id,
+          name: `Plan ${id}`,
+          startDate: '2025-07-01T00:00:00Z',
+          endDate: '2025-07-07T00:00:00Z',
+        }
+      : null,
+  ),
 }));
 
 jest.mock('../useMealPlanItemActions', () => ({
@@ -74,10 +87,7 @@ describe('useAddRecipeToMealPlan', () => {
   });
 
   it('addRecipeToMealPlan creates item and shows success toast', async () => {
-    mockCreateItem.mockResolvedValueOnce({
-      __typename: 'CreateMealPlanItemPayload',
-      mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
-    });
+    mockCreateItem.mockResolvedValueOnce(true);
 
     const { result } = renderHook(() => useAddRecipeToMealPlan());
 
@@ -96,13 +106,14 @@ describe('useAddRecipeToMealPlan', () => {
         mealPlanId: 'plan-1',
         meal: { recipeId: 'r-1' },
         mealType: 'DINNER',
+        date: toMealDateTime(new Date('2025-06-03')),
       }),
     );
     expect(mockToastSuccess).toHaveBeenCalledWith('Added to meal plan');
   });
 
   it('addRecipeToMealPlan returns false on failure', async () => {
-    mockCreateItem.mockResolvedValueOnce({ success: false });
+    mockCreateItem.mockResolvedValueOnce(false);
 
     const { result } = renderHook(() => useAddRecipeToMealPlan());
 
@@ -163,5 +174,38 @@ describe('useAddRecipeToMealPlan', () => {
     );
 
     expect(result.current.activePlanId).toBe('plan-2');
+  });
+
+  it('resolves a picked plan that is not in the loaded pages', () => {
+    const { result } = renderHook(() =>
+      useAddRecipeToMealPlan({ planId: 'plan-from-page-3' }),
+    );
+
+    expect(result.current.activePlan?.name).toBe('Plan plan-from-page-3');
+    expect(result.current.hasPlan).toBe(true);
+  });
+
+  it('lists the current plan even when it is past the loaded pages', () => {
+    const { useMealPlans } = require('../useMealPlans');
+    useMealPlans.mockReturnValueOnce(
+      mockMealPlansState({
+        currentPlan: {
+          id: 'current',
+          startDate: '2025-06-01T00:00:00Z',
+          endDate: '2025-06-07T00:00:00Z',
+        },
+        hasMore: true,
+      }),
+    );
+
+    const { result } = renderHook(() => useAddRecipeToMealPlan());
+
+    expect(result.current.mealPlans.map(plan => plan.id)).toEqual([
+      'current',
+      'plan-1',
+    ]);
+    expect(result.current.hasMorePlans).toBe(true);
+    result.current.loadMorePlans();
+    expect(mockLoadMore).toHaveBeenCalled();
   });
 });

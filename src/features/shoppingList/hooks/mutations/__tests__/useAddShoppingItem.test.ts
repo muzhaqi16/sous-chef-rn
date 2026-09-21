@@ -4,8 +4,19 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { useAddShoppingItem } from '../useAddShoppingItem';
-import { addOptimisticShoppingListItem } from '#features/shoppingList/cache/items';
+import {
+  addOptimisticShoppingListItem,
+  createOptimisticShoppingListItem,
+  reconcileShoppingCreate,
+} from '#features/shoppingList/cache/items';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { alertService } from '#/services/alertService';
+import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 // The response mirrors the real batch payload the hook reads
 // (`addItemsToShoppingList.results[0].item`) so the real reconciler classifies
@@ -36,10 +47,13 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
 jest.mock('#features/shoppingList/cache/items', () => {
   const actual = jest.requireActual('#features/shoppingList/cache/items');
   return {
-    // Keep the REAL reconcileShoppingCreate (and the classifyCreateResult it
+    // Keep the REAL reconcileShoppingCreate (and the settledStatus it
     // calls) so the keep/revert decision under test is production's — a
     // hand-copied reconciler drifts from the operation names it hard-codes.
     ...actual,
+    // Wrapped, not replaced: its revert is module-internal, so what it RETURNS
+    // is the observable keep/revert decision.
+    reconcileShoppingCreate: jest.fn(actual.reconcileShoppingCreate),
     // Leaf cache writers are stubbed so the hook runs without a live cache.
     revertOptimisticShoppingListItem: jest.fn(),
     addOptimisticShoppingListItem: jest.fn(),
@@ -54,8 +68,14 @@ jest.mock('#features/shoppingList/cache/items', () => {
   };
 });
 
+jest.mock('#/utils/deviceLocale', () => ({
+  ...jest.requireActual('#/utils/deviceLocale'),
+  getDeviceDecimalSeparator: jest.fn(() => '.'),
+}));
+
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.');
 });
 
 describe('useAddShoppingItem', () => {
@@ -91,6 +111,94 @@ describe('useAddShoppingItem', () => {
 
     // The create mutation was then fired.
     expect(created.fired).toHaveLength(1);
+  });
+
+  it('gives the optimistic row the fraction the form typed, not its leading number', async () => {
+    const created = addItemMock();
+    const { result } = renderHookWithApollo(
+      () => useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      { operationMocks: [created.mock] },
+    );
+
+    await act(async () => {
+      await result.current.addItem({
+        itemName: 'Flour',
+        quantityInput: '1 1/2',
+      });
+    });
+
+    expect(createOptimisticShoppingListItem).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ quantity: 1.5, quantityInput: '1 1/2' }),
+    );
+  });
+
+  it('sends a comma-device quantity as API text', async () => {
+    jest.mocked(getDeviceDecimalSeparator).mockReturnValue(',');
+    const created = addItemMock();
+    const { result } = renderHookWithApollo(
+      () => useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      { operationMocks: [created.mock] },
+    );
+
+    await act(async () => {
+      await result.current.addItem({ itemName: 'Flour', quantityInput: '2,2' });
+    });
+
+    expect(created.fired).toEqual([
+      expect.objectContaining({
+        input: expect.objectContaining({
+          items: [expect.objectContaining({ quantity: '2.2' })],
+        }),
+      }),
+    ]);
+  });
+
+  it('reports a queued add as added, so quick-add does not call it a failure', async () => {
+    const queued = recordMock(AddItemToShoppingListDocument, {
+      data: { addItemsToShoppingList: null },
+    });
+    const { result } = renderHookWithApollo(
+      () => useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      { operationMocks: [queued.mock] },
+    );
+
+    let added: boolean | undefined;
+    await act(async () => {
+      added = await result.current.addItem({ itemName: 'Milk' });
+    });
+
+    expect(added).toBe(true);
+    expect(jest.mocked(reconcileShoppingCreate).mock.results).toEqual([
+      { type: 'return', value: 'kept' },
+    ]);
+    expect(alertService.alert).not.toHaveBeenCalled();
+  });
+
+  it('reverts and reports a refused add', async () => {
+    const refused = recordMock(AddItemToShoppingListDocument, {
+      data: {
+        addItemsToShoppingList: {
+          __typename: 'ForbiddenError',
+          code: ErrorCode.Forbidden,
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(
+      () => useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      { operationMocks: [refused.mock] },
+    );
+
+    let added: boolean | undefined;
+    await act(async () => {
+      added = await result.current.addItem({ itemName: 'Milk' });
+    });
+
+    expect(added).toBe(false);
+    expect(jest.mocked(reconcileShoppingCreate).mock.results).toEqual([
+      { type: 'return', value: 'reverted' },
+    ]);
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
   });
 
   it('does nothing when listId is missing', async () => {

@@ -7,16 +7,18 @@ import {
   UseRecipeFavoriteState_RecipeFragmentDoc,
   type UseRecipeFavoriteState_RecipeFragment,
 } from './useRecipeFavoriteState.generated';
-import { type MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
+import type { MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
 import { extractNodes } from '#/utils/connectionUtils';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import type { ExternalSource } from '#/graphql/generated/schemaTypes';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import type {
   SaveToFavoritesOptions,
   UseRecipePreloadReturn,
 } from '#features/recipes/hooks/useRecipePreload';
 
 export interface UseRecipeFavoriteStateParams {
-  externalSource: string | undefined;
+  externalSource: ExternalSource | undefined;
   externalId: string | undefined;
   externalRecipe: RecipeInformation | null;
   isBackendRecipe: boolean;
@@ -94,7 +96,7 @@ export function useRecipeFavoriteState({
           .find(
             r =>
               r?.externalSource === externalSource &&
-              r?.externalId === externalId,
+              r.externalId === externalId,
           )
       : undefined;
 
@@ -123,10 +125,10 @@ export function useRecipeFavoriteState({
     const options: SaveToFavoritesOptions = {
       folder: folder ?? undefined,
       tags: tags && tags.length > 0 ? tags : undefined,
-      notes: notes || undefined,
+      notes: firstNonBlank(notes),
     };
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         const result = await saveRecipeToFavorites(externalRecipe, options);
 

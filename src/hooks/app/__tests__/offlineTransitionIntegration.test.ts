@@ -14,11 +14,13 @@
  * the leaf side effects.
  */
 import { renderHook } from '@testing-library/react-native';
-import { ApolloLink, Observable, gql } from '@apollo/client';
-import type { ApolloClient, OperationVariables } from '@apollo/client';
+import { Observable } from '@apollo/client';
+import type { ApolloClient, ApolloLink } from '@apollo/client';
 import { OperationTypeNode } from 'graphql';
 import type { DocumentNode } from 'graphql';
 import { createTestStore } from '#/test-utils/createTestStore';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { TransferHomeOwnershipDocument } from '#operations/home/home.generated';
 import {
   blocksCacheMissQueries,
   isApiUnavailable,
@@ -50,6 +52,7 @@ jest.mock('#/apollo/offlineQueue/queueManager', () => ({
   queueManager: {
     onOnline: jest.fn(),
     onOffline: jest.fn(),
+    onSessionToken: jest.fn(),
     requestDrain: jest.fn(),
     withdrawUnqueueableWrite: jest.fn(),
   },
@@ -73,21 +76,13 @@ import { createQueueLink } from '#/apollo/offlineQueue/queueLink';
 import { OfflineRejectedError } from '#/apollo/offlineQueue/OfflineRejectedError';
 import { probeApiHealth } from '#/apollo/links/apiHealthProbe';
 
-const ONLINE_ONLY_MUTATION = gql`
-  mutation TransferHomeOwnership($input: TransferHomeOwnershipInput!) {
-    transferHomeOwnership(input: $input) {
-      id
-    }
-  }
-`;
-
-function makeOperation(query: DocumentNode, operationName: string) {
+function makeOperation(query: DocumentNode) {
   const context: ApolloLink.OperationContext = {};
   return {
     query,
-    operationName,
+    operationName: operationNameOf(query),
     operationType: OperationTypeNode.MUTATION,
-    variables: {} as OperationVariables,
+    variables: {},
     getContext: () => context,
     setContext: jest.fn(),
     extensions: {},
@@ -175,10 +170,7 @@ describe('offline transition (real store + real breaker)', () => {
 
     const error = await new Promise<unknown>(resolve => {
       link
-        .request(
-          makeOperation(ONLINE_ONLY_MUTATION, 'TransferHomeOwnership'),
-          forward as unknown as ApolloLink.ForwardFunction,
-        )!
+        .request(makeOperation(TransferHomeOwnershipDocument), forward)
         .subscribe({
           next: () => resolve(new Error('expected no result')),
           error: resolve,

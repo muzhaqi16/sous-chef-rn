@@ -12,10 +12,12 @@ import { commonStyles } from '#/styles/commonStyles';
 import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import { AdjustQuantityModal_PantryItemFragmentDoc } from './AdjustQuantityModal.generated';
+import { localizeNumericHint } from '#/utils/formatters/number';
 import {
-  formatNumberForInput,
-  localizeNumericHint,
-} from '#/utils/formatters/number';
+  formatQuantityForInput,
+  isUnchangedQuantity,
+  resolveQuantityNotation,
+} from '#/utils/formatQuantity';
 import { Sheet } from '#components/templates/Sheet';
 import {
   adjustQuantitySchema,
@@ -24,6 +26,7 @@ import {
   parseRemainingWeight,
   type AdjustQuantityFormValues,
 } from './adjustQuantityFormConfig';
+import { logValidationErrors } from '#/utils/validation/common';
 
 interface AdjustQuantityModalProps {
   visible: boolean;
@@ -68,7 +71,12 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
     setPendingSeed(
       nextSeedKey && pantryItem
         ? {
-            quantityInput: formatNumberForInput(pantryItem.quantity),
+            quantityInput: formatQuantityForInput(pantryItem.quantity, {
+              notation: resolveQuantityNotation(
+                null,
+                pantryItem.unit.displayAsFraction,
+              ),
+            }),
             reason: '',
             remainingWeightInput: '',
           }
@@ -83,13 +91,19 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
   // Reaching here means the schema passed; a refusal renders under its field.
   const handleConfirm = handleSubmit(values => {
     if (!pantryItem) return;
+    // The seed is rounded to what the field can show. Sent back unedited, it
+    // rewrites the stock and books an adjustment for the rounding; the exact
+    // stored value moves nothing, so the server records nothing.
+    const edited = parseQuantity(values);
     onConfirm(
-      parseQuantity(values),
+      isUnchangedQuantity(edited, pantryItem.quantity)
+        ? pantryItem.quantity
+        : edited,
       values.reason.trim(),
       parseRemainingWeight(values),
     );
     onClose();
-  });
+  }, logValidationErrors);
 
   return (
     <Sheet
@@ -109,17 +123,17 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
       {!!pantryItem && (
         <>
           <View style={commonStyles.bottomSheetItemInfo}>
-            <Text style={commonStyles.bottomSheetItemName}>
+            <Text role="heading" style={commonStyles.bottomSheetItemName}>
               {pantryItem.itemName}
             </Text>
             <View style={commonStyles.bottomSheetItemRow}>
-              <Text style={commonStyles.bottomSheetItemLabel}>
+              <Text role="body" tone="secondary">
                 {t('adjustQuantity.currentLabel')}
               </Text>
               <FormattedItemSubtitle
                 quantity={pantryItem.quantity}
-                displayAsFraction={pantryItem.unit?.displayAsFraction}
-                unitSymbol={pantryItem.unit?.symbol}
+                displayAsFraction={pantryItem.unit.displayAsFraction}
+                unitSymbol={pantryItem.unit.symbol}
               />
             </View>
           </View>
@@ -127,7 +141,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
           {pantryItem.lastUsedAt != null &&
             pantryItem.remainingNetWeight != null && (
               <View style={commonStyles.bottomSheetItemRow}>
-                <Text style={commonStyles.bottomSheetItemLabel}>
+                <Text role="body" tone="secondary">
                   {t('labels.remaining')}
                   {formatNetWeightDisplay(
                     pantryItem.remainingNetWeight,
@@ -149,7 +163,6 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
                   onChangeText={field.onChange}
                   error={fieldState.error?.message}
                   placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
-                  keyboardType="numeric"
                   useBottomSheetInput
                 />
               )}

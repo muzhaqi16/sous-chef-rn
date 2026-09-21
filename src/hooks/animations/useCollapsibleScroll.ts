@@ -38,8 +38,6 @@ export interface UseCollapsibleScrollReturn {
    * fling interrupted by a tab switch would otherwise leave it stuck.
    */
   isUserDragging: SharedValue<boolean>;
-  /** Current scroll offset. */
-  scrollY: SharedValue<number>;
 }
 
 /**
@@ -136,6 +134,5 @@ export function useCollapsibleScroll(): UseCollapsibleScrollReturn {
     momentumEndHandler,
     isScrolledDown,
     isUserDragging,
-    scrollY,
   };
 }

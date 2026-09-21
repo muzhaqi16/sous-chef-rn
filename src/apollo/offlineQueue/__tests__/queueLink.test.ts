@@ -1,13 +1,33 @@
-import { ApolloLink, Observable } from '@apollo/client';
-import type { ApolloClient, OperationVariables } from '@apollo/client';
+import { InMemoryCache, Observable } from '@apollo/client';
+import type {
+  ApolloClient,
+  OperationVariables,
+  ApolloLink,
+} from '@apollo/client';
 import { OperationTypeNode } from 'graphql';
 import type { DocumentNode } from 'graphql';
 import { createQueueLink } from '../queueLink';
 import { queueStore } from '../queueStore';
-import { OfflineRejectedError } from '../OfflineRejectedError';
+import {
+  isOfflineRejectedError,
+  OfflineRejectedError,
+} from '../OfflineRejectedError';
 import { useStore } from '#store';
 import { isNetworkError } from '#/utils/isNetworkError';
+import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import { gql } from '@apollo/client';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import {
+  LoginDocument,
+  RefreshTokenDocument,
+  RegisterDocument,
+  VerifyEmailDocument,
+} from '#operations/auth/auth.generated';
+import { UpdateItemDocument } from '#features/catalog/hooks/useSuggestItemEdit.generated';
+import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { ToggleShoppingListItemPurchasedDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { CreateRecipeReviewDocument } from '#features/recipes/graphql/recipeReview.generated';
+import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 
 // Mock the store module
 jest.mock('#store', () => ({
@@ -41,6 +61,10 @@ jest.mock('#/utils/generateId', () => ({
   generateId: jest.fn(() => 'test-uuid'),
 }));
 
+jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
+  apolloCachePersistence: { flushPending: jest.fn() },
+}));
+
 // Mock the logger
 const MOCK_MUTATION = gql`
   mutation AddItem($input: AddItemInput!) {
@@ -60,20 +84,13 @@ const MOCK_QUERY = gql`
   }
 `;
 
-const MOCK_LOGIN_MUTATION = gql`
-  mutation Login($email: String!, $password: String!) {
-    login(email: $email, password: $password) {
-      accessToken
-    }
-  }
-`;
-
 /** Build a minimal Apollo Operation */
 function makeOperation(options: {
   query: DocumentNode;
   operationName?: string;
   variables?: OperationVariables;
   context?: ApolloLink.OperationContext;
+  cache?: InMemoryCache;
 }): ApolloLink.Operation {
   const contextMap: ApolloLink.OperationContext = options.context || {};
   return {
@@ -84,7 +101,10 @@ function makeOperation(options: {
     getContext: () => contextMap,
     setContext: jest.fn(),
     extensions: {},
-    client: {} as ApolloClient,
+    // The link reads only the cache, where the queued write's row is.
+    client: {
+      cache: options.cache ?? new InMemoryCache(),
+    } as Partial<ApolloClient> as ApolloClient,
   };
 }
 
@@ -123,7 +143,7 @@ describe('createQueueLink', () => {
       const forward = makeForward();
 
       const observable = link.request(operation, forward);
-      observable!.subscribe({
+      observable.subscribe({
         next(result) {
           expect(result.data).toEqual({ testData: true });
         },
@@ -152,7 +172,7 @@ describe('createQueueLink', () => {
       const forward = makeForward({ addItem: { id: '1', name: 'Apple' } });
 
       const observable = link.request(operation, forward);
-      observable!.subscribe({
+      observable.subscribe({
         next(result) {
           expect(result.data).toEqual({ addItem: { id: '1', name: 'Apple' } });
         },
@@ -188,10 +208,12 @@ describe('createQueueLink', () => {
         variables: { input: { id: 'item-1' } },
         context: { localFirst: true },
       });
-      const forward = failingForward(new Error('Network request failed'));
+      const forward = failingForward(
+        new NetworkRequestError('Network request failed'),
+      );
 
       let sawQueued = false;
-      link.request(operation, forward)!.subscribe({
+      link.request(operation, forward).subscribe({
         next(result) {
           // The 'network-error' reason is load-bearing: networkStatusLink only
           // counts THIS flavor of queued result as a breaker failure.
@@ -235,9 +257,11 @@ describe('createQueueLink', () => {
           fetchOptions: () => undefined,
         },
       });
-      const forward = failingForward(new Error('Network request failed'));
+      const forward = failingForward(
+        new NetworkRequestError('Network request failed'),
+      );
 
-      link.request(operation, forward)!.subscribe({
+      link.request(operation, forward).subscribe({
         complete() {
           const queued = (queueStore.addMutation as jest.Mock).mock.calls[0][0];
           expect(queued.context).toEqual({ localFirst: true });
@@ -257,9 +281,11 @@ describe('createQueueLink', () => {
         variables: { input: { id: 'item-1' } },
         // no localFirst
       });
-      const forward = failingForward(new Error('Network request failed'));
+      const forward = failingForward(
+        new NetworkRequestError('Network request failed'),
+      );
 
-      link.request(operation, forward)!.subscribe({
+      link.request(operation, forward).subscribe({
         error(err) {
           expect((err as Error).message).toBe('Network request failed');
           expect(queueStore.addMutation).not.toHaveBeenCalled();
@@ -274,8 +300,8 @@ describe('createQueueLink', () => {
         user: { id: 'user-1' },
       });
       const operation = makeOperation({
-        query: MOCK_MUTATION,
-        operationName: 'UpdateItem',
+        query: UpdateItemDocument,
+        operationName: operationNameOf(UpdateItemDocument),
         variables: { input: { id: 'item-1' } },
         context: { localFirst: true },
       });
@@ -283,7 +309,7 @@ describe('createQueueLink', () => {
         new Error('Validation failed: name required'),
       );
 
-      link.request(operation, forward)!.subscribe({
+      link.request(operation, forward).subscribe({
         error(err) {
           expect((err as Error).message).toContain('Validation failed');
           expect(queueStore.addMutation).not.toHaveBeenCalled();
@@ -298,14 +324,14 @@ describe('createQueueLink', () => {
         user: { id: 'user-1' },
       });
       const operation = makeOperation({
-        query: MOCK_MUTATION,
-        operationName: 'UpdateItem',
+        query: UpdateItemDocument,
+        operationName: operationNameOf(UpdateItemDocument),
         variables: { input: { id: 'item-1' } },
         context: { localFirst: true },
       });
       const forward = makeForward({ updateItem: { id: 'item-1' } });
 
-      link.request(operation, forward)!.subscribe({
+      link.request(operation, forward).subscribe({
         next(result) {
           expect(result.data).toEqual({ updateItem: { id: 'item-1' } });
         },
@@ -321,6 +347,82 @@ describe('createQueueLink', () => {
   // Offline interception
   // -------------------------------------------------------------------------
   describe('offline interception', () => {
+    // The queue is durable at enqueue, so the cache row it replays against must
+    // be too: a kill before a deferred save relaunched with no row.
+    it('writes the owed cache save in the same step that queues the write', done => {
+      mockedGetState.mockReturnValue({
+        isOnline: false,
+        user: { id: 'user-1' },
+      });
+      const operation = makeOperation({
+        query: MOCK_MUTATION,
+        operationName: operationNameOf(MOCK_MUTATION),
+        context: { localFirst: true },
+      });
+
+      link.request(operation, makeForward()).subscribe({
+        complete() {
+          expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
+          expect(apolloCachePersistence.flushPending).toHaveBeenCalledTimes(1);
+          expect(
+            jest.mocked(apolloCachePersistence.flushPending).mock
+              .invocationCallOrder[0],
+          ).toBeGreaterThan(
+            jest.mocked(queueStore.addMutation).mock.invocationCallOrder[0]!,
+          );
+          done();
+        },
+      });
+    });
+
+    // The replay needs the row's list, which the toggle input does not carry;
+    // read now, while the hook's own write keeps the row cached.
+    it('records the cached values the replay reads when it queues', done => {
+      mockedGetState.mockReturnValue({
+        isOnline: false,
+        user: { id: 'user-1' },
+      });
+      const cache = new InMemoryCache();
+      cache.writeFragment({
+        id: cache.identify({ __typename: 'ShoppingListItem', id: 'row-1' }),
+        fragment: gql`
+          fragment QueuedRow on ShoppingListItem {
+            id
+            itemName
+            item {
+              id
+            }
+            shoppingList {
+              id
+            }
+          }
+        `,
+        data: {
+          __typename: 'ShoppingListItem',
+          id: 'row-1',
+          itemName: 'Milk',
+          item: { __typename: 'Item', id: 'item-1' },
+          shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
+        },
+      });
+      const operation = makeOperation({
+        query: ToggleShoppingListItemPurchasedDocument,
+        operationName: operationNameOf(ToggleShoppingListItemPurchasedDocument),
+        variables: { input: { id: 'row-1', purchased: true } },
+        context: { localFirst: true },
+        cache,
+      });
+
+      link.request(operation, makeForward()).subscribe({
+        complete() {
+          expect(
+            jest.mocked(queueStore.addMutation).mock.calls[0]?.[0].replayInputs,
+          ).toEqual({ shoppingListId: 'list-1', refItemId: 'item-1' });
+          done();
+        },
+      });
+    });
+
     it('queues a localFirst mutation when offline without hitting the network', done => {
       mockedGetState.mockReturnValue({
         isOnline: false,
@@ -335,7 +437,7 @@ describe('createQueueLink', () => {
       const forward = makeForward();
 
       const observable = link.request(operation, forward);
-      observable!.subscribe({
+      observable.subscribe({
         next(result) {
           // The hook's own pre-fired cache write provides the UI change; the
           // queued result carries each top-level field as null plus the
@@ -372,7 +474,7 @@ describe('createQueueLink', () => {
       const forward = makeForward();
 
       const observable = link.request(operation, forward);
-      observable!.subscribe({
+      observable.subscribe({
         next(result) {
           // Each top-level mutation field is emitted as null so Apollo's result
           // write doesn't warn "Missing field"; the classifier reads a null
@@ -397,14 +499,14 @@ describe('createQueueLink', () => {
         user: { id: 'user-1' },
       });
       const operation = makeOperation({
-        query: MOCK_MUTATION,
-        operationName: 'UpdatePantryItem',
+        query: UpdatePantryItemDocument,
+        operationName: operationNameOf(UpdatePantryItemDocument),
         variables: { input: { id: 'item-1', quantity: 2 } },
         // no localFirst — allowlisted via SYNC_REGISTRY
       });
       const forward = makeForward();
 
-      link.request(operation, forward)!.subscribe({
+      link.request(operation, forward).subscribe({
         next(result) {
           expect(result.extensions).toEqual({
             queued: true,
@@ -425,23 +527,24 @@ describe('createQueueLink', () => {
         user: { id: 'user-1' },
       });
       const operation = makeOperation({
-        query: MOCK_MUTATION,
-        operationName: 'CreateRecipeReview',
+        query: CreateRecipeReviewDocument,
+        operationName: operationNameOf(CreateRecipeReviewDocument),
         variables: { input: { rating: 5 } },
         // no localFirst, no Sync* mapping → online-only
       });
       const forward = makeForward();
 
-      link.request(operation, forward)!.subscribe({
+      link.request(operation, forward).subscribe({
         next() {
           done(new Error('should not emit a result'));
         },
         error(err) {
           // The hook's error path shows an honest failure; nothing replays later.
-          // It is the named OfflineRejectedError (so the breaker/telemetry can
-          // skip it) yet still reads as network-shaped for the hook.
+          // It is the named OfflineRejectedError, never a network failure: the
+          // breaker and telemetry skip it, since it never touched the wire.
           expect(err).toBeInstanceOf(OfflineRejectedError);
-          expect(isNetworkError(err)).toBe(true);
+          expect(isOfflineRejectedError(err)).toBe(true);
+          expect(isNetworkError(err)).toBe(false);
           expect((err as Error).message).toContain('CreateRecipeReview');
           expect(forward).not.toHaveBeenCalled();
           expect(queueStore.addMutation).not.toHaveBeenCalled();
@@ -463,7 +566,7 @@ describe('createQueueLink', () => {
       const forward = makeForward();
 
       const observable = link.request(operation, forward);
-      observable!.subscribe({
+      observable.subscribe({
         error(err) {
           expect(err.message).toBe(
             'Cannot queue mutation: No authenticated user',
@@ -496,7 +599,7 @@ describe('createQueueLink', () => {
       });
       const forward = makeForward();
 
-      link.request(operation, forward)!.subscribe({
+      link.request(operation, forward).subscribe({
         next(result) {
           expect(result.extensions).toEqual({
             queued: true,
@@ -525,7 +628,7 @@ describe('createQueueLink', () => {
       });
       const forward = makeForward();
 
-      link.request(operation, forward)!.subscribe({
+      link.request(operation, forward).subscribe({
         complete() {
           expect(forward).toHaveBeenCalledTimes(1);
           expect(queueStore.addMutation).not.toHaveBeenCalled();
@@ -541,14 +644,14 @@ describe('createQueueLink', () => {
         user: { id: 'user-1' },
       });
       const operation = makeOperation({
-        query: MOCK_MUTATION,
-        operationName: 'UpdatePantryItem',
+        query: UpdatePantryItemDocument,
+        operationName: operationNameOf(UpdatePantryItemDocument),
         variables: { input: { id: 'item-1', quantity: 2 } },
         // no localFirst — allowlisted via SYNC_REGISTRY, same as the offline path
       });
       const forward = makeForward();
 
-      link.request(operation, forward)!.subscribe({
+      link.request(operation, forward).subscribe({
         next(result) {
           expect(result.extensions).toEqual({
             queued: true,
@@ -565,29 +668,28 @@ describe('createQueueLink', () => {
   });
 
   describe('never-queue operations', () => {
-    const neverQueueOps = [
-      'RefreshToken',
-      'Login',
-      'Register',
-      'SignUp',
-      'Logout',
-      'VerifyEmail',
+    const neverQueueDocuments = [
+      RefreshTokenDocument,
+      LoginDocument,
+      RegisterDocument,
+      VerifyEmailDocument,
     ];
 
-    neverQueueOps.forEach(opName => {
+    neverQueueDocuments.forEach(document => {
+      const opName = operationNameOf(document);
       it(`forwards ${opName} even when offline`, done => {
         mockedGetState.mockReturnValue({
           isOnline: false,
           user: { id: 'user-1' },
         });
         const operation = makeOperation({
-          query: MOCK_LOGIN_MUTATION,
+          query: document,
           operationName: opName,
         });
         const forward = makeForward({ [opName.toLowerCase()]: { ok: true } });
 
         const observable = link.request(operation, forward);
-        observable!.subscribe({
+        observable.subscribe({
           complete() {
             expect(forward).toHaveBeenCalledTimes(1);
             expect(queueStore.addMutation).not.toHaveBeenCalled();
@@ -615,7 +717,7 @@ describe('createQueueLink', () => {
       const forward = makeForward();
 
       const observable = link.request(operation, forward);
-      observable!.subscribe({
+      observable.subscribe({
         complete() {
           expect(forward).toHaveBeenCalledTimes(1);
           expect(queueStore.addMutation).not.toHaveBeenCalled();
@@ -656,7 +758,7 @@ describe('createQueueLink', () => {
         context: { localFirst: true },
       });
 
-      link.request(operation, makeForward())!.subscribe({
+      link.request(operation, makeForward()).subscribe({
         next() {
           done(new Error('a refused enqueue must not report success'));
         },
@@ -666,6 +768,8 @@ describe('createQueueLink', () => {
             expect.objectContaining({ operationName: 'AddItem' }),
             expect.objectContaining({ retryable: false }),
           );
+          // Nothing was queued, so no save is owed to a queued write.
+          expect(apolloCachePersistence.flushPending).not.toHaveBeenCalled();
           done();
         },
       });

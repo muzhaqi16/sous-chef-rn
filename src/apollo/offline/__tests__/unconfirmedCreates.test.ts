@@ -1,15 +1,15 @@
-import type { DocumentNode } from 'graphql';
 import { unconfirmedCreates } from '../unconfirmedCreates';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { QueueStatus, type QueuedMutation } from '#/apollo/offlineQueue/types';
 import { storage } from '#storage/mmkv';
+import { queuedMutationFor } from '#/test-utils/queuedMutation';
+import { CreateMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 
 function makeQueuedCreate(clientId: string): QueuedMutation {
   return {
     id: `mut-${clientId}`,
     userId: 'user-1',
-    operationName: 'CreateMealPlan',
-    mutation: { kind: 'Document', definitions: [] } as DocumentNode,
+    ...queuedMutationFor(CreateMealPlanDocument),
     variables: { input: { id: clientId, name: 'Camping Trip' } },
     status: QueueStatus.PENDING,
     createdAt: Date.now(),

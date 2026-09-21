@@ -1,18 +1,20 @@
 import { BaseScreen } from './BaseScreen';
+import { authTestIDs } from '../../src/features/auth/testIDs';
+import { kitTestIDs } from '../../src/components/testIDs';
 
 export class ForgotPasswordScreen extends BaseScreen {
-  protected screenID = 'forgot-password-screen';
+  protected screenID = authTestIDs.forgotPasswordScreen;
 
-  private readonly emailInput = 'forgot-password-email-input';
+  private readonly emailInput = authTestIDs.forgotPasswordEmailInput;
 
   /** Last field filled here, so it is the one holding the keyboard. */
-  protected keyboardInput = this.emailInput;
+  protected override keyboardInput = this.emailInput;
 
   /** `AuthFormTemplate`'s title row — above the keyboard on every auth screen. */
-  protected blurTarget = 'auth-title-row';
-  private readonly submitButton = 'forgot-password-submit-button';
-  private readonly loginLink = 'forgot-password-login-link';
-  private readonly sentView = 'forgot-password-sent';
+  protected override blurTarget = authTestIDs.formTitleRow;
+  private readonly submitButton = authTestIDs.forgotPasswordSubmitButton;
+  private readonly loginLink = authTestIDs.forgotPasswordLoginLink;
+  private readonly sentView = authTestIDs.forgotPasswordSentView;
 
   async requestPasswordReset(email: string) {
     await this.waitForScreen();
@@ -35,7 +37,7 @@ export class ForgotPasswordScreen extends BaseScreen {
   }
 
   async expectEmailFieldError() {
-    await this.expectVisible(`${this.emailInput}-error`);
+    await this.expectVisible(kitTestIDs.inputError(this.emailInput));
   }
 
   async expectSubmitVisible() {

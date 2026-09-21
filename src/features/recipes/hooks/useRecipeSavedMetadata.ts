@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { gql, type ApolloCache } from '@apollo/client';
 import {
   snapshotFields,
-  updateEntityFieldsLocalFirst,
+  writeEntityFields,
 } from '#/apollo/utils/localFirstFields';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import {
   UpdateFavoriteRecipeDocument,
   RemoveRecipeFromFavoritesDocument,
@@ -18,6 +18,7 @@ import {
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { performOptimisticUnfavorite } from '#features/recipes/utils/optimisticUnfavorite';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 
 interface UseRecipeSavedMetadataOptions {
   recipeId: string | undefined;
@@ -86,26 +87,31 @@ export function useRecipeSavedMetadata({
     updates: Partial<SavedDetailsRef>,
     input: Record<string, unknown>,
   ): Promise<boolean> => {
+    // Every caller returns early without a recipe; this keeps the id typed.
+    if (!recipeId) return false;
     const saved = readSavedDetails(client.cache, recipeId);
+    const entity = saved
+      ? { __typename: 'SavedRecipe', id: saved.id }
+      : undefined;
     const previous = snapshotFields(saved, updates);
+    writeEntityFields(client.cache, entity, updates);
 
-    // `persisted` is false only for a REFUSAL — a queued write keeps its cache
-    // change and counts as persisted. Returned rather than swallowed: the
-    // helper has already reverted the cache by then, so a caller that toasts
-    // success regardless tells the user the opposite of what it just did.
-    const { persisted } = await updateEntityFieldsLocalFirst({
-      cache: client.cache,
-      entity: saved ? { __typename: 'SavedRecipe', id: saved.id } : undefined,
-      updates,
-      previous,
-      logLabel: 'updateFavoriteRecipe',
-      mutate: () =>
+    // A queued write keeps its cache change and counts as persisted.
+    const settled = await settleMutation(
+      () =>
         updateFavoriteRecipeMutation({
-          variables: { input: { recipeId: recipeId!, ...input } },
+          variables: { input: { recipeId, ...input } },
           context: { localFirst: true },
         }),
-    });
-    return persisted;
+      {
+        document: UpdateFavoriteRecipeDocument,
+        fallback: t('recipes.updateRecipeFailed'),
+        onFailed: () => writeEntityFields(client.cache, entity, previous),
+        present: 'none',
+      },
+    );
+    if (settled.failure) toastService.error(settled.failure.body);
+    return settled.status !== 'failed';
   };
   const [showFolderPicker, setShowFolderPicker] = useState(false);
   const [updatingFolderTags, setUpdatingFolderTags] = useState(false);
@@ -114,13 +120,9 @@ export function useRecipeSavedMetadata({
     UpdateFavoriteRecipeDocument,
     {
       update: (cache, { data }) => {
-        if (
-          data?.updateFavoriteRecipe?.__typename !==
-          'UpdateFavoriteRecipePayload'
-        ) {
-          return;
-        }
-        const updatedSavedRecipe = data.updateFavoriteRecipe.savedRecipe;
+        const payload = appliedPayload(data);
+        if (!payload) return;
+        const updatedSavedRecipe = payload.savedRecipe;
 
         const folder = updatedSavedRecipe.folder;
         if (folder) {
@@ -163,13 +165,6 @@ export function useRecipeSavedMetadata({
           },
         );
       },
-      // Reports, never displays. `err.message` is the server's own English —
-      // unlocalizable by construction — and every caller of
-      // `applyMetadataUpdate` now surfaces its own localized refusal, so a
-      // toast here would also be the second one for a single failure.
-      onError: err => {
-        errorService.reportError(err, { operation: 'updateFavoriteRecipe' });
-      },
     },
   );
 
@@ -194,10 +189,7 @@ export function useRecipeSavedMetadata({
       // server's unchanged folder back over the row — so it snapped back
       // seconds later under a success toast, and offline never converged.
       const persisted = await applyMetadataUpdate({ folder }, { folder });
-      if (!persisted) {
-        toastService.error(t('recipes.updateRecipeFailed'));
-        return;
-      }
+      if (!persisted) return;
       toastService.success(
         folder
           ? t('recipes.movedToFolder', { folder })
@@ -211,10 +203,7 @@ export function useRecipeSavedMetadata({
 
     return executeWithLoadingState(async () => {
       const persisted = await applyMetadataUpdate({ tags }, { tags });
-      if (!persisted) {
-        toastService.error(t('recipes.updateRecipeFailed'));
-        return;
-      }
+      if (!persisted) return;
       toastService.success(t('recipes.tagsUpdated'));
     }, setUpdatingFolderTags);
   };
@@ -229,10 +218,7 @@ export function useRecipeSavedMetadata({
         { notes },
         { notes: notes || null },
       );
-      if (!persisted) {
-        toastService.error(t('recipes.updateRecipeFailed'));
-        return;
-      }
+      if (!persisted) return;
       toastService.success(t('recipes.notesUpdated'));
     }, setUpdatingFolderTags);
   };
@@ -245,10 +231,7 @@ export function useRecipeSavedMetadata({
         { personalRating: rating },
         { personalRating: rating },
       );
-      if (!persisted) {
-        toastService.error(t('recipes.updateRecipeFailed'));
-        return;
-      }
+      if (!persisted) return;
       toastService.success(
         rating
           ? t('recipes.ratedValue', { rating })
@@ -260,7 +243,7 @@ export function useRecipeSavedMetadata({
   const handleUnfavoriteRecipe = (): Promise<void> => {
     // For backend recipes, use recipeId. For external recipes, fall back to
     // the preloadedRecipe id from the preload cache.
-    const targetRecipeId = recipeId || preloadedRecipeId;
+    const targetRecipeId = recipeId ?? preloadedRecipeId;
 
     if (!targetRecipeId) {
       toastService.error(t('recipes.cannotRemoveNoId'));
@@ -278,9 +261,8 @@ export function useRecipeSavedMetadata({
             // unreachable instead of surfacing a blocking error.
             context: { localFirst: true },
           }),
-        operation: 'unfavoriteRecipe',
-        reportFailure: () =>
-          toastService.error(t('recipes.removeFromSavedFailed')),
+        fallback: t('recipes.removeFromSavedFailed'),
+        present: failure => toastService.error(failure.body),
       });
       if (!kept) return;
 

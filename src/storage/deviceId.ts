@@ -4,6 +4,7 @@ import { generateId } from '#/utils/generateId';
 
 const DEVICE_ID_KEY = 'device_id';
 const LEGACY_FINGERPRINT_KEY = 'device_fingerprint';
+const DEVICE_ROW_KEY = 'device_row';
 
 let cachedDeviceId: string | null = null;
 let hydration: Promise<string | null> | null = null;
@@ -91,4 +92,12 @@ export function readLegacyDeviceFingerprint(): string | null {
 /** Called only once the server confirms the row is gone. */
 export function clearLegacyDeviceFingerprint(): void {
   if (mirrorIsUsable()) storage.remove(LEGACY_FINGERPRINT_KEY);
+}
+
+/**
+ * A retired key: it named the server row a session end once cleared the push
+ * token on. Removed on session end so it does not outlive the account it names.
+ */
+export function clearRetiredDeviceRow(): void {
+  if (mirrorIsUsable()) storage.remove(DEVICE_ROW_KEY);
 }

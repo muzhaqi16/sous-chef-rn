@@ -1,3 +1,5 @@
+import { t } from '#/i18n';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import React, { type ReactNode } from 'react';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { renderHook, act } from '@testing-library/react-native';
@@ -7,6 +9,7 @@ import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { ConvertExpiredBatchesToWasteDocument } from '#features/pantry/graphql/pantry.generated';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { alertService } from '#/services/alertService';
 import { useConvertExpiredBatchesToWaste } from '../useConvertExpiredBatchesToWaste';
 
@@ -29,7 +32,10 @@ function renderConvert(
   onSuccess?: () => void,
 ) {
   const tapLink = new ApolloLink((operation, forward) => {
-    if (operation.operationName === 'ConvertExpiredBatchesToWaste') {
+    if (
+      operation.operationName ===
+      operationNameOf(ConvertExpiredBatchesToWasteDocument)
+    ) {
       capturedContexts.push({
         ...operation.getContext(),
         variables: operation.variables,
@@ -103,7 +109,7 @@ describe('useConvertExpiredBatchesToWaste (local-first)', () => {
             data: {
               convertExpiredBatchesToWaste: {
                 __typename: 'NotFoundError',
-                code: 'NOT_FOUND',
+                code: ErrorCode.NotFound,
                 message: 'Pantry item not found',
                 resource: 'PantryItem',
                 resourceId: 'item-1',
@@ -123,11 +129,11 @@ describe('useConvertExpiredBatchesToWaste (local-first)', () => {
 
     expect(resolved).toBe(false);
     expect(onSuccess).not.toHaveBeenCalled();
-    // A union-error payload carries no transport error, so onError never fires —
-    // the hook must surface its own alert.
+    // A refusal resolves as data; the hook still tells the user, in the copy
+    // for a missing record rather than the server's text.
     expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Failed to discard expired items',
+      t('errors.notFoundTitle'),
+      expect.stringContaining('could not be found'),
     );
   });
 });

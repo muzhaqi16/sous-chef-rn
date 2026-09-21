@@ -1,5 +1,9 @@
-import { useConversionPreview } from './useConversionPreview';
+import {
+  useConversionPreview,
+  type UseConversionPreviewOptions,
+} from './useConversionPreview';
 import type { PantryActionSharedState } from '#features/pantry/components/modals/PantryActionModal';
+import { snapDeductionToCap } from '#features/pantry/utils/validateDeductionQuantity';
 
 interface QuantityFeedbackResult {
   /** Conversion preview (text, loading state, raw value, server certainty) */
@@ -17,6 +21,33 @@ interface QuantityFeedbackResult {
   remainingUnitSymbol: string;
 }
 
+/** A pantry action's preview: a dual-tracked item previews into its net weight. */
+export function actionConversionOptions(
+  inputQuantity: number | null,
+  shared: PantryActionSharedState,
+): UseConversionPreviewOptions {
+  const toNetWeight = shared.isDualTracked && shared.isConvertedUnit;
+  const trackingUnitId = toNetWeight
+    ? shared.netWeightUnitId
+    : shared.trackingUnitId;
+  return {
+    pantryItemId: shared.pantryItemId,
+    inputQuantity,
+    selectedUnitId: shared.activeUnitId,
+    selectedUnitSymbol: shared.activeUnitSymbol,
+    selectedDisplayAsFraction: shared.displayAsFractionOf(shared.activeUnitId),
+    trackingUnitId,
+    trackingUnitSymbol:
+      toNetWeight && shared.netWeightUnitSymbol !== undefined
+        ? shared.netWeightUnitSymbol
+        : shared.trackingUnitSymbol,
+    trackingDisplayAsFraction: shared.displayAsFractionOf(trackingUnitId),
+    conversionRatio: shared.isDualTracked
+      ? null
+      : shared.selectedUnitInfo?.conversionRatio ?? null,
+  };
+}
+
 /**
  * Shared quantity feedback for consume / waste modals.
  *
@@ -28,23 +59,9 @@ export function useQuantityFeedback(
   shared: PantryActionSharedState,
 ): QuantityFeedbackResult {
   // For dual-tracked items, convert input to net weight unit (e.g. cups → grams)
-  const conversion = useConversionPreview({
-    pantryItemId: shared.pantryItemId,
-    inputQuantity,
-    selectedUnitId: shared.activeUnitId,
-    selectedUnitSymbol: shared.activeUnitSymbol,
-    trackingUnitId:
-      shared.isDualTracked && shared.isConvertedUnit
-        ? shared.netWeightUnitId!
-        : shared.trackingUnitId,
-    trackingUnitSymbol:
-      shared.isDualTracked && shared.isConvertedUnit
-        ? shared.netWeightUnitSymbol!
-        : shared.trackingUnitSymbol,
-    conversionRatio: shared.isDualTracked
-      ? null
-      : shared.selectedUnitInfo?.conversionRatio ?? null,
-  });
+  const conversion = useConversionPreview(
+    actionConversionOptions(inputQuantity, shared),
+  );
 
   const hasInput = inputQuantity !== null && !isNaN(inputQuantity);
   let remaining: number | null = null;
@@ -58,19 +75,28 @@ export function useQuantityFeedback(
       shared.availableInSelectedUnit ?? 0,
       shared.trackingQuantity,
     );
-    remaining = hasInput ? availableInUnit - inputQuantity : null;
-  } else if (shared.isDualTracked && conversion.convertedValue != null) {
-    // API converted input to net weight — subtract directly
-    availableInUnit = shared.remainingNetWeight!;
-    remainingUnitSymbol = shared.netWeightUnitSymbol!;
     remaining = hasInput
-      ? shared.remainingNetWeight! - conversion.convertedValue
+      ? availableInUnit - snapDeductionToCap(inputQuantity, availableInUnit)
+      : null;
+  } else if (
+    shared.isDualTracked &&
+    conversion.convertedValue != null &&
+    shared.remainingNetWeight != null &&
+    shared.netWeightUnitSymbol !== undefined
+  ) {
+    // API converted input to net weight — subtract directly. Dual tracking
+    // implies both the remaining weight and its unit are present.
+    availableInUnit = shared.remainingNetWeight;
+    remainingUnitSymbol = shared.netWeightUnitSymbol;
+    remaining = hasInput
+      ? shared.remainingNetWeight - conversion.convertedValue
       : null;
   } else if (shared.availableInSelectedUnit != null) {
     // Non-dual-tracked converted unit — subtract in selected unit
     availableInUnit = shared.availableInSelectedUnit;
     remaining = hasInput
-      ? shared.availableInSelectedUnit - inputQuantity
+      ? shared.availableInSelectedUnit -
+        snapDeductionToCap(inputQuantity, shared.availableInSelectedUnit)
       : null;
   }
 

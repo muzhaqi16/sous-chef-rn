@@ -1,11 +1,11 @@
 import { boolean, date, mixed, object, string, type ObjectSchema } from 'yup';
-import { t } from '#/i18n';
+import { t, type TranslationKey } from '#/i18n';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 
 // Messages resolve LAZILY: the schema is built once at module scope, so an
 // eagerly resolved one freezes whichever language was active at import time.
-const msg = (key: string) => (): string => t(key);
+const msg = (key: TranslationKey) => (): string => t(key);
 
 export interface MoveToPantryFormValues {
   pantryId: string | null;
@@ -24,7 +24,7 @@ export const moveToPantrySchema: ObjectSchema<MoveToPantryFormValues> = object({
   quantityInput: string()
     .defined()
     .test('positive', msg('errors.invalidQuantity'), value => {
-      const parsed = parseFractionalInput(value ?? '');
+      const parsed = parseFractionalInput(value);
       return parsed !== null && !Number.isNaN(parsed) && parsed > 0;
     }),
   // A unit is chosen from the catalog OR typed; either satisfies the field, so

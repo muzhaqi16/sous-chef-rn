@@ -1,8 +1,9 @@
 import React from 'react';
 import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { VerifyEmailDocument } from '#operations/auth/auth.generated';
+import { SignedInEmailVerificationDocument } from '#features/auth/hooks/useVerifyEmail.generated';
 import { UserRole, AppTheme, ErrorCode } from '#/graphql/generated/schemaTypes';
 import type { RootState } from '#store/index';
 import { EmailVerificationDeepLinkScreen } from '../EmailVerificationDeepLinkScreen';
@@ -66,6 +67,7 @@ jest.mock('#store/useAppStore', () => {
     useAppStore: <T,>(selector: (state: RootState) => T): T =>
       selector(getState()),
     useUser: jest.fn(() => mockUserObject),
+    useUserId: jest.fn(() => mockUserObject.id),
     useUpdateUser: () => getState().updateUser,
   };
 });
@@ -104,7 +106,8 @@ jest.mock('#components/atoms/SousChefLoader', () => {
 
 function buildVerifyMock(
   recordedVariables: Record<string, unknown>[] = [],
-): MockedResponse {
+  verifiedUserId = '1',
+): MockFor<typeof VerifyEmailDocument> {
   return {
     request: {
       query: VerifyEmailDocument,
@@ -119,7 +122,7 @@ function buildVerifyMock(
           __typename: 'VerifyEmailPayload',
           user: {
             __typename: 'User',
-            id: '1',
+            id: verifiedUserId,
             email: 'test@example.com',
             emailVerified: true,
             role: UserRole.User,
@@ -236,30 +239,60 @@ describe('EmailVerificationDeepLinkScreen', () => {
     expect(screen.getByText('Email Verified!')).toBeTruthy();
   });
 
-  it('treats an already-verified address as success', async () => {
-    // A link opened twice — mail app, then browser — is a verified account, not
-    // a failure worth showing the user.
+  it('does not mark the signed-in account verified for another account’s link', async () => {
     renderWithApollo(<EmailVerificationDeepLinkScreen />, {
-      operationMocks: [
-        {
-          request: { query: VerifyEmailDocument, variables: () => true },
-          result: {
-            data: {
-              verifyEmail: {
-                __typename: 'ConflictError',
-                code: ErrorCode.EmailAlreadyVerified,
-                message: 'Email already verified',
-              },
-            },
-          },
+      operationMocks: [buildVerifyMock([], 'account-b')],
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Email Verified!')).toBeTruthy();
+    });
+    expect(mockUpdateUser).not.toHaveBeenCalled();
+  });
+
+  // A link opened twice — mail app, then browser — is a verified account, not a
+  // failure worth showing the user. The refusal names no account.
+  const alreadyVerifiedMock: MockFor<typeof VerifyEmailDocument> = {
+    request: { query: VerifyEmailDocument, variables: () => true },
+    result: {
+      data: {
+        verifyEmail: {
+          __typename: 'ConflictError',
+          code: ErrorCode.EmailAlreadyVerified,
+          message: 'Email already verified',
         },
-      ],
+      },
+    },
+  };
+  const signedInVerificationMock = (
+    emailVerified: boolean,
+  ): MockFor<typeof SignedInEmailVerificationDocument> => ({
+    request: { query: SignedInEmailVerificationDocument },
+    result: {
+      data: { me: { __typename: 'User', id: '1', emailVerified } },
+    },
+  });
+
+  it('marks the signed-in account verified once the server confirms an already-verified link', async () => {
+    renderWithApollo(<EmailVerificationDeepLinkScreen />, {
+      operationMocks: [alreadyVerifiedMock, signedInVerificationMock(true)],
     });
 
     await waitFor(() => {
       expect(screen.getByText('Email Verified!')).toBeTruthy();
     });
     expect(mockUpdateUser).toHaveBeenCalledWith({ emailVerified: true });
+  });
+
+  it('leaves the signed-in account unverified when the already-verified link was another account’s', async () => {
+    renderWithApollo(<EmailVerificationDeepLinkScreen />, {
+      operationMocks: [alreadyVerifiedMock, signedInVerificationMock(false)],
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Email Verified!')).toBeTruthy();
+    });
+    expect(mockUpdateUser).not.toHaveBeenCalled();
   });
 
   it('steps aside once a signed-in user is verified', async () => {
@@ -316,8 +349,9 @@ describe('EmailVerificationDeepLinkScreen - no session', () => {
       key: 'test-key',
       name: 'EmailVerificationDeepLink',
     });
-    const { useUser } = require('#store/useAppStore');
+    const { useUser, useUserId } = require('#store/useAppStore');
     (useUser as jest.Mock).mockReturnValue(null);
+    (useUserId as jest.Mock).mockReturnValue(undefined);
   });
 
   afterEach(() => {
@@ -390,7 +424,7 @@ describe('EmailVerificationDeepLinkScreen - retry', () => {
     // Reusing the initial-verification flag for a retry swaps the whole screen
     // back to "Verifying…" and takes away the failure the user is reading.
     // Progress belongs in the button alone.
-    const failingMock: MockedResponse = {
+    const failingMock: MockFor<typeof VerifyEmailDocument> = {
       request: { query: VerifyEmailDocument, variables: () => true },
       result: {
         data: {
@@ -420,8 +454,41 @@ describe('EmailVerificationDeepLinkScreen - retry', () => {
     // Still the failure state — no full-page loader, no lost error message.
     expect(screen.getByText('Verification Failed')).toBeTruthy();
     expect(
-      screen.getByText('Verification code is invalid or expired'),
-    ).toBeTruthy();
+      screen.getAllByText(
+        'Verification failed. The link may be expired or invalid.',
+      ).length,
+    ).toBeGreaterThan(0);
     expect(screen.queryByTestId('loader')).toBeNull();
+  });
+
+  // The refusal's `message` is English by construction; the screen rendered it.
+  it('shows the app’s own sentence for a refused link, never the server’s', async () => {
+    renderWithApollo(<EmailVerificationDeepLinkScreen />, {
+      operationMocks: [
+        {
+          request: { query: VerifyEmailDocument, variables: () => true },
+          result: {
+            data: {
+              verifyEmail: {
+                __typename: 'ValidationError',
+                code: ErrorCode.ValidationFailed,
+                message: 'SERVER PROSE',
+                field: 'code',
+              },
+            },
+          },
+        },
+      ],
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Verification Failed')).toBeTruthy();
+    });
+    expect(screen.queryByText('SERVER PROSE')).toBeNull();
+    expect(
+      screen.getAllByText(
+        'Verification failed. The link may be expired or invalid.',
+      ).length,
+    ).toBeGreaterThan(0);
   });
 });

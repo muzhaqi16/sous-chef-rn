@@ -12,6 +12,7 @@ fragment ItemPhotoCarousel_itemPhoto on ItemPhoto {
   isPrimary
   status
   variants {
+    id
     url
     kind
   }

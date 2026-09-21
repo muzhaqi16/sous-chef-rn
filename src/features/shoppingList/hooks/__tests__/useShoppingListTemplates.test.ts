@@ -1,16 +1,23 @@
 import { waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import { GetShoppingListTemplatesDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  GetShoppingListTemplatesDocument,
+  type GetShoppingListTemplatesQuery,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { COPYABLE_ITEM_LIMIT } from '#features/shoppingList/cache/copySource';
 import { useShoppingListTemplates } from '../useShoppingListTemplates';
+
+type TemplateEdge = MockPart<
+  GetShoppingListTemplatesQuery['shoppingLists']['edges'][number]
+>;
 
 function buildTemplate(
   id: string,
   name: string,
   templateName: string | null,
   totalItems = 0,
-) {
+): TemplateEdge {
   return {
     __typename: 'ShoppingListEdge',
     cursor: id,
@@ -24,7 +31,7 @@ function buildTemplate(
   };
 }
 
-const templatesMock: MockedResponse = {
+const templatesMock: MockFor<typeof GetShoppingListTemplatesDocument> = {
   request: {
     query: GetShoppingListTemplatesDocument,
     variables: { first: 50, copyableItemLimit: COPYABLE_ITEM_LIMIT },
@@ -54,7 +61,7 @@ describe('useShoppingListTemplates', () => {
       operationMocks: [templatesMock],
     });
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await waitFor(() => expect(result.current.templates).toHaveLength(2));
 
     expect(result.current.templates).toEqual([
       { id: 'tpl-1', displayName: 'Weekly Staples', totalItems: 12 },
@@ -62,13 +69,11 @@ describe('useShoppingListTemplates', () => {
     ]);
   });
 
-  it('returns nothing and fires no request when skipped', async () => {
+  it('returns nothing when skipped', () => {
     const { result } = renderHookWithApollo(
       () => useShoppingListTemplates({ skip: true }),
       { operationMocks: [templatesMock] },
     );
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.templates).toEqual([]);
   });

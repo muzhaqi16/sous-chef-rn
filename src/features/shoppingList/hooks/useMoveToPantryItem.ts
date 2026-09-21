@@ -53,7 +53,7 @@ export function useMoveToPantryItem({
     // unit of its own — the two agree otherwise, since the server derives one
     // from the other.
     purchasedUnit:
-      purchaseData?.shoppingListItem?.purchasesConnection?.edges?.[0]?.node ??
+      purchaseData?.shoppingListItem?.purchasesConnection.edges[0]?.node ??
       null,
   };
 }

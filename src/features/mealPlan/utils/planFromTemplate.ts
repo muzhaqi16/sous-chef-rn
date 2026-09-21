@@ -1,4 +1,5 @@
 import { generateEntityId } from '#/utils/generateEntityId';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { mealReferenceOf } from '#features/mealPlan/utils/mealReference';
 import type {
   CreateMealPlanInput,
@@ -62,7 +63,7 @@ export function planFromTemplate(
 
   const plan: CreateMealPlanInput = {
     id: planId,
-    name: options.name?.trim() || source.name,
+    name: firstNonBlank(options.name)?.trim() ?? source.name,
     startDate: options.startDate,
     endDate: new Date(start + span * DAY_MS).toISOString(),
     planType: options.planType,

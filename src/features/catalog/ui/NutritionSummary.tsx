@@ -1,26 +1,24 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { View, ViewStyle, ScrollView } from 'react-native';
+import type { ViewStyle } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import type { NutritionsData, NutritionHighlight } from '#/types/nutrition';
+import type { NutritionHighlight } from '#/types/nutrition';
 import {
-  parseNutritions,
+  type NutritionSummaryFacts,
   extractMacroSummary,
   generateHighlights,
   formatNutritionValue,
   formatCalories,
   hasNutritionData,
 } from '#domain/nutrition';
-import { Text } from '#components/atoms/Text';
+import { Text, type TextTone } from '#components/atoms/Text';
 import { Card } from '#components/atoms/Card';
 
 interface NutritionSummaryProps {
-  /** Raw nutritions JSON from API or parsed NutritionsData */
-  nutritions: unknown;
-  /** Actual serving size in grams to scale values (optional) */
-  actualServingGrams?: number | null;
+  nutritionFacts: NutritionSummaryFacts | null;
   /** Show highlight badges (default: true) */
   showHighlights?: boolean;
   /** Compact mode for inline display */
@@ -32,6 +30,13 @@ interface NutritionSummaryProps {
 }
 
 type MacroTone = 'calories' | 'protein' | 'carbs' | 'fat';
+
+const MACRO_TEXT_TONE: Record<MacroTone, TextTone> = {
+  calories: 'accent',
+  protein: 'success',
+  carbs: 'warning',
+  fat: 'danger',
+};
 
 interface MacroCircleProps {
   label: string;
@@ -50,11 +55,15 @@ const MacroCircle: React.FC<MacroCircleProps> = ({
   return (
     <View style={circleStyles.container}>
       <View style={circleStyles.circle}>
-        <Text role="bodyStrong" style={circleStyles.value}>
+        <Text role="bodyStrong" tone={MACRO_TEXT_TONE[tone]}>
           {value}
         </Text>
         {unit ? (
-          <Text role="label" style={circleStyles.unit}>
+          <Text
+            role="label"
+            tone={MACRO_TEXT_TONE[tone]}
+            style={circleStyles.unit}
+          >
             {unit}
           </Text>
         ) : null}
@@ -73,6 +82,12 @@ const MacroCircle: React.FC<MacroCircleProps> = ({
 
 type HighlightVariant = 'positive' | 'caution' | 'neutral';
 
+const HIGHLIGHT_TEXT_TONE: Record<HighlightVariant, TextTone> = {
+  positive: 'success',
+  caution: 'warning',
+  neutral: 'secondary',
+};
+
 const toVariant = (type: NutritionHighlight['type']): HighlightVariant =>
   type === 'positive' ? 'positive' : type === 'caution' ? 'caution' : 'neutral';
 
@@ -87,7 +102,7 @@ const HighlightBadge: React.FC<HighlightBadgeProps> = ({ highlight }) => {
 
   return (
     <View style={badgeStyles.badge}>
-      <Text role="label" style={badgeStyles.label}>
+      <Text role="label" tone={HIGHLIGHT_TEXT_TONE[variant]}>
         {t(highlight.labelKey)}
       </Text>
     </View>
@@ -95,8 +110,7 @@ const HighlightBadge: React.FC<HighlightBadgeProps> = ({ highlight }) => {
 };
 
 export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
-  nutritions: nutritionsRaw,
-  actualServingGrams,
+  nutritionFacts,
   showHighlights = true,
   compact = false,
   onPress,
@@ -105,16 +119,11 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
   styles.useVariants({ compact });
   const { t } = useTranslation();
 
-  const nutritions =
-    typeof nutritionsRaw === 'object' && nutritionsRaw !== null
-      ? (nutritionsRaw as NutritionsData)
-      : parseNutritions(nutritionsRaw);
+  const macros = extractMacroSummary(nutritionFacts);
 
-  const macros = extractMacroSummary(nutritions, actualServingGrams);
+  const highlights = showHighlights ? generateHighlights(nutritionFacts) : [];
 
-  const highlights = showHighlights ? generateHighlights(nutritions) : [];
-
-  if (!hasNutritionData(nutritions)) {
+  if (!hasNutritionData(nutritionFacts)) {
     return null;
   }
 
@@ -270,26 +279,8 @@ const circleStyles = StyleSheet.create(theme => ({
       },
     },
   },
-  value: {
-    variants: {
-      tone: {
-        calories: { color: theme.colors.primary },
-        protein: { color: theme.colors.success },
-        carbs: { color: theme.colors.warning },
-        fat: { color: theme.colors.error },
-      },
-    },
-  },
   unit: {
-    marginTop: -2,
-    variants: {
-      tone: {
-        calories: { color: theme.colors.primary },
-        protein: { color: theme.colors.success },
-        carbs: { color: theme.colors.warning },
-        fat: { color: theme.colors.error },
-      },
-    },
+    marginTop: -theme.spacing['2xs'],
   },
   label: {
     marginTop: theme.spacing.xs,
@@ -306,15 +297,6 @@ const badgeStyles = StyleSheet.create(theme => ({
         positive: { backgroundColor: theme.colors.success + '20' },
         caution: { backgroundColor: theme.colors.warning + '20' },
         neutral: { backgroundColor: theme.colors.textSecondary + '20' },
-      },
-    },
-  },
-  label: {
-    variants: {
-      variant: {
-        positive: { color: theme.colors.success },
-        caution: { color: theme.colors.warning },
-        neutral: { color: theme.colors.textSecondary },
       },
     },
   },

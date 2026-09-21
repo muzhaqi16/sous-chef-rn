@@ -12,34 +12,38 @@ import {
   persist,
   subscribeWithSelector,
 } from 'zustand/middleware';
+import { isRecord } from '#/utils/isRecord';
 
 enableMapSet();
-import { createAuthSlice, AuthState } from './slices/authSlice';
+import type { AuthState } from './slices/authSlice';
+import { createAuthSlice } from './slices/authSlice';
+import type { PreferencesState } from './slices/preferencesSlice';
 import {
   applyThemePreferenceToRuntime,
   createPreferencesSlice,
-  PreferencesState,
 } from './slices/preferencesSlice';
 import { FontScalePreference } from './slices/preferenceTypes';
-import { createAppSlice, AppState } from './slices/appSlice';
-import { createUISlice, UIState } from './slices/uiSlice';
-import { createTutorialSlice, TutorialState } from './slices/tutorialSlice';
-import {
-  createResetManager,
+import type { AppState } from './slices/appSlice';
+import { createAppSlice } from './slices/appSlice';
+import type { UIState } from './slices/uiSlice';
+import { createUISlice } from './slices/uiSlice';
+import type { TutorialState } from './slices/tutorialSlice';
+import { createTutorialSlice } from './slices/tutorialSlice';
+import type {
   ResetOptions,
   RESET_SCENARIOS,
   SessionEndReason,
 } from './resetManager';
+import { createResetManager } from './resetManager';
 
-import {
-  createNavigationSlice,
-  NavigationState,
-} from './slices/navigationSlice';
-import { createTelemetrySlice, TelemetryState } from './slices/telemetrySlice';
+import type { NavigationState } from './slices/navigationSlice';
+import { createNavigationSlice } from './slices/navigationSlice';
+import type { TelemetryState } from './slices/telemetrySlice';
+import { createTelemetrySlice } from './slices/telemetrySlice';
+import type { NetworkState } from './slices/networkSlice';
 import {
   createNetworkSlice,
   hydrateOfflineModeFromStorage,
-  NetworkState,
 } from './slices/networkSlice';
 import {
   zustandStorage,
@@ -52,7 +56,7 @@ import {
   loadSessionTokens,
   pickFresherSessionTokens,
   clearSessionTokens,
-  type SessionTokenLoadResult,
+  addPendingRevocation,
 } from '#/storage/keychain';
 import { logger } from '#/utils/environment';
 // Type-only: a value import would close the telemetry→useStore cycle.
@@ -68,20 +72,23 @@ const hydrateSessionTokensThenFinish = async (
 ): Promise<void> => {
   // A keychain item outlives the app on iOS. With the encrypted store empty
   // there is no local state behind those tokens — a reinstall, or cleared app
-  // data — so the session is not resumed and the credentials are dropped.
+  // data — so the session is not resumed and the credentials are dropped. Its
+  // lineage is still live server-side and still a push target, so it is parked
+  // for `POST /revoke` rather than only forgotten.
   if (openedWithEmptyStore()) {
+    const orphaned = await loadSessionTokens();
+    if (orphaned.status === 'ok') {
+      await addPendingRevocation(orphaned.tokens);
+    }
     await clearSessionTokens();
     state?.setHydrated(true);
     return;
   }
 
-  // `?? { status: 'absent' }` tolerates legacy test mocks resolving null.
-  const result: SessionTokenLoadResult = (await loadSessionTokens()) ?? {
-    status: 'absent',
-  };
+  const result = await loadSessionTokens();
   if (result.status === 'ok') {
     const fallback =
-      state?.accessToken && state?.refreshToken
+      state?.accessToken && state.refreshToken
         ? { accessToken: state.accessToken, refreshToken: state.refreshToken }
         : null;
     const tokens = pickFresherSessionTokens(result.tokens, fallback);
@@ -90,7 +97,7 @@ const hydrateSessionTokensThenFinish = async (
     if (tokens === result.tokens) {
       state?.setSessionTokensInKeychain(true);
     }
-  } else if (state?.accessToken && state?.refreshToken) {
+  } else if (state?.accessToken && state.refreshToken) {
     // MMKV fallback: the write-through self-heals the keychain, and partialize
     // keeps this copy until `sessionTokensInKeychain` confirms.
     if (result.status === 'error') {
@@ -135,7 +142,7 @@ export const handleStoreRehydration = (
   // since this one last ran `setAuth` — would otherwise denominate every
   // figure on screen in a currency the account does not hold.
   const recordCurrency = state?.user?.preferredCurrency;
-  if (recordCurrency && recordCurrency !== state?.preferredCurrency) {
+  if (recordCurrency && recordCurrency !== state.preferredCurrency) {
     state.preferredCurrency = recordCurrency;
   }
 
@@ -143,9 +150,11 @@ export const handleStoreRehydration = (
   // `#/i18n` pulls in `i18n/config`, which has load-time side effects.
   const language = state?.language;
   if (language && language !== 'en') {
-    import('#/i18n').then(({ changeLanguage }) => {
-      void changeLanguage(language);
-    });
+    void import('#/i18n')
+      .then(({ changeLanguage }) => {
+        void changeLanguage(language);
+      })
+      .catch(error => logger.warn('Loading the stored language failed', error));
   }
 
   void hydrateSessionTokensThenFinish(state);
@@ -155,12 +164,14 @@ export const handleStoreRehydration = (
   const startTs = (globalThis as { __APP_START_TIMESTAMP?: number })
     .__APP_START_TIMESTAMP;
   if (startTs) {
-    import('#services/telemetry').then(({ Telemetry }) => {
-      Telemetry.histogram(
-        'app_js_entry_to_store_ready_ms',
-        Date.now() - startTs,
-      );
-    });
+    void import('#services/telemetry')
+      .then(({ Telemetry }) => {
+        Telemetry.histogram(
+          'app_js_entry_to_store_ready_ms',
+          Date.now() - startTs,
+        );
+      })
+      .catch(error => logger.warn('Loading telemetry failed', error));
   }
 
   // Outside persist (see partialize) so the last setting is readable before
@@ -322,8 +333,10 @@ const BLOB_ONLY_KEYS: ReadonlySet<string> = new Set([
 
 export { PERSISTED_KEYS };
 
-const pickPersisted = (state: RootState): Pick<RootState, PersistedKey> => {
-  const persisted = {} as Pick<RootState, PersistedKey>;
+const pickPersisted = (
+  state: RootState,
+): Partial<Pick<RootState, PersistedKey>> => {
+  const persisted: Partial<Pick<RootState, PersistedKey>> = {};
   for (const key of PERSISTED_KEYS) {
     assignKey(persisted, state, key);
   }
@@ -333,7 +346,7 @@ const pickPersisted = (state: RootState): Pick<RootState, PersistedKey> => {
 // Separate generic so each assignment is typed per-key instead of as the
 // intersection of all persisted value types.
 const assignKey = <K extends PersistedKey>(
-  target: Pick<RootState, PersistedKey>,
+  target: Partial<Pick<RootState, PersistedKey>>,
   source: RootState,
   key: K,
 ): void => {
@@ -441,13 +454,21 @@ export const useStore = create<RootState>()(
           // hold it. Same key strings, different home — without this every
           // dismissed coach mark replays and every login count restarts at 0.
           if (version < 16) {
-            const state = (persistedState ?? {}) as Record<string, unknown>;
-            const hints = {
-              ...((state.featureHintsShown as Record<string, boolean>) ?? {}),
-            };
-            const counts = {
-              ...((state.loginCounts as Record<string, number>) ?? {}),
-            };
+            const state = isRecord(persistedState) ? persistedState : {};
+            const hints: Record<string, boolean> = {};
+            if (isRecord(state.featureHintsShown)) {
+              for (const [key, shown] of Object.entries(
+                state.featureHintsShown,
+              )) {
+                if (typeof shown === 'boolean') hints[key] = shown;
+              }
+            }
+            const counts: Record<string, number> = {};
+            if (isRecord(state.loginCounts)) {
+              for (const [userId, count] of Object.entries(state.loginCounts)) {
+                if (typeof count === 'number') counts[userId] = count;
+              }
+            }
 
             for (const key of legacyTutorialKeys()) {
               if (key.startsWith(LEGACY_HINT_PREFIX)) {

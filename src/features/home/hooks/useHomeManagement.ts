@@ -10,34 +10,20 @@ import { useHomeSelection } from './useHomeSelection';
 import { useHomeMutations } from './useHomeMutations';
 import { useHomeInvitations } from './useHomeInvitations';
 
-// MembershipRole is available from '#generated' directly
-// import { MembershipRole } from '#/graphql/generated/schemaTypes';
-
 export function useHomeManagement() {
   // Query hook - fetches homes and computes stats
-  const {
-    homes,
-    remoteDefaultHomeId,
-    loading,
-    initialLoading,
-    error,
-    stats,
-    refetch,
-  } = useHomeQuery();
+  const { homes, remoteDefaultHomeId, loading, hasResult, stats, refetch } =
+    useHomeQuery();
 
   // Selection hook - handles default home logic
-  const {
-    selectedHomeId,
-    setDefaultHome,
-    setSelectedHomeId,
-    setSelectedPantryId,
-  } = useHomeSelection({
-    homes,
-    remoteDefaultHomeId,
-  });
+  const { setDefaultHome, setSelectedHomeId, setSelectedPantryId } =
+    useHomeSelection({
+      homes,
+      remoteDefaultHomeId,
+    });
 
   // Mutations hook - CRUD operations
-  const { createHome, deleteHome, creating, deleting } = useHomeMutations({
+  const { createHome, deleteHome, creating } = useHomeMutations({
     refetch,
     setDefaultHome,
     setSelectedPantryId,
@@ -49,7 +35,6 @@ export function useHomeManagement() {
     joinHomeByCode,
     previewHomeByCode,
     previewHome,
-    inviting,
     joiningByCode,
     loadingPreview,
   } = useHomeInvitations({
@@ -62,19 +47,14 @@ export function useHomeManagement() {
   return {
     // Data
     homes,
-    allHomes: homes,
-    selectedHomeId,
     remoteDefaultHomeId,
     loading,
-    initialLoading,
-    error,
+    hasResult,
     stats,
     previewHome,
 
     // Loading states
     creating,
-    deleting,
-    inviting,
     joiningByCode,
     loadingPreview,
 

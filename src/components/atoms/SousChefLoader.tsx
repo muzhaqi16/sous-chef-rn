@@ -22,21 +22,9 @@ import {
 import { Text } from '#components/atoms/Text';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
 import { motion } from '#/theme/foundations/motion';
+import { colors } from '#/theme/foundations/colors';
 
-// Colors for the grocery bag illustration
-const COLORS = {
-  bag: '#D4A574',
-  bagDark: '#C4956A',
-  baguette: '#F5A623',
-  baguetteLines: '#8B5A2B',
-  tomato: '#E53935',
-  tomatoHighlight: '#EF5350',
-  tomatoStem: '#4CAF50',
-  leaves: '#66BB6A',
-  leavesDark: '#43A047',
-  banner: '#FFF3E0',
-  bannerText: '#F58234',
-};
+const COLORS = colors.illustration;
 
 // Size configurations
 const SIZES = {
@@ -101,13 +89,15 @@ function buildPaths(cx: number, cy: number, scale: number) {
   };
 }
 
+const buildForSize = ({ canvas, scale }: (typeof SIZES)[keyof typeof SIZES]) =>
+  buildPaths(canvas / 2, canvas / 2, scale);
+
 // Pre-build paths for each size at module scope (only 3 variants, created once)
-const PATH_CACHE = Object.fromEntries(
-  Object.entries(SIZES).map(([key, { canvas, scale }]) => [
-    key,
-    buildPaths(canvas / 2, canvas / 2, scale),
-  ]),
-) as Record<keyof typeof SIZES, ReturnType<typeof buildPaths>>;
+const PATH_CACHE = {
+  small: buildForSize(SIZES.small),
+  medium: buildForSize(SIZES.medium),
+  large: buildForSize(SIZES.large),
+};
 
 interface SousChefLoaderProps {
   size?: 'small' | 'medium' | 'large';

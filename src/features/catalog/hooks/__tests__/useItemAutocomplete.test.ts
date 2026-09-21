@@ -1,8 +1,6 @@
 import { act } from '@testing-library/react-native';
-import {
-  renderHookWithApollo,
-  type MockedResponse,
-} from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   AutocompleteItemsDocument,
   SearchItemsSemanticDocument,
@@ -52,7 +50,7 @@ jest.mock('#store/useAppStore', () => {
  */
 function createItemsMock(
   recorded: Array<Record<string, unknown>>,
-): MockedResponse {
+): MockFor<typeof AutocompleteItemsDocument> {
   return {
     request: {
       query: AutocompleteItemsDocument,
@@ -62,17 +60,29 @@ function createItemsMock(
       },
     },
     maxUsageCount: Number.POSITIVE_INFINITY,
-    result: { data: { autocompleteItems: [] } },
+    result: {
+      data: {
+        autocompleteItems: {
+          __typename: 'AutocompleteResult',
+          totalCount: 0,
+          suggestions: [],
+        },
+      },
+    },
   };
 }
-function createSemanticMock(): MockedResponse {
+function createSemanticMock(): MockFor<typeof SearchItemsSemanticDocument> {
   return {
     request: {
       query: SearchItemsSemanticDocument,
       variables: () => true,
     },
     maxUsageCount: Number.POSITIVE_INFINITY,
-    result: { data: { searchItemsSemantic: [] } },
+    result: {
+      data: {
+        searchItemsSemantic: { __typename: 'ItemConnection', edges: [] },
+      },
+    },
   };
 }
 

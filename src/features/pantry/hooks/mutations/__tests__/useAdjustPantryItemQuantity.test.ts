@@ -1,6 +1,9 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
+import { t } from '#/i18n';
 import { AdjustPantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import type { AdjustPantryItemQuantityInput } from '#/graphql/generated/schemaTypes';
 import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
@@ -8,25 +11,13 @@ import { useAdjustPantryItemQuantity } from '../useAdjustPantryItemQuantity';
 
 jest.mock('#/services/errorService');
 
-let mockHandleVersionConflict = false;
-jest.mock('#/utils/errors/versionConflict', () => ({
-  handleVersionConflict: jest.fn(() => mockHandleVersionConflict),
-  getVersionConflictMessage: jest.fn(() => 'Version conflict message'),
-}));
-
-let mockIsInvalidUnit = false;
-jest.mock('#/utils/errors/invalidUnit', () => ({
-  isInvalidUnitError: jest.fn(() => mockIsInvalidUnit),
-  getInvalidUnitMessage: jest.fn(() => 'Invalid unit message'),
-}));
-
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
 const successMock = (variables: {
   input: AdjustPantryItemQuantityInput;
-}): MockedResponse => ({
+}): MockFor<typeof AdjustPantryItemQuantityDocument> => ({
   // variables: () => true — the input carries a generated idempotencyKey, so
   // match on the operation, not an exact deep-equal (MockLink can't match the
   // generated value).
@@ -40,7 +31,7 @@ const successMock = (variables: {
           id: variables.input.id,
           version: 1,
           updatedAt: '2026-01-01T00:00:00.000Z',
-          quantity: String(variables.input.newQuantity),
+          quantity: variables.input.newQuantity,
           remainingNetWeight: variables.input.remainingNetWeight ?? null,
           lastUsedAt: null,
           activeBatchCount: 0,
@@ -53,18 +44,20 @@ const successMock = (variables: {
 // variables: () => true — the input carries a generated idempotencyKey, so match
 // on the operation, not an exact deep-equal (MockLink can't match the generated
 // value). These two builders ignore the input entirely (error / static payload).
-const errorMock = (): MockedResponse => ({
+const errorMock = (): MockFor<typeof AdjustPantryItemQuantityDocument> => ({
   request: { query: AdjustPantryItemQuantityDocument, variables: () => true },
   error: new Error('Network error'),
 });
 
-const validationErrorMock = (): MockedResponse => ({
+const validationErrorMock = (): MockFor<
+  typeof AdjustPantryItemQuantityDocument
+> => ({
   request: { query: AdjustPantryItemQuantityDocument, variables: () => true },
   result: {
     data: {
       adjustPantryItemQuantity: {
         __typename: 'ValidationError',
-        code: 'VALIDATION_FAILED',
+        code: ErrorCode.ValidationFailed,
         message: 'Invalid quantity',
         field: 'newQuantity',
       },
@@ -72,22 +65,18 @@ const validationErrorMock = (): MockedResponse => ({
   },
 });
 
+const refusalMock = (
+  member: Record<string, unknown>,
+): MockFor<typeof AdjustPantryItemQuantityDocument> => ({
+  request: { query: AdjustPantryItemQuantityDocument, variables: () => true },
+  result: { data: { adjustPantryItemQuantity: member } },
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
-  mockHandleVersionConflict = false;
-  mockIsInvalidUnit = false;
 });
 
 describe('useAdjustPantryItemQuantity', () => {
-  it('returns adjustQuantity function and loading state', () => {
-    const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
-      wrapper: createApolloTestWrapper({ operationMocks: [] }),
-    });
-
-    expect(typeof result.current.adjustQuantity).toBe('function');
-    expect(result.current.loading).toBe(false);
-  });
-
   it('returns true and calls onSuccess on successful adjustment', async () => {
     const onSuccess = jest.fn();
     const variables = {
@@ -188,10 +177,15 @@ describe('useAdjustPantryItemQuantity', () => {
   });
 
   it('shows version conflict alert on version error', async () => {
-    mockHandleVersionConflict = true;
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
       wrapper: createApolloTestWrapper({
-        operationMocks: [errorMock()],
+        operationMocks: [
+          refusalMock({
+            __typename: 'ConflictError',
+            code: ErrorCode.VersionConflict,
+            message: 'Stale write',
+          }),
+        ],
       }),
     });
 
@@ -201,15 +195,9 @@ describe('useAdjustPantryItemQuantity', () => {
     });
 
     expect(success).toBe(false);
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Item Updated',
-        'Version conflict message',
-        [
-          { text: 'Refresh', onPress: expect.any(Function) },
-          { text: 'Cancel', style: 'cancel' },
-        ],
-      ),
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('errors.entityUpdatedTitle', { entity: t('labels.item') }),
+      getVersionConflictMessage(),
     );
   });
 
@@ -231,7 +219,7 @@ describe('useAdjustPantryItemQuantity', () => {
       // unlocalizable English and belongs in the report, not the alert.
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
-        'Something went wrong.',
+        'Could not adjust the quantity.',
       ),
     );
   });
@@ -256,6 +244,30 @@ describe('useAdjustPantryItemQuantity', () => {
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
       "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.",
+    );
+  });
+  it("explains a refused unit in the app's own copy", async () => {
+    const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
+      wrapper: createApolloTestWrapper({
+        operationMocks: [
+          refusalMock({
+            __typename: 'ValidationError',
+            code: TopLevelErrorCode.UnitInvalid,
+            message: 'raw server words',
+          }),
+        ],
+      }),
+    });
+
+    let success: boolean | undefined;
+    await act(async () => {
+      success = await result.current.adjustQuantity('item-1', 5, 'Count', 1);
+    });
+
+    expect(success).toBe(false);
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('errors.invalidUnitTitle'),
+      t('errors.codes.unitInvalid'),
     );
   });
 });

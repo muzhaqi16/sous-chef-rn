@@ -72,7 +72,6 @@
     "deleteWarning": "Eliminare questa dispensa rimuoverà permanentemente tutti gli articoli al suo interno. Questa azione non può essere annullata.",
     "deleteConfirmMessage": "Vuoi davvero eliminare questa dispensa? Questa azione non può essere annullata e rimuoverà tutti gli articoli.",
     "nameEmptyError": "Il nome della dispensa non può essere vuoto",
-    "createFailed": "Impossibile creare la dispensa",
     "loadErrorTitle": "Errore caricamento dispensa",
     "loadErrorMessage": "Impossibile caricare i dati. Riprova.",
     "userCreatedDescription": "Dispensa creata dall'utente"
@@ -177,7 +176,12 @@
     "currentLabel": "Attuale: ",
     "newQuantity": "Nuova quantità",
     "reasonPlaceholder": "Perché stai modificando la quantità?",
-    "remainingWeightPlaceholder": "Lascia vuoto per regolare automaticamente"
+    "remainingWeightPlaceholder": "Lascia vuoto per regolare automaticamente",
+    "systemReason": {
+      "stackMerged": "Rettifica dopo l'unione di articoli",
+      "stackPurged": "Rimozione amministrativa",
+      "stackRemoved": "Rimosso dalla dispensa"
+    }
   },
   "recordWaste": {
     "wasteBy": "Spreco per",
@@ -300,7 +304,8 @@
     "acquisitionMethod": "Come acquisito",
     "methodPurchased": "Acquistato",
     "methodHomegrown": "Coltivato in casa",
-    "methodGifted": "Regalato"
+    "methodGifted": "Regalato",
+    "methodBarcodeScan": "Scansione codice a barre"
   },
   "pantryScreen": {
     "greetingFallback": "Buongiorno",
@@ -361,9 +366,8 @@
   },
   "duplicateItem": {
     "title": "Articolo già in dispensa",
-    "body": "Questo articolo è già nella tua dispensa. Vuoi rifornirlo o aggiungere una voce separata?",
-    "restock": "Rifornisci",
-    "addAnyway": "Aggiungi comunque"
+    "body": "Questo articolo è già nella tua dispensa in questa unità. Vuoi rifornirlo?",
+    "restock": "Rifornisci"
   },
   "expirationAction": {
     "cooked": "Cucinato",
@@ -418,6 +422,9 @@
   "pantryItemCard": {
     "remainingAmount": "{{amount}} rimanenti",
     "portionsLeft_one": "Rimane {{count}} {{unit}}",
-    "portionsLeft_other": "Rimangono {{count}} {{unit}}"
+    "portionsLeft_other": "Rimangono {{count}} {{unit}}",
+    "packageContents_one": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
+    "packageContents_other": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
+    "packageWithTotal": "{{breakdown}} ({{total}} {{weightUnit}} in totale)"
   }
 }

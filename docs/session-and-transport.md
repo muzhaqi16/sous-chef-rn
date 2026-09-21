@@ -9,10 +9,9 @@ REAL installed graphql-ws against a fake socket — not this table.
 
 ## Session end
 
-**`authService.logout()` is the only sign-out.** There were two paths clearing
-different subsets, and the profile button used the weaker one — so the previous
-person's notification inbox, scanner history, item-autocomplete LRU and queued
-mutations survived a sign-out on a shared device.
+**`authService.logout()` is the only sign-out.** A second path clearing a
+different subset lets the previous person's notification inbox, scanner history,
+item-autocomplete LRU and queued mutations survive a sign-out on a shared device.
 
 `SESSION_SCOPED_STATE` in `src/store/resetManager.ts` is the single list of
 what a session end removes. `resetStore` applies it in memory and
@@ -38,11 +37,14 @@ That registry exists because the steps live in the Apollo layer while
 `store → resetManager → apollo/client → links → store`. Each module registers
 its own step at module init — `logoutCleanup` the Apollo teardown,
 `queueManager` the drain cancel — the same hand-off `registerApolloClient` and
-`registerTokenRefresh` use. Three things about it are load-bearing:
+`registerTokenRefresh` use. Four things about it are load-bearing:
 
-- **`completeLogout()` must run after `performLogoutCleanup()`.** That latch
-  makes `authLink` and `errorLink` refuse every operation; left set, the next
-  sign-in cannot send its login mutation.
+- **The sign-out gate is one counted scope.** `whileSessionEnds`
+  (`src/store/sessionEnding.ts`) holds it across the teardown AND the store
+  reset, on both paths, and releases it however they exit; `authLink` and
+  `errorLink` refuse every operation while it is held. A gate left latched by a
+  throw would refuse the next sign-in's login mutation. `endSession` is
+  single-flight, so N failing operations join one teardown.
 - **`queueManager.onLogout()` is deliberately NOT called.** It deletes the
   user's queued writes, and a rejected refresh token is not the user choosing
   to discard unsynced work. Only the pending drain is cancelled; the entries
@@ -50,21 +52,38 @@ its own step at module init — `logoutCleanup` the Apollo teardown,
   sign-out path.
 - **`apiReachabilityBreaker`'s `/health` probe keeps running.** It is
   unauthenticated, and the sign-in screen needs to know whether the API is up.
-- **`devicePushToken` clears the server's delivery target.** `updateDevice`
-  removes only the token; the device row survives, because deleting it revokes
-  the device credential biometric sign-in exchanges. It resolves the row with
-  `deviceByDeviceId` when this launch never registered, skips the lookup while
-  offline, and is fire-and-forget so a round trip cannot hold the teardown. On
-  `refresh_token_dead` the access token is already refused, so a `ForbiddenError`
-  here is the expected outcome and is logged at `warn`, not treated as an
-  incident.
+- **`refresh-token-revoke` runs first** and reads the tokens before any other
+  step or `resetStore` clears them.
 
-**Every session-end path clears the push token, not just `logout()`.** It is a
-teardown step rather than a call beside the sign-out for exactly that reason:
-`endSession` — the path `account_inactive`, `refresh_token_dead` and
-`session_revoked` take — otherwise leaves a live delivery target for an account
-that has been signed out, and the next person to sign in on that device receives
-its notifications.
+**Push delivery follows the session, so every session end revokes its refresh
+token.** The server pushes to a device only while the account holds a live
+refresh-token lineage bound to it (the `x-device-id` the session was minted
+with). No revocation route touches the push registration and the client does not
+either: a session end sends no `updateDevice`, and signing back in resumes
+delivery with no re-registration.
+
+What the server cannot see is a session the client drops without telling it.
+The `refresh-token-revoke` step (`src/services/auth/refreshTokenRevocation.ts`)
+therefore parks the refresh token (plus the access token, which `/revoke`
+denylists) in the keychain and then `POST /revoke`s it. Parking comes first, so
+a process kill mid-request loses nothing. A 2xx or a 4xx settles the entry; the
+network, a 5xx or a 429 leaves it parked. `usePendingRevocationDrain` drains the
+parked list on launch and whenever `isNetworkWithheld` clears, one entry at a
+time, stopping at the first unanswered request. The step is fire-and-forget: a
+sign-out never waits on the network. `/revoke` needs no access token and is
+idempotent, so it runs on server-ended sessions too. An `AUTH_TOKEN_EXPIRED`
+end, for one, can leave the lineage live. A launch that finds keychain tokens
+behind an empty store (an iOS reinstall) parks them the same way before clearing
+them.
+
+`/revoke` deliberately leaves the device credential exchangeable, so the
+settings sign-out keeps biometric sign-in working.
+
+**A session is bound to the device only if the id is present at sign-in.**
+`login` and `register` await `ensureDeviceId()` before minting, because
+`authLink` sends only what the sync `getDeviceId()` already holds. A session
+minted without the header is bound to no device, and nothing is ever pushed to
+it. Refresh inherits the binding server-side.
 
 **A device update is read as errors-as-data.** `UpdateDeviceResult` is a union
 (`ConflictError | ForbiddenError | NotFoundError | UpdateDevicePayload |
@@ -76,6 +95,19 @@ Where the identity that names the device comes from, and why it is keychain-
 primary: `docs/subscriptions-echo-and-budget.md` § The device identity.
 
 ## Token rotation
+
+**A session end mints nothing.** A credential landing after the teardown cleared
+storage is written back and re-arms the refresh, leaving a signed-out device a
+live session — and `client.stop()` does not cancel an in-flight refresh
+mutation. So `setTokens` refuses a pair while the scope is held, the refresh
+opens no rotation inside it, and a rotation that completes after its session
+was cleared or replaced (the stored refresh token is no longer the one it
+presented) is discarded. Dropping it is safe because `/revoke` retires the
+whole token family under the issuance lock: the teardown's revoke of the
+consumed predecessor also retires a successor the rotation already minted, and
+a rotation that loses the lock to it is refused. One begun before the sign-out
+still answers the request waiting on it, unstored and without re-dialling the
+socket.
 
 **Both transports can rotate, and a lost race is survivable** — the server
 tells one apart from a dead session. Rotation is single-use; when an HTTP
@@ -111,10 +143,27 @@ expired, so an ordinary connect still costs nothing.
 
 **A request is never sent with an access token that has already expired.**
 `authLink` tells "expires in four minutes" from "expired an hour ago": the
-first refreshes ahead without stalling, the second AWAITS the single-flight
-refresh and sends what it returns. Both looked alike under one
-`isTokenExpiringSoon(token, 5min)` call, which is how six concurrent operations
-came to present the same dead JWT and draw six rotations between them.
+first refreshes ahead without stalling, the second awaits
+`proactiveTokenRefresh()` and sends what it returns.
+`isTokenExpiringSoon(token, 5min)` is true for both, so a single call cannot
+tell them apart: collapsed, six concurrent operations present the same dead JWT
+and draw six rotations between them. The refresh itself is single-flight
+(`refreshState` + `refreshQueue` in `src/apollo/links/refreshToken.ts`); the
+REQUESTS are gated on it too.
+
+## Password rules
+
+**A password being SET goes through `newPasswordRule`, not `passwordRule`**
+(`src/utils/validation/common.ts`), and each mirrors the server exactly.
+SETTING one (register, reset, change) is 8–72 characters with a lowercase
+letter, an uppercase letter and a digit — checked locally because a doomed round
+trip spends the rate budget and comes back as an unlocalizable English
+`message`. SIGNING IN reads back a password the account ALREADY has, and the
+server's login schema asserts only non-empty plus the 72 cap (bcrypt's limit,
+not a policy), so `passwordRule` asserts only that too: any extra rule refuses a
+real password, and the reset flow needs the account it cannot reach.
+`src/utils/validation/__tests__/auth.test.ts` § "the password policy for a
+password being SET" pins both halves.
 
 ## WebSocket close codes
 
@@ -125,14 +174,15 @@ and parks a retry while the device is offline (see `awaitDialPermission`, and
 the paragraph below on why `retryWait` cannot hold it). `shouldRetry` is the
 single hook over that loop and answers one question — **is this verdict
 terminal** — reading `src/apollo/links/wsCloseCodes.ts`.
-`shouldAutoReconnect` is folded into it, because it is now the only thing that
+`shouldAutoReconnect` is folded into it, because it is the only thing that
 can stop a re-dial.
 
-**Do NOT add a second backoff beside it.** There was one: a timer whose only
-action was `wsClient.terminate()`, which is `if (connecting) emit('closed')` —
-a no-op once a socket has closed, since graphql-ws clears `connecting` in its
-own close handler. It could interrupt a live connection; it could never dial
-one, so every path that looked like recovery silently wasn't. (Pacing also
+**Do NOT add a second reconnect or backoff loop beside it.** A timer whose
+action is `wsClient.terminate()` does nothing useful: `terminate()` is
+`if (connecting) emit('closed')`, a no-op once a socket has closed, since
+graphql-ws clears `connecting` in its own close handler. It can interrupt a live
+connection but never dial one, so every path that looks like recovery silently
+isn't. (Pacing also
 does not belong in `retryWait`: graphql-ws resets `retries` on every ack and
 skips `retryWait` for close 1000 — pacing lives in `url()`, which every dial
 passes through. Asserted by the "server that accepts then immediately closes"

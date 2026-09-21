@@ -59,7 +59,9 @@ export const CollapsibleChipPicker = <T extends string>({
         style={styles.collapsedRow}
         onPress={() => setExpanded(prev => !prev)}
       >
-        <Text style={commonStyles.bottomSheetSectionLabel}>{label}</Text>
+        <Text role="label" style={commonStyles.bottomSheetSectionLabel}>
+          {label}
+        </Text>
         <View style={styles.collapsedRight}>
           {selectedLabel ? (
             <Text role="bodyStrong" tone="accent">
@@ -91,6 +93,7 @@ export const CollapsibleChipPicker = <T extends string>({
                   onPress={() => handleSelect(option.value)}
                 >
                   <Text
+                    role="caption"
                     style={[
                       commonStyles.bottomSheetOptionText,
                       selected && commonStyles.bottomSheetOptionTextSelected,

@@ -20,6 +20,7 @@ import { useAppStore } from '#store/useAppStore';
 
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
+import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
@@ -148,7 +149,7 @@ export const useListSettings = (listId: string | undefined) => {
   const isHomeMember = !!shoppingList?.home?.myMembership;
   const linkedHomeId = shoppingList?.homeId ?? null;
 
-  const { leaveList, leaving } = useLeaveShoppingList(listId || '');
+  const { leaveList, leaving } = useLeaveShoppingList(listId ?? '');
   const { updateShoppingList } = useUpdateShoppingList(
     t('errors.saveSettingsFailed'),
   );
@@ -218,6 +219,7 @@ export const useListSettings = (listId: string | undefined) => {
         return t('shoppingListScreens.patternMonthly');
       case RecurringPattern.Custom:
         return t('shoppingListScreens.patternCustom');
+      case null:
       default:
         return t('shoppingListScreens.patternNone');
     }
@@ -257,7 +259,7 @@ export const useListSettings = (listId: string | undefined) => {
       return;
     }
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         if (!listId && selectedTemplateId) {
           // The copy is assembled on the device, so it is queued like any
@@ -266,7 +268,7 @@ export const useListSettings = (listId: string | undefined) => {
           const newListId = await createFromTemplate(
             selectedTemplateId,
             name.trim(),
-            selectedHomeId || undefined,
+            selectedHomeId ?? undefined,
           );
           if (!newListId) return;
           if (isDefault) {
@@ -280,9 +282,13 @@ export const useListSettings = (listId: string | undefined) => {
             description: t('shoppingListScreens.createdFromSettings'),
             isDefault,
             tags: ['user-created'],
-            homeId: selectedHomeId || undefined,
+            homeId: selectedHomeId ?? undefined,
           });
-          setSelectedShoppingListId(newList.id);
+          if (newList.status === 'failed') {
+            toastService.error(newList.body);
+            return;
+          }
+          setSelectedShoppingListId(newList.shoppingList.id);
           goBack();
         } else {
           // Local-first: a queued offline save keeps its cache write and
@@ -291,9 +297,9 @@ export const useListSettings = (listId: string | undefined) => {
           const defaultTurnedOn = isDefault && !shoppingList?.isDefault;
           const defaultTurnedOff = !isDefault && !!shoppingList?.isDefault;
           if (defaultTurnedOn) {
-            await setAsDefault(listId!);
+            await setAsDefault(listId);
           }
-          await updateShoppingList(listId!, {
+          await updateShoppingList(listId, {
             name: name.trim(),
             ...(defaultTurnedOff && { isDefault: false }),
           });
@@ -311,7 +317,7 @@ export const useListSettings = (listId: string | undefined) => {
             const parsed =
               budgetInput.trim() === '' ? null : parseDecimalInput(budgetInput);
             if (parsed === null || !Number.isNaN(parsed)) {
-              await setBudget(listId!, parsed, currency ?? undefined);
+              await setBudget(listId, parsed, currency ?? undefined);
             }
           }
         }
@@ -327,6 +333,25 @@ export const useListSettings = (listId: string | undefined) => {
     );
   };
 
+  const deleteList = async (id: string) => {
+    // Suppresses subscription races; the service auto-cleans after 10s.
+    subscriptionService.registerParentDeletion(id);
+
+    // The hook reports a refusal by returning false and has already said so;
+    // leaving the screen anyway strands the person on a list that still exists.
+    const deleted = await deleteShoppingList(id);
+    if (!deleted) {
+      subscriptionService.unregisterParentDeletion(id);
+      return;
+    }
+
+    // useShoppingListSelection then auto-selects the next list.
+    setSelectedShoppingListId(null);
+    // Unmounts this screen's query watcher, so a late subscription
+    // update cannot trigger a refetch of the deleted list.
+    goBack();
+  };
+
   const handleDelete = () => {
     if (!listId) return; // Should never happen as delete button is hidden
     alertService.alert(
@@ -337,21 +362,8 @@ export const useListSettings = (listId: string | undefined) => {
         {
           text: t('labels.delete'),
           style: 'destructive',
-          onPress: async () => {
-            // Suppresses subscription races; the service auto-cleans after 10s.
-            subscriptionService.registerParentDeletion(listId);
-
-            try {
-              await deleteShoppingList(listId!);
-
-              // useShoppingListSelection then auto-selects the next list.
-              setSelectedShoppingListId(null);
-              // Unmounts this screen's query watcher, so a late subscription
-              // update cannot trigger a refetch of the deleted list.
-              goBack();
-            } catch {
-              subscriptionService.unregisterParentDeletion(listId);
-            }
+          onPress: () => {
+            void deleteList(listId);
           },
         },
       ],
@@ -363,9 +375,9 @@ export const useListSettings = (listId: string | undefined) => {
   const handleToggleComplete = () => {
     if (!listId) return;
     if (isCompleted) {
-      reactivateList(listId);
+      void reactivateList(listId);
     } else {
-      completeList(listId);
+      void completeList(listId);
     }
   };
 
@@ -397,7 +409,9 @@ export const useListSettings = (listId: string | undefined) => {
         { text: t('labels.cancel'), style: 'cancel' },
         {
           text: t('labels.archiveList'),
-          onPress: archiveList,
+          onPress: () => {
+            void archiveList();
+          },
         },
       ],
     );
@@ -406,20 +420,20 @@ export const useListSettings = (listId: string | undefined) => {
   // Price tracking toggles immediately (like a real setting), not on Save.
   const handleTogglePriceTracking = (value: boolean) => {
     if (listId) {
-      setPriceTracking(listId, value);
+      void setPriceTracking(listId, value);
     }
   };
 
   // Reminder — a picked date sets/updates it; the clear action removes it.
   const handleSetReminderDate = (date: Date | null) => {
     if (listId && date) {
-      setReminder(listId, date.toISOString(), true);
+      void setReminder(listId, date.toISOString(), true);
     }
   };
 
   const handleClearReminder = () => {
     if (listId) {
-      clearReminder(listId);
+      void clearReminder(listId);
     }
   };
 
@@ -427,13 +441,16 @@ export const useListSettings = (listId: string | undefined) => {
   // spin up a new list from it.
   const handleSaveAsTemplate = () => {
     if (listId) {
-      markAsTemplate(listId, name.trim() || t('shoppingListScreens.thisList'));
+      void markAsTemplate(
+        listId,
+        name.trim() || t('shoppingListScreens.thisList'),
+      );
     }
   };
 
   const handleCreateFromTemplate = () => {
     if (!listId) return;
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         const newListId = await createFromTemplate(
           listId,
@@ -454,19 +471,19 @@ export const useListSettings = (listId: string | undefined) => {
   const handleSelectPattern = (pattern: RecurringPattern) => {
     setShowPatternPicker(false);
     if (listId) {
-      setRecurring(listId, pattern, 1);
+      void setRecurring(listId, pattern, 1);
     }
   };
 
   const handleStopRecurring = () => {
     if (listId) {
-      cancelRecurring(listId);
+      void cancelRecurring(listId);
     }
   };
 
   const handleGenerateNext = () => {
     if (!listId) return;
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         const newListId = await generateNext(listId);
         if (newListId) {
@@ -492,7 +509,11 @@ export const useListSettings = (listId: string | undefined) => {
 
   const handleOpenHomePicker = () => {
     if (!homesLoaded) {
-      fetchHomeData();
+      void fetchHomeData().catch(error =>
+        errorService.reportError(error, {
+          operation: 'ListSettings.fetchHomeData',
+        }),
+      );
     }
     setShowHomePicker(true);
   };
@@ -516,7 +537,7 @@ export const useListSettings = (listId: string | undefined) => {
               return;
             }
 
-            leaveList(currentUserCollaborator.id, {
+            void leaveList(currentUserCollaborator.id, {
               onSuccess: () => {
                 setSelectedShoppingListId(null);
                 goBack();

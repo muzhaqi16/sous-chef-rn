@@ -1,4 +1,5 @@
 import { waitFor } from '@testing-library/react-native';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -38,8 +39,14 @@ const mockGetDeviceTimezone = jest.requireMock(
   '#features/notifications/utils/quietHours',
 ).getDeviceTimezone as jest.Mock;
 
-const basePreferences = {
-  __typename: 'NotificationPreferences' as const,
+type StoredPreferences = NonNullable<
+  NonNullable<
+    MockDataFor<typeof GetNotificationPreferencesDocument>['me']
+  >['notificationPreferences']
+>;
+
+const basePreferences: StoredPreferences = {
+  __typename: 'NotificationPreferences',
   id: 'pref-1',
   emailEnabled: true,
   pushEnabled: true,
@@ -64,25 +71,29 @@ const basePreferences = {
   quietHoursTimezone: 'UTC',
 };
 
-const prefsQueryMock = (patch: Partial<typeof basePreferences> = {}) =>
-  recordMock(GetNotificationPreferencesDocument, {
-    data: {
-      me: {
-        __typename: 'User' as const,
-        id: 'user-1',
-        notificationPreferences: {
-          ...basePreferences,
-          userId: 'user-1',
-          ...patch,
-        },
+const prefsQueryMock = (patch: Partial<typeof basePreferences> = {}) => {
+  const data: MockDataFor<typeof GetNotificationPreferencesDocument> = {
+    me: {
+      __typename: 'User',
+      id: 'user-1',
+      notificationPreferences: {
+        ...basePreferences,
+        userId: 'user-1',
+        ...patch,
       },
     },
+  };
+  return recordMock(GetNotificationPreferencesDocument, {
+    data,
     maxUsageCount: Number.POSITIVE_INFINITY,
   }).mock;
+};
 
-const updatedPrefs = (patch: Partial<typeof basePreferences>) => ({
+const updatedPrefs = (
+  patch: Partial<typeof basePreferences>,
+): MockDataFor<typeof UpdateNotificationPreferencesDocument> => ({
   updateNotificationPreferences: {
-    __typename: 'UpdateNotificationPreferencesPayload' as const,
+    __typename: 'UpdateNotificationPreferencesPayload',
     notificationPreferences: {
       ...basePreferences,
       userId: 'user-1',
@@ -191,7 +202,7 @@ describe('useQuietHoursTimezoneSync', () => {
     const update = recordMock(UpdateNotificationPreferencesDocument, {
       data: {
         updateNotificationPreferences: {
-          __typename: 'ValidationError' as const,
+          __typename: 'ValidationError',
           code: ErrorCode.ValidationFailed,
           message: 'Invalid timezone',
           field: 'quietHours.quietHoursTimezone',

@@ -2,12 +2,13 @@
 
 import React from 'react';
 import { userEvent, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import type { AlertButton } from '#/services/alertService';
 import {
   CollaboratorRole,
+  ErrorCode,
   MembershipRole,
 } from '#/graphql/generated/schemaTypes';
 import { AcceptInvite } from '../AcceptInvite';
@@ -22,6 +23,10 @@ import {
 import {
   GetHomeInviteByTokenDocument,
   GetShoppingListInviteByTokenDocument,
+  type AcceptInvite_HomeInviteFragment,
+  type AcceptInvite_ShoppingListInviteFragment,
+  type GetHomeInviteByTokenQuery,
+  type GetShoppingListInviteByTokenQuery,
 } from '../AcceptInvite.generated';
 
 // The screen resolves the invite straight from the deep-link token, so every
@@ -67,14 +72,21 @@ interface ShoppingListInviteInput {
   role?: CollaboratorRole;
   invitedByEmail?: string | null;
   invitedByDisplayName?: string | null;
-  shoppingListName?: string | null;
+  shoppingListName?: string;
   shoppingListDescription?: string | null;
 }
 
 // Shapes exactly what GetShoppingListInviteByToken selects (id, role, invitedBy,
 // shoppingList) so useFragment reports `complete`.
-function buildShoppingListInvite(input: ShoppingListInviteInput = {}) {
-  const invitedBy =
+/** The invite on the wire: the query's own selection plus the screen's fragment. */
+type ShoppingListInvite =
+  GetShoppingListInviteByTokenQuery['shoppingListInviteByToken'] &
+    AcceptInvite_ShoppingListInviteFragment;
+
+function buildShoppingListInvite(
+  input: ShoppingListInviteInput = {},
+): MockPart<ShoppingListInvite> {
+  const invitedBy: MockPart<ShoppingListInvite['invitedBy']> =
     input.invitedByEmail === null
       ? null
       : {
@@ -94,15 +106,12 @@ function buildShoppingListInvite(input: ShoppingListInviteInput = {}) {
     id: input.id ?? 'invite-1',
     role: input.role ?? CollaboratorRole.Editor,
     invitedBy,
-    shoppingList:
-      input.shoppingListName === null
-        ? null
-        : {
-            __typename: 'ShoppingList',
-            id: 'list-1',
-            name: input.shoppingListName ?? 'My List',
-            description: input.shoppingListDescription ?? null,
-          },
+    shoppingList: {
+      __typename: 'ShoppingList',
+      id: 'list-1',
+      name: input.shoppingListName ?? 'My List',
+      description: input.shoppingListDescription ?? null,
+    },
   };
 }
 
@@ -111,23 +120,23 @@ interface HomeInviteInput {
   role?: MembershipRole;
   inviterEmail?: string;
   inviterDisplayName?: string | null;
-  homeName?: string | null;
+  homeName?: string;
 }
 
 // Shapes exactly what GetHomeInviteByToken selects.
-function buildHomeInvite(input: HomeInviteInput = {}) {
+type HomeInvite = GetHomeInviteByTokenQuery['homeInviteByToken'] &
+  AcceptInvite_HomeInviteFragment;
+
+function buildHomeInvite(input: HomeInviteInput = {}): MockPart<HomeInvite> {
   return {
     __typename: 'HomeInvite',
     id: input.id ?? 'invite-1',
     role: input.role ?? MembershipRole.Member,
-    home:
-      input.homeName === null
-        ? null
-        : {
-            __typename: 'Home',
-            id: 'home-1',
-            name: input.homeName ?? 'Family Home',
-          },
+    home: {
+      __typename: 'Home',
+      id: 'home-1',
+      name: input.homeName ?? 'Family Home',
+    },
     inviter: {
       __typename: 'User',
       id: 'inviter-1',
@@ -146,7 +155,7 @@ function buildHomeInvite(input: HomeInviteInput = {}) {
 function shoppingTokenMock(
   invite: ReturnType<typeof buildShoppingListInvite> | null,
   token: string = TOKEN,
-): MockedResponse {
+): MockFor<typeof GetShoppingListInviteByTokenDocument> {
   return {
     request: {
       query: GetShoppingListInviteByTokenDocument,
@@ -160,7 +169,7 @@ function shoppingTokenMock(
 function homeTokenMock(
   invite: ReturnType<typeof buildHomeInvite> | null,
   token: string = TOKEN,
-): MockedResponse {
+): MockFor<typeof GetHomeInviteByTokenDocument> {
   return {
     request: { query: GetHomeInviteByTokenDocument, variables: { token } },
     result: { data: { homeInviteByToken: invite } },
@@ -168,7 +177,9 @@ function homeTokenMock(
   };
 }
 
-function buildAcceptShoppingListInviteMock(token: string): MockedResponse {
+function buildAcceptShoppingListInviteMock(
+  token: string,
+): MockFor<typeof AcceptShoppingListInviteDocument> {
   return {
     request: {
       query: AcceptShoppingListInviteDocument,
@@ -185,21 +196,36 @@ function buildAcceptShoppingListInviteMock(token: string): MockedResponse {
   };
 }
 
+const REFUSAL_CODE = {
+  NotFoundError: ErrorCode.NotFound,
+  ForbiddenError: ErrorCode.Forbidden,
+  ConflictError: ErrorCode.Conflict,
+};
+
 function buildRefusedShoppingListInviteMock(
   token: string,
   typename: 'NotFoundError' | 'ForbiddenError' | 'ConflictError',
-): MockedResponse {
+): MockFor<typeof AcceptShoppingListInviteDocument> {
   return {
     request: {
       query: AcceptShoppingListInviteDocument,
       variables: { input: { token } },
     },
-    result: { data: { acceptShoppingListInvite: { __typename: typename } } },
+    result: {
+      data: {
+        acceptShoppingListInvite: {
+          __typename: typename,
+          code: REFUSAL_CODE[typename],
+        },
+      },
+    },
     maxUsageCount: 10,
   };
 }
 
-function buildAcceptHomeInviteMock(token: string): MockedResponse {
+function buildAcceptHomeInviteMock(
+  token: string,
+): MockFor<typeof AcceptHomeInviteDocument> {
   return {
     request: {
       query: AcceptHomeInviteDocument,
@@ -216,7 +242,9 @@ function buildAcceptHomeInviteMock(token: string): MockedResponse {
   };
 }
 
-function buildDeclineShoppingListInviteMock(token: string): MockedResponse {
+function buildDeclineShoppingListInviteMock(
+  token: string,
+): MockFor<typeof DeclineShoppingListInviteDocument> {
   return {
     request: {
       query: DeclineShoppingListInviteDocument,
@@ -233,7 +261,9 @@ function buildDeclineShoppingListInviteMock(token: string): MockedResponse {
   };
 }
 
-function buildDeclineHomeInviteMock(token: string): MockedResponse {
+function buildDeclineHomeInviteMock(
+  token: string,
+): MockFor<typeof DeclineHomeInviteDocument> {
   return {
     request: {
       query: DeclineHomeInviteDocument,
@@ -250,7 +280,9 @@ function buildDeclineHomeInviteMock(token: string): MockedResponse {
   };
 }
 
-function buildAcceptShoppingListInviteErrorMock(token: string): MockedResponse {
+function buildAcceptShoppingListInviteErrorMock(
+  token: string,
+): MockFor<typeof AcceptShoppingListInviteDocument> {
   return {
     request: {
       query: AcceptShoppingListInviteDocument,
@@ -263,7 +295,7 @@ function buildAcceptShoppingListInviteErrorMock(token: string): MockedResponse {
 
 function buildDeclineShoppingListInviteErrorMock(
   token: string,
-): MockedResponse {
+): MockFor<typeof DeclineShoppingListInviteDocument> {
   return {
     request: {
       query: DeclineShoppingListInviteDocument,
@@ -446,20 +478,6 @@ describe('AcceptInvite', () => {
     );
   });
 
-  it('shows "Shopping List" fallback when shopping list name is missing', async () => {
-    const tree = renderWithApollo(<AcceptInvite />, {
-      operationMocks: [
-        shoppingTokenMock(buildShoppingListInvite({ shoppingListName: null })),
-        homeTokenMock(null),
-      ],
-    });
-    await waitFor(() =>
-      expect(tree.getAllByText('Shopping List').length).toBeGreaterThanOrEqual(
-        1,
-      ),
-    );
-  });
-
   it('shows description when shopping list has description', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
@@ -611,7 +629,7 @@ describe('AcceptInvite', () => {
     const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
     const buttons = alertCall[2] as AlertButton[];
     const declineBtn = buttons.find(b => b.text === 'Decline');
-    await declineBtn?.onPress?.();
+    declineBtn?.onPress?.();
     await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
   });
 
@@ -629,22 +647,12 @@ describe('AcceptInvite', () => {
     const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
     const buttons = alertCall[2] as AlertButton[];
     const declineBtn = buttons.find(b => b.text === 'Decline');
-    await declineBtn?.onPress?.();
+    declineBtn?.onPress?.();
     await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
   });
 
   it('shows error alert when accept fails', async () => {
     const user = userEvent.setup();
-    const { executeWithLoadingState } = require('#/utils/finallyHelpers');
-    executeWithLoadingState.mockImplementationOnce(
-      (
-        _fn: () => Promise<void>,
-        _setLoading: (value: boolean) => void,
-        onError: (error: unknown) => void,
-      ) => {
-        onError(new Error('An unexpected database error occurred'));
-      },
-    );
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
         shoppingTokenMock(
@@ -658,14 +666,49 @@ describe('AcceptInvite', () => {
     await user.press(tree.getByText('Accept'));
     // The server's own text is unlocalizable English by construction — the
     // client sends no `Accept-Language` and the token carries no locale — so it
-    // must not be what the alert body says. `expect.any(String)` is what let it
-    // through here.
+    // must not be what the alert body says.
     await waitFor(() => {
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
-        'Something went wrong.',
+        'Failed to accept invitation. Please try again.',
       );
     });
+  });
+
+  it('tells a throttled accept how long to wait, not that accepting failed', async () => {
+    const user = userEvent.setup();
+    const rateLimited = Object.assign(new Error('rate limited'), {
+      errors: [
+        {
+          message: 'Too many requests',
+          extensions: { code: 'OPERATION_RATE_LIMITED', retryAfter: 600 },
+        },
+      ],
+    });
+    const tree = renderWithApollo(<AcceptInvite />, {
+      operationMocks: [
+        shoppingTokenMock(
+          buildShoppingListInvite({ shoppingListName: 'My List' }),
+        ),
+        homeTokenMock(null),
+        {
+          request: {
+            query: AcceptShoppingListInviteDocument,
+            variables: { input: { token: TOKEN } },
+          },
+          error: rateLimited,
+        },
+      ],
+    });
+    await waitFor(() => expect(tree.getByText('Accept')).toBeTruthy());
+    await user.press(tree.getByText('Accept'));
+    await waitFor(() => {
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Too many requests. Please try again in 10 minutes.',
+      );
+    });
+    expect(mockGoBack).not.toHaveBeenCalled();
   });
 
   it('shows error alert for invalid invitation when no token', async () => {
@@ -683,18 +726,6 @@ describe('AcceptInvite', () => {
       operationMocks: [
         shoppingTokenMock(null),
         homeTokenMock(buildHomeInvite({ homeName: 'Family Home' })),
-      ],
-    });
-    await waitFor(() =>
-      expect(tree.getAllByText('Home').length).toBeGreaterThanOrEqual(1),
-    );
-  });
-
-  it('shows "Home" fallback when home invite has no home name', async () => {
-    const tree = renderWithApollo(<AcceptInvite />, {
-      operationMocks: [
-        shoppingTokenMock(null),
-        homeTokenMock(buildHomeInvite({ homeName: null })),
       ],
     });
     await waitFor(() =>
@@ -846,17 +877,6 @@ describe('AcceptInvite', () => {
 
   it('shows error alert when decline fails', async () => {
     const user = userEvent.setup();
-    const { executeWithLoadingState } = require('#/utils/finallyHelpers');
-    executeWithLoadingState.mockImplementation(
-      async (
-        _fn: () => Promise<void>,
-        _setLoading: (value: boolean) => void,
-        onError: (error: unknown) => void,
-      ) => {
-        onError(new Error('decline failed'));
-        return undefined;
-      },
-    );
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
         shoppingTokenMock(
@@ -871,12 +891,13 @@ describe('AcceptInvite', () => {
     const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
     const buttons = alertCall[2] as AlertButton[];
     const declineBtn = buttons.find(b => b.text === 'Decline');
-    await declineBtn?.onPress?.();
+    declineBtn?.onPress?.();
     await waitFor(() => {
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
-        'Failed to decline invitation',
+        'Failed to decline invitation. Please try again.',
       );
     });
+    expect(mockGoBack).not.toHaveBeenCalled();
   });
 });

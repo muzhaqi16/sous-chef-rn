@@ -4,21 +4,19 @@ import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
-import {
-  launchCamera,
-  launchImageLibrary,
+import { errorService } from '#/services/errorService';
+import type {
   ImagePickerResponse,
   MediaType,
   CameraOptions,
   ImageLibraryOptions,
 } from 'react-native-image-picker';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { imageErrorMessage } from '#hooks/useImageUpload';
-import {
-  validateImageFile,
-  ImageValidationError,
-} from '#utils/imageValidation';
+import type { ImageValidationError } from '#utils/imageValidation';
+import { validateImageFile } from '#utils/imageValidation';
 import { usePermission } from '#hooks/permissions/usePermission';
 import { ImagePickerSheet } from '#features/catalog/components/ImagePickerSheet';
 import { Text } from '#components/atoms/Text';
@@ -131,14 +129,23 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
         t('imagePicker.cameraPermissionBody'),
         [
           { text: t('labels.cancel'), style: 'cancel' },
-          { text: t('labels.openSettings'), onPress: openSettings },
+          {
+            text: t('labels.openSettings'),
+            onPress: () => {
+              void openSettings().catch(error =>
+                errorService.reportError(error, {
+                  operation: 'ImagePicker.openSettings',
+                }),
+              );
+            },
+          },
         ],
       );
       return;
     }
     const result = await requestCamera();
     if (result === 'granted') {
-      launchCamera(DEFAULT_OPTIONS, handleImageResponse);
+      void launchCamera(DEFAULT_OPTIONS, handleImageResponse);
     }
   };
 
@@ -147,7 +154,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
       ...DEFAULT_OPTIONS,
       ...(multiSelect && { selectionLimit: 0 }),
     };
-    launchImageLibrary(libraryOptions, handleImageResponse);
+    void launchImageLibrary(libraryOptions, handleImageResponse);
   };
 
   const showImagePicker = () => {

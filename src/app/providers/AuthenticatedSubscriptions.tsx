@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { useShoppingListSubscriptions } from '#features/shoppingList/hooks/useShoppingListSubscriptions';
 import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscriptions';
 import { useHomeSubscriptions } from '#features/home/hooks/useHomeSubscriptions';

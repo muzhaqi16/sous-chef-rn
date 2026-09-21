@@ -2,12 +2,13 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { InfoRow } from '#components/atoms/InfoRow';
-
-const ThemedConditionInfoRow = withUnistyles(InfoRow);
 import { Icon } from '#/utils/iconUtils';
-import { getUnitDisplayText } from '#utils/formatQuantity';
+import {
+  formatQuantityForDisplay,
+  getUnitDisplayText,
+} from '#utils/formatQuantity';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
 import {
@@ -23,6 +24,7 @@ import {
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import type { BatchPricingSummary } from '#features/pantry/utils/summarizeBatchPricing';
+import { ItemCondition } from '#/graphql/generated/schemaTypes';
 
 interface PantryDetailInfoProps {
   itemRef:
@@ -71,8 +73,12 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
     ? fragmentResult.data
     : (itemRef as PantryDetailInfo_PantryItemFragment);
 
+  const conditionLabel = formatCondition(item.condition, t);
+  const acquisitionLabel = formatAcquisitionMethod(item.acquisitionMethod, t);
   const isCriticalCondition =
-    item.condition === 'SPOILED' || item.condition === 'EXPIRED';
+    item.condition === ItemCondition.Spoiled ||
+    item.condition === ItemCondition.Expired;
+  const conditionTone = isCriticalCondition ? 'danger' : 'warning';
 
   // The server derives both from the active batches; `costPerUnit` is a display
   // rate rounded to cents, so it is never multiplied back — `totalCost` is the
@@ -108,11 +114,13 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Quantity Row */}
       <InfoRow
         label={t('labels.quantity')}
-        value={`${item.quantity} ${getUnitDisplayText(item.unit)}`}
+        value={`${formatQuantityForDisplay(item.quantity)} ${getUnitDisplayText(
+          item.unit,
+        )}`}
         icon="apps-outline"
         showColon={false}
-        labelStyle={styles.labelText}
-        valueStyle={styles.valueText}
+        labelTone="secondary"
+        valueTone="primary"
         containerStyle={styles.rowContainer}
       />
       {/* Net Weight Row */}
@@ -122,12 +130,10 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={netWeightText}
           icon="scale-outline"
           showColon={false}
-          labelStyle={styles.labelText}
+          labelTone="secondary"
           containerStyle={styles.rowContainer}
         >
-          <Text role="bodyStrong" style={styles.valueText}>
-            {netWeightText}
-          </Text>
+          <Text role="bodyStrong">{netWeightText}</Text>
           {!!item.lastUsedAt && !!onCorrectWeight && (
             <AppPressable
               onPress={onCorrectWeight}
@@ -147,8 +153,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={remainingNetWeightText}
           icon="scale-outline"
           showColon={false}
-          labelStyle={styles.labelText}
-          valueStyle={styles.valueText}
+          labelTone="secondary"
+          valueTone="primary"
           containerStyle={styles.rowContainer}
         />
       )}
@@ -159,8 +165,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={quantityBreakdownText}
           icon="layers-outline"
           showColon={false}
-          labelStyle={styles.labelText}
-          valueStyle={styles.valueText}
+          labelTone="secondary"
+          valueTone="primary"
           containerStyle={styles.rowContainer}
         />
       )}
@@ -170,8 +176,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={portionsLeftText}
           icon="pie-chart-outline"
           showColon={false}
-          labelStyle={styles.labelText}
-          valueStyle={styles.valueText}
+          labelTone="secondary"
+          valueTone="primary"
           containerStyle={styles.rowContainer}
         />
       )}
@@ -182,8 +188,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={packageBreakdownText}
           icon="layers-outline"
           showColon={false}
-          labelStyle={styles.labelText}
-          valueStyle={styles.valueText}
+          labelTone="secondary"
+          valueTone="primary"
           containerStyle={styles.rowContainer}
         />
       )}
@@ -205,8 +211,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           }
           icon="timer-outline"
           showColon={false}
-          labelStyle={styles.labelText}
-          valueStyle={styles.valueText}
+          labelTone="secondary"
+          valueTone="primary"
           containerStyle={styles.rowContainer}
         />
       )}
@@ -217,8 +223,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={brandName}
           icon="pricetag-outline"
           showColon={false}
-          labelStyle={styles.labelText}
-          valueStyle={styles.valueText}
+          labelTone="secondary"
+          valueTone="primary"
           containerStyle={styles.rowContainer}
         />
       )}
@@ -226,15 +232,11 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {!!item.storageLocation && (
         <InfoRow
           label={t('labels.storage')}
-          value={
-            typeof item.storageLocation === 'string'
-              ? item.storageLocation
-              : item.storageLocation.name
-          }
+          value={item.storageLocation.name}
           icon="cube-outline"
           showColon={false}
-          labelStyle={styles.labelText}
-          valueStyle={styles.valueText}
+          labelTone="secondary"
+          valueTone="primary"
           containerStyle={styles.rowContainer}
         />
       )}
@@ -245,40 +247,33 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={item.store.name}
           icon="storefront-outline"
           showColon={false}
-          labelStyle={styles.labelText}
-          valueStyle={styles.valueText}
+          labelTone="secondary"
+          valueTone="primary"
           containerStyle={styles.rowContainer}
         />
       )}
       {/* Condition Row - only show if not GOOD */}
-      {!!formatCondition(item.condition) && (
-        <ThemedConditionInfoRow
+      {!!conditionLabel && (
+        <InfoRow
           label={t('labels.condition')}
-          value={formatCondition(item.condition)}
+          value={conditionLabel}
           icon="fitness-outline"
-          uniProps={theme => ({
-            iconColor: isCriticalCondition
-              ? theme.colors.error
-              : theme.colors.warning,
-          })}
-          valueStyle={[
-            isCriticalCondition && styles.valueError,
-            item.condition === 'FAIR' && styles.valueWarning,
-          ]}
+          iconTone={conditionTone}
+          valueTone={conditionTone}
           showColon={false}
-          labelStyle={styles.labelText}
+          labelTone="secondary"
           containerStyle={styles.rowContainer}
         />
       )}
       {/* Acquired Via Row */}
-      {!!formatAcquisitionMethod(item.acquisitionMethod) && (
+      {!!acquisitionLabel && (
         <InfoRow
           label={t('pantryItemDetail.fields.acquired')}
-          value={formatAcquisitionMethod(item.acquisitionMethod)}
+          value={acquisitionLabel}
           icon="bag-handle-outline"
           showColon={false}
-          labelStyle={styles.labelText}
-          valueStyle={styles.valueText}
+          labelTone="secondary"
+          valueTone="primary"
           containerStyle={styles.rowContainer}
         />
       )}
@@ -293,8 +288,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={formatCostOrNull(costPerUnit, itemCurrency)}
           icon="cash-outline"
           showColon={false}
-          labelStyle={styles.labelText}
-          valueStyle={styles.valueText}
+          labelTone="secondary"
+          valueTone="primary"
           containerStyle={styles.rowContainer}
         />
       )}
@@ -305,8 +300,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={formatCostOrNull(item.totalCost, itemCurrency)}
           icon="wallet-outline"
           showColon={false}
-          labelStyle={styles.labelText}
-          valueStyle={styles.valueText}
+          labelTone="secondary"
+          valueTone="primary"
           containerStyle={styles.rowContainer}
         />
       )}
@@ -314,11 +309,13 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {item.minQuantity != null && item.minQuantity > 0 && (
         <InfoRow
           label={t('pantryItemDetail.fields.minStock')}
-          value={`${item.minQuantity} ${item.unit?.name ?? ''}`}
+          value={`${formatQuantityForDisplay(item.minQuantity)} ${
+            item.unit.name
+          }`}
           icon="alert-circle-outline"
           showColon={false}
-          labelStyle={styles.labelText}
-          valueStyle={styles.valueText}
+          labelTone="secondary"
+          valueTone="primary"
           containerStyle={styles.rowContainer}
         />
       )}
@@ -326,11 +323,13 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {item.restockQuantity != null && item.restockQuantity > 0 && (
         <InfoRow
           label={t('pantryItemDetail.fields.restockAt')}
-          value={`${item.restockQuantity} ${item.unit?.name ?? ''}`}
+          value={`${formatQuantityForDisplay(item.restockQuantity)} ${
+            item.unit.name
+          }`}
           icon="refresh-outline"
           showColon={false}
-          labelStyle={styles.labelText}
-          valueStyle={styles.valueText}
+          labelTone="secondary"
+          valueTone="primary"
           containerStyle={styles.rowContainer}
         />
       )}
@@ -352,8 +351,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           }`}
           icon="receipt-outline"
           showColon={false}
-          labelStyle={styles.labelText}
-          valueStyle={styles.valueText}
+          labelTone="secondary"
+          valueTone="primary"
           containerStyle={styles.rowContainer}
         />
       )}
@@ -364,8 +363,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={formatDate(item.lastUsedAt)}
           icon="time-outline"
           showColon={false}
-          labelStyle={styles.labelText}
-          valueStyle={styles.valueText}
+          labelTone="secondary"
+          valueTone="primary"
           containerStyle={styles.rowContainer}
         />
       )}
@@ -378,11 +377,13 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
               {t('pantryItemDetail.notes')}
             </Text>
           </View>
-          <Text style={styles.notesText}>{item.storageNotes}</Text>
+          <Text role="body" style={styles.notesText}>
+            {item.storageNotes}
+          </Text>
         </View>
       )}
       {/* Tags Section */}
-      {!!item.tags && item.tags.length > 0 && (
+      {item.tags.length > 0 && (
         <View style={styles.tagsSection}>
           <Text role="caption" tone="secondary" style={styles.tagsLabel}>
             {t('pantryItemDetail.tags')}
@@ -404,8 +405,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         value={formatDate(item.createdAt)}
         icon="calendar-outline"
         showColon={false}
-        labelStyle={styles.labelText}
-        valueStyle={styles.valueText}
+        labelTone="secondary"
+        valueTone="primary"
         containerStyle={styles.rowContainer}
       />
     </>
@@ -418,21 +419,9 @@ const styles = StyleSheet.create(theme => ({
     borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.divider,
   },
-  labelText: {
-    color: theme.colors.textSecondary,
-  },
-  valueText: {
-    color: theme.colors.textPrimary,
-  },
   correctWeightButton: {
     marginLeft: theme.spacing.sm,
     padding: theme.spacing.xs,
-  },
-  valueError: {
-    color: theme.colors.error,
-  },
-  valueWarning: {
-    color: theme.colors.warning,
   },
   notesSection: {
     marginTop: theme.spacing.md,

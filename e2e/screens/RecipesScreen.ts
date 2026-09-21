@@ -1,17 +1,18 @@
 /**
- * Deliberately minimal: `recipes-screen` and `tab-recipe` are the only testIDs
- * the Recipes surface renders, so only navigation lives here. Add a method back
- * when what it drives has a testID in `src/`.
+ * Only navigation lives here: no spec drives the Recipes surface past reaching
+ * it. Add a method when one does, with its id from `recipesTestIDs`.
  */
 
+import { kitTestIDs } from '../../src/components/testIDs';
+import { recipesTestIDs } from '../../src/features/recipes/testIDs';
 import { BaseScreen } from './BaseScreen';
 
 export class RecipesScreen extends BaseScreen {
-  protected screenID = 'recipes-screen';
+  protected screenID = recipesTestIDs.recipesScreen;
 
-  /** 'tab-recipe' is singular: the id derives from the route name 'Recipe'. */
+  /** The tab id derives from the route name, which is the singular `Recipe`. */
   async navigateToTab() {
-    await this.tapByID('tab-recipe');
+    await this.tapByID(kitTestIDs.tab('Recipe'));
     await this.waitForScreen();
   }
 }

@@ -27,7 +27,6 @@ import {
   type CreatePantryFn,
 } from '#features/pantry/hooks/useCreatePantry';
 import type { CreateHomeFn } from '#features/home/hooks/useCreateHome';
-import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { useCreateHomeFlow } from '#features/onboarding/hooks/useCreateHomeFlow';
 
 import {
@@ -37,7 +36,10 @@ import {
   useSetSelectedPantryId,
   useUser,
 } from '#store/useAppStore';
-import { useOnboardingNavigation } from '#features/onboarding/hooks/useOnboardingNavigation';
+import {
+  useOnboardingNavigation,
+  type OnboardingStepId,
+} from '#features/onboarding/hooks/useOnboardingNavigation';
 
 import { getCreateHomeSchema } from '#features/onboarding/utils/validation';
 import { logValidationErrors } from '#/utils/validation/common';
@@ -46,6 +48,8 @@ import { OnboardingErrorBoundary } from '#components/providers/ScreenErrorBounda
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Card } from '#components/atoms/Card';
+import { onboardingTestIDs } from '#features/onboarding/testIDs';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /** Module scope so the try/catch does not bail the component out of the compiler. */
 async function performCreateHome(
@@ -59,34 +63,35 @@ async function performCreateHome(
     createPantry: CreatePantryFn;
     setSelectedHomeId: (id: string) => void;
     setSelectedPantryId: (id: string) => void;
-    skipToStep: (step: string) => void;
-    navigateToNextStep: (step: string) => void;
+    skipToStep: (step: OnboardingStepId) => void;
+    navigateToNextStep: (step: OnboardingStepId) => void;
     homeNotFoundMessage: string;
-    createHomeFailedMessage: string;
+    /** This screen's copy for a failure the refusal's own code does not describe. */
+    setupErrorMessage: string;
+    reportFailure: (message: string) => void;
   },
 ): Promise<void> {
   if (deps.needsHome) {
-    const outcome = await deps.createHome({
-      name: data.homeName.trim(),
-      description: tGlobal('onBoarding.createdDuringOnboarding'),
-      type: HomeType.Household,
-      isPublic: false,
-      // Asking for a join code while the email is unverified makes the server
-      // refuse the whole mutation, dead-ending onboarding for anyone who
-      // deferred verification. A join code can be enabled later in settings.
-      allowJoinCode: !deps.hasUnverifiedEmail,
-      tags: ['onboarding'],
-    });
+    const outcome = await deps.createHome(
+      {
+        name: data.homeName.trim(),
+        description: tGlobal('onBoarding.createdDuringOnboarding'),
+        type: HomeType.Household,
+        isPublic: false,
+        // Asking for a join code while the email is unverified makes the server
+        // refuse the whole mutation, dead-ending onboarding for anyone who
+        // deferred verification. A join code can be enabled later in settings.
+        allowJoinCode: !deps.hasUnverifiedEmail,
+        tags: ['onboarding'],
+      },
+      deps.setupErrorMessage,
+    );
 
-    // Throws the precise domain error, whose CODE the screen resolves to
-    // localized copy. Its `message` is English by construction and is never
-    // shown. A QUEUED create is not rejected and never reaches this.
+    // Shown inline, never the refusal's `message`. A QUEUED create is not
+    // rejected and never reaches this.
     if (outcome.status === 'rejected') {
-      unwrapPayload(
-        outcome.payload,
-        'CreateHomePayload',
-        deps.createHomeFailedMessage,
-      );
+      deps.reportFailure(outcome.failure.body);
+      return;
     }
 
     // The minted id, not a payload's: queued, there is no payload, and the
@@ -152,16 +157,17 @@ const InviteCard: React.FC<{
 
   if (!complete) return null;
 
-  const inviterName =
-    invite.inviter?.profile?.displayName ||
-    invite.inviter?.email ||
-    t('labels.someone');
-  const inviteHomeName = invite.home?.name || t('labels.unknownHome');
+  // Bound apart: an optional chain inside the `??` test bails the compiler.
+  const namedInviter = firstNonBlank(
+    invite.inviter?.profile?.displayName,
+    invite.inviter?.email,
+  );
+  const inviterName = namedInviter ?? t('labels.someone');
 
   return (
     <Card padding="none" style={styles.inviteCard}>
       <Text role="subheading" style={styles.inviteHomeName}>
-        {inviteHomeName}
+        {invite.home.name}
       </Text>
       <View style={styles.inviteDetailsContainer}>
         <Text role="caption">
@@ -259,7 +265,7 @@ const CreateHomeScreenComponent = () => {
   const onSubmit = (data: FormValues) => {
     setGraphqlError(null);
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       () =>
         performCreateHome(data, {
           needsHome,
@@ -273,7 +279,8 @@ const CreateHomeScreenComponent = () => {
           skipToStep,
           navigateToNextStep,
           homeNotFoundMessage: t('onBoarding.homeNotFound'),
-          createHomeFailedMessage: t('errors.createHomeFailed'),
+          setupErrorMessage: t('onBoarding.setupError'),
+          reportFailure: setGraphqlError,
         }),
       setIsCreating,
       (error: unknown) => {
@@ -403,7 +410,7 @@ const CreateHomeScreenComponent = () => {
       title={getTitle()}
       subtitle={getSubtitle()}
       onSkip={() => skipToStep('CreateShoppingList')}
-      testID="onboarding-create-home-screen"
+      testID={onboardingTestIDs.createHomeScreen}
     >
       {!!existingHome && (
         <View style={styles.existingResourcesContainer}>

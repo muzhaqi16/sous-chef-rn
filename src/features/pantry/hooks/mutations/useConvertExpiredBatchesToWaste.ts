@@ -7,11 +7,9 @@
 
 import { useMutation } from '@apollo/client/react';
 import { ConvertExpiredBatchesToWasteDocument } from '#features/pantry/graphql/pantry.generated';
-import { handleMutationError } from '#/utils/errorHandlers';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { t } from '#/i18n';
+import { useTranslation } from '#/i18n';
 
 interface UseConvertExpiredBatchesToWasteOptions {
   onSuccess?: () => void;
@@ -20,40 +18,31 @@ interface UseConvertExpiredBatchesToWasteOptions {
 export function useConvertExpiredBatchesToWaste({
   onSuccess,
 }: UseConvertExpiredBatchesToWasteOptions = {}) {
-  const [convertMutation, { loading }] = useMutation(
-    ConvertExpiredBatchesToWasteDocument,
-    {
-      onError: error => {
-        handleMutationError(error, {
-          operation: 'Convert Expired Batches To Waste',
-        });
-      },
-    },
-  );
+  const { t } = useTranslation();
+  const [convertMutation] = useMutation(ConvertExpiredBatchesToWasteDocument);
 
   const convertExpiredBatches = async (
     pantryItemId: string,
   ): Promise<boolean> => {
-    const result = await convertMutation({
-      variables: {
-        input: { pantryItemId, idempotencyKey: generateEntityId() },
+    const settled = await settleMutation(
+      () =>
+        convertMutation({
+          variables: {
+            input: { pantryItemId, idempotencyKey: generateEntityId() },
+          },
+          context: { localFirst: true },
+        }),
+      {
+        document: ConvertExpiredBatchesToWasteDocument,
+        fallback: t('errors.discardExpiredFailed'),
       },
-      context: { localFirst: true },
-    });
+    );
+    if (settled.status === 'failed') return false;
 
-    const outcome = classifyCreateResult(result);
-
-    if (outcome === 'rejected') {
-      // onError covers transport errors; a non-success union payload has none.
-      alertRejectedMutation(result, t('errors.discardExpiredFailed'));
-      return false;
-    }
-
-    // created (response reconciles quantity / batch counts) or queued (replays
-    // the canonical mutation, deduped by its idempotencyKey).
+    // A queued conversion replays the canonical mutation, deduped by its key.
     onSuccess?.();
     return true;
   };
 
-  return { convertExpiredBatches, loading };
+  return { convertExpiredBatches };
 }

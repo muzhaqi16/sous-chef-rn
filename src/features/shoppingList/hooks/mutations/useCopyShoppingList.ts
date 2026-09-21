@@ -1,12 +1,14 @@
 /**
- * Applies what a copy derive produced: one local-first create, then one batch
- * add carrying a client-minted id per line. Both are queued, so a copy made
+ * Applies what a copy derive produced: one local-first create, then batch
+ * adds carrying a client-minted id per line. Both are queued, so a copy made
  * offline shows immediately and replays parent-before-children.
  */
 
+import { toastService } from '#/services/toastService';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
+  addItemsInSlices,
   addOptimisticShoppingListItem,
   buildAddItemsReconcileUpdate,
   createOptimisticShoppingListItem,
@@ -25,13 +27,14 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
     { update: buildAddItemsReconcileUpdate({}) },
   );
 
-  /** The new list's id, or null when the create could not be made. */
+  /**
+   * The new list's id, or null when the create could not be made. A refused
+   * line batch is reported here and taken back; the list stands without it.
+   */
   const copyList = async (
     derived: DerivedList,
     overrides: { homeId?: string | null } = {},
   ): Promise<string | null> => {
-    // Built before the try: a value block inside one bails the whole function
-    // out of the React Compiler.
     const input = {
       ...derived.list,
       ...(overrides.homeId !== undefined && {
@@ -39,35 +42,32 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
       }),
     };
 
-    // `createShoppingList` THROWS a refusal rather than returning one. Assign
-    // in the try and read outside it, for the same reason.
-    let created;
-    try {
-      created = await createShoppingList(input);
-    } catch (error) {
-      errorService.reportError(error, { operation: 'Copy shopping list' });
+    const created = await createShoppingList(input);
+    if (created.status === 'failed') {
+      toastService.error(created.body);
+      return null;
     }
-    const listId = created?.id ?? null;
-    if (!listId) return null;
+    const listId = created.shoppingList.id;
 
     for (const line of derived.items) {
       writeLineToCache(listId, line.id, derived);
     }
 
-    if (derived.items.length > 0) {
-      try {
-        await addItems({
-          variables: {
-            input: { shoppingListId: listId, items: derived.items },
-          },
+    const failure = await addItemsInSlices(
+      client.cache,
+      listId,
+      derived.items,
+      slice =>
+        addItems({
+          variables: { input: { shoppingListId: listId, items: slice } },
           context: { localFirst: true },
-        });
-      } catch (error) {
-        errorService.reportError(error, {
-          operation: 'Copy shopping list items',
-        });
-      }
-    }
+        }),
+      {
+        document: AddItemToShoppingListDocument,
+        fallback: fallbackErrorMessage,
+      },
+    );
+    if (failure) toastService.error(failure.body);
 
     return listId;
   };

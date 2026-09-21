@@ -24,7 +24,7 @@ export function useOnboardingItems({ first = 50 }: { first?: number } = {}) {
   );
 
   return {
-    items: data?.items?.edges?.map(edge => edge.node) ?? [],
+    items: data?.items.edges.map(edge => edge.node) ?? [],
     loading,
     hasLoaded: !!data,
     failed: !!error,

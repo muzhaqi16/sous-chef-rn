@@ -108,8 +108,6 @@ const mockItem = {
       name: 'Pounds',
       isDefault: true,
       isPreferred: false,
-      displayNameSingular: 'pound',
-      displayNamePlural: 'pounds',
     },
     {
       id: 'unit-2',
@@ -117,8 +115,6 @@ const mockItem = {
       name: 'Ounces',
       isDefault: false,
       isPreferred: false,
-      displayNameSingular: 'ounce',
-      displayNamePlural: 'ounces',
     },
   ],
 };
@@ -156,8 +152,8 @@ describe('QuantityEditSheet, render contract', () => {
 
   it('renders unit chips for item units', () => {
     render(<QuantityEditSheet {...defaultProps} />);
-    expect(screen.getByText('pounds')).toBeTruthy();
-    expect(screen.getByText('ounces')).toBeTruthy();
+    expect(screen.getByText('lbs')).toBeTruthy();
+    expect(screen.getByText('oz')).toBeTruthy();
   });
 
   it('renders nothing meaningful when item is null', () => {
@@ -184,7 +180,7 @@ describe('QuantityEditSheet, render contract', () => {
   it('does not render chips when item has no units', () => {
     const noUnitsItem = { ...mockItem, itemUnits: [] };
     render(<QuantityEditSheet {...defaultProps} item={noUnitsItem} />);
-    expect(screen.queryByTestId('chip-pounds')).toBeNull();
+    expect(screen.queryByTestId('chip-lbs')).toBeNull();
   });
 
   it('handles visible=false', () => {

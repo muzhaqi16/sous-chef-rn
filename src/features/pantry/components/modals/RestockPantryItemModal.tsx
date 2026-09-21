@@ -9,8 +9,12 @@ import { DatePickerField } from '#components/molecules/DatePickerField';
 import { ConversionPreview } from '#features/pantry/components/ConversionPreview';
 import { FractionQuickSelect } from '#features/pantry/components/FractionQuickSelect';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { formatQuantity } from '#/utils/formatQuantity';
+import {
+  formatQuantityForDisplay,
+  formatQuantityForInput,
+} from '#/utils/formatQuantity';
 import { useConversionPreview } from '#features/pantry/hooks/useConversionPreview';
+import { actionConversionOptions } from '#features/pantry/hooks/useQuantityFeedback';
 import { commonStyles } from '#/styles/commonStyles';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import {
@@ -19,10 +23,7 @@ import {
 } from '#features/pantry/components/modals/PantryActionModal';
 import { Text } from '#components/atoms/Text';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import {
-  formatNumberForInput,
-  localizeNumericHint,
-} from '#/utils/formatters/number';
+import { localizeNumericHint } from '#/utils/formatters/number';
 
 interface RestockPantryItemModalProps {
   visible: boolean;
@@ -80,8 +81,8 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       quantityInput,
       shared.notes,
       shared.activeUnitId,
-      isNaN(costPerUnit!) ? undefined : costPerUnit,
-      isNaN(totalCost!) ? undefined : totalCost,
+      costPerUnit === undefined || isNaN(costPerUnit) ? undefined : costPerUnit,
+      totalCost === undefined || isNaN(totalCost) ? undefined : totalCost,
       expiresAt,
     );
     onClose();
@@ -142,23 +143,9 @@ const RestockActionFields: React.FC<{
   const addAmount = parseFractionalInput(quantityInput);
 
   // For dual-tracked items, show conversion to net weight unit (e.g. cups → grams)
-  const conversion = useConversionPreview({
-    pantryItemId: shared.pantryItemId,
-    inputQuantity: addAmount,
-    selectedUnitId: shared.activeUnitId,
-    selectedUnitSymbol: shared.activeUnitSymbol,
-    trackingUnitId:
-      shared.isDualTracked && shared.isConvertedUnit
-        ? shared.netWeightUnitId!
-        : shared.trackingUnitId,
-    trackingUnitSymbol:
-      shared.isDualTracked && shared.isConvertedUnit
-        ? shared.netWeightUnitSymbol!
-        : shared.trackingUnitSymbol,
-    conversionRatio: shared.isDualTracked
-      ? null
-      : shared.selectedUnitInfo?.conversionRatio ?? null,
-  });
+  const conversion = useConversionPreview(
+    actionConversionOptions(addAmount, shared),
+  );
 
   // For dual-tracked items, show new total in net weight
   const currentInUnit =
@@ -169,8 +156,10 @@ const RestockActionFields: React.FC<{
       : shared.trackingQuantity;
 
   const newQuantitySymbol =
-    shared.isDualTracked && shared.isConvertedUnit
-      ? shared.netWeightUnitSymbol!
+    shared.isDualTracked &&
+    shared.isConvertedUnit &&
+    shared.netWeightUnitSymbol !== undefined
+      ? shared.netWeightUnitSymbol
       : shared.activeUnitSymbol;
 
   const newQuantity =
@@ -193,7 +182,6 @@ const RestockActionFields: React.FC<{
           value={quantityInput}
           onChangeText={setQuantityInput}
           placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
-          keyboardType="numeric"
           useBottomSheetInput
           required
         />
@@ -202,7 +190,7 @@ const RestockActionFields: React.FC<{
             {newQuantity !== null ? (
               <Text role="label" tone="accent" style={styles.newQuantityText}>
                 {t('restockItem.newQuantityPrefix')}
-                {formatQuantity(newQuantity)} {newQuantitySymbol}
+                {formatQuantityForDisplay(newQuantity)} {newQuantitySymbol}
               </Text>
             ) : null}
             {shared.isConvertedUnit ? (
@@ -217,7 +205,7 @@ const RestockActionFields: React.FC<{
         {shared.commonFractions != null && shared.commonFractions.length > 0 ? (
           <FractionQuickSelect
             fractions={shared.commonFractions}
-            onSelect={value => setQuantityInput(formatNumberForInput(value))}
+            onSelect={value => setQuantityInput(formatQuantityForInput(value))}
             selectedValue={addAmount ?? undefined}
             unitSymbol={shared.activeUnitSymbol}
             displayAsFraction

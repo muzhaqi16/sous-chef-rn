@@ -6,7 +6,10 @@ import { Icon } from '#utils/iconUtils';
 import { HomeMemberCard } from './HomeMemberCard';
 import { HomeInviteCard } from './HomeInviteCard';
 import { Text } from '#components/atoms/Text';
-import { InviteStatus } from '#/graphql/generated/schemaTypes';
+import {
+  InviteStatus,
+  type MembershipRole,
+} from '#/graphql/generated/schemaTypes';
 import type { MembershipPermissionKey } from '#features/home/hooks/useHomeDetailManagement';
 import type { HomeDetailScreen_HomeFragment } from '#features/home/screens/HomeDetailScreen.generated';
 
@@ -28,9 +31,15 @@ interface HomeMembersSectionProps {
     displayName: string;
   };
   resolveInviteLabel: (invite: InviteNode) => string;
-  onChangeRole: (membershipId: string, role: string, name: string) => void;
+  onChangeRole: (
+    membershipId: string,
+    role: MembershipRole,
+    name: string,
+  ) => void;
   onRemove: (membershipId: string, name: string) => void;
   onTransferOwnership: (memberUserId: string, name: string) => void;
+  /** A transfer is in flight, so no member's "Make owner" can start another. */
+  transferringOwnership?: boolean;
   onUpdatePermission: (
     membershipId: string,
     permission: MembershipPermissionKey,
@@ -55,6 +64,7 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
   onChangeRole,
   onRemove,
   onTransferOwnership,
+  transferringOwnership,
   onUpdatePermission,
   onRevokeInvite,
 }) => {
@@ -85,6 +95,7 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
               onTransferOwnership={() =>
                 onTransferOwnership(member.userId, displayName)
               }
+              transferDisabled={transferringOwnership}
               onUpdatePermission={(permission, value) =>
                 onUpdatePermission(member.id, permission, value)
               }

@@ -72,6 +72,9 @@ export async function storeCredentials(
     // `saveCredentials` records the offered account as its last step, so a
     // failed write leaves the previous account's enrolment offered.
     await saveCredentials(email, credential);
+    // Startup wrote `false` if nothing was enrolled, and the login screen hides
+    // the button on it until something writes it back.
+    useStore.getState().setHasStoredCredentials(true);
     return true;
   } catch (error) {
     logger.error('Error storing credentials:', error);
@@ -102,9 +105,16 @@ export async function loadStoredCredentials(
 
     store.setAuthIsLoadingCredentials(false);
 
-    return credentials
-      ? { email: credentials.username, credential: credentials.password }
-      : null;
+    if (!credentials) {
+      // `loadCredentials` discards a slot the device can never open again; the
+      // button is rendered from the flag, so the attempt that found it dead
+      // takes it down. A cancelled prompt keeps the slot, and the button.
+      if (!(await checkStoredCredentials(email))) {
+        store.setHasStoredCredentials(false);
+      }
+      return null;
+    }
+    return { email: credentials.username, credential: credentials.password };
   } catch (error) {
     logger.error('Error loading credentials:', error);
     store.setAuthIsLoadingCredentials(false);

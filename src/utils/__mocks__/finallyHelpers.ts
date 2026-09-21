@@ -1,10 +1,5 @@
 /** Passthrough auto-mock — wraps every export in jest.fn() while preserving real behavior. */
 
-import {
-  GraphQLDomainError,
-  GraphQLNetworkError,
-} from '../errors/graphqlErrors';
-
 export const executeRefreshWithFinally = jest.fn(
   async (
     refreshFn: () => Promise<unknown>,
@@ -56,31 +51,6 @@ export const executeAsyncWithCleanup = jest.fn(
   },
 );
 
-export const unwrapPayload = jest.fn(
-  <TUnion extends { __typename: string }, TName extends TUnion['__typename']>(
-    payload: TUnion | null | undefined,
-    successTypename: TName,
-    fallbackMessage: string,
-  ): Extract<TUnion, { __typename: TName }> => {
-    if (payload == null) {
-      throw new GraphQLNetworkError(fallbackMessage);
-    }
-    if (payload.__typename === successTypename) {
-      return payload as Extract<TUnion, { __typename: TName }>;
-    }
-    const { __typename, code, message, ...extra } = payload as Record<
-      string,
-      unknown
-    > & { __typename: string };
-    throw new GraphQLDomainError({
-      __typename,
-      code: String(code ?? 'UNKNOWN'),
-      message: String(message || fallbackMessage),
-      ...extra,
-    });
-  },
-);
-
 export const executeWithLoadingState = jest.fn(
   async (
     fn: () => Promise<void>,
@@ -95,14 +65,5 @@ export const executeWithLoadingState = jest.fn(
     } finally {
       setLoading(false);
     }
-  },
-);
-
-export const isSuccessPayload = jest.fn(
-  <TUnion extends { __typename: string }, TName extends TUnion['__typename']>(
-    payload: TUnion | null | undefined,
-    successTypename: TName,
-  ): payload is Extract<TUnion, { __typename: TName }> => {
-    return payload != null && payload.__typename === successTypename;
   },
 );

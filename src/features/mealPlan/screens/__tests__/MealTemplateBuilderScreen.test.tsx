@@ -1,7 +1,9 @@
 'use no memo';
 import React from 'react';
-import { screen } from '@testing-library/react-native';
+import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { MealType } from '#/graphql/generated/schemaTypes';
+import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 import { MealTemplateBuilderScreen } from '../MealTemplateBuilderScreen';
 
 // Delegate to the real hook and spy on the write: `control` has no
@@ -38,18 +40,38 @@ jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/navigation/useAppNavigation');
 
+const mockAddItem = jest.fn(async () => true);
+const mockUpdateItem = jest.fn(async () => true);
 jest.mock('#features/mealPlan/hooks/useMealTemplateEditor', () => ({
   useMealTemplateEditor: jest.fn(() => ({
     createTemplate: jest.fn(),
     updateTemplate: jest.fn(),
-    addItem: jest.fn(),
-    updateItem: jest.fn(),
+    addItem: mockAddItem,
+    updateItem: mockUpdateItem,
     removeItem: jest.fn(),
+    readRecipeName: (recipeId: string) =>
+      recipeId === 'recipe-2' ? 'Pesto Pasta' : '',
     creating: false,
     updating: false,
-    addingItem: false,
   })),
 }));
+
+interface PickerProps {
+  onAddRecipe: (recipeId: string, mealType: MealType) => void;
+}
+const pickerRenders: PickerProps[] = [];
+jest.mock('#features/mealPlan/components/AddMealSheet', () => ({
+  AddMealSheet: (props: PickerProps) => {
+    pickerRenders.push(props);
+    return null;
+  },
+}));
+
+const pickRecipe = (recipeId: string, mealType: MealType) => {
+  const picker = pickerRenders[pickerRenders.length - 1];
+  if (!picker) throw new Error('the recipe picker never rendered');
+  act(() => picker.onAddRecipe(recipeId, mealType));
+};
 
 jest.mock('#components/templates/FormScreen', () => ({
   FormScreen: ({
@@ -156,5 +178,121 @@ describe('MealTemplateBuilderScreen', () => {
       <MealTemplateBuilderScreen route={{ params: { templateId: 'tpl-1' } }} />,
     );
     expect(screen.getByText('Edit Template')).toBeTruthy();
+  });
+
+  describe('recipe-backed items', () => {
+    const RECIPE_TEMPLATE = {
+      id: 'tmpl-r',
+      name: 'Pasta Week',
+      category: 'WEEKLY',
+      description: '',
+      defaultServings: 2,
+      tags: [],
+      items: [
+        {
+          id: 'item-1',
+          dayOffset: 0,
+          mealType: MealType.Dinner,
+          customMealName: null,
+          servings: 2,
+          notes: null,
+          recipe: {
+            id: 'recipe-1',
+            name: 'Carbonara',
+            imageUrl: null,
+            servings: 4,
+            totalTimeMinutes: 25,
+          },
+        },
+      ],
+    };
+
+    beforeEach(() => {
+      mockAddItem.mockClear();
+      mockUpdateItem.mockClear();
+      pickerRenders.length = 0;
+    });
+
+    afterEach(() => {
+      mockLoadedTemplate = null;
+    });
+
+    // Sending `meal: { customMealName }` for an untouched recipe row replaced
+    // its recipe on the server.
+    it('saves an edited recipe item without replacing its recipe', async () => {
+      const user = userEvent.setup();
+      mockLoadedTemplate = RECIPE_TEMPLATE;
+      renderWithApollo(
+        <MealTemplateBuilderScreen
+          route={{ params: { templateId: 'tmpl-r' } }}
+        />,
+      );
+
+      expect(screen.getByText('Carbonara')).toBeTruthy();
+      await user.press(
+        screen.getByTestId(mealPlanTestIDs.templateItemRow('item-1')),
+      );
+      expect(
+        screen.getByTestId(mealPlanTestIDs.templateItemRecipe),
+      ).toBeTruthy();
+
+      await user.press(
+        screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
+      );
+
+      await waitFor(() => expect(mockUpdateItem).toHaveBeenCalledTimes(1));
+      expect(mockUpdateItem).toHaveBeenCalledWith({
+        id: 'item-1',
+        dayOffset: 0,
+        mealType: MealType.Dinner,
+        servings: 2,
+      });
+    });
+
+    it('adds a saved recipe to a slot by its id', async () => {
+      const user = userEvent.setup();
+      mockLoadedTemplate = RECIPE_TEMPLATE;
+      renderWithApollo(
+        <MealTemplateBuilderScreen
+          route={{ params: { templateId: 'tmpl-r' } }}
+        />,
+      );
+
+      pickRecipe('recipe-2', MealType.Lunch);
+      expect(screen.getByText('Pesto Pasta')).toBeTruthy();
+
+      await user.press(
+        screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
+      );
+
+      await waitFor(() => expect(mockAddItem).toHaveBeenCalledTimes(1));
+      expect(mockAddItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          templateId: 'tmpl-r',
+          mealType: MealType.Lunch,
+          meal: { recipeId: 'recipe-2' },
+        }),
+      );
+    });
+
+    it('lists a picked recipe as a draft row under its name', async () => {
+      const user = userEvent.setup();
+      renderWithApollo(
+        <MealTemplateBuilderScreen route={{ params: undefined }} />,
+      );
+
+      pickRecipe('recipe-2', MealType.Dinner);
+      await user.press(
+        screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
+      );
+
+      await waitFor(() =>
+        expect(screen.queryByText('No meals added yet')).toBeNull(),
+      );
+      expect(screen.getByText('Pesto Pasta')).toBeTruthy();
+      expect(
+        screen.queryByTestId(mealPlanTestIDs.templateItemRecipe),
+      ).toBeNull();
+    });
   });
 });

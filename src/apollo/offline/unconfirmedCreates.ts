@@ -42,7 +42,7 @@ export const unconfirmedCreates = {
 
   /** Whether a create for `id` is still in flight or waiting to replay. */
   has(id: string): boolean {
-    return inFlight.has(id) || queueStore.getPendingClientIds().has(id);
+    return inFlight.has(id) || queueStore.getUnconfirmedCreateIds().has(id);
   },
 
   /**

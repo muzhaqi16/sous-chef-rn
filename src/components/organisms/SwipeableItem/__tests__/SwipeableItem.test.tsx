@@ -3,13 +3,15 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import { Text } from '#components/atoms/Text';
+import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
+import type { TranslationKey } from '#/i18n';
 
 // Actions are descriptors now, so the tests build them the way callers do.
 const action = (
   key: string,
   onPress: () => void = jest.fn(),
-  labelKey = 'labels.edit',
-) => ({ key, icon: 'create-outline' as const, labelKey, onPress });
+  labelKey: TranslationKey = 'labels.edit',
+): SwipeAction => ({ key, icon: 'create-outline', labelKey, onPress });
 
 type TestInstance = ReturnType<typeof screen.getByTestId>;
 

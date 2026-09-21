@@ -93,7 +93,7 @@ query GetShoppingListDetails($id: ID!) {
 # Lightweight query for list selector - metadata only, no items/collaborators
 # Use this for dashboard/list views.
 query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
-  shoppingLists(filters: { homeId: $homeId }, first: $first, after: $after) {
+  shoppingLists(homeId: $homeId, first: $first, after: $after) {
     edges {
       cursor
       node {
@@ -217,6 +217,7 @@ query GetShoppingListItemsFiltered(
             id
             imageUrl
             images {
+              id
               url
               kind
             }
@@ -750,6 +751,7 @@ mutation AddItemToShoppingList($input: AddItemsToShoppingListInput!) {
         index
         clientId
         success
+        code
         quantityIncremented
         error
         item {
@@ -938,7 +940,7 @@ mutation UpdateShoppingListItemQuantity(
     ... on UpdateShoppingListItemQuantityPayload {
       shoppingListItem {
         id
-        ...useShoppingListActions_updateQuantityResult
+        ...useQuantityEditModal_updateQuantityResult
       }
     }
     ... on Error {
@@ -1053,7 +1055,7 @@ mutation RemoveItemsFromShoppingList(
       code
       message
     }
-    # `alertIfRejected` routes a refusal that names a field to `errors.field.*`
+    # `settleMutation` routes a refusal that names a field to `errors.field.*`
     # and shows the server's unlocalizable English only as a last resort. It
     # reads `field` off the payload, so not selecting it here made that branch
     # unreachable: every rejection of this mutation fell back to the generic

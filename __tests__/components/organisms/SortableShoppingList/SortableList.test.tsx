@@ -7,7 +7,7 @@ import type { FragmentType } from '@apollo/client/masking';
 import { SortableShoppingList } from '../../../../src/features/shoppingList/components/SortableShoppingList/SortableList';
 import { ShoppingListPermissionsProvider } from '#features/shoppingList/context/ShoppingListPermissionsContext';
 import type { ShoppingListRowItem } from '../../../../src/features/shoppingList/components/SortableShoppingList/types';
-import { SortableItem_ItemFragmentDoc } from '../../../../src/features/shoppingList/components/SortableShoppingList/SortableItem.generated';
+import type { SortableItem_ItemFragmentDoc } from '../../../../src/features/shoppingList/components/SortableShoppingList/SortableItem.generated';
 
 jest.mock('../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../src/apollo/links/refreshToken');
@@ -21,9 +21,12 @@ jest.mock('../../../../src/hooks/ui/useSwipeableCoordinator', () => ({
     handleSwipeableClose: jest.fn(),
   }),
 }));
-jest.mock('../../../../src/features/shoppingList/components/SortableShoppingList/SortableItem', () => ({
-  SwipeableListItem: () => null,
-}));
+jest.mock(
+  '../../../../src/features/shoppingList/components/SortableShoppingList/SortableItem',
+  () => ({
+    SwipeableListItem: () => null,
+  }),
+);
 jest.mock('../../../../src/constants/layout', () => ({
   getTabBarBottomPadding: jest.fn(() => 80),
   getScrollClearancePadding: jest.fn(() => 148),
@@ -88,9 +91,7 @@ describe('SortableShoppingList', () => {
       },
     ];
     const { toJSON } = render(
-      withPermissions(
-        <SortableShoppingList {...defaultProps} items={items} />,
-      ),
+      withPermissions(<SortableShoppingList {...defaultProps} items={items} />),
     );
     expect(toJSON()).toBeTruthy();
   });

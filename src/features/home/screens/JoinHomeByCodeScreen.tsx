@@ -17,8 +17,8 @@ import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { Screen } from '#components/templates/Screen';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /**
  * Join a home via share link or a typed code. Mirrors
@@ -26,7 +26,7 @@ import { Screen } from '#components/templates/Screen';
  * user sees the home name and counts before committing.
  */
 export const JoinHomeByCodeScreen: React.FC<
-  StaticScreenProps<{ joinCode?: string }>
+  StaticScreenProps<{ joinCode?: string } | undefined>
 > = ({ route }) => {
   const { t } = useTranslation();
   const { goBack, toPantryMain } = useAppNavigation();
@@ -68,20 +68,24 @@ export const JoinHomeByCodeScreen: React.FC<
     }
     if (!requireVerifiedEmail()) return;
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
-        const result = unwrapPayload(
-          await joinHome(code),
-          'JoinHomeByCodePayload',
-          t('joinHome.joinFailed'),
-        );
+        const outcome = await joinHome(code);
+        if (!outcome.joined) {
+          toastService.error(outcome.body);
+          return;
+        }
 
-        useStore.getState().setSelectedHomeId(result.membership.homeId);
+        // An unknown home would read as one the user left, and be swapped
+        // back out; it is selected once the homes list next has it.
+        if (outcome.homeKnown) {
+          useStore.getState().setSelectedHomeId(outcome.homeId);
+        }
         goBack();
         toPantryMain();
         toastService.success(
           t('labels.joined', {
-            name: home?.name || t('joinHome.homeFallback'),
+            name: firstNonBlank(home?.name) ?? t('joinHome.homeFallback'),
           }),
         );
       },
@@ -112,7 +116,12 @@ export const JoinHomeByCodeScreen: React.FC<
           <Text role="heading" align="center" style={styles.title}>
             {t('joinHome.enterCodeTitle')}
           </Text>
-          <Text tone="secondary" align="center" style={styles.description}>
+          <Text
+            role="body"
+            tone="secondary"
+            align="center"
+            style={styles.description}
+          >
             {t('joinHome.enterCodeDescription')}
           </Text>
           <BaseInput
@@ -157,7 +166,7 @@ export const JoinHomeByCodeScreen: React.FC<
         <View style={styles.iconContainer}>
           <Icon name="home" size={48} tone="primary" />
         </View>
-        <Text tone="secondary" align="center" style={styles.title}>
+        <Text role="body" tone="secondary" align="center" style={styles.title}>
           {t('joinHome.invitedToJoin')}
         </Text>
         <View style={styles.previewCard}>
@@ -232,7 +241,6 @@ const styles = StyleSheet.create(theme => ({
   },
   description: {
     marginBottom: theme.spacing.xl,
-    lineHeight: theme.typography.fontSize.md * 1.5,
   },
   inputContainer: {
     width: '100%',

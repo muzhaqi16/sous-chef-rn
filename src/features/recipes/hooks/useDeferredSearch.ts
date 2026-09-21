@@ -17,12 +17,8 @@ interface UseDeferredSearchOptions<T> {
 }
 
 interface UseDeferredSearchResult<T> {
-  /** Search results (deferred for non-blocking UI) */
+  /** Filtered by the debounced query, so they lag typing on purpose. */
   results: T[];
-  /** The deferred query value being used for results */
-  deferredQuery: string;
-  /** Whether results are stale (query changed but results not yet updated) */
-  isStale: boolean;
 }
 
 /**
@@ -55,55 +51,5 @@ export function useDeferredSearch<T>(
     return items.filter(item => searchFn(item, trimmedQuery));
   })();
 
-  const isStale = searchQuery !== deferredQuery;
-
-  return {
-    results,
-    deferredQuery,
-    isStale,
-  };
-}
-
-/** `useDeferredSearch` plus an optional sort over the filtered results. */
-export function useDeferredSearchWithSort<T>(
-  options: UseDeferredSearchOptions<T> & {
-    sortFn?: (a: T, b: T) => number;
-  },
-): UseDeferredSearchResult<T> {
-  const {
-    items,
-    searchQuery,
-    searchFn,
-    sortFn,
-    minQueryLength = 0,
-    debounceMs = DEFAULT_SEARCH_DEBOUNCE_MS,
-  } = options;
-
-  // Debounced, not deferred — same FlashList reason as useDeferredSearch.
-  const deferredQuery = useDebouncedValue(searchQuery, debounceMs);
-
-  const results = (() => {
-    const trimmedQuery = deferredQuery.trim();
-
-    let filtered: T[];
-    if (trimmedQuery.length < minQueryLength) {
-      filtered = items;
-    } else {
-      filtered = items.filter(item => searchFn(item, trimmedQuery));
-    }
-
-    if (sortFn) {
-      return [...filtered].sort(sortFn);
-    }
-
-    return filtered;
-  })();
-
-  const isStale = searchQuery !== deferredQuery;
-
-  return {
-    results,
-    deferredQuery,
-    isStale,
-  };
+  return { results };
 }

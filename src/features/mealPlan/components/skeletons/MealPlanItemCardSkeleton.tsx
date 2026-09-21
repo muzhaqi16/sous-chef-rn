@@ -2,57 +2,34 @@ import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonBase } from '#components/atoms/Skeleton/SkeletonBase';
+import { commonStyles } from '#/styles/commonStyles';
+import { rowType } from '#/theme/foundations/type';
 
-/**
- * Skeleton for a single meal plan item card.
- * Matches MealPlanItemCard layout: checkbox → image → content → delete icon.
- */
+/** Uses the same row surface and slots as MealPlanItemCard. */
 export const MealPlanItemCardSkeleton: React.FC = () => (
-  <View style={styles.card}>
-    {/* Checkbox */}
-    <View style={styles.checkbox}>
-      <SkeletonBase width={24} height={24} borderRadius={12} />
-    </View>
-
-    {/* Image */}
-    <View style={styles.image}>
-      <SkeletonBase
-        width={44}
-        height={44}
-        borderRadius={styles.imageBorderRadius.borderRadius}
-      />
-    </View>
-
-    {/* Content */}
-    <View style={styles.content}>
-      <SkeletonBase width="70%" height={16} borderRadius={4} />
-      <View style={styles.meta}>
-        <SkeletonBase width="50%" height={14} borderRadius={4} />
+  <View style={commonStyles.rowWrapper}>
+    <View style={commonStyles.rowSurface}>
+      <View style={commonStyles.rowContent}>
+        <SkeletonBase width={24} height={24} borderRadius={12} />
+        <SkeletonBase
+          width={48}
+          height={48}
+          borderRadius={styles.imageBorderRadius.borderRadius}
+        />
+        <View style={styles.content}>
+          <View style={styles.titleLine}>
+            <SkeletonBase width="70%" height={16} borderRadius={4} />
+          </View>
+          <View style={[commonStyles.rowTextGap, styles.subtitleLine]}>
+            <SkeletonBase width="50%" height={14} borderRadius={4} />
+          </View>
+        </View>
       </View>
     </View>
-
-    {/* Delete icon */}
-    <SkeletonBase width={20} height={20} borderRadius={10} />
   </View>
 );
 
 const styles = StyleSheet.create(theme => ({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    marginBottom: theme.spacing.xs,
-  },
-  checkbox: {
-    marginRight: theme.spacing.sm,
-  },
-  image: {
-    marginRight: theme.spacing.sm,
-  },
   imageBorderRadius: {
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
@@ -60,7 +37,12 @@ const styles = StyleSheet.create(theme => ({
   content: {
     flex: 1,
   },
-  meta: {
-    marginTop: 2,
+  titleLine: {
+    minHeight: theme.type[rowType.title].lineHeight,
+    justifyContent: 'center',
+  },
+  subtitleLine: {
+    minHeight: theme.type.caption.lineHeight,
+    justifyContent: 'center',
   },
 }));

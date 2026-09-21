@@ -237,10 +237,10 @@ describe('useShoppingListSelectorModal', () => {
 
     const { actions } = result.current.listConfig;
     expect(actions).toBeDefined();
-    expect(actions!.length).toBe(3);
-    expect(actions![0]!.label).toBe('Create');
-    expect(actions![1]!.label).toBe('Share');
-    expect(actions![2]!.label).toBe('Settings');
+    expect(actions.length).toBe(3);
+    expect(actions[0]!.label).toBe('Create');
+    expect(actions[1]!.label).toBe('Share');
+    expect(actions[2]!.label).toBe('Settings');
   });
 
   it('has only create action when no currentListId', () => {
@@ -253,8 +253,8 @@ describe('useShoppingListSelectorModal', () => {
     );
 
     const { actions } = result.current.listConfig;
-    expect(actions!.length).toBe(1);
-    expect(actions![0]!.label).toBe('Create');
+    expect(actions.length).toBe(1);
+    expect(actions[0]!.label).toBe('Create');
   });
 
   it('sets title to "Select Shopping List" when not in delete mode', () => {
@@ -516,7 +516,7 @@ describe('useShoppingListSelectorModal', () => {
     );
 
     act(() => {
-      result.current.listConfig.actions![0]!.onPress();
+      result.current.listConfig.actions[0]!.onPress();
     });
 
     expect(mockSetOverlayOpen).toHaveBeenCalledWith(false);
@@ -533,7 +533,7 @@ describe('useShoppingListSelectorModal', () => {
     );
 
     act(() => {
-      result.current.listConfig.actions![1]!.onPress();
+      result.current.listConfig.actions[1]!.onPress();
     });
 
     expect(mockNav.toShareList).toHaveBeenCalledWith({
@@ -551,7 +551,7 @@ describe('useShoppingListSelectorModal', () => {
     );
 
     act(() => {
-      result.current.listConfig.actions![2]!.onPress();
+      result.current.listConfig.actions[2]!.onPress();
     });
 
     expect(mockNav.toListSettings).toHaveBeenCalledWith({
@@ -1002,7 +1002,7 @@ describe('useShoppingListSelectorModal', () => {
       );
 
       act(() => {
-        result.current.listConfig.actions![1]!.onPress();
+        result.current.listConfig.actions[1]!.onPress();
       });
 
       expect(mockSetOverlayOpen).toHaveBeenCalledWith(false);
@@ -1021,7 +1021,7 @@ describe('useShoppingListSelectorModal', () => {
       );
 
       act(() => {
-        result.current.listConfig.actions![2]!.onPress();
+        result.current.listConfig.actions[2]!.onPress();
       });
 
       expect(mockSetOverlayOpen).toHaveBeenCalledWith(false);

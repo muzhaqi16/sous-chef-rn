@@ -10,8 +10,11 @@ import { colors } from '#/theme/foundations/colors';
  * foreground follows the fill's luminance and the fill is user-overridable, so
  * a hardcoded white is wrong for four of the seven pickable brand colours.
  *
- * A hardcoded white is one of four ways the pairing breaks; the other three
- * read as correct, and each gets its own scan below.
+ * Two of the four ways the pairing breaks are per-file and belong to
+ * `sous-chef/on-fill-text-uses-its-token`: a hardcoded white, and an `on*`
+ * token naming a fill other than the one beside it. What stays here needs more
+ * than one file — a shared fill overridden locally under a shared foreground —
+ * or needs the palette itself, to check the contrast the pairing exists for.
  */
 const FILES = globSync('src/**/*.{ts,tsx}', {
   exclude: (p: string) =>
@@ -43,43 +46,15 @@ const FILL_GROUP = FILL_NAMES.join('|');
 const FILLS = new RegExp(
   `backgroundColor:\\s*theme\\.colors\\.(${FILL_GROUP})\\b`,
 );
-/**
- * A hardcoded white. `theme.colors.white` is gone — text over a photo, a
- * camera preview or a dark scrim reads `onScrim` — so what is left to catch is
- * a raw literal, which no type error can.
- */
-const WHITE =
-  /\bcolor:\s*['"`](?:#fff(?:fff)?|white|rgba?\(\s*255\s*,\s*255\s*,\s*255[^)]*\))['"`]/i;
-
 /** The fill an `on*` token names — `onPrimary` belongs to `primary`. */
 const fillOfOnToken = (token: string): string =>
   token.slice(2, 3).toLowerCase() + token.slice(3);
-
-const suspects = FILES.flatMap(file => {
-  const blocks = styleBlocks(readFileSync(file, 'utf8'));
-  const fills = [...blocks.values()].some(b => FILLS.test(b));
-  if (!fills) return [];
-
-  return [...blocks.entries()]
-    .filter(([, body]) => WHITE.test(body))
-    .map(([name]) => `${file}#${name}`);
-});
 
 /**
  * An `on*` token in the same block as a fill it does not name. Reads as
  * correct — it is a token, not a literal — and inverts with whichever fill it
  * IS named for.
  */
-const misTokened = FILES.flatMap(file => {
-  const blocks = styleBlocks(readFileSync(file, 'utf8'));
-
-  return [...blocks.entries()].flatMap(([name, body]) => {
-    const fill = FILLS.exec(body)?.[1];
-    const onToken = /\bcolor:\s*theme\.colors\.(on[A-Z]\w*)/.exec(body)?.[1];
-    if (!fill || !onToken) return [];
-    return fillOfOnToken(onToken) === fill ? [] : [`${file}#${name}`];
-  });
-});
 
 /**
  * A shared fill overridden locally, under a shared foreground naming the
@@ -161,16 +136,35 @@ const strandedOnFillComponents = FILES.flatMap(file => {
  */
 const AA_NORMAL = 4.5;
 
-/** Pairs below AA that predate this guard, each with the ratio it sits at. */
+/**
+ * The `<group>.<key>` fills some component actually paints. A `*Bg` token is
+ * only a ground for the `*Text` beside it once something renders it as one, and
+ * a `*Text` can sit on a surface no `*Bg` names at all — `expiration.expiredText`
+ * is painted on the alert bar's own ground. Pairing by NAME measures
+ * combinations that appear on no screen, so the fills are read from source:
+ * the palette cannot say which pairs meet.
+ */
+const paintedFills = new Set(
+  FILES.flatMap(file => [
+    ...readFileSync(file, 'utf8').matchAll(
+      /backgroundColor:\s*[\w.]*\bcolors\.(\w+)\.(\w+)/g,
+    ),
+  ]).map(m => `${m[1]}.${m[2]}`),
+);
+
+/**
+ * Painted pairs below AA, each a standing decision rather than a queue: the
+ * brand's own orange sets both, and darkening either to clear 4.5 would change
+ * the tab's colour. An entry states why the pairing stands; a NEW pair below AA
+ * still fails.
+ */
 const PALETTE_CONTRAST_EXEMPT: Record<string, string> = {
-  'colors.expiration.expiredBg + .expiredText':
-    '4.41 — pre-existing, marginal; expiration chrome is reviewed as a set',
-  'colors.expiration.warningBg + .warningText':
-    '3.43 — pre-existing; same set as expiredText',
   'colors.filterTab.activeBg + .activeText':
-    '2.58 — the brand pairing, white on the brand orange by decision',
+    '2.58 — white on the brand orange, the same pairing `applyAppearance` ' +
+    'derives for a custom brand; see `project_brand_color_white_on_primary`',
   'colors.filterTab.filteredBg + .filteredText':
-    '3.33 — pre-existing; the filtered state, not the active fill',
+    '3.33 — the brand orange tinted for the filtered state, which reads as ' +
+    'one ramp with the active fill above and moves only with it',
 };
 
 const palettePairs = Object.entries(colors).flatMap(([group, value]) => {
@@ -179,6 +173,7 @@ const palettePairs = Object.entries(colors).flatMap(([group, value]) => {
 
   return entries.flatMap(([key, fill]) => {
     if (typeof fill !== 'string' || !/Bg$/.test(key)) return [];
+    if (!paintedFills.has(`${group}.${key}`)) return [];
     const textKey = key.replace(/Bg$/, 'Text');
     const text = (value as Record<string, unknown>)[textKey];
     if (typeof text !== 'string') return [];
@@ -199,28 +194,6 @@ describe('text on a primary or danger fill', () => {
     expect(FILES.length).toBeGreaterThan(400);
   });
 
-  it('still recognises a hardcoded white', () => {
-    // `suspects` is empty across the tree, so an inert pattern would pass here
-    // for the wrong reason.
-    for (const literal of [
-      "'#fff'",
-      '"#FFFFFF"',
-      "'white'",
-      "'rgba(255, 255, 255, 0.8)'",
-    ]) {
-      expect(WHITE.test(`color: ${literal},`)).toBe(true);
-    }
-    expect(WHITE.test('color: theme.colors.onPrimary,')).toBe(false);
-  });
-
-  it('reads onPrimary/onError/onScrim rather than a hardcoded white', () => {
-    expect(suspects).toEqual([]);
-  });
-
-  it('never paints an on-token over a fill it does not name', () => {
-    expect(misTokened).toEqual([]);
-  });
-
   it('does not let a caller override a shared fill under its foreground', () => {
     expect(overriddenSharedFills).toEqual([]);
   });
@@ -233,7 +206,10 @@ describe('text on a primary or danger fill', () => {
 describe('palette groups pairing a fill with its own text', () => {
   it('finds the pairs it exists to check', () => {
     // A scan matching nothing passes identically whether the contract holds or
-    // the palette was reshaped under it.
+    // the palette was reshaped under it. `paintedFills` is the half that can
+    // empty silently: a renamed token or a reshaped style block leaves the
+    // regex matching nothing and every pair unchecked.
+    expect(paintedFills.size).toBeGreaterThan(0);
     expect(palettePairs.length).toBeGreaterThan(0);
   });
 

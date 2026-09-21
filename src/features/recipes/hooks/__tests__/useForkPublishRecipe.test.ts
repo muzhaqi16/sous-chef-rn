@@ -12,6 +12,8 @@ import { RecipeForm_RecipeFragmentDoc } from '#features/recipes/screens/RecipeFo
 import { useForkRecipe } from '../useForkRecipe';
 import { usePublishRecipe } from '../usePublishRecipe';
 import { useStore } from '#store';
+import { alertService } from '#/services/alertService';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -154,7 +156,7 @@ describe('useForkRecipe', () => {
             data: {
               forkRecipe: {
                 __typename: 'ForbiddenError',
-                code: 'FORBIDDEN',
+                code: ErrorCode.Forbidden,
                 message: 'nope',
               },
             },
@@ -172,6 +174,33 @@ describe('useForkRecipe', () => {
       key => key.startsWith('Recipe:') && key !== 'Recipe:recipe-1',
     );
     expect(forked).toEqual([]);
+    // Reported once, in the app's words.
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    expect(alertService.alert).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'nope',
+    );
+  });
+
+  it('drops the copy and reports once when the fork throws', async () => {
+    const cache = seedSource();
+    const { result } = renderHookWithApollo(() => useForkRecipe(), {
+      cache,
+      operationMocks: [
+        {
+          request: { query: ForkRecipeDocument, variables: () => true },
+          error: new Error('network down'),
+        },
+      ],
+    });
+
+    let id: string | null = 'unset';
+    await act(async () => {
+      id = await result.current.forkRecipe('recipe-1');
+    });
+
+    expect(id).toBeNull();
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -202,7 +231,7 @@ describe('usePublishRecipe', () => {
             data: {
               updateRecipe: {
                 __typename: 'ValidationError',
-                code: 'VALIDATION_FAILED',
+                code: ErrorCode.ValidationFailed,
                 message: 'bad',
                 field: 'status',
               },

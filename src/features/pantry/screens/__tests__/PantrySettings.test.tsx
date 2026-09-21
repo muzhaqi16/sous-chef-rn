@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { makeCache } from '#/apollo/cache';
-import { InMemoryCache } from '@apollo/client';
+import type { InMemoryCache } from '@apollo/client';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {

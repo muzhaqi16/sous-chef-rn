@@ -1,14 +1,13 @@
 import { Platform } from 'react-native';
-import {
+import type {
   TelemetryConfig,
   LogEntry,
   LogExceptionDetails,
   MetricEntry,
   ErrorDetails,
   TelemetryTransport,
-  TransportSendError,
-  DEFAULT_CONFIG,
 } from './types';
+import { TransportSendError, DEFAULT_CONFIG } from './types';
 import { ConsoleTransport } from './transports/ConsoleTransport';
 import { HttpTransport } from './transports/HttpTransport';
 import { scrubLogExtra, scrubString } from './scrub';
@@ -16,6 +15,7 @@ import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import { getDeviceId } from '#/storage/deviceId';
 import { generateId } from '#/utils/generateId';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import { getVersion, isEmulatorSync } from 'react-native-device-info';
 import { env as buildEnv } from '#/config/env';
 import { useStore } from '#store';
@@ -242,7 +242,7 @@ export class TelemetryService {
     }
 
     if (level === 'error') {
-      this.flushLogs();
+      void this.flushLogs();
     }
   }
 
@@ -352,16 +352,16 @@ export class TelemetryService {
         ...error.context,
       },
       {
-        type: error.name || 'Error',
+        type: firstNonBlank(error.name) ?? 'Error',
         message: error.message,
         stacktrace: error.stack,
       },
     );
 
     this.incrementCounter('app_errors_total', 1, {
-      component: error.component || 'unknown',
-      operation: error.operation || 'unknown',
-      is_fatal: String(error.isFatal || false),
+      component: firstNonBlank(error.component) ?? 'unknown',
+      operation: firstNonBlank(error.operation) ?? 'unknown',
+      is_fatal: String(error.isFatal ?? false),
     });
   }
 
@@ -426,17 +426,15 @@ export class TelemetryService {
     this.clearFlushTimers();
 
     if (this.config.enableLogs) {
-      this.flushTimers.logs = setInterval(
-        () => this.flushLogs(),
-        this.config.flushIntervals.logs,
-      );
+      this.flushTimers.logs = setInterval(() => {
+        void this.flushLogs();
+      }, this.config.flushIntervals.logs);
     }
 
     if (this.config.enableMetrics) {
-      this.flushTimers.metrics = setInterval(
-        () => this.flushMetrics(),
-        this.config.flushIntervals.metrics,
-      );
+      this.flushTimers.metrics = setInterval(() => {
+        void this.flushMetrics();
+      }, this.config.flushIntervals.metrics);
     }
   }
 
@@ -675,7 +673,7 @@ export class TelemetryService {
 
   destroy(): void {
     this.clearFlushTimers();
-    this.flush();
+    void this.flush();
     this.isInitialized = false;
   }
 }

@@ -38,7 +38,15 @@ const fromMLKitFormat = (
     case 'upc-a':
     case 'upc-e':
       return format;
-    default:
+    case 'unknown':
+    case 'code-128':
+    case 'code-39':
+    case 'code-93':
+    case 'codabar':
+    case 'data-matrix':
+    case 'itf':
+    case 'pdf-417':
+    case 'aztec':
       return null;
   }
 };

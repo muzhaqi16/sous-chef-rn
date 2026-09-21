@@ -10,20 +10,6 @@ export async function expectElementText(testID: string, text: string) {
   await expect(element(by.id(testID))).toHaveText(text);
 }
 
-export async function expectToastVisible(message: string) {
-  await expect(element(by.text(message))).toBeVisible();
-}
-
-export async function expectToastAppearsAndDisappears(
-  message: string,
-  timeout: number = 5000,
-) {
-  await expect(element(by.text(message))).toBeVisible();
-  await waitFor(element(by.text(message)))
-    .not.toBeVisible()
-    .withTimeout(timeout);
-}
-
 export async function expectScreenLoaded(screenTestID: string) {
   await expect(element(by.id(screenTestID))).toBeVisible();
 }
@@ -67,10 +53,6 @@ export async function expectUnchecked(testID: string) {
 
 export async function expectFieldEmpty(testID: string) {
   await expect(element(by.id(testID))).toHaveText('');
-}
-
-export async function expectErrorMessage(message: string) {
-  await expect(element(by.text(message))).toBeVisible();
 }
 
 export async function expectAllVisible(...testIDs: string[]) {

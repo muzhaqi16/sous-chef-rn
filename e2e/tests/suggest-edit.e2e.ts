@@ -8,9 +8,12 @@ import { device, element, by, waitFor } from 'detox';
 import { getAuthTokens } from '../helpers/tokenProvider';
 import { dismissBiometricPromptIfPresent } from '../helpers/auth';
 import { t } from '../helpers/i18n';
+import { barcodeTestIDs } from '../../src/features/barcode/testIDs';
+import { catalogTestIDs } from '../../src/features/catalog/testIDs';
 
 // Seeded, PUBLIC, not created by the test user -> canEdit: false.
-const PUBLIC_ITEM_UPC = '085239110201'; // Ground Beef
+const PUBLIC_ITEM_UPC = '085239110201';
+const PUBLIC_ITEM_NAME = 'Ground Beef';
 
 const settle = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -45,21 +48,21 @@ describe('Item edit suggestions', () => {
   });
 
   it('lands on the scanned item rather than the pantry', async () => {
-    await waitFor(element(by.text('Ground Beef')))
+    await waitFor(element(by.text(PUBLIC_ITEM_NAME)))
       .toBeVisible()
       .withTimeout(20000);
   });
 
   it('offers Suggest Edit for an item the user may not edit directly', async () => {
     // canEdit: false -> the suggestion wording, never "Edit".
-    await waitFor(element(by.text(t('suggestItemEdit.suggestAction'))))
-      .toBeVisible()
+    await waitFor(element(by.id(barcodeTestIDs.productEditActionLabel)))
+      .toHaveText(t('labels.suggestEdit'))
       .withTimeout(10000);
     await shoot('02-suggest-edit-visible');
   });
 
   it('opens the form worded as a review, not an immediate change', async () => {
-    await element(by.text(t('suggestItemEdit.suggestAction'))).tap();
+    await element(by.id(barcodeTestIDs.productEditAction)).tap();
     await settle(2500);
     await shoot('03-suggest-edit-sheet');
 
@@ -67,16 +70,14 @@ describe('Item edit suggestions', () => {
     // change goes live immediately, `edit` promises review. Asserted through
     // the resolved copy rather than a literal, so rewording en.json can't leave
     // this passing against a string the app does not render.
-    await waitFor(element(by.id('add-item-form-subtitle')))
+    await waitFor(element(by.id(catalogTestIDs.addItemFormSubtitle)))
       .toHaveText(t('addItemForm.modes.edit.subtitle'))
       .withTimeout(10000);
   });
 
   it('leads the form with the note the reviewer needs', async () => {
     // The note sits first on Basics and is required on this path.
-    await waitFor(
-      element(by.text(t('addItemForm.fields.editNote.placeholder'))),
-    )
+    await waitFor(element(by.id(catalogTestIDs.addItemFormEditNoteInput)))
       .toBeVisible()
       .withTimeout(10000);
   });

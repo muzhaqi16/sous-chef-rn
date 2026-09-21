@@ -1,5 +1,6 @@
 import React from 'react';
 import type { SvgProps } from 'react-native-svg';
+import { StorageType } from '#/graphql/generated/schemaTypes';
 import Refrigerator from '#assets/icons/svg/storageLocations/refrigerator.svg';
 import Freezer from '#assets/icons/svg/storageLocations/freezer.svg';
 import PantryShelf from '#assets/icons/svg/storageLocations/pantry-shelf.svg';
@@ -12,24 +13,24 @@ import ClosedStorage from '#assets/icons/svg/storageLocations/closed-storage.svg
 import BoatRvStorage from '#assets/icons/svg/storageLocations/boat-rv-storage.svg';
 import Custom from '#assets/icons/svg/storageLocations/custom.svg';
 
-const SVG_MAP: Record<string, React.FC<SvgProps>> = {
-  REFRIGERATOR: Refrigerator,
-  FREEZER: Freezer,
-  PANTRY_SHELF: PantryShelf,
-  CABINET: Cabinet,
-  DRAWER: Drawer,
-  COUNTER: Counter,
-  BASEMENT: Basement,
-  GARAGE: GarageOutdoor,
-  OUTDOOR: GarageOutdoor,
-  CLOSET: ClosedStorage,
-  BOAT_STORAGE: BoatRvStorage,
-  RV_STORAGE: BoatRvStorage,
-  CUSTOM: Custom,
+const SVG_MAP: Record<StorageType, React.FC<SvgProps>> = {
+  [StorageType.Refrigerator]: Refrigerator,
+  [StorageType.Freezer]: Freezer,
+  [StorageType.PantryShelf]: PantryShelf,
+  [StorageType.Cabinet]: Cabinet,
+  [StorageType.Drawer]: Drawer,
+  [StorageType.Counter]: Counter,
+  [StorageType.Basement]: Basement,
+  [StorageType.Garage]: GarageOutdoor,
+  [StorageType.Outdoor]: GarageOutdoor,
+  [StorageType.Closet]: ClosedStorage,
+  [StorageType.BoatStorage]: BoatRvStorage,
+  [StorageType.RvStorage]: BoatRvStorage,
+  [StorageType.Custom]: Custom,
 };
 
 interface StorageLocationIconProps {
-  type: string;
+  type: StorageType;
   size?: number;
   color?: string;
 }
@@ -39,6 +40,7 @@ export const StorageLocationIcon: React.FC<StorageLocationIconProps> = ({
   size = 24,
   color,
 }) => {
-  const SvgComponent = SVG_MAP[type] ?? Custom;
-  return <SvgComponent width={size} height={size} color={color} />;
+  // A type the API added after this build has no entry.
+  const Svg = type in SVG_MAP ? SVG_MAP[type] : Custom;
+  return <Svg width={size} height={size} color={color} />;
 };

@@ -7,6 +7,8 @@
 import { element, by, waitFor } from 'detox';
 import { launchAppWithFabricWorkaround } from '../init';
 import { bootstrapAuthenticatedSession } from '../helpers/auth';
+import { pantryTestIDs } from '../../src/features/pantry/testIDs';
+import { shoppingListTestIDs } from '../../src/features/shoppingList/testIDs';
 
 const SHOPPING_TAP_NOTIFICATION = {
   trigger: { type: 'push' },
@@ -29,7 +31,7 @@ describe('P1: cold-launch notification tap', () => {
       userNotification: SHOPPING_TAP_NOTIFICATION,
     });
 
-    await waitFor(element(by.id('shopping-list-screen')))
+    await waitFor(element(by.id(shoppingListTestIDs.screen)))
       .toBeVisible()
       .withTimeout(20000);
 
@@ -44,7 +46,7 @@ describe('P1: cold-launch notification tap', () => {
 
     // Default post-login screen is the Pantry tab — a stale replayed tap
     // would put us on the shopping list instead.
-    await waitFor(element(by.id('pantry-screen')))
+    await waitFor(element(by.id(pantryTestIDs.screen)))
       .toBeVisible()
       .withTimeout(20000);
 

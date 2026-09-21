@@ -97,6 +97,7 @@ query GetPantry(
           type
           icon
           color
+          temperature
           isDefault
           currentItemCount
           parentLocation {
@@ -427,18 +428,11 @@ query GetPantryLedgerAnalytics(
   }
 }
 
-query ConsumptionUnitsForItem(
-  $itemId: ID!
-  $trackingUnitId: ID!
-  $netWeightUnitId: ID
-  $portionUnitId: ID
-) {
-  consumptionUnitsForItem(
-    itemId: $itemId
-    trackingUnitId: $trackingUnitId
-    netWeightUnitId: $netWeightUnitId
-    portionUnitId: $portionUnitId
-  ) {
+# Per STACK, not per catalog item: the server reads the whole measurement
+# profile (net weight, portion definition, density), so every unit returned is
+# one createPantryItemUsage accepts for this row.
+query ConsumptionUnitsForPantryItem($pantryItemId: ID!) {
+  consumptionUnitsForPantryItem(pantryItemId: $pantryItemId) {
     unit {
       id
       name
@@ -457,8 +451,8 @@ query ConsumptionUnitsForItem(
   }
 }
 
-query RestockUnitsForItem($pantryItemId: ID!) {
-  restockUnitsForItem(pantryItemId: $pantryItemId) {
+query RestockUnitsForPantryItem($pantryItemId: ID!) {
+  restockUnitsForPantryItem(pantryItemId: $pantryItemId) {
     unit {
       id
       name
@@ -627,6 +621,7 @@ mutation CreatePantryItem($input: CreatePantryItemInput!) {
           id
           imageUrl
           images {
+            id
             url
             kind
           }
@@ -760,6 +755,7 @@ mutation DeletePantryItem($input: DeletePantryItemInput!) {
   deletePantryItem(input: $input) {
     __typename
     ... on DeletePantryItemPayload {
+      converged
       pantryItem {
         id
         pantry {
@@ -1239,6 +1235,7 @@ query GetPantryItemUsageHistory(
           usedAt
           purpose
           adjustmentReason
+          adjustmentKind
         }
       }
     }

@@ -1,4 +1,5 @@
 import { act } from '@testing-library/react-native';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -15,15 +16,9 @@ import {
 import { useStore } from '#store';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
+import { t } from '#/i18n';
+import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
 import { useMoveToPantry } from '../useMoveToPantry';
-
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    trackEvent: jest.fn(),
-    // errorService.reportError routes through this on the failure path.
-    trackError: jest.fn(),
-  },
-}));
 
 // Spread the real module: a partial factory silently omits whatever the hook
 // imports NEXT — the local-first move added two more updaters, and a trimmed
@@ -50,7 +45,7 @@ function createItem(
   overrides: Partial<ShoppingListItemDisplayFragment> = {},
 ): ShoppingListItemDisplayFragment {
   return {
-    __typename: 'ShoppingListItem' as const,
+    __typename: 'ShoppingListItem',
     id: 'item-1',
     itemName: 'Milk',
     quantity: 2,
@@ -59,7 +54,7 @@ function createItem(
     // the cache holds. Seeding only `isPurchased` makes the carry-forward
     // write a partial record no server response could produce.
     purchaseInfo: {
-      __typename: 'ShoppingListItemPurchaseInfo' as const,
+      __typename: 'ShoppingListItemPurchaseInfo',
       isPurchased: true,
       movedToPantryAt: null,
       purchaseDate: null,
@@ -77,21 +72,20 @@ function moveMock() {
   return recordMock(MoveShoppingItemToPantryDocument, {
     data: {
       moveShoppingItemToPantry: {
-        __typename: 'MoveShoppingItemToPantryPayload' as const,
-        pantryItem: { __typename: 'PantryItem' as const, id: 'pantry-item-1' },
+        __typename: 'MoveShoppingItemToPantryPayload',
+        pantryItem: { __typename: 'PantryItem', id: 'pantry-item-1' },
       },
     },
   });
 }
 
 describe('useMoveToPantry', () => {
-  it('returns moveToPantry function and loading state', () => {
+  it('returns moveToPantry function', () => {
     const { result } = renderHookWithApollo(() =>
       useMoveToPantry({ currentListId: 'list-1' }),
     );
 
     expect(typeof result.current.moveToPantry).toBe('function');
-    expect(result.current.loading).toBe(false);
   });
 
   it('calls mutation with correct variables', async () => {
@@ -194,7 +188,7 @@ describe('useMoveToPantry', () => {
     const conflicted = recordMock(MoveShoppingItemToPantryDocument, {
       data: {
         moveShoppingItemToPantry: {
-          __typename: 'ConflictError' as const,
+          __typename: 'ConflictError',
           message: 'Pantry item was modified',
           code: ErrorCode.Conflict,
         },
@@ -217,9 +211,20 @@ describe('useMoveToPantry', () => {
     });
 
     expect(moveResult).toBe(false);
+    // `CONFLICT` is a state refusal, not a stale version: one alert, described
+    // by its code rather than as "updated by another user".
+    expect(alertSpy).toHaveBeenCalledTimes(1);
     expect(alertSpy).toHaveBeenCalledWith(
-      'Error',
-      'Failed to move item to the pantry. Please try again.',
+      t('labels.error'),
+      expect.any(String),
+    );
+    expect(alertSpy).not.toHaveBeenCalledWith(
+      expect.anything(),
+      getVersionConflictMessage(),
+    );
+    expect(alertSpy).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'Pantry item was modified',
     );
   });
 
@@ -409,9 +414,9 @@ describe('useMoveToPantry pantry item count', () => {
       id: 'Pantry:pantry-1',
       fragment: STATS_FRAGMENT,
       data: {
-        __typename: 'Pantry' as const,
+        __typename: 'Pantry',
         id: 'pantry-1',
-        stats: { __typename: 'PantryStats' as const, totalItems: 63 },
+        stats: { __typename: 'PantryStats', totalItems: 63 },
       },
     });
     return cache;
@@ -434,11 +439,13 @@ describe('useMoveToPantry pantry item count', () => {
    */
   function echoingMoveMock() {
     return recordMock(MoveShoppingItemToPantryDocument, {
-      data: (vars: Record<string, unknown>) => ({
+      dataFor: (
+        vars: Record<string, unknown>,
+      ): MockDataFor<typeof MoveShoppingItemToPantryDocument> => ({
         moveShoppingItemToPantry: {
-          __typename: 'MoveShoppingItemToPantryPayload' as const,
+          __typename: 'MoveShoppingItemToPantryPayload',
           pantryItem: {
-            __typename: 'PantryItem' as const,
+            __typename: 'PantryItem',
             id: (vars.input as { pantryItemId: string }).pantryItemId,
           },
         },
@@ -509,7 +516,7 @@ describe('useMoveToPantry pantry item count', () => {
     const rejected = recordMock(MoveShoppingItemToPantryDocument, {
       data: {
         moveShoppingItemToPantry: {
-          __typename: 'ValidationError' as const,
+          __typename: 'ValidationError',
           message: 'nope',
         },
       },
@@ -538,7 +545,7 @@ describe('useMoveToPantry pantry item count', () => {
     const rejected = recordMock(MoveShoppingItemToPantryDocument, {
       data: {
         moveShoppingItemToPantry: {
-          __typename: 'ValidationError' as const,
+          __typename: 'ValidationError',
           message: 'nope',
           field: 'shoppingListItemId',
         },
@@ -558,10 +565,106 @@ describe('useMoveToPantry pantry item count', () => {
       });
     });
 
+    // The removal is stubbed here, so it records no counter change to pass on.
     expect(restoreItemToShoppingListAfterMoveToPantry).toHaveBeenCalledWith(
       expect.anything(),
       'item-1',
+      undefined,
     );
+  });
+
+  it('evicts the pantry row it published when the move is refused', async () => {
+    const cache = seededCache();
+    const rejected = recordMock(MoveShoppingItemToPantryDocument, {
+      data: {
+        moveShoppingItemToPantry: {
+          __typename: 'ValidationError',
+          message: 'nope',
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [rejected.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 2,
+        removeFromList: true,
+      });
+    });
+
+    const mintedId = (rejected.fired[0]!.input as { pantryItemId: string })
+      .pantryItemId;
+    // An unlinked but cached row is persisted and read back by any detail query.
+    expect(
+      cache.identify({ __typename: 'PantryItem', id: mintedId }) ?? '',
+    ).not.toBe('');
+    expect(
+      cache.extract()[
+        cache.identify({ __typename: 'PantryItem', id: mintedId })!
+      ],
+    ).toBeUndefined();
+  });
+
+  it('evicts the pantry row it published when the server restocks another', async () => {
+    const cache = seededCache();
+    const move = moveMock();
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [move.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 2,
+        removeFromList: true,
+      });
+    });
+
+    const mintedId = (move.fired[0]!.input as { pantryItemId: string })
+      .pantryItemId;
+    expect(
+      cache.extract()[
+        cache.identify({ __typename: 'PantryItem', id: mintedId })!
+      ],
+    ).toBeUndefined();
+  });
+
+  it('re-reads when the list counters moved while the refused move was in flight', async () => {
+    const { ApolloClient } = require('@apollo/client');
+    const refetchQueries = jest
+      .spyOn(ApolloClient.prototype, 'refetchQueries')
+      .mockReturnValue(Promise.resolve([]));
+    (
+      restoreItemToShoppingListAfterMoveToPantry as jest.Mock
+    ).mockReturnValueOnce(false);
+    const rejected = recordMock(MoveShoppingItemToPantryDocument, {
+      data: {
+        moveShoppingItemToPantry: {
+          __typename: 'ValidationError',
+          message: 'nope',
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [rejected.mock], cache: seededCache() },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 2,
+        removeFromList: true,
+      });
+    });
+
+    expect(refetchQueries).toHaveBeenCalled();
+    refetchQueries.mockRestore();
   });
 
   it('withdraws the count when the server supersedes the optimistic row', async () => {
@@ -583,5 +686,234 @@ describe('useMoveToPantry pantry item count', () => {
     });
 
     expect(readTotal(cache)).toBe(63);
+  });
+});
+
+describe('useMoveToPantry keeping the row on the list', () => {
+  const { gql } = require('@apollo/client');
+  const LIST_QUERY = gql`
+    query KeepOnListSeed($listId: ID!, $isPurchased: Boolean) {
+      shoppingList(id: $listId) {
+        __typename
+        id
+        totalItems
+        completedItems
+        itemsConnection(filters: { isPurchased: $isPurchased }) {
+          __typename
+          totalCount
+          edges {
+            __typename
+            cursor
+            node {
+              __typename
+              id
+              purchaseInfo {
+                __typename
+                isPurchased
+                movedToPantryAt
+                purchaseDate
+                purchasedById
+                purchasedPrice
+                purchasedQuantity
+                purchasedBy {
+                  __typename
+                  id
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const unpurchased = createItem({
+    purchaseInfo: { ...createItem().purchaseInfo, isPurchased: false },
+  });
+
+  const purchasedRow = createItem();
+
+  function seededList(row: ShoppingListItemDisplayFragment = unpurchased) {
+    const { makeCache } = require('#/apollo/cache');
+    const cache = makeCache();
+    const rowIsPurchased = row.purchaseInfo?.isPurchased === true;
+    const edge = {
+      __typename: 'ShoppingListItemEdge',
+      cursor: row.id,
+      node: {
+        __typename: 'ShoppingListItem',
+        id: row.id,
+        purchaseInfo: row.purchaseInfo,
+      },
+    };
+    const write = (isPurchased: boolean, edges: unknown[]) =>
+      cache.writeQuery({
+        query: LIST_QUERY,
+        variables: { listId: 'list-1', isPurchased },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            totalItems: 1,
+            completedItems: rowIsPurchased ? 1 : 0,
+            itemsConnection: {
+              __typename: 'ShoppingListItemConnection',
+              totalCount: edges.length,
+              edges,
+            },
+          },
+        },
+      });
+    write(false, rowIsPurchased ? [] : [edge]);
+    write(true, rowIsPurchased ? [edge] : []);
+    return cache;
+  }
+
+  const queuedMoveMock = () =>
+    recordMock(MoveShoppingItemToPantryDocument, {
+      data: { moveShoppingItemToPantry: null },
+    });
+
+  const refusedMoveMock = () =>
+    recordMock(MoveShoppingItemToPantryDocument, {
+      data: {
+        moveShoppingItemToPantry: {
+          __typename: 'ConflictError',
+          message: 'Pantry item was modified',
+          code: ErrorCode.Conflict,
+        },
+      },
+    });
+
+  async function keepOnList(
+    cache: ReturnType<typeof seededList>,
+    mock: ReturnType<typeof moveMock>['mock'],
+    row: ShoppingListItemDisplayFragment,
+  ) {
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [mock], cache },
+    );
+    await act(async () => {
+      await result.current.moveToPantry(row, {
+        pantryId: 'pantry-1',
+        actualQuantity: 2,
+        removeFromList: false,
+      });
+    });
+  }
+
+  const read = (cache: { readQuery: Function }, isPurchased: boolean) =>
+    cache.readQuery({
+      query: LIST_QUERY,
+      variables: { listId: 'list-1', isPurchased },
+    }) as {
+      shoppingList: {
+        completedItems: number;
+        itemsConnection: {
+          edges: {
+            node: {
+              id: string;
+              purchaseInfo: {
+                isPurchased: boolean;
+                movedToPantryAt: string | null;
+              };
+            };
+          }[];
+        };
+      };
+    };
+
+  // The API marks a kept line purchased and stamps it, whatever its state.
+  it('marks an unpurchased row purchased and stamped, in the purchased counts', async () => {
+    const cache = seededList();
+    const move = moveMock();
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [move.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(unpurchased, {
+        pantryId: 'pantry-1',
+        actualQuantity: 2,
+        removeFromList: false,
+      });
+    });
+
+    const purchased = read(cache, true).shoppingList;
+    expect(purchased.itemsConnection.edges.map(e => e.node.id)).toEqual([
+      'item-1',
+    ]);
+    const [edge] = purchased.itemsConnection.edges;
+    expect(edge?.node.purchaseInfo.isPurchased).toBe(true);
+    expect(edge?.node.purchaseInfo.movedToPantryAt).toEqual(expect.any(String));
+    expect(purchased.completedItems).toBe(1);
+    expect(read(cache, false).shoppingList.itemsConnection.edges).toEqual([]);
+  });
+  // The stamp is what stops the row offering the move; a queued move runs no
+  // `update`, so the stamp is part of the local-first write.
+  it.each([
+    ['online', moveMock],
+    ['queued', queuedMoveMock],
+  ])(
+    'leaves an already-purchased row purchased and stamped (%s)',
+    async (_label, mockFor) => {
+      const cache = seededList(purchasedRow);
+
+      await keepOnList(cache, mockFor().mock, purchasedRow);
+
+      const list = read(cache, true).shoppingList;
+      expect(list.itemsConnection.edges.map(e => e.node.id)).toEqual([
+        'item-1',
+      ]);
+      const [edge] = list.itemsConnection.edges;
+      expect(edge?.node.purchaseInfo.isPurchased).toBe(true);
+      expect(edge?.node.purchaseInfo.movedToPantryAt).toEqual(
+        expect.any(String),
+      );
+      expect(list.completedItems).toBe(1);
+      expect(read(cache, false).shoppingList.itemsConnection.edges).toEqual([]);
+    },
+  );
+
+  it('moves a queued unpurchased row into the purchased counts', async () => {
+    const cache = seededList();
+
+    await keepOnList(cache, queuedMoveMock().mock, unpurchased);
+
+    const list = read(cache, true).shoppingList;
+    expect(list.itemsConnection.edges.map(e => e.node.id)).toEqual(['item-1']);
+    expect(
+      list.itemsConnection.edges[0]?.node.purchaseInfo.movedToPantryAt,
+    ).toEqual(expect.any(String));
+    expect(list.completedItems).toBe(1);
+  });
+
+  it('clears the stamp from an already-purchased row when the move is refused', async () => {
+    const cache = seededList(purchasedRow);
+
+    await keepOnList(cache, refusedMoveMock().mock, purchasedRow);
+
+    const list = read(cache, true).shoppingList;
+    const [edge] = list.itemsConnection.edges;
+    expect(edge?.node.purchaseInfo.isPurchased).toBe(true);
+    expect(edge?.node.purchaseInfo.movedToPantryAt).toBeNull();
+    expect(list.completedItems).toBe(1);
+  });
+
+  it('puts a refused unpurchased row back in the unpurchased counts', async () => {
+    const cache = seededList();
+
+    await keepOnList(cache, refusedMoveMock().mock, unpurchased);
+
+    const open = read(cache, false).shoppingList;
+    expect(open.itemsConnection.edges.map(e => e.node.id)).toEqual(['item-1']);
+    expect(open.itemsConnection.edges[0]?.node.purchaseInfo).toMatchObject({
+      isPurchased: false,
+      movedToPantryAt: null,
+    });
+    expect(open.completedItems).toBe(0);
+    expect(read(cache, true).shoppingList.itemsConnection.edges).toEqual([]);
   });
 });

@@ -11,12 +11,11 @@ import { toastService } from '#/services/toastService';
 import {
   SuggestionSurface,
   type ItemSuggestion,
-  type StorageLocation,
 } from '#/graphql/generated/schemaTypes';
+import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
 import { AddItemSheet } from '#features/catalog/ui/AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '#features/catalog/ui/AddItemSheet/useAddItemSheetState';
-import type { SuggestionsHookResult } from '#features/catalog/ui/AddItemSheet/types';
 import { pantrySheetConfig } from '#features/pantry/components/modals/AddToPantrySheet/pantrySheetConfig';
 import { AddDetailsSheet } from './AddDetailsSheet';
 
@@ -66,14 +65,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     skip: !visible || !state.shouldFetch,
   });
 
-  // Adapt suggestions to the expected interface
-  const suggestions: SuggestionsHookResult<PantryItemSuggestion> = {
-    grouped: suggestionsResult.grouped,
-    loading: suggestionsResult.loading,
-    hasSuggestions: suggestionsResult.hasSuggestions,
-    refetch: suggestionsResult.refetch,
-  };
-
   // Dismiss a junk/unwanted suggestion from the PANTRY surface.
   const { dismissSuggestion } = useSuggestionDismissal(
     SuggestionSurface.Pantry,
@@ -81,9 +72,9 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   );
 
   // Storage locations read on-demand from cache (no active watcher)
-  const [storageLocations, setStorageLocations] = useState<StorageLocation[]>(
-    [],
-  );
+  const [storageLocations, setStorageLocations] = useState<
+    readonly StorageLocationOption[]
+  >([]);
 
   // Track items currently being added to prevent duplicate rapid-fire mutations
   const pendingItemIds = useRef(new Set<string>());
@@ -136,7 +127,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     // Offline-first: the pantry answers "do I already stock this?" itself. The
     // server would refuse the create anyway, and offline it never gets asked —
     // so route to the restock now rather than queueing a doomed create.
-    const cachedDuplicate = findCachedDuplicate(item.id);
+    const cachedDuplicate = findCachedDuplicate(item.id, item.defaultUnit?.id);
     if (cachedDuplicate) {
       removeSuggestion(item.id);
       await runRestock(
@@ -182,7 +173,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     state.startExitAnimation(pantryItem.itemId);
 
     // Same local-first check as the search handler above.
-    const cachedDuplicate = findCachedDuplicate(pantryItem.itemId);
+    const cachedDuplicate = findCachedDuplicate(
+      pantryItem.itemId,
+      pantryItem.defaultUnitId,
+    );
     if (cachedDuplicate) {
       await runRestock(
         cachedDuplicate.existingPantryItemId,
@@ -241,7 +235,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       contextId={pantryId}
       onClose={onClose}
       config={pantrySheetConfig}
-      suggestions={suggestions}
+      suggestions={suggestionsResult}
       onQuickAddSearchSuggestion={handleQuickAddSearchSuggestion}
       onQuickAddSuggestion={handleQuickAddSuggestion}
       onDismissSuggestion={handleDismissSuggestion}

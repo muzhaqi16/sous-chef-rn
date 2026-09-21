@@ -20,7 +20,10 @@ import {
   CacheStrategy,
   type SubscriptionApolloClient,
 } from '#/services/subscriptions/types';
-import { UserSubtype } from '#/graphql/generated/schemaTypes';
+import {
+  ModerationReasonCode,
+  UserSubtype,
+} from '#/graphql/generated/schemaTypes';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
@@ -67,7 +70,7 @@ function handleRemovedFromHome(
 }
 
 function handleAddedToHome(client: SubscriptionApolloClient) {
-  client.refetchQueries({ include: [GetHomesDocument] });
+  void client.refetchQueries({ include: [GetHomesDocument] });
   toastService.success(t('accountEvents.addedToHome'));
 }
 
@@ -92,19 +95,27 @@ function handleAddedToShoppingList() {
   toastService.success(t('accountEvents.addedToShoppingList'));
 }
 
-function handleBannedOrSuspended(
-  payload: UserEventPayload,
-  subtype: UserSubtype,
-) {
-  const reason = payload.reason
-    ? t('accountEvents.reasonSuffix', { reason: payload.reason })
-    : '';
+/**
+ * The event's `reason` is a moderator's own English, so no toast shows it. The
+ * copy comes from `reasonCode`, which separates the two states the user needs
+ * told apart: the failed-login lockout lifts by itself, a moderator's decision
+ * does not.
+ */
+function handleBannedOrSuspended(payload: UserEventPayload) {
   const message =
-    subtype === UserSubtype.Banned
-      ? t('accountEvents.accountBanned', { reason })
-      : t('accountEvents.accountSuspended', { reason });
+    payload.reasonCode === ModerationReasonCode.FailedLoginAttempts
+      ? // The count is the server's; without it the sentence omits the number
+        // rather than stating a zero.
+        payload.failedLoginCount == null
+        ? t('accountEvents.accountLocked')
+        : t('accountEvents.accountLockedAttempts', {
+            count: payload.failedLoginCount,
+          })
+      : payload.subtype === UserSubtype.Banned
+      ? t('accountEvents.accountBanned')
+      : t('accountEvents.accountSuspended');
   toastService.error(message);
-  authService.logout();
+  void authService.logout();
 }
 
 /**
@@ -115,18 +126,16 @@ function handleBannedOrSuspended(
  */
 export function useUserSubscriptions(userId?: string) {
   const client = useApolloClient();
-  const selectedHomeId = useSelectedHomeId() || null;
+  const selectedHomeId = useSelectedHomeId() ?? null;
 
   const userEventHandlers = subscriptionService.register<UserEventPayload>({
-    subscriptionName: 'UserEvents',
+    document: UserEventsDocument,
     entityType: 'User',
     enableDeduplication: false,
     userId,
     cacheUpdateStrategy: CacheStrategy.NONE,
     enableLogging: true,
     customOnData: (payload: UserEventPayload) => {
-      if (!payload) return;
-
       switch (payload.subtype) {
         // Apollo auto-normalizes the User / UserProfile node by id; no manual
         // cache work needed (mirrors the former userUpdated / userProfileChanged
@@ -153,13 +162,11 @@ export function useUserSubscriptions(userId?: string) {
 
         case UserSubtype.Banned:
         case UserSubtype.Suspended:
-          handleBannedOrSuspended(payload, payload.subtype);
+          handleBannedOrSuspended(payload);
           break;
 
         case UserSubtype.Warned:
-          toastService.error(
-            payload.reason || t('accountEvents.warningReceived'),
-          );
+          toastService.error(t('accountEvents.warningReceived'));
           break;
 
         case UserSubtype.Unbanned:
@@ -171,9 +178,9 @@ export function useUserSubscriptions(userId?: string) {
 
   const userSkip = !userId;
   const userEvents = useSubscription(UserEventsDocument, {
-    variables: { userId: userId! },
+    variables: { userId: userId ?? '' },
     skip: userSkip,
     ...userEventHandlers,
   });
-  useSubscriptionTransportRecovery('UserEvents', userEvents, userSkip);
+  useSubscriptionTransportRecovery(UserEventsDocument, userEvents, userSkip);
 }

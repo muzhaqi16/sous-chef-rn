@@ -7,14 +7,22 @@ import {
 } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
-import { type UseShoppingListItemForm_ItemFragment } from './useShoppingListItemForm.generated';
-import {
-  type UpdateShoppingListItemInput,
-  type UnitSpecInput,
+import type { UseShoppingListItemForm_ItemFragment } from './useShoppingListItemForm.generated';
+import type {
+  UpdateShoppingListItemInput,
+  UnitSpecInput,
 } from '#/graphql/generated/schemaTypes';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import {
+  normalizeNumericTextForApi,
+  parseDecimalInput,
+} from '#/utils/parseDecimalInput';
 import { formatNumberForInput } from '#/utils/formatters/number';
+import {
+  formatQuantityForInput,
+  parseStoredQuantityText,
+} from '#/utils/formatQuantity';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 import {
   shoppingItemSchema,
   SHOPPING_ITEM_DEFAULTS,
@@ -57,24 +65,33 @@ export function useShoppingListItemForm(
    * and saving without touching it sends nothing.
    */
   const setFromItem = (item: UseShoppingListItemForm_ItemFragment) => {
+    // The API echoes `quantityInput` as a float string, so it is re-formatted;
+    // text no parser reads ("a pinch") stays as the person wrote it.
+    const typed = item.quantityInput?.trim();
+    const typedValue = typed ? parseStoredQuantityText(typed) : null;
+    const netWeightUnitLabel = firstNonBlank(
+      item.netWeightUnit?.symbol,
+      item.netWeightUnit?.name,
+    );
     reset({
-      itemName: item.itemName || '',
+      itemName: item.itemName ?? '',
       quantityInput:
-        item.quantityInput || formatNumberForInput(item.quantity) || '1',
-      unit: item.unitName || '',
-      notes: item.notes || '',
-      category: item.category || '',
-      selectedUnitId: item.unit?.id || null,
-      estimatedPrice: formatNumberForInput(item.priceEstimate?.estimated),
-      priority: item.priority ?? 0,
-      storeId: item.storeInfo?.preferredStore?.id || null,
-      storeName: item.storeInfo?.preferredStore?.name || '',
-      brand: item.brand?.name || '',
-      brandId: item.brand?.id || null,
+        (typed && typedValue == null
+          ? typed
+          : formatQuantityForInput(typedValue ?? item.quantity)) || '1',
+      unit: item.unitName ?? '',
+      notes: item.notes ?? '',
+      category: item.category ?? '',
+      selectedUnitId: item.unit?.id ?? null,
+      estimatedPrice: formatNumberForInput(item.priceEstimate.estimated),
+      priority: item.priority,
+      storeId: item.storeInfo.preferredStore?.id ?? null,
+      storeName: item.storeInfo.preferredStore?.name ?? '',
+      brand: item.brand?.name ?? '',
+      brandId: item.brand?.id ?? null,
       netWeight: formatNumberForInput(item.netWeight),
-      netWeightUnit:
-        item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
-      netWeightUnitId: item.netWeightUnit?.id || null,
+      netWeightUnit: netWeightUnitLabel ?? '',
+      netWeightUnitId: item.netWeightUnit?.id ?? null,
     });
   };
 
@@ -90,7 +107,7 @@ export function useShoppingListItemForm(
     // Excluded at the SOURCE, not subtracted from `isDirty` after: react-hook-form
     // mutates `dirtyFields` in place, so anything derived from it memoizes on an
     // identity that never changes. `isDirty` is a subscribed primitive.
-    const tracked = (DIRTY_TRACKED_FIELDS as string[]).includes(field);
+    const tracked = DIRTY_TRACKED_FIELDS.includes(field);
     setValue(field, value, { shouldDirty: tracked, shouldValidate: true });
     // `shouldValidate` re-runs the rule on THIS field only, and the net-weight
     // rule lives on `netWeightUnit` while its inputs are `netWeight` and
@@ -104,7 +121,7 @@ export function useShoppingListItemForm(
   /** Parsed net weight, or undefined when the field is empty or not a number. */
   const parseNetWeightInput = (): number | undefined => {
     const raw = getValues('netWeight');
-    if (!raw?.trim()) return undefined;
+    if (!raw.trim()) return undefined;
     const value = parseDecimalInput(raw);
     return Number.isFinite(value) ? value : undefined;
   };
@@ -131,8 +148,8 @@ export function useShoppingListItemForm(
     }
 
     if (dirtyFields.quantityInput) {
-      // Raw string: the server's FlexibleQuantity accepts "1/3", "1 1/4", "0.5".
-      input.quantity = v.quantityInput;
+      // FlexibleQuantity reads "1/3", "1 1/4", "0.5" — a period decimal only.
+      input.quantity = normalizeNumericTextForApi(v.quantityInput);
     }
 
     // Unit — nest into UnitSpecInput
@@ -151,10 +168,12 @@ export function useShoppingListItemForm(
       input.category = v.category;
     }
 
-    // Pricing — nest into PricingEstimatesInput
-    if (dirtyFields.estimatedPrice && v.estimatedPrice) {
+    // An emptied price is a clear: `PricingEstimatesInput.estimatedPrice` takes null.
+    if (dirtyFields.estimatedPrice) {
       input.pricing = {
-        estimatedPrice: parseDecimalInput(v.estimatedPrice),
+        estimatedPrice: v.estimatedPrice
+          ? parseDecimalInput(v.estimatedPrice)
+          : null,
       };
     }
 
@@ -219,7 +238,6 @@ export function useShoppingListItemForm(
     errors,
     /** Current values, subscribed — for logic and display, not for field wiring. */
     values,
-    dirtyFields,
     /** True when any SUBMITTED field changed — see `setFieldValue`. */
     hasDirtyFields: isDirty,
     setFieldValue,

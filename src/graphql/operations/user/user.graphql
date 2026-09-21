@@ -150,6 +150,14 @@ mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
           appliesToHomeId
           createdAt
         }
+        # The update upserts: this links a just-created row to `me`, which
+        # otherwise stays cached as `dietaryProfile: null`.
+        user {
+          id
+          dietaryProfile {
+            id
+          }
+        }
       }
     }
     ... on Error {
@@ -170,35 +178,6 @@ mutation AddDietaryRestriction($input: AddRestrictionInput!) {
   addRestriction(input: $input) {
     __typename
     ... on AddRestrictionPayload {
-      dietaryRestriction {
-        id
-        diet
-        intolerance
-        healthGoal
-        severity
-        notes
-        appliesToHomeId
-        createdAt
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation UpdateDietaryRestriction($input: UpdateRestrictionInput!) {
-  updateRestriction(input: $input) {
-    __typename
-    ... on UpdateRestrictionPayload {
       dietaryRestriction {
         id
         diet

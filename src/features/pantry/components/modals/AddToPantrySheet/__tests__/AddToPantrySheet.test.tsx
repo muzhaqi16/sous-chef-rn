@@ -1,11 +1,8 @@
 'use no memo';
 import React from 'react';
 import { screen, waitFor } from '@testing-library/react-native';
-import {
-  renderWithApollo,
-  recordMock,
-  type MockedResponse,
-} from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
+import { renderWithApollo, recordMock } from '#/test-utils/apolloMockProvider';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
@@ -25,8 +22,7 @@ jest.mock('#features/pantry/hooks/usePantryItemSuggestions', () => ({
   PANTRY_SUGGESTIONS_LIMIT: 20,
   usePantryItemSuggestions: jest.fn(() => ({
     grouped: [],
-    loading: false,
-    hasSuggestions: false,
+    state: 'empty',
     refetch: jest.fn(),
   })),
 }));
@@ -153,8 +149,7 @@ describe('AddToPantrySheet', () => {
     );
     usePantryItemSuggestions.mockReturnValue({
       grouped: [{ title: 'Recent', items: [{ id: '1', name: 'Milk' }] }],
-      loading: false,
-      hasSuggestions: true,
+      state: 'ready',
       refetch: jest.fn(),
     });
 
@@ -168,8 +163,7 @@ describe('AddToPantrySheet', () => {
     );
     usePantryItemSuggestions.mockReturnValue({
       grouped: [],
-      loading: true,
-      hasSuggestions: false,
+      state: 'loading',
       refetch: jest.fn(),
     });
 
@@ -193,7 +187,7 @@ describe('AddToPantrySheet', () => {
    * read the union member.
    */
   describe('a resolved refusal is not a success', () => {
-    const forbidden: MockedResponse = {
+    const forbidden: MockFor<typeof CreatePantryItemDocument> = {
       request: {
         query: CreatePantryItemDocument,
         // The input carries a freshly minted cuid, so match on the operation.
@@ -305,7 +299,7 @@ describe('AddToPantrySheet', () => {
       };
     };
 
-    const duplicate: MockedResponse = {
+    const duplicate: MockFor<typeof CreatePantryItemDocument> = {
       request: {
         query: CreatePantryItemDocument,
         variables: () => true,
@@ -321,7 +315,7 @@ describe('AddToPantrySheet', () => {
       },
     };
 
-    const restocked: MockedResponse = {
+    const restocked: MockFor<typeof RestockPantryItemDocument> = {
       request: {
         query: RestockPantryItemDocument,
         variables: () => true,
@@ -430,6 +424,10 @@ describe('AddToPantrySheet', () => {
                   __typename
                   id
                 }
+                unit {
+                  __typename
+                  id
+                }
               }
             }
           }
@@ -478,10 +476,18 @@ describe('AddToPantrySheet', () => {
         itemName: 'Milk',
         quantity: 3,
         item: { __typename: 'Item', id: 'item-1' },
+        unit: { __typename: 'Unit', id: 'unit-l' },
       },
     };
 
-    const restocked: MockedResponse = {
+    // A search suggestion names the unit a one-tap add is created in.
+    const milkInLitres = {
+      id: 'item-1',
+      name: 'Milk',
+      defaultUnit: { __typename: 'ItemUnitSuggestion', id: 'unit-l' },
+    };
+
+    const restocked: MockFor<typeof RestockPantryItemDocument> = {
       request: { query: RestockPantryItemDocument, variables: () => true },
       result: {
         data: {
@@ -521,7 +527,7 @@ describe('AddToPantrySheet', () => {
       const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
         item: unknown,
       ) => void;
-      quickAdd({ id: 'item-1', name: 'Milk' });
+      quickAdd(milkInLitres);
 
       await waitFor(() =>
         expect(toastService.success).toHaveBeenCalledWith('Restocked Milk'),
@@ -546,7 +552,7 @@ describe('AddToPantrySheet', () => {
       const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
         item: unknown,
       ) => void;
-      quickAdd({ id: 'item-1', name: 'Milk' });
+      quickAdd(milkInLitres);
 
       expect(readQuantity(cache)).toBe(4);
     });
@@ -561,7 +567,7 @@ describe('AddToPantrySheet', () => {
       const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
         item: unknown,
       ) => void;
-      quickAdd({ id: 'item-1', name: 'Milk' });
+      quickAdd(milkInLitres);
 
       await waitFor(() => expect(toastService.success).toHaveBeenCalled());
       const read = cache.readQuery<{
@@ -576,6 +582,59 @@ describe('AddToPantrySheet', () => {
         },
       });
       expect(read?.pantry?.stats?.totalItems).toBe(1);
+    });
+
+    it('leaves a stack held in another unit alone', async () => {
+      // Held in litres, added in millilitres: restocking would add 1 L.
+      const cache = seedStocked([stockedEdge]);
+      const create = recordMock(CreatePantryItemDocument, {
+        data: {
+          createPantryItem: {
+            __typename: 'CreatePantryItemPayload',
+            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+          },
+        },
+      });
+      renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
+        cache,
+        operationMocks: [create.mock, restocked],
+      });
+
+      const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
+        item: unknown,
+      ) => void;
+      quickAdd({
+        ...milkInLitres,
+        defaultUnit: { __typename: 'ItemUnitSuggestion', id: 'unit-ml' },
+      });
+
+      await waitFor(() => expect(create.fired).toHaveLength(1));
+      expect(readQuantity(cache)).toBe(3);
+      expect(toastService.success).not.toHaveBeenCalledWith('Restocked Milk');
+    });
+
+    it('leaves an add whose unit it cannot know to the server', async () => {
+      const cache = seedStocked([stockedEdge]);
+      const create = recordMock(CreatePantryItemDocument, {
+        data: {
+          createPantryItem: {
+            __typename: 'CreatePantryItemPayload',
+            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+          },
+        },
+      });
+      renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
+        cache,
+        operationMocks: [create.mock, restocked],
+      });
+
+      const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
+        item: unknown,
+      ) => void;
+      quickAdd({ id: 'item-1', name: 'Milk', defaultUnit: null });
+
+      await waitFor(() => expect(create.fired).toHaveLength(1));
+      expect(readQuantity(cache)).toBe(3);
     });
 
     it('still fires the create for an item the cache does not stock', async () => {

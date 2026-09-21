@@ -5,6 +5,7 @@ import type {
   StoreObject,
 } from '@apollo/client';
 import { isReference } from '@apollo/client';
+import type { StoreValue } from '@apollo/client/utilities';
 import {
   mergeConnectionByNodeId,
   itemsConnectionFieldPolicy,
@@ -76,7 +77,7 @@ export const shoppingListTypePolicies: TypePolicies = {
     fields: {
       itemsConnection: itemsConnectionFieldPolicy(),
       suggestions: {
-        merge(existing = [], incoming) {
+        merge(existing: StoreValue = [], incoming: StoreValue) {
           if (incoming == null) return existing;
           return incoming;
         },
@@ -113,9 +114,9 @@ export const shoppingListTypePolicies: TypePolicies = {
       },
       // List-level queries (return collections of lists/homes)
       shoppingLists: {
-        // Different homes have different shopping lists - cache separately per filter
-        keyArgs: ['filters'],
-        merge(existing = [], incoming) {
+        // `cache.modify` by field name still reaches every stored variant.
+        keyArgs: ['filters', 'homeId', 'first'],
+        merge(existing: StoreValue = [], incoming: StoreValue) {
           // Preserve existing cache only on network errors (null/undefined)
           // Allow empty arrays through - user may genuinely have no lists
           if (incoming == null) {
@@ -127,7 +128,7 @@ export const shoppingListTypePolicies: TypePolicies = {
       shoppingListSuggestions: {
         // Note: 'limit' excluded from keyArgs to avoid unnecessary cache fragmentation
         keyArgs: ['shoppingListId'],
-        merge(existing = [], incoming) {
+        merge(existing: StoreValue = [], incoming: StoreValue) {
           if (incoming == null) {
             return existing;
           }

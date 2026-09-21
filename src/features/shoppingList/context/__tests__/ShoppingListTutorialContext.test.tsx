@@ -107,3 +107,30 @@ describe('ShoppingListTutorialProvider — step sequence', () => {
     jest.useRealTimers();
   });
 });
+
+// Last in the file: the suppression is process-wide and has no undo.
+describe('ShoppingListTutorialProvider — Detox suppression', () => {
+  it('never starts once feature hints are suppressed for E2E', () => {
+    jest.useFakeTimers();
+    const { suppressFeatureHintsForE2E } = jest.requireActual<
+      typeof import('#hooks/useFeatureHint')
+    >('#hooks/useFeatureHint');
+    suppressFeatureHintsForE2E();
+
+    const { result } = renderHook(() => useShoppingListTutorialState(), {
+      wrapper: ({ children }: { children: React.ReactNode }) => (
+        <ShoppingListTutorialProvider canStart>
+          {children}
+        </ShoppingListTutorialProvider>
+      ),
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+    expect(result.current?.currentStep).not.toBe(
+      ShoppingListTutorialStep.SPOTLIGHT_ADD_BUTTON,
+    );
+    jest.useRealTimers();
+  });
+});

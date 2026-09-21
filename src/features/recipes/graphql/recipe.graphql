@@ -45,33 +45,19 @@ query SearchRecipes(
   }
 }
 
-query MyRecipes(
-  $cursor: String
-  $first: Int = 25
-  $category: RecipeCategory
-  $difficulty: Difficulty
-) {
-  recipes(
-    after: $cursor
-    first: $first
-    filters: { category: $category, difficulty: $difficulty }
-  ) {
+query MyRecipes($cursor: String, $first: Int = 25) {
+  recipes(after: $cursor, first: $first) {
     edges {
       node {
         id
-        category
-        difficulty
         # Selected at the parent so the screen can filter the connection
         # without materializing each masked node. Already fetched inside
         # MyRecipeCard_recipe — this only keeps it visible after masking,
         # so it costs nothing on the wire.
         name
         description
-        savedDetails {
-          id
-          folder
-        }
         ...MyRecipeCard_recipe
+        ...useRecipeFavoriteState_recipe
       }
       cursor
     }
@@ -113,10 +99,10 @@ query GetRecipeReviews($id: ID!) {
   }
 }
 
-query MySavedRecipes($folder: String, $first: Int, $after: String) {
+query MySavedRecipes($first: Int, $after: String) {
   me {
     id
-    savedRecipesConnection(folder: $folder, first: $first, after: $after) {
+    savedRecipesConnection(first: $first, after: $after) {
       edges {
         node {
           id
@@ -564,11 +550,16 @@ mutation MarkRecipeAsCooked($input: MarkRecipeAsCookedInput!) {
       # Replay signal: true = the client-minted cooking-log id already existed
       # (idempotent replay), false = a fresh log row was created.
       converged
-      # Ingredients the server could NOT deduct: no conversion reached the
-      # stack's unit. Without this the toast reports unqualified success.
+      # Ingredients the server could NOT deduct. Without this the toast reports
+      # unqualified success.
+      #
+      # `reason` is deliberately NOT selected: it is a server string, we never
+      # display it, and the schema's own guidance is to branch on `code`. The
+      # code says WHY — UNIT_INVALID for an ingredient no conversion reaches —
+      # so the toast can name the cause rather than only the count.
       skippedIngredients {
         itemName
-        reason
+        code
       }
       cookingLog {
         id

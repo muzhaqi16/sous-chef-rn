@@ -1,51 +1,34 @@
 /** Screen object model for the Shopping List screen. */
 
 import { BaseScreen } from './BaseScreen';
-import { element, by, waitFor, expect } from 'detox';
-import { expectDisappearsAfter } from '../helpers/assertions';
+import { element, by, waitFor } from 'detox';
+import { isOnScreen } from '../helpers/waitFor';
+import { shoppingListTestIDs } from '../../src/features/shoppingList/testIDs';
+import { catalogTestIDs } from '../../src/features/catalog/testIDs';
+import { kitTestIDs } from '../../src/components/testIDs';
+
+const SHOPPING_TAB = kitTestIDs.tab('ShoppingList');
+const ADD_ITEM_SHEET_MODAL = catalogTestIDs.addItemSheetModal(
+  shoppingListTestIDs.addSheetPrefix,
+);
+const ADD_ITEM_SEARCH_INPUT = catalogTestIDs.addItemSheetSearchInput(
+  shoppingListTestIDs.addSheetPrefix,
+);
+const ADD_MANUALLY_BUTTON = catalogTestIDs.addManuallyButton(
+  shoppingListTestIDs.addSheetPrefix,
+);
 
 export class ShoppingListScreen extends BaseScreen {
-  protected screenID = 'shopping-list-screen';
+  protected screenID = shoppingListTestIDs.screen;
 
-  // Element IDs
-  private readonly addButton = 'tab-bar-add-button';
-  private readonly listContainer = 'shopping-list';
-  private readonly searchInput = 'shopping-list-search-input';
-  private readonly filterButton = 'shopping-list-filter-button';
-  private readonly sortButton = 'shopping-list-sort-button';
-  private readonly emptyState = 'shopping-list-empty-state';
-  private readonly loadingIndicator = 'shopping-list-loading';
-  private readonly refreshControl = 'shopping-list-refresh-control';
-
-  private getItemByIndex(index: number) {
-    return element(by.id(`shopping-list-item-${index}`));
-  }
-
-  private getItemByName(name: string) {
-    return element(by.id(`shopping-list-item-${name}`));
-  }
-
-  private getItemCheckboxByIndex(index: number) {
-    return element(by.id(`shopping-list-item-${index}-checkbox`));
-  }
-
-  private getItemDeleteButtonByIndex(index: number) {
-    return element(by.id(`shopping-list-item-${index}-delete`));
-  }
-
-  private getItemEditButtonByIndex(index: number) {
-    return element(by.id(`shopping-list-item-${index}-edit`));
-  }
-
-  /** The tab testID is `tab-shoppinglist` — no dash, from route name `ShoppingList`. */
   async navigateToTab() {
     console.log('📱 Navigating to Shopping List tab...');
     // Wait for tab bar to be ready (longer timeout after relaunch)
-    await waitFor(element(by.id('tab-shoppinglist')))
+    await waitFor(element(by.id(SHOPPING_TAB)))
       .toBeVisible()
       .withTimeout(10000);
     console.log('✓ Shopping list tab found, tapping...');
-    await element(by.id('tab-shoppinglist')).tap();
+    await element(by.id(SHOPPING_TAB)).tap();
     console.log('✓ Tapped shopping list tab, waiting for screen...');
 
     // Wait for screen with retry on failure
@@ -53,26 +36,38 @@ export class ShoppingListScreen extends BaseScreen {
       await this.waitForScreen(5000);
     } catch {
       console.log('Screen not visible, retrying tab tap...');
-      await element(by.id('tab-shoppinglist')).tap();
+      await element(by.id(SHOPPING_TAB)).tap();
       await this.waitForScreen(10000);
     }
     console.log('✓ Shopping list screen visible');
   }
 
   async tapAddButton() {
+    await this.tapByID(kitTestIDs.tabBarAddButton);
+  }
 
-    await this.tapByID(this.addButton);
+  /** A `FilterTabBar` tab by its route key; the visible label is translated. */
+  filterTab(routeKey: 'shopping' | 'purchased') {
+    return element(
+      by.id(kitTestIDs.filterTab(shoppingListTestIDs.tabBarPrefix, routeKey)),
+    );
+  }
+
+  async openFilterTab(routeKey: 'shopping' | 'purchased') {
+    const tab = this.filterTab(routeKey);
+    await waitFor(tab).toBeVisible().withTimeout(5000);
+    await tab.tap();
   }
 
   /**
-   * Blur by tapping the details sheet's top-left corner, which sits ABOVE the
-   * keyboard and so stays hittable. These call sites do not all know which field
+   * Blur by tapping the details sheet's header title: inert, and ABOVE the
+   * keyboard so it stays hittable. These call sites do not all know which field
    * holds focus, so `BaseScreen.dismissKeyboard`'s targeted return key does not
    * apply. `replaceText` needs 100% visibility, which a keyboard overlap denies.
    */
   private async dismissSheetKeyboard() {
     try {
-      await element(by.id('add-shopping-item-details')).tap({ x: 10, y: 10 });
+      await element(by.id(shoppingListTestIDs.addSheetTitle)).tap();
     } catch {
       // Nothing focused, or the sheet moved — the next action reports it.
     }
@@ -81,8 +76,8 @@ export class ShoppingListScreen extends BaseScreen {
   /**
    * Type into one of the details sheet's `variant="modal"` autocompletes. Typing
    * presents a second `BottomSheetModal` (`stackBehavior="push"`) ON TOP of the
-   * details sheet, so a timeout on `add-shopping-item-submit-button` is that sheet
-   * in front of it, not a missing testID. Commit via `${testID}-search` + return.
+   * details sheet, so a timeout on the sheet's submit button is that sheet in front
+   * of it, not a missing testID. Commit via the picker's search field + return.
    */
   private async fillModalAutocomplete(
     testID: string,
@@ -94,7 +89,7 @@ export class ShoppingListScreen extends BaseScreen {
     try {
       await waitFor(element(by.id(testID)))
         .toBeVisible()
-        .whileElement(by.id('add-shopping-item-scroll'))
+        .whileElement(by.id(shoppingListTestIDs.addSheetScroll))
         .scroll(200, 'down', NaN, 0.85);
     } catch {
       // Already on screen, or the sheet does not scroll — the type below is
@@ -103,7 +98,7 @@ export class ShoppingListScreen extends BaseScreen {
 
     await element(by.id(testID)).replaceText(value);
 
-    const search = element(by.id(`${testID}-search`));
+    const search = element(by.id(catalogTestIDs.autocompleteSearch(testID)));
     try {
       await waitFor(search).toBeVisible().withTimeout(5000);
     } catch {
@@ -120,7 +115,7 @@ export class ShoppingListScreen extends BaseScreen {
     // generated name for a catalog one. So selection is opt-in; return is default.
     if (selectSuggestion) {
       try {
-        const suggestion = element(by.id(`${testID}-suggestion-0`));
+        const suggestion = element(by.id(catalogTestIDs.suggestion(testID, 0)));
         await waitFor(suggestion).toBeVisible().withTimeout(3000);
         await suggestion.tap();
       } catch {
@@ -135,7 +130,7 @@ export class ShoppingListScreen extends BaseScreen {
     // `onChangeText` per keystroke and return only closes the picker — so the
     // fallback below costs nothing, and return does not always land on the unit.
     try {
-      await waitFor(element(by.id('add-shopping-item-submit-button')))
+      await waitFor(element(by.id(shoppingListTestIDs.addSheetSubmitButton)))
         .toBeVisible()
         .withTimeout(5000);
       await this.dismissSheetKeyboard();
@@ -159,7 +154,7 @@ export class ShoppingListScreen extends BaseScreen {
     // Wait for the SUBMIT BUTTON, not for the search field to go away: the
     // picker's dismissal and the host sheet's re-layout finish at different
     // times, so the two claims are not equivalent.
-    await waitFor(element(by.id('add-shopping-item-submit-button')))
+    await waitFor(element(by.id(shoppingListTestIDs.addSheetSubmitButton)))
       .toBeVisible()
       .withTimeout(10000);
 
@@ -172,21 +167,14 @@ export class ShoppingListScreen extends BaseScreen {
    * and `device.pressBack()` is Android-only and throws outright on iOS.
    */
   async dismissAddItemSheet() {
-    // Unwind the DETAILS step first if it is up. `AddItemSheet` stacks it over
-    // the picker, so swiping the picker down while the details form is in front
-    // dismisses nothing and the list never comes back. Cancel is derived by
-    // `SheetFormHeader` from the submit id (`-submit-button` -> `-cancel-button`).
+    // A details step stacked over the picker closes through its own Cancel.
     try {
-      await element(by.id('add-shopping-item-cancel-button')).tap();
-      await waitFor(element(by.id('add-shopping-item-name-input')))
-        .not.toBeVisible()
-        .withTimeout(5000);
+      await element(by.id(shoppingListTestIDs.addSheetCancelButton)).tap();
     } catch {
-      // Details step not open — the picker swipe below is all that is needed.
+      // No details step open.
     }
-
     try {
-      await element(by.id('add-shopping-item-modal'))
+      await element(by.id(ADD_ITEM_SHEET_MODAL))
         .atIndex(0)
         .swipe('down', 'fast', 0.9);
     } catch {
@@ -206,12 +194,7 @@ export class ShoppingListScreen extends BaseScreen {
     }
 
     try {
-      await element(by.id('add-shopping-item-cancel-button')).tap();
-    } catch {
-      // Details step already gone.
-    }
-    try {
-      await element(by.id('add-shopping-item-modal'))
+      await element(by.id(ADD_ITEM_SHEET_MODAL))
         .atIndex(0)
         .swipe('down', 'fast', 0.9);
     } catch {
@@ -237,7 +220,7 @@ export class ShoppingListScreen extends BaseScreen {
       await element(by.text(name)).swipe('left', 'fast', 0.7);
 
       const deleteButton = element(
-        by.id(/^shopping-list-item-.+-delete$/),
+        by.id(shoppingListTestIDs.anyItemControl('delete')),
       ).atIndex(0);
       await waitFor(deleteButton).toBeVisible().withTimeout(5000);
       await deleteButton.tap();
@@ -265,36 +248,36 @@ export class ShoppingListScreen extends BaseScreen {
     await this.tapAddButton();
 
     try {
-      await waitFor(element(by.id('add-shopping-item-search-input')))
+      await waitFor(element(by.id(ADD_ITEM_SEARCH_INPUT)))
         .toBeVisible()
         .withTimeout(3000);
     } catch {
       console.log('Picker sheet did not open, retrying add button tap...');
       await this.tapAddButton();
-      await waitFor(element(by.id('add-shopping-item-search-input')))
+      await waitFor(element(by.id(ADD_ITEM_SEARCH_INPUT)))
         .toBeVisible()
         .withTimeout(3000);
     }
 
     // The search bar debounces 250ms before the results (and the row below)
     // render, so the wait that follows is what settles it.
-    await element(by.id('add-shopping-item-search-input')).replaceText('zz');
-    await waitFor(element(by.id('add-shopping-item-add-manually-button')))
+    await element(by.id(ADD_ITEM_SEARCH_INPUT)).replaceText('zz');
+    await waitFor(element(by.id(ADD_MANUALLY_BUTTON)))
       .toBeVisible()
       .withTimeout(5000);
 
-    // Wait on the NAME INPUT, not on `add-shopping-item-modal`: that id belongs
+    // Wait on the NAME INPUT, not on the picker sheet's modal: that id belongs
     // to the PICKER sheet, which this tap navigates away from, so waiting for it
     // afterwards can only time out.
-    await element(by.id('add-shopping-item-add-manually-button')).tap();
+    await element(by.id(ADD_MANUALLY_BUTTON)).tap();
     try {
-      await waitFor(element(by.id('add-shopping-item-name-input')))
+      await waitFor(element(by.id(shoppingListTestIDs.addSheetNameInput)))
         .toBeVisible()
         .withTimeout(5000);
     } catch {
       console.log('Details step did not open, retrying "Add Manually" tap...');
-      await element(by.id('add-shopping-item-add-manually-button')).tap();
-      await waitFor(element(by.id('add-shopping-item-name-input')))
+      await element(by.id(ADD_MANUALLY_BUTTON)).tap();
+      await waitFor(element(by.id(shoppingListTestIDs.addSheetNameInput)))
         .toBeVisible()
         .withTimeout(5000);
     }
@@ -306,7 +289,9 @@ export class ShoppingListScreen extends BaseScreen {
 
     // The name is a plain field — no picker. The unit below is a `variant="modal"`
     // autocomplete; see `fillModalAutocomplete`.
-    await element(by.id('add-shopping-item-name-input')).replaceText(name);
+    await element(by.id(shoppingListTestIDs.addSheetNameInput)).replaceText(
+      name,
+    );
 
     if (quantity !== undefined) {
       // `EditableCounter` is a plain input, but `replaceText` requires 100%
@@ -315,14 +300,16 @@ export class ShoppingListScreen extends BaseScreen {
       // point". Two attempts, since blurring is itself best-effort.
       const quantityStr =
         typeof quantity === 'number' ? quantity.toString() : quantity;
-      const quantityInput = element(by.id('add-shopping-item-quantity-input'));
+      const quantityInput = element(
+        by.id(shoppingListTestIDs.addSheetQuantityInput),
+      );
 
       for (let attempt = 0; attempt < 2; attempt++) {
         await this.dismissSheetKeyboard();
         try {
           await waitFor(quantityInput)
             .toBeVisible()
-            .whileElement(by.id('add-shopping-item-scroll'))
+            .whileElement(by.id(shoppingListTestIDs.addSheetScroll))
             .scroll(150, 'up', NaN, 0.15);
         } catch {
           // Already in view, or the sheet does not scroll.
@@ -342,160 +329,36 @@ export class ShoppingListScreen extends BaseScreen {
     if (unit) {
       // Selected from the list, not typed: the unit has to resolve to a real
       // catalog entity for the save to mean anything.
-      await this.fillModalAutocomplete('add-shopping-item-unit-picker', unit, {
-        selectSuggestion: true,
-      });
+      await this.fillModalAutocomplete(
+        shoppingListTestIDs.addSheetUnitPicker,
+        unit,
+        {
+          selectSuggestion: true,
+        },
+      );
     }
 
-    await this.tapByID('add-shopping-item-submit-button');
+    await this.tapByID(shoppingListTestIDs.addSheetSubmitButton);
 
-    // Check if error modal appeared (e.g., "Please enter a valid quantity")
-    try {
-      await waitFor(element(by.text('Please enter a valid quantity')))
-        .toBeVisible()
-        .withTimeout(2000);
-
-      await element(by.text('OK')).tap();
+    // An alert after submit is the form refusing the save (an invalid quantity).
+    if (await isOnScreen(kitTestIDs.alertModal, 2000)) {
+      await element(by.id(kitTestIDs.alertButton(0))).tap();
       throw new Error(
-        `Failed to add shopping list item: Invalid quantity "${quantity}". ` +
+        `Failed to add shopping list item: the form refused quantity "${quantity}". ` +
           `Expected formats: "1", "1.5", "1/4", or "1 1/4"`,
       );
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message.includes('Failed to add shopping list item')
-      ) {
-        throw error;
-      }
-      // Otherwise, error modal didn't appear (good!), continue
     }
 
     // Wait for the form to close: 15s covers the mutation plus the cache update.
     // Waits on the NAME INPUT, which only the details step renders —
-    // `add-shopping-item-modal` is the PICKER sheet's id, and `not.toBeVisible()`
+    // the modal id is the PICKER sheet's, and `not.toBeVisible()`
     // on an id that is not on screen passes instantly, asserting nothing.
-    await waitFor(element(by.id('add-shopping-item-name-input')))
+    await waitFor(element(by.id(shoppingListTestIDs.addSheetNameInput)))
       .not.toBeVisible()
       .withTimeout(15000);
 
-
-    await waitFor(element(by.id('shopping-list-screen')))
+    await waitFor(element(by.id(this.screenID)))
       .toBeVisible()
       .withTimeout(5000);
-  }
-
-  async toggleItemByIndex(index: number) {
-    await this.getItemCheckboxByIndex(index).tap();
-  }
-
-  async swipeToDeleteItem(index: number) {
-    await this.getItemByIndex(index).swipe('left', 'fast');
-    await this.getItemDeleteButtonByIndex(index).tap();
-  }
-
-  async editItemByIndex(index: number, newName: string) {
-    await this.getItemByIndex(index).tap();
-
-    await waitFor(element(by.id('edit-item-modal')))
-      .toBeVisible()
-      .withTimeout(3000);
-
-    await this.clearAndType('edit-item-name-input', newName);
-
-    // Check the name field, not `edit-item-modal`: it was just typed into, so it
-    // is proven matchable, and a disappearance check against an unmatchable id
-    // passes vacuously.
-    await expectDisappearsAfter('edit-item-name-input', () =>
-      this.tapByID('edit-item-submit-button'),
-    );
-  }
-
-  async searchFor(query: string) {
-    await this.clearAndType(this.searchInput, query);
-    await this.dismissSheetKeyboard();
-  }
-
-  async clearSearch() {
-    await this.getElementById(this.searchInput).clearText();
-  }
-
-  async openFilter() {
-    await this.tapByID(this.filterButton);
-  }
-
-  async openSort() {
-    await this.tapByID(this.sortButton);
-  }
-
-  async pullToRefresh() {
-    await this.getElementById(this.listContainer).swipe('down', 'fast', 0.75);
-    await this.waitForElementToDisappear(this.refreshControl, 5000);
-  }
-
-  async scrollToBottom() {
-    await this.scrollTo(this.listContainer, 'bottom');
-  }
-
-  async scrollToTop() {
-    await this.scrollTo(this.listContainer, 'top');
-  }
-
-  async expectEmptyState() {
-    await this.expectVisible(this.emptyState);
-  }
-
-  async expectLoadingVisible() {
-    await this.expectVisible(this.loadingIndicator);
-  }
-
-  async expectItemExists(index: number) {
-    await expect(this.getItemByIndex(index)).toExist();
-  }
-
-  async expectItemVisible(index: number) {
-    await expect(this.getItemByIndex(index)).toBeVisible();
-  }
-
-  async expectItemText(index: number, text: string) {
-    await expect(this.getItemByIndex(index)).toHaveText(text);
-  }
-
-  async expectItemChecked(index: number) {
-    await expect(this.getItemCheckboxByIndex(index)).toHaveToggleValue(true);
-  }
-
-  async expectItemUnchecked(index: number) {
-    await expect(this.getItemCheckboxByIndex(index)).toHaveToggleValue(false);
-  }
-
-  async expectItemCount(count: number) {
-    for (let i = 0; i < count; i++) {
-      await this.expectItemExists(i);
-    }
-
-    // Verify next item doesn't exist
-    try {
-      await expect(this.getItemByIndex(count)).not.toExist();
-    } catch {
-      // If element exists, count is wrong
-      throw new Error(`Expected ${count} items, but found more`);
-    }
-  }
-
-  async waitForListToLoad(timeout: number = 10000) {
-    await this.waitForElementToDisappear(this.loadingIndicator, timeout);
-  }
-
-  async longPressItem(index: number, duration: number = 1000) {
-    await this.getItemByIndex(index).longPress(duration);
-  }
-
-  async dragItem(fromIndex: number, toIndex: number) {
-    const fromElement = this.getItemByIndex(fromIndex);
-    const toElement = this.getItemByIndex(toIndex);
-
-    await fromElement.longPress();
-    // Detox has no native drag-and-drop API; this may need a platform-specific path.
-    await toElement.tap();
   }
 }

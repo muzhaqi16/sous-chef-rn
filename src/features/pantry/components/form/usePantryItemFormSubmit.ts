@@ -1,41 +1,37 @@
 import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import { t } from '#/i18n';
-import { parseFractionalInput as parseQuantityInput } from '#/utils/fractionUtils';
-import { StorageState, ItemCondition } from '#/graphql/generated/schemaTypes';
-import type { UnitSelection } from '#features/pantry/hooks/mutations/types';
+import { parseFractionalInput } from '#/utils/fractionUtils';
+import { isUnchangedQuantity } from '#/utils/formatQuantity';
+import { formatNumberForInput } from '#/utils/formatters/number';
+import type { StorageType } from '#/graphql/generated/schemaTypes';
+import type { FieldNamesMarkedBoolean } from 'react-hook-form';
+import type {
+  DirtyFieldFlags,
+  UnitSelection,
+} from '#features/pantry/hooks/mutations/types';
+import { isOwnKey } from '#/utils/isOwnKey';
 import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
+import type { PantryItemFormData } from './PantryItemForm';
 
-/** All form fields PantryItemForm exposes through `useForm`. */
-export interface PantryItemFormData {
-  itemName?: string;
-  selectedItemId?: string;
-  brand?: string;
-  quantityInput?: string;
-  unit: string;
-  tags?: string[];
-  minQuantity?: string;
-  restockQuantity?: string;
-  netWeight?: string;
-  netWeightUnit?: string;
-  netWeightUnitId?: string;
-  storageState: StorageState;
-  condition?: ItemCondition;
-  location: string;
-  expirationDate?: Date;
-  notes: string;
-  category: string;
-}
+/** react-hook-form's `formState.dirtyFields` for this form. */
+type FormDirtyFields = Partial<
+  Readonly<FieldNamesMarkedBoolean<PantryItemFormData>>
+>;
 
 /** Argument shapes for the mutation primitives, matching this hook's call sites. */
 interface UpdatePantryItemFieldsArgs {
   itemId: string;
   input: PantryItemFormData;
-  dirtyFields: Record<string, boolean>;
+  dirtyFields: DirtyFieldFlags;
   selectedLocationId: string | null;
   selectedBrandId: string | null;
   trackingUnit?: UnitSelection;
-  selectedStorageLocation: { id: string; name: string; type: string } | null;
+  selectedStorageLocation: {
+    id: string;
+    name: string;
+    type: StorageType;
+  } | null;
   unitSymbol?: string;
 }
 
@@ -53,19 +49,34 @@ export interface UsePantryItemFormSubmitParams {
   currentPantryId: string | undefined | null;
   isWeightLocked: boolean;
   existingPantryItem: PantryItemForm_PantryItemFragment | null;
-  dirtyFields: Record<string, unknown>;
+  dirtyFields: FormDirtyFields;
   trackingUnit: UnitSelection;
   netWeightUnitId: string | null;
   selectedLocationId: string | null;
   selectedBrandId: string | null;
   selectedCategoryId: string | null;
-  selectedStorageLocation: { id: string; name: string; type: string } | null;
+  selectedStorageLocation: {
+    id: string;
+    name: string;
+    type: StorageType;
+  } | null;
   /** Mutation primitives. */
   updatePantryItemFields: (args: UpdatePantryItemFieldsArgs) => unknown;
-  updateQuantity: (args: UpdateQuantityArgs) => unknown;
+  /** Resolves false when the write was refused. */
+  updateQuantity: (args: UpdateQuantityArgs) => Promise<boolean>;
   resolveUnitId: (id: string | null, symbol: string) => Promise<string | null>;
   /** Callback after a no-op edit. */
   onSuccess?: () => void;
+}
+
+// react-hook-form marks a dirty array field with an array of flags; every
+// consumer reads a field's entry for truthiness only.
+function toDirtyFlags(dirtyFields: FormDirtyFields): DirtyFieldFlags {
+  const flags: DirtyFieldFlags = {};
+  for (const [field, value] of Object.entries(dirtyFields)) {
+    if (isOwnKey(dirtyFields, field)) flags[field] = Boolean(value);
+  }
+  return flags;
 }
 
 /**
@@ -76,11 +87,7 @@ export interface UsePantryItemFormSubmitParams {
  */
 export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
   const handleSave = async (data: PantryItemFormData) => {
-    const quantityValue = parseQuantityInput(data.quantityInput || '');
-    if (!quantityValue || quantityValue <= 0) {
-      alertService.alert(t('labels.error'), t('errors.invalidQuantity'));
-      return;
-    }
+    const typedQuantity = parseFractionalInput(data.quantityInput ?? '');
 
     if (!params.currentPantryId) {
       alertService.alert(t('labels.error'), t('itemForm.noPantrySelected'));
@@ -90,7 +97,7 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
       const unitId =
         params.trackingUnit.id ?? (await params.resolveUnitId(null, data.unit));
 
-      const netWeightUnitText = (data.netWeightUnit || '').trim();
+      const netWeightUnitText = (data.netWeightUnit ?? '').trim();
       if (!params.isWeightLocked && netWeightUnitText) {
         const resolvedNetWeightUnitId =
           params.netWeightUnitId ??
@@ -106,17 +113,14 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
         return;
       }
 
-      const dirtyFieldsRecord = { ...params.dirtyFields } as Record<
-        string,
-        boolean
-      >;
+      const dirtyFieldsRecord = toDirtyFlags(params.dirtyFields);
 
       if (params.isWeightLocked) {
         delete dirtyFieldsRecord.netWeight;
         delete dirtyFieldsRecord.netWeightUnitId;
       }
 
-      const currentUnitSymbol = currentItem.unit?.symbol || '';
+      const currentUnitSymbol = currentItem.unit.symbol;
       const typedUnit = (data.unit || '').trim();
       if (typedUnit && typedUnit !== currentUnitSymbol) {
         dirtyFieldsRecord.unit = true;
@@ -126,19 +130,41 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
       const unitChanged = !!dirtyFieldsRecord.unit;
       const unitChangedWithoutId = unitChanged && !unitId;
 
-      const hasNonQuantityChanges = Object.keys(dirtyFieldsRecord).some(
-        k => k !== 'quantityInput' && k !== 'unit' && dirtyFieldsRecord[k],
+      const hasNonQuantityChanges = Object.entries(dirtyFieldsRecord).some(
+        ([field, dirty]) =>
+          field !== 'quantityInput' && field !== 'unit' && dirty,
       );
+      const sendsQuantity =
+        quantityChanged || (unitChanged && !unitChangedWithoutId);
 
-      if (quantityChanged || (unitChanged && !unitChangedWithoutId)) {
-        params.updateQuantity({
+      // Only a quantity being sent is judged: an empty stack stays editable.
+      if (sendsQuantity && (!typedQuantity || typedQuantity <= 0)) {
+        alertService.alert(t('labels.error'), t('errors.invalidQuantity'));
+        return;
+      }
+
+      // The seed is rounded to three places; sent back unedited it would
+      // rewrite the stock, so the stored value goes instead.
+      const keepsStored =
+        typedQuantity !== null &&
+        isUnchangedQuantity(typedQuantity, currentItem.quantity);
+      const quantityValue = keepsStored ? currentItem.quantity : typedQuantity;
+      const quantityInput = keepsStored
+        ? formatNumberForInput(currentItem.quantity)
+        : data.quantityInput;
+
+      // In order: the field update re-reads the version the quantity write
+      // returns, or the server refuses it as a conflict.
+      if (sendsQuantity && quantityValue) {
+        const stands = await params.updateQuantity({
           itemId: params.itemId,
-          quantityInput: data.quantityInput || quantityValue.toString(),
+          quantityInput: quantityInput ?? quantityValue.toString(),
           quantityValue,
           unitId: unitChangedWithoutId ? null : unitId,
           unitSymbol: data.unit,
           trackingUnit: params.trackingUnit,
         });
+        if (!stands) return;
       }
 
       if (hasNonQuantityChanges || unitChangedWithoutId) {

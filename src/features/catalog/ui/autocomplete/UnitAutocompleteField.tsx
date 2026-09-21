@@ -6,6 +6,7 @@ import {
 } from '#features/catalog/hooks/useUnitAutocomplete';
 import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
 import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
+import type { UnitType } from '#/graphql/generated/schemaTypes';
 
 interface UnitAutocompleteFieldProps {
   variant: 'inline' | 'modal';
@@ -19,7 +20,7 @@ interface UnitAutocompleteFieldProps {
   onUnitSelected?: (
     unitId: string | null,
     unitName: string | null,
-    unitType?: string | null,
+    unitType?: UnitType | null,
     unitSymbol?: string | null,
   ) => void;
   /** See `InlineAutocomplete`: for hosts sized to their own content. */

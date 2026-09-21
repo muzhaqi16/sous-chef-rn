@@ -8,6 +8,7 @@ import type {
 } from '#/graphql/generated/schemaTypes';
 import type { ImageFile } from '#hooks/useImageUpload';
 import { useStore } from '#store';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /**
  * Shape of the dynamic AddItemForm submission fields this mapper reads. The
@@ -44,13 +45,12 @@ export interface AddItemFormData {
  * from-OCR flow so the mapping stays in one place.
  */
 export function mapFormToCreateItemInput(
-  formData: Record<string, unknown>,
+  data: AddItemFormData,
 ): CreateItemInput {
-  const data = formData as AddItemFormData;
   return {
     name: data.name,
-    description: data.description || undefined,
-    type: data.type || undefined,
+    description: firstNonBlank(data.description),
+    type: data.type,
     brand:
       data.brandId || data.brandName
         ? { brandId: data.brandId, brandName: data.brandName }
@@ -58,7 +58,7 @@ export function mapFormToCreateItemInput(
     classification:
       data.storageState || data.tags?.length || data.categoryIds?.length
         ? {
-            storageState: data.storageState || undefined,
+            storageState: data.storageState,
             tags: data.tags?.length ? data.tags : undefined,
             categoryIds: data.categoryIds?.length
               ? data.categoryIds
@@ -68,9 +68,9 @@ export function mapFormToCreateItemInput(
     productDetails:
       data.primaryUpc || data.shelfLifeDays || data.shelfLifeOpenedDays
         ? {
-            primaryUpc: data.primaryUpc || undefined,
-            shelfLifeDays: data.shelfLifeDays || undefined,
-            shelfLifeOpenedDays: data.shelfLifeOpenedDays || undefined,
+            primaryUpc: firstNonBlank(data.primaryUpc),
+            shelfLifeDays: data.shelfLifeDays ?? undefined,
+            shelfLifeOpenedDays: data.shelfLifeOpenedDays ?? undefined,
           }
         : undefined,
     packageInfo:
@@ -78,9 +78,9 @@ export function mapFormToCreateItemInput(
       data.defaultConsumeIncrement ||
       data.defaultConsumeUnitId
         ? {
-            baseDimension: data.baseDimension || undefined,
-            defaultConsumeIncrement: data.defaultConsumeIncrement || undefined,
-            defaultConsumeUnitId: data.defaultConsumeUnitId || undefined,
+            baseDimension: data.baseDimension,
+            defaultConsumeIncrement: data.defaultConsumeIncrement ?? undefined,
+            defaultConsumeUnitId: firstNonBlank(data.defaultConsumeUnitId),
           }
         : undefined,
     netWeights: data.netWeights?.length ? data.netWeights : undefined,

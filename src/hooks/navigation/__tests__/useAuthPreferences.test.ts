@@ -5,7 +5,6 @@ import { useAuthPreferences } from '../useAuthPreferences';
 type MockUser = RootState['user'];
 type MockStoreState = {
   user: MockUser;
-  getUserNavigationState: RootState['getUserNavigationState'];
   setUserNavigationState: RootState['setUserNavigationState'];
 };
 
@@ -14,14 +13,12 @@ jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
 const mockSetUserNavigationState = jest.fn();
-const mockGetUserNavigationState = jest.fn();
 
 let mockUser: MockUser = { id: 'u1', email: 'test@test.com' } as MockUser;
 
 jest.mock('#store/useAppStore', () => {
   const getState = (): MockStoreState => ({
     user: mockUser,
-    getUserNavigationState: mockGetUserNavigationState,
     setUserNavigationState: mockSetUserNavigationState,
   });
   return {
@@ -35,55 +32,9 @@ jest.mock('#store/useAppStore', () => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockUser = { id: 'u1', email: 'test@test.com' } as MockUser;
-  mockGetUserNavigationState.mockReturnValue(null);
 });
 
 describe('useAuthPreferences', () => {
-  describe('shouldShowCredentialPrompt', () => {
-    it('returns true when no navigation state exists for user', () => {
-      mockGetUserNavigationState.mockReturnValue(null);
-      const { result } = renderHook(() => useAuthPreferences());
-
-      expect(result.current.shouldShowCredentialPrompt()).toBe(true);
-    });
-
-    it('returns true when credentialPromptDeclined is false', () => {
-      mockGetUserNavigationState.mockReturnValue({
-        credentialPromptDeclined: false,
-      });
-      const { result } = renderHook(() => useAuthPreferences());
-
-      expect(result.current.shouldShowCredentialPrompt()).toBe(true);
-    });
-
-    it('returns false when credentialPromptDeclined is true', () => {
-      mockGetUserNavigationState.mockReturnValue({
-        credentialPromptDeclined: true,
-      });
-      const { result } = renderHook(() => useAuthPreferences());
-
-      expect(result.current.shouldShowCredentialPrompt()).toBe(false);
-    });
-
-    it('returns false when no user and no userId provided', () => {
-      mockUser = null;
-      const { result } = renderHook(() => useAuthPreferences());
-
-      expect(result.current.shouldShowCredentialPrompt()).toBe(false);
-    });
-
-    it('uses provided userId over current user', () => {
-      mockGetUserNavigationState.mockReturnValue({
-        credentialPromptDeclined: true,
-      });
-      const { result } = renderHook(() => useAuthPreferences());
-
-      result.current.shouldShowCredentialPrompt('other-user');
-
-      expect(mockGetUserNavigationState).toHaveBeenCalledWith('other-user');
-    });
-  });
-
   describe('markBiometricDeclined', () => {
     it('sets biometricDeclinedPermanently for current user', () => {
       const { result } = renderHook(() => useAuthPreferences());
@@ -168,69 +119,6 @@ describe('useAuthPreferences', () => {
 
       expect(mockSetUserNavigationState).toHaveBeenCalledWith('u1', {
         biometricDeclinedPermanently: false,
-      });
-    });
-  });
-
-  describe('resetAllPreferences', () => {
-    it('resets both biometric and credential preferences', () => {
-      const { result } = renderHook(() => useAuthPreferences());
-
-      act(() => {
-        result.current.resetAllPreferences();
-      });
-
-      expect(mockSetUserNavigationState).toHaveBeenCalledWith('u1', {
-        biometricDeclinedPermanently: false,
-        credentialPromptDeclined: false,
-      });
-    });
-  });
-
-  describe('trackCredentialPromptShown', () => {
-    it('records the timestamp of the credential prompt', () => {
-      const now = 1700000000000;
-      jest.spyOn(Date, 'now').mockReturnValue(now);
-
-      const { result } = renderHook(() => useAuthPreferences());
-
-      act(() => {
-        result.current.trackCredentialPromptShown();
-      });
-
-      expect(mockSetUserNavigationState).toHaveBeenCalledWith('u1', {
-        lastCredentialPromptShown: now,
-      });
-
-      jest.restoreAllMocks();
-    });
-  });
-
-  describe('clearRegistrationPreferences', () => {
-    it('clears credential and biometric preferences for the given userId', () => {
-      const { result } = renderHook(() => useAuthPreferences());
-
-      act(() => {
-        result.current.clearRegistrationPreferences('u3');
-      });
-
-      expect(mockSetUserNavigationState).toHaveBeenCalledWith('u3', {
-        credentialPromptDeclined: false,
-        biometricDeclinedPermanently: false,
-      });
-    });
-  });
-
-  describe('trackLogout', () => {
-    it('sets biometricEnabled to false for the given userId', () => {
-      const { result } = renderHook(() => useAuthPreferences());
-
-      act(() => {
-        result.current.trackLogout('u1');
-      });
-
-      expect(mockSetUserNavigationState).toHaveBeenCalledWith('u1', {
-        biometricEnabled: false,
       });
     });
   });

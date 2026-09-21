@@ -1,12 +1,11 @@
 import React, { Suspense, useEffect, useRef } from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
+import type { StaticParamList, Theme } from '@react-navigation/native';
 import {
   createStaticNavigation,
   DefaultTheme,
   DarkTheme,
-  StaticParamList,
-  Theme,
 } from '@react-navigation/native';
 import {
   createNativeStackNavigator,

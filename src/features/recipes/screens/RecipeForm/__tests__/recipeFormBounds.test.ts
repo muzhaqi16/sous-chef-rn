@@ -86,4 +86,48 @@ describe('the recipe form bounds', () => {
       expect(await firstError({ ...base(), steps })).toBeTruthy();
     });
   });
+
+  // The API's recipe bounds: at most 10 tags of 1–50 characters after
+  // trimming, tips at most 2,000 characters.
+  describe('tags', () => {
+    const tagList = (count: number, length = 5) =>
+      Array.from({ length: count }, (_, i) => `${i}`.padEnd(length, 'x')).join(
+        ', ',
+      );
+
+    it('accepts 10 tags of 50 characters', async () => {
+      expect(await firstError({ ...base(), tags: tagList(10, 50) })).toBeNull();
+    });
+
+    it('refuses an 11th tag', async () => {
+      expect(await firstError({ ...base(), tags: tagList(11) })).toContain(
+        '10',
+      );
+    });
+
+    it('refuses a tag over 50 characters', async () => {
+      expect(await firstError({ ...base(), tags: tagList(1, 51) })).toContain(
+        '50',
+      );
+    });
+
+    it('counts neither blank entries nor surrounding spaces', async () => {
+      const tags = ` ${'x'.repeat(50)} ,, ${tagList(9)}, `;
+      expect(await firstError({ ...base(), tags })).toBeNull();
+    });
+  });
+
+  describe('tips', () => {
+    it('accepts 2,000 characters', async () => {
+      expect(
+        await firstError({ ...base(), tips: 'x'.repeat(2000) }),
+      ).toBeNull();
+    });
+
+    it('refuses 2,001', async () => {
+      expect(await firstError({ ...base(), tips: 'x'.repeat(2001) })).toContain(
+        '2000',
+      );
+    });
+  });
 });

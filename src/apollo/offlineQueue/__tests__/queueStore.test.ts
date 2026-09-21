@@ -1,7 +1,16 @@
 import type { DocumentNode } from 'graphql';
 import { QueueStore } from '../queueStore';
-import { QueueCapacityError, QueuedMutation, QueueStatus } from '../types';
+import type { QueuedMutation } from '../types';
+import { QueueCapacityError, QueueStatus } from '../types';
 import { storage } from '#storage/mmkv';
+import { queuedMutationFor } from '#/test-utils/queuedMutation';
+import { ForkRecipeDocument } from '#features/recipes/graphql/recipe.generated';
+import {
+  AddItemToShoppingListDocument,
+  MoveShoppingListItemDocument,
+  RemoveItemFromShoppingListDocument,
+  ToggleShoppingListItemPurchasedDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 
 // The global jest.setup.js already mocks react-native-mmkv with an in-memory Map,
 // which means `storage` from '#storage/mmkv' is backed by that Map mock.
@@ -82,6 +91,19 @@ describe('QueueStore', () => {
 
       store.addMutation(makeMutation());
       expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('tells subscribers when its cached queue state is invalidated', () => {
+      // Session teardown invalidates the cache; a pending-write badge reading
+      // the store must re-read, or it keeps showing writes that are gone.
+      const listener = jest.fn();
+      store.subscribe(listener);
+      store.setCurrentUserId('user-1');
+      listener.mockClear();
+
+      store.invalidateCache();
+
+      expect(listener).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -179,13 +201,13 @@ describe('QueueStore', () => {
       it('coalesces pending move mutations for the same item', () => {
         const move1 = makeMutation({
           id: 'move-1',
-          operationName: 'MoveShoppingListItem',
-          variables: { input: { itemId: 'item-A', afterId: 'x' } },
+          ...queuedMutationFor(MoveShoppingListItemDocument),
+          variables: { input: { itemId: 'item-A', afterItemId: 'x' } },
         });
         const move2 = makeMutation({
           id: 'move-2',
-          operationName: 'MoveShoppingListItem',
-          variables: { input: { itemId: 'item-A', afterId: 'y' } },
+          ...queuedMutationFor(MoveShoppingListItemDocument),
+          variables: { input: { itemId: 'item-A', afterItemId: 'y' } },
         });
 
         store.addMutation(move1);
@@ -195,21 +217,21 @@ describe('QueueStore', () => {
         expect(result).toHaveLength(1);
         // The second (latest) mutation should win
         expect(result[0]!.id).toBe('move-2');
-        expect(result[0]!.variables.input.afterId).toBe('y');
+        expect(result[0]!.variables.input.afterItemId).toBe('y');
       });
 
       it('does not coalesce move mutations for different items', () => {
         store.addMutation(
           makeMutation({
             id: 'move-a',
-            operationName: 'MoveShoppingListItem',
+            ...queuedMutationFor(MoveShoppingListItemDocument),
             variables: { input: { itemId: 'item-A' } },
           }),
         );
         store.addMutation(
           makeMutation({
             id: 'move-b',
-            operationName: 'MoveShoppingListItem',
+            ...queuedMutationFor(MoveShoppingListItemDocument),
             variables: { input: { itemId: 'item-B' } },
           }),
         );
@@ -222,7 +244,7 @@ describe('QueueStore', () => {
           makeMutation({
             id: 'move-u1',
             userId: 'user-1',
-            operationName: 'MoveShoppingListItem',
+            ...queuedMutationFor(MoveShoppingListItemDocument),
             variables: { input: { itemId: 'item-A' } },
           }),
         );
@@ -230,7 +252,7 @@ describe('QueueStore', () => {
           makeMutation({
             id: 'move-u2',
             userId: 'user-2',
-            operationName: 'MoveShoppingListItem',
+            ...queuedMutationFor(MoveShoppingListItemDocument),
             variables: { input: { itemId: 'item-A' } },
           }),
         );
@@ -245,7 +267,7 @@ describe('QueueStore', () => {
         store.addMutation(
           makeMutation({
             id: 'move-processing',
-            operationName: 'MoveShoppingListItem',
+            ...queuedMutationFor(MoveShoppingListItemDocument),
             variables: { input: { itemId: 'item-A' } },
             status: QueueStatus.PROCESSING,
           }),
@@ -253,12 +275,224 @@ describe('QueueStore', () => {
         store.addMutation(
           makeMutation({
             id: 'move-new',
-            operationName: 'MoveShoppingListItem',
+            ...queuedMutationFor(MoveShoppingListItemDocument),
             variables: { input: { itemId: 'item-A' } },
           }),
         );
 
         expect(store.getMutationsForUser('user-1')).toHaveLength(2);
+      });
+
+      it("queues the final move after a create it names, not in the first move's slot", () => {
+        // The drain replays in queue order. In the first move's slot, "after X"
+        // is sent before X exists, refused, and the row withdrawn.
+        store.addMutation(
+          makeMutation({
+            id: 'move-1',
+            ...queuedMutationFor(MoveShoppingListItemDocument),
+            variables: { input: { itemId: 'item-A', afterItemId: 'item-Y' } },
+          }),
+        );
+        store.addMutation(
+          makeMutation({
+            id: 'create-x',
+            ...queuedMutationFor(AddItemToShoppingListDocument),
+            variables: {
+              input: { shoppingListId: 'list-1', items: [{ id: 'item-X' }] },
+            },
+          }),
+        );
+        store.addMutation(
+          makeMutation({
+            id: 'move-2',
+            ...queuedMutationFor(MoveShoppingListItemDocument),
+            variables: { input: { itemId: 'item-A', afterItemId: 'item-X' } },
+          }),
+        );
+
+        expect(store.getMutationsForUser('user-1').map(m => m.id)).toEqual([
+          'create-x',
+          'move-2',
+        ]);
+      });
+
+      it("keeps the first move's age and conflict count on the surviving move", () => {
+        store.addMutation(
+          makeMutation({
+            id: 'move-1',
+            ...queuedMutationFor(MoveShoppingListItemDocument),
+            variables: { input: { itemId: 'item-A', afterItemId: 'item-Y' } },
+            createdAt: 1_000,
+            conflictCount: 1,
+          }),
+        );
+        store.addMutation(
+          makeMutation({
+            id: 'move-2',
+            ...queuedMutationFor(MoveShoppingListItemDocument),
+            variables: { input: { itemId: 'item-A', afterItemId: 'item-Z' } },
+            createdAt: 5_000,
+          }),
+        );
+
+        const [survivor] = store.getMutationsForUser('user-1');
+        // The 90-day horizon counts from the first move the user made, while
+        // `createdAt` stays the moment this one was queued — the drain replays
+        // in `createdAt` order, and an older stamp would sort the surviving
+        // move ahead of a row created between the two moves.
+        expect(survivor).toMatchObject({
+          id: 'move-2',
+          createdAt: 5_000,
+          agedFrom: 1_000,
+          conflictCount: 1,
+        });
+      });
+
+      it("expires the survivor on the first move's age, not its own", () => {
+        const ninetyOneDays = 91 * 24 * 60 * 60 * 1000;
+        const old = Date.now() - ninetyOneDays;
+        store.addMutation(
+          makeMutation({
+            id: 'move-1',
+            ...queuedMutationFor(MoveShoppingListItemDocument),
+            variables: { input: { itemId: 'item-A', afterItemId: 'item-Y' } },
+            createdAt: old,
+          }),
+        );
+        store.addMutation(
+          makeMutation({
+            id: 'move-2',
+            ...queuedMutationFor(MoveShoppingListItemDocument),
+            variables: { input: { itemId: 'item-A', afterItemId: 'item-Z' } },
+            createdAt: Date.now(),
+          }),
+        );
+
+        expect(store.expireStalePending('user-1')).toHaveLength(1);
+      });
+    });
+
+    describe('a delete supersedes pending writes to its subject', () => {
+      const toggle = (id: string, itemId: string, createdAt: number) =>
+        makeMutation({
+          id,
+          ...queuedMutationFor(ToggleShoppingListItemPurchasedDocument),
+          variables: { input: { id: itemId, purchased: true, version: 2 } },
+          createdAt,
+        });
+      const remove = (id: string, itemId: string) =>
+        makeMutation({
+          id,
+          ...queuedMutationFor(RemoveItemFromShoppingListDocument),
+          variables: { input: { id: itemId } },
+          createdAt: 9_000,
+        });
+
+      it('drops a pending update to the deleted row and keeps its age', () => {
+        store.addMutation(toggle('tick', 'sli-1', 1_000));
+        store.addMutation(toggle('other', 'sli-2', 2_000));
+
+        store.addMutation(remove('delete', 'sli-1'));
+
+        const queue = store.getPendingMutationsForUser('user-1');
+        expect(queue.map(m => m.id)).toEqual(['other', 'delete']);
+        expect(store.getMutation('delete')?.agedFrom).toBe(1_000);
+      });
+
+      // An in-flight write may already have reached the server; the drain
+      // settles it, and the delete waits its turn.
+      it('leaves a write that is already in flight alone', () => {
+        store.addMutation({
+          ...toggle('tick', 'sli-1', 1_000),
+          status: QueueStatus.PROCESSING,
+        });
+
+        store.addMutation(remove('delete', 'sli-1'));
+
+        expect(store.getMutation('tick')?.status).toBe(QueueStatus.PROCESSING);
+        expect(store.getMutation('delete')?.agedFrom).toBeUndefined();
+      });
+
+      it('drops an update parked for re-auth to the deleted row', () => {
+        store.addMutation({
+          ...toggle('tick', 'sli-1', 1_000),
+          status: QueueStatus.AUTH_ERROR,
+        });
+
+        store.addMutation(remove('delete', 'sli-1'));
+
+        expect(store.getMutation('tick')).toBeNull();
+        expect(store.getMutation('delete')?.agedFrom).toBe(1_000);
+      });
+
+      it('keeps a create parked for re-auth, so the delete follows it', () => {
+        store.addMutation({
+          ...makeMutation({
+            id: 'create',
+            ...queuedMutationFor(AddItemToShoppingListDocument),
+            variables: {
+              input: {
+                shoppingListId: 'list-1',
+                items: [{ id: 'sli-new', itemName: 'Milk' }],
+              },
+            },
+            createdAt: 1_000,
+          }),
+          status: QueueStatus.AUTH_ERROR,
+        });
+
+        store.addMutation(remove('delete', 'sli-new'));
+
+        expect(store.getMutationsForUser('user-1').map(m => m.id)).toEqual([
+          'create',
+          'delete',
+        ]);
+      });
+
+      it('drops a pending device-minted create together with the delete', () => {
+        store.addMutation(
+          makeMutation({
+            id: 'create',
+            ...queuedMutationFor(AddItemToShoppingListDocument),
+            variables: {
+              input: {
+                shoppingListId: 'list-1',
+                items: [{ id: 'sli-new', itemName: 'Milk' }],
+              },
+            },
+            createdAt: 1_000,
+          }),
+        );
+        store.addMutation(toggle('tick', 'sli-new', 2_000));
+
+        store.addMutation(remove('delete', 'sli-new'));
+
+        expect(store.getMutationsForUser('user-1')).toEqual([]);
+      });
+
+      it('keeps a multi-row create that also minted other rows', () => {
+        store.addMutation(
+          makeMutation({
+            id: 'batch',
+            ...queuedMutationFor(AddItemToShoppingListDocument),
+            variables: {
+              input: {
+                shoppingListId: 'list-1',
+                items: [
+                  { id: 'sli-a', itemName: 'Milk' },
+                  { id: 'sli-b', itemName: 'Eggs' },
+                ],
+              },
+            },
+            createdAt: 1_000,
+          }),
+        );
+
+        store.addMutation(remove('delete', 'sli-a'));
+
+        expect(
+          store.getPendingMutationsForUser('user-1').map(m => m.id),
+        ).toEqual(['batch', 'delete']);
       });
     });
   });
@@ -792,7 +1026,7 @@ describe('QueueStore', () => {
   // getPendingClientIds
   // -------------------------------------------------------------------------
   describe('getPendingClientIds', () => {
-    it('collects input.id and input.itemId from the current user pending queue', () => {
+    it('collects the subject each pending write names, per its input type', () => {
       store.setCurrentUserId('user-1');
       store.addMutation(
         makeMutation({ id: 'm1', variables: { input: { id: 'cuid-create' } } }),
@@ -800,13 +1034,27 @@ describe('QueueStore', () => {
       store.addMutation(
         makeMutation({
           id: 'm2',
-          operationName: 'MoveShoppingListItem',
-          variables: { input: { itemId: 'cuid-move' } },
+          ...queuedMutationFor(MoveShoppingListItemDocument),
+          variables: { input: { itemId: 'cuid-move', afterItemId: 'row-0' } },
         }),
       );
 
       const ids = store.getPendingClientIds();
       expect(ids).toEqual(new Set(['cuid-create', 'cuid-move']));
+    });
+
+    it("protects a pending fork's new recipe, not the recipe it forks from", () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(
+        makeMutation({
+          id: 'm-fork',
+          ...queuedMutationFor(ForkRecipeDocument),
+          variables: {
+            input: { id: 'recipe-src', newRecipeId: 'recipe-fork' },
+          },
+        }),
+      );
+      expect(store.getPendingClientIds()).toEqual(new Set(['recipe-fork']));
     });
 
     it('returns an empty set when no current user is set', () => {
@@ -822,20 +1070,12 @@ describe('QueueStore', () => {
       expect(store.getPendingClientIds().size).toBe(0);
     });
 
-    it('collects a top-level variables.id', () => {
-      store.setCurrentUserId('user-1');
-      store.addMutation(
-        makeMutation({ id: 'm-top', variables: { id: 'cuid-top-level' } }),
-      );
-      expect(store.getPendingClientIds()).toEqual(new Set(['cuid-top-level']));
-    });
-
     it('collects the item id from a single-item batch add', () => {
       store.setCurrentUserId('user-1');
       store.addMutation(
         makeMutation({
           id: 'm-batch-1',
-          operationName: 'AddItemsToShoppingList',
+          ...queuedMutationFor(AddItemToShoppingListDocument),
           variables: {
             input: {
               shoppingListId: 'list-1',
@@ -852,7 +1092,7 @@ describe('QueueStore', () => {
       store.addMutation(
         makeMutation({
           id: 'm-batch-n',
-          operationName: 'AddItemsToShoppingList',
+          ...queuedMutationFor(AddItemToShoppingListDocument),
           variables: {
             input: {
               shoppingListId: 'list-1',
@@ -875,7 +1115,7 @@ describe('QueueStore', () => {
       store.addMutation(
         makeMutation({
           id: 'm-batch-bad',
-          operationName: 'AddItemsToShoppingList',
+          ...queuedMutationFor(AddItemToShoppingListDocument),
           variables: {
             input: {
               shoppingListId: 'list-1',
@@ -907,21 +1147,6 @@ describe('QueueStore', () => {
       store.resetProcessingToPending('user-1');
       expect(store.getPendingClientIds()).toEqual(new Set(['cuid-stranded']));
     });
-
-    it('collects both input.id and items[].id when a shape carries both', () => {
-      store.setCurrentUserId('user-1');
-      store.addMutation(
-        makeMutation({
-          id: 'm-both',
-          variables: {
-            input: { id: 'cuid-input', items: [{ id: 'cuid-item' }] },
-          },
-        }),
-      );
-      expect(store.getPendingClientIds()).toEqual(
-        new Set(['cuid-input', 'cuid-item']),
-      );
-    });
   });
 
   // The server prunes idempotency-dedup rows after 90 days — replaying a
@@ -937,12 +1162,41 @@ describe('QueueStore', () => {
 
       const expired = store.expireStalePending('user-1');
 
-      expect(expired).toBe(1);
+      expect(expired.map(m => m.id)).toEqual(['stale-1']);
       expect(store.getPendingMutationsForUser('user-1')).toEqual([]);
       const failed = store.getMutation('stale-1');
       expect(failed?.status).toBe(QueueStatus.FAILED);
       expect(failed?.lastError?.code).toBe('OFFLINE_SYNC_WINDOW_EXPIRED');
       expect(failed?.lastError?.retryable).toBe(false);
+    });
+
+    it('stamps the expired entry so routine cleanup removes it', () => {
+      store.addMutation(
+        makeMutation({ id: 'stale-2', createdAt: NINETY_ONE_DAYS_AGO }),
+      );
+      const now = Date.now();
+      store.expireStalePending('user-1');
+
+      jest.spyOn(Date, 'now').mockReturnValue(now + 25 * 60 * 60 * 1000);
+      const discarded = store.cleanupTerminal();
+      jest.restoreAllMocks();
+
+      expect(discarded.map(m => m.id)).toEqual(['stale-2']);
+      expect(store.getMutation('stale-2')).toBeNull();
+    });
+
+    it('keeps an entry one second under the horizon', () => {
+      // The age horizon is the ONLY lifetime bound on a pending write, so its
+      // edge is exact: nothing else ages an entry out.
+      store.addMutation(
+        makeMutation({
+          id: 'edge',
+          createdAt: Date.now() - (90 * 24 * 60 * 60 * 1000 - 1000),
+        }),
+      );
+
+      expect(store.expireStalePending('user-1')).toEqual([]);
+      expect(store.getMutation('edge')?.status).toBe(QueueStatus.PENDING);
     });
 
     it('leaves fresh PENDING entries untouched', () => {
@@ -956,7 +1210,7 @@ describe('QueueStore', () => {
 
       const expired = store.expireStalePending('user-1');
 
-      expect(expired).toBe(0);
+      expect(expired).toEqual([]);
       expect(store.getPendingMutationsForUser('user-1')).toHaveLength(2);
     });
 
@@ -978,7 +1232,7 @@ describe('QueueStore', () => {
 
       const expired = store.expireStalePending('user-1');
 
-      expect(expired).toBe(0);
+      expect(expired).toEqual([]);
       expect(store.getMutation('other-user')?.status).toBe(QueueStatus.PENDING);
       expect(store.getMutation('already-failed')?.lastError).toBeUndefined();
     });

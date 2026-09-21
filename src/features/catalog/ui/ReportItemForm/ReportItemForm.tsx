@@ -11,6 +11,7 @@ import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { useReportItem } from '#features/catalog/hooks/useReportItem';
 import { MIN_EDIT_REASON_LENGTH } from '#features/catalog/utils/itemValidation';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 
 export interface ReportItemTarget {
   id: string;
@@ -62,13 +63,13 @@ export const ReportItemForm: React.FC<ReportItemFormProps> = ({
       <BottomSheetHeader
         title={t('reportItem.title')}
         cancelLabel={t('labels.back')}
-        cancelTestID="report-item-cancel-button"
+        cancelTestID={catalogTestIDs.reportItemCancelButton}
         confirmLabel={t('reportItem.submit')}
         onCancel={onClose}
         onConfirm={handleSubmit}
         saving={loading}
         confirmDisabled={!target || reasonTooShort}
-        confirmTestID="report-item-submit-button"
+        confirmTestID={catalogTestIDs.reportItemSubmitButton}
       />
       <BottomSheetFormScrollView
         contentContainerStyle={styles.content}
@@ -133,7 +134,7 @@ export const ReportItemForm: React.FC<ReportItemFormProps> = ({
               multiline
               numberOfLines={3}
               editable={!loading}
-              testID="report-item-reason-input"
+              testID={catalogTestIDs.reportItemReasonInput}
             />
             {/* Says why submit is disabled. Withheld until they start typing, so
                 it reads as guidance rather than an error on an untouched field. */}

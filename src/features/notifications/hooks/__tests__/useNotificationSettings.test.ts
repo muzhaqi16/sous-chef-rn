@@ -1,6 +1,7 @@
 'use no memo';
 
 import { act, waitFor } from '@testing-library/react-native';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -30,8 +31,14 @@ jest.mock('#store/useAppStore', () => {
   };
 });
 
-const mockPreferencesData = {
-  __typename: 'NotificationPreferences' as const,
+type StoredPreferences = NonNullable<
+  NonNullable<
+    MockDataFor<typeof GetNotificationPreferencesDocument>['me']
+  >['notificationPreferences']
+>;
+
+const mockPreferencesData: StoredPreferences = {
+  __typename: 'NotificationPreferences',
   id: 'pref-1',
   emailEnabled: true,
   pushEnabled: true,
@@ -89,7 +96,7 @@ function withPrefs(prefs: typeof mockPreferencesData | null) {
         ? recordMock(GetNotificationPreferencesDocument, {
             data: {
               me: {
-                __typename: 'User' as const,
+                __typename: 'User',
                 id: 'user-1',
                 notificationPreferences: null,
               },
@@ -112,26 +119,29 @@ function withPrefs(prefs: typeof mockPreferencesData | null) {
  * `settings` back out of the cache have to mock the query explicitly too.
  */
 function prefsQueryMock(patch: Partial<typeof mockPreferencesData> = {}) {
-  return recordMock(GetNotificationPreferencesDocument, {
-    data: {
-      me: {
-        __typename: 'User' as const,
-        id: 'user-1',
-        notificationPreferences: {
-          ...mockPreferencesData,
-          userId: 'user-1',
-          ...patch,
-        },
+  const data: MockDataFor<typeof GetNotificationPreferencesDocument> = {
+    me: {
+      __typename: 'User',
+      id: 'user-1',
+      notificationPreferences: {
+        ...mockPreferencesData,
+        userId: 'user-1',
+        ...patch,
       },
     },
+  };
+  return recordMock(GetNotificationPreferencesDocument, {
+    data,
     maxUsageCount: Number.POSITIVE_INFINITY,
   }).mock;
 }
 
-function updatedPrefs(patch: Partial<typeof mockPreferencesData>) {
+function updatedPrefs(
+  patch: Partial<typeof mockPreferencesData>,
+): MockDataFor<typeof UpdateNotificationPreferencesDocument> {
   return {
     updateNotificationPreferences: {
-      __typename: 'UpdateNotificationPreferencesPayload' as const,
+      __typename: 'UpdateNotificationPreferencesPayload',
       notificationPreferences: {
         ...mockPreferencesData,
         userId: 'user-1',
@@ -252,7 +262,7 @@ describe('useNotificationSettings', () => {
     const update = recordMock(UpdateNotificationPreferencesDocument, {
       data: {
         updateNotificationPreferences: {
-          __typename: 'ForbiddenError' as const,
+          __typename: 'ForbiddenError',
           code: ErrorCode.Forbidden,
           message: 'Push requires a registered device',
         },
@@ -324,30 +334,6 @@ describe('useNotificationSettings', () => {
     });
   });
 
-  it('updateMultipleSettings sends batch update', async () => {
-    const update = recordMock(UpdateNotificationPreferencesDocument, {
-      data: updatedPrefs({ pushEnabled: true, lowStockAlerts: false }),
-    });
-
-    const { result } = renderHookWithApollo(() => useNotificationSettings(), {
-      operationMocks: [
-        ...withPrefs(mockPreferencesData).operationMocks,
-        update.mock,
-      ],
-    });
-
-    let success: boolean = false;
-    await act(async () => {
-      success = await result.current.updateMultipleSettings({
-        pushEnabled: true,
-        lowStockAlerts: false,
-      });
-    });
-
-    expect(update.fired.length).toBeGreaterThan(0);
-    expect(success).toBe(true);
-  });
-
   it('resetToDefaults sends default values', async () => {
     const update = recordMock(UpdateNotificationPreferencesDocument, {
       data: updatedPrefs({ pushEnabled: false }),
@@ -360,11 +346,13 @@ describe('useNotificationSettings', () => {
       ],
     });
 
+    let success: boolean = false;
     await act(async () => {
-      await result.current.resetToDefaults();
+      success = await result.current.resetToDefaults();
     });
 
     expect(update.fired.length).toBeGreaterThan(0);
+    expect(success).toBe(true);
   });
 
   it('isQuietTime returns false when quiet hours disabled', async () => {

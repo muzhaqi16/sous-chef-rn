@@ -3,8 +3,17 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Text } from '#components/atoms/Text';
+import { Text, type TextTone } from '#components/atoms/Text';
 import { Divider } from '#components/atoms/Divider';
+
+type ConfirmColor = 'primary' | 'success' | 'warning' | 'error';
+
+const CONFIRM_TONE: Record<ConfirmColor, TextTone> = {
+  primary: 'accent',
+  success: 'success',
+  warning: 'warning',
+  error: 'danger',
+};
 
 interface BottomSheetHeaderProps {
   /** Optional centered title. Omit when the confirm action already names the
@@ -15,7 +24,8 @@ interface BottomSheetHeaderProps {
   cancelLabel?: string;
   confirmLabel?: string;
   confirmDisabled?: boolean;
-  confirmColor?: 'primary' | 'success' | 'warning' | 'error';
+  /** `error` is a destructive action, so it renders in the danger tone. */
+  confirmColor?: ConfirmColor;
   /**
    * A submission is in FLIGHT — distinct from `confirmDisabled`, which is an
    * incomplete form. Both dim the control; only this one swaps the label, so a
@@ -25,6 +35,8 @@ interface BottomSheetHeaderProps {
   savingLabel?: string;
   cancelTestID?: string;
   confirmTestID?: string;
+  /** The title is inert, so a test taps it to blur a field without side effects. */
+  titleTestID?: string;
 }
 
 export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
@@ -39,12 +51,9 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
   savingLabel,
   cancelTestID,
   confirmTestID,
+  titleTestID,
 }) => {
   const { t } = useTranslation();
-  styles.useVariants({
-    confirmColor,
-    confirmDisabled: confirmDisabled || saving,
-  });
 
   const resolvedCancelLabel = cancelLabel ?? t('labels.cancel');
   // `saving` blocks the controls; it substitutes the LABEL only when the caller
@@ -73,6 +82,7 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
             align="center"
             style={styles.title}
             numberOfLines={1}
+            testID={titleTestID}
           >
             {title}
           </Text>
@@ -87,7 +97,11 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
           accessibilityLabel={resolvedConfirmLabel}
           accessibilityState={{ disabled: confirmBlocked }}
         >
-          <Text role="bodyStrong" align="right" style={styles.confirmText}>
+          <Text
+            role="bodyStrong"
+            align="right"
+            tone={confirmBlocked ? 'tertiary' : CONFIRM_TONE[confirmColor]}
+          >
             {resolvedConfirmLabel}
           </Text>
         </AppPressable>
@@ -115,19 +129,6 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     flex: 1,
-  },
-  confirmText: {
-    variants: {
-      confirmColor: {
-        primary: { color: theme.colors.primary },
-        success: { color: theme.colors.success },
-        warning: { color: theme.colors.warning },
-        error: { color: theme.colors.error },
-      },
-      confirmDisabled: {
-        true: { color: theme.colors.textTertiary },
-      },
-    },
   },
   divider: {
     marginTop: theme.spacing.sm,

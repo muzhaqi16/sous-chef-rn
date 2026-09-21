@@ -2,7 +2,8 @@ import React from 'react';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Text } from '#components/atoms/Text';
+import { Text, type TextTone } from '#components/atoms/Text';
+import { kitTestIDs } from '#components/testIDs';
 
 export interface PageIndicatorItem {
   label: string;
@@ -14,6 +15,8 @@ interface PageIndicatorProps {
   pages: readonly (string | PageIndicatorItem)[];
   currentPage: number;
   onPagePress: (index: number) => void;
+  /** A page button's id by index: a registry builder, `kitTestIDs.pageIndicator` by default. */
+  testIDFor?: (index: number) => string;
 }
 
 const normalize = (
@@ -25,13 +28,20 @@ const normalize = (
 
 type DotState = 'error' | 'selected' | 'idle';
 
+// A page with errors is flagged, not described, so its label is not error copy.
+const LABEL_TONE: Record<DotState, TextTone> = {
+  error: 'danger',
+  selected: 'accent',
+  idle: 'secondary',
+};
+
 const PageIndicatorItemRow: React.FC<{
   label: string;
-  index: number;
+  testID: string;
   selected: boolean;
   hasError: boolean;
   onPress: () => void;
-}> = ({ label, index, selected, hasError, onPress }) => {
+}> = ({ label, testID, selected, hasError, onPress }) => {
   const state: DotState = hasError ? 'error' : selected ? 'selected' : 'idle';
   styles.useVariants({ state });
 
@@ -39,7 +49,7 @@ const PageIndicatorItemRow: React.FC<{
     <AppPressable
       // Indexed, not label-derived: the labels are translated, so a test
       // targeting them would pass in English and fail in every other locale.
-      testID={`page-indicator-${index}`}
+      testID={testID}
       onPress={onPress}
       accessibilityRole="tab"
       accessibilityLabel={label}
@@ -50,7 +60,7 @@ const PageIndicatorItemRow: React.FC<{
       <Text
         size="sm"
         weight={selected ? 'semibold' : 'regular'}
-        style={styles.label}
+        tone={LABEL_TONE[state]}
       >
         {label}
       </Text>
@@ -62,6 +72,7 @@ export const PageIndicator: React.FC<PageIndicatorProps> = ({
   pages,
   currentPage,
   onPagePress,
+  testIDFor = kitTestIDs.pageIndicator,
 }) => {
   return (
     <View style={styles.container} accessibilityRole="tablist">
@@ -72,7 +83,7 @@ export const PageIndicator: React.FC<PageIndicatorProps> = ({
           <PageIndicatorItemRow
             key={label}
             label={label}
-            index={index}
+            testID={testIDFor(index)}
             selected={selected}
             hasError={hasError}
             onPress={() => onPagePress(index)}
@@ -106,15 +117,6 @@ const styles = StyleSheet.create(theme => ({
         error: { backgroundColor: theme.colors.error },
         selected: { backgroundColor: theme.colors.primary },
         idle: { backgroundColor: theme.colors.border },
-      },
-    },
-  },
-  label: {
-    variants: {
-      state: {
-        error: { color: theme.colors.error },
-        selected: { color: theme.colors.primary },
-        idle: { color: theme.colors.textSecondary },
       },
     },
   },

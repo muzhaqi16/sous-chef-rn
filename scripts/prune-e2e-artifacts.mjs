@@ -19,7 +19,7 @@
 import { readdirSync, statSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseFlags } from './lib/tooling.mjs';
+import { bytes, parseFlags, sizeOf } from './lib/tooling.mjs';
 
 const flags = parseFlags({
   keep: { type: 'string', default: '5' },
@@ -40,30 +40,6 @@ if (!existsSync(ROOT)) {
   console.log('Nothing to prune: e2e/artifacts does not exist.');
   process.exit(0);
 }
-
-const bytes = n => {
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let v = n;
-  let u = 0;
-  while (v >= 1024 && u < units.length - 1) {
-    v /= 1024;
-    u += 1;
-  }
-  return `${v.toFixed(1)} ${units[u]}`;
-};
-
-const dirSize = dir => {
-  let total = 0;
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    try {
-      total += entry.isDirectory() ? dirSize(full) : statSync(full).size;
-    } catch {
-      // Raced with something else deleting it — not our problem to report.
-    }
-  }
-  return total;
-};
 
 let reclaimed = 0;
 let removed = 0;
@@ -89,7 +65,7 @@ for (const config of readdirSync(ROOT, { withFileTypes: true })) {
     continue;
   }
 
-  const freed = stale.reduce((sum, run) => sum + dirSize(run.full), 0);
+  const freed = stale.reduce((sum, run) => sum + sizeOf(run.full), 0);
   reclaimed += freed;
   removed += stale.length;
 

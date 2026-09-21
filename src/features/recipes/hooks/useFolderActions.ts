@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { ApolloCache } from '@apollo/client';
@@ -9,8 +8,8 @@ import {
   type SavedRecipeFoldersQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import { toastService } from '#/services/toastService';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { isRecord } from '#/utils/isRecord';
 
 /**
  * Read / write the folder list. Module-level so each caller's try body stays a
@@ -47,15 +46,13 @@ function rewriteSavedRecipeFolders(
   // `TypeName:id`. Serializing the whole store is the cost of the only correct
   // question — which `SavedRecipe` entities carry this folder, whichever query
   // cached them — and this runs on a rename or delete, not a render path.
-  const snapshot = cache.extract() as Record<
-    string,
-    { folder?: string | null } | undefined
-  >;
+  const snapshot = cache.extract();
   const changed: string[] = [];
+  if (!isRecord(snapshot)) return changed;
 
-  for (const cacheId of Object.keys(snapshot)) {
+  for (const [cacheId, entity] of Object.entries(snapshot)) {
     if (!cacheId.startsWith('SavedRecipe:')) continue;
-    if (snapshot[cacheId]?.folder !== from) continue;
+    if ((isRecord(entity) ? entity.folder : undefined) !== from) continue;
 
     changed.push(cacheId);
     cache.modify({ id: cacheId, fields: { folder: () => to } });
@@ -86,11 +83,7 @@ export function useFolderActions() {
   const client = useApolloClient();
   const [loading, setLoading] = useState(false);
 
-  const [deleteRecipeFolderMutation] = useMutation(DeleteRecipeFolderDocument, {
-    onError: err => {
-      errorService.reportError(err, { operation: 'folderAction' });
-    },
-  });
+  const [deleteRecipeFolderMutation] = useMutation(DeleteRecipeFolderDocument);
 
   /**
    * Rename a folder by moving all recipes to a new folder name
@@ -121,32 +114,28 @@ export function useFolderActions() {
       newName,
     );
 
-    let result;
-    try {
-      result = await deleteRecipeFolderMutation({
-        variables: { input: { folder: oldName, moveTo: newName } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, { operation: 'renameFolder' });
-    }
+    const settled = await settleMutation(
+      () =>
+        deleteRecipeFolderMutation({
+          variables: { input: { folder: oldName, moveTo: newName } },
+          context: { localFirst: true },
+        }),
+      {
+        document: DeleteRecipeFolderDocument,
+        fallback: t('recipes.renameFolderFailedRetry'),
+        onFailed: () => {
+          if (previousFolders) writeFolders(client.cache, previousFolders);
+          restoreSavedRecipeFolders(client.cache, movedRecipes, oldName);
+        },
+        // Folder outcomes are reported as toasts, success and failure alike.
+        present: 'none',
+      },
+    );
 
     setLoading(false);
 
-    if (classifyCreateResult(result) === 'rejected') {
-      if (previousFolders) writeFolders(client.cache, previousFolders);
-      restoreSavedRecipeFolders(client.cache, movedRecipes, oldName);
-      // The app's own words. `message` is the server's English by construction
-      // — the client sends no `Accept-Language` and the token carries no locale
-      // — so this displayed untranslated text to every es/it/sq user. The
-      // mutation already selects `... on ValidationError { field }`, which is
-      // the actionable half anyway.
-      toastService.error(
-        localizedRefusalMessage(
-          result?.data?.deleteRecipeFolder,
-          t('recipes.renameFolderFailedRetry'),
-        ),
-      );
+    if (settled.failure) {
+      toastService.error(settled.failure.body);
       return false;
     }
 
@@ -177,27 +166,27 @@ export function useFolderActions() {
       null,
     );
 
-    let result;
-    try {
-      result = await deleteRecipeFolderMutation({
-        variables: { input: { folder: folderName } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, { operation: 'deleteFolder' });
-    }
+    const settled = await settleMutation(
+      () =>
+        deleteRecipeFolderMutation({
+          variables: { input: { folder: folderName } },
+          context: { localFirst: true },
+        }),
+      {
+        document: DeleteRecipeFolderDocument,
+        fallback: t('recipes.deleteFolderFailed'),
+        onFailed: () => {
+          if (previousFolders) writeFolders(client.cache, previousFolders);
+          restoreSavedRecipeFolders(client.cache, unfoldered, folderName);
+        },
+        present: 'none',
+      },
+    );
 
     setLoading(false);
 
-    if (classifyCreateResult(result) === 'rejected') {
-      if (previousFolders) writeFolders(client.cache, previousFolders);
-      restoreSavedRecipeFolders(client.cache, unfoldered, folderName);
-      toastService.error(
-        localizedRefusalMessage(
-          result?.data?.deleteRecipeFolder,
-          t('recipes.deleteFolderFailed'),
-        ),
-      );
+    if (settled.failure) {
+      toastService.error(settled.failure.body);
       return false;
     }
 

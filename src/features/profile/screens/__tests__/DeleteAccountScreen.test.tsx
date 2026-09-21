@@ -7,18 +7,18 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { CanDeleteAccountDocument } from '#operations/auth/user.generated';
+import { DeletionBlockerType } from '#/graphql/generated/schemaTypes';
 import { DeleteAccountScreen } from '../DeleteAccountScreen';
 import type { BaseInputProps } from '#components/molecules/BaseInput/BaseInput';
 import type { LoadingProps } from '#components/molecules/Loading';
 
 jest.mock('#hooks/navigation/useAppNavigation');
-const mockNav = (
-  jest.requireMock('#hooks/navigation/useAppNavigation') as {
-    useAppNavigation: jest.Mock;
-  }
-).useAppNavigation();
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
 
 jest.mock('#/services/errorService');
+const { localizedErrorMessage } = jest.requireMock('#/services/errorService');
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
@@ -72,6 +72,13 @@ function canDeleteOk(): MockedResponse {
   }).mock;
 }
 
+// What the server's English says. The counts below are the same numbers, now
+// delivered as fields — so the copy can state them in the reader's language.
+const HOME_SERVER_MESSAGE =
+  'You are the only owner of "My Home" which has 1 other member(s). Transfer ownership or remove members first.';
+const LIST_SERVER_MESSAGE =
+  'You are the only owner of "Weekly" which has 2 active collaborator(s). Transfer ownership or remove collaborators first.';
+
 function canDeleteBlocked(): MockedResponse {
   return recordMock(CanDeleteAccountDocument, {
     data: {
@@ -81,9 +88,19 @@ function canDeleteBlocked(): MockedResponse {
         blockers: [
           {
             __typename: 'DeletionBlocker',
+            type: DeletionBlockerType.HomeOwnership,
             resourceId: 'home-1',
             resourceName: 'My Home',
-            message: 'You are the sole owner',
+            memberCount: 1,
+            collaboratorCount: null,
+          },
+          {
+            __typename: 'DeletionBlocker',
+            type: DeletionBlockerType.ShoppingList,
+            resourceId: 'list-1',
+            resourceName: 'Weekly',
+            memberCount: null,
+            collaboratorCount: 2,
           },
         ],
       },
@@ -194,7 +211,12 @@ describe('DeleteAccountScreen - error state', () => {
       operationMocks: [canDeleteError()],
     });
     await screen.findByText('Unable to check account status');
-    expect(screen.getByText('Network error')).toBeTruthy();
+    expect(screen.queryByText('Network error')).toBeNull();
+    expect(localizedErrorMessage).toHaveBeenCalledWith(
+      expect.anything(),
+      'An error occurred. Please try again.',
+    );
+    expect(screen.getByText('Something went wrong.')).toBeTruthy();
   });
 
   it('shows retry button on error', async () => {
@@ -216,7 +238,91 @@ describe('DeleteAccountScreen - blocked state', () => {
     });
     await screen.findByText('Cannot Delete Account');
     expect(screen.getByText('My Home')).toBeTruthy();
-    expect(screen.getByText('You are the sole owner')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Nobody else owns "My Home", and it still has 1 other member.',
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText('• Transfer ownership to another member'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Nobody else owns the shopping list "Weekly", and it still has 2 collaborators.',
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText('• Remove all collaborators from the list'),
+    ).toBeTruthy();
+  });
+
+  it('renders no server message text', async () => {
+    renderWithApollo(<DeleteAccountScreen />, {
+      operationMocks: [canDeleteBlocked()],
+    });
+    await screen.findByText('Cannot Delete Account');
+    expect(screen.queryByText(HOME_SERVER_MESSAGE)).toBeNull();
+    expect(screen.queryByText(LIST_SERVER_MESSAGE)).toBeNull();
+    expect(screen.queryByText(/only owner|\(s\)/)).toBeNull();
+  });
+
+  it('states the blocker without a number when the server sends no count', async () => {
+    // A count-free wording, never "and it still has 0 other members".
+    const mock = recordMock(CanDeleteAccountDocument, {
+      data: {
+        canDeleteAccount: {
+          __typename: 'CanDeleteAccountResult',
+          canDelete: false,
+          blockers: [
+            {
+              __typename: 'DeletionBlocker',
+              type: DeletionBlockerType.HomeOwnership,
+              resourceId: 'home-1',
+              resourceName: 'My Home',
+              memberCount: null,
+              collaboratorCount: null,
+            },
+          ],
+        },
+      },
+    }).mock;
+    renderWithApollo(<DeleteAccountScreen />, { operationMocks: [mock] });
+    await screen.findByText('Cannot Delete Account');
+    expect(
+      screen.getByText(
+        'Nobody else owns "My Home", and it still has other members.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('gives an unclassified blocker its reason and no resolution steps', async () => {
+    const mock = recordMock(CanDeleteAccountDocument, {
+      data: {
+        canDeleteAccount: {
+          __typename: 'CanDeleteAccountResult',
+          canDelete: false,
+          blockers: [
+            {
+              __typename: 'DeletionBlocker',
+              type: DeletionBlockerType.Other,
+              resourceId: 'thing-1',
+              resourceName: 'Thing',
+              memberCount: null,
+              collaboratorCount: null,
+            },
+          ],
+        },
+      },
+    }).mock;
+    renderWithApollo(<DeleteAccountScreen />, { operationMocks: [mock] });
+    await screen.findByText('Cannot Delete Account');
+    expect(
+      screen.getByText(
+        '"Thing" has to be resolved before your account can be deleted.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText('To resolve:')).toBeNull();
+    expect(screen.queryByText('Resolve "Thing" first.')).toBeNull();
   });
 
   it('shows Go Back button in blocked state', async () => {

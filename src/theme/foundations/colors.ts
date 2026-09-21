@@ -107,7 +107,6 @@ export const colors = {
     error: '#DC2626',
     errorText: '#B91C1C',
     errorBg: '#FEF2F2',
-    errorBorder: '#EF4444',
     success: '#16A34A',
     successBg: '#F0FDF4',
     warning: '#D97706',
@@ -118,12 +117,9 @@ export const colors = {
 
   // Light-mode canonical shape; `darkExpiration` below mirrors the keys exactly.
   expiration: {
-    expiredBg: '#FEF2F2',
     expiredBorder: '#FECACA',
     expiredText: '#DC2626',
-    expiredIconBg: '#FEE2E2',
     warningText: '#EA580C',
-    warningBg: '#FFFBEB',
     warningBorder: '#FDE68A',
   },
 
@@ -144,14 +140,11 @@ export const colors = {
   },
 
   avatar: {
-    gradientStart: jaffa['500'],
-    gradientEnd: jaffa['400'],
     shadow: 'rgba(245, 130, 52, 0.3)',
   },
 
   sectionHeader: {
     warningText: '#EA580C',
-    defaultText: '#6B7280',
     actionText: jaffa['500'],
   },
 
@@ -199,6 +192,53 @@ export const colors = {
     rating: { light: '#F59E0B', dark: '#FCD34D' },
   },
 
+  /** Native press ripple (`android_ripple`); translucent, so one value reads on either scheme. */
+  ripple: {
+    subtle: 'rgba(0,0,0,0.06)',
+    default: 'rgba(0,0,0,0.1)',
+    onFill: 'rgba(255,255,255,0.2)',
+  },
+  /** Painted behind the liquid-glass material, per scheme. */
+  glass: { light: 'rgba(255, 255, 255, 0.4)', dark: 'rgba(28, 27, 32, 0.4)' },
+  /** A white wash for a control's ground over a photo or scrim. */
+  onScrimSubtle: 'rgba(255, 255, 255, 0.2)',
+  /** Swatches a user picks for a storage location; the chosen hex is stored. */
+  locationSwatches: {
+    red: '#E53935',
+    pink: '#D81B60',
+    purple: '#8E24AA',
+    blue: '#1E88E5',
+    teal: '#00897B',
+    green: '#43A047',
+    orange: '#FB8C00',
+    brown: '#6D4C41',
+    grey: '#757575',
+    indigo: '#3949AB',
+  },
+  /** Accent swatches offered in Appearance; the chosen hex is stored. */
+  accentSwatches: {
+    blue: '#2563EB',
+    green: '#16A34A',
+    purple: '#7C3AED',
+    red: '#DC2626',
+    teal: '#0D9488',
+    pink: '#f51aff',
+  },
+  /** The loading illustration: artwork, so it keeps its own colours in both schemes. */
+  illustration: {
+    bag: '#D4A574',
+    bagDark: '#C4956A',
+    baguette: '#F5A623',
+    baguetteLines: '#8B5A2B',
+    tomato: '#E53935',
+    tomatoHighlight: '#EF5350',
+    tomatoStem: '#4CAF50',
+    leaves: '#66BB6A',
+    leavesDark: '#43A047',
+    banner: '#FFF3E0',
+    bannerText: '#F58234',
+  },
+
   transparent: 'transparent',
   overlay: 'rgba(0, 0, 0, 0.6)', // Default overlay - kept for backwards compatibility
 };
@@ -206,12 +246,9 @@ export const colors = {
 // Dark overrides for `colors.expiration`. Solid, no alpha, or the swipeable
 // container's background bleeds through.
 export const darkExpiration: typeof colors.expiration = {
-  expiredBg: '#3D2A2A',
   expiredBorder: '#5C3A3A',
   expiredText: '#FCA5A5',
-  expiredIconBg: '#4A3030',
   warningText: '#FDBA74',
-  warningBg: '#3D3225',
   warningBorder: '#5C4A35',
 };
 

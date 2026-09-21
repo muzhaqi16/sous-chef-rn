@@ -48,7 +48,7 @@ function wrapItems(
       row = {
         id: node.id,
         isPurchased: forcePurchasedState,
-        sortOrder: node.sortOrder ?? null,
+        sortOrder: node.sortOrder,
         itemRef: node,
       };
       rowCache.set(node, row);

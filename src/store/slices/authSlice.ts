@@ -4,16 +4,18 @@
 // Implements proactive token refresh (best practice)
 // ============================================
 
-import { StateCreator } from 'zustand';
+import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
 import {
   cancelProactiveRefresh,
   refreshTokenNow,
   scheduleProactiveRefresh,
 } from '../tokenRefreshBridge';
+import { isSessionEnding } from '../sessionEnding';
 import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { saveSessionTokens, clearSessionTokens } from '#storage/keychain';
 import { logger } from '#/utils/environment';
+import type { UserRole } from '#/graphql/generated/schemaTypes';
 
 // ============================================
 // AppState Token Refresh
@@ -55,14 +57,15 @@ export const handleTokenRefreshOnResume = async (
 /**
  * The signed-in user as persisted. `email` / `emailVerified` / `role` are
  * API-gated (null unless the caller is that user or an admin), so they stay
- * nullable — read defensively (`user?.email || fallback`), never assert.
+ * nullable — read defensively, never assert: `user?.email ?? fallback`, or
+ * `firstNonBlank(user?.email) ?? fallback` where a blank string must fall through.
  */
 export interface User {
   id: string;
   email: string | null;
   emailVerified: boolean | null;
   onBoarded: boolean;
-  role?: string | null;
+  role?: UserRole | null;
   canAccessDevTools?: boolean;
   firstName?: string;
   lastName?: string;
@@ -267,6 +270,14 @@ export const createAuthSlice: StateCreator<
     },
 
     setTokens: ({ accessToken, refreshToken }) => {
+      // Landing mid sign-out, a credential outlives it and re-arms the refresh
+      // the teardown cancelled.
+      if (isSessionEnding()) {
+        logger.warn(
+          'Discarded a token pair that arrived while the session ended',
+        );
+        return;
+      }
       set(state => {
         if (accessToken !== undefined) state.accessToken = accessToken;
         if (refreshToken !== undefined) state.refreshToken = refreshToken;

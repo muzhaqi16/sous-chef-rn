@@ -90,3 +90,36 @@ describe('sessionTeardown', () => {
     await expect(runSessionTeardown()).resolves.toBeUndefined();
   });
 });
+
+describe('teardown order', () => {
+  // Registration order is first-use order under Metro's inlineRequires, so it
+  // differs between a fresh sign-in and a restored session. The push-token
+  // clear has to go out before the Apollo step stops the client.
+  it('runs devicePushToken before apollo whatever order they registered in', async () => {
+    const ran: string[] = [];
+    registerSessionTeardown('apollo', () => {
+      ran.push('apollo');
+    });
+    registerSessionTeardown('devicePushToken', () => {
+      ran.push('devicePushToken');
+    });
+
+    await runSessionTeardown();
+
+    expect(ran).toEqual(['devicePushToken', 'apollo']);
+  });
+
+  it('still runs a step the order does not name', async () => {
+    const ran: string[] = [];
+    registerSessionTeardown('apollo', () => {
+      ran.push('apollo');
+    });
+    registerSessionTeardown('something-new', () => {
+      ran.push('something-new');
+    });
+
+    await runSessionTeardown();
+
+    expect(ran).toEqual(['apollo', 'something-new']);
+  });
+});

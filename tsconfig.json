@@ -4,6 +4,12 @@
   "exclude": ["**/node_modules", "**/Pods", "e2e", "__tests__"],
   "compilerOptions": {
     "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedParameters": true,
+    "forceConsistentCasingInFileNames": true,
+    "incremental": true,
+    "tsBuildInfoFile": "node_modules/.cache/tsc/app.tsbuildinfo",
     "types": ["react-native", "jest", "node"],
     "moduleSuffixes": [".ios", ".android", ".native", ""],
     "paths": {

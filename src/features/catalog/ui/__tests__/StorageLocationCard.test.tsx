@@ -2,6 +2,7 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { StorageLocationCard } from '#features/catalog/ui/StorageLocationCard';
+import { StorageType } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#utils/iconUtils', () => ({
   Icon: ({ name }: { name: string }) => {
@@ -26,7 +27,7 @@ jest.mock('#/styles/commonStyles', () => ({
 describe('StorageLocationCard', () => {
   const defaultLocation = {
     name: 'Kitchen Fridge',
-    type: 'REFRIGERATOR',
+    type: StorageType.Refrigerator,
     icon: '🧊',
     currentItemCount: 12,
     parentLocation: null,

@@ -119,7 +119,9 @@ export function MultiSelectChipSheet<T extends string = string>({
           <Text role="caption" tone="secondary">
             {selectedItems.length === 0
               ? t('multiSelect.noneSelected')
-              : `${selectedItems.length} selected`}
+              : t('multiSelect.selectedCount', {
+                  count: selectedItems.length,
+                })}
           </Text>
           {selectedItems.length > 0 && (
             <Pressable

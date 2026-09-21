@@ -4,10 +4,12 @@ import { registerSessionScopedStore } from '#store/sessionScopedStores';
 import { immer } from 'zustand/middleware/immer';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '#/storage/mmkv';
+import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
 import type {
   RecipeSearchResult,
   SearchRecipesResult,
   RecipeInformation,
+  RecipePriceBreakdown,
 } from '#/services/spoonacular/types';
 
 interface CachedRecipeSearch {
@@ -21,8 +23,17 @@ interface CachedRecipeSearch {
   totalResults?: number | null;
 }
 
+interface CachedLookup<T> {
+  data: T;
+  cachedAt: number;
+}
+
 interface RecipeCacheState {
   cache: Record<string, CachedRecipeSearch>;
+  /** `/information` with nutrition, keyed by Spoonacular recipe id. */
+  details: Record<string, CachedLookup<RecipeInformation>>;
+  /** `priceBreakdownWidget.json`, keyed by Spoonacular recipe id. */
+  priceBreakdowns: Record<string, CachedLookup<RecipePriceBreakdown>>;
 
   getCached: (key: string) => CachedRecipeSearch | null;
   setCached: (
@@ -41,6 +52,29 @@ interface RecipeCacheState {
 }
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+// A detail payload with nutrition runs to tens of KB and the store persists to
+// MMKV, so each lookup map keeps only its most recent entries.
+const MAX_LOOKUP_ENTRIES = 40;
+
+const isFresh = (entry: { cachedAt: number } | undefined, now: number) =>
+  entry !== undefined && now - entry.cachedAt <= CACHE_TTL_MS;
+
+function withNewest<T>(
+  entries: Record<string, CachedLookup<T>>,
+  key: string,
+  data: T,
+): Record<string, CachedLookup<T>> {
+  const next = { ...entries, [key]: { data, cachedAt: Date.now() } };
+  const byAge = Object.entries(next).sort(
+    ([, a], [, b]) => a.cachedAt - b.cachedAt,
+  );
+  const excess = Math.max(0, byAge.length - MAX_LOOKUP_ENTRIES);
+  for (const [stale] of byAge.slice(0, excess)) {
+    delete next[stale];
+  }
+  return next;
+}
 
 // In-flight network requests keyed by cache key, so a second caller for the
 // same search latches onto the existing request instead of firing a duplicate.
@@ -101,6 +135,8 @@ export const useRecipeCacheStore = create<RecipeCacheState>()(
   persist(
     immer((set, get) => ({
       cache: {},
+      details: {},
+      priceBreakdowns: {},
 
       getCached: (key: string) => {
         const cached = get().cache[key];
@@ -175,6 +211,12 @@ export const useRecipeCacheStore = create<RecipeCacheState>()(
               delete state.cache[key];
             }
           }
+          for (const [key, entry] of Object.entries(state.details)) {
+            if (!isFresh(entry, now)) delete state.details[key];
+          }
+          for (const [key, entry] of Object.entries(state.priceBreakdowns)) {
+            if (!isFresh(entry, now)) delete state.priceBreakdowns[key];
+          }
         });
       },
 
@@ -185,16 +227,96 @@ export const useRecipeCacheStore = create<RecipeCacheState>()(
         inflightRequests.clear();
         set(state => {
           state.cache = {};
+          state.details = {};
+          state.priceBreakdowns = {};
         });
       },
     })),
     {
       name: 'recipe-search-cache',
       storage: createJSONStorage(() => zustandStorage),
-      partialize: state => ({ cache: state.cache }),
+      partialize: state => ({
+        cache: state.cache,
+        details: state.details,
+        priceBreakdowns: state.priceBreakdowns,
+      }),
     },
   ),
 );
+
+/**
+ * Every Spoonacular request is billed, so a recipe's details are fetched once
+ * per TTL: a repeat view, an add to a plan and a save all read this entry, and
+ * concurrent callers share one request. Always requested with nutrition, the
+ * form every caller needs for the ingest mirror.
+ */
+export async function fetchRecipeInformation(
+  id: number,
+  signal?: AbortSignal,
+): Promise<RecipeInformation> {
+  const key = String(id);
+  const cached = useRecipeCacheStore.getState().details[key];
+  if (isFresh(cached, Date.now()) && cached) return cached.data;
+
+  // Stored inside the shared request, so a caller that aborts still leaves
+  // the paid-for answer behind for the next one.
+  return abortable(
+    useRecipeCacheStore
+      .getState()
+      .getOrFetchResults(`info:${key}`, async () => {
+        const data = await spoonacularService.getRecipeInformation({
+          id,
+          includeNutrition: true,
+        });
+        useRecipeCacheStore.setState(state => ({
+          details: withNewest(state.details, key, data),
+        }));
+        return data;
+      }),
+    signal,
+  );
+}
+
+/**
+ * The server refreshes an imported recipe's mirror at most once per 24h, so a
+ * price breakdown fetched again inside the TTL buys nothing.
+ */
+export async function fetchRecipePriceBreakdown(
+  id: number,
+): Promise<RecipePriceBreakdown> {
+  const key = String(id);
+  const cached = useRecipeCacheStore.getState().priceBreakdowns[key];
+  if (isFresh(cached, Date.now()) && cached) return cached.data;
+
+  return useRecipeCacheStore
+    .getState()
+    .getOrFetchResults(`price:${key}`, async () => {
+      const data = await spoonacularService.getRecipePriceBreakdown(id);
+      useRecipeCacheStore.setState(state => ({
+        priceBreakdowns: withNewest(state.priceBreakdowns, key, data),
+      }));
+      return data;
+    });
+}
+
+// The shared request runs to completion so its result is cached for whoever
+// asks next; an aborted caller only stops waiting for it.
+function abortable<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return promise;
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => {
+      const error = new Error('Aborted');
+      error.name = 'AbortError';
+      reject(error);
+    };
+    if (signal.aborted) {
+      onAbort();
+      return;
+    }
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(resolve, reject);
+  });
+}
 
 /**
  * Recipe searches name what the previous person was cooking and the cache is

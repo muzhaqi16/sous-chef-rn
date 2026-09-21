@@ -6,13 +6,6 @@ import {
 } from '../useCommitTracking';
 import { Telemetry } from '#/services/telemetry';
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    histogram: jest.fn(),
-    increment: jest.fn(),
-  },
-}));
-
 jest.mock('#/store/performanceStore', () => ({
   usePerformanceStore: {
     getState: jest.fn(() => ({

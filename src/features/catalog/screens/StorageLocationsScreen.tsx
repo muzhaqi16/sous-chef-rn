@@ -12,7 +12,6 @@ import {
   type StorageLocationInitialData,
 } from '#features/catalog/ui/StorageLocationSheet/StorageLocationSheet';
 import type { StorageLocationFormValues } from '#features/catalog/ui/StorageLocationForm';
-import { StorageType } from '#/graphql/generated/schemaTypes';
 import type { GetStorageLocationsQuery } from '#features/catalog/graphql/storageLocation.generated';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { commonStyles } from '#/styles/commonStyles';
@@ -68,7 +67,7 @@ export const StorageLocationsScreen: React.FC<
     deleteLocation,
     setDefaultLocation,
     createLocation,
-    error,
+    errorMessage,
     offline,
     refetch,
   } = useStorageLocationManagement(homeId, selectedPantryId ?? undefined);
@@ -92,8 +91,7 @@ export const StorageLocationsScreen: React.FC<
   const renderTreeNode = (
     node: StorageNode,
     depth: number = 0,
-  ): React.ReactElement | null => {
-    if (!node?.id) return null;
+  ): React.ReactElement => {
     return (
       <View key={node.id} style={styles.treeNode(depth)}>
         <StorageLocationCard
@@ -108,14 +106,8 @@ export const StorageLocationsScreen: React.FC<
     );
   };
 
-  // The sheet's form values carry `type` as a plain string; the mutation
-  // inputs expect the `StorageType` enum. The sheet only ever emits valid
-  // StorageType values, so narrow it as we hand off to the mutations.
   const handleCreate = async (formData: StorageLocationFormValues) => {
-    const result = await createLocation({
-      ...formData,
-      type: formData.type as StorageType,
-    });
+    const result = await createLocation(formData);
     return !!result;
   };
 
@@ -123,10 +115,7 @@ export const StorageLocationsScreen: React.FC<
     id: string,
     formData: StorageLocationFormValues,
   ) => {
-    const result = await updateLocation(id, {
-      ...formData,
-      type: formData.type as StorageType,
-    });
+    const result = await updateLocation(id, formData);
     return !!result;
   };
 
@@ -195,8 +184,8 @@ export const StorageLocationsScreen: React.FC<
         {
           text: t('labels.delete'),
           style: 'destructive',
-          onPress: async () => {
-            await deleteLocation(location.id);
+          onPress: () => {
+            void deleteLocation(location.id);
           },
         },
       ],
@@ -208,7 +197,7 @@ export const StorageLocationsScreen: React.FC<
   };
 
   const handleRefresh = () => {
-    executeRefreshWithFinally(() => refetch(), setRefreshing);
+    void executeRefreshWithFinally(() => refetch(), setRefreshing);
   };
 
   if (initialLoading) {
@@ -242,11 +231,11 @@ export const StorageLocationsScreen: React.FC<
       content: (
         <>
           {/* Error Message */}
-          {!!error && (
+          {!!errorMessage && (
             <EmptyState
               icon="alert-circle-outline"
               title={t('errors.boundary.title')}
-              description={error.message}
+              description={errorMessage}
               action={{
                 label: t('labels.retry'),
                 onPress: handleRefresh,

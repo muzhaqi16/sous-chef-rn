@@ -1,30 +1,24 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import type { UpdateProfileInput } from '#/graphql/generated/schemaTypes';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
-import { errorService } from '#/services/errorService';
-
-/** The result is carried so the caller can resolve LOCALIZED refusal copy. */
-export interface UpdateProfileOutcome {
-  rejected: boolean;
-  result: { data?: unknown; error?: unknown } | undefined;
-}
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { useTranslation } from '#/i18n';
 
 /**
- * Write profile fields locally, then send them. A rejection restores the
- * snapshot; a queued (null) result keeps the write, so it survives offline.
+ * Write profile fields locally, then send them. A failure restores the
+ * snapshot and is alerted; a queued (null) result keeps the write, so it
+ * survives offline.
  */
 export function useUpdateProfile<T extends { id: string }>(
   profile: T | null | undefined,
 ) {
+  const { t } = useTranslation();
   const client = useApolloClient();
   const [updateProfileMutation] = useMutation(UpdateUserProfileDocument);
 
-  const updateProfile = async (
-    input: UpdateProfileInput,
-  ): Promise<UpdateProfileOutcome> => {
-    if (!profile) return { rejected: false, result: undefined };
+  const updateProfile = async (input: UpdateProfileInput): Promise<void> => {
+    if (!profile) return;
 
     const { revert } = optimisticFieldUpdate(
       client.cache,
@@ -34,23 +28,18 @@ export function useUpdateProfile<T extends { id: string }>(
       'Update Profile',
     );
 
-    let result;
-    try {
-      result = await updateProfileMutation({
-        variables: { input },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'PersonalInformation.updateProfile',
-      });
-    }
-
-    if (classifyCreateResult(result) !== 'rejected') {
-      return { rejected: false, result };
-    }
-    revert();
-    return { rejected: true, result };
+    await settleMutation(
+      () =>
+        updateProfileMutation({
+          variables: { input },
+          context: { localFirst: true },
+        }),
+      {
+        document: UpdateUserProfileDocument,
+        fallback: t('errors.updateProfileFailed'),
+        onFailed: revert,
+      },
+    );
   };
 
   return { updateProfile };

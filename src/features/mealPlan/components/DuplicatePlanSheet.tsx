@@ -8,13 +8,14 @@ import { addDays, differenceInDays, parseISO } from 'date-fns';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { FormInput } from '#components/atoms/FormInput';
 import { Icon } from '#utils/iconUtils';
-import { type MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { Text } from '#components/atoms/Text';
 import {
   formatMonthDay,
   formatMonthDayYear,
   formatWeekdayMonthDay,
 } from '#/utils/formatters/date';
+import { toMealDateTime } from '#/utils/dateUtils';
 
 interface DuplicatePlanSheetProps {
   visible: boolean;
@@ -57,7 +58,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
   }
 
   const duration = (() => {
-    if (!mealPlan?.startDate || !mealPlan?.endDate) return 7;
+    if (!mealPlan?.startDate || !mealPlan.endDate) return 7;
     return differenceInDays(
       parseISO(mealPlan.endDate),
       parseISO(mealPlan.startDate),
@@ -78,8 +79,8 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
     onDuplicate({
       mealPlanId: mealPlan.id,
       newName: name.trim(),
-      newStartDate: newStartDate.toISOString(),
-      newEndDate: newEndDate.toISOString(),
+      newStartDate: toMealDateTime(newStartDate),
+      newEndDate: toMealDateTime(newEndDate),
     });
   };
 
@@ -211,7 +212,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   dateSubtext: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   infoCard: {
     flexDirection: 'row',

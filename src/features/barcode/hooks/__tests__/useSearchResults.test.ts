@@ -1,4 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -11,6 +12,9 @@ import {
 } from '#operations/item/item.generated';
 import { useSearchResults } from '../useSearchResults';
 import { useStore } from '#store';
+import { t } from '#/i18n';
+import { TimeoutError } from '#/utils/errors/timeoutError';
+import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 
 // Partial item-node shapes for mock connection edges. Kept as a loose record
 // because the fixtures deliberately omit required Item fields (type,
@@ -64,7 +68,7 @@ jest.mock('#/utils/finallyHelpers', () => ({
         await fn();
         return true;
       } catch (e) {
-        if (typeof onError === 'function') onError(e);
+        if (typeof onError === 'function') await onError(e);
         return false;
       }
     },
@@ -83,39 +87,43 @@ function upcMock(
   items: MockItemNode[],
   options: { partial?: boolean } = {},
 ): MockedResponse {
-  return recordMock(ItemByUpcFilterDocument, {
-    data: {
-      items: {
-        __typename: 'ItemConnection' as const,
-        edges: items.map((node, i) => ({
-          __typename: 'ItemEdge' as const,
-          cursor: `c${i}`,
-          node: { __typename: 'Item' as const, ...node },
-        })),
-      },
+  const data: MockDataFor<typeof ItemByUpcFilterDocument> = {
+    items: {
+      __typename: 'ItemConnection',
+      edges: items.map((node, i) => ({
+        __typename: 'ItemEdge',
+        cursor: `c${i}`,
+        node: { __typename: 'Item', ...node },
+      })),
     },
+  };
+  return recordMock(ItemByUpcFilterDocument, {
+    data,
     partial: options.partial,
   }).mock;
 }
 
 function skuMock(items: MockItemNode[]): MockedResponse {
-  return recordMock(ItemBySkuFilterDocument, {
-    data: {
-      items: {
-        __typename: 'ItemConnection' as const,
-        edges: items.map((node, i) => ({
-          __typename: 'ItemEdge' as const,
-          cursor: `c${i}`,
-          node: { __typename: 'Item' as const, ...node },
-        })),
-      },
+  const data: MockDataFor<typeof ItemBySkuFilterDocument> = {
+    items: {
+      __typename: 'ItemConnection',
+      edges: items.map((node, i) => ({
+        __typename: 'ItemEdge',
+        cursor: `c${i}`,
+        node: { __typename: 'Item', ...node },
+      })),
     },
-  }).mock;
+  };
+  return recordMock(ItemBySkuFilterDocument, { data }).mock;
 }
 
-function upcErrorMock(message: string): MockedResponse {
+function upcErrorMock(
+  error: Error,
+  options: { maxUsageCount?: number } = {},
+): MockedResponse {
   return recordMock(ItemByUpcFilterDocument, {
-    error: new Error(message),
+    error,
+    maxUsageCount: options.maxUsageCount,
   }).mock;
 }
 
@@ -127,20 +135,18 @@ const SAMPLE_UPC_ITEM = {
   primaryUpc: '1234567890',
   netWeight: 500,
   displayUnit: {
-    __typename: 'Unit' as const,
+    __typename: 'Unit',
     id: 'unit-1',
     name: 'grams',
     symbol: 'g',
   },
   brands: [
     {
-      __typename: 'ItemBrand' as const,
-      brand: { __typename: 'Brand' as const, id: 'brand-1', name: 'TestBrand' },
+      __typename: 'ItemBrand',
+      brand: { __typename: 'Brand', id: 'brand-1', name: 'TestBrand' },
     },
   ],
-  units: [
-    { __typename: 'ItemUnit' as const, unitId: 'unit-1', isDefault: true },
-  ],
+  units: [{ __typename: 'ItemUnit', unitId: 'unit-1', isDefault: true }],
   variationBrand: null,
   matchedVariation: null,
 };
@@ -286,27 +292,78 @@ describe('useSearchResults', () => {
   });
 
   describe('error mapping', () => {
-    it('maps timeout to user-friendly message', async () => {
+    it('shows the connection copy for a failed fetch', async () => {
       renderHookWithApollo(() => useSearchResults('1234567890'), {
-        operationMocks: [upcErrorMock('Request timeout')],
+        operationMocks: [
+          upcErrorMock(new NetworkRequestError('Network request failed')),
+        ],
       });
 
       await waitFor(() =>
         expect(mockSetSearchError).toHaveBeenCalledWith(
-          'Search timed out. Please try again.',
+          t('errors.networkError'),
         ),
       );
     });
 
-    it('maps generic errors via "Search failed:" prefix', async () => {
+    it('shows the connection copy for a request timeout', async () => {
       renderHookWithApollo(() => useSearchResults('1234567890'), {
-        operationMocks: [upcErrorMock('Server error')],
+        operationMocks: [
+          upcErrorMock(
+            new TimeoutError('Request timeout after 10000ms', 10000),
+          ),
+        ],
       });
 
       await waitFor(() =>
         expect(mockSetSearchError).toHaveBeenCalledWith(
-          expect.stringContaining('Server error'),
+          t('errors.networkError'),
         ),
+      );
+    });
+
+    it("shows the app's retry copy for a server failure, never its message", async () => {
+      renderHookWithApollo(() => useSearchResults('1234567890'), {
+        operationMocks: [upcErrorMock(new Error('Server error'))],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchError).toHaveBeenCalledWith(
+          t('errors.codes.genericRetry'),
+        ),
+      );
+      for (const [copy] of mockSetSearchError.mock.calls) {
+        expect(copy ?? '').not.toContain('Server error');
+      }
+    });
+  });
+
+  describe('retry', () => {
+    it('refetches the failed UPC query and shows its result', async () => {
+      const { result } = renderHookWithApollo(
+        () => useSearchResults('1234567890'),
+        {
+          operationMocks: [
+            upcErrorMock(new Error('Server error'), { maxUsageCount: 1 }),
+            upcMock([SAMPLE_UPC_ITEM]),
+          ],
+        },
+      );
+
+      await waitFor(() =>
+        expect(mockSetSearchError).toHaveBeenCalledWith(
+          t('errors.codes.genericRetry'),
+        ),
+      );
+
+      act(() => {
+        result.current.handleRetry();
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchResults).toHaveBeenCalledWith([
+          expect.objectContaining({ id: 'item-1' }),
+        ]),
       );
     });
   });
@@ -314,7 +371,7 @@ describe('useSearchResults', () => {
   describe('format mapping', () => {
     it('maps ean-13 → EAN_13 and fires UPC query with that variable', async () => {
       const upc = recordMock(ItemByUpcFilterDocument, {
-        data: { items: { __typename: 'ItemConnection' as const, edges: [] } },
+        data: { items: { __typename: 'ItemConnection', edges: [] } },
       });
 
       renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
@@ -331,7 +388,7 @@ describe('useSearchResults', () => {
 
     it('maps upc-a → UPC_A', async () => {
       const upc = recordMock(ItemByUpcFilterDocument, {
-        data: { items: { __typename: 'ItemConnection' as const, edges: [] } },
+        data: { items: { __typename: 'ItemConnection', edges: [] } },
       });
 
       renderHookWithApollo(() => useSearchResults('1234567890', 'upc-a'), {
@@ -348,7 +405,7 @@ describe('useSearchResults', () => {
 
     it('passes undefined upcFormat for unknown formats', async () => {
       const upc = recordMock(ItemByUpcFilterDocument, {
-        data: { items: { __typename: 'ItemConnection' as const, edges: [] } },
+        data: { items: { __typename: 'ItemConnection', edges: [] } },
       });
 
       renderHookWithApollo(
@@ -370,8 +427,8 @@ describe('useSearchResults', () => {
       return recordMock(CreateItemDocument, {
         data: {
           createItem: {
-            __typename: 'CreateItemPayload' as const,
-            item: { __typename: 'Item' as const, id: 'new-item' },
+            __typename: 'CreateItemPayload',
+            item: { __typename: 'Item', id: 'new-item' },
           },
         },
       }).mock;

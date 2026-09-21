@@ -15,6 +15,8 @@ import {
 } from '../../helpers/waitFor';
 import { generateTestEmail } from '../../helpers/data';
 import { TEST_USER } from '../../fixtures/testData';
+import { authTestIDs } from '../../../src/features/auth/testIDs';
+import { kitTestIDs } from '../../../src/components/testIDs';
 
 /**
  * Two limits bound this file and clear differently: 5/hour per IP (Redis,
@@ -46,15 +48,15 @@ describe('Password Reset', () => {
     // every probe below reads as "not visible" until it is dismissed. Detox's
     // system-alert matchers cannot reach it — `alertService` renders its own
     // modal — so it is dismissed by testID.
-    if (await isOnScreen('alert-modal')) {
-      await element(by.id('alert-button-0')).tap();
+    if (await isOnScreen(kitTestIDs.alertModal)) {
+      await element(by.id(kitTestIDs.alertButton(0))).tap();
     }
 
-    if (await isOnScreen('forgot-password-screen')) return;
+    if (await isOnScreen(authTestIDs.forgotPasswordScreen)) return;
 
-    if (await isOnScreen('forgot-password-sent')) {
-      await element(by.id('forgot-password-back-to-login-button')).tap();
-    } else if (await isOnScreen('landing-auth-screen')) {
+    if (await isOnScreen(authTestIDs.forgotPasswordSentView)) {
+      await element(by.id(authTestIDs.forgotPasswordBackToLoginButton)).tap();
+    } else if (await isOnScreen(authTestIDs.landingScreen)) {
       await landingScreen.tapLogin();
     }
 
@@ -65,7 +67,9 @@ describe('Password Reset', () => {
 
   describe('Form Display', () => {
     it('should show forgot password form elements', async () => {
-      await forgotPasswordScreen.expectVisible('forgot-password-email-input');
+      await forgotPasswordScreen.expectVisible(
+        authTestIDs.forgotPasswordEmailInput,
+      );
       await forgotPasswordScreen.expectSubmitVisible();
     });
   });
@@ -92,7 +96,7 @@ describe('Password Reset', () => {
       // Establish the button first: asserting only its absence passes whether
       // the form was replaced or the id was never right.
       await expect(
-        element(by.id('forgot-password-submit-button')),
+        element(by.id(authTestIDs.forgotPasswordSubmitButton)),
       ).toBeVisible();
 
       await forgotPasswordScreen.requestPasswordReset(TEST_USER.email);
@@ -103,7 +107,7 @@ describe('Password Reset', () => {
       // Re-submission is prevented structurally, not by a debounce: one submit
       // replaces the form, so there is no second submit to make.
       await expect(
-        element(by.id('forgot-password-submit-button')),
+        element(by.id(authTestIDs.forgotPasswordSubmitButton)),
       ).not.toExist();
     });
 

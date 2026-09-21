@@ -1,4 +1,8 @@
-import { t } from '#/i18n';
+import { t, type TranslationKey } from '#/i18n';
+import {
+  CollaboratorRole,
+  MembershipRole,
+} from '#/graphql/generated/schemaTypes';
 /**
  * Ownership, roles and user info for shopping lists and homes. `user.email` is
  * nullable — the API returns it only for the caller's own record — so it is
@@ -18,7 +22,7 @@ interface ShoppingListOwnership {
 
 interface ShoppingListCollaborator {
   collaboratorId?: string | null;
-  role: string;
+  role: CollaboratorRole;
   status: string;
   collaborator?: {
     id: string;
@@ -45,7 +49,7 @@ import { extractNodes } from '#/utils/connectionUtils';
  */
 interface HomeMember {
   userId?: string;
-  role: string;
+  role: MembershipRole;
   status?: string;
   user?: {
     id: string;
@@ -68,7 +72,7 @@ export interface HomeWithMembers {
 
 const resolveHomeMembers = (home: HomeWithMembers): HomeMember[] => {
   if (Array.isArray(home.members)) {
-    return home.members.filter(Boolean) as HomeMember[];
+    return home.members.filter(Boolean);
   }
 
   return extractNodes<HomeMember>(home.membersConnection);
@@ -146,7 +150,7 @@ export function isShoppingListOwner(
   currentUserId?: string,
 ): boolean {
   if (!currentUserId) return false;
-  return list.ownerships?.some(o => o.userId === currentUserId) || false;
+  return list.ownerships?.some(o => o.userId === currentUserId) ?? false;
 }
 
 /**
@@ -155,13 +159,13 @@ export function isShoppingListOwner(
 export function getShoppingListRole(
   list: ShoppingListWithOwnership,
   currentUserId?: string,
-  homeMyMembership?: { role: string } | null,
-): string | null {
+  homeMyMembership?: { role: MembershipRole } | null,
+): CollaboratorRole | MembershipRole | null {
   if (!currentUserId) return null;
 
   // Check if owner
   if (isShoppingListOwner(list, currentUserId)) {
-    return 'OWNER';
+    return CollaboratorRole.Owner;
   }
 
   // Check collaborators using resolver (supports both array and connection)
@@ -171,14 +175,16 @@ export function getShoppingListRole(
   );
 
   // Fall back to home membership role for home-linked lists
-  return collaboration?.role || homeMyMembership?.role || null;
+  return collaboration?.role ?? homeMyMembership?.role ?? null;
 }
 
 /**
  * Get owner information for a home
  */
 export function getHomeOwnerInfo(home: HomeWithMembers): OwnerInfo | null {
-  const owner = resolveHomeMembers(home).find(m => m.role === 'OWNER');
+  const owner = resolveHomeMembers(home).find(
+    m => m.role === MembershipRole.Owner,
+  );
   if (!owner?.user) return null;
 
   return {
@@ -199,7 +205,10 @@ export function isHomeOwner(
   if (!currentUserId) return false;
   return (
     resolveHomeMembers(home).some(
-      m => m.userId && m.userId === currentUserId && m.role === 'OWNER',
+      m =>
+        m.userId &&
+        m.userId === currentUserId &&
+        m.role === MembershipRole.Owner,
     ) || false
   );
 }
@@ -218,21 +227,25 @@ export function getInitials(displayName?: string | null): string {
 }
 
 /**
- * A collaborator role, in the reader's language. The labels already exist under
- * `collaboratorRoles.*`; an unmapped role falls back to the shared unknown
- * label rather than to the identifier with its capitalisation changed.
+ * A list or home role, in the reader's language. `ADMIN` and `OWNER` exist in
+ * both enums with the same value, so each carries one entry covering both.
  */
-const ROLE_LABEL_KEYS: Record<string, string> = {
-  OWNER: 'collaboratorRoles.owner',
-  ADMIN: 'labels.admin',
-  EDITOR: 'collaboratorRoles.editor',
-  VIEWER: 'collaboratorRoles.viewer',
-  SHOPPER: 'collaboratorRoles.shopper',
-  CONTRIBUTOR: 'collaboratorRoles.contributor',
-  MEMBER: 'roles.member',
+const ROLE_LABEL_KEYS: Record<
+  CollaboratorRole | MembershipRole,
+  TranslationKey
+> = {
+  [CollaboratorRole.Owner]: 'collaboratorRoles.owner',
+  [CollaboratorRole.Admin]: 'labels.admin',
+  [CollaboratorRole.Editor]: 'collaboratorRoles.editor',
+  [CollaboratorRole.Viewer]: 'collaboratorRoles.viewer',
+  [CollaboratorRole.Shopper]: 'collaboratorRoles.shopper',
+  [CollaboratorRole.Contributor]: 'collaboratorRoles.contributor',
+  [MembershipRole.Member]: 'roles.member',
+  [MembershipRole.Guest]: 'labels.guest',
 };
 
-export function formatRoleDisplay(role: string | null): string {
-  const key = role ? ROLE_LABEL_KEYS[role] : undefined;
-  return key ? t(key) : t('labels.unknown');
+export function formatRoleDisplay(
+  role: CollaboratorRole | MembershipRole | null,
+): string {
+  return role ? t(ROLE_LABEL_KEYS[role]) : t('labels.unknown');
 }

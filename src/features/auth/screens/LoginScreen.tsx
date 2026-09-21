@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { errorService } from '#/services/errorService';
+import { toastService } from '#/services/toastService';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { useForm } from 'react-hook-form';
@@ -15,7 +16,7 @@ import { PasswordInput } from '#components/molecules/PasswordInput';
 import { RememberMeModal } from '#features/auth/components/RememberMeModal';
 import { getLoginValidationSchema } from '#/utils/validation/auth';
 import { logValidationErrors } from '#/utils/validation/common';
-import { type LoginInput } from '#/graphql/generated/schemaTypes';
+import type { LoginInput } from '#/graphql/generated/schemaTypes';
 import { useRememberMe } from '#features/auth/hooks/useRememberMe';
 import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
 import { useAppStore, useHasStoredCredentials } from '#store/useAppStore';
@@ -27,6 +28,10 @@ import { Telemetry } from '#/services/telemetry';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 import { authoritativeBiometryName } from '#components/organisms/biometric/biometryLabel';
+import { authTestIDs } from '#features/auth/testIDs';
+
+// `onRefusal` hands back the code as the untyped string the server sent.
+const EMAIL_NOT_VERIFIED: string = ErrorCode.AuthEmailNotVerified;
 
 /** Module-level function to load auth info.
  *  Extracted from useEffect to avoid try-catch bailout. */
@@ -103,7 +108,9 @@ export function LoginScreen(): React.JSX.Element {
     // The password is not stored: enrolment asks the server for a device-bound
     // credential and puts that behind biometry instead.
     onAccept: async ({ email }) => {
-      await authService.enrolDeviceCredential(email);
+      if ((await authService.enrolDeviceCredential(email)) === 'unsaved') {
+        toastService.error(t('errors.saveLoginFailed'));
+      }
       finishRememberMe();
     },
     onDecline: finishRememberMe,
@@ -141,7 +148,7 @@ export function LoginScreen(): React.JSX.Element {
 
   // Track screen view and load stored credentials and biometric info on mount
   useEffect(() => {
-    loadAuthInfoAsync(
+    void loadAuthInfoAsync(
       authService.getLastBiometricEmail,
       authService.checkStoredCredentials,
       authService.getBiometricInfo,
@@ -155,25 +162,20 @@ export function LoginScreen(): React.JSX.Element {
   const onSubmit = async (input: LoginInput) => {
     Telemetry.trackEvent('login_attempt', { method: 'email_password' });
 
-    try {
-      await authService.login(input, {
-        // A 403 that leaves the credentials valid: the mailbox is unproven, and
-        // the emailed code clears it. Sending the reader to enter that code is
-        // the only action available, so the screen offers it rather than
-        // leaving a toast on a form they can only re-submit.
-        onRefusal: code => {
-          if (code === ErrorCode.AuthEmailNotVerified) {
-            setUnverifiedEmail(input.email);
-          }
-        },
-      });
+    // `login` reports its own failures and resolves false; it does not throw.
+    const signedIn = await authService.login(input, {
+      // A 403 that leaves the credentials valid: the mailbox is unproven, and
+      // the emailed code clears it. Sending the reader to enter that code is
+      // the only action available, so the screen offers it rather than
+      // leaving a toast on a form they can only re-submit.
+      onRefusal: code => {
+        if (code === EMAIL_NOT_VERIFIED) {
+          setUnverifiedEmail(input.email);
+        }
+      },
+    });
+    if (signedIn) {
       Telemetry.trackEvent('login_success', { method: 'email_password' });
-    } catch (err) {
-      Telemetry.trackError(err instanceof Error ? err : 'Login failed', {
-        component: 'LoginScreen',
-        operation: 'email_password_login',
-      });
-      authService.handleAuthError(err, 'Login');
     }
   };
 
@@ -186,7 +188,7 @@ export function LoginScreen(): React.JSX.Element {
       biometric_type: biometricInfo.biometryType,
     });
 
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         // Exchanges the device credential; the password is never held, so
         // there is nothing here to replay through `login`.
@@ -226,6 +228,7 @@ export function LoginScreen(): React.JSX.Element {
         return 'scan-outline';
       case 'Touch ID':
       case 'Fingerprint':
+      case null:
         return 'finger-print';
       default:
         return 'finger-print';
@@ -261,7 +264,7 @@ export function LoginScreen(): React.JSX.Element {
   }
 
   return (
-    <AuthWrapper testID="login-screen">
+    <AuthWrapper testID={authTestIDs.loginScreen}>
       <AuthFormTemplate<LoginInput>
         contentPlacement="center"
         title={t('auth.loginTitle')}
@@ -271,20 +274,20 @@ export function LoginScreen(): React.JSX.Element {
             name: 'email',
             label: t('auth.emailAddress'),
             component: EmailInput,
-            props: { testID: 'login-email-input' },
+            props: { testID: authTestIDs.loginEmailInput },
           },
           {
             name: 'password',
             label: t('auth.password'),
             component: PasswordInput,
-            props: { showToggle: true, testID: 'login-password-input' },
+            props: { showToggle: true, testID: authTestIDs.loginPasswordInput },
           },
         ]}
         control={form.control}
         errors={form.formState.errors}
         focusChaining
         linkText={t('auth.forgotPassword')}
-        linkTestID="login-forgot-password-link"
+        linkTestID={authTestIDs.loginForgotPasswordLink}
         onLinkPress={() => {
           Telemetry.trackEvent('forgot_password_clicked', {
             source: 'LoginScreen',
@@ -292,11 +295,11 @@ export function LoginScreen(): React.JSX.Element {
           navigateToForgotPassword();
         }}
         submitText={isLoggingIn ? t('auth.loggingIn') : t('auth.logIn')}
-        submitButtonTestID="login-submit-button"
+        submitButtonTestID={authTestIDs.loginSubmitButton}
         onSubmit={form.handleSubmit(onSubmit, logValidationErrors)}
         footerText={t('auth.noAccount')}
         footerLinkText={t('auth.signUp')}
-        footerLinkTestID="login-signup-link"
+        footerLinkTestID={authTestIDs.loginSignUpLink}
         onFooterLinkPress={() => {
           Telemetry.trackEvent('signup_navigation_clicked', {
             source: 'LoginScreen',
@@ -349,7 +352,7 @@ export function LoginScreen(): React.JSX.Element {
         visible={showRememberMeModal}
         onAccept={handleRememberMeAccept}
         onDecline={handleRememberMeDecline}
-        email={pendingCredentials?.email || ''}
+        email={pendingCredentials?.email ?? ''}
       />
     </AuthWrapper>
   );

@@ -156,9 +156,7 @@ describe('CollaboratorPermissionsBottomSheet', () => {
       ref.current?.open(makeCollaborator());
     });
     const switches = screen.getAllByRole('switch');
-    act(() => {
-      fireEvent(switches[0]!, 'valueChange', false);
-    });
+    fireEvent(switches[0]!, 'valueChange', false);
     // The switch flips optimistically before the mutation resolves.
     await waitFor(() => expect(switches[0]!.props.value).toBe(false));
   });

@@ -20,6 +20,7 @@ import {
   writeOptimisticTemplate,
 } from '#features/mealPlan/utils/buildOptimisticTemplate';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
+import { writeOptimisticMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
 import { useUser } from '#store/useAppStore';
 import {
   MealTemplateDisplayFragmentDoc,
@@ -31,16 +32,19 @@ import {
   type CreateMealTemplateInput,
   type CreateTemplateFromMealPlanInput,
 } from '#/graphql/generated/schemaTypes';
-import { handleMutationError } from '#/utils/errorHandlers';
 import { toastService } from '#/services/toastService';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { Telemetry } from '#/services/telemetry';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import {
+  settleMutation,
+  type SettledFailure,
+} from '#/apollo/utils/settleMutation';
 import {
   createAddToQueryConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
   skipUnmatchedFilterVariants,
 } from '#/apollo/utils/cacheUpdaters';
-import { t } from '#/i18n';
+import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
 
 const addToMealTemplates = createAddToQueryConnectionUpdater(
@@ -54,6 +58,7 @@ const removeFromMealTemplates = createRemoveFromQueryConnectionUpdater(
 
 export function useMealTemplateActions() {
   const client = useApolloClient();
+  const { t } = useTranslation();
   const user = useUser();
   const { createMealPlan, creating: creatingPlan } = useMealPlanActions();
 
@@ -61,8 +66,8 @@ export function useMealTemplateActions() {
     CreateMealTemplateDocument,
     {
       update: (cache, { data }) => {
-        const payload = data?.createMealTemplate;
-        if (payload?.__typename === 'CreateMealTemplatePayload') {
+        const payload = appliedPayload(data);
+        if (payload) {
           addToMealTemplates(cache, payload.mealTemplate, {
             position: 'start',
             // Scope the write to variants this template belongs to: the browser
@@ -74,9 +79,6 @@ export function useMealTemplateActions() {
           });
         }
       },
-      onError: error => {
-        handleMutationError(error, { operation: 'Create Meal Template' });
-      },
     },
   );
 
@@ -85,15 +87,8 @@ export function useMealTemplateActions() {
   );
 
   // The optimistic remove + revert live in deleteTemplate (local-first), so this
-  // mutation has no update callback — only the transport-error reporter.
-  const [deleteTemplateMutation, { loading: deleting }] = useMutation(
-    DeleteMealTemplateDocument,
-    {
-      onError: error => {
-        handleMutationError(error, { operation: 'Delete Template' });
-      },
-    },
-  );
+  // mutation has no update callback.
+  const [deleteTemplateMutation] = useMutation(DeleteMealTemplateDocument);
 
   const reportSkipped = (count: number) => {
     if (count === 0) return;
@@ -110,7 +105,10 @@ export function useMealTemplateActions() {
     });
   };
 
-  const createTemplate = async (input: CreateMealTemplateInput) => {
+  /** `true` once the template landed or is queued; `false` when it reverted. */
+  const createTemplate = async (
+    input: CreateMealTemplateInput,
+  ): Promise<boolean> => {
     const optimistic = user ? buildOptimisticTemplate(input, user.id) : null;
     if (optimistic) {
       try {
@@ -127,15 +125,33 @@ export function useMealTemplateActions() {
         });
       }
     }
-    try {
-      await createTemplateMutation({
-        variables: { input },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, { operation: 'Create Meal Template' });
-    }
-    return input.id ?? null;
+
+    const revertCreate = () => {
+      if (!optimistic) return;
+      try {
+        removeFromMealTemplates(client.cache, optimistic.id, {
+          evictItem: true,
+        });
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Revert rejected Meal Template create',
+        });
+      }
+    };
+
+    const settled = await settleMutation(
+      () =>
+        createTemplateMutation({
+          variables: { input },
+          context: { localFirst: true },
+        }),
+      {
+        document: CreateMealTemplateDocument,
+        fallback: t('mealTemplateBuilder.failedToCreate'),
+        onFailed: revertCreate,
+      },
+    );
+    return settled.status !== 'failed';
   };
 
   const createPlanFromTemplate = async (
@@ -157,22 +173,35 @@ export function useMealTemplateActions() {
     });
 
     const created = await createMealPlan(derived.plan);
-    if (created?.__typename === 'ValidationError') return null;
+    if (created.status === 'failed') return null;
 
+    let failedMeal: SettledFailure | undefined;
     for (const meal of derived.items) {
-      try {
-        await createPlanItem({
-          variables: { input: meal },
-          context: { localFirst: true },
-        });
-      } catch (error) {
-        errorService.reportError(error, {
-          operation: 'Create plan from template',
-        });
-      }
+      // Offline the new plan shows its meals only from this write.
+      const revert = writeOptimisticMealPlanItem(client.cache, meal);
+      const settled = await settleMutation(
+        () =>
+          createPlanItem({
+            variables: { input: meal },
+            context: { localFirst: true },
+          }),
+        {
+          document: CreateMealPlanItemDocument,
+          fallback: t('mealTemplateBuilder.failedToAddItem'),
+          present: 'none',
+          onFailed: revert,
+        },
+      );
+      failedMeal = failedMeal ?? settled.failure;
     }
 
-    toastService.success(t('mealTemplateActions.planCreated'));
+    // One message for the batch: the plan exists, so a meal that did not land
+    // replaces the success toast rather than following it.
+    if (failedMeal) {
+      toastService.error(failedMeal.body);
+    } else {
+      toastService.success(t('mealTemplateActions.planCreated'));
+    }
     reportSkipped(derived.skipped.length);
     Telemetry.trackEvent('meal_plan_created_from_template', {
       template_id: input.templateId,
@@ -207,14 +236,14 @@ export function useMealTemplateActions() {
       tags: input.tags,
     });
 
-    const templateId = await createTemplate(derived.template);
+    if (!(await createTemplate(derived.template))) return null;
     toastService.success(t('mealTemplateActions.savedAsTemplate'));
     reportSkipped(derived.skipped.length);
     Telemetry.trackEvent('template_created_from_meal_plan', {
       meal_plan_id: input.mealPlanId,
       copied_meals: derived.template.items?.length ?? 0,
     });
-    return { mealTemplateId: templateId };
+    return { mealTemplateId: derived.template.id ?? null };
   };
 
   const deleteTemplate = async (id: string) => {
@@ -230,9 +259,8 @@ export function useMealTemplateActions() {
 
     // Local-first: remove from the cache BEFORE firing, so the deletion shows
     // immediately and survives an offline queue. Replaying the delete for an
-    // already-deleted template is idempotent on the API — it resolves to a
-    // success payload, so the queue drains the entry without a spurious
-    // sync-failed toast. Mirrors deleteMealPlan.
+    // already-deleted template is idempotent on the API, and a NotFound counts
+    // as deleted too. Mirrors deleteMealPlan.
     try {
       removeFromMealTemplates(client.cache, id, { evictItem: true });
     } catch (cacheError) {
@@ -241,45 +269,44 @@ export function useMealTemplateActions() {
       });
     }
 
-    let result;
-    try {
-      result = await deleteTemplateMutation({
-        variables: { input: { id } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Delete meal template error:',
-      });
-    }
-
-    const outcome = classifyCreateResult(result);
-
-    if (outcome === 'rejected') {
-      if (snapshot && cacheId) {
-        try {
-          client.cache.writeFragment({
-            id: cacheId,
-            fragment: MealTemplateDisplayFragmentDoc,
-            fragmentName: 'MealTemplateDisplay',
-            data: snapshot,
-          });
-          addToMealTemplates(client.cache, snapshot, {
-            position: 'start',
-            skipStoreField: skipUnmatchedFilterVariants({
-              category: snapshot.category,
-            }),
-          });
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Restore refused Template delete',
-          });
-        }
+    const restoreTemplate = () => {
+      if (!snapshot || !cacheId) return;
+      try {
+        client.cache.writeFragment({
+          id: cacheId,
+          fragment: MealTemplateDisplayFragmentDoc,
+          fragmentName: 'MealTemplateDisplay',
+          data: snapshot,
+        });
+        addToMealTemplates(client.cache, snapshot, {
+          position: 'start',
+          skipStoreField: skipUnmatchedFilterVariants({
+            category: snapshot.category,
+          }),
+        });
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Restore refused Template delete',
+        });
       }
-      return false;
-    }
+    };
 
-    // 'created' (online) or 'queued' (offline) — both keep the optimistic remove.
+    const settled = await settleMutation(
+      () =>
+        deleteTemplateMutation({
+          variables: { input: { id } },
+          context: { localFirst: true },
+        }),
+      {
+        document: DeleteMealTemplateDocument,
+        fallback: t('mealTemplateActions.deleteFailed'),
+        removal: true,
+        onFailed: restoreTemplate,
+      },
+    );
+    if (settled.status === 'failed') return false;
+
+    // Applied (online) or queued (offline) — both keep the optimistic remove.
     toastService.success(t('mealTemplateActions.templateDeleted'));
     return true;
   };
@@ -292,10 +319,10 @@ export function useMealTemplateActions() {
     }
 
     const derived = deriveTemplateCopy(template, { newName });
-    const templateId = await createTemplate(derived.template);
+    if (!(await createTemplate(derived.template))) return null;
     toastService.success(t('mealTemplateActions.templateDuplicated'));
     reportSkipped(derived.skipped.length);
-    return { mealTemplateId: templateId };
+    return { mealTemplateId: derived.template.id ?? null };
   };
 
   return {
@@ -303,10 +330,8 @@ export function useMealTemplateActions() {
     createTemplateFromPlan,
     deleteTemplate,
     duplicateTemplate,
-    loading: creatingPlan || creatingTemplate || deleting || addingMeals,
     creatingFromTemplate: creatingPlan || addingMeals,
     creatingTemplate,
-    deleting,
     duplicating: creatingTemplate,
   };
 }

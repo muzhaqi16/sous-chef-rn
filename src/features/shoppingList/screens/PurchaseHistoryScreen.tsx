@@ -16,6 +16,8 @@ import { PaginatedHistoryScreen } from '#components/templates/PaginatedHistorySc
 import { formatCurrency } from '#/utils/formatters/number';
 import { usePreferredCurrency } from '#/domain/money';
 import { formatDateTime } from '#/utils/formatters/date';
+import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 const keyExtractor = (item: { id: string }) => item.id;
 
@@ -99,7 +101,8 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
               {t('purchaseHistory.quantityLabel')}
             </Text>
             <Text role="label">
-              {purchase.quantity} {purchase.unitSymbol}
+              {formatQuantityForDisplay(purchase.quantity)}{' '}
+              {purchase.unitSymbol}
             </Text>
           </View>
 
@@ -142,9 +145,10 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
           {/* displayName -> email -> "Someone": `email` is null for anyone but
               the caller themself, and a profile is optional. */}
           <Text role="label" style={styles.purchaseDetailValue}>
-            {purchase.user.profile?.displayName ||
-              purchase.user.email ||
-              t('labels.someone')}
+            {firstNonBlank(
+              purchase.user.profile?.displayName,
+              purchase.user.email,
+            ) ?? t('labels.someone')}
           </Text>
         </View>
       </View>
@@ -170,14 +174,14 @@ const PurchaseHistoryHeader: React.FC<{
   const { t } = useTranslation();
   return (
     <View style={styles.statsContainer}>
-      <Text>
+      <Text role="body">
         {t('purchaseHistory.totalPurchases')}{' '}
         <Text role="bodyStrong" style={styles.statsValue}>
           {totalCount}
         </Text>
       </Text>
       {!!totalSpent && (
-        <Text style={styles.statsRow}>
+        <Text role="body" style={styles.statsRow}>
           {t('purchaseHistory.totalSpent')}{' '}
           <Text role="bodyStrong" style={styles.statsValue}>
             {totalSpent}
@@ -185,7 +189,7 @@ const PurchaseHistoryHeader: React.FC<{
         </Text>
       )}
       {!!averageSpent && (
-        <Text style={styles.statsRow}>
+        <Text role="body" style={styles.statsRow}>
           {t('purchaseHistory.averagePrice')}{' '}
           <Text role="bodyStrong" style={styles.statsValue}>
             {averageSpent}
@@ -202,8 +206,15 @@ export const PurchaseHistoryScreen: React.FC<
   const { t } = useTranslation();
   const { itemId, itemName } = route.params;
 
-  const { purchases, totalCount, state, loadMore, isFetchingMore, retry } =
-    useItemPurchaseHistory(itemId);
+  const {
+    purchases,
+    totalCount,
+    state,
+    loadMore,
+    hasNextPage,
+    isFetchingMore,
+    retry,
+  } = useItemPurchaseHistory(itemId);
   const preferredCurrency = usePreferredCurrency();
 
   // Priced purchases only. A price is NULL when it was never observed — a line
@@ -232,6 +243,7 @@ export const PurchaseHistoryScreen: React.FC<
       state={state}
       onRetry={retry}
       onEndReached={loadMore}
+      hasNextPage={hasNextPage}
       isFetchingMore={isFetchingMore}
       keyExtractor={keyExtractor}
       renderItem={makeRenderItem(totalCount)}

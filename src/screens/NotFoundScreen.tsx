@@ -23,7 +23,7 @@ export const NotFoundScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text align="center" style={styles.text}>
+      <Text role="body" align="center" style={styles.text}>
         {t('notFound.message')}
       </Text>
       <View style={styles.buttonContainer}>

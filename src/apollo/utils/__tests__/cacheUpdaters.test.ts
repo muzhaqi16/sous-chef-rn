@@ -1,4 +1,5 @@
-import type { ApolloCache } from '@apollo/client';
+import { gql, type ApolloCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import {
   createAddToQueryConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
@@ -8,6 +9,11 @@ import {
   createRemoveFromParentArrayUpdater,
   skipUnmatchedFilterVariants,
   skipUnmatchedArgVariants,
+  setCachedFields,
+  applyOptimisticFragmentPatch,
+  safeEvict,
+  safeEvictMany,
+  adoptServerEntityId,
 } from '../cacheUpdaters';
 import { logger } from '#/utils/environment';
 
@@ -202,33 +208,6 @@ describe('createAddToQueryConnectionUpdater', () => {
     expect(result).toBe(existingConnection);
   });
 
-  it('does not update totalCount when updateTotalCount is false', () => {
-    const addToLists = createAddToQueryConnectionUpdater<Entity>(
-      'lists',
-      'List',
-    );
-    const cache = createMockCache();
-
-    addToLists(
-      cache,
-      { id: 'l-1', __typename: 'List' },
-      {
-        updateTotalCount: false,
-      },
-    );
-
-    const helpers = createFieldHelpers();
-    const existingConnection = { edges: [], totalCount: 5 };
-    const result = invokeFieldModifier(
-      cache,
-      'lists',
-      existingConnection,
-      helpers,
-    );
-
-    expect(result.totalCount).toBe(5);
-  });
-
   it('returns existing connection when toReference returns undefined', () => {
     const addToLists = createAddToQueryConnectionUpdater<Entity>(
       'lists',
@@ -251,7 +230,9 @@ describe('createAddToQueryConnectionUpdater', () => {
     expect(result).toBe(existingConnection);
   });
 
-  it('handles empty existing connection object', () => {
+  // A record without `totalCount` never selected it; introducing one would turn
+  // the next query that does select it into a cache hit.
+  it('does not introduce totalCount on a connection that has none', () => {
     const addToLists = createAddToQueryConnectionUpdater<Entity>(
       'lists',
       'List',
@@ -264,7 +245,52 @@ describe('createAddToQueryConnectionUpdater', () => {
     const result = invokeFieldModifier(cache, 'lists', {}, helpers);
 
     expect(result.edges).toHaveLength(1);
-    expect(result.totalCount).toBe(1);
+    expect('totalCount' in result).toBe(false);
+  });
+
+  it('bumps a totalCount the record already holds', () => {
+    const addToLists = createAddToQueryConnectionUpdater<Entity>(
+      'lists',
+      'List',
+    );
+    const cache = createMockCache();
+
+    addToLists(cache, { id: 'l-1', __typename: 'List' });
+
+    const helpers = createFieldHelpers();
+    const result = invokeFieldModifier(
+      cache,
+      'lists',
+      { edges: [], totalCount: 5 },
+      helpers,
+    );
+
+    expect(result.totalCount).toBe(6);
+  });
+
+  // A connection the server returned as `null` is stored as `null`, which the
+  // parameter default does not replace. Apollo reads a modifier returning
+  // `undefined` over it as a delete, so "leave alone" must hand back the null.
+  it('treats a null-stored connection as empty and never deletes it', () => {
+    const addToLists = createAddToQueryConnectionUpdater<Entity>(
+      'lists',
+      'List',
+    );
+    const cache = createMockCache();
+
+    addToLists(cache, { id: 'l-1', __typename: 'List' });
+
+    const added = invokeFieldModifier(
+      cache,
+      'lists',
+      null,
+      createFieldHelpers(),
+    );
+    expect(added.edges).toHaveLength(1);
+
+    const skipping = createFieldHelpers();
+    skipping.toReference.mockReturnValue(undefined);
+    expect(invokeFieldModifier(cache, 'lists', null, skipping)).toBeNull();
   });
 });
 
@@ -354,37 +380,22 @@ describe('createRemoveFromQueryConnectionUpdater', () => {
     expect(cache.gc).not.toHaveBeenCalled();
   });
 
-  it('skips gc when gc is false', () => {
+  it('leaves the connection untouched when no edge matches', () => {
     const remove = createRemoveFromQueryConnectionUpdater('recipes', 'Recipe');
     const cache = createMockCache();
 
-    remove(cache, 'r-1', { evictItem: true, gc: false });
-
-    expect(cache.evict).toHaveBeenCalled();
-    expect(cache.gc).not.toHaveBeenCalled();
-  });
-
-  it('does not update totalCount when updateTotalCount is false', () => {
-    const remove = createRemoveFromQueryConnectionUpdater('recipes', 'Recipe');
-    const cache = createMockCache();
-
-    remove(cache, 'r-1', { updateTotalCount: false });
+    remove(cache, 'r-9');
 
     const helpers = createFieldHelpers();
     helpers.readField.mockReturnValue('r-1');
-
     const existingConnection = {
       edges: [{ node: { __ref: 'Recipe:r-1' } }],
       totalCount: 5,
     };
-    const result = invokeFieldModifier(
-      cache,
-      'recipes',
-      existingConnection,
-      helpers,
-    );
 
-    expect(result.totalCount).toBe(5);
+    expect(
+      invokeFieldModifier(cache, 'recipes', existingConnection, helpers),
+    ).toBe(existingConnection);
   });
 });
 
@@ -570,35 +581,6 @@ describe('createAddToParentConnectionUpdater', () => {
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('Parent entity not found'),
     );
-  });
-
-  it('does not update totalCount when updateTotalCount is false', () => {
-    const add = createAddToParentConnectionUpdater<Entity>(
-      'Pantry',
-      'itemsConnection',
-      'PantryItem',
-    );
-    const cache = createMockCache();
-
-    add(
-      cache,
-      'p-1',
-      { id: 'pi-new', __typename: 'PantryItem' },
-      {
-        updateTotalCount: false,
-      },
-    );
-
-    const helpers = createFieldHelpers();
-    const existing = { edges: [], totalCount: 5 };
-    const result = invokeFieldModifier(
-      cache,
-      'itemsConnection',
-      existing,
-      helpers,
-    );
-
-    expect(result.totalCount).toBe(5);
   });
 
   it('returns existing connection when toReference returns undefined', () => {
@@ -814,20 +796,6 @@ describe('createRemoveFromParentConnectionUpdater', () => {
     expect(cache.evict).not.toHaveBeenCalled();
   });
 
-  it('skips gc when gc is false', () => {
-    const remove = createRemoveFromParentConnectionUpdater(
-      'Pantry',
-      'itemsConnection',
-      'PantryItem',
-    );
-    const cache = createMockCache();
-
-    remove(cache, 'p-1', 'pi-1', { evictItem: true, gc: false });
-
-    expect(cache.evict).toHaveBeenCalled();
-    expect(cache.gc).not.toHaveBeenCalled();
-  });
-
   it('clamps totalCount to 0', () => {
     const remove = createRemoveFromParentConnectionUpdater(
       'Pantry',
@@ -871,30 +839,22 @@ describe('createRemoveFromParentConnectionUpdater', () => {
     );
   });
 
-  it('does not update totalCount when updateTotalCount is false', () => {
+  it('reports whether an edge was removed', () => {
     const remove = createRemoveFromParentConnectionUpdater(
       'Pantry',
       'itemsConnection',
       'PantryItem',
     );
     const cache = createMockCache();
-
-    remove(cache, 'p-1', 'pi-1', { updateTotalCount: false });
-
-    const helpers = createFieldHelpers();
-    helpers.readField.mockReturnValue('pi-1');
-    const existing = {
-      edges: [{ node: { __ref: 'PantryItem:pi-1' } }],
-      totalCount: 10,
-    };
-    const result = invokeFieldModifier(
-      cache,
-      'itemsConnection',
-      existing,
-      helpers,
+    cache.modify.mockImplementation(({ fields }) =>
+      fields.itemsConnection(
+        { edges: [{ node: { __ref: 'PantryItem:pi-1' } }], totalCount: 1 },
+        createFieldHelpers(),
+      ),
     );
 
-    expect(result.totalCount).toBe(10);
+    expect(remove(cache, 'p-1', 'pi-1')).toBe(true);
+    expect(remove(cache, 'p-1', 'pi-9')).toBe(false);
   });
 });
 
@@ -978,20 +938,6 @@ describe('createRemoveFromParentArrayUpdater', () => {
     expect(cache.evict).not.toHaveBeenCalled();
   });
 
-  it('skips gc when gc is false', () => {
-    const remove = createRemoveFromParentArrayUpdater(
-      'Pantry',
-      'items',
-      'PantryItem',
-    );
-    const cache = createMockCache();
-
-    remove(cache, 'p-1', 'pi-1', { evictItem: true, gc: false });
-
-    expect(cache.evict).toHaveBeenCalled();
-    expect(cache.gc).not.toHaveBeenCalled();
-  });
-
   it('warns and returns early when parent not found', () => {
     const remove = createRemoveFromParentArrayUpdater(
       'Pantry',
@@ -1051,6 +997,62 @@ describe('skipUnmatchedFilterVariants', () => {
 
   it('skips when the args cannot be parsed', () => {
     expect(skip('mealTemplates({not json)')).toBe(true);
+    expect(skip('mealTemplates:{not json')).toBe(true);
+  });
+
+  // Both production consumers (`mealTemplates`, `User.notificationsConnection`)
+  // are array-`keyArgs` fields, which Apollo writes in the COLON form. A guard
+  // that only finds `(` never skips a real variant.
+  it('reads the colon form an array-keyArgs field is stored under', () => {
+    expect(skip('mealTemplates:{"filters":{"category":"DINNER"}}')).toBe(false);
+    expect(skip('mealTemplates:{"filters":{"category":"BREAKFAST"}}')).toBe(
+      true,
+    );
+    expect(skip('mealTemplates:{"filters":{"search":"pasta"}}')).toBe(true);
+    expect(skip('mealTemplates:{"filters":{}}')).toBe(false);
+  });
+
+  it('sees the storeFieldName Apollo writes for a real keyArgs field', () => {
+    const cache = makeCache();
+    cache.writeQuery({
+      query: gql`
+        query FilterVariantProbe($filters: MealTemplateFilters) {
+          mealTemplates(filters: $filters) {
+            totalCount
+            edges {
+              node {
+                id
+              }
+            }
+          }
+        }
+      `,
+      variables: { filters: { category: 'DINNER' } },
+      data: {
+        mealTemplates: {
+          __typename: 'MealTemplateConnection',
+          totalCount: 0,
+          edges: [],
+        },
+      },
+    });
+
+    const seen: string[] = [];
+    cache.modify({
+      fields: {
+        mealTemplates(existing, { storeFieldName }) {
+          seen.push(storeFieldName);
+          return existing;
+        },
+      },
+    });
+
+    const [storeFieldName] = seen;
+    expect(storeFieldName).toMatch(/^mealTemplates:\{/);
+    expect(skip(storeFieldName!)).toBe(false);
+    expect(
+      skipUnmatchedFilterVariants({ category: 'LUNCH' })(storeFieldName!),
+    ).toBe(true);
   });
 });
 
@@ -1102,5 +1104,196 @@ describe('skipUnmatchedArgVariants', () => {
   it('skips when the args cannot be parsed', () => {
     expect(skip('storageLocations:{not json')).toBe(true);
     expect(skip('storageLocations({not json)')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Direct cache helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * These five run against a real `makeCache()`, not the mock above: `safeEvict*`
+ * narrow on `instanceof InMemoryCache` and `applyOptimisticFragmentPatch` does a
+ * readFragment/writeFragment round trip, so a double would exercise the branch
+ * the production path never takes.
+ */
+describe('direct cache helpers', () => {
+  const STORAGE_LOCATION = gql`
+    fragment ProbeStorageLocation on StorageLocation {
+      id
+      name
+      updatedAt
+    }
+  `;
+
+  const seedLocation = (
+    cache: ApolloCache,
+    id: string,
+    name = 'Freezer',
+  ): void => {
+    cache.writeFragment({
+      id: `StorageLocation:${id}`,
+      fragment: STORAGE_LOCATION,
+      fragmentName: 'ProbeStorageLocation',
+      data: {
+        __typename: 'StorageLocation',
+        id,
+        name,
+        updatedAt: '2020-01-01T00:00:00.000Z',
+      },
+    });
+  };
+
+  const readLocation = (cache: ApolloCache, id: string) =>
+    cache.readFragment<{ name: string; updatedAt: string }>({
+      id: `StorageLocation:${id}`,
+      fragment: STORAGE_LOCATION,
+      fragmentName: 'ProbeStorageLocation',
+    });
+
+  describe('setCachedFields', () => {
+    it('writes scalar fields onto an existing record', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'loc-1');
+
+      setCachedFields(cache, 'StorageLocation', 'loc-1', { name: 'Pantry' });
+
+      expect(readLocation(cache, 'loc-1')?.name).toBe('Pantry');
+    });
+
+    it('leaves the cache alone for a record it does not hold', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'loc-1');
+      const before = cache.extract();
+
+      setCachedFields(cache, 'StorageLocation', 'absent', { name: 'Pantry' });
+
+      expect(cache.extract()).toEqual(before);
+    });
+  });
+
+  describe('applyOptimisticFragmentPatch', () => {
+    it('writes the patch permanently and hands back a working revert', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'loc-1', 'Freezer');
+
+      const revert = applyOptimisticFragmentPatch(
+        cache,
+        { typename: 'StorageLocation', id: 'loc-1' },
+        { fragment: STORAGE_LOCATION, fragmentName: 'ProbeStorageLocation' },
+        { name: 'Cupboard' },
+        'rename',
+      );
+
+      expect(readLocation(cache, 'loc-1')?.name).toBe('Cupboard');
+      // Not Apollo's optimistic layer: the write outlives a broadcast, which is
+      // what lets it survive a queued mutation.
+      expect(readLocation(cache, 'loc-1')?.updatedAt).not.toBe(
+        '2020-01-01T00:00:00.000Z',
+      );
+
+      revert();
+
+      expect(readLocation(cache, 'loc-1')).toEqual({
+        __typename: 'StorageLocation',
+        id: 'loc-1',
+        name: 'Freezer',
+        updatedAt: '2020-01-01T00:00:00.000Z',
+      });
+    });
+
+    it('writes nothing when the fragment reads incomplete, and its revert no-ops', () => {
+      const cache = makeCache();
+      const before = cache.extract();
+
+      const revert = applyOptimisticFragmentPatch(
+        cache,
+        { typename: 'StorageLocation', id: 'never-cached' },
+        { fragment: STORAGE_LOCATION, fragmentName: 'ProbeStorageLocation' },
+        { name: 'Cupboard' },
+        'rename',
+      );
+
+      expect(cache.extract()).toEqual(before);
+      revert();
+      expect(cache.extract()).toEqual(before);
+    });
+  });
+
+  describe('safeEvict', () => {
+    it('removes the entity from the extract', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'loc-1');
+      expect(cache.extract()).toHaveProperty('StorageLocation:loc-1');
+
+      safeEvict(cache, 'StorageLocation', 'loc-1');
+
+      expect(cache.extract()).not.toHaveProperty('StorageLocation:loc-1');
+    });
+
+    it('does not throw on a cache that is not an InMemoryCache', () => {
+      expect(() =>
+        safeEvict(createMockCache(), 'StorageLocation', 'loc-1'),
+      ).not.toThrow();
+    });
+  });
+
+  describe('safeEvictMany', () => {
+    it('removes every named entity in one pass', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'loc-1');
+      seedLocation(cache, 'loc-2');
+      seedLocation(cache, 'loc-3');
+
+      safeEvictMany(cache, [
+        { typename: 'StorageLocation', id: 'loc-1' },
+        { typename: 'StorageLocation', id: 'loc-3' },
+      ]);
+
+      const extract = cache.extract();
+      expect(extract).not.toHaveProperty('StorageLocation:loc-1');
+      expect(extract).toHaveProperty('StorageLocation:loc-2');
+      expect(extract).not.toHaveProperty('StorageLocation:loc-3');
+    });
+
+    it('does not throw on a cache that is not an InMemoryCache', () => {
+      expect(() =>
+        safeEvictMany(createMockCache(), [
+          { typename: 'StorageLocation', id: 'loc-1' },
+        ]),
+      ).not.toThrow();
+    });
+  });
+
+  describe('adoptServerEntityId', () => {
+    it('evicts the client-id row when the server resolved to a different one', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'client-1');
+      seedLocation(cache, 'server-1');
+
+      adoptServerEntityId(cache, 'StorageLocation', 'server-1', 'client-1');
+
+      const extract = cache.extract();
+      expect(extract).not.toHaveProperty('StorageLocation:client-1');
+      expect(extract).toHaveProperty('StorageLocation:server-1');
+    });
+
+    it('keeps the row when the server echoed the client id back', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'client-1');
+
+      adoptServerEntityId(cache, 'StorageLocation', 'client-1', 'client-1');
+
+      expect(cache.extract()).toHaveProperty('StorageLocation:client-1');
+    });
+
+    it('keeps the row when no client id was minted', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'server-1');
+
+      adoptServerEntityId(cache, 'StorageLocation', 'server-1', null);
+
+      expect(cache.extract()).toHaveProperty('StorageLocation:server-1');
+    });
   });
 });

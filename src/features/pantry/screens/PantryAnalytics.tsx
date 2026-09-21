@@ -3,7 +3,8 @@ import { useTranslation } from '#/i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { usePantryAnalytics } from '#features/pantry/hooks/usePantryAnalytics';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
-import { TabView, TabRoute } from '#features/pantry/components/TabView/TabView';
+import type { TabRoute } from '#features/pantry/components/TabView/TabView';
+import { TabView } from '#features/pantry/components/TabView/TabView';
 import { DateRangeFilter } from '#features/pantry/components/analytics/DateRangeFilter';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { UsageTab } from '#features/pantry/components/analyticsTabs/UsageTab';
@@ -49,7 +50,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
   // spinner is cleared either way (try/finally is banned in component bodies —
   // it makes the React Compiler bail out of the whole component).
   const handleRefresh = () => {
-    executeRefreshWithFinally(refetch, setRefreshing);
+    void executeRefreshWithFinally(refetch, setRefreshing);
   };
 
   const routes: TabRoute[] = [

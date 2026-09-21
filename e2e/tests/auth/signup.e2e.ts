@@ -1,20 +1,29 @@
 /**
- * Sign up: happy-path registration, validation errors, and edge cases.
+ * Sign up: the form's validation, and a registration landing on code entry.
+ *
+ * `register` allows 5 calls an hour per IP, held in Redis, so only two tests
+ * spend one. The code travels only by mail, so code entry is the furthest a
+ * sign-up can get here; the name cases stop at client validation.
  */
 
-import { element, by, waitFor } from 'detox';
+import { device } from 'detox';
 import { launchAppWithFabricWorkaround } from '../../init';
+import { CodeVerificationScreen } from '../../screens/CodeVerificationScreen';
 import { LandingAuthScreen } from '../../screens/LandingAuthScreen';
 import { LoginScreen } from '../../screens/LoginScreen';
 import { SignUpScreen } from '../../screens/SignUpScreen';
-import { dismissBiometricPromptIfPresent } from '../../helpers/auth';
-import { TIMEOUTS, waitForNetworkIdle, waitForScreen } from '../../helpers/waitFor';
+import { TIMEOUTS } from '../../helpers/waitFor';
 import { generateTestEmail } from '../../helpers/data';
+import { TEST_USER } from '../../fixtures/testData';
+import { authTestIDs } from '../../../src/features/auth/testIDs';
+
+const VALID_PASSWORD = 'TestPass123!';
 
 describe('Sign Up', () => {
   const landingScreen = new LandingAuthScreen();
   const loginScreen = new LoginScreen();
   const signUpScreen = new SignUpScreen();
+  const codeVerificationScreen = new CodeVerificationScreen();
 
   beforeAll(async () => {
     await launchAppWithFabricWorkaround({
@@ -24,29 +33,24 @@ describe('Sign Up', () => {
     });
   });
 
+  /**
+   * An EMPTY form every time. Tests end on the form with values and errors
+   * left in it, on code entry, or on login, and a reload resets all three to
+   * the landing screen.
+   */
   beforeEach(async () => {
-    // Nothing here navigates back, so from the second test on the app is
-    // already sitting on the signup screen and waiting for the landing screen
-    // can only time out. Get back to a known state first, then navigate.
-    const alreadyOnSignUp = await signUpScreen
-      .waitForScreen(1000)
-      .then(() => true)
-      .catch(() => false);
-    if (alreadyOnSignUp) {
-      await signUpScreen.goBack();
-    }
-
-    await landingScreen.waitForScreen(5000);
+    await device.reloadReactNative();
+    await landingScreen.waitForScreen(TIMEOUTS.LONG);
     await landingScreen.tapSignUp();
     await signUpScreen.waitForScreen();
   });
 
   describe('Form Display', () => {
     it('should show all signup form elements', async () => {
-      await signUpScreen.expectVisible('signup-name-input');
-      await signUpScreen.expectVisible('signup-email-input');
-      await signUpScreen.expectVisible('signup-password-input');
-      await signUpScreen.expectVisible('signup-confirm-password-input');
+      await signUpScreen.expectVisible(authTestIDs.signUpNameInput);
+      await signUpScreen.expectVisible(authTestIDs.signUpEmailInput);
+      await signUpScreen.expectVisible(authTestIDs.signUpPasswordInput);
+      await signUpScreen.expectVisible(authTestIDs.signUpConfirmPasswordInput);
       await signUpScreen.expectSubmitVisible();
     });
   });
@@ -54,8 +58,8 @@ describe('Sign Up', () => {
   describe('Validation Errors', () => {
     it('should show error for empty name', async () => {
       await signUpScreen.enterEmail(generateTestEmail());
-      await signUpScreen.enterPassword('TestPass123!');
-      await signUpScreen.enterConfirmPassword('TestPass123!');
+      await signUpScreen.enterPassword(VALID_PASSWORD);
+      await signUpScreen.enterConfirmPassword(VALID_PASSWORD);
       await signUpScreen.submit();
 
       await signUpScreen.waitForScreen();
@@ -64,8 +68,8 @@ describe('Sign Up', () => {
 
     it('should show error for empty email', async () => {
       await signUpScreen.enterName('Test User');
-      await signUpScreen.enterPassword('TestPass123!');
-      await signUpScreen.enterConfirmPassword('TestPass123!');
+      await signUpScreen.enterPassword(VALID_PASSWORD);
+      await signUpScreen.enterConfirmPassword(VALID_PASSWORD);
       await signUpScreen.submit();
 
       await signUpScreen.waitForScreen();
@@ -75,8 +79,8 @@ describe('Sign Up', () => {
     it('should show error for invalid email format', async () => {
       await signUpScreen.enterName('Test User');
       await signUpScreen.enterEmail('invalid-email');
-      await signUpScreen.enterPassword('TestPass123!');
-      await signUpScreen.enterConfirmPassword('TestPass123!');
+      await signUpScreen.enterPassword(VALID_PASSWORD);
+      await signUpScreen.enterConfirmPassword(VALID_PASSWORD);
       await signUpScreen.submit();
 
       await signUpScreen.waitForScreen();
@@ -97,24 +101,27 @@ describe('Sign Up', () => {
     it('should show error for password mismatch', async () => {
       await signUpScreen.enterName('Test User');
       await signUpScreen.enterEmail(generateTestEmail());
-      await signUpScreen.enterPassword('TestPass123!');
+      await signUpScreen.enterPassword(VALID_PASSWORD);
       await signUpScreen.enterConfirmPassword('DifferentPass123!');
       await signUpScreen.submit();
 
       await signUpScreen.waitForScreen();
       await signUpScreen.expectConfirmPasswordFieldError();
     });
+  });
 
-    it('should show error for existing email', async () => {
-      // Use an email that's already registered
-      await signUpScreen.enterName('Test User');
-      await signUpScreen.enterEmail('e2e.test@souschef.app');
-      await signUpScreen.enterPassword('TestPass123!');
-      await signUpScreen.enterConfirmPassword('TestPass123!');
-      await signUpScreen.submit();
+  describe('Existing Email', () => {
+    // Registration is existence-blind: the API answers a registered address
+    // exactly as it answers a new one, so there is no refusal to show.
+    it('should land on code entry as a new address does', async () => {
+      await signUpScreen.signUpWith(
+        'Test User',
+        TEST_USER.email,
+        VALID_PASSWORD,
+      );
 
-      await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
-      await signUpScreen.waitForScreen();
+      await codeVerificationScreen.waitForScreen(TIMEOUTS.LONG);
+      await codeVerificationScreen.expectResendOffered();
     });
   });
 
@@ -126,87 +133,48 @@ describe('Sign Up', () => {
   });
 
   describe('Happy Path', () => {
-    it('should successfully create a new account', async () => {
-      const testEmail = generateTestEmail();
-      const testPassword = 'TestPassword123!';
-
+    it('should create an account, ask for the code, and offer sign-in', async () => {
       await signUpScreen.signUpWith(
         'E2E Test User',
-        testEmail,
-        testPassword,
-        testPassword,
+        generateTestEmail(),
+        VALID_PASSWORD,
       );
 
-      await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
+      await codeVerificationScreen.waitForScreen(TIMEOUTS.LONG);
+      await codeVerificationScreen.expectResendOffered();
 
-      // Only real devices with biometric hardware raise this prompt.
-      await dismissBiometricPromptIfPresent();
-
-      // Should navigate to onboarding or home screen
-      let navigatedSuccessfully = false;
-
-      try {
-        await waitForScreen('onboarding-screen', TIMEOUTS.DEFAULT);
-        navigatedSuccessfully = true;
-      } catch {
-        // Not onboarding
-      }
-
-      if (!navigatedSuccessfully) {
-        try {
-          await waitFor(element(by.id('tab-bar')))
-            .toBeVisible()
-            .withTimeout(TIMEOUTS.DEFAULT);
-          navigatedSuccessfully = true;
-        } catch {
-          // Not home
-        }
-      }
-
-      if (!navigatedSuccessfully) {
-        // Check for create home screen (part of onboarding flow)
-        await waitForScreen('create-home-screen', TIMEOUTS.DEFAULT);
-        navigatedSuccessfully = true;
-      }
-
-      if (!navigatedSuccessfully) {
-        throw new Error('Signup did not navigate to onboarding, home, or create-home screen');
-      }
+      await codeVerificationScreen.tapSignIn();
+      await loginScreen.waitForScreen();
     });
   });
 
-  describe('Edge Cases', () => {
-    it('should handle very long name', async () => {
-      const longName = 'A'.repeat(100);
-      await signUpScreen.enterName(longName);
+  /**
+   * A mismatched confirmation keeps each submit off the network while the whole
+   * schema still runs, so no name error beside that one means the name passed.
+   * The API takes any name of 1-255 characters.
+   */
+  describe('Name Edge Cases', () => {
+    async function submitWithName(enterName: () => Promise<void>) {
+      await enterName();
       await signUpScreen.enterEmail(generateTestEmail());
-      await signUpScreen.enterPassword('TestPass123!');
-      await signUpScreen.enterConfirmPassword('TestPass123!');
-
-      // Should not crash - verify we're still on signup screen
-      await signUpScreen.waitForScreen();
-    });
-
-    it('should handle special characters in name', async () => {
-      await signUpScreen.enterName("John O'Brien-Smith");
-      await signUpScreen.enterEmail(generateTestEmail());
-      await signUpScreen.enterPassword('TestPass123!');
-      await signUpScreen.enterConfirmPassword('TestPass123!');
+      await signUpScreen.enterPassword(VALID_PASSWORD);
+      await signUpScreen.enterConfirmPassword('DifferentPass123!');
       await signUpScreen.submit();
 
-      await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
-      await signUpScreen.waitForScreen();
+      await signUpScreen.expectConfirmPasswordFieldError();
+      await signUpScreen.expectNoNameFieldError();
+    }
+
+    it('should accept a very long name', async () => {
+      await submitWithName(() => signUpScreen.pasteName('A'.repeat(100)));
     });
 
-    it('should handle unicode characters in name', async () => {
-      await signUpScreen.enterName('José María Müller');
-      await signUpScreen.enterEmail(generateTestEmail());
-      await signUpScreen.enterPassword('TestPass123!');
-      await signUpScreen.enterConfirmPassword('TestPass123!');
-      await signUpScreen.submit();
+    it('should accept special characters in name', async () => {
+      await submitWithName(() => signUpScreen.enterName("John O'Brien-Smith"));
+    });
 
-      await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
-      await signUpScreen.waitForScreen();
+    it('should accept unicode characters in name', async () => {
+      await submitWithName(() => signUpScreen.pasteName('José María Müller'));
     });
   });
 });

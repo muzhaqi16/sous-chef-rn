@@ -12,7 +12,7 @@ Developer documentation for the Sous Chef React Native app. For what the app
 | **[Architecture](architecture.md)** | How the app is built and organized — feature modules, state ownership, the data layer, offline-first, navigation, and the UI layer. Read this first. |
 | **[Development](development.md)** | Setup, environment files, build variants, codegen, testing, quality gates, and the full command reference. |
 | **[Contributing](../CONTRIBUTING.md)** | Contribution terms, PR guidelines, git hooks. |
-| **[CLAUDE.md](../CLAUDE.md)** | The enforced day-to-day conventions, one rule per line — commands, structure, Apollo, UI, React Compiler, i18n, testing. Backed by lint rules and tests; verified rules link into the probe record below. |
+| **[CLAUDE.md](../CLAUDE.md)** | The conventions no lint rule or test catches — structure, Apollo and session contracts, device-only UI gotchas, React Compiler, i18n, testing — and the enforcer's name where one exists. Verified rules link into the probe record below. |
 | **[Verified library behaviour](verified-library-behaviour.md)** | The probe record CLAUDE.md's one-line verification stamps link into — each entry pins a rule to the installed package's source, with a re-check command. |
 
 ---
@@ -43,6 +43,7 @@ Developer documentation for the Sous Chef React Native app. For what the app
 
 | Document | What's in it |
 | --- | --- |
+| [UI layer — mechanisms](ui-layer.md) | The mechanism, evidence and traps behind CLAUDE.md § UI layer — screen and sheet shells, the list row, Unistyles, typography, elevation, motion, gestures, bottom sheets, FlashList, forms, quantities — under the same headings. |
 | [Backdrop lifecycle design](backdrop-lifecycle-design.md) | The global bottom-sheet backdrop system and the leak it was designed to fix. |
 | [FlashList performance — current state](flashlist-performance-analysis.md) | How the pantry and shopping-list FlashLists are fed, what a page append costs (measured), why every write used to refetch a page and recompute the hidden Recipes tab (and the fixes), how to read the perf instrumentation, and the disposition of the earlier investigation's issues. |
 | [FlashList layout-index race](flashlist-layout-index-race.md) | Resolved `not enough layouts` crash on rapid deletes — FlashList shrinks its layout table during render, so list data must never come through `useDeferredValue`/`startTransition`; mechanism, the rule, validation. |
@@ -54,7 +55,7 @@ Developer documentation for the Sous Chef React Native app. For what the app
 | --- | --- |
 | [Android build setup](android-build-setup.md) | Build environments, tag-triggered workflows, keystores, and outputs. |
 | [Android multi-device guide](android-devices-readme.md) | How `MODE` / `TARGET` / `DEVICE_ID` drive `scripts/run-android.sh`. |
-| [Android ProGuard debugging](android-proguard-debugging.md) | Diagnosing R8/ProGuard-only crashes in release builds. |
+| [Android ProGuard debugging](android-proguard-debugging.md) | Crash reporting (Crashlytics, Android) and diagnosing R8/ProGuard-only crashes in release builds. |
 
 ## Operations
 

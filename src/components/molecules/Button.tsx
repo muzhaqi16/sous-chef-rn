@@ -1,5 +1,5 @@
 import React from 'react';
-import { type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { RIPPLE } from '#constants/ripple';
 import { Icon } from '#utils/iconUtils';
@@ -46,10 +46,9 @@ export const Button: React.FC<ButtonProps> = ({
   accessibilityLabel,
   accessibilityHint,
 }) => {
-  // Use title/children as fallback for accessibility label
   const buttonLabel =
-    accessibilityLabel ||
-    title ||
+    accessibilityLabel ??
+    title ??
     (typeof children === 'string' ? children : undefined);
 
   const useWhiteRipple = variant === 'primary' || variant === 'danger';
@@ -100,7 +99,7 @@ export const Button: React.FC<ButtonProps> = ({
             />
           )}
           <Text role="bodyStrong" style={[styles.text, txtStyle]}>
-            {title || children}
+            {title ?? children}
           </Text>
         </>
       )}

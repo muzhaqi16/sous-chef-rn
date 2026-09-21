@@ -48,7 +48,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
     setPrevVisible(visible);
     setPrevDefaultServings(defaultServings);
     if (visible) {
-      setServingsInput(defaultServings?.toString() || '1');
+      setServingsInput(String(defaultServings));
       setDeductFromPantry(true);
       setUseGranularDeduction(true);
       setNotes('');
@@ -68,9 +68,11 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
   // uses, so the two are separated here: substituting the default for text
   // nobody could read cooks — and deducts — a number never entered.
   const servingsUnreadable = !!typedServings && parsedServings == null;
+  // `servingsMade` is an Int, so a fraction refuses the whole request.
   const servingsError =
     servingsUnreadable ||
-    (parsedServings != null && (isNaN(parsedServings) || parsedServings <= 0))
+    (parsedServings != null &&
+      (!Number.isInteger(parsedServings) || parsedServings <= 0))
       ? t('errors.field.servingsMade')
       : undefined;
 
@@ -78,7 +80,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
     if (servingsError) return;
 
     onConfirm({
-      servings: parsedServings ?? defaultServings ?? 1,
+      servings: parsedServings ?? defaultServings,
       deductFromPantry,
       useGranularDeduction:
         deductFromPantry && hasPantry && useGranularDeduction,
@@ -122,7 +124,6 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
           placeholder={t('markCookedModal.servingsPlaceholderPrefix', {
             count: defaultServings || 1,
           })}
-          keyboardType="numeric"
           error={servingsError}
         />
       </View>

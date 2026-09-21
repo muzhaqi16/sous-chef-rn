@@ -20,7 +20,6 @@ export const useAddToMealPlanSheet = ({
 
   return {
     open: () => setVisible(true),
-    close: () => setVisible(false),
     element: (
       <AddToMealPlanSheet
         visible={visible}

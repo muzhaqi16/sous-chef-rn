@@ -1,8 +1,13 @@
-'use no memo';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
+('use no memo');
 
 import React from 'react';
 import { userEvent, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type {
+  MockedResponse,
+  MockFor,
+  MockPart,
+} from '#/test-utils/apolloMockProvider';
 import {
   renderWithApollo,
   statesFutureSchemaValues,
@@ -13,8 +18,11 @@ import {
   CreateHomeDocument,
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
+  type GetHomesQuery,
+  type GetMyPendingInvitesQuery,
 } from '#operations/home/home.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
+import type { InviteCard_InviteFragment } from '../CreateHomeScreen.generated';
 import type { RootState } from '#store/index';
 import { CreateHomeScreen } from '../CreateHomeScreen';
 
@@ -82,6 +90,9 @@ jest.mock('../helpers', () => ({
 // `toHomeViewModels.mockReturnValue(…)` from before the view-model module
 // was removed.
 // Prefixed `mock*` so the jest.mock factory below is allowed to reference it.
+type HomesConnection = GetHomesQuery['homes'];
+type PantriesConnection =
+  HomesConnection['edges'][number]['node']['pantriesConnection'];
 type StagedPantryNode = {
   __typename?: string;
   id: string;
@@ -92,50 +103,42 @@ type StagedHome = {
   id: string;
   name: string;
   pantriesConnection?: {
-    __typename?: string;
+    __typename: PantriesConnection['__typename'];
     edges?: Array<{ __typename?: string; node?: StagedPantryNode } | null>;
     totalCount?: number;
   };
 };
 let mockStagedHomes: StagedHome[] | null = null;
 
+/** Every connection `useCreateHomeFlow` flattens, staged or served. */
+type FlattenedConnection =
+  | HomesConnection
+  | NonNullable<GetMyPendingInvitesQuery['me']>['pendingHomeInvitesConnection']
+  | PantriesConnection
+  | StagedHome['pantriesConnection']
+  | null
+  | undefined;
+
 /**
  * `extractNodes` flattens Relay-style connections in production. The mock
- * supports three shapes so existing fixtures keep working:
- *
- *   1. A real connection (`{ edges: [{ node }] }`) — normalize to nodes.
- *   2. A flat array — already in node form, return as-is.
- *   3. The GetHomes connection (or anything else) — return the test-staged
- *      homes if set; otherwise the default empty array.
+ * returns the test-staged homes for the GetHomes connection when any are
+ * staged, and otherwise normalizes the connection's edges to nodes.
  *
  * Tests that stage homes also pre-flatten each home's pantries onto a
  * `pantries` array; production reads `extractNodes(home.pantriesConnection)`,
  * so the mock surfaces `home.pantries` when `pantriesConnection` is absent.
  */
 jest.mock('#/utils/connectionUtils', () => ({
-  extractNodes: jest.fn((data: unknown) => {
-    // When the input is a Connection-shape (has `edges`/`__typename`) and the
-    // test staged homes, treat that input as the GetHomes connection and
-    // return the staged data. Empty fixtures from `defaultOperationMocks`
-    // would otherwise overwrite the staged value on a re-render.
-    const asConnection = data as {
-      __typename?: string;
-      edges?: Array<{ node?: unknown } | null>;
-    } | null;
-    if (
-      mockStagedHomes &&
-      asConnection &&
-      typeof asConnection === 'object' &&
-      'edges' in asConnection &&
-      (asConnection.__typename === 'HomeConnection' || !asConnection.__typename)
-    ) {
+  extractNodes: jest.fn((data: FlattenedConnection) => {
+    // Empty fixtures from `defaultOperationMocks` would otherwise overwrite the
+    // staged homes on a re-render.
+    if (mockStagedHomes && data?.__typename === 'HomeConnection') {
       return mockStagedHomes;
     }
     if (!data) return mockStagedHomes ?? [];
-    if (Array.isArray(asConnection?.edges)) {
-      return asConnection.edges.map(e => e?.node).filter(Boolean);
+    if (Array.isArray(data.edges)) {
+      return data.edges.map(e => e?.node).filter(Boolean);
     }
-    if (Array.isArray(data)) return data;
     return [];
   }),
 }));
@@ -265,14 +268,15 @@ jest.mock('#/services/alertService', () => ({
 }));
 
 // --- Mock state used by tests to control query responses ---
-type PendingInviteShape = {
-  id: string;
-  role: string;
-  home: { name: string } | null;
-  inviter: { email?: string; profile?: { displayName?: string } | null } | null;
-};
+/** The invite node the pending-invites query itself selects. */
+type PendingInviteShape = MockPart<
+  NonNullable<
+    GetMyPendingInvitesQuery['me']
+  >['pendingHomeInvitesConnection']['edges'][number]['node'] &
+    InviteCard_InviteFragment
+>;
 
-let mockHomesData: { edges: unknown[] } = { edges: [] };
+let mockHomesData: MockPart<GetHomesQuery['homes']> = { edges: [] };
 let mockHomesLoading = false;
 let mockPendingInvites: PendingInviteShape[] = [];
 
@@ -315,7 +319,7 @@ let mockDeclineHomeInviteResponse: Record<string, unknown> = {
   },
 };
 
-function buildGetHomesMock(): MockedResponse {
+function buildGetHomesMock(): MockFor<typeof GetHomesDocument> {
   return {
     request: { query: GetHomesDocument, variables: () => true },
     maxUsageCount: 100,
@@ -347,7 +351,9 @@ function buildGetHomesMock(): MockedResponse {
   };
 }
 
-function buildGetMyPendingInvitesMock(): MockedResponse {
+function buildGetMyPendingInvitesMock(): MockFor<
+  typeof GetMyPendingInvitesDocument
+> {
   return {
     request: { query: GetMyPendingInvitesDocument, variables: () => true },
     maxUsageCount: 100,
@@ -397,7 +403,7 @@ function buildGetMyPendingInvitesMock(): MockedResponse {
   };
 }
 
-function buildCreateHomeMock(): MockedResponse {
+function buildCreateHomeMock(): MockFor<typeof CreateHomeDocument> {
   // One case here states an `ErrorCode` the schema does not have, because every
   // member it does have is mapped to copy — so nothing valid reaches the
   // caller-fallback branch this screen relies on.
@@ -416,7 +422,7 @@ function buildCreateHomeMock(): MockedResponse {
   });
 }
 
-function buildCreatePantryMock(): MockedResponse {
+function buildCreatePantryMock(): MockFor<typeof CreatePantryDocument> {
   return {
     request: {
       query: CreatePantryDocument,
@@ -431,9 +437,9 @@ function buildCreatePantryMock(): MockedResponse {
     result: (variables: Record<string, unknown>) => ({
       data: {
         createPantry: {
-          __typename: 'CreatePantryPayload' as const,
+          __typename: 'CreatePantryPayload',
           pantry: {
-            __typename: 'Pantry' as const,
+            __typename: 'Pantry',
             id: (variables.input as { id: string }).id,
             name: 'Kitchen',
             isDefault: true,
@@ -445,7 +451,7 @@ function buildCreatePantryMock(): MockedResponse {
   };
 }
 
-function buildAcceptHomeInviteMock(): MockedResponse {
+function buildAcceptHomeInviteMock(): MockFor<typeof AcceptHomeInviteDocument> {
   return {
     request: {
       query: AcceptHomeInviteDocument,
@@ -459,7 +465,9 @@ function buildAcceptHomeInviteMock(): MockedResponse {
   };
 }
 
-function buildDeclineHomeInviteMock(): MockedResponse {
+function buildDeclineHomeInviteMock(): MockFor<
+  typeof DeclineHomeInviteDocument
+> {
   return {
     request: {
       query: DeclineHomeInviteDocument,
@@ -630,7 +638,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: {
           email: 'john@test.com',
@@ -810,7 +818,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: {
           email: 'john@test.com',
@@ -829,7 +837,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: {
           email: 'john@test.com',
@@ -846,7 +854,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
       },
@@ -860,7 +868,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: null,
       },
@@ -870,20 +878,6 @@ describe('CreateHomeScreen', () => {
     expect(await findByText('Someone')).toBeTruthy();
   });
 
-  it('shows "Unknown Home" when home name is missing from invite', async () => {
-    mockPendingInvites = [
-      {
-        id: 'invite-1',
-        role: 'MEMBER',
-        home: null,
-        inviter: { email: 'john@test.com', profile: null },
-      },
-    ];
-
-    const { findByText } = renderScreen();
-    expect(await findByText('Unknown Home')).toBeTruthy();
-  });
-
   it('offers no accept or decline, and says where the invite can be opened', async () => {
     // Redeeming needs the invite's bearer token, which the API discloses once
     // to the inviter and stores only as a digest — so this list cannot supply
@@ -891,7 +885,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
       },
@@ -948,7 +942,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
       },
@@ -996,7 +990,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
       },
@@ -1277,7 +1271,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'ADMIN',
+        role: MembershipRole.Admin,
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
       },
@@ -1291,7 +1285,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Johns Home' },
         inviter: { email: 'john@test.com', profile: null },
       },
@@ -1397,7 +1391,7 @@ describe('CreateHomeScreen', () => {
     mockPendingInvites = [
       {
         id: 'invite-1',
-        role: 'MEMBER',
+        role: MembershipRole.Member,
         home: { name: 'Home A' },
         inviter: {
           email: 'a@test.com',
@@ -1406,7 +1400,7 @@ describe('CreateHomeScreen', () => {
       },
       {
         id: 'invite-2',
-        role: 'ADMIN',
+        role: MembershipRole.Admin,
         home: { name: 'Home B' },
         inviter: { email: 'b@test.com', profile: { displayName: 'Bob' } },
       },

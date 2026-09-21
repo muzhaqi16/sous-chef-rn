@@ -42,11 +42,10 @@ const cachedHomes = (cache: ApolloCache) => {
         existingHomes: { edges?: HomeEdge[]; readonly __ref?: string },
         { readField },
       ) {
-        if (!existingHomes || !existingHomes.edges) return existingHomes;
+        if (!existingHomes.edges) return existingHomes;
 
         existingHomes.edges.forEach((edge: HomeEdge) => {
-          const homeRef = ('node' in edge && edge.node) || edge;
-          if (!homeRef) return;
+          const homeRef = 'node' in edge ? edge.node ?? edge : edge;
           const cacheId = cache.identify(homeRef);
           if (cacheId)
             found.push({ cacheId, homeId: readField('id', homeRef) });
@@ -124,8 +123,7 @@ export const restoreDefaultHome = (
     cache.modify({
       id: cacheId,
       fields: {
-        isDefault: (_existing, { DELETE }) =>
-          wasDefault === undefined ? DELETE : wasDefault,
+        isDefault: (_existing, { DELETE }) => wasDefault ?? DELETE,
       },
     });
   });

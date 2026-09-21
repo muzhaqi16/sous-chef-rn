@@ -10,6 +10,8 @@ import type { RecipeInformation } from '#/services/spoonacular/types';
 const recipe = {
   id: 1,
   title: 'Inside-Out Lasagna',
+  summary: '',
+  cuisines: [],
   servings: 4,
   extendedIngredients: [
     {
@@ -111,6 +113,32 @@ describe('sending an imported recipe’s units', () => {
     // pair "oz" with 200.
     expect(mirror?.unitShort).toBe('g');
     expect(mirror?.unitLong).toBe('grams');
+  });
+
+  it('leaves the mirror’s abbreviations unset rather than borrowing the US ones', () => {
+    const metricAuthored = {
+      ...recipe,
+      extendedIngredients: [
+        {
+          id: 1,
+          name: 'flour',
+          amount: 200,
+          unit: 'g',
+          measures: {
+            us: { amount: 7.05, unitShort: 'oz', unitLong: 'ounces' },
+            metric: { amount: 200, unitShort: 'g', unitLong: 'grams' },
+          },
+        },
+      ],
+    } as unknown as RecipeInformation;
+
+    const mirror =
+      toRecipeInput(metricAuthored).ingredients?.[0]?.externalSources?.[0]
+        ?.spoonacular;
+
+    expect(mirror?.unit).toBe('g');
+    expect(mirror?.unitShort).toBeUndefined();
+    expect(mirror?.unitLong).toBeUndefined();
   });
 
   it('leaves a bare count with an empty unit rather than inventing one', () => {

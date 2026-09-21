@@ -3,6 +3,13 @@ import { ActivityIndicator, View } from 'react-native';
 import { render } from '@testing-library/react-native';
 import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { Text } from '#components/atoms/Text';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: jest.fn(() => false),
+}));
+
+const withheld = jest.mocked(useIsApiUnavailable);
 
 const MockSkeleton: React.FC<{ animated?: boolean }> = ({ animated }) => (
   <View testID="skeleton-item">
@@ -11,6 +18,27 @@ const MockSkeleton: React.FC<{ animated?: boolean }> = ({ animated }) => (
 );
 
 describe('PaginationFooter', () => {
+  beforeEach(() => withheld.mockReturnValue(false));
+
+  describe('with the network withheld', () => {
+    it('says why the list stops instead of spinning', () => {
+      withheld.mockReturnValue(true);
+      const { getByText, UNSAFE_queryByType } = render(
+        <PaginationFooter hasMore={true} itemCount={10} />,
+      );
+      expect(getByText(/nothing more to load/)).toBeTruthy();
+      expect(UNSAFE_queryByType(ActivityIndicator)).toBeNull();
+    });
+
+    it('stays silent when there is no further page', () => {
+      withheld.mockReturnValue(true);
+      const { toJSON } = render(
+        <PaginationFooter hasMore={false} itemCount={10} />,
+      );
+      expect(toJSON()).toBeNull();
+    });
+  });
+
   describe('spinner fallback (no SkeletonComponent)', () => {
     it('shows spinner when hasMore is true', () => {
       const { UNSAFE_getByType } = render(

@@ -15,6 +15,8 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
+import { useTranslation } from '#/i18n';
+import { localizedErrorMessage } from '#/services/errorService';
 
 type UsageAnalytics = NonNullable<
   GetPantryUsageAnalyticsQuery['pantry']
@@ -35,18 +37,18 @@ interface UsePantryAnalyticsOptions {
 interface UsePantryAnalyticsReturn {
   usageData: UsageAnalytics | null;
   usageLoading: boolean;
-  usageError: Error | undefined;
+  /** Localized copy for the failed read; never the server's message. */
+  usageError: string | undefined;
   /** No network was attempted and nothing was cached for these filters. */
   usageOffline: boolean;
   wasteData: WasteAnalytics | null;
   wasteLoading: boolean;
-  wasteError: Error | undefined;
+  wasteError: string | undefined;
   wasteOffline: boolean;
   ledgerData: LedgerAnalytics | null;
   ledgerLoading: boolean;
-  ledgerError: Error | undefined;
+  ledgerError: string | undefined;
   ledgerOffline: boolean;
-  loading: boolean;
   dateRange: DateRange;
   setDateRange: (range: DateRange) => void;
   ledgerGranularity: PeriodGranularity;
@@ -59,6 +61,7 @@ export function usePantryAnalytics({
   initialDateRange = DateRange.LastMonth,
   ledgerGranularity: initialLedgerGranularity = PeriodGranularity.Weekly,
 }: UsePantryAnalyticsOptions): UsePantryAnalyticsReturn {
+  const { t } = useTranslation();
   const [dateRange, setDateRange] = useState<DateRange>(initialDateRange);
   const [ledgerGranularity, setLedgerGranularity] = useState<PeriodGranularity>(
     initialLedgerGranularity,
@@ -105,9 +108,9 @@ export function usePantryAnalytics({
     skip: !hasValidPantryId,
   });
 
-  useApolloErrorLogger('GetPantryUsageAnalytics', usageError);
-  useApolloErrorLogger('GetPantryWasteAnalytics', wasteError);
-  useApolloErrorLogger('GetPantryLedgerAnalytics', ledgerError);
+  useApolloErrorLogger(GetPantryUsageAnalyticsDocument, usageError);
+  useApolloErrorLogger(GetPantryWasteAnalyticsDocument, wasteError);
+  useApolloErrorLogger(GetPantryLedgerAnalyticsDocument, ledgerError);
 
   /**
    * `allSettled`, not `all`, so a refresh always resolves whatever the global
@@ -121,21 +124,17 @@ export function usePantryAnalytics({
   const wasteAnalytics = wasteQueryData?.pantry?.wasteAnalytics ?? null;
   const ledgerAnalytics = ledgerQueryData?.pantry?.ledgerAnalytics ?? null;
 
+  const toCopy = (error: unknown) =>
+    error
+      ? localizedErrorMessage(error, t('errors.codes.genericRetry'))
+      : undefined;
+
   // Filtered by `dateRange` / `granularity`, so each combination is its own
   // cache entry — offline, changing a filter is a guaranteed miss even when the
   // screen was populated a second ago. See `useOfflineAwareError`.
-  const usage = useOfflineAwareError(
-    usageError as Error | undefined,
-    usageAnalytics !== null,
-  );
-  const waste = useOfflineAwareError(
-    wasteError as Error | undefined,
-    wasteAnalytics !== null,
-  );
-  const ledger = useOfflineAwareError(
-    ledgerError as Error | undefined,
-    ledgerAnalytics !== null,
-  );
+  const usage = useOfflineAwareError(usageError, usageAnalytics !== null);
+  const waste = useOfflineAwareError(wasteError, wasteAnalytics !== null);
+  const ledger = useOfflineAwareError(ledgerError, ledgerAnalytics !== null);
 
   // `loading && !data`, never bare `loading`: under `cache-and-network` Apollo
   // reports `loading` for the whole network leg on EVERY mount, which would
@@ -148,17 +147,16 @@ export function usePantryAnalytics({
   return {
     usageData: usageAnalytics,
     usageLoading: usageIsBlank,
-    usageError: usage.error,
+    usageError: toCopy(usage.error),
     usageOffline: usage.offline,
     wasteData: wasteAnalytics,
     wasteLoading: wasteIsBlank,
-    wasteError: waste.error,
+    wasteError: toCopy(waste.error),
     wasteOffline: waste.offline,
     ledgerData: ledgerAnalytics,
     ledgerLoading: ledgerIsBlank,
-    ledgerError: ledger.error,
+    ledgerError: toCopy(ledger.error),
     ledgerOffline: ledger.offline,
-    loading: usageIsBlank || wasteIsBlank || ledgerIsBlank,
     dateRange,
     setDateRange,
     ledgerGranularity,

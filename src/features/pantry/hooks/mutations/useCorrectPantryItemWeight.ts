@@ -12,17 +12,11 @@ import {
   type UseCorrectPantryItemWeight_PantryItemFragment,
 } from './useCorrectPantryItemWeight.generated';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import {
-  handleMutationError,
-  versionConflictCheck,
-  invalidUnitCheck,
-} from '#/utils/errorHandlers';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
-import { t } from '#/i18n';
+import { useTranslation } from '#/i18n';
 
 interface UseCorrectPantryItemWeightOptions {
   onSuccess?: () => void;
@@ -31,19 +25,10 @@ interface UseCorrectPantryItemWeightOptions {
 export function useCorrectPantryItemWeight({
   onSuccess,
 }: UseCorrectPantryItemWeightOptions = {}) {
+  const { t } = useTranslation();
   const client = useApolloClient();
 
-  const [correctMutation, { loading }] = useMutation(
-    AdjustPantryItemWeightDocument,
-    {
-      onError: error => {
-        handleMutationError(error, {
-          operation: 'Correct Weight',
-          checks: [versionConflictCheck(), invalidUnitCheck()],
-        });
-      },
-    },
-  );
+  const [correctMutation] = useMutation(AdjustPantryItemWeightDocument);
 
   const correctWeight = async (
     pantryItemId: string,
@@ -71,12 +56,9 @@ export function useCorrectPantryItemWeight({
         data,
       });
 
-    // The correction is absolute (a physical re-weigh), so set it directly.
-    // Persist it too, so the exact value survives an app-kill before replay.
-    // The unit is deliberately NOT changed locally: `netWeightUnitId` only
-    // names a unit id, and inventing a `netWeightUnit` object from it would
-    // write a half-populated Unit into the cache. The server's response fills
-    // it in.
+    // The correction is absolute (a physical re-weigh), so set it directly and
+    // persist it across an app-kill. The unit is NOT changed locally: an id
+    // alone would write a half-populated Unit; the server's response fills it.
     if (currentItem) {
       const optimistic = enhanceWithVersion(currentItem, { netWeight });
       try {
@@ -94,25 +76,7 @@ export function useCorrectPantryItemWeight({
       );
     }
 
-    const result = await correctMutation({
-      variables: {
-        input: {
-          id: pantryItemId,
-          netWeight,
-          reason,
-          version,
-          idempotencyKey: generateEntityId(),
-          ...(netWeightUnitId ? { netWeightUnitId } : {}),
-        },
-      },
-      context: { localFirst: true },
-    });
-
-    const outcome = classifyCreateResult(result);
-
-    if (outcome === 'rejected') {
-      // Restore the pre-correction snapshot. A transport error already alerted
-      // via onError; a non-success union member carries no error, so alert here.
+    const revert = () => {
       if (currentItem) {
         try {
           writeItem(currentItem);
@@ -123,19 +87,39 @@ export function useCorrectPantryItemWeight({
         }
       }
       optimisticDataPersistence.clear('PantryItem', pantryItemId, 'netWeight');
-      alertRejectedMutation(result, t('errors.correctWeightFailed'));
-      return false;
-    }
+    };
 
-    // 'created' (server confirmed, the response normalized the authoritative
-    // value) or 'queued' (offline / API down — replays the canonical mutation,
-    // deduped by its idempotencyKey).
-    if (outcome === 'created') {
+    const settled = await settleMutation(
+      () =>
+        correctMutation({
+          variables: {
+            input: {
+              id: pantryItemId,
+              netWeight,
+              reason,
+              version,
+              idempotencyKey: generateEntityId(),
+              ...(netWeightUnitId ? { netWeightUnitId } : {}),
+            },
+          },
+          context: { localFirst: true },
+        }),
+      {
+        document: AdjustPantryItemWeightDocument,
+        fallback: t('errors.correctWeightFailed'),
+        onFailed: revert,
+      },
+    );
+    if (settled.status === 'failed') return false;
+
+    // Applied: the response normalized the authoritative value. Queued: the
+    // persisted value stands until the replay lands.
+    if (settled.status === 'applied') {
       optimisticDataPersistence.clear('PantryItem', pantryItemId, 'netWeight');
     }
     onSuccess?.();
     return true;
   };
 
-  return { correctWeight, loading };
+  return { correctWeight };
 }

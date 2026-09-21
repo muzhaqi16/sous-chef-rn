@@ -1,12 +1,16 @@
 import { waitFor } from '@testing-library/react-native';
 import { useApolloClient } from '@apollo/client/react';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import { MySavedRecipesDocument } from '#features/recipes/graphql/recipe.generated';
+import {
+  MySavedRecipesDocument,
+  type MySavedRecipesQuery,
+} from '#features/recipes/graphql/recipe.generated';
 import {
   SavedRecipeCard_SavedRecipeFragmentDoc,
   type SavedRecipeCard_SavedRecipeFragment,
 } from '#features/recipes/components/SavedRecipeCard.generated';
+import { filterByTerm } from '#hooks/search/useLocalSearch';
 import { useSavedRecipes } from '../useSavedRecipes';
 
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
@@ -20,11 +24,21 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
 // Break circular dependency
 jest.mock('#/apollo/links/tokenScheduler');
 
+/**
+ * The node on the wire: what the query selects plus what the card's fragment
+ * reads, since masking keeps a fragment's fields out of the query's own type
+ * while the response still has to carry them.
+ */
+type SavedRecipeNode = NonNullable<
+  MySavedRecipesQuery['me']
+>['savedRecipesConnection']['edges'][number]['node'] &
+  SavedRecipeCard_SavedRecipeFragment;
+
 function buildRecipe(
   id: string,
   name: string,
-  overrides: Record<string, unknown> = {},
-) {
+  overrides: MockPart<SavedRecipeNode['recipe']> = {},
+): MockPart<SavedRecipeNode['recipe']> {
   // Exactly what `MySavedRecipes` selects on the nested recipe: `id`, `name`
   // and `description` at the parent, plus the four card fields from
   // `SavedRecipeCard_savedRecipe`. The recipe's own category, status, external
@@ -51,7 +65,7 @@ function buildSavedRecipeNode(
     tags?: string[] | null;
     cookedCount?: number | null;
   } = {},
-) {
+): MockPart<SavedRecipeNode> {
   return {
     __typename: 'SavedRecipe',
     id,
@@ -77,12 +91,12 @@ function buildMySavedRecipesMock(
     hasNextPage?: boolean;
     error?: Error;
   } = {},
-): MockedResponse {
+): MockFor<typeof MySavedRecipesDocument> {
   if (options.error) {
     return {
       request: {
         query: MySavedRecipesDocument,
-        variables: { folder: undefined, first: 20 },
+        variables: { first: 20 },
       },
       error: options.error,
     };
@@ -91,7 +105,7 @@ function buildMySavedRecipesMock(
   return {
     request: {
       query: MySavedRecipesDocument,
-      variables: { folder: undefined, first: 20 },
+      variables: { first: 20 },
     },
     result: {
       data: {
@@ -142,8 +156,76 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function useSavedRecipesWithClient(folder?: string | null) {
-  const state = useSavedRecipes(folder);
+function buildPageMock(options: {
+  after?: string;
+  edges: Array<{
+    cursor: string;
+    node: ReturnType<typeof buildSavedRecipeNode>;
+  }>;
+  endCursor: string | null;
+  error?: Error;
+}): MockFor<typeof MySavedRecipesDocument> {
+  const request = {
+    query: MySavedRecipesDocument,
+    variables: {
+      first: 20,
+      ...(options.after ? { after: options.after } : {}),
+    },
+  };
+  if (options.error) return { request, error: options.error };
+  return {
+    request,
+    result: {
+      data: {
+        me: {
+          __typename: 'User',
+          id: 'user-1',
+          savedRecipesConnection: {
+            __typename: 'SavedRecipeConnection',
+            totalCount: 3,
+            edges: options.edges.map(e => ({
+              __typename: 'SavedRecipeEdge',
+              cursor: e.cursor,
+              node: e.node,
+            })),
+            pageInfo: {
+              __typename: 'PageInfo',
+              hasNextPage: options.endCursor !== null,
+              endCursor: options.endCursor,
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
+const firstPage = buildPageMock({
+  edges: [standardEdges[0]!],
+  endCursor: 'page-1',
+});
+const secondPage = buildPageMock({
+  after: 'page-1',
+  edges: [standardEdges[1]!],
+  endCursor: 'page-2',
+});
+const thirdPage = buildPageMock({
+  after: 'page-2',
+  edges: [
+    {
+      cursor: 'c3',
+      node: buildSavedRecipeNode('sr-3', buildRecipe('r-3', 'Lasagne')),
+    },
+  ],
+  endCursor: null,
+});
+
+const searchByName = <T extends { recipe: { name: string } }>(
+  recipes: readonly T[],
+) => filterByTerm(recipes, 'lasagne', [saved => saved.recipe.name]);
+
+function useSavedRecipesWithClient() {
+  const state = useSavedRecipes();
   const client = useApolloClient();
   return { ...state, client };
 }
@@ -197,7 +279,7 @@ describe('useSavedRecipes', () => {
     expect(result.current.state.recipes[1]!.tags).toEqual([]);
   });
 
-  it('returns totalCount and hasNextPage', async () => {
+  it('returns hasNextPage as hasMore', async () => {
     const { result } = renderHookWithApollo(() => useSavedRecipesWithClient(), {
       operationMocks: [
         buildMySavedRecipesMock({
@@ -209,50 +291,70 @@ describe('useSavedRecipes', () => {
     });
 
     await waitFor(() => expect(result.current.state.recipes).toHaveLength(2));
-    expect(result.current.state.totalCount).toBe(10);
     expect(result.current.state.hasMore).toBe(true);
   });
 
-  it('getRecipeById finds by recipeId', async () => {
-    const { result } = renderHookWithApollo(() => useSavedRecipesWithClient(), {
-      operationMocks: [
-        buildMySavedRecipesMock({ edges: standardEdges, totalCount: 10 }),
-      ],
+  describe('loadAllPages', () => {
+    it('loads every remaining page, so a search finds a recipe on page 3', async () => {
+      const { result } = renderHookWithApollo(
+        () => useSavedRecipes({ loadAllPages: true }),
+        { operationMocks: [firstPage, secondPage, thirdPage] },
+      );
+
+      await waitFor(() => expect(result.current.state.recipes).toHaveLength(3));
+      expect(searchByName(result.current.state.recipes).map(r => r.id)).toEqual(
+        ['sr-3'],
+      );
+      expect(result.current.state.hasMore).toBe(false);
+      expect(result.current.state.isLoadingRemainingPages).toBe(false);
     });
 
-    await waitFor(() => expect(result.current.state.recipes).toHaveLength(2));
+    it('loads nothing past page one until it is switched on', async () => {
+      const { result, rerender } = renderHookWithApollo(
+        ({ loadAllPages }: { loadAllPages: boolean }) =>
+          useSavedRecipes({ loadAllPages }),
+        {
+          operationMocks: [firstPage, secondPage, thirdPage],
+          initialProps: { loadAllPages: false },
+        },
+      );
 
-    const found = result.current.actions.getRecipeById('r-1');
-    expect(found?.id).toBe('sr-1');
-    expect(readName(result, found!.id)).toBe('Pasta');
-  });
+      await waitFor(() => expect(result.current.state.recipes).toHaveLength(1));
+      expect(result.current.state.hasMore).toBe(true);
+      expect(result.current.state.isLoadingRemainingPages).toBe(false);
+      expect(searchByName(result.current.state.recipes)).toEqual([]);
 
-  it('getRecipesByFolder filters by folder', async () => {
-    const { result } = renderHookWithApollo(() => useSavedRecipesWithClient(), {
-      operationMocks: [
-        buildMySavedRecipesMock({ edges: standardEdges, totalCount: 10 }),
-      ],
+      rerender({ loadAllPages: true });
+      expect(result.current.state.isLoadingRemainingPages).toBe(true);
+
+      await waitFor(() => expect(result.current.state.recipes).toHaveLength(3));
+      expect(searchByName(result.current.state.recipes)).toHaveLength(1);
     });
 
-    await waitFor(() => expect(result.current.state.recipes).toHaveLength(2));
+    it('stops on a failed page and keeps the rows already cached', async () => {
+      const { result } = renderHookWithApollo(
+        () => useSavedRecipes({ loadAllPages: true }),
+        {
+          operationMocks: [
+            firstPage,
+            buildPageMock({
+              after: 'page-1',
+              edges: [],
+              endCursor: null,
+              error: new Error('Network request failed'),
+            }),
+          ],
+        },
+      );
 
-    const weeknight = result.current.actions.getRecipesByFolder('Weeknight');
-    expect(weeknight).toHaveLength(1);
-    expect(readName(result, weeknight[0]!.id)).toBe('Pasta');
-  });
-
-  it('getRecipesByTag filters by tag', async () => {
-    const { result } = renderHookWithApollo(() => useSavedRecipesWithClient(), {
-      operationMocks: [
-        buildMySavedRecipesMock({ edges: standardEdges, totalCount: 10 }),
-      ],
+      await waitFor(() => expect(result.current.state.recipes).toHaveLength(1));
+      expect(result.current.state.isLoadingRemainingPages).toBe(true);
+      await waitFor(() =>
+        expect(result.current.state.isLoadingRemainingPages).toBe(false),
+      );
+      expect(result.current.state.hasMore).toBe(true);
+      expect(result.current.state.recipes.map(r => r.id)).toEqual(['sr-1']);
     });
-
-    await waitFor(() => expect(result.current.state.recipes).toHaveLength(2));
-
-    const quick = result.current.actions.getRecipesByTag('Quick');
-    expect(quick).toHaveLength(1);
-    expect(readName(result, quick[0]!.id)).toBe('Pasta');
   });
 
   it('returns empty recipes when data is undefined (skipped via logged-out flag)', () => {

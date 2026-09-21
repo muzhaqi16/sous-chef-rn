@@ -12,7 +12,7 @@ describe('StaggeredEntryContext', () => {
     it('renders children', () => {
       render(
         <StaggeredEntryProvider>
-          <Text>Staggered Content</Text>
+          <Text role="body">Staggered Content</Text>
         </StaggeredEntryProvider>,
       );
       expect(screen.getByText('Staggered Content')).toBeTruthy();

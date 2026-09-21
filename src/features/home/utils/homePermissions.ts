@@ -43,27 +43,3 @@ export function canInviteToHome(
 ): boolean {
   return getInvitableRoles(userRole, canInviteOthers).length > 0;
 }
-
-/** null when the user is not a member. */
-export function findUserMembership(
-  members:
-    | Array<{ id: string; userId?: string; role: string; status: string }>
-    | undefined,
-  currentUserId: string | undefined,
-): { id: string; role: MembershipRole; status: string } | null {
-  if (!members || !currentUserId) {
-    return null;
-  }
-
-  const membership = members.find(m => m.userId === currentUserId);
-
-  if (!membership) {
-    return null;
-  }
-
-  return {
-    id: membership.id,
-    role: membership.role as MembershipRole,
-    status: membership.status,
-  };
-}

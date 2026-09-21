@@ -1,3 +1,4 @@
+import type { ImageValidationError } from '../imageValidation';
 import {
   sniffImageMimeType,
   validateImageFile,
@@ -6,7 +7,6 @@ import {
   ALLOWED_IMAGE_TYPES,
   MAX_IMAGE_SIZE,
   MAX_PROFILE_SIZE,
-  ImageValidationError,
 } from '../imageValidation';
 
 describe('validateImageFile', () => {
@@ -195,9 +195,9 @@ describe('sniffImageMimeType', () => {
       blob: async () => ({
         slice: () => ({ __base64: base64 }),
       }),
-    }) as unknown as typeof fetch;
-    globalThis.atob = ((input: string) =>
-      Buffer.from(input, 'base64').toString('binary')) as typeof atob;
+    });
+    globalThis.atob = (input: string) =>
+      Buffer.from(input, 'base64').toString('binary');
     global.FileReader = class {
       result: string | null = null;
       onloadend: (() => void) | null = null;
@@ -261,9 +261,7 @@ describe('sniffImageMimeType', () => {
     mockFileBytes(null);
     await expect(sniffImageMimeType('file:///a.jpg')).resolves.toBeNull();
 
-    global.fetch = jest
-      .fn()
-      .mockRejectedValue(new Error('no such file')) as unknown as typeof fetch;
+    global.fetch = jest.fn().mockRejectedValue(new Error('no such file'));
     await expect(sniffImageMimeType('file:///gone.jpg')).resolves.toBeNull();
   });
 });

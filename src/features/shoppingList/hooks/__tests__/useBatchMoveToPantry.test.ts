@@ -1,6 +1,7 @@
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -18,12 +19,6 @@ jest.mock('#/services/toastService', () => ({
     success: (...args: unknown[]) => mockToastSuccess(...args),
     error: (...args: unknown[]) => mockToastError(...args),
     info: (...args: unknown[]) => mockToastInfo(...args),
-  },
-}));
-
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    trackEvent: jest.fn(),
   },
 }));
 
@@ -47,43 +42,59 @@ function moveMock(payload: {
   /** Lines that errored — `summary.failed`, itemised in `failedItems`. */
   failedItems?: {
     itemName: string;
-    code: string;
+    code: ErrorCode;
     errorId?: string | null;
   }[];
 }) {
-  return recordMock(MovePurchasedItemsToPantryDocument, {
-    data: {
-      movePurchasedItemsToPantry: {
-        __typename: 'MovePurchasedItemsToPantryPayload' as const,
-        // Every line now in the pantry: the ones this call moved, plus the
-        // already-stocked ones the server reports as skipped.
-        movedItems: [
-          ...payload.movedItemIds.map(id => ({
-            __typename: 'MovedItemInfo' as const,
+  type MovedItem = { __typename: 'MovedItemInfo'; shoppingListItemId: string };
+  type FailedItem = {
+    __typename: 'FailedMoveInfo';
+    itemName: string;
+    code: ErrorCode;
+    errorId?: string | null;
+  };
+
+  const data: MockDataFor<typeof MovePurchasedItemsToPantryDocument> = {
+    movePurchasedItemsToPantry: {
+      __typename: 'MovePurchasedItemsToPantryPayload',
+      // Every line now in the pantry: the ones this call moved, plus the
+      // already-stocked ones the server reports as skipped.
+      movedItems: [
+        ...payload.movedItemIds.map(
+          (id): MovedItem => ({
+            __typename: 'MovedItemInfo',
             shoppingListItemId: id,
-          })),
-          ...Array.from({ length: payload.skippedCount }, (_, i) => ({
-            __typename: 'MovedItemInfo' as const,
+          }),
+        ),
+        ...Array.from(
+          { length: payload.skippedCount },
+          (_, i): MovedItem => ({
+            __typename: 'MovedItemInfo',
             shoppingListItemId: `already-${i}`,
-          })),
-        ],
-        failedItems: (payload.failedItems ?? []).map(item => ({
-          __typename: 'FailedMoveInfo' as const,
+          }),
+        ),
+      ],
+      failedItems: (payload.failedItems ?? []).map(
+        (item): FailedItem => ({
+          __typename: 'FailedMoveInfo',
           errorId: null,
           ...item,
-        })),
-        summary: {
-          __typename: 'BulkSummary' as const,
-          total:
-            payload.movedCount +
-            payload.skippedCount +
-            (payload.failedItems?.length ?? 0),
-          succeeded: payload.movedCount,
-          failed: payload.failedItems?.length ?? 0,
-          skipped: payload.skippedCount,
-        },
+        }),
+      ),
+      summary: {
+        __typename: 'BulkSummary',
+        total:
+          payload.movedCount +
+          payload.skippedCount +
+          (payload.failedItems?.length ?? 0),
+        succeeded: payload.movedCount,
+        failed: payload.failedItems?.length ?? 0,
+        skipped: payload.skippedCount,
       },
     },
+  };
+  return recordMock(MovePurchasedItemsToPantryDocument, {
+    data,
   });
 }
 
@@ -122,10 +133,10 @@ function cacheWithPurchasedRows(
       fragment: PURCHASED_ROW_SEED,
       fragmentName: 'PurchasedRowSeed',
       data: {
-        __typename: 'ShoppingListItem' as const,
+        __typename: 'ShoppingListItem',
         id,
         purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo' as const,
+          __typename: 'ShoppingListItemPurchaseInfo',
           isPurchased: true,
           movedToPantryAt: null,
           purchaseDate: null,
@@ -308,7 +319,7 @@ describe('useBatchMoveToPantry', () => {
       skippedCount: 0,
       targetPantryName: 'My Pantry',
       movedItemIds: [],
-      failedItems: [{ itemName: 'bread', code: 'VALIDATION_FAILED' }],
+      failedItems: [{ itemName: 'bread', code: ErrorCode.ValidationFailed }],
     });
 
     const { result } = renderHookWithApollo(
@@ -335,7 +346,7 @@ describe('useBatchMoveToPantry', () => {
       failedItems: [
         {
           itemName: 'bread',
-          code: 'VALIDATION_FAILED',
+          code: ErrorCode.ValidationFailed,
           errorId: 'log-42',
         },
       ],
@@ -425,9 +436,17 @@ describe('useBatchMoveToPantry', () => {
       targetPantryName: 'My Pantry',
       movedItemIds: ['item-1'],
       failedItems: [
-        { itemName: 'bread', code: 'VALIDATION_FAILED', errorId: 'log-42' },
-        { itemName: 'milk', code: 'INTERNAL_ERROR', errorId: 'log-43' },
-        { itemName: 'eggs', code: 'VALIDATION_FAILED', errorId: null },
+        {
+          itemName: 'bread',
+          code: ErrorCode.ValidationFailed,
+          errorId: 'log-42',
+        },
+        {
+          itemName: 'milk',
+          code: ErrorCode.InternalServerError,
+          errorId: 'log-43',
+        },
+        { itemName: 'eggs', code: ErrorCode.ValidationFailed, errorId: null },
       ],
     });
 
@@ -448,7 +467,7 @@ describe('useBatchMoveToPantry', () => {
       expect.objectContaining({
         failed_count: 3,
         // Distinct and sorted: three failures, two causes.
-        failed_codes: 'INTERNAL_ERROR,VALIDATION_FAILED',
+        failed_codes: `${ErrorCode.InternalServerError},${ErrorCode.ValidationFailed}`,
         // Only the ids that exist, so a null cannot become an empty slot.
         failed_error_ids: 'log-42,log-43',
       }),
@@ -457,14 +476,15 @@ describe('useBatchMoveToPantry', () => {
 
   it('surfaces an alert and skips onSuccess when the server resolves an error member', async () => {
     const mockOnSuccess = jest.fn();
-    const move = recordMock(MovePurchasedItemsToPantryDocument, {
-      data: {
-        movePurchasedItemsToPantry: {
-          __typename: 'ForbiddenError' as const,
-          code: ErrorCode.Forbidden,
-          message: 'Not allowed',
-        },
+    const data: MockDataFor<typeof MovePurchasedItemsToPantryDocument> = {
+      movePurchasedItemsToPantry: {
+        __typename: 'ForbiddenError',
+        code: ErrorCode.Forbidden,
+        message: 'Not allowed',
       },
+    };
+    const move = recordMock(MovePurchasedItemsToPantryDocument, {
+      data,
     });
 
     const { result } = renderHookWithApollo(
@@ -487,14 +507,17 @@ describe('useBatchMoveToPantry', () => {
 
   /**
    * A null payload with no error is how the offline queue reports a QUEUED
-   * mutation, not a failure — `classifyCreateResult` is the single place that
+   * mutation, not a failure — `settledStatus` is the single place that
    * meaning is encoded. Treating it as a failure only holds for an online-only
    * move, where a null result can mean nothing else.
    */
   it('treats a null payload as queued: reports pending, not a count, and succeeds', async () => {
     const mockOnSuccess = jest.fn();
+    const data: MockDataFor<typeof MovePurchasedItemsToPantryDocument> = {
+      movePurchasedItemsToPantry: null,
+    };
     const move = recordMock(MovePurchasedItemsToPantryDocument, {
-      data: { movePurchasedItemsToPantry: null },
+      data,
     });
 
     const { result } = renderHookWithApollo(
@@ -616,7 +639,7 @@ describe('counters are adjusted exactly once', () => {
       id: 'ShoppingList:list-1',
       fragment: COUNTS,
       data: {
-        __typename: 'ShoppingList' as const,
+        __typename: 'ShoppingList',
         id: 'list-1',
         totalItems: 10,
         completedItems: 4,
@@ -672,13 +695,14 @@ describe('counters are adjusted exactly once', () => {
 
   it('leaves the counters untouched when the server refuses', async () => {
     const cache = seededCache();
-    const refused = recordMock(MovePurchasedItemsToPantryDocument, {
-      data: {
-        movePurchasedItemsToPantry: {
-          __typename: 'ValidationError' as const,
-          message: 'nope',
-        },
+    const data: MockDataFor<typeof MovePurchasedItemsToPantryDocument> = {
+      movePurchasedItemsToPantry: {
+        __typename: 'ValidationError',
+        message: 'nope',
       },
+    };
+    const refused = recordMock(MovePurchasedItemsToPantryDocument, {
+      data,
     });
 
     const { result } = renderHookWithApollo(
@@ -727,10 +751,10 @@ describe('moved lines are marked stocked in the cache', () => {
       id: 'ShoppingListItem:item-1',
       fragment: STOCKED,
       data: {
-        __typename: 'ShoppingListItem' as const,
+        __typename: 'ShoppingListItem',
         id: 'item-1',
         purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo' as const,
+          __typename: 'ShoppingListItemPurchaseInfo',
           isPurchased: true,
           movedToPantryAt: null,
           // Present so the merge's clearing behaviour is observable below.
@@ -789,10 +813,10 @@ describe('moved lines are marked stocked in the cache', () => {
       id: 'ShoppingListItem:item-1',
       fragment: STOCKED,
       data: {
-        __typename: 'ShoppingListItem' as const,
+        __typename: 'ShoppingListItem',
         id: 'item-1',
         purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo' as const,
+          __typename: 'ShoppingListItemPurchaseInfo',
           isPurchased: true,
           movedToPantryAt: SERVER_STAMP,
           purchasedQuantity: 3,
@@ -885,10 +909,10 @@ describe('the write-back cannot clear the purchase record', () => {
       id: 'ShoppingListItem:item-1',
       fragment: RECORD,
       data: {
-        __typename: 'ShoppingListItem' as const,
+        __typename: 'ShoppingListItem',
         id: 'item-1',
         purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo' as const,
+          __typename: 'ShoppingListItemPurchaseInfo',
           isPurchased: false,
           movedToPantryAt: null,
           purchasedQuantity: 7,

@@ -4,6 +4,8 @@ import { render, screen, userEvent } from '@testing-library/react-native';
 import type { ViewProps } from 'react-native';
 import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { MealPlanType, MembershipRole } from '#/graphql/generated/schemaTypes';
+import { addDays, parseISO } from 'date-fns';
+import { toMealDateTime } from '#/utils/dateUtils';
 import { DuplicatePlanSheet } from '../DuplicatePlanSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -222,6 +224,29 @@ describe('DuplicatePlanSheet', () => {
         newEndDate: expect.any(String),
       }),
     );
+  });
+
+  // The source plan's boundary can carry any time of day (older plans are UTC
+  // midnight); the copy is sent as the picked day's local noon, like every
+  // other plan boundary, or its last day falls outside the API's UTC-day range.
+  it('sends the new plan boundaries as local noon of the days shown', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <DuplicatePlanSheet {...defaultProps} visible={false} />,
+    );
+    rerender(<DuplicatePlanSheet {...defaultProps} visible={true} />);
+    await user.press(screen.getByTestId('confirm-button'));
+
+    const shownStart = addDays(parseISO(mockMealPlan.endDate), 1);
+    expect(defaultProps.onDuplicate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        newStartDate: toMealDateTime(shownStart),
+        newEndDate: toMealDateTime(addDays(shownStart, 6)),
+      }),
+    );
+    const [[sent]] = defaultProps.onDuplicate.mock.calls;
+    expect(new Date(sent.newStartDate).getHours()).toBe(12);
+    expect(new Date(sent.newEndDate).getHours()).toBe(12);
   });
 
   it('renders chevron navigation icons for date adjustment', () => {

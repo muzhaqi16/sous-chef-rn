@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
 import { toastService } from '#/services/toastService';
-import { errorService } from '#/services/errorService';
 import { t } from '#/i18n';
 import type { AddToListOutcome } from '#features/pantry/hooks/useAddPantryItemToShoppingList';
 
@@ -86,18 +85,13 @@ export function useLowStockListPicker({ addToList, rows, homeId }: Options) {
       setBusy(true);
       // Mints the id, writes the list optimistically and fires local-first, so
       // offline the rows below have a list to name before the server has one.
-      let created;
-      try {
-        created = await createShoppingList({ name: trimmed, homeId });
-      } catch (error) {
-        errorService.reportError(error, { operation: 'Create list and add' });
-      }
+      const created = await createShoppingList({ name: trimmed, homeId });
       setBusy(false);
-      if (!created) {
-        toastService.error(t('errors.createShoppingListFailed'));
+      if (created.status === 'failed') {
+        toastService.error(created.body);
         return;
       }
-      await addTo(created.id, picked);
+      await addTo(created.shoppingList.id, picked);
     })();
   };
 

@@ -7,7 +7,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { type SharedValue } from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
 import {
   SwipeActions,
   swipeTrayWidth,
@@ -19,6 +19,7 @@ import type {
   SwipeAction,
   SwipeableItemProps,
 } from '#components/organisms/SwipeableItem/types';
+import { kitTestIDs } from '#components/testIDs';
 
 // Mirrors the -12 marginLeft/Right in the action container styles, so the
 // placeholder measures the same width as the real tray and the card cannot open
@@ -96,7 +97,10 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
       ? actions.map(action =>
           action.testID
             ? action
-            : { ...action, testID: `${testIDPrefix}-${action.key}` },
+            : {
+                ...action,
+                testID: kitTestIDs.swipeAction(testIDPrefix, action.key),
+              },
         )
       : actions;
 

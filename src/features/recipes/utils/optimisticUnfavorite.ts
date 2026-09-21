@@ -1,13 +1,15 @@
 import type { ApolloClient, Reference } from '@apollo/client';
 import {
   MySavedRecipesDocument,
+  RemoveRecipeFromFavoritesDocument,
   type MySavedRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { errorService } from '#/services/errorService';
+import {
+  settleMutation,
+  type SettledFailure,
+} from '#/apollo/utils/settleMutation';
 
-// The mutate result this helper classifies. Not generic: nothing here depends
-// on the mutation's shape — classifyCreateResult reads the outcome structurally.
+// The mutate result settled here. Not generic: nothing here reads the payload.
 type UnfavoriteResult = { data?: unknown; error?: unknown };
 
 interface OptimisticUnfavoriteArgs {
@@ -16,24 +18,24 @@ interface OptimisticUnfavoriteArgs {
   recipeId: string;
   /** Fires the RemoveRecipeFromFavorites mutation (local-first, idempotent). */
   mutate: () => Promise<UnfavoriteResult>;
-  /** `errorService` operation label for the throw path. */
-  operation: string;
-  /** Reports the failure to the user (alert or toast). Fires once, on rejection or throw. */
-  reportFailure: () => void;
+  /** The caller's copy for a failure nothing more specific describes. */
+  fallback: string;
+  /** Shows the failure; an alert when absent. */
+  present?: (failure: SettledFailure) => void;
 }
 
 /**
  * Un-saves a recipe optimistically. Snapshots `MySavedRecipes` and the recipe's
  * `savedDetails`, then drops the edge before firing so the removal sticks
- * offline and replays idempotently. A rejection or throw reverts and reports
- * once; `'queued'` keeps it. Returns whether the removal was kept.
+ * offline and replays idempotently. A failure reverts and is reported once; a
+ * queued removal stands. Returns whether the removal was kept.
  */
 export async function performOptimisticUnfavorite({
   client,
   recipeId,
   mutate,
-  operation,
-  reportFailure,
+  fallback,
+  present,
 }: OptimisticUnfavoriteArgs): Promise<boolean> {
   const recipeCacheId = client.cache.identify({
     __typename: 'Recipe',
@@ -94,23 +96,13 @@ export async function performOptimisticUnfavorite({
     }
   };
 
-  let result;
-  try {
-    result = await mutate();
-  } catch (error: unknown) {
-    revert();
-    errorService.reportError(error, { operation });
-    reportFailure();
-  }
-  if (!result) return false; // threw -> already reverted above
+  const settled = await settleMutation(mutate, {
+    document: RemoveRecipeFromFavoritesDocument,
+    fallback,
+    onFailed: revert,
+    present: present ? 'none' : 'alert',
+  });
+  if (settled.failure && present) present(settled.failure);
 
-  // A resolved rejection (error union member / transport error) reverts;
-  // 'queued' (offline / API down) keeps the optimistic removal — it replays.
-  if (classifyCreateResult(result) === 'rejected') {
-    revert();
-    reportFailure();
-    return false;
-  }
-
-  return true;
+  return settled.status !== 'failed';
 }

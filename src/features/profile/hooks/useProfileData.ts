@@ -18,14 +18,14 @@ export const useProfileData = () => {
     notifyOnNetworkStatusChange: false,
   });
 
-  const profile = data?.me?.profile || null;
+  const profile = data?.me?.profile ?? null;
 
   return {
     user,
     profile,
     loading,
     // errorPolicy:'all' (global) resolves failures with data+error rather than
-    // throwing — expose `error` so consumers can surface a refresh failure.
+    // throwing.
     error,
     refetch,
   };

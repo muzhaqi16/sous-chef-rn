@@ -100,7 +100,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
 const styles = StyleSheet.create(theme => ({
   container: {
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: theme.spacing['2xs'],
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     minWidth: 40,
@@ -112,7 +112,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surfaceVariant,
     variants: {
       inline: {
-        true: { flexDirection: 'row', gap: 2 },
+        true: { flexDirection: 'row', gap: theme.spacing['2xs'] },
         false: {},
       },
       disabled: {

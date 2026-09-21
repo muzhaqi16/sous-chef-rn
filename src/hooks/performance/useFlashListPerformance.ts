@@ -13,7 +13,6 @@ import { NativePerformanceService } from '#/services/performance/NativePerforman
 import {
   DEFAULT_PERFORMANCE_CONFIG,
   type ScrollFrameMetric,
-  type BlankRiskAssessment,
 } from '#/services/performance/types';
 import {
   createMountedCellRenderer,
@@ -77,21 +76,12 @@ interface UseFlashListPerformanceReturn {
    */
   hasContentLayout: boolean;
   onDataReferenceChange: () => void;
-  printReport: () => void;
-  getBlankRisk: () => BlankRiskAssessment;
   /**
    * The FlashList's `CellRendererComponent`. Always set; in an unsampled session
    * it wraps cells without registering them and blank evaluation is skipped.
    */
   CellRendererComponent: MountedCellRenderer;
 }
-
-const noopRisk: BlankRiskAssessment = {
-  level: 'none',
-  factors: [],
-  coverageRatio: 1,
-  scrollVelocity: 0,
-};
 
 const COVERAGE_REPORT_INTERVAL = 2000;
 
@@ -270,10 +260,7 @@ export function useFlashListPerformance<T>(
     const list = flashListRef.current;
     // Guarded as a function: test doubles of FlashList expose a bare instance.
     if (!list || typeof list.computeVisibleIndices !== 'function') return;
-    const visibleIndices = list.computeVisibleIndices();
-    if (!visibleIndices) return;
-
-    const { startIndex, endIndex } = visibleIndices;
+    const { startIndex, endIndex } = list.computeVisibleIndices();
     const expectedCount = endIndex - startIndex + 1;
     if (expectedCount <= 0) return;
     const mountedCount = cellRegistry.countMountedInRange(startIndex, endIndex);
@@ -317,62 +304,61 @@ export function useFlashListPerformance<T>(
         scrollVelocity,
       };
 
-      if (dedupeRAFRef.current === null) {
-        dedupeRAFRef.current = requestAnimationFrame(() => {
-          const pending = pendingMetricRef.current;
-          if (pending && diagnostics) {
-            diagnostics.recordScrollFrame(pending);
+      if (dedupeRAFRef.current !== null) return;
+      dedupeRAFRef.current = requestAnimationFrame(() => {
+        const pending = pendingMetricRef.current;
+        if (pending) {
+          diagnostics.recordScrollFrame(pending);
 
-            // Streak start, complete blanks and streak end only.
-            if (pending.blankDetected) {
-              streakCountRef.current += 1;
-              if (!wasBlankRef.current || pending.mountedCount === 0) {
-                console.debug(
-                  `📊 [FlashList:${options.componentName}] Blank: mounted=${
-                    pending.mountedCount
-                  }/${pending.expectedCount} visible=[${pending.visibleStart},${
-                    pending.visibleEnd
-                  }] gap=${pending.frameGap.toFixed(0)}ms`,
-                );
-              }
-              wasBlankRef.current = true;
-            } else {
-              if (wasBlankRef.current && streakCountRef.current > 1) {
-                console.debug(
-                  `📊 [FlashList:${options.componentName}] Blank streak ended after ${streakCountRef.current} frames`,
-                );
-              }
-              streakCountRef.current = 0;
-              wasBlankRef.current = false;
+          // Streak start, complete blanks and streak end only.
+          if (pending.blankDetected) {
+            streakCountRef.current += 1;
+            if (!wasBlankRef.current || pending.mountedCount === 0) {
+              console.debug(
+                `📊 [FlashList:${options.componentName}] Blank: mounted=${
+                  pending.mountedCount
+                }/${pending.expectedCount} visible=[${pending.visibleStart},${
+                  pending.visibleEnd
+                }] gap=${pending.frameGap.toFixed(0)}ms`,
+              );
+            }
+            wasBlankRef.current = true;
+          } else {
+            if (wasBlankRef.current && streakCountRef.current > 1) {
+              console.debug(
+                `📊 [FlashList:${options.componentName}] Blank streak ended after ${streakCountRef.current} frames`,
+              );
+            }
+            streakCountRef.current = 0;
+            wasBlankRef.current = false;
 
-              const risk = diagnostics.assessBlankRisk();
-              if (risk.level === 'medium') {
-                console.debug(
-                  `⚠️ [FlashList:${
-                    options.componentName
-                  }] Blank risk MEDIUM: ${risk.factors.join(
-                    ', ',
-                  )} (coverage=${risk.coverageRatio.toFixed(
-                    2,
-                  )}, velocity=${risk.scrollVelocity.toFixed(0)} items/s)`,
-                );
-              } else if (risk.level === 'high') {
-                console.debug(
-                  `🚨 [FlashList:${
-                    options.componentName
-                  }] Blank risk HIGH: ${risk.factors.join(
-                    ', ',
-                  )} (coverage=${risk.coverageRatio.toFixed(
-                    2,
-                  )}, velocity=${risk.scrollVelocity.toFixed(0)} items/s)`,
-                );
-              }
+            const risk = diagnostics.assessBlankRisk();
+            if (risk.level === 'medium') {
+              console.debug(
+                `⚠️ [FlashList:${
+                  options.componentName
+                }] Blank risk MEDIUM: ${risk.factors.join(
+                  ', ',
+                )} (coverage=${risk.coverageRatio.toFixed(
+                  2,
+                )}, velocity=${risk.scrollVelocity.toFixed(0)} items/s)`,
+              );
+            } else if (risk.level === 'high') {
+              console.debug(
+                `🚨 [FlashList:${
+                  options.componentName
+                }] Blank risk HIGH: ${risk.factors.join(
+                  ', ',
+                )} (coverage=${risk.coverageRatio.toFixed(
+                  2,
+                )}, velocity=${risk.scrollVelocity.toFixed(0)} items/s)`,
+              );
             }
           }
-          pendingMetricRef.current = null;
-          dedupeRAFRef.current = null;
-        });
-      }
+        }
+        pendingMetricRef.current = null;
+        dedupeRAFRef.current = null;
+      });
     }
   };
 
@@ -419,27 +405,12 @@ export function useFlashListPerformance<T>(
     }
   };
 
-  const printReport = () => {
-    if (__DEV__) {
-      diagnostics?.printReport();
-    }
-  };
-
-  const getBlankRisk = () => {
-    if (__DEV__ && diagnostics) {
-      return diagnostics.assessBlankRisk();
-    }
-    return noopRisk;
-  };
-
   return {
     onLoad,
     onViewableItemsChanged,
     onCommitLayoutEffect,
     hasContentLayout,
     onDataReferenceChange,
-    printReport,
-    getBlankRisk,
     CellRendererComponent,
   };
 }

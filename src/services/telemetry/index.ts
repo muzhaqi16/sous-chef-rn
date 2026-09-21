@@ -1,9 +1,10 @@
 import { Platform } from 'react-native';
 import { env as buildEnv } from '#/config/env';
 import { TelemetryService } from './TelemetryService';
-import { LogEntry, TelemetryConfig } from './types';
+import type { LogEntry, TelemetryConfig } from './types';
 import { getVersion } from 'react-native-device-info';
 import { Environment } from '#/utils/environment';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 const createTelemetryConfig = (): TelemetryConfig => {
   const env = Environment.getConfig();
@@ -55,7 +56,10 @@ const createTelemetryConfig = (): TelemetryConfig => {
     transports: {
       http:
         (env.isDevelopment || env.isStaging || env.isProduction) &&
-        !!(buildEnv.OTLP_METRICS_ENDPOINT || buildEnv.OTLP_LOGS_ENDPOINT),
+        firstNonBlank(
+          buildEnv.OTLP_METRICS_ENDPOINT,
+          buildEnv.OTLP_LOGS_ENDPOINT,
+        ) !== undefined,
       console: false,
     },
   };
@@ -64,9 +68,7 @@ const createTelemetryConfig = (): TelemetryConfig => {
 let telemetryService: TelemetryService | null = null;
 
 function getService(): TelemetryService {
-  if (!telemetryService) {
-    telemetryService = new TelemetryService(createTelemetryConfig());
-  }
+  telemetryService ??= new TelemetryService(createTelemetryConfig());
   return telemetryService;
 }
 
@@ -114,7 +116,7 @@ export const Telemetry = {
     getService().trackScreenView(screenName, properties),
 
   trackError: (error: Error | string, context?: Record<string, unknown>) => {
-    const { component, operation, isFatal, ...rest } = context || {};
+    const { component, operation, isFatal, ...rest } = context ?? {};
     const details = {
       message: typeof error === 'string' ? error : error.message,
       name: typeof error === 'string' ? undefined : error.name,

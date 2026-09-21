@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { View, ViewStyle } from 'react-native';
+import type { ViewStyle } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
@@ -69,7 +70,7 @@ export const ClickableInfoPanel: React.FC<ClickableInfoPanelProps> = ({
         ) : (
           <EmptyState
             size="compact"
-            title={emptyMessage || t('labels.noDataAvailable')}
+            title={emptyMessage ?? t('labels.noDataAvailable')}
           />
         )}
       </Card>

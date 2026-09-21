@@ -1,24 +1,15 @@
-import { StateCreator } from 'zustand';
+import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
 
 /**
- * A deep-link intent queued while hydrating or logged out, replayed by
- * `useDeepLinkRouter`. Share codes are not JWTs, so they skip
- * `validateDeepLinkToken`.
+ * A join link `useJoinLinkAuthGate` queued for a logged-out visitor, replayed
+ * by `useDeepLinkRouter` after sign-in. Held in memory only, never persisted.
  */
-export interface TokenDeepLinkAction {
-  type: 'email_verification' | 'password_reset' | 'accept_invitation';
-  token: string;
-  timestamp: number;
-}
-
-export interface CodeDeepLinkAction {
+export interface DeepLinkAction {
   type: 'join_home' | 'join_list';
   code: string;
   timestamp: number;
 }
-
-export type DeepLinkAction = TokenDeepLinkAction | CodeDeepLinkAction;
 
 export enum OnBoardingSteps {
   createHome = 'createHome',
@@ -190,16 +181,14 @@ export const createNavigationSlice: StateCreator<
 
   setUserNavigationState: (userId, navState) => {
     set(state => {
-      if (!state.userNavigationStates[userId]) {
-        state.userNavigationStates[userId] = {};
-      }
+      state.userNavigationStates[userId] ??= {};
       Object.assign(state.userNavigationStates[userId], navState);
     });
   },
 
   getUserNavigationState: userId => {
     const state = get();
-    return state.userNavigationStates[userId] || null;
+    return state.userNavigationStates[userId] ?? null;
   },
 
   clearUserNavigationState: userId => {

@@ -1,9 +1,10 @@
 import React from 'react';
-import { StyleProp, ViewStyle } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#components/molecules/Button';
-import { IconName, Icon } from '#/utils/iconUtils';
+import type { IconName } from '#/utils/iconUtils';
+import { Icon } from '#/utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { motion } from '#/theme/foundations/motion';
 
@@ -147,7 +148,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {!!action && (
         <Button
           onPress={action.onPress}
-          variant={action.variant || 'primary'}
+          variant={action.variant ?? 'primary'}
           size="medium"
           icon={action.icon}
           style={styles.actionButton}

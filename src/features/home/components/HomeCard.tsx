@@ -9,7 +9,7 @@ import Animated, {
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import { useFragment } from '@apollo/client/react';
-import { type FragmentType } from '@apollo/client/masking';
+import type { FragmentType } from '@apollo/client/masking';
 
 import { Icon } from '#utils/iconUtils';
 import { HomeActions } from './HomeActions';
@@ -78,12 +78,10 @@ export const HomeCard: React.FC<HomeCardProps> = ({
 
   if (!complete) return null;
 
-  const memberCount = home.membersConnection?.totalCount ?? 0;
-  const pantryCount = home.pantriesConnection?.totalCount ?? 0;
-  const members =
-    home.membersConnection?.edges?.map(e => e.node).filter(Boolean) ?? [];
-  const invites =
-    home.invitesConnection?.edges?.map(e => e.node).filter(Boolean) ?? [];
+  const memberCount = home.membersConnection.totalCount;
+  const pantryCount = home.pantriesConnection.totalCount;
+  const members = home.membersConnection.edges.map(e => e.node);
+  const invites = home.invitesConnection.edges.map(e => e.node);
 
   const handleDelete = () => {
     onDelete(home.id, home.name);

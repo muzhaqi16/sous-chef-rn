@@ -4,7 +4,6 @@ import { MembershipRole } from '#/graphql/generated/schemaTypes';
  * Permission flags for pantry operations
  */
 export interface PantryPermissions {
-  canView: boolean;
   canAddItems: boolean;
   canEditItems: boolean; // covers edit/consume/restock/remove
   canCreatePantry: boolean; // API gate: ACTIVE membership with canEditPantry
@@ -16,14 +15,12 @@ export interface PantryPermissions {
  */
 interface HomeMembership {
   role: MembershipRole;
-  canViewPantry?: boolean;
   canEditPantry?: boolean;
   canAddItems?: boolean;
   canManageHome?: boolean;
 }
 
 const NO_PERMISSIONS: PantryPermissions = {
-  canView: false,
   canAddItems: false,
   canEditItems: false,
   canCreatePantry: false,
@@ -31,7 +28,6 @@ const NO_PERMISSIONS: PantryPermissions = {
 };
 
 const FULL_PERMISSIONS: PantryPermissions = {
-  canView: true,
   canAddItems: true,
   canEditItems: true,
   canCreatePantry: true,
@@ -62,7 +58,6 @@ export function getPantryPermissions(
   if (role === MembershipRole.Guest) {
     const guestCanEditPantry = membership.canEditPantry === true;
     return {
-      canView: membership.canViewPantry === true,
       canAddItems: membership.canAddItems === true,
       canEditItems: guestCanEditPantry,
       canCreatePantry: guestCanEditPantry,
@@ -73,7 +68,6 @@ export function getPantryPermissions(
   // MEMBER: permissive defaults — allowed unless explicitly denied
   const canEditPantry = membership.canEditPantry !== false;
   return {
-    canView: membership.canViewPantry !== false,
     canAddItems: membership.canAddItems !== false,
     canEditItems: canEditPantry,
     canCreatePantry: canEditPantry,

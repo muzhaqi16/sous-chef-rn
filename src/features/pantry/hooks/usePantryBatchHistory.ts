@@ -1,3 +1,4 @@
+import { NetworkStatus } from '@apollo/client';
 import { useApolloClient, useQuery } from '@apollo/client/react';
 import { loadPageWithCursorRecovery } from '#hooks/utils/cursorRecovery';
 import { GetPantryItemBatchHistoryDocument } from '#features/pantry/graphql/pantry.generated';
@@ -64,14 +65,13 @@ export function usePantryBatchHistory(pantryItemId: string) {
   // Only describes the whole connection once every page is loaded — otherwise
   // it counts the loaded window and would climb as the reader scrolls a pantry
   // that did not change. `unreadable` rows are in `totalCount` but not here.
-  const allPagesLoaded = !connection?.pageInfo?.hasNextPage && unreadable === 0;
+  const allPagesLoaded = !connection?.pageInfo.hasNextPage && unreadable === 0;
   const activeCount = allPagesLoaded
     ? batches.filter(b => b.status === BatchStatus.Active).length
     : null;
-  const hasNextPage = connection?.pageInfo?.hasNextPage ?? false;
-  const endCursor = connection?.pageInfo?.endCursor ?? null;
-  // networkStatus 3 = fetchMore in flight.
-  const isFetchingMore = networkStatus === 3;
+  const hasNextPage = connection?.pageInfo.hasNextPage ?? false;
+  const endCursor = connection?.pageInfo.endCursor ?? null;
+  const isFetchingMore = networkStatus === NetworkStatus.fetchMore;
 
   const loadMore = () => {
     if (!hasNextPage || !endCursor || loading || isFetchingMore) return;
@@ -104,6 +104,7 @@ export function usePantryBatchHistory(pantryItemId: string) {
     activeCount,
     state,
     loadMore,
+    hasNextPage,
     isFetchingMore,
     retry,
   };

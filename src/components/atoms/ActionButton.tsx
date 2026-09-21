@@ -15,7 +15,7 @@ import { motion } from '#/theme/foundations/motion';
 
 type ActionButtonProps = {
   onPress: () => void;
-  name?: string;
+  name: string;
   style?: StyleProp<ViewStyle>;
   color?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
@@ -67,7 +67,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
     const rotate = interpolate(rotation.get(), [0, 1], [0, 90]);
     return {
       backgroundColor: withTiming(
-        backgroundColor || animatedTheme.get().colors.surface,
+        backgroundColor ?? animatedTheme.get().colors.surface,
         { duration: motion.timing.FAST, easing: motion.easing.standard },
       ),
       transform: [{ scale: scale.get() }, { rotate: `${rotate}deg` }],
@@ -78,15 +78,14 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
     <View style={[styles.button, style]}>
       <Animated.View style={[styles.animatedInner, animatedStyle]}>
         <IconButton
-          name={name || 'add'}
+          name={name}
           size={size}
           tone="primary"
           color={color}
           onPress={onPress}
           testID={testID}
           accessibilityLabel={
-            accessibilityLabel ||
-            t('a11y.actionButton', { name: name || t('labels.add') })
+            accessibilityLabel ?? t('a11y.actionButton', { name })
           }
         />
       </Animated.View>

@@ -1,7 +1,8 @@
 import { act } from '@testing-library/react-native';
 import { ErrorCode, ExternalSource } from '#/graphql/generated/schemaTypes';
-import { gql, InMemoryCache } from '@apollo/client';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { InMemoryCache } from '@apollo/client';
+import { gql } from '@apollo/client';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   recordMock,
@@ -113,7 +114,7 @@ const makeSpoonacularRecipe = (id = 123) =>
 function buildUpsertMock(
   recipe: { id: string; name: string; imageUrl?: string | null },
   created: boolean = true,
-): MockedResponse {
+): MockFor<typeof UpsertExternalRecipeDocument> {
   return {
     request: {
       query: UpsertExternalRecipeDocument,
@@ -178,29 +179,23 @@ describe('useRecipePreload', () => {
   it('starts with default state', () => {
     const { result } = renderHookWithApollo(() => useRecipePreload());
 
-    expect(result.current.preloading).toBe(false);
     expect(result.current.preloadedRecipe).toBeNull();
-    expect(result.current.preloadError).toBeNull();
     expect(result.current.savingToFavorites).toBe(false);
   });
 
   it('preloadRecipe calls upsert mutation and caches result', async () => {
-    const onPreloadSuccess = jest.fn();
-    const { result } = renderHookWithApollo(
-      () => useRecipePreload({ onPreloadSuccess }),
-      {
-        operationMocks: [
-          buildUpsertMock(
-            {
-              id: 'backend-1',
-              name: 'Test Recipe',
-              imageUrl: 'https://example.com/img.jpg',
-            },
-            true,
-          ),
-        ],
-      },
-    );
+    const { result } = renderHookWithApollo(() => useRecipePreload(), {
+      operationMocks: [
+        buildUpsertMock(
+          {
+            id: 'backend-1',
+            name: 'Test Recipe',
+            imageUrl: 'https://example.com/img.jpg',
+          },
+          true,
+        ),
+      ],
+    });
 
     let preloaded!: PreloadedRecipe | null;
     await act(async () => {
@@ -215,7 +210,6 @@ describe('useRecipePreload', () => {
         externalId: '123',
       }),
     );
-    expect(onPreloadSuccess).toHaveBeenCalledWith(preloaded);
     expect(result.current.preloadedRecipe).toEqual(preloaded);
   });
 
@@ -227,7 +221,7 @@ describe('useRecipePreload', () => {
 
     const dirty = makeSpoonacularRecipe(777);
     dirty.extendedIngredients = [
-      { ...dirty.extendedIngredients[0]!, name: 'pasta $1.50' },
+      { ...dirty.extendedIngredients![0]!, name: 'pasta $1.50' },
     ];
 
     const { result } = renderHookWithApollo(() => useRecipePreload(), {
@@ -316,7 +310,7 @@ describe('useRecipePreload', () => {
     // Ingredient id 999 has no entry in nutrition.ingredients (only id 1).
     const recipe = makeSpoonacularRecipe();
     recipe.extendedIngredients = [
-      { ...recipe.extendedIngredients[0]!, id: 999 },
+      { ...recipe.extendedIngredients![0]!, id: 999 },
     ];
 
     const { result } = renderHookWithApollo(() => useRecipePreload(), {
@@ -452,27 +446,6 @@ describe('useRecipePreload', () => {
 
     expect(preloaded).toBeNull();
   });
-
-  it('clearCache resets all state', async () => {
-    const { result } = renderHookWithApollo(() => useRecipePreload(), {
-      operationMocks: [
-        buildUpsertMock({ id: 'b1', name: 'R', imageUrl: null }, true),
-      ],
-    });
-
-    await act(async () => {
-      await result.current.preloadRecipe(makeSpoonacularRecipe(50));
-    });
-
-    expect(result.current.preloadedRecipe).not.toBeNull();
-
-    act(() => {
-      result.current.clearCache();
-    });
-
-    expect(result.current.preloadedRecipe).toBeNull();
-    expect(result.current.preloadError).toBeNull();
-  });
 });
 
 // =============================================================================
@@ -565,7 +538,7 @@ const favoriteMock = (
     | { kind: 'created' }
     | { kind: 'divergent' }
     | { kind: 'rejected'; __typename: 'ValidationError' },
-): MockedResponse => ({
+): MockFor<typeof AddRecipeToFavoritesDocument> => ({
   request: {
     query: AddRecipeToFavoritesDocument,
     variables: () => true,

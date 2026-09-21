@@ -1,7 +1,11 @@
-import { ApolloLink, Observable } from '@apollo/client';
+import type { ApolloLink } from '@apollo/client';
+import { Observable } from '@apollo/client';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import performance from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { NotificationEventsDocument } from '#features/notifications/graphql/notifications.generated';
 
 // Telemetry uses the shared mock from `src/services/telemetry/__mocks__/`
 // (applied globally in jest.setup.js), whose `isLevelEnabled` defaults to true
@@ -29,13 +33,14 @@ jest.mock('#/utils/errorSerialization', () => ({
 }));
 
 import { createTelemetryLink } from '../telemetryLink';
+import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 
 const mockedEnvironment = Environment as jest.Mocked<typeof Environment>;
 const mockedPerformance = performance as jest.Mocked<typeof performance>;
 
 // The mock operation/forward are intentionally partial fixtures.
 interface MockOperation {
-  operationName: string;
+  operationName: string | undefined;
   query: {
     definitions: Array<{ kind: string; operation: string }>;
   };
@@ -560,7 +565,7 @@ describe('createTelemetryLink', () => {
 
       const link = createTelemetryLink();
       const operation = createMockOperation('NetworkFailQuery');
-      const networkError = new Error('Network request failed');
+      const networkError = new NetworkRequestError('Network request failed');
 
       const forward: MockForward = jest.fn(
         (): Observable<ApolloLink.Result> =>
@@ -596,10 +601,8 @@ describe('createTelemetryLink', () => {
       mockedEnvironment.isDevelopment.mockReturnValue(true);
 
       const link = createTelemetryLink();
-      const operation = createMockOperation(
-        'NotificationEvents',
-        'subscription',
-      );
+      const subscriptionName = operationNameOf(NotificationEventsDocument);
+      const operation = createMockOperation(subscriptionName, 'subscription');
       const socketError = new Error('Socket closed');
 
       const forward: MockForward = jest.fn(
@@ -614,10 +617,10 @@ describe('createTelemetryLink', () => {
         error: () => {
           expect(Telemetry.warn).toHaveBeenCalledWith(
             expect.stringContaining(
-              'Subscription NotificationEvents disconnected',
+              `Subscription ${subscriptionName} disconnected`,
             ),
             expect.objectContaining({
-              operation_name: 'NotificationEvents',
+              operation_name: subscriptionName,
               operation_type: 'subscription',
               network_error: true,
             }),
@@ -632,6 +635,40 @@ describe('createTelemetryLink', () => {
         },
       });
     });
+
+    it('reports a subscription server error that mentions a connection', done => {
+      mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
+      mockedEnvironment.isDevelopment.mockReturnValue(true);
+
+      const link = createTelemetryLink();
+      const subscriptionName = operationNameOf(NotificationEventsDocument);
+      const operation = createMockOperation(subscriptionName, 'subscription');
+      const serverError = new CombinedGraphQLErrors({
+        errors: [{ message: 'Database connection pool exhausted' }],
+      });
+
+      const forward: MockForward = jest.fn(
+        (): Observable<ApolloLink.Result> =>
+          new Observable(observer => {
+            observer.error(serverError);
+          }),
+      );
+
+      const result = runRequest(link, operation, forward);
+      result.subscribe({
+        error: () => {
+          expect(Telemetry.warn).not.toHaveBeenCalledWith(
+            expect.stringContaining('disconnected'),
+            expect.anything(),
+          );
+          expect(Telemetry.error).toHaveBeenCalledWith(
+            expect.stringContaining(subscriptionName),
+            expect.objectContaining({ operation_type: 'subscription' }),
+          );
+          done();
+        },
+      });
+    });
   });
 
   describe('operation types', () => {
@@ -641,7 +678,7 @@ describe('createTelemetryLink', () => {
 
       const link = createTelemetryLink();
       const operation: MockOperation = {
-        operationName: '',
+        operationName: undefined,
         query: {
           definitions: [{ kind: 'OperationDefinition', operation: 'query' }],
         },

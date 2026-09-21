@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
@@ -17,12 +17,13 @@ import {
   PantryActionModal,
   type PantryActionSharedState,
 } from '#features/pantry/components/modals/PantryActionModal';
-import { type PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
+import type { PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
 import { Text } from '#components/atoms/Text';
+import { localizeNumericHint } from '#/utils/formatters/number';
 import {
-  formatNumberForInput,
-  localizeNumericHint,
-} from '#/utils/formatters/number';
+  formatQuantityForInput,
+  resolveQuantityNotation,
+} from '#/utils/formatQuantity';
 
 interface RecordWastePantryItemModalProps {
   visible: boolean;
@@ -38,7 +39,10 @@ interface RecordWastePantryItemModalProps {
   ) => void;
 }
 
-const WASTE_REASON_OPTIONS: Array<{ labelKey: string; value: WasteReason }> = [
+const WASTE_REASON_OPTIONS: Array<{
+  labelKey: TranslationKey;
+  value: WasteReason;
+}> = [
   { labelKey: 'recordWaste.reasonExpired', value: WasteReason.Expired },
   { labelKey: 'recordWaste.reasonSpoiled', value: WasteReason.Spoiled },
   { labelKey: 'labels.mold', value: WasteReason.Mold },
@@ -65,7 +69,11 @@ export const RecordWastePantryItemModal: React.FC<
   const [isRecycled, setIsRecycled] = useState(false);
 
   const handleReset = (item: PantryActionModal_PantryItemFragment) => {
-    setWasteAmountInput(formatNumberForInput(item.quantity));
+    setWasteAmountInput(
+      formatQuantityForInput(item.quantity, {
+        notation: resolveQuantityNotation(null, item.unit.displayAsFraction),
+      }),
+    );
     setWasteReason(WasteReason.Expired);
     setIsComposted(false);
     setIsRecycled(false);
@@ -168,7 +176,6 @@ const WasteActionFields: React.FC<{
           value={wasteAmountInput}
           onChangeText={setWasteAmountInput}
           placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
-          keyboardType="numeric"
           useBottomSheetInput
         />
         <QuantityInputFeedback
@@ -182,7 +189,7 @@ const WasteActionFields: React.FC<{
           conversionConfidence={conversion.confidence}
           commonFractions={shared.commonFractions}
           onFractionSelect={value =>
-            setWasteAmountInput(formatNumberForInput(value))
+            setWasteAmountInput(formatQuantityForInput(value))
           }
           selectedFractionValue={wasteAmount ?? undefined}
         />
@@ -198,7 +205,7 @@ const WasteActionFields: React.FC<{
 
       {/* Sustainability Tracking */}
       <View style={commonStyles.bottomSheetSection}>
-        <Text style={commonStyles.bottomSheetSectionLabel}>
+        <Text role="label" style={commonStyles.bottomSheetSectionLabel}>
           {t('recordWaste.sustainability')}
         </Text>
         <View style={styles.checkboxContainer}>

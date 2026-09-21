@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { detectScanType } from './fields';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 interface BarcodeInfoProps {
   scannedValue?: string;
@@ -21,7 +22,8 @@ export const BarcodeInfo: React.FC<BarcodeInfoProps> = ({
   format,
 }) => {
   const { t } = useTranslation();
-  if (!scannedValue && !barcode) return null;
+  const shownValue = firstNonBlank(scannedValue, barcode);
+  if (shownValue === undefined) return null;
 
   return (
     <View style={styles.barcodeInfo}>
@@ -31,7 +33,7 @@ export const BarcodeInfo: React.FC<BarcodeInfoProps> = ({
           : t('barcode.upc')}
       </Text>
       <Text role="bodyStrong" style={styles.barcodeValue}>
-        {scannedValue || barcode}
+        {shownValue}
       </Text>
       {!!format && (
         <>

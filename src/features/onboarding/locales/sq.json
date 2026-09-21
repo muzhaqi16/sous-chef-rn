@@ -68,31 +68,6 @@
     "createdDuringOnboarding": "Krijuar gjatë konfigurimit",
     "defaultPantryDescription": "Qilar i parazgjedhur"
   },
-  "onboardingSteps": {
-    "CreateHome": {
-      "title": "Krijo shtëpinë",
-      "subtitle": "Konfiguro shtëpinë tënde"
-    },
-    "CreateShoppingList": {
-      "subtitle": "Krijo listën tënde të parë"
-    },
-    "SelectPantryItems": {
-      "title": "Artikujt e qilarit",
-      "subtitle": "Zgjidh çfarë ke"
-    },
-    "ProfilePictureUpload": {
-      "subtitle": "Shto foton tënde"
-    },
-    "InviteMembers": {
-      "subtitle": "Ndaje me familjen"
-    },
-    "BiometricSetup": {
-      "subtitle": "Konfiguro biometrinë"
-    },
-    "OnboardingComplete": {
-      "title": "Përfundimi"
-    }
-  },
   "onboardingValidation": {
     "homeRequired": "Emri i shtëpisë është i detyrueshëm",
     "homeMin": "Emri i shtëpisë duhet të ketë të paktën {{count}} karaktere",
@@ -103,7 +78,8 @@
     "listRequired": "Emri i listës është i detyrueshëm",
     "listMin": "Emri i listës duhet të ketë të paktën {{count}} karaktere",
     "listMax": "Emri i listës duhet të ketë më pak se {{count}} karaktere",
-    "itemsMax": "Mund të zgjedhësh deri në {{count}} artikuj"
+    "itemsMax": "Mund të zgjedhësh deri në {{count}} artikuj",
+    "homeChars": "Emri i shtëpisë mund të përmbajë vetëm shkronja, numra, hapësira, viza, apostrofa dhe thonjëza"
   },
   "onboarding": {
     "progress": "Hapi {{step}} nga {{total}}"

@@ -24,10 +24,10 @@ describe('useDefaultHomeSyncStore', () => {
     expect(isDefaultHomeSyncPending('home-2')).toBe(true);
   });
 
-  it('is emptied by a session end', async () => {
+  it('is emptied by a session end', () => {
     useDefaultHomeSyncStore.getState().markPending('home-1');
 
-    await resetSessionScopedStores();
+    resetSessionScopedStores();
 
     expect(useDefaultHomeSyncStore.getState().pendingDefaultHomeId).toBeNull();
   });

@@ -60,6 +60,7 @@
     "myRecipesSubtitle": "Create and manage your own custom recipes",
     "myRecipesTitle": "My Recipes",
     "myRecipesSearchPlaceholder": "Search my recipes...",
+    "myRecipesSearchingAll": "Searching all your recipes...",
     "myRecipesEmptyTitle": "No recipes yet",
     "myRecipesEmptyDescription": "Create your first recipe",
     "createRecipe": "Create Recipe",
@@ -71,7 +72,8 @@
     "loadingRecipe": "Loading recipe...",
     "recipeNotFoundDb": "Recipe not found in database",
     "recipeNotFound": "Recipe not found",
-    "percentHealthy": "% healthy",
+    "loadFailed": "Couldn't load this recipe",
+    "percentHealthy": "{{percent}}% healthy",
     "cookedCount": "Cooked {{count}}x",
     "markCooked": "Mark cooked",
     "nutritionTitle": "Nutrition",
@@ -106,6 +108,9 @@
     "savedRecipesSearchPlaceholder": "Search saved recipes...",
     "savedRecipesEmptyTitle": "No saved recipes",
     "savedRecipesEmptyDescription": "Save recipes from search to see them here",
+    "savedRecipesSearchingAll": "Searching all your saved recipes...",
+    "searchIncompleteTitle": "Couldn't load all your recipes",
+    "searchIncompleteDescription": "Some matches may be missing.",
     "removeRecipeFailed": "Failed to remove recipe. Please try again.",
     "filterAll": "All",
     "folders": "Folders",
@@ -151,6 +156,14 @@
     "markedCookedDeducted": "Recipe marked as cooked! Ingredients deducted from pantry.",
     "markedCookedSkipped_one": "Recipe marked as cooked. {{count}} ingredient could not be deducted.",
     "markedCookedSkipped_other": "Recipe marked as cooked. {{count}} ingredients could not be deducted.",
+    "markedCookedSkippedUnit_one": "Recipe marked as cooked. {{count}} ingredient could not be deducted: its unit does not convert to the pantry stack.",
+    "markedCookedSkippedUnit_other": "Recipe marked as cooked. {{count}} ingredients could not be deducted: their units do not convert to the pantry stack.",
+    "markedCookedSkippedNames_one": "Recipe marked as cooked. {{names}} could not be deducted.",
+    "markedCookedSkippedNames_other": "Recipe marked as cooked. {{names}} could not be deducted.",
+    "markedCookedSkippedNamesMore_other": "Recipe marked as cooked. {{names}} and {{count}} more could not be deducted.",
+    "markedCookedSkippedUnitNames_one": "Recipe marked as cooked. {{names}} could not be deducted: its unit does not convert to the pantry stack.",
+    "markedCookedSkippedUnitNames_other": "Recipe marked as cooked. {{names}} could not be deducted: their units do not convert to the pantry stack.",
+    "markedCookedSkippedUnitNamesMore_other": "Recipe marked as cooked. {{names}} and {{count}} more could not be deducted: their units do not convert to the pantry stack.",
     "markedCooked": "Recipe marked as cooked!",
     "renameFolderFailedRetry": "Failed to rename folder. Please try again.",
     "folderRenamed": "Renamed \"{{oldName}}\" to \"{{newName}}\"",
@@ -278,6 +291,9 @@
     "favoriteA11y": "Add to favourites",
     "unfavoriteA11y": "Remove from favourites",
     "stepsTooMany": "A recipe can have at most {{count}} steps",
+    "tagsTooMany": "A recipe can have at most {{count}} tags",
+    "tagTooLong": "Each tag can be at most {{count}} characters",
+    "tipsTooLong": "Tips can be at most {{count}} characters",
     "stepsTooLarge": "These steps are too long to save. Shorten them and try again."
   },
   "recipeFilters": {
@@ -344,6 +360,12 @@
     "confirmAndDeduct": "Confirm & Deduct",
     "confirmAndDeductCount": "Confirm & Deduct ({{count}})",
     "includedCount": "{{n}}/{{m}} included",
+    "summaryAvailable_one": "{{count}} available",
+    "summaryAvailable_other": "{{count}} available",
+    "summaryPartial_one": "{{count}} partial",
+    "summaryPartial_other": "{{count}} partial",
+    "summaryMissing_one": "{{count}} missing",
+    "summaryMissing_other": "{{count}} missing",
     "skipReview": "Skip Review"
   },
   "markCookedModal": {
@@ -365,7 +387,20 @@
   },
   "nutrition": {
     "noData": "No nutrition data available",
-    "servingSize": "Serving Size"
+    "servingSize": "Serving Size",
+    "nutrient": {
+      "totalFat": "Total fat",
+      "saturatedFat": "Saturated fat",
+      "transFat": "Trans fat",
+      "addedSugars": "Added sugars",
+      "cholesterol": "Cholesterol",
+      "vitaminD": "Vitamin D"
+    },
+    "category": {
+      "macro": "Macronutrients",
+      "vitamin": "Vitamins",
+      "mineral": "Minerals"
+    }
   },
   "cuisineSelector": {
     "title": "Preferred Cuisines",
@@ -406,7 +441,6 @@
     "goodFiber": "Good Fiber",
     "lowSugar": "Low Sugar",
     "highSodium": "High Sodium",
-    "vitaminC": "Vitamin C",
     "iron": "Iron",
     "calcium": "Calcium",
     "potassium": "Potassium"

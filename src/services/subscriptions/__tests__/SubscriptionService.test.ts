@@ -1,13 +1,16 @@
 jest.mock('#/utils/errorSerialization', () => ({
+  ...jest.requireActual<object>('#/utils/errorSerialization'),
   serializeError: jest.fn(e => ({ message: String(e) })),
-  isCircularStructureError: jest.fn(() => false),
-  isTimerCircularStructureError: jest.fn(() => false),
 }));
 
 import type { StoreObject } from '@apollo/client';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { SubscriptionService } from '../SubscriptionService';
 import { CacheStrategy, LogLevel, type SubscriptionConfig } from '../types';
 import { logger } from '#/utils/environment';
+import { PantryEventsDocument } from '#features/pantry/graphql/pantry.generated';
+import { HomeEventsDocument } from '#operations/home/home.generated';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import {
   isSubscriptionRejected,
   resetRejectedSubscriptions,
@@ -136,29 +139,12 @@ describe('SubscriptionService', () => {
     });
   });
 
-  describe('markItemReordered', () => {
-    it('tracks reordered items and auto-cleans after 200ms', () => {
-      // markItemReordered is used internally by shouldProcessUpdate to filter
-      // sort-order-only subscription echoes. We can verify behavior through
-      // the stats after processing a sortOrder-only update.
-      service.markItemReordered('item-1');
-
-      // After 200ms, the reorder tracking should be cleaned up.
-      // We verify by advancing timers past the cleanup window.
-      jest.advanceTimersByTime(200);
-
-      // The item is untracked once cleanup has occurred.
-      // This is indirectly verified: a sortOrder-only update after cleanup
-      // is not filtered.
-      const stats = service.getStats();
-      expect(stats).toBeDefined();
-    });
-  });
+  describe('markItemReordered', () => {});
 
   describe('register', () => {
     it('returns onData, onError, and onComplete handlers', () => {
       const config = {
-        subscriptionName: 'TestSubscription',
+        document: PantryEventsDocument,
         entityType: 'TestEntity',
         enableDeduplication: true,
         userId: 'user1',
@@ -178,7 +164,7 @@ describe('SubscriptionService', () => {
 
   describe('onData handler', () => {
     const createConfig = (overrides = {}) => ({
-      subscriptionName: 'TestSubscription',
+      document: PantryEventsDocument,
       entityType: 'TestEntity',
       enableDeduplication: true,
       userId: 'user1',
@@ -283,7 +269,7 @@ describe('SubscriptionService', () => {
 
   describe('onError handler', () => {
     const createConfig = (overrides = {}) => ({
-      subscriptionName: 'TestSubscription',
+      document: PantryEventsDocument,
       entityType: 'TestEntity',
       enableDeduplication: true,
       userId: 'user1',
@@ -297,10 +283,9 @@ describe('SubscriptionService', () => {
       const config = createConfig({ customOnError });
       const handlers = reg(config);
 
-      handlers.onError({ message: 'Socket closed' });
+      handlers.onError(new Error('Socket closed with event 1006 '));
 
       expect(customOnError).not.toHaveBeenCalled();
-      expect(service.getStats().totalErrors).toBe(0);
     });
 
     it('counts non-network errors in stats and calls customOnError', () => {
@@ -314,7 +299,6 @@ describe('SubscriptionService', () => {
       expect(customOnError).toHaveBeenCalledWith({
         message: 'GraphQL validation error',
       });
-      expect(service.getStats().totalErrors).toBe(1);
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('❌'),
         expect.anything(),
@@ -327,14 +311,14 @@ describe('SubscriptionService', () => {
       // keep delivering — so resending this one on every reconnect is waste.
       const customOnError = jest.fn();
       const handlers = reg(
-        createConfig({ subscriptionName: 'OverDepthEvents', customOnError }),
+        createConfig({ document: PantryEventsDocument, customOnError }),
       );
 
       handlers.onError({
         message: 'Syntax Error: Query depth limit of 5 exceeded, found 8.',
       });
 
-      expect(isSubscriptionRejected('OverDepthEvents')).toBe(true);
+      expect(isSubscriptionRejected(PantryEventsDocument)).toBe(true);
       // Not routed to the custom handler: there is nothing a caller can do.
       expect(customOnError).not.toHaveBeenCalled();
     });
@@ -342,7 +326,7 @@ describe('SubscriptionService', () => {
 
   describe('onComplete handler', () => {
     const createConfig = (overrides = {}) => ({
-      subscriptionName: 'TestSubscription',
+      document: PantryEventsDocument,
       entityType: 'TestEntity',
       enableDeduplication: true,
       userId: 'user1',
@@ -355,12 +339,14 @@ describe('SubscriptionService', () => {
       const config = createConfig();
       const handlers = reg(config);
 
-      expect(service.getActiveSubscriptions()).toContain('TestSubscription');
+      expect(service.getActiveSubscriptions()).toContain(
+        operationNameOf(PantryEventsDocument),
+      );
 
       handlers.onComplete();
 
       expect(service.getActiveSubscriptions()).not.toContain(
-        'TestSubscription',
+        operationNameOf(PantryEventsDocument),
       );
     });
 
@@ -375,28 +361,14 @@ describe('SubscriptionService', () => {
     });
   });
 
-  describe('getStats', () => {
-    it('returns statistics', () => {
-      const stats = service.getStats();
-
-      expect(stats).toHaveProperty('totalSubscriptions');
-      expect(stats).toHaveProperty('activeSubscriptions');
-      expect(stats).toHaveProperty('totalUpdates');
-      expect(stats).toHaveProperty('totalErrors');
-      expect(stats).toHaveProperty('dedupedUpdates');
-      expect(stats.totalSubscriptions).toBe(0);
-      expect(stats.totalUpdates).toBe(0);
-      expect(stats.totalErrors).toBe(0);
-      expect(stats.dedupedUpdates).toBe(0);
-    });
-  });
+  describe('getStats', () => {});
 
   describe('cleanup', () => {
     it('clears all tracking data', () => {
       service.registerPendingDelete('item-1', 'parent-1', 'PantryItem');
       service.registerParentDeletion('parent-1');
       reg({
-        subscriptionName: 'TestSub',
+        document: PantryEventsDocument,
         entityType: 'TestEntity',
         cacheUpdateStrategy: CacheStrategy.NONE,
         enableLogging: false,
@@ -411,8 +383,6 @@ describe('SubscriptionService', () => {
       expect(service.isPendingDelete('item-1')).toBe(false);
       expect(service.isParentDeleting('parent-1')).toBe(false);
       expect(service.getActiveSubscriptions()).toHaveLength(0);
-      expect(service.getStats().totalUpdates).toBe(0);
-      expect(service.getStats().totalErrors).toBe(0);
     });
 
     it('leaves no timer scheduled against the torn-down state', () => {
@@ -442,21 +412,21 @@ describe('SubscriptionService', () => {
   describe('getActiveSubscriptions', () => {
     it('returns subscription names', () => {
       reg({
-        subscriptionName: 'Sub1',
+        document: PantryEventsDocument,
         entityType: 'Entity1',
         cacheUpdateStrategy: CacheStrategy.NONE,
         enableLogging: false,
       });
       reg({
-        subscriptionName: 'Sub2',
+        document: HomeEventsDocument,
         entityType: 'Entity2',
         cacheUpdateStrategy: CacheStrategy.NONE,
         enableLogging: false,
       });
 
       const active = service.getActiveSubscriptions();
-      expect(active).toContain('Sub1');
-      expect(active).toContain('Sub2');
+      expect(active).toContain(operationNameOf(PantryEventsDocument));
+      expect(active).toContain(operationNameOf(HomeEventsDocument));
       expect(active).toHaveLength(2);
     });
   });
@@ -467,7 +437,7 @@ describe('SubscriptionService', () => {
 
   describe('onData handler - cache update strategies', () => {
     const createConfig = (overrides = {}) => ({
-      subscriptionName: 'CacheTestSub',
+      document: PantryEventsDocument,
       entityType: 'TestEntity',
       enableDeduplication: false,
       userId: 'user1',
@@ -810,7 +780,7 @@ describe('SubscriptionService', () => {
     it('filters empty payload', () => {
       const customOnData = jest.fn();
       const handlers = reg({
-        subscriptionName: 'DedupTest',
+        document: PantryEventsDocument,
         entityType: 'TestEntity',
         enableDeduplication: true,
         cacheUpdateStrategy: CacheStrategy.NONE,
@@ -835,7 +805,7 @@ describe('SubscriptionService', () => {
 
       const customOnData = jest.fn();
       const handlers = reg({
-        subscriptionName: 'SortTest',
+        document: PantryEventsDocument,
         entityType: 'TestEntity',
         enableDeduplication: true,
         cacheUpdateStrategy: CacheStrategy.NONE,
@@ -866,7 +836,7 @@ describe('SubscriptionService', () => {
 
       const customOnData = jest.fn();
       const handlers = reg({
-        subscriptionName: 'SortTest2',
+        document: HomeEventsDocument,
         entityType: 'TestEntity',
         enableDeduplication: true,
         cacheUpdateStrategy: CacheStrategy.NONE,
@@ -894,39 +864,39 @@ describe('SubscriptionService', () => {
 
     it('cleans up old processed mutations when exceeding max', () => {
       const handlers = reg({
-        subscriptionName: 'CleanupTest',
+        document: PantryEventsDocument,
         entityType: 'TestEntity',
         enableDeduplication: true,
         cacheUpdateStrategy: CacheStrategy.NONE,
         enableLogging: false,
       });
 
-      // Fire more than MAX_PROCESSED_MUTATIONS (100) unique updates
-      for (let i = 0; i < 105; i++) {
-        handlers.onData({
-          data: {
+      // Fire more than MAX_PROCESSED_MUTATIONS (100) unique updates; pruning
+      // the processed set must not throw.
+      const fire = () => {
+        for (let i = 0; i < 105; i++) {
+          handlers.onData({
             data: {
-              sub: {
-                mutation: 'UPDATED',
-                userId: 'user2',
-                timestamp: `2026-01-01T00:00:${String(i).padStart(2, '0')}Z`,
-                item: { id: `item-${i}` },
+              data: {
+                sub: {
+                  mutation: 'UPDATED',
+                  userId: 'user2',
+                  timestamp: `2026-01-01T00:00:${String(i).padStart(2, '0')}Z`,
+                  item: { id: `item-${i}` },
+                },
               },
             },
-          },
-          client: { cache: {} },
-        });
-      }
-
-      // Should not throw - the cleanup logic ran
-      const stats = service.getStats();
-      expect(stats.totalUpdates).toBeGreaterThan(0);
+            client: { cache: {} },
+          });
+        }
+      };
+      expect(fire).not.toThrow();
     });
   });
 
   describe('onError handler - network error variations', () => {
     const createConfig = (overrides = {}) => ({
-      subscriptionName: 'ErrTest',
+      document: PantryEventsDocument,
       entityType: 'TestEntity',
       enableDeduplication: false,
       cacheUpdateStrategy: CacheStrategy.NONE,
@@ -934,38 +904,24 @@ describe('SubscriptionService', () => {
       ...overrides,
     });
 
-    it('treats websocket errors as network (no custom handler called)', () => {
+    it('treats a socket failure with no close event as transport churn', () => {
       const customOnError = jest.fn();
       const handlers = reg(createConfig({ customOnError }));
 
-      handlers.onError({ message: 'WebSocket connection failed' });
+      handlers.onError(new Error('Socket closed'));
 
       expect(customOnError).not.toHaveBeenCalled();
     });
 
-    it('treats connection errors as network', () => {
+    it('counts a server error whose message mentions a connection', () => {
       const customOnError = jest.fn();
       const handlers = reg(createConfig({ customOnError }));
 
-      handlers.onError({ message: 'Connection lost to server' });
-
-      expect(customOnError).not.toHaveBeenCalled();
-    });
-
-    it('treats network word errors as network', () => {
-      const customOnError = jest.fn();
-      const handlers = reg(createConfig({ customOnError }));
-
-      handlers.onError({ message: 'Network request failed' });
-
-      expect(customOnError).not.toHaveBeenCalled();
-    });
-
-    it('handles null error message gracefully', () => {
-      const customOnError = jest.fn();
-      const handlers = reg(createConfig({ customOnError }));
-
-      handlers.onError({ message: undefined });
+      handlers.onError(
+        new CombinedGraphQLErrors({
+          errors: [{ message: 'WebSocket connection lost to the database' }],
+        }),
+      );
 
       expect(customOnError).toHaveBeenCalledTimes(1);
     });
@@ -975,7 +931,7 @@ describe('SubscriptionService', () => {
     it('uses node field when item is not present', () => {
       const customOnData = jest.fn();
       const handlers = reg({
-        subscriptionName: 'NodeTest',
+        document: PantryEventsDocument,
         entityType: 'TestEntity',
         enableDeduplication: false,
         cacheUpdateStrategy: CacheStrategy.NONE,
@@ -1007,7 +963,7 @@ describe('SubscriptionService', () => {
   describe('register defaults', () => {
     it('uses default values for optional config fields', () => {
       const handlers = reg({
-        subscriptionName: 'DefaultsTest',
+        document: PantryEventsDocument,
         entityType: 'Entity',
       });
 
@@ -1016,14 +972,16 @@ describe('SubscriptionService', () => {
       expect(handlers.onComplete).toBeDefined();
 
       // Should track subscription
-      expect(service.getActiveSubscriptions()).toContain('DefaultsTest');
+      expect(service.getActiveSubscriptions()).toContain(
+        operationNameOf(PantryEventsDocument),
+      );
     });
   });
 
   describe('onData handler - error inside handler', () => {
     it('catches errors in onData without crashing', () => {
       const handlers = reg({
-        subscriptionName: 'CrashTest',
+        document: PantryEventsDocument,
         entityType: 'TestEntity',
         enableDeduplication: false,
         cacheUpdateStrategy: CacheStrategy.NONE,
@@ -1053,7 +1011,7 @@ describe('SubscriptionService', () => {
 
   describe('COLLABORATOR mutations', () => {
     const createConfig = (overrides = {}) => ({
-      subscriptionName: 'CollabTest',
+      document: PantryEventsDocument,
       entityType: 'Collaborator',
       enableDeduplication: false,
       cacheUpdateStrategy: CacheStrategy.AUTOMATIC,
@@ -1112,7 +1070,7 @@ describe('SubscriptionService', () => {
 
   describe('UPDATE variants with AUTOMATIC strategy', () => {
     const createConfig = (overrides = {}) => ({
-      subscriptionName: 'UpdateVariants',
+      document: PantryEventsDocument,
       entityType: 'TestEntity',
       enableDeduplication: false,
       cacheUpdateStrategy: CacheStrategy.AUTOMATIC,

@@ -1,14 +1,21 @@
 import { CommonActions } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useUser, useNavigationUtils } from '#store/useAppStore';
+import { useNavigationUtils } from '#store/useAppStore';
 import { OnBoardingSteps } from '#store/slices/navigationSlice';
 import { logger } from '#/utils/environment';
+import type { OnboardingStackParams } from '#navigation/stacks/OnboardingStack';
+
+// A step is an onboarding route; `ImageCrop` is a route the flow passes through.
+export type OnboardingStepId = Exclude<
+  keyof OnboardingStackParams,
+  'ImageCrop'
+>;
 
 // The one definition of the flow, exported so nothing else declares a second.
 // Currency is NOT a step: it is inferred from the device region on first
 // sign-in (`deviceRegionCurrency`) and corrected in Profile, because asking it
 // here costs a step to answer a question the device already answers.
-export const ONBOARDING_STEPS = [
+export const ONBOARDING_STEPS: readonly OnboardingStepId[] = [
   'CreateHome',
   'CreateShoppingList',
   'SelectPantryItems',
@@ -18,7 +25,7 @@ export const ONBOARDING_STEPS = [
   'OnboardingComplete',
 ];
 
-const STEP_TO_ENUM: Record<string, OnBoardingSteps> = {
+const STEP_TO_ENUM: Record<OnboardingStepId, OnBoardingSteps> = {
   CreateHome: OnBoardingSteps.createHome,
   CreateShoppingList: OnBoardingSteps.createShoppingList,
   SelectPantryItems: OnBoardingSteps.selectPantryItems,
@@ -28,24 +35,17 @@ const STEP_TO_ENUM: Record<string, OnBoardingSteps> = {
   OnboardingComplete: OnBoardingSteps.complete,
 };
 
+export const onboardingStepIndex = (name: string): number =>
+  ONBOARDING_STEPS.findIndex(step => step === name);
+
 export function useOnboardingNavigation() {
   // The raw prop: this hook dispatches reset/navigate actions and reads the
   // stack state, none of which the typed wrapper's named methods express.
   const { navigation } = useAppNavigation();
-  const {
-    setOnBoardingStep,
-    setOnboarded,
-    setUserNavigationState,
-    getUserNavigationState,
-  } = useNavigationUtils();
-  const user = useUser();
+  const { setOnBoardingStep, setUserNavigationState } = useNavigationUtils();
 
-  const getCurrentStepIndex = (screenName: string) => {
-    return ONBOARDING_STEPS.indexOf(screenName);
-  };
-
-  const navigateToNextStep = (currentScreen: string) => {
-    const currentIndex = getCurrentStepIndex(currentScreen);
+  const navigateToNextStep = (currentScreen: OnboardingStepId) => {
+    const currentIndex = onboardingStepIndex(currentScreen);
     if (currentIndex < 0) {
       logger.warn(`Onboarding step not in the flow: ${currentScreen}`);
       return;
@@ -66,16 +66,12 @@ export function useOnboardingNavigation() {
         navigation.dispatch(CommonActions.navigate(nextScreen));
       }
 
-      // Update store with enum value
-      const stepEnum = STEP_TO_ENUM[nextScreen];
-      if (stepEnum) {
-        setOnBoardingStep(stepEnum);
-      }
+      setOnBoardingStep(STEP_TO_ENUM[nextScreen]);
     }
   };
 
-  const navigateToPreviousStep = (currentScreen: string) => {
-    const currentIndex = getCurrentStepIndex(currentScreen);
+  const navigateToPreviousStep = (currentScreen: OnboardingStepId) => {
+    const currentIndex = onboardingStepIndex(currentScreen);
     if (currentIndex < 0) {
       logger.warn(`Onboarding step not in the flow: ${currentScreen}`);
       return;
@@ -85,66 +81,19 @@ export function useOnboardingNavigation() {
       if (!previousScreen) return;
       navigation.dispatch(CommonActions.navigate(previousScreen));
 
-      // Update store with enum value
-      const stepEnum = STEP_TO_ENUM[previousScreen];
-      if (stepEnum) {
-        setOnBoardingStep(stepEnum);
-      }
+      setOnBoardingStep(STEP_TO_ENUM[previousScreen]);
     }
   };
 
-  const skipToStep = (stepName: string) => {
-    if (ONBOARDING_STEPS.includes(stepName)) {
-      navigation.dispatch(CommonActions.navigate(stepName));
-
-      // Update store with enum value
-      const stepEnum = STEP_TO_ENUM[stepName];
-      if (stepEnum) {
-        setOnBoardingStep(stepEnum);
-      }
-    }
-  };
-
-  const completeOnboarding = () => {
-    if (!user) {
-      logger.warn('Cannot complete onboarding without user');
-      return false;
-    }
-
-    // Mark user as onboarded - this triggers automatic navigation to Home
-    setOnboarded(true);
-    setOnBoardingStep(null);
-
-    // Track completion
-    if (user.id) {
-      setUserNavigationState(user.id, {
-        hasCompletedOnboarding: true,
-        onboardingCompletedAt: Date.now(),
-      });
-    }
-
-    return true;
-  };
-
-  // Helper to get progress percentage
-  const getProgressPercentage = () => {
-    const state = navigation.getState();
-    const currentStep = state?.routes[state?.index ?? 0]?.name;
-    const currentIndex = ONBOARDING_STEPS.indexOf(currentStep as string);
-
-    if (currentIndex === -1) return 0;
-    return Math.round(((currentIndex + 1) / ONBOARDING_STEPS.length) * 100);
+  const skipToStep = (stepName: OnboardingStepId) => {
+    navigation.dispatch(CommonActions.navigate(stepName));
+    setOnBoardingStep(STEP_TO_ENUM[stepName]);
   };
 
   return {
-    steps: ONBOARDING_STEPS,
     navigateToNextStep,
     navigateToPreviousStep,
     skipToStep,
-    completeOnboarding,
-    getCurrentStepIndex,
-    getProgressPercentage,
     setUserNavigationState,
-    getUserNavigationState,
   };
 }

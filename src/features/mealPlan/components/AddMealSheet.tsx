@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import {
@@ -18,11 +18,15 @@ import { Icon } from '#utils/iconUtils';
 import { useFragment } from '@apollo/client/react';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import {
+  MEAL_TYPE_LABEL_KEYS,
+  MEAL_TYPE_ORDER,
+} from '#features/mealPlan/utils/mealPlanEnumLabels';
+import {
   useSavedRecipes,
   type SavedRecipeNode,
 } from '#features/recipes/hooks/useSavedRecipes';
 import { AddMealSheet_SavedRecipeFragmentDoc } from './AddMealSheet.generated';
-import { CachedImage } from '#components/atoms/CachedImage';
+import { CachedImage, warmImage } from '#components/atoms/CachedImage';
 import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
 import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
 import {
@@ -34,6 +38,7 @@ import { useRecipePreload } from '#features/recipes/hooks/useRecipePreload';
 import {
   useRecipeCacheStore,
   textSearchCacheKey,
+  fetchRecipeInformation,
 } from '#features/recipes/store/useRecipeCacheStore';
 import { toastService } from '#/services/toastService';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
@@ -41,6 +46,7 @@ import type { SearchRecipesResult } from '#/services/spoonacular/types';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { EmptyState } from '#components/molecules/EmptyState';
+import { Loading } from '#components/molecules/Loading';
 
 interface AddMealSheetProps {
   visible: boolean;
@@ -50,16 +56,7 @@ interface AddMealSheetProps {
   onAddCustomMeal: (name: string, mealType: MealType) => void;
 }
 
-const MEAL_TYPES: { type: MealType; labelKey: string }[] = [
-  { type: MealType.Breakfast, labelKey: 'labels.breakfast' },
-  { type: MealType.Lunch, labelKey: 'labels.lunch' },
-  { type: MealType.Dinner, labelKey: 'labels.dinner' },
-  { type: MealType.Snack, labelKey: 'usagePurpose.SNACK' },
-  { type: MealType.Brunch, labelKey: 'labels.brunch' },
-  { type: MealType.Dessert, labelKey: 'labels.dessert' },
-];
-
-const DIET_TAG_LABEL_KEYS: Record<DietTag, string> = {
+const DIET_TAG_LABEL_KEYS: Record<DietTag, TranslationKey> = {
   vegan: 'addMealSheet.dietVegan',
   vegetarian: 'addMealSheet.dietVegetarian',
   glutenFree: 'addMealSheet.dietGlutenFree',
@@ -67,6 +64,9 @@ const DIET_TAG_LABEL_KEYS: Record<DietTag, string> = {
 };
 
 const MIN_QUERY_LENGTH = 3;
+
+/** How long an add waits for the recipe's image, on top of saving it. */
+const IMAGE_WARM_MAX_MS = 1500;
 
 /** Module-level helper to reset sheet state when it opens */
 function resetSheetState(
@@ -116,7 +116,7 @@ function searchSpoonacularWithCache(
 
   setSearching(true);
 
-  executeAsyncWithCleanup(
+  void executeAsyncWithCleanup(
     async () => {
       const response = await spoonacularService.searchRecipesWithInfo(
         { query, number: 10 },
@@ -176,11 +176,11 @@ const SavedRecipeRow: React.FC<SavedRecipeRowProps> = ({
         />
       )}
       <View style={styles.recipeInfo}>
-        <Text role="bodyStrong" style={styles.recipeName} numberOfLines={1}>
+        <Text role="bodyStrong" numberOfLines={1}>
           {recipe.name}
         </Text>
         {!!(recipe.servings || recipe.totalTimeMinutes) && (
-          <Text role="caption" style={styles.recipeMeta}>
+          <Text role="caption" tone="secondary" style={styles.recipeMeta}>
             {recipe.servings
               ? t('addMealSheet.servings', { count: recipe.servings })
               : ''}
@@ -215,10 +215,11 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     MealType.Dinner,
   );
   const [searchQuery, setSearchQuery] = useState('');
+  const hasQuery = searchQuery.trim().length > 0;
   const {
-    state: { recipes, hasMore },
+    state: { recipes, hasMore, isLoadingRemainingPages },
     actions: { loadMore },
-  } = useSavedRecipes();
+  } = useSavedRecipes({ loadAllPages: hasQuery });
 
   // Spoonacular search state
   const [spoonacularResults, setSpoonacularResults] = useState<
@@ -297,21 +298,22 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   const handleSelectSpoonacularRecipe = (item: TransformedRecipeItem) => {
     setLoadingItemId(item.spoonacularId);
 
-    executeAsyncWithCleanup(
+    void executeAsyncWithCleanup(
       async () => {
-        const fullRecipe = await spoonacularService.getRecipeInformation({
-          id: item.spoonacularId,
-          // Carry per-ingredient nutrition so the ingest below populates the
-          // external-ingredient mirror (spoonacular.nutrition) — one call with
-          // a flag, no extra requests. Matches useRecipeData's detail fetch.
-          includeNutrition: true,
-        });
+        // With nutrition, so the ingest below fills the ingredient mirror; the
+        // same cached entry the detail screen reads.
+        const fullRecipe = await fetchRecipeInformation(item.spoonacularId);
 
         // Deliberate save (add to meal plan) → withCost re-ingests with the
         // recipe-scoped priceBreakdown so per-ingredient cost lands in the mirror.
         const preloaded = await preloadRecipe(fullRecipe, undefined, {
           withCost: true,
         });
+        // The saved recipe's image is the server's own copy, a URL this device
+        // has never loaded, so the new meal card would open on a shimmer.
+        if (preloaded?.imageUrl) {
+          await warmImage(preloaded.imageUrl, IMAGE_WARM_MAX_MS);
+        }
         if (preloaded) {
           onAddRecipe(preloaded.id, selectedMealType);
           onClose();
@@ -329,12 +331,10 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   // `loadMore` guards re-entry synchronously (usePagination's isFetchingMoreRef),
   // so onEndReached firing repeatedly during a fling is safe.
   const handleEndReached = () => {
-    if (hasMore && !searchQuery.trim()) {
-      loadMore();
+    if (hasMore) {
+      void loadMore();
     }
   };
-
-  const hasQuery = searchQuery.trim().length > 0;
 
   // Filtering moved up from the row so the list's item count matches what is
   // actually rendered — a virtualized list can't absorb rows that return null.
@@ -342,9 +342,10 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     r => r.recipe.name,
   ]);
 
-  const mealTypeOptions: ChipOption<MealType>[] = MEAL_TYPES.map(
-    ({ type, labelKey }) => ({ key: type, label: t(labelKey) }),
-  );
+  const mealTypeOptions: ChipOption<MealType>[] = MEAL_TYPE_ORDER.map(type => ({
+    key: type,
+    label: t(MEAL_TYPE_LABEL_KEYS[type]),
+  }));
 
   return (
     <BottomSheetModal
@@ -443,6 +444,14 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
           }
           ListFooterComponent={
             <>
+              {hasQuery && isLoadingRemainingPages ? (
+                <Loading
+                  size="small"
+                  message={t('recipes.savedRecipesSearchingAll')}
+                  style={styles.loadingRemaining}
+                />
+              ) : null}
+
               {/* Additional search results */}
               {hasQuery && (searchingApi || spoonacularResults.length > 0) ? (
                 <>
@@ -467,11 +476,16 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                         />
                       ) : null}
                       <View style={styles.recipeInfo}>
-                        <Text style={styles.recipeName} numberOfLines={1}>
+                        <Text role="bodyStrong" numberOfLines={1}>
                           {item.title}
                         </Text>
                         {item.subtitle ? (
-                          <Text style={styles.recipeMeta} numberOfLines={1}>
+                          <Text
+                            role="caption"
+                            tone="secondary"
+                            style={styles.recipeMeta}
+                            numberOfLines={1}
+                          >
                             {item.subtitle}
                           </Text>
                         ) : null}
@@ -511,6 +525,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
 
               {hasQuery &&
               filteredRecipes.length === 0 &&
+              !isLoadingRemainingPages &&
               !searchingApi &&
               spoonacularResults.length === 0 ? (
                 <EmptyState
@@ -583,12 +598,8 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     justifyContent: 'center',
   },
-  recipeName: {
-    color: theme.colors.textPrimary,
-  },
   recipeMeta: {
-    color: theme.colors.textSecondary,
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   dietTagsRow: {
     flexDirection: 'row',
@@ -598,7 +609,7 @@ const styles = StyleSheet.create(theme => ({
   dietTag: {
     backgroundColor: theme.colors.surfaceVariant,
     paddingHorizontal: theme.spacing.xsPlus,
-    paddingVertical: 1,
+    paddingVertical: theme.spacing['3xs'],
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
   },
@@ -607,6 +618,10 @@ const styles = StyleSheet.create(theme => ({
   },
   sectionHeaderSpacing: {
     paddingVertical: theme.spacing.sm,
+  },
+  loadingRemaining: {
+    flex: 0,
+    paddingVertical: theme.spacing.md,
   },
   centeredSpinner: {
     alignItems: 'center',

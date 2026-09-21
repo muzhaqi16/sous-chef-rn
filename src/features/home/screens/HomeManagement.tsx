@@ -1,11 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
-import {
-  PrimaryActivityIndicator,
-  PlainScrollRefreshControl,
-} from '#components/atoms/themedComponents';
+import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   LinearTransition,
@@ -13,7 +10,6 @@ import Animated, {
   FadeOutUp,
 } from 'react-native-reanimated';
 
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
 import { useHomeManagement } from '#features/home/hooks/useHomeManagement';
@@ -31,18 +27,19 @@ import {
 } from '#features/home/utils/homePermissions';
 import { commonStyles } from '#/styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { motion } from '#/theme/foundations/motion';
 import { Screen } from '#components/templates/Screen';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { homeTestIDs } from '#features/home/testIDs';
 
 export const HomeManagement: React.FC = () => {
   useScreenTransition('HomeManagement');
   const { t } = useTranslation();
   const { goBack, toHomeDetail } = useAppNavigation();
-  const insets = useSafeAreaInsets();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [mode, setMode] = useState<'create' | 'join'>('create');
@@ -70,7 +67,8 @@ export const HomeManagement: React.FC = () => {
   const {
     homes,
     remoteDefaultHomeId,
-    initialLoading,
+    loading,
+    hasResult,
     creating,
     joiningByCode,
     loadingPreview,
@@ -93,7 +91,7 @@ export const HomeManagement: React.FC = () => {
   const { show, InviteModalComponent } = useInviteUserModal();
   const inviteUserPrompt = (homeId: string) => {
     // Find the home and user's membership
-    const home = homes?.find(h => h.id === homeId);
+    const home = homes.find(h => h.id === homeId);
     if (!home) {
       toastService.error(t('errors.codes.homeNotFound'));
       return;
@@ -124,12 +122,8 @@ export const HomeManagement: React.FC = () => {
     show({
       title: t('labels.inviteMemberToHome'),
       allowedRoles,
-      onSubmit: async (email, role) => {
-        // Just call the function and let any errors bubble up to the modal
-        // The modal will handle displaying the error and keeping itself open
-        await inviteUserToHome(homeId, email, role);
-        // If we reach here, the invitation was successful and the modal will close
-      },
+      // A refusal comes back as copy the modal shows inline, keeping it open.
+      onSubmit: (email, role) => inviteUserToHome(homeId, email, role),
     });
   };
 
@@ -199,7 +193,7 @@ export const HomeManagement: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    executeWithLoadingState(
+    void executeWithLoadingState(
       async () => {
         await refetchHomes();
       },
@@ -216,28 +210,14 @@ export const HomeManagement: React.FC = () => {
   // `Home.isDefault` (via `remoteDefaultHomeId`), not the local selection —
   // the two are allowed to differ, and only one of them is what this screen's
   // "Default" chip claims.
-  const sortedHomes = (() => {
-    if (!homes) return [];
-    return [...homes].sort((a, b) => {
-      if (a.id === remoteDefaultHomeId) return -1;
-      if (b.id === remoteDefaultHomeId) return 1;
-      return 0;
-    });
-  })();
+  const sortedHomes = [...homes].sort((a, b) => {
+    if (a.id === remoteDefaultHomeId) return -1;
+    if (b.id === remoteDefaultHomeId) return 1;
+    return 0;
+  });
 
-  // Only show loading screen on initial load (no cached data)
-  // Once we have data, show it immediately even if refetching
-  if (initialLoading) {
-    return (
-      <View style={commonStyles.loadingContainer}>
-        <SousChefLoader
-          size="small"
-          showBrand={false}
-          message={t('labels.loading')}
-        />
-      </View>
-    );
-  }
+  // Not empty-aware: with no homes the stats and the create form are the page.
+  const dataState = useDataState({ loading, hasResult, isEmpty: false });
 
   const headerActions: HeaderAction[] = [
     {
@@ -245,7 +225,7 @@ export const HomeManagement: React.FC = () => {
       accessibilityLabel: t('labels.addItem'),
       onPress: () => setShowCreateForm(true),
       variant: 'primary',
-      testID: 'home-management-add-button',
+      testID: homeTestIDs.managementAddButton,
     },
   ];
 
@@ -258,7 +238,14 @@ export const HomeManagement: React.FC = () => {
           back: goBack,
           actions: headerActions,
         }}
-        scroll="list"
+        scroll="scroll"
+        refresh={{ refreshing, onRefresh: handleRefresh }}
+        // Create and join are local-first; an open form outranks an unanswered read.
+        state={
+          showCreateForm
+            ? undefined
+            : { value: dataState, onRetry: handleRefresh }
+        }
         gutter="none"
       >
         {/* Stats Section */}
@@ -303,6 +290,7 @@ export const HomeManagement: React.FC = () => {
                 onPress={() => setMode('join')}
               >
                 <Text
+                  role="label"
                   style={[
                     styles.modeButtonText,
                     mode === 'join' && styles.modeButtonTextActive,
@@ -348,7 +336,7 @@ export const HomeManagement: React.FC = () => {
                     </Text>
                     <Text role="caption" style={styles.previewSubtitle}>
                       {t('joinHome.memberCount', {
-                        count: previewHome.membersConnection?.totalCount ?? 0,
+                        count: previewHome.membersConnection.totalCount,
                       })}
                     </Text>
                   </View>
@@ -377,66 +365,53 @@ export const HomeManagement: React.FC = () => {
           </Animated.View>
         )}
 
-        {/* Homes List */}
-        <Animated.View
-          layout={LinearTransition.duration(motion.timing.SLOW)}
-          style={[styles.scrollView, { paddingBottom: insets.bottom }]}
-        >
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            contentContainerStyle={styles.scrollContent}
-            refreshControl={
-              <PlainScrollRefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-              />
-            }
-          >
-            {/* NOTE: Per-item entering + LinearTransition layout animations on
+        {/* Homes List — the page scrolls as one; the stats and the form above
+            are small enough that pinning them only shortens the list. */}
+        <Animated.View layout={LinearTransition.duration(motion.timing.SLOW)}>
+          {/* NOTE: Per-item entering + LinearTransition layout animations on
                 a `.map()`-rendered list are acceptable here because the home
                 list is bounded (typically <10 items). For longer lists, prefer
                 a single FlashList `itemLayoutAnimation` or stagger-gate the
                 entering animations after the first render — see
                 js-animations-reanimated.md for the long-list pattern. */}
-            {sortedHomes.map((home, index) => {
-              const userCanInvite = home.myMembership
-                ? canInviteToHome(
-                    home.myMembership.role,
-                    home.myMembership.canInviteOthers,
-                  )
-                : false;
-              // deleteHome is @requireAccess(Home, OWNER) server-side — the
-              // OWNER role, not the canManageHome flag (which ADMINs hold by
-              // default). Gating on the flag showed ADMINs a Delete that could
-              // only ever return FORBIDDEN.
-              const userCanDelete = home.myMembership?.role === 'OWNER';
+          {sortedHomes.map((home, index) => {
+            const userCanInvite = home.myMembership
+              ? canInviteToHome(
+                  home.myMembership.role,
+                  home.myMembership.canInviteOthers,
+                )
+              : false;
+            // deleteHome is @requireAccess(Home, OWNER) server-side — the
+            // OWNER role, not the canManageHome flag (which ADMINs hold by
+            // default). Gating on the flag showed ADMINs a Delete that could
+            // only ever return FORBIDDEN.
+            const userCanDelete =
+              home.myMembership?.role === MembershipRole.Owner;
 
-              return (
-                <Animated.View
-                  key={home.id}
-                  entering={FadeInDown.delay(index * 50).springify()}
-                  layout={LinearTransition.duration(600)
-                    .springify()
-                    .damping(30)
-                    .stiffness(180)
-                    .mass(1.5)}
-                >
-                  <HomeCard
-                    homeRef={home}
-                    isDefault={home.id === remoteDefaultHomeId}
-                    isHighlighted={home.id === highlightedHomeId}
-                    canInvite={userCanInvite}
-                    canDelete={userCanDelete}
-                    onPress={handleViewHomeDetail}
-                    onSetDefault={handleSetDefault}
-                    onInvite={inviteUserPrompt}
-                    onDelete={deleteHome}
-                  />
-                </Animated.View>
-              );
-            })}
-          </ScrollView>
+            return (
+              <Animated.View
+                key={home.id}
+                entering={FadeInDown.delay(index * 50).springify()}
+                layout={LinearTransition.duration(600)
+                  .springify()
+                  .damping(30)
+                  .stiffness(180)
+                  .mass(1.5)}
+              >
+                <HomeCard
+                  homeRef={home}
+                  isDefault={home.id === remoteDefaultHomeId}
+                  isHighlighted={home.id === highlightedHomeId}
+                  canInvite={userCanInvite}
+                  canDelete={userCanDelete}
+                  onPress={handleViewHomeDetail}
+                  onSetDefault={handleSetDefault}
+                  onInvite={inviteUserPrompt}
+                  onDelete={deleteHome}
+                />
+              </Animated.View>
+            );
+          })}
         </Animated.View>
       </Screen>
       {InviteModalComponent}
@@ -445,9 +420,6 @@ export const HomeManagement: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  scrollView: {
-    flex: 1,
-  },
   formContainer: {
     marginHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
@@ -503,8 +475,5 @@ const styles = StyleSheet.create(theme => ({
   },
   previewSubtitle: {
     color: theme.colors.textSecondary,
-  },
-  scrollContent: {
-    flexGrow: 1,
   },
 }));

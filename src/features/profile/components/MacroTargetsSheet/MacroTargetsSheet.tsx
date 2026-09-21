@@ -18,6 +18,7 @@ import {
   macroTargetUpdates,
   type MacroTargetsFormValues,
 } from './macroTargetsFormConfig';
+import { logValidationErrors } from '#/utils/validation/common';
 
 interface MacroTargetsSheetProps {
   visible: boolean;
@@ -73,10 +74,10 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
     setPendingSeed(
       visible
         ? {
-            calories: initialValues?.calorieTarget?.toString() || '',
-            protein: initialValues?.proteinTarget?.toString() || '',
-            carbs: initialValues?.carbsTarget?.toString() || '',
-            fat: initialValues?.fatTarget?.toString() || '',
+            calories: initialValues?.calorieTarget?.toString() ?? '',
+            protein: initialValues?.proteinTarget?.toString() ?? '',
+            carbs: initialValues?.carbsTarget?.toString() ?? '',
+            fat: initialValues?.fatTarget?.toString() ?? '',
           }
         : null,
     );
@@ -97,7 +98,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
     if (!success) {
       alertService.alert(t('labels.error'), t('macroTargets.updateFailed'));
     }
-  });
+  }, logValidationErrors);
 
   return (
     <BottomSheetModal ref={bottomSheetRef} {...modalProps}>

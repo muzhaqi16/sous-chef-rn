@@ -67,10 +67,9 @@ const inviteNotification = (
 ): NotificationItem => ({
   id: 'n-invite',
   type: NotificationType.ExpiryReminder,
+  isAuthoredContent: false,
   category: NotificationCategory.Pantry,
   priority: Priority.Normal,
-  title: 'You are invited',
-  message: 'Join the Smith household',
   payload,
   sentAt: '2026-07-01T00:00:00Z',
   isRead: false,

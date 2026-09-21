@@ -12,17 +12,14 @@ import {
   UseUpdatePantryItemQuantity_PantryItemFragmentDoc,
   type UseUpdatePantryItemQuantity_PantryItemFragment,
 } from './useUpdatePantryItemQuantity.generated';
-import {
-  handleMutationError,
-  versionConflictCheck,
-} from '#/utils/errorHandlers';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { buildOptimisticUnit } from './utils';
 import type { UnitSelection } from './types';
 import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { logger } from '#/utils/environment';
+import { useTranslation } from '#/i18n';
 
 interface UseUpdatePantryItemQuantityOptions {
   onSuccess?: () => void;
@@ -42,35 +39,32 @@ export function useUpdatePantryItemQuantity({
   onSuccess,
   refetch,
 }: UseUpdatePantryItemQuantityOptions) {
+  const { t } = useTranslation();
   const client = useApolloClient();
 
   const [updateQuantityMutation] = useMutation(
     UpdatePantryItemQuantityDocument,
-    {
-      onError: error => {
-        handleMutationError(error, {
-          operation: 'Update Quantity',
-          checks: [versionConflictCheck({ onRefresh: refetch })],
-        });
-      },
-    },
   );
 
   /**
-   * Update quantity and/or unit of a pantry item
-   * Fires mutation asynchronously - doesn't await to allow immediate navigation
+   * Updates quantity and/or unit. `onSuccess` runs as soon as the write is
+   * fired; the returned promise resolves once it settles, false on a refusal.
    */
-  const updateQuantity = ({
+  const updateQuantity = async ({
     itemId,
     quantityInput,
     quantityValue,
     unitId,
     trackingUnit,
-  }: UpdateQuantityParams): void => {
+  }: UpdateQuantityParams): Promise<boolean> => {
+    const cacheId = client.cache.identify({
+      __typename: 'PantryItem',
+      id: itemId,
+    });
     const currentItem =
       client.cache.readFragment<UseUpdatePantryItemQuantity_PantryItemFragment>(
         {
-          id: client.cache.identify({ __typename: 'PantryItem', id: itemId }),
+          id: cacheId,
           fragment: UseUpdatePantryItemQuantity_PantryItemFragmentDoc,
           fragmentName: 'useUpdatePantryItemQuantity_pantryItem',
         },
@@ -78,16 +72,19 @@ export function useUpdatePantryItemQuantity({
 
     if (!currentItem) {
       logger.warn('Item not found, cannot update quantity:', itemId);
-      return;
+      return false;
     }
 
     // The field accepts fractions ("1 1/4") as well as decimals, so it needs
     // the fraction-aware parser — `parseDecimalInput` declines a fraction
     // outright rather than misreading it.
     const quantityText = quantityInput || quantityValue.toString();
-    const newQuantity = parseFractionalInput(quantityText) ?? NaN;
+    const newQuantity = parseFractionalInput(quantityText);
+    if (newQuantity === null) {
+      logger.warn('Unreadable quantity, nothing written:', itemId);
+      return false;
+    }
 
-    // Fire mutation asynchronously - don't await to allow immediate navigation
     const optimisticPantryItem = enhanceWithVersion(currentItem, {
       quantity: newQuantity,
       unit: buildOptimisticUnit(trackingUnit, currentItem.unit),
@@ -95,10 +92,6 @@ export function useUpdatePantryItemQuantity({
 
     // Permanent write BEFORE firing: survives an offline/API-down queue
     // (where no response ever arrives to materialize the change).
-    const cacheId = client.cache.identify({
-      __typename: 'PantryItem',
-      id: itemId,
-    });
     const writeItem = (data: UseUpdatePantryItemQuantity_PantryItemFragment) =>
       client.cache.writeFragment({
         id: cacheId,
@@ -114,50 +107,42 @@ export function useUpdatePantryItemQuantity({
       });
     }
 
-    updateQuantityMutation({
-      variables: {
-        input: {
-          pantryItemId: itemId,
-          // Separators normalized, fraction preserved: the server parses
-          // this string itself and rejects a comma decimal outright.
-          quantity: normalizeNumericTextForApi(quantityText),
-          unitId: unitId,
-          version: currentItem.version ?? undefined,
-        },
-      },
-      // Queue offline / on API-down — replays via the idempotent SyncPantryItem.
-      context: { localFirst: true },
-    })
-      .then(result => {
-        // 'queued' (null payload, no error) keeps the permanent write — the
-        // change replays later. A rejection restores the pre-edit snapshot;
-        // the user-facing alert comes from the mutation's onError.
-        const outcome = classifyCreateResult(result);
-        if (outcome === 'rejected') {
-          try {
-            writeItem(currentItem);
-          } catch (cacheError) {
-            errorService.reportError(cacheError, {
-              operation: 'Revert rejected Pantry Item quantity update',
-            });
-          }
-        }
-      })
-      .catch(error => {
-        try {
-          writeItem(currentItem);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert failed Pantry Item quantity update',
-          });
-        }
-        errorService.reportError(error, {
-          operation: 'updatePantryItemQuantity',
+    const revert = () => {
+      try {
+        writeItem(currentItem);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Revert rejected Pantry Item quantity update',
         });
-        // Error already handled by mutation's onError
-      });
+      }
+    };
+
+    const settled = settleMutation(
+      () =>
+        updateQuantityMutation({
+          variables: {
+            input: {
+              pantryItemId: itemId,
+              // Separators normalized, fraction preserved: the server parses
+              // this string itself and rejects a comma decimal outright.
+              quantity: normalizeNumericTextForApi(quantityText),
+              unitId: unitId,
+              version: currentItem.version,
+            },
+          },
+          // Queue offline / on API-down — replays via the idempotent SyncPantryItem.
+          context: { localFirst: true },
+        }),
+      {
+        document: UpdatePantryItemQuantityDocument,
+        fallback: t('errors.updateItemFailed'),
+        onFailed: revert,
+        onConflictRefresh: refetch,
+      },
+    );
 
     onSuccess?.();
+    return (await settled).status !== 'failed';
   };
 
   return { updateQuantity };

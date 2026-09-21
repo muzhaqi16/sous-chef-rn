@@ -10,7 +10,7 @@ jest.mock('../../apollo/links/refreshToken');
 jest.mock('#/storage/keychain', () => ({
   clearTempRegistrationPassword: jest.fn(() => Promise.resolve()),
   clearSessionTokens: jest.fn(() => Promise.resolve()),
-  loadSessionTokens: jest.fn(() => Promise.resolve(null)),
+  loadSessionTokens: jest.fn(() => Promise.resolve({ status: 'absent' })),
   saveSessionTokens: jest.fn(() => Promise.resolve()),
   clearCredentials: jest.fn(() => Promise.resolve()),
 }));
@@ -48,12 +48,14 @@ import { storage } from '#/storage/mmkv';
 import {
   clearTempRegistrationPassword,
   clearCredentials,
+  clearSessionTokens,
 } from '#/storage/keychain';
 import { cancelTokenRefresh } from '#/apollo/links/tokenScheduler';
 import {
   registerSessionTeardown,
   clearSessionTeardown,
 } from '../sessionTeardown';
+import { isSessionEnding } from '../sessionEnding';
 import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import { logger } from '#/utils/environment';
 
@@ -267,6 +269,8 @@ describe('resetManager', () => {
       });
 
       it('clears auth from storage when auth is true', async () => {
+        storage.set('accessToken', 'stale-access');
+        storage.set('refreshToken', 'stale-refresh');
         await resetManager.resetStore({
           auth: true,
           ui: false,
@@ -274,8 +278,8 @@ describe('resetManager', () => {
           clearApolloCache: false,
         });
         expect(clearTempRegistrationPassword).toHaveBeenCalled();
-        expect(storage.remove).toHaveBeenCalledWith('accessToken');
-        expect(storage.remove).toHaveBeenCalledWith('refreshToken');
+        expect(storage.contains('accessToken')).toBe(false);
+        expect(storage.contains('refreshToken')).toBe(false);
       });
 
       it('handles missing zustand data gracefully', async () => {
@@ -413,6 +417,35 @@ describe('resetManager', () => {
       );
     });
 
+    describe('endSession runs once', () => {
+      // Several in-flight operations can each report a dead session, and
+      // `errorLink` / `wsLink` / `tokenRefreshFailed` all fire it unawaited. A
+      // second teardown clears the flags the first is still running under.
+      it('joins a teardown already in progress instead of starting another', async () => {
+        const step = jest.fn(
+          () => new Promise<void>(resolve => setTimeout(resolve, 10)),
+        );
+        registerSessionTeardown('counted', step);
+
+        await Promise.all([
+          resetManager.endSession('account_inactive'),
+          resetManager.endSession('session_revoked'),
+        ]);
+
+        expect(step).toHaveBeenCalledTimes(1);
+      });
+
+      it('ends the session again once the first has finished', async () => {
+        const step = jest.fn();
+        registerSessionTeardown('counted', step);
+
+        await resetManager.endSession('account_inactive');
+        await resetManager.endSession('session_revoked');
+
+        expect(step).toHaveBeenCalledTimes(2);
+      });
+    });
+
     describe('endSession', () => {
       const REASONS = [
         'refresh_rejected',
@@ -424,6 +457,8 @@ describe('resetManager', () => {
       it.each(REASONS)(
         'performs the full cleanup for reason %s',
         async reason => {
+          storage.set('accessToken', 'stale-access');
+          storage.set('refreshToken', 'stale-refresh');
           await resetManager.endSession(reason);
 
           const authCall = findAuthResetCall(mockSet);
@@ -447,8 +482,8 @@ describe('resetManager', () => {
           // Scheduled refresh, keychain tier, and persisted tokens
           expect(apolloReset.cancelTokenRefresh).toHaveBeenCalled();
           expect(clearTempRegistrationPassword).toHaveBeenCalled();
-          expect(storage.remove).toHaveBeenCalledWith('accessToken');
-          expect(storage.remove).toHaveBeenCalledWith('refreshToken');
+          expect(storage.contains('accessToken')).toBe(false);
+          expect(storage.contains('refreshToken')).toBe(false);
 
           // Persisted Apollo cache
           expectPersistedCacheCleared();
@@ -534,6 +569,23 @@ describe('resetManager', () => {
 
           expect(findAuthResetCall(mockSet)?.[0]?.accessToken).toBeNull();
           expectPersistedCacheCleared();
+          expect(isSessionEnding()).toBe(false);
+        });
+
+        it('keeps the gate closed for the whole of the store reset', async () => {
+          // Operations admitted here would fire against a session whose tokens
+          // are still in the store but whose transports are already stopped.
+          const gate: boolean[] = [];
+          apolloReset.clearStore.mockImplementation(async () => {
+            gate.push(isSessionEnding());
+          });
+          (clearSessionTokens as jest.Mock).mockImplementation(async () => {
+            gate.push(isSessionEnding());
+          });
+
+          await resetManager.endSession('refresh_rejected');
+
+          expect(gate).toEqual([true, true]);
         });
       });
 

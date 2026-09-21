@@ -61,7 +61,7 @@ const ITEMS_QUERY = gql`
   }
 `;
 
-function seed() {
+function seed({ completedItems = 2 } = {}) {
   const cache = makeCache();
   cache.writeQuery({
     query: ITEMS_QUERY,
@@ -71,7 +71,7 @@ function seed() {
         __typename: 'ShoppingList',
         id: 'sl-1',
         totalItems: 5,
-        completedItems: 2,
+        completedItems,
         itemsConnection: {
           __typename: 'ShoppingListItemConnection',
           totalCount: 1,
@@ -237,5 +237,52 @@ describe('restoreItemToShoppingListAfterMoveToPantry counters', () => {
     restoreItemToShoppingListAfterMoveToPantry(cache, 'sli-1');
 
     expect(counts(cache)).toMatchObject({ totalItems: 5, completedItems: 2 });
+  });
+
+  it('puts back a completedItems the removal could not lower', () => {
+    // A purchased row under `completedItems: 0`: the removal clamps at 0, so a
+    // `+1` restore would overshoot to 1.
+    const cache = seed({ completedItems: 0 });
+
+    const change = removeItemFromShoppingListForMoveToPantry(
+      cache,
+      'sl-1',
+      'sli-1',
+      true,
+      { evictEntity: false },
+    );
+    const exact = restoreItemToShoppingListAfterMoveToPantry(
+      cache,
+      'sli-1',
+      change,
+    );
+
+    expect(exact).toBe(true);
+    expect(counts(cache)).toMatchObject({ totalItems: 5, completedItems: 0 });
+  });
+
+  it('reports a counter another write moved in between', () => {
+    const cache = seed();
+
+    const change = removeItemFromShoppingListForMoveToPantry(
+      cache,
+      'sl-1',
+      'sli-1',
+      true,
+      { evictEntity: false },
+    );
+    cache.modify({
+      id: 'ShoppingList:sl-1',
+      fields: { totalItems: (existing: number) => existing + 4 },
+    });
+    const exact = restoreItemToShoppingListAfterMoveToPantry(
+      cache,
+      'sli-1',
+      change,
+    );
+
+    // The newer value stands and is restored relatively; the caller re-reads.
+    expect(exact).toBe(false);
+    expect(counts(cache)).toMatchObject({ totalItems: 9, completedItems: 2 });
   });
 });

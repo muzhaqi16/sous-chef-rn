@@ -1,4 +1,5 @@
 import { waitFor } from '@testing-library/react-native';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   type MockedResponse,
@@ -8,21 +9,26 @@ import {
   UpdateRecipeDocument,
   UpdateRecipeIngredientsDocument,
 } from '#features/recipes/graphql/recipe.generated';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n';
 
 /**
  * An edit is two writes in parallel. Reporting the pair as saved when either
  * leg was refused leaves the screen closing on a change the server discarded —
- * and the message has to come from the leg that was actually refused, since a
- * success payload resolves to no message at all.
+ * and the message has to come from the leg that was actually refused.
  */
 const RECIPE_ID = 'recipe-1';
 
-const updateMock = (payload: Record<string, unknown>): MockedResponse => ({
+const updateMock = (
+  payload: Record<string, unknown>,
+): MockFor<typeof UpdateRecipeDocument> => ({
   request: { query: UpdateRecipeDocument, variables: () => true },
   result: { data: { updateRecipe: payload } },
 });
 
-const ingredientsMock = (payload: Record<string, unknown>): MockedResponse => ({
+const ingredientsMock = (
+  payload: Record<string, unknown>,
+): MockFor<typeof UpdateRecipeIngredientsDocument> => ({
   request: { query: UpdateRecipeIngredientsDocument, variables: () => true },
   result: { data: { updateRecipeIngredients: payload } },
 });
@@ -34,9 +40,17 @@ const renderWrites = (mocks: MockedResponse[]) =>
 
 const REFUSAL = {
   __typename: 'ValidationError',
-  code: 'VALIDATION_FAILED',
+  code: ErrorCode.ValidationFailed,
   message: 'nope',
   field: 'name',
+};
+
+// The app's copy, never the server's `message`: `name` has no `errors.field`
+// entry, so the body is the caller's fallback.
+const REFUSED_FAILURE = {
+  code: ErrorCode.ValidationFailed,
+  field: REFUSAL.field,
+  body: t('recipes.updateRecipeFailed'),
 };
 
 describe('useRecipeFormWrites.updateRecipe', () => {
@@ -49,10 +63,11 @@ describe('useRecipeFormWrites.updateRecipe', () => {
 
     const outcome = await result.current.updateRecipe(RECIPE_ID, {}, []);
 
-    expect(outcome.status).toBe('rejected');
-    // The REFUSED leg's payload — the recipe's success payload would resolve
-    // to no localized message and the alert would be blank.
-    expect(outcome.payload).toMatchObject({ __typename: 'ValidationError' });
+    // The REFUSED leg's failure — the recipe leg succeeded and has none.
+    expect(outcome).toEqual({
+      status: 'rejected',
+      failure: expect.objectContaining(REFUSED_FAILURE),
+    });
   });
 
   it('reports rejected when only the RECIPE leg is refused', async () => {
@@ -64,8 +79,10 @@ describe('useRecipeFormWrites.updateRecipe', () => {
 
     const outcome = await result.current.updateRecipe(RECIPE_ID, {}, []);
 
-    expect(outcome.status).toBe('rejected');
-    expect(outcome.payload).toMatchObject({ __typename: 'ValidationError' });
+    expect(outcome).toEqual({
+      status: 'rejected',
+      failure: expect.objectContaining(REFUSED_FAILURE),
+    });
   });
 
   it('reports ok only when both legs land', async () => {

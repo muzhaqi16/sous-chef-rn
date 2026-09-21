@@ -35,7 +35,6 @@ jest.mock('../../../src/features/mealPlan/hooks/useMealTemplates', () => ({
       // never answered, which must not render the same way.
       hasResult: true,
       hasMore: false,
-      totalCount: 0,
       searchQuery: '',
       selectedCategory: undefined,
     },

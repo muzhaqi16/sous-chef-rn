@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
+import {
+  Pressable,
+  ThemedActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -9,6 +12,10 @@ import { parseISO, startOfDay } from 'date-fns';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { MealType } from '#/graphql/generated/schemaTypes';
+import {
+  MEAL_TYPE_LABEL_KEYS,
+  MEAL_TYPE_ORDER,
+} from '#features/mealPlan/utils/mealPlanEnumLabels';
 import { useAddRecipeToMealPlan } from '#features/mealPlan/hooks/useAddRecipeToMealPlan';
 import { useMealPlanCalendar } from '#features/mealPlan/hooks/useMealPlanCalendar';
 import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
@@ -25,15 +32,6 @@ interface AddToMealPlanSheetProps {
   recipeId: string;
   initialMealType?: MealType;
 }
-
-const MEAL_TYPE_KEYS: { type: MealType; labelKey: string }[] = [
-  { type: MealType.Breakfast, labelKey: 'labels.breakfast' },
-  { type: MealType.Brunch, labelKey: 'labels.brunch' },
-  { type: MealType.Lunch, labelKey: 'labels.lunch' },
-  { type: MealType.Snack, labelKey: 'usagePurpose.SNACK' },
-  { type: MealType.Dinner, labelKey: 'labels.dinner' },
-  { type: MealType.Dessert, labelKey: 'labels.dessert' },
-];
 
 export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
   visible,
@@ -66,10 +64,17 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
     }
   }
 
-  const { addRecipeToMealPlan, adding, hasPlan, mealPlans, activePlanId } =
-    useAddRecipeToMealPlan({ planId: selectedPlanId });
-
-  const activePlan = mealPlans.find(p => p.id === activePlanId) ?? null;
+  const {
+    addRecipeToMealPlan,
+    adding,
+    hasPlan,
+    mealPlans,
+    activePlan,
+    activePlanId,
+    hasMorePlans,
+    loadingMorePlans,
+    loadMorePlans,
+  } = useAddRecipeToMealPlan({ planId: selectedPlanId });
 
   const minDate = activePlan
     ? startOfDay(parseISO(activePlan.startDate))
@@ -116,7 +121,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
           </Text>
         )}
 
-        {hasPlan && mealPlans.length > 1 ? (
+        {hasPlan && (mealPlans.length > 1 || hasMorePlans) ? (
           <>
             <SectionHeader variant="overline" style={styles.sectionLabel}>
               {t('labels.mealPlan')}
@@ -162,6 +167,21 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
                   </Pressable>
                 );
               })}
+              {hasMorePlans ? (
+                <Pressable
+                  onPress={loadMorePlans}
+                  disabled={loadingMorePlans}
+                  style={styles.morePlansChip}
+                >
+                  {loadingMorePlans ? (
+                    <ThemedActivityIndicator size="small" />
+                  ) : (
+                    <Text role="label" tone="accent">
+                      {t('addToMealPlan.morePlans')}
+                    </Text>
+                  )}
+                </Pressable>
+              ) : null}
             </ScrollView>
           </>
         ) : null}
@@ -197,7 +217,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
         </SectionHeader>
 
         <View style={styles.mealTypeRow}>
-          {MEAL_TYPE_KEYS.map(({ type, labelKey }) => (
+          {MEAL_TYPE_ORDER.map(type => (
             <Pressable
               key={type}
               onPress={() => setSelectedMealType(type)}
@@ -213,7 +233,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
                   selectedMealType === type && styles.mealTypeTextSelected,
                 ]}
               >
-                {t(labelKey)}
+                {t(MEAL_TYPE_LABEL_KEYS[type])}
               </Text>
             </Pressable>
           ))}
@@ -251,6 +271,15 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
+  morePlansChip: {
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
+    borderWidth: theme.borderWidth.hairline,
+    borderColor: theme.colors.border,
+  },
   planChipSelected: {
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
@@ -263,7 +292,7 @@ const styles = StyleSheet.create(theme => ({
   },
   planChipDate: {
     color: theme.colors.textSecondary,
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
   planChipDateSelected: {
     color: theme.colors.onPrimary,

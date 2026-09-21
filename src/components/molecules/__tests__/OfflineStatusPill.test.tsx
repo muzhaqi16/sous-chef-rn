@@ -9,14 +9,15 @@ const offlineStatus = useOfflineStatus as jest.MockedFunction<
   typeof useOfflineStatus
 >;
 
-const status = (over: Partial<ReturnType<typeof useOfflineStatus>> = {}) =>
-  ({
-    offline: true,
-    iconName: 'cloud-offline-outline',
-    message: 'You are offline',
-    pendingCount: 0,
-    ...over,
-  } as ReturnType<typeof useOfflineStatus>);
+const status = (
+  over: Partial<ReturnType<typeof useOfflineStatus>> = {},
+): ReturnType<typeof useOfflineStatus> => ({
+  offline: true,
+  iconName: 'cloud-offline-outline',
+  message: 'You are offline',
+  pendingCount: 0,
+  ...over,
+});
 
 describe('OfflineStatusPill', () => {
   it('renders nothing while online', () => {

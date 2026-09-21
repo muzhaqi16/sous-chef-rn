@@ -1,6 +1,7 @@
 import React, { createContext, useContext, type ReactNode } from 'react';
 import { createActionsContext } from '#hooks/utils/createActionsContext';
-import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { errorService } from '#/services/errorService';
+import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { MoveToPantryModal } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal';
 import { AddToShoppingListSheet } from '#features/shoppingList/components/AddToShoppingListSheet/AddToShoppingListSheet';
 import { QuantityEditSheet } from '#features/shoppingList/components/QuantityEditSheet/QuantityEditSheet';
@@ -90,7 +91,13 @@ export function ShoppingListModalsProvider({
     openAddItemSheet: addItemSheet.open,
     openQuantityEdit: quantityEdit.openForItem,
     openPurchaseAmount: purchaseAmount.openForItem,
-    openMoveToPantry: moveToPantry.openForItem,
+    openMoveToPantry: itemId => {
+      void moveToPantry.openForItem(itemId).catch(error =>
+        errorService.reportError(error, {
+          operation: 'ShoppingListModals.openMoveToPantry',
+        }),
+      );
+    },
   };
 
   const anyVisible =

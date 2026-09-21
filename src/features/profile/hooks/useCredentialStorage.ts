@@ -1,18 +1,10 @@
-import { useState } from 'react';
 import {
-  loadCredentials,
-  saveCredentials,
   hasCredentials,
   clearCredentials,
   getBiometricCapability,
 } from '#/storage/keychain';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
-
-export interface Credentials {
-  email: string;
-  password: string;
-}
 
 // Module-level functions — stable references, no hook state needed
 
@@ -38,19 +30,6 @@ const getBiometricInfo = async () => {
   }
 };
 
-const storeCredentials = async (
-  email: string,
-  password: string,
-): Promise<boolean> => {
-  try {
-    await saveCredentials(email, password);
-    return true;
-  } catch (error) {
-    errorService.reportError(error, { operation: 'storeCredentials' });
-    return false;
-  }
-};
-
 const removeCredentials = async (email?: string): Promise<boolean> => {
   if (!email) return false;
   try {
@@ -62,47 +41,9 @@ const removeCredentials = async (email?: string): Promise<boolean> => {
   }
 };
 
-/**
- * Hook for managing credential storage operations.
- * This hook handles all keychain/biometric credential operations.
- */
-export const useCredentialStorage = () => {
-  const [isLoadingCredentials, setIsLoadingCredentials] = useState(false);
-
-  const loadStoredCredentials = async (
-    email?: string,
-  ): Promise<Credentials | null> => {
-    setIsLoadingCredentials(true);
-
-    let credentials = null;
-    if (email) {
-      try {
-        credentials = await loadCredentials(email);
-      } catch (error) {
-        // Leaving it null reports "no stored credentials", which is the safe
-        // reading of a keychain we could not open.
-        errorService.reportError(error, {
-          operation: 'Error loading credentials',
-        });
-      }
-    }
-
-    setIsLoadingCredentials(false);
-
-    return credentials
-      ? {
-          email: credentials.username,
-          password: credentials.password,
-        }
-      : null;
-  };
-
-  return {
-    isLoadingCredentials,
-    checkStoredCredentials,
-    loadStoredCredentials,
-    getBiometricInfo,
-    storeCredentials,
-    removeCredentials,
-  };
-};
+/** The keychain reads and the removal the profile's biometric row needs. */
+export const useCredentialStorage = () => ({
+  checkStoredCredentials,
+  getBiometricInfo,
+  removeCredentials,
+});

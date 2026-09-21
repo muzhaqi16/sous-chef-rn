@@ -1,7 +1,9 @@
 'use no memo';
 
 import React from 'react';
-import { act, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
+import { kitTestIDs } from '#components/testIDs';
+import { homeTestIDs } from '#features/home/testIDs';
 import { HomeManagement } from '../HomeManagement';
 
 // Mock token scheduler / refreshToken
@@ -23,7 +25,8 @@ jest.mock('#features/home/hooks/useHomeManagement', () => ({
       },
     ],
     remoteDefaultHomeId: 'home-1',
-    initialLoading: false,
+    loading: false,
+    hasResult: true,
     creating: false,
     joiningByCode: false,
     loadingPreview: false,
@@ -47,16 +50,32 @@ jest.mock('#features/home/hooks/useInviteUserModal', () => ({
 }));
 
 jest.mock('#features/home/utils/homePermissions', () => ({
-  findUserMembership: jest.fn(
-    (members: Array<{ user?: { id?: string } }> | undefined, userId: string) =>
-      members?.find(m => m.user?.id === userId),
-  ),
   getInvitableRoles: jest.fn(() => ['MEMBER']),
   canInviteToHome: jest.fn(() => true),
 }));
 
 jest.mock('#components/organisms/Header', () => ({
-  Header: ({ title }: { title?: string }) => title,
+  Header: ({
+    title,
+    rightActions,
+  }: {
+    title?: string;
+    rightActions?: { testID?: string; onPress: () => void }[];
+  }) => {
+    const { Pressable, Text, View } = require('react-native');
+    return (
+      <View>
+        <Text>{title}</Text>
+        {rightActions?.map(action => (
+          <Pressable
+            key={action.testID}
+            testID={action.testID}
+            onPress={action.onPress}
+          />
+        ))}
+      </View>
+    );
+  },
 }));
 
 jest.mock('#components/molecules/BaseInput/BaseInput', () => ({
@@ -72,7 +91,10 @@ jest.mock('#features/home/components/HomeStats', () => ({
 }));
 
 jest.mock('#features/home/components/CreateHomeForm', () => ({
-  CreateHomeForm: () => null,
+  CreateHomeForm: () => {
+    const { View } = require('react-native');
+    return <View testID="create-home-form" />;
+  },
 }));
 
 // Captures every render's props so tests can assert the gating computed by the
@@ -83,7 +105,7 @@ const mockHomeCardProps: Array<{
   canInvite?: boolean;
   isDefault?: boolean;
   isHighlighted?: boolean;
-  onSetDefault?: (homeId: string) => void;
+  onSetDefault?: (homeId: string) => void | Promise<void>;
 }> = [];
 jest.mock('#features/home/components/HomeCard', () => ({
   HomeCard: (props: {
@@ -92,7 +114,7 @@ jest.mock('#features/home/components/HomeCard', () => ({
     canInvite?: boolean;
     isDefault?: boolean;
     isHighlighted?: boolean;
-    onSetDefault?: (homeId: string) => void;
+    onSetDefault?: (homeId: string) => void | Promise<void>;
   }) => {
     mockHomeCardProps.push(props);
     return props.homeRef?.name;
@@ -108,30 +130,18 @@ jest.mock('#/services/errorService');
 jest.mock('#/styles/commonStyles', () => ({
   commonStyles: {
     container: {},
-    loadingContainer: {},
     cardWithShadow: {},
   },
 }));
 
 jest.mock('#/utils/finallyHelpers');
 
-jest.mock('#components/atoms/SousChefLoader', () => ({
-  SousChefLoader: () => 'SousChefLoader',
-}));
-
-/**
- * The `useHomeManagement` surface this screen reads, in one place.
- *
- * `selectedHomeId` and `remoteDefaultHomeId` are deliberately DIFFERENT here:
- * they answer different questions (which home am I viewing vs. which is the
- * account's default) and the screen must never substitute one for the other.
- */
+/** The `useHomeManagement` surface this screen reads, in one place. */
 const baseHookReturn = {
   homes: [],
-  selectedHome: null,
-  selectedHomeId: null as string | null,
   remoteDefaultHomeId: null as string | null,
-  initialLoading: false,
+  loading: false,
+  hasResult: true,
   creating: false,
   joiningByCode: false,
   loadingPreview: false,
@@ -171,7 +181,8 @@ describe('HomeManagement', () => {
     useHomeManagement.mockReturnValue({
       homes: [],
       defaultHomeId: null,
-      initialLoading: true,
+      loading: true,
+      hasResult: false,
       creating: false,
       joiningByCode: false,
       loadingPreview: false,
@@ -186,8 +197,41 @@ describe('HomeManagement', () => {
       refetch: jest.fn(),
     });
 
-    const tree = render(<HomeManagement />);
-    expect(tree.toJSON()).toBeTruthy();
+    const { getByTestId } = render(<HomeManagement />);
+    expect(getByTestId(kitTestIDs.stateLoading)).toBeTruthy();
+  });
+
+  it('shows the error state when the first read settles with no answer', () => {
+    mockHook({ loading: false, hasResult: false });
+
+    const { getByTestId, queryByText } = render(<HomeManagement />);
+
+    expect(getByTestId(kitTestIDs.stateError)).toBeTruthy();
+    expect(queryByText('My Home')).toBeNull();
+  });
+
+  // Creating and joining are local-first, so an unanswered first read must
+  // not hide the form they live in.
+  it('opens the create form offline with nothing cached', () => {
+    mockHook({ loading: false, hasResult: false });
+
+    const { getByTestId } = render(<HomeManagement />);
+    fireEvent.press(getByTestId(homeTestIDs.managementAddButton));
+
+    expect(getByTestId('create-home-form')).toBeTruthy();
+  });
+
+  it('keeps preserved homes on screen when a refetch fails', () => {
+    mockHook({
+      homes: [{ id: 'home-1', name: 'My Home', myMembership: {} }],
+      loading: false,
+      hasResult: true,
+    });
+
+    const { queryByTestId } = render(<HomeManagement />);
+
+    expect(queryByTestId(kitTestIDs.stateError)).toBeNull();
+    expect(mockHomeCardProps.at(-1)?.homeRef?.id).toBe('home-1');
   });
 
   it('renders homes list when homes exist', () => {
@@ -202,7 +246,8 @@ describe('HomeManagement', () => {
     useHomeManagement.mockReturnValue({
       homes: [],
       defaultHomeId: null,
-      initialLoading: false,
+      loading: false,
+      hasResult: true,
       creating: false,
       joiningByCode: false,
       loadingPreview: false,
@@ -241,7 +286,8 @@ describe('HomeManagement', () => {
         },
       ],
       remoteDefaultHomeId: 'home-1',
-      initialLoading: false,
+      loading: false,
+      hasResult: true,
       creating: false,
       joiningByCode: false,
       loadingPreview: false,
@@ -274,7 +320,8 @@ describe('HomeManagement', () => {
         },
       ],
       remoteDefaultHomeId: 'home-1',
-      initialLoading: false,
+      loading: false,
+      hasResult: true,
       creating: true,
       joiningByCode: false,
       loadingPreview: false,
@@ -300,7 +347,8 @@ describe('HomeManagement', () => {
     useHomeManagement.mockReturnValue({
       homes: [],
       defaultHomeId: null,
-      initialLoading: false,
+      loading: false,
+      hasResult: true,
       creating: false,
       joiningByCode: true,
       loadingPreview: false,
@@ -326,7 +374,8 @@ describe('HomeManagement', () => {
     useHomeManagement.mockReturnValue({
       homes: [],
       defaultHomeId: null,
-      initialLoading: false,
+      loading: false,
+      hasResult: true,
       creating: false,
       joiningByCode: false,
       loadingPreview: false,
@@ -352,7 +401,8 @@ describe('HomeManagement', () => {
     useHomeManagement.mockReturnValue({
       homes: [],
       defaultHomeId: null,
-      initialLoading: false,
+      loading: false,
+      hasResult: true,
       creating: false,
       joiningByCode: false,
       loadingPreview: true,
@@ -388,7 +438,8 @@ describe('HomeManagement', () => {
         },
       ],
       defaultHomeId: null,
-      initialLoading: false,
+      loading: false,
+      hasResult: true,
       creating: false,
       joiningByCode: false,
       loadingPreview: false,
@@ -454,21 +505,17 @@ describe('HomeManagement', () => {
   });
 
   describe('the Default chip', () => {
-    // The chip claims the ACCOUNT's default home. `selectedHomeId` is a
-    // separate, locally persisted "which home am I viewing" value that is
-    // allowed to differ — reading it here made the chip point at one home
-    // while the server said another, and the disagreement survived a restart.
+    // The chip claims the ACCOUNT's default home, which the device-local
+    // selection is allowed to differ from.
     const twoHomes = [
       { id: 'home-1', name: 'First', myMembership: { canManageHome: true } },
       { id: 'home-2', name: 'Second', myMembership: { canManageHome: true } },
     ];
 
-    it('follows the server default, not the local selection', () => {
+    it('follows the server default', () => {
       mockHook({
         homes: twoHomes,
         remoteDefaultHomeId: 'home-2',
-        // Deliberately a DIFFERENT home: the user is viewing home-1.
-        selectedHomeId: 'home-1',
       });
 
       render(<HomeManagement />);
@@ -484,7 +531,6 @@ describe('HomeManagement', () => {
       mockHook({
         homes: twoHomes,
         remoteDefaultHomeId: 'home-2',
-        selectedHomeId: 'home-1',
       });
 
       render(<HomeManagement />);
@@ -506,7 +552,6 @@ describe('HomeManagement', () => {
       mockHook({
         homes: twoHomes,
         remoteDefaultHomeId: 'home-1',
-        selectedHomeId: 'home-1',
         setDefaultHome,
       });
 
@@ -529,7 +574,6 @@ describe('HomeManagement', () => {
       mockHook({
         homes: twoHomes,
         remoteDefaultHomeId: 'home-1',
-        selectedHomeId: 'home-1',
         setDefaultHome,
       });
 

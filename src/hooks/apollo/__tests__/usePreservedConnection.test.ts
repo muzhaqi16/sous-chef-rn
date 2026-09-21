@@ -37,7 +37,7 @@ describe('usePreservedConnection', () => {
     const { result, rerender } = renderHook(
       ({ connection }: { connection: Conn | undefined }) =>
         usePreservedConnection(connection),
-      { initialProps: { connection: c as Conn | undefined } },
+      { initialProps: { connection: c } },
     );
 
     expect(result.current.nodes).toHaveLength(3);
@@ -61,7 +61,7 @@ describe('usePreservedConnection', () => {
     const { result, rerender } = renderHook(
       ({ connection }: { connection: Conn | undefined }) =>
         usePreservedConnection(connection),
-      { initialProps: { connection: populated as Conn | undefined } },
+      { initialProps: { connection: populated } },
     );
 
     expect(result.current.nodes).toHaveLength(1);
@@ -77,7 +77,7 @@ describe('usePreservedConnection', () => {
     const { result, rerender } = renderHook(
       ({ connection }: { connection: Conn | undefined }) =>
         usePreservedConnection(connection),
-      { initialProps: { connection: first as Conn | undefined } },
+      { initialProps: { connection: first } },
     );
 
     rerender({ connection: undefined });
@@ -94,7 +94,7 @@ describe('usePreservedNodes', () => {
     const { result, rerender } = renderHook(
       ({ connection }: { connection: Conn | undefined }) =>
         usePreservedNodes(connection),
-      { initialProps: { connection: c as Conn | undefined } },
+      { initialProps: { connection: c } },
     );
 
     expect(result.current).toEqual([{ id: 'x' }, { id: 'y' }]);

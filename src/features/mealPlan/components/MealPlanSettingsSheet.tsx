@@ -5,7 +5,6 @@ import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
-import type { IconTone } from '#utils/iconUtils';
 import { parseISO } from 'date-fns';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { NutritionSummaryCard } from './NutritionSummaryCard';
@@ -44,26 +43,29 @@ function ActionItem({
   label,
   description,
   onPress,
-  tone = 'textPrimary',
+  destructive = false,
   disabled,
 }: {
   icon: string;
   label: string;
   description?: string;
   onPress: () => void;
-  tone?: IconTone;
+  destructive?: boolean;
   disabled?: boolean;
 }) {
-  actionStyles.useVariants({ tone: tone === 'error' ? 'error' : undefined });
   return (
     <AppPressable
       onPress={onPress}
       style={actionStyles.item}
       disabled={disabled}
     >
-      <Icon name={icon} size={22} tone={tone} />
+      <Icon
+        name={icon}
+        size={22}
+        tone={destructive ? 'danger' : 'textPrimary'}
+      />
       <View style={actionStyles.content}>
-        <Text role="bodyStrong" style={actionStyles.label}>
+        <Text role="bodyStrong" tone={destructive ? 'danger' : 'primary'}>
           {label}
         </Text>
         {!!description && (
@@ -101,10 +103,10 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
     fragmentName: 'MealPlanSettingsSheet_mealPlan',
     from: mealPlanRef,
   });
-  const mealPlan: MealPlanSettingsSheet_MealPlanFragment | null =
-    fragmentResult.complete
-      ? fragmentResult.data
-      : (mealPlanRef as MealPlanSettingsSheet_MealPlanFragment | null);
+  // The ref production passes is masked to `{ __typename, id }`. Cast to the
+  // full fragment it has none of the fields the render reads, so an incomplete
+  // read — the plan just deleted — is absent, not a partial plan.
+  const mealPlan = fragmentResult.complete ? fragmentResult.data : null;
 
   const [showNutrition, setShowNutrition] = useState(false);
 
@@ -118,7 +120,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
   const handleToggleDietary = () => {
     if (!mealPlan || !dietaryProfile) return;
     const nextLinked = !isDietaryLinked;
-    updateMealPlan(mealPlan.id, {
+    void updateMealPlan(mealPlan.id, {
       dietaryProfileId: nextLinked ? dietaryProfile.id : null,
     });
     if (nextLinked) setShowNutrition(true);
@@ -271,7 +273,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
       </View>
 
       {/* Nutrition details */}
-      {!!showNutrition && !!mealPlan.nutritionSummary && (
+      {!!showNutrition && (
         <View style={styles.nutritionContainer}>
           <NutritionSummaryCard
             nutritionSummary={mealPlan.nutritionSummary}
@@ -281,24 +283,23 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
       )}
 
       {/* Generated shopping lists */}
-      {!!mealPlan.generatedShoppingLists &&
-        mealPlan.generatedShoppingLists.length > 0 && (
-          <View style={styles.section}>
-            <SectionHeader variant="overline">
-              {t('mealPlanSettings.generatedLists')}
-            </SectionHeader>
-            <View style={styles.actionsCard}>
-              {mealPlan.generatedShoppingLists.map(list => (
-                <View key={list.id} style={styles.listRow}>
-                  <Icon name="list-outline" size={18} tone="textSecondary" />
-                  <Text role="caption" style={styles.listName}>
-                    {list.name}
-                  </Text>
-                </View>
-              ))}
-            </View>
+      {mealPlan.generatedShoppingLists.length > 0 && (
+        <View style={styles.section}>
+          <SectionHeader variant="overline">
+            {t('mealPlanSettings.generatedLists')}
+          </SectionHeader>
+          <View style={styles.actionsCard}>
+            {mealPlan.generatedShoppingLists.map(list => (
+              <View key={list.id} style={styles.listRow}>
+                <Icon name="list-outline" size={18} tone="textSecondary" />
+                <Text role="caption" style={styles.listName}>
+                  {list.name}
+                </Text>
+              </View>
+            ))}
           </View>
-        )}
+        </View>
+      )}
 
       {/* Danger zone */}
       {permissions.canDelete ? (
@@ -316,7 +317,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
               }
               description={t('mealPlanSettings.deletePlanDesc')}
               onPress={handleDelete}
-              tone="error"
+              destructive
               disabled={deleting}
             />
           </View>
@@ -382,21 +383,10 @@ const actionStyles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     gap: theme.spacing.md,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
   content: {
     flex: 1,
   },
-  label: {
-    color: theme.colors.textPrimary,
-    variants: {
-      tone: {
-        error: { color: theme.colors.error },
-      },
-    },
-  },
   description: {
-    marginTop: 2,
+    marginTop: theme.spacing['2xs'],
   },
 }));

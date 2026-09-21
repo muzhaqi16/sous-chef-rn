@@ -2,17 +2,11 @@
  * Every metric this app emits must have a documented contract, and every
  * documented contract must have an emitter.
  *
- * A metric's NAME is the only thing most readers ever see, and a wrong name is
- * not a cosmetic problem — it redirects work. `app_zustand_hydration_ms`
- * measured JS-bundle entry to the store's rehydrate callback, a window
- * dominated by module evaluation; the blob read + `JSON.parse` + rehydrate is
- * ~5 ms of it. On the strength of the name alone, a whole optimisation pass
- * went after that 5 ms (2026-08-25). The table row said "Zustand store
- * hydration time", which agreed with the name and confirmed the mistake.
- *
- * So the table is the contract, and this test makes it impossible to add a
- * metric without writing one, or to rename an emitter and leave the
- * documentation describing the old thing.
+ * A metric's NAME is the only thing most readers ever see, and a name that
+ * promises a narrower window than it measures sends optimisation work after
+ * the wrong part of it. So the table is the contract, and this test makes it
+ * impossible to add a metric without writing one, or to rename an emitter and
+ * leave the documentation describing the old thing.
  *
  * The other direction matters too: a documented metric with no emitter is a
  * permanently-empty series, and an empty panel reads as "no problem" rather

@@ -30,7 +30,6 @@ jest.mock('../../../src/features/notifications/hooks/useExpirationNotificationSy
 jest.mock('../../../src/features/notifications/hooks/useNotificationSync', () => ({
   useNotificationSync: () => ({
     syncMarkAsRead: jest.fn(),
-    syncMarkUnread: jest.fn(),
     syncDelete: jest.fn(),
     syncMarkAllAsRead: jest.fn(),
   }),

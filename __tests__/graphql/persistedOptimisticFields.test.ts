@@ -1,14 +1,12 @@
 /**
  * Every field persisted for optimistic restoration must exist on its type.
  *
- * `optimisticDataPersistence.save(...)` / `.track(...)` take an entity type and
- * a field name as plain strings, and restoration replays them through
- * `cache.modify({ id, fields: { [name]: … } })`. `cache.modify` **silently
- * ignores** a modifier for a field the entity does not have — no throw, no
- * warning, nothing in a log. So a wrong name is invisible at every stage:
- * typecheck passes (they're strings), lint passes, the unit tests pass (they
- * assert the value was persisted, not that it restored), and the feature just
- * quietly doesn't survive a restart.
+ * Restoration replays a persisted field through
+ * `cache.modify({ id, fields: { [name]: … } })`, which **silently ignores** a
+ * modifier for a field the entity does not have — no throw, no warning. The
+ * signatures type both names against codegen (`PersistedField<T>`), so a field
+ * taken from a typed list is checked by the compiler; this test holds the
+ * literal call sites to the schema itself.
  *
  * That is what happened to the shopping list's offline "purchased" tick. It was
  * persisted as `isPurchased`, but `ShoppingListItem` has no such field —
@@ -20,7 +18,7 @@
  */
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, resolve, relative } from 'path';
-import { parse, Kind, type ObjectTypeDefinitionNode } from 'graphql';
+import { parse, Kind } from 'graphql';
 
 const ROOT = resolve(__dirname, '..', '..');
 const SRC = join(ROOT, 'src');
@@ -32,7 +30,7 @@ const schemaFields = (): Map<string, Set<string>> => {
   const byType = new Map<string, Set<string>>();
   for (const def of doc.definitions) {
     if (def.kind !== Kind.OBJECT_TYPE_DEFINITION) continue;
-    const node = def as ObjectTypeDefinitionNode;
+    const node = def;
     byType.set(
       node.name.value,
       new Set((node.fields ?? []).map(f => f.name.value)),
@@ -64,10 +62,8 @@ interface PersistedField {
  * Find `optimisticDataPersistence.save(…)` / `.track(…)` calls and read their
  * first two string arguments.
  *
- * Both take `(entityType, entityId, field, value)`. Matching the literal call
- * shape is deliberate: a variable entity type or field name would not be
- * checkable here, and would be a worse idea than the bug this guards — so the
- * assertion below also requires that every call site be in this literal form.
+ * Both take `(entityType, entityId, field, value)`. The entity type is always a
+ * literal; a field that is not one comes from a list typed as `PersistedField<T>`.
  */
 const CALL =
   /optimisticDataPersistence\s*\.\s*(?:save|track)\s*\(([^;]*?)\)\s*;/gs;
@@ -90,10 +86,11 @@ const collectPersistedFields = (): {
         m => m[1] ?? m[2],
       );
       const relPath = relative(ROOT, file);
-      if (literals.length < 2) {
+      if (literals.length < 1) {
         unparsed.push(`${relPath}: ${args!.replace(/\s+/g, ' ').trim()}`);
         continue;
       }
+      if (literals.length < 2) continue;
       fields.push({
         file: relPath,
         entityType: literals[0]!,
@@ -115,9 +112,7 @@ describe('persisted optimistic fields exist on their type', () => {
     expect(fields.length).toBeGreaterThan(0);
   });
 
-  it('every call site names its entity type and field as string literals', () => {
-    // A computed field name cannot be checked here, and `cache.modify` would go
-    // on ignoring it silently. Keep them literal.
+  it('every call site names its entity type as a string literal', () => {
     expect(unparsed).toEqual([]);
   });
 

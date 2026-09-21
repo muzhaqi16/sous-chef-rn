@@ -1,11 +1,22 @@
 import React from 'react';
-import { View, ViewStyle } from 'react-native';
+import type { ViewStyle } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Text } from '#components/atoms/Text';
+import { Text, type TextTone } from '#components/atoms/Text';
+
+type BadgeVariant = 'default' | 'primary' | 'success' | 'warning' | 'danger';
+
+const BADGE_TEXT_TONE: Record<BadgeVariant, TextTone> = {
+  default: 'primary',
+  primary: 'accent',
+  success: 'success',
+  warning: 'warning',
+  danger: 'danger',
+};
 
 interface BadgeProps {
   children: React.ReactNode;
-  variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
+  variant?: BadgeVariant;
   size?: 'small' | 'medium';
   style?: ViewStyle;
 }
@@ -27,7 +38,7 @@ export const Badge: React.FC<BadgeProps> = ({
       accessibilityLabel={typeof children === 'string' ? children : undefined}
       style={[styles.badge, style]}
     >
-      <Text role="bodyStrong" style={styles.text}>
+      <Text role="bodyStrong" tone={BADGE_TEXT_TONE[variant]}>
         {children}
       </Text>
     </View>
@@ -51,23 +62,12 @@ const styles = StyleSheet.create(theme => ({
       size: {
         small: {
           paddingHorizontal: theme.spacing.xsPlus,
-          paddingVertical: 2,
+          paddingVertical: theme.spacing['2xs'],
         },
         medium: {
           paddingHorizontal: theme.spacing.smPlus,
           paddingVertical: theme.spacing.xsPlus,
         },
-      },
-    },
-  },
-  text: {
-    variants: {
-      variant: {
-        default: { color: theme.colors.textPrimary },
-        primary: { color: theme.colors.primary },
-        success: { color: theme.colors.success },
-        warning: { color: theme.colors.warning },
-        danger: { color: theme.colors.danger },
       },
     },
   },

@@ -1,5 +1,6 @@
 import { useAppStore } from '#store/useAppStore';
 import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /**
  * The shape every denominated field arrives in — `PantryItem.costCurrency`,
@@ -20,9 +21,9 @@ export function resolveCurrency(
   figureCurrency: FigureCurrency | null | undefined,
   preferred: string,
 ): string {
-  // `||`, not `??`: an empty preference is the absence of an answer, and Intl
-  // would reject it rather than fall back.
-  return figureCurrency?.code || preferred || DEFAULT_CURRENCY;
+  // A blank code is the absence of an answer, and Intl would reject it rather
+  // than fall back.
+  return firstNonBlank(figureCurrency?.code, preferred) ?? DEFAULT_CURRENCY;
 }
 
 /** The account's currency, mirrored from `UserSettings.preferredCurrency`. */

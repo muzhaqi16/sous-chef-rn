@@ -5,7 +5,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { recordMock } from '#/test-utils/apolloMockProvider';
-import { BarcodeCreatePantryItemDocument } from '../SearchResults.generated';
+import { BarcodeCreatePantryItemDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -36,9 +36,7 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
 }));
 
 jest.mock('#features/shoppingList/cache/items', () => {
-  const { classifyCreateResult } = jest.requireActual(
-    '#/apollo/utils/classifyCreateResult',
-  );
+  const { settledStatus } = jest.requireActual('#/apollo/utils/settleMutation');
   const revertOptimisticShoppingListItem = jest.fn();
   return {
     revertOptimisticShoppingListItem,
@@ -51,7 +49,7 @@ jest.mock('#features/shoppingList/cache/items', () => {
     // keep/revert decision under test matches production.
     reconcileShoppingCreate: jest.fn(
       (cache: unknown, listId: string, id: string, result: unknown) => {
-        if (classifyCreateResult(result) === 'rejected') {
+        if (settledStatus(result) === 'failed') {
           revertOptimisticShoppingListItem(cache, listId, id);
           return 'reverted';
         }

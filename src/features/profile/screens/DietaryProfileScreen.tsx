@@ -10,13 +10,13 @@ import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
-import {
+import type {
   Diet,
   Intolerance,
   HealthGoal,
   Cuisine,
-  RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
+import { RestrictionSeverity } from '#/graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#/utils/iconUtils';
 import { StringArrayManager } from '#features/profile/components/StringArrayManager/StringArrayManager';
@@ -39,7 +39,7 @@ export const DietaryProfileScreen: React.FC = () => {
   const { t } = useTranslation();
   const money = useMoney();
   const {
-    profile,
+    editableProfile: profile,
     loading,
     updateDietaryProfile,
     addDietaryRestriction,
@@ -58,14 +58,15 @@ export const DietaryProfileScreen: React.FC = () => {
         {
           text: t('labels.remove'),
           style: 'destructive',
-          onPress: async () => {
-            const success = await removeDietaryRestriction(id);
-            if (!success) {
-              alertService.alert(
-                t('labels.error'),
-                t('dietary.removeRestrictionFailed'),
-              );
-            }
+          onPress: () => {
+            void removeDietaryRestriction(id).then(success => {
+              if (!success) {
+                alertService.alert(
+                  t('labels.error'),
+                  t('dietary.removeRestrictionFailed'),
+                );
+              }
+            });
           },
         },
         { text: t('labels.cancel'), style: 'cancel' },
@@ -114,7 +115,16 @@ export const DietaryProfileScreen: React.FC = () => {
       RestrictionSeverity.Preference,
     );
     if (added) {
-      await Promise.all(replaceIds.map(id => removeDietaryRestriction(id)));
+      const removed = await Promise.all(
+        replaceIds.map(id => removeDietaryRestriction(id)),
+      );
+      // A silent failure here leaves the person holding two lifestyle diets.
+      if (!removed.every(Boolean)) {
+        alertService.alert(
+          t('labels.error'),
+          t('dietary.removeRestrictionFailed'),
+        );
+      }
     }
     return added;
   };
@@ -170,7 +180,7 @@ export const DietaryProfileScreen: React.FC = () => {
   const handleAddFavoriteIngredient = async (ingredient: string) => {
     return await updateDietaryProfile({
       favoriteIngredients: [
-        ...(profile?.favoriteIngredients || []),
+        ...(profile?.favoriteIngredients ?? []),
         ingredient,
       ],
     });
@@ -178,7 +188,7 @@ export const DietaryProfileScreen: React.FC = () => {
 
   const handleRemoveFavoriteIngredient = async (ingredient: string) => {
     await updateDietaryProfile({
-      favoriteIngredients: (profile?.favoriteIngredients || []).filter(
+      favoriteIngredients: (profile?.favoriteIngredients ?? []).filter(
         i => i !== ingredient,
       ),
     });
@@ -187,7 +197,7 @@ export const DietaryProfileScreen: React.FC = () => {
   const handleAddDislikedIngredient = async (ingredient: string) => {
     return await updateDietaryProfile({
       dislikedIngredients: [
-        ...(profile?.dislikedIngredients || []),
+        ...(profile?.dislikedIngredients ?? []),
         ingredient,
       ],
     });
@@ -195,7 +205,7 @@ export const DietaryProfileScreen: React.FC = () => {
 
   const handleRemoveDislikedIngredient = async (ingredient: string) => {
     await updateDietaryProfile({
-      dislikedIngredients: (profile?.dislikedIngredients || []).filter(
+      dislikedIngredients: (profile?.dislikedIngredients ?? []).filter(
         i => i !== ingredient,
       ),
     });
@@ -228,7 +238,7 @@ export const DietaryProfileScreen: React.FC = () => {
     return (
       <ProfileScreenWrapper title={t('dietary.title')} scrollEnabled={false}>
         <View style={commonStyles.loadingContainer}>
-          <Text style={commonStyles.loadingText}>
+          <Text role="body" style={commonStyles.loadingText}>
             {t('dietary.loadingProfile')}
           </Text>
         </View>
@@ -240,12 +250,19 @@ export const DietaryProfileScreen: React.FC = () => {
     return (
       <ProfileScreenWrapper title={t('dietary.title')} scrollEnabled={false}>
         <EmptyState
-          title={t('dietary.noProfileTitle')}
-          description={t('dietary.noProfileSubtitle')}
+          title={t('dietary.loadFailedTitle')}
+          description={t('dietary.loadFailedSubtitle')}
         />
       </ProfileScreenWrapper>
     );
   }
+
+  const hasMacroTarget = [
+    profile.calorieTarget,
+    profile.proteinTarget,
+    profile.carbsTarget,
+    profile.fatTarget,
+  ].some(target => !!target);
 
   return (
     <ProfileScreenWrapper title={t('dietary.title')}>
@@ -255,7 +272,9 @@ export const DietaryProfileScreen: React.FC = () => {
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
-        <Text style={commonStyles.subtitle}>{t('dietary.restrictions')}</Text>
+        <Text role="bodyStrong" tone="secondary">
+          {t('dietary.restrictions')}
+        </Text>
         <View style={styles.sectionCard}>
           <DietaryRestrictionSelector
             existingRestrictions={profile.restrictions}
@@ -271,7 +290,7 @@ export const DietaryProfileScreen: React.FC = () => {
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
-        <Text style={commonStyles.subtitle}>
+        <Text role="bodyStrong" tone="secondary">
           {t('dietary.foodPreferences')}
         </Text>
         <View style={styles.sectionCard}>
@@ -310,7 +329,9 @@ export const DietaryProfileScreen: React.FC = () => {
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
-        <Text style={commonStyles.subtitle}>{t('dietary.nutritionGoals')}</Text>
+        <Text role="bodyStrong" tone="secondary">
+          {t('dietary.nutritionGoals')}
+        </Text>
         <View style={styles.sectionCard}>
           <Pressable
             style={({ pressed }) => pressed && styles.pressed}
@@ -349,7 +370,7 @@ export const DietaryProfileScreen: React.FC = () => {
       >
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={commonStyles.subtitle}>
+            <Text role="bodyStrong" tone="secondary">
               {t('labels.cookingPreferences')}
             </Text>
             <AppPressable
@@ -393,64 +414,62 @@ export const DietaryProfileScreen: React.FC = () => {
         </View>
       </Animated.View>
       {/* Macro Targets Section (Advanced) */}
-      {!!(
-        profile.calorieTarget ||
-        profile.proteinTarget ||
-        profile.carbsTarget ||
-        profile.fatTarget
-      ) && (
-        <Animated.View
-          entering={FadeIn.duration(motion.timing.SLOW).delay(400)}
-          layout={LinearTransition}
-          style={styles.sectionContainer}
-        >
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={commonStyles.subtitle}>
-                {t('dietary.macroTargets')}
-              </Text>
-              <AppPressable
-                onPress={handleOpenMacros}
-                accessibilityLabel={t('a11y.editNamed', {
-                  name: t('macroTargets.title'),
-                })}
-                style={styles.editButton}
-              >
-                <Icon name="create-outline" size={20} tone="primary" />
-              </AppPressable>
-            </View>
-            {!!profile.calorieTarget && (
-              <InfoRow
-                label={t('dietary.dailyCalories')}
-                value={profile.calorieTarget}
-                unit="kcal"
-              />
-            )}
-            {!!profile.proteinTarget && (
-              <InfoRow
-                label={t('dietary.protein')}
-                value={profile.proteinTarget}
-                unit="g"
-              />
-            )}
-            {!!profile.carbsTarget && (
-              <InfoRow
-                label={t('labels.carbs')}
-                value={profile.carbsTarget}
-                unit="g"
-              />
-            )}
-            {!!profile.fatTarget && (
-              <InfoRow
-                label={t('dietary.fat')}
-                value={profile.fatTarget}
-                unit="g"
-                showBorder={false}
-              />
-            )}
+      <Animated.View
+        entering={FadeIn.duration(motion.timing.SLOW).delay(400)}
+        layout={LinearTransition}
+        style={styles.sectionContainer}
+      >
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeaderRow}>
+            <Text role="bodyStrong" tone="secondary">
+              {t('dietary.macroTargets')}
+            </Text>
+            <AppPressable
+              onPress={handleOpenMacros}
+              accessibilityLabel={t('a11y.editNamed', {
+                name: t('macroTargets.title'),
+              })}
+              style={styles.editButton}
+            >
+              <Icon name="create-outline" size={20} tone="primary" />
+            </AppPressable>
           </View>
-        </Animated.View>
-      )}
+          {!hasMacroTarget && (
+            <Text role="caption" tone="secondary">
+              {t('dietary.macroTargetsEmpty')}
+            </Text>
+          )}
+          {!!profile.calorieTarget && (
+            <InfoRow
+              label={t('dietary.dailyCalories')}
+              value={profile.calorieTarget}
+              unit="kcal"
+            />
+          )}
+          {!!profile.proteinTarget && (
+            <InfoRow
+              label={t('dietary.protein')}
+              value={profile.proteinTarget}
+              unit="g"
+            />
+          )}
+          {!!profile.carbsTarget && (
+            <InfoRow
+              label={t('labels.carbs')}
+              value={profile.carbsTarget}
+              unit="g"
+            />
+          )}
+          {!!profile.fatTarget && (
+            <InfoRow
+              label={t('dietary.fat')}
+              value={profile.fatTarget}
+              unit="g"
+              showBorder={false}
+            />
+          )}
+        </View>
+      </Animated.View>
       {/* Nutrition Goals Sheets */}
       <NumberInputSheet
         visible={editingMeals}
@@ -478,10 +497,10 @@ export const DietaryProfileScreen: React.FC = () => {
         onClose={handleCloseCookingPrefs}
         onSave={handleSaveCookingPrefs}
         initialValues={{
-          cookingSkillLevel: profile?.cookingSkillLevel,
-          maxPrepTimeMinutes: profile?.maxPrepTimeMinutes,
-          maxCookTimeMinutes: profile?.maxCookTimeMinutes,
-          budgetPerMeal: profile?.budgetPerMeal,
+          cookingSkillLevel: profile.cookingSkillLevel,
+          maxPrepTimeMinutes: profile.maxPrepTimeMinutes,
+          maxCookTimeMinutes: profile.maxCookTimeMinutes,
+          budgetPerMeal: profile.budgetPerMeal,
         }}
       />
       {/* Macro Targets Sheet */}
@@ -490,10 +509,10 @@ export const DietaryProfileScreen: React.FC = () => {
         onClose={handleCloseMacros}
         onSave={handleSaveMacros}
         initialValues={{
-          calorieTarget: profile?.calorieTarget,
-          proteinTarget: profile?.proteinTarget,
-          carbsTarget: profile?.carbsTarget,
-          fatTarget: profile?.fatTarget,
+          calorieTarget: profile.calorieTarget,
+          proteinTarget: profile.proteinTarget,
+          carbsTarget: profile.carbsTarget,
+          fatTarget: profile.fatTarget,
         }}
       />
     </ProfileScreenWrapper>

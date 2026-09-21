@@ -50,7 +50,6 @@ export const storage = {
   getNumber: jest.fn((key: string) => store.get(key) as number | undefined),
   getBoolean: jest.fn((key: string) => store.get(key) as boolean | undefined),
   remove: jest.fn((key: string) => store.delete(key)),
-  delete: jest.fn((key: string) => store.delete(key)),
   contains: jest.fn((key: string) => store.has(key)),
   clearAll: jest.fn(() => store.clear()),
   getAllKeys: jest.fn(() => [...store.keys()]),

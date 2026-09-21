@@ -2,9 +2,10 @@
 
 import React from 'react';
 import type { TextInputProps } from 'react-native';
-import { screen } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { ShareList } from '../ShareList';
+import { kitTestIDs } from '#components/testIDs';
 import { ShoppingListCollaboratorFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 
 const seedCollaboratorCache = () =>
@@ -67,7 +68,11 @@ jest.mock('#hooks/auth/useEmailVerification', () => ({
 jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#store/useAppStore', () => {
-  const mockState = { user: { id: 'u1', email: 'owner@test.com' } };
+  const mockState = {
+    user: { id: 'u1', email: 'owner@test.com' },
+    isOnline: true,
+    apiReachable: true,
+  };
   const fn = <T,>(selector: (state: typeof mockState) => T): T =>
     selector(mockState);
   fn.getState = () => ({});
@@ -118,20 +123,27 @@ let mockOwnerships: Array<{
   user: null;
 }> = [];
 
+// `null` stands for a details read that produced nothing to show.
+let mockDetailsRead: { loading: boolean; hasResult: boolean } | null = null;
+const mockRefetch = jest.fn();
+
 jest.mock('#features/shoppingList/hooks/useShoppingListDetails', () => ({
   useShoppingListDetails: () => ({
-    shoppingList: {
-      id: 'sl1',
-      name: 'Test List',
-      homeId: null,
-      home: null,
-    },
-    loading: false,
+    shoppingList: mockDetailsRead
+      ? null
+      : {
+          id: 'sl1',
+          name: 'Test List',
+          homeId: null,
+          home: null,
+        },
+    loading: mockDetailsRead?.loading ?? false,
+    hasResult: mockDetailsRead?.hasResult ?? true,
     isRefetching: false,
-    collaborators: mockCollaborators,
-    ownerships: mockOwnerships,
+    collaborators: mockDetailsRead ? [] : mockCollaborators,
+    ownerships: mockDetailsRead ? [] : mockOwnerships,
     name: 'Test List',
-    refetch: jest.fn(),
+    refetch: mockRefetch,
   }),
 }));
 
@@ -161,11 +173,19 @@ jest.mock('#components/molecules/Loading', () => ({
   Loading: () => null,
 }));
 jest.mock('#components/molecules/Button', () => ({
-  Button: ({ title, onPress }: { title?: string; onPress: () => void }) => {
+  Button: ({
+    title,
+    children,
+    onPress,
+  }: {
+    title?: string;
+    children?: React.ReactNode;
+    onPress: () => void;
+  }) => {
     const { Pressable, Text } = require('react-native');
     return (
       <Pressable onPress={onPress}>
-        <Text>{title}</Text>
+        <Text>{title ?? children}</Text>
       </Pressable>
     );
   },
@@ -199,6 +219,7 @@ describe('ShareList', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockDetailsRead = null;
     // Default: the current user (u1) owns the list via an ownership record.
     mockOwnerships = [
       {
@@ -213,6 +234,24 @@ describe('ShareList', () => {
   it('renders the title', () => {
     render(<ShareList route={route} />);
     expect(screen.getByText('Share List')).toBeTruthy();
+  });
+
+  it('shows the loading state, not an empty share screen, on a cold read', () => {
+    mockDetailsRead = { loading: true, hasResult: false };
+    render(<ShareList route={route} />);
+    expect(screen.getByText('Share List')).toBeTruthy();
+    expect(screen.queryByText('Invite Members')).toBeNull();
+    expect(screen.queryByTestId(kitTestIDs.stateError)).toBeNull();
+  });
+
+  it('shows a retryable error when the details read fails with nothing cached', () => {
+    mockDetailsRead = { loading: false, hasResult: false };
+    render(<ShareList route={route} />);
+    expect(screen.getByTestId(kitTestIDs.stateError)).toBeTruthy();
+    expect(screen.queryByText('Invite Members')).toBeNull();
+
+    fireEvent.press(screen.getByText('Try again'));
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
   });
 
   it('shows invite section', () => {

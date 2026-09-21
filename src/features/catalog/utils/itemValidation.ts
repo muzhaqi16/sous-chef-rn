@@ -1,6 +1,12 @@
 import { string, number, array, object, boolean, type InferType } from 'yup';
 import { normalizeSmartPunctuation } from '#/utils/validation/common';
-import { t } from '#/i18n';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { t, type KeyUnder } from '#/i18n';
+import {
+  BaseDimension,
+  ItemType,
+  StorageState,
+} from '#/graphql/generated/schemaTypes';
 
 /**
  * These schemas are built once at module scope, so a message resolved eagerly
@@ -8,8 +14,21 @@ import { t } from '#/i18n';
  * accepts a function and calls it when the rule actually fails, so the lookup
  * lands after any language change.
  */
-const msg = (key: string, options?: Record<string, unknown>) => (): string =>
-  t(`itemValidation.${key}`, options);
+const msg =
+  (key: KeyUnder<'itemValidation'>, options?: Record<string, unknown>) =>
+  (): string =>
+    t(`itemValidation.${key}`, options);
+
+/**
+ * yup's own number cast rejects "0,5", which a comma keypad types. Typed text is
+ * read with the decimal parser instead; blank is absent, unreadable is `NaN`.
+ */
+const decimalText = (value: unknown, originalValue: unknown): unknown => {
+  if (typeof originalValue !== 'string') return value;
+  return originalValue.trim() === ''
+    ? undefined
+    : parseDecimalInput(originalValue);
+};
 
 // --- item-specific validation rules ------------------------------------------
 
@@ -31,7 +50,7 @@ export const descriptionRule = string()
 // Without this, `.min(8)` and `.matches()` run on '' and fail, which blocks
 // form submission for any flow that doesn't start with a scanned barcode.
 export const upcRule = string()
-  .transform(value =>
+  .transform((value: unknown) =>
     typeof value === 'string' && value.trim() === '' ? undefined : value,
   )
   .matches(/^[0-9]+$/, msg('upcDigits'))
@@ -48,9 +67,10 @@ export const urlRule = string().url(msg('urlInvalid')).optional();
 
 // Shelf life validation (in days)
 export const shelfLifeDaysRule = number()
-  .transform((value, originalValue) =>
+  .transform((value: unknown, originalValue: unknown) =>
     String(originalValue).trim() === '' ? undefined : value,
   )
+  .typeError(msg('wholeNumber'))
   .integer(msg('wholeNumber'))
   .min(1, msg('shelfLifeMin'))
   .max(3650, msg('shelfLifeMax', { count: 10 }))
@@ -58,9 +78,10 @@ export const shelfLifeDaysRule = number()
 
 // Shelf life once opened validation (in days)
 export const shelfLifeOpenedDaysRule = number()
-  .transform((value, originalValue) =>
+  .transform((value: unknown, originalValue: unknown) =>
     String(originalValue).trim() === '' ? undefined : value,
   )
+  .typeError(msg('wholeNumber'))
   .integer(msg('wholeNumber'))
   .min(1, msg('shelfLifeOpenedMin'))
   .max(3650, msg('shelfLifeOpenedMax', { count: 10 }))
@@ -73,9 +94,7 @@ export const displayPricePerUnitRule = string()
 
 // Unit quantity validation
 export const unitQtyRule = number()
-  .transform((value, originalValue) =>
-    String(originalValue).trim() === '' ? undefined : value,
-  )
+  .transform(decimalText)
   .min(0.001, msg('unitQtyMin'))
   .optional();
 
@@ -94,12 +113,18 @@ export const unitsRule = array()
       unitId: string().optional(),
       unitName: string().optional(),
       isDefault: boolean().default(false),
-      packageSize: number().min(0.001).optional(),
+      packageSize: number()
+        .typeError(msg('greaterThanZero'))
+        .min(0.001, msg('greaterThanZero'))
+        .optional(),
       contentUnitId: string().optional(),
       contentUnitName: string().optional(),
       retailUnit: boolean().optional(),
       packageDescription: string().optional(),
-      conversionRatio: number().min(0.001).optional(),
+      conversionRatio: number()
+        .typeError(msg('greaterThanZero'))
+        .min(0.001, msg('greaterThanZero'))
+        .optional(),
     }),
   )
   .optional();
@@ -113,7 +138,7 @@ export const vendorRule = string()
 // Transform handles the case where the form value is still a comma-separated
 // string (onChange validation fires before the blur transform runs).
 export const tagsRule = array()
-  .transform((value, originalValue) => {
+  .transform((value: unknown, originalValue: unknown) => {
     if (typeof originalValue === 'string') {
       return originalValue
         .split(',')
@@ -192,24 +217,38 @@ export const createItemSchema = object({
   netWeights: array()
     .of(
       object({
+        // A row the user left blank arrives as `NaN` — the number type rejects
+        // it before `required` is reached, so the message has to be set here
+        // too or yup's untranslated default reaches the screen.
         value: number()
+          .transform(decimalText)
+          .typeError(msg('netWeightValueRequired'))
           .min(0.001, msg('netWeightMin'))
           .required(msg('netWeightValueRequired')),
         unitName: string().required(msg('netWeightUnitRequired')),
+        // The unit the user picked, carried so the server links it directly
+        // instead of re-resolving the name.
+        unitId: string().optional(),
       }),
     )
     .optional(),
 
   // Product Details
-  type: string().nullable().optional(),
-  storageState: string().nullable().optional(),
+  type: string().oneOf(Object.values(ItemType)).nullable().optional(),
+  storageState: string()
+    .oneOf(Object.values(StorageState))
+    .nullable()
+    .optional(),
   shelfLifeDays: shelfLifeDaysRule,
   shelfLifeOpenedDays: shelfLifeOpenedDaysRule,
-  baseDimension: string().nullable().optional(),
+  // `''` is the picker's "none" option.
+  baseDimension: string()
+    .oneOf([...Object.values(BaseDimension), ''])
+    .nullable()
+    .optional(),
   defaultConsumeIncrement: number()
-    .transform((value, originalValue) =>
-      String(originalValue).trim() === '' ? undefined : value,
-    )
+    .transform(decimalText)
+    .typeError(msg('greaterThanZero'))
     .min(0.001, msg('greaterThanZero'))
     .optional(),
   defaultConsumeUnitId: string().optional(),

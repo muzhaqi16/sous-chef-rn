@@ -7,7 +7,8 @@ import React, {
   useState,
   type ReactNode,
 } from 'react';
-import { View, StyleProp, ViewStyle, TextInputProps } from 'react-native';
+import type { StyleProp, ViewStyle, TextInputProps } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import {
   StyleSheet,
@@ -202,7 +203,7 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
       getValue: () => textRef.current,
       setValue: (next: string) => {
         textRef.current = next;
-        liveInput()?.setNativeProps?.({ text: next });
+        liveInput()?.setNativeProps({ text: next });
         setHasText(next.length > 0);
       },
     }));
@@ -217,7 +218,7 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
       if (defaultValue === undefined || defaultValue === textRef.current)
         return;
       textRef.current = defaultValue;
-      liveInput()?.setNativeProps?.({ text: defaultValue });
+      liveInput()?.setNativeProps({ text: defaultValue });
       onChangeText(defaultValue);
     }, [defaultValue, onChangeText]);
 
@@ -275,7 +276,7 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
                     action.backgroundColor ?? theme.colors.primary,
                 })}
                 size={action.size}
-                accessibilityLabel={action.accessibilityLabel || fallbackLabel}
+                accessibilityLabel={action.accessibilityLabel ?? fallbackLabel}
                 isHighlighted={action.animated ? action.isHighlighted : false}
                 testID={action.testID}
               />

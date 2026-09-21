@@ -1,6 +1,5 @@
 import { getApolloClient } from '#/apollo/clientRegistry';
-import { cancelCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
-import { InMemoryCache } from '@apollo/client';
+import type { InMemoryCache } from '@apollo/client';
 import { useStore } from '#store';
 import { storage } from '#/storage/mmkv';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
@@ -9,7 +8,10 @@ import { cancelTokenRefresh } from './links/tokenScheduler';
 import { disposeWebSocket } from './links/wsLink';
 import { clearRefreshState } from './links/refreshToken';
 import { registerSessionTeardown } from '#store/sessionTeardown';
+import { isSessionEnding, resetSessionEndingGate } from '#store/sessionEnding';
 import { logger } from '#/utils/environment';
+import { RefreshTokenDocument } from '#operations/auth/auth.generated';
+import { operationNameOf } from './utils/documentOperation';
 
 interface LogoutCleanupOptions {
   clearCache?: boolean;
@@ -29,16 +31,13 @@ type CleanupSubscription = { unsubscribe: () => void } | (() => void);
  * Handles cache clearing, subscription cancellation, and error suppression
  */
 export class LogoutCleanup {
-  private static isLoggingOut = false;
   private static activeSubscriptions = new Set<CleanupSubscription>();
 
   /**
    * Check if the app is currently in logout process
    */
   static isInLogoutProcess(): boolean {
-    // Check both local flag and global store state
-    const globalState = useStore.getState().isLoggingOut;
-    return LogoutCleanup.isLoggingOut || globalState;
+    return isSessionEnding() || useStore.getState().isLoggingOut;
   }
 
   /**
@@ -68,14 +67,13 @@ export class LogoutCleanup {
     } = options;
 
     logger.info('🧹 Starting Apollo logout cleanup...');
-    LogoutCleanup.isLoggingOut = true;
 
     try {
       // 1. Cancel scheduled token refresh
       cancelTokenRefresh();
 
       // 2. Cancel pending cache persistence
-      cancelCachePersistence();
+      apolloCachePersistence.cancel();
 
       // 3. Cancel all active subscriptions
       if (cancelSubscriptions) {
@@ -101,11 +99,9 @@ export class LogoutCleanup {
     }
   }
 
-  /**
-   * Complete the logout process and reset flags
-   */
+  /** Test seam: the gate is released by the scope that opened it. */
   static completeLogout(): void {
-    LogoutCleanup.isLoggingOut = false;
+    resetSessionEndingGate();
     LogoutCleanup.activeSubscriptions.clear();
     logger.info('🏁 Apollo logout process completed');
   }
@@ -208,53 +204,22 @@ export class LogoutCleanup {
    * Utility to check if a GraphQL operation should be skipped during logout
    */
   static shouldSkipOperation(operationName?: string): boolean {
-    if (!LogoutCleanup.isLoggingOut) return false;
+    if (!LogoutCleanup.isInLogoutProcess()) return false;
 
     // Names only. A call that belongs to the sign-out but shares its name with
     // one that does not — `UpdateDevice` is both the device delete and the push
     // token rotation — opts in per call via `allowDuringLogout` instead.
-    const allowedOperations = ['RefreshToken', 'Logout'];
-
-    return operationName ? !allowedOperations.includes(operationName) : true;
-  }
-
-  /**
-   * Handle errors that occur during logout gracefully
-   */
-  static handleLogoutError(error: unknown, operationName?: string): boolean {
-    if (!LogoutCleanup.isLoggingOut) return false;
-
-    // Suppress common logout-related errors
-    const suppressibleErrors = [
-      'No access token available',
-      'Response not successful: Received status code 500',
-      'Network error',
-      'Request failed',
-    ];
-
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const shouldSuppress = suppressibleErrors.some(msg =>
-      errorMessage.includes(msg),
-    );
-
-    if (shouldSuppress) {
-      logger.info(
-        `🔇 Suppressed logout error for ${operationName}: ${errorMessage}`,
-      );
-      return true;
-    }
-
-    return false;
+    return operationName
+      ? operationName !== operationNameOf(RefreshTokenDocument)
+      : true;
   }
 }
 
 // A session the server ended gets the same teardown a deliberate sign-out does:
 // the difference is who decided, not how much of the session is still usable.
 //
-// `completeLogout()` is not optional. `performLogoutCleanup` latches a flag that
-// `authLink` and `errorLink` read to refuse operations; left set, the next
-// sign-in cannot send its login mutation.
+// The gate belongs to whoever started the session end (`whileSessionEnds`), not
+// to this step: it must stay closed for the store reset that follows.
 registerSessionTeardown('apollo', async () => {
   await LogoutCleanup.performLogoutCleanup();
-  LogoutCleanup.completeLogout();
 });

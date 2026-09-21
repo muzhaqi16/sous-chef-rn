@@ -2,11 +2,6 @@
 // registration and the device credential all present the same value. Two of
 // them diverging is invisible to typecheck and to every other suite — each one
 // keeps passing against its own id.
-//
-// The STRUCTURAL half of that rule — that no other module mints or persists an
-// identity — is the `device-identity` concern in
-// `scripts/check-canonical-mechanisms.mjs`, which derives its file set from the
-// tree and can prove it still fails. What is left here is behavioural.
 
 const mockMutate = jest.fn().mockResolvedValue({ data: {} });
 const mockQuery = jest.fn().mockResolvedValue({ data: {} });
@@ -15,7 +10,7 @@ jest.mock('#/apollo/client', () => ({
     mutate: (...args: unknown[]) => mockMutate(...args),
     query: (...args: unknown[]) => mockQuery(...args),
   },
-  cancelCachePersistence: jest.fn(),
+  restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
 

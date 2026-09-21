@@ -1,8 +1,6 @@
 import { act } from '@testing-library/react-native';
-import {
-  renderHookWithApollo,
-  type MockedResponse,
-} from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { SearchBrandsDocument } from '#operations/item/item.generated';
 import type { RootState } from '#store/index';
 import { useBrandAutocomplete } from '#features/catalog/hooks/useBrandAutocomplete';
@@ -35,7 +33,7 @@ const suggestedBrands = [
  */
 function createSearchBrandsMock(
   recorded: Array<Record<string, unknown>>,
-): MockedResponse {
+): MockFor<typeof SearchBrandsDocument> {
   return {
     request: {
       query: SearchBrandsDocument,

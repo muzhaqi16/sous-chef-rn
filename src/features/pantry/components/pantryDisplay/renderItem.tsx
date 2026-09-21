@@ -16,10 +16,9 @@ export type PantryListNode = PantryListItemNode;
 
 // Module scope: stable reference, no closure recreated per render. Each leaf
 // owns its cache subscription via useFragment.
-export const renderItem = ({ item }: ListRenderItemInfo<PantryListNode>) => {
-  if (!item) return null;
-  return <PantryItemCard pantryItemRef={item} />;
-};
+export const renderItem = ({ item }: ListRenderItemInfo<PantryListNode>) => (
+  <PantryItemCard pantryItemRef={item} />
+);
 
 /** Row 0 is the sticky filter tabs; every other row is an item. */
 export type PantryListItem = StickyHeaderSentinel | PantryListNode;

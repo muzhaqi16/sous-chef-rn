@@ -299,6 +299,59 @@ describe('useRecipeForm', () => {
     });
   });
 
+  it('buildUpdateInput clears emptied optional fields instead of omitting them', () => {
+    // An omitted field is left unchanged by the API, so an emptied one must be
+    // sent as a clear: null for a nullable column, [] for a dietary list.
+    const { result } = renderHook(() => useRecipeForm());
+
+    act(() => {
+      result.current.updateField('name', '');
+      result.current.updateField('servings', '');
+      result.current.updateField('description', '  ');
+      result.current.updateField('notes', '');
+      result.current.updateField('tips', '');
+      result.current.updateField('originalAuthor', '');
+      result.current.updateField('imageUrl', '');
+      result.current.updateField('cuisine', '');
+      result.current.updateField('prepTimeMinutes', '');
+      result.current.updateField('cookTimeMinutes', '');
+      result.current.updateField('caloriesPerServing', '');
+      result.current.updateField('diets', []);
+      result.current.updateField('healthGoals', []);
+      result.current.updateField('intolerances', []);
+    });
+
+    const input = result.current.buildUpdateInput();
+    expect(input).toEqual(
+      expect.objectContaining({
+        description: null,
+        notes: null,
+        tips: null,
+        attribution: { originalAuthor: null },
+        media: { imageUrl: null },
+        timing: { prepTimeMinutes: null, cookTimeMinutes: null },
+        nutrition: { caloriesPerServing: null },
+        dietary: { diets: [], healthGoals: [], intolerances: [] },
+      }),
+    );
+    expect(input.metadata?.cuisine).toBeNull();
+    // NOT NULL columns: the API refuses null, so an empty entry stays omitted.
+    expect(input.name).toBeUndefined();
+    expect(input.metadata?.servings).toBeUndefined();
+  });
+
+  it('buildUpdateInput sends an emptied tag field as [], which clears', () => {
+    // The API replaces the whole list and refuses `tags: null`; an omitted
+    // list leaves the stored tags in place.
+    const { result } = renderHook(() => useRecipeForm());
+
+    act(() => {
+      result.current.updateField('tags', ' , ');
+    });
+
+    expect(result.current.buildUpdateInput().tags).toEqual([]);
+  });
+
   it('populateFromRecipe fills form from recipe data', () => {
     const { result } = renderHook(() => useRecipeForm());
 

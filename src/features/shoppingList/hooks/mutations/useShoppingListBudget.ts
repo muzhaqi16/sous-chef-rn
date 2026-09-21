@@ -12,16 +12,15 @@ import {
   UseShoppingListBudget_ListFragmentDoc,
   type UseShoppingListBudget_ListFragment,
 } from './useShoppingListBudget.generated';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { toastService } from '#/services/toastService';
 import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
 import type { UpdateShoppingListInput } from '#/graphql/generated/schemaTypes';
-import { errorService } from '#/services/errorService';
 
 export function useShoppingListBudget() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [mutate, { loading }] = useMutation(UpdateShoppingListDocument);
+  const [mutate] = useMutation(UpdateShoppingListDocument);
 
   const applyOptimistic = (
     id: string,
@@ -59,27 +58,19 @@ export function useShoppingListBudget() {
       return false;
     }
 
-    let result;
-    try {
-      result = await mutate({
-        variables: { input: { id, ...input, version: current.version } },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Update Shopping List budget error:',
-      });
-    }
-
-    if (!result) {
-      revert();
-      return false;
-    }
-    if (alertIfRejected(result, failureMessage)) {
-      revert();
-      return false;
-    }
-    return true;
+    const settled = await settleMutation(
+      () =>
+        mutate({
+          variables: { input: { id, ...input, version: current.version } },
+          context: { localFirst: true },
+        }),
+      {
+        document: UpdateShoppingListDocument,
+        fallback: failureMessage,
+        onFailed: revert,
+      },
+    );
+    return settled.status !== 'failed';
   };
 
   const setBudget = async (
@@ -115,5 +106,5 @@ export function useShoppingListBudget() {
     );
   };
 
-  return { setBudget, setPriceTracking, loading };
+  return { setBudget, setPriceTracking };
 }

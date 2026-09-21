@@ -1,6 +1,9 @@
 import { useEffect, startTransition } from 'react';
 import { client } from '#/apollo/client';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import {
+  optimisticDataPersistence,
+  type PersistedEntityType,
+} from '#/apollo/offline/OptimisticDataPersistence';
 import { fieldWriterFor } from '#/apollo/utils/fieldWriters';
 import { useUser } from '#store/useAppStore';
 
@@ -23,7 +26,7 @@ const isPartialObject = (value: unknown): value is Record<string, unknown> =>
  * local intent the offline queue is about to replay.
  */
 export function useOptimisticDataRestorationMultiple(
-  entityTypes: string[],
+  entityTypes: PersistedEntityType[],
   enabled = true,
 ) {
   const user = useUser();
@@ -54,21 +57,21 @@ export function useOptimisticDataRestorationMultiple(
               // A field whose rules live in a dedicated writer is restored
               // THROUGH it — the blind merge below would be a second writer with
               // none of the invariants, on a path no foreground test reaches.
-              const merged = Object.keys(fields).reduce((acc, field) => {
+              const merged: Record<string, (existing: unknown) => unknown> = {};
+              Object.keys(fields).forEach(field => {
                 const owner = fieldWriterFor(entityType, field);
                 if (owner) {
                   owner(cache, entityId, fields[field]);
-                  return acc;
+                  return;
                 }
                 const value = fields[field];
-                acc[field] = isPartialObject(value)
+                merged[field] = isPartialObject(value)
                   ? (existing: unknown) =>
                       isPartialObject(existing)
                         ? { ...existing, ...value }
                         : value
                   : () => value;
-                return acc;
-              }, {} as Record<string, (existing: unknown) => unknown>);
+              });
 
               if (Object.keys(merged).length === 0) return;
 

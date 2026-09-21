@@ -1,8 +1,16 @@
 import { waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import { GetShoppingListDetailsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import {
+  GetShoppingListDetailsDocument,
+  type GetShoppingListDetailsQuery,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  CollaboratorRole,
+  CollaboratorStatus,
+  ListStatus,
+  MembershipRole,
+} from '#/graphql/generated/schemaTypes';
 import { useShoppingListDetails } from '../useShoppingListDetails';
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
@@ -17,7 +25,11 @@ interface BuildShoppingListArgs {
   collaborators?: Array<{ id: string; email: string }>;
 }
 
-function buildShoppingList(args: BuildShoppingListArgs = {}) {
+type ShoppingListDetails = GetShoppingListDetailsQuery['shoppingList'];
+
+function buildShoppingList(
+  args: BuildShoppingListArgs = {},
+): MockPart<ShoppingListDetails> {
   const id = args.id ?? 'list-1';
   const collaborators = args.collaborators ?? [];
   return {
@@ -25,7 +37,7 @@ function buildShoppingList(args: BuildShoppingListArgs = {}) {
     id,
     name: args.name ?? 'Groceries',
     isDefault: args.isDefault ?? true,
-    status: 'ACTIVE',
+    status: ListStatus.Active,
     isCompleted: false,
     completedShopDate: null,
     isRecurring: false,
@@ -71,8 +83,8 @@ function buildShoppingList(args: BuildShoppingListArgs = {}) {
           __typename: 'ShoppingListCollaborator',
           id: c.id,
           email: c.email,
-          role: 'EDITOR',
-          status: 'ACTIVE',
+          role: CollaboratorRole.Editor,
+          status: CollaboratorStatus.Active,
           collaboratorId: c.id,
           canAddItems: true,
           canRemoveItems: true,
@@ -104,7 +116,7 @@ function buildShoppingList(args: BuildShoppingListArgs = {}) {
 function buildDetailsMock(
   listId: string,
   shoppingList: ReturnType<typeof buildShoppingList> | null,
-): MockedResponse {
+): MockFor<typeof GetShoppingListDetailsDocument> {
   return {
     request: {
       query: GetShoppingListDetailsDocument,
@@ -117,7 +129,10 @@ function buildDetailsMock(
   };
 }
 
-function buildDetailsErrorMock(listId: string, error: Error): MockedResponse {
+function buildDetailsErrorMock(
+  listId: string,
+  error: Error,
+): MockFor<typeof GetShoppingListDetailsDocument> {
   return {
     request: {
       query: GetShoppingListDetailsDocument,
@@ -150,10 +165,10 @@ describe('useShoppingListDetails', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.shoppingList).not.toBeNull();
     expect(result.current.name).toBe('Groceries');
-    expect(result.current.isDefault).toBe(true);
     expect(result.current.collaborators).toHaveLength(1);
     expect(result.current.collaborators[0]!.email).toBe('alice@test.com');
     expect(result.current.isShared).toBe(true);
+    expect(result.current.hasResult).toBe(true);
   });
 
   it('returns default values when no shopping list data', async () => {
@@ -167,7 +182,6 @@ describe('useShoppingListDetails', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.shoppingList).toBeNull();
     expect(result.current.name).toBe('');
-    expect(result.current.isDefault).toBe(false);
     expect(result.current.collaborators).toEqual([]);
     expect(result.current.isShared).toBe(false);
   });
@@ -185,6 +199,7 @@ describe('useShoppingListDetails', () => {
     // falls back to null (default). Wait for the network cycle to complete.
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.shoppingList).toBeNull();
+    expect(result.current.hasResult).toBe(false);
   });
 
   it('exposes refetch function', async () => {

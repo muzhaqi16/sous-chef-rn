@@ -10,17 +10,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
-  formatCondition: jest.fn((c: string | null | undefined) => {
-    if (!c || c === 'GOOD') return null;
-    return c.charAt(0) + c.slice(1).toLowerCase();
-  }),
-  formatAcquisitionMethod: jest.fn((m: string | null | undefined) => {
-    if (!m) return null;
-    return m
-      .split('_')
-      .map((w: string) => w.charAt(0) + w.slice(1).toLowerCase())
-      .join(' ');
-  }),
+  ...jest.requireActual('#features/pantry/hooks/usePantryItemTransformation'),
   // Honours the currency it is given: a double that always prints `$` makes
   // the denomination invisible to every assertion.
   formatCostOrNull: jest.fn(
@@ -34,12 +24,6 @@ jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
     if (!d) return null;
     return 'Jan 1, 2024';
   }),
-}));
-
-jest.mock('#utils/formatQuantity', () => ({
-  getUnitDisplayText: jest.fn(
-    (unit?: { symbol?: string; name?: string } | null) => unit?.symbol || '',
-  ),
 }));
 
 // Typed against the component's own generated fragment — only the fields the
@@ -167,10 +151,10 @@ describe('PantryDetailInfo', () => {
   });
 
   it('renders Storage row when storageLocation is set', () => {
-    const item = {
+    const item: PantryDetailInfo_PantryItemFragment = {
       ...baseItem,
       storageLocation: {
-        __typename: 'StorageLocation' as const,
+        __typename: 'StorageLocation',
         id: 'sl1',
         name: 'Top shelf',
       },
@@ -181,9 +165,9 @@ describe('PantryDetailInfo', () => {
   });
 
   it('renders Store row when store name exists', () => {
-    const item = {
+    const item: PantryDetailInfo_PantryItemFragment = {
       ...baseItem,
-      store: { __typename: 'Store' as const, id: 'st1', name: 'Whole Foods' },
+      store: { __typename: 'Store', id: 'st1', name: 'Whole Foods' },
     };
     render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Store')).toBeTruthy();
@@ -216,7 +200,7 @@ describe('PantryDetailInfo', () => {
     };
     render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Acquired')).toBeTruthy();
-    expect(screen.getByText('Shopping List')).toBeTruthy();
+    expect(screen.getByText('Shopping list')).toBeTruthy();
   });
 
   // acquisitionMethod is non-null in the schema, so the row always renders.
@@ -377,6 +361,25 @@ describe('PantryDetailInfo', () => {
       expect(screen.queryByText('Stock value')).toBeNull();
       expect(screen.queryByText('$0.00')).toBeNull();
     });
+  });
+
+  it('renders a fractional quantity as a cooking fraction', () => {
+    const item = { ...baseItem, quantity: 1.25 };
+    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
+    expect(screen.getByText('1 1/4 L')).toBeTruthy();
+  });
+
+  it('rounds a quantity no cooking fraction fits to three decimals', () => {
+    const item = { ...baseItem, quantity: 177.4412 };
+    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
+    expect(screen.getByText('177.441 L')).toBeTruthy();
+  });
+
+  it('formats the Min Stock and Restock At quantities', () => {
+    const item = { ...baseItem, minQuantity: 0.5, restockQuantity: 1.3333334 };
+    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
+    expect(screen.getByText('1/2 liters')).toBeTruthy();
+    expect(screen.getByText('1 1/3 liters')).toBeTruthy();
   });
 
   it('renders Min Stock row when minQuantity is set', () => {

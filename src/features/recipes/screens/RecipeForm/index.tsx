@@ -4,7 +4,10 @@ import { alertService } from '#/services/alertService';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FormScreen } from '#components/templates/FormScreen';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useRecipeFormWrites } from '#features/recipes/hooks/useRecipeFormWrites';
+import {
+  useRecipeFormWrites,
+  type RecipeWriteFailure,
+} from '#features/recipes/hooks/useRecipeFormWrites';
 import { useUser } from '#store/useAppStore';
 import { useRecipeForm } from './useRecipeForm';
 import { RecipeBasicFields } from '#features/recipes/components/recipeForm/RecipeBasicFields';
@@ -20,11 +23,25 @@ import {
   type RecipeStepEditorRef,
 } from '#features/recipes/components/recipeForm/RecipeStepEditor';
 import { RecipeTagsSection } from '#features/recipes/components/recipeForm/RecipeTagsSection';
-import type { IngredientFormState, StepFormState } from './formState';
+import type {
+  IngredientFormState,
+  RecipeFormState,
+  StepFormState,
+} from './formState';
 import type { RecipeCreatedBy } from '#features/recipes/utils/recipeCacheWriters';
-import { localizedRefusalMessage } from '#/apollo/utils/alertRejectedMutation';
 import { localizedErrorMessage } from '#/services/errorService';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { recipesTestIDs } from '#features/recipes/testIDs';
+import { logValidationErrors } from '#/utils/validation/common';
+
+/** The fields whose sections render their own validation message. */
+const FIELDS_WITH_MESSAGES: ReadonlyArray<keyof RecipeFormState> = [
+  'name',
+  'ingredients',
+  'steps',
+  'tips',
+  'tags',
+];
 
 export const RecipeFormScreen: React.FC<
   StaticScreenProps<{ recipeId?: string } | undefined>
@@ -54,6 +71,16 @@ export const RecipeFormScreen: React.FC<
     }
   }, [recipeRef, readRecipe, populateFromRecipe]);
 
+  // A refusal naming a field the form renders a message for lands on it.
+  const reportFailure = (failure: RecipeWriteFailure) => {
+    const field = FIELDS_WITH_MESSAGES.find(name => name === failure.field);
+    if (field) {
+      form.setError(field, { type: 'server', message: failure.body });
+      return;
+    }
+    alertService.alert(failure.title, failure.body);
+  };
+
   const onValid = async () => {
     // The save body is held in a local runner so the try below contains a
     // single plain call: the React Compiler bails out of this component when a
@@ -70,13 +97,7 @@ export const RecipeFormScreen: React.FC<
           goBack();
           return;
         }
-        alertService.alert(
-          t('labels.error'),
-          localizedRefusalMessage(
-            outcome.payload,
-            t('recipes.updateRecipeFailed'),
-          ),
-        );
+        reportFailure(outcome.failure);
         return;
       }
 
@@ -93,13 +114,7 @@ export const RecipeFormScreen: React.FC<
         goBack();
         return;
       }
-      alertService.alert(
-        t('labels.error'),
-        localizedRefusalMessage(
-          outcome.payload,
-          t('recipes.createRecipeFailed'),
-        ),
-      );
+      reportFailure(outcome.failure);
     };
 
     try {
@@ -114,7 +129,7 @@ export const RecipeFormScreen: React.FC<
 
   // A field the user can fix is reported ON the field: the list sections carry
   // their own message, and the basic fields render theirs under the input.
-  const handleSave = form.handleSubmit(onValid);
+  const handleSave = form.handleSubmit(onValid, logValidationErrors);
 
   // Ingredient handlers
   const handleEditIngredient = (ingredient: IngredientFormState) => {
@@ -160,7 +175,7 @@ export const RecipeFormScreen: React.FC<
         onClose={goBack}
         onSave={handleSave}
         loading={saving}
-        testID="recipe-form-screen"
+        testID={recipesTestIDs.recipeFormScreen}
       >
         {/* Basic fields */}
         <RecipeBasicFields

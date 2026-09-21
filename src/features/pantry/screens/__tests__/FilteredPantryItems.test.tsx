@@ -172,7 +172,7 @@ const mockExpiredItems = [
   },
 ];
 
-let mockAllItems: MockPantryItem[] | null = mockLowStockItems;
+let mockAllItems: MockPantryItem[] = mockLowStockItems;
 let mockLoading = false;
 let mockError: Error | undefined;
 let mockHasResult = true;
@@ -364,6 +364,16 @@ describe('FilteredPantryItems', () => {
       expect(screen.getByText('1 stk remaining')).toBeTruthy();
     });
 
+    it('renders a fractional remaining quantity as a cooking fraction', () => {
+      mockAllItems = [
+        { ...mockLowStockItems[0]!, quantity: 1.25 },
+        { ...mockLowStockItems[1]!, quantity: 177.4412 },
+      ];
+      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+      expect(screen.getByText('1 1/4 pcs remaining')).toBeTruthy();
+      expect(screen.getByText('177.441 stk remaining')).toBeTruthy();
+    });
+
     it('shows empty state when all items are stocked', () => {
       mockAllItems = [];
       renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
@@ -374,7 +384,7 @@ describe('FilteredPantryItems', () => {
 
     it('renders without crashing during loading', () => {
       mockLoading = true;
-      mockAllItems = null;
+      mockAllItems = [];
       renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
       expect(screen.getByText('Low Stock Items')).toBeTruthy();
     });
@@ -427,7 +437,7 @@ describe('FilteredPantryItems', () => {
     // per-mode flag that hid this had no stated reason.
     it('shows the add-all button in header', () => {
       renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
-      expect(screen.queryByTestId('add-all-low-stock')).not.toBeNull();
+      expect(screen.getByTestId('add-all-low-stock')).not.toBeNull();
     });
 
     it('renders expiring item names', () => {

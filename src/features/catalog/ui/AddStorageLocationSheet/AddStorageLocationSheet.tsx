@@ -118,7 +118,9 @@ export const AddStorageLocationSheet: React.FC<
           accessibilityRole="button"
           accessibilityLabel={t('labels.cancel')}
         >
-          <Text tone="secondary">{t('labels.cancel')}</Text>
+          <Text role="body" tone="secondary">
+            {t('labels.cancel')}
+          </Text>
         </AppPressable>
 
         <Text role="heading" align="center" style={styles.title}>
@@ -168,7 +170,7 @@ export const AddStorageLocationSheet: React.FC<
           onSubmitEditing={handleCreate}
         />
         {!!error && (
-          <Text role="caption" tone="error" style={styles.errorText}>
+          <Text role="error" tone="error" style={styles.errorText}>
             {error}
           </Text>
         )}

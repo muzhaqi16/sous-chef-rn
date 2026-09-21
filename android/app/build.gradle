@@ -62,8 +62,8 @@ android {
         applicationId "dev.souschef.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 172
-        versionName "4.5.6"
+        versionCode 178
+        versionName "4.6.2"
         testBuildType System.getProperty('testBuildType', 'debug')
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -187,6 +187,8 @@ gradle.taskGraph.whenReady { graph ->
 // then rebuild — see docs/push-setup-checklist.md.
 if (file("google-services.json").exists()) {
     apply plugin: "com.google.gms.google-services"
+    // Needs the same Firebase config, so it applies under the same condition.
+    apply plugin: "com.google.firebase.crashlytics"
 } else {
     // A release/bundle build without FCM config would ship with push silently
     // dead — fail fast instead. Debug/dev builds still succeed without the file.

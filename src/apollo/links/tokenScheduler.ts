@@ -94,7 +94,8 @@ export function scheduleTokenRefresh(
       )}s ` + `(token expires in ${Math.round((expiresAt - now) / 1000)}s)`,
     );
 
-    refreshTimer = setTimeout(async () => {
+    // Never rejects: the refresh itself is caught below.
+    const runScheduledRefresh = async () => {
       // Skip the refresh while offline. `getState()` rather than the hook —
       // this runs in a setTimeout callback, outside React.
       const state = useStore.getState();
@@ -117,6 +118,10 @@ export function scheduleTokenRefresh(
         // Reactive refresh (errorLink) will handle it if this fails
         // This is our fallback - user may experience a brief 401 error
       }
+    };
+
+    refreshTimer = setTimeout(() => {
+      void runScheduledRefresh();
     }, delay);
   } catch (error) {
     logger.error(

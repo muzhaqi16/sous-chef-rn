@@ -20,17 +20,6 @@ jest.mock('#services/authService', () => ({
   authService: { registerDeviceInBackground: jest.fn() },
 }));
 
-jest.mock('#services/telemetry', () => ({
-  Telemetry: {
-    updateConfig: jest.fn(),
-    initialize: jest.fn(),
-    trackEvent: jest.fn(),
-    histogram: jest.fn(),
-    increment: jest.fn(),
-    gauge: jest.fn(),
-  },
-}));
-
 jest.mock('#services/haptic/HapticService', () => ({
   HapticService: { initialize: jest.fn() },
 }));
@@ -57,12 +46,8 @@ jest.mock('react-native-launch-arguments', () => ({
   LaunchArguments: { value: jest.fn(() => ({})) },
 }));
 
-const { useStore } = jest.requireMock('#store') as {
-  useStore: { getState: jest.Mock };
-};
-const { authService } = jest.requireMock('#services/authService') as {
-  authService: { registerDeviceInBackground: jest.Mock };
-};
+const { useStore } = jest.requireMock('#store');
+const { authService } = jest.requireMock('#services/authService');
 
 describe('useStartupInit — restored-session push registration', () => {
   beforeAll(() => {
@@ -145,27 +130,15 @@ describe('useStartupInit — the build gate on launch-arg injection', () => {
   //
   // So the cases worth holding are the flag being off by default, and the gate
   // reading nothing but the flag.
-  const { LaunchArguments } = jest.requireMock(
-    'react-native-launch-arguments',
-  ) as { LaunchArguments: { value: jest.Mock } };
-  const { Environment } = jest.requireMock('#/utils/environment') as {
-    Environment: {
-      isProduction: jest.Mock;
-      isDevelopment: jest.Mock;
-      allowsLaunchArgAuth: jest.Mock;
-    };
-  };
-  const { Telemetry } = jest.requireMock('#services/telemetry') as {
-    Telemetry: { updateConfig: jest.Mock };
-  };
+  const { LaunchArguments } = jest.requireMock('react-native-launch-arguments');
+  const { Environment } = jest.requireMock('#/utils/environment');
+  const { Telemetry } = jest.requireMock('#services/telemetry');
   const { NativePerformanceService } = jest.requireMock(
     '#/services/performance/NativePerformanceService',
-  ) as {
-    NativePerformanceService: { initialize: jest.Mock; cleanup: jest.Mock };
-  };
+  );
   const { MemoryMonitor } = jest.requireMock(
     '#/services/performance/MemoryMonitor',
-  ) as { MemoryMonitor: { start: jest.Mock } };
+  );
 
   const storeActions = {
     setAuth: jest.fn(),

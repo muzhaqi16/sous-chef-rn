@@ -6,7 +6,7 @@
  */
 import type { ApolloCache } from '@apollo/client';
 import { SYNC_REGISTRY } from './syncRegistry';
-import type { QueuedMutation } from './types';
+import type { QueuedMutation, ReplayInputs } from './types';
 import type { SyncConversion } from './syncBuilder';
 import { logger } from '#/utils/environment';
 
@@ -21,6 +21,21 @@ export function hasSyncMapping(operationName: string): boolean {
 /** Every operation the queue can replay through a `Sync*` upsert. */
 export function syncMappedOperations(): string[] {
   return Object.keys(SYNC_REGISTRY);
+}
+
+/**
+ * The cache values a write's replay will read, taken while its row is still
+ * cached. Undefined for an operation whose replay reads nothing.
+ */
+export function captureReplayInputs(
+  mutation: QueuedMutation,
+  cache: ApolloCache,
+): ReplayInputs | undefined {
+  const inputs = SYNC_REGISTRY[mutation.operationName]?.captureReplayInputs?.(
+    mutation,
+    cache,
+  );
+  return inputs && Object.keys(inputs).length > 0 ? inputs : undefined;
 }
 
 /**

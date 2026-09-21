@@ -1,40 +1,34 @@
-import { clamp, parseISO, startOfDay } from 'date-fns';
-import { MealType } from '#/graphql/generated/schemaTypes';
-import { useMealPlans } from './useMealPlans';
+import type { MealType } from '#/graphql/generated/schemaTypes';
+import { useMealPlanDisplay, useMealPlans } from './useMealPlans';
 import { useMealPlanItemActions } from './useMealPlanItemActions';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
+import { toMealDateTime } from '#/utils/dateUtils';
 
 interface UseAddRecipeToMealPlanOptions {
   planId?: string | null;
-  date?: Date;
 }
 
 export function useAddRecipeToMealPlan(
   options?: UseAddRecipeToMealPlanOptions,
 ) {
   const {
-    state: { currentPlan, mealPlans },
+    state: { currentPlan, mealPlans: loadedPlans, hasMore, loadingMore },
+    actions: { loadMore },
   } = useMealPlans();
 
-  const activePlan = (() => {
-    if (options?.planId) {
-      return mealPlans.find(p => p.id === options.planId) ?? null;
-    }
-    return currentPlan ?? mealPlans[0] ?? null;
-  })();
+  // A picked plan is read by id, so one from a later page resolves too.
+  const pickedPlan = useMealPlanDisplay(options?.planId ?? null);
+  const activePlan = options?.planId ? pickedPlan : currentPlan;
+
+  // The current plan may sit past the loaded pages; it leads so it is pickable.
+  const mealPlans =
+    activePlan && !loadedPlans.some(plan => plan.id === activePlan.id)
+      ? [activePlan, ...loadedPlans]
+      : loadedPlans;
 
   const activePlanId = activePlan?.id ?? null;
   const { createItem, creating } = useMealPlanItemActions(activePlanId);
-
-  const targetDate = (() => {
-    if (options?.date) return options.date;
-    const today = startOfDay(new Date());
-    if (!activePlan) return today;
-    const start = startOfDay(parseISO(activePlan.startDate));
-    const end = startOfDay(parseISO(activePlan.endDate));
-    return clamp(today, { start, end });
-  })();
 
   const addRecipeToMealPlan = async ({
     recipeId,
@@ -49,13 +43,13 @@ export function useAddRecipeToMealPlan(
       toastService.error(t('errors.noActiveMealPlan'));
       return false;
     }
-    const result = await createItem({
+    const added = await createItem({
       mealPlanId: activePlanId,
       meal: { recipeId },
       mealType,
-      date: date.toISOString(),
+      date: toMealDateTime(date),
     });
-    if (result?.__typename === 'CreateMealPlanItemPayload') {
+    if (added) {
       toastService.success(t('toasts.addedToMealPlan'));
       return true;
     }
@@ -66,8 +60,13 @@ export function useAddRecipeToMealPlan(
     addRecipeToMealPlan,
     adding: creating,
     hasPlan: !!activePlanId,
-    targetDate,
     mealPlans,
+    activePlan,
     activePlanId,
+    hasMorePlans: hasMore,
+    loadingMorePlans: loadingMore,
+    loadMorePlans: () => {
+      void loadMore();
+    },
   };
 }

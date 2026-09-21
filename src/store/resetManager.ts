@@ -8,10 +8,12 @@ import {
   clearSessionTokens,
 } from '#/storage/keychain';
 import { runSessionTeardown } from './sessionTeardown';
+import { whileSessionEnds } from './sessionEnding';
 import { resetSessionScopedStores } from './sessionScopedStores';
 import { logger } from '#/utils/environment';
 import { getApolloResetBridge } from './apolloResetBridge';
 import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
+import { isRecord } from '#/utils/isRecord';
 
 /**
  * Which server verdict ended the session — log line only; `endSession` performs
@@ -92,10 +94,38 @@ const SESSION_SCOPED_STATE = {
   preferredCurrency: DEFAULT_CURRENCY,
 } satisfies Partial<RootState>;
 
-export const createResetManager = (
-  set: (state: Partial<RootState>) => void,
-  get: () => RootState,
-) => ({
+type SetState = (state: Partial<RootState>) => void;
+type GetState = () => RootState;
+
+let sessionEndInFlight: Promise<void> | null = null;
+
+const runSessionEnd = async (
+  set: SetState,
+  get: GetState,
+  reason: SessionEndReason,
+): Promise<void> => {
+  logger.info(`Session ended by the server (${reason}) — clearing session`);
+
+  // Every reason gets identical cleanup deliberately — `reason` is for the log
+  // line, not to branch on. Clearing the Apollo cache is the part that must not
+  // vary: the persisted blob holds the signed-out account's entities and
+  // `cache-and-network` restores them on the next sign-in.
+
+  // Transports stop FIRST, so in-flight work is cancelled rather than re-fired
+  // against cleared tokens (the endless-loading symptom).
+  await whileSessionEnds(async () => {
+    await runSessionTeardown();
+
+    await createResetManager(set, get).resetStore({
+      auth: true,
+      ui: false,
+      preferences: false,
+      clearApolloCache: true,
+    });
+  });
+};
+
+export const createResetManager = (set: SetState, get: GetState) => ({
   resetStore: async (options: ResetOptions | keyof typeof RESET_SCENARIOS) => {
     const resetOptions =
       typeof options === 'string' ? RESET_SCENARIOS[options] : options;
@@ -180,23 +210,13 @@ export const createResetManager = (
   },
 
   endSession: async (reason: SessionEndReason) => {
-    logger.info(`Session ended by the server (${reason}) — clearing session`);
+    // Every transport reporting a dead session fires this unawaited, and a
+    // second pass clears `isLoggingOut` while the first still depends on it.
+    if (sessionEndInFlight) return sessionEndInFlight;
 
-    // Every reason gets identical cleanup deliberately — `reason` is for the
-    // log line, not to branch on. Clearing the Apollo cache is the part that
-    // must not vary: the persisted blob holds the signed-out account's
-    // entities and `cache-and-network` restores them on the next sign-in.
-
-    // Transports stop FIRST, so in-flight work is cancelled rather than
-    // re-fired against cleared tokens (the endless-loading symptom).
-    await runSessionTeardown();
-
-    const resetManager = createResetManager(set, get);
-    await resetManager.resetStore({
-      auth: true,
-      ui: false,
-      preferences: false,
-      clearApolloCache: true,
+    sessionEndInFlight = runSessionEnd(set, get, reason);
+    return sessionEndInFlight.finally(() => {
+      sessionEndInFlight = null;
     });
   },
 
@@ -208,7 +228,7 @@ export const createResetManager = (
       await resetManager.endSession('refresh_rejected');
     } else {
       // Network or unknown: keep auth state, defer the refresh.
-      set({ needsTokenRefresh: true } as Partial<RootState>);
+      set({ needsTokenRefresh: true });
     }
   },
 });
@@ -225,13 +245,14 @@ const clearAuthFromStorage = async () => {
 
     const currentData = await zustandStorage.getItem(STORAGE_KEY);
     if (currentData) {
-      const parsedData = JSON.parse(currentData);
-      if (parsedData.state) {
+      const parsedData: unknown = JSON.parse(currentData);
+      if (isRecord(parsedData) && isRecord(parsedData.state)) {
+        const persistedState = parsedData.state;
         // The same keys `resetStore` clears in memory. Persist rewrites the
         // whole blob after `set(newState)`; this covers the window in between,
         // where a kill leaves this copy for the next person's session.
         for (const key of Object.keys(SESSION_SCOPED_STATE)) {
-          delete parsedData.state[key];
+          delete persistedState[key];
         }
 
         zustandStorage.setItem(STORAGE_KEY, JSON.stringify(parsedData));

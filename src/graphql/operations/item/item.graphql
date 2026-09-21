@@ -38,12 +38,14 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
           displayAsFraction
         }
         brands {
+          id
           brand {
             id
             name
           }
         }
         categories {
+          id
           isPrimary
           category {
             id
@@ -52,6 +54,7 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
           }
         }
         units {
+          id
           isDefault
           unitId
         }
@@ -60,6 +63,7 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
           name
         }
         matchedVariation {
+          id
           netWeight
           netWeightUnit
           packageSize
@@ -115,12 +119,14 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: ID) {
           displayAsFraction
         }
         brands {
+          id
           brand {
             id
             name
           }
         }
         categories {
+          id
           isPrimary
           category {
             id
@@ -129,6 +135,7 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: ID) {
           }
         }
         units {
+          id
           isDefault
           unitId
         }
@@ -228,12 +235,14 @@ query SearchItemsSemantic(
           type
         }
         brands {
+          id
           brand {
             id
             name
           }
         }
         categories {
+          id
           isPrimary
           category {
             id
@@ -316,12 +325,14 @@ mutation CreateItem($input: CreateItemInput!) {
         imageUrl
         tags
         brands {
+          id
           brand {
             id
             name
           }
         }
         categories {
+          id
           category {
             id
             name

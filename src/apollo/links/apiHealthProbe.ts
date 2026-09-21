@@ -4,14 +4,16 @@ import { Environment, logger } from '#/utils/environment';
 const PROBE_TIMEOUT_MS = 5_000;
 
 /**
- * REST health endpoint derived from the GraphQL base URL
- * (`https://api.example.com/graphql` → `https://api.example.com/health`).
- * Exported for tests.
+ * A REST endpoint beside the GraphQL one
+ * (`https://api.example.com/graphql` + `/health` → `https://api.example.com/health`).
  */
-export const getHealthUrl = (): string => {
+export const getApiRestUrl = (path: `/${string}`): string => {
   const { baseUrl } = Environment.getApiConfig();
-  return `${baseUrl.replace(/\/graphql\/?$/, '')}/health`;
+  return `${baseUrl.replace(/\/graphql\/?$/, '')}${path}`;
 };
+
+/** Exported for tests. */
+export const getHealthUrl = (): string => getApiRestUrl('/health');
 
 /**
  * A plain GET of `/health` — no GraphQL, no auth, no link chain. Lets

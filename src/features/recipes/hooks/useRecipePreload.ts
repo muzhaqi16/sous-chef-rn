@@ -17,9 +17,10 @@ import {
 } from '#features/recipes/graphql/recipe.generated';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
-import { RecipeInformation } from '#/services/spoonacular/types';
-import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import type { RecipeInformation } from '#/services/spoonacular/types';
+import { fetchRecipePriceBreakdown } from '#features/recipes/store/useRecipeCacheStore';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import {
   adoptServerFavoriteId,
   writeOptimisticFavorite,
@@ -47,14 +48,7 @@ export interface PreloadedRecipe {
 }
 
 export interface UseRecipePreloadOptions {
-  /** Callback when preload succeeds */
-  onPreloadSuccess?: (recipe: PreloadedRecipe) => void;
-  /** Callback when preload fails */
-  onPreloadError?: (error: Error) => void;
-  /** Callback when favorite succeeds */
   onFavoriteSuccess?: () => void;
-  /** Callback when favorite fails */
-  onFavoriteError?: (error: Error) => void;
 }
 
 export interface SaveToFavoritesOptions {
@@ -69,13 +63,10 @@ export interface SaveToFavoritesOptions {
 export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const { onPreloadSuccess, onFavoriteSuccess, onFavoriteError } = options;
+  const { onFavoriteSuccess } = options;
 
-  // State
-  const [preloading, setPreloading] = useState(false);
   const [preloadedRecipe, setPreloadedRecipe] =
     useState<PreloadedRecipe | null>(null);
-  const [preloadError, setPreloadError] = useState<string | null>(null);
   const [savingToFavorites, setSavingToFavorites] = useState(false);
 
   // Cache of preloaded recipes (externalId -> PreloadedRecipe)
@@ -88,12 +79,10 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   const [favoriteRecipe] = useMutation(AddRecipeToFavoritesDocument, {
     // Use cache.updateQuery instead of refetchQueries for better performance and offline support
     update: (cache, { data }, { variables }) => {
-      if (
-        data?.addRecipeToFavorites?.__typename !== 'AddRecipeToFavoritesPayload'
-      )
-        return;
+      const payload = appliedPayload(data);
+      if (!payload) return;
 
-      const savedRecipe = data.addRecipeToFavorites.savedRecipe;
+      const savedRecipe = payload.savedRecipe;
 
       // Add to MySavedRecipes cache
       cache.updateQuery<MySavedRecipesQuery>(
@@ -151,7 +140,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
         );
       }
 
-      const clientId = variables?.input?.id;
+      const clientId = variables?.input.id;
       if (clientId && savedRecipe.id !== clientId) {
         adoptServerFavoriteId(
           cache,
@@ -171,7 +160,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   const preloadRecipe = async (
     spoonacularRecipe: RecipeInformation,
     externalSource: ExternalSource = ExternalSource.Spoonacular,
-    preloadOptions: { throwOnError?: boolean; withCost?: boolean } = {},
+    preloadOptions: { withCost?: boolean } = {},
   ): Promise<PreloadedRecipe | null> => {
     const externalId = String(spoonacularRecipe.id);
 
@@ -184,11 +173,9 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       !preloadOptions.withCost
     ) {
       const cached = preloadCacheRef.current.get(externalId);
-      return cached || null;
+      return cached ?? null;
     }
     attemptedPreloadsRef.current.add(externalId);
-
-    setPreloading(true);
 
     // Per-ingredient cost comes from the recipe-scoped priceBreakdown (ONE
     // call), fetched only on deliberate saves. Best-effort — a failure
@@ -196,9 +183,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     let priceBreakdown = null;
     if (preloadOptions.withCost) {
       try {
-        priceBreakdown = await spoonacularService.getRecipePriceBreakdown(
-          Number(externalId),
-        );
+        priceBreakdown = await fetchRecipePriceBreakdown(Number(externalId));
       } catch (error) {
         // Best-effort: leaving it null lets the save proceed without cost.
         errorService.reportError(error, {
@@ -209,23 +194,19 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
 
     const input = toRecipeInput(spoonacularRecipe, priceBreakdown);
 
-    let result;
-    try {
-      result = await upsertRecipe({ variables: { input } });
-    } catch (error) {
-      errorService.reportError(error, { operation: 'preloadRecipe' });
-      if (preloadOptions.throwOnError) {
-        setPreloading(false);
-        throw error; // Propagate error for explicit saves
-      }
-    }
+    // Reported, not shown: a view preload is invisible, and a deliberate save
+    // reports its own outcome when no backend id comes back.
+    const settled = await settleMutation(
+      () => upsertRecipe({ variables: { input } }),
+      {
+        document: UpsertExternalRecipeDocument,
+        fallback: t('recipes.saveRecipeFailed'),
+        present: 'none',
+      },
+    );
 
-    setPreloading(false);
-
-    if (!result) return null;
-
-    const payload = result.data?.upsertExternalRecipe;
-    if (payload?.__typename === 'UpsertExternalRecipePayload') {
+    const payload = appliedPayload(settled.data);
+    if (payload) {
       const data = payload;
       const preloaded: PreloadedRecipe = {
         id: data.recipe.id,
@@ -238,7 +219,6 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
 
       preloadCacheRef.current.set(externalId, preloaded);
       setPreloadedRecipe(preloaded);
-      onPreloadSuccess?.(preloaded);
 
       return preloaded;
     }
@@ -266,7 +246,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     const preloaded = await preloadRecipe(
       spoonacularRecipe,
       ExternalSource.Spoonacular,
-      { throwOnError: false, withCost: true },
+      { withCost: true },
     );
     const recipeId =
       preloaded?.id ?? preloadCacheRef.current.get(externalId)?.id;
@@ -294,7 +274,6 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       saveOptions,
     );
 
-    let result;
     const favoriteRecipeOptions = {
       variables: {
         input: {
@@ -310,33 +289,24 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       // unreachable, instead of failing the save.
       context: { localFirst: true },
     };
-    try {
-      result = await favoriteRecipe(favoriteRecipeOptions);
-    } catch (error) {
-      revert();
-      errorService.reportError(error, {
-        operation: 'saveRecipeToFavorites',
-      });
-      toastService.error(t('recipes.saveRecipeFailed'));
-
-      if (error instanceof Error) {
-        onFavoriteError?.(error);
-      }
-    }
+    // Applied (online) and queued (offline / API down) both keep the optimistic
+    // favorite — the heart fills and a queued favorite replays. Only a failure
+    // reverts, whether it threw or resolved as a refusal.
+    const settled = await settleMutation(
+      () => favoriteRecipe(favoriteRecipeOptions),
+      {
+        document: AddRecipeToFavoritesDocument,
+        fallback: t('recipes.saveRecipeFailed'),
+        onFailed: revert,
+        // Saving a recipe reports its outcome as a toast.
+        present: 'none',
+      },
+    );
 
     setSavingToFavorites(false);
 
-    if (!result) return { success: false }; // threw -> already reverted above
-
-    // 'created' (online) and 'queued' (offline / API down) both keep the
-    // optimistic favorite — the heart fills and a queued favorite replays. Only
-    // a resolved rejection (error union member / transport error) reverts. Under
-    // errorPolicy:'all' a refusal RESOLVES rather than throws, so this check is
-    // what stops a refused favorite from sticking + toasting success.
-    const outcome = classifyCreateResult(result);
-    if (outcome === 'rejected') {
-      revert();
-      toastService.error(t('recipes.saveRecipeFailed'));
+    if (settled.failure) {
+      toastService.error(settled.failure.body);
       return { success: false };
     }
 
@@ -346,28 +316,11 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     return { success: true, recipeId };
   };
 
-  /**
-   * Clear the preload cache
-   */
-  const clearCache = () => {
-    preloadCacheRef.current.clear();
-    setPreloadedRecipe(null);
-    setPreloadError(null);
-  };
-
   return {
-    // State
-    preloading,
     preloadedRecipe,
-    preloadError,
     savingToFavorites,
-
-    // Actions
     preloadRecipe,
     saveRecipeToFavorites,
-
-    // Helpers
-    clearCache,
   };
 }
 

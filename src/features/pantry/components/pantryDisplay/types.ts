@@ -1,17 +1,24 @@
 import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
-import { type PantryStats } from '#/graphql/generated/schemaTypes';
+import type { PantryStats } from '#/graphql/generated/schemaTypes';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 import type {
   PantrySortOption,
   PantrySortDirection,
 } from '#store/slices/preferenceTypes';
+import type { DataState } from '#hooks/data/useDataState';
 import type { PantryListNode } from './renderItem';
 
 // Aliases of the store preference enums, so display and persisted preference
 // share one source of truth.
 export type SortOption = PantrySortOption;
 export type SortDirection = PantrySortDirection;
+
+/** A failed items read; it replaces the empty state, which would claim none exist. */
+export interface PantryItemsFailure {
+  state: Extract<DataState, 'error' | 'offline'>;
+  onRetry: () => void;
+}
 
 export interface PantryContentRef {
   scrollToTop(): void;
@@ -84,12 +91,15 @@ export interface PantryContentProps {
 
   refreshing?: boolean;
   loading?: boolean;
+  itemsFailure?: PantryItemsFailure | null;
   /**
    * True while a server-mode tab/sort switch re-fetches the filtered page, so
    * the switch skeleton hides the lingering previous tab. Always false in
    * client mode, where switching is instant.
    */
   fetching?: boolean;
+  /** A server search for the typed term is in flight. */
+  searching?: boolean;
   /**
    * True when the server pages/filters the items. Gates the switch-skeleton
    * latch: a client-mode switch never fetches, so an armed latch would wait on
@@ -136,4 +146,5 @@ export interface PantryEmptyStateProps {
   onSelectHome?: () => void;
   onCreatePantry?: () => void;
   overallItemCount: number;
+  failure?: PantryItemsFailure | null;
 }

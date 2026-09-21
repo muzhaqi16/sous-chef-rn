@@ -1,17 +1,13 @@
-import { waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import { act, waitFor } from '@testing-library/react-native';
+import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import { GetShoppingListSuggestionsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { useStore } from '#store';
+import {
+  GetShoppingListSuggestionsDocument,
+  type GetShoppingListSuggestionsQuery,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { SuggestionSource } from '#/graphql/generated/schemaTypes';
 import { useShoppingListSuggestions } from '../useShoppingListSuggestions';
-
-// --- Mocks ---
-
-let mockIsOffline = false;
-
-jest.mock('#hooks/settings/useOfflineMode', () => ({
-  useIsEffectivelyOffline: () => mockIsOffline,
-}));
 
 jest.mock('#utils/imageUtils', () => ({
   resolveImageUrl: jest.fn(() => null),
@@ -23,7 +19,7 @@ jest.mock('#components/atoms/CachedImage', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockIsOffline = false;
+  useStore.setState({ isOnline: true, apiReachable: true });
 });
 
 interface SuggestionInput {
@@ -32,7 +28,11 @@ interface SuggestionInput {
   itemName?: string;
 }
 
-function buildSuggestion(input: SuggestionInput) {
+type Suggestion = NonNullable<
+  GetShoppingListSuggestionsQuery['shoppingList']
+>['recentlyDeleted'][number];
+
+function buildSuggestion(input: SuggestionInput): MockPart<Suggestion> {
   return {
     __typename: 'ShoppingListSuggestion',
     id: input.id,
@@ -56,7 +56,7 @@ function buildSuggestionsMock(
   listId: string,
   suggestions: ReturnType<typeof buildSuggestion>[],
   limit = 20,
-): MockedResponse {
+): MockFor<typeof GetShoppingListSuggestionsDocument> {
   // Each source is fetched via its own aliased field; bucket the flat input.
   const bySource = (source: SuggestionSource) =>
     suggestions.filter(s => s.source === source);
@@ -84,7 +84,7 @@ function buildSuggestionsErrorMock(
   listId: string,
   error: Error,
   limit = 20,
-): MockedResponse {
+): MockFor<typeof GetShoppingListSuggestionsDocument> {
   return {
     request: {
       query: GetShoppingListSuggestionsDocument,
@@ -96,17 +96,22 @@ function buildSuggestionsErrorMock(
 }
 
 describe('useShoppingListSuggestions', () => {
-  it('returns empty state when no data', async () => {
+  it('is loading before the network resolves', () => {
     const { result } = renderHookWithApollo(
       () => useShoppingListSuggestions({ shoppingListId: 'list-1' }),
-      {
-        operationMocks: [buildSuggestionsMock('list-1', [])],
-      },
+      { operationMocks: [buildSuggestionsMock('list-1', [])] },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.suggestions).toEqual([]);
-    expect(result.current.hasSuggestions).toBe(false);
+    expect(result.current.state).toBe('loading');
+  });
+
+  it('is empty when the server has no suggestions', async () => {
+    const { result } = renderHookWithApollo(
+      () => useShoppingListSuggestions({ shoppingListId: 'list-1' }),
+      { operationMocks: [buildSuggestionsMock('list-1', [])] },
+    );
+
+    await waitFor(() => expect(result.current.state).toBe('empty'));
     expect(result.current.grouped.recentlyDeleted).toEqual([]);
     expect(result.current.grouped.frequentlyAdded).toEqual([]);
     expect(result.current.grouped.popular).toEqual([]);
@@ -136,98 +141,69 @@ describe('useShoppingListSuggestions', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await waitFor(() => expect(result.current.state).toBe('ready'));
     expect(result.current.grouped.recentlyDeleted).toHaveLength(2);
     expect(result.current.grouped.frequentlyAdded).toHaveLength(1);
     expect(result.current.grouped.popular).toHaveLength(1);
-    expect(result.current.hasSuggestions).toBe(true);
   });
 
-  it('returns all suggestions in flat array', async () => {
+  it('is an error, not empty, when the read fails online', async () => {
     const { result } = renderHookWithApollo(
       () => useShoppingListSuggestions({ shoppingListId: 'list-1' }),
       {
         operationMocks: [
-          buildSuggestionsMock('list-1', [
-            buildSuggestion({
-              id: '1',
-              source: SuggestionSource.RecentlyDeleted,
-            }),
-            buildSuggestion({ id: '2', source: SuggestionSource.Popular }),
-          ]),
+          buildSuggestionsErrorMock('list-1', new Error('Network error')),
         ],
       },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.suggestions).toHaveLength(2);
+    await waitFor(() => expect(result.current.state).toBe('error'));
   });
 
-  it('returns empty suggestions when offline', async () => {
-    mockIsOffline = true;
-
+  it('is offline, not empty, when the server is unreachable and nothing was cached', async () => {
+    useStore.setState({ isOnline: false, apiReachable: null });
     const { result } = renderHookWithApollo(
       () => useShoppingListSuggestions({ shoppingListId: 'list-1' }),
       {
         operationMocks: [
+          buildSuggestionsErrorMock('list-1', new Error('Network error')),
+        ],
+      },
+    );
+
+    await waitFor(() => expect(result.current.state).toBe('offline'));
+  });
+
+  it('retries the read', async () => {
+    const { result } = renderHookWithApollo(
+      () => useShoppingListSuggestions({ shoppingListId: 'list-1' }),
+      {
+        operationMocks: [
+          {
+            ...buildSuggestionsErrorMock('list-1', new Error('Network error')),
+            maxUsageCount: 1,
+          },
           buildSuggestionsMock('list-1', [
             buildSuggestion({ id: '1', source: SuggestionSource.Popular }),
           ]),
         ],
       },
     );
+    await waitFor(() => expect(result.current.state).toBe('error'));
 
-    // Hook short-circuits on offline → never calls network → suggestions stays []
-    expect(result.current.suggestions).toEqual([]);
-    expect(result.current.hasSuggestions).toBe(false);
-    expect(result.current.isOffline).toBe(true);
+    act(() => {
+      result.current.refetch();
+    });
+
+    await waitFor(() => expect(result.current.state).toBe('ready'));
   });
 
-  it('exposes loading state initially', () => {
+  it('does not read without a list id', () => {
     const { result } = renderHookWithApollo(
-      () => useShoppingListSuggestions({ shoppingListId: 'list-1' }),
-      {
-        operationMocks: [buildSuggestionsMock('list-1', [])],
-      },
+      () => useShoppingListSuggestions({ shoppingListId: undefined }),
+      { operationMocks: [] },
     );
 
-    expect(typeof result.current.loading).toBe('boolean');
-  });
-
-  it('exposes error state', async () => {
-    const testError = new Error('Network error');
-    const { result } = renderHookWithApollo(
-      () => useShoppingListSuggestions({ shoppingListId: 'list-1' }),
-      {
-        operationMocks: [buildSuggestionsErrorMock('list-1', testError)],
-      },
-    );
-
-    await waitFor(() => expect(result.current.error).toBeTruthy());
-    expect(result.current.error?.message).toContain('Network error');
-  });
-
-  it('exposes refetch function', async () => {
-    const { result } = renderHookWithApollo(
-      () => useShoppingListSuggestions({ shoppingListId: 'list-1' }),
-      {
-        operationMocks: [buildSuggestionsMock('list-1', [])],
-      },
-    );
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(typeof result.current.refetch).toBe('function');
-  });
-
-  it('hasSuggestions is false when all groups are empty', async () => {
-    const { result } = renderHookWithApollo(
-      () => useShoppingListSuggestions({ shoppingListId: 'list-1' }),
-      {
-        operationMocks: [buildSuggestionsMock('list-1', [])],
-      },
-    );
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.hasSuggestions).toBe(false);
+    expect(result.current.state).toBe('empty');
   });
 });

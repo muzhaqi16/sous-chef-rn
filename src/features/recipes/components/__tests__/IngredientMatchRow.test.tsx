@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import type {
   getAvailabilityStatus as getAvailabilityStatusFn,
   EditableMatch,
@@ -126,6 +126,132 @@ describe('IngredientMatchRow', () => {
     });
     render(<IngredientMatchRow {...defaultProps} editableMatch={matched} />);
     expect(screen.getByText(/White Sugar/)).toBeTruthy();
+  });
+
+  it('renders the matched pantry quantity as a cooking fraction', () => {
+    const matched = makeMatch('Sugar', {
+      matchedPantryItem: {
+        __typename: 'PantryItem',
+        id: 'p1',
+        itemName: 'White Sugar',
+        quantity: 1.25,
+        unit: { __typename: 'Unit', id: 'u1', name: 'cup', symbol: 'cups' },
+      },
+    });
+    render(<IngredientMatchRow {...defaultProps} editableMatch={matched} />);
+    expect(screen.getByText(/1 1\/4 cups/)).toBeTruthy();
+  });
+
+  it('rounds a matched pantry quantity no fraction fits to three decimals', () => {
+    const matched = makeMatch('Milk', {
+      matchedPantryItem: {
+        __typename: 'PantryItem',
+        id: 'p1',
+        itemName: 'Milk',
+        quantity: 177.4412,
+        unit: {
+          __typename: 'Unit',
+          id: 'u1',
+          name: 'millilitre',
+          symbol: 'mL',
+        },
+      },
+    });
+    render(<IngredientMatchRow {...defaultProps} editableMatch={matched} />);
+    expect(screen.getByText(/177\.441 mL/)).toBeTruthy();
+  });
+
+  it('seeds the decimal-pad quantity input rounded to three decimals, never a fraction', () => {
+    render(
+      <IngredientMatchRow
+        {...defaultProps}
+        editableMatch={{ ...makeMatch('Milk'), adjustedQuantity: 0.33333334 }}
+      />,
+    );
+    expect(screen.getByDisplayValue('0.333')).toBeTruthy();
+  });
+
+  it('keeps a half-typed decimal in the field while the quantity updates', () => {
+    const onUpdate = jest.fn();
+    const editableMatch = { ...makeMatch('Milk'), adjustedQuantity: 1 };
+    const { rerender } = render(
+      <IngredientMatchRow
+        {...defaultProps}
+        onUpdate={onUpdate}
+        editableMatch={editableMatch}
+      />,
+    );
+
+    fireEvent.changeText(screen.getByDisplayValue('1'), '1.');
+    expect(onUpdate).toHaveBeenLastCalledWith(0, { adjustedQuantity: 1 });
+    rerender(
+      <IngredientMatchRow
+        {...defaultProps}
+        onUpdate={onUpdate}
+        editableMatch={{ ...editableMatch, adjustedQuantity: 1 }}
+      />,
+    );
+    expect(screen.getByDisplayValue('1.')).toBeTruthy();
+
+    fireEvent.changeText(screen.getByDisplayValue('1.'), '1.5');
+    expect(onUpdate).toHaveBeenLastCalledWith(0, { adjustedQuantity: 1.5 });
+  });
+
+  it('clears the quantity when the field is emptied, so nothing is deducted', () => {
+    const onUpdate = jest.fn();
+    // The sheet owns the match, so the row's update lands in the same render.
+    const Sheet = () => {
+      const [editableMatch, setEditableMatch] = React.useState({
+        ...makeMatch('Flour'),
+        adjustedQuantity: 2,
+      });
+      return (
+        <IngredientMatchRow
+          editableMatch={editableMatch}
+          index={0}
+          onUpdate={(index, updates) => {
+            onUpdate(index, updates);
+            setEditableMatch(current => ({ ...current, ...updates }));
+          }}
+        />
+      );
+    };
+    render(<Sheet />);
+
+    fireEvent.changeText(screen.getByDisplayValue('2'), '');
+
+    expect(onUpdate).toHaveBeenLastCalledWith(0, { adjustedQuantity: 0 });
+    expect(screen.queryByDisplayValue('2')).toBeNull();
+    expect(screen.queryByDisplayValue('0')).toBeNull();
+  });
+
+  it('clears the quantity when the field holds no number', () => {
+    const onUpdate = jest.fn();
+    render(
+      <IngredientMatchRow
+        {...defaultProps}
+        onUpdate={onUpdate}
+        editableMatch={{ ...makeMatch('Flour'), adjustedQuantity: 2 }}
+      />,
+    );
+
+    fireEvent.changeText(screen.getByDisplayValue('2'), 'abc');
+
+    expect(onUpdate).toHaveBeenLastCalledWith(0, { adjustedQuantity: 0 });
+  });
+
+  it('reseeds the field when the quantity changes from outside it', () => {
+    const editableMatch = { ...makeMatch('Milk'), adjustedQuantity: 1 };
+    const { rerender } = render(
+      <IngredientMatchRow {...defaultProps} editableMatch={editableMatch} />,
+    );
+    rerender(
+      <IngredientMatchRow
+        {...defaultProps}
+        editableMatch={{ ...editableMatch, adjustedQuantity: 2.5 }}
+      />,
+    );
+    expect(screen.getByDisplayValue('2.5')).toBeTruthy();
   });
 
   it('renders suggested unit symbol', () => {

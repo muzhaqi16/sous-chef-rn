@@ -4,6 +4,7 @@ import {
   PasswordActionStatus,
 } from '#/graphql/generated/schemaTypes';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo, recordMock } from '#/test-utils/apolloMockProvider';
 import { RequestPasswordResetDocument } from '#operations/auth/auth.generated';
 import { ForgotPasswordScreen } from '../ForgotPasswordScreen';
@@ -120,9 +121,9 @@ jest.mock('#components/molecules/EmailInput', () => ({
 
 // --- Helpers ---
 
-const sentPayload = {
+const sentPayload: MockDataFor<typeof RequestPasswordResetDocument> = {
   requestPasswordReset: {
-    __typename: 'RequestPasswordResetPayload' as const,
+    __typename: 'RequestPasswordResetPayload',
     status: PasswordActionStatus.Sent,
   },
 };
@@ -193,7 +194,7 @@ describe('ForgotPasswordScreen', () => {
     const { mock } = recordMock(RequestPasswordResetDocument, {
       data: {
         requestPasswordReset: {
-          __typename: 'ValidationError' as const,
+          __typename: 'ValidationError',
           code: ErrorCode.ValidationFailed,
           message: 'Email is invalid.',
         },

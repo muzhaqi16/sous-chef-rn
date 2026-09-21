@@ -383,9 +383,9 @@ if (added.length > 0) {
       '  1. node scripts/probe-unistyles-compiler-order.mjs\n' +
       '  2. Confirm babel.config.js still runs\n' +
       '     Unistyles -> unistyles-scope-crawl -> React Compiler, in that order.\n\n' +
-      'Do NOT add `use no memo` to the component. The `noMemoOptOuts` list in\n' +
-      'check-compiler-bailouts.baseline.json is empty and shrink-only, so the\n' +
-      'next pre-push step rejects it — and it would hide the regression rather\n' +
+      'Do NOT add `use no memo` to the component. check-compiler-bailouts has\n' +
+      'no baseline, so any opt-out is a failure and the next pre-push step\n' +
+      'rejects it — and it would hide the regression rather\n' +
       'than fix it. Run with --explain to see the transform this defends against.\n',
   );
   process.exit(1);

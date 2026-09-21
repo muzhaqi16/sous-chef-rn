@@ -35,7 +35,8 @@ credentials, payment secret keys, anything metered and billed to you.
 `scripts/check-bundled-secrets.mjs` encodes this split. Every credential-shaped
 var in `generate-env.js`'s `KEYS` list must be classified as `PUBLIC_BY_DESIGN`
 or `ACCEPTED_FINDINGS`, or the build fails — so the decision about what a leaked
-copy grants gets made by a person, in writing, once.
+copy grants gets made by a person, in writing, once. `PUBLIC_BY_DESIGN` is reserved for the
+first kind; an infrastructure credential never qualifies, however it is scoped.
 
 ## What we ship, and the reasoning for each
 
@@ -125,6 +126,23 @@ and fails when an accepted finding is **no longer** in the bundle — that last 
 so a stale exemption can't outlive the problem it was written for. Accepted
 findings print on every release build, so what we're shipping stays visible
 rather than quietly normalized.
+
+## Launch-argument auth is gated on the artifact
+
+`ALLOW_LAUNCH_ARG_AUTH` lets a build take a session from launch arguments, so a
+build carrying it is a build that accepts an injected session. The gate tests
+the ARTIFACT, not the environment: `MODE=release npm run android` resolves to a
+development `NODE_ENV` _and_ signs with the distribution key, so an environment
+test passes on an APK you could hand to someone.
+
+- `scripts/check-launch-arg-auth.mjs --platform android --variant <name>` reads
+  the variant's `signingConfig` out of `build.gradle` and refuses anything not
+  debug-signed. `--platform ios --sdk <sdk>` refuses a device SDK, since a
+  simulator artifact cannot be installed on a phone.
+- `scripts/run-android.sh` grants the flag to `debug|localRelease` only;
+  `scripts/run-ios.sh` to `debug`, `release` and `localRelease`, which the gate
+  then accepts only for `iphonesimulator`. Both invoke the gate on the build path itself, and it also runs in
+  pre-commit and CI.
 
 ---
 

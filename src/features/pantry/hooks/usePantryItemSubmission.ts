@@ -1,15 +1,14 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { alertService } from '#/services/alertService';
-import { t } from '#/i18n';
+import { useTranslation } from '#/i18n';
 import {
   CreatePantryItemDocument,
   RestockPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import {
+import type {
   StorageState,
   ItemCondition,
-  AcquisitionMethod,
 } from '#/graphql/generated/schemaTypes';
+import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
@@ -21,11 +20,8 @@ import {
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { findCachedPantryItemDuplicate } from '#features/pantry/utils/pantryCacheReaders';
 import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import {
-  alertIfRejected,
-  alertRejectedMutation,
-} from '#/apollo/utils/alertRejectedMutation';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   getPantryItemDuplicateFromResult,
@@ -97,6 +93,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     onSuccess,
   } = params;
 
+  const { t } = useTranslation();
   const client = useApolloClient();
 
   // Create mutation
@@ -104,13 +101,12 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     CreatePantryItemDocument,
     {
       update: (cache, { data }, { variables }) => {
-        const payload = data?.createPantryItem;
-        if (payload?.__typename !== 'CreatePantryItemPayload' || !pantryId)
-          return;
+        const payload = appliedPayload(data);
+        if (!payload || !pantryId) return;
         const pantryItem = payload.pantryItem;
         // Read outside the try: `?.` is a value block, and one inside a try
         // body bails the React Compiler out of the whole hook.
-        const clientId = variables?.input?.id;
+        const clientId = variables?.input.id;
 
         // Idempotent re-add (same cuid id) so the connection holds the
         // authoritative server entity.
@@ -153,15 +149,15 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       if (!isNaN(pkgSize) && pkgSize > 0) {
         itemUnits = [
           {
-            unitId: unitId || undefined,
+            unitId: unitId ?? undefined,
             unitName: !unitId && unit.trim() ? unit.trim() : undefined,
             packageSize: pkgSize,
-            contentUnitId: contentUnitId || undefined,
+            contentUnitId: contentUnitId ?? undefined,
             contentUnitName: !contentUnitId ? contentUnit.trim() : undefined,
             retailUnit: true,
           },
           {
-            unitId: contentUnitId || undefined,
+            unitId: contentUnitId ?? undefined,
             unitName: !contentUnitId ? contentUnit.trim() : undefined,
             isDefault: true,
           },
@@ -188,7 +184,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       ? parseDecimalInput(pantryNetWeight) || undefined
       : totalPackageNetWeight;
     const effectiveNetWeightUnitId =
-      pantryNetWeightUnitId ||
+      pantryNetWeightUnitId ??
       (totalPackageNetWeight ? displayUnitId : undefined);
 
     // Purchase info — send only when the user provided something. `storeId`
@@ -207,7 +203,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       costValue !== undefined ||
       acquisitionMethod !== AcquisitionMethod.Purchased
         ? {
-            storeId: storeId || undefined,
+            storeId: storeId ?? undefined,
             costPerUnit: costValue,
             acquisitionMethod,
           }
@@ -226,14 +222,14 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       unit:
         unitId || unit.trim()
           ? {
-              unitId: unitId || undefined,
+              unitId: unitId ?? undefined,
               unitName: !unitId && unit.trim() ? unit.trim() : undefined,
             }
           : undefined,
       storage: {
         storageState,
         condition,
-        storageLocationId: selectedStorageLocationId || undefined,
+        storageLocationId: selectedStorageLocationId ?? undefined,
         storageLocationName:
           !selectedStorageLocationId && storageLocation.trim()
             ? storageLocation.trim()
@@ -324,16 +320,14 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
             .filter(Boolean)
         : [],
     };
-    // Publishing and withdrawing the optimistic row are a pair, and the
-    // force-add retry below has to do both again after the duplicate branch
-    // has withdrawn it. Named here so the two halves cannot drift.
+    // Publishing and withdrawing the optimistic row are a pair; named here so
+    // the two halves cannot drift.
     const applyOptimisticItem = () => {
       try {
         // Publishes the row AND counts it. The count cannot live in the
         // mutation's `update:` callback — that only runs with a server
         // payload, so offline the row would appear while the header kept the
-        // old count. The helper counts only a row it actually added, so the
-        // force-add retry below cannot double-count.
+        // old count.
         addPantryItemLocally(client.cache, pantryId, optimisticItem);
         writePantryItemDetailStub(client.cache, id, detailStubFields);
       } catch (cacheError) {
@@ -351,118 +345,59 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
      * refusal — so both offer the same choice.
      */
     const promptDuplicateRecovery = (existingPantryItemId: string) => {
-      promptPantryDuplicate({
-        onRestock: async () => {
-          let restockResult;
-          const restockPantryItemOptions = {
-            variables: {
-              input: {
-                id: existingPantryItemId,
-                quantity,
-                // Forward the purchase details the user just entered so the
-                // restock records an ItemPriceHistory observation instead of
-                // discarding cost/store/expiry on the duplicate path.
-                ...(costValue !== undefined && { costPerUnit: costValue }),
-                ...(storeId && { storeId }),
-                ...(expirationDate && {
-                  expiresAt: expirationDate.toISOString(),
-                }),
-                // idempotencyKey dedups the restock ledger row on replay.
-                idempotencyKey: generateEntityId(),
-              },
-            },
-            // Local-first: queued offline, replayed as the canonical
-            // mutation (deduped by its idempotencyKey).
-            context: { localFirst: true },
-          };
-          try {
-            restockResult = await restockPantryItem(restockPantryItemOptions);
-          } catch (error) {
-            errorService.reportError(error, {
-              operation: 'Restock pantry item error:',
-            });
-          }
-          // executeMutation returns false only when the call threw; under
-          // errorPolicy 'all' a transport/GraphQL error instead resolves as
-          // `{ error }`. restockPantryItem has no `onError`, so surface both the
-          // throw and the resolved-error cases here.
-          if (!restockResult || restockResult.error) {
-            alertService.alert(
-              t('labels.error'),
-              t('errors.restockFailedRetry'),
-            );
-            return;
-          }
-          // A resolved non-success union member carries no `error`, so classify
-          // it — a bare falsy check would treat the refusal as success.
-          if (classifyCreateResult(restockResult) === 'rejected') {
-            alertRejectedMutation(
-              restockResult,
-              t('errors.restockFailedRetry'),
-            );
-            return;
-          }
-          onSuccess();
-        },
-        onAddAnyway: async () => {
-          // Nothing is on screen at this point — either no row was ever
-          // published, or the refusal branch withdrew it — so publish before
-          // firing, or a force-add that queues offline shows nothing until the
-          // replay lands. The id is reused deliberately: no row was committed
-          // under it, and reusing it is what makes the replay idempotent.
-          unconfirmedCreates.mark(id);
-          applyOptimisticItem();
-          let retryResult;
-          try {
-            retryResult = await createPantryItem({
+      const restockExisting = async () => {
+        const settled = await settleMutation(
+          () =>
+            restockPantryItem({
               variables: {
-                input: { ...mutationInput, forceAdd: true },
+                input: {
+                  id: existingPantryItemId,
+                  quantity,
+                  // Forward the purchase details the user just entered so the
+                  // restock records an ItemPriceHistory observation.
+                  ...(costValue !== undefined && { costPerUnit: costValue }),
+                  ...(storeId && { storeId }),
+                  ...(expirationDate && {
+                    expiresAt: expirationDate.toISOString(),
+                  }),
+                  // idempotencyKey dedups the restock ledger row on replay.
+                  idempotencyKey: generateEntityId(),
+                },
               },
-              // Same local-first contract as the first attempt: without it the
-              // force-add is the one add on this screen that cannot queue.
+              // Local-first: queued offline, replayed as the canonical
+              // mutation (deduped by its idempotencyKey).
               context: { localFirst: true },
-            });
-          } catch (error) {
-            errorService.reportError(error, {
-              operation: 'Force add pantry item error:',
-            });
-          }
-          unconfirmedCreates.confirm(id);
-          if (!retryResult) {
-            revertOptimisticItem();
-            alertService.alert(
-              t('labels.error'),
-              t('errors.addItemFailedRetry'),
-            );
-            return;
-          }
-          // `alertIfRejected`, not a payload-typename check: a retry whose first
-          // attempt did commit answers ConflictError(IDEMPOTENT_REPLAY), a
-          // successful no-op. Not `alertRejectedMutation` either — this mutation
-          // has no `onError`, so the resolved-`error` case would go unreported.
-          if (alertIfRejected(retryResult, t('errors.addItemFailedRetry'))) {
-            revertOptimisticItem();
-            return;
-          }
-          onSuccess();
+            }),
+          {
+            document: RestockPantryItemDocument,
+            fallback: t('errors.restockFailedRetry'),
+          },
+        );
+        if (settled.status === 'failed') return;
+        onSuccess();
+      };
+      // `settleMutation` never rejects, so the restock needs no catch here.
+      promptPantryDuplicate({
+        onRestock: () => {
+          void restockExisting();
         },
       });
     };
 
     // Offline-first: the pantry answers "do I already stock this?" itself, so
-    // nothing is published and no doomed create is queued. This form sends an
-    // inline item and has no catalog id, so it matches on the name — the same
-    // resolution the server does — and only ever prompts, never acts on it.
-    const cachedDuplicate = findCachedPantryItemDuplicate(
-      client.cache,
-      pantryId,
-      {
-        itemName: itemName.trim(),
-      },
-    );
+    // nothing is published and no doomed create is queued. The server refuses
+    // only the item IN THAT UNIT, so the match is name plus unit id. A blank
+    // unit resolves server-side to the item's tracking unit, which a held stack
+    // almost always is, so it matches any held unit; free text is the server's.
+    const cachedDuplicate =
+      unitId || !unit.trim()
+        ? findCachedPantryItemDuplicate(client.cache, pantryId, {
+            itemName: itemName.trim(),
+            unitId,
+          })
+        : null;
     if (cachedDuplicate) {
-      // Nothing was published under this id; release the detail-read gate the
-      // force-add path re-claims for itself.
+      // Nothing was published under this id; release the detail-read gate.
       unconfirmedCreates.confirm(id);
       promptDuplicateRecovery(cachedDuplicate.existingPantryItemId);
       return;
@@ -471,34 +406,29 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     applyOptimisticItem();
 
     let result;
+    let thrown: unknown;
     try {
       result = await createPantryItem({
         variables: { input: mutationInput },
         context: { localFirst: true },
       });
     } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Create pantry item error:',
-      });
+      thrown = error;
     }
     // Released on every outcome: acknowledged and rejected both leave nothing
     // for a detail read to miss, and a create that went to the queue has
     // already been handed off to `queueStore`'s pending set by now.
     unconfirmedCreates.confirm(id);
-    if (!result) {
-      // Hard failure (threw) → revert the optimistic item.
-      revertOptimisticItem();
-      alertService.alert(t('labels.error'), t('errors.addItemFailed'));
-      return;
-    }
 
-    // Check for a duplicate (typed DuplicatePantryItemError member in `data` or
-    // the legacy PANTRY_ITEM_ALREADY_EXISTS GraphQL error). Outside try for the
-    // React Compiler.
-    const duplicateInfo = getPantryItemDuplicateFromResult(
-      result.data?.createPantryItem,
-      result.error,
-    );
+    // A duplicate arrives as a typed DuplicatePantryItemError member in `data`
+    // or as the legacy PANTRY_ITEM_ALREADY_EXISTS GraphQL error.
+    const answered = result;
+    const duplicateInfo = answered
+      ? getPantryItemDuplicateFromResult(
+          answered.data?.createPantryItem,
+          answered.error,
+        )
+      : null;
     if (duplicateInfo) {
       // Backstop for what the local check could not see — a windowed list, or a
       // collaborator's add. The server writes nothing on a refusal, so withdraw
@@ -508,21 +438,18 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       return;
     }
 
-    const outcome = classifyCreateResult(result);
-    if (outcome === 'rejected') {
-      // The server refused the create — discard the item we showed.
-      revertOptimisticItem();
-      // The create document selects `... on ValidationError { field }`, and a
-      // refusal that names a field has localized copy under `errors.field.*`
-      // (`netWeight` is reachable from this form). A fixed string threw that
-      // away and told the user only that "something" failed.
-      // `alertIfRejected` rather than `alertRejectedMutation`: this mutation
-      // has no `onError`, so the resolved-`error` case needs telling too.
-      alertIfRejected(result, t('errors.addItemFailed'));
-    } else {
-      // 'created' or 'queued' — the item stays (and replays if queued offline).
-      onSuccess();
-    }
+    // A refusal naming a field (`netWeight` is reachable from this form) reads
+    // as its localized `errors.field.*` copy.
+    const settled = await settleMutation(
+      () => (answered ? Promise.resolve(answered) : Promise.reject(thrown)),
+      {
+        document: CreatePantryItemDocument,
+        fallback: t('errors.addItemFailed'),
+        onFailed: revertOptimisticItem,
+      },
+    );
+    // Applied or queued — the item stays (and replays if queued offline).
+    if (settled.status !== 'failed') onSuccess();
   };
 
   return { handleConfirm, loading };

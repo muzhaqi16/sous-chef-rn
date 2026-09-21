@@ -4,13 +4,6 @@
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    trackEvent: jest.fn(),
-    increment: jest.fn(),
-  },
-}));
-
 jest.mock('#/services/performance/types', () => ({
   DEFAULT_PERFORMANCE_CONFIG: {
     enabled: true,

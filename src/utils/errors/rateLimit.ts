@@ -26,7 +26,6 @@ const RATE_LIMIT_CODES: string[] = [
 
 export interface RateLimitDetails {
   retryAfter: number | null;
-  message: string;
 }
 
 interface GraphQLErrorLike {
@@ -48,7 +47,7 @@ function graphQLErrorsOf(err: ApolloErrorLike): GraphQLErrorLike[] | undefined {
 
 function toErrorObject(error: unknown): ApolloErrorLike | null {
   if (error == null || typeof error !== 'object') return null;
-  return error as ApolloErrorLike;
+  return error;
 }
 
 export function isRateLimitError(error: unknown): boolean {
@@ -91,37 +90,14 @@ export function getRateLimitDetails(error: unknown): RateLimitDetails | null {
       typeof rateLimitError.extensions?.retryAfter === 'number'
         ? rateLimitError.extensions.retryAfter
         : null,
-    message:
-      rateLimitError.message ||
-      t('errors.rateLimitGeneric', {
-        defaultValue: 'Too many requests. Please try again later.',
-      }),
   };
 }
 
 export function getRateLimitMessage(error: unknown): string {
-  const details = getRateLimitDetails(error);
-  if (!details) {
-    return t('errors.rateLimitGeneric', {
-      defaultValue: 'Too many requests. Please try again later.',
-    });
+  const retryAfter = getRateLimitDetails(error)?.retryAfter;
+  if (!retryAfter || retryAfter <= 0) return t('errors.rateLimitGeneric');
+  if (retryAfter >= 60) {
+    return t('errors.rateLimitMinutes', { count: Math.ceil(retryAfter / 60) });
   }
-
-  if (details.retryAfter && details.retryAfter > 0) {
-    if (details.retryAfter >= 60) {
-      const minutes = Math.ceil(details.retryAfter / 60);
-      return t('errors.rateLimitMinutes', {
-        count: minutes,
-        defaultValue:
-          'Too many requests. Please try again in {{count}} minute(s).',
-      });
-    }
-    return t('errors.rateLimitSeconds', {
-      count: details.retryAfter,
-      defaultValue:
-        'Too many requests. Please try again in {{count}} second(s).',
-    });
-  }
-
-  return details.message;
+  return t('errors.rateLimitSeconds', { count: retryAfter });
 }

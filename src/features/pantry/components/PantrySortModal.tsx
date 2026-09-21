@@ -1,6 +1,7 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import React from 'react';
 import { View, Modal } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
@@ -22,7 +23,7 @@ interface PantrySortModalProps {
 
 const SORT_OPTIONS: Array<{
   key: SortOption;
-  labelKey: string;
+  labelKey: TranslationKey;
   icon: string;
   library?: string;
 }> = [
@@ -70,7 +71,7 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
         <View
           style={styles.sortModal}
           onStartShouldSetResponder={() => true}
-          testID="pantry-sort-modal"
+          testID={pantryTestIDs.sortModal}
         >
           <Text role="bodyStrong" style={styles.sortModalTitle}>
             {t('pantrySort.title')}
@@ -80,7 +81,7 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
               key={option.key}
               // Derived from the option key, so a new sort option is reachable
               // from a test the moment it is added.
-              testID={`pantry-sort-option-${option.key}`}
+              testID={pantryTestIDs.sortOption(option.key)}
               style={[
                 styles.sortOption,
                 sortOption === option.key && styles.sortOptionActive,

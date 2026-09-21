@@ -24,8 +24,30 @@ export const registerSessionTeardown = (
  * One step failing must not skip the rest — they are independent, and a session
  * that ends half-quiet is the failure this exists to prevent.
  */
+/**
+ * Insertion order is first-USE order under Metro's `inlineRequires`, so it
+ * differs between a fresh sign-in and a restored session.
+ * `refresh-token-revoke` reads the tokens before anything else runs. A step not
+ * named here runs after those that are.
+ */
+const TEARDOWN_ORDER: readonly string[] = [
+  'refresh-token-revoke',
+  'devicePushToken',
+  'token-refresh',
+  'notification-reseed',
+  'offline-queue',
+  'apollo',
+];
+
 export const runSessionTeardown = async (): Promise<void> => {
-  for (const [name, step] of steps) {
+  const ordered = [
+    ...TEARDOWN_ORDER.filter(name => steps.has(name)),
+    ...[...steps.keys()].filter(name => !TEARDOWN_ORDER.includes(name)),
+  ];
+
+  for (const name of ordered) {
+    const step = steps.get(name);
+    if (!step) continue;
     try {
       await step();
     } catch (error) {

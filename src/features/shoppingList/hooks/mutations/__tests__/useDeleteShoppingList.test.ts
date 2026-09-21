@@ -1,5 +1,5 @@
 import { waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useDeleteShoppingList } from '../useDeleteShoppingList';
@@ -16,7 +16,7 @@ describe('useDeleteShoppingList', () => {
     // The server's message is unlocalizable by construction: the client sends
     // no `Accept-Language` and the token carries no locale, so an es / it / sq
     // user gets a translated title over an English body.
-    const failure: MockedResponse = {
+    const failure: MockFor<typeof DeleteShoppingListDocument> = {
       request: { query: DeleteShoppingListDocument, variables: () => true },
       error: new Error('An unexpected database error occurred'),
       maxUsageCount: Number.POSITIVE_INFINITY,

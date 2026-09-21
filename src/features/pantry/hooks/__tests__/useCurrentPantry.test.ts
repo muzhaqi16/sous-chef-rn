@@ -1,4 +1,4 @@
-import { InMemoryCache } from '@apollo/client';
+import type { InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { waitFor } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
@@ -62,7 +62,6 @@ describe('useCurrentPantry', () => {
     expect(result.current.isReady).toBe(false);
     expect(result.current.pantry).toBeNull();
     expect(result.current.pantries).toEqual([]);
-    expect(result.current.selectedPantryId).toBeNull();
     expect(result.current.currentHome).toBeNull();
     expect(result.current.selectedHomeId).toBeNull();
   });

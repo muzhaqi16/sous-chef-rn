@@ -1,6 +1,7 @@
 import type { DocumentNode } from 'graphql';
 import { gql, type ApolloCache } from '@apollo/client';
-import type { QueuedMutation } from './types';
+import type { QueuedMutation, ReplayInputs } from './types';
+import { queuedSubject } from './queuedSubject';
 
 /**
  * The contract between the queue and the features whose writes it replays: the
@@ -11,12 +12,54 @@ import type { QueuedMutation } from './types';
 export interface SyncConversion {
   syncMutation: DocumentNode;
   syncVariables: Record<string, unknown>;
+  /** Replays an original document whose input's `version` is non-null. */
+  requiresVersion?: boolean;
 }
 
-export type SyncBuilder = (
+export type ReplayInputReader = (
   mutation: QueuedMutation,
   cache: ApolloCache,
-) => SyncConversion;
+) => ReplayInputs;
+
+export type SyncBuilder = ((
+  mutation: QueuedMutation,
+  cache: ApolloCache,
+) => SyncConversion) & {
+  /** Run when the write is queued; its result is stored as `replayInputs`. */
+  captureReplayInputs?: ReplayInputReader;
+};
+
+/**
+ * A builder whose cache reads are all in `read`. Values captured at enqueue win
+ * over a replay-time read, which only fills what an older entry lacks.
+ */
+export function withCapturedReads(
+  read: ReplayInputReader,
+  build: (
+    mutation: QueuedMutation,
+    inputs: ReplayInputs,
+    cache: ApolloCache,
+  ) => SyncConversion,
+): SyncBuilder {
+  const builder: SyncBuilder = (mutation, cache) =>
+    build(
+      mutation,
+      { ...read(mutation, cache), ...mutation.replayInputs },
+      cache,
+    );
+  builder.captureReplayInputs = read;
+  return builder;
+}
+
+/** Drops the reads that found nothing, so a stored miss never masks a hit. */
+export const definedInputs = (
+  inputs: Record<string, string | null | undefined>,
+): ReplayInputs =>
+  Object.fromEntries(
+    Object.entries(inputs).filter(
+      (entry): entry is [string, string] => entry[1] != null,
+    ),
+  );
 
 /** op-name → builder, the shape a feature's `offline/syncBuilders.ts` exports. */
 export type SyncBuilderTable = Record<string, SyncBuilder>;
@@ -57,16 +100,13 @@ export const getQueuedInput = (mutation: QueuedMutation): QueuedInput =>
   (mutation.variables.input ?? {}) as QueuedInput;
 
 /**
- * The client-minted permanent cuid IS the sync `clientId`. A malformed input
- * with no id yields `undefined` on purpose, so the server refuses it rather
- * than it being back-filled with a fabricated id; builders cast to
- * `Sync*Input`'s required `clientId: ID`, and a cast does not coerce.
+ * The client-minted permanent cuid IS the sync `clientId`, read from the input
+ * type's subject — never a guess that could land on a catalog `itemId`. A
+ * malformed input with no id yields `undefined`, so the server refuses it;
+ * builders cast to `Sync*Input`'s required `clientId: ID`, which does not coerce.
  */
-export const getClientId = (
-  mutation: QueuedMutation,
-  input: QueuedInput,
-): string | undefined =>
-  input.id ?? input.itemId ?? (mutation.variables.id as string | undefined);
+export const getClientId = (mutation: QueuedMutation): string | undefined =>
+  queuedSubject(mutation).subjectIds[0];
 
 const QUEUE_UNIT_FRAGMENT = gql`
   fragment QueueUnitData on Unit {
@@ -103,3 +143,12 @@ export const readUnitSpec = (
 
   return unit?.symbol ? { ...spec, unitSymbol: unit.symbol } : spec;
 };
+
+/** The unit spec with a captured symbol beside its id, unless it has one. */
+export const withUnitSymbol = (
+  spec: UnitSpec,
+  unitSymbol: string | undefined,
+): UnitSpec =>
+  spec.unitSymbol || !unitSymbol || !spec.unitId
+    ? spec
+    : { ...spec, unitSymbol };

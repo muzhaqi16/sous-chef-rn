@@ -1,13 +1,11 @@
 import type { DocumentNode } from 'graphql';
 import { storage, isRecoveryStorage } from '#storage/mmkv';
-import {
-  QueueCapacityError,
-  QueuedMutation,
-  QueueError,
-  QueueStats,
-  QueueStatus,
-} from './types';
+import type { QueuedMutation, QueueError, QueueStats } from './types';
+import { QueueCapacityError, QueueStatus } from './types';
 import { logger } from '#/utils/environment';
+import { deletesItsSubject, queuedSubject } from './queuedSubject';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
 const QUEUE_STORAGE_KEY = 'apollo-mutation-queue';
 const CURRENT_USER_KEY = 'apollo-queue-current-user';
@@ -16,6 +14,19 @@ const CURRENT_USER_KEY = 'apollo-queue-current-user';
 // (SUCCESS/FAILED) entries are evicted first; a queue full of un-synced work
 // rejects the enqueue rather than dropping a PENDING op mid dependency chain.
 const MAX_QUEUE_SIZE = 100;
+
+const MOVE_SHOPPING_LIST_ITEM = operationNameOf(MoveShoppingListItemDocument);
+
+/** The item a queued move targets; entries are persisted JSON, read structurally. */
+const movedItemIdOf = (mutation: QueuedMutation): string | undefined => {
+  const input: unknown = mutation.variables.input;
+  return typeof input === 'object' &&
+    input !== null &&
+    'itemId' in input &&
+    typeof input.itemId === 'string'
+    ? input.itemId
+    : undefined;
+};
 
 /**
  * Terminal = the queue will not replay it as things stand. AUTH_ERROR counts
@@ -44,14 +55,6 @@ type SerializedQueuedMutation = Omit<QueuedMutation, 'mutation'> & {
   mutation: string;
 };
 
-/**
- * Queued variables are duck-typed and ride a persistence boundary, so client-id
- * extraction guards at runtime instead of trusting a compile-time shape.
- */
-const addIfClientId = (ids: Set<string>, value: unknown): void => {
-  if (typeof value === 'string' && value) ids.add(value);
-};
-
 /** User-scoped mutation queue persisted to MMKV. */
 export class QueueStore {
   // Write-through in-memory cache: updated on every write, invalidated on a
@@ -63,6 +66,7 @@ export class QueueStore {
   // (cache.ts), so without these each write costs an MMKV read and a rebuild.
   private currentUserId: string | null | undefined = undefined;
   private pendingClientIds: Set<string> | null = null;
+  private unconfirmedCreateIds: Set<string> | null = null;
 
   // Lets UI read live queue state (the offline banner's pending count) through
   // useSyncExternalStore instead of polling MMKV.
@@ -138,12 +142,13 @@ export class QueueStore {
       logger.error('Failed to save queue to storage:', error);
     }
     this.pendingClientIds = null;
+    this.unconfirmedCreateIds = null;
     this.notifyListeners();
   }
 
   getCurrentUserId(): string | null {
     if (this.currentUserId === undefined) {
-      this.currentUserId = storage.getString(CURRENT_USER_KEY) || null;
+      this.currentUserId = storage.getString(CURRENT_USER_KEY) ?? null;
     }
     return this.currentUserId;
   }
@@ -154,6 +159,7 @@ export class QueueStore {
     }
     this.currentUserId = userId;
     this.pendingClientIds = null;
+    this.unconfirmedCreateIds = null;
     // The pending count is user-scoped, so a user switch changes it even
     // though the queue contents didn't.
     this.notifyListeners();
@@ -163,37 +169,56 @@ export class QueueStore {
     storage.remove(CURRENT_USER_KEY);
     this.currentUserId = null;
     this.pendingClientIds = null;
+    this.unconfirmedCreateIds = null;
     this.notifyListeners();
   }
 
   /**
    * Repeated MoveShoppingListItem ops for one item coalesce into the last
-   * position, so a drag only ever replays where the item finally landed.
+   * position, so a drag only ever replays where the item finally landed. The
+   * merged move keeps the first one's age in `agedFrom` — not in `createdAt`,
+   * which orders the drain: an older stamp there would sort the surviving move
+   * ahead of a row created between the two moves, and the move names that row.
    */
   addMutation(mutation: QueuedMutation): void {
     const queue = this.loadQueue();
 
-    if (mutation.operationName === 'MoveShoppingListItem') {
-      const itemId = mutation.variables?.input?.itemId;
+    if (mutation.operationName === MOVE_SHOPPING_LIST_ITEM) {
+      const itemId = movedItemIdOf(mutation);
 
       if (itemId) {
         const existingIndex = queue.findIndex(
           m =>
-            m.operationName === 'MoveShoppingListItem' &&
-            m.variables?.input?.itemId === itemId &&
+            m.operationName === MOVE_SHOPPING_LIST_ITEM &&
+            movedItemIdOf(m) === itemId &&
             m.userId === mutation.userId &&
             m.status === QueueStatus.PENDING, // Only coalesce pending mutations
         );
 
-        if (existingIndex !== -1) {
+        const [superseded] =
+          existingIndex === -1 ? [] : queue.splice(existingIndex, 1);
+        if (superseded) {
           logger.debug(
             `🔄 Queue: Coalescing move mutations for item ${itemId} - keeping final position`,
           );
-          queue[existingIndex] = mutation;
+          // Appended, not written into the old slot: the drain replays in queue
+          // order, and the final position can name a row created since.
+          queue.push({
+            ...mutation,
+            agedFrom: superseded.agedFrom ?? superseded.createdAt,
+            conflictCount: superseded.conflictCount,
+          });
           this.saveQueue(queue);
           return;
         }
       }
+    }
+
+    if (
+      deletesItsSubject(mutation) &&
+      this.supersedeByDelete(queue, mutation)
+    ) {
+      return;
     }
 
     // Enforce the cap without ever dropping a PENDING op: that would break a
@@ -225,6 +250,49 @@ export class QueueStore {
     logger.debug(
       `📥 Queue: Added mutation ${mutation.operationName} (${mutation.id}) for user ${mutation.userId}`,
     );
+  }
+
+  /**
+   * Drops the pending (or re-auth-parked, non-minting) writes to the row a delete
+   * removes: left queued, each holds the delete behind it. A row the server never
+   * had takes the delete with it. Returns whether it settled the enqueue.
+   */
+  private supersedeByDelete(
+    queue: QueuedMutation[],
+    deletion: QueuedMutation,
+  ): boolean {
+    const [deletedId] = queuedSubject(deletion).subjectIds;
+    if (!deletedId) return false;
+
+    const kept: QueuedMutation[] = [];
+    let oldest = Infinity;
+    let mintedHere = false;
+    for (const m of queue) {
+      const { subjectIds, mintedIds } = queuedSubject(m);
+      const superseded =
+        m.userId === deletion.userId &&
+        (m.status === QueueStatus.PENDING ||
+          (m.status === QueueStatus.AUTH_ERROR && mintedIds.length === 0)) &&
+        subjectIds.length > 0 &&
+        subjectIds.every(id => id === deletedId);
+      if (!superseded) {
+        kept.push(m);
+        continue;
+      }
+      oldest = Math.min(oldest, m.agedFrom ?? m.createdAt);
+      mintedHere ||= mintedIds.length > 0;
+    }
+    const supersededCount = queue.length - kept.length;
+    if (supersededCount === 0) return false;
+
+    logger.debug(
+      `🔄 Queue: ${deletion.operationName} supersedes ${supersededCount} pending write(s) to ${deletedId}`,
+    );
+    if (!mintedHere) {
+      kept.push({ ...deletion, agedFrom: deletion.agedFrom ?? oldest });
+    }
+    this.saveQueue(kept);
+    return true;
   }
 
   removeMutation(mutationId: string): boolean {
@@ -307,41 +375,46 @@ export class QueueStore {
    * PENDING entries past the 90-day dedup horizon become FAILED so they surface
    * through the normal failure UX instead of double-applying. Expiry is
    * age-based, so a FIFO queue can only expire a prefix, never punch a hole
-   * mid dependency chain.
+   * mid dependency chain. Returns the expired entries for withdrawal.
    */
-  expireStalePending(userId: string): number {
+  expireStalePending(
+    userId: string,
+  ): Array<QueuedMutation & { lastError: QueueError }> {
     const queue = this.loadQueue();
-    const cutoff = Date.now() - MAX_PENDING_AGE_MS;
-    let expired = 0;
+    const now = Date.now();
+    const cutoff = now - MAX_PENDING_AGE_MS;
+    const expired: Array<QueuedMutation & { lastError: QueueError }> = [];
     const updated = queue.map(m => {
       if (
         m.userId !== userId ||
         m.status !== QueueStatus.PENDING ||
-        m.createdAt > cutoff
+        (m.agedFrom ?? m.createdAt) > cutoff
       ) {
         return m;
       }
-      expired++;
       const lastError: QueueError = {
         type: 'unknown',
         message:
           'Queued change expired: older than the 90-day offline sync window',
         code: 'OFFLINE_SYNC_WINDOW_EXPIRED',
-        timestamp: Date.now(),
+        timestamp: now,
         retryable: false,
       };
-      return {
+      const failed = {
         ...m,
         status: QueueStatus.FAILED,
-        updatedAt: Date.now(),
+        updatedAt: now,
+        processedAt: now,
         lastError,
       };
+      expired.push(failed);
+      return failed;
     });
 
-    if (expired > 0) {
+    if (expired.length > 0) {
       this.saveQueue(updated);
       logger.warn(
-        `🧹 Queue: Expired ${expired} PENDING mutation(s) past the 90-day sync window`,
+        `🧹 Queue: Expired ${expired.length} PENDING mutation(s) past the 90-day sync window`,
       );
     }
     return expired;
@@ -359,26 +432,37 @@ export class QueueStore {
     const ids = new Set<string>();
     const userId = this.getCurrentUserId();
     if (userId) {
-      for (const { variables } of this.getPendingMutationsForUser(userId)) {
-        addIfClientId(
-          ids,
-          variables?.input?.id ?? variables?.input?.itemId ?? variables?.id,
-        );
-        // Batch creates mint one client id per item; the isArray guard covers
-        // persisted entries whose shape predates the current enqueue path.
-        const items = variables?.input?.items;
-        if (Array.isArray(items)) {
-          for (const item of items) addIfClientId(ids, item?.id);
-        }
+      for (const mutation of this.getPendingMutationsForUser(userId)) {
+        for (const id of queuedSubject(mutation).subjectIds) ids.add(id);
       }
     }
     this.pendingClientIds = ids;
     return ids;
   }
 
+  /**
+   * Ids the device minted for a create still PENDING — rows the server has
+   * never seen. Narrower than {@link getPendingClientIds}: a pending usage or
+   * update names a row the server owns, and treating it as unconfirmed skips
+   * that row's detail queries and pins it into lists it has left.
+   */
+  getUnconfirmedCreateIds(): Set<string> {
+    if (this.unconfirmedCreateIds) return this.unconfirmedCreateIds;
+
+    const ids = new Set<string>();
+    const userId = this.getCurrentUserId();
+    if (userId) {
+      for (const mutation of this.getPendingMutationsForUser(userId)) {
+        for (const id of queuedSubject(mutation).mintedIds) ids.add(id);
+      }
+    }
+    this.unconfirmedCreateIds = ids;
+    return ids;
+  }
+
   getMutation(mutationId: string): QueuedMutation | null {
     const queue = this.loadQueue();
-    return queue.find(m => m.id === mutationId) || null;
+    return queue.find(m => m.id === mutationId) ?? null;
   }
 
   clearQueueForUser(userId: string): number {
@@ -403,6 +487,7 @@ export class QueueStore {
     storage.remove(QUEUE_STORAGE_KEY);
     this.cache = null;
     this.pendingClientIds = null;
+    this.unconfirmedCreateIds = null;
     logger.debug('🧹 Queue: Cleared all mutations');
     this.notifyListeners();
   }
@@ -517,7 +602,10 @@ export class QueueStore {
   invalidateCache(): void {
     this.cache = null;
     this.pendingClientIds = null;
+    this.unconfirmedCreateIds = null;
     this.currentUserId = undefined;
+    // A pending-write badge reads through the cache; it must re-read now.
+    this.notifyListeners();
     if (__DEV__) {
       logger.debug('🔄 Queue: Cache invalidated');
     }

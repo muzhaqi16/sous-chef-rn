@@ -1,5 +1,6 @@
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
-import { createClient, Client } from 'graphql-ws';
+import type { Client } from 'graphql-ws';
+import { createClient } from 'graphql-ws';
 import { AppState, Platform } from 'react-native';
 import { env } from '#/config/env';
 import { useStore } from '#store';
@@ -50,7 +51,7 @@ const webSocketImpl: WebSocketWithHeaders = class extends BaseWebSocket {
 };
 
 // Use env.WEB_SOCKET_URL from .env if set, otherwise use environment-specific default
-const WS_URL = env.WEB_SOCKET_URL || Environment.getApiConfig().wsUrl;
+const WS_URL = env.WEB_SOCKET_URL ?? Environment.getApiConfig().wsUrl;
 
 // Replaceable because `dispose()` is one-way: it latches `disposed` with no
 // reset, after which every retry silently gives up. A session end must drop
@@ -632,9 +633,7 @@ const createWsClient = () => {
 };
 
 const getOrCreateClient = (): Client => {
-  if (!currentClient) {
-    currentClient = createWsClient();
-  }
+  currentClient ??= createWsClient();
   return currentClient;
 };
 

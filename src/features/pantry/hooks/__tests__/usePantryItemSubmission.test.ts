@@ -1,13 +1,16 @@
 'use no memo';
 
-import { act } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  CreatePantryItemDocument,
+  RestockPantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import {
   AcquisitionMethod,
   ErrorCode,
@@ -438,6 +441,53 @@ describe('usePantryItemSubmission', () => {
     );
   });
 
+  it('recovers a server duplicate refusal by restocking the named stack, never a second create', async () => {
+    // A forced add would land on this same stack while the row published under
+    // the minted id stayed behind as a ghost; restock is the only recovery.
+    const refused = recordMock(CreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'DuplicatePantryItemError',
+          code: ErrorCode.Conflict,
+          message: 'Already in pantry',
+          existingPantryItemIds: ['existing-1'],
+        },
+      },
+    });
+    const restock = recordMock(RestockPantryItemDocument, {
+      data: {
+        restockPantryItem: { __typename: 'RestockPantryItemPayload' },
+      },
+    });
+
+    const { result } = renderHookWithApollo(
+      () => usePantryItemSubmission(defaultParams),
+      { operationMocks: [refused.mock, restock.mock] },
+    );
+
+    await act(async () => {
+      await result.current.handleConfirm();
+    });
+
+    const buttons = (alertService.alert as jest.Mock).mock.lastCall?.[2] as {
+      text: string;
+      onPress?: () => void;
+    }[];
+    expect(buttons.map(b => b.text)).toEqual(['Cancel', 'Restock']);
+
+    await act(async () => {
+      buttons[1]?.onPress?.();
+    });
+
+    await waitFor(() =>
+      expect(restock.fired).toContainEqual({
+        input: expect.objectContaining({ id: 'existing-1', quantity: 2 }),
+      }),
+    );
+    await waitFor(() => expect(mockOnSuccess).toHaveBeenCalled());
+    expect(refused.fired).toHaveLength(1);
+  });
+
   it('shows error when result has error but is not duplicate', async () => {
     const {
       isPantryItemDuplicateError,
@@ -538,7 +588,8 @@ describe('usePantryItemSubmission', () => {
    * Offline-first: this form is reachable with no network, so a duplicate it
    * could have seen in its own cache must not become a create the server will
    * only refuse later. It sends an inline item with no catalog id, so the match
-   * is on the name — and it only ever prompts on that match, never acts.
+   * is on the name plus the unit — the server refuses only the item in that
+   * unit — and it only ever prompts on that match, never acts.
    */
   describe('a duplicate the cache can already see', () => {
     // Args are load-bearing — see the reader's own suite: the connection is
@@ -572,6 +623,10 @@ describe('usePantryItemSubmission', () => {
                   __typename
                   id
                 }
+                unit {
+                  __typename
+                  id
+                }
               }
             }
           }
@@ -579,7 +634,7 @@ describe('usePantryItemSubmission', () => {
       }
     `;
 
-    const seedStocked = (itemName: string) => {
+    const seedStocked = (itemName: string, unitId = 'unit-1') => {
       const cache = makeCache();
       cache.writeQuery({
         query: STOCKED_PANTRY,
@@ -606,6 +661,7 @@ describe('usePantryItemSubmission', () => {
                     itemName,
                     quantity: 3,
                     item: { __typename: 'Item', id: 'item-1' },
+                    unit: { __typename: 'Unit', id: unitId },
                   },
                 },
               ],
@@ -648,6 +704,72 @@ describe('usePantryItemSubmission', () => {
 
       expect(m.fired).toHaveLength(1);
       expect(mockOnSuccess).toHaveBeenCalled();
+    });
+
+    it('fires the create when the item is stocked only in another unit', async () => {
+      // A different unit is a separate stack the server accepts.
+      const m = createMock();
+      const { result } = renderHookWithApollo(
+        () => usePantryItemSubmission(defaultParams),
+        { cache: seedStocked('Milk', 'unit-litre'), operationMocks: [m.mock] },
+      );
+
+      await act(async () => {
+        await result.current.handleConfirm();
+      });
+
+      expect(alertService.alert).not.toHaveBeenCalled();
+      expect(m.fired).toHaveLength(1);
+      expect(mockOnSuccess).toHaveBeenCalled();
+    });
+
+    it('offers the restock for a blank unit, which the server resolves to the held stack', async () => {
+      const m = createMock();
+      const { result } = renderHookWithApollo(
+        () =>
+          usePantryItemSubmission({
+            ...defaultParams,
+            itemName: 'Eggs',
+            unit: '',
+            unitId: null,
+          }),
+        {
+          cache: seedStocked('Eggs', 'unit-piece'),
+          operationMocks: [m.mock],
+        },
+      );
+
+      await act(async () => {
+        await result.current.handleConfirm();
+      });
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Item Already in Pantry',
+        expect.stringContaining('already in your pantry'),
+        expect.any(Array),
+      );
+      expect(m.fired).toHaveLength(0);
+      expect(mockOnSuccess).not.toHaveBeenCalled();
+    });
+
+    it('leaves a free-text unit to the server', async () => {
+      const m = createMock();
+      const { result } = renderHookWithApollo(
+        () =>
+          usePantryItemSubmission({
+            ...defaultParams,
+            unit: 'cups',
+            unitId: null,
+          }),
+        { cache: seedStocked('Milk'), operationMocks: [m.mock] },
+      );
+
+      await act(async () => {
+        await result.current.handleConfirm();
+      });
+
+      expect(alertService.alert).not.toHaveBeenCalled();
+      expect(m.fired).toHaveLength(1);
     });
   });
 });

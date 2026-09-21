@@ -1,3 +1,4 @@
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useEffect, useRef, useState } from 'react';
 import { useUnreadNotificationCount } from '#features/notifications/hooks/useUnreadNotificationCount';
 import {
@@ -46,6 +47,7 @@ import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import type { Translate } from '#/i18n/types';
 import { Screen } from '#components/templates/Screen';
+import { PantryHeader } from '#features/pantry/components/PantryHeader';
 
 function buildPantryTutorialSteps(t: Translate): TutorialStep[] {
   return [
@@ -119,7 +121,7 @@ const PantryMainInner: React.FC = () => {
 
   useTabScreenLifecycle({
     screenName: 'PantryMain',
-    optimisticTypes: ['Pantry', 'PantryItem'],
+    optimisticTypes: ['PantryItem', 'PantryItemBatch'],
     telemetryProperties: () => ({
       home_id: screen.selectedHomeId,
       pantry_id: screen.pantry?.id,
@@ -363,8 +365,10 @@ function PantryMainContent({
     setAddLocationSheetVisible(true);
   };
 
+  const coachStep = tutorial.currentStep;
+
   return (
-    <Screen testID="pantry-screen" scroll="list" gutter="none">
+    <Screen testID={pantryTestIDs.screen} scroll="list" gutter="none">
       <PantryContent
         ref={pantryContentRef}
         userName={screen.userName}
@@ -415,7 +419,9 @@ function PantryMainContent({
         hasMore={screen.searchActive ? false : screen.hasMore}
         refreshing={screen.isRefreshing}
         loading={screen.isLoadingInitial}
+        itemsFailure={screen.itemsFailure}
         fetching={screen.itemsFetching}
+        searching={screen.isSearching}
         serverMode={screen.serverMode}
         onHomeBadgeLayout={setHomeBadgeRect}
         onSettingsIconLayout={setSettingsIconRect}
@@ -431,18 +437,17 @@ function PantryMainContent({
         onClose={onOverlayClose}
       />
       {/* Tutorial spotlight coach-marks */}
-      {tutorial.currentStep ? (
+      {coachStep ? (
         <SpotlightCoachMark
-          targetRect={tutorial.currentStep.targetRect}
-          title={tutorial.currentStep.title}
-          subtitle={tutorial.currentStep.subtitle}
-          stepIndex={tutorial.currentStep.stepIndex}
-          totalSteps={tutorial.currentStep.totalSteps}
+          targetRect={coachStep.targetRect}
+          title={coachStep.title}
+          subtitle={coachStep.subtitle}
+          stepIndex={coachStep.stepIndex}
+          totalSteps={coachStep.totalSteps}
           onDismiss={tutorial.skipAll}
           onNext={tutorial.advanceInPlace}
           onTargetPress={() => {
-            const action =
-              tutorialTargetActions[tutorial.currentStep!.stepIndex];
+            const action = tutorialTargetActions[coachStep.stepIndex];
             action?.();
             tutorial.advance();
           }}
@@ -475,16 +480,13 @@ const PantryMainFallback: React.FC = () => {
     },
   ];
   return (
-    <Screen
-      testID="pantry-screen"
-      header={{
-        variant: 'tab',
-        label: t('pantryScreen.greetingFallback'),
-        title: t('pantryScreen.tabPantry'),
-      }}
-      scroll="list"
-      gutter="none"
-    >
+    // No `header`: the loaded screen has none either — it draws the greeting
+    // inside its list — so the chrome here is the same shape, not a title that
+    // swaps for a greeting a moment later.
+    <Screen testID={pantryTestIDs.screen} scroll="list" gutter="none">
+      <View style={styles.fallbackHeader}>
+        <PantryHeader householdName={t('pantryHeader.homeFallback')} />
+      </View>
       <View style={styles.gutter}>
         <SearchBar
           value=""
@@ -522,5 +524,11 @@ const styles = StyleSheet.create(theme => ({
   // the page gutter they do not carry themselves.
   gutter: {
     paddingHorizontal: theme.layout.pageGutter,
+  },
+  // The same lead-in and inset `PantryContent` gives the real header.
+  fallbackHeader: {
+    paddingHorizontal: theme.layout.pageGutter,
+    paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.sm,
   },
 }));

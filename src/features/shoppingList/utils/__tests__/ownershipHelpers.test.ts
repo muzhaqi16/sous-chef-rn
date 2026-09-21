@@ -8,6 +8,10 @@ import {
   getInitials,
   formatRoleDisplay,
 } from '#features/shoppingList/utils/ownershipHelpers';
+import {
+  CollaboratorRole,
+  MembershipRole,
+} from '#/graphql/generated/schemaTypes';
 
 const makeOwnership = (userId: string, profile?: Record<string, unknown>) => ({
   userId,
@@ -20,7 +24,7 @@ const makeOwnership = (userId: string, profile?: Record<string, unknown>) => ({
 
 const makeMember = (
   userId: string,
-  role: string,
+  role: MembershipRole,
   profile?: Record<string, unknown>,
 ) => ({
   userId,
@@ -65,7 +69,7 @@ describe('ownershipHelpers', () => {
       const list = {
         ownerships: [makeOwnership('u1')],
         home: {
-          members: [makeMember('u2', 'OWNER')],
+          members: [makeMember('u2', MembershipRole.Owner)],
         },
       };
       const info = getShoppingListDisplayAvatarInfo(list);
@@ -75,7 +79,7 @@ describe('ownershipHelpers', () => {
     it('falls back to list owner when home has no owner', () => {
       const list = {
         ownerships: [makeOwnership('u1')],
-        home: { members: [makeMember('u2', 'MEMBER')] },
+        home: { members: [makeMember('u2', MembershipRole.Member)] },
       };
       const info = getShoppingListDisplayAvatarInfo(list);
       expect(info?.id).toBe('u1');
@@ -118,7 +122,7 @@ describe('ownershipHelpers', () => {
   describe('getShoppingListRole', () => {
     it('returns OWNER for list owner', () => {
       const list = { ownerships: [{ userId: 'u1' }] };
-      expect(getShoppingListRole(list, 'u1')).toBe('OWNER');
+      expect(getShoppingListRole(list, 'u1')).toBe(CollaboratorRole.Owner);
     });
 
     it('returns collaborator role', () => {
@@ -127,19 +131,23 @@ describe('ownershipHelpers', () => {
         collaboratorsConnection: {
           edges: [
             {
-              node: { collaboratorId: 'u1', role: 'EDITOR', status: 'ACTIVE' },
+              node: {
+                collaboratorId: 'u1',
+                role: CollaboratorRole.Editor,
+                status: 'ACTIVE',
+              },
             },
           ],
         },
       };
-      expect(getShoppingListRole(list, 'u1')).toBe('EDITOR');
+      expect(getShoppingListRole(list, 'u1')).toBe(CollaboratorRole.Editor);
     });
 
     it('falls back to home membership role', () => {
       const list = { ownerships: [] };
-      expect(getShoppingListRole(list, 'u1', { role: 'MEMBER' })).toBe(
-        'MEMBER',
-      );
+      expect(
+        getShoppingListRole(list, 'u1', { role: MembershipRole.Member }),
+      ).toBe(MembershipRole.Member);
     });
 
     it('returns null when no match found', () => {
@@ -155,7 +163,7 @@ describe('ownershipHelpers', () => {
 
   describe('getHomeOwnerInfo', () => {
     it('finds owner from members array', () => {
-      const home = { members: [makeMember('u1', 'OWNER')] };
+      const home = { members: [makeMember('u1', MembershipRole.Owner)] };
       const info = getHomeOwnerInfo(home);
       expect(info?.id).toBe('u1');
     });
@@ -163,7 +171,7 @@ describe('ownershipHelpers', () => {
     it('finds owner from membersConnection', () => {
       const home = {
         membersConnection: {
-          edges: [{ node: makeMember('u1', 'OWNER') }],
+          edges: [{ node: makeMember('u1', MembershipRole.Owner) }],
         },
       };
       const info = getHomeOwnerInfo(home);
@@ -171,29 +179,31 @@ describe('ownershipHelpers', () => {
     });
 
     it('returns null when no owner found', () => {
-      const home = { members: [makeMember('u1', 'MEMBER')] };
+      const home = { members: [makeMember('u1', MembershipRole.Member)] };
       expect(getHomeOwnerInfo(home)).toBeNull();
     });
 
     it('returns null when owner has no user', () => {
-      const home = { members: [{ userId: 'u1', role: 'OWNER', user: null }] };
+      const home = {
+        members: [{ userId: 'u1', role: MembershipRole.Owner, user: null }],
+      };
       expect(getHomeOwnerInfo(home)).toBeNull();
     });
   });
 
   describe('isHomeOwner', () => {
     it('returns true when user is the owner', () => {
-      const home = { members: [makeMember('u1', 'OWNER')] };
+      const home = { members: [makeMember('u1', MembershipRole.Owner)] };
       expect(isHomeOwner(home, 'u1')).toBe(true);
     });
 
     it('returns false when user is not the owner', () => {
-      const home = { members: [makeMember('u1', 'MEMBER')] };
+      const home = { members: [makeMember('u1', MembershipRole.Member)] };
       expect(isHomeOwner(home, 'u1')).toBe(false);
     });
 
     it('returns false without currentUserId', () => {
-      const home = { members: [makeMember('u1', 'OWNER')] };
+      const home = { members: [makeMember('u1', MembershipRole.Owner)] };
       expect(isHomeOwner(home)).toBe(false);
     });
   });
@@ -226,19 +236,14 @@ describe('ownershipHelpers', () => {
 
   describe('formatRoleDisplay', () => {
     it.each([
-      ['OWNER', 'Owner'],
-      ['ADMIN', 'Admin'],
-      ['EDITOR', 'Editor'],
-      ['VIEWER', 'Viewer'],
-      ['MEMBER', 'Member'],
+      [CollaboratorRole.Owner, 'Owner'],
+      [CollaboratorRole.Admin, 'Admin'],
+      [CollaboratorRole.Editor, 'Editor'],
+      [CollaboratorRole.Viewer, 'Viewer'],
+      [MembershipRole.Member, 'Member'],
+      [MembershipRole.Guest, 'Guest'],
     ])('formats %s as %s', (input, expected) => {
       expect(formatRoleDisplay(input)).toBe(expected);
-    });
-
-    it('does not put an unmapped identifier on screen', () => {
-      // Title-casing a role the client has no copy for shows the server's
-      // identifier in English to every reader, whatever language they chose.
-      expect(formatRoleDisplay('MODERATOR')).toBe('Unknown');
     });
 
     it('returns Unknown for null', () => {

@@ -32,3 +32,5 @@ export const readLegacyDeviceFingerprint = jest.fn<string | null, []>(
 );
 
 export const clearLegacyDeviceFingerprint = jest.fn<void, []>(() => undefined);
+
+export const clearRetiredDeviceRow = jest.fn<void, []>(() => undefined);

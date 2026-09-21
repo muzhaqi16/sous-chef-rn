@@ -6,16 +6,19 @@
  */
 
 import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
+import type { TranslationKey } from '#/i18n';
 
 export interface SettingOptionConfig {
-  labelKey: string;
+  labelKey: TranslationKey;
   value: string;
 }
 
 export interface SettingItemConfig {
   key: string;
-  labelKey: string;
+  labelKey: TranslationKey;
   type: string;
+  /** `text` only: the example the edit sheet's empty input shows. */
+  placeholderKey?: TranslationKey;
   options?: SettingOptionConfig[];
 }
 
@@ -34,8 +37,8 @@ export interface SettingSectionConfig {
    * to branch on the English title, which tied control flow to display copy.
    */
   id: string;
-  /** Empty for an unlabelled trailing group (the log-out row). */
-  titleKey: string;
+  /** Absent for an unlabelled trailing group (the log-out row). */
+  titleKey?: TranslationKey;
   items: SettingItemConfig[];
 }
 
@@ -50,23 +53,37 @@ export const PERSONAL_INFO_CONFIG: SettingSectionConfig[] = [
         key: 'firstName',
         labelKey: 'personalInformation.firstName',
         type: 'text',
+        placeholderKey: 'personalInformation.firstNamePlaceholder',
       },
       {
         key: 'lastName',
         labelKey: 'personalInformation.lastName',
         type: 'text',
+        placeholderKey: 'personalInformation.lastNamePlaceholder',
       },
       {
         key: 'displayName',
         labelKey: 'personalInformation.displayName',
         type: 'text',
+        placeholderKey: 'personalInformation.displayNamePlaceholder',
       },
-      { key: 'bio', labelKey: 'personalInformation.bio', type: 'text' },
-      { key: 'phone', labelKey: 'personalInformation.phone', type: 'text' },
+      {
+        key: 'bio',
+        labelKey: 'personalInformation.bio',
+        type: 'text',
+        placeholderKey: 'personalInformation.bioPlaceholder',
+      },
+      {
+        key: 'phone',
+        labelKey: 'personalInformation.phone',
+        type: 'text',
+        placeholderKey: 'personalInformation.phonePlaceholder',
+      },
       {
         key: 'dateOfBirth',
         labelKey: 'personalInformation.dateOfBirth',
         type: 'text',
+        placeholderKey: 'personalInformation.dateOfBirthPlaceholder',
       },
       {
         key: 'gender',
@@ -228,7 +245,6 @@ export const PROFILE_SETTINGS_CONFIG: SettingSectionConfig[] = [
   },
   {
     id: 'logout',
-    titleKey: '',
     items: [
       { key: 'logout', labelKey: 'profile.labels.logout', type: 'action' },
     ],

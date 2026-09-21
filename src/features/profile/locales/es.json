@@ -16,9 +16,26 @@
     "deleteBlockedTitle": "No se puede eliminar la cuenta",
     "deleteBlockedSubtitle": "Tu cuenta no se puede eliminar hasta que resuelvas lo siguiente:",
     "deleteResolveTitle": "Para resolverlo:",
-    "deleteResolveTransfer": "• Transfiere la propiedad a otro miembro",
-    "deleteResolveRemoveMembers": "• Elimina a todos los miembros del hogar",
-    "deleteResolveDeleteHome": "• Elimina el hogar",
+    "deleteBlocker": {
+      "homeOwnership": {
+        "reason": "Nadie más posee «{{name}}», que todavía tiene otros miembros.",
+        "reasonCounted_one": "Nadie más posee «{{name}}», que todavía tiene {{count}} miembro más.",
+        "reasonCounted_other": "Nadie más posee «{{name}}», que todavía tiene {{count}} miembros más.",
+        "transferOwnership": "Transfiere la propiedad a otro miembro",
+        "removeMembers": "Elimina a los demás miembros del hogar",
+        "deleteResource": "Elimina el hogar"
+      },
+      "shoppingList": {
+        "reason": "Nadie más posee la lista de compras «{{name}}», que todavía tiene colaboradores.",
+        "reasonCounted_one": "Nadie más posee la lista de compras «{{name}}», que todavía tiene {{count}} colaborador.",
+        "reasonCounted_other": "Nadie más posee la lista de compras «{{name}}», que todavía tiene {{count}} colaboradores.",
+        "removeCollaborators": "Elimina a todos los colaboradores de la lista",
+        "deleteResource": "Elimina la lista de compras"
+      },
+      "other": {
+        "reason": "Hay que resolver «{{name}}» antes de poder eliminar tu cuenta."
+      }
+    },
     "deleteWarningTitle": "Advertencia: ¡esto es permanente!",
     "deleteWhatWillBeDeleted": "Lo que se eliminará:",
     "deleteWipeProfile": "Tu perfil y la información de la cuenta",
@@ -65,12 +82,13 @@
     "budgetPerMeal": "Presupuesto por comida",
     "minutes": "minutos",
     "macroTargets": "Objetivos de macros (avanzado)",
+    "macroTargetsEmpty": "Aún no hay objetivos",
     "dailyCalories": "Calorías diarias",
     "protein": "Proteína",
     "fat": "Grasa",
     "loadingProfile": "Cargando perfil alimentario...",
-    "noProfileTitle": "Sin perfil alimentario",
-    "noProfileSubtitle": "Crea tu perfil alimentario para recibir recomendaciones de recetas personalizadas"
+    "loadFailedTitle": "No se pudo cargar tu perfil alimentario",
+    "loadFailedSubtitle": "Comprueba tu conexión e inténtalo de nuevo."
   },
   "biometricSetup": {
     "authRequiredTitle": "Autenticación requerida",
@@ -210,16 +228,24 @@
     "visibilityFriendsOnly": "Solo Amigos",
     "visibilityPrivate": "Privado",
     "showEmail": "Mostrar Correo",
-    "showPhone": "Mostrar Teléfono"
+    "showPhone": "Mostrar Teléfono",
+    "firstNamePlaceholder": "p. ej., Juan",
+    "lastNamePlaceholder": "p. ej., García",
+    "displayNamePlaceholder": "p. ej., juan_garcia",
+    "bioPlaceholder": "Cuéntanos sobre ti...",
+    "phonePlaceholder": "p. ej., +34 612 345 678",
+    "dateOfBirthPlaceholder": "p. ej., 1990-01-15"
   },
   "accountEvents": {
     "removedFromHome": "Se te ha eliminado de un hogar",
     "addedToHome": "Se te ha añadido a un nuevo hogar",
     "removedFromShoppingList": "Se te ha eliminado de una lista de la compra",
     "addedToShoppingList": "Se te ha añadido a una lista de la compra",
-    "accountBanned": "Tu cuenta ha sido bloqueada{{reason}}",
-    "accountSuspended": "Tu cuenta ha sido suspendida{{reason}}",
-    "reasonSuffix": ": {{reason}}",
+    "accountBanned": "Tu cuenta ha sido bloqueada",
+    "accountSuspended": "Tu cuenta ha sido suspendida",
+    "accountLockedAttempts_one": "Tu cuenta está bloqueada tras {{count}} intento de inicio de sesión fallido. Se desbloqueará sola en breve.",
+    "accountLockedAttempts_other": "Tu cuenta está bloqueada tras {{count}} intentos de inicio de sesión fallidos. Se desbloqueará sola en breve.",
+    "accountLocked": "Tu cuenta está bloqueada tras demasiados intentos de inicio de sesión fallidos. Se desbloqueará sola en breve.",
     "warningReceived": "Has recibido una advertencia de un moderador"
   },
   "biometrics": {
@@ -253,6 +279,18 @@
     "dateFormat": "La fecha debe tener el formato AAAA-MM-DD",
     "dateInvalid": "Introduce una fecha válida",
     "dateUnreasonable": "Introduce una fecha de nacimiento razonable",
-    "invalidVisibility": "Selecciona una opción de visibilidad válida"
+    "invalidVisibility": "Selecciona una opción de visibilidad válida",
+    "invalidGender": "Selecciona un género válido"
+  },
+  "stringArrayManager": {
+    "inputPlaceholder": "Introduce un valor...",
+    "empty": "Aún no has añadido nada",
+    "valueRequired": "Introduce un valor",
+    "duplicate": "Este elemento ya existe",
+    "maxItems_one": "Puedes añadir hasta {{count}} elemento",
+    "maxItems_other": "Puedes añadir hasta {{count}} elementos"
+  },
+  "restrictionSection": {
+    "empty": "Aún no hay ninguno"
   }
 }
