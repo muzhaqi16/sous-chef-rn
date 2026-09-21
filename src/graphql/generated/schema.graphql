@@ -1801,7 +1801,10 @@ type CookingLog {
   pantryDeducted: Boolean!
   pantryItemsUsed: [PantryItemUsage!]!
   rating: Int
-  recipe: Recipe!
+  """
+  Null once the recipe is no longer visible to the viewer, e.g. unpublished by its author.
+  """
+  recipe: Recipe
   servingsMade: Int
   user: User!
   wouldMakeAgain: Boolean
