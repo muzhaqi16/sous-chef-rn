@@ -6279,7 +6279,6 @@ union MarkAllNotificationsAsReadResult = ConflictError | ForbiddenError | MarkAl
 
 input MarkAsTemplateInput {
   id: ID!
-  saveItems: Boolean
   templateName: String!
 }
 
@@ -9768,7 +9767,9 @@ type PurchaseHistorySummary {
   lastPurchaseDate: DateTime
   """Whether this item has been purchased before"""
   previouslyPurchased: Boolean!
-  """Total number of times purchased"""
+  """
+  Times any member purchased this line; purchasesConnection lists only the caller's own.
+  """
   purchaseCount: Int!
 }
 
@@ -11779,6 +11780,9 @@ type ShoppingListItem {
   priority: Int!
   purchaseHistory: PurchaseHistorySummary!
   purchaseInfo: ShoppingListItemPurchaseInfo!
+  """
+  The caller's own purchases of this line. purchaseHistory counts every member's.
+  """
   purchasesConnection(after: String, before: String, first: Int, last: Int, orderBy: PurchaseOrderBy): PurchaseConnection!
   quantity: Float
   quantityInput: String
@@ -13741,7 +13745,6 @@ input UpdateLoginHistoryInput {
   id: ID!
   isMobileApp: Boolean
   network: NetworkLocationInput
-  reviewNotes: String
   reviewed: Boolean
   reviewerId: ID
   risk: RiskAssessmentInput
@@ -14002,7 +14005,7 @@ Result of UpdatePantryItemQuantity. Select on UpdatePantryItemQuantityPayload fo
 success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
-union UpdatePantryItemQuantityResult = ConflictError | ForbiddenError | NotFoundError | UpdatePantryItemQuantityPayload | ValidationError
+union UpdatePantryItemQuantityResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | UpdatePantryItemQuantityPayload | ValidationError
 
 """
 Result of UpdatePantryItem. Select on UpdatePantryItemPayload for the
