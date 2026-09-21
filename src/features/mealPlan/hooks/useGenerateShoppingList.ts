@@ -7,7 +7,9 @@ import {
   AddDerivedItemsToShoppingListDocument,
   LinkDerivedListToMealPlanDocument,
   UseGenerateShoppingList_MealPlanFragmentDoc,
+  type UseGenerateShoppingList_MealPlanFragment,
 } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
+import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
   deriveShoppingListFromMealPlan,
   type PlannedMeal,
@@ -20,7 +22,8 @@ import {
 } from '#features/shoppingList/cache/items';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
 import { usePantryQuery } from '#features/pantry/hooks/usePantryQuery';
-import { useSelectedPantryId } from '#store/useAppStore';
+import { useAppStore, useSelectedPantryId } from '#store/useAppStore';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { errorService } from '#/services/errorService';
@@ -65,6 +68,39 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
   );
 
   const [linkToPlan] = useMutation(LinkDerivedListToMealPlanDocument);
+  const apiUnavailable = useAppStore(isApiUnavailable);
+
+  // An imported recipe's ingredients link to catalog items on a server job, so
+  // a plan cached straight after the import holds `item: null` and the derive
+  // would skip them. One network read picks up whatever has linked since.
+  const withLinkedIngredients = async (
+    id: string,
+    cached: UseGenerateShoppingList_MealPlanFragment,
+  ): Promise<UseGenerateShoppingList_MealPlanFragment> => {
+    const unlinked = cached.mealPlanItems.some(item =>
+      item.recipe?.ingredientsConnection.edges.some(edge => !edge.node.item),
+    );
+    if (!unlinked || apiUnavailable) return cached;
+
+    const fetched = await client
+      .query({
+        query: GetMealPlanDocument,
+        variables: { id },
+        fetchPolicy: 'network-only',
+      })
+      .catch(() => null);
+    if (!fetched || fetched.error) return cached;
+
+    const cacheId = client.cache.identify({ __typename: 'MealPlan', id });
+    if (!cacheId) return cached;
+    return (
+      client.cache.readFragment<UseGenerateShoppingList_MealPlanFragment>({
+        id: cacheId,
+        fragment: UseGenerateShoppingList_MealPlanFragmentDoc,
+        fragmentName: 'useGenerateShoppingList_mealPlan',
+      }) ?? cached
+    );
+  };
 
   const generateShoppingList = async (
     options: GenerateShoppingListOptions = {},
@@ -74,7 +110,9 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
       return null;
     }
 
-    const meals: PlannedMeal[] = plan.mealPlanItems.map(item => ({
+    const source = await withLinkedIngredients(mealPlanId, plan);
+
+    const meals: PlannedMeal[] = source.mealPlanItems.map(item => ({
       id: item.id,
       servings: item.servings,
       recipe: item.recipe
@@ -103,7 +141,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     const { inputs, displayNames, skipped, pantryChecked } =
       deriveShoppingListFromMealPlan(meals, {
         mealPlanId,
-        mealPlanName: plan.name,
+        mealPlanName: source.name,
         checkPantry: options.checkPantry ?? true,
         pantryRows,
       });
@@ -114,12 +152,12 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     }
 
     const listName =
-      firstNonBlank(options.name)?.trim() ?? defaultListName(plan.name);
+      firstNonBlank(options.name)?.trim() ?? defaultListName(source.name);
     let listId = options.shoppingListId ?? null;
     if (!listId) {
       const created = await createShoppingList({
         name: listName,
-        homeId: plan.homeId,
+        homeId: source.homeId,
       });
       if (created.status === 'failed') {
         toastService.error(created.body);
