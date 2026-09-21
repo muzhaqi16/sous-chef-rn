@@ -111,6 +111,15 @@ jest.mock('#/hooks/useFeatureHint', () => ({
 import { logger } from '#/utils/environment';
 import { authService } from '#/services/authService';
 
+const keychainMock = () =>
+  jest.requireMock<{
+    loadCredentials: jest.Mock;
+    saveCredentials: jest.Mock;
+  }>('#/storage/keychain');
+const STORED_SLOT = { username: 'chef@example.com', password: 'dc1:secret' };
+const setHasStoredCredentials = () =>
+  mockStoreState.setHasStoredCredentials as jest.Mock;
+
 describe('logout and biometric credentials', () => {
   beforeEach(() => {
     mockStoreState.biometricRetryAt = 0;
@@ -292,6 +301,82 @@ describe('logout and biometric credentials', () => {
     expect(mockToastError).toHaveBeenCalledWith(
       expect.stringContaining('needs setting up again'),
     );
+  });
+
+  describe('the offered button', () => {
+    // A queued answer a case did not consume would otherwise answer for the
+    // next one.
+    afterEach(() => {
+      mockHasCredentials.mockReset().mockResolvedValue(true);
+      keychainMock().loadCredentials.mockReset().mockResolvedValue(STORED_SLOT);
+      keychainMock().saveCredentials.mockReset();
+    });
+
+    // The keychain drops a slot the device can never open again (a screen-lock
+    // reset, an invalidated key), but the button is rendered from the flag — so
+    // the attempt that found it dead must take the button down itself.
+    it('takes the affordance down on the attempt that finds the slot unusable', async () => {
+      setHasStoredCredentials().mockClear();
+      keychainMock().loadCredentials.mockResolvedValueOnce(null);
+      mockHasCredentials
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
+
+      expect(
+        await authService.signInWithDeviceCredential('chef@example.com'),
+      ).toBe(false);
+
+      expect(setHasStoredCredentials()).toHaveBeenCalledWith(false);
+    });
+
+    it('keeps it up when the attempt failed but the slot survived', async () => {
+      setHasStoredCredentials().mockClear();
+      keychainMock().loadCredentials.mockResolvedValueOnce(null);
+
+      await authService.signInWithDeviceCredential('chef@example.com');
+
+      expect(setHasStoredCredentials()).not.toHaveBeenCalledWith(false);
+    });
+
+    // Startup writes `false` when nothing is enrolled, so an enrolment later in
+    // the same session must write it back or the button stays hidden until a
+    // restart.
+    it('offers the button once an enrolment is stored', async () => {
+      setHasStoredCredentials().mockClear();
+      mockMutate.mockResolvedValueOnce({
+        data: {
+          issueDeviceCredential: {
+            __typename: 'DeviceCredentialPayload',
+            credential: 'secret',
+          },
+        },
+      });
+
+      expect(await authService.enrolDeviceCredential('chef@example.com')).toBe(
+        true,
+      );
+      expect(setHasStoredCredentials()).toHaveBeenCalledWith(true);
+    });
+
+    it('does not offer it when the enrolment could not be stored', async () => {
+      setHasStoredCredentials().mockClear();
+      keychainMock().saveCredentials.mockRejectedValueOnce(
+        new Error('keystore unavailable'),
+      );
+      mockMutate.mockResolvedValueOnce({
+        data: {
+          issueDeviceCredential: {
+            __typename: 'DeviceCredentialPayload',
+            credential: 'secret',
+          },
+        },
+      });
+
+      expect(await authService.enrolDeviceCredential('chef@example.com')).toBe(
+        false,
+      );
+      expect(setHasStoredCredentials()).not.toHaveBeenCalled();
+    });
   });
 
   it('takes it down when the server calls the credential dead', async () => {

@@ -1088,6 +1088,51 @@ fetch('http://localhost:8099/fraction.js')
 })();
 ```
 
+### Android does not invalidate a `BIOMETRY_CURRENT_SET` entry on a new enrolment
+
+**Claim:** on Android, a react-native-keychain entry saved with
+`BIOMETRY_CURRENT_SET` survives a new fingerprint enrolment, and the new finger
+unlocks it — it behaves as `BIOMETRY_ANY`. Only iOS invalidates it.
+
+**Verified 2026-09-21 against `react-native-keychain@10.0.0`, on an Android 16
+(API 36) emulator** running the `stg-v4.6.1` build. Enabled biometric sign-in
+with finger 1, enrolled finger 2, then signed in with finger 1 and again with
+finger 2: both succeeded. keystore2 logged `KEY_USER_NOT_AUTHENTICATED` (auth
+token expired, `timeout=5s`) before each prompt, never an invalidation.
+
+`CipherStorageKeystoreAesGcm.getKeyGenSpecBuilder` sets
+`setUserAuthenticationParameters(5, AUTH_BIOMETRIC_STRONG or AUTH_DEVICE_CREDENTIAL)`
+and never calls `setInvalidatedByBiometricEnrollment`, which Android applies
+only to a key with no validity window. A per-use key is not an option without
+changing the library: its prompt passes no `CryptoObject`
+(`prompt.authenticate(this.promptInfo)`), so such a key could never be unlocked.
+Accepted as a risk — it needs the device PIN and a sign-out that kept
+biometrics (`openspec/changes/fix-pr232-review-findings/design.md` D11).
+
+Re-check: pinned by `src/storage/__tests__/keychainAndroidErrors.library.test.ts`.
+On device: enable biometric sign-in, enrol a second finger, sign out, and sign
+in with the new finger.
+
+### An Android screen-lock reset surfaces as a failed tag check, not an invalidated key
+
+**Claim:** once the screen lock is removed and set again, loading a biometric
+entry rejects on every attempt with `code: "E_CRYPTO_FAILED"` and
+`message: "Decryption failed: Authentication tag verification failed. …"` —
+never with a `KeyPermanentlyInvalidated` message.
+
+**Verified 2026-09-21 against `react-native-keychain@10.0.0`, on an Android 16
+emulator.** Removing the lock deletes the auth-bound key.
+`CipherStorageBase.extractGeneratedKey` then finds the alias missing and
+generates a new key under it, the prompt succeeds, and `decryptBytes` fails with
+`AEADBadTagException`, which it rethrows as that `CryptoFailedException`.
+`reThrowOnError` passes a `CryptoFailedException` through unwrapped, so there is
+no `Wrapped error:` prefix. The entry can never be read again, so
+`isKeychainKeyInvalidated` treats the message as an unusable key.
+
+Re-check: the rethrow, the pass-through and the regeneration are pinned by
+`src/storage/__tests__/keychainAndroidErrors.library.test.ts`. On device: remove
+and re-add the screen lock and a fingerprint, then tap *Use Biometric Login*.
+
 ### An Android biometric cancel is indistinguishable from an invalidated key by code
 
 **Claim:** react-native-keychain rejects a user CANCEL and a permanently

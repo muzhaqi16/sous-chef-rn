@@ -150,9 +150,9 @@ export async function saveCredentials(
       password,
       {
         service,
-        // CURRENT_SET, not ANY: the entry is invalidated when a face or finger
-        // is enrolled, so someone who learns the passcode cannot add their own
-        // biometric and unlock the stored credential.
+        // CURRENT_SET, not ANY: on iOS a newly enrolled face or finger
+        // invalidates the entry. Android does not — the library's key has a 5 s
+        // validity window, which exempts it — so there a new finger unlocks it.
         accessControl: ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
         // On Android, prefer a hardware-backed keystore; falls back to
         // software-backed when the device has no secure element.

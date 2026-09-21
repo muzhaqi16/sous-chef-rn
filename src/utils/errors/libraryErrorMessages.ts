@@ -53,8 +53,11 @@ export const isDataStoreContention = (error: unknown) =>
   error instanceof Error &&
   error.message.includes('multiple DataStores active');
 
+// The last alternative is Android's screen-lock reset: the keystore drops the
+// key, the library makes a new one under the same alias, and the stored
+// ciphertext fails its tag check against it on every attempt — permanent.
 const INVALIDATED =
-  /Key\s*Permanently\s*Invalidated|BiometryCurrentSet|changed or deleted their auth/i;
+  /Key\s*Permanently\s*Invalidated|BiometryCurrentSet|changed or deleted their auth|Authentication tag verification failed/i;
 
 // react-native-keychain rejects every `CryptoFailedException` as
 // `E_CRYPTO_FAILED`, and its biometric handler builds one for EVERY androidx

@@ -569,6 +569,28 @@ describe('keychain storage', () => {
       },
     );
 
+    it('clears the slot when a screen-lock reset left a key that cannot open it', async () => {
+      // Captured on an Android 16 emulator after removing and re-adding the
+      // screen lock: every attempt failed this way and the slot was kept.
+      mockGetGenericPassword.mockRejectedValue(
+        Object.assign(
+          new Error(
+            'Decryption failed: Authentication tag verification failed. This usually indicates that the encrypted data was modified, corrupted, or is being decrypted with the wrong key.',
+          ),
+          {
+            code: 'E_CRYPTO_FAILED',
+            name: 'com.oblador.keychain.exceptions.CryptoFailedException',
+          },
+        ),
+      );
+      mockResetGenericPassword.mockResolvedValue(true);
+
+      const result = await loadCredentials('user@test.com');
+
+      expect(result).toBeNull();
+      expect(mockResetGenericPassword).toHaveBeenCalled();
+    });
+
     it('clears the slot when the platform names the invalidated key', async () => {
       mockGetGenericPassword.mockRejectedValue(
         Object.assign(new Error('Wrapped error: Key permanently invalidated'), {
