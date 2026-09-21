@@ -2,10 +2,9 @@
 //  - P2-13: the getToken-timeout dead window — a push token that materializes
 //    after acquirePushToken timed out (null) but before the refresh listener
 //    subscribed is re-checked after subscribe and pushed to the server.
-//  - P2-11: logout tears down the prior user's push/notification state —
-//    clears the device push token (updateDevice clearPushToken:true) while
-//    leaving the device row intact, unsubscribes the refresh listener, and
-//    resets notification state; a failure never blocks the local teardown.
+//  - A session end writes nothing to the device row: the server pushes only to
+//    a live session bound to the device, so the refresh-token revoke ends
+//    delivery. It unsubscribes the rotation listener and resets local state.
 //
 // authService uses the singleton Apollo client and reads module boundaries, so
 // each dependency is mocked at its module edge (the pattern in
@@ -41,11 +40,15 @@ jest.mock('#/services/permissions/PermissionService', () => ({
 const mockAcquireToken = jest.fn();
 const mockGetToken = jest.fn();
 const mockUnsubscribe = jest.fn();
-const mockOnRefresh = jest.fn(() => mockUnsubscribe);
+const mockOnRefresh = jest.fn<
+  typeof mockUnsubscribe,
+  [((token: string) => void)?]
+>(() => mockUnsubscribe);
 jest.mock('#/services/push/pushTokenProvider', () => ({
   acquirePushToken: () => mockAcquireToken(),
   getPushTokenProvider: () => ({ getToken: () => mockGetToken() }),
-  onPushTokenRefresh: () => mockOnRefresh(),
+  onPushTokenRefresh: (listener: (token: string) => void) =>
+    mockOnRefresh(listener),
 }));
 
 const mockPerformLogoutCleanup = jest.fn().mockResolvedValue(undefined);
@@ -386,24 +389,6 @@ describe('a device update is judged by its result, not by not throwing', () => {
       });
     });
 
-  it('does not report a refused push-token clear as a cleared token', async () => {
-    authService.registerDeviceInBackground();
-    await flush();
-    mockStoreState.user = { id: 'u1', email: 'u1@example.com' };
-    refuse('ForbiddenError', 'FORBIDDEN');
-
-    await authService.logout();
-    await flush();
-
-    expect(logger.info).not.toHaveBeenCalledWith(
-      'Device push token cleared on session end',
-    );
-    expect(logger.warn).toHaveBeenCalledWith(
-      'Failed to clear the device push token on session end:',
-      expect.objectContaining({ status: 'refused', code: 'FORBIDDEN' }),
-    );
-  });
-
   it('does not report a refused token rotation as delivered', async () => {
     mockAcquireToken.mockResolvedValueOnce('apns-1');
     mockGetToken.mockResolvedValueOnce('apns-2');
@@ -422,16 +407,14 @@ describe('a device update is judged by its result, not by not throwing', () => {
   });
 });
 
-// `endSession` — the path an `account_inactive`, `refresh_token_dead` or
-// `session_revoked` verdict takes — clears no push token of its own. It runs the
-// teardown, so the clear belongs there rather than beside the deliberate
-// sign-out; otherwise a server-ended session leaves a live delivery target on a
-// device the next person signs in on.
-describe('a server-ended session stops push delivery too', () => {
+// `endSession` and `logout` both run the teardown. Neither touches the push
+// registration: signing back in resumes delivery without re-registering, and a
+// write here would need the credential the session end is discarding.
+describe('a session end leaves the push registration to the server', () => {
   const teardown = () =>
     require('#store/sessionTeardown').runSessionTeardown() as Promise<void>;
 
-  it('clears the token from the teardown, not only from a deliberate sign-out', async () => {
+  it('sends no device update from the teardown', async () => {
     authService.registerDeviceInBackground();
     await flush();
     mockMutate.mockClear();
@@ -439,90 +422,31 @@ describe('a server-ended session stops push delivery too', () => {
     await teardown();
     await flush();
 
-    expect(updateCallsWith('clearPushToken')).toContainEqual(
-      expect.objectContaining({ id: 'srv-1', clearPushToken: true }),
-    );
-  });
-
-  // The row a PREVIOUS launch registered. Resolving it with a lookup instead
-  // would put a query in front of the clear, and the Apollo teardown step's
-  // `client.stop()` cancels queries.
-  it('clears the row a previous launch registered, with no lookup', async () => {
-    const { readDeviceRow } = require('#/storage/deviceId');
-    (readDeviceRow as jest.Mock).mockReturnValue('srv-9');
-    // The store still holds the session while the teardown runs.
-    mockStoreState.user = { id: 'u1' };
-
-    await teardown();
-    await flush();
-
+    expect(mockMutate).not.toHaveBeenCalled();
     expect(mockQuery).not.toHaveBeenCalled();
-    expect(updateCallsWith('clearPushToken')).toContainEqual(
-      expect.objectContaining({ id: 'srv-9', clearPushToken: true }),
-    );
   });
 
-  it('sends the clear while the access token is still there to sign it', async () => {
-    const { readDeviceRow } = require('#/storage/deviceId');
-    (readDeviceRow as jest.Mock).mockReturnValue('srv-9');
-    mockStoreState.user = { id: 'u1' };
-    mockStoreState.accessToken = 'live-token';
-    const tokensAtSend: (string | null)[] = [];
-    mockMutate.mockImplementation(() => {
-      tokensAtSend.push(
-        typeof mockStoreState.accessToken === 'string'
-          ? mockStoreState.accessToken
-          : null,
-      );
-      return Promise.resolve({
-        data: { updateDevice: { __typename: 'UpdateDevicePayload' } },
-      });
-    });
+  it('removes the retired device-row key', async () => {
+    const { clearRetiredDeviceRow } = require('#/storage/deviceId');
 
     await teardown();
-    await flush();
 
-    expect(tokensAtSend.length).toBeGreaterThan(0);
-    expect(tokensAtSend.every(Boolean)).toBe(true);
+    expect(clearRetiredDeviceRow).toHaveBeenCalled();
   });
 
-  it('forgets the row so the next account never clears it', async () => {
-    const { readDeviceRow, clearDeviceRow } = require('#/storage/deviceId');
-    (readDeviceRow as jest.Mock).mockReturnValue('srv-9');
-    mockStoreState.user = { id: 'u1' };
-
-    await teardown();
-    await flush();
-
-    expect(clearDeviceRow).toHaveBeenCalled();
-  });
-
-  it('cannot skip the rest of the teardown by failing', async () => {
+  it('cannot skip the rest of the teardown', async () => {
     const { registerSessionTeardown } = require('#store/sessionTeardown');
     const later = jest.fn();
     registerSessionTeardown('after-device-push-token', later);
-    mockQuery.mockRejectedValue(new Error('offline'));
 
     await teardown();
-    await flush();
 
     expect(later).toHaveBeenCalledTimes(1);
   });
-
-  it('does not spend a doomed round trip while offline', async () => {
-    mockStoreState.isOnline = false;
-
-    await teardown();
-    await flush();
-
-    expect(mockQuery).not.toHaveBeenCalled();
-    expect(updateCallsWith('clearPushToken')).toEqual([]);
-  });
 });
 
-describe('logout — push/notification teardown (P2-11)', () => {
-  it('clears the push token, unsubscribes the listener, and resets notifications', async () => {
-    // Register first so the server device id + refresh listener are live.
+describe('logout — push/notification teardown', () => {
+  it('unsubscribes the rotation listener and resets the session state', async () => {
     mockAcquireToken.mockResolvedValueOnce('apns-1');
     mockGetToken.mockResolvedValueOnce('apns-1');
     authService.registerDeviceInBackground();
@@ -533,47 +457,41 @@ describe('logout — push/notification teardown (P2-11)', () => {
     mockMutate.mockClear();
     mockUnsubscribe.mockClear(); // count only logout's unsubscribe
 
-    await authService.logout();
+    await authService.logout({ keepBiometricCredentials: true });
 
-    // Push delivery suppressed server-side.
-    expect(updateCallsWith('clearPushToken')).toContainEqual(
-      expect.objectContaining({ id: 'srv-1', clearPushToken: true }),
-    );
-    // The device row survives: deleting it would revoke the device credential
+    // Neither a clear nor a delete: the row carries the device credential
     // biometric sign-in exchanges after a deliberate sign-out.
+    expect(updateCallsWith('clearPushToken')).toEqual([]);
     expect(updateCallsWith('delete')).toEqual([]);
-    // Refresh listener unsubscribed and the session-scoped store state reset.
     expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
     expect(mockStoreState.resetStore).toHaveBeenCalledWith(
       expect.objectContaining({ auth: true }),
     );
   });
+});
 
-  it('completes local teardown even when the push-token clear rejects', async () => {
+describe('a rotated push token', () => {
+  it('is not sent when blank, which the server would store as no token', async () => {
+    const rotationListeners: ((token: string) => void)[] = [];
+    mockOnRefresh.mockImplementationOnce(
+      (listener?: (token: string) => void) => {
+        if (listener) rotationListeners.push(listener);
+        return mockUnsubscribe;
+      },
+    );
     mockAcquireToken.mockResolvedValueOnce('apns-1');
     mockGetToken.mockResolvedValueOnce('apns-1');
     authService.registerDeviceInBackground();
     await flush();
+    mockMutate.mockClear();
 
-    mockStoreState.user = { id: 'u1', email: 'u1@example.com' };
-    mockUnsubscribe.mockClear(); // count only logout's unsubscribe
-    // The push-token clear (updateDevice clearPushToken) rejects.
-    mockMutate.mockImplementation(({ variables }) => {
-      const input = (variables?.input ?? {}) as Record<string, unknown>;
-      if ('clearPushToken' in input)
-        return Promise.reject(new Error('offline'));
-      return Promise.resolve({ data: {} });
-    });
+    const [listener] = rotationListeners;
+    listener?.('');
+    listener?.('apns-2');
+    await flush();
 
-    await expect(authService.logout()).resolves.toBeUndefined();
-
-    // Local teardown still ran despite the network failure. The auth branch
-    // of resetStore is what clears the session-scoped state a shared device
-    // would otherwise hand to the next person.
-    expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
-    expect(mockStoreState.resetStore).toHaveBeenCalledTimes(1);
-    expect(mockStoreState.resetStore).toHaveBeenCalledWith(
-      expect.objectContaining({ auth: true }),
-    );
+    expect(updateCallsWith('pushToken')).toEqual([
+      { id: 'srv-1', pushToken: 'apns-2' },
+    ]);
   });
 });

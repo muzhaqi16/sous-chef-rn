@@ -2,6 +2,7 @@ import { useNetworkStatus } from '#hooks/useNetworkStatus';
 import { useAppearance } from '#hooks/useAppearance';
 import { useOnlineQueueSync } from '#hooks/app/useOnlineQueueSync';
 import { useReconnectBackfill } from '#hooks/app/useReconnectBackfill';
+import { usePendingRevocationDrain } from '#hooks/app/usePendingRevocationDrain';
 import { useStartupInit } from '#hooks/app/useStartupInit';
 import { useAppStateLifecycle } from '#hooks/app/useAppStateLifecycle';
 
@@ -15,6 +16,7 @@ export function useAppLifecycle(): void {
   useNetworkStatus();
   useOnlineQueueSync();
   useReconnectBackfill();
+  usePendingRevocationDrain();
   useStartupInit();
   useAppStateLifecycle();
 }

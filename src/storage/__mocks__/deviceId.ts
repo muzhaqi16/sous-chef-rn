@@ -33,26 +33,4 @@ export const readLegacyDeviceFingerprint = jest.fn<string | null, []>(
 
 export const clearLegacyDeviceFingerprint = jest.fn<void, []>(() => undefined);
 
-/**
- * The server row a session end clears the push token on. Map-backed so a suite
- * can seed the "this launch never registered" case:
- *
- *   ```ts
- *   (readDeviceRow as jest.Mock).mockReturnValue('srv-9');
- *   ```
- */
-const deviceRows = new Map<string, string>();
-
-export const saveDeviceRow = jest.fn<void, [string, string]>(
-  (userId, rowId) => {
-    deviceRows.set(userId, rowId);
-  },
-);
-
-export const readDeviceRow = jest.fn<string | null, [string]>(
-  userId => deviceRows.get(userId) ?? null,
-);
-
-export const clearDeviceRow = jest.fn<void, []>(() => {
-  deviceRows.clear();
-});
+export const clearRetiredDeviceRow = jest.fn<void, []>(() => undefined);

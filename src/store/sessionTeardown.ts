@@ -26,11 +26,12 @@ export const registerSessionTeardown = (
  */
 /**
  * Insertion order is first-USE order under Metro's `inlineRequires`, so it
- * differs between a fresh sign-in and a restored session. `devicePushToken`
- * must precede `apollo`, which stops the client. A step not named here runs
- * after those that are.
+ * differs between a fresh sign-in and a restored session.
+ * `refresh-token-revoke` reads the tokens before anything else runs. A step not
+ * named here runs after those that are.
  */
 const TEARDOWN_ORDER: readonly string[] = [
+  'refresh-token-revoke',
   'devicePushToken',
   'token-refresh',
   'notification-reseed',

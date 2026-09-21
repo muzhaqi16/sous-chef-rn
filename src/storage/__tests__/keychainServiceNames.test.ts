@@ -3,6 +3,7 @@ import {
   DEFAULT_SERVICE,
   DEVICE_ID_SERVICE,
   LAST_BIOMETRIC_EMAIL_KEY,
+  PENDING_REVOCATIONS_SERVICE,
   SESSION_TOKENS_SERVICE,
   TEMP_REGISTRATION_SERVICE,
 } from '../keychain';
@@ -31,6 +32,9 @@ describe('keychain service names', () => {
     );
     expect(SESSION_TOKENS_SERVICE).toBe('dev.souschef.app.session.tokens');
     expect(DEVICE_ID_SERVICE).toBe('dev.souschef.app.device.id');
+    expect(PENDING_REVOCATIONS_SERVICE).toBe(
+      'dev.souschef.app.session.pendingRevocations',
+    );
   });
 
   it('keeps the biometric-email key off the namespace', () => {

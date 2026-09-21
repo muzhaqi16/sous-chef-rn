@@ -283,8 +283,8 @@ export const useConfigurableSettings = () => {
           ...baseItem,
           onPress: () => {
             // `authService.logout` and not the store's own `logout` action:
-            // the store action resets state but never deregisters the device
-            // for push, hands the offline queue its owner change, or removes
+            // the store action resets state but never revokes the session
+            // server-side (which ends push delivery), hands the offline queue its owner change, or removes
             // the persisted queue/navigation keys. Two sign-out paths that
             // each clear a different subset is how the shared-device residue
             // got there; this is the only one.

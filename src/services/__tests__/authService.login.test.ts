@@ -134,6 +134,27 @@ describe('authService.login — LoginResult union', () => {
   });
 });
 
+// The server pushes only to a session bound to the device, and `authLink`
+// sends the id it already holds — null on a cold identity.
+describe('authService.login — device binding', () => {
+  it('resolves the device id before the session is minted', async () => {
+    const { ensureDeviceId } = require('#/storage/deviceId');
+    const order: string[] = [];
+    (ensureDeviceId as jest.Mock).mockImplementationOnce(() => {
+      order.push('ensureDeviceId');
+      return Promise.resolve('device_test');
+    });
+    mockMutate.mockImplementationOnce(() => {
+      order.push('Login');
+      return Promise.resolve(rejection('AUTH_CREDENTIALS_INVALID', 'x'));
+    });
+
+    await authService.login(INPUT);
+
+    expect(order).toEqual(['ensureDeviceId', 'Login']);
+  });
+});
+
 describe('authService.autoLogin — stored-credential lifecycle', () => {
   it('keeps the credential when the exchange is refused as credentials-invalid', async () => {
     mockMutate.mockResolvedValueOnce(

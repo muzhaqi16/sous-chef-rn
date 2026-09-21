@@ -31,6 +31,7 @@ export const CREDENTIALS_INDICATOR_SERVICE = `${NAMESPACE}.credentials.indicator
 export const TEMP_REGISTRATION_SERVICE = `${NAMESPACE}.temp.registration`;
 export const SESSION_TOKENS_SERVICE = `${NAMESPACE}.session.tokens`;
 export const DEVICE_ID_SERVICE = `${NAMESPACE}.device.id`;
+export const PENDING_REVOCATIONS_SERVICE = `${NAMESPACE}.session.pendingRevocations`;
 export const LAST_BIOMETRIC_EMAIL_KEY =
   appConfig.identity.lastBiometricEmailKey;
 
@@ -609,4 +610,106 @@ export async function loadDeviceId(): Promise<DeviceIdLoadResult> {
   }
   logger.error('Device id read failed after retries:', lastError);
   return { status: 'error' };
+}
+
+// Refresh tokens of sessions that ended before the server heard: push delivery
+// follows a LIVE session, so each stays a push target until `POST /revoke`
+// lands. Outlives the session on purpose; bounded, oldest dropped.
+
+export interface PendingRevocation {
+  refreshToken: string;
+  accessToken: string | null;
+}
+
+const PENDING_REVOCATIONS_CAP = 10;
+
+const isPendingRevocation = (value: unknown): value is PendingRevocation =>
+  typeof value === 'object' &&
+  value !== null &&
+  'refreshToken' in value &&
+  typeof value.refreshToken === 'string' &&
+  'accessToken' in value &&
+  (value.accessToken === null || typeof value.accessToken === 'string');
+
+// Inside a queued operation only: a read and its write must not interleave
+// with another caller's.
+async function readPendingRevocationsUnqueued(): Promise<PendingRevocation[]> {
+  const entry = await getGenericPassword({
+    service: PENDING_REVOCATIONS_SERVICE,
+  });
+  if (!entry) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(entry.password);
+  } catch {
+    logger.error('Stored pending revocations are unparseable; dropping them');
+    return [];
+  }
+  return Array.isArray(parsed) ? parsed.filter(isPendingRevocation) : [];
+}
+
+async function writePendingRevocationsUnqueued(
+  pending: PendingRevocation[],
+): Promise<void> {
+  if (pending.length === 0) {
+    await resetGenericPassword({ service: PENDING_REVOCATIONS_SERVICE });
+    return;
+  }
+  const stored = await setGenericPassword(
+    'revocations',
+    JSON.stringify(pending),
+    {
+      service: PENDING_REVOCATIONS_SERVICE,
+      accessible: ACCESSIBLE.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+    },
+  );
+  if (!stored) throw new Error('Keychain rejected the pending revocations');
+}
+
+/** Park a session's tokens until the server confirms the revoke. */
+export async function addPendingRevocation(
+  revocation: PendingRevocation,
+): Promise<boolean> {
+  return queueOperation(async () => {
+    try {
+      const pending = (await readPendingRevocationsUnqueued()).filter(
+        entry => entry.refreshToken !== revocation.refreshToken,
+      );
+      pending.push(revocation);
+      await writePendingRevocationsUnqueued(
+        pending.slice(-PENDING_REVOCATIONS_CAP),
+      );
+      return true;
+    } catch (error) {
+      logger.warn('Failed to park a refresh token for revocation:', error);
+      return false;
+    }
+  });
+}
+
+export async function loadPendingRevocations(): Promise<PendingRevocation[]> {
+  return queueOperation(async () => {
+    try {
+      return await readPendingRevocationsUnqueued();
+    } catch (error) {
+      logger.warn('Failed to read pending revocations:', error);
+      return [];
+    }
+  });
+}
+
+/** Called only once the server has settled the revoke for good. */
+export async function removePendingRevocation(
+  refreshToken: string,
+): Promise<void> {
+  return queueOperation(async () => {
+    try {
+      const pending = await readPendingRevocationsUnqueued();
+      await writePendingRevocationsUnqueued(
+        pending.filter(entry => entry.refreshToken !== refreshToken),
+      );
+    } catch (error) {
+      logger.warn('Failed to remove a settled pending revocation:', error);
+    }
+  });
 }

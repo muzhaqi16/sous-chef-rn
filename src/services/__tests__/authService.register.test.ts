@@ -38,6 +38,8 @@ jest.mock(
     ),
 );
 
+jest.mock('#/storage/deviceId');
+
 const mockToastError = jest.fn();
 jest.mock('#/services/toastService', () => ({
   toastService: { error: (...args: unknown[]) => mockToastError(...args) },

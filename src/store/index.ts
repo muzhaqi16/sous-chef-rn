@@ -56,6 +56,7 @@ import {
   loadSessionTokens,
   pickFresherSessionTokens,
   clearSessionTokens,
+  addPendingRevocation,
 } from '#/storage/keychain';
 import { logger } from '#/utils/environment';
 // Type-only: a value import would close the telemetry→useStore cycle.
@@ -71,8 +72,14 @@ const hydrateSessionTokensThenFinish = async (
 ): Promise<void> => {
   // A keychain item outlives the app on iOS. With the encrypted store empty
   // there is no local state behind those tokens — a reinstall, or cleared app
-  // data — so the session is not resumed and the credentials are dropped.
+  // data — so the session is not resumed and the credentials are dropped. Its
+  // lineage is still live server-side and still a push target, so it is parked
+  // for `POST /revoke` rather than only forgotten.
   if (openedWithEmptyStore()) {
+    const orphaned = await loadSessionTokens();
+    if (orphaned.status === 'ok') {
+      await addPendingRevocation(orphaned.tokens);
+    }
     await clearSessionTokens();
     state?.setHydrated(true);
     return;

@@ -52,22 +52,38 @@ its own step at module init — `logoutCleanup` the Apollo teardown,
   sign-out path.
 - **`apiReachabilityBreaker`'s `/health` probe keeps running.** It is
   unauthenticated, and the sign-in screen needs to know whether the API is up.
-- **`devicePushToken` clears the server's delivery target.** `updateDevice`
-  removes only the token; the device row survives, because deleting it revokes
-  the device credential biometric sign-in exchanges. It clears the row id
-  persisted at registration (`saveDeviceRow`), so no lookup — a query the
-  `apollo` step would cancel — stands in front of it; it skips while offline,
-  and is fire-and-forget so a round trip cannot hold the teardown. On
-  `refresh_token_dead` the access token is already refused, so a `ForbiddenError`
-  here is the expected outcome and is logged at `warn`, not treated as an
-  incident.
+- **`refresh-token-revoke` runs first** and reads the tokens before any other
+  step or `resetStore` clears them.
 
-**Every session-end path clears the push token, not just `logout()`.** It is a
-teardown step rather than a call beside the sign-out for exactly that reason:
-`endSession` — the path `account_inactive`, `refresh_token_dead` and
-`session_revoked` take — otherwise leaves a live delivery target for an account
-that has been signed out, and the next person to sign in on that device receives
-its notifications.
+**Push delivery follows the session, so every session end revokes its refresh
+token.** The server pushes to a device only while the account holds a live
+refresh-token lineage bound to it (the `x-device-id` the session was minted
+with). No revocation route touches the push registration and the client does not
+either: a session end sends no `updateDevice`, and signing back in resumes
+delivery with no re-registration.
+
+What the server cannot see is a session the client drops without telling it.
+The `refresh-token-revoke` step (`src/services/auth/refreshTokenRevocation.ts`)
+therefore parks the refresh token (plus the access token, which `/revoke`
+denylists) in the keychain and then `POST /revoke`s it. Parking comes first, so
+a process kill mid-request loses nothing. A 2xx or a 4xx settles the entry; the
+network, a 5xx or a 429 leaves it parked. `usePendingRevocationDrain` drains the
+parked list on launch and whenever `isNetworkWithheld` clears, one entry at a
+time, stopping at the first unanswered request. The step is fire-and-forget: a
+sign-out never waits on the network. `/revoke` needs no access token and is
+idempotent, so it runs on server-ended sessions too. An `AUTH_TOKEN_EXPIRED`
+end, for one, can leave the lineage live. A launch that finds keychain tokens
+behind an empty store (an iOS reinstall) parks them the same way before clearing
+them.
+
+`/revoke` deliberately leaves the device credential exchangeable, so the
+settings sign-out keeps biometric sign-in working.
+
+**A session is bound to the device only if the id is present at sign-in.**
+`login` and `register` await `ensureDeviceId()` before minting, because
+`authLink` sends only what the sync `getDeviceId()` already holds. A session
+minted without the header is bound to no device, and nothing is ever pushed to
+it. Refresh inherits the binding server-side.
 
 **A device update is read as errors-as-data.** `UpdateDeviceResult` is a union
 (`ConflictError | ForbiddenError | NotFoundError | UpdateDevicePayload |

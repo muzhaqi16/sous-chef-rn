@@ -437,6 +437,9 @@ async function login(
   store.setAuthIsLoading(true);
 
   try {
+    // `authLink` sends the id it already holds. A session minted without it is
+    // bound to no device, and the server pushes only to a bound session.
+    await ensureDeviceId();
     const result = await client.mutate({
       mutation: LoginDocument,
       variables: { input },
@@ -509,6 +512,8 @@ async function register(
   const clearAuth = () => {
     store.clearAuth();
   };
+  // Bound to the device, as `login` explains.
+  await ensureDeviceId();
   const settled = await settleMutation(
     () => client.mutate({ mutation: RegisterDocument, variables: { input } }),
     {

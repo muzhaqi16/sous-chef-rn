@@ -21,19 +21,18 @@ import {
   validateDeviceInformation,
 } from '#/utils/deviceInfo';
 import {
-  clearDeviceRow,
   clearLegacyDeviceFingerprint,
+  clearRetiredDeviceRow,
   ensureDeviceId,
-  readDeviceRow,
   readLegacyDeviceFingerprint,
-  saveDeviceRow,
 } from '#/storage/deviceId';
 import { registerSessionTeardown } from '#/store/sessionTeardown';
-import { useStore } from '#store';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 
-// Registering THIS device with the server, and telling it to stop on sign-out.
-// Fire-and-forget: a failure here must never block a sign-in.
+// Registering THIS device with the server. Fire-and-forget: a failure here must
+// never block a sign-in. A session end leaves the push token in place: the
+// server pushes only to a live session bound to the device, so revoking the
+// refresh token (`refreshTokenRevocation.ts`) is what stops delivery.
 
 /**
  * `undefined` leaves the server's stored push token alone; `null` clears it.
@@ -147,14 +146,6 @@ function buildDeviceInput(
 let pushTokenRefreshUnsubscribe: (() => void) | null = null;
 
 /**
- * Server-assigned device id from the most recent registration this process.
- * Captured so logout can deregister the device server-side (the local
- * `deviceInfo.deviceId` is not the server PK). Null until a registration
- * succeeds; cleared on logout.
- */
-let registeredDeviceId: string | null = null;
-
-/**
  * `updateDevice` is errors-as-data: every refusal in its result union RESOLVES,
  * so a caller reading only the absence of a throw reports a change the server
  * declined to make.
@@ -182,16 +173,13 @@ function readDeviceUpdate(result: {
 
 async function updateDevice(
   input: UpdateDeviceInput,
-  context?: Record<string, unknown>,
 ): Promise<DeviceUpdateOutcome> {
   try {
-    // The response is a bare `device { id }` nothing reads, and writing it
-    // during a sign-out re-seeds the cache `clearStore` has emptied.
+    // The response is a bare `device { id }` nothing reads.
     const result = await client.mutate({
       mutation: UpdateDeviceDocument,
       variables: { input },
       fetchPolicy: 'no-cache',
-      context,
     });
     return readDeviceUpdate(result);
   } catch (error) {
@@ -212,55 +200,12 @@ export async function pushRotatedTokenToServer(
   logger.error('Failed to update rotated push token:', outcome);
 }
 
-/**
- * Stops the server pushing to a session that has ended. The device row itself
- * survives: removing it revokes the device credential that lets biometric
- * sign-in recover from a deliberate sign-out.
- */
-async function clearDevicePushToken(): Promise<void> {
-  const registered = registeredDeviceId;
+// A rotation after the session ended has no credential to send it with; the
+// next sign-in registers the current token.
+registerSessionTeardown('devicePushToken', () => {
   pushTokenRefreshUnsubscribe?.();
   pushTokenRefreshUnsubscribe = null;
-  registeredDeviceId = null;
-
-  // Read before any await: the store still holds the session here, and the
-  // mutation must be ISSUED before `resetStore` nulls the token `authLink`
-  // reads. A lookup in front of it would lose both.
-  const state = useStore.getState();
-  const ownerId = state.user?.id;
-  const rowId = registered ?? (ownerId ? readDeviceRow(ownerId) : null);
-  clearDeviceRow();
-  if (!rowId) return;
-
-  // Nothing can replay this: clearing account A's row needs account A's
-  // credential, and the sign-out is about to delete it.
-  if (state.isOnline === false) {
-    logger.warn('Offline session end: the device stays a push target');
-    return;
-  }
-
-  const outcome = await updateDevice(
-    { id: rowId, clearPushToken: true },
-    { allowDuringLogout: true },
-  );
-  if (outcome.status === 'ok') {
-    logger.info('Device push token cleared on session end');
-    return;
-  }
-  // A session the SERVER ended has already had its access token refused, so a
-  // refusal here is the expected outcome rather than an incident.
-  logger.warn('Failed to clear the device push token on session end:', outcome);
-}
-
-// Every path that ends a session, not only the sign-out the user asked for: a
-// server-ended session leaves the same live delivery target behind.
-// Fire-and-forget is safe because the clear is a MUTATION and the `apollo`
-// step's `client.stop()` cancels only queries — which is why it must not wait
-// on a lookup. Verified: `#apollo-client-stop-cancels-queries-not-mutations`.
-registerSessionTeardown('devicePushToken', () => {
-  void clearDevicePushToken().catch(error =>
-    logger.warn('Device push-token teardown failed:', error),
-  );
+  clearRetiredDeviceRow();
 });
 
 /**
@@ -363,13 +308,10 @@ async function registerDeviceOnce(): Promise<RegistrationOutcome> {
     // row id, not the identity the device presents.
     const serverDeviceId = registerPayload.device?.id;
     if (serverDeviceId) {
-      registeredDeviceId = serverDeviceId;
-      // Survives the process, so a session end needs no lookup to find the row.
-      const ownerId = useStore.getState().user?.id;
-      if (ownerId) saveDeviceRow(ownerId, serverDeviceId);
       pushTokenRefreshUnsubscribe?.();
       pushTokenRefreshUnsubscribe = onPushTokenRefresh(token => {
-        void pushRotatedTokenToServer(serverDeviceId, token);
+        // The server stores a blank token as none, which would clear it.
+        if (token) void pushRotatedTokenToServer(serverDeviceId, token);
       });
 
       // Close the getToken-timeout dead window: the OS can deliver a token after

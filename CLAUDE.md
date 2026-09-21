@@ -174,9 +174,13 @@ Mechanism: `docs/session-and-transport.md`. No gate holds these.
 - **A session end STOPS things before clearing**: `runSessionTeardown()` first,
   the sign-out gate is one counted `whileSessionEnds` scope held through the
   store reset, `queueManager.onLogout()` only on deliberate sign-out, `/health`
-  keeps probing. Every path clears the push token (a `registerSessionTeardown` step).
+  keeps probing.
 - **A session end mints nothing**: `setTokens` refuses a pair inside the scope,
   and a refresh that outlives its session is discarded (`refreshToken.ts`).
+- **Push delivery follows the session**: every session end revokes its refresh
+  token (`POST /revoke`, parked in the keychain until the API answers), never
+  the push token. `login`/`register` await `ensureDeviceId()` or the session is
+  bound to no device.
 - **A session end DROPS the socket client** (`disposeWebSocket()`), not just
   disposes it; no second reconnect loop; reconnect pacing goes in `url()`.
 - **`AUTH_REFRESH_TOKEN_SUPERSEDED` ≠ `_INVALID`** — never sign out on the first;
