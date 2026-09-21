@@ -8,6 +8,7 @@ import { isAuthRefusalCode } from '#/utils/authErrorCodes';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { VERSION_CONFLICT_CODES } from '#/utils/errors/versionConflict';
+import { getRateLimitDetails } from '#/utils/errors/rateLimit';
 import {
   isErrorTypename,
   type MutationErrorTypename,
@@ -132,9 +133,16 @@ const UNIT_RESOURCE = 'unit';
  */
 const TRANSIENT_SERVER_CODES: readonly string[] = [
   TopLevelErrorCode.ServiceUnavailable,
+];
+
+/** Budget refusals: re-sending inside the window is refused again, so none is. */
+const RATE_LIMIT_CODES: readonly string[] = [
   TopLevelErrorCode.RateLimitExceeded,
   TopLevelErrorCode.OperationRateLimited,
 ];
+
+/** The per-operation window. RATE_LIMIT_EXCEEDED names `resetAt`, not `retryAfter`. */
+const RATE_LIMIT_FALLBACK_SECONDS = 60;
 
 /**
  * A missing unit row is the only unit refusal a vocabulary refresh can clear;
@@ -234,6 +242,21 @@ export function classifyError(error: unknown): QueueError {
       code,
       timestamp: Date.now(),
       retryable: true,
+    };
+  }
+
+  // `retryable: false` skips the in-run loop; QueueManager defers `server` and
+  // holds every drain until `retryAfterMs` has passed.
+  if (code && RATE_LIMIT_CODES.includes(code)) {
+    const retryAfter = getRateLimitDetails(error)?.retryAfter ?? 0;
+    return {
+      type: 'server',
+      message,
+      code,
+      timestamp: Date.now(),
+      retryable: false,
+      retryAfterMs:
+        (retryAfter > 0 ? retryAfter : RATE_LIMIT_FALLBACK_SECONDS) * 1000,
     };
   }
 

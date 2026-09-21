@@ -45,6 +45,8 @@ export interface QueueError {
   code?: string;
   timestamp: number;
   retryable: boolean;
+  /** Set on a rate-limit refusal: no drain runs until this much time passes. */
+  retryAfterMs?: number;
 }
 
 export interface QueuedMutation {

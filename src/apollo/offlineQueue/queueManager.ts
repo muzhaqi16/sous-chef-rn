@@ -154,6 +154,8 @@ export class QueueManager {
   private overwriteReporter: OverwriteReporter | null = null;
   private drainedHandler: ((userId: string) => void) | null = null;
   private drainTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Epoch ms before which no drain replays: the server's rate-limit window. */
+  private drainNotBefore = 0;
   /** Whether this drain has already re-fetched the unit vocabulary. */
   private hasRefreshedUnits = false;
   /** Entries that have already spent their one re-resolution attempt. */
@@ -218,6 +220,17 @@ export class QueueManager {
       Telemetry.warn('Queue drain skipped: API unavailable', {
         is_online: state.isOnline,
       });
+      return;
+    }
+
+    // Every trigger lands here, so one check holds them all; the wake-up drain
+    // is the only one that runs once the window has passed.
+    const holdMs = this.drainNotBefore - Date.now();
+    if (holdMs > 0) {
+      Telemetry.increment('offline_queue_drain_skipped_total', 1, {
+        reason: 'rate_limited',
+      });
+      this.requestDrain(holdMs);
       return;
     }
 
@@ -629,6 +642,10 @@ export class QueueManager {
         status: QueueStatus.PENDING,
         retryCount: 0,
       });
+      if (queueError.retryAfterMs !== undefined) {
+        this.drainNotBefore = Date.now() + queueError.retryAfterMs;
+        this.requestDrain(queueError.retryAfterMs);
+      }
       logger.info(
         `🕓 Queue: ${mutation.id} deferred (transient ${queueError.type}) — stays PENDING for next drain`,
       );
@@ -940,6 +957,11 @@ export class QueueManager {
     this.drainTimer = null;
   }
 
+  /** Lifts a rate-limit hold; the budget it tracked belonged to the old session. */
+  releaseDrainHold(): void {
+    this.drainNotBefore = 0;
+  }
+
   onOffline(): void {
     logger.info('📴 Queue: Network offline, queue processing paused');
   }
@@ -982,6 +1004,7 @@ export const queueManager = new QueueManager();
 // `onLogout`'s job, on the deliberate sign-out path.
 registerSessionTeardown('offline-queue', () => {
   queueManager.cancelPendingDrain();
+  queueManager.releaseDrainHold();
   // The store is write-through over an in-RAM mirror. Dropping the mirror keeps
   // it from outliving the blob and answering the next session from memory.
   queueStore.invalidateCache();

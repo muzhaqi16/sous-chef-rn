@@ -314,16 +314,37 @@ describe('classifyError — load shedding and rate limits', () => {
       errors: [{ message: 'Refused', extensions: { code } }],
     });
 
-  it.each([
-    'SERVICE_UNAVAILABLE',
-    'RATE_LIMIT_EXCEEDED',
-    'OPERATION_RATE_LIMITED',
-  ])('defers %s rather than withdrawing the write', code => {
-    const queueError = classifyError(combined(code));
+  it('defers SERVICE_UNAVAILABLE and retries it in-run', () => {
+    const queueError = classifyError(combined('SERVICE_UNAVAILABLE'));
 
     expect(queueError.type).toBe('server');
     expect(queueError.retryable).toBe(true);
-    expect(queueError.code).toBe(code);
+    expect(queueError.retryAfterMs).toBeUndefined();
+  });
+
+  // A re-send inside the window is refused again and spends the budget.
+  it.each(['RATE_LIMIT_EXCEEDED', 'OPERATION_RATE_LIMITED'])(
+    'defers %s without an in-run retry, holding for its retryAfter',
+    code => {
+      const queueError = classifyError(
+        new CombinedGraphQLErrors({
+          errors: [
+            { message: 'Refused', extensions: { code, retryAfter: 42 } },
+          ],
+        }),
+      );
+
+      expect(queueError.type).toBe('server');
+      expect(queueError.retryable).toBe(false);
+      expect(queueError.code).toBe(code);
+      expect(queueError.retryAfterMs).toBe(42_000);
+    },
+  );
+
+  it('holds for the per-operation window when no retryAfter is named', () => {
+    const queueError = classifyError(combined('RATE_LIMIT_EXCEEDED'));
+
+    expect(queueError.retryAfterMs).toBe(60_000);
   });
 
   it('defers a 503 that carries no GraphQL code', () => {

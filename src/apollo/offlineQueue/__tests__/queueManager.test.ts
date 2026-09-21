@@ -1035,6 +1035,84 @@ describe('QueueManager', () => {
   });
 
   // -------------------------------------------------------------------------
+  // Rate-limit hold
+  // -------------------------------------------------------------------------
+  describe('a rate-limit refusal holds every drain for retryAfter', () => {
+    const rateLimited = (retryAfter?: number) => ({
+      data: undefined,
+      error: new CombinedGraphQLErrors({
+        errors: [
+          {
+            message: 'Rate limit exceeded',
+            extensions: { code: 'OPERATION_RATE_LIMITED', retryAfter },
+          },
+        ],
+      }),
+    });
+
+    beforeEach(() => {
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: 'token',
+        isOnline: true,
+        apiReachable: true,
+      });
+      manager['validateTokenBeforeReplay'] = jest.fn().mockResolvedValue(true);
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
+        makeMutation({ id: 'limited-1', userId: 'user-1' }),
+      ]);
+    });
+
+    afterEach(() => {
+      mockClient.mutate.mockReset();
+    });
+
+    it('sends once, keeps the write, and sends nothing until the window passes', async () => {
+      mockClient.mutate.mockResolvedValue(rateLimited(30));
+
+      await manager.processQueue();
+
+      expect(mockClient.mutate).toHaveBeenCalledTimes(1);
+      expect(queueStore.markMutationFailed).not.toHaveBeenCalled();
+      expect(queueStore.updateMutation).toHaveBeenCalledWith(
+        'limited-1',
+        expect.objectContaining({ status: QueueStatus.PENDING }),
+      );
+
+      manager.requestDrain();
+      manager.onOnline();
+      await manager.processQueue();
+      await jest.advanceTimersByTimeAsync(29_000);
+      expect(mockClient.mutate).toHaveBeenCalledTimes(1);
+
+      await jest.advanceTimersByTimeAsync(1_000);
+      expect(mockClient.mutate).toHaveBeenCalledTimes(2);
+    });
+
+    it('holds for the per-operation window when retryAfter is absent', async () => {
+      mockClient.mutate.mockResolvedValue(rateLimited());
+
+      await manager.processQueue();
+      await jest.advanceTimersByTimeAsync(59_000);
+      expect(mockClient.mutate).toHaveBeenCalledTimes(1);
+
+      await jest.advanceTimersByTimeAsync(1_000);
+      expect(mockClient.mutate).toHaveBeenCalledTimes(2);
+    });
+
+    it('lifts the hold for the next session', async () => {
+      mockClient.mutate.mockResolvedValue(rateLimited(30));
+      await manager.processQueue();
+
+      manager.cancelPendingDrain();
+      manager.releaseDrainHold();
+      await manager.processQueue();
+
+      expect(mockClient.mutate).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Event handlers
   // -------------------------------------------------------------------------
   describe('whenIdle', () => {
