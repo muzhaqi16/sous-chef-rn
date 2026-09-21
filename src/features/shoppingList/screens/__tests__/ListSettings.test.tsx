@@ -205,6 +205,13 @@ describe('ListSettings', () => {
     expect(screen.getByText('List Name')).toBeTruthy();
   });
 
+  it('caps the name at the length the server accepts', () => {
+    render(<ListSettings route={createRoute} />);
+    expect(screen.getByPlaceholderText('Enter list name').props.maxLength).toBe(
+      100,
+    );
+  });
+
   it('shows default list toggle', () => {
     render(<ListSettings route={editRoute} />);
     expect(screen.getByText('Default List')).toBeTruthy();

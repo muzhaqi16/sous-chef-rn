@@ -1202,3 +1202,27 @@ the `apollo` teardown step stops the client. That is safe only because the clear
 is a mutation AND needs no lookup first — resolving the device row with a query
 would put a cancellable operation in front of it, and the retry would then be
 built after `resetStore` had nulled the token `authLink` signs it with.
+
+### An iOS 27 SDK build launches only with the UIScene lifecycle
+
+**Claim:** an app linked against the iOS 27 SDK that declares no
+`UIApplicationSceneManifest` traps at launch on iOS 27, before any JS runs. The
+same binary built with an older SDK still launches. React Native has no scene
+support of its own, so the host app's `SceneDelegate` owns the window, and it
+must copy a cold-start link into the launch options: `Linking.getInitialURL()`
+reads only `launchOptions[UIApplicationLaunchOptionsURLKey]` and the
+user-activity dictionary, while under scenes UIKit delivers both in the scene's
+connection options.
+
+**Verified 2026-09-21 on Xcode 27.0 (27A266a), iPhone 17 simulator, iOS 27.0,
+`react-native@0.86.3`.** The pre-scene build crashed at launch with
+`EXC_BREAKPOINT` in `_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`
+(`UIApplication workspace:didCreateScene:…`). After the migration, a cold
+`souschef://home-management` opened HomeManagement and a warm one reached React
+Navigation. `RCTReactNativeFactory.h` and `RCTLinkingManager.mm:151-164` in
+0.86.3, and the 0.87.1 community template, contain no scene code.
+
+**What depends on it:** `ios/SousChef/AppDelegate.swift` — `SceneDelegate`
+starts React Native once (a reconnected scene re-parents the existing window),
+keeps `AppDelegate.window` pointing at it (LogBox re-keys that window on
+dismiss), and merges the connection options into the launch options.

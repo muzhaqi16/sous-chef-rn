@@ -10,6 +10,7 @@ import { InfoRow } from '#components/atoms/InfoRow';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { RecurringPattern } from '#/graphql/generated/schemaTypes';
+import { LIST_NAME_MAX_LENGTH } from '#features/shoppingList/utils/shoppingListConstants';
 
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Text } from '#components/atoms/Text';
@@ -282,6 +283,7 @@ export const ListSettings: React.FC<
               value={name}
               onChangeText={setName}
               placeholder={t('shoppingListScreens.listNamePlaceholder')}
+              maxLength={LIST_NAME_MAX_LENGTH}
             />
 
             {/* Home selector - only show for new lists. */}
