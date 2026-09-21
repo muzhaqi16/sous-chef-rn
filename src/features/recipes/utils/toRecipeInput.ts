@@ -140,12 +140,12 @@ export const toRecipeInput = (
                 original: ing.original,
                 originalName: ing.originalName,
                 // The ingredient's OWN measure — `unit` is what `amount` is
-                // stated in. `measures.us` is the fallback only because some
-                // responses omit the abbreviations, not because it is a peer.
+                // stated in. Never filled from `measures.us`: a metric-authored
+                // recipe would mirror `200 g` labelled `oz`.
                 amount: ing.amount,
                 unit: ing.unit,
-                unitShort: ing.unitShort ?? ing.measures?.us?.unitShort,
-                unitLong: ing.unitLong ?? ing.measures?.us?.unitLong,
+                unitShort: ing.unitShort,
+                unitLong: ing.unitLong,
                 consistency: ing.consistency,
                 aisle: ing.aisle,
                 // Filename only — the server builds the CDN URL and
