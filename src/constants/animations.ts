@@ -4,7 +4,7 @@ import { motion } from '#/theme/foundations/motion';
 
 /** Alert modal animation. */
 export const ALERT = {
-  ENTER_SCALE_FROM: 0.85,
+  ENTER_SCALE_FROM: 0.96,
   EXIT_SCALE_TO: 0.9,
   DEPTH_SCALE: 0.95,
   DEPTH_TRANSLATE_Y: -8,
