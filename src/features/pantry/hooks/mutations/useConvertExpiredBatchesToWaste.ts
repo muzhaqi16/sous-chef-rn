@@ -10,6 +10,7 @@ import { ConvertExpiredBatchesToWasteDocument } from '#features/pantry/graphql/p
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useTranslation } from '#/i18n';
+import { toDateKey } from '#/utils/dateUtils';
 
 interface UseConvertExpiredBatchesToWasteOptions {
   onSuccess?: () => void;
@@ -28,7 +29,12 @@ export function useConvertExpiredBatchesToWaste({
       () =>
         convertMutation({
           variables: {
-            input: { pantryItemId, idempotencyKey: generateEntityId() },
+            input: {
+              pantryItemId,
+              idempotencyKey: generateEntityId(),
+              // Captured at the tap, so a replay judges the day the user saw.
+              today: toDateKey(new Date()),
+            },
           },
           context: { localFirst: true },
         }),
