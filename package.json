@@ -100,7 +100,7 @@
     "@react-native-firebase/messaging": "^25.1.0",
     "@react-native-vector-icons/common": "^12.4.0",
     "@react-native-vector-icons/ionicons": "^12.3.0",
-    "@react-navigation/bottom-tabs": "8.0.0-alpha.46",
+    "@react-navigation/bottom-tabs": "8.0.0-alpha.52",
     "@react-navigation/core": "^8.0.0-alpha.31",
     "@react-navigation/elements": "^3.0.0-alpha.44",
     "@react-navigation/native": "^8.0.0-alpha.40",
