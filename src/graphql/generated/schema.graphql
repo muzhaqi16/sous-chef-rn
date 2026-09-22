@@ -8208,6 +8208,11 @@ type Notification {
   """Deep link or CTA destination for this notification."""
   actionUrl: String
   """
+  The bulk send this notification went out in, when its sender named one.
+  Filter on it with NotificationFilters.batchId.
+  """
+  batchId: String
+  """
   Grouping category for this notification.
   Matches the categories returned by NotificationStats.byCategory.
   """
@@ -8343,6 +8348,10 @@ input NotificationFilters {
   batchId: String
   category: NotificationCategory
   dateRange: DateRangeInput
+  """
+  True for rows a person wrote (an admin announcement), false for templated ones.
+  """
+  isAuthoredContent: Boolean
   priority: Priority
   sourceType: NotificationSourceType
   status: NotificationStatus
@@ -9997,8 +10006,9 @@ type Query {
   compatibleUnitsForItem(currentUnitId: ID, itemId: ID!): [CompatibleUnit!]!
   """
   Ranked consumption-eligible units for a CATALOG item, for a stack described
-  by its unit ids. Amounts are optional: which units are offered does not
-  depend on them. A netWeight, portionsPerTrackingUnit or densityOverride of
+  by its unit ids — the preview of what a user holding that stack would be
+  offered, before any stack exists. Amounts are optional: which units are
+  offered does not depend on them. A netWeight, portionsPerTrackingUnit or densityOverride of
   zero or less is refused, and so is a portionsPerTrackingUnit without its
   portionUnitId.
   """
@@ -10025,7 +10035,7 @@ type Query {
     """
     portionsPerTrackingUnit: Float
     trackingUnitId: ID!
-  ): [RankedUnit!]! @deprecated(reason: "Use consumptionUnitsForPantryItem instead.")
+  ): [RankedUnit!]!
   """
   Ranked units this pantry stack can be consumed in, best first: its own
   portion unit → the item's default consume unit → curated → the net-weight
@@ -10170,7 +10180,10 @@ type Query {
   pantries(after: String, before: String, filters: PantryFilters, first: Int, homeId: ID, last: Int, orderBy: PantryOrderBy): PantryConnection!
   """Fetch a single pantry by its ID."""
   pantry(id: ID!): Pantry
-  """Fetch a single pantry item by its ID."""
+  """
+  Fetch a single pantry item by its ID. On the admin surface this is how one
+  stack and its usageRecords (with adjustmentKind) are read directly.
+  """
   pantryItem(id: ID!): PantryItem
   """
   Get batches for a pantry item, optionally filtered by status, with
@@ -10217,6 +10230,35 @@ type Query {
   Reachable anonymously so a not-yet-signed-up recipient can preview.
   """
   resolveShareLink(code: String!): ResolveShareLinkResult
+  """
+  Ranked restock-eligible units for a CATALOG item, for a stack described by
+  its unit ids: the catalog preview of restockUnitsForPantryItem. The
+  arguments and their refusals are consumptionUnitsForItem's.
+  """
+  restockUnitsForCatalogItem(
+    """The stack's density in g/mL, when it overrides the item's."""
+    densityOverride: Float
+    itemId: ID!
+    """The net weight of ONE tracking unit. Optional."""
+    netWeight: Float
+    """
+    The unit the stack's net weight is recorded in. Its measure is offered
+    whether or not netWeight is passed.
+    """
+    netWeightUnitId: ID
+    """
+    The stack's own portion unit (PantryItem.portionUnitId), when it defines
+    one. Passed with or without its count it is read as the stack's portion,
+    so "clove" is offered first for a bulb stack.
+    """
+    portionUnitId: ID
+    """
+    How many portion units one tracking unit holds. Optional; requires
+    portionUnitId.
+    """
+    portionsPerTrackingUnit: Float
+    trackingUnitId: ID!
+  ): [RankedUnit!]!
   """The list restockUnitsForPantryItem returns."""
   restockUnitsForItem(pantryItemId: ID!): [RankedUnit!]! @deprecated(reason: "Use restockUnitsForPantryItem instead.")
   """
@@ -10335,7 +10377,11 @@ type Query {
   units(isCommon: Boolean, limit: Int = 50, type: UnitType): [Unit!]!
   """Fetch a single user by their ID."""
   user(id: ID!): User
-  """Validate item data integrity (read-only check)"""
+  """
+  Validate item data integrity (read-only check). Errors are always
+  reported; the data-quality warnings (ItemValidationWarningCode) only when
+  deep is true.
+  """
   validateItem(deep: Boolean, id: ID!): ItemValidationReport!
   """Validate a UPC barcode string."""
   validateUpc(upc: String!): UpcValidation!
