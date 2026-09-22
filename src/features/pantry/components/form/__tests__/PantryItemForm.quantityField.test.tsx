@@ -1,5 +1,6 @@
 'use no memo';
 
+import { toDateKey } from '#/utils/dateUtils';
 import React from 'react';
 import { makeCache } from '#/apollo/cache';
 import type { InMemoryCache } from '@apollo/client';
@@ -135,7 +136,12 @@ function buildCache(): InMemoryCache {
   });
   cache.writeQuery({
     query: GetPantryDocument,
-    variables: { id: 'p1', itemsFirst: 50, storageLocationsFirst: 20 },
+    variables: {
+      id: 'p1',
+      itemsFirst: 50,
+      storageLocationsFirst: 20,
+      today: toDateKey(new Date()),
+    },
     data: pantryData({ id: 'p1' }),
   });
   cache.writeQuery({

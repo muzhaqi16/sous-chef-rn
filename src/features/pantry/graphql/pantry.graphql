@@ -11,8 +11,8 @@ query GetPantry(
   $storageLocationsCursor: String
   $storageLocationsFirst: Int = 20
   # The viewer's calendar date, so the expiring and expired counts split where
-  # the rows do.
-  $today: LocalDate
+  # the rows do. Required: omitted, the server counts on UTC's date.
+  $today: LocalDate!
 ) {
   pantry(id: $id) {
     id
@@ -138,7 +138,7 @@ query GetPantryItem($id: ID!) {
 query GetPantryItemSuggestions(
   $pantryId: ID!
   $limit: Int = 20
-  $today: LocalDate
+  $today: LocalDate!
 ) {
   pantry(id: $pantryId) {
     id

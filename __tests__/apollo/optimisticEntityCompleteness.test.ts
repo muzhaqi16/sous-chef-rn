@@ -189,7 +189,7 @@ const TestUnitFragment = gql`
   }
 `;
 
-const PANTRY_VARS = { id: 'pantry-1', itemsFirst: 50 };
+const PANTRY_VARS = { id: 'pantry-1', itemsFirst: 50, today: '2026-09-22' };
 const LIST_VARS = { id: 'list-1', first: 20, isPurchased: false };
 
 async function seedPantryCache() {
