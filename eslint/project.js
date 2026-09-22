@@ -440,12 +440,10 @@ const overrides = [
     },
   },
   {
-    // The gorhom re-export site, its circular-import helper, and ActionTray —
-    // a different-shape sheet that claims the backdrop declaratively.
+    // The gorhom re-export site and its circular-import helper.
     files: [
       'src/hooks/useStandardBottomSheet.tsx',
       'src/hooks/useBottomSheetBackHandler.ts',
-      'src/components/templates/ActionTray/ActionTray.tsx',
     ],
     rules: {
       'no-restricted-imports': restrictedImports({

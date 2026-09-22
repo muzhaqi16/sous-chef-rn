@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  Modal,
   FlatList,
   useWindowDimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
+import { Modal } from '#components/atoms/themedComponents';
 import { useTranslation } from '#/i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {

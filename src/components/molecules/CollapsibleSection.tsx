@@ -4,6 +4,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { Text } from '#components/atoms/Text';
+import { CurrentThemeScope } from '#components/atoms/CurrentThemeScope';
 
 interface CollapsibleSectionProps {
   title: string;
@@ -37,7 +38,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
           tone="textSecondary"
         />
       </AppPressable>
-      {!!expanded && children}
+      {!!expanded && <CurrentThemeScope>{children}</CurrentThemeScope>}
     </>
   );
 };

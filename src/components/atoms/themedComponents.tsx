@@ -1,5 +1,7 @@
 import {
   ActivityIndicator,
+  Modal as RNModal,
+  type ModalProps,
   Platform,
   Pressable as RNPressable,
   RefreshControl as RNRefreshControl,
@@ -18,6 +20,7 @@ import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import type { Theme } from '#/theme/themes';
 
 import { Icon } from '#utils/iconUtils';
+import { CurrentThemeScope } from '#components/atoms/CurrentThemeScope';
 
 // Shared withUnistyles wrappers for third-party components taking theme-derived
 // props. Module scope, so screens carry no useUnistyles re-render subscription.
@@ -27,6 +30,14 @@ import { Icon } from '#utils/iconUtils';
 // values inside `({pressed}) => [...]` callbacks (unistyles#1109). For gesture
 // composition, import RNGH's Pressable at the call site.
 export const Pressable = RNPressable;
+
+// Import Modal from here. RN's mounts its children only while visible, so they
+// sit in `CurrentThemeScope`.
+export const Modal = ({ children, ...props }: ModalProps) => (
+  <RNModal {...props}>
+    <CurrentThemeScope>{children}</CurrentThemeScope>
+  </RNModal>
+);
 
 // `inputPlaceholder` is the palette's placeholder tone (~3.6:1); a body-text tone
 // here renders an empty field as dark as a filled one. `keyboardAppearance` reads

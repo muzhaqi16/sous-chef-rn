@@ -145,6 +145,17 @@ they read it.
   zero bailouts, and silently wrong. The measured three-way table is in
   [the useVariants scope re-crawl entry](verified-library-behaviour.md#unistyles-usevariants-rewrite-needs-a-scope-re-crawl-before-the-compiler);
   `scripts/check-unistyles-variant-staleness.mjs` is the ongoing cover.
+- **A host that mounts its children later than they were created wraps them in
+  `CurrentThemeScope`.** A `styles.x` read is a snapshot, and the compiler caches
+  an element against its other dependencies, so a parent that outlives a theme
+  change can hand a host elements carrying the old theme's colours. Unistyles
+  updates MOUNTED views natively, but corrects a snapshot at mount only inside a
+  scoped theme (`HybridShadowRegistry::link`), so the stale colours stick until
+  the next theme change. The sheet wrapper (`#hooks/useStandardBottomSheet`,
+  which `ActionTray` uses too), the `Modal` re-export in `themedComponents`
+  (RN's is banned) and `CollapsibleSection` carry it; a new host that gates
+  `children` on its own open state adds it. A component rendering its own JSX
+  needs nothing: the condition it mounts on is a dependency of that JSX.
 
 ## Typography roles
 

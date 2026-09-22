@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Modal } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ErrorActivityIndicator,
   OnPrimaryActivityIndicator,
+  Modal,
 } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';

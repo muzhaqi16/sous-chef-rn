@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { View, Modal, useWindowDimensions } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import {
   useSharedValue,
   useDerivedValue,
@@ -16,7 +16,7 @@ import {
   GestureDetector,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
-import { Pressable } from '#components/atoms/themedComponents';
+import { Pressable, Modal } from '#components/atoms/themedComponents';
 import {
   Canvas,
   Group,
