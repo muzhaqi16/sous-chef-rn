@@ -102,7 +102,7 @@ export const NotificationActionHandler: React.FC<
 
     const enrichment = {
       expirationNotificationId: resolved.id,
-      daysUntilExpiry: resolved.daysUntilExpiry,
+      expiresOn: resolved.expiresOn,
       pantryItemName: resolved.pantryItem.item.name,
       pantryItemImageUrl: resolved.pantryItem.item.imageUrl,
     };

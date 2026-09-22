@@ -20,7 +20,7 @@ import {
   useSetIsPantryQueryComplete,
 } from '#store/useAppStore';
 import { PAGE_SIZE } from '#features/pantry/constants/pagination';
-import { toDateKey } from '#/utils/dateUtils';
+import { useToday } from '#features/pantry/hooks/useToday';
 
 /**
  * Direct fields the screen-level hooks need, plus an opaque
@@ -50,6 +50,7 @@ export function usePantryQuery(
   itemsFirst: number = PAGE_SIZE.MAX,
   options?: PantryQueryOptions,
 ) {
+  const today = useToday();
   const isLoggedOut = useIsLoggedOut();
   const isHomeSelectionReady = useIsHomeSelectionReady();
 
@@ -90,7 +91,7 @@ export function usePantryQuery(
         itemsFilter: itemsFilter ?? undefined,
         itemsOrderBy: itemsOrderBy ?? undefined,
         storageLocationsFirst: PAGE_SIZE.COMPACT,
-        today: toDateKey(new Date()),
+        today,
       },
       skip: shouldSkip,
       ...(options?.fetchPolicy ? { fetchPolicy: options.fetchPolicy } : {}),

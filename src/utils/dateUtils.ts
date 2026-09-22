@@ -66,6 +66,10 @@ export const toDateKey = (date: Date): string => format(date, 'yyyy-MM-dd');
 export const fromDateKey = (key: string): Date =>
   parse(key, 'yyyy-MM-dd', new Date());
 
+/** Whether a value from untyped data (a push payload) is a `LocalDate` key. */
+export const isDateKey = (value: string): boolean =>
+  /^\d{4}-\d{2}-\d{2}$/.test(value);
+
 /**
  * A picked calendar day as the instant a meal or plan boundary is sent at:
  * local noon, whose UTC day is the local day from UTC-11 to UTC+12. The API

@@ -5,7 +5,8 @@ export interface ExpirationLinkData {
   /** Absent until the enrichment event resolves the backing row. */
   expirationNotificationId?: string;
   expirationAction?: string | null;
-  daysUntilExpiry?: number | null;
+  /** YYYY-MM-DD; the day count is taken when the sheet renders. */
+  expiresOn?: string | null;
   pantryItemName?: string | null;
   pantryItemImageUrl?: string | null;
 }

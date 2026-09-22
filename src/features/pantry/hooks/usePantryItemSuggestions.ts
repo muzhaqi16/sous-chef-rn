@@ -10,7 +10,7 @@ import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#/services/errorService';
 import type { SuggestionsHookResult } from '#features/catalog/ui/AddItemSheet/types';
-import { toDateKey } from '#/utils/dateUtils';
+import { useToday } from '#features/pantry/hooks/useToday';
 
 /**
  * Per-source fetch limit. Each section is fetched with its own quota, and the
@@ -34,15 +34,14 @@ export function usePantryItemSuggestions({
   limit = PANTRY_SUGGESTIONS_LIMIT,
   skip = false,
 }: UsePantryItemSuggestionsOptions): SuggestionsHookResult<PantryItemSuggestion> {
+  const today = useToday();
   const skipped = skip || !pantryId;
 
   // Not skipped offline: `offlineModeLink` serves a cached read and answers a
   // miss with an error, which `useDataState` classifies as offline.
   const { data, loading, error, refetch } = useQuery(
     GetPantryItemSuggestionsDocument,
-    skipped
-      ? skipToken
-      : { variables: { pantryId, limit, today: toDateKey(new Date()) } },
+    skipped ? skipToken : { variables: { pantryId, limit, today } },
   );
 
   useApolloErrorLogger(GetPantryItemSuggestionsDocument, error);

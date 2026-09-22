@@ -4,10 +4,13 @@ import {
   NotificationType,
 } from '#/graphql/generated/schemaTypes';
 import type { Icon } from '#utils/iconUtils';
-import { safeParseDate } from '#utils/dateUtils';
+import { isDateKey, safeParseDate } from '#utils/dateUtils';
 import type { NotificationPayload } from '#features/notifications/types';
 import type { Translate } from '#/i18n/types';
-import { expiryLabel } from '#domain/expiry';
+import {
+  daysUntilExpiry as daysUntilExpiryOn,
+  expiryLabel,
+} from '#domain/expiry';
 import type { TranslationKey } from '#/i18n';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { formatMonthDay } from '#/utils/formatters/date';
@@ -102,8 +105,15 @@ export interface ExpiryReminderFields {
 export const readExpiryReminderFields = (
   payload: NotificationPayload,
 ): ExpiryReminderFields | null => {
-  const { daysUntilExpiry, pantryItemId } = payload;
+  const { pantryItemId } = payload;
   const itemName = readText(payload, 'itemName');
+  const expiresOn = readText(payload, 'expiresOn');
+  // The date is counted on this phone, so an old reminder in the feed does not
+  // keep the day count it was sent with. Older payloads carry only the count.
+  const daysUntilExpiry: unknown =
+    expiresOn && isDateKey(expiresOn)
+      ? daysUntilExpiryOn(expiresOn)
+      : payload.daysUntilExpiry;
   if (itemName === null || typeof daysUntilExpiry !== 'number') {
     return null;
   }

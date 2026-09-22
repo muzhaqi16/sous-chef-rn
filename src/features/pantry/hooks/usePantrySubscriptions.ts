@@ -191,7 +191,7 @@ export function usePantrySubscriptions(userId?: string) {
     linkExpirationData(notification.genericNotificationId, {
       expirationNotificationId: notification.id,
       expirationAction: notification.actionTaken ?? undefined,
-      daysUntilExpiry: notification.daysUntilExpiry,
+      expiresOn: notification.expiresOn,
       pantryItemName: notification.pantryItem.item.name,
       pantryItemImageUrl: notification.pantryItem.item.imageUrl,
     });

@@ -52,7 +52,7 @@ import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useScreenListInset } from '#components/templates/useScreenListInset';
-import { toDateKey } from '#/utils/dateUtils';
+import { useToday } from '#features/pantry/hooks/useToday';
 
 export type FilteredPantryItemsMode = 'lowStock' | 'expiring' | 'expired';
 
@@ -291,7 +291,8 @@ export const FilteredPantryItems: React.FC<
 > = ({ route }) => {
   const { t } = useTranslation();
   const mode = route.params?.mode ?? 'lowStock';
-  const config = buildModeConfig(t, toDateKey(new Date()))[mode];
+  const today = useToday();
+  const config = buildModeConfig(t, today)[mode];
 
   const { toPantryItemDetail } = useAppNavigation();
   const listInset = useScreenListInset();

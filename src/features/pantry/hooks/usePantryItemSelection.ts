@@ -33,7 +33,7 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
-import { toDateKey } from '#/utils/dateUtils';
+import { useToday } from '#features/pantry/hooks/useToday';
 
 type PantryItemsConnection = NonNullable<
   GetPantryQuery['pantry']
@@ -92,6 +92,7 @@ function buildIndex(
  * are the pantry feature's to know.
  */
 export function usePantryItemSelection(pantryId: string | null | undefined) {
+  const today = useToday();
   const { t } = useTranslation();
   const client = useApolloClient();
   const { data, loading, refetch } = useQuery(
@@ -101,7 +102,7 @@ export function usePantryItemSelection(pantryId: string | null | undefined) {
           variables: {
             id: pantryId,
             itemsFirst: 100,
-            today: toDateKey(new Date()),
+            today,
           },
         }
       : skipToken,

@@ -6,7 +6,7 @@
 import React from 'react';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import type { Translate } from '#/i18n/types';
-import { expiryLabel } from '#domain/expiry';
+import { daysUntilExpiry, expiryLabel } from '#domain/expiry';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -72,11 +72,11 @@ const EXPIRATION_ACTIONS: {
 ];
 
 const getExpirySubtitle = (
-  daysUntilExpiry: number | null | undefined,
+  expiresOn: string | null | undefined,
   t: Translate,
 ): string => {
-  if (daysUntilExpiry == null) return t('expirationAction.expiringSoon');
-  return expiryLabel(daysUntilExpiry, t);
+  if (!expiresOn) return t('expirationAction.expiringSoon');
+  return expiryLabel(daysUntilExpiry(expiresOn), t);
 };
 
 function OptionRow({
@@ -131,7 +131,7 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
     firstNonBlank(notification?.pantryItemName) ??
     t('expirationAction.thisItem');
   const subtitle = notification
-    ? getExpirySubtitle(notification.daysUntilExpiry, t)
+    ? getExpirySubtitle(notification.expiresOn, t)
     : '';
 
   return (

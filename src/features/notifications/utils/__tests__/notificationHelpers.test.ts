@@ -4,6 +4,7 @@ import {
   getNotificationIcon,
 } from '#features/notifications/utils/notificationHelpers';
 import { getI18n } from '#/i18n/config';
+import { toDateKey } from '#/utils/dateUtils';
 import { getPushTrayCopy } from '#features/notifications/pushCopy';
 import type { NotificationPayload } from '#features/notifications/types';
 
@@ -269,6 +270,31 @@ describe('notificationHelpers', () => {
           activeBatchCount: 1,
         }),
       ).toBe('Lettuce: Expires in 3 days');
+    });
+
+    // A reminder read a day after it was sent must not keep its send-time count.
+    it('counts days from the payload date on this phone', () => {
+      const inTwoDays = new Date();
+      inTwoDays.setDate(inTwoDays.getDate() + 2);
+      expect(
+        messageOf(NotificationType.ExpiryReminder, {
+          itemName: 'Kale',
+          expiresOn: toDateKey(inTwoDays),
+          daysUntilExpiry: 5,
+          isMultiBatch: false,
+        }),
+      ).toBe('Kale: Expires in 2 days');
+    });
+
+    it('falls back to the sent count when the date is not a date', () => {
+      expect(
+        messageOf(NotificationType.ExpiryReminder, {
+          itemName: 'Kale',
+          expiresOn: '2026-09-22T12:00:00Z',
+          daysUntilExpiry: 1,
+          isMultiBatch: false,
+        }),
+      ).toBe('Kale: Expires tomorrow');
     });
 
     it('uses "today" / "tomorrow" wording for 0 and 1 day', () => {

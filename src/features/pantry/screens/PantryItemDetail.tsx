@@ -208,8 +208,11 @@ export const PantryItemDetail: React.FC<
     notation: resolveQuantityNotation(null, item.unit.displayAsFraction),
   })} ${getUnitDisplayText(item.unit)}`;
 
+  // The EXPIRED flag can land a day late east of UTC, so the date decides too.
   const hasExpiredBatches =
-    (item.condition === ItemCondition.Expired && item.quantity > 0) ||
+    (item.quantity > 0 &&
+      (item.condition === ItemCondition.Expired ||
+        (!!item.expiresOn && daysUntilExpiry(item.expiresOn) < 0))) ||
     batches.some(
       batch =>
         batch.status === BatchStatus.Active &&

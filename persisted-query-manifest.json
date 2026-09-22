@@ -423,10 +423,10 @@
       "body": "mutation ExchangeDeviceCredential($input: ExchangeDeviceCredentialInput!) {\n  exchangeDeviceCredential(input: $input) {\n    __typename\n    ... on DeviceCredentialSessionPayload {\n      accessToken\n      refreshToken\n      credentialExpiresAt\n      user {\n        id\n        ...LoginUser\n        __typename\n      }\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n  }\n}\n\nfragment LoginUser on User {\n  id\n  email\n  displayName\n  emailVerified\n  role\n  canAccessDevTools\n  onBoarded\n  createdAt\n  timezone\n  preferredCurrency\n  defaultHomeId\n  defaultHome {\n    id\n    name\n    isDefault\n    pantriesConnection {\n      edges {\n        node {\n          id\n          isDefault\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n  profile {\n    id\n    firstName\n    lastName\n    displayName\n    bio\n    avatar\n    phone\n    dateOfBirth\n    gender\n    profileVisibility\n    showEmail\n    showPhone\n    __typename\n  }\n  settings {\n    id\n    theme\n    showTutorials\n    __typename\n  }\n  __typename\n}"
     },
     {
-      "id": "00fa5418a74f0031f05f9d7a0608cafe7baa2a6fe85de3d1b0effa39ed86ee6e",
+      "id": "586ef57738b97b9a772dc8721125f9d925577023bf6e37c6231aa971acfda339",
       "name": "ExpirationNotificationForEvent",
       "type": "query",
-      "body": "query ExpirationNotificationForEvent($id: ID!) {\n  expirationNotification(id: $id) {\n    id\n    ...usePantrySubscriptions_expirationNotification\n    __typename\n  }\n}\n\nfragment usePantrySubscriptions_expirationNotification on ExpirationNotification {\n  id\n  daysUntilExpiry\n  actionTaken\n  genericNotificationId\n  pantryItem {\n    id\n    item {\n      id\n      name\n      imageUrl\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
+      "body": "query ExpirationNotificationForEvent($id: ID!) {\n  expirationNotification(id: $id) {\n    id\n    ...usePantrySubscriptions_expirationNotification\n    __typename\n  }\n}\n\nfragment usePantrySubscriptions_expirationNotification on ExpirationNotification {\n  id\n  expiresOn\n  actionTaken\n  genericNotificationId\n  pantryItem {\n    id\n    item {\n      id\n      name\n      imageUrl\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
     },
     {
       "id": "f37d70111e3505f5999e02ebc1b32df16c9020d7d031437ec68a5e2edc99a2d9",
@@ -465,10 +465,10 @@
       "body": "query GetDietaryProfile {\n  me {\n    id\n    dietaryProfile {\n      id\n      userId\n      preferredCuisines\n      dislikedIngredients\n      favoriteIngredients\n      calorieTarget\n      proteinTarget\n      carbsTarget\n      fatTarget\n      mealsPerDay\n      snacksPerDay\n      cookingSkillLevel\n      maxPrepTimeMinutes\n      maxCookTimeMinutes\n      budgetPerMeal\n      createdAt\n      updatedAt\n      restrictions {\n        id\n        diet\n        intolerance\n        healthGoal\n        severity\n        notes\n        appliesToHomeId\n        createdAt\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
-      "id": "444fd3f47c2c661425d251aac53c6901c29ed45e31bd72fad3b919e14548916f",
+      "id": "5fc18f2e4a9d57e8187bef7bca7d0de6703ea233eaf10d31da0a75f167d5dee4",
       "name": "GetExpirationNotificationsForPantryItem",
       "type": "query",
-      "body": "query GetExpirationNotificationsForPantryItem($pantryItemId: ID!) {\n  me {\n    id\n    expirationNotificationsConnection(\n      filters: {pantryItemId: $pantryItemId}\n      first: 20\n      orderBy: {createdAt: DESC}\n    ) {\n      edges {\n        node {\n          id\n          genericNotificationId\n          daysUntilExpiry\n          pantryItem {\n            id\n            item {\n              id\n              name\n              imageUrl\n              __typename\n            }\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
+      "body": "query GetExpirationNotificationsForPantryItem($pantryItemId: ID!) {\n  me {\n    id\n    expirationNotificationsConnection(\n      filters: {pantryItemId: $pantryItemId}\n      first: 20\n      orderBy: {createdAt: DESC}\n    ) {\n      edges {\n        node {\n          id\n          genericNotificationId\n          expiresOn\n          pantryItem {\n            id\n            item {\n              id\n              name\n              imageUrl\n              __typename\n            }\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "92007583a22b1411e3306c83db7d61b22bf1f01caf16e14a732385e7a358061f",

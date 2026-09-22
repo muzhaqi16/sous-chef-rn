@@ -1,6 +1,6 @@
 fragment usePantrySubscriptions_expirationNotification on ExpirationNotification {
   id
-  daysUntilExpiry
+  expiresOn
   actionTaken
   genericNotificationId
   pantryItem {
