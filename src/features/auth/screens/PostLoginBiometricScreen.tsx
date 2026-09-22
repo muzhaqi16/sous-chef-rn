@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
-import { ThemedKeyboardAwareScrollView } from '#components/atoms/themedComponents';
-import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
+import { Screen } from '#components/templates/Screen';
 import { StyleSheet } from 'react-native-unistyles';
 import { usePostLoginState } from '#store/useAppStore';
 import { useBiometricPrompting } from '#features/auth/hooks/useBiometricPrompting';
@@ -53,47 +52,31 @@ export const PostLoginBiometricScreen = () => {
   }, [postLoginCredentials, setNavigationState]);
 
   return (
-    <ThemedSafeAreaView
-      style={styles.safeArea}
-      testID={authTestIDs.postLoginBiometricScreen}
-    >
-      <ThemedKeyboardAwareScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.content}>
-          <BiometricSetupView
-            iconName={bio.iconName}
-            title={bio.title}
-            description={bio.description}
-            benefits={bio.benefits}
-            footer={bio.footer}
-            isEnabling={bio.isEnabling}
-            enableLabel={bio.enableLabel}
-            skipLabel={bio.skipLabel}
-            onEnable={bio.handleEnable}
-            onSkip={bio.handleSkip}
-            testID={authTestIDs.postLoginBiometricView}
-          />
-        </View>
-      </ThemedKeyboardAwareScrollView>
-    </ThemedSafeAreaView>
+    <Screen testID={authTestIDs.postLoginBiometricScreen}>
+      <View style={styles.content}>
+        <BiometricSetupView
+          iconName={bio.iconName}
+          title={bio.title}
+          description={bio.description}
+          benefits={bio.benefits}
+          footer={bio.footer}
+          isEnabling={bio.isEnabling}
+          enableLabel={bio.enableLabel}
+          skipLabel={bio.skipLabel}
+          onEnable={bio.handleEnable}
+          onSkip={bio.handleSkip}
+          testID={authTestIDs.postLoginBiometricView}
+        />
+      </View>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  scrollContent: {
+  content: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.xl,
-  },
-  content: {
     alignItems: 'center',
+    paddingVertical: theme.spacing.xl,
   },
 }));

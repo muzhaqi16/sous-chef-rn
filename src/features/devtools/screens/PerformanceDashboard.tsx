@@ -1,9 +1,8 @@
 import React from 'react';
-import { View, ScrollView } from 'react-native';
-import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
+import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { useTranslation } from '#/i18n';
-import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
+import { SubScreen } from '#components/templates/SubScreen';
 import { Environment } from '#/utils/environment';
 import { useCanAccessDevTools } from '#store/useAppStore';
 import { Text } from '#components/atoms/Text';
@@ -40,13 +39,13 @@ export const PerformanceDashboard: React.FC = () => {
 
   if (!Environment.shouldEnableDebugFeatures() && !canAccessDevTools) {
     return (
-      <ProfileScreenWrapper title={t('labels.performanceDashboard')}>
+      <SubScreen title={t('labels.performanceDashboard')}>
         <View style={styles.notAvailableContainer}>
           <Text role="body" tone="secondary" align="center">
             {t('performance.notAvailable')}
           </Text>
         </View>
-      </ProfileScreenWrapper>
+      </SubScreen>
     );
   }
 
@@ -56,54 +55,42 @@ export const PerformanceDashboard: React.FC = () => {
     recentMemorySnapshots.length > 0;
 
   return (
-    <ProfileScreenWrapper
+    <SubScreen
       title={t('labels.performanceDashboard')}
-      scrollEnabled={false}
+      refresh={{ refreshing, onRefresh }}
     >
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={
-          <PlainScrollRefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-          />
-        }
-      >
-        <View style={styles.lastUpdated}>
-          <Text role="caption" tone="tertiary">
-            {t('performance.lastUpdated', {
-              time: formatTimestamp(lastUpdated),
-            })}
+      <View style={styles.lastUpdated}>
+        <Text role="caption" tone="tertiary">
+          {t('performance.lastUpdated', {
+            time: formatTimestamp(lastUpdated),
+          })}
+        </Text>
+      </View>
+
+      <TrackingCard />
+
+      {!!__DEV__ && <FpsCard />}
+      <StartupCard metrics={startupMetrics} />
+      <HttpCard requests={recentHttpRequests} />
+      {!!trackRenders && <SlowestComponentsCard metrics={slowestComponents} />}
+      {!!trackScreens && <SlowestScreensCard metrics={slowestScreens} />}
+      {!!trackMemory && <MemoryCard snapshots={recentMemorySnapshots} />}
+
+      {!!isEnabled && !hasData && (
+        <EmptyState
+          title={t('performance.noDataYet')}
+          description={t('performance.noDataSubtitle')}
+        />
+      )}
+
+      {!!hasData && (
+        <AppPressable style={styles.clearButton} onPress={onClearData}>
+          <Text role="bodyStrong" style={styles.clearButtonText}>
+            {t('performance.clearData')}
           </Text>
-        </View>
-
-        <TrackingCard />
-
-        {!!__DEV__ && <FpsCard />}
-        <StartupCard metrics={startupMetrics} />
-        <HttpCard requests={recentHttpRequests} />
-        {!!trackRenders && (
-          <SlowestComponentsCard metrics={slowestComponents} />
-        )}
-        {!!trackScreens && <SlowestScreensCard metrics={slowestScreens} />}
-        {!!trackMemory && <MemoryCard snapshots={recentMemorySnapshots} />}
-
-        {!!isEnabled && !hasData && (
-          <EmptyState
-            title={t('performance.noDataYet')}
-            description={t('performance.noDataSubtitle')}
-          />
-        )}
-
-        {!!hasData && (
-          <AppPressable style={styles.clearButton} onPress={onClearData}>
-            <Text role="bodyStrong" style={styles.clearButtonText}>
-              {t('performance.clearData')}
-            </Text>
-          </AppPressable>
-        )}
-      </ScrollView>
-    </ProfileScreenWrapper>
+        </AppPressable>
+      )}
+    </SubScreen>
   );
 };
 

@@ -8,7 +8,7 @@ import {
   BottomSheetModal,
   useStandardBottomSheet,
 } from '#hooks/useStandardBottomSheet';
-import { Header } from '#components/organisms/Header';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { formatQuantityForInput } from '#/utils/formatQuantity';
@@ -140,20 +140,14 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
           scrolled the header off the top. Gorhom's own `interactive` lift seats
           this content-sized sheet on the keyboard already. */}
       <BottomSheetView style={[styles.content, contentContainerStyle]}>
-        <Header
+        <SheetHeader
           title={t('purchaseAmountSheet.title')}
-          centerTitle
           onClose={onClose}
-          rightActions={[
-            {
-              icon: 'checkmark',
-              accessibilityLabel: t('labels.save'),
-              onPress: handleConfirm,
-              variant: 'primary',
-              disabled: loading || !quantityIsUsable,
-              loading,
-            },
-          ]}
+          confirm={{
+            onPress: handleConfirm,
+            disabled: !quantityIsUsable,
+            loading,
+          }}
         />
         <View style={styles.headerSpacer} />
         <View style={styles.sections}>

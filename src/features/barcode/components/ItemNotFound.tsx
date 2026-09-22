@@ -52,7 +52,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    padding: theme.spacing.lg,
+    paddingVertical: theme.spacing.lg,
     gap: theme.spacing.sm,
   },
   notFoundMessage: {

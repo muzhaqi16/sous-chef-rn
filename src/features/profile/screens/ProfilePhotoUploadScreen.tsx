@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { t as tGlobal } from '#/i18n';
 import { View, Dimensions } from 'react-native';
-import { BackButton } from '#components/atoms/BackButton';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { useFocusEffect } from '@react-navigation/native';
@@ -181,19 +180,17 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
   };
 
   return (
-    <Screen scroll="list" gutter="none">
+    <Screen
+      scroll="none"
+      header={{
+        title: t('profile.uploadYourPhoto'),
+        // Presented from the bottom, so it closes; an upload in flight holds it.
+        close: () => {
+          if (!isUploading) goBack();
+        },
+      }}
+    >
       <View style={styles.content}>
-        <View style={styles.header}>
-          <BackButton
-            onPress={goBack}
-            style={styles.headerBack}
-            disabled={isUploading}
-          />
-          <Text role="display" align="center" style={styles.title}>
-            {t('profile.uploadYourPhoto')}
-          </Text>
-        </View>
-
         <Text role="bodyStrong" align="center" tone="secondary">
           {croppedImage
             ? t('profile.photoReadyToUpload')
@@ -284,33 +281,11 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   content: {
     flexGrow: 1,
     flexShrink: 1,
     flexBasis: 0,
-    paddingHorizontal: theme.spacing.xl,
-    paddingBottom: theme.spacing.md,
-  },
-  title: {
-    marginBottom: theme.spacing.xsPlus,
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.base,
-    paddingTop: theme.spacing.sm,
-  },
-  headerBack: {
-    padding: theme.spacing.sm,
-    paddingTop: 0,
-    position: 'relative',
-    marginLeft: -theme.spacing.md,
+    paddingTop: theme.spacing.md,
   },
   avatar: {
     flexGrow: 1,

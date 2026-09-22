@@ -69,12 +69,11 @@ export const SignUpScreen = (): React.JSX.Element => {
   }
 
   return (
-    <AuthWrapper testID={authTestIDs.signUpScreen}>
+    <AuthWrapper testID={authTestIDs.signUpScreen} onBack={() => goBack()}>
       <AuthFormTemplate<SignUpValues>
         contentPlacement="center"
         title={t('auth.signupTitle')}
         subtitle={t('auth.signupSubtitle')}
-        onBackPress={() => goBack()}
         fields={[
           {
             name: 'name',

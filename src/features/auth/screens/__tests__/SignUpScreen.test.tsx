@@ -35,15 +35,26 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 jest.mock('#features/auth/components/AuthWrapper', () => {
-  const { View } = require('react-native');
+  const { View, Pressable, Text } = require('react-native');
   return {
     AuthWrapper: ({
       children,
       testID,
+      onBack,
     }: {
       children?: React.ReactNode;
       testID?: string;
-    }) => <View testID={testID}>{children}</View>,
+      onBack?: () => void;
+    }) => (
+      <View testID={testID}>
+        {onBack ? (
+          <Pressable testID="back-button" onPress={onBack}>
+            <Text>Back</Text>
+          </Pressable>
+        ) : null}
+        {children}
+      </View>
+    ),
   };
 });
 
@@ -58,7 +69,6 @@ jest.mock('#features/auth/components/AuthFormTemplate', () => {
       onSubmit,
       submitDisabled,
       submitCountdown,
-      onBackPress,
       footerText,
       footerLinkText,
       footerLinkTestID,
@@ -76,7 +86,6 @@ jest.mock('#features/auth/components/AuthFormTemplate', () => {
       onSubmit?: () => void;
       submitDisabled?: boolean;
       submitCountdown?: number;
-      onBackPress?: () => void;
       footerText?: string;
       footerLinkText?: string;
       footerLinkTestID?: string;
@@ -90,11 +99,6 @@ jest.mock('#features/auth/components/AuthFormTemplate', () => {
       <View testID="auth-form-template">
         <Text>{title}</Text>
         {subtitle ? <Text>{subtitle}</Text> : null}
-        {onBackPress ? (
-          <Pressable testID="back-button" onPress={onBackPress}>
-            <Text>Back</Text>
-          </Pressable>
-        ) : null}
         <Pressable
           testID={submitButtonTestID}
           onPress={onSubmit}

@@ -25,6 +25,7 @@ import { BiometricSetupModal } from '#features/profile/components/BiometricSetup
 import { authoritativeBiometryName } from '#components/organisms/biometric/biometryLabel';
 import { errorService } from '#/services/errorService';
 import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useCurrencyPreference } from '#features/profile/hooks/useCurrencyPreference';
 
 /**
@@ -36,6 +37,16 @@ export const useConfigurableSettings = () => {
   const { t } = useTranslation();
   const user = useUser();
   const { getUserNavigationState } = useNavigationUtils();
+  const {
+    toPersonalInformation,
+    toNotificationSettings,
+    toDietaryProfile,
+    toAppSettings,
+    toAppearance,
+    toDebugInfo,
+    toPerformanceDashboard,
+    toChangePassword,
+  } = useAppNavigation();
   const { language, setLanguage } = usePreferences();
   const {
     preferredCurrency,
@@ -257,25 +268,23 @@ export const useConfigurableSettings = () => {
         }
         break;
 
-      // Navigation items
+      // Navigation items: each row carries its own destination.
       case 'personalInformation':
+        return { ...baseItem, onPress: toPersonalInformation };
       case 'notifications':
+        return { ...baseItem, onPress: toNotificationSettings };
       case 'dietaryProfile':
+        return { ...baseItem, onPress: toDietaryProfile };
       case 'appSettings':
+        return { ...baseItem, onPress: toAppSettings };
       case 'appearance':
+        return { ...baseItem, onPress: toAppearance };
       case 'debugInfo':
+        return { ...baseItem, onPress: toDebugInfo };
       case 'performanceDashboard':
+        return { ...baseItem, onPress: toPerformanceDashboard };
       case 'changePassword':
-        if (config.type === 'navigation') {
-          return {
-            ...baseItem,
-            onPress: () => {
-              // Navigation will be handled in ProfileScreen
-              // by checking the type and calling navigate
-            },
-          };
-        }
-        break;
+        return { ...baseItem, onPress: toChangePassword };
 
       // Action items
       case 'logout':

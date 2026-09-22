@@ -334,8 +334,7 @@ export const ImageCropScreen: React.FC<
     <Screen
       header={{
         title: t('profile.cropPhoto'),
-        back: goBack,
-        centerTitle: true,
+        close: goBack,
         actions: [
           {
             icon: 'refresh',
@@ -347,7 +346,6 @@ export const ImageCropScreen: React.FC<
         ],
       }}
       scroll="none"
-      gutter="none"
     >
       <View style={styles.content}>
         <Text
@@ -417,10 +415,6 @@ export const ImageCropScreen: React.FC<
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   content: {
     flex: 1,
     alignItems: 'center',
@@ -428,7 +422,6 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xl,
   },
   instructions: {
-    paddingHorizontal: theme.spacing.xl,
     marginBottom: theme.spacing.xl,
   },
   cropContainer: {
@@ -482,7 +475,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
   },
   buttonContainer: {
-    paddingHorizontal: theme.spacing.xl,
     paddingTop: theme.spacing.xl,
     width: '100%',
   },

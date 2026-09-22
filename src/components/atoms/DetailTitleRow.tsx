@@ -9,7 +9,7 @@ interface DetailTitleRowProps {
   trailing?: React.ReactNode;
   /** Max title lines; unlimited when omitted. */
   numberOfLines?: number;
-  /** Drops horizontal padding for parents that pad their own content. */
+  /** Drops the top padding for parents that pad their own content. */
   flush?: boolean;
   style?: StyleProp<ViewStyle>;
 }
@@ -41,7 +41,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.sm,
   },
   rowFlush: {

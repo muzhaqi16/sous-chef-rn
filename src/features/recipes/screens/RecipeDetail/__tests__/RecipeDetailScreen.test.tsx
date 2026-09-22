@@ -118,10 +118,6 @@ jest.mock('#components/atoms/SousChefLoader', () => ({
   SousChefLoader: () => 'SousChefLoader',
 }));
 
-jest.mock('#components/atoms/BackButton', () => ({
-  BackButton: () => 'BackButton',
-}));
-
 jest.mock('#features/recipes/components/FolderPicker', () => ({
   FolderPicker: () => null,
 }));

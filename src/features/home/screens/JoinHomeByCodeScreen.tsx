@@ -17,7 +17,7 @@ import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { Screen } from '#components/templates/Screen';
+import { SubScreen } from '#components/templates/SubScreen';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /**
@@ -201,27 +201,15 @@ export const JoinHomeByCodeScreen: React.FC<
   };
 
   return (
-    <Screen
-      header={{
-        title: t('labels.joinHome'),
-        back: () => goBack(),
-        centerTitle: true,
-      }}
-      scroll="none"
-      gutter="none"
-    >
+    <SubScreen title={t('labels.joinHome')} scroll="none">
       {renderBody()}
-    </Screen>
+    </SubScreen>
   );
 };
 
 export default JoinHomeByCodeScreen;
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   loader: {
     flex: 1,
     alignItems: 'center',
@@ -229,7 +217,7 @@ const styles = StyleSheet.create(theme => ({
   },
   content: {
     flex: 1,
-    padding: theme.spacing.xl,
+    paddingVertical: theme.spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },

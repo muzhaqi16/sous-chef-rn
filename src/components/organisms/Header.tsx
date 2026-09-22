@@ -20,11 +20,6 @@ import { kitTestIDs } from '#components/testIDs';
 // in #components/atoms/HeaderActionIcon, shared with CollapsingHeroDetail's
 // chips — import them from there.
 
-/**
- * Header preset variants for common screen patterns
- */
-export type HeaderVariant = 'default' | 'detail' | 'form' | 'modal';
-
 interface HeaderProps {
   /** Screen title (optional for detail variant) */
   title?: string;
@@ -43,8 +38,6 @@ interface HeaderProps {
    * a Save affordance, a text button. Renders after `rightActions`.
    */
   rightElement?: React.ReactNode;
-  /** Preset variant for common patterns */
-  variant?: HeaderVariant;
   /** Transparent background */
   transparent?: boolean;
   /** Hide bottom border */
@@ -96,16 +89,12 @@ export const Header: React.FC<HeaderProps> = ({
   centerTitle,
   onBack,
   onClose,
-  variant = 'default',
   transparent = false,
   borderless = false,
 }) => {
   const { t } = useTranslation();
   styles.useVariants({ transparent, borderless });
 
-  // Apply variant presets
-  const shouldCenterTitle =
-    centerTitle ?? (variant === 'form' || variant === 'modal');
   const showTitle = title !== undefined && title !== '';
   const showBackButton = onBack && !onClose;
   const showCloseButton = onClose !== undefined;
@@ -148,7 +137,13 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <View style={[commonStyles.header, styles.headerOverrides]}>
+    <View
+      style={[
+        commonStyles.header,
+        commonStyles.barInset,
+        styles.headerOverrides,
+      ]}
+    >
       {/* Behind the content, so the material shows the scroll under it while
           the actions and title stay opaque. */}
       <GlassSurface style={styles.glassFill} />
@@ -184,7 +179,7 @@ export const Header: React.FC<HeaderProps> = ({
       {showTitle ? (
         <Text
           role="heading"
-          align={shouldCenterTitle ? 'center' : undefined}
+          align={centerTitle ? 'center' : undefined}
           style={styles.title}
           numberOfLines={1}
         >

@@ -102,6 +102,20 @@ jest.mock('#hooks/navigation/useAuthPreferences', () => ({
 // PersonalInformationScreen, so a fixture that put them here would test a path
 // production cannot reach — and would keep unreachable branches in the hook
 // alive.
+const mockToAppearance = jest.fn();
+jest.mock('#hooks/navigation/useAppNavigation', () => ({
+  useAppNavigation: () => ({
+    toPersonalInformation: jest.fn(),
+    toNotificationSettings: jest.fn(),
+    toDietaryProfile: jest.fn(),
+    toAppSettings: jest.fn(),
+    toAppearance: mockToAppearance,
+    toDebugInfo: jest.fn(),
+    toPerformanceDashboard: jest.fn(),
+    toChangePassword: jest.fn(),
+  }),
+}));
+
 jest.mock('#/config/settingsConfig', () => ({
   PROFILE_SETTINGS_CONFIG: [
     {
@@ -221,6 +235,21 @@ describe('useConfigurableSettings', () => {
     // failure by returning false, so an unset default would put every case on
     // the failure path.
     mockRemoveCredentials.mockResolvedValue(true);
+  });
+
+  it('gives a navigation row its own destination', () => {
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
+    const appearance = sectionById(
+      result.current.sections,
+      'appearanceAndLanguage',
+    ).items.find(item => item.key === 'appearance');
+
+    appearance?.onPress?.();
+
+    expect(mockToAppearance).toHaveBeenCalledTimes(1);
   });
 
   it('returns sections from config', () => {

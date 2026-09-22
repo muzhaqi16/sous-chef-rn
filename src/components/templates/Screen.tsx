@@ -1,5 +1,12 @@
 import React from 'react';
-import { View, ScrollView, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  View,
+  ScrollView,
+  type ScrollViewProps,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
+import Animated, { type ScrollHandlerProcessed } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -17,13 +24,16 @@ import {
   KEYBOARD_PERSIST_TAPS,
 } from '#components/templates/keyboardTaps';
 
+const NO_AUTOMATIC_INSET: ScrollViewProps['contentInsetAdjustmentBehavior'] =
+  'never';
+
 export interface ScreenHeaderConfig {
   /**
    * `standard` is the titled bar with a back control; `tab` is a root tab's
-   * bar; `collapsing` means the screen draws its own hero and the scaffold
-   * stays out of the way; `none` is a screen with no chrome.
+   * bar; `none` is a screen with no chrome. A hero screen is
+   * `CollapsingHeroDetail`, not a variant.
    */
-  variant?: 'standard' | 'tab' | 'collapsing' | 'none';
+  variant?: 'standard' | 'tab' | 'none';
   title?: string;
   /** `tab` only: the small label above the title. */
   label?: string;
@@ -40,7 +50,6 @@ export interface ScreenHeaderConfig {
   back?: () => void;
   /** A handler shows a close control instead of back — for a presented screen. */
   close?: () => void;
-  centerTitle?: boolean;
 }
 
 export interface ScreenRefresh {
@@ -58,6 +67,8 @@ interface ScreenBaseProps {
    * implement three of the four and leave a failed fetch reading "nothing yet".
    */
   state?: { value: DataState; onRetry: () => void; empty?: EmptyStateProps };
+  /** Fixed below the scroll host; it takes the bottom inset instead of the content. */
+  footer?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 }
@@ -70,7 +81,14 @@ interface ScreenBaseProps {
  */
 export type ScreenProps = ScreenBaseProps &
   (
-    | { scroll?: 'none' | 'scroll' | 'form'; refresh?: ScreenRefresh }
+    | {
+        scroll?: 'scroll';
+        refresh?: ScreenRefresh;
+        /** Drives scroll-linked chrome; the host becomes an Animated.ScrollView. */
+        onScroll?: ScrollHandlerProcessed<Record<string, unknown>>;
+        scrollTestID?: string;
+      }
+    | { scroll: 'none' | 'form'; refresh?: ScreenRefresh }
     | { scroll: 'list'; refresh?: never }
   );
 
@@ -81,17 +99,30 @@ export type ScreenProps = ScreenBaseProps &
  * padding, so the `scroll` host turns off iOS's automatic inset, which would
  * reserve it a second time.
  */
-export const Screen: React.FC<ScreenProps> = ({
-  children,
-  header,
-  scroll = 'scroll',
-  gutter = 'page',
-  refresh,
-  state,
-  style,
-  testID,
-}) => {
+export const Screen: React.FC<ScreenProps> = props => {
+  const {
+    children,
+    header,
+    scroll = 'scroll',
+    gutter = 'page',
+    refresh,
+    state,
+    footer,
+    style,
+    testID,
+  } = props;
+  const onScroll =
+    props.scroll === undefined || props.scroll === 'scroll'
+      ? props.onScroll
+      : undefined;
+  const scrollTestID =
+    props.scroll === undefined || props.scroll === 'scroll'
+      ? props.scrollTestID
+      : undefined;
   const insets = useSafeAreaInsets();
+  // With a footer the footer clears the home indicator, so the content only
+  // needs its own trailing space.
+  const contentBottom = footer ? 0 : insets.bottom;
   const variant = header?.variant ?? (header ? 'standard' : 'none');
   styles.useVariants({ gutter, chrome: variant === 'tab' ? 'tab' : 'other' });
 
@@ -103,7 +134,7 @@ export const Screen: React.FC<ScreenProps> = ({
         onClose={header?.close}
         rightActions={header?.actions}
         rightElement={header?.rightElement}
-        centerTitle={header?.centerTitle}
+        centerTitle
       />
     ) : variant === 'tab' ? (
       <TabScreenHeader
@@ -146,7 +177,7 @@ export const Screen: React.FC<ScreenProps> = ({
         <ThemedKeyboardAwareScrollView
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingBottom: insets.bottom },
+            styles.contentBottom(contentBottom),
           ]}
           showsVerticalScrollIndicator={false}
           // Stated, not inherited: KeyboardAwareScrollView supplies no default
@@ -161,25 +192,33 @@ export const Screen: React.FC<ScreenProps> = ({
       );
     }
     if (scroll === 'scroll') {
-      return (
-        <ScrollView
-          style={styles.body}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: insets.bottom },
-          ]}
-          contentInsetAdjustmentBehavior="never"
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps={KEYBOARD_PERSIST_TAPS}
-          keyboardDismissMode={KEYBOARD_DISMISS_MODE}
-          refreshControl={plainRefresh}
+      const hostProps = {
+        style: styles.body,
+        contentContainerStyle: [
+          styles.scrollContent,
+          styles.contentBottom(contentBottom),
+        ],
+        contentInsetAdjustmentBehavior: NO_AUTOMATIC_INSET,
+        showsVerticalScrollIndicator: false,
+        keyboardShouldPersistTaps: KEYBOARD_PERSIST_TAPS,
+        keyboardDismissMode: KEYBOARD_DISMISS_MODE,
+        refreshControl: plainRefresh,
+        testID: scrollTestID,
+      };
+      return onScroll ? (
+        <Animated.ScrollView
+          {...hostProps}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
         >
           {body}
-        </ScrollView>
+        </Animated.ScrollView>
+      ) : (
+        <ScrollView {...hostProps}>{body}</ScrollView>
       );
     }
     return (
-      <View style={[styles.fixed, { paddingBottom: insets.bottom }]}>
+      <View style={[styles.fixed, styles.contentBottom(contentBottom)]}>
         {body}
       </View>
     );
@@ -189,6 +228,11 @@ export const Screen: React.FC<ScreenProps> = ({
     <View style={[styles.container, style]} testID={testID}>
       <View style={styles.chromeInset}>{chrome}</View>
       {content}
+      {footer ? (
+        <View style={[styles.footer, styles.footerBottom(insets.bottom)]}>
+          {footer}
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -228,6 +272,17 @@ const styles = StyleSheet.create(theme => ({
       },
     },
   },
+  contentBottom: (bottomInset: number) => ({
+    paddingBottom: bottomInset + theme.layout.pageBottom,
+  }),
+  // Fixed chrome, not content: it takes the gutter whatever the body does.
+  footer: {
+    paddingTop: theme.spacing.sm,
+    paddingHorizontal: theme.layout.pageGutter,
+  },
+  footerBottom: (bottomInset: number) => ({
+    paddingBottom: bottomInset + theme.spacing.sm,
+  }),
   scrollContent: {
     flexGrow: 1,
     variants: {
