@@ -151,6 +151,50 @@ export const EMPTY_PAGINATION: SearchPagination = {
   seen: createSeenKeys(),
 };
 
+interface SpoonacularPage {
+  results: SpoonacularRecipe[];
+  total: number | null;
+}
+
+const EMPTY_SPOONACULAR_PAGE: SpoonacularPage = { results: [], total: null };
+
+/**
+ * One Spoonacular text-search page, served from the 24h cache when it holds
+ * one. Every text search goes through here: the cache key names the query,
+ * filters and offset but not the page size, so a second writer with another
+ * size would hand this one a short page. Throws on a failed fetch.
+ */
+export async function fetchSpoonacularTextPage(
+  query: string,
+  filters: RecipeFilters,
+  offset: number,
+  signal?: AbortSignal,
+): Promise<SpoonacularPage> {
+  const cacheKey = textSearchCacheKey(query, filters, offset);
+  const cacheStore = useRecipeCacheStore.getState();
+  const cached = cacheStore.getCached(cacheKey);
+  // A null total (entry persisted before the field existed) reads as unknown.
+  if (cached) {
+    return { results: cached.results, total: cached.totalResults ?? null };
+  }
+  const data = await spoonacularService.searchRecipesWithInfo(
+    {
+      query,
+      number: SEARCH_FETCH_SIZE,
+      offset,
+      ...(filters.diet.length > 0 && { diet: filters.diet.join(',') }),
+      ...(filters.intolerances.length > 0 && {
+        intolerances: filters.intolerances.join(','),
+      }),
+      ...(filters.mealType && { type: filters.mealType }),
+      ...(filters.maxReadyTime && { maxReadyTime: filters.maxReadyTime }),
+    },
+    signal,
+  );
+  cacheStore.setCached(cacheKey, data.results, undefined, data.totalResults);
+  return { results: data.results, total: data.totalResults };
+}
+
 // One combined page of results plus the advanced cursor state — the shared
 // unit of work for both the initial search and load-more.
 export interface SearchPageResult {
@@ -222,56 +266,17 @@ export async function fetchRecipeSearchPage(
     ? searchLocalRecipes()
     : Promise.resolve(null);
 
-  // Spoonacular search — served from the 24h cache when available. The cache
-  // key includes the offset so a later page isn't served the first page's
-  // results. Errors are captured (not alerted) so the local source can still
-  // render; the alert only fires when the combined list would otherwise be
-  // empty. Skipped when the Spoonacular source is exhausted.
+  // Errors are captured, not alerted, so the local source can still render;
+  // the alert fires only when the combined list would otherwise be empty.
   let spoonacularError: unknown = null;
-  const cacheKey = textSearchCacheKey(query, filters, spoonacularOffset);
-  const cacheStore = useRecipeCacheStore.getState();
-  const cached = fetchSpoonacular ? cacheStore.getCached(cacheKey) : null;
-
-  const spoonacularPromise: Promise<{
-    results: SpoonacularRecipe[];
-    total: number | null;
-  }> = !fetchSpoonacular
-    ? Promise.resolve({ results: [], total: null })
-    : cached
-    ? // A cache hit keeps the fetch-time total so paging still works — a null
-      // total (entry persisted before the field existed) reads as "unknown".
-      Promise.resolve({
-        results: cached.results,
-        total: cached.totalResults ?? null,
-      })
-    : (async () => {
-        let results: SpoonacularRecipe[] = [];
-        let total: number | null = null;
-        const searchParams = {
-          query,
-          number: SEARCH_FETCH_SIZE,
-          offset: spoonacularOffset,
-          ...(filters.diet.length > 0 && { diet: filters.diet.join(',') }),
-          ...(filters.intolerances.length > 0 && {
-            intolerances: filters.intolerances.join(','),
-          }),
-          ...(filters.mealType && { type: filters.mealType }),
-          ...(filters.maxReadyTime && {
-            maxReadyTime: filters.maxReadyTime,
-          }),
-        };
-        try {
-          const data = await spoonacularService.searchRecipesWithInfo(
-            searchParams,
-          );
-          results = data.results;
-          total = data.totalResults;
-          cacheStore.setCached(cacheKey, results, undefined, total);
-        } catch (error) {
+  const spoonacularPromise = !fetchSpoonacular
+    ? Promise.resolve(EMPTY_SPOONACULAR_PAGE)
+    : fetchSpoonacularTextPage(query, filters, spoonacularOffset).catch(
+        (error: unknown) => {
           spoonacularError = error;
-        }
-        return { results, total };
-      })();
+          return EMPTY_SPOONACULAR_PAGE;
+        },
+      );
 
   const [localData, spoonacular] = await Promise.all([
     localPromise,

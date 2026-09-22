@@ -30,7 +30,7 @@ import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
 import type { TransformedRecipeItem, DietTag } from '#domain/recipeTransform';
 import { useRecipePreload } from '#features/recipes/hooks/useRecipePreload';
 import { fetchRecipeInformation } from '#features/recipes/store/useRecipeCacheStore';
-import { useMealRecipeSearch } from '#features/mealPlan/hooks/useMealRecipeSearch';
+import { useRecipeTextSearch } from '#features/recipes/hooks/useRecipeTextSearch';
 import { toastService } from '#/services/toastService';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
@@ -101,7 +101,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     searching: searchingApi,
     search: searchSpoonacular,
     clear: clearSpoonacular,
-  } = useMealRecipeSearch();
+  } = useRecipeTextSearch();
   const [loadingItemId, setLoadingItemId] = useState<number | null>(null);
 
   const { preloadRecipe } = useRecipePreload();

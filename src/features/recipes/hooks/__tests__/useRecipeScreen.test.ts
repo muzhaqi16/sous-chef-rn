@@ -421,6 +421,8 @@ describe('useRecipeScreen', () => {
 
     expect(mockSearchRecipes).toHaveBeenCalledWith(
       expect.objectContaining({ query: 'pasta', addRecipeInformation: true }),
+      // The Recipes tab passes no abort signal.
+      undefined,
     );
     expect(result.current.searchResults).toHaveLength(2);
     // Transform: SearchRecipesResult ids prefixed with 'spoonacular-'
@@ -1106,6 +1108,8 @@ describe('useRecipeScreen', () => {
       });
       expect(mockSearchRecipes).toHaveBeenCalledWith(
         expect.objectContaining({ diet: 'vegan', maxReadyTime: 30 }),
+        // The Recipes tab passes no abort signal.
+        undefined,
       );
 
       await act(async () => {
