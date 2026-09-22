@@ -15,7 +15,6 @@ import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Icon } from '#utils/iconUtils';
-import { useFragment } from '@apollo/client/react';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import {
   MEAL_TYPE_LABEL_KEYS,
@@ -25,7 +24,7 @@ import {
   useSavedRecipes,
   type SavedRecipeNode,
 } from '#features/recipes/hooks/useSavedRecipes';
-import { AddMealSheet_SavedRecipeFragmentDoc } from './AddMealSheet.generated';
+import { SavedRecipeRow } from './SavedRecipeRow';
 import { CachedImage, warmImage } from '#components/atoms/CachedImage';
 import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
 import type { TransformedRecipeItem, DietTag } from '#domain/recipeTransform';
@@ -72,62 +71,6 @@ function resetSheetState(
 // Every row is the same component, so one recycling pool is correct.
 const getItemType = () => 'item';
 const keyExtractor = (savedRecipe: SavedRecipeNode) => savedRecipe.id;
-
-/**
- * Per-row leaf subscribing to one SavedRecipe via its colocated fragment, which
- * keeps it independent of the recipes feature's internals. Search filtering is
- * the PARENT's job — a row rendering `null` still occupies a slot in the list's
- * item count and leaves a blank gap.
- */
-interface SavedRecipeRowProps {
-  savedRecipeRef: SavedRecipeNode;
-  onPress: (recipeId: string) => void;
-}
-
-const SavedRecipeRow: React.FC<SavedRecipeRowProps> = ({
-  savedRecipeRef,
-  onPress,
-}) => {
-  const { t } = useTranslation();
-  const { data, complete } = useFragment({
-    fragment: AddMealSheet_SavedRecipeFragmentDoc,
-    fragmentName: 'AddMealSheet_savedRecipe',
-    from: savedRecipeRef,
-  });
-
-  if (!complete) return null;
-
-  const { recipe } = data;
-  return (
-    <AppPressable onPress={() => onPress(recipe.id)} style={styles.recipeItem}>
-      {!!recipe.imageUrl && (
-        <CachedImage
-          uri={recipe.imageUrl}
-          style={styles.recipeImage}
-          displaySize={44}
-        />
-      )}
-      <View style={styles.recipeInfo}>
-        <Text role="bodyStrong" numberOfLines={1}>
-          {recipe.name}
-        </Text>
-        {!!(recipe.servings || recipe.totalTimeMinutes) && (
-          <Text role="caption" tone="secondary" style={styles.recipeMeta}>
-            {recipe.servings
-              ? t('addMealSheet.servings', { count: recipe.servings })
-              : ''}
-            {recipe.totalTimeMinutes
-              ? `${recipe.servings ? ' · ' : ''}${t('labels.min', {
-                  count: recipe.totalTimeMinutes,
-                })}`
-              : ''}
-          </Text>
-        )}
-      </View>
-      <Icon name="add-circle-outline" size={24} tone="primary" />
-    </AppPressable>
-  );
-};
 
 export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   visible,

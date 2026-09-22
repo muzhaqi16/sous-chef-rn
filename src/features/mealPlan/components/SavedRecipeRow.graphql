@@ -1,4 +1,4 @@
-fragment AddMealSheet_savedRecipe on SavedRecipe {
+fragment SavedRecipeRow_savedRecipe on SavedRecipe {
   id
   recipe {
     id

@@ -132,8 +132,8 @@ they read it.
   - `TrendLineChart` and `SpotlightCoachMark`, which pass colours into Skia
     draw calls;
   - `BreakdownPieChart`, which hands colours to the chart library as data;
-  - `RecipeMain` and `SortableShoppingList`, which put theme colours into data
-    structures.
+  - `RecipeMain`, `RecipeSearchInput` and `SortableShoppingList`, which put
+    theme colours into data structures.
   - `EdgeFade`, which passes colours into SVG gradient stops;
   - `SearchBar`, which offsets a measured rect by `theme.spacing.sm` in JS.
 - **Plugin order is Unistyles → `unistyles-scope-crawl` → React Compiler**

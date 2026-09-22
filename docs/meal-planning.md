@@ -112,7 +112,7 @@ document selects the payload member plus `... on Error { code message }`, `NotFo
 `MealPlanDisplay` (list card), `MealTemplateDisplay`, `MealTemplateItemFragment`. The
 rest are colocated with their consumer: `MealPlanMain_mealPlan` / `MealPlanMain_item`,
 `MealPlanItemCard_item`, `DailyMeals_item`, `MealPlanItemActions_item`,
-`MealPlanSettingsSheet_mealPlan`, `AddMealSheet_savedRecipe`,
+`MealPlanSettingsSheet_mealPlan`, `SavedRecipeRow_savedRecipe`,
 `useGenerateShoppingList_mealPlan`, `useDuplicateMealPlan_mealPlan`,
 `useMealTemplateActions_template`. `GetMealPlan` spreads the screen, settings-sheet,
 generate and duplicate fragments; meal-item mutations return the four item fragments so

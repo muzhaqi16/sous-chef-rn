@@ -1,9 +1,4 @@
-import React, {
-  useState,
-  useRef,
-  useImperativeHandle,
-  forwardRef,
-} from 'react';
+import React, { useState, useRef } from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -27,109 +22,21 @@ import { RecipeSkeleton } from '#features/recipes/components/skeletons/RecipeSke
 import { RecipeItemSkeleton } from '#features/recipes/components/skeletons/RecipeItemSkeleton';
 import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
-import {
-  useTutorialSequence,
-  type TutorialStep,
-} from '#hooks/ui/useTutorialSequence';
+import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
 import { useTranslation } from '#/i18n';
 import { IngredientSelectorSheet } from '#features/recipes/components/recipeSearch/IngredientSelectorSheet';
 import { useRecipeScreen } from '#features/recipes/hooks/useRecipeScreen';
 import { RecipeFilterSheet } from '#features/recipes/components/RecipeFilterSheet';
 import { ActiveFilterChipsRow } from '#features/recipes/components/ActiveFilterChipsRow';
 import { Text } from '#components/atoms/Text';
-import type { Translate } from '#/i18n/types';
 import { Screen } from '#components/templates/Screen';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import { recipesTestIDs } from '#features/recipes/testIDs';
-
-// ── Recipe tutorial steps (titles/subtitles resolved at usage via t()) ──
-const getRecipeTutorialSteps = (t: Translate): TutorialStep[] => [
-  {
-    featureId: 'recipe_tutorial_saved',
-    title: t('recipes.savedRecipes'),
-    subtitle: t('recipes.savedRecipesSubtitle'),
-    rectKey: 'savedButton',
-  },
-  {
-    featureId: 'recipe_tutorial_my_recipes',
-    title: t('recipes.myRecipes'),
-    subtitle: t('recipes.myRecipesSubtitle'),
-    rectKey: 'myRecipesButton',
-  },
-  {
-    featureId: 'recipe_tutorial_dietary',
-    title: t('recipes.dietaryRestrictions'),
-    subtitle: t('recipes.dietaryRestrictionsSubtitle'),
-    rectKey: 'dietaryButton',
-  },
-  {
-    featureId: 'recipe_tutorial_pantry',
-    title: t('recipes.cookWithPantry'),
-    subtitle: t('recipes.cookWithPantrySubtitle'),
-    rectKey: 'pantryButton',
-  },
-];
-
-// ── Isolated search input — keystrokes only re-render this component ──
-
-interface RecipeSearchInputRef {
-  clear: () => void;
-}
-
-interface RecipeSearchInputProps {
-  onSearch: (query: string) => void;
-  extraActions: SearchBarAction[];
-  /** Seeds the field so the submitted query survives the screen's
-   * skeleton↔list remounts (this component is rendered in two tree positions).
-   * Read once on mount — keystrokes stay local to keep the parent from
-   * re-rendering on every character. */
-  initialQuery: string;
-  /** Tapped the ✕ — clear the field and cancel the active search. */
-  onClear: () => void;
-}
-
-const RecipeSearchInput = forwardRef<
-  RecipeSearchInputRef,
-  RecipeSearchInputProps
->(({ onSearch, extraActions, initialQuery, onClear }, ref) => {
-  const { t } = useTranslation();
-  const [inputQuery, setInputQuery] = useState(initialQuery);
-  // `useUnistyles()` is intentional: theme colors are constructed into the
-  // dynamic `SearchBarAction[]` prop array passed to `<SearchBar>`. The action
-  // shape carries `color`/`backgroundColor` strings, so a `withUnistyles`
-  // wrap on SearchBar would require redesigning the SearchBarAction type.
-  const { theme } = useUnistyles();
-
-  useImperativeHandle(ref, () => ({
-    clear: () => setInputQuery(''),
-  }));
-
-  const rightActions: SearchBarAction[] = [
-    ...extraActions,
-    {
-      icon: 'search',
-      onPress: () => onSearch(inputQuery),
-      color: theme.colors.primary,
-      backgroundColor: theme.colors.surface,
-      testID: recipesTestIDs.searchSubmit,
-    },
-  ];
-
-  return (
-    <View style={styles.gutter}>
-      <SearchBar
-        value={inputQuery}
-        onChangeText={setInputQuery}
-        onClear={onClear}
-        onSubmitEditing={() => onSearch(inputQuery)}
-        returnKeyType="search"
-        placeholder={t('recipes.searchPlaceholder')}
-        rightActions={rightActions}
-        testID={recipesTestIDs.searchInput}
-      />
-    </View>
-  );
-});
+import { getRecipeTutorialSteps } from '#features/recipes/components/recipeTutorialSteps';
+import {
+  RecipeSearchInput,
+  type RecipeSearchInputRef,
+} from '#features/recipes/components/RecipeSearchInput';
 
 // ── Inner component (thin — delegates to useRecipeScreen facade) ──
 
@@ -139,7 +46,7 @@ const RecipeMainInner: React.FC = () => {
   const { toRecipeCreate, toRecipeDetail, toSavedRecipes, toMyRecipes } =
     useAppNavigation();
   // `useUnistyles()` is intentional: same `SearchBarAction[]` construction
-  // pattern as `RecipeSearchInput` above — theme strings flow into a runtime
+  // pattern as `RecipeSearchInput` — theme strings flow into a runtime
   // prop array that can't move into a stylesheet.
   const { theme } = useUnistyles();
 
@@ -495,15 +402,16 @@ const RecipeMainInner: React.FC = () => {
       scroll="list"
       gutter="none"
     >
-      {/* Above the list, not inside it: the spinner drops from the list's top.
-          It carries its own gutter — don't wrap it in another. */}
-      <RecipeSearchInput
-        ref={searchInputRef}
-        onSearch={screen.handleTextSearch}
-        initialQuery={screen.searchQuery}
-        onClear={screen.clearSearch}
-        extraActions={searchBarExtraActions}
-      />
+      {/* Above the list, not inside it: the spinner drops from the list's top. */}
+      <View style={styles.gutter}>
+        <RecipeSearchInput
+          ref={searchInputRef}
+          onSearch={screen.handleTextSearch}
+          initialQuery={screen.searchQuery}
+          onClear={screen.clearSearch}
+          extraActions={searchBarExtraActions}
+        />
+      </View>
       {/* A search in flight always shows the skeleton so the tap gets instant
           feedback (and any stale prior results are replaced); discovery's
           initial load only skeletons when there's nothing on screen yet. */}
