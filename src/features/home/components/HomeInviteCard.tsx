@@ -157,7 +157,4 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     backgroundColor: theme.colors.validation.errorBg,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

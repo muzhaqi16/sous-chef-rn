@@ -114,7 +114,4 @@ const styles = StyleSheet.create(theme => ({
   modalButtonPrimaryText: {
     color: theme.colors.onPrimary,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

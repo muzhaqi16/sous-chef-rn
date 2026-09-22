@@ -249,9 +249,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'flex-start',
     gap: theme.spacing.sm,
   },
-  icon: {
-    marginRight: theme.spacing.sm,
-  },
   info: {
     flex: 1,
   },

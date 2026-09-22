@@ -260,7 +260,4 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

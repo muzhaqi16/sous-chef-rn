@@ -204,5 +204,4 @@ const styles = StyleSheet.create(theme => ({
   emptyMessage: {
     marginTop: theme.spacing.xl,
   },
-  pressed: { opacity: theme.opacity.pressed },
 }));

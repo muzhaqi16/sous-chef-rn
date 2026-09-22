@@ -60,7 +60,4 @@ const styles = StyleSheet.create(theme => ({
       },
     },
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

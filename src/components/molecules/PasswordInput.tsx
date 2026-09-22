@@ -57,13 +57,10 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
   );
 };
 
-const pressedStyles = StyleSheet.create(theme => ({
+const pressedStyles = StyleSheet.create({
   toggle: {
     alignSelf: 'stretch',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+});

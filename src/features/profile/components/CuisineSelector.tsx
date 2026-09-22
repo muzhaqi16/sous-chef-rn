@@ -125,7 +125,4 @@ const styles = StyleSheet.create(theme => ({
   showMoreText: {
     marginLeft: theme.spacing.xs,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

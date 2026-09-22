@@ -119,9 +119,6 @@ export const styles = StyleSheet.create(theme => ({
   clearButtonText: {
     color: theme.colors.onError,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
   startupCard: {
     backgroundColor: theme.colors.backgroundSecondary,
     borderRadius: theme.radii.sm,

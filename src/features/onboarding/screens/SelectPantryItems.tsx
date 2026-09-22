@@ -254,7 +254,4 @@ const styles = StyleSheet.create(theme => ({
   errorText: {
     marginBottom: theme.spacing.lg,
   },
-  loader: {
-    marginVertical: theme.spacing.xl,
-  },
 }));

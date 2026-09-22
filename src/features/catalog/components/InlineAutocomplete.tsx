@@ -327,8 +327,4 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   suggestion: {},
-
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

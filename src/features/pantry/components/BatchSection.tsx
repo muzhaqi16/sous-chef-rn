@@ -105,7 +105,4 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     alignItems: 'center',
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

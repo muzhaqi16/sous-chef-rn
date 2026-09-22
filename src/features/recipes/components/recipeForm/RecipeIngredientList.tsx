@@ -94,9 +94,6 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     marginBottom: theme.spacing.xs,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
   ingredientInfo: {
     flex: 1,
   },

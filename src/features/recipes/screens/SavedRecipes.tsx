@@ -400,10 +400,6 @@ const styles = StyleSheet.create(theme => ({
   gutter: {
     paddingHorizontal: theme.layout.pageGutter,
   },
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   searchBarContainer: {
     paddingHorizontal: theme.spacing.md,
   },

@@ -433,9 +433,6 @@ const styles = StyleSheet.create(theme => ({
   dimmed: {
     opacity: 0.5,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
   pendingSync: {
     fontStyle: 'italic',
   },

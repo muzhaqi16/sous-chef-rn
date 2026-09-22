@@ -57,7 +57,4 @@ const styles = StyleSheet.create(theme => ({
     marginLeft: theme.spacing.xs,
     color: theme.colors.primary,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

@@ -202,7 +202,4 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.md,
     fontStyle: 'italic',
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

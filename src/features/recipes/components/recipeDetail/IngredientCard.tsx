@@ -171,7 +171,4 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

@@ -199,9 +199,6 @@ export const styles = StyleSheet.create(theme => ({
   granularityButtonTextActive: {
     color: theme.colors.onPrimary,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
   periodLegend: {
     flexDirection: 'row',
     justifyContent: 'center',

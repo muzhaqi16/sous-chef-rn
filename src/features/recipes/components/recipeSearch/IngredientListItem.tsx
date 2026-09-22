@@ -68,5 +68,4 @@ const styles = StyleSheet.create(theme => ({
   ingredientText: {
     marginLeft: theme.spacing.md,
   },
-  pressed: { opacity: theme.opacity.pressed },
 }));

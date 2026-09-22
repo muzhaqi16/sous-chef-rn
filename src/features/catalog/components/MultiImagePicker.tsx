@@ -353,7 +353,4 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     gap: theme.spacing.xs,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

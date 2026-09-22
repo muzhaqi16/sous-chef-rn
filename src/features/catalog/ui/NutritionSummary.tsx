@@ -251,9 +251,6 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     overflow: 'hidden',
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));
 
 const circleStyles = StyleSheet.create(theme => ({

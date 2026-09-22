@@ -93,9 +93,6 @@ const scanButtonStyles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));
 
 type TabFieldGroups = {

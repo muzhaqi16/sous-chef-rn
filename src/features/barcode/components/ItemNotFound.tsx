@@ -62,8 +62,4 @@ const styles = StyleSheet.create(theme => ({
     fontStyle: 'italic',
     marginTop: theme.spacing.sm,
   },
-  addButton: {
-    marginTop: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.xl,
-  },
 }));

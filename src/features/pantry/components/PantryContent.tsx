@@ -557,16 +557,6 @@ const styles = StyleSheet.create(theme => ({
     paddingTop: theme.spacing.sm,
     paddingBottom: theme.spacing.sm,
   },
-  // `stickyHeaderActive` applies while pinned, so the row keeps an opaque
-  // background and rows scroll cleanly underneath.
-  stickySection: {
-    backgroundColor: theme.colors.background,
-    zIndex: theme.zIndex.sticky,
-    paddingBottom: theme.spacing.sm,
-  },
-  stickyHeaderActive: {
-    backgroundColor: theme.colors.background,
-  },
   searchContainer: {},
   statsContainer: {},
   listContent: {

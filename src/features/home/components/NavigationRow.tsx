@@ -78,7 +78,4 @@ const styles = StyleSheet.create(theme => ({
   navigationSubtitle: {
     marginTop: theme.spacing.xs,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

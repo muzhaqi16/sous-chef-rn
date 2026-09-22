@@ -316,9 +316,6 @@ const styles = StyleSheet.create(theme => ({
   footerText: {
     fontStyle: 'italic',
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));
 
 export default DebugInfo;

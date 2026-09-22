@@ -381,7 +381,4 @@ const styles = StyleSheet.create(theme => ({
   biometricTextDisabled: {
     color: theme.colors.textSecondary,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

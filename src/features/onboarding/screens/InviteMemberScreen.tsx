@@ -343,7 +343,4 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
   },
   infoText: {},
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

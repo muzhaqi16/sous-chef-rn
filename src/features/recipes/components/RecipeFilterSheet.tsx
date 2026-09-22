@@ -440,5 +440,4 @@ const styles = StyleSheet.create(theme => ({
   infoBannerTitle: {
     flex: 1,
   },
-  pressed: { opacity: theme.opacity.pressed },
 }));

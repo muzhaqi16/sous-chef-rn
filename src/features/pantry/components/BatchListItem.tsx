@@ -230,7 +230,4 @@ const styles = StyleSheet.create(theme => ({
   actionButton: {
     padding: theme.spacing.xs,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

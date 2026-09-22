@@ -488,9 +488,6 @@ const styles = StyleSheet.create(theme => ({
   cropButtonText: {
     color: theme.colors.background,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));
 
 export default ImageCropScreen;

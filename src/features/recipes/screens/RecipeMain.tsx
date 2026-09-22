@@ -699,5 +699,4 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size['3xs'],
     fontWeight: theme.fonts.weight.bold,
   },
-  pressed: { opacity: theme.opacity.pressed },
 }));

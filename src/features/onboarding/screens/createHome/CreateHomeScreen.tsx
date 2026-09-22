@@ -507,33 +507,6 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
     marginBottom: theme.spacing.md,
   },
-  inviteActions: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
-  inviteDeclineButton: {
-    flex: 1,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.surface,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-  },
-  inviteAcceptButton: {
-    flex: 1,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.primary,
-  },
-  inviteAcceptButtonText: {
-    color: theme.colors.onPrimary,
-  },
   orDivider: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -546,8 +519,5 @@ const styles = StyleSheet.create(theme => ({
   },
   dividerText: {
     paddingHorizontal: theme.spacing.md,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

@@ -492,9 +492,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primaryLight,
     borderColor: theme.colors.primary,
   },
-  typeIcon: {
-    marginBottom: theme.spacing.xs,
-  },
   typeLabel: {
     color: theme.colors.textSecondary,
   },
@@ -560,8 +557,5 @@ const styles = StyleSheet.create(theme => ({
   formActions: {
     gap: theme.spacing.sm,
     marginTop: theme.spacing.md,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

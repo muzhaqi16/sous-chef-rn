@@ -380,14 +380,11 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
   pager: {
     flex: 1,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+});

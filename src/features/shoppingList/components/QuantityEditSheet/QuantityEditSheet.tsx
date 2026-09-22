@@ -419,7 +419,4 @@ const styles = StyleSheet.create(theme => ({
     padding: 0,
     color: theme.colors.textPrimary,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

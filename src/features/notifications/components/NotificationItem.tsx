@@ -131,9 +131,6 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.xs,
     justifyContent: 'center',
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));
 
 export const NotificationItem = NotificationItemComponent;

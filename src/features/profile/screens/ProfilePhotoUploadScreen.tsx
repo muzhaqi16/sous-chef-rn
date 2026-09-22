@@ -357,9 +357,6 @@ const styles = StyleSheet.create(theme => ({
   btnSecondaryText: {
     color: theme.colors.secondary,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));
 
 export default ProfilePhotoUploadScreen;
