@@ -4,6 +4,7 @@
  */
 export const mealPlanTestIDs = {
   screen: 'meal-plan-screen',
+  itemCompleteToggle: (itemId: string) => `meal-plan-item-complete-${itemId}`,
 
   createScreen: 'create-meal-plan-screen',
   createNameInput: 'meal-plan-name-input',
