@@ -268,7 +268,7 @@ export const ResetPasswordScreen: React.FC = () => {
       }}
       scroll="form"
     >
-      <View style={styles.content}>
+      <View style={styles.formContent}>
         <View style={styles.iconContainer}>
           <Icon name="lock-closed-outline" size={64} tone="primary" />
         </View>
@@ -343,6 +343,14 @@ export const ResetPasswordScreen: React.FC = () => {
 const styles = StyleSheet.create(theme => ({
   content: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing.xl,
+  },
+  // `flexGrow`, not `flex`: inside a scroller `flex: 1` pins the box to the
+  // viewport, so taller content overflows instead of scrolling.
+  formContent: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: theme.spacing.xl,
