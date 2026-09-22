@@ -128,7 +128,7 @@ const styles = StyleSheet.create(theme => ({
   avatar: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
+    borderRadius: theme.radii.full,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
     borderWidth: theme.borderWidth.medium,

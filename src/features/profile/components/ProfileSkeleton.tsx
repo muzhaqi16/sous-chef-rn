@@ -10,14 +10,13 @@ const AVATAR_SIZE = 80; // matches ProfileHero.AVATAR_SIZE
 
 // Mirrors `PROFILE_SETTINGS_CONFIG` in `src/config/settingsConfig.ts`, minus the
 // Developer section that `Environment.shouldEnableDebugFeatures()` gates out.
-const SECTIONS: ReadonlyArray<{ rows: number; hasTitle: boolean }> = [
-  { rows: 1, hasTitle: true }, // Personal Information
-  { rows: 2, hasTitle: true }, // Appearance & Language
-  { rows: 1, hasTitle: true }, // Notifications
-  { rows: 1, hasTitle: true }, // Dietary Profile
-  { rows: 1, hasTitle: true }, // App Settings
-  { rows: 2, hasTitle: true }, // Security
-  { rows: 1, hasTitle: false }, // Logout
+const SECTION_ROWS: readonly number[] = [
+  1, // Personal Information
+  3, // Appearance & Language
+  1, // Notifications
+  1, // Dietary Profile
+  1, // App Settings
+  2, // Security
 ];
 
 // The real header, so back works before the profile lands; the hero and rows
@@ -47,20 +46,16 @@ export const ProfileSkeleton: React.FC<{ onBack: () => void }> = ({
         <SkeletonLine width="55%" height={12} />
       </View>
 
-      {SECTIONS.map((section, idx) => (
+      {SECTION_ROWS.map((rows, idx) => (
         <View key={idx} style={styles.section}>
-          {section.hasTitle ? (
-            <SkeletonLine width="30%" height={12} style={styles.sectionTitle} />
-          ) : (
-            <View style={styles.emptySectionTitle} />
-          )}
+          <SkeletonLine width="30%" height={12} style={styles.sectionTitle} />
           <View style={styles.sectionBody}>
-            {Array.from({ length: section.rows }).map((_, rowIdx) => (
+            {Array.from({ length: rows }).map((_, rowIdx) => (
               <View
                 key={rowIdx}
                 style={[
                   styles.rowWrapper,
-                  rowIdx === section.rows - 1 && styles.rowLast,
+                  rowIdx === rows - 1 && styles.rowLast,
                 ]}
               >
                 <SkeletonLine width="60%" height={16} />
@@ -83,15 +78,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
   },
   sectionTitle: {
-    marginBottom: theme.spacing.md,
-    marginTop: theme.spacing.md,
-  },
-  emptySectionTitle: {
-    // The real SettingsSection renders an empty <Text role="caption"> for empty
-    // titles. Text line-height ≈ 18, plus the same md/md margins as titled
-    // sections — mirroring keeps the logout section's vertical position
-    // stable across skeleton → real.
-    height: 18,
     marginBottom: theme.spacing.md,
     marginTop: theme.spacing.md,
   },
