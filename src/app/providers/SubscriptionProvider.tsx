@@ -8,7 +8,6 @@ import {
 } from '#/apollo/links/wsLink';
 import { AuthenticatedSubscriptions } from '#/app/providers/AuthenticatedSubscriptions';
 import { AuthenticatedDataProvider } from '#/app/providers/AuthenticatedDataProvider';
-import { ListAnimationProvider } from '#/context/ListAnimationContext';
 
 interface SubscriptionProviderProps {
   children: React.ReactNode;
@@ -72,7 +71,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
   }, [isTokenReady]);
 
   return (
-    <ListAnimationProvider>
+    <>
       {/* Only initialize data when user is authenticated AND token is ready. */}
       {/* Key by userId to force remount when user changes - this ensures hooks
           like useDefaultHome reset their refs and fetch fresh data for the new user */}
@@ -85,8 +84,6 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
         <AuthenticatedSubscriptions key={`subs-${user.id}`} userId={user.id} />
       )}
       {children}
-    </ListAnimationProvider>
+    </>
   );
 };
-
-export default SubscriptionProvider;

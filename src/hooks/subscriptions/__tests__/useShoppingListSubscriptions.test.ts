@@ -1,6 +1,6 @@
 'use no memo';
 
-import { act } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useShoppingListSubscriptions } from '#features/shoppingList/hooks/useShoppingListSubscriptions';
@@ -328,16 +328,13 @@ describe('useShoppingListSubscriptions', () => {
     expect(safeEvict).toHaveBeenCalledWith(mockCache, 'ShoppingList', 'list-1');
   });
 
-  it('passes scheduleAnimation callback for Deleted items', () => {
+  it('removes a deleted item as the event arrives, with no deferral', () => {
     const {
       removeFromShoppingListItemsConnection,
     } = require('#features/shoppingList/cache/connections');
 
     const getOnData = captureCustomOnData();
-    const scheduleAnimation = jest.fn((_id, _dir, onComplete) => onComplete());
-    renderHookWithApollo(() =>
-      useShoppingListSubscriptions('user-1', scheduleAnimation),
-    );
+    renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
 
     const mockCache: MockBatchCache = {
       batch: jest.fn(
@@ -358,12 +355,60 @@ describe('useShoppingListSubscriptions', () => {
       mockClient,
     );
 
-    expect(scheduleAnimation).toHaveBeenCalledWith(
+    // Synchronously — a deferred write dropped a second event for the same row.
+    expect(removeFromShoppingListItemsConnection).toHaveBeenCalledWith(
+      mockCache,
+      'list-1',
       'i1',
-      -1,
-      expect.any(Function),
+      { evictItem: true },
     );
-    expect(removeFromShoppingListItemsConnection).toHaveBeenCalled();
+  });
+});
+
+describe('useShoppingListSubscriptions: another device toggles a row twice', () => {
+  it('applies both moves, in order — the second event is not dropped', async () => {
+    const {
+      moveShoppingListItemToPurchased,
+      moveShoppingListItemToUnpurchased,
+    } = require('#features/shoppingList/cache/connections');
+    const fetchModule = require('#/services/subscriptions/fetchEventEntity');
+    const fetchSpy = jest
+      .spyOn(fetchModule, 'fetchEventEntity')
+      .mockResolvedValue({ shoppingListItem: { id: 'i1' } });
+
+    const getOnData = captureCustomOnData();
+    renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
+
+    const mockCache: MockBatchCache = {
+      batch: jest.fn(
+        ({ update }: { update: (cache: MockBatchCache) => void }) =>
+          update(mockCache),
+      ),
+    };
+    const event = (mutation: string) => ({
+      subtype: 'ITEMS_CHANGED',
+      mutation,
+      node: { __typename: 'ShoppingListItem', id: 'i1' },
+      listId: 'list-1',
+      actorUserId: 'other-user',
+      updatedFields: ['isPurchased'],
+    });
+
+    // Back to back, faster than any animation could run.
+    getOnData()(event('ITEM_COMPLETED'), { cache: mockCache });
+    getOnData()(event('ITEM_UNCOMPLETED'), { cache: mockCache });
+    await waitFor(() =>
+      expect(moveShoppingListItemToUnpurchased).toHaveBeenCalled(),
+    );
+
+    expect(moveShoppingListItemToPurchased).toHaveBeenCalledTimes(1);
+    expect(moveShoppingListItemToUnpurchased).toHaveBeenCalledTimes(1);
+    expect(
+      moveShoppingListItemToPurchased.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      moveShoppingListItemToUnpurchased.mock.invocationCallOrder[0],
+    );
+    fetchSpy.mockRestore();
   });
 });
 

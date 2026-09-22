@@ -141,14 +141,6 @@ function resortEdges(
   }
 }
 
-type ScheduleAnimationFn = (
-  itemId: string,
-  direction: 1 | -1,
-  onComplete: () => void,
-) => void;
-
-type ScheduleEntryAnimationFn = (itemId: string, direction: 1 | -1) => void;
-
 // Collaborator removal — module scope (constant config, no closure deps) so the
 // MyShoppingListsEvents handler can reference it directly.
 const removeCollaborator = createRemoveFromParentConnectionUpdater(
@@ -158,14 +150,10 @@ const removeCollaborator = createRemoveFromParentConnectionUpdater(
 );
 
 /**
- * Mounted once at app level, by `SubscriptionProvider`. The animation schedulers
- * let a move be animated out before, and in after, the cache write.
+ * Mounted once at app level, by `SubscriptionProvider`. Another device's change
+ * is written as it arrives; this device's own writes are skipped as echoes.
  */
-export function useShoppingListSubscriptions(
-  userId?: string,
-  scheduleAnimation?: ScheduleAnimationFn,
-  scheduleEntryAnimation?: ScheduleEntryAnimationFn,
-) {
+export function useShoppingListSubscriptions(userId?: string) {
   const selectedShoppingListId = useSelectedShoppingListId() ?? undefined;
   const rejected = useSubscriptionRejected(MyShoppingListsEventsDocument);
 
@@ -194,22 +182,14 @@ export function useShoppingListSubscriptions(
       mutation === MutationType.Deleted ||
       mutation === MutationType.ItemRemoved
     ) {
-      const removeItem = () => {
-        // One observer notification for the remove + evict + gc.
-        client.cache.batch({
-          update(cache: ApolloCache) {
-            removeFromShoppingListItemsConnection(cache, listId, itemId, {
-              evictItem: true,
-            });
-          },
-        });
-      };
-
-      if (scheduleAnimation) {
-        scheduleAnimation(itemId, -1, removeItem);
-      } else {
-        removeItem();
-      }
+      // One observer notification for the remove + evict + gc.
+      client.cache.batch({
+        update(cache: ApolloCache) {
+          removeFromShoppingListItemsConnection(cache, listId, itemId, {
+            evictItem: true,
+          });
+        },
+      });
       return;
     }
 
@@ -261,34 +241,9 @@ export function useShoppingListSubscriptions(
       });
     }
 
-    if (scheduleAnimation && (isCompletedMutation || isUncompletedMutation)) {
-      // Animated path: batch the move + sort in the animation callback.
-      const direction: 1 | -1 = isCompletedMutation ? 1 : -1;
-      const moveOp = isCompletedMutation
-        ? moveShoppingListItemToPurchased
-        : moveShoppingListItemToUnpurchased;
-
-      // Sort only the destination variant after the move
-      const sortVariant = isCompletedMutation
-        ? '"isPurchased":true'
-        : '"isPurchased":false';
-
-      scheduleAnimation(itemId, direction, () => {
-        client.cache.batch({
-          update(cache: ApolloCache) {
-            moveOp(cache, listId, { id: itemId });
-            if (sortOrderChanged) {
-              resortEdges(cache, listId, sortVariant);
-            }
-          },
-        });
-        scheduleEntryAnimation?.(itemId, direction);
-      });
-      return;
-    }
-
-    // A plain ItemUpdated does not say where the row sits, so all variants sort.
-    const nonAnimSortVariant = isCompletedMutation
+    // A completion sorts only its destination variant; a plain ItemUpdated does
+    // not say where the row sits, so all variants sort.
+    const sortVariant = isCompletedMutation
       ? '"isPurchased":true'
       : isUncompletedMutation
       ? '"isPurchased":false'
@@ -310,7 +265,7 @@ export function useShoppingListSubscriptions(
         }
 
         if (sortOrderChanged) {
-          resortEdges(cache, listId, nonAnimSortVariant);
+          resortEdges(cache, listId, sortVariant);
         }
       },
     });
