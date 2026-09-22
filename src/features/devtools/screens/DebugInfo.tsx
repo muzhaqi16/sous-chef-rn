@@ -1,10 +1,10 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { View } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
-import { SubScreen } from '#components/templates/SubScreen';
+import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { Environment } from '#/utils/environment';
 import { env } from '#/config/env';
 import { Platform } from 'react-native';
@@ -172,19 +172,19 @@ export const DebugInfo: React.FC = () => {
   // Only show in development, local, or staging builds — or for users with dev tools access
   if (!Environment.shouldEnableDebugFeatures() && !canAccessDevTools) {
     return (
-      <SubScreen title={t('labels.debugInfo')}>
+      <ProfileScreenWrapper title={t('labels.debugInfo')}>
         <View style={styles.notAvailableContainer}>
           <Text role="body" tone="secondary" align="center">
             {t('debugInfo.notAvailable')}
           </Text>
         </View>
-      </SubScreen>
+      </ProfileScreenWrapper>
     );
   }
 
   return (
-    <SubScreen title={t('labels.debugInfo')}>
-      <>
+    <ProfileScreenWrapper title={t('labels.debugInfo')}>
+      <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <Text role="caption" tone="secondary" style={styles.headerText}>
             {t('debugInfo.header')}
@@ -234,12 +234,15 @@ export const DebugInfo: React.FC = () => {
             {t('debugInfo.footer')}
           </Text>
         </View>
-      </>
-    </SubScreen>
+      </ScrollView>
+    </ProfileScreenWrapper>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  scrollView: {
+    flex: 1,
+  },
   notAvailableContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -247,13 +250,10 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.xl,
   },
   header: {
-    marginTop: theme.spacing.md,
     padding: theme.spacing.md,
     backgroundColor: theme.colors.backgroundSecondary,
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
+    borderBottomWidth: theme.borderWidth.hairline,
+    borderBottomColor: theme.colors.border,
   },
   headerText: {
     marginBottom: theme.spacing.base,
@@ -271,6 +271,7 @@ const styles = StyleSheet.create(theme => ({
   },
   section: {
     marginVertical: theme.spacing.base,
+    paddingHorizontal: theme.spacing.md,
   },
   sectionHeader: {
     flexDirection: 'row',

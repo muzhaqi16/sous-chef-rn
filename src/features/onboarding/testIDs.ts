@@ -13,5 +13,6 @@ export const onboardingTestIDs = {
   completeScreen: 'onboarding-complete-screen',
 
   /** `OnBoardingWrapper`'s header buttons, under the step screen's id. */
+  backButton: (screenID: string) => `${screenID}-back-button`,
   skipButton: (screenID: string) => `${screenID}-skip-button`,
 };

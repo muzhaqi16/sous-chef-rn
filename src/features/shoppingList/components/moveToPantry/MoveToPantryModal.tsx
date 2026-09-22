@@ -8,7 +8,7 @@ import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
-import { SheetHeader } from '#components/templates/SheetHeader';
+import { Header } from '#components/organisms/Header';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
@@ -319,16 +319,26 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       style={styles.scrollView}
     >
       {/* Header */}
-      <SheetHeader
+      <Header
         title={t('moveToPantry.title')}
-        onClose={onClose}
-        confirm={{
-          accessibilityLabel: t('moveToPantry.title'),
-          onPress: () => {
-            void handleSubmit(onValid, logValidationErrors)();
+        centerTitle
+        leftActions={[
+          {
+            icon: 'close',
+            accessibilityLabel: t('labels.close'),
+            onPress: onClose,
           },
-          disabled: confirmDisabled,
-        }}
+        ]}
+        rightActions={[
+          {
+            icon: 'checkmark',
+            accessibilityLabel: t('moveToPantry.title'),
+            onPress: () => {
+              void handleSubmit(onValid, logValidationErrors)();
+            },
+            disabled: confirmDisabled,
+          },
+        ]}
       />
 
       {!!shoppingListItem && (

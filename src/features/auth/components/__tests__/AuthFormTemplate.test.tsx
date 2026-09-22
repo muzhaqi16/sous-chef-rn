@@ -1,4 +1,6 @@
 import React from 'react';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { useForm } from 'react-hook-form';
 import { AuthFormTemplate } from '../AuthFormTemplate';
@@ -49,11 +51,23 @@ jest.mock('#components/molecules/Button', () => {
   };
 });
 
+jest.mock('#components/atoms/BackButton', () => {
+  const { Pressable, Text } = require('react-native');
+  return {
+    BackButton: ({ onPress }: { onPress: () => void }) => (
+      <Pressable onPress={onPress} testID="back-button">
+        <Text>Back</Text>
+      </Pressable>
+    ),
+  };
+});
+
 // Helper wrapper to provide react-hook-form control
 interface WrapperProps {
   children?: React.ReactNode;
   title?: string;
   subtitle?: string | React.ReactNode;
+  onBackPress?: () => void;
   footerText?: string;
   footerLinkText?: string;
   footerLinkTestID?: string;
@@ -119,9 +133,52 @@ describe('AuthFormTemplate', () => {
     expect(screen.getByText('Password')).toBeTruthy();
   });
 
-  it('carries no back control — the screen header owns it', () => {
+  it('renders back button when onBackPress is provided', async () => {
+    const user = userEvent.setup();
+    const onBackPress = jest.fn();
+    render(<Wrapper onBackPress={onBackPress} />);
+    expect(screen.getByTestId('back-button')).toBeTruthy();
+    await user.press(screen.getByTestId('back-button'));
+    expect(onBackPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a long title clear of the back button', () => {
+    // The button is absolutely positioned over the title row, so without the
+    // inset a long localized title renders underneath it and loses taps to it.
+    const longTitle =
+      'Keni harruar fjalëkalimin tuaj dhe doni ta rivendosni tani';
+    render(<Wrapper onBackPress={jest.fn()} title={longTitle} />);
+
+    const style = screen.getByTestId('auth-title-row').props.style as
+      | { paddingHorizontal?: number }
+      | Array<{ paddingHorizontal?: number }>;
+    const padding = (Array.isArray(style) ? style : [style]).find(
+      entry => entry?.paddingHorizontal !== undefined,
+    )?.paddingHorizontal;
+
+    expect(padding).toBeGreaterThan(0);
+  });
+
+  it('anchors the back button by writing direction, not by physical side', () => {
+    // `left` does not flip under RTL, which puts a back control on the side the
+    // reader ends on. Read from the source because the style crosses a
+    // `withUnistyles` wrapper before it reaches a host element.
+    const source = readFileSync(
+      join(__dirname, '..', 'AuthFormTemplate.tsx'),
+      'utf8',
+    );
+    const headerAction = source.slice(
+      source.indexOf('headerAction: {'),
+      source.indexOf('titleRow: {'),
+    );
+
+    expect(headerAction).toMatch(/\bstart: 0\b/);
+    expect(headerAction).not.toMatch(/\bleft: 0\b/);
+  });
+
+  it('does not render back button when onBackPress is not provided', () => {
     render(<Wrapper />);
-    expect(screen.queryByLabelText('Go Back')).toBeNull();
+    expect(screen.queryByTestId('back-button')).toBeNull();
   });
 
   it('renders footer link when all footer props provided', () => {

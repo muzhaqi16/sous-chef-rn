@@ -14,8 +14,8 @@ jest.mock('#store/useAppStore', () => ({
   ),
   useCanAccessDevTools: jest.fn(() => false),
 }));
-jest.mock('#components/templates/SubScreen', () => ({
-  SubScreen: ({
+jest.mock('#components/templates/ProfileScreenWrapper', () => ({
+  ProfileScreenWrapper: ({
     title,
     children,
   }: {

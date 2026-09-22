@@ -57,17 +57,15 @@ export const commonStyles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
-    paddingVertical: theme.spacing.sm,
-  },
-
-  // A bar's inset puts its first and last GLYPH on the page gutter: the
-  // touch target's slack around the icon is subtracted, so the back arrow
-  // starts where the content does. Computed, because the gutter scales with
-  // density and the touch target does not.
-  barInset: {
-    paddingHorizontal:
-      theme.layout.pageGutter -
-      (theme.sizes.touchTarget.md - theme.sizes.icon.md) / 2,
+    paddingVertical: {
+      xs: theme.spacing.sm,
+      md: theme.spacing.md,
+    },
+    paddingHorizontal: {
+      xs: theme.spacing.sm,
+      md: theme.spacing.md,
+      lg: theme.spacing.lg,
+    },
   },
 
   scrollContent: {
@@ -125,7 +123,7 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
 
   settingsSection: {
-    paddingVertical: theme.spacing.md,
+    padding: theme.spacing.md,
     borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },

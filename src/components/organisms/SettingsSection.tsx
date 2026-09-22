@@ -62,7 +62,10 @@ const styles = StyleSheet.create(theme => ({
   section: {
     variants: {
       variant: {
-        card: { marginBottom: theme.spacing.md },
+        card: {
+          marginBottom: theme.spacing.md,
+          paddingHorizontal: theme.spacing.md,
+        },
         inset: { marginBottom: theme.spacing.xl },
       },
     },
@@ -71,7 +74,10 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       variant: {
         card: {},
-        inset: { marginTop: theme.spacing.md },
+        inset: {
+          paddingHorizontal: theme.spacing.md,
+          marginTop: theme.spacing.md,
+        },
       },
     },
   },
@@ -102,10 +108,7 @@ const styles = StyleSheet.create(theme => ({
           borderCurve: 'continuous',
           overflow: 'hidden',
         },
-        // Its rules run edge to edge through the screen's gutter; its rows
-        // pad themselves back onto it.
         inset: {
-          marginHorizontal: -theme.layout.pageGutter,
           marginTop: theme.spacing.sm,
           borderTopWidth: theme.borderWidth.hairline,
           borderBottomWidth: theme.borderWidth.hairline,

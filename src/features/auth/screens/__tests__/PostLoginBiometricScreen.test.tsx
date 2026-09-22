@@ -16,6 +16,15 @@ jest.mock('#components/molecules/PasswordInput', () => ({
   PasswordInput: () => null,
 }));
 
+jest.mock('react-native-safe-area-context', () => {
+  const { View } = require('react-native');
+  return {
+    SafeAreaView: ({ children, ...props }: { children?: React.ReactNode }) => (
+      <View {...props}>{children}</View>
+    ),
+  };
+});
+
 jest.mock('#hooks/performance/useScreenTransition', () => ({
   useScreenTransition: jest.fn(),
 }));

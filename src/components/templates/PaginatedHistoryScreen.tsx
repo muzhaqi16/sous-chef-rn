@@ -9,6 +9,7 @@ import {
 } from '@shopify/flash-list';
 
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
+import { BackButton } from '#components/atoms/BackButton';
 import { Text } from '#components/atoms/Text';
 import type { IconName } from '#utils/iconUtils';
 import { DataStateView } from '#components/organisms/DataStateView';
@@ -16,10 +17,9 @@ import type { DataState } from '#hooks/data/useDataState';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { EmptyState } from '#components/molecules/EmptyState';
-import { SubScreen } from './SubScreen';
-import { useScreenListInset } from './useScreenListInset';
 
 export interface PaginatedHistoryScreenProps<T> {
   title: string;
@@ -53,7 +53,7 @@ export interface PaginatedHistoryScreenProps<T> {
 }
 
 /**
- * A `SubScreen` over one paginated list; the list owns the gutter. The query stays at the call
+ * A back-titled screen over one paginated list. The query stays at the call
  * site: the document, variables and `errorPolicy` are what differ per screen.
  */
 export function PaginatedHistoryScreen<T>({
@@ -77,7 +77,7 @@ export function PaginatedHistoryScreen<T>({
 }: PaginatedHistoryScreenProps<T>) {
   const { t } = useTranslation();
   const networkWithheld = useIsApiUnavailable();
-  const listInset = useScreenListInset();
+  const { goBack } = useAppNavigation();
 
   const flashListRef = useRef<FlashListRef<T>>(null);
   const perfCallbacks = useFlashListPerformance(flashListRef, {
@@ -92,13 +92,20 @@ export function PaginatedHistoryScreen<T>({
   );
 
   return (
-    <SubScreen title={title} scroll="list" gutter="none">
-      {/* The entity the history belongs to reads before the list loads. */}
-      {!!subtitle && (
-        <Text role="caption" tone="secondary" style={styles.subtitle}>
-          {subtitle}
-        </Text>
-      )}
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <BackButton onPress={goBack} style={styles.backButton} />
+        <View style={styles.headerContent}>
+          <Text role="heading">{title}</Text>
+          {!!subtitle && (
+            <Text role="caption" tone="secondary" style={styles.headerSubtitle}>
+              {subtitle}
+            </Text>
+          )}
+        </View>
+        <View style={styles.headerSpacer} />
+      </View>
+
       {state === 'loading' ? (
         <View style={styles.loadingContainer}>
           <ThemedActivityIndicator />
@@ -149,18 +156,39 @@ export function PaginatedHistoryScreen<T>({
               />
             )
           }
-          contentContainerStyle={[styles.content, listInset]}
+          contentContainerStyle={styles.content}
           style={styles.scrollView}
         />
       )}
-    </SubScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create(theme => ({
-  subtitle: {
-    paddingHorizontal: theme.layout.pageGutter,
-    paddingTop: theme.spacing.md,
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: theme.borderWidth.hairline,
+    borderBottomColor: theme.colors.border,
+  },
+  backButton: {
+    marginRight: theme.spacing.sm,
+  },
+  headerContent: {
+    flex: 1,
+  },
+  headerSubtitle: {
+    marginTop: theme.spacing.xs,
+  },
+  headerSpacer: {
+    width: theme.spacing.xl,
   },
   loadingContainer: {
     flex: 1,
@@ -171,8 +199,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   content: {
-    paddingHorizontal: theme.layout.pageGutter,
-    paddingTop: theme.spacing.md,
+    padding: theme.spacing.md,
     // So the empty state centres in the viewport rather than hugging the header.
     flexGrow: 1,
   },

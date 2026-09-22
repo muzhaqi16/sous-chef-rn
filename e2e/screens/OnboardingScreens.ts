@@ -34,7 +34,7 @@ export class SelectPantryItemsScreen extends BaseScreen {
   }
 
   async tapBack() {
-    await this.tapByID(kitTestIDs.headerBackButton);
+    await this.tapByID(onboardingTestIDs.backButton(this.screenID));
   }
 
   // Item selection is AnimatedChip components with no testIDs — a test can

@@ -919,7 +919,7 @@ and `GetUserProfile` selected 17 profile fields while `LoginUser` wrote 3. A
 stalled request then held the screen blank for httpLink's 10s abort deadline
 (`Environment.getApiConfig().timeout`), up to ~30s across `retryLink`'s three
 attempts — with no header and no back button, because the loading branch
-rendered outside the screen scaffold (now `SubScreen`).
+rendered outside `ProfileScreenWrapper`.
 
 ### Apollo partial reads omit missing keys rather than undefining them
 

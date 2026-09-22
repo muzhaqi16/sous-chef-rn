@@ -9,6 +9,7 @@ import type { FieldValues, Control, FieldErrors } from 'react-hook-form';
 import type { FieldDef } from '#components/molecules/DynamicFormFields';
 import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
 import { Button } from '#components/molecules/Button';
+import { BackButton } from '#components/atoms/BackButton';
 import { Link } from '#components/atoms/Link';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
@@ -18,6 +19,7 @@ import { authTestIDs } from '#features/auth/testIDs';
 interface Props<T extends FieldValues> {
   title: string;
   subtitle?: string | React.ReactNode;
+  onBackPress?: () => void;
   fields: FieldDef<T>[];
   control: Control<T>;
   errors: FieldErrors<T>;
@@ -52,6 +54,7 @@ interface Props<T extends FieldValues> {
 export function AuthFormTemplate<T extends FieldValues>({
   title,
   subtitle,
+  onBackPress = undefined,
   fields,
   control,
   errors,
@@ -121,6 +124,14 @@ export function AuthFormTemplate<T extends FieldValues>({
     <View style={styles.formContainer}>
       <View>
         <View style={styles.titleRow} testID={authTestIDs.formTitleRow}>
+          {!!onBackPress && (
+            <BackButton
+              tone="textOnSurfaceVariant"
+              onPress={onBackPress}
+              style={styles.headerAction}
+            />
+          )}
+
           <Text role="title" tone="primary" align="center">
             {title}
           </Text>
@@ -222,10 +233,27 @@ const styles = StyleSheet.create(theme => ({
       },
     },
   },
+  headerAction: {
+    // Absolute so a screen with a back button starts its title at the same height
+    // as one without. `start`, not `left`, so it flips under RTL.
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    start: 0,
+    zIndex: theme.zIndex.raised,
+    width: theme.sizes.button.md,
+    borderRadius: theme.radii.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.transparent,
+  },
   titleRow: {
     minHeight: theme.sizes.button.md,
     justifyContent: 'center',
     marginBottom: theme.spacing.sm,
+    // Clears the absolute back button on both sides, so a long localized title
+    // cannot render underneath it and lose taps to it.
+    paddingHorizontal: theme.sizes.button.md,
   },
   subtitle: {
     variants: {

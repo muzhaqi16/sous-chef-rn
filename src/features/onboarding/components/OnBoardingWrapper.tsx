@@ -1,8 +1,10 @@
+import { BackButton } from '#components/atoms/BackButton';
 import { useTranslation } from '#/i18n';
 import type { ReactNode } from 'react';
 import React from 'react';
 import { View } from 'react-native';
-import { Screen } from '#components/templates/Screen';
+import { ThemedKeyboardAwareScrollView } from '#components/atoms/themedComponents';
+import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -40,58 +42,87 @@ export const OnBoardingWrapper = ({
   const step = stepIndex >= 0 ? stepIndex + 1 : null;
   const totalSteps = ONBOARDING_STEPS.length;
 
-  const hasFooter = !!onSkip || step != null;
-
   return (
-    <Screen
-      scroll="form"
-      testID={testID}
-      header={
-        title || onBack
-          ? { title: title ?? '', back: onBack }
-          : { variant: 'none' }
-      }
-      footer={
-        hasFooter ? (
-          <View style={styles.bottomNavigation}>
-            {!!onSkip && (
-              <AppPressable
-                onPress={onSkip}
-                style={styles.skipButton}
-                testID={
-                  testID ? onboardingTestIDs.skipButton(testID) : undefined
-                }
-              >
-                <Text role="bodyStrong" style={styles.skipText}>
-                  {t('labels.skip')}
-                </Text>
-              </AppPressable>
-            )}
-            {step != null && (
-              <ProgressBar
-                value={step / totalSteps}
-                style={styles.progressBar}
-                accessibilityLabel={t('onboarding.progress', {
-                  step,
-                  total: totalSteps,
-                })}
-              />
-            )}
-          </View>
-        ) : undefined
-      }
-    >
-      {!!subtitle && (
-        <Text role="bodyStrong" style={styles.subtitle}>
-          {subtitle}
-        </Text>
-      )}
-      <View style={styles.content}>{children}</View>
-    </Screen>
+    <ThemedSafeAreaView style={styles.safeArea} testID={testID}>
+      <View style={styles.headerContainer}>
+        {onBack ? (
+          <BackButton
+            tone="primary"
+            onPress={onBack}
+            style={styles.iconButton}
+            testID={testID ? onboardingTestIDs.backButton(testID) : undefined}
+          />
+        ) : (
+          <View style={styles.iconButton} />
+        )}
+        {!!title && (
+          <Text role="bodyStrong" style={styles.headerTitle}>
+            {title}
+          </Text>
+        )}
+        <View style={styles.iconButton} />
+      </View>
+      <ThemedKeyboardAwareScrollView
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
+      >
+        {!!subtitle && (
+          <Text role="bodyStrong" style={styles.subtitle}>
+            {subtitle}
+          </Text>
+        )}
+        <View style={styles.content}>{children}</View>
+      </ThemedKeyboardAwareScrollView>
+      <View style={styles.bottomNavigation}>
+        {!!onSkip && (
+          <AppPressable
+            onPress={onSkip}
+            style={styles.skipButton}
+            testID={testID ? onboardingTestIDs.skipButton(testID) : undefined}
+          >
+            <Text role="bodyStrong" style={styles.skipText}>
+              {t('labels.skip')}
+            </Text>
+          </AppPressable>
+        )}
+        {step != null && (
+          <ProgressBar
+            value={step / totalSteps}
+            style={styles.progressBar}
+            accessibilityLabel={t('onboarding.progress', {
+              step,
+              total: totalSteps,
+            })}
+          />
+        )}
+      </View>
+    </ThemedSafeAreaView>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  safeArea: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+  headerTitle: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
+  },
+  iconButton: {
+    width: theme.sizes.button.md,
+    height: theme.sizes.button.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   skipButton: {
     marginLeft: 'auto',
     padding: theme.spacing.sm,
@@ -101,21 +132,28 @@ const styles = StyleSheet.create(theme => ({
   },
   progressBar: {
     flex: 1,
+    marginHorizontal: theme.spacing.md,
+  },
+  scrollContainer: {
+    // flexGrow without flex so short screens still fill the viewport while
+    // taller ones (or ones pushed up by the keyboard) can actually scroll.
+    flexGrow: 1,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   bottomNavigation: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
   subtitle: {
     color: theme.colors.textSecondary,
-    marginTop: theme.spacing.md,
     marginBottom: theme.spacing.xl,
     textAlign: 'center',
   },
   content: {
     flexGrow: 1,
     justifyContent: 'space-around',
-    paddingTop: theme.spacing.md,
   },
 }));

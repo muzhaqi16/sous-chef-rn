@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { SheetHeader } from '#components/templates/SheetHeader';
+import { Header } from '#components/organisms/Header';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -294,7 +294,7 @@ export function BottomSheetAutocompleteInput<T>({
             and it also re-registers the sheet's scrollable as a plain view
             after the list registers itself. It is for static content. */}
         <View style={styles.sheetBody}>
-          <SheetHeader title={title} onClose={handleClose} borderless />
+          <Header title={title} centerTitle onClose={handleClose} borderless />
           <View style={styles.headerSection}>
             <ThemedBottomSheetTextInput
               style={styles.bottomSheetInput}

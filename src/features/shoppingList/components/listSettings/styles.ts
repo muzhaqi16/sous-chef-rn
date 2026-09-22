@@ -5,6 +5,13 @@ import { StyleSheet } from 'react-native-unistyles';
  * the next — splitting the sheet per section is how that stops being true.
  */
 export const listSettingsStyles = StyleSheet.create(theme => ({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  content: {
+    flex: 1,
+  },
   pressed: {
     opacity: theme.opacity.pressed,
   },

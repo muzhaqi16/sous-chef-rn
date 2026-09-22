@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import type { SettingItem } from '#components/organisms/SettingRow';
-import { SubScreen } from '#components/templates/SubScreen';
+import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useProfileData } from '#features/profile/hooks/useProfileData';
 import { useUser } from '#store/useAppStore';
 import {
@@ -169,7 +169,10 @@ export const PersonalInformationScreen: React.FC = () => {
 
   if (dataState !== 'ready') {
     return (
-      <SubScreen title={t('labels.personalInformation')} scroll="none">
+      <ProfileScreenWrapper
+        title={t('labels.personalInformation')}
+        scrollEnabled={false}
+      >
         <DataStateView
           state={dataState}
           onRetry={() => {
@@ -177,12 +180,12 @@ export const PersonalInformationScreen: React.FC = () => {
             refetch().catch(() => {});
           }}
         />
-      </SubScreen>
+      </ProfileScreenWrapper>
     );
   }
 
   return (
-    <SubScreen
+    <ProfileScreenWrapper
       title={t('labels.personalInformation')}
       refresh={{ refreshing, onRefresh: handleRefresh }}
     >
@@ -193,7 +196,7 @@ export const PersonalInformationScreen: React.FC = () => {
           items={section.items}
         />
       ))}
-    </SubScreen>
+    </ProfileScreenWrapper>
   );
 };
 

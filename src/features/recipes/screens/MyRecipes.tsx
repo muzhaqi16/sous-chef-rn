@@ -20,8 +20,7 @@ import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { useLocalSearch } from '#hooks/search/useLocalSearch';
-import { SubScreen } from '#components/templates/SubScreen';
-import { useScreenListInset } from '#components/templates/useScreenListInset';
+import { Screen } from '#components/templates/Screen';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { recipesTestIDs } from '#features/recipes/testIDs';
@@ -34,8 +33,8 @@ const getItemType = () => 'item';
 export const MyRecipes: React.FC = () => {
   useScreenTransition('MyRecipes');
   const { t } = useTranslation();
-  const { toRecipeDetail, toRecipeEdit, toRecipeCreate } = useAppNavigation();
-  const listInset = useScreenListInset();
+  const { toRecipeDetail, toRecipeEdit, toRecipeCreate, goBack } =
+    useAppNavigation();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Search filters on the device, so a query needs every page.
@@ -154,9 +153,9 @@ export const MyRecipes: React.FC = () => {
   );
 
   return (
-    <SubScreen
+    <Screen
       testID={recipesTestIDs.myRecipesScreen}
-      title={t('recipes.myRecipesTitle')}
+      header={{ title: t('recipes.myRecipesTitle'), back: goBack }}
       scroll="list"
       gutter="none"
     >
@@ -216,11 +215,11 @@ export const MyRecipes: React.FC = () => {
               />
             )
           }
-          contentContainerStyle={[styles.listContent, listInset]}
+          contentContainerStyle={styles.listContent}
           {...FLASHLIST_DEFAULTS.fullScreen}
         />
       )}
-    </SubScreen>
+    </Screen>
   );
 };
 

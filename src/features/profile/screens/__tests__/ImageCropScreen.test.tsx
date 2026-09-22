@@ -4,7 +4,6 @@ import React from 'react';
 import type { ComponentProps } from 'react';
 import { render, userEvent } from '@testing-library/react-native';
 import { Image } from 'react-native';
-import { kitTestIDs } from '#components/testIDs';
 import { ImageCropScreen } from '../ImageCropScreen';
 
 type ImageCropScreenProps = ComponentProps<typeof ImageCropScreen>;
@@ -19,6 +18,20 @@ jest.mock('#hooks/navigation/useAppNavigation', () => ({
 
 jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
+}));
+
+jest.mock('#components/organisms/Header', () => ({
+  Header: ({ title, onBack }: { title?: string; onBack?: () => void }) => {
+    const { View, Text, Pressable } = require('react-native');
+    return (
+      <View>
+        <Pressable testID="back-button" onPress={onBack}>
+          <Text>Back</Text>
+        </Pressable>
+        <Text>{title}</Text>
+      </View>
+    );
+  },
 }));
 
 jest.mock('#utils/imageValidation', () => ({
@@ -82,13 +95,15 @@ describe('ImageCropScreen', () => {
     expect(getAllByText('Crop Photo').length).toBeGreaterThanOrEqual(2);
   });
 
-  it('closes rather than goes back, being presented from the bottom', async () => {
+  it('renders back button', () => {
+    const { getByTestId } = render(<ImageCropScreen {...defaultProps} />);
+    expect(getByTestId('back-button')).toBeTruthy();
+  });
+
+  it('navigates back when back pressed', async () => {
     const user = userEvent.setup();
-    const { getByTestId, queryByTestId } = render(
-      <ImageCropScreen {...defaultProps} />,
-    );
-    expect(queryByTestId(kitTestIDs.headerBackButton)).toBeNull();
-    await user.press(getByTestId(kitTestIDs.headerCloseButton));
+    const { getByTestId } = render(<ImageCropScreen {...defaultProps} />);
+    await user.press(getByTestId('back-button'));
     expect(mockGoBack).toHaveBeenCalled();
   });
 });

@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useTranslation } from '#/i18n';
+import { View } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
 import { NotificationItem } from '#features/notifications/components/NotificationItem';
@@ -14,8 +15,7 @@ import { useNotifications } from '#features/notifications/hooks/useNotifications
 import { useNotificationHistory } from '#features/notifications/hooks/useNotificationHistory';
 import type { DisplayNotification as NotificationType } from '#features/notifications/utils/toDisplayNotification';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
-import { SubScreen } from '#components/templates/SubScreen';
-import { useScreenListInset } from '#components/templates/useScreenListInset';
+import { Header } from '#components/organisms/Header';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { NotificationActionHandler } from '#features/notifications/components/NotificationActionHandler';
 import {
@@ -30,8 +30,7 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 export const NotificationListScreen: React.FC = () => {
   const { t } = useTranslation();
   useScreenTransition('NotificationListScreen');
-  const listInset = useScreenListInset();
-  const { toPantryMain, toNotificationDetail, toNotificationSettings } =
+  const { toPantryMain, toNotificationDetail, toNotificationSettings, goBack } =
     useAppNavigation();
   const [filterCategory, setFilterCategory] =
     useState<NotificationCategory | null>(null);
@@ -122,6 +121,21 @@ export const NotificationListScreen: React.FC = () => {
   const keyExtractor = (row: NotificationFeedRow) =>
     row.kind === 'header' ? `header:${row.title}` : row.notification.id;
 
+  const renderHeader = () => (
+    <Header
+      title={t('labels.notifications')}
+      centerTitle={true}
+      onBack={goBack}
+      rightActions={[
+        {
+          icon: 'settings',
+          accessibilityLabel: t('a11y.notificationSettings'),
+          onPress: toNotificationSettings,
+        },
+      ]}
+    />
+  );
+
   const notificationActionRef = useRef<
     ((notification: NotificationType) => void) | null
   >(null);
@@ -147,21 +161,12 @@ export const NotificationListScreen: React.FC = () => {
       {({ handleNotificationAction }) => {
         notificationActionRef.current = handleNotificationAction;
         return (
-          <SubScreen
-            title={t('labels.notifications')}
-            actions={[
-              {
-                icon: 'settings',
-                accessibilityLabel: t('a11y.notificationSettings'),
-                onPress: toNotificationSettings,
-              },
-            ]}
-            scroll="list"
-            gutter="none"
-          >
+          <View style={styles.container}>
             <UrgentNotificationsBanner
               urgentNotifications={filteredGroups.urgent}
             />
+
+            {renderHeader()}
 
             <NotificationFilters
               selectedCategory={filterCategory}
@@ -205,12 +210,11 @@ export const NotificationListScreen: React.FC = () => {
               }
               onEndReached={loadMore}
               onEndReachedThreshold={0.4}
-              contentContainerStyle={[
-                !hasNotifications && styles.emptyInset,
-                listInset,
-              ]}
+              contentContainerStyle={
+                !hasNotifications ? styles.emptyInset : undefined
+              }
             />
-          </SubScreen>
+          </View>
         );
       }}
     </NotificationActionHandler>
@@ -218,6 +222,10 @@ export const NotificationListScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   emptyInset: {
     flex: 1,
   },

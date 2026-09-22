@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
@@ -23,7 +23,7 @@ import {
 } from '#/utils/finallyHelpers';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { Text } from '#components/atoms/Text';
-import { SubScreen } from '#components/templates/SubScreen';
+import { Screen } from '#components/templates/Screen';
 
 function syncPantryFormState(
   pantry:
@@ -194,19 +194,26 @@ export const PantrySettings: React.FC<
   // `loading && !pantry` — a cached copy renders instead of blanking the screen.
   if (pantryId && loadingPantry && !pantry) {
     return (
-      <SubScreen title={t('pantrySettings.loading')} scroll="none">
+      <Screen
+        header={{ title: t('pantrySettings.loading'), back: goBack }}
+        scroll="none"
+        gutter="none"
+      >
         <Loading message={t('pantrySettings.loadingData')} />
-      </SubScreen>
+      </Screen>
     );
   }
 
   return (
-    <SubScreen
-      title={
-        !pantryId ? t('pantrySettings.createTitle') : t('pantrySettings.title')
-      }
-      rightElement={
-        (!pantryId ? permissions.canCreatePantry : permissions.canEditItems) ? (
+    <Screen
+      header={{
+        title: !pantryId
+          ? t('pantrySettings.createTitle')
+          : t('pantrySettings.title'),
+        back: goBack,
+        rightElement: (
+          !pantryId ? permissions.canCreatePantry : permissions.canEditItems
+        ) ? (
           <Pressable
             onPress={handleSave}
             disabled={saving}
@@ -220,89 +227,99 @@ export const PantrySettings: React.FC<
                 : t('labels.save')}
             </Text>
           </Pressable>
-        ) : undefined
-      }
-      scroll="form"
+        ) : undefined,
+      }}
+      scroll="list"
+      gutter="none"
     >
-      <View style={commonStyles.settingsSection}>
-        <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
-          {t('labels.general')}
-        </Text>
+      <ScrollView style={styles.content}>
+        <View style={commonStyles.settingsSection}>
+          <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
+            {t('labels.general')}
+          </Text>
 
-        <BaseInput
-          label={t('labels.pantryName')}
-          value={name}
-          onChangeText={setName}
-          placeholder={t('pantrySettings.namePlaceholder')}
-        />
+          <BaseInput
+            label={t('labels.pantryName')}
+            value={name}
+            onChangeText={setName}
+            placeholder={t('pantrySettings.namePlaceholder')}
+          />
 
-        <BaseInput
-          label={t('storageLocationForm.descriptionLabel')}
-          value={description}
-          onChangeText={setDescription}
-          placeholder={t('pantrySettings.descriptionPlaceholder')}
-          multiline
-          numberOfLines={3}
-        />
+          <BaseInput
+            label={t('storageLocationForm.descriptionLabel')}
+            value={description}
+            onChangeText={setDescription}
+            placeholder={t('pantrySettings.descriptionPlaceholder')}
+            multiline
+            numberOfLines={3}
+          />
 
-        <View style={commonStyles.settingsRow}>
-          <View style={commonStyles.settingsRowInfo}>
-            <Text role="bodyStrong">{t('pantrySettings.defaultPantry')}</Text>
-            <Text role="caption" style={commonStyles.settingsRowDescription}>
-              {t('pantrySettings.defaultPantryDesc')}
+          <View style={commonStyles.settingsRow}>
+            <View style={commonStyles.settingsRowInfo}>
+              <Text role="bodyStrong">{t('pantrySettings.defaultPantry')}</Text>
+              <Text role="caption" style={commonStyles.settingsRowDescription}>
+                {t('pantrySettings.defaultPantryDesc')}
+              </Text>
+            </View>
+            <BaseSwitch
+              accessibilityLabel={t('pantrySettings.defaultPantry')}
+              value={isDefault}
+              onValueChange={handleToggleDefault}
+            />
+          </View>
+        </View>
+
+        {!!pantryId && !!pantry && (
+          <View style={commonStyles.settingsSection}>
+            <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
+              {t('labels.information')}
+            </Text>
+
+            <InfoRow
+              label={t('pantrySettings.itemsInPantry')}
+              value={t('labels.itemCount', {
+                count: pantryItemCount,
+              })}
+            />
+          </View>
+        )}
+
+        {/* Only show danger zone if editing existing pantry and user can delete */}
+        {!!pantryId && permissions.canDeletePantry ? (
+          <View style={commonStyles.settingsSection}>
+            <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
+              {t('labels.dangerZone')}
+            </Text>
+
+            <AppPressable style={styles.deleteButton} onPress={handleDelete}>
+              <Icon name="trash-outline" size={20} tone="error" />
+              <Text
+                role="bodyStrong"
+                tone="danger"
+                style={styles.deleteButtonText}
+              >
+                {t('labels.deletePantry')}
+              </Text>
+            </AppPressable>
+
+            <Text role="caption" tone="secondary" style={styles.dangerWarning}>
+              {t('pantrySettings.deleteWarning')}
             </Text>
           </View>
-          <BaseSwitch
-            accessibilityLabel={t('pantrySettings.defaultPantry')}
-            value={isDefault}
-            onValueChange={handleToggleDefault}
-          />
-        </View>
-      </View>
-
-      {!!pantryId && !!pantry && (
-        <View style={commonStyles.settingsSection}>
-          <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
-            {t('labels.information')}
-          </Text>
-
-          <InfoRow
-            label={t('pantrySettings.itemsInPantry')}
-            value={t('labels.itemCount', {
-              count: pantryItemCount,
-            })}
-          />
-        </View>
-      )}
-
-      {/* Only show danger zone if editing existing pantry and user can delete */}
-      {!!pantryId && permissions.canDeletePantry ? (
-        <View style={commonStyles.settingsSection}>
-          <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
-            {t('labels.dangerZone')}
-          </Text>
-
-          <AppPressable style={styles.deleteButton} onPress={handleDelete}>
-            <Icon name="trash-outline" size={20} tone="error" />
-            <Text
-              role="bodyStrong"
-              tone="danger"
-              style={styles.deleteButtonText}
-            >
-              {t('labels.deletePantry')}
-            </Text>
-          </AppPressable>
-
-          <Text role="caption" tone="secondary" style={styles.dangerWarning}>
-            {t('pantrySettings.deleteWarning')}
-          </Text>
-        </View>
-      ) : null}
-    </SubScreen>
+        ) : null}
+      </ScrollView>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  content: {
+    flex: 1,
+  },
   deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',

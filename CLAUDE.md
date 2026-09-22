@@ -207,12 +207,10 @@ quantity (`src/utils` formatters), device storage (a Zustand slice), loading
 (`<Text role>` + `tone`), inputs (`ThemedTextInput`), icons (`<Icon tone>`),
 colour and spacing (`theme.*`), elevation (`theme.shadows`), text on a fill (its
 `on*` token), local search (`useLocalSearch`), and nothing for reduce motion or
-memoization. A screen is `Screen` or a preset over it (`SubScreen` for a pushed
-screen, `FormScreen`, `DetailTemplate`, …) and never assembles its own header,
-back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
-`headerGeometry.test.tsx`). No gate holds these:
+memoization. No gate holds these:
 
-- **A sheet is `Sheet`; a full-screen form is `FormScreen`.**
+- **A screen, sheet or full-screen form is `Screen` / `Sheet` / `FormScreen`**;
+  a screen never assembles its own header.
 - **A list row is `commonStyles.rowWrapper` + `rowSurface` + `rowContent`**, the
   `theme.layout.row*` steps, and `rowType` for its text.
 - **Radius and z-index are `theme.*` tokens; a duration, spring or curve is

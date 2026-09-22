@@ -14,7 +14,7 @@ import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAut
 import { FormInput } from '#components/atoms/FormInput';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/atoms/FieldRow';
-import { SheetHeader } from '#components/templates/SheetHeader';
+import { Header } from '#components/organisms/Header';
 import { generateId } from '#/utils/generateId';
 import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import type { IngredientFormState } from '#features/recipes/screens/RecipeForm/formState';
@@ -136,12 +136,25 @@ export const RecipeIngredientEditor = forwardRef<
       handleIndicatorStyle={styles.handleIndicator}
       backgroundStyle={styles.sheetBackground}
     >
-      <SheetHeader
+      <Header
         title={
           editingId ? t('recipes.editIngredient') : t('recipes.addIngredient')
         }
-        onClose={() => setVisible(false)}
-        confirm={{ onPress: handleSave }}
+        centerTitle
+        leftActions={[
+          {
+            icon: 'close',
+            accessibilityLabel: t('labels.close'),
+            onPress: () => setVisible(false),
+          },
+        ]}
+        rightActions={[
+          {
+            icon: 'checkmark',
+            accessibilityLabel: t('labels.save'),
+            onPress: handleSave,
+          },
+        ]}
       />
 
       <BottomSheetFormScrollView

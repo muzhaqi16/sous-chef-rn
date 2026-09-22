@@ -103,9 +103,9 @@ jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#/utils/iconUtils', () => ({ Icon: 'Icon' }));
 
-jest.mock('#features/profile/components/ProfileHero', () => {
+jest.mock('#features/profile/components/ProfileHeader', () => {
   const { View } = require('react-native');
-  return { ProfileHero: () => <View testID="profile-hero" /> };
+  return { ProfileHeader: () => <View testID="profile-header" /> };
 });
 
 // Presses through to the item's own onPress, which is the whole point: a
