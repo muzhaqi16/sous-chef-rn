@@ -5,7 +5,7 @@ import { readFileSync } from 'fs';
  * occupies — so it always overlaps a header. What decides whether it is
  * READABLE there is native view order: iOS 26's liquid-glass material
  * composites above sibling RN views whatever their `zIndex`, so a toast
- * mounted inside the navigator's subtree renders behind the header's glass.
+ * mounted inside the navigator's subtree renders behind any glass it overlaps.
  */
 const APP = readFileSync('App.tsx', 'utf8');
 const TOAST = readFileSync('src/components/molecules/Toast.tsx', 'utf8');

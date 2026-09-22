@@ -3,9 +3,9 @@ import { readFileSync } from 'fs';
 /**
  * A theme picked IN THE APP moves `rt.themeName`; it does not move
  * `rt.colorScheme`, which follows the OS. `RootNavigator` resolves `themeName`,
- * and the glass material must agree with it — it paints the tab bar and the
- * header, so reading only `colorScheme` leaves a light bar under a dark theme
- * with its labels unreadable.
+ * and the glass material must agree with it — it paints the tab bar, so
+ * reading only `colorScheme` leaves a light bar under a dark theme with its
+ * labels unreadable.
  */
 const SOURCE = readFileSync('src/components/atoms/GlassSurface.tsx', 'utf8');
 

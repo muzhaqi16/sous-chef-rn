@@ -7,7 +7,6 @@ import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
 import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
-import { GlassSurface, supportsGlass } from '#components/atoms/GlassSurface';
 import { HeaderActionIcon } from '#components/molecules/HeaderActionIcon';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { kitTestIDs } from '#components/testIDs';
@@ -39,8 +38,6 @@ interface HeaderProps {
    * a Save affordance, a text button. Renders after `rightActions`.
    */
   rightElement?: React.ReactNode;
-  /** Transparent background */
-  transparent?: boolean;
   /** Hide bottom border */
   borderless?: boolean;
 }
@@ -90,11 +87,10 @@ export const Header: React.FC<HeaderProps> = ({
   centerTitle,
   onBack,
   onClose,
-  transparent = false,
   borderless = false,
 }) => {
   const { t } = useTranslation();
-  styles.useVariants({ transparent, borderless });
+  styles.useVariants({ borderless });
 
   const showTitle = title !== undefined && title !== '';
   const showBackButton = onBack && !onClose;
@@ -145,9 +141,6 @@ export const Header: React.FC<HeaderProps> = ({
         styles.headerOverrides,
       ]}
     >
-      {/* Behind the content, so the material shows the scroll under it while
-          the actions and title stay opaque. */}
-      <GlassSurface style={styles.glassFill} />
       {/* Left side */}
       <View style={styles.actions}>
         {!!showCloseButton && (
@@ -206,21 +199,8 @@ export const Header: React.FC<HeaderProps> = ({
 // ============================================
 
 const styles = StyleSheet.create(theme => ({
-  glassFill: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
   headerOverrides: {
-    // The material supplies the surface where the platform has it; elsewhere
-    // `commonStyles.header`'s opaque fill stands in.
-    backgroundColor: supportsGlass ? 'transparent' : undefined,
     variants: {
-      transparent: {
-        true: { backgroundColor: 'transparent' },
-      },
       borderless: {
         true: { borderBottomWidth: theme.borderWidth.none },
       },
