@@ -106,7 +106,6 @@ export const keepMealInsidePlan = (
 
 /** Convert YYYY-MM-DD to a UTC midnight ISO string. Pass-through for malformed input. */
 export const dateStringToISO = (dateStr: string): string => {
-  if (!dateStr) return dateStr;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  if (!isDateKey(dateStr)) return dateStr;
   return `${dateStr}T00:00:00.000Z`;
 };

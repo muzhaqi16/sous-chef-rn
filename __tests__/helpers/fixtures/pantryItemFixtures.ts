@@ -29,6 +29,7 @@ export interface PantryItemFixture {
   quantity?: number;
   storageState?: string;
   expiresOn?: string | null;
+  earliestBatchExpiresOn?: string | null;
   createdAt?: string;
   brandName?: string | null;
   categoryName?: string | null;
@@ -95,7 +96,7 @@ export function pantryItemData(
       portionUnit: null,
       remainingPortions: null,
       activeBatchCount: 0,
-      earliestBatchExpiresOn: null,
+      earliestBatchExpiresOn: fixture.earliestBatchExpiresOn ?? null,
       item: {
         __typename: 'Item',
         id: 'item1',

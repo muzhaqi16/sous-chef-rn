@@ -981,10 +981,10 @@
       "body": "query PantryItemForEvent($id: ID!) {\n  pantryItem(id: $id) {\n    id\n    ...usePantrySubscriptions_pantryItem\n    __typename\n  }\n}\n\nfragment usePantrySubscriptions_pantryItem on PantryItem {\n  id\n  pantryId\n  itemId\n  itemName\n  quantity\n  version\n  createdAt\n  updatedAt\n  storageState\n  expiresOn\n  lowStockAlert\n  isLowStock\n  minQuantity\n  lastUsedAt\n  netWeight\n  remainingNetWeight\n  portionUnitId\n  portionUnit {\n    id\n    name\n    symbol\n    __typename\n  }\n  remainingPortions\n  activeBatchCount\n  earliestBatchExpiresOn\n  item {\n    id\n    imageUrl\n    images {\n      id\n      url\n      kind\n      __typename\n    }\n    __typename\n  }\n  unit {\n    id\n    name\n    symbol\n    type\n    displayAsFraction\n    __typename\n  }\n  netWeightUnit {\n    id\n    name\n    symbol\n    __typename\n  }\n  storageLocation {\n    id\n    name\n    type\n    __typename\n  }\n  packageBreakdown {\n    count\n    contentUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    perUnitNetWeight\n    perUnitNetWeightUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    totalNetWeight\n    __typename\n  }\n  quantityBreakdown {\n    fullPackages\n    looseContentUnits\n    contentUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    totalContentUnits\n    remainingWeight\n    remainingWeightUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
     },
     {
-      "id": "b4edf171332bf3829940b0cf82052864b39c0b668ada658c6ec2296189f660c3",
+      "id": "cbc7c8c0335035c7b605c0bed127d965ef66b493f3878022b4f16fae3596b68b",
       "name": "PantrySummaryForEvent",
       "type": "query",
-      "body": "query PantrySummaryForEvent($id: ID!) {\n  pantry(id: $id) {\n    id\n    name\n    description\n    isDefault\n    version\n    stats {\n      totalItems\n      expiringCount\n      expiredCount\n      lowStockCount\n      __typename\n    }\n    __typename\n  }\n}"
+      "body": "query PantrySummaryForEvent($id: ID!, $today: LocalDate) {\n  pantry(id: $id) {\n    id\n    name\n    description\n    isDefault\n    version\n    stats(today: $today) {\n      totalItems\n      expiringCount\n      expiredCount\n      lowStockCount\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "5deabb7504e9e8323b06fd37247f6b16673050e14e7d3f8cd483f7df0fa3aa57",

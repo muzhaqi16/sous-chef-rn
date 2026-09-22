@@ -190,6 +190,7 @@ describe('useHybridPantrySearch', () => {
         itemsFilter: { storageState: 'AMBIENT', search: 'Milk' },
         itemsOrderBy: { field: 'NAME', direction: 'ASC' },
         storageLocationsFirst: 0,
+        today: expect.any(String),
       });
       expect(result.current.useServerSort).toBe(true);
     });

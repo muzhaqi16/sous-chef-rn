@@ -5,6 +5,7 @@ import {
   itemsConnectionFieldPolicy,
 } from '#/apollo/cacheFieldPolicies';
 import type { CachedConnection, CachedEdge } from '#/apollo/cacheFieldPolicies';
+import { isRecord } from '#/utils/isRecord';
 
 /**
  * The pantry's cache shape: windowed item connections keyed on what actually partitions them, and by-id redirects so a locally-created row is readable before the server has it.
@@ -15,7 +16,23 @@ import type { CachedConnection, CachedEdge } from '#/apollo/cacheFieldPolicies';
 export const pantryTypePolicies: TypePolicies = {
   Pantry: {
     fields: {
-      itemsConnection: itemsConnectionFieldPolicy(['filters', 'orderBy']),
+      itemsConnection: {
+        ...itemsConnectionFieldPolicy(),
+        // Keyed on every filter but `today`, which only moves the expiring
+        // window: keying on it would leave the expiring list a cache miss the
+        // next day, offline included, and a stranded entry per day.
+        keyArgs: (args: Record<string, unknown> | null) => {
+          const filters = args?.filters;
+          if (!isRecord(filters) || !('today' in filters)) {
+            return ['filters', 'orderBy'];
+          }
+          return [
+            'filters',
+            Object.keys(filters).filter(key => key !== 'today'),
+            'orderBy',
+          ];
+        },
+      },
       storageLocationsConnection: mergeConnectionByNodeId(),
       // `today` only moves the expiring window; keying on it would empty a warm
       // cache at midnight.

@@ -131,14 +131,16 @@ query ExpirationNotificationForEvent($id: ID!) {
 # writing this narrow shape over a cached `stats` that also holds
 # `storageStateCounts` / `storageLocationCounts` (selected by `GetPantry`)
 # merges rather than truncates.
-query PantrySummaryForEvent($id: ID!) {
+query PantrySummaryForEvent($id: ID!, $today: LocalDate) {
   pantry(id: $id) {
     id
     name
     description
     isDefault
     version
-    stats {
+    # Unkeyed in the cache: without the viewer's day, UTC counts overwrite
+    # the ones GetPantry read.
+    stats(today: $today) {
       totalItems
       expiringCount
       expiredCount

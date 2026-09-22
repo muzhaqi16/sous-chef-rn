@@ -18,6 +18,8 @@ import { Text } from '#components/atoms/Text';
 import { Badge } from '#components/atoms/Badge';
 import { formatMonthDay } from '#/utils/formatters/date';
 import { hitSlop } from '#/theme/foundations/sizes';
+import { fromDateKey } from '#/utils/dateUtils';
+import { useToday } from '#features/pantry/hooks/useToday';
 
 interface BatchListItemProps {
   batch: PantryItemBatchFragment;
@@ -30,9 +32,13 @@ interface BatchListItemProps {
  * Takes the hook's `t` rather than the module-level helper, which does not
  * re-render on a language change.
  */
-const getExpiryText = (expiresOn: string | null | undefined, t: Translate) => {
+const getExpiryText = (
+  expiresOn: string | null | undefined,
+  today: string,
+  t: Translate,
+) => {
   if (!expiresOn) return null;
-  const diffDays = daysUntilExpiry(expiresOn);
+  const diffDays = daysUntilExpiry(expiresOn, fromDateKey(today));
   return { text: expiryLabel(diffDays, t), isExpired: diffDays < 0 };
 };
 
@@ -54,6 +60,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
   onWaste,
 }) => {
   const { t } = useTranslation();
+  const today = useToday();
   const money = useMoney();
   // Per-entity cache subscription: re-renders only when this batch's
   // PantryItemBatchFragment fields change (e.g., status, isOpened, quantity
@@ -66,7 +73,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
   });
   const batch = fragmentResult.complete ? fragmentResult.data : batchSource;
 
-  const expiryInfo = getExpiryText(batch.expiresOn, t);
+  const expiryInfo = getExpiryText(batch.expiresOn, today, t);
   const isActive = batch.status === BatchStatus.Active;
 
   return (

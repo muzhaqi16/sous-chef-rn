@@ -38,6 +38,7 @@ import {
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 import { logger } from '#/utils/environment';
+import { toDateKey } from '#/utils/dateUtils';
 import { useSubscriptionTransportRecovery } from '#hooks/subscriptions/useSubscriptionTransportRecovery';
 
 type PantryEventsPayload = PantryEventsSubscription['pantryEvents'];
@@ -95,7 +96,7 @@ function refreshPantrySummary(
     void fetchEventEntity(
       client,
       PantrySummaryForEventDocument,
-      { id: pantryId },
+      { id: pantryId, today: toDateKey(new Date()) },
       'Pantry',
     );
   }, SUMMARY_REFRESH_DELAY_MS);

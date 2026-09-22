@@ -329,12 +329,16 @@ describe('PantryItemDetail (integration)', () => {
   });
 
   // The server's EXPIRED flag can be a day late east of UTC; the date decides.
-  it('offers discard once the expiry date has passed, flag or not', async () => {
+  it("offers discard once the batches' expiry date has passed, flag or not", async () => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [
-        itemMock({ ...fullItem, expiresOn: toDateKey(yesterday) }),
+        itemMock({
+          ...fullItem,
+          expiresOn: toDateKey(yesterday),
+          earliestBatchExpiresOn: toDateKey(yesterday),
+        }),
       ],
     });
     await screen.findAllByText('Milk');
@@ -344,7 +348,24 @@ describe('PantryItemDetail (integration)', () => {
   it('does not offer discard on the expiry date itself', async () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [
-        itemMock({ ...fullItem, expiresOn: toDateKey(new Date()) }),
+        itemMock({
+          ...fullItem,
+          expiresOn: toDateKey(new Date()),
+          earliestBatchExpiresOn: toDateKey(new Date()),
+        }),
+      ],
+    });
+    await screen.findAllByText('Milk');
+    expect(screen.queryByTestId('pantry-item-discard-button')).toBeNull();
+  });
+
+  // An edit moves only the item's date; the server would find no expired batch.
+  it('does not offer discard for an item date its batches do not share', async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [
+        itemMock({ ...fullItem, expiresOn: toDateKey(yesterday) }),
       ],
     });
     await screen.findAllByText('Milk');

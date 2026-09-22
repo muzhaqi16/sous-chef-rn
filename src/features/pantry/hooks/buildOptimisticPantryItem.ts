@@ -28,7 +28,7 @@ export interface OptimisticPantryItemFields {
   /** Resolved against the cached `Unit` — see {@link readCachedUnit}. */
   unitId?: string | null;
   storageState?: StorageState | null;
-  /** ISO date string. */
+  /** YYYY-MM-DD. */
   expiresOn?: string | null;
   /** Storage location *name* (an optimistic placeholder id is generated). */
   location?: string | null;

@@ -17,6 +17,7 @@ import {
   useCreatePantry,
   type PantryWriteOutcome,
 } from '#features/pantry/hooks/useCreatePantry';
+import { useToday } from '#features/pantry/hooks/useToday';
 import {
   snapshotFields,
   writeEntityFields,
@@ -58,6 +59,7 @@ interface UsePantrySettingsArgs {
 /** The pantry a settings screen reads, and every write it can make to it. */
 export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
   const { t } = useTranslation();
+  const today = useToday();
   const client = useApolloClient();
   // The create is `useCreatePantry`'s — one pantry create, wherever it is made.
   const { createPantry: createPantryWrite } = useCreatePantry();
@@ -75,6 +77,7 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
             id: pantryId,
             itemsFirst: 25,
             storageLocationsFirst: 15,
+            today,
           },
         }
       : skipToken,
