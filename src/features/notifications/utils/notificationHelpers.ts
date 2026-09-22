@@ -7,6 +7,7 @@ import type { Icon } from '#utils/iconUtils';
 import { safeParseDate } from '#utils/dateUtils';
 import type { NotificationPayload } from '#features/notifications/types';
 import type { Translate } from '#/i18n/types';
+import { expiryLabel } from '#domain/expiry';
 import type { TranslationKey } from '#/i18n';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { formatMonthDay } from '#/utils/formatters/date';
@@ -148,16 +149,9 @@ const buildExpiryReminderMessage = (
   if (!fields) {
     return null;
   }
-  const name = buildExpiryName(fields, t);
-  if (fields.daysUntilExpiry <= 0) {
-    return t('notifications.expiry.expiresToday', { name });
-  }
-  if (fields.daysUntilExpiry === 1) {
-    return t('notifications.expiry.expiresTomorrow', { name });
-  }
-  return t('notifications.expiry.expiresInDays', {
-    name,
-    days: fields.daysUntilExpiry,
+  return t('notifications.expiry.reminder', {
+    name: buildExpiryName(fields, t),
+    status: expiryLabel(fields.daysUntilExpiry, t),
   });
 };
 

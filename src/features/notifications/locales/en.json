@@ -77,9 +77,7 @@
     "acceptInvitation": "Accept Invitation",
     "recently": "Recently",
     "expiry": {
-      "expiresToday": "{{name}} expires today",
-      "expiresTomorrow": "{{name}} expires tomorrow",
-      "expiresInDays": "{{name}} expires in {{days}} days",
+      "reminder": "{{name}}: {{status}}",
       "qualifierOpened": "{{name}} (opened {{date}})",
       "qualifierAdded": "{{name}} (added {{date}})"
     },

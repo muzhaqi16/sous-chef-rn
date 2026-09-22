@@ -71,10 +71,7 @@ describe('nativePushMessaging', () => {
       expect(mockShowLocal).toHaveBeenCalledWith({
         id: 'n1',
         title: t('notifications.copy.title.EXPIRY_REMINDER'),
-        body: t('notifications.expiry.expiresInDays', {
-          name: 'Milk',
-          days: 3,
-        }),
+        body: 'Milk: Expires in 3 days',
         data,
       });
       // The server's English is carried for the fallback path, never drawn.

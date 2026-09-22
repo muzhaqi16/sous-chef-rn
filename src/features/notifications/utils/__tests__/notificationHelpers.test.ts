@@ -268,7 +268,7 @@ describe('notificationHelpers', () => {
           isMultiBatch: false,
           activeBatchCount: 1,
         }),
-      ).toBe('Lettuce expires in 3 days');
+      ).toBe('Lettuce: Expires in 3 days');
     });
 
     it('uses "today" / "tomorrow" wording for 0 and 1 day', () => {
@@ -278,7 +278,7 @@ describe('notificationHelpers', () => {
           daysUntilExpiry: 0,
           isMultiBatch: false,
         }),
-      ).toBe('Baby Spinach expires today');
+      ).toBe('Baby Spinach: Expires today');
 
       expect(
         messageOf(NotificationType.ExpiryReminder, {
@@ -286,7 +286,7 @@ describe('notificationHelpers', () => {
           daysUntilExpiry: 1,
           isMultiBatch: false,
         }),
-      ).toBe('Pitas expires tomorrow');
+      ).toBe('Pitas: Expires tomorrow');
     });
 
     it('qualifies a multi-batch item with the opened date in local time', () => {
@@ -301,7 +301,7 @@ describe('notificationHelpers', () => {
         t,
       );
       // Date is locale/timezone-formatted, so assert structure not an exact day.
-      expect(message).toMatch(/^Milk \(opened .+\) expires tomorrow$/);
+      expect(message).toMatch(/^Milk \(opened .+\): Expires tomorrow$/);
       expect(message).not.toContain('Batch');
     });
 
@@ -316,7 +316,7 @@ describe('notificationHelpers', () => {
         }),
         t,
       );
-      expect(message).toMatch(/^Yogurt \(added .+\) expires in 3 days$/);
+      expect(message).toMatch(/^Yogurt \(added .+\): Expires in 3 days$/);
     });
   });
 
