@@ -1744,6 +1744,11 @@ enum ConversionType {
 input ConvertExpiredBatchesToWasteInput {
   idempotencyKey: ID
   pantryItemId: ID!
+  """
+  The viewer's calendar date. A batch is expired when its expiry date is
+  before it. Defaults to today's date in UTC.
+  """
+  today: LocalDate
 }
 
 type ConvertExpiredBatchesToWastePayload {
@@ -7663,7 +7668,10 @@ type Mutation {
   markNotificationUnread(input: MarkNotificationUnreadInput!): MarkNotificationUnreadResult!
   """Mark a pantry as the default for its home."""
   markPantryAsDefault(input: MarkPantryAsDefaultInput!): MarkPantryAsDefaultResult!
-  """Mark a pantry item as expired."""
+  """
+  Mark a pantry item as expired: its expiry date becomes a day that has already
+  passed on every calendar, so it counts as expired straight away.
+  """
   markPantryItemExpired(input: MarkPantryItemExpiredInput!): MarkPantryItemExpiredResult!
   """
   Repoint which of an item's photos is the hero, demoting the incumbent in the
