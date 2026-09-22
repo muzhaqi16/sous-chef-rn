@@ -2288,7 +2288,11 @@ input CreatePantryInput {
 
 input CreatePantryItemInput {
   brand: BrandReferenceInput
-  expiresAt: DateTime
+  """
+  The expiry date as YYYY-MM-DD, with no time and no timezone. Send this or
+  expiresAt, not both; null clears it where the field may be cleared.
+  """
+  expiresOn: LocalDate
   """
   When the pantry already holds this item in the resolved unit, add the quantity to that
   stack and return it instead of refusing with DuplicatePantryItemError. A pantry holds one
@@ -2418,7 +2422,8 @@ union CreateProfileResult = ConflictError | CreateProfilePayload | ForbiddenErro
 input CreatePurchaseInput {
   currencyId: ID!
   discountAmount: Float
-  expirationDate: DateTime
+  """The expiry date as YYYY-MM-DD. Send this or expirationDate, not both."""
+  expiresOn: LocalDate
   """
   Optional client-generated permanent ID (CUID2) for offline-first idempotency.
   """
@@ -4131,7 +4136,10 @@ type ExpirationNotification {
   createdAt: DateTime!
   daysUntilExpiry: Int!
   dismissedAt: DateTime
-  expiresAt: DateTime!
+  """The expiry date as 12:00 UTC of that day."""
+  expiresAt: DateTime! @deprecated(reason: "Use expiresOn instead.")
+  """The expiry date this reminder is about."""
+  expiresOn: LocalDate!
   genericNotification: Notification
   genericNotificationId: ID
   id: ID!
@@ -6010,6 +6018,11 @@ enum ListStatus {
   TEMPLATE
 }
 
+"""
+A calendar date as YYYY-MM-DD, with no time and no timezone. A value with a time is rejected.
+"""
+scalar LocalDate
+
 type LocationStat {
   count: Int!
   ipCity: String
@@ -7137,8 +7150,11 @@ input MoveShoppingItemToPantryInput {
   actualQuantity: Float!
   """Unit ID for the quantity (defaults to shopping item's unit)"""
   actualUnitId: ID
-  """Expiration date (optional)"""
-  expiresAt: DateTime
+  """
+  The expiry date as YYYY-MM-DD, with no time and no timezone. Send this or
+  expiresAt, not both; null clears it where the field may be cleared.
+  """
+  expiresOn: LocalDate
   idempotencyKey: ID
   """Additional notes"""
   notes: String
@@ -8826,9 +8842,22 @@ type Pantry {
   clamped server-side to a maximum of 50.
   """
   recentlyDeletedItems(limit: Int = 10): [PantryItem!]!
-  stats: PantryStats!
+  """
+  Counts for this pantry. Pass today as the viewer's calendar date so the
+  expiring and expired counts match what the viewer sees; without it the
+  server uses today's date in UTC.
+  """
+  stats(today: LocalDate): PantryStats!
   storageLocationsConnection(after: String, before: String, first: Int, last: Int, orderBy: StorageLocationOrderBy): StorageLocationConnection!
-  suggestions(expirationDays: Int = 7, limit: Int = 10, sources: [PantrySuggestionSource!]): [PantryItemSuggestion!]!
+  suggestions(
+    expirationDays: Int = 7
+    limit: Int = 10
+    sources: [PantrySuggestionSource!]
+    """
+    The viewer's calendar date, for EXPIRING_SOON; defaults to today's date in UTC.
+    """
+    today: LocalDate
+  ): [PantryItemSuggestion!]!
   tags: [String!]!
   temperature: String
   updatedAt: DateTime!
@@ -8968,9 +8997,20 @@ type PantryItem {
   createdAt: DateTime!
   """Density for this stack in g/mL; the catalog's applies when null."""
   densityOverride: Float
-  earliestBatchExpiration: DateTime
+  """The soonest batch expiry as 12:00 UTC of that day."""
+  earliestBatchExpiration: DateTime @deprecated(reason: "Use earliestBatchExpiresOn instead.")
+  """The soonest expiry date among the active batches."""
+  earliestBatchExpiresOn: LocalDate
   expirationAlert: Boolean!
-  expiresAt: DateTime
+  """
+  The expiry date as 12:00 UTC of that day, which reads as the same date in
+  every timezone from UTC-11 to UTC+11.
+  """
+  expiresAt: DateTime @deprecated(reason: "Use expiresOn instead.")
+  """
+  The expiry date, with no time and no timezone. An item is not expired on this date: it expires today. It is expired from the next day on, judged on the viewer's calendar.
+  """
+  expiresOn: LocalDate
   id: ID!
   isComposted: Boolean!
   """
@@ -9082,8 +9122,11 @@ type PantryItemBatch {
   """
   currencyProvenance: CurrencyProvenance
   depletedAt: DateTime
-  expiresAt: DateTime
+  """The batch's expiry date as 12:00 UTC of that day."""
+  expiresAt: DateTime @deprecated(reason: "Use expiresOn instead.")
   expiresAtIsManual: Boolean!
+  """The batch's expiry date, with no time and no timezone."""
+  expiresOn: LocalDate
   id: ID!
   isOpened: Boolean!
   notes: String
@@ -9237,14 +9280,15 @@ input PantryItemFilters {
   condition: ItemCondition
   expirationDays: Int
   """
-  Only items expiring within expirationDays (default 7), and only items you
-  still have — an item whose quantity is zero is not expiring.
+  Only items whose expiry date is on or before today plus expirationDays
+  (default 7), and only items you still have — an item whose quantity is
+  zero is not expiring.
   
   Has NO lower bound, so ALREADY-EXPIRED items are included. This is a
-  deliberate superset of PantryStats.expiringCount, which bounds at the
-  present moment and therefore reports a smaller number than this filter
-  returns; PantryStats.expiredCount covers the difference. Clients that want
-  both an Expiring and an Expired section split this one page by date.
+  deliberate superset of PantryStats.expiringCount, which starts at today;
+  PantryStats.expiredCount covers the difference. Clients that want both an
+  Expiring and an Expired section split this one page by date: expired is
+  an expiry date before today.
   """
   expiringSoon: Boolean
   itemId: ID
@@ -9270,6 +9314,11 @@ input PantryItemFilters {
   storageLocationId: ID
   storageState: StorageState
   tags: [String!]
+  """
+  The viewer's calendar date, which expiringSoon counts from. Defaults to
+  today's date in UTC.
+  """
+  today: LocalDate
 }
 
 """Order by options for pantry items"""
@@ -9277,6 +9326,7 @@ input PantryItemOrderBy {
   addedAt: SortOrder
   createdAt: SortOrder
   currentQuantity: SortOrder
+  """Sorts by expiry date. Items dated the same day are ordered by id."""
   expiresAt: SortOrder
   itemName: SortOrder
 }
@@ -9302,14 +9352,18 @@ type PantryItemSuggestion {
   category: String
   """Current quantity in pantry (for LOW_STOCK source)"""
   currentQuantity: Float
-  """Days until expiration (for EXPIRING_SOON source)"""
+  """
+  Calendar days from today to the expiry date: 0 on the date itself (for EXPIRING_SOON source)
+  """
   daysUntilExpiry: Int
   """Default unit object for one-tap add"""
   defaultUnit: SuggestionUnit
   """Default unit ID for one-tap add (last used or item default)"""
   defaultUnitId: ID
-  """Expiration date (for EXPIRING_SOON source)"""
-  expiresAt: DateTime
+  """Expiry date as 12:00 UTC of that day (for EXPIRING_SOON source)"""
+  expiresAt: DateTime @deprecated(reason: "Use expiresOn instead.")
+  """Expiry date (for EXPIRING_SOON source)"""
+  expiresOn: LocalDate
   """
   Frequency count - times user added this item to pantries (for FREQUENTLY_ADDED source)
   """
@@ -9427,7 +9481,15 @@ input PantryOrderBy {
 
 type PantryStats {
   activeItems: Int!
+  """
+  Items you still have whose expiry date is before today. An item is
+  expired from the day after its expiry date.
+  """
   expiredCount: Int!
+  """
+  Items you still have whose expiry date is between today and seven days
+  from today, both included. An item dated today is expiring, not expired.
+  """
   expiringCount: Int!
   lowStockCount: Int!
   storageLocationCounts: [StorageLocationCount!]!
@@ -9673,7 +9735,10 @@ type Purchase {
   currencyId: ID!
   currencySymbol: String!
   discountAmount: Float
-  expirationDate: DateTime
+  """The expiry date as 12:00 UTC of that day."""
+  expirationDate: DateTime @deprecated(reason: "Use expiresOn instead.")
+  """The expiry date, with no time and no timezone."""
+  expiresOn: LocalDate
   id: ID!
   """
   The catalog item, when the shopping line that recorded this purchase had
@@ -11182,7 +11247,11 @@ Input for restocking a pantry item - adds quantity and creates ledger record
 """
 input RestockPantryItemInput {
   costPerUnit: Float
-  expiresAt: DateTime
+  """
+  The new batch's expiry date as YYYY-MM-DD, with no time and no timezone. Send this or
+  expiresAt, not both; null clears it where the field may be cleared.
+  """
+  expiresOn: LocalDate
   id: ID!
   idempotencyKey: ID
   measurementProfile: MeasurementProfileInput
@@ -12824,7 +12893,11 @@ input SyncPantryItemInput {
   brand: BrandReferenceInput
   clientId: ID!
   expirationAlert: Boolean
-  expiresAt: DateTime
+  """
+  The expiry date as YYYY-MM-DD, with no time and no timezone. Send this or
+  expiresAt, not both; null clears it where the field may be cleared.
+  """
+  expiresOn: LocalDate
   """
   When the pantry already holds this item in the resolved unit, add the quantity to that
   stack and return it instead of refusing with DuplicatePantryItemError. A pantry holds one
@@ -13935,7 +14008,11 @@ input UpdatePantryInput {
 input UpdatePantryItemInput {
   brand: BrandReferenceInput
   expirationAlert: Boolean
-  expiresAt: DateTime
+  """
+  The expiry date as YYYY-MM-DD, with no time and no timezone. Send this or
+  expiresAt, not both; null clears it where the field may be cleared.
+  """
+  expiresOn: LocalDate
   id: ID!
   isComposted: Boolean
   isRecycled: Boolean
@@ -14055,7 +14132,8 @@ union UpdateProfileResult = ConflictError | ForbiddenError | NotFoundError | Upd
 
 input UpdatePurchaseInput {
   discountAmount: Float
-  expirationDate: DateTime
+  """The expiry date as YYYY-MM-DD. Send this or expirationDate, not both."""
+  expiresOn: LocalDate
   id: ID!
   originalPrice: Float
   purchaseDate: DateTime
@@ -14699,7 +14777,7 @@ type User {
   createdAt: DateTime!
   defaultHome: Home
   defaultHomeId: ID
-  defaultShoppingListId: ID
+  defaultShoppingListId: ID @deprecated(reason: "No default shopping list is stored, so this is always null. Use shoppingLists instead.")
   deviceStats: DeviceStats
   devicesConnection(after: String, before: String, first: Int, last: Int, orderBy: DeviceOrderBy): DeviceConnection!
   dietaryProfile: DietaryProfile
@@ -14735,7 +14813,6 @@ type User {
   id: ID!
   inviteLogsConnection(after: String, before: String, first: Int, last: Int, orderBy: InviteLogOrderBy): InviteLogConnection!
   language: String
-  lastActiveAt: DateTime
   loginHistoryConnection(after: String, before: String, first: Int, last: Int, orderBy: LoginHistoryOrderBy): LoginHistoryConnection!
   loginHistoryStats(days: Int = 30): LoginHistoryStats
   membershipInHome(homeId: ID!): Membership
@@ -14766,7 +14843,6 @@ type User {
   suspiciousLoginActivity(hours: Int = 24): SuspiciousActivity
   timezone: String
   unreadNotificationCount: Int!
-  updatedAt: DateTime!
 }
 
 """
