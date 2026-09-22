@@ -67,7 +67,11 @@ async function requestCamera(): Promise<PermissionStatus | 'failed'> {
   }
 }
 
-function alertCameraRefused(status: PermissionStatus | 'failed') {
+function alertNoCamera() {
+  alertService.alert(tGlobal('errors.noCameraDevice'));
+}
+
+function alertCameraRefused(status: PermissionStatus) {
   const title = tGlobal('labels.cameraPermission');
   const message = tGlobal(
     'labels.cameraPermissionIsRequiredToTakePhotosPleaseEnableItInYourDeviceSettings',
@@ -104,6 +108,8 @@ export const usePhotoCapture = ({
   const { t } = useTranslation();
 
   const accept = (response: ImagePickerResponse): ImageFile[] => {
+    if (response.errorCode === 'camera_unavailable') alertNoCamera();
+    if (response.errorCode === 'permission') alertCameraRefused('denied');
     if (response.didCancel || response.errorCode) return [];
     const assets = response.assets ?? [];
     const images: ImageFile[] = [];
@@ -129,7 +135,13 @@ export const usePhotoCapture = ({
 
   const takePhoto = async (): Promise<ImageFile[]> => {
     const status = await requestCamera();
-    if (status !== 'granted') {
+    if (status === 'unavailable') {
+      alertNoCamera();
+      return [];
+    }
+    // A request that throws proves nothing; the picker asks for itself and
+    // reports a refusal or a missing camera through `errorCode`.
+    if (status !== 'granted' && status !== 'failed') {
       alertCameraRefused(status);
       return [];
     }

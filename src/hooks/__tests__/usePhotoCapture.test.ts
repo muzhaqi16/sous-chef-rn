@@ -82,13 +82,31 @@ describe('usePhotoCapture', () => {
       expect(PermissionService.openSettings).toHaveBeenCalled();
     });
 
-    it('explains a permission request that throws', async () => {
+    it('still opens the camera when the permission request throws', async () => {
       mockRequest.mockRejectedValue(new Error('native'));
+      mockLaunchCamera.mockResolvedValue(picked(asset('a')));
+
+      const images = await capture().takePhoto();
+
+      expect(images.map(image => image.fileName)).toEqual(['a.jpg']);
+      expect(mockAlert).not.toHaveBeenCalled();
+    });
+
+    it('says there is no camera rather than blaming the permission', async () => {
+      mockRequest.mockResolvedValue('unavailable');
 
       expect(await capture().takePhoto()).toEqual([]);
 
       expect(mockLaunchCamera).not.toHaveBeenCalled();
-      expect(mockAlert).toHaveBeenCalledTimes(1);
+      expect(mockAlert).toHaveBeenCalledWith('No camera device found');
+    });
+
+    it('says there is no camera when the picker reports none', async () => {
+      mockLaunchCamera.mockResolvedValue({ errorCode: 'camera_unavailable' });
+
+      expect(await capture().takePhoto()).toEqual([]);
+
+      expect(mockAlert).toHaveBeenCalledWith('No camera device found');
     });
   });
 
