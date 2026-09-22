@@ -491,6 +491,7 @@ const styles = StyleSheet.create(theme => ({
   categoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
     gap: theme.spacing.xs,
   },

@@ -7,8 +7,6 @@ interface FormScreenProps {
   onClose: () => void;
   onSave: () => void;
   loading?: boolean;
-  /** False while there is nothing to save — the form is still loading, or gone. */
-  canSave?: boolean;
   children: React.ReactNode;
   testID?: string;
   submitButtonTestID?: string;
@@ -24,7 +22,6 @@ export const FormScreen: React.FC<FormScreenProps> = ({
   onClose,
   onSave,
   loading = false,
-  canSave = true,
   children,
   testID,
   submitButtonTestID,
@@ -36,14 +33,14 @@ export const FormScreen: React.FC<FormScreenProps> = ({
       scroll="form"
       header={{
         title,
+        centerTitle: true,
         actions: [
           {
             icon: 'checkmark',
             accessibilityLabel: t('labels.save'),
             onPress: onSave,
-            variant: 'primary',
             loading,
-            disabled: loading || !canSave,
+            disabled: loading,
             testID: submitButtonTestID,
           },
         ],

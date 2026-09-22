@@ -5,7 +5,6 @@
 export const profileTestIDs = {
   profileScreen: 'profile-screen',
   profileScrollView: 'profile-scroll-view',
-  moreButton: 'profile-more-button',
   verifyEmailBanner: 'verify-email-banner',
   logoutButton: 'profile-logout-button',
 

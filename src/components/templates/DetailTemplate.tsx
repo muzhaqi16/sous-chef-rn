@@ -1,11 +1,14 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Icon } from '#utils/iconUtils';
+import type { HeaderVariant } from '../organisms/Header';
+import { Header } from '../organisms/Header';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { Button } from '#components/molecules/Button';
 import { DetailSection } from '../molecules/DetailSection';
-import { Screen } from './Screen';
+import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 
 interface TemplateSection {
   title?: string;
@@ -19,6 +22,8 @@ interface DetailTemplateProps {
   title?: string;
   onBack: () => void;
   headerActions?: HeaderAction[];
+  /** Header variant preset */
+  headerVariant?: HeaderVariant;
   sections: TemplateSection[];
   primaryAction?: {
     label: string;
@@ -33,47 +38,78 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
   title,
   onBack,
   headerActions = [],
+  headerVariant,
   sections,
   primaryAction,
   refreshing,
   onRefresh,
-}) => (
-  <Screen
-    header={{ title: title ?? '', back: onBack, actions: headerActions }}
-    refresh={
-      onRefresh
-        ? {
-            refreshing: refreshing ?? false,
-            onRefresh: () => {
-              void onRefresh();
-            },
-          }
-        : undefined
-    }
-  >
-    <View style={styles.sections}>
-      {sections.map((section, index) => (
-        <DetailSection
-          key={index}
-          title={section.title}
-          transparent={section.transparent}
-          fill={section.fill}
-        >
-          {section.content}
-        </DetailSection>
-      ))}
-      {!!primaryAction && (
-        <Button onPress={primaryAction.onPress} icon={primaryAction.icon}>
-          {primaryAction.label}
-        </Button>
-      )}
+}) => {
+  const insets = useSafeAreaInsets();
+  const scrollContentStyle = insets.bottom
+    ? [styles.scrollContent, { paddingBottom: insets.bottom }]
+    : styles.scrollContent;
+  return (
+    <View style={styles.container}>
+      <Header
+        title={title}
+        onBack={onBack}
+        rightActions={headerActions}
+        variant={headerVariant}
+        centerTitle
+      />
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={scrollContentStyle}
+        refreshControl={
+          onRefresh ? (
+            <PlainScrollRefreshControl
+              refreshing={refreshing ?? false}
+              onRefresh={onRefresh}
+            />
+          ) : undefined
+        }
+      >
+        {/* Sections render through the shared DetailSection card primitive;
+            the scroll view already pads horizontally, so the card's own
+            horizontal margin is canceled. */}
+        {sections.map((section, index) => (
+          <DetailSection
+            key={index}
+            title={section.title}
+            transparent={section.transparent}
+            fill={section.fill}
+            style={styles.templateSection}
+          >
+            {section.content}
+          </DetailSection>
+        ))}
+        {!!primaryAction && (
+          <Button onPress={primaryAction.onPress} icon={primaryAction.icon}>
+            {primaryAction.label}
+          </Button>
+        )}
+      </ScrollView>
     </View>
-  </Screen>
-);
+  );
+};
 
 const styles = StyleSheet.create(theme => ({
-  sections: {
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    gap: theme.spacing.md,
+  },
+  content: {
+    paddingHorizontal: theme.spacing.md,
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  scrollContent: {
     flexGrow: 1,
-    paddingTop: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    paddingBottom: theme.spacing.sm,
+  },
+  templateSection: {
+    marginHorizontal: 0,
   },
 }));

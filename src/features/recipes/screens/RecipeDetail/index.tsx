@@ -667,6 +667,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.xl,
   },
   recipeContent: {
+    paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.md,
   },
   titleSpacing: {
@@ -700,15 +701,14 @@ const styles = StyleSheet.create(theme => ({
   },
   ingredientsSection: {
     marginBottom: theme.spacing.xl,
-    // Bleeds the carousel to the screen edge through the hero card's gutter.
-    marginHorizontal: -theme.layout.pageGutter,
+    marginHorizontal: -theme.spacing.lg,
   },
   ingredientsSectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
-    paddingHorizontal: theme.layout.pageGutter,
+    paddingHorizontal: theme.spacing.lg,
   },
   addAllButton: {
     color: theme.colors.primary,
@@ -718,7 +718,7 @@ const styles = StyleSheet.create(theme => ({
   },
   ingredientsList: {
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.layout.pageGutter,
+    paddingHorizontal: theme.spacing.lg,
   },
   attribution: {
     paddingTop: theme.spacing.md,

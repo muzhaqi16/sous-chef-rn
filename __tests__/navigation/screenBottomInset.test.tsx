@@ -1,10 +1,8 @@
 import React from 'react';
-import { ScrollView, View } from 'react-native';
-import { render, renderHook, screen } from '@testing-library/react-native';
+import { ScrollView } from 'react-native';
+import { render } from '@testing-library/react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Screen } from '#components/templates/Screen';
-import { useScreenListInset } from '#components/templates/useScreenListInset';
-import { lightTheme } from '#/theme/themes';
 
 /**
  * The `scroll` host pads its content by the bottom inset, so iOS's automatic
@@ -13,12 +11,6 @@ import { lightTheme } from '#/theme/themes';
  */
 
 const HOME_INDICATOR = 34;
-const CLEARED = HOME_INDICATOR + lightTheme.layout.pageBottom;
-
-const paddingsOf = (style: unknown) =>
-  [style]
-    .flat(3)
-    .map(entry => (entry as { paddingBottom?: unknown } | null)?.paddingBottom);
 
 describe('the scroll host reserves the bottom inset once', () => {
   beforeEach(() => {
@@ -45,30 +37,13 @@ describe('the scroll host reserves the bottom inset once', () => {
     );
     const host = UNSAFE_getByType(ScrollView);
 
-    expect(paddingsOf(host.props.contentContainerStyle)).toContain(CLEARED);
+    const paddings = [host.props.contentContainerStyle]
+      .flat(3)
+      .map(
+        entry => (entry as { paddingBottom?: unknown } | null)?.paddingBottom,
+      );
+
+    expect(paddings).toContain(HOME_INDICATOR);
     expect(host.props.contentInsetAdjustmentBehavior).toBe('never');
-  });
-
-  it('gives a list child the same trailing space through the hook', () => {
-    const { result } = renderHook(() => useScreenListInset());
-
-    expect(paddingsOf(result.current)).toContain(CLEARED);
-  });
-
-  it('moves the inset to the footer when there is one', () => {
-    const { UNSAFE_getByType } = render(
-      <Screen scroll="scroll" footer={<View testID="footer" />}>
-        {null}
-      </Screen>,
-    );
-    const host = UNSAFE_getByType(ScrollView);
-    let footerHost = screen.getByTestId('footer').parent;
-    while (footerHost && !footerHost.props.style)
-      footerHost = footerHost.parent;
-
-    expect(paddingsOf(host.props.contentContainerStyle)).not.toContain(CLEARED);
-    expect(paddingsOf(footerHost?.props.style)).toContain(
-      HOME_INDICATOR + lightTheme.spacing.sm,
-    );
   });
 });

@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { render, userEvent } from '@testing-library/react-native';
-import { kitTestIDs } from '#components/testIDs';
 import { ProfilePhotoUploadScreen } from '../ProfilePhotoUploadScreen';
 
 // Mock token scheduler / refreshToken
@@ -63,6 +62,28 @@ jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
+// Both the plain atom and its themed wrapper: the wrapper is declared beside
+// what it wraps, so a factory naming only the atom leaves the screen's import
+// undefined.
+jest.mock('#components/atoms/BackButton', () => ({
+  BackButton: ({ onPress }: { onPress?: () => void }) => {
+    const { Pressable, Text } = require('react-native');
+    return (
+      <Pressable onPress={onPress} testID="back-button">
+        <Text>Back</Text>
+      </Pressable>
+    );
+  },
+  ThemedBackButton: ({ onPress }: { onPress?: () => void }) => {
+    const { Pressable, Text } = require('react-native');
+    return (
+      <Pressable onPress={onPress} testID="back-button">
+        <Text>Back</Text>
+      </Pressable>
+    );
+  },
+}));
+
 jest.mock('#features/catalog/components/ImagePicker', () => ({
   ImageFile: {},
 }));
@@ -90,11 +111,15 @@ describe('ProfilePhotoUploadScreen', () => {
     expect(getByText('Select Photo')).toBeTruthy();
   });
 
-  it('closes rather than goes back, being presented from the bottom', async () => {
+  it('renders back button', () => {
+    const { getByTestId } = render(<ProfilePhotoUploadScreen />);
+    expect(getByTestId('back-button')).toBeTruthy();
+  });
+
+  it('calls goBack when back button pressed', async () => {
     const user = userEvent.setup();
-    const { getByTestId, queryByTestId } = render(<ProfilePhotoUploadScreen />);
-    expect(queryByTestId(kitTestIDs.headerBackButton)).toBeNull();
-    await user.press(getByTestId(kitTestIDs.headerCloseButton));
+    const { getByTestId } = render(<ProfilePhotoUploadScreen />);
+    await user.press(getByTestId('back-button'));
     expect(mockGoBack).toHaveBeenCalled();
   });
 

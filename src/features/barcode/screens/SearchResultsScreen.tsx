@@ -200,6 +200,7 @@ export const SearchResultsScreen: React.FC<
         ],
       }}
       scroll="none"
+      gutter="none"
     >
       {renderContent()}
 
@@ -241,6 +242,10 @@ export const SearchResultsScreen: React.FC<
 };
 
 const styles = StyleSheet.create(theme => ({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   bottomSheetBackground: {
     backgroundColor: theme.colors.surface,
   },

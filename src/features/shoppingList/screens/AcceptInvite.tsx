@@ -151,7 +151,7 @@ export const AcceptInvite: React.FC = () => {
   const inviterName = inviterDisplayName ?? t('labels.someone');
 
   return (
-    <Screen header={{ close: () => goBack() }} scroll="none">
+    <Screen header={{ close: () => goBack() }} scroll="list" gutter="none">
       <View style={styles.content}>
         <View style={styles.iconContainer}>
           <Icon
@@ -253,11 +253,15 @@ export const AcceptInvite: React.FC = () => {
 export default AcceptInvite;
 
 const styles = StyleSheet.create(theme => ({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: theme.spacing.xl,
+    padding: theme.spacing.xl,
   },
   title: {
     flex: 1,

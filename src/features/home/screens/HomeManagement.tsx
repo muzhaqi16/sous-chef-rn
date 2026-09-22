@@ -31,7 +31,7 @@ import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { motion } from '#/theme/foundations/motion';
-import { SubScreen } from '#components/templates/SubScreen';
+import { Screen } from '#components/templates/Screen';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { homeTestIDs } from '#features/home/testIDs';
@@ -39,7 +39,7 @@ import { homeTestIDs } from '#features/home/testIDs';
 export const HomeManagement: React.FC = () => {
   useScreenTransition('HomeManagement');
   const { t } = useTranslation();
-  const { toHomeDetail } = useAppNavigation();
+  const { goBack, toHomeDetail } = useAppNavigation();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [mode, setMode] = useState<'create' | 'join'>('create');
@@ -231,9 +231,13 @@ export const HomeManagement: React.FC = () => {
 
   return (
     <>
-      <SubScreen
-        title={t('homeManagement.title')}
-        actions={headerActions}
+      <Screen
+        header={{
+          title: t('homeManagement.title'),
+          centerTitle: true,
+          back: goBack,
+          actions: headerActions,
+        }}
         scroll="scroll"
         refresh={{ refreshing, onRefresh: handleRefresh }}
         // Create and join are local-first; an open form outranks an unanswered read.
@@ -242,6 +246,7 @@ export const HomeManagement: React.FC = () => {
             ? undefined
             : { value: dataState, onRetry: handleRefresh }
         }
+        gutter="none"
       >
         {/* Stats Section */}
         <HomeStats
@@ -408,7 +413,7 @@ export const HomeManagement: React.FC = () => {
             );
           })}
         </Animated.View>
-      </SubScreen>
+      </Screen>
       {InviteModalComponent}
     </>
   );
@@ -416,6 +421,7 @@ export const HomeManagement: React.FC = () => {
 
 const styles = StyleSheet.create(theme => ({
   formContainer: {
+    marginHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
   },
   modeSwitcher: {

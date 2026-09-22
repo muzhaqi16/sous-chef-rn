@@ -4,7 +4,6 @@ import { render, screen, userEvent } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
 import { OnBoardingWrapper } from '../OnBoardingWrapper';
 import { ONBOARDING_STEPS } from '#features/onboarding/hooks/useOnboardingNavigation';
-import { kitTestIDs } from '#components/testIDs';
 
 let mockRouteName = 'CreateHome';
 jest.mock('@react-navigation/native', () => ({
@@ -13,6 +12,23 @@ jest.mock('@react-navigation/native', () => ({
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
+jest.mock('#components/atoms/BackButton', () => ({
+  BackButton: ({
+    onPress,
+    testID,
+  }: {
+    onPress?: () => void;
+    testID?: string;
+  }) => {
+    const { Pressable, Text: RNText } = require('react-native');
+    return (
+      <Pressable onPress={onPress} testID={testID}>
+        <RNText>Back</RNText>
+      </Pressable>
+    );
+  },
+}));
+
 describe('OnBoardingWrapper', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -53,7 +69,8 @@ describe('OnBoardingWrapper', () => {
         <Text>Content</Text>
       </OnBoardingWrapper>,
     );
-    await user.press(screen.getByTestId(kitTestIDs.headerBackButton));
+    expect(screen.getByText('Back')).toBeTruthy();
+    await user.press(screen.getByText('Back'));
     expect(onBack).toHaveBeenCalled();
   });
 
@@ -63,7 +80,7 @@ describe('OnBoardingWrapper', () => {
         <Text>Content</Text>
       </OnBoardingWrapper>,
     );
-    expect(screen.queryByTestId(kitTestIDs.headerBackButton)).toBeNull();
+    expect(screen.queryByText('Back')).toBeNull();
   });
 
   it('renders skip button when onSkip is provided', async () => {
@@ -103,6 +120,16 @@ describe('OnBoardingWrapper', () => {
     );
     expect(toJSON()).toBeTruthy();
     expect(screen.queryByLabelText(/^Step /)).toBeNull();
+  });
+
+  it('passes testID to back button', () => {
+    const onBack = jest.fn();
+    render(
+      <OnBoardingWrapper testID="onboarding-screen" onBack={onBack}>
+        <Text>Content</Text>
+      </OnBoardingWrapper>,
+    );
+    expect(screen.getByTestId('onboarding-screen-back-button')).toBeTruthy();
   });
 
   it('shows skip button testID when testID and onSkip provided', () => {

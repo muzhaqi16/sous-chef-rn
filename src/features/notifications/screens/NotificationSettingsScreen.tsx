@@ -10,7 +10,7 @@ import type { Translate } from '#/i18n/types';
 
 import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { SettingsSection } from '#components/organisms/SettingsSection';
-import { SubScreen } from '#components/templates/SubScreen';
+import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import {
   useNotificationSettings,
   type NotificationSettings,
@@ -434,7 +434,10 @@ export const NotificationSettingsScreen: React.FC = () => {
   // leavable while it waits.
   if (dataState !== 'ready') {
     return (
-      <SubScreen title={t('notifications.title')} scroll="none">
+      <ProfileScreenWrapper
+        title={t('notifications.title')}
+        scrollEnabled={false}
+      >
         <DataStateView
           state={dataState}
           onRetry={() => {
@@ -446,12 +449,12 @@ export const NotificationSettingsScreen: React.FC = () => {
           }}
           testID={notificationsTestIDs.settingsState}
         />
-      </SubScreen>
+      </ProfileScreenWrapper>
     );
   }
 
   return (
-    <SubScreen title={t('notifications.title')}>
+    <ProfileScreenWrapper title={t('notifications.title')}>
       {/* Quiet Hours Status */}
       {isQuietTime() && (
         <View style={styles.quietTimeAlert}>
@@ -634,7 +637,7 @@ export const NotificationSettingsScreen: React.FC = () => {
           loading={updating === 'reset'}
         />
       </SettingsSection>
-    </SubScreen>
+    </ProfileScreenWrapper>
   );
 };
 
@@ -642,6 +645,7 @@ const styles = StyleSheet.create(theme => ({
   quietTimeAlert: {
     backgroundColor: theme.colors.info + '20',
     padding: theme.spacing.md,
+    marginHorizontal: theme.spacing.md,
     marginTop: theme.spacing.sm,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',

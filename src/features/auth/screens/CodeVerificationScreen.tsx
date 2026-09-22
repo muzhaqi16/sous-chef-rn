@@ -250,12 +250,10 @@ export function CodeVerificationScreen({
   };
 
   return (
-    <AuthWrapper
-      testID={authTestIDs.codeVerificationScreen}
-      onBack={onBackPress}
-    >
+    <AuthWrapper testID={authTestIDs.codeVerificationScreen}>
       <AuthFormTemplate
         contentPlacement="top"
+        onBackPress={onBackPress}
         title={t('auth.enterCode')}
         subtitle={
           <>

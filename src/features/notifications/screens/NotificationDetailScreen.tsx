@@ -1,11 +1,10 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { View } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
-import { SubScreen } from '#components/templates/SubScreen';
 import { NotificationActionHandler } from '#features/notifications/components/NotificationActionHandler';
 import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
 
@@ -25,11 +24,11 @@ export const NotificationDetailScreen: React.FC<
 
   if (!notification) {
     return (
-      <SubScreen title={t('labels.notifications')} scroll="none">
+      <View style={styles.container}>
         <Text role="error" tone="error" align="center" style={styles.errorText}>
           {t('notifications.notFound')}
         </Text>
-      </SubScreen>
+      </View>
     );
   }
 
@@ -41,7 +40,7 @@ export const NotificationDetailScreen: React.FC<
   return (
     <NotificationActionHandler>
       {({ handleNotificationAction, showExpirationActionSheet }) => (
-        <SubScreen title={t('labels.notifications')}>
+        <ScrollView style={styles.container}>
           <View style={styles.header}>
             <View style={styles.iconContainer}>
               <Icon name="notifications" size={32} tone="primary" />
@@ -89,20 +88,23 @@ export const NotificationDetailScreen: React.FC<
               </AppPressable>
             )}
           </View>
-        </SubScreen>
+        </ScrollView>
       )}
     </NotificationActionHandler>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   header: {
     alignItems: 'center',
-    marginTop: theme.spacing.md,
     padding: theme.spacing.xl,
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.lg,
-    borderCurve: 'continuous',
+    borderBottomWidth: theme.borderWidth.hairline,
+    borderBottomColor: theme.colors.border,
   },
   iconContainer: {
     width: 64,
@@ -117,7 +119,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
   },
   content: {
-    paddingTop: theme.spacing.lg,
+    padding: theme.spacing.lg,
   },
   message: {
     marginBottom: theme.spacing.lg,
@@ -144,5 +146,8 @@ const styles = StyleSheet.create(theme => ({
   },
   errorText: {
     marginTop: theme.spacing.xl,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

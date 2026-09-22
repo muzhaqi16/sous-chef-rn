@@ -171,7 +171,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   scrollContent: {
-    paddingVertical: theme.spacing.lg,
+    padding: theme.spacing.lg,
     gap: theme.spacing.lg,
   },
 }));

@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { FormTextArea } from '#components/atoms/FormTextArea';
-import { SheetHeader } from '#components/templates/SheetHeader';
+import { Header } from '#components/organisms/Header';
 import { generateId } from '#/utils/generateId';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import type { StepFormState } from '#features/recipes/screens/RecipeForm/formState';
@@ -60,10 +60,23 @@ export const RecipeStepEditor = forwardRef<
 
   return (
     <BottomSheetModal ref={bottomSheetRef} {...modalProps} index={0}>
-      <SheetHeader
+      <Header
         title={editingId ? t('recipes.editStep') : t('recipes.addStep')}
-        onClose={() => setVisible(false)}
-        confirm={{ onPress: handleSave }}
+        centerTitle
+        leftActions={[
+          {
+            icon: 'close',
+            accessibilityLabel: t('labels.close'),
+            onPress: () => setVisible(false),
+          },
+        ]}
+        rightActions={[
+          {
+            icon: 'checkmark',
+            accessibilityLabel: t('labels.save'),
+            onPress: handleSave,
+          },
+        ]}
       />
 
       <BottomSheetView style={styles.content}>

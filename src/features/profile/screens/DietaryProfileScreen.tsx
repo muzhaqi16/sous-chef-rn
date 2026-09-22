@@ -8,7 +8,7 @@ import { alertService } from '#/services/alertService';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
-import { SubScreen } from '#components/templates/SubScreen';
+import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import type {
   Diet,
@@ -232,28 +232,28 @@ export const DietaryProfileScreen: React.FC = () => {
   // Gate on "nothing to show", not on `loading` — `cache-and-network` reports
   // `loading: true` for the whole network leg on every mount, so a bare
   // `if (loading)` blanks the screen for up to httpLink's 10s abort. Both
-  // non-content states stay inside SubScreen, which is what keeps a
+  // non-content states stay inside ProfileScreenWrapper, which is what keeps a
   // back button on screen while it waits.
   if (loading && !profile) {
     return (
-      <SubScreen title={t('dietary.title')} scroll="none">
+      <ProfileScreenWrapper title={t('dietary.title')} scrollEnabled={false}>
         <View style={commonStyles.loadingContainer}>
           <Text role="body" style={commonStyles.loadingText}>
             {t('dietary.loadingProfile')}
           </Text>
         </View>
-      </SubScreen>
+      </ProfileScreenWrapper>
     );
   }
 
   if (!profile) {
     return (
-      <SubScreen title={t('dietary.title')} scroll="none">
+      <ProfileScreenWrapper title={t('dietary.title')} scrollEnabled={false}>
         <EmptyState
           title={t('dietary.loadFailedTitle')}
           description={t('dietary.loadFailedSubtitle')}
         />
-      </SubScreen>
+      </ProfileScreenWrapper>
     );
   }
 
@@ -265,7 +265,7 @@ export const DietaryProfileScreen: React.FC = () => {
   ].some(target => !!target);
 
   return (
-    <SubScreen title={t('dietary.title')}>
+    <ProfileScreenWrapper title={t('dietary.title')}>
       {/* Dietary Restrictions Section */}
       <Animated.View
         entering={FadeIn.duration(motion.timing.SLOW)}
@@ -515,14 +515,15 @@ export const DietaryProfileScreen: React.FC = () => {
           fatTarget: profile.fatTarget,
         }}
       />
-    </SubScreen>
+    </ProfileScreenWrapper>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   sectionContainer: {
+    paddingHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
-    marginTop: theme.spacing.md,
+    marginTop: theme.spacing.xs,
   },
   sectionCard: {
     backgroundColor: theme.colors.surface,

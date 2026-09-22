@@ -83,8 +83,9 @@ jest.mock('#components/organisms/SettingsSection', () => ({
   SettingsSection: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-jest.mock('#components/templates/SubScreen', () => ({
-  SubScreen: ({ children }: { children: React.ReactNode }) => children,
+jest.mock('#components/templates/ProfileScreenWrapper', () => ({
+  ProfileScreenWrapper: ({ children }: { children: React.ReactNode }) =>
+    children,
 }));
 
 jest.mock('#components/molecules/ModalPicker', () => ({

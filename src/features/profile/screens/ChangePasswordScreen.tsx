@@ -17,7 +17,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { changePasswordSchema } from '#utils/validation/auth';
 import { logValidationErrors } from '#utils/validation/common';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { SubScreen } from '#components/templates/SubScreen';
+import { Screen } from '#components/templates/Screen';
 import { toastService } from '#services/toastService';
 
 interface ChangePasswordForm {
@@ -131,7 +131,15 @@ export const ChangePasswordScreen: React.FC = () => {
   const isFormValid = form.formState.isValid;
 
   return (
-    <SubScreen title={t('labels.changePassword')} scroll="form">
+    <Screen
+      header={{
+        title: t('labels.changePassword'),
+        back: goBack,
+        centerTitle: true,
+      }}
+      scroll="form"
+      gutter="none"
+    >
       <View style={styles.contentContainer}>
         <View style={styles.iconContainer}>
           <Icon name="lock-closed-outline" size={64} tone="primary" />
@@ -192,13 +200,20 @@ export const ChangePasswordScreen: React.FC = () => {
           </Button>
         </View>
       </View>
-    </SubScreen>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  content: {
+    flex: 1,
+  },
   contentContainer: {
-    paddingTop: theme.spacing.lg,
+    padding: theme.spacing.lg,
     alignItems: 'center',
   },
   iconContainer: {
@@ -211,6 +226,7 @@ const styles = StyleSheet.create(theme => ({
   },
   form: {
     width: '100%',
+    maxWidth: 320,
   },
   field: {
     marginBottom: theme.spacing.lg,

@@ -36,8 +36,6 @@ export const space = (...values: (keyof typeof spacing)[]) => {
 export const layout = {
   /** Screen edge to any screen-level content — chrome, controls and rows alike. */
   pageGutter: 16,
-  /** Below a screen's last content, on top of the bottom safe-area inset. */
-  pageBottom: 24,
   sectionGap: 24,
   /** A row's own edge to its content. */
   rowInset: 8,
