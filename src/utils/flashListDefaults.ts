@@ -38,32 +38,3 @@ export const FLASHLIST_DEFAULTS: Record<
     onEndReachedThreshold: 0.8,
   },
 };
-
-// Sticky header sentinel: prepended to a FlashList's data so
-// stickyHeaderIndices pins it natively (UI thread, no JS bridge). A screen's
-// renderItem checks isStickyHeaderSentinel() and draws its own tab component.
-
-/** Discriminator for sentinel items prepended to FlashList data arrays. */
-export interface StickyHeaderSentinel {
-  __sentinel: 'stickyHeader';
-}
-
-/** Singleton sentinel instance — prepend to data[0] for stickyHeaderIndices. */
-export const STICKY_HEADER_SENTINEL: StickyHeaderSentinel = {
-  __sentinel: 'stickyHeader',
-};
-
-/** Type guard for sentinel items in a mixed data array. */
-export const isStickyHeaderSentinel = (
-  item: unknown,
-): item is StickyHeaderSentinel =>
-  typeof item === 'object' &&
-  item !== null &&
-  '__sentinel' in item &&
-  item.__sentinel === 'stickyHeader';
-
-/** Stable stickyHeaderIndices array — data[0] is always the sticky sentinel. */
-export const STICKY_HEADER_INDICES = [0];
-
-/** Default sticky header config — native driver for smooth Android performance. */
-export const STICKY_HEADER_CONFIG = { useNativeDriver: true };

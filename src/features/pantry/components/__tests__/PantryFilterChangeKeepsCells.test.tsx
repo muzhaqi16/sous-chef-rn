@@ -6,24 +6,16 @@ import { PantrySortOption } from '#store/slices/preferenceTypes';
 /**
  * Changing the pantry filter must not re-render every mounted item cell.
  *
- * The sticky filter tabs are row 0 of the FlashList, so they come through
- * `renderItem`. When that renderer was written inline it closed over the filter
- * state, and `extraData` carried `locationFilter` as well — which meant a tab
- * change re-rendered every mounted cell through BOTH of FlashList's triggers.
- *
  * Verified against the installed `@shopify/flash-list@2.3.2`: `ViewHolder`'s
  * `React.memo` comparator (`src/recyclerview/ViewHolder.tsx`) reads
  *
  *     prevProps.extraData === nextProps.extraData &&
  *     prevProps.renderItem === nextProps.renderItem &&
  *
- * so either one changing is enough on its own. Fixing only one would have
- * looked like a fix and changed nothing.
- *
- * No item cell needs either value: the leaf renderer reads only `item`, and
- * `PantryItemCard` owns its own cache subscription via `useFragment`. The tabs
- * now take their state from `PantryStickyTabsProvider`, which lets the renderer
- * live at module scope and lets `locationFilter` leave `extraData`.
+ * so either one changing is enough on its own. No item cell needs the filter:
+ * the renderer reads only `item`, and `PantryItemCard` owns its own cache
+ * subscription via `useFragment`. So the renderer lives at module scope and
+ * `locationFilter` stays out of `extraData`.
  *
  * This asserts the two props directly rather than counting renders, because
  * these two identities ARE the mechanism — FlashList's own comparator is the
@@ -79,7 +71,7 @@ const baseProps = {
 
 const lastProps = () => flashListProps[flashListProps.length - 1];
 
-describe('pantry sticky tabs are decoupled from renderItem', () => {
+describe('a pantry filter change keeps every mounted cell', () => {
   beforeEach(() => {
     flashListProps.length = 0;
   });

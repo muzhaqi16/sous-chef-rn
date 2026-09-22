@@ -76,16 +76,6 @@ const AUTHORS: Record<string, string> = {
 const GUTTERLESS = ['FilterTabs'];
 
 /**
- * Hosts that supply the inset by POSITION rather than by a style of their own:
- * they render inside a container that is already padded, so adding one here
- * would double it.
- */
-const INHERITS_AN_INSET: Record<string, string> = {
-  'src/features/pantry/components/pantryDisplay/PantryStickyTabs.tsx':
-    "row 0 of PantryContent's list, whose content container carries the gutter",
-};
-
-/**
  * A skeleton list that INHERITS its inset, and the padded container it sits in.
  * Every other file rendering a run of skeleton rows has to read the token —
  * `commonStyles.rowWrapper` carries no horizontal inset, so a skeleton list
@@ -95,7 +85,7 @@ const SKELETON_INHERITS_AN_INSET: Record<string, string> = {
   'src/components/atoms/PaginationFooter.tsx':
     "the list's own footer slot, inside its content container",
   'src/features/pantry/components/PantryListSkeletonOverlay.tsx':
-    "absolute inside PantryContent's ListHeaderComponent, itself inside the gutter",
+    'absolute over the list in PantryContent, which passes it the gutter',
   'src/features/pantry/components/skeletons/PantryScreenSkeleton.tsx':
     'PantryMain and the list empty state, both of which inset bare children',
   'src/features/profile/components/ProfileSkeleton.tsx':
@@ -160,7 +150,6 @@ describe('the page gutter has one author per page', () => {
       const rendersIt = new RegExp(`<${name}[\\s<>/]`);
       const hosts = sources.filter(f => {
         if (f.includes('__tests__')) return false;
-        if (f in INHERITS_AN_INSET) return false;
         return (
           rendersIt.test(readFileSync(f, 'utf8')) && !f.includes(`/${name}/`)
         );

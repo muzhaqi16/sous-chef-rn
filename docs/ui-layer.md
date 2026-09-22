@@ -253,6 +253,11 @@ they read it.
   `PlainScrollRefreshControl`. The `withUnistyles` wrapper is transparent to
   either, since the gesture crosses by reference
   ([RNGH's scroll gesture reaches only RNGH's RefreshControl](verified-library-behaviour.md#rnghs-scroll-gesture-reaches-only-rnghs-refreshcontrol)).
+- **A tab root's chrome sits above its list, never inside it.** The spinner
+  drops from the scroll view's top edge and everything inside moves with the
+  pull, so the header, search and filter tabs stay out of `ListHeaderComponent`;
+  on every tab the spinner appears below still chrome. Pantry's test holds it
+  (`keeps the header, search and tabs outside the refreshable list`).
 - **The rule is about the host, not about FlashList.** A standalone RNGH scroller
   offering pull-to-refresh renders `SwipeAwareScrollComponent` too, never a
   hand-rolled RNGH `<ScrollView>`. The mechanism:
@@ -358,8 +363,8 @@ they read it.
 - **The cover exists from the list's first commit.** A cover whose mount waits on
   a post-commit state update (an `onLayout` measurement, a deferred flag) is
   starved behind the row-mount storm it exists to hide. That is why the pantry's
-  cover is an absolute flap inside `ListHeaderComponent`
-  (`PantryListSkeletonOverlay.tsx`).
+  cover renders in the same pass as its list, as an absolute earlier sibling
+  the cells paint over (`PantryListSkeletonOverlay.tsx`).
 - **A settled empty list releases on `rowCount: 0`, not on a commit.** For data
   that goes empty to empty, FlashList commits once. That commit lands while the
   skeletons are still up, and the placeholder guard discards it — so a list
