@@ -1,3 +1,4 @@
+import type { ComponentProps, ReactNode } from 'react';
 import { useRef, useEffect, useContext, useState } from 'react';
 import {
   BottomSheetModal as GorhomBottomSheetModal,
@@ -9,16 +10,31 @@ import { NavigationContext } from '@react-navigation/native';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { useBottomSheetBackdropClaim } from '#hooks/useBottomSheetBackdropClaim';
+import { CurrentThemeScope } from '#components/atoms/CurrentThemeScope';
 
-/**
- * Theme-reactive `BottomSheetModal`: theme updates flow through the ShadowTree,
- * so callers never re-render for new colors. Re-exported under the gorhom name
- * so only the import source changes at a call site.
- */
-const ThemedBottomSheetModal = withUnistyles(GorhomBottomSheetModal, theme => ({
+const ThemedModalShell = withUnistyles(GorhomBottomSheetModal, theme => ({
   backgroundStyle: { backgroundColor: theme.colors.surface },
   handleIndicatorStyle: { backgroundColor: theme.colors.textSecondary },
 }));
+
+type ThemedBottomSheetModalProps = Omit<
+  ComponentProps<typeof ThemedModalShell>,
+  'children'
+> & { children: ReactNode };
+
+/**
+ * Theme-reactive `BottomSheetModal`, re-exported under the gorhom name so only
+ * the import source changes at a call site. Content mounts on every present,
+ * so it sits in `CurrentThemeScope`.
+ */
+const ThemedBottomSheetModal = ({
+  children,
+  ...props
+}: ThemedBottomSheetModalProps) => (
+  <ThemedModalShell {...props}>
+    <CurrentThemeScope>{children}</CurrentThemeScope>
+  </ThemedModalShell>
+);
 
 export { ThemedBottomSheetModal as BottomSheetModal };
 
