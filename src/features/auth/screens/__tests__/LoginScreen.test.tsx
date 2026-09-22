@@ -12,11 +12,8 @@ import { useStore } from '#store';
 
 // --- Mocks ---
 
-const mockHandleRememberMeAccept = jest.fn();
-const mockHandleRememberMeDecline = jest.fn();
-
 // LoginScreen drives login/biometric through `authService` directly; it only
-// consumes `useRememberMe` for the RememberMe modal.
+// consumes `useRememberMe` for the remember-login prompt.
 // `mockRealRememberMe` swaps the real hook in for the enrolment cases.
 let mockRealRememberMe = false;
 jest.mock('#features/auth/hooks/useRememberMe', () => ({
@@ -31,13 +28,7 @@ jest.mock('#features/auth/hooks/useRememberMe', () => ({
             '#features/auth/hooks/useRememberMe',
           )
           .useRememberMe(events)
-      : {
-          showRememberMeModal: false,
-          pendingCredentials: null,
-          handleRememberMeAccept: mockHandleRememberMeAccept,
-          handleRememberMeDecline: mockHandleRememberMeDecline,
-          showRememberMePrompt: jest.fn(),
-        },
+      : { showRememberMePrompt: jest.fn() },
 }));
 
 const mockNavigateToForgotPassword = jest.fn();
@@ -118,24 +109,6 @@ jest.mock('#features/auth/components/AuthFormTemplate', () => {
         ) : null}
       </View>
     ),
-  };
-});
-
-jest.mock('#features/auth/components/RememberMeModal', () => {
-  const { Pressable, Text } = require('react-native');
-  return {
-    RememberMeModal: ({
-      visible,
-      onAccept,
-    }: {
-      visible?: boolean;
-      onAccept: () => void;
-    }) =>
-      visible ? (
-        <Pressable testID="remember-me-modal" onPress={onAccept}>
-          <Text>Remember me</Text>
-        </Pressable>
-      ) : null,
   };
 });
 
@@ -329,10 +302,19 @@ describe('LoginScreen remembering the sign-in', () => {
       jest.requireActual('#/services/toastService').toastService,
       'error',
     );
+    const { alertService } = jest.requireActual<
+      typeof import('#/services/alertService')
+    >('#/services/alertService');
+    const alert = jest
+      .spyOn(alertService, 'alert')
+      .mockImplementation(() => {});
     useStore.getState().setPostLoginCredentials({ email: 'chef@example.com' });
 
     render(<LoginScreen />);
-    await userEvent.press(await screen.findByTestId('remember-me-modal'));
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+    // Button 1 is "Remember".
+    const [, , buttons] = alert.mock.calls[0] ?? [];
+    buttons?.[1]?.onPress?.();
 
     await waitFor(() =>
       expect(toastError).toHaveBeenCalledWith(

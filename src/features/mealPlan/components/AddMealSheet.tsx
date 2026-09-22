@@ -28,21 +28,12 @@ import {
 import { AddMealSheet_SavedRecipeFragmentDoc } from './AddMealSheet.generated';
 import { CachedImage, warmImage } from '#components/atoms/CachedImage';
 import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
-import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
-import {
-  transformRecipeForDisplay,
-  type TransformedRecipeItem,
-  type DietTag,
-} from '#domain/recipeTransform';
+import type { TransformedRecipeItem, DietTag } from '#domain/recipeTransform';
 import { useRecipePreload } from '#features/recipes/hooks/useRecipePreload';
-import {
-  useRecipeCacheStore,
-  textSearchCacheKey,
-  fetchRecipeInformation,
-} from '#features/recipes/store/useRecipeCacheStore';
+import { fetchRecipeInformation } from '#features/recipes/store/useRecipeCacheStore';
+import { useMealRecipeSearch } from '#features/mealPlan/hooks/useMealRecipeSearch';
 import { toastService } from '#/services/toastService';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
-import type { SearchRecipesResult } from '#/services/spoonacular/types';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { EmptyState } from '#components/molecules/EmptyState';
@@ -63,8 +54,6 @@ const DIET_TAG_LABEL_KEYS: Record<DietTag, TranslationKey> = {
   dairyFree: 'addMealSheet.dietDairyFree',
 };
 
-const MIN_QUERY_LENGTH = 3;
-
 /** How long an add waits for the recipe's image, on top of saving it. */
 const IMAGE_WARM_MAX_MS = 1500;
 
@@ -73,68 +62,11 @@ function resetSheetState(
   initialMealType: MealType | undefined,
   setSearchQuery: (v: string) => void,
   setSelectedMealType: (v: MealType) => void,
-  setSpoonacularResults: (v: TransformedRecipeItem[]) => void,
-  setSearchingApi: (v: boolean) => void,
   setLoadingItemId: (v: number | null) => void,
 ) {
   setSearchQuery('');
   setSelectedMealType(initialMealType ?? MealType.Dinner);
-  setSpoonacularResults([]);
-  setSearchingApi(false);
   setLoadingItemId(null);
-}
-
-/** Module-level helper to clear search results when query is too short */
-function clearSearchResults(
-  setSpoonacularResults: (v: TransformedRecipeItem[]) => void,
-  setSearchingApi: (v: boolean) => void,
-) {
-  setSpoonacularResults([]);
-  setSearchingApi(false);
-}
-
-/** Module-level async helper: search Spoonacular with cache-first strategy */
-function searchSpoonacularWithCache(
-  query: string,
-  onResults: (results: TransformedRecipeItem[]) => void,
-  setSearching: (v: boolean) => void,
-  signal: AbortSignal,
-) {
-  const cacheKey = textSearchCacheKey(query);
-  const cacheStore = useRecipeCacheStore.getState();
-  const cached = cacheStore.getCached(cacheKey);
-
-  if (cached) {
-    onResults(
-      cached.results.map(r =>
-        transformRecipeForDisplay(r as SearchRecipesResult),
-      ),
-    );
-    setSearching(false);
-    return;
-  }
-
-  setSearching(true);
-
-  void executeAsyncWithCleanup(
-    async () => {
-      const response = await spoonacularService.searchRecipesWithInfo(
-        { query, number: 10 },
-        signal,
-      );
-
-      if (!signal.aborted) {
-        cacheStore.setCached(cacheKey, response.results);
-        onResults(response.results.map(transformRecipeForDisplay));
-      }
-    },
-    () => {
-      if (!signal.aborted) setSearching(false);
-    },
-    () => {
-      // Silently fail - saved recipes still show
-    },
-  );
 }
 
 // Every row is the same component, so one recycling pool is correct.
@@ -221,18 +153,18 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     actions: { loadMore },
   } = useSavedRecipes({ loadAllPages: hasQuery });
 
-  // Spoonacular search state
-  const [spoonacularResults, setSpoonacularResults] = useState<
-    TransformedRecipeItem[]
-  >([]);
-  const [searchingApi, setSearchingApi] = useState(false);
+  const {
+    results: spoonacularResults,
+    searching: searchingApi,
+    search: searchSpoonacular,
+    clear: clearSpoonacular,
+  } = useMealRecipeSearch();
   const [loadingItemId, setLoadingItemId] = useState<number | null>(null);
 
   const { preloadRecipe } = useRecipePreload();
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   const searchBarRef = useRef<SearchBarRef>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Reset state when sheet opens
   useEffect(() => {
@@ -241,45 +173,21 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
         initialMealType,
         setSearchQuery,
         setSelectedMealType,
-        setSpoonacularResults,
-        setSearchingApi,
         setLoadingItemId,
       );
+      clearSpoonacular();
       searchBarRef.current?.clear();
     }
-  }, [visible, initialMealType]);
+  }, [visible, initialMealType, clearSpoonacular]);
 
   const handleDebouncedSearch = (text: string) => {
     setSearchQuery(text);
-
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-
-    const trimmed = text.trim();
-    if (trimmed.length < MIN_QUERY_LENGTH) {
-      clearSearchResults(setSpoonacularResults, setSearchingApi);
-      return;
-    }
-
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-    searchSpoonacularWithCache(
-      trimmed,
-      setSpoonacularResults,
-      setSearchingApi,
-      controller.signal,
-    );
+    searchSpoonacular(text);
   };
 
   const handleClearSearch = () => {
     setSearchQuery('');
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-    clearSearchResults(setSpoonacularResults, setSearchingApi);
+    clearSpoonacular();
   };
 
   const handleSelectRecipe = (recipeId: string) => {

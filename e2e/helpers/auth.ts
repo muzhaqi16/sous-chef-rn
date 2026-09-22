@@ -90,13 +90,13 @@ let systemPasswordAlertHandled = false;
 export async function dismissBiometricPromptIfPresent() {
   console.log('🔍 Checking for post-login prompts...');
 
-  // The "Remember login info?" credential modal appears after a fresh UI
-  // login and blocks the tab bar until dismissed.
+  // The "Remember login info?" prompt is an in-app alert after a fresh UI
+  // login; it blocks the tab bar until dismissed. Button 0 is "Not now".
   await waitIfPresent(
-    element(by.id(authTestIDs.rememberMeModal)),
+    element(by.id(kitTestIDs.alertModal)),
     async () => {
       console.log('📱 Dismissing remember-login-info prompt...');
-      await tapByID(authTestIDs.rememberMeDeclineButton);
+      await tapByID(kitTestIDs.alertButton(0));
       console.log('✅ Remember-login prompt dismissed');
     },
     3000,

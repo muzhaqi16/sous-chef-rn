@@ -530,15 +530,13 @@ export const PantryContent = React.forwardRef<
               maintainVisibleContentPosition={MVCP_DISABLED}
             />
 
-            {!!sortModalVisible && (
-              <PantrySortModal
-                visible={sortModalVisible}
-                sortOption={sortOption}
-                sortDirection={sortDirection}
-                onSelect={handleSortSelect}
-                onClose={closeSortModal}
-              />
-            )}
+            <PantrySortModal
+              visible={sortModalVisible}
+              sortOption={sortOption}
+              sortDirection={sortDirection}
+              onSelect={handleSortSelect}
+              onClose={closeSortModal}
+            />
           </View>
         </PantryStickyTabsProvider>
       </PantryActionsProvider>

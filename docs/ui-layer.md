@@ -134,6 +134,8 @@ they read it.
   - `BreakdownPieChart`, which hands colours to the chart library as data;
   - `RecipeMain` and `SortableShoppingList`, which put theme colours into data
     structures.
+  - `EdgeFade`, which passes colours into SVG gradient stops;
+  - `SearchBar`, which offsets a measured rect by `theme.spacing.sm` in JS.
 - **Plugin order is Unistyles → `unistyles-scope-crawl` → React Compiler**
   (`babel.config.js`): the documented order with a crawl between. Unistyles'
   `useVariants` rewrite declares a shadowing binding without `scope.crawl()`;

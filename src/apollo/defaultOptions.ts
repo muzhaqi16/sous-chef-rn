@@ -14,7 +14,7 @@ import type { ApolloClient } from '@apollo/client';
 export const APOLLO_DEFAULT_OPTIONS: ApolloClient.DefaultOptions.Input = {
   query: {
     // Cache first, so a one-shot read works offline unless the caller says it
-    // needs fresh data. `defaultOptions.test.ts` pins this and lists the
+    // needs fresh data. `oneShotQueryDefault.test.ts` pins this and lists the
     // callers that opt out.
     fetchPolicy: 'cache-first',
     errorPolicy: 'all', // Return both data and errors for observability

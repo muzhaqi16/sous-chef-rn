@@ -96,5 +96,11 @@
     "verifyingEmail": "Verificando tu correo...",
     "verifyingEmailSubtitle": "Espera mientras confirmamos tu dirección de correo.",
     "yourEmail": "tu correo"
+  },
+  "rememberMe": {
+    "title": "¿Recordar datos de inicio de sesión?",
+    "body": "Guardaremos de forma segura tus datos de inicio de sesión para {{email}} en este dispositivo, así no tendrás que introducirlos la próxima vez.",
+    "notNow": "Ahora no",
+    "remember": "Recordar"
   }
 }

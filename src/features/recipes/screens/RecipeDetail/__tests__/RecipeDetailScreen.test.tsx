@@ -128,7 +128,7 @@ jest.mock('#features/shoppingList/ui/ShoppingListPickerSheet', () => ({
   ShoppingListPickerSheet: () => null,
 }));
 
-jest.mock('#components/organisms/MarkCookedModal', () => ({
+jest.mock('#features/recipes/ui/MarkCookedModal', () => ({
   MarkCookedModal: () => null,
 }));
 

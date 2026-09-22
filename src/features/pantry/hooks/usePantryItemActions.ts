@@ -365,8 +365,7 @@ export function usePantryItemActions({
     closeModal();
   };
 
-  // Existence check helper — opens the modal only if the cache has an entry
-  // for the id (mirrors the previous `materializeItem` behavior).
+  // Opens the modal only when the cache holds the item.
   const hasItemInCache = (itemId: string): boolean => {
     const cacheId = client.cache.identify({
       __typename: 'PantryItem',

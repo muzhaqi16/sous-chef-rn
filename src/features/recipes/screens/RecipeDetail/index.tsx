@@ -17,7 +17,7 @@ import { Icon } from '#utils/iconUtils';
 
 import { FolderPicker } from '#features/recipes/components/FolderPicker';
 import { RecipeDetailErrorBoundary } from '#components/providers/ScreenErrorBoundary';
-import { MarkCookedModal } from '#components/organisms/MarkCookedModal';
+import { MarkCookedModal } from '#features/recipes/ui/MarkCookedModal';
 import { IngredientMatchingSheet } from '#features/recipes/components/modals/IngredientMatchingSheet';
 import { SaveRecipeSheet } from '#features/recipes/components/modals/SaveRecipeSheet/SaveRecipeSheet';
 import { ManageRecipeSheet } from '#features/recipes/components/modals/ManageRecipeSheet/ManageRecipeSheet';

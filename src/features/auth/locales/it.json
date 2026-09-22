@@ -96,5 +96,11 @@
     "verifyingEmail": "Verifica della tua email in corso...",
     "verifyingEmailSubtitle": "Attendi mentre confermiamo il tuo indirizzo email.",
     "yourEmail": "la tua email"
+  },
+  "rememberMe": {
+    "title": "Ricordare i dati di accesso?",
+    "body": "Salveremo in modo sicuro i tuoi dati di accesso per {{email}} su questo dispositivo, così non dovrai reinserirli la prossima volta.",
+    "notNow": "Non ora",
+    "remember": "Ricorda"
   }
 }

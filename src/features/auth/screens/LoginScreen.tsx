@@ -13,7 +13,6 @@ import { AuthFormTemplate } from '#features/auth/components/AuthFormTemplate';
 import { AuthWrapper } from '#features/auth/components/AuthWrapper';
 import { EmailInput } from '#components/molecules/EmailInput';
 import { PasswordInput } from '#components/molecules/PasswordInput';
-import { RememberMeModal } from '#features/auth/components/RememberMeModal';
 import { getLoginValidationSchema } from '#/utils/validation/auth';
 import { logValidationErrors } from '#/utils/validation/common';
 import type { LoginInput } from '#/graphql/generated/schemaTypes';
@@ -98,13 +97,7 @@ export function LoginScreen(): React.JSX.Element {
     setNavigationState('main_app');
   };
 
-  const {
-    showRememberMeModal,
-    pendingCredentials,
-    handleRememberMeAccept,
-    handleRememberMeDecline,
-    showRememberMePrompt,
-  } = useRememberMe({
+  const { showRememberMePrompt } = useRememberMe({
     // The password is not stored: enrolment asks the server for a device-bound
     // credential and puts that behind biometry instead.
     onAccept: async ({ email }) => {
@@ -347,13 +340,6 @@ export function LoginScreen(): React.JSX.Element {
           </AppPressable>
         </View>
       )}
-      {/* RememberMe Modal */}
-      <RememberMeModal
-        visible={showRememberMeModal}
-        onAccept={handleRememberMeAccept}
-        onDecline={handleRememberMeDecline}
-        email={pendingCredentials?.email ?? ''}
-      />
     </AuthWrapper>
   );
 }

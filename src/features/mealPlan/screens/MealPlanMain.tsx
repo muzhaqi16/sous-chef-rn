@@ -20,7 +20,7 @@ import { TemplateSheets } from '#features/mealPlan/components/TemplateSheets';
 import { GenerateShoppingListSheet } from '#features/mealPlan/components/GenerateShoppingListSheet';
 import { MealPlanSettingsSheet } from '#features/mealPlan/components/MealPlanSettingsSheet';
 import { DuplicatePlanSheet } from '#features/mealPlan/components/DuplicatePlanSheet';
-import { MarkCookedModal } from '#components/organisms/MarkCookedModal';
+import { MarkCookedModal } from '#features/recipes/ui/MarkCookedModal';
 import { NutritionSummaryCard } from '#features/mealPlan/components/NutritionSummaryCard';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';

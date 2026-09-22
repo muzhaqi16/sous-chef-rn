@@ -78,7 +78,7 @@ const styles = StyleSheet.create(theme => ({
   },
   card: {
     backgroundColor: theme.colors.background,
-    borderRadius: theme.spacing.lg,
+    borderRadius: theme.radii['3xl'],
     borderCurve: 'continuous',
     padding: theme.spacing.xl,
     alignItems: 'center',

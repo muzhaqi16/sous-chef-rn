@@ -1,11 +1,11 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { renderHook } from '@testing-library/react-native';
+import { alertService, type AlertButton } from '#/services/alertService';
 import { useRememberMe } from '../useRememberMe';
 
 // Break circular dependency chain
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
-// Mock useAuthPreferences
 const mockMarkCredentialPromptDeclined = jest.fn();
 jest.mock('#/hooks/navigation/useAuthPreferences', () => ({
   useAuthPreferences: () => ({
@@ -16,102 +16,59 @@ jest.mock('#/hooks/navigation/useAuthPreferences', () => ({
 const mockOnAccept = jest.fn().mockResolvedValue(undefined);
 const mockOnDecline = jest.fn();
 
+/** Prompt, then return the buttons the alert was shown with. */
+const prompt = (email = 'user@example.com'): AlertButton[] => {
+  const alert = jest.spyOn(alertService, 'alert').mockImplementation(() => {});
+  const { result } = renderHook(() =>
+    useRememberMe({ onAccept: mockOnAccept, onDecline: mockOnDecline }),
+  );
+  result.current.showRememberMePrompt({ email });
+  const [call] = alert.mock.calls;
+  if (!call) throw new Error('no alert shown');
+  return call[2] ?? [];
+};
+
 beforeEach(() => {
+  jest.restoreAllMocks();
   jest.clearAllMocks();
   mockOnAccept.mockResolvedValue(undefined);
 });
 
 describe('useRememberMe', () => {
-  it('initializes with modal hidden and no pending credentials', () => {
+  it('asks with the address being remembered', () => {
+    const alert = jest
+      .spyOn(alertService, 'alert')
+      .mockImplementation(() => {});
     const { result } = renderHook(() =>
       useRememberMe({ onAccept: mockOnAccept, onDecline: mockOnDecline }),
     );
 
-    expect(result.current.showRememberMeModal).toBe(false);
-    expect(result.current.pendingCredentials).toBeNull();
+    result.current.showRememberMePrompt({ email: 'user@example.com' });
+
+    expect(alert).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.stringContaining('user@example.com'),
+      expect.any(Array),
+    );
   });
 
-  it('showRememberMePrompt sets credentials and shows modal', () => {
-    const { result } = renderHook(() =>
-      useRememberMe({ onAccept: mockOnAccept, onDecline: mockOnDecline }),
-    );
+  it('enrols the prompted address on accept', () => {
+    const [, remember] = prompt('user@example.com');
 
-    act(() => {
-      result.current.showRememberMePrompt({
-        email: 'test@test.com',
-      });
-    });
+    remember?.onPress?.();
 
-    expect(result.current.showRememberMeModal).toBe(true);
-    expect(result.current.pendingCredentials).toEqual({
-      email: 'test@test.com',
-    });
+    expect(mockOnAccept).toHaveBeenCalledWith({ email: 'user@example.com' });
+    expect(mockOnDecline).not.toHaveBeenCalled();
   });
 
-  it('handleRememberMeAccept calls onAccept with pending credentials', async () => {
-    const { result } = renderHook(() =>
-      useRememberMe({ onAccept: mockOnAccept, onDecline: mockOnDecline }),
-    );
+  it('declines, and is not asked again on this install', () => {
+    const [notNow] = prompt();
 
-    act(() => {
-      result.current.showRememberMePrompt({
-        email: 'test@test.com',
-      });
-    });
+    notNow?.onPress?.();
 
-    await act(async () => {
-      await result.current.handleRememberMeAccept();
-    });
-
-    expect(mockOnAccept).toHaveBeenCalledWith({
-      email: 'test@test.com',
-    });
-    expect(result.current.showRememberMeModal).toBe(false);
-    expect(result.current.pendingCredentials).toBeNull();
-  });
-
-  it('handleRememberMeAccept hides modal even when no pending credentials', async () => {
-    const { result } = renderHook(() =>
-      useRememberMe({ onAccept: mockOnAccept, onDecline: mockOnDecline }),
-    );
-
-    await act(async () => {
-      await result.current.handleRememberMeAccept();
-    });
-
-    expect(mockOnAccept).not.toHaveBeenCalled();
-    expect(result.current.showRememberMeModal).toBe(false);
-  });
-
-  it('handleRememberMeDecline hides modal and calls onDecline', () => {
-    const { result } = renderHook(() =>
-      useRememberMe({ onAccept: mockOnAccept, onDecline: mockOnDecline }),
-    );
-
-    act(() => {
-      result.current.showRememberMePrompt({
-        email: 'test@test.com',
-      });
-    });
-
-    act(() => {
-      result.current.handleRememberMeDecline();
-    });
-
-    expect(result.current.showRememberMeModal).toBe(false);
-    expect(result.current.pendingCredentials).toBeNull();
-    expect(mockOnDecline).toHaveBeenCalledTimes(1);
-  });
-
-  it('handleRememberMeDecline marks credential prompt as declined', () => {
-    const { result } = renderHook(() =>
-      useRememberMe({ onAccept: mockOnAccept, onDecline: mockOnDecline }),
-    );
-
-    act(() => {
-      result.current.handleRememberMeDecline();
-    });
-
+    expect(notNow?.style).toBe('cancel');
     expect(mockMarkCredentialPromptDeclined).toHaveBeenCalledTimes(1);
+    expect(mockOnDecline).toHaveBeenCalledTimes(1);
+    expect(mockOnAccept).not.toHaveBeenCalled();
   });
 });
