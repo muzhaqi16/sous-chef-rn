@@ -16,6 +16,7 @@ import { useStore } from '#store';
 // consumes `useRememberMe` for the remember-login prompt.
 // `mockRealRememberMe` swaps the real hook in for the enrolment cases.
 let mockRealRememberMe = false;
+const mockShowRememberMePrompt = jest.fn();
 jest.mock('#features/auth/hooks/useRememberMe', () => ({
   useRememberMe: (
     events: Parameters<
@@ -28,7 +29,12 @@ jest.mock('#features/auth/hooks/useRememberMe', () => ({
             '#features/auth/hooks/useRememberMe',
           )
           .useRememberMe(events)
-      : { showRememberMePrompt: jest.fn() },
+      : // A new closure per render, as a changed `t` or store action gives.
+        {
+          showRememberMePrompt: (
+            credentials: import('#features/auth/hooks/useRememberMe').RememberMeCredentials,
+          ) => mockShowRememberMePrompt(credentials),
+        },
 }));
 
 const mockNavigateToForgotPassword = jest.fn();
@@ -322,5 +328,25 @@ describe('LoginScreen remembering the sign-in', () => {
       ),
     );
     expect(useStore.getState().navigationState).toBe('main_app');
+  });
+});
+
+describe('LoginScreen remember-login prompt', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+  afterEach(() => {
+    useStore.getState().setPostLoginCredentials(null);
+  });
+
+  it('prompts once per sign-in however often the prompt closure changes', async () => {
+    useStore.getState().setPostLoginCredentials({ email: 'chef@example.com' });
+
+    const { rerender } = render(<LoginScreen />);
+    rerender(<LoginScreen />);
+    rerender(<LoginScreen />);
+
+    await waitFor(() => expect(mockShowRememberMePrompt).toHaveBeenCalled());
+    expect(mockShowRememberMePrompt).toHaveBeenCalledTimes(1);
   });
 });

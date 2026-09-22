@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { errorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
 import { View } from 'react-native';
@@ -81,8 +81,11 @@ async function loadAuthInfoAsync(
 export function LoginScreen(): React.JSX.Element {
   const { t } = useTranslation();
   const { navigateToForgotPassword, navigateToSignUp } = useAuthNavigation();
-  const isLoggingIn = useAppStore(state => state.authIsLoading);
+  const authIsLoading = useAppStore(state => state.authIsLoading);
   const postLoginCredentials = useAppStore(state => state.postLoginCredentials);
+  // The sign-in lasts until the remember-login answer is acted on: the alert
+  // closes on the tap, before the enrolment behind "Remember" has finished.
+  const isLoggingIn = authIsLoading || !!postLoginCredentials;
   const setPostLoginCredentials = useAppStore(
     state => state.setPostLoginCredentials,
   );
@@ -109,10 +112,15 @@ export function LoginScreen(): React.JSX.Element {
     onDecline: finishRememberMe,
   });
 
+  // Each call pushes a new alert, and the effect re-runs whenever the prompt
+  // closure changes identity, so one stash must prompt exactly once.
+  const promptedFor = useRef<typeof postLoginCredentials>(null);
   useEffect(() => {
-    if (postLoginCredentials) {
-      showRememberMePrompt(postLoginCredentials);
+    if (!postLoginCredentials || promptedFor.current === postLoginCredentials) {
+      return;
     }
+    promptedFor.current = postLoginCredentials;
+    showRememberMePrompt(postLoginCredentials);
   }, [postLoginCredentials, showRememberMePrompt]);
 
   const [biometricSlotSeenOnMount, setShouldShowBiometricButton] =
