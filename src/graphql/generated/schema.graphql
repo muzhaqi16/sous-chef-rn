@@ -7742,7 +7742,6 @@ type Mutation {
   read them as defined above rather than by analogy with other bulk payloads:
   failed can be non-zero, skipped is "already stocked" rather than "could not
   be moved", and movedItems.length is not a count of what this call stocked.
-  docs/api/graphql-operation-conventions.md records what changed and when.
   
   A line whose catalog item was deleted is re-resolved from the name it still
   carries rather than skipped; only a line with neither fails.
@@ -11519,6 +11518,10 @@ type ShoppingList {
   Returns empty array if not linked to a home.
   """
   availablePantries: [Pantry!]!
+  """
+  The template this list was created from; null when the caller cannot view
+  that template.
+  """
   basedOnTemplate: ShoppingList
   budgetAmount: Float
   """
@@ -11539,6 +11542,10 @@ type ShoppingList {
   description: String
   estimatedTotal: Float!
   generatedFromMealPlan: Boolean!
+  """
+  The home this list belongs to; null when the caller cannot view that home,
+  which includes any caller reading the list through its share code.
+  """
   home: Home
   homeId: ID
   id: ID!
@@ -11558,6 +11565,10 @@ type ShoppingList {
   """
   navigateLink: ShareLink!
   nextRecurringDate: DateTime
+  """
+  Who owns this list; empty when the caller cannot view the list itself, as
+  when it is read through its share code without having joined.
+  """
   ownerships: [ShoppingListOwnership!]!
   plannedShopDate: DateTime
   priceTracking: Boolean!
