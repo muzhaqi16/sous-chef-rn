@@ -122,6 +122,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
 const styles = StyleSheet.create(theme => ({
   hero: {
     alignItems: 'center',
+    paddingTop: theme.spacing.lg,
     paddingBottom: theme.spacing.md,
   },
   avatar: {
@@ -153,6 +154,6 @@ const styles = StyleSheet.create(theme => ({
   info: {
     alignItems: 'center',
     gap: theme.spacing['2xs'],
-    marginTop: theme.spacing.sm,
+    marginTop: theme.spacing.md,
   },
 }));

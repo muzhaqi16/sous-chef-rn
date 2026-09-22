@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -39,7 +40,7 @@ export const ProfileScreen = () => {
   const { toProfilePhotoUpload, toDeleteAccount, toVerifyEmail, goBack } =
     useAppNavigation();
   const { profile, user, loading } = useProfileData();
-  const { sections, BiometricModal } = useConfigurableSettings();
+  const { sections, BiometricModal, logout } = useConfigurableSettings();
   const actionTrayRef = useRef<ActionTrayRef>(null);
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
@@ -61,12 +62,10 @@ export const ProfileScreen = () => {
     toProfilePhotoUpload();
   };
 
-  // Takes the row's OWN handler rather than looking the row up by key — one
-  // binding, the item the renderer already has in hand, so a renamed section
-  // key cannot leave the button firing telemetry and nothing else.
-  const handleLogout = (performLogout: (() => void) | undefined) => {
+  const handleLogout = () => {
     Telemetry.trackEvent('logout_clicked', { source: 'ProfileScreen' });
-    performLogout?.();
+    actionTrayRef.current?.close();
+    logout();
   };
 
   const handleMorePress = () => {
@@ -138,53 +137,53 @@ export const ProfileScreen = () => {
           <SettingsSection
             key={`section-${index}`}
             title={section.title}
-            items={section.items.map(item => {
-              // Wrap the row's own handler so the tap is recorded; the
-              // handler itself stays the one the settings config built.
-              if (item.key === 'logout') {
-                return {
-                  ...item,
-                  testID: profileTestIDs.logoutButton,
-                  onPress: () => handleLogout(item.onPress),
-                };
-              }
-              if (item.type === 'navigation') {
-                return { ...item, testID: profileTestIDs.menuItem(item.key) };
-              }
-              return item;
-            })}
+            items={section.items.map(item =>
+              item.type === 'navigation'
+                ? { ...item, testID: profileTestIDs.menuItem(item.key) }
+                : item,
+            )}
           />
         ))}
       {BiometricModal}
       <ActionTray ref={actionTrayRef}>
-        <AppPressable style={styles.menuItem} onPress={handleDeleteAccount}>
-          <Icon name="trash-outline" size={20} tone="error" />
-          <Text
-            role="bodyStrong"
-            tone="danger"
-            style={styles.menuItemTextDestructive}
+        <View style={styles.menu}>
+          <AppPressable
+            style={styles.menuItem(false)}
+            onPress={handleLogout}
+            testID={profileTestIDs.logoutButton}
           >
-            {t('account.deleteTitle')}
-          </Text>
-        </AppPressable>
+            <Icon name="log-out-outline" size={20} tone="textPrimary" />
+            <Text role="bodyStrong">{t('profile.labels.logout')}</Text>
+          </AppPressable>
+          <AppPressable
+            style={styles.menuItem(true)}
+            onPress={handleDeleteAccount}
+          >
+            <Icon name="trash-outline" size={20} tone="error" />
+            <Text role="bodyStrong" tone="danger">
+              {t('account.deleteTitle')}
+            </Text>
+          </AppPressable>
+        </View>
       </ActionTray>
     </SubScreen>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  menuItem: {
+  menu: {
+    gap: theme.spacing.sm,
+  },
+  menuItem: (destructive: boolean) => ({
     flexDirection: 'row',
     alignItems: 'center',
+    gap: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.error,
+    borderColor: destructive ? theme.colors.error : theme.colors.border,
     backgroundColor: 'transparent',
-  },
-  menuItemTextDestructive: {
-    marginLeft: theme.spacing.md,
-  },
+  }),
 }));

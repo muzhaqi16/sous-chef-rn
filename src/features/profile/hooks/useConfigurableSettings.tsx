@@ -286,54 +286,49 @@ export const useConfigurableSettings = () => {
       case 'changePassword':
         return { ...baseItem, onPress: toChangePassword };
 
-      // Action items
-      case 'logout':
-        return {
-          ...baseItem,
-          onPress: () => {
-            // `authService.logout` and not the store's own `logout` action:
-            // the store action resets state but never revokes the session
-            // server-side (which ends push delivery), hands the offline queue its owner change, or removes
-            // the persisted queue/navigation keys. Two sign-out paths that
-            // each clear a different subset is how the shared-device residue
-            // got there; this is the only one.
-            const signOut = () => {
-              // Keeps the biometric credential: signing back in after a
-              // deliberate sign-out is exactly what it exists for, and the
-              // refresh-token lineage this revokes cannot serve that.
-              void authService.logout({ keepBiometricCredentials: true });
-              logger.debug('User logged out');
-            };
-
-            // A deliberate sign-out DELETES the queue
-            // (`queueManager.onLogout`), so prompt only when there is something
-            // to lose; an empty queue stays a one-tap sign-out.
-            const pendingCount = queueStore.getPendingCount();
-            if (pendingCount === 0) {
-              signOut();
-              return;
-            }
-
-            alertService.alert(
-              t('profile.labels.logout'),
-              t('confirmations.logoutWithPending', { count: pendingCount }),
-              [
-                { text: t('labels.cancel'), style: 'cancel' },
-                {
-                  text: t('profile.labels.logout'),
-                  style: 'destructive',
-                  onPress: signOut,
-                },
-              ],
-            );
-          },
-        };
-
       default:
         logger.warn(`Unhandled setting key: ${config.key}`);
     }
 
     return baseItem;
+  };
+
+  const logout = () => {
+    // `authService.logout` and not the store's own `logout` action:
+    // the store action resets state but never revokes the session
+    // server-side (which ends push delivery), hands the offline queue its owner change, or removes
+    // the persisted queue/navigation keys. Two sign-out paths that
+    // each clear a different subset is how the shared-device residue
+    // got there; this is the only one.
+    const signOut = () => {
+      // Keeps the biometric credential: signing back in after a
+      // deliberate sign-out is exactly what it exists for, and the
+      // refresh-token lineage this revokes cannot serve that.
+      void authService.logout({ keepBiometricCredentials: true });
+      logger.debug('User logged out');
+    };
+
+    // A deliberate sign-out DELETES the queue
+    // (`queueManager.onLogout`), so prompt only when there is something
+    // to lose; an empty queue stays a one-tap sign-out.
+    const pendingCount = queueStore.getPendingCount();
+    if (pendingCount === 0) {
+      signOut();
+      return;
+    }
+
+    alertService.alert(
+      t('profile.labels.logout'),
+      t('confirmations.logoutWithPending', { count: pendingCount }),
+      [
+        { text: t('labels.cancel'), style: 'cancel' },
+        {
+          text: t('profile.labels.logout'),
+          style: 'destructive',
+          onPress: signOut,
+        },
+      ],
+    );
   };
 
   const sections = (() => {
@@ -357,5 +352,6 @@ export const useConfigurableSettings = () => {
   return {
     sections,
     BiometricModal,
+    logout,
   };
 };

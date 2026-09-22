@@ -129,14 +129,11 @@ describe('settingsConfig', () => {
       expect(appearanceItem!.type).toBe('navigation');
     });
 
-    it('has a logout action', () => {
-      const logoutSection = PROFILE_SETTINGS_CONFIG.find(s =>
-        s.items.some(i => i.key === 'logout'),
+    it('has no logout row; sign-out lives in the profile menu', () => {
+      const keys = PROFILE_SETTINGS_CONFIG.flatMap(s =>
+        s.items.map(i => i.key),
       );
-      expect(logoutSection).toBeDefined();
-      const logoutItem = logoutSection!.items.find(i => i.key === 'logout');
-      expect(logoutItem!.type).toBe('action');
-      expect(logoutItem!.labelKey).toBe('profile.labels.logout');
+      expect(keys).not.toContain('logout');
     });
 
     it('has Developer section with debugInfo and performanceDashboard', () => {

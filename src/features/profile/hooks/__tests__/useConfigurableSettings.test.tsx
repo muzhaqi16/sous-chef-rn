@@ -141,12 +141,6 @@ jest.mock('#/config/settingsConfig', () => ({
         },
       ],
     },
-    {
-      id: 'logout',
-      items: [
-        { key: 'logout', labelKey: 'profile.labels.logout', type: 'action' },
-      ],
-    },
   ],
 }));
 
@@ -200,7 +194,6 @@ function buildMocks() {
           enabledFeatures: [],
           betaFeatures: [],
           createdAt: '2025-01-01T00:00:00.000Z',
-          updatedAt: '2025-01-01T00:00:00.000Z',
           user: {
             __typename: 'User',
             id: 'user-1',
@@ -258,7 +251,7 @@ describe('useConfigurableSettings', () => {
       operationMocks: [settings.mock],
     });
 
-    expect(result.current.sections).toHaveLength(3);
+    expect(result.current.sections).toHaveLength(2);
     // `key` is the section's stable id; `title` is the resolved i18n key. The
     // two are asserted together because the screen branches on the former and
     // renders the latter, so a config that collapses them into one English
@@ -266,7 +259,6 @@ describe('useConfigurableSettings', () => {
     expect(result.current.sections.map(s => s.key)).toEqual([
       'appearanceAndLanguage',
       'security',
-      'logout',
     ]);
     expect(result.current.sections[0]!.title).toBe('Appearance & Language');
   });
@@ -295,17 +287,14 @@ describe('useConfigurableSettings', () => {
     expect(appearanceItem.type).toBe('navigation');
   });
 
-  it('signs out through authService when the logout action is pressed', () => {
+  it('signs out through authService', () => {
     const { settings } = buildMocks();
     const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
       operationMocks: [settings.mock],
     });
 
-    const accountSection = sectionById(result.current.sections, 'logout');
-    const logoutItem = itemByKey(accountSection.items, 'logout');
-
     act(() => {
-      logoutItem.onPress?.();
+      result.current.logout();
     });
 
     expect(mockLogout).toHaveBeenCalled();
@@ -320,13 +309,8 @@ describe('useConfigurableSettings', () => {
       operationMocks: [settings.mock],
     });
 
-    const logoutItem = itemByKey(
-      sectionById(result.current.sections, 'logout').items,
-      'logout',
-    );
-
     act(() => {
-      logoutItem.onPress?.();
+      result.current.logout();
     });
 
     expect(mockLogout).not.toHaveBeenCalled();
@@ -353,13 +337,8 @@ describe('useConfigurableSettings', () => {
       operationMocks: [settings.mock],
     });
 
-    const logoutItem = itemByKey(
-      sectionById(result.current.sections, 'logout').items,
-      'logout',
-    );
-
     await act(async () => {
-      logoutItem.onPress?.();
+      result.current.logout();
     });
 
     expect(mockLogout).toHaveBeenCalledWith({
