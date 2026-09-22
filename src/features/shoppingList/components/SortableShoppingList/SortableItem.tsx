@@ -19,7 +19,6 @@ import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 
-import { HIT_SLOP } from '#features/shoppingList/constants/touch';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
 import {
   useShoppingListTutorialState,
@@ -39,6 +38,7 @@ import {
 import type { ShoppingListRowItem } from './types';
 import { motion } from '#/theme/foundations/motion';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 /**
  * The row subscribes to its own entity via `useFragment(SortableItem_item)` and
@@ -268,7 +268,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             tutorialActions?.notifyMoveToPantryTapped();
           }}
           style={styles.moveToPantryButton}
-          hitSlop={HIT_SLOP}
+          hitSlop={hitSlop.md}
           accessibilityLabel={t('moveToPantry.title')}
           testID={shoppingListTestIDs.itemMoveToPantry(itemId)}
         >

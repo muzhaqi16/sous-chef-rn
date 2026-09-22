@@ -13,6 +13,7 @@ import { safeParseDate } from '#utils/dateUtils';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { formatRelativeToNow } from '#/utils/formatters/date';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface NotificationItemProps {
   notification: NotificationType;
@@ -84,7 +85,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
         <AppPressable
           style={styles.dismissButton}
           onPress={handleDismiss}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          hitSlop={hitSlop.lg}
           accessibilityLabel={t('notifications.dismissA11y')}
         >
           <Icon name="close" size={20} tone="textTertiary" />

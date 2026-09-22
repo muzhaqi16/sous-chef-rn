@@ -15,6 +15,7 @@ import {
   MEAL_TYPES,
   isLifestyleDietValue,
 } from '#features/recipes/utils/recipeFilterOptions';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 const COOK_TIMES = [15, 30, 45, 60];
 
@@ -112,7 +113,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
         <View style={styles.filterHeaderActions}>
           <Pressable
             onPress={() => setDraftFilters(DEFAULT_FILTERS)}
-            hitSlop={8}
+            hitSlop={hitSlop.md}
             accessibilityRole="button"
             accessibilityLabel={t('recipeFilters.clearAllA11y')}
           >
@@ -122,7 +123,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
           </Pressable>
           <Pressable
             onPress={onRequestClose}
-            hitSlop={8}
+            hitSlop={hitSlop.md}
             accessibilityRole="button"
             accessibilityLabel={t('recipeFilters.applyA11y')}
           >

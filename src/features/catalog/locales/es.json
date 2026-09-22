@@ -273,7 +273,6 @@
     "removeImage": "Eliminar imagen",
     "changePerspective": "Cambiar la perspectiva de la imagen",
     "selectPerspective": "Seleccionar perspectiva",
-    "cameraPermissionBody": "Se requiere permiso de cámara. Actívalo en los ajustes de tu dispositivo.",
     "chooseFromLibrary": "Elegir de la galería"
   },
   "itemPhotos": {

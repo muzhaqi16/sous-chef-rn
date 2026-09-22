@@ -1,4 +1,12 @@
+/** Touch area added around a small control; a prop value, so it is imported, not read from the theme. */
+export const hitSlop = {
+  sm: 4,
+  md: 8,
+  lg: 12,
+};
+
 export const sizes = {
+  hitSlop,
   // Component sizes
   button: {
     sm: 32,

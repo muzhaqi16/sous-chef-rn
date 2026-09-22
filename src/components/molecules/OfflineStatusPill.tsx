@@ -8,6 +8,7 @@ import { TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
 import { kitTestIDs } from '#components/testIDs';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface OfflineStatusPillProps {
   size?: number;
@@ -36,7 +37,7 @@ export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
       testID={kitTestIDs.offlineBanner}
       onPress={handlePress}
       style={[styles.pressable, style]}
-      hitSlop={8}
+      hitSlop={hitSlop.md}
       accessibilityRole="button"
       accessibilityLabel={message}
       accessibilityLiveRegion="polite"

@@ -26,6 +26,7 @@ import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { catalogTestIDs } from '#features/catalog/testIDs';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 /**
  * How many rows each section shows in the overview before a "More" affordance
@@ -221,7 +222,7 @@ export function AddItemSheet<
             <AppPressable
               onPress={() => setActiveSourceKey(groupConfig.key)}
               style={styles.moreButton}
-              hitSlop={8}
+              hitSlop={hitSlop.md}
               accessibilityRole="button"
               accessibilityLabel={`${t('addItemSheet.more')} ${sectionTitle}`}
             >

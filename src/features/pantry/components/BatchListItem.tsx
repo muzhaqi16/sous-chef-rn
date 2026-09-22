@@ -2,6 +2,7 @@ import React from 'react';
 import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
+import { daysUntilExpiry, expiryLabel } from '#domain/expiry';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -16,6 +17,7 @@ import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 import { Badge } from '#components/atoms/Badge';
 import { formatMonthDay } from '#/utils/formatters/date';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface BatchListItemProps {
   batch: PantryItemBatchFragment;
@@ -30,20 +32,8 @@ interface BatchListItemProps {
  */
 const getExpiryText = (expiresAt: string | null | undefined, t: Translate) => {
   if (!expiresAt) return null;
-  const now = new Date();
-  const expiry = new Date(expiresAt);
-  const diffDays = Math.ceil(
-    (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  if (diffDays < 0)
-    return { text: t('pantryItemDetail.batch.expired'), isExpired: true };
-  if (diffDays === 0)
-    return { text: t('labels.expiresToday'), isExpired: false };
-  return {
-    text: t('expiration.daysLeft', { count: diffDays }),
-    isExpired: false,
-  };
+  const diffDays = daysUntilExpiry(expiresAt);
+  return { text: expiryLabel(diffDays, t), isExpired: diffDays < 0 };
 };
 
 /**
@@ -162,7 +152,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               onPress={() => onOpen(batch.id)}
               accessibilityLabel={t('a11y.openBatch')}
               style={styles.actionButton}
-              hitSlop={8}
+              hitSlop={hitSlop.md}
             >
               <Icon name="open-outline" size={18} tone="primary" />
             </AppPressable>
@@ -172,7 +162,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               onPress={() => onWaste(batch.id)}
               accessibilityLabel={t('a11y.wasteBatch')}
               style={styles.actionButton}
-              hitSlop={8}
+              hitSlop={hitSlop.md}
             >
               <Icon name="trash-outline" size={18} tone="error" />
             </AppPressable>

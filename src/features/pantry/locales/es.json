@@ -31,7 +31,6 @@
       "opened": "Abierto",
       "wasted": "Desperdiciado",
       "depleted": "Agotado",
-      "expired": "Caducado",
       "depletedOn": "Agotado el {{date}}",
       "wastedOn": "Desperdiciado {{date}}",
       "costPerUnit": "{{cost}}/unidad",
@@ -145,9 +144,6 @@
     "tutorialAddSubtitle": "Toca para añadir este artículo a tu lista de la compra",
     "tutorialAddAllTitle": "Añadir todo de una vez",
     "tutorialAddAllSubtitle": "Añade todos los artículos con poco stock a tu lista de la compra de una vez",
-    "expired": "Caducado",
-    "expiresTomorrow": "Caduca mañana",
-    "expiresInDays": "Caduca en {{count}} días",
     "lowStockTitle": "Artículos con poco stock",
     "lowStockEmpty": "Todos los artículos están por encima del nivel mínimo",
     "remaining": "{{quantity}} {{unit}} restantes",
@@ -377,7 +373,6 @@
     "wasted": "Desperdiciado / Descartado",
     "noAction": "Sin acción",
     "expiringSoon": "Caduca pronto",
-    "alreadyExpired": "Ya caducado",
     "title": "¿Qué pasó con {{itemName}}?",
     "thisItem": "este artículo",
     "toast": {
@@ -393,18 +388,7 @@
     "all": "Todos"
   },
   "expiration": {
-    "noExpiryDate": "Sin fecha de caducidad",
-    "expiredDaysAgo_one": "Caducó hace {{count}} día",
-    "expiredDaysAgo_other": "Caducó hace {{count}} días",
-    "expiresToday": "¡Caduca hoy!",
-    "expiresTomorrow": "¡Caduca mañana!",
-    "expiresInDays_one": "Caduca en {{count}} día",
-    "expiresInDays_other": "Caduca en {{count}} días",
-    "daysLeft_one": "queda {{count}} día",
-    "daysLeft_other": "quedan {{count}} días",
-    "expired": "Caducado",
-    "daysToExpire_one": "{{count}} día para caducar",
-    "daysToExpire_other": "{{count}} días para caducar"
+    "noExpiryDate": "Sin fecha de caducidad"
   },
   "conversionPreview": {
     "approximate": "(aprox.)"

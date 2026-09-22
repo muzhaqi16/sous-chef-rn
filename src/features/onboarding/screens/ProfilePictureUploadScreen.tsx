@@ -13,16 +13,8 @@ import { Button } from '#components/molecules/Button';
 import { Link } from '#components/atoms/Link';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
-import type {
-  ImagePickerResponse,
-  MediaType,
-  CameraOptions,
-  ImageLibraryOptions,
-} from 'react-native-image-picker';
-import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
-import type { ImageValidationError } from '#utils/imageValidation';
-import { validateImageFile } from '#utils/imageValidation';
-import { imageErrorMessage, useImageUpload } from '#hooks/useImageUpload';
+import { useImageUpload } from '#hooks/useImageUpload';
+import { usePhotoCapture } from '#hooks/usePhotoCapture';
 import { useOnboardingNavigation } from '#features/onboarding/hooks/useOnboardingNavigation';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { ImageFile } from '#/types/media';
@@ -32,7 +24,6 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useProfileData } from '#features/profile/hooks/useProfileData';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { PermissionService } from '#services/permissions/PermissionService';
 import { useStore } from '#store';
 import { LocalImage } from '#components/atoms/LocalImage';
 
@@ -45,14 +36,6 @@ function syncExistingAvatar(
     setExistingAvatarUrl(avatar);
   }
 }
-
-const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
-  mediaType: 'photo' as MediaType,
-  includeBase64: false,
-  maxHeight: 2000,
-  maxWidth: 2000,
-  quality: 0.8,
-};
 
 const { width: screenWidth } = Dimensions.get('window');
 const AVATAR_SIZE = Math.min(screenWidth * 0.4, 200);
@@ -97,59 +80,16 @@ export const ProfilePictureUploadScreen = () => {
     }
   }, [profile?.avatar, hasLocalImage]);
 
-  const handleImageResponse = (response: ImagePickerResponse) => {
-    if (response.didCancel || response.errorCode || !response.assets?.[0]) {
-      return;
-    }
+  const { takePhoto, pickPhoto } = usePhotoCapture({ forProfile: true });
 
-    const asset = response.assets[0];
-    if (!asset.uri) return;
-    const imageFile: ImageFile = {
-      uri: asset.uri,
-      fileName: asset.fileName,
-      fileSize: asset.fileSize,
-      type: asset.type,
-    };
-
-    try {
-      validateImageFile(imageFile, true);
-      setSelectedImage(imageFile);
-      setCroppedImage(null); // Reset cropped image when new image is selected
-    } catch (error) {
-      const validationError = error as ImageValidationError;
-      // Its `message` is English by construction — for the log, never the user.
-      alertService.alert(
-        t('labels.invalidImage'),
-        imageErrorMessage(t, validationError, true),
-      );
-    }
+  const selectImage = ([imageFile]: ImageFile[]) => {
+    if (!imageFile) return;
+    setSelectedImage(imageFile);
+    setCroppedImage(null);
   };
 
-  const handleTakePhoto = async () => {
-    let permission;
-    try {
-      permission = await PermissionService.request('camera');
-    } catch {
-      // The picker reports through the callback; its promise only resolves.
-      void launchCamera(DEFAULT_OPTIONS, handleImageResponse);
-      return;
-    }
-
-    if (permission === 'granted') {
-      void launchCamera(DEFAULT_OPTIONS, handleImageResponse);
-    } else {
-      alertService.alert(
-        t('labels.cameraPermission'),
-        t('onBoarding.cameraPermissionTakePhotoMessage'),
-      );
-    }
-  };
-
-  const handleSelectPhoto = () => {
-    // Android Photo Picker doesn't require permissions
-    // iOS also allows launching without explicit permission on modern versions
-    void launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
-  };
+  const handleTakePhoto = async () => selectImage(await takePhoto());
+  const handleSelectPhoto = async () => selectImage(await pickPhoto());
 
   const handleCropImage = () => {
     if (!selectedImage) return;

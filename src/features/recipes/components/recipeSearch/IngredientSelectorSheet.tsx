@@ -18,6 +18,7 @@ import {
 } from '#features/recipes/components/recipeSearch/IngredientListItem';
 import type { useRecipeScreen } from '#features/recipes/hooks/useRecipeScreen';
 import { Text } from '#components/atoms/Text';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 // ── Types ──
 
@@ -112,7 +113,10 @@ export const IngredientSelectorSheet: React.FC<
                 count: screen.selectedIngredients.size,
               })}
             </Text>
-            <Pressable onPress={screen.clearSelectedIngredients} hitSlop={8}>
+            <Pressable
+              onPress={screen.clearSelectedIngredients}
+              hitSlop={hitSlop.md}
+            >
               <Text role="label" tone="accent">
                 {t('labels.clearAll')}
               </Text>

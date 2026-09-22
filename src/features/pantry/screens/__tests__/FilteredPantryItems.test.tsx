@@ -518,7 +518,7 @@ describe('FilteredPantryItems', () => {
 
     it('shows expired subtitle', () => {
       renderWithApollo(<FilteredPantryItems route={makeRoute('expired')} />);
-      expect(screen.getByText('Expired')).toBeTruthy();
+      expect(screen.getByText(/^Expired \d+ days? ago$/)).toBeTruthy();
     });
 
     it('excludes items that are only expiring soon', () => {

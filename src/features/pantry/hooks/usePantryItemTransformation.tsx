@@ -12,6 +12,7 @@ import {
 // render the result are responsible for re-running these on a language change.
 import { isTranslationKey, t as tGlobal } from '#/i18n';
 import type { Translate } from '#/i18n/types';
+import { daysUntilExpiry, expiryLabel } from '#domain/expiry';
 import { formatCurrency as formatMoney } from '#/utils/formatters/number';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { firstNonBlank } from '#/utils/firstNonBlank';
@@ -54,30 +55,11 @@ export const getExpirationStatus = (
   if (expiresIn === null) {
     return { text: tGlobal('expiration.noExpiryDate'), type: 'normal' };
   }
-  if (expiresIn < 0) {
-    return {
-      text: tGlobal('expiration.expiredDaysAgo', {
-        count: Math.abs(expiresIn),
-      }),
-      type: 'expired',
-    };
-  }
-  if (expiresIn === 0) {
-    return { text: tGlobal('expiration.expiresToday'), type: 'critical' };
-  }
-  if (expiresIn === 1) {
-    return { text: tGlobal('expiration.expiresTomorrow'), type: 'warning' };
-  }
-  if (expiresIn <= 3) {
-    return {
-      text: tGlobal('expiration.expiresInDays', { count: expiresIn }),
-      type: 'warning',
-    };
-  }
-  return {
-    text: tGlobal('expiration.daysLeft', { count: expiresIn }),
-    type: 'normal',
-  };
+  const text = expiryLabel(expiresIn, tGlobal);
+  if (expiresIn < 0) return { text, type: 'expired' };
+  if (expiresIn === 0) return { text, type: 'critical' };
+  if (expiresIn <= 3) return { text, type: 'warning' };
+  return { text, type: 'normal' };
 };
 
 interface PackageBreakdown {
@@ -189,27 +171,10 @@ export const formatQuantityBreakdown = (
 // Helper function to calculate expiry info for detail views
 export const getExpiryInfo = (expiresAt: string | null | undefined) => {
   if (!expiresAt) return null;
-  const now = new Date();
-  const expiry = new Date(expiresAt);
-  const diffDays = Math.ceil(
-    (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  if (diffDays < 0)
-    return {
-      text: tGlobal('expiration.expired'),
-      isExpired: true,
-      isUrgent: true,
-    };
-  if (diffDays === 0)
-    return {
-      text: tGlobal('labels.expiresToday'),
-      isExpired: false,
-      isUrgent: true,
-    };
+  const diffDays = daysUntilExpiry(expiresAt);
   return {
-    text: tGlobal('expiration.daysToExpire', { count: diffDays }),
-    isExpired: false,
+    text: expiryLabel(diffDays, tGlobal),
+    isExpired: diffDays < 0,
     isUrgent: diffDays <= 3,
   };
 };

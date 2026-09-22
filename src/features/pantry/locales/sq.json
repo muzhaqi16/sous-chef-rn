@@ -31,7 +31,6 @@
       "opened": "Hapur",
       "wasted": "Shpenzuar",
       "depleted": "Mbaruar",
-      "expired": "Skaduar",
       "depletedOn": "Mbaruar më {{date}}",
       "wastedOn": "Hedhur {{date}}",
       "costPerUnit": "{{cost}}/njësi",
@@ -145,9 +144,6 @@
     "tutorialAddSubtitle": "Trokit për të shtuar këtë artikull në listën e blerjeve",
     "tutorialAddAllTitle": "Shto të gjitha menjëherë",
     "tutorialAddAllSubtitle": "Shto të gjithë artikujt me stok të ulët në listën e blerjeve menjëherë",
-    "expired": "Skaduar",
-    "expiresTomorrow": "Skadon nesër",
-    "expiresInDays": "Skadon për {{count}} ditë",
     "lowStockTitle": "Artikuj me stok të ulët",
     "lowStockEmpty": "Të gjithë artikujt janë mbi nivelin minimal të stokut",
     "remaining": "{{quantity}} {{unit}} të mbetur",
@@ -377,7 +373,6 @@
     "wasted": "Hedhur / Shpërdoruar",
     "noAction": "Pa asnjë veprim",
     "expiringSoon": "Po skadon së shpejti",
-    "alreadyExpired": "Tashmë i skaduar",
     "title": "Çfarë ndodhi me {{itemName}}?",
     "thisItem": "këtë artikull",
     "toast": {
@@ -393,18 +388,7 @@
     "all": "Të gjitha"
   },
   "expiration": {
-    "noExpiryDate": "Pa datë skadimi",
-    "expiredDaysAgo_one": "Skaduar {{count}} ditë më parë",
-    "expiredDaysAgo_other": "Skaduar {{count}} ditë më parë",
-    "expiresToday": "Skadon sot!",
-    "expiresTomorrow": "Skadon nesër!",
-    "expiresInDays_one": "Skadon për {{count}} ditë",
-    "expiresInDays_other": "Skadon për {{count}} ditë",
-    "daysLeft_one": "{{count}} ditë e mbetur",
-    "daysLeft_other": "{{count}} ditë të mbetura",
-    "expired": "Skaduar",
-    "daysToExpire_one": "{{count}} ditë deri në skadim",
-    "daysToExpire_other": "{{count}} ditë deri në skadim"
+    "noExpiryDate": "Pa datë skadimi"
   },
   "conversionPreview": {
     "approximate": "(afërsisht)"

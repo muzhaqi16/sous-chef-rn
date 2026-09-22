@@ -6,6 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Text } from '#components/atoms/Text';
 import { ARROW_SIZE } from './spotlightConstants';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface SpotlightTooltipProps {
   /** Absolute position ({left,width,top|bottom}) of the tooltip card. */
@@ -59,13 +60,21 @@ export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
       {totalSteps != null &&
       stepIndex != null &&
       stepIndex >= totalSteps - 1 ? (
-        <Pressable onPress={onDismiss} style={styles.nextButton} hitSlop={8}>
+        <Pressable
+          onPress={onDismiss}
+          style={styles.nextButton}
+          hitSlop={hitSlop.md}
+        >
           <Text role="bodyStrong" tone="accent">
             {t('labels.done')}
           </Text>
         </Pressable>
       ) : onNext ? (
-        <Pressable onPress={onNext} style={styles.nextButton} hitSlop={8}>
+        <Pressable
+          onPress={onNext}
+          style={styles.nextButton}
+          hitSlop={hitSlop.md}
+        >
           <Text role="bodyStrong" tone="accent">
             {t('labels.next')} ›
           </Text>

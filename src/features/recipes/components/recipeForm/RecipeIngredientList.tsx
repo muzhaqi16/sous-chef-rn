@@ -9,6 +9,7 @@ import type { IngredientFormState } from '#features/recipes/screens/RecipeForm/f
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface RecipeIngredientListProps {
   ingredients: IngredientFormState[];
@@ -55,7 +56,7 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
             accessibilityLabel={t('a11y.removeNamed', {
               name: ingredient.name,
             })}
-            hitSlop={8}
+            hitSlop={hitSlop.md}
             style={styles.removeButton}
           >
             <Icon name="close-circle" size={20} tone="error" />

@@ -31,7 +31,6 @@
       "opened": "Opened",
       "wasted": "Wasted",
       "depleted": "Depleted",
-      "expired": "Expired",
       "depletedOn": "Depleted {{date}}",
       "wastedOn": "Wasted {{date}}",
       "costPerUnit": "{{cost}}/unit",
@@ -145,9 +144,6 @@
     "tutorialAddSubtitle": "Tap to add this item to your shopping list",
     "tutorialAddAllTitle": "Add all at once",
     "tutorialAddAllSubtitle": "Add all low stock items to your shopping list at once",
-    "expired": "Expired",
-    "expiresTomorrow": "Expires tomorrow",
-    "expiresInDays": "Expires in {{count}} days",
     "lowStockTitle": "Low Stock Items",
     "lowStockEmpty": "All items are above minimum stock levels",
     "remaining": "{{quantity}} {{unit}} remaining",
@@ -377,7 +373,6 @@
     "wasted": "Wasted / Discarded",
     "noAction": "No action taken",
     "expiringSoon": "Expiring soon",
-    "alreadyExpired": "Already expired",
     "title": "What happened with {{itemName}}?",
     "thisItem": "this item",
     "toast": {
@@ -393,18 +388,7 @@
     "all": "All"
   },
   "expiration": {
-    "noExpiryDate": "No expiry date",
-    "expiredDaysAgo_one": "Expired {{count}} day ago",
-    "expiredDaysAgo_other": "Expired {{count}} days ago",
-    "expiresToday": "Expires today!",
-    "expiresTomorrow": "Expires tomorrow!",
-    "expiresInDays_one": "Expires in {{count}} day",
-    "expiresInDays_other": "Expires in {{count}} days",
-    "daysLeft_one": "{{count}} day left",
-    "daysLeft_other": "{{count}} days left",
-    "expired": "Expired",
-    "daysToExpire_one": "{{count}} day to expire",
-    "daysToExpire_other": "{{count}} days to expire"
+    "noExpiryDate": "No expiry date"
   },
   "conversionPreview": {
     "approximate": "(approx.)"

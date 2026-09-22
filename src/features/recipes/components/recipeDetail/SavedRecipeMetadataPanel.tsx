@@ -6,6 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface SavedRecipeMetadataPanelProps {
   savedFolder: string | null;
@@ -40,7 +41,7 @@ export const SavedRecipeMetadataPanel: React.FC<
               key={star}
               onPress={() => onUpdateRating(star === savedRating ? null : star)}
               accessibilityLabel={t('a11y.rateStars', { count: star })}
-              hitSlop={4}
+              hitSlop={hitSlop.sm}
               disabled={updatingFolderTags}
             >
               <Icon

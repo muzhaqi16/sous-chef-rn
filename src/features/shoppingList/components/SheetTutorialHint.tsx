@@ -7,6 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { motion } from '#/theme/foundations/motion';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface SheetTutorialHintProps {
   text: string;
@@ -37,7 +38,11 @@ export const SheetTutorialHint: React.FC<SheetTutorialHintProps> = ({
           {text}
         </Text>
         {!!onSkip && (
-          <Pressable onPress={onSkip} hitSlop={8} style={styles.skipButton}>
+          <Pressable
+            onPress={onSkip}
+            hitSlop={hitSlop.md}
+            style={styles.skipButton}
+          >
             <Text role="label" tone="tertiary">
               {t('labels.skip')}
             </Text>
@@ -62,7 +67,11 @@ export const SheetTutorialHint: React.FC<SheetTutorialHintProps> = ({
         </Text>
       </View>
       {!!onSkip && (
-        <Pressable onPress={onSkip} hitSlop={8} style={styles.skipButton}>
+        <Pressable
+          onPress={onSkip}
+          hitSlop={hitSlop.md}
+          style={styles.skipButton}
+        >
           <Text role="label" tone="tertiary">
             {t('labels.skip')}
           </Text>

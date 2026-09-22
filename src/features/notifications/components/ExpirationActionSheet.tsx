@@ -6,6 +6,7 @@
 import React from 'react';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import type { Translate } from '#/i18n/types';
+import { expiryLabel } from '#domain/expiry';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -75,9 +76,7 @@ const getExpirySubtitle = (
   t: Translate,
 ): string => {
   if (daysUntilExpiry == null) return t('expirationAction.expiringSoon');
-  if (daysUntilExpiry <= 0) return t('expirationAction.alreadyExpired');
-  if (daysUntilExpiry === 1) return t('expiration.expiresTomorrow');
-  return t('expiration.expiresInDays', { count: daysUntilExpiry });
+  return expiryLabel(daysUntilExpiry, t);
 };
 
 function OptionRow({

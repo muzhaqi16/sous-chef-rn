@@ -16,6 +16,7 @@ import {
   formatWeekdayMonthDay,
 } from '#/utils/formatters/date';
 import { toMealDateTime } from '#/utils/dateUtils';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface DuplicatePlanSheetProps {
   visible: boolean;
@@ -136,7 +137,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
             onPress={() => setStartDateOffset(prev => prev - 7)}
             accessibilityLabel={t('a11y.previousWeek')}
             style={styles.dateButton}
-            hitSlop={8}
+            hitSlop={hitSlop.md}
           >
             <Icon name="chevron-back" size={20} tone="primary" />
           </Pressable>
@@ -152,7 +153,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
             onPress={() => setStartDateOffset(prev => prev + 7)}
             accessibilityLabel={t('a11y.nextWeek')}
             style={styles.dateButton}
-            hitSlop={8}
+            hitSlop={hitSlop.md}
           >
             <Icon name="chevron-forward" size={20} tone="primary" />
           </Pressable>

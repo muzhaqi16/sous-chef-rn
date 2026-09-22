@@ -60,6 +60,7 @@ import type {
   PantryContentProps,
   PantryContentRef,
 } from './pantryDisplay/types';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 // Survives unmount/remount (stack navigation) so a return visit skips the
 // skeletons; resets on app restart.
@@ -460,7 +461,7 @@ export const PantryContent = React.forwardRef<
                         >
                           <Pressable
                             onPress={onSettingsPress}
-                            hitSlop={8}
+                            hitSlop={hitSlop.md}
                             accessibilityRole="button"
                             accessibilityLabel={t('labels.pantrySettings')}
                           >

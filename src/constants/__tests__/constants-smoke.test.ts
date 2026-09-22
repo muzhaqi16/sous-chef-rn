@@ -5,7 +5,6 @@
 
 import { SHEET, SLIDE_PRESETS } from '../animations';
 import { SKILL_LEVELS, DIETARY_LIMITS } from '#domain/dietary';
-import { HIT_SLOP } from '#features/shoppingList/constants/touch';
 import {
   getTabBarBottomPadding,
   getScrollClearancePadding,
@@ -58,12 +57,6 @@ describe('dietary constants', () => {
     expect(DIETARY_LIMITS.prepTime).toEqual({ min: 0, max: 480 });
     expect(DIETARY_LIMITS.calories).toEqual({ min: 0, max: 10000 });
     expect(DIETARY_LIMITS.protein).toEqual({ min: 0, max: 500 });
-  });
-});
-
-describe('touch constants', () => {
-  it('exports HIT_SLOP with all sides', () => {
-    expect(HIT_SLOP).toEqual({ top: 8, bottom: 8, left: 8, right: 8 });
   });
 });
 

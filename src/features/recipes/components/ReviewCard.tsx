@@ -14,6 +14,7 @@ import {
 } from '#features/recipes/graphql/recipeFragments.generated';
 import { formatRelativeToNow } from '#/utils/formatters/date';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface ReviewCardProps {
   review: RecipeReviewFragment;
@@ -86,7 +87,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
             {!!onEdit && (
               <Pressable
                 onPress={onEdit}
-                hitSlop={8}
+                hitSlop={hitSlop.md}
                 style={({ pressed }) => pressed && styles.pressed}
                 accessibilityLabel={t('recipes.editReviewA11y')}
               >
@@ -96,7 +97,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
             {!!onDelete && (
               <Pressable
                 onPress={onDelete}
-                hitSlop={8}
+                hitSlop={hitSlop.md}
                 style={({ pressed }) => pressed && styles.pressed}
                 accessibilityLabel={t('recipes.deleteReviewA11y')}
               >

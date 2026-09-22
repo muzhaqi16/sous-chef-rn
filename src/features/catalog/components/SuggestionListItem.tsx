@@ -14,6 +14,7 @@ import { CachedImage } from '#components/atoms/CachedImage';
 import { SLIDE_PRESETS } from '#constants/animations';
 import { Text } from '#components/atoms/Text';
 import { catalogTestIDs } from '#features/catalog/testIDs';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 export interface SuggestionListItemProps {
   imageUrl?: string | null;
@@ -161,7 +162,7 @@ export const SuggestionListItem = ({
             style={styles.dismissButton}
             onPress={onDismiss}
             disabled={isExiting}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            hitSlop={hitSlop.md}
             accessibilityRole="button"
             accessibilityLabel={t('labels.dismissNamed', { name: title })}
             testID={
@@ -180,7 +181,7 @@ export const SuggestionListItem = ({
             style={styles.quickAddButton}
             onPress={onQuickAdd}
             disabled={disabled}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            hitSlop={hitSlop.md}
             accessibilityRole="button"
             accessibilityLabel={t('labels.addNamed', { name: title })}
           >

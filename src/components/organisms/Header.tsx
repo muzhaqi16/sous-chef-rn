@@ -11,6 +11,7 @@ import { GlassSurface, supportsGlass } from '#components/atoms/GlassSurface';
 import { HeaderActionIcon } from '#components/molecules/HeaderActionIcon';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { kitTestIDs } from '#components/testIDs';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 // ============================================
 // Types
@@ -110,7 +111,7 @@ export const Header: React.FC<HeaderProps> = ({
         testID={action.testID}
         accessibilityRole="button"
         accessibilityLabel={action.accessibilityLabel}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        hitSlop={hitSlop.lg}
       >
         <HeaderActionIcon action={action} />
         {action.badge !== undefined && action.badge > 0 && (
@@ -155,7 +156,7 @@ export const Header: React.FC<HeaderProps> = ({
             onPress={onClose}
             accessibilityRole="button"
             accessibilityLabel={t('labels.close')}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={hitSlop.lg}
             testID={kitTestIDs.headerCloseButton}
           >
             <Icon name="close" size={24} tone="textPrimary" />
@@ -167,7 +168,7 @@ export const Header: React.FC<HeaderProps> = ({
             onPress={onBack}
             accessibilityRole="button"
             accessibilityLabel={t('labels.goBack')}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={hitSlop.lg}
             testID={kitTestIDs.headerBackButton}
           >
             <Icon name="arrow-back" size={24} tone="textPrimary" />

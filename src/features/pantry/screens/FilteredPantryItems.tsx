@@ -48,6 +48,7 @@ import {
 } from '#features/pantry/context/FilteredItemsActionsContext';
 import { Text } from '#components/atoms/Text';
 import type { Translate } from '#/i18n/types';
+import { daysUntilExpiry, expiryLabel } from '#domain/expiry';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { SubScreen } from '#components/templates/SubScreen';
@@ -94,11 +95,7 @@ function formatExpirySubtitle(
   t: Translate,
 ): string {
   if (!expiresAt) return '';
-  const days = differenceInCalendarDays(new Date(expiresAt), new Date());
-  if (days < 0) return t('filteredPantry.expired');
-  if (days === 0) return t('labels.expiresToday');
-  if (days === 1) return t('filteredPantry.expiresTomorrow');
-  return t('filteredPantry.expiresInDays', { count: days });
+  return expiryLabel(daysUntilExpiry(expiresAt), t);
 }
 
 function buildModeConfig(

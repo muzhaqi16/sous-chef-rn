@@ -19,6 +19,7 @@ import {
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 export interface ManageFolderSheetProps {
   sheetRef: React.RefObject<BottomSheetModalRef | null>;
@@ -85,7 +86,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
           <Pressable
             onPress={onClose}
             accessibilityLabel={t('labels.close')}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={hitSlop.lg}
             style={({ pressed }) => pressed && styles.pressed}
           >
             <Icon name="close" size={24} tone="textPrimary" />

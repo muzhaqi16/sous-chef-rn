@@ -130,10 +130,6 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#features/shoppingList/constants/touch', () => ({
-  HIT_SLOP: { top: 8, bottom: 8, left: 8, right: 8 },
-}));
-
 jest.mock('#hooks/animations/useSlideAnimation', () => ({
   useSlideAnimation: jest.fn(() => ({
     animatedSlideStyle: {},

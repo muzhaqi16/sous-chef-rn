@@ -21,6 +21,7 @@ import {
   HeaderActionIcon,
   type HeaderAction,
 } from '#components/molecules/HeaderActionIcon';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 // Visible hero height below the status bar; `heroHeight` grows it by the top
 // inset so it fills edge-to-edge behind it.
@@ -62,7 +63,7 @@ const HeroChip: React.FC<{ action: HeaderAction }> = ({ action }) => (
     onPress={action.onPress}
     disabled={!!action.disabled || !!action.loading}
     style={styles.chip}
-    hitSlop={8}
+    hitSlop={hitSlop.md}
     testID={action.testID}
     accessibilityRole="button"
     accessibilityLabel={action.accessibilityLabel}

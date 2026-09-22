@@ -57,6 +57,7 @@ import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { Screen, type ScreenHeaderConfig } from '#components/templates/Screen';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 /**
  * Inner content component that uses modal context.
@@ -279,7 +280,7 @@ export const ShoppingListMainContent: React.FC<
   const headerRight = (
     <Pressable
       onPress={handleOpenSelector}
-      hitSlop={8}
+      hitSlop={hitSlop.md}
       testID={shoppingListTestIDs.listSelectorButton}
       accessibilityRole="button"
       accessibilityLabel={t('shoppingListScreen.switchListAccessibility')}

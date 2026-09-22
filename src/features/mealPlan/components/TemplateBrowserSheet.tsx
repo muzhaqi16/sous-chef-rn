@@ -28,6 +28,7 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 const CATEGORY_KEYS: {
   key: TemplateCategory | undefined;
@@ -128,7 +129,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
           <Text role="heading">{t('templateBrowser.title')}</Text>
           <Pressable
             onPress={onClose}
-            hitSlop={8}
+            hitSlop={hitSlop.md}
             accessibilityLabel={t('labels.close')}
           >
             <Icon name="close" size={24} tone="textSecondary" />

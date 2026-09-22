@@ -273,7 +273,6 @@
     "removeImage": "Remove image",
     "changePerspective": "Change image perspective",
     "selectPerspective": "Select Perspective",
-    "cameraPermissionBody": "Camera permission is required. Please enable it in your device settings.",
     "chooseFromLibrary": "Choose from Library"
   },
   "itemPhotos": {

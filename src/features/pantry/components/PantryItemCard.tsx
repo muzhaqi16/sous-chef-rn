@@ -12,7 +12,6 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { useRecyclingState } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
-import { differenceInCalendarDays } from 'date-fns';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
 import { BaseItemCard } from '#features/pantry/components/BaseItemCard/BaseItemCard';
@@ -26,6 +25,7 @@ import { Text } from '#components/atoms/Text';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 import { getExpirationStatus } from '#features/pantry/hooks/usePantryItemTransformation';
+import { daysUntilExpiry } from '#domain/expiry';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
 import { motion } from '#/theme/foundations/motion';
@@ -170,9 +170,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   const imageUrl = resolveImageUrl(pantryItem);
 
   const expiresAt = pantryItem.expiresAt;
-  const expiresIn = expiresAt
-    ? differenceInCalendarDays(new Date(expiresAt), new Date())
-    : null;
+  const expiresIn = expiresAt ? daysUntilExpiry(expiresAt) : null;
   const expStatus = getExpirationStatus(expiresIn);
   const showExpiration =
     expiresIn !== null && expiresIn <= EXPIRATION_DISPLAY_THRESHOLD_DAYS;

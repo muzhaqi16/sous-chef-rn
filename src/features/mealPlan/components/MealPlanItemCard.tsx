@@ -16,6 +16,7 @@ import {
   MealPlanItemCard_ItemFragmentDoc,
   type MealPlanItemCard_ItemFragment,
 } from './MealPlanItemCard.generated';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface MealPlanItemCardProps {
   item: MealPlanItemCard_ItemFragment;
@@ -68,7 +69,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
       onPress={() =>
         onToggleCompleted(item.id, item.isCompleted, !!item.recipe)
       }
-      hitSlop={8}
+      hitSlop={hitSlop.md}
       accessibilityLabel={
         item.isCompleted ? t('a11y.markIncomplete') : t('a11y.markComplete')
       }

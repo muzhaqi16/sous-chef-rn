@@ -4,6 +4,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { useTranslation } from '#/i18n';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface StarRatingInputProps {
   value: number;
@@ -26,7 +27,7 @@ export const StarRatingInput: React.FC<StarRatingInputProps> = ({
           key={star}
           onPress={() => onChange(star)}
           accessibilityLabel={t('a11y.rateStars', { count: star })}
-          hitSlop={6}
+          hitSlop={hitSlop.sm}
           disabled={disabled}
           style={({ pressed }) => pressed && styles.pressed}
         >

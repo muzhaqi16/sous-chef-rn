@@ -56,6 +56,12 @@ const PRODUCTION_SYNTAX = [
       'Use a named step of `theme.borderWidth` (none | hairline | thin | medium | thick | heavy) rather than a literal. A literal is a width the theme cannot change.',
   },
   {
+    id: 'hitSlopLiteral',
+    selector: "JSXAttribute[name.name='hitSlop']:has(Literal[raw=/^[0-9]/])",
+    message:
+      'Use a step of `hitSlop` from #/theme/foundations/sizes (sm | md | lg) rather than a literal.',
+  },
+  {
     id: 'toastLiteral',
     selector:
       'CallExpression[callee.object.name=/^(toastService|alertService)$/] > Literal[value=/[A-Za-z]{3}/]',

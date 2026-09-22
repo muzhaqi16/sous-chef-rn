@@ -9,6 +9,7 @@ import { Text } from '#components/atoms/Text';
 import { commonStyles } from '#/styles/commonStyles';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { rowType } from '#/theme/foundations/type';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 /** A trailing icon button on a recipe row. */
 export interface RecipeCardAction {
@@ -85,7 +86,7 @@ export const RecipeCardView: React.FC<RecipeCardViewProps> = ({
             <Pressable
               key={action.key}
               onPress={action.onPress}
-              hitSlop={8}
+              hitSlop={hitSlop.md}
               style={({ pressed }) => pressed && styles.pressed}
               accessibilityLabel={t(action.labelKey)}
             >

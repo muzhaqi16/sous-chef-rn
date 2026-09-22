@@ -11,6 +11,7 @@ import type { ImageFile } from '#/types/media';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { Text } from '#components/atoms/Text';
 import { LocalImage } from '#components/atoms/LocalImage';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 export interface SelectedImage extends ImageFile {
   perspective: string;
@@ -175,7 +176,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                 style={styles.removeButton}
                 onPress={() => handleRemoveImage(index)}
                 disabled={disabled}
-                hitSlop={11}
+                hitSlop={hitSlop.lg}
                 accessibilityRole="button"
                 accessibilityLabel={t('imagePicker.removeImage')}
               >
@@ -186,7 +187,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                   style={styles.primaryButton}
                   onPress={() => handleSetPrimary(index)}
                   disabled={disabled || image.isPrimary}
-                  hitSlop={11}
+                  hitSlop={hitSlop.lg}
                   accessibilityRole="button"
                   accessibilityState={{ selected: !!image.isPrimary }}
                   accessibilityLabel={t(

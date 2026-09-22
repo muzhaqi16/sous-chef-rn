@@ -24,6 +24,7 @@ import {
 } from '#components/atoms/themedComponents';
 import { motion } from '#/theme/foundations/motion';
 import { kitTestIDs } from '#components/testIDs';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 export interface BaseInputProps extends TextInputProps {
   label?: string;
@@ -145,7 +146,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           <AppPressable
             style={styles.leftIconWrapper}
             onPress={onClear}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={hitSlop.lg}
             accessibilityRole="button"
             accessibilityLabel={t('labels.clearInput')}
           >

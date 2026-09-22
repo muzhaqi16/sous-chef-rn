@@ -37,6 +37,7 @@ import {
   RecipeSearchInput,
   type RecipeSearchInputRef,
 } from '#features/recipes/components/RecipeSearchInput';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 // ── Inner component (thin — delegates to useRecipeScreen facade) ──
 
@@ -222,7 +223,7 @@ const RecipeMainInner: React.FC = () => {
       >
         <Pressable
           onPress={toSavedRecipes}
-          hitSlop={8}
+          hitSlop={hitSlop.md}
           accessibilityRole="button"
           accessibilityLabel={t('recipes.savedRecipes')}
         >
@@ -250,7 +251,7 @@ const RecipeMainInner: React.FC = () => {
       >
         <Pressable
           onPress={toMyRecipes}
-          hitSlop={8}
+          hitSlop={hitSlop.md}
           accessibilityRole="button"
           accessibilityLabel={t('recipes.myRecipes')}
         >
@@ -276,7 +277,7 @@ const RecipeMainInner: React.FC = () => {
       >
         <Pressable
           onPress={openFilterSheet}
-          hitSlop={8}
+          hitSlop={hitSlop.md}
           accessibilityRole="button"
           accessibilityLabel={t('recipes.dietaryRestrictions')}
         >
@@ -357,7 +358,7 @@ const RecipeMainInner: React.FC = () => {
             screen.clearSearch();
             searchInputRef.current?.clear();
           }}
-          hitSlop={8}
+          hitSlop={hitSlop.md}
           accessibilityRole="button"
           accessibilityLabel={t('recipes.clearSearch')}
         >

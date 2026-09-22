@@ -53,13 +53,13 @@ describe('getExpirationStatus', () => {
   });
   it('returns critical for today', () => {
     expect(getExpirationStatus(0)).toEqual({
-      text: 'Expires today!',
+      text: 'Expires today',
       type: 'critical',
     });
   });
   it('returns warning for tomorrow', () => {
     expect(getExpirationStatus(1)).toEqual({
-      text: 'Expires tomorrow!',
+      text: 'Expires tomorrow',
       type: 'warning',
     });
   });
@@ -68,7 +68,7 @@ describe('getExpirationStatus', () => {
   });
   it('returns normal for > 3 days', () => {
     expect(getExpirationStatus(10)).toEqual({
-      text: '10 days left',
+      text: 'Expires in 10 days',
       type: 'normal',
     });
   });
