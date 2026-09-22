@@ -12,6 +12,7 @@ import type {
 import type { DirtyFieldFlags, UnitSelection, FormDataInput } from './types';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { toDateKey } from '#/utils/dateUtils';
 
 // Cache updater for adding items to Pantry.itemsConnection
 
@@ -84,7 +85,9 @@ export function buildDirtyUpdateInput(
   }
 
   if (dirtyFields.expirationDate) {
-    input.expiresAt = data.expirationDate?.toISOString() ?? null;
+    input.expiresOn = data.expirationDate
+      ? toDateKey(data.expirationDate)
+      : null;
   }
 
   if (dirtyFields.tags) {

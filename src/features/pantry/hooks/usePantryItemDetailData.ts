@@ -78,7 +78,7 @@ export function usePantryItemDetailData(itemId: string) {
   // is acknowledged — the identical error means "not told yet" while unconfirmed.
   const deletedOnServer = !isUnconfirmed && isResourceNotFoundError(itemError);
 
-  // Edges arrive masked; materialize each so status/expiresAt reads and
+  // Edges arrive masked; materialize each so status/expiresOn reads and
   // BatchSection's sort/filter work directly.
   const batches: PantryItemBatchFragment[] =
     batchesData?.pantryItemBatchesConnection.edges

@@ -12,6 +12,7 @@ import {
 } from '#features/pantry/components/form/PantryItemForm.generated';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { extractNodes } from '#/utils/connectionUtils';
+import { toDateKey } from '#/utils/dateUtils';
 
 interface UsePantryItemFormDataArgs {
   itemId: string | null | undefined;
@@ -76,7 +77,7 @@ export function usePantryItemFormData({
     selectedPantryId ?? pantry?.id ?? existingPantryItem?.pantryId;
 
   const { data: pantryData } = useQuery(GetPantryDocument, {
-    variables: { id: currentPantryId ?? '' },
+    variables: { id: currentPantryId ?? '', today: toDateKey(new Date()) },
     skip: !currentPantryId,
     fetchPolicy: 'cache-first',
   });

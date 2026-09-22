@@ -8,5 +8,5 @@ fragment useCreatePantryItemUsage_pantryItem on PantryItem {
   lastUsedAt
   remainingNetWeight
   activeBatchCount
-  earliestBatchExpiration
+  earliestBatchExpiresOn
 }

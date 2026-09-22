@@ -5,11 +5,12 @@ import {
   PantrySortDirection,
   PREFERENCE_DEFAULTS,
 } from '#store/slices/preferenceTypes';
+import { fromDateKey } from '#/utils/dateUtils';
 
 interface SortableItem {
   id: string;
   itemName?: string | null;
-  expiresAt?: string | null;
+  expiresOn?: string | null;
   quantity: number;
   createdAt?: string;
 }
@@ -42,7 +43,7 @@ function cachedSort<T extends SortableItem>(
     if (option === PantrySortOption.EXPIRY) {
       expiryMap.set(
         item.id,
-        item.expiresAt ? new Date(item.expiresAt).getTime() : Infinity,
+        item.expiresOn ? fromDateKey(item.expiresOn).getTime() : Infinity,
       );
     } else if (option === PantrySortOption.RECENT) {
       createdMap.set(

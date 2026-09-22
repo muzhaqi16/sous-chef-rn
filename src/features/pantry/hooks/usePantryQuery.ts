@@ -20,6 +20,7 @@ import {
   useSetIsPantryQueryComplete,
 } from '#store/useAppStore';
 import { PAGE_SIZE } from '#features/pantry/constants/pagination';
+import { toDateKey } from '#/utils/dateUtils';
 
 /**
  * Direct fields the screen-level hooks need, plus an opaque
@@ -89,6 +90,7 @@ export function usePantryQuery(
         itemsFilter: itemsFilter ?? undefined,
         itemsOrderBy: itemsOrderBy ?? undefined,
         storageLocationsFirst: PAGE_SIZE.COMPACT,
+        today: toDateKey(new Date()),
       },
       skip: shouldSkip,
       ...(options?.fetchPolicy ? { fetchPolicy: options.fetchPolicy } : {}),

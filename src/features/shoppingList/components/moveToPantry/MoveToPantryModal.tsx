@@ -40,6 +40,7 @@ import {
   moveToPantrySchema,
   type MoveToPantryFormValues,
 } from './moveToPantryFormConfig';
+import { toDateKey } from '#/utils/dateUtils';
 
 interface MoveToPantryModalProps {
   visible: boolean;
@@ -52,7 +53,7 @@ interface MoveToPantryModalProps {
     actualQuantity: number;
     actualUnitId?: string;
     storageState?: StorageState;
-    expiresAt?: string;
+    expiresOn?: string;
     removeFromList: boolean;
     actualPrice?: number;
     notes?: string;
@@ -290,7 +291,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       actualQuantity: quantityValue,
       actualUnitId: confirmedUnitId ?? undefined,
       storageState,
-      expiresAt: confirmedExpiry?.toISOString(),
+      expiresOn: confirmedExpiry ? toDateKey(confirmedExpiry) : undefined,
       removeFromList,
       actualPrice,
       notes: notes || undefined,

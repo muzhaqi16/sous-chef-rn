@@ -81,7 +81,7 @@ function consumeMock(payload?: Record<string, unknown>) {
       quantityUsed: 1,
       usageUnitId: null,
       usageUnit: null,
-      usedAt: '2026-01-01T00:00:00.000Z',
+      usedAt: '2026-01-01',
       purpose: UsagePurpose.Cooking,
       notes: null,
       wasteReason: null,
@@ -92,10 +92,10 @@ function consumeMock(payload?: Record<string, unknown>) {
         id: 'item-1',
         quantity: 4,
         version: 2,
-        lastUsedAt: '2026-01-01T00:00:00.000Z',
+        lastUsedAt: '2026-01-01',
         remainingNetWeight: null,
         activeBatchCount: 0,
-        earliestBatchExpiration: null,
+        earliestBatchExpiresOn: null,
       },
       usedBy: null,
     },
@@ -124,13 +124,13 @@ function restockMock(payload?: Record<string, unknown>) {
         __typename: 'PantryItem',
         id: 'item-1',
         version: 2,
-        updatedAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01',
         quantity: 6,
         netWeight: null,
         remainingNetWeight: null,
-        expiresAt: null,
+        expiresOn: null,
         activeBatchCount: 1,
-        earliestBatchExpiration: null,
+        earliestBatchExpiresOn: null,
         netWeightUnit: null,
         packageBreakdown: null,
         quantityBreakdown: null,
@@ -432,7 +432,7 @@ describe('usePantryItemActions', () => {
           notes: 'Bought more',
           costPerUnit: undefined,
           totalCost: undefined,
-          expiresAt: null,
+          expiresOn: null,
           idempotencyKey: expect.any(String),
         },
       });
@@ -510,7 +510,7 @@ describe('usePantryItemActions', () => {
         result.current.handleRestockItem('item-1');
       });
 
-      const expiresAt = new Date('2026-12-31');
+      const expiresOn = new Date(2026, 11, 31);
       await act(async () => {
         await result.current.handleConfirmRestock(
           5,
@@ -519,7 +519,7 @@ describe('usePantryItemActions', () => {
           'unit-kg',
           2.5,
           12.5,
-          expiresAt,
+          expiresOn,
         );
       });
 
@@ -527,7 +527,7 @@ describe('usePantryItemActions', () => {
       expect(input.unitId).toBe('unit-kg');
       expect(input.costPerUnit).toBe(2.5);
       expect(input.totalCost).toBe(12.5);
-      expect(input.expiresAt).toBe('2026-12-31T00:00:00.000Z');
+      expect(input.expiresOn).toBe('2026-12-31');
     });
   });
 

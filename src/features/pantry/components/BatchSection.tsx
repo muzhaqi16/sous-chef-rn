@@ -43,10 +43,10 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
   const activeBatches = batches
     .filter(b => b.status === BatchStatus.Active)
     .sort((a, b) => {
-      if (!a.expiresAt && !b.expiresAt) return a.batchNumber - b.batchNumber;
-      if (!a.expiresAt) return 1;
-      if (!b.expiresAt) return -1;
-      return new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime();
+      if (!a.expiresOn && !b.expiresOn) return a.batchNumber - b.batchNumber;
+      if (!a.expiresOn) return 1;
+      if (!b.expiresOn) return -1;
+      return a.expiresOn.localeCompare(b.expiresOn);
     });
 
   const activeBatchCount = activeBatches.length;

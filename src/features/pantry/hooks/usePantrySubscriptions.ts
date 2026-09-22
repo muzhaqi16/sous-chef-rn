@@ -242,7 +242,7 @@ export function usePantrySubscriptions(userId?: string) {
           void handleItemChanged(payload, client, selectedPantryId);
           break;
 
-        // An alert is a change to the item's `isLowStock` / `expiresAt` /
+        // An alert is a change to the item's `isLowStock` / `expiresOn` /
         // batch counts, which the event doesn't carry.
         case PantrySubtype.LowStockAlert:
         case PantrySubtype.ExpirationAlert:

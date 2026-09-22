@@ -152,6 +152,7 @@ const DEFAULT_SCALAR_MOCKS: IMocks = {
   Float: () => 1,
   Boolean: () => true,
   DateTime: () => '2025-01-01T00:00:00.000Z',
+  LocalDate: () => '2025-01-01',
   Date: () => '2025-01-01',
   JSON: () => ({}),
   BigInt: () => '1',

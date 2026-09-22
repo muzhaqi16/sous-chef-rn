@@ -54,6 +54,7 @@ import { useRecipeSuggestionsForItem } from '#features/pantry/hooks/useRecipeSug
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
 import { commonStyles } from '#/styles/commonStyles';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
+import { daysUntilExpiry } from '#domain/expiry';
 
 /**
  * Extracted so `styles.useVariants` is called once per instance.
@@ -148,7 +149,7 @@ export const PantryItemDetail: React.FC<
   };
 
   const imageUrl = resolveImageUrl(item, 'large');
-  const expiryInfo = getExpiryInfo(item?.expiresAt);
+  const expiryInfo = getExpiryInfo(item?.expiresOn);
   const daysInPantry = getDaysInPantry(item?.createdAt);
   const storageStateDisplay = formatStorageState(item?.storageState, t);
   const brandName = item?.brand?.name ?? null;
@@ -212,8 +213,8 @@ export const PantryItemDetail: React.FC<
     batches.some(
       batch =>
         batch.status === BatchStatus.Active &&
-        !!batch.expiresAt &&
-        new Date(batch.expiresAt) < new Date(),
+        !!batch.expiresOn &&
+        daysUntilExpiry(batch.expiresOn) < 0,
     );
 
   const discardActions: HeaderAction[] =

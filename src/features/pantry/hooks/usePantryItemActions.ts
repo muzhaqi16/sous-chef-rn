@@ -22,6 +22,7 @@ import {
   UsePantryItemActions_QuantityFragmentDoc,
   UsePantryItemActions_IdFragmentDoc,
 } from './usePantryItemActions.generated';
+import { toDateKey } from '#/utils/dateUtils';
 
 interface UsePantryItemActionsOptions {
   removeItem: (id: string) => Promise<void>;
@@ -305,7 +306,7 @@ export function usePantryItemActions({
     }
 
     const restockNotes = notes || undefined;
-    const expiresAtValue = expiresAt ? expiresAt.toISOString() : null;
+    const expiresOn = expiresAt ? toDateKey(expiresAt) : null;
     const revertOptimistic = () => {
       if (canOptimistic) {
         revertQuantity(itemId, originalQty);
@@ -333,7 +334,7 @@ export function usePantryItemActions({
               notes: restockNotes,
               costPerUnit,
               totalCost,
-              expiresAt: expiresAtValue,
+              expiresOn,
               // idempotencyKey dedups the restock ledger row on replay.
               idempotencyKey: generateEntityId(),
             },

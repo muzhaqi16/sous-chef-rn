@@ -6,16 +6,10 @@ import { daysUntilExpiry, expiryLabel } from '#/domain/expiry';
 describe('daysUntilExpiry', () => {
   const now = new Date(2026, 8, 21, 23, 30);
 
-  it('counts calendar days, so a date later today is today', () => {
-    expect(
-      daysUntilExpiry(new Date(2026, 8, 21, 23, 59).toISOString(), now),
-    ).toBe(0);
-    expect(
-      daysUntilExpiry(new Date(2026, 8, 22, 0, 5).toISOString(), now),
-    ).toBe(1);
-    expect(daysUntilExpiry(new Date(2026, 8, 19, 12).toISOString(), now)).toBe(
-      -2,
-    );
+  it('reads the key as a local day, so late evening is still that day', () => {
+    expect(daysUntilExpiry('2026-09-21', now)).toBe(0);
+    expect(daysUntilExpiry('2026-09-22', now)).toBe(1);
+    expect(daysUntilExpiry('2026-09-19', now)).toBe(-2);
   });
 });
 

@@ -30,9 +30,9 @@ interface BatchListItemProps {
  * Takes the hook's `t` rather than the module-level helper, which does not
  * re-render on a language change.
  */
-const getExpiryText = (expiresAt: string | null | undefined, t: Translate) => {
-  if (!expiresAt) return null;
-  const diffDays = daysUntilExpiry(expiresAt);
+const getExpiryText = (expiresOn: string | null | undefined, t: Translate) => {
+  if (!expiresOn) return null;
+  const diffDays = daysUntilExpiry(expiresOn);
   return { text: expiryLabel(diffDays, t), isExpired: diffDays < 0 };
 };
 
@@ -66,7 +66,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
   });
   const batch = fragmentResult.complete ? fragmentResult.data : batchSource;
 
-  const expiryInfo = getExpiryText(batch.expiresAt, t);
+  const expiryInfo = getExpiryText(batch.expiresOn, t);
   const isActive = batch.status === BatchStatus.Active;
 
   return (

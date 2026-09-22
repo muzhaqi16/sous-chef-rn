@@ -54,6 +54,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
 import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
+import { fromDateKey } from '#/utils/dateUtils';
 
 export interface PantryItemFormData {
   itemName?: string;
@@ -105,7 +106,7 @@ const formValuesFromItem = (
   storageState: item.storageState,
   condition: item.condition,
   location: item.storageLocation?.name ?? '',
-  expirationDate: item.expiresAt ? new Date(item.expiresAt) : undefined,
+  expirationDate: item.expiresOn ? fromDateKey(item.expiresOn) : undefined,
   notes: item.storageNotes ?? '',
   category: item.item.categories[0]?.category.name ?? '',
   tags: item.tags,

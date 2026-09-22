@@ -9,6 +9,7 @@ import {
 } from '#features/pantry/graphql/pantry.generated';
 import { PantrySuggestionSource } from '#/graphql/generated/schemaTypes';
 import { usePantryItemSuggestions } from '../usePantryItemSuggestions';
+import { toDateKey } from '#/utils/dateUtils';
 
 jest.mock('#utils/imageUtils', () => ({
   resolveImageUrl: (item: { imageUrl?: string | null } | null | undefined) =>
@@ -38,7 +39,7 @@ function makeSuggestion(overrides: Partial<Suggestion> = {}): Suggestion {
     minQuantity: null,
     restockQuantity: null,
     daysUntilExpiry: null,
-    expiresAt: null,
+    expiresOn: null,
     lastQuantity: null,
     lastUnitId: null,
     frequencyCount: null,
@@ -55,7 +56,8 @@ function makeSuggestion(overrides: Partial<Suggestion> = {}): Suggestion {
   };
 }
 
-const VARIABLES = { pantryId: 'pantry-1', limit: 20 };
+const TODAY = toDateKey(new Date());
+const VARIABLES = { pantryId: 'pantry-1', limit: 20, today: TODAY };
 
 function buildData(suggestions: Suggestion[]): GetPantryItemSuggestionsQuery {
   // Each source is fetched via its own aliased field; bucket the flat input.
@@ -290,7 +292,11 @@ describe('usePantryItemSuggestions', () => {
       () => usePantryItemSuggestions({ pantryId: 'pantry-1', limit: 5 }),
       {
         operationMocks: [
-          buildMock([makeSuggestion()], { pantryId: 'pantry-1', limit: 5 }),
+          buildMock([makeSuggestion()], {
+            pantryId: 'pantry-1',
+            limit: 5,
+            today: TODAY,
+          }),
         ],
       },
     );

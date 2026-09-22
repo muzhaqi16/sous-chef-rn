@@ -169,8 +169,8 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   const name = pantryItem.itemName;
   const imageUrl = resolveImageUrl(pantryItem);
 
-  const expiresAt = pantryItem.expiresAt;
-  const expiresIn = expiresAt ? daysUntilExpiry(expiresAt) : null;
+  const expiresOn = pantryItem.expiresOn;
+  const expiresIn = expiresOn ? daysUntilExpiry(expiresOn) : null;
   const expStatus = getExpirationStatus(expiresIn);
   const showExpiration =
     expiresIn !== null && expiresIn <= EXPIRATION_DISPLAY_THRESHOLD_DAYS;

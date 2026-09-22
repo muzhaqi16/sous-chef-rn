@@ -34,7 +34,8 @@ export interface MoveToPantryInput {
   actualQuantity: number;
   actualUnitId?: string;
   storageState?: StorageState;
-  expiresAt?: string;
+  /** YYYY-MM-DD. */
+  expiresOn?: string;
   removeFromList: boolean;
   actualPrice?: number;
   notes?: string;
@@ -203,7 +204,7 @@ export function useMoveToPantry({
         // The API tracks the stack in the stated unit, else the line's own.
         unitId: input.actualUnitId ?? item.unit?.id,
         storageState: input.storageState,
-        expiresAt: input.expiresAt,
+        expiresOn: input.expiresOn,
       },
       client.cache,
     );
@@ -318,7 +319,7 @@ export function useMoveToPantry({
               actualQuantity: input.actualQuantity,
               actualUnitId: input.actualUnitId,
               storageState: input.storageState,
-              expiresAt: input.expiresAt,
+              expiresOn: input.expiresOn,
               removeFromList: input.removeFromList,
               actualPrice: input.actualPrice,
               notes: input.notes,

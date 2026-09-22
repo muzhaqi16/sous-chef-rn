@@ -29,7 +29,7 @@ export interface OptimisticPantryItemFields {
   unitId?: string | null;
   storageState?: StorageState | null;
   /** ISO date string. */
-  expiresAt?: string | null;
+  expiresOn?: string | null;
   /** Storage location *name* (an optimistic placeholder id is generated). */
   location?: string | null;
   minQuantity?: number | null;
@@ -110,7 +110,7 @@ export function buildOptimisticPantryItem(
     itemName: fields.itemName,
     quantity: fields.quantity ?? 1,
     storageState: fields.storageState ?? StorageState.None,
-    expiresAt: fields.expiresAt ?? null,
+    expiresOn: fields.expiresOn ?? null,
     lowStockAlert: false,
     isLowStock: false,
     minQuantity: fields.minQuantity ?? null,
@@ -123,7 +123,7 @@ export function buildOptimisticPantryItem(
     portionUnit: null,
     remainingPortions: null,
     activeBatchCount: 0,
-    earliestBatchExpiration: null,
+    earliestBatchExpiresOn: null,
     item: {
       __typename: 'Item',
       id: catalogItemId,

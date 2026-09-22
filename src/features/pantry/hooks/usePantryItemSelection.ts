@@ -33,6 +33,7 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
+import { toDateKey } from '#/utils/dateUtils';
 
 type PantryItemsConnection = NonNullable<
   GetPantryQuery['pantry']
@@ -95,7 +96,15 @@ export function usePantryItemSelection(pantryId: string | null | undefined) {
   const client = useApolloClient();
   const { data, loading, refetch } = useQuery(
     GetPantryDocument,
-    pantryId ? { variables: { id: pantryId, itemsFirst: 100 } } : skipToken,
+    pantryId
+      ? {
+          variables: {
+            id: pantryId,
+            itemsFirst: 100,
+            today: toDateKey(new Date()),
+          },
+        }
+      : skipToken,
   );
 
   const { removeItem } = usePantryItemMutations({

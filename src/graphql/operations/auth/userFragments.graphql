@@ -14,7 +14,6 @@ fragment LoginUser on User {
   canAccessDevTools
   onBoarded
   createdAt
-  updatedAt
   timezone
   # The currency the SERVER records a new cost in when nothing else names one
   # (`resolveIntakeCurrency`: purchase → list → this → the system default). Read
@@ -22,7 +21,6 @@ fragment LoginUser on User {
   # display that disagreed with intake would misreport what the money is.
   preferredCurrency
   defaultHomeId
-  defaultShoppingListId
   defaultHome {
     id
     name

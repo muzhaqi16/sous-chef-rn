@@ -13,6 +13,7 @@ import {
 } from '../PantryItemCard.generated';
 import { PantryActionsProvider } from '../PantryActionsContext';
 import { StorageState } from '#/graphql/generated/schemaTypes';
+import { toDateKey } from '#/utils/dateUtils';
 
 jest.mock('react-native-worklets', () => ({
   createWorkletRuntime: jest.fn(),
@@ -119,7 +120,7 @@ interface BuildItemOverrides {
   quantity?: number;
   unitSymbol?: string;
   storageLocationName?: string | null;
-  expiresAt?: string | null;
+  expiresOn?: string | null;
   imageUrl?: string | null;
   packageBreakdown?: {
     count: number;
@@ -154,13 +155,13 @@ function buildItem(
       ? { __typename: 'Unit', ...overrides.portionUnit }
       : null,
     remainingPortions: overrides.remainingPortions ?? null,
-    expiresAt: overrides.expiresAt ?? null,
+    expiresOn: overrides.expiresOn ?? null,
     storageState: StorageState.Refrigerated,
     lastUsedAt: null,
     netWeight: null,
     remainingNetWeight: null,
     activeBatchCount: overrides.activeBatchCount ?? 1,
-    updatedAt: '2025-01-01T00:00:00Z',
+    updatedAt: '2025-01-01',
     item: {
       __typename: 'Item',
       id: `item-${overrides.id ?? 'pantry-1'}`,
@@ -282,7 +283,7 @@ describe('PantryItemCard', () => {
     const expires = new Date();
     expires.setDate(expires.getDate() + 3);
     renderCard({
-      expiresAt: expires.toISOString(),
+      expiresOn: toDateKey(expires),
       storageLocationName: 'Freezer',
       quantityBreakdown: {
         fullPackages: 2,
@@ -318,11 +319,11 @@ describe('PantryItemCard', () => {
     expect(screen.getByText('Out of stock')).toBeTruthy();
   });
 
-  it('renders expiration text when expiresAt is set', () => {
+  it('renders expiration text when expiresOn is set', () => {
     // Three days from "now" — getExpirationStatus returns a warning text
     const expires = new Date();
     expires.setDate(expires.getDate() + 3);
-    renderCard({ expiresAt: expires.toISOString() });
+    renderCard({ expiresOn: toDateKey(expires) });
     // getExpirationStatus may emit "Expires in 3 days" or similar — assert on
     // a stable substring so the test isn't tied to copy.
     expect(screen.getAllByText(/day/i).length).toBeGreaterThan(0);
@@ -333,14 +334,14 @@ describe('PantryItemCard', () => {
     // list row and must not render.
     const expires = new Date();
     expires.setDate(expires.getDate() + 113);
-    renderCard({ expiresAt: expires.toISOString() });
+    renderCard({ expiresOn: toDateKey(expires) });
     expect(screen.queryByText(/day/i)).toBeNull();
   });
 
   it('shows expiration text at the edge of the display window', () => {
     const expires = new Date();
     expires.setDate(expires.getDate() + 10);
-    renderCard({ expiresAt: expires.toISOString() });
+    renderCard({ expiresOn: toDateKey(expires) });
     expect(screen.getAllByText(/day/i).length).toBeGreaterThan(0);
   });
 

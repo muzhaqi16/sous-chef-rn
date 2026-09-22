@@ -17,14 +17,20 @@ export const pantryTypePolicies: TypePolicies = {
     fields: {
       itemsConnection: itemsConnectionFieldPolicy(['filters', 'orderBy']),
       storageLocationsConnection: mergeConnectionByNodeId(),
+      // `today` only moves the expiring window; keying on it would empty a warm
+      // cache at midnight.
       suggestions: {
+        keyArgs: ['limit', 'sources', 'expirationDays'],
         merge(existing: unknown = [], incoming: unknown) {
           if (incoming == null) return existing;
           return incoming;
         },
       },
       // `true` is Apollo's shorthand for `mergeObjects(existing, incoming)`.
+      // Unkeyed: mutations write `stats` with no `today`, and must land on the
+      // entry `GetPantry` reads with one.
       stats: {
+        keyArgs: false,
         merge: true,
       },
     },

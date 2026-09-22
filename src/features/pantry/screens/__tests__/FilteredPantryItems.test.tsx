@@ -5,6 +5,7 @@ import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { FilteredPantryItems } from '../FilteredPantryItems';
+import { toDateKey } from '#/utils/dateUtils';
 
 // Structural shape consumed by the screen via the mocked `usePantryManagement`.
 type MockPantryItem = {
@@ -15,7 +16,7 @@ type MockPantryItem = {
   quantity: number;
   unit: { symbol: string } | null;
   isLowStock: boolean;
-  expiresAt?: string;
+  expiresOn?: string;
 };
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -147,7 +148,7 @@ const mockExpiringItems = [
     quantity: 1,
     unit: { symbol: 'gal' },
     isLowStock: false,
-    expiresAt: tomorrow.toISOString(),
+    expiresOn: toDateKey(tomorrow),
   },
   {
     id: 'ex2',
@@ -156,7 +157,7 @@ const mockExpiringItems = [
     quantity: 2,
     unit: { symbol: 'cups' },
     isLowStock: false,
-    expiresAt: in3Days.toISOString(),
+    expiresOn: toDateKey(in3Days),
   },
 ];
 
@@ -168,7 +169,7 @@ const mockExpiredItems = [
     quantity: 1,
     unit: { symbol: 'steak' },
     isLowStock: false,
-    expiresAt: sixDaysAgo.toISOString(),
+    expiresOn: toDateKey(sixDaysAgo),
   },
 ];
 
@@ -478,7 +479,9 @@ describe('FilteredPantryItems', () => {
       renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
       expect(mockUsePantryManagement).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ filters: { expiringSoon: true } }),
+        expect.objectContaining({
+          filters: { expiringSoon: true, today: toDateKey(new Date()) },
+        }),
       );
     });
 
@@ -488,7 +491,9 @@ describe('FilteredPantryItems', () => {
       renderWithApollo(<FilteredPantryItems route={makeRoute('expired')} />);
       expect(mockUsePantryManagement).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ filters: { expiringSoon: true } }),
+        expect.objectContaining({
+          filters: { expiringSoon: true, today: toDateKey(new Date()) },
+        }),
       );
     });
 

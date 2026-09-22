@@ -16,6 +16,7 @@ import {
   PantryItemCard_PantryItemFragmentDoc,
   type PantryItemCard_PantryItemFragment,
 } from '../PantryItemCard.generated';
+import { toDateKey } from '#/utils/dateUtils';
 
 // PantryContent now reads `useApolloClient` for the image-preload effect and
 // each `PantryItemCard` cell subscribes to its own entity via `useFragment`.
@@ -60,10 +61,10 @@ function createMockPantryItem(
     id: 'mock-id',
     itemName: 'Mock Item',
     quantity: 1,
-    expiresAt: null,
-    createdAt: '2024-01-01T00:00:00Z',
+    expiresOn: null,
+    createdAt: '2024-01-01',
     updatedAt: null,
-    addedAt: '2024-01-01T00:00:00Z',
+    addedAt: '2024-01-01',
     addedBy: null,
     lastModifiedBy: null,
     storageState: 'AMBIENT',
@@ -82,7 +83,7 @@ function createMockPantryItem(
       averageShelfLife: null,
       defaultUnit: null,
       displayUnit: null,
-      createdAt: '2024-01-01T00:00:00Z',
+      createdAt: '2024-01-01',
       updatedAt: null,
       isVerified: false,
       verifiedAt: null,
@@ -480,7 +481,7 @@ describe('PantryContent', () => {
             id: '1',
             itemName: 'X',
             quantity: 1,
-            expiresAt: null,
+            expiresOn: null,
           }),
         ]}
       />,
@@ -792,13 +793,13 @@ describe('PantryContent', () => {
   });
 
   it('renders items with expiration dates', () => {
-    const futureDate = new Date(Date.now() + 2 * 86400000).toISOString();
+    const futureDate = toDateKey(new Date(Date.now() + 2 * 86400000));
     const items = [
       createMockPantryItem({
         id: '1',
         itemName: 'Yogurt',
         quantity: 1,
-        expiresAt: futureDate,
+        expiresOn: futureDate,
       }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);
@@ -806,13 +807,13 @@ describe('PantryContent', () => {
   });
 
   it('renders items with expired dates', () => {
-    const pastDate = new Date(Date.now() - 2 * 86400000).toISOString();
+    const pastDate = toDateKey(new Date(Date.now() - 2 * 86400000));
     const items = [
       createMockPantryItem({
         id: '1',
         itemName: 'Old Milk',
         quantity: 1,
-        expiresAt: pastDate,
+        expiresOn: pastDate,
       }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);
