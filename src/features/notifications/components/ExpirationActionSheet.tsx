@@ -19,6 +19,7 @@ import { Icon, type IconName } from '#utils/iconUtils';
 import { Title } from '#components/atoms/Title';
 import { Text } from '#components/atoms/Text';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { useToday } from '#hooks/useToday';
 
 interface ExpirationActionSheetProps {
   visible: boolean;
@@ -73,10 +74,11 @@ const EXPIRATION_ACTIONS: {
 
 const getExpirySubtitle = (
   expiresOn: string | null | undefined,
+  today: string,
   t: Translate,
 ): string => {
   if (!expiresOn) return t('expirationAction.expiringSoon');
-  return expiryLabel(daysUntilExpiry(expiresOn), t);
+  return expiryLabel(daysUntilExpiry(expiresOn, today), t);
 };
 
 function OptionRow({
@@ -120,6 +122,7 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
   onDismiss,
 }) => {
   const { t } = useTranslation();
+  const today = useToday();
   // State-driven presentation via visible prop (no manual ref access during render)
   const { ref, modalProps, insets } = useStandardBottomSheet({
     visible,
@@ -131,7 +134,7 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
     firstNonBlank(notification?.pantryItemName) ??
     t('expirationAction.thisItem');
   const subtitle = notification
-    ? getExpirySubtitle(notification.expiresOn, t)
+    ? getExpirySubtitle(notification.expiresOn, today, t)
     : '';
 
   return (

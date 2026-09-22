@@ -171,10 +171,10 @@ export const formatQuantityBreakdown = (
 // Helper function to calculate expiry info for detail views
 export const getExpiryInfo = (
   expiresOn: string | null | undefined,
-  now?: Date,
+  today: string,
 ) => {
   if (!expiresOn) return null;
-  const diffDays = daysUntilExpiry(expiresOn, now);
+  const diffDays = daysUntilExpiry(expiresOn, today);
   return {
     text: expiryLabel(diffDays, tGlobal),
     isExpired: diffDays < 0,

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useToday } from '#hooks/useToday';
 import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
@@ -27,6 +28,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
   onDismiss,
 }) => {
   const { t } = useTranslation();
+  const today = useToday();
 
   const handlePress = () => {
     onPress(notification);
@@ -41,7 +43,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
     return date ? formatRelativeToNow(date) : t('notifications.recently');
   })();
 
-  const copy = getNotificationCopy(notification, t);
+  const copy = getNotificationCopy(notification, t, today);
 
   return (
     <AppPressable

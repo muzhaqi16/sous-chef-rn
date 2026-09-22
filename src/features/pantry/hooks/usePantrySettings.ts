@@ -17,7 +17,7 @@ import {
   useCreatePantry,
   type PantryWriteOutcome,
 } from '#features/pantry/hooks/useCreatePantry';
-import { useToday } from '#features/pantry/hooks/useToday';
+import { useToday } from '#hooks/useToday';
 import {
   snapshotFields,
   writeEntityFields,

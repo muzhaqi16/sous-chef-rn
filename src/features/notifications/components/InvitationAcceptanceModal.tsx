@@ -17,6 +17,7 @@ import {
 } from '#features/notifications/hooks/useInvitationActions';
 import { useUser } from '#store/useAppStore';
 import type { InvitationData } from '#features/notifications/types';
+import { useToday } from '#hooks/useToday';
 import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
 import { ErrorCode, NotificationType } from '#/graphql/generated/schemaTypes';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
@@ -34,6 +35,7 @@ export const InvitationAcceptanceModal: React.FC<
   InvitationAcceptanceModalProps
 > = ({ visible, invitation, onClose, onAccept, onReject }) => {
   const { t } = useTranslation();
+  const today = useToday();
   const user = useUser();
   const userId = user?.id ?? null;
   const [accepting, setAccepting] = useState(false);
@@ -145,6 +147,7 @@ export const InvitationAcceptanceModal: React.FC<
       payload: invitation.payload,
     },
     t,
+    today,
   );
 
   return (

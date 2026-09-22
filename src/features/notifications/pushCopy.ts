@@ -12,6 +12,7 @@ import { NotificationType } from '#/graphql/generated/schemaTypes';
 import type { NotificationPayload } from '#features/notifications/types';
 import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
 import type { Translate } from '#/i18n/types';
+import { toDateKey } from '#/utils/dateUtils';
 
 /** Keys the transport carries for routing and correlation, never for copy. */
 const NON_PAYLOAD_KEYS = new Set([
@@ -114,6 +115,7 @@ export const getPushTrayCopy = (
       message: englishBody || null,
     },
     t,
+    toDateKey(new Date()),
   );
   return { title: copy.title, body: copy.message };
 };

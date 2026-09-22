@@ -55,8 +55,7 @@ import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItem
 import { commonStyles } from '#/styles/commonStyles';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import { daysUntilExpiry } from '#domain/expiry';
-import { fromDateKey } from '#/utils/dateUtils';
-import { useToday } from '#features/pantry/hooks/useToday';
+import { useToday } from '#hooks/useToday';
 
 /**
  * Extracted so `styles.useVariants` is called once per instance.
@@ -94,7 +93,7 @@ export const PantryItemDetail: React.FC<
   } = useAppNavigation();
   const selectedShoppingListId = useSelectedShoppingListId();
   const selectedPantryId = useSelectedPantryId();
-  const now = fromDateKey(useToday());
+  const today = useToday();
   const [refreshing, setRefreshing] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
@@ -152,7 +151,7 @@ export const PantryItemDetail: React.FC<
   };
 
   const imageUrl = resolveImageUrl(item, 'large');
-  const expiryInfo = getExpiryInfo(item?.expiresOn, now);
+  const expiryInfo = getExpiryInfo(item?.expiresOn, today);
   const daysInPantry = getDaysInPantry(item?.createdAt);
   const storageStateDisplay = formatStorageState(item?.storageState, t);
   const brandName = item?.brand?.name ?? null;
@@ -218,12 +217,12 @@ export const PantryItemDetail: React.FC<
     (item.quantity > 0 &&
       (item.condition === ItemCondition.Expired ||
         (!!item.earliestBatchExpiresOn &&
-          daysUntilExpiry(item.earliestBatchExpiresOn, now) < 0))) ||
+          daysUntilExpiry(item.earliestBatchExpiresOn, today) < 0))) ||
     batches.some(
       batch =>
         batch.status === BatchStatus.Active &&
         !!batch.expiresOn &&
-        daysUntilExpiry(batch.expiresOn, now) < 0,
+        daysUntilExpiry(batch.expiresOn, today) < 0,
     );
 
   const discardActions: HeaderAction[] =

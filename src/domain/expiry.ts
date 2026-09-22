@@ -2,9 +2,13 @@ import { differenceInCalendarDays } from 'date-fns';
 import type { Translate } from '#/i18n/types';
 import { fromDateKey } from '#/utils/dateUtils';
 
-/** Calendar days from today to an `expiresOn` date: 0 is today, negative is past. */
-export const daysUntilExpiry = (expiresOn: string, now = new Date()): number =>
-  differenceInCalendarDays(fromDateKey(expiresOn), now);
+/**
+ * Calendar days from `today` to an `expiresOn` date: 0 is today, negative is
+ * past. `today` is required: a compiled component that read the clock here
+ * would keep the day it first rendered on — render paths pass `useToday()`.
+ */
+export const daysUntilExpiry = (expiresOn: string, today: string): number =>
+  differenceInCalendarDays(fromDateKey(expiresOn), fromDateKey(today));
 
 /** The one phrase for each expiry state, shared by every surface that shows it. */
 export const expiryLabel = (days: number, t: Translate): string => {

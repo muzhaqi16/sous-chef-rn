@@ -26,8 +26,7 @@ import { resolveImageUrl } from '#utils/imageUtils';
 import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 import { getExpirationStatus } from '#features/pantry/hooks/usePantryItemTransformation';
 import { daysUntilExpiry } from '#domain/expiry';
-import { fromDateKey } from '#/utils/dateUtils';
-import { useToday } from '#features/pantry/hooks/useToday';
+import { useToday } from '#hooks/useToday';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
 import { motion } from '#/theme/foundations/motion';
@@ -173,9 +172,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   const imageUrl = resolveImageUrl(pantryItem);
 
   const expiresOn = pantryItem.expiresOn;
-  const expiresIn = expiresOn
-    ? daysUntilExpiry(expiresOn, fromDateKey(today))
-    : null;
+  const expiresIn = expiresOn ? daysUntilExpiry(expiresOn, today) : null;
   const expStatus = getExpirationStatus(expiresIn);
   const showExpiration =
     expiresIn !== null && expiresIn <= EXPIRATION_DISPLAY_THRESHOLD_DAYS;

@@ -12,7 +12,7 @@ import {
 } from '#features/pantry/components/form/PantryItemForm.generated';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { extractNodes } from '#/utils/connectionUtils';
-import { useToday } from '#features/pantry/hooks/useToday';
+import { useToday } from '#hooks/useToday';
 
 interface UsePantryItemFormDataArgs {
   itemId: string | null | undefined;

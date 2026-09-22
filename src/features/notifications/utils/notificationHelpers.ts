@@ -104,6 +104,7 @@ export interface ExpiryReminderFields {
 
 export const readExpiryReminderFields = (
   payload: NotificationPayload,
+  today: string,
 ): ExpiryReminderFields | null => {
   const { pantryItemId } = payload;
   const itemName = readText(payload, 'itemName');
@@ -112,7 +113,7 @@ export const readExpiryReminderFields = (
   // keep the day count it was sent with. Older payloads carry only the count.
   const daysUntilExpiry: unknown =
     expiresOn && isDateKey(expiresOn)
-      ? daysUntilExpiryOn(expiresOn)
+      ? daysUntilExpiryOn(expiresOn, today)
       : payload.daysUntilExpiry;
   if (itemName === null || typeof daysUntilExpiry !== 'number') {
     return null;
@@ -154,8 +155,9 @@ const buildExpiryName = (
 const buildExpiryReminderMessage = (
   payload: NotificationPayload,
   t: Translate,
+  today: string,
 ): string | null => {
-  const fields = readExpiryReminderFields(payload);
+  const fields = readExpiryReminderFields(payload, today);
   if (!fields) {
     return null;
   }
@@ -374,6 +376,7 @@ const buildActorListMessage = (
 export const getNotificationCopy = (
   notification: NotificationCopySource,
   t: Translate,
+  today: string,
 ): NotificationCopy => {
   const { type, payload } = notification;
   // An admin's announcement is content a person wrote, like a list's name —
@@ -455,7 +458,7 @@ export const getNotificationCopy = (
     case NotificationType.LowStock:
       return { title, message: buildLowStockMessage(payload, t) };
     case NotificationType.ExpiryReminder: {
-      const single = buildExpiryReminderMessage(payload, t);
+      const single = buildExpiryReminderMessage(payload, t, today);
       if (single) return { title, message: single };
       const digest = buildDigestMessage(payload, t);
       return digest

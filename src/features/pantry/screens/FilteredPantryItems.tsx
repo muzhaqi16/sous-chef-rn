@@ -52,7 +52,7 @@ import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useScreenListInset } from '#components/templates/useScreenListInset';
-import { useToday } from '#features/pantry/hooks/useToday';
+import { useToday } from '#hooks/useToday';
 
 export type FilteredPantryItemsMode = 'lowStock' | 'expiring' | 'expired';
 
@@ -92,10 +92,11 @@ interface ModeConfig {
 
 function formatExpirySubtitle(
   expiresOn: string | null | undefined,
+  today: string,
   t: Translate,
 ): string {
   if (!expiresOn) return '';
-  return expiryLabel(daysUntilExpiry(expiresOn), t);
+  return expiryLabel(daysUntilExpiry(expiresOn, today), t);
 }
 
 /** Soonest first; YYYY-MM-DD orders as text, and an undated item goes last. */
@@ -152,11 +153,11 @@ function buildModeConfig(
       // Mirrors `PantryStats.expiringCount`: dated today through seven days on.
       filter: item => {
         if (!item.expiresOn || item.quantity <= 0) return false;
-        const days = daysUntilExpiry(item.expiresOn);
+        const days = daysUntilExpiry(item.expiresOn, today);
         return days >= 0 && days <= 7;
       },
       sort: byExpiry,
-      subtitle: item => formatExpirySubtitle(item.expiresOn, t),
+      subtitle: item => formatExpirySubtitle(item.expiresOn, today, t),
       tutorialSteps: [],
     },
     expired: {
@@ -169,10 +170,10 @@ function buildModeConfig(
       filter: item =>
         !!item.expiresOn &&
         item.quantity > 0 &&
-        daysUntilExpiry(item.expiresOn) < 0,
+        daysUntilExpiry(item.expiresOn, today) < 0,
       // Longest-expired first.
       sort: byExpiry,
-      subtitle: item => formatExpirySubtitle(item.expiresOn, t),
+      subtitle: item => formatExpirySubtitle(item.expiresOn, today, t),
       tutorialSteps: [],
     },
   };

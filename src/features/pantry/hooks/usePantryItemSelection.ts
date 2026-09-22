@@ -33,7 +33,7 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
-import { useToday } from '#features/pantry/hooks/useToday';
+import { useToday } from '#hooks/useToday';
 
 type PantryItemsConnection = NonNullable<
   GetPantryQuery['pantry']

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useToday } from '#hooks/useToday';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -21,6 +22,7 @@ export const NotificationDetailScreen: React.FC<
   }>
 > = ({ route }) => {
   const { t } = useTranslation();
+  const today = useToday();
   const notification = route.params.notification;
 
   if (!notification) {
@@ -36,7 +38,7 @@ export const NotificationDetailScreen: React.FC<
   // payload is always a NotificationPayload object (narrowed at the ingestion
   // boundary), so it can be read directly.
   const payload = notification.payload;
-  const copy = getNotificationCopy(notification, t);
+  const copy = getNotificationCopy(notification, t, today);
 
   return (
     <NotificationActionHandler>

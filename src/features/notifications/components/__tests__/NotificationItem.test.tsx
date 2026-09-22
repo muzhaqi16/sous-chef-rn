@@ -22,6 +22,7 @@ jest.mock('#utils/iconUtils', () => {
 });
 
 jest.mock('#utils/dateUtils', () => ({
+  ...jest.requireActual<typeof import('#utils/dateUtils')>('#utils/dateUtils'),
   safeParseDate: jest.fn(() => new Date('2026-03-01T12:00:00Z')),
 }));
 

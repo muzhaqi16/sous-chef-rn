@@ -18,8 +18,7 @@ import { Text } from '#components/atoms/Text';
 import { Badge } from '#components/atoms/Badge';
 import { formatMonthDay } from '#/utils/formatters/date';
 import { hitSlop } from '#/theme/foundations/sizes';
-import { fromDateKey } from '#/utils/dateUtils';
-import { useToday } from '#features/pantry/hooks/useToday';
+import { useToday } from '#hooks/useToday';
 
 interface BatchListItemProps {
   batch: PantryItemBatchFragment;
@@ -38,7 +37,7 @@ const getExpiryText = (
   t: Translate,
 ) => {
   if (!expiresOn) return null;
-  const diffDays = daysUntilExpiry(expiresOn, fromDateKey(today));
+  const diffDays = daysUntilExpiry(expiresOn, today);
   return { text: expiryLabel(diffDays, t), isExpired: diffDays < 0 };
 };
 

@@ -10,7 +10,7 @@ import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#/services/errorService';
 import type { SuggestionsHookResult } from '#features/catalog/ui/AddItemSheet/types';
-import { useToday } from '#features/pantry/hooks/useToday';
+import { useToday } from '#hooks/useToday';
 
 /**
  * Per-source fetch limit. Each section is fetched with its own quota, and the

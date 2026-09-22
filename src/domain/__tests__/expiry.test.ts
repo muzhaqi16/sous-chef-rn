@@ -4,12 +4,13 @@ import type { Translate } from '#/i18n/types';
 import { daysUntilExpiry, expiryLabel } from '#/domain/expiry';
 
 describe('daysUntilExpiry', () => {
-  const now = new Date(2026, 8, 21, 23, 30);
+  const today = '2026-09-21';
 
-  it('reads the key as a local day, so late evening is still that day', () => {
-    expect(daysUntilExpiry('2026-09-21', now)).toBe(0);
-    expect(daysUntilExpiry('2026-09-22', now)).toBe(1);
-    expect(daysUntilExpiry('2026-09-19', now)).toBe(-2);
+  it('counts calendar days from the given day', () => {
+    expect(daysUntilExpiry('2026-09-21', today)).toBe(0);
+    expect(daysUntilExpiry('2026-09-22', today)).toBe(1);
+    expect(daysUntilExpiry('2026-09-19', today)).toBe(-2);
+    expect(daysUntilExpiry('2026-10-01', today)).toBe(10);
   });
 });
 

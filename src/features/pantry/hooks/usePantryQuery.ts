@@ -20,7 +20,7 @@ import {
   useSetIsPantryQueryComplete,
 } from '#store/useAppStore';
 import { PAGE_SIZE } from '#features/pantry/constants/pagination';
-import { useToday } from '#features/pantry/hooks/useToday';
+import { useToday } from '#hooks/useToday';
 
 /**
  * Direct fields the screen-level hooks need, plus an opaque

@@ -3,6 +3,7 @@ import { GetExpirationNotificationsForPantryItemDocument } from '#features/notif
 import { readExpiryReminderFields } from '#features/notifications/utils/notificationHelpers';
 import type { DisplayNotification } from '#features/notifications/utils/toDisplayNotification';
 import { errorService } from '#/services/errorService';
+import { toDateKey } from '#/utils/dateUtils';
 import { useNotificationSync } from '#features/notifications/hooks/useNotificationSync';
 
 /** The cache reads and writes a notification's action buttons need. */
@@ -18,6 +19,7 @@ export function useNotificationActionData() {
   const resolveExpirationLink = async (notification: DisplayNotification) => {
     const pantryItemId = readExpiryReminderFields(
       notification.payload,
+      toDateKey(new Date()),
     )?.pantryItemId;
     if (!pantryItemId) return null;
 
