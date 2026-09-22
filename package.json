@@ -103,7 +103,7 @@
     "@react-navigation/bottom-tabs": "8.0.0-alpha.46",
     "@react-navigation/core": "^8.0.0-alpha.31",
     "@react-navigation/elements": "^3.0.0-alpha.44",
-    "@react-navigation/native": "^8.0.0-alpha.40",
+    "@react-navigation/native": "^8.0.0-alpha.46",
     "@react-navigation/native-stack": "8.0.0-alpha.48",
     "@shopify/flash-list": "^2.3.2",
     "@shopify/react-native-skia": "^2.11.2",
