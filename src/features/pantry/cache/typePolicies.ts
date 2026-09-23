@@ -44,8 +44,8 @@ export const pantryTypePolicies: TypePolicies = {
         },
       },
       // `true` is Apollo's shorthand for `mergeObjects(existing, incoming)`.
-      // Unkeyed: mutations write `stats` with no `today`, and must land on the
-      // entry `GetPantry` reads with one.
+      // Unkeyed: a write made on one day must land on the entry `GetPantry`
+      // reads after midnight moves its `today`.
       stats: {
         keyArgs: false,
         merge: true,

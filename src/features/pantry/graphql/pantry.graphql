@@ -142,7 +142,7 @@ query GetPantryItemSuggestions(
 ) {
   pantry(id: $pantryId) {
     id
-    lowStock: suggestions(limit: $limit, sources: [LOW_STOCK]) {
+    lowStock: suggestions(limit: $limit, sources: [LOW_STOCK], today: $today) {
       id
       itemId
       name
@@ -204,7 +204,11 @@ query GetPantryItemSuggestions(
       popularityRank
       pantryItemId
     }
-    recentlyDeleted: suggestions(limit: $limit, sources: [RECENTLY_DELETED]) {
+    recentlyDeleted: suggestions(
+      limit: $limit
+      sources: [RECENTLY_DELETED]
+      today: $today
+    ) {
       id
       itemId
       name
@@ -233,7 +237,11 @@ query GetPantryItemSuggestions(
       popularityRank
       pantryItemId
     }
-    frequentlyAdded: suggestions(limit: $limit, sources: [FREQUENTLY_ADDED]) {
+    frequentlyAdded: suggestions(
+      limit: $limit
+      sources: [FREQUENTLY_ADDED]
+      today: $today
+    ) {
       id
       itemId
       name
@@ -262,7 +270,7 @@ query GetPantryItemSuggestions(
       popularityRank
       pantryItemId
     }
-    popular: suggestions(limit: $limit, sources: [POPULAR]) {
+    popular: suggestions(limit: $limit, sources: [POPULAR], today: $today) {
       id
       itemId
       name
@@ -592,7 +600,7 @@ mutation MarkPantryAsDefault($input: MarkPantryAsDefaultInput!) {
   }
 }
 
-mutation CreatePantryItem($input: CreatePantryItemInput!) {
+mutation CreatePantryItem($input: CreatePantryItemInput!, $today: LocalDate!) {
   createPantryItem(input: $input) {
     __typename
     ... on CreatePantryItemPayload {
@@ -690,7 +698,7 @@ mutation CreatePantryItem($input: CreatePantryItemInput!) {
         }
         pantry {
           id
-          stats {
+          stats(today: $today) {
             totalItems
           }
         }
@@ -721,7 +729,7 @@ mutation CreatePantryItem($input: CreatePantryItemInput!) {
   }
 }
 
-mutation UpdatePantryItem($input: UpdatePantryItemInput!) {
+mutation UpdatePantryItem($input: UpdatePantryItemInput!, $today: LocalDate!) {
   updatePantryItem(input: $input) {
     __typename
     ... on UpdatePantryItemPayload {
@@ -731,7 +739,7 @@ mutation UpdatePantryItem($input: UpdatePantryItemInput!) {
       }
       pantry {
         id
-        stats {
+        stats(today: $today) {
           totalItems
           storageStateCounts {
             refrigerated
@@ -762,7 +770,7 @@ mutation UpdatePantryItem($input: UpdatePantryItemInput!) {
   }
 }
 
-mutation DeletePantryItem($input: DeletePantryItemInput!) {
+mutation DeletePantryItem($input: DeletePantryItemInput!, $today: LocalDate!) {
   deletePantryItem(input: $input) {
     __typename
     ... on DeletePantryItemPayload {
@@ -771,7 +779,7 @@ mutation DeletePantryItem($input: DeletePantryItemInput!) {
         id
         pantry {
           id
-          stats {
+          stats(today: $today) {
             totalItems
           }
         }

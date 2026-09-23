@@ -593,7 +593,10 @@ describe('optimistic entity completeness', () => {
         createPantryItem: { pantryItem: { id: string; pantryId: string } };
         // The mocks resolve every field regardless of the input, so this only
         // has to satisfy the required-variable check.
-      }>(CreatePantryItemDocument, { input: { pantryId: 'pantry-1' } });
+      }>(CreatePantryItemDocument, {
+        input: { pantryId: 'pantry-1' },
+        today: '2026-09-22',
+      });
       const pantryItem = created.createPantryItem.pantryItem;
       pantryItem.id = 'server-item-1';
       pantryItem.pantryId = 'pantry-1';

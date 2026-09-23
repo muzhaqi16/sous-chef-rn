@@ -119,19 +119,19 @@ describe('sortOptionToOrderBy', () => {
     });
   });
 
-  it('maps "expiry" + "asc" to { expiresAt: SortOrder.Asc }', () => {
+  it('maps "expiry" + "asc" to { expiresOn: SortOrder.Asc }', () => {
     expect(
       sortOptionToOrderBy(PantrySortOption.EXPIRY, PantrySortDirection.ASC),
     ).toEqual({
-      expiresAt: SortOrder.Asc,
+      expiresOn: SortOrder.Asc,
     });
   });
 
-  it('maps "expiry" + "desc" to { expiresAt: SortOrder.Desc }', () => {
+  it('maps "expiry" + "desc" to { expiresOn: SortOrder.Desc }', () => {
     expect(
       sortOptionToOrderBy(PantrySortOption.EXPIRY, PantrySortDirection.DESC),
     ).toEqual({
-      expiresAt: SortOrder.Desc,
+      expiresOn: SortOrder.Desc,
     });
   });
 
