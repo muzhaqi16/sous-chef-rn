@@ -289,7 +289,9 @@ describe('pantry sync builders', () => {
     },
   );
 
-  it('drops the create-only today from the sync upsert', () => {
+  // `today` is the day the user acted, which the replay may be days after;
+  // the server derives a shelf-life expiry from it.
+  it('forwards the queued today to the sync upsert', () => {
     const mutation = makeMutation({
       ...queuedMutationFor(CreatePantryItemDocument),
       variables: {
@@ -299,7 +301,7 @@ describe('pantry sync builders', () => {
 
     const input = wrapper(convertToSyncMutation(mutation).syncVariables);
 
-    expect(input).not.toHaveProperty('today');
+    expect(input.today).toBe('2026-09-22');
   });
 
   it('sends no forceAdd on an update', () => {
