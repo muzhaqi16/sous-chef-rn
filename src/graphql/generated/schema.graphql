@@ -2294,8 +2294,8 @@ input CreatePantryInput {
 input CreatePantryItemInput {
   brand: BrandReferenceInput
   """
-  The expiry date as YYYY-MM-DD, with no time and no timezone. Send this or
-  expiresAt, not both; null clears it where the field may be cleared.
+  The expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
+  where the field may be cleared.
   """
   expiresOn: LocalDate
   """
@@ -2325,6 +2325,11 @@ input CreatePantryItemInput {
   storage: StorageDetailsInput
   tags: [String!]
   thresholds: InventoryThresholdsInput
+  """
+  The viewer's calendar date. With no expiresOn, the expiry is this date plus the
+  item's shelf life; without it no expiry is set.
+  """
+  today: LocalDate
   unit: UnitSpecInput
 }
 
@@ -2364,6 +2369,11 @@ input CreatePantryItemUsageInput {
   quantityUsed: Float
   recipeId: ID
   targetBatchId: ID
+  """
+  The viewer's calendar date. A batch this use opens gets this date plus the item's
+  opened shelf life when that is sooner; without it the expiry is left as it is.
+  """
+  today: LocalDate
   usageUnitId: ID
   wasteReason: WasteReason
 }
@@ -2427,7 +2437,7 @@ union CreateProfileResult = ConflictError | CreateProfilePayload | ForbiddenErro
 input CreatePurchaseInput {
   currencyId: ID!
   discountAmount: Float
-  """The expiry date as YYYY-MM-DD. Send this or expirationDate, not both."""
+  """The expiry date as YYYY-MM-DD."""
   expiresOn: LocalDate
   """
   Optional client-generated permanent ID (CUID2) for offline-first idempotency.
@@ -4141,8 +4151,6 @@ type ExpirationNotification {
   createdAt: DateTime!
   daysUntilExpiry: Int!
   dismissedAt: DateTime
-  """The expiry date as 12:00 UTC of that day."""
-  expiresAt: DateTime! @deprecated(reason: "Use expiresOn instead.")
   """The expiry date this reminder is about."""
   expiresOn: LocalDate!
   genericNotification: Notification
@@ -6024,7 +6032,7 @@ enum ListStatus {
 }
 
 """
-A calendar date as YYYY-MM-DD, with no time and no timezone. A value with a time is rejected.
+A calendar date as YYYY-MM-DD, with no time and no timezone. A value sent with a time keeps the date as written and drops the time.
 """
 scalar LocalDate
 
@@ -7156,8 +7164,8 @@ input MoveShoppingItemToPantryInput {
   """Unit ID for the quantity (defaults to shopping item's unit)"""
   actualUnitId: ID
   """
-  The expiry date as YYYY-MM-DD, with no time and no timezone. Send this or
-  expiresAt, not both; null clears it where the field may be cleared.
+  The expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
+  where the field may be cleared.
   """
   expiresOn: LocalDate
   idempotencyKey: ID
@@ -8761,6 +8769,11 @@ enum NutritionSource {
 input OpenPantryItemBatchInput {
   batchId: ID!
   idempotencyKey: ID
+  """
+  The viewer's calendar date. The opened batch gets this date plus the item's opened
+  shelf life when that is sooner; without it the expiry is left as it is.
+  """
+  today: LocalDate
 }
 
 type OpenPantryItemBatchPayload {
@@ -8778,6 +8791,11 @@ union OpenPantryItemBatchResult = ConflictError | ForbiddenError | NotFoundError
 input OpenPantryItemInput {
   id: ID!
   idempotencyKey: ID
+  """
+  The viewer's calendar date. The opened batch gets this date plus the item's opened
+  shelf life when that is sooner; without it the expiry is left as it is.
+  """
+  today: LocalDate
   """
   Optimistic concurrency control. REQUIRED: the caller is updating a row it
   already holds, so it has the version — and an update that silently skipped
@@ -9013,16 +9031,9 @@ type PantryItem {
   createdAt: DateTime!
   """Density for this stack in g/mL; the catalog's applies when null."""
   densityOverride: Float
-  """The soonest batch expiry as 12:00 UTC of that day."""
-  earliestBatchExpiration: DateTime @deprecated(reason: "Use earliestBatchExpiresOn instead.")
   """The soonest expiry date among the active batches."""
   earliestBatchExpiresOn: LocalDate
   expirationAlert: Boolean!
-  """
-  The expiry date as 12:00 UTC of that day, which reads as the same date in
-  every timezone from UTC-11 to UTC+11.
-  """
-  expiresAt: DateTime @deprecated(reason: "Use expiresOn instead.")
   """
   The expiry date, with no time and no timezone. An item is not expired on this date: it expires today. It is expired from the next day on, judged on the viewer's calendar.
   """
@@ -9138,8 +9149,6 @@ type PantryItemBatch {
   """
   currencyProvenance: CurrencyProvenance
   depletedAt: DateTime
-  """The batch's expiry date as 12:00 UTC of that day."""
-  expiresAt: DateTime @deprecated(reason: "Use expiresOn instead.")
   expiresAtIsManual: Boolean!
   """The batch's expiry date, with no time and no timezone."""
   expiresOn: LocalDate
@@ -9376,8 +9385,6 @@ type PantryItemSuggestion {
   defaultUnit: SuggestionUnit
   """Default unit ID for one-tap add (last used or item default)"""
   defaultUnitId: ID
-  """Expiry date as 12:00 UTC of that day (for EXPIRING_SOON source)"""
-  expiresAt: DateTime @deprecated(reason: "Use expiresOn instead.")
   """Expiry date (for EXPIRING_SOON source)"""
   expiresOn: LocalDate
   """
@@ -9751,8 +9758,6 @@ type Purchase {
   currencyId: ID!
   currencySymbol: String!
   discountAmount: Float
-  """The expiry date as 12:00 UTC of that day."""
-  expirationDate: DateTime @deprecated(reason: "Use expiresOn instead.")
   """The expiry date, with no time and no timezone."""
   expiresOn: LocalDate
   id: ID!
@@ -11301,8 +11306,8 @@ Input for restocking a pantry item - adds quantity and creates ledger record
 input RestockPantryItemInput {
   costPerUnit: Float
   """
-  The new batch's expiry date as YYYY-MM-DD, with no time and no timezone. Send this or
-  expiresAt, not both; null clears it where the field may be cleared.
+  The new batch's expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
+  where the field may be cleared.
   """
   expiresOn: LocalDate
   id: ID!
@@ -12959,8 +12964,8 @@ input SyncPantryItemInput {
   clientId: ID!
   expirationAlert: Boolean
   """
-  The expiry date as YYYY-MM-DD, with no time and no timezone. Send this or
-  expiresAt, not both; null clears it where the field may be cleared.
+  The expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
+  where the field may be cleared.
   """
   expiresOn: LocalDate
   """
@@ -14074,8 +14079,8 @@ input UpdatePantryItemInput {
   brand: BrandReferenceInput
   expirationAlert: Boolean
   """
-  The expiry date as YYYY-MM-DD, with no time and no timezone. Send this or
-  expiresAt, not both; null clears it where the field may be cleared.
+  The expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
+  where the field may be cleared.
   """
   expiresOn: LocalDate
   id: ID!
@@ -14197,7 +14202,7 @@ union UpdateProfileResult = ConflictError | ForbiddenError | NotFoundError | Upd
 
 input UpdatePurchaseInput {
   discountAmount: Float
-  """The expiry date as YYYY-MM-DD. Send this or expirationDate, not both."""
+  """The expiry date as YYYY-MM-DD."""
   expiresOn: LocalDate
   id: ID!
   originalPrice: Float
