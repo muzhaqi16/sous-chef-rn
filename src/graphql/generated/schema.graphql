@@ -1746,9 +1746,9 @@ input ConvertExpiredBatchesToWasteInput {
   pantryItemId: ID!
   """
   The viewer's calendar date. A batch is expired when its expiry date is
-  before it. Defaults to today's date in UTC.
+  before it.
   """
-  today: LocalDate
+  today: LocalDate!
 }
 
 type ConvertExpiredBatchesToWastePayload {
@@ -4203,7 +4203,7 @@ input ExpirationNotificationFilters {
 """Order by options for expiration notifications"""
 input ExpirationNotificationOrderBy {
   createdAt: SortOrder
-  expiresAt: SortOrder
+  expiresOn: SortOrder
 }
 
 enum ExpirationNotificationType {
@@ -6032,7 +6032,7 @@ enum ListStatus {
 }
 
 """
-A calendar date as YYYY-MM-DD, with no time and no timezone. A value sent with a time keeps the date as written and drops the time.
+A calendar date as YYYY-MM-DD, with no time and no timezone. A value with a time is rejected.
 """
 scalar LocalDate
 
@@ -6432,6 +6432,10 @@ union MarkPantryAsDefaultResult = ConflictError | ForbiddenError | MarkPantryAsD
 
 input MarkPantryItemExpiredInput {
   id: ID!
+  """
+  The viewer's calendar date. The item's expiry becomes the day before it.
+  """
+  today: LocalDate!
   """
   Optimistic concurrency control. REQUIRED: the caller is updating a row it
   already holds, so it has the version — and an update that silently skipped
@@ -8877,20 +8881,17 @@ type Pantry {
   """
   recentlyDeletedItems(limit: Int = 10): [PantryItem!]!
   """
-  Counts for this pantry. Pass today as the viewer's calendar date so the
-  expiring and expired counts match what the viewer sees; without it the
-  server uses today's date in UTC.
+  Counts for this pantry. today is the viewer's calendar date, which the
+  expiring and expired counts are judged on.
   """
-  stats(today: LocalDate): PantryStats!
+  stats(today: LocalDate!): PantryStats!
   storageLocationsConnection(after: String, before: String, first: Int, last: Int, orderBy: StorageLocationOrderBy): StorageLocationConnection!
   suggestions(
     expirationDays: Int = 7
     limit: Int = 10
     sources: [PantrySuggestionSource!]
-    """
-    The viewer's calendar date, for EXPIRING_SOON; defaults to today's date in UTC.
-    """
-    today: LocalDate
+    """The viewer's calendar date, which EXPIRING_SOON counts from."""
+    today: LocalDate!
   ): [PantryItemSuggestion!]!
   tags: [String!]!
   temperature: String
@@ -9340,8 +9341,8 @@ input PantryItemFilters {
   storageState: StorageState
   tags: [String!]
   """
-  The viewer's calendar date, which expiringSoon counts from. Defaults to
-  today's date in UTC.
+  The viewer's calendar date, which expiringSoon counts from. Required when
+  expiringSoon is true.
   """
   today: LocalDate
 }
@@ -9352,7 +9353,7 @@ input PantryItemOrderBy {
   createdAt: SortOrder
   currentQuantity: SortOrder
   """Sorts by expiry date. Items dated the same day are ordered by id."""
-  expiresAt: SortOrder
+  expiresOn: SortOrder
   itemName: SortOrder
 }
 
@@ -9580,8 +9581,6 @@ Included when admin requests resources with stats.
 type PantryUsageStats {
   """Total estimated value of items"""
   estimatedValue: Float
-  """Number of items expiring within 7 days"""
-  expiringItemCount: Int!
   """Total number of items"""
   itemCount: Int!
   """Last activity timestamp"""
