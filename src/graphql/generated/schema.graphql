@@ -12989,6 +12989,12 @@ input SyncPantryItemInput {
   storage: StorageDetailsInput
   tags: [String!]
   thresholds: InventoryThresholdsInput
+  """
+  The viewer's calendar date. With no expiresOn, the expiry is this date plus the
+  item's shelf life; without it no expiry is set. Send the date the user acted, not the
+  replay date. Applies to a create only; an update never derives an expiry.
+  """
+  today: LocalDate
   unit: UnitSpecInput
   version: Int
   wasteReason: WasteReason
