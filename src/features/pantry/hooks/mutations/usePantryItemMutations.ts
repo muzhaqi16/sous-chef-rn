@@ -6,6 +6,7 @@
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { toDateKey } from '#/utils/dateUtils';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
@@ -82,7 +83,7 @@ export function usePantryItemMutations({
     const settled = await settleMutation(
       () =>
         removeItemMutation({
-          variables: { input: { id: itemId } },
+          variables: { input: { id: itemId }, today: toDateKey(new Date()) },
           context: { localFirst: true },
         }),
       {

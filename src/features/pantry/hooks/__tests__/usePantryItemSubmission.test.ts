@@ -211,6 +211,7 @@ describe('usePantryItemSubmission', () => {
     });
 
     expect(m.fired).toContainEqual({
+      today: expect.any(String),
       input: expect.objectContaining({
         pantryId: 'pantry-1',
         quantity: 2,
@@ -233,6 +234,7 @@ describe('usePantryItemSubmission', () => {
     });
 
     expect(m.fired).toContainEqual({
+      today: expect.any(String),
       input: expect.objectContaining({
         tags: ['dairy', 'organic'],
       }),
@@ -256,6 +258,7 @@ describe('usePantryItemSubmission', () => {
     });
 
     expect(m.fired).toContainEqual({
+      today: expect.any(String),
       input: expect.objectContaining({
         thresholds: { minQuantity: 1, restockQuantity: 5 },
       }),
@@ -292,6 +295,7 @@ describe('usePantryItemSubmission', () => {
 
     // The picked LOCAL day, whatever the device's offset from UTC.
     expect(m.fired).toContainEqual({
+      today: expect.any(String),
       input: expect.objectContaining({
         expiresOn: '2025-06-15',
       }),
@@ -311,6 +315,7 @@ describe('usePantryItemSubmission', () => {
     });
 
     expect(m.fired).toContainEqual({
+      today: expect.any(String),
       input: expect.objectContaining({
         item: expect.objectContaining({ brand: 'Organic Valley' }),
       }),
@@ -333,6 +338,7 @@ describe('usePantryItemSubmission', () => {
     });
 
     expect(m.fired).toContainEqual({
+      today: expect.any(String),
       input: expect.objectContaining({
         storage: expect.objectContaining({ storageLocationId: 'loc-1' }),
       }),
@@ -355,6 +361,7 @@ describe('usePantryItemSubmission', () => {
     });
 
     expect(m.fired).toContainEqual({
+      today: expect.any(String),
       input: expect.objectContaining({
         storage: expect.objectContaining({
           storageLocationName: 'Top Shelf',
@@ -379,6 +386,7 @@ describe('usePantryItemSubmission', () => {
     });
 
     expect(m.fired).toContainEqual({
+      today: expect.any(String),
       input: expect.objectContaining({
         storage: expect.objectContaining({ storageNotes: 'Keep cool' }),
       }),
@@ -404,6 +412,7 @@ describe('usePantryItemSubmission', () => {
     });
 
     expect(m.fired).toContainEqual({
+      today: expect.any(String),
       input: expect.objectContaining({
         item: expect.objectContaining({
           units: expect.arrayContaining([
@@ -529,6 +538,7 @@ describe('usePantryItemSubmission', () => {
     });
 
     expect(m.fired).toContainEqual({
+      today: expect.any(String),
       input: expect.objectContaining({
         item: expect.objectContaining({
           netWeight: 16,
@@ -555,6 +565,7 @@ describe('usePantryItemSubmission', () => {
     });
 
     expect(m.fired).toContainEqual({
+      today: expect.any(String),
       input: expect.objectContaining({
         netWeight: expect.objectContaining({
           netWeight: 500,
@@ -577,6 +588,7 @@ describe('usePantryItemSubmission', () => {
     });
 
     expect(m.fired).toContainEqual({
+      today: expect.any(String),
       input: expect.objectContaining({
         unit: undefined,
       }),

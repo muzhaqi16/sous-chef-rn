@@ -51,7 +51,7 @@ export function sortOptionToOrderBy(
     case PantrySortOption.NAME:
       return { itemName: sortOrder };
     case PantrySortOption.EXPIRY:
-      return { expiresAt: sortOrder };
+      return { expiresOn: sortOrder };
     case PantrySortOption.QUANTITY:
       return { currentQuantity: sortOrder };
     case PantrySortOption.RECENT:

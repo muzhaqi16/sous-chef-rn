@@ -2,6 +2,7 @@ import { gql, type ApolloCache } from '@apollo/client';
 import {
   SyncPantryItemDocument,
   SyncDeletePantryItemDocument,
+  UpdatePantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import type {
   SyncDeletePantryItemInput,
@@ -20,6 +21,7 @@ import {
   type UnitSpec,
 } from '#/apollo/offlineQueue/syncBuilder';
 import { parseStoredQuantityText } from '#/utils/formatQuantity';
+import { toDateKey } from '#/utils/dateUtils';
 
 // How the offline queue replays a pantry write; contract in
 // `#/apollo/offlineQueue/syncBuilder`.
@@ -83,11 +85,13 @@ export const buildPantryItemSync = withCapturedReads(
     const { id: _omitId, itemName, ...rest } = input;
 
     // Only `UpdatePantryItemInput` carries `itemName`. The sync upsert's update
-    // branch ignores `item`, so a rename replays as the original (`version: Int!`).
+    // branch ignores `item`, so a rename replays as the original (`version: Int!`),
+    // through the current document: the queue persists the AST it was sent with,
+    // which an older build wrote without the `$today` that `stats` requires.
     if (itemName != null) {
       return {
-        syncMutation: mutation.mutation,
-        syncVariables: mutation.variables,
+        syncMutation: UpdatePantryItemDocument,
+        syncVariables: { today: toDateKey(new Date()), ...mutation.variables },
         requiresVersion: true,
       };
     }

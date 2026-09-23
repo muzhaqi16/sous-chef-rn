@@ -408,7 +408,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     let thrown: unknown;
     try {
       result = await createPantryItem({
-        variables: { input: mutationInput },
+        variables: { input: mutationInput, today: mutationInput.today },
         context: { localFirst: true },
       });
     } catch (error) {

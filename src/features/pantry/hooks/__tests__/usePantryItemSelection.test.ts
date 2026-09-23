@@ -122,6 +122,7 @@ describe('usePantryItemSelection.addItem', () => {
     expect(readPantry(cache).totalItems).toBe(2);
     expect(queued.fired).toEqual([
       {
+        today: expect.any(String),
         input: expect.objectContaining({
           ...ONBOARDING_INPUT,
           id: added?.id,
@@ -207,7 +208,9 @@ describe('usePantryItemSelection.removeItem', () => {
       await pending;
     });
 
-    expect(queued.fired).toEqual([{ input: { id: 'pi-1' } }]);
+    expect(queued.fired).toEqual([
+      { input: { id: 'pi-1' }, today: expect.any(String) },
+    ]);
     expect(rowIds(cache)).not.toContain('pi-1');
     expect(readPantry(cache).totalItems).toBe(0);
   });

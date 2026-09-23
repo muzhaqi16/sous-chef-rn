@@ -8,6 +8,7 @@
  * silently loses the idempotency the table exists to provide.
  */
 import { readFileSync } from 'fs';
+import { gql } from '@apollo/client';
 import { join } from 'path';
 import {
   buildSchema,
@@ -33,6 +34,7 @@ import {
   convertToSyncMutation as convertToSyncMutationFn,
 } from '#/apollo/offlineQueue/convertToSyncMutation';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
+import { toDateKey } from '#/utils/dateUtils';
 
 jest.mock('#/utils/deviceLocale', () => ({
   getDeviceDecimalSeparator: jest.fn(() => '.'),
@@ -114,8 +116,46 @@ describe('pantry sync builders', () => {
     const conversion = convertToSyncMutation(mutation);
 
     expect(conversion.syncMutation).toBe(UpdatePantryItemDocument);
-    expect(conversion.syncVariables).toEqual(mutation.variables);
+    expect(conversion.syncVariables).toEqual({
+      ...mutation.variables,
+      today: toDateKey(new Date()),
+    });
     expect(conversion.requiresVersion).toBe(true);
+  });
+
+  // The queue persists the AST it was sent with; one queued before `stats`
+  // required `today` would fail validation on replay.
+  it('replays a rename queued by an older build through the current document', () => {
+    const mutation = makeMutation({
+      ...queuedMutationFor(UpdatePantryItemDocument),
+      mutation: gql`
+        mutation UpdatePantryItem($input: UpdatePantryItemInput!) {
+          updatePantryItem(input: $input) {
+            __typename
+          }
+        }
+      `,
+      variables: { input: { id: 'item-2', itemName: 'Oat milk', version: 4 } },
+    });
+
+    const conversion = convertToSyncMutation(mutation);
+
+    expect(conversion.syncMutation).toBe(UpdatePantryItemDocument);
+    expect(conversion.syncVariables.today).toBe(toDateKey(new Date()));
+  });
+
+  it('keeps the today a rename was queued with', () => {
+    const mutation = makeMutation({
+      ...queuedMutationFor(UpdatePantryItemDocument),
+      variables: {
+        input: { id: 'item-2', itemName: 'Oat milk', version: 4 },
+        today: '2026-09-20',
+      },
+    });
+
+    expect(convertToSyncMutation(mutation).syncVariables.today).toBe(
+      '2026-09-20',
+    );
   });
 
   it('pins the rename passthrough to the SDL: its input requires version', () => {

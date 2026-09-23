@@ -224,11 +224,10 @@ export function useAddToPantry({
 
     let result;
     let thrown: unknown;
+    const today = toDateKey(new Date());
     try {
       result = await createPantryItem({
-        variables: {
-          input: { id, pantryId, itemId, today: toDateKey(new Date()) },
-        },
+        variables: { input: { id, pantryId, itemId, today }, today },
         context: { localFirst: true },
       });
     } catch (error) {

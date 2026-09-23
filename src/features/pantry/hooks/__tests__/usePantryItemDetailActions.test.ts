@@ -194,7 +194,10 @@ describe('usePantryItemDetailActions', () => {
       });
 
       await waitFor(() =>
-        expect(deleteMock.fired).toContainEqual({ input: { id: 'item-1' } }),
+        expect(deleteMock.fired).toContainEqual({
+          input: { id: 'item-1' },
+          today: expect.any(String),
+        }),
       );
       await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
     });
@@ -322,7 +325,10 @@ describe('usePantryItemDetailActions', () => {
       });
 
       await waitFor(() =>
-        expect(deleteMock.fired).toContainEqual({ input: { id: 'item-1' } }),
+        expect(deleteMock.fired).toContainEqual({
+          input: { id: 'item-1' },
+          today: expect.any(String),
+        }),
       );
       await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
     });
