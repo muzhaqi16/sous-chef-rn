@@ -67,6 +67,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
               onChangeText={onChange}
               placeholder={t('labels.pcsDozen')}
               onUnitSelected={onUnitSelected}
+              error={errors.unit?.message?.toString()}
               testID={unitTestID}
             />
           )}

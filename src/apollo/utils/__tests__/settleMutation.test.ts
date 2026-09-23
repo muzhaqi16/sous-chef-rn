@@ -3,12 +3,18 @@ import { alertService, type AlertButton } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import { storeApi } from '#store';
 import { t } from '#/i18n';
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  TopLevelErrorCode,
+  UnitDenial,
+} from '#/graphql/generated/schemaTypes';
 import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
 import {
   CreatePantryItemDocument,
+  CreatePantryItemUsageDocument,
   DeletePantryItemDocument,
   type CreatePantryItemMutation,
+  type CreatePantryItemUsageMutation,
   type DeletePantryItemMutation,
 } from '#features/pantry/graphql/pantry.generated';
 import { operationNameOf } from '../documentOperation';
@@ -26,12 +32,19 @@ type Member<T extends { __typename: string }> = {
   code?: string;
   field?: string | null;
   resource?: string | null;
+  validUnits?: string[];
+  denial?: UnitDenial | null;
+  available?: number | null;
+  availableUnitSymbol?: string | null;
 };
 type Create = CreatePantryItemMutation['createPantryItem'];
+type Use = CreatePantryItemUsageMutation['createPantryItemUsage'];
 type Delete = DeletePantryItemMutation['deletePantryItem'];
 
 const create = (member: Member<Create> | null) => () =>
   Promise.resolve({ data: { createPantryItem: member } });
+const use = (member: Member<Use>) => () =>
+  Promise.resolve({ data: { createPantryItemUsage: member } });
 const remove = (member: Member<Delete>) => () =>
   Promise.resolve({ data: { deletePantryItem: member } });
 const throwing = (error: unknown) => () => Promise.reject(error);
@@ -198,6 +211,51 @@ describe('settleMutation', () => {
       expect(onUnitInvalid).toHaveBeenCalledTimes(1);
       expect(alerts()).toEqual([
         [t('errors.invalidUnitTitle'), t('errors.codes.unitInvalid')],
+      ]);
+    });
+  });
+
+  describe('a stock refusal', () => {
+    it('says why the unit was refused and which units would work', async () => {
+      await settleMutation(
+        create({
+          __typename: 'UnitEligibilityError',
+          code: TopLevelErrorCode.UnitInvalid,
+          field: 'unitId',
+          validUnits: ['g', 'oz'],
+          denial: UnitDenial.NoRoute,
+        }),
+        options,
+      );
+
+      expect(alerts()).toEqual([
+        [
+          t('errors.invalidUnitTitle'),
+          t('errors.unitRefusedTryUnits', {
+            reason: t('errors.unitDenied.noRoute'),
+            units: 'g, oz',
+          }),
+        ],
+      ]);
+    });
+
+    it('says what is left, in the unit asked', async () => {
+      await settleMutation(
+        use({
+          __typename: 'InsufficientQuantityError',
+          code: ErrorCode.InsufficientQuantity,
+          field: 'quantityUsed',
+          available: 1.5,
+          availableUnitSymbol: 'cup',
+        }),
+        { document: CreatePantryItemUsageDocument, fallback: FALLBACK },
+      );
+
+      expect(alerts()).toEqual([
+        [
+          t('labels.error'),
+          t('errors.onlyAvailable', { amount: '1 1/2', unit: 'cup' }),
+        ],
       ]);
     });
   });

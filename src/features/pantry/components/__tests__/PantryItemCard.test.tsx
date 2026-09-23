@@ -118,6 +118,7 @@ interface BuildItemOverrides {
   id?: string;
   itemName?: string;
   quantity?: number;
+  heldQuantity?: number;
   unitSymbol?: string;
   storageLocationName?: string | null;
   expiresOn?: string | null;
@@ -150,6 +151,7 @@ function buildItem(
     id: overrides.id ?? 'pantry-1',
     itemName: overrides.itemName ?? 'Milk',
     quantity: overrides.quantity ?? 2,
+    heldQuantity: overrides.heldQuantity ?? overrides.quantity ?? 2,
     portionUnitId: overrides.portionUnit?.id ?? null,
     portionUnit: overrides.portionUnit
       ? { __typename: 'Unit', ...overrides.portionUnit }

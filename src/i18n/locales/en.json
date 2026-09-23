@@ -54,7 +54,8 @@
       "uniqueConstraint": "This value already exists",
       "unitInvalid": "That unit cannot be used here.",
       "validationFailed": "Please check your input and try again",
-      "versionConflict": "This item was updated by another user. Please refresh and try again."
+      "versionConflict": "This item was updated by another user. Please refresh and try again.",
+      "unitChangeNeedsResolution": "This unit change is only an estimate. Choose whether to use the estimate or enter the amount yourself."
     },
     "addItemFailed": "Failed to add item",
     "updateItemFailed": "Failed to update item",
@@ -140,7 +141,7 @@
     "recordWasteFailedRetry": "Failed to record item waste. Please try again.",
     "moveToPantryFailedRetry": "Failed to move item to the pantry. Please try again.",
     "adjustQuantityFailed": "Could not adjust the quantity.",
-    "correctWeightFailed": "Could not correct the weight.",
+    "correctWeightFailed": "Could not correct the package size.",
     "openBatchFailed": "Could not open this batch.",
     "wasteBatchFailed": "Could not mark this as wasted.",
     "updateShoppingItemFailed": "Could not update the item.",
@@ -163,7 +164,7 @@
     "generic": "An error occurred",
     "noActiveMealPlan": "No active meal plan. Create one first.",
     "field": {
-      "unit": "This item's unit can't be used right now. Deplete its batches first, or pick a unit it converts to — a made-up unit can't be measured against one.",
+      "unit": "This item's unit changes through the Unit field, which shows what happens to its stock before saving.",
       "usageUnitId": "This item can't be recorded in that unit. Pick one from the list.",
       "netWeight": "Enter both a package size and its unit, or leave both empty.",
       "quantity": "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.",
@@ -176,8 +177,20 @@
       "servingsMade": "Enter a whole number of servings greater than zero",
       "key": "That image could not be confirmed. Pick it again and retry.",
       "imageUrl": "Image URL must start with http:// or https://",
-      "website": "Website must start with http:// or https://"
-    }
+      "website": "Website must start with http:// or https://",
+      "packageSize": "Enter the package size in a unit of the same kind as this item's (weight with weight, volume with volume).",
+      "resolution": "Choose whether to use the estimate or enter the amount yourself.",
+      "quantityUsed": "That's more than this item has left.",
+      "unitId": "That unit can't be used here. Pick one from the list."
+    },
+    "unitDenied": {
+      "curation": "That unit isn't offered for this item.",
+      "noRoute": "That unit can't be converted to how this item is tracked.",
+      "missingFact": "Using that unit needs a fact this item doesn't have yet, like its package size or density.",
+      "inexpressible": "This item's stock can't be measured in that unit."
+    },
+    "unitRefusedTryUnits": "{{reason}} Units that work here: {{units}}.",
+    "onlyAvailable": "There's only {{amount}} {{unit}} left."
   },
   "success": {
     "itemAdded": "Item added successfully",

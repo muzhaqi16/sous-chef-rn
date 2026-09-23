@@ -298,6 +298,7 @@
     }
   },
   "itemForm": {
+    "unknownUnit": "\"{{unit}}\" no es una unidad que reconozcamos. Elige una de la lista.",
     "itemInformation": "Información del artículo",
     "storageDetails": "Detalles de almacenamiento",
     "noPantrySelected": "No hay despensa seleccionada. Selecciona una despensa primero.",
@@ -309,7 +310,6 @@
     "tags": "Etiquetas",
     "tagsPlaceholder": "Introduce etiquetas separadas por comas",
     "location": "Ubicación",
-    "netWeightLocked": "El peso se bloquea tras su uso: corrígelo desde los detalles del artículo",
     "locationPlaceholder": "p. ej., estante superior, cajón 2",
     "storageNotes": "Notas de almacenamiento",
     "notes": "Notas",

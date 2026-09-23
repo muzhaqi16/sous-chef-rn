@@ -55,13 +55,17 @@ export const editItemSchema = object({
       return !context.parent.netWeightUnitId;
     },
   ),
+  // Typed text passes: the submit resolves it to a unit, and reports on this
+  // field when it can't.
   netWeightUnit: string().test(
     'net-weight-needs-unit',
     msg('labels.pleaseSelectAUnitForTheNetWeight'),
-    (_value, context: { parent: NetWeightSiblings }) => {
+    (value, context: { parent: NetWeightSiblings }) => {
       const weight = (context.parent.netWeight ?? '').trim();
       if (!weight) return true;
-      return Boolean(context.parent.netWeightUnitId);
+      return (
+        Boolean(context.parent.netWeightUnitId) || Boolean((value ?? '').trim())
+      );
     },
   ),
   netWeightUnitId: string(),

@@ -5,7 +5,7 @@ import {
   SearchUnitsDocument,
   GetCommonUnitsDocument,
 } from '#operations/item/unit.generated';
-import { useAppStore } from '#store/useAppStore';
+import { useAppStore, useIsOnline } from '#store/useAppStore';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
 import type { UnitType } from '#/graphql/generated/schemaTypes';
@@ -23,6 +23,7 @@ const UNITS_CACHE_TTL = 24 * 60 * 60 * 1000;
 
 export function useUnitAutocomplete() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const isOnline = useIsOnline();
   const cachedUnits = useAppStore(state => state.cachedUnits);
   const setCachedUnits = useAppStore(state => state.setCachedUnits);
   const lastUnitsFetchedAt = useAppStore(state => state.lastUnitsFetchedAt);
@@ -102,7 +103,9 @@ export function useUnitAutocomplete() {
     fallbackItems,
     filterFallback,
     maxResults: 10,
-    localFirst: true,
+    // The cached units are the common ones only, and the server matches
+    // plurals and alternate names ("sticks", "ounces"): it answers when it can.
+    localFirst: !isOnline,
   });
 
   return autocomplete;

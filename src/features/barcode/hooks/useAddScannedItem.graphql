@@ -13,6 +13,7 @@ mutation BarcodeAddItemToShoppingList($input: AddItemsToShoppingListInput!) {
         success
         code
         quantityIncremented
+        packageSizeCleared
         error
         item {
           id
@@ -54,6 +55,11 @@ mutation BarcodeCreatePantryItem($input: CreatePantryItemInput!) {
     ... on ValidationError {
       field
     }
+    ... on UnitEligibilityError {
+      field
+      validUnits
+      denial
+    }
     # A re-add of an item already stocked arrives as this union member; its ids
     # route the user to a one-tap restock.
     ... on DuplicatePantryItemError {
@@ -78,6 +84,8 @@ mutation BarcodeRestockPantryItem($input: RestockPantryItemInput!) {
           # a spurious conflict.
           version
           quantity
+          heldQuantity
+          isLowStock
           ...SearchResults_pantryItem
         }
       }
@@ -92,6 +100,11 @@ mutation BarcodeRestockPantryItem($input: RestockPantryItemInput!) {
     }
     ... on ValidationError {
       field
+    }
+    ... on UnitEligibilityError {
+      field
+      validUnits
+      denial
     }
   }
 }

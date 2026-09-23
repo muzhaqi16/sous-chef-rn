@@ -1,130 +1,8 @@
-import { buildOptimisticUnit, buildDirtyUpdateInput } from '../utils';
-import type { UnitSelection, FormDataInput } from '../types';
+import { buildDirtyUpdateInput } from '../utils';
+import type { FormDataInput } from '../types';
 import type { StorageState } from '#/graphql/generated/schemaTypes';
-import { UnitType } from '#/graphql/generated/schemaTypes';
-
-type CurrentUnit = Parameters<typeof buildOptimisticUnit>[1];
-
-const CURRENT: CurrentUnit = {
-  __typename: 'Unit',
-  id: 'unit-current',
-  name: 'Piece',
-  symbol: 'pc',
-  type: UnitType.Count,
-  displayAsFraction: true,
-};
 
 describe('pantry mutations utils', () => {
-  describe('buildOptimisticUnit', () => {
-    // `PantryItem.unit` is never null, so no pick keeps the row's own unit.
-    it('keeps the current unit when no unit is picked', () => {
-      const newUnit: UnitSelection = {
-        id: null,
-        name: null,
-        symbol: null,
-        type: null,
-      };
-      expect(buildOptimisticUnit(newUnit, CURRENT)).toBe(CURRENT);
-    });
-
-    it('builds unit with newUnit fields when provided', () => {
-      const newUnit: UnitSelection = {
-        id: 'unit-1',
-        name: 'Kilogram',
-        symbol: 'kg',
-        type: UnitType.Weight,
-      };
-
-      const result = buildOptimisticUnit(newUnit, CURRENT);
-
-      expect(result).toEqual(
-        expect.objectContaining({
-          __typename: 'Unit',
-          id: 'unit-1',
-          name: 'Kilogram',
-          symbol: 'kg',
-          type: UnitType.Weight,
-        }),
-      );
-    });
-
-    it('falls back to currentUnit fields when newUnit fields are null', () => {
-      const newUnit: UnitSelection = {
-        id: 'unit-2',
-        name: null,
-        symbol: null,
-        type: null,
-      };
-      const currentUnit: CurrentUnit = {
-        __typename: 'Unit',
-        id: 'unit-1',
-        name: 'Gram',
-        symbol: 'g',
-        type: UnitType.Weight,
-        displayAsFraction: false,
-      };
-
-      const result = buildOptimisticUnit(newUnit, currentUnit);
-
-      expect(result).toEqual(
-        expect.objectContaining({
-          id: 'unit-2',
-          name: 'Gram',
-          symbol: 'g',
-          type: UnitType.Weight,
-          displayAsFraction: false,
-        }),
-      );
-    });
-
-    it("takes the current unit's type when the pick carries none", () => {
-      const newUnit: UnitSelection = {
-        id: 'unit-3',
-        name: 'Each',
-        symbol: 'ea',
-        type: null,
-      };
-
-      expect(buildOptimisticUnit(newUnit, CURRENT).type).toBe(CURRENT.type);
-    });
-
-    it("keeps the current unit's fraction display", () => {
-      const newUnit: UnitSelection = {
-        id: 'unit-5',
-        name: 'Liter',
-        symbol: 'L',
-        type: UnitType.Volume,
-      };
-
-      expect(buildOptimisticUnit(newUnit, CURRENT).displayAsFraction).toBe(
-        CURRENT.displayAsFraction,
-      );
-    });
-
-    it('writes exactly the fields a PantryItem.unit selection names', () => {
-      // One field short and the whole cache read is INCOMPLETE; one field over
-      // and the optimistic entity retains a value the server may have redefined.
-      const result = buildOptimisticUnit(
-        {
-          id: 'unit-6',
-          name: 'Cup',
-          symbol: 'cup',
-          type: UnitType.Volume,
-        },
-        CURRENT,
-      );
-
-      expect(Object.keys(result).sort()).toEqual([
-        '__typename',
-        'displayAsFraction',
-        'id',
-        'name',
-        'symbol',
-        'type',
-      ]);
-    });
-  });
-
   describe('buildDirtyUpdateInput', () => {
     const baseFormData: FormDataInput = {
       itemName: 'Milk',
@@ -353,64 +231,12 @@ describe('pantry mutations utils', () => {
       expect(result).toEqual({ netWeight: { netWeightUnitId: null } });
     });
 
-    /**
-     * The one `UnitSpecInput` the pantry update path builds.
-     *
-     * It is deliberately id-less: the caller reaches it exactly when the typed
-     * unit could NOT be resolved to a catalog id. The server
-     * resolves a bare `unitSymbol` to a real unit and repoints `unitId` with
-     * it, so this is a tracking-unit CHANGE — subject to the batch and
-     * conversion guards, whose refusal arrives as
-     * `ValidationError(field: "unit")` and routes to `errors.field.unit`. It is
-     * not a caption write, and pinning the shape here is what stops it drifting
-     * into one.
-     */
-    describe('unit handling', () => {
-      it('sends the typed symbol with no unitId when the unit is dirty', () => {
-        const result = buildDirtyUpdateInput(
-          baseFormData,
-          { unit: true },
-          null,
-          null,
-          'cans',
-        );
-        expect(result).toEqual({ unit: { unitSymbol: 'cans' } });
-      });
-
-      it('trims the symbol', () => {
-        const result = buildDirtyUpdateInput(
-          baseFormData,
-          { unit: true },
-          null,
-          null,
-          '  cans  ',
-        );
-        expect(result).toEqual({ unit: { unitSymbol: 'cans' } });
-      });
-
-      it('sends no unit when the field is dirty but the symbol is blank', () => {
-        // Nothing to resolve — sending `{ unitSymbol: '' }` would ask the
-        // server to find-or-create a unit with no name.
-        const result = buildDirtyUpdateInput(
-          baseFormData,
-          { unit: true },
-          null,
-          null,
-          '   ',
-        );
-        expect(result).toEqual({});
-      });
-
-      it('sends no unit when the field is not dirty', () => {
-        const result = buildDirtyUpdateInput(
-          baseFormData,
-          {},
-          null,
-          null,
-          'cans',
-        );
-        expect(result).toEqual({});
-      });
+    // `unit` only relabels the unit in use; the unit changes through
+    // `changePantryItemUnit`, so a dirty unit field sends nothing here.
+    it('never sends a unit', () => {
+      expect(
+        buildDirtyUpdateInput(baseFormData, { unit: true }, null, null),
+      ).toEqual({});
     });
 
     describe('brand handling', () => {

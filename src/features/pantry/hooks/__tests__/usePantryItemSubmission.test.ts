@@ -496,6 +496,53 @@ describe('usePantryItemSubmission', () => {
     expect(refused.fired).toHaveLength(1);
   });
 
+  it('restocks with the package size entered, not the stack default', async () => {
+    // A 22 oz jar restocking a 32 oz stack keeps its own size.
+    const refused = recordMock(CreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'DuplicatePantryItemError',
+          code: ErrorCode.Conflict,
+          message: 'Already in pantry',
+          existingPantryItemIds: ['existing-1'],
+        },
+      },
+    });
+    const restock = recordMock(RestockPantryItemDocument, {
+      data: {
+        restockPantryItem: { __typename: 'RestockPantryItemPayload' },
+      },
+    });
+    const { result } = renderHookWithApollo(
+      () =>
+        usePantryItemSubmission({
+          ...defaultParams,
+          pantryNetWeight: '22',
+          pantryNetWeightUnitId: 'u-oz',
+        }),
+      { operationMocks: [refused.mock, restock.mock] },
+    );
+
+    await act(async () => {
+      await result.current.handleConfirm();
+    });
+    const buttons = (alertService.alert as jest.Mock).mock.lastCall?.[2] as {
+      text: string;
+      onPress?: () => void;
+    }[];
+    await act(async () => {
+      buttons[1]?.onPress?.();
+    });
+
+    await waitFor(() =>
+      expect(restock.fired).toContainEqual({
+        input: expect.objectContaining({
+          packageSize: { netWeight: 22, netWeightUnitId: 'u-oz' },
+        }),
+      }),
+    );
+  });
+
   it('shows error when result has error but is not duplicate', async () => {
     const {
       isPantryItemDuplicateError,

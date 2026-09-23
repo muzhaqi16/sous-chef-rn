@@ -27,6 +27,7 @@ export interface PantryItemFixture {
   id?: string;
   itemName?: string;
   quantity?: number;
+  heldQuantity?: number;
   storageState?: string;
   expiresOn?: string | null;
   earliestBatchExpiresOn?: string | null;
@@ -79,6 +80,7 @@ export function pantryItemData(
       itemId: 'item1',
       itemName: fixture.itemName ?? 'Milk',
       quantity: fixture.quantity ?? 2,
+      heldQuantity: fixture.heldQuantity ?? fixture.quantity ?? 2,
       costCurrency: null,
       version: 1,
       updatedAt: '2026-01-01',

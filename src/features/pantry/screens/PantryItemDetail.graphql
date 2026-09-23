@@ -11,6 +11,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
   itemId
   itemName
   quantity
+  heldQuantity
   version
   updatedAt
   storageState
@@ -199,6 +200,7 @@ mutation AddItemToShoppingListFromPantryItem(
         success
         code
         quantityIncremented
+        packageSizeCleared
         error
         item {
           id

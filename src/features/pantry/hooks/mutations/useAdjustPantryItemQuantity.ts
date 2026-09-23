@@ -64,6 +64,7 @@ export function useAdjustPantryItemQuantity({
     if (currentItem) {
       const optimistic = enhanceWithVersion(currentItem, {
         quantity: newQuantity,
+        heldQuantity: newQuantity,
         ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
       });
       try {
@@ -79,7 +80,22 @@ export function useAdjustPantryItemQuantity({
         'quantity',
         newQuantity,
       );
+      optimisticDataPersistence.save(
+        'PantryItem',
+        pantryItemId,
+        'heldQuantity',
+        newQuantity,
+      );
     }
+
+    const clearPersisted = () => {
+      optimisticDataPersistence.clear('PantryItem', pantryItemId, 'quantity');
+      optimisticDataPersistence.clear(
+        'PantryItem',
+        pantryItemId,
+        'heldQuantity',
+      );
+    };
 
     const revert = () => {
       if (currentItem) {
@@ -91,7 +107,7 @@ export function useAdjustPantryItemQuantity({
           });
         }
       }
-      optimisticDataPersistence.clear('PantryItem', pantryItemId, 'quantity');
+      clearPersisted();
     };
 
     // idempotencyKey dedups the ADJUSTMENT ledger entry on replay. `version` is
@@ -121,9 +137,7 @@ export function useAdjustPantryItemQuantity({
 
     // Applied: the response normalized the authoritative value. Queued: the
     // persisted value stands until the replay lands.
-    if (settled.status === 'applied') {
-      optimisticDataPersistence.clear('PantryItem', pantryItemId, 'quantity');
-    }
+    if (settled.status === 'applied') clearPersisted();
     onSuccess?.();
     return true;
   };

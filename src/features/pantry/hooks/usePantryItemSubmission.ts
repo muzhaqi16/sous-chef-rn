@@ -359,6 +359,16 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
                   ...(expirationDate && {
                     expiresOn: toDateKey(expirationDate),
                   }),
+                  // These packages' own size; without it the batch takes the
+                  // stack's default, which may be another size (a 22 oz jar
+                  // on a 32 oz stack).
+                  ...(effectivePantryNetWeight &&
+                    effectiveNetWeightUnitId && {
+                      packageSize: {
+                        netWeight: effectivePantryNetWeight,
+                        netWeightUnitId: effectiveNetWeightUnitId,
+                      },
+                    }),
                   // idempotencyKey dedups the restock ledger row on replay.
                   idempotencyKey: generateEntityId(),
                 },

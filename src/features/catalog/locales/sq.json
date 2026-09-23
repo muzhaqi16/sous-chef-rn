@@ -298,6 +298,7 @@
     }
   },
   "itemForm": {
+    "unknownUnit": "\"{{unit}}\" nuk është njësi që e njohim. Zgjidhni një nga lista.",
     "itemInformation": "Informacioni i artikullit",
     "storageDetails": "Detajet e ruajtjes",
     "noPantrySelected": "Nuk është zgjedhur asnjë qilar. Zgjidh një qilar së pari.",
@@ -309,7 +310,6 @@
     "tags": "Etiketat",
     "tagsPlaceholder": "Shkruaj etiketat të ndara me presje",
     "location": "Vendndodhja",
-    "netWeightLocked": "Pesha kyçet pas përdorimit — korrigjoje te detajet e artikullit",
     "locationPlaceholder": "p.sh., Rafti i sipërm, Sirtari 2",
     "storageNotes": "Shënime ruajtjeje",
     "notes": "Shënime",

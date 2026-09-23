@@ -21,6 +21,7 @@ import { useUpdatePantryItem } from '#features/pantry/hooks/mutations/useUpdateP
 import { useUpdatePantryItemQuantity } from '#features/pantry/hooks/mutations/useUpdatePantryItemQuantity';
 import type { PantryItemForm_PantryItemFragment } from '../PantryItemForm.generated';
 import type { PantryItemFormData } from '../PantryItemForm';
+import type { UnitChangePreview } from '#features/pantry/hooks/usePantryUnitChange';
 import {
   usePantryItemFormSubmit,
   type UsePantryItemFormSubmitParams,
@@ -76,6 +77,11 @@ const baseData: PantryItemFormData = {
   netWeightUnitId: '',
 };
 
+// Only the confirmation reads the preview; the save just hands it over.
+const PREVIEW = { version: 3 } as UnitChangePreview;
+
+const KG = { id: 'unit-kg', name: 'Kilogram', symbol: 'kg', type: null };
+
 function defaults(
   overrides: Partial<UsePantryItemFormSubmitParams> = {},
 ): UsePantryItemFormSubmitParams {
@@ -84,10 +90,10 @@ function defaults(
     // nothing could reach, so the create branch is gone with it.
     itemId: 'item-1',
     currentPantryId: 'pantry-1',
-    isWeightLocked: false,
     existingPantryItem: {
       id: 'item-1',
-      unit: { symbol: 'L' },
+      quantity: 2,
+      unit: { id: 'unit-1', symbol: 'L' },
     } as PantryItemForm_PantryItemFragment,
     dirtyFields: {},
     trackingUnit: { id: 'unit-1', name: 'Liter', symbol: 'L', type: null },
@@ -96,9 +102,14 @@ function defaults(
     selectedBrandId: null,
     selectedCategoryId: null,
     selectedStorageLocation: null,
-    updatePantryItemFields: jest.fn(),
+    updatePantryItemFields: jest.fn().mockResolvedValue(true),
     updateQuantity: jest.fn().mockResolvedValue(true),
     resolveUnitId: jest.fn(),
+    previewUnitChange: jest
+      .fn()
+      .mockResolvedValue({ status: 'ready', preview: PREVIEW }),
+    confirmUnitChange: jest.fn().mockResolvedValue(true),
+    reportFieldError: jest.fn(),
     onSuccess: jest.fn(),
     ...overrides,
   };
@@ -139,7 +150,7 @@ describe('usePantryItemFormSubmit', () => {
     const emptyStack = {
       id: 'item-1',
       quantity: 0,
-      unit: { symbol: 'L' },
+      unit: { id: 'unit-1', symbol: 'L' },
     } as PantryItemForm_PantryItemFragment;
 
     it('saves a notes edit on a stack whose quantity is 0', async () => {
@@ -177,106 +188,209 @@ describe('usePantryItemFormSubmit', () => {
     });
   });
 
-  describe('a unit-only edit keeps the stored quantity', () => {
-    it('sends the stored value, not the seed rounded to three places', async () => {
+  describe('a unit change', () => {
+    it('previews it, asks for confirmation, and closes once it is made', async () => {
       const params = defaults({
-        existingPantryItem: {
-          id: 'item-1',
-          quantity: 1.23456,
-          unit: { symbol: 'L' },
-        } as PantryItemForm_PantryItemFragment,
-        trackingUnit: {
-          id: 'unit-kg',
-          name: 'Kilogram',
-          symbol: 'kg',
-          type: null,
-        },
+        trackingUnit: KG,
         dirtyFields: { unit: true },
+      });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      await result.current.handleSave({ ...baseData, unit: 'kg' });
+
+      expect(params.previewUnitChange).toHaveBeenCalledWith({
+        unitId: 'unit-kg',
+        quantity: null,
+      });
+      expect(params.confirmUnitChange).toHaveBeenCalledWith({
+        unitId: 'unit-kg',
+        quantity: null,
+        preview: PREVIEW,
+      });
+      // The quick set never carries a unit.
+      expect(params.updateQuantity).not.toHaveBeenCalled();
+      expect(params.onSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    it('offers the amount typed with the new unit as the stock in it', async () => {
+      // 2 pieces of chicken with no size, restated as 1/2 lb.
+      const params = defaults({
+        trackingUnit: KG,
+        dirtyFields: { unit: true, quantityInput: true },
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
       await result.current.handleSave({
         ...baseData,
-        quantityInput: '1.235',
         unit: 'kg',
+        quantityInput: '0.5',
       });
 
-      await waitFor(() =>
-        expect(params.updateQuantity).toHaveBeenCalledWith(
-          expect.objectContaining({
-            quantityInput: '1.23456',
-            quantityValue: 1.23456,
-            unitId: 'unit-kg',
-          }),
-        ),
+      expect(params.previewUnitChange).toHaveBeenCalledWith({
+        unitId: 'unit-kg',
+        quantity: 0.5,
+      });
+      expect(params.updateQuantity).not.toHaveBeenCalled();
+    });
+
+    it('stays open, saving nothing else, when the change is not confirmed', async () => {
+      const params = defaults({
+        trackingUnit: KG,
+        dirtyFields: { unit: true, notes: true },
+        confirmUnitChange: jest.fn().mockResolvedValue(false),
+      });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      await result.current.handleSave({ ...baseData, unit: 'kg', notes: 'x' });
+
+      expect(params.updatePantryItemFields).not.toHaveBeenCalled();
+      expect(params.onSuccess).not.toHaveBeenCalled();
+    });
+
+    it('saves the other edits after the unit change, never the unit itself', async () => {
+      const params = defaults({
+        trackingUnit: KG,
+        dirtyFields: { unit: true, notes: true },
+      });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      await result.current.handleSave({ ...baseData, unit: 'kg', notes: 'x' });
+
+      const [call] = (params.updatePantryItemFields as jest.Mock).mock.calls[0];
+      expect(call.dirtyFields).toEqual({ notes: true });
+      expect(params.onSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    it('says on the unit field that a change needs a connection', async () => {
+      const params = defaults({
+        trackingUnit: KG,
+        previewUnitChange: jest.fn().mockResolvedValue({ status: 'offline' }),
+      });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      await result.current.handleSave({ ...baseData, unit: 'kg' });
+
+      expect(params.reportFieldError).toHaveBeenCalledWith(
+        'unit',
+        'Changing the unit needs a connection, so we can show what happens to your stock first.',
       );
+      expect(params.confirmUnitChange).not.toHaveBeenCalled();
+      expect(params.onSuccess).not.toHaveBeenCalled();
+    });
+
+    it('says on the unit field when the change could not be checked', async () => {
+      const params = defaults({
+        trackingUnit: KG,
+        previewUnitChange: jest.fn().mockResolvedValue({ status: 'failed' }),
+      });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      await result.current.handleSave({ ...baseData, unit: 'kg' });
+
+      expect(params.reportFieldError).toHaveBeenCalledWith(
+        'unit',
+        "Couldn't check what this change would do. Try again.",
+      );
+    });
+
+    it('reports a typed unit it cannot resolve on the field, and sends nothing', async () => {
+      const params = defaults({
+        trackingUnit: { id: null, name: null, symbol: null, type: null },
+        resolveUnitId: jest.fn().mockResolvedValue(null),
+      });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      await result.current.handleSave({ ...baseData, unit: 'sticks of' });
+
+      expect(params.reportFieldError).toHaveBeenCalledWith(
+        'unit',
+        '"sticks of" isn\'t a unit we recognise. Pick one from the list.',
+      );
+      expect(params.previewUnitChange).not.toHaveBeenCalled();
+      expect(params.updatePantryItemFields).not.toHaveBeenCalled();
+    });
+
+    it('resolves a typed unit before previewing it', async () => {
+      const resolveUnitId = jest.fn().mockResolvedValue('unit-stick');
+      const params = defaults({
+        trackingUnit: { id: null, name: null, symbol: null, type: null },
+        resolveUnitId,
+      });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      await result.current.handleSave({ ...baseData, unit: 'sticks' });
+
+      expect(resolveUnitId).toHaveBeenCalledWith(null, 'sticks');
+      expect(params.previewUnitChange).toHaveBeenCalledWith({
+        unitId: 'unit-stick',
+        quantity: null,
+      });
     });
   });
 
-  describe('unit resolution (runs before the update branch)', () => {
-    it('resolves unitId from symbol when trackingUnit.id is null', async () => {
-      const resolveUnitId = jest.fn().mockResolvedValue('resolved-unit');
-      const params = defaults({
-        trackingUnit: { id: null, name: null, symbol: null, type: null },
-        dirtyFields: { quantityInput: true },
-        resolveUnitId,
-      });
-      const { result } = renderHook(() => usePantryItemFormSubmit(params));
-
-      await result.current.handleSave(baseData);
-
-      await waitFor(() =>
-        expect(params.updateQuantity).toHaveBeenCalledWith(
-          expect.objectContaining({ unitId: 'resolved-unit' }),
-        ),
+  describe('the net weight is the default for new stock', () => {
+    it('resolves a typed net-weight unit to its id', async () => {
+      const resolveUnitId = jest.fn().mockResolvedValue('nw-unit');
+      const params = defaults({ dirtyFields: { netWeight: true } });
+      const { result } = renderHook(() =>
+        usePantryItemFormSubmit({ ...params, resolveUnitId }),
       );
-      expect(resolveUnitId).toHaveBeenCalledWith(null, 'L');
-    });
 
-    it('resolves netWeight unit from symbol text when not weight-locked', async () => {
-      const resolveUnitId = jest
-        .fn()
-        .mockResolvedValueOnce('unit-1')
-        .mockResolvedValueOnce('nw-unit');
-      const params = defaults({
-        trackingUnit: { id: null, name: null, symbol: null, type: null },
-        netWeightUnitId: null,
-        resolveUnitId,
-      });
-      const { result } = renderHook(() => usePantryItemFormSubmit(params));
-
-      const data = { ...baseData, netWeightUnit: 'oz' };
+      const data = { ...baseData, netWeight: '12', netWeightUnit: 'oz' };
       await result.current.handleSave(data);
 
-      await waitFor(() =>
-        expect(resolveUnitId).toHaveBeenCalledWith(null, 'oz'),
-      );
+      expect(resolveUnitId).toHaveBeenCalledWith(null, 'oz');
       expect(data.netWeightUnitId).toBe('nw-unit');
     });
 
-    it('skips netWeight unit resolution when weight-locked', async () => {
-      const resolveUnitId = jest.fn().mockResolvedValue('x');
+    it('reports a net-weight unit it cannot resolve on the field, and saves nothing', async () => {
       const params = defaults({
-        isWeightLocked: true,
-        trackingUnit: { id: 'u', name: null, symbol: null, type: null },
-        resolveUnitId,
+        dirtyFields: { netWeight: true, netWeightUnit: true },
+        resolveUnitId: jest.fn().mockResolvedValue(null),
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({ ...baseData, netWeightUnit: 'oz' });
+      await result.current.handleSave({
+        ...baseData,
+        netWeight: '12',
+        netWeightUnit: 'ozz',
+      });
 
-      await waitFor(() => expect(params.onSuccess).toHaveBeenCalled());
-      expect(resolveUnitId).not.toHaveBeenCalled();
+      expect(params.reportFieldError).toHaveBeenCalledWith(
+        'netWeightUnit',
+        '"ozz" isn\'t a unit we recognise. Pick one from the list.',
+      );
+      expect(params.updatePantryItemFields).not.toHaveBeenCalled();
+      expect(params.onSuccess).not.toHaveBeenCalled();
+    });
+
+    it('is sent on a stack that has been used', async () => {
+      const params = defaults({
+        existingPantryItem: {
+          id: 'item-1',
+          quantity: 2,
+          lastUsedAt: '2026-09-01',
+          unit: { id: 'unit-1', symbol: 'L' },
+        } as PantryItemForm_PantryItemFragment,
+        dirtyFields: { netWeight: true },
+        netWeightUnitId: 'u-oz',
+      });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      await result.current.handleSave({
+        ...baseData,
+        netWeight: '32',
+        netWeightUnit: 'oz',
+      });
+
+      const [call] = (params.updatePantryItemFields as jest.Mock).mock.calls[0];
+      expect(call.dirtyFields.netWeight).toBe(true);
     });
   });
 
   describe('edit mode', () => {
-    const editParams = (
-      overrides: Partial<UsePantryItemFormSubmitParams> = {},
-    ) => defaults({ ...overrides });
-
     it('alerts when editing without an existing item', async () => {
-      const params = editParams({ existingPantryItem: null });
+      const params = defaults({ existingPantryItem: null });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
       await result.current.handleSave(baseData);
@@ -289,84 +403,93 @@ describe('usePantryItemFormSubmit', () => {
       );
     });
 
-    it('calls updateQuantity when quantityInput is dirty', async () => {
-      const params = editParams({ dirtyFields: { quantityInput: true } });
+    it('sets the quantity in the same unit through the quick set', async () => {
+      const params = defaults({ dirtyFields: { quantityInput: true } });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave(baseData);
+      await result.current.handleSave({ ...baseData, quantityInput: '3' });
 
-      await waitFor(() =>
-        expect(params.updateQuantity).toHaveBeenCalledWith(
-          expect.objectContaining({
-            itemId: 'item-1',
-            quantityValue: 2,
-            unitId: 'unit-1',
-          }),
-        ),
-      );
+      expect(params.updateQuantity).toHaveBeenCalledWith({
+        itemId: 'item-1',
+        quantityInput: '3',
+        quantityValue: 3,
+      });
+      expect(params.previewUnitChange).not.toHaveBeenCalled();
     });
 
-    it('detects unit change from typed symbol vs current item', async () => {
-      const params = editParams({ dirtyFields: {} });
-      const { result } = renderHook(() => usePantryItemFormSubmit(params));
-
-      await result.current.handleSave({ ...baseData, unit: 'kg' });
-
-      // unit is 'kg' (typed) against 'L' (current) but trackingUnit still has 'L'
-      // unitId is 'unit-1' (from trackingUnit), so unitChangedWithoutId is false
-      await waitFor(() => expect(params.updateQuantity).toHaveBeenCalled());
-    });
-
-    it('routes unit-only change without unitId through updatePantryItemFields', async () => {
-      const params = editParams({
-        trackingUnit: { id: null, name: null, symbol: null, type: null },
-        resolveUnitId: jest.fn().mockResolvedValue(null),
-        dirtyFields: {},
+    it('sends the stored value, not the seed rounded to three places', async () => {
+      const params = defaults({
+        existingPantryItem: {
+          id: 'item-1',
+          quantity: 1.23456,
+          unit: { id: 'unit-1', symbol: 'L' },
+        } as PantryItemForm_PantryItemFragment,
+        dirtyFields: { quantityInput: true },
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({ ...baseData, unit: 'kg' });
+      await result.current.handleSave({ ...baseData, quantityInput: '1.235' });
 
-      await waitFor(() =>
-        expect(params.updatePantryItemFields).toHaveBeenCalledWith(
-          expect.objectContaining({
-            itemId: 'item-1',
-            unitSymbol: 'kg',
-          }),
-        ),
+      expect(params.updateQuantity).toHaveBeenCalledWith(
+        expect.objectContaining({
+          quantityInput: '1.23456',
+          quantityValue: 1.23456,
+        }),
       );
-      // updateQuantity NOT called because unitChangedWithoutId
-      expect(params.updateQuantity).not.toHaveBeenCalled();
-    });
-
-    it('strips weight fields from dirtyFields when locked', async () => {
-      const params = editParams({
-        isWeightLocked: true,
-        dirtyFields: { netWeight: true, notes: true },
-      });
-      const { result } = renderHook(() => usePantryItemFormSubmit(params));
-
-      await result.current.handleSave(baseData);
-
-      await waitFor(() =>
-        expect(params.updatePantryItemFields).toHaveBeenCalled(),
-      );
-      const call = (params.updatePantryItemFields as jest.Mock).mock
-        .calls[0][0];
-      expect(call.dirtyFields.netWeight).toBeUndefined();
-      expect(call.dirtyFields.notes).toBe(true);
     });
 
     it('calls onSuccess when nothing changed', async () => {
-      const params = editParams({ dirtyFields: {} });
+      const params = defaults({ dirtyFields: {} });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      // unit unchanged because data.unit === currentItem.unit.symbol === 'L'
       await result.current.handleSave(baseData);
 
       await waitFor(() => expect(params.onSuccess).toHaveBeenCalled());
       expect(params.updateQuantity).not.toHaveBeenCalled();
       expect(params.updatePantryItemFields).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('the form closes only once every write stands', () => {
+    it('stays open when the quantity write is refused', async () => {
+      const params = defaults({
+        dirtyFields: { quantityInput: true, notes: true },
+        updateQuantity: jest.fn().mockResolvedValue(false),
+      });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      await result.current.handleSave({ ...baseData, quantityInput: '3' });
+
+      expect(params.updatePantryItemFields).not.toHaveBeenCalled();
+      expect(params.onSuccess).not.toHaveBeenCalled();
+    });
+
+    it('stays open when the field write is refused', async () => {
+      const params = defaults({
+        dirtyFields: { notes: true },
+        updatePantryItemFields: jest.fn().mockResolvedValue(false),
+      });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      await result.current.handleSave({ ...baseData, notes: 'Top shelf' });
+
+      expect(params.updatePantryItemFields).toHaveBeenCalled();
+      expect(params.onSuccess).not.toHaveBeenCalled();
+    });
+
+    it('closes once after both writes stand', async () => {
+      const params = defaults({
+        dirtyFields: { quantityInput: true, notes: true },
+      });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      await result.current.handleSave({
+        ...baseData,
+        quantityInput: '3',
+        notes: 'Top shelf',
+      });
+
+      expect(params.onSuccess).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -399,6 +522,7 @@ describe('usePantryItemFormSubmit', () => {
       itemId: null,
       itemName: 'Milk',
       quantity: 2,
+      heldQuantity: 2,
       version: 1,
       updatedAt: '2026-01-01',
       storageState: StorageState.Ambient,
@@ -498,14 +622,15 @@ describe('usePantryItemFormSubmit', () => {
       const onSuccess = jest.fn();
       const { result } = renderHookWithApollo(
         () => {
-          const { updatePantryItemFields } = useUpdatePantryItem({ onSuccess });
-          const { updateQuantity } = useUpdatePantryItemQuantity({ onSuccess });
+          const { updatePantryItemFields } = useUpdatePantryItem({});
+          const { updateQuantity } = useUpdatePantryItemQuantity({});
           return usePantryItemFormSubmit(
             defaults({
+              onSuccess,
               existingPantryItem: {
                 id: 'item-1',
                 quantity: 2,
-                unit: { symbol: 'L' },
+                unit: { id: 'unit-1', symbol: 'L' },
               } as PantryItemForm_PantryItemFragment,
               dirtyFields: { quantityInput: true, notes: true },
               updatePantryItemFields,
@@ -534,6 +659,7 @@ describe('usePantryItemFormSubmit', () => {
         }),
       );
       expect(alertService.alert).not.toHaveBeenCalled();
+      expect(onSuccess).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -47,7 +47,7 @@ import { Icon } from '#/utils/iconUtils';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { BatchSection } from '#features/pantry/components/BatchSection';
 import { AdjustQuantityModal } from '#features/pantry/components/modals/AdjustQuantityModal';
-import { CorrectWeightModal } from '#features/pantry/components/modals/CorrectWeightModal';
+import { CorrectPackageSizeModal } from '#features/pantry/components/modals/CorrectPackageSizeModal';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { useRecipeSuggestionsForItem } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
@@ -206,7 +206,8 @@ export const PantryItemDetail: React.FC<
     );
   }
 
-  const quantityText = `${formatQuantityForDisplay(item.quantity, {
+  // What is left, exactly: `quantity` counts a partly used package as one.
+  const quantityText = `${formatQuantityForDisplay(item.heldQuantity, {
     notation: resolveQuantityNotation(null, item.unit.displayAsFraction),
   })} ${getUnitDisplayText(item.unit)}`;
 
@@ -224,6 +225,15 @@ export const PantryItemDetail: React.FC<
         !!batch.expiresOn &&
         daysUntilExpiry(batch.expiresOn, today) < 0,
     );
+
+  const activeBatches = batches.filter(
+    batch => batch.status === BatchStatus.Active,
+  );
+  const [soleBatch] = activeBatches;
+  const soleWeighedBatchId =
+    activeBatches.length === 1 && soleBatch?.netWeight != null
+      ? soleBatch.id
+      : null;
 
   const discardActions: HeaderAction[] =
     hasExpiredBatches && permissions.canEditItems
@@ -386,7 +396,11 @@ export const PantryItemDetail: React.FC<
             packageBreakdownText={packageBreakdownText}
             shelfLifeDays={item.item.shelfLifeDays}
             shelfLifeOpenedDays={item.item.shelfLifeOpenedDays}
-            onCorrectWeight={() => actions.setCorrectWeightVisible(true)}
+            onCorrectPackageSize={
+              soleWeighedBatchId
+                ? () => actions.setCorrectingBatchId(soleWeighedBatchId)
+                : undefined
+            }
             pricing={batchPricing}
           />
         </DetailSection>
@@ -396,6 +410,7 @@ export const PantryItemDetail: React.FC<
             <BatchSection
               batches={batches}
               unitSymbol={item.unit.symbol}
+              netWeightUnitSymbol={item.netWeightUnit?.symbol}
               totalCount={batchTotalCount}
               onViewAll={() =>
                 toPantryBatchHistory({
@@ -404,6 +419,7 @@ export const PantryItemDetail: React.FC<
                   unitSymbol: item.unit.symbol,
                 })
               }
+              onCorrectSize={actions.setCorrectingBatchId}
             />
           </DetailSection>
         )}
@@ -472,12 +488,13 @@ export const PantryItemDetail: React.FC<
           onConfirm={actions.handleConfirmAdjust}
         />
       )}
-      {!!actions.correctWeightVisible && (
-        <CorrectWeightModal
-          visible={actions.correctWeightVisible}
+      {!!actions.correctingBatchId && (
+        <CorrectPackageSizeModal
+          visible
           pantryItemId={itemId}
-          onClose={() => actions.setCorrectWeightVisible(false)}
-          onConfirm={actions.handleCorrectWeight}
+          batchId={actions.correctingBatchId}
+          onClose={() => actions.setCorrectingBatchId(null)}
+          onConfirm={actions.handleCorrectPackageSize}
         />
       )}
       {itemPhotos.length > 0 && (

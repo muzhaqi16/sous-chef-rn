@@ -30,18 +30,6 @@ jest.mock('../utils', () => ({
       return input;
     },
   ),
-  // Mirrors the real `buildOptimisticUnit` (mutations/utils.ts) field for
-  // field. A double that returns fewer fields than the function it stands in
-  // for writes an incomplete Unit into the cache, which makes every read that
-  // selects one come back empty — the opposite of what the real builder does.
-  buildOptimisticUnit: jest.fn(() => ({
-    __typename: 'Unit',
-    id: 'new-unit-id',
-    symbol: 'kg',
-    name: 'Kilogram',
-    type: 'WEIGHT',
-    displayAsFraction: false,
-  })),
   stateToCountKey: jest.fn(() => 'ambient'),
 }));
 
@@ -59,6 +47,7 @@ const buildPantryItem = (overrides: Record<string, unknown> = {}) => ({
   itemId: null,
   itemName: 'Milk',
   quantity: 5,
+  heldQuantity: 5,
   version: 1,
   updatedAt: '2025-01-01',
   storageState: 'PANTRY',
@@ -119,14 +108,18 @@ describe('useUpdatePantryItem', () => {
     expect(typeof result.current.updatePantryItemFields).toBe('function');
   });
 
-  it('fires mutation with dirty fields only', () => {
-    const onSuccess = jest.fn();
-    const { result } = renderHookWithApollo(
-      () => useUpdatePantryItem({ onSuccess }),
-      { cache: seedItem() },
-    );
+  it('resolves true once the write is queued', async () => {
+    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
+      cache: seedItem(),
+      operationMocks: [
+        {
+          request: { query: UpdatePantryItemDocument, variables: () => true },
+          result: { data: { updatePantryItem: null } },
+        },
+      ],
+    });
 
-    result.current.updatePantryItemFields({
+    const stands = await result.current.updatePantryItemFields({
       itemId: 'item-1',
       input: createFormData(),
       dirtyFields: { itemName: true },
@@ -134,18 +127,30 @@ describe('useUpdatePantryItem', () => {
       selectedBrandId: null,
     });
 
-    // onSuccess fires synchronously (mutation is fire-and-forget)
-    expect(onSuccess).toHaveBeenCalled();
+    expect(stands).toBe(true);
   });
 
-  it('calls onSuccess immediately without waiting for mutation', () => {
-    const onSuccess = jest.fn();
-    const { result } = renderHookWithApollo(
-      () => useUpdatePantryItem({ onSuccess }),
-      { cache: seedItem() },
-    );
+  it('resolves false when the server refuses the write', async () => {
+    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
+      cache: seedItem(),
+      operationMocks: [
+        {
+          request: { query: UpdatePantryItemDocument, variables: () => true },
+          result: {
+            data: {
+              updatePantryItem: {
+                __typename: 'ValidationError',
+                code: 'VALIDATION_FAILED',
+                message: 'Name is invalid',
+                field: 'itemName',
+              },
+            },
+          },
+        },
+      ],
+    });
 
-    result.current.updatePantryItemFields({
+    const stands = await result.current.updatePantryItemFields({
       itemId: 'item-1',
       input: createFormData(),
       dirtyFields: { itemName: true },
@@ -153,17 +158,15 @@ describe('useUpdatePantryItem', () => {
       selectedBrandId: null,
     });
 
-    expect(onSuccess).toHaveBeenCalled();
+    expect(stands).toBe(false);
   });
 
-  it('calls onSuccess without mutation when no dirty fields', () => {
-    const onSuccess = jest.fn();
-    const { result } = renderHookWithApollo(
-      () => useUpdatePantryItem({ onSuccess }),
-      { cache: seedItem() },
-    );
+  it('resolves true without a mutation when no fields are dirty', async () => {
+    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
+      cache: seedItem(),
+    });
 
-    result.current.updatePantryItemFields({
+    const stands = await result.current.updatePantryItemFields({
       itemId: 'item-1',
       input: createFormData(),
       dirtyFields: {},
@@ -171,56 +174,10 @@ describe('useUpdatePantryItem', () => {
       selectedBrandId: null,
     });
 
-    expect(onSuccess).toHaveBeenCalled();
+    expect(stands).toBe(true);
     // Early return — buildDirtyUpdateInput returns {} so the mutation never fires.
     const { buildDirtyUpdateInput } = jest.requireMock('../utils');
     expect(buildDirtyUpdateInput.mock.results[0]?.value).toEqual({});
-  });
-
-  it('builds optimistic unit when trackingUnit has different id', () => {
-    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
-      cache: seedItem(),
-    });
-
-    result.current.updatePantryItemFields({
-      itemId: 'item-1',
-      input: createFormData(),
-      dirtyFields: { notes: true },
-      selectedLocationId: null,
-      selectedBrandId: null,
-      trackingUnit: {
-        id: 'new-unit-id',
-        name: 'Kilogram',
-        symbol: 'kg',
-        type: UnitType.Weight,
-      },
-    });
-
-    const { buildOptimisticUnit } = jest.requireMock('../utils');
-    expect(buildOptimisticUnit).toHaveBeenCalled();
-  });
-
-  it('does not build optimistic unit when trackingUnit matches current', () => {
-    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
-      cache: seedItem(),
-    });
-
-    result.current.updatePantryItemFields({
-      itemId: 'item-1',
-      input: createFormData(),
-      dirtyFields: { notes: true },
-      selectedLocationId: null,
-      selectedBrandId: null,
-      trackingUnit: {
-        id: 'unit-1',
-        name: 'Gram',
-        symbol: 'g',
-        type: UnitType.Weight,
-      },
-    });
-
-    const { buildOptimisticUnit } = jest.requireMock('../utils');
-    expect(buildOptimisticUnit).not.toHaveBeenCalled();
   });
 });
 
@@ -236,7 +193,7 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
     result: { current: ReturnType<typeof useUpdatePantryItem> },
     itemName: string,
   ) => {
-    result.current.updatePantryItemFields({
+    void result.current.updatePantryItemFields({
       itemId: 'item-1',
       input: createFormData({ itemName }),
       dirtyFields: { itemName: true },
@@ -355,10 +312,9 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
   });
 
   it('tells the user which input the server refused (the unit)', async () => {
-    // The API resolves a bare `unit.unitSymbol` to a real unit and refuses the
-    // change while batches exist — a ValidationError with `field: "unit"`. The edit
-    // must snap back AND say which of the four sub-inputs this call carries was
-    // refused — in the app's own words, because `message` is English only.
+    // `unit` only relabels the unit in use; a different one is refused on
+    // `field: "unit"`. The edit must snap back AND say which input was refused —
+    // in the app's own words, because `message` is English only.
     const cache = seedItem();
     const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
       cache,
@@ -374,7 +330,7 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
                 __typename: 'ValidationError',
                 code: 'VALIDATION_FAILED',
                 message:
-                  'Cannot change tracking unit while batches exist. Deplete all batches first.',
+                  "A pantry item's unit changes through changePantryItemUnit.",
                 field: 'unit',
               },
             },
@@ -391,13 +347,9 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
       expect(readItemName(cache)).toBe('Milk');
     });
     const { alertService } = require('#/services/alertService');
-    // One string covers all three `unit` refusals — "batches exist", "no
-    // conversion path", and the vocabulary refusing to mint a measured unit
-    // from free text — because the server distinguishes them only in the
-    // message, which is not shown. Naming every remedy is the honest cost.
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
-      "This item's unit can't be used right now. Deplete its batches first, or pick a unit it converts to \u2014 a made-up unit can't be measured against one.",
+      "This item's unit changes through the Unit field, which shows what happens to its stock before saving.",
     );
   });
 });

@@ -41,13 +41,16 @@ import {
   type MoveToPantryFormValues,
 } from './moveToPantryFormConfig';
 import { toDateKey } from '#/utils/dateUtils';
+import type { MoveTarget } from '#features/shoppingList/utils/moveTargets';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
 interface MoveToPantryModalProps {
   visible: boolean;
   shoppingListItemId: string | null;
-  pantries: Array<{ id: string; name: string; isDefault: boolean }>;
+  pantries: readonly MoveTarget[];
   selectedPantryId: string | null;
   onClose: () => void;
+  /** Resolves true once the move is applied or queued; a refusal keeps the sheet open. */
   onConfirm: (input: {
     pantryId: string;
     actualQuantity: number;
@@ -57,7 +60,8 @@ interface MoveToPantryModalProps {
     removeFromList: boolean;
     actualPrice?: number;
     notes?: string;
-  }) => void;
+    packageSize?: { netWeight: number; netWeightUnitId: string };
+  }) => Promise<boolean>;
   /** Server unreachable (offline / API down) — disables the confirm action. */
   confirmDisabled?: boolean;
 }
@@ -260,7 +264,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
 
   // Reaching here means the schema passed, so every field rule has already
   // reported itself ON its own field.
-  const onValid = (values: MoveToPantryFormValues) => {
+  const [isMoving, setIsMoving] = useState(false);
+  const onValid = async (values: MoveToPantryFormValues) => {
     if (!shoppingListItem) return;
     const {
       pantryId: confirmedPantryId,
@@ -271,7 +276,17 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       removeFromList,
       actualPriceInput: confirmedPrice,
       notes,
+      packageSizeInput,
+      packageSizeUnitId,
     } = values;
+    // The schema passed, so a stated size carries its unit.
+    const packageSize =
+      packageSizeInput.trim() && packageSizeUnitId
+        ? {
+            netWeight: parseDecimalInput(packageSizeInput),
+            netWeightUnitId: packageSizeUnitId,
+          }
+        : undefined;
 
     const quantityValue = parseFractionalInput(confirmedQuantity);
     if (quantityValue === null) return;
@@ -286,7 +301,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
         ? undefined
         : unitPriceFromTotal(totalPaid, quantityValue) ?? undefined;
 
-    onConfirm({
+    setIsMoving(true);
+    const moved = await onConfirm({
       pantryId: confirmedPantryId ?? '',
       actualQuantity: quantityValue,
       actualUnitId: confirmedUnitId ?? undefined,
@@ -295,8 +311,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       removeFromList,
       actualPrice,
       notes: notes || undefined,
+      packageSize,
     });
-    onClose();
+    setIsMoving(false);
+    if (moved) onClose();
   };
 
   const handleDateChange = (_event: DateTimePickerEvent, date?: Date) => {
@@ -329,6 +347,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             void handleSubmit(onValid, logValidationErrors)();
           },
           disabled: confirmDisabled,
+          loading: isMoving,
         }}
       />
 
@@ -398,6 +417,55 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                   />
                 </View>
               </View>
+            </View>
+
+            {/* Package size (Optional) */}
+            <View style={styles.section}>
+              <View style={styles.quantityUnitRow}>
+                <View style={styles.quantityField}>
+                  <Controller
+                    control={control}
+                    name="packageSizeInput"
+                    render={({ field, fieldState }) => (
+                      <FormInput
+                        label={t('moveToPantry.packageSizeLabel')}
+                        value={field.value}
+                        onChangeText={text => {
+                          field.onChange(text);
+                          void trigger('packageSizeUnitValue');
+                        }}
+                        placeholder={localizeNumericHint(t('labels.eG145'))}
+                        keyboardType="decimal-pad"
+                        error={fieldState.error?.message}
+                      />
+                    )}
+                  />
+                </View>
+                <View style={styles.unitField}>
+                  <Controller
+                    control={control}
+                    name="packageSizeUnitValue"
+                    render={({ field, fieldState }) => (
+                      <UnitAutocompleteField
+                        variant="inline"
+                        label={t('storageLocationForm.unit')}
+                        value={field.value}
+                        onChangeText={field.onChange}
+                        placeholder={t('labels.ozGMl')}
+                        error={fieldState.error?.message}
+                        testID={shoppingListTestIDs.moveToPantryPackageSizeUnit}
+                        onUnitSelected={id => {
+                          setValue('packageSizeUnitId', id);
+                          void trigger('packageSizeUnitValue');
+                        }}
+                      />
+                    )}
+                  />
+                </View>
+              </View>
+              <Text role="caption" tone="secondary" style={styles.perUnitHint}>
+                {t('moveToPantry.packageSizeHint')}
+              </Text>
             </View>
 
             {/* Storage State */}

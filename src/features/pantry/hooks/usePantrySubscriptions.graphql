@@ -24,6 +24,7 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
   itemId
   itemName
   quantity
+  heldQuantity
   version
   createdAt
   updatedAt

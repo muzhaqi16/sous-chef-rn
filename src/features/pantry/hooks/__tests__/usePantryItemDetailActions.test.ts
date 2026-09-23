@@ -69,7 +69,7 @@ jest.mock('#features/shoppingList/cache/items', () => {
 const mockConvertExpiredToWaste = jest.fn();
 const mockConvertExpiredBatches = jest.fn();
 const mockAdjustQuantity = jest.fn();
-const mockCorrectWeight = jest.fn();
+const mockCorrectPackageSize = jest.fn().mockResolvedValue(true);
 
 jest.mock('#features/pantry/hooks/mutations/useConvertExpiredToWaste', () => ({
   useConvertExpiredToWaste: () => ({
@@ -93,12 +93,11 @@ jest.mock(
   }),
 );
 
-jest.mock(
-  '#features/pantry/hooks/mutations/useCorrectPantryItemWeight',
-  () => ({
-    useCorrectPantryItemWeight: () => ({ correctWeight: mockCorrectWeight }),
+jest.mock('#features/pantry/hooks/mutations/useCorrectPackageSize', () => ({
+  useCorrectPackageSize: () => ({
+    correctPackageSize: mockCorrectPackageSize,
   }),
-);
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -146,7 +145,7 @@ describe('usePantryItemDetailActions', () => {
 
       expect(result.current.addToListStatus).toBe('idle');
       expect(result.current.adjustModalVisible).toBe(false);
-      expect(result.current.correctWeightVisible).toBe(false);
+      expect(result.current.correctingBatchId).toBeNull();
     });
 
     it('exposes modal-state setters', () => {
@@ -155,8 +154,8 @@ describe('usePantryItemDetailActions', () => {
       act(() => result.current.setAdjustModalVisible(true));
       expect(result.current.adjustModalVisible).toBe(true);
 
-      act(() => result.current.setCorrectWeightVisible(true));
-      expect(result.current.correctWeightVisible).toBe(true);
+      act(() => result.current.setCorrectingBatchId('batch-1'));
+      expect(result.current.correctingBatchId).toBe('batch-1');
     });
   });
 
@@ -777,27 +776,40 @@ describe('usePantryItemDetailActions', () => {
     });
   });
 
-  describe('handleCorrectWeight', () => {
-    it('calls correctWeight with item id, weight, reason, version', () => {
+  describe('handleCorrectPackageSize', () => {
+    const correction = {
+      netWeight: 22,
+      netWeightUnitId: 'unit-oz',
+      reason: 'label misread',
+    };
+
+    it('corrects the batch being corrected, on this item', async () => {
       const { result } = setup();
+      act(() => result.current.setCorrectingBatchId('batch-1'));
 
-      act(() => result.current.handleCorrectWeight(500, 'mis-entered', 'g'));
+      let corrected: boolean | undefined;
+      await act(async () => {
+        corrected = await result.current.handleCorrectPackageSize(correction);
+      });
 
-      expect(mockCorrectWeight).toHaveBeenCalledWith(
-        'item-1',
-        500,
-        'mis-entered',
-        1,
-        'g',
-      );
+      expect(corrected).toBe(true);
+      expect(mockCorrectPackageSize).toHaveBeenCalledWith({
+        ...correction,
+        pantryItemId: 'item-1',
+        batchId: 'batch-1',
+      });
     });
 
-    it('does nothing when item is null', () => {
-      const { result } = setup({ item: null });
+    it('does nothing when no batch is being corrected', async () => {
+      const { result } = setup();
 
-      act(() => result.current.handleCorrectWeight(100, 'r'));
+      let corrected: boolean | undefined;
+      await act(async () => {
+        corrected = await result.current.handleCorrectPackageSize(correction);
+      });
 
-      expect(mockCorrectWeight).not.toHaveBeenCalled();
+      expect(corrected).toBe(false);
+      expect(mockCorrectPackageSize).not.toHaveBeenCalled();
     });
   });
 });

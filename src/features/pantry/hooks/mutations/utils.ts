@@ -2,42 +2,18 @@
  * Shared utilities for pantry item mutations
  */
 
-import type { UseUpdatePantryItem_PantryItemFragment } from './useUpdatePantryItem.generated';
 import type {
   UpdatePantryItemInput,
   StorageDetailsInput,
   InventoryThresholdsInput,
   NetWeightInput,
 } from '#/graphql/generated/schemaTypes';
-import type { DirtyFieldFlags, UnitSelection, FormDataInput } from './types';
+import type { DirtyFieldFlags, FormDataInput } from './types';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { toDateKey } from '#/utils/dateUtils';
 
 // Cache updater for adding items to Pantry.itemsConnection
-
-/**
- * Optimistic `Unit` for a cache update. Writes exactly the fields every
- * `PantryItem.unit` selection names — one short and the whole read is
- * INCOMPLETE, so the fields here and in `writePantryItemDetailStub_unit` move
- * together.
- */
-export function buildOptimisticUnit(
-  newUnit: UnitSelection,
-  currentUnit: UseUpdatePantryItem_PantryItemFragment['unit'],
-): UseUpdatePantryItem_PantryItemFragment['unit'] {
-  // No unit picked keeps the one the row has: `PantryItem.unit` is never null.
-  if (!newUnit.id) return currentUnit;
-
-  return {
-    __typename: 'Unit',
-    id: newUnit.id,
-    symbol: firstNonBlank(newUnit.symbol) ?? currentUnit.symbol,
-    name: firstNonBlank(newUnit.name, currentUnit.name, newUnit.symbol) ?? '',
-    type: newUnit.type ?? currentUnit.type,
-    displayAsFraction: currentUnit.displayAsFraction,
-  };
-}
 
 /**
  * `version` is excluded because the form cannot dirty it; the caller adds it
@@ -50,7 +26,6 @@ export function buildDirtyUpdateInput(
   dirtyFields: DirtyFieldFlags,
   locationId: string | null,
   brandId: string | null,
-  unitSymbol?: string | null,
 ): DirtyUpdateInput {
   const input: DirtyUpdateInput = {};
 
@@ -135,11 +110,6 @@ export function buildDirtyUpdateInput(
   }
   if (Object.keys(netWeightInput).length > 0) {
     input.netWeight = netWeightInput;
-  }
-
-  // Handle unit changes via UnitSpecInput (when unitId is unavailable)
-  if (dirtyFields.unit && unitSymbol?.trim()) {
-    input.unit = { unitSymbol: unitSymbol.trim() };
   }
 
   // Group brand fields into brand: BrandReferenceInput

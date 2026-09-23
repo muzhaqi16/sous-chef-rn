@@ -109,6 +109,8 @@ export function buildOptimisticPantryItem(
     itemId: catalogItemId,
     itemName: fields.itemName,
     quantity: fields.quantity ?? 1,
+    // Fresh stock: every package is whole, so what is held is the count.
+    heldQuantity: fields.quantity ?? 1,
     storageState: fields.storageState ?? StorageState.None,
     expiresOn: fields.expiresOn ?? null,
     lowStockAlert: false,

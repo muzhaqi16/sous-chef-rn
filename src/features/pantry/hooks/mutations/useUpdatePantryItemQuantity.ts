@@ -1,5 +1,5 @@
 /**
- * Local-first: the updated quantity/unit is written to the cache PERMANENTLY
+ * Local-first: the updated quantity is written to the cache PERMANENTLY
  * before firing (an `optimisticResponse` would roll back on the offline queue's
  * null result), so a queued update stays visible and replays via the idempotent
  * `SyncPantryItem` upsert; a real rejection restores the pre-edit snapshot.
@@ -14,15 +14,12 @@ import {
 } from './useUpdatePantryItemQuantity.generated';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { buildOptimisticUnit } from './utils';
-import type { UnitSelection } from './types';
 import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { logger } from '#/utils/environment';
 import { useTranslation } from '#/i18n';
 
 interface UseUpdatePantryItemQuantityOptions {
-  onSuccess?: () => void;
   refetch?: () => void;
 }
 
@@ -30,13 +27,9 @@ interface UpdateQuantityParams {
   itemId: string;
   quantityInput: string;
   quantityValue: number;
-  unitId: string | null;
-  unitSymbol: string;
-  trackingUnit: UnitSelection;
 }
 
 export function useUpdatePantryItemQuantity({
-  onSuccess,
   refetch,
 }: UseUpdatePantryItemQuantityOptions) {
   const { t } = useTranslation();
@@ -47,15 +40,14 @@ export function useUpdatePantryItemQuantity({
   );
 
   /**
-   * Updates quantity and/or unit. `onSuccess` runs as soon as the write is
-   * fired; the returned promise resolves once it settles, false on a refusal.
+   * Sets the quantity in the stack's own unit; the unit changes through
+   * `changePantryItemUnit`. Resolves once the write settles — at once when it
+   * is queued — and false on a refusal, which has been alerted.
    */
   const updateQuantity = async ({
     itemId,
     quantityInput,
     quantityValue,
-    unitId,
-    trackingUnit,
   }: UpdateQuantityParams): Promise<boolean> => {
     const cacheId = client.cache.identify({
       __typename: 'PantryItem',
@@ -85,9 +77,10 @@ export function useUpdatePantryItemQuantity({
       return false;
     }
 
+    // The set amount is what the stack holds; the response recounts packages.
     const optimisticPantryItem = enhanceWithVersion(currentItem, {
       quantity: newQuantity,
-      unit: buildOptimisticUnit(trackingUnit, currentItem.unit),
+      heldQuantity: newQuantity,
     });
 
     // Permanent write BEFORE firing: survives an offline/API-down queue
@@ -117,7 +110,7 @@ export function useUpdatePantryItemQuantity({
       }
     };
 
-    const settled = settleMutation(
+    const settled = await settleMutation(
       () =>
         updateQuantityMutation({
           variables: {
@@ -126,7 +119,6 @@ export function useUpdatePantryItemQuantity({
               // Separators normalized, fraction preserved: the server parses
               // this string itself and rejects a comma decimal outright.
               quantity: normalizeNumericTextForApi(quantityText),
-              unitId: unitId,
               version: currentItem.version,
             },
           },
@@ -141,8 +133,7 @@ export function useUpdatePantryItemQuantity({
       },
     );
 
-    onSuccess?.();
-    return (await settled).status !== 'failed';
+    return settled.status !== 'failed';
   };
 
   return { updateQuantity };

@@ -1,0 +1,89 @@
+# What a unit change would do, without writing. `message` is not selected: the
+# refusal is shown from its `code` and `field`.
+query PreviewPantryItemUnitChange($input: PreviewPantryItemUnitChangeInput!) {
+  previewPantryItemUnitChange(input: $input) {
+    version
+    method
+    exact
+    quantityIgnored
+    fromUnit {
+      id
+      symbol
+      displayAsFraction
+    }
+    toUnit {
+      id
+      symbol
+      displayAsFraction
+    }
+    quantityBefore
+    heldQuantityBefore
+    quantityAfter
+    heldQuantityAfter
+    batches {
+      batchId
+      quantityBefore
+      quantityAfter
+    }
+    minQuantityAfter
+    restockQuantityAfter
+    dropsNetWeight
+    dropsPortions
+    dropsThresholds
+    conflictingPantryItemId
+    refusal {
+      code
+      field
+    }
+  }
+}
+
+# Every stack field the change re-denominates. The batches are re-read: each
+# one is restated in the new unit, which the response does not carry.
+fragment usePantryUnitChange_pantryItem on PantryItem {
+  id
+  version
+  updatedAt
+  quantity
+  heldQuantity
+  unit {
+    id
+    name
+    symbol
+    type
+    displayAsFraction
+  }
+  netWeight
+  remainingNetWeight
+  netWeightUnit {
+    id
+    name
+    symbol
+  }
+  minQuantity
+  restockQuantity
+  isLowStock
+}
+
+mutation ChangePantryItemUnit($input: ChangePantryItemUnitInput!) {
+  changePantryItemUnit(input: $input) {
+    __typename
+    ... on ChangePantryItemUnitPayload {
+      pantryItem {
+        id
+        ...usePantryUnitChange_pantryItem
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

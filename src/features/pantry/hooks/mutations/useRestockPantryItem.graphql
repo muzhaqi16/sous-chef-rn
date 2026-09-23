@@ -6,6 +6,8 @@ fragment useRestockPantryItem_pantryItem on PantryItem {
   version
   updatedAt
   quantity
+  heldQuantity
+  isLowStock
   netWeight
   remainingNetWeight
   expiresOn

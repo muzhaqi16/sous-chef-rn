@@ -6,12 +6,14 @@ import { useTranslation } from '#/i18n';
 import { useFragment } from '@apollo/client/react';
 import { FormInput } from '#components/atoms/FormInput';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
-import { FormattedItemSubtitle } from '#components/molecules/FormattedItemSubtitle';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { commonStyles } from '#/styles/commonStyles';
 import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
-import { CorrectWeightModal_PantryItemFragmentDoc } from './CorrectWeightModal.generated';
+import {
+  CorrectPackageSizeModal_BatchFragmentDoc,
+  CorrectPackageSizeModal_PantryItemFragmentDoc,
+} from './CorrectPackageSizeModal.generated';
 import {
   formatNumberForInput,
   localizeNumericHint,
@@ -26,30 +28,38 @@ import {
 } from './correctWeightFormConfig';
 import { logValidationErrors } from '#/utils/validation/common';
 
-interface CorrectWeightModalProps {
-  visible: boolean;
-  pantryItemId: string | null;
-  onClose: () => void;
-  onConfirm: (
-    netWeight: number,
-    reason: string,
-    netWeightUnitId?: string,
-  ) => void;
+export interface PackageSizeCorrectionInput {
+  netWeight: number;
+  netWeightUnitId: string;
+  reason: string;
 }
 
-export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
-  visible,
-  pantryItemId,
-  onClose,
-  onConfirm,
-}) => {
+interface CorrectPackageSizeModalProps {
+  visible: boolean;
+  pantryItemId: string;
+  batchId: string | null;
+  onClose: () => void;
+  /** Resolves true once the correction stands; a refusal keeps the sheet open. */
+  onConfirm: (input: PackageSizeCorrectionInput) => Promise<boolean>;
+}
+
+/** Corrects ONE batch's package size; the stack's default is edited elsewhere. */
+export const CorrectPackageSizeModal: React.FC<
+  CorrectPackageSizeModalProps
+> = ({ visible, pantryItemId, batchId, onClose, onConfirm }) => {
   const { t } = useTranslation();
-  const { data, complete } = useFragment({
-    fragment: CorrectWeightModal_PantryItemFragmentDoc,
-    fragmentName: 'CorrectWeightModal_pantryItem',
-    from: pantryItemId ? { __typename: 'PantryItem', id: pantryItemId } : null,
+  const itemFragment = useFragment({
+    fragment: CorrectPackageSizeModal_PantryItemFragmentDoc,
+    fragmentName: 'CorrectPackageSizeModal_pantryItem',
+    from: { __typename: 'PantryItem', id: pantryItemId },
   });
-  const pantryItem = pantryItemId && complete ? data : null;
+  const batchFragment = useFragment({
+    fragment: CorrectPackageSizeModal_BatchFragmentDoc,
+    fragmentName: 'CorrectPackageSizeModal_batch',
+    from: batchId ? { __typename: 'PantryItemBatch', id: batchId } : null,
+  });
+  const pantryItem = itemFragment.complete ? itemFragment.data : null;
+  const batch = batchId && batchFragment.complete ? batchFragment.data : null;
 
   const { control, handleSubmit, setValue, reset, getValues } =
     useForm<CorrectWeightFormValues>({
@@ -60,17 +70,17 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
   // `reset` notifies mounted `Controller` children synchronously, so calling it
   // during render updates components that are not rendering. The seed is
   // computed here (own state only) and applied from an effect. Keyed on the
-  // item id so a cache update to the same item does not clobber typed input.
+  // batch id so a cache update to the same batch does not clobber typed input.
   const [pendingSeed, setPendingSeed] =
     useState<CorrectWeightFormValues | null>(null);
   const [seedKey, setSeedKey] = useState<string | null>(null);
-  const nextSeedKey = visible && pantryItem ? pantryItem.id : null;
+  const nextSeedKey = visible && pantryItem && batch ? batch.id : null;
   if (nextSeedKey !== seedKey) {
     setSeedKey(nextSeedKey);
     setPendingSeed(
-      nextSeedKey && pantryItem
+      nextSeedKey && pantryItem && batch
         ? {
-            weightInput: formatNumberForInput(pantryItem.netWeight),
+            weightInput: formatNumberForInput(batch.netWeight),
             unitDisplay: getUnitDisplayText(pantryItem.netWeightUnit),
             selectedUnitId: pantryItem.netWeightUnit?.id ?? null,
             reason: '',
@@ -91,33 +101,38 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
     if (unitName) setValue('unitDisplay', unitName, { shouldDirty: true });
   };
 
+  const [isSaving, setIsSaving] = useState(false);
   // Reaching here means the schema passed; a refusal renders under its field.
-  const handleConfirm = handleSubmit(values => {
-    if (!pantryItem) return;
-    const { selectedUnitId } = getValues();
-    onConfirm(
-      parseWeight(values),
-      values.reason.trim(),
-      selectedUnitId && selectedUnitId !== pantryItem.netWeightUnit?.id
-        ? selectedUnitId
-        : undefined,
-    );
-    onClose();
+  const submit = handleSubmit(async values => {
+    const netWeightUnitId =
+      getValues().selectedUnitId ?? pantryItem?.netWeightUnit?.id;
+    if (!netWeightUnitId) return;
+    setIsSaving(true);
+    const corrected = await onConfirm({
+      netWeight: parseWeight(values),
+      netWeightUnitId,
+      reason: values.reason.trim(),
+    });
+    setIsSaving(false);
+    if (corrected) onClose();
   }, logValidationErrors);
+  const handleConfirm = () => {
+    void submit();
+  };
 
-  const currentWeightText = formatNetWeightDisplay(
-    pantryItem?.netWeight,
+  const sizeText = formatNetWeightDisplay(
+    batch?.netWeight,
     pantryItem?.netWeightUnit,
   );
-  const remainingWeightText = formatNetWeightDisplay(
-    pantryItem?.remainingNetWeight,
+  const remainingText = formatNetWeightDisplay(
+    batch?.remainingNetWeight,
     pantryItem?.netWeightUnit,
   );
 
   return (
     <Sheet
       mode="form"
-      visible={visible ? !!pantryItem : false}
+      visible={visible ? !!pantryItem && !!batch : false}
       onDismiss={onClose}
       snapPoints={['65%', '85%']}
       contentContainerStyle={commonStyles.bottomSheetContent}
@@ -127,40 +142,38 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
         onCancel={onClose}
         onConfirm={handleConfirm}
         confirmLabel={t('correctWeight.correct')}
+        saving={isSaving}
       />
 
-      {!!pantryItem && (
+      {!!pantryItem && !!batch && (
         <>
           <View style={commonStyles.bottomSheetItemInfo}>
             <Text role="heading" style={commonStyles.bottomSheetItemName}>
               {pantryItem.itemName}
             </Text>
-            {!!currentWeightText && (
+            <View style={commonStyles.bottomSheetItemRow}>
+              <Text role="body" tone="secondary">
+                {t('pantryItemDetail.batch.number', {
+                  number: batch.batchNumber,
+                })}
+              </Text>
+            </View>
+            {!!sizeText && (
               <View style={commonStyles.bottomSheetItemRow}>
                 <Text role="body" tone="secondary">
                   {t('correctWeight.netWeightPrefix')}
-                  {currentWeightText}
+                  {sizeText}
                 </Text>
               </View>
             )}
-            {!!remainingWeightText && (
+            {!!remainingText && (
               <View style={commonStyles.bottomSheetItemRow}>
                 <Text role="body" tone="secondary">
                   {t('labels.remaining')}
-                  {remainingWeightText}
+                  {remainingText}
                 </Text>
               </View>
             )}
-            <View style={commonStyles.bottomSheetItemRow}>
-              <Text role="body" tone="secondary">
-                {t('correctWeight.quantityLabel')}
-              </Text>
-              <FormattedItemSubtitle
-                quantity={pantryItem.quantity}
-                displayAsFraction={pantryItem.unit.displayAsFraction}
-                unitSymbol={pantryItem.unit.symbol}
-              />
-            </View>
           </View>
 
           <View style={commonStyles.bottomSheetSection}>

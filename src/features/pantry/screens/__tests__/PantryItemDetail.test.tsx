@@ -34,13 +34,13 @@ jest.mock('#features/pantry/hooks/usePantryItemDetailActions', () => ({
     addToListStatus: 'idle',
     adjustModalVisible: false,
     setAdjustModalVisible: jest.fn(),
-    correctWeightVisible: false,
-    setCorrectWeightVisible: jest.fn(),
+    correctingBatchId: null,
+    setCorrectingBatchId: jest.fn(),
     handleDelete: jest.fn(),
     handleAddToShoppingList: jest.fn(),
     handleDiscardExpired: jest.fn(),
     handleConfirmAdjust: jest.fn(),
-    handleCorrectWeight: jest.fn(),
+    handleCorrectPackageSize: jest.fn(),
   }),
 }));
 
@@ -95,8 +95,8 @@ jest.mock('#features/pantry/components/modals/AdjustQuantityModal', () => ({
   AdjustQuantityModal: () => null,
 }));
 
-jest.mock('#features/pantry/components/modals/CorrectWeightModal', () => ({
-  CorrectWeightModal: () => null,
+jest.mock('#features/pantry/components/modals/CorrectPackageSizeModal', () => ({
+  CorrectPackageSizeModal: () => null,
 }));
 
 jest.mock('#components/atoms/SousChefLoader', () => ({

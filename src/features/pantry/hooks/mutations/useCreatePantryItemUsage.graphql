@@ -5,6 +5,8 @@ fragment useCreatePantryItemUsage_pantryItem on PantryItem {
   id
   version
   quantity
+  heldQuantity
+  isLowStock
   lastUsedAt
   remainingNetWeight
   activeBatchCount

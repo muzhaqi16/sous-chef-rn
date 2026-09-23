@@ -33,7 +33,12 @@ import { ItemInformationSection } from './ItemInformationSection';
 import { QuantitySection } from './QuantitySection';
 import { StorageDetailsSection } from './StorageDetailsSection';
 import { NetWeightSection } from './NetWeightSection';
-import { usePantryItemFormSubmit } from './usePantryItemFormSubmit';
+import {
+  usePantryItemFormSubmit,
+  type UnitChangeConfirmation,
+} from './usePantryItemFormSubmit';
+import { usePantryUnitChange } from '#features/pantry/hooks/usePantryUnitChange';
+import { UnitChangeSheet } from '#features/pantry/components/modals/UnitChangeSheet';
 import { logValidationErrors } from '#utils/validation/common';
 import {
   TAB_FIELDS,
@@ -157,14 +162,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   } = usePantryItemFormData({ itemId, selectedHomeId, selectedPantryId });
 
   const { updatePantryItemFields } = useUpdatePantryItem({
-    onSuccess,
     refetch: () => {
       void refetchItem();
     },
   });
 
   const { updateQuantity } = useUpdatePantryItemQuantity({
-    onSuccess,
     refetch: () => {
       void refetchItem();
     },
@@ -201,6 +204,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     handleSubmit,
     formState: { errors, dirtyFields },
     setValue,
+    setError,
     reset,
     trigger,
   } = useForm<PantryItemFormData>({
@@ -282,12 +286,20 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   };
 
   const item = existingPantryItem;
-  const isWeightLocked = !!item?.lastUsedAt;
+
+  const { preview: previewUnitChange } = usePantryUnitChange();
+  // The pending confirmation holds the resolver the save awaits.
+  const [pendingUnitChange, setPendingUnitChange] = useState<
+    (UnitChangeConfirmation & { settle: (changed: boolean) => void }) | null
+  >(null);
+  const settleUnitChange = (changed: boolean) => {
+    pendingUnitChange?.settle(changed);
+    setPendingUnitChange(null);
+  };
 
   const { handleSave } = usePantryItemFormSubmit({
     itemId,
     currentPantryId,
-    isWeightLocked,
     existingPantryItem,
     dirtyFields: dirtyFields,
     trackingUnit,
@@ -299,14 +311,34 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     updatePantryItemFields,
     updateQuantity,
     resolveUnitId,
+    previewUnitChange: request =>
+      previewUnitChange({
+        pantryItemId: itemId,
+        unitId: request.unitId,
+        quantity: request.quantity ?? undefined,
+      }),
+    confirmUnitChange: confirmation =>
+      new Promise<boolean>(settle => {
+        setPendingUnitChange({ ...confirmation, settle });
+      }),
+    reportFieldError: (field, message) => {
+      setCurrentPage(PAGES.findIndex(page => TAB_FIELDS[page].includes(field)));
+      setError(field, { type: 'server', message }, { shouldFocus: false });
+    },
     onSuccess,
   });
 
   // Cache first: a locally created item is readable before any round trip, so
   // spin only when there is genuinely nothing to show. `isUnconfirmed` counts
   // as loading, not missing — the create is in flight.
+  const [isSaving, setIsSaving] = useState(false);
+  const submit = async () => {
+    setIsSaving(true);
+    await handleSubmit(handleSave, logValidationErrors)();
+    setIsSaving(false);
+  };
   const save = () => {
-    void handleSubmit(handleSave, logValidationErrors)();
+    void submit();
   };
   const shell = (children: React.ReactNode, canSave = true) => (
     <FormScreen
@@ -314,6 +346,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       onClose={() => goBack()}
       onSave={save}
       canSave={canSave}
+      loading={isSaving}
       testID={pantryTestIDs.editItemModal}
       submitButtonTestID={pantryTestIDs.editItemSubmitButton}
     >
@@ -411,7 +444,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         {currentPage === 1 && (
           <NetWeightSection
             control={control}
-            isWeightLocked={isWeightLocked}
             onNetWeightChanged={revalidateNetWeight}
             onNetWeightUnitSelected={handleNetWeightUnitSelected}
           />
@@ -468,6 +500,17 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           </>
         )}
       </View>
+
+      {!!pendingUnitChange && (
+        <UnitChangeSheet
+          pantryItemId={itemId}
+          unitId={pendingUnitChange.unitId}
+          typedQuantity={pendingUnitChange.quantity}
+          initialPreview={pendingUnitChange.preview}
+          onClose={() => settleUnitChange(false)}
+          onChanged={() => settleUnitChange(true)}
+        />
+      )}
     </>,
   );
 };

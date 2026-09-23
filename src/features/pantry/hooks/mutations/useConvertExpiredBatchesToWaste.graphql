@@ -4,6 +4,8 @@ fragment useConvertExpiredBatchesToWaste_pantryItem on PantryItem {
   id
   version
   quantity
+  heldQuantity
+  isLowStock
   activeBatchCount
   earliestBatchExpiresOn
 }

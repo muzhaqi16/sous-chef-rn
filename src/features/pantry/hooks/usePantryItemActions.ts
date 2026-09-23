@@ -53,6 +53,13 @@ const RANKED_UNIT_FIELDS = [
   RestockUnitsForPantryItemDocument,
 ].map(rootFieldOf);
 
+interface StockSnapshot {
+  quantity: number;
+  heldQuantity: number;
+}
+
+const NO_STOCK: StockSnapshot = { quantity: 0, heldQuantity: 0 };
+
 export function usePantryItemActions({
   removeItem,
   navigateTo,
@@ -90,26 +97,26 @@ export function usePantryItemActions({
     return data?.unit?.id ?? undefined;
   };
 
-  /**
-   * Read the current quantity from the cache, for optimistic revert.
-   */
-  const readCurrentQuantity = (itemId: string): number => {
+  /** The stock as cached, to restore if the write is refused. */
+  const readCurrentStock = (itemId: string): StockSnapshot => {
     const cacheId = client.cache.identify({
       __typename: 'PantryItem',
       id: itemId,
     });
-    if (!cacheId) return 0;
-    const data = client.cache.readFragment<{ quantity: number }>({
+    if (!cacheId) return NO_STOCK;
+    const data = client.cache.readFragment<StockSnapshot>({
       id: cacheId,
       fragment: UsePantryItemActions_QuantityFragmentDoc,
     });
-    return data?.quantity ?? 0;
+    return data ?? NO_STOCK;
   };
 
   /**
-   * Optimistically update a pantry item's quantity in cache for instant UI feedback.
+   * Moves the cached stock by `delta` tracking units for instant feedback.
+   * `heldQuantity` is what the screens show; `quantity` counts packages and is
+   * settled by the response.
    */
-  const optimisticUpdateQuantity = (itemId: string, newQuantity: number) => {
+  const optimisticUpdateStock = (itemId: string, delta: number) => {
     const cacheId = client.cache.identify({
       __typename: 'PantryItem',
       id: itemId,
@@ -119,8 +126,11 @@ export function usePantryItemActions({
     client.cache.modify({
       id: cacheId,
       fields: {
-        quantity() {
-          return Math.max(0, newQuantity);
+        quantity(existing: number) {
+          return Math.max(0, existing + delta);
+        },
+        heldQuantity(existing: number) {
+          return Math.max(0, existing + delta);
         },
         updatedAt() {
           return new Date().toISOString();
@@ -132,10 +142,8 @@ export function usePantryItemActions({
     });
   };
 
-  /**
-   * Revert a pantry item's quantity in cache on mutation error.
-   */
-  const revertQuantity = (itemId: string, originalQty: number) => {
+  /** Restores the stock snapshot taken before a refused write. */
+  const revertStock = (itemId: string, original: StockSnapshot) => {
     const cacheId = client.cache.identify({
       __typename: 'PantryItem',
       id: itemId,
@@ -146,7 +154,10 @@ export function usePantryItemActions({
       id: cacheId,
       fields: {
         quantity() {
-          return originalQty;
+          return original.quantity;
+        },
+        heldQuantity() {
+          return original.heldQuantity;
         },
       },
     });
@@ -172,18 +183,18 @@ export function usePantryItemActions({
     if (activeModal.type !== 'consume') return;
 
     const itemId = activeModal.itemId;
-    const originalQty = readCurrentQuantity(itemId);
+    const original = readCurrentStock(itemId);
     const trackingUnitId = readTrackingUnitId(itemId);
     // Only apply optimistic update when using the tracking unit (same unit = direct subtraction)
     // When using a converted unit, the server response will update the cache
     const canOptimistic = !usageUnitId || usageUnitId === trackingUnitId;
     if (canOptimistic) {
-      optimisticUpdateQuantity(itemId, originalQty - quantityUsed);
+      optimisticUpdateStock(itemId, -quantityUsed);
     }
 
     const consumeNotes = notes || undefined;
     const revertOptimistic = canOptimistic
-      ? () => revertQuantity(itemId, originalQty)
+      ? () => revertStock(itemId, original)
       : undefined;
 
     const settled = await settleMutation(
@@ -227,16 +238,16 @@ export function usePantryItemActions({
     if (activeModal.type !== 'waste') return;
 
     const itemId = activeModal.itemId;
-    const originalQty = readCurrentQuantity(itemId);
+    const original = readCurrentStock(itemId);
     const trackingUnitId = readTrackingUnitId(itemId);
     const canOptimistic = !wasteUnitId || wasteUnitId === trackingUnitId;
     if (canOptimistic) {
-      optimisticUpdateQuantity(itemId, originalQty - wasteAmount);
+      optimisticUpdateStock(itemId, -wasteAmount);
     }
 
     const wasteNotes = notes || undefined;
     const revertOptimistic = canOptimistic
-      ? () => revertQuantity(itemId, originalQty)
+      ? () => revertStock(itemId, original)
       : undefined;
 
     const settled = await settleMutation(
@@ -284,11 +295,11 @@ export function usePantryItemActions({
     if (activeModal.type !== 'restock') return;
 
     const itemId = activeModal.itemId;
-    const originalQty = readCurrentQuantity(itemId);
+    const original = readCurrentStock(itemId);
     const trackingUnitId = readTrackingUnitId(itemId);
     const canOptimistic = !unitId || unitId === trackingUnitId;
     if (canOptimistic) {
-      optimisticUpdateQuantity(itemId, originalQty + quantity);
+      optimisticUpdateStock(itemId, quantity);
     }
 
     // Optimistically increment activeBatchCount for instant UI feedback
@@ -311,7 +322,7 @@ export function usePantryItemActions({
     const expiresOn = expiresAt ? toDateKey(expiresAt) : null;
     const revertOptimistic = () => {
       if (canOptimistic) {
-        revertQuantity(itemId, originalQty);
+        revertStock(itemId, original);
       }
       if (cacheIdForBatch) {
         client.cache.modify({

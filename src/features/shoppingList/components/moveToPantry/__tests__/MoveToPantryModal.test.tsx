@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import type { ViewProps } from 'react-native';
 import { MoveToPantryModal } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { MoveToPantryPurchaseInfoDocument } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal.generated';
@@ -103,22 +104,26 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
     // Reproduces the real field's order — the symbol first, then the id, and a
     // keystroke drops a previous pick. The required-unit rule reports on the
     // TEXT while reading the id, so only both writes together exercise it.
+    // A field with a `testID` prefixes its controls with it.
     UnitAutocompleteField: ({
       onChangeText,
       onUnitSelected,
       error,
+      testID,
     }: {
       onChangeText: (text: string) => void;
       onUnitSelected?: (unitId: string | null) => void;
       error?: string;
-    }) =>
-      R.createElement(
+      testID?: string;
+    }) => {
+      const prefix = testID ? `${testID}-` : '';
+      return R.createElement(
         RN.View,
-        { testID: 'unit-autocomplete' },
+        { testID: `${prefix}unit-autocomplete` },
         R.createElement(
           RN.Pressable,
           {
-            testID: 'pick-unit',
+            testID: `${prefix}pick-unit`,
             onPress: () => {
               onChangeText('kg');
               onUnitSelected?.('unit-kg');
@@ -129,7 +134,7 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
         R.createElement(
           RN.Pressable,
           {
-            testID: 'clear-unit',
+            testID: `${prefix}clear-unit`,
             onPress: () => {
               onChangeText('');
               onUnitSelected?.(null);
@@ -138,9 +143,10 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
           R.createElement(RN.Text, null, 'Clear'),
         ),
         error
-          ? R.createElement(RN.Text, { testID: 'unit-error' }, error)
+          ? R.createElement(RN.Text, { testID: `${prefix}unit-error` }, error)
           : null,
-      ),
+      );
+    },
   };
 });
 
@@ -228,7 +234,7 @@ describe('MoveToPantryModal', () => {
     pantries: mockPantries,
     selectedPantryId: 'p1',
     onClose: jest.fn(),
-    onConfirm: jest.fn(),
+    onConfirm: jest.fn().mockResolvedValue(true),
   };
 
   beforeEach(() => {
@@ -438,7 +444,7 @@ describe('MoveToPantryModal', () => {
     const openWithPurchase = (
       purchasedQuantity: number | null,
       purchasedPrice: number | null,
-      onConfirm = jest.fn(),
+      onConfirm = jest.fn().mockResolvedValue(true),
     ) => {
       const { rerender } = renderWithApollo(
         <MoveToPantryModal
@@ -533,10 +539,106 @@ describe('MoveToPantryModal', () => {
       );
     });
 
+    it('closes once the move stands', async () => {
+      const onClose = jest.fn();
+      const { rerender } = renderWithApollo(
+        <MoveToPantryModal
+          {...defaultProps}
+          visible={false}
+          onClose={onClose}
+        />,
+        { cache: makeCache(), operationMocks: [purchaseMock(5, 0.59)] },
+      );
+      rerender(<MoveToPantryModal {...defaultProps} onClose={onClose} />);
+
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+      );
+      fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+      await waitFor(() => expect(onClose).toHaveBeenCalled());
+    });
+
+    it('stays open when the move is refused', async () => {
+      const onClose = jest.fn();
+      const onConfirm = jest.fn().mockResolvedValue(false);
+      const { rerender } = renderWithApollo(
+        <MoveToPantryModal
+          {...defaultProps}
+          visible={false}
+          onClose={onClose}
+          onConfirm={onConfirm}
+        />,
+        { cache: makeCache(), operationMocks: [purchaseMock(5, 0.59)] },
+      );
+      rerender(
+        <MoveToPantryModal
+          {...defaultProps}
+          onClose={onClose}
+          onConfirm={onConfirm}
+        />,
+      );
+
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+      );
+      fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+      await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("sends this package's own size when one is given", async () => {
+      // A 22 oz jar moving onto a 32 oz stack keeps its size.
+      const onConfirm = openWithPurchase(5, 0.59);
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+      );
+
+      fireEvent.changeText(
+        screen.getByTestId('move-to-pantry-field-Package size'),
+        '22',
+      );
+      fireEvent.press(
+        screen.getByTestId(
+          `${shoppingListTestIDs.moveToPantryPackageSizeUnit}-pick-unit`,
+        ),
+      );
+      fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+      await waitFor(() =>
+        expect(onConfirm).toHaveBeenCalledWith(
+          expect.objectContaining({
+            packageSize: { netWeight: 22, netWeightUnitId: 'unit-kg' },
+          }),
+        ),
+      );
+    });
+
+    it('asks for the unit of a size given without one', async () => {
+      const onConfirm = openWithPurchase(5, 0.59);
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+      );
+
+      fireEvent.changeText(
+        screen.getByTestId('move-to-pantry-field-Package size'),
+        '22',
+      );
+      fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+      expect(
+        await screen.findByTestId(
+          `${shoppingListTestIDs.moveToPantryPackageSizeUnit}-unit-error`,
+        ),
+      ).toBeTruthy();
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
     it('takes the unit from the purchase when the line carries none', async () => {
       // `purchaseInfo` has the amounts but no unit, and a line's own unit is
       // nullable — `Purchase.unitId` is not.
-      const onConfirm = jest.fn();
+      const onConfirm = jest.fn().mockResolvedValue(true);
       const { rerender } = renderWithApollo(
         <MoveToPantryModal
           {...defaultProps}
@@ -574,7 +676,7 @@ describe('MoveToPantryModal', () => {
       // block read `null`, concluded the line had no unit, and queued the
       // purchase's AFTER the reset's — moving the item in the purchase's unit
       // instead of the one the line and the header both show.
-      const onConfirm = jest.fn();
+      const onConfirm = jest.fn().mockResolvedValue(true);
       // WARM cache — the normal path after Mark Purchased. The purchase is
       // already readable, so the seed block runs in the same pass as the reset
       // rather than a beat later.

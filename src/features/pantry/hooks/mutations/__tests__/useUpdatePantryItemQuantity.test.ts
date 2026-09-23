@@ -49,14 +49,6 @@ it('writes and sends nothing for a quantity no parser can read', async () => {
       itemId: 'pi-1',
       quantityInput: 'abc',
       quantityValue: Number.NaN,
-      unitId: UNIT.id,
-      unitSymbol: UNIT.symbol,
-      trackingUnit: {
-        id: UNIT.id,
-        name: UNIT.name,
-        symbol: UNIT.symbol,
-        type: UNIT.type,
-      },
     });
   });
 

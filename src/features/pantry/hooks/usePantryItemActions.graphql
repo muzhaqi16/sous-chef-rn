@@ -8,6 +8,7 @@ fragment usePantryItemActions_trackingUnit on PantryItem {
 fragment usePantryItemActions_quantity on PantryItem {
   id
   quantity
+  heldQuantity
 }
 
 fragment usePantryItemActions_id on PantryItem {

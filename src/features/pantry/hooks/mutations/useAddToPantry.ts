@@ -1,3 +1,4 @@
+import { gql } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   CreatePantryItemDocument,
@@ -46,6 +47,14 @@ interface UseAddToPantryArgs {
  * local-first write, its revert and the duplicate/refusal reading live here so
  * the sheet's two entry points cannot drift apart.
  */
+// What a restock bumps beside the count: the amount the screens show.
+const RESTOCKED_STOCK = gql`
+  fragment useAddToPantry_restockedStock on PantryItem {
+    id
+    heldQuantity
+  }
+`;
+
 export function useAddToPantry({
   pantryId,
   suggestionsLimit,
@@ -151,11 +160,30 @@ export function useAddToPantry({
     pantryItemId: string,
     cachedQuantity: number | null,
   ): Promise<RestockOutcome> => {
+    const cacheId = client.cache.identify({
+      __typename: 'PantryItem',
+      id: pantryItemId,
+    });
+    const held =
+      cachedQuantity === null
+        ? null
+        : client.cache.readFragment<{ heldQuantity: number }>({
+            id: cacheId,
+            fragment: RESTOCKED_STOCK,
+          })?.heldQuantity ?? null;
     const optimistic = optimisticFieldUpdate(
       client.cache,
-      client.cache.identify({ __typename: 'PantryItem', id: pantryItemId }),
-      cachedQuantity === null ? null : { quantity: cachedQuantity },
-      { quantity: (cachedQuantity ?? 0) + 1 },
+      cacheId,
+      cachedQuantity === null
+        ? null
+        : {
+            quantity: cachedQuantity,
+            ...(held !== null && { heldQuantity: held }),
+          },
+      {
+        quantity: (cachedQuantity ?? 0) + 1,
+        ...(held !== null && { heldQuantity: held + 1 }),
+      },
       'Restock Pantry Item',
     );
 

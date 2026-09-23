@@ -66,6 +66,7 @@ query GetPantry(
           # it as an Item.
           itemId
           quantity
+          heldQuantity
           expiresOn
           storageState
           isLowStock
@@ -610,6 +611,7 @@ mutation CreatePantryItem($input: CreatePantryItemInput!, $today: LocalDate!) {
         itemId
         itemName
         quantity
+        heldQuantity
         version
         # `createdAt` is selected by GetPantry on every list node, so the create
         # response (and the optimistic entity built from this selection) must
@@ -726,6 +728,11 @@ mutation CreatePantryItem($input: CreatePantryItemInput!, $today: LocalDate!) {
     ... on ValidationError {
       field
     }
+    ... on UnitEligibilityError {
+      field
+      validUnits
+      denial
+    }
   }
 }
 
@@ -821,6 +828,8 @@ mutation CreatePantryItemUsage($input: CreatePantryItemUsageInput!) {
         pantryItem {
           id
           quantity
+          heldQuantity
+          isLowStock
           ...useCreatePantryItemUsage_pantryItem
         }
         usedBy {
@@ -840,6 +849,16 @@ mutation CreatePantryItemUsage($input: CreatePantryItemUsageInput!) {
     }
     ... on ValidationError {
       field
+    }
+    ... on UnitEligibilityError {
+      field
+      validUnits
+      denial
+    }
+    ... on InsufficientQuantityError {
+      field
+      available
+      availableUnitSymbol
     }
   }
 }
@@ -871,6 +890,11 @@ mutation RestockPantryItem($input: RestockPantryItemInput!) {
     ... on ValidationError {
       field
     }
+    ... on UnitEligibilityError {
+      field
+      validUnits
+      denial
+    }
   }
 }
 
@@ -887,6 +911,8 @@ mutation UpdatePantryItemQuantity($input: UpdatePantryItemQuantityInput!) {
         # without it the cache keeps the pre-adjustment weight and every screen
         # reading `remainingNetWeight` shows the old figure until a refetch.
         remainingNetWeight
+        heldQuantity
+        isLowStock
       }
     }
     ... on Error {
@@ -899,6 +925,11 @@ mutation UpdatePantryItemQuantity($input: UpdatePantryItemQuantityInput!) {
     }
     ... on ValidationError {
       field
+    }
+    ... on UnitEligibilityError {
+      field
+      validUnits
+      denial
     }
   }
 }
@@ -923,16 +954,27 @@ mutation AdjustPantryItemQuantity($input: AdjustPantryItemQuantityInput!) {
     ... on ValidationError {
       field
     }
+    ... on UnitEligibilityError {
+      field
+      validUnits
+      denial
+    }
   }
 }
 
-mutation AdjustPantryItemWeight($input: AdjustPantryItemWeightInput!) {
-  adjustPantryItemWeight(input: $input) {
+mutation CorrectPantryItemPackageSize(
+  $input: CorrectPantryItemPackageSizeInput!
+) {
+  correctPantryItemPackageSize(input: $input) {
     __typename
-    ... on AdjustPantryItemWeightPayload {
+    ... on CorrectPantryItemPackageSizePayload {
       pantryItem {
         id
-        ...useCorrectPantryItemWeight_pantryItem
+        ...useCorrectPackageSize_pantryItem
+      }
+      batch {
+        id
+        ...PantryItemBatchFragment
       }
     }
     ... on Error {

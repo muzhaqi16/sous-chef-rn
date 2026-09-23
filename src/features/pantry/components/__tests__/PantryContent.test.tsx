@@ -61,6 +61,7 @@ function createMockPantryItem(
     id: 'mock-id',
     itemName: 'Mock Item',
     quantity: 1,
+    heldQuantity: overrides.quantity ?? 1,
     expiresOn: null,
     createdAt: '2024-01-01',
     updatedAt: null,

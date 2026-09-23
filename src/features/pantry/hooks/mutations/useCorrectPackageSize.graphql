@@ -1,0 +1,27 @@
+# The stack fields a package-size correction changes: its version, and the
+# weight it holds, since the batch keeps the same fraction of a new size.
+fragment useCorrectPackageSize_pantryItem on PantryItem {
+  id
+  version
+  updatedAt
+  remainingNetWeight
+  heldQuantity
+  isLowStock
+}
+
+# What the correction reads before firing: only what the detail screen caches.
+fragment useCorrectPackageSize_stack on PantryItem {
+  id
+  version
+  netWeightUnit {
+    id
+  }
+}
+
+# What the correction writes ahead of the response: the batch's own size and
+# its remaining weight, scaled so the same fraction remains.
+fragment useCorrectPackageSize_batch on PantryItemBatch {
+  id
+  netWeight
+  remainingNetWeight
+}

@@ -1,5 +1,9 @@
-import { act } from '@testing-library/react-native';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { act, waitFor } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import { SearchUnitsDocument } from '#operations/item/unit.generated';
 import type { RootState } from '#store/index';
 import type { UnitItem } from '#features/catalog/hooks/useUnitAutocomplete';
 import { useUnitAutocomplete } from '#features/catalog/hooks/useUnitAutocomplete';
@@ -93,7 +97,35 @@ describe('useUnitAutocomplete', () => {
     expect(names).toContain('Ounce');
   });
 
-  it('uses local-first search: matches cached units before API for terms >= minChars', () => {
+  it('asks the server while online even when a cached unit matches', async () => {
+    // The cache holds the common units only; the server also matches plurals
+    // and alternate names, so "sticks" finds stick.
+    const m = recordMock(SearchUnitsDocument, {
+      data: {
+        searchUnits: [
+          { __typename: 'Unit', id: 'u-stick', name: 'stick', symbol: 'stick' },
+        ],
+      },
+    });
+    const { result } = renderHookWithApollo(() => useUnitAutocomplete(), {
+      operationMocks: [m.mock],
+    });
+
+    act(() => {
+      result.current.handleSearchTermChange('sticks');
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(500);
+    });
+
+    await waitFor(() =>
+      expect(result.current.displayItems.map(i => i.symbol)).toEqual(['stick']),
+    );
+    expect(m.fired).toEqual([{ query: 'sticks', limit: 10 }]);
+  });
+
+  it('matches the cached units while offline', () => {
+    mockIsOnline = false;
     const { result } = renderHookWithApollo(
       () => useUnitAutocomplete(),
       apolloMocks,
@@ -101,10 +133,6 @@ describe('useUnitAutocomplete', () => {
 
     act(() => {
       result.current.handleSearchTermChange('cup');
-    });
-
-    act(() => {
-      jest.advanceTimersByTime(500);
     });
 
     expect(result.current.displayItems).toEqual([
@@ -139,7 +167,8 @@ describe('useUnitAutocomplete', () => {
     expect(result.current.displayItems).toEqual(mockCachedUnits);
   });
 
-  it('filters by symbol match', () => {
+  it('filters by symbol match while offline', () => {
+    mockIsOnline = false;
     const { result } = renderHookWithApollo(
       () => useUnitAutocomplete(),
       apolloMocks,

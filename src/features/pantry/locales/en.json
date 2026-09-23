@@ -41,7 +41,8 @@
       "historySummary_other": "{{active}} active of {{total}}",
       "historyTotal_one": "{{count}} batch",
       "historyTotal_other": "{{count}} batches",
-      "emptyTitle": "No batches yet"
+      "emptyTitle": "No batches yet",
+      "packageSize": "Package: {{size}}"
     },
     "deleteTitle": "Delete Item",
     "discardBatchesTitle": "Discard Expired Batches",
@@ -56,7 +57,8 @@
       "emptyTitle": "No usage yet"
     },
     "shelfLifeBoth": "{{days}}d ({{openedDays}}d once opened)",
-    "shelfLifeOpened": "{{days}}d once opened"
+    "shelfLifeOpened": "{{days}}d once opened",
+    "packages": "Packages"
   },
   "pantrySettings": {
     "createTitle": "Create New Pantry",
@@ -218,6 +220,8 @@
     "purposeTransfer": "Transfer"
   },
   "moveToPantry": {
+    "cannotAddTitle": "Can't add to this home's pantry",
+    "cannotAddBody": "You don't have permission to add items to {{home}}'s pantries. Ask the home's owner to give you access, or switch to a home you can add to.",
     "selectPantryError": "Please select a pantry",
     "selectUnitError": "Please select a unit",
     "title": "Move to Pantry",
@@ -243,7 +247,9 @@
     "allAlreadyThere_other": "Those {{count}} items are already in your pantry",
     "failedItems_one": "Couldn't move {{names}}",
     "failedItems_other": "Couldn't move {{count}} items, including {{names}}",
-    "nothingLeftToMove": "Everything purchased is already in your pantry"
+    "nothingLeftToMove": "Everything purchased is already in your pantry",
+    "packageSizeLabel": "Package size",
+    "packageSizeHint": "Only if this package differs from the usual size, like a 22 oz jar. Leave empty to use the usual size."
   },
   "pantryAction": {
     "useByDefault": "Use by",
@@ -253,14 +259,13 @@
     "amountWithUnit": "{{amount}} {{unit}}"
   },
   "correctWeight": {
-    "invalidWeight": "Please enter a valid weight",
+    "invalidWeight": "Please enter a valid size",
     "reasonRequired": "Please provide a reason for the correction",
-    "title": "Correct Weight",
+    "title": "Correct package size",
     "correct": "Correct",
-    "netWeightPrefix": "Net Weight: ",
-    "quantityLabel": "Quantity: ",
-    "newNetWeight": "New Net Weight",
-    "reasonPlaceholder": "Why is the weight being corrected?"
+    "netWeightPrefix": "Package size: ",
+    "newNetWeight": "Actual package size",
+    "reasonPlaceholder": "Why is the size being corrected?"
   },
   "addToPantry": {
     "restocked": "Restocked {{name}}",
@@ -410,5 +415,37 @@
     "packageContents_one": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageContents_other": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageWithTotal": "{{breakdown}} ({{total}} {{weightUnit}} total)"
+  },
+  "unitChange": {
+    "title": "Change unit",
+    "check": "Check",
+    "exact": "Exact conversion.",
+    "estimate": "This is an estimate.",
+    "quantityIgnored": "The amount you entered isn't used: the stock converts exactly.",
+    "estimateChoice": "{{from}} and {{to}} only convert approximately for this item.",
+    "useEstimate": "Use the estimate: about {{amount}}",
+    "useMyAmount": "Enter the amount myself",
+    "noRoute": "{{from}} can't be converted to {{to}} for this item, so enter how much you have in {{to}}.",
+    "amountLabel": "Amount in {{unit}}",
+    "packageSizeTitle": "How much is one {{unit}}?",
+    "packageSizeLabel": "Size of one {{unit}}",
+    "batches": "Each batch",
+    "dropsNetWeight": "The package size will be removed.",
+    "dropsPortions": "The portions per package will be removed.",
+    "dropsThresholds": "The low-stock alert levels will be cleared.",
+    "alertBelowAfter": "Alert when below: {{amount}}",
+    "conflicting": "You already have this item tracked in {{unit}}. Change that one instead, or pick a different unit.",
+    "needsConnection": "Changing the unit needs a connection, so we can show what happens to your stock first.",
+    "previewFailed": "Couldn't check what this change would do. Try again.",
+    "changedMeanwhile": "This item changed while you were looking. Check the new figures and confirm again.",
+    "failed": "Couldn't change the unit. Try again.",
+    "amountRequired": "Enter the amount you have.",
+    "packageSizeRequired": "Enter the size of one package and its unit.",
+    "beforeAfter": "{{before}} → {{after}}",
+    "recountNote": "These units don't convert for this item, so the amount you entered replaces the old one."
+  },
+  "packageSize": {
+    "defaultTitle": "Default package size",
+    "defaultHint": "New stock takes this size when none is given. To fix a package you already have, use Correct package size on the item's page."
   }
 }

@@ -39,7 +39,8 @@ interface PantryDetailInfoProps {
   packageBreakdownText: string | null;
   shelfLifeDays: number | null | undefined;
   shelfLifeOpenedDays: number | null | undefined;
-  onCorrectWeight?: () => void;
+  /** Offered when one weighed batch holds the stock: corrects its size. */
+  onCorrectPackageSize?: () => void;
   /**
    * What the batches say about the item's money fields — which rows to label as
    * a blend, and when the rate is too diluted to show. {@link summarizeBatchPricing}
@@ -57,7 +58,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   packageBreakdownText,
   shelfLifeDays,
   shelfLifeOpenedDays,
-  onCorrectWeight,
+  onCorrectPackageSize,
   pricing,
 }) => {
   const { t } = useTranslation();
@@ -112,22 +113,34 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
 
   return (
     <>
-      {/* Quantity Row */}
+      {/* Quantity Row: what is left, exactly */}
       <InfoRow
         label={t('labels.quantity')}
-        value={`${formatQuantityForDisplay(item.quantity)} ${getUnitDisplayText(
-          item.unit,
-        )}`}
+        value={`${formatQuantityForDisplay(
+          item.heldQuantity,
+        )} ${getUnitDisplayText(item.unit)}`}
         icon="apps-outline"
         showColon={false}
         labelTone="secondary"
         valueTone="primary"
         containerStyle={styles.rowContainer}
       />
+      {/* Packages Row: a partly used package still counts as one */}
+      {item.quantity !== item.heldQuantity && (
+        <InfoRow
+          label={t('pantryItemDetail.packages')}
+          value={formatQuantityForDisplay(item.quantity)}
+          icon="cube-outline"
+          showColon={false}
+          labelTone="secondary"
+          valueTone="primary"
+          containerStyle={styles.rowContainer}
+        />
+      )}
       {/* Net Weight Row */}
       {!!netWeightText && (
         <InfoRow
-          label={t('labels.netWeight')}
+          label={t('packageSize.defaultTitle')}
           value={netWeightText}
           icon="scale-outline"
           showColon={false}
@@ -135,9 +148,9 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           containerStyle={styles.rowContainer}
         >
           <Text role="bodyStrong">{netWeightText}</Text>
-          {!!item.lastUsedAt && !!onCorrectWeight && (
+          {!!onCorrectPackageSize && (
             <AppPressable
-              onPress={onCorrectWeight}
+              onPress={onCorrectPackageSize}
               accessibilityLabel={t('correctWeight.title')}
               hitSlop={hitSlop.md}
               style={styles.correctWeightButton}

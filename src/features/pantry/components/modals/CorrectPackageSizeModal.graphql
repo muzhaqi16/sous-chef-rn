@@ -1,0 +1,16 @@
+fragment CorrectPackageSizeModal_pantryItem on PantryItem {
+  id
+  itemName
+  netWeightUnit {
+    id
+    name
+    symbol
+  }
+}
+
+fragment CorrectPackageSizeModal_batch on PantryItemBatch {
+  id
+  batchNumber
+  netWeight
+  remainingNetWeight
+}

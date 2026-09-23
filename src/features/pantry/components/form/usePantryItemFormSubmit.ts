@@ -10,6 +10,10 @@ import type {
   DirtyFieldFlags,
   UnitSelection,
 } from '#features/pantry/hooks/mutations/types';
+import type {
+  PreviewOutcome,
+  UnitChangePreview,
+} from '#features/pantry/hooks/usePantryUnitChange';
 import { isOwnKey } from '#/utils/isOwnKey';
 import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
 import type { PantryItemFormData } from './PantryItemForm';
@@ -26,28 +30,30 @@ interface UpdatePantryItemFieldsArgs {
   dirtyFields: DirtyFieldFlags;
   selectedLocationId: string | null;
   selectedBrandId: string | null;
-  trackingUnit?: UnitSelection;
   selectedStorageLocation: {
     id: string;
     name: string;
     type: StorageType;
   } | null;
-  unitSymbol?: string;
 }
 
 interface UpdateQuantityArgs {
   itemId: string;
   quantityInput: string;
   quantityValue: number;
-  unitId: string | null;
-  unitSymbol: string;
-  trackingUnit: UnitSelection;
+}
+
+/** A unit change the user is asked to confirm: the target and its preview. */
+export interface UnitChangeConfirmation {
+  unitId: string;
+  /** The amount the form holds, read as the stack in the new unit. */
+  quantity: number | null;
+  preview: UnitChangePreview;
 }
 
 export interface UsePantryItemFormSubmitParams {
   itemId: string | undefined;
   currentPantryId: string | undefined | null;
-  isWeightLocked: boolean;
   existingPantryItem: PantryItemForm_PantryItemFragment | null;
   dirtyFields: FormDirtyFields;
   trackingUnit: UnitSelection;
@@ -60,12 +66,22 @@ export interface UsePantryItemFormSubmitParams {
     name: string;
     type: StorageType;
   } | null;
-  /** Mutation primitives. */
-  updatePantryItemFields: (args: UpdatePantryItemFieldsArgs) => unknown;
-  /** Resolves false when the write was refused. */
+  /** Mutation primitives; each resolves false when its write was refused. */
+  updatePantryItemFields: (
+    args: UpdatePantryItemFieldsArgs,
+  ) => Promise<boolean>;
   updateQuantity: (args: UpdateQuantityArgs) => Promise<boolean>;
   resolveUnitId: (id: string | null, symbol: string) => Promise<string | null>;
-  /** Callback after a no-op edit. */
+  /** What moving the stack onto `unitId` would do. */
+  previewUnitChange: (request: {
+    unitId: string;
+    quantity: number | null;
+  }) => Promise<PreviewOutcome>;
+  /** Shows the preview; resolves true once the change was made. */
+  confirmUnitChange: (confirmation: UnitChangeConfirmation) => Promise<boolean>;
+  /** Reports a problem the user can fix on the field it concerns. */
+  reportFieldError: (field: 'unit' | 'netWeightUnit', message: string) => void;
+  /** Runs once every write was applied or queued; a refusal keeps the form open. */
   onSuccess?: () => void;
 }
 
@@ -80,108 +96,132 @@ function toDirtyFlags(dirtyFields: FormDirtyFields): DirtyFieldFlags {
 }
 
 /**
- * Returns a `handleSave` function for PantryItemForm. Extracted so the
- * 130-line branch logic (add vs edit, dirty-field routing, weight-lock
- * handling, unit-symbol resolution) can be unit-tested directly without
- * spinning up the full form.
+ * Returns a `handleSave` function for PantryItemForm. Extracted so the branch
+ * logic (dirty-field routing, unit resolution, the unit change and its
+ * confirmation) can be unit-tested directly without spinning up the full form.
  */
 export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
+  /** Moves the stack onto `unitId`; false when it did not happen. */
+  const changeUnit = async (
+    unitId: string,
+    quantity: number | null,
+  ): Promise<boolean> => {
+    const outcome = await params.previewUnitChange({ unitId, quantity });
+    if (outcome.status !== 'ready') {
+      params.reportFieldError(
+        'unit',
+        t(
+          outcome.status === 'offline'
+            ? 'unitChange.needsConnection'
+            : 'unitChange.previewFailed',
+        ),
+      );
+      return false;
+    }
+    return params.confirmUnitChange({
+      unitId,
+      quantity,
+      preview: outcome.preview,
+    });
+  };
+
   const handleSave = async (data: PantryItemFormData) => {
     const typedQuantity = parseFractionalInput(data.quantityInput ?? '');
+    const typedUnit = (data.unit || '').trim();
+    const netWeightUnitText = (data.netWeightUnit ?? '').trim();
 
     if (!params.currentPantryId) {
       alertService.alert(t('labels.error'), t('itemForm.noPantrySelected'));
       return;
     }
+    const currentItem = params.existingPantryItem;
+    if (!currentItem || !params.itemId) {
+      alertService.alert(t('labels.error'), t('errors.itemNotFound'));
+      return;
+    }
+    const itemId = params.itemId;
+
     try {
+      const unitTyped = !!typedUnit && typedUnit !== currentItem.unit.symbol;
       const unitId =
-        params.trackingUnit.id ?? (await params.resolveUnitId(null, data.unit));
-
-      const netWeightUnitText = (data.netWeightUnit ?? '').trim();
-      if (!params.isWeightLocked && netWeightUnitText) {
-        const resolvedNetWeightUnitId =
-          params.netWeightUnitId ??
-          (await params.resolveUnitId(null, netWeightUnitText));
-        if (resolvedNetWeightUnitId) {
-          data.netWeightUnitId = resolvedNetWeightUnitId;
-        }
-      }
-
-      const currentItem = params.existingPantryItem;
-      if (!currentItem || !params.itemId) {
-        alertService.alert(t('labels.error'), t('errors.itemNotFound'));
+        params.trackingUnit.id ??
+        (unitTyped ? await params.resolveUnitId(null, typedUnit) : null);
+      if (unitTyped && !unitId) {
+        params.reportFieldError(
+          'unit',
+          t('itemForm.unknownUnit', { unit: typedUnit }),
+        );
         return;
       }
 
+      if (netWeightUnitText) {
+        const resolvedNetWeightUnitId =
+          params.netWeightUnitId ??
+          (await params.resolveUnitId(null, netWeightUnitText));
+        if (!resolvedNetWeightUnitId) {
+          params.reportFieldError(
+            'netWeightUnit',
+            t('itemForm.unknownUnit', { unit: netWeightUnitText }),
+          );
+          return;
+        }
+        data.netWeightUnitId = resolvedNetWeightUnitId;
+      }
+
       const dirtyFieldsRecord = toDirtyFlags(params.dirtyFields);
+      // `unit` only relabels on this path; a different unit is its own change.
+      delete dirtyFieldsRecord.unit;
 
-      if (params.isWeightLocked) {
-        delete dirtyFieldsRecord.netWeight;
-        delete dirtyFieldsRecord.netWeightUnitId;
-      }
-
-      const currentUnitSymbol = currentItem.unit.symbol;
-      const typedUnit = (data.unit || '').trim();
-      if (typedUnit && typedUnit !== currentUnitSymbol) {
-        dirtyFieldsRecord.unit = true;
-      }
-
+      const unitChanged = !!unitId && unitId !== currentItem.unit.id;
       const quantityChanged = !!dirtyFieldsRecord.quantityInput;
-      const unitChanged = !!dirtyFieldsRecord.unit;
-      const unitChangedWithoutId = unitChanged && !unitId;
-
-      const hasNonQuantityChanges = Object.entries(dirtyFieldsRecord).some(
-        ([field, dirty]) =>
-          field !== 'quantityInput' && field !== 'unit' && dirty,
+      const hasFieldChanges = Object.entries(dirtyFieldsRecord).some(
+        ([field, dirty]) => field !== 'quantityInput' && dirty,
       );
-      const sendsQuantity =
-        quantityChanged || (unitChanged && !unitChangedWithoutId);
 
       // Only a quantity being sent is judged: an empty stack stays editable.
-      if (sendsQuantity && (!typedQuantity || typedQuantity <= 0)) {
+      if (quantityChanged && (!typedQuantity || typedQuantity <= 0)) {
         alertService.alert(t('labels.error'), t('errors.invalidQuantity'));
         return;
       }
 
-      // The seed is rounded to three places; sent back unedited it would
-      // rewrite the stock, so the stored value goes instead.
-      const keepsStored =
-        typedQuantity !== null &&
-        isUnchangedQuantity(typedQuantity, currentItem.quantity);
-      const quantityValue = keepsStored ? currentItem.quantity : typedQuantity;
-      const quantityInput = keepsStored
-        ? formatNumberForInput(currentItem.quantity)
-        : data.quantityInput;
-
-      // In order: the field update re-reads the version the quantity write
-      // returns, or the server refuses it as a conflict.
-      if (sendsQuantity && quantityValue) {
+      if (unitChanged) {
+        // The quantity typed with a new unit is what the stack holds in it.
+        const changed = await changeUnit(
+          unitId,
+          quantityChanged ? typedQuantity : null,
+        );
+        if (!changed) return;
+      } else if (quantityChanged && typedQuantity) {
+        // The seed is rounded to three places; sent back unedited it would
+        // rewrite the stock, so the stored value goes instead.
+        const keepsStored = isUnchangedQuantity(
+          typedQuantity,
+          currentItem.quantity,
+        );
         const stands = await params.updateQuantity({
-          itemId: params.itemId,
-          quantityInput: quantityInput ?? quantityValue.toString(),
-          quantityValue,
-          unitId: unitChangedWithoutId ? null : unitId,
-          unitSymbol: data.unit,
-          trackingUnit: params.trackingUnit,
+          itemId,
+          quantityInput: keepsStored
+            ? formatNumberForInput(currentItem.quantity)
+            : data.quantityInput ?? typedQuantity.toString(),
+          quantityValue: keepsStored ? currentItem.quantity : typedQuantity,
         });
         if (!stands) return;
       }
 
-      if (hasNonQuantityChanges || unitChangedWithoutId) {
-        params.updatePantryItemFields({
-          itemId: params.itemId,
+      // After the quantity write: the field update re-reads the version it
+      // returns, or the server refuses it as a conflict.
+      if (hasFieldChanges) {
+        const fieldsStand = await params.updatePantryItemFields({
+          itemId,
           input: data,
           dirtyFields: dirtyFieldsRecord,
           selectedLocationId: params.selectedLocationId,
           selectedBrandId: params.selectedBrandId,
-          trackingUnit:
-            quantityChanged || unitChanged ? params.trackingUnit : undefined,
           selectedStorageLocation: params.selectedStorageLocation,
-          unitSymbol: unitChangedWithoutId ? data.unit : undefined,
         });
-      } else if (!quantityChanged && !unitChanged) {
-        params.onSuccess?.();
+        if (!fieldsStand) return;
       }
+      params.onSuccess?.();
     } catch (error) {
       errorService.reportError(error, {
         operation: 'updatePantryItem',

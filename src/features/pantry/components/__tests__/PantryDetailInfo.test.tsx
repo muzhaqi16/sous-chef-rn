@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { screen } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo as render } from '#/test-utils/apolloMockProvider';
 import { PantryDetailInfo } from '../PantryDetailInfo';
 import type { PantryDetailInfo_PantryItemFragment } from '../PantryDetailInfo.generated';
@@ -34,6 +34,7 @@ const baseItem: PantryDetailInfo_PantryItemFragment = {
   __typename: 'PantryItem',
   id: 'pi1',
   quantity: 2,
+  heldQuantity: 2,
   costCurrency: null,
   unit: { __typename: 'Unit', id: 'u1', name: 'liters', symbol: 'L' },
   storageLocation: null,
@@ -114,14 +115,31 @@ describe('PantryDetailInfo', () => {
     expect(screen.queryByText('Brand')).toBeNull();
   });
 
-  it('renders Net Weight row when netWeightText is provided', () => {
+  it('renders the default package size row when netWeightText is provided', () => {
     render(<PantryDetailInfo {...defaultProps} netWeightText="500g" />);
-    expect(screen.getByText('Net Weight')).toBeTruthy();
+    expect(screen.getByText('Default package size')).toBeTruthy();
   });
 
-  it('does not render Net Weight row when netWeightText is null', () => {
+  it('shows what is left exactly, and the packages when one is partly used', () => {
+    // 1 1/4 jars held in 2 jars: one full, one a quarter left.
+    render(
+      <PantryDetailInfo
+        {...defaultProps}
+        itemRef={{ ...baseItem, quantity: 2, heldQuantity: 1.25 }}
+      />,
+    );
+    expect(screen.getByText('1 1/4 L')).toBeTruthy();
+    expect(screen.getByText('Packages')).toBeTruthy();
+  });
+
+  it('shows no packages row when every package is whole', () => {
+    render(<PantryDetailInfo {...defaultProps} />);
+    expect(screen.queryByText('Packages')).toBeNull();
+  });
+
+  it('does not render the default package size row when netWeightText is null', () => {
     render(<PantryDetailInfo {...defaultProps} netWeightText={null} />);
-    expect(screen.queryByText('Net Weight')).toBeNull();
+    expect(screen.queryByText('Default package size')).toBeNull();
   });
 
   it('renders Remaining Weight row when provided', () => {
@@ -364,13 +382,13 @@ describe('PantryDetailInfo', () => {
   });
 
   it('renders a fractional quantity as a cooking fraction', () => {
-    const item = { ...baseItem, quantity: 1.25 };
+    const item = { ...baseItem, quantity: 2, heldQuantity: 1.25 };
     render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('1 1/4 L')).toBeTruthy();
   });
 
   it('rounds a quantity no cooking fraction fits to three decimals', () => {
-    const item = { ...baseItem, quantity: 177.4412 };
+    const item = { ...baseItem, quantity: 178, heldQuantity: 177.4412 };
     render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('177.441 L')).toBeTruthy();
   });
@@ -421,31 +439,23 @@ describe('PantryDetailInfo', () => {
     expect(screen.queryByText('Tags')).toBeNull();
   });
 
-  it('renders correct weight edit button when lastUsedAt and onCorrectWeight exist', () => {
-    const onCorrectWeight = jest.fn();
-    const item = { ...baseItem, lastUsedAt: '2024-06-15' };
+  it('offers the package size correction when the screen passes one', () => {
+    const onCorrectPackageSize = jest.fn();
     render(
       <PantryDetailInfo
         {...defaultProps}
-        itemRef={item}
         netWeightText="500g"
-        onCorrectWeight={onCorrectWeight}
+        onCorrectPackageSize={onCorrectPackageSize}
       />,
     );
-    expect(screen.getByText('Net Weight')).toBeTruthy();
-    expect(screen.getByText('500g')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Correct package size'));
+    expect(onCorrectPackageSize).toHaveBeenCalled();
   });
 
-  it('does not render correct weight edit button when lastUsedAt is null', () => {
-    const onCorrectWeight = jest.fn();
-    render(
-      <PantryDetailInfo
-        {...defaultProps}
-        netWeightText="500g"
-        onCorrectWeight={onCorrectWeight}
-      />,
-    );
-    expect(screen.getByText('Net Weight')).toBeTruthy();
+  it('offers no correction when the screen passes none', () => {
+    render(<PantryDetailInfo {...defaultProps} netWeightText="500g" />);
+    expect(screen.getByText('Default package size')).toBeTruthy();
+    expect(screen.queryByLabelText('Correct package size')).toBeNull();
   });
 
   it('renders Shelf Life row with both unopened and opened days', () => {

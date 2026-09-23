@@ -54,7 +54,8 @@
       "uniqueConstraint": "Kjo vlerë ekziston tashmë",
       "unitInvalid": "Kjo njësi nuk mund të përdoret këtu.",
       "validationFailed": "Kontrolloni të dhënat e futura dhe provoni sërish",
-      "versionConflict": "Ky artikull u përditësua nga një përdorues tjetër. Rifreskoni dhe provoni sërish."
+      "versionConflict": "Ky artikull u përditësua nga një përdorues tjetër. Rifreskoni dhe provoni sërish.",
+      "unitChangeNeedsResolution": "Ky ndryshim njësie është vetëm një vlerësim. Zgjidhni nëse do të përdorni vlerësimin apo do të vendosni vetë sasinë."
     },
     "addItemFailed": "Nuk u shtua dot artikulli",
     "updateItemFailed": "Nuk u përditësua dot artikulli",
@@ -140,7 +141,7 @@
     "recordWasteFailedRetry": "Regjistrimi i mbetjeve të artikullit dështoi. Provo sërish.",
     "moveToPantryFailedRetry": "Artikulli nuk u zhvendos dot te qilari. Provo përsëri.",
     "adjustQuantityFailed": "Sasia nuk mund të rregullohej.",
-    "correctWeightFailed": "Pesha nuk mund të korrigjohej.",
+    "correctWeightFailed": "Madhësia e paketimit nuk u korrigjua dot.",
     "openBatchFailed": "Ky grumbull nuk mund të hapej.",
     "wasteBatchFailed": "Nuk mund të shënohej si i mbetur.",
     "updateShoppingItemFailed": "Artikulli nuk mund të përditësohej.",
@@ -163,7 +164,7 @@
     "generic": "Ndodhi një gabim",
     "noActiveMealPlan": "Asnjë plan vaktesh aktiv. Krijo një së pari.",
     "field": {
-      "unit": "Njësia e këtij artikulli nuk mund të përdoret tani. Zbraz së pari grupet e tij ose zgjidh një njësi të përshtatshme — një njësi e shpikur nuk mund të matet ndaj një tjetre.",
+      "unit": "Njësia e këtij artikulli ndryshohet nga fusha Njësia, e cila tregon çfarë ndodh me stokun para ruajtjes.",
       "usageUnitId": "Ky artikull nuk mund të regjistrohet në atë njësi. Zgjidh një nga lista.",
       "netWeight": "Vendos si madhësinë e paketimit ashtu edhe njësinë e saj, ose lëri të dyja bosh.",
       "quantity": "Ajo sasi nuk është e vlefshme. Provo një numër si 2, 0.5 ose 1 1/2.",
@@ -176,8 +177,20 @@
       "servingsMade": "Shkruaj një numër të plotë racionesh më të madh se zero",
       "key": "Ai imazh nuk u konfirmua dot. Zgjidhe sërish dhe provo përsëri.",
       "imageUrl": "URL-ja e imazhit duhet të fillojë me http:// ose https://",
-      "website": "Uebsajti duhet të fillojë me http:// ose https://"
-    }
+      "website": "Uebsajti duhet të fillojë me http:// ose https://",
+      "packageSize": "Vendosni madhësinë e paketimit në një njësi të të njëjtit lloj si ajo e artikullit (peshë me peshë, vëllim me vëllim).",
+      "resolution": "Zgjidhni nëse do të përdorni vlerësimin apo do të vendosni vetë sasinë.",
+      "quantityUsed": "Kjo është më shumë se sa ka mbetur nga ky artikull.",
+      "unitId": "Kjo njësi nuk mund të përdoret këtu. Zgjidhni një nga lista."
+    },
+    "unitDenied": {
+      "curation": "Kjo njësi nuk ofrohet për këtë artikull.",
+      "noRoute": "Kjo njësi nuk mund të konvertohet në mënyrën si regjistrohet ky artikull.",
+      "missingFact": "Përdorimi i kësaj njësie kërkon një të dhënë që ky artikull nuk e ka ende, si madhësia e paketimit ose dendësia.",
+      "inexpressible": "Stoku i këtij artikulli nuk mund të matet në këtë njësi."
+    },
+    "unitRefusedTryUnits": "{{reason}} Njësitë që funksionojnë këtu: {{units}}.",
+    "onlyAvailable": "Kanë mbetur vetëm {{amount}} {{unit}}."
   },
   "success": {
     "itemAdded": "Artikulli u shtua",

@@ -24,7 +24,7 @@ import { queuedSubject } from './queuedSubject';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import {
   AdjustPantryItemQuantityDocument,
-  AdjustPantryItemWeightDocument,
+  CorrectPantryItemPackageSizeDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UpdateHomeDocument } from '#operations/home/home.generated';
@@ -91,7 +91,7 @@ const ENTRY_SCOPED_DEFERRALS: ReadonlySet<string> = new Set([
 export const VERSION_REQUIRED_OPERATIONS: ReadonlySet<string> = new Set(
   [
     AdjustPantryItemQuantityDocument,
-    AdjustPantryItemWeightDocument,
+    CorrectPantryItemPackageSizeDocument,
     UpdateShoppingListDocument,
     UpdateHomeDocument,
   ].map(operationNameOf),

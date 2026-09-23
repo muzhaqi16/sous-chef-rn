@@ -57,6 +57,7 @@ const RESTOCKED_QUANTITY = gql`
   fragment _ScannedRestockQuantity on PantryItem {
     id
     quantity
+    heldQuantity
   }
 `;
 
@@ -273,7 +274,7 @@ export function useAddScannedItem({
       id: existingPantryItemId,
     });
     const cached = cacheId
-      ? client.cache.readFragment<{ quantity: number }>({
+      ? client.cache.readFragment<{ quantity: number; heldQuantity: number }>({
           id: cacheId,
           fragment: RESTOCKED_QUANTITY,
         })
@@ -281,8 +282,13 @@ export function useAddScannedItem({
     const optimistic = optimisticFieldUpdate(
       client.cache,
       cacheId,
-      cached ? { quantity: cached.quantity } : null,
-      { quantity: (cached?.quantity ?? 0) + SCANNED_QUANTITY },
+      cached
+        ? { quantity: cached.quantity, heldQuantity: cached.heldQuantity }
+        : null,
+      {
+        quantity: (cached?.quantity ?? 0) + SCANNED_QUANTITY,
+        heldQuantity: (cached?.heldQuantity ?? 0) + SCANNED_QUANTITY,
+      },
       'Restock scanned Pantry Item',
     );
 
