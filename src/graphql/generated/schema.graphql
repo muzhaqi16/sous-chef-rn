@@ -657,38 +657,7 @@ Result of AdjustPantryItemQuantity. Select on AdjustPantryItemQuantityPayload fo
 success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
-union AdjustPantryItemQuantityResult = AdjustPantryItemQuantityPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-"""
-Input for correcting the net weight of a dual-tracked pantry item.
-Recalculates remainingNetWeight proportionally and derives new quantity.
-"""
-input AdjustPantryItemWeightInput {
-  id: ID!
-  idempotencyKey: ID
-  """The corrected net weight per unit (e.g., 12.5 for 12.5 oz per jar)"""
-  netWeight: Float!
-  """
-  Unit for the net weight (optional — only provide to also change the unit)
-  """
-  netWeightUnitId: ID
-  """Why the correction is needed (required for audit trail)"""
-  reason: String!
-  """Optimistic concurrency control"""
-  version: Int!
-}
-
-type AdjustPantryItemWeightPayload {
-  pantry: Pantry
-  pantryItem: PantryItem!
-}
-
-"""
-Result of AdjustPantryItemWeight. Select on AdjustPantryItemWeightPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union AdjustPantryItemWeightResult = AdjustPantryItemWeightPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+union AdjustPantryItemQuantityResult = AdjustPantryItemQuantityPayload | ConflictError | ForbiddenError | NotFoundError | UnitEligibilityError | ValidationError
 
 """
 Who or what corrected a pantry stack's recorded quantity, on a usage row that
@@ -913,6 +882,12 @@ type BatchAddShoppingListItemResult {
   index: Int!
   """The created/updated item (null if failed)"""
   item: ShoppingListItem
+  """
+  True when this add stated a package size the line it merged into could not
+  keep: the line then records no size, and each package takes the pantry
+  stack's default at the move unless the move states one.
+  """
+  packageSizeCleared: Boolean
   """Whether quantity was incremented (item already existed)"""
   quantityIncremented: Boolean
   """Whether the operation succeeded"""
@@ -1462,6 +1437,41 @@ enum CategoryType {
   SYSTEM
 }
 
+input ChangePantryItemUnitInput {
+  idempotencyKey: ID
+  """
+  The size of one new unit, required when a unit of measure becomes a count (grams into jars)
+  """
+  packageSize: PackageSizeInput
+  pantryItemId: ID!
+  """
+  What the stack holds in the new unit; read with RECOUNT, or where no route exists
+  """
+  quantity: Float
+  resolution: PantryUnitChangeResolution
+  """The new tracking unit"""
+  unitId: ID!
+  """The stack's version, as a preview reported it"""
+  version: Int!
+}
+
+type ChangePantryItemUnitPayload {
+  """True when the route was exact"""
+  exact: Boolean!
+  method: PantryUnitChangeMethod!
+  pantry: Pantry
+  pantryItem: PantryItem!
+  """True when a quantity was sent and an exact route made it unused"""
+  quantityIgnored: Boolean!
+}
+
+"""
+Result of ChangePantryItemUnit. Select on ChangePantryItemUnitPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union ChangePantryItemUnitResult = ChangePantryItemUnitPayload | ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | ValidationError
+
 input ChangePasswordInput {
   currentPassword: String!
   newPassword: String!
@@ -1874,6 +1884,39 @@ type CookingStats {
   totalCookingSessions: Int!
   totalRecipesCooked: Int!
 }
+
+"""
+Corrects one batch's package content when its size was misread. Send exactly
+one of `packageSize` or `portionsPerTrackingUnit`. The same fraction of the
+package remains and the batch keeps its value; no other batch changes.
+"""
+input CorrectPantryItemPackageSizeInput {
+  batchId: ID!
+  idempotencyKey: ID
+  """
+  The batch's true net weight per tracking unit, in a unit of the same kind as the stack's net weight
+  """
+  packageSize: PackageSizeInput
+  """The batch's true number of portions per tracking unit"""
+  portionsPerTrackingUnit: Float
+  """Why the correction is needed; recorded on the stack's history"""
+  reason: String!
+  """The stack's version"""
+  version: Int!
+}
+
+type CorrectPantryItemPackageSizePayload {
+  batch: PantryItemBatch!
+  pantry: Pantry
+  pantryItem: PantryItem!
+}
+
+"""
+Result of CorrectPantryItemPackageSize. Select on CorrectPantryItemPackageSizePayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union CorrectPantryItemPackageSizeResult = ConflictError | CorrectPantryItemPackageSizePayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateBrandInput {
   description: String
@@ -2343,7 +2386,7 @@ Result of CreatePantryItem. Select on CreatePantryItemPayload for the
 success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
-union CreatePantryItemResult = ConflictError | CreatePantryItemPayload | DuplicatePantryItemError | ForbiddenError | NotFoundError | ValidationError
+union CreatePantryItemResult = ConflictError | CreatePantryItemPayload | DuplicatePantryItemError | ForbiddenError | NotFoundError | UnitEligibilityError | ValidationError
 
 input CreatePantryItemUsageInput {
   """
@@ -2389,7 +2432,7 @@ Result of CreatePantryItemUsage. Select on CreatePantryItemUsagePayload for the
 success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
-union CreatePantryItemUsageResult = ConflictError | CreatePantryItemUsagePayload | ForbiddenError | NotFoundError | ValidationError
+union CreatePantryItemUsageResult = ConflictError | CreatePantryItemUsagePayload | ForbiddenError | InsufficientQuantityError | NotFoundError | UnitEligibilityError | ValidationError
 
 type CreatePantryPayload {
   home: Home
@@ -4101,6 +4144,10 @@ enum ErrorCode {
   NOT_FOUND
   PANTRY_ITEM_ALREADY_EXISTS
   RESOURCE_ALREADY_EXISTS
+  """
+  A unit change whose route is an estimate, sent without CONVERT or RECOUNT. Show the preview's two choices and resend with one.
+  """
+  UNIT_CHANGE_NEEDS_RESOLUTION
   UNIT_INVALID
   VALIDATION_FAILED
   VERSION_CONFLICT
@@ -4886,6 +4933,18 @@ input InlineItemInput {
   netWeights: [ItemNetWeightInput!]
   units: [ItemUnitInput!]
   upc: String
+}
+
+"""
+More was asked of a stack than it holds. `available` is what it holds, in
+`availableUnitSymbol`, the unit the request was stated in.
+"""
+type InsufficientQuantityError implements Error {
+  available: Float
+  availableUnitSymbol: String
+  code: ErrorCode!
+  field: String
+  message: String!
 }
 
 """
@@ -7175,6 +7234,11 @@ input MoveShoppingItemToPantryInput {
   idempotencyKey: ID
   """Additional notes"""
   notes: String
+  """
+  The purchased packages' own size (1 jar of 22 oz), recorded on the new batch. Omitted,
+  the line's own package size applies, else the pantry item's default.
+  """
+  packageSize: PackageSizeInput
   """ID of the target pantry"""
   pantryId: ID!
   """
@@ -7191,7 +7255,8 @@ input MoveShoppingItemToPantryInput {
   """
   pantryItemId: ID
   """
-  Whether to remove the item from the shopping list after moving (default: true)
+  Whether to remove the item from the shopping list after moving. Default false:
+  the line stays on the list, stamped as moved.
   """
   removeFromList: Boolean
   """ID of the shopping list item to move"""
@@ -7220,7 +7285,7 @@ Result of MoveShoppingItemToPantry. Select on MoveShoppingItemToPantryPayload fo
 success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
-union MoveShoppingItemToPantryResult = ConflictError | ForbiddenError | MoveShoppingItemToPantryPayload | NotFoundError | ValidationError
+union MoveShoppingItemToPantryResult = ConflictError | ForbiddenError | MoveShoppingItemToPantryPayload | NotFoundError | UnitEligibilityError | ValidationError
 
 input MoveShoppingListItemInput {
   afterItemId: ID
@@ -7343,12 +7408,6 @@ type Mutation {
   quick set.
   """
   adjustPantryItemQuantity(input: AdjustPantryItemQuantityInput!): AdjustPantryItemQuantityResult!
-  """
-  Adjust the net weight for a dual-tracked pantry item.
-  Recalculates remainingNetWeight proportionally and derives new quantity.
-  Use this when the original net weight was entered incorrectly.
-  """
-  adjustPantryItemWeight(input: AdjustPantryItemWeightInput!): AdjustPantryItemWeightResult!
   """Create multiple items at once"""
   bulkCreateItems(input: BulkCreateItemsInput!): BulkCreateItemsResult!
   """Create multiple purchase records at once."""
@@ -7373,6 +7432,15 @@ type Mutation {
   bulkUpsertItemsByExternalSource(input: BulkUpsertItemsByExternalSourceInput!): BulkUpsertItemsByExternalSourceResult!
   """Cancel recurring generation for a shopping list."""
   cancelRecurring(input: CancelRecurringInput!): CancelRecurringResult!
+  """
+  Move a stack onto another tracking unit. Every batch is re-denominated
+  at the same value, with its package content, the stack's defaults and its
+  thresholds, in one transaction recorded on the stack's history. An exact
+  route applies without a resolution; an estimate needs CONVERT or RECOUNT
+  (refused with UNIT_CHANGE_NEEDS_RESOLUTION on `resolution`); no route needs
+  RECOUNT with a quantity.
+  """
+  changePantryItemUnit(input: ChangePantryItemUnitInput!): ChangePantryItemUnitResult!
   """
   Change password for authenticated user (requires current password verification)
   """
@@ -7404,6 +7472,13 @@ type Mutation {
   and sets quantity to 0. Use after expiration job marks item as EXPIRED.
   """
   convertExpiredToWaste(input: ConvertExpiredToWasteInput!): ConvertExpiredToWasteResult!
+  """
+  Correct one batch's package size or portion count when it was misread.
+  The same fraction of the package remains and its value is kept; the
+  correction is recorded on the stack's history. The stack's default for new
+  stock is edited with updatePantryItem.
+  """
+  correctPantryItemPackageSize(input: CorrectPantryItemPackageSizeInput!): CorrectPantryItemPackageSizeResult!
   """Create a new brand."""
   createBrand(input: CreateBrandInput!): CreateBrandResult!
   """Create a new category."""
@@ -7764,10 +7839,9 @@ type Mutation {
   Creates a PantryItem with full traceability back to the shopping list item.
   Optionally removes the item from the shopping list.
   
-  The target pantry must belong to the same home as the shopping list. A
-  pantry in another home is refused as a validation error naming the mismatch,
-  even where the caller has permission to add items to it; a PERSONAL list
-  (one with no home) may target any pantry the caller can add to.
+  The target pantry may be in any home: the caller needs the right to mark the
+  line purchased and the right to add items to the named pantry, and a pantry
+  the caller cannot add to is refused as ForbiddenError.
   
   Stocking is once PER PURCHASE, keyed on the line and its purchase cycle: a
   replay within one purchase returns the existing pantry item with
@@ -8847,6 +8921,16 @@ input PackageInfoInput {
   servingsPerPackage: Int
 }
 
+"""
+One package's net content: how much one tracking unit of what is being taken in
+holds, in a unit of measure (a 22 oz jar is 22 + oz). The batch records it; without
+it, the batch takes the item's default package size.
+"""
+input PackageSizeInput {
+  netWeight: Float!
+  netWeightUnitId: ID!
+}
+
 type PageInfo {
   endCursor: String
   hasNextPage: Boolean!
@@ -9039,10 +9123,16 @@ type PantryItem {
   The expiry date, with no time and no timezone. An item is not expired on this date: it expires today. It is expired from the next day on, judged on the viewer's calendar.
   """
   expiresOn: LocalDate
+  """
+  The exact amount held in the tracking unit: each batch by its own package size, a
+  partly used package as its fraction (1.25 jars). quantity counts a partly used
+  package as one; low stock is decided on this.
+  """
+  heldQuantity: Float!
   id: ID!
   isComposted: Boolean!
   """
-  Whether this item is low on stock: quantity at or below zero, or at or below
+  Whether this item is low on stock: heldQuantity at or below zero, or at or below
   minQuantity when a minimum is set. The same definition
   PantryStats.lowStockCount counts and the lowStock filter on
   PantryItemFilters selects.
@@ -9060,6 +9150,10 @@ type PantryItem {
   ledger(filters: AnalyticsFilters): LedgerSummary!
   lowStockAlert: Boolean!
   minQuantity: Float
+  """
+  The DEFAULT package size a new batch takes when none is stated (overrides the
+  catalog's). Each batch records its own; editing this restates no stock held.
+  """
   netWeight: Float
   netWeightUnit: Unit
   packageBreakdown: PackageBreakdown
@@ -9101,6 +9195,8 @@ type PantryItem {
   remainingPortions: Float
   restockQuantity: Float
   sourceShoppingListItemId: ID
+  """Whole and partly used packages, batch by batch."""
+  stockBreakdown: StockBreakdown!
   storageLocation: StorageLocation
   storageNotes: String
   storageState: StorageState!
@@ -9155,9 +9251,15 @@ type PantryItemBatch {
   expiresOn: LocalDate
   id: ID!
   isOpened: Boolean!
+  """
+  This batch's own package size, in the stack's net-weight unit (a 22 oz jar is 22).
+  """
+  netWeight: Float
   notes: String
   openedAt: DateTime
   pantryItemId: ID!
+  """This batch's own portions per tracking unit (an 18-egg pack is 18)."""
+  portionsPerTrackingUnit: Float
   """
   The purchase this acquisition was recorded under, where one exists. A
   restock's purchase belongs here rather than on the item, whose purchaseId
@@ -9574,6 +9676,85 @@ enum PantrySuggestionSource {
   RECENTLY_DELETED
 }
 
+"""One batch before and after a unit change."""
+type PantryUnitChangeBatch {
+  """
+  Null for the stock the stack held outside its batches, carried into a new batch
+  """
+  batchId: ID
+  """
+  Net weight per new unit, in the stack's net-weight unit after the change
+  """
+  netWeightAfter: Float
+  portionsPerTrackingUnitAfter: Float
+  quantityAfter: Float!
+  quantityBefore: Float!
+}
+
+"""How a unit change reaches the stack's new quantity."""
+enum PantryUnitChangeMethod {
+  """Converted along a route between the units."""
+  CONVERSION
+  """The quantity sent is the stack."""
+  RECOUNT
+  """
+  Measured by what the batches hold: jars of 32 oz into grams, or grams into jars of a stated size.
+  """
+  WEIGHT
+}
+
+type PantryUnitChangePreview {
+  batches: [PantryUnitChangeBatch!]!
+  confidence: Float
+  """A held stack of the item in the new unit, which refuses the change"""
+  conflictingPantryItemId: ID
+  """The stack stops recording a net weight"""
+  dropsNetWeight: Boolean!
+  """The stack stops recording a portion definition"""
+  dropsPortions: Boolean!
+  """The thresholds are cleared: an empty stack with no exact route"""
+  dropsThresholds: Boolean!
+  """
+  True for an exact route; false for an estimate; null for a recount or a refusal
+  """
+  exact: Boolean
+  fromUnit: Unit!
+  heldQuantityAfter: Float
+  heldQuantityBefore: Float!
+  """
+  Null when no route reaches the new unit. An estimate is reported with its refusal, so both choices can be shown.
+  """
+  method: PantryUnitChangeMethod
+  minQuantityAfter: Float
+  netWeightAfter: Float
+  netWeightUnitIdAfter: ID
+  portionsPerTrackingUnitAfter: Float
+  quantityAfter: Float
+  quantityBefore: Float!
+  """True when a quantity was sent and an exact route makes it unused"""
+  quantityIgnored: Boolean!
+  refusal: PantryUnitChangeRefusal
+  restockQuantityAfter: Float
+  toUnit: Unit!
+  """The stack's version this preview was computed against"""
+  version: Int!
+}
+
+"""The refusal changePantryItemUnit would return for the same input."""
+type PantryUnitChangeRefusal {
+  code: ErrorCode!
+  field: String!
+  message: String!
+}
+
+"""The caller's choice where the route is an estimate, or there is none."""
+enum PantryUnitChangeResolution {
+  """Apply the estimated route."""
+  CONVERT
+  """Take the quantity sent as what the stack holds in the new unit."""
+  RECOUNT
+}
+
 """
 Usage statistics for a Pantry.
 Included when admin requests resources with stats.
@@ -9587,6 +9768,23 @@ type PantryUsageStats {
   lastActivityAt: DateTime
   """Number of low stock items"""
   lowStockItemCount: Int!
+}
+
+"""
+One partly used package: its batch, its size, and the fraction of it that remains.
+"""
+type PartialPackage {
+  """Null for stock the stack holds outside its batches."""
+  batchId: ID
+  """
+  This package's own size, in the stack's net-weight unit; null when it is not weighed.
+  """
+  netWeight: Float
+  """
+  The fraction of this package left, between 0 and 1 (0.25 = a quarter jar).
+  """
+  remaining: Float!
+  remainingNetWeight: Float
 }
 
 """
@@ -9639,6 +9837,21 @@ input PowerStatusInput {
   to type it from. Registered in the open-shape register.
   """
   powerState: JSON
+}
+
+input PreviewPantryItemUnitChangeInput {
+  """
+  The size of one new unit, required when a unit of measure becomes a count (grams into jars)
+  """
+  packageSize: PackageSizeInput
+  pantryItemId: ID!
+  """
+  What the stack holds in the new unit; read with RECOUNT, or where no route exists
+  """
+  quantity: Float
+  resolution: PantryUnitChangeResolution
+  """The new tracking unit"""
+  unitId: ID!
 }
 
 """Price estimate information for a shopping list item"""
@@ -10199,6 +10412,15 @@ type Query {
   Handles "1/4", "1 1/4", "0.25" formats
   """
   parseQuantityInput(input: String!, unitId: ID!): QuantityDisplay!
+  """
+  What changePantryItemUnit would do with this input, without writing: the
+  method, whether the route is exact or an estimate, the stack and each batch
+  before and after, the thresholds after, the per-unit facts dropped, a held
+  stack that conflicts, and the refusal the change would raise. Confirm by
+  sending the change with the preview's version: a stack changed since is
+  refused with VERSION_CONFLICT.
+  """
+  previewPantryItemUnitChange(input: PreviewPantryItemUnitChangeInput!): PantryUnitChangePreview!
   """Fetch a single purchase by its ID."""
   purchase(id: ID!): Purchase
   """
@@ -11313,6 +11535,17 @@ input RestockPantryItemInput {
   idempotencyKey: ID
   measurementProfile: MeasurementProfileInput
   notes: String
+  """
+  Portions one restocked unit holds, on an item counted in portions (an 18-egg pack).
+  Omitted, the item's default applies.
+  """
+  packagePortions: Float
+  """
+  The restocked packages' own size, when counted in the item's unit (1 jar of 22 oz).
+  Omitted, the new batch takes the item's default package size. A size the item's
+  weight cannot be expressed in is refused on packageSize.
+  """
+  packageSize: PackageSizeInput
   quantity: Float!
   restockedAt: DateTime
   storeId: ID
@@ -11331,7 +11564,7 @@ Result of RestockPantryItem. Select on RestockPantryItemPayload for the
 success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
-union RestockPantryItemResult = ConflictError | ForbiddenError | NotFoundError | RestockPantryItemPayload | ValidationError
+union RestockPantryItemResult = ConflictError | ForbiddenError | NotFoundError | RestockPantryItemPayload | UnitEligibilityError | ValidationError
 
 input RestoreItemInput {
   id: ID!
@@ -12326,6 +12559,16 @@ input SpoonacularWeightPerServingInput {
   unit: String
 }
 
+"""
+What a stack holds, package by package: whole packages and the partly used ones. Each
+batch is measured by its own package size, so a 22 oz jar and a 32 oz jar are each one
+jar.
+"""
+type StockBreakdown {
+  fullPackages: Int!
+  partialPackages: [PartialPackage!]!
+}
+
 """Reusable sub-input for storage details"""
 input StorageDetailsInput {
   condition: ItemCondition
@@ -13272,7 +13515,7 @@ enum TopLevelErrorCode {
   """
   HOME_NOT_A_MEMBER
   """
-  More was requested from a pantry item than it holds. A mutation reports this as a ValidationError union member carrying the same code.
+  More was requested from a pantry item than it holds. createPantryItemUsage reports it as the InsufficientQuantityError member, with what is held; others as a ValidationError.
   """
   INSUFFICIENT_QUANTITY
   """
@@ -13325,7 +13568,11 @@ enum TopLevelErrorCode {
   """
   UNAUTHENTICATED
   """
-  The unit is not valid for the requested operation. The message states why — curation, no conversion route, a fact the food does not record, or a measure the stack cannot express. Carries no machine-readable list of the units that would be: a mutation reports this as a ValidationError union member, which has no extensions, and the message names the acceptable alternatives in prose. To present them as options, re-query consumptionUnitsForPantryItem or restockUnitsForPantryItem.
+  A unit change whose route is an estimate, sent without CONVERT or RECOUNT. A mutation reports this as a ValidationError union member on `resolution`.
+  """
+  UNIT_CHANGE_NEEDS_RESOLUTION
+  """
+  The unit is not valid for the requested operation: curation, no conversion route, a fact the food does not record, or a measure the stack cannot express. The stock operations report it as the UnitEligibilityError member, carrying validUnits and denial; others as a ValidationError.
   """
   UNIT_INVALID
   VALIDATION_FAILED
@@ -13409,6 +13656,30 @@ type Unit {
   type: UnitType!
   unitRole: UnitRole!
   updatedAt: DateTime!
+}
+
+"""Which question refused a unit."""
+enum UnitDenial {
+  """The unit is not offered for this item."""
+  CURATION
+  """The stack's own measure cannot express the amount."""
+  INEXPRESSIBLE
+  """A fact the conversion needs (a density, a net weight) is not recorded."""
+  MISSING_FACT
+  """No conversion route reaches the stack's unit."""
+  NO_ROUTE
+}
+
+"""
+A unit a stock operation cannot take. `field` names the input that carried
+it; `validUnits` are the symbols the operation would take, best first.
+"""
+type UnitEligibilityError implements Error {
+  code: ErrorCode!
+  denial: UnitDenial
+  field: String
+  message: String!
+  validUnits: [String!]!
 }
 
 input UnitOpsInput {
@@ -14142,8 +14413,10 @@ type UpdatePantryItemPayload {
 """Input for updating pantry item quantity"""
 input UpdatePantryItemQuantityInput {
   pantryItemId: ID!
+  """
+  The stack's new amount, in its own tracking unit. The unit changes through changePantryItemUnit.
+  """
   quantity: String!
-  unitId: ID
   version: Int
 }
 
@@ -14157,7 +14430,7 @@ Result of UpdatePantryItemQuantity. Select on UpdatePantryItemQuantityPayload fo
 success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
-union UpdatePantryItemQuantityResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | UpdatePantryItemQuantityPayload | ValidationError
+union UpdatePantryItemQuantityResult = ConflictError | ForbiddenError | NotFoundError | UnitEligibilityError | UpdatePantryItemQuantityPayload | ValidationError
 
 """
 Result of UpdatePantryItem. Select on UpdatePantryItemPayload for the
