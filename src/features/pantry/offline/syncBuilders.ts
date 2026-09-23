@@ -80,7 +80,8 @@ export const buildPantryItemSync = withCapturedReads(
   (mutation, captured, cache) => {
     const input = getQueuedInput(mutation);
     const clientId = getClientId(mutation);
-    const { id: _omitId, itemName, ...rest } = input;
+    // `SyncPantryItemInput` has no `today`; an unknown input field fails the replay.
+    const { id: _omitId, today: _omitToday, itemName, ...rest } = input;
 
     // Only `UpdatePantryItemInput` carries `itemName`. The sync upsert's update
     // branch ignores `item`, so a rename replays as the original (`version: Int!`).

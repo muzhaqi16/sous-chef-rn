@@ -289,6 +289,19 @@ describe('pantry sync builders', () => {
     },
   );
 
+  it('drops the create-only today from the sync upsert', () => {
+    const mutation = makeMutation({
+      ...queuedMutationFor(CreatePantryItemDocument),
+      variables: {
+        input: { id: 'p-9', pantryId: 'pan-1', today: '2026-09-22' },
+      },
+    });
+
+    const input = wrapper(convertToSyncMutation(mutation).syncVariables);
+
+    expect(input).not.toHaveProperty('today');
+  });
+
   it('sends no forceAdd on an update', () => {
     mockClient.cache.readFragment.mockReturnValue({
       id: 'item-u',

@@ -18,6 +18,7 @@ import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
 import { t } from '#/i18n';
 import { changeLanguage } from '#/i18n/config';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { toDateKey } from '#/utils/dateUtils';
 import { usePantryItemActions } from '../usePantryItemActions';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -304,6 +305,7 @@ describe('usePantryItemActions', () => {
           purpose: UsagePurpose.Cooking,
           notes: 'For dinner',
           usageUnitId: undefined,
+          today: toDateKey(new Date()),
           idempotencyKey: expect.any(String),
         },
       });
@@ -400,6 +402,7 @@ describe('usePantryItemActions', () => {
           wasteReason: 'EXPIRED',
           isComposted: true,
           isRecycled: false,
+          today: toDateKey(new Date()),
           idempotencyKey: expect.any(String),
         },
       });

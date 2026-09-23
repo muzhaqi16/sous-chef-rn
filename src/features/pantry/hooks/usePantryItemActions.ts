@@ -196,6 +196,7 @@ export function usePantryItemActions({
               purpose,
               notes: consumeNotes,
               usageUnitId,
+              today: toDateKey(new Date()),
               // idempotencyKey dedups the usage ledger row on replay.
               idempotencyKey: generateEntityId(),
             },
@@ -251,6 +252,7 @@ export function usePantryItemActions({
               wasteReason,
               isComposted,
               isRecycled,
+              today: toDateKey(new Date()),
               // idempotencyKey dedups the usage ledger row on replay.
               idempotencyKey: generateEntityId(),
             },

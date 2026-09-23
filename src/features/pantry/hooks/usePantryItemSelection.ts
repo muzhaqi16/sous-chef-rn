@@ -184,7 +184,7 @@ export function usePantryItemSelection(pantryId: string | null | undefined) {
     let thrown: unknown;
     try {
       result = await createPantryItem({
-        variables: { input: { ...input, id, pantryId } },
+        variables: { input: { ...input, id, pantryId, today } },
         context: { localFirst: true },
       });
     } catch (error) {

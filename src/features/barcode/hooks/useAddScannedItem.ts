@@ -36,6 +36,7 @@ import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { toDateKey } from '#/utils/dateUtils';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
@@ -154,6 +155,7 @@ export function useAddScannedItem({
       pantryId,
       itemId: item.id,
       quantity: SCANNED_QUANTITY,
+      today: toDateKey(new Date()),
       ...(item.netWeight != null && item.displayUnit?.id
         ? {
             netWeight: {

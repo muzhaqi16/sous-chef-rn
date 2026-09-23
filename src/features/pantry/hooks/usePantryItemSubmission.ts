@@ -239,6 +239,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       },
       purchase,
       expiresOn: expirationDate ? toDateKey(expirationDate) : undefined,
+      today: toDateKey(new Date()),
       tags: tags
         ? tags
             .split(',')
