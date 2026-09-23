@@ -107,12 +107,6 @@
     "title": "Të konfigurojmë hyrjen me {{type}}?",
     "description": "Përdor {{authType}} për një hyrje më të shpejtë dhe më të sigurt herën tjetër. Mund ta aktivizosh më vonë te Cilësimet nëse ndërron mendje."
   },
-  "rememberMe": {
-    "title": "Të kujtohen të dhënat e hyrjes?",
-    "body": "Do t'i ruajmë në mënyrë të sigurt të dhënat e hyrjes për {{email}} në këtë pajisje, kështu nuk do duhet t'i futësh herën tjetër.",
-    "notNow": "Jo tani",
-    "remember": "Kujto"
-  },
   "appearance": {
     "themeSection": "Tema",
     "themeLight": "E ndritshme",
@@ -197,10 +191,6 @@
     "uploadPhoto": "Ngarko foton",
     "chooseDifferentPhoto": "Zgjidh foto tjetër",
     "selectPhoto": "Zgjidh foto",
-    "cameraPermissionDeniedTitle": "Leja e kamerës u refuzua",
-    "cameraPermissionBlockedTitle": "Leja e kamerës u bllokua",
-    "cameraPermissionBlockedMessage": "Qasja në kamerë është e bllokuar. Shko te Cilësimet > Aplikacionet > {{appName}} > Lejet për të aktivizuar qasjen në kamerë.",
-    "permissionErrorMessage": "Dështoi kërkesa për lejen e kamerës. Provo përsëri ose kontrollo cilësimet e pajisjes.",
     "updatePhotoFailed": "Dështoi përditësimi i fotos së profilit",
     "cropPhoto": "Pri foton",
     "cropping": "Duke prerë...",

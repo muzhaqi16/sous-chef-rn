@@ -1,6 +1,5 @@
 import {
   getDeviceDecimalSeparator,
-  getDeviceLocale,
   resetDeviceLocaleCache,
 } from '../deviceLocale';
 
@@ -64,17 +63,5 @@ describe('getDeviceDecimalSeparator', () => {
     // is the point: this must not re-resolve on every keystroke.
     setNumberFormat(realNumberFormat);
     expect(getDeviceDecimalSeparator()).toBe(',');
-  });
-});
-
-describe('getDeviceLocale', () => {
-  it('reports the resolved device locale', () => {
-    onLocale('es-ES');
-    expect(getDeviceLocale()).toBe('es-ES');
-  });
-
-  it('falls back to en-US when Intl is unavailable', () => {
-    withoutIntl();
-    expect(getDeviceLocale()).toBe('en-US');
   });
 });

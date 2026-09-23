@@ -54,16 +54,6 @@ const OverlayBackdropContext = createContext<OverlayBackdropContextType | null>(
 const OverlayBackdropInternalContext =
   createContext<OverlayBackdropInternalContextType | null>(null);
 
-export const useOverlayBackdrop = (): OverlayBackdropContextType => {
-  const context = useContext(OverlayBackdropContext);
-  if (!context) {
-    throw new Error(
-      'useOverlayBackdrop must be used within OverlayBackdropProvider',
-    );
-  }
-  return context;
-};
-
 // Module-scoped for stable identity. `claim` returns '' so a paired `release`
 // harmlessly finds no slot.
 const NOOP_BACKDROP: OverlayBackdropContextType = {
@@ -75,8 +65,8 @@ const NOOP_BACKDROP: OverlayBackdropContextType = {
 let missingProviderWarned = false;
 
 /**
- * `useOverlayBackdrop` with a no-op fallback instead of a throw, for cross-cutting
- * hooks rendered in provider-less test trees. Warns once in DEV — hitting the
+ * The backdrop context with a no-op fallback, for cross-cutting hooks rendered
+ * in provider-less test trees. Warns once in DEV — hitting the
  * fallback in real code silently drops the dim layer.
  */
 export const useOverlayBackdropOptional = (): OverlayBackdropContextType => {

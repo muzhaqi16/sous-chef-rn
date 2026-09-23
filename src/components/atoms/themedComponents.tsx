@@ -1,5 +1,7 @@
 import {
   ActivityIndicator,
+  Modal as RNModal,
+  type ModalProps,
   Platform,
   Pressable as RNPressable,
   RefreshControl as RNRefreshControl,
@@ -13,12 +15,12 @@ import DateTimePicker, {
   type IOSNativeProps,
 } from '@react-native-community/datetimepicker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 
 import type { Theme } from '#/theme/themes';
 
 import { Icon } from '#utils/iconUtils';
+import { CurrentThemeScope } from '#components/atoms/CurrentThemeScope';
 
 // Shared withUnistyles wrappers for third-party components taking theme-derived
 // props. Module scope, so screens carry no useUnistyles re-render subscription.
@@ -28,6 +30,14 @@ import { Icon } from '#utils/iconUtils';
 // values inside `({pressed}) => [...]` callbacks (unistyles#1109). For gesture
 // composition, import RNGH's Pressable at the call site.
 export const Pressable = RNPressable;
+
+// Import Modal from here. RN's mounts its children only while visible, so they
+// sit in `CurrentThemeScope`.
+export const Modal = ({ children, ...props }: ModalProps) => (
+  <RNModal {...props}>
+    <CurrentThemeScope>{children}</CurrentThemeScope>
+  </RNModal>
+);
 
 // `inputPlaceholder` is the palette's placeholder tone (~3.6:1); a body-text tone
 // here renders an empty field as dark as a filled one. `keyboardAppearance` reads
@@ -178,11 +188,8 @@ export const SuccessActivityIndicator = withUnistyles(
 );
 
 /** Android starts the circle at `offset - diameter`, so at 0 it slides in clipped
- *  by the host's top edge; iOS shifts the control's frame and needs none.
- *  `chromeAbove` is for a host whose chrome scrolls inside it (the pantry list). */
-const REFRESH_CIRCLE_DIAMETER = 40;
-export const refreshSpinnerOffset = (chromeAbove = 0) =>
-  Platform.OS === 'android' ? chromeAbove + REFRESH_CIRCLE_DIAMETER : 0;
+ *  by the host's top edge; iOS shifts the control's frame and needs none. */
+const REFRESH_SPINNER_OFFSET = Platform.OS === 'android' ? 40 : 0;
 
 // RNGH's ScrollView injects its scroll gesture as
 // `cloneElement(refreshControl, { block })`, and only a `createNativeWrapper`
@@ -193,7 +200,7 @@ export const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
   colors: [theme.colors.primary],
   tintColor: theme.colors.primary,
   progressBackgroundColor: theme.colors.surface,
-  progressViewOffset: refreshSpinnerOffset(),
+  progressViewOffset: REFRESH_SPINNER_OFFSET,
 }));
 
 /** The same theming on RN's own control, for plain RN `ScrollView` hosts. RNGH's
@@ -204,15 +211,9 @@ export const PlainScrollRefreshControl = withUnistyles(
     colors: [theme.colors.primary],
     tintColor: theme.colors.primary,
     progressBackgroundColor: theme.colors.surface,
-    progressViewOffset: refreshSpinnerOffset(),
+    progressViewOffset: REFRESH_SPINNER_OFFSET,
   }),
 );
 
 /** Theme-reactive Icon wrapper: re-renders so derived `tone`/`color` stay in sync. */
 export const ThemedIcon = withUnistyles(Icon);
-
-/** Theme-reactive SafeAreaView. safe-area-context's is third-party, so the babel
- * plugin does not bind it to the ShadowTree and a theme-derived background
- * passed to it resolves once and never updates. Use for any SafeAreaView whose
- * style reads theme values. */
-export const ThemedSafeAreaView = withUnistyles(SafeAreaView);

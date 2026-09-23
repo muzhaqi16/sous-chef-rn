@@ -9,6 +9,7 @@ import type { MealType } from '#/graphql/generated/schemaTypes';
 import type { MealPlanItemCard_ItemFragment } from './MealPlanItemCard.generated';
 import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 import { useTranslation } from '#/i18n';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface MealTypeSectionProps {
   mealType: MealType;
@@ -46,7 +47,7 @@ export const MealTypeSection: React.FC<MealTypeSectionProps> = ({
           <Pressable
             onPress={() => onAddMeal(mealType)}
             accessibilityLabel={t('labels.addNamed', { name: label })}
-            hitSlop={12}
+            hitSlop={hitSlop.lg}
           >
             <Icon name="add" size={20} tone="primary" />
           </Pressable>

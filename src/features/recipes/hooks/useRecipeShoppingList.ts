@@ -454,7 +454,7 @@ export function useRecipeShoppingList({
         } else if (externalIngredients.length > 0) {
           const items: BatchAddShoppingListItemInput[] =
             externalIngredients.map((ingredient, index) => {
-              // Amount and unit from ONE measure — see `addOneIngredient`.
+              // Amount and unit from ONE measure, so the two always agree.
               const measure = preferredMeasure(
                 ingredient.measures,
                 unitSystem,

@@ -20,7 +20,8 @@ import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { useLocalSearch } from '#hooks/search/useLocalSearch';
-import { Screen } from '#components/templates/Screen';
+import { SubScreen } from '#components/templates/SubScreen';
+import { useScreenListInset } from '#components/templates/useScreenListInset';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { recipesTestIDs } from '#features/recipes/testIDs';
@@ -33,8 +34,8 @@ const getItemType = () => 'item';
 export const MyRecipes: React.FC = () => {
   useScreenTransition('MyRecipes');
   const { t } = useTranslation();
-  const { toRecipeDetail, toRecipeEdit, toRecipeCreate, goBack } =
-    useAppNavigation();
+  const { toRecipeDetail, toRecipeEdit, toRecipeCreate } = useAppNavigation();
+  const listInset = useScreenListInset();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Search filters on the device, so a query needs every page.
@@ -153,9 +154,9 @@ export const MyRecipes: React.FC = () => {
   );
 
   return (
-    <Screen
+    <SubScreen
       testID={recipesTestIDs.myRecipesScreen}
-      header={{ title: t('recipes.myRecipesTitle'), back: goBack }}
+      title={t('recipes.myRecipesTitle')}
       scroll="list"
       gutter="none"
     >
@@ -215,19 +216,15 @@ export const MyRecipes: React.FC = () => {
               />
             )
           }
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, listInset]}
           {...FLASHLIST_DEFAULTS.fullScreen}
         />
       )}
-    </Screen>
+    </SubScreen>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   searchBarContainer: {
     paddingHorizontal: theme.spacing.md,
   },

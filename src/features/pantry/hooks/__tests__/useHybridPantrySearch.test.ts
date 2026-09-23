@@ -122,7 +122,7 @@ describe('useHybridPantrySearch', () => {
                     quantity: 1,
                     updatedAt: '2026-01-01',
                     storageState: StorageState.Ambient,
-                    expiresAt: null,
+                    expiresOn: null,
                     isLowStock: false,
                     lastUsedAt: null,
                     netWeight: null,
@@ -190,6 +190,7 @@ describe('useHybridPantrySearch', () => {
         itemsFilter: { storageState: 'AMBIENT', search: 'Milk' },
         itemsOrderBy: { field: 'NAME', direction: 'ASC' },
         storageLocationsFirst: 0,
+        today: expect.any(String),
       });
       expect(result.current.useServerSort).toBe(true);
     });

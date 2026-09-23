@@ -3,21 +3,9 @@ import { useTranslation } from '#/i18n';
 
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { alertService } from '#/services/alertService';
-import { errorService } from '#/services/errorService';
-import type {
-  ImagePickerResponse,
-  MediaType,
-  CameraOptions,
-  ImageLibraryOptions,
-} from 'react-native-image-picker';
-import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { imageErrorMessage } from '#hooks/useImageUpload';
-import type { ImageValidationError } from '#utils/imageValidation';
-import { validateImageFile } from '#utils/imageValidation';
-import { usePermission } from '#hooks/permissions/usePermission';
+import { usePhotoCapture } from '#hooks/usePhotoCapture';
 import { ImagePickerSheet } from '#features/catalog/components/ImagePickerSheet';
 import { Text } from '#components/atoms/Text';
 import type { ImageFile } from '#/types/media';
@@ -32,27 +20,6 @@ interface ImagePickerProps {
   children?: React.ReactNode;
 }
 
-/** Module-level validation wrapper to keep try-catch out of the component body (React Compiler). */
-function tryValidateImage(
-  imageFile: ImageFile,
-  isProfile: boolean,
-): { valid: true } | { valid: false; error: ImageValidationError } {
-  try {
-    validateImageFile(imageFile, isProfile);
-    return { valid: true };
-  } catch (error) {
-    return { valid: false, error: error as ImageValidationError };
-  }
-}
-
-const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
-  mediaType: 'photo' as MediaType,
-  includeBase64: false,
-  maxHeight: 2000,
-  maxWidth: 2000,
-  quality: 0.8,
-};
-
 export const ImagePicker: React.FC<ImagePickerProps> = ({
   onImageSelected,
   onMultiImageSelected,
@@ -64,98 +31,24 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
 }) => {
   const { t } = useTranslation();
   const [sheetVisible, setSheetVisible] = useState(false);
-  const {
-    request: requestCamera,
-    isBlocked,
-    openSettings,
-  } = usePermission('camera');
+  const { takePhoto, pickPhoto } = usePhotoCapture({
+    forProfile: isProfile,
+    multiple: multiSelect && !!onMultiImageSelected,
+    onInvalid: onError,
+  });
 
-  const handleImageResponse = (response: ImagePickerResponse) => {
-    if (response.didCancel || response.errorCode || !response.assets?.length) {
-      return;
-    }
-
+  const deliver = (images: ImageFile[]) => {
+    const [first] = images;
+    if (!first) return;
     if (multiSelect && onMultiImageSelected) {
-      // Multi-select mode: process all assets
-      const validImages: ImageFile[] = [];
-      for (const asset of response.assets) {
-        if (!asset.uri) continue;
-        const imageFile: ImageFile = {
-          uri: asset.uri,
-          fileName: asset.fileName,
-          fileSize: asset.fileSize,
-          type: asset.type,
-        };
-        const result = tryValidateImage(imageFile, isProfile);
-        if (result.valid) {
-          validImages.push(imageFile);
-        } else {
-          onError?.(result.error);
-        }
-      }
-      if (validImages.length > 0) {
-        onMultiImageSelected(validImages);
-      }
+      onMultiImageSelected(images);
     } else {
-      // Single-select mode (backward compatible)
-      const asset = response.assets[0];
-      if (!asset?.uri) return;
-      const imageFile: ImageFile = {
-        uri: asset.uri,
-        fileName: asset.fileName,
-        fileSize: asset.fileSize,
-        type: asset.type,
-      };
-
-      const result = tryValidateImage(imageFile, isProfile);
-      if (result.valid) {
-        onImageSelected(imageFile);
-      } else {
-        onError?.(result.error);
-        // The error's own message is English by construction and belongs in the
-        // report `onError` makes, not on screen. The code is what maps to copy.
-        alertService.alert(
-          t('labels.invalidImage'),
-          imageErrorMessage(t, result.error, isProfile),
-        );
-      }
+      onImageSelected(first);
     }
   };
 
-  const handleCameraPress = async () => {
-    if (isBlocked) {
-      alertService.alert(
-        t('labels.cameraPermission'),
-        t('imagePicker.cameraPermissionBody'),
-        [
-          { text: t('labels.cancel'), style: 'cancel' },
-          {
-            text: t('labels.openSettings'),
-            onPress: () => {
-              void openSettings().catch(error =>
-                errorService.reportError(error, {
-                  operation: 'ImagePicker.openSettings',
-                }),
-              );
-            },
-          },
-        ],
-      );
-      return;
-    }
-    const result = await requestCamera();
-    if (result === 'granted') {
-      void launchCamera(DEFAULT_OPTIONS, handleImageResponse);
-    }
-  };
-
-  const handleLibraryPress = () => {
-    const libraryOptions: ImageLibraryOptions = {
-      ...DEFAULT_OPTIONS,
-      ...(multiSelect && { selectionLimit: 0 }),
-    };
-    void launchImageLibrary(libraryOptions, handleImageResponse);
-  };
+  const handleCameraPress = async () => deliver(await takePhoto());
+  const handleLibraryPress = async () => deliver(await pickPhoto());
 
   const showImagePicker = () => {
     if (disabled) return;

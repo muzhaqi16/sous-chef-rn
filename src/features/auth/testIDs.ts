@@ -48,10 +48,6 @@ export const authTestIDs = {
   emailVerifiedSignInButton: 'email-verified-sign-in',
   emailVerificationRetryButton: 'verification-retry',
 
-  rememberMeModal: 'remember-me-modal',
-  rememberMeDeclineButton: 'remember-me-decline',
-  rememberMeAcceptButton: 'remember-me-accept',
-
   postLoginBiometricScreen: 'post-login-biometric-screen',
   /** The `BiometricSetupView` prefix; its buttons are `kitTestIDs.biometric*`. */
   postLoginBiometricView: 'post-login-biometric',

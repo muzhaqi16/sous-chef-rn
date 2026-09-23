@@ -25,7 +25,7 @@ export const registerApolloResetBridge = (
 /** Null before `apollo/client.ts` evaluates, which is before a session exists. */
 export const getApolloResetBridge = (): ApolloResetBridge | null => bridge;
 
-/** Test seam: forget the registration. */
+/** @internal Test seam: forget the registration. */
 export const clearApolloResetBridge = (): void => {
   bridge = null;
 };

@@ -88,11 +88,8 @@ mutation UpdateAccount($input: UpdateAccountInput!) {
         timezone
         preferredCurrency
         language
-        defaultShoppingListId
         defaultHomeId
         createdAt
-        updatedAt
-        lastActiveAt
       }
     }
     ... on Error {
@@ -130,7 +127,6 @@ mutation UpdateUserProfile($input: UpdateProfileInput!) {
         showEmail
         showPhone
         createdAt
-        updatedAt
       }
     }
     ... on Error {
@@ -173,7 +169,6 @@ mutation UpdateUserPreferences($input: UpdateSettingsInput!) {
         enabledFeatures
         betaFeatures
         createdAt
-        updatedAt
       }
     }
     ... on Error {
@@ -225,7 +220,6 @@ mutation CompleteOnboarding {
         canAccessDevTools
         onBoarded
         createdAt
-        updatedAt
         timezone
       }
     }
@@ -282,7 +276,6 @@ subscription UserEvents($userId: ID!) {
         timezone
         preferredCurrency
         language
-        lastActiveAt
       }
       # PROFILE_CHANGED normalizes this node straight into the cache (see
       # useUserSubscriptions), so it writes the SAME shape `GetUserProfile`

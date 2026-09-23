@@ -96,5 +96,11 @@
     "verifyingEmail": "Po verifikohet emaili juaj...",
     "verifyingEmailSubtitle": "Ju lutemi prisni ndërsa konfirmojmë adresën tuaj të emailit.",
     "yourEmail": "emailin tuaj"
+  },
+  "rememberMe": {
+    "title": "Të kujtohen të dhënat e hyrjes?",
+    "body": "Do t'i ruajmë në mënyrë të sigurt të dhënat e hyrjes për {{email}} në këtë pajisje, kështu nuk do duhet t'i futësh herën tjetër.",
+    "notNow": "Jo tani",
+    "remember": "Kujto"
   }
 }

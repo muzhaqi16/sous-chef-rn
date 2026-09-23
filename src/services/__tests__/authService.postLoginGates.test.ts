@@ -112,7 +112,6 @@ const unmaskedUser = {
   emailVerified: true,
   onBoarded: true,
   defaultHomeId: null,
-  defaultShoppingListId: null,
 };
 
 beforeEach(() => {

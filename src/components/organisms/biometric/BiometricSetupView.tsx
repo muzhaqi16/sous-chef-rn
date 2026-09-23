@@ -147,7 +147,7 @@ const styles = StyleSheet.create(theme => ({
   primaryButton: {
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.spacing.md,
+    borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
     alignItems: 'center',
     backgroundColor: theme.colors.primary,
@@ -158,7 +158,7 @@ const styles = StyleSheet.create(theme => ({
   secondaryButton: {
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.spacing.md,
+    borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
     alignItems: 'center',
     backgroundColor: 'transparent',

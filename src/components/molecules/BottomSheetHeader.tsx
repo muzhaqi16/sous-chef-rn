@@ -134,5 +134,3 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
   },
 }));
-
-export default BottomSheetHeader;

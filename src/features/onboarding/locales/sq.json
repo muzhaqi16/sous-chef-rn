@@ -45,7 +45,6 @@
     "legalNotice": "Duke vazhduar ju pranoni",
     "uploadAndContinue": "Ngarko dhe vazhdo",
     "updateProfilePhotoFailed": "Përditësimi i fotos së profilit dështoi. Provo sërish.",
-    "cameraPermissionTakePhotoMessage": "Qasja në kamerë kërkohet për të bërë një foto. Aktivizoje te cilësimet.",
     "completeTitle": "Gjithçka gati!",
     "completeSubtitle": "Shtëpia jote është gati për përdorim",
     "congratulations": "Urime! Ke konfiguruar me sukses:",
@@ -78,7 +77,6 @@
     "listRequired": "Emri i listës është i detyrueshëm",
     "listMin": "Emri i listës duhet të ketë të paktën {{count}} karaktere",
     "listMax": "Emri i listës duhet të ketë më pak se {{count}} karaktere",
-    "itemsMax": "Mund të zgjedhësh deri në {{count}} artikuj",
     "homeChars": "Emri i shtëpisë mund të përmbajë vetëm shkronja, numra, hapësira, viza, apostrofa dhe thonjëza"
   },
   "onboarding": {

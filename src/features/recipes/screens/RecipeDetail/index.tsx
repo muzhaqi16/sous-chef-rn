@@ -17,7 +17,7 @@ import { Icon } from '#utils/iconUtils';
 
 import { FolderPicker } from '#features/recipes/components/FolderPicker';
 import { RecipeDetailErrorBoundary } from '#components/providers/ScreenErrorBoundary';
-import { MarkCookedModal } from '#components/organisms/MarkCookedModal';
+import { MarkCookedModal } from '#features/recipes/ui/MarkCookedModal';
 import { IngredientMatchingSheet } from '#features/recipes/components/modals/IngredientMatchingSheet';
 import { SaveRecipeSheet } from '#features/recipes/components/modals/SaveRecipeSheet/SaveRecipeSheet';
 import { ManageRecipeSheet } from '#features/recipes/components/modals/ManageRecipeSheet/ManageRecipeSheet';
@@ -667,7 +667,6 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.xl,
   },
   recipeContent: {
-    paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.md,
   },
   titleSpacing: {
@@ -701,14 +700,15 @@ const styles = StyleSheet.create(theme => ({
   },
   ingredientsSection: {
     marginBottom: theme.spacing.xl,
-    marginHorizontal: -theme.spacing.lg,
+    // Bleeds the carousel to the screen edge through the hero card's gutter.
+    marginHorizontal: -theme.layout.pageGutter,
   },
   ingredientsSectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   addAllButton: {
     color: theme.colors.primary,
@@ -718,7 +718,7 @@ const styles = StyleSheet.create(theme => ({
   },
   ingredientsList: {
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   attribution: {
     paddingTop: theme.spacing.md,

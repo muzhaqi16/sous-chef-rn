@@ -107,12 +107,6 @@
     "title": "¿Configurar inicio de sesión con {{type}}?",
     "description": "Usa {{authType}} para un inicio de sesión más rápido y seguro la próxima vez. Siempre puedes activarlo más tarde en Ajustes si cambias de opinión."
   },
-  "rememberMe": {
-    "title": "¿Recordar datos de inicio de sesión?",
-    "body": "Guardaremos de forma segura tus datos de inicio de sesión para {{email}} en este dispositivo, así no tendrás que introducirlos la próxima vez.",
-    "notNow": "Ahora no",
-    "remember": "Recordar"
-  },
   "appearance": {
     "themeSection": "Tema",
     "themeLight": "Claro",
@@ -197,10 +191,6 @@
     "uploadPhoto": "Subir foto",
     "chooseDifferentPhoto": "Elegir otra foto",
     "selectPhoto": "Seleccionar foto",
-    "cameraPermissionDeniedTitle": "Permiso de cámara denegado",
-    "cameraPermissionBlockedTitle": "Permiso de cámara bloqueado",
-    "cameraPermissionBlockedMessage": "El acceso a la cámara está bloqueado. Ve a Ajustes > Apps > {{appName}} > Permisos para habilitar el acceso a la cámara.",
-    "permissionErrorMessage": "No se pudo solicitar el permiso de cámara. Inténtalo de nuevo o revisa la configuración de tu dispositivo.",
     "updatePhotoFailed": "No se pudo actualizar la foto de perfil",
     "cropPhoto": "Recortar foto",
     "cropping": "Recortando...",

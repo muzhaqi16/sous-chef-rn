@@ -2,6 +2,7 @@ import React from 'react';
 import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
+import { daysUntilExpiry, expiryLabel } from '#domain/expiry';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -16,6 +17,8 @@ import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 import { Badge } from '#components/atoms/Badge';
 import { formatMonthDay } from '#/utils/formatters/date';
+import { hitSlop } from '#/theme/foundations/sizes';
+import { useToday } from '#hooks/useToday';
 
 interface BatchListItemProps {
   batch: PantryItemBatchFragment;
@@ -28,22 +31,14 @@ interface BatchListItemProps {
  * Takes the hook's `t` rather than the module-level helper, which does not
  * re-render on a language change.
  */
-const getExpiryText = (expiresAt: string | null | undefined, t: Translate) => {
-  if (!expiresAt) return null;
-  const now = new Date();
-  const expiry = new Date(expiresAt);
-  const diffDays = Math.ceil(
-    (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  if (diffDays < 0)
-    return { text: t('pantryItemDetail.batch.expired'), isExpired: true };
-  if (diffDays === 0)
-    return { text: t('labels.expiresToday'), isExpired: false };
-  return {
-    text: t('expiration.daysLeft', { count: diffDays }),
-    isExpired: false,
-  };
+const getExpiryText = (
+  expiresOn: string | null | undefined,
+  today: string,
+  t: Translate,
+) => {
+  if (!expiresOn) return null;
+  const diffDays = daysUntilExpiry(expiresOn, today);
+  return { text: expiryLabel(diffDays, t), isExpired: diffDays < 0 };
 };
 
 /**
@@ -64,6 +59,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
   onWaste,
 }) => {
   const { t } = useTranslation();
+  const today = useToday();
   const money = useMoney();
   // Per-entity cache subscription: re-renders only when this batch's
   // PantryItemBatchFragment fields change (e.g., status, isOpened, quantity
@@ -76,7 +72,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
   });
   const batch = fragmentResult.complete ? fragmentResult.data : batchSource;
 
-  const expiryInfo = getExpiryText(batch.expiresAt, t);
+  const expiryInfo = getExpiryText(batch.expiresOn, today, t);
   const isActive = batch.status === BatchStatus.Active;
 
   return (
@@ -162,7 +158,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               onPress={() => onOpen(batch.id)}
               accessibilityLabel={t('a11y.openBatch')}
               style={styles.actionButton}
-              hitSlop={8}
+              hitSlop={hitSlop.md}
             >
               <Icon name="open-outline" size={18} tone="primary" />
             </AppPressable>
@@ -172,7 +168,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               onPress={() => onWaste(batch.id)}
               accessibilityLabel={t('a11y.wasteBatch')}
               style={styles.actionButton}
-              hitSlop={8}
+              hitSlop={hitSlop.md}
             >
               <Icon name="trash-outline" size={18} tone="error" />
             </AppPressable>
@@ -229,8 +225,5 @@ const styles = StyleSheet.create(theme => ({
   },
   actionButton: {
     padding: theme.spacing.xs,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

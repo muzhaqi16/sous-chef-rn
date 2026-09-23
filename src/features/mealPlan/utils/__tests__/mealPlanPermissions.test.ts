@@ -1,7 +1,6 @@
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import {
   isMealPlanOwner,
-  isPersonalPlan,
   getMealPlanPermissions,
 } from '../mealPlanPermissions';
 
@@ -64,20 +63,6 @@ describe('mealPlanPermissions', () => {
       const plan = { user: { id: 'owner' }, createdBy: { id: 'creator' } };
       expect(isMealPlanOwner(plan, 'creator')).toBe(false);
       expect(isMealPlanOwner(plan, 'owner')).toBe(true);
-    });
-  });
-
-  describe('isPersonalPlan', () => {
-    it('returns true when homeId is absent', () => {
-      expect(isPersonalPlan({})).toBe(true);
-    });
-
-    it('returns true when homeId is null', () => {
-      expect(isPersonalPlan({ homeId: null })).toBe(true);
-    });
-
-    it('returns false when homeId is present', () => {
-      expect(isPersonalPlan({ homeId: 'h1' })).toBe(false);
     });
   });
 

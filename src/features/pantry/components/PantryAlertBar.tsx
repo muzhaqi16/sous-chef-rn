@@ -8,6 +8,7 @@ import { Icon } from '#utils/iconUtils';
 import GroceryBasket from '#assets/icons/svg/grocery-basket.svg';
 import type { PantryStats } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 const ThemedGroceryBasket = withUnistyles(GroceryBasket, theme => ({
   color: theme.colors.textSecondary,
@@ -111,7 +112,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
         {!!onAnalyticsPress && (
           <AppPressable
             onPress={onAnalyticsPress}
-            hitSlop={8}
+            hitSlop={hitSlop.md}
             accessibilityRole="button"
             accessibilityLabel={t('pantryScreen.analyticsAccessibility')}
           >
@@ -121,7 +122,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
         {!!sortLabel && !!onSortPress && (
           <AppPressable
             onPress={onSortPress}
-            hitSlop={8}
+            hitSlop={hitSlop.md}
             testID={pantryTestIDs.sortButton}
           >
             <Text role="label" style={styles.sortLabel}>

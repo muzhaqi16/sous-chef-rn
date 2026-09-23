@@ -252,9 +252,7 @@
     "shelfLifeMax": "Afati i ruajtjes nuk mund të kalojë {{count}} vjet",
     "shelfLifeOpenedMin": "Afati i ruajtjes pas hapjes duhet të jetë të paktën 1 ditë",
     "shelfLifeOpenedMax": "Afati i ruajtjes pas hapjes nuk mund të kalojë {{count}} vjet",
-    "displayPricePerUnitMax": "Çmimi për njësi nuk mund të kalojë {{count}} karaktere",
     "unitQtyMin": "Sasia e njësisë duhet të jetë më e madhe se 0",
-    "defaultUnitMax": "Simboli i njësisë nuk mund të kalojë {{count}} karaktere",
     "vendorMax": "Emri i furnizuesit nuk mund të kalojë {{count}} karaktere",
     "tagMax": "Çdo etiketë nuk mund të kalojë {{count}} karaktere",
     "tagsMax": "Nuk mund të ketë më shumë se {{count}} etiketa",
@@ -275,7 +273,6 @@
     "removeImage": "Hiq foton",
     "changePerspective": "Ndrysho këndin e fotos",
     "selectPerspective": "Zgjidh këndin",
-    "cameraPermissionBody": "Kërkohet leja e kamerës. Aktivizoje te cilësimet e pajisjes.",
     "chooseFromLibrary": "Zgjidh nga galeria"
   },
   "itemPhotos": {

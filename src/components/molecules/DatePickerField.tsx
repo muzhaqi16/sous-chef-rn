@@ -130,7 +130,4 @@ const styles = StyleSheet.create(theme => ({
   calendarPicker: {
     alignSelf: 'center',
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

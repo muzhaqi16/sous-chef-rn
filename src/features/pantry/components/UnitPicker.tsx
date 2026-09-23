@@ -218,7 +218,4 @@ const styles = StyleSheet.create(theme => ({
   trackingUnit: {
     borderStyle: 'solid',
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

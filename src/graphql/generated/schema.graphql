@@ -1744,6 +1744,11 @@ enum ConversionType {
 input ConvertExpiredBatchesToWasteInput {
   idempotencyKey: ID
   pantryItemId: ID!
+  """
+  The viewer's calendar date. A batch is expired when its expiry date is
+  before it. Defaults to today's date in UTC.
+  """
+  today: LocalDate
 }
 
 type ConvertExpiredBatchesToWastePayload {
@@ -2288,7 +2293,11 @@ input CreatePantryInput {
 
 input CreatePantryItemInput {
   brand: BrandReferenceInput
-  expiresAt: DateTime
+  """
+  The expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
+  where the field may be cleared.
+  """
+  expiresOn: LocalDate
   """
   When the pantry already holds this item in the resolved unit, add the quantity to that
   stack and return it instead of refusing with DuplicatePantryItemError. A pantry holds one
@@ -2316,6 +2325,11 @@ input CreatePantryItemInput {
   storage: StorageDetailsInput
   tags: [String!]
   thresholds: InventoryThresholdsInput
+  """
+  The viewer's calendar date. With no expiresOn, the expiry is this date plus the
+  item's shelf life; without it no expiry is set.
+  """
+  today: LocalDate
   unit: UnitSpecInput
 }
 
@@ -2355,6 +2369,11 @@ input CreatePantryItemUsageInput {
   quantityUsed: Float
   recipeId: ID
   targetBatchId: ID
+  """
+  The viewer's calendar date. A batch this use opens gets this date plus the item's
+  opened shelf life when that is sooner; without it the expiry is left as it is.
+  """
+  today: LocalDate
   usageUnitId: ID
   wasteReason: WasteReason
 }
@@ -2418,7 +2437,8 @@ union CreateProfileResult = ConflictError | CreateProfilePayload | ForbiddenErro
 input CreatePurchaseInput {
   currencyId: ID!
   discountAmount: Float
-  expirationDate: DateTime
+  """The expiry date as YYYY-MM-DD."""
+  expiresOn: LocalDate
   """
   Optional client-generated permanent ID (CUID2) for offline-first idempotency.
   """
@@ -4131,7 +4151,8 @@ type ExpirationNotification {
   createdAt: DateTime!
   daysUntilExpiry: Int!
   dismissedAt: DateTime
-  expiresAt: DateTime!
+  """The expiry date this reminder is about."""
+  expiresOn: LocalDate!
   genericNotification: Notification
   genericNotificationId: ID
   id: ID!
@@ -6010,6 +6031,11 @@ enum ListStatus {
   TEMPLATE
 }
 
+"""
+A calendar date as YYYY-MM-DD, with no time and no timezone. A value sent with a time keeps the date as written and drops the time.
+"""
+scalar LocalDate
+
 type LocationStat {
   count: Int!
   ipCity: String
@@ -7137,8 +7163,11 @@ input MoveShoppingItemToPantryInput {
   actualQuantity: Float!
   """Unit ID for the quantity (defaults to shopping item's unit)"""
   actualUnitId: ID
-  """Expiration date (optional)"""
-  expiresAt: DateTime
+  """
+  The expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
+  where the field may be cleared.
+  """
+  expiresOn: LocalDate
   idempotencyKey: ID
   """Additional notes"""
   notes: String
@@ -7647,7 +7676,10 @@ type Mutation {
   markNotificationUnread(input: MarkNotificationUnreadInput!): MarkNotificationUnreadResult!
   """Mark a pantry as the default for its home."""
   markPantryAsDefault(input: MarkPantryAsDefaultInput!): MarkPantryAsDefaultResult!
-  """Mark a pantry item as expired."""
+  """
+  Mark a pantry item as expired: its expiry date becomes a day that has already
+  passed on every calendar, so it counts as expired straight away.
+  """
   markPantryItemExpired(input: MarkPantryItemExpiredInput!): MarkPantryItemExpiredResult!
   """
   Repoint which of an item's photos is the hero, demoting the incumbent in the
@@ -7718,7 +7750,6 @@ type Mutation {
   read them as defined above rather than by analogy with other bulk payloads:
   failed can be non-zero, skipped is "already stocked" rather than "could not
   be moved", and movedItems.length is not a count of what this call stocked.
-  docs/api/graphql-operation-conventions.md records what changed and when.
   
   A line whose catalog item was deleted is re-resolved from the name it still
   carries rather than skipped; only a line with neither fails.
@@ -8185,6 +8216,11 @@ type Notification {
   """Deep link or CTA destination for this notification."""
   actionUrl: String
   """
+  The bulk send this notification went out in, when its sender named one.
+  Filter on it with NotificationFilters.batchId.
+  """
+  batchId: String
+  """
   Grouping category for this notification.
   Matches the categories returned by NotificationStats.byCategory.
   """
@@ -8320,6 +8356,10 @@ input NotificationFilters {
   batchId: String
   category: NotificationCategory
   dateRange: DateRangeInput
+  """
+  True for rows a person wrote (an admin announcement), false for templated ones.
+  """
+  isAuthoredContent: Boolean
   priority: Priority
   sourceType: NotificationSourceType
   status: NotificationStatus
@@ -8729,6 +8769,11 @@ enum NutritionSource {
 input OpenPantryItemBatchInput {
   batchId: ID!
   idempotencyKey: ID
+  """
+  The viewer's calendar date. The opened batch gets this date plus the item's opened
+  shelf life when that is sooner; without it the expiry is left as it is.
+  """
+  today: LocalDate
 }
 
 type OpenPantryItemBatchPayload {
@@ -8746,6 +8791,11 @@ union OpenPantryItemBatchResult = ConflictError | ForbiddenError | NotFoundError
 input OpenPantryItemInput {
   id: ID!
   idempotencyKey: ID
+  """
+  The viewer's calendar date. The opened batch gets this date plus the item's opened
+  shelf life when that is sooner; without it the expiry is left as it is.
+  """
+  today: LocalDate
   """
   Optimistic concurrency control. REQUIRED: the caller is updating a row it
   already holds, so it has the version — and an update that silently skipped
@@ -8826,9 +8876,22 @@ type Pantry {
   clamped server-side to a maximum of 50.
   """
   recentlyDeletedItems(limit: Int = 10): [PantryItem!]!
-  stats: PantryStats!
+  """
+  Counts for this pantry. Pass today as the viewer's calendar date so the
+  expiring and expired counts match what the viewer sees; without it the
+  server uses today's date in UTC.
+  """
+  stats(today: LocalDate): PantryStats!
   storageLocationsConnection(after: String, before: String, first: Int, last: Int, orderBy: StorageLocationOrderBy): StorageLocationConnection!
-  suggestions(expirationDays: Int = 7, limit: Int = 10, sources: [PantrySuggestionSource!]): [PantryItemSuggestion!]!
+  suggestions(
+    expirationDays: Int = 7
+    limit: Int = 10
+    sources: [PantrySuggestionSource!]
+    """
+    The viewer's calendar date, for EXPIRING_SOON; defaults to today's date in UTC.
+    """
+    today: LocalDate
+  ): [PantryItemSuggestion!]!
   tags: [String!]!
   temperature: String
   updatedAt: DateTime!
@@ -8968,9 +9031,13 @@ type PantryItem {
   createdAt: DateTime!
   """Density for this stack in g/mL; the catalog's applies when null."""
   densityOverride: Float
-  earliestBatchExpiration: DateTime
+  """The soonest expiry date among the active batches."""
+  earliestBatchExpiresOn: LocalDate
   expirationAlert: Boolean!
-  expiresAt: DateTime
+  """
+  The expiry date, with no time and no timezone. An item is not expired on this date: it expires today. It is expired from the next day on, judged on the viewer's calendar.
+  """
+  expiresOn: LocalDate
   id: ID!
   isComposted: Boolean!
   """
@@ -9082,8 +9149,9 @@ type PantryItemBatch {
   """
   currencyProvenance: CurrencyProvenance
   depletedAt: DateTime
-  expiresAt: DateTime
   expiresAtIsManual: Boolean!
+  """The batch's expiry date, with no time and no timezone."""
+  expiresOn: LocalDate
   id: ID!
   isOpened: Boolean!
   notes: String
@@ -9237,14 +9305,15 @@ input PantryItemFilters {
   condition: ItemCondition
   expirationDays: Int
   """
-  Only items expiring within expirationDays (default 7), and only items you
-  still have — an item whose quantity is zero is not expiring.
+  Only items whose expiry date is on or before today plus expirationDays
+  (default 7), and only items you still have — an item whose quantity is
+  zero is not expiring.
   
   Has NO lower bound, so ALREADY-EXPIRED items are included. This is a
-  deliberate superset of PantryStats.expiringCount, which bounds at the
-  present moment and therefore reports a smaller number than this filter
-  returns; PantryStats.expiredCount covers the difference. Clients that want
-  both an Expiring and an Expired section split this one page by date.
+  deliberate superset of PantryStats.expiringCount, which starts at today;
+  PantryStats.expiredCount covers the difference. Clients that want both an
+  Expiring and an Expired section split this one page by date: expired is
+  an expiry date before today.
   """
   expiringSoon: Boolean
   itemId: ID
@@ -9270,6 +9339,11 @@ input PantryItemFilters {
   storageLocationId: ID
   storageState: StorageState
   tags: [String!]
+  """
+  The viewer's calendar date, which expiringSoon counts from. Defaults to
+  today's date in UTC.
+  """
+  today: LocalDate
 }
 
 """Order by options for pantry items"""
@@ -9277,6 +9351,7 @@ input PantryItemOrderBy {
   addedAt: SortOrder
   createdAt: SortOrder
   currentQuantity: SortOrder
+  """Sorts by expiry date. Items dated the same day are ordered by id."""
   expiresAt: SortOrder
   itemName: SortOrder
 }
@@ -9302,14 +9377,16 @@ type PantryItemSuggestion {
   category: String
   """Current quantity in pantry (for LOW_STOCK source)"""
   currentQuantity: Float
-  """Days until expiration (for EXPIRING_SOON source)"""
+  """
+  Calendar days from today to the expiry date: 0 on the date itself (for EXPIRING_SOON source)
+  """
   daysUntilExpiry: Int
   """Default unit object for one-tap add"""
   defaultUnit: SuggestionUnit
   """Default unit ID for one-tap add (last used or item default)"""
   defaultUnitId: ID
-  """Expiration date (for EXPIRING_SOON source)"""
-  expiresAt: DateTime
+  """Expiry date (for EXPIRING_SOON source)"""
+  expiresOn: LocalDate
   """
   Frequency count - times user added this item to pantries (for FREQUENTLY_ADDED source)
   """
@@ -9427,7 +9504,15 @@ input PantryOrderBy {
 
 type PantryStats {
   activeItems: Int!
+  """
+  Items you still have whose expiry date is before today. An item is
+  expired from the day after its expiry date.
+  """
   expiredCount: Int!
+  """
+  Items you still have whose expiry date is between today and seven days
+  from today, both included. An item dated today is expiring, not expired.
+  """
   expiringCount: Int!
   lowStockCount: Int!
   storageLocationCounts: [StorageLocationCount!]!
@@ -9673,7 +9758,8 @@ type Purchase {
   currencyId: ID!
   currencySymbol: String!
   discountAmount: Float
-  expirationDate: DateTime
+  """The expiry date, with no time and no timezone."""
+  expiresOn: LocalDate
   id: ID!
   """
   The catalog item, when the shopping line that recorded this purchase had
@@ -9925,8 +10011,9 @@ type Query {
   compatibleUnitsForItem(currentUnitId: ID, itemId: ID!): [CompatibleUnit!]!
   """
   Ranked consumption-eligible units for a CATALOG item, for a stack described
-  by its unit ids. Amounts are optional: which units are offered does not
-  depend on them. A netWeight, portionsPerTrackingUnit or densityOverride of
+  by its unit ids — the preview of what a user holding that stack would be
+  offered, before any stack exists. Amounts are optional: which units are
+  offered does not depend on them. A netWeight, portionsPerTrackingUnit or densityOverride of
   zero or less is refused, and so is a portionsPerTrackingUnit without its
   portionUnitId.
   """
@@ -9953,7 +10040,7 @@ type Query {
     """
     portionsPerTrackingUnit: Float
     trackingUnitId: ID!
-  ): [RankedUnit!]! @deprecated(reason: "Use consumptionUnitsForPantryItem instead.")
+  ): [RankedUnit!]!
   """
   Ranked units this pantry stack can be consumed in, best first: its own
   portion unit → the item's default consume unit → curated → the net-weight
@@ -10098,7 +10185,10 @@ type Query {
   pantries(after: String, before: String, filters: PantryFilters, first: Int, homeId: ID, last: Int, orderBy: PantryOrderBy): PantryConnection!
   """Fetch a single pantry by its ID."""
   pantry(id: ID!): Pantry
-  """Fetch a single pantry item by its ID."""
+  """
+  Fetch a single pantry item by its ID. On the admin surface this is how one
+  stack and its usageRecords (with adjustmentKind) are read directly.
+  """
   pantryItem(id: ID!): PantryItem
   """
   Get batches for a pantry item, optionally filtered by status, with
@@ -10145,6 +10235,35 @@ type Query {
   Reachable anonymously so a not-yet-signed-up recipient can preview.
   """
   resolveShareLink(code: String!): ResolveShareLinkResult
+  """
+  Ranked restock-eligible units for a CATALOG item, for a stack described by
+  its unit ids: the catalog preview of restockUnitsForPantryItem. The
+  arguments and their refusals are consumptionUnitsForItem's.
+  """
+  restockUnitsForCatalogItem(
+    """The stack's density in g/mL, when it overrides the item's."""
+    densityOverride: Float
+    itemId: ID!
+    """The net weight of ONE tracking unit. Optional."""
+    netWeight: Float
+    """
+    The unit the stack's net weight is recorded in. Its measure is offered
+    whether or not netWeight is passed.
+    """
+    netWeightUnitId: ID
+    """
+    The stack's own portion unit (PantryItem.portionUnitId), when it defines
+    one. Passed with or without its count it is read as the stack's portion,
+    so "clove" is offered first for a bulb stack.
+    """
+    portionUnitId: ID
+    """
+    How many portion units one tracking unit holds. Optional; requires
+    portionUnitId.
+    """
+    portionsPerTrackingUnit: Float
+    trackingUnitId: ID!
+  ): [RankedUnit!]!
   """The list restockUnitsForPantryItem returns."""
   restockUnitsForItem(pantryItemId: ID!): [RankedUnit!]! @deprecated(reason: "Use restockUnitsForPantryItem instead.")
   """
@@ -10263,7 +10382,11 @@ type Query {
   units(isCommon: Boolean, limit: Int = 50, type: UnitType): [Unit!]!
   """Fetch a single user by their ID."""
   user(id: ID!): User
-  """Validate item data integrity (read-only check)"""
+  """
+  Validate item data integrity (read-only check). Errors are always
+  reported; the data-quality warnings (ItemValidationWarningCode) only when
+  deep is true.
+  """
   validateItem(deep: Boolean, id: ID!): ItemValidationReport!
   """Validate a UPC barcode string."""
   validateUpc(upc: String!): UpcValidation!
@@ -11182,7 +11305,11 @@ Input for restocking a pantry item - adds quantity and creates ledger record
 """
 input RestockPantryItemInput {
   costPerUnit: Float
-  expiresAt: DateTime
+  """
+  The new batch's expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
+  where the field may be cleared.
+  """
+  expiresOn: LocalDate
   id: ID!
   idempotencyKey: ID
   measurementProfile: MeasurementProfileInput
@@ -11442,6 +11569,10 @@ type ShoppingList {
   Returns empty array if not linked to a home.
   """
   availablePantries: [Pantry!]!
+  """
+  The template this list was created from; null when the caller cannot view
+  that template.
+  """
   basedOnTemplate: ShoppingList
   budgetAmount: Float
   """
@@ -11462,6 +11593,10 @@ type ShoppingList {
   description: String
   estimatedTotal: Float!
   generatedFromMealPlan: Boolean!
+  """
+  The home this list belongs to; null when the caller cannot view that home,
+  which includes any caller reading the list through its share code.
+  """
   home: Home
   homeId: ID
   id: ID!
@@ -11481,6 +11616,10 @@ type ShoppingList {
   """
   navigateLink: ShareLink!
   nextRecurringDate: DateTime
+  """
+  Who owns this list; empty when the caller cannot view the list itself, as
+  when it is read through its share code without having joined.
+  """
   ownerships: [ShoppingListOwnership!]!
   plannedShopDate: DateTime
   priceTracking: Boolean!
@@ -12824,7 +12963,11 @@ input SyncPantryItemInput {
   brand: BrandReferenceInput
   clientId: ID!
   expirationAlert: Boolean
-  expiresAt: DateTime
+  """
+  The expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
+  where the field may be cleared.
+  """
+  expiresOn: LocalDate
   """
   When the pantry already holds this item in the resolved unit, add the quantity to that
   stack and return it instead of refusing with DuplicatePantryItemError. A pantry holds one
@@ -12846,6 +12989,12 @@ input SyncPantryItemInput {
   storage: StorageDetailsInput
   tags: [String!]
   thresholds: InventoryThresholdsInput
+  """
+  The viewer's calendar date. With no expiresOn, the expiry is this date plus the
+  item's shelf life; without it no expiry is set. Send the date the user acted, not the
+  replay date. Applies to a create only; an update never derives an expiry.
+  """
+  today: LocalDate
   unit: UnitSpecInput
   version: Int
   wasteReason: WasteReason
@@ -13935,7 +14084,11 @@ input UpdatePantryInput {
 input UpdatePantryItemInput {
   brand: BrandReferenceInput
   expirationAlert: Boolean
-  expiresAt: DateTime
+  """
+  The expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
+  where the field may be cleared.
+  """
+  expiresOn: LocalDate
   id: ID!
   isComposted: Boolean
   isRecycled: Boolean
@@ -14055,7 +14208,8 @@ union UpdateProfileResult = ConflictError | ForbiddenError | NotFoundError | Upd
 
 input UpdatePurchaseInput {
   discountAmount: Float
-  expirationDate: DateTime
+  """The expiry date as YYYY-MM-DD."""
+  expiresOn: LocalDate
   id: ID!
   originalPrice: Float
   purchaseDate: DateTime
@@ -14699,7 +14853,7 @@ type User {
   createdAt: DateTime!
   defaultHome: Home
   defaultHomeId: ID
-  defaultShoppingListId: ID
+  defaultShoppingListId: ID @deprecated(reason: "No default shopping list is stored, so this is always null. Use shoppingLists instead.")
   deviceStats: DeviceStats
   devicesConnection(after: String, before: String, first: Int, last: Int, orderBy: DeviceOrderBy): DeviceConnection!
   dietaryProfile: DietaryProfile
@@ -14735,7 +14889,6 @@ type User {
   id: ID!
   inviteLogsConnection(after: String, before: String, first: Int, last: Int, orderBy: InviteLogOrderBy): InviteLogConnection!
   language: String
-  lastActiveAt: DateTime
   loginHistoryConnection(after: String, before: String, first: Int, last: Int, orderBy: LoginHistoryOrderBy): LoginHistoryConnection!
   loginHistoryStats(days: Int = 30): LoginHistoryStats
   membershipInHome(homeId: ID!): Membership
@@ -14766,7 +14919,6 @@ type User {
   suspiciousLoginActivity(hours: Int = 24): SuspiciousActivity
   timezone: String
   unreadNotificationCount: Int!
-  updatedAt: DateTime!
 }
 
 """

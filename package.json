@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "4.6.2",
+  "version": "4.6.5",
   "private": true,
   "scripts": {
     "android": "bash scripts/run-android.sh",
@@ -42,7 +42,7 @@
     "check:launch-arg-auth": "node scripts/check-launch-arg-auth.mjs",
     "check:unistyles-variants": "node scripts/check-unistyles-variant-staleness.mjs",
     "check:compiler-bailouts": "node scripts/check-compiler-bailouts.mjs",
-    "check:dead-modules": "knip --include files --no-progress",
+    "check:dead-modules": "knip --include files,exports,nsExports --no-progress",
     "check:import-cycles": "madge --circular src",
     "e2e:prune": "node scripts/prune-e2e-artifacts.mjs",
     "build:prune": "node scripts/prune-build-output.mjs",
@@ -129,7 +129,7 @@
     "react-native-get-random-values": "^2.0.0",
     "react-native-haptic-feedback": "^3.0.0",
     "react-native-image-picker": "^8.2.1",
-    "react-native-keyboard-controller": "^1.22.4",
+    "react-native-keyboard-controller": "^1.22.5",
     "react-native-keychain": "^10.0.0",
     "react-native-launch-arguments": "^4.1.1",
     "react-native-mmkv": "^4.3.2",

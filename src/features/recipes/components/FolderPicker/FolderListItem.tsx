@@ -67,7 +67,4 @@ const styles = StyleSheet.create(theme => ({
   folderName: {
     flex: 1,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

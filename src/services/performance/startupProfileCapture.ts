@@ -84,12 +84,3 @@ export function armStartupProfileFallback(): void {
 export function captureStartupProfileOnBackground(): void {
   captureStartupProfile(FALLBACK_PROFILE_FILENAME);
 }
-
-/** Test seam — the latch and timer are module state. */
-export function resetStartupProfileCaptureForTesting(): void {
-  captured = false;
-  if (fallbackTimer !== null) {
-    clearTimeout(fallbackTimer);
-    fallbackTimer = null;
-  }
-}

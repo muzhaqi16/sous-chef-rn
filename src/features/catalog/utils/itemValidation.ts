@@ -87,22 +87,6 @@ export const shelfLifeOpenedDaysRule = number()
   .max(3650, msg('shelfLifeOpenedMax', { count: 10 }))
   .optional();
 
-// Display price per unit validation
-export const displayPricePerUnitRule = string()
-  .max(50, msg('displayPricePerUnitMax', { count: 50 }))
-  .optional();
-
-// Unit quantity validation
-export const unitQtyRule = number()
-  .transform(decimalText)
-  .min(0.001, msg('unitQtyMin'))
-  .optional();
-
-// Default unit validation (symbol)
-export const defaultUnitRule = string()
-  .max(10, msg('defaultUnitMax', { count: 10 }))
-  .optional();
-
 // Category IDs validation
 export const categoryIdsRule = array().of(string().required()).optional();
 

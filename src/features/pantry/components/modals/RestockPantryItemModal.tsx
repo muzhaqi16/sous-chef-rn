@@ -278,7 +278,4 @@ const styles = StyleSheet.create(theme => ({
   newQuantityText: {
     marginTop: 0,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

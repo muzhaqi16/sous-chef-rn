@@ -7,6 +7,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import type { BaseSuggestionItem } from './types';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface SuggestionDrilldownProps<T extends BaseSuggestionItem> {
   /** Section title (e.g. "POPULAR") shown next to the back button */
@@ -45,7 +46,7 @@ export function SuggestionDrilldown<T extends BaseSuggestionItem>({
         <AppPressable
           onPress={onBack}
           style={styles.backButton}
-          hitSlop={8}
+          hitSlop={hitSlop.md}
           accessibilityRole="button"
           accessibilityLabel={backLabel}
         >

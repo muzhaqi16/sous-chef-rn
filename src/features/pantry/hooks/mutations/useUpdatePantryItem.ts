@@ -20,6 +20,7 @@ import { buildDirtyUpdateInput, buildOptimisticUnit } from './utils';
 import type { DirtyFieldFlags, FormDataInput, UnitSelection } from './types';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { logger } from '#/utils/environment';
+import { toDateKey } from '#/utils/dateUtils';
 
 interface UseUpdatePantryItemOptions {
   onSuccess?: () => void;
@@ -100,7 +101,9 @@ export function useUpdatePantryItem({
     if (dirtyFields.condition && input.condition)
       optimisticUpdate.condition = input.condition;
     if (dirtyFields.expirationDate) {
-      optimisticUpdate.expiresAt = input.expirationDate?.toISOString() ?? null;
+      optimisticUpdate.expiresOn = input.expirationDate
+        ? toDateKey(input.expirationDate)
+        : null;
     }
     if (dirtyFields.tags) optimisticUpdate.tags = input.tags ?? [];
     if (dirtyFields.minQuantity) {

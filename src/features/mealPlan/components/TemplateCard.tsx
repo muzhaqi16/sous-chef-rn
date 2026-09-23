@@ -119,9 +119,6 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

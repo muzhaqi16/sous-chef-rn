@@ -136,7 +136,4 @@ const styles = StyleSheet.create(theme => ({
   capacityUnit: {
     flex: 1,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

@@ -84,9 +84,6 @@ const footerStyles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
   icon: {
     width: 32,
   },

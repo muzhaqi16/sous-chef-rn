@@ -22,6 +22,7 @@ import {
   UsePantryItemActions_QuantityFragmentDoc,
   UsePantryItemActions_IdFragmentDoc,
 } from './usePantryItemActions.generated';
+import { toDateKey } from '#/utils/dateUtils';
 
 interface UsePantryItemActionsOptions {
   removeItem: (id: string) => Promise<void>;
@@ -195,6 +196,7 @@ export function usePantryItemActions({
               purpose,
               notes: consumeNotes,
               usageUnitId,
+              today: toDateKey(new Date()),
               // idempotencyKey dedups the usage ledger row on replay.
               idempotencyKey: generateEntityId(),
             },
@@ -250,6 +252,7 @@ export function usePantryItemActions({
               wasteReason,
               isComposted,
               isRecycled,
+              today: toDateKey(new Date()),
               // idempotencyKey dedups the usage ledger row on replay.
               idempotencyKey: generateEntityId(),
             },
@@ -305,7 +308,7 @@ export function usePantryItemActions({
     }
 
     const restockNotes = notes || undefined;
-    const expiresAtValue = expiresAt ? expiresAt.toISOString() : null;
+    const expiresOn = expiresAt ? toDateKey(expiresAt) : null;
     const revertOptimistic = () => {
       if (canOptimistic) {
         revertQuantity(itemId, originalQty);
@@ -333,7 +336,7 @@ export function usePantryItemActions({
               notes: restockNotes,
               costPerUnit,
               totalCost,
-              expiresAt: expiresAtValue,
+              expiresOn,
               // idempotencyKey dedups the restock ledger row on replay.
               idempotencyKey: generateEntityId(),
             },
@@ -365,8 +368,7 @@ export function usePantryItemActions({
     closeModal();
   };
 
-  // Existence check helper — opens the modal only if the cache has an entry
-  // for the id (mirrors the previous `materializeItem` behavior).
+  // Opens the modal only when the cache holds the item.
   const hasItemInCache = (itemId: string): boolean => {
     const cacheId = client.cache.identify({
       __typename: 'PantryItem',

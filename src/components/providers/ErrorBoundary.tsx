@@ -254,9 +254,6 @@ const styles = StyleSheet.create(theme => ({
   retryButtonText: {
     color: theme.colors.background,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));
 
 export default ErrorBoundary;

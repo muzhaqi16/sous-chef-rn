@@ -1,13 +1,5 @@
 import type { Schema } from 'yup';
-import {
-  getCreateHomeSchema,
-  createShoppingListSchema,
-  getCreateShoppingListSchema,
-  inviteMembersSchema,
-  getInviteMembersSchema,
-  selectPantryItemsSchema,
-  getSelectPantryItemsSchema,
-} from '../validation';
+import { getCreateHomeSchema, createShoppingListSchema } from '../validation';
 
 const validate = async (schema: Schema, data: Record<string, unknown>) => {
   try {
@@ -123,65 +115,6 @@ describe('onboarding validation', () => {
         shoppingListName: 'a'.repeat(51),
       });
       expect(msg).toContain('50');
-    });
-  });
-
-  describe('getCreateShoppingListSchema', () => {
-    it('returns the schema', () => {
-      expect(getCreateShoppingListSchema()).toBe(createShoppingListSchema);
-    });
-  });
-
-  describe('inviteMembersSchema', () => {
-    it('accepts valid email', async () => {
-      expect(
-        await validate(inviteMembersSchema, { email: 'test@example.com' }),
-      ).toBeNull();
-    });
-
-    it('rejects invalid email', async () => {
-      const msg = await validate(inviteMembersSchema, { email: 'invalid' });
-      expect(msg).toBeTruthy();
-    });
-
-    it('rejects missing email', async () => {
-      const msg = await validate(inviteMembersSchema, {});
-      expect(msg).toBeTruthy();
-    });
-  });
-
-  describe('getInviteMembersSchema', () => {
-    it('returns the schema', () => {
-      expect(getInviteMembersSchema()).toBe(inviteMembersSchema);
-    });
-  });
-
-  describe('selectPantryItemsSchema', () => {
-    it('accepts up to 5 items', async () => {
-      expect(
-        await validate(selectPantryItemsSchema, {
-          selectedItems: ['a', 'b', 'c', 'd', 'e'],
-        }),
-      ).toBeNull();
-    });
-
-    it('rejects more than 5 items', async () => {
-      const msg = await validate(selectPantryItemsSchema, {
-        selectedItems: ['a', 'b', 'c', 'd', 'e', 'f'],
-      });
-      expect(msg).toContain('5');
-    });
-
-    it('accepts empty array', async () => {
-      expect(
-        await validate(selectPantryItemsSchema, { selectedItems: [] }),
-      ).toBeNull();
-    });
-  });
-
-  describe('getSelectPantryItemsSchema', () => {
-    it('returns the schema', () => {
-      expect(getSelectPantryItemsSchema()).toBe(selectPantryItemsSchema);
     });
   });
 });

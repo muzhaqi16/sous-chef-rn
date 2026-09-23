@@ -2,7 +2,7 @@ fragment PantryItemCard_pantryItem on PantryItem {
   id
   itemName
   quantity
-  expiresAt
+  expiresOn
   storageState
   lastUsedAt
   netWeight

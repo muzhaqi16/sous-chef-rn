@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, View, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
@@ -7,6 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedTextInput,
   OnPrimaryActivityIndicator as ThemedActivityIndicator,
+  Modal,
 } from '#components/atoms/themedComponents';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { Icon } from '#/utils/iconUtils';

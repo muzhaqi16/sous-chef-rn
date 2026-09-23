@@ -14,7 +14,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
   version
   updatedAt
   storageState
-  expiresAt
+  expiresOn
   lowStockAlert
   isLowStock
   minQuantity
@@ -29,7 +29,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
   }
   remainingPortions
   activeBatchCount
-  earliestBatchExpiration
+  earliestBatchExpiresOn
   item {
     id
     # Gates the photo viewer's "set as main photo" action. Viewer-scoped, but it

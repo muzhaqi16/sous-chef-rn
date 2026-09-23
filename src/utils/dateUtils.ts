@@ -1,4 +1,4 @@
-import { parseISO, isValid, format } from 'date-fns';
+import { parseISO, isValid, format, parse } from 'date-fns';
 
 const MAX_REASONABLE_TIMESTAMP_MS = 4102444800000; // year 2100
 
@@ -60,6 +60,17 @@ export const extractDateString = (value: unknown): string => {
 export const toDateKey = (date: Date): string => format(date, 'yyyy-MM-dd');
 
 /**
+ * A `LocalDate` key back to that day's local midnight. `new Date('2026-09-21')`
+ * reads the key as UTC midnight, which is the previous day west of UTC.
+ */
+export const fromDateKey = (key: string): Date =>
+  parse(key, 'yyyy-MM-dd', new Date());
+
+/** Whether a value from untyped data (a push payload) is a `LocalDate` key. */
+export const isDateKey = (value: string): boolean =>
+  /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+/**
  * A picked calendar day as the instant a meal or plan boundary is sent at:
  * local noon, whose UTC day is the local day from UTC-11 to UTC+12. The API
  * compares meals to their plan by UTC day.
@@ -95,16 +106,6 @@ export const keepMealInsidePlan = (
 
 /** Convert YYYY-MM-DD to a UTC midnight ISO string. Pass-through for malformed input. */
 export const dateStringToISO = (dateStr: string): string => {
-  if (!dateStr) return dateStr;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  if (!isDateKey(dateStr)) return dateStr;
   return `${dateStr}T00:00:00.000Z`;
-};
-
-/** Format a date-like value to an ISO string, with fallback. */
-export const safeFormatDate = (
-  value: unknown,
-  fallback = 'Recently',
-): string => {
-  const date = safeParseDate(value);
-  return date ? date.toISOString() : fallback;
 };

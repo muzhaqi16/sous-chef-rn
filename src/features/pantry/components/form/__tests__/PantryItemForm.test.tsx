@@ -1,5 +1,6 @@
 'use no memo';
 
+import { toDateKey } from '#/utils/dateUtils';
 import React from 'react';
 import { makeCache } from '#/apollo/cache';
 import type { InMemoryCache } from '@apollo/client';
@@ -316,7 +317,12 @@ function buildCache(opts: {
 
   cache.writeQuery({
     query: GetPantryDocument,
-    variables: { id: 'p1', itemsFirst: 50, storageLocationsFirst: 20 },
+    variables: {
+      id: 'p1',
+      itemsFirst: 50,
+      storageLocationsFirst: 20,
+      today: toDateKey(new Date()),
+    },
     data: pantryData({ id: 'p1' }),
   });
 
@@ -402,7 +408,7 @@ describe('PantryItemForm — edit mode', () => {
     await screen.findByTestId('edit-pantry-item-modal');
   });
 
-  it('shows "Item not found" when the item query returns null', async () => {
+  it('shows "Item not found", still closable, when the item query returns null', async () => {
     renderWithApollo(<PantryItemForm itemId="missing" />, {
       cache: buildCache({}),
       operationMocks: [
@@ -412,6 +418,8 @@ describe('PantryItemForm — edit mode', () => {
       ],
     });
     await screen.findByText('Item not found');
+    // The form's header — and so its close control — stays up.
+    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
   });
 
   it('renders the Inventory tab with quantity section in edit mode', async () => {

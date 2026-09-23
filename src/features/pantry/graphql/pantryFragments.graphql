@@ -9,7 +9,7 @@ fragment PantryItemBatchFragment on PantryItemBatch {
   batchNumber
   quantity
   status
-  expiresAt
+  expiresOn
   expiresAtIsManual
   costPerUnit
   totalCost

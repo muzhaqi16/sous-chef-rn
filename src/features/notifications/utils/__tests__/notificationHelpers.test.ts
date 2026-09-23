@@ -4,12 +4,14 @@ import {
   getNotificationIcon,
 } from '#features/notifications/utils/notificationHelpers';
 import { getI18n } from '#/i18n/config';
+import { toDateKey } from '#/utils/dateUtils';
 import { getPushTrayCopy } from '#features/notifications/pushCopy';
 import type { NotificationPayload } from '#features/notifications/types';
 
 // Real i18n instance (auto-initialized on config import) so the test exercises
 // the actual locale keys + interpolation rather than a stubbed translator.
 const t = getI18n().t;
+const today = toDateKey(new Date());
 
 const makeExpiry = (payload: NotificationPayload) => ({
   type: NotificationType.ExpiryReminder,
@@ -17,7 +19,7 @@ const makeExpiry = (payload: NotificationPayload) => ({
 });
 
 const messageOf = (type: NotificationType, payload: NotificationPayload) =>
-  getNotificationCopy({ type, payload }, t).message;
+  getNotificationCopy({ type, payload }, t, today).message;
 
 describe('notificationHelpers', () => {
   // FCM stringifies every value and the push path re-coerces numeric-looking
@@ -58,12 +60,17 @@ describe('notificationHelpers', () => {
         getNotificationCopy(
           { type: unknown, payload: {}, title: 'Weekly recap', message: 'Hi' },
           t,
+          today,
         ),
       ).toEqual({ title: 'Weekly recap', message: 'Hi' });
     });
 
     it('falls back to a generic title, never the key', () => {
-      const copy = getNotificationCopy({ type: unknown, payload: {} }, t);
+      const copy = getNotificationCopy(
+        { type: unknown, payload: {} },
+        t,
+        today,
+      );
       expect(copy.title).toBe(t('notifications.copy.title.unknown'));
       expect(copy.title).not.toContain('notifications.');
     });
@@ -72,7 +79,7 @@ describe('notificationHelpers', () => {
   describe('getNotificationCopy', () => {
     it('titles every type in local copy', () => {
       for (const type of Object.values(NotificationType)) {
-        const { title } = getNotificationCopy({ type, payload: {} }, t);
+        const { title } = getNotificationCopy({ type, payload: {} }, t, today);
         expect(title).not.toBe('');
         expect(title).not.toContain('notifications.copy');
       }
@@ -89,14 +96,18 @@ describe('notificationHelpers', () => {
       };
 
       it('shows the words as written', () => {
-        expect(getNotificationCopy(authored, t)).toEqual({
+        expect(getNotificationCopy(authored, t, today)).toEqual({
           title: 'Scheduled maintenance',
           message: 'The app is read-only on Sunday morning.',
         });
       });
 
       it('falls back to a local title when the author left none', () => {
-        const { title } = getNotificationCopy({ ...authored, title: null }, t);
+        const { title } = getNotificationCopy(
+          { ...authored, title: null },
+          t,
+          today,
+        );
         expect(title).toBe('Announcement');
       });
 
@@ -104,6 +115,7 @@ describe('notificationHelpers', () => {
         const copy = getNotificationCopy(
           { ...authored, isAuthoredContent: false },
           t,
+          today,
         );
         expect(copy.title).not.toBe('Scheduled maintenance');
         expect(copy.message).not.toBe(
@@ -113,7 +125,7 @@ describe('notificationHelpers', () => {
 
       it('does NOT read the words when the flag is absent', () => {
         const { isAuthoredContent: _omitted, ...unflagged } = authored;
-        const copy = getNotificationCopy(unflagged, t);
+        const copy = getNotificationCopy(unflagged, t, today);
         expect(copy.title).not.toBe('Scheduled maintenance');
       });
     });
@@ -199,6 +211,7 @@ describe('notificationHelpers', () => {
             payload: { listName: 'Weekly', eventType: 'complete' },
           },
           t,
+          today,
         ),
       ).toEqual({
         title: 'Shopping list completed',
@@ -223,6 +236,7 @@ describe('notificationHelpers', () => {
             itemNames: ['Milk', 'Eggs', 'Kale', 'Tofu', 'Rice'],
           }),
           t,
+          today,
         ),
       ).toEqual({
         title: 'Expiring this week',
@@ -241,6 +255,7 @@ describe('notificationHelpers', () => {
         getNotificationCopy(
           { type: NotificationType.LowStock, payload: { test: true } },
           t,
+          today,
         ).title,
       ).toBe('Test notification');
     });
@@ -268,7 +283,32 @@ describe('notificationHelpers', () => {
           isMultiBatch: false,
           activeBatchCount: 1,
         }),
-      ).toBe('Lettuce expires in 3 days');
+      ).toBe('Lettuce: Expires in 3 days');
+    });
+
+    // A reminder read a day after it was sent must not keep its send-time count.
+    it('counts days from the payload date on this phone', () => {
+      const inTwoDays = new Date();
+      inTwoDays.setDate(inTwoDays.getDate() + 2);
+      expect(
+        messageOf(NotificationType.ExpiryReminder, {
+          itemName: 'Kale',
+          expiresOn: toDateKey(inTwoDays),
+          daysUntilExpiry: 5,
+          isMultiBatch: false,
+        }),
+      ).toBe('Kale: Expires in 2 days');
+    });
+
+    it('falls back to the sent count when the date is not a date', () => {
+      expect(
+        messageOf(NotificationType.ExpiryReminder, {
+          itemName: 'Kale',
+          expiresOn: '2026-09-22T12:00:00Z',
+          daysUntilExpiry: 1,
+          isMultiBatch: false,
+        }),
+      ).toBe('Kale: Expires tomorrow');
     });
 
     it('uses "today" / "tomorrow" wording for 0 and 1 day', () => {
@@ -278,7 +318,7 @@ describe('notificationHelpers', () => {
           daysUntilExpiry: 0,
           isMultiBatch: false,
         }),
-      ).toBe('Baby Spinach expires today');
+      ).toBe('Baby Spinach: Expires today');
 
       expect(
         messageOf(NotificationType.ExpiryReminder, {
@@ -286,7 +326,7 @@ describe('notificationHelpers', () => {
           daysUntilExpiry: 1,
           isMultiBatch: false,
         }),
-      ).toBe('Pitas expires tomorrow');
+      ).toBe('Pitas: Expires tomorrow');
     });
 
     it('qualifies a multi-batch item with the opened date in local time', () => {
@@ -299,9 +339,10 @@ describe('notificationHelpers', () => {
           batchAddedAt: '2026-03-01T12:00:00.000Z',
         }),
         t,
+        today,
       );
       // Date is locale/timezone-formatted, so assert structure not an exact day.
-      expect(message).toMatch(/^Milk \(opened .+\) expires tomorrow$/);
+      expect(message).toMatch(/^Milk \(opened .+\): Expires tomorrow$/);
       expect(message).not.toContain('Batch');
     });
 
@@ -315,8 +356,9 @@ describe('notificationHelpers', () => {
           batchAddedAt: '2026-03-01T12:00:00.000Z',
         }),
         t,
+        today,
       );
-      expect(message).toMatch(/^Yogurt \(added .+\) expires in 3 days$/);
+      expect(message).toMatch(/^Yogurt \(added .+\): Expires in 3 days$/);
     });
   });
 

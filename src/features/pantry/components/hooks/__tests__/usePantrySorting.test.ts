@@ -10,7 +10,7 @@ import {
 interface TestItem {
   id: string;
   itemName?: string | null;
-  expiresAt?: string | null;
+  expiresOn?: string | null;
   quantity: number;
   createdAt?: string;
 }
@@ -19,7 +19,7 @@ const makeItem = (
   overrides: Partial<TestItem> & { id: string; quantity: number },
 ): TestItem => ({
   itemName: null,
-  expiresAt: null,
+  expiresOn: null,
   createdAt: undefined,
   ...overrides,
 });
@@ -138,9 +138,9 @@ describe('usePantrySorting', () => {
     );
 
     const items: TestItem[] = [
-      makeItem({ id: '1', expiresAt: null, quantity: 1 }),
-      makeItem({ id: '2', expiresAt: '2025-01-01', quantity: 1 }),
-      makeItem({ id: '3', expiresAt: '2024-06-01', quantity: 1 }),
+      makeItem({ id: '1', expiresOn: null, quantity: 1 }),
+      makeItem({ id: '2', expiresOn: '2025-01-01', quantity: 1 }),
+      makeItem({ id: '3', expiresOn: '2024-06-01', quantity: 1 }),
     ];
 
     const sorted = result.current.sortItems(items);

@@ -96,5 +96,11 @@
     "verifyingEmail": "Verifying your email...",
     "verifyingEmailSubtitle": "Please wait while we confirm your email address.",
     "yourEmail": "your email"
+  },
+  "rememberMe": {
+    "title": "Remember login info?",
+    "body": "We'll securely save your login info for {{email}} on this device, so you won't need to enter it next time.",
+    "notNow": "Not Now",
+    "remember": "Remember"
   }
 }

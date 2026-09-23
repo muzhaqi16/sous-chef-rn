@@ -9,6 +9,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import type { RowThemeColors } from '#components/atoms/rowTheme';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface QuantityBadgeProps {
   testID?: string;
@@ -69,7 +70,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
         quantity: accessibilityText,
       })}
       accessibilityHint={t('quantityBadge.a11yHint')}
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      hitSlop={hitSlop.md}
     >
       <View style={[styles.container, containerOverride]}>
         <Text

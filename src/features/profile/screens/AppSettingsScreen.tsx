@@ -5,7 +5,7 @@ import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { SettingsSection } from '#components/organisms/SettingsSection';
-import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
+import { SubScreen } from '#components/templates/SubScreen';
 import {
   useAppSettings,
   type AppSettings,
@@ -175,10 +175,10 @@ export const AppSettingsScreen: React.FC = () => {
   // leavable while it waits.
   if (dataState !== 'ready') {
     return (
-      <ProfileScreenWrapper
+      <SubScreen
         title={t('labels.appSettings')}
         testID={profileTestIDs.settingsScreen}
-        scrollEnabled={false}
+        scroll="none"
       >
         <DataStateView
           state={dataState}
@@ -200,12 +200,12 @@ export const AppSettingsScreen: React.FC = () => {
             onValueChange={handleOfflineModeChange}
           />
         </SettingsSection>
-      </ProfileScreenWrapper>
+      </SubScreen>
     );
   }
 
   return (
-    <ProfileScreenWrapper
+    <SubScreen
       title={t('labels.appSettings')}
       testID={profileTestIDs.settingsScreen}
     >
@@ -325,7 +325,7 @@ export const AppSettingsScreen: React.FC = () => {
           loading={updating === 'reset'}
         />
       </SettingsSection>
-    </ProfileScreenWrapper>
+    </SubScreen>
   );
 };
 

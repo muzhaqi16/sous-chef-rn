@@ -195,24 +195,6 @@ export function getHomeOwnerInfo(home: HomeWithMembers): OwnerInfo | null {
   };
 }
 
-/**
- * Check if current user is the owner of a home
- */
-export function isHomeOwner(
-  home: HomeWithMembers,
-  currentUserId?: string,
-): boolean {
-  if (!currentUserId) return false;
-  return (
-    resolveHomeMembers(home).some(
-      m =>
-        m.userId &&
-        m.userId === currentUserId &&
-        m.role === MembershipRole.Owner,
-    ) || false
-  );
-}
-
 /** Avatar fallback: the first letter, capitalized; "?" for nullish. */
 export function getInitials(displayName?: string | null): string {
   if (!displayName) return '?';

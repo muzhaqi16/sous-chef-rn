@@ -178,5 +178,3 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
   },
 }));
-
-export default ErrorState;

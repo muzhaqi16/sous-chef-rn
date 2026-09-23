@@ -25,6 +25,7 @@ import {
 import { Text } from '#components/atoms/Text';
 import type { BatchPricingSummary } from '#features/pantry/utils/summarizeBatchPricing';
 import { ItemCondition } from '#/graphql/generated/schemaTypes';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface PantryDetailInfoProps {
   itemRef:
@@ -138,7 +139,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
             <AppPressable
               onPress={onCorrectWeight}
               accessibilityLabel={t('correctWeight.title')}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              hitSlop={hitSlop.md}
               style={styles.correctWeightButton}
             >
               <Icon name="create-outline" size={16} tone="primary" />

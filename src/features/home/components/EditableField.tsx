@@ -179,7 +179,4 @@ const styles = StyleSheet.create(theme => ({
   saveButtonText: {
     color: theme.colors.neutral[0],
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

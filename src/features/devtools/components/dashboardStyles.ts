@@ -1,9 +1,6 @@
 import { StyleSheet } from 'react-native-unistyles';
 
 export const styles = StyleSheet.create(theme => ({
-  scrollView: {
-    flex: 1,
-  },
   notAvailableContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -11,13 +8,11 @@ export const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.xl,
   },
   lastUpdated: {
-    paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.sm,
     alignItems: 'flex-end',
   },
   metricsSection: {
     marginVertical: theme.spacing.base,
-    paddingHorizontal: theme.spacing.md,
   },
   sectionTitle: {
     marginBottom: theme.spacing.xs,
@@ -113,7 +108,6 @@ export const styles = StyleSheet.create(theme => ({
     color: theme.colors.success,
   },
   clearButton: {
-    marginHorizontal: theme.spacing.md,
     marginVertical: theme.spacing.xl,
     backgroundColor: theme.colors.error,
     paddingVertical: theme.spacing.smPlus,
@@ -124,9 +118,6 @@ export const styles = StyleSheet.create(theme => ({
   },
   clearButtonText: {
     color: theme.colors.onError,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
   startupCard: {
     backgroundColor: theme.colors.backgroundSecondary,

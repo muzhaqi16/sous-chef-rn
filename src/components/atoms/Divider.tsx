@@ -45,5 +45,3 @@ const styles = StyleSheet.create(theme => ({
     },
   },
 }));
-
-export default Divider;

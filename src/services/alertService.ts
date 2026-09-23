@@ -5,6 +5,7 @@
 
 import { Alert } from 'react-native';
 import { logger } from '#/utils/environment';
+import { t } from '#/i18n';
 
 export type AlertButtonStyle = 'default' | 'cancel' | 'destructive';
 
@@ -38,7 +39,7 @@ class AlertService {
     const resolvedButtons: AlertButton[] =
       buttons && buttons.length > 0
         ? buttons
-        : [{ text: 'OK', style: 'default' }];
+        : [{ text: t('labels.ok'), style: 'default' }];
 
     if (!this.showAlertFn) {
       // Fallback to native alert before provider mounts

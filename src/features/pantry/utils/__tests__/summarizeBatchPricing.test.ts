@@ -10,7 +10,7 @@ const batch = (
     batchNumber: 1,
     quantity: 1,
     status: BatchStatus.Active,
-    expiresAt: null,
+    expiresOn: null,
     expiresAtIsManual: false,
     costPerUnit: null,
     totalCost: null,
@@ -19,8 +19,8 @@ const batch = (
     openedAt: null,
     depletedAt: null,
     remainingNetWeight: null,
-    createdAt: '2026-08-01T00:00:00Z',
-    updatedAt: '2026-08-01T00:00:00Z',
+    createdAt: '2026-08-01',
+    updatedAt: '2026-08-01',
     wasteReason: null,
     pantryItemId: 'pi1',
     store: null,
@@ -96,18 +96,18 @@ describe('summarizeBatchPricing', () => {
         id: 'b1',
         costPerUnit: 0.59,
         totalCost: 2.95,
-        createdAt: '2026-08-01T00:00:00Z',
+        createdAt: '2026-08-01',
       }),
       batch({
         id: 'b2',
         costPerUnit: 1,
         totalCost: 3,
-        createdAt: '2026-08-31T00:00:00Z',
+        createdAt: '2026-08-31',
       }),
     ]);
 
     expect(summary.lastPurchase).toEqual({
-      date: '2026-08-31T00:00:00Z',
+      date: '2026-08-31',
       totalCost: 3,
     });
   });
@@ -152,7 +152,7 @@ describe('which acquisition is the newest', () => {
         id: 'older',
         costPerUnit: 1,
         totalCost: 10,
-        createdAt: '2026-08-20T00:00:00Z',
+        createdAt: '2026-08-20',
       }),
       batch({
         id: 'newer',
@@ -172,13 +172,13 @@ describe('which acquisition is the newest', () => {
       id: 'older',
       costPerUnit: 1,
       totalCost: 10,
-      createdAt: '2026-08-01T00:00:00Z',
+      createdAt: '2026-08-01',
     });
     const newest = batch({
       id: 'newest',
       costPerUnit: 2,
       totalCost: 40,
-      createdAt: '2026-08-28T00:00:00Z',
+      createdAt: '2026-08-28',
     });
 
     const before = summarizeBatchPricing([older, newest]);

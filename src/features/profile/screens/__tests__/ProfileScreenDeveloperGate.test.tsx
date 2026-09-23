@@ -96,9 +96,9 @@ jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#/utils/iconUtils', () => ({ Icon: 'Icon' }));
 
-jest.mock('#features/profile/components/ProfileHeader', () => {
+jest.mock('#features/profile/components/ProfileHero', () => {
   const { View } = require('react-native');
-  return { ProfileHeader: () => <View testID="profile-header" /> };
+  return { ProfileHero: () => <View testID="profile-hero" /> };
 });
 
 jest.mock('#components/organisms/SettingsSection', () => {

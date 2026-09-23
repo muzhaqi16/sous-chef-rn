@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { NavigationContext } from '@react-navigation/native';
 import {
-  BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetFooter,
   type BottomSheetFooterProps,
@@ -25,6 +24,10 @@ import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
 import { useBackdropClaim } from '#components/providers/OverlayBackdropProvider';
 import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
+import {
+  BottomSheetModal,
+  type BottomSheetModalRef,
+} from '#hooks/useStandardBottomSheet';
 import { useSheetBackdropOpacity } from '#hooks/useSheetBackdropOpacity';
 import { ActionTrayScrollContext } from './ActionTrayScrollContext';
 import type { ActionTrayProps, ActionTrayRef } from './types';
@@ -55,7 +58,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     ref,
   ) => {
     const { t } = useTranslation();
-    const bottomSheetRef = useRef<BottomSheetModal>(null);
+    const bottomSheetRef = useRef<BottomSheetModalRef>(null);
     const scrollRef = useRef<BottomSheetScrollViewMethods>(null);
     const [mounted, setMounted] = useState(false);
     const [viewportHeight, setViewportHeight] = useState(0);

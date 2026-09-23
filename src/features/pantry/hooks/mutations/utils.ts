@@ -3,16 +3,16 @@
  */
 
 import type { UseUpdatePantryItem_PantryItemFragment } from './useUpdatePantryItem.generated';
-import {
-  StorageState,
-  type UpdatePantryItemInput,
-  type StorageDetailsInput,
-  type InventoryThresholdsInput,
-  type NetWeightInput,
+import type {
+  UpdatePantryItemInput,
+  StorageDetailsInput,
+  InventoryThresholdsInput,
+  NetWeightInput,
 } from '#/graphql/generated/schemaTypes';
 import type { DirtyFieldFlags, UnitSelection, FormDataInput } from './types';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { toDateKey } from '#/utils/dateUtils';
 
 // Cache updater for adding items to Pantry.itemsConnection
 
@@ -85,7 +85,9 @@ export function buildDirtyUpdateInput(
   }
 
   if (dirtyFields.expirationDate) {
-    input.expiresAt = data.expirationDate?.toISOString() ?? null;
+    input.expiresOn = data.expirationDate
+      ? toDateKey(data.expirationDate)
+      : null;
   }
 
   if (dirtyFields.tags) {
@@ -152,22 +154,4 @@ export function buildDirtyUpdateInput(
   }
 
   return input;
-}
-
-/**
- * Map StorageState enum to the corresponding key in storageStateCounts.
- */
-export function stateToCountKey(
-  state: StorageState | string | undefined | null,
-): 'refrigerated' | 'frozen' | 'ambient' {
-  switch (state) {
-    case StorageState.Refrigerated:
-      return 'refrigerated';
-    case StorageState.Frozen:
-      return 'frozen';
-    case null:
-    case undefined:
-    default:
-      return 'ambient';
-  }
 }

@@ -82,6 +82,14 @@ const PRODUCTION_FIXTURES: Fixture[] = [
     valid: ['const s = { borderWidth: theme.borderWidth.hairline };'],
   },
   {
+    id: 'hitSlopLiteral',
+    invalid: [
+      'const a = <Pressable hitSlop={8} />;',
+      'const a = <Pressable hitSlop={{ top: 8, bottom: 8 }} />;',
+    ],
+    valid: ['const a = <Pressable hitSlop={hitSlop.md} />;'],
+  },
+  {
     id: 'toastLiteral',
     invalid: ['toastService.show("Hello world");'],
     valid: ['toastService.show(t("pantry.saved"));', 'toastService.show("✕");'],

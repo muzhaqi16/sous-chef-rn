@@ -201,8 +201,12 @@ describe('useHomeMutations', () => {
       expect(settled).toBe(false);
       expect(result.current.creating).toBe(true);
 
-      await waitFor(() => expect(settled).toBe(true));
-      expect(result.current.creating).toBe(false);
+      // `settled` flips in a microtask; `result.current` only after React's
+      // re-render and passive effect, so the flag is awaited, not read after.
+      await waitFor(() => {
+        expect(settled).toBe(true);
+        expect(result.current.creating).toBe(false);
+      });
     });
 
     it('reports a refused default pantry and keeps the home', async () => {

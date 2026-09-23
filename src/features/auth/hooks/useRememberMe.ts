@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useTranslation } from '#/i18n';
+import { alertService } from '#/services/alertService';
 import { useAuthPreferences } from '#/hooks/navigation/useAuthPreferences';
 
 /** Who the prompt is about. Enrolment authorises off the live session, so the
@@ -13,50 +14,37 @@ export interface RememberMeEvents {
 }
 
 /**
- * Hook for managing RememberMe modal state and logic.
- * This hook only handles modal state and user interactions - it doesn't know
- * HOW credentials are stored, just WHAT the user wants to do with them.
+ * The "remember login info?" prompt. It knows WHAT the person chose, not HOW
+ * credentials are stored — the caller's `onAccept` does the enrolment.
  */
 export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
-  // RememberMe modal state
-  const [showRememberMeModal, setShowRememberMeModal] = useState(false);
-  const [pendingCredentials, setPendingCredentials] =
-    useState<RememberMeCredentials | null>(null);
-
-  // Dependencies
+  const { t } = useTranslation();
   const { markCredentialPromptDeclined } = useAuthPreferences();
 
-  const handleRememberMeAccept = async () => {
-    // The enrolment reports its own failure.
-    if (pendingCredentials) await onAccept(pendingCredentials);
-    setShowRememberMeModal(false);
-    setPendingCredentials(null);
-  };
-
-  const handleRememberMeDecline = () => {
-    setShowRememberMeModal(false);
-
-    // Track credential prompt declination to avoid showing it again
-    markCredentialPromptDeclined();
-
-    setPendingCredentials(null);
-    onDecline();
-  };
-
-  // Helper function to show the RememberMe modal
   const showRememberMePrompt = (credentials: RememberMeCredentials) => {
-    setPendingCredentials(credentials);
-    setShowRememberMeModal(true);
+    alertService.alert(
+      t('rememberMe.title'),
+      t('rememberMe.body', { email: credentials.email }),
+      [
+        {
+          text: t('rememberMe.notNow'),
+          style: 'cancel',
+          onPress: () => {
+            // Not asked again on this install.
+            markCredentialPromptDeclined();
+            onDecline();
+          },
+        },
+        {
+          text: t('rememberMe.remember'),
+          onPress: () => {
+            // The enrolment reports its own failure.
+            void onAccept(credentials);
+          },
+        },
+      ],
+    );
   };
 
-  return {
-    // State
-    showRememberMeModal,
-    pendingCredentials,
-
-    // Actions
-    handleRememberMeAccept,
-    handleRememberMeDecline,
-    showRememberMePrompt,
-  };
+  return { showRememberMePrompt };
 };

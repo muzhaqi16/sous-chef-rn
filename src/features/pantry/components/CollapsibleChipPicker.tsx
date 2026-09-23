@@ -129,7 +129,4 @@ const styles = StyleSheet.create(theme => ({
   expandedContainer: {
     marginTop: theme.spacing.sm,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

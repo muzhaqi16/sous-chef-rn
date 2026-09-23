@@ -56,6 +56,7 @@ Developer documentation for the Sous Chef React Native app. For what the app
 | [Android build setup](android-build-setup.md) | Build environments, tag-triggered workflows, keystores, and outputs. |
 | [Android multi-device guide](android-devices-readme.md) | How `MODE` / `TARGET` / `DEVICE_ID` drive `scripts/run-android.sh`. |
 | [Android ProGuard debugging](android-proguard-debugging.md) | Crash reporting (Crashlytics, Android) and diagnosing R8/ProGuard-only crashes in release builds. |
+| [Reanimated 4.7 upgrade — assessment](reanimated-4.7-upgrade.md) | Why the 4.7 / Worklets 0.13 bump waits for 4.7.1, the breaking changes checked against our code, the re-check and upgrade procedure, the layout-animation device-QA list, the fallback flag, and how to install packages that depend on Reanimated until then. |
 
 ## Operations
 

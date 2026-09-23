@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
@@ -23,7 +23,7 @@ import {
 } from '#/utils/finallyHelpers';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { Text } from '#components/atoms/Text';
-import { Screen } from '#components/templates/Screen';
+import { SubScreen } from '#components/templates/SubScreen';
 
 function syncPantryFormState(
   pantry:
@@ -194,26 +194,19 @@ export const PantrySettings: React.FC<
   // `loading && !pantry` — a cached copy renders instead of blanking the screen.
   if (pantryId && loadingPantry && !pantry) {
     return (
-      <Screen
-        header={{ title: t('pantrySettings.loading'), back: goBack }}
-        scroll="none"
-        gutter="none"
-      >
+      <SubScreen title={t('pantrySettings.loading')} scroll="none">
         <Loading message={t('pantrySettings.loadingData')} />
-      </Screen>
+      </SubScreen>
     );
   }
 
   return (
-    <Screen
-      header={{
-        title: !pantryId
-          ? t('pantrySettings.createTitle')
-          : t('pantrySettings.title'),
-        back: goBack,
-        rightElement: (
-          !pantryId ? permissions.canCreatePantry : permissions.canEditItems
-        ) ? (
+    <SubScreen
+      title={
+        !pantryId ? t('pantrySettings.createTitle') : t('pantrySettings.title')
+      }
+      rightElement={
+        (!pantryId ? permissions.canCreatePantry : permissions.canEditItems) ? (
           <Pressable
             onPress={handleSave}
             disabled={saving}
@@ -227,99 +220,89 @@ export const PantrySettings: React.FC<
                 : t('labels.save')}
             </Text>
           </Pressable>
-        ) : undefined,
-      }}
-      scroll="list"
-      gutter="none"
+        ) : undefined
+      }
+      scroll="form"
     >
-      <ScrollView style={styles.content}>
+      <View style={commonStyles.settingsSection}>
+        <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
+          {t('labels.general')}
+        </Text>
+
+        <BaseInput
+          label={t('labels.pantryName')}
+          value={name}
+          onChangeText={setName}
+          placeholder={t('pantrySettings.namePlaceholder')}
+        />
+
+        <BaseInput
+          label={t('storageLocationForm.descriptionLabel')}
+          value={description}
+          onChangeText={setDescription}
+          placeholder={t('pantrySettings.descriptionPlaceholder')}
+          multiline
+          numberOfLines={3}
+        />
+
+        <View style={commonStyles.settingsRow}>
+          <View style={commonStyles.settingsRowInfo}>
+            <Text role="bodyStrong">{t('pantrySettings.defaultPantry')}</Text>
+            <Text role="caption" style={commonStyles.settingsRowDescription}>
+              {t('pantrySettings.defaultPantryDesc')}
+            </Text>
+          </View>
+          <BaseSwitch
+            accessibilityLabel={t('pantrySettings.defaultPantry')}
+            value={isDefault}
+            onValueChange={handleToggleDefault}
+          />
+        </View>
+      </View>
+
+      {!!pantryId && !!pantry && (
         <View style={commonStyles.settingsSection}>
           <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
-            {t('labels.general')}
+            {t('labels.information')}
           </Text>
 
-          <BaseInput
-            label={t('labels.pantryName')}
-            value={name}
-            onChangeText={setName}
-            placeholder={t('pantrySettings.namePlaceholder')}
+          <InfoRow
+            label={t('pantrySettings.itemsInPantry')}
+            value={t('labels.itemCount', {
+              count: pantryItemCount,
+            })}
           />
-
-          <BaseInput
-            label={t('storageLocationForm.descriptionLabel')}
-            value={description}
-            onChangeText={setDescription}
-            placeholder={t('pantrySettings.descriptionPlaceholder')}
-            multiline
-            numberOfLines={3}
-          />
-
-          <View style={commonStyles.settingsRow}>
-            <View style={commonStyles.settingsRowInfo}>
-              <Text role="bodyStrong">{t('pantrySettings.defaultPantry')}</Text>
-              <Text role="caption" style={commonStyles.settingsRowDescription}>
-                {t('pantrySettings.defaultPantryDesc')}
-              </Text>
-            </View>
-            <BaseSwitch
-              accessibilityLabel={t('pantrySettings.defaultPantry')}
-              value={isDefault}
-              onValueChange={handleToggleDefault}
-            />
-          </View>
         </View>
+      )}
 
-        {!!pantryId && !!pantry && (
-          <View style={commonStyles.settingsSection}>
-            <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
-              {t('labels.information')}
+      {/* Only show danger zone if editing existing pantry and user can delete */}
+      {!!pantryId && permissions.canDeletePantry ? (
+        <View style={commonStyles.settingsSection}>
+          <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
+            {t('labels.dangerZone')}
+          </Text>
+
+          <AppPressable style={styles.deleteButton} onPress={handleDelete}>
+            <Icon name="trash-outline" size={20} tone="error" />
+            <Text
+              role="bodyStrong"
+              tone="danger"
+              style={styles.deleteButtonText}
+            >
+              {t('labels.deletePantry')}
             </Text>
+          </AppPressable>
 
-            <InfoRow
-              label={t('pantrySettings.itemsInPantry')}
-              value={t('labels.itemCount', {
-                count: pantryItemCount,
-              })}
-            />
-          </View>
-        )}
-
-        {/* Only show danger zone if editing existing pantry and user can delete */}
-        {!!pantryId && permissions.canDeletePantry ? (
-          <View style={commonStyles.settingsSection}>
-            <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
-              {t('labels.dangerZone')}
-            </Text>
-
-            <AppPressable style={styles.deleteButton} onPress={handleDelete}>
-              <Icon name="trash-outline" size={20} tone="error" />
-              <Text
-                role="bodyStrong"
-                tone="danger"
-                style={styles.deleteButtonText}
-              >
-                {t('labels.deletePantry')}
-              </Text>
-            </AppPressable>
-
-            <Text role="caption" tone="secondary" style={styles.dangerWarning}>
-              {t('pantrySettings.deleteWarning')}
-            </Text>
-          </View>
-        ) : null}
-      </ScrollView>
-    </Screen>
+          <Text role="caption" tone="secondary" style={styles.dangerWarning}>
+            {t('pantrySettings.deleteWarning')}
+          </Text>
+        </View>
+      ) : null}
+    </SubScreen>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  content: {
-    flex: 1,
-  },
   deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',

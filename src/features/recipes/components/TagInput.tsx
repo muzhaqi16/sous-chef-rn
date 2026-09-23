@@ -10,6 +10,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { filterByTerm, identity } from '#hooks/search/useLocalSearch';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 export interface TagInputProps {
   tags: string[];
@@ -93,7 +94,7 @@ export const TagInput: React.FC<TagInputProps> = ({
               <Pressable
                 onPress={() => handleRemoveTag(tag)}
                 accessibilityLabel={t('a11y.removeNamed', { name: tag })}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                hitSlop={hitSlop.md}
                 style={({ pressed }) => pressed && styles.pressed}
               >
                 <Icon name="close" size={14} tone="primary" />

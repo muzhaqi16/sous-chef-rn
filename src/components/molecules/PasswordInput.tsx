@@ -6,6 +6,7 @@ import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#/utils/iconUtils';
 import { useTranslation } from '#/i18n';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 export interface PasswordInputProps
   extends Omit<BaseInputProps, 'secureTextEntry'> {
@@ -42,7 +43,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
           accessibilityLabel={
             visible ? t('a11y.hidePassword') : t('a11y.showPassword')
           }
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          hitSlop={hitSlop.lg}
           style={pressedStyles.toggle}
         >
           <Icon
@@ -57,13 +58,10 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
   );
 };
 
-const pressedStyles = StyleSheet.create(theme => ({
+const pressedStyles = StyleSheet.create({
   toggle: {
     alignSelf: 'stretch',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+});

@@ -82,8 +82,9 @@ Map and reasoning: `docs/architecture.md`.
 - **Aliases** are added ONLY in `tsconfig.json` `paths`. Each top-level `src/`
   folder is `#<name>`; irregular: `#/*` → `src/*`, `#operations`,
   `#generated`, `#/test-utils/*` → `__tests__/helpers/*`.
-- **A `src/` module needs a PRODUCTION importer** (`check:dead-modules`): a test
-  or `jest.mock()` does not count, so dead code goes with its test.
+- **A `src/` module or export needs a PRODUCTION importer** (`check:dead-modules`):
+  a test or `jest.mock()` does not count, so dead code goes with its test; a
+  deliberate test seam is tagged `@internal`.
 - **Every member a hook returns is read by production code**
   (`hookMembersAreConsumed.test.ts`). An unread one is a gap to wire or code to
   delete, never an allowlist entry.
@@ -207,10 +208,12 @@ quantity (`src/utils` formatters), device storage (a Zustand slice), loading
 (`<Text role>` + `tone`), inputs (`ThemedTextInput`), icons (`<Icon tone>`),
 colour and spacing (`theme.*`), elevation (`theme.shadows`), text on a fill (its
 `on*` token), local search (`useLocalSearch`), and nothing for reduce motion or
-memoization. No gate holds these:
+memoization. A screen is `Screen` or a preset over it (`SubScreen` for a pushed
+screen, `FormScreen`, `DetailTemplate`, …) and never assembles its own header,
+back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
+`headerGeometry.test.tsx`). No gate holds these:
 
-- **A screen, sheet or full-screen form is `Screen` / `Sheet` / `FormScreen`**;
-  a screen never assembles its own header.
+- **A sheet is `Sheet`; a full-screen form is `FormScreen`.**
 - **A list row is `commonStyles.rowWrapper` + `rowSurface` + `rowContent`**, the
   `theme.layout.row*` steps, and `rowType` for its text.
 - **Radius and z-index are `theme.*` tokens; a duration, spring or curve is

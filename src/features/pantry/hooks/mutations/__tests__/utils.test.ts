@@ -130,7 +130,7 @@ describe('pantry mutations utils', () => {
       itemName: 'Milk',
       storageState: 'PANTRY' as StorageState,
       location: 'Fridge',
-      expirationDate: new Date('2026-06-01'),
+      expirationDate: new Date(2026, 5, 1),
       notes: 'Whole milk',
       category: 'Dairy',
       unit: 'L',
@@ -189,17 +189,17 @@ describe('pantry mutations utils', () => {
       });
     });
 
-    it('includes expiresAt as ISO string when dirty', () => {
+    it('includes expiresOn as a local date key when dirty', () => {
       const result = buildDirtyUpdateInput(
         baseFormData,
         { expirationDate: true },
         null,
         null,
       );
-      expect(result).toEqual({ expiresAt: '2026-06-01T00:00:00.000Z' });
+      expect(result).toEqual({ expiresOn: '2026-06-01' });
     });
 
-    it('includes null expiresAt when date is undefined', () => {
+    it('includes null expiresOn when date is undefined', () => {
       const formData = { ...baseFormData, expirationDate: undefined };
       const result = buildDirtyUpdateInput(
         formData,
@@ -207,7 +207,7 @@ describe('pantry mutations utils', () => {
         null,
         null,
       );
-      expect(result).toEqual({ expiresAt: null });
+      expect(result).toEqual({ expiresOn: null });
     });
 
     it('includes notes when dirty', () => {

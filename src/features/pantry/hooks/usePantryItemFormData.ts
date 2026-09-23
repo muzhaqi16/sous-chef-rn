@@ -12,6 +12,7 @@ import {
 } from '#features/pantry/components/form/PantryItemForm.generated';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { extractNodes } from '#/utils/connectionUtils';
+import { useToday } from '#hooks/useToday';
 
 interface UsePantryItemFormDataArgs {
   itemId: string | null | undefined;
@@ -32,6 +33,7 @@ export function usePantryItemFormData({
   selectedHomeId,
   selectedPantryId,
 }: UsePantryItemFormDataArgs) {
+  const today = useToday();
   const client = useApolloClient();
 
   const { data: homeData } = useQuery(GetHomeDocument, {
@@ -76,7 +78,7 @@ export function usePantryItemFormData({
     selectedPantryId ?? pantry?.id ?? existingPantryItem?.pantryId;
 
   const { data: pantryData } = useQuery(GetPantryDocument, {
-    variables: { id: currentPantryId ?? '' },
+    variables: { id: currentPantryId ?? '', today },
     skip: !currentPantryId,
     fetchPolicy: 'cache-first',
   });

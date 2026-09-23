@@ -3,40 +3,6 @@ import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import type { CreatePantryFn } from '#features/pantry/hooks/useCreatePantry';
 
-interface ResourceWithId {
-  id: string;
-  isDefault?: boolean;
-}
-
-// Resource checking helpers
-export const checkExistingResources = async (
-  homes: ResourceWithId[],
-  pantries: ResourceWithId[],
-  callbacks: {
-    onComplete: () => void;
-    onBothExist: () => void;
-    setSelectedHomeId: (id: string) => void;
-    setSelectedPantryId: (id: string) => void;
-  },
-) => {
-  const [firstHome] = homes;
-  if (firstHome) {
-    callbacks.setSelectedHomeId(firstHome.id);
-
-    const existingPantry = pantries.find(p => p.isDefault) ?? pantries[0];
-    if (existingPantry) {
-      callbacks.setSelectedPantryId(existingPantry.id);
-
-      // Both exist - skip to next step
-      callbacks.onBothExist();
-      return true;
-    }
-  }
-
-  callbacks.onComplete();
-  return false;
-};
-
 /**
  * The create is local-first, so the id it minted is the pantry's id whether the
  * server answered or the write is queued — reading the payload would report a
@@ -72,16 +38,5 @@ export const showPantryCreationError = (onContinue: () => void) => {
     t('createHome.pantryFailedTitle'),
     t('createHome.pantryFailedBody'),
     [{ text: t('labels.continue'), onPress: onContinue }],
-  );
-};
-
-export const showSkipPantryWarning = (onSkip: () => void) => {
-  alertService.alert(
-    t('createHome.skipPantryTitle'),
-    t('createHome.skipPantryBody'),
-    [
-      { text: t('labels.cancel'), style: 'cancel' },
-      { text: t('labels.skip'), onPress: onSkip, style: 'destructive' },
-    ],
   );
 };

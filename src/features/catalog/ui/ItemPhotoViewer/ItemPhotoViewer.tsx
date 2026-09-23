@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  Modal,
   FlatList,
   useWindowDimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
+import { Modal } from '#components/atoms/themedComponents';
 import { useTranslation } from '#/i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -41,6 +41,7 @@ import {
   type ItemPhotoRef,
 } from '#features/catalog/ui/ItemPhotoCarousel';
 import { useMarkPrimaryItemImage } from '#features/catalog/hooks/useMarkPrimaryItemImage';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
@@ -155,7 +156,7 @@ export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
         <Pressable
           onPress={onClose}
           style={[styles.closeButton, { top: insets.top + 8 }]}
-          hitSlop={12}
+          hitSlop={hitSlop.lg}
           accessibilityRole="button"
           accessibilityLabel={t('labels.close')}
         >

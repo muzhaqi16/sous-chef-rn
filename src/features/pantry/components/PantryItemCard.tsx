@@ -12,7 +12,6 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { useRecyclingState } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
-import { differenceInCalendarDays } from 'date-fns';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
 import { BaseItemCard } from '#features/pantry/components/BaseItemCard/BaseItemCard';
@@ -26,6 +25,8 @@ import { Text } from '#components/atoms/Text';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 import { getExpirationStatus } from '#features/pantry/hooks/usePantryItemTransformation';
+import { daysUntilExpiry } from '#domain/expiry';
+import { useToday } from '#hooks/useToday';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
 import { motion } from '#/theme/foundations/motion';
@@ -162,6 +163,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   // BEFORE the `!complete` early return: a hook after it is conditional, which
   // bails the whole component out of the React Compiler.
   const isPendingSync = useIsPendingSync(pantryItem.id);
+  const today = useToday();
 
   if (!complete) return null;
 
@@ -169,10 +171,8 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   const name = pantryItem.itemName;
   const imageUrl = resolveImageUrl(pantryItem);
 
-  const expiresAt = pantryItem.expiresAt;
-  const expiresIn = expiresAt
-    ? differenceInCalendarDays(new Date(expiresAt), new Date())
-    : null;
+  const expiresOn = pantryItem.expiresOn;
+  const expiresIn = expiresOn ? daysUntilExpiry(expiresOn, today) : null;
   const expStatus = getExpirationStatus(expiresIn);
   const showExpiration =
     expiresIn !== null && expiresIn <= EXPIRATION_DISPLAY_THRESHOLD_DAYS;

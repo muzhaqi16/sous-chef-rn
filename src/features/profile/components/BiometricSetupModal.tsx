@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Modal } from 'react-native';
+import { View } from 'react-native';
+import { Modal } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { BiometricSetupView } from '#components/organisms/biometric/BiometricSetupView';
 import { useBiometricSetup } from '#components/organisms/biometric/useBiometricSetup';
@@ -78,7 +79,7 @@ const styles = StyleSheet.create(theme => ({
   },
   card: {
     backgroundColor: theme.colors.background,
-    borderRadius: theme.spacing.lg,
+    borderRadius: theme.radii['3xl'],
     borderCurve: 'continuous',
     padding: theme.spacing.xl,
     alignItems: 'center',

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useToday } from '#hooks/useToday';
 import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
@@ -13,6 +14,7 @@ import { safeParseDate } from '#utils/dateUtils';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { formatRelativeToNow } from '#/utils/formatters/date';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface NotificationItemProps {
   notification: NotificationType;
@@ -26,6 +28,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
   onDismiss,
 }) => {
   const { t } = useTranslation();
+  const today = useToday();
 
   const handlePress = () => {
     onPress(notification);
@@ -40,7 +43,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
     return date ? formatRelativeToNow(date) : t('notifications.recently');
   })();
 
-  const copy = getNotificationCopy(notification, t);
+  const copy = getNotificationCopy(notification, t, today);
 
   return (
     <AppPressable
@@ -84,7 +87,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
         <AppPressable
           style={styles.dismissButton}
           onPress={handleDismiss}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          hitSlop={hitSlop.lg}
           accessibilityLabel={t('notifications.dismissA11y')}
         >
           <Icon name="close" size={20} tone="textTertiary" />
@@ -130,9 +133,6 @@ const styles = StyleSheet.create(theme => ({
   dismissButton: {
     padding: theme.spacing.xs,
     justifyContent: 'center',
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));
 

@@ -159,9 +159,6 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     marginBottom: theme.spacing.md,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
   chipGroupLabel: {
     marginBottom: theme.spacing.xs,
   },

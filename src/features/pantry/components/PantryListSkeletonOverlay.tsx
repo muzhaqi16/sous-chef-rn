@@ -1,52 +1,45 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import React from 'react';
-import { View } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import Animated, { FadeOut } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
-import { PantryStickyTabs } from './pantryDisplay/PantryStickyTabs';
 import { motion } from '#/theme/foundations/motion';
 
-// A screenful is enough: the flap only covers the area below the header, and
-// each shimmer is a UI-thread animation running during the row-mount window.
+// A screenful is enough, and each shimmer is a UI-thread animation running
+// during the row-mount window.
 const SKELETON_ROWS = 8;
 
 /**
  * Covers the list area while FlashList's first layout is pending: v2 holds every
- * cell at `opacity: 0` until it commits, while the header chrome paints at once.
+ * cell at `opacity: 0` until it commits, while the chrome above paints at once.
  * It must exist from the list's FIRST commit — anything mounting on a post-commit
  * state update is starved behind the row-mount storm it covers.
  */
-
-// Absolute inside `ListHeaderComponent`, and no zIndex deliberately: cells are a
-// later sibling, so they paint over it the instant they turn opaque. Must sit
-// inside `PantryStickyTabsProvider`.
-export const PantryListSkeletonOverlay: React.FC = () => (
+export const PantryListSkeletonOverlay: React.FC<{
+  style?: StyleProp<ViewStyle>;
+}> = ({ style }) => (
   <Animated.View
     testID={pantryTestIDs.listSkeletonOverlay}
     exiting={FadeOut.duration(motion.timing.STANDARD)}
-    style={styles.flap}
+    style={[styles.cover, style]}
     pointerEvents="none"
   >
-    <PantryStickyTabs pinned={false} />
-    {/* No inset between the tabs and the first row: the tabs' own
-        `paddingBottom` is the whole gap in the real list too. */}
-    <View>
-      {Array.from({ length: SKELETON_ROWS }, (_, index) => (
-        <PantryItemSkeleton key={index} />
-      ))}
-    </View>
+    {Array.from({ length: SKELETON_ROWS }, (_, index) => (
+      <PantryItemSkeleton key={index} />
+    ))}
   </Animated.View>
 );
 
-const styles = StyleSheet.create((theme, rt) => ({
-  flap: {
+const styles = StyleSheet.create(theme => ({
+  cover: {
     position: 'absolute',
-    top: '100%',
+    top: 0,
     left: 0,
     right: 0,
-    height: rt.screen.height,
+    bottom: 0,
+    overflow: 'hidden',
     backgroundColor: theme.colors.background,
   },
 }));

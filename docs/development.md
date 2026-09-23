@@ -466,7 +466,7 @@ The whole-tree gates, and where each runs:
 | `check-launch-arg-auth`             | no distributable build accepts an injected session                                           | pre-commit, CI, build |
 | `check-compiler-bailouts`           | no component silently skips React Compiler compilation                                       | pre-push, CI          |
 | `check-unistyles-variant-staleness` | no `useVariants` read frozen at its first-render value                                       | pre-push, CI          |
-| `check:dead-modules` (knip)         | every `src/` module has a production importer; a test import or `jest.mock()` does not count | pre-push, CI          |
+| `check:dead-modules` (knip)         | every `src/` module and export has a production importer; a test import or `jest.mock()` does not count, an export used only in its own file is fine, and a test seam is tagged `@internal` | pre-push, CI          |
 | `check:import-cycles` (madge)       | no load-time import cycle; `import type` and `await import()` edges are skipped              | pre-push, CI          |
 | `find-stale-cache-fields`           | no new mutation that leaves a server-recomputed field stale in the cache                     | CI                    |
 | `check-bundled-secrets`             | every credential in a built bundle carries a recorded decision                               | build                 |
@@ -588,7 +588,7 @@ Pipelines, environments, and secrets: [`CI_CD.md`](CI_CD.md) and
 | `lint` / `lint:fix`     | ESLint (cached)                                   |
 | `format`                | Prettier                                          |
 | `i18n:check`            | Locale parity                                     |
-| `check:dead-modules`    | knip: a `src/` module with no production importer |
+| `check:dead-modules`    | knip: a `src/` module or export with no production importer |
 | `check:import-cycles`   | madge: load-time import cycles                    |
 | `check:audit`           | `npm audit` over production dependencies          |
 | `test` / `test:changed` | Jest                                              |

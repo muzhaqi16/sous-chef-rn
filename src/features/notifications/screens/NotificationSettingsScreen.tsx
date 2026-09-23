@@ -1,24 +1,36 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { errorService } from '#/services/errorService';
-import { View, Platform, Linking, AppState } from 'react-native';
+import { View, Platform, Linking } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { authService } from '#/services/authService';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 
 import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { SettingsSection } from '#components/organisms/SettingsSection';
-import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
+import { SubScreen } from '#components/templates/SubScreen';
 import {
   useNotificationSettings,
   type NotificationSettings,
 } from '#features/notifications/hooks/useNotificationSettings';
 import { useNotificationPermissions } from '#features/notifications/hooks/useNotificationPermissions';
+import { useResyncPermissionOnReturn } from '#features/notifications/hooks/useResyncPermissionOnReturn';
+import {
+  CHANNEL_SETTINGS,
+  PANTRY_SETTINGS,
+  SHOPPING_SETTINGS,
+  SOCIAL_SETTINGS,
+  RECIPE_SETTINGS,
+  DIGEST_SETTINGS,
+  QUIET_HOURS_SETTINGS,
+  getFrequencyOptions,
+  getThresholdOptions,
+  type SettingDef,
+} from '#features/notifications/utils/notificationSettingsConfig';
 import { useNotificationSync } from '#features/notifications/hooks/useNotificationSync';
-import { EXPIRATION_THRESHOLD_DAYS } from '#features/notifications/utils/expirationLadder';
-import { ExpirationFrequency } from '#/graphql/generated/schemaTypes';
+import type { ExpirationFrequency } from '#/graphql/generated/schemaTypes';
 import { useDataState } from '#hooks/data/useDataState';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { ModalPicker } from '#components/molecules/ModalPicker';
@@ -29,147 +41,7 @@ import {
 } from '#/utils/finallyHelpers';
 import { logger } from '#/utils/environment';
 import { Text } from '#components/atoms/Text';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { notificationsTestIDs } from '#features/notifications/testIDs';
-
-interface SettingDef {
-  key: keyof NotificationSettings;
-  titleKey: TranslationKey;
-  descriptionKey: TranslationKey;
-}
-
-const CHANNEL_SETTINGS: SettingDef[] = [
-  {
-    key: 'pushEnabled',
-    titleKey: 'notifications.pushNotifications',
-    descriptionKey: 'notifications.pushNotificationsDesc',
-  },
-  {
-    key: 'emailEnabled',
-    titleKey: 'notifications.emailNotifications',
-    descriptionKey: 'notifications.emailNotificationsDesc',
-  },
-  {
-    key: 'smsEnabled',
-    titleKey: 'notifications.smsNotifications',
-    descriptionKey: 'notifications.smsNotificationsDesc',
-  },
-];
-
-const PANTRY_SETTINGS: SettingDef[] = [
-  {
-    key: 'lowStockAlerts',
-    titleKey: 'notifications.lowStockAlerts',
-    descriptionKey: 'notifications.lowStockAlertsDesc',
-  },
-  {
-    key: 'pantryChanges',
-    titleKey: 'notifications.pantryUpdates',
-    descriptionKey: 'notifications.pantryUpdatesDesc',
-  },
-];
-
-const SHOPPING_SETTINGS: SettingDef[] = [
-  {
-    key: 'shoppingListUpdates',
-    titleKey: 'notifications.listUpdates',
-    descriptionKey: 'notifications.listUpdatesDesc',
-  },
-  {
-    key: 'sharedListUpdates',
-    titleKey: 'notifications.sharedListUpdates',
-    descriptionKey: 'notifications.sharedListUpdatesDesc',
-  },
-];
-
-const SOCIAL_SETTINGS: SettingDef[] = [
-  {
-    key: 'collaborationInvites',
-    titleKey: 'notifications.collaborationInvites',
-    descriptionKey: 'notifications.collaborationInvitesDesc',
-  },
-  {
-    key: 'homeInvites',
-    titleKey: 'notifications.homeInvitations',
-    descriptionKey: 'notifications.homeInvitationsDesc',
-  },
-];
-
-const RECIPE_SETTINGS: SettingDef[] = [
-  {
-    key: 'recipeRecommendations',
-    titleKey: 'notifications.recipeRecommendations',
-    descriptionKey: 'notifications.recipeRecommendationsDesc',
-  },
-  {
-    key: 'mealPlanReminders',
-    titleKey: 'notifications.mealPlanReminders',
-    descriptionKey: 'notifications.mealPlanRemindersDesc',
-  },
-  {
-    key: 'cookingReminders',
-    titleKey: 'notifications.cookingReminders',
-    descriptionKey: 'notifications.cookingRemindersDesc',
-  },
-];
-
-const DIGEST_SETTINGS: SettingDef[] = [
-  {
-    key: 'weeklyDigest',
-    titleKey: 'labels.weeklyDigest',
-    descriptionKey: 'notifications.weeklyDigestDesc',
-  },
-  {
-    key: 'monthlyReport',
-    titleKey: 'notifications.monthlyReport',
-    descriptionKey: 'notifications.monthlyReportDesc',
-  },
-];
-
-const QUIET_HOURS_SETTINGS: SettingDef[] = [
-  {
-    key: 'quietHoursEnabled',
-    titleKey: 'notifications.enableQuietHours',
-    descriptionKey: 'notifications.enableQuietHoursDesc',
-  },
-];
-
-const getFrequencyOptions = (t: Translate) => [
-  {
-    label: t('notifications.frequencyRealTime'),
-    value: ExpirationFrequency.RealTime,
-  },
-  {
-    label: t('notifications.frequencyDailyMorning'),
-    value: ExpirationFrequency.DailyMorning,
-  },
-  {
-    label: t('notifications.frequencyDailyEvening'),
-    value: ExpirationFrequency.DailyEvening,
-  },
-  {
-    label: t('labels.weeklyDigest'),
-    value: ExpirationFrequency.WeeklyDigest,
-  },
-  {
-    label: t('labels.never'),
-    value: ExpirationFrequency.Never,
-  },
-];
-
-const thresholdLabel = (t: Translate, days: number): string => {
-  if (days === 0) return t('notifications.thresholdSameDay');
-  if (days === 1) return t('notifications.thresholdNDaysBefore', { n: 1 });
-  return t('notifications.thresholdNDaysBeforePlural', { n: days });
-};
-
-// Derived from the ladder, so an offered value always maps to a rung the API
-// can actually fire.
-const getThresholdOptions = (t: Translate) =>
-  EXPIRATION_THRESHOLD_DAYS.map(days => ({
-    label: thresholdLabel(t, days),
-    value: String(days),
-  }));
 
 /**
  * No `loading` prop: `SettingSwitch` forwards it to `disabled`, which drops taps
@@ -197,28 +69,10 @@ const renderSettings = (
     />
   ));
 
-/**
- * A permission changed in system settings reaches the server only from here:
- * registration carries the push token when permission is granted and clears the
- * stored one when it is not, so either direction is delivered by the same call.
- * Module scope keeps the reference dep-array stable.
- */
-const syncPermissionChange = async (
-  checkPermissions: () => Promise<boolean>,
-  wasGranted: boolean | null,
-  pushEnabled: boolean,
-): Promise<void> => {
-  const granted = await checkPermissions();
-  if (wasGranted === null || granted === wasGranted || !pushEnabled) return;
-  authService.registerDeviceInBackground();
-};
-
 export const NotificationSettingsScreen: React.FC = () => {
   const { t } = useTranslation();
   const FREQUENCY_OPTIONS = getFrequencyOptions(t);
   const THRESHOLD_OPTIONS = getThresholdOptions(t);
-  const { navigation } = useAppNavigation();
-  const { addListener } = navigation;
   const [updating, setUpdating] = useState<string | null>(null);
   const [frequencyPickerVisible, setFrequencyPickerVisible] = useState(false);
   const [thresholdPickerVisible, setThresholdPickerVisible] = useState(false);
@@ -262,43 +116,11 @@ export const NotificationSettingsScreen: React.FC = () => {
     );
   };
 
-  const appState = useRef(AppState.currentState);
-
-  // Check permission status when screen comes into focus
-  useEffect(() => {
-    const checkPermsOnFocus = addListener('focus', () => {
-      void syncPermissionChange(
-        checkPermissions,
-        hasPermission,
-        settings.pushEnabled,
-      );
-    });
-
-    return checkPermsOnFocus;
-  }, [addListener, checkPermissions, hasPermission, settings.pushEnabled]);
-
-  // Re-check permissions when returning from device settings (background -> active)
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', nextAppState => {
-      // `currentState` is null until Android reports the first state, so the
-      // ref cannot be assumed to hold a string.
-      if (
-        /inactive|background/.test(String(appState.current)) &&
-        nextAppState === 'active'
-      ) {
-        void syncPermissionChange(
-          checkPermissions,
-          hasPermission,
-          settings.pushEnabled,
-        );
-      }
-      appState.current = nextAppState;
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, [checkPermissions, hasPermission, settings.pushEnabled]);
+  useResyncPermissionOnReturn({
+    checkPermissions,
+    hasPermission,
+    pushEnabled: settings.pushEnabled,
+  });
 
   const handleSettingChange = (
     key: keyof NotificationSettings,
@@ -434,10 +256,7 @@ export const NotificationSettingsScreen: React.FC = () => {
   // leavable while it waits.
   if (dataState !== 'ready') {
     return (
-      <ProfileScreenWrapper
-        title={t('notifications.title')}
-        scrollEnabled={false}
-      >
+      <SubScreen title={t('notifications.title')} scroll="none">
         <DataStateView
           state={dataState}
           onRetry={() => {
@@ -449,12 +268,12 @@ export const NotificationSettingsScreen: React.FC = () => {
           }}
           testID={notificationsTestIDs.settingsState}
         />
-      </ProfileScreenWrapper>
+      </SubScreen>
     );
   }
 
   return (
-    <ProfileScreenWrapper title={t('notifications.title')}>
+    <SubScreen title={t('notifications.title')}>
       {/* Quiet Hours Status */}
       {isQuietTime() && (
         <View style={styles.quietTimeAlert}>
@@ -637,7 +456,7 @@ export const NotificationSettingsScreen: React.FC = () => {
           loading={updating === 'reset'}
         />
       </SettingsSection>
-    </ProfileScreenWrapper>
+    </SubScreen>
   );
 };
 
@@ -645,7 +464,6 @@ const styles = StyleSheet.create(theme => ({
   quietTimeAlert: {
     backgroundColor: theme.colors.info + '20',
     padding: theme.spacing.md,
-    marginHorizontal: theme.spacing.md,
     marginTop: theme.spacing.sm,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',

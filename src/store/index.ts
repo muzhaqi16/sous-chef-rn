@@ -518,5 +518,8 @@ export const useStore = create<RootState>()(
   ),
 );
 
-/** Vanilla store API (non-hook name) for useStoreWithEqualityFn. */
+/**
+ * The store under a non-hook name: the React Compiler refuses a `use*` binding
+ * passed as a value, so `useStoreWithEqualityFn(useStore, …)` bails.
+ */
 export const storeApi = useStore;

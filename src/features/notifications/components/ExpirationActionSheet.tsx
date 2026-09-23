@@ -6,6 +6,7 @@
 import React from 'react';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import type { Translate } from '#/i18n/types';
+import { daysUntilExpiry, expiryLabel } from '#domain/expiry';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -18,6 +19,7 @@ import { Icon, type IconName } from '#utils/iconUtils';
 import { Title } from '#components/atoms/Title';
 import { Text } from '#components/atoms/Text';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { useToday } from '#hooks/useToday';
 
 interface ExpirationActionSheetProps {
   visible: boolean;
@@ -71,13 +73,12 @@ const EXPIRATION_ACTIONS: {
 ];
 
 const getExpirySubtitle = (
-  daysUntilExpiry: number | null | undefined,
+  expiresOn: string | null | undefined,
+  today: string,
   t: Translate,
 ): string => {
-  if (daysUntilExpiry == null) return t('expirationAction.expiringSoon');
-  if (daysUntilExpiry <= 0) return t('expirationAction.alreadyExpired');
-  if (daysUntilExpiry === 1) return t('expiration.expiresTomorrow');
-  return t('expiration.expiresInDays', { count: daysUntilExpiry });
+  if (!expiresOn) return t('expirationAction.expiringSoon');
+  return expiryLabel(daysUntilExpiry(expiresOn, today), t);
 };
 
 function OptionRow({
@@ -121,6 +122,7 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
   onDismiss,
 }) => {
   const { t } = useTranslation();
+  const today = useToday();
   // State-driven presentation via visible prop (no manual ref access during render)
   const { ref, modalProps, insets } = useStandardBottomSheet({
     visible,
@@ -132,7 +134,7 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
     firstNonBlank(notification?.pantryItemName) ??
     t('expirationAction.thisItem');
   const subtitle = notification
-    ? getExpirySubtitle(notification.daysUntilExpiry, t)
+    ? getExpirySubtitle(notification.expiresOn, today, t)
     : '';
 
   return (

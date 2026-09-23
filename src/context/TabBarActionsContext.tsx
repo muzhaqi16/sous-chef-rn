@@ -51,9 +51,6 @@ interface TabBarStateContextType {
   addButtonRect: TargetRect | null;
 }
 
-type TabBarActionsContextType = TabBarSettersContextType &
-  TabBarStateContextType;
-
 const TabBarSettersContext = createContext<
   TabBarSettersContextType | undefined
 >(undefined);
@@ -217,11 +214,4 @@ export const useTabBarState = (): TabBarStateContextType => {
     );
   }
   return context;
-};
-
-/** Prefer `useTabBarSetters` or `useTabBarState` — this subscribes to both. */
-export const useTabBarActions = (): TabBarActionsContextType => {
-  const setters = useTabBarSetters();
-  const state = useTabBarState();
-  return { ...setters, ...state };
 };

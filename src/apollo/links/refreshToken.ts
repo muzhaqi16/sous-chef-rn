@@ -7,7 +7,6 @@ import {
   isSessionEndingAuthCode,
   isSupersededRefreshCode,
 } from '#/utils/authErrorCodes';
-import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { SessionError } from '#/utils/errors/sessionError';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
@@ -487,13 +486,6 @@ export const clearRefreshState = () => {
   };
   refreshQueue = [];
 };
-
-/**
- * Check if a refresh token is still valid (not expired)
- * Useful for pre-request validation to avoid wasted API calls
- */
-export const isRefreshTokenValid = (refreshToken: string | null): boolean =>
-  !!refreshToken && !isTokenExpiringSoon(refreshToken);
 
 /**
  * Proactive refresh, driven by the scheduler before expiry so a 401 never

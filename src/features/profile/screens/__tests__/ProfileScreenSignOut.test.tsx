@@ -11,22 +11,11 @@ import { Telemetry } from '#/services/telemetry';
 import { ProfileScreen } from '../ProfileScreen';
 
 /**
- * Sign-out reachability.
- *
- * Finding the logout ROW by looking its SECTION up by `key` gives one action
- * two independent identifier bindings. Rename what `useConfigurableSettings`
- * puts in `key` — `configSection.title` versus `configSection.id` — and the
- * lookup stops matching, leaving Log Out a button that fires telemetry and
- * nothing else, with every suite still green because nothing pressed it.
- *
- * So this suite presses the row and asserts the handler the settings config
- * built actually runs, and it does so with the section carrying an unexpected
- * id: the binding must be to the item the renderer already holds, never to a
- * section identifier a refactor is free to rename.
+ * Sign-out lives in the more-options tray: pressing it runs the settings hook's
+ * `logout`, which owns the pending-writes warning and `authService.logout`.
  */
 
 const mockSignOut = jest.fn();
-let mockLogoutSectionKey = 'logout';
 
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: jest.fn(() => ({
@@ -52,8 +41,6 @@ jest.mock('#features/profile/hooks/useProfileData', () => ({
   }),
 }));
 
-// Mirrors the real hook's output: a section keyed by its stable config id,
-// holding a logout item that carries the sign-out handler itself.
 jest.mock('#features/profile/hooks/useConfigurableSettings', () => ({
   useConfigurableSettings: () => ({
     sections: [
@@ -68,20 +55,9 @@ jest.mock('#features/profile/hooks/useConfigurableSettings', () => ({
           },
         ],
       },
-      {
-        key: mockLogoutSectionKey,
-        title: '',
-        items: [
-          {
-            key: 'logout',
-            label: 'Log Out',
-            type: 'action',
-            onPress: mockSignOut,
-          },
-        ],
-      },
     ],
     BiometricModal: null,
+    logout: mockSignOut,
   }),
 }));
 
@@ -103,9 +79,9 @@ jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#/utils/iconUtils', () => ({ Icon: 'Icon' }));
 
-jest.mock('#features/profile/components/ProfileHeader', () => {
+jest.mock('#features/profile/components/ProfileHero', () => {
   const { View } = require('react-native');
-  return { ProfileHeader: () => <View testID="profile-header" /> };
+  return { ProfileHero: () => <View testID="profile-hero" /> };
 });
 
 // Presses through to the item's own onPress, which is the whole point: a
@@ -139,49 +115,29 @@ jest.mock('#components/templates/ActionTray/ActionTray', () => {
   const R = require('react');
   const RN = require('react-native');
   const ActionTray = R.forwardRef(function MockActionTray(
-    _props: ActionTrayProps,
+    props: ActionTrayProps,
     ref: React.Ref<ActionTrayRef>,
   ) {
     R.useImperativeHandle(ref, () => ({ open: jest.fn(), close: jest.fn() }));
-    return <RN.View testID="action-tray" />;
+    return <RN.View testID="action-tray">{props.children}</RN.View>;
   });
   return { ActionTray };
 });
 
 describe('ProfileScreen sign-out', () => {
   beforeEach(() => {
-    mockLogoutSectionKey = 'logout';
     jest.clearAllMocks();
   });
 
-  it('runs the sign-out handler the settings config built', () => {
+  it('signs out from the more-options tray', () => {
     render(<ProfileScreen />);
 
     fireEvent.press(screen.getByTestId('profile-logout-button'));
 
     expect(mockSignOut).toHaveBeenCalledTimes(1);
-  });
-
-  it('records the tap without swallowing the handler', () => {
-    render(<ProfileScreen />);
-
-    fireEvent.press(screen.getByTestId('profile-logout-button'));
-
     expect(Telemetry.trackEvent).toHaveBeenCalledWith('logout_clicked', {
       source: 'ProfileScreen',
     });
-    expect(mockSignOut).toHaveBeenCalledTimes(1);
-  });
-
-  it('still signs out when the logout section is renamed', () => {
-    // The regression this suite exists for: a section-identifier rename must
-    // not be able to disconnect the button.
-    mockLogoutSectionKey = 'session-actions';
-
-    render(<ProfileScreen />);
-    fireEvent.press(screen.getByTestId('profile-logout-button'));
-
-    expect(mockSignOut).toHaveBeenCalledTimes(1);
   });
 
   it('reaches the row by its label', () => {
@@ -190,5 +146,14 @@ describe('ProfileScreen sign-out', () => {
     fireEvent.press(screen.getByText('Log Out'));
 
     expect(mockSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('is no longer a settings row', () => {
+    render(<ProfileScreen />);
+
+    expect(screen.getAllByText('Log Out')).toHaveLength(1);
+    expect(screen.getByTestId('action-tray')).toContainElement(
+      screen.getByTestId('profile-logout-button'),
+    );
   });
 });

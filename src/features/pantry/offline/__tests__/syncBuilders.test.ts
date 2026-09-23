@@ -289,6 +289,21 @@ describe('pantry sync builders', () => {
     },
   );
 
+  // `today` is the day the user acted, which the replay may be days after;
+  // the server derives a shelf-life expiry from it.
+  it('forwards the queued today to the sync upsert', () => {
+    const mutation = makeMutation({
+      ...queuedMutationFor(CreatePantryItemDocument),
+      variables: {
+        input: { id: 'p-9', pantryId: 'pan-1', today: '2026-09-22' },
+      },
+    });
+
+    const input = wrapper(convertToSyncMutation(mutation).syncVariables);
+
+    expect(input.today).toBe('2026-09-22');
+  });
+
   it('sends no forceAdd on an update', () => {
     mockClient.cache.readFragment.mockReturnValue({
       id: 'item-u',

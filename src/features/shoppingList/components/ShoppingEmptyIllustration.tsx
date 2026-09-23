@@ -185,19 +185,6 @@ export const ShoppingEmptyIllustration: React.FC<
   );
 };
 
-// Convenience exports for size variants
-export const ShoppingEmptyIllustrationSmall: React.FC = () => (
-  <ShoppingEmptyIllustration size="small" />
-);
-
-export const ShoppingEmptyIllustrationMedium: React.FC = () => (
-  <ShoppingEmptyIllustration size="medium" />
-);
-
-export const ShoppingEmptyIllustrationLarge: React.FC = () => (
-  <ShoppingEmptyIllustration size="large" />
-);
-
 const componentStyles = StyleSheet.create({
   container: {
     alignItems: 'center',

@@ -4,6 +4,7 @@ import type { QueuedMutation, QueueError, QueueStats } from './types';
 import { QueueCapacityError, QueueStatus } from './types';
 import { logger } from '#/utils/environment';
 import { deletesItsSubject, queuedSubject } from './queuedSubject';
+import { withExpiresOn } from './legacyExpiry';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
@@ -104,10 +105,14 @@ export class QueueStore {
 
       const parsed = JSON.parse(queueJson) as SerializedQueuedMutation[];
 
-      const queue: QueuedMutation[] = parsed.map(item => ({
-        ...item,
-        mutation: JSON.parse(item.mutation) as DocumentNode,
-      }));
+      const queue: QueuedMutation[] = parsed.map(item => {
+        const mutation = JSON.parse(item.mutation) as DocumentNode;
+        return {
+          ...item,
+          mutation,
+          variables: withExpiresOn(mutation, item.variables),
+        };
+      });
 
       this.cache = queue;
 

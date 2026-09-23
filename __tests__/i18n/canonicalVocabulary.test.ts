@@ -422,12 +422,9 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
     },
     {
       keys: [
-        'pantryItemDetail.batch.expired',
         'pantryAnalytics.reasonExpired',
-        'filteredPantry.expired',
         'recordWaste.reasonExpired',
         'addToPantry.conditionExpired',
-        'expiration.expired',
         'inviteStatus.EXPIRED',
       ],
       reason:
@@ -712,12 +709,6 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
         '"Krijo listë" vs "Krijo Listë". One form would be wrong in the ' +
         'other context, so the distinction belongs in the key rather ' +
         'than in a runtime parameter.',
-    },
-    {
-      keys: ['filteredPantry.expiresInDays', 'expiration.expiresInDays_other'],
-      reason:
-        'Same string, but the keys are reached by different mechanisms ' +
-        'and cannot be re-pointed at one another.',
     },
     {
       keys: ['nutritionGoal.labelFatG', 'macroTargets.fat'],

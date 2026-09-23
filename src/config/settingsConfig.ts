@@ -243,10 +243,4 @@ export const PROFILE_SETTINGS_CONFIG: SettingSectionConfig[] = [
       },
     ],
   },
-  {
-    id: 'logout',
-    items: [
-      { key: 'logout', labelKey: 'profile.labels.logout', type: 'action' },
-    ],
-  },
 ];

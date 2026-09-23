@@ -1,5 +1,5 @@
 import { colors, darkExpiration, darkFilterTab } from '../foundations/colors';
-import { spacing, space } from '../foundations/spacing';
+import { spacing } from '../foundations/spacing';
 import { typography, fonts } from '../foundations/typography';
 import { radii } from '../foundations/radii';
 import { shadows } from '../foundations/shadows';
@@ -104,20 +104,6 @@ describe('theme foundations', () => {
       expect(spacing.smPlus).toBe(10);
       expect(spacing.base).toBe(12);
       expect(spacing.mdPlus).toBe(20);
-    });
-  });
-
-  describe('space helper', () => {
-    it('returns array of spacing values for given keys', () => {
-      expect(space('xs', 'md', 'lg')).toEqual([4, 16, 24]);
-    });
-
-    it('returns empty array for no arguments', () => {
-      expect(space()).toEqual([]);
-    });
-
-    it('returns single value', () => {
-      expect(space('sm')).toEqual([8]);
     });
   });
 

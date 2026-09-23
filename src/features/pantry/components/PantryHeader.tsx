@@ -9,6 +9,7 @@ import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
 import { Text } from '#components/atoms/Text';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 // Matches theme.typography.fontSize.lg (18). Inlined so the component does not
 // need useUnistyles — the theme value is module-static.
@@ -137,7 +138,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
         <Pressable
           onPress={onNotificationPress}
           style={styles.notificationButton}
-          hitSlop={8}
+          hitSlop={hitSlop.md}
           accessibilityRole="button"
           accessibilityLabel={t('labels.notifications')}
         >

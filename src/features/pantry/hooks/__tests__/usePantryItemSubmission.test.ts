@@ -121,9 +121,9 @@ function createMock(success = true) {
             itemName: 'Milk',
             quantity: 1,
             version: 1,
-            updatedAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01',
             storageState: StorageState.Ambient,
-            expiresAt: null,
+            expiresOn: null,
             lowStockAlert: false,
             isLowStock: false,
             minQuantity: null,
@@ -131,7 +131,7 @@ function createMock(success = true) {
             netWeight: null,
             remainingNetWeight: null,
             activeBatchCount: 0,
-            earliestBatchExpiration: null,
+            earliestBatchExpiresOn: null,
             item: null,
             unit: null,
             netWeightUnit: null,
@@ -279,7 +279,7 @@ describe('usePantryItemSubmission', () => {
   });
 
   it('includes expiration date when set', async () => {
-    const date = new Date('2025-06-15T00:00:00.000Z');
+    const date = new Date(2025, 5, 15);
     const m = createMock();
     const { result } = renderHookWithApollo(
       () => usePantryItemSubmission({ ...defaultParams, expirationDate: date }),
@@ -290,11 +290,10 @@ describe('usePantryItemSubmission', () => {
       await result.current.handleConfirm();
     });
 
-    // Full ISO DateTime — the schema scalar is DateTime; a date-only string
-    // relied on unspecified server coercion.
+    // The picked LOCAL day, whatever the device's offset from UTC.
     expect(m.fired).toContainEqual({
       input: expect.objectContaining({
-        expiresAt: '2025-06-15T00:00:00.000Z',
+        expiresOn: '2025-06-15',
       }),
     });
   });

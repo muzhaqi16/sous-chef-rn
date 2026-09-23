@@ -1,14 +1,13 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View } from 'react-native';
 import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { Text } from '#components/atoms/Text';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 
-import { commonStyles } from '#/styles/commonStyles';
 import { useSelectedPantryId, useSelectedHomeId } from '#store/useAppStore';
 import { usePantryItemFormData } from '#features/pantry/hooks/usePantryItemFormData';
 import {
@@ -27,7 +26,7 @@ import {
 import type { FieldDef } from '#components/molecules/DynamicFormFields';
 import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
 import { FormInput } from '#components/atoms/FormInput';
-import { Header } from '#components/organisms/Header';
+import { FormScreen } from '#components/templates/FormScreen';
 import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
 import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 import { ItemInformationSection } from './ItemInformationSection';
@@ -55,6 +54,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
 import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
+import { fromDateKey } from '#/utils/dateUtils';
 
 export interface PantryItemFormData {
   itemName?: string;
@@ -106,7 +106,7 @@ const formValuesFromItem = (
   storageState: item.storageState,
   condition: item.condition,
   location: item.storageLocation?.name ?? '',
-  expirationDate: item.expiresAt ? new Date(item.expiresAt) : undefined,
+  expirationDate: item.expiresOn ? fromDateKey(item.expiresOn) : undefined,
   notes: item.storageNotes ?? '',
   category: item.item.categories[0]?.category.name ?? '',
   tags: item.tags,
@@ -305,21 +305,42 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   // Cache first: a locally created item is readable before any round trip, so
   // spin only when there is genuinely nothing to show. `isUnconfirmed` counts
   // as loading, not missing — the create is in flight.
+  const save = () => {
+    void handleSubmit(handleSave, logValidationErrors)();
+  };
+  const shell = (children: React.ReactNode, canSave = true) => (
+    <FormScreen
+      title={t('itemForm.editTitle')}
+      onClose={() => goBack()}
+      onSave={save}
+      canSave={canSave}
+      testID={pantryTestIDs.editItemModal}
+      submitButtonTestID={pantryTestIDs.editItemSubmitButton}
+    >
+      {children}
+    </FormScreen>
+  );
+
+  // Cache first: a locally created item is readable before any round trip, so
+  // spin only when there is genuinely nothing to show. `isUnconfirmed` counts
+  // as loading, not missing — the create is in flight.
   if (!existingPantryItem && (itemLoading || isUnconfirmed)) {
-    return (
-      <View style={[commonStyles.container, commonStyles.center]}>
+    return shell(
+      <View style={styles.state}>
         <PrimaryActivityIndicator size="large" />
-      </View>
+      </View>,
+      false,
     );
   }
 
   if (!existingPantryItem) {
-    return (
-      <View style={[commonStyles.container, commonStyles.center]}>
+    return shell(
+      <View style={styles.state}>
         <Text role="error" tone="error">
           {t('errors.itemNotFound')}
         </Text>
-      </View>
+      </View>,
+      false,
     );
   }
 
@@ -369,127 +390,96 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     hasError: tabHasError(page),
   }));
 
-  return (
-    <View testID={pantryTestIDs.editItemModal} style={styles.container}>
-      <KeyboardAvoidingView
-        style={commonStyles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <Header
-          variant="form"
-          title={t('itemForm.editTitle')}
-          onClose={() => goBack()}
-          rightActions={[
-            {
-              icon: 'checkmark',
-              accessibilityLabel: t('labels.save'),
-              onPress: () => {
-                void handleSubmit(handleSave, logValidationErrors)();
-              },
-              variant: 'primary',
-              testID: pantryTestIDs.editItemSubmitButton,
-            },
-          ]}
-        />
+  return shell(
+    <>
+      <PageIndicator
+        pages={indicatorPages}
+        currentPage={currentPage}
+        onPagePress={setCurrentPage}
+      />
 
-        <PageIndicator
-          pages={indicatorPages}
-          currentPage={currentPage}
-          onPagePress={setCurrentPage}
-        />
+      <View style={styles.pageContent}>
+        {currentPage === 0 && (
+          <ItemInformationSection
+            control={control}
+            errors={errors}
+            onBrandSelected={setSelectedBrandId}
+            onCategorySelected={handleCategorySelect}
+          />
+        )}
 
-        <ScrollView
-          style={commonStyles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.pageContent}>
-            {currentPage === 0 && (
-              <ItemInformationSection
-                control={control}
-                errors={errors}
-                onBrandSelected={setSelectedBrandId}
-                onCategorySelected={handleCategorySelect}
-              />
-            )}
+        {currentPage === 1 && (
+          <NetWeightSection
+            control={control}
+            isWeightLocked={isWeightLocked}
+            onNetWeightChanged={revalidateNetWeight}
+            onNetWeightUnitSelected={handleNetWeightUnitSelected}
+          />
+        )}
 
-            {currentPage === 1 && (
-              <NetWeightSection
-                control={control}
-                isWeightLocked={isWeightLocked}
-                onNetWeightChanged={revalidateNetWeight}
-                onNetWeightUnitSelected={handleNetWeightUnitSelected}
-              />
-            )}
+        {currentPage === 2 && (
+          <StorageDetailsSection
+            control={control}
+            errors={errors}
+            storageState={watchedValues.storageState ?? StorageState.Ambient}
+            condition={watchedValues.condition ?? ItemCondition.Good}
+            expirationDate={watchedValues.expirationDate}
+            onStorageStateChange={state =>
+              setValue('storageState', state, { shouldDirty: true })
+            }
+            onConditionChange={c =>
+              setValue('condition', c, { shouldDirty: true })
+            }
+            onDateChange={date => {
+              setValue('expirationDate', date ?? undefined, {
+                shouldDirty: true,
+              });
+            }}
+            storageLocations={storageLocations}
+            onStorageLocationSelected={handleStorageLocationSelect}
+            onAddNewLocation={handleAddNewLocation}
+          />
+        )}
 
-            {currentPage === 2 && (
-              <StorageDetailsSection
-                control={control}
-                errors={errors}
-                storageState={
-                  watchedValues.storageState ?? StorageState.Ambient
-                }
-                condition={watchedValues.condition ?? ItemCondition.Good}
-                expirationDate={watchedValues.expirationDate}
-                onStorageStateChange={state =>
-                  setValue('storageState', state, { shouldDirty: true })
-                }
-                onConditionChange={c =>
-                  setValue('condition', c, { shouldDirty: true })
-                }
-                onDateChange={date => {
-                  setValue('expirationDate', date ?? undefined, {
-                    shouldDirty: true,
-                  });
-                }}
-                storageLocations={storageLocations}
-                onStorageLocationSelected={handleStorageLocationSelect}
-                onAddNewLocation={handleAddNewLocation}
-              />
-            )}
+        {currentPage === 3 && (
+          <>
+            <QuantitySection
+              control={control}
+              errors={errors}
+              onUnitSelected={handleUnitSelected}
+              testID={pantryTestIDs.editItemQuantityInput}
+              unitTestID={pantryTestIDs.editItemUnitPicker}
+              unitSymbol={item?.unit.symbol}
+            />
 
-            {currentPage === 3 && (
-              <>
-                <QuantitySection
+            <CollapsibleSection
+              title={t('labels.moreOptions')}
+              expanded={showTags}
+              onToggle={() => setTagsExpanded(prev => !prev)}
+            >
+              <View style={styles.advancedContent}>
+                <DynamicFormFields
+                  fields={tagsFields}
                   control={control}
                   errors={errors}
-                  onUnitSelected={handleUnitSelected}
-                  testID={pantryTestIDs.editItemQuantityInput}
-                  unitTestID={pantryTestIDs.editItemUnitPicker}
-                  unitSymbol={item?.unit.symbol}
                 />
-
-                <CollapsibleSection
-                  title={t('labels.moreOptions')}
-                  expanded={showTags}
-                  onToggle={() => setTagsExpanded(prev => !prev)}
-                >
-                  <View style={styles.advancedContent}>
-                    <DynamicFormFields
-                      fields={tagsFields}
-                      control={control}
-                      errors={errors}
-                    />
-                  </View>
-                </CollapsibleSection>
-              </>
-            )}
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+              </View>
+            </CollapsibleSection>
+          </>
+        )}
+      </View>
+    </>,
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
+  state: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  // Generous bottom padding so the last field clears the keyboard.
   pageContent: {
-    paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
   },
   advancedContent: {
     paddingTop: theme.spacing.md,

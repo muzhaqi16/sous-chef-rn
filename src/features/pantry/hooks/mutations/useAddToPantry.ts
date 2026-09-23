@@ -23,6 +23,7 @@ import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { extractNodes } from '#/utils/connectionUtils';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { toDateKey } from '#/utils/dateUtils';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 
@@ -225,7 +226,9 @@ export function useAddToPantry({
     let thrown: unknown;
     try {
       result = await createPantryItem({
-        variables: { input: { id, pantryId, itemId } },
+        variables: {
+          input: { id, pantryId, itemId, today: toDateKey(new Date()) },
+        },
         context: { localFirst: true },
       });
     } catch (error) {

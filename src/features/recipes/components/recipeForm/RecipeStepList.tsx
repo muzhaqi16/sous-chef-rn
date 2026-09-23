@@ -8,6 +8,7 @@ import { Icon } from '#utils/iconUtils';
 import type { StepFormState } from '#features/recipes/screens/RecipeForm/formState';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface RecipeStepListProps {
   steps: StepFormState[];
@@ -50,7 +51,7 @@ export const RecipeStepList: React.FC<RecipeStepListProps> = ({
             accessibilityLabel={t('a11y.removeNamed', {
               name: step.instruction,
             })}
-            hitSlop={8}
+            hitSlop={hitSlop.md}
             style={styles.removeButton}
           >
             <Icon name="close-circle" size={20} tone="error" />
@@ -88,9 +89,6 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     marginBottom: theme.spacing.xs,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
   stepNumber: {
     width: 28,

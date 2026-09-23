@@ -25,6 +25,7 @@ import { BiometricSetupModal } from '#features/profile/components/BiometricSetup
 import { authoritativeBiometryName } from '#components/organisms/biometric/biometryLabel';
 import { errorService } from '#/services/errorService';
 import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useCurrencyPreference } from '#features/profile/hooks/useCurrencyPreference';
 
 /**
@@ -36,6 +37,16 @@ export const useConfigurableSettings = () => {
   const { t } = useTranslation();
   const user = useUser();
   const { getUserNavigationState } = useNavigationUtils();
+  const {
+    toPersonalInformation,
+    toNotificationSettings,
+    toDietaryProfile,
+    toAppSettings,
+    toAppearance,
+    toDebugInfo,
+    toPerformanceDashboard,
+    toChangePassword,
+  } = useAppNavigation();
   const { language, setLanguage } = usePreferences();
   const {
     preferredCurrency,
@@ -257,74 +268,67 @@ export const useConfigurableSettings = () => {
         }
         break;
 
-      // Navigation items
+      // Navigation items: each row carries its own destination.
       case 'personalInformation':
+        return { ...baseItem, onPress: toPersonalInformation };
       case 'notifications':
+        return { ...baseItem, onPress: toNotificationSettings };
       case 'dietaryProfile':
+        return { ...baseItem, onPress: toDietaryProfile };
       case 'appSettings':
+        return { ...baseItem, onPress: toAppSettings };
       case 'appearance':
+        return { ...baseItem, onPress: toAppearance };
       case 'debugInfo':
+        return { ...baseItem, onPress: toDebugInfo };
       case 'performanceDashboard':
+        return { ...baseItem, onPress: toPerformanceDashboard };
       case 'changePassword':
-        if (config.type === 'navigation') {
-          return {
-            ...baseItem,
-            onPress: () => {
-              // Navigation will be handled in ProfileScreen
-              // by checking the type and calling navigate
-            },
-          };
-        }
-        break;
-
-      // Action items
-      case 'logout':
-        return {
-          ...baseItem,
-          onPress: () => {
-            // `authService.logout` and not the store's own `logout` action:
-            // the store action resets state but never revokes the session
-            // server-side (which ends push delivery), hands the offline queue its owner change, or removes
-            // the persisted queue/navigation keys. Two sign-out paths that
-            // each clear a different subset is how the shared-device residue
-            // got there; this is the only one.
-            const signOut = () => {
-              // Keeps the biometric credential: signing back in after a
-              // deliberate sign-out is exactly what it exists for, and the
-              // refresh-token lineage this revokes cannot serve that.
-              void authService.logout({ keepBiometricCredentials: true });
-              logger.debug('User logged out');
-            };
-
-            // A deliberate sign-out DELETES the queue
-            // (`queueManager.onLogout`), so prompt only when there is something
-            // to lose; an empty queue stays a one-tap sign-out.
-            const pendingCount = queueStore.getPendingCount();
-            if (pendingCount === 0) {
-              signOut();
-              return;
-            }
-
-            alertService.alert(
-              t('profile.labels.logout'),
-              t('confirmations.logoutWithPending', { count: pendingCount }),
-              [
-                { text: t('labels.cancel'), style: 'cancel' },
-                {
-                  text: t('profile.labels.logout'),
-                  style: 'destructive',
-                  onPress: signOut,
-                },
-              ],
-            );
-          },
-        };
+        return { ...baseItem, onPress: toChangePassword };
 
       default:
         logger.warn(`Unhandled setting key: ${config.key}`);
     }
 
     return baseItem;
+  };
+
+  const logout = () => {
+    // `authService.logout` and not the store's own `logout` action:
+    // the store action resets state but never revokes the session
+    // server-side (which ends push delivery), hands the offline queue its owner change, or removes
+    // the persisted queue/navigation keys. Two sign-out paths that
+    // each clear a different subset is how the shared-device residue
+    // got there; this is the only one.
+    const signOut = () => {
+      // Keeps the biometric credential: signing back in after a
+      // deliberate sign-out is exactly what it exists for, and the
+      // refresh-token lineage this revokes cannot serve that.
+      void authService.logout({ keepBiometricCredentials: true });
+      logger.debug('User logged out');
+    };
+
+    // A deliberate sign-out DELETES the queue
+    // (`queueManager.onLogout`), so prompt only when there is something
+    // to lose; an empty queue stays a one-tap sign-out.
+    const pendingCount = queueStore.getPendingCount();
+    if (pendingCount === 0) {
+      signOut();
+      return;
+    }
+
+    alertService.alert(
+      t('profile.labels.logout'),
+      t('confirmations.logoutWithPending', { count: pendingCount }),
+      [
+        { text: t('labels.cancel'), style: 'cancel' },
+        {
+          text: t('profile.labels.logout'),
+          style: 'destructive',
+          onPress: signOut,
+        },
+      ],
+    );
   };
 
   const sections = (() => {
@@ -348,5 +352,6 @@ export const useConfigurableSettings = () => {
   return {
     sections,
     BiometricModal,
+    logout,
   };
 };

@@ -23,11 +23,6 @@ export const spacing = {
   '4xl': 96,
 };
 
-// Helper function for consistent spacing
-export const space = (...values: (keyof typeof spacing)[]) => {
-  return values.map(v => spacing[v]);
-};
-
 /**
  * Semantic layout steps, named for the job rather than the size. The row steps
  * are the list row's whole geometry: four shells compose one, so the numbers
@@ -36,6 +31,8 @@ export const space = (...values: (keyof typeof spacing)[]) => {
 export const layout = {
   /** Screen edge to any screen-level content — chrome, controls and rows alike. */
   pageGutter: 16,
+  /** Below a screen's last content, on top of the bottom safe-area inset. */
+  pageBottom: 24,
   sectionGap: 24,
   /** A row's own edge to its content. */
   rowInset: 8,

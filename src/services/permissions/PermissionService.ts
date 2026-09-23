@@ -14,6 +14,7 @@ export type PermissionStatus =
   | 'granted'
   | 'denied'
   | 'blocked'
+  | 'unavailable'
   | 'undetermined';
 
 function normalizeRNPermissionStatus(
@@ -26,8 +27,9 @@ function normalizeRNPermissionStatus(
     case RESULTS.DENIED:
       return 'denied';
     case RESULTS.BLOCKED:
-    case RESULTS.UNAVAILABLE:
       return 'blocked';
+    case RESULTS.UNAVAILABLE:
+      return 'unavailable';
     default:
       return 'undetermined';
   }
@@ -67,7 +69,9 @@ class PermissionServiceClass {
   async request(permission: AppPermission): Promise<PermissionStatus> {
     const currentStatus = await this.check(permission);
     if (currentStatus === 'granted') return 'granted';
-    if (currentStatus === 'blocked') return 'blocked';
+    if (currentStatus === 'blocked' || currentStatus === 'unavailable') {
+      return currentStatus;
+    }
 
     if (permission === 'notifications') {
       return this.requestNotifications();

@@ -104,5 +104,3 @@ const styles = StyleSheet.create(theme => ({
     fontFamily: 'monospace',
   },
 }));
-
-export default Loading;

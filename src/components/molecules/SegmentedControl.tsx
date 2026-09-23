@@ -212,7 +212,4 @@ const styles = StyleSheet.create(theme => ({
     ...theme.type.label,
     textAlign: 'center',
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

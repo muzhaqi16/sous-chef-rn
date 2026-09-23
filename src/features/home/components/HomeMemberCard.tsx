@@ -252,7 +252,4 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     marginRight: theme.spacing.md,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

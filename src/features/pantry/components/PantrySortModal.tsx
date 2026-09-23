@@ -1,11 +1,11 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import React from 'react';
-import { View, Modal } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation, type TranslationKey } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
+import { Sheet } from '#components/templates/Sheet';
 import { Icon } from '#utils/iconUtils';
 import type { SortOption, SortDirection } from './pantryDisplay/types';
 import {
@@ -58,93 +58,62 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
 }) => {
   const { t } = useTranslation();
   return (
-    <Modal
+    <Sheet
+      mode="action"
       visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-      statusBarTranslucent
-      navigationBarTranslucent
+      onDismiss={onClose}
+      snapPoints={['45%']}
+      title={t('pantrySort.title')}
     >
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        {/* Absorb taps on the card so they don't bubble to the backdrop and close it */}
-        <View
-          style={styles.sortModal}
-          onStartShouldSetResponder={() => true}
-          testID={pantryTestIDs.sortModal}
-        >
-          <Text role="bodyStrong" style={styles.sortModalTitle}>
-            {t('pantrySort.title')}
-          </Text>
-          {SORT_OPTIONS.map(option => (
-            <AppPressable
-              key={option.key}
-              // Derived from the option key, so a new sort option is reachable
-              // from a test the moment it is added.
-              testID={pantryTestIDs.sortOption(option.key)}
+      <View testID={pantryTestIDs.sortModal}>
+        {SORT_OPTIONS.map(option => (
+          <AppPressable
+            key={option.key}
+            // Derived from the option key, so a new sort option is reachable
+            // from a test the moment it is added.
+            testID={pantryTestIDs.sortOption(option.key)}
+            style={[
+              styles.sortOption,
+              sortOption === option.key && styles.sortOptionActive,
+            ]}
+            onPress={() => onSelect(option.key)}
+          >
+            <Icon
+              name={option.icon}
+              size={18}
+              library={option.library}
+              tone="primary"
+            />
+            <Text
+              role="bodyStrong"
               style={[
-                styles.sortOption,
-                sortOption === option.key && styles.sortOptionActive,
+                styles.sortOptionLabel,
+                sortOption === option.key && styles.sortOptionLabelActive,
               ]}
-              onPress={() => onSelect(option.key)}
             >
+              {t(option.labelKey)}
+            </Text>
+            {sortOption === option.key && (
               <Icon
-                name={option.icon}
+                name={
+                  sortDirection === PantrySortDirection.ASC
+                    ? 'arrow-up'
+                    : 'arrow-down'
+                }
                 size={18}
-                library={option.library}
                 tone="primary"
               />
-              <Text
-                role="bodyStrong"
-                style={[
-                  styles.sortOptionLabel,
-                  sortOption === option.key && styles.sortOptionLabelActive,
-                ]}
-              >
-                {t(option.labelKey)}
-              </Text>
-              {sortOption === option.key && (
-                <Icon
-                  name={
-                    sortDirection === PantrySortDirection.ASC
-                      ? 'arrow-up'
-                      : 'arrow-down'
-                  }
-                  size={18}
-                  tone="primary"
-                />
-              )}
-            </AppPressable>
-          ))}
-        </View>
-      </Pressable>
-    </Modal>
+            )}
+          </AppPressable>
+        ))}
+      </View>
+    </Sheet>
   );
 };
 
 PantrySortModal.displayName = 'PantrySortModal';
 
 const styles = StyleSheet.create(theme => ({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: theme.colors.overlays.medium,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sortModal: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.xl,
-    borderCurve: 'continuous',
-    padding: theme.spacing.mdPlus,
-    width: '80%',
-    maxWidth: theme.sizes.modal.sm,
-    ...theme.shadows.lg,
-  },
-  sortModalTitle: {
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
-    textAlign: 'center',
-  },
   sortOption: {
     flexDirection: 'row',
     alignItems: 'center',

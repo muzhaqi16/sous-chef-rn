@@ -12,7 +12,6 @@ import { alertService } from '#/services/alertService';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { StyleSheet } from 'react-native-unistyles';
-import { differenceInCalendarDays } from 'date-fns';
 
 import { Icon } from '#utils/iconUtils';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
@@ -48,9 +47,12 @@ import {
 } from '#features/pantry/context/FilteredItemsActionsContext';
 import { Text } from '#components/atoms/Text';
 import type { Translate } from '#/i18n/types';
+import { daysUntilExpiry, expiryLabel } from '#domain/expiry';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { EmptyState } from '#components/molecules/EmptyState';
-import { Screen } from '#components/templates/Screen';
+import { SubScreen } from '#components/templates/SubScreen';
+import { useScreenListInset } from '#components/templates/useScreenListInset';
+import { useToday } from '#hooks/useToday';
 
 export type FilteredPantryItemsMode = 'lowStock' | 'expiring' | 'expired';
 
@@ -68,7 +70,7 @@ interface FilteredItem {
   quantity: number;
   unit: { id: string; symbol: string } | null;
   isLowStock: boolean;
-  expiresAt: string | null;
+  expiresOn: string | null;
 }
 
 interface ModeConfig {
@@ -89,19 +91,24 @@ interface ModeConfig {
 }
 
 function formatExpirySubtitle(
-  expiresAt: string | null | undefined,
+  expiresOn: string | null | undefined,
+  today: string,
   t: Translate,
 ): string {
-  if (!expiresAt) return '';
-  const days = differenceInCalendarDays(new Date(expiresAt), new Date());
-  if (days < 0) return t('filteredPantry.expired');
-  if (days === 0) return t('labels.expiresToday');
-  if (days === 1) return t('filteredPantry.expiresTomorrow');
-  return t('filteredPantry.expiresInDays', { count: days });
+  if (!expiresOn) return '';
+  return expiryLabel(daysUntilExpiry(expiresOn, today), t);
 }
+
+/** Soonest first; YYYY-MM-DD orders as text, and an undated item goes last. */
+const byExpiry = (a: FilteredItem, b: FilteredItem): number => {
+  if (!a.expiresOn || !b.expiresOn)
+    return a.expiresOn ? -1 : b.expiresOn ? 1 : 0;
+  return a.expiresOn.localeCompare(b.expiresOn);
+};
 
 function buildModeConfig(
   t: Translate,
+  today: string,
 ): Record<FilteredPantryItemsMode, ModeConfig> {
   return {
     lowStock: {
@@ -142,22 +149,15 @@ function buildModeConfig(
       // `expirationDays` is deliberately not passed: `PantryStats.expiringCount`
       // is always a 7-day window, so widening it here would list items the badge
       // never counted.
-      serverFilters: { expiringSoon: true },
-      // Mirrors `PantryStats.expiringCount`: within 7 days, not yet expired.
+      serverFilters: { expiringSoon: true, today },
+      // Mirrors `PantryStats.expiringCount`: dated today through seven days on.
       filter: item => {
-        if (!item.expiresAt || item.quantity <= 0) return false;
-        const days = differenceInCalendarDays(
-          new Date(item.expiresAt),
-          new Date(),
-        );
+        if (!item.expiresOn || item.quantity <= 0) return false;
+        const days = daysUntilExpiry(item.expiresOn, today);
         return days >= 0 && days <= 7;
       },
-      sort: (a, b) => {
-        const aDate = a.expiresAt ? new Date(a.expiresAt).getTime() : Infinity;
-        const bDate = b.expiresAt ? new Date(b.expiresAt).getTime() : Infinity;
-        return aDate - bDate;
-      },
-      subtitle: item => formatExpirySubtitle(item.expiresAt, t),
+      sort: byExpiry,
+      subtitle: item => formatExpirySubtitle(item.expiresOn, today, t),
       tutorialSteps: [],
     },
     expired: {
@@ -165,23 +165,15 @@ function buildModeConfig(
       emptyMessage: t('filteredPantry.expiredEmpty'),
       emptyIcon: 'alert-circle-outline',
       // Same unbounded superset as `expiring`; the predicate keeps the past-dated.
-      serverFilters: { expiringSoon: true },
-      // Mirrors server `PantryStats.expiredCount`: past expiresAt, quantity > 0.
-      filter: item => {
-        if (!item.expiresAt || item.quantity <= 0) return false;
-        const days = differenceInCalendarDays(
-          new Date(item.expiresAt),
-          new Date(),
-        );
-        return days < 0;
-      },
-      sort: (a, b) => {
-        // Oldest-expired first.
-        const aDate = a.expiresAt ? new Date(a.expiresAt).getTime() : Infinity;
-        const bDate = b.expiresAt ? new Date(b.expiresAt).getTime() : Infinity;
-        return aDate - bDate;
-      },
-      subtitle: item => formatExpirySubtitle(item.expiresAt, t),
+      serverFilters: { expiringSoon: true, today },
+      // Mirrors `PantryStats.expiredCount`: dated before today, quantity > 0.
+      filter: item =>
+        !!item.expiresOn &&
+        item.quantity > 0 &&
+        daysUntilExpiry(item.expiresOn, today) < 0,
+      // Longest-expired first.
+      sort: byExpiry,
+      subtitle: item => formatExpirySubtitle(item.expiresOn, today, t),
       tutorialSteps: [],
     },
   };
@@ -300,9 +292,11 @@ export const FilteredPantryItems: React.FC<
 > = ({ route }) => {
   const { t } = useTranslation();
   const mode = route.params?.mode ?? 'lowStock';
-  const config = buildModeConfig(t)[mode];
+  const today = useToday();
+  const config = buildModeConfig(t, today)[mode];
 
-  const { goBack, toPantryItemDetail } = useAppNavigation();
+  const { toPantryItemDetail } = useAppNavigation();
+  const listInset = useScreenListInset();
 
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -459,13 +453,9 @@ export const FilteredPantryItems: React.FC<
     : undefined;
 
   return (
-    <Screen
-      header={{
-        title: config.title,
-        back: goBack,
-        centerTitle: true,
-        actions: headerRightActions,
-      }}
+    <SubScreen
+      title={config.title}
+      actions={headerRightActions}
       scroll="list"
       gutter="none"
     >
@@ -478,7 +468,7 @@ export const FilteredPantryItems: React.FC<
           onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
           renderScrollComponent={SwipeAwareScrollComponent}
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, listInset]}
           data={filteredItems}
           keyExtractor={keyExtractor}
           {...FLASHLIST_DEFAULTS.fullScreen}
@@ -535,7 +525,7 @@ export const FilteredPantryItems: React.FC<
         onCreateListAndAdd={picker.handleCreateListAndAdd}
         onDismiss={picker.dismissPicker}
       />
-    </Screen>
+    </SubScreen>
   );
 };
 
@@ -555,8 +545,5 @@ const styles = StyleSheet.create(theme => ({
   },
   actionButton: {
     padding: theme.spacing.xs,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

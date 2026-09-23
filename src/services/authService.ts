@@ -77,9 +77,6 @@ function bootstrapUserStore(user: LoginUserFragment): void {
       storeState.setIsHomeSelectionReady(true);
     }
   }
-  if (user.defaultShoppingListId) {
-    storeState.setSelectedShoppingListId(user.defaultShoppingListId);
-  }
 
   // Seeded before any screen's tutorial hooks mount, so a user who disabled
   // tutorials sees no flash of coach marks on a new device. Only this master

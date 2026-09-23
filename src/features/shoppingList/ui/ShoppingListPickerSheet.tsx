@@ -15,6 +15,7 @@ import type {
   SelectorConfig,
 } from '#components/organisms/AnimatedItemSelector/types';
 import { LIST_NAME_MAX_LENGTH } from '#features/shoppingList/utils/shoppingListConstants';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface ShoppingList {
   id: string;
@@ -106,7 +107,7 @@ export const ShoppingListPickerSheet: React.FC<
     headerRight: (
       <Pressable
         onPress={() => setNaming(current => !current)}
-        hitSlop={8}
+        hitSlop={hitSlop.md}
         accessibilityRole="button"
         accessibilityLabel={t('shoppingListPicker.newListNamePlaceholder')}
       >

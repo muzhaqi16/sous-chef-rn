@@ -29,6 +29,7 @@ property, so the helper strips it before ESLint sees the entry.
 | `allowFontScaling`             | `allowFontScaling={false}`.                                                 |
 | `handRolledSearch`             | `.filter(… .toLowerCase().includes(…))`.                                    |
 | `borderWidthLiteral`           | A numeric literal on any `border*Width`.                                    |
+| `hitSlopLiteral`               | A numeric literal in `hitSlop`; use a step of `hitSlop` (`sizes.ts`).       |
 | `toastLiteral`                 | An untranslated string into `toastService` / `alertService`.                |
 | `toastServerMessage`           | A server `message` into either service.                                     |
 | `toastTemplateLiteral`         | A template literal into either service.                                     |

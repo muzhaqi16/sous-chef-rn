@@ -54,6 +54,7 @@ export function usePermission(permission: AppPermission) {
     request: requestPermission,
     openSettings,
     isGranted: status === 'granted',
-    isBlocked: status === 'blocked',
+    // No hardware can't be requested either, so it takes the Settings path.
+    isBlocked: status === 'blocked' || status === 'unavailable',
   };
 }

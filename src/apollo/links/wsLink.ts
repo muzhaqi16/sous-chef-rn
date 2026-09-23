@@ -777,6 +777,7 @@ export const disposeWebSocket = () => {
 };
 
 // Export function to get WebSocket connection state
+/** @internal Test seam. */
 export const getWebSocketState = () => {
   return {
     lastReconnectTime,

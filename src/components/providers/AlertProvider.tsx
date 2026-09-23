@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { View } from 'react-native';
+import { Pressable, Modal } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -42,8 +41,12 @@ const AlertCard: React.FC<AlertCardProps> = ({
   };
 
   useEffect(() => {
-    scale.set(withSpring(1, motion.spring.GENTLE));
-    opacity.set(withTiming(1, { duration: motion.timing.STANDARD }));
+    const enter = {
+      duration: motion.timing.STANDARD,
+      easing: motion.easing.decelerate,
+    };
+    scale.set(withTiming(1, enter));
+    opacity.set(withTiming(1, enter));
   }, [scale, opacity]);
 
   const handleButtonPress = (button: AlertButton) => {

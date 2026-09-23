@@ -19,12 +19,6 @@ export type BuiltInLocationFilter =
 /** A built-in filter or a custom storage location ID. */
 export type LocationFilter = BuiltInLocationFilter | string;
 
-export function isBuiltInFilter(
-  filter: LocationFilter,
-): filter is BuiltInLocationFilter {
-  return ['all', 'fridge', 'freezer', 'pantry', 'unassigned'].includes(filter);
-}
-
 /** Server-side filter for a LocationFilter; null for 'all' (no filter). */
 export function locationFilterToQueryFilter(
   filter: LocationFilter,

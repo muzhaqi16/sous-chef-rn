@@ -10,6 +10,9 @@ query GetPantry(
   $itemsOrderBy: PantryItemOrderBy
   $storageLocationsCursor: String
   $storageLocationsFirst: Int = 20
+  # The viewer's calendar date, so the expiring and expired counts split where
+  # the rows do. Required: omitted, the server counts on UTC's date.
+  $today: LocalDate!
 ) {
   pantry(id: $id) {
     id
@@ -18,7 +21,7 @@ query GetPantry(
     description
     isDefault
     version
-    stats {
+    stats(today: $today) {
       totalItems
       expiringCount
       expiredCount
@@ -48,7 +51,7 @@ query GetPantry(
         node {
           # Direct selections cover what the screen-level hooks + filtered
           # views read off each node — local sort comparators (itemName,
-          # expiresAt, quantity, createdAt), local search (itemName),
+          # expiresOn, quantity, createdAt), local search (itemName),
           # location filtering (storageState, storageLocation.id), stats
           # (isLowStock), and `FilteredPantryItems`' subtitle (unit.symbol).
           # Leaf rendering lives in the masked `PantryItemCard_pantryItem`
@@ -63,7 +66,7 @@ query GetPantry(
           # it as an Item.
           itemId
           quantity
-          expiresAt
+          expiresOn
           storageState
           isLowStock
           createdAt
@@ -132,7 +135,11 @@ query GetPantryItem($id: ID!) {
 # Fields are inlined per alias rather than shared via a named fragment: data
 # masking is enabled globally, so a `...Fragment` spread would hide these fields
 # from the hook's direct reads (the rows render plain props, not useFragment).
-query GetPantryItemSuggestions($pantryId: ID!, $limit: Int = 20) {
+query GetPantryItemSuggestions(
+  $pantryId: ID!
+  $limit: Int = 20
+  $today: LocalDate!
+) {
   pantry(id: $pantryId) {
     id
     lowStock: suggestions(limit: $limit, sources: [LOW_STOCK]) {
@@ -157,14 +164,18 @@ query GetPantryItemSuggestions($pantryId: ID!, $limit: Int = 20) {
       minQuantity
       restockQuantity
       daysUntilExpiry
-      expiresAt
+      expiresOn
       lastQuantity
       lastUnitId
       frequencyCount
       popularityRank
       pantryItemId
     }
-    expiringSoon: suggestions(limit: $limit, sources: [EXPIRING_SOON]) {
+    expiringSoon: suggestions(
+      limit: $limit
+      sources: [EXPIRING_SOON]
+      today: $today
+    ) {
       id
       itemId
       name
@@ -186,7 +197,7 @@ query GetPantryItemSuggestions($pantryId: ID!, $limit: Int = 20) {
       minQuantity
       restockQuantity
       daysUntilExpiry
-      expiresAt
+      expiresOn
       lastQuantity
       lastUnitId
       frequencyCount
@@ -215,7 +226,7 @@ query GetPantryItemSuggestions($pantryId: ID!, $limit: Int = 20) {
       minQuantity
       restockQuantity
       daysUntilExpiry
-      expiresAt
+      expiresOn
       lastQuantity
       lastUnitId
       frequencyCount
@@ -244,7 +255,7 @@ query GetPantryItemSuggestions($pantryId: ID!, $limit: Int = 20) {
       minQuantity
       restockQuantity
       daysUntilExpiry
-      expiresAt
+      expiresOn
       lastQuantity
       lastUnitId
       frequencyCount
@@ -273,7 +284,7 @@ query GetPantryItemSuggestions($pantryId: ID!, $limit: Int = 20) {
       minQuantity
       restockQuantity
       daysUntilExpiry
-      expiresAt
+      expiresOn
       lastQuantity
       lastUnitId
       frequencyCount
@@ -601,7 +612,7 @@ mutation CreatePantryItem($input: CreatePantryItemInput!) {
         createdAt
         updatedAt
         storageState
-        expiresAt
+        expiresOn
         lowStockAlert
         isLowStock
         minQuantity
@@ -616,7 +627,7 @@ mutation CreatePantryItem($input: CreatePantryItemInput!) {
         }
         remainingPortions
         activeBatchCount
-        earliestBatchExpiration
+        earliestBatchExpiresOn
         item {
           id
           imageUrl

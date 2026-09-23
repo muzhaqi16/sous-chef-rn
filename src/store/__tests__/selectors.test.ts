@@ -1,5 +1,4 @@
 import { renderHook } from '@testing-library/react-native';
-import { UserRole } from '#/graphql/generated/schemaTypes';
 import {
   useUser,
   useSelectedHomeId,
@@ -9,10 +8,7 @@ import {
   useIsHydrated,
   useIsOnline,
   useIsHomeSelectionReady,
-  useIsAdminUser,
   useCanAccessDevTools,
-  useAuthTokens,
-  useAuthActions,
   usePostLoginState,
   usePantryState,
   useShoppingListState,
@@ -171,30 +167,6 @@ describe('atomic hooks', () => {
 });
 
 describe('computed hooks', () => {
-  it('useIsAdminUser returns true for ADMIN role', () => {
-    updateMockState({ user: { role: UserRole.Admin } });
-    const { result } = renderHook(() => useIsAdminUser());
-    expect(result.current).toBe(true);
-  });
-
-  it('useIsAdminUser returns true for SUPER_ADMIN role', () => {
-    updateMockState({ user: { role: UserRole.SuperAdmin } });
-    const { result } = renderHook(() => useIsAdminUser());
-    expect(result.current).toBe(true);
-  });
-
-  it('useIsAdminUser returns false for regular user', () => {
-    updateMockState({ user: { role: UserRole.User } });
-    const { result } = renderHook(() => useIsAdminUser());
-    expect(result.current).toBe(false);
-  });
-
-  it('useIsAdminUser returns false when user is null', () => {
-    updateMockState({ user: null });
-    const { result } = renderHook(() => useIsAdminUser());
-    expect(result.current).toBeFalsy();
-  });
-
   it('useCanAccessDevTools returns true when canAccessDevTools is true', () => {
     updateMockState({ user: { canAccessDevTools: true } });
     const { result } = renderHook(() => useCanAccessDevTools());
@@ -243,23 +215,6 @@ describe('useNavigationState', () => {
 });
 
 describe('grouped hooks', () => {
-  it('useAuthTokens returns grouped auth tokens with loading flags', () => {
-    const { result } = renderHook(() => useAuthTokens());
-    expect(result.current.user).toEqual(mockState.user);
-    expect(result.current.accessToken).toBe('access-token-123');
-    expect(result.current.refreshToken).toBe('refresh-token-456');
-    expect(result.current.isAutoLoggingIn).toBe(false);
-    expect(result.current.isLoggingOut).toBe(false);
-  });
-
-  it('useAuthActions returns all auth action functions', () => {
-    const { result } = renderHook(() => useAuthActions());
-    expect(result.current.setAuth).toBe(mockState.setAuth);
-    expect(result.current.clearAuth).toBe(mockState.clearAuth);
-    expect(result.current.setTokens).toBe(mockState.setTokens);
-    expect(result.current.updateUser).toBe(mockState.updateUser);
-  });
-
   it('usePostLoginState returns grouped post-login state', () => {
     const { result } = renderHook(() => usePostLoginState());
     expect(result.current.navigationState).toBe('main_app');

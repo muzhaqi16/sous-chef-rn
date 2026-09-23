@@ -119,10 +119,10 @@ describe('PermissionService', () => {
       expect(result).toBe('blocked');
     });
 
-    it('maps UNAVAILABLE to blocked', async () => {
+    it('maps UNAVAILABLE to unavailable', async () => {
       mockCheck.mockResolvedValue(RESULTS.UNAVAILABLE);
       const result = await PermissionService.check('camera');
-      expect(result).toBe('blocked');
+      expect(result).toBe('unavailable');
     });
   });
 });

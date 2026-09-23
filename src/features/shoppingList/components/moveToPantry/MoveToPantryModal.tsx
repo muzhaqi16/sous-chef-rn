@@ -8,7 +8,7 @@ import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
-import { Header } from '#components/organisms/Header';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
@@ -40,6 +40,7 @@ import {
   moveToPantrySchema,
   type MoveToPantryFormValues,
 } from './moveToPantryFormConfig';
+import { toDateKey } from '#/utils/dateUtils';
 
 interface MoveToPantryModalProps {
   visible: boolean;
@@ -52,7 +53,7 @@ interface MoveToPantryModalProps {
     actualQuantity: number;
     actualUnitId?: string;
     storageState?: StorageState;
-    expiresAt?: string;
+    expiresOn?: string;
     removeFromList: boolean;
     actualPrice?: number;
     notes?: string;
@@ -290,7 +291,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       actualQuantity: quantityValue,
       actualUnitId: confirmedUnitId ?? undefined,
       storageState,
-      expiresAt: confirmedExpiry?.toISOString(),
+      expiresOn: confirmedExpiry ? toDateKey(confirmedExpiry) : undefined,
       removeFromList,
       actualPrice,
       notes: notes || undefined,
@@ -319,26 +320,16 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       style={styles.scrollView}
     >
       {/* Header */}
-      <Header
+      <SheetHeader
         title={t('moveToPantry.title')}
-        centerTitle
-        leftActions={[
-          {
-            icon: 'close',
-            accessibilityLabel: t('labels.close'),
-            onPress: onClose,
+        onClose={onClose}
+        confirm={{
+          accessibilityLabel: t('moveToPantry.title'),
+          onPress: () => {
+            void handleSubmit(onValid, logValidationErrors)();
           },
-        ]}
-        rightActions={[
-          {
-            icon: 'checkmark',
-            accessibilityLabel: t('moveToPantry.title'),
-            onPress: () => {
-              void handleSubmit(onValid, logValidationErrors)();
-            },
-            disabled: confirmDisabled,
-          },
-        ]}
+          disabled: confirmDisabled,
+        }}
       />
 
       {!!shoppingListItem && (

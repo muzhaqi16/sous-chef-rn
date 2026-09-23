@@ -13,6 +13,7 @@ import { Text } from '#components/atoms/Text';
 import { InlineFolderChooser } from '#features/recipes/components/InlineFolderChooser';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Sheet } from '#components/templates/Sheet';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 export interface ManageRecipeSheetProps {
   visible: boolean;
@@ -158,7 +159,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
           <Pressable
             onPress={handleRemove}
             accessibilityLabel={t('labels.remove')}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={hitSlop.lg}
             disabled={updating}
             style={({ pressed }) => pressed && styles.pressed}
           >
@@ -167,7 +168,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
           <Pressable
             onPress={onClose}
             accessibilityLabel={t('labels.close')}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={hitSlop.lg}
             style={({ pressed }) => pressed && styles.pressed}
           >
             <Icon name="close" size={24} tone="textPrimary" />
@@ -195,7 +196,12 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
             key={star}
             onPress={() => handleRatingPress(star)}
             accessibilityLabel={t('a11y.rateStars', { count: star })}
-            hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
+            hitSlop={{
+              top: hitSlop.lg,
+              bottom: hitSlop.lg,
+              left: hitSlop.sm,
+              right: hitSlop.sm,
+            }}
             disabled={updating}
             style={({ pressed }) => pressed && styles.pressed}
           >

@@ -55,6 +55,7 @@ const mockedSchema = addMocksToSchema({
     Float: () => 1,
     Boolean: () => true,
     DateTime: () => '2026-01-01T00:00:00.000Z',
+    LocalDate: () => '2026-01-01',
     Date: () => '2026-01-01',
     JSON: () => ({}),
     BigInt: () => '1',
@@ -77,7 +78,7 @@ async function runAgainstSchema<T>(
   return result.data as T;
 }
 
-const PANTRY_VARS = { id: 'pantry-1', itemsFirst: 50 };
+const PANTRY_VARS = { id: 'pantry-1', itemsFirst: 50, today: '2026-09-22' };
 const LIST_VARS = { id: 'list-1', first: 25, isPurchased: false };
 
 async function seedPantry() {

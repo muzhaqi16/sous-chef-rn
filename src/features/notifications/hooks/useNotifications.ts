@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { AppState, Platform } from 'react-native';
 import { useTranslation } from '#/i18n';
+import { toDateKey } from '#/utils/dateUtils';
 import { useApolloClient, useSubscription } from '@apollo/client/react';
 import type { ApolloClient } from '@apollo/client';
 import {
@@ -247,7 +248,11 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       appStateRef.current !== 'active' &&
       !isQuietTime()
     ) {
-      const copy = getNotificationCopy(processedNotification, t);
+      const copy = getNotificationCopy(
+        processedNotification,
+        t,
+        toDateKey(new Date()),
+      );
       void showLocalNotification({
         id: processedNotification.id,
         title: copy.title,

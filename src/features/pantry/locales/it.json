@@ -31,7 +31,6 @@
       "opened": "Aperto",
       "wasted": "Sprecato",
       "depleted": "Esaurito",
-      "expired": "Scaduto",
       "depletedOn": "Esaurito il {{date}}",
       "wastedOn": "Sprecato {{date}}",
       "costPerUnit": "{{cost}}/unità",
@@ -145,9 +144,6 @@
     "tutorialAddSubtitle": "Tocca per aggiungere questo articolo alla tua lista della spesa",
     "tutorialAddAllTitle": "Aggiungi tutto in una volta",
     "tutorialAddAllSubtitle": "Aggiungi tutti gli articoli con poche scorte alla lista della spesa in una volta",
-    "expired": "Scaduto",
-    "expiresTomorrow": "Scade domani",
-    "expiresInDays": "Scade tra {{count}} giorni",
     "lowStockTitle": "Articoli con poche scorte",
     "lowStockEmpty": "Tutti gli articoli sono sopra il livello minimo di scorta",
     "remaining": "{{quantity}} {{unit}} rimanenti",
@@ -377,7 +373,6 @@
     "wasted": "Sprecato / Buttato",
     "noAction": "Nessuna azione",
     "expiringSoon": "In scadenza",
-    "alreadyExpired": "Già scaduto",
     "title": "Che fine ha fatto {{itemName}}?",
     "thisItem": "questo articolo",
     "toast": {
@@ -393,18 +388,7 @@
     "all": "Tutti"
   },
   "expiration": {
-    "noExpiryDate": "Nessuna data di scadenza",
-    "expiredDaysAgo_one": "Scaduto {{count}} giorno fa",
-    "expiredDaysAgo_other": "Scaduto {{count}} giorni fa",
-    "expiresToday": "Scade oggi!",
-    "expiresTomorrow": "Scade domani!",
-    "expiresInDays_one": "Scade tra {{count}} giorno",
-    "expiresInDays_other": "Scade tra {{count}} giorni",
-    "daysLeft_one": "{{count}} giorno rimasto",
-    "daysLeft_other": "{{count}} giorni rimasti",
-    "expired": "Scaduto",
-    "daysToExpire_one": "{{count}} giorno alla scadenza",
-    "daysToExpire_other": "{{count}} giorni alla scadenza"
+    "noExpiryDate": "Nessuna data di scadenza"
   },
   "conversionPreview": {
     "approximate": "(circa)"

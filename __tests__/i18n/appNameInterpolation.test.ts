@@ -21,7 +21,7 @@ const flatten = (obj: unknown, prefix = ''): Array<[string, string]> => {
  *
  * This read only `src/i18n/locales/` — about a third of the copy — so it could
  * not see the one file that actually uses the variable outside core
- * (`profile.cameraPermissionBlockedMessage`), nor a literal product name typed
+ * (`auth.loginTitle`), nor a literal product name typed
  * into any feature's copy.
  */
 const load = (locale: string) => mergedLocale(locale);

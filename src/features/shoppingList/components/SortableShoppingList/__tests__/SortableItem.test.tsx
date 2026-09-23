@@ -130,10 +130,6 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#features/shoppingList/constants/touch', () => ({
-  HIT_SLOP: { top: 8, bottom: 8, left: 8, right: 8 },
-}));
-
 jest.mock('#hooks/animations/useSlideAnimation', () => ({
   useSlideAnimation: jest.fn(() => ({
     animatedSlideStyle: {},
@@ -143,12 +139,6 @@ jest.mock('#hooks/animations/useSlideAnimation', () => ({
 
 jest.mock('#constants/animations', () => ({
   staggeredEntryAnimation: { duration: 300 },
-}));
-
-jest.mock('#features/shoppingList/context/StaggeredEntryContext', () => ({
-  useStaggeredEntry: jest.fn(() => ({
-    getEntryDelay: jest.fn(() => 0),
-  })),
 }));
 
 // The row reads its swipe-action factory from this context now: it is a

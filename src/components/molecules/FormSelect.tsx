@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { ViewStyle } from 'react-native';
-import { View, Modal, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
+import { Modal } from '#components/atoms/themedComponents';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';

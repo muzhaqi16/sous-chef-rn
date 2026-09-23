@@ -29,6 +29,7 @@ import {
 } from '#domain/pantryItemDuplicate';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { errorService } from '#/services/errorService';
+import { toDateKey } from '#/utils/dateUtils';
 
 export interface PantryItemSubmissionParams {
   pantryId: string | undefined;
@@ -237,10 +238,8 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
         storageNotes: storageNotes.trim() || undefined,
       },
       purchase,
-      // Full ISO DateTime — the schema scalar is DateTime and every other
-      // write path sends the complete timestamp (a bare date relies on
-      // unspecified server coercion).
-      expiresAt: expirationDate ? expirationDate.toISOString() : undefined,
+      expiresOn: expirationDate ? toDateKey(expirationDate) : undefined,
+      today: toDateKey(new Date()),
       tags: tags
         ? tags
             .split(',')
@@ -291,7 +290,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
         quantity,
         unitId,
         storageState,
-        expiresAt: expirationDate ? expirationDate.toISOString() : null,
+        expiresOn: expirationDate ? toDateKey(expirationDate) : null,
         location:
           !selectedStorageLocationId && storageLocation.trim()
             ? storageLocation.trim()
@@ -358,7 +357,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
                   ...(costValue !== undefined && { costPerUnit: costValue }),
                   ...(storeId && { storeId }),
                   ...(expirationDate && {
-                    expiresAt: expirationDate.toISOString(),
+                    expiresOn: toDateKey(expirationDate),
                   }),
                   // idempotencyKey dedups the restock ledger row on replay.
                   idempotencyKey: generateEntityId(),

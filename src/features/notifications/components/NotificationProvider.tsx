@@ -37,5 +37,3 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
     </>
   );
 };
-
-export default NotificationProvider;

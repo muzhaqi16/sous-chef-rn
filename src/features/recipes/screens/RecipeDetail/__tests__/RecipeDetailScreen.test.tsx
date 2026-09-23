@@ -118,10 +118,6 @@ jest.mock('#components/atoms/SousChefLoader', () => ({
   SousChefLoader: () => 'SousChefLoader',
 }));
 
-jest.mock('#components/atoms/BackButton', () => ({
-  BackButton: () => 'BackButton',
-}));
-
 jest.mock('#features/recipes/components/FolderPicker', () => ({
   FolderPicker: () => null,
 }));
@@ -132,7 +128,7 @@ jest.mock('#features/shoppingList/ui/ShoppingListPickerSheet', () => ({
   ShoppingListPickerSheet: () => null,
 }));
 
-jest.mock('#components/organisms/MarkCookedModal', () => ({
+jest.mock('#features/recipes/ui/MarkCookedModal', () => ({
   MarkCookedModal: () => null,
 }));
 

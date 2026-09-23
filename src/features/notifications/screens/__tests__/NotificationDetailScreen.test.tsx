@@ -90,7 +90,7 @@ describe('NotificationDetailScreen', () => {
     );
     render(<NotificationDetailScreen route={makeRoute({ notification })} />);
     expect(screen.getByText('Expiry reminder')).toBeTruthy();
-    expect(screen.getByText('Milk expires tomorrow')).toBeTruthy();
+    expect(screen.getByText('Milk: Expires tomorrow')).toBeTruthy();
     expect(screen.queryByText(server.title)).toBeNull();
     expect(screen.queryByText(server.message)).toBeNull();
   });

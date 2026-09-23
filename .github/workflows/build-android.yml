@@ -231,16 +231,16 @@ jobs:
         if: env.IS_PLAYSTORE == 'true'
         run: |
           cd android
-          ./gradlew bundleRelease
+          ./gradlew bundleRelease --stacktrace
 
       - name: Build APK
         if: env.IS_PLAYSTORE != 'true'
         run: |
           cd android
           if [ "${{ env.BUILD_ENV }}" = "stg" ]; then
-            ./gradlew assembleStaging
+            ./gradlew assembleStaging --stacktrace
           else
-            ./gradlew assembleRelease
+            ./gradlew assembleRelease --stacktrace
           fi
 
       # Both run AFTER the build, not before it. `metro.config.js` calls
@@ -527,16 +527,16 @@ jobs:
         if: env.IS_PLAYSTORE == 'true'
         run: |
           cd android
-          ./gradlew bundleRelease
+          ./gradlew bundleRelease --stacktrace
 
       - name: Build APK
         if: env.IS_PLAYSTORE != 'true'
         run: |
           cd android
           if [ "${{ env.BUILD_ENV }}" = "stg" ]; then
-            ./gradlew assembleStaging
+            ./gradlew assembleStaging --stacktrace
           else
-            ./gradlew assembleRelease
+            ./gradlew assembleRelease --stacktrace
           fi
 
       # Both run AFTER the build, not before it. `metro.config.js` calls

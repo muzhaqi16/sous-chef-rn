@@ -1,5 +1,3 @@
-import { jwtDecode } from 'jwt-decode';
-
 // Mock jwt-decode
 jest.mock('jwt-decode', () => ({
   jwtDecode: jest.fn(),
@@ -43,7 +41,6 @@ jest.mock('../../client', () => ({
 import type { ApolloLink } from '@apollo/client/link';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import {
-  isRefreshTokenValid,
   getRefreshState,
   clearRefreshState,
   attemptTokenRefresh,
@@ -59,7 +56,6 @@ import { classifyError } from '#/apollo/offlineQueue/queueErrorPolicy';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';
 
-const mockedJwtDecode = jwtDecode as jest.MockedFunction<typeof jwtDecode>;
 const mockedClient = client as jest.Mocked<typeof client>;
 const mockedUseStore = useStore as jest.Mocked<typeof useStore>;
 const mockedIsNetworkError = isNetworkError as jest.MockedFunction<
@@ -76,57 +72,6 @@ describe('refreshToken', () => {
     // The client is injected at runtime (registerApolloClient) rather than
     // imported, so the refresh mutation reads it from the registered reference.
     registerApolloClient(mockedClient);
-  });
-
-  describe('isRefreshTokenValid', () => {
-    it('returns true when refresh token is valid and not expired', () => {
-      const futureExp = Math.floor(Date.now() / 1000) + 86400; // 24 hours
-      mockedJwtDecode.mockReturnValue({ exp: futureExp });
-
-      expect(isRefreshTokenValid('valid-refresh-token')).toBe(true);
-    });
-
-    it('returns false when refresh token is expired', () => {
-      const pastExp = Math.floor(Date.now() / 1000) - 3600; // 1 hour ago
-      mockedJwtDecode.mockReturnValue({ exp: pastExp });
-
-      expect(isRefreshTokenValid('expired-refresh-token')).toBe(false);
-    });
-
-    it('returns false when refresh token is null', () => {
-      expect(isRefreshTokenValid(null)).toBe(false);
-    });
-
-    it('returns false when refresh token is empty string', () => {
-      // jwtDecode should throw for empty string
-      mockedJwtDecode.mockImplementation(() => {
-        throw new Error('Invalid token specified');
-      });
-
-      expect(isRefreshTokenValid('')).toBe(false);
-    });
-
-    it('returns false when jwt decode throws', () => {
-      mockedJwtDecode.mockImplementation(() => {
-        throw new Error('Malformed token');
-      });
-
-      expect(isRefreshTokenValid('bad-token')).toBe(false);
-    });
-
-    it('returns true when token expires exactly 1 second from now', () => {
-      const exp = Math.floor(Date.now() / 1000) + 1;
-      mockedJwtDecode.mockReturnValue({ exp });
-
-      expect(isRefreshTokenValid('almost-expired')).toBe(true);
-    });
-
-    it('returns false when token just expired (1 second ago)', () => {
-      const exp = Math.floor(Date.now() / 1000) - 1;
-      mockedJwtDecode.mockReturnValue({ exp });
-
-      expect(isRefreshTokenValid('just-expired')).toBe(false);
-    });
   });
 
   describe('getRefreshState', () => {

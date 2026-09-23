@@ -28,7 +28,8 @@ export interface PantryItemFixture {
   itemName?: string;
   quantity?: number;
   storageState?: string;
-  expiresAt?: string | null;
+  expiresOn?: string | null;
+  earliestBatchExpiresOn?: string | null;
   createdAt?: string;
   brandName?: string | null;
   categoryName?: string | null;
@@ -80,11 +81,11 @@ export function pantryItemData(
       quantity: fixture.quantity ?? 2,
       costCurrency: null,
       version: 1,
-      updatedAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01',
       storageState:
         (fixture.storageState as StorageState | undefined) ??
         StorageState.Refrigerated,
-      expiresAt: fixture.expiresAt ?? null,
+      expiresOn: fixture.expiresOn ?? null,
       lowStockAlert: false,
       isLowStock: false,
       minQuantity: fixture.minQuantity ?? null,
@@ -95,7 +96,7 @@ export function pantryItemData(
       portionUnit: null,
       remainingPortions: null,
       activeBatchCount: 0,
-      earliestBatchExpiration: null,
+      earliestBatchExpiresOn: fixture.earliestBatchExpiresOn ?? null,
       item: {
         __typename: 'Item',
         id: 'item1',
@@ -146,7 +147,7 @@ export function pantryItemData(
         : null,
       tags,
       storageNotes: fixture.storageNotes ?? null,
-      createdAt: fixture.createdAt ?? '2026-01-01T00:00:00Z',
+      createdAt: fixture.createdAt ?? '2026-01-01',
       restockQuantity: fixture.restockQuantity ?? null,
       store: null,
       condition:

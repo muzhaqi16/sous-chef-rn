@@ -38,6 +38,7 @@ import {
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 import { logger } from '#/utils/environment';
+import { toDateKey } from '#/utils/dateUtils';
 import { useSubscriptionTransportRecovery } from '#hooks/subscriptions/useSubscriptionTransportRecovery';
 
 type PantryEventsPayload = PantryEventsSubscription['pantryEvents'];
@@ -95,7 +96,7 @@ function refreshPantrySummary(
     void fetchEventEntity(
       client,
       PantrySummaryForEventDocument,
-      { id: pantryId },
+      { id: pantryId, today: toDateKey(new Date()) },
       'Pantry',
     );
   }, SUMMARY_REFRESH_DELAY_MS);
@@ -191,7 +192,7 @@ export function usePantrySubscriptions(userId?: string) {
     linkExpirationData(notification.genericNotificationId, {
       expirationNotificationId: notification.id,
       expirationAction: notification.actionTaken ?? undefined,
-      daysUntilExpiry: notification.daysUntilExpiry,
+      expiresOn: notification.expiresOn,
       pantryItemName: notification.pantryItem.item.name,
       pantryItemImageUrl: notification.pantryItem.item.imageUrl,
     });
@@ -242,7 +243,7 @@ export function usePantrySubscriptions(userId?: string) {
           void handleItemChanged(payload, client, selectedPantryId);
           break;
 
-        // An alert is a change to the item's `isLowStock` / `expiresAt` /
+        // An alert is a change to the item's `isLowStock` / `expiresOn` /
         // batch counts, which the event doesn't carry.
         case PantrySubtype.LowStockAlert:
         case PantrySubtype.ExpirationAlert:

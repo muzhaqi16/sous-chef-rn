@@ -20,6 +20,7 @@ import { catalogTestIDs } from '#features/catalog/testIDs';
 // imports the field builders below).
 import type { AddItemFormMode } from './AddItemForm';
 import type { Translate } from '#/i18n/types';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 /** `edit` proposes changes for review; `directEdit` writes them through. Both
  *  render the same form, so most field logic branches on this rather than mode. */
@@ -74,7 +75,7 @@ export const ScanUpcButton: React.FC<{ onPress: () => void }> = ({
   return (
     <AppPressable
       onPress={onPress}
-      hitSlop={8}
+      hitSlop={hitSlop.md}
       accessibilityRole="button"
       accessibilityLabel={t('addItemForm.scanUpcA11y')}
       style={scanButtonStyles.button}
@@ -92,9 +93,6 @@ const scanButtonStyles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));
 

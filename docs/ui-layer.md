@@ -27,13 +27,35 @@ optional:
 ## Screen scaffold and sheet shell
 
 - **`Screen`** (`src/components/templates/Screen.tsx`) takes `header`
-  (`standard | tab | collapsing | none`, plus title, actions, back, close and the
-  offline pill), `scroll` (`none | scroll | form | list`), `gutter`, `refresh`
-  and `state`. It never applies the top inset: the navigator does, and
-  `__tests__/navigation/screenTopInset.test.tsx` renders the composition to
-  prove the inset lands once. A bare `<SafeAreaView>` with no `edges` insets all
-  four sides, and is the usual way a second inset happens. The rest of the
-  scaffold is convention.
+  (`standard | tab | none`, plus title, actions, back, close and the
+  offline pill), `scroll` (`none | scroll | form | list`), `gutter`, `refresh`,
+  `state`, `footer`, and — in `scroll` mode — `onScroll` (an animated scroll
+  handler) and `scrollTestID`. It never applies the top inset: the navigator
+  does, and `__tests__/navigation/screenTopInset.test.tsx` renders the
+  composition to prove the inset lands once. A bare `<SafeAreaView>` with no
+  `edges` insets all four sides, and is the usual way a second inset happens.
+- **One geometry.** A header bar's first and last glyphs sit on the page gutter:
+  `commonStyles.barInset` pads by `pageGutter − (touchTarget.md − icon.md) / 2`,
+  so a 24pt icon centred in its 44pt target starts where content does. `Header`
+  and `CollapsingHeroDetail`'s bar both use it and are both 60pt tall
+  (`__tests__/ui/headerGeometry.test.tsx`). Standard titles are always centred.
+- **One gutter.** `gutter="page"` (the default) is the only way a screen states
+  its horizontal inset; `gutter="none"` is for a `scroll="list"` screen whose
+  list owns its content inset. Content below the scaffold carries no edge inset
+  of its own (`__tests__/ui/pageGutterHasOneAuthor.test.ts`).
+- **Trailing space.** `scroll | form | none` pad by the bottom inset plus
+  `layout.pageBottom`; a `footer` takes the inset instead. A `list` child reads
+  the same value from `useScreenListInset()`.
+- **Back or close.** A pushed screen shows back; one presented from the bottom
+  (modal or `slide_from_bottom` card) shows close in the same slot.
+- **Presets.** `SubScreen` is a pushed screen whose back returns to the previous
+  screen; `FormScreen` a full-screen form (close + save); `DetailTemplate` a
+  screen of card sections; `PaginatedHistoryScreen` a `SubScreen` over one
+  paginated list; `AuthWrapper` and `OnBoardingWrapper` the auth and onboarding
+  shells. A pushed screen whose back is plain `goBack` is `SubScreen`, never
+  `Screen` with a hand-built `back`. A form sheet's header is `SheetHeader`
+  (close, centred title, primary confirm); only templates render `Header`.
+  `__tests__/ui/screenUsesTheScaffold.test.ts` holds all of this.
 - **`Sheet`** (`src/components/templates/Sheet.tsx`) takes
   `view | form | action | list`. `form` supplies both the keyboard offset and
   the input context, so inputs inside resolve to gorhom's `BottomSheetTextInput`.
@@ -56,7 +78,7 @@ they read it.
 - **Geometry** is `commonStyles.rowWrapper` (the row's place in the list),
   `rowSurface` (its card) and `rowContent` (the slot layout inside it), in
   `src/styles/commonStyles.ts`. Their steps are the named `theme.layout.row*`
-  tokens (`rowInset`, `rowSlotGap`, `rowTextGap`, `rowGap`, `rowGutter`), so
+  tokens (`rowInset`, `rowSlotGap`, `rowTextGap`, `rowGap`), so
   density scales them. Held in four separate copies, the steps drift into three
   paddings, three row gaps and two radii; one definition cannot drift.
 - **Text** is `rowType` (`src/theme/foundations/type.ts`): `title` for the row's
@@ -110,8 +132,10 @@ they read it.
   - `TrendLineChart` and `SpotlightCoachMark`, which pass colours into Skia
     draw calls;
   - `BreakdownPieChart`, which hands colours to the chart library as data;
-  - `RecipeMain` and `SortableShoppingList`, which put theme colours into data
-    structures.
+  - `RecipeMain`, `RecipeSearchInput` and `SortableShoppingList`, which put
+    theme colours into data structures.
+  - `EdgeFade`, which passes colours into SVG gradient stops;
+  - `SearchBar`, which offsets a measured rect by `theme.spacing.sm` in JS.
 - **Plugin order is Unistyles → `unistyles-scope-crawl` → React Compiler**
   (`babel.config.js`): the documented order with a crawl between. Unistyles'
   `useVariants` rewrite declares a shadowing binding without `scope.crawl()`;
@@ -121,6 +145,17 @@ they read it.
   zero bailouts, and silently wrong. The measured three-way table is in
   [the useVariants scope re-crawl entry](verified-library-behaviour.md#unistyles-usevariants-rewrite-needs-a-scope-re-crawl-before-the-compiler);
   `scripts/check-unistyles-variant-staleness.mjs` is the ongoing cover.
+- **A host that mounts its children later than they were created wraps them in
+  `CurrentThemeScope`.** A `styles.x` read is a snapshot, and the compiler caches
+  an element against its other dependencies, so a parent that outlives a theme
+  change can hand a host elements carrying the old theme's colours. Unistyles
+  updates MOUNTED views natively, but corrects a snapshot at mount only inside a
+  scoped theme (`HybridShadowRegistry::link`), so the stale colours stick until
+  the next theme change. The sheet wrapper (`#hooks/useStandardBottomSheet`,
+  which `ActionTray` uses too), the `Modal` re-export in `themedComponents`
+  (RN's is banned) and `CollapsibleSection` carry it; a new host that gates
+  `children` on its own open state adds it. A component rendering its own JSX
+  needs nothing: the condition it mounts on is a dependency of that JSX.
 
 ## Typography roles
 
@@ -229,6 +264,11 @@ they read it.
   `PlainScrollRefreshControl`. The `withUnistyles` wrapper is transparent to
   either, since the gesture crosses by reference
   ([RNGH's scroll gesture reaches only RNGH's RefreshControl](verified-library-behaviour.md#rnghs-scroll-gesture-reaches-only-rnghs-refreshcontrol)).
+- **A tab root's chrome sits above its list, never inside it.** The spinner
+  drops from the scroll view's top edge and everything inside moves with the
+  pull, so the header, search and filter tabs stay out of `ListHeaderComponent`;
+  on every tab the spinner appears below still chrome. Pantry's test holds it
+  (`keeps the header, search and tabs outside the refreshable list`).
 - **The rule is about the host, not about FlashList.** A standalone RNGH scroller
   offering pull-to-refresh renders `SwipeAwareScrollComponent` too, never a
   hand-rolled RNGH `<ScrollView>`. The mechanism:
@@ -334,8 +374,8 @@ they read it.
 - **The cover exists from the list's first commit.** A cover whose mount waits on
   a post-commit state update (an `onLayout` measurement, a deferred flag) is
   starved behind the row-mount storm it exists to hide. That is why the pantry's
-  cover is an absolute flap inside `ListHeaderComponent`
-  (`PantryListSkeletonOverlay.tsx`).
+  cover renders in the same pass as its list, as an absolute earlier sibling
+  the cells paint over (`PantryListSkeletonOverlay.tsx`).
 - **A settled empty list releases on `rowCount: 0`, not on a commit.** For data
   that goes empty to empty, FlashList commits once. That commit lands while the
   skeletons are still up, and the placeholder guard discards it — so a list

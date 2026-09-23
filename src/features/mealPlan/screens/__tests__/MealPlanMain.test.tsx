@@ -217,7 +217,7 @@ jest.mock('#features/mealPlan/components/DuplicatePlanSheet', () => ({
 jest.mock('#features/mealPlan/components/NutritionSummaryCard', () => ({
   NutritionSummaryCard: () => null,
 }));
-jest.mock('#components/organisms/MarkCookedModal', () => ({
+jest.mock('#features/recipes/ui/MarkCookedModal', () => ({
   MarkCookedModal: () => null,
 }));
 jest.mock(

@@ -171,7 +171,7 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   shareCodeSection: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },

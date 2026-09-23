@@ -162,9 +162,4 @@ const styles = StyleSheet.create(theme => ({
   dividerGap: {
     marginBottom: theme.spacing.lg,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));
-
-export default StorageLocationSheet;

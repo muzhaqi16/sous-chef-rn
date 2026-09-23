@@ -6,8 +6,6 @@
 import { gql, type ApolloCache } from '@apollo/client';
 import { List_ListDetailFragmentDoc } from './list.generated';
 import { NEUTRAL_SHOPPING_LIST_DETAIL } from './shoppingListDetailNeutral.generated';
-import { settledStatus } from '#/apollo/utils/settleMutation';
-import { errorService } from '#/services/errorService';
 import {
   type AddToConnectionOptions,
   createAddToQueryConnectionUpdater,
@@ -329,28 +327,4 @@ export function readShoppingListSnapshot(
     fragment: OptimisticShoppingListFragment,
     fragmentName: '_OptimisticShoppingList',
   });
-}
-
-/**
- * Reconcile a local-first list create: the keep/revert rule of
- * {@link reconcileShoppingCreate} — `'failed'` discards, `'applied'`/`'queued'`
- * keep, a queued create replaying later keyed by the same `id`.
- */
-export function reconcileShoppingListCreate(
-  cache: ApolloCache,
-  optimisticId: string,
-  result: { data?: unknown; error?: unknown } | null | undefined,
-): 'kept' | 'reverted' {
-  const failed = settledStatus(result ?? undefined) === 'failed';
-  if (failed) {
-    try {
-      revertOptimisticShoppingList(cache, optimisticId);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Revert rejected Shopping List',
-      });
-    }
-    return 'reverted';
-  }
-  return 'kept';
 }

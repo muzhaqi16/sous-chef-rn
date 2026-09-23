@@ -72,10 +72,10 @@ jest.mock('#/styles/commonStyles', () => ({
   },
 }));
 
-jest.mock('#components/templates/ProfileScreenWrapper', () => {
+jest.mock('#components/templates/SubScreen', () => {
   const { View, Text } = require('react-native');
   return {
-    ProfileScreenWrapper: ({
+    SubScreen: ({
       children,
       title,
       testID,

@@ -339,7 +339,4 @@ const styles = StyleSheet.create(theme => ({
   sheetOptionText: {
     flex: 1,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

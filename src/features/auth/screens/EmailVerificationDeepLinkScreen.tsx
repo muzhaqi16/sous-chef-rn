@@ -183,7 +183,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   }, [verificationResult, userId, replaceWithLogin, dismiss]);
 
   return (
-    <Screen header={{ close: dismiss }} scroll="list" gutter="none">
+    <Screen header={{ close: dismiss }} scroll="none">
       <View style={styles.content}>
         {!!isVerifying && (
           <>
@@ -273,15 +273,11 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: theme.spacing.xl,
+    paddingVertical: theme.spacing.xl,
   },
   iconContainer: {
     marginBottom: theme.spacing.xl,

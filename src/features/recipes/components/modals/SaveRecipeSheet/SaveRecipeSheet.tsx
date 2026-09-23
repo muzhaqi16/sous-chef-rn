@@ -13,6 +13,7 @@ import { Text } from '#components/atoms/Text';
 import { InlineFolderChooser } from '#features/recipes/components/InlineFolderChooser';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Sheet } from '#components/templates/Sheet';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 export interface SaveRecipeSheetProps {
   visible: boolean;
@@ -112,7 +113,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
           <Pressable
             onPress={handleSave}
             accessibilityLabel={t('labels.save')}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={hitSlop.lg}
             disabled={saving}
             style={({ pressed }) => pressed && styles.pressed}
           >
@@ -125,7 +126,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
           <Pressable
             onPress={onClose}
             accessibilityLabel={t('labels.close')}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={hitSlop.lg}
             style={({ pressed }) => pressed && styles.pressed}
           >
             <Icon name="close" size={24} tone="textPrimary" />

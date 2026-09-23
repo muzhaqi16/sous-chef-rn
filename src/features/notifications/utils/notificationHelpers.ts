@@ -4,9 +4,13 @@ import {
   NotificationType,
 } from '#/graphql/generated/schemaTypes';
 import type { Icon } from '#utils/iconUtils';
-import { safeParseDate } from '#utils/dateUtils';
+import { isDateKey, safeParseDate } from '#utils/dateUtils';
 import type { NotificationPayload } from '#features/notifications/types';
 import type { Translate } from '#/i18n/types';
+import {
+  daysUntilExpiry as daysUntilExpiryOn,
+  expiryLabel,
+} from '#domain/expiry';
 import type { TranslationKey } from '#/i18n';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { formatMonthDay } from '#/utils/formatters/date';
@@ -100,9 +104,17 @@ export interface ExpiryReminderFields {
 
 export const readExpiryReminderFields = (
   payload: NotificationPayload,
+  today: string,
 ): ExpiryReminderFields | null => {
-  const { daysUntilExpiry, pantryItemId } = payload;
+  const { pantryItemId } = payload;
   const itemName = readText(payload, 'itemName');
+  const expiresOn = readText(payload, 'expiresOn');
+  // The date is counted on this phone, so an old reminder in the feed does not
+  // keep the day count it was sent with. Older payloads carry only the count.
+  const daysUntilExpiry: unknown =
+    expiresOn && isDateKey(expiresOn)
+      ? daysUntilExpiryOn(expiresOn, today)
+      : payload.daysUntilExpiry;
   if (itemName === null || typeof daysUntilExpiry !== 'number') {
     return null;
   }
@@ -143,21 +155,15 @@ const buildExpiryName = (
 const buildExpiryReminderMessage = (
   payload: NotificationPayload,
   t: Translate,
+  today: string,
 ): string | null => {
-  const fields = readExpiryReminderFields(payload);
+  const fields = readExpiryReminderFields(payload, today);
   if (!fields) {
     return null;
   }
-  const name = buildExpiryName(fields, t);
-  if (fields.daysUntilExpiry <= 0) {
-    return t('notifications.expiry.expiresToday', { name });
-  }
-  if (fields.daysUntilExpiry === 1) {
-    return t('notifications.expiry.expiresTomorrow', { name });
-  }
-  return t('notifications.expiry.expiresInDays', {
-    name,
-    days: fields.daysUntilExpiry,
+  return t('notifications.expiry.reminder', {
+    name: buildExpiryName(fields, t),
+    status: expiryLabel(fields.daysUntilExpiry, t),
   });
 };
 
@@ -370,6 +376,7 @@ const buildActorListMessage = (
 export const getNotificationCopy = (
   notification: NotificationCopySource,
   t: Translate,
+  today: string,
 ): NotificationCopy => {
   const { type, payload } = notification;
   // An admin's announcement is content a person wrote, like a list's name —
@@ -451,7 +458,7 @@ export const getNotificationCopy = (
     case NotificationType.LowStock:
       return { title, message: buildLowStockMessage(payload, t) };
     case NotificationType.ExpiryReminder: {
-      const single = buildExpiryReminderMessage(payload, t);
+      const single = buildExpiryReminderMessage(payload, t, today);
       if (single) return { title, message: single };
       const digest = buildDigestMessage(payload, t);
       return digest

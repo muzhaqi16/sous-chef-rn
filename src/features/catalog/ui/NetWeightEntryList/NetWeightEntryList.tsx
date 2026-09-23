@@ -171,7 +171,4 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     paddingTop: theme.spacing.xl,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

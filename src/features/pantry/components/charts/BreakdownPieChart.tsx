@@ -157,5 +157,8 @@ const styles = StyleSheet.create(theme => ({
   },
 }));
 
-/** Internals under test — see the palette suite in this file's tests. */
+/**
+ * Internals under test — see the palette suite in this file's tests.
+ * @internal Test seam.
+ */
 export const __testables = { brandFirstColors };

@@ -8,6 +8,7 @@ import { Text } from '#components/atoms/Text';
 import { formatDayOfMonth, formatWeekdayShort } from '#/utils/formatters/date';
 import { toDateKey } from '#/utils/dateUtils';
 import { useTranslation } from '#/i18n';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 interface WeekStripProps {
   weekDays: Date[];
@@ -48,7 +49,7 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
         onPress={canGoPrev ? onPrevWeek : undefined}
         accessibilityLabel={t('a11y.previousWeek')}
         style={[styles.arrowButton, !canGoPrev && styles.arrowButtonDisabled]}
-        hitSlop={8}
+        hitSlop={hitSlop.md}
       >
         <Icon
           name="chevron-back"
@@ -113,7 +114,7 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
         onPress={canGoNext ? onNextWeek : undefined}
         accessibilityLabel={t('a11y.nextWeek')}
         style={[styles.arrowButton, !canGoNext && styles.arrowButtonDisabled]}
-        hitSlop={8}
+        hitSlop={hitSlop.md}
       >
         <Icon
           name="chevron-forward"

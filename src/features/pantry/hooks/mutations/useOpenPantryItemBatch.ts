@@ -12,6 +12,7 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useTranslation } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { toDateKey } from '#/utils/dateUtils';
 import { errorService } from '#/services/errorService';
 
 interface UseOpenPantryItemBatchOptions {
@@ -90,7 +91,13 @@ export function useOpenPantryItemBatch({
     const settled = await settleMutation(
       () =>
         openMutation({
-          variables: { input: { batchId, idempotencyKey: generateEntityId() } },
+          variables: {
+            input: {
+              batchId,
+              today: toDateKey(new Date()),
+              idempotencyKey: generateEntityId(),
+            },
+          },
           context: { localFirst: true },
         }),
       {

@@ -5,7 +5,7 @@
 # unchanged), matching the canonical restockPantryItem. Either way the entity
 # needs full display-cell hydration so subsequent reads (PantryItemCard,
 # PantryItemDetail) find the fields they expect, and the restock-mutated
-# fields (quantity, activeBatchCount, earliestBatchExpiration, version) must be
+# fields (quantity, activeBatchCount, earliestBatchExpiresOn, version) must be
 # selected so Apollo normalizes them onto the existing cached entity.
 fragment useMoveToPantry_pantryItem on PantryItem {
   id
@@ -28,7 +28,7 @@ fragment useMoveToPantry_pantryItem on PantryItem {
   createdAt
   updatedAt
   storageState
-  expiresAt
+  expiresOn
   lowStockAlert
   isLowStock
   minQuantity
@@ -43,7 +43,7 @@ fragment useMoveToPantry_pantryItem on PantryItem {
   }
   remainingPortions
   activeBatchCount
-  earliestBatchExpiration
+  earliestBatchExpiresOn
   item {
     id
     imageUrl

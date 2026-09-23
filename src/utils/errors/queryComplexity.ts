@@ -3,8 +3,6 @@
  * per page.
  */
 
-import { logger } from '#/utils/environment';
-
 // PAGINATION_LIMIT_EXCEEDED is a TopLevelErrorCode member, repeated literally
 // because a TS string enum rejects a computed initializer. QUERY_TOO_COMPLEX is
 // in neither generated enum — the API's registry has no such code.
@@ -149,40 +147,4 @@ export function describeQueryComplexity(error: unknown): string {
     default:
       return 'Query complexity limit exceeded. Please simplify your request.';
   }
-}
-
-/**
- * @returns true when the error was a complexity error, in which case
- *   `onRetryWithReducedComplexity` has already been invoked.
- */
-export function handleQueryComplexityError(
-  error: unknown,
-  onRetryWithReducedComplexity?: () => void | Promise<void>,
-): boolean {
-  if (!isQueryComplexityError(error)) {
-    return false;
-  }
-
-  const details = getQueryComplexityDetails(error);
-  logger.warn('⚠️ Query complexity error detected:', {
-    description: describeQueryComplexity(error),
-    details,
-    error,
-  });
-
-  // If pagination limit exceeded, can automatically retry with reduced pagination
-  if (
-    details?.errorType === QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED &&
-    onRetryWithReducedComplexity
-  ) {
-    logger.debug('🔄 Retrying with reduced pagination...');
-    const retry = onRetryWithReducedComplexity();
-    if (retry instanceof Promise) {
-      retry.catch(retryError =>
-        logger.warn('Retry with reduced pagination failed', retryError),
-      );
-    }
-  }
-
-  return true;
 }

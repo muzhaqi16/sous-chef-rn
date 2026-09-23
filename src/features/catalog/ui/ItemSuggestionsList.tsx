@@ -302,7 +302,4 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     gap: theme.spacing.sm,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

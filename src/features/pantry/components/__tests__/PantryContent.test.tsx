@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { makeCache } from '#/apollo/cache';
-import { screen, act, fireEvent } from '@testing-library/react-native';
+import { screen, act, fireEvent, within } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryContent } from '../PantryContent';
 import type { PantryItem } from '#/graphql/generated/schemaTypes';
@@ -16,6 +16,7 @@ import {
   PantryItemCard_PantryItemFragmentDoc,
   type PantryItemCard_PantryItemFragment,
 } from '../PantryItemCard.generated';
+import { toDateKey } from '#/utils/dateUtils';
 
 // PantryContent now reads `useApolloClient` for the image-preload effect and
 // each `PantryItemCard` cell subscribes to its own entity via `useFragment`.
@@ -60,10 +61,10 @@ function createMockPantryItem(
     id: 'mock-id',
     itemName: 'Mock Item',
     quantity: 1,
-    expiresAt: null,
-    createdAt: '2024-01-01T00:00:00Z',
+    expiresOn: null,
+    createdAt: '2024-01-01',
     updatedAt: null,
-    addedAt: '2024-01-01T00:00:00Z',
+    addedAt: '2024-01-01',
     addedBy: null,
     lastModifiedBy: null,
     storageState: 'AMBIENT',
@@ -82,7 +83,7 @@ function createMockPantryItem(
       averageShelfLife: null,
       defaultUnit: null,
       displayUnit: null,
-      createdAt: '2024-01-01T00:00:00Z',
+      createdAt: '2024-01-01',
       updatedAt: null,
       isVerified: false,
       verifiedAt: null,
@@ -379,6 +380,20 @@ describe('PantryContent', () => {
     expect(screen.getByTestId('pantry-search-input')).toBeTruthy();
   });
 
+  // Pull-to-refresh drops its spinner from the list's top edge, so whatever the
+  // list contains moves with the pull. Every tab keeps its chrome still.
+  it('keeps the header, search and tabs outside the refreshable list', () => {
+    render(<PantryContent {...defaultProps} onRefresh={jest.fn()} />);
+    const list = within(screen.getByTestId('pantry-list'));
+
+    expect(screen.getByText('John')).toBeTruthy();
+    expect(list.queryByText('John')).toBeNull();
+    expect(screen.getByTestId('pantry-search-input')).toBeTruthy();
+    expect(list.queryByTestId('pantry-search-input')).toBeNull();
+    expect(screen.getByTestId('filter-tabs')).toBeTruthy();
+    expect(list.queryByTestId('filter-tabs')).toBeNull();
+  });
+
   it('renders filter tabs', () => {
     render(<PantryContent {...defaultProps} />);
     expect(screen.getByTestId('filter-tabs')).toBeTruthy();
@@ -480,7 +495,7 @@ describe('PantryContent', () => {
             id: '1',
             itemName: 'X',
             quantity: 1,
-            expiresAt: null,
+            expiresOn: null,
           }),
         ]}
       />,
@@ -521,11 +536,10 @@ describe('PantryContent', () => {
       expect(screen.queryByText('Your pantry is empty')).toBeNull();
     });
 
-    // The overlay is an absolute flap at `top: '100%'` of the header and the
-    // footer starts below it, so anything the footer draws while the flap is up
-    // shows through at a second origin — offset shimmer rows, or the empty
-    // state reading through as "empty" over a loading list.
-    it('renders nothing beneath the overlay while it is up', () => {
+    // The overlay sits under the list, so anything the footer draws while it
+    // is up paints over it — offset shimmer rows, or the empty state reading as
+    // "empty" over a loading list.
+    it('renders no footer over the overlay while it is up', () => {
       render(
         <PantryContent
           {...defaultProps}
@@ -612,8 +626,8 @@ describe('PantryContent', () => {
         />,
       );
       // There is deliberately no local render window: FlashList mounts by
-      // `drawDistance`, not by `data.length`. data = sentinel + all 30 items.
-      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(31);
+      // `drawDistance`, not by `data.length`.
+      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(30);
     });
 
     it('forwards end-reached to server pagination', () => {
@@ -631,7 +645,7 @@ describe('PantryContent', () => {
         screen.getByTestId('pantry-list').props.onEndReached?.();
       });
       expect(onEndReached).toHaveBeenCalledTimes(1);
-      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(31);
+      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(30);
     });
 
     it('keeps onEndReached identity stable across re-renders', () => {
@@ -704,8 +718,7 @@ describe('PantryContent', () => {
 
       mockOverlayPresent = false;
       rerender(<PantryContent {...defaultProps} items={threeItems} />);
-      // sentinel + 3 rows
-      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(4);
+      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(3);
     });
   });
 
@@ -792,13 +805,13 @@ describe('PantryContent', () => {
   });
 
   it('renders items with expiration dates', () => {
-    const futureDate = new Date(Date.now() + 2 * 86400000).toISOString();
+    const futureDate = toDateKey(new Date(Date.now() + 2 * 86400000));
     const items = [
       createMockPantryItem({
         id: '1',
         itemName: 'Yogurt',
         quantity: 1,
-        expiresAt: futureDate,
+        expiresOn: futureDate,
       }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);
@@ -806,13 +819,13 @@ describe('PantryContent', () => {
   });
 
   it('renders items with expired dates', () => {
-    const pastDate = new Date(Date.now() - 2 * 86400000).toISOString();
+    const pastDate = toDateKey(new Date(Date.now() - 2 * 86400000));
     const items = [
       createMockPantryItem({
         id: '1',
         itemName: 'Old Milk',
         quantity: 1,
-        expiresAt: pastDate,
+        expiresOn: pastDate,
       }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);
@@ -944,8 +957,8 @@ describe('PantryContent', () => {
           locationCounts={{ all: 2, fridge: 0, freezer: 0, pantry: 0 }}
         />,
       );
-      // The chrome (header/search/tabs) renders as the list header and stays
-      // visible; the overlay flap fills the body below the sticky tabs.
+      // The chrome (header/search/tabs) stays visible above the list; the
+      // overlay covers only the list area below it.
       expect(screen.getByTestId('pantry-list-skeleton-overlay')).toBeTruthy();
       expect(screen.getByTestId('pantry-search-input')).toBeTruthy();
     });

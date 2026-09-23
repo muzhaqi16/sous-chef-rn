@@ -66,7 +66,7 @@ export interface DisplayNotification {
    */
   expirationNotificationId?: string | null;
   expirationAction?: string | null;
-  daysUntilExpiry?: number | null;
+  expiresOn?: string | null;
   pantryItemName?: string | null;
   pantryItemImageUrl?: string | null;
 }

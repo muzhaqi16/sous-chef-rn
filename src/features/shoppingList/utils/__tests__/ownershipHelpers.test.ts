@@ -4,7 +4,6 @@ import {
   isShoppingListOwner,
   getShoppingListRole,
   getHomeOwnerInfo,
-  isHomeOwner,
   getInitials,
   formatRoleDisplay,
 } from '#features/shoppingList/utils/ownershipHelpers';
@@ -188,23 +187,6 @@ describe('ownershipHelpers', () => {
         members: [{ userId: 'u1', role: MembershipRole.Owner, user: null }],
       };
       expect(getHomeOwnerInfo(home)).toBeNull();
-    });
-  });
-
-  describe('isHomeOwner', () => {
-    it('returns true when user is the owner', () => {
-      const home = { members: [makeMember('u1', MembershipRole.Owner)] };
-      expect(isHomeOwner(home, 'u1')).toBe(true);
-    });
-
-    it('returns false when user is not the owner', () => {
-      const home = { members: [makeMember('u1', MembershipRole.Member)] };
-      expect(isHomeOwner(home, 'u1')).toBe(false);
-    });
-
-    it('returns false without currentUserId', () => {
-      const home = { members: [makeMember('u1', MembershipRole.Owner)] };
-      expect(isHomeOwner(home)).toBe(false);
     });
   });
 

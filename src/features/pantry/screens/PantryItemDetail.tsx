@@ -54,6 +54,8 @@ import { useRecipeSuggestionsForItem } from '#features/pantry/hooks/useRecipeSug
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
 import { commonStyles } from '#/styles/commonStyles';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
+import { daysUntilExpiry } from '#domain/expiry';
+import { useToday } from '#hooks/useToday';
 
 /**
  * Extracted so `styles.useVariants` is called once per instance.
@@ -91,6 +93,7 @@ export const PantryItemDetail: React.FC<
   } = useAppNavigation();
   const selectedShoppingListId = useSelectedShoppingListId();
   const selectedPantryId = useSelectedPantryId();
+  const today = useToday();
   const [refreshing, setRefreshing] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
@@ -148,7 +151,7 @@ export const PantryItemDetail: React.FC<
   };
 
   const imageUrl = resolveImageUrl(item, 'large');
-  const expiryInfo = getExpiryInfo(item?.expiresAt);
+  const expiryInfo = getExpiryInfo(item?.expiresOn, today);
   const daysInPantry = getDaysInPantry(item?.createdAt);
   const storageStateDisplay = formatStorageState(item?.storageState, t);
   const brandName = item?.brand?.name ?? null;
@@ -207,13 +210,19 @@ export const PantryItemDetail: React.FC<
     notation: resolveQuantityNotation(null, item.unit.displayAsFraction),
   })} ${getUnitDisplayText(item.unit)}`;
 
+  // The EXPIRED flag can land a day late east of UTC, so the date decides too.
+  // The batches' date, not the item's: an edit moves only the item's, and the
+  // server discards only expired batches.
   const hasExpiredBatches =
-    (item.condition === ItemCondition.Expired && item.quantity > 0) ||
+    (item.quantity > 0 &&
+      (item.condition === ItemCondition.Expired ||
+        (!!item.earliestBatchExpiresOn &&
+          daysUntilExpiry(item.earliestBatchExpiresOn, today) < 0))) ||
     batches.some(
       batch =>
         batch.status === BatchStatus.Active &&
-        !!batch.expiresAt &&
-        new Date(batch.expiresAt) < new Date(),
+        !!batch.expiresOn &&
+        daysUntilExpiry(batch.expiresOn, today) < 0,
     );
 
   const discardActions: HeaderAction[] =
@@ -491,7 +500,6 @@ const styles = StyleSheet.create(theme => ({
   categoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
     gap: theme.spacing.xs,
   },

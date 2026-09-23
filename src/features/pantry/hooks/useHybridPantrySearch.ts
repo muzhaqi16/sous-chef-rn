@@ -11,8 +11,9 @@ import {
   type UseHybridSearchReturn,
 } from '#features/pantry/hooks/useHybridSearch';
 import type { PantryListItemNode } from '#features/pantry/hooks/usePantryQuery';
+import { useToday } from '#hooks/useToday';
 
-// Connection nodes carry direct fields (id, itemName, expiresAt, …) plus an
+// Connection nodes carry direct fields (id, itemName, expiresOn, …) plus an
 // opaque `PantryItemCard_pantryItem` fragment ref. The leaf cell unmasks the
 // ref via `useFragment`; the hook layer only needs the direct fields for
 // local search / sort.
@@ -52,6 +53,7 @@ export function useHybridPantrySearch({
   loading,
   isOnline,
 }: UseHybridPantrySearchParams): UseHybridSearchReturn<PantryItem> {
+  const today = useToday();
   const config: UseHybridSearchConfig<GetPantryQuery, PantryItem> = {
     items,
     totalCount,
@@ -70,10 +72,12 @@ export function useHybridPantrySearch({
         itemsFilter: { ...(locationQueryFilter ?? {}), search },
         itemsOrderBy: orderBy,
         storageLocationsFirst: 0,
+        // The search result writes `stats` too, and they are unkeyed.
+        today,
       };
     },
     // Each node already carries the fields needed for local search + sort
-    // (itemName, expiresAt, quantity, …) plus the masked PantryItemCard
+    // (itemName, expiresOn, quantity, …) plus the masked PantryItemCard
     // fragment ref. Pass through without unmasking.
     extractItems: data => extractNodes(data.pantry?.itemsConnection),
     searchPredicate: pantryItemSearch,

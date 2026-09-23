@@ -91,13 +91,4 @@ export const isTransportFailure = jest.fn((error: unknown): boolean => {
   return !code || TRANSPORT_CODES.has(code);
 });
 
-export const useErrorService = jest.fn(() => ({
-  ...generated.useErrorService(),
-  getUserFriendlyMessage: errorService.getUserFriendlyMessage,
-  hasUserFriendlyMessage: errorService.hasUserFriendlyMessage,
-  getErrorCategory: errorService.getErrorCategory,
-  shouldRetry: errorService.shouldRetry,
-  isAuthError: errorService.isAuthError,
-}));
-
 export const ErrorService = generated.ErrorService;

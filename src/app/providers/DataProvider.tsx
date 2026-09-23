@@ -57,5 +57,3 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   // Return children immediately - preloading happens in background
   return <>{children}</>;
 };
-
-export default DataProvider;

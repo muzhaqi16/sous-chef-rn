@@ -12,7 +12,7 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
   updatedAt
   storageState
   condition
-  expiresAt
+  expiresOn
   lowStockAlert
   isLowStock
   minQuantity
@@ -20,7 +20,7 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
   netWeight
   remainingNetWeight
   activeBatchCount
-  earliestBatchExpiration
+  earliestBatchExpiresOn
   restockQuantity
   storageNotes
   tags

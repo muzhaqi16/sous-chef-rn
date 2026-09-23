@@ -17,7 +17,7 @@ fragment queueManager_syncPantryItem on PantryItem {
   createdAt
   updatedAt
   storageState
-  expiresAt
+  expiresOn
   lowStockAlert
   isLowStock
   minQuantity
@@ -32,7 +32,7 @@ fragment queueManager_syncPantryItem on PantryItem {
   }
   remainingPortions
   activeBatchCount
-  earliestBatchExpiration
+  earliestBatchExpiresOn
   item {
     id
     imageUrl

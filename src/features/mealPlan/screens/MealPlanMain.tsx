@@ -20,7 +20,7 @@ import { TemplateSheets } from '#features/mealPlan/components/TemplateSheets';
 import { GenerateShoppingListSheet } from '#features/mealPlan/components/GenerateShoppingListSheet';
 import { MealPlanSettingsSheet } from '#features/mealPlan/components/MealPlanSettingsSheet';
 import { DuplicatePlanSheet } from '#features/mealPlan/components/DuplicatePlanSheet';
-import { MarkCookedModal } from '#components/organisms/MarkCookedModal';
+import { MarkCookedModal } from '#features/recipes/ui/MarkCookedModal';
 import { NutritionSummaryCard } from '#features/mealPlan/components/NutritionSummaryCard';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
@@ -59,6 +59,7 @@ import { toDateKey } from '#/utils/dateUtils';
 import { Screen, type ScreenHeaderConfig } from '#components/templates/Screen';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 import { toMealDateTime } from '#/utils/dateUtils';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 /** The chrome a plan-less Meal Plan shows, before the DeferredScreen gate and
  *  again while the plan list is still arriving. */
@@ -482,7 +483,7 @@ const MealPlanMainInner: React.FC = () => {
             {permissions.canGenerateShoppingList ? (
               <Pressable
                 onPress={() => setShoppingListSheetVisible(true)}
-                hitSlop={8}
+                hitSlop={hitSlop.md}
                 style={styles.headerActionButton}
                 accessibilityLabel={t('mealPlanMain.generateShoppingListLabel')}
               >
@@ -492,7 +493,7 @@ const MealPlanMainInner: React.FC = () => {
             {permissions.canSaveAsTemplate ? (
               <Pressable
                 onPress={handleSaveAsTemplate}
-                hitSlop={8}
+                hitSlop={hitSlop.md}
                 style={styles.headerActionButton}
                 accessibilityLabel={t('mealPlanMain.saveAsTemplateLabel')}
               >
@@ -501,7 +502,7 @@ const MealPlanMainInner: React.FC = () => {
             ) : null}
             <Pressable
               onPress={() => setSettingsVisible(true)}
-              hitSlop={8}
+              hitSlop={hitSlop.md}
               style={styles.headerActionButton}
               accessibilityLabel={t('mealPlanMain.planSettingsLabel')}
             >

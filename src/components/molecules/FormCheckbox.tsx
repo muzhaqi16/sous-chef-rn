@@ -88,7 +88,4 @@ const styles = StyleSheet.create(theme => ({
   errorText: {
     marginTop: theme.spacing.xs,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

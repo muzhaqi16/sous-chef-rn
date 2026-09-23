@@ -77,9 +77,7 @@
     "acceptInvitation": "Prano ftesën",
     "recently": "Kohët e fundit",
     "expiry": {
-      "expiresToday": "{{name}} skadon sot",
-      "expiresTomorrow": "{{name}} skadon nesër",
-      "expiresInDays": "{{name}} skadon për {{days}} ditë",
+      "reminder": "{{name}}: {{status}}",
       "qualifierOpened": "{{name}} (hapur më {{date}})",
       "qualifierAdded": "{{name}} (shtuar më {{date}})"
     },

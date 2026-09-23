@@ -118,7 +118,4 @@ const styles = StyleSheet.create(theme => ({
     borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

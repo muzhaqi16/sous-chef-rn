@@ -1,6 +1,6 @@
 import { knownEntry } from '#/utils/closedEnum';
 import React, { useState } from 'react';
-import { View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
@@ -14,7 +14,7 @@ import { useDeleteAccount } from '#features/profile/hooks/useDeleteAccount';
 import { authService } from '#/services/authService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import { Screen } from '#components/templates/Screen';
+import { SubScreen } from '#components/templates/SubScreen';
 
 interface BlockerCopy {
   icon: IconName;
@@ -139,10 +139,7 @@ export const DeleteAccountScreen: React.FC = () => {
   );
 
   const renderBlockedState = () => (
-    <ScrollView
-      style={styles.content}
-      contentContainerStyle={styles.contentContainer}
-    >
+    <View style={styles.contentContainer}>
       <View style={styles.blockedWarningContainer}>
         <Icon name="alert-circle-outline" size={48} tone="warning" />
         <Text role="subheading" style={styles.blockedWarningTitle}>
@@ -202,111 +199,103 @@ export const DeleteAccountScreen: React.FC = () => {
           {t('labels.goBack')}
         </Text>
       </AppPressable>
-    </ScrollView>
+    </View>
   );
 
   const renderDeleteForm = () => (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.content}
-    >
-      <ScrollView
-        contentContainerStyle={styles.contentContainer}
-        keyboardShouldPersistTaps="handled"
+    <View style={styles.contentContainer}>
+      <View style={styles.warningContainer}>
+        <Icon name="warning-outline" size={48} tone="error" />
+        <Text role="subheading" tone="danger" style={styles.warningTitle}>
+          {t('account.deleteWarningTitle')}
+        </Text>
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeader style={styles.sectionTitleSpacing}>
+          {t('account.deleteWhatWillBeDeleted')}
+        </SectionHeader>
+        <View style={styles.bulletPoint}>
+          <Icon name="close-circle-outline" size={20} tone="error" />
+          <Text role="body" style={styles.bulletText}>
+            {t('account.deleteWipeProfile')}
+          </Text>
+        </View>
+        <View style={styles.bulletPoint}>
+          <Icon name="close-circle-outline" size={20} tone="error" />
+          <Text role="body" style={styles.bulletText}>
+            {t('account.deleteWipePantry')}
+          </Text>
+        </View>
+        <View style={styles.bulletPoint}>
+          <Icon name="close-circle-outline" size={20} tone="error" />
+          <Text role="body" style={styles.bulletText}>
+            {t('account.deleteWipeShoppingLists')}
+          </Text>
+        </View>
+        <View style={styles.bulletPoint}>
+          <Icon name="close-circle-outline" size={20} tone="error" />
+          <Text role="body" style={styles.bulletText}>
+            {t('account.deleteWipePreferences')}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeader style={styles.sectionTitleSpacing}>
+          {t('account.deleteBeforeYouProceed')}
+        </SectionHeader>
+        <Text role="body" style={styles.text}>
+          • {t('account.deleteProceedIrreversible')}
+        </Text>
+        <Text role="body" style={styles.text}>
+          • {t('account.deleteProceedLogout')}
+        </Text>
+        <Text role="body" style={styles.text}>
+          • {t('account.deleteProceedNoRecovery')}
+        </Text>
+      </View>
+
+      <View style={styles.confirmationSection}>
+        <Text role="body" style={styles.confirmationLabel}>
+          {t('account.deleteTypeConfirm')}
+        </Text>
+        <BaseInput
+          value={confirmText}
+          onChangeText={setConfirmText}
+          placeholder={t('account.deleteTypePlaceholder')}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          editable={!isDeleting}
+        />
+      </View>
+
+      <AppPressable
+        style={[
+          styles.deleteButton,
+          (confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting) &&
+            styles.deleteButtonDisabled,
+        ]}
+        onPress={handleDeleteAccount}
+        disabled={confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting}
       >
-        <View style={styles.warningContainer}>
-          <Icon name="warning-outline" size={48} tone="error" />
-          <Text role="subheading" tone="danger" style={styles.warningTitle}>
-            {t('account.deleteWarningTitle')}
-          </Text>
-        </View>
+        <Text role="bodyStrong" style={styles.deleteButtonText}>
+          {isDeleting
+            ? t('account.deleteInProgress')
+            : t('account.deleteForever')}
+        </Text>
+      </AppPressable>
 
-        <View style={styles.section}>
-          <SectionHeader style={styles.sectionTitleSpacing}>
-            {t('account.deleteWhatWillBeDeleted')}
-          </SectionHeader>
-          <View style={styles.bulletPoint}>
-            <Icon name="close-circle-outline" size={20} tone="error" />
-            <Text role="body" style={styles.bulletText}>
-              {t('account.deleteWipeProfile')}
-            </Text>
-          </View>
-          <View style={styles.bulletPoint}>
-            <Icon name="close-circle-outline" size={20} tone="error" />
-            <Text role="body" style={styles.bulletText}>
-              {t('account.deleteWipePantry')}
-            </Text>
-          </View>
-          <View style={styles.bulletPoint}>
-            <Icon name="close-circle-outline" size={20} tone="error" />
-            <Text role="body" style={styles.bulletText}>
-              {t('account.deleteWipeShoppingLists')}
-            </Text>
-          </View>
-          <View style={styles.bulletPoint}>
-            <Icon name="close-circle-outline" size={20} tone="error" />
-            <Text role="body" style={styles.bulletText}>
-              {t('account.deleteWipePreferences')}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <SectionHeader style={styles.sectionTitleSpacing}>
-            {t('account.deleteBeforeYouProceed')}
-          </SectionHeader>
-          <Text role="body" style={styles.text}>
-            • {t('account.deleteProceedIrreversible')}
-          </Text>
-          <Text role="body" style={styles.text}>
-            • {t('account.deleteProceedLogout')}
-          </Text>
-          <Text role="body" style={styles.text}>
-            • {t('account.deleteProceedNoRecovery')}
-          </Text>
-        </View>
-
-        <View style={styles.confirmationSection}>
-          <Text role="body" style={styles.confirmationLabel}>
-            {t('account.deleteTypeConfirm')}
-          </Text>
-          <BaseInput
-            value={confirmText}
-            onChangeText={setConfirmText}
-            placeholder={t('account.deleteTypePlaceholder')}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            editable={!isDeleting}
-          />
-        </View>
-
-        <AppPressable
-          style={[
-            styles.deleteButton,
-            (confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting) &&
-              styles.deleteButtonDisabled,
-          ]}
-          onPress={handleDeleteAccount}
-          disabled={confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting}
-        >
-          <Text role="bodyStrong" style={styles.deleteButtonText}>
-            {isDeleting
-              ? t('account.deleteInProgress')
-              : t('account.deleteForever')}
-          </Text>
-        </AppPressable>
-
-        <AppPressable
-          style={styles.cancelButton}
-          onPress={goBack}
-          disabled={isDeleting}
-        >
-          <Text role="bodyStrong" style={styles.cancelButtonText}>
-            {t('labels.cancel')}
-          </Text>
-        </AppPressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <AppPressable
+        style={styles.cancelButton}
+        onPress={goBack}
+        disabled={isDeleting}
+      >
+        <Text role="bodyStrong" style={styles.cancelButtonText}>
+          {t('labels.cancel')}
+        </Text>
+      </AppPressable>
+    </View>
   );
 
   const renderContent = () => {
@@ -326,31 +315,15 @@ export const DeleteAccountScreen: React.FC = () => {
   };
 
   return (
-    <Screen
-      header={{
-        title: t('account.deleteTitle'),
-        back: goBack,
-        centerTitle: true,
-      }}
-      scroll="list"
-      gutter="none"
-    >
+    <SubScreen title={t('account.deleteTitle')} scroll="form">
       {renderContent()}
-    </Screen>
+    </SubScreen>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  content: {
-    flex: 1,
-  },
   contentContainer: {
-    padding: theme.spacing.lg,
-    paddingBottom: theme.spacing['4xl'],
+    paddingTop: theme.spacing.lg,
   },
   centerContainer: {
     flex: 1,

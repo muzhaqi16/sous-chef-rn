@@ -157,7 +157,6 @@ const styles = StyleSheet.create(theme => ({
     overflow: 'hidden',
   },
   homeCardWrapper: {
-    marginHorizontal: theme.spacing.md,
     marginVertical: theme.spacing.sm,
     // borderRadius needed for shadow to follow card shape
     borderRadius: theme.radii.md,

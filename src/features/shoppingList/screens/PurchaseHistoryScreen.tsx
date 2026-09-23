@@ -342,7 +342,4 @@ const styles = StyleSheet.create(theme => ({
   purchaseDetailValue: {
     flex: 1,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

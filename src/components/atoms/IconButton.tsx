@@ -99,5 +99,3 @@ const styles = StyleSheet.create(theme => ({
     opacity: theme.opacity.pressed,
   },
 }));
-
-export default IconButton;

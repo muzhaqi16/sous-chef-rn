@@ -1,6 +1,6 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useEffect, useRef, useState, useImperativeHandle } from 'react';
-import { View, type LayoutChangeEvent } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
@@ -8,7 +8,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   Pressable,
-  refreshSpinnerOffset,
   ThemedRefreshControl,
 } from '#components/atoms/themedComponents';
 import { getScrollClearancePadding } from '#constants/layout';
@@ -19,6 +18,7 @@ import {
   PREFERENCE_DEFAULTS,
 } from '#store/slices/preferenceTypes';
 import { SearchBar } from '#components/molecules/SearchBar';
+import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
 import { PantryHeader } from './PantryHeader';
 import { PantrySortModal } from './PantrySortModal';
 import {
@@ -34,12 +34,7 @@ import { useOverlayBackdropPresence } from '#components/providers/OverlayBackdro
 import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
-import {
-  FLASHLIST_DEFAULTS,
-  STICKY_HEADER_SENTINEL,
-  STICKY_HEADER_INDICES,
-  STICKY_HEADER_CONFIG,
-} from '#utils/flashListDefaults';
+import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 
 import {
   DRAW_DISTANCE,
@@ -47,19 +42,17 @@ import {
   getDefaultPantryTabs,
 } from './pantryDisplay/constants';
 import {
-  renderPantryListItem,
-  getPantryListItemType,
+  renderItem,
   pantryListKeyExtractor,
-  type PantryListItem,
   type PantryListNode,
 } from './pantryDisplay/renderItem';
-import { PantryStickyTabsProvider } from './pantryDisplay/PantryStickyTabs';
 import { PantryEmptyState } from './PantryEmptyState';
 import { PantryListSkeletonOverlay } from './PantryListSkeletonOverlay';
 import type {
   PantryContentProps,
   PantryContentRef,
 } from './pantryDisplay/types';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 // Survives unmount/remount (stack navigation) so a return visit skips the
 // skeletons; resets on app restart.
@@ -131,7 +124,7 @@ export const PantryContent = React.forwardRef<
     useCommitTracking('PantryContent');
     const { t } = useTranslation();
     const { bottom: safeBottom } = useSafeAreaInsets();
-    const flashListRef = useRef<FlashListRef<PantryListItem>>(null);
+    const flashListRef = useRef<FlashListRef<PantryListNode>>(null);
     const settingsIconRef = useRef<View>(null);
 
     useImperativeHandle(ref, () => ({
@@ -206,13 +199,6 @@ export const PantryContent = React.forwardRef<
     // local render window either; DRAW_DISTANCE alone bounds the mounted set.
     const sortedItems = useServerSort ? items : sortItems(items);
 
-    // Measured, not estimated: the alert bar comes and goes.
-    const [chromeHeight, setChromeHeight] = useState(0);
-    const handleChromeLayout = (event: LayoutChangeEvent) => {
-      const next = Math.round(event.nativeEvent.layout.height);
-      setChromeHeight(prev => (prev === next ? prev : next));
-    };
-
     // A tab switch whose new page is still fetching (server mode only). Cleared
     // only on a true→false `fetching` transition, never when fetching was
     // already false at press time — the Apollo refetch is one render behind.
@@ -239,7 +225,7 @@ export const PantryContent = React.forwardRef<
 
     // A sort change rebuilds the row order, so a kept offset would land on an
     // arbitrary slice. Tab switches intentionally keep their position instead
-    // (rows swap in place under the sticky tabs).
+    // (rows swap in place under the tabs).
     useEffect(() => {
       const handle = requestAnimationFrame(() => {
         flashListRef.current?.scrollToOffset({ offset: 0, animated: false });
@@ -257,13 +243,10 @@ export const PantryContent = React.forwardRef<
     const showSkeletons =
       initialSkeletons || switchSkeletons || searchSkeletons;
 
-    // While skeletons show, hand the list only the sticky tabs: chrome and tabs
-    // stay visible, and stale rows from a previous tab can't flash through.
+    // While skeletons show, hand the list no rows, so stale rows from a
+    // previous tab can't flash through.
     const bodyItems = showSkeletons ? [] : sortedItems;
-    const nextListData: PantryListItem[] = [
-      STICKY_HEADER_SENTINEL,
-      ...bodyItems,
-    ];
+    const nextListData = bodyItems;
     const isEmpty = bodyItems.length === 0;
 
     // Hold the ROWS still while a sheet covers them: every pantry write flips
@@ -289,10 +272,7 @@ export const PantryContent = React.forwardRef<
       componentName: 'PantryContent',
       reportInterval: 10000,
       hasRealContent: !initialSkeletons,
-      // The BODY rows, not `listData.length`: the sticky sentinel is always in
-      // that array, so a settled-empty tab would never reach the `rowCount === 0`
-      // release and its cover would wait for a commit that has no rows to make.
-      rowCount: listData.length - 1,
+      rowCount: listData.length,
     });
     // FlashList re-renders EVERY mounted cell when this prop's identity changes,
     // so it must never change: the live handler (which flips to `undefined` as
@@ -312,15 +292,15 @@ export const PantryContent = React.forwardRef<
     );
 
     // The blank-window cover: FlashList holds every cell invisible until its
-    // first layout commits while the header chrome paints immediately, so the
-    // cover mounts inside ListHeaderComponent from the FIRST commit and
-    // releases on `hasContentLayout`, which `rowCount` resolves for an empty
-    // tab. No `useMinimumVisible` — the exit fade is the anti-flash smoothing.
+    // first layout commits while the chrome paints immediately, so the cover
+    // renders beside the list from its FIRST commit and releases on
+    // `hasContentLayout`, which `rowCount` resolves for an empty tab. No
+    // `useMinimumVisible` — the exit fade is the anti-flash smoothing.
     const overlayVisible = initialSkeletons || !perfCallbacks.hasContentLayout;
 
-    // The overlay covers the whole list area, so the footer renders NOTHING
-    // beneath it: its own skeleton rows start from a different origin (two
-    // offset sets of shimmer) and its empty state shows through the flap.
+    // The footer renders NOTHING while the overlay is up: it would paint over
+    // the overlay, its skeleton rows as a second offset set of shimmer and its
+    // empty state as "empty" over a loading list.
     const footerVisible = !overlayVisible;
 
     useDataReferenceTracker(
@@ -366,30 +346,102 @@ export const PantryContent = React.forwardRef<
           { paddingBottom: getScrollClearancePadding(safeBottom) },
         ];
 
-    // Read from context, not from `renderItem`'s closure — see
-    // `PantryStickyTabs` for why that matters to every other cell.
-    const stickyTabs = {
-      tabs: tabsWithAddButton,
-      activeTabId: locationFilter,
-      onTabChange: handleLocationFilterChange,
-      counts: locationCounts,
-    };
+    const settingsIcon = (
+      <View
+        ref={settingsIconRef}
+        collapsable={false}
+        onLayout={() => {
+          if (onSettingsIconLayout) {
+            requestAnimationFrame(() => {
+              settingsIconRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+                if (w > 0 && h > 0) {
+                  onSettingsIconLayout({
+                    x: pageX,
+                    y: pageY,
+                    width: w,
+                    height: h,
+                  });
+                }
+              });
+            });
+          }
+        }}
+      >
+        <Pressable
+          onPress={onSettingsPress}
+          hitSlop={hitSlop.md}
+          accessibilityRole="button"
+          accessibilityLabel={t('labels.pantrySettings')}
+        >
+          <Icon name="settings-outline" size={18} tone="textTertiary" />
+        </Pressable>
+      </View>
+    );
 
     return (
       <PantryActionsProvider actions={itemActions}>
-        <PantryStickyTabsProvider value={stickyTabs}>
-          <View style={styles.container}>
-            <FlashList<PantryListItem>
+        <View style={styles.container}>
+          {/* Above the list, not inside it: the spinner drops from the list's
+              top, as on every other tab. */}
+          <View style={styles.chrome}>
+            <View style={styles.header}>
+              <PantryHeader
+                userName={userName}
+                householdName={householdName}
+                avatarUrl={avatarUrl}
+                notificationCount={notificationCount}
+                onAvatarPress={onAvatarPress}
+                onHomePress={onHomePress}
+                onNotificationPress={onNotificationPress}
+                onHomeBadgeLayout={onHomeBadgeLayout}
+              />
+            </View>
+            <SearchBar
+              value={searchQuery}
+              onChangeText={onSearchChange}
+              placeholder={t('pantryScreen.searchPlaceholder')}
+              showSearchIcon={true}
+              testID={pantryTestIDs.searchInput}
+              innerRightIcon={settingsIcon}
+            />
+            {!!stats && (
+              <PantryAlertBar
+                stats={stats}
+                onAnalyticsPress={onAnalyticsPress}
+                onLowStockNavigate={onLowStockNavigate}
+                onExpiringNavigate={onExpiringNavigate}
+                onExpiredNavigate={onExpiredNavigate}
+                sortLabel={`${t('pantryScreen.sort')} ${
+                  sortDirection === PantrySortDirection.ASC ? '↑' : '↓'
+                }`}
+                onSortPress={openSortModal}
+              />
+            )}
+            <View style={styles.tabs}>
+              <FilterTabs<LocationFilter>
+                tabs={tabsWithAddButton}
+                activeTabId={locationFilter}
+                onTabChange={handleLocationFilterChange}
+                counts={locationCounts}
+                testIDPrefix={pantryTestIDs.locationTabPrefix}
+              />
+            </View>
+          </View>
+
+          <View style={styles.listHost}>
+            {/* An earlier sibling with no zIndex, so cells paint over it the
+                instant they turn opaque. */}
+            {overlayVisible ? (
+              <PantryListSkeletonOverlay style={styles.overlayGutter} />
+            ) : null}
+            <FlashList<PantryListNode>
               renderScrollComponent={SwipeAwareScrollComponent}
               ref={flashListRef}
               CellRendererComponent={perfCallbacks.CellRendererComponent}
               testID={pantryTestIDs.list}
               data={listData}
-              renderItem={renderPantryListItem}
+              renderItem={renderItem}
               keyExtractor={pantryListKeyExtractor}
-              getItemType={getPantryListItemType}
-              stickyHeaderIndices={STICKY_HEADER_INDICES}
-              stickyHeaderConfig={STICKY_HEADER_CONFIG}
               drawDistance={DRAW_DISTANCE}
               maxItemsInRecyclePool={15}
               extraData={extraData}
@@ -406,91 +458,8 @@ export const PantryContent = React.forwardRef<
                     testID={pantryTestIDs.refreshControl}
                     refreshing={refreshing}
                     onRefresh={onRefresh}
-                    // This screen's chrome scrolls INSIDE the list, so the
-                    // spinner has to clear it as well as its own diameter.
-                    progressViewOffset={refreshSpinnerOffset(chromeHeight)}
                   />
                 ) : undefined
-              }
-              ListHeaderComponent={
-                // The positioned parent the skeleton flap anchors to
-                // (`top: '100%'`, flush below the chrome).
-                <View onLayout={handleChromeLayout}>
-                  <View style={styles.header}>
-                    <PantryHeader
-                      userName={userName}
-                      householdName={householdName}
-                      avatarUrl={avatarUrl}
-                      notificationCount={notificationCount}
-                      onAvatarPress={onAvatarPress}
-                      onHomePress={onHomePress}
-                      onNotificationPress={onNotificationPress}
-                      onHomeBadgeLayout={onHomeBadgeLayout}
-                    />
-                  </View>
-                  <View style={styles.searchContainer}>
-                    <SearchBar
-                      value={searchQuery}
-                      onChangeText={onSearchChange}
-                      placeholder={t('pantryScreen.searchPlaceholder')}
-                      showSearchIcon={true}
-                      testID={pantryTestIDs.searchInput}
-                      innerRightIcon={
-                        <View
-                          ref={settingsIconRef}
-                          collapsable={false}
-                          onLayout={() => {
-                            if (onSettingsIconLayout) {
-                              requestAnimationFrame(() => {
-                                settingsIconRef.current?.measure(
-                                  (_x, _y, w, h, pageX, pageY) => {
-                                    if (w > 0 && h > 0) {
-                                      onSettingsIconLayout({
-                                        x: pageX,
-                                        y: pageY,
-                                        width: w,
-                                        height: h,
-                                      });
-                                    }
-                                  },
-                                );
-                              });
-                            }
-                          }}
-                        >
-                          <Pressable
-                            onPress={onSettingsPress}
-                            hitSlop={8}
-                            accessibilityRole="button"
-                            accessibilityLabel={t('labels.pantrySettings')}
-                          >
-                            <Icon
-                              name="settings-outline"
-                              size={18}
-                              tone="textTertiary"
-                            />
-                          </Pressable>
-                        </View>
-                      }
-                    />
-                  </View>
-                  {!!stats && (
-                    <View style={styles.statsContainer}>
-                      <PantryAlertBar
-                        stats={stats}
-                        onAnalyticsPress={onAnalyticsPress}
-                        onLowStockNavigate={onLowStockNavigate}
-                        onExpiringNavigate={onExpiringNavigate}
-                        onExpiredNavigate={onExpiredNavigate}
-                        sortLabel={`${t('pantryScreen.sort')} ${
-                          sortDirection === PantrySortDirection.ASC ? '↑' : '↓'
-                        }`}
-                        onSortPress={openSortModal}
-                      />
-                    </View>
-                  )}
-                  {overlayVisible ? <PantryListSkeletonOverlay /> : null}
-                </View>
               }
               ListFooterComponent={
                 !footerVisible ? null : isEmpty ? (
@@ -529,18 +498,16 @@ export const PantryContent = React.forwardRef<
               onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
               maintainVisibleContentPosition={MVCP_DISABLED}
             />
-
-            {!!sortModalVisible && (
-              <PantrySortModal
-                visible={sortModalVisible}
-                sortOption={sortOption}
-                sortDirection={sortDirection}
-                onSelect={handleSortSelect}
-                onClose={closeSortModal}
-              />
-            )}
           </View>
-        </PantryStickyTabsProvider>
+
+          <PantrySortModal
+            visible={sortModalVisible}
+            sortOption={sortOption}
+            sortDirection={sortDirection}
+            onSelect={handleSortSelect}
+            onClose={closeSortModal}
+          />
+        </View>
       </PantryActionsProvider>
     );
   },
@@ -551,30 +518,29 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  chrome: {
+    paddingHorizontal: theme.layout.pageGutter,
+  },
   header: {
-    backgroundColor: theme.colors.background,
     // The lead-in `Screen`'s `tab` chrome gives every other tab root.
     paddingTop: theme.spacing.sm,
     paddingBottom: theme.spacing.sm,
   },
-  // `stickyHeaderActive` applies while pinned, so the row keeps an opaque
-  // background and rows scroll cleanly underneath.
-  stickySection: {
-    backgroundColor: theme.colors.background,
-    zIndex: theme.zIndex.sticky,
+  tabs: {
     paddingBottom: theme.spacing.sm,
   },
-  stickyHeaderActive: {
-    backgroundColor: theme.colors.background,
+  listHost: {
+    flex: 1,
   },
-  searchContainer: {},
-  statsContainer: {},
+  overlayGutter: {
+    paddingHorizontal: theme.layout.pageGutter,
+  },
   listContent: {
     paddingHorizontal: theme.layout.pageGutter,
   },
   listContentEmpty: {
     // The same gutter as the populated list: this container owns it, so zeroing
-    // it here puts the header and the empty state flush against the screen edge.
+    // it here puts the empty state flush against the screen edge.
     paddingHorizontal: theme.layout.pageGutter,
     flexGrow: 1,
   },

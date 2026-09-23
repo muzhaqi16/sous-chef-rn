@@ -68,7 +68,7 @@ jest.mock('#features/notifications/components/ExpirationActionSheet', () => ({
         {JSON.stringify({
           id: notification.id,
           expirationNotificationId: notification.expirationNotificationId,
-          daysUntilExpiry: notification.daysUntilExpiry,
+          expiresOn: notification.expiresOn,
           pantryItemName: notification.pantryItemName,
         })}
       </Text>
@@ -155,7 +155,7 @@ describe('NotificationActionHandler — showExpirationActionSheet', () => {
                     __typename: 'ExpirationNotification',
                     id: 'exp-resolved',
                     genericNotificationId: 'n1',
-                    daysUntilExpiry: 1,
+                    expiresOn: '2026-09-23',
                     pantryItem: {
                       __typename: 'PantryItem',
                       id: 'item-1',
@@ -184,7 +184,7 @@ describe('NotificationActionHandler — showExpirationActionSheet', () => {
     expect(fired).toContainEqual({ pantryItemId: 'item-1' });
     expect(mockLinkExpirationData).toHaveBeenCalledWith('n1', {
       expirationNotificationId: 'exp-resolved',
-      daysUntilExpiry: 1,
+      expiresOn: '2026-09-23',
       pantryItemName: 'Milk',
       pantryItemImageUrl: null,
     });
@@ -193,7 +193,7 @@ describe('NotificationActionHandler — showExpirationActionSheet', () => {
     ).toMatchObject({
       id: 'n1',
       expirationNotificationId: 'exp-resolved',
-      daysUntilExpiry: 1,
+      expiresOn: '2026-09-23',
       pantryItemName: 'Milk',
     });
   });

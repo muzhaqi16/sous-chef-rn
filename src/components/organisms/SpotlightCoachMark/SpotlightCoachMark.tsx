@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { View, Modal, useWindowDimensions } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import {
   useSharedValue,
   useDerivedValue,
@@ -16,7 +16,7 @@ import {
   GestureDetector,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
-import { Pressable } from '#components/atoms/themedComponents';
+import { Pressable, Modal } from '#components/atoms/themedComponents';
 import {
   Canvas,
   Group,
@@ -42,6 +42,7 @@ import { SpotlightTooltip } from './SpotlightTooltip';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
 import { motion } from '#/theme/foundations/motion';
 import { kitTestIDs } from '#components/testIDs';
+import { hitSlop } from '#/theme/foundations/sizes';
 
 export interface TargetRect {
   x: number;
@@ -403,7 +404,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
               ? { right: undefined, left: theme.spacing.lg }
               : undefined,
           ]}
-          hitSlop={12}
+          hitSlop={hitSlop.lg}
           accessibilityRole="button"
           accessibilityLabel={t('tutorial.skipTutorial')}
           testID={kitTestIDs.spotlightSkipButton}

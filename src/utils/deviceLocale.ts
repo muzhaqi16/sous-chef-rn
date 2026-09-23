@@ -13,30 +13,10 @@ export type DecimalSeparator = '.' | ',';
  * `parseFloat` unchanged, and it is what `en` (the `fallbackLng`) uses anyway.
  */
 const FALLBACK_SEPARATOR: DecimalSeparator = '.';
-const FALLBACK_LOCALE = 'en-US';
 
 // Resolving a locale walks the platform's locale database and cannot change
 // without an app restart, so compute once.
 let cachedSeparator: DecimalSeparator | undefined;
-let cachedLocale: string | undefined;
-
-/**
- * The device's BCP 47 tag. `Intl` constructors already select it for
- * `undefined`, so pass that instead unless the tag itself is needed.
- */
-export function getDeviceLocale(): string {
-  if (cachedLocale !== undefined) return cachedLocale;
-
-  let resolved = FALLBACK_LOCALE;
-  try {
-    resolved = new Intl.NumberFormat().resolvedOptions().locale || resolved;
-  } catch {
-    // Left at the fallback.
-  }
-
-  cachedLocale = resolved;
-  return resolved;
-}
 
 /**
  * The separator the device's keypad offers, and so the only one some people can
@@ -70,8 +50,8 @@ export function getDeviceDecimalSeparator(): DecimalSeparator {
 /**
  * Test-only: the underlying values cannot change while the app runs, so nothing
  * in the app should call this.
+ * @internal Test seam.
  */
 export function resetDeviceLocaleCache(): void {
   cachedSeparator = undefined;
-  cachedLocale = undefined;
 }

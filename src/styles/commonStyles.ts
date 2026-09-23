@@ -8,11 +8,6 @@ import { StyleSheet } from 'react-native-unistyles';
  */
 
 export const commonStyles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
@@ -46,10 +41,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  center: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
 
   header: {
     flexDirection: 'row',
@@ -57,19 +48,17 @@ export const commonStyles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
-    paddingVertical: {
-      xs: theme.spacing.sm,
-      md: theme.spacing.md,
-    },
-    paddingHorizontal: {
-      xs: theme.spacing.sm,
-      md: theme.spacing.md,
-      lg: theme.spacing.lg,
-    },
+    paddingVertical: theme.spacing.sm,
   },
 
-  scrollContent: {
-    flexGrow: 1,
+  // A bar's inset puts its first and last GLYPH on the page gutter: the
+  // touch target's slack around the icon is subtracted, so the back arrow
+  // starts where the content does. Computed, because the gutter scales with
+  // density and the touch target does not.
+  barInset: {
+    paddingHorizontal:
+      theme.layout.pageGutter -
+      (theme.sizes.touchTarget.md - theme.sizes.icon.md) / 2,
   },
 
   input: {
@@ -85,11 +74,6 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
   inputGroup: {
     marginBottom: theme.spacing.lg,
-  },
-  label: {
-    ...theme.type.label,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
   },
 
   button: {
@@ -118,12 +102,9 @@ export const commonStyles = StyleSheet.create(theme => ({
   buttonTextPrimary: {
     color: theme.colors.onPrimary,
   },
-  buttonTextSecondary: {
-    color: theme.colors.textPrimary,
-  },
 
   settingsSection: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
@@ -149,10 +130,6 @@ export const commonStyles = StyleSheet.create(theme => ({
   settingsRowInfo: {
     flex: 1,
     marginRight: theme.spacing.base,
-  },
-  settingsRowLabel: {
-    ...theme.type.bodyStrong,
-    color: theme.colors.textPrimary,
   },
   settingsRowDescription: {
     ...theme.type.caption,
@@ -263,10 +240,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  bottomSheetItemLabel: {
-    ...theme.type.body,
-    color: theme.colors.textSecondary,
-  },
   bottomSheetSection: {
     marginBottom: theme.spacing.md,
   },
@@ -336,22 +309,6 @@ export const commonStyles = StyleSheet.create(theme => ({
   chipText: {
     ...theme.type.label,
     color: theme.colors.chipText,
-  },
-  body: {
-    ...theme.type.body,
-    color: theme.colors.textPrimary,
-  },
-  bodySecondary: {
-    ...theme.type.body,
-    color: theme.colors.textSecondary,
-  },
-  title: {
-    ...theme.type.heading,
-    color: theme.colors.textPrimary,
-  },
-  subtitle: {
-    ...theme.type.bodyStrong,
-    color: theme.colors.textSecondary,
   },
   caption: {
     ...theme.type.caption,

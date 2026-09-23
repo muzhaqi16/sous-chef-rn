@@ -1,5 +1,4 @@
 import type { RootState } from '#store/index';
-import { UserRole } from '#/graphql/generated/schemaTypes';
 
 /**
  * Creates a mock module for `jest.mock('#store/useAppStore', () => mockAppStore({...}))`.
@@ -42,35 +41,12 @@ export function mockAppStore(state: Partial<RootState>) {
     useIsHydrated: jest.fn(() => state.isHydrated),
     useIsOnline: jest.fn(() => state.isOnline),
     useCanAccessDevTools: jest.fn(() => state.user?.canAccessDevTools === true),
-    useIsAdminUser: jest.fn(
-      () =>
-        state.user?.role === UserRole.Admin ||
-        state.user?.role === UserRole.SuperAdmin,
-    ),
     useIsHomeSelectionReady: jest.fn(() => state.isHomeSelectionReady),
     useSetIsHomeSelectionReady: jest.fn(() => state.setIsHomeSelectionReady),
     useSetIsPantryQueryComplete: jest.fn(() => state.setIsPantryQueryComplete),
     useSetHomeAndPantry: jest.fn(() => state.setHomeAndPantry),
 
     // ── Grouped hooks ────────────────────────────────────────────────────
-    useAuthTokens: jest.fn(() => ({
-      user: state.user,
-      accessToken: state.accessToken,
-      refreshToken: state.refreshToken,
-      isAutoLoggingIn: state.isAutoLoggingIn,
-      isLoggingOut: state.isLoggingOut,
-    })),
-    useAuthActions: jest.fn(() => ({
-      setAuth: state.setAuth,
-      clearAuth: state.clearAuth,
-      setTokens: state.setTokens,
-      updateUser: state.updateUser,
-      setEmailVerified: state.setEmailVerified,
-      setOnboarded: state.setOnboarded,
-      setRememberMe: state.setRememberMe,
-      setIsAutoLoggingIn: state.setIsAutoLoggingIn,
-      setUserNavigationState: state.setUserNavigationState,
-    })),
     usePostLoginState: jest.fn(() => ({
       navigationState: state.navigationState,
       showBiometricSetup: state.showBiometricSetup,

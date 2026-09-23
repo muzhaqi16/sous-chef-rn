@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
 import {
   LiquidGlassView,
@@ -44,8 +44,3 @@ export const GlassSurface: React.FC<GlassSurfaceProps> = ({
 
 /** True where the platform renders the material — iOS 26 and later. */
 export const supportsGlass = isLiquidGlassSupported;
-
-/** A `View` for the fallback, so a caller need not import the flag. */
-export const GlassFallback: React.FC<{ style?: StyleProp<ViewStyle> }> = ({
-  style,
-}) => (isLiquidGlassSupported ? null : <View style={style} />);

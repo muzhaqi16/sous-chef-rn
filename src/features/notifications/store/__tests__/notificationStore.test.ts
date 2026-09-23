@@ -22,7 +22,7 @@ const enrichment = (
   overrides: Partial<ExpirationLinkData> = {},
 ): ExpirationLinkData => ({
   expirationNotificationId: 'exp-1',
-  daysUntilExpiry: 3,
+  expiresOn: '2026-09-25',
   pantryItemName: 'Milk',
   pantryItemImageUrl: null,
   ...overrides,

@@ -8,7 +8,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { Header } from '#components/organisms/Header';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { StyleSheet } from 'react-native-unistyles';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
@@ -211,21 +211,15 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
       {/* `BottomSheetView` reports its own height as the sheet's content
           height, so everything the sheet shows must sit inside this one. */}
       <BottomSheetView style={[styles.content, contentContainerStyle]}>
-        <Header
+        <SheetHeader
           title={t('quantityEditSheet.title')}
-          centerTitle
           onClose={onClose}
-          rightActions={[
-            {
-              icon: 'checkmark',
-              accessibilityLabel: t('labels.save'),
-              onPress: handleSave,
-              variant: 'primary',
-              disabled: !hasChanges || !quantityIsValid || loading,
-              loading: loading,
-              testID: shoppingListTestIDs.quantityEditSaveButton,
-            },
-          ]}
+          confirm={{
+            onPress: handleSave,
+            disabled: !hasChanges || !quantityIsValid,
+            loading,
+            testID: shoppingListTestIDs.quantityEditSaveButton,
+          }}
         />
         <View style={styles.headerSpacer} />
         {/* The header spans the full width and only the fields are inset, so
@@ -424,8 +418,5 @@ const styles = StyleSheet.create(theme => ({
     minWidth: 80,
     padding: 0,
     color: theme.colors.textPrimary,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

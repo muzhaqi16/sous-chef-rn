@@ -141,10 +141,10 @@ jest.mock('#/config/settingsConfig', () => ({
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#components/templates/ProfileScreenWrapper', () => {
+jest.mock('#components/templates/SubScreen', () => {
   const { View, Text } = require('react-native');
   return {
-    ProfileScreenWrapper: ({
+    SubScreen: ({
       children,
       title,
     }: {

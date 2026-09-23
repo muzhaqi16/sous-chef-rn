@@ -232,9 +232,4 @@ const styles = StyleSheet.create(theme => ({
   hint: {
     marginTop: theme.spacing.sm,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));
-
-export default AddStorageLocationSheet;

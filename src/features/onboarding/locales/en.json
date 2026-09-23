@@ -45,7 +45,6 @@
     "legalNotice": "By continuing you agree to our",
     "uploadAndContinue": "Upload & Continue",
     "updateProfilePhotoFailed": "Failed to update profile photo. Please try again.",
-    "cameraPermissionTakePhotoMessage": "Camera access is required to take a photo. Please enable it in settings.",
     "completeTitle": "All set!",
     "completeSubtitle": "Your home is ready to use",
     "congratulations": "Congratulations! You've successfully set up:",
@@ -78,7 +77,6 @@
     "listRequired": "Shopping list name is required",
     "listMin": "Shopping list name must be at least {{count}} characters",
     "listMax": "Shopping list name must be less than {{count}} characters",
-    "itemsMax": "You can select up to {{count}} items",
     "homeChars": "Home name can only contain letters, numbers, spaces, hyphens, apostrophes, and quotes"
   },
   "onboarding": {

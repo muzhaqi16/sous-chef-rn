@@ -1,75 +1,24 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { t as tGlobal } from '#/i18n';
 import { View, Dimensions } from 'react-native';
-import { BackButton } from '#components/atoms/BackButton';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
-import type {
-  ImagePickerResponse,
-  MediaType,
-  CameraOptions,
-  ImageLibraryOptions,
-} from 'react-native-image-picker';
-import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { StyleSheet } from 'react-native-unistyles';
-import type { ImageValidationError } from '#utils/imageValidation';
-import { validateImageFile } from '#utils/imageValidation';
-import { imageErrorMessage, useImageUpload } from '#hooks/useImageUpload';
+import { useImageUpload } from '#hooks/useImageUpload';
+import { usePhotoCapture } from '#hooks/usePhotoCapture';
 import type { ImageFile } from '#/types/media';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
-import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
-import { PermissionService } from '#services/permissions/PermissionService';
 import { useStore } from '#store';
 import { LocalImage } from '#components/atoms/LocalImage';
 import { Screen } from '#components/templates/Screen';
 
-const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
-  mediaType: 'photo' as MediaType,
-  includeBase64: false,
-  maxHeight: 2000,
-  maxWidth: 2000,
-  quality: 0.8,
-};
-
 const { width: screenWidth } = Dimensions.get('window');
 const AVATAR_SIZE = Math.min(screenWidth * 0.6, 250);
-
-/** Module-level function for camera permission request.
- *  Extracted to avoid try-catch with conditional inside component body (React Compiler bailout). */
-async function requestCameraAndLaunch(
-  handleImageResponse: (response: ImagePickerResponse) => void,
-): Promise<void> {
-  const result = await PermissionService.request('camera');
-  if (result === 'granted') {
-    // The picker reports through the callback; its promise only resolves.
-    void launchCamera(DEFAULT_OPTIONS, handleImageResponse);
-  } else if (result === 'denied') {
-    alertService.alert(
-      tGlobal('profile.cameraPermissionDeniedTitle'),
-      tGlobal(
-        'labels.cameraPermissionIsRequiredToTakePhotosPleaseEnableItInYourDeviceSettings',
-      ),
-    );
-  } else if (result === 'blocked') {
-    alertService.alert(
-      tGlobal('profile.cameraPermissionBlockedTitle'),
-      tGlobal('profile.cameraPermissionBlockedMessage'),
-    );
-  } else {
-    alertService.alert(
-      tGlobal('labels.cameraPermission'),
-      tGlobal(
-        'labels.cameraPermissionIsRequiredToTakePhotosPleaseEnableItInYourDeviceSettings',
-      ),
-    );
-  }
-}
 
 export const ProfilePhotoUploadScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -88,53 +37,16 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
     }
   });
 
-  const handleImageResponse = (response: ImagePickerResponse) => {
-    if (response.didCancel || response.errorCode || !response.assets?.[0]) {
-      return;
-    }
+  const { takePhoto, pickPhoto } = usePhotoCapture({ forProfile: true });
 
-    const asset = response.assets[0];
-    if (!asset.uri) return;
-    const imageFile: ImageFile = {
-      uri: asset.uri,
-      fileName: asset.fileName,
-      fileSize: asset.fileSize,
-      type: asset.type,
-    };
-
-    try {
-      validateImageFile(imageFile, true);
-      setSelectedImage(imageFile);
-      setCroppedImage(null); // Reset cropped image when new image is selected
-    } catch (error) {
-      const validationError = error as ImageValidationError;
-      // Its `message` is English by construction — for the log, never the user.
-      alertService.alert(
-        t('labels.invalidImage'),
-        imageErrorMessage(t, validationError, true),
-      );
-    }
+  const selectImage = ([imageFile]: ImageFile[]) => {
+    if (!imageFile) return;
+    setSelectedImage(imageFile);
+    setCroppedImage(null);
   };
 
-  const handleTakePhoto = async () => {
-    try {
-      await requestCameraAndLaunch(handleImageResponse);
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'ProfilePhotoUpload.cameraPermission',
-      });
-      alertService.alert(
-        t('errors.permissionTitle'),
-        t('profile.permissionErrorMessage'),
-      );
-    }
-  };
-
-  const handleSelectPhoto = () => {
-    // Android Photo Picker doesn't require permissions
-    // iOS also allows launching without explicit permission on modern versions
-    void launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
-  };
+  const handleTakePhoto = async () => selectImage(await takePhoto());
+  const handleSelectPhoto = async () => selectImage(await pickPhoto());
 
   const handleCropImage = () => {
     if (!selectedImage) return;
@@ -181,19 +93,17 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
   };
 
   return (
-    <Screen scroll="list" gutter="none">
+    <Screen
+      scroll="none"
+      header={{
+        title: t('profile.uploadYourPhoto'),
+        // Presented from the bottom, so it closes; an upload in flight holds it.
+        close: () => {
+          if (!isUploading) goBack();
+        },
+      }}
+    >
       <View style={styles.content}>
-        <View style={styles.header}>
-          <BackButton
-            onPress={goBack}
-            style={styles.headerBack}
-            disabled={isUploading}
-          />
-          <Text role="display" align="center" style={styles.title}>
-            {t('profile.uploadYourPhoto')}
-          </Text>
-        </View>
-
         <Text role="bodyStrong" align="center" tone="secondary">
           {croppedImage
             ? t('profile.photoReadyToUpload')
@@ -284,33 +194,11 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   content: {
     flexGrow: 1,
     flexShrink: 1,
     flexBasis: 0,
-    paddingHorizontal: theme.spacing.xl,
-    paddingBottom: theme.spacing.md,
-  },
-  title: {
-    marginBottom: theme.spacing.xsPlus,
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.base,
-    paddingTop: theme.spacing.sm,
-  },
-  headerBack: {
-    padding: theme.spacing.sm,
-    paddingTop: 0,
-    position: 'relative',
-    marginLeft: -theme.spacing.md,
+    paddingTop: theme.spacing.md,
   },
   avatar: {
     flexGrow: 1,
@@ -381,9 +269,6 @@ const styles = StyleSheet.create(theme => ({
   },
   btnSecondaryText: {
     color: theme.colors.secondary,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));
 

@@ -107,12 +107,6 @@
     "title": "Set up {{type}} Login?",
     "description": "Use {{authType}} for faster, more secure login next time. You can always enable this later in Settings if you change your mind."
   },
-  "rememberMe": {
-    "title": "Remember login info?",
-    "body": "We'll securely save your login info for {{email}} on this device, so you won't need to enter it next time.",
-    "notNow": "Not Now",
-    "remember": "Remember"
-  },
   "appearance": {
     "themeSection": "Theme",
     "themeLight": "Light",
@@ -197,10 +191,6 @@
     "uploadPhoto": "Upload Photo",
     "chooseDifferentPhoto": "Choose Different Photo",
     "selectPhoto": "Select Photo",
-    "cameraPermissionDeniedTitle": "Camera Permission Denied",
-    "cameraPermissionBlockedTitle": "Camera Permission Blocked",
-    "cameraPermissionBlockedMessage": "Camera access is blocked. Please go to Settings > Apps > {{appName}} > Permissions to enable camera access.",
-    "permissionErrorMessage": "Failed to request camera permission. Please try again or check your device settings.",
     "updatePhotoFailed": "Failed to update profile photo",
     "cropPhoto": "Crop Photo",
     "cropping": "Cropping...",

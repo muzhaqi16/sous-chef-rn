@@ -52,7 +52,6 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
 }));
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
-  usePreservedArrayData: <T>(data: T[] | null | undefined) => data || [],
   usePreservedQueryData: <T>(data: T | undefined, initial: T) =>
     data !== undefined ? data : initial,
 }));
@@ -208,8 +207,7 @@ describe('usePantryQuery', () => {
   it('returns items directly from the cache (pending-delete filtering now happens in subscription handlers)', () => {
     const { result } = renderHookWithApollo(() => usePantryQuery('pantry-1'));
 
-    // Items come straight from extractNodes(itemsConnection) →
-    // usePreservedArrayData with no intermediate JS-layer filtering. The Apollo
+    // Items come straight from extractNodes(itemsConnection) with no intermediate JS-layer filtering. The Apollo
     // cache is the single source of truth; pending-delete echoes are skipped
     // at the subscription handler level in `usePantrySubscriptions.ts`.
     expect(Array.isArray(result.current.state.pantryItems)).toBe(true);

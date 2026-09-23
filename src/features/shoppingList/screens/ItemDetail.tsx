@@ -424,7 +424,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: theme.spacing.xs,
-    marginHorizontal: theme.spacing.lg,
     marginTop: theme.spacing.sm,
     // Separate the badge from the Information card below it; the card has no
     // top margin of its own, so without this the badge sits flush against it.

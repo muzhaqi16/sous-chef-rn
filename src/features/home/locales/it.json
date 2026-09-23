@@ -164,9 +164,7 @@
   "createHome": {
     "allowJoinCode": "Consenti ad altri di unirsi con un codice",
     "pantryFailedTitle": "Avviso",
-    "pantryFailedBody": "Creazione della dispensa non riuscita, ma puoi crearla più tardi dalle impostazioni.",
-    "skipPantryTitle": "Saltare la creazione della dispensa?",
-    "skipPantryBody": "Hai una casa ma nessuna dispensa. Puoi crearne una più tardi dalle impostazioni."
+    "pantryFailedBody": "Creazione della dispensa non riuscita, ma puoi crearla più tardi dalle impostazioni."
   },
   "homeMembers": {
     "noMembers": "Nessun membro"

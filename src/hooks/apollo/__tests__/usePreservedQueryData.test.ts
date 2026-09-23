@@ -1,10 +1,7 @@
 'use no memo';
 
 import { renderHook } from '@testing-library/react-native';
-import {
-  usePreservedQueryData,
-  usePreservedArrayData,
-} from '../usePreservedQueryData';
+import { usePreservedQueryData } from '../usePreservedQueryData';
 
 describe('usePreservedQueryData', () => {
   it('returns initial value when current data is undefined', () => {
@@ -97,66 +94,5 @@ describe('usePreservedQueryData', () => {
 
     rerender({ data: obj2 });
     expect(result.current).toBe(obj2);
-  });
-});
-
-describe('usePreservedArrayData', () => {
-  it('returns empty array when data is undefined', () => {
-    const { result } = renderHook(() => usePreservedArrayData(undefined));
-
-    expect(result.current).toEqual([]);
-  });
-
-  it('returns empty array when data is null', () => {
-    const { result } = renderHook(() => usePreservedArrayData(null));
-
-    expect(result.current).toEqual([]);
-  });
-
-  it('returns current array when available', () => {
-    const items = [{ id: '1' }, { id: '2' }];
-    const { result } = renderHook(() => usePreservedArrayData(items));
-
-    expect(result.current).toBe(items);
-  });
-
-  it('preserves last successful array when data changes then becomes undefined', () => {
-    const items = [{ id: '1' }, { id: '2' }];
-    const { result, rerender } = renderHook(
-      ({ data }: { data: { id: string }[] | null | undefined }) =>
-        usePreservedArrayData(data),
-      {
-        initialProps: {
-          data: undefined as { id: string }[] | undefined | null,
-        },
-      },
-    );
-
-    expect(result.current).toEqual([]);
-
-    rerender({ data: items });
-    expect(result.current).toBe(items);
-
-    rerender({ data: undefined });
-    expect(result.current).toBe(items);
-  });
-
-  it('preserves last successful array when data changes then becomes null', () => {
-    const items = [{ id: '1' }];
-    const { result, rerender } = renderHook(
-      ({ data }: { data: { id: string }[] | null | undefined }) =>
-        usePreservedArrayData(data),
-      {
-        initialProps: {
-          data: undefined as { id: string }[] | null | undefined,
-        },
-      },
-    );
-
-    rerender({ data: items });
-    expect(result.current).toBe(items);
-
-    rerender({ data: null });
-    expect(result.current).toBe(items);
   });
 });

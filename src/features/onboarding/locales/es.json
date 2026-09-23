@@ -45,7 +45,6 @@
     "legalNotice": "Al continuar, aceptas nuestros",
     "uploadAndContinue": "Subir y continuar",
     "updateProfilePhotoFailed": "No se pudo actualizar la foto de perfil. Inténtalo de nuevo.",
-    "cameraPermissionTakePhotoMessage": "Se requiere acceso a la cámara para tomar una foto. Habilítalo en la configuración.",
     "completeTitle": "¡Todo listo!",
     "completeSubtitle": "Tu hogar está listo para usar",
     "congratulations": "¡Felicidades! Has configurado correctamente:",
@@ -78,7 +77,6 @@
     "listRequired": "El nombre de la lista es obligatorio",
     "listMin": "El nombre de la lista debe tener al menos {{count}} caracteres",
     "listMax": "El nombre de la lista debe tener menos de {{count}} caracteres",
-    "itemsMax": "Puedes seleccionar hasta {{count}} artículos",
     "homeChars": "El nombre del hogar solo puede contener letras, números, espacios, guiones, apóstrofos y comillas"
   },
   "onboarding": {

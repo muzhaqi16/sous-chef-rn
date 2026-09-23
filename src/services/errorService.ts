@@ -556,20 +556,3 @@ export const localizedErrorMessage = (
   if (fallback && TRANSPORT_CODES.has(code)) return fallback;
   return errorService.getUserFriendlyMessage(code, fallback);
 };
-
-// Hook form for components.
-export const useErrorService = () => {
-  return {
-    handleApolloError: errorService.handleApolloError.bind(errorService),
-    parseApolloError: errorService.parseApolloError.bind(errorService),
-    handleMutation: errorService.handleMutation.bind(errorService),
-    handleMutationWithVersionConflict:
-      errorService.handleMutationWithVersionConflict.bind(errorService),
-    getUserFriendlyMessage:
-      errorService.getUserFriendlyMessage.bind(errorService),
-    getErrorCategory: errorService.getErrorCategory.bind(errorService),
-    shouldRetry: errorService.shouldRetry.bind(errorService),
-    isAuthError: errorService.isAuthError.bind(errorService),
-    reportError: errorService.reportError.bind(errorService),
-  };
-};

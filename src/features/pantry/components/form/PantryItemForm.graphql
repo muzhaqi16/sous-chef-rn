@@ -28,7 +28,7 @@ fragment PantryItemForm_pantryItem on PantryItem {
   storageState
   condition
   storageNotes
-  expiresAt
+  expiresOn
   netWeight
   lastUsedAt
   tags

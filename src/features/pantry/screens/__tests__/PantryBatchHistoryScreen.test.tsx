@@ -20,7 +20,7 @@ function historyMock(
     batchNumber: number;
     quantity: number;
     status: BatchStatus;
-    expiresAt?: string | null;
+    expiresOn?: string | null;
     depletedAt?: string | null;
   }>,
   page?: { totalCount?: number; hasNextPage?: boolean },
@@ -42,7 +42,7 @@ function historyMock(
           batchNumber: b.batchNumber,
           quantity: b.quantity,
           status: b.status,
-          expiresAt: b.expiresAt ?? null,
+          expiresOn: b.expiresOn ?? null,
           depletedAt: b.depletedAt ?? null,
           costPerUnit: null,
           totalCost: null,
@@ -118,14 +118,14 @@ describe('PantryBatchHistoryScreen', () => {
             batchNumber: 1,
             quantity: 5,
             status: BatchStatus.Active,
-            expiresAt: '2026-12-01T00:00:00Z',
+            expiresOn: '2026-12-01',
           },
           {
             id: 'b2',
             batchNumber: 2,
             quantity: 3,
             status: BatchStatus.Active,
-            expiresAt: '2026-09-01T00:00:00Z',
+            expiresOn: '2026-09-01',
           },
         ]),
       ],
@@ -150,7 +150,7 @@ describe('PantryBatchHistoryScreen', () => {
             batchNumber: 1,
             quantity: 0,
             status: BatchStatus.Wasted,
-            depletedAt: '2026-08-31T00:00:00Z',
+            depletedAt: '2026-08-31',
           },
         ]),
       ],
@@ -170,7 +170,7 @@ describe('PantryBatchHistoryScreen', () => {
             batchNumber: 1,
             quantity: 0,
             status: BatchStatus.Depleted,
-            depletedAt: '2026-08-31T00:00:00Z',
+            depletedAt: '2026-08-31',
           },
         ]),
       ],
