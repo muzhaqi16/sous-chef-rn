@@ -63,13 +63,8 @@ import NavigationService, { navigationRef } from '#services/NavigationService';
 import { Telemetry } from '#services/telemetry';
 import { NativePerformanceService } from '#services/performance/NativePerformanceService';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
-import { appConfig } from '#/config/appConfig';
 import { motion } from '#/theme/foundations/motion';
-
-const DEEP_LINK_PREFIXES = [
-  `${appConfig.identity.deepLink.scheme}://`,
-  ...appConfig.identity.deepLink.hosts.map(h => `https://${h}`),
-];
+import { rootLinking } from './linking';
 
 function RootLayout({ children }: { children: React.ReactNode }) {
   useDeepLinkRouter();
@@ -351,9 +346,7 @@ export function Navigation() {
           ref={navigationRef}
           theme={navigationTheme}
           onReady={NavigationService.flushPendingNavigation}
-          linking={{
-            prefixes: DEEP_LINK_PREFIXES,
-          }}
+          linking={rootLinking}
         />
       </Suspense>
     </NavigationErrorBoundary>
