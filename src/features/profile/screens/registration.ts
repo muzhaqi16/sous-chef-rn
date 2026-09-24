@@ -35,9 +35,10 @@ const VerifyEmailScreen = React.lazy(() =>
 
 /**
  * Profile and its settings screens, siblings of `Home` (see RootNavigator).
- * Only `ProfilePhotoUpload`, `ImageCrop` and `DeleteAccount` are deep-linkable;
- * the rest opt out with `linking: null`. Onboarding registers its own
- * `ImageCrop` so cropping there stays inside the onboarding flow.
+ * `Profile` and `ChangePassword` are email link targets (the security alert
+ * opens Change Password); a new path also needs claiming in the API's
+ * `apple-app-site-association` and `assetlinks.json`. Onboarding registers its
+ * own `ImageCrop` so cropping there stays inside the onboarding flow.
  */
 export const profileScreens = {
   Profile: createNativeStackScreen({
@@ -46,7 +47,7 @@ export const profileScreens = {
       animation: 'slide_from_right',
       animationDuration: motion.timing.STANDARD,
     },
-    linking: null,
+    linking: 'profile',
   }),
   ProfilePhotoUpload: createNativeStackScreen({
     screen: ProfilePhotoUploadScreen,
@@ -91,7 +92,7 @@ export const profileScreens = {
   ChangePassword: createNativeStackScreen({
     screen: ChangePasswordScreen,
     options: settingsScreenOptions,
-    linking: null,
+    linking: 'settings/change-password',
   }),
   Appearance: createNativeStackScreen({
     screen: AppearanceScreen,

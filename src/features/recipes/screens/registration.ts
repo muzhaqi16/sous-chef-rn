@@ -2,6 +2,7 @@ import { createNativeStackScreen } from '@react-navigation/native-stack';
 import { noInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 import { detailScreenOptions } from '#navigation/detailScreenOptions';
 import { RecipeDetail } from './RecipeDetail';
+import { RecipeLinkScreen } from './RecipeLinkScreen';
 import { RecipeFormScreen } from './RecipeForm';
 import { SavedRecipes } from './SavedRecipes';
 import { MyRecipes } from './MyRecipes';
@@ -19,6 +20,13 @@ export const recipeDetailScreens = {
     layout: noInsetScreenLayout,
     options: detailScreenOptions,
     linking: null,
+  }),
+  // The recipe link target, forwarding to `RecipeDetail`: a path param is a
+  // REQUIRED param, and an external recipe opens RecipeDetail without an id.
+  RecipeLink: createNativeStackScreen({
+    screen: RecipeLinkScreen,
+    options: { animation: 'none' },
+    linking: 'recipes/:recipeId',
   }),
   // RecipeCreate/RecipeEdit share RecipeFormScreen, distinguished by route
   // params rather than by which component renders.

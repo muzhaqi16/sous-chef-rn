@@ -140,6 +140,9 @@ export function useAppNavigation() {
     // actions stay wherever the user opened it from.
     toRecipeDetail: (params: RootStackParamList['RecipeDetail']) =>
       navigation.navigate('RecipeDetail', params),
+    /** A recipe link's resolver hands off to the detail screen and leaves the stack. */
+    replaceWithRecipeDetail: (params: RootStackParamList['RecipeDetail']) =>
+      navigation.dispatch(replaceAction('RecipeDetail', params)),
     toRecipeCreate: () => navigation.navigate('RecipeCreate'),
     toRecipeEdit: (params: RootStackParamList['RecipeEdit']) =>
       navigation.navigate('RecipeEdit', params),

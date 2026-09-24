@@ -5,6 +5,7 @@ jest.mock('../RecipeDetail', () => ({ RecipeDetail: () => null }));
 jest.mock('../RecipeForm', () => ({ RecipeFormScreen: () => null }));
 jest.mock('../SavedRecipes', () => ({ SavedRecipes: () => null }));
 jest.mock('../MyRecipes', () => ({ MyRecipes: () => null }));
+jest.mock('../RecipeLinkScreen', () => ({ RecipeLinkScreen: () => null }));
 
 import { expectDeclaresLinkingIntent } from '#/test-utils/screenRegistration';
 import { recipeDetailScreens } from '../registration';
@@ -16,6 +17,7 @@ describe('recipeDetailScreens', () => {
       'RecipeCreate',
       'RecipeDetail',
       'RecipeEdit',
+      'RecipeLink',
       'SavedRecipes',
     ]);
   });
@@ -29,5 +31,12 @@ describe('recipeDetailScreens', () => {
 
   it('every screen declares an explicit linking intent', () => {
     expectDeclaresLinkingIntent(recipeDetailScreens);
+  });
+
+  // RecipeDetail's params stay link-free: a path param would be required, and
+  // an external recipe opens it with no id.
+  it('links recipe emails through RecipeLink, not RecipeDetail', () => {
+    expect(recipeDetailScreens.RecipeLink.linking).toBe('recipes/:recipeId');
+    expect(recipeDetailScreens.RecipeDetail.linking).toBeNull();
   });
 });
