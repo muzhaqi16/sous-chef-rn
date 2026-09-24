@@ -33,12 +33,8 @@ import { ItemInformationSection } from './ItemInformationSection';
 import { QuantitySection } from './QuantitySection';
 import { StorageDetailsSection } from './StorageDetailsSection';
 import { NetWeightSection } from './NetWeightSection';
-import {
-  usePantryItemFormSubmit,
-  type UnitChangeConfirmation,
-} from './usePantryItemFormSubmit';
+import { usePantryItemFormSubmit } from './usePantryItemFormSubmit';
 import { usePantryUnitChange } from '#features/pantry/hooks/usePantryUnitChange';
-import { UnitChangeSheet } from '#features/pantry/components/modals/UnitChangeSheet';
 import { logValidationErrors } from '#utils/validation/common';
 import {
   TAB_FIELDS,
@@ -287,15 +283,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   const item = existingPantryItem;
 
-  const { preview: previewUnitChange } = usePantryUnitChange();
-  // The pending confirmation holds the resolver the save awaits.
-  const [pendingUnitChange, setPendingUnitChange] = useState<
-    (UnitChangeConfirmation & { settle: (changed: boolean) => void }) | null
-  >(null);
-  const settleUnitChange = (changed: boolean) => {
-    pendingUnitChange?.settle(changed);
-    setPendingUnitChange(null);
-  };
+  const unitChange = usePantryUnitChange();
 
   const { handleSave } = usePantryItemFormSubmit({
     itemId,
@@ -311,16 +299,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     updatePantryItemFields,
     updateQuantity,
     resolveUnitId,
-    previewUnitChange: request =>
-      previewUnitChange({
-        pantryItemId: itemId,
-        unitId: request.unitId,
-        quantity: request.quantity ?? undefined,
-      }),
-    confirmUnitChange: confirmation =>
-      new Promise<boolean>(settle => {
-        setPendingUnitChange({ ...confirmation, settle });
-      }),
+    unitChange: {
+      preview: request =>
+        unitChange.preview({ ...request, pantryItemId: itemId }),
+      change: request =>
+        unitChange.change({ ...request, pantryItemId: itemId }),
+    },
     reportFieldError: (field, message) => {
       setCurrentPage(PAGES.findIndex(page => TAB_FIELDS[page].includes(field)));
       setError(field, { type: 'server', message }, { shouldFocus: false });
@@ -500,17 +484,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           </>
         )}
       </View>
-
-      {!!pendingUnitChange && (
-        <UnitChangeSheet
-          pantryItemId={itemId}
-          unitId={pendingUnitChange.unitId}
-          typedQuantity={pendingUnitChange.quantity}
-          initialPreview={pendingUnitChange.preview}
-          onClose={() => settleUnitChange(false)}
-          onChanged={() => settleUnitChange(true)}
-        />
-      )}
     </>,
   );
 };

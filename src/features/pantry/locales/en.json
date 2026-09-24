@@ -418,17 +418,13 @@
   },
   "unitChange": {
     "title": "Change unit",
-    "check": "Check",
     "exact": "Exact conversion.",
     "estimate": "This is an estimate.",
     "quantityIgnored": "The amount you entered isn't used: the stock converts exactly.",
     "estimateChoice": "{{from}} and {{to}} only convert approximately for this item.",
     "useEstimate": "Use the estimate: about {{amount}}",
-    "useMyAmount": "Enter the amount myself",
+    "useMyAmount": "Use my amount: {{amount}}",
     "noRoute": "{{from}} can't be converted to {{to}} for this item, so enter how much you have in {{to}}.",
-    "amountLabel": "Amount in {{unit}}",
-    "packageSizeTitle": "How much is one {{unit}}?",
-    "packageSizeLabel": "Size of one {{unit}}",
     "batches": "Each batch",
     "dropsNetWeight": "The package size will be removed.",
     "dropsPortions": "The portions per package will be removed.",
@@ -439,10 +435,10 @@
     "previewFailed": "Couldn't check what this change would do. Try again.",
     "changedMeanwhile": "This item changed while you were looking. Check the new figures and confirm again.",
     "failed": "Couldn't change the unit. Try again.",
-    "amountRequired": "Enter the amount you have.",
-    "packageSizeRequired": "Enter the size of one package and its unit.",
     "beforeAfter": "{{before}} → {{after}}",
-    "recountNote": "These units don't convert for this item, so the amount you entered replaces the old one."
+    "recountNote": "These units don't convert for this item, so the amount you entered replaces the old one.",
+    "enterAmountHint": "Or enter the amount yourself in Current Quantity and save again.",
+    "packageSizeNeeded": "To count this in {{unit}}, enter how much one {{unit}} holds, then save again."
   },
   "packageSize": {
     "defaultTitle": "Default package size",

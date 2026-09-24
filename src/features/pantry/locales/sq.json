@@ -418,17 +418,13 @@
   },
   "unitChange": {
     "title": "Ndrysho njësinë",
-    "check": "Kontrollo",
     "exact": "Konvertim i saktë.",
     "estimate": "Ky është një vlerësim.",
     "quantityIgnored": "Sasia që vendosët nuk përdoret: stoku konvertohet saktë.",
     "estimateChoice": "{{from}} dhe {{to}} konvertohen vetëm përafërsisht për këtë artikull.",
     "useEstimate": "Përdor vlerësimin: rreth {{amount}}",
-    "useMyAmount": "Do ta vendos vetë sasinë",
+    "useMyAmount": "Përdor sasinë time: {{amount}}",
     "noRoute": "{{from}} nuk mund të konvertohet në {{to}} për këtë artikull, prandaj vendosni sa keni në {{to}}.",
-    "amountLabel": "Sasia në {{unit}}",
-    "packageSizeTitle": "Sa përmban një {{unit}}?",
-    "packageSizeLabel": "Madhësia e një {{unit}}",
     "batches": "Çdo grup",
     "dropsNetWeight": "Madhësia e paketimit do të hiqet.",
     "dropsPortions": "Porcionet për paketim do të hiqen.",
@@ -439,10 +435,10 @@
     "previewFailed": "Nuk u kontrollua dot çfarë do të bënte ky ndryshim. Provoni përsëri.",
     "changedMeanwhile": "Ky artikull ndryshoi ndërsa e shikonit. Kontrolloni shifrat e reja dhe konfirmoni përsëri.",
     "failed": "Njësia nuk u ndryshua dot. Provoni përsëri.",
-    "amountRequired": "Vendosni sasinë që keni.",
-    "packageSizeRequired": "Vendosni madhësinë e një paketimi dhe njësinë e saj.",
     "beforeAfter": "{{before}} → {{after}}",
-    "recountNote": "Këto njësi nuk konvertohen për këtë artikull, prandaj sasia që vendosët zëvendëson atë të mëparshmen."
+    "recountNote": "Këto njësi nuk konvertohen për këtë artikull, prandaj sasia që vendosët zëvendëson atë të mëparshmen.",
+    "enterAmountHint": "Ose vendosni vetë sasinë te Sasia aktuale dhe ruani përsëri.",
+    "packageSizeNeeded": "Për ta numëruar në {{unit}}, vendosni sa përmban një {{unit}}, pastaj ruani përsëri."
   },
   "packageSize": {
     "defaultTitle": "Madhësia e paracaktuar e paketimit",

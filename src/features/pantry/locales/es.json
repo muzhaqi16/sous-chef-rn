@@ -418,17 +418,13 @@
   },
   "unitChange": {
     "title": "Cambiar unidad",
-    "check": "Comprobar",
     "exact": "Conversión exacta.",
     "estimate": "Es una estimación.",
     "quantityIgnored": "La cantidad que introdujiste no se usa: las existencias se convierten con exactitud.",
     "estimateChoice": "{{from}} y {{to}} solo se convierten de forma aproximada para este artículo.",
     "useEstimate": "Usar la estimación: unos {{amount}}",
-    "useMyAmount": "Introducir la cantidad yo mismo",
+    "useMyAmount": "Usar mi cantidad: {{amount}}",
     "noRoute": "{{from}} no se puede convertir a {{to}} para este artículo, así que indica cuánto tienes en {{to}}.",
-    "amountLabel": "Cantidad en {{unit}}",
-    "packageSizeTitle": "¿Cuánto contiene un {{unit}}?",
-    "packageSizeLabel": "Tamaño de un {{unit}}",
     "batches": "Cada lote",
     "dropsNetWeight": "Se eliminará el tamaño del paquete.",
     "dropsPortions": "Se eliminarán las porciones por paquete.",
@@ -439,10 +435,10 @@
     "previewFailed": "No se pudo comprobar qué haría este cambio. Inténtalo de nuevo.",
     "changedMeanwhile": "Este artículo cambió mientras lo revisabas. Comprueba las nuevas cifras y confirma de nuevo.",
     "failed": "No se pudo cambiar la unidad. Inténtalo de nuevo.",
-    "amountRequired": "Indica la cantidad que tienes.",
-    "packageSizeRequired": "Indica el tamaño de un paquete y su unidad.",
     "beforeAfter": "{{before}} → {{after}}",
-    "recountNote": "Estas unidades no se convierten para este artículo, así que la cantidad que introdujiste sustituye a la anterior."
+    "recountNote": "Estas unidades no se convierten para este artículo, así que la cantidad que introdujiste sustituye a la anterior.",
+    "enterAmountHint": "O introduce tú la cantidad en Cantidad actual y guarda de nuevo.",
+    "packageSizeNeeded": "Para contarlo en {{unit}}, indica cuánto contiene un {{unit}} y guarda de nuevo."
   },
   "packageSize": {
     "defaultTitle": "Tamaño de paquete predeterminado",

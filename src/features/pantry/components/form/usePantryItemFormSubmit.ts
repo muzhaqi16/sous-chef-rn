@@ -10,13 +10,15 @@ import type {
   DirtyFieldFlags,
   UnitSelection,
 } from '#features/pantry/hooks/mutations/types';
-import type {
-  PreviewOutcome,
-  UnitChangePreview,
-} from '#features/pantry/hooks/usePantryUnitChange';
 import { isOwnKey } from '#/utils/isOwnKey';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
 import type { PantryItemFormData } from './PantryItemForm';
+import {
+  runUnitChange,
+  type UnitChangeDeps,
+  type UnitChangeField,
+} from './unitChangeFlow';
 
 /** react-hook-form's `formState.dirtyFields` for this form. */
 type FormDirtyFields = Partial<
@@ -43,14 +45,6 @@ interface UpdateQuantityArgs {
   quantityValue: number;
 }
 
-/** A unit change the user is asked to confirm: the target and its preview. */
-export interface UnitChangeConfirmation {
-  unitId: string;
-  /** The amount the form holds, read as the stack in the new unit. */
-  quantity: number | null;
-  preview: UnitChangePreview;
-}
-
 export interface UsePantryItemFormSubmitParams {
   itemId: string | undefined;
   currentPantryId: string | undefined | null;
@@ -72,15 +66,13 @@ export interface UsePantryItemFormSubmitParams {
   ) => Promise<boolean>;
   updateQuantity: (args: UpdateQuantityArgs) => Promise<boolean>;
   resolveUnitId: (id: string | null, symbol: string) => Promise<string | null>;
-  /** What moving the stack onto `unitId` would do. */
-  previewUnitChange: (request: {
-    unitId: string;
-    quantity: number | null;
-  }) => Promise<PreviewOutcome>;
-  /** Shows the preview; resolves true once the change was made. */
-  confirmUnitChange: (confirmation: UnitChangeConfirmation) => Promise<boolean>;
+  /** Previews and makes a unit change, bound to this item. */
+  unitChange: Pick<UnitChangeDeps, 'preview' | 'change'>;
   /** Reports a problem the user can fix on the field it concerns. */
-  reportFieldError: (field: 'unit' | 'netWeightUnit', message: string) => void;
+  reportFieldError: (
+    field: UnitChangeField | 'netWeightUnit',
+    message: string,
+  ) => void;
   /** Runs once every write was applied or queued; a refusal keeps the form open. */
   onSuccess?: () => void;
 }
@@ -95,36 +87,20 @@ function toDirtyFlags(dirtyFields: FormDirtyFields): DirtyFieldFlags {
   return flags;
 }
 
+/** The form's net weight and its resolved unit, when both are given. */
+function packageSizeOf(data: PantryItemFormData) {
+  const netWeight = parseDecimalInput(data.netWeight ?? '');
+  const netWeightUnitId = data.netWeightUnitId;
+  if (isNaN(netWeight) || netWeight <= 0 || !netWeightUnitId) return undefined;
+  return { netWeight, netWeightUnitId };
+}
+
 /**
  * Returns a `handleSave` function for PantryItemForm. Extracted so the branch
  * logic (dirty-field routing, unit resolution, the unit change and its
  * confirmation) can be unit-tested directly without spinning up the full form.
  */
 export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
-  /** Moves the stack onto `unitId`; false when it did not happen. */
-  const changeUnit = async (
-    unitId: string,
-    quantity: number | null,
-  ): Promise<boolean> => {
-    const outcome = await params.previewUnitChange({ unitId, quantity });
-    if (outcome.status !== 'ready') {
-      params.reportFieldError(
-        'unit',
-        t(
-          outcome.status === 'offline'
-            ? 'unitChange.needsConnection'
-            : 'unitChange.previewFailed',
-        ),
-      );
-      return false;
-    }
-    return params.confirmUnitChange({
-      unitId,
-      quantity,
-      preview: outcome.preview,
-    });
-  };
-
   const handleSave = async (data: PantryItemFormData) => {
     const typedQuantity = parseFractionalInput(data.quantityInput ?? '');
     const typedUnit = (data.unit || '').trim();
@@ -185,10 +161,15 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
       }
 
       if (unitChanged) {
-        // The quantity typed with a new unit is what the stack holds in it.
-        const changed = await changeUnit(
-          unitId,
-          quantityChanged ? typedQuantity : null,
+        // The quantity typed with a new unit is what the stack holds in it,
+        // and the net weight is one package when a measure becomes a count.
+        const changed = await runUnitChange(
+          { ...params.unitChange, reportFieldError: params.reportFieldError },
+          {
+            unitId,
+            quantity: quantityChanged ? typedQuantity : null,
+            packageSize: packageSizeOf(data),
+          },
         );
         if (!changed) return;
       } else if (quantityChanged && typedQuantity) {

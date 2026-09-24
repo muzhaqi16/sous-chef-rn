@@ -41,11 +41,6 @@ export const pantryTestIDs = {
   editItemQuantityInput: 'edit-pantry-item-quantity-input',
   editItemUnitPicker: 'edit-pantry-item-unit-picker',
 
-  unitChangeConfirm: 'unit-change-confirm',
-  unitChangeAmount: 'unit-change-amount',
-  unitChangeSummary: 'unit-change-summary',
-  unitChangeError: 'unit-change-error',
-
   sortOption: (key: string) => `pantry-sort-option-${key}`,
   /** The add-details sheet's page indicator, by page index. */
   addDetailsPage: (index: number) => `add-pantry-item-page-${index}`,

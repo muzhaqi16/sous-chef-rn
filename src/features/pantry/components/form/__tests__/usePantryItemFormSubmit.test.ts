@@ -21,7 +21,7 @@ import { useUpdatePantryItem } from '#features/pantry/hooks/mutations/useUpdateP
 import { useUpdatePantryItemQuantity } from '#features/pantry/hooks/mutations/useUpdatePantryItemQuantity';
 import type { PantryItemForm_PantryItemFragment } from '../PantryItemForm.generated';
 import type { PantryItemFormData } from '../PantryItemForm';
-import type { UnitChangePreview } from '#features/pantry/hooks/usePantryUnitChange';
+import { runUnitChange } from '../unitChangeFlow';
 import {
   usePantryItemFormSubmit,
   type UsePantryItemFormSubmitParams,
@@ -58,8 +58,14 @@ jest.mock('#/utils/fractionUtils', () => ({
   }),
 }));
 
+// The unit change's preview, confirmation and refusals are its own suite
+// (`unitChangeFlow.test.ts`); here, what the save hands it and does with it.
+jest.mock('../unitChangeFlow');
+const mockRunUnitChange = jest.mocked(runUnitChange);
+
 beforeEach(() => {
   jest.clearAllMocks();
+  mockRunUnitChange.mockResolvedValue(true);
 });
 
 const baseData: PantryItemFormData = {
@@ -76,9 +82,6 @@ const baseData: PantryItemFormData = {
   netWeightUnit: '',
   netWeightUnitId: '',
 };
-
-// Only the confirmation reads the preview; the save just hands it over.
-const PREVIEW = { version: 3 } as UnitChangePreview;
 
 const KG = { id: 'unit-kg', name: 'Kilogram', symbol: 'kg', type: null };
 
@@ -105,10 +108,7 @@ function defaults(
     updatePantryItemFields: jest.fn().mockResolvedValue(true),
     updateQuantity: jest.fn().mockResolvedValue(true),
     resolveUnitId: jest.fn(),
-    previewUnitChange: jest
-      .fn()
-      .mockResolvedValue({ status: 'ready', preview: PREVIEW }),
-    confirmUnitChange: jest.fn().mockResolvedValue(true),
+    unitChange: { preview: jest.fn(), change: jest.fn() },
     reportFieldError: jest.fn(),
     onSuccess: jest.fn(),
     ...overrides,
@@ -189,7 +189,7 @@ describe('usePantryItemFormSubmit', () => {
   });
 
   describe('a unit change', () => {
-    it('previews it, asks for confirmation, and closes once it is made', async () => {
+    it('runs the unit change, and closes once it is made', async () => {
       const params = defaults({
         trackingUnit: KG,
         dirtyFields: { unit: true },
@@ -198,15 +198,10 @@ describe('usePantryItemFormSubmit', () => {
 
       await result.current.handleSave({ ...baseData, unit: 'kg' });
 
-      expect(params.previewUnitChange).toHaveBeenCalledWith({
-        unitId: 'unit-kg',
-        quantity: null,
-      });
-      expect(params.confirmUnitChange).toHaveBeenCalledWith({
-        unitId: 'unit-kg',
-        quantity: null,
-        preview: PREVIEW,
-      });
+      expect(mockRunUnitChange).toHaveBeenCalledWith(
+        expect.objectContaining({ reportFieldError: params.reportFieldError }),
+        { unitId: 'unit-kg', quantity: null, packageSize: undefined },
+      );
       // The quick set never carries a unit.
       expect(params.updateQuantity).not.toHaveBeenCalled();
       expect(params.onSuccess).toHaveBeenCalledTimes(1);
@@ -226,18 +221,42 @@ describe('usePantryItemFormSubmit', () => {
         quantityInput: '0.5',
       });
 
-      expect(params.previewUnitChange).toHaveBeenCalledWith({
+      expect(mockRunUnitChange).toHaveBeenCalledWith(expect.anything(), {
         unitId: 'unit-kg',
         quantity: 0.5,
+        packageSize: undefined,
       });
       expect(params.updateQuantity).not.toHaveBeenCalled();
     });
 
-    it('stays open, saving nothing else, when the change is not confirmed', async () => {
+    it('offers the net weight as the size of one package', async () => {
+      const params = defaults({
+        trackingUnit: KG,
+        dirtyFields: { unit: true },
+        netWeightUnitId: 'u-oz',
+      });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      await result.current.handleSave({
+        ...baseData,
+        unit: 'kg',
+        netWeight: '32',
+        netWeightUnit: 'oz',
+      });
+
+      expect(mockRunUnitChange).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          packageSize: { netWeight: 32, netWeightUnitId: 'u-oz' },
+        }),
+      );
+    });
+
+    it('stays open, saving nothing else, when the change is not made', async () => {
+      mockRunUnitChange.mockResolvedValue(false);
       const params = defaults({
         trackingUnit: KG,
         dirtyFields: { unit: true, notes: true },
-        confirmUnitChange: jest.fn().mockResolvedValue(false),
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
@@ -261,38 +280,6 @@ describe('usePantryItemFormSubmit', () => {
       expect(params.onSuccess).toHaveBeenCalledTimes(1);
     });
 
-    it('says on the unit field that a change needs a connection', async () => {
-      const params = defaults({
-        trackingUnit: KG,
-        previewUnitChange: jest.fn().mockResolvedValue({ status: 'offline' }),
-      });
-      const { result } = renderHook(() => usePantryItemFormSubmit(params));
-
-      await result.current.handleSave({ ...baseData, unit: 'kg' });
-
-      expect(params.reportFieldError).toHaveBeenCalledWith(
-        'unit',
-        'Changing the unit needs a connection, so we can show what happens to your stock first.',
-      );
-      expect(params.confirmUnitChange).not.toHaveBeenCalled();
-      expect(params.onSuccess).not.toHaveBeenCalled();
-    });
-
-    it('says on the unit field when the change could not be checked', async () => {
-      const params = defaults({
-        trackingUnit: KG,
-        previewUnitChange: jest.fn().mockResolvedValue({ status: 'failed' }),
-      });
-      const { result } = renderHook(() => usePantryItemFormSubmit(params));
-
-      await result.current.handleSave({ ...baseData, unit: 'kg' });
-
-      expect(params.reportFieldError).toHaveBeenCalledWith(
-        'unit',
-        "Couldn't check what this change would do. Try again.",
-      );
-    });
-
     it('reports a typed unit it cannot resolve on the field, and sends nothing', async () => {
       const params = defaults({
         trackingUnit: { id: null, name: null, symbol: null, type: null },
@@ -306,11 +293,11 @@ describe('usePantryItemFormSubmit', () => {
         'unit',
         '"sticks of" isn\'t a unit we recognise. Pick one from the list.',
       );
-      expect(params.previewUnitChange).not.toHaveBeenCalled();
+      expect(mockRunUnitChange).not.toHaveBeenCalled();
       expect(params.updatePantryItemFields).not.toHaveBeenCalled();
     });
 
-    it('resolves a typed unit before previewing it', async () => {
+    it('resolves a typed unit before changing to it', async () => {
       const resolveUnitId = jest.fn().mockResolvedValue('unit-stick');
       const params = defaults({
         trackingUnit: { id: null, name: null, symbol: null, type: null },
@@ -321,10 +308,10 @@ describe('usePantryItemFormSubmit', () => {
       await result.current.handleSave({ ...baseData, unit: 'sticks' });
 
       expect(resolveUnitId).toHaveBeenCalledWith(null, 'sticks');
-      expect(params.previewUnitChange).toHaveBeenCalledWith({
-        unitId: 'unit-stick',
-        quantity: null,
-      });
+      expect(mockRunUnitChange).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ unitId: 'unit-stick' }),
+      );
     });
   });
 
@@ -414,7 +401,7 @@ describe('usePantryItemFormSubmit', () => {
         quantityInput: '3',
         quantityValue: 3,
       });
-      expect(params.previewUnitChange).not.toHaveBeenCalled();
+      expect(mockRunUnitChange).not.toHaveBeenCalled();
     });
 
     it('sends the stored value, not the seed rounded to three places', async () => {

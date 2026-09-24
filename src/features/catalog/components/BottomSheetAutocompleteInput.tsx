@@ -308,6 +308,9 @@ export function BottomSheetAutocompleteInput<T>({
                 testID ? catalogTestIDs.autocompleteSearch(testID) : undefined
               }
               autoCapitalize={autoCapitalize}
+              // iOS commits a correction as the keyboard closes on a pick,
+              // overwriting the value just picked.
+              autoCorrect={false}
             />
           </View>
           <FlashList
