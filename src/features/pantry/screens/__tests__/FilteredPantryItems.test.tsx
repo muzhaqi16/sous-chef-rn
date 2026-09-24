@@ -15,6 +15,7 @@ type MockPantryItem = {
   itemName: string;
   quantity: number;
   heldQuantity: number;
+  displayAmount: { quantity: number; unit: { symbol: string } };
   unit: { symbol: string } | null;
   isLowStock: boolean;
   expiresOn?: string;
@@ -121,6 +122,7 @@ const mockLowStockItems = [
     quantity: 2,
     heldQuantity: 2,
     unit: { symbol: 'pcs' },
+    displayAmount: { quantity: 2, unit: { symbol: 'pcs' } },
     isLowStock: true,
   },
   {
@@ -130,6 +132,7 @@ const mockLowStockItems = [
     quantity: 1,
     heldQuantity: 1,
     unit: { symbol: 'stk' },
+    displayAmount: { quantity: 1, unit: { symbol: 'stk' } },
     isLowStock: true,
   },
 ];
@@ -151,6 +154,7 @@ const mockExpiringItems = [
     quantity: 1,
     heldQuantity: 1,
     unit: { symbol: 'gal' },
+    displayAmount: { quantity: 1, unit: { symbol: 'gal' } },
     isLowStock: false,
     expiresOn: toDateKey(tomorrow),
   },
@@ -161,6 +165,7 @@ const mockExpiringItems = [
     quantity: 2,
     heldQuantity: 2,
     unit: { symbol: 'cups' },
+    displayAmount: { quantity: 2, unit: { symbol: 'cups' } },
     isLowStock: false,
     expiresOn: toDateKey(in3Days),
   },
@@ -174,6 +179,7 @@ const mockExpiredItems = [
     quantity: 1,
     heldQuantity: 1,
     unit: { symbol: 'steak' },
+    displayAmount: { quantity: 1, unit: { symbol: 'steak' } },
     isLowStock: false,
     expiresOn: toDateKey(sixDaysAgo),
   },
@@ -373,8 +379,18 @@ describe('FilteredPantryItems', () => {
 
     it('renders a fractional remaining quantity as a cooking fraction', () => {
       mockAllItems = [
-        { ...mockLowStockItems[0]!, quantity: 2, heldQuantity: 1.25 },
-        { ...mockLowStockItems[1]!, quantity: 178, heldQuantity: 177.4412 },
+        {
+          ...mockLowStockItems[0]!,
+          quantity: 2,
+          heldQuantity: 1.25,
+          displayAmount: { quantity: 1.25, unit: { symbol: 'pcs' } },
+        },
+        {
+          ...mockLowStockItems[1]!,
+          quantity: 178,
+          heldQuantity: 177.4412,
+          displayAmount: { quantity: 177.4412, unit: { symbol: 'stk' } },
+        },
       ];
       renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
       expect(screen.getByText('1 1/4 pcs remaining')).toBeTruthy();

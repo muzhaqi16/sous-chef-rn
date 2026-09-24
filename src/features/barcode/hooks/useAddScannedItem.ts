@@ -40,6 +40,7 @@ import { toDateKey } from '#/utils/dateUtils';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
+import { writeHeldStock } from '#features/pantry/cache/stock';
 
 // Only reads `{ id }` from the new item, so the local SearchResults_pantryItem
 // fragment is sufficient.
@@ -57,7 +58,6 @@ const RESTOCKED_QUANTITY = gql`
   fragment _ScannedRestockQuantity on PantryItem {
     id
     quantity
-    heldQuantity
   }
 `;
 
@@ -274,7 +274,7 @@ export function useAddScannedItem({
       id: existingPantryItemId,
     });
     const cached = cacheId
-      ? client.cache.readFragment<{ quantity: number; heldQuantity: number }>({
+      ? client.cache.readFragment<{ quantity: number }>({
           id: cacheId,
           fragment: RESTOCKED_QUANTITY,
         })
@@ -282,15 +282,18 @@ export function useAddScannedItem({
     const optimistic = optimisticFieldUpdate(
       client.cache,
       cacheId,
-      cached
-        ? { quantity: cached.quantity, heldQuantity: cached.heldQuantity }
-        : null,
-      {
-        quantity: (cached?.quantity ?? 0) + SCANNED_QUANTITY,
-        heldQuantity: (cached?.heldQuantity ?? 0) + SCANNED_QUANTITY,
-      },
+      cached ? { quantity: cached.quantity } : null,
+      { quantity: (cached?.quantity ?? 0) + SCANNED_QUANTITY },
       'Restock scanned Pantry Item',
     );
+    // The amount the screens show moves with the count.
+    const undoHeld = cached
+      ? writeHeldStock(
+          client.cache,
+          existingPantryItemId,
+          held => held + SCANNED_QUANTITY,
+        )
+      : () => {};
 
     const settled = await settleMutation(
       () =>
@@ -309,7 +312,10 @@ export function useAddScannedItem({
       {
         document: BarcodeRestockPantryItemDocument,
         fallback: t('errors.restockFailedRetry'),
-        onFailed: optimistic.revert,
+        onFailed: () => {
+          optimistic.revert();
+          undoHeld();
+        },
       },
     );
     return settled.status !== 'failed';

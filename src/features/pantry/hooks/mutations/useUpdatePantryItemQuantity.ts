@@ -18,6 +18,7 @@ import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { logger } from '#/utils/environment';
 import { useTranslation } from '#/i18n';
+import { writeHeldStock } from '#features/pantry/cache/stock';
 
 interface UseUpdatePantryItemQuantityOptions {
   refetch?: () => void;
@@ -27,6 +28,8 @@ interface UpdateQuantityParams {
   itemId: string;
   quantityInput: string;
   quantityValue: number;
+  /** The count multiple the amount is stated in (a dozen); else the stack's own unit. */
+  statedIn?: { id: string; symbol: string; conversionFactor: number } | null;
 }
 
 export function useUpdatePantryItemQuantity({
@@ -40,14 +43,15 @@ export function useUpdatePantryItemQuantity({
   );
 
   /**
-   * Sets the quantity in the stack's own unit; the unit changes through
-   * `changePantryItemUnit`. Resolves once the write settles — at once when it
+   * Sets the quantity in the stack's own unit, or in the dozen it is shown in;
+   * the unit changes through `changePantryItemUnit`. Resolves once the write settles — at once when it
    * is queued — and false on a refusal, which has been alerted.
    */
   const updateQuantity = async ({
     itemId,
     quantityInput,
     quantityValue,
+    statedIn,
   }: UpdateQuantityParams): Promise<boolean> => {
     const cacheId = client.cache.identify({
       __typename: 'PantryItem',
@@ -78,9 +82,13 @@ export function useUpdatePantryItemQuantity({
     }
 
     // The set amount is what the stack holds; the response recounts packages.
+    // A dozen counts in pieces, the unit its factor is stated against.
+    const held = statedIn
+      ? newQuantity * statedIn.conversionFactor
+      : newQuantity;
     const optimisticPantryItem = enhanceWithVersion(currentItem, {
-      quantity: newQuantity,
-      heldQuantity: newQuantity,
+      quantity: held,
+      heldQuantity: held,
     });
 
     // Permanent write BEFORE firing: survives an offline/API-down queue
@@ -92,8 +100,22 @@ export function useUpdatePantryItemQuantity({
         fragmentName: 'useUpdatePantryItemQuantity_pantryItem',
         data,
       });
+    // Shown as typed ("2 doz"); a conditional inside the `try` would bail the
+    // React Compiler out of this hook.
+    const shownAs: Parameters<typeof writeHeldStock>[3] = statedIn
+      ? {
+          __typename: 'DisplayAmount',
+          quantity: newQuantity,
+          unit: {
+            __typename: 'Unit',
+            id: statedIn.id,
+            symbol: statedIn.symbol,
+          },
+        }
+      : undefined;
     try {
       writeItem(optimisticPantryItem);
+      writeHeldStock(client.cache, itemId, held, shownAs);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Update Pantry Item Quantity (optimistic)',
@@ -119,6 +141,7 @@ export function useUpdatePantryItemQuantity({
               // Separators normalized, fraction preserved: the server parses
               // this string itself and rejects a comma decimal outright.
               quantity: normalizeNumericTextForApi(quantityText),
+              ...(statedIn && { unitId: statedIn.id }),
               version: currentItem.version,
             },
           },

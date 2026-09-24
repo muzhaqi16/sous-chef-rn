@@ -85,6 +85,13 @@ mutation BarcodeRestockPantryItem($input: RestockPantryItemInput!) {
           version
           quantity
           heldQuantity
+          displayAmount {
+            quantity
+            unit {
+              id
+              symbol
+            }
+          }
           isLowStock
           ...SearchResults_pantryItem
         }

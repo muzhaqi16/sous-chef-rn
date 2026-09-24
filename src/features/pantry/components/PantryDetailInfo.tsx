@@ -5,10 +5,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { Icon } from '#/utils/iconUtils';
-import {
-  formatQuantityForDisplay,
-  getUnitDisplayText,
-} from '#utils/formatQuantity';
+import { formatQuantityForDisplay } from '#utils/formatQuantity';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
 import {
@@ -113,12 +110,12 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
 
   return (
     <>
-      {/* Quantity Row: what is left, exactly */}
+      {/* Quantity Row: what is left, as the stack is shown */}
       <InfoRow
         label={t('labels.quantity')}
-        value={`${formatQuantityForDisplay(
-          item.heldQuantity,
-        )} ${getUnitDisplayText(item.unit)}`}
+        value={`${formatQuantityForDisplay(item.displayAmount.quantity)} ${
+          item.displayAmount.unit.symbol
+        }`}
         icon="apps-outline"
         showColon={false}
         labelTone="secondary"

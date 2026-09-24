@@ -35,6 +35,11 @@ const baseItem: PantryDetailInfo_PantryItemFragment = {
   id: 'pi1',
   quantity: 2,
   heldQuantity: 2,
+  displayAmount: {
+    __typename: 'DisplayAmount',
+    quantity: 2,
+    unit: { __typename: 'Unit', id: 'u1', symbol: 'L' },
+  },
   costCurrency: null,
   unit: { __typename: 'Unit', id: 'u1', name: 'liters', symbol: 'L' },
   storageLocation: null,
@@ -52,6 +57,12 @@ const baseItem: PantryDetailInfo_PantryItemFragment = {
   tags: [],
   createdAt: '2024-01-01',
 };
+
+/** A stack holding `held`, shown in the unit it counts in. */
+const holding = (held: number) => ({
+  heldQuantity: held,
+  displayAmount: { ...baseItem.displayAmount, quantity: held },
+});
 
 describe('PantryDetailInfo', () => {
   const defaultProps = {
@@ -125,11 +136,26 @@ describe('PantryDetailInfo', () => {
     render(
       <PantryDetailInfo
         {...defaultProps}
-        itemRef={{ ...baseItem, quantity: 2, heldQuantity: 1.25 }}
+        itemRef={{ ...baseItem, quantity: 2, ...holding(1.25) }}
       />,
     );
     expect(screen.getByText('1 1/4 L')).toBeTruthy();
     expect(screen.getByText('Packages')).toBeTruthy();
+  });
+
+  it('shows a stack as the server shows it: 12 pc as 1 doz', () => {
+    const item: PantryDetailInfo_PantryItemFragment = {
+      ...baseItem,
+      quantity: 12,
+      heldQuantity: 12,
+      displayAmount: {
+        __typename: 'DisplayAmount',
+        quantity: 1,
+        unit: { __typename: 'Unit', id: 'u-doz', symbol: 'doz' },
+      },
+    };
+    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
+    expect(screen.getByText('1 doz')).toBeTruthy();
   });
 
   it('shows no packages row when every package is whole', () => {
@@ -382,13 +408,13 @@ describe('PantryDetailInfo', () => {
   });
 
   it('renders a fractional quantity as a cooking fraction', () => {
-    const item = { ...baseItem, quantity: 2, heldQuantity: 1.25 };
+    const item = { ...baseItem, quantity: 2, ...holding(1.25) };
     render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('1 1/4 L')).toBeTruthy();
   });
 
   it('rounds a quantity no cooking fraction fits to three decimals', () => {
-    const item = { ...baseItem, quantity: 178, heldQuantity: 177.4412 };
+    const item = { ...baseItem, quantity: 178, ...holding(177.4412) };
     render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('177.441 L')).toBeTruthy();
   });

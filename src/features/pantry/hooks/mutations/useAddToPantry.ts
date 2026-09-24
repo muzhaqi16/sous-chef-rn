@@ -1,4 +1,3 @@
-import { gql } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   CreatePantryItemDocument,
@@ -27,6 +26,7 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { toDateKey } from '#/utils/dateUtils';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
+import { writeHeldStock } from '#features/pantry/cache/stock';
 
 /** What became of an add. The caller owns the toast and the animation. */
 export type AddPantryItemOutcome =
@@ -47,14 +47,6 @@ interface UseAddToPantryArgs {
  * local-first write, its revert and the duplicate/refusal reading live here so
  * the sheet's two entry points cannot drift apart.
  */
-// What a restock bumps beside the count: the amount the screens show.
-const RESTOCKED_STOCK = gql`
-  fragment useAddToPantry_restockedStock on PantryItem {
-    id
-    heldQuantity
-  }
-`;
-
 export function useAddToPantry({
   pantryId,
   suggestionsLimit,
@@ -164,28 +156,18 @@ export function useAddToPantry({
       __typename: 'PantryItem',
       id: pantryItemId,
     });
-    const held =
-      cachedQuantity === null
-        ? null
-        : client.cache.readFragment<{ heldQuantity: number }>({
-            id: cacheId,
-            fragment: RESTOCKED_STOCK,
-          })?.heldQuantity ?? null;
     const optimistic = optimisticFieldUpdate(
       client.cache,
       cacheId,
-      cachedQuantity === null
-        ? null
-        : {
-            quantity: cachedQuantity,
-            ...(held !== null && { heldQuantity: held }),
-          },
-      {
-        quantity: (cachedQuantity ?? 0) + 1,
-        ...(held !== null && { heldQuantity: held + 1 }),
-      },
+      cachedQuantity === null ? null : { quantity: cachedQuantity },
+      { quantity: (cachedQuantity ?? 0) + 1 },
       'Restock Pantry Item',
     );
+    // The amount the screens show moves with the count.
+    const undoHeld =
+      cachedQuantity === null
+        ? () => {}
+        : writeHeldStock(client.cache, pantryItemId, held => held + 1);
 
     // The sheet tells the user; the settle classifies, reverts and reports.
     const settled = await settleMutation(
@@ -204,7 +186,10 @@ export function useAddToPantry({
       {
         document: RestockPantryItemDocument,
         fallback: t('addToPantry.restockFailed'),
-        onFailed: optimistic.revert,
+        onFailed: () => {
+          optimistic.revert();
+          undoHeld();
+        },
         present: 'none',
       },
     );

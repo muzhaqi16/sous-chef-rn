@@ -21,6 +21,7 @@ import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { toDateKey } from '#/utils/dateUtils';
 import { usePantryItemActions } from '../usePantryItemActions';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { WriteHeldStock_PantryItemFragmentDoc } from '#features/pantry/cache/stock.generated';
 import {
   UsePantryItemActions_IdFragmentDoc,
   UsePantryItemActions_QuantityFragmentDoc,
@@ -44,17 +45,20 @@ const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
     // One entry per fragment the hook reads back, so the fixture is held to
     // each of the three selections rather than to its own keys.
     ids.flatMap(id => {
+      const unit = { __typename: 'Unit', id: 'unit-1', symbol: 'ea' };
       const data = {
         __typename: 'PantryItem',
         id,
         quantity,
         heldQuantity: quantity,
-        unit: { __typename: 'Unit', id: 'unit-1', symbol: 'ea' },
+        displayAmount: { __typename: 'DisplayAmount', quantity, unit },
+        unit,
       };
       return [
         { fragment: UsePantryItemActions_IdFragmentDoc, data },
         { fragment: UsePantryItemActions_QuantityFragmentDoc, data },
         { fragment: UsePantryItemActions_TrackingUnitFragmentDoc, data },
+        { fragment: WriteHeldStock_PantryItemFragmentDoc, data },
       ];
     }),
   );
@@ -794,6 +798,8 @@ describe('usePantryItemActions', () => {
       expect(cachedItem(cache)).toMatchObject({
         quantity: 3,
         heldQuantity: 3,
+        // The amount as shown moves with it, in the unit the stack counts in.
+        displayAmount: { quantity: 3, unit: { id: 'unit-1', symbol: 'ea' } },
       });
       expect(alertService.alert).not.toHaveBeenCalled();
       expect(result.current.consumeModal.visible).toBe(false);
@@ -860,6 +866,7 @@ describe('usePantryItemActions', () => {
       expect(cachedItem(cache)).toMatchObject({
         quantity: 5,
         heldQuantity: 5,
+        displayAmount: { quantity: 5 },
       });
       expect(alertService.alert).toHaveBeenCalledTimes(1);
       expect(result.current.wasteModal.visible).toBe(true);

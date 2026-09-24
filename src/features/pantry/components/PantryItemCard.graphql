@@ -3,6 +3,13 @@ fragment PantryItemCard_pantryItem on PantryItem {
   itemName
   quantity
   heldQuantity
+  displayAmount {
+    quantity
+    unit {
+      id
+      symbol
+    }
+  }
   expiresOn
   storageState
   lastUsedAt

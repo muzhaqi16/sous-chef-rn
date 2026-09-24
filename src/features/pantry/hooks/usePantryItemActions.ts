@@ -21,8 +21,10 @@ import {
   UsePantryItemActions_TrackingUnitFragmentDoc,
   UsePantryItemActions_QuantityFragmentDoc,
   UsePantryItemActions_IdFragmentDoc,
+  type UsePantryItemActions_QuantityFragment,
 } from './usePantryItemActions.generated';
 import { toDateKey } from '#/utils/dateUtils';
+import { writeHeldStock } from '#features/pantry/cache/stock';
 
 interface UsePantryItemActionsOptions {
   removeItem: (id: string) => Promise<void>;
@@ -53,12 +55,7 @@ const RANKED_UNIT_FIELDS = [
   RestockUnitsForPantryItemDocument,
 ].map(rootFieldOf);
 
-interface StockSnapshot {
-  quantity: number;
-  heldQuantity: number;
-}
-
-const NO_STOCK: StockSnapshot = { quantity: 0, heldQuantity: 0 };
+type StockSnapshot = UsePantryItemActions_QuantityFragment;
 
 export function usePantryItemActions({
   removeItem,
@@ -98,17 +95,16 @@ export function usePantryItemActions({
   };
 
   /** The stock as cached, to restore if the write is refused. */
-  const readCurrentStock = (itemId: string): StockSnapshot => {
+  const readCurrentStock = (itemId: string): StockSnapshot | null => {
     const cacheId = client.cache.identify({
       __typename: 'PantryItem',
       id: itemId,
     });
-    if (!cacheId) return NO_STOCK;
-    const data = client.cache.readFragment<StockSnapshot>({
+    if (!cacheId) return null;
+    return client.cache.readFragment<StockSnapshot>({
       id: cacheId,
       fragment: UsePantryItemActions_QuantityFragmentDoc,
     });
-    return data ?? NO_STOCK;
   };
 
   /**
@@ -129,9 +125,6 @@ export function usePantryItemActions({
         quantity(existing: number) {
           return Math.max(0, existing + delta);
         },
-        heldQuantity(existing: number) {
-          return Math.max(0, existing + delta);
-        },
         updatedAt() {
           return new Date().toISOString();
         },
@@ -140,10 +133,12 @@ export function usePantryItemActions({
         },
       },
     });
+    writeHeldStock(client.cache, itemId, held => Math.max(0, held + delta));
   };
 
   /** Restores the stock snapshot taken before a refused write. */
-  const revertStock = (itemId: string, original: StockSnapshot) => {
+  const revertStock = (itemId: string, original: StockSnapshot | null) => {
+    if (!original) return;
     const cacheId = client.cache.identify({
       __typename: 'PantryItem',
       id: itemId,
@@ -156,11 +151,14 @@ export function usePantryItemActions({
         quantity() {
           return original.quantity;
         },
-        heldQuantity() {
-          return original.heldQuantity;
-        },
       },
     });
+    writeHeldStock(
+      client.cache,
+      itemId,
+      original.heldQuantity,
+      original.displayAmount,
+    );
   };
 
   // Consume/Waste item mutation (both use createPantryItemUsage)

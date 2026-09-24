@@ -67,6 +67,13 @@ query GetPantry(
           itemId
           quantity
           heldQuantity
+          displayAmount {
+            quantity
+            unit {
+              id
+              symbol
+            }
+          }
           expiresOn
           storageState
           isLowStock
@@ -612,6 +619,13 @@ mutation CreatePantryItem($input: CreatePantryItemInput!, $today: LocalDate!) {
         itemName
         quantity
         heldQuantity
+        displayAmount {
+          quantity
+          unit {
+            id
+            symbol
+          }
+        }
         version
         # `createdAt` is selected by GetPantry on every list node, so the create
         # response (and the optimistic entity built from this selection) must
@@ -829,6 +843,13 @@ mutation CreatePantryItemUsage($input: CreatePantryItemUsageInput!) {
           id
           quantity
           heldQuantity
+          displayAmount {
+            quantity
+            unit {
+              id
+              symbol
+            }
+          }
           isLowStock
           ...useCreatePantryItemUsage_pantryItem
         }
@@ -912,6 +933,13 @@ mutation UpdatePantryItemQuantity($input: UpdatePantryItemQuantityInput!) {
         # reading `remainingNetWeight` shows the old figure until a refetch.
         remainingNetWeight
         heldQuantity
+        displayAmount {
+          quantity
+          unit {
+            id
+            symbol
+          }
+        }
         isLowStock
       }
     }

@@ -31,7 +31,6 @@ import {
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import {
   formatQuantityForDisplay,
-  getUnitDisplayText,
   resolveQuantityNotation,
 } from '#utils/formatQuantity';
 import { BatchStatus, ItemCondition } from '#/graphql/generated/schemaTypes';
@@ -206,10 +205,15 @@ export const PantryItemDetail: React.FC<
     );
   }
 
-  // What is left, exactly: `quantity` counts a partly used package as one.
-  const quantityText = `${formatQuantityForDisplay(item.heldQuantity, {
-    notation: resolveQuantityNotation(null, item.unit.displayAsFraction),
-  })} ${getUnitDisplayText(item.unit)}`;
+  // What is left, as the stack is shown: "1 doz" for 12 pc.
+  const shown = item.displayAmount;
+  const shownInOwnUnit = shown.unit.id === item.unit.id;
+  const quantityText = `${formatQuantityForDisplay(shown.quantity, {
+    notation: resolveQuantityNotation(
+      null,
+      shownInOwnUnit ? item.unit.displayAsFraction : null,
+    ),
+  })} ${shown.unit.symbol}`;
 
   // The EXPIRED flag can land a day late east of UTC, so the date decides too.
   // The batches' date, not the item's: an edit moves only the item's, and the

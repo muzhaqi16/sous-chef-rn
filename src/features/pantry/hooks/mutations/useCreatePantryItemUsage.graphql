@@ -6,6 +6,13 @@ fragment useCreatePantryItemUsage_pantryItem on PantryItem {
   version
   quantity
   heldQuantity
+  displayAmount {
+    quantity
+    unit {
+      id
+      symbol
+    }
+  }
   isLowStock
   lastUsedAt
   remainingNetWeight

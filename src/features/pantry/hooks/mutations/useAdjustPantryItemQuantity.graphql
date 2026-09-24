@@ -9,6 +9,13 @@ fragment useAdjustPantryItemQuantity_pantryItem on PantryItem {
   updatedAt
   quantity
   heldQuantity
+  displayAmount {
+    quantity
+    unit {
+      id
+      symbol
+    }
+  }
   isLowStock
   remainingNetWeight
   lastUsedAt

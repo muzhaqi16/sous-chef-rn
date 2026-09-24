@@ -31,6 +31,12 @@ query PreviewPantryItemUnitChange($input: PreviewPantryItemUnitChangeInput!) {
     dropsPortions
     dropsThresholds
     conflictingPantryItemId
+    # What the stack will read as: "1 doz" for 12 pc shown in dozens. The
+    # confirmation shows this, so no dozen is computed on the device.
+    displayAmountAfter {
+      quantity
+      text
+    }
     refusal {
       code
       field
@@ -46,6 +52,13 @@ fragment usePantryUnitChange_pantryItem on PantryItem {
   updatedAt
   quantity
   heldQuantity
+  displayAmount {
+    quantity
+    unit {
+      id
+      symbol
+    }
+  }
   unit {
     id
     name

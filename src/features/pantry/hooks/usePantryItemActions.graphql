@@ -9,6 +9,13 @@ fragment usePantryItemActions_quantity on PantryItem {
   id
   quantity
   heldQuantity
+  displayAmount {
+    quantity
+    unit {
+      id
+      symbol
+    }
+  }
 }
 
 fragment usePantryItemActions_id on PantryItem {

@@ -17,6 +17,7 @@ import { useTranslation } from '#/i18n';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
+import { writeHeldStock } from '#features/pantry/cache/stock';
 
 interface UseAdjustPantryItemQuantityOptions {
   onSuccess?: () => void;
@@ -69,6 +70,7 @@ export function useAdjustPantryItemQuantity({
       });
       try {
         writeItem(optimistic);
+        writeHeldStock(client.cache, pantryItemId, newQuantity);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Adjust Pantry Item Quantity (optimistic)',

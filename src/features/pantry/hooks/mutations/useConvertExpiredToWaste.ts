@@ -14,6 +14,7 @@ import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
+import { writeHeldStock } from '#features/pantry/cache/stock';
 
 interface UseConvertExpiredToWasteOptions {
   onSuccess?: () => void;
@@ -56,15 +57,16 @@ export function useConvertExpiredToWaste({
       quantity: number,
       heldQuantity: number,
       condition: ItemCondition,
-    ) =>
+    ) => {
       client.cache.modify({
         id: itemCacheId,
         fields: {
           quantity: () => quantity,
-          heldQuantity: () => heldQuantity,
           condition: () => condition,
         },
       });
+      writeHeldStock(client.cache, pantryItemId, heldQuantity);
+    };
 
     // Permanent optimistic write before firing — survives an offline/queued convert.
     const clearQuantityPersistence = optimisticDataPersistence.track(

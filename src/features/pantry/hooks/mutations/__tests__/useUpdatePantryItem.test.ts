@@ -48,6 +48,11 @@ const buildPantryItem = (overrides: Record<string, unknown> = {}) => ({
   itemName: 'Milk',
   quantity: 5,
   heldQuantity: 5,
+  displayAmount: {
+    __typename: 'DisplayAmount',
+    quantity: 5,
+    unit: { __typename: 'Unit', id: 'unit-1', symbol: 'g' },
+  },
   version: 1,
   updatedAt: '2025-01-01',
   storageState: 'PANTRY',

@@ -8,7 +8,6 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import {
   formatQuantityForDisplay,
-  isUnchangedQuantity,
   resolveQuantityNotation,
 } from '#/utils/formatQuantity';
 import type {
@@ -65,6 +64,8 @@ export interface UnitChangeTarget {
   amount: number;
   /** The form's net weight: one package, for a measure becoming a count. */
   packageSize?: PackageSize;
+  /** The stack as it reads now ("1 doz"); else its quantity in its own unit. */
+  shownBefore?: string;
 }
 
 /** A request and what the server says it would do. */
@@ -79,6 +80,11 @@ const amountText = (quantity: number | null | undefined, unit: PreviewUnit) =>
   `${formatQuantityForDisplay(quantity, {
     notation: resolveQuantityNotation(null, unit.displayAsFraction),
   })} ${unit.symbol}`;
+
+/** The stack as it will read: the server's text, so no dozen is worked out here. */
+const shownAfter = (preview: UnitChangePreview) =>
+  preview.displayAmountAfter?.text ??
+  amountText(preview.quantityAfter, preview.toUnit);
 
 const beforeAfter = (
   before: number | null | undefined,
@@ -115,9 +121,16 @@ function consequences(preview: UnitChangePreview): string[] {
   return lines;
 }
 
-function summaryMessage(preview: UnitChangePreview): string {
+function summaryMessage(
+  preview: UnitChangePreview,
+  shownBefore: string | undefined,
+): string {
   const lines = [
-    beforeAfter(preview.quantityBefore, preview.quantityAfter, preview),
+    t('unitChange.beforeAfter', {
+      before:
+        shownBefore ?? amountText(preview.quantityBefore, preview.fromUnit),
+      after: shownAfter(preview),
+    }),
   ];
   if (preview.method === PantryUnitChangeMethod.Recount) {
     lines.push(t('unitChange.recountNote'));
@@ -212,7 +225,10 @@ async function decide(
 ): Promise<Option | null> {
   const { preview } = convert;
   const { fromUnit, toUnit } = preview;
-  const amount = amountText(target.amount, toUnit);
+  // What the stack reads as once set to the form's amount: "1 doz", not 12 pc.
+  const amount = set
+    ? shownAfter(set.preview)
+    : amountText(target.amount, toUnit);
   const withNotice = (message: string) =>
     notice ? `${notice}\n\n${message}` : message;
   const setChoice = set && {
@@ -221,7 +237,7 @@ async function decide(
   };
   const setOrConvert = t('unitChange.setOrConvert', {
     amount,
-    before: amountText(preview.quantityBefore, fromUnit),
+    before: target.shownBefore ?? amountText(preview.quantityBefore, fromUnit),
   });
 
   switch (unitChangeMode(preview)) {
@@ -262,14 +278,13 @@ async function decide(
         );
         return null;
       }
-      return ask(withNotice(summaryMessage(setChoice.value.preview)), [
-        { label: t('unitChange.title'), value: setChoice.value },
-      ]);
+      return ask(
+        withNotice(summaryMessage(setChoice.value.preview, target.shownBefore)),
+        [{ label: t('unitChange.title'), value: setChoice.value }],
+      );
     case 'estimate': {
       const estimate = {
-        label: t('unitChange.convertToAbout', {
-          amount: amountText(preview.quantityAfter, toUnit),
-        }),
+        label: t('unitChange.convertToAbout', { amount: shownAfter(preview) }),
         value: {
           ...convert,
           request: {
@@ -303,10 +318,10 @@ async function decide(
     }
     case 'summary': {
       const sameAmount =
-        preview.quantityAfter != null &&
-        isUnchangedQuantity(target.amount, preview.quantityAfter);
+        setChoice !== null &&
+        shownAfter(setChoice.value.preview) === shownAfter(preview);
       if (!setChoice || sameAmount) {
-        // Landing on the field's amount, the stack holds exactly it: a
+        // Both read the same, and setting holds exactly the field's amount: a
         // converted 0.999996 doz is 11.99995 pc, not the 12 shown.
         const exactly =
           setChoice &&
@@ -314,20 +329,33 @@ async function decide(
             consequences(preview).join()
             ? setChoice.value
             : convert;
-        return ask(withNotice(summaryMessage(preview)), [
+        return ask(withNotice(summaryMessage(preview, target.shownBefore)), [
           { label: t('unitChange.title'), value: exactly },
         ]);
       }
+      // A count multiple (a dozen) on a stack of pieces changes only how it
+      // reads: the count stays, so there is nothing to convert.
+      const countStays = preview.fromUnit.id === preview.toUnit.id;
+      const kept = shownAfter(preview);
       return ask(
         withNotice(
-          choiceMessage([setOrConvert], preview, setChoice.value, amount),
+          choiceMessage(
+            [
+              countStays
+                ? t('unitChange.setOrKeep', { amount, kept })
+                : setOrConvert,
+            ],
+            preview,
+            setChoice.value,
+            amount,
+          ),
         ),
         [
           setChoice,
           {
-            label: t('unitChange.convertTo', {
-              amount: amountText(preview.quantityAfter, toUnit),
-            }),
+            label: countStays
+              ? t('unitChange.keep', { amount: kept })
+              : t('unitChange.convertTo', { amount: kept }),
             value: convert,
           },
         ],

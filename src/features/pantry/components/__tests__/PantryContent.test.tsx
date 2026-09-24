@@ -56,12 +56,22 @@ type DeepPartial<T> = T extends object
 function createMockPantryItem(
   overrides: DeepPartial<PantryItem> = {},
 ): PantryItem {
+  const held = overrides.heldQuantity ?? overrides.quantity ?? 1;
   return {
     __typename: 'PantryItem',
     id: 'mock-id',
     itemName: 'Mock Item',
     quantity: 1,
-    heldQuantity: overrides.quantity ?? 1,
+    heldQuantity: held,
+    displayAmount: {
+      __typename: 'DisplayAmount',
+      quantity: held,
+      unit: {
+        __typename: 'Unit',
+        id: overrides.unit?.id ?? 'unit-piece',
+        symbol: overrides.unit?.symbol ?? 'pc',
+      },
+    },
     expiresOn: null,
     createdAt: '2024-01-01',
     updatedAt: null,

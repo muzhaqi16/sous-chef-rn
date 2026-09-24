@@ -24,6 +24,10 @@ fragment writePantryItemDetailStub_pantryItem on PantryItem {
   tags
   storageNotes
   restockQuantity
+  # Set only by the server; a stack created offline is shown in its own unit.
+  displayUnit {
+    id
+  }
   condition
   acquisitionMethod
   costPerUnit

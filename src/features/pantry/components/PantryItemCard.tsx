@@ -188,10 +188,10 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
     : undefined;
   const expiryStatusKey: ExpiryStatus = showExpiration ? variant : 'normal';
 
-  // What is left, exactly: `quantity` counts a partly used package as one.
+  // What is left, as the stack is shown: "1 doz" for 12 pc.
   const quantity = formatQuantityDisplay(
-    pantryItem.heldQuantity,
-    pantryItem.unit.symbol,
+    pantryItem.displayAmount.quantity,
+    pantryItem.displayAmount.unit.symbol,
   );
   // Custom names only; the default locations are the filter tabs.
   const location = pantryItem.storageLocation?.name ?? null;

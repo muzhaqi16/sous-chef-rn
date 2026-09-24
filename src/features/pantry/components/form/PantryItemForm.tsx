@@ -34,6 +34,7 @@ import { QuantitySection } from './QuantitySection';
 import { StorageDetailsSection } from './StorageDetailsSection';
 import { NetWeightSection } from './NetWeightSection';
 import { usePantryItemFormSubmit } from './usePantryItemFormSubmit';
+import { editedAmount } from './editedAmount';
 import { usePantryUnitChange } from '#features/pantry/hooks/usePantryUnitChange';
 import { logValidationErrors } from '#utils/validation/common';
 import {
@@ -96,8 +97,8 @@ const formValuesFromItem = (
   item: PantryItemForm_PantryItemFragment,
 ): PantryItemFormData => ({
   itemName: item.itemName,
-  quantityInput: formatQuantityForInput(item.quantity) || '1',
-  unit: item.unit.symbol, // Tracking unit
+  quantityInput: formatQuantityForInput(editedAmount(item).quantity) || '1',
+  unit: editedAmount(item).unit.symbol,
   minQuantity: decimalQuantityInput(item.minQuantity),
   restockQuantity: decimalQuantityInput(item.restockQuantity),
   brand: item.brand?.name ?? '',
@@ -218,11 +219,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     setPrevExistingItemData(itemQueryData);
     const item = existingPantryItem;
     reset(formValuesFromItem(item));
+    const { unit } = editedAmount(item);
     setTrackingUnit({
-      id: item.unit.id,
-      name: item.unit.name,
-      symbol: item.unit.symbol,
-      type: item.unit.type,
+      id: unit.id,
+      name: unit.name,
+      symbol: unit.symbol,
+      type: unit.type,
     });
   }
 

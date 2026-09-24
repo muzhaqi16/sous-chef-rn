@@ -2,7 +2,10 @@ import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import { t } from '#/i18n';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { isUnchangedQuantity } from '#/utils/formatQuantity';
+import {
+  formatQuantityForDisplay,
+  isUnchangedQuantity,
+} from '#/utils/formatQuantity';
 import { formatNumberForInput } from '#/utils/formatters/number';
 import type { StorageType } from '#/graphql/generated/schemaTypes';
 import type { FieldNamesMarkedBoolean } from 'react-hook-form';
@@ -14,6 +17,7 @@ import { isOwnKey } from '#/utils/isOwnKey';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
 import type { PantryItemFormData } from './PantryItemForm';
+import { editedAmount } from './editedAmount';
 import {
   runUnitChange,
   type UnitChangeDeps,
@@ -43,6 +47,7 @@ interface UpdateQuantityArgs {
   itemId: string;
   quantityInput: string;
   quantityValue: number;
+  statedIn?: { id: string; symbol: string; conversionFactor: number } | null;
 }
 
 export interface UsePantryItemFormSubmitParams {
@@ -116,9 +121,11 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
       return;
     }
     const itemId = params.itemId;
+    // What the form shows: "1 doz" for 12 pc shown in dozens.
+    const edited = editedAmount(currentItem);
 
     try {
-      const unitTyped = !!typedUnit && typedUnit !== currentItem.unit.symbol;
+      const unitTyped = !!typedUnit && typedUnit !== edited.unit.symbol;
       const unitId =
         params.trackingUnit.id ??
         (unitTyped ? await params.resolveUnitId(null, typedUnit) : null);
@@ -148,7 +155,13 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
       // `unit` only relabels on this path; a different unit is its own change.
       delete dirtyFieldsRecord.unit;
 
-      const unitChanged = !!unitId && unitId !== currentItem.unit.id;
+      // The dozen the stack is already shown in: the amount is stated in it,
+      // and nothing about the unit changes (11 pc shown in dozens, set to 1 doz).
+      const shownIn = currentItem.displayUnit;
+      const statedInShown =
+        !!unitId && unitId !== edited.unit.id && unitId === shownIn?.id;
+      const unitChanged =
+        !!unitId && unitId !== edited.unit.id && !statedInShown;
       const quantityChanged = !!dirtyFieldsRecord.quantityInput;
       const hasFieldChanges = Object.entries(dirtyFieldsRecord).some(
         ([field, dirty]) => field !== 'quantityInput' && dirty,
@@ -171,24 +184,26 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
             amount:
               typedQuantity !== null && typedQuantity > 0
                 ? typedQuantity
-                : currentItem.quantity,
+                : edited.quantity,
             packageSize: packageSizeOf(data),
+            shownBefore: `${formatQuantityForDisplay(
+              currentItem.displayAmount.quantity,
+            )} ${currentItem.displayAmount.unit.symbol}`,
           },
         );
         if (!changed) return;
       } else if (quantityChanged && typedQuantity) {
         // The seed is rounded to three places; sent back unedited it would
         // rewrite the stock, so the stored value goes instead.
-        const keepsStored = isUnchangedQuantity(
-          typedQuantity,
-          currentItem.quantity,
-        );
+        const keepsStored =
+          !statedInShown && isUnchangedQuantity(typedQuantity, edited.quantity);
         const stands = await params.updateQuantity({
           itemId,
           quantityInput: keepsStored
-            ? formatNumberForInput(currentItem.quantity)
+            ? formatNumberForInput(edited.quantity)
             : data.quantityInput ?? typedQuantity.toString(),
-          quantityValue: keepsStored ? currentItem.quantity : typedQuantity,
+          quantityValue: keepsStored ? edited.quantity : typedQuantity,
+          statedIn: statedInShown ? shownIn : edited.statedIn,
         });
         if (!stands) return;
       }

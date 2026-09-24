@@ -59,6 +59,7 @@ const converted = (
   dropsPortions: false,
   dropsThresholds: false,
   conflictingPantryItemId: null,
+  displayAmountAfter: null,
   refusal: null,
   ...over,
 });
@@ -311,6 +312,75 @@ describe('runUnitChange', () => {
       await runUnitChange(d, TWELVE);
 
       expect(d.change).toHaveBeenCalledWith({ unitId: 'u-pc', version: 3 });
+    });
+  });
+
+  describe('a dozen on a stack of pieces, which only changes how it reads', () => {
+    const reads = (
+      quantity: number,
+      text: string,
+    ): UnitChangePreview['displayAmountAfter'] => ({
+      __typename: 'DisplayAmount',
+      quantity,
+      text,
+    });
+    const shownIn = (held: number, text: string) =>
+      converted({
+        toUnit: PC,
+        quantityBefore: held,
+        quantityAfter: held,
+        displayAmountAfter: reads(held, text),
+      });
+    const setToDozen = (text: string) =>
+      ready(
+        setTo(12, {
+          toUnit: PC,
+          quantityBefore: 11,
+          displayAmountAfter: reads(1, text),
+        }),
+      );
+    const ONE_DOZEN: UnitChangeTarget = {
+      unitId: 'u-doz',
+      amount: 1,
+      shownBefore: '11 pc',
+    };
+
+    it('asks whether it is a dozen now, or keeps the count', async () => {
+      const d = deps(ready(shownIn(11, '11 pc')), setToDozen('1 doz'));
+      pressNext('Set to');
+
+      await runUnitChange(d, ONE_DOZEN);
+
+      expect(alertMessage()).toBe('Is it 1 doz, or keep 11 pc?');
+      expect(alertLabels()).toEqual(['Set to 1 doz', 'Keep 11 pc', 'Cancel']);
+      // The server restates the dozen in pieces.
+      expect(d.change).toHaveBeenCalledWith({
+        unitId: 'u-doz',
+        resolution: PantryUnitChangeResolution.Recount,
+        quantity: 1,
+        version: 3,
+      });
+    });
+
+    it('keeps the count and only changes how it reads', async () => {
+      const d = deps(ready(shownIn(11, '11 pc')), setToDozen('1 doz'));
+      pressNext('Keep');
+
+      await runUnitChange(d, ONE_DOZEN);
+
+      expect(d.change).toHaveBeenCalledWith({ unitId: 'u-doz', version: 3 });
+    });
+
+    it('confirms once where both read the same', async () => {
+      const d = deps(ready(shownIn(12, '1 doz')), setToDozen('1 doz'));
+      pressNext('Change unit');
+
+      await runUnitChange(d, { ...ONE_DOZEN, shownBefore: '12 pc' });
+
+      expect(alertMessage()).toBe('12 pc → 1 doz\nExact conversion.');
+      expect(d.change).toHaveBeenCalledWith(
+        expect.objectContaining({ quantity: 1 }),
+      );
     });
   });
 

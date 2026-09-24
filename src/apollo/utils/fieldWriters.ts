@@ -9,6 +9,7 @@ import type {
   PersistedEntityType,
   PersistedField,
 } from '#/apollo/offline/OptimisticDataPersistence';
+import { PANTRY_FIELD_WRITERS } from '#features/pantry/offline/fieldWriters';
 import { SHOPPING_LIST_FIELD_WRITERS } from '#features/shoppingList/offline/fieldWriters';
 
 /** Applies a persisted patch for one field of one entity. */
@@ -26,6 +27,7 @@ export type FieldWriterTable = {
 };
 
 const WRITERS: FieldWriterTable = {
+  ...PANTRY_FIELD_WRITERS,
   ...SHOPPING_LIST_FIELD_WRITERS,
 };
 

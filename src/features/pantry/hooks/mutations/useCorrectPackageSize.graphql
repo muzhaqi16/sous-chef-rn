@@ -6,6 +6,13 @@ fragment useCorrectPackageSize_pantryItem on PantryItem {
   updatedAt
   remainingNetWeight
   heldQuantity
+  displayAmount {
+    quantity
+    unit {
+      id
+      symbol
+    }
+  }
   isLowStock
 }
 
