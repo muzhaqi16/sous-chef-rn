@@ -9730,6 +9730,14 @@ type PantryUnitChangePreview {
   confidence: Float
   """A held stack of the item in the new unit, which refuses the change"""
   conflictingPantryItemId: ID
+  """
+  What the stack holds after the change, as it will be shown (12 pc shown as 1 doz); null with no route
+  """
+  displayAmountAfter: DisplayAmount
+  """
+  The unit the stack is shown in after the change; null when shown in the unit it counts in
+  """
+  displayUnitAfter: Unit
   """The stack stops recording a net weight"""
   dropsNetWeight: Boolean!
   """The stack stops recording a portion definition"""
@@ -14438,9 +14446,15 @@ type UpdatePantryItemPayload {
 input UpdatePantryItemQuantityInput {
   pantryItemId: ID!
   """
-  The stack's new amount, in its own tracking unit. The unit changes through changePantryItemUnit.
+  The stack's new amount, in its own tracking unit or in unitId. The unit changes through changePantryItemUnit.
   """
   quantity: String!
+  """
+  The unit quantity is stated in: the stack's own, or a count multiple of it
+  (2 doz for a stack of pieces), restated in the stack's unit. Any other unit
+  is refused on unitId. Absent: the stack's own unit.
+  """
+  unitId: ID
   version: Int
 }
 
