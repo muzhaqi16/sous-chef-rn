@@ -1,5 +1,4 @@
-import type { AlertButton } from 'react-native';
-import { alertService } from '#/services/alertService';
+import { alertService, type AlertButton } from '#/services/alertService';
 import {
   ErrorCode,
   PantryUnitChangeMethod,
@@ -9,6 +8,7 @@ import type {
   ChangeOutcome,
   PreviewOutcome,
   UnitChangePreview,
+  UnitChangeRequest,
 } from '#features/pantry/hooks/usePantryUnitChange';
 import {
   runUnitChange,
@@ -22,25 +22,36 @@ jest.mock('#/services/alertService', () => ({
 }));
 const mockAlert = jest.mocked(alertService.alert);
 
-const unit = (id: string, symbol: string): UnitChangePreview['toUnit'] => ({
+const unit = (
+  id: string,
+  symbol: string,
+  displayAsFraction = true,
+): UnitChangePreview['toUnit'] => ({
   __typename: 'Unit',
   id,
   symbol,
-  displayAsFraction: true,
+  displayAsFraction,
 });
 
-const preview = (over: Partial<UnitChangePreview> = {}): UnitChangePreview => ({
+const PC = unit('u-pc', 'pc');
+const DOZ = unit('u-doz', 'doz', false);
+const LB = unit('u-lb', 'lb');
+
+/** 1 egg converted into dozens: the route the server takes with no resolution. */
+const converted = (
+  over: Partial<UnitChangePreview> = {},
+): UnitChangePreview => ({
   __typename: 'PantryUnitChangePreview',
   version: 3,
   method: PantryUnitChangeMethod.Conversion,
   exact: true,
   quantityIgnored: false,
-  fromUnit: unit('u-ct', 'ct'),
-  toUnit: unit('u-lb', 'lb'),
-  quantityBefore: 2,
-  heldQuantityBefore: 2,
-  quantityAfter: 1.5,
-  heldQuantityAfter: 1.5,
+  fromUnit: PC,
+  toUnit: DOZ,
+  quantityBefore: 1,
+  heldQuantityBefore: 1,
+  quantityAfter: 1 / 12,
+  heldQuantityAfter: 1 / 12,
   batches: [],
   minQuantityAfter: null,
   restockQuantityAfter: null,
@@ -51,6 +62,19 @@ const preview = (over: Partial<UnitChangePreview> = {}): UnitChangePreview => ({
   refusal: null,
   ...over,
 });
+
+/** The same stack set to the form's amount in the new unit. */
+const setTo = (
+  quantity: number,
+  over: Partial<UnitChangePreview> = {},
+): UnitChangePreview =>
+  converted({
+    method: PantryUnitChangeMethod.Recount,
+    exact: null,
+    quantityAfter: quantity,
+    heldQuantityAfter: quantity,
+    ...over,
+  });
 
 const refusal = (
   code: ErrorCode,
@@ -66,25 +90,41 @@ const ready = (p: UnitChangePreview): PreviewOutcome => ({
   preview: p,
 });
 
-function deps(...previews: PreviewOutcome[]) {
-  const previewFn = jest.fn<Promise<PreviewOutcome>, unknown[]>();
-  for (const outcome of previews) previewFn.mockResolvedValueOnce(outcome);
+type Request = Omit<UnitChangeRequest, 'pantryItemId'>;
+
+/**
+ * Answers a recount preview with `set`, and each other preview with the next
+ * of `convert` (the last one repeating).
+ */
+function deps(
+  convert: PreviewOutcome | PreviewOutcome[],
+  set: PreviewOutcome = ready(setTo(1)),
+) {
+  const queue = Array.isArray(convert) ? [...convert] : [convert];
+  const preview = jest.fn((request: Request) => {
+    if (request.resolution === PantryUnitChangeResolution.Recount) {
+      return Promise.resolve(set);
+    }
+    const next = queue.length > 1 ? queue.shift() : queue[0];
+    if (!next) throw new Error('No preview queued');
+    return Promise.resolve(next);
+  });
   return {
-    preview: previewFn,
+    preview,
     change: jest
-      .fn<Promise<ChangeOutcome>, unknown[]>()
+      .fn<Promise<ChangeOutcome>, [Request & { version: number }]>()
       .mockResolvedValue({ status: 'changed' }),
     reportFieldError: jest.fn(),
   } satisfies UnitChangeDeps;
 }
 
-const TARGET: UnitChangeTarget = { unitId: 'u-lb', quantity: null };
+const EGGS: UnitChangeTarget = { unitId: 'u-doz', amount: 1 };
 
 /** Answers the next alert by pressing the button whose label starts with `label`. */
 function pressNext(label: string) {
   mockAlert.mockImplementationOnce((_title, _message, buttons) => {
     const button = (buttons ?? []).find((b: AlertButton) =>
-      b.text?.startsWith(label),
+      b.text.startsWith(label),
     );
     if (!button) throw new Error(`No "${label}" button`);
     button.onPress?.();
@@ -100,17 +140,15 @@ beforeEach(() => {
 });
 
 describe('unitChangeMode', () => {
-  it('summarises an exact route and a recount previewed with an amount', () => {
-    expect(unitChangeMode(preview())).toBe('summary');
-    expect(
-      unitChangeMode(preview({ method: PantryUnitChangeMethod.Recount })),
-    ).toBe('summary');
+  it('summarises an exact route and a recount', () => {
+    expect(unitChangeMode(converted())).toBe('summary');
+    expect(unitChangeMode(setTo(1))).toBe('summary');
   });
 
   it('offers the estimate where the route is approximate', () => {
     expect(
       unitChangeMode(
-        preview({
+        converted({
           exact: false,
           refusal: refusal(ErrorCode.UnitChangeNeedsResolution, 'resolution'),
         }),
@@ -118,10 +156,10 @@ describe('unitChangeMode', () => {
     ).toBe('estimate');
   });
 
-  it('needs an amount where no route exists: 2 ct of chicken into lb', () => {
+  it('needs an amount where no route exists', () => {
     expect(
       unitChangeMode(
-        preview({
+        converted({
           method: null,
           refusal: refusal(ErrorCode.ValidationFailed, 'quantity'),
         }),
@@ -132,7 +170,7 @@ describe('unitChangeMode', () => {
   it('needs one package size when a measure becomes a count', () => {
     expect(
       unitChangeMode(
-        preview({
+        converted({
           method: null,
           refusal: refusal(ErrorCode.ValidationFailed, 'packageSize'),
         }),
@@ -141,108 +179,240 @@ describe('unitChangeMode', () => {
   });
 
   it('refuses when the item is already held in the new unit', () => {
-    expect(unitChangeMode(preview({ conflictingPantryItemId: 'pi-2' }))).toBe(
+    expect(unitChangeMode(converted({ conflictingPantryItemId: 'pi-2' }))).toBe(
       'refused',
     );
   });
 });
 
 describe('runUnitChange', () => {
-  it('confirms the before and after in the app alert, then changes', async () => {
-    const d = deps(ready(preview()));
+  describe('where the conversion changes the amount: 1 pc into dozens', () => {
+    it('asks whether it is 1 doz or 1 pc converted', async () => {
+      const d = deps(ready(converted()));
+      pressNext('Cancel');
+
+      await runUnitChange(d, EGGS);
+
+      expect(alertMessage()).toBe('Is it 1 doz, or should 1 pc be converted?');
+      expect(alertLabels()).toEqual([
+        'Set to 1 doz',
+        'Convert to 0.083 doz',
+        'Cancel',
+      ]);
+    });
+
+    it('sets the stock to the amount in the form', async () => {
+      const d = deps(ready(converted()));
+      pressNext('Set to');
+
+      await expect(runUnitChange(d, EGGS)).resolves.toBe(true);
+
+      expect(d.change).toHaveBeenCalledWith({
+        unitId: 'u-doz',
+        resolution: PantryUnitChangeResolution.Recount,
+        quantity: 1,
+        version: 3,
+      });
+    });
+
+    it('converts the stock', async () => {
+      const d = deps(ready(converted()));
+      pressNext('Convert to');
+
+      await runUnitChange(d, EGGS);
+
+      expect(d.change).toHaveBeenCalledWith({ unitId: 'u-doz', version: 3 });
+    });
+
+    it('sends nothing on Cancel', async () => {
+      const d = deps(ready(converted()));
+      pressNext('Cancel');
+
+      await expect(runUnitChange(d, EGGS)).resolves.toBe(false);
+
+      expect(d.change).not.toHaveBeenCalled();
+      expect(d.reportFieldError).not.toHaveBeenCalled();
+    });
+
+    it('lists what each choice leaves behind where they differ', async () => {
+      const d = deps(
+        ready(converted({ dropsThresholds: true })),
+        ready(setTo(1, { minQuantityAfter: 6 })),
+      );
+      pressNext('Cancel');
+
+      await runUnitChange(d, EGGS);
+
+      expect(alertMessage()).toBe(
+        [
+          'Is it 1 doz, or should 1 pc be converted?',
+          'If set to 1 doz:',
+          'Alert when below: 6 doz',
+          'If converted:',
+          'The low-stock alert levels will be cleared.',
+        ].join('\n'),
+      );
+    });
+
+    it('lists it once where they agree', async () => {
+      const d = deps(
+        ready(converted({ dropsNetWeight: true })),
+        ready(setTo(1, { dropsNetWeight: true })),
+      );
+      pressNext('Cancel');
+
+      await runUnitChange(d, EGGS);
+
+      expect(alertMessage()).toBe(
+        [
+          'Is it 1 doz, or should 1 pc be converted?',
+          'The package size will be removed.',
+        ].join('\n'),
+      );
+    });
+  });
+
+  describe('where the conversion lands on the amount in the form', () => {
+    // 0.999996 doz converts to 11.99995 pc: shown as the 12 typed, but not it.
+    const noisy = converted({
+      fromUnit: DOZ,
+      toUnit: PC,
+      quantityBefore: 0.999996,
+      quantityAfter: 11.999952,
+    });
+    const TWELVE: UnitChangeTarget = { unitId: 'u-pc', amount: 12 };
+
+    it('confirms once, and sets exactly the amount shown', async () => {
+      const d = deps(
+        ready(noisy),
+        ready(setTo(12, { fromUnit: DOZ, toUnit: PC })),
+      );
+      pressNext('Change unit');
+
+      await runUnitChange(d, TWELVE);
+
+      expect(alertLabels()).toEqual(['Cancel', 'Change unit']);
+      expect(alertMessage()).toBe('1 doz → 12 pc\nExact conversion.');
+      expect(d.change).toHaveBeenCalledWith({
+        unitId: 'u-pc',
+        resolution: PantryUnitChangeResolution.Recount,
+        quantity: 12,
+        version: 3,
+      });
+    });
+
+    it('converts where setting would leave something else behind', async () => {
+      const d = deps(
+        ready(noisy),
+        ready(setTo(12, { fromUnit: DOZ, toUnit: PC, dropsNetWeight: true })),
+      );
+      pressNext('Change unit');
+
+      await runUnitChange(d, TWELVE);
+
+      expect(d.change).toHaveBeenCalledWith({ unitId: 'u-pc', version: 3 });
+    });
+  });
+
+  it('only converts an empty stack, which takes no amount', async () => {
+    const d = deps(
+      ready(converted({ quantityBefore: 0, quantityAfter: 0 })),
+      ready(setTo(0, { quantityIgnored: true })),
+    );
     pressNext('Change unit');
 
-    await expect(runUnitChange(d, TARGET)).resolves.toBe(true);
+    await runUnitChange(d, { unitId: 'u-doz', amount: 3 });
 
-    expect(mockAlert).toHaveBeenCalledWith(
-      'Change unit',
-      expect.stringContaining('Exact conversion.'),
-      expect.any(Array),
-    );
     expect(alertLabels()).toEqual(['Cancel', 'Change unit']);
-    expect(d.change).toHaveBeenCalledWith({ unitId: 'u-lb', version: 3 });
+    expect(d.change).toHaveBeenCalledWith({ unitId: 'u-doz', version: 3 });
   });
 
-  it('lists what the change drops before it is confirmed', async () => {
-    const d = deps(
-      ready(preview({ dropsNetWeight: true, dropsThresholds: true })),
-    );
-    pressNext('Change unit');
+  describe('where no route exists: 2 ct of chicken as 1/2 lb', () => {
+    const noRoute = converted({
+      toUnit: LB,
+      quantityBefore: 2,
+      method: null,
+      exact: null,
+      quantityAfter: null,
+      refusal: refusal(ErrorCode.ValidationFailed, 'quantity'),
+    });
+    const CHICKEN: UnitChangeTarget = { unitId: 'u-lb', amount: 0.5 };
 
-    await runUnitChange(d, TARGET);
+    it('confirms the amount in the form as the stock', async () => {
+      const d = deps(
+        ready(noRoute),
+        ready(setTo(0.5, { toUnit: LB, quantityBefore: 2 })),
+      );
+      pressNext('Change unit');
 
-    expect(alertMessage()).toContain('The package size will be removed.');
-    expect(alertMessage()).toContain(
-      'The low-stock alert levels will be cleared.',
-    );
-  });
+      await runUnitChange(d, CHICKEN);
 
-  it('sends nothing when the user cancels', async () => {
-    const d = deps(ready(preview()));
-    pressNext('Cancel');
+      expect(alertMessage()).toBe(
+        "2 pc → 1/2 lb\nThese units don't convert for this item, so the stock is set to this amount.",
+      );
+      expect(d.change).toHaveBeenCalledWith({
+        unitId: 'u-lb',
+        resolution: PantryUnitChangeResolution.Recount,
+        quantity: 0.5,
+        version: 3,
+      });
+    });
 
-    await expect(runUnitChange(d, TARGET)).resolves.toBe(false);
+    it('asks for an amount on its field where the server takes none', async () => {
+      const d = deps(
+        ready(noRoute),
+        ready(
+          setTo(0.5, {
+            method: null,
+            refusal: refusal(ErrorCode.ValidationFailed, 'quantity'),
+          }),
+        ),
+      );
 
-    expect(d.change).not.toHaveBeenCalled();
-    expect(d.reportFieldError).not.toHaveBeenCalled();
-  });
+      await expect(runUnitChange(d, CHICKEN)).resolves.toBe(false);
 
-  it('restates the typed amount as a recount: 2 ct of chicken as 1/2 lb', async () => {
-    const d = deps(
-      ready(
-        preview({
-          method: PantryUnitChangeMethod.Recount,
-          exact: null,
-          quantityAfter: 0.5,
-        }),
-      ),
-    );
-    pressNext('Change unit');
-
-    await runUnitChange(d, { unitId: 'u-lb', quantity: 0.5 });
-
-    expect(d.preview).toHaveBeenCalledWith({ unitId: 'u-lb', quantity: 0.5 });
-    expect(alertMessage()).toContain('replaces the old one');
-    expect(d.change).toHaveBeenCalledWith({
-      unitId: 'u-lb',
-      quantity: 0.5,
-      resolution: PantryUnitChangeResolution.Recount,
-      version: 3,
+      expect(d.reportFieldError).toHaveBeenCalledWith(
+        'quantityInput',
+        "pc can't be converted to lb for this item, so enter how much you have in lb.",
+      );
+      expect(mockAlert).not.toHaveBeenCalled();
     });
   });
 
   describe('an approximate route', () => {
-    const estimate = preview({
+    const estimate = converted({
+      toUnit: LB,
+      quantityBefore: 2,
       exact: false,
       quantityAfter: 1.5,
       refusal: refusal(ErrorCode.UnitChangeNeedsResolution, 'resolution'),
     });
+    const TARGET: UnitChangeTarget = { unitId: 'u-lb', amount: 2 };
 
-    it('converts by the estimate', async () => {
-      const d = deps(ready(estimate));
-      pressNext('Use the estimate');
+    it('offers the amount in the form beside the estimate', async () => {
+      const d = deps(ready(estimate), ready(setTo(2, { toUnit: LB })));
+      pressNext('Convert to about');
 
       await runUnitChange(d, TARGET);
 
       expect(alertLabels()).toEqual([
+        'Set to 2 lb',
+        'Convert to about 1 1/2 lb',
         'Cancel',
-        'Use the estimate: about 1 1/2 lb',
       ]);
-      expect(alertMessage()).toContain('Or enter the amount yourself');
-      expect(d.change).toHaveBeenCalledWith(
-        expect.objectContaining({
-          resolution: PantryUnitChangeResolution.Convert,
-        }),
-      );
+      expect(d.change).toHaveBeenCalledWith({
+        unitId: 'u-lb',
+        resolution: PantryUnitChangeResolution.Convert,
+        version: 3,
+      });
     });
 
-    it('offers the typed amount beside the estimate', async () => {
-      const d = deps(ready(estimate));
-      pressNext('Use my amount');
+    it('sets the amount in the form', async () => {
+      const d = deps(ready(estimate), ready(setTo(2, { toUnit: LB })));
+      pressNext('Set to');
 
-      await runUnitChange(d, { unitId: 'u-lb', quantity: 2 });
+      await runUnitChange(d, TARGET);
 
-      expect(alertLabels()).toContain('Use my amount: 2 lb');
       expect(d.change).toHaveBeenCalledWith(
         expect.objectContaining({
           resolution: PantryUnitChangeResolution.Recount,
@@ -252,61 +422,94 @@ describe('runUnitChange', () => {
     });
   });
 
-  describe('reports what the user must supply on its field', () => {
-    it('an amount, where no route exists', async () => {
-      const d = deps(
-        ready(
-          preview({
-            method: null,
-            refusal: refusal(ErrorCode.ValidationFailed, 'quantity'),
-          }),
-        ),
-      );
+  describe('a measure becoming a count: 1 lb of butter into sticks', () => {
+    const STICK = unit('u-stick', 'stick');
+    const needsSize = converted({
+      fromUnit: LB,
+      toUnit: STICK,
+      method: null,
+      exact: null,
+      quantityAfter: null,
+      refusal: refusal(ErrorCode.ValidationFailed, 'packageSize'),
+    });
+    const set = ready(setTo(1, { fromUnit: LB, toUnit: STICK }));
+    const BUTTER: UnitChangeTarget = { unitId: 'u-stick', amount: 1 };
 
-      await expect(runUnitChange(d, TARGET)).resolves.toBe(false);
+    it('offers the amount in the form, or a package size to convert', async () => {
+      const d = deps(ready(needsSize), set);
+      pressNext('Set to');
 
-      expect(d.reportFieldError).toHaveBeenCalledWith(
-        'quantityInput',
-        "ct can't be converted to lb for this item, so enter how much you have in lb.",
+      await runUnitChange(d, BUTTER);
+
+      expect(alertMessage()).toBe(
+        'To convert, enter how much one stick holds. Or set the stock to 1 stick.',
       );
-      expect(mockAlert).not.toHaveBeenCalled();
+      expect(alertLabels()).toEqual([
+        'Set to 1 stick',
+        'Enter package size',
+        'Cancel',
+      ]);
+      expect(d.change).toHaveBeenCalledWith(
+        expect.objectContaining({ quantity: 1 }),
+      );
     });
 
-    it('one package size, when the form has none', async () => {
-      const d = deps(
-        ready(
-          preview({
-            method: null,
-            toUnit: unit('u-stick', 'stick'),
-            refusal: refusal(ErrorCode.ValidationFailed, 'packageSize'),
-          }),
-        ),
-      );
+    it('takes the user to the net weight to enter one', async () => {
+      const d = deps(ready(needsSize), set);
+      pressNext('Enter package size');
 
-      await runUnitChange(d, { unitId: 'u-stick', quantity: null });
+      await expect(runUnitChange(d, BUTTER)).resolves.toBe(false);
 
       expect(d.reportFieldError).toHaveBeenCalledWith(
         'netWeight',
         'To count this in stick, enter how much one stick holds, then save again.',
       );
+      expect(d.change).not.toHaveBeenCalled();
     });
 
-    it('the reason the change is refused', async () => {
-      const d = deps(ready(preview({ conflictingPantryItemId: 'pi-2' })));
+    it("converts by the form's net weight as one package", async () => {
+      const packageSize = { netWeight: 4, netWeightUnitId: 'u-oz' };
+      const sized = converted({
+        fromUnit: LB,
+        toUnit: STICK,
+        method: PantryUnitChangeMethod.Weight,
+        quantityAfter: 4,
+      });
+      const d = deps([ready(needsSize), ready(sized)], set);
+      pressNext('Convert to');
 
-      await runUnitChange(d, TARGET);
+      await runUnitChange(d, { ...BUTTER, packageSize });
+
+      expect(d.preview).toHaveBeenCalledWith({
+        unitId: 'u-stick',
+        packageSize,
+      });
+      expect(alertLabels()).toContain('Convert to 4 stick');
+      expect(d.change).toHaveBeenCalledWith({
+        unitId: 'u-stick',
+        packageSize,
+        version: 3,
+      });
+    });
+  });
+
+  describe('reports on its field', () => {
+    it('the reason the change is refused', async () => {
+      const d = deps(ready(converted({ conflictingPantryItemId: 'pi-2' })));
+
+      await runUnitChange(d, EGGS);
 
       expect(d.reportFieldError).toHaveBeenCalledWith(
         'unit',
-        'You already have this item tracked in lb. Change that one instead, or pick a different unit.',
+        'You already have this item tracked in doz. Change that one instead, or pick a different unit.',
       );
       expect(d.change).not.toHaveBeenCalled();
     });
 
-    it('a connection, offline', async () => {
-      const d = deps({ status: 'offline' });
+    it('that a connection is needed, offline', async () => {
+      const d = deps({ status: 'offline' }, { status: 'offline' });
 
-      await runUnitChange(d, TARGET);
+      await runUnitChange(d, EGGS);
 
       expect(d.reportFieldError).toHaveBeenCalledWith(
         'unit',
@@ -314,16 +517,16 @@ describe('runUnitChange', () => {
       );
     });
 
-    it('the server refusal, on the field it names', async () => {
-      const d = deps(ready(preview()));
+    it('a server refusal, on the field it names', async () => {
+      const d = deps(ready(converted()));
       d.change.mockResolvedValue({
         status: 'failed',
         field: 'quantity',
         message: 'Enter an amount above 0.',
       });
-      pressNext('Change unit');
+      pressNext('Set to');
 
-      await expect(runUnitChange(d, TARGET)).resolves.toBe(false);
+      await expect(runUnitChange(d, EGGS)).resolves.toBe(false);
 
       expect(d.reportFieldError).toHaveBeenCalledWith(
         'quantityInput',
@@ -332,35 +535,15 @@ describe('runUnitChange', () => {
     });
   });
 
-  it("re-previews with the form's net weight as one package", async () => {
-    const needsSize = preview({
-      method: null,
-      refusal: refusal(ErrorCode.ValidationFailed, 'packageSize'),
-    });
-    const d = deps(ready(needsSize), ready(preview()));
-    pressNext('Change unit');
-    const packageSize = { netWeight: 4, netWeightUnitId: 'u-oz' };
-
-    await runUnitChange(d, { unitId: 'u-lb', quantity: null, packageSize });
-
-    expect(d.preview).toHaveBeenLastCalledWith({
-      unitId: 'u-lb',
-      packageSize,
-    });
-    expect(d.change).toHaveBeenCalledWith(
-      expect.objectContaining({ packageSize }),
-    );
-  });
-
-  it('shows the new figures when the stack moved on, and confirms again', async () => {
-    const d = deps(ready(preview()), ready(preview({ version: 4 })));
+  it('shows the new figures when the stack moved on, and asks again', async () => {
+    const d = deps([ready(converted()), ready(converted({ version: 4 }))]);
     d.change
       .mockResolvedValueOnce({ status: 'conflict' })
       .mockResolvedValueOnce({ status: 'changed' });
-    pressNext('Change unit');
-    pressNext('Change unit');
+    pressNext('Convert to');
+    pressNext('Convert to');
 
-    await expect(runUnitChange(d, TARGET)).resolves.toBe(true);
+    await expect(runUnitChange(d, EGGS)).resolves.toBe(true);
 
     expect(alertMessage(1)).toMatch(
       /^This item changed while you were looking/,
@@ -371,15 +554,11 @@ describe('runUnitChange', () => {
   });
 
   it('gives up after repeated conflicts', async () => {
-    const d = deps(
-      ready(preview()),
-      ready(preview({ version: 4 })),
-      ready(preview({ version: 5 })),
-    );
+    const d = deps(ready(converted()));
     d.change.mockResolvedValue({ status: 'conflict' });
-    for (let i = 0; i < 3; i += 1) pressNext('Change unit');
+    for (let i = 0; i < 3; i += 1) pressNext('Convert to');
 
-    await expect(runUnitChange(d, TARGET)).resolves.toBe(false);
+    await expect(runUnitChange(d, EGGS)).resolves.toBe(false);
 
     expect(d.change).toHaveBeenCalledTimes(3);
     expect(d.reportFieldError).toHaveBeenCalledWith(

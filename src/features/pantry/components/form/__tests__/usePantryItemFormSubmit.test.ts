@@ -189,7 +189,7 @@ describe('usePantryItemFormSubmit', () => {
   });
 
   describe('a unit change', () => {
-    it('runs the unit change, and closes once it is made', async () => {
+    it('offers the stored amount when the quantity is untouched, and closes once changed', async () => {
       const params = defaults({
         trackingUnit: KG,
         dirtyFields: { unit: true },
@@ -200,11 +200,35 @@ describe('usePantryItemFormSubmit', () => {
 
       expect(mockRunUnitChange).toHaveBeenCalledWith(
         expect.objectContaining({ reportFieldError: params.reportFieldError }),
-        { unitId: 'unit-kg', quantity: null, packageSize: undefined },
+        { unitId: 'unit-kg', amount: 2, packageSize: undefined },
       );
       // The quick set never carries a unit.
       expect(params.updateQuantity).not.toHaveBeenCalled();
       expect(params.onSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    it('offers the amount the field shows, not the stored value it rounds', async () => {
+      const params = defaults({
+        trackingUnit: KG,
+        dirtyFields: { unit: true },
+        existingPantryItem: {
+          id: 'item-1',
+          quantity: 0.999996,
+          unit: { id: 'unit-1', symbol: 'L' },
+        } as PantryItemForm_PantryItemFragment,
+      });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      await result.current.handleSave({
+        ...baseData,
+        unit: 'kg',
+        quantityInput: '1',
+      });
+
+      expect(mockRunUnitChange).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ amount: 1 }),
+      );
     });
 
     it('offers the amount typed with the new unit as the stock in it', async () => {
@@ -223,7 +247,7 @@ describe('usePantryItemFormSubmit', () => {
 
       expect(mockRunUnitChange).toHaveBeenCalledWith(expect.anything(), {
         unitId: 'unit-kg',
-        quantity: 0.5,
+        amount: 0.5,
         packageSize: undefined,
       });
       expect(params.updateQuantity).not.toHaveBeenCalled();

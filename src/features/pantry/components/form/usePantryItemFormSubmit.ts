@@ -161,13 +161,17 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
       }
 
       if (unitChanged) {
-        // The quantity typed with a new unit is what the stack holds in it,
-        // and the net weight is one package when a measure becomes a count.
+        // The net weight is one package when a measure becomes a count.
         const changed = await runUnitChange(
           { ...params.unitChange, reportFieldError: params.reportFieldError },
           {
             unitId,
-            quantity: quantityChanged ? typedQuantity : null,
+            // What the field shows, never the stored value it rounds: a
+            // stack set to "1" holds exactly 1.
+            amount:
+              typedQuantity !== null && typedQuantity > 0
+                ? typedQuantity
+                : currentItem.quantity,
             packageSize: packageSizeOf(data),
           },
         );

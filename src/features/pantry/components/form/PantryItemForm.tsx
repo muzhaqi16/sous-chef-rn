@@ -461,7 +461,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           <>
             <QuantitySection
               control={control}
-              errors={errors}
               onUnitSelected={handleUnitSelected}
               testID={pantryTestIDs.editItemQuantityInput}
               unitTestID={pantryTestIDs.editItemUnitPicker}
