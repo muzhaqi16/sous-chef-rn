@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
+import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import { useTranslation } from '#/i18n';
 import { Text } from '#components/atoms/Text';
 import { ARROW_SIZE } from './spotlightConstants';
@@ -41,8 +42,21 @@ export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
 }) => {
   const { t } = useTranslation();
 
+  const animatedTheme = useAnimatedTheme();
+  const surfaceStyle = useAnimatedStyle(() => {
+    const theme = animatedTheme.get();
+    return {
+      padding: theme.spacing.lg,
+      borderRadius: theme.radii.lg,
+      backgroundColor: theme.colors.surface,
+      ...theme.shadows.lg,
+    };
+  });
+
   return (
-    <Animated.View style={[styles.tooltip, containerStyle, animatedStyle]}>
+    <Animated.View
+      style={[styles.tooltip, containerStyle, surfaceStyle, animatedStyle]}
+    >
       {/* Arrow */}
       <View style={[styles.arrow, arrowStyle]} />
 
@@ -85,13 +99,10 @@ export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  // Themed surface values are in `surfaceStyle`.
   tooltip: {
     position: 'absolute',
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
-    padding: theme.spacing.lg,
-    ...theme.shadows.lg,
   },
   arrow: {
     position: 'absolute',

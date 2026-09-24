@@ -37,12 +37,17 @@ const AUTHORS: Record<string, string> = {
 
   // The header bars' inset, derived from the gutter so their glyphs sit on it.
   'src/styles/commonStyles.ts': 'bar inset aligns the glyph to the gutter',
+  // Floats over every tab's page, so its edges line up with that page's rows.
+  'src/app/FloatingTabBar/FloatingTabBar.tsx':
+    'floating chrome aligned to the page it covers',
 
   // A section whose rules bleed through the gutter it sits in.
   'src/components/organisms/SettingsSection.tsx':
     'deliberate negation, inset rules',
   'src/features/recipes/screens/RecipeDetail/index.tsx':
     'deliberate negation, edge-bleeding carousel',
+  'src/features/catalog/ui/StorageLocationForm.tsx':
+    'deliberate negation, chip rows bleed through the sheet gutter',
 
   // A screen whose loading or skeleton branch renders its children bare under
   // `gutter="none"`, where no list content container exists to inset them.

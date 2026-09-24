@@ -18,21 +18,24 @@ const jaffa = {
   '950': '#431407',
 };
 
+/** The secondary ramp, hoisted for the same reason. */
+const charade = {
+  '50': '#f5f6f9',
+  '100': '#e7e9f2',
+  '200': '#d5d8e8',
+  '300': '#b9bfd7',
+  '400': '#979ec3',
+  '500': '#7d82b4',
+  '600': '#6b6ca5',
+  '700': '#605f96',
+  '800': '#54527b',
+  '900': '#454464',
+  '950': '#2c2b3c',
+};
+
 export const colors = {
   jaffa,
-  charade: {
-    '50': '#f5f6f9',
-    '100': '#e7e9f2',
-    '200': '#d5d8e8',
-    '300': '#b9bfd7',
-    '400': '#979ec3',
-    '500': '#7d82b4',
-    '600': '#6b6ca5',
-    '700': '#605f96',
-    '800': '#54527b',
-    '900': '#454464',
-    '950': '#2c2b3c',
-  },
+  charade,
   fuchsiaBlue: {
     '50': '#f6f3ff',
     '100': '#eee9fe',
@@ -198,8 +201,8 @@ export const colors = {
     default: 'rgba(0,0,0,0.1)',
     onFill: 'rgba(255,255,255,0.2)',
   },
-  /** Painted behind the liquid-glass material, per scheme. */
-  glass: { light: 'rgba(255, 255, 255, 0.4)', dark: 'rgba(28, 27, 32, 0.4)' },
+  /** Painted behind the liquid-glass material: `secondaryDark` at 85%. */
+  glass: `${charade['950']}D9`,
   /** A white wash for a control's ground over a photo or scrim. */
   onScrimSubtle: 'rgba(255, 255, 255, 0.2)',
   /** Swatches a user picks for a storage location; the chosen hex is stored. */

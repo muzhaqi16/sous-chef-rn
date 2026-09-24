@@ -6,7 +6,6 @@ import { SignUpScreen } from '../SignUpScreen';
 
 // --- Mocks ---
 
-const mockGoBack = jest.fn();
 const mockNavigateToLogin = jest.fn();
 const mockRegister = jest.fn();
 
@@ -26,7 +25,7 @@ jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
   useNavigation: () => ({
-    goBack: mockGoBack,
+    goBack: jest.fn(),
     navigate: jest.fn(),
     dispatch: jest.fn(),
     canGoBack: jest.fn(() => true),
@@ -196,16 +195,9 @@ describe('SignUpScreen', () => {
     expect(screen.getByText('Sign Up')).toBeTruthy();
   });
 
-  it('renders the back button', () => {
+  it('renders no back button, like the other root auth screens', () => {
     renderWithApollo(<SignUpScreen />);
-    expect(screen.getByTestId('back-button')).toBeTruthy();
-  });
-
-  it('calls goBack when back button is pressed', async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<SignUpScreen />);
-    await user.press(screen.getByTestId('back-button'));
-    expect(mockGoBack).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('back-button')).toBeNull();
   });
 
   it('renders sign in footer link', () => {

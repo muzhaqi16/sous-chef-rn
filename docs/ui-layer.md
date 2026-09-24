@@ -118,6 +118,19 @@ they read it.
   Switches use `BaseSwitch` (`src/components/atoms/BaseSwitch.tsx`); themed icon
   colours use `<Icon tone="X" />` (`src/utils/iconUtils.tsx`), and the glyph
   package itself is an import ban.
+- **A node reanimated animates takes no themed Unistyles style**
+  ([`sous-chef/animated-node-takes-no-themed-style`](rules/animated-node-takes-no-themed-style.md)).
+  Reanimated renders its animated prop's React-side value into the host's style
+  array. Unistyles links those plain objects to the node, and after a theme
+  rebuild its non-React commits write them back over the animation. The view
+  then shows a stale value until its next React re-render. The global dim
+  (`GlobalBackdrop`) snapped off at the end of every sheet open this way
+  ([Unistyles re-applies reanimated's React-side value](verified-library-behaviour.md#unistyles-re-applies-reanimateds-react-side-value-over-an-animation)).
+  The node's static key keeps only structure. Themed values go in a
+  `useAnimatedStyle` of their own that reads only `useAnimatedTheme()`, which
+  re-runs on a theme change and never per frame (`Toast`, `AlertProvider`,
+  `FloatingTabBar`). Or they sit on a non-animated parent or child
+  (`GlobalBackdrop`, `SkeletonBase`, the list rows' `rowWrapper`).
 - **Never wrap `Pressable`/`TouchableX` with `withUnistyles`.** The wrapper
   copies a function-style `style={({ pressed }) => [...]}` into `{}`. RN's
   `Pressable` needs no wrapper, because the Unistyles Babel plugin binds it to

@@ -16,14 +16,12 @@ import type { RegisterInput } from '#/graphql/generated/schemaTypes';
 import { authService } from '#/services/authService';
 import { useAppStore } from '#store/useAppStore';
 import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { authTestIDs } from '#features/auth/testIDs';
 
 type SignUpValues = RegisterInput & { confirmPassword: string; name: string };
 
 export const SignUpScreen = (): React.JSX.Element => {
   const { t } = useTranslation();
-  const { goBack } = useAppNavigation();
   const isRegistering = useAppStore(state => state.authIsLoading);
   const { navigateToLogin } = useAuthNavigation();
 
@@ -69,9 +67,8 @@ export const SignUpScreen = (): React.JSX.Element => {
   }
 
   return (
-    <AuthWrapper testID={authTestIDs.signUpScreen} onBack={() => goBack()}>
+    <AuthWrapper testID={authTestIDs.signUpScreen}>
       <AuthFormTemplate<SignUpValues>
-        contentPlacement="center"
         title={t('auth.signupTitle')}
         subtitle={t('auth.signupSubtitle')}
         fields={[

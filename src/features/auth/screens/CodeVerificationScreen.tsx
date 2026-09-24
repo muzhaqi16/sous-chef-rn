@@ -255,7 +255,6 @@ export function CodeVerificationScreen({
       onBack={onBackPress}
     >
       <AuthFormTemplate
-        contentPlacement="top"
         title={t('auth.enterCode')}
         subtitle={
           <>

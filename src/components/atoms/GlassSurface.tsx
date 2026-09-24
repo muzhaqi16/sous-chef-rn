@@ -1,6 +1,5 @@
 import React from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { useUnistyles } from 'react-native-unistyles';
 import {
   LiquidGlassView,
   isLiquidGlassSupported,
@@ -8,34 +7,21 @@ import {
 import { colors } from '#/theme/foundations/colors';
 
 export interface GlassSurfaceProps {
-  /**
-   * Painted behind the glass. It is a scrim, not a theme fill: the material
-   * shows what is under it, so the tint only deepens the contrast.
-   */
-  tint?: { light: string; dark: string };
   style?: StyleProp<ViewStyle>;
 }
 
-const DEFAULT_TINT = colors.glass;
-
 /**
  * The liquid-glass fill, or nothing where the platform lacks the material; the
- * caller paints its own opaque fallback. `themeName` FIRST, as `useTheme` and
- * `RootNavigator` resolve it — an in-app theme choice does not move
- * `colorScheme`, which left the glass light under a dark theme.
+ * caller paints its own opaque fallback. Dark in both themes: the chrome it
+ * backs keeps light glyphs whichever theme is chosen.
  */
-export const GlassSurface: React.FC<GlassSurfaceProps> = ({
-  tint = DEFAULT_TINT,
-  style,
-}) => {
-  const { rt } = useUnistyles();
+export const GlassSurface: React.FC<GlassSurfaceProps> = ({ style }) => {
   if (!isLiquidGlassSupported) return null;
-  const scheme = (rt.themeName ?? rt.colorScheme) === 'dark' ? 'dark' : 'light';
   return (
     <LiquidGlassView
       effect="regular"
-      colorScheme={scheme}
-      tintColor={tint[scheme]}
+      colorScheme="dark"
+      tintColor={colors.glass}
       style={style}
       pointerEvents="none"
     />

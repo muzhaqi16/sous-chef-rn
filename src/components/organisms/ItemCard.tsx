@@ -72,26 +72,25 @@ const SwipeableItemCard: React.FC<ItemCardProps> = ({
     );
 
   return (
-    <Animated.View
-      style={[commonStyles.rowWrapper, animatedSlideStyle]}
-      testID={testID}
-    >
-      <SwipeableItem
-        onPress={onPress}
-        leftActions={withSlideOut(leftActions)}
-        rightActions={withSlideOut(rightActions)}
-        onSwipeableWillOpen={onSwipeableWillOpen}
-        testIDPrefix={testID}
-      >
-        <ListItem
-          title={title}
-          subtitle={subtitle}
-          badge={badge}
-          rightElement={rightElement}
-          leftElement={leftElement}
-        />
-      </SwipeableItem>
-    </Animated.View>
+    <View style={commonStyles.rowWrapper} testID={testID}>
+      <Animated.View style={animatedSlideStyle}>
+        <SwipeableItem
+          onPress={onPress}
+          leftActions={withSlideOut(leftActions)}
+          rightActions={withSlideOut(rightActions)}
+          onSwipeableWillOpen={onSwipeableWillOpen}
+          testIDPrefix={testID}
+        >
+          <ListItem
+            title={title}
+            subtitle={subtitle}
+            badge={badge}
+            rightElement={rightElement}
+            leftElement={leftElement}
+          />
+        </SwipeableItem>
+      </Animated.View>
+    </View>
   );
 };
 

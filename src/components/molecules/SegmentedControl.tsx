@@ -68,12 +68,16 @@ const SegmentedTab = <T extends string>({
     };
   });
 
+  const labelTypeStyle = useAnimatedStyle(() => ({
+    ...animatedTheme.get().type.label,
+  }));
+
   styles.useVariants({ compact: isCompact });
 
   return (
     <AppPressable style={styles.segment} onPress={onPress}>
       <Animated.Text
-        style={[styles.segmentText, textAnimatedStyle]}
+        style={[styles.segmentText, labelTypeStyle, textAnimatedStyle]}
         numberOfLines={2}
       >
         {formatLabel(option)}
@@ -130,9 +134,7 @@ export const SegmentedControl = <T extends string>({
     // Width is 0 until measured; the opacity gate keeps the always-mounted pill
     // from painting at the left edge before the first measurement.
     opacity: tabWidth > 0 ? 1 : 0,
-    // The brand color is read INSIDE the worklet so Reanimated is the node's sole
-    // writer; on the static stylesheet, Unistyles also commits to it and a
-    // Reanimated commit can land over a freshly-applied theme color.
+    borderRadius: animatedTheme.get().radii.md,
     backgroundColor: animatedTheme.get().colors.primary,
   }));
 
@@ -190,10 +192,7 @@ const styles = StyleSheet.create(theme => ({
     top: 0,
     left: 0,
     bottom: 0,
-    borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    // backgroundColor is driven by the worklet in `indicatorAnimatedStyle` — see
-    // there for why it must not sit on the static stylesheet.
   },
   segment: {
     flex: 1,
@@ -209,7 +208,6 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   segmentText: {
-    ...theme.type.label,
     textAlign: 'center',
   },
 }));

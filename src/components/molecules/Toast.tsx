@@ -13,6 +13,7 @@ import { usePanGesture, GestureDetector } from 'react-native-gesture-handler';
 import { Pressable } from '#components/atoms/themedComponents';
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { _setToastDispatch } from '#/services/toastService';
@@ -138,6 +139,30 @@ const ToastCard = forwardRef<
   const iconName = TOAST_ICONS[type];
   styles.useVariants({ type: type === 'default' ? undefined : type });
 
+  const animatedTheme = useAnimatedTheme();
+  const surfaceStyle = useAnimatedStyle(() => {
+    const theme = animatedTheme.get();
+    const banner =
+      type === 'default' ? undefined : theme.colors.alertBanner[type];
+    return {
+      left: theme.spacing.md,
+      right: theme.spacing.md,
+      marginTop: theme.spacing.md,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.base,
+      borderRadius: theme.radii.lg,
+      zIndex: theme.zIndex.toast,
+      ...theme.shadows.md,
+      backgroundColor: banner ? banner.bg : theme.colors.textPrimary,
+      ...(banner
+        ? {
+            borderWidth: theme.borderWidth.hairline,
+            borderColor: banner.border,
+          }
+        : { borderWidth: theme.borderWidth.none }),
+    };
+  });
+
   return (
     <Animated.View
       ref={ref}
@@ -152,7 +177,12 @@ const ToastCard = forwardRef<
       accessibilityLabel={message}
       // Safe-area offset applied as layout, not animation — see the entry
       // effect. `marginTop` (spacing.md) is the gap below it.
-      style={[styles.toastContainer, { top: topInset }, animatedStyle]}
+      style={[
+        styles.toastContainer,
+        { top: topInset },
+        surfaceStyle,
+        animatedStyle,
+      ]}
     >
       {iconName ? (
         <ThemedToastIcon
@@ -370,46 +400,13 @@ export const ToastProvider: React.FC<{ children?: ReactNode }> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  // Themed surface values are in `surfaceStyle`; `top` comes from the
+  // safe-area inset at the call site.
   toastContainer: {
     position: 'absolute',
-    left: theme.spacing.md,
-    right: theme.spacing.md,
-    // `top` is set at the call site from the safe-area inset; this is the gap
-    // between the status bar and the toast.
-    marginTop: theme.spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.base,
-    borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
-    zIndex: theme.zIndex.toast,
-    ...theme.shadows.md,
-    backgroundColor: theme.colors.textPrimary,
-    variants: {
-      type: {
-        success: {
-          backgroundColor: theme.colors.alertBanner.success.bg,
-          borderWidth: theme.borderWidth.hairline,
-          borderColor: theme.colors.alertBanner.success.border,
-        },
-        error: {
-          backgroundColor: theme.colors.alertBanner.error.bg,
-          borderWidth: theme.borderWidth.hairline,
-          borderColor: theme.colors.alertBanner.error.border,
-        },
-        warning: {
-          backgroundColor: theme.colors.alertBanner.warning.bg,
-          borderWidth: theme.borderWidth.hairline,
-          borderColor: theme.colors.alertBanner.warning.border,
-        },
-        info: {
-          backgroundColor: theme.colors.alertBanner.info.bg,
-          borderWidth: theme.borderWidth.hairline,
-          borderColor: theme.colors.alertBanner.info.border,
-        },
-      },
-    },
   },
   icon: {
     marginRight: theme.spacing.xs,
