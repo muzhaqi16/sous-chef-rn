@@ -3968,6 +3968,17 @@ enum Difficulty {
   VERY_EASY
 }
 
+"""
+An amount as it is shown: the number, the unit, and the text a client displays.
+"""
+type DisplayAmount {
+  """The amount in unit: 0.25 for a quarter dozen."""
+  quantity: Float!
+  """Ready to display: ¼ doz, 11 pc."""
+  text: String!
+  unit: Unit!
+}
+
 """Display format for quantities"""
 enum DisplayFormat {
   AUTO
@@ -9116,6 +9127,17 @@ type PantryItem {
   createdAt: DateTime!
   """Density for this stack in g/mL; the catalog's applies when null."""
   densityOverride: Float
+  """
+  What the stack holds as it is shown: in displayUnit when that is a whole number
+  or an exact common fraction of it (1 doz, ½ doz, 1¼ doz), otherwise in the unit
+  it is counted in (11 pc). A count multiple is never shown as a decimal.
+  """
+  displayAmount: DisplayAmount!
+  """
+  The unit this stack is shown in when it is counted in another: a dozen, for a
+  stack counted in pieces. Null when it is shown in the unit it is counted in.
+  """
+  displayUnit: Unit
   """The soonest expiry date among the active batches."""
   earliestBatchExpiresOn: LocalDate
   expirationAlert: Boolean!
