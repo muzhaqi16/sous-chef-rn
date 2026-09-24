@@ -3972,11 +3972,25 @@ enum Difficulty {
 An amount as it is shown: the number, the unit, and the text a client displays.
 """
 type DisplayAmount {
+  """
+  The common fraction shown (¼ ⅓ ½ ⅔ ¾), the same in every locale. Null when
+  the amount is shown as a number. Never render quantity as a decimal when this
+  is set: ⅓ doz is not 0.33 doz.
+  """
+  fraction: String
   """The amount in unit: 0.25 for a quarter dozen."""
   quantity: Float!
-  """Ready to display: ¼ doz, 11 pc."""
+  """
+  Ready to display: ¼ doz, 11 pc. Not localized; a client formatting numbers
+  for its locale composes whole and fraction instead.
+  """
   text: String!
   unit: Unit!
+  """
+  Beside fraction, the whole units: 1 of 1¼ doz, 0 of ¼ doz. Null when the
+  amount has no fraction, which is then quantity as a number.
+  """
+  whole: Int
 }
 
 """Display format for quantities"""
