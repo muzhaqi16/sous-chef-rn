@@ -10502,8 +10502,10 @@ type Query {
   Search items with cursor-based pagination (Relay spec).
   
   With an orderBy, every page is reachable through after, before and last.
-  Without one, matches are ranked by relevance (the caller's own private
-  items, then their frequent items, then by popularity). A ranked list has
+  Without one, matches are ranked by relevance: an exact name first, then
+  names starting with the query, then names containing it, and only then a
+  description, tag or UPC match. Within each tier come the caller's own private
+  items, then their frequent items, then name similarity and popularity. A ranked list has
   no cursor, so only its first page is served: after, before and last are
   refused with a validation error until an orderBy is named.
   """
