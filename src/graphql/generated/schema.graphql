@@ -45,47 +45,6 @@ directive @cacheControl(
 ) on FIELD_DEFINITION | INTERFACE | OBJECT | UNION
 
 """
-Mark a mutation that a client never queues offline, so it needs no
-`idempotencyKey` on its input.
-
-The offline-replay coverage rule requires a key on the cumulative-write verbs
-(restock, waste, adjust, consume, record, increment, convert, open), because a
-queued write replayed after a flaky connection must not apply twice. The one
-class of operation that carries such a verb without carrying that risk is the
-**server-recorded event** — the server writes it in response to something that
-already happened, so no client queue holds a copy to replay.
-
-That is not visible in the SDL, so it is DECLARED here rather than derived —
-beside the operation it describes, where a reviewer reading the mutation sees
-it, and with a mandatory reason.
-
-**A set-to-absolute value is NOT a reason to exempt.** Writing the same
-absolute value twice converges, but that says nothing about whether the second
-write is ACCEPTED: an input carrying `version` refuses every replay with a
-version conflict, because the first application bumped the row's version. Such
-an operation is not offline-replayable no matter how idempotent its value is —
-it needs a key, claimed before the version check inside the write transaction,
-so the replay surfaces as `IDEMPOTENT_REPLAY` instead.
-
-It is NOT an authorization posture and grants nothing. Its only effect is to
-tell the operation-conventions check that this mutation's missing
-`idempotencyKey` is intentional.
-
-Example:
-  type Mutation {
-    recordPriceObservation(input: RecordPriceObservationInput!): RecordPriceObservationResult!
-      @auth
-      @offlineReplayExempt(reason: "server-recorded observation, not client-queued")
-  }
-"""
-directive @offlineReplayExempt(
-  """
-  Why this mutation is not offline-queued. Required — an unexplained exemption is the drift this directive exists to prevent.
-  """
-  reason: String!
-) on FIELD_DEFINITION
-
-"""
 Mark a field as supporting OPTIONAL authentication.
 
 - If the caller provides a valid JWT, the resolver sees a populated
@@ -190,7 +149,7 @@ Returns FORBIDDEN error if user doesn't have required role.
 
 Note: Uses existing MembershipRole enum (OWNER, ADMIN, MEMBER, GUEST).
 Distinct from @requireSystemRole, which gates on the global UserRole
-enum, and from the requireUserRole resolver helper.
+enum.
 
 Example:
 type Mutation {
@@ -461,9 +420,8 @@ union AddRecipeToShoppingListResult = AddRecipeToShoppingListPayload | ConflictE
 
 input AddRestrictionInput {
   appliesToHomeId: ID
-  diet: Diet
-  healthGoal: HealthGoal
-  intolerance: Intolerance
+  """What the restriction restricts"""
+  kind: RestrictionKindInput!
   notes: String
   severity: RestrictionSeverity!
 }
@@ -704,6 +662,9 @@ type AuthenticationError implements Error {
 }
 
 input AutocompleteCategoryInput {
+  """
+  At most this many suggestions: default 10, at most 50 (a larger value gives 50)
+  """
   limit: Int = 10
   parentId: ID
   query: String!
@@ -722,6 +683,9 @@ type AutocompleteCategoryResult {
 
 input AutocompleteInput {
   category: String
+  """
+  At most this many suggestions: default 10, at most 50 (a larger value gives 50)
+  """
   limit: Int = 10
   query: String!
   storeId: ID
@@ -823,8 +787,9 @@ type BatchAddShoppingListItemResult {
   """The created/updated item (null if failed)"""
   item: ShoppingListItem
   """
-  True when this add stated a package size the line it merged into could not
-  keep: the line then records no size, and each package takes the pantry
+  True when this add merged into a line whose package size it could not keep:
+  it stated another size, or scanned another barcode stating none onto a line
+  with one. The line then records no size, and each package takes the pantry
   stack's default at the move unless the move states one.
   """
   packageSizeCleared: Boolean
@@ -880,10 +845,11 @@ Brand type for product manufacturers and retailers
 Cache: 1 hour - brand catalog is relatively stable
 """
 type Brand {
-  """
-  Child brands. The limit is clamped server-side; the hierarchy is admin-curated and shallow.
-  """
-  children(limit: Int = 50): [Brand!]!
+  """Child brands, by name"""
+  children(
+    """At most this many: default 50, at most 50 (a larger value gives 50)"""
+    limit: Int = 50
+  ): [Brand!]!
   createdAt: DateTime!
   description: String
   id: ID!
@@ -1225,10 +1191,11 @@ Category type for organizing items
 Cache: 2 hours - reference data that changes very rarely
 """
 type Category {
-  """
-  Child categories. The limit is clamped server-side; the hierarchy is admin-curated and shallow.
-  """
-  children(limit: Int = 50): [Category!]!
+  """Active child categories the caller can see, by sort order, then name"""
+  children(
+    """At most this many: default 50, at most 50 (a larger value gives 50)"""
+    limit: Int = 50
+  ): [Category!]!
   color: String
   createdAt: DateTime!
   createdBy: User
@@ -1292,6 +1259,13 @@ input CategoryOrderBy {
   createdAt: SortOrder
   name: SortOrder
   sortOrder: SortOrder
+}
+
+"""A category, named exactly one way: by id, by slug, or by name."""
+input CategoryRefInput {
+  id: ID
+  name: String
+  slug: String
 }
 
 enum CategorySource {
@@ -1404,8 +1378,6 @@ enum ChangeType {
 """Order by options for collaborators"""
 input CollaboratorOrderBy {
   invitedAt: SortOrder
-  itemsAdded: SortOrder
-  lastViewedAt: SortOrder
 }
 
 """
@@ -1988,6 +1960,14 @@ input CreateItemSuggestionInput {
   changes: SuggestibleItemChangesInput!
   itemId: ID!
   note: String!
+  """
+  One barcode of the item to correct instead of the item itself: a product
+  record, as Item.matchedVariation returned it. It may change only
+  packageInfo.netWeight, packageInfo.netWeightKind, packageInfo.displayUnit
+  and brand; approving it changes that barcode only. A record that is not one
+  of the item's barcodes is refused.
+  """
+  variation: ID
 }
 
 type CreateItemSuggestionPayload {
@@ -2137,31 +2117,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union CreateMealTemplateResult = ConflictError | CreateMealTemplatePayload | ForbiddenError | NotFoundError | ValidationError
 
-input CreateMembershipInput {
-  canAddItems: Boolean
-  canEditPantry: Boolean
-  canInviteOthers: Boolean
-  canManageHome: Boolean
-  canRemoveItems: Boolean
-  canViewPantry: Boolean
-  displayName: String
-  homeId: ID!
-  role: MembershipRole
-  userId: ID!
-}
-
-type CreateMembershipPayload {
-  home: Home
-  membership: Membership!
-}
-
-"""
-Result of CreateMembership. Select on CreateMembershipPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union CreateMembershipResult = ConflictError | CreateMembershipPayload | ForbiddenError | NotFoundError | ValidationError
-
 input CreatePantryInput {
   description: String
   homeId: ID!
@@ -2291,7 +2246,8 @@ union CreatePantryResult = ConflictError | CreatePantryPayload | ForbiddenError 
 
 input CreateProfileInput {
   bio: String
-  dateOfBirth: String
+  """The date of birth, as a calendar date"""
+  dateOfBirth: LocalDate
   displayName: String
   firstName: String
   gender: String
@@ -2368,7 +2324,7 @@ input CreateRecipeInput {
   id: ID
   ingredients: [RecipeIngredientInput!]!
   instructions: JSON!
-  media: MediaAssetsInput
+  media: RecipeMediaInput
   metadata: RecipeMetadataInput
   name: String!
   notes: String
@@ -4496,14 +4452,13 @@ type Home {
   """
   joinLink: ShareLink
   """
-  Low stock items across all pantries in this home.
-  
-  The limit is clamped server-side (see SMALL_LIST_FIELD_MAX): this is a
-  dashboard list, and a home with many pantries can accumulate a lot of
-  low-stock rows. Bounds the RESPONSE — the underlying batch read is not yet
-  per-key limited, so this caps payload and client memory, not database work.
+  The stacks across this home's pantries that are at or under the minimum
+  the user set for them, with low-stock alerts on, by item name.
   """
-  lowStockItems(limit: Int = 20): [LowStockItem!]!
+  lowStockItems(
+    """At most this many: default 20, at most 50 (a larger value gives 50)"""
+    limit: Int = 20
+  ): [LowStockItem!]!
   maxMembers: Int
   mealPlansConnection(
     """Resume after this cursor: a previous page's endCursor"""
@@ -4665,12 +4620,6 @@ type HomeInvite {
   """
   createdAt: DateTime!
   """
-  Permission overrides for the recipient's membership. No operation sets
-  them, so this is null and an accepted invite gets its role's default
-  permissions.
-  """
-  customPermissions: HomePermissions
-  """
   When the recipient declined the invite; null otherwise. Re-inviting the
   same address is refused for 24 hours after a decline.
   """
@@ -4700,11 +4649,6 @@ type HomeInvite {
   invitedUserId: ID
   """Who sent the invite; null once that account is deleted"""
   inviter: User
-  """
-  When a reminder for the invite was last sent. The server sends no invite
-  reminders, so it is null.
-  """
-  lastReminderAt: DateTime
   """The invite's newest logs. `limit` defaults to 10 and is capped at 50."""
   logs(
     """At most this many entries, newest first"""
@@ -4715,15 +4659,10 @@ type HomeInvite {
   """
   message: String
   """
-  A display name for the recipient; null when none is recorded. No operation
-  sets it.
+  The recipient's own display name, else first name, taken from their account
+  when the invited address belongs to one; null otherwise, never the address.
   """
   recipientName: String
-  """
-  How many reminders were sent for the invite. The server sends no invite
-  reminders, so it is 0.
-  """
-  reminderCount: Int!
   """When the invite was revoked; null otherwise"""
   revokedAt: DateTime
   """The home role the recipient gets on accepting"""
@@ -4816,16 +4755,6 @@ type HomeOwnershipEdge implements Edge {
   cursor: String!
   """The HomeOwnership this edge wraps."""
   node: HomeOwnership!
-}
-
-"""Custom permissions that can override default role permissions"""
-type HomePermissions {
-  canAddItems: Boolean
-  canEditPantry: Boolean
-  canInviteOthers: Boolean
-  canManageHome: Boolean
-  canRemoveItems: Boolean
-  canViewPantry: Boolean
 }
 
 """Subtype discriminator for the consolidated homeEvents stream."""
@@ -4943,12 +4872,11 @@ A catalog item described inline, for a stack whose item may not exist yet
 input InlineItemInput {
   brand: String
   """
-  Category reference for the item created inline — a category name, slug, or
-  id. Resolved against the catalog taxonomy; a name that matches nothing
+  The category of the item created inline. A name that matches nothing
   creates a CUSTOM category and links it, the same way a new brand name is
-  handled. An unknown id resolves to no category. Never fails the add.
+  handled; an id or slug must name a category the caller can see.
   """
-  category: String
+  category: CategoryRefInput
   description: String
   displayUnitId: ID
   name: String
@@ -5112,11 +5040,9 @@ input InviteToShoppingListInput {
   canAddItems: Boolean
   canEdit: Boolean
   canEditItems: Boolean
-  canExport: Boolean
   canInviteOthers: Boolean
   canMarkPurchased: Boolean
   canRemoveItems: Boolean
-  canViewHistory: Boolean
   email: EmailAddress!
   expiresAt: DateTime
   role: CollaboratorRole!
@@ -5211,7 +5137,7 @@ type Item {
   searchItemsSemantic). Those are no-store with or without canEdit — a root
   field has no parent for ItemConnection's inheritMaxAge to inherit from, so
   they fall back to defaultMaxAge: 0. Splitting canEdit out of a connection
-  query buys nothing. See docs/api/item-suggestions.md.
+  query buys nothing.
   """
   canEdit: Boolean!
   """
@@ -5233,8 +5159,9 @@ type Item {
   """
   categories: [ItemCategory!]!
   """
-  netWeight converted to the caller's preferred unit system, so two callers
-  reading the same item can get different answers.
+  A PACKAGE netWeight converted to the caller's preferred unit system, so two
+  callers reading the same item can get different answers. Null for a serving
+  or reference figure.
   """
   convertedNetWeight: ConvertedValue
   """When the item was created."""
@@ -5260,8 +5187,8 @@ type Item {
   """Free-text description of the item, or null when none is recorded."""
   description: String
   """
-  Unit that netWeight is stated in, for example oz. Taken from the matched
-  product variation when there is one; null when unknown.
+  Unit that netWeight is stated in, for example oz. On an item returned by a
+  barcode lookup, the unit of that barcode's figure when it has one.
   """
   displayUnit: Unit
   """
@@ -5306,9 +5233,11 @@ type Item {
   """
   isUserCreated: Boolean!
   """
-  The product variation (package size, brand, images) behind the barcode this
-  item was reached through, when that barcode belongs to a variation rather than
-  to the item's own UPCs. Null otherwise.
+  The product record (package size, brand, images) of the barcode a lookup
+  returned this item for, whether that barcode is the item's primary, an
+  alternate, or known only through the record. An add names it as
+  item.variation. Null when the item was not returned by a barcode lookup, or
+  the barcode has no record.
   """
   matchedVariation: ProductVariation
   """
@@ -5320,7 +5249,7 @@ type Item {
   callers and returned only to ADMIN/SUPER_ADMIN roles; every other key is
   returned to all callers. This is a deliberate, documented projection (not the
   raw column) — the read-side counterpart to `ItemMetadataInput` narrowing the
-  write surface to four dietary booleans. See docs/api/json-open-shape-register.md.
+  write surface to four dietary booleans.
   
   Pinned `maxAge: 0, scope: PRIVATE`: the projection is viewer-dependent, so the
   type's `maxAge: 1800, scope: PUBLIC` MUST NOT cache an admin response and
@@ -5335,16 +5264,16 @@ type Item {
   """
   needsApproval: Boolean!
   """
-  Net quantity stated for the item, in displayUnit; netWeightKind says whether it
-  is one package, one serving or a 100 g reference. When the item was reached
-  through a product variation's barcode, this is the variation's package figure.
-  Null when unknown.
+  Net quantity stated for the item, in displayUnit; netWeightKind says what it
+  measures. On an item returned by a barcode lookup it is that barcode's own
+  figure: its product record's, else the item's own for its primary barcode,
+  else null. An add naming the record stores the same figure. Null when unknown.
   """
   netWeight: Float
   """
-  What the item's catalog netWeight measures: PACKAGE (one retail unit's net
-  quantity), SERVING (one labelled serving) or REFERENCE (a 100 g nutrition
-  basis). Null when unknown.
+  What netWeight measures: PACKAGE (one retail unit's net quantity), SERVING
+  (one labelled serving) or REFERENCE (a 100 g nutrition basis). Only a PACKAGE
+  figure becomes a pantry stack's package size. Null when unknown.
   """
   netWeightKind: NetWeightKind
   """
@@ -5359,10 +5288,9 @@ type Item {
   """
   Nutrition as aggregated from this item's sources, in the legacy Json mirror.
   
-  Prefer `nutritionFacts`, which is the same data in the structured table
-  item.prisma groups under "Structured data relations (replacing Json fields
-  over time)". This column stays authoritative for now and carries any key the
-  table has no column for.
+  Prefer `nutritionFacts`, which is the same data in structured form. This
+  field stays authoritative for now and carries any key the structured form
+  has no field for.
   """
   nutritions: JSON
   """Number of PENDING community edit suggestions for this item."""
@@ -5462,6 +5390,13 @@ type Item {
   ): ItemStoreSkuConnection!
   """Free-form labels attached to the item; empty when none."""
   tags: [String!]!
+  """
+  The unit an add of this item naming no unit is counted in: the unit the
+  given pantry holds it in, or last held it in, else the item's preferred
+  tracking unit, retail unit, default unit or declared count unit, else piece.
+  Without a pantry, from the item alone. Requires view access to the pantry.
+  """
+  trackingUnit(pantry: ID): Unit!
   """The item's general kind, such as FOOD, DRINK or HOUSEHOLD."""
   type: ItemType!
   """
@@ -5597,6 +5532,10 @@ type ItemEditSuggestion {
   """The contributor who proposed the change."""
   suggestedBy: User
   updatedAt: DateTime!
+  """
+  The barcode's product record the suggestion corrects; null when it targets the item.
+  """
+  variation: ProductVariation
 }
 
 """
@@ -5827,12 +5766,19 @@ input ItemPriceHistoryOrderBy {
 
 """
 Mutually-exclusive item reference: supply exactly one of an existing catalog
-item id or a free-text name. Enforced by the GraphQL executor (@oneOf) — the
-request is rejected before any resolver runs if zero or both are provided.
+item id, a scanned barcode's product record, or a free-text name. Enforced by
+the GraphQL executor (@oneOf) — the request is rejected before any resolver
+runs if zero or two are provided.
 """
 input ItemRefInput {
   itemId: ID
   itemName: String
+  """
+  A barcode's product record, as Item.matchedVariation returned it: the line
+  names its item and stores the net weight, unit, brand and barcode the lookup
+  reported.
+  """
+  variation: ID
 }
 
 enum ItemStatus {
@@ -7255,11 +7201,6 @@ type Membership {
   id: ID!
   """When the member joined the home; reset when a former member rejoins"""
   joinedAt: DateTime!
-  """
-  When the member was last active in the home. The server does not record
-  it, so it is null.
-  """
-  lastActiveAt: DateTime
   """When the member left or was removed from the home; null otherwise"""
   leftAt: DateTime
   """
@@ -7336,7 +7277,6 @@ type MembershipStats {
   active: Int!
   byRole: MembershipRoleStats!
   byStatus: MembershipStatusStats!
-  recentlyActive: Int!
   total: Int!
 }
 
@@ -7613,8 +7553,8 @@ type Mutation {
   Add a recipe's ingredients to a shopping list, pantry-deficit-aware: checks
   the pantry and adds only the shortfall (with smart unit handling). Use
   createShoppingListItemsFromRecipe instead to add every ingredient in full
-  regardless of pantry stock — the two are intentional variants (see
-  graphql-operation-conventions.md §5), not duplicates.
+  regardless of pantry stock — the two are intentional variants, not
+  duplicates.
   """
   addRecipeToShoppingList(input: AddRecipeToShoppingListInput!): AddRecipeToShoppingListResult!
   """Add a dietary restriction to the user's profile."""
@@ -7628,8 +7568,7 @@ type Mutation {
   usage record with a mandatory reason for the audit trail; the delta
   (positive or negative) is computed automatically. For a plain quantity set
   with no audit record, use updatePantryItemQuantity — the two are intentional
-  variants (see graphql-operation-conventions.md §5): audited adjust vs.
-  quick set.
+  variants: audited adjust vs. quick set.
   """
   adjustPantryItemQuantity(input: AdjustPantryItemQuantityInput!): AdjustPantryItemQuantityResult!
   """Create multiple items at once"""
@@ -7732,13 +7671,6 @@ type Mutation {
   createMealPlanItem(input: CreateMealPlanItemInput!): CreateMealPlanItemResult!
   """Create a new meal template"""
   createMealTemplate(input: CreateMealTemplateInput!): CreateMealTemplateResult!
-  """
-  Add a member to a home directly, as a system operator. A home admin cannot:
-  the person being added has not consented, so the invite and join-code
-  routes — which end with them accepting — are the ways into a home. Requires
-  a verified email like those routes do.
-  """
-  createMembership(input: CreateMembershipInput!): CreateMembershipResult!
   """Create a new pantry for a home."""
   createPantry(input: CreatePantryInput!): CreatePantryResult!
   """Create a new pantry item in a pantry."""
@@ -7765,8 +7697,7 @@ type Mutation {
   Add a SINGLE recipe ingredient to a shopping list (smart-merge: if the item
   already exists, quantities are added with unit conversion). This is the
   per-ingredient variant of createShoppingListItemsFromRecipe (which adds the
-  whole recipe at once) — the two are intentional variants (see
-  graphql-operation-conventions.md §5), not duplicates:
+  whole recipe at once) — the two are intentional variants, not duplicates:
   use this to add one ingredient, the plural op to add them all.
   """
   createShoppingListItemFromRecipeIngredient(input: CreateShoppingListItemFromRecipeIngredientInput!): CreateShoppingListItemFromRecipeIngredientResult!
@@ -7774,8 +7705,8 @@ type Mutation {
   Add every ingredient of a recipe to a shopping list in full (scaling
   quantities when servings differ), without checking the pantry. Use
   addRecipeToShoppingList instead for the pantry-deficit-aware variant that
-  adds only the shortfall — the two are intentional variants (see
-  graphql-operation-conventions.md §5), not duplicates.
+  adds only the shortfall — the two are intentional variants, not
+  duplicates.
   """
   createShoppingListItemsFromRecipe(input: CreateShoppingListItemsFromRecipeInput!): CreateShoppingListItemsFromRecipeResult!
   """
@@ -7820,10 +7751,8 @@ type Mutation {
   """Delete a notification."""
   deleteNotification(input: DeleteNotificationInput!): DeleteNotificationResult!
   """
-  Delete a pantry (owner only). Authorized in the resolver and the service
-  rather than by a resource directive: the directive resolves the pantry
-  through the live-row loader, which would refuse the idempotent replay of an
-  already-deleted pantry before it could converge.
+  Delete a pantry (owner only). The owner repeating the delete of a pantry
+  already deleted succeeds, so a replayed request converges.
   """
   deletePantry(input: DeletePantryInput!): DeletePantryResult!
   """
@@ -8164,14 +8093,13 @@ type Mutation {
   Offline-sync twin of createPantryItem/updatePantryItem — idempotent by a
   client-minted id (the primary key for creates, idempotencyKey for
   cumulative deltas). Use the online mutations directly when not syncing
-  offline edits. See docs/api/graphql-operation-conventions.md (§5 variants).
+  offline edits.
   """
   syncPantryItem(input: SyncPantryItemInput!): SyncPantryItemResult!
   """
   Offline-sync twin of addItemsToShoppingList/updateShoppingListItem —
   idempotent by a client-minted id (the primary key or idempotencyKey). Use
-  the online mutations directly when not syncing offline edits. See
-  docs/api/graphql-operation-conventions.md (§5).
+  the online mutations directly when not syncing offline edits.
   """
   syncShoppingListItem(input: SyncShoppingListItemInput!): SyncShoppingListItemResult!
   """Toggle a helpful vote on a recipe review."""
@@ -8251,8 +8179,8 @@ type Mutation {
   Set a pantry item's quantity directly (supports fractions). A plain setter
   with no audit record. When reconciling to a physical count and you want an
   auditable ADJUSTMENT usage record (mandatory reason, auto-computed delta),
-  use adjustPantryItemQuantity instead — the two are intentional variants
-  (see graphql-operation-conventions.md §5): quick set vs. audited adjust.
+  use adjustPantryItemQuantity instead — the two are intentional variants:
+  quick set vs. audited adjust.
   """
   updatePantryItemQuantity(input: UpdatePantryItemQuantityInput!): UpdatePantryItemQuantityResult!
   """
@@ -8303,10 +8231,8 @@ type Mutation {
   """
   User-contributed store details (phone, email, website, lat/lng, hours).
   Distinct from the admin-managed updateStore (canonical name/address/pricing)
-  — the two are intentional variants by audience and field set (see
-  graphql-operation-conventions.md §5). NOTE: this input's id argument is
-  `storeId` while UpdateStoreInput uses `id`; unify to `id` in the next
-  coordinated breaking cutover.
+  — the two are intentional variants by audience and field set. This input
+  names the store `storeId`; UpdateStoreInput names it `id`.
   
   Community-editable by design: any authenticated user may contribute or
   OVERWRITE these shared contact fields, with no moderation gate (unlike the
@@ -8774,6 +8700,10 @@ matching by-id query to fetch the source entity.
 enum NotificationSourceType {
   """sourceId is a HomeInvite.id."""
   HOME_INVITE
+  """sourceId is a MealPlanItem.id."""
+  MEAL_PLAN_ITEM
+  """sourceId is a Pantry.id."""
+  PANTRY
   """sourceId is a PantryItem.id."""
   PANTRY_ITEM
   """sourceId is a PantryItemBatch.id."""
@@ -8782,6 +8712,10 @@ enum NotificationSourceType {
   SHOPPING_LIST
   """sourceId is a ShoppingListCollaborator.id."""
   SHOPPING_LIST_COLLABORATOR
+  """
+  sourceId is a User.id: a summary or reminder about the recipient's own data.
+  """
+  USER
 }
 
 """
@@ -8842,6 +8776,8 @@ enum NotificationType {
   COLLABORATOR_REMOVED
   """A collaborator's role was changed on a shopping list"""
   COLLABORATOR_ROLE_CHANGED
+  """It is time to start cooking a planned recipe"""
+  COOKING_REMINDER
   """
   Alerts that a pantry item is approaching or has passed its expiration date
   """
@@ -8854,20 +8790,34 @@ enum NotificationType {
   ITEM_DELETED
   """Informs that an existing item has been modified"""
   ITEM_UPDATED
+  """A shopping list's reminder date has come"""
+  LIST_REMINDER
   """Notifies that a shared shopping list has been updated"""
   LIST_UPDATED
   """
   Warns that a pantry item quantity has fallen below the configured threshold
   """
   LOW_STOCK
+  """The day's planned meals, sent in the morning"""
+  MEAL_PLAN_REMINDER
   """Invitation to join a household as a member"""
   MEMBERSHIP_INVITE
+  """
+  The previous month's spending, waste, most used items and recipes cooked
+  """
+  MONTHLY_REPORT
   """Informs that a new item has been added to the pantry or shopping list"""
   NEW_ITEM_ADDED
   """Records that a recipe has been cooked or prepared"""
   RECIPE_COOKED
+  """Recipes that match what the user's pantries hold, weekly"""
+  RECIPE_RECOMMENDATIONS
   """Confirms that a recipe has been saved to the user's collection"""
   RECIPE_SAVED
+  """Other participants changed the items on a shared shopping list"""
+  SHARED_LIST_CHANGED
+  """A summary of the week's pantry activity"""
+  WEEKLY_DIGEST
 }
 
 type NotificationTypeCount {
@@ -9206,10 +9156,8 @@ type PageInfo {
 }
 
 """
-Pantry/storage location for a home.
-Not cached at the response level: child PantryItem mutations happen frequently and
-TTL-based caching can't be invalidated mid-window. Server-side coherence is handled
-via DataLoader + Redis invalidation in resolvers (invalidatePantryItemCache).
+Pantry/storage location for a home. Responses that include it are not
+cached, since its items change often.
 """
 type Pantry {
   createdAt: DateTime!
@@ -9258,8 +9206,10 @@ type Pantry {
     last: Int
     orderBy: StorageLocationOrderBy
   ): StorageLocationConnection!
+  """Items worth adding to this pantry, from the chosen sources"""
   suggestions(
     expirationDays: Int = 7
+    """At most this many: default 10, at most 50 (a larger value gives 50)"""
     limit: Int = 10
     sources: [PantrySuggestionSource!]
     """The viewer's calendar date, which EXPIRING_SOON counts from."""
@@ -9927,14 +9877,20 @@ type PantryItemPhoto {
 }
 
 """
-The catalog item a pantry stack holds: exactly one of an existing item or an
-item described inline.
+The catalog item a pantry stack holds: exactly one of an existing item, a
+scanned barcode's product record, or an item described inline.
 """
 input PantryItemSourceInput {
   """An existing catalog item"""
   id: ID
   """An item described inline: matched by UPC, then by name, else created"""
   inline: InlineItemInput
+  """
+  A barcode's product record, as Item.matchedVariation returned it: the stack
+  holds its item and stores the net weight, unit, brand and barcode the lookup
+  reported. Only a PACKAGE figure becomes the stack's package size.
+  """
+  variation: ID
 }
 
 """
@@ -10400,8 +10356,8 @@ input ProductDetailsInput {
 }
 
 """
-Product variation data from ExternalSourceMapping
-Represents a specific UPC/package variation of an Item
+One barcode's product record: the package that barcode names, its brand and
+images, as its source stated them.
 """
 type ProductVariation {
   brandInfo: VariationBrandInfo
@@ -10410,10 +10366,20 @@ type ProductVariation {
   externalType: String
   id: ID!
   images: [VariationImage!]
+  """The package figure, in unit; netWeightKind says what it measures."""
   netWeight: Float
+  """
+  What netWeight measures; only a PACKAGE figure becomes a stack's package size.
+  """
+  netWeightKind: NetWeightKind
+  """The unit as the source spelled it; unit is the one to compute with."""
   netWeightUnit: String
   packageSize: String
   source: String!
+  """
+  The unit netWeight is stated in. Null when the record states no figure.
+  """
+  unit: Unit
   upc: String
   updatedAt: DateTime!
 }
@@ -11292,7 +11258,7 @@ type Query {
   ): RecipeConnection!
   """Popular items to suggest to the caller."""
   recommendedItems(
-    """How many to return: default 10; a larger value is capped at 100"""
+    """How many to return: default 10, at most 100; a larger value is refused"""
     limit: Int = 10
   ): [ItemSuggestion!]!
   """
@@ -11380,14 +11346,12 @@ type Query {
     query: String!
   ): ItemConnection!
   """
-  Semantic (vector) search over the catalog. The prompt is embedded
-  server-side and compared against Item.embedding via pgvector cosine
-  distance. Intended as an augmentation to exact-match paths (UPC, tsvector)
-  — use when text search fails or OCR is noisy.
+  Semantic search over the catalog: items ranked by how close their meaning
+  is to the prompt. An augmentation to the exact-match paths (barcode, text
+  search) — use it when text search fails or OCR is noisy.
   
-  Items without a cached embedding are excluded; the catalog has been
-  backfilled, and new or edited items are embedded asynchronously by the
-  ITEM_EMBEDDING job. Auth-gated to bound embedding-service spend.
+  An item just created or edited may be missing for a short while, until it
+  has been indexed. Requires sign-in.
   
   Forward pagination only, via first. Vector-distance ordering does not
   compose with id-based cursors, and backward pagination has no meaningful
@@ -11896,8 +11860,11 @@ type Recipe {
   updatedAt: DateTime!
   """Revision number of the recipe, increased by each edit."""
   version: Int!
-  """URL of a video for the recipe, or null when none is recorded."""
-  videoUrl: String
+  """
+  A link to a video of the recipe, entered by its author; null when none. The
+  external import does not fill it.
+  """
+  videoUrl: URL
 }
 
 """Sub-input for recipe attribution"""
@@ -12122,7 +12089,8 @@ input RecipeIngredientSourceInput {
   consistency: String
   data: JSON
   externalId: String!
-  imageUrl: String
+  """An absolute http(s) link to the ingredient's image at this source"""
+  imageUrl: URL
   isPrimary: Boolean
   metadata: JSON
   originalName: String
@@ -12147,6 +12115,17 @@ type RecipeIngredientSourceMapping {
   recipeIngredient: RecipeIngredient!
   source: ExternalSource!
   updatedAt: DateTime!
+}
+
+"""A recipe's media: its image, and a link to a video of it."""
+input RecipeMediaInput {
+  """An absolute http(s) link to the recipe's image"""
+  imageUrl: URL
+  """
+  An absolute http(s) link to a video of the recipe, entered by its author;
+  null clears it.
+  """
+  videoUrl: URL
 }
 
 """Sub-input for recipe metadata"""
@@ -12727,6 +12706,15 @@ Always include a __typename so the variant can be discriminated.
 """
 union RestorePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | RestorePantryItemPayload | ValidationError
 
+"""
+What one restriction restricts: exactly one of a diet, an intolerance or a health goal.
+"""
+input RestrictionKindInput {
+  diet: Diet
+  healthGoal: HealthGoal
+  intolerance: Intolerance
+}
+
 enum RestrictionSeverity {
   ALLERGY
   GOAL
@@ -12871,11 +12859,6 @@ Cache: 1 minute - frequently updated by collaborators
 """
 type ShoppingList {
   """
-  Saved list setting for automatic item suggestions; false by default. The
-  server does not act on it.
-  """
-  autoAddSuggestions: Boolean!
-  """
   Available pantries for moving items (from linked home).
   Returns empty array if not linked to a home.
   """
@@ -13007,17 +12990,12 @@ type ShoppingList {
   When generateNextRecurringList last made the next list in the series; null before the first
   """
   lastRecurredAt: DateTime
-  """
-  When a reminder for the list was last sent. The server sends no list
-  reminders, so it is null.
-  """
+  """When the list's reminder was last sent; null before the first."""
   lastReminderSent: DateTime
   """
   The meal plan the list was made from; null when there is none or the caller cannot view it
   """
   mealPlan: MealPlan
-  """Free-form JSON attached to the list; null when none"""
-  metadata: JSON
   """The list's name"""
   name: String!
   """
@@ -13038,8 +13016,9 @@ type ShoppingList {
   """When the user plans to go shopping; null when not set"""
   plannedShopDate: DateTime
   """
-  Saved list setting for tracking price changes; true by default. The server
-  does not act on it.
+  Whether the list's estimated prices and purchases are recorded in each
+  item's price history; true by default. Off, the list's totals and purchase
+  records are unaffected.
   """
   priceTracking: Boolean!
   """The list's priority: 0 low, 1 medium, 2 high. 0 when unset."""
@@ -13063,11 +13042,14 @@ type ShoppingList {
   recurringPattern: RecurringPattern
   """How many of the list's items are not yet purchased"""
   remainingItems: Int!
-  """When the reminder is for; null when none is set"""
+  """
+  The day the reminder is for, read as a calendar date in the owner's time
+  zone; null when none is set. Moving it arms the reminder again.
+  """
   reminderDate: DateTime
   """
   Whether a reminder is set for the list, with updateShoppingListReminder.
-  The reminder is saved only: the server sends no notification for it.
+  The owner is sent a LIST_REMINDER at 09:00 local time on the reminder's day.
   """
   reminderEnabled: Boolean!
   """
@@ -13086,16 +13068,6 @@ type ShoppingList {
   public (isPublic) and a shareCode is set.
   """
   shareLink: ShareLink
-  """
-  Saved list setting for sorting items by store layout; false by default.
-  The server does not act on it.
-  """
-  smartSorting: Boolean!
-  """
-  Position for a custom ordering of lists; 0 when unset. No operation sets
-  it.
-  """
-  sortOrder: Int!
   """
   Where the list is in its lifecycle. completeShoppingList sets COMPLETED,
   markShoppingListActive sets ACTIVE and markAsTemplate sets TEMPLATE;
@@ -13123,11 +13095,6 @@ type ShoppingList {
   The name the list carries as a template, set with markAsTemplate; null for a list never marked as one
   """
   templateName: String
-  """
-  A saved collaborator count the server does not keep up to date, so it
-  reads 0. Use collaboratorsConnection's totalCount instead.
-  """
-  totalCollaborators: Int!
   """
   The amount actually spent, as recorded by completeShoppingList. 0 when
   none was recorded.
@@ -13163,11 +13130,6 @@ type ShoppingListCollaborator {
   """Grants editing the list's items"""
   canEditItems: Boolean!
   """
-  Permission flag for exporting the list; on by default for every role. No
-  operation checks it.
-  """
-  canExport: Boolean!
-  """
   Grants inviting more collaborators, with a role and permissions no greater than the collaborator's own
   """
   canInviteOthers: Boolean!
@@ -13175,11 +13137,6 @@ type ShoppingListCollaborator {
   canMarkPurchased: Boolean!
   """Grants removing items from the list"""
   canRemoveItems: Boolean!
-  """
-  Permission flag for viewing the list's activity history; on by default for
-  every role. No operation checks it.
-  """
-  canViewHistory: Boolean!
   """
   The collaborator's account; null for an invite to an email address with no account
   """
@@ -13210,37 +13167,6 @@ type ShoppingListCollaborator {
   when that account no longer exists.
   """
   invitedBy: User
-  """
-  How many items the collaborator added. The server does not count them, so
-  it is 0.
-  """
-  itemsAdded: Int!
-  """
-  How many items the collaborator marked purchased. The server does not
-  count them, so it is 0.
-  """
-  itemsPurchased: Int!
-  """
-  When the collaborator last edited the list. The server does not record
-  it, so it is null.
-  """
-  lastEditedAt: DateTime
-  """
-  When the collaborator last viewed the list. The server does not record
-  it, so it is null.
-  """
-  lastViewedAt: DateTime
-  """
-  The collaborator's choice to be notified when the list changes; true by
-  default. No operation changes it, and no change notification reads it.
-  """
-  notifyOnChanges: Boolean!
-  """
-  Whether the collaborator is notified when someone else completes the list,
-  subject to their shoppingListUpdates preference; true by default. No
-  operation changes it.
-  """
-  notifyOnComplete: Boolean!
   """
   The collaborator's role on the list. An invite takes its default permission
   flags from the role; someone who joins through the share code is a VIEWER.
@@ -13590,11 +13516,9 @@ input ShoppingListPlanningInput {
 
 """Sub-input for shopping list settings"""
 input ShoppingListSettingsInput {
-  autoAddSuggestions: Boolean
   category: String
   priceTracking: Boolean
   priority: Int
-  smartSorting: Boolean
 }
 
 """
@@ -13767,7 +13691,7 @@ input SpoonacularEstimatedCostInput {
 """
 Typed Spoonacular ingredient payload. Mirrors Spoonacular
 GET /food/ingredients/{id}/information (+ recipe extendedIngredient fields)
-so the catalog mirror is loss-free. See docs/architecture/external-ingredient-mirror.md.
+so the catalog mirror is loss-free.
 """
 input SpoonacularIngredientInput {
   aisle: String
@@ -15169,11 +15093,9 @@ input UpdateCollaboratorPermissionsFieldsInput {
   canAddItems: Boolean
   canEdit: Boolean
   canEditItems: Boolean
-  canExport: Boolean
   canInviteOthers: Boolean
   canMarkPurchased: Boolean
   canRemoveItems: Boolean
-  canViewHistory: Boolean
 }
 
 input UpdateCollaboratorPermissionsInput {
@@ -15393,6 +15315,11 @@ Consolidated input for updating items.
 Handles all item updates including categories, brands, units, tags, nutrition, images, etc.
 """
 input UpdateItemInput {
+  """
+  A brand to add to the item's brands. An item's brands are a set: this adds
+  one and keeps the rest, and null changes nothing. Remove a brand with
+  brandOps.removeBrandIds.
+  """
   brand: BrandRefInput
   brandOps: BrandOpsInput
   categoryOps: CategoryOpsInput
@@ -15705,7 +15632,8 @@ input UpdateProfileInput {
   avatar: URL
   bio: String
   coverImage: URL
-  dateOfBirth: String
+  """The date of birth, as a calendar date"""
+  dateOfBirth: LocalDate
   displayName: String
   firstName: String
   gender: String
@@ -15776,7 +15704,7 @@ input UpdateRecipeInput {
   dietary: DietaryTagsInput
   id: ID!
   instructions: JSON
-  media: MediaAssetsInput
+  media: RecipeMediaInput
   metadata: RecipeMetadataInput
   name: String
   notes: String
@@ -16158,7 +16086,7 @@ input UpsertExternalRecipeInput {
   externalSourceUrl: URL
   ingredients: [RecipeIngredientInput!]!
   instructions: JSON!
-  media: MediaAssetsInput
+  media: RecipeMediaInput
   metadata: RecipeMetadataInput
   name: String!
   notes: String
@@ -16565,12 +16493,6 @@ type User {
     orderBy: InviteLogOrderBy
   ): InviteLogConnection!
   """
-  The account's language code, en unless set otherwise. The app's display
-  language is settings.language. Null unless the caller is this user or an
-  admin.
-  """
-  language: String
-  """
   The user's sign-in attempts, successful and failed, newest first by
   default. Empty unless the caller is this user or an admin.
   """
@@ -16660,6 +16582,8 @@ type User {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; most recently invited first when omitted"""
+    orderBy: CollaboratorOrderBy
   ): ShoppingListCollaboratorConnection!
   """
   Pending, unexpired home invites sent to the user's email address, newest
@@ -16770,6 +16694,8 @@ type User {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; most recently invited first when omitted"""
+    orderBy: CollaboratorOrderBy
   ): ShoppingListCollaboratorConnection!
   """
   The user's shopping-list ownership entries, newest first by default. Empty
@@ -16942,7 +16868,8 @@ type UserProfile {
   bio: String
   coverImage: URL
   createdAt: DateTime!
-  dateOfBirth: DateTime
+  """The date of birth, as a calendar date; null when not given"""
+  dateOfBirth: LocalDate
   displayName: String
   firstName: String
   gender: String
@@ -17047,7 +16974,8 @@ type ValidationError implements Error {
   """
   field: String
   """
-  Every rule the input failed, one entry per message. Empty when no field is named.
+  Every rule the input failed, one entry per message; never empty. A rule on
+  the whole input has the path _root.
   """
   issues: [ValidationIssue!]!
   message: String!
