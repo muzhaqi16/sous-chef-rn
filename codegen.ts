@@ -28,6 +28,12 @@ const SCALARS = {
   Date: 'string',
   // YYYY-MM-DD with no time or zone; parse with `fromDateKey`, never `new Date()`.
   LocalDate: 'string',
+  // Format-checked strings: a malformed value is refused as BAD_USER_INPUT
+  // before any resolver runs, not answered with a ValidationError.
+  EmailAddress: 'string',
+  URL: 'string',
+  TimeZone: 'string',
+  CountryCode: 'string',
   // Mapped to global ambient types declared in src/types/graphqlScalars.d.ts.
   // Referenced by bare name — no import — because the `module#Type` import
   // syntax collides with the project's `#/` path alias. JSON uses the

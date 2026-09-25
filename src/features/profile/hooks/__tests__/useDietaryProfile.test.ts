@@ -14,6 +14,7 @@ import {
   type GetDietaryProfileQuery,
 } from '#operations/user/user.generated';
 import {
+  CookingSkillLevel,
   Cuisine,
   Diet,
   ErrorCode,
@@ -75,7 +76,7 @@ const mockProfileData: MockPart<DietaryProfile> = {
   fatTarget: 65,
   mealsPerDay: 3,
   snacksPerDay: 1,
-  cookingSkillLevel: 'INTERMEDIATE',
+  cookingSkillLevel: CookingSkillLevel.Intermediate,
   maxPrepTimeMinutes: 30,
   maxCookTimeMinutes: 60,
   budgetPerMeal: 15,

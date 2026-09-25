@@ -5,6 +5,7 @@ import { QueueCapacityError, QueueStatus } from './types';
 import { logger } from '#/utils/environment';
 import { deletesItsSubject, queuedSubject } from './queuedSubject';
 import { withExpiresOn } from './legacyExpiry';
+import { withRefInputs } from './legacyRefs';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
@@ -110,7 +111,10 @@ export class QueueStore {
         return {
           ...item,
           mutation,
-          variables: withExpiresOn(mutation, item.variables),
+          variables: withRefInputs(
+            mutation,
+            withExpiresOn(mutation, item.variables),
+          ),
         };
       });
 

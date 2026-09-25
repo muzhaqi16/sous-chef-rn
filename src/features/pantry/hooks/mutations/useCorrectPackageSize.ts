@@ -137,7 +137,7 @@ export function useCorrectPackageSize() {
           variables: {
             input: {
               batchId,
-              packageSize: { netWeight, netWeightUnitId },
+              correction: { packageSize: { netWeight, netWeightUnitId } },
               reason,
               version: item.version,
               idempotencyKey: generateEntityId(),

@@ -1,4 +1,4 @@
-import { Diet } from '#/graphql/generated/schemaTypes';
+import { CookingSkillLevel, Diet } from '#/graphql/generated/schemaTypes';
 
 /**
  * Stackable dietary constraints — they layer on a lifestyle diet, so they stay
@@ -14,14 +14,22 @@ export const CONSTRAINT_DIETS: ReadonlySet<Diet> = new Set([
 export const isLifestyleDiet = (diet: Diet): boolean =>
   !CONSTRAINT_DIETS.has(diet);
 
-export type SkillLevel = 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
-
-export const SKILL_LEVELS: SkillLevel[] = [
-  'Beginner',
-  'Intermediate',
-  'Advanced',
-  'Expert',
+/** Least to most experienced — the picker's order, which the enum's is not. */
+export const SKILL_LEVELS: readonly CookingSkillLevel[] = [
+  CookingSkillLevel.Beginner,
+  CookingSkillLevel.Intermediate,
+  CookingSkillLevel.Advanced,
+  CookingSkillLevel.Expert,
 ];
+
+/**
+ * A stored level this build can word. A cache persisted before the enum holds
+ * the Title-case string it replaced until the profile is refetched.
+ */
+export const knownSkillLevel = (
+  value: string | null | undefined,
+): CookingSkillLevel | null =>
+  SKILL_LEVELS.find(level => level === value) ?? null;
 
 export const DIETARY_LIMITS = {
   prepTime: { min: 0, max: 480 },

@@ -80,7 +80,7 @@ query GetRecipe($id: ID!) {
 query GetRecipeReviews($id: ID!) {
   recipe(id: $id) {
     id
-    reviews {
+    reviewsConnection {
       edges {
         node {
           id
@@ -163,7 +163,7 @@ mutation CreateRecipe($input: CreateRecipeInput!) {
   }
 }
 
-mutation UpsertExternalRecipe($input: CreateRecipeInput!) {
+mutation UpsertExternalRecipe($input: UpsertExternalRecipeInput!) {
   upsertExternalRecipe(input: $input) {
     __typename
     ... on UpsertExternalRecipePayload {

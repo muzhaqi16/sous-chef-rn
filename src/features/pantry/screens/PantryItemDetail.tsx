@@ -428,11 +428,11 @@ export const PantryItemDetail: React.FC<
           </DetailSection>
         )}
 
-        {item.usageRecords.edges.length > 0 && (
+        {item.usageRecordsConnection.edges.length > 0 && (
           <DetailSection>
             <PantryUsageHistory
-              usageRecords={item.usageRecords.edges}
-              totalCount={item.usageRecords.totalCount ?? undefined}
+              usageRecords={item.usageRecordsConnection.edges}
+              totalCount={item.usageRecordsConnection.totalCount ?? undefined}
               onViewAll={() =>
                 toPantryUsageHistory({
                   pantryItemId: itemId,

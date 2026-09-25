@@ -180,11 +180,10 @@
       "website": "Uebsajti duhet të fillojë me http:// ose https://",
       "packageSize": "Vendosni madhësinë e paketimit në një njësi të të njëjtit lloj si ajo e artikullit (peshë me peshë, vëllim me vëllim).",
       "resolution": "Zgjidhni nëse do të përdorni vlerësimin apo do të vendosni vetë sasinë.",
-      "quantityUsed": "Kjo është më shumë se sa ka mbetur nga ky artikull.",
+      "amount": "Kjo është më shumë se sa ka mbetur nga ky artikull.",
       "unitId": "Kjo njësi nuk mund të përdoret këtu. Zgjidhni një nga lista."
     },
     "unitDenied": {
-      "curation": "Kjo njësi nuk ofrohet për këtë artikull.",
       "noRoute": "Kjo njësi nuk mund të konvertohet në mënyrën si regjistrohet ky artikull.",
       "missingFact": "Përdorimi i kësaj njësie kërkon një të dhënë që ky artikull nuk e ka ende, si madhësia e paketimit ose dendësia.",
       "inexpressible": "Stoku i këtij artikulli nuk mund të matet në këtë njësi."
@@ -743,7 +742,7 @@
   "pushNotification": {
     "title": "{{appName}}",
     "body": "Ke një njoftim të ri",
-    "coalesced_one": "{{count}} përditësim sa ke munguar",
-    "coalesced_other": "{{count}} përditësime sa ke munguar"
+    "coalesced_one": "{{count}} njoftim i ri",
+    "coalesced_other": "{{count}} njoftime të reja"
   }
 }

@@ -64,7 +64,7 @@ export const pantryTypePolicies: TypePolicies = {
       },
       // Without a policy, keyArgs is every argument and a `fetchMore` page
       // lands under its own cursor — the list never grows.
-      usageRecords: mergeConnectionByNodeId(['orderBy']),
+      usageRecordsConnection: mergeConnectionByNodeId(['orderBy']),
     },
   },
   Query: {

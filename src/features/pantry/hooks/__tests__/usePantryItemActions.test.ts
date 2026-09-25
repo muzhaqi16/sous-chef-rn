@@ -306,7 +306,7 @@ describe('usePantryItemActions', () => {
       expect(m.fired).toContainEqual({
         input: {
           pantryItemId: 'item-1',
-          quantityUsed: 2,
+          amount: { quantity: 2 },
           purpose: UsagePurpose.Cooking,
           notes: 'For dinner',
           usageUnitId: undefined,
@@ -403,7 +403,7 @@ describe('usePantryItemActions', () => {
       expect(m.fired).toContainEqual({
         input: {
           pantryItemId: 'item-1',
-          quantityUsed: 1,
+          amount: { quantity: 1 },
           purpose: UsagePurpose.Waste,
           notes: 'Past date',
           usageUnitId: undefined,
@@ -740,7 +740,7 @@ describe('usePantryItemActions', () => {
         __typename: 'ValidationError',
         code: 'VALIDATION_FAILED',
         message: 'Cannot use more than available quantity',
-        field: 'quantityUsed',
+        field: 'amount',
       });
       const { result } = renderHookWithApollo(
         () => usePantryItemActions(createOptions()),
@@ -762,7 +762,7 @@ describe('usePantryItemActions', () => {
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
-        t('errors.field.quantityUsed'),
+        t('errors.field.amount'),
       );
     });
   });

@@ -63,7 +63,10 @@ const addReviewEdge = (
   cache.modify({
     id: cacheId,
     fields: {
-      reviews(existing: ConnectionData = {}, { toReference, readField }) {
+      reviewsConnection(
+        existing: ConnectionData = {},
+        { toReference, readField },
+      ) {
         const newRef = toReference({
           __typename: 'RecipeReview',
           id: reviewId,
@@ -99,7 +102,7 @@ const removeReviewEdge = (
   cache.modify({
     id: cacheId,
     fields: {
-      reviews(existing: ConnectionData = {}, { readField }) {
+      reviewsConnection(existing: ConnectionData = {}, { readField }) {
         const existingEdges = existing.edges ?? [];
         const edges = existingEdges.filter(
           edge => readField('id', edge.node) !== reviewId,

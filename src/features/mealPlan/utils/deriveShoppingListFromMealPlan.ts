@@ -150,7 +150,7 @@ export function deriveShoppingListFromMealPlan(
     inputs.push({
       id: lineId,
       item: { itemId: entry.itemId },
-      unit: { unitId: entry.unitId },
+      unit: { id: entry.unitId },
       quantity,
       recipeContext: {
         mealPlanId: options.mealPlanId,

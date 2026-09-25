@@ -60,6 +60,10 @@ const mockedSchema = addMocksToSchema({
     JSON: () => ({}),
     BigInt: () => '1',
     FlexibleQuantity: () => '1',
+    EmailAddress: () => 'mock@example.com',
+    URL: () => 'https://example.com/mock',
+    TimeZone: () => 'UTC',
+    CountryCode: () => 'US',
   },
 });
 

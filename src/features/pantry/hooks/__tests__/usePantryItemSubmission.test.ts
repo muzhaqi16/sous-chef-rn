@@ -215,7 +215,7 @@ describe('usePantryItemSubmission', () => {
       input: expect.objectContaining({
         pantryId: 'pantry-1',
         quantity: 2,
-        item: expect.objectContaining({ name: 'Milk' }),
+        item: { inline: expect.objectContaining({ name: 'Milk' }) },
       }),
     });
     expect(mockOnSuccess).toHaveBeenCalled();
@@ -317,7 +317,9 @@ describe('usePantryItemSubmission', () => {
     expect(m.fired).toContainEqual({
       today: expect.any(String),
       input: expect.objectContaining({
-        item: expect.objectContaining({ brand: 'Organic Valley' }),
+        item: {
+          inline: expect.objectContaining({ brand: 'Organic Valley' }),
+        },
       }),
     });
   });
@@ -340,7 +342,7 @@ describe('usePantryItemSubmission', () => {
     expect(m.fired).toContainEqual({
       today: expect.any(String),
       input: expect.objectContaining({
-        storage: expect.objectContaining({ storageLocationId: 'loc-1' }),
+        storage: expect.objectContaining({ location: { id: 'loc-1' } }),
       }),
     });
   });
@@ -364,7 +366,7 @@ describe('usePantryItemSubmission', () => {
       today: expect.any(String),
       input: expect.objectContaining({
         storage: expect.objectContaining({
-          storageLocationName: 'Top Shelf',
+          location: { name: 'Top Shelf' },
         }),
       }),
     });
@@ -414,11 +416,13 @@ describe('usePantryItemSubmission', () => {
     expect(m.fired).toContainEqual({
       today: expect.any(String),
       input: expect.objectContaining({
-        item: expect.objectContaining({
-          units: expect.arrayContaining([
-            expect.objectContaining({ packageSize: 12 }),
-          ]),
-        }),
+        item: {
+          inline: expect.objectContaining({
+            units: expect.arrayContaining([
+              expect.objectContaining({ packageSize: 12 }),
+            ]),
+          }),
+        },
       }),
     });
   });
@@ -587,10 +591,12 @@ describe('usePantryItemSubmission', () => {
     expect(m.fired).toContainEqual({
       today: expect.any(String),
       input: expect.objectContaining({
-        item: expect.objectContaining({
-          netWeight: 16,
-          displayUnitId: 'wu-1',
-        }),
+        item: {
+          inline: expect.objectContaining({
+            netWeight: 16,
+            displayUnitId: 'wu-1',
+          }),
+        },
       }),
     });
   });

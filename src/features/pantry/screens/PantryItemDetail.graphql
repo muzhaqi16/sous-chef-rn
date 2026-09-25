@@ -169,7 +169,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
   # Shares one cache field with GetPantryItemUsageHistory: same `orderBy` key,
   # and `pageInfo` on BOTH so neither write strips the cursor the other needs.
   # `first` is a window size, not a filter, so it is not part of the key.
-  usageRecords(first: 5, orderBy: { usedAt: DESC }) {
+  usageRecordsConnection(first: 5, orderBy: { usedAt: DESC }) {
     totalCount
     pageInfo {
       hasNextPage

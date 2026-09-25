@@ -156,7 +156,7 @@ export function usePantryItemSelection(pantryId: string | null | undefined) {
     const id = generateEntityId();
     // The published id is tappable; detail screens wait until the server has it.
     unconfirmedCreates.mark(id);
-    const itemId = input.itemId ?? null;
+    const itemId = input.item.id ?? null;
     // Built outside the try: a value block inside a try body bails the compiler.
     const optimistic = buildOptimisticPantryItem(
       id,
@@ -165,7 +165,7 @@ export function usePantryItemSelection(pantryId: string | null | undefined) {
         itemName,
         itemId,
         quantity: input.quantity,
-        unitId: input.unit?.unitId,
+        unitId: input.unit?.id,
         storageState: input.storage?.storageState,
       },
       client.cache,

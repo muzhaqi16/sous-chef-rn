@@ -151,7 +151,7 @@ function createMockPantryItem(
         hasPreviousPage: false,
       },
     },
-    usageRecords: {
+    usageRecordsConnection: {
       __typename: 'PantryItemUsageConnection',
       edges: [],
       pageInfo: {

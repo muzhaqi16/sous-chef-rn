@@ -201,7 +201,7 @@ export function usePantryItemActions({
           variables: {
             input: {
               pantryItemId: itemId,
-              quantityUsed,
+              amount: { quantity: quantityUsed },
               purpose,
               notes: consumeNotes,
               usageUnitId,
@@ -254,7 +254,7 @@ export function usePantryItemActions({
           variables: {
             input: {
               pantryItemId: itemId,
-              quantityUsed: wasteAmount,
+              amount: { quantity: wasteAmount },
               purpose: UsagePurpose.Waste,
               notes: wasteNotes,
               usageUnitId: wasteUnitId,

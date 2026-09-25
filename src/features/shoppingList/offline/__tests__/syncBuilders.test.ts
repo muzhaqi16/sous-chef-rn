@@ -133,9 +133,9 @@ describe('shopping-list sync builders', () => {
   });
 
   // UpdateShoppingListItemQuantity sends a flat `unitId`, but
-  // SyncShoppingListItemInput.unit is a UnitSpecInput object — the converter
+  // SyncShoppingListItemInput.unit is a UnitRefInput object — the converter
   // normalizes the flat scalar into `unit` so an offline unit change isn't lost.
-  it('normalizes a flat unitId into unit:{unitId} for a quantity sync', () => {
+  it('normalizes a flat unitId into unit:{id} for a quantity sync', () => {
     mockClient.cache.readFragment.mockReturnValue({
       id: 'sl-item-1',
       shoppingList: { id: 'list-99' },
@@ -150,7 +150,7 @@ describe('shopping-list sync builders', () => {
     });
     const { syncVariables } = convertToSyncMutation(mutation);
     const item = wrapper(syncVariables).item as Record<string, unknown>;
-    expect(item.unit).toEqual({ unitId: 'unit-7' });
+    expect(item.unit).toEqual({ id: 'unit-7' });
   });
 
   it('converts ToggleShoppingListItemPurchased with cache read', () => {
@@ -238,7 +238,7 @@ describe('shopping-list sync builders', () => {
       expect(item.item).toEqual({ itemName: 'Milk' });
     });
 
-    it('keeps the captured unit symbol beside a unit id the cache no longer has', () => {
+    it('sends the captured unit symbol for a unit id the cache no longer has', () => {
       mockClient.cache.readFragment.mockReturnValue(null);
       const mutation = makeMutation({
         ...queuedMutationFor(UpdateShoppingListItemQuantityDocument),
@@ -255,7 +255,7 @@ describe('shopping-list sync builders', () => {
       const item = wrapper(convertToSyncMutation(mutation).syncVariables)
         .item as Record<string, unknown>;
 
-      expect(item.unit).toEqual({ unitId: 'unit-kg', unitSymbol: 'kg' });
+      expect(item.unit).toEqual({ symbol: 'kg' });
     });
 
     it('captures the list and ref a toggle reads, while the row is cached', () => {

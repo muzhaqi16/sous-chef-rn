@@ -13,13 +13,11 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   MarkNotificationAsReadDocument,
   DeleteNotificationDocument,
-  SendTestNotificationDocument,
 } from '#features/notifications/graphql/notificationMutations.generated';
 import {
   MarkAllNotificationsAsReadDocument,
   DeleteMultipleNotificationsDocument,
 } from '#features/notifications/graphql/bulkNotificationMutations.generated';
-import { NotificationType } from '#/graphql/generated/schemaTypes';
 import {
   applyAllNotificationsRead,
   applyNotificationRead,
@@ -44,7 +42,6 @@ export function useNotificationSync() {
   const [deleteMultipleMutation] = useMutation(
     DeleteMultipleNotificationsDocument,
   );
-  const [sendTestMutation] = useMutation(SendTestNotificationDocument);
 
   const userId = () => useStore.getState().user?.id;
 
@@ -157,30 +154,10 @@ export function useNotificationSync() {
     }
   };
 
-  /**
-   * Fire a self-addressed test notification. The created notification arrives
-   * back through the live subscription, so there is no optimistic write.
-   */
-  const syncSendTest = async (
-    type: NotificationType = NotificationType.ExpiryReminder,
-  ): Promise<boolean> => {
-    const settled = await settleMutation(
-      () => sendTestMutation({ variables: { input: { type } } }),
-      {
-        document: SendTestNotificationDocument,
-        fallback: t('notifications.testFailedMessage'),
-        // The settings screen reports the outcome, sent or not.
-        present: 'none',
-      },
-    );
-    return settled.status !== 'failed';
-  };
-
   return {
     syncMarkAsRead,
     syncDelete,
     syncMarkAllAsRead,
     syncClearRead,
-    syncSendTest,
   };
 }

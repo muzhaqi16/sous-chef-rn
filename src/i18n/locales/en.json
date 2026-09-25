@@ -180,11 +180,10 @@
       "website": "Website must start with http:// or https://",
       "packageSize": "Enter the package size in a unit of the same kind as this item's (weight with weight, volume with volume).",
       "resolution": "Choose whether to use the estimate or enter the amount yourself.",
-      "quantityUsed": "That's more than this item has left.",
+      "amount": "That's more than this item has left.",
       "unitId": "That unit can't be used here. Pick one from the list."
     },
     "unitDenied": {
-      "curation": "That unit isn't offered for this item.",
       "noRoute": "That unit can't be converted to how this item is tracked.",
       "missingFact": "Using that unit needs a fact this item doesn't have yet, like its package size or density.",
       "inexpressible": "This item's stock can't be measured in that unit."
@@ -743,7 +742,7 @@
   "pushNotification": {
     "title": "{{appName}}",
     "body": "You have a new notification",
-    "coalesced_one": "{{count}} update while you were away",
-    "coalesced_other": "{{count}} updates while you were away"
+    "coalesced_one": "{{count}} new notification",
+    "coalesced_other": "{{count}} new notifications"
   }
 }

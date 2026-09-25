@@ -158,7 +158,11 @@ const DEFAULT_SCALAR_MOCKS: IMocks = {
   BigInt: () => '1',
   IPv4: () => '127.0.0.1',
   FlexibleQuantity: () => '1',
-  Upload: () => ({ uri: 'file://mock', type: 'image/png', name: 'mock.png' }),
+  EmailAddress: () => 'mock@example.com',
+  URL: () => 'https://example.com/mock',
+  TimeZone: () => 'UTC',
+  CountryCode: () => 'US',
+  Upload:() => ({ uri: 'file://mock', type: 'image/png', name: 'mock.png' }),
 };
 
 interface SharedApolloTestOptions {

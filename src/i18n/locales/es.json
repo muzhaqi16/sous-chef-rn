@@ -180,11 +180,10 @@
       "website": "El sitio web debe empezar por http:// o https://",
       "packageSize": "Indica el tamaño del paquete en una unidad del mismo tipo que la de este artículo (peso con peso, volumen con volumen).",
       "resolution": "Elige si usar la estimación o introducir la cantidad tú mismo.",
-      "quantityUsed": "Es más de lo que le queda a este artículo.",
+      "amount": "Es más de lo que le queda a este artículo.",
       "unitId": "Esa unidad no se puede usar aquí. Elige una de la lista."
     },
     "unitDenied": {
-      "curation": "Esa unidad no está disponible para este artículo.",
       "noRoute": "Esa unidad no se puede convertir a la forma en que se registra este artículo.",
       "missingFact": "Usar esa unidad requiere un dato que este artículo aún no tiene, como el tamaño del paquete o la densidad.",
       "inexpressible": "Las existencias de este artículo no se pueden medir en esa unidad."
@@ -743,7 +742,7 @@
   "pushNotification": {
     "title": "{{appName}}",
     "body": "Tienes una notificación nueva",
-    "coalesced_one": "{{count}} novedad mientras no estabas",
-    "coalesced_other": "{{count}} novedades mientras no estabas"
+    "coalesced_one": "{{count}} notificación nueva",
+    "coalesced_other": "{{count}} notificaciones nuevas"
   }
 }

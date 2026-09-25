@@ -41,6 +41,7 @@ import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import { writeHeldStock } from '#features/pantry/cache/stock';
+import { refByIdOrName } from '#/utils/refInput';
 
 // Only reads `{ id }` from the new item, so the local SearchResults_pantryItem
 // fragment is sufficient.
@@ -154,7 +155,7 @@ export function useAddScannedItem({
     const input: CreatePantryItemInput = {
       id,
       pantryId,
-      itemId: item.id,
+      item: { id: item.id },
       quantity: SCANNED_QUANTITY,
       today: toDateKey(new Date()),
       ...(item.netWeight != null && item.displayUnit?.id
@@ -356,14 +357,9 @@ export function useAddScannedItem({
             id,
             item: { itemId: item.id },
             quantity: SCANNED_QUANTITY,
-            unit: {
-              unitId: item.displayUnit?.id ?? item.unitId,
-              unitName: item.displayUnit?.name,
-            },
-            brand:
-              item.brandId || item.brandName
-                ? { brandId: item.brandId, brandName: item.brandName }
-                : undefined,
+            unit: refByIdOrName(item.displayUnit?.id ?? item.unitId, null),
+            unitLabel: item.displayUnit?.name,
+            brand: refByIdOrName(item.brandId, item.brandName),
             netWeight: item.netWeight
               ? {
                   netWeight: item.netWeight,

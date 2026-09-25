@@ -510,7 +510,7 @@ describe('usePantryItemDetailActions', () => {
               ),
               item: { itemId: 'catalog-1' },
               quantity: 3,
-              unit: { unitId: 'unit-1' },
+              unit: { id: 'unit-1' },
             },
           ],
         },

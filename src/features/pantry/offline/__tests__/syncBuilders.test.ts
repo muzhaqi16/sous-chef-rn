@@ -200,7 +200,7 @@ describe('pantry sync builders', () => {
         clientId: 'gone-item',
         pantryId: 'pan-7',
         quantity: 1.5,
-        unit: { unitId: 'u-kg', unitSymbol: 'kg' },
+        unit: { symbol: 'kg' },
       });
     });
 
@@ -271,7 +271,7 @@ describe('pantry sync builders', () => {
     expect(input.clientId).toBe('item-q');
     expect(input.pantryId).toBe('pan-q');
     expect(input.quantity).toBe(2.5);
-    expect(input.unit).toEqual({ unitId: 'unit-7' });
+    expect(input.unit).toEqual({ id: 'unit-7' });
     expect(input.version).toBe(3);
     expect(input.pantryItemId).toBeUndefined();
   });

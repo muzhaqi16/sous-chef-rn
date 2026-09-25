@@ -77,7 +77,6 @@ const REPLAY_SAFETY_BASELINE: Record<
   MarkHomeAsDefault: 'absolute-update',
   RemoveItemsFromShoppingList: 'absolute-update',
   RemoveRecipeFromFavorites: 'absolute-update',
-  SendTestNotification: 'absolute-update',
   UpdateDietaryProfile: 'absolute-update',
   UpdateFavoriteRecipe: 'absolute-update',
   UpdateNotificationPreferences: 'absolute-update',

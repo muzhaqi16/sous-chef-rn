@@ -130,7 +130,6 @@ function failureFromPayload(payload: object): Failure {
 }
 
 const UNIT_DENIAL_COPY: Readonly<Record<UnitDenial, TranslationKey>> = {
-  [UnitDenial.Curation]: 'errors.unitDenied.curation',
   [UnitDenial.NoRoute]: 'errors.unitDenied.noRoute',
   [UnitDenial.MissingFact]: 'errors.unitDenied.missingFact',
   [UnitDenial.Inexpressible]: 'errors.unitDenied.inexpressible',

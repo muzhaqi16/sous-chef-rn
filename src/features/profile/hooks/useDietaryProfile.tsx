@@ -10,6 +10,7 @@ import {
   RemoveDietaryRestrictionDocument,
 } from '#operations/user/user.generated';
 import type {
+  CookingSkillLevel,
   Cuisine,
   Diet,
   Intolerance,
@@ -48,7 +49,7 @@ export interface DietaryProfileData {
   fatTarget?: number | null;
   mealsPerDay: number;
   snacksPerDay: number;
-  cookingSkillLevel?: string | null;
+  cookingSkillLevel?: CookingSkillLevel | null;
   maxPrepTimeMinutes?: number | null;
   maxCookTimeMinutes?: number | null;
   budgetPerMeal?: number | null;
@@ -185,7 +186,7 @@ export const useDietaryProfile = () => {
     fatTarget?: number | null;
     mealsPerDay?: number;
     snacksPerDay?: number;
-    cookingSkillLevel?: string | null;
+    cookingSkillLevel?: CookingSkillLevel | null;
     maxPrepTimeMinutes?: number | null;
     maxCookTimeMinutes?: number | null;
     budgetPerMeal?: number | null;

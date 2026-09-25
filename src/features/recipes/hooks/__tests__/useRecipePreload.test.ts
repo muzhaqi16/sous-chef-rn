@@ -15,7 +15,8 @@ import {
 } from '#features/recipes/graphql/recipe.generated';
 import type { RecipeInformation } from '#/services/spoonacular/types';
 import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
-import { useRecipePreload, type PreloadedRecipe } from '../useRecipePreload';
+import { useRecipePreload } from '../useRecipePreload';
+import type { PreloadedRecipe } from '../useExternalRecipeMirror';
 import { makeCache } from '#/apollo/cache';
 
 jest.mock('#/services/spoonacular/SpoonacularService', () => ({

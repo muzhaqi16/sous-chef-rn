@@ -189,19 +189,19 @@ export function buildSuggestibleItemChanges(
     changedFields.push('packageInfo.netWeight');
   }
   // The unit picker leaves `unitId` undefined when the user free-types a unit
-  // the catalog doesn't have, so fall back to the by-name twin, which the
-  // server resolves find-or-create. An explicit id always wins. Sending the
-  // name is accepted and then dropped on approval, so diffing only the id would
-  // let a free-typed unit change vanish silently.
+  // the catalog doesn't have, so fall back to the name, which the server
+  // resolves find-or-create. An explicit id always wins. Sending the name is
+  // accepted and then dropped on approval, so diffing only the id would let a
+  // free-typed unit change vanish silently.
   const unitName = norm(netWeight?.unitName);
   if (netWeight?.unitId) {
     if (netWeight.unitId !== original.displayUnitId) {
-      packageInfo.displayUnitId = netWeight.unitId;
-      changedFields.push('packageInfo.displayUnitId');
+      packageInfo.displayUnit = { id: netWeight.unitId };
+      changedFields.push('packageInfo.displayUnit');
     }
   } else if (unitName && unitName !== norm(original.displayUnitName)) {
-    packageInfo.displayUnitName = unitName;
-    changedFields.push('packageInfo.displayUnitName');
+    packageInfo.displayUnit = { name: unitName };
+    changedFields.push('packageInfo.displayUnit');
   }
   if (
     formData.baseDimension &&
@@ -214,7 +214,7 @@ export function buildSuggestibleItemChanges(
     changes.packageInfo = packageInfo;
   }
 
-  // `brand` resolves brandId, else finds-or-creates by brandName — the only way
+  // `brand` resolves an id, else finds-or-creates by name — the only way
   // to name a brand that isn't in the catalog yet, so a free-typed brand is
   // expressible. It is purely additive and never removes the brand already on
   // the item, so replacing one means pairing it with brandOps.removeBrandIds.
@@ -225,8 +225,8 @@ export function buildSuggestibleItemChanges(
 
   if (brandChanged) {
     changes.brand = formData.brandId
-      ? { brandId: formData.brandId }
-      : { brandName };
+      ? { id: formData.brandId }
+      : { name: brandName };
     changedFields.push('brand');
     if (original.brandId) {
       changes.brandOps = { removeBrandIds: [original.brandId] };

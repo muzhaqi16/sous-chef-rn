@@ -83,7 +83,7 @@ it('sends the batch, its size, the stack version and an idempotency key', async 
     {
       input: {
         batchId: 'b-1',
-        packageSize: { netWeight: 22, netWeightUnitId: 'u-oz' },
+        correction: { packageSize: { netWeight: 22, netWeightUnitId: 'u-oz' } },
         reason: 'label misread',
         version: 4,
         // Without the key a queued replay writes the history row twice.
@@ -144,7 +144,7 @@ it('restores the batch and says why when the correction is refused', async () =>
         __typename: 'ValidationError',
         code: ErrorCode.ValidationFailed,
         message: 'raw server words',
-        field: 'packageSize',
+        field: 'correction.packageSize',
       },
     },
   });

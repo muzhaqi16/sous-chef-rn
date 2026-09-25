@@ -167,10 +167,10 @@
     "budgetPerMeal": "Presupuesto por comida ($)",
     "budgetPlaceholder": "p. ej., 15.00",
     "skillLevels": {
-      "Beginner": "Principiante",
-      "Intermediate": "Intermedio",
-      "Advanced": "Avanzado",
-      "Expert": "Experto"
+      "BEGINNER": "Principiante",
+      "INTERMEDIATE": "Intermedio",
+      "ADVANCED": "Avanzado",
+      "EXPERT": "Experto"
     }
   },
   "profile": {

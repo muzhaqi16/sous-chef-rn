@@ -14,6 +14,7 @@ import {
   getClientId,
   getQueuedInput,
   readUnitSpec,
+  readUnitSymbol,
   withCapturedReads,
   withUnitSymbol,
   type QueuedInput,
@@ -107,13 +108,11 @@ const flattenedInput = (mutation: QueuedMutation): QueuedInput => {
     : queued;
 };
 
-// AddItem sends a `unit` UnitSpecInput; UpdateShoppingListItem(Quantity) sends
-// flat `unitId`/`unitName` — normalize both or the unit change is lost.
-const queuedUnitSpec = (input: QueuedInput): UnitSpec => ({
-  ...((input.unit ?? {}) as UnitSpec),
-  ...(input.unitId != null && { unitId: input.unitId }),
-  ...(input.unitName != null && { unitName: input.unitName }),
-});
+// AddItem and UpdateShoppingListItem send a `unit` reference;
+// UpdateShoppingListItemQuantity a flat `unitId` — normalize both or the unit
+// change is lost.
+const queuedUnitSpec = (input: QueuedInput): UnitSpec =>
+  input.unitId != null ? { id: input.unitId } : input.unit ?? {};
 
 /**
  * What the replay needs beyond the input: the owning list, the catalog ref and
@@ -135,9 +134,7 @@ const readShoppingItemInputs: ReplayInputReader = (mutation, cache) => {
     refItemId: itemRef && 'itemId' in itemRef ? itemRef.itemId : undefined,
     refItemName:
       itemRef && 'itemName' in itemRef ? itemRef.itemName : undefined,
-    unitSymbol: unit.unitSymbol
-      ? undefined
-      : readUnitSpec(cache, unit)?.unitSymbol,
+    unitSymbol: readUnitSymbol(cache, unit),
   });
 };
 
@@ -202,7 +199,9 @@ export const buildShoppingItemSync = withCapturedReads(
       item: itemRef,
       ...(input.category != null && { category: input.category }),
       ...(input.notes != null && { notes: input.notes }),
-      ...(unit && { unit: unit }),
+      // `null` clears a line's unit or brand, so it replays as sent.
+      ...(unit ? { unit } : input.unit === null && { unit: null }),
+      ...(input.unitLabel !== undefined && { unitLabel: input.unitLabel }),
       // FlexibleQuantity scalar (string | number, e.g. "1/3") — pass through.
       ...(input.quantity != null && { quantity: input.quantity }),
       ...(purchaseTracking != null && {
@@ -211,7 +210,7 @@ export const buildShoppingItemSync = withCapturedReads(
       ...(input.priority != null && { priority: input.priority }),
       ...(input.sortOrder != null && { sortOrder: input.sortOrder }),
       // Carried by the barcode add; replay must not drop them.
-      ...(input.brand != null && {
+      ...(input.brand !== undefined && {
         brand: input.brand,
       }),
       ...(input.netWeight != null && {

@@ -173,7 +173,7 @@ export function pantryItemData(
       costPerUnit: fixture.costPerUnit ?? null,
       totalCost: fixture.totalCost ?? null,
       purchase: null,
-      usageRecords: {
+      usageRecordsConnection: {
         __typename: 'PantryItemUsageConnection',
         totalCount: 0,
         pageInfo: {

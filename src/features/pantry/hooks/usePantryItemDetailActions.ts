@@ -216,7 +216,7 @@ export function usePantryItemDetailActions({
     const catalogItemId = item?.item?.id ?? '';
     // An out-of-stock item (quantity 0) still adds one to the list.
     const quantity = item?.quantity === 0 ? 1 : item?.quantity ?? 1;
-    const unitInput = item?.unit?.id ? { unitId: item.unit.id } : undefined;
+    const unitInput = item?.unit?.id ? { id: item.unit.id } : undefined;
     const itemName = item?.itemName ?? '';
     // Generate the new item's id so a create that gets queued (offline / API
     // down) replays idempotently, keyed by this id.

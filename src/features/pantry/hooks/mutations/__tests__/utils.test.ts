@@ -45,17 +45,17 @@ describe('pantry mutations utils', () => {
       expect(result).toEqual({ storage: { storageState: 'PANTRY' } });
     });
 
-    it('includes storageLocationId when location is dirty and locationId provided', () => {
+    it('links the location by id when location is dirty and locationId provided', () => {
       const result = buildDirtyUpdateInput(
         baseFormData,
         { location: true },
         'loc-1',
         null,
       );
-      expect(result).toEqual({ storage: { storageLocationId: 'loc-1' } });
+      expect(result).toEqual({ storage: { location: { id: 'loc-1' } } });
     });
 
-    it('sends storageLocationName when location is dirty with a typed name but no id (server find-or-creates by name)', () => {
+    it('names the location when location is dirty with a typed name but no id (server find-or-creates by name)', () => {
       const result = buildDirtyUpdateInput(
         baseFormData,
         { location: true },
@@ -63,8 +63,18 @@ describe('pantry mutations utils', () => {
         null,
       );
       expect(result).toEqual({
-        storage: { storageLocationName: 'Fridge' },
+        storage: { location: { name: 'Fridge' } },
       });
+    });
+
+    it('clears the location when the field was emptied', () => {
+      const result = buildDirtyUpdateInput(
+        { ...baseFormData, location: '  ' },
+        { location: true },
+        null,
+        null,
+      );
+      expect(result).toEqual({ storage: { location: null } });
     });
 
     it('includes expiresOn as a local date key when dirty', () => {
@@ -240,27 +250,27 @@ describe('pantry mutations utils', () => {
     });
 
     describe('brand handling', () => {
-      it('uses brandId when brand is dirty and brandId provided', () => {
+      it('refers to the brand by id when brand is dirty and brandId provided', () => {
         const result = buildDirtyUpdateInput(
           baseFormData,
           { brand: true },
           null,
           'brand-1',
         );
-        expect(result).toEqual({ brand: { brandId: 'brand-1' } });
+        expect(result).toEqual({ brand: { id: 'brand-1' } });
       });
 
-      it('uses brandName when brand is dirty, no brandId, but brand text exists', () => {
+      it('names the brand when brand is dirty, no brandId, but brand text exists', () => {
         const result = buildDirtyUpdateInput(
           baseFormData,
           { brand: true },
           null,
           null,
         );
-        expect(result).toEqual({ brand: { brandName: 'Organic Valley' } });
+        expect(result).toEqual({ brand: { name: 'Organic Valley' } });
       });
 
-      it('sets brandId to null when brand is dirty with no brandId and empty brand text', () => {
+      it('clears the brand when brand is dirty with no brandId and empty brand text', () => {
         const formData = { ...baseFormData, brand: '' };
         const result = buildDirtyUpdateInput(
           formData,
@@ -268,7 +278,7 @@ describe('pantry mutations utils', () => {
           null,
           null,
         );
-        expect(result).toEqual({ brand: { brandId: null } });
+        expect(result).toEqual({ brand: null });
       });
     });
 

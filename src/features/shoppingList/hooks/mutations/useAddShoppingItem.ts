@@ -24,6 +24,8 @@ import {
 } from '#/utils/parseDecimalInput';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { errorService } from '#/services/errorService';
+import { refByIdOrName } from '#/utils/refInput';
+import { lineUnitFields } from '#features/shoppingList/utils/lineUnit';
 
 interface UseAddShoppingItemOptions {
   listId: string | null | undefined;
@@ -81,23 +83,13 @@ export function useAddShoppingItem({
       id,
       item: { itemName: input.itemName },
       quantity: apiQuantityText ?? input.quantity ?? 1,
-      ...((!!input.unitName || !!input.unitId) && {
-        unit: {
-          ...(input.unitId && { unitId: input.unitId }),
-          ...(input.unitName && { unitName: input.unitName }),
-        },
-      }),
+      ...lineUnitFields(input.unitId, input.unitName),
       ...(input.notes && { notes: input.notes }),
       ...(input.category && { category: input.category }),
       ...(input.estimatedPrice && {
         pricing: { estimatedPrice: parseDecimalInput(input.estimatedPrice) },
       }),
-      ...((!!input.brandName || !!input.brandId) && {
-        brand: {
-          ...(input.brandId && { brandId: input.brandId }),
-          ...(input.brandName && { brandName: input.brandName }),
-        },
-      }),
+      brand: refByIdOrName(input.brandId, input.brandName),
       // Net weight is all-or-nothing — only send when both value and unit are set.
       ...(input.netWeight !== undefined &&
         input.netWeightUnitId && {

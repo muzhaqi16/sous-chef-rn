@@ -1306,7 +1306,11 @@ query GetPantryItemUsageHistory(
     # Newest first, stated rather than assumed: the summary panel labels
     # `usageRecords[0]` the most recent entry, and a default order is the
     # server's to change.
-    usageRecords(first: $first, after: $after, orderBy: { usedAt: DESC }) {
+    usageRecordsConnection(
+      first: $first
+      after: $after
+      orderBy: { usedAt: DESC }
+    ) {
       totalCount
       pageInfo {
         hasNextPage

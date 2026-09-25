@@ -47,7 +47,7 @@ fragment writePantryItemDetailStub_pantryItem on PantryItem {
   }
   # Field arguments are part of the cache key, so these must match
   # `PantryItemDetail_pantryItem` exactly or this seeds a different field.
-  usageRecords(first: 5, orderBy: { usedAt: DESC }) {
+  usageRecordsConnection(first: 5, orderBy: { usedAt: DESC }) {
     totalCount
     pageInfo {
       hasNextPage

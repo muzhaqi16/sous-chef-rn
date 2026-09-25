@@ -135,11 +135,20 @@ The mobile side is complete; pointers for future changes:
 
 ## Payload contract
 
-Every push carries `notificationId` (dedup key — must match the WebSocket
-notification id), `type` (the `NotificationType`, e.g. `LOW_STOCK`), `category`
-(the `NotificationCategory` — routing → Pantry / Shopping tab, else the feed),
-and `sourceId` / `sourceType` when set (source correlation, not used for
-routing). **Where `title` / `body` live differs by platform:** iOS puts them in
+A push standing for one notification carries `notificationId` (dedup key — must
+match the WebSocket notification id), `type` (the `NotificationType`, e.g.
+`LOW_STOCK`), `category` (the `NotificationCategory` — routing → Pantry /
+Shopping tab, else the feed), `sourceId` / `sourceType` when set (source
+correlation, not used for routing), and the display parameters `pushCopy` words
+the tray entry from.
+
+A **summary** — two or more notifications deferred by quiet hours or a delivery
+slot, still unread when it is delivered — names only the set: `coalescedCount`
+and `coalescedTypes`, with no id, type, category, source or display parameters.
+Android words it from the count, and a tap opens the feed. A deferred push with
+one member left arrives as that notification itself.
+
+**Where `title` / `body` live differs by platform:** iOS puts them in
 `aps.alert` (the OS auto-displays it when backgrounded/killed), so they are *not*
 in the iOS `data`; Android sends **data-only** (no `notification` block), so
 `title` / `body` ride inside the FCM `data` and Notifee draws the tray entry.

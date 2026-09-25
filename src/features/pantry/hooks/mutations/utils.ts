@@ -41,15 +41,17 @@ export function buildDirtyUpdateInput(
   if (dirtyFields.condition && data.condition) {
     storage.condition = data.condition;
   }
-  // A selected location links by id; a freshly-typed name sends
-  // storageLocationName so updatePantryItem find-or-creates it (case-insensitive
-  // within the home, else a new CUSTOM location) and links it — matching the
-  // create path. An explicit id wins when both are present.
+  // A selected location links by id; a freshly-typed name makes
+  // updatePantryItem find-or-create it (case-insensitive within the home, else a
+  // new CUSTOM location) — matching the create path. An emptied field clears it.
   if (dirtyFields.location) {
+    const locationName = data.location.trim();
     if (locationId) {
-      storage.storageLocationId = locationId;
-    } else if (data.location.trim()) {
-      storage.storageLocationName = data.location.trim();
+      storage.location = { id: locationId };
+    } else if (locationName) {
+      storage.location = { name: locationName };
+    } else {
+      storage.location = null;
     }
   }
   if (dirtyFields.notes) {
@@ -112,14 +114,13 @@ export function buildDirtyUpdateInput(
     input.netWeight = netWeightInput;
   }
 
-  // Group brand fields into brand: BrandReferenceInput
   if (dirtyFields.brand) {
     if (brandId) {
-      input.brand = { brandId };
+      input.brand = { id: brandId };
     } else if (data.brand?.trim()) {
-      input.brand = { brandName: data.brand.trim() };
+      input.brand = { name: data.brand.trim() };
     } else {
-      input.brand = { brandId: null };
+      input.brand = null;
     }
   }
 

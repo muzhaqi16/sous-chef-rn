@@ -1,6 +1,6 @@
 import {
   ExternalSource,
-  type CreateRecipeInput,
+  type UpsertExternalRecipeInput,
 } from '#/graphql/generated/schemaTypes';
 import type { RecipeInformation } from '#/services/spoonacular/types';
 import type { RecipePriceBreakdown } from '#/services/spoonacular/types';
@@ -10,9 +10,18 @@ import { stripPriceFromName } from '#features/recipes/utils/stripPriceFromName';
 const normalizeName = (name: string): string => name.trim().toLowerCase();
 
 /**
- * A Spoonacular recipe as this app's `CreateRecipeInput`. Pure: it reads only
- * what the fetch already returned, which is what lets the mirror carry
- * per-ingredient nutrition without a second Spoonacular call.
+ * A `URL` field refuses the whole upsert over a blank or relative link, so a
+ * link that is not absolute http(s) is left out rather than sent.
+ */
+const absoluteUrl = (value: string | null | undefined): string | undefined => {
+  const trimmed = value?.trim();
+  return trimmed && /^https?:\/\/\S+$/i.test(trimmed) ? trimmed : undefined;
+};
+
+/**
+ * A Spoonacular recipe as the `UpsertExternalRecipeInput` that mirrors it.
+ * Pure: it reads only what the fetch already returned, which is what lets the
+ * mirror carry per-ingredient nutrition without a second Spoonacular call.
  */
 export const toRecipeInput = (
   spoonacularRecipe: RecipeInformation,
@@ -86,13 +95,13 @@ export const toRecipeInput = (
     // Attribution - original recipe source
     attribution: {
       source: spoonacularRecipe.sourceName,
-      sourceUrl: spoonacularRecipe.sourceUrl,
+      sourceUrl: absoluteUrl(spoonacularRecipe.sourceUrl),
     },
 
     // External source fields
     source: ExternalSource.Spoonacular,
     externalSourceId: String(spoonacularRecipe.id),
-    externalSourceUrl: spoonacularRecipe.sourceUrl,
+    externalSourceUrl: absoluteUrl(spoonacularRecipe.sourceUrl),
     externalSourceData: spoonacularRecipe,
 
     // Transform ingredients for backend
@@ -190,5 +199,5 @@ export const toRecipeInput = (
           ],
         };
       }) ?? [],
-  } satisfies CreateRecipeInput;
+  } satisfies UpsertExternalRecipeInput;
 };

@@ -32,6 +32,7 @@ import {
 } from '#/utils/parseDecimalInput';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { refByIdOrName } from '#/utils/refInput';
 
 type RouteParams = {
   listId: string;
@@ -192,7 +193,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
             quantityInput: apiQuantityText,
             unitName: unit || null,
             category: category || null,
-            unitId: 'unit' in unitData ? unitData.unit.unitId : undefined,
+            unitId: unitData.unit?.id ?? undefined,
           },
           {
             item: { itemName },
@@ -208,12 +209,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
             // priority back to it.
             priority,
             ...(storeId && { storePrefs: { preferredStoreId: storeId } }),
-            ...((!!brandId || !!brandName) && {
-              brand: {
-                ...(brandId && { brandId }),
-                ...(brandName && { brandName }),
-              },
-            }),
+            brand: refByIdOrName(brandId, brandName),
             // Both or neither: the schema refuses a weight without a resolved
             // unit id, so reaching here with one and not the other cannot happen.
             ...(netWeightValue !== undefined &&

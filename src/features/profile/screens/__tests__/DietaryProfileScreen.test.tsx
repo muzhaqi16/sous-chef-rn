@@ -2,6 +2,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { DietaryProfileScreen } from '../DietaryProfileScreen';
+import { CookingSkillLevel } from '#/graphql/generated/schemaTypes';
 
 // --- Mocks ---
 
@@ -18,7 +19,7 @@ jest.mock('#features/profile/hooks/useDietaryProfile', () => ({
       dislikedIngredients: ['Cilantro'],
       mealsPerDay: 3,
       snacksPerDay: 2,
-      cookingSkillLevel: 'Intermediate',
+      cookingSkillLevel: 'INTERMEDIATE',
       maxPrepTimeMinutes: 30,
       maxCookTimeMinutes: 45,
       budgetPerMeal: 15,
@@ -279,7 +280,7 @@ describe('DietaryProfileScreen - loading state', () => {
           dislikedIngredients: [],
           mealsPerDay: 3,
           snacksPerDay: 2,
-          cookingSkillLevel: 'Intermediate',
+          cookingSkillLevel: CookingSkillLevel.Intermediate,
           maxPrepTimeMinutes: 30,
           maxCookTimeMinutes: 45,
           budgetPerMeal: 15,

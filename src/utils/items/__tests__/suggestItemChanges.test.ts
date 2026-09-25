@@ -140,7 +140,7 @@ describe('buildSuggestibleItemChanges', () => {
       unchangedForm({ brandId: 'brand-2', brandName: 'Globex' }),
     );
 
-    expect(diff.changes.brand).toEqual({ brandId: 'brand-2' });
+    expect(diff.changes.brand).toEqual({ id: 'brand-2' });
     expect(diff.changes.brandOps).toEqual({ removeBrandIds: ['brand-1'] });
   });
 
@@ -150,7 +150,7 @@ describe('buildSuggestibleItemChanges', () => {
       unchangedForm({ brandId: 'brand-2', brandName: 'Globex' }),
     );
 
-    expect(diff.changes.brand).toEqual({ brandId: 'brand-2' });
+    expect(diff.changes.brand).toEqual({ id: 'brand-2' });
     expect(diff.changes).not.toHaveProperty('brandOps');
   });
 
@@ -162,7 +162,7 @@ describe('buildSuggestibleItemChanges', () => {
       unchangedForm({ brandId: undefined, brandName: 'Typed Brand' }),
     );
 
-    expect(diff.changes.brand).toEqual({ brandName: 'Typed Brand' });
+    expect(diff.changes.brand).toEqual({ name: 'Typed Brand' });
     expect(diff.changes.brandOps).toEqual({ removeBrandIds: ['brand-1'] });
   });
 
@@ -187,19 +187,21 @@ describe('buildSuggestibleItemChanges', () => {
   });
 
   // A unit the catalog doesn't have comes back from the picker with no unitId.
-  // The server resolves displayUnitName find-or-create, so the change has to
-  // travel by name or it is silently lost.
-  it('falls back to displayUnitName when the unit was free-typed', () => {
+  // The server resolves a display unit by name find-or-create, so the change
+  // has to travel by name or it is silently lost.
+  it('names the display unit when the unit was free-typed', () => {
     const diff = buildSuggestibleItemChanges(
       snapshot(),
       unchangedForm({ netWeights: [{ value: 500, unitName: 'punnet' }] }),
     );
 
-    expect(diff.changes.packageInfo).toEqual({ displayUnitName: 'punnet' });
-    expect(diff.changedFields).toContain('packageInfo.displayUnitName');
+    expect(diff.changes.packageInfo).toEqual({
+      displayUnit: { name: 'punnet' },
+    });
+    expect(diff.changedFields).toContain('packageInfo.displayUnit');
   });
 
-  it('prefers displayUnitId over the name when the picker resolved the unit', () => {
+  it('refers to the display unit by id when the picker resolved it', () => {
     const diff = buildSuggestibleItemChanges(
       snapshot(),
       unchangedForm({
@@ -207,8 +209,9 @@ describe('buildSuggestibleItemChanges', () => {
       }),
     );
 
-    expect(diff.changes.packageInfo).toEqual({ displayUnitId: 'unit-oz' });
-    expect(diff.changes.packageInfo).not.toHaveProperty('displayUnitName');
+    expect(diff.changes.packageInfo).toEqual({
+      displayUnit: { id: 'unit-oz' },
+    });
   });
 
   it('does not treat a re-typed identical unit name as a change', () => {
