@@ -1,8 +1,9 @@
 /**
- * Publish / unpublish via `updateRecipe(status)` — an absolute status set keyed
- * by the recipe id, so local-first and idempotent on replay. The toggle reads
- * `Recipe.isPublished`, so the flip is written BEFORE firing; a failure
- * reverts from a snapshot, a queued write keeps it.
+ * Submit for review, withdraw, or unpublish via `updateRecipe(status)` — an
+ * absolute status set keyed by the recipe id, so local-first and idempotent on
+ * replay. Submitting lands in PENDING_REVIEW until a moderator approves, never
+ * straight in PUBLISHED, so that is what the cache shows before firing; a
+ * failure reverts from a snapshot, a queued write keeps it.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -16,42 +17,47 @@ export function usePublishRecipe() {
   const client = useApolloClient();
   const [mutate, { loading: publishing }] = useMutation(UpdateRecipeDocument);
 
-  const setPublished = async (
+  /** `true` submits the recipe for review; `false` returns it to a draft. */
+  const setSubmitted = async (
     recipeId: string,
-    published: boolean,
+    submitted: boolean,
   ): Promise<boolean> => {
-    // Flip the cached `isPublished` the detail screen reads before firing.
-    // `cache.modify` only runs the modifier when the field is already cached,
-    // so `didWrite` gates the revert to that case (no-op on the detail screen's
-    // first render before the recipe is cached, or in unit tests).
+    // `cache.modify` only runs a modifier when the field is already cached, so
+    // `didWrite` gates the revert to that case.
     const cacheId = client.cache.identify({
       __typename: 'Recipe',
       id: recipeId,
     });
-    let previousIsPublished: boolean | undefined;
-    let didWrite = false;
+    let previous: { status: RecipeStatus; isPublished: boolean } | undefined;
     if (cacheId) {
-      client.cache.modify<{ isPublished: boolean }>({
+      client.cache.modify<{ status: RecipeStatus; isPublished: boolean }>({
         id: cacheId,
         fields: {
-          isPublished(existing) {
-            previousIsPublished = existing;
-            didWrite = true;
-            return published;
+          status(existing, { readField }) {
+            previous = {
+              status: existing,
+              isPublished: readField<boolean>('isPublished') ?? false,
+            };
+            return submitted ? RecipeStatus.PendingReview : RecipeStatus.Draft;
           },
+          isPublished: () => false,
         },
       });
     }
     const revert = () => {
-      if (cacheId && didWrite) {
-        client.cache.modify<{ isPublished: boolean }>({
+      const snapshot = previous;
+      if (cacheId && snapshot) {
+        client.cache.modify<{ status: RecipeStatus; isPublished: boolean }>({
           id: cacheId,
-          fields: { isPublished: () => previousIsPublished ?? false },
+          fields: {
+            status: () => snapshot.status,
+            isPublished: () => snapshot.isPublished,
+          },
         });
       }
     };
 
-    const status = published ? RecipeStatus.Published : RecipeStatus.Draft;
+    const status = submitted ? RecipeStatus.Published : RecipeStatus.Draft;
     const settled = await settleMutation(
       () =>
         mutate({
@@ -67,5 +73,5 @@ export function usePublishRecipe() {
     return settled.status !== 'failed';
   };
 
-  return { setPublished, publishing };
+  return { setSubmitted, publishing };
 }

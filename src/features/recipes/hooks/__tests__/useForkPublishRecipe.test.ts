@@ -35,7 +35,7 @@ const SOURCE = {
   caloriesPerServing: null,
   difficulty: 'MEDIUM',
   category: 'DINNER',
-  cuisine: 'Italian',
+  cuisines: ['ITALIAN'],
   status: 'PUBLISHED',
   diets: [],
   healthGoals: [],
@@ -205,7 +205,39 @@ describe('useForkRecipe', () => {
 });
 
 describe('usePublishRecipe', () => {
-  it('returns true when the publish is queued offline', async () => {
+  // A submission lands in PENDING_REVIEW until a moderator approves, so the
+  // cache must not claim the recipe is published while it waits.
+  it('shows a submitted draft in review before the server answers', async () => {
+    const cache = seedCache([
+      {
+        data: { ...SOURCE, status: 'DRAFT' },
+        fragment: RecipeForm_RecipeFragmentDoc,
+        fragmentName: 'RecipeForm_recipe',
+      },
+    ]);
+    const { result } = renderHookWithApollo(() => usePublishRecipe(), {
+      cache,
+      operationMocks: [
+        {
+          request: { query: UpdateRecipeDocument, variables: () => true },
+          result: { data: { updateRecipe: null } }, // queued signature
+        },
+      ],
+    });
+
+    await act(async () => {
+      await result.current.setSubmitted('recipe-1', true);
+    });
+
+    const recipe = cache.readFragment<{ status: string }>({
+      id: cache.identify({ __typename: 'Recipe', id: 'recipe-1' }),
+      fragment: RecipeForm_RecipeFragmentDoc,
+      fragmentName: 'RecipeForm_recipe',
+    });
+    expect(recipe?.status).toBe('PENDING_REVIEW');
+  });
+
+  it('returns true when the submission is queued offline', async () => {
     const { result } = renderHookWithApollo(() => usePublishRecipe(), {
       operationMocks: [
         {
@@ -217,7 +249,7 @@ describe('usePublishRecipe', () => {
 
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.setPublished('recipe-1', true);
+      ok = await result.current.setSubmitted('recipe-1', true);
     });
     expect(ok).toBe(true);
   });
@@ -243,7 +275,7 @@ describe('usePublishRecipe', () => {
 
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.setPublished('recipe-1', false);
+      ok = await result.current.setSubmitted('recipe-1', false);
     });
     expect(ok).toBe(false);
   });

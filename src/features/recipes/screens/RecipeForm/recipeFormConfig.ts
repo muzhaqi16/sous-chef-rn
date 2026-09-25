@@ -2,6 +2,7 @@ import { array, mixed, number, object, string, type ObjectSchema } from 'yup';
 import { t, type TranslationKey } from '#/i18n';
 import {
   RecipeStatus,
+  type Cuisine,
   type Difficulty,
   type RecipeCategory,
   type Diet,
@@ -96,7 +97,7 @@ export const recipeFormSchema: ObjectSchema<RecipeFormState> = object({
   caloriesPerServing: string().defined(),
   difficulty: mixed<Difficulty>().nullable().defined(),
   category: mixed<RecipeCategory>().nullable().defined(),
-  cuisine: string().defined(),
+  cuisines: array().of(mixed<Cuisine>().defined()).defined(),
   status: mixed<RecipeStatus>().oneOf(Object.values(RecipeStatus)).defined(),
   diets: array().of(mixed<Diet>().defined()).defined(),
   healthGoals: array().of(mixed<HealthGoal>().defined()).defined(),
@@ -152,7 +153,7 @@ export const recipeFormDefaults = (): RecipeFormState => ({
   caloriesPerServing: '',
   difficulty: null,
   category: null,
-  cuisine: '',
+  cuisines: [],
   status: RecipeStatus.Draft,
   diets: [],
   healthGoals: [],

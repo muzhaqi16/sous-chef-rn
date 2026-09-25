@@ -64,6 +64,7 @@ const mockedSchema = addMocksToSchema({
     URL: () => 'https://example.com/mock',
     TimeZone: () => 'UTC',
     CountryCode: () => 'US',
+    CurrencyCode: () => 'USD',
   },
 });
 

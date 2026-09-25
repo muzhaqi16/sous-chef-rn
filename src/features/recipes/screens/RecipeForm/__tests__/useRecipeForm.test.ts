@@ -2,6 +2,7 @@
 
 import { renderHook, act } from '@testing-library/react-native';
 import {
+  Cuisine,
   Difficulty,
   RecipeCategory,
   RecipeStatus,
@@ -312,7 +313,7 @@ describe('useRecipeForm', () => {
       result.current.updateField('tips', '');
       result.current.updateField('originalAuthor', '');
       result.current.updateField('imageUrl', '');
-      result.current.updateField('cuisine', '');
+      result.current.updateField('cuisines', []);
       result.current.updateField('prepTimeMinutes', '');
       result.current.updateField('cookTimeMinutes', '');
       result.current.updateField('caloriesPerServing', '');
@@ -334,7 +335,8 @@ describe('useRecipeForm', () => {
         dietary: { diets: [], healthGoals: [], intolerances: [] },
       }),
     );
-    expect(input.metadata?.cuisine).toBeNull();
+    // [] clears the list; the API refuses null for it.
+    expect(input.metadata?.cuisines).toEqual([]);
     // NOT NULL columns: the API refuses null, so an empty entry stays omitted.
     expect(input.name).toBeUndefined();
     expect(input.metadata?.servings).toBeUndefined();
@@ -367,7 +369,7 @@ describe('useRecipeForm', () => {
       caloriesPerServing: 300,
       difficulty: Difficulty.Easy,
       category: RecipeCategory.MainCourse,
-      cuisine: 'Italian',
+      cuisines: [Cuisine.Italian],
       status: RecipeStatus.Published,
       diets: [Diet.Keto],
       healthGoals: [HealthGoal.HighProtein],
@@ -432,7 +434,7 @@ describe('useRecipeForm', () => {
       caloriesPerServing: null,
       difficulty: Difficulty.Easy,
       category: RecipeCategory.MainCourse,
-      cuisine: null,
+      cuisines: [],
       status: RecipeStatus.Published,
       diets: [],
       healthGoals: [],

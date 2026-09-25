@@ -2,8 +2,11 @@ import { PROTECTED_RECIPE_FOLDERS } from '#features/recipes/utils/folders';
 import React, { useState } from 'react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { View, ScrollView } from 'react-native';
-import { useTranslation } from '#/i18n';
-import type { ExternalSource } from '#/graphql/generated/schemaTypes';
+import { useTranslation, type TranslationKey } from '#/i18n';
+import {
+  RecipeStatus,
+  type ExternalSource,
+} from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { openWebUrl } from '#features/recipes/utils/externalUrl';
 import {
@@ -13,7 +16,7 @@ import {
 import { Text } from '#components/atoms/Text';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Icon, type IconName } from '#utils/iconUtils';
 
 import { FolderPicker } from '#features/recipes/components/FolderPicker';
 import { RecipeDetailErrorBoundary } from '#components/providers/ScreenErrorBoundary';
@@ -50,6 +53,18 @@ import { firstNonBlank } from '#/utils/firstNonBlank';
 
 const IngredientSeparator = () => <View style={styles.ingredientGap} />;
 
+/** Submit a draft, withdraw one in review, unpublish a published one. */
+const PUBLISH_ACTION_ICON: Readonly<Record<RecipeStatus, IconName>> = {
+  [RecipeStatus.Draft]: 'cloud-upload-outline',
+  [RecipeStatus.PendingReview]: 'hourglass-outline',
+  [RecipeStatus.Published]: 'cloud-done-outline',
+};
+const PUBLISH_ACTION_LABEL: Readonly<Record<RecipeStatus, TranslationKey>> = {
+  [RecipeStatus.Draft]: 'recipes.publishA11y',
+  [RecipeStatus.PendingReview]: 'recipes.withdrawA11y',
+  [RecipeStatus.Published]: 'recipes.unpublishA11y',
+};
+
 const RecipeDetailScreen: React.FC = () => {
   const { t } = useTranslation();
   useScreenTransition('RecipeDetail');
@@ -59,7 +74,7 @@ const RecipeDetailScreen: React.FC = () => {
   const { settings } = useAppSettings();
   const preferredUnitSystem = settings.preferredUnitSystem;
   const { forkRecipe, forking } = useForkRecipe();
-  const { setPublished, publishing } = usePublishRecipe();
+  const { setSubmitted, publishing } = usePublishRecipe();
   const {
     goBack,
     recipeId,
@@ -138,8 +153,11 @@ const RecipeDetailScreen: React.FC = () => {
     if (newId) toRecipeDetail({ recipeId: newId });
   };
 
+  // A draft is submitted for review; one in review or published goes back to
+  // a draft.
+  const status = displayData?.status;
   const handleTogglePublish = () => {
-    if (recipeId) void setPublished(recipeId, !displayData?.isPublished);
+    if (recipeId) void setSubmitted(recipeId, status === RecipeStatus.Draft);
   };
 
   // The source URL comes from the recipe provider or another member, so it is
@@ -225,15 +243,13 @@ const RecipeDetailScreen: React.FC = () => {
             testID: recipesTestIDs.editButton,
           } satisfies HeaderAction,
           {
-            icon: displayData?.isPublished
-              ? 'cloud-done-outline'
-              : 'cloud-upload-outline',
+            icon: PUBLISH_ACTION_ICON[status ?? RecipeStatus.Draft],
             onPress: handleTogglePublish,
             variant: 'primary',
             loading: publishing,
-            accessibilityLabel: displayData?.isPublished
-              ? t('recipes.unpublishA11y')
-              : t('recipes.publishA11y'),
+            accessibilityLabel: t(
+              PUBLISH_ACTION_LABEL[status ?? RecipeStatus.Draft],
+            ),
             testID: recipesTestIDs.publishButton,
           } satisfies HeaderAction,
         ]
@@ -423,7 +439,8 @@ const RecipeDetailScreen: React.FC = () => {
           originalAuthor={displayData.originalAuthor}
           tags={displayData.tags}
           isBackendRecipe={isBackendRecipe}
-          isPublished={displayData.isPublished}
+          status={displayData.status}
+          reviewNote={displayData.reviewNote}
         />
 
         {!!isBackendRecipe && !!recipeId && !!isSaved && (

@@ -1,5 +1,6 @@
 import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 import type {
+  Cuisine,
   CreateRecipeInput,
   Diet,
   Difficulty,
@@ -36,7 +37,7 @@ export interface ForkableRecipe {
   caloriesPerServing?: number | null;
   difficulty?: Difficulty | null;
   category?: RecipeCategory | null;
-  cuisine?: string | null;
+  cuisines?: Cuisine[] | null;
   diets?: Diet[] | null;
   healthGoals?: HealthGoal[] | null;
   intolerances?: Intolerance[] | null;
@@ -70,7 +71,7 @@ export function forkRecipe(
     ...(source.tags != null && { tags: source.tags }),
     metadata: {
       ...(source.category != null && { category: source.category }),
-      ...(source.cuisine != null && { cuisine: source.cuisine }),
+      ...(source.cuisines != null && { cuisines: source.cuisines }),
       ...(source.difficulty != null && { difficulty: source.difficulty }),
       ...(source.servings != null && { servings: source.servings }),
     },

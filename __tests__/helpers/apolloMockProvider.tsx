@@ -162,6 +162,7 @@ const DEFAULT_SCALAR_MOCKS: IMocks = {
   URL: () => 'https://example.com/mock',
   TimeZone: () => 'UTC',
   CountryCode: () => 'US',
+  CurrencyCode: () => 'USD',
   Upload:() => ({ uri: 'file://mock', type: 'image/png', name: 'mock.png' }),
 };
 

@@ -88,7 +88,7 @@ const defaultState = {
   caloriesPerServing: '',
   difficulty: null,
   category: null,
-  cuisine: '',
+  cuisines: [],
   status: RecipeStatus.Draft,
   diets: [],
   healthGoals: [],

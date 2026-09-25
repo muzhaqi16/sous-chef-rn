@@ -152,6 +152,7 @@ const mockedSchema = addMocksToSchema({
     URL: () => 'https://example.com/mock',
     TimeZone: () => 'UTC',
     CountryCode: () => 'US',
+    CurrencyCode: () => 'USD',
     // Result unions default to their first member (an error type), which would
     // leave the success inline fragment unmatched and the payload undefined.
     CreatePantryItemResult: () => ({ __typename: 'CreatePantryItemPayload' }),

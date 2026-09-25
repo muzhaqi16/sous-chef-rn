@@ -1,4 +1,5 @@
 import {
+  Cuisine,
   Diet,
   Difficulty,
   HealthGoal,
@@ -25,7 +26,7 @@ const source: ForkableRecipe = {
   caloriesPerServing: 520,
   difficulty: Difficulty.Medium,
   category: RecipeCategory.Dinner,
-  cuisine: 'Italian',
+  cuisines: [Cuisine.Italian],
   diets: [Diet.Vegetarian],
   healthGoals: [HealthGoal.HighProtein],
   intolerances: [Intolerance.Peanut],
@@ -69,7 +70,7 @@ describe('forkRecipe', () => {
       tags: ['comfort'],
       metadata: {
         category: RecipeCategory.Dinner,
-        cuisine: 'Italian',
+        cuisines: [Cuisine.Italian],
         difficulty: Difficulty.Medium,
         servings: 6,
       },

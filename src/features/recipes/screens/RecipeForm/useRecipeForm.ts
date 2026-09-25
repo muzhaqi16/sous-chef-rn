@@ -208,7 +208,7 @@ export function useRecipeForm() {
         servings: parseInt(state.servings) || 4,
         difficulty: state.difficulty ?? undefined,
         category: state.category ?? undefined,
-        cuisine: state.cuisine.trim() || undefined,
+        cuisines: state.cuisines.length > 0 ? state.cuisines : undefined,
       },
       timing: {
         prepTimeMinutes: parseInt(state.prepTimeMinutes) || undefined,
@@ -251,7 +251,7 @@ export function useRecipeForm() {
         servings: parseInt(state.servings) || undefined,
         difficulty: state.difficulty ?? undefined,
         category: state.category ?? undefined,
-        cuisine: state.cuisine.trim() || null,
+        cuisines: state.cuisines,
       },
       timing: {
         prepTimeMinutes: parseInt(state.prepTimeMinutes) || null,
@@ -284,7 +284,7 @@ export function useRecipeForm() {
       caloriesPerServing: formatNumberForInput(recipe.caloriesPerServing),
       difficulty: recipe.difficulty,
       category: recipe.category,
-      cuisine: recipe.cuisine ?? '',
+      cuisines: [...recipe.cuisines],
       status: recipe.status,
       diets: recipe.diets,
       healthGoals: recipe.healthGoals,

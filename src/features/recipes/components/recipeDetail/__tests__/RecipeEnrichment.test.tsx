@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { RecipeEnrichment } from '../RecipeEnrichment';
+import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 
 const NUTRITION = {
   nutrients: [
@@ -38,14 +39,47 @@ describe('RecipeEnrichment', () => {
 
   it('renders nothing when a backend recipe has no enrichment', () => {
     const { toJSON } = render(
-      <RecipeEnrichment isBackendRecipe={true} isPublished={true} />,
+      <RecipeEnrichment
+        isBackendRecipe={true}
+        status={RecipeStatus.Published}
+      />,
     );
     // Published backend recipe with no nutrition/tips/tags → empty fragment.
     expect(toJSON()).toBeNull();
   });
 
   it('shows the draft badge for an unpublished backend recipe', () => {
-    render(<RecipeEnrichment isBackendRecipe={true} isPublished={false} />);
+    render(
+      <RecipeEnrichment isBackendRecipe={true} status={RecipeStatus.Draft} />,
+    );
     expect(screen.getByText('Draft — not published')).toBeTruthy();
+  });
+
+  // Submitting lands in review, never straight in PUBLISHED: a publish badge
+  // there would claim a visibility the recipe does not have.
+  it('says a recipe waiting for a moderator is in review', () => {
+    render(
+      <RecipeEnrichment
+        isBackendRecipe={true}
+        status={RecipeStatus.PendingReview}
+      />,
+    );
+    expect(
+      screen.getByText("In review — only you can see it until it's approved"),
+    ).toBeTruthy();
+    expect(screen.queryByText('Draft — not published')).toBeNull();
+  });
+
+  it("shows a returned draft's moderator note", () => {
+    render(
+      <RecipeEnrichment
+        isBackendRecipe={true}
+        status={RecipeStatus.Draft}
+        reviewNote="Add the oven temperature."
+      />,
+    );
+    expect(
+      screen.getByText("Moderator's note: Add the oven temperature."),
+    ).toBeTruthy();
   });
 });

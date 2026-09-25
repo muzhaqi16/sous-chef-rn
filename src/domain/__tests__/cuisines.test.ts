@@ -4,7 +4,7 @@ import {
   POPULAR_CUISINES,
   cuisineLabelKey,
   getAllCuisineOptions,
-} from '#features/profile/constants/cuisines';
+} from '#domain/cuisines';
 
 describe('cuisines constants', () => {
   describe('POPULAR_CUISINES', () => {

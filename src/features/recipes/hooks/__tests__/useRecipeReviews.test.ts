@@ -196,6 +196,7 @@ const makeBackendRecipe = (
   status: RecipeStatus.Draft,
   isPublished: false,
   publishedAt: null,
+  reviewNote: null,
   forkedFromId: null,
   forkedFrom: null,
   originalAuthor: null,

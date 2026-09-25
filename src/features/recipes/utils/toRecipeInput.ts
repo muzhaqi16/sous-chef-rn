@@ -5,6 +5,7 @@ import {
 import type { RecipeInformation } from '#/services/spoonacular/types';
 import type { RecipePriceBreakdown } from '#/services/spoonacular/types';
 import { stripPriceFromName } from '#features/recipes/utils/stripPriceFromName';
+import { cuisineFromName } from '#domain/cuisines';
 
 /** Ingredient names are matched case- and whitespace-insensitively. */
 const normalizeName = (name: string): string => name.trim().toLowerCase();
@@ -73,9 +74,11 @@ export const toRecipeInput = (
     // nutrition/image fields; each lives under its typed sub-input.
     metadata: {
       servings: spoonacularRecipe.servings,
-      cuisine: spoonacularRecipe.cuisines?.length
-        ? spoonacularRecipe.cuisines.join(', ')
-        : undefined,
+      // Only the cuisines the API names; one it has no member for is dropped.
+      cuisines: (spoonacularRecipe.cuisines ?? []).flatMap(name => {
+        const cuisine = cuisineFromName(name);
+        return cuisine ? [cuisine] : [];
+      }),
     },
     // Spoonacular usually omits the prep/cook breakdown but always provides
     // readyInMinutes — persist it as the total time so the imported recipe

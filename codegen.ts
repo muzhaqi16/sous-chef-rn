@@ -34,6 +34,7 @@ const SCALARS = {
   URL: 'string',
   TimeZone: 'string',
   CountryCode: 'string',
+  CurrencyCode: 'string',
   // Mapped to global ambient types declared in src/types/graphqlScalars.d.ts.
   // Referenced by bare name — no import — because the `module#Type` import
   // syntax collides with the project's `#/` path alias. JSON uses the

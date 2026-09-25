@@ -1,18 +1,28 @@
 'use no memo';
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { RecipeCategoryFields } from '#features/recipes/components/recipeForm/RecipeCategoryFields';
 import type { RecipeFormState } from '#features/recipes/screens/RecipeForm/formState';
-import { Difficulty, RecipeStatus } from '#/graphql/generated/schemaTypes';
+import {
+  Cuisine,
+  Difficulty,
+  RecipeStatus,
+} from '#/graphql/generated/schemaTypes';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
-jest.mock('../../../../../src/components/atoms/FormInput', () => ({
-  FormInput: (props: { label?: string }) => {
+jest.mock('#components/molecules/AnimatedChip', () => ({
+  AnimatedChip: ({
+    label,
+    onPress,
+  }: {
+    label?: string;
+    onPress?: () => void;
+  }) => {
     const { Text } = require('react-native');
-    return <Text>{props.label}</Text>;
+    return <Text onPress={onPress}>{label}</Text>;
   },
 }));
 jest.mock('../../../../../src/components/molecules/SegmentedControl', () => ({
@@ -33,7 +43,7 @@ describe('RecipeCategoryFields', () => {
     caloriesPerServing: '',
     difficulty: Difficulty.Medium,
     category: null,
-    cuisine: 'Italian',
+    cuisines: [Cuisine.Italian],
     status: RecipeStatus.Draft,
     diets: [],
     healthGoals: [],
@@ -62,11 +72,28 @@ describe('RecipeCategoryFields', () => {
     expect(getByText('Difficulty')).toBeTruthy();
   });
 
-  it('renders Cuisine input', () => {
+  it('renders the cuisine chips', () => {
     const { getByText } = render(
       <RecipeCategoryFields state={defaultState} updateField={updateField} />,
     );
     expect(getByText('Cuisine')).toBeTruthy();
+    expect(getByText('Italian')).toBeTruthy();
+  });
+
+  // The API takes a list of enum members, so a chip adds or removes one.
+  it('adds a tapped cuisine and removes a selected one', () => {
+    const { getByText } = render(
+      <RecipeCategoryFields state={defaultState} updateField={updateField} />,
+    );
+
+    fireEvent.press(getByText('Mexican'));
+    expect(updateField).toHaveBeenLastCalledWith('cuisines', [
+      Cuisine.Italian,
+      Cuisine.Mexican,
+    ]);
+
+    fireEvent.press(getByText('Italian'));
+    expect(updateField).toHaveBeenLastCalledWith('cuisines', []);
   });
 
   it('renders Status segmented control', () => {
