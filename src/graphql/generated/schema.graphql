@@ -567,6 +567,13 @@ Input for adjusting pantry item quantity to match physical count.
 Creates an ADJUSTMENT usage record for audit trail.
 """
 input AdjustPantryItemQuantityInput {
+  """
+  The container weighed with what it holds, in the stack's net-weight unit: the
+  recount records grossWeight − tareWeight as the remaining net weight. Refused
+  with a ValidationError when the stack records no tare, when it weighs less
+  than the tare, or together with remainingNetWeight.
+  """
+  grossWeight: Float
   id: ID!
   idempotencyKey: ID
   """The actual quantity from physical count"""
@@ -1891,7 +1898,7 @@ union CreateFromTemplateResult = ConflictError | CreateFromTemplatePayload | For
 input CreateHomeInput {
   allowJoinCode: Boolean
   createDefaultPantry: Boolean
-  currency: String
+  currency: CurrencyCode
   defaultPantryName: String
   description: String
   """
@@ -2367,6 +2374,10 @@ input CreateRecipeInput {
   notes: String
   nutrition: NutritionInfoInput
   source: ExternalSource
+  """
+  DRAFT keeps the recipe private. PUBLISHED or PENDING_REVIEW submits it for
+  admin review: it is PENDING_REVIEW until an admin approves it.
+  """
   status: RecipeStatus
   tags: [String!]
   timing: TimeEstimatesInput
@@ -2578,11 +2589,16 @@ Always include a __typename so the variant can be discriminated.
 """
 union CreateTemplateFromMealPlanResult = ConflictError | CreateTemplateFromMealPlanPayload | ForbiddenError | NotFoundError | ValidationError
 
+"""A recipe's cuisine"""
 enum Cuisine {
   """Cuisines of the African continent"""
   AFRICAN
+  """Albanian cuisine"""
+  ALBANIAN
   """American cuisine"""
   AMERICAN
+  """Cuisines of Asia, where a recipe names no one country"""
+  ASIAN
   """British cuisine"""
   BRITISH
   """Cajun cuisine of Louisiana"""
@@ -2593,6 +2609,8 @@ enum Cuisine {
   CHINESE
   """Eastern European cuisine"""
   EASTERN_EUROPEAN
+  """Cuisines of Europe, where a recipe names no one country"""
+  EUROPEAN
   """French cuisine"""
   FRENCH
   """German cuisine"""
@@ -2646,7 +2664,7 @@ Currency type for price information
 Cache: 2 hours - currency definitions are static reference data
 """
 type Currency {
-  code: String!
+  code: CurrencyCode!
   createdAt: DateTime!
   decimalPlaces: Int!
   id: ID!
@@ -2655,6 +2673,9 @@ type Currency {
   symbol: String!
   updatedAt: DateTime!
 }
+
+"""An ISO 4217 currency code, e.g. "EUR" or "ALL"."""
+scalar CurrencyCode
 
 """
 How the currency on a pantry money figure was decided — observed from the
@@ -2984,6 +3005,23 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union DeletePantryItemResult = ConflictError | DeletePantryItemPayload | ForbiddenError | NotFoundError | ValidationError
+
+input DeletePantryItemUsageInput {
+  """The use to undo"""
+  id: ID!
+}
+
+type DeletePantryItemUsagePayload {
+  """The pantry item, holding again what the undone use took"""
+  pantryItem: PantryItem!
+}
+
+"""
+Result of DeletePantryItemUsage. Select on DeletePantryItemUsagePayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union DeletePantryItemUsageResult = ConflictError | DeletePantryItemUsagePayload | ForbiddenError | NotFoundError | ValidationError
 
 type DeletePantryPayload {
   """
@@ -4419,7 +4457,7 @@ Cache: 5 minutes - metadata changes occasionally
 type Home {
   allowJoinCode: Boolean!
   createdAt: DateTime!
-  currency: String
+  currency: CurrencyCode
   description: String
   id: ID!
   inviteLogsConnection(
@@ -4618,6 +4656,7 @@ input HomeFilters {
   type: HomeType
 }
 
+"""An invitation to join a home, sent to an email address"""
 type HomeInvite {
   """When the invite was accepted; null until then"""
   acceptedAt: DateTime
@@ -4667,7 +4706,10 @@ type HomeInvite {
   """
   lastReminderAt: DateTime
   """The invite's newest logs. `limit` defaults to 10 and is capped at 50."""
-  logs(limit: Int = 10): [InviteLog!]!
+  logs(
+    """At most this many entries, newest first"""
+    limit: Int = 10
+  ): [InviteLog!]!
   """
   An optional note from the inviter, included in the invite email; null when none
   """
@@ -5246,7 +5288,12 @@ type Item {
   best match for an explicit kind. This field cannot express a gallery; select
   "photos" for that.
   """
-  images(kind: ImageKind): [ItemImage!]!
+  images(
+    """
+    The rendition of the primary photo to return; the thumbnail, else the photo, when omitted
+    """
+    kind: ImageKind
+  ): [ItemImage!]!
   """
   The item's ingredient list as supplied when it was created or edited, with no
   fixed shape. Null when none was supplied.
@@ -5362,6 +5409,7 @@ type Item {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; newest first when omitted"""
     orderBy: ItemPriceHistoryOrderBy
   ): ItemPriceHistoryConnection!
   """The item's main UPC barcode, or null when it has none."""
@@ -5409,6 +5457,7 @@ type Item {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; oldest first when omitted"""
     orderBy: ItemStoreSkuOrderBy
   ): ItemStoreSkuConnection!
   """Free-form labels attached to the item; empty when none."""
@@ -5427,6 +5476,7 @@ type Item {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; newest first when omitted"""
     orderBy: ItemUnitConversionOrderBy
   ): ItemUnitConversionConnection!
   """
@@ -6657,8 +6707,8 @@ input MarkRecipeAsCookedInput {
   Servings cooked, counted as Spoonacular counts them: the recipe's ingredient
   amounts make `Recipe.servings` servings, so each is scaled by
   servings / Recipe.servings (4 servings of a 4-serving recipe is the recipe
-  as written; 2 is half). The same rule as `addRecipeToShoppingList`.
-  Omit to cook the whole recipe. Must be positive.
+  as written; 2 is half). Unlike `addRecipeToShoppingList`, whose servings is
+  a plain multiplier. Omit to cook the whole recipe. Must be positive.
   """
   servings: Float
 }
@@ -7168,6 +7218,7 @@ input MediaAssetsInput {
   images: [ImageInput!]
 }
 
+"""A user's membership of a home: their role and permissions in it"""
 type Membership {
   """Grants adding items to the home's pantries"""
   canAddItems: Boolean!
@@ -7700,7 +7751,8 @@ type Mutation {
   createPurchase(input: CreatePurchaseInput!): CreatePurchaseResult!
   """
   Create a recipe, either entered manually or carried over from an external
-  source.
+  source. A new recipe from a catalog source is PENDING_REVIEW; any other
+  follows its input status (see CreateRecipeInput.status).
   """
   createRecipe(input: CreateRecipeInput!): CreateRecipeResult!
   """Create a review for a published recipe."""
@@ -7784,6 +7836,13 @@ type Mutation {
   adminPurgePantryItems.
   """
   deletePantryItem(input: DeletePantryItemInput!): DeletePantryItemResult!
+  """
+  Undo a use or waste: the packages it drew on get back exactly what it took,
+  at their own cost and expiry, and the record counts in no history or total.
+  Refused with ValidationError for a restock, or when a package it drew on
+  has since left the pantry item; NotFoundError when already undone.
+  """
+  deletePantryItemUsage(input: DeletePantryItemUsageInput!): DeletePantryItemUsageResult!
   """Delete a purchase record."""
   deletePurchase(input: DeletePurchaseInput!): DeletePurchaseResult!
   """
@@ -8205,12 +8264,14 @@ type Mutation {
   updatePurchase(input: UpdatePurchaseInput!): UpdatePurchaseResult!
   """
   Update a recipe the caller owns. Ingredients are managed separately by
-  updateRecipeIngredients.
+  updateRecipeIngredients. Changing a PUBLISHED recipe's content sends it
+  back to PENDING_REVIEW, hidden from everyone else until an admin approves.
   """
   updateRecipe(input: UpdateRecipeInput!): UpdateRecipeResult!
   """
   Replace a recipe's ingredient list. Separate from updateRecipe because the
   ingredients are a collection edited as a whole rather than field by field.
+  On a PUBLISHED recipe it sends the recipe back to PENDING_REVIEW.
   """
   updateRecipeIngredients(input: UpdateRecipeIngredientsInput!): UpdateRecipeIngredientsResult!
   """Update an existing recipe review (author only)."""
@@ -8268,7 +8329,9 @@ type Mutation {
   """
   Import a recipe from an external source, matching on source plus external
   id. Returns the existing recipe when one already matches rather than
-  creating a duplicate, so replaying an import is safe.
+  creating a duplicate, so replaying an import is safe. A new import is
+  PENDING_REVIEW, visible only to the caller until an admin approves it; an
+  existing one the caller cannot see is NotFoundError.
   """
   upsertExternalRecipe(input: UpsertExternalRecipeInput!): UpsertExternalRecipeResult!
   """Create or update an item based on its external source ID."""
@@ -9239,6 +9302,10 @@ type PantryDeficit {
   needed: Float!
   needsToBuy: Boolean!
   """
+  What the given shopping list's unbought line for the item already covers, in the ingredient's unit; 0 without a list
+  """
+  onShoppingList: Float!
+  """
   Stacks of this ingredient whose amount could not be expressed in the
   ingredient's unit (a head of garlic with no clove anchor, say). They are
   excluded from the available total rather than counted as one each.
@@ -9440,10 +9507,13 @@ type PantryItem {
   """
   Totals added, consumed and wasted for this stack, over the period filters selects
   """
-  ledger(filters: AnalyticsFilters): LedgerSummary!
+  ledger(
+    """The period to total; the last 30 days when omitted"""
+    filters: AnalyticsFilters
+  ): LedgerSummary!
   """
-  Whether the user wants to be reminded to rebuy this stack when it falls to
-  minQuantity; it has no effect while minQuantity is null. False by default.
+  Opt-in for low-stock notifications on this stack (default false): with it on
+  and a minQuantity set, falling to or below the minimum notifies the home.
   """
   lowStockAlert: Boolean!
   """
@@ -9556,6 +9626,10 @@ type PantryItem {
   """Free-form labels on this stack; empty when none"""
   tags: [String!]!
   """
+  The empty container's weight, in netWeightUnit: a recount by grossWeight records gross − tare. Null when none is recorded.
+  """
+  tareWeight: Float
+  """
   Value of the REMAINING stock. Batches whose cost was never recorded are
   excluded rather than counted as free, so this is the value of the stock
   whose price is known — null when that is none of it.
@@ -9583,6 +9657,7 @@ type PantryItem {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; most recent use first when omitted"""
     orderBy: PantryItemUsageOrderBy
   ): PantryItemUsageConnection!
   """
@@ -10615,7 +10690,8 @@ type Query {
   ): BrandConnection!
   """
   Calculate pantry deficit for recipe ingredients
-  Compares recipe needs against available pantry items
+  Compares recipe needs against available pantry items, and — given a
+  shopping list — what its unbought lines already plan to buy
   """
   calculateRecipePantryDeficit(
     """The pantry to check against"""
@@ -10626,6 +10702,8 @@ type Query {
     Servings to cook: amounts scale by servings / Recipe.servings. Omitted, the whole recipe
     """
     servings: Float
+    """A list whose unbought lines already cover part of what is short"""
+    shoppingListId: ID
   ): [PantryDeficit!]!
   """
   Check if conversion is possible between two units
@@ -10792,7 +10870,7 @@ type Query {
   """Fetch a single currency by its ISO code."""
   currencyByCode(
     """The ISO 4217 code, e.g. USD"""
-    code: String!
+    code: CurrencyCode!
   ): Currency
   """Get a single device by ID"""
   device(
@@ -11331,7 +11409,7 @@ type Query {
   """
   Search all recipes (global search). Anonymous callers see published recipes
   only; authenticated callers also see their own private recipes. Filter
-  criteria (diets, intolerances, category, cuisine, maxReadyTime) are grouped
+  criteria (diets, intolerances, category, cuisines, maxReadyTime) are grouped
   under the RecipeFilters object.
   """
   searchRecipes(
@@ -11594,6 +11672,7 @@ type Recipe {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; most recently cooked first when omitted"""
     orderBy: CookingLogOrderBy
   ): CookingLogConnection!
   """When the recipe was created."""
@@ -11604,9 +11683,9 @@ type Recipe {
   """
   createdBy: User
   """
-  The recipe's cuisine as free text, for example Italian, or null when not stated.
+  The recipe's cuisines, such as ITALIAN and MEDITERRANEAN; empty when none is stated.
   """
-  cuisine: String
+  cuisines: [Cuisine!]!
   """Short summary of the recipe, or null when none."""
   description: String
   """
@@ -11654,6 +11733,7 @@ type Recipe {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; newest first when omitted"""
     orderBy: RecipeOrderBy
   ): RecipeForkConnection!
   """
@@ -11754,6 +11834,13 @@ type Recipe {
   rating4Count: Int!
   """Number of 5-star reviews."""
   rating5Count: Int!
+  """
+  The note an admin left with the last moderation decision. A rejection
+  always carries one. Null for anyone but the author and admins.
+  """
+  reviewNote: String
+  """When an admin last approved or rejected this recipe."""
+  reviewedAt: DateTime
   """Reviews of this recipe from all users, newest first by default."""
   reviewsConnection(
     """Resume after this cursor: a previous page's endCursor"""
@@ -11764,6 +11851,7 @@ type Recipe {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; newest first when omitted"""
     orderBy: RecipeReviewOrderBy
   ): RecipeReviewConnection!
   """
@@ -11886,14 +11974,14 @@ filters mirror the Spoonacular complexSearch parameters:
   - diets         -> recipe must match ALL selected
   - intolerances  -> exclude recipes containing ANY selected intolerance
   - category      -> meal type
-  - cuisine       -> match ANY of the selected
+  - cuisines      -> match ANY of the selected
   - maxReadyTime  -> total time, in minutes
 """
 input RecipeFilters {
   """Filter by meal-type category"""
   category: RecipeCategory
   """Cuisines to match any of (searchRecipes)"""
-  cuisine: [String!]
+  cuisines: [Cuisine!]
   """Dietary restrictions the recipe must match (searchRecipes)"""
   diets: [Diet!]
   """Filter by difficulty (recipes/adminRecipes)"""
@@ -11904,6 +11992,11 @@ input RecipeFilters {
   intolerances: [Intolerance!]
   """Maximum total ready time in minutes (searchRecipes)"""
   maxReadyTime: Int
+  """
+  Filter by status (recipes/adminRecipes). `adminRecipes` with
+  PENDING_REVIEW is the moderation queue.
+  """
+  status: RecipeStatus
 }
 
 """
@@ -12059,7 +12152,10 @@ type RecipeIngredientSourceMapping {
 """Sub-input for recipe metadata"""
 input RecipeMetadataInput {
   category: RecipeCategory
-  cuisine: String
+  """
+  The recipe's cuisines, replacing the list; null is refused, [] clears it
+  """
+  cuisines: [Cuisine!]
   difficulty: Difficulty
   servings: Int
 }
@@ -12135,8 +12231,18 @@ type RecipeSourceMapping {
   updatedAt: DateTime!
 }
 
+"""
+Who can see a recipe. Admins see every recipe and its author always sees it.
+"""
 enum RecipeStatus {
+  """Visible to its author only."""
   DRAFT
+  """
+  Submitted for publication and waiting for an admin; still visible to its
+  author only. Publishing a recipe, or editing a published one, lands here.
+  """
+  PENDING_REVIEW
+  """Approved by an admin and visible to everyone."""
   PUBLISHED
 }
 
@@ -12221,7 +12327,7 @@ type RefreshTokenPayload {
 """Sub-input for regional/locale settings"""
 input RegionalSettingsInput {
   language: String
-  preferredCurrency: String
+  preferredCurrency: CurrencyCode
   preferredUnitSystem: UnitSystem
   timezone: TimeZone
 }
@@ -12804,6 +12910,7 @@ type ShoppingList {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; most recently invited first when omitted"""
     orderBy: CollaboratorOrderBy
   ): ShoppingListCollaboratorConnection!
   """
@@ -12828,7 +12935,7 @@ type ShoppingList {
   A cost recorded from the list without a currency of its own is recorded in
   it.
   """
-  currency: String
+  currency: CurrencyCode
   """Default pantry for the linked home (if any)."""
   defaultPantry: Pantry
   """Free-text description of the list; null when none"""
@@ -12887,11 +12994,13 @@ type ShoppingList {
     after: String
     """Resume before this cursor: a previous page's startCursor"""
     before: String
+    """Narrow the items returned"""
     filters: ShoppingListItemFilters
     """Page size, reading forward: default 20, at most 100"""
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; newest first when omitted"""
     orderBy: ShoppingListItemOrderBy
   ): ShoppingListItemConnection!
   """
@@ -12940,7 +13049,10 @@ type ShoppingList {
   Bounded field: limit defaults to 10 and is clamped server-side to a
   maximum of 50.
   """
-  recentlyDeletedItems(limit: Int = 10): [ShoppingListItem!]!
+  recentlyDeletedItems(
+    """At most this many: default 10, at most 50"""
+    limit: Int = 10
+  ): [ShoppingListItem!]!
   """
   How many pattern periods lie between lists: days for DAILY and CUSTOM,
   weeks for WEEKLY, fortnights for BIWEEKLY, months for MONTHLY. Null when
@@ -12995,7 +13107,12 @@ type ShoppingList {
   Bounded field: limit defaults to 10 and is clamped server-side to a
   maximum of 50.
   """
-  suggestions(limit: Int = 10, sources: [SuggestionSource!]): [ShoppingListSuggestion!]!
+  suggestions(
+    """At most this many: default 10, at most 50"""
+    limit: Int = 10
+    """Only suggestions from these sources; every source when omitted"""
+    sources: [SuggestionSource!]
+  ): [ShoppingListSuggestion!]!
   """Free-text labels on the list, at most 10; empty when none"""
   tags: [String!]!
   """The store the user plans to shop at; null when none is set"""
@@ -13034,6 +13151,7 @@ type ShoppingList {
   viewCount: Int!
 }
 
+"""A user a shopping list is shared with, and what they may do on it"""
 type ShoppingListCollaborator {
   """Grants adding items to the list"""
   canAddItems: Boolean!
@@ -13463,7 +13581,7 @@ input ShoppingListOwnershipOrderBy {
 """Sub-input for shopping list planning details"""
 input ShoppingListPlanningInput {
   budgetAmount: Float
-  currency: String
+  currency: CurrencyCode
   plannedShopDate: DateTime
   reminderDate: DateTime
   reminderEnabled: Boolean
@@ -14418,6 +14536,10 @@ input SyncPantryItemInput {
   """
   item: PantryItemSourceInput
   lastUsedAt: DateTime
+  """
+  Opt-in for low-stock notifications on this stack (default false): with it on
+  and a minQuantity set, falling to or below the minimum notifies the home.
+  """
   lowStockAlert: Boolean
   netWeight: NetWeightInput
   pantryId: ID!
@@ -15028,7 +15150,7 @@ updateProfile; app settings on updateSettings.
 """
 input UpdateAccountInput {
   onBoarded: Boolean
-  preferredCurrency: String
+  preferredCurrency: CurrencyCode
   timezone: TimeZone
 }
 
@@ -15226,7 +15348,7 @@ union UpdateFavoriteRecipeResult = ConflictError | ForbiddenError | NotFoundErro
 
 input UpdateHomeInput {
   allowJoinCode: Boolean
-  currency: String
+  currency: CurrencyCode
   description: String
   id: ID!
   isPublic: Boolean
@@ -15469,12 +15591,22 @@ input UpdatePantryItemInput {
   isComposted: Boolean
   isRecycled: Boolean
   itemName: String
+  """
+  Opt-in for low-stock notifications on this stack (default false): with it on
+  and a minQuantity set, falling to or below the minimum notifies the home.
+  """
   lowStockAlert: Boolean
   measurementProfile: MeasurementProfileInput
   netWeight: NetWeightInput
   quantity: Float
   storage: StorageDetailsInput
   tags: [String!]
+  """
+  The empty container's weight, in the stack's net-weight unit, so a recount can
+  weigh it full (adjustPantryItemQuantity.grossWeight). Null clears it. Refused
+  on a stack with no net weight to state it in.
+  """
+  tareWeight: Float
   thresholds: InventoryThresholdsInput
   """
   The unit in use, restated. A different unit is refused: changePantryItemUnit
@@ -15649,6 +15781,10 @@ input UpdateRecipeInput {
   name: String
   notes: String
   nutrition: NutritionInfoInput
+  """
+  DRAFT keeps the recipe private. PUBLISHED or PENDING_REVIEW submits it for
+  admin review: it is PENDING_REVIEW until an admin approves it.
+  """
   status: RecipeStatus
   tags: [String!]
   timing: TimeEstimatesInput
@@ -16028,6 +16164,10 @@ input UpsertExternalRecipeInput {
   notes: String
   nutrition: NutritionInfoInput
   source: ExternalSource!
+  """
+  DRAFT keeps the recipe private. PUBLISHED or PENDING_REVIEW submits it for
+  admin review: it is PENDING_REVIEW until an admin approves it.
+  """
   status: RecipeStatus
   tags: [String!]
   timing: TimeEstimatesInput
@@ -16262,6 +16402,7 @@ type User {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; newest first when omitted"""
     orderBy: UserAddressOrderBy
   ): UserAddressConnection!
   """Whether this user can access developer tools and internal dashboards"""
@@ -16280,6 +16421,7 @@ type User {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; newest first when omitted"""
     orderBy: ShoppingListOrderBy
   ): ShoppingListConnection!
   """
@@ -16295,6 +16437,7 @@ type User {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; most recently cooked first when omitted"""
     orderBy: CookingLogOrderBy
   ): CookingLogConnection!
   """
@@ -16332,6 +16475,7 @@ type User {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; newest first when omitted"""
     orderBy: DeviceOrderBy
   ): DeviceConnection!
   """
@@ -16374,11 +16518,13 @@ type User {
     after: String
     """Resume before this cursor: a previous page's startCursor"""
     before: String
+    """Narrow the notifications returned"""
     filters: ExpirationNotificationFilters
     """Page size, reading forward: default 20, at most 100"""
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; newest first when omitted"""
     orderBy: ExpirationNotificationOrderBy
   ): ExpirationNotificationConnection!
   """
@@ -16415,6 +16561,7 @@ type User {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; newest first when omitted"""
     orderBy: InviteLogOrderBy
   ): InviteLogConnection!
   """
@@ -16436,18 +16583,25 @@ type User {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; newest first when omitted"""
     orderBy: LoginHistoryOrderBy
   ): LoginHistoryConnection!
   """
   Sign-in statistics for a window of the last N days, where N is the days
   argument (30 by default). Null unless the caller is this user or an admin.
   """
-  loginHistoryStats(days: Int = 30): LoginHistoryStats
+  loginHistoryStats(
+    """How many days back to count"""
+    days: Int = 30
+  ): LoginHistoryStats
   """
   The user's ACTIVE membership in the given home. Null when there is none,
   or unless the caller is this user or an admin.
   """
-  membershipInHome(homeId: ID!): Membership
+  membershipInHome(
+    """The home to read the membership in"""
+    homeId: ID!
+  ): Membership
   """
   The user's ACTIVE home memberships, newest first by default. Empty unless
   the caller is this user or an admin.
@@ -16461,6 +16615,7 @@ type User {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; newest first when omitted"""
     orderBy: MembershipOrderBy
   ): MembershipConnection!
   """
@@ -16477,11 +16632,13 @@ type User {
     after: String
     """Resume before this cursor: a previous page's startCursor"""
     before: String
+    """Narrow the notifications returned"""
     filters: NotificationFilters
     """Page size, reading forward: default 20, at most 100"""
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; most recently sent first when omitted"""
     orderBy: NotificationOrderBy
   ): NotificationConnection!
   """
@@ -16523,7 +16680,7 @@ type User {
   A cost recorded with no purchase or list currency is recorded in it. Null
   unless the caller is this user or an admin.
   """
-  preferredCurrency: String
+  preferredCurrency: CurrencyCode
   """
   The user's profile. Null for a signed-out caller, when the user has none,
   or when the profile's visibility hides it: PRIVATE shows it to the user and
@@ -16549,12 +16706,15 @@ type User {
     after: String
     """Resume before this cursor: a previous page's startCursor"""
     before: String
+    """Narrow the purchases returned"""
     filters: PurchaseFilters
     """Page size, reading forward: default 20, at most 100"""
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; newest first when omitted"""
     orderBy: PurchaseOrderBy
+    """Only purchases from this shopping list"""
     shoppingListId: ID
   ): PurchaseConnection!
   """Null unless the caller is this user or an admin. See email."""
@@ -16570,9 +16730,11 @@ type User {
     before: String
     """Page size, reading forward: default 20, at most 100"""
     first: Int
+    """Only recipes saved in this folder"""
     folder: String
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; most recently saved first when omitted"""
     orderBy: SavedRecipeOrderBy
   ): SavedRecipeConnection!
   """
@@ -16622,6 +16784,7 @@ type User {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
+    """Sort order; newest first when omitted"""
     orderBy: ShoppingListOwnershipOrderBy
   ): ShoppingListOwnershipConnection!
   """
@@ -16629,7 +16792,10 @@ type User {
   hours argument (24 by default). Null unless the caller is this user or an
   admin.
   """
-  suspiciousLoginActivity(hours: Int = 24): SuspiciousActivity
+  suspiciousLoginActivity(
+    """How many hours back to look"""
+    hours: Int = 24
+  ): SuspiciousActivity
   """
   The user's IANA time zone, such as America/New_York; UTC until changed
   with updateAccount. Null unless the caller is this user or an admin.
@@ -16814,7 +16980,7 @@ type UserSettings {
   maxDecimalPlaces: Int!
   offlineMode: Boolean!
   personalizedAds: Boolean!
-  preferredCurrency: String!
+  preferredCurrency: CurrencyCode!
   """
   Fraction **denominators** the user wants quantities rounded to — 4 means
   quarters. Note the inverse of `Unit.commonFractions`, which holds decimals
