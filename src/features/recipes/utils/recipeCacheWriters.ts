@@ -117,7 +117,7 @@ function buildOptimisticRecipeEntity(
     forkedFrom: null,
     originalAuthor: input.attribution?.originalAuthor ?? null,
     tips: input.tips ?? null,
-    videoUrl: null,
+    videoUrl: input.media?.videoUrl ?? null,
     tags: input.tags ?? [],
     source: null,
     sourceUrl: null,

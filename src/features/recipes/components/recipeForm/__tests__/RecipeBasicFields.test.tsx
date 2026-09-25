@@ -82,6 +82,7 @@ const defaultState = {
   name: '',
   description: '',
   imageUrl: '',
+  videoUrl: '',
   servings: '4',
   prepTimeMinutes: '',
   cookTimeMinutes: '',

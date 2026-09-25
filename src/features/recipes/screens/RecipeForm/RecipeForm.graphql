@@ -5,6 +5,7 @@ fragment RecipeForm_recipe on Recipe {
   name
   description
   imageUrl
+  videoUrl
   servings
   prepTimeMinutes
   cookTimeMinutes

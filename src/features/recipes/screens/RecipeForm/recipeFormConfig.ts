@@ -91,6 +91,13 @@ export const recipeFormSchema: ObjectSchema<RecipeFormState> = object({
       msg('errors.field.imageUrl'),
       value => !value || /^https?:\/\//i.test(value),
     ),
+  videoUrl: string()
+    .defined()
+    .test(
+      'http-scheme',
+      msg('errors.field.videoUrl'),
+      value => !value || /^https?:\/\//i.test(value),
+    ),
   servings: string().defined(),
   prepTimeMinutes: string().defined(),
   cookTimeMinutes: string().defined(),
@@ -147,6 +154,7 @@ export const recipeFormDefaults = (): RecipeFormState => ({
   name: '',
   description: '',
   imageUrl: '',
+  videoUrl: '',
   servings: '4',
   prepTimeMinutes: '',
   cookTimeMinutes: '',

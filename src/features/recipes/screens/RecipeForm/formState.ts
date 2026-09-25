@@ -32,6 +32,7 @@ export interface RecipeFormState {
   name: string;
   description: string;
   imageUrl: string;
+  videoUrl: string;
   servings: string;
   prepTimeMinutes: string;
   cookTimeMinutes: string;

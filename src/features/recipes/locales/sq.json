@@ -6,6 +6,7 @@
     "descriptionPlaceholder": "Një përshkrim i shkurtër i recetës...",
     "imageUrl": "URL e imazhit",
     "imageUrlPlaceholder": "https://...",
+    "videoUrl": "URL e videos",
     "caloriesPerServing": "Kalori/Pjesë",
     "prepTimeMin": "Koha e përgatitjes (min)",
     "cookTimeMin": "Koha e gatimit (min)",

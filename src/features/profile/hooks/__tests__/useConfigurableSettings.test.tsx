@@ -145,7 +145,6 @@ jest.mock('#/config/settingsConfig', () => ({
 }));
 
 jest.mock('#utils/dateUtils', () => ({
-  dateStringToISO: jest.fn((v: string) => v),
   extractDateString: jest.fn((v: unknown) => v || ''),
 }));
 

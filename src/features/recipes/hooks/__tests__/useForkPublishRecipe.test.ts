@@ -29,6 +29,7 @@ const SOURCE = {
   name: 'Lasagna',
   description: 'Layered',
   imageUrl: null,
+  videoUrl: null,
   servings: 6,
   prepTimeMinutes: 20,
   cookTimeMinutes: 45,

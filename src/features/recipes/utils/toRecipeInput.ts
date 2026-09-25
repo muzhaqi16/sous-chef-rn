@@ -93,7 +93,7 @@ export const toRecipeInput = (
         ? Math.round(caloriesPerServing)
         : undefined,
     },
-    media: { imageUrl: spoonacularRecipe.image },
+    media: { imageUrl: absoluteUrl(spoonacularRecipe.image) },
 
     // Attribution - original recipe source
     attribution: {

@@ -12,7 +12,7 @@ import {
 } from '#/config/settingsConfig';
 import { useUpdateProfile } from '#features/profile/hooks/useUpdateProfile';
 import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
-import { dateStringToISO, extractDateString } from '#utils/dateUtils';
+import { extractDateString } from '#utils/dateUtils';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { useDataState } from '#hooks/data/useDataState';
 import { DataStateView } from '#components/organisms/DataStateView';
@@ -110,9 +110,9 @@ export const PersonalInformationScreen: React.FC = () => {
         return {
           ...baseItem,
           value: extractDateString(profile?.dateOfBirth),
+          // A calendar date, sent as the YYYY-MM-DD the field validates.
           onSave: (v: string) => {
-            const isoValue = dateStringToISO(v);
-            void updateProfile({ dateOfBirth: isoValue });
+            void updateProfile({ dateOfBirth: v || null });
           },
         };
 

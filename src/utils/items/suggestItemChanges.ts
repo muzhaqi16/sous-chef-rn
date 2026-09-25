@@ -241,6 +241,63 @@ export function buildSuggestibleItemChanges(
   };
 }
 
+/** The scanned barcode's own pack, as the scan reported it. */
+export interface ScannedPack {
+  netWeight?: number;
+  netWeightKind?: NetWeightKind;
+  displayUnit?: { id: string; name: string };
+  brandId?: string;
+  brandName?: string;
+}
+
+/**
+ * The snapshot a barcode correction diffs against: the item, with the scanned
+ * barcode's own size and brand in place of the item's, so the form opens on
+ * what the scan showed.
+ */
+export function withScannedPack(
+  snapshot: EditableItemSnapshot,
+  pack: ScannedPack,
+): EditableItemSnapshot {
+  return {
+    ...snapshot,
+    netWeight: pack.netWeight,
+    netWeightKind: pack.netWeightKind,
+    displayUnitId: pack.displayUnit?.id,
+    displayUnitName: pack.displayUnit?.name,
+    brandId: pack.brandId,
+    brandName: pack.brandName,
+  };
+}
+
+/**
+ * A barcode's record takes only its size, what the size measures, its unit
+ * and its brand; the rest of an edit is the item's. The form's size is a
+ * package size, so a size sent to the barcode says so.
+ */
+export function splitBarcodeChanges(changes: SuggestibleItemChangesInput): {
+  barcode: SuggestibleItemChangesInput;
+  item: SuggestibleItemChangesInput;
+} {
+  // A barcode has one brand: replacing it removes nothing from the item's.
+  const { packageInfo, brand, brandOps: _itemBrands, ...itemRest } = changes;
+  const { netWeight, displayUnit, ...packageRest } = packageInfo ?? {};
+  const barcode: SuggestibleItemChangesInput = {};
+  if (netWeight != null || displayUnit != null) {
+    barcode.packageInfo = {
+      ...(netWeight != null && {
+        netWeight,
+        netWeightKind: NetWeightKind.Package,
+      }),
+      ...(displayUnit != null && { displayUnit }),
+    };
+  }
+  if (brand != null) barcode.brand = brand;
+  const item: SuggestibleItemChangesInput = { ...itemRest };
+  if (Object.keys(packageRest).length > 0) item.packageInfo = packageRest;
+  return { barcode, item };
+}
+
 /** Prefill AddItemForm from the snapshot the diff will later compare against. */
 export function buildInitialDataFromSnapshot(
   snapshot: EditableItemSnapshot,

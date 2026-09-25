@@ -203,6 +203,7 @@ export function useRecipeForm() {
       instructions,
       media: {
         imageUrl: state.imageUrl.trim() || undefined,
+        videoUrl: state.videoUrl.trim() || undefined,
       },
       metadata: {
         servings: parseInt(state.servings) || 4,
@@ -246,6 +247,7 @@ export function useRecipeForm() {
       })),
       media: {
         imageUrl: state.imageUrl.trim() || null,
+        videoUrl: state.videoUrl.trim() || null,
       },
       metadata: {
         servings: parseInt(state.servings) || undefined,
@@ -274,6 +276,7 @@ export function useRecipeForm() {
       name: recipe.name,
       description: recipe.description ?? '',
       imageUrl: recipe.imageUrl ?? '',
+      videoUrl: recipe.videoUrl ?? '',
       servings: String(recipe.servings),
       prepTimeMinutes: recipe.prepTimeMinutes
         ? String(recipe.prepTimeMinutes)

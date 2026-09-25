@@ -177,6 +177,7 @@
       "servingsMade": "Enter a whole number of servings greater than zero",
       "key": "That image could not be confirmed. Pick it again and retry.",
       "imageUrl": "Image URL must start with http:// or https://",
+      "videoUrl": "Video URL must start with http:// or https://",
       "website": "Website must start with http:// or https://",
       "packageSize": "Enter the package size in a unit of the same kind as this item's (weight with weight, volume with volume).",
       "resolution": "Choose whether to use the estimate or enter the amount yourself.",

@@ -445,9 +445,22 @@ describe('useDietaryProfile', () => {
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 
-  it('addDietaryRestriction calls mutation with correct params', async () => {
+  // The API takes what a restriction restricts as a one-key `kind`.
+  it('addDietaryRestriction sends the restriction as its kind', async () => {
+    const add = buildAddRestrictionMock();
+    const fired: unknown[] = [];
+    const recording = {
+      ...add,
+      request: {
+        ...add.request,
+        variables: (variables: unknown) => {
+          fired.push(variables);
+          return true;
+        },
+      },
+    };
     const { result } = renderHookWithApollo(() => useDietaryProfile(), {
-      operationMocks: [buildGetProfileMock(), buildAddRestrictionMock()],
+      operationMocks: [buildGetProfileMock(), recording],
     });
 
     await waitFor(() => {
@@ -464,6 +477,12 @@ describe('useDietaryProfile', () => {
     });
 
     expect(success).toBe(true);
+    expect(fired).toContainEqual({
+      input: expect.objectContaining({
+        kind: { diet: Diet.Vegan },
+        severity: RestrictionSeverity.Allergy,
+      }),
+    });
   });
 
   it('removeDietaryRestriction calls mutation', async () => {

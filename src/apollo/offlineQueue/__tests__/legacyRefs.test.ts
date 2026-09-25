@@ -9,7 +9,11 @@ import {
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { MovePurchasedItemsToPantryDocument } from '#features/shoppingList/hooks/useBatchMoveToPantry.generated';
-import { UpdateDietaryProfileDocument } from '#operations/user/user.generated';
+import {
+  AddDietaryRestrictionDocument,
+  UpdateDietaryProfileDocument,
+} from '#operations/user/user.generated';
+import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import { RestockPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { withRefInputs } from '../legacyRefs';
 
@@ -178,6 +182,45 @@ describe('withRefInputs', () => {
         input: { cookingSkillLevel: 'Intermediate' },
       }).input,
     ).toEqual({ cookingSkillLevel: 'INTERMEDIATE' });
+  });
+
+  it("names an inline item's category by reference", () => {
+    expect(
+      withRefInputs(CreatePantryItemDocument, {
+        input: {
+          id: 'p1',
+          pantryId: 'pan1',
+          item: { name: 'Kefir', category: 'Dairy' },
+        },
+      }).input,
+    ).toEqual({
+      id: 'p1',
+      pantryId: 'pan1',
+      item: { inline: { name: 'Kefir', category: { name: 'Dairy' } } },
+    });
+  });
+
+  it('moves a restriction under its kind', () => {
+    expect(
+      withRefInputs(AddDietaryRestrictionDocument, {
+        input: { intolerance: 'GLUTEN', severity: 'ALLERGY' },
+      }).input,
+    ).toEqual({ kind: { intolerance: 'GLUTEN' }, severity: 'ALLERGY' });
+  });
+
+  it('sends a date of birth as the calendar date it named', () => {
+    expect(
+      withRefInputs(UpdateUserProfileDocument, {
+        input: { dateOfBirth: '1990-01-15T00:00:00.000Z' },
+      }).input,
+    ).toEqual({ dateOfBirth: '1990-01-15' });
+  });
+
+  it('leaves an add naming a barcode record alone', () => {
+    const variables = {
+      input: { id: 'p1', pantryId: 'pan1', item: { variation: 'var1' } },
+    };
+    expect(withRefInputs(CreatePantryItemDocument, variables)).toBe(variables);
   });
 
   it('leaves a write already in the new shape alone', () => {

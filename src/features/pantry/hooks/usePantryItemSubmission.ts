@@ -260,7 +260,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
         inline: {
           name: itemName.trim(),
           brand: brand.trim() || undefined,
-          category: category.trim() || undefined,
+          category: refByIdOrName(null, category),
           units: itemUnits,
           netWeight: netWeight,
           displayUnitId: displayUnitId,

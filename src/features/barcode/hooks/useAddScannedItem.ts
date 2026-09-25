@@ -55,6 +55,19 @@ const addToPantryItemsConnection =
 /** A scanned item is always one container: the per-container weight is separate. */
 const SCANNED_QUANTITY = 1;
 
+/**
+ * A scan names the scanned barcode's product record when the lookup found one,
+ * so the add stores that pack's size, brand and barcode; else the item.
+ */
+const scannedPantrySource = (item: ScannedItem) =>
+  item.variationId ? { variation: item.variationId } : { id: item.id };
+const scannedListItemRef = (item: ScannedItem) =>
+  item.variationId ? { variation: item.variationId } : { itemId: item.id };
+
+/** The unit an add naming none counts in; the default unit on a fresh item. */
+const scannedUnitId = (item: ScannedItem) =>
+  item.trackingUnit?.id ?? item.unitId;
+
 const RESTOCKED_QUANTITY = gql`
   fragment _ScannedRestockQuantity on PantryItem {
     id
@@ -152,20 +165,14 @@ export function useAddScannedItem({
     const id = generateEntityId();
     unconfirmedCreates.mark(id);
 
+    // No `netWeight` or `unit`: the scan's own figure is the record's to store,
+    // and one sent here would be kept as the user's edit.
     const input: CreatePantryItemInput = {
       id,
       pantryId,
-      item: { id: item.id },
+      item: scannedPantrySource(item),
       quantity: SCANNED_QUANTITY,
       today: toDateKey(new Date()),
-      ...(item.netWeight != null && item.displayUnit?.id
-        ? {
-            netWeight: {
-              netWeight: item.netWeight,
-              netWeightUnitId: item.displayUnit.id,
-            },
-          }
-        : {}),
     };
 
     // Built before the try: `?.`/`??` are value blocks, and one inside a try
@@ -177,7 +184,7 @@ export function useAddScannedItem({
         itemName: item.name,
         itemId: item.id,
         quantity: SCANNED_QUANTITY,
-        unitId: item.displayUnit?.id ?? item.unitId,
+        unitId: scannedUnitId(item),
       },
       client.cache,
     );
@@ -334,8 +341,8 @@ export function useAddScannedItem({
       itemName: item.name,
       quantity: SCANNED_QUANTITY,
       itemId: item.id,
-      unitId: item.displayUnit?.id ?? item.unitId,
-      unitName: item.displayUnit?.name,
+      unitId: scannedUnitId(item),
+      unitName: item.trackingUnit?.symbol,
     });
     try {
       addOptimisticShoppingListItem(
@@ -355,17 +362,12 @@ export function useAddScannedItem({
         items: [
           {
             id,
-            item: { itemId: item.id },
+            item: scannedListItemRef(item),
             quantity: SCANNED_QUANTITY,
-            unit: refByIdOrName(item.displayUnit?.id ?? item.unitId, null),
-            unitLabel: item.displayUnit?.name,
-            brand: refByIdOrName(item.brandId, item.brandName),
-            netWeight: item.netWeight
-              ? {
-                  netWeight: item.netWeight,
-                  netWeightUnitId: item.displayUnit?.id,
-                }
-              : undefined,
+            // A record brings its own brand; one sent here would replace it.
+            brand: item.variationId
+              ? undefined
+              : refByIdOrName(item.brandId, item.brandName),
           },
         ],
       },

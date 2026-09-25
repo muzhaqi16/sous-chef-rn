@@ -6,6 +6,7 @@
     "descriptionPlaceholder": "Una breve descripción de la receta...",
     "imageUrl": "URL de imagen",
     "imageUrlPlaceholder": "https://...",
+    "videoUrl": "URL del vídeo",
     "caloriesPerServing": "Calorías/Ración",
     "prepTimeMin": "Tiempo de prep. (min)",
     "cookTimeMin": "Tiempo de cocción (min)",

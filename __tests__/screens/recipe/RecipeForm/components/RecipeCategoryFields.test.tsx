@@ -37,6 +37,7 @@ describe('RecipeCategoryFields', () => {
     name: 'Test Recipe',
     description: '',
     imageUrl: '',
+    videoUrl: '',
     servings: '4',
     prepTimeMinutes: '10',
     cookTimeMinutes: '20',

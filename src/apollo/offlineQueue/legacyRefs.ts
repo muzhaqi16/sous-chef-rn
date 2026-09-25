@@ -78,7 +78,15 @@ const withStorageLocation = (input: Input): Input => {
   return { ...input, storage: location ? { ...rest, location } : rest };
 };
 
-/** An inline item's `units` and `netWeights`, each unit by reference. */
+/** A category named in words, which the input now takes as a reference. */
+const withCategoryRef = (item: Input): Input => {
+  if (typeof item.category !== 'string') return item;
+  const { category, ...rest } = item;
+  const name = text(category);
+  return name ? { ...rest, category: { name } } : rest;
+};
+
+/** An inline item's category, `units` and `netWeights`, each by reference. */
 const inlineItem = (item: Input): Input => {
   const units = Array.isArray(item.units)
     ? item.units.filter(isRecord).flatMap(row => {
@@ -97,17 +105,21 @@ const inlineItem = (item: Input): Input => {
         return unit ? [{ ...rest, unit }] : [];
       })
     : item.netWeights;
-  return {
+  return withCategoryRef({
     ...item,
     ...(units !== undefined && { units }),
     ...(netWeights !== undefined && { netWeights }),
-  };
+  });
 };
 
 /** `itemId` / an inline `item` as `item: { id } | { inline }`, the id winning. */
 const withItemSource = (input: Input): Input => {
   const { itemId, item, ...rest } = input;
-  if (isRecord(item) && ('id' in item || 'inline' in item)) return input;
+  if (isRecord(item) && isRecord(item.inline)) {
+    const inline = withCategoryRef(item.inline);
+    return inline === item.inline ? input : { ...rest, item: { inline } };
+  }
+  if (isRecord(item) && ('id' in item || 'variation' in item)) return input;
   const id = text(itemId);
   if (id) return { ...rest, item: { id } };
   return isRecord(item)
@@ -154,6 +166,28 @@ const purchasedMoveHints = (input: Input): Input => {
   return { ...rest, pantryItemHints: pantryItemIds };
 };
 
+/** `{ diet | intolerance | healthGoal }` beside the severity, as its `kind`. */
+const restrictionKind = (input: Input): Input => {
+  if ('kind' in input) return input;
+  const { diet, intolerance, healthGoal, ...rest } = input;
+  const kind =
+    diet != null
+      ? { diet }
+      : intolerance != null
+      ? { intolerance }
+      : healthGoal != null
+      ? { healthGoal }
+      : null;
+  return kind ? { ...rest, kind } : input;
+};
+
+/** A date of birth sent as a UTC-midnight instant, as the calendar date it named. */
+const dateOfBirthDay = (input: Input): Input => {
+  const value = input.dateOfBirth;
+  if (typeof value !== 'string' || !value.includes('T')) return input;
+  return { ...input, dateOfBirth: value.slice(0, 10) };
+};
+
 const SKILL_LEVELS = new Set<string>(Object.values(CookingSkillLevel));
 
 /** The Title-case level an older build stored, as the enum it became. */
@@ -174,7 +208,9 @@ type RewrittenInput =
   | 'AddItemsToShoppingListInput'
   | 'UpdateShoppingListItemInput'
   | 'MovePurchasedItemsToPantryInput'
-  | 'UpdateDietaryProfileInput';
+  | 'UpdateDietaryProfileInput'
+  | 'AddRestrictionInput'
+  | 'UpdateProfileInput';
 
 const REWRITES: Readonly<Record<RewrittenInput, (input: Input) => Input>> = {
   CreatePantryItemInput: pantryItemWrite,
@@ -187,6 +223,8 @@ const REWRITES: Readonly<Record<RewrittenInput, (input: Input) => Input>> = {
   UpdateShoppingListItemInput: input => withBrand(withUnit(input, true)),
   MovePurchasedItemsToPantryInput: purchasedMoveHints,
   UpdateDietaryProfileInput: dietarySkillLevel,
+  AddRestrictionInput: restrictionKind,
+  UpdateProfileInput: dateOfBirthDay,
 };
 
 export const withRefInputs = (

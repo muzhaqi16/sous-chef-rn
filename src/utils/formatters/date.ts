@@ -30,6 +30,9 @@ export const formatDayOfMonth = (date: Date): string => display(date, 'd');
 export const formatDateTime = (date: Date): string =>
   display(date, 'MMM d, yyyy, h:mm a');
 
+/** The locale's own time of day: `6:30 PM` in en, `18:30` in es. */
+export const formatTimeOfDay = (date: Date): string => display(date, 'p');
+
 /** The locale's own short date: `11/4/2026` in en, `04/11/2026` in es. */
 export const formatShortDate = (date: Date): string => display(date, 'P');
 

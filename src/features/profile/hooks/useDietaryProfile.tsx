@@ -252,7 +252,7 @@ export const useDietaryProfile = () => {
       () =>
         addRestriction({
           variables: {
-            input: { ...restriction, severity, notes, appliesToHomeId },
+            input: { kind: restriction, severity, notes, appliesToHomeId },
           },
           // No optimisticResponse to tear down — queue offline and replay
           // idempotently; the cache update runs on the (replayed) response.
