@@ -359,6 +359,46 @@ describe('settleMutation', () => {
     });
   });
 
+  it("puts a value refused before any resolver ran on its field's copy", async () => {
+    const refused = new CombinedGraphQLErrors({
+      errors: [
+        {
+          message: SERVER_TEXT,
+          extensions: { code: 'BAD_USER_INPUT', field: 'input.media.imageUrl' },
+        },
+      ],
+    });
+    const settled = await settleMutation(
+      () => Promise.resolve({ error: refused }),
+      {
+        ...options,
+        present: 'none',
+      },
+    );
+
+    expect(settled.failure).toMatchObject({
+      field: 'imageUrl',
+      body: t('errors.field.imageUrl'),
+    });
+  });
+
+  it('names the list, not the index, for a refused list entry', async () => {
+    const refused = new CombinedGraphQLErrors({
+      errors: [
+        {
+          message: SERVER_TEXT,
+          extensions: { code: 'BAD_USER_INPUT', field: 'input.emails.1' },
+        },
+      ],
+    });
+    const settled = await settleMutation(throwing(refused), {
+      ...options,
+      present: 'none',
+    });
+
+    expect(settled.failure?.field).toBe('emails');
+  });
+
   it("shows a thrown refusal's code copy, not its text", async () => {
     await settleMutation(throwing(graphQLError(ErrorCode.Forbidden)), options);
 

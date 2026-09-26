@@ -22,6 +22,7 @@ import {
   VERSION_CONFLICT_CODES,
 } from '#/utils/errors/versionConflict';
 import { getNotFoundMessage } from '#/utils/errors/notFoundMessage';
+import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
 import {
   getRateLimitMessage,
   isRateLimitError,
@@ -91,6 +92,14 @@ type MutationResult<TData> = { data?: TData | null; error?: unknown };
 const stringOrNull = (value: unknown): string | null =>
   typeof value === 'string' && value ? value : null;
 
+// A dotted path's last named segment: `input.media.imageUrl` is `imageUrl`, and
+// a list index names no field, so `input.emails.1` is `emails`.
+const fieldName = (path: string | null | undefined): string | null =>
+  path
+    ?.split('.')
+    .filter(segment => !/^\d+$/.test(segment))
+    .pop() ?? null;
+
 function failureFromError(error: unknown): Failure {
   // A failure the server gave no verdict on carries no code worth naming.
   const code = isTransportFailure(error)
@@ -98,7 +107,8 @@ function failureFromError(error: unknown): Failure {
     : errorService.parseApolloError(error, { logError: false }).error?.code;
   return {
     code: code ?? null,
-    field: null,
+    // A scalar refused before any resolver ran names its path here.
+    field: fieldName(getTopLevelGraphQLError(error)?.field),
     resource: null,
     validUnits: [],
     denial: null,
@@ -118,7 +128,7 @@ function failureFromPayload(payload: object): Failure {
     'availableUnitSymbol' in payload ? payload.availableUnitSymbol : undefined;
   return {
     code: stringOrNull(code),
-    field: stringOrNull(field)?.split('.').pop() ?? null,
+    field: fieldName(stringOrNull(field)),
     resource: stringOrNull(resource),
     validUnits: Array.isArray(validUnits)
       ? validUnits.filter(unit => typeof unit === 'string')

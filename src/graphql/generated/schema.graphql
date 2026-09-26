@@ -5675,16 +5675,14 @@ input ItemNetWeightInput {
 
 """
 Sort options for item lists (items, searchItems). Object-map convention:
-set the field(s) to sort by to ASC or DESC.
+set the field(s) to sort by to ASC or DESC. Every field set is applied, in the
+order declared here, whatever order the request writes them in.
 """
 input ItemOrderBy {
   createdAt: SortOrder
-  imageCount: SortOrder
   name: SortOrder
   popularity: SortOrder
-  price: SortOrder
   shelfLife: SortOrder
-  unitPrice: SortOrder
   updatedAt: SortOrder
 }
 
@@ -6653,8 +6651,7 @@ input MarkRecipeAsCookedInput {
   Servings cooked, counted as Spoonacular counts them: the recipe's ingredient
   amounts make `Recipe.servings` servings, so each is scaled by
   servings / Recipe.servings (4 servings of a 4-serving recipe is the recipe
-  as written; 2 is half). Unlike `addRecipeToShoppingList`, whose servings is
-  a plain multiplier. Omit to cook the whole recipe. Must be positive.
+  as written; 2 is half). Omit to cook the whole recipe. Must be positive.
   """
   servings: Float
 }
@@ -10942,7 +10939,9 @@ type Query {
   and a UPC/SKU lookup each return a single page, so after, before and last
   are refused, and each applies a subset of the filters. A filter the
   request's mode does not apply is refused with a validation error naming
-  it, never ignored.
+  it, never ignored. The orderBy applies in every mode: isPopular and
+  isTrending still select the most popular items, and isRecent the newest,
+  then return them in the requested order.
   """
   items(
     """Resume after this cursor: a previous page's endCursor"""
@@ -10955,7 +10954,9 @@ type Query {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
-    """Sort order; newest first when omitted"""
+    """
+    Sort order; most popular first when omitted, and newest first for isRecent
+    """
     orderBy: ItemOrderBy
   ): ItemConnection!
   """
@@ -11340,7 +11341,7 @@ type Query {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
-    """Sort order; newest first when omitted"""
+    """Sort order; ranked by relevance when omitted"""
     orderBy: ItemOrderBy
     """The search text"""
     query: String!
@@ -11516,7 +11517,7 @@ type Query {
     first: Int
     """Page size, reading backward: default 20, at most 100"""
     last: Int
-    """Sort order; newest first when omitted"""
+    """Sort order; by name when omitted"""
     orderBy: StoreOrderBy
   ): StoreConnection!
   """
@@ -14112,7 +14113,11 @@ input StoreLocationInput {
 
 """
 Sort options for the stores list. Object-map convention: set a field to
-ASC or DESC. Setting `popularity` routes to the popular-stores ranking.
+ASC or DESC. `popularity` is the quality rating, unrated stores last in
+either direction; setting it makes the list a single page, sorted by
+popularity, then name, then createdAt. Otherwise the fields set apply in the
+order declared here, whatever order the request writes them in. A nearby or
+recommended list is returned in the order set here.
 """
 input StoreOrderBy {
   createdAt: SortOrder
