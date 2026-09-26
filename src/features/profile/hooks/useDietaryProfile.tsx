@@ -15,6 +15,7 @@ import type {
   Diet,
   Intolerance,
   HealthGoal,
+  RestrictionKindInput,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
 import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
@@ -238,11 +239,7 @@ export const useDietaryProfile = () => {
   };
 
   const addDietaryRestriction = async (
-    restriction: {
-      diet?: Diet;
-      intolerance?: Intolerance;
-      healthGoal?: HealthGoal;
-    },
+    restriction: RestrictionKindInput,
     severity: RestrictionSeverity,
     notes?: string,
     appliesToHomeId?: string,

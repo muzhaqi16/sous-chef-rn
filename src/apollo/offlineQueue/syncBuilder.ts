@@ -1,5 +1,6 @@
 import type { DocumentNode } from 'graphql';
 import { gql, type ApolloCache } from '@apollo/client';
+import type { BrandRefInput } from '#/graphql/generated/schemaTypes';
 import type { QueuedMutation, ReplayInputs } from './types';
 import { queuedSubject } from './queuedSubject';
 import { firstNonBlank } from '#/utils/firstNonBlank';
@@ -83,6 +84,8 @@ export interface QueuedInput {
   quantity?: number | string;
   unit?: UnitSpec | null;
   unitLabel?: string | null;
+  // `legacyRefs` rewrites an older build's brandId/brandName to this before replay.
+  brand?: BrandRefInput | null;
   unitId?: string;
   purchased?: boolean;
   purchaseTracking?: Record<string, unknown>;

@@ -11,6 +11,7 @@ import {
 import type { UseItemForEdit_ItemFragment } from '#features/catalog/hooks/useItemForEdit.generated';
 import type { AddItemFormData } from './createItemMapping';
 import type { AddItemFormInitialData } from '#features/catalog/ui/AddItemForm/AddItemForm';
+import { refByIdOrName } from '#/utils/refInput';
 
 /**
  * The pre-edit original `buildSuggestibleItemChanges` diffs against. Source it
@@ -222,11 +223,12 @@ export function buildSuggestibleItemChanges(
   const brandChanged = formData.brandId
     ? formData.brandId !== original.brandId
     : !!brandName && brandName !== norm(original.brandName);
+  const brand = brandChanged
+    ? refByIdOrName(formData.brandId, brandName)
+    : undefined;
 
-  if (brandChanged) {
-    changes.brand = formData.brandId
-      ? { id: formData.brandId }
-      : { name: brandName };
+  if (brand) {
+    changes.brand = brand;
     changedFields.push('brand');
     if (original.brandId) {
       changes.brandOps = { removeBrandIds: [original.brandId] };

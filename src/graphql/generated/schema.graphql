@@ -916,7 +916,7 @@ input BrandOrderBy {
 A brand, by id or by name: exactly one. On an update, `brand: null` clears a
 single-brand field.
 """
-input BrandRefInput {
+input BrandRefInput @oneOf {
   id: ID
   """Matched exactly; a brand is created when none has this name"""
   name: String
@@ -1262,7 +1262,7 @@ input CategoryOrderBy {
 }
 
 """A category, named exactly one way: by id, by slug, or by name."""
-input CategoryRefInput {
+input CategoryRefInput @oneOf {
   id: ID
   name: String
   slug: String
@@ -1779,7 +1779,7 @@ Always include a __typename so the variant can be discriminated.
 union CorrectPantryItemPackageSizeResult = ConflictError | CorrectPantryItemPackageSizePayload | ForbiddenError | NotFoundError | ValidationError
 
 """An ISO 3166-1 alpha-2 country code, e.g. "AL"."""
-scalar CountryCode
+scalar CountryCode @specifiedBy(url: "https://www.iso.org/iso-3166-country-codes.html")
 
 input CreateBrandInput {
   description: String
@@ -2631,7 +2631,7 @@ type Currency {
 }
 
 """An ISO 4217 currency code, e.g. "EUR" or "ALL"."""
-scalar CurrencyCode
+scalar CurrencyCode @specifiedBy(url: "https://www.iso.org/iso-4217-currency-codes.html")
 
 """
 How the currency on a pantry money figure was decided — observed from the
@@ -2699,7 +2699,7 @@ input DateRangeInput {
 """
 A date-time string at UTC, such as 2007-12-03T10:15:30Z, compliant with the `date-time` format outlined in section 5.6 of the RFC 3339 profile of the ISO 8601 standard for representation of dates and times using the Gregorian calendar.This scalar is serialized to a string in ISO 8601 format and parsed from a string in ISO 8601 format.
 """
-scalar DateTime
+scalar DateTime @specifiedBy(url: "https://www.rfc-editor.org/rfc/rfc3339#section-5.6")
 
 input DeclineHomeInviteInput {
   token: String!
@@ -3905,7 +3905,7 @@ interface Edge {
 }
 
 """An email address (RFC 5322 addr-spec)."""
-scalar EmailAddress
+scalar EmailAddress @specifiedBy(url: "https://www.rfc-editor.org/rfc/rfc5322#section-3.4.1")
 
 input EnableHomeJoinLinkInput {
   """ID of the home to enable the join link for."""
@@ -5634,7 +5634,7 @@ enum ItemImageStatus {
 Find one item by a single identifier: exactly one of a barcode or a store SKU.
 The result is a single page.
 """
-input ItemLookupInput {
+input ItemLookupInput @oneOf {
   """A store's SKU"""
   sku: SkuLookupInput
   """A UPC/EAN barcode"""
@@ -5770,7 +5770,7 @@ item id, a scanned barcode's product record, or a free-text name. Enforced by
 the GraphQL executor (@oneOf) — the request is rejected before any resolver
 runs if zero or two are provided.
 """
-input ItemRefInput {
+input ItemRefInput @oneOf {
   itemId: ID
   itemName: String
   """
@@ -6053,7 +6053,7 @@ enum ItemValidationWarningCode {
 """
 The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
 """
-scalar JSON
+scalar JSON @specifiedBy(url: "http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf")
 
 input JoinHomeByCodeInput {
   joinCode: String!
@@ -6202,7 +6202,7 @@ enum ListStatus {
 """
 A calendar date as YYYY-MM-DD, with no time and no timezone. A value with a time is rejected.
 """
-scalar LocalDate
+scalar LocalDate @specifiedBy(url: "https://www.rfc-editor.org/rfc/rfc3339#section-5.6")
 
 type LocationStat {
   count: Int!
@@ -7010,7 +7010,7 @@ Mutually-exclusive meal reference: supply exactly one of a recipe id or a
 free-text custom meal name. Enforced by the GraphQL executor (@oneOf) — the
 request is rejected before any resolver runs if zero or both are provided.
 """
-input MealRefInput {
+input MealRefInput @oneOf {
   customMealName: String
   recipeId: ID
 }
@@ -9129,7 +9129,7 @@ input PackageInfoInput {
 """
 What a package-size correction restates: exactly one of the batch's size or its portions.
 """
-input PackageSizeCorrectionInput {
+input PackageSizeCorrectionInput @oneOf {
   """
   The batch's true net weight per tracking unit, in a unit of the same kind as the stack's net weight
   """
@@ -9880,7 +9880,7 @@ type PantryItemPhoto {
 The catalog item a pantry stack holds: exactly one of an existing item, a
 scanned barcode's product record, or an item described inline.
 """
-input PantryItemSourceInput {
+input PantryItemSourceInput @oneOf {
   """An existing catalog item"""
   id: ID
   """An item described inline: matched by UPC, then by name, else created"""
@@ -12709,7 +12709,7 @@ union RestorePantryItemResult = ConflictError | DuplicatePantryItemError | Forbi
 """
 What one restriction restricts: exactly one of a diet, an intolerance or a health goal.
 """
-input RestrictionKindInput {
+input RestrictionKindInput @oneOf {
   diet: Diet
   healthGoal: HealthGoal
   intolerance: Intolerance
@@ -13863,7 +13863,7 @@ A storage location, by id or by name: exactly one. A name matches a root
 location of the pantry's home in any case, and creates one at the root when
 none does; a nested location is reachable only by id.
 """
-input StorageLocationRefInput {
+input StorageLocationRefInput @oneOf {
   id: ID
   name: String
 }
@@ -14641,7 +14641,7 @@ type TimeSeriesDataPoint {
 }
 
 """An IANA time zone name, e.g. "Europe/Tirane" or "UTC"."""
-scalar TimeZone
+scalar TimeZone @specifiedBy(url: "https://www.iana.org/time-zones")
 
 input ToggleReviewHelpfulInput {
   isHelpful: Boolean!
@@ -14865,7 +14865,7 @@ enum TrustLevel {
 }
 
 """An absolute http(s) URL, at most 2048 characters."""
-scalar URL
+scalar URL @specifiedBy(url: "https://url.spec.whatwg.org/#absolute-url-string")
 
 """Sub-input for UI preferences"""
 input UiPreferencesInput {
@@ -14964,7 +14964,7 @@ A unit, by exactly one of its id, its symbol or its name. A symbol matches
 exact case first ("mL" vs "ML"), then any case; a name matches any case. A
 symbol or name no unit has creates a count unit under it.
 """
-input UnitRefInput {
+input UnitRefInput @oneOf {
   id: ID
   name: String
   symbol: String
@@ -16176,7 +16176,7 @@ union UpsertItemUnitConversionResult = ConflictError | ForbiddenError | NotFound
 """
 How much of a stack one use takes: exactly one of a quantity or everything.
 """
-input UsageAmountInput {
+input UsageAmountInput @oneOf {
   """
   true to use everything the stack holds, whatever it is; the record states that amount in the
   tracking unit. Refused when the stack is already empty. false is refused.

@@ -13,9 +13,8 @@ import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import type {
   CookingSkillLevel,
   Diet,
-  Intolerance,
-  HealthGoal,
   Cuisine,
+  RestrictionKindInput,
 } from '#/graphql/generated/schemaTypes';
 import { RestrictionSeverity } from '#/graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
@@ -78,11 +77,7 @@ export const DietaryProfileScreen: React.FC = () => {
 
   // Batch add restrictions handler
   const handleAddRestrictions = async (
-    restrictions: {
-      diet?: Diet;
-      intolerance?: Intolerance;
-      healthGoal?: HealthGoal;
-    }[],
+    restrictions: RestrictionKindInput[],
     severity: RestrictionSeverity,
   ) => {
     let allSucceeded = false;
