@@ -25,10 +25,9 @@ export const SignUpScreen = (): React.JSX.Element => {
   const isRegistering = useAppStore(state => state.authIsLoading);
   const { navigateToLogin } = useAuthNavigation();
 
-  // Registration is verification-first: a successful `register` sends an
-  // activation mail and opens NO session. On success we swap the form for the
-  // code-entry screen (same for a new or already-registered email —
-  // existence-blind) instead of navigating into the app.
+  // A successful `register` mails a code and signs in, which hands over to the
+  // root navigator's verification gate. An address that refuses the password
+  // (taken, or a deleted account) swaps the form for code entry instead.
   const [sentToEmail, setSentToEmail] = useState<string | null>(null);
 
   const form = useForm<SignUpValues>({
@@ -46,14 +45,14 @@ export const SignUpScreen = (): React.JSX.Element => {
     const input: RegisterInput = { name, email, password };
 
     // Uses default rememberMe=true
-    let ok;
+    let outcome;
     try {
-      ok = await authService.register(input);
+      outcome = await authService.register(input);
     } catch (err) {
       authService.handleAuthError(err, 'Registration');
     }
 
-    if (ok) {
+    if (outcome === 'verificationSent') {
       setSentToEmail(email);
     }
   };
