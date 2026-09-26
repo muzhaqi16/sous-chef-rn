@@ -35,6 +35,7 @@ export interface PantryItemFixture {
   id: string;
   itemName?: string;
   quantity?: number;
+  heldQuantity?: number;
 }
 
 export interface StorageLocationFixture {
@@ -85,6 +86,13 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
     itemId: `item-${item.id}`,
     itemName: item.itemName ?? `Item ${item.id}`,
     quantity: item.quantity ?? 1,
+    heldQuantity: item.heldQuantity ?? item.quantity ?? 1,
+    // Shown in the unit it counts in, as the server shows a stack of pieces.
+    displayAmount: {
+      __typename: 'DisplayAmount',
+      quantity: item.heldQuantity ?? item.quantity ?? 1,
+      unit: { __typename: 'Unit', id: 'unit-piece', symbol: 'pc' },
+    },
     createdAt: '2026-01-01',
     updatedAt: '2026-01-01',
     storageState: StorageState.Ambient,
@@ -118,9 +126,7 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
   };
 }
 
-function storageLocationNode(
-  loc: StorageLocationFixture,
-): StorageLocationNode {
+function storageLocationNode(loc: StorageLocationFixture): StorageLocationNode {
   return {
     __typename: 'StorageLocation',
     id: loc.id,

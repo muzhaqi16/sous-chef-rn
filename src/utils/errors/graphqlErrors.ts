@@ -14,6 +14,8 @@ export class GraphQLNetworkError extends Error {
 export interface TopLevelGraphQLError {
   code: string;
   message: string;
+  /** The refused argument path (`input.email`) of a value no resolver saw. */
+  field: string | null;
 }
 
 /** Reads the first top-level GraphQL error's code + message from an Apollo
@@ -27,9 +29,11 @@ export function getTopLevelGraphQLError(
   }
   const first = error.errors[0];
   if (!first) return null;
+  const field = first.extensions?.field;
   return {
     code: describeValue(first.extensions?.code ?? ''),
     message: first.message,
+    field: typeof field === 'string' && field ? field : null,
   };
 }
 

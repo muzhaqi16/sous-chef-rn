@@ -54,7 +54,8 @@
       "uniqueConstraint": "Este valor ya existe",
       "unitInvalid": "Esa unidad no se puede usar aquí.",
       "validationFailed": "Revisa los datos introducidos e inténtalo de nuevo",
-      "versionConflict": "Otro usuario ha actualizado este elemento. Actualiza e inténtalo de nuevo."
+      "versionConflict": "Otro usuario ha actualizado este elemento. Actualiza e inténtalo de nuevo.",
+      "unitChangeNeedsResolution": "Este cambio de unidad es solo una estimación. Elige si usar la estimación o introducir la cantidad tú mismo."
     },
     "addItemFailed": "No se pudo añadir el artículo",
     "updateItemFailed": "No se pudo actualizar el artículo",
@@ -140,7 +141,7 @@
     "recordWasteFailedRetry": "No se pudo registrar el desperdicio del artículo. Inténtalo de nuevo.",
     "moveToPantryFailedRetry": "No se pudo mover el artículo a la despensa. Inténtalo de nuevo.",
     "adjustQuantityFailed": "No se pudo ajustar la cantidad.",
-    "correctWeightFailed": "No se pudo corregir el peso.",
+    "correctWeightFailed": "No se pudo corregir el tamaño del paquete.",
     "openBatchFailed": "No se pudo abrir este lote.",
     "wasteBatchFailed": "No se pudo marcar como desperdiciado.",
     "updateShoppingItemFailed": "No se pudo actualizar el artículo.",
@@ -163,7 +164,7 @@
     "generic": "Se ha producido un error",
     "noActiveMealPlan": "No hay plan de comidas activo. Crea uno primero.",
     "field": {
-      "unit": "La unidad de este artículo no se puede usar ahora. Vacía primero sus lotes o elige una unidad compatible: una unidad inventada no se puede medir frente a otra.",
+      "unit": "La unidad de este artículo se cambia desde el campo Unidad, que muestra qué pasa con sus existencias antes de guardar.",
       "usageUnitId": "Este artículo no se puede registrar en esa unidad. Elige una de la lista.",
       "netWeight": "Introduce el tamaño del paquete y su unidad, o deja ambos vacíos.",
       "quantity": "Esa cantidad no es válida. Prueba con un número como 2, 0,5 o 1 1/2.",
@@ -175,9 +176,21 @@
       "currentPassword": "Esa contraseña actual no es correcta. Compruébala e inténtalo de nuevo.",
       "servingsMade": "Introduce un número entero de raciones mayor que cero",
       "key": "No se pudo confirmar esa imagen. Vuelve a elegirla e inténtalo de nuevo.",
-      "imageUrl": "La URL de la imagen debe empezar por http:// o https://",
-      "website": "El sitio web debe empezar por http:// o https://"
-    }
+      "imageUrl": "Introduce la URL completa de la imagen, empezando por http:// o https://",
+      "videoUrl": "Introduce la URL completa del vídeo, empezando por http:// o https://",
+      "website": "El sitio web debe empezar por http:// o https://",
+      "packageSize": "Indica el tamaño del paquete en una unidad del mismo tipo que la de este artículo (peso con peso, volumen con volumen).",
+      "resolution": "Elige si usar la estimación o introducir la cantidad tú mismo.",
+      "amount": "Es más de lo que le queda a este artículo.",
+      "unitId": "Esa unidad no se puede usar aquí. Elige una de la lista."
+    },
+    "unitDenied": {
+      "noRoute": "Esa unidad no se puede convertir a la forma en que se registra este artículo.",
+      "missingFact": "Usar esa unidad requiere un dato que este artículo aún no tiene, como el tamaño del paquete o la densidad.",
+      "inexpressible": "Las existencias de este artículo no se pueden medir en esa unidad."
+    },
+    "unitRefusedTryUnits": "{{reason}} Unidades que sirven aquí: {{units}}.",
+    "onlyAvailable": "Solo quedan {{amount}} {{unit}}."
   },
   "success": {
     "itemAdded": "Artículo añadido",
@@ -730,7 +743,7 @@
   "pushNotification": {
     "title": "{{appName}}",
     "body": "Tienes una notificación nueva",
-    "coalesced_one": "{{count}} novedad mientras no estabas",
-    "coalesced_other": "{{count}} novedades mientras no estabas"
+    "coalesced_one": "{{count}} notificación nueva",
+    "coalesced_other": "{{count}} notificaciones nuevas"
   }
 }

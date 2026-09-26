@@ -118,6 +118,9 @@ interface BuildItemOverrides {
   id?: string;
   itemName?: string;
   quantity?: number;
+  heldQuantity?: number;
+  /** The server's display amount; the held amount in the tracking unit if absent. */
+  shown?: { quantity: number; symbol: string };
   unitSymbol?: string;
   storageLocationName?: string | null;
   expiresOn?: string | null;
@@ -150,6 +153,20 @@ function buildItem(
     id: overrides.id ?? 'pantry-1',
     itemName: overrides.itemName ?? 'Milk',
     quantity: overrides.quantity ?? 2,
+    heldQuantity: overrides.heldQuantity ?? overrides.quantity ?? 2,
+    displayAmount: {
+      __typename: 'DisplayAmount',
+      quantity:
+        overrides.shown?.quantity ??
+        overrides.heldQuantity ??
+        overrides.quantity ??
+        2,
+      unit: {
+        __typename: 'Unit',
+        id: overrides.shown ? 'unit-shown' : 'unit-1',
+        symbol: overrides.shown?.symbol ?? overrides.unitSymbol ?? 'gal',
+      },
+    },
     portionUnitId: overrides.portionUnit?.id ?? null,
     portionUnit: overrides.portionUnit
       ? { __typename: 'Unit', ...overrides.portionUnit }
@@ -267,6 +284,16 @@ describe('PantryItemCard', () => {
   it('renders quantity in right slot', () => {
     renderCard();
     expect(screen.getByText('2 gal')).toBeTruthy();
+  });
+
+  it('shows the stack as the server shows it: 12 pc as 1 doz', () => {
+    renderCard({
+      quantity: 12,
+      unitSymbol: 'pc',
+      shown: { quantity: 1, symbol: 'doz' },
+    });
+    expect(screen.getByText('1 doz')).toBeTruthy();
+    expect(screen.queryByText('12 pc')).toBeNull();
   });
 
   it('renders custom storage location when provided', () => {

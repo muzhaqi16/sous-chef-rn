@@ -194,6 +194,7 @@ export class ErrorService {
     // Pantry Errors
     PANTRY_ITEM_ALREADY_EXISTS: 'pantryItemAlreadyExists',
     INSUFFICIENT_QUANTITY: 'insufficientQuantity',
+    UNIT_CHANGE_NEEDS_RESOLUTION: 'unitChangeNeedsResolution',
     // A low-stock line skipped because the target list already carries it.
     ITEM_ALREADY_IN_LIST: 'shoppingItemAlreadyExists',
 

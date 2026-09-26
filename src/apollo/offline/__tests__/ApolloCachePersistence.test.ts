@@ -15,7 +15,7 @@ const VERSION_KEY = 'apollo-cache-version';
 const LEGACY_KEYS = ['apollo-cache-v1-critical', 'apollo-cache-v1-deferred'];
 // Identifies the shape of a persisted blob, not the app version that wrote it
 // — `CURRENT_CACHE_VERSION` in ApolloCachePersistence. Keep in step with it.
-const CURRENT_VERSION = 'shape-3';
+const CURRENT_VERSION = 'shape-4';
 
 const schedule = (cache: NormalizedCacheObject) =>
   apolloCachePersistence.scheduleExtractAndSave(() => cache);

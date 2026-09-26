@@ -704,7 +704,6 @@ mutation AddCollaborator($input: InviteToShoppingListInput!) {
         ...ShoppingListCollaboratorFragment
         canEdit
         invitedAt
-        lastViewedAt
       }
     }
     ... on Error {
@@ -753,6 +752,7 @@ mutation AddItemToShoppingList($input: AddItemsToShoppingListInput!) {
         success
         code
         quantityIncremented
+        packageSizeCleared
         error
         item {
           id
@@ -1026,6 +1026,11 @@ mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {
     }
     ... on ValidationError {
       field
+    }
+    ... on UnitEligibilityError {
+      field
+      validUnits
+      denial
     }
   }
 }

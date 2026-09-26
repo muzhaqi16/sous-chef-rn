@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet } from 'react-native-unistyles';
+import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import {
   alertService,
   type AlertEntry,
@@ -75,6 +76,18 @@ const AlertCard: React.FC<AlertCardProps> = ({
   const depthTranslateY = isTop ? 0 : ALERT.DEPTH_TRANSLATE_Y;
   const depthOpacity = isTop ? 1 : ALERT.DEPTH_OPACITY;
 
+  const animatedTheme = useAnimatedTheme();
+  const cardSurfaceStyle = useAnimatedStyle(() => {
+    const theme = animatedTheme.get();
+    return {
+      margin: theme.spacing.mdPlus,
+      padding: theme.spacing.mdPlus,
+      borderRadius: theme.radii.lg,
+      backgroundColor: theme.colors.surface,
+      ...theme.shadows.lg,
+    };
+  });
+
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.get() * depthOpacity,
     transform: [
@@ -94,6 +107,7 @@ const AlertCard: React.FC<AlertCardProps> = ({
       testID={isTop ? kitTestIDs.alertModal : kitTestIDs.alertModalBehind}
       style={[
         styles.card,
+        cardSurfaceStyle,
         animatedStyle,
         { zIndex: zIndex.modal - stackIndex },
       ]}
@@ -203,7 +217,7 @@ const AlertStack: React.FC<AlertStackProps> = ({ alerts, onDismiss }) => {
 
   return (
     <View style={styles.stackContainer}>
-      <Animated.View style={[styles.backdrop, backdropStyle]}>
+      <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
         <Pressable
           style={styles.backdropPressable}
           onPress={handleBackdropPress}
@@ -289,25 +303,14 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: theme.colors.black,
-  },
   backdropPressable: {
     flex: 1,
+    backgroundColor: theme.colors.black,
   },
+  // Themed surface values are in `cardSurfaceStyle`.
   card: {
     position: 'absolute',
-    margin: theme.spacing.mdPlus,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
-    padding: theme.spacing.mdPlus,
-    ...theme.shadows.lg,
     minWidth: 300,
     maxWidth: '85%',
   },

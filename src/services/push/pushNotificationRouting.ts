@@ -28,9 +28,8 @@ export const routeNotificationTap = (
 ): void => {
   const { category } = readTapData(data);
 
-  // Category alone. Quiet hours DELAY each notification's own push rather than
-  // merging them (`docs/guides/push-notifications.md` § Consent and gating), so
-  // no delivery stands for several and there is nothing to route around.
+  // Category alone. A summary push stands for several deferred notifications
+  // and carries no row's category, so it falls through to the feed.
   const route = STATIC_FEATURE_REGISTRY.find(
     feature => feature.pushRoute?.category === category?.toUpperCase(),
   )?.pushRoute;

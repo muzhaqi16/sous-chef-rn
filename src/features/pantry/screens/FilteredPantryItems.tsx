@@ -68,6 +68,8 @@ interface FilteredItem {
   itemId: string;
   itemName: string;
   quantity: number;
+  heldQuantity: number;
+  displayAmount: { quantity: number; unit: { symbol: string } };
   unit: { id: string; symbol: string } | null;
   isLowStock: boolean;
   expiresOn: string | null;
@@ -122,8 +124,8 @@ function buildModeConfig(
       filter: item => item.isLowStock,
       subtitle: item =>
         t('filteredPantry.remaining', {
-          quantity: formatQuantityForDisplay(item.quantity),
-          unit: item.unit?.symbol ?? '',
+          quantity: formatQuantityForDisplay(item.displayAmount.quantity),
+          unit: item.displayAmount.unit.symbol,
         }).trim(),
       tutorialSteps: [
         {

@@ -1,4 +1,5 @@
 import type {
+  Cuisine,
   RecipeStatus,
   Difficulty,
   RecipeCategory,
@@ -31,6 +32,7 @@ export interface RecipeFormState {
   name: string;
   description: string;
   imageUrl: string;
+  videoUrl: string;
   servings: string;
   prepTimeMinutes: string;
   cookTimeMinutes: string;
@@ -38,7 +40,7 @@ export interface RecipeFormState {
   // Category
   difficulty: Difficulty | null;
   category: RecipeCategory | null;
-  cuisine: string;
+  cuisines: Cuisine[];
   status: RecipeStatus;
   // Tags
   diets: Diet[];

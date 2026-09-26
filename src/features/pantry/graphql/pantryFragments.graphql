@@ -28,7 +28,11 @@ fragment PantryItemBatchFragment on PantryItemBatch {
   isOpened
   openedAt
   depletedAt
+  # This package's own size, in the stack's net-weight unit; the stack's
+  # netWeight is only the default new stock inherits.
+  netWeight
   remainingNetWeight
+  portionsPerTrackingUnit
   createdAt
   updatedAt
   wasteReason

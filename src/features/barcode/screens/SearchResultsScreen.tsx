@@ -20,6 +20,7 @@ import { useBottomSheetState } from '#features/barcode/store/barcodeScannerStore
 import { useSearchResults } from '../hooks/useSearchResults';
 import type { BarcodeSource } from '#features/barcode/types';
 import type { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
+import type { ScannedPack } from '#utils/items/suggestItemChanges';
 import { Screen } from '#components/templates/Screen';
 
 /** Build form initialData from a ScannedItem for edit/variant modes */
@@ -38,6 +39,21 @@ function buildInitialDataFromItem(item: ScannedItem): AddItemFormInitialData {
     shelfLifeOpenedDays: item.shelfLifeOpenedDays,
     tags: item.tags,
     categoryIds: item.categories?.map(c => c.id),
+  };
+}
+
+/** The scanned barcode's record and pack, for a correction aimed at it. */
+function scannedPackOf(
+  item: ScannedItem,
+): (ScannedPack & { variationId: string }) | undefined {
+  if (!item.variationId) return undefined;
+  return {
+    variationId: item.variationId,
+    netWeight: item.netWeight,
+    netWeightKind: item.netWeightKind,
+    displayUnit: item.displayUnit,
+    brandId: item.brandId,
+    brandName: item.brandName,
   };
 }
 
@@ -79,7 +95,7 @@ export const SearchResultsScreen: React.FC<
     handleAddItem,
     handleRetry,
     clearSearch,
-  } = useSearchResults(barcode, format);
+  } = useSearchResults(barcode, format, pantryId);
 
   // Hide bottom sheet when search results are found or barcode changes
   // This prevents the AddItemForm from showing when there's already a match
@@ -220,6 +236,7 @@ export const SearchResultsScreen: React.FC<
               itemId={currentItem.id}
               barcode={barcode}
               format={format}
+              scan={scannedPackOf(currentItem)}
               onClose={hideBottomSheet}
             />
           ) : (

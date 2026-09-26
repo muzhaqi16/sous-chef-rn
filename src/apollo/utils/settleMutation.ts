@@ -1,9 +1,14 @@
 import type { DocumentNode } from 'graphql';
 import { ServerError } from '@apollo/client/errors';
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  TopLevelErrorCode,
+  UnitDenial,
+} from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { errorService, isTransportFailure } from '#/services/errorService';
-import { isTranslationKey, t } from '#/i18n';
+import { isTranslationKey, t, type TranslationKey } from '#/i18n';
+import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import {
   alertVersionConflict,
   reportMutationFailure,
@@ -17,6 +22,7 @@ import {
   VERSION_CONFLICT_CODES,
 } from '#/utils/errors/versionConflict';
 import { getNotFoundMessage } from '#/utils/errors/notFoundMessage';
+import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
 import {
   getRateLimitMessage,
   isRateLimitError,
@@ -73,6 +79,12 @@ interface Failure {
   code: string | null;
   field: string | null;
   resource: string | null;
+  /** `UnitEligibilityError`: the units the operation would take, best first. */
+  validUnits: readonly string[];
+  denial: string | null;
+  /** `InsufficientQuantityError`: what the stack holds, in the unit asked. */
+  available: number | null;
+  availableUnitSymbol: string | null;
 }
 
 type MutationResult<TData> = { data?: TData | null; error?: unknown };
@@ -80,23 +92,73 @@ type MutationResult<TData> = { data?: TData | null; error?: unknown };
 const stringOrNull = (value: unknown): string | null =>
   typeof value === 'string' && value ? value : null;
 
+// A dotted path's last named segment: `input.media.imageUrl` is `imageUrl`, and
+// a list index names no field, so `input.emails.1` is `emails`.
+const fieldName = (path: string | null | undefined): string | null =>
+  path
+    ?.split('.')
+    .filter(segment => !/^\d+$/.test(segment))
+    .pop() ?? null;
+
 function failureFromError(error: unknown): Failure {
   // A failure the server gave no verdict on carries no code worth naming.
   const code = isTransportFailure(error)
     ? null
     : errorService.parseApolloError(error, { logError: false }).error?.code;
-  return { code: code ?? null, field: null, resource: null };
+  return {
+    code: code ?? null,
+    // A scalar refused before any resolver ran names its path here.
+    field: fieldName(getTopLevelGraphQLError(error)?.field),
+    resource: null,
+    validUnits: [],
+    denial: null,
+    available: null,
+    availableUnitSymbol: null,
+  };
 }
 
 function failureFromPayload(payload: object): Failure {
   const code = 'code' in payload ? payload.code : undefined;
   const field = 'field' in payload ? payload.field : undefined;
   const resource = 'resource' in payload ? payload.resource : undefined;
+  const validUnits = 'validUnits' in payload ? payload.validUnits : undefined;
+  const denial = 'denial' in payload ? payload.denial : undefined;
+  const available = 'available' in payload ? payload.available : undefined;
+  const availableUnitSymbol =
+    'availableUnitSymbol' in payload ? payload.availableUnitSymbol : undefined;
   return {
     code: stringOrNull(code),
-    field: stringOrNull(field)?.split('.').pop() ?? null,
+    field: fieldName(stringOrNull(field)),
     resource: stringOrNull(resource),
+    validUnits: Array.isArray(validUnits)
+      ? validUnits.filter(unit => typeof unit === 'string')
+      : [],
+    denial: stringOrNull(denial),
+    available: typeof available === 'number' ? available : null,
+    availableUnitSymbol: stringOrNull(availableUnitSymbol),
   };
+}
+
+const UNIT_DENIAL_COPY: Readonly<Record<UnitDenial, TranslationKey>> = {
+  [UnitDenial.NoRoute]: 'errors.unitDenied.noRoute',
+  [UnitDenial.MissingFact]: 'errors.unitDenied.missingFact',
+  [UnitDenial.Inexpressible]: 'errors.unitDenied.inexpressible',
+};
+
+const isUnitDenial = (value: string | null): value is UnitDenial =>
+  value !== null && value in UNIT_DENIAL_COPY;
+
+/** Why the unit was refused, and the units that would work instead. */
+function unitRefusalBody({ denial, validUnits }: Failure): string {
+  const reason = isUnitDenial(denial)
+    ? t(UNIT_DENIAL_COPY[denial])
+    : t('errors.codes.unitInvalid');
+  return validUnits.length > 0
+    ? t('errors.unitRefusedTryUnits', {
+        reason,
+        units: validUnits.join(', '),
+      })
+    : reason;
 }
 
 type Classified =
@@ -159,10 +221,11 @@ export function settledStatus(
 }
 
 function describe(
-  { code, field, resource }: Failure,
+  failure: Failure,
   error: unknown,
   options: SettleOptions,
 ): SettledFailure {
+  const { code, field, resource, available, availableUnitSymbol } = failure;
   const title = options.title ?? t('labels.error');
   const copy: Partial<Record<string, { title: string; body: string }>> =
     options.copy ?? {};
@@ -187,7 +250,18 @@ function describe(
       code,
       field,
       title: t('errors.invalidUnitTitle'),
-      body: t('errors.codes.unitInvalid'),
+      body: unitRefusalBody(failure),
+    };
+  }
+  if (code === ErrorCode.InsufficientQuantity && available !== null) {
+    return {
+      code,
+      field,
+      title,
+      body: t('errors.onlyAvailable', {
+        amount: formatQuantityForDisplay(available),
+        unit: availableUnitSymbol ?? '',
+      }),
     };
   }
   if (isGoneCode(code)) {

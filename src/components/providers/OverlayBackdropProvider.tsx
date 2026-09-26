@@ -300,13 +300,16 @@ export const GlobalBackdrop: React.FC = () => {
     return null;
   }
 
+  // No themed Unistyles style on the animated node: Unistyles would capture
+  // reanimated's React-side opacity and write it back over the animation, so
+  // the colour sits one level down.
   return (
     <Animated.View
-      style={[styles.backdrop, animatedStyle]}
+      style={[StyleSheet.absoluteFill, animatedStyle]}
       pointerEvents={isVisible ? 'auto' : 'none'}
     >
       <Pressable
-        style={styles.pressable}
+        style={styles.scrim}
         onPress={handlePress}
         accessible={false}
       />
@@ -315,15 +318,8 @@ export const GlobalBackdrop: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: theme.colors.black,
-  },
-  pressable: {
+  scrim: {
     flex: 1,
+    backgroundColor: theme.colors.black,
   },
 }));

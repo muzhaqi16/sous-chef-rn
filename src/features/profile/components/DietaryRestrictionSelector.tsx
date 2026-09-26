@@ -10,6 +10,7 @@ import {
   Intolerance,
   HealthGoal,
   RestrictionSeverity,
+  type RestrictionKindInput,
 } from '#/graphql/generated/schemaTypes';
 import { isLifestyleDiet } from '#domain/dietary';
 import { executeWriteWithFinally } from '#/utils/finallyHelpers';
@@ -87,12 +88,6 @@ const HEALTH_GOALS: { labelKey: TranslationKey; value: HealthGoal }[] = [
   },
 ];
 
-type RestrictionType = {
-  diet?: Diet;
-  intolerance?: Intolerance;
-  healthGoal?: HealthGoal;
-};
-
 type DietaryRestrictionSelectorProps = {
   existingRestrictions: {
     id: string;
@@ -101,7 +96,7 @@ type DietaryRestrictionSelectorProps = {
     healthGoal?: HealthGoal | null;
   }[];
   onAdd: (
-    restrictions: RestrictionType[],
+    restrictions: RestrictionKindInput[],
     severity: RestrictionSeverity,
   ) => Promise<boolean>;
   onRemove: (id: string) => void;
@@ -280,7 +275,7 @@ export const DietaryRestrictionSelector: React.FC<
 
     void executeWriteWithFinally(
       async () => {
-        const restrictions: RestrictionType[] = selectedConstraintIds.map(
+        const restrictions: RestrictionKindInput[] = selectedConstraintIds.map(
           diet => ({ diet }),
         );
 
@@ -312,7 +307,7 @@ export const DietaryRestrictionSelector: React.FC<
 
     void executeWriteWithFinally(
       async () => {
-        const restrictions: RestrictionType[] = selectedIntoleranceIds.map(
+        const restrictions: RestrictionKindInput[] = selectedIntoleranceIds.map(
           intolerance => ({
             intolerance,
           }),
@@ -346,7 +341,7 @@ export const DietaryRestrictionSelector: React.FC<
 
     void executeWriteWithFinally(
       async () => {
-        const restrictions: RestrictionType[] = selectedGoalIds.map(
+        const restrictions: RestrictionKindInput[] = selectedGoalIds.map(
           healthGoal => ({
             healthGoal,
           }),

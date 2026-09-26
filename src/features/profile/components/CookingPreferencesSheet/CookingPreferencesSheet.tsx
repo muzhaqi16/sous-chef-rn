@@ -11,7 +11,8 @@ import { FormInput } from '#components/atoms/FormInput';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
-import { SKILL_LEVELS, DIETARY_LIMITS } from '#domain/dietary';
+import { SKILL_LEVELS, DIETARY_LIMITS, knownSkillLevel } from '#domain/dietary';
+import type { CookingSkillLevel } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
@@ -24,13 +25,13 @@ interface CookingPreferencesSheetProps {
   visible: boolean;
   onClose: () => void;
   onSave: (values: {
-    cookingSkillLevel?: string;
+    cookingSkillLevel?: CookingSkillLevel;
     maxPrepTimeMinutes?: number;
     maxCookTimeMinutes?: number;
     budgetPerMeal?: number;
   }) => Promise<boolean>;
   initialValues?: {
-    cookingSkillLevel?: string | null;
+    cookingSkillLevel?: CookingSkillLevel | null;
     maxPrepTimeMinutes?: number | null;
     maxCookTimeMinutes?: number | null;
     budgetPerMeal?: number | null;
@@ -52,20 +53,16 @@ export const CookingPreferencesSheet: React.FC<
   });
 
   // Form state
-  const [skillLevel, setSkillLevel] = useState('');
+  const [skillLevel, setSkillLevel] = useState<CookingSkillLevel | null>(null);
   const [skillPickerVisible, setSkillPickerVisible] = useState(false);
 
-  // The VALUE stays the English enum the API stores; only the label is copy.
   const skillLevelOptions = SKILL_LEVELS.map(level => ({
     label: t(`cookingPreferences.skillLevels.${level}`),
     value: level,
   }));
-  // The API field is a free string, so a stored level outside SKILL_LEVELS
-  // shows as written rather than as a key path.
-  const knownSkillLevel = SKILL_LEVELS.find(level => level === skillLevel);
-  const skillLevelLabel = knownSkillLevel
-    ? t(`cookingPreferences.skillLevels.${knownSkillLevel}`)
-    : skillLevel || t('cookingPreferences.selectSkillLevel');
+  const skillLevelLabel = skillLevel
+    ? t(`cookingPreferences.skillLevels.${skillLevel}`)
+    : t('cookingPreferences.selectSkillLevel');
   const [prepTime, setPrepTime] = useState('');
   const [cookTime, setCookTime] = useState('');
   const [budget, setBudget] = useState('');
@@ -78,7 +75,7 @@ export const CookingPreferencesSheet: React.FC<
     setPrevVisible(visible);
     setPrevInitialValues(initialValues);
     if (visible) {
-      setSkillLevel(initialValues?.cookingSkillLevel ?? '');
+      setSkillLevel(knownSkillLevel(initialValues?.cookingSkillLevel));
       setPrepTime(initialValues?.maxPrepTimeMinutes?.toString() ?? '');
       setCookTime(initialValues?.maxCookTimeMinutes?.toString() ?? '');
       setBudget(formatNumberForInput(initialValues?.budgetPerMeal));
@@ -87,15 +84,14 @@ export const CookingPreferencesSheet: React.FC<
 
   const handleSave = async () => {
     const updates: {
-      cookingSkillLevel?: string;
+      cookingSkillLevel?: CookingSkillLevel;
       maxPrepTimeMinutes?: number;
       maxCookTimeMinutes?: number;
       budgetPerMeal?: number;
     } = {};
 
-    // Validate and add skill level if provided
-    if (skillLevel.trim()) {
-      updates.cookingSkillLevel = skillLevel.trim();
+    if (skillLevel) {
+      updates.cookingSkillLevel = skillLevel;
     }
 
     // Validate and add prep time if provided

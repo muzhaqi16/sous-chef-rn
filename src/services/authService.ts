@@ -428,11 +428,19 @@ async function login(
      * `AUTH_EMAIL_NOT_VERIFIED`, which the emailed code clears.
      */
     onRefusal?: (code: string) => void;
+    /** Logs a failure without telling the user, for a caller whose fallback does. */
+    quiet?: boolean;
   },
 ): Promise<boolean> {
   const showRememberPrompt = options?.showRememberPrompt ?? true;
+  const quiet = options?.quiet ?? false;
   const store = useStore.getState();
   store.setAuthIsLoading(true);
+
+  const reportError = (error: unknown) => {
+    if (quiet) logger.warn('Login failed', error);
+    else handleAuthError(error);
+  };
 
   try {
     // `authLink` sends the id it already holds. A session minted without it is
@@ -456,7 +464,7 @@ async function login(
         // incomplete, so reporting success leaves the user on the form with
         // nothing said. `userProfileCompleteness.test.ts` pins the shape.
         logger.error('Login succeeded but the LoginUser read was incomplete');
-        toastService.error(t('errors.codes.genericRetry'));
+        if (!quiet) toastService.error(t('errors.codes.genericRetry'));
         store.setAuthIsLoading(false);
         return false;
       }
@@ -477,13 +485,18 @@ async function login(
 
     const refusal = result.data?.login;
     if (refusal && 'code' in refusal) {
-      handleRejectedAuthPayload(refusal, operationNameOf(LoginDocument));
+      if (quiet) {
+        logger.warn(`Login rejected by the server: ${refusal.code}`);
+        store.setAuthIsLoading(false);
+      } else {
+        handleRejectedAuthPayload(refusal, operationNameOf(LoginDocument));
+      }
       options?.onRefusal?.(refusal.code);
       return false;
     }
 
     if (result.error) {
-      handleAuthError(result.error);
+      reportError(result.error);
       store.setAuthIsLoading(false);
       return false;
     }
@@ -491,16 +504,23 @@ async function login(
     store.setAuthIsLoading(false);
     return false;
   } catch (error) {
-    handleAuthError(error);
+    reportError(error);
     store.setAuthIsLoading(false);
     return false;
   }
 }
 
+/**
+ * `signedIn`: `login` admitted the new, unverified account, so the verification
+ * gate and its skip take over. `verificationSent`: the address refused the
+ * password just typed, as one held by another account or a deleted one does.
+ */
+type RegisterOutcome = 'signedIn' | 'verificationSent' | 'failed';
+
 async function register(
   input: RegisterInput,
   shouldRemember = true,
-): Promise<boolean> {
+): Promise<RegisterOutcome> {
   const store = useStore.getState();
   store.setAuthIsLoading(true);
 
@@ -524,20 +544,28 @@ async function register(
       },
     },
   );
-  store.setAuthIsLoading(false);
 
   if (settled.failure) {
+    store.setAuthIsLoading(false);
     toastService.error(settled.failure.body);
-    return false;
+    return 'failed';
   }
-  if (settled.status !== 'applied') return false;
+  if (settled.status !== 'applied') {
+    store.setAuthIsLoading(false);
+    return 'failed';
+  }
 
-  // Registration is verification-first and existence-blind: the API sends an
-  // activation email and issues NO tokens. Do NOT set auth here — the user
-  // activates via the emailed link, then logs in.
   store.setRememberMe(shouldRemember);
   logger.info('Registration successful: verification email sent');
-  return true;
+
+  // `register` issues no tokens, but `login` admits an unverified account.
+  // Never after verifying instead: a deleted account is restored under its
+  // ORIGINAL password, which this one need not be.
+  const signedIn = await login(
+    { email: input.email, password: input.password },
+    { showRememberPrompt: false, quiet: true },
+  );
+  return signedIn ? 'signedIn' : 'verificationSent';
 }
 
 /** Longest a best-effort revoke may hold the sign-out. */

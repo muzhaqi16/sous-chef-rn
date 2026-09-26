@@ -47,6 +47,7 @@ fragment HomeDetailScreen_home on Home {
         id
         status
         email
+        recipientName
         ...HomeInviteCard_invite
       }
     }

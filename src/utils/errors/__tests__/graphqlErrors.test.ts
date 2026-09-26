@@ -31,14 +31,32 @@ describe('getTopLevelGraphQLError', () => {
     expect(getTopLevelGraphQLError(error)).toEqual({
       code: 'UNAUTHENTICATED',
       message: 'Token expired',
+      field: null,
     });
+  });
+
+  it('reads the path of a value refused before any resolver ran', () => {
+    const error = new CombinedGraphQLErrors({
+      errors: [
+        {
+          message: 'EmailAddress must be an email address',
+          extensions: { code: 'BAD_USER_INPUT', field: 'input.email' },
+        },
+      ],
+    } satisfies FormattedExecutionResult);
+
+    expect(getTopLevelGraphQLError(error)?.field).toBe('input.email');
   });
 
   it('defaults code/message to empty strings when missing', () => {
     const error = new CombinedGraphQLErrors({
       errors: [{ message: '' }],
     } satisfies FormattedExecutionResult);
-    expect(getTopLevelGraphQLError(error)).toEqual({ code: '', message: '' });
+    expect(getTopLevelGraphQLError(error)).toEqual({
+      code: '',
+      message: '',
+      field: null,
+    });
   });
 
   it('returns null for a non-GraphQL error', () => {

@@ -360,61 +360,63 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     return <View style={commonStyles.rowWrapper} />;
   }
 
-  // One Animated.View carries both the entry animation and the slide style.
+  // The gap sits on a plain wrapper: the animated node takes no themed style.
   return (
-    <Animated.View style={[commonStyles.rowWrapper, animatedSlideStyle]}>
-      {isTutorialItemCardTarget ? (
-        <View
-          ref={itemCardRef}
-          collapsable={false}
-          onLayout={handleItemCardLayout}
-          style={styles.measureOverlay}
-          pointerEvents="none"
-        />
-      ) : null}
-      <SwipeableItem
-        itemId={itemId}
-        // Keyed by id, not index: a drag would repoint an index-keyed testID at
-        // a different row. Swipe actions append `-edit` / `-delete`.
-        testIDPrefix={shoppingListTestIDs.itemRow(itemId)}
-        onPress={onItemPress ? () => onItemPress(itemId) : undefined}
-        // Hold an unpurchased row to record actual qty/price; falls back to
-        // details otherwise. The tutorial advances when that sheet CLOSES
-        // (ShoppingListModalsContext), not here where it has only just opened.
-        onLongPress={
-          !isPurchased && onTogglePurchase
-            ? () => onTogglePurchase(itemId, { withDetails: true })
-            : onItemPress
-            ? () => onItemPress(itemId)
-            : undefined
-        }
-        // Edit left, delete right. The descriptors come from the screen; the
-        // permission gate stays here because it is per-row.
-        leftActions={canEditItems ? swipeActions?.left : undefined}
-        rightActions={canRemoveItems ? swipeActions?.right : undefined}
-        friction={1}
-        onSwipeableWillOpen={ref => {
-          onSwipeableWillOpen?.(ref);
-          if (isTutorialSwipeTarget) {
-            tutorialActions?.notifySwipeActionsSeen();
+    <View style={commonStyles.rowWrapper}>
+      <Animated.View style={animatedSlideStyle}>
+        {isTutorialItemCardTarget ? (
+          <View
+            ref={itemCardRef}
+            collapsable={false}
+            onLayout={handleItemCardLayout}
+            style={styles.measureOverlay}
+            pointerEvents="none"
+          />
+        ) : null}
+        <SwipeableItem
+          itemId={itemId}
+          // Keyed by id, not index: a drag would repoint an index-keyed testID at
+          // a different row. Swipe actions append `-edit` / `-delete`.
+          testIDPrefix={shoppingListTestIDs.itemRow(itemId)}
+          onPress={onItemPress ? () => onItemPress(itemId) : undefined}
+          // Hold an unpurchased row to record actual qty/price; falls back to
+          // details otherwise. The tutorial advances when that sheet CLOSES
+          // (ShoppingListModalsContext), not here where it has only just opened.
+          onLongPress={
+            !isPurchased && onTogglePurchase
+              ? () => onTogglePurchase(itemId, { withDetails: true })
+              : onItemPress
+              ? () => onItemPress(itemId)
+              : undefined
           }
-        }}
-        onSwipeableClose={onSwipeableClose}
-        enabled={swipeEnabled}
-      >
-        <ListItem
-          title={itemName}
-          subtitle={subtitle}
-          rightElement={rightElement}
-          leftElement={leftElement}
-          checkboxElement={checkboxElement}
-          dragHandleElement={null}
-          rightIcon={undefined}
-          isPurchased={isPurchased}
-          themeColors={themeColors}
-        />
-      </SwipeableItem>
-    </Animated.View>
+          // Edit left, delete right. The descriptors come from the screen; the
+          // permission gate stays here because it is per-row.
+          leftActions={canEditItems ? swipeActions?.left : undefined}
+          rightActions={canRemoveItems ? swipeActions?.right : undefined}
+          friction={1}
+          onSwipeableWillOpen={ref => {
+            onSwipeableWillOpen?.(ref);
+            if (isTutorialSwipeTarget) {
+              tutorialActions?.notifySwipeActionsSeen();
+            }
+          }}
+          onSwipeableClose={onSwipeableClose}
+          enabled={swipeEnabled}
+        >
+          <ListItem
+            title={itemName}
+            subtitle={subtitle}
+            rightElement={rightElement}
+            leftElement={leftElement}
+            checkboxElement={checkboxElement}
+            dragHandleElement={null}
+            rightIcon={undefined}
+            isPurchased={isPurchased}
+            themeColors={themeColors}
+          />
+        </SwipeableItem>
+      </Animated.View>
+    </View>
   );
 };
 

@@ -26,6 +26,7 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { toDateKey } from '#/utils/dateUtils';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
+import { writeHeldStock } from '#features/pantry/cache/stock';
 
 /** What became of an add. The caller owns the toast and the animation. */
 export type AddPantryItemOutcome =
@@ -151,13 +152,22 @@ export function useAddToPantry({
     pantryItemId: string,
     cachedQuantity: number | null,
   ): Promise<RestockOutcome> => {
+    const cacheId = client.cache.identify({
+      __typename: 'PantryItem',
+      id: pantryItemId,
+    });
     const optimistic = optimisticFieldUpdate(
       client.cache,
-      client.cache.identify({ __typename: 'PantryItem', id: pantryItemId }),
+      cacheId,
       cachedQuantity === null ? null : { quantity: cachedQuantity },
       { quantity: (cachedQuantity ?? 0) + 1 },
       'Restock Pantry Item',
     );
+    // The amount the screens show moves with the count.
+    const undoHeld =
+      cachedQuantity === null
+        ? () => {}
+        : writeHeldStock(client.cache, pantryItemId, held => held + 1);
 
     // The sheet tells the user; the settle classifies, reverts and reports.
     const settled = await settleMutation(
@@ -176,7 +186,10 @@ export function useAddToPantry({
       {
         document: RestockPantryItemDocument,
         fallback: t('addToPantry.restockFailed'),
-        onFailed: optimistic.revert,
+        onFailed: () => {
+          optimistic.revert();
+          undoHeld();
+        },
         present: 'none',
       },
     );
@@ -227,7 +240,10 @@ export function useAddToPantry({
     const today = toDateKey(new Date());
     try {
       result = await createPantryItem({
-        variables: { input: { id, pantryId, itemId, today }, today },
+        variables: {
+          input: { id, pantryId, item: { id: itemId }, today },
+          today,
+        },
         context: { localFirst: true },
       });
     } catch (error) {

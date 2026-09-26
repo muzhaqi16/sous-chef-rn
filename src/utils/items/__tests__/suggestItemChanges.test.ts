@@ -7,6 +7,8 @@ import {
 import {
   buildInitialDataFromSnapshot,
   buildSuggestibleItemChanges,
+  splitBarcodeChanges,
+  withScannedPack,
   type EditableItemSnapshot,
 } from '../suggestItemChanges';
 import type { AddItemFormData } from '../createItemMapping';
@@ -140,7 +142,7 @@ describe('buildSuggestibleItemChanges', () => {
       unchangedForm({ brandId: 'brand-2', brandName: 'Globex' }),
     );
 
-    expect(diff.changes.brand).toEqual({ brandId: 'brand-2' });
+    expect(diff.changes.brand).toEqual({ id: 'brand-2' });
     expect(diff.changes.brandOps).toEqual({ removeBrandIds: ['brand-1'] });
   });
 
@@ -150,7 +152,7 @@ describe('buildSuggestibleItemChanges', () => {
       unchangedForm({ brandId: 'brand-2', brandName: 'Globex' }),
     );
 
-    expect(diff.changes.brand).toEqual({ brandId: 'brand-2' });
+    expect(diff.changes.brand).toEqual({ id: 'brand-2' });
     expect(diff.changes).not.toHaveProperty('brandOps');
   });
 
@@ -162,7 +164,7 @@ describe('buildSuggestibleItemChanges', () => {
       unchangedForm({ brandId: undefined, brandName: 'Typed Brand' }),
     );
 
-    expect(diff.changes.brand).toEqual({ brandName: 'Typed Brand' });
+    expect(diff.changes.brand).toEqual({ name: 'Typed Brand' });
     expect(diff.changes.brandOps).toEqual({ removeBrandIds: ['brand-1'] });
   });
 
@@ -187,19 +189,21 @@ describe('buildSuggestibleItemChanges', () => {
   });
 
   // A unit the catalog doesn't have comes back from the picker with no unitId.
-  // The server resolves displayUnitName find-or-create, so the change has to
-  // travel by name or it is silently lost.
-  it('falls back to displayUnitName when the unit was free-typed', () => {
+  // The server resolves a display unit by name find-or-create, so the change
+  // has to travel by name or it is silently lost.
+  it('names the display unit when the unit was free-typed', () => {
     const diff = buildSuggestibleItemChanges(
       snapshot(),
       unchangedForm({ netWeights: [{ value: 500, unitName: 'punnet' }] }),
     );
 
-    expect(diff.changes.packageInfo).toEqual({ displayUnitName: 'punnet' });
-    expect(diff.changedFields).toContain('packageInfo.displayUnitName');
+    expect(diff.changes.packageInfo).toEqual({
+      displayUnit: { name: 'punnet' },
+    });
+    expect(diff.changedFields).toContain('packageInfo.displayUnit');
   });
 
-  it('prefers displayUnitId over the name when the picker resolved the unit', () => {
+  it('refers to the display unit by id when the picker resolved it', () => {
     const diff = buildSuggestibleItemChanges(
       snapshot(),
       unchangedForm({
@@ -207,8 +211,9 @@ describe('buildSuggestibleItemChanges', () => {
       }),
     );
 
-    expect(diff.changes.packageInfo).toEqual({ displayUnitId: 'unit-oz' });
-    expect(diff.changes.packageInfo).not.toHaveProperty('displayUnitName');
+    expect(diff.changes.packageInfo).toEqual({
+      displayUnit: { id: 'unit-oz' },
+    });
   });
 
   it('does not treat a re-typed identical unit name as a change', () => {
@@ -321,4 +326,66 @@ describe('buildInitialDataFromSnapshot — what a net weight measures', () => {
       expect(initial.netWeights).toBeUndefined();
     });
   }
+});
+
+// A barcode's record takes only its pack: size, what the size measures, unit
+// and brand. Anything else in the edit is the item's.
+describe('splitBarcodeChanges', () => {
+  it("sends the pack's size and brand to the barcode, the rest to the item", () => {
+    const { barcode, item } = splitBarcodeChanges({
+      name: 'Oat Milk',
+      brand: { id: 'brand-2' },
+      brandOps: { removeBrandIds: ['brand-1'] },
+      packageInfo: {
+        netWeight: 500,
+        displayUnit: { id: 'unit-g' },
+        baseDimension: BaseDimension.Mass,
+      },
+    });
+
+    expect(barcode).toEqual({
+      brand: { id: 'brand-2' },
+      packageInfo: {
+        netWeight: 500,
+        netWeightKind: NetWeightKind.Package,
+        displayUnit: { id: 'unit-g' },
+      },
+    });
+    // Replacing the barcode's brand removes nothing from the item's brands.
+    expect(item).toEqual({
+      name: 'Oat Milk',
+      packageInfo: { baseDimension: BaseDimension.Mass },
+    });
+  });
+
+  it('leaves the barcode nothing when the edit touches no pack fact', () => {
+    expect(splitBarcodeChanges({ name: 'Oat Milk' })).toEqual({
+      barcode: {},
+      item: { name: 'Oat Milk' },
+    });
+  });
+});
+
+describe('withScannedPack', () => {
+  it("diffs against the scanned barcode's pack, not the item's", () => {
+    const original = withScannedPack(
+      snapshot({ netWeight: 1000, displayUnitId: 'unit-g', brandId: 'b-1' }),
+      {
+        netWeight: 30,
+        netWeightKind: NetWeightKind.Serving,
+        displayUnit: { id: 'unit-g', name: 'g' },
+        brandId: 'b-pack',
+        brandName: 'Pack Brand',
+      },
+    );
+
+    expect(original).toMatchObject({
+      netWeight: 30,
+      netWeightKind: NetWeightKind.Serving,
+      displayUnitId: 'unit-g',
+      displayUnitName: 'g',
+      brandId: 'b-pack',
+      brandName: 'Pack Brand',
+    });
+  });
 });

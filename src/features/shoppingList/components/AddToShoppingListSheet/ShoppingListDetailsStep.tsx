@@ -118,8 +118,7 @@ export const ShoppingListDetailsStep: React.FC<
           itemName,
           quantityInput,
           unitName: unit || undefined,
-          unitId:
-            'unit' in unitData ? unitData.unit.unitId ?? undefined : undefined,
+          unitId: unitData.unit?.id ?? undefined,
           notes: notes || undefined,
           category: category || undefined,
           estimatedPrice: estimatedPrice || undefined,

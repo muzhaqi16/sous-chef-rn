@@ -5,13 +5,14 @@ fragment RecipeForm_recipe on Recipe {
   name
   description
   imageUrl
+  videoUrl
   servings
   prepTimeMinutes
   cookTimeMinutes
   caloriesPerServing
   difficulty
   category
-  cuisine
+  cuisines
   status
   diets
   healthGoals

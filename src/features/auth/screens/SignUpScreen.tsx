@@ -16,21 +16,18 @@ import type { RegisterInput } from '#/graphql/generated/schemaTypes';
 import { authService } from '#/services/authService';
 import { useAppStore } from '#store/useAppStore';
 import { useAuthNavigation } from '#features/auth/hooks/useAuthNavigation';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { authTestIDs } from '#features/auth/testIDs';
 
 type SignUpValues = RegisterInput & { confirmPassword: string; name: string };
 
 export const SignUpScreen = (): React.JSX.Element => {
   const { t } = useTranslation();
-  const { goBack } = useAppNavigation();
   const isRegistering = useAppStore(state => state.authIsLoading);
   const { navigateToLogin } = useAuthNavigation();
 
-  // Registration is verification-first: a successful `register` sends an
-  // activation mail and opens NO session. On success we swap the form for the
-  // code-entry screen (same for a new or already-registered email —
-  // existence-blind) instead of navigating into the app.
+  // A successful `register` mails a code and signs in, which hands over to the
+  // root navigator's verification gate. An address that refuses the password
+  // (taken, or a deleted account) swaps the form for code entry instead.
   const [sentToEmail, setSentToEmail] = useState<string | null>(null);
 
   const form = useForm<SignUpValues>({
@@ -48,14 +45,14 @@ export const SignUpScreen = (): React.JSX.Element => {
     const input: RegisterInput = { name, email, password };
 
     // Uses default rememberMe=true
-    let ok;
+    let outcome;
     try {
-      ok = await authService.register(input);
+      outcome = await authService.register(input);
     } catch (err) {
       authService.handleAuthError(err, 'Registration');
     }
 
-    if (ok) {
+    if (outcome === 'verificationSent') {
       setSentToEmail(email);
     }
   };
@@ -69,9 +66,8 @@ export const SignUpScreen = (): React.JSX.Element => {
   }
 
   return (
-    <AuthWrapper testID={authTestIDs.signUpScreen} onBack={() => goBack()}>
+    <AuthWrapper testID={authTestIDs.signUpScreen}>
       <AuthFormTemplate<SignUpValues>
-        contentPlacement="center"
         title={t('auth.signupTitle')}
         subtitle={t('auth.signupSubtitle')}
         fields={[

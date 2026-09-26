@@ -23,8 +23,12 @@ import { useToday } from '#hooks/useToday';
 interface BatchListItemProps {
   batch: PantryItemBatchFragment;
   unitSymbol?: string;
+  /** The unit every batch's own package size is recorded in. */
+  netWeightUnitSymbol?: string;
   onOpen?: (batchId: string) => void;
   onWaste?: (batchId: string) => void;
+  /** Offered on a weighed batch: its package size can be corrected. */
+  onCorrectSize?: (batchId: string) => void;
 }
 
 /**
@@ -55,8 +59,10 @@ const formatDate = (dateString: string | null | undefined) => {
 const BatchListItemComponent: React.FC<BatchListItemProps> = ({
   batch: batchSource,
   unitSymbol,
+  netWeightUnitSymbol,
   onOpen,
   onWaste,
+  onCorrectSize,
 }) => {
   const { t } = useTranslation();
   const today = useToday();
@@ -98,6 +104,16 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
         <Text role="caption" style={styles.quantityText}>
           {formatQuantityForDisplay(batch.quantity)} {unitSymbol ?? ''}
         </Text>
+
+        {batch.netWeight != null && !!netWeightUnitSymbol && (
+          <Text role="caption" tone="tertiary" style={styles.metaText}>
+            {t('pantryItemDetail.batch.packageSize', {
+              size: `${formatQuantityForDisplay(
+                batch.netWeight,
+              )} ${netWeightUnitSymbol}`,
+            })}
+          </Text>
+        )}
 
         {expiryInfo ? (
           <View style={styles.expiryRow}>
@@ -161,6 +177,16 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               hitSlop={hitSlop.md}
             >
               <Icon name="open-outline" size={18} tone="primary" />
+            </AppPressable>
+          )}
+          {batch.netWeight != null && !!onCorrectSize && (
+            <AppPressable
+              onPress={() => onCorrectSize(batch.id)}
+              accessibilityLabel={t('correctWeight.title')}
+              style={styles.actionButton}
+              hitSlop={hitSlop.md}
+            >
+              <Icon name="scale-outline" size={18} tone="primary" />
             </AppPressable>
           )}
           {!!onWaste && (

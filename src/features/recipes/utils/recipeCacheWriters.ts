@@ -105,14 +105,19 @@ function buildOptimisticRecipeEntity(
     totalTimeMinutes: totalTime(prep, cook),
     caloriesPerServing: input.nutrition?.caloriesPerServing ?? null,
     nutritionData: (input.nutrition?.nutritionData as JsonValue) ?? null,
-    status: input.status ?? RecipeStatus.Draft,
-    isPublished: input.status === RecipeStatus.Published,
+    // A create asking to publish is stored in review until a moderator approves.
+    status:
+      !input.status || input.status === RecipeStatus.Draft
+        ? RecipeStatus.Draft
+        : RecipeStatus.PendingReview,
+    isPublished: false,
     publishedAt: null,
+    reviewNote: null,
     forkedFromId: null,
     forkedFrom: null,
     originalAuthor: input.attribution?.originalAuthor ?? null,
     tips: input.tips ?? null,
-    videoUrl: null,
+    videoUrl: input.media?.videoUrl ?? null,
     tags: input.tags ?? [],
     source: null,
     sourceUrl: null,
@@ -185,7 +190,7 @@ function writeOptimisticRecipeFormFields(
       difficulty:
         input.metadata?.difficulty ?? NEUTRAL_RECIPE_FORM_FIELDS.difficulty,
       category: input.metadata?.category ?? NEUTRAL_RECIPE_FORM_FIELDS.category,
-      cuisine: input.metadata?.cuisine ?? null,
+      cuisines: input.metadata?.cuisines ?? [],
       diets: input.dietary?.diets ?? [],
       healthGoals: input.dietary?.healthGoals ?? [],
       intolerances: input.dietary?.intolerances ?? [],

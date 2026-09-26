@@ -298,6 +298,7 @@
     }
   },
   "itemForm": {
+    "unknownUnit": "\"{{unit}}\" isn't a unit we recognise. Pick one from the list.",
     "itemInformation": "Item Information",
     "storageDetails": "Storage Details",
     "noPantrySelected": "No pantry selected. Please select a pantry first.",
@@ -309,7 +310,6 @@
     "tags": "Tags",
     "tagsPlaceholder": "Enter tags separated by commas",
     "location": "Location",
-    "netWeightLocked": "Weight locked after use — correct from item details",
     "locationPlaceholder": "e.g., Top shelf, Drawer 2",
     "storageNotes": "Storage Notes",
     "notes": "Notes",

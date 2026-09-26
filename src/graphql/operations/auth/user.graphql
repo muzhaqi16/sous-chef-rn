@@ -87,7 +87,6 @@ mutation UpdateAccount($input: UpdateAccountInput!) {
         onBoarded
         timezone
         preferredCurrency
-        language
         defaultHomeId
         createdAt
       }
@@ -275,7 +274,6 @@ subscription UserEvents($userId: ID!) {
         onBoarded
         timezone
         preferredCurrency
-        language
       }
       # PROFILE_CHANGED normalizes this node straight into the cache (see
       # useUserSubscriptions), so it writes the SAME shape `GetUserProfile`

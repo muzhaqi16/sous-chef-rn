@@ -326,9 +326,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
                   ),
             };
           }}
-          resolveInviteLabel={invite =>
-            getInviteDisplayName({ email: invite.email }, t)
-          }
+          resolveInviteLabel={invite => getInviteDisplayName(invite, t)}
           onChangeRole={changeRole}
           onRemove={removeMember}
           onTransferOwnership={handleTransferOwnership}

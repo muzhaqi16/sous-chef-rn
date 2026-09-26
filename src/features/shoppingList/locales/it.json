@@ -161,7 +161,8 @@
     "priorityMedium": "Media",
     "priorityHigh": "Alta",
     "store": "Negozio preferito",
-    "storePlaceholder": "es., Costco"
+    "storePlaceholder": "es., Costco",
+    "packageSizeCleared": "Questo articolo era già nella lista con un'altra dimensione della confezione, quindi la riga non ne registra più una."
   },
   "purchaseHistory": {
     "quantityLabel": "Quantità:",

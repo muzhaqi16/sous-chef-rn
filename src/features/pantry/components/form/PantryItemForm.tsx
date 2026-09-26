@@ -34,6 +34,8 @@ import { QuantitySection } from './QuantitySection';
 import { StorageDetailsSection } from './StorageDetailsSection';
 import { NetWeightSection } from './NetWeightSection';
 import { usePantryItemFormSubmit } from './usePantryItemFormSubmit';
+import { editedAmount } from './editedAmount';
+import { usePantryUnitChange } from '#features/pantry/hooks/usePantryUnitChange';
 import { logValidationErrors } from '#utils/validation/common';
 import {
   TAB_FIELDS,
@@ -95,8 +97,8 @@ const formValuesFromItem = (
   item: PantryItemForm_PantryItemFragment,
 ): PantryItemFormData => ({
   itemName: item.itemName,
-  quantityInput: formatQuantityForInput(item.quantity) || '1',
-  unit: item.unit.symbol, // Tracking unit
+  quantityInput: formatQuantityForInput(editedAmount(item).quantity) || '1',
+  unit: editedAmount(item).unit.symbol,
   minQuantity: decimalQuantityInput(item.minQuantity),
   restockQuantity: decimalQuantityInput(item.restockQuantity),
   brand: item.brand?.name ?? '',
@@ -157,14 +159,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   } = usePantryItemFormData({ itemId, selectedHomeId, selectedPantryId });
 
   const { updatePantryItemFields } = useUpdatePantryItem({
-    onSuccess,
     refetch: () => {
       void refetchItem();
     },
   });
 
   const { updateQuantity } = useUpdatePantryItemQuantity({
-    onSuccess,
     refetch: () => {
       void refetchItem();
     },
@@ -201,6 +201,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     handleSubmit,
     formState: { errors, dirtyFields },
     setValue,
+    setError,
     reset,
     trigger,
   } = useForm<PantryItemFormData>({
@@ -218,11 +219,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     setPrevExistingItemData(itemQueryData);
     const item = existingPantryItem;
     reset(formValuesFromItem(item));
+    const { unit } = editedAmount(item);
     setTrackingUnit({
-      id: item.unit.id,
-      name: item.unit.name,
-      symbol: item.unit.symbol,
-      type: item.unit.type,
+      id: unit.id,
+      name: unit.name,
+      symbol: unit.symbol,
+      type: unit.type,
     });
   }
 
@@ -282,12 +284,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   };
 
   const item = existingPantryItem;
-  const isWeightLocked = !!item?.lastUsedAt;
+
+  const unitChange = usePantryUnitChange();
 
   const { handleSave } = usePantryItemFormSubmit({
     itemId,
     currentPantryId,
-    isWeightLocked,
     existingPantryItem,
     dirtyFields: dirtyFields,
     trackingUnit,
@@ -299,14 +301,30 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     updatePantryItemFields,
     updateQuantity,
     resolveUnitId,
+    unitChange: {
+      preview: request =>
+        unitChange.preview({ ...request, pantryItemId: itemId }),
+      change: request =>
+        unitChange.change({ ...request, pantryItemId: itemId }),
+    },
+    reportFieldError: (field, message) => {
+      setCurrentPage(PAGES.findIndex(page => TAB_FIELDS[page].includes(field)));
+      setError(field, { type: 'server', message }, { shouldFocus: false });
+    },
     onSuccess,
   });
 
   // Cache first: a locally created item is readable before any round trip, so
   // spin only when there is genuinely nothing to show. `isUnconfirmed` counts
   // as loading, not missing — the create is in flight.
+  const [isSaving, setIsSaving] = useState(false);
+  const submit = async () => {
+    setIsSaving(true);
+    await handleSubmit(handleSave, logValidationErrors)();
+    setIsSaving(false);
+  };
   const save = () => {
-    void handleSubmit(handleSave, logValidationErrors)();
+    void submit();
   };
   const shell = (children: React.ReactNode, canSave = true) => (
     <FormScreen
@@ -314,6 +332,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       onClose={() => goBack()}
       onSave={save}
       canSave={canSave}
+      loading={isSaving}
       testID={pantryTestIDs.editItemModal}
       submitButtonTestID={pantryTestIDs.editItemSubmitButton}
     >
@@ -411,7 +430,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         {currentPage === 1 && (
           <NetWeightSection
             control={control}
-            isWeightLocked={isWeightLocked}
             onNetWeightChanged={revalidateNetWeight}
             onNetWeightUnitSelected={handleNetWeightUnitSelected}
           />
@@ -445,7 +463,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           <>
             <QuantitySection
               control={control}
-              errors={errors}
               onUnitSelected={handleUnitSelected}
               testID={pantryTestIDs.editItemQuantityInput}
               unitTestID={pantryTestIDs.editItemUnitPicker}

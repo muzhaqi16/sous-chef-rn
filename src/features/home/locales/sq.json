@@ -143,8 +143,6 @@
     "owner": "Pronar",
     "permissions": {
       "viewItems": "Shiko artikujt",
-      "viewHistory": "Shiko historikun",
-      "exportList": "Eksporto listën",
       "addItems": "Shto artikuj",
       "editItems": "Modifiko artikuj",
       "removeItems": "Hiq artikuj",

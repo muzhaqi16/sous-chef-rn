@@ -31,12 +31,29 @@ fragment PantryItemForm_pantryItem on PantryItem {
   expiresOn
   netWeight
   lastUsedAt
+  activeBatchCount
   tags
   unit {
     id
     name
     symbol
     type
+  }
+  displayAmount {
+    quantity
+    unit {
+      id
+      symbol
+    }
+  }
+  # Only the server sets it, so a stack created offline has none. Its factor
+  # restates an amount edited in dozens as the pieces the stack counts in.
+  displayUnit {
+    id
+    name
+    symbol
+    type
+    conversionFactor
   }
   netWeightUnit {
     id

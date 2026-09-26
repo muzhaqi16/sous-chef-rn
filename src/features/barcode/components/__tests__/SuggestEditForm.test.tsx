@@ -10,15 +10,33 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { SuggestEditForm } from '../SuggestEditForm';
 import { GetItemForEditDocument } from '#features/catalog/hooks/useItemForEdit.generated';
-import { ItemType, StorageState } from '#/graphql/generated/schemaTypes';
+import {
+  ItemType,
+  NetWeightKind,
+  StorageState,
+} from '#/graphql/generated/schemaTypes';
 
 // AddItemForm drags in the whole form stack (react-hook-form, autocompletes,
 // image picker). This suite is about what SuggestEditForm renders *around* it.
 jest.mock('#features/catalog/ui/AddItemForm/AddItemForm', () => ({
   __esModule: true,
-  default: ({ mode }: { mode: string }) => {
+  default: ({
+    mode,
+    initialData,
+  }: {
+    mode: string;
+    initialData?: { netWeights?: Array<{ value: number; unitName: string }> };
+  }) => {
     const { Text } = jest.requireActual('react-native');
-    return <Text testID="add-item-form">{mode}</Text>;
+    const [weight] = initialData?.netWeights ?? [];
+    return (
+      <>
+        <Text testID="add-item-form">{mode}</Text>
+        <Text testID="prefilled-size">
+          {weight ? `${weight.value} ${weight.unitName}` : 'none'}
+        </Text>
+      </>
+    );
   },
 }));
 
@@ -42,15 +60,24 @@ const itemData = ({ canEdit = false, canSuggest = true } = {}): MockDataFor<
     primaryUpc: null,
     shelfLifeDays: null,
     shelfLifeOpenedDays: null,
-    netWeight: null,
+    netWeight: 1000,
+    netWeightKind: NetWeightKind.Package,
     baseDimension: null,
     imageUrl: null,
     canEdit,
     canSuggest,
-    displayUnit: null,
+    displayUnit: { __typename: 'Unit', id: 'unit-g', name: 'g', symbol: 'g' },
     brands: [],
   },
 });
+
+// The pack a barcode lookup reported: a 500 g jar of a 1 kg catalog item.
+const SCANNED_PACK = {
+  variationId: 'esm-1',
+  netWeight: 500,
+  netWeightKind: NetWeightKind.Package,
+  displayUnit: { id: 'unit-g', name: 'g' },
+};
 
 const renderForm = (operationMocks: MockedResponse[]) =>
   renderWithApollo(<SuggestEditForm itemId="item-1" onClose={jest.fn()} />, {
@@ -138,6 +165,43 @@ describe('SuggestEditForm', () => {
   // would invite an edit that could only be refused on submit, so the sheet says
   // so instead. Reachable even though the card hides its edit action for such an
   // item: a cached scan carries no flags, and only this snapshot is authoritative.
+  // A suggestion from a scan corrects that barcode's pack, so it opens on the
+  // pack the scan showed rather than on the item's own figure.
+  it('opens a suggestion on the scanned pack', async () => {
+    const { mock } = recordMock(GetItemForEditDocument, { data: itemData() });
+    renderWithApollo(
+      <SuggestEditForm
+        itemId="item-1"
+        scan={SCANNED_PACK}
+        onClose={jest.fn()}
+      />,
+      { operationMocks: [mock] },
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('prefilled-size')).toHaveTextContent('500 g'),
+    );
+  });
+
+  // A direct edit writes the item, so it stays on the item's own figure.
+  it("opens a direct edit on the item's own size", async () => {
+    const { mock } = recordMock(GetItemForEditDocument, {
+      data: itemData({ canEdit: true }),
+    });
+    renderWithApollo(
+      <SuggestEditForm
+        itemId="item-1"
+        scan={SCANNED_PACK}
+        onClose={jest.fn()}
+      />,
+      { operationMocks: [mock] },
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('prefilled-size')).toHaveTextContent('1000 g'),
+    );
+  });
+
   it('states the item is read-only when neither write path is open', async () => {
     const { mock } = recordMock(GetItemForEditDocument, {
       data: itemData({ canEdit: false, canSuggest: false }),

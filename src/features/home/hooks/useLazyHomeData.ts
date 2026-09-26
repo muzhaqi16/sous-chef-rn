@@ -1,7 +1,6 @@
 import { useLazyQuery } from '@apollo/client/react';
 import { GetHomesDocument } from '#operations/home/home.generated';
-import { useSelectedHomeId, useSelectedPantryId } from '#store/useAppStore';
-import { extractNodes } from '#/utils/connectionUtils';
+import { useSelectedPantryId } from '#store/useAppStore';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 
 /**
@@ -11,7 +10,6 @@ import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
  * Prevents unnecessary home queries during shopping list refresh.
  */
 export function useLazyHomeData() {
-  const selectedHomeId = useSelectedHomeId();
   const selectedPantryId = useSelectedPantryId();
 
   const [getHomes, { data: homesData }] = useLazyQuery(GetHomesDocument, {
@@ -23,11 +21,6 @@ export function useLazyHomeData() {
   // (preserve the connection BEFORE extracting — see usePreservedConnection).
   const homes = usePreservedNodes(homesData?.homes);
 
-  // Pantries for the current home (connection edges → flat array).
-  const pantries = selectedHomeId
-    ? extractNodes(homes.find(h => h.id === selectedHomeId)?.pantriesConnection)
-    : [];
-
   const fetchHomeData = async () => {
     if (!homesData) {
       await getHomes();
@@ -36,7 +29,6 @@ export function useLazyHomeData() {
 
   return {
     homes,
-    pantries,
     selectedPantryId,
     isLoaded: !!homesData,
     fetchHomeData,

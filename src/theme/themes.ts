@@ -204,14 +204,9 @@ export const lightTheme = {
     favorite: colors.actions.favorite.light,
     rating: colors.actions.rating.light,
 
-    // Navigation bar active accent — charade-based. The bar background
-    // (`secondaryDark`) stays dark in both themes; the active accent shifts
-    // with the theme so theme switches are visible.
-    navigationActive: colors.charade[600],
-    // FloatingTabBar `+` button background — charade[500] is a muted accent
-    // that harmonizes with the other charade-based nav elements without
-    // overpowering them like the primary brand color did.
-    navigationCta: colors.charade[500],
+    // The tab bar is `secondaryDark` in both themes; on the light page it
+    // needs no edge.
+    navigationEdge: 'transparent',
   },
 };
 
@@ -379,12 +374,9 @@ export const darkTheme = {
     favorite: colors.actions.favorite.dark,
     rating: colors.actions.rating.dark,
 
-    // Navigation bar active accent — lighter charade step for dark mode so
-    // the switch is visible against the (also-dark) bar background.
-    navigationActive: colors.charade[300],
-    // FloatingTabBar `+` button background — same charade[500] in both
-    // themes so the CTA reads consistently against the dark bar bg.
-    navigationCta: colors.charade[500],
+    // The tab bar is `secondaryDark` in both themes, which sits at 1.2:1 on
+    // this page; the edge holds 3:1 against the page, the rows and the bar.
+    navigationEdge: colors.charade[500],
   },
 };
 

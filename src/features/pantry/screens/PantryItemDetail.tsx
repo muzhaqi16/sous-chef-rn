@@ -31,7 +31,6 @@ import {
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import {
   formatQuantityForDisplay,
-  getUnitDisplayText,
   resolveQuantityNotation,
 } from '#utils/formatQuantity';
 import { BatchStatus, ItemCondition } from '#/graphql/generated/schemaTypes';
@@ -47,7 +46,7 @@ import { Icon } from '#/utils/iconUtils';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { BatchSection } from '#features/pantry/components/BatchSection';
 import { AdjustQuantityModal } from '#features/pantry/components/modals/AdjustQuantityModal';
-import { CorrectWeightModal } from '#features/pantry/components/modals/CorrectWeightModal';
+import { CorrectPackageSizeModal } from '#features/pantry/components/modals/CorrectPackageSizeModal';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { useRecipeSuggestionsForItem } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
@@ -206,9 +205,15 @@ export const PantryItemDetail: React.FC<
     );
   }
 
-  const quantityText = `${formatQuantityForDisplay(item.quantity, {
-    notation: resolveQuantityNotation(null, item.unit.displayAsFraction),
-  })} ${getUnitDisplayText(item.unit)}`;
+  // What is left, as the stack is shown: "1 doz" for 12 pc.
+  const shown = item.displayAmount;
+  const shownInOwnUnit = shown.unit.id === item.unit.id;
+  const quantityText = `${formatQuantityForDisplay(shown.quantity, {
+    notation: resolveQuantityNotation(
+      null,
+      shownInOwnUnit ? item.unit.displayAsFraction : null,
+    ),
+  })} ${shown.unit.symbol}`;
 
   // The EXPIRED flag can land a day late east of UTC, so the date decides too.
   // The batches' date, not the item's: an edit moves only the item's, and the
@@ -224,6 +229,15 @@ export const PantryItemDetail: React.FC<
         !!batch.expiresOn &&
         daysUntilExpiry(batch.expiresOn, today) < 0,
     );
+
+  const activeBatches = batches.filter(
+    batch => batch.status === BatchStatus.Active,
+  );
+  const [soleBatch] = activeBatches;
+  const soleWeighedBatchId =
+    activeBatches.length === 1 && soleBatch?.netWeight != null
+      ? soleBatch.id
+      : null;
 
   const discardActions: HeaderAction[] =
     hasExpiredBatches && permissions.canEditItems
@@ -386,7 +400,11 @@ export const PantryItemDetail: React.FC<
             packageBreakdownText={packageBreakdownText}
             shelfLifeDays={item.item.shelfLifeDays}
             shelfLifeOpenedDays={item.item.shelfLifeOpenedDays}
-            onCorrectWeight={() => actions.setCorrectWeightVisible(true)}
+            onCorrectPackageSize={
+              soleWeighedBatchId
+                ? () => actions.setCorrectingBatchId(soleWeighedBatchId)
+                : undefined
+            }
             pricing={batchPricing}
           />
         </DetailSection>
@@ -396,6 +414,7 @@ export const PantryItemDetail: React.FC<
             <BatchSection
               batches={batches}
               unitSymbol={item.unit.symbol}
+              netWeightUnitSymbol={item.netWeightUnit?.symbol}
               totalCount={batchTotalCount}
               onViewAll={() =>
                 toPantryBatchHistory({
@@ -404,15 +423,16 @@ export const PantryItemDetail: React.FC<
                   unitSymbol: item.unit.symbol,
                 })
               }
+              onCorrectSize={actions.setCorrectingBatchId}
             />
           </DetailSection>
         )}
 
-        {item.usageRecords.edges.length > 0 && (
+        {item.usageRecordsConnection.edges.length > 0 && (
           <DetailSection>
             <PantryUsageHistory
-              usageRecords={item.usageRecords.edges}
-              totalCount={item.usageRecords.totalCount ?? undefined}
+              usageRecords={item.usageRecordsConnection.edges}
+              totalCount={item.usageRecordsConnection.totalCount ?? undefined}
               onViewAll={() =>
                 toPantryUsageHistory({
                   pantryItemId: itemId,
@@ -472,12 +492,13 @@ export const PantryItemDetail: React.FC<
           onConfirm={actions.handleConfirmAdjust}
         />
       )}
-      {!!actions.correctWeightVisible && (
-        <CorrectWeightModal
-          visible={actions.correctWeightVisible}
+      {!!actions.correctingBatchId && (
+        <CorrectPackageSizeModal
+          visible
           pantryItemId={itemId}
-          onClose={() => actions.setCorrectWeightVisible(false)}
-          onConfirm={actions.handleCorrectWeight}
+          batchId={actions.correctingBatchId}
+          onClose={() => actions.setCorrectingBatchId(null)}
+          onConfirm={actions.handleCorrectPackageSize}
         />
       )}
       {itemPhotos.length > 0 && (

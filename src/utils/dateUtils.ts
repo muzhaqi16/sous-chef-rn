@@ -103,9 +103,3 @@ export const keepMealInsidePlan = (
     ? clamped.toISOString()
     : mealDate;
 };
-
-/** Convert YYYY-MM-DD to a UTC midnight ISO string. Pass-through for malformed input. */
-export const dateStringToISO = (dateStr: string): string => {
-  if (!isDateKey(dateStr)) return dateStr;
-  return `${dateStr}T00:00:00.000Z`;
-};

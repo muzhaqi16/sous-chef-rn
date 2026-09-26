@@ -1,130 +1,8 @@
-import { buildOptimisticUnit, buildDirtyUpdateInput } from '../utils';
-import type { UnitSelection, FormDataInput } from '../types';
+import { buildDirtyUpdateInput } from '../utils';
+import type { FormDataInput } from '../types';
 import type { StorageState } from '#/graphql/generated/schemaTypes';
-import { UnitType } from '#/graphql/generated/schemaTypes';
-
-type CurrentUnit = Parameters<typeof buildOptimisticUnit>[1];
-
-const CURRENT: CurrentUnit = {
-  __typename: 'Unit',
-  id: 'unit-current',
-  name: 'Piece',
-  symbol: 'pc',
-  type: UnitType.Count,
-  displayAsFraction: true,
-};
 
 describe('pantry mutations utils', () => {
-  describe('buildOptimisticUnit', () => {
-    // `PantryItem.unit` is never null, so no pick keeps the row's own unit.
-    it('keeps the current unit when no unit is picked', () => {
-      const newUnit: UnitSelection = {
-        id: null,
-        name: null,
-        symbol: null,
-        type: null,
-      };
-      expect(buildOptimisticUnit(newUnit, CURRENT)).toBe(CURRENT);
-    });
-
-    it('builds unit with newUnit fields when provided', () => {
-      const newUnit: UnitSelection = {
-        id: 'unit-1',
-        name: 'Kilogram',
-        symbol: 'kg',
-        type: UnitType.Weight,
-      };
-
-      const result = buildOptimisticUnit(newUnit, CURRENT);
-
-      expect(result).toEqual(
-        expect.objectContaining({
-          __typename: 'Unit',
-          id: 'unit-1',
-          name: 'Kilogram',
-          symbol: 'kg',
-          type: UnitType.Weight,
-        }),
-      );
-    });
-
-    it('falls back to currentUnit fields when newUnit fields are null', () => {
-      const newUnit: UnitSelection = {
-        id: 'unit-2',
-        name: null,
-        symbol: null,
-        type: null,
-      };
-      const currentUnit: CurrentUnit = {
-        __typename: 'Unit',
-        id: 'unit-1',
-        name: 'Gram',
-        symbol: 'g',
-        type: UnitType.Weight,
-        displayAsFraction: false,
-      };
-
-      const result = buildOptimisticUnit(newUnit, currentUnit);
-
-      expect(result).toEqual(
-        expect.objectContaining({
-          id: 'unit-2',
-          name: 'Gram',
-          symbol: 'g',
-          type: UnitType.Weight,
-          displayAsFraction: false,
-        }),
-      );
-    });
-
-    it("takes the current unit's type when the pick carries none", () => {
-      const newUnit: UnitSelection = {
-        id: 'unit-3',
-        name: 'Each',
-        symbol: 'ea',
-        type: null,
-      };
-
-      expect(buildOptimisticUnit(newUnit, CURRENT).type).toBe(CURRENT.type);
-    });
-
-    it("keeps the current unit's fraction display", () => {
-      const newUnit: UnitSelection = {
-        id: 'unit-5',
-        name: 'Liter',
-        symbol: 'L',
-        type: UnitType.Volume,
-      };
-
-      expect(buildOptimisticUnit(newUnit, CURRENT).displayAsFraction).toBe(
-        CURRENT.displayAsFraction,
-      );
-    });
-
-    it('writes exactly the fields a PantryItem.unit selection names', () => {
-      // One field short and the whole cache read is INCOMPLETE; one field over
-      // and the optimistic entity retains a value the server may have redefined.
-      const result = buildOptimisticUnit(
-        {
-          id: 'unit-6',
-          name: 'Cup',
-          symbol: 'cup',
-          type: UnitType.Volume,
-        },
-        CURRENT,
-      );
-
-      expect(Object.keys(result).sort()).toEqual([
-        '__typename',
-        'displayAsFraction',
-        'id',
-        'name',
-        'symbol',
-        'type',
-      ]);
-    });
-  });
-
   describe('buildDirtyUpdateInput', () => {
     const baseFormData: FormDataInput = {
       itemName: 'Milk',
@@ -167,17 +45,17 @@ describe('pantry mutations utils', () => {
       expect(result).toEqual({ storage: { storageState: 'PANTRY' } });
     });
 
-    it('includes storageLocationId when location is dirty and locationId provided', () => {
+    it('links the location by id when location is dirty and locationId provided', () => {
       const result = buildDirtyUpdateInput(
         baseFormData,
         { location: true },
         'loc-1',
         null,
       );
-      expect(result).toEqual({ storage: { storageLocationId: 'loc-1' } });
+      expect(result).toEqual({ storage: { location: { id: 'loc-1' } } });
     });
 
-    it('sends storageLocationName when location is dirty with a typed name but no id (server find-or-creates by name)', () => {
+    it('names the location when location is dirty with a typed name but no id (server find-or-creates by name)', () => {
       const result = buildDirtyUpdateInput(
         baseFormData,
         { location: true },
@@ -185,8 +63,18 @@ describe('pantry mutations utils', () => {
         null,
       );
       expect(result).toEqual({
-        storage: { storageLocationName: 'Fridge' },
+        storage: { location: { name: 'Fridge' } },
       });
+    });
+
+    it('clears the location when the field was emptied', () => {
+      const result = buildDirtyUpdateInput(
+        { ...baseFormData, location: '  ' },
+        { location: true },
+        null,
+        null,
+      );
+      expect(result).toEqual({ storage: { location: null } });
     });
 
     it('includes expiresOn as a local date key when dirty', () => {
@@ -353,88 +241,36 @@ describe('pantry mutations utils', () => {
       expect(result).toEqual({ netWeight: { netWeightUnitId: null } });
     });
 
-    /**
-     * The one `UnitSpecInput` the pantry update path builds.
-     *
-     * It is deliberately id-less: the caller reaches it exactly when the typed
-     * unit could NOT be resolved to a catalog id. The server
-     * resolves a bare `unitSymbol` to a real unit and repoints `unitId` with
-     * it, so this is a tracking-unit CHANGE — subject to the batch and
-     * conversion guards, whose refusal arrives as
-     * `ValidationError(field: "unit")` and routes to `errors.field.unit`. It is
-     * not a caption write, and pinning the shape here is what stops it drifting
-     * into one.
-     */
-    describe('unit handling', () => {
-      it('sends the typed symbol with no unitId when the unit is dirty', () => {
-        const result = buildDirtyUpdateInput(
-          baseFormData,
-          { unit: true },
-          null,
-          null,
-          'cans',
-        );
-        expect(result).toEqual({ unit: { unitSymbol: 'cans' } });
-      });
-
-      it('trims the symbol', () => {
-        const result = buildDirtyUpdateInput(
-          baseFormData,
-          { unit: true },
-          null,
-          null,
-          '  cans  ',
-        );
-        expect(result).toEqual({ unit: { unitSymbol: 'cans' } });
-      });
-
-      it('sends no unit when the field is dirty but the symbol is blank', () => {
-        // Nothing to resolve — sending `{ unitSymbol: '' }` would ask the
-        // server to find-or-create a unit with no name.
-        const result = buildDirtyUpdateInput(
-          baseFormData,
-          { unit: true },
-          null,
-          null,
-          '   ',
-        );
-        expect(result).toEqual({});
-      });
-
-      it('sends no unit when the field is not dirty', () => {
-        const result = buildDirtyUpdateInput(
-          baseFormData,
-          {},
-          null,
-          null,
-          'cans',
-        );
-        expect(result).toEqual({});
-      });
+    // `unit` only relabels the unit in use; the unit changes through
+    // `changePantryItemUnit`, so a dirty unit field sends nothing here.
+    it('never sends a unit', () => {
+      expect(
+        buildDirtyUpdateInput(baseFormData, { unit: true }, null, null),
+      ).toEqual({});
     });
 
     describe('brand handling', () => {
-      it('uses brandId when brand is dirty and brandId provided', () => {
+      it('refers to the brand by id when brand is dirty and brandId provided', () => {
         const result = buildDirtyUpdateInput(
           baseFormData,
           { brand: true },
           null,
           'brand-1',
         );
-        expect(result).toEqual({ brand: { brandId: 'brand-1' } });
+        expect(result).toEqual({ brand: { id: 'brand-1' } });
       });
 
-      it('uses brandName when brand is dirty, no brandId, but brand text exists', () => {
+      it('names the brand when brand is dirty, no brandId, but brand text exists', () => {
         const result = buildDirtyUpdateInput(
           baseFormData,
           { brand: true },
           null,
           null,
         );
-        expect(result).toEqual({ brand: { brandName: 'Organic Valley' } });
+        expect(result).toEqual({ brand: { name: 'Organic Valley' } });
       });
 
-      it('sets brandId to null when brand is dirty with no brandId and empty brand text', () => {
+      it('clears the brand when brand is dirty with no brandId and empty brand text', () => {
         const formData = { ...baseFormData, brand: '' };
         const result = buildDirtyUpdateInput(
           formData,
@@ -442,7 +278,7 @@ describe('pantry mutations utils', () => {
           null,
           null,
         );
-        expect(result).toEqual({ brand: { brandId: null } });
+        expect(result).toEqual({ brand: null });
       });
     });
 

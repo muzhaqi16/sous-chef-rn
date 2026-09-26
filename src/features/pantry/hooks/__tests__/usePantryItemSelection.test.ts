@@ -51,7 +51,7 @@ const PANTRY: MockDataFor<typeof GetPantryDocument> = {
 };
 
 const ONBOARDING_INPUT = {
-  itemId: 'cat-milk',
+  item: { id: 'cat-milk' },
   quantity: null,
   storage: {
     storageState: StorageState.Ambient,
@@ -138,7 +138,7 @@ describe('usePantryItemSelection.addItem', () => {
       createPantryItem: {
         __typename: 'ValidationError',
         code: ErrorCode.ValidationFailed,
-        field: 'itemId',
+        field: 'item.id',
       },
     };
     const refused = recordMock(CreatePantryItemDocument, {

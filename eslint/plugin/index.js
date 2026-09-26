@@ -31,5 +31,6 @@ module.exports = {
     'rngh-refresh-control-matches-host': require('./rules/rngh-refresh-control-matches-host'),
     'on-fill-text-uses-its-token': require('./rules/on-fill-text-uses-its-token'),
     'selects-key-field-directly': require('./rules/selects-key-field-directly'),
+    'animated-node-takes-no-themed-style': require('./rules/animated-node-takes-no-themed-style'),
   },
 };

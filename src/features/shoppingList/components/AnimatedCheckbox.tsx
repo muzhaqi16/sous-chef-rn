@@ -67,6 +67,14 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
     }
   }
 
+  const boxShapeStyle = useAnimatedStyle(() => {
+    const theme = animatedTheme.get();
+    return {
+      borderRadius: theme.radii.smPlus,
+      borderWidth: theme.borderWidth.medium,
+    };
+  });
+
   const animatedStyle = useAnimatedStyle(() => {
     const baseScale = visuallyChecked ? 1.05 : 1;
     const pressScale = isPressed.get() ? 0.9 : 1;
@@ -129,7 +137,12 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
       testID={testID}
     >
       <Animated.View
-        style={[styles.container, { width: size, height: size }, animatedStyle]}
+        style={[
+          styles.container,
+          { width: size, height: size },
+          boxShapeStyle,
+          animatedStyle,
+        ]}
       >
         {!!visuallyChecked && (
           <Icon name="checkmark" size={size * 0.66} tone="onPrimary" />
@@ -149,8 +162,6 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   container: {
-    borderRadius: theme.radii.smPlus,
-    borderWidth: theme.borderWidth.medium,
     justifyContent: 'center',
     alignItems: 'center',
   },

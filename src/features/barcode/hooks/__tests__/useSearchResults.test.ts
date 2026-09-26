@@ -140,12 +140,6 @@ const SAMPLE_UPC_ITEM = {
     name: 'grams',
     symbol: 'g',
   },
-  brands: [
-    {
-      __typename: 'ItemBrand',
-      brand: { __typename: 'Brand', id: 'brand-1', name: 'TestBrand' },
-    },
-  ],
   units: [{ __typename: 'ItemUnit', unitId: 'unit-1', isDefault: true }],
   variationBrand: null,
   matchedVariation: null,
@@ -262,10 +256,9 @@ describe('useSearchResults', () => {
         primaryUpc: null,
         netWeight: null,
         displayUnit: null,
-        brands: [],
         units: [],
-        // `variationBrand` / `matchedVariation` are selected by
-        // `ItemByUpcFilter` only — the SKU query cannot return them.
+        variationBrand: null,
+        matchedVariation: null,
       };
 
       renderHookWithApollo(() => useSearchResults('SKU123'), {
@@ -280,6 +273,75 @@ describe('useSearchResults', () => {
         ),
       );
       expect(mockHideBottomSheet).toHaveBeenCalled();
+    });
+
+    // A barcode names one pack of the item. What the scan shows, and what an
+    // add stores, is that pack's own size and brand — never another pack's
+    // figure or one brand picked from the item's list.
+    it("reports the scanned barcode's own pack", async () => {
+      renderHookWithApollo(() => useSearchResults('0001112223334', 'ean-13'), {
+        operationMocks: [
+          upcMock([
+            {
+              ...SAMPLE_UPC_ITEM,
+              primaryUpc: '9998887776665',
+              netWeight: 30,
+              netWeightKind: 'SERVING',
+              variationBrand: {
+                __typename: 'Brand',
+                id: 'brand-pack',
+                name: 'Pack Brand',
+              },
+              matchedVariation: {
+                __typename: 'ProductVariation',
+                id: 'esm-1',
+                upc: '0001112223334',
+              },
+              trackingUnit: {
+                __typename: 'Unit',
+                id: 'unit-can',
+                name: 'can',
+                symbol: 'can',
+                type: 'COUNT',
+                displayAsFraction: false,
+              },
+            },
+          ]),
+        ],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchResults).toHaveBeenCalledWith([
+          expect.objectContaining({
+            upc: '0001112223334',
+            variationId: 'esm-1',
+            netWeight: 30,
+            netWeightKind: 'SERVING',
+            brandId: 'brand-pack',
+            brandName: 'Pack Brand',
+            trackingUnit: { id: 'unit-can', name: 'can', symbol: 'can' },
+          }),
+        ]),
+      );
+    });
+
+    it('asks for the unit the destination pantry counts the item in', async () => {
+      const upc = recordMock(ItemByUpcFilterDocument, {
+        data: { items: { __typename: 'ItemConnection', edges: [] } },
+      });
+
+      renderHookWithApollo(
+        () => useSearchResults('1234567890', 'ean-13', 'pantry-7'),
+        { operationMocks: [upc.mock] },
+      );
+
+      await waitFor(() =>
+        expect(upc.fired).toContainEqual({
+          upc: '1234567890',
+          upcFormat: 'EAN_13',
+          pantry: 'pantry-7',
+        }),
+      );
     });
 
     it('shows bottom sheet when neither UPC nor SKU finds results', async () => {

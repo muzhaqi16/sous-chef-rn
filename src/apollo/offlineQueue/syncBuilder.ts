@@ -1,7 +1,9 @@
 import type { DocumentNode } from 'graphql';
 import { gql, type ApolloCache } from '@apollo/client';
+import type { BrandRefInput } from '#/graphql/generated/schemaTypes';
 import type { QueuedMutation, ReplayInputs } from './types';
 import { queuedSubject } from './queuedSubject';
+import { firstNonBlank } from '#/utils/firstNonBlank';
 
 /**
  * The contract between the queue and the features whose writes it replays: the
@@ -65,9 +67,9 @@ export const definedInputs = (
 export type SyncBuilderTable = Record<string, SyncBuilder>;
 
 /**
- * Loose shape of a queued `input`, persisted untyped. Quantity/update shopping
- * ops send the unit as flat `unitId`/`unitName` scalars rather than a `unit`
- * object; the shopping builder normalizes both.
+ * Loose shape of a queued `input`, persisted untyped. The quantity ops send the
+ * unit as a flat `unitId` rather than a `unit` reference; the builders
+ * normalize both.
  */
 export interface QueuedInput {
   id?: string;
@@ -80,9 +82,11 @@ export interface QueuedInput {
   category?: string;
   notes?: string;
   quantity?: number | string;
-  unit?: { unitId?: string; unitName?: string };
+  unit?: UnitSpec | null;
+  unitLabel?: string | null;
+  // `legacyRefs` rewrites an older build's brandId/brandName to this before replay.
+  brand?: BrandRefInput | null;
   unitId?: string;
-  unitName?: string;
   purchased?: boolean;
   purchaseTracking?: Record<string, unknown>;
   priority?: number;
@@ -115,33 +119,43 @@ const QUEUE_UNIT_FRAGMENT = gql`
   }
 `;
 
-/** What a builder puts in a `UnitSpecInput` slot. */
+/** A queued `UnitRefInput`, read loosely: the queue persists untyped JSON. */
 export interface UnitSpec {
-  unitId?: string;
-  unitName?: string;
-  unitSymbol?: string;
+  id?: string;
+  name?: string;
+  symbol?: string;
 }
+
+/** What a builder puts in a `UnitRefInput` slot: `@oneOf`, so one key. */
+export type UnitRef = { id: string } | { symbol: string } | { name: string };
+
+/** The cached symbol of a queued unit id; nothing when the spec has one. */
+export const readUnitSymbol = (
+  cache: ApolloCache,
+  spec: UnitSpec,
+): string | undefined => {
+  if (spec.symbol || !spec.id) return undefined;
+  const unit = cache.readFragment<{ id: string; symbol: string }>({
+    id: cache.identify({ __typename: 'Unit', id: spec.id }),
+    fragment: QUEUE_UNIT_FRAGMENT,
+  });
+  return firstNonBlank(unit?.symbol);
+};
 
 /**
  * A unit reference the server can still resolve after the vocabulary repair.
- * A queued `unitId` may name a merged-away row, and an id is not re-resolvable
- * — a symbol is. So the cached symbol rides ALONGSIDE the id, which
- * `UnitSpecInput` allows. Best-effort: no cached unit yields the id alone.
+ * A queued id may name a merged-away row, and an id is not re-resolvable — a
+ * symbol is. So a known symbol stands in for the id. Best-effort: with no
+ * cached unit the id goes as queued.
  */
 export const readUnitSpec = (
   cache: ApolloCache,
   spec: UnitSpec,
-): UnitSpec | undefined => {
-  const hasReference = spec.unitId ?? spec.unitName ?? spec.unitSymbol;
-  if (!hasReference) return undefined;
-  if (!spec.unitId || spec.unitSymbol) return spec;
-
-  const unit = cache.readFragment<{ id: string; symbol: string }>({
-    id: cache.identify({ __typename: 'Unit', id: spec.unitId }),
-    fragment: QUEUE_UNIT_FRAGMENT,
-  });
-
-  return unit?.symbol ? { ...spec, unitSymbol: unit.symbol } : spec;
+): UnitRef | undefined => {
+  const symbol = firstNonBlank(spec.symbol) ?? readUnitSymbol(cache, spec);
+  if (symbol) return { symbol };
+  if (spec.id) return { id: spec.id };
+  return spec.name ? { name: spec.name } : undefined;
 };
 
 /** The unit spec with a captured symbol beside its id, unless it has one. */
@@ -149,6 +163,6 @@ export const withUnitSymbol = (
   spec: UnitSpec,
   unitSymbol: string | undefined,
 ): UnitSpec =>
-  spec.unitSymbol || !unitSymbol || !spec.unitId
+  spec.symbol || !unitSymbol || !spec.id
     ? spec
-    : { ...spec, unitSymbol };
+    : { ...spec, symbol: unitSymbol };

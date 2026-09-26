@@ -128,20 +128,32 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
     ...config,
   };
 
-  // Check if notification type is enabled in user preferences
+  // The preference that gates each type, as the API gates it
+  // (`docs/api/notifications.md` § What each toggle sends).
   const isNotificationTypeEnabled = (type: NotificationType): boolean => {
     switch (type) {
+      case NotificationType.NewItemAdded:
       case NotificationType.ItemUpdated:
+      case NotificationType.ItemDeleted:
         return userPreferences.pantryChanges;
       case NotificationType.LowStock:
         return userPreferences.lowStockAlerts;
       case NotificationType.ExpiryReminder:
         return userPreferences.expirationNotifications;
       case NotificationType.ListUpdated:
-        return (
-          userPreferences.shoppingListUpdates ||
-          userPreferences.sharedListUpdates
-        );
+        return userPreferences.shoppingListUpdates;
+      case NotificationType.SharedListChanged:
+        return userPreferences.sharedListUpdates;
+      case NotificationType.MealPlanReminder:
+        return userPreferences.mealPlanReminders;
+      case NotificationType.CookingReminder:
+        return userPreferences.cookingReminders;
+      case NotificationType.RecipeRecommendations:
+        return userPreferences.recipeRecommendations;
+      case NotificationType.WeeklyDigest:
+        return userPreferences.weeklyDigest;
+      case NotificationType.MonthlyReport:
+        return userPreferences.monthlyReport;
       case NotificationType.CollaborationInvite:
       case NotificationType.CollaborationAccepted:
       case NotificationType.CollaborationDeclined:
@@ -153,12 +165,10 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       case NotificationType.HomeInvitation:
       case NotificationType.HomeJoined:
         return userPreferences.homeInvites;
+      // A list's reminder date is sent whatever the toggles say.
+      case NotificationType.ListReminder:
       case NotificationType.RecipeCooked:
-        return userPreferences.cookingReminders;
       case NotificationType.RecipeSaved:
-        return userPreferences.recipeRecommendations;
-      case NotificationType.ItemDeleted:
-      case NotificationType.NewItemAdded:
       default:
         return true;
     }

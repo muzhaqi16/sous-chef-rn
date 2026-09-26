@@ -39,7 +39,7 @@ jest.mock('#/apollo/links/tokenScheduler');
 
 type ReviewNode = NonNullable<
   Unmasked<GetRecipeReviewsQuery>['recipe']
->['reviews']['edges'][number]['node'];
+>['reviewsConnection']['edges'][number]['node'];
 
 function buildReviewNode(
   id: string,
@@ -105,7 +105,7 @@ function buildGetRecipeReviewsMock(
         recipe: {
           __typename: 'Recipe',
           id: recipeId,
-          reviews: {
+          reviewsConnection: {
             __typename: 'RecipeReviewConnection',
             totalCount: nodes.length,
             edges: nodes.map(node => ({
@@ -196,6 +196,7 @@ const makeBackendRecipe = (
   status: RecipeStatus.Draft,
   isPublished: false,
   publishedAt: null,
+  reviewNote: null,
   forkedFromId: null,
   forkedFrom: null,
   originalAuthor: null,

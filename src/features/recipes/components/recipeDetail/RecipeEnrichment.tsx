@@ -6,6 +6,7 @@ import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { isRecord } from '#/utils/isRecord';
+import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 
 interface NutrientRow {
   labelKey: TranslationKey;
@@ -77,7 +78,8 @@ interface RecipeEnrichmentProps {
   originalAuthor?: string;
   tags?: string[];
   isBackendRecipe: boolean;
-  isPublished?: boolean;
+  status?: RecipeStatus;
+  reviewNote?: string;
 }
 
 export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
@@ -89,7 +91,8 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
   originalAuthor,
   tags,
   isBackendRecipe,
-  isPublished,
+  status,
+  reviewNote,
 }) => {
   const { t } = useTranslation();
   const nutrients = parseNutrition(nutritionData);
@@ -180,14 +183,28 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
         </View>
       )}
 
-      {/* Draft badge — owner sees when a backend recipe is unpublished. */}
-      {!!(isBackendRecipe && isPublished === false) && (
+      {/* Only the author sees a recipe that is not published. */}
+      {!!(isBackendRecipe && status === RecipeStatus.Draft) && (
         <View style={styles.draftBadge}>
           <Icon name="eye-off-outline" size={14} tone="textSecondary" />
           <Text role="caption" tone="secondary" style={styles.metaText}>
             {t('recipes.draftBadge')}
           </Text>
         </View>
+      )}
+      {!!(isBackendRecipe && status === RecipeStatus.PendingReview) && (
+        <View style={styles.draftBadge}>
+          <Icon name="hourglass-outline" size={14} tone="textSecondary" />
+          <Text role="caption" tone="secondary" style={styles.metaText}>
+            {t('recipes.inReviewBadge')}
+          </Text>
+        </View>
+      )}
+      {/* A rejection returns the recipe as a draft, always with a note. */}
+      {!!(isBackendRecipe && status === RecipeStatus.Draft && reviewNote) && (
+        <Text role="caption" tone="secondary" style={styles.reviewNote}>
+          {t('recipes.reviewNote', { note: reviewNote })}
+        </Text>
       )}
     </>
   );
@@ -239,5 +256,8 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.xs,
     marginTop: theme.spacing.md,
+  },
+  reviewNote: {
+    marginTop: theme.spacing.xs,
   },
 }));

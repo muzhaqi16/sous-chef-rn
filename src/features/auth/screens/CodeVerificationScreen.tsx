@@ -22,6 +22,7 @@ import { logger } from '#/utils/environment';
 import { logValidationErrors } from '#/utils/validation/common';
 import { getEmailVerificationValidationSchema } from '#/utils/validation/auth';
 import { toastService } from '#services/toastService';
+import { TOAST } from '#/constants/animations';
 import { authTestIDs } from '#features/auth/testIDs';
 
 type CodeVerificationValues = {
@@ -31,8 +32,8 @@ type CodeVerificationValues = {
 // Where this screen was opened from, deciding the exit, whether a skip link
 // shows, and where success lands. `gate` is the root navigator's conditional
 // group with no app behind it; `inApp` is pushed over an existing session, so
-// backing out IS the skip; `signup` has NO session at all, because `register`
-// issues no tokens — `verifyEmail` is public, so the code still works.
+// backing out IS the skip; `signup` has NO session, because the password was
+// refused at sign-up or sign-in — `verifyEmail` is public, so the code still works.
 export type VerificationContext = 'gate' | 'inApp' | 'signup';
 
 interface CodeVerificationScreenProps {
@@ -94,7 +95,7 @@ export function CodeVerificationScreen({
   const updateUser = useUpdateUser();
   const { skipVerification } = useEmailVerificationActions();
   const { goBack } = useAppNavigation();
-  const { navigateToLogin } = useAuthNavigation();
+  const { navigateToLogin, navigateToForgotPassword } = useAuthNavigation();
   const { verifyEmail, resendVerificationEmail } = useVerifyEmail();
 
   // Manual code entry is the ONLY verification this screen performs: a
@@ -122,9 +123,9 @@ export function CodeVerificationScreen({
     defaultValues: { code: '' },
   });
 
-  // `register` opens no session, so the sign-up path passes the address in. The
-  // session wins where both exist, so a stale route value cannot redirect a
-  // signed-in user's resend.
+  // With no session, the sign-up path passes the address in. The session wins
+  // where both exist, so a stale route value cannot redirect a signed-in user's
+  // resend.
   const targetEmail = user?.email ?? email ?? null;
 
   // Under `gate` the root navigator swaps this screen away as the flag flips, so
@@ -143,9 +144,15 @@ export function CodeVerificationScreen({
 
   const onVerified = () => {
     if (context === 'signup') {
-      // `verifyEmail` returns the user but no tokens, so the sign-up path is left
-      // with no session and signing in is the next step.
-      toastService.success(t('auth.emailVerifiedToast'));
+      // `verifyEmail` issues no tokens, and a deleted account comes back under
+      // its ORIGINAL password, not the one typed at re-registration.
+      toastService.success(t('auth.emailVerifiedToastSignIn'), {
+        duration: TOAST.AUTO_DISMISS_LONG,
+        action: {
+          label: t('auth.forgotPassword'),
+          onPress: navigateToForgotPassword,
+        },
+      });
       leaveToSignIn();
       return;
     }
@@ -255,7 +262,6 @@ export function CodeVerificationScreen({
       onBack={onBackPress}
     >
       <AuthFormTemplate
-        contentPlacement="top"
         title={t('auth.enterCode')}
         subtitle={
           <>

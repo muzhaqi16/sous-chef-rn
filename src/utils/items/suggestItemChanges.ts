@@ -11,6 +11,7 @@ import {
 import type { UseItemForEdit_ItemFragment } from '#features/catalog/hooks/useItemForEdit.generated';
 import type { AddItemFormData } from './createItemMapping';
 import type { AddItemFormInitialData } from '#features/catalog/ui/AddItemForm/AddItemForm';
+import { refByIdOrName } from '#/utils/refInput';
 
 /**
  * The pre-edit original `buildSuggestibleItemChanges` diffs against. Source it
@@ -189,19 +190,19 @@ export function buildSuggestibleItemChanges(
     changedFields.push('packageInfo.netWeight');
   }
   // The unit picker leaves `unitId` undefined when the user free-types a unit
-  // the catalog doesn't have, so fall back to the by-name twin, which the
-  // server resolves find-or-create. An explicit id always wins. Sending the
-  // name is accepted and then dropped on approval, so diffing only the id would
-  // let a free-typed unit change vanish silently.
+  // the catalog doesn't have, so fall back to the name, which the server
+  // resolves find-or-create. An explicit id always wins. Sending the name is
+  // accepted and then dropped on approval, so diffing only the id would let a
+  // free-typed unit change vanish silently.
   const unitName = norm(netWeight?.unitName);
   if (netWeight?.unitId) {
     if (netWeight.unitId !== original.displayUnitId) {
-      packageInfo.displayUnitId = netWeight.unitId;
-      changedFields.push('packageInfo.displayUnitId');
+      packageInfo.displayUnit = { id: netWeight.unitId };
+      changedFields.push('packageInfo.displayUnit');
     }
   } else if (unitName && unitName !== norm(original.displayUnitName)) {
-    packageInfo.displayUnitName = unitName;
-    changedFields.push('packageInfo.displayUnitName');
+    packageInfo.displayUnit = { name: unitName };
+    changedFields.push('packageInfo.displayUnit');
   }
   if (
     formData.baseDimension &&
@@ -214,7 +215,7 @@ export function buildSuggestibleItemChanges(
     changes.packageInfo = packageInfo;
   }
 
-  // `brand` resolves brandId, else finds-or-creates by brandName — the only way
+  // `brand` resolves an id, else finds-or-creates by name — the only way
   // to name a brand that isn't in the catalog yet, so a free-typed brand is
   // expressible. It is purely additive and never removes the brand already on
   // the item, so replacing one means pairing it with brandOps.removeBrandIds.
@@ -222,11 +223,12 @@ export function buildSuggestibleItemChanges(
   const brandChanged = formData.brandId
     ? formData.brandId !== original.brandId
     : !!brandName && brandName !== norm(original.brandName);
+  const brand = brandChanged
+    ? refByIdOrName(formData.brandId, brandName)
+    : undefined;
 
-  if (brandChanged) {
-    changes.brand = formData.brandId
-      ? { brandId: formData.brandId }
-      : { brandName };
+  if (brand) {
+    changes.brand = brand;
     changedFields.push('brand');
     if (original.brandId) {
       changes.brandOps = { removeBrandIds: [original.brandId] };
@@ -239,6 +241,63 @@ export function buildSuggestibleItemChanges(
     hasChanges: changedFields.length > 0,
     changedFields,
   };
+}
+
+/** The scanned barcode's own pack, as the scan reported it. */
+export interface ScannedPack {
+  netWeight?: number;
+  netWeightKind?: NetWeightKind;
+  displayUnit?: { id: string; name: string };
+  brandId?: string;
+  brandName?: string;
+}
+
+/**
+ * The snapshot a barcode correction diffs against: the item, with the scanned
+ * barcode's own size and brand in place of the item's, so the form opens on
+ * what the scan showed.
+ */
+export function withScannedPack(
+  snapshot: EditableItemSnapshot,
+  pack: ScannedPack,
+): EditableItemSnapshot {
+  return {
+    ...snapshot,
+    netWeight: pack.netWeight,
+    netWeightKind: pack.netWeightKind,
+    displayUnitId: pack.displayUnit?.id,
+    displayUnitName: pack.displayUnit?.name,
+    brandId: pack.brandId,
+    brandName: pack.brandName,
+  };
+}
+
+/**
+ * A barcode's record takes only its size, what the size measures, its unit
+ * and its brand; the rest of an edit is the item's. The form's size is a
+ * package size, so a size sent to the barcode says so.
+ */
+export function splitBarcodeChanges(changes: SuggestibleItemChangesInput): {
+  barcode: SuggestibleItemChangesInput;
+  item: SuggestibleItemChangesInput;
+} {
+  // A barcode has one brand: replacing it removes nothing from the item's.
+  const { packageInfo, brand, brandOps: _itemBrands, ...itemRest } = changes;
+  const { netWeight, displayUnit, ...packageRest } = packageInfo ?? {};
+  const barcode: SuggestibleItemChangesInput = {};
+  if (netWeight != null || displayUnit != null) {
+    barcode.packageInfo = {
+      ...(netWeight != null && {
+        netWeight,
+        netWeightKind: NetWeightKind.Package,
+      }),
+      ...(displayUnit != null && { displayUnit }),
+    };
+  }
+  if (brand != null) barcode.brand = brand;
+  const item: SuggestibleItemChangesInput = { ...itemRest };
+  if (Object.keys(packageRest).length > 0) item.packageInfo = packageRest;
+  return { barcode, item };
 }
 
 /** Prefill AddItemForm from the snapshot the diff will later compare against. */

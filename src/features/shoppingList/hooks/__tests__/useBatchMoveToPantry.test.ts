@@ -550,7 +550,7 @@ describe('useBatchMoveToPantry', () => {
   describe('when the API is unavailable', () => {
     /**
      * The batch is local-first, not an offline refusal with a toast: the
-     * client mints a pantry-row id per purchased line (`pantryItemIds`), so a
+     * client mints a pantry-row id per purchased line (`pantryItemHints`), so a
      * replay resolves to the same rows rather than creating a second set.
      */
     it('still fires the mutation, so the queue can replay it', async () => {
@@ -600,17 +600,20 @@ describe('useBatchMoveToPantry', () => {
       });
 
       const input = move.fired[0]?.input as {
-        pantryItemIds?: { shoppingListItemId: string; pantryItemId: string }[];
+        pantryItemHints?: {
+          shoppingListItemId: string;
+          pantryItemId: string;
+        }[];
       };
-      expect(input.pantryItemIds).toHaveLength(2);
-      expect(input.pantryItemIds?.map(h => h.shoppingListItemId)).toEqual([
+      expect(input.pantryItemHints).toHaveLength(2);
+      expect(input.pantryItemHints?.map(h => h.shoppingListItemId)).toEqual([
         'item-1',
         'item-2',
       ]);
       // Distinct ids — one row per line, not one row reused.
-      expect(new Set(input.pantryItemIds?.map(h => h.pantryItemId)).size).toBe(
-        2,
-      );
+      expect(
+        new Set(input.pantryItemHints?.map(h => h.pantryItemId)).size,
+      ).toBe(2);
     });
   });
 });

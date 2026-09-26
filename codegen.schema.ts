@@ -25,6 +25,10 @@ console.log(`✓ Pulling schema from ${API_URL}`);
 const config: CodegenConfig = {
   overwrite: true,
   schema: API_URL,
+  // Root `config` reaches the URL loader's introspection query. graphql-js leaves
+  // `isOneOf` out unless asked, and without `@oneOf` the generated `*RefInput`
+  // types allow zero or two keys — both refused before any resolver runs.
+  config: { oneOf: true, specifiedByUrl: true },
   generates: {
     'src/graphql/generated/schema.graphql': {
       plugins: ['schema-ast'],

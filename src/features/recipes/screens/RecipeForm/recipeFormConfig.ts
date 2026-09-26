@@ -2,6 +2,7 @@ import { array, mixed, number, object, string, type ObjectSchema } from 'yup';
 import { t, type TranslationKey } from '#/i18n';
 import {
   RecipeStatus,
+  type Cuisine,
   type Difficulty,
   type RecipeCategory,
   type Diet,
@@ -17,6 +18,17 @@ import type {
 // Messages resolve LAZILY: the schema is built once at module scope, so an
 // eagerly resolved one freezes whichever language was active at import time.
 const msg = (key: TranslationKey) => (): string => t(key);
+
+// The API's URL scalar takes an absolute http(s) URL of at most 2048 characters
+// and refuses anything else before any resolver runs, with no field to report
+// on. Blank stays valid: the field is optional and is sent as undefined.
+const httpUrl = (key: TranslationKey) =>
+  string()
+    .defined()
+    .trim()
+    .url(msg(key))
+    .matches(/^https?:\/\//i, { message: msg(key), excludeEmptyString: true })
+    .max(2048, msg(key));
 const msgWith =
   (key: TranslationKey, options: Record<string, unknown>) => (): string =>
     t(key, options);
@@ -80,23 +92,15 @@ const stepSchema: ObjectSchema<StepFormState> = object({
 export const recipeFormSchema: ObjectSchema<RecipeFormState> = object({
   name: string().trim().required(msg('recipes.nameRequired')),
   description: string().defined(),
-  // The API accepts http/https only, and refuses anything else as a field-level
-  // error on a form the user has already left. Blank stays valid — the field is
-  // optional and an empty string is sent as undefined.
-  imageUrl: string()
-    .defined()
-    .test(
-      'http-scheme',
-      msg('errors.field.imageUrl'),
-      value => !value || /^https?:\/\//i.test(value),
-    ),
+  imageUrl: httpUrl('errors.field.imageUrl'),
+  videoUrl: httpUrl('errors.field.videoUrl'),
   servings: string().defined(),
   prepTimeMinutes: string().defined(),
   cookTimeMinutes: string().defined(),
   caloriesPerServing: string().defined(),
   difficulty: mixed<Difficulty>().nullable().defined(),
   category: mixed<RecipeCategory>().nullable().defined(),
-  cuisine: string().defined(),
+  cuisines: array().of(mixed<Cuisine>().defined()).defined(),
   status: mixed<RecipeStatus>().oneOf(Object.values(RecipeStatus)).defined(),
   diets: array().of(mixed<Diet>().defined()).defined(),
   healthGoals: array().of(mixed<HealthGoal>().defined()).defined(),
@@ -146,13 +150,14 @@ export const recipeFormDefaults = (): RecipeFormState => ({
   name: '',
   description: '',
   imageUrl: '',
+  videoUrl: '',
   servings: '4',
   prepTimeMinutes: '',
   cookTimeMinutes: '',
   caloriesPerServing: '',
   difficulty: null,
   category: null,
-  cuisine: '',
+  cuisines: [],
   status: RecipeStatus.Draft,
   diets: [],
   healthGoals: [],

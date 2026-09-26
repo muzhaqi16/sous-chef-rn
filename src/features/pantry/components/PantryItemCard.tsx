@@ -188,13 +188,14 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
     : undefined;
   const expiryStatusKey: ExpiryStatus = showExpiration ? variant : 'normal';
 
+  // What is left, as the stack is shown: "1 doz" for 12 pc.
   const quantity = formatQuantityDisplay(
-    pantryItem.quantity,
-    pantryItem.unit.symbol,
+    pantryItem.displayAmount.quantity,
+    pantryItem.displayAmount.unit.symbol,
   );
   // Custom names only; the default locations are the filter tabs.
   const location = pantryItem.storageLocation?.name ?? null;
-  const isOutOfStock = pantryItem.quantity === 0;
+  const isOutOfStock = pantryItem.heldQuantity <= 0;
   // Each of the row's four text slots has ONE owner, and an absent value leaves
   // its slot empty rather than letting another value move in. Amounts and
   // breakdowns belong to the detail screen.

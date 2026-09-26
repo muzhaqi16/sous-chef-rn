@@ -149,7 +149,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
   },
   headerButton: {
     paddingVertical: theme.spacing.xs,

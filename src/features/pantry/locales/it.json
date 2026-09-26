@@ -41,7 +41,8 @@
       "historySummary_other": "{{active}} attivi su {{total}}",
       "historyTotal_one": "{{count}} lotto",
       "historyTotal_other": "{{count}} lotti",
-      "emptyTitle": "Nessun lotto"
+      "emptyTitle": "Nessun lotto",
+      "packageSize": "Confezione: {{size}}"
     },
     "deleteTitle": "Elimina articolo",
     "discardBatchesTitle": "Scarta i lotti scaduti",
@@ -56,7 +57,8 @@
       "emptyTitle": "Nessun utilizzo"
     },
     "shelfLifeBoth": "{{days}} g ({{openedDays}} g dopo l'apertura)",
-    "shelfLifeOpened": "{{days}} g dopo l'apertura"
+    "shelfLifeOpened": "{{days}} g dopo l'apertura",
+    "packages": "Confezioni"
   },
   "pantrySettings": {
     "createTitle": "Crea nuova dispensa",
@@ -218,6 +220,8 @@
     "purposeTransfer": "Trasferimento"
   },
   "moveToPantry": {
+    "cannotAddTitle": "Non puoi aggiungere alla dispensa di questa casa",
+    "cannotAddBody": "Non hai il permesso di aggiungere articoli alle dispense di {{home}}. Chiedi l'accesso al proprietario della casa o passa a una casa in cui puoi aggiungere.",
     "selectPantryError": "Seleziona una dispensa",
     "selectUnitError": "Seleziona un'unità",
     "title": "Sposta in dispensa",
@@ -243,7 +247,9 @@
     "allAlreadyThere_other": "Quei {{count}} articoli sono già in dispensa",
     "failedItems_one": "Impossibile spostare {{names}}",
     "failedItems_other": "Impossibile spostare {{count}} articoli, tra cui {{names}}",
-    "nothingLeftToMove": "Tutto ciò che hai comprato è già in dispensa"
+    "nothingLeftToMove": "Tutto ciò che hai comprato è già in dispensa",
+    "packageSizeLabel": "Dimensione della confezione",
+    "packageSizeHint": "Solo se questa confezione è diversa dalla dimensione abituale, come un barattolo da 22 oz. Lascia vuoto per usare la dimensione abituale."
   },
   "pantryAction": {
     "useByDefault": "Da consumare entro",
@@ -253,14 +259,13 @@
     "amountWithUnit": "{{amount}} {{unit}}"
   },
   "correctWeight": {
-    "invalidWeight": "Inserisci un peso valido",
+    "invalidWeight": "Inserisci una dimensione valida",
     "reasonRequired": "Fornisci un motivo per la correzione",
-    "title": "Correggi peso",
+    "title": "Correggi dimensione della confezione",
     "correct": "Correggi",
-    "netWeightPrefix": "Peso netto: ",
-    "quantityLabel": "Quantità: ",
-    "newNetWeight": "Nuovo peso netto",
-    "reasonPlaceholder": "Perché stai correggendo il peso?"
+    "netWeightPrefix": "Dimensione della confezione: ",
+    "newNetWeight": "Dimensione reale della confezione",
+    "reasonPlaceholder": "Perché stai correggendo la dimensione?"
   },
   "addToPantry": {
     "restocked": "Scorta di {{name}} aggiornata",
@@ -410,5 +415,39 @@
     "packageContents_one": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageContents_other": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageWithTotal": "{{breakdown}} ({{total}} {{weightUnit}} in totale)"
+  },
+  "unitChange": {
+    "title": "Cambia unità",
+    "exact": "Conversione esatta.",
+    "estimate": "È una stima.",
+    "estimateChoice": "{{from}} e {{to}} si convertono solo in modo approssimativo per questo articolo.",
+    "setOrConvert": "Sono {{amount}}, o bisogna convertire {{before}}?",
+    "setOrKeep": "Sono {{amount}}, o mantenere {{kept}}?",
+    "setTo": "Imposta a {{amount}}",
+    "convertTo": "Converti in {{amount}}",
+    "convertToAbout": "Converti in circa {{amount}}",
+    "keep": "Mantieni {{amount}}",
+    "ifSet": "Impostando {{amount}}:",
+    "ifConverted": "Convertendo:",
+    "noRoute": "{{from}} non può essere convertito in {{to}} per questo articolo, quindi inserisci quanto ne hai in {{to}}.",
+    "batches": "Ogni lotto",
+    "dropsNetWeight": "La dimensione della confezione verrà rimossa.",
+    "dropsPortions": "Le porzioni per confezione verranno rimosse.",
+    "dropsThresholds": "I livelli di avviso per scorte basse verranno azzerati.",
+    "alertBelowAfter": "Avvisa sotto: {{amount}}",
+    "conflicting": "Hai già questo articolo registrato in {{unit}}. Modifica quello, oppure scegli un'altra unità.",
+    "needsConnection": "Per cambiare l'unità serve una connessione, così possiamo mostrarti prima cosa succede alle scorte.",
+    "previewFailed": "Impossibile verificare cosa farebbe questa modifica. Riprova.",
+    "changedMeanwhile": "Questo articolo è cambiato mentre lo guardavi. Controlla i nuovi valori e conferma di nuovo.",
+    "failed": "Impossibile cambiare l'unità. Riprova.",
+    "beforeAfter": "{{before}} → {{after}}",
+    "recountNote": "Queste unità non si convertono per questo articolo, quindi le scorte diventano questa quantità.",
+    "packageSizeNeeded": "Per contarlo in {{unit}}, inserisci quanto contiene un {{unit}}, poi salva di nuovo.",
+    "packageSizeOrSet": "Per convertire, inserisci quanto contiene un {{unit}}. Oppure imposta le scorte a {{amount}}.",
+    "enterPackageSize": "Inserisci dimensione confezione"
+  },
+  "packageSize": {
+    "defaultTitle": "Dimensione predefinita della confezione",
+    "defaultHint": "Le nuove scorte prendono questa dimensione se non ne viene indicata un'altra. Per correggere una confezione che hai già, usa Correggi dimensione della confezione nella pagina dell'articolo."
   }
 }

@@ -39,6 +39,8 @@ export interface MoveToPantryInput {
   removeFromList: boolean;
   actualPrice?: number;
   notes?: string;
+  /** This package's own size; omitted, the line's size or the stack's default. */
+  packageSize?: { netWeight: number; netWeightUnitId: string };
 }
 
 interface UseMoveToPantryOptions {
@@ -323,6 +325,7 @@ export function useMoveToPantry({
               removeFromList: input.removeFromList,
               actualPrice: input.actualPrice,
               notes: input.notes,
+              packageSize: input.packageSize,
             },
           },
           context: { localFirst: true },

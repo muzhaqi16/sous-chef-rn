@@ -74,7 +74,7 @@ fragment BasicRecipeFragment on Recipe {
   totalTimeMinutes
   difficulty
   category
-  cuisine
+  cuisines
   status
   isExternal
   externalSource

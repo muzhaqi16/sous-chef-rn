@@ -1,0 +1,17 @@
+# What `writeHeldStock` reads and writes: the amount held, the unit it counts
+# in, and the amount as shown.
+fragment writeHeldStock_pantryItem on PantryItem {
+  id
+  heldQuantity
+  unit {
+    id
+    symbol
+  }
+  displayAmount {
+    quantity
+    unit {
+      id
+      symbol
+    }
+  }
+}

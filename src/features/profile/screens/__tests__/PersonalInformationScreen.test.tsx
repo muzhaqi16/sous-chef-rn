@@ -21,7 +21,7 @@ const mockProfile = {
   displayName: 'JohnDoe',
   bio: 'A chef',
   phone: '555-1234',
-  dateOfBirth: '1990-01-15T00:00:00.000Z',
+  dateOfBirth: '1990-01-15',
   gender: 'Male',
   profileVisibility: 'PUBLIC',
   showEmail: true,
@@ -58,7 +58,6 @@ jest.mock('#/services/alertService', () => ({
 jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#utils/dateUtils', () => ({
-  dateStringToISO: jest.fn((val: string) => val),
   extractDateString: jest.fn((val: string) => val || ''),
 }));
 

@@ -6,6 +6,14 @@ fragment PantryDetailInfo_pantryItem on PantryItem {
   id
   condition
   quantity
+  heldQuantity
+  displayAmount {
+    quantity
+    unit {
+      id
+      symbol
+    }
+  }
   lastUsedAt
   acquisitionMethod
   costPerUnit

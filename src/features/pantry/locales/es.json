@@ -41,7 +41,8 @@
       "historySummary_other": "{{active}} activos de {{total}}",
       "historyTotal_one": "{{count}} lote",
       "historyTotal_other": "{{count}} lotes",
-      "emptyTitle": "Aún sin lotes"
+      "emptyTitle": "Aún sin lotes",
+      "packageSize": "Paquete: {{size}}"
     },
     "deleteTitle": "Eliminar artículo",
     "discardBatchesTitle": "Descartar lotes caducados",
@@ -56,7 +57,8 @@
       "emptyTitle": "Aún sin uso"
     },
     "shelfLifeBoth": "{{days}} d ({{openedDays}} d una vez abierto)",
-    "shelfLifeOpened": "{{days}} d una vez abierto"
+    "shelfLifeOpened": "{{days}} d una vez abierto",
+    "packages": "Paquetes"
   },
   "pantrySettings": {
     "createTitle": "Crear nueva despensa",
@@ -218,6 +220,8 @@
     "purposeTransfer": "Traslado"
   },
   "moveToPantry": {
+    "cannotAddTitle": "No puedes añadir a la despensa de este hogar",
+    "cannotAddBody": "No tienes permiso para añadir artículos a las despensas de {{home}}. Pide acceso al propietario del hogar o cambia a un hogar al que puedas añadir.",
     "selectPantryError": "Selecciona una despensa",
     "selectUnitError": "Selecciona una unidad",
     "title": "Mover a la despensa",
@@ -243,7 +247,9 @@
     "allAlreadyThere_other": "Esos {{count}} artículos ya están en tu despensa",
     "failedItems_one": "No se pudo mover {{names}}",
     "failedItems_other": "No se pudieron mover {{count}} artículos, incluidos {{names}}",
-    "nothingLeftToMove": "Todo lo comprado ya está en tu despensa"
+    "nothingLeftToMove": "Todo lo comprado ya está en tu despensa",
+    "packageSizeLabel": "Tamaño del paquete",
+    "packageSizeHint": "Solo si este paquete difiere del tamaño habitual, como un frasco de 22 oz. Déjalo vacío para usar el tamaño habitual."
   },
   "pantryAction": {
     "useByDefault": "Consumir antes de",
@@ -253,14 +259,13 @@
     "amountWithUnit": "{{amount}} {{unit}}"
   },
   "correctWeight": {
-    "invalidWeight": "Introduce un peso válido",
+    "invalidWeight": "Introduce un tamaño válido",
     "reasonRequired": "Indica un motivo para la corrección",
-    "title": "Corregir peso",
+    "title": "Corregir tamaño del paquete",
     "correct": "Corregir",
-    "netWeightPrefix": "Peso neto: ",
-    "quantityLabel": "Cantidad: ",
-    "newNetWeight": "Nuevo peso neto",
-    "reasonPlaceholder": "¿Por qué se corrige el peso?"
+    "netWeightPrefix": "Tamaño del paquete: ",
+    "newNetWeight": "Tamaño real del paquete",
+    "reasonPlaceholder": "¿Por qué se corrige el tamaño?"
   },
   "addToPantry": {
     "restocked": "Se reabasteció {{name}}",
@@ -410,5 +415,39 @@
     "packageContents_one": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageContents_other": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageWithTotal": "{{breakdown}} ({{total}} {{weightUnit}} en total)"
+  },
+  "unitChange": {
+    "title": "Cambiar unidad",
+    "exact": "Conversión exacta.",
+    "estimate": "Es una estimación.",
+    "estimateChoice": "{{from}} y {{to}} solo se convierten de forma aproximada para este artículo.",
+    "setOrConvert": "¿Son {{amount}}, o hay que convertir {{before}}?",
+    "setOrKeep": "¿Son {{amount}}, o mantener {{kept}}?",
+    "setTo": "Fijar en {{amount}}",
+    "convertTo": "Convertir a {{amount}}",
+    "convertToAbout": "Convertir a unos {{amount}}",
+    "keep": "Mantener {{amount}}",
+    "ifSet": "Si se fija en {{amount}}:",
+    "ifConverted": "Si se convierte:",
+    "noRoute": "{{from}} no se puede convertir a {{to}} para este artículo, así que indica cuánto tienes en {{to}}.",
+    "batches": "Cada lote",
+    "dropsNetWeight": "Se eliminará el tamaño del paquete.",
+    "dropsPortions": "Se eliminarán las porciones por paquete.",
+    "dropsThresholds": "Se borrarán los niveles de alerta de existencias bajas.",
+    "alertBelowAfter": "Avisar por debajo de: {{amount}}",
+    "conflicting": "Ya tienes este artículo registrado en {{unit}}. Cambia ese, o elige otra unidad.",
+    "needsConnection": "Para cambiar la unidad hace falta conexión, así podemos mostrarte primero qué pasa con tus existencias.",
+    "previewFailed": "No se pudo comprobar qué haría este cambio. Inténtalo de nuevo.",
+    "changedMeanwhile": "Este artículo cambió mientras lo revisabas. Comprueba las nuevas cifras y confirma de nuevo.",
+    "failed": "No se pudo cambiar la unidad. Inténtalo de nuevo.",
+    "beforeAfter": "{{before}} → {{after}}",
+    "recountNote": "Estas unidades no se convierten para este artículo, así que las existencias pasan a ser esta cantidad.",
+    "packageSizeNeeded": "Para contarlo en {{unit}}, indica cuánto contiene un {{unit}} y guarda de nuevo.",
+    "packageSizeOrSet": "Para convertir, indica cuánto contiene un {{unit}}. O fija las existencias en {{amount}}.",
+    "enterPackageSize": "Indicar tamaño del paquete"
+  },
+  "packageSize": {
+    "defaultTitle": "Tamaño de paquete predeterminado",
+    "defaultHint": "Las nuevas existencias toman este tamaño si no se indica otro. Para corregir un paquete que ya tienes, usa Corregir tamaño del paquete en la página del artículo."
   }
 }

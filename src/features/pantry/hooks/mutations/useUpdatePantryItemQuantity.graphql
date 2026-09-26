@@ -4,11 +4,12 @@ fragment useUpdatePantryItemQuantity_pantryItem on PantryItem {
   id
   version
   quantity
-  unit {
-    id
-    name
-    symbol
-    type
-    displayAsFraction
+  heldQuantity
+  displayAmount {
+    quantity
+    unit {
+      id
+      symbol
+    }
   }
 }

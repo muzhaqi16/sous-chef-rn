@@ -79,7 +79,6 @@ function Wrapper({ children: _children, ...overrides }: WrapperProps) {
 
   return (
     <AuthFormTemplate
-      contentPlacement="center"
       title="Sign In"
       fields={fields}
       control={control}

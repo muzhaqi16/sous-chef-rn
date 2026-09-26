@@ -143,8 +143,6 @@
     "owner": "Owner",
     "permissions": {
       "viewItems": "View items",
-      "viewHistory": "View history",
-      "exportList": "Export list",
       "addItems": "Add items",
       "editItems": "Edit items",
       "removeItems": "Remove items",

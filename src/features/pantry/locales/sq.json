@@ -41,7 +41,8 @@
       "historySummary_other": "{{active}} aktive nga {{total}}",
       "historyTotal_one": "{{count}} grup",
       "historyTotal_other": "{{count}} grupe",
-      "emptyTitle": "Ende pa lote"
+      "emptyTitle": "Ende pa lote",
+      "packageSize": "Paketimi: {{size}}"
     },
     "deleteTitle": "Fshi artikullin",
     "discardBatchesTitle": "Hidh grupet e skaduara",
@@ -56,7 +57,8 @@
       "emptyTitle": "Ende pa përdorim"
     },
     "shelfLifeBoth": "{{days}} d ({{openedDays}} d pas hapjes)",
-    "shelfLifeOpened": "{{days}} d pas hapjes"
+    "shelfLifeOpened": "{{days}} d pas hapjes",
+    "packages": "Paketime"
   },
   "pantrySettings": {
     "createTitle": "Krijo qilar të ri",
@@ -218,6 +220,8 @@
     "purposeTransfer": "Transferim"
   },
   "moveToPantry": {
+    "cannotAddTitle": "Nuk mund të shtoni në qilarin e kësaj shtëpie",
+    "cannotAddBody": "Nuk keni leje të shtoni artikuj në qilarët e {{home}}. Kërkojini pronarit të shtëpisë t'ju japë qasje, ose kaloni në një shtëpi ku mund të shtoni.",
     "selectPantryError": "Zgjidh një qilar",
     "selectUnitError": "Zgjidh një njësi",
     "title": "Zhvendos te qilari",
@@ -243,7 +247,9 @@
     "allAlreadyThere_other": "Ata {{count}} artikuj janë tashmë te qilari yt",
     "failedItems_one": "Nuk u zhvendos dot {{names}}",
     "failedItems_other": "Nuk u zhvendosën dot {{count}} artikuj, përfshirë {{names}}",
-    "nothingLeftToMove": "Gjithçka e blerë është tashmë te qilari yt"
+    "nothingLeftToMove": "Gjithçka e blerë është tashmë te qilari yt",
+    "packageSizeLabel": "Madhësia e paketimit",
+    "packageSizeHint": "Vetëm nëse ky paketim ndryshon nga madhësia e zakonshme, si një kavanoz 22 oz. Lëreni bosh për të përdorur madhësinë e zakonshme."
   },
   "pantryAction": {
     "useByDefault": "Përdor deri më",
@@ -253,14 +259,13 @@
     "amountWithUnit": "{{amount}} {{unit}}"
   },
   "correctWeight": {
-    "invalidWeight": "Shkruaj një peshë të vlefshme",
+    "invalidWeight": "Shkruaj një madhësi të vlefshme",
     "reasonRequired": "Shkruaj një arsye për korrigjimin",
-    "title": "Korrigjo peshën",
+    "title": "Korrigjo madhësinë e paketimit",
     "correct": "Korrigjo",
-    "netWeightPrefix": "Pesha neto: ",
-    "quantityLabel": "Sasia: ",
-    "newNetWeight": "Pesha e re neto",
-    "reasonPlaceholder": "Pse po korrigjohet pesha?"
+    "netWeightPrefix": "Madhësia e paketimit: ",
+    "newNetWeight": "Madhësia e vërtetë e paketimit",
+    "reasonPlaceholder": "Pse po korrigjohet madhësia?"
   },
   "addToPantry": {
     "restocked": "U rimbush {{name}}",
@@ -410,5 +415,39 @@
     "packageContents_one": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageContents_other": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageWithTotal": "{{breakdown}} ({{total}} {{weightUnit}} gjithsej)"
+  },
+  "unitChange": {
+    "title": "Ndrysho njësinë",
+    "exact": "Konvertim i saktë.",
+    "estimate": "Ky është një vlerësim.",
+    "estimateChoice": "{{from}} dhe {{to}} konvertohen vetëm përafërsisht për këtë artikull.",
+    "setOrConvert": "A janë {{amount}}, apo duhet konvertuar {{before}}?",
+    "setOrKeep": "A janë {{amount}}, apo të mbahen {{kept}}?",
+    "setTo": "Vendos {{amount}}",
+    "convertTo": "Konverto në {{amount}}",
+    "convertToAbout": "Konverto në rreth {{amount}}",
+    "keep": "Mbaj {{amount}}",
+    "ifSet": "Nëse vendoset {{amount}}:",
+    "ifConverted": "Nëse konvertohet:",
+    "noRoute": "{{from}} nuk mund të konvertohet në {{to}} për këtë artikull, prandaj vendosni sa keni në {{to}}.",
+    "batches": "Çdo grup",
+    "dropsNetWeight": "Madhësia e paketimit do të hiqet.",
+    "dropsPortions": "Porcionet për paketim do të hiqen.",
+    "dropsThresholds": "Nivelet e alarmit për stok të ulët do të fshihen.",
+    "alertBelowAfter": "Njofto nën: {{amount}}",
+    "conflicting": "E keni tashmë këtë artikull të regjistruar në {{unit}}. Ndryshoni atë, ose zgjidhni një njësi tjetër.",
+    "needsConnection": "Ndryshimi i njësisë kërkon lidhje, që t'ju tregojmë fillimisht çfarë ndodh me stokun.",
+    "previewFailed": "Nuk u kontrollua dot çfarë do të bënte ky ndryshim. Provoni përsëri.",
+    "changedMeanwhile": "Ky artikull ndryshoi ndërsa e shikonit. Kontrolloni shifrat e reja dhe konfirmoni përsëri.",
+    "failed": "Njësia nuk u ndryshua dot. Provoni përsëri.",
+    "beforeAfter": "{{before}} → {{after}}",
+    "recountNote": "Këto njësi nuk konvertohen për këtë artikull, prandaj stoku bëhet kjo sasi.",
+    "packageSizeNeeded": "Për ta numëruar në {{unit}}, vendosni sa përmban një {{unit}}, pastaj ruani përsëri.",
+    "packageSizeOrSet": "Për ta konvertuar, vendosni sa përmban një {{unit}}. Ose vendoseni stokun në {{amount}}.",
+    "enterPackageSize": "Vendos madhësinë e paketimit"
+  },
+  "packageSize": {
+    "defaultTitle": "Madhësia e paracaktuar e paketimit",
+    "defaultHint": "Stoku i ri merr këtë madhësi kur nuk jepet tjetër. Për të korrigjuar një paketim që e keni tashmë, përdorni Korrigjo madhësinë e paketimit në faqen e artikullit."
   }
 }

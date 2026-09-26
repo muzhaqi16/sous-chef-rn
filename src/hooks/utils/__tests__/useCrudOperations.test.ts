@@ -247,7 +247,7 @@ describe('useCrudOperations', () => {
       expect(alerts()).toEqual([
         [
           'Error',
-          "This item's unit can't be used right now. Deplete its batches first, or pick a unit it converts to — a made-up unit can't be measured against one.",
+          "This item's unit changes through the Unit field, which shows what happens to its stock before saving.",
         ],
       ]);
     });

@@ -58,9 +58,13 @@ export const pantryTypePolicies: TypePolicies = {
       unit: {
         merge: false, // Always replace unit with incoming data, never merge
       },
+      // The amount as shown is one value: a new one replaces the old whole.
+      displayAmount: {
+        merge: false,
+      },
       // Without a policy, keyArgs is every argument and a `fetchMore` page
       // lands under its own cursor — the list never grows.
-      usageRecords: mergeConnectionByNodeId(['orderBy']),
+      usageRecordsConnection: mergeConnectionByNodeId(['orderBy']),
     },
   },
   Query: {

@@ -10,6 +10,7 @@ import type { Unmasked } from '@apollo/client/masking';
 import { StorageState, StorageType } from '#/graphql/generated/schemaTypes';
 import type { CreatePantryItemMutation } from '#features/pantry/graphql/pantry.generated';
 import { NEUTRAL_UNIT } from './pantryItemDetailNeutral.generated';
+import { heldDisplayAmount } from '#domain/stockDisplay';
 
 type CreatePantryItemSuccessShape = Extract<
   Unmasked<CreatePantryItemMutation>['createPantryItem'],
@@ -95,6 +96,7 @@ export function buildOptimisticPantryItem(
   cache?: ApolloCache,
 ): OptimisticPantryItem {
   const catalogItemId = fields.itemId ?? '';
+  const unit = resolveOptimisticUnit(cache, fields);
   // The return type checks every selected field; `version` starts at 1 and the
   // server's response carries the real one.
   return {
@@ -109,6 +111,9 @@ export function buildOptimisticPantryItem(
     itemId: catalogItemId,
     itemName: fields.itemName,
     quantity: fields.quantity ?? 1,
+    // Fresh stock: every package is whole, so what is held is the count.
+    heldQuantity: fields.quantity ?? 1,
+    displayAmount: heldDisplayAmount(fields.quantity ?? 1, unit),
     storageState: fields.storageState ?? StorageState.None,
     expiresOn: fields.expiresOn ?? null,
     lowStockAlert: false,
@@ -130,7 +135,7 @@ export function buildOptimisticPantryItem(
       imageUrl: null,
       images: [],
     },
-    unit: resolveOptimisticUnit(cache, fields),
+    unit,
     netWeightUnit: null,
     storageLocation: fields.location
       ? {

@@ -215,7 +215,7 @@ describe('usePantryItemSubmission', () => {
       input: expect.objectContaining({
         pantryId: 'pantry-1',
         quantity: 2,
-        item: expect.objectContaining({ name: 'Milk' }),
+        item: { inline: expect.objectContaining({ name: 'Milk' }) },
       }),
     });
     expect(mockOnSuccess).toHaveBeenCalled();
@@ -317,7 +317,9 @@ describe('usePantryItemSubmission', () => {
     expect(m.fired).toContainEqual({
       today: expect.any(String),
       input: expect.objectContaining({
-        item: expect.objectContaining({ brand: 'Organic Valley' }),
+        item: {
+          inline: expect.objectContaining({ brand: 'Organic Valley' }),
+        },
       }),
     });
   });
@@ -340,7 +342,7 @@ describe('usePantryItemSubmission', () => {
     expect(m.fired).toContainEqual({
       today: expect.any(String),
       input: expect.objectContaining({
-        storage: expect.objectContaining({ storageLocationId: 'loc-1' }),
+        storage: expect.objectContaining({ location: { id: 'loc-1' } }),
       }),
     });
   });
@@ -364,7 +366,7 @@ describe('usePantryItemSubmission', () => {
       today: expect.any(String),
       input: expect.objectContaining({
         storage: expect.objectContaining({
-          storageLocationName: 'Top Shelf',
+          location: { name: 'Top Shelf' },
         }),
       }),
     });
@@ -414,11 +416,13 @@ describe('usePantryItemSubmission', () => {
     expect(m.fired).toContainEqual({
       today: expect.any(String),
       input: expect.objectContaining({
-        item: expect.objectContaining({
-          units: expect.arrayContaining([
-            expect.objectContaining({ packageSize: 12 }),
-          ]),
-        }),
+        item: {
+          inline: expect.objectContaining({
+            units: expect.arrayContaining([
+              expect.objectContaining({ packageSize: 12 }),
+            ]),
+          }),
+        },
       }),
     });
   });
@@ -496,6 +500,53 @@ describe('usePantryItemSubmission', () => {
     expect(refused.fired).toHaveLength(1);
   });
 
+  it('restocks with the package size entered, not the stack default', async () => {
+    // A 22 oz jar restocking a 32 oz stack keeps its own size.
+    const refused = recordMock(CreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'DuplicatePantryItemError',
+          code: ErrorCode.Conflict,
+          message: 'Already in pantry',
+          existingPantryItemIds: ['existing-1'],
+        },
+      },
+    });
+    const restock = recordMock(RestockPantryItemDocument, {
+      data: {
+        restockPantryItem: { __typename: 'RestockPantryItemPayload' },
+      },
+    });
+    const { result } = renderHookWithApollo(
+      () =>
+        usePantryItemSubmission({
+          ...defaultParams,
+          pantryNetWeight: '22',
+          pantryNetWeightUnitId: 'u-oz',
+        }),
+      { operationMocks: [refused.mock, restock.mock] },
+    );
+
+    await act(async () => {
+      await result.current.handleConfirm();
+    });
+    const buttons = (alertService.alert as jest.Mock).mock.lastCall?.[2] as {
+      text: string;
+      onPress?: () => void;
+    }[];
+    await act(async () => {
+      buttons[1]?.onPress?.();
+    });
+
+    await waitFor(() =>
+      expect(restock.fired).toContainEqual({
+        input: expect.objectContaining({
+          packageSize: { netWeight: 22, netWeightUnitId: 'u-oz' },
+        }),
+      }),
+    );
+  });
+
   it('shows error when result has error but is not duplicate', async () => {
     const {
       isPantryItemDuplicateError,
@@ -540,10 +591,12 @@ describe('usePantryItemSubmission', () => {
     expect(m.fired).toContainEqual({
       today: expect.any(String),
       input: expect.objectContaining({
-        item: expect.objectContaining({
-          netWeight: 16,
-          displayUnitId: 'wu-1',
-        }),
+        item: {
+          inline: expect.objectContaining({
+            netWeight: 16,
+            displayUnitId: 'wu-1',
+          }),
+        },
       }),
     });
   });

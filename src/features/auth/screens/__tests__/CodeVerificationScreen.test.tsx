@@ -95,8 +95,12 @@ const mockNav = jest
   .useAppNavigation();
 
 const mockNavigateToLogin = jest.fn();
+const mockNavigateToForgotPassword = jest.fn();
 jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
-  useAuthNavigation: () => ({ navigateToLogin: mockNavigateToLogin }),
+  useAuthNavigation: () => ({
+    navigateToLogin: mockNavigateToLogin,
+    navigateToForgotPassword: mockNavigateToForgotPassword,
+  }),
 }));
 
 jest.mock('#/utils/finallyHelpers');
@@ -509,6 +513,49 @@ describe('CodeVerificationScreen', () => {
       await user.press(screen.getByTestId('code-verification-sign-in'));
 
       expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
+    });
+
+    it('names the account password on the way to sign-in, with reset one tap away', async () => {
+      // A deleted account comes back under its ORIGINAL password, so the one
+      // typed at re-registration may not be the one that signs in.
+      mockStoreUser(null);
+      const user = userEvent.setup();
+      renderWithApollo(
+        <CodeVerificationScreen context="signup" email="new@example.com" />,
+        {
+          operationMocks: [
+            {
+              request: { query: VerifyEmailDocument, variables: () => true },
+              result: {
+                data: {
+                  verifyEmail: {
+                    __typename: 'VerifyEmailPayload',
+                    user: { __typename: 'User', id: 'user-1' },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      );
+
+      await user.type(screen.getByTestId('field-code'), '123456');
+      await user.press(screen.getByTestId('submit-button'));
+
+      await waitFor(() => {
+        expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
+      });
+      expect(mockToastSuccess).toHaveBeenCalledTimes(1);
+      const [message, options] = mockToastSuccess.mock.calls[0] as [
+        string,
+        { action: { label: string; onPress: () => void } },
+      ];
+      expect(message).toBe(
+        'Email verified. Sign in with the password this account already has.',
+      );
+      expect(options.action.label).toBe('Forgot password?');
+      options.action.onPress();
+      expect(mockNavigateToForgotPassword).toHaveBeenCalledTimes(1);
     });
 
     it('has no back button — the account already exists', () => {

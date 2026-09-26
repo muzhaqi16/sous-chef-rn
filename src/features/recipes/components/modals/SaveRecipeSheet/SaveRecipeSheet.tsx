@@ -1,19 +1,13 @@
 import React, { useState } from 'react';
-import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  ThemedActivityIndicator,
-  ThemedBottomSheetTextInput,
-} from '#components/atoms/themedComponents';
+import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { TagInput } from '#features/recipes/components/TagInput';
-import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { InlineFolderChooser } from '#features/recipes/components/InlineFolderChooser';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Sheet } from '#components/templates/Sheet';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { SheetHeader } from '#components/templates/SheetHeader';
 
 export interface SaveRecipeSheetProps {
   visible: boolean;
@@ -94,45 +88,27 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
       contentContainerStyle={styles.contentContainer}
       style={styles.scrollView}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text role="heading">{t('saveRecipe.title')}</Text>
-          {!!recipeName && (
-            <Text
-              role="caption"
-              tone="secondary"
-              style={styles.recipeName}
-              numberOfLines={1}
-            >
-              {recipeName}
-            </Text>
-          )}
-        </View>
-        <View style={styles.headerButtons}>
-          <Pressable
-            onPress={handleSave}
-            accessibilityLabel={t('labels.save')}
-            hitSlop={hitSlop.lg}
-            disabled={saving}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            {saving ? (
-              <ThemedActivityIndicator size="small" />
-            ) : (
-              <Icon name="checkmark" size={24} tone="primary" />
-            )}
-          </Pressable>
-          <Pressable
-            onPress={onClose}
-            accessibilityLabel={t('labels.close')}
-            hitSlop={hitSlop.lg}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Icon name="close" size={24} tone="textPrimary" />
-          </Pressable>
-        </View>
-      </View>
+      <SheetHeader
+        title={t('saveRecipe.title')}
+        onClose={onClose}
+        confirm={{
+          onPress: () => {
+            void handleSave();
+          },
+          loading: saving,
+        }}
+      />
+      {!!recipeName && (
+        <Text
+          role="caption"
+          tone="secondary"
+          align="center"
+          style={styles.recipeName}
+          numberOfLines={1}
+        >
+          {recipeName}
+        </Text>
+      )}
 
       <InlineFolderChooser
         folders={displayFolders}
@@ -178,23 +154,9 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     paddingBottom: theme.spacing.xl,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: theme.spacing.md,
-  },
-  headerLeft: {
-    flex: 1,
-    marginRight: theme.spacing.md,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.md,
-  },
   recipeName: {
     marginTop: theme.spacing.xs,
+    marginBottom: theme.spacing.md,
   },
   sectionLabel: {
     marginBottom: theme.spacing.xs,
@@ -211,8 +173,5 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
     minHeight: 60,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

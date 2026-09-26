@@ -93,6 +93,8 @@ export const getPushTrayCopy = (
       ? { title: englishTitle, body: englishBody }
       : null;
 
+  // A summary stands for several deferred rows and carries no row's type or
+  // display parameters, so it is worded from its count alone.
   const coalescedCount = Number(data.coalescedCount);
   if (Number.isFinite(coalescedCount) && coalescedCount > 0) {
     return {

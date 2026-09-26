@@ -42,6 +42,7 @@ const PRODUCTION_RULES = [
   'no-scrollable-in-bottom-sheet-view',
   'rngh-refresh-control-matches-host',
   'on-fill-text-uses-its-token',
+  'animated-node-takes-no-themed-style',
 ];
 
 const productionRules = severity =>

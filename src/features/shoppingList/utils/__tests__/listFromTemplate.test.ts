@@ -83,7 +83,8 @@ describe('listFromTemplate', () => {
 
     expect(items[0]).toMatchObject({
       item: { itemId: 'item-1' },
-      unit: { unitId: 'unit-1' },
+      unit: { id: 'unit-1' },
+      unitLabel: 'pc',
       quantity: 2,
       notes: 'ripe',
       category: 'Produce',
@@ -100,7 +101,7 @@ describe('listFromTemplate', () => {
     expect(skipped).toEqual([]);
     expect(items[0]).toMatchObject({
       item: { itemName: 'Tomatoes' },
-      unit: { unitName: 'pc' },
+      unit: { name: 'pc' },
     });
   });
 

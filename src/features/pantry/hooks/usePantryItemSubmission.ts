@@ -28,6 +28,7 @@ import {
   promptPantryDuplicate,
 } from '#domain/pantryItemDuplicate';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { refByIdOrName } from '#/utils/refInput';
 import { errorService } from '#/services/errorService';
 import { toDateKey } from '#/utils/dateUtils';
 
@@ -148,21 +149,19 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     if (showPackageDetails && packageSize && contentUnit) {
       const pkgSize = parseDecimalInput(packageSize);
       if (!isNaN(pkgSize) && pkgSize > 0) {
-        itemUnits = [
-          {
-            unitId: unitId ?? undefined,
-            unitName: !unitId && unit.trim() ? unit.trim() : undefined,
-            packageSize: pkgSize,
-            contentUnitId: contentUnitId ?? undefined,
-            contentUnitName: !contentUnitId ? contentUnit.trim() : undefined,
-            retailUnit: true,
-          },
-          {
-            unitId: contentUnitId ?? undefined,
-            unitName: !contentUnitId ? contentUnit.trim() : undefined,
-            isDefault: true,
-          },
-        ];
+        const packageUnit = refByIdOrName(unitId, unit);
+        const packageContentUnit = refByIdOrName(contentUnitId, contentUnit);
+        if (packageUnit && packageContentUnit) {
+          itemUnits = [
+            {
+              unit: packageUnit,
+              packageSize: pkgSize,
+              contentUnit: packageContentUnit,
+              retailUnit: true,
+            },
+            { unit: packageContentUnit, isDefault: true },
+          ];
+        }
       }
       // Per-container net weight, and it is all-or-nothing here too: a bare
       // `item.netWeight` with no `displayUnitId` is a number the server cannot
@@ -220,21 +219,11 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       id,
       pantryId,
       quantity,
-      unit:
-        unitId || unit.trim()
-          ? {
-              unitId: unitId ?? undefined,
-              unitName: !unitId && unit.trim() ? unit.trim() : undefined,
-            }
-          : undefined,
+      unit: refByIdOrName(unitId, unit),
       storage: {
         storageState,
         condition,
-        storageLocationId: selectedStorageLocationId ?? undefined,
-        storageLocationName:
-          !selectedStorageLocationId && storageLocation.trim()
-            ? storageLocation.trim()
-            : undefined,
+        location: refByIdOrName(selectedStorageLocationId, storageLocation),
         storageNotes: storageNotes.trim() || undefined,
       },
       purchase,
@@ -268,12 +257,14 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
             }
           : undefined,
       item: {
-        name: itemName.trim(),
-        brand: brand.trim() || undefined,
-        category: category.trim() || undefined,
-        units: itemUnits,
-        netWeight: netWeight,
-        displayUnitId: displayUnitId,
+        inline: {
+          name: itemName.trim(),
+          brand: brand.trim() || undefined,
+          category: refByIdOrName(null, category),
+          units: itemUnits,
+          netWeight: netWeight,
+          displayUnitId: displayUnitId,
+        },
       },
     };
 
@@ -359,6 +350,16 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
                   ...(expirationDate && {
                     expiresOn: toDateKey(expirationDate),
                   }),
+                  // These packages' own size; without it the batch takes the
+                  // stack's default, which may be another size (a 22 oz jar
+                  // on a 32 oz stack).
+                  ...(effectivePantryNetWeight &&
+                    effectiveNetWeightUnitId && {
+                      packageSize: {
+                        netWeight: effectivePantryNetWeight,
+                        netWeightUnitId: effectiveNetWeightUnitId,
+                      },
+                    }),
                   // idempotencyKey dedups the restock ledger row on replay.
                   idempotencyKey: generateEntityId(),
                 },

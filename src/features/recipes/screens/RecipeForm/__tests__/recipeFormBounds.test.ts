@@ -30,24 +30,29 @@ describe('the recipe form bounds', () => {
   });
 
   describe('imageUrl', () => {
-    it.each(['https://example.com/a.png', 'http://example.com/a.png', ''])(
-      'accepts %p',
-      async imageUrl => {
-        expect(await firstError({ ...base(), imageUrl })).toBeNull();
-      },
-    );
+    it.each([
+      'https://example.com/a.png',
+      'http://example.com/a.png',
+      ' https://example.com/a.png ',
+      '',
+    ])('accepts %p', async imageUrl => {
+      expect(await firstError({ ...base(), imageUrl })).toBeNull();
+    });
 
-    // The API accepts http/https only. Refused server-side, this arrives as a
-    // field error on a form the user has already left.
+    // The API's URL scalar refuses these before any resolver runs.
     // Assembled, not written literally: `no-script-url` flags the literal even
     // in a test asserting that the schema refuses it.
     const scriptUrl = `${'java'}${'script'}:alert(1)`;
-    it.each(['ftp://example.com/a.png', scriptUrl, 'example.com'])(
-      'refuses %p on the field',
-      async imageUrl => {
-        expect(await firstError({ ...base(), imageUrl })).toContain('http');
-      },
-    );
+    it.each([
+      'ftp://example.com/a.png',
+      scriptUrl,
+      'example.com',
+      'https://',
+      'https://exa mple.com/a.png',
+      `https://example.com/${'a'.repeat(2048)}`,
+    ])('refuses %p on the field', async imageUrl => {
+      expect(await firstError({ ...base(), imageUrl })).toContain('http');
+    });
   });
 
   describe('the instructions JSON bound', () => {

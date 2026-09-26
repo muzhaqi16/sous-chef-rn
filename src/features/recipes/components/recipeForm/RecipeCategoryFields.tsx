@@ -1,9 +1,16 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { FormInput } from '#components/atoms/FormInput';
+import { View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { Text } from '#components/atoms/Text';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
-import { Difficulty, RecipeStatus } from '#/graphql/generated/schemaTypes';
+import {
+  Difficulty,
+  RecipeStatus,
+  type Cuisine,
+} from '#/graphql/generated/schemaTypes';
 import type { RecipeFormState } from '#features/recipes/screens/RecipeForm/formState';
+import { CuisineChips } from '#features/recipes/ui/CuisineChips';
 
 interface RecipeCategoryFieldsProps {
   state: RecipeFormState;
@@ -31,6 +38,13 @@ export const RecipeCategoryFields: React.FC<RecipeCategoryFieldsProps> = ({
     t(`recipes.difficultyLabel.${value}`);
   const formatStatus = (value: RecipeStatus) =>
     t(`recipes.recipeStatus.${value}`);
+  const toggleCuisine = (cuisine: Cuisine) =>
+    updateField(
+      'cuisines',
+      state.cuisines.includes(cuisine)
+        ? state.cuisines.filter(c => c !== cuisine)
+        : [...state.cuisines, cuisine],
+    );
   return (
     <>
       {!!state.difficulty && (
@@ -52,20 +66,34 @@ export const RecipeCategoryFields: React.FC<RecipeCategoryFieldsProps> = ({
         />
       )}
 
-      <FormInput
-        label={t('recipes.cuisine')}
-        value={state.cuisine}
-        onChangeText={v => updateField('cuisine', v)}
-        placeholder={t('recipes.cuisinePlaceholder')}
-      />
+      <View style={styles.cuisines}>
+        <Text role="bodyStrong" style={styles.cuisinesLabel}>
+          {t('recipes.cuisine')}
+        </Text>
+        <CuisineChips selected={state.cuisines} onToggle={toggleCuisine} />
+      </View>
 
+      {/* A recipe in review was submitted: it sits on the publish side. */}
       <SegmentedControl
         label={t('labels.status')}
         options={STATUSES}
-        value={state.status}
+        value={
+          state.status === RecipeStatus.PendingReview
+            ? RecipeStatus.Published
+            : state.status
+        }
         onChange={v => updateField('status', v)}
         formatLabel={formatStatus}
       />
     </>
   );
 };
+
+const styles = StyleSheet.create(theme => ({
+  cuisines: {
+    marginBottom: theme.spacing.md,
+  },
+  cuisinesLabel: {
+    marginBottom: theme.spacing.sm,
+  },
+}));

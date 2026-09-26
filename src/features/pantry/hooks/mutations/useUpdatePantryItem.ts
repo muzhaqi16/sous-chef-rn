@@ -16,14 +16,13 @@ import type { StorageType } from '#/graphql/generated/schemaTypes';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useTranslation } from '#/i18n';
-import { buildDirtyUpdateInput, buildOptimisticUnit } from './utils';
-import type { DirtyFieldFlags, FormDataInput, UnitSelection } from './types';
+import { buildDirtyUpdateInput } from './utils';
+import type { DirtyFieldFlags, FormDataInput } from './types';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { logger } from '#/utils/environment';
 import { toDateKey } from '#/utils/dateUtils';
 
 interface UseUpdatePantryItemOptions {
-  onSuccess?: () => void;
   refetch?: () => void;
 }
 
@@ -33,52 +32,41 @@ interface UpdatePantryItemFieldsParams {
   dirtyFields: DirtyFieldFlags;
   selectedLocationId: string | null;
   selectedBrandId: string | null;
-  trackingUnit?: UnitSelection;
   selectedStorageLocation?: {
     id: string;
     name: string;
     type: StorageType;
   } | null;
-  unitSymbol?: string;
 }
 
-export function useUpdatePantryItem({
-  onSuccess,
-  refetch,
-}: UseUpdatePantryItemOptions) {
+export function useUpdatePantryItem({ refetch }: UseUpdatePantryItemOptions) {
   const { t } = useTranslation();
   const client = useApolloClient();
 
   const [updateMutation] = useMutation(UpdatePantryItemDocument);
 
   /**
-   * Update non-quantity fields of a pantry item
-   * Fires mutation asynchronously - doesn't await to allow immediate navigation
+   * Updates the dirtied non-quantity fields. Resolves once the write settles —
+   * at once when it is queued — and false on a refusal, which has been alerted.
    */
-  const updatePantryItemFields = ({
+  const updatePantryItemFields = async ({
     itemId,
     input,
     dirtyFields,
     selectedLocationId,
     selectedBrandId,
-    trackingUnit,
     selectedStorageLocation,
-    unitSymbol,
-  }: UpdatePantryItemFieldsParams): void => {
+  }: UpdatePantryItemFieldsParams): Promise<boolean> => {
     // Build input for dirty fields only
     const updateInput = buildDirtyUpdateInput(
       input,
       dirtyFields,
       selectedLocationId,
       selectedBrandId,
-      unitSymbol,
     );
 
     // Only fire mutation if there are changes
-    if (Object.keys(updateInput).length === 0) {
-      onSuccess?.();
-      return;
-    }
+    if (Object.keys(updateInput).length === 0) return true;
 
     const currentItem =
       client.cache.readFragment<UseUpdatePantryItem_PantryItemFragment>({
@@ -89,7 +77,7 @@ export function useUpdatePantryItem({
 
     if (!currentItem) {
       logger.warn('Item not found, cannot update:', itemId);
-      return;
+      return false;
     }
 
     // Build optimistic update from form data (PantryItem-shaped, not mutation-input-shaped)
@@ -136,15 +124,6 @@ export function useUpdatePantryItem({
       }
     }
 
-    // Include new unit in optimistic response to prevent race condition
-    // with updateQuantity mutation overwriting the unit
-    if (trackingUnit?.id && trackingUnit.id !== currentItem.unit.id) {
-      optimisticUpdate.unit = buildOptimisticUnit(
-        trackingUnit,
-        currentItem.unit,
-      );
-    }
-
     const optimisticPantryItem = enhanceWithVersion(
       currentItem,
       optimisticUpdate,
@@ -183,7 +162,7 @@ export function useUpdatePantryItem({
 
     // A refusal naming `field: "unit"` (a unit change while the item has
     // batches) reads as the localized `errors.field.unit` copy.
-    void settleMutation(
+    const settled = await settleMutation(
       () =>
         updateMutation({
           variables: {
@@ -201,7 +180,7 @@ export function useUpdatePantryItem({
       },
     );
 
-    onSuccess?.();
+    return settled.status !== 'failed';
   };
 
   return { updatePantryItemFields };

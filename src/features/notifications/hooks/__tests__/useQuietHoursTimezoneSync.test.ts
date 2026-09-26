@@ -108,9 +108,10 @@ beforeEach(() => {
 });
 
 /**
- * `quietHoursTimezone` is the only timezone the API reads when it defers a push,
- * and it defaults to "UTC" — where a 22:00–08:00 window mutes mid-afternoon in
- * New York. `registerDevice` carries a timezone too, but nothing reads it.
+ * `quietHoursTimezone` is the only timezone the API reads when it defers a push
+ * or schedules a reminder or digest, and it defaults to "UTC" — where a
+ * 22:00–08:00 window mutes mid-afternoon in New York. `registerDevice` carries
+ * a timezone too, but nothing reads it.
  */
 describe('useQuietHoursTimezoneSync', () => {
   it('rewrites the API default of UTC to the device zone', async () => {
@@ -144,9 +145,10 @@ describe('useQuietHoursTimezoneSync', () => {
     await waitFor(() => expect(update.fired).toEqual([]));
   });
 
-  it('stays quiet while quiet hours are disabled', async () => {
+  // A morning meal-plan reminder is scheduled in this zone too.
+  it('keeps the zone in step while quiet hours are off', async () => {
     const update = recordMock(UpdateNotificationPreferencesDocument, {
-      data: updatedPrefs({}),
+      data: updatedPrefs({ quietHoursTimezone: 'America/New_York' }),
     });
 
     renderHookWithApollo(() => useQuietHoursTimezoneSync(), {
@@ -156,7 +158,11 @@ describe('useQuietHoursTimezoneSync', () => {
       ],
     });
 
-    await waitFor(() => expect(update.fired).toEqual([]));
+    await waitFor(() =>
+      expect(update.fired).toContainEqual({
+        input: { quietHours: { quietHoursTimezone: 'America/New_York' } },
+      }),
+    );
   });
 
   it('does not write when the device reports no zone', async () => {

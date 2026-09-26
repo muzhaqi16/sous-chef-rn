@@ -100,7 +100,7 @@ export const TabItem: React.FC<TabItemProps> = ({
     <Icon
       name={isFocused ? icon.active : icon.inactive}
       size={24}
-      tone={isFocused ? 'primary' : 'textSecondary'}
+      tone={isFocused ? 'primary' : 'onScrim'}
     />
   );
 
@@ -138,7 +138,7 @@ const styles = StyleSheet.create(theme => ({
     minWidth: theme.sizes.touchTarget.sm,
   },
   tabLabel: {
-    color: theme.colors.textSecondary,
+    color: theme.colors.onScrim,
     marginTop: theme.spacing.xs,
     // A label too wide to fit takes the full tab width, where the default left
     // alignment puts it off to one side of its own icon — so centre it. The call

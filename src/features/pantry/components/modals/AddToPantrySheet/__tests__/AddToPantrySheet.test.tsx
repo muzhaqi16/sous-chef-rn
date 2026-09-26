@@ -427,6 +427,7 @@ describe('AddToPantrySheet', () => {
                 unit {
                   __typename
                   id
+                  symbol
                 }
               }
             }
@@ -476,7 +477,7 @@ describe('AddToPantrySheet', () => {
         itemName: 'Milk',
         quantity: 3,
         item: { __typename: 'Item', id: 'item-1' },
-        unit: { __typename: 'Unit', id: 'unit-l' },
+        unit: { __typename: 'Unit', id: 'unit-l', symbol: 'L' },
       },
     };
 
