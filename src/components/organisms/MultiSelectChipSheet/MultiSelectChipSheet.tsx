@@ -92,6 +92,7 @@ export function MultiSelectChipSheet<T extends string = string>({
       */}
       <View style={[styles.bottomSheetContent, contentContainerStyle]}>
         <BottomSheetHeader
+          contentPadding="md"
           title={title}
           onCancel={onClose}
           onConfirm={onDone}

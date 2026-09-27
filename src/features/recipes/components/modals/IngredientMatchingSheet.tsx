@@ -94,6 +94,7 @@ export const IngredientMatchingSheet: React.FC<
         registers SCROLLABLE_TYPE.VIEW after the list, losing arbitration. */}
       <View style={[styles.container, contentContainerStyle]}>
         <BottomSheetHeader
+          contentPadding="md"
           title={t('ingredientMatching.reviewIngredients')}
           onCancel={onClose}
           onConfirm={onConfirm}

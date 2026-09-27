@@ -184,6 +184,7 @@ export const CookingPreferencesSheet: React.FC<
       >
         {/* Header */}
         <BottomSheetHeader
+          contentPadding="md"
           title={t('labels.cookingPreferences')}
           onCancel={onClose}
           onConfirm={handleSave}

@@ -138,6 +138,7 @@ export const CorrectPackageSizeModal: React.FC<
       contentContainerStyle={commonStyles.bottomSheetContent}
     >
       <BottomSheetHeader
+        contentPadding="md"
         title={t('correctWeight.title')}
         onCancel={onClose}
         onConfirm={handleConfirm}

@@ -101,6 +101,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
       {/* Header — no title; the "Mark Cooked" action and the recipe name
             below already convey intent. */}
       <BottomSheetHeader
+        contentPadding="md"
         onCancel={onClose}
         onConfirm={handleConfirm}
         confirmLabel={t('markCookedModal.markCooked')}

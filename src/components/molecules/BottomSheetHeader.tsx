@@ -5,6 +5,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text, type TextTone } from '#components/atoms/Text';
 import { Divider } from '#components/atoms/Divider';
+import { commonStyles } from '#/styles/commonStyles';
 
 type ConfirmColor = 'primary' | 'success' | 'warning' | 'error';
 
@@ -16,6 +17,8 @@ const CONFIRM_TONE: Record<ConfirmColor, TextTone> = {
 };
 
 interface BottomSheetHeaderProps {
+  /** Horizontal padding on the parent sheet body, cancelled for the header. */
+  contentPadding?: 'md' | 'lg';
   /** Optional centered title. Omit when the confirm action already names the
    *  intent (e.g. a "Mark Cooked" / "Generate" button) to avoid redundancy. */
   title?: string;
@@ -40,6 +43,7 @@ interface BottomSheetHeaderProps {
 }
 
 export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
+  contentPadding,
   title,
   onCancel,
   onConfirm,
@@ -64,7 +68,9 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
   const confirmBlocked = confirmDisabled || saving;
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, commonStyles.sheetHeaderBleed(contentPadding)]}
+    >
       <View style={styles.header}>
         <AppPressable
           onPress={onCancel}
@@ -120,7 +126,8 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.xs,
+    // Text has its own button padding; keep the label on the page gutter.
+    paddingHorizontal: theme.layout.pageGutter - theme.spacing.xs,
   },
   button: {
     paddingVertical: theme.spacing.xs,

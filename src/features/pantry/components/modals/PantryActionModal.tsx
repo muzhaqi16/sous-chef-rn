@@ -257,6 +257,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
         showsVerticalScrollIndicator={false}
       >
         <BottomSheetHeader
+          contentPadding="md"
           title={title}
           onCancel={onClose}
           onConfirm={() => onConfirm(shared)}

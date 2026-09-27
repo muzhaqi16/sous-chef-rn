@@ -89,6 +89,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
       style={styles.scrollView}
     >
       <SheetHeader
+        contentPadding="md"
         title={t('saveRecipe.title')}
         onClose={onClose}
         confirm={{

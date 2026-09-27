@@ -339,6 +339,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     >
       {/* Header */}
       <SheetHeader
+        contentPadding="md"
         title={t('moveToPantry.title')}
         onClose={onClose}
         confirm={{

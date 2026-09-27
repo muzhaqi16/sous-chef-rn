@@ -61,6 +61,11 @@ export const commonStyles = StyleSheet.create(theme => ({
       (theme.sizes.touchTarget.md - theme.sizes.icon.md) / 2,
   },
 
+  // Headers own their edge inset, even inside a padded sheet body.
+  sheetHeaderBleed: (contentPadding?: 'md' | 'lg') => ({
+    marginHorizontal: contentPadding ? -theme.spacing[contentPadding] : 0,
+  }),
+
   input: {
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
