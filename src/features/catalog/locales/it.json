@@ -298,6 +298,7 @@
     }
   },
   "itemForm": {
+    "unknownUnit": "\"{{unit}}\" non è un'unità che riconosciamo. Scegline una dall'elenco.",
     "itemInformation": "Informazioni articolo",
     "storageDetails": "Dettagli di conservazione",
     "noPantrySelected": "Nessuna dispensa selezionata. Seleziona prima una dispensa.",
@@ -309,7 +310,6 @@
     "tags": "Tag",
     "tagsPlaceholder": "Inserisci i tag separati da virgola",
     "location": "Posizione",
-    "netWeightLocked": "Peso bloccato dopo l'uso — correggilo dai dettagli dell'articolo",
     "locationPlaceholder": "es. ripiano alto, cassetto 2",
     "storageNotes": "Note di conservazione",
     "notes": "Note",

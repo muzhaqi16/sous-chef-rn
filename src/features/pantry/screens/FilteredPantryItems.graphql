@@ -12,6 +12,7 @@ mutation AddItemToShoppingListFromFilteredPantry(
         success
         code
         quantityIncremented
+        packageSizeCleared
         error
         item {
           id

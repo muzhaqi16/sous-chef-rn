@@ -6,7 +6,6 @@ import { SignUpScreen } from '../SignUpScreen';
 
 // --- Mocks ---
 
-const mockGoBack = jest.fn();
 const mockNavigateToLogin = jest.fn();
 const mockRegister = jest.fn();
 
@@ -26,7 +25,7 @@ jest.mock('#features/auth/hooks/useAuthNavigation', () => ({
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
   useNavigation: () => ({
-    goBack: mockGoBack,
+    goBack: jest.fn(),
     navigate: jest.fn(),
     dispatch: jest.fn(),
     canGoBack: jest.fn(() => true),
@@ -196,16 +195,9 @@ describe('SignUpScreen', () => {
     expect(screen.getByText('Sign Up')).toBeTruthy();
   });
 
-  it('renders the back button', () => {
+  it('renders no back button, like the other root auth screens', () => {
     renderWithApollo(<SignUpScreen />);
-    expect(screen.getByTestId('back-button')).toBeTruthy();
-  });
-
-  it('calls goBack when back button is pressed', async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<SignUpScreen />);
-    await user.press(screen.getByTestId('back-button'));
-    expect(mockGoBack).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('back-button')).toBeNull();
   });
 
   it('renders sign in footer link', () => {
@@ -221,16 +213,16 @@ describe('SignUpScreen', () => {
     expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
   });
 
-  it('offers code entry on successful registration', async () => {
-    mockRegister.mockResolvedValue(true);
+  it('offers code entry when the new account cannot sign in', async () => {
+    mockRegister.mockResolvedValue('verificationSent');
     const user = userEvent.setup();
     renderWithApollo(<SignUpScreen />);
 
     await user.press(screen.getByTestId('signup-submit-button'));
 
-    // Registration succeeded → the form is replaced by the code screen (no
-    // navigation into the app, no auth). The activation mail carries a code AND
-    // a link, so the user can finish here instead of leaving for their inbox.
+    // The address refused the password (taken, or a deleted account), so the
+    // form is replaced by the code screen. The activation mail carries a code
+    // AND a link, so the user can finish here instead of leaving for their inbox.
     await waitFor(() => {
       expect(screen.getByTestId('code-verification-screen')).toBeTruthy();
     });
@@ -242,7 +234,7 @@ describe('SignUpScreen', () => {
     // The mail has already gone out, so the first resend tap must not be able
     // to fire a duplicate send seconds later.
     const recordedVariables: Record<string, unknown>[] = [];
-    mockRegister.mockResolvedValue(true);
+    mockRegister.mockResolvedValue('verificationSent');
     const user = userEvent.setup();
     renderWithApollo(<SignUpScreen />, {
       operationMocks: [
@@ -279,8 +271,21 @@ describe('SignUpScreen', () => {
     expect(recordedVariables).toHaveLength(0);
   });
 
+  it('leaves a signed-in registration to the verification gate', async () => {
+    // The root navigator swaps the auth group for the gate, which offers the
+    // skip; code entry here would be a second, skip-less copy of it.
+    mockRegister.mockResolvedValue('signedIn');
+    const user = userEvent.setup();
+    renderWithApollo(<SignUpScreen />);
+
+    await user.press(screen.getByTestId('signup-submit-button'));
+
+    await waitFor(() => expect(mockRegister).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId('code-verification-screen')).toBeNull();
+  });
+
   it('stays on the form (no code entry) when registration is rejected', async () => {
-    mockRegister.mockResolvedValue(false);
+    mockRegister.mockResolvedValue('failed');
     const user = userEvent.setup();
     renderWithApollo(<SignUpScreen />);
 

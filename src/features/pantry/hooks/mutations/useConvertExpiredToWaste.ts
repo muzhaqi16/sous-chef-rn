@@ -14,6 +14,7 @@ import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
+import { writeHeldStock } from '#features/pantry/cache/stock';
 
 interface UseConvertExpiredToWasteOptions {
   onSuccess?: () => void;
@@ -23,6 +24,7 @@ const CONVERT_STATE_FRAGMENT = gql`
   fragment useConvertExpiredToWaste_state on PantryItem {
     id
     quantity
+    heldQuantity
     condition
   }
 `;
@@ -43,6 +45,7 @@ export function useConvertExpiredToWaste({
     });
     const snapshot = client.cache.readFragment<{
       quantity: number;
+      heldQuantity: number;
       condition: ItemCondition;
     }>({
       id: itemCacheId,
@@ -50,17 +53,32 @@ export function useConvertExpiredToWaste({
       fragmentName: 'useConvertExpiredToWaste_state',
     });
 
-    const writeState = (quantity: number, condition: ItemCondition) =>
+    const writeState = (
+      quantity: number,
+      heldQuantity: number,
+      condition: ItemCondition,
+    ) => {
       client.cache.modify({
         id: itemCacheId,
-        fields: { quantity: () => quantity, condition: () => condition },
+        fields: {
+          quantity: () => quantity,
+          condition: () => condition,
+        },
       });
+      writeHeldStock(client.cache, pantryItemId, heldQuantity);
+    };
 
     // Permanent optimistic write before firing — survives an offline/queued convert.
     const clearQuantityPersistence = optimisticDataPersistence.track(
       'PantryItem',
       pantryItemId,
       'quantity',
+      0,
+    );
+    const clearHeldPersistence = optimisticDataPersistence.track(
+      'PantryItem',
+      pantryItemId,
+      'heldQuantity',
       0,
     );
     const clearConditionPersistence = optimisticDataPersistence.track(
@@ -71,10 +89,11 @@ export function useConvertExpiredToWaste({
     );
     const clearPersistence = () => {
       clearQuantityPersistence();
+      clearHeldPersistence();
       clearConditionPersistence();
     };
     try {
-      writeState(0, ItemCondition.Spoiled);
+      writeState(0, 0, ItemCondition.Spoiled);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Convert Expired To Waste (optimistic)',
@@ -86,7 +105,11 @@ export function useConvertExpiredToWaste({
       // the optimistic write instead of restoring the item.
       if (snapshot) {
         try {
-          writeState(snapshot.quantity, snapshot.condition);
+          writeState(
+            snapshot.quantity,
+            snapshot.heldQuantity,
+            snapshot.condition,
+          );
         } catch (cacheError) {
           errorService.reportError(cacheError, {
             operation: 'Revert rejected expired-to-waste convert',

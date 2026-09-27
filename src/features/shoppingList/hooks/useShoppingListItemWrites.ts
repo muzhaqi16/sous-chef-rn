@@ -30,6 +30,7 @@ import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { useTranslation } from '#/i18n';
 
 type LocalItemField = keyof Pick<
@@ -166,6 +167,10 @@ export function useShoppingListItemWrites(
     if (kept === 'reverted') {
       alertService.alert(t('labels.error'), failureMessage);
       return false;
+    }
+    const [result] = appliedPayload(settled.data)?.results ?? [];
+    if (result?.packageSizeCleared) {
+      toastService.info(t('shoppingListScreens.packageSizeCleared'));
     }
     return true;
   };

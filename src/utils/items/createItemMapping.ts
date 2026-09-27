@@ -9,6 +9,42 @@ import type {
 import type { ImageFile } from '#hooks/useImageUpload';
 import { useStore } from '#store';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { refByIdOrName } from '#/utils/refInput';
+
+/** A net-weight row as the form collects it: a picked unit's id, or a typed name. */
+export interface NetWeightRow {
+  value: number;
+  unitName: string;
+  unitId?: string;
+}
+
+/** An item-unit row as the form collects it; each unit is an id or a typed name. */
+export interface ItemUnitRow {
+  unitId?: string;
+  unitName?: string;
+  isDefault?: boolean;
+  packageSize?: number;
+  contentUnitId?: string;
+  contentUnitName?: string;
+}
+
+const toNetWeightInput = (row: NetWeightRow): ItemNetWeightInput[] => {
+  const unit = refByIdOrName(row.unitId, row.unitName);
+  return unit ? [{ unit, value: row.value }] : [];
+};
+
+const toItemUnitInput = (row: ItemUnitRow): ItemUnitInput[] => {
+  const unit = refByIdOrName(row.unitId, row.unitName);
+  if (!unit) return [];
+  return [
+    {
+      unit,
+      isDefault: row.isDefault,
+      packageSize: row.packageSize,
+      contentUnit: refByIdOrName(row.contentUnitId, row.contentUnitName),
+    },
+  ];
+};
 
 /**
  * Shape of the dynamic AddItemForm submission fields this mapper reads. The
@@ -32,8 +68,8 @@ export interface AddItemFormData {
   baseDimension?: BaseDimension;
   defaultConsumeIncrement?: number;
   defaultConsumeUnitId?: string;
-  netWeights?: ItemNetWeightInput[];
-  units?: ItemUnitInput[];
+  netWeights?: NetWeightRow[];
+  units?: ItemUnitRow[];
   imageUrl?: string;
   sku?: string;
   storeId?: string;
@@ -51,10 +87,7 @@ export function mapFormToCreateItemInput(
     name: data.name,
     description: firstNonBlank(data.description),
     type: data.type,
-    brand:
-      data.brandId || data.brandName
-        ? { brandId: data.brandId, brandName: data.brandName }
-        : undefined,
+    brand: refByIdOrName(data.brandId, data.brandName),
     classification:
       data.storageState || data.tags?.length || data.categoryIds?.length
         ? {
@@ -83,8 +116,12 @@ export function mapFormToCreateItemInput(
             defaultConsumeUnitId: firstNonBlank(data.defaultConsumeUnitId),
           }
         : undefined,
-    netWeights: data.netWeights?.length ? data.netWeights : undefined,
-    unitConfig: data.units?.length ? { units: data.units } : undefined,
+    netWeights: data.netWeights?.length
+      ? data.netWeights.flatMap(toNetWeightInput)
+      : undefined,
+    unitConfig: data.units?.length
+      ? { units: data.units.flatMap(toItemUnitInput) }
+      : undefined,
     media: data.imageUrl ? { imageUrl: data.imageUrl } : undefined,
     storeSkus:
       data.sku && data.storeId

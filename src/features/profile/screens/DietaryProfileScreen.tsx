@@ -11,10 +11,10 @@ import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import type {
+  CookingSkillLevel,
   Diet,
-  Intolerance,
-  HealthGoal,
   Cuisine,
+  RestrictionKindInput,
 } from '#/graphql/generated/schemaTypes';
 import { RestrictionSeverity } from '#/graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
@@ -22,6 +22,7 @@ import { Icon } from '#/utils/iconUtils';
 import { StringArrayManager } from '#features/profile/components/StringArrayManager/StringArrayManager';
 import { NumberInputSheet } from '#features/profile/components/NumberInputSheet/NumberInputSheet';
 import { InfoRow } from '#components/atoms/InfoRow';
+import { knownSkillLevel } from '#domain/dietary';
 
 const ThemedInfoRow = withUnistyles(InfoRow, theme => ({
   iconColor: theme.colors.primary,
@@ -76,11 +77,7 @@ export const DietaryProfileScreen: React.FC = () => {
 
   // Batch add restrictions handler
   const handleAddRestrictions = async (
-    restrictions: {
-      diet?: Diet;
-      intolerance?: Intolerance;
-      healthGoal?: HealthGoal;
-    }[],
+    restrictions: RestrictionKindInput[],
     severity: RestrictionSeverity,
   ) => {
     let allSucceeded = false;
@@ -133,7 +130,7 @@ export const DietaryProfileScreen: React.FC = () => {
   const [editingCookingPrefs, setEditingCookingPrefs] = useState(false);
 
   const handleSaveCookingPrefs = async (values: {
-    cookingSkillLevel?: string;
+    cookingSkillLevel?: CookingSkillLevel;
     maxPrepTimeMinutes?: number;
     maxCookTimeMinutes?: number;
     budgetPerMeal?: number;
@@ -263,6 +260,7 @@ export const DietaryProfileScreen: React.FC = () => {
     profile.carbsTarget,
     profile.fatTarget,
   ].some(target => !!target);
+  const skillLevel = knownSkillLevel(profile.cookingSkillLevel);
 
   return (
     <SubScreen title={t('dietary.title')}>
@@ -383,10 +381,10 @@ export const DietaryProfileScreen: React.FC = () => {
               <Icon name="create-outline" size={20} tone="primary" />
             </AppPressable>
           </View>
-          {!!profile.cookingSkillLevel && (
+          {!!skillLevel && (
             <InfoRow
               label={t('dietary.skillLevel')}
-              value={profile.cookingSkillLevel}
+              value={t(`cookingPreferences.skillLevels.${skillLevel}`)}
             />
           )}
           {!!profile.maxPrepTimeMinutes && (

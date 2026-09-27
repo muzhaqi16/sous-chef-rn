@@ -114,6 +114,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
       contentContainerStyle={commonStyles.bottomSheetContent}
     >
       <BottomSheetHeader
+        contentPadding="md"
         title={t('adjustQuantity.title')}
         onCancel={onClose}
         onConfirm={handleConfirm}
@@ -150,6 +151,14 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
                 </Text>
               </View>
             )}
+
+          <Text
+            role="caption"
+            tone="secondary"
+            style={commonStyles.bottomSheetSection}
+          >
+            {t('adjustQuantity.description')}
+          </Text>
 
           <View style={commonStyles.bottomSheetSection}>
             <Controller

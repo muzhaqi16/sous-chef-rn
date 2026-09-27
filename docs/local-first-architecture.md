@@ -265,10 +265,11 @@ re-sending the original is safe.
 
 Shopping quantity rides the `FlexibleQuantity` scalar (`string | number`, e.g. `"1/3"` or `2`) — passed
 through directly, no `unitId` wrapper. Pantry quantity is a plain `Float`. The shopping builder
-normalizes the **unit** into the `unit: UnitSpecInput` object the `Sync*` inputs expect — folding a flat
-`unitId`/`unitName` (sent by `UpdateShoppingListItem(Quantity)`) into it so an offline unit change isn't
-dropped on replay — and the pantry builder folds `UpdatePantryItem`'s flat `itemName` into `item: { name }`
-while backfilling the required `pantryId` from cache.
+normalizes the **unit** into the `unit: UnitRefInput` reference the `Sync*` inputs expect — `@oneOf`,
+so exactly one of `id`, `symbol`, `name` — folding the flat `unitId` `UpdateShoppingListItemQuantity`
+sends into it so an offline unit change isn't dropped on replay. Both builders send a cached unit
+symbol in place of a queued id, which a vocabulary repair may have retired; the pantry builder also
+backfills the required `pantryId` from cache.
 
 ## 6. Persistence — two mechanisms
 
@@ -390,9 +391,12 @@ query-blocking, orthogonal to connectivity.
   three writes queued across one revoked session, only the one whose failure carried a code survived.
 - **Only a missing unit row is stale.** A `NotFoundError` on the unit resource triggers a vocabulary
   refresh and a retry; `UNIT_INVALID` does not. The API defines it as the unit being invalid for the
-  operation (curation, no conversion route, a fact the food does not record, a measure the stack cannot
+  operation (no conversion route, a fact the food does not record, a measure the stack cannot
   express), none of which a refresh clears — and the replay re-sends the same unit, so retrying only
   delays the withdrawal. The interactive path refetches the ranked units so the user can pick another.
+- **A queued write outlives the build that shaped it.** `queueStore` rewrites each entry on load
+  into this build's input shapes (`legacyExpiry.ts`, `legacyRefs.ts`): the API refuses a retired shape
+  before any resolver runs, so an entry left as queued is a write lost after an upgrade.
 - **Not yet shipped:** a uniform offline-degraded affordance for online-only features.
 
 ## 10. Scope

@@ -111,7 +111,7 @@ export function useAddToShoppingList({
             id,
             item: { itemId },
             quantity: null,
-            unit: unitId ? { unitId } : undefined,
+            unit: unitId ? { id: unitId } : undefined,
           },
         ],
       },

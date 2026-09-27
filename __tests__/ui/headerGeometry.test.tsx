@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Header } from '#components/organisms/Header';
 import {
   CollapsingHeroDetail,
@@ -76,5 +76,27 @@ describe('standard header titles', () => {
     );
 
     expect(screen.UNSAFE_getByType(Header).props.centerTitle).toBe(true);
+  });
+
+  it('sit on the bar centre when only one side has actions', () => {
+    render(<Header title="Home Details" onBack={jest.fn()} centerTitle />);
+
+    // The two action groups are the header's only measured host views.
+    const [left, right, ...rest] = screen.UNSAFE_root.findAll(
+      node => typeof node.type === 'string' && !!node.props.onLayout,
+    );
+    if (!left || !right || rest.length > 0) {
+      throw new Error('expected exactly one action group per side');
+    }
+    const layoutOfWidth = (width: number) => ({
+      nativeEvent: { layout: { x: 0, y: 0, width, height: 44 } },
+    });
+    fireEvent(left, 'layout', layoutOfWidth(44));
+    fireEvent(right, 'layout', layoutOfWidth(0));
+
+    const { marginLeft, marginRight } = flat(
+      screen.getByText('Home Details').props.style,
+    );
+    expect(44 + Number(marginLeft)).toBe(0 + Number(marginRight));
   });
 });

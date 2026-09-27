@@ -69,12 +69,6 @@ jest.mock('#features/notifications/hooks/useNotificationPermissions', () => ({
   })),
 }));
 
-jest.mock('#features/notifications/hooks/useNotificationSync', () => ({
-  useNotificationSync: jest.fn(() => ({
-    syncSendTest: jest.fn().mockResolvedValue(true),
-  })),
-}));
-
 jest.mock('#components/molecules/SettingSwitch', () => ({
   SettingSwitch: ({ title }: { title: string }) => title,
 }));

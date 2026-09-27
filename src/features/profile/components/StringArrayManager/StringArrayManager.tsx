@@ -178,6 +178,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
         contentContainerStyle={styles.sheetContent}
       >
         <BottomSheetHeader
+          contentPadding="lg"
           title={addButtonLabel ?? t('labels.addItem')}
           onCancel={handleCancel}
           onConfirm={handleAdd}

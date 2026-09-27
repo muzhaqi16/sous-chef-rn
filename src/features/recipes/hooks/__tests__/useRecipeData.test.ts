@@ -55,7 +55,7 @@ function backendRecipeMock(
         totalTimeMinutes: recipe.totalTimeMinutes ?? null,
         difficulty: Difficulty.Easy,
         category: RecipeCategory.Dinner,
-        cuisine: null,
+        cuisines: [],
         status: RecipeStatus.Published,
         caloriesPerServing: null,
         nutritionData: null,

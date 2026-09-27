@@ -121,23 +121,25 @@ describe('nativePushMessaging', () => {
       expect(drawn.body).not.toContain('{{');
     });
 
-    it("states a coalesced push count in the reader's own plural form", async () => {
+    it("states a summary push's count in the reader's own plural form", async () => {
       registerFcmBackgroundHandler();
       const handler = mockSetBackgroundHandler.mock.calls[0][1];
 
+      // A summary names only the set: no id, type, source or display parameters.
       await handler({
         messageId: 'm1d',
         data: {
-          title: '3 updates while you were away',
-          body: 'Milk expiring; Bread low',
+          title: '3 new notifications',
+          body: 'Milk expires in 2 days; Bread is running low; and 1 more',
           coalescedCount: '3',
           coalescedTypes: '["EXPIRY_REMINDER","LOW_STOCK"]',
-          notificationId: 'n1d',
         },
       });
 
       expect(mockShowLocal).toHaveBeenCalledWith(
         expect.objectContaining({
+          id: 'm1d',
+          title: t('pushNotification.title'),
           body: t('pushNotification.coalesced', { count: 3 }),
         }),
       );

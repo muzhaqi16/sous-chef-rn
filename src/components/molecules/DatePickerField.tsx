@@ -105,8 +105,8 @@ const styles = StyleSheet.create(theme => ({
   input: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 48,
-    paddingHorizontal: theme.spacing.sm,
+    height: theme.sizes.input.md,
+    paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.inputBackground,

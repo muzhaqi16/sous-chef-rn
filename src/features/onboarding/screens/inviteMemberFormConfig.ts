@@ -1,5 +1,6 @@
 import { object, string, type ObjectSchema } from 'yup';
 import { t, type TranslationKey } from '#/i18n';
+import { isEmailAddress } from '#utils/validation/common';
 
 // Messages resolve LAZILY: the schema is built once at module scope, so an
 // eagerly resolved one freezes whichever language was active at import time.
@@ -16,8 +17,6 @@ export interface InviteEmailContext {
   ownEmail: string | null | undefined;
 }
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 export const normalizeInviteEmail = (raw: string): string =>
   raw.trim().toLowerCase();
 
@@ -33,7 +32,7 @@ export const inviteEmailSchema = (
     email: string()
       .transform(normalizeInviteEmail)
       .required(msg('commonValidation.emailInvalid'))
-      .matches(EMAIL, msg('commonValidation.emailInvalid'))
+      .test('email', msg('commonValidation.emailInvalid'), isEmailAddress)
       .notOneOf(context.existing, msg('inviteMembers.duplicateEmailMessage'))
       .test(
         'not-self',

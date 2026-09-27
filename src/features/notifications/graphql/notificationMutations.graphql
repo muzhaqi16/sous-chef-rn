@@ -25,29 +25,6 @@ mutation MarkNotificationAsRead($input: MarkNotificationAsReadInput!) {
   }
 }
 
-# Fire a self-addressed test notification — lets a user validate their
-# notification setup (and, once remote push lands, that pushes arrive) from
-# the settings screen.
-mutation SendTestNotification($input: SendTestNotificationInput!) {
-  sendTestNotification(input: $input) {
-    __typename
-    ... on SendTestNotificationPayload {
-      notification {
-        id
-        title
-        message
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
 # No `notification { id }`: written back, it would restore the evicted row as a
 # stub, and a queued replay writes its result to the cache.
 mutation DeleteNotification($input: DeleteNotificationInput!) {

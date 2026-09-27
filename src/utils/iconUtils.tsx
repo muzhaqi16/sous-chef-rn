@@ -46,7 +46,6 @@ export const TONE_TO_COLOR = {
   background: (t: Theme) => t.colors.background,
   favorite: (t: Theme) => t.colors.favorite,
   rating: (t: Theme) => t.colors.rating,
-  navigationActive: (t: Theme) => t.colors.navigationActive,
   // Nested paths need an entry here; a caller cannot express one as a key.
   alertBannerWarning: (t: Theme) => t.colors.alertBanner.warning.text,
 };

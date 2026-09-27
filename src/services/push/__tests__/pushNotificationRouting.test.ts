@@ -112,11 +112,20 @@ describe('routeNotificationTap', () => {
     });
   });
 
-  /**
-   * `docs/api/notifications.md` lists `notificationId` as ALWAYS present, and
-   * quiet hours DELAY each push rather than merging several into one. So an
-   * absent id says nothing about coalescing — routing keys off `category`.
-   */
+  describe('a summary push', () => {
+    // Several deferred notifications delivered as one: the API names only the
+    // set, so no row's category can pull the tap into that row's tab.
+    it('opens the feed', () => {
+      routeNotificationTap({
+        coalescedCount: '3',
+        coalescedTypes: '["EXPIRY_REMINDER","LOW_STOCK"]',
+      });
+
+      expect(mockNavigate).toHaveBeenCalledTimes(1);
+      expect(mockNavigate).toHaveBeenCalledWith('Notifications');
+    });
+  });
+
   describe('a payload the sender did not fully populate', () => {
     it('deep-links on category alone', () => {
       routeNotificationTap({ category: 'PANTRY' });

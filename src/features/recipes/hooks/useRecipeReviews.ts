@@ -59,7 +59,7 @@ export function useRecipeReviews({
   // sort/filter by `helpful`, `createdAt`, and inspect `user`.
   const reviews = (() => {
     const rawRefs =
-      reviewsData?.recipe?.reviews.edges.map(edge => edge.node) ?? [];
+      reviewsData?.recipe?.reviewsConnection.edges.map(edge => edge.node) ?? [];
     const materialized = rawRefs
       .map(ref =>
         apolloClient.cache.readFragment<RecipeReviewFragment>({

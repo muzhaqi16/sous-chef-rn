@@ -13,6 +13,7 @@ import {
   getClientId,
   getQueuedInput,
   readUnitSpec,
+  readUnitSymbol,
   withCapturedReads,
   withUnitSymbol,
   type QueuedInput,
@@ -59,16 +60,13 @@ const readPantryItemInputs =
       pantryId: input.pantryId
         ? undefined
         : readPantryId(cache, getClientId(mutation)),
-      unitSymbol: unit.unitSymbol
-        ? undefined
-        : readUnitSpec(cache, unit)?.unitSymbol,
+      unitSymbol: readUnitSymbol(cache, unit),
     });
   };
 
-// A create sends `unit: { unitId }`; an edit already sends `{ unitSymbol }`.
 const itemUnitOf = (input: QueuedInput): UnitSpec => input.unit ?? {};
 const quantityUnitOf = (input: QueuedInput): UnitSpec => ({
-  unitId: input.unitId,
+  id: input.unitId,
 });
 
 /**

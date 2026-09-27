@@ -15,10 +15,10 @@ import {
 } from './useNotificationSettings';
 
 /**
- * Points `quietHoursTimezone` at the device's zone: it is the ONLY timezone the
- * API reads when deferring a push (`registerDevice`'s is stored and ignored),
- * and it defaults to "UTC", muting mid-afternoon in New York. App-wide so a
- * traveller re-syncs without opening a notification screen.
+ * Points `quietHoursTimezone` at the device's zone: the API reads it for quiet
+ * hours AND for every scheduled send (reminders, digests), whether or not quiet
+ * hours are on (`registerDevice`'s zone is stored and ignored). It defaults to
+ * "UTC". App-wide so a traveller re-syncs without opening a notification screen.
  */
 export const useQuietHoursTimezoneSync = (): void => {
   const user = useUser();
@@ -37,7 +37,6 @@ export const useQuietHoursTimezoneSync = (): void => {
 
   const preferences = data?.me?.notificationPreferences;
   const preferencesId = preferences?.id;
-  const quietHoursEnabled = preferences?.quietHoursEnabled;
   const quietHoursTimezone = preferences?.quietHoursTimezone;
 
   // The zone a write was attempted for this mount. It is never cleared: the
@@ -60,7 +59,6 @@ export const useQuietHoursTimezoneSync = (): void => {
   useEffect(() => {
     if (
       !deviceTimezone ||
-      !quietHoursEnabled ||
       !preferencesId ||
       quietHoursTimezone === deviceTimezone ||
       attemptedFor.current === deviceTimezone
@@ -91,7 +89,6 @@ export const useQuietHoursTimezoneSync = (): void => {
     client,
     deviceTimezone,
     preferencesId,
-    quietHoursEnabled,
     quietHoursTimezone,
     updatePreferences,
   ]);

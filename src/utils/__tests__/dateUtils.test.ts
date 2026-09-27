@@ -1,9 +1,5 @@
 import { spawnSync } from 'child_process';
-import {
-  extractDateString,
-  dateStringToISO,
-  safeParseDate,
-} from '../dateUtils';
+import { extractDateString, safeParseDate } from '../dateUtils';
 
 describe('extractDateString', () => {
   it('extracts from ISO string with timezone offset', () => {
@@ -46,25 +42,6 @@ describe('extractDateString', () => {
   it('handles numeric Unix timestamp in milliseconds', () => {
     const result = extractDateString(1705276800000);
     expect(result).toBe('2024-01-15');
-  });
-});
-
-describe('dateStringToISO', () => {
-  it('converts YYYY-MM-DD to ISO string', () => {
-    const result = dateStringToISO('2024-01-15');
-    expect(result).toBe('2024-01-15T00:00:00.000Z');
-  });
-
-  it('returns empty string for empty input', () => {
-    expect(dateStringToISO('')).toBe('');
-  });
-
-  it('returns input unchanged for invalid format', () => {
-    expect(dateStringToISO('not-a-date')).toBe('not-a-date');
-  });
-
-  it('returns input unchanged for partial date format', () => {
-    expect(dateStringToISO('2024-01')).toBe('2024-01');
   });
 });
 

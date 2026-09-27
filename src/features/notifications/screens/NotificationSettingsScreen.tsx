@@ -29,7 +29,6 @@ import {
   getThresholdOptions,
   type SettingDef,
 } from '#features/notifications/utils/notificationSettingsConfig';
-import { useNotificationSync } from '#features/notifications/hooks/useNotificationSync';
 import type { ExpirationFrequency } from '#/graphql/generated/schemaTypes';
 import { useDataState } from '#hooks/data/useDataState';
 import { DataStateView } from '#components/organisms/DataStateView';
@@ -90,7 +89,6 @@ export const NotificationSettingsScreen: React.FC = () => {
     resetToDefaults,
     isQuietTime,
   } = useNotificationSettings();
-  const { syncSendTest } = useNotificationSync();
 
   // `settings` always has a value (defaults are filled in), so availability has
   // to come from `hasPreferences`.
@@ -101,20 +99,6 @@ export const NotificationSettingsScreen: React.FC = () => {
     isEmpty: false,
     skipped,
   });
-
-  const handleSendTest = async () => {
-    setUpdating('test');
-    const ok = await syncSendTest();
-    setUpdating(null);
-    alertService.alert(
-      ok
-        ? t('notifications.testSentTitle')
-        : t('notifications.testFailedTitle'),
-      ok
-        ? t('notifications.testSentMessage')
-        : t('notifications.testFailedMessage'),
-    );
-  };
 
   useResyncPermissionOnReturn({
     checkPermissions,
@@ -435,16 +419,6 @@ export const NotificationSettingsScreen: React.FC = () => {
             </Text>
           </View>
         )}
-      </SettingsSection>
-
-      <SettingsSection variant="inset" title={t('notifications.testSection')}>
-        <SettingSwitch
-          title={t('notifications.sendTestNotification')}
-          description={t('notifications.sendTestNotificationDesc')}
-          value={false}
-          onValueChange={handleSendTest}
-          loading={updating === 'test'}
-        />
       </SettingsSection>
 
       <SettingsSection variant="inset" title={t('settings.resetSection')}>

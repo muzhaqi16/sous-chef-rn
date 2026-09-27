@@ -7,6 +7,7 @@ export const shoppingListTestIDs = {
   listSelectorButton: 'shopping-list-selector',
   searchInput: 'shopping-list-search-input',
   batchMoveToPantryButton: 'shopping-list-batch-move-pantry',
+  moveToPantryPackageSizeUnit: 'move-to-pantry-package-size-unit',
   clearAllButton: 'shopping-list-clear-all',
 
   /** `FilterTabBar`: tabs go through `kitTestIDs.filterTab` under this prefix. */

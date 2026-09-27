@@ -19,7 +19,8 @@ import {
 import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
 import { useConvertExpiredBatchesToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredBatchesToWaste';
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
-import { useCorrectPantryItemWeight } from '#features/pantry/hooks/mutations/useCorrectPantryItemWeight';
+import { useCorrectPackageSize } from '#features/pantry/hooks/mutations/useCorrectPackageSize';
+import type { PackageSizeCorrectionInput } from '#features/pantry/components/modals/CorrectPackageSizeModal';
 import { usePantryItemMutations } from '#features/pantry/hooks/mutations/usePantryItemMutations';
 import {
   formatQuantityForDisplay,
@@ -68,9 +69,9 @@ export interface UsePantryItemDetailActionsResult {
   addToListStatus: AddToListStatus;
   adjustModalVisible: boolean;
   setAdjustModalVisible: (v: boolean) => void;
-  correctWeightVisible: boolean;
-  setCorrectWeightVisible: (v: boolean) => void;
-  /** Server unreachable — correcting net weight has no offline replay path. */
+  /** The batch whose package size is being corrected, if any. */
+  correctingBatchId: string | null;
+  setCorrectingBatchId: (batchId: string | null) => void;
   handleDelete: () => void;
   handleAddToShoppingList: () => Promise<void>;
   handleDiscardExpired: () => void;
@@ -79,11 +80,9 @@ export interface UsePantryItemDetailActionsResult {
     reason: string,
     remainingNetWeight?: number,
   ) => void;
-  handleCorrectWeight: (
-    netWeight: number,
-    reason: string,
-    netWeightUnitId?: string,
-  ) => void;
+  handleCorrectPackageSize: (
+    input: PackageSizeCorrectionInput,
+  ) => Promise<boolean>;
 }
 
 /**
@@ -103,7 +102,9 @@ export function usePantryItemDetailActions({
   const [addToListStatus, setAddToListStatus] =
     useState<AddToListStatus>('idle');
   const [adjustModalVisible, setAdjustModalVisible] = useState(false);
-  const [correctWeightVisible, setCorrectWeightVisible] = useState(false);
+  const [correctingBatchId, setCorrectingBatchId] = useState<string | null>(
+    null,
+  );
 
   const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -158,7 +159,7 @@ export function usePantryItemDetailActions({
   });
 
   const { adjustQuantity } = useAdjustPantryItemQuantity();
-  const { correctWeight } = useCorrectPantryItemWeight();
+  const { correctPackageSize } = useCorrectPackageSize();
 
   const confirmDelete = async () => {
     if (!resolvedPantryId) {
@@ -215,7 +216,7 @@ export function usePantryItemDetailActions({
     const catalogItemId = item?.item?.id ?? '';
     // An out-of-stock item (quantity 0) still adds one to the list.
     const quantity = item?.quantity === 0 ? 1 : item?.quantity ?? 1;
-    const unitInput = item?.unit?.id ? { unitId: item.unit.id } : undefined;
+    const unitInput = item?.unit?.id ? { id: item.unit.id } : undefined;
     const itemName = item?.itemName ?? '';
     // Generate the new item's id so a create that gets queued (offline / API
     // down) replays idempotently, keyed by this id.
@@ -360,31 +361,27 @@ export function usePantryItemDetailActions({
     );
   };
 
-  const handleCorrectWeight = (
-    netWeight: number,
-    reason: string,
-    netWeightUnitId?: string,
-  ) => {
-    if (!item) return;
-    void correctWeight(
-      item.id,
-      netWeight,
-      reason,
-      item.version,
-      netWeightUnitId,
-    );
+  const handleCorrectPackageSize = async (
+    input: PackageSizeCorrectionInput,
+  ): Promise<boolean> => {
+    if (!correctingBatchId) return false;
+    return correctPackageSize({
+      ...input,
+      pantryItemId: itemId,
+      batchId: correctingBatchId,
+    });
   };
 
   return {
     addToListStatus,
     adjustModalVisible,
     setAdjustModalVisible,
-    correctWeightVisible,
-    setCorrectWeightVisible,
+    correctingBatchId,
+    setCorrectingBatchId,
     handleDelete,
     handleAddToShoppingList,
     handleDiscardExpired,
     handleConfirmAdjust,
-    handleCorrectWeight,
+    handleCorrectPackageSize,
   };
 }

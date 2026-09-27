@@ -1,5 +1,6 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { ApolloCache } from '@apollo/client';
+import type { MovePurchasedItemsToPantryInput } from '#/graphql/generated/schemaTypes';
 import { MovePurchasedItemsToPantryDocument } from './useBatchMoveToPantry.generated';
 import {
   readMovedToPantryAt,
@@ -75,9 +76,9 @@ export function useBatchMoveToPantry({
 
     // Built outside the try: a `&&` spread is a value block, and one inside a
     // try body bails this whole hook out of the React Compiler.
-    const moveInput =
+    const moveInput: MovePurchasedItemsToPantryInput =
       idHints.length > 0
-        ? { shoppingListId: currentListId, pantryItemIds: idHints }
+        ? { shoppingListId: currentListId, pantryItemHints: idHints }
         : { shoppingListId: currentListId };
 
     const settled = await settleMutation(

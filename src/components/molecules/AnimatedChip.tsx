@@ -76,6 +76,16 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
   // Animated container style driven by shared value
   // paddingRight is fixed — the LinearTransition layout animation handles spacing
   // when the checkmark icon appears/disappears, avoiding non-GPU layout recalc.
+  const chipSurfaceStyle = useAnimatedStyle(() => {
+    const theme = animatedTheme.get();
+    return {
+      borderRadius: theme.radii['2xl'],
+      borderWidth: theme.borderWidth.thin,
+      paddingVertical: theme.spacing.xsPlus,
+      paddingHorizontal: theme.spacing.sm,
+    };
+  });
+
   const animatedContainerStyle = useAnimatedStyle(() => {
     return {
       borderColor: interpolateColor(
@@ -96,6 +106,10 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
   });
 
   // Animated text style driven by shared value
+  const labelTypeStyle = useAnimatedStyle(() => ({
+    ...animatedTheme.get().type.label,
+  }));
+
   const animatedTextStyle = useAnimatedStyle(() => {
     return {
       color: interpolateColor(
@@ -135,11 +149,13 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
         accessibilityState={{ selected }}
         style={({ pressed }) => pressed && styles.pressed}
       >
-        <Animated.View style={[styles.chip, animatedContainerStyle]}>
+        <Animated.View
+          style={[styles.chip, chipSurfaceStyle, animatedContainerStyle]}
+        >
           {!!imageUrl && (
             <CachedImage uri={imageUrl} style={styles.image} displaySize={24} />
           )}
-          <Animated.Text style={[styles.label, animatedTextStyle]}>
+          <Animated.Text style={[labelTypeStyle, animatedTextStyle]}>
             {label}
           </Animated.Text>
           {!!selected && (
@@ -177,13 +193,9 @@ const styles = StyleSheet.create(theme => ({
   },
   chip: {
     alignItems: 'center',
-    borderRadius: theme.radii['2xl'],
     borderCurve: 'continuous',
     flexDirection: 'row',
     justifyContent: 'center',
-    paddingVertical: theme.spacing.xsPlus,
-    paddingHorizontal: theme.spacing.sm,
-    borderWidth: theme.borderWidth.thin,
   },
   image: {
     width: theme.sizes.icon.md,
@@ -191,9 +203,6 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
     marginRight: theme.spacing.sm,
-  },
-  label: {
-    ...theme.type.label,
   },
   iconContainer: {
     marginLeft: theme.spacing.sm,

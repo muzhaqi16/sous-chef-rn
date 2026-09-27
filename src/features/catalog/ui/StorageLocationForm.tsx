@@ -154,7 +154,7 @@ export const StorageLocationForm = forwardRef<
     }));
 
     return (
-      <View style={styles.container}>
+      <View>
         {/* Name */}
         <View style={commonStyles.inputGroup}>
           <Text role="label" tone="secondary" style={styles.fieldLabel}>
@@ -427,21 +427,19 @@ export const StorageLocationForm = forwardRef<
 );
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    paddingHorizontal: theme.spacing.lg,
-  },
   carouselInputGroup: {
     overflow: 'visible',
   },
+  // Bleeds the chip rows through the host sheet's gutter to its edges.
   carouselContainer: {
-    marginHorizontal: -theme.spacing.lg,
+    marginHorizontal: -theme.layout.pageGutter,
     marginTop: theme.spacing.xs,
   },
   typeScroll: {
     flexGrow: 0,
   },
   typeScrollContent: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   parentScroll: {
     marginTop: theme.spacing.xs,

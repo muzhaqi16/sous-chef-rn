@@ -1,6 +1,7 @@
 import React, { useLayoutEffect } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -41,6 +42,11 @@ const AnimatedScanLine: React.FC<AnimatedScanLineProps> = ({
     };
   }, [animatedValue, duration, motionEnabled]);
 
+  const animatedTheme = useAnimatedTheme();
+  const lineThicknessStyle = useAnimatedStyle(() => ({
+    height: animatedTheme.get().borderWidth.medium,
+  }));
+
   const animatedStyle = useAnimatedStyle(() => {
     const translateY = interpolate(
       animatedValue.get(),
@@ -68,6 +74,7 @@ const AnimatedScanLine: React.FC<AnimatedScanLineProps> = ({
       <Animated.View
         style={[
           styles.line,
+          lineThicknessStyle,
           {
             backgroundColor: color,
             boxShadow: [
@@ -87,16 +94,15 @@ const AnimatedScanLine: React.FC<AnimatedScanLineProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create({
   // Positioned over the camera preview; the frame's geometry comes from the
   // detected barcode bounds, so only the positioning mode is a style.
   frame: {
     position: 'absolute',
   },
   line: {
-    height: theme.borderWidth.medium,
     width: '100%',
   },
-}));
+});
 
 export default AnimatedScanLine;

@@ -3,11 +3,9 @@ import { join } from 'path';
 
 /**
  * A UNIT_INVALID refusal carries an unlocalizable English `message` by
- * construction, and no machine-readable list of the units that would work —
- * `schema.graphql` says so under UNIT_INVALID and directs clients to re-query
- * the ranked-unit list instead. Both halves were being read anyway: the dead
- * `validUnits` array, and the server's sentence shown verbatim to a Spanish,
- * Italian or Albanian reader.
+ * construction. The stock operations' `UnitEligibilityError` names the units
+ * that would work (`validUnits`) and why (`denial`); those are the only parts of
+ * the refusal the alert may use, around the app's own sentences.
  *
  * Source-scanned rather than rendered because the defect is a call site, not a
  * value: a test that renders one alert cannot see the other three.
@@ -27,8 +25,11 @@ it('every unit-refusal alert takes its body from the translator', () => {
     // Guards against the scan silently matching nothing.
     expect(alerts.length).toBeGreaterThan(0);
     for (const body of alerts) {
-      expect(body).toMatch(/^t\('errors\./);
+      expect(body).toMatch(/^(t\('errors\.|unitRefusalBody\()/);
     }
+    // The helper builds from the translator and the refusal's fields alone.
+    const helper = /function unitRefusalBody[\s\S]*?\n}\n/.exec(source)?.[0];
+    if (helper) expect(helper).not.toMatch(/message/);
   }
 });
 

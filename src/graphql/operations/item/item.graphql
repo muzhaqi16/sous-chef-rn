@@ -2,8 +2,14 @@
 # QUERIES
 # ============================================
 
-query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
-  items(filters: { lookup: { upc: $upc, upcFormat: $upcFormat } }, first: 1) {
+# A scan reports the scanned barcode's own pack: `netWeight`, `netWeightKind`,
+# `displayUnit` and `variationBrand` are that barcode's, never another pack's.
+# An add names `matchedVariation.id` to store exactly those facts.
+query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat, $pantry: ID) {
+  items(
+    filters: { lookup: { upc: { code: $upc, format: $upcFormat } } }
+    first: 1
+  ) {
     edges {
       cursor
       node {
@@ -25,24 +31,21 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
         shelfLifeDays
         shelfLifeOpenedDays
         tags
-        # `type` + `displayAsFraction` are here for the pantry add that follows
-        # a scan: `SearchResults` passes `displayUnit.id` to
-        # `buildOptimisticPantryItem`, which resolves it against the cached
-        # `Unit` and needs all five fields — a partial entity reads back as null
-        # and the optimistic row loses its unit for the whole offline session.
+        netWeightKind
         displayUnit {
+          id
+          name
+          symbol
+        }
+        # The unit an add naming no unit counts in, for the optimistic row.
+        # `buildOptimisticPantryItem` resolves it against the cached `Unit` and
+        # needs all five fields: a partial entity reads back as null.
+        trackingUnit(pantry: $pantry) {
           id
           name
           symbol
           type
           displayAsFraction
-        }
-        brands {
-          id
-          brand {
-            id
-            name
-          }
         }
         categories {
           id
@@ -64,14 +67,7 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
         }
         matchedVariation {
           id
-          netWeight
-          netWeightUnit
-          packageSize
-          confidence
-          brandInfo {
-            id
-            name
-          }
+          upc
         }
       }
     }
@@ -83,8 +79,11 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
   }
 }
 
-query ItemBySkuFilter($sku: String!, $skuStoreId: ID) {
-  items(filters: { lookup: { sku: $sku, skuStoreId: $skuStoreId } }, first: 1) {
+query ItemBySkuFilter($sku: String!, $skuStoreId: ID, $pantry: ID) {
+  items(
+    filters: { lookup: { sku: { sku: $sku, storeId: $skuStoreId } } }
+    first: 1
+  ) {
     edges {
       cursor
       node {
@@ -106,24 +105,21 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: ID) {
         shelfLifeDays
         shelfLifeOpenedDays
         tags
-        # `type` + `displayAsFraction` are here for the pantry add that follows
-        # a scan: `SearchResults` passes `displayUnit.id` to
-        # `buildOptimisticPantryItem`, which resolves it against the cached
-        # `Unit` and needs all five fields — a partial entity reads back as null
-        # and the optimistic row loses its unit for the whole offline session.
+        netWeightKind
         displayUnit {
+          id
+          name
+          symbol
+        }
+        # The unit an add naming no unit counts in, for the optimistic row.
+        # `buildOptimisticPantryItem` resolves it against the cached `Unit` and
+        # needs all five fields: a partial entity reads back as null.
+        trackingUnit(pantry: $pantry) {
           id
           name
           symbol
           type
           displayAsFraction
-        }
-        brands {
-          id
-          brand {
-            id
-            name
-          }
         }
         categories {
           id
@@ -138,6 +134,14 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: ID) {
           id
           isDefault
           unitId
+        }
+        variationBrand {
+          id
+          name
+        }
+        matchedVariation {
+          id
+          upc
         }
       }
     }
@@ -298,17 +302,10 @@ mutation CreateItem($input: CreateItemInput!) {
         canEdit
         canSuggest
         netWeight
-        # `type` + `displayAsFraction` are here for the pantry add that follows
-        # a scan: `SearchResults` passes `displayUnit.id` to
-        # `buildOptimisticPantryItem`, which resolves it against the cached
-        # `Unit` and needs all five fields — a partial entity reads back as null
-        # and the optimistic row loses its unit for the whole offline session.
         displayUnit {
           id
           name
           symbol
-          type
-          displayAsFraction
         }
         convertedNetWeight {
           value

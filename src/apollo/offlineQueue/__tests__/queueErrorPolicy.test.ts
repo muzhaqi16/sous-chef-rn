@@ -314,6 +314,15 @@ describe('classifyError — load shedding and rate limits', () => {
       errors: [{ message: 'Refused', extensions: { code } }],
     });
 
+  // A queued write naming a field a later API removed (updatePantryItemQuantity's
+  // unitId, adjustPantryItemWeight) can never succeed: it is dropped, not retried.
+  it('drops a write the schema no longer validates', () => {
+    const queueError = classifyError(combined('GRAPHQL_VALIDATION_FAILED'));
+
+    expect(queueError.type).toBe('unknown');
+    expect(queueError.retryable).toBe(false);
+  });
+
   it('defers SERVICE_UNAVAILABLE and retries it in-run', () => {
     const queueError = classifyError(combined('SERVICE_UNAVAILABLE'));
 

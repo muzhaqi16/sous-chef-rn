@@ -167,6 +167,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
       style={styles.scrollView}
     >
       <BottomSheetHeader
+        contentPadding="md"
         title={t('mealPlanSettings.planSettings')}
         onCancel={onClose}
         onConfirm={onClose}

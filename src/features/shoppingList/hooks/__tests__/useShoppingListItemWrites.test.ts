@@ -4,12 +4,16 @@ import {
   recordMock,
   renderHookWithApollo,
   seedCache,
+  type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
+  AddItemToShoppingListDocument,
   GetShoppingListItemDocument,
   UpdateShoppingListItemDocument,
+  type AddItemToShoppingListMutationVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import { toastService } from '#/services/toastService';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 import { useShoppingListItemWrites } from '../useShoppingListItemWrites';
@@ -22,6 +26,9 @@ jest.mock('#/utils/deviceLocale', () => ({
 jest.mock('#/services/errorService');
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
+}));
+jest.mock('#/services/toastService', () => ({
+  toastService: { info: jest.fn() },
 }));
 jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: {
@@ -179,5 +186,72 @@ describe('useShoppingListItemWrites.updateItem', () => {
       () => expect(itemQuery.fired.length).toBeGreaterThan(readsBefore),
       { timeout: 3000 },
     );
+  });
+});
+
+describe('useShoppingListItemWrites.createItem', () => {
+  function addWith(packageSizeCleared: boolean) {
+    const add = recordMock(AddItemToShoppingListDocument, {
+      dataFor: (vars): MockDataFor<typeof AddItemToShoppingListDocument> => {
+        const [row] = (vars as AddItemToShoppingListMutationVariables).input
+          .items;
+        return {
+          addItemsToShoppingList: {
+            __typename: 'AddItemsToShoppingListPayload',
+            results: [
+              {
+                __typename: 'BatchAddShoppingListItemResult',
+                index: 0,
+                success: true,
+                packageSizeCleared,
+                item: {
+                  __typename: 'ShoppingListItem',
+                  id: row?.id ?? '',
+                  shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
+                },
+              },
+            ],
+          },
+        };
+      },
+    });
+    return renderHookWithApollo(
+      () => useShoppingListItemWrites('list-1', undefined),
+      {
+        operationMocks: [add.mock],
+      },
+    );
+  }
+
+  it('says so when an add leaves the line it joined with no package size', async () => {
+    const { result } = addWith(true);
+
+    await act(async () => {
+      await result.current.createItem(
+        { shoppingListId: 'list-1', itemName: 'Pasta sauce', quantity: 1 },
+        {
+          item: { itemName: 'Pasta sauce' },
+          quantity: '1',
+          netWeight: { netWeight: 22, netWeightUnitId: 'u-oz' },
+        },
+      );
+    });
+
+    expect(toastService.info).toHaveBeenCalledWith(
+      'This item was already on the list with a different package size, so the line no longer records one.',
+    );
+  });
+
+  it('says nothing when the line keeps its size', async () => {
+    const { result } = addWith(false);
+
+    await act(async () => {
+      await result.current.createItem(
+        { shoppingListId: 'list-1', itemName: 'Pasta sauce', quantity: 1 },
+        { item: { itemName: 'Pasta sauce' }, quantity: '1' },
+      );
+    });
+
+    expect(toastService.info).not.toHaveBeenCalled();
   });
 });

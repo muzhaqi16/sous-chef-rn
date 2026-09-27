@@ -115,6 +115,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
       >
         {/* Header */}
         <BottomSheetHeader
+          contentPadding="md"
           title={t('macroTargets.title')}
           onCancel={onClose}
           onConfirm={handleSave}

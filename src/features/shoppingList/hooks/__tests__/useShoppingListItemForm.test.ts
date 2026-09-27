@@ -317,11 +317,12 @@ describe('useShoppingListItemForm', () => {
       );
 
       expect(result.current.buildUnitInput()).toEqual({
-        unit: { unitName: 'gallon' },
+        unit: { name: 'gallon' },
+        unitLabel: 'gallon',
       });
     });
 
-    it('includes unitId when selectedUnitId is set', () => {
+    it('refers to a picked unit by id, labelled as typed', () => {
       const { result } = renderHook(() => useShoppingListItemForm());
 
       act(() => {
@@ -330,7 +331,8 @@ describe('useShoppingListItemForm', () => {
       });
 
       expect(result.current.buildUnitInput()).toEqual({
-        unit: { unitName: 'gallon', unitId: 'unit-123' },
+        unit: { id: 'unit-123' },
+        unitLabel: 'gallon',
       });
     });
 
@@ -525,7 +527,7 @@ describe('useShoppingListItemForm', () => {
         result.current.setFieldValue('brand', 'Chobani');
       });
       expect(result.current.buildDirtyInput().brand).toEqual({
-        brandId: 'brand-2',
+        id: 'brand-2',
       });
     });
 
@@ -537,17 +539,17 @@ describe('useShoppingListItemForm', () => {
         result.current.setFieldValue('brand', 'Chobani');
       });
       expect(result.current.buildDirtyInput().brand).toEqual({
-        brandName: 'Chobani',
+        name: 'Chobani',
       });
     });
 
-    it('removes the brand with an explicit null id when cleared', () => {
+    it('removes the brand with an explicit null when cleared', () => {
       const result = seed();
       act(() => {
         result.current.setFieldValue('brandId', null);
         result.current.setFieldValue('brand', '');
       });
-      expect(result.current.buildDirtyInput().brand).toEqual({ brandId: null });
+      expect(result.current.buildDirtyInput().brand).toBeNull();
     });
 
     it('clears the estimated price when the field is emptied', () => {

@@ -42,12 +42,6 @@ interface Props<T extends FieldValues> {
   isLoading?: boolean;
   /** Return key moves down the fields instead of just closing the keyboard. */
   focusChaining?: boolean;
-  /**
-   * Where the fields sit in the leftover height: `center` splits it with the
-   * button block, `top` parks them below the header. Required, because a default
-   * silently re-lays out every screen that predates it.
-   */
-  contentPlacement: 'center' | 'top';
 }
 export function AuthFormTemplate<T extends FieldValues>({
   title,
@@ -73,7 +67,6 @@ export function AuthFormTemplate<T extends FieldValues>({
   linkCountdown,
   isLoading = false,
   focusChaining = false,
-  contentPlacement,
 }: Props<T>) {
   // With the keyboard up the scroll view keeps its full height, so the flexible
   // slack survives and pushes the fields under it. Collapsing the slack keeps the
@@ -111,15 +104,12 @@ export function AuthFormTemplate<T extends FieldValues>({
 
   const layoutTransition = LinearTransition.duration(transitionMs);
 
-  // The keyboard overrides the caller's placement: no leftover height to split.
-  styles.useVariants({
-    compact: isKeyboardVisible,
-    fieldsPlacement: isKeyboardVisible ? 'compact' : contentPlacement,
-  });
+  styles.useVariants({ compact: isKeyboardVisible });
 
   return (
     <View style={styles.formContainer}>
-      <View>
+      <View style={styles.leadingSpace} />
+      <Animated.View layout={layoutTransition}>
         <View style={styles.titleRow} testID={authTestIDs.formTitleRow}>
           <Text role="title" tone="primary" align="center">
             {title}
@@ -135,7 +125,7 @@ export function AuthFormTemplate<T extends FieldValues>({
             {subtitle}
           </Text>
         ) : null}
-      </View>
+      </Animated.View>
 
       <Animated.View style={styles.fieldsGroup} layout={layoutTransition}>
         <DynamicFormFields<T>
@@ -159,6 +149,8 @@ export function AuthFormTemplate<T extends FieldValues>({
           </View>
         )}
       </Animated.View>
+
+      <View style={styles.trailingSpace} />
 
       <Animated.View style={styles.action} layout={layoutTransition}>
         <Button
@@ -211,14 +203,23 @@ const styles = StyleSheet.create(theme => ({
     // its own content overflows past whatever a following sibling occupies.
     flexGrow: 1,
   },
+  // The leftover height splits 1:2 around header + fields, which sits them
+  // above centre. Keyboard up: nothing to split.
+  leadingSpace: {
+    variants: {
+      compact: { true: { flexGrow: 0 }, false: { flexGrow: 1 } },
+    },
+  },
+  trailingSpace: {
+    variants: {
+      compact: { true: { flexGrow: 0 }, false: { flexGrow: 2 } },
+    },
+  },
   fieldsGroup: {
     variants: {
-      fieldsPlacement: {
-        center: { marginTop: 'auto' },
-        // A fixed gap instead, so the rest of the height falls below the fields.
-        top: { marginTop: theme.spacing['3xl'] },
-        // Keyboard up: straight under the header, nothing to distribute.
-        compact: { marginTop: 0 },
+      compact: {
+        true: { marginTop: 0 },
+        false: { marginTop: theme.spacing.md },
       },
     },
   },
@@ -243,18 +244,15 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
   },
   action: {
-    // Paired with the same auto margin on `fieldsGroup`, splitting the leftover
-    // height so the fields sit mid-screen. Both resolve to 0 on a screen with no
-    // leftover; the padding is what keeps a gap above the button there.
+    // The spacers collapse on a screen with no leftover height; the padding is
+    // what keeps a gap above the button there.
     variants: {
       compact: {
         true: {
-          marginTop: 0,
           paddingTop: theme.spacing.md,
           marginBottom: theme.spacing.sm,
         },
         false: {
-          marginTop: 'auto',
           paddingTop: theme.spacing.lg,
           marginBottom: theme.spacing.md,
         },

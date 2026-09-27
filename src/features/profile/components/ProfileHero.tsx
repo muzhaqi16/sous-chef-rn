@@ -42,6 +42,31 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
   const { t } = useTranslation();
   const animatedTheme = useAnimatedTheme();
 
+  const avatarSurfaceStyle = useAnimatedStyle(() => {
+    const theme = animatedTheme.get();
+    return {
+      borderRadius: theme.radii.full,
+      backgroundColor: theme.colors.surface,
+      borderWidth: theme.borderWidth.medium,
+      borderColor: theme.colors.primary,
+    };
+  });
+  const badgeLayoutStyle = useAnimatedStyle(() => {
+    const theme = animatedTheme.get();
+    const side = theme.sizes.icon.lg - theme.spacing.xs;
+    return {
+      right: -theme.spacing.xs,
+      bottom: -theme.spacing.xs,
+      width: side,
+      height: side,
+      borderRadius: theme.radii.full,
+    };
+  });
+  const infoLayoutStyle = useAnimatedStyle(() => {
+    const theme = animatedTheme.get();
+    return { gap: theme.spacing['2xs'], marginTop: theme.spacing.md };
+  });
+
   const avatarStyle = useAnimatedStyle(() => ({
     transform: [
       {
@@ -55,9 +80,6 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
     ],
   }));
 
-  // The brand colour is read inside the worklet so Reanimated is the badge's
-  // only writer; on the static sheet a Reanimated commit could pin it to the
-  // previous brand colour until remount.
   const badgeStyle = useAnimatedStyle(() => ({
     backgroundColor: animatedTheme.get().colors.primary,
     opacity: interpolate(
@@ -83,7 +105,10 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
         onPress={onAvatarPress}
         accessibilityLabel={t('a11y.changePhoto')}
       >
-        <Animated.View collapsable={false} style={[styles.avatar, avatarStyle]}>
+        <Animated.View
+          collapsable={false}
+          style={[styles.avatar, avatarSurfaceStyle, avatarStyle]}
+        >
           {avatarUrl ? (
             <CachedImage
               uri={avatarUrl}
@@ -97,12 +122,18 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
             <Icon name="person" size={32} tone="textSecondary" />
           )}
         </Animated.View>
-        <Animated.View collapsable={false} style={[styles.badge, badgeStyle]}>
+        <Animated.View
+          collapsable={false}
+          style={[styles.badge, badgeLayoutStyle, badgeStyle]}
+        >
           <Icon tone="iconOnPrimary" name="create" size={15} />
         </Animated.View>
       </AppPressable>
       {(!!name || !!subtitle) && (
-        <Animated.View collapsable={false} style={[styles.info, infoStyle]}>
+        <Animated.View
+          collapsable={false}
+          style={[styles.info, infoLayoutStyle, infoStyle]}
+        >
           {!!name && (
             <Text role="heading" align="center">
               {name}
@@ -128,11 +159,7 @@ const styles = StyleSheet.create(theme => ({
   avatar: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
-    borderRadius: theme.radii.full,
     borderCurve: 'continuous',
-    backgroundColor: theme.colors.surface,
-    borderWidth: theme.borderWidth.medium,
-    borderColor: theme.colors.primary,
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
@@ -143,17 +170,10 @@ const styles = StyleSheet.create(theme => ({
   },
   badge: {
     position: 'absolute',
-    right: -theme.spacing.xs,
-    bottom: -theme.spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
-    width: theme.sizes.icon.lg - theme.spacing.xs,
-    height: theme.sizes.icon.lg - theme.spacing.xs,
-    borderRadius: theme.radii.full,
   },
   info: {
     alignItems: 'center',
-    gap: theme.spacing['2xs'],
-    marginTop: theme.spacing.md,
   },
 }));

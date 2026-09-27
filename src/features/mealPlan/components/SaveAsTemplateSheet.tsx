@@ -115,6 +115,7 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
       style={styles.scrollView}
     >
       <BottomSheetHeader
+        contentPadding="md"
         title={t('labels.saveAsTemplate')}
         onCancel={onClose}
         onConfirm={handleSave}

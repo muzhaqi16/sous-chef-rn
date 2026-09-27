@@ -125,6 +125,28 @@ describe('useItemReordering', () => {
     });
   });
 
+  it('places a move past a duplicate block by code point, as the server orders keys', async () => {
+    const m = moveMock();
+    const duplicated = [
+      { id: 'item-1', sortOrder: 'a0', version: 1 },
+      { id: 'item-2', sortOrder: 'a0', version: 1 },
+      { id: 'item-3', sortOrder: 'az', version: 1 },
+      { id: 'item-4', sortOrder: 'aZ', version: 1 },
+      { id: 'item-5', sortOrder: 'b00', version: 1 },
+    ];
+    const { result } = renderHookWithApollo(
+      () => useItemReordering({ listId: 'list-1', items: duplicated }),
+      { operationMocks: [m.mock] },
+    );
+
+    await act(async () => {
+      await result.current.handleSortOrderUpdate('item-5', 'item-1', 'item-2');
+    });
+
+    // "aZ" precedes "az" by code point; a locale comparison picks "az".
+    expect(mockGenerateKeyBetween).toHaveBeenCalledWith('a0', 'aZ');
+  });
+
   it('handles null afterItemId (moving to first position)', async () => {
     const m = moveMock();
     const { result } = renderHookWithApollo(

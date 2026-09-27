@@ -375,7 +375,7 @@ export function writePantryItemDetailStub(
           : null,
       // A row created a moment ago has no purchase record and no usage history.
       purchase: null,
-      usageRecords: {
+      usageRecordsConnection: {
         __typename: 'PantryItemUsageConnection',
         totalCount: 0,
         pageInfo: {

@@ -105,6 +105,7 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
       contentContainerStyle={styles.content}
     >
       <BottomSheetHeader
+        contentPadding="lg"
         title={title}
         onCancel={handleCancel}
         onConfirm={handleSave}

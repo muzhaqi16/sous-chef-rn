@@ -104,7 +104,7 @@ jest.mock('#features/recipes/hooks/useForkRecipe', () => ({
 
 jest.mock('#features/recipes/hooks/usePublishRecipe', () => ({
   usePublishRecipe: jest.fn(() => ({
-    setPublished: jest.fn(),
+    setSubmitted: jest.fn(),
     publishing: false,
   })),
 }));

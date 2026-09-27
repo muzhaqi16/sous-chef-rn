@@ -17,7 +17,7 @@ export function useOnboardingItems({ first = 50 }: { first?: number } = {}) {
           curation: { showInOnboarding: true },
           types: [ItemType.Food, ItemType.Foundation],
         },
-        orderBy: { popularity: SortOrder.Asc },
+        orderBy: { popularity: SortOrder.Desc },
         first,
       },
     },

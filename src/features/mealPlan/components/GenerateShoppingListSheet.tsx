@@ -74,6 +74,7 @@ export const GenerateShoppingListSheet: React.FC<
     >
       {/* No title; the "Generate" action already names the intent. */}
       <BottomSheetHeader
+        contentPadding="md"
         onCancel={onClose}
         onConfirm={handleGenerate}
         confirmLabel={

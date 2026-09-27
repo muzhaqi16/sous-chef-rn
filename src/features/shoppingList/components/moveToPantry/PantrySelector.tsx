@@ -6,9 +6,10 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import type { MoveTarget } from '#features/shoppingList/utils/moveTargets';
 
 interface PantrySelectorProps {
-  pantries: Array<{ id: string; name: string; isDefault: boolean }>;
+  pantries: readonly MoveTarget[];
   selectedPantryId: string | null;
   onSelect: (pantryId: string) => void;
   /** Rendered under the options — the field the user has to fix is this one. */

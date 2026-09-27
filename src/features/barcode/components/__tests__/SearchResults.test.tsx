@@ -5,7 +5,10 @@ import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { recordMock } from '#/test-utils/apolloMockProvider';
-import { BarcodeCreatePantryItemDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
+import {
+  BarcodeAddItemToShoppingListDocument,
+  BarcodeCreatePantryItemDocument,
+} from '#features/barcode/hooks/useAddScannedItem.generated';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -191,10 +194,10 @@ describe('SearchResults', () => {
     expect(screen.getByText('Scan Another')).toBeTruthy();
   });
 
-  it('sends quantity 1 (not the net weight) when adding a scanned item to the pantry', async () => {
-    // A 1.89 L carton: quantity is the CONTAINER COUNT (1), the per-container
-    // weight goes in the separate netWeight input. Sending quantity = netWeight
-    // would make the server compute remainingNetWeight = netWeight² (regression).
+  // A 1.89 L carton is ONE container. Its size belongs to the barcode's record,
+  // which the add names: a netWeight sent beside it would be stored as the
+  // user's own edit.
+  it('adds one container naming the scanned record, and no size of its own', async () => {
     const rec = recordMock(BarcodeCreatePantryItemDocument, {
       data: {
         createPantryItem: {
@@ -209,6 +212,7 @@ describe('SearchResults', () => {
         {...defaultProps}
         item={{
           ...mockItem,
+          variationId: 'esm-1',
           netWeight: 1.89,
           displayUnit: { id: 'unit-litre', name: 'litre', symbol: 'L' },
         }}
@@ -219,19 +223,75 @@ describe('SearchResults', () => {
     fireEvent.press(screen.getByTestId('primary-btn'));
 
     await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
-    const firedInput = (
-      rec.fired[0] as {
-        input: {
-          quantity: number;
-          netWeight: { netWeight: number; netWeightUnitId: string } | null;
-        };
-      }
-    ).input;
+    const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
+      .input;
     expect(firedInput.quantity).toBe(1);
-    expect(firedInput.netWeight).toEqual({
-      netWeight: 1.89,
-      netWeightUnitId: 'unit-litre',
+    expect(firedInput.item).toEqual({ variation: 'esm-1' });
+    expect(firedInput).not.toHaveProperty('netWeight');
+    expect(firedInput).not.toHaveProperty('unit');
+  });
+
+  it('names the item when the scan found no record for the barcode', async () => {
+    const rec = recordMock(BarcodeCreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'CreatePantryItemPayload',
+          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+        },
+      },
     });
+
+    renderWithApollo(<SearchResults {...defaultProps} />, {
+      operationMocks: [rec.mock],
+    });
+
+    fireEvent.press(screen.getByTestId('primary-btn'));
+
+    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    expect(
+      (rec.fired[0] as { input: Record<string, unknown> }).input.item,
+    ).toEqual({ id: 'item-1' });
+  });
+
+  // The record carries the pack's brand and size to the line; a brand or size
+  // sent beside it would replace them.
+  it("adds a list line naming the record, and neither brand nor size of the scan's", async () => {
+    const rec = recordMock(BarcodeAddItemToShoppingListDocument, {
+      data: {
+        addItemsToShoppingList: {
+          __typename: 'AddItemsToShoppingListPayload',
+          results: [],
+        },
+      },
+    });
+
+    renderWithApollo(
+      <SearchResults
+        {...defaultProps}
+        source="shoppingList"
+        pantryId={undefined}
+        shoppingListId="list-1"
+        item={{
+          ...mockItem,
+          variationId: 'esm-1',
+          brandId: 'brand-pack',
+          brandName: 'Pack Brand',
+          displayUnit: { id: 'unit-litre', name: 'litre', symbol: 'L' },
+        }}
+      />,
+      { operationMocks: [rec.mock] },
+    );
+
+    fireEvent.press(screen.getByTestId('primary-btn'));
+
+    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    const [line] = (
+      rec.fired[0] as { input: { items: Record<string, unknown>[] } }
+    ).input.items;
+    expect(line?.item).toEqual({ variation: 'esm-1' });
+    expect(line?.brand).toBeUndefined();
+    expect(line?.netWeight).toBeUndefined();
+    expect(line?.unit).toBeUndefined();
   });
 
   describe('the pantry item count', () => {

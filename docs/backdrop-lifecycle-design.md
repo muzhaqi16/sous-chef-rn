@@ -372,3 +372,14 @@ declarative form.
   entirely for a purely time/state-driven model (simpler, marginally less prompt)?
 - Long-term: is the global backdrop still worth its complexity, or should the tab
   bar derive coverage another way so we can adopt gorhom's per-sheet backdrop?
+
+## 14. Open/close flicker (2026-09-23): a rendering bug, not a lifecycle bug
+
+The dim ramped in, then snapped off as the sheet settled, and sometimes flashed
+back on after a close. Traces showed exactly one claim and one release per
+cycle, and the opacity SharedValue was correct throughout. The native view was
+showing a stale value that Unistyles wrote back over the animation, because
+`GlobalBackdrop`'s animated node also carried a themed Unistyles style. The fix
+moved the colour to a child
+([Unistyles re-applies reanimated's React-side value](verified-library-behaviour.md#unistyles-re-applies-reanimateds-react-side-value-over-an-animation)).
+The claim/release model above was not involved.

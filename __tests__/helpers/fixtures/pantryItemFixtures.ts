@@ -27,6 +27,7 @@ export interface PantryItemFixture {
   id?: string;
   itemName?: string;
   quantity?: number;
+  heldQuantity?: number;
   storageState?: string;
   expiresOn?: string | null;
   earliestBatchExpiresOn?: string | null;
@@ -70,6 +71,12 @@ export function pantryItemData(
 ): UnmaskedGetPantryItemQuery {
   const id = fixture.id ?? 'pi1';
   const tags = fixture.tags ?? [];
+  const trackingUnit = unit(
+    fixture.unitSymbol,
+    fixture.unitName,
+    fixture.unitDisplayAsFraction,
+  );
+  const held = fixture.heldQuantity ?? fixture.quantity ?? 2;
   const data: UnmaskedGetPantryItemQuery = {
     __typename: 'Query',
     pantryItem: {
@@ -79,6 +86,17 @@ export function pantryItemData(
       itemId: 'item1',
       itemName: fixture.itemName ?? 'Milk',
       quantity: fixture.quantity ?? 2,
+      heldQuantity: held,
+      // Shown in the unit it counts in.
+      displayAmount: {
+        __typename: 'DisplayAmount',
+        quantity: held,
+        unit: {
+          __typename: 'Unit',
+          id: trackingUnit.id,
+          symbol: trackingUnit.symbol,
+        },
+      },
       costCurrency: null,
       version: 1,
       updatedAt: '2026-01-01',
@@ -126,11 +144,8 @@ export function pantryItemData(
             ]
           : [],
       },
-      unit: unit(
-        fixture.unitSymbol,
-        fixture.unitName,
-        fixture.unitDisplayAsFraction,
-      ),
+      unit: trackingUnit,
+      displayUnit: null,
       netWeightUnit: null,
       storageLocation: fixture.storageLocationName
         ? {
@@ -158,7 +173,7 @@ export function pantryItemData(
       costPerUnit: fixture.costPerUnit ?? null,
       totalCost: fixture.totalCost ?? null,
       purchase: null,
-      usageRecords: {
+      usageRecordsConnection: {
         __typename: 'PantryItemUsageConnection',
         totalCount: 0,
         pageInfo: {

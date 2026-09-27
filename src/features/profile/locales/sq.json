@@ -167,10 +167,10 @@
     "budgetPerMeal": "Buxheti për vakt ($)",
     "budgetPlaceholder": "p.sh. 15.00",
     "skillLevels": {
-      "Beginner": "Fillestar",
-      "Intermediate": "I mesëm",
-      "Advanced": "I avancuar",
-      "Expert": "Ekspert"
+      "BEGINNER": "Fillestar",
+      "INTERMEDIATE": "I mesëm",
+      "ADVANCED": "I avancuar",
+      "EXPERT": "Ekspert"
     }
   },
   "profile": {

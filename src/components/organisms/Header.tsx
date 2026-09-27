@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, type LayoutChangeEvent } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -96,6 +96,24 @@ export const Header: React.FC<HeaderProps> = ({
   const showBackButton = onBack && !onClose;
   const showCloseButton = onClose !== undefined;
 
+  // `align: center` only centres within the title's box, which sits between
+  // the two action groups; padding the narrower side centres it on the bar.
+  const [sideWidths, setSideWidths] = useState({ left: 0, right: 0 });
+  const trackSide =
+    (side: 'left' | 'right') =>
+    ({ nativeEvent }: LayoutChangeEvent) => {
+      const { width } = nativeEvent.layout;
+      setSideWidths(prev =>
+        prev[side] === width ? prev : { ...prev, [side]: width },
+      );
+    };
+  const leftImbalance = centerTitle
+    ? Math.max(0, sideWidths.right - sideWidths.left)
+    : 0;
+  const rightImbalance = centerTitle
+    ? Math.max(0, sideWidths.left - sideWidths.right)
+    : 0;
+
   // Render a single action button
   const renderAction = (action: HeaderAction, index: number) => {
     const pressable = (
@@ -142,7 +160,7 @@ export const Header: React.FC<HeaderProps> = ({
       ]}
     >
       {/* Left side */}
-      <View style={styles.actions}>
+      <View style={styles.actions} onLayout={trackSide('left')}>
         {!!showCloseButton && (
           <AppPressable
             style={styles.action}
@@ -174,7 +192,7 @@ export const Header: React.FC<HeaderProps> = ({
         <Text
           role="heading"
           align={centerTitle ? 'center' : undefined}
-          style={styles.title}
+          style={styles.title(leftImbalance, rightImbalance)}
           numberOfLines={1}
         >
           {title}
@@ -185,7 +203,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* The offline pill leads the action group, so every screen using this
           header carries the signal rather than just the tab headers. Renders
           null when online, so screens with no actions are unaffected. */}
-      <View style={styles.actions}>
+      <View style={styles.actions} onLayout={trackSide('right')}>
         <OfflineStatusPill size={22} />
         {rightActions.map(renderAction)}
         {rightElement}
@@ -206,10 +224,11 @@ const styles = StyleSheet.create(theme => ({
       },
     },
   },
-  title: {
+  title: (leftImbalance: number, rightImbalance: number) => ({
     flex: 1,
-    marginHorizontal: theme.spacing.sm,
-  },
+    marginLeft: theme.spacing.sm + leftImbalance,
+    marginRight: theme.spacing.sm + rightImbalance,
+  }),
   titleSpacer: {
     flex: 1,
   },

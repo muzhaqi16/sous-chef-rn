@@ -158,7 +158,12 @@ const DEFAULT_SCALAR_MOCKS: IMocks = {
   BigInt: () => '1',
   IPv4: () => '127.0.0.1',
   FlexibleQuantity: () => '1',
-  Upload: () => ({ uri: 'file://mock', type: 'image/png', name: 'mock.png' }),
+  EmailAddress: () => 'mock@example.com',
+  URL: () => 'https://example.com/mock',
+  TimeZone: () => 'UTC',
+  CountryCode: () => 'US',
+  CurrencyCode: () => 'USD',
+  Upload:() => ({ uri: 'file://mock', type: 'image/png', name: 'mock.png' }),
 };
 
 interface SharedApolloTestOptions {
@@ -655,6 +660,7 @@ import {
   executeSync,
   parse,
   getNamedType,
+  GraphQLNonNull,
   isAbstractType,
   isEnumType,
   isInputObjectType,
@@ -1176,6 +1182,16 @@ function placeholderForInput(type: GraphQLInputType): unknown {
   if (isListType(inner)) return [];
   if (isEnumType(inner)) return inner.getValues()[0]?.value ?? null;
   if (isInputObjectType(inner)) {
+    // A @oneOf input takes exactly one key, and every key is nullable, so the
+    // non-null pass below would build `{}`, which the schema refuses.
+    if (inner.isOneOf) {
+      const [first] = Object.values(inner.getFields());
+      if (!first) return {};
+      const required = isNonNullType(first.type)
+        ? first.type
+        : new GraphQLNonNull(first.type);
+      return { [first.name]: placeholderForInput(required) };
+    }
     const value: Record<string, unknown> = {};
     for (const field of Object.values(inner.getFields())) {
       if (isNonNullType(field.type) && field.defaultValue === undefined) {

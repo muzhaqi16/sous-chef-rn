@@ -203,12 +203,13 @@ export function useRecipeForm() {
       instructions,
       media: {
         imageUrl: state.imageUrl.trim() || undefined,
+        videoUrl: state.videoUrl.trim() || undefined,
       },
       metadata: {
         servings: parseInt(state.servings) || 4,
         difficulty: state.difficulty ?? undefined,
         category: state.category ?? undefined,
-        cuisine: state.cuisine.trim() || undefined,
+        cuisines: state.cuisines.length > 0 ? state.cuisines : undefined,
       },
       timing: {
         prepTimeMinutes: parseInt(state.prepTimeMinutes) || undefined,
@@ -246,12 +247,13 @@ export function useRecipeForm() {
       })),
       media: {
         imageUrl: state.imageUrl.trim() || null,
+        videoUrl: state.videoUrl.trim() || null,
       },
       metadata: {
         servings: parseInt(state.servings) || undefined,
         difficulty: state.difficulty ?? undefined,
         category: state.category ?? undefined,
-        cuisine: state.cuisine.trim() || null,
+        cuisines: state.cuisines,
       },
       timing: {
         prepTimeMinutes: parseInt(state.prepTimeMinutes) || null,
@@ -274,6 +276,7 @@ export function useRecipeForm() {
       name: recipe.name,
       description: recipe.description ?? '',
       imageUrl: recipe.imageUrl ?? '',
+      videoUrl: recipe.videoUrl ?? '',
       servings: String(recipe.servings),
       prepTimeMinutes: recipe.prepTimeMinutes
         ? String(recipe.prepTimeMinutes)
@@ -284,7 +287,7 @@ export function useRecipeForm() {
       caloriesPerServing: formatNumberForInput(recipe.caloriesPerServing),
       difficulty: recipe.difficulty,
       category: recipe.category,
-      cuisine: recipe.cuisine ?? '',
+      cuisines: [...recipe.cuisines],
       status: recipe.status,
       diets: recipe.diets,
       healthGoals: recipe.healthGoals,

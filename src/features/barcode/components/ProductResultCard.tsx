@@ -10,12 +10,14 @@ import { Text } from '#components/atoms/Text';
 import { formatQuantity } from '#utils/formatQuantity';
 import { Card } from '#components/atoms/Card';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
+import { NetWeightKind } from '#/graphql/generated/schemaTypes';
 
 interface Item {
   id: string;
   name: string;
   brandName?: string;
   netWeight?: number;
+  netWeightKind?: NetWeightKind;
   displayUnit?: {
     name?: string;
   };
@@ -44,6 +46,21 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
   const { t } = useTranslation();
   const money = useMoney();
   const showActions = !!onEditItem || !!onCreateVariant;
+  const amount =
+    item.netWeight == null
+      ? null
+      : `${formatQuantity(item.netWeight)}${
+          item.displayUnit?.name ? ` ${item.displayUnit.name}` : ''
+        }`;
+  // Only a PACKAGE figure is the pack's size; the others say what they measure.
+  const netWeightLine =
+    amount === null
+      ? null
+      : item.netWeightKind === NetWeightKind.Serving
+      ? t('barcode.servingAmount', { amount })
+      : item.netWeightKind === NetWeightKind.Reference
+      ? t('barcode.referenceAmount', { amount })
+      : amount;
 
   return (
     <Card padding="none" style={styles.itemCard}>
@@ -68,10 +85,9 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
             {item.brandName}
           </Text>
         )}
-        {item.netWeight != null && (
+        {netWeightLine !== null && (
           <Text role="body" tone="secondary">
-            {formatQuantity(item.netWeight)}
-            {item.displayUnit?.name ? ` ${item.displayUnit.name}` : ''}
+            {netWeightLine}
           </Text>
         )}
         {item.price != null && (

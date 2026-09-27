@@ -146,6 +146,11 @@ function makeCache(overrides: Record<string, unknown> = {}) {
         itemId: 'item-1',
         itemName: 'Flour',
         quantity: 5,
+        displayAmount: {
+          __typename: 'DisplayAmount',
+          quantity: 5,
+          unit: { __typename: 'Unit', id: 'u1', symbol: 'lbs' },
+        },
         activeBatchCount: 1,
         netWeight: null,
         remainingNetWeight: null,
@@ -285,6 +290,11 @@ describe('PantryActionModal', () => {
           name: '',
           type: 'COUNT',
           displayAsFraction: false,
+        },
+        displayAmount: {
+          __typename: 'DisplayAmount',
+          quantity: 5,
+          unit: { __typename: 'Unit', id: '', symbol: '' },
         },
       }),
     });

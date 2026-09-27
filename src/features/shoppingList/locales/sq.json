@@ -161,7 +161,8 @@
     "priorityMedium": "Mesatare",
     "priorityHigh": "E lartë",
     "store": "Dyqani i preferuar",
-    "storePlaceholder": "p.sh., Costco"
+    "storePlaceholder": "p.sh., Costco",
+    "packageSizeCleared": "Ky artikull ishte tashmë në listë me një madhësi tjetër paketimi, prandaj rreshti nuk ruan më asnjë."
   },
   "purchaseHistory": {
     "quantityLabel": "Sasia:",

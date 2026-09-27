@@ -4,6 +4,7 @@ import { immer } from 'zustand/middleware/immer';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { zustandStorage } from '#/storage/mmkv';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
+import type { NetWeightKind } from '#/graphql/generated/schemaTypes';
 
 /** One row of the scanner's result list and its recent-scan history. */
 export interface ScannedItem {
@@ -19,14 +20,30 @@ export interface ScannedItem {
    *  Undefined on a cached scan, which is why the sheet re-checks the
    *  authoritative snapshot rather than trusting this. */
   canSuggest?: boolean;
+  /** The code that was scanned, which is what the card shows. */
   upc: string;
+  /**
+   * The scanned barcode's product record. An add naming it stores the pack the
+   * scan reported: its size, brand and barcode.
+   */
+  variationId?: string;
   unitId?: string;
+  /** The scanned barcode's own figure, in `displayUnit`. */
   netWeight?: number;
+  /** What `netWeight` measures; only a PACKAGE figure is a package size. */
+  netWeightKind?: NetWeightKind;
   displayUnit?: {
     id: string;
     name: string;
     symbol: string;
   };
+  /** The unit an add naming no unit counts the row in. */
+  trackingUnit?: {
+    id: string;
+    name: string;
+    symbol: string;
+  };
+  /** The scanned barcode's own brand; never one picked from the item's list. */
   brandName?: string;
   brandId?: string;
   type?: string;

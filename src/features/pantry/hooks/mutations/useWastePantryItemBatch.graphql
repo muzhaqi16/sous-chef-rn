@@ -4,6 +4,15 @@ fragment useWastePantryItemBatch_pantryItem on PantryItem {
   id
   version
   quantity
+  heldQuantity
+  displayAmount {
+    quantity
+    unit {
+      id
+      symbol
+    }
+  }
+  isLowStock
   activeBatchCount
   earliestBatchExpiresOn
 }

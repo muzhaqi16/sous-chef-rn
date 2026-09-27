@@ -362,6 +362,69 @@ RN's `Pressable` needs no wrapper: the Unistyles babel plugin auto-binds it to
 the C++ ShadowTree, so function-style callbacks with `StyleSheet.create`
 proxies work natively.
 
+### Unistyles re-applies reanimated's React-side value over an animation
+
+**Claim:** an element reanimated animates must not also carry a theme-reading
+Unistyles style. Unistyles captures reanimated's React-side value of the
+animated prop and writes it back over the animation, so the element shows a
+stale value until its next React re-render. It is invisible when the animation
+comes to rest at the value React already holds, and visible when it does not:
+the global dim rests at 0.5 while React holds 0.
+
+**Verified against `react-native-unistyles@3.3.0` +
+`react-native-reanimated@4.6.0` (default static flags) + `react-native@0.86.3`,
+2026-09-23.** The chain:
+
+1. Reanimated's `AnimatedComponent` renders the host with
+   `style: [...yourStyles, <animated style's initial value>, state.settledStyle]`:
+   plain objects that hold the animated prop's React-side value.
+2. The Unistyles babel plugin binds that host. Its ref callback calls
+   `UnistylesShadowRegistry.add(ref, props.style)` on every commit
+   (`src/core/createUnistylesElement.native.tsx`).
+3. `HybridShadowRegistry::link` → `unistyleFromValue` wraps every plain object
+   in the array as a static "exotic" unistyle and links it to the node beside
+   the real one (`cxx/core/UnistyleWrapper.h`). A node with no themed style has
+   nothing that ever triggers an update.
+4. A theme rebuild of the node (`useAppearance` calls `updateTheme` on every
+   cold start) parses each exotic entry from its raw value
+   (`cxx/parser/Parser.cpp`, "compute styles only once"). The node's props,
+   the captured opacity included, go into the update map, which
+   `ShadowTrafficController` never drains, and into
+   `family->nativeProps_DEPRECATED`, which `ShadowNode::clone` re-applies to
+   any props-less clone.
+5. These are non-React commits. With `USE_COMMIT_HOOK_ONLY_FOR_REACT_COMMITS`
+   on, reanimated's commit hook skips them. A settled animation has no next
+   frame to correct the value, so the stale value holds until a React
+   re-render. Reanimated's settled-props sync is usually that re-render, 0.5 s
+   to 1.5 s later.
+
+Observed 2026-09-23 on the iOS simulator by measuring the dimmed header's
+luminance per recorded frame (Meal Plan → Add a meal, open/close ×4). With
+`[styles.backdrop, animatedStyle]`, every open dimmed in, then snapped to
+undimmed as the sheet settled, and closes sometimes flashed the dim back on.
+The SharedValue was correct throughout. With the settled-props sync stubbed
+out, the view stayed wrong. With `[StyleSheet.absoluteFill, animatedStyle]`
+and the colour on a child, 16 of 16 transitions were clean. Removing the
+sheets' `CurrentThemeScope` did not help. Every animated node in `src` was
+then converted, and `sous-chef/animated-node-takes-no-themed-style` holds it. Upstream: reanimated
+[#10444](https://github.com/software-mansion/react-native-reanimated/issues/10444)
+has the same symptom and is open. Reanimated
+[#8513](https://github.com/software-mansion/react-native-reanimated/issues/8513)
+says mixing the two libraries on one node is unsupported. Unistyles
+[#1252](https://github.com/jpudysz/react-native-unistyles/issues/1252)
+covers the undrained update map. There is no fix in either package as of
+unistyles 3.3.0 and reanimated 4.7.0.
+
+Re-check:
+
+```
+grep -n "unistylesFromNonExistentNativeState" -A 6 node_modules/react-native-unistyles/cxx/core/UnistyleWrapper.h
+grep -n "compute styles only once" -A 5 node_modules/react-native-unistyles/cxx/parser/Parser.cpp
+grep -n "getUpdates\|removeShadowNode" node_modules/react-native-unistyles/cxx/shadowTree/ShadowTrafficController.h
+grep -n "propsOverride.emplace" -B 4 node_modules/react-native/ReactCommon/react/renderer/core/ShadowNode.cpp
+grep -n "USE_COMMIT_HOOK_ONLY_FOR_REACT_COMMITS" -A 6 node_modules/react-native-reanimated/Common/cpp/reanimated/Fabric/ReanimatedCommitHook.cpp
+```
+
 ### react-compiler try shapes
 
 **Claim:** inside hook/component bodies, exactly two `try` shapes make the

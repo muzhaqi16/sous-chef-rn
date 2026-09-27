@@ -21,8 +21,6 @@ export const ROLE_PERMISSIONS: Record<CollaboratorRole, RoleInfo> = {
     icon: 'eye-outline',
     permissions: [
       { labelKey: 'collaboratorRoles.permissions.viewItems', granted: true },
-      { labelKey: 'collaboratorRoles.permissions.viewHistory', granted: true },
-      { labelKey: 'collaboratorRoles.permissions.exportList', granted: true },
       { labelKey: 'collaboratorRoles.permissions.addItems', granted: false },
       { labelKey: 'collaboratorRoles.permissions.editItems', granted: false },
       { labelKey: 'collaboratorRoles.permissions.removeItems', granted: false },
@@ -42,8 +40,6 @@ export const ROLE_PERMISSIONS: Record<CollaboratorRole, RoleInfo> = {
     icon: 'cart-outline',
     permissions: [
       { labelKey: 'collaboratorRoles.permissions.viewItems', granted: true },
-      { labelKey: 'collaboratorRoles.permissions.viewHistory', granted: true },
-      { labelKey: 'collaboratorRoles.permissions.exportList', granted: true },
       {
         labelKey: 'collaboratorRoles.permissions.markPurchased',
         granted: true,
@@ -63,8 +59,6 @@ export const ROLE_PERMISSIONS: Record<CollaboratorRole, RoleInfo> = {
     icon: 'add-circle-outline',
     permissions: [
       { labelKey: 'collaboratorRoles.permissions.viewItems', granted: true },
-      { labelKey: 'collaboratorRoles.permissions.viewHistory', granted: true },
-      { labelKey: 'collaboratorRoles.permissions.exportList', granted: true },
       { labelKey: 'collaboratorRoles.permissions.addItems', granted: true },
       {
         labelKey: 'collaboratorRoles.permissions.markPurchased',
@@ -84,8 +78,6 @@ export const ROLE_PERMISSIONS: Record<CollaboratorRole, RoleInfo> = {
     icon: 'create-outline',
     permissions: [
       { labelKey: 'collaboratorRoles.permissions.viewItems', granted: true },
-      { labelKey: 'collaboratorRoles.permissions.viewHistory', granted: true },
-      { labelKey: 'collaboratorRoles.permissions.exportList', granted: true },
       { labelKey: 'collaboratorRoles.permissions.addItems', granted: true },
       { labelKey: 'collaboratorRoles.permissions.editItems', granted: true },
       { labelKey: 'collaboratorRoles.permissions.removeItems', granted: true },
@@ -105,8 +97,6 @@ export const ROLE_PERMISSIONS: Record<CollaboratorRole, RoleInfo> = {
     icon: 'settings-outline',
     permissions: [
       { labelKey: 'collaboratorRoles.permissions.viewItems', granted: true },
-      { labelKey: 'collaboratorRoles.permissions.viewHistory', granted: true },
-      { labelKey: 'collaboratorRoles.permissions.exportList', granted: true },
       { labelKey: 'collaboratorRoles.permissions.addItems', granted: true },
       { labelKey: 'collaboratorRoles.permissions.editItems', granted: true },
       { labelKey: 'collaboratorRoles.permissions.removeItems', granted: true },
@@ -123,8 +113,6 @@ export const ROLE_PERMISSIONS: Record<CollaboratorRole, RoleInfo> = {
     icon: 'star',
     permissions: [
       { labelKey: 'collaboratorRoles.permissions.viewItems', granted: true },
-      { labelKey: 'collaboratorRoles.permissions.viewHistory', granted: true },
-      { labelKey: 'collaboratorRoles.permissions.exportList', granted: true },
       { labelKey: 'collaboratorRoles.permissions.addItems', granted: true },
       { labelKey: 'collaboratorRoles.permissions.editItems', granted: true },
       { labelKey: 'collaboratorRoles.permissions.removeItems', granted: true },

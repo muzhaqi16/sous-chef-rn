@@ -3,6 +3,7 @@ import type {
   BatchAddShoppingListItemInput,
   CreateShoppingListInput,
 } from '#/graphql/generated/schemaTypes';
+import { lineUnitFields } from './lineUnit';
 
 /** One line of the list being copied, as `CopyableShoppingListFragment` caches it. */
 export interface CopyableLine {
@@ -85,12 +86,6 @@ export function listFromTemplate(
       continue;
     }
 
-    const unit = line.unitId
-      ? { unitId: line.unitId }
-      : line.unitName
-      ? { unitName: line.unitName }
-      : null;
-
     const lineId = mint();
     display.set(lineId, {
       itemName: line.itemName ?? '',
@@ -104,7 +99,7 @@ export function listFromTemplate(
     items.push({
       id: lineId,
       item,
-      ...(unit && { unit }),
+      ...lineUnitFields(line.unitId, line.unitName),
       ...(line.quantity != null && { quantity: line.quantity }),
       ...(line.notes != null && { notes: line.notes }),
       ...(line.category != null && { category: line.category }),

@@ -8,6 +8,14 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
   itemId
   itemName
   quantity
+  heldQuantity
+  displayAmount {
+    quantity
+    unit {
+      id
+      symbol
+    }
+  }
   version
   updatedAt
   storageState

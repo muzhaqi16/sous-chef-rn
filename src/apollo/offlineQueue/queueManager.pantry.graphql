@@ -13,6 +13,14 @@ fragment queueManager_syncPantryItem on PantryItem {
   itemId
   itemName
   quantity
+  heldQuantity
+  displayAmount {
+    quantity
+    unit {
+      id
+      symbol
+    }
+  }
   version
   createdAt
   updatedAt

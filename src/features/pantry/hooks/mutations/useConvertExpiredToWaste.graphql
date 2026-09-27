@@ -5,6 +5,15 @@ fragment useConvertExpiredToWaste_pantryItem on PantryItem {
   id
   version
   quantity
+  heldQuantity
+  displayAmount {
+    quantity
+    unit {
+      id
+      symbol
+    }
+  }
+  isLowStock
   condition
   wasteReason
   storageState

@@ -11,6 +11,7 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
+import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import { commonStyles } from '#/styles/commonStyles';
 import { sizes } from '#/theme/foundations/sizes';
 import { spacing } from '#/theme/foundations/spacing';
@@ -130,6 +131,19 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
     return { transform: [{ translateY: y * 0.5 }] };
   });
 
+  const animatedTheme = useAnimatedTheme();
+  const barSurfaceStyle = useAnimatedStyle(() => {
+    const theme = animatedTheme.get();
+    return {
+      backgroundColor: theme.colors.background,
+      borderBottomWidth: theme.borderWidth.hairline,
+      borderBottomColor: theme.colors.border,
+    };
+  });
+  const titleLayoutStyle = useAnimatedStyle(() => ({
+    marginHorizontal: animatedTheme.get().spacing.sm,
+  }));
+
   // Transparent over the hero, opaque exactly as the content card reaches the
   // bar. Image-less screens are solid from the start.
   const barBgStyle = useAnimatedStyle(() => {
@@ -211,7 +225,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
       >
         <Animated.View
           pointerEvents="none"
-          style={[styles.barSolid, barBgStyle]}
+          style={[styles.barSolid, barSurfaceStyle, barBgStyle]}
         />
         <View
           style={[
@@ -233,7 +247,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
               expanded, with no UI↔JS mount round-trips during scroll. */}
           <Animated.View
             pointerEvents="none"
-            style={[styles.titleWrap, titleStyle]}
+            style={[styles.titleWrap, titleLayoutStyle, titleStyle]}
           >
             {title ? (
               <Text role="bodyStrong" numberOfLines={1}>
@@ -292,15 +306,13 @@ const styles = StyleSheet.create(theme => ({
     right: 0,
     zIndex: theme.zIndex.sticky,
   },
+  // Themed values are in `barSurfaceStyle`.
   barSolid: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: theme.colors.background,
-    borderBottomWidth: theme.borderWidth.hairline,
-    borderBottomColor: theme.colors.border,
   },
   barRow: {
     position: 'absolute',
@@ -313,7 +325,6 @@ const styles = StyleSheet.create(theme => ({
   titleWrap: {
     flex: 1,
     justifyContent: 'center',
-    marginHorizontal: theme.spacing.sm,
   },
   actionsRow: {
     flexDirection: 'row',

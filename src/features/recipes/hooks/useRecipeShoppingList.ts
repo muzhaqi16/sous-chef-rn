@@ -39,6 +39,7 @@ import { preferredMeasure } from '#features/recipes/utils/preferredMeasure';
 import { useAppSettings } from '#features/profile/hooks/useAppSettings';
 import type { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
+import { refByIdOrName } from '#/utils/refInput';
 import type {
   AddItemsToShoppingListInput,
   CreateShoppingListItemFromRecipeIngredientInput,
@@ -187,7 +188,7 @@ async function addIngredientToList(
                   id: rowId,
                   item: { itemName },
                   quantity,
-                  unit: { unitName },
+                  unit: refByIdOrName(null, unitName),
                   storePrefs,
                 },
               ],
@@ -409,11 +410,9 @@ export function useRecipeShoppingList({
             () =>
               createShoppingListItemsFromRecipeMutation({
                 variables: {
-                  input: {
-                    recipeId,
-                    shoppingListId: listId,
-                    servings: backendRecipe.servings,
-                  },
+                  // No `servings`: it counts servings to shop for, and the
+                  // whole recipe is the default.
+                  input: { recipeId, shoppingListId: listId },
                 },
               }),
             {
@@ -474,7 +473,7 @@ export function useRecipeShoppingList({
                   ),
                 },
                 quantity: measure.amount ?? 0,
-                unit: { unitName: measure.unit },
+                unit: refByIdOrName(null, measure.unit),
                 storePrefs: ingredient.aisle
                   ? { aisle: ingredient.aisle }
                   : undefined,
@@ -492,7 +491,7 @@ export function useRecipeShoppingList({
             if (!rowId) return;
             // Value blocks (`?.`, `??`, ternary) must stay OUT of the try —
             // inside one they bail this whole hook out of the React Compiler.
-            const unitName = batchItem.unit?.unitName ?? null;
+            const unitName = batchItem.unit?.name ?? null;
             const quantity =
               typeof batchItem.quantity === 'number'
                 ? batchItem.quantity

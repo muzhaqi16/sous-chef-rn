@@ -53,7 +53,7 @@ describe('deriving a shopping list from a cached meal plan', () => {
     expect(inputs).toHaveLength(1);
     expect(inputs[0]?.quantity).toBe(6);
     expect(inputs[0]?.item).toEqual({ itemId: 'i-1' });
-    expect(inputs[0]?.unit).toEqual({ unitId: 'u-1' });
+    expect(inputs[0]?.unit).toEqual({ id: 'u-1' });
   });
 
   it('takes the recipe as written when it declares no servings', () => {

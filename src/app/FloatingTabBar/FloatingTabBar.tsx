@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
-import { Platform, View, useWindowDimensions } from 'react-native';
+import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
@@ -8,6 +8,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
+import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import {
   useTabBarState,
   useTabBarSetters,
@@ -67,9 +68,6 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     onAddPress?.();
   };
   const { bottom: safeBottom } = useSafeAreaInsets();
-  const { width: screenWidth } = useWindowDimensions();
-
-  const tabBarWidth = screenWidth * 0.95;
 
   const activeTabIndex = useSharedValue(state.index);
 
@@ -105,6 +103,27 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     },
   );
 
+  const animatedTheme = useAnimatedTheme();
+  const overlayLayerStyle = useAnimatedStyle(() => ({
+    zIndex: animatedTheme.get().zIndex.overlay,
+  }));
+  const barSurfaceStyle = useAnimatedStyle(() => {
+    const theme = animatedTheme.get();
+    return {
+      left: theme.layout.pageGutter,
+      right: theme.layout.pageGutter,
+      borderRadius: theme.radii['2xl'],
+      ...theme.shadows.lg,
+      // Dark in both themes, under light glyphs. iOS 26 Liquid Glass drops the
+      // solid fill; Android / iOS < 26 keep it.
+      ...(supportsGlass ? {} : { backgroundColor: theme.colors.secondaryDark }),
+    };
+  });
+  // Flush with the bar's right edge.
+  const addButtonOffsetStyle = useAnimatedStyle(() => ({
+    right: animatedTheme.get().layout.pageGutter,
+  }));
+
   const animatedStyle = useAnimatedStyle(() => {
     // Sheets contribute dim opacity scaled by BACKDROP_OPACITY; dividing inverts
     // it back to coverage, 0 (closed) → 1 (fully open).
@@ -120,16 +139,13 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
 
   const barBottom =
     Platform.OS === 'ios'
-      ? Math.max(safeBottom * 0.5, 16)
+      ? Math.max(safeBottom * 0.7, 16)
       : Math.max(safeBottom, 16);
 
-  const containerStyle = { width: tabBarWidth, bottom: barBottom };
+  const containerStyle = { bottom: barBottom };
 
-  // Sits above the bar, flush with its right edge — the bar is centred at 95%
-  // of the screen, so that edge is half the remainder in from the right.
   const floatingButtonStyle = {
     bottom: barBottom + TAB_BAR_HEIGHT + FLOATING_BUTTON_GAP,
-    right: (screenWidth - tabBarWidth) / 2,
   };
 
   const handleTabPress = (
@@ -170,12 +186,14 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
       style={[
         containerStyle,
         styles.container,
-        supportsGlass && styles.containerGlass,
+        overlayLayerStyle,
+        barSurfaceStyle,
         animatedStyle,
       ]}
       testID={kitTestIDs.tabBar}
     >
       <GlassSurface style={styles.glassFill} />
+      <View style={styles.edge} />
       <View style={styles.tabsRow}>
         {state.routes.map((route, index) => {
           const options = descriptors[route.key]?.options ?? {};
@@ -203,7 +221,13 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     <Animated.View
       ref={addButtonRef}
       collapsable={false}
-      style={[floatingButtonStyle, styles.floatingAddButton, animatedStyle]}
+      style={[
+        floatingButtonStyle,
+        styles.floatingAddButton,
+        overlayLayerStyle,
+        addButtonOffsetStyle,
+        animatedStyle,
+      ]}
       onLayout={() => {
         requestAnimationFrame(() => {
           addButtonRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
@@ -232,20 +256,12 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  // Themed values are in `barSurfaceStyle` and `overlayLayerStyle`.
   container: {
-    backgroundColor: theme.colors.surface,
     height: TAB_BAR_HEIGHT,
-    alignSelf: 'center',
-    borderRadius: theme.radii['2xl'],
     borderCurve: 'continuous',
     position: 'absolute',
     paddingHorizontal: '5%',
-    ...theme.shadows.lg,
-    zIndex: theme.zIndex.overlay,
-  },
-  // iOS 26 Liquid Glass drops the solid fill; Android / iOS < 26 keep it.
-  containerGlass: {
-    backgroundColor: 'transparent',
   },
   // Self-clips to the bar radius and ignores touches so taps reach the buttons.
   glassFill: {
@@ -257,12 +273,25 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii['2xl'],
     borderCurve: 'continuous',
   },
+  // Over the glass, not the bar's own border: a border insets the glass by its
+  // width, and the glass's lighter rim then shows inside the line.
+  edge: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: theme.radii['2xl'],
+    borderCurve: 'continuous',
+    borderWidth: theme.borderWidth.hairline,
+    borderColor: theme.colors.navigationEdge,
+    pointerEvents: 'none',
+  },
   tabsRow: {
     flex: 1,
     flexDirection: 'row',
   },
   floatingAddButton: {
     position: 'absolute',
-    zIndex: theme.zIndex.overlay,
   },
 }));

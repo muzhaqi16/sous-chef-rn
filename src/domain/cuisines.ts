@@ -39,3 +39,16 @@ export const getAllCuisineOptions = () => {
 
   return [...POPULAR_CUISINES, ...remainingCuisines];
 };
+
+const CUISINE_BY_NAME = new Map<string, Cuisine>(
+  Object.values(Cuisine).map(cuisine => [cuisine, cuisine]),
+);
+
+/** A cuisine named in words ("Eastern European"), when it is one the API has. */
+export const cuisineFromName = (name: string): Cuisine | undefined =>
+  CUISINE_BY_NAME.get(
+    name
+      .trim()
+      .toUpperCase()
+      .replace(/[\s-]+/g, '_'),
+  );

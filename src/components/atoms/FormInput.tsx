@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
+import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
 import {
   ThemedBottomSheetTextInput,
   ThemedTextInput,
@@ -42,7 +43,11 @@ export const FormInput: React.FC<FormInputProps> = ({
       ? ThemedBottomSheetTextInput
       : ThemedTextInput;
 
-  styles.useVariants({ error: !!error, hasTrailing: !!trailing });
+  styles.useVariants({
+    error: !!error,
+    hasTrailing: !!trailing,
+    multiline: !!textInputProps.multiline,
+  });
 
   const { t } = useTranslation();
   const inputLabel = accessibilityLabel ?? label;
@@ -89,12 +94,18 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.base,
-    ...theme.type.body,
     backgroundColor: theme.colors.surface,
     color: theme.colors.textPrimary,
     variants: {
+      multiline: {
+        false: singleLineInputStyle(theme),
+        true: {
+          ...theme.type.body,
+          paddingHorizontal: theme.spacing.md,
+          paddingVertical: theme.spacing.base,
+          textAlignVertical: 'top',
+        },
+      },
       error: {
         true: { borderColor: theme.colors.error },
       },

@@ -51,6 +51,16 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
         error={errors?.imageUrl?.message}
       />
 
+      <FormInput
+        label={t('recipes.videoUrl')}
+        value={state.videoUrl}
+        onChangeText={v => updateField('videoUrl', v)}
+        placeholder={t('recipes.imageUrlPlaceholder')}
+        keyboardType="url"
+        autoCapitalize="none"
+        error={errors?.videoUrl?.message}
+      />
+
       <View style={styles.row}>
         <View style={styles.halfField}>
           <EditableCounter

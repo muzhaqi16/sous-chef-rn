@@ -102,6 +102,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
         contentContainerStyle={[styles.content, contentContainerStyle]}
       >
         <BottomSheetHeader
+          contentPadding="lg"
           title={t('addToMealPlan.title')}
           onCancel={onClose}
           onConfirm={handleConfirm}

@@ -62,7 +62,7 @@ const REGION_CURRENCY = {
   NZ: 'NZD',
   PN: 'NZD',
   TK: 'NZD',
-  AL: 'LEK',
+  AL: 'ALL',
   CA: 'CAD',
   CH: 'CHF',
   CN: 'CNY',

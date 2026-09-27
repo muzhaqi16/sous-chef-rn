@@ -24,6 +24,7 @@ const READ_STATE = gql`
   fragment _readConvertState on PantryItem {
     id
     quantity
+    heldQuantity
     condition
   }
 `;
@@ -34,6 +35,7 @@ const seedItem = () =>
       __typename: 'PantryItem',
       id: 'item-1',
       quantity: 4,
+      heldQuantity: 4,
       condition: ItemCondition.Good,
     },
   ]);
@@ -102,6 +104,7 @@ describe('useConvertExpiredToWaste (local-first)', () => {
       // Synchronous permanent write — visible before the mutation settles.
       expect(readState(cache)).toMatchObject({
         quantity: 0,
+        heldQuantity: 0,
         condition: ItemCondition.Spoiled,
       });
       resolved = await promise;
@@ -111,6 +114,7 @@ describe('useConvertExpiredToWaste (local-first)', () => {
     // Queued result keeps the optimistic state for replay.
     expect(readState(cache)).toMatchObject({
       quantity: 0,
+      heldQuantity: 0,
       condition: ItemCondition.Spoiled,
     });
 
@@ -161,6 +165,7 @@ describe('useConvertExpiredToWaste (local-first)', () => {
     expect(resolved).toBe(false);
     expect(readState(cache)).toMatchObject({
       quantity: 4,
+      heldQuantity: 4,
       condition: ItemCondition.Good,
     });
     // A refusal resolves as data; the hook still tells the user, in the copy

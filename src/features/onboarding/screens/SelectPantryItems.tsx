@@ -123,9 +123,9 @@ export const SelectPantryItems = () => {
           await Promise.all([
             ...itemsToAdd.map(async item => {
               const outcome = await addItem(item.name, {
-                itemId: item.id,
+                item: { id: item.id },
                 ...(item.displayUnit?.id && {
-                  unit: { unitId: item.displayUnit.id },
+                  unit: { id: item.displayUnit.id },
                 }),
                 quantity: null,
                 storage: {

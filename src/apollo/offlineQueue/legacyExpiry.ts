@@ -15,7 +15,8 @@ const DATE_ONLY_EXPIRY_INPUTS = new Set([
 const namedType = (type: TypeNode): string =>
   type.kind === Kind.NAMED_TYPE ? type.name.value : namedType(type.type);
 
-const inputTypeOf = (document: DocumentNode): string | null => {
+/** The named type of an operation's `$input`, e.g. `CreatePantryItemInput`. */
+export const inputTypeOf = (document: DocumentNode): string | null => {
   for (const definition of document.definitions) {
     if (definition.kind !== Kind.OPERATION_DEFINITION) continue;
     const input = definition.variableDefinitions?.find(

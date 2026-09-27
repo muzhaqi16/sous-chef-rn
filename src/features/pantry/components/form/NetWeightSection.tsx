@@ -13,20 +13,17 @@ import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface NetWeightSectionProps {
   control: Control<PantryItemFormData>;
-  /** When true, the net-weight inputs are disabled (weight locked after use). */
-  isWeightLocked: boolean;
   /** Re-runs the all-or-nothing rule, which reports on the unit field. */
   onNetWeightChanged: () => void;
   onNetWeightUnitSelected: (unitId: string | null) => void;
 }
 
 /**
- * "Net Weight" page of {@link PantryItemForm} (page index 1). Optional weight +
- * unit used for consumption tracking; locks once the item has been used.
+ * "Net Weight" page of {@link PantryItemForm} (page index 1): the DEFAULT
+ * package size new stock takes. Editing it restates nothing already held.
  */
 export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
   control,
-  isWeightLocked,
   onNetWeightChanged,
   onNetWeightUnitSelected,
 }) => {
@@ -34,15 +31,12 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
   return (
     <View style={styles.section}>
       <SectionHeader style={styles.sectionTitleSpacing}>
-        {t('labels.netWeight')}
+        {t('packageSize.defaultTitle')}
       </SectionHeader>
       <Text role="caption" style={styles.sectionDescription}>
-        {t('labels.netWeightIsUsedForConsumptionTrackingAndIsOptional')}
+        {t('packageSize.defaultHint')}
       </Text>
-      <View
-        pointerEvents={isWeightLocked ? 'none' : 'auto'}
-        style={isWeightLocked ? styles.lockedSection : undefined}
-      >
+      <View>
         <FieldRow>
           <Controller
             control={control}
@@ -58,7 +52,6 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
                 onBlur={onBlur}
                 placeholder={localizeNumericHint(t('labels.eG145'))}
                 keyboardType="decimal-pad"
-                editable={!isWeightLocked}
                 // The pair is all-or-nothing: the submit path drops a weight
                 // with no resolved unit id, so a refusal has to say which half
                 // is missing rather than the value silently vanishing.
@@ -83,11 +76,6 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
           />
         </FieldRow>
       </View>
-      {!!isWeightLocked && (
-        <Text role="caption" style={styles.lockedHint}>
-          {t('itemForm.netWeightLocked')}
-        </Text>
-      )}
     </View>
   );
 };
@@ -100,13 +88,6 @@ const styles = StyleSheet.create(theme => ({
     fontStyle: 'italic',
     color: theme.colors.textTertiary,
     marginBottom: theme.spacing.sm,
-  },
-  lockedSection: {
-    opacity: theme.opacity.disabled,
-  },
-  lockedHint: {
-    color: theme.colors.textTertiary,
-    fontStyle: 'italic',
   },
   sectionTitleSpacing: {
     marginBottom: theme.spacing.md,

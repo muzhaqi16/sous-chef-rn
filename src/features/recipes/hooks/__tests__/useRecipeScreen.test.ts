@@ -178,7 +178,7 @@ function makeLocalRecipeNode(overrides: Record<string, unknown> = {}) {
     totalTimeMinutes: 60,
     difficulty: null,
     category: null,
-    cuisine: null,
+    cuisines: [],
     status: 'PUBLISHED',
     isExternal: false,
     externalSource: null,

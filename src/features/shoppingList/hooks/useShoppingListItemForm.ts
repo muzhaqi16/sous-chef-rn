@@ -9,8 +9,8 @@ import { yupResolver } from '@hookform/resolvers/yup';
 
 import type { UseShoppingListItemForm_ItemFragment } from './useShoppingListItemForm.generated';
 import type {
+  BatchAddShoppingListItemInput,
   UpdateShoppingListItemInput,
-  UnitSpecInput,
 } from '#/graphql/generated/schemaTypes';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
@@ -23,6 +23,8 @@ import {
   parseStoredQuantityText,
 } from '#/utils/formatQuantity';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { refByIdOrName } from '#/utils/refInput';
+import { lineUnitFields } from '#features/shoppingList/utils/lineUnit';
 import {
   shoppingItemSchema,
   SHOPPING_ITEM_DEFAULTS,
@@ -126,15 +128,12 @@ export function useShoppingListItemForm(
     return Number.isFinite(value) ? value : undefined;
   };
 
-  const buildUnitInput = (): { unit: UnitSpecInput } | {} => {
+  const buildUnitInput = (): Pick<
+    BatchAddShoppingListItemInput,
+    'unit' | 'unitLabel'
+  > => {
     const { unit, selectedUnitId } = getValues();
-    if (!unit && !selectedUnitId) return {};
-    return {
-      unit: {
-        unitName: unit,
-        ...(selectedUnitId && { unitId: selectedUnitId }),
-      },
-    };
+    return lineUnitFields(selectedUnitId, unit) ?? {};
   };
 
   // Only dirty fields, for edit mode. `dirtyFields` OMITS clean fields, so every
@@ -152,12 +151,12 @@ export function useShoppingListItemForm(
       input.quantity = normalizeNumericTextForApi(v.quantityInput);
     }
 
-    // Unit — nest into UnitSpecInput
+    // An emptied unit clears the line's unit, and its label with it.
     if (dirtyFields.unit || dirtyFields.selectedUnitId) {
-      input.unit = {
-        unitName: v.unit,
-        ...(v.selectedUnitId && { unitId: v.selectedUnitId }),
-      };
+      Object.assign(
+        input,
+        lineUnitFields(v.selectedUnitId, v.unit) ?? { unit: null },
+      );
     }
 
     if (dirtyFields.notes) {
@@ -186,16 +185,10 @@ export function useShoppingListItemForm(
       input.storePrefs = { preferredStoreId: v.storeId };
     }
 
-    // Brand — BrandReferenceInput. The server lets brandId win over brandName
-    // and find-or-creates a name it does not know; an explicit `brandId: null`
-    // is the only way to remove one (omitting the sub-input leaves it alone).
+    // The server find-or-creates a brand name it does not know; `brand: null`
+    // is the only way to remove one (omitting it leaves the brand alone).
     if (dirtyFields.brand || dirtyFields.brandId) {
-      const brandName = v.brand.trim();
-      input.brand = v.brandId
-        ? { brandId: v.brandId }
-        : brandName
-        ? { brandName }
-        : { brandId: null };
+      input.brand = refByIdOrName(v.brandId, v.brand) ?? null;
     }
 
     // Net weight — NetWeightInput. `netWeight: null` clears the value and its

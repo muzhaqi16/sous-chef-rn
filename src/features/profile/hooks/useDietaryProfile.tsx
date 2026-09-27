@@ -10,10 +10,12 @@ import {
   RemoveDietaryRestrictionDocument,
 } from '#operations/user/user.generated';
 import type {
+  CookingSkillLevel,
   Cuisine,
   Diet,
   Intolerance,
   HealthGoal,
+  RestrictionKindInput,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
 import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
@@ -48,7 +50,7 @@ export interface DietaryProfileData {
   fatTarget?: number | null;
   mealsPerDay: number;
   snacksPerDay: number;
-  cookingSkillLevel?: string | null;
+  cookingSkillLevel?: CookingSkillLevel | null;
   maxPrepTimeMinutes?: number | null;
   maxCookTimeMinutes?: number | null;
   budgetPerMeal?: number | null;
@@ -185,7 +187,7 @@ export const useDietaryProfile = () => {
     fatTarget?: number | null;
     mealsPerDay?: number;
     snacksPerDay?: number;
-    cookingSkillLevel?: string | null;
+    cookingSkillLevel?: CookingSkillLevel | null;
     maxPrepTimeMinutes?: number | null;
     maxCookTimeMinutes?: number | null;
     budgetPerMeal?: number | null;
@@ -237,11 +239,7 @@ export const useDietaryProfile = () => {
   };
 
   const addDietaryRestriction = async (
-    restriction: {
-      diet?: Diet;
-      intolerance?: Intolerance;
-      healthGoal?: HealthGoal;
-    },
+    restriction: RestrictionKindInput,
     severity: RestrictionSeverity,
     notes?: string,
     appliesToHomeId?: string,
@@ -251,7 +249,7 @@ export const useDietaryProfile = () => {
       () =>
         addRestriction({
           variables: {
-            input: { ...restriction, severity, notes, appliesToHomeId },
+            input: { kind: restriction, severity, notes, appliesToHomeId },
           },
           // No optimisticResponse to tear down — queue offline and replay
           // idempotently; the cache update runs on the (replayed) response.

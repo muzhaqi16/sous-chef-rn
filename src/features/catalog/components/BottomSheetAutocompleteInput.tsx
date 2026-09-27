@@ -12,6 +12,7 @@ import {
   ThemedTextInput,
 } from '#components/atoms/themedComponents';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
+import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 import { useIsOnline } from '#store/useAppStore';
 import { Icon } from '#utils/iconUtils';
@@ -308,6 +309,9 @@ export function BottomSheetAutocompleteInput<T>({
                 testID ? catalogTestIDs.autocompleteSearch(testID) : undefined
               }
               autoCapitalize={autoCapitalize}
+              // iOS commits a correction as the keyboard closes on a pick,
+              // overwriting the value just picked.
+              autoCorrect={false}
             />
           </View>
           <FlashList
@@ -335,13 +339,11 @@ export function BottomSheetAutocompleteInput<T>({
 
 const styles = StyleSheet.create(theme => ({
   fieldInput: {
+    ...singleLineInputStyle(theme),
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.base,
-    ...theme.type.body,
     backgroundColor: theme.colors.surface,
     color: theme.colors.textPrimary,
   },
@@ -360,12 +362,10 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
   },
   bottomSheetInput: {
+    ...singleLineInputStyle(theme),
     marginBottom: theme.spacing.md,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    ...theme.type.body,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
     backgroundColor: theme.colors.inputBackground,
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,

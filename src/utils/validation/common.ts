@@ -37,9 +37,18 @@ export function logValidationErrors(errors: FieldErrors<FieldValues>) {
 
 // --- shared rules ------------------------------------------------------------
 
-// "standard" email rule
+// The API's EmailAddress scalar: zod's email format, at most 254 characters. An
+// address it refuses fails before any resolver runs, with no field to put the
+// message on, so every email field holds this line. `a@b` and `a..b@c.com` pass
+// yup's own `.email()`.
+const EMAIL_ADDRESS =
+  /^(?!\.)(?!.*\.\.)[\w'+.-]*[\w+-]@([A-Za-z0-9][A-Za-z0-9-]*\.)+[A-Za-z]{2,}$/;
+
+export const isEmailAddress = (value: string | undefined): boolean =>
+  !value || (value.length <= 254 && EMAIL_ADDRESS.test(value));
+
 export const emailRule = string()
-  .email(msg('emailInvalid'))
+  .test('email', msg('emailInvalid'), isEmailAddress)
   .required(msg('emailRequired'));
 
 // Sign-in reads back a password the user ALREADY has, so a policy rule here

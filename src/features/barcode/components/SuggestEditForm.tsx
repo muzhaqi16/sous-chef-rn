@@ -9,12 +9,18 @@ import AddItemForm, {
 } from '#features/catalog/ui/AddItemForm/AddItemForm';
 import { useItemForEdit } from '#features/catalog/hooks/useItemForEdit';
 import { useSuggestItemEdit } from '#features/catalog/hooks/useSuggestItemEdit';
-import { buildInitialDataFromSnapshot } from '#utils/items/suggestItemChanges';
+import {
+  buildInitialDataFromSnapshot,
+  withScannedPack,
+  type ScannedPack,
+} from '#utils/items/suggestItemChanges';
 
 interface SuggestEditFormProps {
   itemId: string;
   barcode?: string;
   format?: string;
+  /** The scanned barcode's record and pack, when the lookup found one. */
+  scan?: ScannedPack & { variationId: string };
   onClose: () => void;
 }
 
@@ -27,15 +33,30 @@ export const SuggestEditForm: React.FC<SuggestEditFormProps> = ({
   itemId,
   barcode,
   format,
+  scan,
   onClose,
 }) => {
   const { t } = useTranslation();
   const { snapshot, loading, error, refetch } = useItemForEdit(itemId);
   const { submitEdit, loading: submitting } = useSuggestItemEdit();
 
+  // A suggestion on a scanned barcode corrects that barcode's pack, so it opens
+  // on, and is diffed against, the pack the scan showed. A direct edit writes
+  // the item, and stays on the item's own figures.
+  const targetsBarcode =
+    !!scan && !!snapshot && !snapshot.canEdit && snapshot.canSuggest;
+  const original =
+    snapshot && scan && targetsBarcode
+      ? withScannedPack(snapshot, scan)
+      : snapshot;
+
   const handleSubmit = async (formData: AddItemSubmitPayload) => {
-    if (!snapshot) return;
-    const result = await submitEdit(snapshot, formData);
+    if (!original) return;
+    const result = await submitEdit(
+      original,
+      formData,
+      targetsBarcode ? scan.variationId : undefined,
+    );
     // Keep the sheet open when there's nothing to send or the send failed, so
     // the user's edits survive and they can correct and retry.
     if (result.status !== 'failed' && result.status !== 'noChanges') {
@@ -86,7 +107,7 @@ export const SuggestEditForm: React.FC<SuggestEditFormProps> = ({
       barcode={barcode}
       format={format}
       mode={snapshot.canEdit ? 'directEdit' : 'edit'}
-      initialData={buildInitialDataFromSnapshot(snapshot)}
+      initialData={buildInitialDataFromSnapshot(original ?? snapshot)}
       onSubmit={handleSubmit}
       onClose={onClose}
       loading={submitting}

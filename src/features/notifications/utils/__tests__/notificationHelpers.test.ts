@@ -362,6 +362,125 @@ describe('notificationHelpers', () => {
     });
   });
 
+  // The server's scheduled and coalesced notifications, worded from their
+  // payloads (`docs/api/notifications.md` § payload schemas).
+  describe('a server-written summary or reminder', () => {
+    it('names who changed a pantry and what', () => {
+      expect(
+        messageOf(NotificationType.NewItemAdded, {
+          pantryName: 'Kitchen',
+          itemCount: 1,
+          itemNames: ['Milk'],
+          actorNames: ['Ana'],
+        }),
+      ).toBe('Ana added Milk to Kitchen');
+      expect(
+        messageOf(NotificationType.ItemDeleted, {
+          pantryName: 'Kitchen',
+          itemCount: 4,
+          itemNames: ['Milk', 'Eggs'],
+          actorNames: ['Ana', 'Ben'],
+        }),
+      ).toBe('Ana and Ben removed 4 items from Kitchen');
+    });
+
+    it('counts the actors a summary cannot name', () => {
+      expect(
+        messageOf(NotificationType.SharedListChanged, {
+          listName: 'Groceries',
+          changeCount: 9,
+          actorNames: ['Ana', 'Ben', 'Cleo', 'Dan', 'Eve'],
+        }),
+      ).toBe('Ana, Ben, Cleo and 2 others made changes to Groceries');
+    });
+
+    it("says how much a list's reminder has left to buy", () => {
+      expect(
+        messageOf(NotificationType.ListReminder, {
+          listName: 'Groceries',
+          itemCount: 3,
+        }),
+      ).toBe('Groceries has 3 items to buy');
+      expect(
+        messageOf(NotificationType.ListReminder, {
+          listName: 'Groceries',
+          itemCount: 0,
+        }),
+      ).toBe('Your reminder for Groceries');
+    });
+
+    it("names the day's meals, counting the rest", () => {
+      expect(
+        messageOf(NotificationType.MealPlanReminder, {
+          mealCount: 5,
+          mealNames: ['Oats', 'Salad', 'Soup'],
+        }),
+      ).toBe('Planned today: Oats, Salad, Soup and 2 others');
+    });
+
+    it('tells when to start cooking in the reader’s clock', () => {
+      expect(
+        messageOf(NotificationType.CookingReminder, {
+          recipeName: 'Lasagna',
+          mealTime: '18:30',
+        }),
+      ).toBe('Start Lasagna now to eat at 6:30 PM');
+      expect(
+        messageOf(NotificationType.CookingReminder, { recipeName: 'Lasagna' }),
+      ).toBe('Start Lasagna now');
+    });
+
+    it('lists only the figures a weekly digest has', () => {
+      expect(
+        messageOf(NotificationType.WeeklyDigest, {
+          itemsAdded: 1,
+          itemsUsed: 0,
+          itemsWasted: 2,
+          itemsExpiringSoon: 3,
+        }),
+      ).toBe('1 item added, 2 wasted, 3 expiring this week');
+    });
+
+    it('words a monthly report from its counts', () => {
+      expect(
+        messageOf(NotificationType.MonthlyReport, {
+          purchaseCount: 12,
+          recipesCooked: 1,
+          wastedItemCount: 0,
+        }),
+      ).toBe('12 purchases, 1 recipe cooked');
+    });
+
+    it('falls back to a sentence when a payload names nothing', () => {
+      expect(messageOf(NotificationType.RecipeRecommendations, {})).toBe(
+        "Recipes match what's in your pantry",
+      );
+      expect(messageOf(NotificationType.WeeklyDigest, {})).toBe(
+        'Your weekly pantry summary is ready',
+      );
+      expect(messageOf(NotificationType.NewItemAdded, {})).toBe(
+        'An item was added',
+      );
+    });
+
+    // Push data is a flat string map: the lists arrive as JSON text.
+    it('words the same notification from its push data', () => {
+      expect(
+        getPushTrayCopy(
+          {
+            type: NotificationType.RecipeRecommendations,
+            recipeCount: '2',
+            recipeNames: '["Chili","Tacos"]',
+          },
+          t,
+        ),
+      ).toEqual({
+        title: 'Recipes for your pantry',
+        body: 'Your pantry is ready for Chili and Tacos',
+      });
+    });
+  });
+
   describe('getNotificationIcon', () => {
     it.each([
       [NotificationType.ExpiryReminder, 'time'],
@@ -373,6 +492,9 @@ describe('notificationHelpers', () => {
       [NotificationType.CollaborationInvite, 'person-add'],
       [NotificationType.ListUpdated, 'list'],
       [NotificationType.HomeJoined, 'people'],
+      [NotificationType.ListReminder, 'alarm'],
+      [NotificationType.CookingReminder, 'restaurant'],
+      [NotificationType.WeeklyDigest, 'stats-chart'],
     ])('returns "%s" icon for %s', (type, icon) => {
       expect(getNotificationIcon(type)).toBe(icon);
     });

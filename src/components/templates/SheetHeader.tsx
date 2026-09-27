@@ -1,4 +1,6 @@
 import React from 'react';
+import { View } from 'react-native';
+import { commonStyles } from '#/styles/commonStyles';
 import { useTranslation } from '#/i18n';
 import { Header } from '#components/organisms/Header';
 
@@ -12,6 +14,8 @@ interface SheetConfirm {
 }
 
 interface SheetHeaderProps {
+  /** Horizontal padding on the parent sheet body, cancelled for the header. */
+  contentPadding?: 'md' | 'lg';
   title: string;
   onClose: () => void;
   /** The sheet's confirm action; omit it for a sheet that only closes. */
@@ -25,6 +29,7 @@ interface SheetHeaderProps {
  * every sheet, as `FormScreen` gives a full-screen form.
  */
 export const SheetHeader: React.FC<SheetHeaderProps> = ({
+  contentPadding,
   title,
   onClose,
   confirm,
@@ -32,27 +37,29 @@ export const SheetHeader: React.FC<SheetHeaderProps> = ({
 }) => {
   const { t } = useTranslation();
   return (
-    <Header
-      title={title}
-      centerTitle
-      onClose={onClose}
-      borderless={borderless}
-      rightActions={
-        confirm
-          ? [
-              {
-                icon: 'checkmark',
-                accessibilityLabel:
-                  confirm.accessibilityLabel ?? t('labels.save'),
-                onPress: confirm.onPress,
-                variant: 'primary',
-                disabled: !!confirm.disabled || !!confirm.loading,
-                loading: confirm.loading,
-                testID: confirm.testID,
-              },
-            ]
-          : []
-      }
-    />
+    <View style={commonStyles.sheetHeaderBleed(contentPadding)}>
+      <Header
+        title={title}
+        centerTitle
+        onClose={onClose}
+        borderless={borderless}
+        rightActions={
+          confirm
+            ? [
+                {
+                  icon: 'checkmark',
+                  accessibilityLabel:
+                    confirm.accessibilityLabel ?? t('labels.save'),
+                  onPress: confirm.onPress,
+                  variant: 'primary',
+                  disabled: !!confirm.disabled || !!confirm.loading,
+                  loading: confirm.loading,
+                  testID: confirm.testID,
+                },
+              ]
+            : []
+        }
+      />
+    </View>
   );
 };

@@ -16,6 +16,24 @@ describe('emailRule', () => {
       'valid email',
     );
   });
+
+  // The API's EmailAddress scalar refuses these before any resolver runs.
+  it.each([
+    'user@gmailcom',
+    'a@b.c',
+    'a..b@example.com',
+    'a!b@example.com',
+    `${'a'.repeat(250)}@example.com`,
+  ])('rejects %p, which the API refuses', async email => {
+    await expect(emailRule.validate(email)).rejects.toThrow('valid email');
+  });
+
+  it.each(["o'neil@example.com", 'first.last+tag@mail.example.co'])(
+    'accepts %p',
+    async email => {
+      await expect(emailRule.validate(email)).resolves.toBe(email);
+    },
+  );
 });
 
 // Sign-in only asserts the field is filled: the server checks non-emptiness and

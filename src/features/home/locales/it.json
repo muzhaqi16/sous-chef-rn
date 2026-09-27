@@ -143,8 +143,6 @@
     "owner": "Proprietario",
     "permissions": {
       "viewItems": "Vedere gli articoli",
-      "viewHistory": "Vedere la cronologia",
-      "exportList": "Esportare la lista",
       "addItems": "Aggiungere articoli",
       "editItems": "Modificare articoli",
       "removeItems": "Rimuovere articoli",

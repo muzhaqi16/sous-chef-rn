@@ -1649,12 +1649,12 @@ describe('cache pagination integration', () => {
   // the merge policy and the selection compatibility load-bearing.
   // =========================================================================
 
-  describe('PantryItem.usageRecords (keyArgs = orderBy)', () => {
+  describe('PantryItem.usageRecordsConnection (keyArgs = orderBy)', () => {
     const QUERY = gql`
       query GetUsage($id: ID!, $first: Int, $after: String) {
         pantryItem(id: $id) {
           id
-          usageRecords(
+          usageRecordsConnection(
             first: $first
             after: $after
             orderBy: { usedAt: DESC }
@@ -1676,7 +1676,7 @@ describe('cache pagination integration', () => {
     `;
 
     interface UsageResult {
-      pantryItem?: { usageRecords?: TestConnection };
+      pantryItem?: { usageRecordsConnection?: TestConnection };
     }
 
     const usageEdge = (id: string) =>
@@ -1699,7 +1699,7 @@ describe('cache pagination integration', () => {
           pantryItem: {
             __typename: 'PantryItem',
             id: 'pi-1',
-            usageRecords: buildConnection(
+            usageRecordsConnection: buildConnection(
               'PantryItemUsageConnection',
               edges,
               pageInfo,
@@ -1739,7 +1739,7 @@ describe('cache pagination integration', () => {
         query: QUERY,
         variables: { id: 'pi-1', first: 30 },
       });
-      const ids = (result?.pantryItem?.usageRecords?.edges ?? []).map(
+      const ids = (result?.pantryItem?.usageRecordsConnection?.edges ?? []).map(
         e => e.node.id,
       );
 
@@ -1767,7 +1767,7 @@ describe('cache pagination integration', () => {
         variables: { id: 'pi-1', first: 30 },
       });
 
-      expect(after?.pantryItem?.usageRecords?.pageInfo).toEqual({
+      expect(after?.pantryItem?.usageRecordsConnection?.pageInfo).toEqual({
         __typename: 'PageInfo',
         hasNextPage: false,
         endCursor: 'c2',

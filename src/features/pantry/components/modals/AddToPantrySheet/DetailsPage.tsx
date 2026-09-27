@@ -129,7 +129,6 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
               placeholder={localizeNumericHint(t('labels.eG145'))}
               keyboardType="decimal-pad"
               useBottomSheetInput
-              inputStyle={styles.netWeightInput}
             />
             <UnitAutocompleteField
               variant="inline"
@@ -229,10 +228,6 @@ const styles = StyleSheet.create(theme => ({
   // The hint below carries the rest of the gap.
   netWeightRow: {
     marginBottom: theme.spacing.xs,
-  },
-  // Matches the unit picker beside it.
-  netWeightInput: {
-    height: theme.sizes.input.md,
   },
   ...detailsPageBaseStyles(theme),
   sectionDescription: {

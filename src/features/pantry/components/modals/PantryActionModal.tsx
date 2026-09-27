@@ -257,6 +257,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
         showsVerticalScrollIndicator={false}
       >
         <BottomSheetHeader
+          contentPadding="md"
           title={title}
           onCancel={onClose}
           onConfirm={() => onConfirm(shared)}
@@ -279,17 +280,18 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
                   quantity={
                     isSingleUnitDualTracked
                       ? effectiveNetWeight
-                      : pantryItem.quantity
+                      : pantryItem.displayAmount.quantity
                   }
                   displayAsFraction={
-                    isSingleUnitDualTracked
+                    isSingleUnitDualTracked ||
+                    pantryItem.displayAmount.unit.id !== pantryItem.unit.id
                       ? undefined
                       : pantryItem.unit.displayAsFraction
                   }
                   unitSymbol={
                     isSingleUnitDualTracked
                       ? pantryItem.netWeightUnit?.symbol
-                      : pantryItem.unit.symbol
+                      : pantryItem.displayAmount.unit.symbol
                   }
                 />
                 {!!isDualTracked && !isSingleUnitDualTracked && (

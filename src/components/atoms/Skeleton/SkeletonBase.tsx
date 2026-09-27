@@ -75,10 +75,13 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
         style,
       ]}
     >
-      {/* UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View */}
+      {/* The sweep never rests, so its colour sits on a child rather than in the
+          worklet: the animated node takes no themed style. */}
       {!!shouldAnimate && (
         <View style={styles.shimmer}>
-          <Animated.View style={[styles.shimmerFill, animatedStyle]} />
+          <Animated.View style={[styles.shimmer, animatedStyle]}>
+            <View style={styles.shimmerFill} />
+          </Animated.View>
         </View>
       )}
     </View>
@@ -87,8 +90,7 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   shimmerFill: {
-    width: '100%',
-    height: '100%',
+    flex: 1,
     backgroundColor: theme.colors.surface,
     opacity: 0.3,
   },

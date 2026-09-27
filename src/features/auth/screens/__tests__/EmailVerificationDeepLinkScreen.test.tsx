@@ -365,7 +365,9 @@ describe('EmailVerificationDeepLinkScreen - no session', () => {
       expect(screen.getByTestId('email-verified-sign-in')).toBeTruthy();
     });
     expect(
-      screen.getByText(/Your account is active — sign in to get started\./),
+      screen.getByText(
+        /Your account is active — sign in with the password it already has\./,
+      ),
     ).toBeTruthy();
 
     await act(async () => {

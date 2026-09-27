@@ -95,6 +95,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
       contentContainerStyle={styles.contentContainer}
     >
       <BottomSheetHeader
+        contentPadding="md"
         title={t('labels.duplicatePlan')}
         onCancel={onClose}
         onConfirm={handleDuplicate}

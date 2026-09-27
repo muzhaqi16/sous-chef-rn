@@ -34,6 +34,18 @@ interface UseItemReorderingOptions<T extends ShoppingListItem> {
  * Optimistic reordering by fractional index: the new sortOrder is written to the
  * cache before the mutation fires, and reverted from persistence on failure.
  */
+// Code-point order, as the server's COLLATE "C" ranks the keys; a locale
+// comparison puts "aZ" after "az".
+function bySortOrderCodePoint(
+  a: { sortOrder?: string | null },
+  b: { sortOrder?: string | null },
+): number {
+  const left = a.sortOrder ?? '';
+  const right = b.sortOrder ?? '';
+  if (left < right) return -1;
+  return left > right ? 1 : 0;
+}
+
 export function useItemReordering<T extends ShoppingListItem>(
   options: UseItemReorderingOptions<T>,
 ) {
@@ -99,11 +111,9 @@ export function useItemReordering<T extends ShoppingListItem>(
         );
 
         const sharedSortOrder = afterItem.sortOrder;
-        const nextItem = items
+        const [nextItem] = items
           .filter(i => i.sortOrder && i.sortOrder > sharedSortOrder)
-          .sort((a, b) =>
-            (a.sortOrder ?? '').localeCompare(b.sortOrder ?? ''),
-          )[0];
+          .sort(bySortOrderCodePoint);
 
         duplicateBlockSortOrder = generateKeyBetween(
           afterItem.sortOrder,

@@ -11,7 +11,7 @@ const CACHE_VERSION_KEY = 'apollo-cache-version';
  * redefines what persisted data means — retired ids and rewritten values parse
  * cleanly and are still wrong. `cacheSchemaVersion.test.ts` pins it.
  */
-const CURRENT_CACHE_VERSION = 'shape-3';
+const CURRENT_CACHE_VERSION = 'shape-4';
 /** Keys nothing writes; `clear()` removes them so a session end strands nothing. */
 const LEGACY_SPLIT_KEYS = [
   'apollo-cache-v1-critical',

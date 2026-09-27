@@ -19,7 +19,7 @@ fragment recipeCacheWriters_formFields on Recipe {
   cookTimeMinutes
   difficulty
   category
-  cuisine
+  cuisines
   diets
   healthGoals
   intolerances

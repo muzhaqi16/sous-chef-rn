@@ -8,7 +8,7 @@ import {
   CreateItemDocument,
   type CreateItemMutation,
 } from '#operations/item/item.generated';
-import { UpcFormat } from '#/graphql/generated/schemaTypes';
+import { UpcFormat, type NetWeightKind } from '#/graphql/generated/schemaTypes';
 import {
   useSearchState,
   useBottomSheetState,
@@ -52,7 +52,11 @@ const mapVisionCameraFormatToUpcFormat = (
   }
 };
 
-// Helper function to convert GraphQL Item to ScannedItem
+/**
+ * A lookup's item as a scan result. On a barcode lookup the size, its kind, its
+ * unit and `variationBrand` are the scanned barcode's own (API
+ * `barcodePackage`), so nothing here borrows another pack's figure or brand.
+ */
 const convertToScannedItem = (
   item: {
     id: string;
@@ -61,8 +65,8 @@ const convertToScannedItem = (
     imageUrl?: string | null;
     canEdit?: boolean | null;
     canSuggest?: boolean | null;
-    primaryUpc?: string | null;
     netWeight?: number | null;
+    netWeightKind?: NetWeightKind | null;
     type?: string | null;
     storageState?: string | null;
     shelfLifeDays?: number | null;
@@ -73,12 +77,11 @@ const convertToScannedItem = (
       name: string;
       symbol: string;
     } | null;
-    brands?: Array<{
-      brand: {
-        id: string;
-        name: string;
-      };
-    }> | null;
+    trackingUnit?: {
+      id: string;
+      name: string;
+      symbol: string;
+    } | null;
     categories?: Array<{
       isPrimary?: boolean | null;
       category: {
@@ -95,82 +98,65 @@ const convertToScannedItem = (
       name: string;
     } | null;
     matchedVariation?: {
-      netWeight?: number | null;
-      netWeightUnit?: string | null;
-      packageSize?: string | null;
-      confidence?: number | null;
-      brandInfo?: {
-        id?: string | null;
-        name: string;
-      } | null;
+      id: string;
     } | null;
   },
-  fallbackBarcode: string,
+  scannedCode: string,
   brandNameOverride?: string,
-): ScannedItem => {
-  // Prefer matched variation data over item defaults
-  const effectiveNetWeight =
-    item.matchedVariation?.netWeight ?? item.netWeight ?? undefined;
-
-  // Build display unit: prefer variation's netWeightUnit, then fall back to item's displayUnit
-  const effectiveDisplayUnit = item.matchedVariation?.netWeightUnit
-    ? {
-        id: item.displayUnit?.id ?? '',
-        name: item.matchedVariation.netWeightUnit,
-        symbol: item.matchedVariation.netWeightUnit,
-      }
-    : item.displayUnit
+): ScannedItem => ({
+  id: item.id,
+  name: item.name,
+  description: firstNonBlank(item.description),
+  imageUrl: firstNonBlank(item.imageUrl),
+  canEdit: item.canEdit ?? undefined,
+  canSuggest: item.canSuggest ?? undefined,
+  upc: scannedCode,
+  variationId: item.matchedVariation?.id,
+  unitId: item.units.find(u => u.isDefault)?.unitId,
+  netWeight: item.netWeight ?? undefined,
+  netWeightKind: item.netWeightKind ?? undefined,
+  displayUnit: item.displayUnit
     ? {
         id: item.displayUnit.id,
         name: item.displayUnit.name,
         symbol: item.displayUnit.symbol,
       }
-    : undefined;
-
-  // Brand priority: override > matchedVariation.brandInfo > brands[0] > variationBrand
-  const effectiveBrandName =
-    brandNameOverride ??
-    item.matchedVariation?.brandInfo?.name ??
-    item.brands?.[0]?.brand.name ??
-    item.variationBrand?.name ??
-    undefined;
-
-  const effectiveBrandId =
-    item.matchedVariation?.brandInfo?.id ??
-    item.brands?.[0]?.brand.id ??
-    item.variationBrand?.id ??
-    undefined;
-
-  return {
-    id: item.id,
-    name: item.name,
-    description: firstNonBlank(item.description),
-    imageUrl: firstNonBlank(item.imageUrl),
-    canEdit: item.canEdit ?? undefined,
-    canSuggest: item.canSuggest ?? undefined,
-    upc: firstNonBlank(item.primaryUpc) ?? fallbackBarcode,
-    unitId: item.units.find(u => u.isDefault)?.unitId,
-    netWeight: effectiveNetWeight,
-    displayUnit: effectiveDisplayUnit,
-    brandName: effectiveBrandName,
-    brandId: effectiveBrandId,
-    type: item.type ?? undefined,
-    storageState: item.storageState ?? undefined,
-    shelfLifeDays: item.shelfLifeDays ?? undefined,
-    shelfLifeOpenedDays: item.shelfLifeOpenedDays ?? undefined,
-    tags: item.tags ?? undefined,
-    categories: item.categories?.map(c => ({
-      id: c.category.id,
-      name: c.category.name,
-      isPrimary: c.isPrimary ?? undefined,
-    })),
-  };
-};
+    : undefined,
+  trackingUnit: item.trackingUnit
+    ? {
+        id: item.trackingUnit.id,
+        name: item.trackingUnit.name,
+        symbol: item.trackingUnit.symbol,
+      }
+    : undefined,
+  // The brand typed into the create form is the item's; a scan's is the
+  // barcode's own.
+  brandName: brandNameOverride ?? item.variationBrand?.name,
+  brandId: brandNameOverride ? undefined : item.variationBrand?.id,
+  type: item.type ?? undefined,
+  storageState: item.storageState ?? undefined,
+  shelfLifeDays: item.shelfLifeDays ?? undefined,
+  shelfLifeOpenedDays: item.shelfLifeOpenedDays ?? undefined,
+  tags: item.tags ?? undefined,
+  categories: item.categories?.map(c => ({
+    id: c.category.id,
+    name: c.category.name,
+    isPrimary: c.isPrimary ?? undefined,
+  })),
+});
 
 const uploadPendingImages = sharedUploadPendingImages;
 const cleanupPendingImageStorage = sharedCleanupPendingImageStorage;
 
-export const useSearchResults = (barcode: string, format?: string) => {
+/**
+ * `pantryId` is where an add from the result lands, so the lookup can report the
+ * unit that pantry would count the item in.
+ */
+export const useSearchResults = (
+  barcode: string,
+  format?: string,
+  pantryId?: string,
+) => {
   const { t } = useTranslation();
   const upcFormat = mapVisionCameraFormatToUpcFormat(format);
   const {
@@ -235,7 +221,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
     error: upcError,
     refetch: refetchUpc,
   } = useQuery(ItemByUpcFilterDocument, {
-    variables: { upc: barcode, upcFormat },
+    variables: { upc: barcode, upcFormat, pantry: pantryId },
     fetchPolicy: 'network-only', // Always fetch fresh - prevents stale data from previous scans
   });
 
@@ -248,7 +234,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
     error: skuError,
     refetch: refetchSku,
   } = useQuery(ItemBySkuFilterDocument, {
-    variables: { sku: barcode, skuStoreId: undefined },
+    variables: { sku: barcode, skuStoreId: undefined, pantry: pantryId },
     // Skip SKU search while UPC is loading OR if UPC found a result
     // Must include upcLoading to prevent using stale upcItem from previous scan
     skip: upcLoading || !!upcItem,

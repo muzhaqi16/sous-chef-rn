@@ -4,8 +4,9 @@ import { readUnitSpec } from '#/apollo/offlineQueue/syncBuilder';
 
 /**
  * A queued write names its unit by id, and an id the vocabulary repair retired
- * cannot be re-resolved on replay — a symbol can. So the cached symbol has to
- * ride alongside the id, or the replay is refused and the write is lost.
+ * cannot be re-resolved on replay — a symbol can. `UnitRefInput` takes exactly
+ * one key, so the cached symbol replaces the id, or the replay is refused and
+ * the write is lost.
  */
 const UNIT_FRAGMENT = gql`
   fragment TestUnit on Unit {
@@ -31,28 +32,26 @@ const seedUnit = (fields: { id: string; name?: string; symbol?: string }) => {
 };
 
 describe('readUnitSpec', () => {
-  it('carries the cached symbol beside a queued unit id', () => {
+  it('sends the cached symbol in place of a queued unit id', () => {
     const cache = seedUnit({ id: 'unit-1', symbol: 'tbsp' });
 
-    expect(readUnitSpec(cache, { unitId: 'unit-1' })).toEqual({
-      unitId: 'unit-1',
-      unitSymbol: 'tbsp',
-    });
+    expect(readUnitSpec(cache, { id: 'unit-1' })).toEqual({ symbol: 'tbsp' });
   });
 
   it('falls back to the id alone when the unit was never cached', () => {
     // Best effort: the replay still names the unit, and the server resolves it
     // if the id survived the repair.
-    expect(readUnitSpec(makeCache(), { unitId: 'unknown' })).toEqual({
-      unitId: 'unknown',
+    expect(readUnitSpec(makeCache(), { id: 'unknown' })).toEqual({
+      id: 'unknown',
     });
   });
 
-  it('leaves a spec that already carries a symbol alone', () => {
+  it('keeps a symbol captured when the write was queued', () => {
     const cache = seedUnit({ id: 'unit-1', symbol: 'tbsp' });
-    const spec = { unitId: 'unit-1', unitSymbol: 'stale-tbsp' };
 
-    expect(readUnitSpec(cache, spec)).toBe(spec);
+    expect(readUnitSpec(cache, { id: 'unit-1', symbol: 'captured' })).toEqual({
+      symbol: 'captured',
+    });
   });
 
   it('drops a spec that names no unit at all', () => {
@@ -62,8 +61,8 @@ describe('readUnitSpec', () => {
   });
 
   it('keeps a name-only spec, which is re-resolvable without an id', () => {
-    expect(readUnitSpec(makeCache(), { unitName: 'tablespoon' })).toEqual({
-      unitName: 'tablespoon',
+    expect(readUnitSpec(makeCache(), { name: 'tablespoon' })).toEqual({
+      name: 'tablespoon',
     });
   });
 });

@@ -21,6 +21,7 @@ import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { toDateKey } from '#/utils/dateUtils';
 import { usePantryItemActions } from '../usePantryItemActions';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { WriteHeldStock_PantryItemFragmentDoc } from '#features/pantry/cache/stock.generated';
 import {
   UsePantryItemActions_IdFragmentDoc,
   UsePantryItemActions_QuantityFragmentDoc,
@@ -44,16 +45,20 @@ const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
     // One entry per fragment the hook reads back, so the fixture is held to
     // each of the three selections rather than to its own keys.
     ids.flatMap(id => {
+      const unit = { __typename: 'Unit', id: 'unit-1', symbol: 'ea' };
       const data = {
         __typename: 'PantryItem',
         id,
         quantity,
-        unit: { __typename: 'Unit', id: 'unit-1', symbol: 'ea' },
+        heldQuantity: quantity,
+        displayAmount: { __typename: 'DisplayAmount', quantity, unit },
+        unit,
       };
       return [
         { fragment: UsePantryItemActions_IdFragmentDoc, data },
         { fragment: UsePantryItemActions_QuantityFragmentDoc, data },
         { fragment: UsePantryItemActions_TrackingUnitFragmentDoc, data },
+        { fragment: WriteHeldStock_PantryItemFragmentDoc, data },
       ];
     }),
   );
@@ -301,7 +306,7 @@ describe('usePantryItemActions', () => {
       expect(m.fired).toContainEqual({
         input: {
           pantryItemId: 'item-1',
-          quantityUsed: 2,
+          amount: { quantity: 2 },
           purpose: UsagePurpose.Cooking,
           notes: 'For dinner',
           usageUnitId: undefined,
@@ -358,7 +363,10 @@ describe('usePantryItemActions', () => {
         );
       });
 
-      expect(cachedItem(cache)).toMatchObject({ quantity: 5 });
+      expect(cachedItem(cache)).toMatchObject({
+        quantity: 5,
+        heldQuantity: 5,
+      });
       expect(result.current.consumeModal.visible).toBe(true);
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
@@ -395,7 +403,7 @@ describe('usePantryItemActions', () => {
       expect(m.fired).toContainEqual({
         input: {
           pantryItemId: 'item-1',
-          quantityUsed: 1,
+          amount: { quantity: 1 },
           purpose: UsagePurpose.Waste,
           notes: 'Past date',
           usageUnitId: undefined,
@@ -497,7 +505,10 @@ describe('usePantryItemActions', () => {
           variables: { pantryItemId: 'item-1' },
         }),
       ).toEqual(before);
-      expect(cachedItem(cache)).toMatchObject({ quantity: 8 });
+      expect(cachedItem(cache)).toMatchObject({
+        quantity: 8,
+        heldQuantity: 8,
+      });
       expect(result.current.restockModal.visible).toBe(false);
       expect(alertService.alert).not.toHaveBeenCalled();
     });
@@ -724,12 +735,12 @@ describe('usePantryItemActions', () => {
       );
     });
 
-    it('shows generic error for unknown payload failure codes', async () => {
+    it('names the refused input in its own copy, never the message', async () => {
       const m = consumeMock({
         __typename: 'ValidationError',
         code: 'VALIDATION_FAILED',
         message: 'Cannot use more than available quantity',
-        field: 'quantityUsed',
+        field: 'amount',
       });
       const { result } = renderHookWithApollo(
         () => usePantryItemActions(createOptions()),
@@ -749,11 +760,9 @@ describe('usePantryItemActions', () => {
         );
       });
 
-      // `quantityUsed` has no field copy, so the action's shows — never the
-      // refusal's `message`.
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
-        t('errors.recordUsageFailedRetry'),
+        t('errors.field.amount'),
       );
     });
   });
@@ -786,7 +795,12 @@ describe('usePantryItemActions', () => {
         );
       });
 
-      expect(cachedItem(cache)).toMatchObject({ quantity: 3 });
+      expect(cachedItem(cache)).toMatchObject({
+        quantity: 3,
+        heldQuantity: 3,
+        // The amount as shown moves with it, in the unit the stack counts in.
+        displayAmount: { quantity: 3, unit: { id: 'unit-1', symbol: 'ea' } },
+      });
       expect(alertService.alert).not.toHaveBeenCalled();
       expect(result.current.consumeModal.visible).toBe(false);
     });
@@ -818,7 +832,10 @@ describe('usePantryItemActions', () => {
       });
 
       expect(queued.fired).toHaveLength(1);
-      expect(cachedItem(cache)).toMatchObject({ quantity: 4 });
+      expect(cachedItem(cache)).toMatchObject({
+        quantity: 4,
+        heldQuantity: 4,
+      });
       expect(alertService.alert).not.toHaveBeenCalled();
       expect(result.current.wasteModal.visible).toBe(false);
     });
@@ -846,7 +863,11 @@ describe('usePantryItemActions', () => {
         );
       });
 
-      expect(cachedItem(cache)).toMatchObject({ quantity: 5 });
+      expect(cachedItem(cache)).toMatchObject({
+        quantity: 5,
+        heldQuantity: 5,
+        displayAmount: { quantity: 5 },
+      });
       expect(alertService.alert).toHaveBeenCalledTimes(1);
       expect(result.current.wasteModal.visible).toBe(true);
     });
@@ -868,7 +889,10 @@ describe('usePantryItemActions', () => {
         await result.current.handleConfirmRestock(2, '2', '');
       });
 
-      expect(cachedItem(cache)).toMatchObject({ quantity: 5 });
+      expect(cachedItem(cache)).toMatchObject({
+        quantity: 5,
+        heldQuantity: 5,
+      });
       expect(alertService.alert).toHaveBeenCalledTimes(1);
       expect(result.current.restockModal.visible).toBe(true);
     });

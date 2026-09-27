@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
+import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
 import {
   ThemedBottomSheetTextInput,
   ThemedTextInput,
@@ -102,13 +103,11 @@ export const FractionInput: React.FC<FractionInputProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   input: {
+    ...singleLineInputStyle(theme),
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.base,
-    ...theme.type.body,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
     variants: {

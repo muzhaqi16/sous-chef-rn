@@ -2,6 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { CookingPreferencesSheet } from '#features/profile/components/CookingPreferencesSheet/CookingPreferencesSheet';
+import { CookingSkillLevel } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
   useSharedBottomSheetConfigs: jest.fn(() => ({})),
@@ -103,7 +104,7 @@ jest.mock('#components/molecules/ModalPicker', () => {
 });
 
 jest.mock('#domain/dietary', () => ({
-  SKILL_LEVELS: ['Beginner', 'Intermediate', 'Advanced'],
+  SKILL_LEVELS: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'],
   DIETARY_LIMITS: {
     prepTime: { min: 0, max: 480 },
     cookTime: { min: 0, max: 480 },
@@ -172,7 +173,7 @@ describe('CookingPreferencesSheet', () => {
     fireEvent.press(
       screen.getByTestId('cooking-preferences-skill-level-picker'),
     );
-    fireEvent.press(screen.getByTestId('modal-picker-option-Intermediate'));
+    fireEvent.press(screen.getByTestId('modal-picker-option-INTERMEDIATE'));
 
     // Tray closed, trigger now reads the selection rather than the placeholder.
     expect(screen.queryByTestId('modal-picker')).toBeNull();
@@ -181,7 +182,9 @@ describe('CookingPreferencesSheet', () => {
     fireEvent.press(screen.getByTestId('save-btn'));
     await screen.findByText('Cooking Preferences');
     expect(defaultProps.onSave).toHaveBeenCalledWith(
-      expect.objectContaining({ cookingSkillLevel: 'Intermediate' }),
+      expect.objectContaining({
+        cookingSkillLevel: CookingSkillLevel.Intermediate,
+      }),
     );
   });
 

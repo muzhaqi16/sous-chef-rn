@@ -128,6 +128,47 @@ describe('useSuggestItemEdit', () => {
     );
   });
 
+  // A size corrected from a scan is that barcode's, not the item's: the item
+  // can carry other packs. The rest of the edit still goes to the item.
+  it("aims a scanned barcode's size at its record and the rest at the item", async () => {
+    const { mock, fired } = recordMock(CreateItemSuggestionDocument, {
+      data: suggestionPayload(NOTE),
+      maxUsageCount: 2,
+    });
+    const { result } = renderHook([mock]);
+
+    const outcome = await result.current.submitEdit(
+      snapshot({ netWeight: 5, displayUnitId: 'unit-g', displayUnitName: 'g' }),
+      form({
+        netWeights: [{ value: 500, unitName: 'g', unitId: 'unit-g' }],
+      }),
+      'esm-1',
+    );
+
+    expect(outcome).toEqual({ status: 'suggested' });
+    await waitFor(() =>
+      expect(fired).toEqual([
+        {
+          input: {
+            itemId: 'item-1',
+            variation: 'esm-1',
+            note: NOTE,
+            changes: {
+              packageInfo: { netWeight: 500, netWeightKind: 'PACKAGE' },
+            },
+          },
+        },
+        {
+          input: {
+            itemId: 'item-1',
+            note: NOTE,
+            changes: { name: 'Skim Milk' },
+          },
+        },
+      ]),
+    );
+  });
+
   // The server collapses a byte-identical pending suggestion onto the existing
   // one and drops the new note — the echoed note is the only way to tell.
   it('detects the idempotent duplicate collapse via the echoed note', async () => {

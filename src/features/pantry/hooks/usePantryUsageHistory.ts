@@ -16,14 +16,14 @@ export function usePantryUsageHistory(pantryItemId: string) {
       variables: { pantryItemId, first: PAGE_SIZE },
       notifyOnNetworkStatusChange: true,
       // NOT the app-wide `'all'`: a field error nulls the non-null
-      // `usageRecords` and so `pantryItem`, and `'all'` WRITES that null onto
+      // `usageRecordsConnection` and so `pantryItem`, and `'all'` WRITES that null onto
       // `ROOT_QUERY.pantryItem({id})` — the field the detail screen reads —
       // where it sticks and persists to MMKV.
       errorPolicy: 'none',
     },
   );
 
-  const connection = data?.pantryItem?.usageRecords;
+  const connection = data?.pantryItem?.usageRecordsConnection;
   const records: UsageRecord[] = connection?.edges.map(e => e.node) ?? [];
 
   const totalCount = connection?.totalCount ?? records.length;

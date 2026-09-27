@@ -51,7 +51,7 @@ describe('deviceRegion', () => {
 describe('deviceRegionCurrency', () => {
   it.each([
     ['en-US', 'USD'],
-    ['sq-AL', 'LEK'],
+    ['sq-AL', 'ALL'],
     ['it-IT', 'EUR'],
     ['de-AT', 'EUR'],
     ['en-GB', 'GBP'],
@@ -88,6 +88,6 @@ describe('isUnchosenCurrency', () => {
     // the default cannot be told apart from one that was picked.
     expect(isUnchosenCurrency('USD')).toBe(false);
     expect(isUnchosenCurrency('EUR')).toBe(false);
-    expect(isUnchosenCurrency('LEK')).toBe(false);
+    expect(isUnchosenCurrency('ALL')).toBe(false);
   });
 });

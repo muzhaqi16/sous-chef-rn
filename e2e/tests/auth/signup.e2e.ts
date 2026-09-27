@@ -1,9 +1,10 @@
 /**
- * Sign up: the form's validation, and a registration landing on code entry.
+ * Sign up: the form's validation, a new account signing in to the verification
+ * gate, and a taken address landing on signed-out code entry.
  *
  * `register` allows 5 calls an hour per IP, held in Redis, so only two tests
- * spend one. The code travels only by mail, so code entry is the furthest a
- * sign-up can get here; the name cases stop at client validation.
+ * spend one. The code travels only by mail, so the happy path goes on by the
+ * gate's skip; the name cases stop at client validation.
  */
 
 import { device } from 'detox';
@@ -11,6 +12,7 @@ import { launchAppWithFabricWorkaround } from '../../init';
 import { CodeVerificationScreen } from '../../screens/CodeVerificationScreen';
 import { LandingAuthScreen } from '../../screens/LandingAuthScreen';
 import { LoginScreen } from '../../screens/LoginScreen';
+import { CreateHomeScreen } from '../../screens/OnboardingScreens';
 import { SignUpScreen } from '../../screens/SignUpScreen';
 import { TIMEOUTS } from '../../helpers/waitFor';
 import { generateTestEmail } from '../../helpers/data';
@@ -24,6 +26,7 @@ describe('Sign Up', () => {
   const loginScreen = new LoginScreen();
   const signUpScreen = new SignUpScreen();
   const codeVerificationScreen = new CodeVerificationScreen();
+  const createHomeScreen = new CreateHomeScreen();
 
   beforeAll(async () => {
     await launchAppWithFabricWorkaround({
@@ -111,9 +114,9 @@ describe('Sign Up', () => {
   });
 
   describe('Existing Email', () => {
-    // Registration is existence-blind: the API answers a registered address
-    // exactly as it answers a new one, so there is no refusal to show.
-    it('should land on code entry as a new address does', async () => {
+    // Registration is existence-blind, and the sign-in that follows it is
+    // refused for another account's address, so there is no refusal to show.
+    it('should land on code entry with no refusal shown', async () => {
       await signUpScreen.signUpWith(
         'Test User',
         TEST_USER.email,
@@ -133,7 +136,7 @@ describe('Sign Up', () => {
   });
 
   describe('Happy Path', () => {
-    it('should create an account, ask for the code, and offer sign-in', async () => {
+    it('should create an account, sign it in, and let the code wait', async () => {
       await signUpScreen.signUpWith(
         'E2E Test User',
         generateTestEmail(),
@@ -143,8 +146,8 @@ describe('Sign Up', () => {
       await codeVerificationScreen.waitForScreen(TIMEOUTS.LONG);
       await codeVerificationScreen.expectResendOffered();
 
-      await codeVerificationScreen.tapSignIn();
-      await loginScreen.waitForScreen();
+      await codeVerificationScreen.skip();
+      await createHomeScreen.waitForScreen(TIMEOUTS.LONG);
     });
   });
 

@@ -15,7 +15,10 @@ import {
   type UseRecipeData_RecipeFragment,
 } from './useRecipeData.generated';
 import { extractNodes } from '#/utils/connectionUtils';
-import { ExternalSource } from '#/graphql/generated/schemaTypes';
+import {
+  ExternalSource,
+  type RecipeStatus,
+} from '#/graphql/generated/schemaTypes';
 
 export type MaterializedRecipe = NonNullable<
   ReturnType<typeof readRecipeFragment>
@@ -72,7 +75,9 @@ export interface RecipeDisplayData {
   // recipes, hence all optional.
   caloriesPerServing?: number;
   nutritionData?: unknown;
-  isPublished?: boolean;
+  status?: RecipeStatus;
+  /** A moderator's note on the last decision; the author's own recipes only. */
+  reviewNote?: string;
   publishedAt?: string;
   forkedFromId?: string;
   forkedFromName?: string;
@@ -168,7 +173,8 @@ function buildBackendDisplayData(
     sourceUrl: recipe.sourceUrl ?? undefined,
     caloriesPerServing: recipe.caloriesPerServing ?? undefined,
     nutritionData: recipe.nutritionData ?? undefined,
-    isPublished: recipe.isPublished,
+    status: recipe.status,
+    reviewNote: recipe.reviewNote ?? undefined,
     publishedAt: recipe.publishedAt ?? undefined,
     forkedFromId: recipe.forkedFromId ?? undefined,
     forkedFromName: recipe.forkedFrom?.name ?? undefined,

@@ -22,16 +22,20 @@ interface BatchSectionProps {
    */
   batches: ReadonlyArray<PantryItemBatchFragment>;
   unitSymbol?: string;
+  netWeightUnitSymbol?: string;
   /** Every batch, including pages this screen did not fetch. */
   totalCount?: number;
   onViewAll: () => void;
+  onCorrectSize?: (batchId: string) => void;
 }
 
 export const BatchSection: React.FC<BatchSectionProps> = ({
   batches,
   unitSymbol,
+  netWeightUnitSymbol,
   totalCount,
   onViewAll,
+  onCorrectSize,
 }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
@@ -79,8 +83,10 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
               key={batch.id}
               batch={batch}
               unitSymbol={unitSymbol}
+              netWeightUnitSymbol={netWeightUnitSymbol}
               onOpen={handleOpen}
               onWaste={handleWaste}
+              onCorrectSize={onCorrectSize}
             />
           ))}
 
