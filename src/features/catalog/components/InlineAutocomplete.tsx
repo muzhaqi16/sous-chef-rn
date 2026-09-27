@@ -1,5 +1,8 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { View, ScrollView, type LayoutChangeEvent } from 'react-native';
+import { View, type LayoutChangeEvent } from 'react-native';
+// The dropdown must own its scroll gesture inside a draggable bottom sheet.
+// RNGH's ScrollView prevents the sheet's pan handler from interrupting it.
+import { ScrollView } from 'react-native-gesture-handler';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -7,6 +10,7 @@ import { StyleSheet } from 'react-native-unistyles';
 // `placeholderTextColor` and falls back to the OS default, ignoring the theme.
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Label } from '#components/atoms/Label';
+import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
 import { Text } from '#components/atoms/Text';
 import { Divider } from '#components/atoms/Divider';
 import { catalogTestIDs } from '#features/catalog/testIDs';
@@ -278,12 +282,10 @@ const styles = StyleSheet.create(theme => ({
     position: 'relative',
   },
   input: {
+    ...singleLineInputStyle(theme),
     flex: 1,
-    height: theme.sizes.input.md,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    ...theme.type.body,
-    paddingHorizontal: theme.spacing.sm,
     paddingRight: theme.spacing.xl, // Space for loading indicator
     backgroundColor: theme.colors.inputBackground,
     borderWidth: theme.borderWidth.hairline,

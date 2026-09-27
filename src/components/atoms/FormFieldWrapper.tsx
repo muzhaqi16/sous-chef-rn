@@ -3,6 +3,7 @@ import type { ViewStyle } from 'react-native';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
+import { Label } from '#components/atoms/Label';
 
 interface FormFieldWrapperProps {
   label: string;
@@ -31,10 +32,7 @@ export const FormFieldWrapper: React.FC<FormFieldWrapperProps> = ({
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityRole="none"
     >
-      <Text role="bodyStrong" style={styles.label}>
-        {label}
-        {!!required && <Text tone="danger"> *</Text>}
-      </Text>
+      <Label required={required}>{label}</Label>
       {children}
       {error ? (
         <Text role="error" tone="error" style={styles.errorText}>
@@ -48,9 +46,6 @@ export const FormFieldWrapper: React.FC<FormFieldWrapperProps> = ({
 const styles = StyleSheet.create(theme => ({
   container: {
     marginBottom: theme.spacing.md,
-  },
-  label: {
-    marginBottom: theme.spacing.sm,
   },
   errorText: {
     marginTop: theme.spacing.xs,

@@ -14,6 +14,7 @@ import {
   type QuantityNotation,
 } from '#/utils/formatQuantity';
 import { Label } from '#components/atoms/Label';
+import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
 import { Text } from '#components/atoms/Text';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 
@@ -184,7 +185,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    height: 48,
+    height: theme.sizes.input.md,
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.borderLight,
     borderStyle: 'solid',
@@ -227,8 +228,11 @@ const styles = StyleSheet.create(theme => ({
     opacity: theme.opacity.pressed,
   },
   input: {
+    ...singleLineInputStyle(theme),
     flex: 1,
-    ...theme.type.bodyStrong,
+    height: '100%',
+    paddingHorizontal: 0,
+    fontWeight: theme.type.bodyStrong.fontWeight,
     color: theme.colors.textPrimary,
     variants: {
       disabled: {
