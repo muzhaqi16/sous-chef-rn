@@ -168,6 +168,7 @@
     "greetingNoName": "Hello!"
   },
   "adjustQuantity": {
+    "description": "Correct your stock count and record why.",
     "reasonRequired": "Please provide a reason for the adjustment",
     "title": "Adjust Quantity",
     "adjust": "Adjust",

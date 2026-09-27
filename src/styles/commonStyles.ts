@@ -62,6 +62,12 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
 
   // Headers own their edge inset, even inside a padded sheet body.
+  textBarInset: {
+    // Account for the text button's padding, just as barInset does for icons.
+    paddingHorizontal: theme.layout.pageGutter - theme.spacing.xs,
+  },
+
+  // Cancel the body's inset before the header applies its own.
   sheetHeaderBleed: (contentPadding?: 'md' | 'lg') => ({
     marginHorizontal: contentPadding ? -theme.spacing[contentPadding] : 0,
   }),

@@ -168,6 +168,7 @@
     "greetingNoName": "¡Hola!"
   },
   "adjustQuantity": {
+    "description": "Corrige tus existencias e indica el motivo.",
     "reasonRequired": "Indica un motivo para el ajuste",
     "title": "Ajustar cantidad",
     "adjust": "Ajustar",

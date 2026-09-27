@@ -71,7 +71,7 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
     <View
       style={[styles.container, commonStyles.sheetHeaderBleed(contentPadding)]}
     >
-      <View style={styles.header}>
+      <View style={[styles.header, commonStyles.textBarInset]}>
         <AppPressable
           onPress={onCancel}
           style={styles.button}
@@ -126,8 +126,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
-    // Text has its own button padding; keep the label on the page gutter.
-    paddingHorizontal: theme.layout.pageGutter - theme.spacing.xs,
   },
   button: {
     paddingVertical: theme.spacing.xs,

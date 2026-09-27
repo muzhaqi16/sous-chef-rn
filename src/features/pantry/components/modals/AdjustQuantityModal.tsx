@@ -152,6 +152,14 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
               </View>
             )}
 
+          <Text
+            role="caption"
+            tone="secondary"
+            style={commonStyles.bottomSheetSection}
+          >
+            {t('adjustQuantity.description')}
+          </Text>
+
           <View style={commonStyles.bottomSheetSection}>
             <Controller
               control={control}

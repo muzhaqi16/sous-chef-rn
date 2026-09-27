@@ -168,6 +168,7 @@
     "greetingNoName": "Përshëndetje!"
   },
   "adjustQuantity": {
+    "description": "Korrigjo sasinë në stok dhe shëno arsyen.",
     "reasonRequired": "Shkruaj një arsye për rregullimin",
     "title": "Rregullo sasinë",
     "adjust": "Rregullo",
