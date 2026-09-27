@@ -76,6 +76,16 @@ fragment usePantryUnitChange_pantryItem on PantryItem {
   minQuantity
   restockQuantity
   isLowStock
+  activeBatchCount
+  remainingPortions
+  lastUsedAt
+  totalCost
+  purchase {
+    id
+    purchaseDate
+    totalPrice
+    quantity
+  }
 }
 
 mutation ChangePantryItemUnit($input: ChangePantryItemUnitInput!) {

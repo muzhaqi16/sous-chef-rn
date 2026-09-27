@@ -1,5 +1,5 @@
-# The stack fields a package-size correction changes: its version, and the
-# weight it holds, since the batch keeps the same fraction of a new size.
+# Refresh the stack's derived detail fields with the corrected batch, so a
+# cached detail screen does not retain figures from before the correction.
 fragment useCorrectPackageSize_pantryItem on PantryItem {
   id
   version
@@ -14,6 +14,16 @@ fragment useCorrectPackageSize_pantryItem on PantryItem {
     }
   }
   isLowStock
+  activeBatchCount
+  remainingPortions
+  lastUsedAt
+  totalCost
+  purchase {
+    id
+    purchaseDate
+    totalPrice
+    quantity
+  }
 }
 
 # What the correction reads before firing: only what the detail screen caches.
