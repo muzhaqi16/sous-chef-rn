@@ -9203,15 +9203,20 @@ type Pantry {
     last: Int
     orderBy: StorageLocationOrderBy
   ): StorageLocationConnection!
-  """Items worth adding to this pantry, from the chosen sources"""
+  """
+  Items worth adding to this pantry, one list per section. An item appears at
+  most once, in the first section that offers it: lowStock, expiringSoon,
+  recentlyDeleted, frequentlyAdded, popular. Each section holds up to limit.
+  """
   suggestions(
     expirationDays: Int = 7
-    """At most this many: default 10, at most 50 (a larger value gives 50)"""
+    """
+    At most this many per section: default 10, at most 50 (a larger value gives 50)
+    """
     limit: Int = 10
-    sources: [PantrySuggestionSource!]
-    """The viewer's calendar date, which EXPIRING_SOON counts from."""
+    """The viewer's calendar date, which expiringSoon counts from."""
     today: LocalDate!
-  ): [PantryItemSuggestion!]!
+  ): PantrySuggestions!
   tags: [String!]!
   temperature: String
   updatedAt: DateTime!
@@ -10098,6 +10103,24 @@ enum PantrySuggestionSource {
   POPULAR
   """Item was recently removed from this pantry"""
   RECENTLY_DELETED
+}
+
+"""
+Pantry suggestions by section, each item in at most one section. The catalog
+sections (recentlyDeleted, frequentlyAdded, popular) omit items the pantry
+holds and items the viewer dismissed.
+"""
+type PantrySuggestions {
+  """Stacks expiring within expirationDays, soonest first"""
+  expiringSoon: [PantryItemSuggestion!]!
+  """Items the viewer adds to pantries most often"""
+  frequentlyAdded: [PantryItemSuggestion!]!
+  """Stacks below their minimum quantity, lowest held first"""
+  lowStock: [PantryItemSuggestion!]!
+  """Items most often added to pantries across the catalog"""
+  popular: [PantryItemSuggestion!]!
+  """Items removed from this pantry, most recently removed first"""
+  recentlyDeleted: [PantryItemSuggestion!]!
 }
 
 """One batch before and after a unit change."""
@@ -13076,16 +13099,14 @@ type ShoppingList {
   """
   status: ListStatus!
   """
-  Smart suggestions for adding items to this shopping list.
-  Bounded field: limit defaults to 10 and is clamped server-side to a
-  maximum of 50.
+  Items worth adding to this shopping list, one list per section. An item
+  appears at most once, in the first section that offers it: recentlyDeleted,
+  frequentlyAdded, popular. Each section holds up to limit.
   """
   suggestions(
-    """At most this many: default 10, at most 50"""
+    """At most this many per section: default 10, at most 50"""
     limit: Int = 10
-    """Only suggestions from these sources; every source when omitted"""
-    sources: [SuggestionSource!]
-  ): [ShoppingListSuggestion!]!
+  ): ShoppingListSuggestions!
   """Free-text labels on the list, at most 10; empty when none"""
   tags: [String!]!
   """The store the user plans to shop at; null when none is set"""
@@ -13579,6 +13600,21 @@ type ShoppingListSuggestion {
   shoppingListItemId: ID
   """Source of this suggestion"""
   source: SuggestionSource!
+}
+
+"""
+Shopping list suggestions by section, each item in at most one section. Every
+section omits items the list holds and items the viewer dismissed.
+"""
+type ShoppingListSuggestions {
+  """
+  Items most often added: the home's for a home list, else its members' or the viewer's
+  """
+  frequentlyAdded: [ShoppingListSuggestion!]!
+  """Items most often added to shopping lists across the catalog"""
+  popular: [ShoppingListSuggestion!]!
+  """Items removed from this list, most recently removed first"""
+  recentlyDeleted: [ShoppingListSuggestion!]!
 }
 
 """
