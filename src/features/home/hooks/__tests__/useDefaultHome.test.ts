@@ -1,4 +1,4 @@
-import { waitFor } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
@@ -195,27 +195,6 @@ function buildGetHomesMock(
   };
 }
 
-function buildSetDefaultHomeMock(
-  homeId: string,
-): MockFor<typeof MarkHomeAsDefaultDocument> {
-  return {
-    request: {
-      query: MarkHomeAsDefaultDocument,
-      variables: { input: { homeId } },
-    },
-    result: {
-      data: {
-        markHomeAsDefault: {
-          __typename: 'MarkHomeAsDefaultPayload',
-          settings: { __typename: 'UserSettings', id: 'settings-1' },
-          defaultPantry: null,
-        },
-      },
-    },
-    maxUsageCount: 10,
-  };
-}
-
 beforeEach(() => {
   jest.clearAllMocks();
   mockStoreState.selectedHomeId = null;
@@ -226,40 +205,15 @@ beforeEach(() => {
 });
 
 describe('useDefaultHome', () => {
-  it('returns initial state when no data', () => {
-    // No GetHomes mock — hook fires query but resolves to undefined initially.
-    // Since hasInitializedHomeData=false → canAttemptQueries=true → query
-    // fires. Provide an empty homes mock to satisfy.
-    const { result } = renderHookWithApollo(() => useDefaultHome(), {
-      operationMocks: [buildGetHomesMock([])],
-    });
-
-    // Initial render before query resolves
-    expect(result.current.state.selectedHomeId).toBeNull();
-  });
-
-  it('returns selectedHomeId from store', () => {
-    mockStoreState.selectedHomeId = 'home-1';
-
-    const { result } = renderHookWithApollo(() => useDefaultHome(), {
-      operationMocks: [buildGetHomesMock([])],
-    });
-
-    expect(result.current.state.selectedHomeId).toBe('home-1');
-  });
-
-  it('falls back to remoteDefaultHomeId when no selectedHomeId', async () => {
-    const { result } = renderHookWithApollo(() => useDefaultHome(), {
+  it('selects the account default when nothing is selected', async () => {
+    renderHookWithApollo(() => useDefaultHome(), {
       operationMocks: [
         buildGetHomesMock([buildHomeNode({ id: 'home-1', isDefault: true })]),
-        // Hook will also fire SetDefaultHome (first home via invitation logic
-        // when only one home exists) — provide a permissive matcher.
-        buildSetDefaultHomeMock('home-1'),
       ],
     });
 
     await waitFor(() =>
-      expect(result.current.state.selectedHomeId).toBe('home-1'),
+      expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith('home-1'),
     );
   });
 
@@ -280,7 +234,6 @@ describe('useDefaultHome', () => {
             pantries: [{ id: 'pantry-1', isDefault: true }],
           }),
         ]),
-        buildSetDefaultHomeMock('home-1'),
       ],
     });
 
@@ -321,100 +274,6 @@ describe('useDefaultHome', () => {
       expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(true),
     );
     expect(fired).toHaveLength(2);
-  });
-
-  describe('getDefaultPantry', () => {
-    it('returns default pantry from home', () => {
-      const { result } = renderHookWithApollo(() => useDefaultHome(), {
-        operationMocks: [buildGetHomesMock([])],
-      });
-
-      const home = {
-        pantriesConnection: {
-          edges: [
-            { node: { id: 'p-1', isDefault: false } },
-            { node: { id: 'p-2', isDefault: true } },
-          ],
-        },
-      };
-
-      const pantry = result.current.actions.getDefaultPantry(home);
-      expect(pantry?.id).toBe('p-2');
-    });
-
-    it('returns first pantry when no default marked', () => {
-      const { result } = renderHookWithApollo(() => useDefaultHome(), {
-        operationMocks: [buildGetHomesMock([])],
-      });
-
-      const home = {
-        pantriesConnection: {
-          edges: [
-            { node: { id: 'p-1', isDefault: false } },
-            { node: { id: 'p-2', isDefault: false } },
-          ],
-        },
-      };
-
-      const pantry = result.current.actions.getDefaultPantry(home);
-      expect(pantry?.id).toBe('p-1');
-    });
-
-    it('returns null when no pantries', () => {
-      const { result } = renderHookWithApollo(() => useDefaultHome(), {
-        operationMocks: [buildGetHomesMock([])],
-      });
-
-      const pantry = result.current.actions.getDefaultPantry({
-        pantriesConnection: { edges: [] },
-      });
-      expect(pantry).toBeNull();
-    });
-
-    it('reads pantries from the connection shape', () => {
-      const { result } = renderHookWithApollo(() => useDefaultHome(), {
-        operationMocks: [buildGetHomesMock([])],
-      });
-
-      const home = {
-        pantriesConnection: {
-          edges: [
-            { node: { id: 'p-1', isDefault: false } },
-            { node: { id: 'p-2', isDefault: true } },
-          ],
-        },
-      };
-
-      const pantry = result.current.actions.getDefaultPantry(home);
-      expect(pantry?.id).toBe('p-2');
-    });
-
-    it('returns null for null input', () => {
-      const { result } = renderHookWithApollo(() => useDefaultHome(), {
-        operationMocks: [buildGetHomesMock([])],
-      });
-
-      const pantry = result.current.actions.getDefaultPantry(null);
-      expect(pantry).toBeNull();
-    });
-
-    it('returns null when home has no pantries property', () => {
-      const { result } = renderHookWithApollo(() => useDefaultHome(), {
-        operationMocks: [buildGetHomesMock([])],
-      });
-
-      const pantry = result.current.actions.getDefaultPantry({});
-      expect(pantry).toBeNull();
-    });
-
-    it('returns null for undefined input', () => {
-      const { result } = renderHookWithApollo(() => useDefaultHome(), {
-        operationMocks: [buildGetHomesMock([])],
-      });
-
-      const pantry = result.current.actions.getDefaultPantry(undefined);
-      expect(pantry).toBeNull();
-    });
   });
 
   it('sets early ready when persisted home/pantry IDs exist', async () => {
@@ -476,7 +335,6 @@ describe('useDefaultHome', () => {
       renderHookWithApollo(() => useDefaultHome(), {
         operationMocks: [
           buildGetHomesMock([buildHomeNode({ id: 'home-1', isDefault: true })]),
-          buildSetDefaultHomeMock('home-1'),
         ],
       });
 
@@ -506,7 +364,6 @@ describe('useDefaultHome', () => {
               totalCount: 12,
             }),
           ]),
-          buildSetDefaultHomeMock('home-1'),
         ],
       });
 
@@ -541,7 +398,6 @@ describe('useDefaultHome', () => {
               ],
             }),
           ]),
-          buildSetDefaultHomeMock('home-1'),
         ],
       });
 
@@ -595,7 +451,6 @@ describe('useDefaultHome', () => {
               ],
             }),
           ]),
-          buildSetDefaultHomeMock('home-1'),
         ],
       });
 
@@ -616,7 +471,6 @@ describe('useDefaultHome', () => {
               pantries: [{ id: 'pantry-1' }],
             }),
           ]),
-          buildSetDefaultHomeMock('home-1'),
         ],
       });
 
@@ -700,8 +554,6 @@ describe('useDefaultHome', () => {
               pantries: [],
             }),
           ]),
-          // First-home-via-invitation may fire SetDefaultHome
-          buildSetDefaultHomeMock('some-home'),
         ],
       });
 
@@ -715,9 +567,58 @@ describe('useDefaultHome', () => {
     });
   });
 
-  describe('first home via invitation', () => {
-    it('syncs server default when user has exactly one home with no server default', async () => {
+  describe('a first home with no server default', () => {
+    // The server makes a first created or joined home the default itself; a
+    // sync sent from here raced the create and was refused.
+    const recordMarkDefault = () =>
+      recordMock(MarkHomeAsDefaultDocument, {
+        data: {
+          markHomeAsDefault: {
+            __typename: 'MarkHomeAsDefaultPayload',
+            settings: { __typename: 'UserSettings', id: 'settings-1' },
+            defaultPantry: null,
+          },
+        },
+      });
+
+    // One macrotask: long enough for a request fired from an effect to reach
+    // the mock link, which is what `fired` records.
+    const flushPendingRequests = () =>
+      act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+
+    it('is selected locally and never sent to MarkHomeAsDefault', async () => {
+      const markDefault = recordMarkDefault();
+
+      renderHookWithApollo(() => useDefaultHome(), {
+        operationMocks: [
+          buildGetHomesMock([
+            buildHomeNode({
+              id: 'new-home',
+              isDefault: false,
+              pantries: [{ id: 'new-pantry', isDefault: true }],
+            }),
+          ]),
+          markDefault.mock,
+        ],
+      });
+
+      await waitFor(() =>
+        expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(
+          'new-home',
+        ),
+      );
+      expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
+        'new-pantry',
+      );
+      await flushPendingRequests();
+      expect(markDefault.fired).toEqual([]);
+    });
+
+    it('stays unsent once that home is already selected', async () => {
       mockStoreState.selectedHomeId = 'invited-home';
+      const markDefault = recordMarkDefault();
 
       renderHookWithApollo(() => useDefaultHome(), {
         operationMocks: [
@@ -728,65 +629,17 @@ describe('useDefaultHome', () => {
               pantries: [{ id: 'invited-pantry', isDefault: true }],
             }),
           ]),
-          buildSetDefaultHomeMock('invited-home'),
+          markDefault.mock,
         ],
       });
 
-      // Allow effects to settle by waiting for ready state
       await waitFor(() =>
-        expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalled(),
+        expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(
+          true,
+        ),
       );
-    });
-
-    it('does not sync when server already has a default', async () => {
-      mockStoreState.selectedHomeId = 'home-1';
-
-      renderHookWithApollo(() => useDefaultHome(), {
-        operationMocks: [
-          buildGetHomesMock([
-            buildHomeNode({
-              id: 'home-1',
-              isDefault: true,
-              pantries: [],
-            }),
-          ]),
-        ],
-      });
-
-      // Allow effects to settle
-      await waitFor(() =>
-        expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalled(),
-      );
-
-      // The "first home via invitation" effect's first guard is
-      // `if (remoteDefaultHomeId) return;` — server already has a default
-      // (home-1.isDefault = true) so the SetDefaultHome mutation never fires.
-      // We can't directly assert the mutation didn't fire, but if it had been
-      // called with home-1 it would have errored (no mock provided for that
-      // variable combo). The fact that we got to `isHomeSelectionReady=true`
-      // proves the path completed successfully.
-    });
-
-    it('does not sync when user has multiple homes', async () => {
-      mockStoreState.selectedHomeId = 'home-1';
-
-      renderHookWithApollo(() => useDefaultHome(), {
-        operationMocks: [
-          buildGetHomesMock([
-            buildHomeNode({ id: 'home-1', isDefault: false, pantries: [] }),
-            buildHomeNode({ id: 'home-2', isDefault: false, pantries: [] }),
-          ]),
-        ],
-      });
-
-      // Allow effects to settle
-      await waitFor(() =>
-        expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalled(),
-      );
-
-      // Multiple homes → first-home-via-invitation guard fails (length !== 1).
-      // No SetDefaultHome should fire — the mock provider would error if it
-      // had, since we didn't include that mock.
+      await flushPendingRequests();
+      expect(markDefault.fired).toEqual([]);
     });
   });
 });

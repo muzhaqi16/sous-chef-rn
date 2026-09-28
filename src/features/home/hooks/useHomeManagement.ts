@@ -40,7 +40,6 @@ export function useHomeManagement() {
   } = useHomeInvitations({
     homes,
     refetch,
-    setDefaultHome,
     setSelectedHomeId,
   });
 

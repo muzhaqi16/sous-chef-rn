@@ -124,7 +124,6 @@ describe('useHomeManagement', () => {
     expect(useHomeInvitations).toHaveBeenCalledWith({
       homes: mockHomeQuery.homes,
       refetch: mockHomeQuery.refetch,
-      setDefaultHome: mockHomeSelection.setDefaultHome,
       setSelectedHomeId: mockHomeSelection.setSelectedHomeId,
     });
   });

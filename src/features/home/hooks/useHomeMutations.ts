@@ -81,9 +81,9 @@ export function useHomeMutations({
   }
 
   /**
-   * Writes, then adopts the new home: its own default flag and its
-   * default pantry. Adoption is keyed off the MINTED id, so it happens whether
-   * the server answered or the create is queued.
+   * Writes, then adopts the new home and its default pantry. Adoption is keyed
+   * off the MINTED id, so it happens whether the server answered or the create
+   * is queued.
    */
   const createHome = async (
     nameOrInput:
@@ -141,9 +141,10 @@ export function useHomeMutations({
   }
 
   /**
-   * A first home becomes the selection and the account default. Read from the
-   * CACHE rather than a payload: a queued create has none, and the optimistic
-   * write already put the home there.
+   * A first home becomes the selection. Read from the CACHE rather than a
+   * payload: a queued create has none, and the optimistic write already put the
+   * home there. No `MarkHomeAsDefault`: `createHome` makes a first home the
+   * account default on the server, and its payload carries `isDefault`.
    */
   function adoptNewHome(homeId: string) {
     const cachedData = client.cache.readQuery({ query: GetHomesDocument });
@@ -152,8 +153,6 @@ export function useHomeMutations({
     if (!isFirstHome) return;
 
     setSelectedHomeId(homeId);
-    // Presents its own failure; a refused default is reported where it is written.
-    void setDefaultHome(homeId);
 
     // Adopt the new home's default pantry ONLY when we also switched to that
     // home. Unconditionally, creating a SECOND home points `selectedPantryId`

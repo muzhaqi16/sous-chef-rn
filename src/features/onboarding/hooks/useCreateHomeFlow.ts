@@ -5,6 +5,7 @@ import {
 } from '#operations/home/home.generated';
 import { useCreateHome } from '#features/home/hooks/useCreateHome';
 import { extractNodes } from '#/utils/connectionUtils';
+import { defaultPantryOf } from '#domain/homePantries';
 
 interface CreateHomeFlowArgs {
   userId: string | undefined;
@@ -39,9 +40,7 @@ export function useCreateHomeFlow({ userId }: CreateHomeFlowArgs) {
     pendingInvitesData?.me?.pendingHomeInvitesConnection,
   );
   const existingHome = homes[0];
-  const existingHomePantries = extractNodes(existingHome?.pantriesConnection);
-  const existingPantry =
-    existingHomePantries.find(p => p.isDefault) ?? existingHomePantries[0];
+  const existingPantry = defaultPantryOf(existingHome);
 
   return {
     pendingInvites,

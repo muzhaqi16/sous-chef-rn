@@ -16,9 +16,9 @@ jest.mock('#/services/spoonacular/SpoonacularService', () => ({
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
-const mockUseDefaultHome = jest.fn();
-jest.mock('#features/home/hooks/useDefaultHome', () => ({
-  useDefaultHome: () => mockUseDefaultHome(),
+const mockUseCurrentHome = jest.fn();
+jest.mock('#features/pantry/hooks/useCurrentHome', () => ({
+  useCurrentHome: () => mockUseCurrentHome(),
 }));
 
 const mockUsePantryManagement = jest.fn();
@@ -54,9 +54,13 @@ beforeEach(() => {
   useRecipeCacheStore.getState().clearAllCache();
 
   // Default: signed in, home selected, no pantry items, not loading
-  mockUseDefaultHome.mockReturnValue({
-    state: { selectedHomeId: 'home-1' },
-    actions: { getDefaultPantry: () => ({ id: 'pantry-1' }) },
+  mockUseCurrentHome.mockReturnValue({
+    currentHome: {
+      id: 'home-1',
+      pantriesConnection: {
+        edges: [{ node: { id: 'pantry-1', isDefault: true } }],
+      },
+    },
   });
   mockUsePantryManagement.mockReturnValue({
     state: {

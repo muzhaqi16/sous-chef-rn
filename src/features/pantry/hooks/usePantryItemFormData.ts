@@ -12,6 +12,7 @@ import {
 } from '#features/pantry/components/form/PantryItemForm.generated';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { extractNodes } from '#/utils/connectionUtils';
+import { defaultPantryOf } from '#domain/homePantries';
 import { useToday } from '#hooks/useToday';
 
 interface UsePantryItemFormDataArgs {
@@ -19,13 +20,6 @@ interface UsePantryItemFormDataArgs {
   selectedHomeId: string | null | undefined;
   selectedPantryId: string | null | undefined;
 }
-
-/** Inline, to avoid a `useDefaultHome` dependency. */
-const getDefaultPantry = (home: PantryItemForm_HomeFragment | null) => {
-  const pantries = extractNodes(home?.pantriesConnection);
-  if (!pantries.length) return null;
-  return pantries.find(p => p.isDefault) ?? pantries[0] ?? null;
-};
 
 /** Everything the pantry item form reads: the item, its home, its pantry. */
 export function usePantryItemFormData({
@@ -73,7 +67,7 @@ export function usePantryItemFormData({
         from: homeData.home,
       })
     : null;
-  const pantry = getDefaultPantry(home);
+  const pantry = defaultPantryOf(home) ?? null;
   const currentPantryId =
     selectedPantryId ?? pantry?.id ?? existingPantryItem?.pantryId;
 

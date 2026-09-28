@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { errorService } from '#/services/errorService';
 
-import { useDefaultHome } from '#features/home/hooks/useDefaultHome';
+import { useCurrentHome } from '#features/pantry/hooks/useCurrentHome';
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
 import type { PantryListItemNode } from '#features/pantry/hooks/usePantryQuery';
 import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
@@ -9,9 +9,8 @@ import type {
   RecipeSearchResult,
   RecipeInformation,
 } from '#/services/spoonacular/types';
-import { useQuery } from '@apollo/client/react';
 import { useFocusEffect } from '@react-navigation/native';
-import { GetHomeDocument } from '#operations/home/home.generated';
+import { defaultPantryOf } from '#domain/homePantries';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { t } from '#/i18n';
 import {
@@ -276,17 +275,9 @@ async function fetchRandomDiscovery(
 export function useRecipeDiscovery(
   dietaryTags?: string,
 ): UseRecipeDiscoveryResult {
-  const {
-    state: { selectedHomeId },
-    actions: { getDefaultPantry },
-  } = useDefaultHome();
-
-  const { data: homeData } = useQuery(GetHomeDocument, {
-    variables: { homeId: selectedHomeId ?? '' },
-    skip: !selectedHomeId,
-  });
-
-  const defaultPantry = getDefaultPantry(homeData?.home);
+  // From the cache: `useDefaultHome` owns the homes fetch.
+  const { currentHome } = useCurrentHome();
+  const defaultPantry = defaultPantryOf(currentHome);
 
   // Focus gate for the pantry watch: the Recipes tab stays mounted while hidden
   // (`inactiveBehavior: 'none'`), so a live watcher re-renders on every pantry

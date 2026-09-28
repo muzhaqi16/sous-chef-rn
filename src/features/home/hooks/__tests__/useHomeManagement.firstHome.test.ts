@@ -1,19 +1,8 @@
 /**
- * Regression: creating — or joining — the user's FIRST home must sync it as the
- * server-side default, with no alert.
- *
- * The defect lived in the SEAM between two hooks, which is why every existing
- * suite was blind to it: `useHomeMutations.test.ts` and
- * `useHomeInvitations.test.ts` both inject
- * `setDefaultHome: jest.fn().mockResolvedValue(true)`, and
- * `useHomeManagement.test.ts` mocks all four sub-hooks. A mutation's
- * `onCompleted` runs in the same task as its cache write, BEFORE React
- * re-renders, so `useHomeSelection`'s `homes` PROP is still the pre-create
- * (empty) list — any existence check against that prop misses the very home
- * that was just created, aborting the switch before `MarkHomeAsDefault` fires
- * and alerting "Home not found" for a home that exists.
- *
- * So this composes the REAL hooks through `useHomeManagement`.
+ * The user's FIRST home becomes the selection with no `MarkHomeAsDefault` and no
+ * alert: `createHome` and `joinHomeByCode` make it the account default on the
+ * server. Composes the REAL hooks through `useHomeManagement`, since each
+ * sub-hook's own suite injects its collaborators.
  */
 import { act, waitFor } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
@@ -29,10 +18,7 @@ import {
 } from '#operations/home/home.generated';
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { alertService } from '#/services/alertService';
-import { errorService } from '#/services/errorService';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useHomeManagement } from '../useHomeManagement';
 
 const mockStoreState = {
@@ -120,11 +106,10 @@ const createdHomeMock = () =>
           __typename: 'Home',
           id: (vars.input as { id: string }).id,
           name: 'First Home',
-          // Not default server-side yet — that is what MarkHomeAsDefault is
-          // for, and it keeps `remoteDefaultHomeId` honest.
-          isDefault: false,
-          // Empty so the only writer of the pantry selection is the
-          // MarkHomeAsDefault response.
+          // `createHome` makes a first home the account default on the server.
+          isDefault: true,
+          // Empty: the selected pantry is the client-minted one, read from the
+          // cache before its own request settles.
           pantriesConnection: {
             __typename: 'PantryConnection',
             edges: [],
@@ -155,35 +140,32 @@ const createdPantryMock = () =>
     },
   });
 
-const markDefaultMock = (defaultPantryId: string) =>
+/** Records whether `MarkHomeAsDefault` is sent; neither path should send it. */
+const markDefaultMock = () =>
   recordMock(MarkHomeAsDefaultDocument, {
-    data: {
-      markHomeAsDefault: {
-        __typename: 'MarkHomeAsDefaultPayload',
-        settings: { __typename: 'UserSettings', id: 'settings-1' },
-        defaultPantry: { __typename: 'Pantry', id: defaultPantryId },
-      },
-    },
+    error: new Error('MarkHomeAsDefault must not be sent'),
   });
 
-const markDefaultRefusedMock = () =>
-  recordMock(MarkHomeAsDefaultDocument, {
+/** Joining returns Membership only; the joined home is fetched afterwards. */
+const joinedHomeMock = () =>
+  recordMock(JoinHomeByCodeDocument, {
     data: {
-      markHomeAsDefault: {
-        __typename: 'NotFoundError',
-        code: ErrorCode.NotFound,
-        message: 'Home not found',
+      joinHomeByCode: {
+        __typename: 'JoinHomeByCodePayload',
+        membership: {
+          __typename: 'Membership',
+          id: 'membership-1',
+          homeId: 'home-joined',
+        },
       },
     },
   });
 
 describe('first home becomes the default', () => {
-  it('reports a refused sync, since nothing else can', async () => {
-    // A new user left with no default home is invisible otherwise: the
-    // surviving log call is stripped in release and never reaches errorService.
+  it('adopts a newly created first home without MarkHomeAsDefault, and with no alert', async () => {
     const homes = noHomesMock();
     const create = createdHomeMock();
-    const markDefault = markDefaultRefusedMock();
+    const markDefault = markDefaultMock();
 
     const { result } = renderHookWithApollo(() => useHomeManagement(), {
       operationMocks: [
@@ -200,83 +182,24 @@ describe('first home becomes the default', () => {
       await result.current.createHome('First Home');
     });
 
-    await waitFor(() =>
-      expect(errorService.reportError).toHaveBeenCalledWith(
-        expect.any(Error),
-        expect.objectContaining({
-          operation: operationNameOf(MarkHomeAsDefaultDocument),
-        }),
-      ),
-    );
-  });
-
-  it('syncs a newly created first home to the server, with no alert', async () => {
-    const homes = noHomesMock();
-    const create = createdHomeMock();
-    const markDefault = markDefaultMock('pantry-new');
-
-    const { result } = renderHookWithApollo(() => useHomeManagement(), {
-      operationMocks: [
-        homes.mock,
-        create.mock,
-        createdPantryMock().mock,
-        markDefault.mock,
-      ],
-    });
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    await act(async () => {
-      await result.current.createHome('First Home');
-    });
-
-    // `setDefaultHome` is fire-and-forget from createHome's onCompleted, so
-    // wait on its LAST effect rather than on the mutation firing — `fired`
-    // records the invocation, not the resolved result, and asserting on it
-    // would both race and leak the pending promise into the next test.
     const mintedId = (create.fired[0] as { input: { id: string } }).input.id;
-    await waitFor(() =>
-      expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
-        'pantry-new',
-      ),
-    );
-    expect(markDefault.fired).toContainEqual({ input: { homeId: mintedId } });
-
-    // `setHomeAndPantry` / `setIsHomeSelectionReady` are written ONLY by
-    // `setDefaultHome` — the auto-select effect fires the mutation directly and
-    // touches neither. Asserting on them is what stops this test passing via
-    // that effect rather than via the path it means to cover. The pantry is
-    // the client-minted default: adoption reads it from the cache before its
-    // own request has settled.
-    expect(mockStoreState.setHomeAndPantry).toHaveBeenCalledWith(
-      mintedId,
+    expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(mintedId);
+    // The client-minted default pantry, adopted from the cache.
+    expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
       expect.any(String),
     );
-    expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(false);
+    expect(markDefault.fired).toEqual([]);
+    // Written ONLY by `setDefaultHome`, so this proves the create never reached it.
+    expect(mockStoreState.setHomeAndPantry).not.toHaveBeenCalled();
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 
-  it('syncs a joined first home that is in neither the prop nor the cache', async () => {
-    // `JoinHomeByCode` returns Membership only and its `update` kicks off an
-    // un-awaited refetch, so the joined home exists nowhere locally when
-    // `setDefaultHome` runs. A cache-based fallback alone would not fix this.
+  it('selects a joined first home without MarkHomeAsDefault', async () => {
     const homes = noHomesMock();
-    const join = recordMock(JoinHomeByCodeDocument, {
-      data: {
-        joinHomeByCode: {
-          __typename: 'JoinHomeByCodePayload',
-          membership: {
-            __typename: 'Membership',
-            id: 'membership-1',
-            homeId: 'home-joined',
-          },
-        },
-      },
-    });
-    const markDefault = markDefaultMock('pantry-joined');
+    const markDefault = markDefaultMock();
 
     const { result } = renderHookWithApollo(() => useHomeManagement(), {
-      operationMocks: [homes.mock, join.mock, markDefault.mock],
+      operationMocks: [homes.mock, joinedHomeMock().mock, markDefault.mock],
     });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -285,23 +208,16 @@ describe('first home becomes the default', () => {
       await result.current.joinHomeByCode('ABC123');
     });
 
-    await waitFor(() =>
-      expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
-        'pantry-joined',
-      ),
-    );
-    expect(markDefault.fired).toContainEqual({
-      input: { homeId: 'home-joined' },
-    });
-    expect(mockStoreState.setHomeAndPantry).toHaveBeenCalledWith(
+    expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(
       'home-joined',
-      null,
     );
-    // joinHomeByCode's onCompleted alerts SUCCESS, so this is scoped rather
-    // than a blanket not-called.
+    expect(markDefault.fired).toEqual([]);
+    expect(mockStoreState.setHomeAndPantry).not.toHaveBeenCalled();
+    // The join alerts its SUCCESS, so this is scoped rather than a blanket
+    // not-called.
     expect(alertService.alert).not.toHaveBeenCalledWith(
       'Error',
-      'Home not found',
+      expect.anything(),
     );
   });
 });

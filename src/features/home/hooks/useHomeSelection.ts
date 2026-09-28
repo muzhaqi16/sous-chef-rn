@@ -12,10 +12,8 @@ import {
   type GetHomesQuery,
 } from '#operations/home/home.generated';
 import { extractNodes } from '#/utils/connectionUtils';
-import {
-  defaultPantryOf,
-  readDefaultPantryId,
-} from '#features/home/utils/homePantries';
+import { defaultPantryOf } from '#domain/homePantries';
+import { readDefaultPantryId } from '#features/home/utils/homePantries';
 import { useMarkHomeAsDefault } from '#features/home/hooks/useMarkHomeAsDefault';
 import { isDefaultHomeSyncPending } from '#features/home/store/useDefaultHomeSyncStore';
 import {
