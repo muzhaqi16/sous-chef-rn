@@ -270,6 +270,8 @@
   },
   "addToPantry": {
     "restocked": "Scorta di {{name}} aggiornata",
+    "amountLeft_one": "Rimane {{amount}}",
+    "amountLeft_other": "Rimangono {{amount}}",
     "lowStockSettings": "Impostazioni scorte basse",
     "lowStockHint": "Ricevi una notifica quando questo articolo sta per finire.",
     "emptyHint": "Lascia vuoto per disattivare gli avvisi di scorte basse per questo articolo.",

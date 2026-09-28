@@ -56,8 +56,9 @@ const shapeFiles = (): string[] => {
  * redefinition are different reasons to purge, and only the first moves the
  * hash above. Without this, a bump made for the second reason is invisible.
  */
-// shape-4: the API re-expressed dozen stacks in pieces (a dozen is only shown).
-const REVIEWED_CACHE_VERSION = 'shape-4';
+// shape-5: suggestions became one object of sections; purges the per-source
+// entries nothing reads.
+const REVIEWED_CACHE_VERSION = 'shape-5';
 
 it('the persisted cache version matches the decision recorded here', () => {
   const source = readFileSync(

@@ -137,8 +137,8 @@ query GetPantryItem($id: ID!) {
 # One call returns every section: the server places an item only in the first
 # section that offers it, which separate per-section calls cannot do. `limit`
 # is per section, generous enough to back the drill-down. Rows select only what
-# the sheet reads; `SuggestionItem.imageUrl` is always null, so `item` is not
-# selected.
+# the sheet reads, a section's own context included; `SuggestionItem.imageUrl`
+# is always null, so `item` is not selected.
 #
 # Fields are inlined per section rather than shared via a named fragment: data
 # masking is enabled globally, so a `...Fragment` spread would hide these fields
@@ -160,6 +160,11 @@ query GetPantryItemSuggestions(
         imageUrl
         defaultUnitId
         pantryItemId
+        currentQuantity
+        defaultUnit {
+          id
+          symbol
+        }
       }
       expiringSoon {
         id
@@ -170,6 +175,7 @@ query GetPantryItemSuggestions(
         imageUrl
         defaultUnitId
         pantryItemId
+        daysUntilExpiry
       }
       recentlyDeleted {
         id

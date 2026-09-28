@@ -270,6 +270,8 @@
   },
   "addToPantry": {
     "restocked": "U rimbush {{name}}",
+    "amountLeft_one": "Mbetet {{amount}}",
+    "amountLeft_other": "Mbeten {{amount}}",
     "lowStockSettings": "Cilësimet e stokut të ulët",
     "lowStockHint": "Merr njoftim kur ky artikull po mbaron.",
     "emptyHint": "Lëre bosh për të çaktivizuar sinjalizimet e stokut të ulët për këtë artikull.",
