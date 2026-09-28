@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { usePantryState } from '#store/useAppStore';
-import { extractNodes } from '#/utils/connectionUtils';
+import { defaultPantryOf, pantriesOf } from '#domain/homePantries';
 import { useCurrentHome } from '#features/pantry/hooks/useCurrentHome';
 
 /**
@@ -13,10 +13,10 @@ export function useCurrentPantry() {
   const { currentHome, homeCount, selectedHomeId, isHomeSelectionReady } =
     useCurrentHome();
 
-  const pantries = extractNodes(currentHome?.pantriesConnection);
+  const pantries = pantriesOf(currentHome);
 
   const defaultPantry = isHomeSelectionReady
-    ? pantries.find(p => p.isDefault) ?? pantries[0] ?? null
+    ? defaultPantryOf(currentHome) ?? null
     : null;
 
   // Resolve pantry with fallback chain

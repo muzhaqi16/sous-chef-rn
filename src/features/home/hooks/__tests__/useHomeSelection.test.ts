@@ -7,6 +7,8 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import { alertService } from '#/services/alertService';
+import { errorService } from '#/services/errorService';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
 import type { GetHomesQuery } from '#operations/home/home.generated';
 import { useHomeSelection } from '../useHomeSelection';
@@ -507,6 +509,13 @@ describe('useHomeSelection', () => {
       expect(alertService.alert).not.toHaveBeenCalledWith(
         expect.anything(),
         'Home not found',
+      );
+      // Reported too: `markAsDefault`'s fire-and-forget callers present nothing.
+      expect(errorService.reportError).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          operation: operationNameOf(MarkHomeAsDefaultDocument),
+        }),
       );
     });
   });

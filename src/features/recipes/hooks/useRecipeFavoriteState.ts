@@ -26,6 +26,8 @@ export interface UseRecipeFavoriteStateParams {
   /** From `useRecipePreload`. */
   saveRecipeToFavorites: UseRecipePreloadReturn['saveRecipeToFavorites'];
   /** From `useRecipePreload`. */
+  saveBackendRecipeToFavorites: UseRecipePreloadReturn['saveBackendRecipeToFavorites'];
+  /** From `useRecipePreload`. */
   savingToFavorites: boolean;
 }
 
@@ -55,7 +57,7 @@ function syncSavedRecipeState(
 
 /**
  * Tracks whether the current recipe is in the user's favorites and provides
- * `handleSaveRecipe` for external recipes. Backend recipes derive `isSaved`
+ * `handleSaveRecipe` for both routes. Backend recipes derive `isSaved`
  * directly from `backendRecipe.savedDetails`; external recipes look themselves
  * up in `MyRecipes` and mirror the result into local state.
  */
@@ -66,6 +68,7 @@ export function useRecipeFavoriteState({
   isBackendRecipe,
   backendRecipe,
   saveRecipeToFavorites,
+  saveBackendRecipeToFavorites,
   savingToFavorites,
 }: UseRecipeFavoriteStateParams): UseRecipeFavoriteStateResult {
   const apolloClient = useApolloClient();
@@ -100,7 +103,9 @@ export function useRecipeFavoriteState({
           )
       : undefined;
 
-  const derivedRecipeSaved = !!savedRecipeMatch;
+  // `recipes` also lists the mirror minted by merely VIEWING an external
+  // recipe, so a match is saved only when it carries `savedDetails`.
+  const derivedRecipeSaved = !!savedRecipeMatch?.savedDetails;
   const derivedSavedFolderLocal =
     savedRecipeMatch?.savedDetails?.folder ?? null;
 
@@ -120,13 +125,25 @@ export function useRecipeFavoriteState({
     tags?: string[],
     notes?: string,
   ) => {
-    if (!externalRecipe || !externalSource || !externalId) return;
-
     const options: SaveToFavoritesOptions = {
       folder: folder ?? undefined,
       tags: tags && tags.length > 0 ? tags : undefined,
       notes: firstNonBlank(notes),
     };
+
+    // A recipe opened by id has no external recipe to re-ingest; its saved
+    // state reads from `savedDetails`, which the optimistic favorite writes.
+    if (isBackendRecipe && backendRecipe) {
+      const recipeId = backendRecipe.id;
+      void executeWithLoadingState(
+        () => saveBackendRecipeToFavorites(recipeId, options),
+        setSaving,
+        err => errorService.reportError(err, { operation: 'saveRecipe' }),
+      );
+      return;
+    }
+
+    if (!externalRecipe || !externalSource || !externalId) return;
 
     void executeWithLoadingState(
       async () => {

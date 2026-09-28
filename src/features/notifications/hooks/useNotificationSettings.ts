@@ -25,7 +25,6 @@ export interface NotificationSettings {
   // Core toggles
   emailEnabled: boolean;
   pushEnabled: boolean;
-  smsEnabled: boolean;
 
   // Pantry notifications
   expirationNotifications: boolean;
@@ -80,7 +79,6 @@ function keysOf<T extends object>(table: {
 const CHANNELS_KEYS = keysOf<ChannelsInput>({
   emailEnabled: true,
   pushEnabled: true,
-  smsEnabled: true,
 });
 
 const EXPIRATION_KEYS = keysOf<ExpirationInput>({
@@ -244,7 +242,6 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
       // Core toggles
       emailEnabled: preferences?.emailEnabled ?? true,
       pushEnabled: preferences?.pushEnabled ?? false,
-      smsEnabled: preferences?.smsEnabled ?? false,
 
       // Pantry notifications
       expirationNotifications: preferences?.expirationNotifications ?? true,
@@ -311,22 +308,22 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
     });
 
   const resetToDefaults = async () => {
+    // The API's defaults for a new account (`notificationPreferencesDefaults`).
     const defaultSettings: Partial<NotificationSettings> = {
-      emailEnabled: true,
+      emailEnabled: false,
       pushEnabled: false,
-      smsEnabled: false,
-      expirationNotifications: true,
+      expirationNotifications: false,
       expirationNotificationFrequency: ExpirationFrequency.DailyMorning,
       expirationDaysThreshold: 3,
-      lowStockAlerts: true,
-      pantryChanges: true,
-      shoppingListUpdates: true,
+      lowStockAlerts: false,
+      pantryChanges: false,
+      shoppingListUpdates: false,
       collaborationInvites: true,
       homeInvites: true,
-      sharedListUpdates: true,
-      recipeRecommendations: true,
-      mealPlanReminders: true,
-      cookingReminders: true,
+      sharedListUpdates: false,
+      recipeRecommendations: false,
+      mealPlanReminders: false,
+      cookingReminders: false,
       weeklyDigest: false,
       monthlyReport: false,
       quietHoursEnabled: false,

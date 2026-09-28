@@ -18,8 +18,8 @@ export interface SortableListActions {
   onQuantityPress?: (id: string) => void;
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   onSwipeableClose?: () => void;
-  /** Run by a row before a `removesRow` action fires. */
-  onBeforeRowRemoved?: () => void;
+  /** Runs a row's `removesRow` action, so the list can reflow around it. */
+  onRemoveRow?: (commit: () => void) => void;
   /** Drag-to-reorder. The neighbour ids are null at the ends of the list. */
   onSortOrderUpdate?: (
     itemId: string,

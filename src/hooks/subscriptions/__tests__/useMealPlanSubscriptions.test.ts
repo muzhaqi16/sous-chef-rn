@@ -1,7 +1,11 @@
 'use no memo';
 
-import { act } from '@testing-library/react-native';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { act, waitFor } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { MealPlanSubtype, MutationType } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
@@ -424,6 +428,37 @@ describe('useMealPlanSubscriptions', () => {
       client.cache,
       'tpl-1',
       { evictItem: true },
+    );
+  });
+});
+
+describe('useMealPlanSubscriptions: a home the server has not created yet', () => {
+  afterEach(() => {
+    unconfirmedCreates.confirm('home-1');
+  });
+
+  it('subscribes only once its create is acknowledged', async () => {
+    // Refused before the create lands, a subscription completes and nothing
+    // reopens it — so opening early costs the session its events.
+    unconfirmedCreates.mark('home-1');
+    const events = recordMock(MealPlanEventsDocument, {
+      error: new Error('stream ended'),
+    });
+
+    renderHookWithApollo(() => useMealPlanSubscriptions('user-1'), {
+      operationMocks: [events.mock],
+    });
+    await act(async () => {
+      jest.runOnlyPendingTimers();
+    });
+    expect(events.fired).toHaveLength(0);
+
+    act(() => {
+      unconfirmedCreates.confirm('home-1');
+    });
+
+    await waitFor(() =>
+      expect(events.fired).toContainEqual({ homeId: 'home-1' }),
     );
   });
 });

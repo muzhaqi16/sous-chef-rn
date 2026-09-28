@@ -23,29 +23,23 @@ export const deleteAction = (onPress: () => void): SwipeAction => ({
 });
 
 /**
- * Resolves one row's swipe actions, notifying the list before a row-removing one
- * runs — `SwipeableItem` ignores `removesRow` by design. Called from the ROW: in
+ * Resolves one row's swipe actions, handing a row-removing one to the list to
+ * run — `SwipeableItem` ignores `removesRow` by design. Called from the ROW: in
  * the list it would pass a closure over the FlashList ref into a call during
  * render, which the React Compiler refuses.
  */
 export function resolveRowActions(
   itemSwipeActions: ItemSwipeActionsFactory | undefined,
   id: string,
-  onRemoving: (() => void) | undefined,
+  onRemoveRow: ((commit: () => void) => void) | undefined,
 ): { left?: SwipeAction[]; right?: SwipeAction[] } | undefined {
   const built = itemSwipeActions?.(id);
   if (!built) return undefined;
 
   const prepare = (list: SwipeAction[] | undefined) =>
     list?.map(action =>
-      action.removesRow
-        ? {
-            ...action,
-            onPress: () => {
-              onRemoving?.();
-              action.onPress();
-            },
-          }
+      action.removesRow && onRemoveRow
+        ? { ...action, onPress: () => onRemoveRow(action.onPress) }
         : action,
     );
 

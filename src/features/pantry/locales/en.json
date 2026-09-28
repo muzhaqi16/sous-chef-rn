@@ -270,6 +270,8 @@
   },
   "addToPantry": {
     "restocked": "Restocked {{name}}",
+    "amountLeft_one": "{{amount}} left",
+    "amountLeft_other": "{{amount}} left",
     "lowStockSettings": "Low Stock Settings",
     "lowStockHint": "Get notified when this item is running low.",
     "emptyHint": "Leave empty to disable low stock alerts for this item.",

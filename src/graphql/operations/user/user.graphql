@@ -10,7 +10,6 @@ query GetNotificationPreferences {
       userId
       emailEnabled
       pushEnabled
-      smsEnabled
       expirationNotifications
       expirationNotificationFrequency
       expirationDaysThreshold
@@ -83,7 +82,6 @@ mutation UpdateNotificationPreferences(
         userId
         emailEnabled
         pushEnabled
-        smsEnabled
         expirationNotifications
         expirationNotificationFrequency
         expirationDaysThreshold

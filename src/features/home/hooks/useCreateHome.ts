@@ -12,6 +12,7 @@ import {
   type SettledFailure,
 } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import type { CreateHomeInput } from '#/graphql/generated/schemaTypes';
@@ -66,6 +67,9 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
   ): Promise<CreateHomeOutcome> => {
     const id = generateEntityId();
     const input = { ...fields, id, createDefaultPantry: false };
+    // Selecting the home opens its event subscriptions, which the server refuses
+    // until the create lands — see `unconfirmedCreates`.
+    unconfirmedCreates.mark(id);
 
     // Without an auth identity there is no membership to materialize, so the
     // create falls back to online-only rather than writing a home nobody owns.
@@ -113,6 +117,9 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
         present: 'none',
       },
     );
+    // Released on every outcome; a queued create is tracked by the offline
+    // queue's pending set from here on.
+    unconfirmedCreates.confirm(id);
 
     if (settled.failure) {
       return { status: 'rejected', id, failure: settled.failure };

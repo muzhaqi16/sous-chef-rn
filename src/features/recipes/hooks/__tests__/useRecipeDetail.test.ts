@@ -60,6 +60,7 @@ const mockPreloadReturn = {
   preloadedRecipe: null as PreloadedRecipe,
   preloadRecipe: jest.fn(),
   saveRecipeToFavorites: jest.fn(),
+  saveBackendRecipeToFavorites: jest.fn(),
   savingToFavorites: false,
 };
 const mockUseRecipePreload = jest.fn<
@@ -159,6 +160,8 @@ describe('useRecipeDetail (orchestrator wiring)', () => {
         isBackendRecipe: mockRecipeDataReturn.isBackendRecipe,
         backendRecipe: mockRecipeDataReturn.backendRecipe,
         saveRecipeToFavorites: mockPreloadReturn.saveRecipeToFavorites,
+        saveBackendRecipeToFavorites:
+          mockPreloadReturn.saveBackendRecipeToFavorites,
         savingToFavorites: mockPreloadReturn.savingToFavorites,
       }),
     );

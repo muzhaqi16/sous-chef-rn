@@ -159,8 +159,9 @@ skip flag follows focus and that a blur/focus cycle costs no request;
   the cell wrapper is a Reanimated `Animated.View` + layout effect around
   every cell, measured at ~30–60 ms of the SM-S908U1's ~320 ms first-layout
   window on a release build. An unsampled
-  session's `CellRendererComponent` is `undefined` (FlashList's plain View)
-  and emits no blank/coverage series; `flashlist_initial_load_ms`, session
+  session's `CellRendererComponent` is `PlainAnimatedCellRenderer` — the
+  `Animated.View` without the layout effect, kept because the row reflow
+  animates it — and emits no blank/coverage series; `flashlist_initial_load_ms`, session
   duration and the `hasContentLayout` latch are never sampled out.
 - **The initial-mount blank window is a separate mechanism from scroll
   blanks, and it is fixed at the presentation layer** — FlashList v2 holds

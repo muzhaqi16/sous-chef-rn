@@ -11,6 +11,8 @@ export interface BaseSuggestionItem {
   name: string;
   category?: string | null | undefined;
   imageUrl?: string | null | undefined;
+  /** The row's own context ("2 L left"), shown in place of the category. */
+  subtitle?: string | null | undefined;
 }
 
 export interface SuggestionGroupConfig<

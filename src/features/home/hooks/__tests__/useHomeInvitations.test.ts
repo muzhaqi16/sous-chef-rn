@@ -47,7 +47,6 @@ jest.mock('#/services/alertService', () => ({
 const createOptions = () => ({
   homes: [],
   refetch: jest.fn().mockResolvedValue(undefined),
-  setDefaultHome: jest.fn().mockResolvedValue(true),
   setSelectedHomeId: jest.fn(),
 });
 

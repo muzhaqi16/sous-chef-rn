@@ -12,15 +12,14 @@ import { errorService } from '#/services/errorService';
 import type { SuggestionsHookResult } from '#features/catalog/ui/AddItemSheet/types';
 
 /**
- * Per-source fetch limit. Each section is fetched with its own quota, and the
- * sheet shows a small preview that drills into the full per-source list, so this
- * is generous enough to back the drill-down without a second round-trip.
+ * Per-section limit. The sheet shows a small preview of each section that drills
+ * into the full list, so this backs the drill-down without a second round-trip.
  */
 export const SHOPPING_SUGGESTIONS_LIMIT = 20;
 
 export type ShoppingListSuggestionItem = NonNullable<
   GetShoppingListSuggestionsQuery['shoppingList']
->['popular'][number];
+>['suggestions']['popular'][number];
 
 interface UseShoppingListSuggestionsOptions {
   shoppingListId: string | undefined;
@@ -29,9 +28,8 @@ interface UseShoppingListSuggestionsOptions {
 }
 
 /**
- * Shopping list suggestions grouped by source. Each of RECENTLY_DELETED,
- * FREQUENTLY_ADDED and POPULAR is fetched with its own quota (aliased query
- * fields), so no source can crowd out the others.
+ * Shopping list suggestions by section, each with its own quota. The server
+ * places an item in only the first section that offers it.
  */
 export function useShoppingListSuggestions({
   shoppingListId,
@@ -49,30 +47,30 @@ export function useShoppingListSuggestions({
 
   useApolloErrorLogger(GetShoppingListSuggestionsDocument, error);
 
-  const list = data?.shoppingList;
+  const sections = data?.shoppingList?.suggestions;
 
   const grouped = {
-    recentlyDeleted: list?.recentlyDeleted ?? [],
-    frequentlyAdded: list?.frequentlyAdded ?? [],
-    popular: list?.popular ?? [],
+    recentlyDeleted: sections?.recentlyDeleted ?? [],
+    frequentlyAdded: sections?.frequentlyAdded ?? [],
+    popular: sections?.popular ?? [],
   };
 
   // Preload suggestion images into disk cache for instant display. Keyed on the
   // Apollo result, which only changes when the data does — the derived arrays
   // above are rebuilt on every render.
   useEffect(() => {
-    if (!list) return;
+    if (!sections) return;
     const urls = [
-      ...list.recentlyDeleted,
-      ...list.frequentlyAdded,
-      ...list.popular,
+      ...sections.recentlyDeleted,
+      ...sections.frequentlyAdded,
+      ...sections.popular,
     ]
       .map(s => resolveImageUrl(s))
       .filter((url): url is string => !!url);
     if (urls.length > 0) {
       preloadImages(urls);
     }
-  }, [list]);
+  }, [sections]);
 
   const state = useDataState({
     loading,

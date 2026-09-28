@@ -7,10 +7,7 @@
 
 import { useLinkExpirationData } from '#features/notifications/hooks/useLinkExpirationData';
 import { useSubscription } from '@apollo/client/react';
-import {
-  useIsHomeSelectionReady,
-  useSelectedPantryId,
-} from '#store/useAppStore';
+import { useSelectedPantryId } from '#store/useAppStore';
 import {
   PantryEventsDocument,
   type PantryEventsSubscription,
@@ -27,7 +24,6 @@ import {
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
 import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
-import { useSubscriptionRejected } from '#/services/subscriptions/rejectedSubscriptions';
 import {
   CacheStrategy,
   type SubscriptionApolloClient,
@@ -40,6 +36,7 @@ import {
 import { logger } from '#/utils/environment';
 import { toDateKey } from '#/utils/dateUtils';
 import { useSubscriptionTransportRecovery } from '#hooks/subscriptions/useSubscriptionTransportRecovery';
+import { useEntitySubscriptionSkip } from '#hooks/subscriptions/useEntitySubscriptionSkip';
 
 type PantryEventsPayload = PantryEventsSubscription['pantryEvents'];
 
@@ -79,9 +76,9 @@ function isItemCached(
 }
 
 /**
- * The server emits PANTRY_UPDATED per item change because the stats are derived.
- * The values are aggregates, so the last read wins — coalesce instead of firing
- * one request per remote add.
+ * `Pantry.stats` is derived and never pushed: ITEM_CHANGED carries only the
+ * item's id and PANTRY_UPDATED is pantry metadata. So every remote change
+ * re-reads it; the values are aggregates, so the last read wins — coalesce.
  */
 const SUMMARY_REFRESH_DELAY_MS = 400;
 let summaryRefreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -121,6 +118,9 @@ async function handleItemChanged(
     }
     return;
   }
+
+  // Any item change can move a count the header and tabs show.
+  refreshPantrySummary(client, payload.pantryId);
 
   // A delete needs no values — the id is the whole event.
   if (isDelete(mutation)) {
@@ -163,9 +163,11 @@ async function handleItemChanged(
  */
 export function usePantrySubscriptions(userId?: string) {
   const selectedPantryId = useSelectedPantryId() ?? undefined;
-  const isHomeSelectionReady = useIsHomeSelectionReady();
   const linkExpirationData = useLinkExpirationData();
-  const rejected = useSubscriptionRejected(PantryEventsDocument);
+  const pantrySkip = useEntitySubscriptionSkip(
+    PantryEventsDocument,
+    selectedPantryId,
+  );
 
   const expirationOnData = async (
     notificationId: string,
@@ -230,8 +232,12 @@ export function usePantrySubscriptions(userId?: string) {
 
       // Keyed on the originating DEVICE: the mutation response already applied
       // this change here, and nowhere else — the same user's other devices
-      // still need it.
+      // still need it. The counts are the exception: a local write moves only
+      // `totalItems`, so its echo re-reads the rest.
       if (isSelfEcho(payload, userId)) {
+        if (payload.subtype === PantrySubtype.ItemChanged) {
+          refreshPantrySummary(client, payload.pantryId);
+        }
         if (__DEV__) {
           logger.debug('⏭️ [Subscription] Skipping pantry self-echo');
         }
@@ -261,8 +267,8 @@ export function usePantrySubscriptions(userId?: string) {
           }
           break;
 
-        // `Pantry.stats` has a `mergeObjects` field policy, so this narrow
-        // read-back merges over the wider `stats` `GetPantry` selects.
+        // The same read-back carries the name and description. `Pantry.stats`
+        // has a `mergeObjects` field policy, so it merges over GetPantry's.
         case PantrySubtype.PantryUpdated:
           refreshPantrySummary(client, payload.pantryId);
           break;
@@ -282,7 +288,6 @@ export function usePantrySubscriptions(userId?: string) {
     },
   });
 
-  const pantrySkip = !selectedPantryId || !isHomeSelectionReady || rejected;
   const pantryEvents = useSubscription(PantryEventsDocument, {
     // `skip` holds while there is no pantry, so the empty id is never sent.
     variables: { pantryId: selectedPantryId ?? '' },

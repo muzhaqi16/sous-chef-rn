@@ -30,7 +30,7 @@ interface SuggestionInput {
 
 type Suggestion = NonNullable<
   GetShoppingListSuggestionsQuery['shoppingList']
->['recentlyDeleted'][number];
+>['suggestions']['recentlyDeleted'][number];
 
 function buildSuggestion(input: SuggestionInput): MockPart<Suggestion> {
   return {
@@ -38,28 +38,20 @@ function buildSuggestion(input: SuggestionInput): MockPart<Suggestion> {
     id: input.id,
     itemId: `item-${input.id}`,
     name: input.itemName ?? `Item ${input.id}`,
-    source: input.source,
-    imageUrl: null,
     category: null,
+    imageUrl: null,
     defaultUnitId: null,
-    defaultUnit: null,
-    item: null,
-    lastQuantity: null,
-    lastUnitId: null,
-    frequencyCount: null,
-    popularityRank: null,
-    shoppingListItemId: null,
   };
 }
 
 function buildSuggestionsMock(
   listId: string,
-  suggestions: ReturnType<typeof buildSuggestion>[],
+  suggestions: SuggestionInput[],
   limit = 20,
 ): MockFor<typeof GetShoppingListSuggestionsDocument> {
-  // Each source is fetched via its own aliased field; bucket the flat input.
+  // Each input names its section; bucket the flat input.
   const bySource = (source: SuggestionSource) =>
-    suggestions.filter(s => s.source === source);
+    suggestions.filter(s => s.source === source).map(s => buildSuggestion(s));
   return {
     request: {
       query: GetShoppingListSuggestionsDocument,
@@ -70,9 +62,12 @@ function buildSuggestionsMock(
         shoppingList: {
           __typename: 'ShoppingList',
           id: listId,
-          recentlyDeleted: bySource(SuggestionSource.RecentlyDeleted),
-          frequentlyAdded: bySource(SuggestionSource.FrequentlyAdded),
-          popular: bySource(SuggestionSource.Popular),
+          suggestions: {
+            __typename: 'ShoppingListSuggestions',
+            recentlyDeleted: bySource(SuggestionSource.RecentlyDeleted),
+            frequentlyAdded: bySource(SuggestionSource.FrequentlyAdded),
+            popular: bySource(SuggestionSource.Popular),
+          },
         },
       },
     },
@@ -123,19 +118,19 @@ describe('useShoppingListSuggestions', () => {
       {
         operationMocks: [
           buildSuggestionsMock('list-1', [
-            buildSuggestion({
+            {
               id: '1',
               source: SuggestionSource.RecentlyDeleted,
-            }),
-            buildSuggestion({
+            },
+            {
               id: '2',
               source: SuggestionSource.FrequentlyAdded,
-            }),
-            buildSuggestion({ id: '3', source: SuggestionSource.Popular }),
-            buildSuggestion({
+            },
+            { id: '3', source: SuggestionSource.Popular },
+            {
               id: '4',
               source: SuggestionSource.RecentlyDeleted,
-            }),
+            },
           ]),
         ],
       },
@@ -184,7 +179,7 @@ describe('useShoppingListSuggestions', () => {
             maxUsageCount: 1,
           },
           buildSuggestionsMock('list-1', [
-            buildSuggestion({ id: '1', source: SuggestionSource.Popular }),
+            { id: '1', source: SuggestionSource.Popular },
           ]),
         ],
       },

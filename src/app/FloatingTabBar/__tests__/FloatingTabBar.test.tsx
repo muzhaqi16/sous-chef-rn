@@ -20,7 +20,10 @@ jest.mock(
 );
 
 import React from 'react';
+import type { ViewStyle } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import {
+  act,
   render,
   screen,
   userEvent,
@@ -34,6 +37,8 @@ import {
 } from '@react-navigation/bottom-tabs';
 import { FloatingTabBar } from '../FloatingTabBar';
 import type { TabAppearance } from '#features/types';
+import { useStore } from '#store';
+import { TAB_BAR_HEIGHT, TAB_BAR_ICON_ONLY_HEIGHT } from '#constants/layout';
 
 // Mock TabBarActionsContext
 const mockSetActiveTab = jest.fn();
@@ -201,6 +206,22 @@ function renderTabBar(
     </NavigationContainer>,
   );
 }
+
+const flat = (style: unknown): ViewStyle =>
+  StyleSheet.flatten(style as ViewStyle) ?? {};
+
+const barHeight = () => flat(screen.getByTestId('tab-bar').props.style).height;
+
+/** The add button's positioned container: its nearest ancestor with a `bottom`. */
+const addButtonBottom = () => {
+  let current = screen.getByTestId('add-button').parent;
+  while (current) {
+    const { bottom } = flat(current.props.style);
+    if (typeof bottom === 'number') return bottom;
+    current = current.parent;
+  }
+  throw new Error('no add button ancestor declares a bottom');
+};
 
 describe('FloatingTabBar', () => {
   beforeEach(() => {
@@ -374,5 +395,26 @@ describe('FloatingTabBar', () => {
       expect(mockSetActiveTab).toHaveBeenCalledWith('Profile'),
     );
     expect(navigateSpy).not.toHaveBeenCalled();
+  });
+
+  describe('height', () => {
+    afterEach(() => {
+      useStore.setState({ showNavigationLabels: true });
+    });
+
+    it('shortens to the icon row when labels are hidden, taking the add button down with it', () => {
+      renderTabBar();
+      expect(barHeight()).toBe(TAB_BAR_HEIGHT);
+      const labelledBottom = addButtonBottom();
+
+      act(() => {
+        useStore.setState({ showNavigationLabels: false });
+      });
+
+      expect(barHeight()).toBe(TAB_BAR_ICON_ONLY_HEIGHT);
+      expect(labelledBottom - addButtonBottom()).toBe(
+        TAB_BAR_HEIGHT - TAB_BAR_ICON_ONLY_HEIGHT,
+      );
+    });
   });
 });

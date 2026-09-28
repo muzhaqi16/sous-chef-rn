@@ -21,9 +21,12 @@ jest.mock('#components/atoms/CachedImage', () => ({
   preloadImages: (...args: unknown[]) => mockPreloadImages(...args),
 }));
 
-type Suggestion = NonNullable<
+type Sections = NonNullable<
   GetPantryItemSuggestionsQuery['pantry']
->['popular'][number];
+>['suggestions'];
+// Every section's fields, so one builder serves them all.
+type Suggestion = Sections['lowStock'][number] &
+  Sections['expiringSoon'][number];
 
 function makeSuggestion(overrides: Partial<Suggestion> = {}): Suggestion {
   return {
@@ -32,26 +35,13 @@ function makeSuggestion(overrides: Partial<Suggestion> = {}): Suggestion {
     itemId: 'item-1',
     name: 'Milk',
     source: PantrySuggestionSource.LowStock,
-    imageUrl: 'milk.jpg',
     category: null,
+    imageUrl: 'milk.jpg',
     defaultUnitId: null,
-    currentQuantity: null,
-    minQuantity: null,
-    restockQuantity: null,
-    daysUntilExpiry: null,
-    expiresOn: null,
-    lastQuantity: null,
-    lastUnitId: null,
-    frequencyCount: null,
-    popularityRank: null,
     pantryItemId: null,
+    currentQuantity: null,
     defaultUnit: null,
-    item: {
-      __typename: 'SuggestionItem',
-      id: 'item-1',
-      name: 'Milk',
-      imageUrl: null,
-    },
+    daysUntilExpiry: null,
     ...overrides,
   };
 }
@@ -59,8 +49,22 @@ function makeSuggestion(overrides: Partial<Suggestion> = {}): Suggestion {
 const TODAY = toDateKey(new Date());
 const VARIABLES = { pantryId: 'pantry-1', limit: 20, today: TODAY };
 
+/** The fields every section selects. */
+const baseRow = (s: Suggestion) => ({
+  __typename: s.__typename,
+  id: s.id,
+  itemId: s.itemId,
+  name: s.name,
+  source: s.source,
+  category: s.category,
+  imageUrl: s.imageUrl,
+  defaultUnitId: s.defaultUnitId,
+  pantryItemId: s.pantryItemId,
+});
+
 function buildData(suggestions: Suggestion[]): GetPantryItemSuggestionsQuery {
-  // Each source is fetched via its own aliased field; bucket the flat input.
+  // Each row's `source` repeats its section; bucket the flat input, keeping
+  // only what that section selects.
   const bySource = (source: PantrySuggestionSource) =>
     suggestions.filter(s => s.source === source);
   return {
@@ -68,11 +72,25 @@ function buildData(suggestions: Suggestion[]): GetPantryItemSuggestionsQuery {
     pantry: {
       __typename: 'Pantry',
       id: 'pantry-1',
-      lowStock: bySource(PantrySuggestionSource.LowStock),
-      expiringSoon: bySource(PantrySuggestionSource.ExpiringSoon),
-      recentlyDeleted: bySource(PantrySuggestionSource.RecentlyDeleted),
-      frequentlyAdded: bySource(PantrySuggestionSource.FrequentlyAdded),
-      popular: bySource(PantrySuggestionSource.Popular),
+      suggestions: {
+        __typename: 'PantrySuggestions',
+        lowStock: bySource(PantrySuggestionSource.LowStock).map(s => ({
+          ...baseRow(s),
+          currentQuantity: s.currentQuantity,
+          defaultUnit: s.defaultUnit,
+        })),
+        expiringSoon: bySource(PantrySuggestionSource.ExpiringSoon).map(s => ({
+          ...baseRow(s),
+          daysUntilExpiry: s.daysUntilExpiry,
+        })),
+        recentlyDeleted: bySource(PantrySuggestionSource.RecentlyDeleted).map(
+          baseRow,
+        ),
+        frequentlyAdded: bySource(PantrySuggestionSource.FrequentlyAdded).map(
+          baseRow,
+        ),
+        popular: bySource(PantrySuggestionSource.Popular).map(baseRow),
+      },
     },
   };
 }
@@ -168,6 +186,62 @@ describe('usePantryItemSuggestions', () => {
     expect(result.current.grouped.popular).toHaveLength(1);
     expect(result.current.grouped.frequentlyAdded).toHaveLength(1);
     expect(result.current.grouped.recentlyDeleted).toHaveLength(1);
+  });
+
+  describe('the context a row shows in place of its category', () => {
+    const litres: Pick<Suggestion, 'defaultUnitId' | 'defaultUnit'> = {
+      defaultUnitId: 'unit-l',
+      defaultUnit: {
+        __typename: 'SuggestionUnit',
+        id: 'unit-l',
+        symbol: 'L',
+      },
+    };
+
+    const firstRows = async (suggestion: Suggestion) => {
+      const { result } = renderHookWithApollo(
+        () => usePantryItemSuggestions({ pantryId: 'pantry-1' }),
+        { operationMocks: [buildMock([suggestion])] },
+      );
+      await waitFor(() => expect(result.current.state).toBe('ready'));
+      return result.current.grouped;
+    };
+
+    it('says how much a low-stock stack has left', async () => {
+      const grouped = await firstRows(
+        makeSuggestion({ currentQuantity: 2, ...litres }),
+      );
+      expect(grouped.lowStock?.[0]?.subtitle).toBe('2 L left');
+    });
+
+    it('names no amount when the unit it has is not the stack unit', async () => {
+      // The API's `defaultUnit` on a held-stack row is the item's default.
+      const grouped = await firstRows(
+        makeSuggestion({
+          currentQuantity: 2,
+          ...litres,
+          defaultUnitId: 'unit-kg',
+        }),
+      );
+      expect(grouped.lowStock?.[0]?.subtitle).toBeNull();
+    });
+
+    it('says when an expiring stack expires', async () => {
+      const grouped = await firstRows(
+        makeSuggestion({
+          source: PantrySuggestionSource.ExpiringSoon,
+          daysUntilExpiry: 1,
+        }),
+      );
+      expect(grouped.expiringSoon?.[0]?.subtitle).toBe('Expires tomorrow');
+    });
+
+    it('leaves a catalog row to its category', async () => {
+      const grouped = await firstRows(
+        makeSuggestion({ source: PantrySuggestionSource.Popular }),
+      );
+      expect(grouped.popular?.[0]?.subtitle).toBeNull();
+    });
   });
 
   it('is empty when the server has no suggestions', async () => {

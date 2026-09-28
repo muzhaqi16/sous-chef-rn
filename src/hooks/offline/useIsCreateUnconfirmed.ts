@@ -6,8 +6,9 @@ const subscribe = (onStoreChange: () => void) =>
 
 /**
  * Whether `id` names a local-first create the server hasn't acknowledged. Detail
- * queries on a client-minted id pass this to `skip` — the row does not exist
- * server-side yet, so the read could only come back `RESOURCE_NOT_FOUND`.
+ * queries and event subscriptions on a client-minted id pass this to `skip` —
+ * the row does not exist server-side yet, so the read could only come back
+ * `RESOURCE_NOT_FOUND` and the subscription `FORBIDDEN`.
  */
 export const useIsCreateUnconfirmed = (
   id: string | null | undefined,

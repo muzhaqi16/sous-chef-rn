@@ -23,7 +23,6 @@ import {
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
 import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
-import { useSubscriptionRejected } from '#/services/subscriptions/rejectedSubscriptions';
 import {
   CacheStrategy,
   type SubscriptionApolloClient,
@@ -36,10 +35,11 @@ import {
   createRemoveFromQueryConnectionUpdater,
   skipUnmatchedFilterVariants,
 } from '#/apollo/utils/cacheUpdaters';
-import { useIsHomeSelectionReady, useSelectedHomeId } from '#store/useAppStore';
+import { useSelectedHomeId } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { logger } from '#/utils/environment';
 import { useSubscriptionTransportRecovery } from '#hooks/subscriptions/useSubscriptionTransportRecovery';
+import { useEntitySubscriptionSkip } from '#hooks/subscriptions/useEntitySubscriptionSkip';
 
 type MealPlanEventsPayload = MealPlanEventsSubscription['mealPlanEvents'];
 
@@ -320,8 +320,10 @@ function handleTemplateItemChanged(
  */
 export function useMealPlanSubscriptions(userId?: string) {
   const selectedHomeId = useSelectedHomeId() ?? undefined;
-  const isHomeSelectionReady = useIsHomeSelectionReady();
-  const rejected = useSubscriptionRejected(MealPlanEventsDocument);
+  const mealPlanSkip = useEntitySubscriptionSkip(
+    MealPlanEventsDocument,
+    selectedHomeId,
+  );
 
   const eventHandlers = subscriptionService.register<MealPlanEventsPayload>({
     document: MealPlanEventsDocument,
@@ -365,7 +367,6 @@ export function useMealPlanSubscriptions(userId?: string) {
     },
   });
 
-  const mealPlanSkip = !selectedHomeId || !isHomeSelectionReady || rejected;
   const mealPlanEvents = useSubscription(MealPlanEventsDocument, {
     // `skip` holds while there is no home, so the empty id is never sent.
     variables: { homeId: selectedHomeId ?? '' },

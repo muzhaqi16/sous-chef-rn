@@ -33,6 +33,7 @@ import { usePantryImagePreload } from '#features/pantry/hooks/usePantryImagePrel
 import { useOverlayBackdropPresence } from '#components/providers/OverlayBackdropProvider';
 import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
+import { RowReflowContext, useRowReflow } from '#hooks/animations/useRowReflow';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 
@@ -125,6 +126,7 @@ export const PantryContent = React.forwardRef<
     const { t } = useTranslation();
     const { bottom: safeBottom } = useSafeAreaInsets();
     const flashListRef = useRef<FlashListRef<PantryListNode>>(null);
+    const reflow = useRowReflow(flashListRef, onScrollBeginDrag);
     const settingsIconRef = useRef<View>(null);
 
     useImperativeHandle(ref, () => ({
@@ -182,8 +184,7 @@ export const PantryContent = React.forwardRef<
       onItemEdit,
       onItemDelete: onItemDelete
         ? (id: string) => {
-            flashListRef.current?.prepareForLayoutAnimationRender();
-            onItemDelete(id);
+            reflow.removeRow(() => onItemDelete(id));
           }
         : undefined,
       onItemConsume,
@@ -434,70 +435,72 @@ export const PantryContent = React.forwardRef<
             {overlayVisible ? (
               <PantryListSkeletonOverlay style={styles.overlayGutter} />
             ) : null}
-            <FlashList<PantryListNode>
-              renderScrollComponent={SwipeAwareScrollComponent}
-              ref={flashListRef}
-              CellRendererComponent={perfCallbacks.CellRendererComponent}
-              testID={pantryTestIDs.list}
-              data={listData}
-              renderItem={renderItem}
-              keyExtractor={pantryListKeyExtractor}
-              drawDistance={DRAW_DISTANCE}
-              maxItemsInRecyclePool={15}
-              extraData={extraData}
-              contentContainerStyle={listContentStyle}
-              showsVerticalScrollIndicator={false}
-              onScroll={scrollHandler}
-              onScrollBeginDrag={onScrollBeginDrag}
-              onScrollEndDrag={onScrollEndDrag}
-              onMomentumScrollEnd={onMomentumScrollEnd}
-              scrollEventThrottle={16}
-              refreshControl={
-                onRefresh ? (
-                  <ThemedRefreshControl
-                    testID={pantryTestIDs.refreshControl}
-                    refreshing={refreshing}
-                    onRefresh={onRefresh}
-                  />
-                ) : undefined
-              }
-              ListFooterComponent={
-                !footerVisible ? null : isEmpty ? (
-                  <PantryEmptyState
-                    showSkeletons={showSkeletons}
-                    searchQuery={searchQuery}
-                    itemCount={items.length}
-                    locationFilter={locationFilter}
-                    tabs={resolvedTabs}
-                    onAddItem={onAddItem}
-                    noHomeSelected={noHomeSelected}
-                    noHomes={noHomes}
-                    noPantries={noPantries}
-                    onSelectHome={onSelectHome}
-                    onCreatePantry={onCreatePantry}
-                    overallItemCount={locationCounts.all ?? 0}
-                    failure={itemsFailure}
-                  />
-                ) : (
-                  <PaginationFooter
-                    hasMore={hasMore}
-                    isFetchingMore={isLoadingMore}
-                    itemCount={bodyItems.length}
-                    SkeletonComponent={PantryItemSkeleton}
-                    skeletonCount={3}
-                  />
-                )
-              }
-              onEndReached={handleEndReached}
-              onEndReachedThreshold={
-                FLASHLIST_DEFAULTS.analyticsHeavyFullScreen
-                  .onEndReachedThreshold
-              }
-              onLoad={perfCallbacks.onLoad}
-              onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
-              onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
-              maintainVisibleContentPosition={MVCP_DISABLED}
-            />
+            <RowReflowContext.Provider value={reflow.reflowing}>
+              <FlashList<PantryListNode>
+                renderScrollComponent={SwipeAwareScrollComponent}
+                ref={flashListRef}
+                CellRendererComponent={perfCallbacks.CellRendererComponent}
+                testID={pantryTestIDs.list}
+                data={listData}
+                renderItem={renderItem}
+                keyExtractor={pantryListKeyExtractor}
+                drawDistance={DRAW_DISTANCE}
+                maxItemsInRecyclePool={15}
+                extraData={extraData}
+                contentContainerStyle={listContentStyle}
+                showsVerticalScrollIndicator={false}
+                onScroll={scrollHandler}
+                onScrollBeginDrag={reflow.onScrollBeginDrag}
+                onScrollEndDrag={onScrollEndDrag}
+                onMomentumScrollEnd={onMomentumScrollEnd}
+                scrollEventThrottle={16}
+                refreshControl={
+                  onRefresh ? (
+                    <ThemedRefreshControl
+                      testID={pantryTestIDs.refreshControl}
+                      refreshing={refreshing}
+                      onRefresh={onRefresh}
+                    />
+                  ) : undefined
+                }
+                ListFooterComponent={
+                  !footerVisible ? null : isEmpty ? (
+                    <PantryEmptyState
+                      showSkeletons={showSkeletons}
+                      searchQuery={searchQuery}
+                      itemCount={items.length}
+                      locationFilter={locationFilter}
+                      tabs={resolvedTabs}
+                      onAddItem={onAddItem}
+                      noHomeSelected={noHomeSelected}
+                      noHomes={noHomes}
+                      noPantries={noPantries}
+                      onSelectHome={onSelectHome}
+                      onCreatePantry={onCreatePantry}
+                      overallItemCount={locationCounts.all ?? 0}
+                      failure={itemsFailure}
+                    />
+                  ) : (
+                    <PaginationFooter
+                      hasMore={hasMore}
+                      isFetchingMore={isLoadingMore}
+                      itemCount={bodyItems.length}
+                      SkeletonComponent={PantryItemSkeleton}
+                      skeletonCount={3}
+                    />
+                  )
+                }
+                onEndReached={handleEndReached}
+                onEndReachedThreshold={
+                  FLASHLIST_DEFAULTS.analyticsHeavyFullScreen
+                    .onEndReachedThreshold
+                }
+                onLoad={perfCallbacks.onLoad}
+                onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
+                onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
+                maintainVisibleContentPosition={MVCP_DISABLED}
+              />
+            </RowReflowContext.Provider>
           </View>
 
           <PantrySortModal

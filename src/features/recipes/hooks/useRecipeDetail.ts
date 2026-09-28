@@ -36,6 +36,7 @@ export function useRecipeDetail() {
     isBackendRecipe: data.isBackendRecipe,
     backendRecipe: data.backendRecipe,
     saveRecipeToFavorites: preload.saveRecipeToFavorites,
+    saveBackendRecipeToFavorites: preload.saveBackendRecipeToFavorites,
     savingToFavorites: preload.savingToFavorites,
   });
 

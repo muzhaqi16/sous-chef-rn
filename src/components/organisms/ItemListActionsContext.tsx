@@ -6,8 +6,8 @@ import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 export interface ItemListActions {
   onItemPress: (id: string) => void;
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
-  /** Run by a row before a `removesRow` action fires. */
-  onBeforeRowRemoved?: () => void;
+  /** Runs a row's `removesRow` action, so the list can reflow around it. */
+  onRemoveRow?: (commit: () => void) => void;
 }
 
 const actionsContext = createActionsContext<ItemListActions>(

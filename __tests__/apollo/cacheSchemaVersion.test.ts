@@ -29,7 +29,7 @@ import { createHash } from 'crypto';
  *
  * Re-record by running this test: the failure message prints the new hash.
  */
-const REVIEWED_CACHE_POLICY_HASH = '7ea806a0f654c54b';
+const REVIEWED_CACHE_POLICY_HASH = 'c2f664b1f2db903e';
 
 const FEATURES = join('src', 'features');
 
@@ -56,8 +56,9 @@ const shapeFiles = (): string[] => {
  * redefinition are different reasons to purge, and only the first moves the
  * hash above. Without this, a bump made for the second reason is invisible.
  */
-// shape-4: the API re-expressed dozen stacks in pieces (a dozen is only shown).
-const REVIEWED_CACHE_VERSION = 'shape-4';
+// shape-5: suggestions became one object of sections; purges the per-source
+// entries nothing reads.
+const REVIEWED_CACHE_VERSION = 'shape-5';
 
 it('the persisted cache version matches the decision recorded here', () => {
   const source = readFileSync(

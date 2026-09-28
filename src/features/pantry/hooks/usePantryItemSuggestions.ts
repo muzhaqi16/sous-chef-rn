@@ -11,17 +11,42 @@ import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#/services/errorService';
 import type { SuggestionsHookResult } from '#features/catalog/ui/AddItemSheet/types';
 import { useToday } from '#hooks/useToday';
+import { useTranslation } from '#/i18n';
+import type { Translate } from '#/i18n/types';
+import { expiryLabel } from '#domain/expiry';
+import {
+  formatQuantityDisplay,
+  getUnitDisplayText,
+} from '#utils/formatQuantity';
 
 /**
- * Per-source fetch limit. Each section is fetched with its own quota, and the
- * sheet shows a small preview that drills into the full per-source list, so this
- * is generous enough to back the drill-down without a second round-trip.
+ * Per-section limit. The sheet shows a small preview of each section that drills
+ * into the full list, so this backs the drill-down without a second round-trip.
  */
 export const PANTRY_SUGGESTIONS_LIMIT = 20;
 
-type PantryItemSuggestion = NonNullable<
+type Sections = NonNullable<
   GetPantryItemSuggestionsQuery['pantry']
->['popular'][number];
+>['suggestions'];
+type SuggestionRow = Sections['popular'][number];
+type PantryItemSuggestion = SuggestionRow & { subtitle: string | null };
+
+/** How much a low-stock stack holds, when the row can name its unit. */
+const amountLeft = (row: Sections['lowStock'][number], t: Translate) => {
+  const { currentQuantity, defaultUnit } = row;
+  // On a held-stack row the API's `defaultUnit` is the item's default, which
+  // need not be the stack's own unit (`defaultUnitId`).
+  if (currentQuantity === null || defaultUnit?.id !== row.defaultUnitId) {
+    return null;
+  }
+  return t('addToPantry.amountLeft', {
+    count: currentQuantity,
+    amount: formatQuantityDisplay(
+      currentQuantity,
+      getUnitDisplayText(defaultUnit),
+    ),
+  });
+};
 
 interface UsePantryItemSuggestionsOptions {
   pantryId: string | undefined;
@@ -34,6 +59,7 @@ export function usePantryItemSuggestions({
   limit = PANTRY_SUGGESTIONS_LIMIT,
   skip = false,
 }: UsePantryItemSuggestionsOptions): SuggestionsHookResult<PantryItemSuggestion> {
+  const { t } = useTranslation();
   const today = useToday();
   const skipped = skip || !pantryId;
 
@@ -46,40 +72,53 @@ export function usePantryItemSuggestions({
 
   useApolloErrorLogger(GetPantryItemSuggestionsDocument, error);
 
-  // Each source arrives in its own aliased array (own quota); attach the
-  // resolved image URL the rows render.
-  const withImage = (s: PantryItemSuggestion) => ({
-    ...s,
-    imageUrl: resolveImageUrl(s),
+  // The resolved image URL the rows render, and the context line a section
+  // shows in place of the category.
+  const toRow = (
+    row: SuggestionRow,
+    subtitle: string | null = null,
+  ): PantryItemSuggestion => ({
+    ...row,
+    imageUrl: resolveImageUrl(row),
+    subtitle,
   });
 
-  const pantry = data?.pantry;
+  const sections = data?.pantry?.suggestions;
   const grouped = {
-    lowStock: (pantry?.lowStock ?? []).map(withImage),
-    expiringSoon: (pantry?.expiringSoon ?? []).map(withImage),
-    recentlyDeleted: (pantry?.recentlyDeleted ?? []).map(withImage),
-    frequentlyAdded: (pantry?.frequentlyAdded ?? []).map(withImage),
-    popular: (pantry?.popular ?? []).map(withImage),
+    lowStock: (sections?.lowStock ?? []).map(row =>
+      toRow(row, amountLeft(row, t)),
+    ),
+    expiringSoon: (sections?.expiringSoon ?? []).map(row =>
+      toRow(
+        row,
+        row.daysUntilExpiry === null
+          ? null
+          : expiryLabel(row.daysUntilExpiry, t),
+      ),
+    ),
+    recentlyDeleted: (sections?.recentlyDeleted ?? []).map(row => toRow(row)),
+    frequentlyAdded: (sections?.frequentlyAdded ?? []).map(row => toRow(row)),
+    popular: (sections?.popular ?? []).map(row => toRow(row)),
   };
 
   // Preload suggestion images into disk cache for instant display. Keyed on the
   // Apollo result, which only changes when the data does — the derived arrays
   // above are rebuilt on every render.
   useEffect(() => {
-    if (!pantry) return;
+    if (!sections) return;
     const urls = [
-      ...pantry.lowStock,
-      ...pantry.expiringSoon,
-      ...pantry.recentlyDeleted,
-      ...pantry.frequentlyAdded,
-      ...pantry.popular,
+      ...sections.lowStock,
+      ...sections.expiringSoon,
+      ...sections.recentlyDeleted,
+      ...sections.frequentlyAdded,
+      ...sections.popular,
     ]
       .map(s => resolveImageUrl(s))
       .filter((url): url is string => !!url);
     if (urls.length > 0) {
       preloadImages(urls);
     }
-  }, [pantry]);
+  }, [sections]);
 
   const state = useDataState({
     loading,

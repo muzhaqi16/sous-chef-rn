@@ -4,14 +4,22 @@
  * `PantryEvents` is a thin event — the envelope plus the changed entity's id —
  * so what these pin is which events are worth a read-back and which are not.
  */
-import { act } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
+import { useApolloClient } from '@apollo/client/react';
 import { makeCache } from '#/apollo/cache';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderHookWithApollo,
+  type QueryDataFor,
+} from '#/test-utils/apolloMockProvider';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { MutationType, PantrySubtype } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
 import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscriptions';
 import { PantryEventsDocument } from '#features/pantry/graphql/pantry.generated';
+import { PantrySummaryForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
+import { toDateKey } from '#/utils/dateUtils';
 
 type CapturedOnData = (data: unknown, client: unknown) => void;
 
@@ -64,6 +72,19 @@ const makeClient = (
   query: jest.Mock = jest.fn().mockResolvedValue({ data: {} }),
 ) => ({ cache: { readFragment }, query });
 
+/** The coalesced stats read-back fires on a timer; run it and let it settle. */
+const flushSummaryRead = async () => {
+  await act(async () => {
+    jest.runOnlyPendingTimers();
+  });
+};
+
+const summaryReads = (query: jest.Mock) =>
+  query.mock.calls.filter(
+    ([options]) =>
+      (options as { query: unknown }).query === PantrySummaryForEventDocument,
+  );
+
 /** The read-back is a promise, so the handler finishes a microtask later. */
 const deliver = async (
   onData: CapturedOnData,
@@ -115,7 +136,7 @@ describe('usePantrySubscriptions', () => {
     );
   });
 
-  it('removes a deleted item without a read-back', async () => {
+  it('removes a deleted item without reading it back, then recounts the pantry', async () => {
     const getOnData = captureCustomOnData();
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));
     const client = makeClient();
@@ -128,8 +149,13 @@ describe('usePantrySubscriptions', () => {
       'item-1',
       { evictItem: true },
     );
-    // The id is the whole event — nothing to fetch.
+    // The id is the whole event — nothing to fetch for the row itself.
     expect(client.query).not.toHaveBeenCalled();
+
+    // But the counts are derived and never pushed.
+    await flushSummaryRead();
+    expect(client.query).toHaveBeenCalledTimes(1);
+    expect(summaryReads(client.query)).toHaveLength(1);
   });
 
   it('reads an item added elsewhere back before adding it', async () => {
@@ -177,8 +203,11 @@ describe('usePantrySubscriptions', () => {
     const client = makeClient(jest.fn().mockReturnValue(null));
 
     await deliver(getOnData(), itemEvent(MutationType.ItemUpdated), client);
+    await flushSummaryRead();
 
-    expect(client.query).not.toHaveBeenCalled();
+    // Only the counts, which an update elsewhere can still move.
+    expect(client.query).toHaveBeenCalledTimes(1);
+    expect(summaryReads(client.query)).toHaveLength(1);
     expect(mockAddToConnection).not.toHaveBeenCalled();
   });
 
@@ -211,8 +240,12 @@ describe('usePantrySubscriptions', () => {
       itemEvent(MutationType.ItemAdded, 'user-1'),
       client,
     );
+    await flushSummaryRead();
 
-    expect(client.query).not.toHaveBeenCalled();
+    // The response applied the row; only the counts, which a local write
+    // moves just in part, are read back.
+    expect(summaryReads(client.query)).toHaveLength(1);
+    expect(client.query).toHaveBeenCalledTimes(1);
     expect(mockAddToConnection).not.toHaveBeenCalled();
   });
 
@@ -223,34 +256,47 @@ describe('usePantrySubscriptions', () => {
     const client = makeClient();
 
     await deliver(getOnData(), itemEvent(MutationType.ItemUpdated), client);
+    await flushSummaryRead();
 
     expect(client.query).not.toHaveBeenCalled();
     expect(mockRemoveFromConnection).not.toHaveBeenCalled();
   });
 
-  it('coalesces a burst of pantry-stat events into one read', async () => {
-    // The stats are derived, so the server can emit PANTRY_UPDATED per item
-    // change. They are aggregates — the last read wins.
+  it('recounts once for a burst of deletes made elsewhere', async () => {
+    // The counts are aggregates, so the last read wins: one read however many
+    // rows another device just cleared.
     const getOnData = captureCustomOnData();
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));
     const client = makeClient();
-    const statEvent = {
-      subtype: PantrySubtype.PantryUpdated,
-      mutation: MutationType.Updated,
-      pantryId: 'pantry-1',
-      actorUserId: 'user-2',
-      node: { __typename: 'Pantry', id: 'pantry-1' },
-    };
 
-    await deliver(getOnData(), statEvent, client);
-    await deliver(getOnData(), statEvent, client);
-    await deliver(getOnData(), statEvent, client);
+    for (let i = 0; i < 12; i++) {
+      await deliver(getOnData(), itemEvent(MutationType.ItemRemoved), client);
+    }
 
     expect(client.query).not.toHaveBeenCalled();
-    await act(async () => {
-      jest.runOnlyPendingTimers();
-    });
-    expect(client.query).toHaveBeenCalledTimes(1);
+    await flushSummaryRead();
+    expect(summaryReads(client.query)).toHaveLength(1);
+  });
+
+  it('re-reads the pantry summary when its metadata changes', async () => {
+    const getOnData = captureCustomOnData();
+    renderHookWithApollo(() => usePantrySubscriptions('user-1'));
+    const client = makeClient();
+
+    await deliver(
+      getOnData(),
+      {
+        subtype: PantrySubtype.PantryUpdated,
+        mutation: MutationType.Updated,
+        pantryId: 'pantry-1',
+        actorUserId: 'user-2',
+        node: { __typename: 'Pantry', id: 'pantry-1' },
+      },
+      client,
+    );
+    await flushSummaryRead();
+
+    expect(summaryReads(client.query)).toHaveLength(1);
   });
 
   describe('echo suppression', () => {
@@ -267,8 +313,11 @@ describe('usePantrySubscriptions', () => {
         },
         client,
       );
+      await flushSummaryRead();
 
-      expect(client.query).not.toHaveBeenCalled();
+      // No read-back of the row; the counts only.
+      expect(client.query).toHaveBeenCalledTimes(1);
+      expect(summaryReads(client.query)).toHaveLength(1);
     });
 
     it('applies a write the SAME user made on another device', async () => {
@@ -366,5 +415,112 @@ describe('usePantrySubscriptions: event envelope and the cache', () => {
 
     expect(cache.extract()['PantryItem:item-1']).toBeUndefined();
     expect(cache.extract().ROOT_SUBSCRIPTION).toBeUndefined();
+  });
+});
+
+describe('usePantrySubscriptions: the counts after a change made elsewhere', () => {
+  const summary = (
+    count: number,
+  ): QueryDataFor<typeof PantrySummaryForEventDocument> => ({
+    __typename: 'Query',
+    pantry: {
+      __typename: 'Pantry',
+      id: 'pantry-1',
+      name: 'Kitchen Pantry',
+      description: null,
+      isDefault: true,
+      version: 1,
+      stats: {
+        __typename: 'PantryStats',
+        totalItems: count,
+        expiringCount: 0,
+        expiredCount: 0,
+        lowStockCount: 0,
+        storageStateCounts: {
+          __typename: 'StorageStateCounts',
+          refrigerated: 0,
+          frozen: 0,
+          ambient: count,
+          none: 0,
+        },
+        storageLocationCounts: [],
+      },
+    },
+  });
+
+  it('brings the header and tab counts back in line with the rows', async () => {
+    // Another device cleared 12 rows: each event removes its row, and nothing
+    // else moved the counts until they were read back.
+    const variables = { id: 'pantry-1', today: toDateKey(new Date()) };
+    const cache = makeCache();
+    cache.writeQuery({
+      query: PantrySummaryForEventDocument,
+      variables,
+      data: summary(14),
+    });
+    const read = recordMock(PantrySummaryForEventDocument, {
+      data: summary(2),
+    });
+    const getOnData = captureCustomOnData();
+    const { result } = renderHookWithApollo(
+      () => {
+        usePantrySubscriptions('user-1');
+        return useApolloClient();
+      },
+      { cache, operationMocks: [read.mock] },
+    );
+
+    for (let i = 0; i < 12; i++) {
+      await deliver(
+        getOnData(),
+        {
+          ...itemEvent(MutationType.ItemRemoved),
+          originatorClientId: 'device_other',
+        },
+        result.current,
+      );
+    }
+    await flushSummaryRead();
+    await waitFor(() => expect(read.fired).toEqual([variables]));
+    // MockLink answers on a timer of its own.
+    await flushSummaryRead();
+
+    const stats = cache.readQuery({
+      query: PantrySummaryForEventDocument,
+      variables,
+    })?.pantry?.stats;
+    expect(stats?.totalItems).toBe(2);
+    expect(stats?.storageStateCounts?.ambient).toBe(2);
+  });
+});
+
+describe('usePantrySubscriptions: a pantry the server has not created yet', () => {
+  afterEach(() => {
+    unconfirmedCreates.confirm('pantry-1');
+  });
+
+  it('subscribes only once its create is acknowledged', async () => {
+    // Refused before the create lands, a subscription completes and nothing
+    // reopens it — so opening early costs the session its events.
+    unconfirmedCreates.mark('pantry-1');
+    const events = recordMock(PantryEventsDocument, {
+      error: new Error('stream ended'),
+    });
+
+    renderHookWithApollo(() => usePantrySubscriptions('user-1'), {
+      operationMocks: [events.mock],
+    });
+    await act(async () => {
+      jest.runOnlyPendingTimers();
+    });
+    expect(events.fired).toHaveLength(0);
+
+    act(() => {
+      unconfirmedCreates.confirm('pantry-1');
+    });
+
+    await waitFor(() =>
+      expect(events.fired).toContainEqual({ pantryId: 'pantry-1' }),
+    );
   });
 });

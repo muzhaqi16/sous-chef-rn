@@ -22,11 +22,6 @@ export const CHANNEL_SETTINGS: SettingDef[] = [
     titleKey: 'notifications.emailNotifications',
     descriptionKey: 'notifications.emailNotificationsDesc',
   },
-  {
-    key: 'smsEnabled',
-    titleKey: 'notifications.smsNotifications',
-    descriptionKey: 'notifications.smsNotificationsDesc',
-  },
 ];
 
 export const PANTRY_SETTINGS: SettingDef[] = [
@@ -143,3 +138,9 @@ export const getThresholdOptions = (t: Translate) =>
     label: thresholdLabel(t, days),
     value: String(days),
   }));
+
+// The API reads the threshold only for the daily and real-time ladder: a weekly
+// digest spans its own 7-day window, and NEVER sends nothing.
+export const thresholdApplies = (frequency: ExpirationFrequency): boolean =>
+  frequency !== ExpirationFrequency.WeeklyDigest &&
+  frequency !== ExpirationFrequency.Never;

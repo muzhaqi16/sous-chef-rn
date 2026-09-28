@@ -26,14 +26,12 @@ type HomeNode = GetHomesQuery['homes']['edges'][number]['node'];
 interface UseHomeInvitationsOptions {
   homes: HomeNode[] | null;
   refetch: () => Promise<void>;
-  setDefaultHome: (homeId: string) => Promise<boolean>;
   setSelectedHomeId: (homeId: string) => void;
 }
 
 export function useHomeInvitations({
   homes,
   refetch,
-  setDefaultHome,
   setSelectedHomeId,
 }: UseHomeInvitationsOptions) {
   const [inviteUserMutation] = useMutation(InviteToHomeDocument, {
@@ -121,13 +119,12 @@ export function useHomeInvitations({
 
     // The PROP, not a cache read: the question is whether the user had zero
     // homes BEFORE this join, and the prop is that pre-join snapshot (a cache
-    // read would race the un-awaited `refetch()`). `setDefaultHome` must not
-    // require a local record, since the joined home is in neither yet.
+    // read would race the un-awaited `refetch()`). No `MarkHomeAsDefault`: the
+    // server makes a first joined home the default, and `useDefaultHome`
+    // adopts its pantry once the homes list holds it.
     const { homeId } = payload.membership;
     if ((homes ?? []).length === 0) {
       setSelectedHomeId(homeId);
-      // Presents its own failure and rolls the selection back.
-      void setDefaultHome(homeId);
     }
 
     alertService.alert(t('labels.success'), t('home.joinSuccessBody'));

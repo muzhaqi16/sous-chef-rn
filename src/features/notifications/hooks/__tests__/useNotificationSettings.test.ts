@@ -42,7 +42,6 @@ const mockPreferencesData: StoredPreferences = {
   id: 'pref-1',
   emailEnabled: true,
   pushEnabled: true,
-  smsEnabled: false,
   expirationNotifications: true,
   expirationNotificationFrequency: ExpirationFrequency.DailyMorning,
   expirationDaysThreshold: 5,
@@ -163,7 +162,6 @@ describe('useNotificationSettings', () => {
     );
     expect(result.current.settings.emailEnabled).toBe(true);
     expect(result.current.settings.pushEnabled).toBe(true);
-    expect(result.current.settings.smsEnabled).toBe(false);
   });
 
   it('returns defaults when no preferences data', async () => {
@@ -334,7 +332,7 @@ describe('useNotificationSettings', () => {
     });
   });
 
-  it('resetToDefaults sends default values', async () => {
+  it("resetToDefaults sends the API's new-account defaults", async () => {
     const update = recordMock(UpdateNotificationPreferencesDocument, {
       data: updatedPrefs({ pushEnabled: false }),
     });
@@ -351,7 +349,34 @@ describe('useNotificationSettings', () => {
       success = await result.current.resetToDefaults();
     });
 
-    expect(update.fired.length).toBeGreaterThan(0);
+    expect(update.fired).toContainEqual({
+      input: {
+        channels: { emailEnabled: false, pushEnabled: false },
+        expiration: {
+          expirationNotifications: false,
+          expirationNotificationFrequency: 'DAILY_MORNING',
+          expirationDaysThreshold: 3,
+        },
+        features: {
+          lowStockAlerts: false,
+          pantryChanges: false,
+          shoppingListUpdates: false,
+          collaborationInvites: true,
+          homeInvites: true,
+          sharedListUpdates: false,
+          recipeRecommendations: false,
+          mealPlanReminders: false,
+          cookingReminders: false,
+          weeklyDigest: false,
+          monthlyReport: false,
+        },
+        quietHours: {
+          quietHoursEnabled: false,
+          quietHoursStart: '22:00',
+          quietHoursEnd: '08:00',
+        },
+      },
+    });
     expect(success).toBe(true);
   });
 

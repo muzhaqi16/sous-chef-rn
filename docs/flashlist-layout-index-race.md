@@ -124,10 +124,12 @@ with `inactiveBehavior: 'pause'` — a resumed `Activity` subtree re-renders at 
 Offscreen lane, which is also interruptible. They sit under `HomeTabs`
 (`inactiveBehavior: 'none'`) today.
 
-This also unblocks the pantry row-reflow animation (rows sliding up to fill a
-deleted row's gap), which was attempted twice and reverted because the delete
+This also unblocked the row-reflow animation (rows sliding up to fill a deleted
+row's gap), which had been attempted twice and reverted because the delete
 landed in a deferred second commit that `prepareForLayoutAnimationRender()` had
-not armed. With the delete now committing synchronously, that blocker is gone.
+not armed. It shipped as `useRowReflow` (`docs/ui-layer.md` § Row actions):
+the removal still commits synchronously, one ordinary commit after the one that
+attaches the transition — never through `useDeferredValue` or a transition.
 
 ## Validation (2026-08-20, Android dev build, DevTools attached)
 

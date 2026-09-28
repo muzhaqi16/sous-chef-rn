@@ -1,10 +1,13 @@
 import { sizes } from '#/theme/foundations/sizes';
 
 /**
- * The floating tab bar's height, and the single definition of it: the bar
- * renders at this height and every list's bottom padding is derived from it.
+ * The floating tab bar's height with its labels shown — the tallest it gets, so
+ * every list's bottom padding clears this whichever height the bar renders at.
  */
-export const TAB_BAR_HEIGHT = 65;
+export const TAB_BAR_HEIGHT = 60;
+
+/** The floating tab bar's height with its labels hidden: the icon row alone. */
+export const TAB_BAR_ICON_ONLY_HEIGHT = 48;
 
 /** The gap between the bar's top edge and the action button floating above it. */
 export const FLOATING_BUTTON_GAP = 12;

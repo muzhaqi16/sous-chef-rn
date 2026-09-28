@@ -186,7 +186,7 @@ export function AddItemSheet<
         key={item.id}
         imageUrl={item.imageUrl}
         title={item.name}
-        subtitle={item.category}
+        subtitle={item.subtitle ?? item.category}
         placeholderIcon={config.placeholderIcon}
         onQuickAdd={() => onQuickAddSuggestion(item)}
         onDismiss={

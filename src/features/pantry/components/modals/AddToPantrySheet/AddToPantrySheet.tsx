@@ -9,6 +9,7 @@ import {
 import { useAddToPantry } from '#features/pantry/hooks/mutations/useAddToPantry';
 import { toastService } from '#/services/toastService';
 import {
+  PantrySuggestionSource,
   SuggestionSurface,
   type ItemSuggestion,
 } from '#/graphql/generated/schemaTypes';
@@ -18,6 +19,13 @@ import { AddItemSheet } from '#features/catalog/ui/AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '#features/catalog/ui/AddItemSheet/useAddItemSheetState';
 import { pantrySheetConfig } from '#features/pantry/components/modals/AddToPantrySheet/pantrySheetConfig';
 import { AddDetailsSheet } from './AddDetailsSheet';
+
+/** The stack a low-stock or expiring row names; an Add Again row's is removed. */
+const heldStackOf = (row: PantryItemSuggestion) =>
+  row.source === PantrySuggestionSource.LowStock ||
+  row.source === PantrySuggestionSource.ExpiringSoon
+    ? row.pantryItemId
+    : null;
 
 interface AddToPantrySheetProps {
   visible: boolean;
@@ -183,6 +191,16 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         pantryItem.name,
         cachedDuplicate.quantity,
       );
+      pendingItemIds.current.delete(pantryItem.itemId);
+      return;
+    }
+
+    // Past the loaded window the cache cannot see the stack, but the row names
+    // it: a create would be refused as a duplicate, and dropped on an offline
+    // replay.
+    const heldStackId = heldStackOf(pantryItem);
+    if (heldStackId) {
+      await runRestock(heldStackId, pantryItem.name, null);
       pendingItemIds.current.delete(pantryItem.itemId);
       return;
     }

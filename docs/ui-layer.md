@@ -438,9 +438,21 @@ they read it.
   with builders in `SwipeableItem/commonActions.ts`. A domain-flavoured action
   belongs to its feature (`src/features/pantry/components/pantrySwipeActions.ts`).
 - **`removesRow: true`** tells the row renderer (`ItemCard`, `SortableItem`) to
-  slide the row out, calling FlashList's `prepareForLayoutAnimationRender()`
-  first. `SwipeableItem` ignores it, since the swipe organism has no opinion
-  about the list around it.
+  slide the row out, then hands the action to the list (`onRemoveRow`), which
+  runs it through `useRowReflow` so the rows below slide up into the gap.
+  `SwipeableItem` ignores it, since the swipe organism has no opinion about the
+  list around it.
+- **A FlashList that removes rows reflows through `useRowReflow`**
+  (`src/hooks/animations/useRowReflow.ts`): `removeRow(commit)` for the
+  removal, `RowReflowContext.Provider value={reflowing}` around the list, and
+  the hook's `onScrollBeginDrag` (it wraps the list's own) on the FlashList.
+  The cell renderer then animates
+  each cell's `top` with a CSS transition — attached one commit BEFORE the
+  removal (in the same commit it animates nothing) and detached on drag (while
+  attached, every recycled cell animates across the viewport). FlashList's
+  `prepareForLayoutAnimationRender()` only turns recycling off for one commit;
+  it animates nothing on its own. Verified:
+  `#reanimated-css-transitions-need-a-baseline-commit`.
 
 ## Dynamic forms
 

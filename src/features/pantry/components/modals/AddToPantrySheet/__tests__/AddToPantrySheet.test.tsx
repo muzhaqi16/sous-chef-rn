@@ -9,7 +9,10 @@ import {
   CreatePantryItemDocument,
   RestockPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  PantrySuggestionSource,
+} from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { AddToPantrySheet } from '../AddToPantrySheet';
 
@@ -662,6 +665,83 @@ describe('AddToPantrySheet', () => {
       quickAdd({ id: 'item-other', name: 'Eggs' });
 
       await waitFor(() => expect(create.fired).toHaveLength(1));
+    });
+  });
+
+  describe('a row that names its stack', () => {
+    const suggestionRow = (
+      source: PantrySuggestionSource,
+      pantryItemId: string,
+    ) => ({
+      __typename: 'PantryItemSuggestion',
+      id: pantryItemId,
+      itemId: 'item-1',
+      name: 'Milk',
+      source,
+      category: null,
+      imageUrl: null,
+      defaultUnitId: 'unit-l',
+      pantryItemId,
+    });
+
+    const recordCreate = () =>
+      recordMock(CreatePantryItemDocument, {
+        data: {
+          createPantryItem: {
+            __typename: 'CreatePantryItemPayload',
+            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+          },
+        },
+      });
+
+    const recordRestock = () =>
+      recordMock(RestockPantryItemDocument, {
+        data: {
+          restockPantryItem: {
+            __typename: 'RestockPantryItemPayload',
+            pantryItemUsage: {
+              __typename: 'PantryItemUsage',
+              id: 'usage-1',
+              pantryItem: { __typename: 'PantryItem', id: 'pi-held' },
+            },
+          },
+        },
+      });
+
+    it('restocks the held stack a low-stock row names, even past the loaded window', async () => {
+      const create = recordCreate();
+      const restock = recordRestock();
+      renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
+        cache: makeCache(),
+        operationMocks: [create.mock, restock.mock],
+      });
+
+      const quickAdd = sheetProps.current.onQuickAddSuggestion as (
+        row: unknown,
+      ) => void;
+      quickAdd(suggestionRow(PantrySuggestionSource.LowStock, 'pi-held'));
+
+      await waitFor(() => expect(restock.fired).toHaveLength(1));
+      expect(restock.fired[0]).toMatchObject({ input: { id: 'pi-held' } });
+      expect(create.fired).toHaveLength(0);
+      expect(toastService.success).toHaveBeenCalledWith('Restocked Milk');
+    });
+
+    it('adds an Add Again row, never restocking the removed stack it names', async () => {
+      const create = recordCreate();
+      const restock = recordRestock();
+      renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
+        cache: makeCache(),
+        operationMocks: [create.mock, restock.mock],
+      });
+
+      const quickAdd = sheetProps.current.onQuickAddSuggestion as (
+        row: unknown,
+      ) => void;
+      quickAdd(suggestionRow(PantrySuggestionSource.RecentlyDeleted, 'pi-old'));
+
+      await waitFor(() => expect(create.fired).toHaveLength(1));
+      expect(restock.fired).toHaveLength(0);
     });
   });
 });

@@ -37,8 +37,8 @@ export const pantryTypePolicies: TypePolicies = {
       // `today` only moves the expiring window; keying on it would empty a warm
       // cache at midnight.
       suggestions: {
-        keyArgs: ['limit', 'sources', 'expirationDays'],
-        merge(existing: unknown = [], incoming: unknown) {
+        keyArgs: ['limit', 'expirationDays'],
+        merge(existing: unknown, incoming: unknown) {
           if (incoming == null) return existing;
           return incoming;
         },
@@ -154,17 +154,6 @@ export const pantryTypePolicies: TypePolicies = {
       storageLocationTree: {
         // Different homes have different storage location trees - cache separately
         keyArgs: ['homeId'],
-        merge(existing: unknown = [], incoming: unknown) {
-          if (incoming == null) {
-            return existing;
-          }
-          return incoming;
-        },
-      },
-      pantryItemSuggestions: {
-        // Different pantries have different suggestions - cache separately
-        // Note: 'limit' excluded from keyArgs to avoid unnecessary cache fragmentation
-        keyArgs: ['pantryId'],
         merge(existing: unknown = [], incoming: unknown) {
           if (incoming == null) {
             return existing;

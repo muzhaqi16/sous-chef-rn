@@ -123,37 +123,11 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       }
     },
   });
-  /**
-   * Re-ingests with per-ingredient cost before favoriting, so the deliberate
-   * save enriches the mirror, then favorites the resulting backend recipe.
-   */
-  const saveRecipeToFavorites = async (
-    spoonacularRecipe: RecipeInformation,
-    saveOptions?: SaveToFavoritesOptions,
-  ): Promise<{ success: boolean; recipeId?: string }> => {
-    setSavingToFavorites(true);
-
-    const externalId = String(spoonacularRecipe.id);
-
-    // Best-effort online enrichment: re-ingest with per-ingredient cost (withCost
-    // fetches the recipe-scoped priceBreakdown and forces a refresh). When the
-    // API is unreachable it returns null and we fall back to the recipe already
-    // minted by an earlier view-preload — so favoriting an already-cached recipe
-    // is decoupled from the online upsert and works offline.
-    const preloaded = await preloadRecipe(
-      spoonacularRecipe,
-      ExternalSource.Spoonacular,
-      { withCost: true },
-    );
-    const recipeId = preloaded?.id ?? mirroredRecipeId(externalId);
-    if (!recipeId) {
-      // First-ever save AND the upsert couldn't reach the API — nothing minted
-      // to favorite.
-      setSavingToFavorites(false);
-      toastService.error(t('recipes.saveRecipeFailed'));
-      return { success: false };
-    }
-
+  /** Favorites a backend recipe id; the caller holds the saving flag. */
+  const favoriteRecipeId = async (
+    recipeId: string,
+    saveOptions: SaveToFavoritesOptions | undefined,
+  ): Promise<boolean> => {
     // Mint the SavedRecipe row's permanent PK client-side (sent as `input.id`),
     // so an online create and a queued offline replay converge on one row — a
     // duplicate-id replay resolves to the existing SavedRecipe as a success
@@ -199,17 +173,60 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       },
     );
 
-    setSavingToFavorites(false);
-
     if (settled.failure) {
       toastService.error(settled.failure.body);
-      return { success: false };
+      return false;
     }
 
     toastService.success(t('recipes.recipeSavedToCollection'));
     onFavoriteSuccess?.();
+    return true;
+  };
 
-    return { success: true, recipeId };
+  /**
+   * Re-ingests with per-ingredient cost before favoriting, so the deliberate
+   * save enriches the mirror, then favorites the resulting backend recipe.
+   */
+  const saveRecipeToFavorites = async (
+    spoonacularRecipe: RecipeInformation,
+    saveOptions?: SaveToFavoritesOptions,
+  ): Promise<{ success: boolean; recipeId?: string }> => {
+    setSavingToFavorites(true);
+
+    const externalId = String(spoonacularRecipe.id);
+
+    // Best-effort online enrichment: re-ingest with per-ingredient cost (withCost
+    // fetches the recipe-scoped priceBreakdown and forces a refresh). When the
+    // API is unreachable it returns null and we fall back to the recipe already
+    // minted by an earlier view-preload — so favoriting an already-cached recipe
+    // is decoupled from the online upsert and works offline.
+    const preloaded = await preloadRecipe(
+      spoonacularRecipe,
+      ExternalSource.Spoonacular,
+      { withCost: true },
+    );
+    const recipeId = preloaded?.id ?? mirroredRecipeId(externalId);
+    if (!recipeId) {
+      // First-ever save AND the upsert couldn't reach the API — nothing minted
+      // to favorite.
+      setSavingToFavorites(false);
+      toastService.error(t('recipes.saveRecipeFailed'));
+      return { success: false };
+    }
+
+    const saved = await favoriteRecipeId(recipeId, saveOptions);
+    setSavingToFavorites(false);
+    return saved ? { success: true, recipeId } : { success: false };
+  };
+
+  /** Favorites a recipe opened by its backend id — there is no mirror to refresh. */
+  const saveBackendRecipeToFavorites = async (
+    recipeId: string,
+    saveOptions?: SaveToFavoritesOptions,
+  ): Promise<void> => {
+    setSavingToFavorites(true);
+    await favoriteRecipeId(recipeId, saveOptions);
+    setSavingToFavorites(false);
   };
 
   return {
@@ -217,6 +234,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     savingToFavorites,
     preloadRecipe,
     saveRecipeToFavorites,
+    saveBackendRecipeToFavorites,
   };
 }
 
