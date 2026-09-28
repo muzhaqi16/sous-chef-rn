@@ -28,10 +28,12 @@ import { HapticService } from '#services/haptic/HapticService';
 import { SHEET, TAB_BAR } from '#/constants/animations';
 import { GlassSurface, supportsGlass } from '#components/atoms/GlassSurface';
 import { motion } from '#/theme/foundations/motion';
-import { TAB_BAR_HEIGHT, FLOATING_BUTTON_GAP } from '#constants/layout';
+import {
+  TAB_BAR_HEIGHT,
+  TAB_BAR_ICON_ONLY_HEIGHT,
+  FLOATING_BUTTON_GAP,
+} from '#constants/layout';
 import { kitTestIDs } from '#components/testIDs';
-
-/** Between the bar's top edge and the floating action button above it. */
 
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   state,
@@ -142,10 +144,14 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
       ? Math.max(safeBottom * 0.7, 16)
       : Math.max(safeBottom, 16);
 
-  const containerStyle = { bottom: barBottom };
+  const barHeight = showNavigationLabels
+    ? TAB_BAR_HEIGHT
+    : TAB_BAR_ICON_ONLY_HEIGHT;
+
+  const containerStyle = { bottom: barBottom, height: barHeight };
 
   const floatingButtonStyle = {
-    bottom: barBottom + TAB_BAR_HEIGHT + FLOATING_BUTTON_GAP,
+    bottom: barBottom + barHeight + FLOATING_BUTTON_GAP,
   };
 
   const handleTabPress = (
@@ -258,7 +264,6 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
 const styles = StyleSheet.create(theme => ({
   // Themed values are in `barSurfaceStyle` and `overlayLayerStyle`.
   container: {
-    height: TAB_BAR_HEIGHT,
     borderCurve: 'continuous',
     position: 'absolute',
     paddingHorizontal: '5%',
