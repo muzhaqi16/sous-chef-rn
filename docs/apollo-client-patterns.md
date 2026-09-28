@@ -882,6 +882,15 @@ unread notifications this device has never paged in, so a local ±1 was only
 ever an approximation. Verify the ordering claim with a subscription whose
 `onData` reads `cache.extract()`.
 
+**The pantry's counts follow the same rule.** A local write moves
+`stats.totalItems` by a delta (`adjustPantryItemCount`), the one count a row
+alone can settle. Every `ITEM_CHANGED` event, another device's AND this
+device's own echo, re-reads the whole `stats`, header and location tabs
+together, through `PantrySummaryForEvent`, coalesced in `usePantrySubscriptions`.
+The server pushes no stats event: `PANTRY_UPDATED` is pantry metadata (its
+schema doc), so without the re-read a remote delete removes the row and leaves
+the header and tabs counting it.
+
 **`addNotificationToFeed` must scope its write.** `notificationsConnection` is
 keyed on `filters` and `cache.modify` runs for EVERY cached variant, so the
 `skipStoreField: skipUnmatchedFilterVariants({ category, unreadOnly: true })`

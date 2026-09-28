@@ -23,7 +23,8 @@ export const removeFromPantryItemsCache =
 /**
  * Adjust `Pantry.stats.totalItems` by `delta`: the responses carry no parent
  * aggregate and `Pantry.stats` merges rather than recomputes, so the header
- * otherwise contradicts the list. Only `totalItems` — the rest need item state.
+ * otherwise contradicts the list. Only `totalItems` — the rest need item state;
+ * the write's own subscription echo re-reads them (`usePantrySubscriptions`).
  */
 export function adjustPantryItemCount(
   cache: ApolloCache,

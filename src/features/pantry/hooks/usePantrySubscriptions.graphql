@@ -135,10 +135,10 @@ query ExpirationNotificationForEvent($id: ID!) {
   }
 }
 
-# Header + stats only. `Pantry.stats` has a `mergeObjects` field policy, so
-# writing this narrow shape over a cached `stats` that also holds
-# `storageStateCounts` / `storageLocationCounts` (selected by `GetPantry`)
-# merges rather than truncates.
+# Header + every count the pantry screen shows — the location tabs read the
+# storage counts, so a remote add or delete has to re-read them too.
+# `Pantry.stats` has a `mergeObjects` field policy, so this merges over the
+# `stats` GetPantry selects rather than truncating it.
 query PantrySummaryForEvent($id: ID!, $today: LocalDate!) {
   pantry(id: $id) {
     id
@@ -153,6 +153,18 @@ query PantrySummaryForEvent($id: ID!, $today: LocalDate!) {
       expiringCount
       expiredCount
       lowStockCount
+      storageStateCounts {
+        refrigerated
+        frozen
+        ambient
+        none
+      }
+      storageLocationCounts {
+        storageLocationId
+        name
+        type
+        itemCount
+      }
     }
   }
 }
