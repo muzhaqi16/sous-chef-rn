@@ -8444,7 +8444,6 @@ type NotificationCategoryCount {
 input NotificationChannelsInput {
   emailEnabled: Boolean
   pushEnabled: Boolean
-  smsEnabled: Boolean
 }
 
 """
@@ -8662,11 +8661,6 @@ type NotificationPreferences {
   list being completed. Off by default.
   """
   shoppingListUpdates: Boolean!
-  """
-  Saved preference for SMS notifications; off by default. The server sends
-  no SMS.
-  """
-  smsEnabled: Boolean!
   """When the preferences last changed"""
   updatedAt: DateTime!
   """The user these preferences belong to"""
@@ -16896,7 +16890,6 @@ input UserNotificationSettingsInput {
   pushNotifications: Boolean
   recipeRecommendations: Boolean
   shoppingListUpdates: Boolean
-  smsNotifications: Boolean
   weeklyDigest: Boolean
 }
 
