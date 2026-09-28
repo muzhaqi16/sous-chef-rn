@@ -12,6 +12,7 @@ import {
 } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import type { CreatePantryInput } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
@@ -55,6 +56,9 @@ export function useCreatePantry() {
   ): Promise<CreatePantryOutcome> => {
     const id = generateEntityId();
     const input = { ...fields, id };
+    // Selecting the pantry opens its event subscription, which the server
+    // refuses until the create lands — see `unconfirmedCreates`.
+    unconfirmedCreates.mark(id);
     const optimisticPantry = buildOptimisticPantry(id, input);
     try {
       writeOptimisticPantry(client.cache, optimisticPantry);
@@ -91,6 +95,9 @@ export function useCreatePantry() {
         present: 'none',
       },
     );
+    // Released on every outcome; a queued create is tracked by the offline
+    // queue's pending set from here on.
+    unconfirmedCreates.confirm(id);
     if (settled.status === 'failed') {
       return { status: 'rejected', failure: settled.failure, result, id };
     }

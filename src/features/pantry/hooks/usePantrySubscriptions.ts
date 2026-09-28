@@ -7,10 +7,7 @@
 
 import { useLinkExpirationData } from '#features/notifications/hooks/useLinkExpirationData';
 import { useSubscription } from '@apollo/client/react';
-import {
-  useIsHomeSelectionReady,
-  useSelectedPantryId,
-} from '#store/useAppStore';
+import { useSelectedPantryId } from '#store/useAppStore';
 import {
   PantryEventsDocument,
   type PantryEventsSubscription,
@@ -27,7 +24,6 @@ import {
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
 import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
-import { useSubscriptionRejected } from '#/services/subscriptions/rejectedSubscriptions';
 import {
   CacheStrategy,
   type SubscriptionApolloClient,
@@ -40,6 +36,7 @@ import {
 import { logger } from '#/utils/environment';
 import { toDateKey } from '#/utils/dateUtils';
 import { useSubscriptionTransportRecovery } from '#hooks/subscriptions/useSubscriptionTransportRecovery';
+import { useEntitySubscriptionSkip } from '#hooks/subscriptions/useEntitySubscriptionSkip';
 
 type PantryEventsPayload = PantryEventsSubscription['pantryEvents'];
 
@@ -163,9 +160,11 @@ async function handleItemChanged(
  */
 export function usePantrySubscriptions(userId?: string) {
   const selectedPantryId = useSelectedPantryId() ?? undefined;
-  const isHomeSelectionReady = useIsHomeSelectionReady();
   const linkExpirationData = useLinkExpirationData();
-  const rejected = useSubscriptionRejected(PantryEventsDocument);
+  const pantrySkip = useEntitySubscriptionSkip(
+    PantryEventsDocument,
+    selectedPantryId,
+  );
 
   const expirationOnData = async (
     notificationId: string,
@@ -282,7 +281,6 @@ export function usePantrySubscriptions(userId?: string) {
     },
   });
 
-  const pantrySkip = !selectedPantryId || !isHomeSelectionReady || rejected;
   const pantryEvents = useSubscription(PantryEventsDocument, {
     // `skip` holds while there is no pantry, so the empty id is never sent.
     variables: { pantryId: selectedPantryId ?? '' },

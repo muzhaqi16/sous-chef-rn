@@ -2,7 +2,7 @@
 
 jest.mock('#/services/errorService');
 
-import { act } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
@@ -14,6 +14,7 @@ import { Home_HomeDetailFragmentDoc } from '#features/home/cache/home.generated'
 import { useCreateHome } from '../useCreateHome';
 import { useCreatePantry } from '#features/pantry/hooks/useCreatePantry';
 import { useStore } from '#store';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 
 /**
  * A home created offline has to be usable before the server has heard of it:
@@ -147,5 +148,70 @@ describe('creating a home with the API unreachable', () => {
     // No membership can be materialized for nobody, so no home is written
     // either — rather than one whose permission checks answer for no user.
     expect(cache.extract()[`Home:${id}`]).toBeUndefined();
+  });
+});
+
+/**
+ * Selecting a new home or pantry opens its event subscription, which the server
+ * refuses — and completes — until the create lands. The minted id is held as
+ * unconfirmed for exactly that window.
+ */
+describe('a minted id while its create is in flight', () => {
+  beforeEach(() => {
+    useStore.setState({ user: USER });
+  });
+
+  afterEach(() => {
+    useStore.setState({ user: null });
+    jest.clearAllMocks();
+  });
+
+  it('holds a home unconfirmed until the create settles', async () => {
+    const home = recordMock(CreateHomeDocument, {
+      data: { createHome: null },
+      delay: 20,
+    });
+    const { result } = renderHookWithApollo(() => useCreateHome(), {
+      operationMocks: [home.mock],
+    });
+
+    let settled!: Promise<unknown>;
+    act(() => {
+      settled = result.current.createHome({ name: 'New Home' });
+    });
+    await waitFor(() => expect(home.fired).toHaveLength(1));
+    const id = (home.fired[0] as { input: { id: string } }).input.id;
+
+    expect(unconfirmedCreates.has(id)).toBe(true);
+    await act(async () => {
+      await settled;
+    });
+    expect(unconfirmedCreates.has(id)).toBe(false);
+  });
+
+  it('holds a pantry unconfirmed until the create settles', async () => {
+    const pantry = recordMock(CreatePantryDocument, {
+      data: { createPantry: null },
+      delay: 20,
+    });
+    const { result } = renderHookWithApollo(() => useCreatePantry(), {
+      operationMocks: [pantry.mock],
+    });
+
+    let settled!: Promise<unknown>;
+    act(() => {
+      settled = result.current.createPantry({
+        homeId: 'home-1',
+        name: 'Kitchen',
+      });
+    });
+    await waitFor(() => expect(pantry.fired).toHaveLength(1));
+    const id = (pantry.fired[0] as { input: { id: string } }).input.id;
+
+    expect(unconfirmedCreates.has(id)).toBe(true);
+    await act(async () => {
+      await settled;
+    });
+    expect(unconfirmedCreates.has(id)).toBe(false);
   });
 });

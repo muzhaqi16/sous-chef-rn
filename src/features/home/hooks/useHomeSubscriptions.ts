@@ -5,7 +5,7 @@
  * changed id: subscriptions validate at depth 5, which no fragment spread fits.
  */
 
-import { useIsHomeSelectionReady, useSelectedHomeId } from '#store/useAppStore';
+import { useSelectedHomeId } from '#store/useAppStore';
 import { useSubscription } from '@apollo/client/react';
 import {
   GetHomeDocument,
@@ -16,7 +16,6 @@ import {
 import { HomeSubtype } from '#/graphql/generated/schemaTypes';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
-import { useSubscriptionRejected } from '#/services/subscriptions/rejectedSubscriptions';
 import {
   CacheStrategy,
   type SubscriptionApolloClient,
@@ -24,6 +23,7 @@ import {
 import { logger } from '#/utils/environment';
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { useSubscriptionTransportRecovery } from '#hooks/subscriptions/useSubscriptionTransportRecovery';
+import { useEntitySubscriptionSkip } from '#hooks/subscriptions/useEntitySubscriptionSkip';
 
 type HomeEventsPayload = HomeEventsSubscription['homeEvents'];
 
@@ -40,8 +40,10 @@ const removeInviteFromCache = createRemoveFromParentConnectionUpdater(
  */
 export function useHomeSubscriptions(userId?: string) {
   const selectedHomeId = useSelectedHomeId() ?? undefined;
-  const isHomeSelectionReady = useIsHomeSelectionReady();
-  const rejected = useSubscriptionRejected(HomeEventsDocument);
+  const homeSkip = useEntitySubscriptionSkip(
+    HomeEventsDocument,
+    selectedHomeId,
+  );
 
   const homeEventHandlers = subscriptionService.register<HomeEventsPayload>({
     document: HomeEventsDocument,
@@ -103,7 +105,6 @@ export function useHomeSubscriptions(userId?: string) {
     },
   });
 
-  const homeSkip = !selectedHomeId || !isHomeSelectionReady || rejected;
   const homeEvents = useSubscription(HomeEventsDocument, {
     // `skip` holds while there is no home, so the empty id is never sent.
     variables: { homeId: selectedHomeId ?? '' },

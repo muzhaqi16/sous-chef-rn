@@ -161,3 +161,66 @@ describe('unconfirmed-create wiring (pantry items)', () => {
     expect(code).toContain('isUnconfirmed');
   });
 });
+
+/**
+ * Selecting a new home or pantry opens the event subscriptions keyed on its id.
+ * The server refuses a subscription on a row it has not created and completes
+ * it, and nothing reopens it: a subscription opened before the create lands
+ * leaves that home's or pantry's events dark for the session.
+ */
+describe('unconfirmed-create wiring (homes and pantries)', () => {
+  const homeAndPantryCreators = sources
+    .filter(
+      ({ code }) =>
+        /useMutation\(\s*(CreateHomeDocument|CreatePantryDocument)\b/.test(
+          code,
+        ) &&
+        (code.includes('writeOptimisticHome(') ||
+          code.includes('writeOptimisticPantry(')),
+    )
+    .map(({ path }) => path)
+    .sort();
+
+  /** Every subscription whose variables name a home or a pantry. */
+  const idKeyedSubscribers = sources
+    .filter(
+      ({ code }) =>
+        /useSubscription\(/.test(code) &&
+        /variables:\s*\{\s*(homeId|pantryId):/.test(code),
+    )
+    .map(({ path }) => path)
+    .sort();
+
+  it('finds the create paths and the subscriptions, so the checks below are not vacuous', () => {
+    expect(homeAndPantryCreators).toEqual([
+      'src/features/home/hooks/useCreateHome.ts',
+      'src/features/pantry/hooks/useCreatePantry.ts',
+    ]);
+    expect(idKeyedSubscribers).toEqual([
+      'src/features/home/hooks/useHomeSubscriptions.ts',
+      'src/features/mealPlan/hooks/useMealPlanSubscriptions.ts',
+      'src/features/pantry/hooks/usePantrySubscriptions.ts',
+    ]);
+  });
+
+  it.each(homeAndPantryCreators)(
+    '%s claims and releases its client-minted id',
+    file => {
+      const code = stripComments(
+        readFileSync(join(process.cwd(), file), 'utf8'),
+      );
+      expect(code).toContain('unconfirmedCreates.mark(');
+      expect(code).toContain('unconfirmedCreates.confirm(');
+    },
+  );
+
+  it.each(idKeyedSubscribers)(
+    '%s takes its skip from useEntitySubscriptionSkip',
+    file => {
+      const code = stripComments(
+        readFileSync(join(process.cwd(), file), 'utf8'),
+      );
+      expect(code).toContain('useEntitySubscriptionSkip(');
+    },
+  );
+});

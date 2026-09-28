@@ -4,7 +4,8 @@ import { queueStore } from '#/apollo/offlineQueue/queueStore';
  * Client-minted ids whose create the server has not acknowledged. A local-first
  * create publishes the row's cuid to the cache BEFORE firing, so a detail query
  * keyed on that id can only fail (`RESOURCE_NOT_FOUND`) and then sits in an
- * error state that never retries. Detail queries gate `skip` on this set.
+ * error state that never retries, and an event subscription on it is refused
+ * and completed. Both gate `skip` on this set.
  */
 
 // The in-flight window. The queued window belongs to
