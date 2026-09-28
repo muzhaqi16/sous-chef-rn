@@ -332,8 +332,15 @@ describe('useSavedRecipes', () => {
     });
 
     it('stops on a failed page and keeps the rows already cached', async () => {
+      // Read from every render: under load the failed page can settle before
+      // `waitFor` polls again, so a snapshot can miss the running state.
+      const loadingRemaining: boolean[] = [];
       const { result } = renderHookWithApollo(
-        () => useSavedRecipes({ loadAllPages: true }),
+        () => {
+          const saved = useSavedRecipes({ loadAllPages: true });
+          loadingRemaining.push(saved.state.isLoadingRemainingPages);
+          return saved;
+        },
         {
           operationMocks: [
             firstPage,
@@ -348,10 +355,10 @@ describe('useSavedRecipes', () => {
       );
 
       await waitFor(() => expect(result.current.state.recipes).toHaveLength(1));
-      expect(result.current.state.isLoadingRemainingPages).toBe(true);
       await waitFor(() =>
         expect(result.current.state.isLoadingRemainingPages).toBe(false),
       );
+      expect(loadingRemaining).toContain(true);
       expect(result.current.state.hasMore).toBe(true);
       expect(result.current.state.recipes.map(r => r.id)).toEqual(['sr-1']);
     });
