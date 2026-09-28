@@ -101,18 +101,22 @@ export function useAddToPantry({
       },
       data => {
         if (!data?.pantry) return data;
-        const pantry = data.pantry;
+        const { pantry } = data;
+        const sections = pantry.suggestions;
         const without = <T extends { itemId: string }>(list: readonly T[]) =>
           list.filter(s => s.itemId !== itemId);
         return {
           ...data,
           pantry: {
             ...pantry,
-            lowStock: without(pantry.lowStock),
-            expiringSoon: without(pantry.expiringSoon),
-            recentlyDeleted: without(pantry.recentlyDeleted),
-            frequentlyAdded: without(pantry.frequentlyAdded),
-            popular: without(pantry.popular),
+            suggestions: {
+              ...sections,
+              lowStock: without(sections.lowStock),
+              expiringSoon: without(sections.expiringSoon),
+              recentlyDeleted: without(sections.recentlyDeleted),
+              frequentlyAdded: without(sections.frequentlyAdded),
+              popular: without(sections.popular),
+            },
           },
         };
       },

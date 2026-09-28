@@ -61,15 +61,19 @@ export function useAddToShoppingList({
       data => {
         if (!data?.shoppingList) return data;
         const list = data.shoppingList;
+        const sections = list.suggestions;
         const without = <T extends { itemId: string }>(entries: readonly T[]) =>
           entries.filter(s => s.itemId !== itemId);
         return {
           ...data,
           shoppingList: {
             ...list,
-            recentlyDeleted: without(list.recentlyDeleted),
-            frequentlyAdded: without(list.frequentlyAdded),
-            popular: without(list.popular),
+            suggestions: {
+              ...sections,
+              recentlyDeleted: without(sections.recentlyDeleted),
+              frequentlyAdded: without(sections.frequentlyAdded),
+              popular: without(sections.popular),
+            },
           },
         };
       },

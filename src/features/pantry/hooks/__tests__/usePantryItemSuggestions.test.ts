@@ -23,7 +23,7 @@ jest.mock('#components/atoms/CachedImage', () => ({
 
 type Suggestion = NonNullable<
   GetPantryItemSuggestionsQuery['pantry']
->['popular'][number];
+>['suggestions']['popular'][number];
 
 function makeSuggestion(overrides: Partial<Suggestion> = {}): Suggestion {
   return {
@@ -60,7 +60,7 @@ const TODAY = toDateKey(new Date());
 const VARIABLES = { pantryId: 'pantry-1', limit: 20, today: TODAY };
 
 function buildData(suggestions: Suggestion[]): GetPantryItemSuggestionsQuery {
-  // Each source is fetched via its own aliased field; bucket the flat input.
+  // Each row's `source` repeats its section; bucket the flat input.
   const bySource = (source: PantrySuggestionSource) =>
     suggestions.filter(s => s.source === source);
   return {
@@ -68,11 +68,14 @@ function buildData(suggestions: Suggestion[]): GetPantryItemSuggestionsQuery {
     pantry: {
       __typename: 'Pantry',
       id: 'pantry-1',
-      lowStock: bySource(PantrySuggestionSource.LowStock),
-      expiringSoon: bySource(PantrySuggestionSource.ExpiringSoon),
-      recentlyDeleted: bySource(PantrySuggestionSource.RecentlyDeleted),
-      frequentlyAdded: bySource(PantrySuggestionSource.FrequentlyAdded),
-      popular: bySource(PantrySuggestionSource.Popular),
+      suggestions: {
+        __typename: 'PantrySuggestions',
+        lowStock: bySource(PantrySuggestionSource.LowStock),
+        expiringSoon: bySource(PantrySuggestionSource.ExpiringSoon),
+        recentlyDeleted: bySource(PantrySuggestionSource.RecentlyDeleted),
+        frequentlyAdded: bySource(PantrySuggestionSource.FrequentlyAdded),
+        popular: bySource(PantrySuggestionSource.Popular),
+      },
     },
   };
 }

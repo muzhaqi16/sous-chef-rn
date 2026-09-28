@@ -13,15 +13,14 @@ import type { SuggestionsHookResult } from '#features/catalog/ui/AddItemSheet/ty
 import { useToday } from '#hooks/useToday';
 
 /**
- * Per-source fetch limit. Each section is fetched with its own quota, and the
- * sheet shows a small preview that drills into the full per-source list, so this
- * is generous enough to back the drill-down without a second round-trip.
+ * Per-section limit. The sheet shows a small preview of each section that drills
+ * into the full list, so this backs the drill-down without a second round-trip.
  */
 export const PANTRY_SUGGESTIONS_LIMIT = 20;
 
 type PantryItemSuggestion = NonNullable<
   GetPantryItemSuggestionsQuery['pantry']
->['popular'][number];
+>['suggestions']['popular'][number];
 
 interface UsePantryItemSuggestionsOptions {
   pantryId: string | undefined;
@@ -46,40 +45,39 @@ export function usePantryItemSuggestions({
 
   useApolloErrorLogger(GetPantryItemSuggestionsDocument, error);
 
-  // Each source arrives in its own aliased array (own quota); attach the
-  // resolved image URL the rows render.
+  // Attach the resolved image URL the rows render.
   const withImage = (s: PantryItemSuggestion) => ({
     ...s,
     imageUrl: resolveImageUrl(s),
   });
 
-  const pantry = data?.pantry;
+  const sections = data?.pantry?.suggestions;
   const grouped = {
-    lowStock: (pantry?.lowStock ?? []).map(withImage),
-    expiringSoon: (pantry?.expiringSoon ?? []).map(withImage),
-    recentlyDeleted: (pantry?.recentlyDeleted ?? []).map(withImage),
-    frequentlyAdded: (pantry?.frequentlyAdded ?? []).map(withImage),
-    popular: (pantry?.popular ?? []).map(withImage),
+    lowStock: (sections?.lowStock ?? []).map(withImage),
+    expiringSoon: (sections?.expiringSoon ?? []).map(withImage),
+    recentlyDeleted: (sections?.recentlyDeleted ?? []).map(withImage),
+    frequentlyAdded: (sections?.frequentlyAdded ?? []).map(withImage),
+    popular: (sections?.popular ?? []).map(withImage),
   };
 
   // Preload suggestion images into disk cache for instant display. Keyed on the
   // Apollo result, which only changes when the data does — the derived arrays
   // above are rebuilt on every render.
   useEffect(() => {
-    if (!pantry) return;
+    if (!sections) return;
     const urls = [
-      ...pantry.lowStock,
-      ...pantry.expiringSoon,
-      ...pantry.recentlyDeleted,
-      ...pantry.frequentlyAdded,
-      ...pantry.popular,
+      ...sections.lowStock,
+      ...sections.expiringSoon,
+      ...sections.recentlyDeleted,
+      ...sections.frequentlyAdded,
+      ...sections.popular,
     ]
       .map(s => resolveImageUrl(s))
       .filter((url): url is string => !!url);
     if (urls.length > 0) {
       preloadImages(urls);
     }
-  }, [pantry]);
+  }, [sections]);
 
   const state = useDataState({
     loading,

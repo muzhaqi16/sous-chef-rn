@@ -30,7 +30,7 @@ interface SuggestionInput {
 
 type Suggestion = NonNullable<
   GetShoppingListSuggestionsQuery['shoppingList']
->['recentlyDeleted'][number];
+>['suggestions']['recentlyDeleted'][number];
 
 function buildSuggestion(input: SuggestionInput): MockPart<Suggestion> {
   return {
@@ -57,7 +57,7 @@ function buildSuggestionsMock(
   suggestions: ReturnType<typeof buildSuggestion>[],
   limit = 20,
 ): MockFor<typeof GetShoppingListSuggestionsDocument> {
-  // Each source is fetched via its own aliased field; bucket the flat input.
+  // Each row's `source` repeats its section; bucket the flat input.
   const bySource = (source: SuggestionSource) =>
     suggestions.filter(s => s.source === source);
   return {
@@ -70,9 +70,12 @@ function buildSuggestionsMock(
         shoppingList: {
           __typename: 'ShoppingList',
           id: listId,
-          recentlyDeleted: bySource(SuggestionSource.RecentlyDeleted),
-          frequentlyAdded: bySource(SuggestionSource.FrequentlyAdded),
-          popular: bySource(SuggestionSource.Popular),
+          suggestions: {
+            __typename: 'ShoppingListSuggestions',
+            recentlyDeleted: bySource(SuggestionSource.RecentlyDeleted),
+            frequentlyAdded: bySource(SuggestionSource.FrequentlyAdded),
+            popular: bySource(SuggestionSource.Popular),
+          },
         },
       },
     },

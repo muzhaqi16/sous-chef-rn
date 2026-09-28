@@ -77,7 +77,7 @@ export const shoppingListTypePolicies: TypePolicies = {
     fields: {
       itemsConnection: itemsConnectionFieldPolicy(),
       suggestions: {
-        merge(existing: StoreValue = [], incoming: StoreValue) {
+        merge(existing: StoreValue | undefined, incoming: StoreValue) {
           if (incoming == null) return existing;
           return incoming;
         },
@@ -119,16 +119,6 @@ export const shoppingListTypePolicies: TypePolicies = {
         merge(existing: StoreValue = [], incoming: StoreValue) {
           // Preserve existing cache only on network errors (null/undefined)
           // Allow empty arrays through - user may genuinely have no lists
-          if (incoming == null) {
-            return existing;
-          }
-          return incoming;
-        },
-      },
-      shoppingListSuggestions: {
-        // Note: 'limit' excluded from keyArgs to avoid unnecessary cache fragmentation
-        keyArgs: ['shoppingListId'],
-        merge(existing: StoreValue = [], incoming: StoreValue) {
           if (incoming == null) {
             return existing;
           }

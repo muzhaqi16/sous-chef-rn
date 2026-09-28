@@ -134,13 +134,11 @@ query GetPantryItem($id: ID!) {
   }
 }
 
-# Suggestions are a field on Pantry type. Each source is fetched via its own
-# aliased call with a dedicated `limit` so one source can't starve the others —
-# every section (low stock, expiring, add again, favorites, popular) gets its own
-# quota. The UI shows a small preview of each and drills into the full per-source
-# list on demand, so a generous per-source limit is fetched up front.
+# One call returns every section: the server places an item only in the first
+# section that offers it, which separate per-section calls cannot do. `limit`
+# is per section, generous enough to back the drill-down.
 #
-# Fields are inlined per alias rather than shared via a named fragment: data
+# Fields are inlined per section rather than shared via a named fragment: data
 # masking is enabled globally, so a `...Fragment` spread would hide these fields
 # from the hook's direct reads (the rows render plain props, not useFragment).
 query GetPantryItemSuggestions(
@@ -150,162 +148,152 @@ query GetPantryItemSuggestions(
 ) {
   pantry(id: $pantryId) {
     id
-    lowStock: suggestions(limit: $limit, sources: [LOW_STOCK], today: $today) {
-      id
-      itemId
-      name
-      source
-      imageUrl
-      category
-      defaultUnitId
-      defaultUnit {
+    suggestions(limit: $limit, today: $today) {
+      lowStock {
         id
+        itemId
         name
-        symbol
-      }
-      item {
-        id
-        name
+        source
         imageUrl
+        category
+        defaultUnitId
+        defaultUnit {
+          id
+          name
+          symbol
+        }
+        item {
+          id
+          name
+          imageUrl
+        }
+        currentQuantity
+        minQuantity
+        restockQuantity
+        daysUntilExpiry
+        expiresOn
+        lastQuantity
+        lastUnitId
+        frequencyCount
+        popularityRank
+        pantryItemId
       }
-      currentQuantity
-      minQuantity
-      restockQuantity
-      daysUntilExpiry
-      expiresOn
-      lastQuantity
-      lastUnitId
-      frequencyCount
-      popularityRank
-      pantryItemId
-    }
-    expiringSoon: suggestions(
-      limit: $limit
-      sources: [EXPIRING_SOON]
-      today: $today
-    ) {
-      id
-      itemId
-      name
-      source
-      imageUrl
-      category
-      defaultUnitId
-      defaultUnit {
+      expiringSoon {
         id
+        itemId
         name
-        symbol
-      }
-      item {
-        id
-        name
+        source
         imageUrl
+        category
+        defaultUnitId
+        defaultUnit {
+          id
+          name
+          symbol
+        }
+        item {
+          id
+          name
+          imageUrl
+        }
+        currentQuantity
+        minQuantity
+        restockQuantity
+        daysUntilExpiry
+        expiresOn
+        lastQuantity
+        lastUnitId
+        frequencyCount
+        popularityRank
+        pantryItemId
       }
-      currentQuantity
-      minQuantity
-      restockQuantity
-      daysUntilExpiry
-      expiresOn
-      lastQuantity
-      lastUnitId
-      frequencyCount
-      popularityRank
-      pantryItemId
-    }
-    recentlyDeleted: suggestions(
-      limit: $limit
-      sources: [RECENTLY_DELETED]
-      today: $today
-    ) {
-      id
-      itemId
-      name
-      source
-      imageUrl
-      category
-      defaultUnitId
-      defaultUnit {
+      recentlyDeleted {
         id
+        itemId
         name
-        symbol
-      }
-      item {
-        id
-        name
+        source
         imageUrl
+        category
+        defaultUnitId
+        defaultUnit {
+          id
+          name
+          symbol
+        }
+        item {
+          id
+          name
+          imageUrl
+        }
+        currentQuantity
+        minQuantity
+        restockQuantity
+        daysUntilExpiry
+        expiresOn
+        lastQuantity
+        lastUnitId
+        frequencyCount
+        popularityRank
+        pantryItemId
       }
-      currentQuantity
-      minQuantity
-      restockQuantity
-      daysUntilExpiry
-      expiresOn
-      lastQuantity
-      lastUnitId
-      frequencyCount
-      popularityRank
-      pantryItemId
-    }
-    frequentlyAdded: suggestions(
-      limit: $limit
-      sources: [FREQUENTLY_ADDED]
-      today: $today
-    ) {
-      id
-      itemId
-      name
-      source
-      imageUrl
-      category
-      defaultUnitId
-      defaultUnit {
+      frequentlyAdded {
         id
+        itemId
         name
-        symbol
-      }
-      item {
-        id
-        name
+        source
         imageUrl
+        category
+        defaultUnitId
+        defaultUnit {
+          id
+          name
+          symbol
+        }
+        item {
+          id
+          name
+          imageUrl
+        }
+        currentQuantity
+        minQuantity
+        restockQuantity
+        daysUntilExpiry
+        expiresOn
+        lastQuantity
+        lastUnitId
+        frequencyCount
+        popularityRank
+        pantryItemId
       }
-      currentQuantity
-      minQuantity
-      restockQuantity
-      daysUntilExpiry
-      expiresOn
-      lastQuantity
-      lastUnitId
-      frequencyCount
-      popularityRank
-      pantryItemId
-    }
-    popular: suggestions(limit: $limit, sources: [POPULAR], today: $today) {
-      id
-      itemId
-      name
-      source
-      imageUrl
-      category
-      defaultUnitId
-      defaultUnit {
+      popular {
         id
+        itemId
         name
-        symbol
-      }
-      item {
-        id
-        name
+        source
         imageUrl
+        category
+        defaultUnitId
+        defaultUnit {
+          id
+          name
+          symbol
+        }
+        item {
+          id
+          name
+          imageUrl
+        }
+        currentQuantity
+        minQuantity
+        restockQuantity
+        daysUntilExpiry
+        expiresOn
+        lastQuantity
+        lastUnitId
+        frequencyCount
+        popularityRank
+        pantryItemId
       }
-      currentQuantity
-      minQuantity
-      restockQuantity
-      daysUntilExpiry
-      expiresOn
-      lastQuantity
-      lastUnitId
-      frequencyCount
-      popularityRank
-      pantryItemId
     }
   }
 }

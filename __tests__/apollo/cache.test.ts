@@ -414,38 +414,6 @@ describe('cache.ts', () => {
       const result = cache.readQuery<ListResult<'storageLocationTree'>>({ query: QUERY, variables: { homeId: 'h-1' } });
       expect(result?.storageLocationTree).toHaveLength(1);
     });
-
-    it('Query.pantryItemSuggestions preserves existing on null', () => {
-      const QUERY = gql`query GetSuggestions($pantryId: ID!) { pantryItemSuggestions(pantryId: $pantryId) { id } }`;
-      cache.writeQuery({
-        query: QUERY,
-        variables: { pantryId: 'p-1' },
-        data: { pantryItemSuggestions: [{ __typename: 'PantryItem', id: 'pi-1' }] },
-      });
-      cache.writeQuery({
-        query: QUERY,
-        variables: { pantryId: 'p-1' },
-        data: { pantryItemSuggestions: null },
-      });
-      const result = cache.readQuery<ListResult<'pantryItemSuggestions'>>({ query: QUERY, variables: { pantryId: 'p-1' } });
-      expect(result?.pantryItemSuggestions).toHaveLength(1);
-    });
-
-    it('Query.shoppingListSuggestions preserves existing on null', () => {
-      const QUERY = gql`query GetSuggestions($shoppingListId: ID!) { shoppingListSuggestions(shoppingListId: $shoppingListId) { id } }`;
-      cache.writeQuery({
-        query: QUERY,
-        variables: { shoppingListId: 'sl-1' },
-        data: { shoppingListSuggestions: [{ __typename: 'ShoppingListItem', id: 'sli-1' }] },
-      });
-      cache.writeQuery({
-        query: QUERY,
-        variables: { shoppingListId: 'sl-1' },
-        data: { shoppingListSuggestions: null },
-      });
-      const result = cache.readQuery<ListResult<'shoppingListSuggestions'>>({ query: QUERY, variables: { shoppingListId: 'sl-1' } });
-      expect(result?.shoppingListSuggestions).toHaveLength(1);
-    });
   });
 
   // ─── User.profile merge ────────────────────────────────────────
