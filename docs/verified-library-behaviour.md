@@ -1036,7 +1036,60 @@ node scripts/probe-reanimated-reduce-motion.mjs
 ```
 
 `src/hooks/animations/useMotionEnabled.ts` is the single `useReducedMotion`
-read, for the loop cases.
+read, for the loop cases and CSS transitions (below).
+
+### Reanimated CSS transitions need a baseline commit
+
+**Claim:** a CSS transition (`transitionProperty` / `transitionDuration` in a
+Reanimated component's style) animates a property only when the view ALREADY
+had a transition attached in its previous commit. Attached in the same commit
+as the change, it animates nothing. Once attached, it animates every change to
+that property, whatever caused it — including FlashList moving a recycled cell
+to a new `top`. FlashList's `prepareForLayoutAnimationRender()` animates
+nothing itself: it disables recycling and offset correction for the next
+commit only.
+
+**Verified 2026-09-28 against `react-native-reanimated@4.6.0` and
+`@shopify/flash-list@2.3.2`.** `CSSManager.update` builds a normalized style
+only while a transition is attached (`hasTransition`), so with none it passes
+`undefined` and `CSSTransitionsManager.update` stores `prevProps = null`; the
+attaching commit then reads no previous props and triggers nothing. On the
+iOS simulator (pantry, dev build, recorded at 30 fps): attaching in the
+delete's own commit left the rows jumping in one frame; attaching one commit
+earlier spread the move over 8 frames (250 ms); with a transition held on
+for 3 s, a flick sent recycled rows sliding across the viewport, and
+detaching on `onScrollBeginDrag` removed them. On an SM-S908U1 (`localRelease`,
+120 Hz) the reflow ran with no cell lost on detach (the Android regression class
+of reanimated#9218), and against a control build of the direct delete, 3 deletes
+each, frame times were unchanged (p90 16–17 ms both); the reflow added ~29
+rendered frames per delete, 2 of them janky. Consumed by `useRowReflow`.
+
+Re-check:
+
+```
+grep -n "hasTransition ||\|this.propsBuilder.build" node_modules/react-native-reanimated/src/css/native/managers/CSSManager.ts
+grep -n "this.prevProps = nextStyle\|if (!prevProps || !transitionConfig)" node_modules/react-native-reanimated/src/css/native/managers/CSSTransitionsManager.ts
+grep -n -A6 "prepareForLayoutAnimationRender: () =>" node_modules/@shopify/flash-list/src/recyclerview/hooks/useRecyclerViewController.tsx
+grep -n "animationOptimizationsEnabled = false" node_modules/@shopify/flash-list/src/recyclerview/RecyclerView.tsx
+```
+
+### Reanimated CSS transitions ignore reduce motion
+
+**Claim:** unlike `withTiming` and the layout-animation builders (above),
+Reanimated's CSS transitions and animations have no reduce-motion handling: a
+transition runs at its full duration under the OS setting. Motion driven by one
+reads `useMotionEnabled()` and skips attaching it.
+
+**Verified 2026-09-28 against `react-native-reanimated@4.6.0`** by source
+only: neither the JS side (`src/css`) nor the native engine
+(`Common/cpp/reanimated/CSS`) reads a reduced-motion setting. Not probed on a
+device.
+
+Re-check (expect no output):
+
+```
+grep -rli "reducedmotion\|reduce_motion\|reducemotion" node_modules/react-native-reanimated/src/css node_modules/react-native-reanimated/Common/cpp/reanimated/CSS
+```
 
 ### The image picker hands back a cache `file://`, and its head is sliceable
 

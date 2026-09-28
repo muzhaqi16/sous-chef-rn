@@ -81,7 +81,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     onQuantityPress,
     onSwipeableWillOpen,
     onSwipeableClose,
-    onBeforeRowRemoved,
+    onRemoveRow,
   } = actions;
 
   // Both are required, so there is no absent answer to have an opinion about.
@@ -103,11 +103,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // Read from its own context: the command bag publishes behind a ref children
   // see too late.
   const itemSwipeActions = useItemSwipeActions();
-  const swipeActions = resolveRowActions(
-    itemSwipeActions,
-    itemId,
-    onBeforeRowRemoved,
-  );
+  const swipeActions = resolveRowActions(itemSwipeActions, itemId, onRemoveRow);
 
   // Already in the pantry. The bulk move filters on the same stamp, so a
   // "move to pantry" here would do nothing — show it as stocked. Cleared

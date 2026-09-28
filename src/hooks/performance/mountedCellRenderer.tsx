@@ -1,6 +1,7 @@
 import React, { forwardRef, useLayoutEffect, useState } from 'react';
 import type { ViewProps } from 'react-native';
 import Animated from 'react-native-reanimated';
+import { useReflowCellStyle } from '#hooks/animations/useRowReflow';
 
 let nextCellId = 0;
 // Module-level so the component body holds no mutation of a global (the
@@ -99,7 +100,8 @@ export function createMountedCellRenderer(registry: MountedCellRegistry) {
       };
     }, [cellId, index]);
 
-    return <Animated.View ref={ref} {...props} />;
+    const style = useReflowCellStyle(props.style);
+    return <Animated.View ref={ref} {...props} style={style} />;
   });
   MountedCellRenderer.displayName = 'MountedCellRenderer';
   return MountedCellRenderer;
@@ -117,5 +119,6 @@ export const PlainAnimatedCellRenderer = forwardRef<
   React.ComponentRef<typeof Animated.View>,
   ViewProps & { index?: number }
 >(function PlainAnimatedCell({ index: _index, ...props }, ref) {
-  return <Animated.View ref={ref} {...props} />;
+  const style = useReflowCellStyle(props.style);
+  return <Animated.View ref={ref} {...props} style={style} />;
 });

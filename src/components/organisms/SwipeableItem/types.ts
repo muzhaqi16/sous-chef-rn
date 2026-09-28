@@ -27,8 +27,9 @@ export interface SwipeAction {
    */
   haptic?: boolean;
   /**
-   * The action removes the row, so an animating card slides out before running it.
-   * Read by the ROW renderer (`ItemCard`, `SortableItem`), never by `SwipeableItem`.
+   * The action removes the row, so an animating card slides out before running it
+   * and the list reflows the rows below. Read by the ROW renderer (`ItemCard`,
+   * `SortableItem`), never by `SwipeableItem`.
    */
   removesRow?: boolean;
 }

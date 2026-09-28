@@ -1,6 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { View } from 'react-native';
+import { RowReflowContext } from '#hooks/animations/useRowReflow';
 import {
   createMountedCellRenderer,
   MountedCellRegistry,
@@ -149,4 +150,40 @@ describe('the unsampled cell renderer', () => {
 
     expect(registry.countMountedInRange(0, 10)).toBe(0);
   });
+});
+
+describe('the cell reflow transition', () => {
+  const renderers = [
+    {
+      name: 'the sampled renderer',
+      Cell: createMountedCellRenderer(new MountedCellRegistry()),
+    },
+    { name: 'the unsampled renderer', Cell: PlainAnimatedCellRenderer },
+  ];
+
+  it.each(renderers)(
+    '$name animates `top` only while its list reflows',
+    ({ Cell }) => {
+      const cellStyle = (reflowing: boolean | null) => {
+        const cell = <Cell index={0} testID="cell" style={{ top: 40 }} />;
+        const tree = render(
+          reflowing === null ? (
+            cell
+          ) : (
+            <RowReflowContext.Provider value={reflowing}>
+              {cell}
+            </RowReflowContext.Provider>
+          ),
+        );
+        // The cell's own style, or it followed by the transition.
+        return [tree.getByTestId('cell').props.style].flat();
+      };
+      const transition = expect.objectContaining({ transitionProperty: 'top' });
+
+      expect(cellStyle(true)).toEqual([{ top: 40 }, transition]);
+      expect(cellStyle(false)).not.toContainEqual(transition);
+      // A list that never provides the flag never reflows.
+      expect(cellStyle(null)).not.toContainEqual(transition);
+    },
+  );
 });
