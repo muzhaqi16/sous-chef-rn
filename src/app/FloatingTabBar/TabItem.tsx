@@ -139,7 +139,7 @@ const styles = StyleSheet.create(theme => ({
   },
   tabLabel: {
     color: theme.colors.onScrim,
-    marginTop: theme.spacing['2xs'],
+    marginTop: theme.spacing.xs,
     // A label too wide to fit takes the full tab width, where the default left
     // alignment puts it off to one side of its own icon — so centre it. The call
     // site's `numberOfLines={1}` is the other half: a wrapping label would grow

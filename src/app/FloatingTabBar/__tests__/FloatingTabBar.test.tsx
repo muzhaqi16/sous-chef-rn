@@ -38,7 +38,7 @@ import {
 import { FloatingTabBar } from '../FloatingTabBar';
 import type { TabAppearance } from '#features/types';
 import { useStore } from '#store';
-import { TAB_BAR_HEIGHT, TAB_BAR_ICON_ONLY_HEIGHT } from '#constants/layout';
+import { TAB_BAR_HEIGHT } from '#constants/layout';
 
 // Mock TabBarActionsContext
 const mockSetActiveTab = jest.fn();
@@ -402,7 +402,7 @@ describe('FloatingTabBar', () => {
       useStore.setState({ showNavigationLabels: true });
     });
 
-    it('shortens to the icon row when labels are hidden, taking the add button down with it', () => {
+    it('keeps its height when labels are hidden, and the add button stays put', () => {
       renderTabBar();
       expect(barHeight()).toBe(TAB_BAR_HEIGHT);
       const labelledBottom = addButtonBottom();
@@ -411,10 +411,8 @@ describe('FloatingTabBar', () => {
         useStore.setState({ showNavigationLabels: false });
       });
 
-      expect(barHeight()).toBe(TAB_BAR_ICON_ONLY_HEIGHT);
-      expect(labelledBottom - addButtonBottom()).toBe(
-        TAB_BAR_HEIGHT - TAB_BAR_ICON_ONLY_HEIGHT,
-      );
+      expect(barHeight()).toBe(TAB_BAR_HEIGHT);
+      expect(addButtonBottom()).toBe(labelledBottom);
     });
   });
 });

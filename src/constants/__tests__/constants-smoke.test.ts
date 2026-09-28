@@ -10,7 +10,6 @@ import {
   getTabBarBottomPadding,
   getScrollClearancePadding,
   TAB_BAR_HEIGHT,
-  TAB_BAR_ICON_ONLY_HEIGHT,
 } from '../layout';
 import { motion } from '#/theme/foundations/motion';
 
@@ -70,17 +69,16 @@ describe('dietary constants', () => {
 });
 
 describe('layout', () => {
-  it('declares the tab bar height with and without labels', () => {
-    expect(TAB_BAR_HEIGHT).toBe(60);
-    expect(TAB_BAR_ICON_ONLY_HEIGHT).toBe(48);
+  it('declares the tab bar height', () => {
+    expect(TAB_BAR_HEIGHT).toBe(64);
   });
 
   describe('getTabBarBottomPadding', () => {
     it('clears the bar and the safe area', () => {
-      // TAB_BAR_HEIGHT (60) + safeBottom + 16
-      expect(getTabBarBottomPadding(0)).toBe(76);
-      expect(getTabBarBottomPadding(34)).toBe(110);
-      expect(getTabBarBottomPadding(20)).toBe(96);
+      // TAB_BAR_HEIGHT (64) + safeBottom + 16
+      expect(getTabBarBottomPadding(0)).toBe(80);
+      expect(getTabBarBottomPadding(34)).toBe(114);
+      expect(getTabBarBottomPadding(20)).toBe(100);
     });
   });
 
@@ -90,8 +88,8 @@ describe('layout', () => {
     // two are separate functions rather than one with a flag.
     it('adds the floating button on top of the bar padding', () => {
       const button = 56 + 12;
-      expect(getScrollClearancePadding(0)).toBe(76 + button);
-      expect(getScrollClearancePadding(34)).toBe(110 + button);
+      expect(getScrollClearancePadding(0)).toBe(80 + button);
+      expect(getScrollClearancePadding(34)).toBe(114 + button);
     });
 
     it('is always the larger of the two', () => {
