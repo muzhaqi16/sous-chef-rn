@@ -138,9 +138,8 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     const outcome = await addItem({
       itemId: shoppingItem.itemId,
       itemName: shoppingItem.name,
-      // `lastUnitId` for a recently deleted row, otherwise the item's default.
-      unitId:
-        shoppingItem.lastUnitId ?? shoppingItem.defaultUnitId ?? undefined,
+      // The API's one-tap unit: an Add Again row's own unit, else the item's.
+      unitId: shoppingItem.defaultUnitId ?? undefined,
     });
     if (outcome === 'reverted') {
       // Put the tile back and correct the toast that already fired.

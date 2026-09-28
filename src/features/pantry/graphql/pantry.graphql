@@ -136,7 +136,9 @@ query GetPantryItem($id: ID!) {
 
 # One call returns every section: the server places an item only in the first
 # section that offers it, which separate per-section calls cannot do. `limit`
-# is per section, generous enough to back the drill-down.
+# is per section, generous enough to back the drill-down. Rows select only what
+# the sheet reads; `SuggestionItem.imageUrl` is always null, so `item` is not
+# selected.
 #
 # Fields are inlined per section rather than shared via a named fragment: data
 # masking is enabled globally, so a `...Fragment` spread would hide these fields
@@ -154,28 +156,9 @@ query GetPantryItemSuggestions(
         itemId
         name
         source
-        imageUrl
         category
+        imageUrl
         defaultUnitId
-        defaultUnit {
-          id
-          name
-          symbol
-        }
-        item {
-          id
-          name
-          imageUrl
-        }
-        currentQuantity
-        minQuantity
-        restockQuantity
-        daysUntilExpiry
-        expiresOn
-        lastQuantity
-        lastUnitId
-        frequencyCount
-        popularityRank
         pantryItemId
       }
       expiringSoon {
@@ -183,28 +166,9 @@ query GetPantryItemSuggestions(
         itemId
         name
         source
-        imageUrl
         category
+        imageUrl
         defaultUnitId
-        defaultUnit {
-          id
-          name
-          symbol
-        }
-        item {
-          id
-          name
-          imageUrl
-        }
-        currentQuantity
-        minQuantity
-        restockQuantity
-        daysUntilExpiry
-        expiresOn
-        lastQuantity
-        lastUnitId
-        frequencyCount
-        popularityRank
         pantryItemId
       }
       recentlyDeleted {
@@ -212,28 +176,9 @@ query GetPantryItemSuggestions(
         itemId
         name
         source
-        imageUrl
         category
+        imageUrl
         defaultUnitId
-        defaultUnit {
-          id
-          name
-          symbol
-        }
-        item {
-          id
-          name
-          imageUrl
-        }
-        currentQuantity
-        minQuantity
-        restockQuantity
-        daysUntilExpiry
-        expiresOn
-        lastQuantity
-        lastUnitId
-        frequencyCount
-        popularityRank
         pantryItemId
       }
       frequentlyAdded {
@@ -241,28 +186,9 @@ query GetPantryItemSuggestions(
         itemId
         name
         source
-        imageUrl
         category
+        imageUrl
         defaultUnitId
-        defaultUnit {
-          id
-          name
-          symbol
-        }
-        item {
-          id
-          name
-          imageUrl
-        }
-        currentQuantity
-        minQuantity
-        restockQuantity
-        daysUntilExpiry
-        expiresOn
-        lastQuantity
-        lastUnitId
-        frequencyCount
-        popularityRank
         pantryItemId
       }
       popular {
@@ -270,28 +196,9 @@ query GetPantryItemSuggestions(
         itemId
         name
         source
-        imageUrl
         category
+        imageUrl
         defaultUnitId
-        defaultUnit {
-          id
-          name
-          symbol
-        }
-        item {
-          id
-          name
-          imageUrl
-        }
-        currentQuantity
-        minQuantity
-        restockQuantity
-        daysUntilExpiry
-        expiresOn
-        lastQuantity
-        lastUnitId
-        frequencyCount
-        popularityRank
         pantryItemId
       }
     }
