@@ -35,7 +35,6 @@ jest.mock('#features/notifications/hooks/useNotificationSettings', () => ({
     settings: {
       pushEnabled: true,
       emailEnabled: false,
-      smsEnabled: false,
       expirationNotifications: true,
       expirationNotificationFrequency: 'DAILY_MORNING',
       expirationDaysThreshold: 3,
@@ -159,7 +158,6 @@ describe('NotificationSettingsScreen', () => {
       settings: {
         pushEnabled: true,
         emailEnabled: false,
-        smsEnabled: false,
         expirationNotifications: false,
         lowStockAlerts: false,
         pantryChanges: false,
@@ -213,7 +211,6 @@ describe('NotificationSettingsScreen', () => {
       settings: {
         pushEnabled: true,
         emailEnabled: true,
-        smsEnabled: true,
         expirationNotifications: true,
         expirationNotificationFrequency: 'REAL_TIME',
         expirationDaysThreshold: 7,
@@ -250,7 +247,6 @@ describe('NotificationSettingsScreen', () => {
       settings: {
         pushEnabled: false,
         emailEnabled: false,
-        smsEnabled: false,
         expirationNotifications: false,
         lowStockAlerts: false,
         pantryChanges: false,
@@ -285,7 +281,6 @@ describe('NotificationSettingsScreen', () => {
       settings: {
         pushEnabled: true,
         emailEnabled: false,
-        smsEnabled: false,
         expirationNotifications: true,
         expirationNotificationFrequency: 'WEEKLY_DIGEST',
         expirationDaysThreshold: 5,
@@ -322,7 +317,6 @@ describe('NotificationSettingsScreen', () => {
       settings: {
         pushEnabled: true,
         emailEnabled: false,
-        smsEnabled: false,
         expirationNotifications: true,
         expirationNotificationFrequency: 'NEVER',
         expirationDaysThreshold: 0,
@@ -359,7 +353,6 @@ describe('NotificationSettingsScreen', () => {
       settings: {
         pushEnabled: true,
         emailEnabled: true,
-        smsEnabled: false,
         expirationNotifications: true,
         expirationNotificationFrequency: 'DAILY_EVENING',
         expirationDaysThreshold: 1,
@@ -393,7 +386,10 @@ describe('NotificationSettingsScreen', () => {
    * what 3 delivers. The picker offers only values the ladder can fire.
    */
   describe('alert threshold', () => {
-    const renderWithThreshold = (expirationDaysThreshold: number) => {
+    const renderWithThreshold = (
+      expirationDaysThreshold: number,
+      expirationNotificationFrequency = 'DAILY_MORNING',
+    ) => {
       const { useNotificationSettings } = jest.requireMock(
         '#features/notifications/hooks/useNotificationSettings',
       );
@@ -401,7 +397,7 @@ describe('NotificationSettingsScreen', () => {
         settings: {
           pushEnabled: true,
           expirationNotifications: true,
-          expirationNotificationFrequency: 'DAILY_MORNING',
+          expirationNotificationFrequency,
           expirationDaysThreshold,
         },
         loading: false,
@@ -422,6 +418,22 @@ describe('NotificationSettingsScreen', () => {
       expect(tree).not.toContain('5 days before');
       expect(tree).toContain('Select');
     });
+
+    it.each(['WEEKLY_DIGEST', 'NEVER'])(
+      'is not offered under %s, which the API does not filter by it',
+      frequency => {
+        expect(renderWithThreshold(3, frequency)).not.toContain(
+          'Alert Threshold',
+        );
+      },
+    );
+
+    it.each(['REAL_TIME', 'DAILY_MORNING', 'DAILY_EVENING'])(
+      'is offered under %s',
+      frequency => {
+        expect(renderWithThreshold(3, frequency)).toContain('Alert Threshold');
+      },
+    );
   });
 
   /**
@@ -449,7 +461,7 @@ describe('NotificationSettingsScreen', () => {
         checkPermissions: jest.fn().mockResolvedValue(checkResult),
       });
       useNotificationSettings.mockReturnValue({
-        settings: { pushEnabled, emailEnabled: false, smsEnabled: false },
+        settings: { pushEnabled, emailEnabled: false },
         loading: false,
         hasPreferences: true,
         updateNotificationSetting: mockUpdateNotificationSetting,

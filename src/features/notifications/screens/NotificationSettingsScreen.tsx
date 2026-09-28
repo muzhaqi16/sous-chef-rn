@@ -27,6 +27,7 @@ import {
   QUIET_HOURS_SETTINGS,
   getFrequencyOptions,
   getThresholdOptions,
+  thresholdApplies,
   type SettingDef,
 } from '#features/notifications/utils/notificationSettingsConfig';
 import type { ExpirationFrequency } from '#/graphql/generated/schemaTypes';
@@ -351,31 +352,38 @@ export const NotificationSettingsScreen: React.FC = () => {
               onCancel={() => setFrequencyPickerVisible(false)}
             />
 
-            <AppPressable
-              haptic
-              style={styles.pickerRow}
-              onPress={() => setThresholdPickerVisible(true)}
-            >
-              <Text role="label" style={styles.settingLabel}>
-                {t('notifications.alertThreshold')}
-              </Text>
-              <Text role="caption" tone="accent" style={styles.pickerValue}>
-                {THRESHOLD_OPTIONS.find(
-                  o => o.value === String(settings.expirationDaysThreshold),
-                )?.label ?? t('labels.select')}
-              </Text>
-            </AppPressable>
-            <ModalPicker
-              label={t('notifications.alertThreshold')}
-              visible={thresholdPickerVisible}
-              options={THRESHOLD_OPTIONS}
-              selected={String(settings.expirationDaysThreshold)}
-              onSelect={value => {
-                handleSettingChange('expirationDaysThreshold', Number(value));
-                setThresholdPickerVisible(false);
-              }}
-              onCancel={() => setThresholdPickerVisible(false)}
-            />
+            {thresholdApplies(settings.expirationNotificationFrequency) && (
+              <>
+                <AppPressable
+                  haptic
+                  style={styles.pickerRow}
+                  onPress={() => setThresholdPickerVisible(true)}
+                >
+                  <Text role="label" style={styles.settingLabel}>
+                    {t('notifications.alertThreshold')}
+                  </Text>
+                  <Text role="caption" tone="accent" style={styles.pickerValue}>
+                    {THRESHOLD_OPTIONS.find(
+                      o => o.value === String(settings.expirationDaysThreshold),
+                    )?.label ?? t('labels.select')}
+                  </Text>
+                </AppPressable>
+                <ModalPicker
+                  label={t('notifications.alertThreshold')}
+                  visible={thresholdPickerVisible}
+                  options={THRESHOLD_OPTIONS}
+                  selected={String(settings.expirationDaysThreshold)}
+                  onSelect={value => {
+                    handleSettingChange(
+                      'expirationDaysThreshold',
+                      Number(value),
+                    );
+                    setThresholdPickerVisible(false);
+                  }}
+                  onCancel={() => setThresholdPickerVisible(false)}
+                />
+              </>
+            )}
           </>
         )}
 

@@ -50,7 +50,6 @@ const basePreferences: StoredPreferences = {
   id: 'pref-1',
   emailEnabled: true,
   pushEnabled: true,
-  smsEnabled: false,
   expirationNotifications: true,
   expirationNotificationFrequency: ExpirationFrequency.DailyMorning,
   expirationDaysThreshold: 3,
