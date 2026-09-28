@@ -11,6 +11,7 @@ import {
   UpsertExternalRecipeDocument,
   AddRecipeToFavoritesDocument,
   MySavedRecipesDocument,
+  SavedRecipeFoldersDocument,
   type MySavedRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import type { RecipeInformation } from '#/services/spoonacular/types';
@@ -720,5 +721,63 @@ describe('useRecipePreload — local-first favorite', () => {
     expect(ids).toEqual([SERVER_SAVED_ID]);
     expect(ids).not.toContain(SAVED_RECIPE_ID);
     expect(conn?.totalCount).toBe(1);
+  });
+});
+
+describe('useRecipePreload — backend recipe favorite', () => {
+  it('favorites by id without re-ingesting, and lists the new folder', async () => {
+    const cache = seedFavoriteCache();
+    cache.writeQuery({
+      query: SavedRecipeFoldersDocument,
+      data: { __typename: 'Query', savedRecipeFolders: ['Favorites'] },
+    });
+    const upsert = recordUpsertMock();
+    const favorite = recordMock(AddRecipeToFavoritesDocument, {
+      data: {
+        addRecipeToFavorites: {
+          __typename: 'AddRecipeToFavoritesPayload',
+          savedRecipe: {
+            __typename: 'SavedRecipe',
+            id: SAVED_RECIPE_ID,
+            folder: 'Weeknight',
+            recipe: {
+              __typename: 'Recipe',
+              id: 'backend-1',
+              savedDetails: { __typename: 'SavedRecipe', id: SAVED_RECIPE_ID },
+            },
+          },
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(() => useRecipePreload(), {
+      cache,
+      operationMocks: [upsert.mock, favorite.mock],
+    });
+
+    await act(async () => {
+      await result.current.saveBackendRecipeToFavorites('backend-1', {
+        folder: 'Weeknight',
+      });
+    });
+
+    expect(upsert.fired).toHaveLength(0);
+    expect(favorite.fired).toEqual([
+      {
+        input: expect.objectContaining({
+          id: SAVED_RECIPE_ID,
+          recipeId: 'backend-1',
+          folder: 'Weeknight',
+        }),
+      },
+    ]);
+    expect(readSavedDetails(cache)).toEqual(
+      expect.objectContaining({ id: SAVED_RECIPE_ID }),
+    );
+    expect(
+      cache.readQuery({ query: SavedRecipeFoldersDocument })
+        ?.savedRecipeFolders,
+    ).toEqual(['Favorites', 'Weeknight']);
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
+    expect(result.current.savingToFavorites).toBe(false);
   });
 });

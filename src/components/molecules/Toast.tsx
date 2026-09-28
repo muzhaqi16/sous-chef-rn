@@ -36,9 +36,9 @@ export interface ToastOptions {
   type?: ToastType;
   action?: { label: string; onPress: () => void };
   /**
-   * Marks a state announcement: only the latest is still true, so it replaces a
-   * displayed or queued one rather than surfacing long after the state it
-   * describes. Only announcements supersede, and never one carrying an `action`.
+   * A toast replaces a displayed or queued one of its own type, `action` and
+   * all. This marks a state announcement, which also replaces an announcement
+   * of another type: only the latest state is still true.
    */
   supersede?: boolean;
 }
@@ -106,6 +106,9 @@ const sameType = (a: ToastOptions, b: ToastOptions) =>
 /** Both are state announcements, so the newer one obsoletes the older. */
 const supersedes = (older: ToastOptions, newer: ToastOptions) =>
   older.supersede === true && newer.supersede === true;
+
+const replaces = (older: ToastOptions, newer: ToastOptions) =>
+  sameType(older, newer) || supersedes(older, newer);
 
 // Split out of `ToastProvider` so the `styles.useVariants({ type })` read can
 // never destabilise `showToast`, the identity `toastService` dispatches through.
@@ -258,29 +261,19 @@ export const ToastProvider: React.FC<{ children?: ReactNode }> = ({
     );
   };
 
+  // Rapid same-type calls coalesce into one toast that ends N seconds after the
+  // LAST call, not a sequential parade. A replaced toast's action lapses with
+  // it; the change it offered to undo stands.
   const showToast: ToastFn = opts => {
     setQueue(prev => {
-      if (!prev.current)
-        return { ...prev, current: opts, generation: prev.generation + 1 };
-      // Replace in-place when nothing has an action and either the type matches
-      // (coalesces rapid same-type calls into one toast that ends N seconds
-      // after the *last* call, instead of a sequential parade) or both are state
-      // announcements (the newer state is the only true one).
-      const canReplace =
-        prev.current.action == null &&
-        opts.action == null &&
-        (sameType(prev.current, opts) || supersedes(prev.current, opts));
-      if (canReplace) {
+      const waiting = prev.queue.filter(q => !replaces(q, opts));
+      if (!prev.current || replaces(prev.current, opts))
         return {
-          current: { ...opts, action: undefined },
-          queue: prev.queue.filter(
-            q =>
-              q.action != null || !(sameType(q, opts) || supersedes(q, opts)),
-          ),
+          current: opts,
+          queue: waiting,
           generation: prev.generation + 1,
         };
-      }
-      return { ...prev, queue: [...prev.queue, opts] };
+      return { ...prev, queue: [...waiting, opts] };
     });
   };
 

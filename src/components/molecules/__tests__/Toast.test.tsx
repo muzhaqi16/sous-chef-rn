@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { act, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { AccessibilityInfo, Platform } from 'react-native';
 import { usePanGesture } from 'react-native-gesture-handler';
 import { withSpring } from 'react-native-reanimated';
@@ -310,6 +310,126 @@ describe('ToastProvider', () => {
         jest.advanceTimersByTime(1000);
       });
       expect(isLive()).toBe(false);
+    });
+  });
+
+  describe('replacement', () => {
+    const withSpringMock = withSpring as unknown as jest.Mock;
+    const passThrough = (toValue: unknown) => toValue;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      scheduleOnRNMock.mockImplementation(
+        (
+          fn: ((...args: unknown[]) => unknown) | undefined,
+          ...args: unknown[]
+        ) => fn?.(...args),
+      );
+      withSpringMock.mockImplementation((toValue, _config, callback) => {
+        if (typeof callback === 'function') callback(true);
+        return toValue;
+      });
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      withSpringMock.mockImplementation(passThrough);
+    });
+
+    const mountProvider = (): ToastFn => {
+      let show: ToastFn | undefined;
+      render(
+        <ToastProvider>
+          <ToastCapture
+            onReady={fn => {
+              show = fn;
+            }}
+          />
+        </ToastProvider>,
+      );
+      return opts => {
+        act(() => {
+          show?.(opts);
+        });
+      };
+    };
+
+    // One act per step: the queue pops from an effect scheduled after the
+    // dismissal commits, which a single long advance would never reach.
+    const advance = (ms: number) =>
+      act(() => {
+        jest.advanceTimersByTime(ms);
+      });
+    const outlastHold = () => advance(TOAST.AUTO_DISMISS_SHORT + 50);
+    const outlastQueueDelay = () => advance(TOAST.QUEUE_DELAY + 50);
+
+    const isLive = (type: ToastType) =>
+      screen.getByTestId(`toast-${type}`).props.pointerEvents === 'auto';
+
+    const undo = (onPress = jest.fn()) => ({ label: 'Undo', onPress });
+
+    it('replaces a displayed toast carrying an action with a newer one of its type', () => {
+      const show = mountProvider();
+      show({ message: 'Removed A', type: 'success', action: undo() });
+      show({ message: 'Removed B', type: 'success', action: undo() });
+
+      expect(screen.getByText('Removed B')).toBeTruthy();
+      expect(screen.queryByText('Removed A')).toBeNull();
+    });
+
+    it('never brings a replaced toast back', () => {
+      const show = mountProvider();
+      show({ message: 'Removed A', type: 'success', action: undo() });
+      show({ message: 'Removed B', type: 'success', action: undo() });
+
+      outlastHold();
+      outlastQueueDelay();
+
+      expect(screen.queryByText('Removed A')).toBeNull();
+      expect(isLive('success')).toBe(false);
+    });
+
+    it('drops a queued toast of the same type', () => {
+      const show = mountProvider();
+      show({ message: 'Failed', type: 'error' });
+      show({ message: 'Removed A', type: 'success', action: undo() });
+      show({ message: 'Removed B', type: 'success', action: undo() });
+
+      outlastHold();
+      outlastQueueDelay();
+      expect(screen.getByText('Removed B')).toBeTruthy();
+
+      outlastHold();
+      outlastQueueDelay();
+      expect(screen.queryByText('Removed A')).toBeNull();
+      expect(isLive('success')).toBe(false);
+    });
+
+    it('queues a toast of another type behind the displayed one', () => {
+      const show = mountProvider();
+      show({ message: 'Removed A', type: 'success', action: undo() });
+      show({ message: 'Could not remove', type: 'error' });
+
+      expect(isLive('success')).toBe(true);
+      expect(screen.queryByText('Could not remove')).toBeNull();
+
+      outlastHold();
+      outlastQueueDelay();
+      expect(screen.getByText('Could not remove')).toBeTruthy();
+      expect(isLive('error')).toBe(true);
+    });
+
+    it("runs the replacement's action, not the replaced toast's", () => {
+      const first = jest.fn();
+      const second = jest.fn();
+      const show = mountProvider();
+      show({ message: 'Removed A', type: 'success', action: undo(first) });
+      show({ message: 'Removed B', type: 'success', action: undo(second) });
+
+      fireEvent.press(screen.getByText('Undo'));
+
+      expect(second).toHaveBeenCalledTimes(1);
+      expect(first).not.toHaveBeenCalled();
     });
   });
 

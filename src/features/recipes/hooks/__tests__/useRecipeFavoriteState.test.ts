@@ -7,6 +7,7 @@ import {
 import { MyRecipesDocument } from '#features/recipes/graphql/recipe.generated';
 import type { RecipeInformation } from '#/services/spoonacular/types';
 import type { MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
+import { makeCache } from '#/apollo/cache';
 import { useRecipeFavoriteState } from '../useRecipeFavoriteState';
 
 jest.mock('#/utils/finallyHelpers', () => ({
@@ -87,6 +88,7 @@ describe('useRecipeFavoriteState', () => {
             savedDetails: { folder: 'F' },
           } as Partial<MaterializedRecipe> as MaterializedRecipe,
           saveRecipeToFavorites: noopSave,
+          saveBackendRecipeToFavorites: noopSave,
           savingToFavorites: false,
         }),
       );
@@ -106,6 +108,7 @@ describe('useRecipeFavoriteState', () => {
             savedDetails: null,
           } as Partial<MaterializedRecipe> as MaterializedRecipe,
           saveRecipeToFavorites: noopSave,
+          saveBackendRecipeToFavorites: noopSave,
           savingToFavorites: false,
         }),
       );
@@ -133,6 +136,7 @@ describe('useRecipeFavoriteState', () => {
             isBackendRecipe: false,
             backendRecipe: undefined,
             saveRecipeToFavorites: noopSave,
+            saveBackendRecipeToFavorites: noopSave,
             savingToFavorites: false,
           }),
         { operationMocks: [m.mock] },
@@ -140,6 +144,39 @@ describe('useRecipeFavoriteState', () => {
 
       await waitFor(() => expect(result.current.isSaved).toBe(true));
       expect(result.current.savedFolderLocal).toBe('Dinner');
+    });
+
+    it('returns false for a viewed external recipe that was never saved', async () => {
+      const m = myRecipesMock([
+        {
+          id: 'mirror-1',
+          externalSource: ExternalSource.Spoonacular,
+          externalId: '12345',
+        },
+      ]);
+      const cache = makeCache();
+
+      const { result } = renderHookWithApollo(
+        () =>
+          useRecipeFavoriteState({
+            externalSource: ExternalSource.Spoonacular,
+            externalId: '12345',
+            externalRecipe: minimalExternalRecipe,
+            isBackendRecipe: false,
+            backendRecipe: undefined,
+            saveRecipeToFavorites: noopSave,
+            saveBackendRecipeToFavorites: noopSave,
+            savingToFavorites: false,
+          }),
+        { cache, operationMocks: [m.mock] },
+      );
+
+      await waitFor(() =>
+        expect(cache.readQuery({ query: MyRecipesDocument })).not.toBeNull(),
+      );
+      // One tick for the re-render and the effect that mirrors the match.
+      await act(() => new Promise<void>(resolve => setTimeout(resolve, 0)));
+      expect(result.current.isSaved).toBe(false);
     });
 
     it('returns false for external recipe not found in MyRecipes', async () => {
@@ -154,6 +191,7 @@ describe('useRecipeFavoriteState', () => {
             isBackendRecipe: false,
             backendRecipe: undefined,
             saveRecipeToFavorites: noopSave,
+            saveBackendRecipeToFavorites: noopSave,
             savingToFavorites: false,
           }),
         { operationMocks: [m.mock] },
@@ -165,6 +203,37 @@ describe('useRecipeFavoriteState', () => {
   });
 
   describe('handleSaveRecipe', () => {
+    it('favorites a backend recipe by its id', async () => {
+      const save = jest.fn();
+      const saveBackend = jest.fn().mockResolvedValue(undefined);
+      const { result } = renderHookWithApollo(() =>
+        useRecipeFavoriteState({
+          externalSource: undefined,
+          externalId: undefined,
+          externalRecipe: null,
+          isBackendRecipe: true,
+          backendRecipe: {
+            id: 'r1',
+            savedDetails: null,
+          } as Partial<MaterializedRecipe> as MaterializedRecipe,
+          saveRecipeToFavorites: save,
+          saveBackendRecipeToFavorites: saveBackend,
+          savingToFavorites: false,
+        }),
+      );
+
+      await act(async () => {
+        result.current.handleSaveRecipe('Weeknight', ['quick'], ' ');
+      });
+
+      expect(saveBackend).toHaveBeenCalledWith('r1', {
+        folder: 'Weeknight',
+        tags: ['quick'],
+        notes: undefined,
+      });
+      expect(save).not.toHaveBeenCalled();
+    });
+
     it('does nothing when externalRecipe is null', async () => {
       const save = jest.fn().mockResolvedValue({ success: true });
       const { result } = renderHookWithApollo(() =>
@@ -175,6 +244,7 @@ describe('useRecipeFavoriteState', () => {
           isBackendRecipe: false,
           backendRecipe: undefined,
           saveRecipeToFavorites: save,
+          saveBackendRecipeToFavorites: noopSave,
           savingToFavorites: false,
         }),
       );
@@ -196,6 +266,7 @@ describe('useRecipeFavoriteState', () => {
           isBackendRecipe: false,
           backendRecipe: undefined,
           saveRecipeToFavorites: save,
+          saveBackendRecipeToFavorites: noopSave,
           savingToFavorites: false,
         }),
       );
@@ -221,6 +292,7 @@ describe('useRecipeFavoriteState', () => {
           isBackendRecipe: false,
           backendRecipe: undefined,
           saveRecipeToFavorites: save,
+          saveBackendRecipeToFavorites: noopSave,
           savingToFavorites: false,
         }),
       );
@@ -246,6 +318,7 @@ describe('useRecipeFavoriteState', () => {
           isBackendRecipe: false,
           backendRecipe: undefined,
           saveRecipeToFavorites: save,
+          saveBackendRecipeToFavorites: noopSave,
           savingToFavorites: false,
         }),
       );
@@ -268,6 +341,7 @@ describe('useRecipeFavoriteState', () => {
           isBackendRecipe: false,
           backendRecipe: undefined,
           saveRecipeToFavorites: save,
+          saveBackendRecipeToFavorites: noopSave,
           savingToFavorites: false,
         }),
       );
@@ -290,6 +364,7 @@ describe('useRecipeFavoriteState', () => {
           isBackendRecipe: false,
           backendRecipe: undefined,
           saveRecipeToFavorites: noopSave,
+          saveBackendRecipeToFavorites: noopSave,
           savingToFavorites: true,
         }),
       );
@@ -308,6 +383,7 @@ describe('useRecipeFavoriteState', () => {
           isBackendRecipe: false,
           backendRecipe: undefined,
           saveRecipeToFavorites: noopSave,
+          saveBackendRecipeToFavorites: noopSave,
           savingToFavorites: false,
         }),
       );
