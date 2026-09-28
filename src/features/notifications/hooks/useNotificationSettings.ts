@@ -79,8 +79,6 @@ function keysOf<T extends object>(table: {
 const CHANNELS_KEYS = keysOf<ChannelsInput>({
   emailEnabled: true,
   pushEnabled: true,
-  // The API sends no SMS; listed only because the input still accepts it.
-  smsEnabled: true,
 });
 
 const EXPIRATION_KEYS = keysOf<ExpirationInput>({
