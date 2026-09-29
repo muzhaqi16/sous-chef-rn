@@ -159,8 +159,10 @@ export const useBiometricSetup = ({
   };
 
   // An explicit decline everywhere except settings, where dismissing the modal is
-  // not a permanent "don't ask again".
+  // not a permanent "don't ask again". Android back reaches this too, so it
+  // holds while enrolment runs: skipping then completes twice, false then true.
   const handleSkip = () => {
+    if (isEnabling) return;
     onComplete(false, mode !== 'settings');
   };
 
