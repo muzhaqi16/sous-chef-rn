@@ -171,6 +171,8 @@ they read it.
     theme colours into data structures.
   - `EdgeFade`, which passes colours into SVG gradient stops;
   - `SearchBar`, which offsets a measured rect by `theme.spacing.sm` in JS.
+  - `FilteredPantryItems`' loading skeleton, which counts a screenful of rows
+    from `theme.spacing` and `theme.type` in JS.
 - **Plugin order is Unistyles → `unistyles-scope-crawl` → React Compiler**
   (`babel.config.js`): the documented order with a crawl between. Unistyles'
   `useVariants` rewrite declares a shadowing binding without `scope.crawl()`;

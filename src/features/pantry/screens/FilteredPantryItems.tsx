@@ -2,8 +2,6 @@ import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { spacing } from '#/theme/foundations/spacing';
-import { type } from '#/theme/foundations/type';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 // RNGH's Pressable for the cart button: nested in the row's RNGH Swipeable, its
 // native button captures the tap so the row's onPress does not also fire.
@@ -13,7 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { Icon } from '#utils/iconUtils';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
@@ -258,37 +256,75 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
 
 const FilteredRenderItem = FilteredRenderItemComponent;
 
-// The row above at the default density: card padding, both text lines and the
-// card's bottom margin. The window's header height is slack for denser settings.
-const ROW_PITCH =
-  spacing.md * 2 +
-  type.bodyStrong.lineHeight +
-  spacing.xs +
-  type.caption.lineHeight +
-  spacing.sm;
+interface FilteredRowSkeletonProps {
+  showCart: boolean;
+  titleHeight: number;
+  subtitleHeight: number;
+}
 
 /** The row above with bars for its text, so nothing shifts on reveal. */
-const FilteredRowSkeleton: React.FC = () => (
+const FilteredRowSkeleton: React.FC<FilteredRowSkeletonProps> = ({
+  showCart,
+  titleHeight,
+  subtitleHeight,
+}) => (
   <View style={[commonStyles.card, commonStyles.rowSpaceBetween]}>
     <View style={styles.itemInfo}>
       <View style={styles.titleLine}>
-        <SkeletonLine width="60%" height={type.bodyStrong.fontSize} />
+        <SkeletonLine width="60%" height={titleHeight} />
       </View>
       <View style={styles.subtitleLine}>
-        <SkeletonLine width="40%" height={type.caption.fontSize} />
+        <SkeletonLine width="40%" height={subtitleHeight} />
       </View>
     </View>
-    <View style={styles.actionButton}>
-      <SkeletonCircle size={CART_ICON_SIZE} />
-    </View>
+    {showCart ? (
+      <View style={styles.actionButton}>
+        <SkeletonCircle size={CART_ICON_SIZE} />
+      </View>
+    ) : null}
   </View>
 );
+
+/**
+ * A screenful of skeleton rows. The count is arithmetic over the theme, which
+ * the density and text-size preferences scale, so it reads `theme` in JS.
+ */
+const FilteredSkeleton: React.FC<{ showCart: boolean }> = ({ showCart }) => {
+  const { theme } = useUnistyles();
+  const { height: windowHeight } = useWindowDimensions();
+  const { spacing, type } = theme;
+  // Card padding, both text lines and the card's bottom margin; the window's
+  // header height is slack.
+  const rowPitch =
+    spacing.md * 2 +
+    type.bodyStrong.lineHeight +
+    spacing.xs +
+    type.caption.lineHeight +
+    spacing.sm;
+
+  return (
+    <View testID={pantryTestIDs.loading}>
+      {Array.from(
+        { length: Math.ceil(windowHeight / rowPitch) },
+        (_, index) => (
+          <FilteredRowSkeleton
+            key={index}
+            showCart={showCart}
+            titleHeight={type.bodyStrong.fontSize}
+            subtitleHeight={type.caption.fontSize}
+          />
+        ),
+      )}
+    </View>
+  );
+};
 
 interface FilteredEmptyProps {
   state: DataState;
   onRetry: () => void;
   icon: string;
   message: string;
+  showCart: boolean;
 }
 
 /**
@@ -301,20 +337,10 @@ const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
   onRetry,
   icon,
   message,
+  showCart,
 }) => {
-  const { height: windowHeight } = useWindowDimensions();
-
   if (state === 'loading') {
-    return (
-      <View testID={pantryTestIDs.loading}>
-        {Array.from(
-          { length: Math.ceil(windowHeight / ROW_PITCH) },
-          (_, index) => (
-            <FilteredRowSkeleton key={index} />
-          ),
-        )}
-      </View>
-    );
+    return <FilteredSkeleton showCart={showCart} />;
   }
 
   if (state === 'error' || state === 'offline') {
@@ -522,6 +548,7 @@ export const FilteredPantryItems: React.FC<
               onRetry={handleRefresh}
               icon={config.emptyIcon}
               message={config.emptyMessage}
+              showCart={showCart}
             />
           }
           renderItem={({
