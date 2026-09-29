@@ -1,327 +1,257 @@
 import { waitFor } from '@testing-library/react-native';
-import {
-  Difficulty,
-  ExternalSource,
-  RecipeCategory,
-  RecipeStatus,
-} from '#/graphql/generated/schemaTypes';
+import { ExternalSyncStatus } from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
+  statesFutureSchemaValues,
+  type MockDataFor,
+  type MockedResponse,
+  type MockFor,
 } from '#/test-utils/apolloMockProvider';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
-import { useRecipeData } from '../useRecipeData';
-import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
-import { useRecipeCacheStore } from '#features/recipes/store/useRecipeCacheStore';
+import { useRecipeData, type UseRecipeDataParams } from '../useRecipeData';
+import type { CatalogRecipeHint } from '../useOpenCatalogRecipe';
 
-jest.mock('#/services/spoonacular/SpoonacularService', () => ({
-  spoonacularService: {
-    getRecipeInformation: jest.fn(),
-  },
-}));
+type RecipeFixture = NonNullable<
+  MockDataFor<typeof GetRecipeDocument>['recipe']
+>;
 
-const noopPreload = jest.fn().mockResolvedValue(undefined);
+const HINT: CatalogRecipeHint = {
+  externalId: '716429',
+  name: 'Pasta with Garlic',
+  imageUrl: 'https://img.spoonacular.com/recipes/716429-556x370.jpg',
+};
 
-beforeEach(() => {
-  jest.clearAllMocks();
-  // Recipe details are cached by id; each test states its own Spoonacular answer.
-  useRecipeCacheStore.getState().clearAllCache();
+/** A recipe the user wrote: no provider behind it. */
+const authoredRecipe = (overrides: RecipeFixture = {}): RecipeFixture => ({
+  __typename: 'Recipe',
+  id: 'r1',
+  name: 'Pasta',
+  isExternal: false,
+  sourceMapping: null,
+  externalDetails: null,
+  ...overrides,
 });
 
-function backendRecipeMock(
-  recipe: {
-    id: string;
-    name: string;
-    imageUrl?: string | null;
-    servings?: number;
-    totalTimeMinutes?: number | null;
-    description?: string | null;
-    source?: string | null;
-    sourceUrl?: string | null;
-    savedDetails?: Record<string, unknown> | null;
-  } = { id: 'r1', name: 'Pasta', servings: 4 },
+/** A Spoonacular recipe the API holds, in the given sync state. */
+const catalogRecipe = (
+  syncStatus: ExternalSyncStatus,
+  overrides: RecipeFixture = {},
+): RecipeFixture => ({
+  __typename: 'Recipe',
+  id: 'r1',
+  name: 'Catalog Pasta',
+  isExternal: true,
+  createdBy: null,
+  sourceMapping: { __typename: 'RecipeSourceMapping', id: 'sm-1', syncStatus },
+  ...overrides,
+});
+
+const recipeMock = (recipe: RecipeFixture) =>
+  recordMock(GetRecipeDocument, { data: { recipe } }).mock;
+
+function renderData(
+  params: Partial<UseRecipeDataParams>,
+  operationMocks: MockedResponse[] = [],
 ) {
-  return recordMock(GetRecipeDocument, {
-    data: {
-      recipe: {
-        __typename: 'Recipe',
-        id: recipe.id,
-        name: recipe.name,
-        description: recipe.description ?? null,
-        imageUrl: recipe.imageUrl ?? null,
-        servings: recipe.servings ?? 4,
-        prepTimeMinutes: null,
-        cookTimeMinutes: null,
-        totalTimeMinutes: recipe.totalTimeMinutes ?? null,
-        difficulty: Difficulty.Easy,
-        category: RecipeCategory.Dinner,
-        cuisines: [],
-        status: RecipeStatus.Published,
-        caloriesPerServing: null,
-        nutritionData: null,
-        publishedAt: null,
-        forkedFromId: null,
-        forkedFrom: null,
-        originalAuthor: null,
-        tips: null,
-        tags: [],
-        savedDetails: recipe.savedDetails ?? null,
-        instructions: [],
-        notes: null,
-        videoUrl: null,
-        sourceUrl: recipe.sourceUrl ?? null,
-        source: recipe.source ?? null,
-        isPublished: true,
-        averageRating: null,
-        totalReviews: 0,
-        rating1Count: 0,
-        rating2Count: 0,
-        rating3Count: 0,
-        rating4Count: 0,
-        rating5Count: 0,
-        createdBy: null,
-        ingredientsConnection: {
-          __typename: 'RecipeIngredientConnection',
-          edges: [],
-        },
-      },
-    },
-  });
+  return renderHookWithApollo(
+    () =>
+      useRecipeData({
+        recipeId: undefined,
+        hint: undefined,
+        openFailure: null,
+        ...params,
+      }),
+    { operationMocks },
+  );
 }
 
 describe('useRecipeData', () => {
-  describe('with backend recipeId', () => {
-    it('returns backend displayData mapped from GetRecipe', async () => {
-      const m = backendRecipeMock({
-        id: 'r1',
-        name: 'Pasta Carbonara',
-        servings: 2,
-        totalTimeMinutes: 30,
-        description: 'Classic Italian',
-        imageUrl: 'http://example.com/pasta.jpg',
-      });
-      const { result } = renderHookWithApollo(
-        () =>
-          useRecipeData({
-            recipeId: 'r1',
-            externalSource: undefined,
-            externalId: undefined,
-            preloadRecipe: noopPreload,
+  describe('a recipe opened by id', () => {
+    it('shows the API recipe', async () => {
+      const { result } = renderData({ recipeId: 'r1' }, [
+        recipeMock(
+          authoredRecipe({
+            name: 'Pasta Carbonara',
+            servings: 2,
+            totalTimeMinutes: 30,
+            description: 'Classic Italian',
+            imageUrl: 'https://example.com/pasta.jpg',
           }),
-        { operationMocks: [m.mock] },
-      );
+        ),
+      ]);
 
       await waitFor(() => expect(result.current.displayData).not.toBeNull());
 
-      expect(result.current.isBackendRecipe).toBe(true);
       expect(result.current.displayData).toEqual(
         expect.objectContaining({
           title: 'Pasta Carbonara',
           servings: 2,
           readyInMinutes: 30,
           summary: 'Classic Italian',
-          image: 'http://example.com/pasta.jpg',
+          image: 'https://example.com/pasta.jpg',
+          details: 'complete',
         }),
       );
+      expect(result.current.backendRecipe?.id).toBe('r1');
+      expect(result.current.error).toBeNull();
     });
 
-    it('does not fire the Spoonacular fetch when recipeId is set', async () => {
-      const m = backendRecipeMock();
-      renderHookWithApollo(
-        () =>
-          useRecipeData({
-            recipeId: 'r1',
-            externalSource: undefined,
-            externalId: undefined,
-            preloadRecipe: noopPreload,
-          }),
-        { operationMocks: [m.mock] },
-      );
-
-      await new Promise(r => setTimeout(r, 50));
-      expect(spoonacularService.getRecipeInformation).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('with external source/id only', () => {
-    it('fetches via Spoonacular and maps to displayData', async () => {
-      (
-        spoonacularService.getRecipeInformation as jest.Mock
-      ).mockResolvedValueOnce({
-        title: 'External Pasta',
-        servings: 6,
-        readyInMinutes: 45,
-        image: 'http://spoon.com/p.jpg',
-        summary: 'Spoonacular pasta',
-        extendedIngredients: [{ id: 1 }],
-        analyzedInstructions: [],
-        instructions: '<p>steps</p>',
-        vegetarian: true,
-        vegan: false,
-        glutenFree: false,
-        dairyFree: false,
-        sourceName: 'Source',
-        sourceUrl: 'http://source.com',
-        healthScore: 75,
-      });
-
-      const { result } = renderHookWithApollo(() =>
-        useRecipeData({
-          recipeId: undefined,
-          externalSource: ExternalSource.Spoonacular,
-          externalId: '12345',
-          preloadRecipe: noopPreload,
-        }),
-      );
+    it('carries no provider chips for a recipe the user wrote', async () => {
+      const { result } = renderData({ recipeId: 'r1' }, [
+        recipeMock(authoredRecipe()),
+      ]);
 
       await waitFor(() => expect(result.current.displayData).not.toBeNull());
 
-      expect(result.current.isBackendRecipe).toBe(false);
       expect(result.current.displayData).toEqual(
         expect.objectContaining({
-          title: 'External Pasta',
-          servings: 6,
-          readyInMinutes: 45,
-          vegetarian: true,
-          healthScore: 75,
-          instructionsHtml: '<p>steps</p>',
+          healthScore: undefined,
+          vegetarian: undefined,
+          vegan: undefined,
+          glutenFree: undefined,
+          dairyFree: undefined,
         }),
       );
     });
 
-    it('fires preloadRecipe for the loaded external recipe', async () => {
-      const preload = jest.fn().mockResolvedValue(undefined);
-      (
-        spoonacularService.getRecipeInformation as jest.Mock
-      ).mockResolvedValueOnce({
-        title: 'X',
-        servings: 1,
-        extendedIngredients: [],
-        analyzedInstructions: [],
-      });
-
-      renderHookWithApollo(() =>
-        useRecipeData({
-          recipeId: undefined,
-          externalSource: ExternalSource.Spoonacular,
-          externalId: '99',
-          preloadRecipe: preload,
-        }),
-      );
-
-      await waitFor(() => expect(preload).toHaveBeenCalledTimes(1));
-    });
-
-    it('reports error when Spoonacular throws non-abort error', async () => {
-      (
-        spoonacularService.getRecipeInformation as jest.Mock
-      ).mockRejectedValueOnce(new Error('500 Internal Server Error'));
-
-      const { result } = renderHookWithApollo(() =>
-        useRecipeData({
-          recipeId: undefined,
-          externalSource: ExternalSource.Spoonacular,
-          externalId: '12345',
-          preloadRecipe: noopPreload,
-        }),
-      );
-
-      await waitFor(() =>
-        expect(result.current.error).toBe("Couldn't load this recipe"),
-      );
-      expect(result.current.displayData).toBeNull();
-    });
-
-    it('rejects an external source it has no client for', async () => {
-      const { result } = renderHookWithApollo(() =>
-        useRecipeData({
-          recipeId: undefined,
-          externalSource: ExternalSource.Edamam,
-          externalId: '1',
-          preloadRecipe: noopPreload,
-        }),
-      );
-
-      await waitFor(() =>
-        expect(result.current.error).toBe("Couldn't load this recipe"),
-      );
-    });
-  });
-
-  describe('with no recipeId and no external source', () => {
-    it('reports "Recipe not found"', async () => {
-      const { result } = renderHookWithApollo(() =>
-        useRecipeData({
-          recipeId: undefined,
-          externalSource: undefined,
-          externalId: undefined,
-          preloadRecipe: noopPreload,
-        }),
-      );
-
-      await waitFor(() =>
-        expect(result.current.error).toBe('Recipe not found'),
-      );
-      expect(result.current.displayData).toBeNull();
-    });
-  });
-
-  describe('isBackendRecipe', () => {
-    it('is false when recipeId is set but backend hasnt resolved', () => {
-      const m = backendRecipeMock({ id: 'r1', name: 'X' });
-      const { result } = renderHookWithApollo(
-        () =>
-          useRecipeData({
-            recipeId: 'r1',
-            externalSource: undefined,
-            externalId: undefined,
-            preloadRecipe: noopPreload,
+    it('reads the health score and diet chips from the provider details', async () => {
+      const { result } = renderData({ recipeId: 'r1' }, [
+        recipeMock(
+          catalogRecipe(ExternalSyncStatus.Synced, {
+            externalDetails: {
+              __typename: 'SpoonacularRecipeDetails',
+              healthScore: 75,
+              vegetarian: true,
+              vegan: false,
+              glutenFree: true,
+              dairyFree: null,
+            },
           }),
-        { operationMocks: [m.mock] },
-      );
-      expect(result.current.isBackendRecipe).toBe(false);
-    });
-
-    it('is true once backend recipe loads', async () => {
-      const m = backendRecipeMock({ id: 'r1', name: 'X' });
-      const { result } = renderHookWithApollo(
-        () =>
-          useRecipeData({
-            recipeId: 'r1',
-            externalSource: undefined,
-            externalId: undefined,
-            preloadRecipe: noopPreload,
-          }),
-        { operationMocks: [m.mock] },
-      );
-      await waitFor(() => expect(result.current.isBackendRecipe).toBe(true));
-    });
-  });
-
-  describe('displayData precedence', () => {
-    it('prefers backend recipe over external when both are present', async () => {
-      const m = backendRecipeMock({ id: 'r1', name: 'Backend Title' });
-      (
-        spoonacularService.getRecipeInformation as jest.Mock
-      ).mockResolvedValueOnce({
-        title: 'External Title',
-        extendedIngredients: [],
-        analyzedInstructions: [],
-      });
-
-      const { result } = renderHookWithApollo(
-        () =>
-          useRecipeData({
-            recipeId: 'r1',
-            externalSource: ExternalSource.Spoonacular,
-            externalId: '1',
-            preloadRecipe: noopPreload,
-          }),
-        { operationMocks: [m.mock] },
-      );
+        ),
+      ]);
 
       await waitFor(() => expect(result.current.displayData).not.toBeNull());
-      expect(result.current.displayData?.title).toBe('Backend Title');
+
+      expect(result.current.displayData).toEqual(
+        expect.objectContaining({
+          healthScore: 75,
+          vegetarian: true,
+          vegan: false,
+          glutenFree: true,
+          dairyFree: undefined,
+        }),
+      );
     });
+
+    it('waits on the recipe itself once its id is known', () => {
+      const { result } = renderData({ recipeId: 'r1', hint: HINT }, [
+        recipeMock(authoredRecipe()),
+      ]);
+
+      expect(result.current.displayData).toBeNull();
+      expect(result.current.loading).toBe(true);
+    });
+
+    it('prefers the API recipe over the row it was opened from', async () => {
+      const { result } = renderData({ recipeId: 'r1', hint: HINT }, [
+        recipeMock(catalogRecipe(ExternalSyncStatus.Synced, { name: 'API' })),
+      ]);
+
+      await waitFor(() =>
+        expect(result.current.displayData?.title).toBe('API'),
+      );
+      expect(result.current.loading).toBe(false);
+    });
+  });
+
+  describe('what a catalog recipe has to show', () => {
+    it.each([
+      [ExternalSyncStatus.Synced, 'complete'],
+      [ExternalSyncStatus.ClientSupplied, 'complete'],
+      [ExternalSyncStatus.Pending, 'pending'],
+      [ExternalSyncStatus.NotFound, 'unavailable'],
+    ])('%s reads as %s', async (syncStatus, details) => {
+      const { result } = renderData({ recipeId: 'r1' }, [
+        recipeMock(catalogRecipe(syncStatus)),
+      ]);
+
+      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+
+      expect(result.current.displayData?.details).toBe(details);
+    });
+
+    it('shows what it carries for a sync state newer than this build', async () => {
+      // A member newer than this build's enum; the cast is the point.
+      const newerStatus: string = 'REFETCHING';
+      const future: MockFor<typeof GetRecipeDocument> =
+        statesFutureSchemaValues({
+          request: { query: GetRecipeDocument, variables: () => true },
+          result: {
+            data: {
+              recipe: {
+                __typename: 'Recipe',
+                id: 'r1',
+                name: 'Catalog Pasta',
+                isExternal: true,
+                sourceMapping: {
+                  __typename: 'RecipeSourceMapping',
+                  id: 'sm-1',
+                  syncStatus: newerStatus as ExternalSyncStatus,
+                },
+              },
+            },
+          },
+        });
+
+      const { result } = renderData({ recipeId: 'r1' }, [future]);
+
+      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+
+      expect(result.current.displayData?.details).toBe('complete');
+    });
+  });
+
+  describe('a catalog recipe still being opened', () => {
+    it('shows the row’s name and image while its id is on the way', () => {
+      const { result } = renderData({ hint: HINT });
+
+      expect(result.current.displayData).toEqual({
+        title: 'Pasta with Garlic',
+        image: HINT.imageUrl,
+        ingredients: [],
+        details: 'opening',
+      });
+      expect(result.current.loading).toBe(true);
+      expect(result.current.error).toBeNull();
+    });
+
+    it('waits without a title when the row gave none', () => {
+      const { result } = renderData({
+        hint: { externalId: '716429' },
+      });
+
+      expect(result.current.displayData).toBeNull();
+      expect(result.current.loading).toBe(true);
+    });
+
+    it('says why the recipe could not be opened', () => {
+      const { result } = renderData({
+        hint: HINT,
+        openFailure: 'Recipe not found',
+      });
+
+      expect(result.current.error).toBe('Recipe not found');
+      expect(result.current.displayData).toBeNull();
+      expect(result.current.loading).toBe(false);
+    });
+  });
+
+  it('reports "Recipe not found" with neither an id nor a hint', () => {
+    const { result } = renderData({});
+
+    expect(result.current.error).toBe('Recipe not found');
+    expect(result.current.displayData).toBeNull();
+    expect(result.current.loading).toBe(false);
   });
 });

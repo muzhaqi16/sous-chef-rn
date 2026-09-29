@@ -404,7 +404,7 @@ describe('RecipeMain', () => {
     expect(tree.getByText('Need inspiration?')).toBeTruthy();
   });
 
-  it('navigates to RecipeDetail with externalSource for items', () => {
+  it("opens a catalog recipe with the row's own title and image", () => {
     mockDeferredScreen.mockImplementation(
       ({ component: Component }: { component: React.ComponentType }) => (
         <Component />
@@ -431,7 +431,14 @@ describe('RecipeMain', () => {
         pantryItems: [],
         hasPantryItems: false,
       },
-      items: [{ id: '999', title: 'R', subtitle: 's' }],
+      items: [
+        {
+          id: '999',
+          title: 'R',
+          subtitle: 's',
+          imageUrl: 'https://img.spoonacular.com/recipes/999-312x231.jpg',
+        },
+      ],
     });
 
     let capturedOnItemPress: ((id: string | number) => void) | undefined;
@@ -444,9 +451,13 @@ describe('RecipeMain', () => {
     act(() => {
       capturedOnItemPress!('999');
     });
+    // The row's own title and image show while the API opens the recipe.
     expect(mockToRecipeDetail).toHaveBeenCalledWith({
-      externalSource: 'SPOONACULAR',
-      externalId: '999',
+      catalog: {
+        externalId: '999',
+        name: 'R',
+        imageUrl: 'https://img.spoonacular.com/recipes/999-312x231.jpg',
+      },
     });
   });
 

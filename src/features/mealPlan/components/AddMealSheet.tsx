@@ -25,11 +25,10 @@ import {
   type SavedRecipeNode,
 } from '#features/recipes/hooks/useSavedRecipes';
 import { SavedRecipeRow } from './SavedRecipeRow';
-import { CachedImage, warmImage } from '#components/atoms/CachedImage';
+import { CachedImage } from '#components/atoms/CachedImage';
 import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
 import type { TransformedRecipeItem, DietTag } from '#domain/recipeTransform';
-import { useRecipePreload } from '#features/recipes/hooks/useRecipePreload';
-import { fetchRecipeInformation } from '#features/recipes/store/useRecipeCacheStore';
+import { useOpenCatalogRecipe } from '#features/recipes/hooks/useOpenCatalogRecipe';
 import { useRecipeTextSearch } from '#features/recipes/hooks/useRecipeTextSearch';
 import { toastService } from '#/services/toastService';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
@@ -52,9 +51,6 @@ const DIET_TAG_LABEL_KEYS: Record<DietTag, TranslationKey> = {
   glutenFree: 'addMealSheet.dietGlutenFree',
   dairyFree: 'addMealSheet.dietDairyFree',
 };
-
-/** How long an add waits for the recipe's image, on top of saving it. */
-const IMAGE_WARM_MAX_MS = 1500;
 
 /** Module-level helper to reset sheet state when it opens */
 function resetSheetState(
@@ -104,7 +100,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   } = useRecipeTextSearch();
   const [loadingItemId, setLoadingItemId] = useState<number | null>(null);
 
-  const { preloadRecipe } = useRecipePreload();
+  const { openCatalogRecipe } = useOpenCatalogRecipe();
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   const searchBarRef = useRef<SearchBarRef>(null);
@@ -151,26 +147,18 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
 
     void executeAsyncWithCleanup(
       async () => {
-        // With nutrition, so the ingest below fills the ingredient mirror; the
-        // same cached entry the detail screen reads.
-        const fullRecipe = await fetchRecipeInformation(item.spoonacularId);
-
-        // Deliberate save (add to meal plan) → withCost re-ingests with the
-        // recipe-scoped priceBreakdown so per-ingredient cost lands in the mirror.
-        const preloaded = await preloadRecipe(fullRecipe, undefined, {
-          withCost: true,
+        // Planning asks the API for whatever the recipe still lacks.
+        const result = await openCatalogRecipe({
+          externalId: String(item.spoonacularId),
+          name: item.title,
+          imageUrl: item.imageUrl,
         });
-        // The saved recipe's image is the server's own copy, a URL this device
-        // has never loaded, so the new meal card would open on a shimmer.
-        if (preloaded?.imageUrl) {
-          await warmImage(preloaded.imageUrl, IMAGE_WARM_MAX_MS);
+        if (!result.opened) {
+          toastService.error(result.failure);
+          return;
         }
-        if (preloaded) {
-          onAddRecipe(preloaded.id, selectedMealType);
-          onClose();
-        } else {
-          toastService.error(t('addMealSheet.addRecipeFailed'));
-        }
+        onAddRecipe(result.recipeId, selectedMealType);
+        onClose();
       },
       () => setLoadingItemId(null),
       () => {

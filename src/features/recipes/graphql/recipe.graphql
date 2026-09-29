@@ -57,7 +57,6 @@ query MyRecipes($cursor: String, $first: Int = 25) {
         name
         description
         ...MyRecipeCard_recipe
-        ...useRecipeFavoriteState_recipe
       }
       cursor
     }
@@ -163,20 +162,17 @@ mutation CreateRecipe($input: CreateRecipeInput!) {
   }
 }
 
-mutation UpsertExternalRecipe($input: UpsertExternalRecipeInput!) {
+# Names a catalog recipe by provider id; the API fetches its content itself.
+# The recipe selects everything GetRecipe reads, so the detail screen answers
+# from the cache the moment this settles.
+mutation OpenCatalogRecipe($input: UpsertExternalRecipeInput!) {
   upsertExternalRecipe(input: $input) {
     __typename
     ... on UpsertExternalRecipePayload {
       recipe {
         id
-        name
-        imageUrl
-        externalSource
-        externalId
-        servings
-        prepTimeMinutes
-        cookTimeMinutes
-        totalTimeMinutes
+        ...useRecipeData_recipe
+        ...RecipeForm_recipe
       }
       created
     }

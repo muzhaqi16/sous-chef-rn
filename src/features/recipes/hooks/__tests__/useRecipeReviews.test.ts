@@ -206,6 +206,9 @@ const makeBackendRecipe = (
   source: null,
   sourceUrl: null,
   instructions: null,
+  isExternal: false,
+  sourceMapping: null,
+  externalDetails: null,
   savedDetails: null,
   ingredientsConnection: {
     __typename: 'RecipeIngredientConnection',

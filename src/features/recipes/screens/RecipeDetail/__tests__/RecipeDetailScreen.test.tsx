@@ -23,22 +23,15 @@ jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#hooks/performance/useScreenTransition');
 
-// The screen reads only the preferred unit system from settings; the real hook
-// runs its own query and this suite renders without an Apollo provider.
-jest.mock('#features/profile/hooks/useAppSettings', () => ({
-  useAppSettings: () => ({ settings: { preferredUnitSystem: 'METRIC' } }),
-}));
-
 // Mock the hook fully
 jest.mock('../../../hooks/useRecipeDetail', () => ({
   useRecipeDetail: jest.fn(() => ({
     goBack: jest.fn(),
     recipeId: null,
-    externalId: '123',
+    catalogExternalId: undefined,
     loading: false,
     error: 'Recipe not found',
     displayData: null,
-    isBackendRecipe: false,
     backendRecipe: null,
     saving: false,
     isSaved: false,
@@ -197,11 +190,10 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
-      externalId: '123',
+      catalogExternalId: undefined,
       loading: true,
       error: null,
       displayData: null,
-      isBackendRecipe: false,
       backendRecipe: null,
       saving: false,
       isSaved: false,
@@ -257,10 +249,11 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
-      externalId: '123',
+      catalogExternalId: undefined,
       loading: false,
       error: null,
       displayData: {
+        details: 'complete',
         title: 'Spaghetti Carbonara',
         image: 'https://example.com/image.jpg',
         servings: 4,
@@ -275,7 +268,6 @@ describe('RecipeDetail', () => {
         glutenFree: false,
         dairyFree: false,
       },
-      isBackendRecipe: false,
       backendRecipe: null,
       saving: false,
       isSaved: false,
@@ -331,12 +323,13 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
-      externalId: '123',
+      catalogExternalId: undefined,
       loading: false,
       // Offline, a cached recipe's refresh fails. Checking `error` before
       // `displayData` blanked the screen and called it "recipe not found".
       error: 'Network request failed',
       displayData: {
+        details: 'complete',
         title: 'Spaghetti Carbonara',
         image: 'https://example.com/image.jpg',
         servings: 4,
@@ -351,7 +344,6 @@ describe('RecipeDetail', () => {
         glutenFree: false,
         dairyFree: false,
       },
-      isBackendRecipe: false,
       backendRecipe: null,
       saving: false,
       isSaved: false,
@@ -412,17 +404,17 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
-      externalId: null,
+      catalogExternalId: undefined,
       loading: false,
       error: null,
       displayData: {
+        details: 'complete',
         title: 'Quick Soup',
         servings: 6,
         readyInMinutes: 15,
         ingredients: [],
         instructions: [],
       },
-      isBackendRecipe: false,
       backendRecipe: null,
       saving: false,
       isSaved: false,
@@ -480,11 +472,10 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: 'r1',
-      externalId: null,
+      catalogExternalId: undefined,
       loading: false,
       error: "Couldn't load this recipe",
       displayData: null,
-      isBackendRecipe: false,
       backendRecipe: null,
       saving: false,
       isSaved: false,
@@ -539,11 +530,10 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: 'r1',
-      externalId: null,
+      catalogExternalId: undefined,
       loading: false,
       error: null,
       displayData: null,
-      isBackendRecipe: false,
       backendRecipe: null,
       saving: false,
       isSaved: false,
@@ -591,17 +581,18 @@ describe('RecipeDetail', () => {
     expect(tree.getByText('Recipe not found in database')).toBeTruthy();
   });
 
-  it('renders dietary tags for external recipes', () => {
+  it("renders the provider's dietary tags", () => {
     const { useRecipeDetail } = jest.requireMock(
       '../../../hooks/useRecipeDetail',
     );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
-      externalId: '123',
+      catalogExternalId: undefined,
       loading: false,
       error: null,
       displayData: {
+        details: 'complete',
         title: 'Vegan Bowl',
         image: null,
         servings: 2,
@@ -615,7 +606,6 @@ describe('RecipeDetail', () => {
         glutenFree: true,
         dairyFree: true,
       },
-      isBackendRecipe: false,
       backendRecipe: null,
       saving: false,
       isSaved: false,
@@ -674,10 +664,11 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: 'r1',
-      externalId: null,
+      catalogExternalId: undefined,
       loading: false,
       error: null,
       displayData: {
+        details: 'complete',
         title: 'Saved Recipe',
         image: 'https://example.com/img.jpg',
         servings: 4,
@@ -685,7 +676,6 @@ describe('RecipeDetail', () => {
         ingredients: [],
         instructions: [],
       },
-      isBackendRecipe: true,
       backendRecipe: { createdBy: { id: 'user-1' } },
       saving: false,
       isSaved: true,
@@ -748,17 +738,17 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: 'r1',
-      externalId: null,
+      catalogExternalId: undefined,
       loading: false,
       error: null,
       displayData: {
+        details: 'complete',
         title: 'A Recipe',
         image: null,
         servings: 2,
         ingredients: [],
         instructions: [],
       },
-      isBackendRecipe: true,
       backendRecipe: { createdBy: { id: 'other' } },
       saving: false,
       isSaved: true,
@@ -813,10 +803,11 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
-      externalId: '123',
+      catalogExternalId: undefined,
       loading: false,
       error: null,
       displayData: {
+        details: 'complete',
         title: 'Test',
         image: null,
         servings: null,
@@ -827,7 +818,6 @@ describe('RecipeDetail', () => {
         sourceName: 'AllRecipes',
         sourceUrl: 'https://allrecipes.com/r/1',
       },
-      isBackendRecipe: false,
       backendRecipe: null,
       saving: false,
       isSaved: false,
@@ -883,11 +873,10 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
-      externalId: null,
+      catalogExternalId: undefined,
       loading: false,
       error: null,
       displayData: null,
-      isBackendRecipe: false,
       backendRecipe: null,
       saving: false,
       isSaved: false,
@@ -942,17 +931,17 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
-      externalId: null,
+      catalogExternalId: undefined,
       loading: false,
       error: null,
       displayData: {
+        details: 'complete',
         title: 'No Image Recipe',
         image: null,
         servings: 2,
         ingredients: [],
         instructions: [],
       },
-      isBackendRecipe: false,
       backendRecipe: null,
       saving: false,
       isSaved: false,
@@ -1008,17 +997,17 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
-      externalId: '123',
+      catalogExternalId: undefined,
       loading: false,
       error: null,
       displayData: {
+        details: 'complete',
         title: 'Recipe',
         image: null,
         servings: 2,
         ingredients: [{ id: 'i1', name: 'Salt' }],
         instructions: [],
       },
-      isBackendRecipe: false,
       backendRecipe: null,
       saving: false,
       isSaved: false,
@@ -1073,17 +1062,17 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: 'r1',
-      externalId: null,
+      catalogExternalId: undefined,
       loading: false,
       error: null,
       displayData: {
+        details: 'complete',
         title: 'Recipe',
         image: null,
         servings: 2,
         ingredients: [],
         instructions: [],
       },
-      isBackendRecipe: true,
       backendRecipe: { createdBy: { id: 'other' } },
       saving: false,
       isSaved: true,
@@ -1142,6 +1131,7 @@ describe('RecipeDetail', () => {
       loading: false,
       error: null,
       displayData: {
+        details: 'complete',
         title: 'Saving Recipe',
         image: 'https://example.com/img.jpg',
         servings: 4,
@@ -1149,7 +1139,6 @@ describe('RecipeDetail', () => {
         ingredients: [{ id: 'i1', name: 'Salt' }],
         instructions: [{ number: 1, step: 'Add salt' }],
       },
-      isBackendRecipe: false,
       backendRecipe: null,
       saving: true,
       isSaved: false,
@@ -1204,10 +1193,11 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
-      externalId: '123',
+      catalogExternalId: undefined,
       loading: false,
       error: null,
       displayData: {
+        details: 'complete',
         title: 'With Instructions',
         image: null,
         servings: 2,
@@ -1218,7 +1208,6 @@ describe('RecipeDetail', () => {
           { number: 2, step: 'Second step' },
         ],
       },
-      isBackendRecipe: false,
       backendRecipe: null,
       saving: false,
       isSaved: false,
@@ -1274,10 +1263,11 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
-      externalId: '123',
+      catalogExternalId: undefined,
       loading: false,
       error: null,
       displayData: {
+        details: 'complete',
         title: 'Recipe With Ingredients',
         image: null,
         servings: 2,
@@ -1287,7 +1277,6 @@ describe('RecipeDetail', () => {
         ],
         instructions: [],
       },
-      isBackendRecipe: false,
       backendRecipe: null,
       saving: false,
       isSaved: false,
@@ -1342,17 +1331,17 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: 'r1',
-      externalId: null,
+      catalogExternalId: undefined,
       loading: false,
       error: null,
       displayData: {
+        details: 'complete',
         title: 'Cooking Recipe',
         image: null,
         servings: 2,
         ingredients: [],
         instructions: [],
       },
-      isBackendRecipe: true,
       backendRecipe: { createdBy: { id: 'user-1' } },
       saving: false,
       isSaved: true,
@@ -1407,10 +1396,11 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: 'r1',
-      externalId: null,
+      catalogExternalId: undefined,
       loading: false,
       error: null,
       displayData: {
+        details: 'complete',
         title: 'My Pasta Recipe',
         image: null,
         servings: 2,
@@ -1421,7 +1411,6 @@ describe('RecipeDetail', () => {
           { step: 2, text: 'Cook the pasta' },
         ],
       },
-      isBackendRecipe: true,
       backendRecipe: { createdBy: { id: 'user-1' } },
       saving: false,
       isSaved: false,
@@ -1477,17 +1466,17 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: 'r1',
-      externalId: null,
+      catalogExternalId: undefined,
       loading: false,
       error: null,
       displayData: {
+        details: 'complete',
         title: 'No Image Recipe',
         image: null,
         servings: 2,
         ingredients: [],
         instructions: [],
       },
-      isBackendRecipe: true,
       backendRecipe: { createdBy: { id: 'user-1' } },
       saving: false,
       isSaved: false,
@@ -1544,10 +1533,11 @@ describe('RecipeDetail', () => {
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
-      externalId: null,
+      catalogExternalId: undefined,
       loading: false,
       error: null,
       displayData: {
+        details: 'complete',
         title: 'Zero Time Recipe',
         image: null,
         servings: 2,
@@ -1555,7 +1545,6 @@ describe('RecipeDetail', () => {
         ingredients: [],
         instructions: [],
       },
-      isBackendRecipe: false,
       backendRecipe: null,
       saving: false,
       isSaved: false,
@@ -1602,5 +1591,47 @@ describe('RecipeDetail', () => {
     const tree = render(<RecipeDetail route={route} />);
     expect(tree.getAllByText('Zero Time Recipe')[0]).toBeTruthy();
     expect(tree.queryByText(/0 min/)).toBeNull();
+  });
+
+  describe('a catalog recipe the API has not fully fetched', () => {
+    const renderWithDetails = (details: string) => {
+      const { useRecipeDetail } = jest.requireMock<{
+        useRecipeDetail: jest.Mock;
+      }>('../../../hooks/useRecipeDetail');
+      const base = useRecipeDetail.getMockImplementation()?.();
+      useRecipeDetail.mockReturnValue({
+        ...base,
+        error: null,
+        displayData: {
+          details,
+          title: 'Spinach Strata',
+          image: null,
+          ingredients: [],
+        },
+      });
+      return render(<RecipeDetail route={route} />);
+    };
+
+    it("shows the row's title while the API opens it", () => {
+      const tree = renderWithDetails('opening');
+      expect(tree.getAllByText('Spinach Strata')[0]).toBeTruthy();
+      expect(tree.getByTestId('recipe-detail-skeleton')).toBeTruthy();
+    });
+
+    it('says a save will fetch its ingredients and steps', () => {
+      const tree = renderWithDetails('pending');
+      expect(tree.getByText("Details aren't here yet")).toBeTruthy();
+    });
+
+    it('says when its source no longer has it', () => {
+      const tree = renderWithDetails('unavailable');
+      expect(tree.getByText('No longer available')).toBeTruthy();
+    });
+
+    it('shows no notice once it is complete', () => {
+      const tree = renderWithDetails('complete');
+      expect(tree.queryByText("Details aren't here yet")).toBeNull();
+      expect(tree.queryByText('No longer available')).toBeNull();
+    });
   });
 });

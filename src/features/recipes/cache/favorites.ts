@@ -6,7 +6,13 @@ import {
 } from '#features/recipes/graphql/recipe.generated';
 import type { SavedRecipeCard_SavedRecipeFragment } from '#features/recipes/components/SavedRecipeCard.generated';
 import type { ApolloCache } from '@apollo/client';
-import type { SaveToFavoritesOptions } from '#features/recipes/hooks/useRecipePreload';
+
+/** What a save files the recipe under; all optional. */
+export interface SaveToFavoritesOptions {
+  folder?: string;
+  tags?: string[];
+  notes?: string;
+}
 
 const OptimisticSavedRecipeFragment = gql`
   fragment _OptimisticSavedRecipe on SavedRecipe {

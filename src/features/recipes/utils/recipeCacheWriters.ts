@@ -124,6 +124,9 @@ function buildOptimisticRecipeEntity(
     // The create input's JSON (write type) is the same runtime instructions
     // array the detail reads back as JsonValue.
     instructions: input.instructions as JsonValue,
+    isExternal: false,
+    sourceMapping: null,
+    externalDetails: null,
     savedDetails: null,
     averageRating: null,
     totalReviews: 0,

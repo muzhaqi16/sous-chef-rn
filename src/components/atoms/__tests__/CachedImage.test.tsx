@@ -4,7 +4,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import TurboImage from 'react-native-turbo-image';
 import type { Theme } from '../../../theme/themes';
-import { CachedImage, preloadImages, warmImage } from '../CachedImage';
+import { CachedImage, preloadImages } from '../CachedImage';
 
 type StyleSheetArg = object | ((theme: Theme) => object);
 
@@ -334,43 +334,5 @@ describe('preloadImages', () => {
       [{ uri: 'https://example.com/single.jpg' }],
       'dataCache',
     );
-  });
-});
-
-describe('warmImage', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('shows the image without a loading shimmer once it has downloaded', async () => {
-    TurboImage.prefetch = jest
-      .fn<
-        ReturnType<typeof TurboImage.prefetch>,
-        Parameters<typeof TurboImage.prefetch>
-      >()
-      .mockResolvedValue(true);
-
-    await warmImage('https://example.com/warmed.jpg', 1500);
-    render(<CachedImage uri="https://example.com/warmed.jpg" />);
-
-    expect(screen.queryByTestId('skeleton')).toBeNull();
-  });
-
-  it('stops waiting at its cap when the download hangs', async () => {
-    jest.useFakeTimers();
-    TurboImage.prefetch = jest
-      .fn<
-        ReturnType<typeof TurboImage.prefetch>,
-        Parameters<typeof TurboImage.prefetch>
-      >()
-      .mockReturnValue(new Promise(() => {}));
-
-    const waiting = warmImage('https://example.com/hanging.jpg', 1500);
-    jest.advanceTimersByTime(1500);
-    await waiting;
-    jest.useRealTimers();
-
-    render(<CachedImage uri="https://example.com/hanging.jpg" />);
-    expect(screen.getByTestId('skeleton')).toBeTruthy();
   });
 });

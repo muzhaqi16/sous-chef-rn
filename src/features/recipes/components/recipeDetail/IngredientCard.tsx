@@ -8,8 +8,6 @@ import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
 import { getSpoonacularIngredientImageUrl } from '#/services/spoonacular/utils';
 import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
-import { preferredMeasure } from '#features/recipes/utils/preferredMeasure';
-import type { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { Card } from '#components/atoms/Card';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { firstNonBlank } from '#/utils/firstNonBlank';
@@ -18,57 +16,34 @@ interface IngredientCardProps {
   ingredient: DisplayIngredient;
   isAdded: boolean;
   onPress: () => void;
-  /** The reader's preferred system. Only a not-yet-imported recipe can honour
-   *  it: a persisted ingredient carries the one unit the server resolved. */
-  unitSystem: UnitSystem;
 }
-
-// Backend ingredients carry the GraphQL `__typename`; Spoonacular's REST
-// `extendedIngredient` shape does not — use that to discriminate the union.
-const isBackendIngredient = (
-  ingredient: DisplayIngredient,
-): ingredient is Extract<
-  DisplayIngredient,
-  { __typename: 'RecipeIngredient' }
-> => '__typename' in ingredient;
 
 export const IngredientCard: React.FC<IngredientCardProps> = ({
   ingredient,
   isAdded,
   onPress,
-  unitSystem,
 }) => {
   const { t } = useTranslation();
   const money = useMoney();
-  const isBackend = isBackendIngredient(ingredient);
   const ingredientName = ingredient.name || t('labels.unknown');
-  // Both sources answer in the reader's own system. A persisted ingredient is
-  // converted by the server, the only side holding the unit table; a
-  // not-yet-imported one already carries both of Spoonacular's measures. Each
-  // falls back to what it stores when its conversion is unavailable.
-  const converted = isBackend ? ingredient.convertedQuantity : null;
-  const measure = isBackend
-    ? null
-    : preferredMeasure(ingredient.measures, unitSystem);
-  const amount = isBackend
-    ? converted?.value ?? ingredient.quantity
-    : measure?.amount ?? ingredient.amount;
+  // The server converts to the reader's own system; the stored pair is the
+  // fallback when no unit of that system shares the ingredient's dimension.
+  const converted = ingredient.convertedQuantity;
+  const amount = converted?.value ?? ingredient.quantity;
   // A zero amount is an unmeasured ingredient ("salt to taste"): show none.
   const quantity = amount ? formatQuantityForDisplay(amount) : '';
-  const unitSymbol = isBackend
-    ? firstNonBlank(converted?.unit.symbol, ingredient.unit?.symbol)
-    : measure?.unit;
+  const unitSymbol = firstNonBlank(
+    converted ? converted.unit.symbol : null,
+    ingredient.unit?.symbol,
+  );
   const unit = unitSymbol ?? '';
-  // Backend-only: the estimated ingredient price (US dollars), surfaced on its
-  // own line. Never derived from the name — only the dedicated field is shown.
-  const estimatedPrice = isBackend ? ingredient.estimatedPrice : null;
+  // US dollars, null until the recipe is first saved. Never derived from the name.
+  const estimatedPrice = ingredient.estimatedPrice;
   const imageUrl = ingredient.image
     ? ingredient.image.startsWith('http')
-      ? ingredient.image // Already full URL from backend
-      : getSpoonacularIngredientImageUrl(ingredient.image) // Filename needs URL
-    : isBackend
-    ? ingredient.item?.imageUrl
-    : undefined;
+      ? ingredient.image
+      : getSpoonacularIngredientImageUrl(ingredient.image) // A bare filename
+    : ingredient.item?.imageUrl;
 
   return (
     <Card

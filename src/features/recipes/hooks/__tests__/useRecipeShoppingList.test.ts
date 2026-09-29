@@ -5,16 +5,19 @@ import { makeCache } from '#/apollo/cache';
 import type { InMemoryCache } from '@apollo/client';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
+  recordMock,
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import { CreateShoppingListItemFromRecipeIngredientDocument } from '#features/recipes/graphql/recipe.generated';
 import {
-  AddItemsToShoppingListFromRecipeDocument,
+  CreateShoppingListItemFromRecipeIngredientDocument,
+  CreateShoppingListItemsFromRecipeDocument,
+} from '#features/recipes/graphql/recipe.generated';
+import {
   CreateShoppingListForRecipeDocument,
   GetShoppingListsLiteForRecipeDocument,
 } from '../useRecipeDetail.generated';
-import type { RecipeIngredient as ExternalRecipeIngredient } from '#/services/spoonacular/types';
+import type { DisplayIngredient, MaterializedRecipe } from '../useRecipeData';
 import { useRecipeShoppingList } from '../useRecipeShoppingList';
 
 jest.mock('#store/useAppStore', () => ({
@@ -26,11 +29,6 @@ jest.mock('#store/useAppStore', () => ({
 const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
 const mockToastInfo = jest.fn();
-// The hook reads only the preferred unit system from settings; the real hook
-// calls useUser, which this suite replaces with a partial store mock.
-jest.mock('#features/profile/hooks/useAppSettings', () => ({
-  useAppSettings: () => ({ settings: { preferredUnitSystem: 'METRIC' } }),
-}));
 
 jest.mock('#/services/toastService', () => ({
   toastService: {
@@ -89,45 +87,51 @@ const shoppingListsMock = (): MockFor<
   },
 });
 
-const externalIngredient = (
-  overrides: Partial<ExternalRecipeIngredient> = {},
-): ExternalRecipeIngredient => ({
-  id: 1,
-  aisle: 'Baking',
-  image: 'flour.png',
-  consistency: 'solid',
+const ingredient = (
+  overrides: Partial<DisplayIngredient> = {},
+): DisplayIngredient => ({
+  __typename: 'RecipeIngredient',
+  id: 'ing-1',
   name: 'Flour',
-  nameClean: 'flour',
-  original: '2 cups flour',
-  originalName: 'flour',
-  amount: 2,
-  unit: 'cup',
-  meta: [],
-  measures: {
-    us: { amount: 2, unitShort: 'cup', unitLong: 'cups' },
-    metric: { amount: 250, unitShort: 'g', unitLong: 'grams' },
-  },
+  quantity: 2,
+  estimatedPrice: null,
+  item: null,
+  unit: { __typename: 'Unit', id: 'unit-cup', name: 'cup', symbol: 'cup' },
+  convertedQuantity: null,
+  image: null,
+  isOptional: false,
+  notes: null,
+  preparation: null,
+  sortOrder: 0,
+  section: null,
   ...overrides,
 });
 
-/** Renders the hook against `externalRecipe` and waits for the list to load. */
-async function renderForSingleAdd({
-  isBackendRecipe,
+// Add-all reads only the recipe's ingredients.
+const recipeWith = (ingredients: DisplayIngredient[]): MaterializedRecipe =>
+  ({
+    id: 'recipe-1',
+    ingredientsConnection: {
+      __typename: 'RecipeIngredientConnection',
+      edges: ingredients.map(node => ({
+        __typename: 'RecipeIngredientEdge',
+        node,
+      })),
+    },
+  } as Partial<MaterializedRecipe> as MaterializedRecipe);
+
+/** Renders the hook and waits for the target list to load. */
+async function renderShopping({
   operationMocks,
   cache,
+  backendRecipe = null,
 }: {
-  isBackendRecipe: boolean;
   operationMocks: MockedResponse[];
   cache?: InMemoryCache;
+  backendRecipe?: MaterializedRecipe | null;
 }) {
   const rendered = renderHookWithApollo(
-    () =>
-      useRecipeShoppingList({
-        recipeId: 'recipe-1',
-        isBackendRecipe,
-        backendRecipe: null,
-        externalRecipe: null,
-      }),
+    () => useRecipeShoppingList({ recipeId: 'recipe-1', backendRecipe }),
     { operationMocks: [shoppingListsMock(), ...operationMocks], cache },
   );
   await waitFor(() =>
@@ -136,73 +140,79 @@ async function renderForSingleAdd({
   return rendered;
 }
 
-// --- external (Spoonacular) single-ingredient branch ------------------------
+// --- one ingredient ---------------------------------------------------------
 
-const addItemsMock = (
+const addIngredientMock = (
   member:
-    | { kind: 'success'; itemId?: string }
     | { kind: 'error-union' }
-    | { kind: 'transport' },
-): MockFor<typeof AddItemsToShoppingListFromRecipeDocument> => {
+    | { kind: 'queued' }
+    | { kind: 'transport' }
+    | { kind: 'success'; itemId: string },
+): MockFor<typeof CreateShoppingListItemFromRecipeIngredientDocument> => {
+  const request = {
+    query: CreateShoppingListItemFromRecipeIngredientDocument,
+    variables: () => true,
+  };
   if (member.kind === 'transport') {
-    return {
-      request: {
-        query: AddItemsToShoppingListFromRecipeDocument,
-        variables: () => true,
-      },
-      error: new Error('network down'),
-    };
+    return { request, error: new Error('network down') };
   }
   return {
-    request: {
-      query: AddItemsToShoppingListFromRecipeDocument,
-      variables: () => true,
-    },
+    request,
     result: {
       data: {
-        addItemsToShoppingList:
-          member.kind === 'success'
+        createShoppingListItemFromRecipeIngredient:
+          member.kind === 'error-union'
             ? {
-                __typename: 'AddItemsToShoppingListPayload',
-                results: member.itemId
-                  ? [
-                      {
-                        __typename: 'BatchAddShoppingListItemResult',
-                        index: 0,
-                        success: true,
-                        item: {
-                          __typename: 'ShoppingListItem',
-                          id: member.itemId,
-                        },
-                      },
-                    ]
-                  : [],
-                summary: {
-                  __typename: 'BulkSummary',
-                  succeeded: 1,
-                  failed: 0,
-                  skipped: 0,
-                },
-              }
-            : {
                 __typename: 'ValidationError',
                 code: ErrorCode.ValidationFailed,
                 message: 'bad',
+              }
+            : member.kind === 'queued'
+            ? // No payload and no error: the offline queue took it.
+              null
+            : {
+                __typename: 'CreateShoppingListItemFromRecipeIngredientPayload',
+                shoppingListItem: {
+                  __typename: 'ShoppingListItem',
+                  id: member.itemId,
+                },
               },
       },
     },
   };
 };
 
-describe('useRecipeShoppingList — handleAddSingleIngredient (external branch)', () => {
+describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
+  it('adds the recipe ingredient itself to the target list', async () => {
+    const add = recordMock(CreateShoppingListItemFromRecipeIngredientDocument, {
+      data: { createShoppingListItemFromRecipeIngredient: null },
+    });
+    const { result } = await renderShopping({ operationMocks: [add.mock] });
+
+    await act(async () => {
+      await result.current.handleAddSingleIngredient(
+        ingredient({ id: 'ing-7' }),
+      );
+    });
+
+    expect(add.fired).toEqual([
+      {
+        input: {
+          id: 'gen-id-1',
+          recipeIngredientId: 'ing-7',
+          shoppingListId: 'sl-1',
+        },
+      },
+    ]);
+  });
+
   it('does not toast success or mark added on a resolved error-union payload', async () => {
-    const { result } = await renderForSingleAdd({
-      isBackendRecipe: false,
-      operationMocks: [addItemsMock({ kind: 'error-union' })],
+    const { result } = await renderShopping({
+      operationMocks: [addIngredientMock({ kind: 'error-union' })],
     });
 
     await act(async () => {
-      await result.current.handleAddSingleIngredient(externalIngredient());
+      await result.current.handleAddSingleIngredient(ingredient());
     });
 
     await waitFor(() => expect(mockToastError).toHaveBeenCalled());
@@ -210,98 +220,85 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (external branch)'
     expect(result.current.addedIngredients.size).toBe(0);
   });
 
-  it('does not toast success or mark added on a transport error', async () => {
-    const { result } = await renderForSingleAdd({
-      isBackendRecipe: false,
-      operationMocks: [addItemsMock({ kind: 'transport' })],
+  it('says so once, in the app’s own words, on a transport error', async () => {
+    const { result } = await renderShopping({
+      operationMocks: [addIngredientMock({ kind: 'transport' })],
     });
 
     await act(async () => {
-      await result.current.handleAddSingleIngredient(externalIngredient());
+      await result.current.handleAddSingleIngredient(ingredient());
     });
 
     await waitFor(() => expect(mockToastError).toHaveBeenCalled());
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(result.current.addedIngredients.size).toBe(0);
-    // One message, in the app's own words — never the transport's text.
     expect(mockToastError).toHaveBeenCalledTimes(1);
     expect(mockToastError).not.toHaveBeenCalledWith(
       expect.stringContaining('network down'),
     );
   });
 
-  it('toasts success and marks the ingredient added on a success payload', async () => {
-    const { result } = await renderForSingleAdd({
-      isBackendRecipe: false,
-      operationMocks: [addItemsMock({ kind: 'success' })],
+  it('treats an offline-queued result (null payload, no error) as success', async () => {
+    const { result } = await renderShopping({
+      operationMocks: [addIngredientMock({ kind: 'queued' })],
     });
 
     await act(async () => {
       await result.current.handleAddSingleIngredient(
-        externalIngredient({ id: 7 }),
+        ingredient({ id: 'ing-9' }),
       );
     });
 
-    // Wait on the rendered state, not on the toast mock: the toast is called
-    // synchronously right after setAddedIngredients, so it can be observed a
-    // render before `result.current` reflects the new set.
     await waitFor(() =>
-      expect(result.current.addedIngredients.has(7)).toBe(true),
+      expect(result.current.addedIngredients.has('ing-9')).toBe(true),
     );
     expect(mockToastSuccess).toHaveBeenCalled();
     expect(mockToastError).not.toHaveBeenCalled();
   });
 
   it('writes the row into the cache when the create is queued offline', async () => {
-    // The `update:` callback only runs with a server payload, so offline it
-    // never fired: the recipe confirmed success and marked its checkmark while
-    // the shopping list stayed empty until reconnect. The row is now written
-    // before the mutation fires, keyed by the client-minted id so the eventual
-    // replay merges onto it rather than duplicating.
+    // `update:` only runs with a server payload, so offline the row has to be
+    // written before the mutation fires, under the client-minted id the replay
+    // merges onto.
     const cache = makeCache();
-
-    const { result } = await renderForSingleAdd({
-      isBackendRecipe: true,
-      operationMocks: [addRecipeIngredientMock({ kind: 'queued' })],
+    const { result } = await renderShopping({
+      operationMocks: [addIngredientMock({ kind: 'queued' })],
       cache,
     });
 
     await act(async () => {
       await result.current.handleAddSingleIngredient(
-        externalIngredient({ id: 9 }),
+        ingredient({ id: 'ing-9', name: 'Flour', quantity: 2 }),
       );
     });
 
     await waitFor(() =>
-      expect(result.current.addedIngredients.has(9)).toBe(true),
+      expect(result.current.addedIngredients.has('ing-9')).toBe(true),
     );
-
-    expect(cache.extract()).toHaveProperty('ShoppingListItem:gen-id-1');
+    expect(cache.extract()['ShoppingListItem:gen-id-1']).toEqual(
+      expect.objectContaining({ itemName: 'Flour', quantity: 2 }),
+    );
   });
 
   it('counts an added row ONCE in the list stats', async () => {
-    // The optimistic add counts the row; the mutation's reconcile only re-wires
-    // the edge. Counting in both drifts `ShoppingList.totalItems` upwards by one
-    // per add — invisible on the list screen, which reads the connection, and
-    // visible in the list selector, which reads the stat.
+    // The optimistic add counts the row; the reconcile only re-wires the edge.
     const cache = makeCache();
-
-    const { result } = await renderForSingleAdd({
-      isBackendRecipe: false,
-      operationMocks: [addItemsMock({ kind: 'success', itemId: 'gen-id-1' })],
+    const { result } = await renderShopping({
+      operationMocks: [
+        addIngredientMock({ kind: 'success', itemId: 'gen-id-1' }),
+      ],
       cache,
     });
 
     await act(async () => {
       await result.current.handleAddSingleIngredient(
-        externalIngredient({ id: 11 }),
+        ingredient({ id: 'ing-11' }),
       );
     });
 
     await waitFor(() =>
-      expect(result.current.addedIngredients.has(11)).toBe(true),
+      expect(result.current.addedIngredients.has('ing-11')).toBe(true),
     );
-
     const list = cache.extract()['ShoppingList:sl-1'] as {
       totalItems: number;
     };
@@ -309,26 +306,25 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (external branch)'
   });
 
   it('withdraws the optimistic row and its count when the server merges it', async () => {
-    // A catalog merge answers with the EXISTING row's id: the optimistic line
-    // never became a row of its own, so its count goes back with it.
+    // A merge answers with the EXISTING line's id: the optimistic line never
+    // became a row of its own, so its count goes back with it.
     const cache = makeCache();
-
-    const { result } = await renderForSingleAdd({
-      isBackendRecipe: false,
-      operationMocks: [addItemsMock({ kind: 'success', itemId: 'sli-server' })],
+    const { result } = await renderShopping({
+      operationMocks: [
+        addIngredientMock({ kind: 'success', itemId: 'sli-server' }),
+      ],
       cache,
     });
 
     await act(async () => {
       await result.current.handleAddSingleIngredient(
-        externalIngredient({ id: 12 }),
+        ingredient({ id: 'ing-12' }),
       );
     });
 
     await waitFor(() =>
-      expect(result.current.addedIngredients.has(12)).toBe(true),
+      expect(result.current.addedIngredients.has('ing-12')).toBe(true),
     );
-
     const extracted = cache.extract();
     expect(extracted).not.toHaveProperty('ShoppingListItem:gen-id-1');
     expect(
@@ -337,107 +333,89 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (external branch)'
   });
 });
 
-// --- external (Spoonacular) "Add All" batch -----------------------------------
+// --- "Add All" ----------------------------------------------------------------
 
-describe('useRecipeShoppingList — addAll (external batch)', () => {
-  it('reports a refused batch as a failure, not as queued', async () => {
-    // A refusal resolves with an error member and no `error`; read as "no
-    // payload", it took the queued branch and confirmed every ingredient.
-    const cache = makeCache();
-    const rendered = renderHookWithApollo(
-      () =>
-        useRecipeShoppingList({
-          recipeId: 'recipe-1',
-          isBackendRecipe: false,
-          backendRecipe: null,
-          externalRecipe: {
-            extendedIngredients: [externalIngredient({ id: 21 })],
-          } as Parameters<typeof useRecipeShoppingList>[0]['externalRecipe'],
-        }),
-      {
-        operationMocks: [
-          shoppingListsMock(),
-          addItemsMock({ kind: 'error-union' }),
-        ],
-        cache,
+async function addAllTo(result: {
+  current: ReturnType<typeof useRecipeShoppingList>;
+}) {
+  act(() => {
+    result.current.handleAddAll();
+  });
+  await act(async () => {
+    result.current.handleListSelected('sl-1');
+  });
+}
+
+describe('useRecipeShoppingList — Add All', () => {
+  it('adds the whole recipe and marks every ingredient added', async () => {
+    const addAll = recordMock(CreateShoppingListItemsFromRecipeDocument, {
+      data: {
+        createShoppingListItemsFromRecipe: {
+          __typename: 'CreateShoppingListItemsFromRecipePayload',
+          addedItems: [],
+          totalAdded: 2,
+          totalUpdated: 0,
+        },
       },
-    );
-    const { result } = rendered;
-    await waitFor(() => expect(result.current.shoppingLists).toHaveLength(1));
+    });
+    const { result } = await renderShopping({
+      operationMocks: [addAll.mock],
+      backendRecipe: recipeWith([
+        ingredient({ id: 'ing-1' }),
+        ingredient({ id: 'ing-2' }),
+      ]),
+    });
 
-    act(() => {
-      result.current.handleAddAll();
+    await addAllTo(result);
+
+    await waitFor(() =>
+      expect([...result.current.addedIngredients]).toEqual(['ing-1', 'ing-2']),
+    );
+    // No `servings`: the whole recipe is the default.
+    expect(addAll.fired).toEqual([
+      { input: { recipeId: 'recipe-1', shoppingListId: 'sl-1' } },
+    ]);
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
+    expect(mockToastError).not.toHaveBeenCalled();
+  });
+
+  it('reports a refused add as a failure and marks nothing', async () => {
+    const refused: MockFor<typeof CreateShoppingListItemsFromRecipeDocument> = {
+      request: {
+        query: CreateShoppingListItemsFromRecipeDocument,
+        variables: () => true,
+      },
+      result: {
+        data: {
+          createShoppingListItemsFromRecipe: {
+            __typename: 'ValidationError',
+            code: ErrorCode.ValidationFailed,
+            message: 'bad',
+          },
+        },
+      },
+    };
+    const { result } = await renderShopping({
+      operationMocks: [refused],
+      backendRecipe: recipeWith([ingredient({ id: 'ing-1' })]),
     });
-    await act(async () => {
-      result.current.handleListSelected('sl-1');
-    });
+
+    await addAllTo(result);
 
     await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(1));
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(result.current.addedIngredients.size).toBe(0);
-    expect(cache.extract()).not.toHaveProperty('ShoppingListItem:gen-id-1');
   });
-});
 
-// --- backend recipe-ingredient branch ---------------------------------------
+  it('adds nothing while there is no recipe yet', async () => {
+    const addAll = recordMock(CreateShoppingListItemsFromRecipeDocument);
+    const { result } = await renderShopping({ operationMocks: [addAll.mock] });
 
-const addRecipeIngredientMock = (
-  member: { kind: 'error-union' } | { kind: 'queued' },
-): MockFor<typeof CreateShoppingListItemFromRecipeIngredientDocument> => ({
-  request: {
-    query: CreateShoppingListItemFromRecipeIngredientDocument,
-    variables: () => true,
-  },
-  result: {
-    data: {
-      createShoppingListItemFromRecipeIngredient:
-        member.kind === 'error-union'
-          ? {
-              // `resource`/`resourceId` are selected on `NotFoundError`, not on
-              // this member — a ValidationError response cannot carry them.
-              __typename: 'ValidationError',
-              code: ErrorCode.ValidationFailed,
-              message: 'bad',
-            }
-          : // No payload + no error → the offline queue emits the field as null.
-            null,
-    },
-  },
-});
+    await addAllTo(result);
 
-describe('useRecipeShoppingList — handleAddSingleIngredient (backend branch)', () => {
-  it('does not toast success or mark added on a resolved error-union payload', async () => {
-    const { result } = await renderForSingleAdd({
-      isBackendRecipe: true,
-      operationMocks: [addRecipeIngredientMock({ kind: 'error-union' })],
-    });
-
-    await act(async () => {
-      await result.current.handleAddSingleIngredient(externalIngredient());
-    });
-
-    await waitFor(() => expect(mockToastError).toHaveBeenCalled());
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(1));
+    expect(addAll.fired).toHaveLength(0);
     expect(mockToastSuccess).not.toHaveBeenCalled();
-    expect(result.current.addedIngredients.size).toBe(0);
-  });
-
-  it('treats an offline-queued result (null payload, no error) as success', async () => {
-    const { result } = await renderForSingleAdd({
-      isBackendRecipe: true,
-      operationMocks: [addRecipeIngredientMock({ kind: 'queued' })],
-    });
-
-    await act(async () => {
-      await result.current.handleAddSingleIngredient(
-        externalIngredient({ id: 9 }),
-      );
-    });
-
-    await waitFor(() =>
-      expect(result.current.addedIngredients.has(9)).toBe(true),
-    );
-    expect(mockToastSuccess).toHaveBeenCalled();
-    expect(mockToastError).not.toHaveBeenCalled();
   });
 });
 
@@ -508,8 +486,7 @@ describe('useRecipeShoppingList — handleCreateListAndAddIngredients', () => {
       { filters: { isTemplate: true } },
     ];
     variants.forEach(variables => seed(cache, variables));
-    const { result } = await renderForSingleAdd({
-      isBackendRecipe: false,
+    const { result } = await renderShopping({
       operationMocks: [createListMock],
       cache,
     });

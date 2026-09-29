@@ -22,10 +22,6 @@ import { appliedPayload } from '#/utils/errors/mutationPayload';
 
 interface UseRecipeSavedMetadataOptions {
   recipeId: string | undefined;
-  /** Falls back to this id when the recipe was saved as an external recipe (no recipeId yet). */
-  preloadedRecipeId: string | undefined;
-  /** Called after a successful unfavorite so external-recipe state can be cleared by the caller. */
-  onUnfavoriteSuccess: () => void;
 }
 
 /**
@@ -72,8 +68,6 @@ function readSavedDetails(
 
 export function useRecipeSavedMetadata({
   recipeId,
-  preloadedRecipeId,
-  onUnfavoriteSuccess,
 }: UseRecipeSavedMetadataOptions) {
   const { t } = useTranslation();
   const client = useApolloClient();
@@ -241,9 +235,8 @@ export function useRecipeSavedMetadata({
   };
 
   const handleUnfavoriteRecipe = (): Promise<void> => {
-    // For backend recipes, use recipeId. For external recipes, fall back to
-    // the preloadedRecipe id from the preload cache.
-    const targetRecipeId = recipeId ?? preloadedRecipeId;
+    // A catalog recipe still being opened has no id yet.
+    const targetRecipeId = recipeId;
 
     if (!targetRecipeId) {
       toastService.error(t('recipes.cannotRemoveNoId'));
@@ -266,7 +259,6 @@ export function useRecipeSavedMetadata({
       });
       if (!kept) return;
 
-      onUnfavoriteSuccess();
       toastService.success(t('recipes.recipeRemovedFromSaved'));
     }, setUpdatingFolderTags);
   };

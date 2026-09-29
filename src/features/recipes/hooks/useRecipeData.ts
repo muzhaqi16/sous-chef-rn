@@ -1,13 +1,6 @@
-import { useState, useEffect } from 'react';
-import { errorService, localizedErrorMessage } from '#/services/errorService';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { localizedErrorMessage } from '#/services/errorService';
+import { useTranslation } from '#/i18n';
 import { useApolloClient, useQuery } from '@apollo/client/react';
-import { fetchRecipeInformation } from '#features/recipes/store/useRecipeCacheStore';
-import type {
-  RecipeInformation,
-  RecipeIngredient as ExternalRecipeIngredient,
-  RecipeInstruction as ExternalRecipeInstruction,
-} from '#/services/spoonacular/types';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import type { GetRecipeQuery } from '#features/recipes/graphql/recipe.generated';
 import {
@@ -15,33 +8,34 @@ import {
   type UseRecipeData_RecipeFragment,
 } from './useRecipeData.generated';
 import { extractNodes } from '#/utils/connectionUtils';
+import { knownEntry } from '#/utils/closedEnum';
 import {
-  ExternalSource,
+  ExternalSyncStatus,
   type RecipeStatus,
 } from '#/graphql/generated/schemaTypes';
+import type { CatalogRecipeHint } from './useOpenCatalogRecipe';
 
 export type MaterializedRecipe = NonNullable<
   ReturnType<typeof readRecipeFragment>
 >;
 
-/** Backend recipe ingredient (from the GraphQL RecipeFragment). */
-type BackendRecipeIngredient = NonNullable<
+export type DisplayIngredient = NonNullable<
   MaterializedRecipe['ingredientsConnection']['edges'][number]['node']
 >;
 
 /**
- * Normalized display ingredient: either a backend `RecipeIngredient` or an
- * external Spoonacular `extendedIngredient`. Consumers read the fields that
- * exist on whichever source produced `displayData`.
+ * How much of a recipe there is to show. A catalog recipe the API has not
+ * fetched carries only its name and image: `pending` until a save brings the
+ * rest in, `unavailable` when its provider does not have it.
  */
-export type DisplayIngredient =
-  | BackendRecipeIngredient
-  | ExternalRecipeIngredient;
+export type RecipeDetails = 'complete' | 'opening' | 'pending' | 'unavailable';
 
-/** Backend `instructions` is a schema `JSON` scalar; external is a step list. */
-export type DisplayInstructions =
-  | MaterializedRecipe['instructions']
-  | ExternalRecipeInstruction[];
+const DETAILS_BY_SYNC_STATUS: Record<ExternalSyncStatus, RecipeDetails> = {
+  [ExternalSyncStatus.Synced]: 'complete',
+  [ExternalSyncStatus.ClientSupplied]: 'complete',
+  [ExternalSyncStatus.Pending]: 'pending',
+  [ExternalSyncStatus.NotFound]: 'unavailable',
+};
 
 function readRecipeFragment(
   client: ReturnType<typeof useApolloClient>,
@@ -63,16 +57,13 @@ export interface RecipeDisplayData {
   healthScore?: number;
   summary?: string;
   ingredients: DisplayIngredient[];
-  instructions?: DisplayInstructions;
-  instructionsHtml?: string;
+  instructions?: MaterializedRecipe['instructions'];
   vegetarian?: boolean;
   vegan?: boolean;
   glutenFree?: boolean;
   dairyFree?: boolean;
   sourceName?: string;
   sourceUrl?: string;
-  // Backend-only enrichment fields — absent on external (Spoonacular)
-  // recipes, hence all optional.
   caloriesPerServing?: number;
   nutritionData?: unknown;
   status?: RecipeStatus;
@@ -85,90 +76,43 @@ export interface RecipeDisplayData {
   tips?: string;
   videoUrl?: string;
   tags?: string[];
+  details: RecipeDetails;
 }
 
 export interface UseRecipeDataParams {
   recipeId: string | undefined;
-  externalSource: ExternalSource | undefined;
-  externalId: string | undefined;
-  /** Fire-and-forget preload — when an external recipe loads, send it to the
-   *  backend so the next visit can use the backend recipe instead. */
-  preloadRecipe: (recipe: RecipeInformation) => Promise<unknown>;
+  /** What the list row showed, shown while a catalog recipe is being opened. */
+  hint: CatalogRecipeHint | undefined;
+  /** Localized: why a catalog recipe could not be opened. */
+  openFailure: string | null;
 }
 
 export interface UseRecipeDataResult {
   displayData: RecipeDisplayData | null;
   loading: boolean;
-  /** Localized: why neither source produced a recipe. */
+  /** Localized: why there is no recipe to show. */
   error: string | null;
   backendRecipe: MaterializedRecipe | undefined;
-  isBackendRecipe: boolean;
-  externalRecipe: RecipeInformation | null;
+  /** Settles when the recipe has been read again, so a pull can wait on it. */
+  refetch: () => Promise<unknown>;
 }
 
-/** Module-level helper: handles recipe loading with loading/error state management.
- *  Extracted from the hook body to avoid React Compiler bailout from try-catch-finally. */
-async function fetchRecipeData(
-  params: {
-    recipeId: string | undefined;
-    externalSource: ExternalSource | undefined;
-    externalId: string | undefined;
-    backendLoading: boolean;
-  },
-  signal: AbortSignal,
-  setExternalRecipe: (recipe: RecipeInformation) => void,
-  setError: (error: TranslationKey | null) => void,
-  setLoading: (loading: boolean) => void,
-  preloadRecipe: (recipe: RecipeInformation) => Promise<unknown>,
-): Promise<void> {
-  if (params.recipeId) {
-    setLoading(params.backendLoading);
-    return;
-  }
-
-  if (!params.externalSource || !params.externalId) {
-    setError('recipes.recipeNotFound');
-    setLoading(false);
-    return;
-  }
-
-  try {
-    setLoading(true);
-    setError(null);
-
-    if (params.externalSource === ExternalSource.Spoonacular) {
-      const data = await fetchRecipeInformation(
-        Number(params.externalId),
-        signal,
-      );
-      setExternalRecipe(data);
-
-      preloadRecipe(data).catch(() => {
-        // Ignore errors - fire and forget
-      });
-    } else {
-      throw new Error(`Unsupported external source: ${params.externalSource}`);
-    }
-  } catch (err) {
-    if (err instanceof Error && err.name === 'AbortError') return;
-    errorService.reportError(err, { operation: 'fetchRecipe' });
-    setError('recipes.loadFailed');
-  } finally {
-    setLoading(false);
-  }
-}
-
-function buildBackendDisplayData(
-  recipe: MaterializedRecipe,
-): RecipeDisplayData {
+function buildDisplayData(recipe: MaterializedRecipe): RecipeDisplayData {
+  const provider = recipe.externalDetails;
+  const syncStatus = recipe.sourceMapping?.syncStatus;
   return {
     title: recipe.name,
     image: recipe.imageUrl ?? undefined,
     servings: recipe.servings,
     readyInMinutes: recipe.totalTimeMinutes ?? undefined,
+    healthScore: provider?.healthScore ?? undefined,
     summary: recipe.description ?? undefined,
     ingredients: extractNodes(recipe.ingredientsConnection),
     instructions: recipe.instructions,
+    vegetarian: provider?.vegetarian ?? undefined,
+    vegan: provider?.vegan ?? undefined,
+    glutenFree: provider?.glutenFree ?? undefined,
+    dairyFree: provider?.dairyFree ?? undefined,
     sourceName: recipe.source ?? undefined,
     sourceUrl: recipe.sourceUrl ?? undefined,
     caloriesPerServing: recipe.caloriesPerServing ?? undefined,
@@ -182,107 +126,59 @@ function buildBackendDisplayData(
     tips: recipe.tips ?? undefined,
     videoUrl: recipe.videoUrl ?? undefined,
     tags: recipe.tags,
-  };
-}
-
-function buildExternalDisplayData(
-  recipe: RecipeInformation,
-): RecipeDisplayData {
-  return {
-    title: recipe.title,
-    image: recipe.image,
-    servings: recipe.servings,
-    readyInMinutes: recipe.readyInMinutes,
-    healthScore: recipe.healthScore,
-    summary: recipe.summary ?? undefined,
-    ingredients: recipe.extendedIngredients ?? [],
-    instructions: recipe.analyzedInstructions,
-    instructionsHtml: recipe.instructions,
-    vegetarian: recipe.vegetarian,
-    vegan: recipe.vegan,
-    glutenFree: recipe.glutenFree,
-    dairyFree: recipe.dairyFree,
-    sourceName: recipe.sourceName,
-    sourceUrl: recipe.sourceUrl,
+    // A status newer than this build shows what the recipe carries.
+    details: syncStatus
+      ? knownEntry(DETAILS_BY_SYNC_STATUS, syncStatus) ?? 'complete'
+      : 'complete',
   };
 }
 
 /**
- * Loads a recipe from the backend (`recipeId`) or an external source, returning
- * one normalized `displayData` shape. Backend preempts external, and an
- * external load fire-and-forget preloads it so the next visit hits the backend.
+ * The recipe the screen shows, always the API's `Recipe`. A catalog recipe
+ * still being opened shows the row's name and image until its id arrives.
  */
 export function useRecipeData({
   recipeId,
-  externalSource,
-  externalId,
-  preloadRecipe,
+  hint,
+  openFailure,
 }: UseRecipeDataParams): UseRecipeDataResult {
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
-  const [externalRecipe, setExternalRecipe] =
-    useState<RecipeInformation | null>(null);
-  const [errorKey, setErrorKey] = useState<TranslationKey | null>(null);
-
   const apolloClient = useApolloClient();
-  const {
-    data: backendRecipeData,
-    loading: backendLoading,
-    error: backendError,
-  } = useQuery(GetRecipeDocument, {
+  const { data, loading, error, refetch } = useQuery(GetRecipeDocument, {
     variables: { id: recipeId ?? '' },
     skip: !recipeId,
     fetchPolicy: 'cache-and-network',
   });
 
-  // Materialize the masked RecipeFragment ref so downstream consumers (and
-  // this hook's own buildBackendDisplayData) see the full RecipeFragment
-  // fields.
-  const backendRecipeRef = backendRecipeData?.recipe ?? null;
+  // Materialize the masked fragment ref so the screen reads its fields.
   const backendRecipe =
-    readRecipeFragment(apolloClient, backendRecipeRef) ?? undefined;
+    readRecipeFragment(apolloClient, data?.recipe ?? null) ?? undefined;
 
-  useEffect(() => {
-    const controller = new AbortController();
+  const opening = !recipeId && !!hint && !openFailure;
 
-    void fetchRecipeData(
-      { recipeId, externalSource, externalId, backendLoading },
-      controller.signal,
-      setExternalRecipe,
-      setErrorKey,
-      setLoading,
-      preloadRecipe,
-    );
-
-    return () => controller.abort();
-  }, [externalSource, externalId, recipeId, backendLoading, preloadRecipe]);
-
-  const isBackendRecipe = !!recipeId && !!backendRecipe;
+  const displayData: RecipeDisplayData | null = backendRecipe
+    ? buildDisplayData(backendRecipe)
+    : opening && hint.name
+    ? {
+        title: hint.name,
+        image: hint.imageUrl,
+        ingredients: [],
+        details: 'opening',
+      }
+    : null;
 
   const resolveError = () => {
-    if (errorKey) return t(errorKey);
-    if (backendError) {
-      return localizedErrorMessage(backendError, t('recipes.loadFailed'));
-    }
+    if (openFailure) return openFailure;
+    if (error) return localizedErrorMessage(error, t('recipes.loadFailed'));
+    if (!recipeId && !hint) return t('recipes.recipeNotFound');
     return null;
   };
 
-  const displayData: RecipeDisplayData | null = (() => {
-    if (isBackendRecipe) {
-      return buildBackendDisplayData(backendRecipe);
-    }
-    if (externalRecipe) {
-      return buildExternalDisplayData(externalRecipe);
-    }
-    return null;
-  })();
-
   return {
     displayData,
-    loading: loading || backendLoading,
+    loading: opening || loading,
     error: resolveError(),
     backendRecipe,
-    isBackendRecipe,
-    externalRecipe,
+    refetch: () => refetch(),
   };
 }

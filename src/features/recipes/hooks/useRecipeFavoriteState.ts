@@ -1,170 +1,189 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { errorService } from '#/services/errorService';
-import { useApolloClient, useQuery } from '@apollo/client/react';
-import type { RecipeInformation } from '#/services/spoonacular/types';
-import { MyRecipesDocument } from '#features/recipes/graphql/recipe.generated';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
-  UseRecipeFavoriteState_RecipeFragmentDoc,
-  type UseRecipeFavoriteState_RecipeFragment,
-} from './useRecipeFavoriteState.generated';
+  AddRecipeToFavoritesDocument,
+  MySavedRecipesDocument,
+  SavedRecipeFoldersDocument,
+  type MySavedRecipesQuery,
+  type SavedRecipeFoldersQuery,
+} from '#features/recipes/graphql/recipe.generated';
 import type { MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
-import { extractNodes } from '#/utils/connectionUtils';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import type { ExternalSource } from '#/graphql/generated/schemaTypes';
 import { firstNonBlank } from '#/utils/firstNonBlank';
-import type {
-  SaveToFavoritesOptions,
-  UseRecipePreloadReturn,
-} from '#features/recipes/hooks/useRecipePreload';
+import { generateEntityId } from '#/utils/generateEntityId';
+import { settleMutation } from '#/apollo/utils/settleMutation';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
+import {
+  adoptServerFavoriteId,
+  writeOptimisticFavorite,
+  type SaveToFavoritesOptions,
+} from '#features/recipes/cache/favorites';
+import { toastService } from '#/services/toastService';
+import { useTranslation } from '#/i18n';
 
 export interface UseRecipeFavoriteStateParams {
-  externalSource: ExternalSource | undefined;
-  externalId: string | undefined;
-  externalRecipe: RecipeInformation | null;
-  isBackendRecipe: boolean;
   backendRecipe: MaterializedRecipe | undefined;
-  /** From `useRecipePreload`. */
-  saveRecipeToFavorites: UseRecipePreloadReturn['saveRecipeToFavorites'];
-  /** From `useRecipePreload`. */
-  saveBackendRecipeToFavorites: UseRecipePreloadReturn['saveBackendRecipeToFavorites'];
-  /** From `useRecipePreload`. */
-  savingToFavorites: boolean;
+  /** After a save lands, applied or queued. */
+  onSaved: () => void;
 }
 
 export interface UseRecipeFavoriteStateResult {
   isSaved: boolean;
   saving: boolean;
-  savedFolderLocal: string | null;
   handleSaveRecipe: (
     folder?: string | null,
     tags?: string[],
     notes?: string,
   ) => void;
-  /** Exposed so the orchestrator can wire onUnfavoriteSuccess + onFavoriteSuccess. */
-  setRecipeSaved: (v: boolean) => void;
-  setSavedFolderLocal: (v: string | null) => void;
-}
-
-function syncSavedRecipeState(
-  derivedSaved: boolean,
-  derivedFolder: string | null,
-  setRecipeSaved: (v: boolean) => void,
-  setSavedFolderLocal: (v: string | null) => void,
-): void {
-  setRecipeSaved(derivedSaved);
-  setSavedFolderLocal(derivedSaved ? derivedFolder : null);
 }
 
 /**
- * Tracks whether the current recipe is in the user's favorites and provides
- * `handleSaveRecipe` for both routes. Backend recipes derive `isSaved`
- * directly from `backendRecipe.savedDetails`; external recipes look themselves
- * up in `MyRecipes` and mirror the result into local state.
+ * Whether the recipe is saved, read off `savedDetails`, and the save itself.
+ * Every recipe the screen shows is the API's own, catalog ones included.
  */
 export function useRecipeFavoriteState({
-  externalSource,
-  externalId,
-  externalRecipe,
-  isBackendRecipe,
   backendRecipe,
-  saveRecipeToFavorites,
-  saveBackendRecipeToFavorites,
-  savingToFavorites,
+  onSaved,
 }: UseRecipeFavoriteStateParams): UseRecipeFavoriteStateResult {
-  const apolloClient = useApolloClient();
+  const { t } = useTranslation();
+  const client = useApolloClient();
   const [saving, setSaving] = useState(false);
-  const [recipeSaved, setRecipeSaved] = useState(false);
-  const [savedFolderLocal, setSavedFolderLocal] = useState<string | null>(null);
 
-  const { data: myRecipesData } = useQuery(MyRecipesDocument, {
-    skip: !externalSource || !externalId,
+  const [favoriteRecipe] = useMutation(AddRecipeToFavoritesDocument, {
+    update: (cache, { data }, { variables }) => {
+      const payload = appliedPayload(data);
+      if (!payload) return;
+
+      const savedRecipe = payload.savedRecipe;
+
+      cache.updateQuery<MySavedRecipesQuery>(
+        { query: MySavedRecipesDocument },
+        existing => {
+          if (!existing?.me) return existing;
+          const exists = existing.me.savedRecipesConnection.edges.some(
+            edge => edge.node.id === savedRecipe.id,
+          );
+          if (exists) return existing;
+          return {
+            ...existing,
+            me: {
+              ...existing.me,
+              savedRecipesConnection: {
+                ...existing.me.savedRecipesConnection,
+                edges: [
+                  ...existing.me.savedRecipesConnection.edges,
+                  {
+                    __typename: 'SavedRecipeEdge',
+                    cursor: savedRecipe.id,
+                    node: savedRecipe,
+                  },
+                ],
+                totalCount:
+                  (existing.me.savedRecipesConnection.totalCount ?? 0) + 1,
+              },
+            },
+          };
+        },
+      );
+
+      const folder = savedRecipe.folder;
+      if (folder) {
+        cache.updateQuery<SavedRecipeFoldersQuery>(
+          { query: SavedRecipeFoldersDocument },
+          existing => {
+            if (!existing || existing.savedRecipeFolders.includes(folder)) {
+              return existing;
+            }
+            return {
+              ...existing,
+              savedRecipeFolders: [...existing.savedRecipeFolders, folder],
+            };
+          },
+        );
+      }
+
+      const clientId = variables?.input.id;
+      if (clientId && savedRecipe.id !== clientId) {
+        adoptServerFavoriteId(
+          cache,
+          clientId,
+          savedRecipe.id,
+          savedRecipe.recipeId,
+        );
+      }
+    },
   });
 
-  const savedRecipesList = extractNodes(myRecipesData?.recipes);
-
-  // Materialize each recipe ref via a narrow fragment that reads only the
-  // fields needed to identify a saved external recipe and surface its folder.
-  const savedRecipeMatch =
-    externalSource && externalId && savedRecipesList.length > 0
-      ? savedRecipesList
-          .map(ref =>
-            apolloClient.cache.readFragment<UseRecipeFavoriteState_RecipeFragment>(
-              {
-                fragment: UseRecipeFavoriteState_RecipeFragmentDoc,
-                fragmentName: 'useRecipeFavoriteState_recipe',
-                from: { __typename: 'Recipe', id: ref.id },
-              },
-            ),
-          )
-          .find(
-            r =>
-              r?.externalSource === externalSource &&
-              r.externalId === externalId,
-          )
-      : undefined;
-
-  // `recipes` also lists the mirror minted by merely VIEWING an external
-  // recipe, so a match is saved only when it carries `savedDetails`.
-  const derivedRecipeSaved = !!savedRecipeMatch?.savedDetails;
-  const derivedSavedFolderLocal =
-    savedRecipeMatch?.savedDetails?.folder ?? null;
-
-  useEffect(() => {
-    syncSavedRecipeState(
-      derivedRecipeSaved,
-      derivedSavedFolderLocal,
-      setRecipeSaved,
-      setSavedFolderLocal,
+  const favorite = async (
+    recipeId: string,
+    saveOptions: SaveToFavoritesOptions,
+  ): Promise<void> => {
+    // The SavedRecipe's permanent id is minted here, so an online create and a
+    // queued replay converge on one row.
+    const savedRecipeId = generateEntityId();
+    // Written before firing, so the heart fills offline and a queued favorite
+    // survives; `revert()` undoes it on a refusal.
+    const revert = writeOptimisticFavorite(
+      client.cache,
+      savedRecipeId,
+      recipeId,
+      saveOptions,
     );
-  }, [derivedRecipeSaved, derivedSavedFolderLocal]);
 
-  const isSaved = isBackendRecipe ? !!backendRecipe?.savedDetails : recipeSaved;
+    const settled = await settleMutation(
+      () =>
+        favoriteRecipe({
+          variables: {
+            input: {
+              id: savedRecipeId,
+              recipeId,
+              folder: saveOptions.folder,
+              tags: saveOptions.tags,
+              notes: saveOptions.notes,
+            },
+          },
+          context: { localFirst: true },
+        }),
+      {
+        document: AddRecipeToFavoritesDocument,
+        fallback: t('recipes.saveRecipeFailed'),
+        onFailed: revert,
+        // Saving a recipe reports its outcome as a toast.
+        present: 'none',
+      },
+    );
+
+    if (settled.failure) {
+      toastService.error(settled.failure.body);
+      return;
+    }
+    toastService.success(t('recipes.recipeSavedToCollection'));
+    onSaved();
+  };
 
   const handleSaveRecipe = (
     folder?: string | null,
     tags?: string[],
     notes?: string,
   ) => {
+    if (!backendRecipe) return;
+    const recipeId = backendRecipe.id;
     const options: SaveToFavoritesOptions = {
       folder: folder ?? undefined,
       tags: tags && tags.length > 0 ? tags : undefined,
       notes: firstNonBlank(notes),
     };
-
-    // A recipe opened by id has no external recipe to re-ingest; its saved
-    // state reads from `savedDetails`, which the optimistic favorite writes.
-    if (isBackendRecipe && backendRecipe) {
-      const recipeId = backendRecipe.id;
-      void executeWithLoadingState(
-        () => saveBackendRecipeToFavorites(recipeId, options),
-        setSaving,
-        err => errorService.reportError(err, { operation: 'saveRecipe' }),
-      );
-      return;
-    }
-
-    if (!externalRecipe || !externalSource || !externalId) return;
-
     void executeWithLoadingState(
-      async () => {
-        const result = await saveRecipeToFavorites(externalRecipe, options);
-
-        if (result.success) {
-          setRecipeSaved(true);
-          setSavedFolderLocal(folder ?? null);
-        }
-      },
+      () => favorite(recipeId, options),
       setSaving,
       err => errorService.reportError(err, { operation: 'saveRecipe' }),
     );
   };
 
   return {
-    isSaved,
-    saving: saving || savingToFavorites,
-    savedFolderLocal,
+    isSaved: !!backendRecipe?.savedDetails,
+    saving,
     handleSaveRecipe,
-    setRecipeSaved,
-    setSavedFolderLocal,
   };
 }
