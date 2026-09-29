@@ -4198,7 +4198,10 @@ enum ExternalSyncStatus {
   the API re-fetches it from the provider.
   """
   CLIENT_SUPPLIED
-  """The provider has no such recipe, and the API never held its content."""
+  """
+  The provider answered that it has no such recipe, and the API never held
+  its content. Not final: the API asks again, less often each time.
+  """
   NOT_FOUND
   """
   Not fetched from the provider yet: a stub with the name and image the
@@ -8234,11 +8237,11 @@ type Mutation {
   updateUserAppeal(input: UpdateUserAppealInput!): UpdateUserAppealResult!
   """
   Get the API's copy of a catalog recipe, named by provider and provider id.
-  The API fetches the content from the provider itself: a recipe it already
-  holds is returned as is, and a new one is fetched now when the daily
-  provider budget allows (sourceMapping.syncStatus SYNCED). Otherwise it is
-  returned PENDING, carrying the name and image hints, and fetched once a
-  user saves it. Catalog recipes have no author and are published; fork one
+  The API fetches the content from the provider itself: a SYNCED recipe is
+  returned as is, and any other is fetched now when the daily provider
+  budget allows (a NOT_FOUND or CLIENT_SUPPLIED one only once its recheck is
+  due). Otherwise it is returned as held; a PENDING stub carries the name and
+  image hints and is fetched once a user saves it. Catalog recipes have no author and are published; fork one
   to edit it. Replaying is safe: created is false for a recipe already held.
   A user may bring in a limited number of new recipes a day (a rate-limit
   error beyond it); a source the API cannot fetch from is a ValidationError.
