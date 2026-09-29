@@ -23,8 +23,10 @@ describe('the expiry ladder', () => {
     [-1, 'expired', 'expired'],
     [0, 'critical', 'warning'],
     [1, 'warning', 'warning'],
-    [3, 'warning', 'warning'],
-    [4, 'normal', 'normal'],
+    [4, 'warning', 'warning'],
+    // The badge's window: every item `PantryStats.expiringCount` counts.
+    [7, 'warning', 'warning'],
+    [8, 'normal', 'normal'],
     [null, 'normal', 'normal'],
   ])('expiresIn %s is %s, shown as %s', (expiresIn, type, variant) => {
     const status = getExpirationStatus(expiresIn);

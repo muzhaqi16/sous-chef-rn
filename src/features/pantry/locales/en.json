@@ -339,7 +339,8 @@
     "tutorialPantrySettingsSubtitle": "Switch between pantry lists and create new pantries",
     "tutorialAddItemsTitle": "Add items quickly",
     "tutorialAddItemsSubtitle": "Tap + to add items to your pantry",
-    "outOfStock": "Out of stock"
+    "outOfStock": "Out of stock",
+    "runningLow": "Running low"
   },
   "storageState": {
     "AMBIENT": "Ambient",

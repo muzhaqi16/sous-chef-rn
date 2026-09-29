@@ -38,16 +38,18 @@ jest.mock('#features/pantry/components/BaseItemCard/BaseItemCard', () => {
       itemId,
       leftElement,
       rightElement,
+      variant,
     }: {
       children?: React.ReactNode;
       testID?: string;
       itemId?: string;
       leftElement?: React.ReactNode;
       rightElement?: React.ReactNode;
+      variant?: string;
     }) =>
       R.createElement(
         RN.View,
-        { testID: testID || `base-item-card-${itemId}` },
+        { testID: testID || `base-item-card-${itemId}`, variant },
         leftElement || null,
         children,
         rightElement || null,
@@ -119,6 +121,7 @@ interface BuildItemOverrides {
   itemName?: string;
   quantity?: number;
   heldQuantity?: number;
+  isLowStock?: boolean;
   /** The server's display amount; the held amount in the tracking unit if absent. */
   shown?: { quantity: number; symbol: string };
   unitSymbol?: string;
@@ -154,6 +157,7 @@ function buildItem(
     itemName: overrides.itemName ?? 'Milk',
     quantity: overrides.quantity ?? 2,
     heldQuantity: overrides.heldQuantity ?? overrides.quantity ?? 2,
+    isLowStock: overrides.isLowStock ?? false,
     displayAmount: {
       __typename: 'DisplayAmount',
       quantity:
@@ -391,5 +395,46 @@ describe('PantryItemCard', () => {
     };
     renderCard({}, actionsWithDelete);
     expect(screen.getByText('Milk')).toBeTruthy();
+  });
+
+  describe('row status', () => {
+    const inDays = (days: number) => {
+      const date = new Date();
+      date.setDate(date.getDate() + days);
+      return toDateKey(date);
+    };
+    const rowVariant = () =>
+      screen.getByTestId('pantry-item-pantry-1').props.variant;
+
+    // The header badge counts today through seven days on; a row it counts
+    // must be marked, or the badge names items the list does not show.
+    it.each([
+      [0, 'warning'],
+      [5, 'warning'],
+      [7, 'warning'],
+      [8, 'normal'],
+      [-1, 'expired'],
+    ])('an item expiring in %s days reads as %s', (days, variant) => {
+      renderCard({ expiresOn: inDays(days) });
+      expect(rowVariant()).toBe(variant);
+    });
+
+    it('marks a low item and says so', () => {
+      renderCard({ isLowStock: true });
+      expect(rowVariant()).toBe('lowStock');
+      expect(screen.getByText('Running low')).toBeTruthy();
+    });
+
+    it('lets expiry outrank low stock', () => {
+      renderCard({ isLowStock: true, expiresOn: inDays(2) });
+      expect(rowVariant()).toBe('warning');
+      expect(screen.queryByText('Running low')).toBeNull();
+    });
+
+    it('reads an empty stack as low stock whatever its date', () => {
+      renderCard({ quantity: 0, isLowStock: true, expiresOn: inDays(-3) });
+      expect(rowVariant()).toBe('lowStock');
+      expect(screen.getByText('Out of stock')).toBeTruthy();
+    });
   });
 });

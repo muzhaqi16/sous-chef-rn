@@ -9,6 +9,7 @@ export type CardVariant =
   | 'normal'
   | 'warning'
   | 'expired'
+  | 'lowStock'
   | 'success'
   | 'dimmed';
 

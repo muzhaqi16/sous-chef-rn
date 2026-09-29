@@ -49,7 +49,11 @@ import {
 } from '#features/pantry/context/FilteredItemsActionsContext';
 import { Text } from '#components/atoms/Text';
 import type { Translate } from '#/i18n/types';
-import { daysUntilExpiry, expiryLabel } from '#domain/expiry';
+import {
+  daysUntilExpiry,
+  EXPIRING_SOON_DAYS,
+  expiryLabel,
+} from '#domain/expiry';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { SubScreen } from '#components/templates/SubScreen';
@@ -154,11 +158,11 @@ function buildModeConfig(
       // is always a 7-day window, so widening it here would list items the badge
       // never counted.
       serverFilters: { expiringSoon: true, today },
-      // Mirrors `PantryStats.expiringCount`: dated today through seven days on.
+      // Mirrors `PantryStats.expiringCount`.
       filter: item => {
         if (!item.expiresOn || item.quantity <= 0) return false;
         const days = daysUntilExpiry(item.expiresOn, today);
-        return days >= 0 && days <= 7;
+        return days >= 0 && days <= EXPIRING_SOON_DAYS;
       },
       sort: byExpiry,
       subtitle: item => formatExpirySubtitle(item.expiresOn, today, t),

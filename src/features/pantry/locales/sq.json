@@ -339,7 +339,8 @@
     "tutorialPantrySettingsSubtitle": "Kalo mes listave të qilarit dhe krijo qilarë të rinj",
     "tutorialAddItemsTitle": "Shto artikuj shpejt",
     "tutorialAddItemsSubtitle": "Trokit + për të shtuar artikuj në qilarin tënd",
-    "outOfStock": "Pa stok"
+    "outOfStock": "Pa stok",
+    "runningLow": "Po mbaron"
   },
   "storageState": {
     "AMBIENT": "Ambient",

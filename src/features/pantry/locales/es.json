@@ -339,7 +339,8 @@
     "tutorialPantrySettingsSubtitle": "Cambia entre listas de despensa y crea nuevas despensas",
     "tutorialAddItemsTitle": "Añade artículos rápidamente",
     "tutorialAddItemsSubtitle": "Toca + para añadir artículos a tu despensa",
-    "outOfStock": "Sin existencias"
+    "outOfStock": "Sin existencias",
+    "runningLow": "Queda poco"
   },
   "storageState": {
     "AMBIENT": "Ambiente",
