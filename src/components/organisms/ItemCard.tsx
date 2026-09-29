@@ -7,6 +7,7 @@ import type {
   SwipeableRef,
 } from '#components/organisms/SwipeableItem/types';
 import { ListItem } from '../molecules/ListItem';
+import type { BadgeContent } from '#components/atoms/Badge';
 import { commonStyles } from '#/styles/commonStyles';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
 import { SLIDE_PRESETS } from '#/constants/animations';
@@ -26,10 +27,7 @@ interface ItemCardProps {
   /** Revealed by swiping left. Actions flagged `removesRow` slide the row out. */
   rightActions?: SwipeAction[];
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
-  badge?: {
-    text: string;
-    variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
-  };
+  badge?: BadgeContent;
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode; // Optional left element for image or icon
   testID?: string;

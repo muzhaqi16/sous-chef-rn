@@ -15,6 +15,7 @@ import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { ItemCard } from './ItemCard';
+import type { BadgeContent } from '#components/atoms/Badge';
 import type { IconName } from '#/utils/iconUtils';
 import { getScrollClearancePadding } from '#constants/layout';
 import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
@@ -47,10 +48,7 @@ interface Item {
   id: string;
   title: string;
   subtitle: string;
-  badge?: {
-    text: string;
-    variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
-  };
+  badge?: BadgeContent;
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode;
   imageUrl?: string; // Pass URL as data — renderItem creates CachedImage (avoids JSX in transforms)

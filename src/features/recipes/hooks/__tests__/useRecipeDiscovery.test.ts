@@ -2,8 +2,15 @@ import { act, waitFor } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useRecipeDiscovery } from '../useRecipeDiscovery';
 import { spoonacularService } from '#/services/spoonacular/SpoonacularService';
-import { useRecipeCacheStore } from '#features/recipes/store/useRecipeCacheStore';
-import type { SearchRecipesResult } from '#/services/spoonacular/types';
+import {
+  useRecipeCacheStore,
+  ingredientCacheKey,
+} from '#features/recipes/store/useRecipeCacheStore';
+import type {
+  RecipeInformation,
+  RecipeSearchResult,
+  SearchRecipesResult,
+} from '#/services/spoonacular/types';
 
 jest.mock('#/services/spoonacular/SpoonacularService', () => ({
   spoonacularService: {
@@ -169,7 +176,13 @@ describe('useRecipeDiscovery', () => {
       expect.objectContaining({
         title: 'Tomato Pasta',
         spoonacularId: 200,
-        badge: expect.objectContaining({ text: '2/3 match' }),
+        badge: {
+          text: '2 of 3 ingredients in your pantry, 1 to buy',
+          lines: [
+            { icon: 'checkmark-circle', text: '2', variant: 'success' },
+            { icon: 'cart-outline', text: '1', variant: 'warning' },
+          ],
+        },
       }),
     );
     expect(spoonacularService.searchRecipesByIngredients).toHaveBeenCalledWith(
@@ -348,5 +361,131 @@ describe('useRecipeDiscovery: focus gate on the pantry watch', () => {
       1,
     );
     expect(result.current.mode).toBe('pantry');
+  });
+});
+
+describe('useRecipeDiscovery: refresh', () => {
+  const searchResult = (
+    id: number,
+    title: string,
+    used: number,
+    missed: number,
+  ): RecipeSearchResult => ({
+    id,
+    title,
+    image: `https://example.com/${id}.jpg`,
+    imageType: 'jpg',
+    usedIngredientCount: used,
+    missedIngredientCount: missed,
+    missedIngredients: [],
+    usedIngredients: [],
+    unusedIngredients: [],
+    likes: 7,
+  });
+  const tomatoPasta = searchResult(200, 'Tomato Pasta', 2, 1);
+  const tomatoSoup = searchResult(201, 'Tomato Soup', 1, 2);
+  // Enrichment reads only these fields; the rest of the payload is irrelevant.
+  const info = (id: number, servings: number): RecipeInformation => {
+    const read: Partial<RecipeInformation> = {
+      id,
+      title: `Recipe ${id}`,
+      servings,
+      readyInMinutes: 30,
+    };
+    return read as RecipeInformation;
+  };
+
+  function deferred<T>() {
+    let resolve: (value: T) => void = () => {};
+    let reject: (error: unknown) => void = () => {};
+    const promise = new Promise<T>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
+  }
+
+  // A warm cache renders enriched rows at once, the state a pull starts from.
+  async function renderWithEnrichedRows() {
+    mockUsePantryManagement.mockReturnValue({
+      state: {
+        items: [{ id: 'p1', itemName: 'tomato' }],
+        loading: false,
+        hasMore: false,
+        isLoadingMore: false,
+      },
+      actions: { loadMore: jest.fn() },
+    });
+    useRecipeCacheStore
+      .getState()
+      .setCached(ingredientCacheKey('tomato'), [tomatoPasta], {
+        200: info(200, 4),
+      });
+
+    const rendered = renderHookWithApollo(() => useRecipeDiscovery());
+    await waitFor(() => expect(rendered.result.current.loading).toBe(false));
+    expect(rendered.result.current.items[0]?.subtitle).toContain('4 servings');
+    return rendered;
+  }
+
+  it('keeps the rows on screen until their replacements are enriched', async () => {
+    const { result } = await renderWithEnrichedRows();
+    const before = result.current.items;
+
+    const search = deferred<RecipeSearchResult[]>();
+    const bulk = deferred<RecipeInformation[]>();
+    (
+      spoonacularService.searchRecipesByIngredients as jest.Mock
+    ).mockReturnValue(search.promise);
+    (spoonacularService.getBulkRecipeInformation as jest.Mock).mockReturnValue(
+      bulk.promise,
+    );
+
+    let refreshed: Promise<void> = Promise.resolve();
+    act(() => {
+      refreshed = result.current.refresh();
+    });
+    expect(result.current.items).toBe(before);
+
+    await act(async () => {
+      search.resolve([tomatoPasta, tomatoSoup]);
+      await Promise.resolve();
+    });
+    expect(result.current.items).toBe(before);
+
+    await act(async () => {
+      bulk.resolve([info(201, 2)]);
+      await refreshed;
+    });
+
+    expect(result.current.items.map(item => item.subtitle)).toEqual([
+      expect.stringContaining('4 servings'),
+      expect.stringContaining('2 servings'),
+    ]);
+    // A returning recipe's enrichment is reused rather than fetched again.
+    expect(spoonacularService.getBulkRecipeInformation).toHaveBeenCalledWith(
+      [201],
+      undefined,
+    );
+    expect(result.current.loading).toBe(false);
+  });
+
+  it('keeps the rows and the cached entry when the refresh fails', async () => {
+    const { result } = await renderWithEnrichedRows();
+    const before = result.current.items;
+    (
+      spoonacularService.searchRecipesByIngredients as jest.Mock
+    ).mockRejectedValue(new Error('Spoonacular down'));
+
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    expect(result.current.items).toBe(before);
+    expect(result.current.loading).toBe(false);
+    expect(
+      useRecipeCacheStore.getState().getCached(ingredientCacheKey('tomato'))
+        ?.results,
+    ).toEqual([tomatoPasta]);
   });
 });

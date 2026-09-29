@@ -5,7 +5,7 @@ import { ThemedIcon } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import type { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
-import { Badge } from '#components/atoms/Badge';
+import { Badge, BadgeStack, type BadgeContent } from '#components/atoms/Badge';
 import type { RowThemeColors } from '#components/atoms/rowTheme';
 import { Text } from '#components/atoms/Text';
 import { commonStyles } from '#/styles/commonStyles';
@@ -21,10 +21,7 @@ interface ListItemProps {
   leftIcon?: React.ComponentProps<typeof Icon>['name'];
   // `null` suppresses the default trailing chevron.
   rightIcon?: React.ComponentProps<typeof Icon>['name'] | null;
-  badge?: {
-    text: string;
-    variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
-  };
+  badge?: BadgeContent;
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode; // Optional left element for image or icon
   checkboxElement?: React.ReactNode; // Optional checkbox before leftElement (for shopping list)
@@ -94,7 +91,12 @@ const ListItemComponent: React.FC<ListItemProps> = ({
             </ListItemSubtitleSlot>
           ))}
       </View>
-      {!!badge && <Badge variant={badge.variant}>{badge.text}</Badge>}
+      {!!badge &&
+        (badge.lines ? (
+          <BadgeStack label={badge.text} lines={badge.lines} />
+        ) : (
+          <Badge variant={badge.variant}>{badge.text}</Badge>
+        ))}
       {rightElement}
       {!!rightIcon && !rightElement && (
         <ThemedIcon

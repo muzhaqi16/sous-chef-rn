@@ -5,6 +5,7 @@ import type {
   RecipeSearchResult,
 } from '#/services/spoonacular/types';
 import type { SearchRecipesQuery } from '#features/recipes/graphql/recipe.generated';
+import type { BadgeContent } from '#components/atoms/Badge';
 
 // ── Display item type ──
 
@@ -12,10 +13,7 @@ export interface DisplayItem {
   id: string;
   title: string;
   subtitle: string;
-  badge?: {
-    text: string;
-    variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
-  };
+  badge?: BadgeContent;
   imageUrl?: string;
 }
 
