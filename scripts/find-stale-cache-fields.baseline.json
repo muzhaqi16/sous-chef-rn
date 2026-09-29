@@ -1,9 +1,8 @@
 {
-  "maxRiskyPairs": 67,
+  "maxRiskyPairs": 65,
   "pairs": [
     "AddTemplateItem::MealTemplate",
     "AdjustPantryItemQuantity::PantryItem",
-    "AdjustPantryItemWeight::PantryItem",
     "BarcodeCreatePantryItem::PantryItem",
     "CancelRecurring::ShoppingList",
     "CompleteOnboarding::User",
@@ -65,7 +64,6 @@
     "UpdateShoppingListItem::ShoppingListItem",
     "UpdateShoppingListItemQuantity::ShoppingListItem",
     "UpdateShoppingListReminder::ShoppingList",
-    "UpsertExternalRecipe::Recipe",
     "VerifyEmail::User",
     "WastePantryItemBatch::PantryItem"
   ]
