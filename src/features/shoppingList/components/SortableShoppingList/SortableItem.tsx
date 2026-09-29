@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 // RNGH's Pressable (not AppPressable/RN) for the archive button: it's nested in
@@ -39,6 +39,7 @@ import type { ShoppingListRowItem } from './types';
 import { motion } from '#/theme/foundations/motion';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { hitSlop } from '#/theme/foundations/sizes';
+import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
 /**
  * The row subscribes to its own entity via `useFragment(SortableItem_item)` and
@@ -92,9 +93,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // Interactive tutorial — only the first row, and only on its steps.
   const tutorial = useShoppingListTutorialState();
   const tutorialActions = useShoppingListTutorialActions();
-  const itemCardRef = useRef<View>(null);
-  const checkboxRef = useRef<View>(null);
-  const archiveIconRef = useRef<View>(null);
 
   // Forced to match the active tab, so a freshly toggled row paints the new
   // state before the cache propagates.
@@ -191,53 +189,21 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     return () => tutorialActions?.registerRect('itemCard', null);
   }, [isTutorialItemCardTarget, tutorialActions]);
 
-  const handleCheckboxLayout = () => {
-    if (!isTutorialCheckboxTarget) return;
-    requestAnimationFrame(() => {
-      checkboxRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-        if (w > 0 && h > 0) {
-          tutorialActions?.registerRect('checkbox', {
-            x: pageX,
-            y: pageY,
-            width: w,
-            height: h,
-          });
-        }
-      });
-    });
-  };
-
-  const handleArchiveIconLayout = () => {
-    if (!isTutorialArchiveTarget) return;
-    requestAnimationFrame(() => {
-      archiveIconRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-        if (w > 0 && h > 0) {
-          tutorialActions?.registerRect('archiveIcon', {
-            x: pageX,
-            y: pageY,
-            width: w,
-            height: h,
-          });
-        }
-      });
-    });
-  };
-
-  const handleItemCardLayout = () => {
-    if (!isTutorialItemCardTarget) return;
-    requestAnimationFrame(() => {
-      itemCardRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-        if (w > 0 && h > 0) {
-          tutorialActions?.registerRect('itemCard', {
-            x: pageX,
-            y: pageY,
-            width: w,
-            height: h,
-          });
-        }
-      });
-    });
-  };
+  const { ref: checkboxRef, measure: measureCheckbox } = useMeasuredRect(
+    isTutorialCheckboxTarget
+      ? rect => tutorialActions?.registerRect('checkbox', rect)
+      : undefined,
+  );
+  const { ref: archiveIconRef, measure: measureArchiveIcon } = useMeasuredRect(
+    isTutorialArchiveTarget
+      ? rect => tutorialActions?.registerRect('archiveIcon', rect)
+      : undefined,
+  );
+  const { ref: itemCardRef, measure: measureItemCard } = useMeasuredRect(
+    isTutorialItemCardTarget
+      ? rect => tutorialActions?.registerRect('itemCard', rect)
+      : undefined,
+  );
 
   const rightElement = (() => {
     const stockedIndicator = isPurchased && isStocked && (
@@ -254,9 +220,9 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 
     const archiveIcon = isPurchased && !isStocked && !!onMoveToPantry && (
       <View
-        ref={isTutorialArchiveTarget ? archiveIconRef : undefined}
+        ref={archiveIconRef}
         collapsable={false}
-        onLayout={isTutorialArchiveTarget ? handleArchiveIconLayout : undefined}
+        onLayout={isTutorialArchiveTarget ? measureArchiveIcon : undefined}
       >
         <Pressable
           onPress={() => {
@@ -337,11 +303,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 
     if (isTutorialCheckboxTarget) {
       return (
-        <View
-          ref={checkboxRef}
-          collapsable={false}
-          onLayout={handleCheckboxLayout}
-        >
+        <View ref={checkboxRef} collapsable={false} onLayout={measureCheckbox}>
           {checkbox}
         </View>
       );
@@ -364,7 +326,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           <View
             ref={itemCardRef}
             collapsable={false}
-            onLayout={handleItemCardLayout}
+            onLayout={measureItemCard}
             style={styles.measureOverlay}
             pointerEvents="none"
           />

@@ -1,6 +1,7 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 import { FilterTabsItem } from '#components/organisms/FilterTabs/FilterTabsItem';
+import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
 interface FilterTabItemProps {
   routeKey: string;
@@ -31,24 +32,13 @@ const FilterTabItemComponent: React.FC<FilterTabItemProps> = ({
   testID,
   onMeasure,
 }) => {
-  const tabRef = useRef<View>(null);
-
-  const handleLayout = () => {
-    if (!onMeasure) return;
-    requestAnimationFrame(() => {
-      tabRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-        if (w > 0 && h > 0) {
-          onMeasure({ x: pageX, y: pageY, width: w, height: h });
-        }
-      });
-    });
-  };
+  const { ref: tabRef, measure: measureTab } = useMeasuredRect(onMeasure);
 
   return (
     <View
-      ref={onMeasure ? tabRef : undefined}
+      ref={tabRef}
       collapsable={false}
-      onLayout={onMeasure ? handleLayout : undefined}
+      onLayout={onMeasure ? measureTab : undefined}
     >
       <FilterTabsItem
         tab={{ id: routeKey, label: title }}

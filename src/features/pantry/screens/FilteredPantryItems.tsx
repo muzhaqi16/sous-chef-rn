@@ -24,6 +24,7 @@ import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/Spo
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
 import type { PantryItemFilters } from '#/graphql/generated/schemaTypes';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { ShoppingListPickerSheet } from '#features/shoppingList/ui/ShoppingListPickerSheet';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
@@ -203,7 +204,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
 }) => {
   const { t } = useTranslation();
   const { navigateTo, handleAddToList } = useFilteredItemsActions();
-  const cartRef = useRef<View>(null);
+  const { ref: cartRef, measure: measureCart } = useMeasuredRect(onCartMeasure);
 
   const cartButton =
     showCart && handleAddToList ? (
@@ -231,19 +232,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
           </Text>
         </View>
         {cartButton && onCartMeasure ? (
-          <View
-            ref={cartRef}
-            collapsable={false}
-            onLayout={() => {
-              requestAnimationFrame(() => {
-                cartRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-                  if (w > 0 && h > 0) {
-                    onCartMeasure({ x: pageX, y: pageY, width: w, height: h });
-                  }
-                });
-              });
-            }}
-          >
+          <View ref={cartRef} collapsable={false} onLayout={measureCart}>
             {cartButton}
           </View>
         ) : (

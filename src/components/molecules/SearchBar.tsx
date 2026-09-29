@@ -22,6 +22,7 @@ import type {
 } from '#components/atoms/themedComponents';
 import { ActionButton } from '#components/atoms/ActionButton';
 import { commonStyles } from '#/styles/commonStyles';
+import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 import { Icon } from '#utils/iconUtils';
 
 export interface SearchBarAction {
@@ -106,7 +107,6 @@ const MeasuredAction: FC<{
   }) => void;
   children: ReactNode;
 }> = ({ onButtonLayout, children }) => {
-  const ref = useRef<View>(null);
   // Subscribe to theme changes so the reported rect stays in sync with the
   // density/spacing override applied by `useAppearance`. Reading
   // `theme.spacing.sm` here (a) makes the dependency explicit to the React
@@ -115,42 +115,25 @@ const MeasuredAction: FC<{
   const { theme } = useUnistyles();
   const margin = theme.spacing.sm;
 
-  const handleLayout = () => {
-    requestAnimationFrame(() => {
-      ref.current?.measure((_x, _y, w, h, pageX, pageY) => {
-        if (w > 0 && h > 0) {
-          onButtonLayout({
-            x: pageX + margin,
-            y: pageY,
-            width: w - margin,
-            height: h,
-          });
-        }
-      });
-    });
-  };
+  const { ref, measure } = useMeasuredRect(rect =>
+    onButtonLayout({
+      ...rect,
+      x: rect.x + margin,
+      width: rect.width - margin,
+    }),
+  );
 
   // Force a re-measure whenever spacing changes — the inner button's
   // dimensions usually shift along with theme spacing and re-fire onLayout
   // naturally, but this guarantees the rect stays correct even when they
-  // don't (e.g. high-contrast toggle that only changes colors).
+  // don't (e.g. high-contrast toggle that only changes colors). `measure`
+  // changes exactly when `margin` or `onButtonLayout` does.
   useEffect(() => {
-    requestAnimationFrame(() => {
-      ref.current?.measure((_x, _y, w, h, pageX, pageY) => {
-        if (w > 0 && h > 0) {
-          onButtonLayout({
-            x: pageX + margin,
-            y: pageY,
-            width: w - margin,
-            height: h,
-          });
-        }
-      });
-    });
-  }, [margin, onButtonLayout]);
+    measure();
+  }, [measure]);
 
   return (
-    <View ref={ref} collapsable={false} onLayout={handleLayout}>
+    <View ref={ref} collapsable={false} onLayout={measure}>
       {children}
     </View>
   );

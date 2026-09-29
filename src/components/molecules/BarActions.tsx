@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -9,6 +9,7 @@ import {
   type HeaderAction,
 } from '#components/molecules/HeaderActionIcon';
 import { hitSlop, sizes } from '#/theme/foundations/sizes';
+import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
 type MeasureHandler = NonNullable<HeaderAction['onMeasure']>;
 
@@ -57,21 +58,9 @@ const MeasuredAction: React.FC<{
   onMeasure: MeasureHandler;
   children: React.ReactNode;
 }> = ({ onMeasure, children }) => {
-  const ref = useRef<View>(null);
+  const { ref, measure } = useMeasuredRect(onMeasure);
   return (
-    <View
-      ref={ref}
-      collapsable={false}
-      onLayout={() => {
-        requestAnimationFrame(() => {
-          ref.current?.measure((_x, _y, w, h, pageX, pageY) => {
-            if (w > 0 && h > 0) {
-              onMeasure({ x: pageX, y: pageY, width: w, height: h });
-            }
-          });
-        });
-      }}
-    >
+    <View ref={ref} collapsable={false} onLayout={measure}>
       {children}
     </View>
   );

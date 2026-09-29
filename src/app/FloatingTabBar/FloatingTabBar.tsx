@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -34,6 +34,7 @@ import {
   getTabBarBottomOffset,
 } from '#constants/layout';
 import { kitTestIDs } from '#components/testIDs';
+import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   state,
@@ -56,7 +57,8 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   const { setActiveTab, setAddButtonRect, scrollTabBarHidden } =
     useTabBarSetters();
 
-  const addButtonRef = useRef<View>(null);
+  const { ref: addButtonRef, measure: measureAddButton } =
+    useMeasuredRect(setAddButtonRect);
 
   const showNavigationLabels = useShowNavigationLabels();
 
@@ -228,15 +230,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
         addButtonOffsetStyle,
         animatedStyle,
       ]}
-      onLayout={() => {
-        requestAnimationFrame(() => {
-          addButtonRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-            if (w > 0 && h > 0) {
-              setAddButtonRect({ x: pageX, y: pageY, width: w, height: h });
-            }
-          });
-        });
-      }}
+      onLayout={measureAddButton}
     >
       <AddButton
         onPress={handleAddPress}
