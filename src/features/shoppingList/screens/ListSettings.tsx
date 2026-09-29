@@ -131,22 +131,21 @@ export const ListSettings: React.FC<
           ? t('shoppingListScreens.listSettings')
           : t('shoppingListScreens.listInfo')
       }
-      rightElement={
-        isOwner ? (
-          <Pressable
-            onPress={handleSave}
-            disabled={saving}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Text role="bodyStrong" tone="accent">
-              {saving
-                ? t('labels.saving')
-                : !listId
-                ? t('labels.create')
-                : t('labels.save')}
-            </Text>
-          </Pressable>
-        ) : undefined
+      actions={
+        isOwner
+          ? [
+              {
+                label: saving
+                  ? t('labels.saving')
+                  : !listId
+                  ? t('labels.create')
+                  : t('labels.save'),
+                onPress: handleSave,
+                variant: 'primary',
+                disabled: saving,
+              },
+            ]
+          : undefined
       }
       scroll="form"
     >

@@ -1,7 +1,10 @@
 'use no memo';
 import React from 'react';
 import { Platform, TextInput } from 'react-native';
+import { Modal } from '#components/atoms/themedComponents';
 import {
+  act,
+  fireEvent,
   render,
   screen,
   userEvent,
@@ -151,6 +154,36 @@ describe('BiometricSetupModal', () => {
       expect(mockEnrol).toHaveBeenCalledWith('test@example.com');
       expect(defaultProps.onComplete).toHaveBeenCalledWith(true);
     });
+  });
+
+  // Back is the one dismissal the disabled Skip button does not cover: taken
+  // mid-enrolment it completed false, then the enrolment completed true.
+  it('ignores Android back while enrolment runs', async () => {
+    let finishEnrolment: (outcome: string) => void = () => {};
+    mockEnrol.mockReturnValue(
+      new Promise<string>(resolve => {
+        finishEnrolment = resolve;
+      }),
+    );
+    const user = userEvent.setup();
+    render(<BiometricSetupModal {...defaultProps} mode="settings" />);
+
+    await user.press(await screen.findByText('Enable Now'));
+    fireEvent(screen.UNSAFE_getByType(Modal), 'requestClose');
+    expect(defaultProps.onComplete).not.toHaveBeenCalled();
+
+    await act(async () => finishEnrolment('enrolled'));
+    expect(defaultProps.onComplete).toHaveBeenCalledTimes(1);
+    expect(defaultProps.onComplete).toHaveBeenCalledWith(true);
+  });
+
+  it('takes Android back as a skip once nothing is running', async () => {
+    render(<BiometricSetupModal {...defaultProps} mode="settings" />);
+
+    await screen.findByText('Enable Now');
+    fireEvent(screen.UNSAFE_getByType(Modal), 'requestClose');
+
+    expect(defaultProps.onComplete).toHaveBeenCalledWith(false);
   });
 
   // The enrolment reports nothing itself, so this alert is the only message.

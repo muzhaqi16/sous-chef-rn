@@ -212,7 +212,7 @@ describe('useMoveToPantry', () => {
 
     expect(moveResult).toBe(false);
     // `CONFLICT` is a state refusal, not a stale version: one alert, described
-    // by its code rather than as "updated by another user".
+    // by its code rather than as "changed somewhere else".
     expect(alertSpy).toHaveBeenCalledTimes(1);
     expect(alertSpy).toHaveBeenCalledWith(
       t('labels.error'),

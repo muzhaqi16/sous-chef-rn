@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -20,6 +19,7 @@ import type {
 import { SelectorItemContainer } from '#components/organisms/AnimatedItemSelector/SelectorItemContainer';
 import type { ShoppingListFromQuery } from './useShoppingListsQuery';
 import { Text } from '#components/atoms/Text';
+import type { BarAction } from '#components/molecules/BarActions';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
 export type ShoppingListSelectorItem = ShoppingListFromQuery & {
@@ -170,34 +170,22 @@ export function useShoppingListSelectorModal({
     exitDeleteMode();
   };
 
-  const deleteHeaderRight = (() => {
-    if (!isDeleteMode) return undefined;
-    const count = selectedForDeletion.size;
-    const hasSelection = count > 0;
-    return (
-      <View style={styles.deleteHeaderActions}>
-        <Pressable
-          onPress={handleDeleteSelected}
-          accessibilityLabel={t('labels.delete')}
-          disabled={!hasSelection}
-          style={
-            hasSelection ? styles.deleteButton : styles.deleteButtonDisabled
-          }
-        >
-          <Icon
-            name="trash-outline"
-            size={16}
-            tone={hasSelection ? 'error' : 'textSecondary'}
-          />
-        </Pressable>
-        <Pressable onPress={exitDeleteMode}>
-          <Text role="bodyStrong" tone="accent">
-            {t('labels.cancel')}
-          </Text>
-        </Pressable>
-      </View>
-    );
-  })();
+  const deleteHeaderActions: BarAction[] | undefined = isDeleteMode
+    ? [
+        {
+          icon: 'trash-outline',
+          variant: 'error',
+          disabled: selectedForDeletion.size === 0,
+          onPress: handleDeleteSelected,
+          accessibilityLabel: t('labels.delete'),
+        },
+        {
+          label: t('labels.cancel'),
+          variant: 'primary',
+          onPress: exitDeleteMode,
+        },
+      ]
+    : undefined;
 
   // Group lists by home with section headers
   const groupedData = (() => {
@@ -403,7 +391,7 @@ export function useShoppingListSelectorModal({
     emptyMessage: t('shoppingListSelector.emptyMessage'),
     renderCustomItem: renderListItem,
     actions: listActions,
-    headerRight: deleteHeaderRight,
+    headerActions: deleteHeaderActions,
     extraData: selectorExtraData,
   };
 
@@ -431,26 +419,5 @@ const styles = StyleSheet.create(theme => ({
   sectionHeaderText: {
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-  },
-  deleteHeaderActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  deleteButton: {
-    width: 32,
-    height: 32,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.errorLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteButtonDisabled: {
-    width: 32,
-    height: 32,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 }));

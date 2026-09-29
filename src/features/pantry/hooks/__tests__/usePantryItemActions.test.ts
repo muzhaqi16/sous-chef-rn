@@ -677,7 +677,7 @@ describe('usePantryItemActions', () => {
       });
 
       expect(alertService.alert).toHaveBeenCalledWith(
-        'Item Updated',
+        'Changed Elsewhere',
         getVersionConflictMessage(),
       );
     });

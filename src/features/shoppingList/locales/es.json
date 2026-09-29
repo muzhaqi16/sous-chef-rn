@@ -87,7 +87,6 @@
     "budgetPlaceholder": "Sin presupuesto",
     "priceTrackingLabel": "Seguimiento de precios",
     "priceTrackingDesc": "Sigue los precios y gastos de esta lista",
-    "failedToSetBudget": "No se pudo actualizar el presupuesto",
     "failedToSetPriceTracking": "No se pudo actualizar el seguimiento de precios",
     "customPermissions": "Permisos personalizados",
     "permCanEditItems": "Puede editar artículos",

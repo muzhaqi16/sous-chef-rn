@@ -161,7 +161,7 @@ export const useListSettings = (listId: string | undefined) => {
   const { markAsTemplate, createFromTemplate, marking, creating } =
     useShoppingListTemplate();
   const { setReminder, clearReminder } = useShoppingListReminder();
-  const { setBudget, setPriceTracking } = useShoppingListBudget();
+  const { setPriceTracking } = useShoppingListBudget();
   const { deleteShoppingList } = useDeleteShoppingList();
   const { createShoppingList } = useCreateShoppingList(
     t('errors.createListFailed'),
@@ -259,6 +259,20 @@ export const useListSettings = (listId: string | undefined) => {
       return;
     }
 
+    // A changed budget limit (empty clears it); a non-numeric entry is left out
+    // rather than sent as NaN. `Number` would read a comma-decimal keypad's
+    // entry as NaN, so it is parsed with `parseDecimalInput`.
+    const savedBudget =
+      shoppingList?.budgetAmount != null
+        ? String(shoppingList.budgetAmount)
+        : '';
+    const typedBudget =
+      budgetInput.trim() === '' ? null : parseDecimalInput(budgetInput);
+    const changedBudget =
+      budgetInput.trim() !== savedBudget && !Number.isNaN(typedBudget)
+        ? typedBudget
+        : undefined;
+
     void executeWithLoadingState(
       async () => {
         if (!listId && selectedTemplateId) {
@@ -302,24 +316,13 @@ export const useListSettings = (listId: string | undefined) => {
           await updateShoppingList(listId, {
             name: name.trim(),
             ...(defaultTurnedOff && { isDefault: false }),
+            ...(changedBudget !== undefined && {
+              planning: {
+                budgetAmount: changedBudget,
+                ...(currency !== null && { currency }),
+              },
+            }),
           });
-
-          // Commit a changed budget limit (empty clears it). Ignore a
-          // non-numeric entry rather than sending NaN.
-          const savedBudget =
-            shoppingList?.budgetAmount != null
-              ? String(shoppingList.budgetAmount)
-              : '';
-          if (budgetInput.trim() !== savedBudget) {
-            // `Number` reads the DEVICE keypad's comma as NaN, and the guard
-            // below then skips the write while the screen closes as if saved —
-            // so a fractional budget never saved on a comma-decimal locale.
-            const parsed =
-              budgetInput.trim() === '' ? null : parseDecimalInput(budgetInput);
-            if (parsed === null || !Number.isNaN(parsed)) {
-              await setBudget(listId, parsed, currency ?? undefined);
-            }
-          }
         }
       },
       setSaving,

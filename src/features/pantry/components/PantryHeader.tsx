@@ -1,6 +1,6 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import { kitTestIDs } from '#components/testIDs';
-import React, { useRef } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
@@ -10,6 +10,7 @@ import { CachedImage } from '#components/atoms/CachedImage';
 import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
 import { Text } from '#components/atoms/Text';
 import { hitSlop } from '#/theme/foundations/sizes';
+import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
 // Matches theme.typography.fontSize.lg (18). Inlined so the component does not
 // need useUnistyles — the theme value is module-static.
@@ -52,7 +53,8 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
   onHomeBadgeLayout,
 }) => {
   const { t } = useTranslation();
-  const badgeRef = useRef<View>(null);
+  const { ref: badgeRef, measure: measureBadge } =
+    useMeasuredRect(onHomeBadgeLayout);
 
   // A whole greeting written for the no-name case, not a filler word
   // interpolated into the named one — "Hello, there!" does not translate.
@@ -95,23 +97,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
             ref={badgeRef}
             collapsable={false}
             style={styles.householdBadgeInner}
-            onLayout={() => {
-              if (onHomeBadgeLayout) {
-                // Android native layout has to settle before measuring.
-                requestAnimationFrame(() => {
-                  badgeRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-                    if (w > 0 && h > 0) {
-                      onHomeBadgeLayout({
-                        x: pageX,
-                        y: pageY,
-                        width: w,
-                        height: h,
-                      });
-                    }
-                  });
-                });
-              }
-            }}
+            onLayout={measureBadge}
           >
             <Icon
               size={ICON_SIZE_LG}

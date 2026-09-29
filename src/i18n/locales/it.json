@@ -54,7 +54,7 @@
       "uniqueConstraint": "Questo valore esiste già",
       "unitInvalid": "Questa unità non può essere usata qui.",
       "validationFailed": "Controlla i dati inseriti e riprova",
-      "versionConflict": "Questo elemento è stato aggiornato da un altro utente. Aggiorna e riprova.",
+      "versionConflict": "È stato modificato altrove dopo che l'hai aperto. Aggiorna e riprova.",
       "unitChangeNeedsResolution": "Questo cambio di unità è solo una stima. Scegli se usare la stima o inserire tu la quantità."
     },
     "addItemFailed": "Impossibile aggiungere l'articolo",
@@ -146,6 +146,7 @@
     "wasteBatchFailed": "Impossibile contrassegnare come sprecato.",
     "updateShoppingItemFailed": "Impossibile aggiornare l'articolo.",
     "entityUpdatedTitle": "{{entity}}: aggiornamento",
+    "changedElsewhereTitle": "Modificato altrove",
     "entityHome": "Casa",
     "entityMember": "Membro",
     "entityInvite": "Invito",

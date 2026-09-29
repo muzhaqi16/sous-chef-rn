@@ -1,4 +1,4 @@
-import { useApolloClient, useQuery } from '@apollo/client/react';
+import { useApolloClient, useFragment, useQuery } from '@apollo/client/react';
 import { GetHomeDocument } from '#operations/home/home.generated';
 import {
   GetPantryDocument,
@@ -6,7 +6,6 @@ import {
 } from '#features/pantry/graphql/pantry.generated';
 import {
   PantryItemForm_PantryItemFragmentDoc,
-  type PantryItemForm_PantryItemFragment,
   PantryItemForm_HomeFragmentDoc,
   type PantryItemForm_HomeFragment,
 } from '#features/pantry/components/form/PantryItemForm.generated';
@@ -36,28 +35,27 @@ export function usePantryItemFormData({
   });
 
   const isUnconfirmed = useIsCreateUnconfirmed(itemId);
-  const {
-    data: itemQueryData,
-    loading: itemLoading,
-    refetch: refetchItem,
-  } = useQuery(GetPantryItemDocument, {
-    variables: { id: itemId ?? '' },
-    // A client-minted id is cached (and edit-swipeable) before the server has
-    // the row; querying in that window can only return RESOURCE_NOT_FOUND,
-    // which renders as the dead-end "item not found" state.
-    skip: !itemId || isUnconfirmed,
-  });
+  const { loading: itemLoading, refetch: refetchItem } = useQuery(
+    GetPantryItemDocument,
+    {
+      variables: { id: itemId ?? '' },
+      // A client-minted id is cached (and edit-swipeable) before the server has
+      // the row; querying in that window can only return RESOURCE_NOT_FOUND,
+      // which renders as the dead-end "item not found" state.
+      skip: !itemId || isUnconfirmed,
+    },
+  );
 
-  // Materialized by ENTITY key, not off the query result: a locally created
-  // item is in the cache before any round trip, so chaining off the result
-  // would keep the form shut until one completed.
-  const existingPantryItem = itemId
-    ? client.cache.readFragment<PantryItemForm_PantryItemFragment>({
-        fragment: PantryItemForm_PantryItemFragmentDoc,
-        fragmentName: 'PantryItemForm_pantryItem',
-        from: { __typename: 'PantryItem', id: itemId },
-      })
-    : null;
+  // Watched by ENTITY key, not read off the query result: a locally created
+  // item is in the cache before any round trip. Never a render-time
+  // `readFragment` — the compiler memoizes it on `itemId`, so a mount-time miss
+  // outlived the fetch that filled the cache.
+  const liveItem = useFragment({
+    fragment: PantryItemForm_PantryItemFragmentDoc,
+    fragmentName: 'PantryItemForm_pantryItem',
+    from: itemId ? { __typename: 'PantryItem', id: itemId } : null,
+  });
+  const existingPantryItem = liveItem.complete ? liveItem.data : null;
 
   // Masking hides `pantriesConnection` on the raw query result.
   const home = homeData?.home
@@ -83,10 +81,6 @@ export function usePantryItemFormData({
 
   return {
     existingPantryItem,
-    // A STABLE reference that changes only when the server answers — the
-    // materialized item is a fresh object every render, so a form reset keyed
-    // on it would fire on every render.
-    itemQueryData,
     isUnconfirmed,
     currentPantryId,
     storageLocations,

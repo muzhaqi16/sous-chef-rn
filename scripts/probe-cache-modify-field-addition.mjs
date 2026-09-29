@@ -59,7 +59,7 @@ console.log();
 if (absentModifierRan || 'absent' in stored) {
   console.log(
     'CHANGED: cache.modify now adds absent fields. writeEntityFields could go\n' +
-      'back to it — see docs/verified-library-behaviour.md#cache-modify-cannot-add-a-field',
+      'back to it — see docs/verified-library-behaviour.md#cachemodify-cannot-add-a-field',
   );
   process.exit(1);
 }

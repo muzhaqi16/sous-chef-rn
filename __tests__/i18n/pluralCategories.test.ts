@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import i18next from 'i18next';
 import { getI18n } from '#/i18n/config';
 import { isTranslationKey } from '#/i18n';
 
@@ -140,6 +141,29 @@ describe('plural categories', () => {
       lng: 'en',
     });
     expect(italian).not.toBe(english);
+  });
+
+  it('i18next itself falls through to fallbackLng, not the locale _other', () => {
+    // The library behaviour `completePluralCategories` exists for, on a bare
+    // instance. A failure here means i18next now falls back within the locale,
+    // so the completion step can go. A real key, so `t` type-checks.
+    const reviewCount = (one: string, other: string) => ({
+      translation: {
+        recipes: { reviewCount_one: one, reviewCount_other: other },
+      },
+    });
+    const bare = i18next.createInstance();
+    void bare.init({
+      lng: 'it',
+      fallbackLng: 'en',
+      initAsync: false,
+      resources: {
+        it: reviewCount('recensione', 'recensioni'),
+        en: reviewCount('review', 'reviews'),
+      },
+    });
+
+    expect(bare.t('recipes.reviewCount', { count: 1_000_000 })).toBe('reviews');
   });
 });
 

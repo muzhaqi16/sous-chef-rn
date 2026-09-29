@@ -1,3 +1,4 @@
+import { t } from '#/i18n';
 import {
   isVersionConflictError,
   getVersionConflictMessage,
@@ -62,7 +63,9 @@ describe('versionConflict', () => {
     // version-number extensions in the union mapping, so the message is
     // always the generic "updated elsewhere" body (no error argument).
     it('returns the generic message', () => {
-      expect(getVersionConflictMessage()).toContain('This item was updated');
+      expect(getVersionConflictMessage()).toBe(
+        t('errors.codes.versionConflict'),
+      );
     });
   });
 });

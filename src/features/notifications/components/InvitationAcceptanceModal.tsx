@@ -6,8 +6,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import {
   ErrorActivityIndicator,
   OnPrimaryActivityIndicator,
-  Modal,
 } from '#components/atoms/themedComponents';
+import { Dialog, DialogBody, DialogFooter } from '#components/templates/Dialog';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
@@ -34,6 +34,37 @@ interface InvitationAcceptanceModalProps {
 export const InvitationAcceptanceModal: React.FC<
   InvitationAcceptanceModalProps
 > = ({ visible, invitation, onClose, onAccept, onReject }) => {
+  // The caller clears `invitation` as it closes; the card keeps the last one
+  // through the fade-out.
+  const [shown, setShown] = useState(invitation);
+  if (invitation && invitation !== shown) setShown(invitation);
+  const open = visible && invitation != null;
+
+  return (
+    <Dialog visible={open} onRequestClose={onClose}>
+      {shown ? (
+        <InvitationDetails
+          invitation={shown}
+          onClose={onClose}
+          onAccept={onAccept}
+          onReject={onReject}
+        />
+      ) : null}
+    </Dialog>
+  );
+};
+
+type InvitationDetailsProps = Omit<
+  InvitationAcceptanceModalProps,
+  'visible' | 'invitation'
+> & { invitation: InvitationData };
+
+const InvitationDetails: React.FC<InvitationDetailsProps> = ({
+  invitation,
+  onClose,
+  onAccept,
+  onReject,
+}) => {
   const { t } = useTranslation();
   const today = useToday();
   const user = useUser();
@@ -56,7 +87,7 @@ export const InvitationAcceptanceModal: React.FC<
   };
 
   const handleAccept = () => {
-    if (!invitation || !token) return;
+    if (!token) return;
 
     setAccepting(true);
     void executeAsyncWithCleanup(
@@ -88,8 +119,6 @@ export const InvitationAcceptanceModal: React.FC<
   };
 
   const handleReject = async () => {
-    if (!invitation) return;
-
     // Show confirmation alert
     alertService.alert(
       t('confirmations.declineInvitationTitle'),
@@ -136,8 +165,6 @@ export const InvitationAcceptanceModal: React.FC<
     );
   };
 
-  if (!invitation) return null;
-
   const copy = getNotificationCopy(
     {
       type:
@@ -151,142 +178,112 @@ export const InvitationAcceptanceModal: React.FC<
   );
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-      statusBarTranslucent
-      navigationBarTranslucent
-    >
-      <View style={styles.overlay}>
-        <View style={styles.modal}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.iconContainer}>
-              <Icon
-                name={invitation.type === 'HOME_INVITE' ? 'home' : 'cart'}
-                size={32}
-                tone="primary"
-              />
-            </View>
-            <Text role="heading" style={styles.title}>
-              {copy.title}
-            </Text>
-            <AppPressable
-              style={styles.closeButton}
-              onPress={onClose}
-              accessibilityLabel={t('labels.close')}
-            >
-              <Icon name="close" size={24} tone="textSecondary" />
-            </AppPressable>
+    <>
+      <DialogBody>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.iconContainer}>
+            <Icon
+              name={invitation.type === 'HOME_INVITE' ? 'home' : 'cart'}
+              size={32}
+              tone="primary"
+            />
           </View>
+          <Text role="heading" style={styles.title}>
+            {copy.title}
+          </Text>
+          <AppPressable
+            style={styles.closeButton}
+            onPress={onClose}
+            accessibilityLabel={t('labels.close')}
+          >
+            <Icon name="close" size={24} tone="textSecondary" />
+          </AppPressable>
+        </View>
 
-          {/* Content */}
-          <View style={styles.content}>
-            <Text role="body" style={styles.description}>
-              {copy.message}
-            </Text>
+        {/* Content */}
+        <View style={styles.content}>
+          <Text role="body" style={styles.description}>
+            {copy.message}
+          </Text>
 
-            {!!invitation.inviterName && (
-              <View style={styles.inviterContainer}>
-                <Icon name="person" size={16} tone="textSecondary" />
-                <Text
-                  role="caption"
-                  tone="secondary"
-                  style={styles.inviterText}
-                >
-                  {t('labels.invitedBy', { name: invitation.inviterName })}
-                </Text>
-              </View>
-            )}
-
-            <View style={styles.entityContainer}>
-              <Icon
-                name={invitation.type === 'HOME_INVITE' ? 'home' : 'cart'}
-                size={16}
-                tone="textSecondary"
-              />
-              <Text role="label" tone="secondary" style={styles.entityText}>
-                {invitation.entityName}
+          {!!invitation.inviterName && (
+            <View style={styles.inviterContainer}>
+              <Icon name="person" size={16} tone="textSecondary" />
+              <Text role="caption" tone="secondary" style={styles.inviterText}>
+                {t('labels.invitedBy', { name: invitation.inviterName })}
               </Text>
             </View>
-          </View>
+          )}
 
-          {/* Actions. The token rides in the notification that delivered this
+          <View style={styles.entityContainer}>
+            <Icon
+              name={invitation.type === 'HOME_INVITE' ? 'home' : 'cart'}
+              size={16}
+              tone="textSecondary"
+            />
+            <Text role="label" tone="secondary" style={styles.entityText}>
+              {invitation.entityName}
+            </Text>
+          </View>
+        </View>
+      </DialogBody>
+      <DialogFooter>
+        {/* Actions. The token rides in the notification that delivered this
               invite and the API discloses it once, so a surface holding none
               says where the invite can be opened rather than offering a
               control that has nothing to send. */}
-          {!token ? (
-            <View style={styles.unavailable}>
-              <Text role="caption" tone="secondary">
-                {t('invitationAcceptance.unavailableHere')}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.actions}>
-              <AppPressable
-                style={styles.rejectButton}
-                onPress={handleReject}
-                disabled={accepting || rejecting}
-              >
-                {rejecting ? (
-                  <ErrorActivityIndicator />
-                ) : (
-                  <>
-                    <Icon name="close" size={20} tone="error" />
-                    <Text role="bodyStrong" tone="danger">
-                      {t('labels.reject')}
-                    </Text>
-                  </>
-                )}
-              </AppPressable>
+        {!token ? (
+          <Text role="caption" tone="secondary">
+            {t('invitationAcceptance.unavailableHere')}
+          </Text>
+        ) : (
+          <View style={styles.actions}>
+            <AppPressable
+              style={styles.rejectButton}
+              onPress={handleReject}
+              disabled={accepting || rejecting}
+            >
+              {rejecting ? (
+                <ErrorActivityIndicator />
+              ) : (
+                <>
+                  <Icon name="close" size={20} tone="error" />
+                  <Text role="bodyStrong" tone="danger">
+                    {t('labels.reject')}
+                  </Text>
+                </>
+              )}
+            </AppPressable>
 
-              <AppPressable
-                style={styles.acceptButton}
-                onPress={handleAccept}
-                disabled={accepting || rejecting}
-              >
-                {accepting ? (
-                  <OnPrimaryActivityIndicator />
-                ) : (
-                  <>
-                    <Icon name="checkmark" size={20} tone="onPrimary" />
-                    <Text role="bodyStrong" style={styles.acceptText}>
-                      {t('labels.accept')}
-                    </Text>
-                  </>
-                )}
-              </AppPressable>
-            </View>
-          )}
-        </View>
-      </View>
-    </Modal>
+            <AppPressable
+              style={styles.acceptButton}
+              onPress={handleAccept}
+              disabled={accepting || rejecting}
+            >
+              {accepting ? (
+                <OnPrimaryActivityIndicator />
+              ) : (
+                <>
+                  <Icon name="checkmark" size={20} tone="onPrimary" />
+                  <Text role="bodyStrong" style={styles.acceptText}>
+                    {t('labels.accept')}
+                  </Text>
+                </>
+              )}
+            </AppPressable>
+          </View>
+        )}
+      </DialogFooter>
+    </>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  overlay: {
-    flex: 1,
-    backgroundColor: theme.colors.overlays.medium,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: theme.spacing.lg,
-  },
-  modal: {
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.radii.lg,
-    borderCurve: 'continuous',
-    width: '100%',
-    maxWidth: 400,
-    overflow: 'hidden',
-    ...theme.shadows.md,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
     borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },
@@ -306,7 +303,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.xs,
   },
   content: {
-    padding: theme.spacing.lg,
+    paddingTop: theme.spacing.lg,
   },
   description: {
     marginBottom: theme.spacing.md,
@@ -327,14 +324,8 @@ const styles = StyleSheet.create(theme => ({
   entityText: {
     marginLeft: theme.spacing.xs,
   },
-  unavailable: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.lg,
-  },
   actions: {
     flexDirection: 'row',
-    padding: theme.spacing.lg,
-    paddingTop: 0,
     gap: theme.spacing.sm,
   },
   rejectButton: {

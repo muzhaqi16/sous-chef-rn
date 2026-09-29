@@ -92,6 +92,16 @@ function buildPaths(cx: number, cy: number, scale: number) {
 const buildForSize = ({ canvas, scale }: (typeof SIZES)[keyof typeof SIZES]) =>
   buildPaths(canvas / 2, canvas / 2, scale);
 
+/** Pulls the banner up over the canvas so its top edge crosses the bag. */
+const bannerGeometry = ({
+  canvas,
+  scale,
+}: (typeof SIZES)[keyof typeof SIZES]) => ({
+  marginTop: 25 * scale - canvas / 2,
+  minWidth: 110 * scale,
+  minHeight: 28 * scale,
+});
+
 // Pre-build paths for each size at module scope (only 3 variants, created once)
 const PATH_CACHE = {
   small: buildForSize(SIZES.small),
@@ -277,30 +287,10 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
             color={COLORS.bagDark}
           />
         </Group>
-
-        {/* Banner */}
-        <Group>
-          <RoundedRect
-            x={cx - 55 * scale}
-            y={cy + 25 * scale}
-            width={110 * scale}
-            height={28 * scale}
-            r={14 * scale}
-            color={COLORS.banner}
-          />
-        </Group>
       </Canvas>
 
-      {/* Banner text (using React Native Text for better typography) */}
-      <View
-        style={[
-          componentStyles.bannerTextContainer,
-          {
-            marginTop: -35 * scale,
-            width: 110 * scale,
-          },
-        ]}
-      >
+      {/* A view, not a canvas shape, so the banner grows to fit its message. */}
+      <View style={componentStyles.banner}>
         <Text
           role="bodyStrong"
           align="center"
@@ -331,10 +321,21 @@ const componentStyles = StyleSheet.create(theme => ({
     textTransform: 'uppercase',
     letterSpacing: 2,
   },
-  bannerTextContainer: {
+  banner: {
     alignItems: 'center',
     justifyContent: 'center',
-    height: 28,
+    maxWidth: '100%',
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.radii.pill,
+    backgroundColor: COLORS.banner,
+    variants: {
+      size: {
+        small: bannerGeometry(SIZES.small),
+        medium: bannerGeometry(SIZES.medium),
+        large: bannerGeometry(SIZES.large),
+      },
+    },
   },
   bannerText: {
     letterSpacing: 3,

@@ -1,4 +1,5 @@
 import type { IconLibrary } from '#utils/iconUtils';
+import type { BarAction } from '#components/molecules/BarActions';
 
 export interface SelectableItem {
   id: string;
@@ -29,7 +30,7 @@ export interface SelectorConfig<T extends SelectableItem> {
   onSelect: (id: string, item: T) => void;
   displayProperty: keyof T;
   actions: ActionButtonConfig[];
-  headerRight?: React.ReactNode;
+  headerActions?: BarAction[];
   // Optional node rendered above the list (and above the empty state, so a
   // filter UI stays reachable when a filter yields no matches).
   listHeader?: React.ReactNode;

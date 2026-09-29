@@ -390,7 +390,7 @@ function PantryMainContent({
         useServerSort={screen.useServerSort}
         onItemPress={onItemPress}
         onItemEdit={permissions.canEditItems ? handleEditItem : undefined}
-        onItemDelete={permissions.canEditItems ? handleDeleteItem : undefined}
+        onItemDelete={permissions.canRemoveItems ? handleDeleteItem : undefined}
         onItemConsume={permissions.canEditItems ? handleConsumeItem : undefined}
         onItemWaste={permissions.canEditItems ? handleWasteItem : undefined}
         onItemRestock={permissions.canEditItems ? handleRestockItem : undefined}

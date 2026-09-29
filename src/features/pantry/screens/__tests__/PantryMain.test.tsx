@@ -8,6 +8,7 @@ import { screen } from '@testing-library/react-native';
 // mocked out.
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryMain } from '../PantryMain';
+import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import type {
   PantryContentProps,
   PantryContentRef,
@@ -254,6 +255,10 @@ jest.mock('#components/organisms/FilterTabs/FilterTabs', () => ({
   FilterTabs: () => null,
 }));
 
+const defaultPermissionsImpl = jest
+  .mocked(usePantryPermissions)
+  .getMockImplementation();
+
 // --- Per-test mock override helper ---
 function mockPantryScreen(overrides: Partial<typeof defaultPantryScreen> = {}) {
   mockUsePantryScreen.mockReturnValue({ ...defaultPantryScreen, ...overrides });
@@ -262,6 +267,9 @@ function mockPantryScreen(overrides: Partial<typeof defaultPantryScreen> = {}) {
 describe('PantryMain', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest
+      .mocked(usePantryPermissions)
+      .mockImplementation(defaultPermissionsImpl);
     capturedPantryContentProps = {};
     mockUsePantryScreen.mockReturnValue({ ...defaultPantryScreen });
   });
@@ -290,6 +298,21 @@ describe('PantryMain', () => {
     renderWithApollo(<PantryMain />);
     // Modals are mocked to null, just confirm no crash
     expect(screen.getByTestId('pantry-screen')).toBeTruthy();
+  });
+
+  // The API refuses a delete without `canRemoveItems`, which a member lacks by
+  // default — the swipe action must not be offered to one who may only edit.
+  it('offers the swipe delete only to a member who may remove items', () => {
+    jest.mocked(usePantryPermissions).mockReturnValue({
+      canAddItems: true,
+      canEditItems: true,
+      canRemoveItems: false,
+      canCreatePantry: true,
+      canDeletePantry: false,
+    });
+    renderWithApollo(<PantryMain />);
+    expect(capturedPantryContentProps.onItemEdit).toBeDefined();
+    expect(capturedPantryContentProps.onItemDelete).toBeUndefined();
   });
 
   it('renders without crashing when no items', () => {

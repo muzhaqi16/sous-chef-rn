@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#/utils/iconUtils';
@@ -205,22 +204,21 @@ export const PantrySettings: React.FC<
       title={
         !pantryId ? t('pantrySettings.createTitle') : t('pantrySettings.title')
       }
-      rightElement={
-        (!pantryId ? permissions.canCreatePantry : permissions.canEditItems) ? (
-          <Pressable
-            onPress={handleSave}
-            disabled={saving}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Text role="bodyStrong" tone="accent">
-              {saving
-                ? t('labels.saving')
-                : !pantryId
-                ? t('labels.create')
-                : t('labels.save')}
-            </Text>
-          </Pressable>
-        ) : undefined
+      actions={
+        (!pantryId ? permissions.canCreatePantry : permissions.canEditItems)
+          ? [
+              {
+                label: saving
+                  ? t('labels.saving')
+                  : !pantryId
+                  ? t('labels.create')
+                  : t('labels.save'),
+                onPress: handleSave,
+                variant: 'primary',
+                disabled: saving,
+              },
+            ]
+          : undefined
       }
       scroll="form"
     >
@@ -319,8 +317,5 @@ const styles = StyleSheet.create(theme => ({
   },
   dangerWarning: {
     fontStyle: 'italic',
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

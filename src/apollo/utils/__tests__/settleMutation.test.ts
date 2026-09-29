@@ -290,10 +290,7 @@ describe('settleMutation', () => {
         options,
       );
       expect(alerts()).toEqual([
-        [
-          t('errors.entityUpdatedTitle', { entity: t('labels.item') }),
-          getVersionConflictMessage(),
-        ],
+        [t('errors.changedElsewhereTitle'), getVersionConflictMessage()],
       ]);
     });
 

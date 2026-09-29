@@ -111,7 +111,6 @@ export const lightTheme = {
     // Secondary
     secondary: colors.charade[400],
     secondaryLight: colors.charade[100],
-    secondaryDark: colors.charade[950],
     onSecondary: colors.neutral[900],
 
     // Background — warm off-white app surface with white cards layered above it,
@@ -204,9 +203,9 @@ export const lightTheme = {
     favorite: colors.actions.favorite.light,
     rating: colors.actions.rating.light,
 
-    // The tab bar is `secondaryDark` in both themes; on the light page it
-    // needs no edge.
-    navigationEdge: 'transparent',
+    navigationSurface: colors.neutral[0],
+    glassTint: 'transparent',
+    onNavigation: colors.neutral[600],
   },
 };
 
@@ -245,7 +244,6 @@ export const darkTheme = {
     // Secondary
     secondary: colors.charade[400],
     secondaryLight: colors.charade[200],
-    secondaryDark: colors.charade[950],
     onSecondary: colors.neutral[0],
 
     // Background — warm charcoal app surface; surface/surfaceVariant step up
@@ -374,9 +372,11 @@ export const darkTheme = {
     favorite: colors.actions.favorite.dark,
     rating: colors.actions.rating.dark,
 
-    // The tab bar is `secondaryDark` in both themes, which sits at 1.2:1 on
-    // this page; the edge holds 3:1 against the page, the rows and the bar.
-    navigationEdge: colors.charade[500],
+    navigationSurface: colors.charade[950],
+    // Untinted glass is illegible over photos; a near-opaque wash hides the
+    // material. 70% sits between.
+    glassTint: `${colors.charade[950]}B3`,
+    onNavigation: colors.neutral[0],
   },
 };
 

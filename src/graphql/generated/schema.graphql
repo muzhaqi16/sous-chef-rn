@@ -2244,38 +2244,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union CreatePantryResult = ConflictError | CreatePantryPayload | ForbiddenError | NotFoundError | ValidationError
 
-input CreateProfileInput {
-  bio: String
-  """The date of birth, as a calendar date"""
-  dateOfBirth: LocalDate
-  displayName: String
-  firstName: String
-  gender: String
-  """
-  Optional client-generated permanent ID (CUID2). Note: a profile is 1:1 with
-  the user (userId is unique), so creation is already idempotent per user; this
-  is accepted for consistency with other offline-first creates.
-  """
-  id: ID
-  lastName: String
-  phone: String
-  profileVisibility: ProfileVisibility
-  showEmail: Boolean
-  showPhone: Boolean
-  website: URL
-}
-
-type CreateProfilePayload {
-  userProfile: UserProfile!
-}
-
-"""
-Result of CreateProfile. Select on CreateProfilePayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union CreateProfileResult = ConflictError | CreateProfilePayload | ForbiddenError | NotFoundError | ValidationError
-
 input CreatePurchaseInput {
   currencyId: ID!
   discountAmount: Float
@@ -7674,8 +7642,6 @@ type Mutation {
   createPantryItem(input: CreatePantryItemInput!): CreatePantryItemResult!
   """Record a usage event for a pantry item."""
   createPantryItemUsage(input: CreatePantryItemUsageInput!): CreatePantryItemUsageResult!
-  """Create a user profile for the current user."""
-  createProfile(input: CreateProfileInput!): CreateProfileResult!
   """Create a new purchase record."""
   createPurchase(input: CreatePurchaseInput!): CreatePurchaseResult!
   """
@@ -8181,8 +8147,8 @@ type Mutation {
   """
   updatePantryItemQuantity(input: UpdatePantryItemQuantityInput!): UpdatePantryItemQuantityResult!
   """
-  Update user profile. Handles all profile fields including avatar and cover image.
-  Set avatarUrl/coverImageUrl to null to remove them.
+  Update the current user's profile. Handles all profile fields including
+  avatar and cover image; set avatar/coverImage to null to remove them.
   """
   updateProfile(input: UpdateProfileInput!): UpdateProfileResult!
   """Update an existing purchase record."""
@@ -16641,10 +16607,10 @@ type User {
   """
   preferredCurrency: CurrencyCode
   """
-  The user's profile. Null for a signed-out caller, when the user has none,
-  or when the profile's visibility hides it: PRIVATE shows it to the user and
-  admins only, FRIENDS also to anyone who shares a home or a shopping list
-  with the user, and PUBLIC to any signed-in caller.
+  The user's profile; every account has one, created with the account. Null
+  for a signed-out caller or when the profile's visibility hides it: PRIVATE
+  shows it to the user and admins only, FRIENDS also to anyone who shares a
+  home or a shopping list with the user, and PUBLIC to any signed-in caller.
   """
   profile: UserProfile
   """

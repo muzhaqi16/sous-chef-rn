@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { BottomSheetScrollView, BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Title } from '#components/atoms/Title';
+import { BarActions, type BarAction } from '#components/molecules/BarActions';
 import {
   BottomSheetModal,
   useStandardBottomSheet,
@@ -36,8 +37,8 @@ export interface SheetProps extends UseStandardBottomSheetOptions {
   bottomOffset?: number;
   /** The row above the content. Omit when the content names itself. */
   title?: string;
-  /** Content beside the title. */
-  headerRight?: React.ReactNode;
+  /** Actions beside the title, icon or text. */
+  actions?: BarAction[];
 }
 
 /**
@@ -52,7 +53,7 @@ export const Sheet: React.FC<SheetProps> = ({
   showsVerticalScrollIndicator = false,
   bottomOffset,
   title,
-  headerRight,
+  actions,
   ...sheetOptions
 }) => {
   const {
@@ -63,10 +64,10 @@ export const Sheet: React.FC<SheetProps> = ({
 
   const body = (
     <>
-      {title || headerRight ? (
+      {title || actions?.length ? (
         <View style={styles.titleRow}>
           {!!title && <Title style={styles.title}>{title}</Title>}
-          {headerRight}
+          <BarActions actions={actions} placement="gutter" />
         </View>
       ) : null}
       {children}

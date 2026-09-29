@@ -494,7 +494,7 @@ describe('useShoppingListSelectorModal', () => {
     expect(data.length).toBe(5);
   });
 
-  it('headerRight is undefined when not in delete mode', () => {
+  it('has no header actions when not in delete mode', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
         listDataWithOwnership: makeLists(),
@@ -503,7 +503,7 @@ describe('useShoppingListSelectorModal', () => {
       }),
     );
 
-    expect(result.current.listConfig.headerRight).toBeUndefined();
+    expect(result.current.listConfig.headerActions).toBeUndefined();
   });
 
   it('action navigates to ListSettings when Create pressed', () => {
@@ -714,8 +714,8 @@ describe('useShoppingListSelectorModal', () => {
       );
 
       // Not in delete mode, selectedForDeletion is empty
-      // headerRight is undefined when not in delete mode
-      expect(result.current.listConfig.headerRight).toBeUndefined();
+      // no header actions when not in delete mode
+      expect(result.current.listConfig.headerActions).toBeUndefined();
     });
   });
 

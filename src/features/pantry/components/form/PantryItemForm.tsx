@@ -93,6 +93,31 @@ interface PantryItemFormProps {
 const decimalQuantityInput = (value: number | null | undefined): string =>
   formatQuantityForInput(value, { notation: 'decimal' });
 
+// Shown by no one: the form renders a spinner until the item is cached.
+const EMPTY_FORM_VALUES: PantryItemFormData = {
+  itemName: '',
+  brand: '',
+  quantityInput: '1',
+  unit: '',
+  minQuantity: '',
+  restockQuantity: '',
+  netWeight: '',
+  netWeightUnit: '',
+  netWeightUnitId: '',
+  storageState: StorageState.Ambient,
+  condition: ItemCondition.Good,
+  location: '',
+  notes: '',
+  category: '',
+};
+
+const trackingUnitOf = (
+  item: PantryItemForm_PantryItemFragment,
+): UnitSelection => {
+  const { unit } = editedAmount(item);
+  return { id: unit.id, name: unit.name, symbol: unit.symbol, type: unit.type };
+};
+
 const formValuesFromItem = (
   item: PantryItemForm_PantryItemFragment,
 ): PantryItemFormData => ({
@@ -126,8 +151,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const { t } = useTranslation();
   const { goBack } = useAppNavigation();
 
-  const [trackingUnit, setTrackingUnit] =
-    useState<UnitSelection>(emptyUnitSelection);
+  const [pickedUnit, setPickedUnit] = useState<UnitSelection | null>(null);
 
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
@@ -150,7 +174,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   const {
     existingPantryItem,
-    itemQueryData,
     isUnconfirmed,
     currentPantryId,
     storageLocations,
@@ -172,61 +195,37 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   const { resolveUnitId } = useResolveUnit();
 
-  const getInitialValues = (): PantryItemFormData => {
-    if (existingPantryItem) {
-      return formValuesFromItem(existingPantryItem);
-    }
-
-    // Not loaded yet — the form shows a spinner until it is.
-    return {
-      itemName: '',
-      brand: '',
-      quantityInput: '1',
-      unit: '', // Tracking unit
-      minQuantity: '',
-      restockQuantity: '',
-      netWeight: '',
-      netWeightUnit: '',
-      netWeightUnitId: '',
-      storageState: StorageState.Ambient,
-      condition: ItemCondition.Good,
-      location: '',
-      notes: '',
-      category: '',
-    };
-  };
-
   const {
     control,
     handleSubmit,
     formState: { errors, dirtyFields },
     setValue,
     setError,
-    reset,
     trigger,
   } = useForm<PantryItemFormData>({
     resolver: yupResolver(editItemSchema) as Resolver<PantryItemFormData>,
-    defaultValues: getInitialValues(),
+    // `values` lands in an effect that runs before this component's own
+    // `useWatch` subscribes, so an item cached at mount seeds the defaults too.
+    defaultValues: existingPantryItem
+      ? formValuesFromItem(existingPantryItem)
+      : EMPTY_FORM_VALUES,
+    // Re-seeded in RHF's effect whenever the cached item changes; a `reset`
+    // during render updates every mounted `Controller` mid-render, which React
+    // refuses. A field the user has touched keeps what they typed.
+    values: existingPantryItem
+      ? formValuesFromItem(existingPantryItem)
+      : undefined,
+    resetOptions: { keepDirtyValues: true },
     mode: 'onChange',
   });
 
   const watchedValues = useWatch({ control });
 
-  // "Adjusting state during render" pattern — avoids setState-in-useEffect lint error
-  const [prevExistingItemData, setPrevExistingItemData] =
-    useState<typeof itemQueryData>();
-  if (existingPantryItem && itemQueryData !== prevExistingItemData) {
-    setPrevExistingItemData(itemQueryData);
-    const item = existingPantryItem;
-    reset(formValuesFromItem(item));
-    const { unit } = editedAmount(item);
-    setTrackingUnit({
-      id: unit.id,
-      name: unit.name,
-      symbol: unit.symbol,
-      type: unit.type,
-    });
-  }
+  const trackingUnit =
+    pickedUnit ??
+    (existingPantryItem
+      ? trackingUnitOf(existingPantryItem)
+      : emptyUnitSelection);
 
   const handleCategorySelect = (categoryId: string | null) => {
     setSelectedCategoryId(categoryId);
@@ -262,13 +261,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     unitType?: UnitType | null,
     unitSymbol?: string | null,
   ) => {
-    setTrackingUnit(prev => ({
-      ...prev,
+    setPickedUnit({
       id: unitId,
       name: unitName,
       type: unitType ?? null,
       symbol: unitSymbol ?? null,
-    }));
+    });
   };
 
   // The all-or-nothing net-weight rule reports on `netWeightUnit` while its

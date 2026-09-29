@@ -3,6 +3,8 @@ import type { ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Header } from '#components/organisms/Header';
+import type { BarAction } from '#components/molecules/BarActions';
+import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import {
   CollapsingHeroDetail,
   HEADER_BAND_HEIGHT,
@@ -24,12 +26,17 @@ const GLYPH_SLACK = (sizes.touchTarget.md - sizes.icon.md) / 2;
 const flat = (style: unknown): ViewStyle =>
   StyleSheet.flatten(style as ViewStyle) ?? {};
 
-/** The nearest ancestor that declares a horizontal padding or left inset. */
+/**
+ * The nearest ancestor that declares a horizontal padding, past the target's
+ * own component wrappers, which carry its testID and its style.
+ */
 const barOf = (node: ReturnType<typeof screen.getByTestId>) => {
   let current = node.parent;
   while (current) {
     const style = flat(current.props.style);
-    if (style.paddingHorizontal !== undefined) return style;
+    const isOwnWrapper =
+      !!node.props.testID && current.props.testID === node.props.testID;
+    if (!isOwnWrapper && style.paddingHorizontal !== undefined) return style;
     current = current.parent;
   }
   throw new Error('no bar ancestor declares a horizontal inset');
@@ -66,6 +73,78 @@ describe('header bars put the back glyph on the page gutter', () => {
     expect(chip.width).toBe(sizes.touchTarget.md);
     expect(Number(bar.paddingHorizontal) + GLYPH_SLACK).toBe(layout.pageGutter);
     expect(HEADER_BAND_HEIGHT).toBe(spacing.sm * 2 + sizes.touchTarget.md);
+  });
+});
+
+/** The nearest ancestor whose style declares `key`. */
+const ancestorStyleWith = (
+  node: ReturnType<typeof screen.getByTestId>,
+  key: keyof ViewStyle,
+) => {
+  let current = node.parent;
+  while (current) {
+    const style = flat(current.props.style);
+    if (style[key] !== undefined) return style;
+    current = current.parent;
+  }
+  throw new Error(`no ancestor declares ${key}`);
+};
+
+/**
+ * A trailing action obeys the same rule as the back glyph, whether it is an
+ * icon or a label. `Header` reserves the target's slack in its inset, so each
+ * target is whole and a label is padded by the slack an icon has; a bar on a
+ * content gutter puts the glyph on the edge and reaches 44pt by hit slop.
+ */
+describe('bar actions put their outermost glyph on the page gutter', () => {
+  const ACTIONS: BarAction[] = [
+    {
+      icon: 'add',
+      accessibilityLabel: 'Add',
+      onPress: jest.fn(),
+      testID: 'icon-action',
+    },
+    { label: 'Save', onPress: jest.fn(), testID: 'text-action' },
+  ];
+
+  it('Header: every target is whole, a label padded like an icon', () => {
+    render(<Header title="Title" rightActions={ACTIONS} />);
+    const icon = screen.getByTestId('icon-action');
+    const text = screen.getByTestId('text-action');
+    const textTarget = flat(text.props.style);
+
+    expect(flat(icon.props.style).minWidth).toBe(sizes.touchTarget.md);
+    expect(textTarget.minHeight).toBe(sizes.touchTarget.md);
+    expect(
+      Number(barOf(text).paddingHorizontal) +
+        Number(textTarget.paddingHorizontal),
+    ).toBe(layout.pageGutter);
+  });
+
+  it('a gutter bar: the glyph takes the edge, hit slop makes the target', () => {
+    render(<TabScreenHeader label="Label" title="Title" actions={ACTIONS} />);
+
+    for (const id of ['icon-action', 'text-action']) {
+      const target = screen.getByTestId(id);
+      const style = flat(target.props.style);
+      expect(style.paddingHorizontal ?? 0).toBe(0);
+      expect(style.marginRight ?? 0).toBe(0);
+      expect(sizes.icon.md + 2 * Number(target.props.hitSlop)).toBe(
+        sizes.touchTarget.md,
+      );
+    }
+  });
+
+  it('glyphs sit the same distance apart in either bar', () => {
+    const gapOf = () =>
+      Number(ancestorStyleWith(screen.getByTestId('icon-action'), 'gap').gap);
+
+    const header = render(<Header title="Title" rightActions={ACTIONS} />);
+    const barGap = gapOf();
+    header.unmount();
+    render(<TabScreenHeader label="Label" title="Title" actions={ACTIONS} />);
+
+    expect(barGap + 2 * GLYPH_SLACK).toBe(gapOf());
   });
 });
 

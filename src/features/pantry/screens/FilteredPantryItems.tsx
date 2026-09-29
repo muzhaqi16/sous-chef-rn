@@ -1,6 +1,6 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 // RNGH's Pressable for the cart button: nested in the row's RNGH Swipeable, its
@@ -11,18 +11,20 @@ import { useFocusEffect } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { Icon } from '#utils/iconUtils';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
-import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
+import { SkeletonCircle } from '#components/atoms/Skeleton/SkeletonCircle';
+import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState, type DataState } from '#hooks/data/useDataState';
 import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
 import type { PantryItemFilters } from '#/graphql/generated/schemaTypes';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { ShoppingListPickerSheet } from '#features/shoppingList/ui/ShoppingListPickerSheet';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
@@ -183,6 +185,7 @@ function buildModeConfig(
 
 const keyExtractor = (item: { id: string }) => item.id;
 const getItemType = () => 'item';
+const CART_ICON_SIZE = 20;
 
 type LayoutRect = { x: number; y: number; width: number; height: number };
 
@@ -201,7 +204,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
 }) => {
   const { t } = useTranslation();
   const { navigateTo, handleAddToList } = useFilteredItemsActions();
-  const cartRef = useRef<View>(null);
+  const { ref: cartRef, measure: measureCart } = useMeasuredRect(onCartMeasure);
 
   const cartButton =
     showCart && handleAddToList ? (
@@ -215,7 +218,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
         style={styles.actionButton}
         accessibilityLabel={t('labels.addToShoppingList')}
       >
-        <Icon name="cart-outline" size={20} tone="primary" />
+        <Icon name="cart-outline" size={CART_ICON_SIZE} tone="primary" />
       </Pressable>
     ) : null;
 
@@ -229,19 +232,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
           </Text>
         </View>
         {cartButton && onCartMeasure ? (
-          <View
-            ref={cartRef}
-            collapsable={false}
-            onLayout={() => {
-              requestAnimationFrame(() => {
-                cartRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-                  if (w > 0 && h > 0) {
-                    onCartMeasure({ x: pageX, y: pageY, width: w, height: h });
-                  }
-                });
-              });
-            }}
-          >
+          <View ref={cartRef} collapsable={false} onLayout={measureCart}>
             {cartButton}
           </View>
         ) : (
@@ -254,11 +245,75 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
 
 const FilteredRenderItem = FilteredRenderItemComponent;
 
+interface FilteredRowSkeletonProps {
+  showCart: boolean;
+  titleHeight: number;
+  subtitleHeight: number;
+}
+
+/** The row above with bars for its text, so nothing shifts on reveal. */
+const FilteredRowSkeleton: React.FC<FilteredRowSkeletonProps> = ({
+  showCart,
+  titleHeight,
+  subtitleHeight,
+}) => (
+  <View style={[commonStyles.card, commonStyles.rowSpaceBetween]}>
+    <View style={styles.itemInfo}>
+      <View style={styles.titleLine}>
+        <SkeletonLine width="60%" height={titleHeight} />
+      </View>
+      <View style={styles.subtitleLine}>
+        <SkeletonLine width="40%" height={subtitleHeight} />
+      </View>
+    </View>
+    {showCart ? (
+      <View style={styles.actionButton}>
+        <SkeletonCircle size={CART_ICON_SIZE} />
+      </View>
+    ) : null}
+  </View>
+);
+
+/**
+ * A screenful of skeleton rows. The count is arithmetic over the theme, which
+ * the density and text-size preferences scale, so it reads `theme` in JS.
+ */
+const FilteredSkeleton: React.FC<{ showCart: boolean }> = ({ showCart }) => {
+  const { theme } = useUnistyles();
+  const { height: windowHeight } = useWindowDimensions();
+  const { spacing, type } = theme;
+  // Card padding, both text lines and the card's bottom margin; the window's
+  // header height is slack.
+  const rowPitch =
+    spacing.md * 2 +
+    type.bodyStrong.lineHeight +
+    spacing.xs +
+    type.caption.lineHeight +
+    spacing.sm;
+
+  return (
+    <View testID={pantryTestIDs.loading}>
+      {Array.from(
+        { length: Math.ceil(windowHeight / rowPitch) },
+        (_, index) => (
+          <FilteredRowSkeleton
+            key={index}
+            showCart={showCart}
+            titleHeight={type.bodyStrong.fontSize}
+            subtitleHeight={type.caption.fontSize}
+          />
+        ),
+      )}
+    </View>
+  );
+};
+
 interface FilteredEmptyProps {
   state: DataState;
   onRetry: () => void;
   icon: string;
   message: string;
+  showCart: boolean;
 }
 
 /**
@@ -271,15 +326,10 @@ const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
   onRetry,
   icon,
   message,
+  showCart,
 }) => {
   if (state === 'loading') {
-    return (
-      <View>
-        {[1, 2, 3, 4, 5].map(key => (
-          <PantryItemSkeleton key={key} />
-        ))}
-      </View>
-    );
+    return <FilteredSkeleton showCart={showCart} />;
   }
 
   if (state === 'error' || state === 'offline') {
@@ -487,6 +537,7 @@ export const FilteredPantryItems: React.FC<
               onRetry={handleRefresh}
               icon={config.emptyIcon}
               message={config.emptyMessage}
+              showCart={showCart}
             />
           }
           renderItem={({
@@ -544,6 +595,17 @@ const styles = StyleSheet.create(theme => ({
   },
   itemDetails: {
     marginTop: theme.spacing.xs,
+  },
+  // A skeleton bar is its text's font size; its line box is the text's leading,
+  // so the skeleton row stands as tall as the row it replaces.
+  titleLine: {
+    height: theme.type.bodyStrong.lineHeight,
+    justifyContent: 'center',
+  },
+  subtitleLine: {
+    marginTop: theme.spacing.xs,
+    height: theme.type.caption.lineHeight,
+    justifyContent: 'center',
   },
   actionButton: {
     padding: theme.spacing.xs,

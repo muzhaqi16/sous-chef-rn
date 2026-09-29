@@ -54,6 +54,7 @@ import type {
   PantryContentRef,
 } from './pantryDisplay/types';
 import { hitSlop } from '#/theme/foundations/sizes';
+import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
 // Survives unmount/remount (stack navigation) so a return visit skips the
 // skeletons; resets on app restart.
@@ -127,7 +128,8 @@ export const PantryContent = React.forwardRef<
     const { bottom: safeBottom } = useSafeAreaInsets();
     const flashListRef = useRef<FlashListRef<PantryListNode>>(null);
     const reflow = useRowReflow(flashListRef, onScrollBeginDrag);
-    const settingsIconRef = useRef<View>(null);
+    const { ref: settingsIconRef, measure: measureSettingsIcon } =
+      useMeasuredRect(onSettingsIconLayout);
 
     useImperativeHandle(ref, () => ({
       scrollToTop() {
@@ -351,22 +353,7 @@ export const PantryContent = React.forwardRef<
       <View
         ref={settingsIconRef}
         collapsable={false}
-        onLayout={() => {
-          if (onSettingsIconLayout) {
-            requestAnimationFrame(() => {
-              settingsIconRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-                if (w > 0 && h > 0) {
-                  onSettingsIconLayout({
-                    x: pageX,
-                    y: pageY,
-                    width: w,
-                    height: h,
-                  });
-                }
-              });
-            });
-          }
-        }}
+        onLayout={measureSettingsIcon}
       >
         <Pressable
           onPress={onSettingsPress}

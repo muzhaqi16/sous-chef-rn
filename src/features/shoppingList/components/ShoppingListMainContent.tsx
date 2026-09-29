@@ -5,7 +5,6 @@ import {
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -17,7 +16,6 @@ import { ListTemplate } from '#features/shoppingList/components/ListTemplate';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { ShoppingListTabs } from '#features/shoppingList/components/ShoppingListTabs/ShoppingListTabs';
 import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
-import { Icon } from '#utils/iconUtils';
 
 // Hooks & Context
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -56,8 +54,8 @@ import { useDataState } from '#hooks/data/useDataState';
 import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { Screen, type ScreenHeaderConfig } from '#components/templates/Screen';
+import type { BarAction } from '#components/molecules/BarActions';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 /**
  * Inner content component that uses modal context.
@@ -276,18 +274,13 @@ export const ShoppingListMainContent: React.FC<
   const permissions = useShoppingListPermissions(currentListDetails, user?.id);
   const networkWithheld = useIsApiUnavailable();
 
-  // Header right action - list selector button
-  const headerRight = (
-    <Pressable
-      onPress={handleOpenSelector}
-      hitSlop={hitSlop.md}
-      testID={shoppingListTestIDs.listSelectorButton}
-      accessibilityRole="button"
-      accessibilityLabel={t('shoppingListScreen.switchListAccessibility')}
-    >
-      <Icon name="list" size={24} tone="textSecondary" />
-    </Pressable>
-  );
+  const switchListAction: BarAction = {
+    icon: 'list',
+    tone: 'textSecondary',
+    onPress: handleOpenSelector,
+    testID: shoppingListTestIDs.listSelectorButton,
+    accessibilityLabel: t('shoppingListScreen.switchListAccessibility'),
+  };
 
   // One declaration of this screen's tab header. The no-lists branch has no list
   // to name, so it shows the generic one.
@@ -299,7 +292,7 @@ export const ShoppingListMainContent: React.FC<
   const selectedListHeader: ScreenHeaderConfig = {
     ...tabHeader,
     title: currentList?.name ?? tabHeader.title,
-    headerRight,
+    actions: [switchListAction],
   };
 
   // SearchBar rendered above tab pills (positioned above TabView in ShoppingListTabs)

@@ -52,11 +52,14 @@ jest.mock('#hooks/navigation/useAppNavigation', () => ({
   }),
 }));
 
+const FULL_PERMISSIONS = {
+  canAddItems: true,
+  canEditItems: true,
+  canRemoveItems: true,
+};
+const mockPermissions = { ...FULL_PERMISSIONS };
 jest.mock('#features/pantry/hooks/usePantryPermissions', () => ({
-  usePantryPermissions: () => ({
-    canAddItems: true,
-    canEditItems: true,
-  }),
+  usePantryPermissions: () => mockPermissions,
 }));
 
 jest.mock('#hooks/performance/useScreenTransition', () => ({
@@ -112,6 +115,7 @@ jest.mock('#hooks/app/useIsApiUnavailable', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  Object.assign(mockPermissions, FULL_PERMISSIONS);
 });
 
 const route = { params: { itemId: 'pi1' } };
@@ -369,6 +373,28 @@ describe('PantryItemDetail (integration)', () => {
       ],
     });
     await screen.findAllByText('Milk');
+    expect(screen.queryByTestId('pantry-item-discard-button')).toBeNull();
+  });
+
+  // The API gates delete and discard on `canRemoveItems`, which a member lacks
+  // by default: offering them to one who may only edit ends in a refusal.
+  it('offers edit but neither delete nor discard to a member who may not remove', async () => {
+    Object.assign(mockPermissions, { canRemoveItems: false });
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [
+        itemMock({
+          ...fullItem,
+          expiresOn: toDateKey(yesterday),
+          earliestBatchExpiresOn: toDateKey(yesterday),
+        }),
+      ],
+    });
+    await screen.findAllByText('Milk');
+    expect(screen.getByTestId('pantry-item-edit-button')).toBeTruthy();
+    expect(screen.getByTestId('pantry-item-adjust-button')).toBeTruthy();
+    expect(screen.queryByTestId('pantry-item-delete-button')).toBeNull();
     expect(screen.queryByTestId('pantry-item-discard-button')).toBeNull();
   });
 

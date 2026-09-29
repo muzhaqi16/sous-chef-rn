@@ -1,7 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
-import { Modal } from '#components/atoms/themedComponents';
-import { StyleSheet } from 'react-native-unistyles';
+import { Dialog, DialogBody } from '#components/templates/Dialog';
 import { BiometricSetupView } from '#components/organisms/biometric/BiometricSetupView';
 import { useBiometricSetup } from '#components/organisms/biometric/useBiometricSetup';
 
@@ -24,66 +22,29 @@ export const BiometricSetupModal = ({
   mode = 'onboarding',
 }: BiometricSetupModalProps) => {
   const bio = useBiometricSetup({
-    mode: mode === 'settings' ? 'settings' : 'onboarding',
+    mode,
     userEmail,
     active: visible,
     onComplete: enabled => onComplete(enabled),
   });
 
-  // Renders nothing until probed; the hook calls onComplete if biometrics are
-  // unavailable.
-  if (!visible || !bio.available) return null;
+  // Hidden until probed; the hook calls onComplete if biometrics are unavailable.
+  const open = visible && bio.available;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      statusBarTranslucent
-      navigationBarTranslucent
-    >
-      <View style={styles.overlay} />
-      <View style={styles.contentContainer}>
-        <View style={styles.card}>
-          <BiometricSetupView
-            iconName={bio.iconName}
-            title={bio.title}
-            description={bio.description}
-            isEnabling={bio.isEnabling}
-            enableLabel={bio.enableLabel}
-            skipLabel={bio.skipLabel}
-            onEnable={bio.handleEnable}
-            onSkip={bio.handleSkip}
-          />
-        </View>
-      </View>
-    </Modal>
+    <Dialog visible={open} onRequestClose={bio.handleSkip}>
+      <DialogBody>
+        <BiometricSetupView
+          iconName={bio.iconName}
+          title={bio.title}
+          description={bio.description}
+          isEnabling={bio.isEnabling}
+          enableLabel={bio.enableLabel}
+          skipLabel={bio.skipLabel}
+          onEnable={bio.handleEnable}
+          onSkip={bio.handleSkip}
+        />
+      </DialogBody>
+    </Dialog>
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: theme.colors.overlays.medium,
-  },
-  contentContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.xl,
-  },
-  card: {
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.radii['3xl'],
-    borderCurve: 'continuous',
-    padding: theme.spacing.xl,
-    alignItems: 'center',
-    maxWidth: 360,
-    width: '100%',
-  },
-}));

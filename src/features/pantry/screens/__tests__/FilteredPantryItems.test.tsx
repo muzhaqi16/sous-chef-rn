@@ -5,6 +5,8 @@ import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { FilteredPantryItems } from '../FilteredPantryItems';
+import { SkeletonCircle } from '#components/atoms/Skeleton/SkeletonCircle';
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import { toDateKey } from '#/utils/dateUtils';
 
 // Structural shape consumed by the screen via the mocked `usePantryManagement`.
@@ -244,9 +246,6 @@ jest.mock('#components/organisms/SwipeableItem/SwipeableItem', () => ({
     return <Pressable onPress={onPress}>{children}</Pressable>;
   },
 }));
-jest.mock('#features/pantry/components/skeletons/PantryItemSkeleton', () => ({
-  PantryItemSkeleton: () => null,
-}));
 jest.mock('#/styles/commonStyles', () => ({
   commonStyles: {
     container: {},
@@ -405,11 +404,29 @@ describe('FilteredPantryItems', () => {
       ).toBeTruthy();
     });
 
-    it('renders without crashing during loading', () => {
+    it('renders the row skeleton during loading', () => {
       mockLoading = true;
       mockAllItems = [];
       renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
       expect(screen.getByText('Low Stock Items')).toBeTruthy();
+      expect(screen.getByTestId(pantryTestIDs.loading)).toBeTruthy();
+    });
+
+    // The skeleton stands in for the row, so a row without the cart leaves no
+    // placeholder for it, or the text column widens on reveal.
+    it('leaves the cart out of the skeleton when the cart is withheld', () => {
+      mockLoading = true;
+      mockAllItems = [];
+      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+      expect(screen.UNSAFE_queryAllByType(SkeletonCircle)).not.toHaveLength(0);
+
+      mockListCanAddItems = false;
+      try {
+        renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+        expect(screen.UNSAFE_queryAllByType(SkeletonCircle)).toHaveLength(0);
+      } finally {
+        mockListCanAddItems = true;
+      }
     });
 
     describe('a failed fetch is not good news', () => {

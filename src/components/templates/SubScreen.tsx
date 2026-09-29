@@ -1,15 +1,13 @@
 import React from 'react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
+import type { BarAction } from '#components/molecules/BarActions';
 import { Screen, type ScreenProps } from './Screen';
 
 type WithoutHeader<T> = T extends unknown ? Omit<T, 'header'> : never;
 
 export type SubScreenProps = WithoutHeader<ScreenProps> & {
   title?: string;
-  actions?: HeaderAction[];
-  /** Right-side content that is not an icon — a Save affordance, a text button. */
-  rightElement?: React.ReactNode;
+  actions?: BarAction[];
 };
 
 /**
@@ -20,7 +18,6 @@ export type SubScreenProps = WithoutHeader<ScreenProps> & {
 export const SubScreen: React.FC<SubScreenProps> = ({
   title,
   actions,
-  rightElement,
   ...screenProps
 }) => {
   const { goBack } = useAppNavigation();
@@ -28,7 +25,7 @@ export const SubScreen: React.FC<SubScreenProps> = ({
   return (
     <Screen
       {...screenProps}
-      header={{ title: title ?? '', back: goBack, actions, rightElement }}
+      header={{ title: title ?? '', back: goBack, actions }}
     />
   );
 };

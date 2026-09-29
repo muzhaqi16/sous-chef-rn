@@ -602,8 +602,8 @@ Always `BottomSheetModal` (never `BottomSheet`) via the `useStandardBottomSheet`
 hook, driven by a `visible` boolean rather than imperative `present()`/
 `dismiss()`. The app has a global backdrop system
 (`OverlayBackdropProvider` + `GlobalBackdrop`); inline `BottomSheet` backdrops
-conflict with it. See
-[`backdrop-lifecycle-design.md`](backdrop-lifecycle-design.md). The two
+conflict with it. How a sheet claims and releases it:
+[`ui-layer.md` § Bottom sheets](ui-layer.md#bottom-sheets). The two
 verified gorhom mechanics behind the sheet rules — why a scrollable must never
 sit inside `BottomSheetView`, and why sheet inputs must resolve to
 `BottomSheetTextInput` — are recorded in

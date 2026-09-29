@@ -54,7 +54,7 @@
       "uniqueConstraint": "This value already exists",
       "unitInvalid": "That unit cannot be used here.",
       "validationFailed": "Please check your input and try again",
-      "versionConflict": "This item was updated by another user. Please refresh and try again.",
+      "versionConflict": "This changed somewhere else after you opened it. Please refresh and try again.",
       "unitChangeNeedsResolution": "This unit change is only an estimate. Choose whether to use the estimate or enter the amount yourself."
     },
     "addItemFailed": "Failed to add item",
@@ -146,6 +146,7 @@
     "wasteBatchFailed": "Could not mark this as wasted.",
     "updateShoppingItemFailed": "Could not update the item.",
     "entityUpdatedTitle": "{{entity}} Updated",
+    "changedElsewhereTitle": "Changed Elsewhere",
     "entityHome": "Home",
     "entityMember": "Member",
     "entityInvite": "Invite",

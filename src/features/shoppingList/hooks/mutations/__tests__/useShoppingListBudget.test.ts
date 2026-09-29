@@ -22,7 +22,7 @@ const LIST = {
 };
 
 const readBudget = (cache: ReturnType<typeof seedCache>) =>
-  cache.readFragment<{ budgetAmount: number | null; priceTracking: boolean }>({
+  cache.readFragment<{ priceTracking: boolean }>({
     id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
     fragment: UseShoppingListBudget_ListFragmentDoc,
     fragmentName: 'useShoppingListBudget_list',
@@ -34,24 +34,6 @@ const okMock = () => ({
 });
 
 describe('useShoppingListBudget', () => {
-  it('setBudget writes the limit optimistically; a queued (null) result keeps it and returns true', async () => {
-    const cache = seedCache([LIST]);
-    const { result } = renderHookWithApollo(() => useShoppingListBudget(), {
-      cache,
-      operationMocks: [okMock()],
-    });
-
-    let resolved: boolean | undefined;
-    await act(async () => {
-      const promise = result.current.setBudget('list-1', 150);
-      expect(readBudget(cache)?.budgetAmount).toBe(150);
-      resolved = await promise;
-    });
-
-    expect(resolved).toBe(true);
-    expect(readBudget(cache)?.budgetAmount).toBe(150);
-  });
-
   it('setPriceTracking flips the flag optimistically and returns true', async () => {
     const cache = seedCache([LIST]);
     const { result } = renderHookWithApollo(() => useShoppingListBudget(), {
@@ -69,7 +51,7 @@ describe('useShoppingListBudget', () => {
     expect(resolved).toBe(true);
   });
 
-  it('reverts the budget and returns false on a rejection', async () => {
+  it('reverts price tracking and returns false on a rejection', async () => {
     const cache = seedCache([LIST]);
     const { result } = renderHookWithApollo(() => useShoppingListBudget(), {
       cache,
@@ -84,8 +66,8 @@ describe('useShoppingListBudget', () => {
               updateShoppingList: {
                 __typename: 'ValidationError',
                 code: 'VALIDATION_FAILED',
-                message: 'negative budget',
-                field: 'budgetAmount',
+                message: 'price tracking refused',
+                field: 'priceTracking',
               },
             },
           },
@@ -95,12 +77,12 @@ describe('useShoppingListBudget', () => {
 
     let resolved: boolean | undefined;
     await act(async () => {
-      resolved = await result.current.setBudget('list-1', -5);
+      resolved = await result.current.setPriceTracking('list-1', true);
     });
 
     expect(resolved).toBe(false);
     await waitFor(() => {
-      expect(readBudget(cache)?.budgetAmount).toBeNull();
+      expect(readBudget(cache)?.priceTracking).toBe(false);
     });
   });
 });

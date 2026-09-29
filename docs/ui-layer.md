@@ -27,8 +27,8 @@ optional:
 ## Screen scaffold and sheet shell
 
 - **`Screen`** (`src/components/templates/Screen.tsx`) takes `header`
-  (`standard | tab | none`, plus title, actions, back, close and the
-  offline pill), `scroll` (`none | scroll | form | list`), `gutter`, `refresh`,
+  (`standard | tab | none`, plus title, actions, back and close), `scroll`
+  (`none | scroll | form | list`), `gutter`, `refresh`,
   `state`, `footer`, and — in `scroll` mode — `onScroll` (an animated scroll
   handler) and `scrollTestID`. It never applies the top inset: the navigator
   does, and `__tests__/navigation/screenTopInset.test.tsx` renders the
@@ -39,6 +39,13 @@ optional:
   so a 24pt icon centred in its 44pt target starts where content does. `Header`
   and `CollapsingHeroDetail`'s bar both use it and are both 60pt tall
   (`__tests__/ui/headerGeometry.test.tsx`). Standard titles are always centred.
+- **One action contract.** Every bar's actions are `BarAction`s, an icon or a
+  text label, rendered by `BarActions` (`src/components/molecules/BarActions.tsx`);
+  no bar takes a bare node. In `Header` each is a whole 44pt target and a label
+  is padded by the slack an icon has, so Save lands on the gutter just as a
+  glyph does. The tab header, `Sheet` and `ActionTray` sit on a content gutter,
+  so there the glyph takes the edge and `hitSlop` makes the 44pt. Glyphs sit the
+  same distance apart in both; the same test pins all of it.
 - **One gutter.** `gutter="page"` (the default) is the only way a screen states
   its horizontal inset; `gutter="none"` is for a `scroll="list"` screen whose
   list owns its content inset. Content below the scaffold carries no edge inset
@@ -66,6 +73,21 @@ optional:
   ([gorhom BottomSheetView cannot bound a scrollable](verified-library-behaviour.md#gorhom-bottomsheetview-cannot-bound-a-scrollable)).
   `__tests__/sheets/bottomSheetShell.test.ts` holds the shell and
   `__tests__/ui/viewSheetScrollableIsBounded.test.ts` holds the `list` rule.
+- **`Dialog`** (`src/components/templates/Dialog.tsx`) is a centred card over a
+  scrim, for a short decision or a small form. The scrim and card fade together;
+  a `slide` would carry the scrim up with the card. The Modal is
+  `statusBarTranslucent`, so the dialog clears the safe area itself, and
+  react-native-keyboard-controller's `KeyboardAvoidingView` (which also reaches
+  an Android `Modal`) keeps it above the keyboard. `DialogBody` scrolls when the
+  keyboard or a large text size leaves too little room; `DialogFooter` keeps the
+  actions pinned below it.
+  - **Keep it mounted and drive `visible`.** RN's `Modal` keeps its content on
+    screen through the fade-out only while it stays in the tree (iOS renders it
+    until the native dismiss lands), and unmounting a visible one can orphan its
+    scrim on Android. A consumer whose caller clears the data as it closes holds
+    the last value for the fade, as `InvitationAcceptanceModal` does.
+  - **Content mounts on open**, so a form inside starts fresh with no `reset`.
+  - `alertService` stays separate: it stacks alerts with its own animation.
 - **`FormScreen`** is a screen with a form's chrome. The name is the only thing
   it shares with a modal.
 
@@ -149,6 +171,8 @@ they read it.
     theme colours into data structures.
   - `EdgeFade`, which passes colours into SVG gradient stops;
   - `SearchBar`, which offsets a measured rect by `theme.spacing.sm` in JS.
+  - `FilteredPantryItems`' loading skeleton, which counts a screenful of rows
+    from `theme.spacing` and `theme.type` in JS.
 - **Plugin order is Unistyles → `unistyles-scope-crawl` → React Compiler**
   (`babel.config.js`): the documented order with a crawl between. Unistyles'
   `useVariants` rewrite declares a shadowing binding without `scope.crawl()`;
@@ -306,8 +330,7 @@ they read it.
 ## Bottom sheets
 
 - **`BottomSheetModal`, never inline `BottomSheet`.** An inline sheet's backdrop
-  conflicts with the global `OverlayBackdropProvider` + `GlobalBackdrop` system
-  ([`backdrop-lifecycle-design.md`](backdrop-lifecycle-design.md)).
+  conflicts with the global backdrop below.
   `useStandardBottomSheet` (`src/hooks/useStandardBottomSheet.tsx`) drives it
   with a `visible` boolean and `onDismiss`; `present()`/`dismiss()` are called
   only inside the hook's own effects. It re-exports `BottomSheetModal`
@@ -316,6 +339,29 @@ they read it.
   neither may be overridden after the spread. `dismiss()` on a modal that was
   never presented wedges it closed for the session; the hook guards that and a
   raw ref does not.
+- **One global backdrop, claimed per overlay.** The dim behind every sheet is one
+  `GlobalBackdrop` fed by `OverlayBackdropProvider`, not gorhom's per-sheet
+  `BottomSheetBackdrop`, because the floating tab bar hides on the same opacity
+  (`useOverlayBackdropOpacity`). A leaked claim is an invisible layer that eats
+  every tap, so `useBottomSheetBackdropClaim` covers each way a sheet closes:
+  - It **claims** on `onAnimate(toIndex >= 0)`, so the dim ramps with the sheet
+    instead of popping in late; `onChange(index >= 0)` covers a `present()`
+    while already open.
+  - It **releases** on `onChange(-1)` first (also reached through
+    `useStandardBottomSheet`'s `safeOnDismiss`), because a modal dismiss can stop
+    driving `animatedIndex` before it reaches -1; on `animatedIndex` settling at
+    -1 for an interrupted close, where gorhom skips `onChange(-1)`; and on
+    unmount as the last backstop.
+  - `ActionTray` claims declaratively instead: `useBackdropClaim(active)` ties
+    the slot to React state.
+- **Two overlay signals, on purpose.** `useOverlayBackdropPresence()` (any claim)
+  resets the tab bar's scroll-hide and holds the pantry rows still behind a
+  sheet. `isOverlayOpen` in `TabBarActionsContext`, set only by selectors, pauses
+  the tutorials, which open sheets of their own and must not pause themselves.
+- **A flicker in the dim is a rendering bug, not a claim bug.** Traces of the
+  last one showed one claim and one release per cycle; Unistyles was writing
+  Reanimated's stale value back over the animation
+  ([Unistyles re-applies reanimated's React-side value](verified-library-behaviour.md#unistyles-re-applies-reanimateds-react-side-value-over-an-animation)).
 - **Inputs in a sheet resolve to `BottomSheetTextInput`.** A plain RN `TextInput`
   leaves the sheet blind to the keyboard. `BottomSheetTextInput` throws outside a
   sheet, so shared inputs pick it from context —

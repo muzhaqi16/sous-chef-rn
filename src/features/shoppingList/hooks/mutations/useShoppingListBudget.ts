@@ -1,8 +1,8 @@
 /**
- * Local-first: budget rides on updateShoppingList's `planning` sub-input and price
- * tracking on `settings` — absolute sets keyed by the list id, written to the cache
- * before firing and idempotent on a queued replay. totalCost / estimatedTotal are
- * server-derived and are never written optimistically.
+ * Local-first: price tracking rides on updateShoppingList's `settings` sub-input —
+ * an absolute set keyed by the list id, written to the cache before firing and
+ * idempotent on a queued replay. The budget limit is saved with the rest of the
+ * settings by useUpdateShoppingList.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -73,26 +73,6 @@ export function useShoppingListBudget() {
     return settled.status !== 'failed';
   };
 
-  const setBudget = async (
-    id: string,
-    budgetAmount: number | null,
-    currency?: string | null,
-  ): Promise<boolean> => {
-    const revert = applyOptimistic(
-      id,
-      { budgetAmount, ...(currency !== undefined && { currency }) },
-      'Set Budget',
-    );
-    return runUpdate(
-      id,
-      {
-        planning: { budgetAmount, ...(currency !== undefined && { currency }) },
-      },
-      revert,
-      t('shoppingListScreens.failedToSetBudget'),
-    );
-  };
-
   const setPriceTracking = async (
     id: string,
     priceTracking: boolean,
@@ -106,5 +86,5 @@ export function useShoppingListBudget() {
     );
   };
 
-  return { setBudget, setPriceTracking };
+  return { setPriceTracking };
 }

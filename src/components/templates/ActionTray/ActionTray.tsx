@@ -22,6 +22,7 @@ import { StyleSheet as UnistylesStyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
+import { BarActions } from '#components/molecules/BarActions';
 import { useBackdropClaim } from '#components/providers/OverlayBackdropProvider';
 import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import {
@@ -49,7 +50,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       onClose,
       onOpen,
       title,
-      headerRight,
+      headerActions,
       footer,
       showCloseButton = true,
       enableBackdrop = true,
@@ -160,7 +161,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     // Rendered through gorhom's `handleComponent` slot so it stays pinned; its
     // measured height feeds the sheet's dynamic size. Returning null suppresses
     // gorhom's default grab handle rather than drawing an empty band.
-    const hasHeader = !!title || !!headerRight || showCloseButton;
+    const hasHeader = !!title || !!headerActions?.length || showCloseButton;
     const renderHandle = () =>
       hasHeader ? (
         <View style={styles.header}>
@@ -170,7 +171,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
             </Text>
           ) : null}
           <View style={styles.fill} />
-          {!!headerRight && headerRight}
+          <BarActions actions={headerActions} placement="gutter" />
           {showCloseButton ? (
             <AppPressable
               onPress={handleDismiss}
@@ -273,6 +274,8 @@ const styles = UnistylesStyleSheet.create(theme => ({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    // Clears the close chip of the last action's hit slop.
+    gap: theme.spacing.md,
     paddingTop: theme.spacing.lg,
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.md,

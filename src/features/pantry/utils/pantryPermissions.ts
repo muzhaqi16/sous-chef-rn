@@ -5,7 +5,8 @@ import { MembershipRole } from '#/graphql/generated/schemaTypes';
  */
 export interface PantryPermissions {
   canAddItems: boolean;
-  canEditItems: boolean; // covers edit/consume/restock/remove
+  canEditItems: boolean; // API gate: canEditPantry — edit, use, waste an amount, restock
+  canRemoveItems: boolean; // API gate: canRemoveItems — delete, waste a batch or the expired
   canCreatePantry: boolean; // API gate: ACTIVE membership with canEditPantry
   canDeletePantry: boolean; // API gate: OWNER || ADMIN || canManageHome
 }
@@ -17,12 +18,14 @@ interface HomeMembership {
   role: MembershipRole;
   canEditPantry?: boolean;
   canAddItems?: boolean;
+  canRemoveItems?: boolean;
   canManageHome?: boolean;
 }
 
 const NO_PERMISSIONS: PantryPermissions = {
   canAddItems: false,
   canEditItems: false,
+  canRemoveItems: false,
   canCreatePantry: false,
   canDeletePantry: false,
 };
@@ -30,6 +33,7 @@ const NO_PERMISSIONS: PantryPermissions = {
 const FULL_PERMISSIONS: PantryPermissions = {
   canAddItems: true,
   canEditItems: true,
+  canRemoveItems: true,
   canCreatePantry: true,
   canDeletePantry: true,
 };
@@ -38,7 +42,7 @@ const FULL_PERMISSIONS: PantryPermissions = {
  * Per the API sharing guide: MEMBER defaults permissive (`!== false`), GUEST
  * restrictive (`=== true`). Creating and editing a pantry share ONE API gate —
  * an active membership with `canEditPantry` — so `canCreatePantry` tracks
- * `canEditItems`. Only deleting needs `canManageHome`, false for every role.
+ * `canEditItems`. Only deleting a pantry needs `canManageHome`, false for every role.
  */
 export function getPantryPermissions(
   membership: HomeMembership | null | undefined,
@@ -60,6 +64,7 @@ export function getPantryPermissions(
     return {
       canAddItems: membership.canAddItems === true,
       canEditItems: guestCanEditPantry,
+      canRemoveItems: membership.canRemoveItems === true,
       canCreatePantry: guestCanEditPantry,
       canDeletePantry: false, // Guests can never delete a pantry
     };
@@ -70,6 +75,8 @@ export function getPantryPermissions(
   return {
     canAddItems: membership.canAddItems !== false,
     canEditItems: canEditPantry,
+    // Not permissive: the API seeds a MEMBER with `canRemoveItems: false`.
+    canRemoveItems: membership.canRemoveItems === true,
     canCreatePantry: canEditPantry,
     canDeletePantry: membership.canManageHome === true,
   };

@@ -1,6 +1,7 @@
 'use no memo';
 
 import React from 'react';
+import type { BarAction } from '#components/molecules/BarActions';
 import type { TextInputProps } from 'react-native';
 import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
@@ -109,15 +110,16 @@ jest.mock('#components/templates/Screen', () => ({
     header,
     children,
   }: {
-    header?: { title?: string; rightElement?: React.ReactNode };
+    header?: { title?: string; actions?: BarAction[] };
     children: React.ReactNode;
   }) => {
     const { View, Text } = require('react-native');
+    const { BarActions } = require('#components/molecules/BarActions');
     return (
       <View>
         <View testID="screen-header">
           <Text>{header?.title}</Text>
-          {header?.rightElement}
+          <BarActions actions={header?.actions} />
         </View>
         {children}
       </View>

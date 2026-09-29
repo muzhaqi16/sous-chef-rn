@@ -16,6 +16,7 @@ import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { getShoppingListPermissionsWithOwner } from '#features/shoppingList/utils/shoppingListPermissions';
 import * as selectorModalModule from '#features/shoppingList/hooks/useShoppingListSelectorModal';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import type { BarAction } from '#components/molecules/BarActions';
 import { useStore } from '#store';
 import { userEvent } from '@testing-library/react-native';
 
@@ -195,16 +196,19 @@ jest.mock('#features/shoppingList/components/ListTemplate', () => ({
 jest.mock('#components/molecules/TabScreenHeader', () => ({
   TabScreenHeader: ({
     title,
-    headerRight,
+    actions,
   }: {
     title: string;
-    headerRight?: React.ReactNode;
-  }) => (
-    <>
-      {title}
-      {headerRight}
-    </>
-  ),
+    actions?: BarAction[];
+  }) => {
+    const { BarActions } = require('#components/molecules/BarActions');
+    return (
+      <>
+        {title}
+        <BarActions actions={actions} placement="gutter" />
+      </>
+    );
+  },
 }));
 
 jest.mock('#components/molecules/SearchBar', () => ({

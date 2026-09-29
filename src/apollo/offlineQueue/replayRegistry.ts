@@ -29,6 +29,8 @@ import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantr
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { removeGoneNotification } from '#features/notifications/offline/replayReconcilers';
+import { adoptCreatedProfile } from '#features/profile/cache/adoptCreatedProfile';
+import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import {
   DeleteNotificationDocument,
   MarkNotificationAsReadDocument,
@@ -56,6 +58,10 @@ export const REPLAY_RECONCILERS: ReplayReconcilerTable = byOperation([
   [
     CreateShoppingListItemFromRecipeIngredientDocument,
     reconcileShoppingRowReplay,
+  ],
+  [
+    UpdateUserProfileDocument,
+    (cache, _variables, data) => adoptCreatedProfile(cache, data),
   ],
 ]);
 

@@ -32,6 +32,7 @@ import { Text } from '#components/atoms/Text';
 import { Screen } from '#components/templates/Screen';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import { recipesTestIDs } from '#features/recipes/testIDs';
+import type { BarAction } from '#components/molecules/BarActions';
 import { getRecipeTutorialSteps } from '#features/recipes/components/recipeTutorialSteps';
 import {
   RecipeSearchInput,
@@ -97,9 +98,6 @@ const RecipeMainInner: React.FC = () => {
     | 'myRecipesButton'
     | 'dietaryButton'
     | 'pantryButton';
-  const savedButtonRef = useRef<View>(null);
-  const myRecipesButtonRef = useRef<View>(null);
-  const dietaryButtonRef = useRef<View>(null);
 
   // Single state for all layout rects — avoids 4 separate re-renders
   const [buttonRects, setButtonRects] = useState<
@@ -202,106 +200,30 @@ const RecipeMainInner: React.FC = () => {
       ]
     : [];
 
-  const headerRight = (
-    <View style={styles.headerActions}>
-      <View
-        ref={savedButtonRef}
-        collapsable={false}
-        onLayout={() => {
-          requestAnimationFrame(() => {
-            savedButtonRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-              if (w > 0 && h > 0)
-                setButtonRect('savedButton', {
-                  x: pageX,
-                  y: pageY,
-                  width: w,
-                  height: h,
-                });
-            });
-          });
-        }}
-      >
-        <Pressable
-          onPress={toSavedRecipes}
-          hitSlop={hitSlop.md}
-          accessibilityRole="button"
-          accessibilityLabel={t('recipes.savedRecipes')}
-        >
-          <Icon name="bookmark-outline" size={24} tone="textSecondary" />
-        </Pressable>
-      </View>
-      <View
-        ref={myRecipesButtonRef}
-        collapsable={false}
-        onLayout={() => {
-          requestAnimationFrame(() => {
-            myRecipesButtonRef.current?.measure(
-              (_x, _y, w, h, pageX, pageY) => {
-                if (w > 0 && h > 0)
-                  setButtonRect('myRecipesButton', {
-                    x: pageX,
-                    y: pageY,
-                    width: w,
-                    height: h,
-                  });
-              },
-            );
-          });
-        }}
-      >
-        <Pressable
-          onPress={toMyRecipes}
-          hitSlop={hitSlop.md}
-          accessibilityRole="button"
-          accessibilityLabel={t('recipes.myRecipes')}
-        >
-          <Icon name="create-outline" size={24} tone="textSecondary" />
-        </Pressable>
-      </View>
-      <View
-        ref={dietaryButtonRef}
-        collapsable={false}
-        onLayout={() => {
-          requestAnimationFrame(() => {
-            dietaryButtonRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-              if (w > 0 && h > 0)
-                setButtonRect('dietaryButton', {
-                  x: pageX,
-                  y: pageY,
-                  width: w,
-                  height: h,
-                });
-            });
-          });
-        }}
-      >
-        <Pressable
-          onPress={openFilterSheet}
-          hitSlop={hitSlop.md}
-          accessibilityRole="button"
-          accessibilityLabel={t('recipes.dietaryRestrictions')}
-        >
-          <View style={styles.filterIconWrapper}>
-            <Icon
-              name="options-outline"
-              size={24}
-              tone={screen.activeFilterCount > 0 ? 'primary' : 'textSecondary'}
-            />
-            {screen.activeFilterCount > 0 ? (
-              <View
-                style={styles.filterCountBadge}
-                testID={recipesTestIDs.filterCountBadge}
-              >
-                <Text role="caption" style={styles.filterCountBadgeText}>
-                  {String(screen.activeFilterCount)}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        </Pressable>
-      </View>
-    </View>
-  );
+  const headerActions: BarAction[] = [
+    {
+      icon: 'bookmark-outline',
+      tone: 'textSecondary',
+      onPress: toSavedRecipes,
+      accessibilityLabel: t('recipes.savedRecipes'),
+      onMeasure: rect => setButtonRect('savedButton', rect),
+    },
+    {
+      icon: 'create-outline',
+      tone: 'textSecondary',
+      onPress: toMyRecipes,
+      accessibilityLabel: t('recipes.myRecipes'),
+      onMeasure: rect => setButtonRect('myRecipesButton', rect),
+    },
+    {
+      icon: 'options-outline',
+      tone: screen.activeFilterCount > 0 ? 'primary' : 'textSecondary',
+      badge: screen.activeFilterCount,
+      onPress: openFilterSheet,
+      accessibilityLabel: t('recipes.dietaryRestrictions'),
+      onMeasure: rect => setButtonRect('dietaryButton', rect),
+    },
+  ];
 
   const DiscoveryHeader = (() => {
     if (!screen.showDiscovery) return null;
@@ -398,7 +320,7 @@ const RecipeMainInner: React.FC = () => {
         variant: 'tab',
         label: t('recipes.mainSubtitle'),
         title: t('labels.recipes'),
-        headerRight,
+        actions: headerActions,
       }}
       scroll="list"
       gutter="none"
@@ -552,11 +474,6 @@ const styles = StyleSheet.create(theme => ({
   gutter: {
     paddingHorizontal: theme.layout.pageGutter,
   },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.md,
-  },
   suggestedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -586,26 +503,5 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
     marginVertical: theme.layout.rowGap,
-  },
-  filterIconWrapper: {
-    // Anchors the absolutely-positioned count badge to the icon bounds
-    position: 'relative',
-  },
-  filterCountBadge: {
-    position: 'absolute',
-    top: -5,
-    right: -7,
-    minWidth: 16,
-    height: 16,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: theme.spacing['2xsPlus'],
-  },
-  filterCountBadgeText: {
-    color: theme.colors.onPrimary,
-    fontSize: theme.fonts.size['3xs'],
-    fontWeight: theme.fonts.weight.bold,
   },
 }));

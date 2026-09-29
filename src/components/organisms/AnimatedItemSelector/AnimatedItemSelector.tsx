@@ -30,7 +30,7 @@ export const AnimatedItemSelector = <T extends SelectableItem>({
     <ActionTray
       ref={trayRef}
       title={config.title}
-      headerRight={config.headerRight}
+      headerActions={config.headerActions}
       onClose={onClose}
       onOpen={onOpen}
       showCloseButton={true}
