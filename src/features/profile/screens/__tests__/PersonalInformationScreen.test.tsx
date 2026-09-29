@@ -29,11 +29,13 @@ const mockProfile = {
 };
 let mockProfileData: {
   profile: typeof mockProfile | null;
+  hasLoadedProfile: boolean;
   loading: boolean;
   error: Error | undefined;
   refetch: jest.Mock;
 } = {
   profile: mockProfile,
+  hasLoadedProfile: true,
   loading: false,
   error: undefined,
   refetch: jest.fn(),
@@ -191,17 +193,17 @@ describe('PersonalInformationScreen', () => {
     jest.clearAllMocks();
     mockProfileData = {
       profile: mockProfile,
+      hasLoadedProfile: true,
       loading: false,
       error: undefined,
       refetch: jest.fn(() => Promise.resolve()),
     };
   });
 
-  // Every write needs the profile's id; blank fields would take edits that go
-  // nowhere.
   it('shows the error state with a retry when the profile could not be read', async () => {
     mockProfileData = {
       profile: null,
+      hasLoadedProfile: false,
       loading: false,
       error: new Error('network'),
       refetch: jest.fn(() => Promise.resolve()),
@@ -218,6 +220,7 @@ describe('PersonalInformationScreen', () => {
   it('shows the loading state while a cold profile read is in flight', () => {
     mockProfileData = {
       profile: null,
+      hasLoadedProfile: false,
       loading: true,
       error: undefined,
       refetch: jest.fn(() => Promise.resolve()),
@@ -226,6 +229,57 @@ describe('PersonalInformationScreen', () => {
 
     expect(screen.getByTestId(kitTestIDs.stateLoading)).toBeTruthy();
     expect(screen.queryByTestId('setting-firstName')).toBeNull();
+  });
+
+  // An account can have no profile row; `updateProfile` upserts one, so its
+  // first save is what creates it.
+  describe('an account with no profile yet', () => {
+    beforeEach(() => {
+      mockProfileData = {
+        profile: null,
+        hasLoadedProfile: true,
+        loading: false,
+        error: undefined,
+        refetch: jest.fn(() => Promise.resolve()),
+      };
+    });
+
+    it('shows the empty form, not the error state', () => {
+      renderWithApollo(<PersonalInformationScreen />);
+
+      expect(screen.queryByTestId(kitTestIDs.stateError)).toBeNull();
+      expect(screen.getByTestId('setting-firstName')).toBeTruthy();
+      expect(screen.getByTestId('value-profileVisibility')).toHaveTextContent(
+        ProfileVisibility.Private,
+      );
+    });
+
+    it('saves through updateProfile', async () => {
+      const { mock, fired } = recordMock(UpdateUserProfileDocument, {
+        data: {
+          updateProfile: {
+            __typename: 'UpdateProfilePayload',
+            userProfile: {
+              __typename: 'UserProfile',
+              id: 'profile-new',
+              profileVisibility: ProfileVisibility.Friends,
+            },
+          },
+        },
+      });
+      renderWithApollo(<PersonalInformationScreen />, {
+        operationMocks: [mock],
+      });
+
+      await userEvent.press(
+        screen.getByTestId('option-profileVisibility-FRIENDS'),
+      );
+
+      await waitFor(() => expect(fired).toHaveLength(1));
+      expect(fired[0]).toEqual({
+        input: { profileVisibility: ProfileVisibility.Friends },
+      });
+    });
   });
 
   it('renders the screen with correct title', () => {

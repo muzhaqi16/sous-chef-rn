@@ -23,6 +23,9 @@ export const useProfileData = () => {
   return {
     user,
     profile,
+    // `me` answered. Its `profile` is null for an account that has none until
+    // the first `updateProfile` creates it.
+    hasLoadedProfile: !!data?.me,
     loading,
     // errorPolicy:'all' (global) resolves failures with data+error rather than
     // throwing.
