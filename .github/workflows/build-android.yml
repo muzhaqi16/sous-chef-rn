@@ -227,32 +227,47 @@ jobs:
       - name: Generate build-time config from .env
         run: node scripts/generate-env.js
 
-      # uploadCrashlyticsSymbolFile* sends the NDK symbols Crashlytics names
-      # native frames with. It shares the build's invocation so the symbols come
-      # from the exact libraries packaged; a failed upload fails the build.
       - name: Build Play Store AAB
         if: env.IS_PLAYSTORE == 'true'
         run: |
           cd android
-          ./gradlew bundleRelease uploadCrashlyticsSymbolFileRelease --stacktrace
+          ./gradlew bundleRelease --stacktrace
 
       - name: Build APK
         if: env.IS_PLAYSTORE != 'true'
         run: |
           cd android
           if [ "${{ env.BUILD_ENV }}" = "stg" ]; then
-            VARIANT=Staging
+            ./gradlew assembleStaging --stacktrace
           else
-            VARIANT=Release
+            ./gradlew assembleRelease --stacktrace
           fi
-          # Crashlytics applies only with google-services.json, which a staging
-          # build may lack (app/build.gradle fails a release build without it).
-          if [ -f app/google-services.json ]; then
-            ./gradlew "assemble${VARIANT}" "uploadCrashlyticsSymbolFile${VARIANT}" --stacktrace
-          else
-            echo "::warning::No google-services.json: Crashlytics is off, so no native symbols were uploaded"
-            ./gradlew "assemble${VARIANT}" --stacktrace
-          fi
+
+      # uploadCrashlyticsSymbolFileRelease sends the NDK symbols Crashlytics
+      # names native frames with, for the Play Store build only. It runs in the
+      # build's tree, so the symbols come from the libraries just packaged; a
+      # failed upload warns, never fails the build.
+      - name: Upload native symbols to Crashlytics
+        if: env.IS_PLAYSTORE == 'true'
+        continue-on-error: true
+        timeout-minutes: 8
+        run: |
+          set -o pipefail
+          cd android
+          LOG="$RUNNER_TEMP/crashlytics-upload.log"
+          for attempt in 1 2 3; do
+            if ./gradlew uploadCrashlyticsSymbolFileRelease --stacktrace 2>&1 | tee "$LOG"; then
+              echo "Native symbols uploaded on attempt ${attempt}"
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Upload attempt ${attempt} failed; retrying in $((attempt * 20))s"
+              sleep $((attempt * 20))
+            fi
+          done
+          REASON=$(grep -m1 -oE 'response: [^]]+' "$LOG" || echo "see this step's log")
+          echo "::warning::Crashlytics native symbol upload failed 3 times (${REASON}); native frames in this build's crashes will show Missing BuildId"
+          echo "- :warning: Crashlytics native symbols not uploaded: ${REASON}" >> "$GITHUB_STEP_SUMMARY"
 
       # Both run AFTER the build, not before it. `metro.config.js` calls
       # generateEnv() at module scope, so gradle's bundling step rewrites
@@ -534,32 +549,47 @@ jobs:
       - name: Generate build-time config from .env
         run: node scripts/generate-env.js
 
-      # uploadCrashlyticsSymbolFile* sends the NDK symbols Crashlytics names
-      # native frames with. It shares the build's invocation so the symbols come
-      # from the exact libraries packaged; a failed upload fails the build.
       - name: Build Play Store AAB
         if: env.IS_PLAYSTORE == 'true'
         run: |
           cd android
-          ./gradlew bundleRelease uploadCrashlyticsSymbolFileRelease --stacktrace
+          ./gradlew bundleRelease --stacktrace
 
       - name: Build APK
         if: env.IS_PLAYSTORE != 'true'
         run: |
           cd android
           if [ "${{ env.BUILD_ENV }}" = "stg" ]; then
-            VARIANT=Staging
+            ./gradlew assembleStaging --stacktrace
           else
-            VARIANT=Release
+            ./gradlew assembleRelease --stacktrace
           fi
-          # Crashlytics applies only with google-services.json, which a staging
-          # build may lack (app/build.gradle fails a release build without it).
-          if [ -f app/google-services.json ]; then
-            ./gradlew "assemble${VARIANT}" "uploadCrashlyticsSymbolFile${VARIANT}" --stacktrace
-          else
-            echo "::warning::No google-services.json: Crashlytics is off, so no native symbols were uploaded"
-            ./gradlew "assemble${VARIANT}" --stacktrace
-          fi
+
+      # uploadCrashlyticsSymbolFileRelease sends the NDK symbols Crashlytics
+      # names native frames with, for the Play Store build only. It runs in the
+      # build's tree, so the symbols come from the libraries just packaged; a
+      # failed upload warns, never fails the build.
+      - name: Upload native symbols to Crashlytics
+        if: env.IS_PLAYSTORE == 'true'
+        continue-on-error: true
+        timeout-minutes: 8
+        run: |
+          set -o pipefail
+          cd android
+          LOG="$RUNNER_TEMP/crashlytics-upload.log"
+          for attempt in 1 2 3; do
+            if ./gradlew uploadCrashlyticsSymbolFileRelease --stacktrace 2>&1 | tee "$LOG"; then
+              echo "Native symbols uploaded on attempt ${attempt}"
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Upload attempt ${attempt} failed; retrying in $((attempt * 20))s"
+              sleep $((attempt * 20))
+            fi
+          done
+          REASON=$(grep -m1 -oE 'response: [^]]+' "$LOG" || echo "see this step's log")
+          echo "::warning::Crashlytics native symbol upload failed 3 times (${REASON}); native frames in this build's crashes will show Missing BuildId"
+          echo "- :warning: Crashlytics native symbols not uploaded: ${REASON}" >> "$GITHUB_STEP_SUMMARY"
 
       # Both run AFTER the build, not before it. `metro.config.js` calls
       # generateEnv() at module scope, so gradle's bundling step rewrites
