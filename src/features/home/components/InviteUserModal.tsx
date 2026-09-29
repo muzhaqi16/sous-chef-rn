@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
@@ -7,8 +7,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedTextInput,
   OnPrimaryActivityIndicator as ThemedActivityIndicator,
-  Modal,
 } from '#components/atoms/themedComponents';
+import { Dialog, DialogBody, DialogFooter } from '#components/templates/Dialog';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { Icon } from '#/utils/iconUtils';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
@@ -125,6 +125,15 @@ const RoleOption: React.FC<RoleOptionProps> = ({
 export const InviteUserModal: React.FC<InviteUserModalProps> = ({
   visible,
   onClose,
+  ...formProps
+}) => (
+  <Dialog visible={visible} onRequestClose={onClose}>
+    <InviteUserForm onClose={onClose} {...formProps} />
+  </Dialog>
+);
+
+const InviteUserForm: React.FC<Omit<InviteUserModalProps, 'visible'>> = ({
+  onClose,
   onSubmit,
   title,
   submitText,
@@ -157,7 +166,6 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
   const {
     control,
     handleSubmit: submitForm,
-    reset,
     formState: { errors },
   } = useForm<InviteUserFormValues>({
     resolver: yupResolver(inviteUserSchema),
@@ -185,7 +193,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
           setError(refusal);
           return;
         }
-        handleClose();
+        onClose();
       },
       setIsSubmitting,
       (err: unknown) => {
@@ -198,142 +206,108 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
 
   const handleSubmit = submitForm(onValid, logValidationErrors);
 
-  const handleClose = () => {
-    reset({ email: '', role: defaultRole });
-    setError('');
-    onClose();
-  };
-
   return (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={visible}
-      onRequestClose={handleClose}
-      statusBarTranslucent={true}
-      navigationBarTranslucent={true}
-      presentationStyle="overFullScreen"
-    >
-      <View style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <Text role="bodyStrong" style={styles.title}>
-              {resolvedTitle}
-            </Text>
+    <>
+      <DialogBody>
+        <Text role="bodyStrong" style={styles.title}>
+          {resolvedTitle}
+        </Text>
 
-            {/* Email Input */}
-            <Text role="bodyStrong" style={styles.label}>
-              {t('inviteUser.emailLabel')}
-            </Text>
-            <Controller
-              control={control}
-              name="email"
-              render={({ field: { value, onChange, onBlur } }) => (
-                <ThemedTextInput
-                  style={styles.input}
-                  placeholder={t('inviteUser.emailPlaceholder')}
-                  value={value}
-                  onChangeText={text => {
-                    onChange(text);
-                    if (error) setError('');
-                  }}
-                  onBlur={onBlur}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isSubmitting}
-                />
-              )}
+        {/* Email Input */}
+        <Text role="bodyStrong" style={styles.label}>
+          {t('inviteUser.emailLabel')}
+        </Text>
+        <Controller
+          control={control}
+          name="email"
+          render={({ field: { value, onChange, onBlur } }) => (
+            <ThemedTextInput
+              style={styles.input}
+              placeholder={t('inviteUser.emailPlaceholder')}
+              value={value}
+              onChangeText={text => {
+                onChange(text);
+                if (error) setError('');
+              }}
+              onBlur={onBlur}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!isSubmitting}
             />
-            {/* On the field, not in the submission banner: this is the one the
-                user can correct without dismissing anything. */}
-            {errors.email ? (
-              <Text role="error" tone="error" style={styles.errorText}>
-                {errors.email.message}
-              </Text>
-            ) : null}
+          )}
+        />
+        {/* On the field, not in the submission banner: this is the one the
+            user can correct without dismissing anything. */}
+        {errors.email ? (
+          <Text role="error" tone="error" style={styles.errorText}>
+            {errors.email.message}
+          </Text>
+        ) : null}
 
-            {/* Role Selection */}
-            <Text role="bodyStrong" style={styles.roleSectionLabel}>
-              {t('labels.selectRole')}
-            </Text>
-            {availableRoleOptions.map(role => (
-              <Controller
-                key={role.value}
-                control={control}
-                name="role"
-                render={({ field: { value, onChange } }) => (
-                  <RoleOption
-                    role={role}
-                    selected={value === role.value}
-                    onPress={() => onChange(role.value)}
-                    disabled={isSubmitting}
-                    warningText={t('inviteUser.ownerWarning')}
-                  />
-                )}
-              />
-            ))}
-
-            {/* Error Message */}
-            {error ? (
-              <Text role="error" tone="error" style={styles.errorText}>
-                {error}
-              </Text>
-            ) : null}
-
-            {/* Action Buttons */}
-            <View style={styles.buttonContainer}>
-              <AppPressable
-                style={styles.cancelButton}
-                onPress={handleClose}
+        {/* Role Selection */}
+        <Text role="bodyStrong" style={styles.roleSectionLabel}>
+          {t('labels.selectRole')}
+        </Text>
+        {availableRoleOptions.map(role => (
+          <Controller
+            key={role.value}
+            control={control}
+            name="role"
+            render={({ field: { value, onChange } }) => (
+              <RoleOption
+                role={role}
+                selected={value === role.value}
+                onPress={() => onChange(role.value)}
                 disabled={isSubmitting}
-              >
-                <Text role="bodyStrong" style={styles.cancelButtonText}>
-                  {resolvedCancelText}
-                </Text>
-              </AppPressable>
+                warningText={t('inviteUser.ownerWarning')}
+              />
+            )}
+          />
+        ))}
 
-              <AppPressable
-                style={[
-                  styles.submitButton,
-                  (isSubmitting || isOffline) && styles.disabledButton,
-                ]}
-                onPress={handleSubmit}
-                disabled={isSubmitting || isOffline}
-              >
-                {isSubmitting ? (
-                  <ThemedActivityIndicator size="small" />
-                ) : (
-                  <Text role="bodyStrong" style={styles.submitButtonText}>
-                    {resolvedSubmitText}
-                  </Text>
-                )}
-              </AppPressable>
-            </View>
-          </ScrollView>
+        {/* Error Message */}
+        {error ? (
+          <Text role="error" tone="error" style={styles.errorText}>
+            {error}
+          </Text>
+        ) : null}
+      </DialogBody>
+      <DialogFooter>
+        <View style={styles.buttonContainer}>
+          <AppPressable
+            style={styles.cancelButton}
+            onPress={onClose}
+            disabled={isSubmitting}
+          >
+            <Text role="bodyStrong" style={styles.cancelButtonText}>
+              {resolvedCancelText}
+            </Text>
+          </AppPressable>
+
+          <AppPressable
+            style={[
+              styles.submitButton,
+              (isSubmitting || isOffline) && styles.disabledButton,
+            ]}
+            onPress={handleSubmit}
+            disabled={isSubmitting || isOffline}
+          >
+            {isSubmitting ? (
+              <ThemedActivityIndicator size="small" />
+            ) : (
+              <Text role="bodyStrong" style={styles.submitButtonText}>
+                {resolvedSubmitText}
+              </Text>
+            )}
+          </AppPressable>
         </View>
-      </View>
-    </Modal>
+      </DialogFooter>
+    </>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  centeredView: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.overlays.medium,
-  },
-  modalView: {
-    margin: theme.spacing.lg,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    padding: theme.spacing.lg,
-    width: '90%',
-    maxHeight: '80%',
-    ...theme.shadows.lg,
-  },
   title: {
     marginBottom: theme.spacing.lg,
     textAlign: 'center',
@@ -436,7 +410,6 @@ const styles = StyleSheet.create(theme => ({
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: theme.spacing.md,
   },
   cancelButton: {
     flex: 1,
