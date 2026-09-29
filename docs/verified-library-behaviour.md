@@ -61,7 +61,7 @@ implementation from `useIsBottomSheetInput()` context rather than hardcoding.
 focused input's **bottom edge**, not the caret its docstring mentions; the
 library default is `0`.
 
-**Verified against `react-native-keyboard-controller@1.22.4`.**
+**Verified 2026-09-29 against `react-native-keyboard-controller@1.22.5`.**
 `KeyboardAwareScrollView/index.tsx` computes
 `point = absoluteY + inputHeight` and scrolls when
 `visibleRect - point <= bottomOffset`; the prop defaults to `0` in the same
@@ -84,7 +84,7 @@ grep -n "absoluteY + inputHeight\|bottomOffset = " node_modules/react-native-key
 the sheet by the keyboard's height. Focusing a field then opens a band of blank
 sheet and scrolls the header off the top.
 
-**Verified against `react-native-keyboard-controller@1.22.4` +
+**Verified 2026-09-29 against `react-native-keyboard-controller@1.22.5` +
 `@gorhom/bottom-sheet@5.2.14`.** The scrollable pads its own content to lift the
 focused input clear of the keyboard — `ScrollViewWithBottomPadding` in `insets`
 mode (the default), a spacer view in `layout` mode. Gorhom's dynamic sizing takes
@@ -474,16 +474,17 @@ locale's `_other` — it falls through to `fallbackLng`. An Italian user at a
 count of 1,000,000 (Italian needs `many`) would read `1000000 items` in
 English if `_many` keys were missing.
 
-**Verified against `i18next@26.4.0`.** `Translator.resolve()` builds, per
+**Verified 2026-09-29 against `i18next@26.4.2`.** `Translator.resolve()` builds, per
 language, `[key, key + pluralSuffix]` and tries them in reverse — the plural
 key, then the bare key — and never tries `key_other` intra-locale; only after
 both miss does it advance to the next language in the fallback hierarchy.
 `completePluralCategories` in `src/i18n/config.ts` closes the gap by filling
 every CLDR category a locale needs from `_other` before `init`.
 
-Re-check: the probe recorded in the docblock of `src/i18n/index.ts`, plus
-`__tests__/i18n/pluralCategories.test.ts`, which asks `Intl.PluralRules` which
-categories each locale needs rather than hardcoding one/other.
+Re-check: `npx jest __tests__/i18n/pluralCategories.test.ts`. Its "i18next
+itself falls through to fallbackLng" case drives a bare i18next instance with no
+`_many` and expects the English form; the rest ask `Intl.PluralRules` which
+categories each locale needs and assert every one resolves in that locale.
 
 ### InteractionManager is a no-op stub
 
@@ -545,7 +546,7 @@ and its own 4004/4005 before consulting `shouldRetry`, erroring every active
 subscription's sink; `dispose()` latches a `disposed` flag with no reset, and
 `terminate()` is a no-op once a socket has closed.
 
-**Verified against `graphql-ws@6.0.7`** — mechanism and verdicts in
+**Verified 2026-09-29 against `graphql-ws@6.2.1`** — mechanism and verdicts in
 [session-and-transport.md](session-and-transport.md); the canonical record is
 `src/apollo/links/wsCloseCodes.ts`, pinned by
 `src/apollo/links/__tests__/wsCloseCodes.library.test.ts`, which drives the
@@ -601,7 +602,7 @@ and a statement is not. A timing origin written as a statement in `index.js`
 therefore runs after every module that file imports, however near the top it
 appears.
 
-**Verified against `metro@0.83.x`** (the version resolved by
+**Verified 2026-09-29 against `metro@0.84.5`** (the version resolved by
 `react-native@0.86.3`), by running `metro-transform-plugins`'
 `import-export-plugin` — the plugin `experimentalImportSupport` enables — over
 `index.js`'s shape:

@@ -84,7 +84,7 @@ export function writeEntityFields<TFields extends object>(
   // record lacks (silently dropped, no error — and which fields it carries depends
   // on whichever query loaded it), and it stores a nested entity as a private copy
   // rather than a reference. Verified vs `@apollo/client@4.2.12`:
-  // `docs/verified-library-behaviour.md#cache-modify-cannot-add-a-field`.
+  // `docs/verified-library-behaviour.md#cachemodify-cannot-add-a-field`.
   cache.writeFragment({
     id: cacheId,
     fragment: localFirstFragment(entity.__typename, selections),

@@ -112,9 +112,8 @@ describe('writeEntityFields', () => {
    * distinct field shape. It warns per shape and keeps every document in its
    * module-scope cache, which grows for the life of the process.
    *
-   * See `docs/verified-library-behaviour.md#a-document-registered-with-a-library`
-   * — the same constraint `writePantryItemDetailStub` builds its per-field
-   * fragments to satisfy.
+   * See `localFirstFragment` in `localFirstFields.ts` — the same constraint
+   * `writePantryItemDetailStub` builds its per-field fragments to satisfy.
    */
   it('registers distinct field shapes without a duplicate-name warning', () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
