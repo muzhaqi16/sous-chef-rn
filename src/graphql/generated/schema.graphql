@@ -2283,9 +2283,6 @@ input CreateRecipeInput {
   attribution: RecipeAttributionInput
   description: String
   dietary: DietaryTagsInput
-  externalSourceData: JSON
-  externalSourceId: String
-  externalSourceUrl: URL
   """
   Optional client-generated permanent ID (CUID2) for offline-first idempotency.
   """
@@ -2297,7 +2294,6 @@ input CreateRecipeInput {
   name: String!
   notes: String
   nutrition: NutritionInfoInput
-  source: ExternalSource
   """
   DRAFT keeps the recipe private. PUBLISHED or PENDING_REVIEW submits it for
   admin review: it is PENDING_REVIEW until an admin approves it.
@@ -4103,6 +4099,9 @@ enum ExpirationNotificationType {
   WEEKLY_DIGEST
 }
 
+"""A catalog recipe's provider-specific data, one member per provider."""
+union ExternalRecipeDetails = SpoonacularRecipeDetails
+
 enum ExternalSource {
   ALLRECIPES
   BARCODE_LOOKUP
@@ -4190,6 +4189,24 @@ input ExternalSourceMappingInput {
   retailInfo: JSON
   source: ExternalSource!
   storage: JSON
+}
+
+"""Where the API's copy of a catalog recipe stands against its provider."""
+enum ExternalSyncStatus {
+  """
+  Content an app supplied before the API fetched recipes itself; shown until
+  the API re-fetches it from the provider.
+  """
+  CLIENT_SUPPLIED
+  """The provider has no such recipe, and the API never held its content."""
+  NOT_FOUND
+  """
+  Not fetched from the provider yet: a stub with the name and image the
+  importing app supplied, filled in once a user saves the recipe.
+  """
+  PENDING
+  """The provider's own content, fetched and stored by the API."""
+  SYNCED
 }
 
 type FailedIPStat {
@@ -7645,9 +7662,9 @@ type Mutation {
   """Create a new purchase record."""
   createPurchase(input: CreatePurchaseInput!): CreatePurchaseResult!
   """
-  Create a recipe, either entered manually or carried over from an external
-  source. A new recipe from a catalog source is PENDING_REVIEW; any other
-  follows its input status (see CreateRecipeInput.status).
+  Create a recipe the caller writes. It follows its input status (see
+  CreateRecipeInput.status); a catalog recipe comes in through
+  upsertExternalRecipe instead.
   """
   createRecipe(input: CreateRecipeInput!): CreateRecipeResult!
   """Create a review for a published recipe."""
@@ -8216,11 +8233,15 @@ type Mutation {
   """
   updateUserAppeal(input: UpdateUserAppealInput!): UpdateUserAppealResult!
   """
-  Import a recipe from an external source, matching on source plus external
-  id. Returns the existing recipe when one already matches rather than
-  creating a duplicate, so replaying an import is safe. A new import is
-  PENDING_REVIEW, visible only to the caller until an admin approves it; an
-  existing one the caller cannot see is NotFoundError.
+  Get the API's copy of a catalog recipe, named by provider and provider id.
+  The API fetches the content from the provider itself: a recipe it already
+  holds is returned as is, and a new one is fetched now when the daily
+  provider budget allows (sourceMapping.syncStatus SYNCED). Otherwise it is
+  returned PENDING, carrying the name and image hints, and fetched once a
+  user saves it. Catalog recipes have no author and are published; fork one
+  to edit it. Replaying is safe: created is false for a recipe already held.
+  A user may bring in a limited number of new recipes a day (a rate-limit
+  error beyond it); a source the API cannot fetch from is a ValidationError.
   """
   upsertExternalRecipe(input: UpsertExternalRecipeInput!): UpsertExternalRecipeResult!
   """Create or update an item based on its external source ID."""
@@ -11649,6 +11670,12 @@ type Recipe {
   """
   externalData: JSON
   """
+  The provider's data for a catalog recipe that has no canonical field here,
+  read from the stored provider payload; null for a recipe created in the app
+  or a catalog recipe not fetched yet.
+  """
+  externalDetails: ExternalRecipeDetails
+  """
   The recipe's identifier in its external source, or null for a recipe created in the app.
   """
   externalId: String
@@ -12188,9 +12215,20 @@ type RecipeSourceMapping {
   externalType: String
   id: ID!
   isPrimary: Boolean!
+  """When the provider's content was last fetched; null when it never was."""
   lastSyncedAt: DateTime
   metadata: JSON
+  """
+  The provider schema version the stored payload was validated against; null when the API never fetched it.
+  """
+  schemaVersion: Int
   source: ExternalSource!
+  """
+  When the provider's supplementary data (Spoonacular: prices) was fetched; null until the recipe is first saved or planned.
+  """
+  supplementsSyncedAt: DateTime
+  """Where the API's copy stands against the provider."""
+  syncStatus: ExternalSyncStatus!
   updatedAt: DateTime!
 }
 
@@ -13712,6 +13750,21 @@ input SpoonacularIngredientInput {
   unitShort: String
 }
 
+type SpoonacularInstructionGroup {
+  """The group's heading, e.g. For the sauce; null for an unnamed group."""
+  name: String
+  steps: [SpoonacularInstructionStep!]!
+}
+
+type SpoonacularInstructionStep {
+  equipment: [SpoonacularStepEquipment!]!
+  ingredients: [SpoonacularStepIngredient!]!
+  """How long the step takes, as Spoonacular states it."""
+  length: SpoonacularQuantity
+  number: Int!
+  text: String!
+}
+
 input SpoonacularMeasureInput {
   amount: Float
   unitLong: String
@@ -13736,6 +13789,86 @@ input SpoonacularNutritionInput {
   nutrients: [SpoonacularNutrientInput!]
   properties: [SpoonacularNutrientInput!]
   weightPerServing: SpoonacularWeightPerServingInput
+}
+
+type SpoonacularPriceTotals {
+  """The whole recipe's cost, in US cents."""
+  totalCost: Float!
+  """Cost per serving, in US cents."""
+  totalCostPerServing: Float!
+}
+
+type SpoonacularQuantity {
+  number: Float!
+  unit: String!
+}
+
+"""
+A Spoonacular recipe's data that has no canonical recipe field, typed from
+Spoonacular's documented response. Prices are US cents, as Spoonacular reports
+them.
+"""
+type SpoonacularRecipeDetails {
+  aggregateLikes: Float
+  cheap: Boolean
+  creditsText: String
+  """
+  Cuisine names as Spoonacular writes them; the canonical cuisines are on the recipe.
+  """
+  cuisines: [String!]!
+  dairyFree: Boolean
+  """
+  Diet names as Spoonacular writes them; the canonical diets are on the recipe.
+  """
+  diets: [String!]!
+  dishTypes: [String!]!
+  """The recipe's Spoonacular id."""
+  externalId: String!
+  """GAPS diet compliance as Spoonacular states it, e.g. no."""
+  gaps: String
+  glutenFree: Boolean
+  healthScore: Float
+  instructionGroups: [SpoonacularInstructionGroup!]!
+  """
+  The instructions as Spoonacular's markup; the recipe's own steps come from the structured groups when there are any.
+  """
+  instructionsHtml: String
+  ketogenic: Boolean
+  language: String
+  """The licence the recipe is published under, which attribution follows."""
+  license: String
+  lowFodmap: Boolean
+  occasions: [String!]!
+  """
+  Price totals in US cents; null until the recipe is first saved or planned.
+  """
+  priceBreakdown: SpoonacularPriceTotals
+  """Estimated cost per serving, in US cents."""
+  pricePerServing: Float
+  sourceName: String
+  sourceUrl: String
+  spoonacularScore: Float
+  spoonacularSourceUrl: String
+  sustainable: Boolean
+  vegan: Boolean
+  vegetarian: Boolean
+  veryHealthy: Boolean
+  veryPopular: Boolean
+  weightWatcherSmartPoints: Float
+  whole30: Boolean
+}
+
+type SpoonacularStepEquipment {
+  id: Int
+  image: String
+  name: String!
+  temperature: SpoonacularQuantity
+}
+
+type SpoonacularStepIngredient {
+  id: Int
+  image: String
+  name: String!
 }
 
 input SpoonacularWeightPerServingInput {
@@ -16075,32 +16208,20 @@ type UploadFormField {
 }
 
 """
-A recipe imported from an external source. The source and its external id
-identify it: an import that matches an existing recipe returns that recipe.
+A catalog recipe named by its provider and the provider's id. The API
+fetches the content itself; the name and image are shown only until it has.
 """
 input UpsertExternalRecipeInput {
-  attribution: RecipeAttributionInput
-  description: String
-  dietary: DietaryTagsInput
-  externalSourceData: JSON
-  externalSourceId: String!
-  externalSourceUrl: URL
-  ingredients: [RecipeIngredientInput!]!
-  instructions: JSON!
-  media: RecipeMediaInput
-  metadata: RecipeMetadataInput
-  name: String!
-  notes: String
-  nutrition: NutritionInfoInput
+  """The recipe's id at the provider (Spoonacular: a positive integer)."""
+  externalId: String!
+  """The image the app already shows, on the provider's own image host."""
+  imageUrl: URL
+  """
+  The title the app already shows, kept on the recipe until it is fetched.
+  """
+  name: String
+  """The provider; one the API cannot fetch from is refused."""
   source: ExternalSource!
-  """
-  DRAFT keeps the recipe private. PUBLISHED or PENDING_REVIEW submits it for
-  admin review: it is PENDING_REVIEW until an admin approves it.
-  """
-  status: RecipeStatus
-  tags: [String!]
-  timing: TimeEstimatesInput
-  tips: String
 }
 
 type UpsertExternalRecipePayload {
