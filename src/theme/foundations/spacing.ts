@@ -31,6 +31,8 @@ export const spacing = {
 export const layout = {
   /** Screen edge to any screen-level content — chrome, controls and rows alike. */
   pageGutter: 16,
+  /** A pushed screen's header to its first content. */
+  pageTop: 16,
   /** Below a screen's last content, on top of the bottom safe-area inset. */
   pageBottom: 24,
   sectionGap: 24,

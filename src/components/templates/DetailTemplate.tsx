@@ -74,6 +74,6 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
 const styles = StyleSheet.create(theme => ({
   sections: {
     flexGrow: 1,
-    paddingTop: theme.spacing.md,
+    paddingTop: theme.layout.pageTop,
   },
 }));
