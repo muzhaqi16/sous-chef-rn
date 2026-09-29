@@ -1,5 +1,7 @@
 'use no memo';
 
+import { gql } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import type {
   SubscriptionApolloClient,
@@ -37,6 +39,54 @@ function captureCustomOnData() {
   };
 }
 
+// The viewer's row in `home-1`, as the home list caches it.
+const cacheWithViewerMembership = (membershipId: string) => {
+  const cache = makeCache();
+  cache.writeFragment({
+    id: cache.identify({ __typename: 'Home', id: 'home-1' }),
+    fragment: gql`
+      fragment TestViewerMembership on Home {
+        id
+        myMembership {
+          id
+        }
+      }
+    `,
+    data: {
+      __typename: 'Home',
+      id: 'home-1',
+      myMembership: { __typename: 'Membership', id: membershipId },
+    },
+  });
+  return cache;
+};
+
+function deliverMembershipEvent(
+  subtype: HomeSubtype,
+  membershipId: string,
+  cache: ReturnType<typeof makeCache>,
+) {
+  const getOnData = captureCustomOnData();
+  renderHookWithApollo(() => useHomeSubscriptions('member-1'));
+
+  const refetchQueries = jest.fn(() => Promise.resolve([]));
+  const client = {
+    refetchQueries,
+    cache,
+  } as unknown as SubscriptionApolloClient;
+  getOnData()(
+    {
+      __typename: 'HomeEvent',
+      subtype,
+      homeId: 'home-1',
+      actorUserId: 'owner-1',
+      node: { __typename: 'Membership', id: membershipId },
+    },
+    client,
+  );
+  return refetchQueries;
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockRegister.mockReturnValue({});
@@ -49,21 +99,12 @@ describe('useHomeSubscriptions', () => {
   // home screen is open. Refetching `GetHome` alone left an owner's grant or
   // revoke invisible to the member until the next launch.
   it.each([HomeSubtype.MembershipUpdated, HomeSubtype.MembershipRoleChanged])(
-    'refetches the home list on %s, so permissions land live',
+    'refetches the home list on %s of the viewer, so permissions land live',
     subtype => {
-      const getOnData = captureCustomOnData();
-      renderHookWithApollo(() => useHomeSubscriptions('member-1'));
-
-      const refetchQueries = jest.fn(() => Promise.resolve([]));
-      const client = { refetchQueries } as unknown as SubscriptionApolloClient;
-      getOnData()(
-        {
-          __typename: 'HomeEvent',
-          subtype,
-          actorUserId: 'owner-1',
-          node: { __typename: 'Membership', id: 'membership-1' },
-        },
-        client,
+      const refetchQueries = deliverMembershipEvent(
+        subtype,
+        'membership-1',
+        cacheWithViewerMembership('membership-1'),
       );
 
       expect(refetchQueries).toHaveBeenCalledWith({
@@ -71,4 +112,35 @@ describe('useHomeSubscriptions', () => {
       });
     },
   );
+
+  // Every member's device receives every member's event; refetching the whole
+  // home list for each one multiplies a single join by the member count.
+  it.each([
+    HomeSubtype.MembershipJoined,
+    HomeSubtype.MembershipLeft,
+    HomeSubtype.MembershipUpdated,
+    HomeSubtype.MembershipRoleChanged,
+  ])('leaves the home list alone on %s of another member', subtype => {
+    const refetchQueries = deliverMembershipEvent(
+      subtype,
+      'membership-2',
+      cacheWithViewerMembership('membership-1'),
+    );
+
+    expect(refetchQueries).toHaveBeenCalledWith({
+      include: [GetHomeDocument],
+    });
+  });
+
+  it('refetches the home list when the viewer’s row is not cached', () => {
+    const refetchQueries = deliverMembershipEvent(
+      HomeSubtype.MembershipUpdated,
+      'membership-2',
+      makeCache(),
+    );
+
+    expect(refetchQueries).toHaveBeenCalledWith({
+      include: [GetHomeDocument, GetHomesDocument],
+    });
+  });
 });

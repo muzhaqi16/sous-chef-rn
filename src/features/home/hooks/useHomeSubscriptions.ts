@@ -6,6 +6,7 @@
  */
 
 import { useSelectedHomeId } from '#store/useAppStore';
+import { gql, type ApolloCache } from '@apollo/client';
 import { useSubscription } from '@apollo/client/react';
 import {
   GetHomeDocument,
@@ -34,6 +35,36 @@ const removeInviteFromCache = createRemoveFromParentConnectionUpdater(
   'pendingHomeInvitesConnection',
   'HomeInvite',
 );
+
+const VIEWER_MEMBERSHIP = gql`
+  fragment HomeSubscriptions_home on Home {
+    id
+    myMembership {
+      id
+    }
+  }
+`;
+
+/**
+ * Whether a membership event is about the viewer. Unknown when the home list
+ * has not cached the viewer's row, which counts as yes: a missed refetch
+ * leaves stale permissions, a spare one only costs a request.
+ */
+function concernsViewer(
+  cache: ApolloCache,
+  homeId: string,
+  membershipId: string,
+): boolean {
+  const cacheId = cache.identify({ __typename: 'Home', id: homeId });
+  const home =
+    cacheId &&
+    cache.readFragment<{ myMembership?: { id: string } | null }>({
+      id: cacheId,
+      fragment: VIEWER_MEMBERSHIP,
+    });
+  const viewerMembershipId = home ? home.myMembership?.id : undefined;
+  return !viewerMembershipId || viewerMembershipId === membershipId;
+}
 
 /**
  * Subscribes to `homeEvents` for the selected home. Mounted once at app level,
@@ -70,16 +101,24 @@ export function useHomeSubscriptions(userId?: string) {
 
       switch (payload.subtype) {
         // A membership change is a change to the member list, which no
-        // single-entity read expresses — refetch the queries that own it.
-        // `GetHome` is watched only while a home screen is open; `GetHomes`
-        // stays mounted all session and carries the `myMembership` flags the
-        // pantry's permissions read, so an owner's grant or revoke lands live.
+        // single-entity read expresses — refetch the query that owns it, which
+        // is watched only while a home screen is open. `GetHomes` stays mounted
+        // all session and carries the `myMembership` flags the pantry's
+        // permissions read, so it is refetched only for the viewer's own row:
+        // an owner's grant or revoke lands live, and another member's change
+        // does not refetch every home on every member's device.
         case HomeSubtype.MembershipJoined:
         case HomeSubtype.MembershipLeft:
         case HomeSubtype.MembershipUpdated:
         case HomeSubtype.MembershipRoleChanged:
           void client.refetchQueries({
-            include: [GetHomeDocument, GetHomesDocument],
+            include: concernsViewer(
+              client.cache,
+              payload.homeId,
+              payload.node.id,
+            )
+              ? [GetHomeDocument, GetHomesDocument]
+              : [GetHomeDocument],
           });
           break;
 
