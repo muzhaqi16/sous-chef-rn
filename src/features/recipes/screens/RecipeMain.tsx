@@ -342,10 +342,10 @@ const RecipeMainInner: React.FC = () => {
       (screen.discovery.loading &&
         !screen.showSearchResults &&
         screen.items.length === 0) ? (
-        <View style={styles.gutter}>
-          {recipeListHeader}
+        <>
+          <View style={styles.gutter}>{recipeListHeader}</View>
           <RecipeSkeleton />
-        </View>
+        </>
       ) : (
         <ItemList
           items={screen.items}
@@ -454,9 +454,7 @@ const RecipeMainFallback: React.FC = () => {
           editable={false}
         />
       </View>
-      <View style={styles.gutter}>
-        <RecipeSkeleton />
-      </View>
+      <RecipeSkeleton />
     </Screen>
   );
 };
@@ -469,8 +467,8 @@ export const RecipeMain: React.FC = () => (
 );
 
 const styles = StyleSheet.create(theme => ({
-  // Chrome and skeletons render bare under `gutter="none"`, with no list
-  // content container to inset them, so this screen supplies the gutter.
+  // Chrome renders bare under `gutter="none"`, with no list content container
+  // to inset it, so this screen supplies the gutter.
   gutter: {
     paddingHorizontal: theme.layout.pageGutter,
   },
