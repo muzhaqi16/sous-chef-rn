@@ -189,12 +189,11 @@ if (file("google-services.json").exists()) {
     apply plugin: "com.google.gms.google-services"
     // Needs the same Firebase config, so it applies under the same condition.
     apply plugin: "com.google.firebase.crashlytics"
-    // Registers uploadCrashlyticsSymbolFile<Variant>, which CI runs; the upload
-    // never happens on its own. Without symbols a native crash shows no frames.
-    ["release", "staging"].each { buildTypeName ->
-        android.buildTypes.getByName(buildTypeName).firebaseCrashlytics {
-            nativeSymbolUploadEnabled true
-        }
+    // Registers uploadCrashlyticsSymbolFileRelease, which the Play Store CI build
+    // runs; the upload never happens on its own. Without symbols a native crash
+    // shows no frames.
+    android.buildTypes.getByName("release").firebaseCrashlytics {
+        nativeSymbolUploadEnabled true
     }
 } else {
     // A release/bundle build without FCM config would ship with push silently

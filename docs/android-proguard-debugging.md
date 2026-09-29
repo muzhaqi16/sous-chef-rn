@@ -17,12 +17,13 @@ Crashlytics is the only record of one outside a device's logcat.
   (`com.google.firebase.crashlytics`) applies under the same condition as
   google-services — `android/app/google-services.json` present — and uploads the
   R8 mapping for minified builds.
-- **Native frames need symbols.** `release` and `staging` enable
-  `nativeSymbolUploadEnabled`, but the upload is its own task:
-  `build-android.yml` runs `uploadCrashlyticsSymbolFile<Variant>` in its own
-  step after the build, in the same tree. It tries three times; if every try
-  fails, the build still passes with a warning annotation and a line in the run
-  summary naming the server's response. A build without it shows every native
+- **Native frames need symbols.** `release` enables `nativeSymbolUploadEnabled`,
+  but the upload is its own task: for the Play Store build only,
+  `build-android.yml` runs `uploadCrashlyticsSymbolFileRelease` in its own step
+  after the build, in the same tree. Staging and `prod-v*` APK builds upload
+  nothing, so their native frames stay unsymbolicated. It tries three times; if
+  every try fails, the build still passes with a warning annotation and a line in
+  the run summary naming the server's response. A build without it shows every native
   frame as "Missing BuildId". Symbols are matched by build ID, so only the build
   that produced a library can supply them.
 - **Symbolicating a crash with no uploaded symbols.** Every AAB carries symbol
