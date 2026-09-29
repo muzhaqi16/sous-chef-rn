@@ -240,7 +240,7 @@ export const PantryItemDetail: React.FC<
       : null;
 
   const discardActions: HeaderAction[] =
-    hasExpiredBatches && permissions.canEditItems
+    hasExpiredBatches && permissions.canRemoveItems
       ? [
           {
             icon: 'close-circle-outline',
@@ -284,6 +284,10 @@ export const PantryItemDetail: React.FC<
             onPress: handleEdit,
             testID: pantryTestIDs.itemEditButton,
           },
+        ] satisfies HeaderAction[])
+      : []),
+    ...(permissions.canRemoveItems
+      ? ([
           {
             icon: 'trash-outline',
             accessibilityLabel: t('labels.delete'),
@@ -401,7 +405,7 @@ export const PantryItemDetail: React.FC<
             shelfLifeDays={item.item.shelfLifeDays}
             shelfLifeOpenedDays={item.item.shelfLifeOpenedDays}
             onCorrectPackageSize={
-              soleWeighedBatchId
+              soleWeighedBatchId && permissions.canEditItems
                 ? () => actions.setCorrectingBatchId(soleWeighedBatchId)
                 : undefined
             }
@@ -423,7 +427,11 @@ export const PantryItemDetail: React.FC<
                   unitSymbol: item.unit.symbol,
                 })
               }
-              onCorrectSize={actions.setCorrectingBatchId}
+              onCorrectSize={
+                permissions.canEditItems
+                  ? actions.setCorrectingBatchId
+                  : undefined
+              }
             />
           </DetailSection>
         )}

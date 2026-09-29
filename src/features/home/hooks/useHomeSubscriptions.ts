@@ -9,6 +9,7 @@ import { useSelectedHomeId } from '#store/useAppStore';
 import { useSubscription } from '@apollo/client/react';
 import {
   GetHomeDocument,
+  GetHomesDocument,
   GetMyPendingInvitesDocument,
   HomeEventsDocument,
   type HomeEventsSubscription,
@@ -69,12 +70,17 @@ export function useHomeSubscriptions(userId?: string) {
 
       switch (payload.subtype) {
         // A membership change is a change to the member list, which no
-        // single-entity read expresses — refetch the query that owns it.
+        // single-entity read expresses — refetch the queries that own it.
+        // `GetHome` is watched only while a home screen is open; `GetHomes`
+        // stays mounted all session and carries the `myMembership` flags the
+        // pantry's permissions read, so an owner's grant or revoke lands live.
         case HomeSubtype.MembershipJoined:
         case HomeSubtype.MembershipLeft:
         case HomeSubtype.MembershipUpdated:
         case HomeSubtype.MembershipRoleChanged:
-          void client.refetchQueries({ include: [GetHomeDocument] });
+          void client.refetchQueries({
+            include: [GetHomeDocument, GetHomesDocument],
+          });
           break;
 
         // New invite sent → refresh me.pendingHomeInvitesConnection. Adding the

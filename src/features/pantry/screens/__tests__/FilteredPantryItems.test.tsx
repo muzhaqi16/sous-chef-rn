@@ -5,6 +5,7 @@ import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { FilteredPantryItems } from '../FilteredPantryItems';
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import { toDateKey } from '#/utils/dateUtils';
 
 // Structural shape consumed by the screen via the mocked `usePantryManagement`.
@@ -244,9 +245,6 @@ jest.mock('#components/organisms/SwipeableItem/SwipeableItem', () => ({
     return <Pressable onPress={onPress}>{children}</Pressable>;
   },
 }));
-jest.mock('#features/pantry/components/skeletons/PantryItemSkeleton', () => ({
-  PantryItemSkeleton: () => null,
-}));
 jest.mock('#/styles/commonStyles', () => ({
   commonStyles: {
     container: {},
@@ -405,11 +403,12 @@ describe('FilteredPantryItems', () => {
       ).toBeTruthy();
     });
 
-    it('renders without crashing during loading', () => {
+    it('renders the row skeleton during loading', () => {
       mockLoading = true;
       mockAllItems = [];
       renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
       expect(screen.getByText('Low Stock Items')).toBeTruthy();
+      expect(screen.getByTestId(pantryTestIDs.loading)).toBeTruthy();
     });
 
     describe('a failed fetch is not good news', () => {

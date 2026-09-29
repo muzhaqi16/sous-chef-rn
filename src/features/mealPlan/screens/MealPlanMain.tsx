@@ -1,12 +1,10 @@
 import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
-import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
-import { useIsOfflineBannerVisible } from '#hooks/app/useIsOfflineBannerVisible';
+import type { BarAction } from '#components/molecules/BarActions';
 import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
 import { MonthCalendar } from '#features/mealPlan/components/MonthCalendar';
 import { DayMealList } from '#features/mealPlan/components/DayMealList';
@@ -59,7 +57,6 @@ import { toDateKey } from '#/utils/dateUtils';
 import { Screen, type ScreenHeaderConfig } from '#components/templates/Screen';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 import { toMealDateTime } from '#/utils/dateUtils';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 /** The chrome a plan-less Meal Plan shows, before the DeferredScreen gate and
  *  again while the plan list is still arriving. */
@@ -149,11 +146,6 @@ const MealPlanMainInner: React.FC = () => {
     },
     actions: { loadMore: loadMorePlans, refetch: refetchPlans },
   } = useMealPlans();
-
-  // The action cluster carries the offline pill (visible only while offline)
-  // plus the per-plan actions; render it only when one of those would show,
-  // so an online, plan-less header doesn't emit an empty action row.
-  const isOfflineVisible = useIsOfflineBannerVisible();
 
   // Resolves and fetches the active plan, and owns the fallback when the
   // selected one turns out to be deleted or unshared.
@@ -472,46 +464,31 @@ const MealPlanMainInner: React.FC = () => {
     );
   }
 
-  // The pill sits in the real action cluster (the header's built-in one is off
-  // below) so it still shows before a plan is selected, without an empty group.
-  const headerRight =
-    isOfflineVisible || !!activePlanId ? (
-      <>
-        <OfflineStatusPill size={22} />
-        {!!activePlanId && (
-          <>
-            {permissions.canGenerateShoppingList ? (
-              <Pressable
-                onPress={() => setShoppingListSheetVisible(true)}
-                hitSlop={hitSlop.md}
-                style={styles.headerActionButton}
-                accessibilityLabel={t('mealPlanMain.generateShoppingListLabel')}
-              >
-                <Icon name="cart-outline" size={22} tone="primary" />
-              </Pressable>
-            ) : null}
-            {permissions.canSaveAsTemplate ? (
-              <Pressable
-                onPress={handleSaveAsTemplate}
-                hitSlop={hitSlop.md}
-                style={styles.headerActionButton}
-                accessibilityLabel={t('mealPlanMain.saveAsTemplateLabel')}
-              >
-                <Icon name="bookmark-outline" size={22} tone="primary" />
-              </Pressable>
-            ) : null}
-            <Pressable
-              onPress={() => setSettingsVisible(true)}
-              hitSlop={hitSlop.md}
-              style={styles.headerActionButton}
-              accessibilityLabel={t('mealPlanMain.planSettingsLabel')}
-            >
-              <Icon name="ellipsis-vertical" size={22} tone="textSecondary" />
-            </Pressable>
-          </>
-        )}
-      </>
-    ) : undefined;
+  const headerActions: BarAction[] = [];
+  if (activePlanId) {
+    if (permissions.canGenerateShoppingList) {
+      headerActions.push({
+        icon: 'cart-outline',
+        tone: 'primary',
+        onPress: () => setShoppingListSheetVisible(true),
+        accessibilityLabel: t('mealPlanMain.generateShoppingListLabel'),
+      });
+    }
+    if (permissions.canSaveAsTemplate) {
+      headerActions.push({
+        icon: 'bookmark-outline',
+        tone: 'primary',
+        onPress: handleSaveAsTemplate,
+        accessibilityLabel: t('mealPlanMain.saveAsTemplateLabel'),
+      });
+    }
+    headerActions.push({
+      icon: 'ellipsis-vertical',
+      tone: 'textSecondary',
+      onPress: () => setSettingsVisible(true),
+      accessibilityLabel: t('mealPlanMain.planSettingsLabel'),
+    });
+  }
 
   return (
     <Screen
@@ -523,8 +500,7 @@ const MealPlanMainInner: React.FC = () => {
         titleAccessory: (
           <Icon name="chevron-down" size={20} tone="textPrimary" />
         ),
-        offlinePill: false,
-        headerRight,
+        actions: headerActions,
       }}
       scroll="list"
       gutter="none"
@@ -671,9 +647,6 @@ const MealPlanMainInner: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  headerActionButton: {
-    padding: theme.spacing.xs,
-  },
   nutritionContainer: {
     marginBottom: theme.spacing.sm,
   },

@@ -206,7 +206,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
 
   return (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       visible={visible}
       onRequestClose={handleClose}

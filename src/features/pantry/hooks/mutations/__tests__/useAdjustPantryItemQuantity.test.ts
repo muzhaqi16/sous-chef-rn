@@ -196,7 +196,7 @@ describe('useAdjustPantryItemQuantity', () => {
 
     expect(success).toBe(false);
     expect(alertService.alert).toHaveBeenCalledWith(
-      t('errors.entityUpdatedTitle', { entity: t('labels.item') }),
+      t('errors.changedElsewhereTitle'),
       getVersionConflictMessage(),
     );
   });

@@ -7,7 +7,6 @@ export const recipesTestIDs = {
   recipesScreen: 'recipes-screen',
   searchInput: 'recipe-main-search-input',
   searchSubmit: 'recipe-main-search-submit',
-  filterCountBadge: 'filter-count-badge',
   activeFiltersSummary: 'active-filters-summary',
 
   myRecipesScreen: 'my-recipes-screen',

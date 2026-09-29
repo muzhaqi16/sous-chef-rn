@@ -300,16 +300,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     ...theme.type.bodyStrong,
   },
 
-  badge: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.primary,
-  },
-  badgeText: {
-    ...theme.type.label,
-    color: theme.colors.onPrimary,
-  },
   chip: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,

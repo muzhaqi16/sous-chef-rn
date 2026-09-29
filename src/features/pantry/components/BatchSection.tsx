@@ -8,6 +8,7 @@ import { BatchStatus } from '#/graphql/generated/schemaTypes';
 import { BatchListItem } from './BatchListItem';
 import { useOpenPantryItemBatch } from '#features/pantry/hooks/mutations/useOpenPantryItemBatch';
 import { useWastePantryItemBatch } from '#features/pantry/hooks/mutations/useWastePantryItemBatch';
+import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { Text } from '#components/atoms/Text';
 import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 
@@ -42,6 +43,7 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
 
   const { openBatch } = useOpenPantryItemBatch();
   const { wasteBatch } = useWastePantryItemBatch();
+  const permissions = usePantryPermissions();
 
   // Sort active batches by expiration (FIFO order) — earliest first
   const activeBatches = batches
@@ -84,8 +86,8 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
               batch={batch}
               unitSymbol={unitSymbol}
               netWeightUnitSymbol={netWeightUnitSymbol}
-              onOpen={handleOpen}
-              onWaste={handleWaste}
+              onOpen={permissions.canEditItems ? handleOpen : undefined}
+              onWaste={permissions.canRemoveItems ? handleWaste : undefined}
               onCorrectSize={onCorrectSize}
             />
           ))}

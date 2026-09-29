@@ -12,6 +12,7 @@ import {
 const UNKNOWN_MEMBERSHIP_PERMISSIONS: PantryPermissions = {
   canAddItems: true,
   canEditItems: true,
+  canRemoveItems: true,
   canCreatePantry: true,
   canDeletePantry: true,
 };

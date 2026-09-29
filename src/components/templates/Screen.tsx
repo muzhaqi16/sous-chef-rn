@@ -17,7 +17,7 @@ import { Header } from '#components/organisms/Header';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { DataStateView } from '#components/organisms/DataStateView';
 import type { EmptyStateProps } from '#components/molecules/EmptyState';
-import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
+import type { BarAction } from '#components/molecules/BarActions';
 import type { DataState } from '#hooks/data/useDataState';
 import {
   KEYBOARD_DISMISS_MODE,
@@ -37,15 +37,11 @@ export interface ScreenHeaderConfig {
   title?: string;
   /** `tab` only: the small label above the title. */
   label?: string;
-  /** `tab` only: content in the action group, and the title's own affordances. */
-  headerRight?: React.ReactNode;
+  /** `tab` only: the title's own affordances. */
   onTitlePress?: () => void;
   titleAccessory?: React.ReactNode;
-  /** `tab` only: suppress the built-in offline pill when the screen sites it. */
-  offlinePill?: boolean;
-  actions?: HeaderAction[];
-  /** Right-side content that is not an icon — a Save affordance, a text button. */
-  rightElement?: React.ReactNode;
+  /** The trailing actions on either variant, icon or text — never a bare node. */
+  actions?: BarAction[];
   /** A handler shows the back control; omit it for a root screen. */
   back?: () => void;
   /** A handler shows a close control instead of back — for a presented screen. */
@@ -133,17 +129,15 @@ export const Screen: React.FC<ScreenProps> = props => {
         onBack={header?.back}
         onClose={header?.close}
         rightActions={header?.actions}
-        rightElement={header?.rightElement}
         centerTitle
       />
     ) : variant === 'tab' ? (
       <TabScreenHeader
         label={header?.label ?? ''}
         title={header?.title ?? ''}
-        headerRight={header?.headerRight}
+        actions={header?.actions}
         onTitlePress={header?.onTitlePress}
         titleAccessory={header?.titleAccessory}
-        offlinePill={header?.offlinePill}
       />
     ) : null;
 

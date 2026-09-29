@@ -87,7 +87,6 @@
     "budgetPlaceholder": "No budget set",
     "priceTrackingLabel": "Price Tracking",
     "priceTrackingDesc": "Track prices and spending for this list",
-    "failedToSetBudget": "Failed to update budget",
     "failedToSetPriceTracking": "Failed to update price tracking",
     "customPermissions": "Custom Permissions",
     "permCanEditItems": "Can edit items",

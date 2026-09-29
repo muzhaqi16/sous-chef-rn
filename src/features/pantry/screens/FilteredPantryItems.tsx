@@ -1,7 +1,9 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import { useTranslation } from '#/i18n';
+import { spacing } from '#/theme/foundations/spacing';
+import { type } from '#/theme/foundations/type';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 // RNGH's Pressable for the cart button: nested in the row's RNGH Swipeable, its
 // native button captures the tap so the row's onPress does not also fire.
@@ -16,7 +18,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
-import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
+import { SkeletonCircle } from '#components/atoms/Skeleton/SkeletonCircle';
+import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState, type DataState } from '#hooks/data/useDataState';
 import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
@@ -183,6 +186,7 @@ function buildModeConfig(
 
 const keyExtractor = (item: { id: string }) => item.id;
 const getItemType = () => 'item';
+const CART_ICON_SIZE = 20;
 
 type LayoutRect = { x: number; y: number; width: number; height: number };
 
@@ -215,7 +219,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
         style={styles.actionButton}
         accessibilityLabel={t('labels.addToShoppingList')}
       >
-        <Icon name="cart-outline" size={20} tone="primary" />
+        <Icon name="cart-outline" size={CART_ICON_SIZE} tone="primary" />
       </Pressable>
     ) : null;
 
@@ -254,6 +258,32 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
 
 const FilteredRenderItem = FilteredRenderItemComponent;
 
+// The row above at the default density: card padding, both text lines and the
+// card's bottom margin. The window's header height is slack for denser settings.
+const ROW_PITCH =
+  spacing.md * 2 +
+  type.bodyStrong.lineHeight +
+  spacing.xs +
+  type.caption.lineHeight +
+  spacing.sm;
+
+/** The row above with bars for its text, so nothing shifts on reveal. */
+const FilteredRowSkeleton: React.FC = () => (
+  <View style={[commonStyles.card, commonStyles.rowSpaceBetween]}>
+    <View style={styles.itemInfo}>
+      <View style={styles.titleLine}>
+        <SkeletonLine width="60%" height={type.bodyStrong.fontSize} />
+      </View>
+      <View style={styles.subtitleLine}>
+        <SkeletonLine width="40%" height={type.caption.fontSize} />
+      </View>
+    </View>
+    <View style={styles.actionButton}>
+      <SkeletonCircle size={CART_ICON_SIZE} />
+    </View>
+  </View>
+);
+
 interface FilteredEmptyProps {
   state: DataState;
   onRetry: () => void;
@@ -272,12 +302,17 @@ const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
   icon,
   message,
 }) => {
+  const { height: windowHeight } = useWindowDimensions();
+
   if (state === 'loading') {
     return (
-      <View>
-        {[1, 2, 3, 4, 5].map(key => (
-          <PantryItemSkeleton key={key} />
-        ))}
+      <View testID={pantryTestIDs.loading}>
+        {Array.from(
+          { length: Math.ceil(windowHeight / ROW_PITCH) },
+          (_, index) => (
+            <FilteredRowSkeleton key={index} />
+          ),
+        )}
       </View>
     );
   }
@@ -544,6 +579,17 @@ const styles = StyleSheet.create(theme => ({
   },
   itemDetails: {
     marginTop: theme.spacing.xs,
+  },
+  // A skeleton bar is its text's font size; its line box is the text's leading,
+  // so the skeleton row stands as tall as the row it replaces.
+  titleLine: {
+    height: theme.type.bodyStrong.lineHeight,
+    justifyContent: 'center',
+  },
+  subtitleLine: {
+    marginTop: theme.spacing.xs,
+    height: theme.type.caption.lineHeight,
+    justifyContent: 'center',
   },
   actionButton: {
     padding: theme.spacing.xs,

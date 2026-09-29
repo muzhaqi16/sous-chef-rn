@@ -54,7 +54,7 @@
       "uniqueConstraint": "Kjo vlerë ekziston tashmë",
       "unitInvalid": "Kjo njësi nuk mund të përdoret këtu.",
       "validationFailed": "Kontrolloni të dhënat e futura dhe provoni sërish",
-      "versionConflict": "Ky artikull u përditësua nga një përdorues tjetër. Rifreskoni dhe provoni sërish.",
+      "versionConflict": "Kjo u ndryshua diku tjetër pasi e hapët. Rifreskoni dhe provoni sërish.",
       "unitChangeNeedsResolution": "Ky ndryshim njësie është vetëm një vlerësim. Zgjidhni nëse do të përdorni vlerësimin apo do të vendosni vetë sasinë."
     },
     "addItemFailed": "Nuk u shtua dot artikulli",
@@ -146,6 +146,7 @@
     "wasteBatchFailed": "Nuk mund të shënohej si i mbetur.",
     "updateShoppingItemFailed": "Artikulli nuk mund të përditësohej.",
     "entityUpdatedTitle": "{{entity}} u përditësua",
+    "changedElsewhereTitle": "U ndryshua diku tjetër",
     "entityHome": "Shtëpia",
     "entityMember": "Anëtar",
     "entityInvite": "Ftesë",

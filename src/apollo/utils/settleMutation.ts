@@ -241,7 +241,7 @@ function describe(
     return {
       code,
       field,
-      title: t('errors.entityUpdatedTitle', { entity: t('labels.item') }),
+      title: t('errors.changedElsewhereTitle'),
       body: getVersionConflictMessage(),
     };
   }

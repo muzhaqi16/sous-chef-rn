@@ -201,8 +201,6 @@ export const colors = {
     default: 'rgba(0,0,0,0.1)',
     onFill: 'rgba(255,255,255,0.2)',
   },
-  /** Painted behind the liquid-glass material: `secondaryDark` at 85%. */
-  glass: `${charade['950']}D9`,
   /** A white wash for a control's ground over a photo or scrim. */
   onScrimSubtle: 'rgba(255, 255, 255, 0.2)',
   /** Swatches a user picks for a storage location; the chosen hex is stored. */

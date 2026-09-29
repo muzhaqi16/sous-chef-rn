@@ -10,6 +10,7 @@ import { Text } from '#components/atoms/Text';
 import { BatchListItem } from '#features/pantry/components/BatchListItem';
 import { useOpenPantryItemBatch } from '#features/pantry/hooks/mutations/useOpenPantryItemBatch';
 import { useWastePantryItemBatch } from '#features/pantry/hooks/mutations/useWastePantryItemBatch';
+import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 
 const keyExtractor = (item: PantryItemBatchFragment) => item.id;
 const getItemType = (item: PantryItemBatchFragment) =>
@@ -28,6 +29,7 @@ export const PantryBatchHistoryScreen: React.FC<
   const { pantryItemId, itemName, unitSymbol } = route.params;
   const { openBatch } = useOpenPantryItemBatch();
   const { wasteBatch } = useWastePantryItemBatch();
+  const permissions = usePantryPermissions();
   const {
     batches,
     totalCount,
@@ -45,8 +47,8 @@ export const PantryBatchHistoryScreen: React.FC<
     <BatchListItem
       batch={item}
       unitSymbol={unitSymbol}
-      onOpen={openBatch}
-      onWaste={wasteBatch}
+      onOpen={permissions.canEditItems ? openBatch : undefined}
+      onWaste={permissions.canRemoveItems ? wasteBatch : undefined}
     />
   );
 

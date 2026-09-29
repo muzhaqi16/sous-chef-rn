@@ -29,6 +29,7 @@ describe('usePantryPermissions', () => {
       expect(result.current).toEqual({
         canAddItems: true,
         canEditItems: true,
+        canRemoveItems: true,
         canCreatePantry: true,
         canDeletePantry: true,
       });
@@ -59,6 +60,7 @@ describe('usePantryPermissions', () => {
       expect(result.current).toEqual({
         canAddItems: false,
         canEditItems: false,
+        canRemoveItems: false,
         canCreatePantry: false,
         canDeletePantry: false,
       });
@@ -72,6 +74,32 @@ describe('usePantryPermissions', () => {
       const { result } = renderHook(() => usePantryPermissions());
       expect(result.current.canCreatePantry).toBe(true);
       expect(result.current.canDeletePantry).toBe(false);
+    });
+
+    // The API gates deleting an item, wasting a batch and discarding the
+    // expired on `canRemoveItems`, which it seeds FALSE for a member — so the
+    // member who may edit an item may still not remove it.
+    it('lets a default member edit items but not remove them', () => {
+      withHome({
+        id: 'h1',
+        myMembership: {
+          role: MembershipRole.Member,
+          canEditPantry: true,
+          canRemoveItems: false,
+        },
+      });
+      const { result } = renderHook(() => usePantryPermissions());
+      expect(result.current.canEditItems).toBe(true);
+      expect(result.current.canRemoveItems).toBe(false);
+    });
+
+    it('lets a member granted canRemoveItems remove items', () => {
+      withHome({
+        id: 'h1',
+        myMembership: { role: MembershipRole.Member, canRemoveItems: true },
+      });
+      const { result } = renderHook(() => usePantryPermissions());
+      expect(result.current.canRemoveItems).toBe(true);
     });
 
     it('lets a member with canManageHome delete a pantry', () => {

@@ -43,6 +43,7 @@ export const TONE_TO_COLOR = {
   onError: (t: Theme) => t.colors.onError,
   onSuccess: (t: Theme) => t.colors.onSuccess,
   onScrim: (t: Theme) => t.colors.onScrim,
+  onNavigation: (t: Theme) => t.colors.onNavigation,
   background: (t: Theme) => t.colors.background,
   favorite: (t: Theme) => t.colors.favorite,
   rating: (t: Theme) => t.colors.rating,

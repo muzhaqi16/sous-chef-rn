@@ -15,7 +15,6 @@ import type {
   SelectorConfig,
 } from '#components/organisms/AnimatedItemSelector/types';
 import { LIST_NAME_MAX_LENGTH } from '#features/shoppingList/utils/shoppingListConstants';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 interface ShoppingList {
   id: string;
@@ -104,18 +103,12 @@ export const ShoppingListPickerSheet: React.FC<
     emptyMessage: t('shoppingListPicker.noLists'),
     renderCustomItem,
     // Top right, where every other tray puts its action.
-    headerRight: (
-      <Pressable
-        onPress={() => setNaming(current => !current)}
-        hitSlop={hitSlop.md}
-        accessibilityRole="button"
-        accessibilityLabel={t('shoppingListPicker.newListNamePlaceholder')}
-      >
-        <Text role="label" tone="primary">
-          {naming ? t('labels.cancel') : t('shoppingListPicker.newList')}
-        </Text>
-      </Pressable>
-    ),
+    headerActions: [
+      {
+        label: naming ? t('labels.cancel') : t('shoppingListPicker.newList'),
+        onPress: () => setNaming(current => !current),
+      },
+    ],
     listHeader: naming ? (
       <View style={styles.createListRow}>
         <ThemedBottomSheetTextInput

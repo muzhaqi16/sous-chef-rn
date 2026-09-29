@@ -14,7 +14,10 @@ import {
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
-import type { ListStatus } from '#/graphql/generated/schemaTypes';
+import type {
+  ListStatus,
+  ShoppingListPlanningInput,
+} from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 
 interface ShoppingListSettingsUpdate {
@@ -22,6 +25,9 @@ interface ShoppingListSettingsUpdate {
   isDefault?: boolean;
   // Absolute status set — drives archive via updateShoppingList(status: ARCHIVED).
   status?: ListStatus;
+  // Rides on the same write as the rename: every versioned write bumps the
+  // version, so a second write would need the first one's answer first.
+  planning?: Pick<ShoppingListPlanningInput, 'budgetAmount' | 'currency'>;
 }
 
 export function useUpdateShoppingList(fallbackErrorMessage: string) {
@@ -59,6 +65,12 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
           isDefault: updates.isDefault,
         }),
         ...(updates.status !== undefined && { status: updates.status }),
+        ...(updates.planning?.budgetAmount !== undefined && {
+          budgetAmount: updates.planning.budgetAmount,
+        }),
+        ...(updates.planning?.currency !== undefined && {
+          currency: updates.planning.currency,
+        }),
         updatedAt: new Date().toISOString(),
       };
       try {

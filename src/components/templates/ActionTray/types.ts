@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
+import type { BarAction } from '#components/molecules/BarActions';
 
 export interface ActionTrayProps {
   children?: ReactNode;
@@ -7,7 +8,8 @@ export interface ActionTrayProps {
   onClose?: () => void;
   onOpen?: () => void;
   title?: string;
-  headerRight?: ReactNode;
+  /** Actions beside the title, icon or text; the close control follows them. */
+  headerActions?: BarAction[];
   /**
    * Optional content pinned to the bottom of the tray (e.g. primary actions).
    * Rendered via gorhom's `footerComponent`, so it stays fixed while the body

@@ -15,6 +15,7 @@ import { homeDetailNode } from '#/test-utils/fixtures/homeFixtures';
 import { pantryData } from '#/test-utils/fixtures/pantryFixtures';
 import { pantryItemData } from '#/test-utils/fixtures/pantryItemFixtures';
 import { PantryItemForm } from '../PantryItemForm';
+import { PantryItemForm_PantryItemFragmentDoc } from '../PantryItemForm.generated';
 import type { StorageState, UnitType } from '#/graphql/generated/schemaTypes';
 import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
 
@@ -209,12 +210,21 @@ jest.mock('#components/atoms/FieldRow', () => ({
   },
 }));
 
+// Subscribes to a field the way the real section's `Controller`s do, so a
+// form reset reaches a component other than the form.
 jest.mock('../ItemInformationSection', () => ({
-  ItemInformationSection: () => {
+  ItemInformationSection: ({
+    control,
+  }: React.ComponentProps<
+    typeof import('../ItemInformationSection').ItemInformationSection
+  >) => {
     const { Text, View } = require('react-native');
+    const { useWatch } = require('react-hook-form');
+    const itemName = useWatch({ control, name: 'itemName' });
     return (
       <View testID="item-information-section">
         <Text>Item Information</Text>
+        <Text>{`name:${itemName}`}</Text>
       </View>
     );
   },
@@ -420,6 +430,50 @@ describe('PantryItemForm — edit mode', () => {
     await screen.findByText('Item not found');
     // The form's header — and so its close control — stays up.
     expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
+  });
+
+  // The form's fields are cached before the query is: it renders at once, then
+  // the server's answer re-seeds it. Re-seeding during render updated every
+  // mounted field subscriber mid-render, which React refuses.
+  it('re-seeds from a late server answer without updating a field mid-render', async () => {
+    const cache = buildCache({});
+    cache.writeFragment({
+      fragment: PantryItemForm_PantryItemFragmentDoc,
+      fragmentName: 'PantryItemForm_pantryItem',
+      data: pantryItemData({ id: 'item-1', itemName: 'Flour' }).pantryItem,
+    });
+    renderWithApollo(<PantryItemForm itemId="item-1" />, {
+      cache,
+      operationMocks: [
+        recordMock(GetPantryItemDocument, {
+          data: pantryItemData({ id: 'item-1', itemName: 'Bread flour' }),
+        }).mock,
+      ],
+    });
+
+    await screen.findByText('name:Flour');
+    await screen.findByText('name:Bread flour');
+    const renderPhaseUpdates = jest
+      .mocked(console.error)
+      .mock.calls.filter(([message]) =>
+        String(message).includes('Cannot update a component'),
+      );
+    expect(renderPhaseUpdates).toEqual([]);
+  });
+
+  // The first open from the pantry list: the row is cached, the form's fields
+  // are not, so the item arrives only once the query answers.
+  it('renders the item once the query fills a cache that missed on mount', async () => {
+    renderWithApollo(<PantryItemForm itemId="item-1" />, {
+      cache: buildCache({}),
+      operationMocks: [
+        recordMock(GetPantryItemDocument, {
+          data: pantryItemData({ id: 'item-1' }),
+        }).mock,
+      ],
+    });
+    await screen.findByText('Item Information');
+    expect(screen.queryByText('Item not found')).toBeNull();
   });
 
   it('renders the Inventory tab with quantity section in edit mode', async () => {

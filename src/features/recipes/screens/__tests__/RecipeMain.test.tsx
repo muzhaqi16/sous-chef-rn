@@ -1,8 +1,9 @@
 'use no memo';
 
 import React from 'react';
-import { render, userEvent, act } from '@testing-library/react-native';
+import { render, userEvent, act, within } from '@testing-library/react-native';
 import { RecipeMain } from '../RecipeMain';
+import type { BarAction } from '#components/molecules/BarActions';
 import type { transformRecipeForDisplay } from '#domain/recipeTransform';
 import type {
   SearchRecipesResult,
@@ -26,7 +27,7 @@ interface DeferredScreenMockProps {
 
 interface TabScreenHeaderMockProps {
   title?: string;
-  headerRight?: React.ReactNode;
+  actions?: BarAction[];
 }
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -163,14 +164,15 @@ jest.mock('#features/recipes/components/skeletons/RecipeSkeleton', () => ({
   RecipeSkeleton: () => 'RecipeSkeleton',
 }));
 jest.mock('#components/molecules/TabScreenHeader', () => ({
-  TabScreenHeader: ({ title, headerRight }: TabScreenHeaderMockProps) => {
+  TabScreenHeader: ({ title, actions }: TabScreenHeaderMockProps) => {
     const R = require('react');
     const { View, Text } = require('react-native');
+    const { BarActions } = require('#components/molecules/BarActions');
     return R.createElement(
       View,
       null,
       R.createElement(Text, null, title),
-      headerRight || null,
+      R.createElement(BarActions, { actions, placement: 'gutter' }),
     );
   },
 }));
@@ -496,8 +498,8 @@ describe('RecipeMain', () => {
     });
 
     const tree = render(<RecipeMain />);
-    expect(tree.getByTestId('filter-count-badge')).toBeTruthy();
-    expect(tree.getByText('3')).toBeTruthy();
+    const filterButton = tree.getByLabelText('Dietary restrictions');
+    expect(within(filterButton).getByText('3')).toBeTruthy();
   });
 
   it('hides the filter count badge when no filters are active', () => {
@@ -508,7 +510,8 @@ describe('RecipeMain', () => {
     );
 
     const tree = render(<RecipeMain />);
-    expect(tree.queryByTestId('filter-count-badge')).toBeNull();
+    const filterButton = tree.getByLabelText('Dietary restrictions');
+    expect(within(filterButton).queryByText(/\d/)).toBeNull();
   });
 
   it('shows a collapsed filter summary during text search that expands to removable chips', async () => {

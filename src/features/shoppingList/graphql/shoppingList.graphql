@@ -389,6 +389,9 @@ mutation UpdateShoppingList($input: UpdateShoppingListInput!) {
         completionRate
         createdAt
         updatedAt
+        # Every versioned write bumps it; without it the cache keeps the old
+        # one and Save's follow-up budget write is refused as a conflict.
+        version
         ownerships {
           id
           ...ShoppingListOwnershipFragment

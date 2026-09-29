@@ -27,8 +27,8 @@ optional:
 ## Screen scaffold and sheet shell
 
 - **`Screen`** (`src/components/templates/Screen.tsx`) takes `header`
-  (`standard | tab | none`, plus title, actions, back, close and the
-  offline pill), `scroll` (`none | scroll | form | list`), `gutter`, `refresh`,
+  (`standard | tab | none`, plus title, actions, back and close), `scroll`
+  (`none | scroll | form | list`), `gutter`, `refresh`,
   `state`, `footer`, and — in `scroll` mode — `onScroll` (an animated scroll
   handler) and `scrollTestID`. It never applies the top inset: the navigator
   does, and `__tests__/navigation/screenTopInset.test.tsx` renders the
@@ -39,6 +39,13 @@ optional:
   so a 24pt icon centred in its 44pt target starts where content does. `Header`
   and `CollapsingHeroDetail`'s bar both use it and are both 60pt tall
   (`__tests__/ui/headerGeometry.test.tsx`). Standard titles are always centred.
+- **One action contract.** Every bar's actions are `BarAction`s, an icon or a
+  text label, rendered by `BarActions` (`src/components/molecules/BarActions.tsx`);
+  no bar takes a bare node. In `Header` each is a whole 44pt target and a label
+  is padded by the slack an icon has, so Save lands on the gutter just as a
+  glyph does. The tab header, `Sheet` and `ActionTray` sit on a content gutter,
+  so there the glyph takes the edge and `hitSlop` makes the 44pt. Glyphs sit the
+  same distance apart in both; the same test pins all of it.
 - **One gutter.** `gutter="page"` (the default) is the only way a screen states
   its horizontal inset; `gutter="none"` is for a `scroll="list"` screen whose
   list owns its content inset. Content below the scaffold carries no edge inset

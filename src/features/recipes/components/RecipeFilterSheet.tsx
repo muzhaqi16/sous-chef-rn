@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
@@ -15,7 +14,6 @@ import {
   MEAL_TYPES,
   isLifestyleDietValue,
 } from '#features/recipes/utils/recipeFilterOptions';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 const COOK_TIMES = [15, 30, 45, 60];
 
@@ -109,36 +107,22 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
       onDismiss={onRequestClose}
       snapPoints={['75%', '90%']}
       onChange={handleChange}
-      headerRight={
-        <View style={styles.filterHeaderActions}>
-          <Pressable
-            onPress={() => setDraftFilters(DEFAULT_FILTERS)}
-            hitSlop={hitSlop.md}
-            accessibilityRole="button"
-            accessibilityLabel={t('recipeFilters.clearAllA11y')}
-          >
-            <Text role="label" tone="secondary">
-              {t('labels.clear')}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={onRequestClose}
-            hitSlop={hitSlop.md}
-            accessibilityRole="button"
-            accessibilityLabel={t('recipeFilters.applyA11y')}
-          >
-            <Icon
-              name={
-                hasDraftChanges
-                  ? 'checkmark-circle'
-                  : 'checkmark-circle-outline'
-              }
-              size={24}
-              tone="primary"
-            />
-          </Pressable>
-        </View>
-      }
+      actions={[
+        {
+          label: t('labels.clear'),
+          variant: 'secondary',
+          onPress: () => setDraftFilters(DEFAULT_FILTERS),
+          accessibilityLabel: t('recipeFilters.clearAllA11y'),
+        },
+        {
+          icon: hasDraftChanges
+            ? 'checkmark-circle'
+            : 'checkmark-circle-outline',
+          tone: 'primary',
+          onPress: onRequestClose,
+          accessibilityLabel: t('recipeFilters.applyA11y'),
+        },
+      ]}
     >
       {mounted ? (
         <>
@@ -413,11 +397,6 @@ const styles = StyleSheet.create(theme => ({
   },
   checkboxText: {
     marginLeft: theme.spacing.sm,
-  },
-  filterHeaderActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.md,
   },
   infoBanner: {
     flexDirection: 'row',

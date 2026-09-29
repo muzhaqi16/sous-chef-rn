@@ -198,7 +198,7 @@ describe('useMealPlanItemActions', () => {
       expect(created).toBe(false);
       // The app's copy for the code, never the server's `message`.
       expect(mockToastError).toHaveBeenCalledTimes(1);
-      // `CONFLICT` is a state refusal, never "updated by another user".
+      // `CONFLICT` is a state refusal, never "changed somewhere else".
       expect(mockToastError).not.toHaveBeenCalledWith(
         getVersionConflictMessage(),
       );

@@ -154,7 +154,7 @@ export const InvitationAcceptanceModal: React.FC<
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="fade"
       onRequestClose={onClose}
       statusBarTranslucent
       navigationBarTranslucent

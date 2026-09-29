@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
@@ -28,7 +28,11 @@ import { HapticService } from '#services/haptic/HapticService';
 import { SHEET, TAB_BAR } from '#/constants/animations';
 import { GlassSurface, supportsGlass } from '#components/atoms/GlassSurface';
 import { motion } from '#/theme/foundations/motion';
-import { TAB_BAR_HEIGHT, FLOATING_BUTTON_GAP } from '#constants/layout';
+import {
+  TAB_BAR_HEIGHT,
+  FLOATING_BUTTON_GAP,
+  getTabBarBottomOffset,
+} from '#constants/layout';
 import { kitTestIDs } from '#components/testIDs';
 
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
@@ -110,11 +114,12 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     return {
       left: theme.layout.pageGutter,
       right: theme.layout.pageGutter,
-      borderRadius: theme.radii['2xl'],
+      borderRadius: theme.radii.full,
       ...theme.shadows.lg,
-      // Dark in both themes, under light glyphs. iOS 26 Liquid Glass drops the
-      // solid fill; Android / iOS < 26 keep it.
-      ...(supportsGlass ? {} : { backgroundColor: theme.colors.secondaryDark }),
+      // iOS 26 Liquid Glass drops the solid fill; Android / iOS < 26 keep it.
+      ...(supportsGlass
+        ? {}
+        : { backgroundColor: theme.colors.navigationSurface }),
     };
   });
   // Flush with the bar's right edge.
@@ -135,10 +140,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     };
   });
 
-  const barBottom =
-    Platform.OS === 'ios'
-      ? Math.max(safeBottom * 0.7, 16)
-      : Math.max(safeBottom, 16);
+  const barBottom = getTabBarBottomOffset(safeBottom);
 
   const containerStyle = { bottom: barBottom };
 
@@ -268,7 +270,7 @@ const styles = StyleSheet.create(theme => ({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: theme.radii['2xl'],
+    borderRadius: theme.radii.full,
     borderCurve: 'continuous',
   },
   // Over the glass, not the bar's own border: a border insets the glass by its
@@ -279,10 +281,11 @@ const styles = StyleSheet.create(theme => ({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: theme.radii['2xl'],
+    borderRadius: theme.radii.full,
     borderCurve: 'continuous',
     borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.navigationEdge,
+    // Matches the add button's fill.
+    borderColor: theme.colors.primary,
     pointerEvents: 'none',
   },
   tabsRow: {
