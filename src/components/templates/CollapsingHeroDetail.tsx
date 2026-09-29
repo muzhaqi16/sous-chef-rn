@@ -2,7 +2,10 @@ import React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from '#/i18n';
-import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
+import {
+  PlainScrollRefreshControl,
+  ThemedActivityIndicator,
+} from '#components/atoms/themedComponents';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -242,6 +245,16 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
               accessibilityLabel: t('labels.goBack'),
             }}
           />
+          {/* iOS draws a pull's own spinner at the scroll view's top edge,
+              which an edge-to-edge hero puts under the status bar; the bar
+              stays in view through the whole pull. */}
+          {hasHero && refreshing ? (
+            <View style={styles.refreshSlot}>
+              <View style={styles.chip}>
+                <ThemedActivityIndicator />
+              </View>
+            </View>
+          ) : null}
           {/* Always mounted; the interpolated opacity (and pointerEvents
               "none") keeps it invisible and inert while the hero is
               expanded, with no UI↔JS mount round-trips during scroll. */}
@@ -299,6 +312,7 @@ const styles = StyleSheet.create(theme => ({
   contentCardNoHero: {
     marginTop: 0,
   },
+
   bar: {
     position: 'absolute',
     top: 0,
@@ -329,6 +343,9 @@ const styles = StyleSheet.create(theme => ({
   actionsRow: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
+  },
+  refreshSlot: {
+    marginLeft: theme.spacing.sm,
   },
   chip: {
     width: BUTTON_SIZE,
