@@ -245,16 +245,6 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
               accessibilityLabel: t('labels.goBack'),
             }}
           />
-          {/* iOS draws a pull's own spinner at the scroll view's top edge,
-              which an edge-to-edge hero puts under the status bar; the bar
-              stays in view through the whole pull. */}
-          {hasHero && refreshing ? (
-            <View style={styles.refreshSlot}>
-              <View style={styles.chip}>
-                <ThemedActivityIndicator />
-              </View>
-            </View>
-          ) : null}
           {/* Always mounted; the interpolated opacity (and pointerEvents
               "none") keeps it invisible and inert while the hero is
               expanded, with no UI↔JS mount round-trips during scroll. */}
@@ -282,6 +272,20 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
           </View>
         </View>
       </View>
+
+      {/* iOS draws a pull's own spinner at the scroll view's top edge, which an
+          edge-to-edge hero puts under the status bar; this one sits centred
+          just below the chips, in view through the whole pull. */}
+      {hasHero && refreshing ? (
+        <View
+          pointerEvents="none"
+          style={[styles.refreshRow, { top: insets.top + HEADER_BAND_HEIGHT }]}
+        >
+          <View style={styles.chip}>
+            <ThemedActivityIndicator />
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -344,8 +348,12 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     gap: theme.spacing.sm,
   },
-  refreshSlot: {
-    marginLeft: theme.spacing.sm,
+  refreshRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: theme.zIndex.sticky,
   },
   chip: {
     width: BUTTON_SIZE,
