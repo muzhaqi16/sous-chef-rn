@@ -27,19 +27,18 @@ const isProfileVisibility = (value: string): value is ProfileVisibility =>
 
 export const PersonalInformationScreen: React.FC = () => {
   const { t } = useTranslation();
-  const { profile, hasLoadedProfile, loading, error, refetch } =
-    useProfileData();
+  const { profile, loading, error, refetch } = useProfileData();
   const user = useUser();
   // A refused write reverts and is alerted inside the hook.
   const { updateProfile } = useUpdateProfile(profile);
   const [refreshing, setRefreshing] = useState(false);
 
-  // An account with no profile yet gets the empty form: `updateProfile`
-  // creates the row on the first save.
+  // Every write needs the profile's id, so a screen without one would show
+  // blank fields whose edits go nowhere.
   const dataState = useDataState({
     loading,
     error,
-    hasResult: hasLoadedProfile,
+    hasResult: profile !== null,
     isEmpty: false,
   });
 
