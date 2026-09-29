@@ -17,6 +17,18 @@ Crashlytics is the only record of one outside a device's logcat.
   (`com.google.firebase.crashlytics`) applies under the same condition as
   google-services — `android/app/google-services.json` present — and uploads the
   R8 mapping for minified builds.
+- **Native frames need symbols.** `release` and `staging` enable
+  `nativeSymbolUploadEnabled`, but the upload is its own task:
+  `build-android.yml` runs `uploadCrashlyticsSymbolFile<Variant>` in the build's
+  gradle invocation. A build without it shows every native frame as
+  "Missing BuildId". Symbols are matched by build ID, so only the build that
+  produced a library can supply them.
+- **Symbolicating a crash with no uploaded symbols.** Unzip `base/lib/*/` from
+  that build's AAB and find the ABI whose `llvm-readelf -n` build ID matches the
+  trace (an emulator crash matches x86_64, not arm64). Then run
+  `llvm-symbolizer --obj=<lib> <pc>`. The AAB's libs are stripped, so only
+  exported symbols resolve. A frame that lands in a vtable or typeinfo is
+  stack-scan noise.
 - **Native crashes only.** No JS module import exists yet, so unhandled JS
   exceptions still go to Telemetry/Loki, not Crashlytics.
 - Crashlytics must be enabled once in the Firebase console for the project before
