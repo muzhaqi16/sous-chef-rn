@@ -3,14 +3,17 @@ import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import type { UpdateProfileInput } from '#/graphql/generated/schemaTypes';
 import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { adoptCreatedProfile } from '#features/profile/cache/adoptCreatedProfile';
+import {
+  adoptCreatedProfile,
+  writeLocalProfile,
+} from '#features/profile/cache/adoptCreatedProfile';
 import { useTranslation } from '#/i18n';
 
 /**
  * Write profile fields locally, then send them. A failure restores the
  * snapshot and is alerted; a queued (null) result keeps the write, so it
- * survives offline. With no profile yet there is nothing to write locally:
- * `updateProfile` upserts, and the row it creates is linked to `me`.
+ * survives offline. With no profile yet the write lands on a local row:
+ * `updateProfile` upserts, and the row it creates replaces that one.
  */
 export function useUpdateProfile<T extends { id: string }>(
   profile: T | null | undefined,
@@ -20,15 +23,15 @@ export function useUpdateProfile<T extends { id: string }>(
   const [updateProfileMutation] = useMutation(UpdateUserProfileDocument);
 
   const updateProfile = async (input: UpdateProfileInput): Promise<void> => {
-    const { revert } = optimisticFieldUpdate(
-      client.cache,
-      profile
-        ? client.cache.identify({ __typename: 'UserProfile', id: profile.id })
-        : undefined,
-      profile,
-      input,
-      'Update Profile',
-    );
+    const { revert } = profile
+      ? optimisticFieldUpdate(
+          client.cache,
+          client.cache.identify({ __typename: 'UserProfile', id: profile.id }),
+          profile,
+          input,
+          'Update Profile',
+        )
+      : writeLocalProfile(client.cache, input);
 
     const settled = await settleMutation(
       () =>

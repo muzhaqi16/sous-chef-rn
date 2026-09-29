@@ -1,6 +1,7 @@
 'use no memo';
 
 import { act } from '@testing-library/react-native';
+import { gql } from '@apollo/client';
 import {
   recordMock,
   renderHookWithApollo,
@@ -10,7 +11,8 @@ import {
   GetUserProfileDocument,
   UpdateUserProfileDocument,
 } from '#operations/auth/user.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, ProfileVisibility } from '#/graphql/generated/schemaTypes';
+import { adoptCreatedProfile } from '#features/profile/cache/adoptCreatedProfile';
 import { useUpdateProfile } from '../useUpdateProfile';
 
 jest.mock('#/services/alertService', () => ({
@@ -44,6 +46,18 @@ const cacheWithoutProfile = () => {
   return cache;
 };
 
+const PLACEHOLDER = 'UserProfile:user-1:profile';
+
+const readProfile = (cache: ReturnType<typeof makeCache>) =>
+  cache.readQuery({ query: GetUserProfileDocument })?.me?.profile;
+
+// What `queueLink` resolves a queued write with: the payload field null.
+const queuedWrite = () =>
+  recordMock(UpdateUserProfileDocument, {
+    data: { updateProfile: null },
+    partial: true,
+  });
+
 describe('useUpdateProfile', () => {
   describe('for an account with no profile yet', () => {
     it('sends the write, since updateProfile upserts the row', async () => {
@@ -70,10 +84,70 @@ describe('useUpdateProfile', () => {
 
       await act(() => result.current.updateProfile({ firstName: 'Ada' }));
 
-      const profile = cache.readQuery({ query: GetUserProfileDocument })?.me
-        ?.profile;
+      const profile = readProfile(cache);
       expect(profile?.id).toBe('profile-new');
       expect(profile?.firstName).toBe('Ada');
+      expect(cache.extract()[PLACEHOLDER]).toBeUndefined();
+    });
+
+    // Offline there is no created row yet; without a local one the field kept
+    // its empty value and the save looked lost until the queue replayed.
+    it('shows a queued first save at once, on a local row', async () => {
+      const cache = cacheWithoutProfile();
+      const { result } = renderHookWithApollo(() => useUpdateProfile(null), {
+        operationMocks: [queuedWrite().mock],
+        cache,
+      });
+
+      await act(() => result.current.updateProfile({ firstName: 'Ada' }));
+
+      expect(readProfile(cache)).toMatchObject({
+        firstName: 'Ada',
+        lastName: null,
+        profileVisibility: ProfileVisibility.Private,
+        showEmail: false,
+      });
+    });
+
+    it('moves me onto the created row when the queued save replays', async () => {
+      const cache = cacheWithoutProfile();
+      const { result } = renderHookWithApollo(() => useUpdateProfile(null), {
+        operationMocks: [queuedWrite().mock],
+        cache,
+      });
+      await act(() => result.current.updateProfile({ firstName: 'Ada' }));
+
+      // The replay normalizes the created row; its reconciler then links it.
+      const created = { ...readProfile(cache), id: 'profile-new' };
+      cache.writeFragment({
+        id: 'UserProfile:profile-new',
+        fragment: gql`
+          fragment TestCreatedProfile on UserProfile {
+            id
+            firstName
+            lastName
+            displayName
+            bio
+            avatar
+            phone
+            dateOfBirth
+            gender
+            profileVisibility
+            showEmail
+            showPhone
+          }
+        `,
+        data: created,
+      });
+      adoptCreatedProfile(cache, {
+        updateProfile: {
+          __typename: 'UpdateProfilePayload',
+          userProfile: { __typename: 'UserProfile', id: 'profile-new' },
+        },
+      });
+
+      expect(readProfile(cache)?.id).toBe('profile-new');
+      expect(cache.extract()[PLACEHOLDER]).toBeUndefined();
     });
 
     it('links nothing when the server refuses the write', async () => {
@@ -95,9 +169,8 @@ describe('useUpdateProfile', () => {
 
       await act(() => result.current.updateProfile({ firstName: '' }));
 
-      expect(
-        cache.readQuery({ query: GetUserProfileDocument })?.me?.profile,
-      ).toBeNull();
+      expect(readProfile(cache)).toBeNull();
+      expect(cache.extract()[PLACEHOLDER]).toBeUndefined();
     });
   });
 });
