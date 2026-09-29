@@ -171,6 +171,8 @@ mutation OpenCatalogRecipe($input: UpsertExternalRecipeInput!) {
     ... on UpsertExternalRecipePayload {
       recipe {
         id
+        # Read by the search rows' saved badge, which the fragments leave out.
+        isSaved
         ...useRecipeData_recipe
         ...RecipeForm_recipe
       }
