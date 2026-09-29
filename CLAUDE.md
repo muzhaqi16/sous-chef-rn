@@ -213,7 +213,8 @@ screen, `FormScreen`, `DetailTemplate`, …) and never assembles its own header,
 back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 `headerGeometry.test.tsx`). No gate holds these:
 
-- **A sheet is `Sheet`; a full-screen form is `FormScreen`.**
+- **A sheet is `Sheet`; a centred dialog is `Dialog`; a full-screen form is
+  `FormScreen`.**
 - **A list row is `commonStyles.rowWrapper` + `rowSurface` + `rowContent`**, the
   `theme.layout.row*` steps, and `rowType` for its text.
 - **Radius and z-index are `theme.*` tokens; a duration, spring or curve is
@@ -230,6 +231,9 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 - **A sheet's shell is `Sheet`** (`view | form | action | list`); `form` supplies
   the keyboard offset and input context. A sheet whose scrollable fills it is
   `list`, never `view`.
+- **A `Dialog` stays mounted and is driven by `visible`**: unmounting it skips
+  the fade-out and can orphan its scrim on Android. Content goes in
+  `DialogBody`, actions in `DialogFooter`.
 - **A row thumbnail carries no margin** (`rowContent`'s `gap` spaces it). **A
   skeleton row uses the same primitives; its container adds NO gap**, and owns
   the gutter only when it is a standalone sibling list.
@@ -283,8 +287,6 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
   real-finger A/B measures it. Verified: `#rngh-ends-the-nested-scroll-its-scrollview-opens`.
 
 ### Bottom sheets
-
-Design: `docs/backdrop-lifecycle-design.md`.
 
 - **Drive a sheet with `visible` + `onDismiss`**; never inline `BottomSheet`,
   which conflicts with the global backdrop.
