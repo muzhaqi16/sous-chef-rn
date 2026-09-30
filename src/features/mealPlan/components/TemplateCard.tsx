@@ -6,6 +6,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMappingHelper } from '@shopify/flash-list';
 import { useFragment } from '@apollo/client/react';
+import type { FragmentType } from '@apollo/client/masking';
 import { Icon } from '#utils/iconUtils';
 import {
   MealTemplateDisplayFragmentDoc,
@@ -14,7 +15,7 @@ import {
 import { Text } from '#components/atoms/Text';
 
 interface TemplateCardProps {
-  template: MealTemplateDisplayFragment;
+  template: FragmentType<typeof MealTemplateDisplayFragmentDoc>;
   onPress: (template: MealTemplateDisplayFragment) => void;
 }
 
@@ -23,20 +24,15 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
   onPress,
 }) => {
   const { t } = useTranslation();
-  // Per-entity cache subscription: re-renders only when this template's
-  // MealTemplateDisplay fields change. Falls back to the source prop on cache
-  // miss (e.g., entity evicted, or a test that doesn't seed the cache) so we
-  // never blank out a list item.
+  const { getMappingKey } = useMappingHelper();
   const fragmentResult = useFragment({
     fragment: MealTemplateDisplayFragmentDoc,
     fragmentName: 'MealTemplateDisplay',
     from: templateSource,
   });
-  const template = fragmentResult.complete
-    ? fragmentResult.data
-    : templateSource;
+  if (!fragmentResult.complete) return null;
+  const template = fragmentResult.data;
 
-  const { getMappingKey } = useMappingHelper();
   return (
     <AppPressable onPress={() => onPress(template)} style={styles.card}>
       <View style={styles.header}>

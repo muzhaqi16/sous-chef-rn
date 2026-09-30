@@ -32,7 +32,9 @@ interface ShoppingListSettingsUpdate {
 
 export function useUpdateShoppingList(fallbackErrorMessage: string) {
   const client = useApolloClient();
-  const [mutate] = useMutation(UpdateShoppingListDocument);
+  const [mutate] = useMutation(UpdateShoppingListDocument, {
+    context: { localFirst: true },
+  });
 
   const updateShoppingList = async (
     id: string,
@@ -104,7 +106,6 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
       () =>
         mutate({
           variables: { input: { id, ...updates, version: snapshot.version } },
-          context: { localFirst: true },
         }),
       {
         document: UpdateShoppingListDocument,

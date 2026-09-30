@@ -1,13 +1,7 @@
 import { useState } from 'react';
 import { errorService } from '#/services/errorService';
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import {
-  AddRecipeToFavoritesDocument,
-  MySavedRecipesDocument,
-  SavedRecipeFoldersDocument,
-  type MySavedRecipesQuery,
-  type SavedRecipeFoldersQuery,
-} from '#features/recipes/graphql/recipe.generated';
+import { AddRecipeToFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
 import type { MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { firstNonBlank } from '#/utils/firstNonBlank';
@@ -15,7 +9,7 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import {
-  adoptServerFavoriteId,
+  linkSavedFavorite,
   writeOptimisticFavorite,
   type SaveToFavoritesOptions,
 } from '#features/recipes/cache/favorites';
@@ -51,67 +45,20 @@ export function useRecipeFavoriteState({
   const [saving, setSaving] = useState(false);
 
   const [favoriteRecipe] = useMutation(AddRecipeToFavoritesDocument, {
+    context: { localFirst: true },
     update: (cache, { data }, { variables }) => {
       const payload = appliedPayload(data);
       if (!payload) return;
-
-      const savedRecipe = payload.savedRecipe;
-
-      cache.updateQuery<MySavedRecipesQuery>(
-        { query: MySavedRecipesDocument },
-        existing => {
-          if (!existing?.me) return existing;
-          const exists = existing.me.savedRecipesConnection.edges.some(
-            edge => edge.node.id === savedRecipe.id,
-          );
-          if (exists) return existing;
-          return {
-            ...existing,
-            me: {
-              ...existing.me,
-              savedRecipesConnection: {
-                ...existing.me.savedRecipesConnection,
-                edges: [
-                  ...existing.me.savedRecipesConnection.edges,
-                  {
-                    __typename: 'SavedRecipeEdge',
-                    cursor: savedRecipe.id,
-                    node: savedRecipe,
-                  },
-                ],
-                totalCount:
-                  (existing.me.savedRecipesConnection.totalCount ?? 0) + 1,
-              },
-            },
-          };
+      const { savedRecipe } = payload;
+      linkSavedFavorite(
+        cache,
+        {
+          id: savedRecipe.id,
+          recipeId: savedRecipe.recipeId,
+          folder: savedRecipe.folder,
         },
+        variables?.input.id,
       );
-
-      const folder = savedRecipe.folder;
-      if (folder) {
-        cache.updateQuery<SavedRecipeFoldersQuery>(
-          { query: SavedRecipeFoldersDocument },
-          existing => {
-            if (!existing || existing.savedRecipeFolders.includes(folder)) {
-              return existing;
-            }
-            return {
-              ...existing,
-              savedRecipeFolders: [...existing.savedRecipeFolders, folder],
-            };
-          },
-        );
-      }
-
-      const clientId = variables?.input.id;
-      if (clientId && savedRecipe.id !== clientId) {
-        adoptServerFavoriteId(
-          cache,
-          clientId,
-          savedRecipe.id,
-          savedRecipe.recipeId,
-        );
-      }
     },
   });
 
@@ -143,7 +90,6 @@ export function useRecipeFavoriteState({
               notes: saveOptions.notes,
             },
           },
-          context: { localFirst: true },
         }),
       {
         document: AddRecipeToFavoritesDocument,

@@ -25,8 +25,10 @@ export function useBrandAutocomplete(
   options: UseBrandAutocompleteOptions = {},
 ) {
   const { suggestedBrands = [] } = options;
-  const [searchBrands, { data: brandsData, loading }] =
-    useLazyQuery(SearchBrandsDocument);
+  const [searchBrands, { data: brandsData, loading }] = useLazyQuery(
+    SearchBrandsDocument,
+    { refetchOn: false },
+  );
 
   // Caller-supplied suggestions plus the warmed reference cache
   // (useDataPreloading), deduped by id, give offline-capable local fallback.

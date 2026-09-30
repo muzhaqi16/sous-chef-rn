@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { useQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import {
   GetShoppingListDetailsDocument,
   type GetShoppingListDetailsQuery,
@@ -24,15 +23,20 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
 
   // Client defaults apply: cache-and-network with errorPolicy 'all', so cached
   // data still renders when the network leg fails.
-  const { data, previousData, loading, error, refetch } = useQuery(
+  const {
+    data: result,
+    variables,
+    previousData,
+    loading,
+    error,
+    refetch,
+  } = useQuery(
     GetShoppingListDetailsDocument,
-    {
-      variables: {
-        id: listId ?? '',
-      },
-      skip: !hasValidListId,
-    },
+    listId && !isLoggedOut ? { variables: { id: listId } } : skipToken,
   );
+  // `skipToken` keeps the last run's variables AND data, so a result for a
+  // previous list is dropped.
+  const data = variables.id === listId ? result : undefined;
 
   useApolloErrorLogger(GetShoppingListDetailsDocument, error);
 
@@ -48,27 +52,18 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
     }
   };
 
-  // Adjusting state during render (never a ref, never an effect): on a list
-  // switch `previousData` belongs to the OLD list and must not be fallen back to.
-  const [previousListId, setPreviousListId] = useState<
-    string | null | undefined
-  >(listId);
-  const listIdChanged = previousListId !== listId;
-  if (listIdChanged) {
-    setPreviousListId(listId);
-  }
-
-  const shoppingList: ShoppingListDetail | null = listIdChanged
-    ? data?.shoppingList ?? null
-    : data?.shoppingList ?? previousData?.shoppingList ?? null;
+  // `previousData` is not variable-scoped: after a list switch it holds the OLD
+  // list, so it is a fallback only while it is this list's.
+  const previousList = previousData?.shoppingList;
+  const shoppingList: ShoppingListDetail | null =
+    data?.shoppingList ??
+    (previousList && previousList.id === listId ? previousList : null);
 
   // The server returned an explicit null for this list — it was deleted/unshared
   // (a missing by-id record is null data, not a NOT_FOUND error). Distinct from
-  // an access-revoked read, which still surfaces as a FORBIDDEN `error`.
-  // Gated on !loading/!listIdChanged so a transition's stale null can't flag a
-  // freshly selected list as missing before its own fetch resolves.
-  const notFound =
-    !listIdChanged && !loading && !error && data?.shoppingList === null;
+  // an access-revoked read, which still surfaces as a FORBIDDEN `error`. `data`
+  // always answers the current `listId` (a switch re-reads it during render).
+  const notFound = !loading && !error && data?.shoppingList === null;
 
   return {
     shoppingList,

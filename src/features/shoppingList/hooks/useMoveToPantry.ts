@@ -1,20 +1,18 @@
-import { gql, type ApolloCache } from '@apollo/client';
+import type { ApolloCache } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { UseMoveToPantry_WasPurchasedFragmentDoc } from './useMoveToPantry.generated';
 import type { StorageState } from '#/graphql/generated/schemaTypes';
 import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { Telemetry } from '#/services/telemetry';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { errorService } from '#/services/errorService';
-import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
-import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import {
   addToPantryItemsCache,
   adjustPantryItemCount,
   removeFromPantryItemsCache,
-  evictPantryItemDetailStub,
 } from '#features/pantry/cache/items';
 import type { ListCounterChange } from '#features/shoppingList/cache/connections';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -28,6 +26,11 @@ import {
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useTranslation } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { todayKey } from '#/utils/dateUtils';
+import {
+  evictLocalPantryItemSeeds,
+  writeLocalPantryItem,
+} from '#features/pantry/cache/writeLocalPantryItem';
 
 export interface MoveToPantryInput {
   pantryId: string;
@@ -48,17 +51,6 @@ interface UseMoveToPantryOptions {
   onSuccess?: () => void;
 }
 
-/** Minimal read of the moved item's purchase status, to pick the right
- *  filtered connection variant to remove it from. */
-const MoveToPantryItemPurchaseFragment = gql`
-  fragment _MoveToPantryItemPurchase on ShoppingListItem {
-    id
-    purchaseInfo {
-      isPurchased
-    }
-  }
-`;
-
 /**
  * Which filtered variant of the list's connection the row sits in. Both the
  * eager removal and the mutation's `update` have to agree on this, or the
@@ -71,12 +63,10 @@ function readWasPurchased(cache: ApolloCache, itemId: string): boolean {
   });
   if (!itemCacheId) return false;
   return (
-    cache.readFragment<{
-      purchaseInfo?: { isPurchased?: boolean } | null;
-    }>({
+    cache.readFragment({
       id: itemCacheId,
-      fragment: MoveToPantryItemPurchaseFragment,
-    })?.purchaseInfo?.isPurchased ?? false
+      fragment: UseMoveToPantry_WasPurchasedFragmentDoc,
+    })?.purchaseInfo.isPurchased ?? false
   );
 }
 
@@ -150,6 +140,7 @@ export function useMoveToPantry({
   const [moveShoppingItemToPantry] = useMutation(
     MoveShoppingItemToPantryDocument,
     {
+      context: { localFirst: true },
       // Read the move target off the mutation's variables (never a shared ref)
       // so overlapping moves can't corrupt the wrong item; purchase status is
       // read from cache to pick the right filtered variant to remove from.
@@ -196,20 +187,20 @@ export function useMoveToPantry({
 
     // Built before the try: `?.`/`??` are value blocks, and the React Compiler
     // bails out of the whole hook when one appears inside a try body.
-    const optimisticPantryItem = buildOptimisticPantryItem(
-      pantryItemId,
-      {
-        pantryId: input.pantryId,
-        itemName: item.itemName ?? '',
-        quantity: input.actualQuantity,
-        itemId: item.item?.id,
-        // The API tracks the stack in the stated unit, else the line's own.
-        unitId: input.actualUnitId ?? item.unit?.id,
-        storageState: input.storageState,
-        expiresOn: input.expiresOn,
-      },
-      client.cache,
-    );
+    // `actualPrice` is per unit, so the row's `costPerUnit x quantity`
+    // reproduces what the server will compute.
+    const localRow = {
+      pantryId: input.pantryId,
+      itemName: item.itemName ?? '',
+      quantity: input.actualQuantity,
+      itemId: item.item?.id,
+      // The API tracks the stack in the stated unit, else the line's own.
+      unitId: input.actualUnitId ?? item.unit?.id,
+      storageState: input.storageState,
+      expiresOn: input.expiresOn,
+      acquisitionMethod: AcquisitionMethod.ShoppingList,
+      costPerUnit: input.actualPrice ?? null,
+    };
 
     // BOTH sides are written eagerly: offline neither the mutation's `update` nor
     // the replay runs one (the queue completes with a null result, and
@@ -222,25 +213,17 @@ export function useMoveToPantry({
     // bails out of the whole hook when one appears inside a try body.
     const unlinkFromListId = input.removeFromList ? currentListId : undefined;
     const keepOnListId = input.removeFromList ? undefined : currentListId;
-    // Same reason. `actualPrice` is per unit, so the stub's own
-    // `costPerUnit x quantity` reproduces what the server will compute.
-    const detailStubFields = {
-      itemId: item.item?.id,
-      itemName: item.itemName ?? '',
-      acquisitionMethod: AcquisitionMethod.ShoppingList,
-      costPerUnit: input.actualPrice ?? null,
-      quantity: input.actualQuantity,
-    };
     let counterChange: ListCounterChange | undefined;
     let keptStamp: KeptOnListStamp | undefined;
     try {
       // A detail read on a client-minted id 404s and renders the deleted
       // state; `useIsCreateUnconfirmed` skips it until the server confirms.
       unconfirmedCreates.mark(pantryItemId);
-      addToPantryItemsCache(client.cache, input.pantryId, optimisticPantryItem);
-      // Detail-shape the row so the moved item's detail screen renders its
-      // costs from cache — offline this local write is the only source.
-      writePantryItemDetailStub(client.cache, pantryItemId, detailStubFields);
+      writeLocalPantryItem(client.cache, pantryItemId, localRow);
+      addToPantryItemsCache(client.cache, input.pantryId, {
+        __typename: 'PantryItem',
+        id: pantryItemId,
+      });
       // The count travels with the row: offline the mutation's `update` never
       // runs, and `usePantryScreen` branches on this value to pick server vs
       // client sorting, so a stale one selects the wrong mode too.
@@ -277,7 +260,7 @@ export function useMoveToPantry({
           evictItem: true,
         });
         adjustPantryItemCount(client.cache, input.pantryId, -1);
-        evictPantryItemDetailStub(client.cache, pantryItemId);
+        evictLocalPantryItemSeeds(client.cache, pantryItemId);
         let exact = true;
         if (input.removeFromList) {
           exact = restoreItemToShoppingListAfterMoveToPantry(
@@ -313,6 +296,7 @@ export function useMoveToPantry({
       () =>
         moveShoppingItemToPantry({
           variables: {
+            today: todayKey(),
             input: {
               shoppingListItemId: item.id,
               pantryId: input.pantryId,
@@ -328,7 +312,6 @@ export function useMoveToPantry({
               packageSize: input.packageSize,
             },
           },
-          context: { localFirst: true },
         }),
       {
         document: MoveShoppingItemToPantryDocument,
@@ -340,7 +323,8 @@ export function useMoveToPantry({
 
     // The minted id is honoured only on the CREATE branch: a restock returns the
     // EXISTING row's id, which makes the locally written entity a ghost. Evict it
-    // so the pantry does not show the item twice; `update` adds the server's row.
+    // so the pantry does not show the item twice; `update` adds the server's row,
+    // and the response's pantry already states the count.
     const serverId = appliedPayload(settled.data)?.pantryItem.id;
     if (serverId && serverId !== pantryItemId) {
       try {
@@ -348,9 +332,8 @@ export function useMoveToPantry({
         removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId, {
           evictItem: true,
         });
-        adjustPantryItemCount(client.cache, input.pantryId, -1);
-        // The stub's writes survive evicting the row, and persist.
-        evictPantryItemDetailStub(client.cache, pantryItemId);
+        // What the local write put beside the row survives evicting it.
+        evictLocalPantryItemSeeds(client.cache, pantryItemId);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Evict superseded optimistic pantry row',

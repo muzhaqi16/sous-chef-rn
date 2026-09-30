@@ -4,6 +4,7 @@
  * offline shows immediately and replays parent-before-children.
  */
 
+import type { ApolloCache } from '@apollo/client';
 import { toastService } from '#/services/toastService';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -24,7 +25,10 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
     useCreateShoppingList(fallbackErrorMessage);
   const [addItems, { loading: adding }] = useMutation(
     AddItemToShoppingListDocument,
-    { update: buildAddItemsReconcileUpdate({}) },
+    {
+      context: { localFirst: true },
+      update: buildAddItemsReconcileUpdate({}),
+    },
   );
 
   /**
@@ -49,9 +53,14 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
     }
     const listId = created.shoppingList.id;
 
-    for (const line of derived.items) {
-      writeLineToCache(listId, line.id, derived);
-    }
+    // One batch: watchers re-read once for the whole copy, not once per line.
+    client.cache.batch({
+      update: cache => {
+        for (const line of derived.items) {
+          writeLineToCache(cache, listId, line.id, derived);
+        }
+      },
+    });
 
     const failure = await addItemsInSlices(
       client.cache,
@@ -60,7 +69,6 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
       slice =>
         addItems({
           variables: { input: { shoppingListId: listId, items: slice } },
-          context: { localFirst: true },
         }),
       {
         document: AddItemToShoppingListDocument,
@@ -73,6 +81,7 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
   };
 
   function writeLineToCache(
+    cache: ApolloCache,
     listId: string,
     lineId: string | null | undefined,
     derived: DerivedList,
@@ -93,7 +102,7 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
       unitId: display.unitId,
     });
     try {
-      addOptimisticShoppingListItem(client.cache, listId, row);
+      addOptimisticShoppingListItem(cache, listId, row);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Copy shopping list (optimistic)',

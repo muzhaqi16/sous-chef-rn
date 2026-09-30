@@ -20,6 +20,7 @@ import {
   PreviewPantryItemUnitChangeDocument,
   type PreviewPantryItemUnitChangeQuery,
 } from './usePantryUnitChange.generated';
+import { todayKey } from '#/utils/dateUtils';
 
 export type UnitChangePreview =
   PreviewPantryItemUnitChangeQuery['previewPantryItemUnitChange'];
@@ -72,7 +73,8 @@ export function usePantryUnitChange() {
     request: UnitChangeRequest & { version: number },
   ): Promise<ChangeOutcome> => {
     const settled = await settleMutation(
-      () => changeMutation({ variables: { input: request } }),
+      () =>
+        changeMutation({ variables: { input: request, today: todayKey() } }),
       {
         document: ChangePantryItemUnitDocument,
         fallback: t('unitChange.failed'),

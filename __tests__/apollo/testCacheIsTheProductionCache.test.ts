@@ -102,9 +102,8 @@ describe('the default test cache is the production cache', () => {
     // Key PRESENCE, not `?? null`. A bare cache has no merge function, so the
     // second write REPLACES the record and `movedToPantryAt` is simply gone —
     // which `?? null` reports as null and cannot tell from the policy having
-    // cleared it. That coercion is the same one that made a partial read look
-    // whole in `writePantryItemDetailStub`; it makes a guard vacuous just as
-    // easily as a writer.
+    // cleared it. That coercion makes a partial read look whole, and a guard
+    // vacuous just as easily as a writer.
     expect('movedToPantryAt' in (stored.purchaseInfo ?? {})).toBe(true);
     expect(stored.purchaseInfo?.movedToPantryAt).toBeNull();
   });

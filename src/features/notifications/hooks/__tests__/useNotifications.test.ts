@@ -13,6 +13,7 @@ import {
 import {
   NotificationEventsDocument,
   GetUnreadNotificationsDocument,
+  NotificationSummaryDocument,
 } from '#features/notifications/graphql/notifications.generated';
 import {
   NotificationType,
@@ -213,12 +214,26 @@ function buildTransitionEventMock(
   };
 }
 
+// What the server-event re-read answers: the badge after the event.
+const summaryData: MockDataFor<typeof NotificationSummaryDocument> = {
+  notificationSummary: {
+    __typename: 'NotificationSummary',
+    id: 'user-1',
+    unreadCount: 0,
+    hasUrgent: false,
+  },
+};
+
 const unreadFeedData: MockDataFor<typeof GetUnreadNotificationsDocument> = {
+  notificationSummary: {
+    __typename: 'NotificationSummary',
+    id: 'user-1',
+    unreadCount: 0,
+    hasUrgent: false,
+  },
   me: {
     __typename: 'User',
     id: 'user-1',
-    unreadNotificationCount: 0,
-    hasUrgentNotifications: false,
     notificationsConnection: {
       __typename: 'NotificationConnection',
       edges: [],
@@ -236,24 +251,27 @@ beforeEach(() => {
   mockUser = { id: 'user-1' };
 });
 
-// A cache the hook can write through. Seeded with the signed-in user so the
-// badge field exists to be adjusted, and with one notification so the
-// transition tests have a row to move.
+// A cache the hook can write through. Seeded with the badge so there is a
+// count to re-read, and with rows so the transition tests have one to move.
 const seededCache = (
   rows: Array<{ id: string; status: NotificationStatus }> = [],
 ) => {
   const cache = makeCache();
   const data: QueryDataFor<typeof GetUnreadNotificationsDocument> = {
     __typename: 'Query',
-    me: {
-      __typename: 'User',
+    notificationSummary: {
+      __typename: 'NotificationSummary',
       id: 'user-1',
-      unreadNotificationCount: rows.filter(r =>
+      unreadCount: rows.filter(r =>
         [NotificationStatus.Pending, NotificationStatus.Sent].includes(
           r.status,
         ),
       ).length,
-      hasUrgentNotifications: false,
+      hasUrgent: false,
+    },
+    me: {
+      __typename: 'User',
+      id: 'user-1',
       notificationsConnection: {
         __typename: 'NotificationConnection',
         edges: rows.map(r => ({
@@ -290,9 +308,8 @@ const seededCache = (
 };
 
 const badgeCount = (cache: ReturnType<typeof makeCache>): number =>
-  (cache.extract() as Record<string, { unreadNotificationCount?: number }>)[
-    'User:user-1'
-  ]?.unreadNotificationCount ?? -1;
+  cache.readQuery({ query: NotificationSummaryDocument })?.notificationSummary
+    .unreadCount ?? -1;
 
 describe('useNotifications', () => {
   // The hook is now only the write side. Its read side — the feed, the unread
@@ -391,8 +408,7 @@ describe('useNotificationListener', () => {
       cache: seededCache(),
       operationMocks: [
         event,
-        recordMock(GetUnreadNotificationsDocument, { data: unreadFeedData })
-          .mock,
+        recordMock(NotificationSummaryDocument, { data: summaryData }).mock,
       ],
     });
 
@@ -409,8 +425,13 @@ describe('useNotificationListener', () => {
 
   it('a CREATED event lands in the cache and re-reads the count', async () => {
     const cache = seededCache();
-    const { mock, fired } = recordMock(GetUnreadNotificationsDocument, {
-      data: unreadFeedData,
+    const { mock, fired } = recordMock(NotificationSummaryDocument, {
+      data: {
+        notificationSummary: {
+          ...summaryData.notificationSummary,
+          unreadCount: 1,
+        },
+      },
     });
 
     renderHookWithApollo(() => useNotificationListener(), {
@@ -436,6 +457,7 @@ describe('useNotificationListener', () => {
     // `reseedUnreadCount`.
     await waitFor(() => {
       expect(fired.length).toBeGreaterThan(0);
+      expect(badgeCount(cache)).toBe(1);
     });
   });
 
@@ -443,13 +465,13 @@ describe('useNotificationListener', () => {
   // event's `node` into the cache before `onData` runs, so a handler that
   // asked the cache "was this unread?" would always be told "no" and would
   // leave the badge stuck while the row moved.
-  it('READ subtype marks the row read AND re-reads the count', async () => {
+  it('READ subtype marks the row read AND re-reads Query.notificationSummary', async () => {
     const cache = seededCache([
       { id: 'notif-1', status: NotificationStatus.Sent },
     ]);
     expect(badgeCount(cache)).toBe(1);
-    const { mock, fired } = recordMock(GetUnreadNotificationsDocument, {
-      data: unreadFeedData,
+    const { mock, fired } = recordMock(NotificationSummaryDocument, {
+      data: summaryData,
     });
 
     renderHookWithApollo(() => useNotificationListener(), {
@@ -476,8 +498,8 @@ describe('useNotificationListener', () => {
     const cache = seededCache([
       { id: 'notif-2', status: NotificationStatus.Sent },
     ]);
-    const { mock, fired } = recordMock(GetUnreadNotificationsDocument, {
-      data: unreadFeedData,
+    const { mock, fired } = recordMock(NotificationSummaryDocument, {
+      data: summaryData,
     });
 
     renderHookWithApollo(() => useNotificationListener(), {
@@ -515,9 +537,11 @@ describe('useNotificationListener', () => {
     });
 
     // The aggregate event's rows are unknown client-side — the handler must
-    // fall back to a server re-sync instead of guessing at the local ones.
+    // fall back to a server re-sync instead of guessing at the local ones. The
+    // feed query states the badge as well.
     await waitFor(() => {
       expect(fired.length).toBeGreaterThan(0);
+      expect(badgeCount(cache)).toBe(0);
     });
     expect(readNotificationStatus(cache, 'notif-1')).toBe(
       NotificationStatus.Sent,

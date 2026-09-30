@@ -6,6 +6,7 @@ import { logger } from '#/utils/environment';
 import { deletesItsSubject, queuedSubject } from './queuedSubject';
 import { withExpiresOn } from './legacyExpiry';
 import { withRefInputs } from './legacyRefs';
+import { withoutRemovedFields } from './legacySelections';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
@@ -107,7 +108,9 @@ export class QueueStore {
       const parsed = JSON.parse(queueJson) as SerializedQueuedMutation[];
 
       const queue: QueuedMutation[] = parsed.map(item => {
-        const mutation = JSON.parse(item.mutation) as DocumentNode;
+        const mutation = withoutRemovedFields(
+          JSON.parse(item.mutation) as DocumentNode,
+        );
         return {
           ...item,
           mutation,
@@ -450,10 +453,12 @@ export class QueueStore {
   }
 
   /**
-   * Ids the device minted for a create still PENDING — rows the server has
-   * never seen. Narrower than {@link getPendingClientIds}: a pending usage or
-   * update names a row the server owns, and treating it as unconfirmed skips
-   * that row's detail queries and pins it into lists it has left.
+   * Ids the device minted for a create still PENDING or PROCESSING — rows the
+   * server has not confirmed. A replay in flight counts: a first page landing
+   * before its answer would otherwise drop the row. Narrower than
+   * {@link getPendingClientIds}: a pending usage or update names a row the
+   * server owns, and treating it as unconfirmed skips that row's detail
+   * queries and pins it into lists it has left.
    */
   getUnconfirmedCreateIds(): Set<string> {
     if (this.unconfirmedCreateIds) return this.unconfirmedCreateIds;
@@ -461,7 +466,11 @@ export class QueueStore {
     const ids = new Set<string>();
     const userId = this.getCurrentUserId();
     if (userId) {
-      for (const mutation of this.getPendingMutationsForUser(userId)) {
+      const unconfirmed = [
+        ...this.getMutationsForUser(userId, QueueStatus.PENDING),
+        ...this.getMutationsForUser(userId, QueueStatus.PROCESSING),
+      ];
+      for (const mutation of unconfirmed) {
         for (const id of queuedSubject(mutation).mintedIds) ids.add(id);
       }
     }

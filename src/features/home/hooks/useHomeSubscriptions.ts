@@ -6,7 +6,7 @@
  */
 
 import { useSelectedHomeId } from '#store/useAppStore';
-import { gql, type ApolloCache } from '@apollo/client';
+import type { ApolloCache } from '@apollo/client';
 import { useSubscription } from '@apollo/client/react';
 import {
   GetHomeDocument,
@@ -17,6 +17,7 @@ import {
 } from '#operations/home/home.generated';
 import { HomeSubtype } from '#/graphql/generated/schemaTypes';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
 import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
 import {
   CacheStrategy,
@@ -26,6 +27,10 @@ import { logger } from '#/utils/environment';
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { useSubscriptionTransportRecovery } from '#hooks/subscriptions/useSubscriptionTransportRecovery';
 import { useEntitySubscriptionSkip } from '#hooks/subscriptions/useEntitySubscriptionSkip';
+import {
+  HomeInvitesForEventDocument,
+  UseHomeSubscriptions_HomeFragmentDoc,
+} from './useHomeSubscriptions.generated';
 
 type HomeEventsPayload = HomeEventsSubscription['homeEvents'];
 
@@ -35,15 +40,6 @@ const removeInviteFromCache = createRemoveFromParentConnectionUpdater(
   'pendingHomeInvitesConnection',
   'HomeInvite',
 );
-
-const VIEWER_MEMBERSHIP = gql`
-  fragment HomeSubscriptions_home on Home {
-    id
-    myMembership {
-      id
-    }
-  }
-`;
 
 /**
  * Whether a membership event is about the viewer. Unknown when the home list
@@ -58,9 +54,9 @@ function concernsViewer(
   const cacheId = cache.identify({ __typename: 'Home', id: homeId });
   const home =
     cacheId &&
-    cache.readFragment<{ myMembership?: { id: string } | null }>({
+    cache.readFragment({
       id: cacheId,
-      fragment: VIEWER_MEMBERSHIP,
+      fragment: UseHomeSubscriptions_HomeFragmentDoc,
     });
   const viewerMembershipId = home ? home.myMembership?.id : undefined;
   return !viewerMembershipId || viewerMembershipId === membershipId;
@@ -122,13 +118,20 @@ export function useHomeSubscriptions(userId?: string) {
           });
           break;
 
-        // New invite sent → refresh me.pendingHomeInvitesConnection. Adding the
-        // id alone would leave the connection's read incomplete and blank the
-        // list, so refetch rather than write a partial invite.
+        // New invite sent → refresh me.pendingHomeInvitesConnection and the
+        // home's own invite list, which a co-admin's invite otherwise never
+        // reaches. Adding the id alone would leave either read incomplete and
+        // blank the list, so both are read back rather than written partial.
         case HomeSubtype.InviteCreated:
           void client.refetchQueries({
             include: [GetMyPendingInvitesDocument],
           });
+          void fetchEventEntity(
+            client,
+            HomeInvitesForEventDocument,
+            { id: payload.homeId },
+            'HomeInvite',
+          );
           break;
 
         // Invite accepted/declined/revoked → remove from

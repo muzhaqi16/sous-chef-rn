@@ -3,6 +3,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { RecipeDetail } from '../index';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 
 // Mock token scheduler / refreshToken
 jest.mock('#/apollo/links/tokenScheduler');
@@ -1594,20 +1595,25 @@ describe('RecipeDetail', () => {
   });
 
   describe('a catalog recipe the API has not fully fetched', () => {
-    const renderWithDetails = (details: string) => {
+    const renderWithDetails = (details: string, { isSaved = false } = {}) => {
       const { useRecipeDetail } = jest.requireMock<{
         useRecipeDetail: jest.Mock;
       }>('../../../hooks/useRecipeDetail');
       const base = useRecipeDetail.getMockImplementation()?.();
       useRecipeDetail.mockReturnValue({
         ...base,
+        recipeId: details === 'opening' ? null : 'catalog-1',
         error: null,
+        isSaved,
         displayData: {
           details,
           title: 'Spinach Strata',
           image: null,
           ingredients: [],
         },
+        // A catalog recipe has no author.
+        backendRecipe:
+          details === 'opening' ? null : { id: 'catalog-1', createdBy: null },
       });
       return render(<RecipeDetail route={route} />);
     };
@@ -1621,17 +1627,46 @@ describe('RecipeDetail', () => {
     it('says a save will fetch its ingredients and steps', () => {
       const tree = renderWithDetails('pending');
       expect(tree.getByText("Details aren't here yet")).toBeTruthy();
+      expect(
+        tree.getByText(
+          'Save it to have its ingredients and steps fetched, or pull down to try again.',
+        ),
+      ).toBeTruthy();
     });
 
-    it('says when its source no longer has it', () => {
+    it('does not ask to save a recipe already saved', () => {
+      const tree = renderWithDetails('pending', { isSaved: true });
+      expect(
+        tree.getByText(
+          'Its ingredients and steps are on their way. Pull down to check.',
+        ),
+      ).toBeTruthy();
+      expect(tree.queryByText(/^Save it/)).toBeNull();
+    });
+
+    it('says its source could not find it, without calling that final', () => {
       const tree = renderWithDetails('unavailable');
-      expect(tree.getByText('No longer available')).toBeTruthy();
+      expect(tree.getByText('Not available right now')).toBeTruthy();
+    });
+
+    it('offers no fork until its content is fetched', () => {
+      expect(
+        renderWithDetails('pending').queryByTestId(recipesTestIDs.forkButton),
+      ).toBeNull();
+      expect(
+        renderWithDetails('unavailable').queryByTestId(
+          recipesTestIDs.forkButton,
+        ),
+      ).toBeNull();
+      expect(
+        renderWithDetails('complete').getByTestId(recipesTestIDs.forkButton),
+      ).toBeTruthy();
     });
 
     it('shows no notice once it is complete', () => {
       const tree = renderWithDetails('complete');
       expect(tree.queryByText("Details aren't here yet")).toBeNull();
-      expect(tree.queryByText('No longer available')).toBeNull();
+      expect(tree.queryByText('Not available right now')).toBeNull();
     });
   });
 });

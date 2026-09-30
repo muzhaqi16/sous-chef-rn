@@ -6,34 +6,28 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { gql } from '@apollo/client';
 import { WastePantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
+import { UseWastePantryItemBatch_StateFragmentDoc } from './useWastePantryItemBatch.generated';
 import { BatchStatus, type WasteReason } from '#/graphql/generated/schemaTypes';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useTranslation } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
+import { todayKey } from '#/utils/dateUtils';
 
 interface UseWastePantryItemBatchOptions {
   onSuccess?: () => void;
 }
-
-const BATCH_STATUS_FRAGMENT = gql`
-  fragment useWastePantryItemBatch_state on PantryItemBatch {
-    id
-    status
-    quantity
-    depletedAt
-  }
-`;
 
 export function useWastePantryItemBatch({
   onSuccess,
 }: UseWastePantryItemBatchOptions = {}) {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [wasteMutation] = useMutation(WastePantryItemBatchDocument);
+  const [wasteMutation] = useMutation(WastePantryItemBatchDocument, {
+    context: { localFirst: true },
+  });
 
   const wasteBatch = async (
     batchId: string,
@@ -46,13 +40,9 @@ export function useWastePantryItemBatch({
       __typename: 'PantryItemBatch',
       id: batchId,
     });
-    const snapshot = client.cache.readFragment<{
-      status: BatchStatus;
-      quantity: number | null;
-      depletedAt: string | null;
-    }>({
+    const snapshot = client.cache.readFragment({
       id: batchCacheId,
-      fragment: BATCH_STATUS_FRAGMENT,
+      fragment: UseWastePantryItemBatch_StateFragmentDoc,
       fragmentName: 'useWastePantryItemBatch_state',
     });
 
@@ -107,6 +97,7 @@ export function useWastePantryItemBatch({
       () =>
         wasteMutation({
           variables: {
+            today: todayKey(),
             input: {
               batchId,
               wasteReason,
@@ -116,7 +107,6 @@ export function useWastePantryItemBatch({
               idempotencyKey: generateEntityId(),
             },
           },
-          context: { localFirst: true },
         }),
       {
         document: WastePantryItemBatchDocument,

@@ -7,7 +7,10 @@
  */
 import type { InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
-import { GetNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
+import {
+  GetNotificationsDocument,
+  NotificationSummaryDocument,
+} from '#features/notifications/graphql/notifications.generated';
 import {
   NotificationCategory,
   NotificationStatus,
@@ -61,11 +64,15 @@ const seed = (
 ) => {
   const data: QueryDataFor<typeof GetNotificationsDocument> = {
     __typename: 'Query',
+    notificationSummary: {
+      __typename: 'NotificationSummary',
+      id: USER,
+      unreadCount: unread,
+      hasUrgent: false,
+    },
     me: {
       __typename: 'User',
       id: USER,
-      unreadNotificationCount: unread,
-      hasUrgentNotifications: false,
       notificationsConnection: {
         __typename: 'NotificationConnection',
         edges: rows.map(([id, status]) => ({
@@ -89,9 +96,8 @@ const seed = (
 };
 
 const badge = (cache: InMemoryCache): number =>
-  (cache.extract() as Record<string, { unreadNotificationCount?: number }>)[
-    `User:${USER}`
-  ]?.unreadNotificationCount ?? -1;
+  cache.readQuery({ query: NotificationSummaryDocument })?.notificationSummary
+    .unreadCount ?? -1;
 
 describe('notification cache writes', () => {
   let cache: InMemoryCache;
@@ -102,7 +108,7 @@ describe('notification cache writes', () => {
   it('marks read, moving the row and the badge together', () => {
     seed(cache, [['1', NotificationStatus.Sent]], 1);
 
-    expect(applyNotificationRead(cache, USER, '1')).toBe(true);
+    expect(applyNotificationRead(cache, '1')).toBe(true);
     expect(readNotificationStatus(cache, '1')).toBe(NotificationStatus.Read);
     expect(badge(cache)).toBe(0);
   });
@@ -111,17 +117,17 @@ describe('notification cache writes', () => {
   it('does not double-count a repeated mark-read', () => {
     seed(cache, [['1', NotificationStatus.Sent]], 1);
 
-    applyNotificationRead(cache, USER, '1');
-    expect(applyNotificationRead(cache, USER, '1')).toBe(false);
+    applyNotificationRead(cache, '1');
+    expect(applyNotificationRead(cache, '1')).toBe(false);
     expect(badge(cache)).toBe(0);
   });
 
   it('marks unread, and refuses when it was already unread', () => {
     seed(cache, [['1', NotificationStatus.Read]], 0);
 
-    expect(applyNotificationUnread(cache, USER, '1')).toBe(true);
+    expect(applyNotificationUnread(cache, '1')).toBe(true);
     expect(badge(cache)).toBe(1);
-    expect(applyNotificationUnread(cache, USER, '1')).toBe(false);
+    expect(applyNotificationUnread(cache, '1')).toBe(false);
     expect(badge(cache)).toBe(1);
   });
 
@@ -135,10 +141,10 @@ describe('notification cache writes', () => {
       1,
     );
 
-    applyNotificationRemoved(cache, USER, '2');
+    applyNotificationRemoved(cache, '2');
     expect(badge(cache)).toBe(1);
 
-    applyNotificationRemoved(cache, USER, '1');
+    applyNotificationRemoved(cache, '1');
     expect(badge(cache)).toBe(0);
   });
 
@@ -173,7 +179,7 @@ describe('notification cache writes', () => {
 
     expect(cachedUnreadNotificationIds(cache).sort()).toEqual(['1', '3']);
 
-    const flipped = applyAllNotificationsRead(cache, USER);
+    const flipped = applyAllNotificationsRead(cache);
 
     expect(flipped.sort()).toEqual(['1', '3']);
     expect(readNotificationStatus(cache, '1')).toBe(NotificationStatus.Read);
@@ -183,6 +189,6 @@ describe('notification cache writes', () => {
 
   it('reports an uncached notification as unknown, not as unread', () => {
     expect(readNotificationStatus(cache, 'nope')).toBeUndefined();
-    expect(applyNotificationRead(cache, USER, 'nope')).toBe(false);
+    expect(applyNotificationRead(cache, 'nope')).toBe(false);
   });
 });

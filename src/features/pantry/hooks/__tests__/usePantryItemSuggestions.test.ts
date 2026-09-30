@@ -9,7 +9,7 @@ import {
 } from '#features/pantry/graphql/pantry.generated';
 import { PantrySuggestionSource } from '#/graphql/generated/schemaTypes';
 import { usePantryItemSuggestions } from '../usePantryItemSuggestions';
-import { toDateKey } from '#/utils/dateUtils';
+import { todayKey } from '#/utils/dateUtils';
 
 jest.mock('#utils/imageUtils', () => ({
   resolveImageUrl: (item: { imageUrl?: string | null } | null | undefined) =>
@@ -46,7 +46,7 @@ function makeSuggestion(overrides: Partial<Suggestion> = {}): Suggestion {
   };
 }
 
-const TODAY = toDateKey(new Date());
+const TODAY = todayKey();
 const VARIABLES = { pantryId: 'pantry-1', limit: 20, today: TODAY };
 
 /** The fields every section selects. */

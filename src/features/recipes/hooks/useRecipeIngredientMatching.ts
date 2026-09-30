@@ -70,13 +70,17 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
 
   const [loadMatchesQuery] = useLazyQuery(
     MatchRecipeIngredientsToPantryDocument,
+    // Matches read current pantry stock, so a reopened flow must ask again;
+    // a re-execute otherwise inherits the client's `cache-first`.
     {
       fetchPolicy: 'network-only',
+      nextFetchPolicy: 'network-only',
     },
   );
 
   const [confirmMutation, { loading: confirmLoading }] = useMutation(
     ConfirmRecipeConsumptionDocument,
+    { context: { localFirst: true } },
   );
 
   const loadMatches = async (servings: number) => {
@@ -211,7 +215,6 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
           variables: {
             input: { id: generateEntityId(), recipeId, pantryId, consumptions },
           },
-          context: { localFirst: true },
         }),
       {
         document: ConfirmRecipeConsumptionDocument,

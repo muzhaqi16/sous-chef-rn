@@ -10,6 +10,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
 import { useIsHydrated } from '#store/useAppStore';
 import { client, restorePersistedCache } from '#/apollo/client';
+import { connectResyncSources } from '#/apollo/refetchEvents';
 import { Navigation } from '#navigation/RootNavigator';
 import { SplashScreen } from '#screens/SplashScreen';
 import { ToastProvider } from '#components/molecules/Toast';
@@ -42,6 +43,10 @@ setupGlobalErrorHandler();
 setPushTokenProvider(
   Platform.OS === 'ios' ? iosPushProvider : nativePushProvider,
 );
+
+// Foreground, API-reachable and socket-reconnect triggers for the client's
+// resync (`src/apollo/refetchEvents.ts`).
+connectResyncSources(client);
 
 const App = () => {
   const isHydrated = useIsHydrated();

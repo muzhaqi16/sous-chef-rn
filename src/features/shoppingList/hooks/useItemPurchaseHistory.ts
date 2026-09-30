@@ -24,7 +24,6 @@ export function useItemPurchaseHistory(itemId: string) {
     GetItemPurchaseHistoryDocument,
     {
       variables: { itemId, first: PAGE_SIZE },
-      notifyOnNetworkStatusChange: true,
       // NOT the app-wide `'all'`: a field error inside the non-null
       // `purchasesConnection` nulls `shoppingListItem`, and `'all'` WRITES that
       // null onto `ROOT_QUERY.shoppingListItem({id})` — the field ItemDetail

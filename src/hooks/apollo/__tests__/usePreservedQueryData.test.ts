@@ -6,7 +6,7 @@ import { usePreservedQueryData } from '../usePreservedQueryData';
 describe('usePreservedQueryData', () => {
   it('returns initial value when current data is undefined', () => {
     const { result } = renderHook(() =>
-      usePreservedQueryData(undefined, 'fallback'),
+      usePreservedQueryData(undefined, 'fallback', 'k'),
     );
 
     expect(result.current).toBe('fallback');
@@ -14,7 +14,7 @@ describe('usePreservedQueryData', () => {
 
   it('returns current data when it is defined', () => {
     const { result } = renderHook(() =>
-      usePreservedQueryData('hello', 'fallback'),
+      usePreservedQueryData('hello', 'fallback', 'k'),
     );
 
     expect(result.current).toBe('hello');
@@ -24,7 +24,7 @@ describe('usePreservedQueryData', () => {
     // Start undefined, then get data, then lose it
     const { result, rerender } = renderHook(
       ({ data }: { data: string | undefined }) =>
-        usePreservedQueryData(data, 'initial'),
+        usePreservedQueryData(data, 'initial', 'k'),
       { initialProps: { data: undefined as string | undefined } },
     );
 
@@ -42,7 +42,7 @@ describe('usePreservedQueryData', () => {
   it('updates when new data becomes available after an error', () => {
     const { result, rerender } = renderHook(
       ({ data }: { data: string | undefined }) =>
-        usePreservedQueryData(data, 'initial'),
+        usePreservedQueryData(data, 'initial', 'k'),
       { initialProps: { data: undefined as string | undefined } },
     );
 
@@ -63,7 +63,7 @@ describe('usePreservedQueryData', () => {
     // — a subsequent network error then preserves it instead of wiping.
     const { result, rerender } = renderHook(
       ({ data }: { data: string | undefined }) =>
-        usePreservedQueryData(data, 'initial'),
+        usePreservedQueryData(data, 'initial', 'k'),
       { initialProps: { data: 'same' } },
     );
 
@@ -80,7 +80,7 @@ describe('usePreservedQueryData', () => {
 
     const { result, rerender } = renderHook(
       ({ data }: { data: { count: number } | undefined }) =>
-        usePreservedQueryData(data, { count: 0 }),
+        usePreservedQueryData(data, { count: 0 }, 'k'),
       { initialProps: { data: undefined as { count: number } | undefined } },
     );
 
@@ -94,5 +94,50 @@ describe('usePreservedQueryData', () => {
 
     rerender({ data: obj2 });
     expect(result.current).toBe(obj2);
+  });
+
+  describe('subject key', () => {
+    type Props = { data: string | undefined; subject: string };
+
+    it('keeps the value across a failed refresh of the same key', () => {
+      const { result, rerender } = renderHook(
+        ({ data, subject }: Props) =>
+          usePreservedQueryData(data, 'initial', subject),
+        { initialProps: { data: 'list-a data', subject: 'a' } },
+      );
+
+      rerender({ data: undefined, subject: 'a' });
+
+      expect(result.current).toBe('list-a data');
+    });
+
+    it('never returns a value loaded for a different key', () => {
+      const { result, rerender } = renderHook(
+        ({ data, subject }: Props) =>
+          usePreservedQueryData(data, 'initial', subject),
+        { initialProps: { data: 'list-a data', subject: 'a' } },
+      );
+
+      rerender({ data: undefined, subject: 'b' });
+      expect(result.current).toBe('initial');
+
+      // Nor after returning to a key whose value was superseded.
+      rerender({ data: 'list-b data', subject: 'b' });
+      rerender({ data: undefined, subject: 'a' });
+      expect(result.current).toBe('initial');
+    });
+
+    it('re-serves the first key once switched back before any other value loads', () => {
+      const { result, rerender } = renderHook(
+        ({ data, subject }: Props) =>
+          usePreservedQueryData(data, 'initial', subject),
+        { initialProps: { data: 'list-a data', subject: 'a' } },
+      );
+
+      rerender({ data: undefined, subject: 'b' });
+      rerender({ data: undefined, subject: 'a' });
+
+      expect(result.current).toBe('list-a data');
+    });
   });
 });

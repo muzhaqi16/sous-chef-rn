@@ -1,10 +1,12 @@
 import { makeCache } from '#/apollo/cache';
 import {
-  buildOptimisticHome,
   placeholderMembershipId,
-  writeOptimisticHome,
+  writeLocalHome,
 } from '#features/home/cache/optimisticHome';
-import { Home_HomeDetailFragmentDoc } from '#features/home/cache/home.generated';
+import {
+  Home_MembershipRowFragmentDoc,
+  Home_RowFragmentDoc,
+} from '#features/home/cache/home.generated';
 import { reconcileCreateHomeReplay } from '../replayReconcilers';
 
 /**
@@ -23,13 +25,11 @@ const CREATOR = {
 
 const seedCreatedHome = () => {
   const cache = makeCache();
-  writeOptimisticHome(
+  writeLocalHome(
     cache,
-    buildOptimisticHome(
-      HOME_ID,
-      { name: 'Offline Home', id: HOME_ID },
-      CREATOR,
-    ),
+    HOME_ID,
+    { name: 'Offline Home', id: HOME_ID },
+    CREATOR,
   );
   return cache;
 };
@@ -38,12 +38,12 @@ const readHome = (cache: ReturnType<typeof makeCache>) =>
   cache.readFragment<{
     myMembership: { id: string; role: string; canEditPantry: boolean } | null;
     membersConnection: {
-      edges: Array<{ node: { id: string; userId: string } }>;
+      edges: Array<{ node: { id: string } }>;
     };
   }>({
     id: cache.identify({ __typename: 'Home', id: HOME_ID }),
-    fragment: Home_HomeDetailFragmentDoc,
-    fragmentName: 'home_homeDetail',
+    fragment: Home_RowFragmentDoc,
+    fragmentName: 'home_row',
   });
 
 const replay = (cache: ReturnType<typeof makeCache>, data: unknown) =>
@@ -86,7 +86,13 @@ describe('adopting the server membership on a CreateHome replay', () => {
 
     const edges = readHome(cache)?.membersConnection.edges ?? [];
     expect(edges.map(e => e.node.id)).toEqual(['server-membership-1']);
-    expect(edges[0]?.node.userId).toBe('user-1');
+    expect(
+      cache.readFragment({
+        id: 'Membership:server-membership-1',
+        fragment: Home_MembershipRowFragmentDoc,
+        fragmentName: 'home_membershipRow',
+      })?.userId,
+    ).toBe('user-1');
   });
 
   it('evicts the placeholder, so nothing can read it back', () => {

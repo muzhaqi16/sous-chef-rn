@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NetworkStatus } from '@apollo/client';
 import type { WatchQueryFetchPolicy } from '@apollo/client';
-import { useQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import { logger } from '#/utils/environment';
 import {
   GetPantryDocument,
@@ -82,35 +82,41 @@ export function usePantryQuery(
   const shouldSkip =
     (!hasValidPantryId && !isLatched) || options?.skip === true;
 
-  const { data, loading, error, refetch, fetchMore, networkStatus } = useQuery(
+  const {
+    data: result,
+    variables,
+    loading,
+    error,
+    refetch,
+    fetchMore,
+    networkStatus,
+  } = useQuery(
     GetPantryDocument,
-    {
-      variables: {
-        id: pantryId ?? '',
-        itemsFirst,
-        itemsFilter: itemsFilter ?? undefined,
-        itemsOrderBy: itemsOrderBy ?? undefined,
-        storageLocationsFirst: PAGE_SIZE.COMPACT,
-        today,
-      },
-      skip: shouldSkip,
-      ...(options?.fetchPolicy ? { fetchPolicy: options.fetchPolicy } : {}),
-      // After the initial network fetch, use cache-first for re-renders to avoid
-      // duplicate requests. On variable changes (filter/sort), revert to the
-      // initial policy so the user gets fresh data.
-      nextFetchPolicy(_currentFetchPolicy, context) {
-        if (context.reason === 'variables-changed') {
-          return context.initialFetchPolicy;
-        }
-        return 'cache-first';
-      },
-      errorPolicy: 'ignore', // Return cached data on network errors
-      // Apollo emits a re-render when networkStatus transitions, so the
-      // RefreshControl in PantryMain can observe pull-to-refresh state via
-      // `isRefreshing` below.
-      notifyOnNetworkStatusChange: true,
-    },
+    shouldSkip || !pantryId
+      ? skipToken
+      : {
+          variables: {
+            id: pantryId,
+            itemsFirst,
+            itemsFilter: itemsFilter ?? undefined,
+            itemsOrderBy: itemsOrderBy ?? undefined,
+            storageLocationsFirst: PAGE_SIZE.COMPACT,
+            today,
+          },
+          // A caller's policy holds for the query's life: the client default
+          // `nextFetchPolicy: 'cache-first'` would let a `cache-only` read fetch.
+          ...(options?.fetchPolicy
+            ? {
+                fetchPolicy: options.fetchPolicy,
+                nextFetchPolicy: options.fetchPolicy,
+              }
+            : {}),
+          errorPolicy: 'ignore', // Return cached data on network errors
+        },
   );
+  // `skipToken` keeps the last run's variables AND data: a switch to a pantry
+  // that is not yet queried must not serve the previous pantry's result.
+  const data = variables.id === pantryId ? result : undefined;
 
   // Pull-to-refresh state — derived directly from Apollo's networkStatus.
   const isRefreshing = networkStatus === NetworkStatus.refetch;
@@ -121,9 +127,15 @@ export function usePantryQuery(
   // 'ignore'` a transient failure surfaces `data === undefined` even though the
   // persisted cache holds the items, and extracting first flattens that to `[]`,
   // wiping list, count and pagination state.
-  const items = usePreservedConnection(pantry?.itemsConnection);
+  const itemsKey = JSON.stringify([
+    pantryId ?? null,
+    itemsFilter ?? null,
+    itemsOrderBy ?? null,
+  ]);
+  const items = usePreservedConnection(pantry?.itemsConnection, itemsKey);
   const storageLocations = usePreservedConnection(
     pantry?.storageLocationsConnection,
+    pantryId ?? '',
   );
 
   const pantryItems = items.nodes;
@@ -146,7 +158,11 @@ export function usePantryQuery(
 
   const pantryStorageLocations = storageLocations.nodes;
 
-  const stats = usePreservedQueryData(pantry?.stats ?? undefined, null);
+  const stats = usePreservedQueryData(
+    pantry?.stats ?? undefined,
+    null,
+    pantryId ?? '',
+  );
   const totalCount = items.totalCount ?? 0;
 
   const setIsPantryQueryComplete = useSetIsPantryQueryComplete();
@@ -183,14 +199,15 @@ export function usePantryQuery(
       // `errorPolicy: 'ignore'` leaves `data === undefined` on failure, but a
       // preserved connection still counts as an answer — hence not `!!data`.
       hasResult: data !== undefined || items.pageInfo !== undefined,
-      // No pantry to ask about yet — the same predicate given to `skip` above,
+      // No pantry to ask about yet — the same predicate that selects `skipToken`,
       // so a screen classifying this cannot mistake "not asked" for "failed".
       skipped: shouldSkip,
       hasMore,
       isLoadingMore,
     },
     actions: {
-      refetch,
+      // A query skipped from mount has no variables, so a refetch would send none.
+      refetch: () => (shouldSkip ? Promise.resolve() : refetch()),
       loadMore,
     },
   };

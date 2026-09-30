@@ -138,14 +138,11 @@ function createMock(success = true) {
             storageLocation: null,
             packageBreakdown: null,
             quantityBreakdown: null,
-            pantry: {
-              __typename: 'Pantry',
-              id: 'pantry-1',
-              stats: {
-                __typename: 'PantryStats',
-                totalItems: 1,
-              },
-            },
+          },
+          pantry: {
+            __typename: 'Pantry',
+            id: 'pantry-1',
+            stats: { __typename: 'PantryStats', totalItems: 1 },
           },
         },
       },
@@ -493,6 +490,7 @@ describe('usePantryItemSubmission', () => {
 
     await waitFor(() =>
       expect(restock.fired).toContainEqual({
+        today: expect.any(String),
         input: expect.objectContaining({ id: 'existing-1', quantity: 2 }),
       }),
     );
@@ -540,6 +538,7 @@ describe('usePantryItemSubmission', () => {
 
     await waitFor(() =>
       expect(restock.fired).toContainEqual({
+        today: expect.any(String),
         input: expect.objectContaining({
           packageSize: { netWeight: 22, netWeightUnitId: 'u-oz' },
         }),

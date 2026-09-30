@@ -13,10 +13,8 @@ import {
   CreateShoppingListItemFromRecipeIngredientDocument,
   CreateShoppingListItemsFromRecipeDocument,
 } from '#features/recipes/graphql/recipe.generated';
-import {
-  CreateShoppingListForRecipeDocument,
-  GetShoppingListsLiteForRecipeDocument,
-} from '../useRecipeDetail.generated';
+import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { CreateShoppingListForRecipeDocument } from '../useRecipeDetail.generated';
 import type { DisplayIngredient, MaterializedRecipe } from '../useRecipeData';
 import { useRecipeShoppingList } from '../useRecipeShoppingList';
 
@@ -48,11 +46,9 @@ beforeEach(() => {
 });
 
 /** One complete default list so `getTargetShoppingList()` resolves a target. */
-const shoppingListsMock = (): MockFor<
-  typeof GetShoppingListsLiteForRecipeDocument
-> => ({
+const shoppingListsMock = (): MockFor<typeof GetShoppingListsLiteDocument> => ({
   request: {
-    query: GetShoppingListsLiteForRecipeDocument,
+    query: GetShoppingListsLiteDocument,
     variables: () => true,
   },
   result: {
@@ -352,9 +348,8 @@ describe('useRecipeShoppingList — Add All', () => {
       data: {
         createShoppingListItemsFromRecipe: {
           __typename: 'CreateShoppingListItemsFromRecipePayload',
-          addedItems: [],
-          totalAdded: 2,
-          totalUpdated: 0,
+          results: [],
+          summary: { __typename: 'BulkSummary', succeeded: 2, skipped: 0 },
         },
       },
     });
@@ -377,6 +372,48 @@ describe('useRecipeShoppingList — Add All', () => {
     ]);
     expect(mockToastSuccess).toHaveBeenCalledTimes(1);
     expect(mockToastError).not.toHaveBeenCalled();
+  });
+
+  it("takes the list's count from the response, once", async () => {
+    const addAll = recordMock(CreateShoppingListItemsFromRecipeDocument, {
+      data: {
+        createShoppingListItemsFromRecipe: {
+          __typename: 'CreateShoppingListItemsFromRecipePayload',
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'sl-1',
+            totalItems: 7,
+          },
+          results: [
+            {
+              __typename: 'RecipeIngredientAddResult',
+              success: true,
+              item: { __typename: 'ShoppingListItem', id: 'sli-a' },
+            },
+            {
+              __typename: 'RecipeIngredientAddResult',
+              success: true,
+              item: { __typename: 'ShoppingListItem', id: 'sli-b' },
+            },
+          ],
+        },
+      },
+    });
+    const cache = makeCache();
+    const { result } = await renderShopping({
+      operationMocks: [addAll.mock],
+      cache,
+      backendRecipe: recipeWith([
+        ingredient({ id: 'ing-1' }),
+        ingredient({ id: 'ing-2' }),
+      ]),
+    });
+
+    await addAllTo(result);
+
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
+    const list = cache.extract()['ShoppingList:sl-1'] as { totalItems: number };
+    expect(list.totalItems).toBe(7);
   });
 
   it('reports a refused add as a failure and marks nothing', async () => {

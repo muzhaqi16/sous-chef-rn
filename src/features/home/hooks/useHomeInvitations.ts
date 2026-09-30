@@ -74,7 +74,11 @@ export function useHomeInvitations({
   // Preview home by join code query
   const [getHomeByJoinCode, { loading: loadingPreview, data: previewData }] =
     useLazyQuery(GetHomeByJoinCodeDocument, {
-      fetchPolicy: 'network-only', // Always fetch fresh data (one-time operation)
+      // Every lookup asks the server; without `nextFetchPolicy` a repeat
+      // lookup of the same code is answered from the cache.
+      fetchPolicy: 'network-only',
+      nextFetchPolicy: 'network-only',
+      refetchOn: false,
     });
 
   /**

@@ -1,7 +1,12 @@
 import { useEffect } from 'react';
 import { useUser } from '#store/useAppStore';
 import { useStore } from '#store';
-import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import {
+  skipToken,
+  useApolloClient,
+  useMutation,
+  useQuery,
+} from '@apollo/client/react';
 import {
   GetUserSettingsDocument,
   UpdateUserPreferencesDocument,
@@ -33,10 +38,14 @@ export const useAppSettings = () => {
   const { t } = useTranslation();
   const user = useUser();
   const client = useApolloClient();
-  const { data, loading, error, refetch } = useQuery(GetUserSettingsDocument, {
-    skip: !user?.id,
+  const { data, loading, error, refetch } = useQuery(
+    GetUserSettingsDocument,
+    user?.id ? {} : skipToken,
+  );
+  const [updateSettings] = useMutation(UpdateUserPreferencesDocument, {
+    // An unreachable API queues the change, so a flipped setting isn't lost.
+    context: { localFirst: true },
   });
-  const [updateSettings] = useMutation(UpdateUserPreferencesDocument);
 
   const settings = data?.me?.settings;
 
@@ -112,11 +121,8 @@ export const useAppSettings = () => {
       mutate: async () => {
         const settled = await settleMutation(
           () =>
-            // localFirst: an unreachable API queues the change for replay
-            // instead of failing it, so the flipped setting isn't lost.
             updateSettings({
               variables: { input: toSettingsInput(updates) },
-              context: { localFirst: true },
             }),
           { document: UpdateUserPreferencesDocument, fallback: failureMessage },
         );

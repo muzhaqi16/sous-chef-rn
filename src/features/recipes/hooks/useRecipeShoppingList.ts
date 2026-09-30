@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   CreateShoppingListItemsFromRecipeDocument,
   CreateShoppingListItemFromRecipeIngredientDocument,
 } from '#features/recipes/graphql/recipe.generated';
 import type { MaterializedRecipe, DisplayIngredient } from './useRecipeData';
-import {
-  GetShoppingListsLiteForRecipeDocument,
-  CreateShoppingListForRecipeDocument,
-} from './useRecipeDetail.generated';
+import { CreateShoppingListForRecipeDocument } from './useRecipeDetail.generated';
+import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
 import { useAppStore, useSelectedShoppingListId } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';
 import { firstNonBlank } from '#/utils/firstNonBlank';
@@ -25,6 +23,7 @@ import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import {
   addOptimisticShoppingListItem,
+  carriesListTotals,
   createOptimisticShoppingListItem,
   reconcileShoppingItemCreateUpdate,
   revertOptimisticShoppingListItem,
@@ -53,7 +52,6 @@ async function addIngredientToList(
     // `useMutation()` is assignable as-is.
     addRecipeIngredientMutation(options: {
       variables: { input: CreateShoppingListItemFromRecipeIngredientInput };
-      context: { localFirst: boolean };
     }): Promise<{ data?: unknown; error?: unknown }>;
     /** The caller's copy for a refused add. */
     fallback: string;
@@ -94,7 +92,6 @@ async function addIngredientToList(
             shoppingListId,
           },
         },
-        context: { localFirst: true },
       }),
     {
       document: CreateShoppingListItemFromRecipeIngredientDocument,
@@ -111,11 +108,8 @@ export function useRecipeShoppingList({
   backendRecipe,
 }: UseRecipeShoppingListOptions) {
   const { t } = useTranslation();
-  const { data: shoppingListsData, loading: shoppingListsLoading } = useQuery(
-    GetShoppingListsLiteForRecipeDocument,
-    {},
-  );
-  const shoppingLists = extractNodes(shoppingListsData?.shoppingLists);
+  const { lists: shoppingLists, loading: shoppingListsLoading } =
+    useShoppingListsLite();
 
   const selectedShoppingListId = useSelectedShoppingListId();
   const setSelectedShoppingListId = useAppStore(
@@ -180,8 +174,20 @@ export function useRecipeShoppingList({
         if (!payload || !variables) return;
         try {
           const shoppingListId = variables.input.shoppingListId;
-          payload.addedItems.forEach(item => {
-            addNewItemToShoppingListCache(cache, shoppingListId, item);
+          const bumpTotals = !carriesListTotals(
+            payload.shoppingList,
+            shoppingListId,
+          );
+          // A merged ingredient names a line the list already links.
+          payload.results.forEach(({ item }) => {
+            if (item) {
+              addNewItemToShoppingListCache(
+                cache,
+                shoppingListId,
+                item,
+                bumpTotals,
+              );
+            }
           });
         } catch (cacheError) {
           errorService.reportError(cacheError, {
@@ -195,6 +201,7 @@ export function useRecipeShoppingList({
   const [addRecipeIngredientMutation] = useMutation(
     CreateShoppingListItemFromRecipeIngredientDocument,
     {
+      context: { localFirst: true },
       update: (cache, { data }, { variables }) => {
         const response = appliedPayload(data);
         if (!response || !variables) return;
@@ -202,11 +209,18 @@ export function useRecipeShoppingList({
           // The row was already written and counted optimistically, so this
           // only re-wires the edge — and withdraws the optimistic row when the
           // server merged the ingredient into an existing line.
+          const listId = variables.input.shoppingListId;
           reconcileShoppingItemCreateUpdate(
             cache,
-            variables.input.shoppingListId,
+            listId,
             response.shoppingListItem,
             variables.input.id,
+            {
+              countsSettled: carriesListTotals(
+                response.shoppingListItem.shoppingList,
+                listId,
+              ),
+            },
           );
         } catch (cacheError) {
           errorService.reportError(cacheError, {
@@ -308,7 +322,7 @@ export function useRecipeShoppingList({
 
         const payload = appliedPayload(settled.data);
         if (payload) {
-          const data = payload;
+          const { succeeded, skipped } = payload.summary;
           const allIngredientIds = extractNodes(
             backendRecipe.ingredientsConnection,
           ).map(ing => ing.id);
@@ -318,14 +332,14 @@ export function useRecipeShoppingList({
             return next;
           });
           toastService.success(
-            data.totalUpdated > 0
+            skipped > 0
               ? t('recipes.addedItemsToListUpdated', {
-                  count: data.totalAdded,
+                  count: succeeded,
                   listName: resolvedName,
-                  updated: data.totalUpdated,
+                  updated: skipped,
                 })
               : t('recipes.addedItemsToList', {
-                  count: data.totalAdded,
+                  count: succeeded,
                   listName: resolvedName,
                 }),
           );

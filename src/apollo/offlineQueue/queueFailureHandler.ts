@@ -10,7 +10,6 @@ import { isTranslationKey, t } from '#/i18n';
 import { logger } from '#/utils/environment';
 import type {
   FailedMutationInfo,
-  OverwrittenMutationInfo,
   QueueError,
 } from '#/apollo/offlineQueue/types';
 
@@ -128,19 +127,6 @@ function onQueueDrained(): void {
   if (rereadOwed && !hasQueuedWork()) void reread();
 }
 
-/**
- * The server accepted the replay and kept its own value. Nothing is withdrawn —
- * the entry already dequeued as success — so this only tells the person, using
- * the same copy the withdrawal path uses for a conflict.
- */
-export function reportQueueOverwrite(info: OverwrittenMutationInfo): void {
-  logger.warn(`Queue: ${info.operationName} converged on the server's value`, {
-    entityType: info.entityType,
-    entityId: info.entityId,
-  });
-  toastService.error(withdrawalMessage('conflict', info.entityType));
-}
-
 /** Resolves the withdrawal toast, naming the entity where the map knows it. */
 function withdrawalMessage(
   type: QueueError['type'],
@@ -163,6 +149,5 @@ function withdrawalMessage(
  */
 export function registerQueueFailureHandler(): void {
   queueManager.setFailureHandler(handleQueueFailure);
-  queueManager.setOverwriteReporter(reportQueueOverwrite);
   queueManager.setDrainedHandler(onQueueDrained);
 }

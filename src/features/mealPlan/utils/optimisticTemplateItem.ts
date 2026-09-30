@@ -1,9 +1,10 @@
-import { gql, type ApolloCache, type Reference } from '@apollo/client';
+import type { ApolloCache, Reference } from '@apollo/client';
 import {
   MealTemplateItemFragmentDoc,
   type MealTemplateItemFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import type { AddTemplateItemInput } from '#/graphql/generated/schemaTypes';
+import { OptimisticTemplateItem_RecipeRefFragmentDoc } from './optimisticTemplateItem.generated';
 
 /**
  * Local-first writes for a template's items: the item mutations return the whole
@@ -12,17 +13,6 @@ import type { AddTemplateItemInput } from '#/graphql/generated/schemaTypes';
  * the whole function out of the React Compiler.
  */
 
-/** Display fields the item's row shows for a recipe-backed meal. */
-const TemplateItemRecipeFragment = gql`
-  fragment _TemplateItemRecipe on Recipe {
-    id
-    name
-    imageUrl
-    servings
-    totalTimeMinutes
-  }
-`;
-
 export function readRecipeRef(
   cache: ApolloCache,
   recipeId: string | null | undefined,
@@ -30,10 +20,9 @@ export function readRecipeRef(
   if (!recipeId) return null;
   const cacheId = cache.identify({ __typename: 'Recipe', id: recipeId });
   if (!cacheId) return null;
-  const recipe = cache.readFragment<MealTemplateItemFragment['recipe']>({
+  const recipe = cache.readFragment({
     id: cacheId,
-    fragment: TemplateItemRecipeFragment,
-    fragmentName: '_TemplateItemRecipe',
+    fragment: OptimisticTemplateItem_RecipeRefFragmentDoc,
   });
   // A recipe the cache has never seen still has to render as SOMETHING, or the
   // whole items read goes incomplete and the builder blanks. Neutral defaults

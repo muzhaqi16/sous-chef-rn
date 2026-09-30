@@ -204,6 +204,36 @@ const PRODUCTION_SYNTAX = [
   },
 ];
 
+const HOOK_BODY =
+  ':matches(FunctionDeclaration[id.name=/^use[A-Z]/], VariableDeclarator[id.name=/^use[A-Z]/] > :function)';
+// A read in a function that runs later — a handler, an effect, a mutation
+// callback — is a one-shot snapshot. Anything else in a hook body runs while
+// rendering; an array method's callback does too.
+const ARRAY_CALLBACK =
+  '/^(map|flatMap|filter|find|findLast|findIndex|some|every|reduce|forEach|sort|toSorted)$/';
+const DEFERRED_FUNCTION = [
+  ':function VariableDeclarator > :function',
+  ':function FunctionDeclaration',
+  ':function Property > :function',
+  `:function CallExpression:not([callee.property.name=${ARRAY_CALLBACK}]) > :function.arguments`,
+  ':function ReturnStatement > :function',
+  ':function AssignmentExpression > :function',
+  ':function JSXExpressionContainer > :function',
+];
+
+// Feature hooks only (`eslint/project.js` scopes them): a mutation, cache or
+// offline module reads the cache to write it, never to render.
+const FEATURE_HOOK_SYNTAX = [
+  {
+    id: 'renderTimeReadFragment',
+    selector: `${HOOK_BODY} CallExpression[callee.property.name='readFragment']:not(${DEFERRED_FUNCTION.map(
+      fn => `${fn} CallExpression`,
+    ).join(', ')})`,
+    message:
+      'Read cached data while rendering with `useFragment` — `from: x ?? null` for one entity, an ARRAY `from` (`useFragmentList` from #hooks/apollo/useFragmentList) for a list. A render-time `readFragment` is recomputed only when its inputs change, and a masked query result keeps its identity when only masked fields change, so the read goes stale. A one-shot read inside a handler, effect or mutation callback is fine.',
+  },
+];
+
 // Test-suite hygiene. A separate list because the production entries are off
 // for tests, and one rule id cannot carry both sets.
 const TEST_SYNTAX = [
@@ -242,6 +272,10 @@ const entries = (list, allow, add) => [
 const restrictedSyntax = ({ allow = [], add = [] } = {}) =>
   entries(PRODUCTION_SYNTAX, allow, add);
 
+/** The production set plus the bans that hold in feature hooks only. */
+const restrictedSyntaxForFeatureHooks = ({ allow = [], add = [] } = {}) =>
+  entries([...PRODUCTION_SYNTAX, ...FEATURE_HOOK_SYNTAX], allow, add);
+
 /** The test-only set; production entries do not apply to test files. */
 const restrictedSyntaxForTests = ({ allow = [], add = [] } = {}) =>
   entries(TEST_SYNTAX, allow, add);
@@ -249,6 +283,8 @@ const restrictedSyntaxForTests = ({ allow = [], add = [] } = {}) =>
 module.exports = {
   restrictedSyntax,
   restrictedSyntaxForTests,
+  restrictedSyntaxForFeatureHooks,
   PRODUCTION_SYNTAX,
+  FEATURE_HOOK_SYNTAX,
   TEST_SYNTAX,
 };

@@ -220,9 +220,9 @@ const thirdPage = buildPageMock({
   endCursor: null,
 });
 
-const searchByName = <T extends { recipe: { name: string } }>(
+const searchByName = <T extends { recipe: { name: string } | null }>(
   recipes: readonly T[],
-) => filterByTerm(recipes, 'lasagne', [saved => saved.recipe.name]);
+) => filterByTerm(recipes, 'lasagne', [saved => saved.recipe?.name]);
 
 function useSavedRecipesWithClient() {
   const state = useSavedRecipes();
@@ -242,7 +242,7 @@ function readName(
       fragmentName: 'SavedRecipeCard_savedRecipe',
       from: ref,
     },
-  )?.recipe.name;
+  )?.recipe?.name;
 }
 
 describe('useSavedRecipes', () => {

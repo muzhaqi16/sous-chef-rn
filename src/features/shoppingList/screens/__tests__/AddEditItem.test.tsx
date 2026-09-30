@@ -69,30 +69,14 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
   addNewItemToShoppingListCache: jest.fn(),
 }));
 
-jest.mock('#features/shoppingList/cache/items', () => {
-  const { settledStatus } = jest.requireActual('#/apollo/utils/settleMutation');
-  const revertOptimisticShoppingListItem = jest.fn();
-  return {
-    buildAddItemsReconcileUpdate: jest.fn(() => jest.fn()),
-    revertOptimisticShoppingListItem,
-    addOptimisticShoppingListItem: jest.fn(),
-    createOptimisticShoppingListItem: jest.fn((id: string) => ({
-      __typename: 'ShoppingListItem',
-      id,
-    })),
-    // Mirror the real reconciler (real classify + mocked revert) so the
-    // keep/revert decision under test matches production.
-    reconcileShoppingCreate: jest.fn(
-      (cache: unknown, listId: string, id: string, result: unknown) => {
-        if (settledStatus(result) === 'failed') {
-          revertOptimisticShoppingListItem(cache, listId, id);
-          return 'reverted';
-        }
-        return 'kept';
-      },
-    ),
-  };
-});
+jest.mock('#features/shoppingList/cache/items', () => ({
+  buildAddItemsReconcileUpdate: jest.fn(() => jest.fn()),
+  addOptimisticShoppingListItem: jest.fn(),
+  createOptimisticShoppingListItem: jest.fn((id: string) => ({ id })),
+}));
+jest.mock('#features/shoppingList/cache/withdraw', () => ({
+  withdrawShoppingListItems: jest.fn(),
+}));
 jest.mock('#/services/errorService');
 jest.mock('#/utils/finallyHelpers');
 
@@ -366,8 +350,7 @@ function buildAddItemMock(): MockFor<typeof AddItemToShoppingListDocument> {
               index: 0,
               clientId: null,
               success: true,
-              quantityIncremented: false,
-              error: null,
+              failure: null,
               item: buildAddedShoppingListItem('new-item'),
             },
           ],

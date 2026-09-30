@@ -3,8 +3,15 @@
 import React from 'react';
 import { userEvent } from '@testing-library/react-native';
 import { MealPlanItemCard } from '#features/mealPlan/components/MealPlanItemCard';
-import type { MealPlanItemCard_ItemFragment } from '#features/mealPlan/components/MealPlanItemCard.generated';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  MealPlanItemCard_ItemFragmentDoc,
+  type MealPlanItemCard_ItemFragment,
+} from '#features/mealPlan/components/MealPlanItemCard.generated';
+import {
+  renderWithApollo,
+  seedCache,
+  toFragmentRef,
+} from '#/test-utils/apolloMockProvider';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -27,48 +34,57 @@ const makeItem = (
   ...overrides,
 });
 
+/** A strict cell: the item is read from the cache, the prop is its key. */
+const renderCard = (
+  item: MealPlanItemCard_ItemFragment,
+  props: Omit<React.ComponentProps<typeof MealPlanItemCard>, 'item'> = {},
+) =>
+  renderWithApollo(
+    <MealPlanItemCard
+      item={toFragmentRef<typeof MealPlanItemCard_ItemFragmentDoc>(item)}
+      {...props}
+    />,
+    {
+      cache: seedCache([
+        {
+          data: item,
+          fragment: MealPlanItemCard_ItemFragmentDoc,
+          fragmentName: 'MealPlanItemCard_item',
+        },
+      ]),
+    },
+  );
+
 describe('MealPlanItemCard', () => {
   const onToggleCompleted = jest.fn();
 
   it('renders meal name', () => {
-    const { getByText } = renderWithApollo(
-      <MealPlanItemCard
-        item={makeItem()}
-        onToggleCompleted={onToggleCompleted}
-      />,
-    );
+    const { getByText } = renderCard(makeItem(), { onToggleCompleted });
     expect(getByText('Pasta Night')).toBeTruthy();
   });
 
   it('renders recipe name when recipe exists', () => {
     const item = makeItem({
-      recipe: { __typename: 'Recipe', id: 'r1', name: 'Spaghetti Bolognese', imageUrl: null, totalTimeMinutes: 30 },
+      recipe: {
+        __typename: 'Recipe',
+        id: 'r1',
+        name: 'Spaghetti Bolognese',
+        imageUrl: null,
+        totalTimeMinutes: 30,
+      },
     });
-    const { getByText } = renderWithApollo(
-      <MealPlanItemCard item={item} onToggleCompleted={onToggleCompleted} />,
-    );
+    const { getByText } = renderCard(item, { onToggleCompleted });
     expect(getByText('Spaghetti Bolognese')).toBeTruthy();
   });
 
   it('shows meta info with servings and calories', () => {
-    const { getByText } = renderWithApollo(
-      <MealPlanItemCard
-        item={makeItem()}
-        onToggleCompleted={onToggleCompleted}
-      />,
-    );
+    const { getByText } = renderCard(makeItem(), { onToggleCompleted });
     expect(getByText('4 servings \u00B7 500 cal')).toBeTruthy();
   });
 
   it('renders delete button when onDelete provided', () => {
     const onDelete = jest.fn();
-    const { toJSON } = renderWithApollo(
-      <MealPlanItemCard
-        item={makeItem()}
-        onToggleCompleted={onToggleCompleted}
-        onDelete={onDelete}
-      />,
-    );
+    const { toJSON } = renderCard(makeItem(), { onToggleCompleted, onDelete });
     expect(toJSON()).toBeTruthy();
   });
 
@@ -76,13 +92,7 @@ describe('MealPlanItemCard', () => {
     const user = userEvent.setup();
     const onPress = jest.fn();
     const item = makeItem();
-    const { getByText } = renderWithApollo(
-      <MealPlanItemCard
-        item={item}
-        onToggleCompleted={onToggleCompleted}
-        onPress={onPress}
-      />,
-    );
+    const { getByText } = renderCard(item, { onToggleCompleted, onPress });
     await user.press(getByText('Pasta Night'));
     expect(onPress).toHaveBeenCalledWith('mp1');
   });

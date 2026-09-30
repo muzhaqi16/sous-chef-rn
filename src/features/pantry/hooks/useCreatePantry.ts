@@ -2,9 +2,8 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   addPantryToHomeCache,
-  buildOptimisticPantry,
   removeOptimisticPantry,
-  writeOptimisticPantry,
+  writeLocalPantry,
 } from '#features/pantry/utils/optimisticPantry';
 import {
   settleMutation,
@@ -16,6 +15,7 @@ import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import type { CreatePantryInput } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
+import { todayKey } from '#/utils/dateUtils';
 
 /** A write's verdict. A refusal carries the localized copy the caller shows. */
 export interface PantryWriteOutcome {
@@ -41,6 +41,7 @@ export function useCreatePantry() {
   const { t } = useTranslation();
   const client = useApolloClient();
   const [createPantry, { loading }] = useMutation(CreatePantryDocument, {
+    context: { localFirst: true },
     update: (cache, { data }) => {
       const payload = appliedPayload(data);
       if (!payload) return;
@@ -59,10 +60,12 @@ export function useCreatePantry() {
     // Selecting the pantry opens its event subscription, which the server
     // refuses until the create lands — see `unconfirmedCreates`.
     unconfirmedCreates.mark(id);
-    const optimisticPantry = buildOptimisticPantry(id, input);
     try {
-      writeOptimisticPantry(client.cache, optimisticPantry);
-      addPantryToHomeCache(client.cache, input.homeId, optimisticPantry);
+      writeLocalPantry(client.cache, id, input);
+      addPantryToHomeCache(client.cache, input.homeId, {
+        __typename: 'Pantry',
+        id,
+      });
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Create Pantry (optimistic)',
@@ -83,8 +86,7 @@ export function useCreatePantry() {
     const settled = await settleMutation(
       async () => {
         result = await createPantry({
-          variables: { input },
-          context: { localFirst: true },
+          variables: { input, today: todayKey() },
         });
         return result;
       },

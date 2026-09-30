@@ -2,12 +2,18 @@
 # BULK NOTIFICATION MUTATIONS
 # ============================================
 
+# Each payload states the badge after the write, as in notificationMutations.
+
 mutation MarkAllNotificationsAsRead {
   markAllNotificationsAsRead {
     __typename
     ... on MarkAllNotificationsAsReadPayload {
       summary {
         total
+      }
+      notificationSummary {
+        id
+        ...NotificationSummaryReaders
       }
     }
     ... on Error {
@@ -31,6 +37,10 @@ mutation DeleteMultipleNotifications(
     ... on DeleteMultipleNotificationsPayload {
       summary {
         total
+      }
+      notificationSummary {
+        id
+        ...NotificationSummaryReaders
       }
     }
     ... on Error {

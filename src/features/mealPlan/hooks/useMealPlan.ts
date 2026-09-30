@@ -1,20 +1,15 @@
-import {
-  skipToken,
-  useApolloClient,
-  useFragment,
-  useQuery,
-} from '@apollo/client/react';
+import { skipToken, useFragment, useQuery } from '@apollo/client/react';
+import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import {
+  MealPlanMain_ItemFragmentDoc,
   MealPlanMain_MealPlanFragmentDoc,
-  type MealPlanMain_MealPlanFragment,
+  type MealPlanMain_ItemFragment,
 } from '#features/mealPlan/screens/MealPlanMain.generated';
 
 export function useMealPlan(id: string | null) {
-  const client = useApolloClient();
-
   // `createMealPlan` mints the cuid and writes the plan locally, so until the
   // create is acknowledged a server read returns null however honestly it
   // answers — and `planNotFound` would read that null as "deleted". Skipping is
@@ -28,33 +23,21 @@ export function useMealPlan(id: string | null) {
 
   useApolloErrorLogger(GetMealPlanDocument, error);
 
-  // Live binding: `liveMealPlan.data` takes a fresh reference on every relevant
-  // cache write, `mealPlanItems` membership included. Under `dataMasking` the
-  // parent query's `data.mealPlan` is a masked ref whose identity is stable
-  // across nested changes, so it cannot serve as that signal.
+  // Keyed by ENTITY, not read off the query result: a locally created plan is
+  // in the cache while its query is skipped. Each item is a masked ref its own
+  // readers resolve; the screen's handlers read `MealPlanMain_item`.
   const liveMealPlan = useFragment({
     fragment: MealPlanMain_MealPlanFragmentDoc,
     fragmentName: 'MealPlanMain_mealPlan',
     from: id ? { __typename: 'MealPlan', id } : null,
   });
-
-  // Materializes the UNMASKED shape: `readFragment` returns `Unmasked<TData>`
-  // where `useFragment` returns a masked one the screen would have to drill
-  // `$fragmentRefs` for. Cache-key `from` form — the masked-ref form silently
-  // returns partial data. The `liveMealPlan.data` guard is the load-bearing
-  // dependency the compiler memoizes against; gating on the stable masked
-  // `data.mealPlan` pins this read to a stale snapshot until a refetch.
-  const liveData = liveMealPlan.complete ? liveMealPlan.data : null;
-  const mealPlan =
-    id && liveData
-      ? client.cache.readFragment<MealPlanMain_MealPlanFragment>({
-          fragment: MealPlanMain_MealPlanFragmentDoc,
-          fragmentName: 'MealPlanMain_mealPlan',
-          from: { __typename: 'MealPlan', id },
-        }) ?? null
-      : null;
-
+  const mealPlan = id && liveMealPlan.complete ? liveMealPlan.data : null;
   const items = mealPlan?.mealPlanItems ?? [];
+  const itemDetails = useFragmentList({
+    fragment: MealPlanMain_ItemFragmentDoc,
+    fragmentName: 'MealPlanMain_item',
+    from: items,
+  }).filter((item): item is MealPlanMain_ItemFragment => item !== null);
 
   // The server answered with an explicit null for this id: there is no such
   // row. A by-id query reports a miss as null data, not as an error — only a
@@ -66,6 +49,7 @@ export function useMealPlan(id: string | null) {
   return {
     mealPlan,
     items,
+    itemDetails,
     nutritionSummary: mealPlan?.nutritionSummary ?? null,
     mealPlanRef: data?.mealPlan ?? null,
     planNotFound,

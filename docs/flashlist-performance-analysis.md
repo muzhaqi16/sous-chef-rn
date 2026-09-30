@@ -265,7 +265,7 @@ the sampled sessions. Instrumenting them would cost more than it tells you.
   while holding a subset, and client-side filtering over it silently lies.**
   Probed on device (139-item pantry, one item expiring in 2 days):
   `allItems.length: 101`, `totalCount: 139`, **`hasMore: false`**,
-  `withExpiry: 0`. `MAX_WINDOW_EDGES = 100` (`cache.ts`) caps the cached edges,
+  `withExpiry: 0`. `MAX_WINDOW_EDGES = 100` (`src/apollo/cacheFieldPolicies.ts`) caps the cached edges,
   but `pageInfo.hasNextPage` reflects the LAST FETCHED PAGE, so the connection
   ends up claiming there is nothing more while 38 items — including the only one
   carrying `expiresAt` — are absent. `FilteredPantryItems` then filters an

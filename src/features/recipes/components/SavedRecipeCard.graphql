@@ -1,5 +1,6 @@
 fragment SavedRecipeCard_savedRecipe on SavedRecipe {
   id
+  recipeId
   folder
   tags
   notes

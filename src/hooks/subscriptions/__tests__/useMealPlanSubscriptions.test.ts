@@ -11,6 +11,7 @@ import { MealPlanSubtype, MutationType } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
 import { useMealPlanSubscriptions } from '#features/mealPlan/hooks/useMealPlanSubscriptions';
 import { MealPlanEventsDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { MealTemplateItemsForEventDocument } from '#features/mealPlan/hooks/useMealPlanSubscriptions.generated';
 
 type CapturedOnData = (data: unknown, client: unknown) => void;
 
@@ -185,7 +186,11 @@ describe('useMealPlanSubscriptions', () => {
     const getOnData = captureCustomOnData();
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient(
-      jest.fn(),
+      jest.fn().mockReturnValue({
+        __typename: 'MealPlan',
+        id: 'plan-new',
+        planType: 'WEEKLY',
+      }),
       jest.fn().mockResolvedValue({
         data: { mealPlan: { __typename: 'MealPlan', id: 'plan-new' } },
       }),
@@ -211,8 +216,33 @@ describe('useMealPlanSubscriptions', () => {
     expect(mockAddToMealPlans).toHaveBeenCalledWith(
       client.cache,
       { __typename: 'MealPlan', id: 'plan-new' },
-      { position: 'start' },
+      expect.objectContaining({ position: 'start' }),
     );
+  });
+
+  it('skips the add when the read-back leaves the list card incomplete', async () => {
+    const getOnData = captureCustomOnData();
+    renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
+    const client = makeClient(
+      jest.fn().mockReturnValue(null),
+      jest.fn().mockResolvedValue({
+        data: { mealPlan: { __typename: 'MealPlan', id: 'plan-new' } },
+      }),
+    );
+
+    await deliver(
+      getOnData(),
+      {
+        subtype: MealPlanSubtype.MealPlanChanged,
+        mutation: MutationType.Created,
+        mealPlanId: 'plan-new',
+        actorUserId: 'user-2',
+        node: { __typename: 'MealPlan', id: 'plan-new' },
+      },
+      client,
+    );
+
+    expect(mockAddToMealPlans).not.toHaveBeenCalled();
   });
 
   it('skips the add when the plan cannot be read back', async () => {
@@ -406,6 +436,58 @@ describe('useMealPlanSubscriptions', () => {
     );
 
     expect(mockAddToMealTemplates).not.toHaveBeenCalled();
+  });
+
+  it.each([MutationType.ItemAdded, MutationType.Updated])(
+    'reads the template items back on %s rather than linking a bare id',
+    async mutation => {
+      const getOnData = captureCustomOnData();
+      renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
+      const client = makeClient();
+
+      await deliver(
+        getOnData(),
+        {
+          subtype: MealPlanSubtype.MealTemplateItemChanged,
+          mutation,
+          templateId: 'tpl-1',
+          actorUserId: 'user-2',
+          node: { __typename: 'MealTemplateItem', id: 'tpl-item-1' },
+        },
+        client,
+      );
+
+      expect(client.query).toHaveBeenCalledWith(
+        expect.objectContaining({
+          query: MealTemplateItemsForEventDocument,
+          variables: { id: 'tpl-1' },
+          fetchPolicy: 'network-only',
+        }),
+      );
+      expect(mockAddToMealPlanItems).not.toHaveBeenCalled();
+      expect(client.refetchQueries).not.toHaveBeenCalled();
+    },
+  );
+
+  it('does not read back a template item a local delete is removing', async () => {
+    mockIsPendingDelete.mockReturnValue(true);
+    const getOnData = captureCustomOnData();
+    renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
+    const client = makeClient();
+
+    await deliver(
+      getOnData(),
+      {
+        subtype: MealPlanSubtype.MealTemplateItemChanged,
+        mutation: MutationType.Updated,
+        templateId: 'tpl-1',
+        actorUserId: 'user-2',
+        node: { __typename: 'MealTemplateItem', id: 'tpl-item-1' },
+      },
+      client,
+    );
+
+    expect(client.query).not.toHaveBeenCalled();
   });
 
   it('drops a template deleted elsewhere', () => {

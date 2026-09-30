@@ -201,7 +201,6 @@ const dietarySkillLevel = (input: Input): Input => {
 
 type RewrittenInput =
   | 'CreatePantryItemInput'
-  | 'SyncPantryItemInput'
   | 'UpdatePantryItemInput'
   | 'CreatePantryItemUsageInput'
   | 'CorrectPantryItemPackageSizeInput'
@@ -214,7 +213,6 @@ type RewrittenInput =
 
 const REWRITES: Readonly<Record<RewrittenInput, (input: Input) => Input>> = {
   CreatePantryItemInput: pantryItemWrite,
-  SyncPantryItemInput: pantryItemWrite,
   UpdatePantryItemInput: pantryItemWrite,
   CreatePantryItemUsageInput: usageAmount,
   CorrectPantryItemPackageSizeInput: packageSizeCorrection,

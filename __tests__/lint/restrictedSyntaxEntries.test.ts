@@ -9,13 +9,17 @@ import * as typescriptParser from '@typescript-eslint/parser';
 
 const {
   PRODUCTION_SYNTAX,
+  FEATURE_HOOK_SYNTAX,
   TEST_SYNTAX,
   restrictedSyntax,
+  restrictedSyntaxForFeatureHooks,
   restrictedSyntaxForTests,
 } = require('../../eslint/restrictedSyntax.js') as {
   PRODUCTION_SYNTAX: Array<{ id: string; selector: string; message: string }>;
+  FEATURE_HOOK_SYNTAX: Array<{ id: string; selector: string; message: string }>;
   TEST_SYNTAX: Array<{ id: string; selector: string; message: string }>;
   restrictedSyntax: (o?: { allow?: string[] }) => unknown[];
+  restrictedSyntaxForFeatureHooks: () => unknown[];
   restrictedSyntaxForTests: () => unknown[];
 };
 
@@ -254,12 +258,40 @@ const TEST_FIXTURES: Fixture[] = [
   },
 ];
 
+const FEATURE_HOOK_FIXTURES: Fixture[] = [
+  {
+    id: 'renderTimeReadFragment',
+    invalid: [
+      'export function useA() { const x = client.cache.readFragment(o); }',
+      'export const useA = () => { const x = cache.readFragment(o); };',
+      'export function useA() { return edges.map(e => cache.readFragment(e)); }',
+      'export function useA() { const r = (() => xs.filter(x => cache.readFragment(x)))(); }',
+      'export function useA() { const x = id ? client.cache.readFragment(o) : null; }',
+    ],
+    valid: [
+      'export function useA() { const onSave = () => cache.readFragment(o); return { onSave }; }',
+      'export function useA() { useEffect(() => { cache.readFragment(o); }, []); }',
+      'export function useA() { useMutation(D, { update: c => c.readFragment(o) }); }',
+      'export function useA() { function snapshot() { return cache.readFragment(o); } }',
+      'export function useA() { return () => xs.map(x => cache.readFragment(x)); }',
+      'function readRow(cache) { return cache.readFragment(o); }',
+      'export function useA() { const x = useFragment({ fragment, from }); }',
+    ],
+  },
+];
+
 const suites = [
   {
     label: 'production',
     list: PRODUCTION_SYNTAX,
     fixtures: PRODUCTION_FIXTURES,
     entries: restrictedSyntax(),
+  },
+  {
+    label: 'feature-hook',
+    list: FEATURE_HOOK_SYNTAX,
+    fixtures: FEATURE_HOOK_FIXTURES,
+    entries: restrictedSyntaxForFeatureHooks(),
   },
   {
     label: 'test-only',

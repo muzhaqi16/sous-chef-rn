@@ -7,7 +7,7 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
-  addOptimisticShoppingList,
+  restoreShoppingList,
   readShoppingListSnapshot,
   removeShoppingListFromCache,
 } from '#features/shoppingList/cache/list';
@@ -20,7 +20,9 @@ export function useDeleteShoppingList() {
   const { t } = useTranslation();
   const client = useApolloClient();
 
-  const [mutate] = useMutation(DeleteShoppingListDocument);
+  const [mutate] = useMutation(DeleteShoppingListDocument, {
+    context: { localFirst: true },
+  });
 
   /** `true` once the list is gone or its delete is queued; `false` when refused. */
   const deleteShoppingList = async (id: string): Promise<boolean> => {
@@ -38,7 +40,7 @@ export function useDeleteShoppingList() {
     const restore = () => {
       if (!snapshot) return;
       try {
-        addOptimisticShoppingList(client.cache, snapshot);
+        restoreShoppingList(client.cache, snapshot);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Restore refused Shopping List delete',
@@ -51,7 +53,6 @@ export function useDeleteShoppingList() {
       () =>
         mutate({
           variables: { input: { id } },
-          context: { localFirst: true },
         }),
       {
         document: DeleteShoppingListDocument,

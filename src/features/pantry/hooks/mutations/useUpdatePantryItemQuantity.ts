@@ -1,8 +1,8 @@
 /**
  * Local-first: the updated quantity is written to the cache PERMANENTLY
  * before firing (an `optimisticResponse` would roll back on the offline queue's
- * null result), so a queued update stays visible and replays via the idempotent
- * `SyncPantryItem` upsert; a real rejection restores the pre-edit snapshot.
+ * null result), so a queued update stays visible and replays as itself at the
+ * version it holds; a real rejection restores the pre-edit snapshot.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -19,6 +19,7 @@ import { parseFractionalInput } from '#/utils/fractionUtils';
 import { logger } from '#/utils/environment';
 import { useTranslation } from '#/i18n';
 import { writeHeldStock } from '#features/pantry/cache/stock';
+import { todayKey } from '#/utils/dateUtils';
 
 interface UseUpdatePantryItemQuantityOptions {
   refetch?: () => void;
@@ -40,6 +41,7 @@ export function useUpdatePantryItemQuantity({
 
   const [updateQuantityMutation] = useMutation(
     UpdatePantryItemQuantityDocument,
+    { context: { localFirst: true } },
   );
 
   /**
@@ -136,6 +138,7 @@ export function useUpdatePantryItemQuantity({
       () =>
         updateQuantityMutation({
           variables: {
+            today: todayKey(),
             input: {
               pantryItemId: itemId,
               // Separators normalized, fraction preserved: the server parses
@@ -145,8 +148,6 @@ export function useUpdatePantryItemQuantity({
               version: currentItem.version,
             },
           },
-          // Queue offline / on API-down — replays via the idempotent SyncPantryItem.
-          context: { localFirst: true },
         }),
       {
         document: UpdatePantryItemQuantityDocument,

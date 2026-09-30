@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
-import { toDateKey } from '#/utils/dateUtils';
+import { todayKey } from '#/utils/dateUtils';
 
 const listeners = new Set<() => void>();
 let stopWatching: (() => void) | null = null;
@@ -47,7 +47,7 @@ const subscribe = (listener: () => void) => {
   };
 };
 
-const getSnapshot = () => toDateKey(new Date());
+const getSnapshot = todayKey;
 
 /**
  * The phone's calendar date as a `LocalDate` key: the one `today` the expiry

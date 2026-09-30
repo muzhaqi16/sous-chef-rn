@@ -26,7 +26,6 @@ export interface UseItemForEditResult {
 export function useItemForEdit(itemId: string): UseItemForEditResult {
   const { loading, error, refetch } = useQuery(GetItemForEditDocument, {
     variables: { id: itemId },
-    fetchPolicy: 'cache-and-network',
   });
 
   // Read through the fragment rather than `data.item`: under dataMasking the

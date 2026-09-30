@@ -10,7 +10,7 @@ import {
   type GraphQLSchema,
   type OperationDefinitionNode,
 } from 'graphql';
-import { syncMappedOperations } from '#/apollo/offlineQueue/convertToSyncMutation';
+import { REPLAY_PREPARATIONS } from '#/apollo/offlineQueue/preparationRegistry';
 import { PARENT_REFERENCE_KEYS } from '#/apollo/offlineQueue/queueManager';
 import {
   SRC,
@@ -103,7 +103,7 @@ describe('every id an enqueueable input declares is classified for the drain', (
   );
   const mutations = authoredMutations();
   const queueable = new Set([
-    ...syncMappedOperations(),
+    ...Object.keys(REPLAY_PREPARATIONS),
     ...localFirstOperationNames(),
   ]);
   const candidates = [...queueable].filter(name => mutations.has(name)).sort();

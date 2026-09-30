@@ -13,7 +13,6 @@ import {
   MarkExpirationNotificationAsReadDocument,
 } from '#features/notifications/graphql/expirationNotificationMutations.generated';
 import type { ExpirationAction } from '#/graphql/generated/schemaTypes';
-import { useStore } from '#store';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import {
   applyNotificationRead,
@@ -24,11 +23,14 @@ import { toastService } from '#/services/toastService';
 export function useExpirationNotificationSync() {
   const client = useApolloClient();
   const { t } = useTranslation();
-  const [markActionMutation] = useMutation(MarkExpirationActionDocument);
+  const [markActionMutation] = useMutation(MarkExpirationActionDocument, {
+    context: { localFirst: true },
+  });
   // The server merged the former dismiss mutation into
   // markExpirationNotificationAsRead — marking read IS the dismissal.
   const [markReadMutation] = useMutation(
     MarkExpirationNotificationAsReadDocument,
+    { context: { localFirst: true } },
   );
 
   const syncMarkAction = async (
@@ -39,23 +41,13 @@ export function useExpirationNotificationSync() {
     // The action is client-side enrichment and stays in the store; the row's
     // read-state is server state and goes to the cache.
     useNotificationStore.getState().setExpirationAction(notificationId, action);
-    const markedRead = applyNotificationRead(
-      client.cache,
-      useStore.getState().user?.id,
-      notificationId,
-    );
+    const markedRead = applyNotificationRead(client.cache, notificationId);
 
     toastService.success(t(`expirationAction.toast.${action}`));
 
     const revertAction = () => {
       useNotificationStore.getState().setExpirationAction(notificationId, '');
-      if (markedRead) {
-        applyNotificationUnread(
-          client.cache,
-          useStore.getState().user?.id,
-          notificationId,
-        );
-      }
+      if (markedRead) applyNotificationUnread(client.cache, notificationId);
     };
 
     await settleMutation(
@@ -64,7 +56,6 @@ export function useExpirationNotificationSync() {
           variables: {
             input: { notificationId: expirationNotificationId, action },
           },
-          context: { localFirst: true },
         }),
       {
         document: MarkExpirationActionDocument,
@@ -79,7 +70,6 @@ export function useExpirationNotificationSync() {
       () =>
         markReadMutation({
           variables: { input: { notificationId: expirationNotificationId } },
-          context: { localFirst: true },
         }),
       {
         document: MarkExpirationNotificationAsReadDocument,

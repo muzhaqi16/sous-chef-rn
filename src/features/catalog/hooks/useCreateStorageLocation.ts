@@ -1,9 +1,12 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { gql, type ApolloCache } from '@apollo/client';
+import type { ApolloCache } from '@apollo/client';
+import { CreateStorageLocationDocument } from '#features/catalog/graphql/storageLocation.generated';
+import { UseCreateStorageLocation_RowFragmentDoc } from './useCreateStorageLocation.generated';
 import {
-  CreateStorageLocationDocument,
-  type CreateStorageLocationMutation,
-} from '#features/catalog/graphql/storageLocation.generated';
+  NEUTRAL_LOCAL_STORAGE_LOCATION,
+  NEUTRAL_LOCAL_STORAGE_LOCATION_BY_TYPE,
+} from './useCreateStorageLocationNeutral.generated';
+import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
 import type { CreateStorageLocationInput } from '#/graphql/generated/schemaTypes';
 import {
   createAddToQueryConnectionUpdater,
@@ -14,63 +17,27 @@ import {
   type AddToConnectionOptions,
 } from '#/apollo/utils/cacheUpdaters';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import {
-  appliedPayload,
-  type AppliedPayload,
-} from '#/utils/errors/mutationPayload';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
 
-/** The StorageLocation node shape returned by (and written for) the create. */
-type StorageLocationNode =
-  AppliedPayload<CreateStorageLocationMutation>['storageLocation'];
-
 type CreateLocationInput = Omit<CreateStorageLocationInput, 'homeId'>;
 
-type ParentRef = StorageLocationNode['parentLocation'];
-
-// Minimal read of a parent location so a nested create nests correctly offline.
-const PARENT_LOCATION_FRAGMENT = gql`
-  fragment StorageLocationParentRef on StorageLocation {
-    id
-    name
-  }
-`;
-
-function readParentLocation(
-  cache: ApolloCache,
-  parentLocationId: string | null | undefined,
-): ParentRef {
-  if (!parentLocationId) return null;
-  const parent = cache.readFragment<{ id: string; name: string }>({
-    id: cache.identify({
-      __typename: 'StorageLocation',
-      id: parentLocationId,
-    }),
-    fragment: PARENT_LOCATION_FRAGMENT,
-  });
-  // Nesting keys on parentLocation.id; the name is cosmetic (not shown in tabs)
-  // and self-corrects from the server response on sync.
-  return {
-    __typename: 'StorageLocation',
-    id: parentLocationId,
-    name: parent?.name ?? '',
-  };
-}
+/** The reference the connection writes identify a location by. */
+type LocationRef = { __typename: 'StorageLocation'; id: string };
 
 const addToStorageLocationsCache =
-  createAddToQueryConnectionUpdater<StorageLocationNode>(
+  createAddToQueryConnectionUpdater<LocationRef>(
     'storageLocations',
     'StorageLocation',
   );
-const addToPantryLocations =
-  createAddToParentConnectionUpdater<StorageLocationNode>(
-    'Pantry',
-    'storageLocationsConnection',
-    'StorageLocation',
-  );
+const addToPantryLocations = createAddToParentConnectionUpdater<LocationRef>(
+  'Pantry',
+  'storageLocationsConnection',
+  'StorageLocation',
+);
 const removeFromStorageLocationsCache = createRemoveFromQueryConnectionUpdater(
   'storageLocations',
   'StorageLocation',
@@ -81,34 +48,41 @@ const removeFromPantryLocations = createRemoveFromParentConnectionUpdater(
   'StorageLocation',
 );
 
-// Materialize the full StorageLocation node from the create input so the new
-// location renders as a FilterTab instantly and survives an offline/queued
-// create. Server-computed fields get safe defaults; a nested create reads its
-// parent {id,name} from cache so it nests correctly even offline.
-function buildOptimisticStorageLocation(
+/**
+ * Write the location a create makes, complete for every screen that reads one,
+ * so it renders as a filter tab at once and survives a queued create. A nested
+ * create names its parent, which the cache completes from what it holds.
+ */
+function writeLocalStorageLocation(
   cache: ApolloCache,
   id: string,
   input: CreateLocationInput,
-  homeId: string,
-): StorageLocationNode {
-  return {
-    __typename: 'StorageLocation',
-    id,
-    name: input.name,
-    type: input.type,
-    icon: input.icon ?? null,
-    color: input.color ?? null,
-    temperature: input.temperature ?? null,
-    description: input.description ?? null,
-    isClimateControlled: input.isClimateControlled ?? false,
-    capacity: input.capacity ?? null,
-    capacityUnit: input.capacityUnit ?? null,
-    sortOrder: input.sortOrder ?? 0,
-    isDefault: input.isDefault ?? false,
-    currentItemCount: 0,
-    homeId,
-    parentLocation: readParentLocation(cache, input.parentLocationId),
-  };
+): void {
+  writeLocalEntity(cache, {
+    fragment: UseCreateStorageLocation_RowFragmentDoc,
+    fragmentName: 'useCreateStorageLocation_row',
+    neutral: NEUTRAL_LOCAL_STORAGE_LOCATION,
+    neutralByType: NEUTRAL_LOCAL_STORAGE_LOCATION_BY_TYPE,
+    known: {
+      __typename: 'StorageLocation',
+      id,
+      name: input.name,
+      type: input.type,
+      icon: input.icon ?? null,
+      color: input.color ?? null,
+      temperature: input.temperature ?? null,
+      description: input.description ?? null,
+      isClimateControlled: input.isClimateControlled ?? false,
+      capacity: input.capacity ?? null,
+      capacityUnit: input.capacityUnit ?? null,
+      sortOrder: input.sortOrder ?? 0,
+      isDefault: input.isDefault ?? false,
+      currentItemCount: 0,
+      parentLocation: input.parentLocationId
+        ? { __typename: 'StorageLocation', id: input.parentLocationId }
+        : null,
+    },
+  });
 }
 
 /** `storageLocations` is keyed by `homeId`; a location joins its own home's list only. */
@@ -117,13 +91,15 @@ const ownHomeOnly = (homeId: string): AddToConnectionOptions => ({
   skipStoreField: skipUnmatchedArgVariants({ homeId }),
 });
 
-function writeOptimisticLocation(
+function publishLocation(
   cache: ApolloCache,
-  location: StorageLocationNode,
+  id: string,
+  homeId: string,
   pantryId: string | undefined,
 ): void {
+  const location: LocationRef = { __typename: 'StorageLocation', id };
   try {
-    addToStorageLocationsCache(cache, location, ownHomeOnly(location.homeId));
+    addToStorageLocationsCache(cache, location, ownHomeOnly(homeId));
     if (pantryId) {
       addToPantryLocations(cache, pantryId, location, { position: 'end' });
     }
@@ -172,6 +148,7 @@ export function useCreateStorageLocation(
   const [createMutation, { loading: creating }] = useMutation(
     CreateStorageLocationDocument,
     {
+      context: { localFirst: true },
       update: (cache, { data }) => {
         // On the server response, adopt the authoritative node fields. The
         // optimistic edge already exists (same id), so the dedup guard makes
@@ -206,21 +183,21 @@ export function useCreateStorageLocation(
     }
 
     // Local-first: mint the permanent id, write the location to cache before
-    // firing, and queue the create when offline (context.localFirst).
+    // firing, and queue the create when offline (the hook's `localFirst`).
     const id = generateEntityId();
-    const optimistic = buildOptimisticStorageLocation(
-      client.cache,
-      id,
-      input,
-      homeId,
-    );
-    writeOptimisticLocation(client.cache, optimistic, pantryId);
+    try {
+      writeLocalStorageLocation(client.cache, id, input);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Create Storage Location (optimistic)',
+      });
+    }
+    publishLocation(client.cache, id, homeId, pantryId);
 
     const settled = await settleMutation(
       () =>
         createMutation({
           variables: { input: { ...input, homeId, id } },
-          context: { localFirst: true },
         }),
       {
         document: CreateStorageLocationDocument,
@@ -228,11 +205,9 @@ export function useCreateStorageLocation(
         onFailed: () => revertOptimisticLocation(client.cache, id, pantryId),
       },
     );
-    if (settled.status === 'failed') return false;
-
-    // Created (server confirmed) or queued (offline / API down) — keep the
-    // location. On 'created' the update callback adopted the server fields.
-    return appliedPayload(settled.data)?.storageLocation ?? optimistic;
+    // Created (server confirmed) or queued (offline / API down) — the location
+    // stays; on 'applied' the update callback adopted the server fields.
+    return settled.status !== 'failed';
   };
 
   return { createLocation, creating };

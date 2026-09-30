@@ -14,7 +14,9 @@ import { errorService } from '#/services/errorService';
 export function useSetDefaultShoppingList() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [mutate] = useMutation(MarkShoppingListAsDefaultDocument);
+  const [mutate] = useMutation(MarkShoppingListAsDefaultDocument, {
+    context: { localFirst: true },
+  });
 
   const setAsDefault = async (id: string): Promise<boolean> => {
     const cacheId = client.cache.identify({ __typename: 'ShoppingList', id });
@@ -55,7 +57,6 @@ export function useSetDefaultShoppingList() {
       () =>
         mutate({
           variables: { input: { id } },
-          context: { localFirst: true },
         }),
       {
         document: MarkShoppingListAsDefaultDocument,

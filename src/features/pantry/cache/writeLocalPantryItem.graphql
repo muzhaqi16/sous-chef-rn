@@ -1,0 +1,18 @@
+# A local-first create's row: everything a query reads on a pantry item, plus
+# the connections a new row starts with, empty.
+fragment writeLocalPantryItem_row on PantryItem {
+  id
+  ...PantryItemReaders
+  usageRecordsConnection(first: 5, orderBy: { usedAt: DESC }) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      node {
+        id
+      }
+    }
+  }
+}

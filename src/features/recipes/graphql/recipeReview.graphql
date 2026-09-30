@@ -8,7 +8,12 @@ mutation CreateRecipeReview($input: CreateRecipeReviewInput!) {
     ... on CreateRecipeReviewPayload {
       recipeReview {
         id
+        ...RecipeReviewReaders
         ...RecipeReviewFragment
+      }
+      recipe {
+        id
+        ...RecipeReaders
       }
     }
     ... on Error {
@@ -31,7 +36,12 @@ mutation UpdateRecipeReview($input: UpdateRecipeReviewInput!) {
     ... on UpdateRecipeReviewPayload {
       recipeReview {
         id
+        ...RecipeReviewReaders
         ...RecipeReviewFragment
+      }
+      recipe {
+        id
+        ...RecipeReaders
       }
     }
     ... on Error {
@@ -54,6 +64,10 @@ mutation DeleteRecipeReview($input: DeleteRecipeReviewInput!) {
     ... on DeleteRecipeReviewPayload {
       recipeReview {
         id
+      }
+      recipe {
+        id
+        ...RecipeReaders
       }
     }
     ... on Error {

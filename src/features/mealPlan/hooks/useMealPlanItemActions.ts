@@ -20,6 +20,7 @@ import { toastService } from '#/services/toastService';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import {
   addToMealPlanItems,
+  adoptServerMealPlanItem,
   removeFromMealPlanItems,
   writeMealPlanItem,
   writeOptimisticMealPlanItem,
@@ -38,21 +39,29 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
   const [createItemMutation, { loading: creating }] = useMutation(
     CreateMealPlanItemDocument,
     {
-      update(cache, { data }) {
+      context: { localFirst: true },
+      update(cache, { data }, { variables }) {
         const payload = appliedPayload(data);
-        if (!payload || !mealPlanId) return;
-        addToMealPlanItems(cache, mealPlanId, payload.mealPlanItem, {
-          position: 'end',
-        });
+        if (!payload || !variables) return;
+        adoptServerMealPlanItem(
+          cache,
+          variables.input.mealPlanId,
+          payload.mealPlanItem.id,
+          variables.input.id,
+        );
       },
     },
   );
 
   // No update/refetch needed — the mutation returns the full mealPlanItem
   // with id, so Apollo auto-normalizes the cache entry.
-  const [updateItemMutation] = useMutation(UpdateMealPlanItemDocument);
+  const [updateItemMutation] = useMutation(UpdateMealPlanItemDocument, {
+    context: { localFirst: true },
+  });
 
-  const [deleteItemMutation] = useMutation(DeleteMealPlanItemDocument);
+  const [deleteItemMutation] = useMutation(DeleteMealPlanItemDocument, {
+    context: { localFirst: true },
+  });
 
   const readItemSnapshot = (id: string) =>
     client.cache.readFragment({
@@ -83,7 +92,6 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       () =>
         createItemMutation({
           variables: { input: itemInput },
-          context: { localFirst: true },
         }),
       {
         document: CreateMealPlanItemDocument,
@@ -166,7 +174,6 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
             options?.notes != null && { notes: options.notes }),
         },
       },
-      context: { localFirst: true },
     };
     const revertToggle = () => {
       try {
@@ -273,7 +280,6 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       () =>
         deleteItemMutation({
           variables: { input: { id } },
-          context: { localFirst: true },
         }),
       {
         document: DeleteMealPlanItemDocument,

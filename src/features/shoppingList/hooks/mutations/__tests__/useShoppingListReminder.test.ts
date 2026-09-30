@@ -65,6 +65,34 @@ describe('useShoppingListReminder', () => {
     expect(readReminder(cache)?.reminderEnabled).toBe(true);
   });
 
+  // The list query that loaded the row may not have selected the reminder
+  // fields; a patch that read the whole fragment first wrote nothing then.
+  it('writes the reminder onto a list cached without the reminder fields', async () => {
+    const { reminderEnabled, reminderDate, ...withoutReminder } = LIST;
+    const cache = seedCache([withoutReminder]);
+    const { result } = renderHookWithApollo(() => useShoppingListReminder(), {
+      cache,
+      operationMocks: [
+        {
+          request: {
+            query: UpdateShoppingListReminderDocument,
+            variables: () => true,
+          },
+          result: { data: { updateShoppingListReminder: null } },
+        },
+      ],
+    });
+
+    await act(async () => {
+      await result.current.setReminder('list-1', '2026-02-01T09:00:00.000Z');
+    });
+
+    expect(readReminder(cache)).toMatchObject({
+      reminderEnabled: true,
+      reminderDate: '2026-02-01T09:00:00.000Z',
+    });
+  });
+
   it('clearReminder flips the flag off and nulls the date, returning true on success', async () => {
     const cache = seedCache([
       {

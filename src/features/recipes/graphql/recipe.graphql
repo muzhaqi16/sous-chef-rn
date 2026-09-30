@@ -22,18 +22,36 @@ query SearchRecipes(
   ) {
     edges {
       node {
-        # Inline fields read imperatively by useRecipeScreen's combined
-        # search (operation results are masked; fragment fields are not
-        # readable at query time) — same pattern as MyRecipes.
+        # Inline, not a fragment: useRecipeScreen's combined search reads
+        # these off the result, where a spread's fields are masked.
         id
         name
+        description
         imageUrl
         servings
+        prepTimeMinutes
+        cookTimeMinutes
         totalTimeMinutes
+        difficulty
+        category
+        cuisines
+        status
+        isExternal
         externalSource
         externalId
+        primarySource
+        caloriesPerServing
+        createdAt
+        updatedAt
         isSaved
-        ...BasicRecipeFragment
+        savedDetails {
+          id
+          folder
+          tags
+          notes
+          personalRating
+          cookedCount
+        }
       }
       cursor
     }
@@ -83,13 +101,6 @@ query GetRecipeReviews($id: ID!) {
       edges {
         node {
           id
-          # Reactivity signals: helpful/updatedAt also live in
-          # ...RecipeReviewFragment, but selecting them inline keeps them in the
-          # (unmasked) query result so useQuery re-emits when a review is edited
-          # or its helpful count changes. Otherwise the list sorted in
-          # useRecipeReviews.ts stays stale until the next refetch.
-          helpful
-          updatedAt
           ...RecipeReviewFragment
         }
       }
@@ -105,6 +116,7 @@ query MySavedRecipes($first: Int, $after: String) {
       edges {
         node {
           id
+          recipeId
           folder
           tags
           createdAt
@@ -145,7 +157,7 @@ mutation CreateRecipe($input: CreateRecipeInput!) {
     ... on CreateRecipePayload {
       recipe {
         id
-        ...BasicRecipeFragment
+        ...RecipeReaders
       }
     }
     ... on Error {
@@ -171,8 +183,7 @@ mutation OpenCatalogRecipe($input: UpsertExternalRecipeInput!) {
     ... on UpsertExternalRecipePayload {
       recipe {
         id
-        # Read by the search rows' saved badge, which the fragments leave out.
-        isSaved
+        ...RecipeReaders
         ...useRecipeData_recipe
         ...RecipeForm_recipe
       }
@@ -194,6 +205,7 @@ mutation UpdateRecipe($input: UpdateRecipeInput!) {
     ... on UpdateRecipePayload {
       recipe {
         id
+        ...RecipeReaders
         ...useRecipeData_recipe
         ...RecipeForm_recipe
       }
@@ -218,7 +230,7 @@ mutation ForkRecipe($input: ForkRecipeInput!) {
     ... on ForkRecipePayload {
       recipe {
         id
-        ...BasicRecipeFragment
+        ...RecipeReaders
       }
     }
     ... on Error {
@@ -241,6 +253,7 @@ mutation UpdateRecipeIngredients($input: UpdateRecipeIngredientsInput!) {
     ... on UpdateRecipeIngredientsPayload {
       recipe {
         id
+        ...RecipeReaders
         ingredientsConnection {
           edges {
             node {
@@ -293,20 +306,13 @@ mutation AddRecipeToFavorites($input: AddRecipeToFavoritesInput!) {
     ... on AddRecipeToFavoritesPayload {
       savedRecipe {
         id
+        ...SavedRecipeReaders
         recipeId
         userId
-        folder
-        tags
-        notes
-        personalRating
-        cookedCount
-        lastCookedAt
-        createdAt
-        updatedAt
-        recipe {
-          id
-          ...BasicRecipeFragment
-        }
+      }
+      recipe {
+        id
+        ...RecipeReaders
       }
     }
     ... on Error {
@@ -329,6 +335,10 @@ mutation RemoveRecipeFromFavorites($input: RemoveRecipeFromFavoritesInput!) {
     ... on RemoveRecipeFromFavoritesPayload {
       savedRecipe {
         id
+      }
+      recipe {
+        id
+        ...RecipeReaders
       }
     }
     ... on Error {
@@ -372,15 +382,13 @@ mutation UpdateFavoriteRecipe($input: UpdateFavoriteRecipeInput!) {
     ... on UpdateFavoriteRecipePayload {
       savedRecipe {
         id
+        ...SavedRecipeReaders
         recipeId
         userId
-        folder
-        tags
-        notes
-        personalRating
-        cookedCount
-        createdAt
-        updatedAt
+      }
+      recipe {
+        id
+        ...RecipeReaders
       }
     }
     ... on Error {
@@ -403,35 +411,22 @@ mutation CreateShoppingListItemsFromRecipe(
   createShoppingListItemsFromRecipe(input: $input) {
     __typename
     ... on CreateShoppingListItemsFromRecipePayload {
-      # These lines are written straight into the list's connection, so the
-      # response has to satisfy the query that displays them. Hand-listing a
-      # subset left the created entity missing eleven of the fifteen fields
-      # `GetShoppingListItemsFiltered` selects, which makes the whole list read
-      # incomplete rather than one value blank.
-      addedItems {
-        # `id` directly as well as through the spread: masking hides the
-        # fragment's fields from the parent, key field included.
+      shoppingList {
         id
-        ...AddedShoppingListItemFields
-        storeInfo {
-          aisle
+        ...ShoppingListReaders
+      }
+      results {
+        success
+        item {
+          id
+          ...ShoppingListItemReaders
+          ...AddedShoppingListItemFields
         }
       }
-      # Same shape as addedItems: an updated line is normalized into the same
-      # entity the list reads, and a narrower selection would blank the fields
-      # it omits rather than leave them alone.
-      updatedItems {
-        id
-        ...AddedShoppingListItemFields
+      summary {
+        succeeded
+        skipped
       }
-      skippedItems {
-        id
-        name
-        quantity
-      }
-      totalAdded
-      totalUpdated
-      totalSkipped
     }
     ... on Error {
       code
@@ -451,12 +446,10 @@ mutation CreateShoppingListItemFromRecipeIngredient(
     ... on CreateShoppingListItemFromRecipeIngredientPayload {
       shoppingListItem {
         id
-        itemName
-        quantity
-        unit {
+        ...ShoppingListItemReaders
+        shoppingList {
           id
-          name
-          symbol
+          ...ShoppingListReaders
         }
       }
       previousQuantity
@@ -545,6 +538,10 @@ mutation MarkRecipeAsCooked($input: MarkRecipeAsCookedInput!) {
   markRecipeAsCooked(input: $input) {
     __typename
     ... on MarkRecipeAsCookedPayload {
+      recipe {
+        id
+        ...RecipeReaders
+      }
       # Replay signal: true = the client-minted cooking-log id already existed
       # (idempotent replay), false = a fresh log row was created.
       converged

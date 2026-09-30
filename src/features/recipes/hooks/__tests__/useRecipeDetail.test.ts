@@ -365,6 +365,78 @@ describe('useRecipeDetail', () => {
       expect(mockOpenCatalogRecipe).toHaveBeenCalledTimes(2);
       expect(mockRefetch).not.toHaveBeenCalled();
     });
+
+    describe('a catalog recipe the API has not fetched', () => {
+      // Once opened, the API answers with the stub.
+      beforeEach(() => {
+        mockUseRecipeData.mockImplementation(({ recipeId }) => ({
+          ...mockRecipeDataReturn,
+          displayData: recipeId
+            ? {
+                title: 'Pasta with Garlic',
+                ingredients: [],
+                details: 'pending',
+              }
+            : null,
+        }));
+      });
+
+      const renderOpened = async () => {
+        const rendered = renderHookWithApollo(() => useRecipeDetail());
+        await waitFor(() =>
+          expect(rendered.result.current.recipeId).toBe('catalog-1'),
+        );
+        return rendered;
+      };
+
+      it('opens it again, since reading it never makes the API fetch it', async () => {
+        useRoute.mockReturnValue({ params: { catalog: HINT } });
+        const { result } = await renderOpened();
+
+        await act(async () => {
+          result.current.handleRefresh();
+        });
+
+        await waitFor(() =>
+          expect(mockOpenCatalogRecipe).toHaveBeenCalledTimes(2),
+        );
+        expect(mockOpenCatalogRecipe).toHaveBeenLastCalledWith(HINT);
+        expect(mockRefetch).not.toHaveBeenCalled();
+      });
+
+      it('keeps the stub on screen when that open fails', async () => {
+        useRoute.mockReturnValue({ params: { catalog: HINT } });
+        const { result } = await renderOpened();
+        mockOpenCatalogRecipe.mockResolvedValueOnce({
+          opened: false,
+          failure: 'Could not load recipe',
+        });
+
+        await act(async () => {
+          result.current.handleRefresh();
+        });
+
+        await waitFor(() =>
+          expect(mockOpenCatalogRecipe).toHaveBeenCalledTimes(2),
+        );
+        expect(result.current.recipeId).toBe('catalog-1');
+        expect(mockUseRecipeData).toHaveBeenLastCalledWith(
+          expect.objectContaining({ recipeId: 'catalog-1', openFailure: null }),
+        );
+      });
+
+      it('reads one opened by id again, with no hint to open it by', async () => {
+        useRoute.mockReturnValue({ params: { recipeId: 'r1', catalog: HINT } });
+        const { result } = renderHookWithApollo(() => useRecipeDetail());
+
+        await act(async () => {
+          result.current.handleRefresh();
+        });
+
+        expect(mockRefetch).toHaveBeenCalledTimes(1);
+        expect(mockOpenCatalogRecipe).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('what it returns', () => {

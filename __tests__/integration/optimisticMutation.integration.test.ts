@@ -39,13 +39,13 @@ import React from 'react';
 import { ApolloClient, type InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { ApolloProvider } from '@apollo/client/react';
-import type { MockedResponse } from '#/test-utils/apolloMockProvider';
-import { MockLink } from '@apollo/client/testing';
-import type { Unmasked } from '@apollo/client/masking';
 import {
-  ToggleShoppingListItemPurchasedDocument,
-  type ToggleShoppingListItemPurchasedMutation,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+  completeMockedResponse,
+  type MockDataFor,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+import { MockLink } from '@apollo/client/testing';
+import { ToggleShoppingListItemPurchasedDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import {
   ShoppingListItemDisplayFragmentDoc,
@@ -113,76 +113,25 @@ function readPurchaseStatus(cache: InMemoryCache): boolean | undefined {
 
 function buildSettledServerResponse(
   newPurchased: boolean,
-): Unmasked<ToggleShoppingListItemPurchasedMutation> {
+): MockDataFor<typeof ToggleShoppingListItemPurchasedDocument> {
   return {
-    __typename: 'Mutation',
     toggleShoppingListItemPurchased: {
       __typename: 'ToggleShoppingListItemPurchasedPayload',
       shoppingListItem: {
         __typename: 'ShoppingListItem',
         id: ITEM_ID,
-        itemName: 'Milk',
-        quantity: 1,
-        quantityInput: '1',
-        displayFormat: DisplayFormat.Decimal,
-        // The whole object, matching the mutation's selection: a partial
-        // `purchaseInfo` write REPLACES the cached one (see the type policies in
-        // apollo/cache.ts), so the server response has to carry every field it
-        // owns rather than just the flag that changed.
-        purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo',
-          movedToPantryAt: null,
-          isPurchased: newPurchased,
-          purchasedQuantity: newPurchased ? 1 : null,
-          purchasedPrice: newPurchased ? 2.5 : null,
-          purchaseDate: newPurchased ? '2026-01-01T00:00:00.000Z' : null,
-          purchasedBy: newPurchased
-            ? {
-                __typename: 'User',
-                id: 'user-1',
-                profile: {
-                  __typename: 'UserProfile',
-                  id: 'profile-1',
-                  displayName: 'Sam',
-                  avatar: null,
-                },
-              }
-            : null,
-        },
-        // The server creates a purchase row on each mark-purchased, so the
-        // summary moves with `newPurchased`. The mutation selects it precisely
-        // so this lands in the cache — otherwise ItemDetail keeps showing the
-        // pre-toggle count.
-        purchaseHistory: {
-          __typename: 'PurchaseHistorySummary',
-          previouslyPurchased: newPurchased,
-          purchaseCount: newPurchased ? 1 : 0,
-          lastPurchaseDate: newPurchased ? '2026-01-01T00:00:00.000Z' : null,
-        },
-        version: 2,
-        updatedAt: '2025-01-02T00:00:00.000Z',
-        category: 'Dairy',
-        notes: null,
-        unitName: null,
-        unit: null,
-        sortOrder: 'a0',
-        item: null,
-        shoppingList: {
-          __typename: 'ShoppingList',
-          id: 'list-1',
-          totalItems: 0,
-          completedItems: 0,
-          remainingItems: 0,
-          completionRate: 0,
-        },
+        // A `purchaseInfo` write replaces the cached one (the type policy in
+        // apollo/cache.ts), so the flag is stated and the rest completed.
+        purchaseInfo: { isPurchased: newPurchased },
       },
+      shoppingList: { __typename: 'ShoppingList', id: LIST_ID },
     },
   };
 }
 
 function buildClient(opts: {
   initialPurchased: boolean;
-  serverResponse: ToggleShoppingListItemPurchasedMutation;
+  serverResponse: MockDataFor<typeof ToggleShoppingListItemPurchasedDocument>;
   serverDelayMs?: number;
 }) {
   const cache = makeCache();
@@ -190,7 +139,7 @@ function buildClient(opts: {
 
   const newPurchased = !opts.initialPurchased;
   const responses: MockedResponse[] = [
-    {
+    completeMockedResponse({
       request: {
         query: ToggleShoppingListItemPurchasedDocument,
         variables: { input: { id: ITEM_ID, purchased: newPurchased } },
@@ -199,7 +148,7 @@ function buildClient(opts: {
       // `delay` makes the network response asynchronous so we can observe
       // the cache between "optimistic write" and "server settle".
       delay: opts.serverDelayMs ?? 0,
-    },
+    }),
   ];
 
   const client = new ApolloClient({

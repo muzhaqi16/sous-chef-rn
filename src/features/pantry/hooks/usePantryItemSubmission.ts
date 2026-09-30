@@ -11,13 +11,15 @@ import type {
 import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
-import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
+import {
+  writeLocalPantryItem,
+  type LocalPantryItem,
+} from '#features/pantry/cache/writeLocalPantryItem';
 import {
   addToPantryItemsCache,
   addPantryItemLocally,
   revertOptimisticPantryItem,
 } from '#features/pantry/cache/items';
-import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { findCachedPantryItemDuplicate } from '#features/pantry/utils/pantryCacheReaders';
 import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { settleMutation } from '#/apollo/utils/settleMutation';
@@ -30,7 +32,7 @@ import {
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { refByIdOrName } from '#/utils/refInput';
 import { errorService } from '#/services/errorService';
-import { toDateKey } from '#/utils/dateUtils';
+import { toDateKey, todayKey } from '#/utils/dateUtils';
 
 export interface PantryItemSubmissionParams {
   pantryId: string | undefined;
@@ -102,6 +104,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
   const [createPantryItem, { loading }] = useMutation(
     CreatePantryItemDocument,
     {
+      context: { localFirst: true },
       update: (cache, { data }, { variables }) => {
         const payload = appliedPayload(data);
         if (!payload || !pantryId) return;
@@ -130,7 +133,10 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
   );
 
   // Restock mutation
-  const [restockPantryItem] = useMutation(RestockPantryItemDocument, {});
+  const [restockPantryItem] = useMutation(RestockPantryItemDocument, {
+    // Replays as the canonical mutation, deduped by its idempotencyKey.
+    context: { localFirst: true },
+  });
 
   const handleConfirm = async () => {
     if (!pantryId) return;
@@ -228,7 +234,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       },
       purchase,
       expiresOn: expirationDate ? toDateKey(expirationDate) : undefined,
-      today: toDateKey(new Date()),
+      today: todayKey(),
       tags: tags
         ? tags
             .split(',')
@@ -268,41 +274,28 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       },
     };
 
-    // Write the item into the cache before firing, so it shows immediately and
-    // stays if the create is queued offline (the queue replays it later, keyed by
-    // this id).
-    // Built before the try: the conditionals below are value blocks, and the
-    // React Compiler bails out of a hook when one appears inside a try body.
-    const optimisticItem = buildOptimisticPantryItem(
-      id,
-      {
-        pantryId,
-        itemName: itemName.trim(),
-        quantity,
-        unitId,
-        storageState,
-        expiresOn: expirationDate ? toDateKey(expirationDate) : null,
-        location:
-          !selectedStorageLocationId && storageLocation.trim()
-            ? storageLocation.trim()
-            : null,
-        minQuantity: minQuantity ? parseDecimalInput(minQuantity) : null,
-      },
-      client.cache,
-    );
-    // The detail screens read a wider fragment than the list, so the optimistic
-    // entity is materialized for both or a fresh row dead-ends on tap. Built out
-    // here because a value block inside a try body bails the compiler.
-    const detailStubFields = {
+    // Written before firing, so the row shows at once and stays if the create
+    // is queued offline. Built out here: a value block inside a try body bails
+    // the React Compiler.
+    const localRow: LocalPantryItem = {
+      pantryId,
       itemName: itemName.trim(),
-      condition,
-      acquisitionMethod,
       quantity,
-      costPerUnit: costValue ?? null,
-      storageNotes: storageNotes.trim() || null,
+      unitId,
+      storageState,
+      expiresOn: expirationDate ? toDateKey(expirationDate) : null,
+      location:
+        !selectedStorageLocationId && storageLocation.trim()
+          ? storageLocation.trim()
+          : null,
+      minQuantity: minQuantity ? parseDecimalInput(minQuantity) : null,
       restockQuantity: restockQuantity
         ? parseDecimalInput(restockQuantity)
         : null,
+      condition,
+      acquisitionMethod,
+      costPerUnit: costValue ?? null,
+      storageNotes: storageNotes.trim() || null,
       tags: tags
         ? tags
             .split(',')
@@ -318,8 +311,11 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
         // mutation's `update:` callback — that only runs with a server
         // payload, so offline the row would appear while the header kept the
         // old count.
-        addPantryItemLocally(client.cache, pantryId, optimisticItem);
-        writePantryItemDetailStub(client.cache, id, detailStubFields);
+        writeLocalPantryItem(client.cache, id, localRow);
+        addPantryItemLocally(client.cache, pantryId, {
+          __typename: 'PantryItem',
+          id,
+        });
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Add Pantry Item (optimistic)',
@@ -340,6 +336,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
           () =>
             restockPantryItem({
               variables: {
+                today: todayKey(),
                 input: {
                   id: existingPantryItemId,
                   quantity,
@@ -364,9 +361,6 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
                   idempotencyKey: generateEntityId(),
                 },
               },
-              // Local-first: queued offline, replayed as the canonical
-              // mutation (deduped by its idempotencyKey).
-              context: { localFirst: true },
             }),
           {
             document: RestockPantryItemDocument,
@@ -410,7 +404,6 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     try {
       result = await createPantryItem({
         variables: { input: mutationInput, today: mutationInput.today },
-        context: { localFirst: true },
       });
     } catch (error) {
       thrown = error;

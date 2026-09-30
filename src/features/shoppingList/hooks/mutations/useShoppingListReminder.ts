@@ -15,46 +15,50 @@ import {
   type UseShoppingListReminder_ListFragment,
 } from './useShoppingListReminder.generated';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
+import {
+  snapshotFields,
+  writeEntityFields,
+} from '#/apollo/utils/localFirstFields';
 
 export function useShoppingListReminder() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [setMutation] = useMutation(UpdateShoppingListReminderDocument);
-  const [clearMutation] = useMutation(DeleteShoppingListReminderDocument);
+  const [setMutation] = useMutation(UpdateShoppingListReminderDocument, {
+    context: { localFirst: true },
+  });
+  const [clearMutation] = useMutation(DeleteShoppingListReminderDocument, {
+    context: { localFirst: true },
+  });
 
+  /** Writes `patch` over the list and returns what restores the held values. */
   const applyOptimistic = (
     id: string,
     patch: Partial<UseShoppingListReminder_ListFragment>,
-    label: string,
-  ): (() => void) =>
-    applyOptimisticFragmentPatch(
-      client.cache,
-      { typename: 'ShoppingList', id },
-      {
+  ): (() => void) => {
+    const entity = { __typename: 'ShoppingList', id };
+    const held =
+      client.cache.readFragment<UseShoppingListReminder_ListFragment>({
+        id: client.cache.identify(entity),
         fragment: UseShoppingListReminder_ListFragmentDoc,
         fragmentName: 'useShoppingListReminder_list',
-      },
-      patch,
-      label,
-    );
+        returnPartialData: true,
+      });
+    const previous = snapshotFields(held, patch);
+    writeEntityFields(client.cache, entity, patch);
+    return () => writeEntityFields(client.cache, entity, previous);
+  };
 
   const setReminder = async (
     id: string,
     reminderDate: string,
     reminderEnabled = true,
   ): Promise<boolean> => {
-    const revert = applyOptimistic(
-      id,
-      { reminderEnabled, reminderDate },
-      'Set Reminder',
-    );
+    const revert = applyOptimistic(id, { reminderEnabled, reminderDate });
 
     const settled = await settleMutation(
       () =>
         setMutation({
           variables: { input: { id, reminderDate, reminderEnabled } },
-          context: { localFirst: true },
         }),
       {
         document: UpdateShoppingListReminderDocument,
@@ -66,17 +70,15 @@ export function useShoppingListReminder() {
   };
 
   const clearReminder = async (id: string): Promise<boolean> => {
-    const revert = applyOptimistic(
-      id,
-      { reminderEnabled: false, reminderDate: null },
-      'Clear Reminder',
-    );
+    const revert = applyOptimistic(id, {
+      reminderEnabled: false,
+      reminderDate: null,
+    });
 
     const settled = await settleMutation(
       () =>
         clearMutation({
           variables: { input: { id } },
-          context: { localFirst: true },
         }),
       {
         document: DeleteShoppingListReminderDocument,

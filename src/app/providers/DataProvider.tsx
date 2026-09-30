@@ -3,7 +3,7 @@ import { useDataPreloading } from '#/hooks/useDataPreloading';
 import { useOfflineTabPreloading } from '#/app/useOfflineTabPreloading';
 import { useNotificationsOnLaunch } from '#features/notifications/hooks/useNotificationsOnLaunch';
 import { useIsLoggingOut, useUpdateUser, useUser } from '#store/useAppStore';
-import { useQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import { GetUserProfileDocument } from '#operations/auth/user.generated';
 
 interface DataProviderProps {
@@ -37,10 +37,10 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   // Fetch profile on every app load to keep Zustand store in sync
   // (e.g., profilePicture is only set at login/register and goes stale).
   // First mount fires the network once; subsequent re-renders read cache only.
-  const { data: profileData } = useQuery(GetUserProfileDocument, {
-    skip: !user || isLoggingOut,
-    notifyOnNetworkStatusChange: false,
-  });
+  const { data: profileData } = useQuery(
+    GetUserProfileDocument,
+    !user || isLoggingOut ? skipToken : { notifyOnNetworkStatusChange: false },
+  );
 
   useEffect(() => {
     const profile = profileData?.me?.profile;

@@ -49,7 +49,7 @@ export interface QueueError {
   retryAfterMs?: number;
 }
 
-/** Named values a sync builder reads from the cache, e.g. `shoppingListId`. */
+/** Named cache values a replay reads, captured when queued (`unit:<id>` → symbol). */
 export type ReplayInputs = Readonly<Partial<Record<string, string>>>;
 
 export interface QueuedMutation {
@@ -133,20 +133,6 @@ export interface FailedMutationInfo {
 export type FailureHandler = (info: FailedMutationInfo) => void;
 
 /**
- * A replay the server ACCEPTED while keeping its own value for a field the
- * write set. Not a failure — nothing is withdrawn and the entry dequeues as
- * success — but the user's change is gone, so they are told.
- */
-export interface OverwrittenMutationInfo {
-  mutationId: string;
-  operationName: string;
-  entityType: string | null;
-  entityId: string | null;
-}
-
-export type OverwriteReporter = (info: OverwrittenMutationInfo) => void;
-
-/**
  * Withdraws the aggregate a queued write moved that an evict does not put back
  * — a count the mutation's own `update` callback never ran to adjust. Runs
  * BEFORE the evict, so it can still see the edge it is uncounting.
@@ -168,14 +154,26 @@ export type UnlinkWithdrawal = (
 ) => void;
 
 /**
+ * A create the server merged into a row it already held (`outcome: MERGED`):
+ * writes still queued against the minted id move to the surviving row.
+ */
+export interface RowAdoption {
+  mintedId: string;
+  survivingId: string;
+  /** The surviving row's version, the base a moved write is sent at. */
+  version: number | undefined;
+}
+
+/**
  * Settles a replay the server ACCEPTED but resolved differently than the local
  * write assumed — a replay runs with no `update` callback, so normalization is
- * all it gets.
+ * all it gets. A merged create is reported through `adopt`.
  */
 export type ReplayReconciler = (
   cache: ApolloCache,
   variables: OperationVariables,
   data: unknown,
+  adopt?: (adoption: RowAdoption) => void,
 ) => void;
 
 /** Every table here is keyed by operation name, and every entry IDEMPOTENT: a

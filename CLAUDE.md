@@ -96,10 +96,13 @@ Map and reasoning: `docs/architecture.md`.
   passes down.
 - **A feature store calls `registerSessionScopedStore(name, reset)`**
   (`sessionEndLeavesNoData.test.ts`).
-- **Notifications live in the cache** (`notificationCacheWrites.ts`): a local
-  write moves the badge by a delta, a server event reseeds the unread count,
-  `addNotificationToFeed` scopes with `skipUnmatchedFilterVariants` —
-  `docs/apollo-client-patterns.md` § Server events, the unread badge, and write scoping.
+- **Notifications live in the cache** (`notificationCacheWrites.ts`): the badge
+  is `Query.notificationSummary` (`NotificationSummary:<userId>`), stated by
+  every notification write's payload; a local write moves it by a delta only
+  until the response lands, never after one; a server event re-reads
+  `notificationSummary`; `addNotificationToFeed` scopes with
+  `skipUnmatchedFilterVariants` — `docs/apollo-client-patterns.md` § Server
+  events, the unread badge, and write scoping.
 
 ## TypeScript & comments
 
@@ -128,8 +131,21 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
   hold part of it; a screen or component calling `useQuery`/`useMutation`/the
   client directly is caught only by review. `useFragment` and masking types stay allowed.
 - **Fragments**: a component or hook owns a sibling `<Consumer>_<entity>`
-  fragment; screens spread children's, queries the screen's, mutations the
-  hook's. A shared `*Fragments.graphql` has a consumer-list header, 2+ operations
+  fragment; screens spread children's, queries the screen's.
+- **Never `readFragment` while rendering**: a masked result keeps its identity
+  when only masked fields change, so the read freezes. `useFragment`
+  (`from: x ?? null`), or `useFragmentList` for a list (`renderTimeReadFragment`).
+  Verified: `#apollo-masked-results-keep-identity-when-only-masked-fields-change`.
+- **A mutation returns what the queries read** (`find-stale-cache-fields`,
+  strict): it spreads the generated `...<Type>Readers` (`src/graphql/readers/`,
+  `npm run codegen:readers`) on each entity it returns and on the collection
+  whose totals it moves, plus its hook's own fragment. A removal returns only
+  the key; connections stay with their edge writers.
+- **A response that states a count settles it**: no handler adjusts on top
+  (`carriesListTotals`, `carriesPantryCount`).
+- **A local-first create writes its row with `writeLocalEntity`** over a row
+  fragment spreading the entity's readers: known, else held, else the SDL
+  neutral (`generate-optimistic-fillers`). A shared `*Fragments.graphql` has a consumer-list header, 2+ operations
   and 1+ hook. List cells are **strict** (`null` on `!complete`); detail panels and
   sheets **resilient** with guarded scalar reads.
 - **A selection that spreads a fragment on a type with an `id` selects `id`
@@ -144,6 +160,9 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
 - **Settle a write with `settleMutation`** (`applied | queued | failed`; queued
   is never a failure) and narrow with `appliedPayload(data)`
   (`writesSettleThroughOneMechanism.test.ts`).
+- **`localFirst` goes on the `useMutation` options**: a per-call context object
+  replaces the hook's, so extra keys use the callback form
+  (`sous-chef/queueable-write-is-local-first`).
 - **Pick a mutation pattern from `docs/apollo-client-patterns.md` § Choosing a pattern** (no `update` callback by
   default, `refetchQueries` last); build optimistic responses from
   `cache.readFragment` + spread, never hand-rolled shapes.
@@ -151,15 +170,25 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
   `cache.writeFragment` (`writePurchaseInfo`), never `cache.modify`; the
   restoration pass uses `src/apollo/utils/fieldWriters.ts`.
 - **An optimistic entity is COMPLETE for every query reading it**: a new read
-  field reaches every connection writer (builder, create, `Sync*` replay,
+  field reaches every connection writer (builder, create and its replay,
   move/restock, subscription read-back) — `optimisticEntityCompleteness.test.ts`.
 - **Suspense hooks are not adopted** (`docs/apollo-client-patterns.md`
   § Apollo Client 4.x Notes).
 - **Gate a screen on `loading && !data`, NEVER `loading`** — it is true on every
   mount, warm cache or not. A defaults-filling hook returns a flag
   (`hasLoadedSettings`); the loading branch stays inside the header wrapper.
+- **A query that must not run yet takes `skipToken`**, never `skip:` with
+  placeholder variables. `skipToken` keeps the last run's data, so a hook whose
+  subject can change while skipped checks `result.variables` first. Verified:
+  `#apollo-skiptoken-keeps-serving-the-last-runs-data`.
 - **`returnPartialData: false`: `!data` means the read was INCOMPLETE**, so every
   writer writes the full shape its reader selects (`userProfileCompleteness.test.ts`). Verified: `#apollo-reports-loading-true-on-every-mount-warm-cache-or-not`.
+- **Resync is `RefetchEventManager`** (`src/apollo/refetchEvents.ts`): app
+  foreground, API reachable, socket reconnect, after the queue drains. Never add
+  a refetch listener; a search, preview or analytics query sets `refetchOn: false`
+  (`transientQueriesDeclineResync.test.ts`), and a lazy query re-issued to refresh
+  sets `nextFetchPolicy: 'network-only'`. Verified:
+  `#apollo-lazy-re-execute-answers-from-the-cache-after-the-first-result`.
 - **Envelope + `node { id }` event subscriptions run `fetchPolicy: 'no-cache'`**
   (`eventSubscriptionFetchPolicy.test.ts`); **every `useSubscription` is followed
   by `useSubscriptionTransportRecovery`** (`transportRecoveryCoverage.test.ts`);

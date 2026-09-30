@@ -83,16 +83,24 @@ const DETAILS_NOTICE: Readonly<
   },
 };
 
-const DetailsNotice: React.FC<{ details: RecipeDetails }> = ({ details }) => {
+const DetailsNotice: React.FC<{ details: RecipeDetails; saved: boolean }> = ({
+  details,
+  saved,
+}) => {
   const { t } = useTranslation();
   if (details === 'complete') return null;
   if (details === 'opening') return <RecipeDetailSkeleton />;
   const notice = DETAILS_NOTICE[details];
+  // A saved recipe's fetch is already queued, so it is not asked to save.
+  const subtitle: TranslationKey =
+    details === 'pending' && saved
+      ? 'recipes.catalogPendingSavedSubtitle'
+      : notice.subtitle;
   return (
     <View style={styles.detailsNotice}>
       <AlertBanner
         title={t(notice.title)}
-        subtitle={t(notice.subtitle)}
+        subtitle={t(subtitle)}
         icon={notice.icon}
         iconLibrary="Ionicons"
         variant={details === 'pending' ? 'info' : 'warning'}
@@ -172,8 +180,11 @@ const RecipeDetailScreen: React.FC = () => {
   const showHeartIcon = !isSaved || isInFavorites || !savedFolder;
   const showFolderIcon = !isSaved || isInOtherFolder || !savedFolder;
 
-  // A catalog recipe has no author, so nobody owns it and it offers a fork.
+  // A catalog recipe has no author, so nobody owns it and it offers a fork,
+  // once fetched: a fork of a stub copies only its name and image.
   const isOwner = !!user && backendRecipe?.createdBy?.id === user.id;
+  const canFork =
+    !!backendRecipe && !isOwner && displayData?.details === 'complete';
 
   const handleEditRecipe = () => {
     if (recipeId) {
@@ -289,7 +300,7 @@ const RecipeDetailScreen: React.FC = () => {
           } satisfies HeaderAction,
         ]
       : []),
-    ...(backendRecipe && !isOwner
+    ...(canFork
       ? [
           {
             icon: 'git-branch-outline',
@@ -493,7 +504,7 @@ const RecipeDetailScreen: React.FC = () => {
           />
         )}
 
-        <DetailsNotice details={displayData.details} />
+        <DetailsNotice details={displayData.details} saved={isSaved} />
 
         {/* Dietary tags, from the provider's own data */}
         {[

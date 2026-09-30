@@ -29,10 +29,9 @@ import type {
   CreateMealPlanInput,
   UpdateMealPlanInput,
 } from '#/graphql/generated/schemaTypes';
-import {
-  createAddToQueryConnectionUpdater,
-  createRemoveFromQueryConnectionUpdater,
-} from '#/apollo/utils/cacheUpdaters';
+import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { removeFromMealPlans } from '#features/mealPlan/cache/removals';
+import { settleMealPlanDelete } from '#features/mealPlan/offline/replayReconcilers';
 import {
   settleMutation,
   type SettledFailure,
@@ -45,10 +44,6 @@ import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 
 const addToMealPlans = createAddToQueryConnectionUpdater(
-  'mealPlans',
-  'MealPlan',
-);
-const removeFromMealPlans = createRemoveFromQueryConnectionUpdater(
   'mealPlans',
   'MealPlan',
 );
@@ -169,6 +164,7 @@ export function useMealPlanActions() {
   const [createMealPlanMutation, { loading: creating }] = useMutation(
     CreateMealPlanDocument,
     {
+      context: { localFirst: true },
       update: (cache, { data }) => {
         const payload = appliedPayload(data);
         if (payload)
@@ -177,10 +173,19 @@ export function useMealPlanActions() {
     },
   );
 
-  const [updateMealPlanMutation] = useMutation(UpdateMealPlanDocument);
+  const [updateMealPlanMutation] = useMutation(UpdateMealPlanDocument, {
+    context: { localFirst: true },
+  });
 
   const [deleteMealPlanMutation, { loading: deleting }] = useMutation(
     DeleteMealPlanDocument,
+    {
+      context: { localFirst: true },
+      update: (cache, { data }, { variables }) => {
+        if (variables && appliedPayload(data))
+          settleMealPlanDelete(cache, variables, data);
+      },
+    },
   );
 
   const writePlan = (data: MealPlanDisplayFragment) =>
@@ -253,7 +258,6 @@ export function useMealPlanActions() {
       () =>
         createMealPlanMutation({
           variables: { input: { ...input, id } },
-          context: { localFirst: true },
         }),
       {
         document: CreateMealPlanDocument,
@@ -306,7 +310,6 @@ export function useMealPlanActions() {
       () =>
         updateMealPlanMutation({
           variables: { input: { ...input, id } },
-          context: { localFirst: true },
         }),
       {
         document: UpdateMealPlanDocument,
@@ -348,7 +351,6 @@ export function useMealPlanActions() {
       () =>
         deleteMealPlanMutation({
           variables: { input: { id } },
-          context: { localFirst: true },
         }),
       {
         document: DeleteMealPlanDocument,

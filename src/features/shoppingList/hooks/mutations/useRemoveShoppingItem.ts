@@ -5,33 +5,17 @@
  * item still exists server-side, so a refetch restores it.
  */
 
-import { gql } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { RemoveItemFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { readListCounters } from '#features/shoppingList/cache/connections';
+import { UseRemoveShoppingItem_PurchaseFragmentDoc } from './useRemoveShoppingItem.generated';
 import { removeFromShoppingListItemsCache } from './utils';
+import { settleShoppingItemDelete } from '#features/shoppingList/offline/replayReconcilers';
 import { errorService } from '#/services/errorService';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { useTranslation } from '#/i18n';
 import type { ShoppingList } from '#/graphql/generated/schemaTypes';
-
-// Minimal cache-read fragments — only the fields the optimistic-update path needs.
-const ShoppingListStatsFragment = gql`
-  fragment _RemoveShoppingItemStats on ShoppingList {
-    totalItems
-    completedItems
-    remainingItems
-    completionRate
-  }
-`;
-
-const ShoppingListItemPurchaseFragment = gql`
-  fragment _RemoveShoppingItemPurchase on ShoppingListItem {
-    purchaseInfo {
-      isPurchased
-    }
-  }
-`;
 
 type ListStat = keyof Pick<
   ShoppingList,
@@ -106,19 +90,10 @@ export function useRemoveShoppingItem({
   const { t } = useTranslation();
 
   const [removeItemMutation] = useMutation(RemoveItemFromShoppingListDocument, {
+    context: { localFirst: true },
     update(cache, { data }, { variables }) {
-      // Re-evict on the server response: Apollo re-normalizes the
-      // `shoppingListItem { id }` payload, resurrecting the evicted entity.
-      if (!appliedPayload(data) || !listId || !variables) return;
-      try {
-        removeFromShoppingListItemsCache(cache, listId, variables.input.id, {
-          evictItem: true,
-        });
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Cache cleanup failed for removeItem:',
-        });
-      }
+      if (!appliedPayload(data) || !variables) return;
+      settleShoppingItemDelete(cache, variables, data);
     },
   });
 
@@ -130,27 +105,21 @@ export function useRemoveShoppingItem({
       __typename: 'ShoppingList',
       id: listId,
     });
-    const listStats = client.cache.readFragment<ListStats>({
-      id: listCacheId,
-      fragment: ShoppingListStatsFragment,
-      fragmentName: '_RemoveShoppingItemStats',
-      returnPartialData: true,
-    });
-    const itemPurchase = client.cache.readFragment<{
-      purchaseInfo: { isPurchased: boolean } | null;
-    }>({
+    const listStats = listCacheId
+      ? readListCounters(client.cache, listCacheId)
+      : null;
+    const itemPurchase = client.cache.readFragment({
       id: client.cache.identify({
         __typename: 'ShoppingListItem',
         id: itemId,
       }),
-      fragment: ShoppingListItemPurchaseFragment,
-      fragmentName: '_RemoveShoppingItemPurchase',
+      fragment: UseRemoveShoppingItem_PurchaseFragmentDoc,
     });
 
     // Resolved before the try: value blocks inside one bail the React Compiler.
     const nextStats = statsWithoutRow(
       listStats,
-      itemPurchase?.purchaseInfo?.isPurchased ?? false,
+      itemPurchase?.purchaseInfo.isPurchased ?? false,
     );
 
     try {
@@ -168,7 +137,6 @@ export function useRemoveShoppingItem({
       () =>
         removeItemMutation({
           variables: { input: { id: itemId } },
-          context: { localFirst: true },
         }),
       {
         document: RemoveItemFromShoppingListDocument,

@@ -101,6 +101,7 @@ export function useMealTemplateEditor() {
   const [createMutation, { loading: creating }] = useMutation(
     CreateMealTemplateDocument,
     {
+      context: { localFirst: true },
       update: (cache, { data }) => {
         const payload = appliedPayload(data);
         if (payload) {
@@ -119,10 +120,17 @@ export function useMealTemplateEditor() {
   );
   const [updateMutation, { loading: updating }] = useMutation(
     UpdateMealTemplateDocument,
+    { context: { localFirst: true } },
   );
-  const [addItemMutation] = useMutation(AddTemplateItemDocument);
-  const [updateItemMutation] = useMutation(UpdateTemplateItemDocument);
-  const [removeItemMutation] = useMutation(RemoveTemplateItemDocument);
+  const [addItemMutation] = useMutation(AddTemplateItemDocument, {
+    context: { localFirst: true },
+  });
+  const [updateItemMutation] = useMutation(UpdateTemplateItemDocument, {
+    context: { localFirst: true },
+  });
+  const [removeItemMutation] = useMutation(RemoveTemplateItemDocument, {
+    context: { localFirst: true },
+  });
 
   // `AddTemplateItemInput.id` accepts a client-minted CUID2, so a replayed add
   // resolves to the same row (`IDEMPOTENT_REPLAY`), update writes absolute
@@ -179,7 +187,6 @@ export function useMealTemplateEditor() {
       () =>
         createMutation({
           variables: { input: { ...input, id } },
-          context: { localFirst: true },
         }),
       {
         document: CreateMealTemplateDocument,
@@ -255,7 +262,6 @@ export function useMealTemplateEditor() {
       () =>
         updateMutation({
           variables: { input: { ...input, id } },
-          context: { localFirst: true },
         }),
       {
         document: UpdateMealTemplateDocument,
@@ -292,7 +298,6 @@ export function useMealTemplateEditor() {
       () =>
         addItemMutation({
           variables: { input: { ...input, id } },
-          context: { localFirst: true },
         }),
       {
         document: AddTemplateItemDocument,
@@ -339,7 +344,6 @@ export function useMealTemplateEditor() {
           () =>
             updateItemMutation({
               variables: { input },
-              context: { localFirst: true },
             }),
           {
             document: UpdateTemplateItemDocument,
@@ -409,7 +413,6 @@ export function useMealTemplateEditor() {
       () =>
         removeItemMutation({
           variables: { input: { id: itemId } },
-          context: { localFirst: true },
         }),
       {
         document: RemoveTemplateItemDocument,

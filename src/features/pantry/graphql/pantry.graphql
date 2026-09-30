@@ -403,17 +403,13 @@ query RestockUnitsForPantryItem($pantryItemId: ID!) {
 # MUTATIONS
 # ============================================
 
-mutation CreatePantry($input: CreatePantryInput!) {
+mutation CreatePantry($input: CreatePantryInput!, $today: LocalDate!) {
   createPantry(input: $input) {
     __typename
     ... on CreatePantryPayload {
       pantry {
         id
-        homeId
-        name
-        description
-        isDefault
-        version
+        ...PantryReaders
         createdAt
         updatedAt
       }
@@ -432,17 +428,13 @@ mutation CreatePantry($input: CreatePantryInput!) {
   }
 }
 
-mutation UpdatePantry($input: UpdatePantryInput!) {
+mutation UpdatePantry($input: UpdatePantryInput!, $today: LocalDate!) {
   updatePantry(input: $input) {
     __typename
     ... on UpdatePantryPayload {
       pantry {
         id
-        homeId
-        name
-        description
-        isDefault
-        version
+        ...PantryReaders
         createdAt
         updatedAt
       }
@@ -467,7 +459,6 @@ mutation DeletePantry($input: DeletePantryInput!) {
     ... on DeletePantryPayload {
       pantry {
         id
-        name
       }
     }
     ... on Error {
@@ -484,15 +475,16 @@ mutation DeletePantry($input: DeletePantryInput!) {
   }
 }
 
-mutation MarkPantryAsDefault($input: MarkPantryAsDefaultInput!) {
+mutation MarkPantryAsDefault(
+  $input: MarkPantryAsDefaultInput!
+  $today: LocalDate!
+) {
   markPantryAsDefault(input: $input) {
     __typename
     ... on MarkPantryAsDefaultPayload {
       pantry {
         id
-        name
-        isDefault
-        homeId
+        ...PantryReaders
       }
     }
     ... on Error {
@@ -513,122 +505,19 @@ mutation CreatePantryItem($input: CreatePantryItemInput!, $today: LocalDate!) {
   createPantryItem(input: $input) {
     __typename
     ... on CreatePantryItemPayload {
+      storageLocation {
+        id
+        ...StorageLocationReaders
+      }
       pantryItem {
         id
-        pantryId
-        itemId
-        itemName
-        quantity
-        heldQuantity
-        displayAmount {
-          quantity
-          unit {
-            id
-            symbol
-          }
-        }
-        version
-        # `createdAt` is selected by GetPantry on every list node, so the create
-        # response (and the optimistic entity built from this selection) must
-        # carry it — otherwise the list's cache read is INCOMPLETE for the new
-        # item and Apollo drops the whole query result. Online that self-heals
-        # on the next network read; offline it strands the add (see
-        # buildOptimisticPantryItem).
-        createdAt
-        updatedAt
-        storageState
-        expiresOn
-        lowStockAlert
-        isLowStock
-        minQuantity
-        lastUsedAt
-        netWeight
-        remainingNetWeight
-        portionUnitId
-        portionUnit {
-          id
-          name
-          symbol
-        }
-        remainingPortions
-        activeBatchCount
-        earliestBatchExpiresOn
-        item {
-          id
-          imageUrl
-          images {
-            id
-            url
-            kind
-          }
-        }
-        # type + displayAsFraction for the same reason: PantryActionModal's
-        # fragment (spread into GetPantry's nodes) reads them off `unit`, so a
-        # unit first introduced by this response must arrive complete.
-        unit {
-          id
-          name
-          symbol
-          type
-          displayAsFraction
-        }
-        netWeightUnit {
-          id
-          name
-          symbol
-        }
-        storageLocation {
-          id
-          name
-          type
-        }
-        packageBreakdown {
-          count
-          contentUnit {
-            id
-            name
-            symbol
-          }
-          perUnitNetWeight
-          perUnitNetWeightUnit {
-            id
-            name
-            symbol
-          }
-          totalNetWeight
-        }
-        quantityBreakdown {
-          fullPackages
-          looseContentUnits
-          contentUnit {
-            id
-            name
-            symbol
-          }
-          totalContentUnits
-          remainingWeight
-          remainingWeightUnit {
-            id
-            name
-            symbol
-          }
-        }
-        pantry {
-          id
-          stats(today: $today) {
-            totalItems
-          }
-        }
+        ...PantryItemReaders
+      }
+      pantry {
+        id
+        ...PantryReaders
       }
     }
-    # The server can return the duplicate as a union member (in `data`), not just
-    # as a GraphQL error — select the ids so the restock prompt can offer the
-    # existing items. `code`/`message` come from the `... on Error` spread below.
-    #
-    # `suggestion` is deliberately NOT selected. It is a free-form String whose
-    # one documented value (`RESTOCK_EXISTING`) is what this client already
-    # does unconditionally, so reading it would change no branch — and
-    # branching on an unconstrained string would be guessing.
     ... on DuplicatePantryItemError {
       existingPantryItemIds
     }
@@ -655,27 +544,22 @@ mutation UpdatePantryItem($input: UpdatePantryItemInput!, $today: LocalDate!) {
   updatePantryItem(input: $input) {
     __typename
     ... on UpdatePantryItemPayload {
+      storageLocation {
+        id
+        ...StorageLocationReaders
+      }
+      previousStorageLocation {
+        id
+        ...StorageLocationReaders
+      }
       pantryItem {
         id
+        ...PantryItemReaders
         ...useUpdatePantryItem_pantryItem
       }
       pantry {
         id
-        stats(today: $today) {
-          totalItems
-          storageStateCounts {
-            refrigerated
-            frozen
-            ambient
-            none
-          }
-          storageLocationCounts {
-            storageLocationId
-            name
-            type
-            itemCount
-          }
-        }
+        ...PantryReaders
       }
     }
     ... on Error {
@@ -699,12 +583,14 @@ mutation DeletePantryItem($input: DeletePantryItemInput!, $today: LocalDate!) {
       converged
       pantryItem {
         id
-        pantry {
-          id
-          stats(today: $today) {
-            totalItems
-          }
-        }
+      }
+      pantry {
+        id
+        ...PantryReaders
+      }
+      storageLocation {
+        id
+        ...StorageLocationReaders
       }
     }
     ... on Error {
@@ -721,21 +607,25 @@ mutation DeletePantryItem($input: DeletePantryItemInput!, $today: LocalDate!) {
   }
 }
 
-mutation CreatePantryItemUsage($input: CreatePantryItemUsageInput!) {
+mutation CreatePantryItemUsage(
+  $input: CreatePantryItemUsageInput!
+  $today: LocalDate!
+) {
   createPantryItemUsage(input: $input) {
     __typename
     ... on CreatePantryItemUsagePayload {
+      storageLocation {
+        id
+        ...StorageLocationReaders
+      }
+      pantry {
+        id
+        ...PantryReaders
+      }
       pantryItemUsage {
         id
-        quantityUsed
+        ...PantryItemUsageReaders
         usageUnitId
-        usageUnit {
-          id
-          name
-          symbol
-        }
-        usedAt
-        purpose
         notes
         wasteReason
         isComposted
@@ -785,14 +675,24 @@ mutation CreatePantryItemUsage($input: CreatePantryItemUsageInput!) {
   }
 }
 
-mutation RestockPantryItem($input: RestockPantryItemInput!) {
+mutation RestockPantryItem(
+  $input: RestockPantryItemInput!
+  $today: LocalDate!
+) {
   restockPantryItem(input: $input) {
     __typename
     ... on RestockPantryItemPayload {
+      storageLocation {
+        id
+        ...StorageLocationReaders
+      }
+      pantry {
+        id
+        ...PantryReaders
+      }
       pantryItemUsage {
         id
-        quantityUsed
-        purpose
+        ...PantryItemUsageReaders
         costPerUnit
         totalCost
         pantryItem {
@@ -820,28 +720,25 @@ mutation RestockPantryItem($input: RestockPantryItemInput!) {
   }
 }
 
-mutation UpdatePantryItemQuantity($input: UpdatePantryItemQuantityInput!) {
+mutation UpdatePantryItemQuantity(
+  $input: UpdatePantryItemQuantityInput!
+  $today: LocalDate!
+) {
   updatePantryItemQuantity(input: $input) {
     __typename
     ... on UpdatePantryItemQuantityPayload {
+      storageLocation {
+        id
+        ...StorageLocationReaders
+      }
       pantryItem {
         id
+        ...PantryItemReaders
         ...useUpdatePantryItemQuantity_pantryItem
-        # The server recomputes this from the new quantity — verified against
-        # the API: consuming half of a 64g item moved it to 32. The fragment
-        # above mirrors the optimistic shape, so it is selected here instead;
-        # without it the cache keeps the pre-adjustment weight and every screen
-        # reading `remainingNetWeight` shows the old figure until a refetch.
-        remainingNetWeight
-        heldQuantity
-        displayAmount {
-          quantity
-          unit {
-            id
-            symbol
-          }
-        }
-        isLowStock
+      }
+      pantry {
+        id
+        ...PantryReaders
       }
     }
     ... on Error {
@@ -863,13 +760,25 @@ mutation UpdatePantryItemQuantity($input: UpdatePantryItemQuantityInput!) {
   }
 }
 
-mutation AdjustPantryItemQuantity($input: AdjustPantryItemQuantityInput!) {
+mutation AdjustPantryItemQuantity(
+  $input: AdjustPantryItemQuantityInput!
+  $today: LocalDate!
+) {
   adjustPantryItemQuantity(input: $input) {
     __typename
     ... on AdjustPantryItemQuantityPayload {
+      storageLocation {
+        id
+        ...StorageLocationReaders
+      }
       pantryItem {
         id
+        ...PantryItemReaders
         ...useAdjustPantryItemQuantity_pantryItem
+      }
+      pantry {
+        id
+        ...PantryReaders
       }
     }
     ... on Error {
@@ -893,17 +802,28 @@ mutation AdjustPantryItemQuantity($input: AdjustPantryItemQuantityInput!) {
 
 mutation CorrectPantryItemPackageSize(
   $input: CorrectPantryItemPackageSizeInput!
+  $today: LocalDate!
 ) {
   correctPantryItemPackageSize(input: $input) {
     __typename
     ... on CorrectPantryItemPackageSizePayload {
+      storageLocation {
+        id
+        ...StorageLocationReaders
+      }
       pantryItem {
         id
+        ...PantryItemReaders
         ...useCorrectPackageSize_pantryItem
       }
       batch {
         id
+        ...PantryItemBatchReaders
         ...PantryItemBatchFragment
+      }
+      pantry {
+        id
+        ...PantryReaders
       }
     }
     ... on Error {
@@ -920,13 +840,25 @@ mutation CorrectPantryItemPackageSize(
   }
 }
 
-mutation ConvertExpiredToWaste($input: ConvertExpiredToWasteInput!) {
+mutation ConvertExpiredToWaste(
+  $input: ConvertExpiredToWasteInput!
+  $today: LocalDate!
+) {
   convertExpiredToWaste(input: $input) {
     __typename
     ... on ConvertExpiredToWastePayload {
+      storageLocation {
+        id
+        ...StorageLocationReaders
+      }
       pantryItem {
         id
+        ...PantryItemReaders
         ...useConvertExpiredToWaste_pantryItem
+      }
+      pantry {
+        id
+        ...PantryReaders
       }
     }
     ... on Error {
@@ -1003,13 +935,25 @@ query GetPantryItemBatchHistory(
   }
 }
 
-mutation OpenPantryItemBatch($input: OpenPantryItemBatchInput!) {
+mutation OpenPantryItemBatch(
+  $input: OpenPantryItemBatchInput!
+  $today: LocalDate!
+) {
   openPantryItemBatch(input: $input) {
     __typename
     ... on OpenPantryItemBatchPayload {
+      storageLocation {
+        id
+        ...StorageLocationReaders
+      }
       pantryItem {
         id
+        ...PantryItemReaders
         ...useOpenPantryItemBatch_pantryItem
+      }
+      pantry {
+        id
+        ...PantryReaders
       }
     }
     ... on Error {
@@ -1026,13 +970,25 @@ mutation OpenPantryItemBatch($input: OpenPantryItemBatchInput!) {
   }
 }
 
-mutation WastePantryItemBatch($input: WastePantryItemBatchInput!) {
+mutation WastePantryItemBatch(
+  $input: WastePantryItemBatchInput!
+  $today: LocalDate!
+) {
   wastePantryItemBatch(input: $input) {
     __typename
     ... on WastePantryItemBatchPayload {
+      storageLocation {
+        id
+        ...StorageLocationReaders
+      }
       pantryItem {
         id
+        ...PantryItemReaders
         ...useWastePantryItemBatch_pantryItem
+      }
+      pantry {
+        id
+        ...PantryReaders
       }
     }
     ... on Error {
@@ -1051,13 +1007,23 @@ mutation WastePantryItemBatch($input: WastePantryItemBatchInput!) {
 
 mutation ConvertExpiredBatchesToWaste(
   $input: ConvertExpiredBatchesToWasteInput!
+  $today: LocalDate!
 ) {
   convertExpiredBatchesToWaste(input: $input) {
     __typename
     ... on ConvertExpiredBatchesToWastePayload {
+      storageLocation {
+        id
+        ...StorageLocationReaders
+      }
       pantryItem {
         id
+        ...PantryItemReaders
         ...useConvertExpiredBatchesToWaste_pantryItem
+      }
+      pantry {
+        id
+        ...PantryReaders
       }
     }
     ... on Error {
@@ -1077,72 +1043,6 @@ mutation ConvertExpiredBatchesToWaste(
 # ============================================
 # OFFLINE SYNC MUTATIONS
 # ============================================
-
-mutation SyncPantryItem($input: SyncPantryItemInput!) {
-  syncPantryItem(input: $input) {
-    __typename
-    ... on SyncPantryItemPayload {
-      clientId
-      serverId
-      operation
-      converged
-      item {
-        id
-        ...queueManager_syncPantryItem
-      }
-      conflict {
-        clientVersion
-        serverVersion
-        message
-        serverItem {
-          id
-          version
-        }
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on ValidationError {
-      field
-    }
-    ... on NotFoundError {
-      resource
-    }
-  }
-}
-
-mutation SyncDeletePantryItem($input: SyncDeletePantryItemInput!) {
-  syncDeletePantryItem(input: $input) {
-    __typename
-    ... on SyncPantryItemPayload {
-      clientId
-      serverId
-      operation
-      converged
-      item {
-        id
-        itemName
-      }
-      conflict {
-        clientVersion
-        serverVersion
-        message
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on ValidationError {
-      field
-    }
-    ... on NotFoundError {
-      resource
-    }
-  }
-}
 
 # NOTE: The granular pantry deltas (adjust / restock / consume / open-batch /
 # waste / convert-expired) no longer have `sync*` twins. They are made

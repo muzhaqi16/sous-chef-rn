@@ -10,6 +10,7 @@ mutation Login($input: LoginInput!) {
       refreshToken
       user {
         id
+        ...UserReaders
         ...LoginUser
       }
     }
@@ -63,6 +64,7 @@ mutation VerifyEmail($input: VerifyEmailInput!) {
     ... on VerifyEmailPayload {
       user {
         id
+        ...UserReaders
         ...LoginUser
       }
     }
@@ -138,6 +140,7 @@ mutation ResendVerificationEmail($input: ResendVerificationEmailInput!) {
     ... on ResendVerificationEmailPayload {
       user {
         id
+        ...UserReaders
       }
     }
     ... on Error {
@@ -208,6 +211,7 @@ mutation ExchangeDeviceCredential($input: ExchangeDeviceCredentialInput!) {
       credentialExpiresAt
       user {
         id
+        ...UserReaders
         ...LoginUser
       }
     }

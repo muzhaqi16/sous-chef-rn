@@ -1,7 +1,10 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import type { UpdateProfileInput } from '#/graphql/generated/schemaTypes';
-import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
+import {
+  snapshotFields,
+  writeEntityFields,
+} from '#/apollo/utils/localFirstFields';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useTranslation } from '#/i18n';
 
@@ -15,29 +18,26 @@ export function useUpdateProfile<T extends { id: string }>(
 ) {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [updateProfileMutation] = useMutation(UpdateUserProfileDocument);
+  const [updateProfileMutation] = useMutation(UpdateUserProfileDocument, {
+    context: { localFirst: true },
+  });
 
   const updateProfile = async (input: UpdateProfileInput): Promise<void> => {
     if (!profile) return;
 
-    const { revert } = optimisticFieldUpdate(
-      client.cache,
-      client.cache.identify({ __typename: 'UserProfile', id: profile.id }),
-      profile,
-      input,
-      'Update Profile',
-    );
+    const entity = { __typename: 'UserProfile', id: profile.id };
+    const previous = snapshotFields(profile, input);
+    writeEntityFields(client.cache, entity, input);
 
     await settleMutation(
       () =>
         updateProfileMutation({
           variables: { input },
-          context: { localFirst: true },
         }),
       {
         document: UpdateUserProfileDocument,
         fallback: t('errors.updateProfileFailed'),
-        onFailed: revert,
+        onFailed: () => writeEntityFields(client.cache, entity, previous),
       },
     );
   };

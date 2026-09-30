@@ -2,7 +2,8 @@
  * Opens `mealPlanEvents(homeId)` and applies other members' changes; a personal
  * plan (`homeId: null`) emits none. The payload is an envelope plus an id —
  * subscriptions validate against depth 5, which no fragment spread fits — so
- * creates read the entity back and item changes ride `refreshPlanAggregates`.
+ * creates and template-item changes read the entity back, and plan-item changes
+ * ride `refreshPlanAggregates`.
  */
 
 import { useSubscription } from '@apollo/client/react';
@@ -17,9 +18,12 @@ import {
   MealTemplateForEventDocument,
 } from '#features/mealPlan/graphql/mealTemplate.generated';
 import {
+  MealPlanDisplayFragmentDoc,
   MealTemplateDisplayFragmentDoc,
+  type MealPlanDisplayFragment,
   type MealTemplateDisplayFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import { MealTemplateItemsForEventDocument } from './useMealPlanSubscriptions.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
 import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
@@ -29,7 +33,6 @@ import {
 } from '#/services/subscriptions/types';
 import { MealPlanSubtype, MutationType } from '#/graphql/generated/schemaTypes';
 import {
-  createAddToParentArrayUpdater,
   createAddToQueryConnectionUpdater,
   createRemoveFromParentArrayUpdater,
   createRemoveFromQueryConnectionUpdater,
@@ -47,7 +50,8 @@ type MealPlanEventsPayload = MealPlanEventsSubscription['mealPlanEvents'];
  * The add updaters take an id, NEVER a read-back object: `toReference(item,
  * true)` merges what it is handed over the stored entity, so a denormalized
  * result would replace nested references with inline snapshots and un-normalize
- * them. The `readFragment` below is a completeness probe only.
+ * them. The `readFragment`s below read what the read-back normalized, which
+ * masking hides on the query result.
  */
 type EntityRef = { __typename: string; id: string };
 
@@ -75,11 +79,6 @@ const removeFromMealPlanItems = createRemoveFromParentArrayUpdater(
   'MealPlan',
   'mealPlanItems',
   'MealPlanItem',
-);
-
-const addToMealTemplateItems = createAddToParentArrayUpdater<EntityRef>(
-  'MealTemplate',
-  'items',
 );
 
 const removeFromMealTemplateItems = createRemoveFromParentArrayUpdater(
@@ -132,11 +131,24 @@ async function handlePlanChanged(
   );
   if (!data?.mealPlan) return;
 
-  // The id, not the read-back object — see the EntityRef note above.
+  const plan = client.cache.readFragment<MealPlanDisplayFragment>({
+    fragment: MealPlanDisplayFragmentDoc,
+    fragmentName: 'MealPlanDisplay',
+    from: { __typename: 'MealPlan', id: planId },
+  });
+  if (!plan) return;
+
+  // The id, not the read-back object — see the EntityRef note above. Scoped
+  // like the template create below: `Query.mealPlans` is keyed on `filters`.
   addToMealPlans(
     client.cache,
     { __typename: 'MealPlan', id: planId },
-    { position: 'start' },
+    {
+      position: 'start',
+      skipStoreField: skipUnmatchedFilterVariants({
+        planType: plan.planType,
+      }),
+    },
   );
 }
 
@@ -279,14 +291,12 @@ async function handleTemplateChanged(
   );
 }
 
-function handleTemplateItemChanged(
+async function handleTemplateItemChanged(
   payload: MealPlanEventsPayload,
   client: SubscriptionApolloClient,
 ) {
   const templateId = payload.templateId;
-
-  // Updates normalize themselves.
-  if (!templateId || payload.mutation === MutationType.Updated) return;
+  if (!templateId) return;
 
   // Without the node there is no item id to act on — fall back to the network.
   if (payload.node?.__typename !== 'MealTemplateItem') {
@@ -294,8 +304,6 @@ function handleTemplateItemChanged(
     return;
   }
 
-  // Apply locally, like the plan-item path. A refetch would reach neither an
-  // offline device nor `GetMealTemplateForEdit`, which isn't in `include`.
   const itemId = payload.node.id;
 
   if (isDelete(payload.mutation)) {
@@ -305,11 +313,16 @@ function handleTemplateItemChanged(
     return;
   }
 
-  addToMealTemplateItems(
-    client.cache,
-    templateId,
-    { __typename: 'MealTemplateItem', id: itemId },
-    { position: 'end' },
+  if (subscriptionService.isPendingDelete(itemId)) return;
+
+  // The event carries no values, so an add or edit is read back before it
+  // lands: the read writes the server's complete `items` list, where linking
+  // the bare id would leave every reader of the template incomplete.
+  await fetchEventEntity(
+    client,
+    MealTemplateItemsForEventDocument,
+    { id: templateId },
+    'MealTemplateItem',
   );
 }
 
@@ -361,7 +374,7 @@ export function useMealPlanSubscriptions(userId?: string) {
           break;
 
         case MealPlanSubtype.MealTemplateItemChanged:
-          handleTemplateItemChanged(payload, client);
+          void handleTemplateItemChanged(payload, client);
           break;
       }
     },

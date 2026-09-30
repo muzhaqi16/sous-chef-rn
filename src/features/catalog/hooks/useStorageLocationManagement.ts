@@ -1,6 +1,11 @@
 import type { ApolloCache } from '@apollo/client';
 import { toastService } from '#/services/toastService';
-import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import {
+  skipToken,
+  useApolloClient,
+  useMutation,
+  useQuery,
+} from '@apollo/client/react';
 import {
   GetStorageLocationsDocument,
   UpdateStorageLocationDocument,
@@ -145,24 +150,27 @@ export function useStorageLocationManagement(
   pantryId?: string,
 ) {
   const { t } = useTranslation();
-  const shouldSkip = !homeId;
-
-  // PERFORMANCE OPTIMIZATION:
-  // Use cache-first to show cached data instantly, then background refresh with nextFetchPolicy.
-  // This reduces initial network load and shows UI immediately.
-  const { data, loading, error, refetch } = useQuery(
+  const {
+    data: result,
+    variables,
+    loading,
+    error,
+    refetch,
+  } = useQuery(
     GetStorageLocationsDocument,
-    {
-      variables: { homeId: homeId ?? '' },
-      skip: shouldSkip,
-      fetchPolicy: 'cache-first', // Show cached data instantly
-      nextFetchPolicy: 'cache-and-network', // Background refresh on subsequent fetches
-      // `'all'` keeps cached data beside the error. `'ignore'` never sets
-      // `error` for either a GraphQL or a transport failure, so the error
-      // state below could not render.
-      errorPolicy: 'all',
-    },
+    homeId
+      ? {
+          variables: { homeId },
+          // `'all'` keeps cached data beside the error. `'ignore'` never sets
+          // `error` for either a GraphQL or a transport failure, so the error
+          // state below could not render.
+          errorPolicy: 'all',
+        }
+      : skipToken,
   );
+  // `skipToken` keeps the last run's variables AND data, so a result for a
+  // previous home is dropped.
+  const data = variables.homeId === homeId ? result : undefined;
 
   // Offline, "we never tried and have nothing" is read from the absence of
   // data, and offlineModeLink's synthetic cache-miss error is not an error to
@@ -188,16 +196,20 @@ export function useStorageLocationManagement(
   // Each write below settles its own failure and toasts it — no `onError`.
   const [updateMutation, { loading: updating }] = useMutation(
     UpdateStorageLocationDocument,
+    { context: { localFirst: true } },
   );
 
   // No `update` callback: the removal happens eagerly in `deleteLocation` so it
   // is visible offline too, and running it again on the response would just
   // re-evict an already-evicted entity.
-  const [deleteMutation] = useMutation(DeleteStorageLocationDocument);
+  const [deleteMutation] = useMutation(DeleteStorageLocationDocument, {
+    context: { localFirst: true },
+  });
 
   // SetDefault returns the updated location; Apollo auto-normalizes by id.
   const [setDefaultMutation] = useMutation(
     MarkStorageLocationAsDefaultDocument,
+    { context: { localFirst: true } },
   );
 
   const updateLocation = async (
@@ -271,7 +283,6 @@ export function useStorageLocationManagement(
       () =>
         updateMutation({
           variables: { input: { ...input, id } },
-          context: { localFirst: true },
         }),
       {
         document: UpdateStorageLocationDocument,
@@ -326,7 +337,6 @@ export function useStorageLocationManagement(
       () =>
         deleteMutation({
           variables: { input: { id } },
-          context: { localFirst: true },
         }),
       {
         document: DeleteStorageLocationDocument,
@@ -366,7 +376,6 @@ export function useStorageLocationManagement(
       () =>
         setDefaultMutation({
           variables: { input: { id } },
-          context: { localFirst: true },
         }),
       {
         document: MarkStorageLocationAsDefaultDocument,
@@ -392,7 +401,7 @@ export function useStorageLocationManagement(
   };
 
   // Preserve data even when query fails to prevent cascade failures
-  const locations = usePreservedNodes(data?.storageLocations);
+  const locations = usePreservedNodes(data?.storageLocations, homeId ?? '');
 
   // Always derive the tree from the flat list. The flat `GetStorageLocations`
   // query is kept fresh by the create/update/delete cache updaters; the separate
@@ -420,6 +429,6 @@ export function useStorageLocationManagement(
     updateLocation,
     deleteLocation,
     setDefaultLocation,
-    refetch,
+    refetch: () => (homeId ? refetch() : Promise.resolve()),
   };
 }

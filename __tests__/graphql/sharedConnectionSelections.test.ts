@@ -71,8 +71,6 @@ const NO_PAGE_INFO_NEEDED: Record<string, string> = {
     'pre-existing; whole-list read, no paginating consumer',
   'src/features/home/screens/HomeDetailScreen.graphql#pantriesConnection':
     'pre-existing; whole-list read, no paginating consumer',
-  'src/features/pantry/components/form/PantryItemForm.graphql#pantriesConnection':
-    'pre-existing; picker options, no paginating consumer',
   'src/graphql/operations/auth/userFragments.graphql#pantriesConnection':
     'pre-existing; session bootstrap, no paginating consumer',
   'src/graphql/operations/home/home.graphql#membersConnection':

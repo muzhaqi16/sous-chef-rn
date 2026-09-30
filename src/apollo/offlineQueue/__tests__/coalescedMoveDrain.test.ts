@@ -11,7 +11,7 @@ import {
   registerApolloClient,
 } from '#/apollo/clientRegistry';
 import { useStore } from '#store';
-import { ErrorCode, SyncOperation } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   AddItemToShoppingListDocument,
   MoveShoppingListItemDocument,
@@ -24,42 +24,51 @@ jest.mock('#store', () => ({
   useStore: { getState: jest.fn() },
 }));
 
-interface SyncArgs {
-  input: { clientId: string; afterId?: string | null };
+interface AddArgs {
+  input: { shoppingListId: string; items: { id: string }[] };
 }
 
-/** The server: rows it holds, and each sync in the order it arrived. */
+interface MoveArgs {
+  input: { itemId: string; afterItemId?: string | null };
+}
+
+/** The server: rows it holds, and each write in the order it arrived. */
 function serverResolvers(existingIds: string[]) {
   const rows = new Set(existingIds);
   const arrivals: string[] = [];
-  const payload = (clientId: string, operation: SyncOperation) => ({
-    __typename: 'SyncShoppingListItemPayload',
-    clientId,
-    serverId: clientId,
-    operation,
-    converged: false,
-    conflict: null,
-    item: { __typename: 'ShoppingListItem', id: clientId },
-  });
+  const line = (id: string) => ({ __typename: 'ShoppingListItem', id });
   const resolvers = () => ({
     Mutation: {
-      syncShoppingListItem: (_: unknown, { input }: SyncArgs) => {
-        arrivals.push(`create ${input.clientId}`);
-        rows.add(input.clientId);
-        return payload(input.clientId, SyncOperation.Create);
+      addItemsToShoppingList: (_: unknown, { input }: AddArgs) => {
+        const ids = input.items.map(item => item.id);
+        arrivals.push(`create ${ids.join(', ')}`);
+        ids.forEach(id => rows.add(id));
+        return {
+          __typename: 'AddItemsToShoppingListPayload',
+          results: ids.map((id, index) => ({
+            __typename: 'BatchAddShoppingListItemResult',
+            index,
+            success: true,
+            failure: null,
+            item: line(id),
+          })),
+        };
       },
-      syncMoveShoppingListItem: (_: unknown, { input }: SyncArgs) => {
-        arrivals.push(`move ${input.clientId} after ${input.afterId}`);
-        if (input.afterId && !rows.has(input.afterId)) {
+      moveShoppingListItem: (_: unknown, { input }: MoveArgs) => {
+        arrivals.push(`move ${input.itemId} after ${input.afterItemId}`);
+        if (input.afterItemId && !rows.has(input.afterItemId)) {
           return {
             __typename: 'NotFoundError',
             code: ErrorCode.NotFound,
             message: 'Anchor item not found',
             resource: 'ShoppingListItem',
-            resourceId: input.afterId,
+            resourceId: input.afterItemId,
           };
         }
-        return payload(input.clientId, SyncOperation.Move);
+        return {
+          __typename: 'MoveShoppingListItemPayload',
+          shoppingListItem: line(input.itemId),
+        };
       },
     },
   });

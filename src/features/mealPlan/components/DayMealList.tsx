@@ -2,7 +2,7 @@ import React from 'react';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { MealTypeSection } from './MealTypeSection';
+import { MealTypeSection, type MealPlanItemRef } from './MealTypeSection';
 import { EmptyDayState } from './EmptyDayState';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import type { MealTypeGroup } from '#features/mealPlan/hooks/useDailyMeals';
@@ -11,7 +11,7 @@ import { getScrollClearancePadding } from '#constants/layout';
 
 interface DayMealListProps {
   selectedDate: Date;
-  dailyMeals: MealTypeGroup[];
+  dailyMeals: MealTypeGroup<MealPlanItemRef>[];
   isEmpty: boolean;
   onToggleCompleted?: (
     id: string,

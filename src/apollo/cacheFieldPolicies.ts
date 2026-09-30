@@ -32,7 +32,7 @@ export interface CachedConnection {
 /**
  * Maximum number of edges to retain in an itemsConnection cache entry.
  * When a merge would exceed this limit, the oldest edges are evicted.
- * 100 = 2 pages of 50 (pantry) or 5 pages of 20 (shopping list).
+ * 100 = 1 page of 100 (pantry, `PAGE_SIZE.MAX`) or 4 pages of 25 (shopping list).
  */
 const MAX_WINDOW_EDGES = 100;
 
@@ -200,10 +200,40 @@ function preservePendingEdges(
 }
 
 /**
+ * The cached edges an authoritative first page leaves standing: those after the
+ * cached position of the page's last already-held entry, minus any it restates.
+ * A page sharing no entry with the cache cannot be placed, so it keeps none and
+ * `fetchMore` reloads from the page's own cursor.
+ */
+function edgesPastFirstPage(
+  existingEdges: CachedEdge[],
+  incomingEdges: CachedEdge[],
+  incomingIds: Set<string>,
+  readField: ReadField,
+): CachedEdge[] {
+  const existingIndex = new Map<string, number>();
+  existingEdges.forEach((edge, index) => {
+    const id = readEdgeNodeId(edge, readField);
+    if (id) existingIndex.set(id, index);
+  });
+  let cachedPosition = -1;
+  for (const edge of incomingEdges) {
+    const id = readEdgeNodeId(edge, readField);
+    const position = id == null ? undefined : existingIndex.get(id);
+    if (position !== undefined) cachedPosition = position;
+  }
+  if (cachedPosition < 0) return [];
+  return existingEdges.slice(cachedPosition + 1).filter(edge => {
+    const id = readEdgeNodeId(edge, readField);
+    return id != null && !incomingIds.has(id);
+  });
+}
+
+/**
  * Merge a cursorless first page as authoritative for the window it covers.
  * `hasNextPage` decides how much it restates: `false` replaces the whole
- * connection, `true` replaces the first page's worth and keeps later
- * `fetchMore` edges. Only `totalCount === 0` may empty a populated list.
+ * connection, `true` replaces the cached entries up to the page's last one and
+ * keeps the rest. Only `totalCount === 0` may empty a populated list.
  */
 function mergeAuthoritativeFirstPage(
   existing: CachedConnection,
@@ -236,10 +266,7 @@ function mergeAuthoritativeFirstPage(
   const coversWholeList = !incoming.pageInfo?.hasNextPage;
   const tail = coversWholeList
     ? []
-    : existingEdges.slice(incomingEdges.length).filter(edge => {
-        const id = readEdgeNodeId(edge, readField);
-        return id != null && !incomingIds.has(id);
-      });
+    : edgesPastFirstPage(existingEdges, incomingEdges, incomingIds, readField);
 
   const merged: CachedConnection = {
     ...incoming,

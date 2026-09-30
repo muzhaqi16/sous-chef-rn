@@ -39,48 +39,56 @@ function moveMock(payload: {
   skippedCount: number;
   targetPantryName: string;
   movedItemIds: string[];
-  /** Lines that errored — `summary.failed`, itemised in `failedItems`. */
+  /** Lines that errored — `summary.failed`, itemised in `results`. */
   failedItems?: {
     itemName: string;
     code: ErrorCode;
     errorId?: string | null;
   }[];
 }) {
-  type MovedItem = { __typename: 'MovedItemInfo'; shoppingListItemId: string };
-  type FailedItem = {
-    __typename: 'FailedMoveInfo';
+  type Line = {
+    __typename: 'MovePurchasedLineResult';
+    shoppingListItemId: string;
+    success: boolean;
     itemName: string;
-    code: ErrorCode;
-    errorId?: string | null;
+    failure: {
+      __typename: 'BatchElementFailure';
+      code: ErrorCode;
+      errorId: string | null;
+    } | null;
   };
+  const stocked = (id: string): Line => ({
+    __typename: 'MovePurchasedLineResult',
+    shoppingListItemId: id,
+    success: true,
+    itemName: id,
+    failure: null,
+  });
 
   const data: MockDataFor<typeof MovePurchasedItemsToPantryDocument> = {
     movePurchasedItemsToPantry: {
       __typename: 'MovePurchasedItemsToPantryPayload',
-      // Every line now in the pantry: the ones this call moved, plus the
-      // already-stocked ones the server reports as skipped.
-      movedItems: [
-        ...payload.movedItemIds.map(
-          (id): MovedItem => ({
-            __typename: 'MovedItemInfo',
-            shoppingListItemId: id,
-          }),
+      // Every attempted line: the ones this call moved, the already-stocked
+      // ones the server reports as skipped, and the ones that failed.
+      results: [
+        ...payload.movedItemIds.map(stocked),
+        ...Array.from({ length: payload.skippedCount }, (_, i) =>
+          stocked(`already-${i}`),
         ),
-        ...Array.from(
-          { length: payload.skippedCount },
-          (_, i): MovedItem => ({
-            __typename: 'MovedItemInfo',
-            shoppingListItemId: `already-${i}`,
+        ...(payload.failedItems ?? []).map(
+          (item, i): Line => ({
+            __typename: 'MovePurchasedLineResult',
+            shoppingListItemId: `failed-${i}`,
+            success: false,
+            itemName: item.itemName,
+            failure: {
+              __typename: 'BatchElementFailure',
+              code: item.code,
+              errorId: item.errorId ?? null,
+            },
           }),
         ),
       ],
-      failedItems: (payload.failedItems ?? []).map(
-        (item): FailedItem => ({
-          __typename: 'FailedMoveInfo',
-          errorId: null,
-          ...item,
-        }),
-      ),
       summary: {
         __typename: 'BulkSummary',
         total:

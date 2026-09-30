@@ -34,6 +34,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import {
   buildSchema,
+  getNamedType,
   parse,
   isEnumType,
   isListType,
@@ -42,6 +43,7 @@ import {
   isScalarType,
 } from 'graphql';
 import { fromRoot } from './lib/tooling.mjs';
+import { loadDocuments } from './lib/graphqlDocuments.mjs';
 
 const SCHEMA_PATH = fromRoot('src', 'graphql', 'generated', 'schema.graphql');
 
@@ -64,54 +66,114 @@ const ENUM_DEFAULTS = {
   // so this value is not observed in practice. COUNT is the resting kind — a
   // bare "each" — and is the safest thing to be wrong with if it ever is.
   'Unit.type': 'COUNT',
+  // A local membership is only ever the creator's own, of the home it made.
+  'Membership.role': 'OWNER',
+  'Membership.status': 'ACTIVE',
+  // Every location create states its type; this stands in for none.
+  'StorageLocation.type': 'CUSTOM',
+  'StorageLocationCount.type': 'CUSTOM',
+  'ShoppingListItem.displayFormat': 'AUTO',
+  // "USER_CREATED when it came from no external source" — every local create.
+  'Recipe.primarySource': 'USER_CREATED',
+  'Recipe.status': 'DRAFT',
 };
 
-/** Fragments to generate a neutral base for: [file, fragmentName, outName]. */
+/**
+ * Fragments to generate a neutral base for. A fragment may spread others (a
+ * `<Type>Readers`); `unmasked: true` then types the constant `Unmasked<…>`, the
+ * shape `writeFragment` takes for it.
+ */
 const TARGETS = [
   {
     graphql: fromRoot(
       'src',
       'features',
-      'pantry',
+      'shoppingList',
+      'cache',
+      'items.graphql',
+    ),
+    out: fromRoot(
+      'src',
+      'features',
+      'shoppingList',
+      'cache',
+      'shoppingListItemRowNeutral.generated.ts',
+    ),
+    typesFrom: './items.generated',
+    unmasked: true,
+    fragments: {
+      items_row: ['NEUTRAL_LOCAL_SHOPPING_LIST_ITEM', 'Items_RowFragment'],
+    },
+  },
+  {
+    graphql: fromRoot(
+      'src',
+      'features',
+      'catalog',
       'hooks',
-      'writePantryItemDetailStub.graphql',
+      'useCreateStorageLocation.graphql',
+    ),
+    out: fromRoot(
+      'src',
+      'features',
+      'catalog',
+      'hooks',
+      'useCreateStorageLocationNeutral.generated.ts',
+    ),
+    typesFrom: './useCreateStorageLocation.generated',
+    unmasked: true,
+    fragments: {
+      useCreateStorageLocation_row: [
+        'NEUTRAL_LOCAL_STORAGE_LOCATION',
+        'UseCreateStorageLocation_RowFragment',
+      ],
+    },
+  },
+  {
+    graphql: fromRoot(
+      'src',
+      'features',
+      'pantry',
+      'utils',
+      'optimisticPantry.graphql',
     ),
     out: fromRoot(
       'src',
       'features',
       'pantry',
-      'hooks',
-      'pantryItemDetailNeutral.generated.ts',
+      'utils',
+      'optimisticPantryNeutral.generated.ts',
     ),
-    // `types` is what makes the output CHECKED rather than merely generated:
-    // annotating each constant with its codegen'd fragment type means a wrong
-    // ENUM_DEFAULTS entry, or a value the schema would reject, fails `tsc`
-    // instead of reaching a device.
-    typesFrom: './writePantryItemDetailStub.generated',
+    typesFrom: './optimisticPantry.generated',
+    unmasked: true,
     fragments: {
-      writePantryItemDetailStub_pantryItem: [
-        'NEUTRAL_PANTRY_ITEM_DETAIL',
-        'WritePantryItemDetailStub_PantryItemFragment',
+      optimisticPantry_row: [
+        'NEUTRAL_LOCAL_PANTRY',
+        'OptimisticPantry_RowFragment',
       ],
-      writePantryItemDetailStub_itemIdentity: [
-        'NEUTRAL_ITEM_IDENTITY',
-        'WritePantryItemDetailStub_ItemIdentityFragment',
-      ],
-      writePantryItemDetailStub_itemMedia: [
-        'NEUTRAL_ITEM_MEDIA',
-        'WritePantryItemDetailStub_ItemMediaFragment',
-      ],
-      writePantryItemDetailStub_itemPhotos: [
-        'NEUTRAL_ITEM_PHOTOS',
-        'WritePantryItemDetailStub_ItemPhotosFragment',
-      ],
-      writePantryItemDetailStub_itemCatalog: [
-        'NEUTRAL_ITEM_CATALOG',
-        'WritePantryItemDetailStub_ItemCatalogFragment',
-      ],
-      writePantryItemDetailStub_unit: [
-        'NEUTRAL_UNIT',
-        'WritePantryItemDetailStub_UnitFragment',
+    },
+  },
+  {
+    graphql: fromRoot(
+      'src',
+      'features',
+      'pantry',
+      'cache',
+      'writeLocalPantryItem.graphql',
+    ),
+    out: fromRoot(
+      'src',
+      'features',
+      'pantry',
+      'cache',
+      'writeLocalPantryItemNeutral.generated.ts',
+    ),
+    typesFrom: './writeLocalPantryItem.generated',
+    unmasked: true,
+    fragments: {
+      writeLocalPantryItem_row: [
+        'NEUTRAL_LOCAL_PANTRY_ITEM',
+        'WriteLocalPantryItem_RowFragment',
       ],
     },
   },
@@ -122,11 +184,16 @@ const TARGETS = [
       'features',
       'home',
       'cache',
-      'homeDetailNeutral.generated.ts',
+      'homeRowNeutral.generated.ts',
     ),
     typesFrom: './home.generated',
+    unmasked: true,
     fragments: {
-      home_homeDetail: ['NEUTRAL_HOME_DETAIL', 'Home_HomeDetailFragment'],
+      home_row: ['NEUTRAL_LOCAL_HOME', 'Home_RowFragment'],
+      home_membershipRow: [
+        'NEUTRAL_LOCAL_MEMBERSHIP',
+        'Home_MembershipRowFragment',
+      ],
     },
   },
   {
@@ -142,14 +209,12 @@ const TARGETS = [
       'features',
       'shoppingList',
       'cache',
-      'shoppingListDetailNeutral.generated.ts',
+      'shoppingListRowNeutral.generated.ts',
     ),
     typesFrom: './list.generated',
+    unmasked: true,
     fragments: {
-      list_listDetail: [
-        'NEUTRAL_SHOPPING_LIST_DETAIL',
-        'List_ListDetailFragment',
-      ],
+      list_row: ['NEUTRAL_LOCAL_SHOPPING_LIST', 'List_RowFragment'],
     },
   },
   {
@@ -165,13 +230,14 @@ const TARGETS = [
       'features',
       'recipes',
       'utils',
-      'recipeFormFieldsNeutral.generated.ts',
+      'recipeRowNeutral.generated.ts',
     ),
     typesFrom: './recipeCacheWriters.generated',
+    unmasked: true,
     fragments: {
-      recipeCacheWriters_formFields: [
-        'NEUTRAL_RECIPE_FORM_FIELDS',
-        'RecipeCacheWriters_FormFieldsFragment',
+      recipeCacheWriters_row: [
+        'NEUTRAL_LOCAL_RECIPE',
+        'RecipeCacheWriters_RowFragment',
       ],
     },
   },
@@ -235,6 +301,16 @@ function neutralForType(
     parentType.getInterfaces().some(i => i.name === 'Connection');
   if (fieldName === 'totalCount' && isConnection) return 0;
 
+  // A record behind a nullable field or in a list still gets a shape, for a
+  // create that names one to be completed from.
+  const named = getNamedType(type);
+  const shapeOnly = !isNonNullType(type) || isListType(type.ofType);
+  if (shapeOnly && selectionSet && isObjectType(named)) {
+    shapeOnlyDepth += 1;
+    neutralForSelection(schema, named, selectionSet, path);
+    shapeOnlyDepth -= 1;
+  }
+
   // Nullable is the easiest honest answer, and the commonest.
   if (!isNonNullType(type)) return null;
   const inner = type.ofType;
@@ -259,6 +335,9 @@ function neutralForType(
   if (isEnumType(inner)) {
     const key = `${parentTypeName}.${fieldName}`;
     const value = ENUM_DEFAULTS[key];
+    // A shape no create names needs no decided member; one that is named and
+    // lacks it fails the test guard on the missing field.
+    if (value === undefined && shapeOnlyDepth > 0) return undefined;
     if (value === undefined) {
       throw new Error(
         `${path}: non-null enum ${inner.name} has no neutral member.\n` +
@@ -284,25 +363,40 @@ function neutralForType(
   throw new Error(`${path}: unsupported non-null type ${inner.toString()}`);
 }
 
+// A spread is followed into its fields: the base is the UNMASKED shape.
 function neutralForSelection(schema, parentType, selectionSet, path) {
   const out = { __typename: parentType.name };
   for (const selection of selectionSet.selections) {
     if (selection.kind !== 'Field') {
-      throw new Error(
-        `${path}: only plain fields are supported — a spread here would be ` +
-          `written as a masked ref and read back incomplete`,
+      const inner =
+        selection.kind === 'FragmentSpread'
+          ? fragmentIndex.get(selection.name.value)
+          : selection;
+      const condition = inner?.typeCondition?.name.value ?? parentType.name;
+      if (!inner || condition !== parentType.name) {
+        throw new Error(
+          `${path}: a spread must name a fragment on ${parentType.name}`,
+        );
+      }
+      Object.assign(
+        out,
+        neutralForSelection(schema, parentType, inner.selectionSet, path),
       );
+      continue;
     }
     const name = selection.name.value;
     if (name === '__typename') continue;
-    out[name] = neutralForField(
+    const key = selection.alias?.value ?? name;
+    const value = neutralForField(
       schema,
       parentType,
       name,
       selection.selectionSet,
-      `${path}.${name}`,
+      `${path}.${key}`,
     );
+    if (value !== undefined) out[key] = value;
   }
+  shapes?.set(parentType.name, { ...out, ...shapes.get(parentType.name) });
   return out;
 }
 
@@ -342,6 +436,11 @@ function collectEnumTypes(value, out) {
   for (const nested of Object.values(value)) collectEnumTypes(nested, out);
 }
 
+let fragmentIndex = new Map();
+/** Per target: every object type the fragment reaches, with its neutral fields. */
+let shapes = null;
+let shapeOnlyDepth = 0;
+
 function generate(schema, target) {
   const doc = parse(readFileSync(target.graphql, 'utf8'));
   const byName = new Map(
@@ -362,6 +461,7 @@ function generate(schema, target) {
       throw new Error(`${target.graphql}: no fragment '${fragmentName}'`);
     }
     const parentType = schema.getType(fragment.typeCondition.name.value);
+    shapes = target.unmasked ? new Map() : null;
     const neutral = neutralForSelection(
       schema,
       parentType,
@@ -369,13 +469,27 @@ function generate(schema, target) {
       fragmentName,
     );
     collectEnumTypes(neutral, enumTypes);
+    const declared = target.unmasked ? `Unmasked<${typeName}>` : typeName;
     parts.push(
       `/** Neutral base for \`${fragmentName}\`, derived from the schema. */\n` +
-        `export const ${constName}: ${typeName} =\n  ${serialize(
+        `export const ${constName}: ${declared} =\n  ${serialize(
           neutral,
           '  ',
         )};`,
     );
+    if (shapes) {
+      const byType = Object.fromEntries(
+        [...shapes].sort(([a], [b]) => a.localeCompare(b)),
+      );
+      collectEnumTypes(byType, enumTypes);
+      parts.push(
+        `/** Every record \`${fragmentName}\` reaches, by type, for a create that names one. */\n` +
+          `export const ${constName}_BY_TYPE: NeutralByType =\n  ${serialize(
+            byType,
+            '  ',
+          )};`,
+      );
+    }
   }
 
   return (
@@ -393,6 +507,10 @@ function generate(schema, target) {
           .map(t => `  ${t},`)
           .join('\n')}\n} from '#/graphql/generated/schemaTypes';\n`
       : '') +
+    (target.unmasked
+      ? "import type { Unmasked } from '@apollo/client/masking';\n" +
+        "import type { NeutralByType } from '#/apollo/utils/writeLocalEntity';\n"
+      : '') +
     `import type {\n${typeNames.map(t => `  ${t},`).join('\n')}\n} from '${
       target.typesFrom
     }';\n\n` +
@@ -409,6 +527,7 @@ function main() {
     process.exit(2);
   }
   const schema = buildSchema(readFileSync(SCHEMA_PATH, 'utf8'));
+  fragmentIndex = loadDocuments().fragments;
   const check = process.argv.includes('--check');
   let stale = 0;
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import {
   GetPantryUsageAnalyticsDocument,
   GetPantryWasteAnalyticsDocument,
@@ -67,7 +67,7 @@ export function usePantryAnalytics({
     initialLedgerGranularity,
   );
 
-  const hasValidPantryId = !!pantryId?.trim();
+  const validPantryId = pantryId?.trim() ? pantryId : null;
 
   const filter: AnalyticsFilters = {
     dateRange,
@@ -79,34 +79,43 @@ export function usePantryAnalytics({
     loading: usageLoading,
     error: usageError,
     refetch: refetchUsage,
-  } = useQuery(GetPantryUsageAnalyticsDocument, {
-    variables: { pantryId: pantryId ?? '', filter },
-    skip: !hasValidPantryId,
-  });
+  } = useQuery(
+    GetPantryUsageAnalyticsDocument,
+    validPantryId
+      ? { variables: { pantryId: validPantryId, filter }, refetchOn: false }
+      : skipToken,
+  );
 
   const {
     data: wasteQueryData,
     loading: wasteLoading,
     error: wasteError,
     refetch: refetchWaste,
-  } = useQuery(GetPantryWasteAnalyticsDocument, {
-    variables: { pantryId: pantryId ?? '', filter },
-    skip: !hasValidPantryId,
-  });
+  } = useQuery(
+    GetPantryWasteAnalyticsDocument,
+    validPantryId
+      ? { variables: { pantryId: validPantryId, filter }, refetchOn: false }
+      : skipToken,
+  );
 
   const {
     data: ledgerQueryData,
     loading: ledgerLoading,
     error: ledgerError,
     refetch: refetchLedger,
-  } = useQuery(GetPantryLedgerAnalyticsDocument, {
-    variables: {
-      pantryId: pantryId ?? '',
-      filter,
-      granularity: ledgerGranularity,
-    },
-    skip: !hasValidPantryId,
-  });
+  } = useQuery(
+    GetPantryLedgerAnalyticsDocument,
+    validPantryId
+      ? {
+          variables: {
+            pantryId: validPantryId,
+            filter,
+            granularity: ledgerGranularity,
+          },
+          refetchOn: false,
+        }
+      : skipToken,
+  );
 
   useApolloErrorLogger(GetPantryUsageAnalyticsDocument, usageError);
   useApolloErrorLogger(GetPantryWasteAnalyticsDocument, wasteError);
@@ -117,6 +126,7 @@ export function usePantryAnalytics({
    * `errorPolicy` default happens to be; each query reports its own error state.
    */
   const refetch = async () => {
+    if (!validPantryId) return;
     await Promise.allSettled([refetchUsage(), refetchWaste(), refetchLedger()]);
   };
 

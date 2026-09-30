@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
-import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import {
+  skipToken,
+  useApolloClient,
+  useMutation,
+  useQuery,
+} from '@apollo/client/react';
 import {
   GetNotificationPreferencesDocument,
   UpdateNotificationPreferencesDocument,
@@ -27,12 +32,13 @@ export const useQuietHoursTimezoneSync = (): void => {
   // cache-first: the reconciliation is background work and the persisted cache
   // already holds preferences on any launch that could need it, so it must not
   // add a network leg to startup.
-  const { data } = useQuery(GetNotificationPreferencesDocument, {
-    skip: !user?.id,
-    fetchPolicy: 'cache-first',
-  });
+  const { data } = useQuery(
+    GetNotificationPreferencesDocument,
+    user?.id ? { fetchPolicy: 'cache-first' } : skipToken,
+  );
   const [updatePreferences] = useMutation(
     UpdateNotificationPreferencesDocument,
+    { context: { localFirst: true } },
   );
 
   const preferences = data?.me?.notificationPreferences;
@@ -79,7 +85,6 @@ export const useQuietHoursTimezoneSync = (): void => {
       mutate: input =>
         updatePreferences({
           variables: { input },
-          context: { localFirst: true },
         }),
     }).then(persisted => {
       if (persisted) return;

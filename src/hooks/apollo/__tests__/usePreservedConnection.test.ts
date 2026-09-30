@@ -22,7 +22,7 @@ const conn = (ids: string[], totalCount?: number): Conn => ({
 describe('usePreservedConnection', () => {
   it('extracts nodes + totalCount + pageInfo from a defined connection', () => {
     const c = conn(['a', 'b'], 2);
-    const { result } = renderHook(() => usePreservedConnection(c));
+    const { result } = renderHook(() => usePreservedConnection(c, 'k'));
 
     expect(result.current.nodes).toEqual([{ id: 'a' }, { id: 'b' }]);
     expect(result.current.totalCount).toBe(2);
@@ -36,7 +36,7 @@ describe('usePreservedConnection', () => {
     const c = conn(['a', 'b', 'c'], 3);
     const { result, rerender } = renderHook(
       ({ connection }: { connection: Conn | undefined }) =>
-        usePreservedConnection(connection),
+        usePreservedConnection(connection, 'k'),
       { initialProps: { connection: c } },
     );
 
@@ -60,7 +60,7 @@ describe('usePreservedConnection', () => {
     const empty = conn([], 0);
     const { result, rerender } = renderHook(
       ({ connection }: { connection: Conn | undefined }) =>
-        usePreservedConnection(connection),
+        usePreservedConnection(connection, 'k'),
       { initialProps: { connection: populated } },
     );
 
@@ -76,7 +76,7 @@ describe('usePreservedConnection', () => {
     const second = conn(['a', 'b'], 2);
     const { result, rerender } = renderHook(
       ({ connection }: { connection: Conn | undefined }) =>
-        usePreservedConnection(connection),
+        usePreservedConnection(connection, 'k'),
       { initialProps: { connection: first } },
     );
 
@@ -86,6 +86,27 @@ describe('usePreservedConnection', () => {
     rerender({ connection: second });
     expect(result.current.nodes).toHaveLength(2); // recovered
   });
+
+  it("does not re-serve one subject's connection for another", () => {
+    const { result, rerender } = renderHook(
+      ({
+        connection,
+        subject,
+      }: {
+        connection: Conn | undefined;
+        subject: string;
+      }) => usePreservedConnection(connection, subject),
+      {
+        initialProps: { connection: conn(['a'], 1), subject: 'list-1' },
+      },
+    );
+
+    rerender({ connection: undefined, subject: 'list-2' });
+
+    expect(result.current.nodes).toEqual([]);
+    expect(result.current.totalCount).toBeUndefined();
+    expect(result.current.pageInfo).toBeUndefined();
+  });
 });
 
 describe('usePreservedNodes', () => {
@@ -93,7 +114,7 @@ describe('usePreservedNodes', () => {
     const c = conn(['x', 'y']);
     const { result, rerender } = renderHook(
       ({ connection }: { connection: Conn | undefined }) =>
-        usePreservedNodes(connection),
+        usePreservedNodes(connection, 'k'),
       { initialProps: { connection: c } },
     );
 

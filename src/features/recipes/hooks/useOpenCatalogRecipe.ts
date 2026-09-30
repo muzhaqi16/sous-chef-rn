@@ -19,9 +19,10 @@ export type OpenedCatalogRecipe =
   | { opened: true; recipeId: string }
   | { opened: false; failure: string };
 
-// The API refuses an image off Spoonacular's own host, and a refused hint fails
-// the whole open; the image is only a placeholder, so such a one is left out.
+// A refused hint fails the whole open, and the hints only stand in until the
+// fetch: an image off Spoonacular's own host is left out, a long name is cut.
 const SPOONACULAR_IMAGE = /^https:\/\/([a-z0-9-]+\.)*spoonacular\.com\//i;
+const MAX_NAME_LENGTH = 200;
 
 /**
  * The API's own copy of a Spoonacular recipe, found or brought in by id. Never
@@ -45,7 +46,7 @@ export function useOpenCatalogRecipe() {
             input: {
               source: ExternalSource.Spoonacular,
               externalId: hint.externalId,
-              name: hint.name,
+              name: hint.name?.slice(0, MAX_NAME_LENGTH),
               imageUrl,
             },
           },

@@ -6,16 +6,23 @@ mutation AddItemToShoppingListFromFilteredPantry(
   addItemsToShoppingList(input: $input) {
     __typename
     ... on AddItemsToShoppingListPayload {
+      shoppingList {
+        id
+        ...ShoppingListReaders
+      }
       results {
         index
         clientId
         success
-        code
-        quantityIncremented
+        failure {
+          code
+          reason
+          errorId
+        }
         packageSizeCleared
-        error
         item {
           id
+          ...ShoppingListItemReaders
           ...AddedShoppingListItemFields
         }
       }

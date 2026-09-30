@@ -20,7 +20,6 @@ import { useAppStore } from '#store/useAppStore';
 
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
-import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
@@ -512,11 +511,7 @@ export const useListSettings = (listId: string | undefined) => {
 
   const handleOpenHomePicker = () => {
     if (!homesLoaded) {
-      void fetchHomeData().catch(error =>
-        errorService.reportError(error, {
-          operation: 'ListSettings.fetchHomeData',
-        }),
-      );
+      fetchHomeData();
     }
     setShowHomePicker(true);
   };

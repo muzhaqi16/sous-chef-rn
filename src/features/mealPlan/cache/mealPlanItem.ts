@@ -27,6 +27,24 @@ export const removeFromMealPlanItems = createRemoveFromParentArrayUpdater(
   'MealPlanItem',
 );
 
+/**
+ * Settles a create the server answered with its row: a meal the plan already
+ * held on that day, slot and recipe comes back under its own id, so the minted
+ * row gives way to it. Idempotent.
+ */
+export function adoptServerMealPlanItem(
+  cache: ApolloCache,
+  mealPlanId: string,
+  serverItemId: string,
+  mintedId: string | null | undefined,
+): void {
+  if (mintedId && serverItemId !== mintedId) {
+    removeFromMealPlanItems(cache, mealPlanId, mintedId, { evictItem: true });
+  }
+  const serverItem = { __typename: 'MealPlanItem', id: serverItemId };
+  addToMealPlanItems(cache, mealPlanId, serverItem, { position: 'end' });
+}
+
 /** The flat field union of the five item display fragments. */
 export type OptimisticMealPlanItem = {
   __typename: 'MealPlanItem';

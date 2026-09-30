@@ -17,6 +17,7 @@ export function useCategoryAutocomplete(
   const { categoryType = CategoryType.General } = options;
   const [searchCategories, { data, loading }] = useLazyQuery(
     AutocompleteCategoriesDocument,
+    { refetchOn: false },
   );
 
   // Reference data warmed while online (useDataPreloading), narrowed to the

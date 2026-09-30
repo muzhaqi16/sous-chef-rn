@@ -19,6 +19,7 @@ import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
+import { todayKey } from '#/utils/dateUtils';
 
 export interface PackageSizeCorrection {
   pantryItemId: string;
@@ -40,7 +41,9 @@ export function useCorrectPackageSize() {
   const { t } = useTranslation();
   const client = useApolloClient();
 
-  const [correctMutation] = useMutation(CorrectPantryItemPackageSizeDocument);
+  const [correctMutation] = useMutation(CorrectPantryItemPackageSizeDocument, {
+    context: { localFirst: true },
+  });
 
   /** Resolves false on a refusal, which has been alerted and reverted. */
   const correctPackageSize = async ({
@@ -135,6 +138,7 @@ export function useCorrectPackageSize() {
       () =>
         correctMutation({
           variables: {
+            today: todayKey(),
             input: {
               batchId,
               correction: { packageSize: { netWeight, netWeightUnitId } },
@@ -143,7 +147,6 @@ export function useCorrectPackageSize() {
               idempotencyKey: generateEntityId(),
             },
           },
-          context: { localFirst: true },
         }),
       {
         document: CorrectPantryItemPackageSizeDocument,

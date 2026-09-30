@@ -1,7 +1,6 @@
 import {
   handleQueueFailure,
   registerQueueFailureHandler,
-  reportQueueOverwrite,
 } from '../queueFailureHandler';
 import { queueManager } from '../queueManager';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
@@ -21,7 +20,6 @@ import { removePantryItemLocally } from '#features/pantry/cache/items';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import {
   CreatePantryItemDocument,
-  SyncPantryItemDocument,
   UpdatePantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -44,6 +42,9 @@ jest.mock('#features/pantry/cache/items', () => ({
 // factory omitting one makes this suite fail to LOAD, not fail an assertion —
 // so each returns a jest.fn() rather than being left undefined.
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+  // Real for what this suite does not assert on, so an updater a module in the
+  // queue's import graph builds at load exists.
+  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   safeEvict: jest.fn(),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
@@ -281,36 +282,6 @@ describe('queue failure handler', () => {
     expect(safeEvict).not.toHaveBeenCalled();
     expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
     expect(toastService.error).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('reporting a server-side overwrite', () => {
-  const overwrite = (entityType: string | null = 'PantryItem') => ({
-    mutationId: 'q9',
-    operationName: operationNameOf(SyncPantryItemDocument),
-    entityType,
-    entityId: 'item-9',
-  });
-
-  it('tells the person and names the entity', () => {
-    reportQueueOverwrite(overwrite());
-    const [message] = (toastService.error as jest.Mock).mock.calls[0];
-    expect(message).toContain('pantry item');
-  });
-
-  // The replay SUCCEEDED — the server took the write and kept its own value.
-  // Withdrawing here would remove a row the server still has.
-  it('withdraws nothing', () => {
-    reportQueueOverwrite(overwrite());
-    expect(safeEvict).not.toHaveBeenCalled();
-    expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
-    expect(queueStore.removeMutation).not.toHaveBeenCalled();
-  });
-
-  it('falls back to the generic copy with no entity', () => {
-    reportQueueOverwrite(overwrite(null));
-    const [message] = (toastService.error as jest.Mock).mock.calls[0];
-    expect(message).toBe(t('errors.queuedChangeOverwritten'));
   });
 });
 

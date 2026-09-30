@@ -404,6 +404,68 @@ describe('OptimisticDataPersistence', () => {
     });
   });
 
+  describe('clearEntitySavedBetween', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('clears only the fields the landed write saved, with a second write still queued', () => {
+      const now = jest.spyOn(Date, 'now');
+      // The earlier write saved at 1000 and queued at 1500; the landed one
+      // saved at 2000 and queued at 2500.
+      now.mockReturnValue(1_000);
+      seedData([
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '1',
+          field: 'sortOrder',
+          value: 'a1',
+        },
+      ]);
+      now.mockReturnValue(2_000);
+      seedData([
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '1',
+          field: 'quantity',
+          value: 2,
+        },
+      ]);
+
+      optimisticDataPersistence.clearEntitySavedBetween(
+        'ShoppingListItem',
+        '1',
+        { after: 1_500, until: 2_500 },
+      );
+
+      expect(optimisticDataPersistence.get('ShoppingListItem', '1')).toEqual({
+        sortOrder: 'a1',
+      });
+    });
+
+    it('keeps a field saved after the landed write was queued', () => {
+      jest.spyOn(Date, 'now').mockReturnValue(3_000);
+      seedData([
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '1',
+          field: 'quantity',
+          value: 5,
+        },
+      ]);
+
+      optimisticDataPersistence.clearEntitySavedBetween(
+        'ShoppingListItem',
+        '1',
+        { after: Number.NEGATIVE_INFINITY, until: 2_500 },
+      );
+
+      expect(optimisticDataPersistence.get('ShoppingListItem', '1')).toEqual({
+        quantity: 5,
+      });
+    });
+  });
+
   describe('clearType', () => {
     it('removes all fields for a specific entity type', () => {
       seedData([

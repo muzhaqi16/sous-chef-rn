@@ -16,3 +16,10 @@ fragment useOpenPantryItemBatch_pantryItem on PantryItem {
   activeBatchCount
   lastUsedAt
 }
+
+# The pre-open values a refused open restores.
+fragment useOpenPantryItemBatch_state on PantryItemBatch {
+  id
+  isOpened
+  openedAt
+}

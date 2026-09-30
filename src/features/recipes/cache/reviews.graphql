@@ -1,0 +1,16 @@
+# The per-rating counts the average is recomputed from.
+fragment reviews_ratingCounts on Recipe {
+  id
+  totalReviews
+  rating1Count
+  rating2Count
+  rating3Count
+  rating4Count
+  rating5Count
+}
+
+# A review's rating, captured before a removal takes it out of the counts.
+fragment reviews_reviewRating on RecipeReview {
+  id
+  rating
+}

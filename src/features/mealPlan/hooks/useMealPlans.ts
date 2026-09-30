@@ -1,4 +1,5 @@
-import { useApolloClient, useFragment, useQuery } from '@apollo/client/react';
+import { skipToken, useFragment, useQuery } from '@apollo/client/react';
+import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { startOfDay } from 'date-fns';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
@@ -39,47 +40,50 @@ export function useMealPlanList(
   }: MealPlanListOptions = {},
 ) {
   const isLoggedOut = useIsLoggedOut();
-  const client = useApolloClient();
 
-  const { data, loading, error, refetch, fetchMore } = useQuery(
+  const skipped = isLoggedOut || skip;
+  const {
+    data: result,
+    loading,
+    error,
+    refetch,
+    fetchMore,
+  } = useQuery(
     GetMealPlansDocument,
-    {
-      variables: {
-        first,
-        filters,
-        orderBy: { startDate: orderBy },
-      },
-      skip: isLoggedOut || skip,
-    },
+    skipped
+      ? skipToken
+      : { variables: { first, filters, orderBy: { startDate: orderBy } } },
   );
+  // `skipToken` keeps the last run's data even when the filters have moved on
+  // (a new day's `startDate`); a skipped variant answers nothing.
+  const data = skipped ? undefined : result;
 
   useApolloErrorLogger(GetMealPlansDocument, error);
 
   const connectionData = useConnectionData({
     data,
     selector: d => d.mealPlans,
+    key: JSON.stringify([filters ?? null, orderBy]),
     loading,
     fetchMore,
     refetch,
   });
 
-  // Edges arrive as masked refs. The cache-key `from` materializes the full
-  // display shape; the masked-ref `from` silently returns partial/null data.
-  const mealPlans = connectionData.items
-    .map(ref =>
-      client.cache.readFragment<MealPlanDisplayFragment>({
-        fragment: MealPlanDisplayFragmentDoc,
-        fragmentName: 'MealPlanDisplay',
-        from: { __typename: 'MealPlan', id: ref.id },
-      }),
-    )
-    .filter((p): p is MealPlanDisplayFragment => p !== null);
+  // Edges arrive as masked refs; a rename or a date change edits only the plan,
+  // so each is read live for the list and the current-plan choice.
+  const mealPlans = useFragmentList({
+    fragment: MealPlanDisplayFragmentDoc,
+    fragmentName: 'MealPlanDisplay',
+    from: connectionData.items,
+  }).filter((p): p is MealPlanDisplayFragment => p !== null);
 
   return {
     mealPlans,
     loading,
     error,
+    // A query skipped from mount has no variables, so a refetch would send none.
     refetch: async () => {
+      if (skipped) return;
       await refetch();
     },
     hasResult: data !== undefined,

@@ -1,0 +1,5 @@
+# The one field the revert has to be able to read back.
+fragment useCompleteOnboarding_user on User {
+  id
+  onBoarded
+}

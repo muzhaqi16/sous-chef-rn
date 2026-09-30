@@ -1,4 +1,6 @@
+import { gql } from '@apollo/client';
 import { act, waitFor } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
@@ -293,5 +295,61 @@ describe('useMealPlanActions', () => {
 
     expect(deleted).toBe(false);
     expect(alertService.alert).toHaveBeenCalledTimes(1);
+  });
+
+  // The response's `mealPlan { id }` re-creates the evicted plan; a list edge
+  // left pointing at it would read a plan with no fields and blank the list.
+  it('deleteMealPlan leaves the list readable without the plan once the response lands', async () => {
+    const PLANS = gql`
+      query TestDeletePlansList {
+        mealPlans {
+          edges {
+            node {
+              id
+              name
+            }
+          }
+          totalCount
+        }
+      }
+    `;
+    const cache = makeCache();
+    cache.writeQuery({
+      query: PLANS,
+      data: {
+        mealPlans: {
+          __typename: 'MealPlanConnection',
+          totalCount: 2,
+          edges: ['plan-1', 'plan-2'].map(id => ({
+            __typename: 'MealPlanEdge',
+            node: { __typename: 'MealPlan', id, name: id },
+          })),
+        },
+      },
+    });
+    const del = recordMock(DeleteMealPlanDocument, {
+      data: {
+        deleteMealPlan: {
+          __typename: 'DeleteMealPlanPayload',
+          mealPlan: { __typename: 'MealPlan', id: 'plan-1' },
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(() => useMealPlanActions(), {
+      operationMocks: [del.mock],
+      cache,
+    });
+
+    await act(async () => {
+      await result.current.deleteMealPlan('plan-1');
+    });
+
+    const list = cache.readQuery<{
+      mealPlans: { edges: Array<{ node: { id: string } }> };
+    }>({ query: PLANS });
+    expect(list?.mealPlans.edges.map(({ node }) => node.id)).toEqual([
+      'plan-2',
+    ]);
+    expect(cache.extract()['MealPlan:plan-1']).toBeUndefined();
   });
 });

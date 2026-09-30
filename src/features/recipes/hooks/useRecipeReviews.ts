@@ -1,5 +1,10 @@
 import { useTranslation } from '#/i18n';
-import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import {
+  skipToken,
+  useApolloClient,
+  useMutation,
+  useQuery,
+} from '@apollo/client/react';
 import { generateEntityId } from '#/utils/generateEntityId';
 import {
   CreateRecipeReviewDocument,
@@ -14,14 +19,14 @@ import {
 } from '#features/recipes/graphql/recipeFragments.generated';
 import type { MaterializedRecipe } from './useRecipeData';
 import { useUser } from '#store/useAppStore';
+import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { toastService } from '#/services/toastService';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import {
+  addReviewEdge,
   addReviewToRecipe,
-  changeReviewRating,
-  getReviewRating,
   removeReviewFromRecipe,
 } from '#features/recipes/cache/reviews';
 
@@ -41,10 +46,10 @@ export function useRecipeReviews({
   const apolloClient = useApolloClient();
 
   // Fetch reviews separately to avoid exceeding query depth limit
-  const { data: reviewsData } = useQuery(GetRecipeReviewsDocument, {
-    variables: { id: recipeId },
-    skip: !recipeId,
-  });
+  const { data: reviewsData } = useQuery(
+    GetRecipeReviewsDocument,
+    recipeId ? { variables: { id: recipeId } } : skipToken,
+  );
 
   // Derived data from recipe
   const totalReviews = backendRecipe?.totalReviews ?? 0;
@@ -55,25 +60,19 @@ export function useRecipeReviews({
   const rating4Count = backendRecipe?.rating4Count ?? 0;
   const rating5Count = backendRecipe?.rating5Count ?? 0;
 
-  // Materialize each masked review ref via cache.readFragment so we can
-  // sort/filter by `helpful`, `createdAt`, and inspect `user`.
-  const reviews = (() => {
-    const rawRefs =
-      reviewsData?.recipe?.reviewsConnection.edges.map(edge => edge.node) ?? [];
-    const materialized = rawRefs
-      .map(ref =>
-        apolloClient.cache.readFragment<RecipeReviewFragment>({
-          fragment: RecipeReviewFragmentDoc,
-          fragmentName: 'RecipeReviewFragment',
-          from: { __typename: 'RecipeReview', id: ref.id },
-        }),
-      )
-      .filter((r): r is NonNullable<typeof r> => r != null);
-    return materialized.sort((a, b) => {
+  // Live per review, so a vote or an edit re-sorts the list.
+  const reviewEntries = useFragmentList({
+    fragment: RecipeReviewFragmentDoc,
+    fragmentName: 'RecipeReviewFragment',
+    from:
+      reviewsData?.recipe?.reviewsConnection.edges.map(edge => edge.node) ?? [],
+  });
+  const reviews = reviewEntries
+    .filter((r): r is RecipeReviewFragment => r !== null)
+    .sort((a, b) => {
       if (b.helpful !== a.helpful) return b.helpful - a.helpful;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  })();
 
   // Current user's review. `r.user` is null for reviews whose author deleted
   // their account, which can never be the signed-in viewer.
@@ -91,11 +90,7 @@ export function useRecipeReviews({
       update: (cache, { data }) => {
         const payload = appliedPayload(data);
         if (!payload) return;
-        const review = payload.recipeReview;
-        addReviewToRecipe(cache, recipeId, {
-          id: review.id,
-          rating: review.rating,
-        });
+        addReviewEdge(cache, recipeId, payload.recipeReview.id);
       },
     },
   );
@@ -172,7 +167,6 @@ export function useRecipeReviews({
     id: string,
     input: { rating?: number; comment?: string },
   ) => {
-    const prevRating = getReviewRating(apolloClient.cache, id);
     const settled = await settleMutation(
       () =>
         updateReviewMutation({
@@ -182,18 +176,6 @@ export function useRecipeReviews({
               rating: input.rating,
               comment: input.comment,
             },
-          },
-          update: (cache, { data }) => {
-            const payload = appliedPayload(data);
-            if (!payload || prevRating === null) return;
-            if (prevRating !== payload.recipeReview.rating) {
-              changeReviewRating(
-                cache,
-                recipeId,
-                prevRating,
-                payload.recipeReview.rating,
-              );
-            }
           },
         }),
       {

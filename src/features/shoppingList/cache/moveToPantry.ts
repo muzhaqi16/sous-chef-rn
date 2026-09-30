@@ -4,7 +4,7 @@
  * the other tab's `totalCount` is left alone.
  */
 
-import { gql, type ApolloCache } from '@apollo/client';
+import type { ApolloCache } from '@apollo/client';
 import { type ConnectionData, safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { logger } from '#/utils/environment';
 import {
@@ -16,22 +16,7 @@ import {
   type ListCounterChange,
 } from './connections';
 import { readMovedToPantryAt, writePurchaseInfo } from './purchase';
-
-/**
- * What {@link restoreItemToShoppingListAfterMoveToPantry} needs at withdrawal time:
- * which list, and which filtered variant of its connection.
- */
-const RESTORE_MOVED_ITEM_FRAGMENT = gql`
-  fragment RestoreMovedShoppingListItem on ShoppingListItem {
-    id
-    purchaseInfo {
-      isPurchased
-    }
-    shoppingList {
-      id
-    }
-  }
-`;
+import { MoveToPantry_RestoreTargetFragmentDoc } from './moveToPantry.generated';
 
 /**
  * Remove one item when moving it to the pantry. Unlike the generic remover this
@@ -139,19 +124,15 @@ export function restoreItemToShoppingListAfterMoveToPantry(
     });
     if (!itemCacheId) return true;
 
-    const row = cache.readFragment<{
-      id: string;
-      purchaseInfo: { isPurchased: boolean } | null;
-      shoppingList: { id: string } | null;
-    }>({
+    const row = cache.readFragment({
       id: itemCacheId,
-      fragment: RESTORE_MOVED_ITEM_FRAGMENT,
+      fragment: MoveToPantry_RestoreTargetFragmentDoc,
     });
 
-    const listId = row?.shoppingList?.id;
+    const listId = row?.shoppingList.id;
     if (!row || !listId) return true;
 
-    const wasPurchased = Boolean(row.purchaseInfo?.isPurchased);
+    const wasPurchased = row.purchaseInfo.isPurchased;
     const parentCacheId = cache.identify({
       __typename: 'ShoppingList',
       id: listId,

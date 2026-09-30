@@ -15,7 +15,7 @@ import path from 'path';
  *
  * The registries are split by CONSUMER for that reason: `registry.static.ts`
  * carries what i18n needs, `registry.cache.ts` what `makeCache()` needs, and
- * `offlineQueue/syncRegistry.ts` what the queue needs.
+ * `offlineQueue/preparationRegistry.ts` what the queue needs.
  */
 
 const ROOT = path.join(__dirname, '..', '..');
@@ -96,7 +96,7 @@ describe('the i18n launch path', () => {
     ['the Zustand store', 'src/store/index.ts'],
     ['the offline queue store', 'src/apollo/offlineQueue/queueStore.ts'],
     ['the cache field policies', 'src/apollo/cacheFieldPolicies.ts'],
-    ['the sync registry', 'src/apollo/offlineQueue/syncRegistry.ts'],
+    ['the replay registry', 'src/apollo/offlineQueue/preparationRegistry.ts'],
     ['device locale probing', 'src/utils/deviceLocale.ts'],
   ])('does not reach %s', (_label, rel) => {
     expect(reaches(rel)).toBe(false);

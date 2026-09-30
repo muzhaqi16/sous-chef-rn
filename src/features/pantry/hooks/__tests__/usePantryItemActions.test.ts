@@ -18,7 +18,7 @@ import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
 import { t } from '#/i18n';
 import { changeLanguage } from '#/i18n/config';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { toDateKey } from '#/utils/dateUtils';
+import { todayKey } from '#/utils/dateUtils';
 import { usePantryItemActions } from '../usePantryItemActions';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import { WriteHeldStock_PantryItemFragmentDoc } from '#features/pantry/cache/stock.generated';
@@ -304,13 +304,14 @@ describe('usePantryItemActions', () => {
       });
 
       expect(m.fired).toContainEqual({
+        today: expect.any(String),
         input: {
           pantryItemId: 'item-1',
           amount: { quantity: 2 },
           purpose: UsagePurpose.Cooking,
           notes: 'For dinner',
           usageUnitId: undefined,
-          today: toDateKey(new Date()),
+          today: todayKey(),
           idempotencyKey: expect.any(String),
         },
       });
@@ -401,6 +402,7 @@ describe('usePantryItemActions', () => {
       });
 
       expect(m.fired).toContainEqual({
+        today: expect.any(String),
         input: {
           pantryItemId: 'item-1',
           amount: { quantity: 1 },
@@ -410,7 +412,7 @@ describe('usePantryItemActions', () => {
           wasteReason: 'EXPIRED',
           isComposted: true,
           isRecycled: false,
-          today: toDateKey(new Date()),
+          today: todayKey(),
           idempotencyKey: expect.any(String),
         },
       });
@@ -436,6 +438,7 @@ describe('usePantryItemActions', () => {
       });
 
       expect(m.fired).toContainEqual({
+        today: expect.any(String),
         input: {
           id: 'item-1',
           quantity: 3,

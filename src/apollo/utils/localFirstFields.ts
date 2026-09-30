@@ -159,7 +159,7 @@ export interface LocalFirstFieldsOptions<TFields extends object> {
   updates: Partial<TFields>;
   /** Current values for the same keys — restored if the server refuses. */
   previous: Partial<TFields>;
-  /** Fires the mutation. MUST pass `context: { localFirst: true }`. */
+  /** Fires the mutation, whose `useMutation` sets `context: { localFirst: true }`. */
   mutate: () => Promise<MutationResultLike>;
   /** Operation label for error reporting. */
   logLabel: string;

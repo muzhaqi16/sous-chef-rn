@@ -44,10 +44,16 @@ const NETWORK_ONLY_CALLERS: Record<string, string> = {
   'features/pantry/hooks/useHybridSearch.ts':
     'the server leg of a hybrid search; the local leg already answered',
   'services/authService.ts': 'device credentials must not be read stale',
+  'apollo/offlineQueue/queueManager.ts':
+    "a unit's current id, asked after a refusal named the cached one retired",
   'services/subscriptions/fetchEventEntity.ts':
     'reads back the entity an event just named',
   'services/auth/deviceRegistration.ts':
     'device rows decide registration; a stale read re-registers',
+  'hooks/useDataPreloading.ts':
+    'a time-to-live refresh; a cached answer must not be stamped fresh',
+  'features/catalog/hooks/useUnitAutocomplete.ts':
+    'a time-to-live refresh; a cached answer must not be stamped fresh',
 };
 
 describe('the one-shot query default', () => {

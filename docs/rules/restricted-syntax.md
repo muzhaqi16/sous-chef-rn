@@ -21,7 +21,7 @@ property, so the helper strips it before ESLint sees the entry.
 ## Production entries
 
 | Id                             | Bans                                                                        |
-| ------------------------------ | --------------------------------------------------------------------------- |
+| ------------------------------ | --------------------------------------------------------------------------- | --- | ----------------------------------------- |
 | `parseFloat`                   | `parseFloat` / `Number.parseFloat`; use `parseDecimalInput`.                |
 | `inlineImportType`             | An inline `import('…').T` type.                                             |
 | `imperativeSheet`              | Zero-argument `present()` / `dismiss()` on a sheet ref.                     |
@@ -44,7 +44,7 @@ property, so the helper strips it before ESLint sees the entry.
 | `modalPropsOverride`           | `onChange` / `animatedIndex` after `{...modalProps}`.                       |
 | `optimisticResponseCast`       | A hand-rolled, asserted `optimisticResponse` literal.                       |
 | `missingPressableLabel`        | A pressable with no text child and no `accessibilityLabel`.                 |
-| `callerFallbackAfterResolver`  | `localizedErrorMessage(err) || t(…)` — copy behind the operator is dead. |
+| `callerFallbackAfterResolver`  | `localizedErrorMessage(err)                                                 |     | t(…)` — copy behind the operator is dead. |
 | `asUnknown`                    | `as unknown`, typically the `x as unknown as T` double cast.                |
 | `asNever`                      | `as never`.                                                                 |
 | `asRecord`                     | `as Record<…>`.                                                             |
@@ -56,6 +56,20 @@ reports the `any` itself, everywhere. `optimisticResponseCast` overlaps
 `@typescript-eslint/consistent-type-assertions` on production source and exists
 to carry the ban into `__mocks__` and `__perf__`, which the type-aware block
 does not lint.
+
+## Feature-hook entries
+
+Scoped by the override in `eslint/project.js` to `src/features/**/hooks/**`,
+mutation hooks (`hooks/mutations/`) excluded; `cache/` and `offline/` modules
+sit outside it. `restrictedSyntaxForFeatureHooks()` is the production set plus
+these.
+
+| Id                       | Bans                                                                                                                                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `renderTimeReadFragment` | `readFragment` in a `use*` function body, an array method's callback included; use `useFragment` (`from: x ?? null`), or `useFragmentList` (an array `from`) for a list. A read in a handler, effect or mutation callback is allowed. |
+
+The selector sees only the hook's own body: a module-level helper that reads
+the cache and is called while rendering passes it, and is held by review.
 
 ## Test-only entries
 

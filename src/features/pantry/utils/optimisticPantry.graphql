@@ -1,0 +1,29 @@
+# A local-first create's pantry: everything a query reads on one, plus the
+# connection variants its screen reads, empty. `itemsConnection` keys on
+# `filters` and `orderBy`, but an argument-less selection is a different store
+# field; `storageLocationsConnection` keys on every argument, so `$first` is
+# the screen's page size.
+fragment optimisticPantry_row on Pantry {
+  id
+  ...PantryReaders
+  itemsConnection(first: 50) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      cursor
+    }
+  }
+  storageLocationsConnection(first: $first) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      cursor
+    }
+  }
+}

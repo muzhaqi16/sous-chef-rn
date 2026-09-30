@@ -113,7 +113,7 @@ describe('writeEntityFields', () => {
    * module-scope cache, which grows for the life of the process.
    *
    * See `localFirstFragment` in `localFirstFields.ts` — the same constraint
-   * `writePantryItemDetailStub` builds its per-field fragments to satisfy.
+   * `writeLocalEntity` builds its per-field fragments to satisfy.
    */
   it('registers distinct field shapes without a duplicate-name warning', () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});

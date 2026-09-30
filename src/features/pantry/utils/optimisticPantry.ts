@@ -1,102 +1,23 @@
 /**
- * Local-first pantry creation. Materializes a COMPLETE Pantry — zeroed `stats`,
- * empty `itemsConnection` / `storageLocationsConnection` variants — before the
- * create fires: an incomplete entity reads as no data at all, and a
- * `cache.modify` edge write needs an existing connection variant to land in.
+ * Local-first pantry creation. Writes a COMPLETE pantry — zeroed stats, empty
+ * connection variants — before the create fires: an incomplete entity reads as
+ * no data at all, and a `cache.modify` edge write needs a variant to land in.
  */
 
-import { gql, type ApolloCache, type Reference } from '@apollo/client';
+import type { ApolloCache, Reference } from '@apollo/client';
 import { PAGE_SIZE } from '#features/pantry/constants/pagination';
 import { safeEvict, type ConnectionData } from '#/apollo/utils/cacheUpdaters';
+import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import { todayKey } from '#/utils/dateUtils';
+import { OptimisticPantry_RowFragmentDoc } from './optimisticPantry.generated';
+import {
+  NEUTRAL_LOCAL_PANTRY,
+  NEUTRAL_LOCAL_PANTRY_BY_TYPE,
+} from './optimisticPantryNeutral.generated';
 
-export type OptimisticPantry = {
-  __typename: 'Pantry';
-  id: string;
-  homeId: string;
-  name: string;
-  description: string | null;
-  isDefault: boolean;
-  version: number;
-  createdAt: string;
-  updatedAt: string;
-};
-
-/** Entity + zeroed stats (what the pantry screen header/stats read). */
-const OptimisticPantryFragment = gql`
-  fragment _OptimisticPantry on Pantry {
-    id
-    homeId
-    name
-    description
-    isDefault
-    version
-    createdAt
-    updatedAt
-    stats {
-      totalItems
-      activeItems
-      expiringCount
-      expiredCount
-      lowStockCount
-      totalValue
-      storageStateCounts {
-        refrigerated
-        frozen
-        ambient
-        # GetPantry selects none, and a field this fragment omits is dropped on
-        # write — leaving the pantry incomplete, which reads as no data at all.
-        none
-      }
-      storageLocationCounts {
-        storageLocationId
-        name
-        type
-        itemCount
-      }
-    }
-  }
-`;
-
-/**
- * `keyArgs: ['filters', 'orderBy']` are both undefined on the default screen,
- * but a selection with NO argument is a DIFFERENT store field from one with
- * any argument — so this carries `first` to key where the screen reads.
- */
-const PantryEmptyItemsFragment = gql`
-  fragment _PantryEmptyItems on Pantry {
-    itemsConnection(first: 50) {
-      totalCount
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      edges {
-        cursor
-      }
-    }
-  }
-`;
-
-/**
- * storageLocationsConnection keys on all args, so the seeded variant must match
- * the screen's `first` exactly — passed as a variable to track PAGE_SIZE.COMPACT.
- */
-const PantryEmptyStorageLocationsFragment = gql`
-  fragment _PantryEmptyStorageLocations on Pantry {
-    storageLocationsConnection(first: $first) {
-      totalCount
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      edges {
-        cursor
-      }
-    }
-  }
-`;
-
-export function buildOptimisticPantry(
+/** Write the pantry a create makes, complete for every screen that reads one. */
+export function writeLocalPantry(
+  cache: ApolloCache,
   id: string,
   input: {
     homeId: string;
@@ -104,80 +25,22 @@ export function buildOptimisticPantry(
     description?: string | null;
     isDefault?: boolean | null;
   },
-): OptimisticPantry {
-  const now = new Date().toISOString();
-  return {
-    __typename: 'Pantry',
-    id,
-    homeId: input.homeId,
-    name: input.name,
-    description: input.description ?? null,
-    isDefault: input.isDefault ?? false,
-    version: 1,
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
-const EMPTY_CONNECTION = {
-  totalCount: 0,
-  pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: null },
-  edges: [],
-};
-
-/** Write the full entity + zeroed stats + empty connection variants. */
-export function writeOptimisticPantry(
-  cache: ApolloCache,
-  pantry: OptimisticPantry,
 ): void {
-  const cacheId = cache.identify(pantry);
-  cache.writeFragment({
-    id: cacheId,
-    fragment: OptimisticPantryFragment,
-    fragmentName: '_OptimisticPantry',
-    data: {
-      ...pantry,
-      stats: {
-        __typename: 'PantryStats',
-        totalItems: 0,
-        activeItems: 0,
-        expiringCount: 0,
-        expiredCount: 0,
-        lowStockCount: 0,
-        totalValue: 0,
-        storageStateCounts: {
-          __typename: 'StorageStateCounts',
-          refrigerated: 0,
-          frozen: 0,
-          ambient: 0,
-          none: 0,
-        },
-        storageLocationCounts: [],
-      },
+  writeLocalEntity(cache, {
+    fragment: OptimisticPantry_RowFragmentDoc,
+    fragmentName: 'optimisticPantry_row',
+    neutral: NEUTRAL_LOCAL_PANTRY,
+    neutralByType: NEUTRAL_LOCAL_PANTRY_BY_TYPE,
+    known: {
+      __typename: 'Pantry',
+      id,
+      homeId: input.homeId,
+      name: input.name,
+      description: input.description ?? null,
+      isDefault: input.isDefault ?? false,
+      version: 1,
     },
-  });
-  cache.writeFragment({
-    id: cacheId,
-    fragment: PantryEmptyItemsFragment,
-    fragmentName: '_PantryEmptyItems',
-    data: {
-      itemsConnection: {
-        __typename: 'PantryItemConnection',
-        ...EMPTY_CONNECTION,
-      },
-    },
-  });
-  cache.writeFragment({
-    id: cacheId,
-    fragment: PantryEmptyStorageLocationsFragment,
-    fragmentName: '_PantryEmptyStorageLocations',
-    variables: { first: PAGE_SIZE.COMPACT },
-    data: {
-      storageLocationsConnection: {
-        __typename: 'StorageLocationConnection',
-        ...EMPTY_CONNECTION,
-      },
-    },
+    variables: { today: todayKey(), first: PAGE_SIZE.COMPACT },
   });
 }
 
@@ -190,7 +53,8 @@ export function writeOptimisticPantry(
 export function addPantryToHomeCache(
   cache: ApolloCache,
   homeId: string,
-  pantry: { id: string },
+  // `toReference` identifies the pantry by `__typename`.
+  pantry: { __typename: 'Pantry'; id: string },
 ): void {
   const homeCacheId = cache.identify({ __typename: 'Home', id: homeId });
   if (!homeCacheId) return;

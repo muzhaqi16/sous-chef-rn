@@ -177,9 +177,12 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
 
   // Filtering moved up from the row so the list's item count matches what is
   // actually rendered — a virtualized list can't absorb rows that return null.
-  const filteredRecipes = filterByTerm(recipes, searchQuery, [
-    r => r.recipe.name,
-  ]);
+  // An unpublished recipe (`recipe: null`) cannot be planned, so it is left out.
+  const filteredRecipes = filterByTerm(
+    recipes.filter(r => r.recipe !== null),
+    searchQuery,
+    [r => r.recipe?.name],
+  );
 
   const mealTypeOptions: ChipOption<MealType>[] = MEAL_TYPE_ORDER.map(type => ({
     key: type,

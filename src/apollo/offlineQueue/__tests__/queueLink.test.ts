@@ -25,7 +25,7 @@ import {
 } from '#operations/auth/auth.generated';
 import { UpdateItemDocument } from '#features/catalog/hooks/useSuggestItemEdit.generated';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { ToggleShoppingListItemPurchasedDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CreateRecipeReviewDocument } from '#features/recipes/graphql/recipeReview.generated';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 
@@ -384,31 +384,21 @@ describe('createQueueLink', () => {
       });
       const cache = new InMemoryCache();
       cache.writeFragment({
-        id: cache.identify({ __typename: 'ShoppingListItem', id: 'row-1' }),
+        id: cache.identify({ __typename: 'Unit', id: 'unit-1' }),
         fragment: gql`
-          fragment QueuedRow on ShoppingListItem {
+          fragment QueuedUnit on Unit {
             id
-            itemName
-            item {
-              id
-            }
-            shoppingList {
-              id
-            }
+            symbol
           }
         `,
-        data: {
-          __typename: 'ShoppingListItem',
-          id: 'row-1',
-          itemName: 'Milk',
-          item: { __typename: 'Item', id: 'item-1' },
-          shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
-        },
+        data: { __typename: 'Unit', id: 'unit-1', symbol: 'tbsp' },
       });
       const operation = makeOperation({
-        query: ToggleShoppingListItemPurchasedDocument,
-        operationName: operationNameOf(ToggleShoppingListItemPurchasedDocument),
-        variables: { input: { id: 'row-1', purchased: true } },
+        query: UpdateShoppingListItemQuantityDocument,
+        operationName: operationNameOf(UpdateShoppingListItemQuantityDocument),
+        variables: {
+          input: { itemId: 'row-1', quantity: '2', unitId: 'unit-1' },
+        },
         context: { localFirst: true },
         cache,
       });
@@ -417,7 +407,7 @@ describe('createQueueLink', () => {
         complete() {
           expect(
             jest.mocked(queueStore.addMutation).mock.calls[0]?.[0].replayInputs,
-          ).toEqual({ shoppingListId: 'list-1', refItemId: 'item-1' });
+          ).toEqual({ 'unit:unit-1': 'tbsp' });
           done();
         },
       });

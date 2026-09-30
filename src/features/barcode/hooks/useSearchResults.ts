@@ -222,7 +222,10 @@ export const useSearchResults = (
     refetch: refetchUpc,
   } = useQuery(ItemByUpcFilterDocument, {
     variables: { upc: barcode, upcFormat, pantry: pantryId },
-    fetchPolicy: 'network-only', // Always fetch fresh - prevents stale data from previous scans
+    // `items` is keyed by `filters`, so another code's result never serves this
+    // one; network-only is for a code the catalog has gained or changed since.
+    fetchPolicy: 'network-only',
+    refetchOn: false,
   });
 
   // Get first item from UPC filter results
@@ -238,7 +241,8 @@ export const useSearchResults = (
     // Skip SKU search while UPC is loading OR if UPC found a result
     // Must include upcLoading to prevent using stale upcItem from previous scan
     skip: upcLoading || !!upcItem,
-    fetchPolicy: 'network-only', // Always fetch fresh - prevents stale data from previous scans
+    fetchPolicy: 'network-only', // As the UPC lookup above.
+    refetchOn: false,
   });
 
   // Handle UPC query completion - trust API's UPC matching

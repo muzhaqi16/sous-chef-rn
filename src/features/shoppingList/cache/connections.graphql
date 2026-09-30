@@ -1,0 +1,8 @@
+# The list counters a local write moves, recorded so a revert restores them.
+fragment connections_listCounters on ShoppingList {
+  id
+  totalItems
+  completedItems
+  remainingItems
+  completionRate
+}

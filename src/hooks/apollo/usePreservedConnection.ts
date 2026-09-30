@@ -17,15 +17,18 @@ export interface PreservedConnection<TNode> {
 /**
  * ORDER IS THE POINT: preserve the connection OBJECT, THEN flatten. Flattening
  * first turns an error-driven `undefined` into `[]` and the list wipes; a
- * DEFINED `{ edges: [] }` still clears correctly. Value-keyed rather than
- * Apollo's `previousData`, which is not variable-scoped.
+ * DEFINED `{ edges: [] }` still clears correctly. Scoped by `key`, the subject
+ * the connection was loaded for, so a switch never re-serves the previous
+ * subject's list — unlike Apollo's `previousData`, which is not variable-scoped.
  */
 export function usePreservedConnection<C extends ConnectionResult>(
   connection: C | null | undefined,
+  key: string,
 ): PreservedConnection<NodeOfConnection<C>> {
   const preserved = usePreservedQueryData<C | undefined>(
     connection ?? undefined,
     undefined,
+    key,
   );
   return {
     nodes: extractNodes(preserved) as NodeOfConnection<C>[],
@@ -46,10 +49,12 @@ type EdgesConnection<TNode> = {
  */
 export function usePreservedNodes<TNode>(
   connection: EdgesConnection<TNode> | null | undefined,
+  key: string,
 ): TNode[] {
   const preserved = usePreservedQueryData<EdgesConnection<TNode> | undefined>(
     connection ?? undefined,
     undefined,
+    key,
   );
   return extractNodes<TNode>(preserved);
 }

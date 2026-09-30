@@ -87,7 +87,6 @@ mutation DeleteMealTemplate($input: DeleteMealTemplateInput!) {
     ... on DeleteMealTemplatePayload {
       mealTemplate {
         id
-        name
       }
     }
     ... on Error {
@@ -110,11 +109,8 @@ mutation CreateMealTemplate($input: CreateMealTemplateInput!) {
     ... on CreateMealTemplatePayload {
       mealTemplate {
         id
+        ...MealTemplateReaders
         ...MealTemplateDisplay
-        items {
-          id
-          ...MealTemplateItemFragment
-        }
       }
     }
     ... on Error {
@@ -137,6 +133,7 @@ mutation UpdateMealTemplate($input: UpdateMealTemplateInput!) {
     ... on UpdateMealTemplatePayload {
       mealTemplate {
         id
+        ...MealTemplateReaders
         ...MealTemplateDisplay
       }
     }
@@ -160,10 +157,7 @@ mutation AddTemplateItem($input: AddTemplateItemInput!) {
     ... on AddTemplateItemPayload {
       mealTemplate {
         id
-        items {
-          id
-          ...MealTemplateItemFragment
-        }
+        ...MealTemplateReaders
       }
     }
     ... on Error {
@@ -186,7 +180,12 @@ mutation UpdateTemplateItem($input: UpdateTemplateItemInput!) {
     ... on UpdateTemplateItemPayload {
       mealTemplateItem {
         id
+        ...MealTemplateItemReaders
         ...MealTemplateItemFragment
+      }
+      mealTemplate {
+        id
+        ...MealTemplateReaders
       }
     }
     ... on Error {
@@ -207,15 +206,12 @@ mutation RemoveTemplateItem($input: RemoveTemplateItemInput!) {
   removeTemplateItem(input: $input) {
     __typename
     ... on RemoveTemplateItemPayload {
-      mealTemplate {
-        id
-        items {
-          id
-          ...MealTemplateItemFragment
-        }
-      }
       mealTemplateItem {
         id
+      }
+      mealTemplate {
+        id
+        ...MealTemplateReaders
       }
     }
     ... on Error {

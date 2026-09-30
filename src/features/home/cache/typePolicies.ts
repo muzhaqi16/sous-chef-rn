@@ -10,9 +10,9 @@ import { mergeConnectionByNodeId } from '#/apollo/cacheFieldPolicies';
 export const homeTypePolicies: TypePolicies = {
   Home: {
     fields: {
-      membersConnection: mergeConnectionByNodeId(),
+      membersConnection: mergeConnectionByNodeId(['orderBy']),
       invitesConnection: mergeConnectionByNodeId(),
-      pantriesConnection: mergeConnectionByNodeId(),
+      pantriesConnection: mergeConnectionByNodeId(['orderBy']),
       shoppingListsConnection: mergeConnectionByNodeId(),
       mealPlansConnection: mergeConnectionByNodeId(),
       mealTemplatesConnection: mergeConnectionByNodeId(),

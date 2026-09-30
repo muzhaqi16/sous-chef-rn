@@ -33,7 +33,7 @@ export const pantryTypePolicies: TypePolicies = {
           ];
         },
       },
-      storageLocationsConnection: mergeConnectionByNodeId(),
+      storageLocationsConnection: mergeConnectionByNodeId(['orderBy']),
       // `today` only moves the expiring window; keying on it would empty a warm
       // cache at midnight.
       suggestions: {
@@ -101,16 +101,6 @@ export const pantryTypePolicies: TypePolicies = {
           return canRead(ref) ? ref : existing;
         },
       },
-      pantries: {
-        // Different homes have different pantries - cache separately
-        keyArgs: ['homeId'],
-        merge(existing: unknown = [], incoming: unknown) {
-          if (incoming == null) {
-            return existing;
-          }
-          return incoming;
-        },
-      },
       // Batches for a pantry item are a Relay connection keyed by the item
       // (and optional status filter), so each item — and each active/all
       // view — keeps its own cached edge list; edges merge by node id.
@@ -144,16 +134,6 @@ export const pantryTypePolicies: TypePolicies = {
                 : existing.totalCount,
           };
         },
-        merge(existing: unknown = [], incoming: unknown) {
-          if (incoming == null) {
-            return existing;
-          }
-          return incoming;
-        },
-      },
-      storageLocationTree: {
-        // Different homes have different storage location trees - cache separately
-        keyArgs: ['homeId'],
         merge(existing: unknown = [], incoming: unknown) {
           if (incoming == null) {
             return existing;

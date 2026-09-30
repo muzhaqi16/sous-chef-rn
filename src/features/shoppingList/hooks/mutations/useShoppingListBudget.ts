@@ -14,34 +14,40 @@ import {
 } from './useShoppingListBudget.generated';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { toastService } from '#/services/toastService';
-import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
+import {
+  snapshotFields,
+  writeEntityFields,
+} from '#/apollo/utils/localFirstFields';
 import type { UpdateShoppingListInput } from '#/graphql/generated/schemaTypes';
 
 export function useShoppingListBudget() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [mutate] = useMutation(UpdateShoppingListDocument);
+  const [mutate] = useMutation(UpdateShoppingListDocument, {
+    context: { localFirst: true },
+  });
 
+  /** Writes `patch` over the list and returns what restores the held values. */
   const applyOptimistic = (
     id: string,
     patch: Partial<UseShoppingListBudget_ListFragment>,
-    label: string,
-  ): (() => void) =>
-    applyOptimisticFragmentPatch(
-      client.cache,
-      { typename: 'ShoppingList', id },
-      {
-        fragment: UseShoppingListBudget_ListFragmentDoc,
-        fragmentName: 'useShoppingListBudget_list',
-      },
-      patch,
-      label,
-    );
+  ): (() => void) => {
+    const entity = { __typename: 'ShoppingList', id };
+    const held = client.cache.readFragment<UseShoppingListBudget_ListFragment>({
+      id: client.cache.identify(entity),
+      fragment: UseShoppingListBudget_ListFragmentDoc,
+      fragmentName: 'useShoppingListBudget_list',
+      returnPartialData: true,
+    });
+    const previous = snapshotFields(held, patch);
+    writeEntityFields(client.cache, entity, patch);
+    return () => writeEntityFields(client.cache, entity, previous);
+  };
 
   const runUpdate = async (
     id: string,
     input: Omit<UpdateShoppingListInput, 'id' | 'version'>,
-    revert: () => void,
+    patch: Partial<UseShoppingListBudget_ListFragment>,
     failureMessage: string,
   ): Promise<boolean> => {
     // The server requires the version: an update sent without one reports
@@ -53,16 +59,15 @@ export function useShoppingListBudget() {
         fragmentName: 'useShoppingListBudget_list',
       });
     if (!current) {
-      revert();
       toastService.error(failureMessage);
       return false;
     }
 
+    const revert = applyOptimistic(id, patch);
     const settled = await settleMutation(
       () =>
         mutate({
           variables: { input: { id, ...input, version: current.version } },
-          context: { localFirst: true },
         }),
       {
         document: UpdateShoppingListDocument,
@@ -73,18 +78,16 @@ export function useShoppingListBudget() {
     return settled.status !== 'failed';
   };
 
-  const setPriceTracking = async (
+  const setPriceTracking = (
     id: string,
     priceTracking: boolean,
-  ): Promise<boolean> => {
-    const revert = applyOptimistic(id, { priceTracking }, 'Set Price Tracking');
-    return runUpdate(
+  ): Promise<boolean> =>
+    runUpdate(
       id,
       { settings: { priceTracking } },
-      revert,
+      { priceTracking },
       t('shoppingListScreens.failedToSetPriceTracking'),
     );
-  };
 
   return { setPriceTracking };
 }

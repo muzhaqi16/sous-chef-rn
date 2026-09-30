@@ -57,6 +57,7 @@ export function useBatchMoveToPantry({
   // no `pantryId`, so the pantry query picks the rows up on its next fetch.
   const [movePurchasedMutation, { loading }] = useMutation(
     MovePurchasedItemsToPantryDocument,
+    { context: { localFirst: true } },
   );
 
   const batchMoveToPantry = async () => {
@@ -85,7 +86,6 @@ export function useBatchMoveToPantry({
       () =>
         movePurchasedMutation({
           variables: { input: moveInput },
-          context: { localFirst: true },
         }),
       {
         document: MovePurchasedItemsToPantryDocument,
@@ -106,12 +106,13 @@ export function useBatchMoveToPantry({
     if (!payload) return;
 
     // succeeded = lines THIS call moved; skipped = lines already stocked; failed
-    // = itemised in `failedItems`. Every line the payload lists is now in the
-    // pantry, whether this call moved it or found it there.
+    // = the unsuccessful results. Every successful line is now in the pantry.
+    const stocked = payload.results.filter(line => line.success);
+    const failed = payload.results.filter(line => !line.success);
     try {
       markMovedLinesStocked(
         client.cache,
-        payload.movedItems.map(item => item.shoppingListItemId),
+        stocked.map(line => line.shoppingListItemId),
       );
     } catch (cacheError) {
       errorService.reportError(cacheError, {
@@ -155,8 +156,8 @@ export function useBatchMoveToPantry({
     // Reported separately so a partial success still says what did not land; the
     // names are the user's own words, and nothing else from the failure is shown.
     if (failedCount > 0) {
-      const names = payload.failedItems
-        .map(item => item.itemName)
+      const names = failed
+        .map(line => line.itemName)
         .slice(0, 3)
         .join(', ');
       toastService.error(
@@ -175,11 +176,13 @@ export function useBatchMoveToPantry({
       // A count alone cannot tell a validation refusal from a database fault.
       // Distinct codes keep this bounded; the capped ids are how support finds
       // the server-side log for a failure nobody can reproduce.
-      failed_codes: [...new Set(payload.failedItems.map(item => item.code))]
+      failed_codes: [
+        ...new Set(failed.flatMap(line => line.failure?.code ?? [])),
+      ]
         .sort()
         .join(','),
-      failed_error_ids: payload.failedItems
-        .map(item => item.errorId)
+      failed_error_ids: failed
+        .map(line => line.failure?.errorId)
         .filter((id): id is string => !!id)
         .slice(0, 3)
         .join(','),

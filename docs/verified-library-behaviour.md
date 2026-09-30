@@ -887,8 +887,10 @@ It is NOT the right tool for the `purchaseInfo` record. Two rules are documented
 on `writePurchaseInfo` and neither can run through `cache.modify`: the type
 policy's clear-on-flip never fires (no merge runs), and a field the cached record
 does not already carry cannot be introduced. The writer goes through
-`cache.writeFragment` and carries the cached record forward explicitly, so the policy has nothing to clear on a local
-flip — which is what the SDL describes, since it documents a clearing contract
+`cache.writeFragment` with `extensions: { local: true }`, which the policy reads
+to merge a local flip field-wise instead of clearing it (see
+[Apollo `writeFragment` forwards `extensions` to merge functions](#apollo-writefragment-forwards-extensions-to-merge-functions))
+— which is what the SDL describes, since it documents a clearing contract
 for `movedToPantryAt` alone and says nothing about the amounts. The policy still
 governs the narrow SERVER responses it was written for.
 
@@ -1003,9 +1005,8 @@ link.isPrimary === undefined  -> true
 Both of the last two lines are true, which is what makes the mistake easy: a
 completeness test written as `value !== undefined` reads the same as one written
 as `'key' in value` on a whole object, and diverges only on the partial one it
-exists to catch. `writePantryItemDetailStub` tested for `undefined` and so
-judged every partially-cached nested object whole, wrote it straight back, and
-left the read incomplete — the exact case its own comment says it fixed.
+exists to catch: a writer testing for `undefined` judges every partially-cached
+nested object whole, writes it straight back, and leaves the read incomplete.
 
 Ask the cache instead of walking the value: a strict `readFragment` of the
 selection returns `null` when the cache cannot satisfy it, which is Apollo's own
@@ -1361,3 +1362,143 @@ Navigation. `RCTReactNativeFactory.h` and `RCTLinkingManager.mm:151-164` in
 starts React Native once (a reconnected scene re-parents the existing window),
 keeps `AppDelegate.window` pointing at it (LogBox re-keys that window on
 dismiss), and merges the connection options into the launch options.
+
+### Apollo gc needs no result-cache reset to drop evicted entities
+
+Verified 2026-09-29 vs `@apollo/client@4.2.12` — re-check:
+`node scripts/probe-apollo-gc-result-cache.mjs`.
+
+**Claim:** after `cache.evict` + `cache.gc()`, a watched query and a fresh
+read see exactly the same result with or without `resetResultCache: true`.
+Evicted list entries are filtered out; a singular field left pointing at an
+evicted entity makes the read incomplete (`dataState: 'empty'`, `readQuery`
+returns `null`) in both modes. The reset only discards memoized results, so
+the next broadcast re-reads every watcher cold:
+
+```
+default gc   -> list i0,i2 | by id null | singular ref: watcher empty, fresh null
+forced reset -> list i0,i2 | by id null | singular ref: watcher empty, fresh null
+cost of gc + re-read (node, median of 20):
+  500 entities, 50 watchers   -> default ~0.7 ms, forced reset ~3.7–8 ms
+  2000 entities, 200 watchers -> default ~2–8 ms, forced reset ~19–23 ms
+```
+
+The mechanism is Apollo's own dependency tracking: a read depends on each
+entity's `__exists`, which `evict` dirties, so no stale memoized result can
+survive it.
+
+**What depends on it:** the `cache.gc` wrapper in `src/apollo/client.ts` no
+longer forces the reset, and `safeEvict` / `safeEvictMany` in
+`src/apollo/utils/cacheUpdaters.ts` call a plain `cache.gc()`.
+`logoutCleanup.ts` keeps the reset, where the aim is freeing memory on a
+session end.
+
+### Apollo masked results keep identity when only masked fields change
+
+Verified 2026-09-29 vs `@apollo/client@4.2.12` — re-check:
+`node scripts/probe-apollo-masked-result-identity.mjs`.
+
+**Claim:** with `dataMasking: true`, a query does not re-emit when the only
+field that changed sits behind a fragment spread, and its `data` keeps the
+same object identity. A value derived from that `data` by a render-time
+`cache.readFragment` is recomputed only when its inputs change — the React
+Compiler memoizes it on them — so it stays stale until something else changes
+the query's result. `useFragment` (`watchFragment`), with a single or an ARRAY
+`from`, sees the edit:
+
+```
+1. row field behind the spread only
+  query emitted on the edit     -> false
+  data kept its identity        -> true
+  memoized render-time read     -> old b
+  watchFragment, array from     -> ["old a","new b"]
+2. the same field also selected inline (a "signal")
+  query emitted on the edit     -> true
+  data kept its identity        -> false
+  memoized render-time read     -> new b
+```
+
+Two mechanisms in `core/ObservableQuery.js`: the emit filter compares with
+`equalByQuery` against `documentInfo.nonReactiveQuery` (named spreads marked
+`@nonreactive`) when `dataMasking` is on, so a change inside a spread counts
+as equal; and a masked result deeply equal to the previous one is swapped for
+the previous object (`result.data = previous.result.data`). The fragment watch
+(`cache/core/cache.js`, `watchSingleFragment`) compares against the fragment's
+own selection instead, so it emits. The array form (4.1+) returns one entry per
+`from`, deduplicates the per-entity watches, and reports a partial read as one
+`complete: false` with a missing tree keyed by entry index.
+
+Selecting the field inline as well (case 2) makes the query re-emit, which is
+why the "reactivity signal" selections worked — and why removing one as a
+cleanup froze the value it fed.
+
+**What depends on it:** every render-time read of cached data in a feature hook
+goes through `useFragment`, or `useFragmentList` (`src/hooks/apollo/`) for a
+list; `no-restricted-syntax` `renderTimeReadFragment` holds feature hooks to it
+(`docs/rules/restricted-syntax.md`).
+
+### Apollo lazy re-execute answers from the cache after the first result
+
+Verified 2026-09-29 vs `@apollo/client@4.2.12` — re-check:
+`npx jest src/apollo/__tests__/lazyReexecuteFetchPolicy.test.tsx`.
+
+**Claim:** a `useLazyQuery` executed a second time with the same variables is
+answered from the cache, even when the hook asked for `network-only`. `execute`
+calls `observable.reobserve` with the observable's CURRENT `fetchPolicy`
+(`react/hooks/useLazyQuery.js`), and the client-wide
+`nextFetchPolicy: 'cache-first'` (`src/apollo/defaultOptions.ts`) rewrote it
+after the first result (`core/ObservableQuery.js`, `applyNextFetchPolicy`).
+`execute` accepts only `variables` and `context` in 4.2, so the policy cannot
+be overridden per call.
+
+**What depends on it:** a lazy query that re-issues to refresh sets
+`nextFetchPolicy: 'network-only'` on the hook (`useRecipeIngredientMatching`,
+`useHomeInvitations`, `useConvertAvailableQuantity`); a warmer or time-to-live
+refresh uses `client.query({ fetchPolicy: 'network-only' })` through
+`fromServer`. See `apollo-client-patterns.md` § Resync.
+
+### Apollo `writeFragment` forwards `extensions` to merge functions
+
+Verified 2026-09-29 vs `@apollo/client@4.2.12` — re-check:
+`npx jest src/features/shoppingList/cache/__tests__/writePurchaseInfo.test.ts`.
+
+**Claim:** `cache.writeFragment({ …, extensions })` reaches a field policy's
+`merge` as `options.extensions`, although `Cache.WriteFragmentOptions` does not
+declare the key. `writeFragment` spreads its remaining options into `write`
+(`cache/core/cache.js`), `write` passes `extensions` to `writeToStore`
+(`cache/inmemory/writeToStore.js`), and the policies hand it to `merge` (4.1+).
+
+**What depends on it:** `writePurchaseInfo` writes with
+`extensions: { local: true }`, and the `ShoppingListItem.purchaseInfo` merge
+(`src/features/shoppingList/cache/typePolicies.ts`) merges a local write
+field-wise instead of clearing on a flip. The call site widens the options
+type with `Pick<Cache.WriteOptions, 'extensions'>`.
+
+### Apollo `skipToken` keeps serving the last run's data
+
+Verified 2026-09-29 vs `@apollo/client@4.2.12` — re-check:
+`npx jest src/features/shoppingList/hooks/__tests__/useShoppingListItemsQuery.test.ts`
+("serves nothing of the old list once no list is selected").
+
+**Claim:** `useQuery(Doc, skipToken)` passes no variables, so the hook keeps the
+previous run's `variables` and `data`. `skip: true` with new variables returned
+`data: undefined`; `skipToken` returns the LAST subject's data. A hook whose
+subject changes while its query is skipped (a list deselected, a pantry
+switched mid-load) must check the result's `variables` against the current
+subject before using `data`:
+
+```ts
+const result = useQuery(Doc, listId ? { variables: { id: listId } } : skipToken);
+const data = result.variables?.id === listId ? result.data : undefined;
+```
+
+A query skipped from mount has no variables, so `refetch()` on it sends none;
+a hook that exposes `refetch` guards it. Resync is unaffected: a never-run
+`skipToken` query is not `'active'`.
+
+**What depends on it:** `usePantryQuery`, `usePaginatedShoppingItems`,
+`useShoppingListDetails`, `useShoppingListItemsQuery`,
+`useStorageLocationManagement` and `useMealPlanList` (which checks whether it
+is skipped). `useSubscription` has no `skipToken` overload in 4.2.12, so the
+subscription hooks stay on `skip`, which also gates
+`useSubscriptionTransportRecovery`.

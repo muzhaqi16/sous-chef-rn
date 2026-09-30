@@ -33,7 +33,7 @@ const CASES: Case[] = [
   {
     label: "another feature's offline queue surface",
     filePath: RECIPES_HOOK,
-    code: `import { x } from '#features/pantry/offline/syncBuilders';\n${VALUE_USE}`,
+    code: `import { x } from '#features/pantry/offline/replayPreparers';\n${VALUE_USE}`,
     blocked: true,
   },
   {
@@ -70,9 +70,9 @@ const CASES: Case[] = [
   },
   {
     // `offline/` exists for the queue, and the queue IS shared code.
-    label: 'the offline queue importing a feature’s replay builders',
-    filePath: 'src/apollo/offlineQueue/syncRegistry.ts',
-    code: `import { x } from '#features/pantry/offline/syncBuilders';\n${VALUE_USE}`,
+    label: 'the offline queue importing a feature’s replay preparers',
+    filePath: 'src/apollo/offlineQueue/preparationRegistry.ts',
+    code: `import { x } from '#features/pantry/offline/replayPreparers';\n${VALUE_USE}`,
     blocked: false,
   },
   {

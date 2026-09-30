@@ -59,6 +59,9 @@ export const extractDateString = (value: unknown): string => {
  */
 export const toDateKey = (date: Date): string => format(date, 'yyyy-MM-dd');
 
+/** Today's key when called: for a write or a replay. Rendering reads `useToday`. */
+export const todayKey = (): string => toDateKey(new Date());
+
 /**
  * A `LocalDate` key back to that day's local midnight. `new Date('2026-09-21')`
  * reads the key as UTC midnight, which is the previous day west of UTC.

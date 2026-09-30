@@ -1,8 +1,8 @@
 # Canonical shape for a PantryItemBatch in the cache.
 # Spread by: pantry.graphql (GetPantryItemBatches), PantryItemDetail.graphql,
 #   useOpenPantryItemBatch.graphql
-# Read via cache.readFragment by: BatchListItem.tsx, BatchSection.tsx,
-#   PantryItemDetail.tsx
+# Read via useFragment by: BatchListItem.tsx, usePantryItemDetailData.ts,
+#   usePantryBatchHistory.ts
 # Kept shared — all 6 consumers need the identical write-back shape.
 fragment PantryItemBatchFragment on PantryItemBatch {
   id

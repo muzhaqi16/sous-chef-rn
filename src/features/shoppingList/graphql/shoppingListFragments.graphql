@@ -7,11 +7,8 @@
 # to strict per-consumer ownership.
 fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   id
-  # The row's parent list. Not shown anywhere — it is what the offline queue
-  # reads back to build a replay: the toggle / quantity / plain-update inputs
-  # carry only the row id, so `SyncShoppingListItemFieldsInput.shoppingListId`
-  # can only come from the cached row. A writer that omits it makes those
-  # replays fail permanently and the change is undone on reconnect.
+  # The row's parent list. Not shown anywhere: `moveToPantry.ts` reads it to
+  # find the list a moved row leaves.
   shoppingList {
     id
   }
@@ -50,8 +47,8 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
 # Canonical shape for a ShoppingListOwnership in the cache.
 # Spread by: shoppingList.graphql (GetShoppingListDetails, CreateShoppingList,
 #   UpdateShoppingList), useRecipeDetail.graphql (GetShoppingListsLite)
-# Read via cache.readFragment by: useShoppingListDetails.ts,
-#   ShoppingListMainContent.tsx
+# Read via useFragment by: useShoppingListDetails.ts,
+#   useShoppingListPermissions.ts
 # Kept shared — all 6 consumers need the identical write-back shape.
 fragment ShoppingListOwnershipFragment on ShoppingListOwnership {
   id
@@ -71,8 +68,8 @@ fragment ShoppingListOwnershipFragment on ShoppingListOwnership {
 # Canonical shape for a ShoppingListCollaborator in the cache.
 # Spread by: shoppingList.graphql (GetShoppingListDetails, AddCollaborator),
 #   collaboration.graphql (CollaborationChanges subscription)
-# Read via cache.readFragment by: useShoppingListDetails.ts, ShareList.tsx,
-#   ShoppingListMainContent.tsx
+# Read via useFragment by: useShoppingListDetails.ts,
+#   useShoppingListPermissions.ts
 # Kept shared — all 6 consumers need the identical write-back shape.
 fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
   id
@@ -102,8 +99,7 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
 
 # The whole purchase record on a shopping-list item.
 # Spread by: shoppingList.graphql (UpdateShoppingListItem,
-#   ToggleShoppingListItemPurchased), queueManager.graphql
-#   (queueManager_syncItem), useShoppingListSubscriptions.graphql
+#   ToggleShoppingListItemPurchased), useShoppingListSubscriptions.graphql
 #   (useShoppingListSubscriptions_item)
 # Read via the cache by: ItemDetail.tsx (which selects these fields inline
 #   rather than spreading this, because a named spread would mask them from
@@ -148,10 +144,8 @@ fragment ShoppingListItemPurchaseInfoFragment on ShoppingListItemPurchaseInfo {
 # this selection — and they drifted. The two pantry copies had lost the parent
 # list's counters, which matters because `reconcileShoppingItemCreateUpdate`
 # passes `bumpTotalItems: false` on the deliberate assumption that the response
-# carries them; without them a list's counts go stale after an add. All four
-# copies are registered in SHOPPING_LIST_SYNC_BUILDERS and replay through the
-# same Sync fragment, so they were already one operation to the queue while
-# being four to a maintainer. Now they are one selection.
+# carries them; without them a list's counts go stale after an add. Now they
+# are one selection.
 #
 # Scoped to the ITEM rather than the whole payload on purpose: `results` stays
 # unmasked so `buildAddItemsReconcileUpdate` and `useAddShoppingItem` keep

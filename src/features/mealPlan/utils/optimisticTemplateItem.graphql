@@ -1,0 +1,8 @@
+# Display fields the template item's row shows for a recipe-backed meal.
+fragment optimisticTemplateItem_recipeRef on Recipe {
+  id
+  name
+  imageUrl
+  servings
+  totalTimeMinutes
+}

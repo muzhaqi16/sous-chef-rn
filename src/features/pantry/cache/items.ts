@@ -8,10 +8,21 @@ import {
   createRemoveFromParentConnectionUpdater,
   safeEvict,
 } from '#/apollo/utils/cacheUpdaters';
+import { isRecord } from '#/utils/isRecord';
+import { evictLocalPantryItemSeeds } from './writeLocalPantryItem';
 
-export const addToPantryItemsCache = createAddToParentConnectionUpdater<{
+/** The row's reference; the connection write identifies it by `__typename`. */
+export interface PantryItemRef {
+  __typename: 'PantryItem';
   id: string;
-}>('Pantry', 'itemsConnection', 'PantryItem');
+}
+
+export const addToPantryItemsCache =
+  createAddToParentConnectionUpdater<PantryItemRef>(
+    'Pantry',
+    'itemsConnection',
+    'PantryItem',
+  );
 
 export const removeFromPantryItemsCache =
   createRemoveFromParentConnectionUpdater(
@@ -47,25 +58,45 @@ export function adjustPantryItemCount(
   });
 }
 
+interface CountOptions {
+  /** A response already wrote the server's count over the local one. */
+  countsSettled?: boolean;
+}
+
+/**
+ * Whether `pantry`, from a response, carried this pantry's item count — which
+ * Apollo has already written over the local one, so an adjustment on top counts
+ * a row twice.
+ */
+export function carriesPantryCount(pantry: unknown, pantryId: string): boolean {
+  return (
+    isRecord(pantry) &&
+    pantry.id === pantryId &&
+    isRecord(pantry.stats) &&
+    typeof pantry.stats.totalItems === 'number'
+  );
+}
+
 /**
  * Publish a locally-created row AND count it, as one operation. Every path must do
  * both: a count contradicting the rows is visible immediately, and
  * `usePantryScreen` branches on it to pick server-side against client-side
  * sorting. Pairing them here means a call site cannot do one and forget the other.
  */
-export function addPantryItemLocally<T extends { id: string }>(
+export function addPantryItemLocally(
   cache: ApolloCache,
   pantryId: string,
-  // Generic so a caller can pass the whole optimistic entity — which it must,
-  // since the connection write identifies the row through its `__typename`.
-  item: T,
-  options?: Parameters<typeof addToPantryItemsCache>[3],
+  item: PantryItemRef,
+  {
+    countsSettled = false,
+    ...options
+  }: CountOptions & Parameters<typeof addToPantryItemsCache>[3] = {},
 ): boolean {
   // Counted only when the row was actually added: the barcode force-add
   // republishes the same id after a duplicate refusal, which the duplicate guard
   // makes a no-op.
   const added = addToPantryItemsCache(cache, pantryId, item, options);
-  if (added) adjustPantryItemCount(cache, pantryId, 1);
+  if (added && !countsSettled) adjustPantryItemCount(cache, pantryId, 1);
   return added;
 }
 
@@ -77,31 +108,14 @@ export function removePantryItemLocally(
   cache: ApolloCache,
   pantryId: string,
   itemId: string,
-  options?: Parameters<typeof removeFromPantryItemsCache>[3],
+  {
+    countsSettled = false,
+    ...options
+  }: CountOptions & Parameters<typeof removeFromPantryItemsCache>[3] = {},
 ): boolean {
   const removed = removeFromPantryItemsCache(cache, pantryId, itemId, options);
-  if (removed) adjustPantryItemCount(cache, pantryId, -1);
+  if (removed && !countsSettled) adjustPantryItemCount(cache, pantryId, -1);
   return removed;
-}
-
-/** The `Item` a local pantry row points at before the catalog has one. */
-export const localItemIdFor = (pantryItemId: string): string =>
-  `local-item-${pantryItemId}`;
-
-/**
- * Undo what a detail stub writes ALONGSIDE the row — a local `Item` and a
- * retained `ROOT_QUERY` field. Both survive evicting the row, and both persist.
- */
-export function evictPantryItemDetailStub(
-  cache: ApolloCache,
-  pantryItemId: string,
-): void {
-  safeEvict(cache, 'Item', localItemIdFor(pantryItemId));
-  cache.evict({
-    id: 'ROOT_QUERY',
-    fieldName: 'pantryItemBatchesConnection',
-    args: { pantryItemId },
-  });
 }
 
 /**
@@ -112,8 +126,9 @@ export function revertOptimisticPantryItem(
   cache: ApolloCache,
   pantryId: string,
   itemId: string,
+  options: CountOptions = {},
 ): void {
-  removePantryItemLocally(cache, pantryId, itemId);
+  removePantryItemLocally(cache, pantryId, itemId, options);
   safeEvict(cache, 'PantryItem', itemId);
-  evictPantryItemDetailStub(cache, itemId);
+  evictLocalPantryItemSeeds(cache, itemId);
 }

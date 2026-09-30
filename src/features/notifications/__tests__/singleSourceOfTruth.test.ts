@@ -51,11 +51,15 @@ const VARS = { filter: undefined, first: 30 };
 const write = (cache: InMemoryCache, ids: string[], unread: number) => {
   const data: QueryDataFor<typeof GetNotificationsDocument> = {
     __typename: 'Query',
+    notificationSummary: {
+      __typename: 'NotificationSummary',
+      id: 'me',
+      unreadCount: unread,
+      hasUrgent: false,
+    },
     me: {
       __typename: 'User',
       id: 'me',
-      unreadNotificationCount: unread,
-      hasUrgentNotifications: false,
       notificationsConnection: {
         __typename: 'NotificationConnection',
         edges: ids.map(id => ({
@@ -77,8 +81,8 @@ const write = (cache: InMemoryCache, ids: string[], unread: number) => {
 // The query's own generated type is masked; these assertions reach through
 // it deliberately, so the reads are shaped rather than typed.
 type FeedShape = {
+  notificationSummary: { unreadCount: number };
   me: {
-    unreadNotificationCount: number;
     notificationsConnection: {
       edges: { node: { id: string; status: NotificationStatus } }[];
     };
@@ -104,7 +108,7 @@ describe('the notification feed has one source of truth', () => {
 
     const result = read(cache);
     expect(result.me.notificationsConnection.edges).toHaveLength(3);
-    expect(result.me.unreadNotificationCount).toBe(3);
+    expect(result.notificationSummary.unreadCount).toBe(3);
   });
 
   // Scenario: an optimistic read is reverted.
@@ -117,10 +121,10 @@ describe('the notification feed has one source of truth', () => {
       fields: { status: () => NotificationStatus.Read },
     });
     cache.modify({
-      id: 'User:me',
-      fields: { unreadNotificationCount: (n: number) => n - 1 },
+      id: 'NotificationSummary:me',
+      fields: { unreadCount: (n: number) => n - 1 },
     });
-    expect(read(cache).me.unreadNotificationCount).toBe(1);
+    expect(read(cache).notificationSummary.unreadCount).toBe(1);
 
     // One restore puts BOTH back, because both live in one store.
     cache.restore(snapshot);
@@ -129,7 +133,7 @@ describe('the notification feed has one source of truth', () => {
     expect(after.me.notificationsConnection.edges[0]!.node.status).toBe(
       NotificationStatus.Sent,
     );
-    expect(after.me.unreadNotificationCount).toBe(2);
+    expect(after.notificationSummary.unreadCount).toBe(2);
   });
 
   // Scenario: history is paged in after events have already arrived.
@@ -142,7 +146,7 @@ describe('the notification feed has one source of truth', () => {
     );
     expect(ids).toEqual(['3', '2', '1']);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(read(cache).me.unreadNotificationCount).toBe(3);
+    expect(read(cache).notificationSummary.unreadCount).toBe(3);
   });
 
   // The property the other three rest on: writing the same notification twice

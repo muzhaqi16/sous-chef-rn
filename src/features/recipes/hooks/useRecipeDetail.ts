@@ -51,11 +51,18 @@ function useOpenedCatalogRecipe(hint: CatalogRecipeHint | undefined) {
     };
   }, [hint]);
 
-  // A pull after a failed open asks again.
+  // A pull asks again. A retry that fails keeps a recipe already opened on
+  // screen rather than replacing it with the failure.
   const reopen = async () => {
     if (!hint) return;
     const result = await openRef.current(hint);
-    setOpened({ externalId: hint.externalId, result });
+    setOpened(previous =>
+      !result.opened &&
+      previous?.externalId === hint.externalId &&
+      previous.result.opened
+        ? previous
+        : { externalId: hint.externalId, result },
+    );
   };
 
   return {
@@ -75,9 +82,8 @@ export function useRecipeDetail() {
   const { recipeId: routeRecipeId, catalog } = useRoute('RecipeDetail').params;
   const { goBack } = useAppNavigation();
 
-  const catalogOpen = useOpenedCatalogRecipe(
-    routeRecipeId ? undefined : catalog,
-  );
+  const catalogHint = routeRecipeId ? undefined : catalog;
+  const catalogOpen = useOpenedCatalogRecipe(catalogHint);
   const opened = catalogOpen.result;
   const recipeId =
     routeRecipeId ?? (opened?.opened ? opened.recipeId : undefined);
@@ -113,15 +119,19 @@ export function useRecipeDetail() {
     },
   });
 
-  // Pull to refresh reads the recipe again, or retries an open that failed.
+  // Only an open makes the API fetch a catalog recipe it lacks; a read returns
+  // the same stub. So a pull opens again until the recipe is complete.
+  const details = data.displayData?.details;
+  const awaitsFetch = details === 'pending' || details === 'unavailable';
+  const refreshRecipe = () =>
+    !recipeId || (catalogHint && awaitsFetch)
+      ? catalogOpen.reopen()
+      : refetchRecipe();
+
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = () => {
     void executeRefreshWithFinally(
-      () =>
-        Promise.all([
-          recipeId ? refetchRecipe() : catalogOpen.reopen(),
-          wait(MIN_REFRESH_MS),
-        ]),
+      () => Promise.all([refreshRecipe(), wait(MIN_REFRESH_MS)]),
       setRefreshing,
     );
   };

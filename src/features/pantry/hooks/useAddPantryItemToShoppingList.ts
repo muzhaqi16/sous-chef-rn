@@ -1,26 +1,21 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/screens/FilteredPantryItems.generated';
-import {
-  addOptimisticShoppingListItem,
-  createOptimisticShoppingListItem,
-  reconcileShoppingCreate,
-  buildAddItemsReconcileUpdate,
-  revertOptimisticShoppingListItem,
-} from '#features/shoppingList/cache/items';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { errorService } from '#/services/errorService';
+import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
+import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
+import { useTranslation } from '#/i18n';
 
 /** Whether the row survived. The caller owns the copy for a failure. */
 export type AddToListOutcome = 'kept' | 'reverted';
 
 /**
  * Put one pantry item on a shopping list. The row is written before firing so it
- * survives a queued create, and the reconciler discards it on a refusal. The
- * list is a per-call argument because one screen adds a row to the list already
- * selected and adds every row to a list picked in the moment.
+ * survives a queued create, and withdrawn on a refusal. The list is a per-call
+ * argument because one screen adds a row to the list already selected and adds
+ * every row to a list picked in the moment.
  */
 export function useAddPantryItemToShoppingList() {
   const client = useApolloClient();
+  const { t } = useTranslation();
 
   const [addToShoppingList] = useMutation(
     AddItemToShoppingListFromFilteredPantryDocument,
@@ -37,42 +32,15 @@ export function useAddPantryItemToShoppingList() {
     display: { itemName: string; unitId?: string },
   ): Promise<AddToListOutcome> => {
     if (!shoppingListId) return 'reverted';
-    // Mint the id so a queued create replays idempotently, keyed by it.
-    const id = generateEntityId();
-
-    try {
-      addOptimisticShoppingListItem(
-        client.cache,
-        shoppingListId,
-        createOptimisticShoppingListItem(id, {
-          shoppingListId,
-          itemName: display.itemName,
-          unitId: display.unitId,
-        }),
-      );
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Add Shopping List Item (optimistic)',
-      });
-    }
-
-    let result;
-    try {
-      result = await addToShoppingList({
-        variables: {
-          input: { shoppingListId, items: [{ id, item: { itemId } }] },
-        },
-        context: { localFirst: true },
-      });
-    } catch {
-      revertOptimisticShoppingListItem(client.cache, shoppingListId, id);
-      return 'reverted';
-    }
-
-    // A queued create replays later — treat as success. `errorPolicy: 'all'`
-    // resolves rejections, so the catch above never sees them; the reconciler
-    // classifies the result and discards the item we wrote.
-    return reconcileShoppingCreate(client.cache, shoppingListId, id, result);
+    const { outcome } = await createShoppingListRow(client.cache, {
+      listId: shoppingListId,
+      row: { itemName: display.itemName, itemId, unitId: display.unitId },
+      line: { item: { itemId } },
+      send: addToShoppingList,
+      document: AddItemToShoppingListFromFilteredPantryDocument,
+      fallback: t('errors.addItemFailed'),
+    });
+    return outcome;
   };
 
   return { addToList };

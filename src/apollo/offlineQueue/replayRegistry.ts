@@ -1,26 +1,38 @@
 /**
  * Every feature that settles its own replay, keyed by the operation its
- * document declares. See {@link SYNC_REGISTRY} for why this is a list here
- * rather than a manifest field.
+ * document declares. See {@link REPLAY_PREPARATIONS} for why this is a list
+ * here rather than a manifest field.
  */
 import { byOperation } from '#/apollo/utils/documentOperation';
 import { reconcileCreateHomeReplay } from '#features/home/offline/replayReconcilers';
 import {
   reconcileCreatePantryItemReplay,
   reconcileMoveToPantryReplay,
+  settlePantryDelete,
+  settlePantryItemDelete,
 } from '#features/pantry/offline/replayReconcilers';
-import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  CreatePantryItemDocument,
+  DeletePantryDocument,
+  DeletePantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import { CreateHomeDocument } from '#operations/home/home.generated';
 import {
-  reconcileShoppingBatchReplay,
+  reconcileShoppingAddReplay,
   reconcileShoppingRowReplay,
+  settleShoppingItemDelete,
 } from '#features/shoppingList/offline/replayReconcilers';
 import {
   AddItemToShoppingListDocument,
   MoveShoppingItemToPantryDocument,
+  RemoveItemFromShoppingListDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
-import { CreateShoppingListItemFromRecipeIngredientDocument } from '#features/recipes/graphql/recipe.generated';
+import {
+  AddRecipeToFavoritesDocument,
+  CreateShoppingListItemFromRecipeIngredientDocument,
+} from '#features/recipes/graphql/recipe.generated';
+import { reconcileAddRecipeToFavoritesReplay } from '#features/recipes/offline/replayReconcilers';
 import {
   BarcodeAddItemToShoppingListDocument,
   BarcodeCreatePantryItemDocument,
@@ -28,6 +40,16 @@ import {
 import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/screens/FilteredPantryItems.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
+import {
+  CreateMealPlanItemDocument,
+  DeleteMealPlanDocument,
+} from '#features/mealPlan/graphql/mealPlan.generated';
+import { DeleteMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
+import {
+  reconcileCreateMealPlanItemReplay,
+  settleMealPlanDelete,
+  settleMealTemplateDelete,
+} from '#features/mealPlan/offline/replayReconcilers';
 import { removeGoneNotification } from '#features/notifications/offline/replayReconcilers';
 import {
   DeleteNotificationDocument,
@@ -48,11 +70,18 @@ export const forEachBatchAdd = <T>(value: T): Array<[DocumentNode, T]> =>
   ].map((document): [DocumentNode, T] => [document, value]);
 
 export const REPLAY_RECONCILERS: ReplayReconcilerTable = byOperation([
+  [AddRecipeToFavoritesDocument, reconcileAddRecipeToFavoritesReplay],
   [CreateHomeDocument, reconcileCreateHomeReplay],
+  [CreateMealPlanItemDocument, reconcileCreateMealPlanItemReplay],
+  [DeleteMealPlanDocument, settleMealPlanDelete],
+  [DeleteMealTemplateDocument, settleMealTemplateDelete],
   [MoveShoppingItemToPantryDocument, reconcileMoveToPantryReplay],
   [CreatePantryItemDocument, reconcileCreatePantryItemReplay],
   [BarcodeCreatePantryItemDocument, reconcileCreatePantryItemReplay],
-  ...forEachBatchAdd(reconcileShoppingBatchReplay),
+  [DeletePantryItemDocument, settlePantryItemDelete],
+  [DeletePantryDocument, settlePantryDelete],
+  ...forEachBatchAdd(reconcileShoppingAddReplay),
+  [RemoveItemFromShoppingListDocument, settleShoppingItemDelete],
   [
     CreateShoppingListItemFromRecipeIngredientDocument,
     reconcileShoppingRowReplay,

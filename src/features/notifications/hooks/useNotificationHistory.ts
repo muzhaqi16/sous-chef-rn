@@ -1,14 +1,15 @@
 /**
  * The notification feed — the ONLY source; it projects the Apollo cache and
  * holds nothing. The category filter is server-side, so the screen must not
- * filter again. `readFragment` per edge is required, not
- * indirection: `dataMasking` leaves `node` as `{ __typename, id }`.
+ * filter again. Each row is read live: `dataMasking` leaves `node` as
+ * `{ __typename, id }`, and marking one read changes only its own fields.
  */
 
 import { loadPageWithCursorRecovery } from '#hooks/utils/cursorRecovery';
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import { NetworkStatus } from '@apollo/client';
-import { useApolloClient, useQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
+import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { GetNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import {
   UseNotificationsOnLaunch_NotificationFragmentDoc,
@@ -27,35 +28,32 @@ export function useNotificationHistory(
   category: NotificationCategory | null,
   enabled: boolean,
 ) {
-  const client = useApolloClient();
   const pendingExpirationLinks = useNotificationStore(
     state => state.pendingExpirationLinks,
   );
 
   const { data, error, loading, fetchMore, networkStatus, refetch } = useQuery(
     GetNotificationsDocument,
-    {
-      variables: {
-        filter: category ? { category } : undefined,
-        first: PAGE_SIZE,
-      },
-      skip: !enabled,
-      notifyOnNetworkStatusChange: true,
-    },
+    enabled
+      ? {
+          variables: {
+            filter: category ? { category } : undefined,
+            first: PAGE_SIZE,
+          },
+        }
+      : skipToken,
   );
 
   useApolloErrorLogger(GetNotificationsDocument, error);
 
   const connection = data?.me?.notificationsConnection;
 
-  const notifications: DisplayNotification[] = (connection?.edges ?? [])
-    .map(edge =>
-      client.cache.readFragment<UseNotificationsOnLaunch_NotificationFragment>({
-        fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
-        fragmentName: 'useNotificationsOnLaunch_notification',
-        from: { __typename: 'Notification', id: edge.node.id },
-      }),
-    )
+  const entries = useFragmentList({
+    fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
+    fragmentName: 'useNotificationsOnLaunch_notification',
+    from: connection?.edges.map(edge => edge.node) ?? [],
+  });
+  const notifications: DisplayNotification[] = entries
     .filter(
       (n): n is UseNotificationsOnLaunch_NotificationFragment => n !== null,
     )

@@ -3,9 +3,8 @@
  * rejected. A move unlinks or stamps the row, and an evict of the pantry row it
  * created does not restore that half.
  */
-import { gql } from '@apollo/client';
 import { restoreItemToShoppingListAfterMoveToPantry } from '#features/shoppingList/cache/moveToPantry';
-import { revertOptimisticShoppingListItem } from '#features/shoppingList/cache/items';
+import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
 import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import type {
   CountWithdrawalTable,
@@ -32,12 +31,6 @@ export const restoreMovedShoppingListItem: UnlinkWithdrawalTable[string] = (
   restoreItemToShoppingListAfterMoveToPantry(cache, input.shoppingListItemId);
 };
 
-const QUEUED_ROW_FRAGMENT = gql`
-  fragment QueuedShoppingRow on ShoppingListItem {
-    id
-  }
-`;
-
 /**
  * A refused batch add minted every row in `input.items` and counted each one;
  * the failure handler's evict reaches only the first. A row already gone was
@@ -52,13 +45,8 @@ export const withdrawAddedShoppingListItems: CountWithdrawalTable[string] = (
   const { shoppingListId, items } = input;
   if (typeof shoppingListId !== 'string' || !Array.isArray(items)) return;
 
-  for (const row of items) {
-    if (!isRecord(row) || typeof row.id !== 'string') continue;
-    const cached = cache.readFragment({
-      id: cache.identify({ __typename: 'ShoppingListItem', id: row.id }),
-      fragment: QUEUED_ROW_FRAGMENT,
-    });
-    if (!cached) continue;
-    revertOptimisticShoppingListItem(cache, shoppingListId, row.id);
-  }
+  const ids = items.flatMap((row: unknown) =>
+    isRecord(row) && typeof row.id === 'string' ? [row.id] : [],
+  );
+  withdrawShoppingListItems(cache, shoppingListId, ids);
 };

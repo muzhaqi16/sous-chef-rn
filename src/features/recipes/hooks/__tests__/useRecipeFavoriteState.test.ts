@@ -93,6 +93,19 @@ function seedFavoriteCache(cache: InMemoryCache = makeCache()) {
   return cache;
 }
 
+const SAVED_ROW_RECIPE_FRAGMENT = gql`
+  fragment _TestSavedRowRecipe on Recipe {
+    id
+    name
+    description
+    imageUrl
+    servings
+    prepTimeMinutes
+    cookTimeMinutes
+    totalTimeMinutes
+  }
+`;
+
 const readSavedDetails = (cache: InMemoryCache) =>
   cache.readFragment<{ savedDetails: { id: string } | null }>({
     id: cache.identify({ __typename: 'Recipe', id: 'backend-1' }) ?? '',
@@ -337,6 +350,38 @@ describe('useRecipeFavoriteState', () => {
       // Queued is not a failure: the save reports itself done.
       expect(onSaved).toHaveBeenCalledTimes(1);
       expect(mockToastSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    it('lists the saved row, complete, with the recipe the cache holds', async () => {
+      const cache = seedFavoriteCache();
+      cache.writeFragment({
+        id: cache.identify({ __typename: 'Recipe', id: 'backend-1' }),
+        fragment: SAVED_ROW_RECIPE_FRAGMENT,
+        data: {
+          __typename: 'Recipe',
+          id: 'backend-1',
+          name: 'Soup',
+          description: 'Warm',
+          imageUrl: null,
+          servings: 2,
+          prepTimeMinutes: 5,
+          cookTimeMinutes: 20,
+          totalTimeMinutes: 25,
+        },
+      });
+      const { result } = renderFavorite(recipe(), {
+        cache,
+        operationMocks: [favoriteMock('queued')],
+      });
+
+      await save(result, 'Dinner');
+
+      const [edge] = readSavedEdges(cache)?.edges ?? [];
+      expect(edge?.node).toMatchObject({
+        id: SAVED_RECIPE_ID,
+        folder: 'Dinner',
+        recipe: { id: 'backend-1', name: 'Soup', description: 'Warm' },
+      });
     });
 
     it('takes all three writes back when the server refuses', async () => {

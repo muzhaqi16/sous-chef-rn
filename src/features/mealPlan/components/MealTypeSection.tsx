@@ -6,15 +6,21 @@ import { Icon } from '#utils/iconUtils';
 import { MealPlanItemCard } from './MealPlanItemCard';
 import { Text } from '#components/atoms/Text';
 import type { MealType } from '#/graphql/generated/schemaTypes';
-import type { MealPlanItemCard_ItemFragment } from './MealPlanItemCard.generated';
+import type { FragmentType } from '@apollo/client/masking';
+import type { MealPlanItemCard_ItemFragmentDoc } from './MealPlanItemCard.generated';
 import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 import { useTranslation } from '#/i18n';
 import { hitSlop } from '#/theme/foundations/sizes';
 
+/** A plan's item as its query holds it; the card reads its fields. */
+export type MealPlanItemRef = FragmentType<
+  typeof MealPlanItemCard_ItemFragmentDoc
+> & { id: string };
+
 interface MealTypeSectionProps {
   mealType: MealType;
   label: string;
-  items: MealPlanItemCard_ItemFragment[];
+  items: MealPlanItemRef[];
   onToggleCompleted?: (
     id: string,
     isCompleted: boolean,

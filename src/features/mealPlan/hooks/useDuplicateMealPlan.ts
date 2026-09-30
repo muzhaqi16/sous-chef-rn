@@ -35,6 +35,7 @@ export function useDuplicateMealPlan() {
   const { createMealPlan, creating } = useMealPlanActions();
   const [createItem, { loading: addingItems }] = useMutation(
     CreateMealPlanItemDocument,
+    { context: { localFirst: true } },
   );
 
   const readSource = (mealPlanId: string): SourcePlan | null => {
@@ -76,7 +77,6 @@ export function useDuplicateMealPlan() {
         () =>
           createItem({
             variables: { input: item },
-            context: { localFirst: true },
           }),
         {
           document: CreateMealPlanItemDocument,

@@ -17,9 +17,6 @@ query GetMealPlans(
     edges {
       node {
         id
-        name
-        startDate
-        endDate
         ...MealPlanDisplay
       }
       cursor
@@ -64,10 +61,8 @@ mutation CreateMealPlan($input: CreateMealPlanInput!) {
     ... on CreateMealPlanPayload {
       mealPlan {
         id
+        ...MealPlanReaders
         ...MealPlanDisplay
-        dietaryProfile {
-          id
-        }
       }
     }
     ... on Error {
@@ -90,10 +85,8 @@ mutation UpdateMealPlan($input: UpdateMealPlanInput!) {
     ... on UpdateMealPlanPayload {
       mealPlan {
         id
+        ...MealPlanReaders
         ...MealPlanDisplay
-        dietaryProfile {
-          id
-        }
       }
     }
     ... on Error {
@@ -138,10 +131,15 @@ mutation CreateMealPlanItem($input: CreateMealPlanItemInput!) {
     ... on CreateMealPlanItemPayload {
       mealPlanItem {
         id
+        ...MealPlanItemReaders
         ...MealPlanItemCard_item
         ...DailyMeals_item
         ...MealPlanMain_item
         ...MealPlanItemActions_item
+      }
+      mealPlan {
+        id
+        ...MealPlanReaders
       }
     }
     ... on Error {
@@ -164,10 +162,15 @@ mutation UpdateMealPlanItem($input: UpdateMealPlanItemInput!) {
     ... on UpdateMealPlanItemPayload {
       mealPlanItem {
         id
+        ...MealPlanItemReaders
         ...MealPlanItemCard_item
         ...DailyMeals_item
         ...MealPlanMain_item
         ...MealPlanItemActions_item
+      }
+      mealPlan {
+        id
+        ...MealPlanReaders
       }
     }
     ... on Error {
@@ -190,6 +193,10 @@ mutation DeleteMealPlanItem($input: DeleteMealPlanItemInput!) {
     ... on DeleteMealPlanItemPayload {
       mealPlanItem {
         id
+      }
+      mealPlan {
+        id
+        ...MealPlanReaders
       }
     }
     ... on Error {

@@ -60,9 +60,9 @@ let currentClient: Client | null = null;
 let lastReconnectTime = 0;
 const RECONNECT_DEBOUNCE_MS = 2000; // 2 seconds debounce for reconnections
 
-// Reconnect listeners — fired when the socket reconnects after a prior drop, so
-// data that may have changed while disconnected (e.g. notifications) can be
-// backfilled. First connect does NOT fire (it's not a reconnect).
+// Reconnect listeners — fired when the socket reconnects after a prior drop:
+// the client's `wsReconnected` resync and subscription transport recovery.
+// First connect does NOT fire (it's not a reconnect).
 let hasConnectedBefore = false;
 const reconnectListeners = new Set<() => void>();
 
@@ -433,8 +433,8 @@ const createWsClient = () => {
         dialStage = 'acked';
         persistRotatedTokensFromAck(payload);
 
-        // A connect that follows a previous connection is a reconnect — backfill
-        // listeners (notifications, etc.) catch anything missed while dropped.
+        // A connect that follows a previous connection is a reconnect — the
+        // listeners resync what was missed while dropped.
         if (hasConnectedBefore) {
           notifyReconnectListeners();
         }
@@ -763,7 +763,7 @@ export const disposeWebSocket = () => {
   currentClient = null;
   // Module state, reset whether or not there was a client, so the next
   // session's first connect counts as fresh rather than firing the reconnect
-  // listeners and triggering a spurious notifications backfill.
+  // listeners and triggering a spurious resync.
   lastReconnectTime = 0;
   hasConnectedBefore = false;
 

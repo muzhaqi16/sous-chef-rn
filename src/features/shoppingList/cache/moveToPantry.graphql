@@ -1,0 +1,11 @@
+# What restoring a withdrawn line needs: which list, and which filtered variant
+# of its connection.
+fragment moveToPantry_restoreTarget on ShoppingListItem {
+  id
+  purchaseInfo {
+    isPurchased
+  }
+  shoppingList {
+    id
+  }
+}

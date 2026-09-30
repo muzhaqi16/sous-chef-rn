@@ -1,4 +1,5 @@
-import { skipToken, useApolloClient, useQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
+import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { GetMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import {
   MealTemplateItemFragmentDoc,
@@ -11,7 +12,6 @@ interface GroupedDay {
 }
 
 export function useMealTemplate(templateId: string | undefined) {
-  const client = useApolloClient();
   const { data, loading, error, refetch } = useQuery(
     GetMealTemplateDocument,
     templateId ? { variables: { id: templateId } } : skipToken,
@@ -19,18 +19,13 @@ export function useMealTemplate(templateId: string | undefined) {
 
   const template = data?.mealTemplate ?? null;
 
-  // Items arrive as masked refs — materialize so the grouping logic can read
-  // `dayOffset` without bumping into `$fragmentRefs`. Use the cache-key form;
-  // the masked-ref `from` silently returns partial/null data under dataMasking.
-  const items: MealTemplateItemFragment[] = (template?.items ?? [])
-    .map(ref =>
-      client.cache.readFragment<MealTemplateItemFragment>({
-        fragment: MealTemplateItemFragmentDoc,
-        fragmentName: 'MealTemplateItemFragment',
-        from: { __typename: 'MealTemplateItem', id: ref.id },
-      }),
-    )
-    .filter((i): i is MealTemplateItemFragment => i !== null);
+  // Items arrive as masked refs, and moving one to another day edits only the
+  // item — read each live so the grouping follows.
+  const items = useFragmentList({
+    fragment: MealTemplateItemFragmentDoc,
+    fragmentName: 'MealTemplateItemFragment',
+    from: template?.items ?? [],
+  }).filter((i): i is MealTemplateItemFragment => i !== null);
 
   // Group items by day offset
   let groupedByDay: GroupedDay[] = [];

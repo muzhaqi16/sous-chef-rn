@@ -1,8 +1,13 @@
 'use no memo';
 
+import { act, waitFor } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
+import { useApolloClient, useQuery } from '@apollo/client/react';
 import { makeCache } from '#/apollo/cache';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
 import type {
   SubscriptionApolloClient,
   SubscriptionConfig,
@@ -11,7 +16,10 @@ import { HomeSubtype } from '#/graphql/generated/schemaTypes';
 import {
   GetHomeDocument,
   GetHomesDocument,
+  GetMyPendingInvitesDocument,
 } from '#operations/home/home.generated';
+import { HomeDetailScreen_HomeFragmentDoc } from '#features/home/screens/HomeDetailScreen.generated';
+import { HomeInvitesForEventDocument } from '../useHomeSubscriptions.generated';
 import { useStore } from '#store/index';
 import { useHomeSubscriptions } from '../useHomeSubscriptions';
 
@@ -142,5 +150,102 @@ describe('useHomeSubscriptions', () => {
     expect(refetchQueries).toHaveBeenCalledWith({
       include: [GetHomeDocument, GetHomesDocument],
     });
+  });
+});
+
+describe('useHomeSubscriptions: an invite a co-admin sent', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  // MockLink answers on a timer; the read-back then resolves a microtask later.
+  const settle = async () => {
+    for (let i = 0; i < 3; i++) {
+      await act(async () => {
+        jest.advanceTimersByTime(50);
+      });
+    }
+  };
+
+  it("appears in the home's invite list without a refresh", async () => {
+    const home = recordMock(GetHomeDocument, {
+      data: {
+        home: {
+          __typename: 'Home',
+          id: 'home-1',
+          invitesConnection: {
+            __typename: 'HomeInviteConnection',
+            edges: [],
+            totalCount: 0,
+          },
+        },
+      },
+    });
+    const readBack = recordMock(HomeInvitesForEventDocument, {
+      data: {
+        home: {
+          __typename: 'Home',
+          id: 'home-1',
+          invitesConnection: {
+            __typename: 'HomeInviteConnection',
+            edges: [
+              {
+                __typename: 'HomeInviteEdge',
+                node: {
+                  __typename: 'HomeInvite',
+                  id: 'invite-1',
+                  email: 'guest@example.com',
+                },
+              },
+            ],
+            totalCount: 1,
+          },
+        },
+      },
+    });
+    const pending = recordMock(GetMyPendingInvitesDocument, {});
+    const getOnData = captureCustomOnData();
+    const { result } = renderHookWithApollo(
+      () => {
+        useHomeSubscriptions('admin-2');
+        const { data } = useQuery(GetHomeDocument, {
+          variables: { homeId: 'home-1' },
+        });
+        return { client: useApolloClient(), data };
+      },
+      { operationMocks: [home.mock, readBack.mock, pending.mock] },
+    );
+    await settle();
+    await waitFor(() => expect(result.current.data?.home?.id).toBe('home-1'));
+
+    await act(async () => {
+      getOnData()(
+        {
+          __typename: 'HomeEvent',
+          subtype: HomeSubtype.InviteCreated,
+          homeId: 'home-1',
+          actorUserId: 'admin-1',
+          node: { __typename: 'HomeInvite', id: 'invite-1' },
+        },
+        result.current.client,
+      );
+    });
+    await settle();
+
+    expect(readBack.fired).toEqual([{ id: 'home-1' }]);
+    const detail = result.current.client.cache.readFragment({
+      fragment: HomeDetailScreen_HomeFragmentDoc,
+      fragmentName: 'HomeDetailScreen_home',
+      from: { __typename: 'Home', id: 'home-1' },
+    });
+    expect(detail?.invitesConnection.edges.map(edge => edge.node.id)).toEqual([
+      'invite-1',
+    ]);
+    // The screen's own query stays complete: it is not refetched whole.
+    expect(home.fired).toHaveLength(1);
+    expect(result.current.data?.home?.id).toBe('home-1');
   });
 });

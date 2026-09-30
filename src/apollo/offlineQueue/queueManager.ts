@@ -13,21 +13,15 @@ import {
   QueueStatus,
   type FailedMutationInfo,
   type FailureHandler,
-  type OverwriteReporter,
+  type RowAdoption,
 } from './types';
-import { convertToSyncMutation, hasSyncMapping } from './convertToSyncMutation';
+import { prepareReplay } from './prepareReplay';
 import {
   reconcileReplaySuccess,
   settleGoneReplay,
 } from './queueReplayReconcilers';
 import { queuedSubject } from './queuedSubject';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import {
-  AdjustPantryItemQuantityDocument,
-  CorrectPantryItemPackageSizeDocument,
-} from '#features/pantry/graphql/pantry.generated';
-import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { UpdateHomeDocument } from '#operations/home/home.generated';
+import { GetUnitBySymbolDocument } from '#operations/item/unit.generated';
 import { proactiveTokenRefresh } from '../links/refreshToken';
 import { LogoutCleanup } from '../logoutCleanup';
 import { refreshUnitVocabulary } from './refreshUnitVocabulary';
@@ -72,30 +66,12 @@ const DEFAULT_CONFIG: QueueConfig = {
   processingTimeoutMs: 30000,
 };
 
-/** One version-free re-send. A second conflict is a race, not a stale read. */
-const MAX_CONFLICT_RESENDS = 1;
-
 /** Deferrals that belong to one row, so the rest of the pass still runs. */
 const ENTRY_SCOPED_DEFERRALS: ReadonlySet<string> = new Set([
   ErrorCode.Deadlock,
   REPLAY_NOT_PREPARED_CODE,
   BATCH_ROW_TRANSIENT_CODE,
 ]);
-
-/**
- * Queued operations that replay their ORIGINAL document against an input whose
- * `version` is non-null. A version-free re-send of one is refused as malformed,
- * so the conflict is reported instead. Pinned to the SDL by
- * `__tests__/apollo/queueVersionRequirement.test.ts`.
- */
-export const VERSION_REQUIRED_OPERATIONS: ReadonlySet<string> = new Set(
-  [
-    AdjustPantryItemQuantityDocument,
-    CorrectPantryItemPackageSizeDocument,
-    UpdateShoppingListDocument,
-    UpdateHomeDocument,
-  ].map(operationNameOf),
-);
 
 /**
  * Input keys that name the PARENT a queued write attaches to. A deferred
@@ -122,26 +98,28 @@ export const PARENT_REFERENCE_KEYS: readonly string[] = [
   'recipeId',
 ];
 
-/**
- * Drops the `version` a write captured when the user acted. Covers the batch
- * shape too: single-add shopping ops send `input.items[]`, each line carrying
- * its own version.
- */
-const withoutVersion = (variables: OperationVariables): OperationVariables => {
-  const input: unknown = variables.input;
-  if (!isRecord(input)) return variables;
-
-  const { version: _version, ...rest } = input;
-  const items = rest.items;
-  if (Array.isArray(items)) {
-    rest.items = items.map((line: unknown) =>
-      isRecord(line)
-        ? (({ version: _lineVersion, ...lineRest }) => lineRest)(line)
-        : line,
-    );
+/** `value` with every occurrence of the id `from` replaced by `to`. */
+function replaceId(value: unknown, from: string, to: string): unknown {
+  if (value === from) return to;
+  if (Array.isArray(value)) {
+    return value.map((element: unknown) => replaceId(element, from, to));
   }
-  return { ...variables, input: rest };
-};
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, field]) => [
+      key,
+      replaceId(field, from, to),
+    ]),
+  );
+}
+
+/** Whether `value` names the id anywhere. */
+const mentionsId = (value: unknown, id: string): boolean =>
+  value === id ||
+  (Array.isArray(value)
+    ? value.some((element: unknown) => mentionsId(element, id))
+    : isRecord(value) &&
+      Object.values(value).some(field => mentionsId(field, id)));
 
 /** The `version` a record carries, if it is a number. */
 const versionOf = (record: unknown): number | undefined =>
@@ -172,7 +150,6 @@ interface ReplayPayload {
   // `NotFoundError.resource`: without it a refusal over a merged-away Unit is
   // indistinguishable from one over the record itself.
   resource?: string;
-  conflict?: { message?: string };
 }
 
 /**
@@ -184,7 +161,6 @@ export class QueueManager {
   private isProcessing = false;
   private processingPromise: Promise<void> | null = null;
   private failureHandler: FailureHandler | null = null;
-  private overwriteReporter: OverwriteReporter | null = null;
   private drainedHandler: ((userId: string) => void) | null = null;
   private drainTimer: ReturnType<typeof setTimeout> | null = null;
   /** Epoch ms before which no drain replays: the server's rate-limit window. */
@@ -195,14 +171,8 @@ export class QueueManager {
   private rerunAfterPass = false;
   /** Entries that have already spent their one re-resolution attempt. */
   private staleReferenceRetried = new Set<string>();
-  /** Entries whose replay document this drain built requires `version`. */
-  private versionBoundReplays = new Set<string>();
-  /**
-   * Per entity, the version its last replayed write captured and the one the
-   * server returned. A later write captured at the same base was made in the
-   * same offline stretch, so it is sent against the returned version.
-   */
-  private versionRebases = new Map<string, { from: number; to: number }>();
+  /** Variables a replay rewrote this drain, for entries read before it ran. */
+  private rewrittenThisDrain = new Map<string, OperationVariables>();
 
   constructor(config: Partial<QueueConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -214,9 +184,6 @@ export class QueueManager {
   }
 
   /** Invoked when the server accepted a replay but kept its own value. */
-  setOverwriteReporter(reporter: OverwriteReporter): void {
-    this.overwriteReporter = reporter;
-  }
 
   /** Invoked when a pass ends with nothing left pending for the user. */
   setDrainedHandler(handler: (userId: string) => void): void {
@@ -318,7 +285,7 @@ export class QueueManager {
     // unit draws one refresh between them, and an entry gets one re-resolution.
     this.hasRefreshedUnits = false;
     this.staleReferenceRetried.clear();
-    this.versionBoundReplays.clear();
+    this.rewrittenThisDrain.clear();
 
     // Recover entries a killed process left mid-replay: drains are serialized
     // by isProcessing, so any PROCESSING entry visible here is stranded debris,
@@ -394,7 +361,12 @@ export class QueueManager {
       }
 
       try {
-        const result = await this.processMutation(mutation);
+        // An earlier replay may have moved this write onto the version it
+        // returned, or onto the row a merged create survives as.
+        const variables = this.rewrittenThisDrain.get(mutation.id);
+        const result = await this.processMutation(
+          variables ? { ...mutation, variables } : mutation,
+        );
         if (result.success) succeeded++;
         else failed++;
 
@@ -449,8 +421,8 @@ export class QueueManager {
       });
 
       // The change is on the server now, so drop the persisted optimistic
-      // fields — otherwise restoration re-applies stale values over fresher
-      // server state on a later mount. Still-PENDING entries are untouched.
+      // fields it owns — otherwise restoration re-applies stale values over
+      // fresher server state on a later mount. Another queued write's stay.
       this.clearPersistedOptimisticFields(mutation);
 
       // Remove after short delay (allows for reconciliation)
@@ -473,43 +445,50 @@ export class QueueManager {
   }
 
   /**
-   * Replays a queued item through its sync mutation, idempotent by the
-   * client-generated id that rides along as `clientId`.
+   * Replays a queued write as the canonical mutation it was queued as, with
+   * what the device knows better now restated (`prepareReplay`).
    */
   private async executeMutation(
     mutation: QueuedMutation,
   ): Promise<Record<string, unknown> | undefined> {
     const client = requireApolloClient();
-    // A cache miss while building is this device's state, not a verdict: a
-    // bare Error here classifies as a refusal and withdraws the write.
-    let conversion;
+    // A failure while preparing is this device's state, not a verdict: a bare
+    // Error here classifies as a refusal and withdraws the write.
+    let variables: OperationVariables;
     try {
-      conversion = convertToSyncMutation(mutation, client.cache);
+      variables = await prepareReplay(mutation, {
+        cache: client.cache,
+        unitsRefreshed: this.staleReferenceRetried.has(mutation.id),
+        unitIdForSymbol: async symbol => {
+          const { data } = await client.query({
+            query: GetUnitBySymbolDocument,
+            variables: { symbol },
+            fetchPolicy: 'network-only',
+          });
+          return data?.unitBySymbol?.id;
+        },
+      });
     } catch (error) {
       throw new ReplayNotPreparedError(mutation.operationName, error);
     }
-    if (conversion.requiresVersion) this.versionBoundReplays.add(mutation.id);
     const [entityId, ...otherSubjects] = queuedSubject(mutation).subjectIds;
     const rebaseKey = otherSubjects.length === 0 ? entityId : undefined;
-    const capturedVersion = versionOf(mutation.variables.input);
-    const syncVariables = this.rebased(conversion.syncVariables, rebaseKey);
-    const { syncMutation } = conversion;
+    const capturedVersion = versionOf(variables.input);
 
-    logger.info(`🔄 Queue: Replaying ${mutation.operationName} via sync`);
+    logger.info(`🔄 Queue: Replaying ${mutation.operationName}`);
 
     // Apollo 4.2's signatures reject a manually-passed generic, so the
-    // structural payload type arrives on the document: `SyncConversion` carries
-    // a plain `DocumentNode`, which this declaration types.
+    // structural payload type arrives on the document.
     const typedMutation: TypedDocumentNode<
       Record<string, unknown>,
       OperationVariables
-    > = syncMutation;
+    > = mutation.mutation;
     // Masking applies only to what `mutate` returns; `update` sees the fields
     // inside fragment spreads, which the reconcilers read.
     let unmaskedData: Record<string, unknown> | null | undefined;
     const result = await client.mutate({
       mutation: typedMutation,
-      variables: syncVariables,
+      variables,
       context: {
         ...mutation.context,
         skipQueueLink: true,
@@ -542,7 +521,7 @@ export class QueueManager {
       throw new BatchRowDeferredError(mutation.operationName, transientRowCode);
     }
     if (outcome.status !== 'rejected') {
-      this.recordRebase(rebaseKey, capturedVersion, payload);
+      this.rebasePending(mutation, rebaseKey, capturedVersion, payload);
     }
     if (outcome.status === 'converged') {
       // IDEMPOTENT_REPLAY: an earlier attempt already committed this op, so the
@@ -555,7 +534,7 @@ export class QueueManager {
     if (
       outcome.status === 'rejected' &&
       outcome.typename === 'NotFoundError' &&
-      settleGoneReplay(mutation.operationName, syncVariables)
+      settleGoneReplay(mutation.operationName, variables)
     ) {
       logger.info(
         `✅ Queue: ${mutation.operationName}'s subject is gone — settled locally`,
@@ -572,25 +551,13 @@ export class QueueManager {
       );
     }
 
-    // The server accepted the replay and kept its own value. The entry dequeues
-    // as success — nothing to withdraw — but the user's change is gone, so
-    // saying nothing would leave them believing it stuck.
-    if (payload?.conflict) {
-      logger.warn(
-        `⚠️ Queue: Conflict detected for ${mutation.operationName}:`,
-        payload.conflict.message,
-      );
-      Telemetry.increment('offline_queue_conflicts_total', 1, {
-        operation: mutation.operationName,
-      });
-      this.reportOverwrite(mutation);
-    }
-
     // The replay ran with no `update` callback, so it got normalization and
     // nothing else. An operation whose server answer may name a DIFFERENT row
     // than the one written locally is settled here: the foreground path's own
     // reconciliation returned when the call classified as `'queued'`.
-    reconcileReplaySuccess(mutation.operationName, syncVariables, data);
+    reconcileReplaySuccess(mutation.operationName, variables, data, adoption =>
+      this.adoptSurvivingRow(mutation, adoption),
+    );
 
     return result.data;
   }
@@ -634,10 +601,10 @@ export class QueueManager {
     }
 
     // A unit the write names was merged away by the API's vocabulary repair.
-    // Refresh the vocabulary and re-send ONCE — `convertToSyncMutation` rebuilds
-    // the sync input from the cache on every attempt, so the rebuilt write
-    // resolves against current rows. A second refusal is a real one: drop
-    // `retryable` so it falls through to revert-and-inform below.
+    // Refresh the vocabulary and re-send ONCE — `prepareReplay` restates the
+    // write's units on every attempt, so the re-sent write resolves against
+    // current rows. A second refusal is a real one: drop `retryable` so it
+    // falls through to revert-and-inform below.
     if (queueError.type === 'stale-reference') {
       if (this.staleReferenceRetried.has(mutation.id)) {
         logger.warn(
@@ -656,40 +623,17 @@ export class QueueManager {
       }
     }
 
-    // The captured `version` is knowingly stale, so it is stripped and the
-    // user's value re-sent once. That needs a replay document whose input lets
-    // `version` be omitted: a Sync twin, or an original not listed above.
+    // A stale `version` applied nothing (`VERSION_CONFLICT`): someone else
+    // changed the row, and the server's state stands. The write is withdrawn
+    // and reported, and the resync after the drain re-reads the row.
     if (queueError.type === 'conflict') {
-      const conflictCount = (mutation.conflictCount ?? 0) + 1;
-      queueStore.updateMutation(mutation.id, { conflictCount });
-
-      const canResendVersionFree =
-        !this.versionBoundReplays.has(mutation.id) &&
-        (hasSyncMapping(mutation.operationName) ||
-          !VERSION_REQUIRED_OPERATIONS.has(mutation.operationName));
-
-      if (conflictCount > MAX_CONFLICT_RESENDS || !canResendVersionFree) {
-        logger.warn(
-          canResendVersionFree
-            ? `❌ Queue: ${mutation.id} still conflicts after a version-free re-send`
-            : `❌ Queue: ${mutation.id} conflicts and its input requires a version — reporting`,
-        );
-        Telemetry.increment('offline_queue_conflicts_total', 1, {
-          operation: mutation.operationName,
-        });
-        queueError.retryable = false;
-      } else {
-        const variables = withoutVersion(mutation.variables);
-        queueStore.updateMutation(mutation.id, { variables });
-        logger.info(
-          `♻️ Queue: ${mutation.id} conflicted, re-sending without the captured version`,
-        );
-        return await this.processMutation({
-          ...mutation,
-          variables,
-          conflictCount,
-        });
-      }
+      logger.warn(
+        `❌ Queue: ${mutation.id} conflicts — the server's row stands`,
+      );
+      Telemetry.increment('offline_queue_conflicts_total', 1, {
+        operation: mutation.operationName,
+      });
+      queueError.retryable = false;
     }
 
     // Retryable errors (refreshed-auth, network, 5xx): bounded in-run retries
@@ -775,29 +719,77 @@ export class QueueManager {
     };
   }
 
-  /** Moves a write captured at a rebased entity's old base onto its new version. */
-  private rebased(
-    variables: OperationVariables,
-    entityId: string | undefined,
-  ): OperationVariables {
-    const rebase =
-      entityId === undefined ? undefined : this.versionRebases.get(entityId);
-    const input: unknown = variables.input;
-    if (!rebase || !isRecord(input) || input.version !== rebase.from) {
-      return variables;
-    }
-    return { ...variables, input: { ...input, version: rebase.to } };
-  }
-
-  private recordRebase(
+  /**
+   * Moves the writes still queued against `entityId` at the version this replay
+   * captured onto the one the server returned: made in the same offline
+   * stretch, they build on this one. Written to the queue, so a restart
+   * mid-drain keeps it.
+   */
+  private rebasePending(
+    replayed: QueuedMutation,
     entityId: string | undefined,
     capturedVersion: number | undefined,
     payload: unknown,
   ): void {
     if (entityId === undefined || capturedVersion === undefined) return;
     const returned = returnedVersionOf(payload, entityId);
-    if (returned === undefined) return;
-    this.versionRebases.set(entityId, { from: capturedVersion, to: returned });
+    if (returned === undefined || returned === capturedVersion) return;
+    this.rewritePending(
+      replayed,
+      pending => queuedSubject(pending).subjectIds.includes(entityId),
+      input =>
+        input.version === capturedVersion
+          ? { ...input, version: returned }
+          : input,
+    );
+  }
+
+  /**
+   * A create the server merged into a row it already held: every write still
+   * queued against the minted id moves to the surviving row, sent at its
+   * version, since the server refuses the minted id from now on.
+   */
+  private adoptSurvivingRow(
+    replayed: QueuedMutation,
+    { mintedId, survivingId, version }: RowAdoption,
+  ): void {
+    this.rewritePending(
+      replayed,
+      pending => mentionsId(pending.variables.input, mintedId),
+      input => {
+        const moved = replaceId(input, mintedId, survivingId);
+        if (!isRecord(moved)) return input;
+        return version !== undefined && typeof moved.version === 'number'
+          ? { ...moved, version }
+          : moved;
+      },
+    );
+    logger.info(`🔀 Queue: writes for ${mintedId} now target ${survivingId}`);
+  }
+
+  /** Rewrites the input of each other pending write `affects` picks. */
+  private rewritePending(
+    replayed: QueuedMutation,
+    affects: (pending: QueuedMutation) => boolean,
+    rewrite: (input: Record<string, unknown>) => Record<string, unknown>,
+  ): void {
+    for (const stored of queueStore.getPendingMutationsForUser(
+      replayed.userId,
+    )) {
+      const pending = {
+        ...stored,
+        variables: this.rewrittenThisDrain.get(stored.id) ?? stored.variables,
+      };
+      const input: unknown = pending.variables.input;
+      if (pending.id === replayed.id || !isRecord(input)) continue;
+      if (!affects(pending)) continue;
+      const next = rewrite(input);
+      if (next !== input) {
+        const variables = { ...pending.variables, input: next };
+        queueStore.updateMutation(pending.id, { variables });
+        this.rewrittenThisDrain.set(pending.id, variables);
+      }
+    }
   }
 
   private async validateTokenBeforeReplay(): Promise<boolean> {
@@ -880,19 +872,42 @@ export class QueueManager {
   }
 
   /**
-   * Drop persisted optimistic field values for every entity a landed mutation
-   * touched. An uncached entity has nothing to restore, so skipping it is right.
+   * Drop the persisted optimistic fields a landed mutation owns on each entity
+   * it touched: those saved after the latest earlier write still queued for
+   * that entity, up to this one's enqueue. An uncached entity has nothing to
+   * restore, so skipping it is right.
    */
   private clearPersistedOptimisticFields(mutation: QueuedMutation): void {
     const entityIds = this.getAllEntityIds(mutation);
     if (entityIds.length === 0) return;
     // One index for the whole batch rather than a keyspace scan per id.
     const typenames = this.typenamesById();
+    const earlierUnlanded = queueStore
+      .getMutationsForUser(mutation.userId)
+      .filter(
+        queued =>
+          queued.id !== mutation.id &&
+          queued.createdAt < mutation.createdAt &&
+          queued.status !== QueueStatus.SUCCESS &&
+          queued.status !== QueueStatus.FAILED,
+      )
+      .map(queued => ({
+        createdAt: queued.createdAt,
+        entityIds: new Set(this.getAllEntityIds(queued)),
+      }));
     for (const entityId of entityIds) {
       const entityType = typenames.get(entityId);
-      if (entityType) {
-        optimisticDataPersistence.clearEntity(entityType, entityId);
-      }
+      if (!entityType) continue;
+      const after = Math.max(
+        Number.NEGATIVE_INFINITY,
+        ...earlierUnlanded
+          .filter(queued => queued.entityIds.has(entityId))
+          .map(queued => queued.createdAt),
+      );
+      optimisticDataPersistence.clearEntitySavedBetween(entityType, entityId, {
+        after,
+        until: mutation.createdAt,
+      });
     }
   }
 
@@ -947,21 +962,6 @@ export class QueueManager {
    */
   withdrawUnqueueableWrite(mutation: QueuedMutation, error: QueueError): void {
     this.invokeFailureHandler(mutation, error);
-  }
-
-  private reportOverwrite(mutation: QueuedMutation): void {
-    if (!this.overwriteReporter) return;
-    const { entityType, entityId } = this.extractEntityInfo(mutation);
-    try {
-      this.overwriteReporter({
-        mutationId: mutation.id,
-        operationName: mutation.operationName,
-        entityType,
-        entityId,
-      });
-    } catch (reporterError) {
-      logger.error('Queue: Overwrite reporter threw an error:', reporterError);
-    }
   }
 
   private invokeFailureHandler(
@@ -1121,7 +1121,6 @@ export class QueueManager {
 
   /** Drops what a pass carried for the ended session; queue entries stay. */
   forgetSessionState(): void {
-    this.versionRebases.clear();
     this.rerunAfterPass = false;
   }
 }

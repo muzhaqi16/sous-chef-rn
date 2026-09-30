@@ -1,11 +1,17 @@
 /**
- * The `ShoppingList` entity itself: the optimistic list, its place in the overview
+ * The `ShoppingList` entity itself: the local list, its place in the overview
  * query's cache, and the reconcile that adopts the server id.
  */
 
-import { gql, type ApolloCache } from '@apollo/client';
-import { List_ListDetailFragmentDoc } from './list.generated';
-import { NEUTRAL_SHOPPING_LIST_DETAIL } from './shoppingListDetailNeutral.generated';
+import type { ApolloCache } from '@apollo/client';
+import {
+  List_EmptyItemsVariantFragmentDoc,
+  List_RowFragmentDoc,
+} from './list.generated';
+import {
+  NEUTRAL_LOCAL_SHOPPING_LIST,
+  NEUTRAL_LOCAL_SHOPPING_LIST_BY_TYPE,
+} from './shoppingListRowNeutral.generated';
 import {
   type AddToConnectionOptions,
   createAddToQueryConnectionUpdater,
@@ -13,124 +19,22 @@ import {
   safeEvict,
   skipOtherHomeVariants,
 } from '#/apollo/utils/cacheUpdaters';
+import { isHeld, writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import { isRecord } from '#/utils/isRecord';
 import { matchesFilter } from './connections';
 
-export type OptimisticShoppingList = {
+/** What a list's row holds, as far as the cache knows it. */
+export type ShoppingListSnapshot = Record<string, unknown> & {
   __typename: 'ShoppingList';
   id: string;
-  version: number;
-  updatedAt: string;
-  name: string;
-  isDefault: boolean;
-  totalItems: number;
-  completedItems: number;
-  remainingItems: number;
-  completionRate: number;
   homeId: string | null;
-  home: { __typename: 'Home'; id: string; name: string } | null;
-  ownerships: Array<{
-    __typename: 'ShoppingListOwnership';
-    id: string;
-    userId: string;
-    user: OptimisticShoppingListUser;
-  }>;
 };
 
-type OptimisticShoppingListUser = {
-  __typename: 'User';
+// The connection write identifies the row by `__typename`.
+const addToShoppingListsQueryCache = createAddToQueryConnectionUpdater<{
+  __typename: 'ShoppingList';
   id: string;
-  // Nullable per the schema: `User.email` resolves only for the caller's own
-  // record. Populated here (the row is always the creator's), but the shape must
-  // match what the server write-through carries or the entity type-mismatches.
-  email: string | null;
-  displayName: string | null;
-  profile: {
-    __typename: 'UserProfile';
-    id: string;
-    displayName: string | null;
-    avatar: string | null;
-  } | null;
-};
-
-/** Entity write shape for {@link addOptimisticShoppingList}. */
-const OptimisticShoppingListFragment = gql`
-  fragment _OptimisticShoppingList on ShoppingList {
-    id
-    name
-    isDefault
-    totalItems
-    completedItems
-    remainingItems
-    completionRate
-    homeId
-    version
-    updatedAt
-    home {
-      id
-      name
-    }
-    ownerships {
-      id
-      userId
-      user {
-        id
-        email
-        displayName
-        profile {
-          id
-          displayName
-          avatar
-        }
-      }
-    }
-  }
-`;
-
-/** Owner display data read from the cache's canonical `User` entity. */
-const OptimisticListOwnerUserFragment = gql`
-  fragment _OptimisticListOwnerUser on User {
-    id
-    email
-    displayName
-    profile {
-      id
-      displayName
-      avatar
-    }
-  }
-`;
-
-/** Linked-home name read for the overview card's home chip. */
-const OptimisticListHomeFragment = gql`
-  fragment _OptimisticListHome on Home {
-    id
-    name
-  }
-`;
-
-/**
- * One filtered `itemsConnection` variant, addressed by the same
- * `filters: { isPurchased }` keyArgs the items screen queries with.
- */
-const ShoppingListEmptyItemsVariantFragment = gql`
-  fragment _ShoppingListEmptyItemsVariant on ShoppingList {
-    itemsConnection(filters: { isPurchased: $isPurchased }) {
-      totalCount
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      edges {
-        cursor
-      }
-    }
-  }
-`;
-
-const addToShoppingListsQueryCache = createAddToQueryConnectionUpdater(
-  'shoppingLists',
-  'ShoppingList',
-);
+}>('shoppingLists', 'ShoppingList');
 
 /**
  * A created list is never a template, so the `filters: { isTemplate: true }` variant
@@ -146,7 +50,7 @@ const isTemplateListVariant = (storeFieldName: string) =>
  */
 export const addShoppingListToQueryCache = (
   cache: ApolloCache,
-  list: { id: string; homeId: string | null },
+  list: { __typename: 'ShoppingList'; id: string; homeId: string | null },
   options: AddToConnectionOptions = {},
 ): boolean => {
   const isOtherHome = skipOtherHomeVariants(list.homeId);
@@ -163,100 +67,26 @@ const removeShoppingListFromQueryCache = createRemoveFromQueryConnectionUpdater(
 );
 
 /**
- * Build a complete optimistic `ShoppingList`. `id` is the client-minted cuid sent as
- * `input.id`, so create and replay converge on one row. Owner data comes from the
- * cached `User`; an incomplete copy falls back to the auth identity with a `null`
- * profile rather than clobbering cached fields. The home chip degrades to null.
+ * Write a list row — held data kept, the rest neutral — with both filtered
+ * `itemsConnection` variants seeded empty, and link it into the overview. The
+ * variants are what make it usable offline: a `cache.modify` never creates one.
  */
-export function buildOptimisticShoppingList(
-  cache: ApolloCache,
-  id: string,
-  input: { name: string; isDefault?: boolean | null; homeId?: string | null },
-  owner: { id: string; email?: string | null; displayName?: string | null },
-): OptimisticShoppingList {
-  const userCacheId = cache.identify({ __typename: 'User', id: owner.id });
-  const cachedUser = userCacheId
-    ? cache.readFragment<OptimisticShoppingListUser>({
-        id: userCacheId,
-        fragment: OptimisticListOwnerUserFragment,
-        fragmentName: '_OptimisticListOwnerUser',
-      })
-    : null;
-  const user: OptimisticShoppingListUser = cachedUser ?? {
-    __typename: 'User',
-    id: owner.id,
-    email: owner.email ?? null,
-    displayName: owner.displayName ?? null,
-    profile: null,
-  };
-
-  const homeId = input.homeId ?? null;
-  const homeCacheId = homeId
-    ? cache.identify({ __typename: 'Home', id: homeId })
-    : undefined;
-  const home = homeCacheId
-    ? cache.readFragment<{ __typename: 'Home'; id: string; name: string }>({
-        id: homeCacheId,
-        fragment: OptimisticListHomeFragment,
-        fragmentName: '_OptimisticListHome',
-      })
-    : null;
-
-  return {
-    __typename: 'ShoppingList',
-    id,
-    // The server owns the version; its response carries the real one.
-    version: 1,
-    updatedAt: new Date().toISOString(),
-    name: input.name,
-    isDefault: input.isDefault ?? false,
-    totalItems: 0,
-    completedItems: 0,
-    remainingItems: 0,
-    completionRate: 0,
-    homeId,
-    home,
-    ownerships: [
-      {
-        __typename: 'ShoppingListOwnership',
-        // Client-only placeholder row: the server creates its own ownership
-        // row, and the first write-through replaces this array (the orphaned
-        // entity is gc'd later).
-        id: `${id}:owner`,
-        userId: owner.id,
-        user,
-      },
-    ],
-  };
-}
-
-/**
- * Local-first optimistic add of the LIST: full entity, both empty filtered
- * `itemsConnection` variants and the overview edge, written PERMANENTLY before the
- * create fires. Seeding the variants is what makes it usable offline — a
- * `cache.modify` modifier never creates a missing variant. `isDefault` is server-resolved.
- */
-export function addOptimisticShoppingList(
-  cache: ApolloCache,
-  list: OptimisticShoppingList,
-): void {
-  // 1. Full entity write — mandatory offline, where no response ever arrives
-  //    to materialize the row.
-  cache.writeFragment({
-    id: cache.identify(list),
-    fragment: OptimisticShoppingListFragment,
-    fragmentName: '_OptimisticShoppingList',
-    data: list,
+function writeListRow(cache: ApolloCache, row: ShoppingListSnapshot): void {
+  writeLocalEntity(cache, {
+    fragment: List_RowFragmentDoc,
+    fragmentName: 'list_row',
+    neutral: NEUTRAL_LOCAL_SHOPPING_LIST,
+    neutralByType: NEUTRAL_LOCAL_SHOPPING_LIST_BY_TYPE,
+    known: row,
   });
-
-  // 2. Seed both filtered itemsConnection variants as authoritatively empty.
   for (const isPurchased of [false, true]) {
     cache.writeFragment({
-      id: cache.identify(list),
-      fragment: ShoppingListEmptyItemsVariantFragment,
-      fragmentName: '_ShoppingListEmptyItemsVariant',
+      id: cache.identify({ __typename: 'ShoppingList', id: row.id }),
+      fragment: List_EmptyItemsVariantFragmentDoc,
       variables: { isPurchased },
       data: {
+        __typename: 'ShoppingList',
+        id: row.id,
         itemsConnection: {
           __typename: 'ShoppingListItemConnection',
           totalCount: 0,
@@ -270,24 +100,56 @@ export function addOptimisticShoppingList(
       },
     });
   }
+  addShoppingListToQueryCache(cache, row);
+}
 
-  // 3. Detail-shape the same entity so opening the list offline renders from
-  //    cache instead of a wire read the server cannot answer yet.
-  cache.writeFragment({
-    id: cache.identify(list),
-    fragment: List_ListDetailFragmentDoc,
-    fragmentName: 'list_listDetail',
-    data: {
-      // Neutral base derived from the SDL (scripts/generate-optimistic-fillers.mjs)
-      // so a field added to the fragment cannot be forgotten here — that omission
-      // is invisible until the detail screen blanks offline.
-      ...NEUTRAL_SHOPPING_LIST_DETAIL,
-      id: list.id,
-    },
+/**
+ * Write the list a create makes, complete for every screen that reads one.
+ * `id` is the client-minted cuid sent as `input.id`, so create and replay
+ * converge on one row. The owner and the linked home are what the cache holds;
+ * an owner it lacks comes from the auth identity, a home it lacks is left out.
+ */
+export function writeLocalShoppingList(
+  cache: ApolloCache,
+  id: string,
+  input: { name: string; isDefault?: boolean | null; homeId?: string | null },
+  owner: { id: string; email?: string | null; displayName?: string | null },
+): void {
+  const user = { __typename: 'User', id: owner.id };
+  const homeId = input.homeId ?? null;
+  const home = homeId ? { __typename: 'Home', id: homeId } : null;
+  writeListRow(cache, {
+    __typename: 'ShoppingList',
+    id,
+    // The server owns the version; its response carries the real one.
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    name: input.name,
+    isDefault: input.isDefault ?? false,
+    totalItems: 0,
+    completedItems: 0,
+    remainingItems: 0,
+    completionRate: 0,
+    homeId,
+    home: home && isHeld(cache, home) ? home : null,
+    ownerships: [
+      {
+        __typename: 'ShoppingListOwnership',
+        // A placeholder: the server makes its own ownership row, and the first
+        // write-through replaces this array.
+        id: `${id}:owner`,
+        userId: owner.id,
+        user: isHeld(cache, user)
+          ? user
+          : {
+              ...user,
+              email: owner.email ?? null,
+              displayName: owner.displayName ?? null,
+              profile: null,
+            },
+      },
+    ],
   });
-
-  // 4. Edge into the lists overview (every cached filter variant).
-  addShoppingListToQueryCache(cache, list);
 }
 
 /**
@@ -303,7 +165,7 @@ export function removeShoppingListFromCache(
   safeEvict(cache, 'ShoppingList', listId);
 }
 
-/** Reverse {@link addOptimisticShoppingList} when the create is rejected. */
+/** Reverse {@link writeLocalShoppingList} when the create is rejected. */
 export function revertOptimisticShoppingList(
   cache: ApolloCache,
   listId: string,
@@ -312,19 +174,28 @@ export function revertOptimisticShoppingList(
 }
 
 /**
- * Snapshot a list's display shape before a local-first delete so a rejection can
- * restore it via {@link addOptimisticShoppingList}. Null when the cache copy is
- * incomplete — the caller then relies on the next overview refetch.
+ * Snapshot a list's row before a local-first delete, so a refusal can restore
+ * it with {@link restoreShoppingList}. Null when the cache has no such list.
  */
 export function readShoppingListSnapshot(
   cache: ApolloCache,
   listId: string,
-): OptimisticShoppingList | null {
-  const cacheId = cache.identify({ __typename: 'ShoppingList', id: listId });
-  if (!cacheId) return null;
-  return cache.readFragment<OptimisticShoppingList>({
-    id: cacheId,
-    fragment: OptimisticShoppingListFragment,
-    fragmentName: '_OptimisticShoppingList',
+): ShoppingListSnapshot | null {
+  const row: unknown = cache.readFragment({
+    id: cache.identify({ __typename: 'ShoppingList', id: listId }),
+    fragment: List_RowFragmentDoc,
+    fragmentName: 'list_row',
+    returnPartialData: true,
   });
+  if (!isRecord(row)) return null;
+  const homeId = typeof row.homeId === 'string' ? row.homeId : null;
+  return { ...row, __typename: 'ShoppingList', id: listId, homeId };
+}
+
+/** Put back a list whose delete the server refused. */
+export function restoreShoppingList(
+  cache: ApolloCache,
+  snapshot: ShoppingListSnapshot,
+): void {
+  writeListRow(cache, snapshot);
 }

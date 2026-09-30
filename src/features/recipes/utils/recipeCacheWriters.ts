@@ -1,47 +1,31 @@
 /**
- * Local-first cache writers for recipes. A create writes BOTH the MyRecipes
- * list edge and the full `useRecipeData_recipe` entity — the detail screen is
- * complete-gated, so without the second an offline create blanks it. Ingredient
- * `item`/`unit` links are nullable and resolve from the server on sync.
+ * Local-first cache writers for recipes. A create writes the recipe's row —
+ * complete for the detail, the form and the list — and its MyRecipes edge.
+ * Ingredient `item`/`unit` links are nullable and resolve from the server on sync.
  */
 
 import type { ApolloCache } from '@apollo/client';
+import type { Unmasked } from '@apollo/client/masking';
 import {
   MyRecipesDocument,
   type MyRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
+import { RecipeCacheWriters_RowFragmentDoc } from './recipeCacheWriters.generated';
 import {
-  UseRecipeData_RecipeFragmentDoc,
-  type UseRecipeData_RecipeFragment,
-} from '#features/recipes/hooks/useRecipeData.generated';
-import { RecipeCacheWriters_FormFieldsFragmentDoc } from './recipeCacheWriters.generated';
-import { NEUTRAL_RECIPE_FORM_FIELDS } from './recipeFormFieldsNeutral.generated';
+  NEUTRAL_LOCAL_RECIPE,
+  NEUTRAL_LOCAL_RECIPE_BY_TYPE,
+} from './recipeRowNeutral.generated';
 import {
   RecipeStatus,
   type CreateRecipeInput,
-  type ExternalSource,
 } from '#/graphql/generated/schemaTypes';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
 
-/** The (unmasked) MyRecipes edge node shape the list reads per row. */
-export type MyRecipesEdgeNode = {
-  __typename: 'Recipe';
-  id: string;
-  name: string;
-  description: string | null;
-  imageUrl: string | null;
-  servings: number;
-  prepTimeMinutes: number | null;
-  cookTimeMinutes: number | null;
-  totalTimeMinutes: number | null;
-  externalSource: ExternalSource | null;
-  externalId: string | null;
-  savedDetails: {
-    __typename: 'SavedRecipe';
-    id: string;
-    folder: string | null;
-  } | null;
-};
+/** A MyRecipes edge's node, whole. */
+type MyRecipesEdgeNode = NonNullable<
+  Unmasked<MyRecipesQuery>['recipes']
+>['edges'][number]['node'];
 
 /**
  * The created-by identity a recipe entity is materialized with. `email` is
@@ -60,144 +44,78 @@ function totalTime(prep: number | null, cook: number | null): number | null {
   return prep != null || cook != null ? (prep ?? 0) + (cook ?? 0) : null;
 }
 
-/** The MyRecipes edge node a local-first create materializes. */
-function buildOptimisticRecipeNode(
-  id: string,
-  input: CreateRecipeInput,
-): MyRecipesEdgeNode {
-  const prep = input.timing?.prepTimeMinutes ?? null;
-  const cook = input.timing?.cookTimeMinutes ?? null;
-  return {
-    __typename: 'Recipe',
-    id,
-    name: input.name,
-    description: input.description ?? null,
-    imageUrl: input.media?.imageUrl ?? null,
-    servings: input.metadata?.servings ?? 4,
-    prepTimeMinutes: prep,
-    cookTimeMinutes: cook,
-    totalTimeMinutes: totalTime(prep, cook),
-    externalSource: null,
-    externalId: null,
-    savedDetails: null,
-  };
-}
-
 /**
- * Materializes the full `useRecipeData_recipe` entity — the list edge alone
- * leaves the complete-gated detail screen blank offline. Ratings start zeroed,
- * `savedDetails` is null, and ingredient ids are client-minted.
+ * Write the recipe a create makes: ratings zeroed, no reviews, not saved, and
+ * client-minted ingredient ids; the rest what the create states or neutral.
  */
-function buildOptimisticRecipeEntity(
-  id: string,
-  input: CreateRecipeInput,
-  createdBy: RecipeCreatedBy,
-): UseRecipeData_RecipeFragment {
-  const prep = input.timing?.prepTimeMinutes ?? null;
-  const cook = input.timing?.cookTimeMinutes ?? null;
-  return {
-    __typename: 'Recipe',
-    id,
-    name: input.name,
-    description: input.description ?? null,
-    imageUrl: input.media?.imageUrl ?? null,
-    servings: input.metadata?.servings ?? 4,
-    totalTimeMinutes: totalTime(prep, cook),
-    caloriesPerServing: input.nutrition?.caloriesPerServing ?? null,
-    nutritionData: (input.nutrition?.nutritionData as JsonValue) ?? null,
-    // A create asking to publish is stored in review until a moderator approves.
-    status:
-      !input.status || input.status === RecipeStatus.Draft
-        ? RecipeStatus.Draft
-        : RecipeStatus.PendingReview,
-    isPublished: false,
-    publishedAt: null,
-    reviewNote: null,
-    forkedFromId: null,
-    forkedFrom: null,
-    originalAuthor: input.attribution?.originalAuthor ?? null,
-    tips: input.tips ?? null,
-    videoUrl: input.media?.videoUrl ?? null,
-    tags: input.tags ?? [],
-    source: null,
-    sourceUrl: null,
-    // The create input's JSON (write type) is the same runtime instructions
-    // array the detail reads back as JsonValue.
-    instructions: input.instructions as JsonValue,
-    isExternal: false,
-    sourceMapping: null,
-    externalDetails: null,
-    savedDetails: null,
-    averageRating: null,
-    totalReviews: 0,
-    rating1Count: 0,
-    rating2Count: 0,
-    rating3Count: 0,
-    rating4Count: 0,
-    rating5Count: 0,
-    createdBy,
-    ingredientsConnection: {
-      __typename: 'RecipeIngredientConnection',
-      edges: input.ingredients.map((ing, index) => ({
-        __typename: 'RecipeIngredientEdge',
-        node: {
-          __typename: 'RecipeIngredient',
-          id: generateEntityId(),
-          name: ing.name,
-          quantity: ing.quantity,
-          estimatedPrice: ing.estimatedPrice ?? null,
-          item: null,
-          unit: null,
-          // The server converts this against the reader's preferred system, so
-          // a locally created ingredient has none until it comes back.
-          convertedQuantity: null,
-          image: null,
-          isOptional: ing.isOptional ?? false,
-          notes: ing.notes ?? null,
-          preparation: ing.preparation ?? null,
-          sortOrder: ing.sortOrder ?? index,
-          section: ing.section ?? null,
-        },
-      })),
-    },
-  };
-}
-
-/**
- * Write the form-only half of the entity. Overlaps deliberately with the
- * MyRecipes edge node (`prepTimeMinutes` … `category`) so the entity satisfies
- * `RecipeForm_recipe` on its own, independent of the edge write.
- */
-function writeOptimisticRecipeFormFields(
+function writeLocalRecipe(
   cache: ApolloCache,
   id: string,
   input: CreateRecipeInput,
+  createdBy: RecipeCreatedBy,
 ): void {
   const prep = input.timing?.prepTimeMinutes ?? null;
   const cook = input.timing?.cookTimeMinutes ?? null;
-  cache.writeFragment({
-    id: cache.identify({ __typename: 'Recipe', id }),
-    fragment: RecipeCacheWriters_FormFieldsFragmentDoc,
-    fragmentName: 'recipeCacheWriters_formFields',
-    data: {
-      // Neutral base derived from the SDL (see
-      // scripts/generate-optimistic-fillers.mjs), so a field added to
-      // `RecipeForm_recipe` cannot be forgotten here — that omission is
-      // invisible until the detail screen blanks offline.
-      ...NEUTRAL_RECIPE_FORM_FIELDS,
+  writeLocalEntity(cache, {
+    fragment: RecipeCacheWriters_RowFragmentDoc,
+    fragmentName: 'recipeCacheWriters_row',
+    neutral: NEUTRAL_LOCAL_RECIPE,
+    neutralByType: NEUTRAL_LOCAL_RECIPE_BY_TYPE,
+    known: {
+      __typename: 'Recipe',
       id,
+      name: input.name,
+      description: input.description ?? null,
+      imageUrl: input.media?.imageUrl ?? null,
+      videoUrl: input.media?.videoUrl ?? null,
+      servings: input.metadata?.servings ?? 4,
       prepTimeMinutes: prep,
       cookTimeMinutes: cook,
-      // The derived base supplies the same server-side defaults the list node
-      // mirrors; the form overrides them whenever it has a value.
-      difficulty:
-        input.metadata?.difficulty ?? NEUTRAL_RECIPE_FORM_FIELDS.difficulty,
-      category: input.metadata?.category ?? NEUTRAL_RECIPE_FORM_FIELDS.category,
+      totalTimeMinutes: totalTime(prep, cook),
+      difficulty: input.metadata?.difficulty ?? undefined,
+      category: input.metadata?.category ?? undefined,
       cuisines: input.metadata?.cuisines ?? [],
       diets: input.dietary?.diets ?? [],
       healthGoals: input.dietary?.healthGoals ?? [],
       intolerances: input.dietary?.intolerances ?? [],
       notes: input.notes ?? null,
+      caloriesPerServing: input.nutrition?.caloriesPerServing ?? null,
+      nutritionData: input.nutrition?.nutritionData ?? null,
+      // A create asking to publish is stored in review until a moderator approves.
+      status:
+        !input.status || input.status === RecipeStatus.Draft
+          ? RecipeStatus.Draft
+          : RecipeStatus.PendingReview,
+      originalAuthor: input.attribution?.originalAuthor ?? null,
+      tips: input.tips ?? null,
+      tags: input.tags ?? [],
+      // The create input's JSON is the same runtime instructions array the
+      // detail reads back.
+      instructions: input.instructions,
+      createdBy,
+      ingredientsConnection: {
+        __typename: 'RecipeIngredientConnection',
+        edges: input.ingredients.map((ing, index) => ({
+          __typename: 'RecipeIngredientEdge',
+          node: {
+            __typename: 'RecipeIngredient',
+            id: generateEntityId(),
+            name: ing.name,
+            quantity: ing.quantity,
+            estimatedPrice: ing.estimatedPrice ?? null,
+            isOptional: ing.isOptional ?? false,
+            notes: ing.notes ?? null,
+            preparation: ing.preparation ?? null,
+            sortOrder: ing.sortOrder ?? index,
+            section: ing.section ?? null,
+          },
+        })),
+      },
+      reviewsConnection: {
+        __typename: 'RecipeReviewConnection',
+        totalCount: 0,
+        edges: [],
+      },
     },
   });
 }
@@ -254,26 +172,20 @@ function removeMyRecipesEdge(cache: ApolloCache, id: string): void {
   });
 }
 
-/**
- * Local-first create write: the MyRecipes edge + the full detail entity, under
- * the same client-minted id.
- */
+/** Local-first create write: the recipe's row, then its MyRecipes edge. */
 export function writeOptimisticRecipe(
   cache: ApolloCache,
   id: string,
   input: CreateRecipeInput,
   createdBy: RecipeCreatedBy,
 ): void {
-  upsertMyRecipesEdge(cache, buildOptimisticRecipeNode(id, input));
-  cache.writeFragment({
+  writeLocalRecipe(cache, id, input, createdBy);
+  const row = cache.readFragment({
     id: cache.identify({ __typename: 'Recipe', id }),
-    fragment: UseRecipeData_RecipeFragmentDoc,
-    fragmentName: 'useRecipeData_recipe',
-    data: buildOptimisticRecipeEntity(id, input, createdBy),
+    fragment: RecipeCacheWriters_RowFragmentDoc,
+    fragmentName: 'recipeCacheWriters_row',
   });
-  // GetRecipe = useRecipeData_recipe + RecipeForm_recipe; without this the read
-  // is incomplete and the detail screen is blank offline.
-  writeOptimisticRecipeFormFields(cache, id, input);
+  if (row) upsertMyRecipesEdge(cache, row);
 }
 
 /** Revert a rejected create: drop the edge and evict the entity. */

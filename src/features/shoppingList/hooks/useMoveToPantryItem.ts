@@ -1,4 +1,4 @@
-import { useFragment, useQuery } from '@apollo/client/react';
+import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import {
   MoveToPantryModal_ShoppingListItemFragmentDoc,
   MoveToPantryPurchaseInfoDocument,
@@ -27,16 +27,21 @@ export function useMoveToPantryItem({
   // `{ isPurchased movedToPantryAt }` — so on a cold start the missing amounts
   // would blank the sheet instead of just the prefill. `cache-first` means no
   // network leg once they are cached.
-  const { data: purchaseData } = useQuery(MoveToPantryPurchaseInfoDocument, {
-    variables: { id: shoppingListItemId ?? '' },
-    skip: skip || !shoppingListItemId,
-    fetchPolicy: 'cache-first',
-    // NOT the app-wide `'all'`: a field error nulls the non-null `purchaseInfo`
-    // and so `shoppingListItem`, and `'all'` WRITES that null onto
-    // `ROOT_QUERY.shoppingListItem({id})` — the field ItemDetail reads — where
-    // it sticks and persists to MMKV. Losing the prefill costs far less.
-    errorPolicy: 'none',
-  });
+  const { data: purchaseData } = useQuery(
+    MoveToPantryPurchaseInfoDocument,
+    !skip && shoppingListItemId
+      ? {
+          variables: { id: shoppingListItemId },
+          fetchPolicy: 'cache-first',
+          // NOT the app-wide `'all'`: a field error nulls the non-null
+          // `purchaseInfo` and so `shoppingListItem`, and `'all'` WRITES that
+          // null onto `ROOT_QUERY.shoppingListItem({id})` — the field ItemDetail
+          // reads — where it sticks and persists to MMKV. Losing the prefill
+          // costs far less.
+          errorPolicy: 'none',
+        }
+      : skipToken,
+  );
 
   const purchaseInfo = purchaseData?.shoppingListItem?.purchaseInfo ?? null;
 

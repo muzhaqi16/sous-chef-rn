@@ -1,4 +1,4 @@
-const { readSyncRegistryDocuments } = require('../syncRegistry');
+const { readReplayPreparationDocuments } = require('../replayPreparations');
 
 /** The object a call passes as its options, following a `const` if it is one. */
 function optionsObject(node, scope) {
@@ -13,6 +13,20 @@ function optionsObject(node, scope) {
     declarator.init?.type === 'ObjectExpression'
     ? declarator.init
     : undefined;
+}
+
+/** The value of the object's own `key` property. */
+function ownProperty(object, key) {
+  if (!object || object.type !== 'ObjectExpression') return undefined;
+  return object.properties.find(
+    p =>
+      p.type === 'Property' &&
+      (p.key.type === 'Identifier'
+        ? p.key.name
+        : p.key.type === 'Literal'
+        ? String(p.key.value)
+        : undefined) === key,
+  );
 }
 
 /** Whether the object, at any depth, sets `key` — optionally to `true`. */
@@ -47,16 +61,20 @@ module.exports = {
     schema: [],
     messages: {
       missingLocalFirst:
-        '`{{document}}` is in SYNC_REGISTRY, so `queueLink` queues this write offline whether or not you asked. Without `context: { localFirst: true }` the caller skipped the local write: it settles `queued`, the sheet closes, the list keeps the old value, and a restart has nothing to restore. Write the cache first, then pass the marker.',
+        '`{{document}}` is in REPLAY_PREPARATIONS, so `queueLink` queues this write offline whether or not you asked. Without `context: { localFirst: true }` the caller skipped the local write: it settles `queued`, the sheet closes, the list keeps the old value, and a restart has nothing to restore. Write the cache first, then pass the marker.',
+      redundantLocalFirst:
+        'This `useMutation` already sets `context: { localFirst: true }`, so the per-call marker is redundant. Drop it; to add another context key, use the callback form `context: hookContext => ({ ...hookContext, key })`.',
+      contextDropsLocalFirst:
+        'A per-call `context` object REPLACES the `useMutation` context, so this call drops `localFirst: true` and is no longer queued as local-first. Use the callback form `context: hookContext => ({ ...hookContext, key })`.',
       optimisticWithLocalFirst:
         'Do not pair `optimisticResponse` with `localFirst: true`. A queued write completes at once with a null result, and Apollo drops the optimistic layer on completion — so the change flashes on screen and vanishes. The local cache write IS the optimistic update here.',
     },
   },
   create(context) {
-    const queueable = readSyncRegistryDocuments();
+    const queueable = readReplayPreparationDocuments();
     const sourceCode = context.sourceCode;
 
-    /** `fire` → { document, hookOptions } for every queueable `useMutation`. */
+    /** `fire` → { document, hookOptions, hookLocalFirst } for every `useMutation`. */
     const fired = new Map();
 
     const documentNameOf = node =>
@@ -64,17 +82,39 @@ module.exports = {
         ? node.name
         : undefined;
 
-    const checkCall = (node, document, hookOptions) => {
+    // A call's object `context` replaces the hook's; the callback form and an
+    // absent `context` keep it (Apollo 4.1+, `useMutation`'s execute).
+    const checkCall = (node, { document, hookOptions, hookLocalFirst }) => {
       const scope = sourceCode.getScope(node);
       const options = optionsObject(node.arguments[0], scope);
-      const localFirst = sets(options, 'localFirst', true);
+      const callContext = ownProperty(options, 'context')?.value;
+      const callMarker =
+        callContext?.type === 'ObjectExpression'
+          ? ownProperty(callContext, 'localFirst')
+          : undefined;
+      const callLocalFirst =
+        callMarker?.value.type === 'Literal' && callMarker.value.value === true;
+      const replacesHookContext = callContext?.type === 'ObjectExpression';
+      const localFirst =
+        callLocalFirst || (hookLocalFirst && !replacesHookContext);
+
+      if (hookLocalFirst && callMarker) {
+        context.report({ node: callMarker, messageId: 'redundantLocalFirst' });
+      } else if (hookLocalFirst && replacesHookContext) {
+        context.report({
+          node: callContext,
+          messageId: 'contextDropsLocalFirst',
+        });
+      }
 
       if (!localFirst) {
-        context.report({
-          node,
-          messageId: 'missingLocalFirst',
-          data: { document },
-        });
+        if (document) {
+          context.report({
+            node,
+            messageId: 'missingLocalFirst',
+            data: { document },
+          });
+        }
         return;
       }
       if (
@@ -88,17 +128,20 @@ module.exports = {
     return {
       // `const [fire] = useMutation(XDocument, options)`
       'VariableDeclarator[init.callee.name="useMutation"]'(node) {
-        const document = documentNameOf(node.init.arguments[0]);
-        if (!document) return;
         const [binding] =
           node.id.type === 'ArrayPattern' ? node.id.elements : [];
         if (binding?.type !== 'Identifier') return;
+        const hookOptions = optionsObject(
+          node.init.arguments[1],
+          sourceCode.getScope(node),
+        );
+        const hookContext = ownProperty(hookOptions, 'context')?.value;
+        const hookMarker = ownProperty(hookContext, 'localFirst')?.value;
         fired.set(binding.name, {
-          document,
-          hookOptions: optionsObject(
-            node.init.arguments[1],
-            sourceCode.getScope(node),
-          ),
+          document: documentNameOf(node.init.arguments[0]),
+          hookOptions,
+          hookLocalFirst:
+            hookMarker?.type === 'Literal' && hookMarker.value === true,
         });
       },
 
@@ -135,8 +178,7 @@ module.exports = {
             node.callee.type === 'Identifier' &&
             fired.has(node.callee.name)
           ) {
-            const { document, hookOptions } = fired.get(node.callee.name);
-            checkCall(node, document, hookOptions);
+            checkCall(node, fired.get(node.callee.name));
           }
           for (const key of sourceCode.visitorKeys[node.type] ?? []) {
             const child = node[key];

@@ -1,8 +1,7 @@
 import { localizedErrorMessage } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
-import { useApolloClient, useQuery } from '@apollo/client/react';
+import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
-import type { GetRecipeQuery } from '#features/recipes/graphql/recipe.generated';
 import {
   UseRecipeData_RecipeFragmentDoc,
   type UseRecipeData_RecipeFragment,
@@ -15,9 +14,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import type { CatalogRecipeHint } from './useOpenCatalogRecipe';
 
-export type MaterializedRecipe = NonNullable<
-  ReturnType<typeof readRecipeFragment>
->;
+export type MaterializedRecipe = UseRecipeData_RecipeFragment;
 
 export type DisplayIngredient = NonNullable<
   MaterializedRecipe['ingredientsConnection']['edges'][number]['node']
@@ -36,18 +33,6 @@ const DETAILS_BY_SYNC_STATUS: Record<ExternalSyncStatus, RecipeDetails> = {
   [ExternalSyncStatus.Pending]: 'pending',
   [ExternalSyncStatus.NotFound]: 'unavailable',
 };
-
-function readRecipeFragment(
-  client: ReturnType<typeof useApolloClient>,
-  ref: NonNullable<GetRecipeQuery['recipe']> | null,
-) {
-  if (!ref) return null;
-  return client.cache.readFragment<UseRecipeData_RecipeFragment>({
-    fragment: UseRecipeData_RecipeFragmentDoc,
-    fragmentName: 'useRecipeData_recipe',
-    from: ref,
-  });
-}
 
 export interface RecipeDisplayData {
   title: string;
@@ -143,16 +128,19 @@ export function useRecipeData({
   openFailure,
 }: UseRecipeDataParams): UseRecipeDataResult {
   const { t } = useTranslation();
-  const apolloClient = useApolloClient();
-  const { data, loading, error, refetch } = useQuery(GetRecipeDocument, {
-    variables: { id: recipeId ?? '' },
-    skip: !recipeId,
-    fetchPolicy: 'cache-and-network',
-  });
+  const { data, loading, error, refetch } = useQuery(
+    GetRecipeDocument,
+    recipeId ? { variables: { id: recipeId } } : skipToken,
+  );
 
-  // Materialize the masked fragment ref so the screen reads its fields.
-  const backendRecipe =
-    readRecipeFragment(apolloClient, data?.recipe ?? null) ?? undefined;
+  // Live: a save changes only fields behind the query's mask, which leaves
+  // `data.recipe` the same object.
+  const recipe = useFragment({
+    fragment: UseRecipeData_RecipeFragmentDoc,
+    fragmentName: 'useRecipeData_recipe',
+    from: data?.recipe ?? null,
+  });
+  const backendRecipe = recipe.complete ? recipe.data : undefined;
 
   const opening = !recipeId && !!hint && !openFailure;
 
@@ -179,6 +167,6 @@ export function useRecipeData({
     loading: opening || loading,
     error: resolveError(),
     backendRecipe,
-    refetch: () => refetch(),
+    refetch: () => (recipeId ? refetch() : Promise.resolve()),
   };
 }

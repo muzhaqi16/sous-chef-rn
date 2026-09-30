@@ -55,7 +55,7 @@ function successMock() {
 }
 
 describe('useCreateStorageLocation', () => {
-  it('mints a client id, sends it with the create, and returns the location', async () => {
+  it('mints a client id, sends it with the create, and reports success', async () => {
     const { fired, mock } = successMock();
     const { result } = renderHookWithApollo(
       () => useCreateStorageLocation(HOME_ID, PANTRY_ID),
@@ -70,8 +70,7 @@ describe('useCreateStorageLocation', () => {
       });
     });
 
-    // Returned the created location (truthy entity, not false).
-    expect(created).toMatchObject({ name: 'Spice Rack' });
+    expect(created).toBe(true);
 
     // A client-minted cuid2 rode the create as input.id, alongside the homeId.
     expect(fired).toHaveLength(1);
@@ -148,5 +147,50 @@ describe('useCreateStorageLocation', () => {
         ?.storageLocations.edges.map(edge => edge.node.name);
     expect(namesIn(HOME_ID)).toEqual(['Spice Rack']);
     expect(namesIn('home-2')).toEqual([]);
+  });
+
+  it('shows a queued location from its local row alone', async () => {
+    const cache = makeCache();
+    cache.writeQuery({
+      query: GetStorageLocationsDocument,
+      variables: { homeId: HOME_ID },
+      data: {
+        __typename: 'Query',
+        storageLocations: {
+          __typename: 'StorageLocationConnection',
+          edges: [],
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: false,
+            endCursor: null,
+          },
+          totalCount: 0,
+        },
+      },
+    });
+    const queued = recordMock(CreateStorageLocationDocument, {
+      data: { createStorageLocation: null },
+    });
+    const { result } = renderHookWithApollo(
+      () => useCreateStorageLocation(HOME_ID, PANTRY_ID),
+      { cache, operationMocks: [queued.mock] },
+    );
+
+    await act(async () => {
+      await result.current.createLocation({
+        name: 'Spice Rack',
+        type: StorageType.PantryShelf,
+      });
+    });
+
+    // A strict read: one field the row lacks and the whole list reads empty.
+    expect(
+      cache
+        .readQuery({
+          query: GetStorageLocationsDocument,
+          variables: { homeId: HOME_ID },
+        })
+        ?.storageLocations.edges.map(edge => edge.node.name),
+    ).toEqual(['Spice Rack']);
   });
 });

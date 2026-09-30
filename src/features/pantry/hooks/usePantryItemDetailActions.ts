@@ -137,6 +137,7 @@ export function usePantryItemDetailActions({
   const [addToShoppingList] = useMutation(
     AddItemToShoppingListFromPantryItemDocument,
     {
+      context: { localFirst: true },
       // Reconcile swallows its own errors internally, so no wrap is needed here
       // (wrapping would bail the React Compiler out of this hook).
       update: buildAddItemsReconcileUpdate({ listId: selectedShoppingListId }),
@@ -265,7 +266,6 @@ export function usePantryItemDetailActions({
               ],
             },
           },
-          context: { localFirst: true },
         }),
       {
         document: AddItemToShoppingListFromPantryItemDocument,

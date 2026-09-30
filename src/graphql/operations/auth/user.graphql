@@ -80,9 +80,7 @@ mutation UpdateAccount($input: UpdateAccountInput!) {
     ... on UpdateAccountPayload {
       user {
         id
-        email
-        displayName
-        emailVerified
+        ...UserReaders
         role
         onBoarded
         timezone
@@ -148,26 +146,12 @@ mutation UpdateUserPreferences($input: UpdateSettingsInput!) {
     ... on UpdateSettingsPayload {
       userSettings {
         id
+        ...UserSettingsReaders
         user {
           id
           email
           displayName
         }
-        theme
-        compactMode
-        showTutorials
-        autoSync
-        offlineMode
-        shareUsageData
-        shareWithPartners
-        personalizedAds
-        preferredUnitSystem
-        language
-        timezone
-        preferredCurrency
-        enabledFeatures
-        betaFeatures
-        createdAt
       }
     }
     ... on Error {
@@ -212,9 +196,7 @@ mutation CompleteOnboarding {
     ... on CompleteOnboardingPayload {
       user {
         id
-        email
-        displayName
-        emailVerified
+        ...UserReaders
         role
         canAccessDevTools
         onBoarded

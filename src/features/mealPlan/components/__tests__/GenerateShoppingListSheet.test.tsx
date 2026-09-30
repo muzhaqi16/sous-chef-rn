@@ -2,13 +2,13 @@
 import React from 'react';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { GetShoppingListsLiteForMealPlanDocument } from '../GenerateShoppingListSheet.generated';
+import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GenerateShoppingListSheet } from '../GenerateShoppingListSheet';
 
 type SheetProps = React.ComponentProps<typeof GenerateShoppingListSheet>;
 
 function listsMock() {
-  return recordMock(GetShoppingListsLiteForMealPlanDocument, {
+  return recordMock(GetShoppingListsLiteDocument, {
     data: {
       shoppingLists: {
         __typename: 'ShoppingListConnection',

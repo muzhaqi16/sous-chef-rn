@@ -101,6 +101,17 @@ describe('useOpenCatalogRecipe', () => {
     });
   });
 
+  // The API refuses a name over 200 characters, which would fail the open.
+  it('cuts a name longer than the API takes', async () => {
+    const m = openedMock();
+
+    await open({ ...HINT, name: 'a'.repeat(250) }, [m.mock]);
+
+    expect(m.fired[0]).toEqual({
+      input: expect.objectContaining({ name: 'a'.repeat(200) }),
+    });
+  });
+
   it('reads a removed recipe as not found', async () => {
     const m = recordMock(OpenCatalogRecipeDocument, {
       data: {

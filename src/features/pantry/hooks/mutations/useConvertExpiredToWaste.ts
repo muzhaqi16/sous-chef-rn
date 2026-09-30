@@ -6,8 +6,8 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { gql } from '@apollo/client';
 import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
+import { UseConvertExpiredToWaste_StateFragmentDoc } from './useConvertExpiredToWaste.generated';
 import { ItemCondition } from '#/graphql/generated/schemaTypes';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { settleMutation } from '#/apollo/utils/settleMutation';
@@ -15,26 +15,20 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
 import { writeHeldStock } from '#features/pantry/cache/stock';
+import { todayKey } from '#/utils/dateUtils';
 
 interface UseConvertExpiredToWasteOptions {
   onSuccess?: () => void;
 }
-
-const CONVERT_STATE_FRAGMENT = gql`
-  fragment useConvertExpiredToWaste_state on PantryItem {
-    id
-    quantity
-    heldQuantity
-    condition
-  }
-`;
 
 export function useConvertExpiredToWaste({
   onSuccess,
 }: UseConvertExpiredToWasteOptions = {}) {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [convertMutation] = useMutation(ConvertExpiredToWasteDocument);
+  const [convertMutation] = useMutation(ConvertExpiredToWasteDocument, {
+    context: { localFirst: true },
+  });
 
   const convertExpiredToWaste = async (
     pantryItemId: string,
@@ -43,13 +37,9 @@ export function useConvertExpiredToWaste({
       __typename: 'PantryItem',
       id: pantryItemId,
     });
-    const snapshot = client.cache.readFragment<{
-      quantity: number;
-      heldQuantity: number;
-      condition: ItemCondition;
-    }>({
+    const snapshot = client.cache.readFragment({
       id: itemCacheId,
-      fragment: CONVERT_STATE_FRAGMENT,
+      fragment: UseConvertExpiredToWaste_StateFragmentDoc,
       fragmentName: 'useConvertExpiredToWaste_state',
     });
 
@@ -123,9 +113,9 @@ export function useConvertExpiredToWaste({
       () =>
         convertMutation({
           variables: {
+            today: todayKey(),
             input: { pantryItemId, idempotencyKey: generateEntityId() },
           },
-          context: { localFirst: true },
         }),
       {
         document: ConvertExpiredToWasteDocument,

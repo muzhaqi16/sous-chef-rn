@@ -294,7 +294,10 @@ describe('useHomeSelection', () => {
       });
 
       expect(success!).toBe(true);
-      expect(m.fired).toContainEqual({ input: { homeId: 'brand-new-home' } });
+      expect(m.fired).toContainEqual({
+        input: { homeId: 'brand-new-home' },
+        today: expect.any(String),
+      });
       expect(alertService.alert).not.toHaveBeenCalled();
       // No local record, so no pantry hint — the server's `defaultPantry` is
       // what lands the selection.

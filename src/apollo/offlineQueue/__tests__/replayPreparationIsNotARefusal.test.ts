@@ -9,12 +9,13 @@ import {
   queuedMutationFor,
   makeQueuedMutation,
 } from '#/test-utils/queuedMutation';
+import { gql } from '@apollo/client';
+import type { DocumentNode } from 'graphql';
 import {
   AddItemToShoppingListDocument,
   RemoveItemFromShoppingListDocument,
-  SyncDeleteShoppingListItemDocument,
-  SyncShoppingListItemDocument,
   ToggleShoppingListItemPurchasedDocument,
+  UpdateShoppingListItemQuantityDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { QueueStore } from '../queueStore';
 
@@ -34,6 +35,7 @@ jest.mock('#store', () => ({
 
 const mockClient = {
   mutate: jest.fn(),
+  query: jest.fn(),
   cache: makeCache(),
 };
 jest.mock('#/apollo/clientRegistry', () => ({
@@ -64,7 +66,16 @@ jest.mock('../queueStore', () => ({
   },
 }));
 
-/** An update-shaped entry: its input carries no parent id, so the builder reads one. */
+/** A quantity edit naming its unit by a flat id, which only a lookup can re-resolve. */
+const quantityEntry = () =>
+  makeQueuedMutation({
+    id: 'quantity-1',
+    ...queuedMutationFor(UpdateShoppingListItemQuantityDocument),
+    variables: {
+      input: { itemId: 'sli-1', quantity: '2', unitId: 'unit-old' },
+    },
+  });
+
 const toggleEntry = () =>
   makeQueuedMutation({
     id: 'toggle-1',
@@ -88,20 +99,33 @@ describe('a replay that cannot be prepared on the device', () => {
   });
 
   it('is raised as a prepared-failure, not as a bare Error', async () => {
-    // The cache was purged (a version bump) while the queue survived, so the
-    // parent id this entry's replay reads is gone.
+    // A refusal named the unit retired, and the lookup for its current id
+    // fails on the device's side.
+    mockClient.cache.writeFragment({
+      fragment: gql`
+        fragment RetiredUnit on Unit {
+          id
+          symbol
+        }
+      `,
+      data: { __typename: 'Unit', id: 'unit-old', symbol: 'tbsp' },
+    });
+    mockClient.query.mockRejectedValue(new Error('Network request failed'));
+    const entry = quantityEntry();
+    manager['staleReferenceRetried'].add(entry.id);
     const executeMutation = manager['executeMutation'].bind(manager);
 
-    await expect(executeMutation(toggleEntry())).rejects.toBeInstanceOf(
+    await expect(executeMutation(entry)).rejects.toBeInstanceOf(
       ReplayNotPreparedError,
     );
+    expect(mockClient.mutate).not.toHaveBeenCalled();
   });
 
   it('classifies as a deferral that keeps the entry, not a permanent refusal', () => {
     const queueError = classifyError(
       new ReplayNotPreparedError(
         operationNameOf(ToggleShoppingListItemPurchasedDocument),
-        new Error('shoppingListId not found for item sli-1'),
+        new Error('Network request failed'),
       ),
     );
 
@@ -169,8 +193,8 @@ describe('a replay that cannot be prepared on the device', () => {
     expect(queueStore.incrementRetry).not.toHaveBeenCalled();
   });
 
-  it('leaves an entry that carries its own parent id alone', async () => {
-    // Create-shaped inputs need no cache read, so an empty cache is no obstacle.
+  it('sends an entry that needs no lookup', async () => {
+    // Nothing is read to prepare a create, so an empty cache is no obstacle.
     const executeMutation = manager['executeMutation'].bind(manager);
     mockClient.mutate.mockResolvedValue({ data: {} });
 
@@ -189,8 +213,8 @@ describe('a replay that cannot be prepared on the device', () => {
   });
 });
 
-describe('a delete after a write that can no longer be built', () => {
-  it('reaches the server instead of waiting behind that write', async () => {
+describe('a delete after an edit to the same row', () => {
+  it('reaches the server as queued, and nothing brings the row back', async () => {
     jest.clearAllMocks();
     (useStore.getState as jest.Mock).mockReturnValue({
       user: { id: 'user-1' },
@@ -205,8 +229,7 @@ describe('a delete after a write that can no longer be built', () => {
     }>('../queueStore');
     const store = new RealQueueStore();
     store.clearAllQueues();
-    // Offline: the tick queues, then the delete evicts the row the tick's
-    // replay would read its list from.
+    // Offline: the tick queues, then the delete evicts the row.
     store.addMutation({ ...toggleEntry(), createdAt: 1_000 });
     store.addMutation(
       makeQueuedMutation({
@@ -222,12 +245,16 @@ describe('a delete after a write that can no longer be built', () => {
 
     await new QueueManager().processQueue();
 
-    expect(mockClient.mutate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mutation: SyncDeleteShoppingListItemDocument,
-        variables: { input: { clientId: 'sli-1' } },
-      }),
+    const sent = mockClient.mutate.mock.calls.map(
+      ([options]: [{ mutation: DocumentNode; variables: unknown }]) => [
+        operationNameOf(options.mutation),
+        options.variables,
+      ],
     );
+    expect(sent).toContainEqual([
+      operationNameOf(RemoveItemFromShoppingListDocument),
+      { input: { id: 'sli-1' } },
+    ]);
     // Nothing the drain did brought the deleted row back.
     const rowKey = mockClient.cache.identify({
       __typename: 'ShoppingListItem',
@@ -238,7 +265,7 @@ describe('a delete after a write that can no longer be built', () => {
   });
 });
 
-describe('a write that captured what its replay reads', () => {
+describe('an edit to a row that has left the cache', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockClient.cache = makeCache();
@@ -251,32 +278,22 @@ describe('a write that captured what its replay reads', () => {
     });
   });
 
-  const capturedToggle = (id: string, purchased: boolean) =>
+  const queuedToggle = (id: string, purchased: boolean) =>
     makeQueuedMutation({
       id,
       ...queuedMutationFor(ToggleShoppingListItemPurchasedDocument),
       variables: { input: { id: 'sli-1', purchased, version: 3 } },
-      replayInputs: { shoppingListId: 'list-1', refItemName: 'Milk' },
     });
 
-  it('is sent although its row has left the cache', async () => {
+  it('is sent as queued', async () => {
     const manager = new QueueManager();
 
-    await manager['executeMutation'](capturedToggle('t-1', true));
+    await manager['executeMutation'](queuedToggle('t-1', true));
 
     expect(mockClient.mutate).toHaveBeenCalledWith(
       expect.objectContaining({
-        mutation: SyncShoppingListItemDocument,
-        variables: {
-          input: {
-            clientId: 'sli-1',
-            item: expect.objectContaining({
-              shoppingListId: 'list-1',
-              item: { itemName: 'Milk' },
-              purchaseTracking: { isPurchased: true },
-            }),
-          },
-        },
+        mutation: ToggleShoppingListItemPurchasedDocument,
+        variables: { input: { id: 'sli-1', purchased: true, version: 3 } },
       }),
     );
   });
@@ -287,8 +304,8 @@ describe('a write that captured what its replay reads', () => {
     }>('../queueStore');
     const store = new RealQueueStore();
     store.clearAllQueues();
-    store.addMutation({ ...capturedToggle('t-1', true), createdAt: 1_000 });
-    store.addMutation({ ...capturedToggle('t-2', false), createdAt: 2_000 });
+    store.addMutation({ ...queuedToggle('t-1', true), createdAt: 1_000 });
+    store.addMutation({ ...queuedToggle('t-2', false), createdAt: 2_000 });
     (queueStore.getPendingMutationsForUser as jest.Mock).mockImplementation(
       (userId: string) => store.getPendingMutationsForUser(userId),
     );
@@ -296,12 +313,9 @@ describe('a write that captured what its replay reads', () => {
     await new QueueManager().processQueue();
 
     const sent = mockClient.mutate.mock.calls.map(
-      ([options]: [{ variables: { input: { item: unknown } } }]) =>
-        options.variables.input.item,
+      ([options]: [{ variables: { input: { purchased: boolean } } }]) =>
+        options.variables.input.purchased,
     );
-    expect(sent).toEqual([
-      expect.objectContaining({ purchaseTracking: { isPurchased: true } }),
-      expect.objectContaining({ purchaseTracking: { isPurchased: false } }),
-    ]);
+    expect(sent).toEqual([true, false]);
   });
 });

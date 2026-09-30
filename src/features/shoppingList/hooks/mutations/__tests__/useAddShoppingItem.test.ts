@@ -7,8 +7,8 @@ import { useAddShoppingItem } from '../useAddShoppingItem';
 import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
-  reconcileShoppingCreate,
 } from '#features/shoppingList/cache/items';
+import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
@@ -38,6 +38,10 @@ const addItemMock = () =>
     },
   });
 
+jest.mock('#features/shoppingList/cache/withdraw', () => ({
+  withdrawShoppingListItems: jest.fn(),
+}));
+
 jest.mock('#features/shoppingList/cache/connections', () => ({
   ...jest.requireActual('#features/shoppingList/cache/connections'),
   // A leaf cache writer, stubbed so the hook runs without a live cache.
@@ -47,15 +51,9 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
 jest.mock('#features/shoppingList/cache/items', () => {
   const actual = jest.requireActual('#features/shoppingList/cache/items');
   return {
-    // Keep the REAL reconcileShoppingCreate (and the settledStatus it
-    // calls) so the keep/revert decision under test is production's — a
-    // hand-copied reconciler drifts from the operation names it hard-codes.
     ...actual,
-    // Wrapped, not replaced: its revert is module-internal, so what it RETURNS
-    // is the observable keep/revert decision.
-    reconcileShoppingCreate: jest.fn(actual.reconcileShoppingCreate),
-    // Leaf cache writers are stubbed so the hook runs without a live cache.
-    revertOptimisticShoppingListItem: jest.fn(),
+    // Leaf cache writers are stubbed so the hook runs without a live cache;
+    // the keep/withdraw decision stays production's.
     addOptimisticShoppingListItem: jest.fn(),
     // Signature: (id, fields) => entity (the cuid is baked straight in).
     createOptimisticShoppingListItem: jest.fn(
@@ -169,9 +167,7 @@ describe('useAddShoppingItem', () => {
     });
 
     expect(added).toBe(true);
-    expect(jest.mocked(reconcileShoppingCreate).mock.results).toEqual([
-      { type: 'return', value: 'kept' },
-    ]);
+    expect(withdrawShoppingListItems).not.toHaveBeenCalled();
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 
@@ -195,9 +191,11 @@ describe('useAddShoppingItem', () => {
     });
 
     expect(added).toBe(false);
-    expect(jest.mocked(reconcileShoppingCreate).mock.results).toEqual([
-      { type: 'return', value: 'reverted' },
-    ]);
+    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
+      expect.anything(),
+      'list-1',
+      [expect.any(String)],
+    );
     expect(alertService.alert).toHaveBeenCalledTimes(1);
   });
 

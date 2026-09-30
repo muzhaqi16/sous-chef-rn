@@ -1,4 +1,6 @@
-import { waitFor } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
+import type { InMemoryCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import { ExternalSyncStatus } from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
@@ -9,6 +11,7 @@ import {
   type MockFor,
 } from '#/test-utils/apolloMockProvider';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
+import { writeOptimisticFavorite } from '#features/recipes/cache/favorites';
 import { useRecipeData, type UseRecipeDataParams } from '../useRecipeData';
 import type { CatalogRecipeHint } from '../useOpenCatalogRecipe';
 
@@ -53,6 +56,7 @@ const recipeMock = (recipe: RecipeFixture) =>
 function renderData(
   params: Partial<UseRecipeDataParams>,
   operationMocks: MockedResponse[] = [],
+  cache: InMemoryCache = makeCache(),
 ) {
   return renderHookWithApollo(
     () =>
@@ -62,7 +66,7 @@ function renderData(
         openFailure: null,
         ...params,
       }),
-    { operationMocks },
+    { operationMocks, cache },
   );
 }
 
@@ -253,5 +257,70 @@ describe('useRecipeData', () => {
     expect(result.current.error).toBe('Recipe not found');
     expect(result.current.displayData).toBeNull();
     expect(result.current.loading).toBe(false);
+  });
+  // Each of these edits only fields behind the query's mask, so `GetRecipe`'s
+  // result stays the same object while the screen stays open.
+  describe('an edit to the open recipe', () => {
+    const openRecipe = async (recipe: RecipeFixture) => {
+      const cache = makeCache();
+      const rendered = renderData(
+        { recipeId: 'r1' },
+        [recipeMock(recipe)],
+        cache,
+      );
+      await waitFor(() =>
+        expect(rendered.result.current.backendRecipe).toBeDefined(),
+      );
+      return { cache, ...rendered };
+    };
+
+    it('shows a save, and then its notes and rating', async () => {
+      const { cache, result } = await openRecipe(
+        authoredRecipe({ savedDetails: null }),
+      );
+      expect(result.current.backendRecipe?.savedDetails).toBeNull();
+
+      await act(async () => {
+        writeOptimisticFavorite(cache, 'saved-1', 'r1', { notes: 'Less salt' });
+        await Promise.resolve();
+      });
+      await waitFor(() =>
+        expect(result.current.backendRecipe?.savedDetails?.notes).toBe(
+          'Less salt',
+        ),
+      );
+
+      await act(async () => {
+        cache.modify({
+          id: cache.identify({ __typename: 'SavedRecipe', id: 'saved-1' }),
+          fields: { personalRating: () => 4 },
+        });
+        await Promise.resolve();
+      });
+      await waitFor(() =>
+        expect(result.current.backendRecipe?.savedDetails?.personalRating).toBe(
+          4,
+        ),
+      );
+    });
+
+    it('drops the pending notice once the recipe is fetched', async () => {
+      const { cache, result } = await openRecipe(
+        catalogRecipe(ExternalSyncStatus.Pending),
+      );
+      expect(result.current.displayData?.details).toBe('pending');
+
+      await act(async () => {
+        cache.modify({
+          id: cache.identify({ __typename: 'RecipeSourceMapping', id: 'sm-1' }),
+          fields: { syncStatus: () => ExternalSyncStatus.Synced },
+        });
+        await Promise.resolve();
+      });
+
+      await waitFor(() =>
+        expect(result.current.displayData?.details).toBe('complete'),
+      );
+    });
   });
 });

@@ -16,7 +16,9 @@ import { useTranslation } from '#/i18n';
 export function useDeleteRecipe() {
   const client = useApolloClient();
   const { t } = useTranslation();
-  const [deleteRecipeMutation] = useMutation(DeleteRecipeDocument);
+  const [deleteRecipeMutation] = useMutation(DeleteRecipeDocument, {
+    context: { localFirst: true },
+  });
 
   const removeRecipeEdge = (id: string) => {
     client.cache.updateQuery<MyRecipesQuery>(
@@ -53,7 +55,6 @@ export function useDeleteRecipe() {
       () =>
         deleteRecipeMutation({
           variables: { input: { id } },
-          context: { localFirst: true },
         }),
       {
         document: DeleteRecipeDocument,

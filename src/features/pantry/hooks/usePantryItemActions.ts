@@ -23,7 +23,7 @@ import {
   UsePantryItemActions_IdFragmentDoc,
   type UsePantryItemActions_QuantityFragment,
 } from './usePantryItemActions.generated';
-import { toDateKey } from '#/utils/dateUtils';
+import { toDateKey, todayKey } from '#/utils/dateUtils';
 import { writeHeldStock } from '#features/pantry/cache/stock';
 
 interface UsePantryItemActionsOptions {
@@ -162,13 +162,16 @@ export function usePantryItemActions({
   };
 
   // Consume/Waste item mutation (both use createPantryItemUsage)
-  const [createPantryItemUsage] = useMutation(
-    CreatePantryItemUsageDocument,
-    {},
-  );
+  const [createPantryItemUsage] = useMutation(CreatePantryItemUsageDocument, {
+    // Replays as the canonical mutation, deduped by its idempotencyKey.
+    context: { localFirst: true },
+  });
 
   // Restock item mutation
-  const [restockPantryItem] = useMutation(RestockPantryItemDocument, {});
+  const [restockPantryItem] = useMutation(RestockPantryItemDocument, {
+    // Replays as the canonical mutation, deduped by its idempotencyKey.
+    context: { localFirst: true },
+  });
 
   // Handler to confirm consumption
   const handleConfirmConsume = async (
@@ -199,20 +202,18 @@ export function usePantryItemActions({
       () =>
         createPantryItemUsage({
           variables: {
+            today: todayKey(),
             input: {
               pantryItemId: itemId,
               amount: { quantity: quantityUsed },
               purpose,
               notes: consumeNotes,
               usageUnitId,
-              today: toDateKey(new Date()),
+              today: todayKey(),
               // idempotencyKey dedups the usage ledger row on replay.
               idempotencyKey: generateEntityId(),
             },
           },
-          // Local-first: queue offline; replays as the canonical mutation,
-          // deduped by its idempotencyKey.
-          context: { localFirst: true },
         }),
       {
         document: CreatePantryItemUsageDocument,
@@ -252,6 +253,7 @@ export function usePantryItemActions({
       () =>
         createPantryItemUsage({
           variables: {
+            today: todayKey(),
             input: {
               pantryItemId: itemId,
               amount: { quantity: wasteAmount },
@@ -261,14 +263,11 @@ export function usePantryItemActions({
               wasteReason,
               isComposted,
               isRecycled,
-              today: toDateKey(new Date()),
+              today: todayKey(),
               // idempotencyKey dedups the usage ledger row on replay.
               idempotencyKey: generateEntityId(),
             },
           },
-          // Local-first: queue offline; replays as the canonical mutation,
-          // deduped by its idempotencyKey.
-          context: { localFirst: true },
         }),
       {
         document: CreatePantryItemUsageDocument,
@@ -338,6 +337,7 @@ export function usePantryItemActions({
       () =>
         restockPantryItem({
           variables: {
+            today: todayKey(),
             input: {
               id: itemId,
               quantity,
@@ -350,9 +350,6 @@ export function usePantryItemActions({
               idempotencyKey: generateEntityId(),
             },
           },
-          // Local-first: queue offline; replays as the canonical mutation,
-          // deduped by its idempotencyKey.
-          context: { localFirst: true },
         }),
       {
         document: RestockPantryItemDocument,

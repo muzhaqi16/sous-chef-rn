@@ -243,6 +243,28 @@ describe('AddMealSheet', () => {
     expect(screen.getByText(/2 servings · 15 min/)).toBeTruthy();
   });
 
+  it('leaves an unpublished recipe out of the picker, searching included', () => {
+    mockUseSavedRecipes.mockImplementation(() => ({
+      ...savedRecipesResult(false),
+      state: {
+        ...savedRecipesResult(false).state,
+        recipes: [
+          ...savedRecipeNodes,
+          { ...savedRecipeNodes[0], id: 'sr-gone', recipe: null },
+        ],
+      },
+    }));
+    renderWithApollo(<AddMealSheet {...defaultProps} />);
+
+    fireEvent.changeText(
+      screen.getByPlaceholderText('Search recipes or add a custom meal...'),
+      'Pasta',
+    );
+
+    expect(screen.getByText('Pasta Carbonara')).toBeTruthy();
+    expect(screen.queryByText('Chicken Salad')).toBeNull();
+  });
+
   it('shows custom meal option when search query has text', () => {
     renderWithApollo(<AddMealSheet {...defaultProps} />);
     const searchInput = screen.getByPlaceholderText(

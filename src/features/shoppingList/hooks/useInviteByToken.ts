@@ -1,4 +1,9 @@
-import { useFragment, useMutation, useQuery } from '@apollo/client/react';
+import {
+  skipToken,
+  useFragment,
+  useMutation,
+  useQuery,
+} from '@apollo/client/react';
 import type { DocumentNode } from 'graphql';
 import { invitationRefusalCopy } from '#/domain/invitationRefusal';
 import { settleMutation } from '#/apollo/utils/settleMutation';
@@ -45,11 +50,11 @@ export function useInviteByToken(token: string | undefined) {
   const { t } = useTranslation();
   const { data: homeInviteData, loading: homeInviteLoading } = useQuery(
     GetHomeInviteByTokenDocument,
-    { variables: { token: token ?? '' }, skip: !token },
+    token ? { variables: { token } } : skipToken,
   );
   const { data: listInviteData, loading: listInviteLoading } = useQuery(
     GetShoppingListInviteByTokenDocument,
-    { variables: { token: token ?? '' }, skip: !token },
+    token ? { variables: { token } } : skipToken,
   );
 
   const [acceptShoppingListInvite] = useMutation(
@@ -69,15 +74,12 @@ export function useInviteByToken(token: string | undefined) {
   const listFragment = useFragment({
     fragment: AcceptInvite_ShoppingListInviteFragmentDoc,
     fragmentName: 'AcceptInvite_shoppingListInvite',
-    from: shoppingListInvite ?? {
-      __typename: 'ShoppingListCollaborator',
-      id: '',
-    },
+    from: shoppingListInvite ?? null,
   });
   const homeFragment = useFragment({
     fragment: AcceptInvite_HomeInviteFragmentDoc,
     fragmentName: 'AcceptInvite_homeInvite',
-    from: homeInvite ?? { __typename: 'HomeInvite', id: '' },
+    from: homeInvite ?? null,
   });
 
   const invitationType: InvitationType = shoppingListInvite

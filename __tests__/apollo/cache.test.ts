@@ -335,54 +335,6 @@ describe('cache.ts', () => {
       expect(read.storageLocations.totalCount).toBe(1);
     });
 
-    it('Query.shoppingLists preserves existing on null incoming', () => {
-      const QUERY = gql`query GetLists($filters: ShoppingListFilters) { shoppingLists(filters: $filters) { id } }`;
-      cache.writeQuery({
-        query: QUERY,
-        variables: { filters: { homeId: 'h-1' } },
-        data: { shoppingLists: [{ __typename: 'ShoppingList', id: 'sl-1' }] },
-      });
-      cache.writeQuery({
-        query: QUERY,
-        variables: { filters: { homeId: 'h-1' } },
-        data: { shoppingLists: null },
-      });
-      const result = cache.readQuery<ListResult<'shoppingLists'>>({ query: QUERY, variables: { filters: { homeId: 'h-1' } } });
-      expect(result?.shoppingLists).toHaveLength(1);
-    });
-
-    it('Query.shoppingLists allows empty array through', () => {
-      const QUERY = gql`query GetLists($filters: ShoppingListFilters) { shoppingLists(filters: $filters) { id } }`;
-      cache.writeQuery({
-        query: QUERY,
-        variables: { filters: { homeId: 'h-1' } },
-        data: { shoppingLists: [{ __typename: 'ShoppingList', id: 'sl-1' }] },
-      });
-      cache.writeQuery({
-        query: QUERY,
-        variables: { filters: { homeId: 'h-1' } },
-        data: { shoppingLists: [] },
-      });
-      const result = cache.readQuery<ListResult<'shoppingLists'>>({ query: QUERY, variables: { filters: { homeId: 'h-1' } } });
-      expect(result?.shoppingLists).toEqual([]);
-    });
-
-    it('Query.pantries preserves existing on null incoming', () => {
-      const QUERY = gql`query GetPantries($homeId: ID!) { pantries(homeId: $homeId) { id } }`;
-      cache.writeQuery({
-        query: QUERY,
-        variables: { homeId: 'h-1' },
-        data: { pantries: [{ __typename: 'Pantry', id: 'p-1' }] },
-      });
-      cache.writeQuery({
-        query: QUERY,
-        variables: { homeId: 'h-1' },
-        data: { pantries: null },
-      });
-      const result = cache.readQuery<ListResult<'pantries'>>({ query: QUERY, variables: { homeId: 'h-1' } });
-      expect(result?.pantries).toHaveLength(1);
-    });
-
     it('Query.storageLocations preserves existing on null incoming', () => {
       const QUERY = gql`query GetStorageLocations($homeId: ID!) { storageLocations(homeId: $homeId) { id } }`;
       cache.writeQuery({
@@ -397,22 +349,6 @@ describe('cache.ts', () => {
       });
       const result = cache.readQuery<ListResult<'storageLocations'>>({ query: QUERY, variables: { homeId: 'h-1' } });
       expect(result?.storageLocations).toHaveLength(1);
-    });
-
-    it('Query.storageLocationTree preserves existing on null incoming', () => {
-      const QUERY = gql`query GetTree($homeId: ID!) { storageLocationTree(homeId: $homeId) { id } }`;
-      cache.writeQuery({
-        query: QUERY,
-        variables: { homeId: 'h-1' },
-        data: { storageLocationTree: [{ __typename: 'StorageLocation', id: 'slt-1' }] },
-      });
-      cache.writeQuery({
-        query: QUERY,
-        variables: { homeId: 'h-1' },
-        data: { storageLocationTree: null },
-      });
-      const result = cache.readQuery<ListResult<'storageLocationTree'>>({ query: QUERY, variables: { homeId: 'h-1' } });
-      expect(result?.storageLocationTree).toHaveLength(1);
     });
   });
 

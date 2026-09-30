@@ -1,63 +1,77 @@
 import type { ApolloCache } from '@apollo/client';
+import type {
+  NotificationSummary,
+  Query,
+} from '#/graphql/generated/schemaTypes';
 
 /**
- * Keeps the badge aggregates on the cached `User` in step with the notification
- * mutations, which select only `notification { id status }`. Without these the
- * count stays at its fetch-time value and the badge seed re-applies that stale
- * number over the local decrement.
+ * Moves the cached badge (`Query.notificationSummary`) for a write the server
+ * has not answered yet, so a queued write shows at once. A response states the
+ * summary and normalization settles it, so none of these runs after one.
  */
 
-interface BadgeAggregates {
-  unreadNotificationCount: number;
-  hasUrgentNotifications: boolean;
+type Badge = Pick<NotificationSummary, 'unreadCount' | 'hasUrgent'>;
+
+/**
+ * The cache id `ROOT_QUERY.notificationSummary` points at, or undefined before
+ * a query has loaded the badge. `cache.modify` reads here: returning `existing`
+ * unchanged writes nothing.
+ */
+function cachedSummaryId(cache: ApolloCache): string | undefined {
+  let id: string | undefined;
+  cache.modify<Pick<Query, 'notificationSummary'>>({
+    id: 'ROOT_QUERY',
+    fields: {
+      notificationSummary: (existing, { isReference }) => {
+        if (isReference(existing)) id = existing.__ref;
+        return existing;
+      },
+    },
+  });
+  return id;
 }
 
 /**
- * Shifts `unreadNotificationCount` by `delta`, clamped at zero, clearing
- * `hasUrgentNotifications` when it lands there. No-ops without throwing for a
- * falsy user id, a zero delta, or an entity that never fetched the field.
+ * Shifts `unreadCount` by `delta`, clamped at zero, clearing `hasUrgent` when
+ * it lands there. No-ops without throwing for a zero delta or an uncached
+ * badge.
  */
 export function adjustUnreadNotificationCount(
   cache: ApolloCache,
-  userId: string | null | undefined,
   delta: number,
 ): void {
-  if (!userId || delta === 0) return;
-  const cacheId = cache.identify({ __typename: 'User', id: userId });
+  if (delta === 0) return;
+  const cacheId = cachedSummaryId(cache);
   if (!cacheId) return;
   // The count modifier runs before the urgent one (field-object key order), so
   // the urgent flag can react to where the count landed.
   let landedAtZero = false;
-  cache.modify<BadgeAggregates>({
+  cache.modify<Badge>({
     id: cacheId,
     fields: {
-      unreadNotificationCount: existing => {
+      unreadCount: existing => {
         const current = typeof existing === 'number' ? existing : 0;
         const next = Math.max(0, current + delta);
         landedAtZero = next === 0;
         return next;
       },
-      hasUrgentNotifications: existing => (landedAtZero ? false : existing),
+      hasUrgent: existing => (landedAtZero ? false : existing),
     },
   });
 }
 
 /**
- * Zero out the badge aggregates — the mark-all-read path. Same no-op safety
- * as {@link adjustUnreadNotificationCount}.
+ * Zero the badge — the mark-all-read path. Same no-op safety as
+ * {@link adjustUnreadNotificationCount}.
  */
-export function clearUnreadNotificationCount(
-  cache: ApolloCache,
-  userId: string | null | undefined,
-): void {
-  if (!userId) return;
-  const cacheId = cache.identify({ __typename: 'User', id: userId });
+export function clearUnreadNotificationCount(cache: ApolloCache): void {
+  const cacheId = cachedSummaryId(cache);
   if (!cacheId) return;
-  cache.modify<BadgeAggregates>({
+  cache.modify<Badge>({
     id: cacheId,
     fields: {
-      unreadNotificationCount: () => 0,
-      hasUrgentNotifications: () => false,
+      unreadCount: () => 0,
+      hasUrgent: () => false,
     },
   });
 }

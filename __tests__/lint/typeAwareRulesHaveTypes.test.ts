@@ -22,13 +22,13 @@ const FLOATING =
 const CASES: Case[] = [
   {
     tier: 'production source',
-    filePath: 'src/features/pantry/hooks/buildOptimisticPantryItem.ts',
+    filePath: 'src/features/pantry/cache/writeLocalPantryItem.ts',
     code: 'export const f = (s: string) => (s !== undefined ? 1 : 2);\n',
     rule: '@typescript-eslint/no-unnecessary-condition',
   },
   {
     tier: 'production source, unsafe access',
-    filePath: 'src/features/pantry/hooks/buildOptimisticPantryItem.ts',
+    filePath: 'src/features/pantry/cache/writeLocalPantryItem.ts',
     code: 'declare const x: any;\nexport const y = x.foo;\n',
     rule: '@typescript-eslint/no-unsafe-member-access',
   },

@@ -11,12 +11,13 @@
  */
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
-import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
+import { writeLocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
 import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
 import {
   addPantryItemLocally,
   removePantryItemLocally,
   revertOptimisticPantryItem,
+  type PantryItemRef,
 } from '#features/pantry/cache/items';
 
 const PANTRY = gql`
@@ -78,10 +79,10 @@ function seed() {
 
 /**
  * Write the entity before linking it, exactly as the production callers do
- * (`buildOptimisticPantryItem` first, then the connection write). A ref to an
+ * (`writeLocalPantryItem` first, then the connection write). A ref to an
  * entity the store has never seen is filtered out of the connection on read.
  */
-const row = (id: string) => ({ __typename: 'PantryItem', id });
+const row = (id: string): PantryItemRef => ({ __typename: 'PantryItem', id });
 
 const writeRow = (cache: ReturnType<typeof makeCache>, id: string) =>
   cache.writeFragment({
@@ -195,22 +196,20 @@ describe('revertOptimisticPantryItem', () => {
   });
 
   it('leaves nothing the create wrote behind', () => {
-    // The create writes a detail stub alongside the row: a locally minted
-    // `Item` and a RETAINED `ROOT_QUERY` connection field. Neither is reclaimed
-    // by `cache.gc()`, and both are persisted — so a revert that drops only the
-    // row leaves one pair behind per refused create, forever.
+    // The create writes beside the row: a stand-in `Item` and a RETAINED
+    // `ROOT_QUERY` connection field. Neither is reclaimed by `cache.gc()`, and
+    // both are persisted — so a revert that drops only the row leaves one pair
+    // behind per refused create, forever.
     const cache = seed();
     const before = JSON.stringify(cache.extract());
 
-    writeRow(cache, 'pi-3');
-    addPantryItemLocally(cache, 'p-1', row('pi-3'));
-    writePantryItemDetailStub(cache, 'pi-3', {
-      itemId: null,
+    writeLocalPantryItem(cache, 'pi-3', {
+      pantryId: 'p-1',
       itemName: 'Anchovies',
       acquisitionMethod: AcquisitionMethod.ShoppingList,
-      costPerUnit: null,
       quantity: 1,
     });
+    addPantryItemLocally(cache, 'p-1', row('pi-3'));
 
     revertOptimisticPantryItem(cache, 'p-1', 'pi-3');
     cache.gc();

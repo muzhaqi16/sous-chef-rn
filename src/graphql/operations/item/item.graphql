@@ -37,9 +37,7 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat, $pantry: ID) {
           name
           symbol
         }
-        # The unit an add naming no unit counts in, for the optimistic row.
-        # `buildOptimisticPantryItem` resolves it against the cached `Unit` and
-        # needs all five fields: a partial entity reads back as null.
+        # The unit an add naming no unit counts in, for the local row.
         trackingUnit(pantry: $pantry) {
           id
           name
@@ -111,9 +109,7 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: ID, $pantry: ID) {
           name
           symbol
         }
-        # The unit an add naming no unit counts in, for the optimistic row.
-        # `buildOptimisticPantryItem` resolves it against the cached `Unit` and
-        # needs all five fields: a partial entity reads back as null.
+        # The unit an add naming no unit counts in, for the local row.
         trackingUnit(pantry: $pantry) {
           id
           name
@@ -293,12 +289,9 @@ mutation CreateItem($input: CreateItemInput!) {
     ... on CreateItemPayload {
       item {
         id
+        ...ItemReaders
         name
         description
-        # Labels the follow-up edit action correctly — a freshly created item is
-        # the creator's own, so canEdit comes back true and the card offers a
-        # direct "Edit" rather than a suggestion. canSuggest rides along to keep
-        # the cached Item complete for the card's read-only check.
         canEdit
         canSuggest
         netWeight
@@ -420,6 +413,7 @@ mutation MarkItemForReview($input: MarkItemForReviewInput!) {
     ... on MarkItemForReviewPayload {
       item {
         id
+        ...ItemReaders
       }
     }
     ... on Error {

@@ -13,15 +13,16 @@ import {
 import { ErrorCode, UnitType } from '#/graphql/generated/schemaTypes';
 import { isRecord } from '#/utils/isRecord';
 import {
-  SyncPantryItemDocument,
   UpdatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
 } from '#features/pantry/graphql/pantry.generated';
+import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import type { QueuedMutation } from '#/apollo/offlineQueue/types';
 
 /**
  * Offline, the edit form queues its quantity write and its field write with the
- * same captured version. On replay the first bumps the server's version, so the
- * second must still land rather than surface as a conflict.
+ * same captured version. On replay the first bumps the server's version, and
+ * the drain moves the second onto it, so it lands rather than conflicting.
  */
 
 jest.mock('#store', () => ({
@@ -85,7 +86,11 @@ const gqlPantryName = gql`
 function readWrite(variables: Record<string, unknown>) {
   const input = isRecord(variables.input) ? variables.input : {};
   const num = (value: unknown) =>
-    typeof value === 'number' ? value : undefined;
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string'
+      ? Number(value)
+      : undefined;
   const str = (value: unknown) =>
     typeof value === 'string' ? value : undefined;
   return {
@@ -108,7 +113,7 @@ function fakePantryServer() {
     itemName: string;
   } = { version: 1, quantity: 2, storageNotes: null, itemName: 'Milk' };
   const answer =
-    (field: 'updatePantryItem' | 'syncPantryItem') =>
+    (field: 'updatePantryItem' | 'updatePantryItemQuantity') =>
     (variables: Record<string, unknown>) => {
       const input = readWrite(variables);
       if (input.version !== undefined && input.version !== row.version) {
@@ -128,24 +133,21 @@ function fakePantryServer() {
       }
       if (input.itemName !== undefined) row.itemName = input.itemName;
       row.version += 1;
-      // The sync payload's selection carries no `storageNotes`.
-      const { storageNotes, ...synced } = row;
-      const item = { __typename: 'PantryItem', id: 'item-1', ...synced };
       return {
         data: {
-          [field]:
-            field === 'syncPantryItem'
-              ? { __typename: 'SyncPantryItemPayload', converged: false, item }
-              : {
-                  __typename: 'UpdatePantryItemPayload',
-                  pantryItem: { ...item, storageNotes },
-                },
+          [field]: {
+            __typename:
+              field === 'updatePantryItem'
+                ? 'UpdatePantryItemPayload'
+                : 'UpdatePantryItemQuantityPayload',
+            pantryItem: { __typename: 'PantryItem', id: 'item-1', ...row },
+          },
         },
       };
     };
   const respond = (
     query: DocumentNode,
-    field: 'updatePantryItem' | 'syncPantryItem',
+    field: 'updatePantryItem' | 'updatePantryItemQuantity',
   ) =>
     completeMockedResponse({
       request: { query, variables: () => true },
@@ -153,7 +155,7 @@ function fakePantryServer() {
       maxUsageCount: Number.POSITIVE_INFINITY,
     });
   const link = new MockLink([
-    respond(SyncPantryItemDocument, 'syncPantryItem'),
+    respond(UpdatePantryItemQuantityDocument, 'updatePantryItemQuantity'),
     respond(UpdatePantryItemDocument, 'updatePantryItem'),
   ]);
   return { row, link };
@@ -194,6 +196,33 @@ const cachedItemName = (): string | undefined =>
     fragment: gqlPantryName,
   })?.itemName;
 
+/** Replays the entries as one drain over the queue that holds them. */
+async function drain(manager: QueueManager, entries: QueuedMutation[]) {
+  (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue(entries);
+  await manager.processQueue();
+}
+
+const quantityWrite = (id: string) =>
+  makeQueuedMutation({
+    id,
+    ...queuedMutationFor(UpdatePantryItemQuantityDocument),
+    variables: {
+      input: {
+        pantryItemId: 'item-1',
+        quantity: '3',
+        unitId: 'unit-1',
+        version: 1,
+      },
+    },
+  });
+
+const fieldWrite = (id: string, fields: Record<string, unknown>) =>
+  makeQueuedMutation({
+    id,
+    ...queuedMutationFor(UpdatePantryItemDocument),
+    variables: { input: { id: 'item-1', ...fields } },
+  });
+
 describe('an offline combined edit replays without a conflict', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -210,34 +239,12 @@ describe('an offline combined edit replays without a conflict', () => {
     const manager = new QueueManager();
     const failureHandler = jest.fn();
     manager.setFailureHandler(failureHandler);
-    const processMutation = manager['processMutation'].bind(manager);
 
-    const quantity = await processMutation(
-      makeQueuedMutation({
-        id: 'qty-1',
-        ...queuedMutationFor(UpdatePantryItemQuantityDocument),
-        variables: {
-          input: {
-            pantryItemId: 'item-1',
-            quantity: '3',
-            unitId: 'unit-1',
-            version: 1,
-          },
-        },
-      }),
-    );
-    const notes = await processMutation(
-      makeQueuedMutation({
-        id: 'notes-1',
-        ...queuedMutationFor(UpdatePantryItemDocument),
-        variables: {
-          input: { id: 'item-1', storageNotes: 'Top shelf', version: 1 },
-        },
-      }),
-    );
+    await drain(manager, [
+      quantityWrite('qty-1'),
+      fieldWrite('notes-1', { storageNotes: 'Top shelf', version: 1 }),
+    ]);
 
-    expect(quantity.success).toBe(true);
-    expect(notes.success).toBe(true);
     expect(failureHandler).not.toHaveBeenCalled();
     expect(server.row).toEqual({
       version: 3,
@@ -252,33 +259,12 @@ describe('an offline combined edit replays without a conflict', () => {
     const manager = new QueueManager();
     const failureHandler = jest.fn();
     manager.setFailureHandler(failureHandler);
-    const processMutation = manager['processMutation'].bind(manager);
 
-    await processMutation(
-      makeQueuedMutation({
-        id: 'qty-2',
-        ...queuedMutationFor(UpdatePantryItemQuantityDocument),
-        variables: {
-          input: {
-            pantryItemId: 'item-1',
-            quantity: '3',
-            unitId: 'unit-1',
-            version: 1,
-          },
-        },
-      }),
-    );
-    const rename = await processMutation(
-      makeQueuedMutation({
-        id: 'rename-1',
-        ...queuedMutationFor(UpdatePantryItemDocument),
-        variables: {
-          input: { id: 'item-1', itemName: 'Oat milk', version: 1 },
-        },
-      }),
-    );
+    await drain(manager, [
+      quantityWrite('qty-2'),
+      fieldWrite('rename-1', { itemName: 'Oat milk', version: 1 }),
+    ]);
 
-    expect(rename.success).toBe(true);
     expect(failureHandler).not.toHaveBeenCalled();
     expect(server.row).toMatchObject({ quantity: 3, itemName: 'Oat milk' });
     expect(cachedItemName()).toBe('Oat milk');
@@ -289,33 +275,15 @@ describe('an offline combined edit replays without a conflict', () => {
     const manager = new QueueManager();
     const failureHandler = jest.fn();
     manager.setFailureHandler(failureHandler);
-    const processMutation = manager['processMutation'].bind(manager);
 
-    await processMutation(
-      makeQueuedMutation({
-        id: 'qty-3',
-        ...queuedMutationFor(UpdatePantryItemQuantityDocument),
-        variables: {
-          input: {
-            pantryItemId: 'item-1',
-            quantity: '3',
-            unitId: 'unit-1',
-            version: 1,
-          },
-        },
-      }),
-    );
-    const rename = await processMutation(
-      makeQueuedMutation({
-        id: 'rename-2',
-        ...queuedMutationFor(UpdatePantryItemDocument),
-        variables: {
-          input: { id: 'item-1', itemName: 'Oat milk', version: 0 },
-        },
-      }),
-    );
+    await drain(manager, [
+      quantityWrite('qty-3'),
+      fieldWrite('rename-2', { itemName: 'Oat milk', version: 0 }),
+    ]);
 
-    expect(rename.success).toBe(false);
+    expect(failureHandler).toHaveBeenCalledWith(
+      expect.objectContaining({ mutationId: 'rename-2' }),
+    );
     expect(server.row.itemName).toBe('Milk');
   });
 });

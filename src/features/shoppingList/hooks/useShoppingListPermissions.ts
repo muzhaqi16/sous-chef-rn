@@ -1,9 +1,8 @@
-import { useApolloClient } from '@apollo/client/react';
+import { useFragment } from '@apollo/client/react';
+import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import {
   ShoppingListCollaboratorFragmentDoc,
   ShoppingListOwnershipFragmentDoc,
-  type ShoppingListCollaboratorFragment,
-  type ShoppingListOwnershipFragment,
 } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { getShoppingListPermissionsWithOwner } from '#features/shoppingList/utils/shoppingListPermissions';
 
@@ -40,35 +39,34 @@ interface ListDetails {
 }
 
 /**
- * Materializes the collaborator and ownership fragments, then derives the
- * permissions from them. Reads by CACHE KEY (`{ __typename, id }`) — passing a
- * masked ref returns partial or null data under `dataMasking`, which drops an
- * owner of a personal list through to no permissions.
+ * Reads the collaborator and ownership fragments live, then derives the
+ * permissions from them: a role change edits only those entities. Reads by
+ * CACHE KEY (`{ __typename, id }`), since `listDetails` may be a plain object.
  */
 export function useShoppingListPermissions(
   listDetails: ListDetails | null | undefined,
   userId: string | undefined,
 ): ShoppingListPermissions {
-  const client = useApolloClient();
+  const collaboratorNodes = useFragmentList({
+    fragment: ShoppingListCollaboratorFragmentDoc,
+    fragmentName: 'ShoppingListCollaboratorFragment',
+    from:
+      listDetails?.collaboratorsConnection?.edges.map(e => ({
+        __typename: 'ShoppingListCollaborator',
+        id: e.node.id,
+      })) ?? [],
+  });
+
+  const ownershipRef = listDetails?.ownerships?.[0];
+  const ownership = useFragment({
+    fragment: ShoppingListOwnershipFragmentDoc,
+    fragmentName: 'ShoppingListOwnershipFragment',
+    from: ownershipRef
+      ? { __typename: 'ShoppingListOwnership', id: ownershipRef.id }
+      : null,
+  });
+
   if (!listDetails) return NOTHING_ALLOWED;
-
-  const collaboratorNodes =
-    listDetails.collaboratorsConnection?.edges.map(e =>
-      client.cache.readFragment<ShoppingListCollaboratorFragment>({
-        fragment: ShoppingListCollaboratorFragmentDoc,
-        fragmentName: 'ShoppingListCollaboratorFragment',
-        from: { __typename: 'ShoppingListCollaborator', id: e.node.id },
-      }),
-    ) ?? [];
-
-  const ownershipRef = listDetails.ownerships?.[0];
-  const ownershipNode = ownershipRef
-    ? client.cache.readFragment<ShoppingListOwnershipFragment>({
-        fragment: ShoppingListOwnershipFragmentDoc,
-        fragmentName: 'ShoppingListOwnershipFragment',
-        from: { __typename: 'ShoppingListOwnership', id: ownershipRef.id },
-      })
-    : null;
 
   const permissions = getShoppingListPermissionsWithOwner(
     {
@@ -76,7 +74,7 @@ export function useShoppingListPermissions(
       collaboratorsConnection: {
         edges: collaboratorNodes.map(node => ({ node })),
       },
-      ownership: ownershipNode,
+      ownership: ownership.complete ? ownership.data : null,
     },
     userId,
     listDetails.home?.myMembership ?? null,

@@ -50,15 +50,22 @@ mutation AddDerivedItemsToShoppingList($input: AddItemsToShoppingListInput!) {
   addItemsToShoppingList(input: $input) {
     __typename
     ... on AddItemsToShoppingListPayload {
+      shoppingList {
+        id
+        ...ShoppingListReaders
+      }
       results {
         index
         clientId
         success
-        code
-        quantityIncremented
-        error
+        failure {
+          code
+          reason
+          errorId
+        }
         item {
           id
+          ...ShoppingListItemReaders
           ...AddedShoppingListItemFields
         }
       }
@@ -86,6 +93,7 @@ mutation LinkDerivedListToMealPlan($input: LinkShoppingListToMealPlanInput!) {
     ... on LinkShoppingListToMealPlanPayload {
       shoppingList {
         id
+        ...ShoppingListReaders
         generatedFromMealPlan
         mealPlan {
           id

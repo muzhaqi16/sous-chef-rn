@@ -2,7 +2,7 @@ import { errorService } from '#/services/errorService';
 import { GONE_REPLAYS, REPLAY_RECONCILERS } from './replayRegistry';
 import type { OperationVariables } from '@apollo/client';
 import { getApolloClient } from '#/apollo/clientRegistry';
-import type { ReplayReconcilerTable } from './types';
+import type { ReplayReconcilerTable, RowAdoption } from './types';
 
 /**
  * Never throws: a reconciliation failure must not turn a replay the server
@@ -14,13 +14,14 @@ function runReconciler(
   operationName: string,
   variables: OperationVariables,
   data: unknown,
+  adopt?: (adoption: RowAdoption) => void,
 ): boolean {
   const reconcile = table[operationName];
   if (!reconcile) return false;
   const client = getApolloClient();
   if (!client) return true;
   try {
-    reconcile(client.cache, variables, data);
+    reconcile(client.cache, variables, data, adopt);
   } catch (error) {
     errorService.reportError(error, {
       operation: `Queue replay reconciliation failed for ${operationName}`,
@@ -29,12 +30,14 @@ function runReconciler(
   return true;
 }
 
+/** A create the server merged is reported through `adopt`. */
 export function reconcileReplaySuccess(
   operationName: string,
   variables: OperationVariables,
   data: unknown,
+  adopt?: (adoption: RowAdoption) => void,
 ): void {
-  runReconciler(REPLAY_RECONCILERS, operationName, variables, data);
+  runReconciler(REPLAY_RECONCILERS, operationName, variables, data, adopt);
 }
 
 /**

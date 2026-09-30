@@ -48,7 +48,9 @@ export function useRecipeCookingActions({
 
   const ingredientMatching = useRecipeIngredientMatching(recipeId);
 
-  const [markRecipeAsCookedMutation] = useMutation(MarkRecipeAsCookedDocument);
+  const [markRecipeAsCookedMutation] = useMutation(MarkRecipeAsCookedDocument, {
+    context: { localFirst: true },
+  });
 
   /**
    * Fires the cook-log mutation with a client-minted id, so a queued replay
@@ -62,7 +64,6 @@ export function useRecipeCookingActions({
       () =>
         markRecipeAsCookedMutation({
           variables: { input: { ...vars, id } },
-          context: { localFirst: true },
         }),
       {
         document: MarkRecipeAsCookedDocument,

@@ -8,7 +8,7 @@ import {
   type GraphQLSchema,
   type OperationDefinitionNode,
 } from 'graphql';
-import { syncMappedOperations } from '#/apollo/offlineQueue/convertToSyncMutation';
+import { REPLAY_PREPARATIONS } from '#/apollo/offlineQueue/preparationRegistry';
 import {
   SRC,
   authoredMutations,
@@ -18,10 +18,10 @@ import {
 /**
  * Every local-first write can converge on replay.
  *
- * `queueLink` enqueues an operation when it is sync-mapped OR when its caller
- * opted in with `context: { localFirst: true }`. The first half is safe by
- * construction — a `Sync*` upsert keyed by a client-minted cuid lands the same
- * state twice. The second half is safe only if the ORIGINAL mutation is itself
+ * `queueLink` enqueues an operation when it is registered for replay OR when its
+ * caller opted in with `context: { localFirst: true }`. The first half is safe
+ * by the API's contract: those canonical mutations converge on a re-send (a
+ * minted id, a version check, a converging delete). The second half is safe only if the mutation is itself
  * at-most-once, which means the input carries something the server can
  * deduplicate on: a client-minted `id`/`clientId`, or an `idempotencyKey`.
  *
@@ -48,11 +48,11 @@ const IDEMPOTENCY_KEYS = ['id', 'clientId', 'idempotencyKey'];
  * - `bulk-create`: an operation that mints rows the client did not name. A
  *   replay CAN duplicate these, and whether it does is a server-side question
  *   this repo cannot answer (`sous-chef-api` is read-only from here). Each one
- *   needs either a `Sync*` twin or a client-minted key before it can be trusted
+ *   needs a client-minted key before it can be trusted
  *   offline.
  *
  * Nothing may be ADDED here without the same argument being written down. A new
- * local-first operation that is neither sync-mapped nor idempotent fails.
+ * local-first operation that is neither registered nor idempotent fails.
  */
 const REPLAY_SAFETY_BASELINE: Record<
   string,
@@ -138,7 +138,7 @@ describe('local-first writes are replay-safe', () => {
     ),
   );
   const mutations = authoredMutations();
-  const syncMapped = new Set(syncMappedOperations());
+  const registered = new Set(Object.keys(REPLAY_PREPARATIONS));
   const candidates = [...localFirstOperationNames()]
     .filter(name => mutations.has(name))
     .sort();
@@ -154,27 +154,27 @@ describe('local-first writes are replay-safe', () => {
     name => {
       const operation = mutations.get(name)!;
       const replaySafe =
-        syncMapped.has(name) ||
+        registered.has(name) ||
         hasIdempotentInput(schema, name, operation) ||
         name in REPLAY_SAFETY_BASELINE;
 
       expect(
         replaySafe
           ? true
-          : `${name} is fired with context.localFirst but is neither sync-mapped nor idempotent: re-sending it on reconnect would duplicate the write. Add a Sync* builder, or a client-minted id / idempotencyKey to its input.`,
+          : `${name} is fired with context.localFirst but is neither registered for replay nor idempotent: re-sending it on reconnect would duplicate the write. Add a client-minted id / idempotencyKey to its input.`,
       ).toBe(true);
     },
   );
 
   it('the baseline only shrinks', () => {
-    // An entry that has stopped applying — the operation gained a dedupe key, a
-    // `Sync*` twin, or stopped being local-first — has to leave the list, or it
+    // An entry that has stopped applying — the operation gained a dedupe key,
+    // was registered for replay, or stopped being local-first — has to leave the list, or it
     // silently exempts a future operation that happens to reuse the name.
     const stale = Object.keys(REPLAY_SAFETY_BASELINE).filter(name => {
       const operation = mutations.get(name);
       if (!operation || !candidates.includes(name)) return true;
       return (
-        syncMapped.has(name) || hasIdempotentInput(schema, name, operation)
+        registered.has(name) || hasIdempotentInput(schema, name, operation)
       );
     });
 
