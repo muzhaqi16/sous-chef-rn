@@ -23,6 +23,11 @@
       "title": "Replace the saved receipt?",
       "body": "Only one receipt is kept at a time.",
       "confirm": "Replace"
+    },
+    "parsed": {
+      "title_one": "{{count}} item read on this phone",
+      "title_other": "{{count}} items read on this phone",
+      "atPrice": "{{quantity}} at {{price}}"
     }
   }
 }

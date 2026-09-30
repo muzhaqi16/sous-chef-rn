@@ -10,6 +10,7 @@ import { ErrorState } from '#components/molecules/ErrorState';
 import { Loading } from '#components/molecules/Loading';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { alertService } from '#/services/alertService';
+import { ParsedReceiptItems } from '../components/ParsedReceiptItems';
 import { useReceiptScan } from '../hooks/useReceiptScan';
 import { receiptsTestIDs } from '../testIDs';
 
@@ -58,6 +59,7 @@ export const ReceiptScanScreen: React.FC = () => {
               {t('labels.discard')}
             </Button>
           </View>
+          {!!draft.parsed && <ParsedReceiptItems receipt={draft.parsed} />}
           <Text
             role="footnote"
             tone="secondary"

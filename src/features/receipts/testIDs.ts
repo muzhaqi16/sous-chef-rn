@@ -5,4 +5,5 @@
 export const receiptsTestIDs = {
   scanScreen: 'receipt-scan-screen',
   savedText: 'receipt-scan-saved-text',
+  parsedItems: 'receipt-scan-parsed-items',
 };

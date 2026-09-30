@@ -23,6 +23,11 @@
       "title": "¿Reemplazar el recibo guardado?",
       "body": "Solo se guarda un recibo a la vez.",
       "confirm": "Reemplazar"
+    },
+    "parsed": {
+      "title_one": "{{count}} artículo leído en este teléfono",
+      "title_other": "{{count}} artículos leídos en este teléfono",
+      "atPrice": "{{quantity}} a {{price}}"
     }
   }
 }

@@ -2,11 +2,14 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { zustandStorage } from '#/storage/mmkv';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
+import type { ParsedReceipt } from '../utils/structureReceipt';
 
 export interface ReceiptDraft {
   /** Each page's redacted text, in scan order; never an image. */
   pages: string[];
   scannedAt: string;
+  /** Structured on the phone, when its model could. */
+  parsed?: ParsedReceipt;
 }
 
 interface ReceiptDraftState {

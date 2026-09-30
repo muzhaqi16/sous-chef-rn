@@ -9,6 +9,8 @@ import { errorService } from '#/services/errorService';
 import { assembleReceiptLines } from '../utils/assembleReceiptLines';
 import { hasItemLines } from '../utils/hasItemLines';
 import { redactReceiptText } from '../utils/redactReceiptText';
+import type { ParsedReceipt } from '../utils/structureReceipt';
+import { parseReceiptOnDevice } from './onDeviceReceiptParser';
 import {
   useReceiptDraftStore,
   type ReceiptDraft,
@@ -27,8 +29,9 @@ interface UseReceiptScanOptions {
 }
 
 /**
- * Scan → recognise on device → redact → keep as the draft. The pages are
- * deleted by the recognizer whatever it returns; only redacted text is kept.
+ * Scan → recognise on device → redact → keep as the draft → structure it with
+ * the phone's model where there is one. The pages are deleted by the recognizer
+ * whatever it returns; only redacted text, and what was read from it, is kept.
  */
 export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
   const draft = useReceiptDraftStore(state => state.draft);
@@ -78,6 +81,16 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
       scannedAt: new Date().toISOString(),
     };
     saveDraft(next);
+
+    let parsed: ParsedReceipt | null = null;
+    try {
+      parsed = await parseReceiptOnDevice(next.pages);
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Label receipt lines on device',
+      });
+    }
+    if (parsed) saveDraft({ ...next, parsed });
     setStatus('saved');
   };
 
