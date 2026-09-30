@@ -543,6 +543,47 @@ Per-phase table: `docs/flashlist-performance-analysis.md`.
 `adb shell dumpsys display | grep mActiveModeId` gives the active mode; read its
 `vsyncRate`. The SM-S908U1 runs at 96 Hz, so its budget is 10.4 ms, not 16.7 ms.
 
+## Recorded measurements
+
+### Readers on the hot-path writes (2026-09-30)
+
+What the rule "a mutation returns `<Type>Readers`" costs on the two writes a
+person repeats fastest, against the documents they replaced (the tree at
+`abe49cf6a`). Each run interleaves the pre-change document, the current one and
+the current one again as an A/A control, in shuffled order, on the same row.
+
+**Server and payload** — host to the local dev API, 60 samples per arm:
+
+| Write | Response | p50 | p90 | Control p50 |
+|---|---|---|---|---|
+| `ToggleShoppingListItemPurchased`, before | 1.3–1.5 KB | 98.2 ms | 108.9 ms | |
+| `ToggleShoppingListItemPurchased`, readers | 3.5–3.6 KB | 105.9 ms | 117.2 ms | 105.8 ms |
+| `UpdatePantryItemQuantity`, before | 0.4 KB | 87.6 ms | 105.6 ms | |
+| `UpdatePantryItemQuantity`, readers | 5.0 KB | 105.6 ms | 124.1 ms | 104.2 ms |
+
+Of the quantity write's +18 ms, the pantry's `stats(today:)` is ~7 ms and the
+storage location ~3 ms — totals the write moves. The stack's catalog `item`
+(nutrition facts, photos and variants, categories) is 3.3 KB of the 5.0 KB and
+~3–7 ms, and a quantity change moves none of it.
+
+**Client** — `cache.write` of the recorded responses into a fresh `makeCache()`,
+alternating two states so every write changes values; debug build, Hermes, iPhone
+18 Pro and iPhone 17 simulators, 300 samples per arm:
+
+| Write | Before p50 | Readers p50 | Control p50 |
+|---|---|---|---|
+| Toggle (18 Pro / 17) | 0.76 / 0.76 ms | 1.80 / 1.76 ms | 1.76 / 1.79 ms |
+| Quantity (18 Pro / 17) | 0.36 / 0.35 ms | 2.41 / 2.29 ms | 2.34 / 2.27 ms |
+| Quantity, catalog `item` cut to its key (18 Pro) | | 0.87 ms | 0.87 ms |
+
+A debug build overstates this (dev-mode Apollo checks every result) and nothing
+in a release build resolves a few milliseconds of JS: a debug upper bound is the
+reading. None of it is in a tap's path — local-first writes update the screen
+before they send — so the cost is one background task per write, under a frame.
+**Decision:** the readers stay on these writes. If production
+`graphql_request_duration_ms` or payload volume ever says otherwise, the lever is
+the catalog `item` subtree, not the totals.
+
 ## References
 
 - [React Performance Profiling](https://react.dev/reference/react/Profiler)
