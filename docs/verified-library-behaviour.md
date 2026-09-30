@@ -1573,3 +1573,35 @@ rejects with `Document scanning is not supported on this device` (the plugin's
 failure state. The plugin's open iOS crash on
 a zero-page Done (websitebeaver/react-native-document-scanner-plugin#184) is
 accepted: a patch is out of bounds, and JS can't catch it.
+
+### Apple Foundation Models labels receipt lines, but can't be trusted with their figures
+
+Verified 2026-09-30 on macOS 27.0.1 (host `swift` probes) and on the iPhone 18 Pro simulator (iOS 27), through `ReceiptStructuringModule`. The simulator uses the host's model, so `SystemLanguageModel.default.availability` reads `available` there.
+
+**Claim:** with guided generation (`@Generable`) and greedy sampling, the on-device model labels numbered receipt lines reliably, but produces wrong figures when asked for the whole receipt.
+- **Asked for the full structure** (index, kind, quantity, unit price, total, code, date) it invented purchase dates, negated item prices, shifted line indices and put text in `code`.
+- **Asked only to label** each line's kind and name an item's product, it placed 10 of 10 lines, in order, on Walmart, Kroger and Costco formats. It only mislabelled Costco's instant saving (`/ 987654 TPD/EGGS 1.50-`) as a detail line.
+
+So `receipts/utils/structureReceipt.ts` reads every figure from the printed text and lets the printed words overrule a label. The model also copies flags and item numbers into product names (`E 1234567 KS WATER 40PK`), which the structuring strips.
+
+Timings for 10 lines:
+- host: 3.5–5 s;
+- in the app on the simulator: 8.0 s cold (model load), then 4.0–5.4 s;
+- the full `parseReceiptOnDevice` on Kroger: 9.2 s.
+
+Phones will differ, so the timeout is set from device runs (`on-device-receipt-recognition` task 5.1).
+
+Re-check: connect the debugger (`argent-metro-debugger`) and evaluate
+`globalThis.nativeModuleProxy.ReceiptStructuringModule.labelLines([...lines]).then(r => (globalThis.__labels = r))`.
+The deployment target is iOS 16, so the app weak-links `FoundationModels.framework` and gates every use on `#available(iOS 26, *)`.
+
+### ML Kit GenAI Prompt API can't be added under the app's Kotlin 2.1
+
+Verified 2026-09-30 against `com.google.mlkit:genai-prompt:1.0.0-beta4` (with `genai-common` beta4). It is Gemini Nano's on-device Prompt API, with typed structured output. Adding the dependency fails twice:
+
+1. `processDebugMainManifest`: the library's minSdk is 26, against the app's 24. `tools:overrideLibrary` clears it, and Gemini Nano only runs on Android 14 devices anyway.
+2. `compileDebugKotlin`: "Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0". The app pins `kotlinVersion = "2.1.20"`, and the failure hits `MainApplication.kt`, so the whole app stops compiling, not just the code that uses the library.
+
+Android on-device structuring waits for a Kotlin toolchain that reads 2.3 metadata (≥ 2.2). Until then `ReceiptStructuring.availability()` reads `unavailable` on Android, because the module isn't linked.
+
+Re-check: add `implementation("com.google.mlkit:genai-prompt:1.0.0-beta4")` to `android/app/build.gradle`, then run `./gradlew :app:compileDebugKotlin`.
