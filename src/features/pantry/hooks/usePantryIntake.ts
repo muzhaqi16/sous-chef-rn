@@ -15,6 +15,7 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { todayKey } from '#/utils/dateUtils';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
+import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
 
 /** What became of an add. The caller owns the toast and the animation. */
 export type AddPantryItemOutcome =
@@ -23,9 +24,9 @@ export type AddPantryItemOutcome =
   | { status: 'rejected' };
 
 /**
- * The pantry's local-first create: the row is written before the mutation
+ * The pantry's one local-first create: the row is written before the mutation
  * fires, withdrawn on a refusal or a duplicate, and kept when the create is
- * queued. Public so another feature's intake (a receipt) shares one path.
+ * queued. The add sheet, onboarding's picker and a receipt's apply all use it.
  */
 export function usePantryIntake(pantryId: string | undefined) {
   const { t } = useTranslation();
@@ -62,8 +63,8 @@ export function usePantryIntake(pantryId: string | undefined) {
    * refusal withdraws it, count included.
    */
   const addItem = async (
-    itemId: string,
     itemName: string,
+    input: Omit<CreatePantryItemInput, 'id' | 'pantryId' | 'today'>,
   ): Promise<AddPantryItemOutcome> => {
     if (!pantryId) return { status: 'rejected' };
 
@@ -72,11 +73,20 @@ export function usePantryIntake(pantryId: string | undefined) {
     // and its detail/edit screens query by it. Hold those off until the server
     // has the row — see `unconfirmedCreates`.
     unconfirmedCreates.mark(id);
+    // Built outside the try: a value block inside a try body bails the compiler.
+    const localRow = {
+      pantryId,
+      itemName,
+      itemId: input.item.id ?? null,
+      quantity: input.quantity,
+      unitId: input.unit?.id,
+      storageState: input.storage?.storageState,
+    };
 
     try {
       // Publishes the row AND counts it, so the header cannot fall behind the
       // list offline, where no response arrives to correct it.
-      writeLocalPantryItem(client.cache, id, { pantryId, itemName, itemId });
+      writeLocalPantryItem(client.cache, id, localRow);
       addPantryItemLocally(client.cache, pantryId, {
         __typename: 'PantryItem',
         id,
@@ -92,10 +102,7 @@ export function usePantryIntake(pantryId: string | undefined) {
     const today = todayKey();
     try {
       result = await createPantryItem({
-        variables: {
-          input: { id, pantryId, item: { id: itemId }, today },
-          today,
-        },
+        variables: { input: { ...input, id, pantryId, today }, today },
       });
     } catch (error) {
       thrown = error;
