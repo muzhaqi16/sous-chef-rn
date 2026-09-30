@@ -4,6 +4,7 @@ import type { FragmentType } from '@apollo/client/masking';
 import { SavedRecipeCard_SavedRecipeFragmentDoc } from './SavedRecipeCard.generated';
 import { RecipeCardView, type RecipeCardAction } from './RecipeCardView';
 import { recipeTotalMinutes } from '#features/recipes/utils/recipeTime';
+import { useTranslation } from '#/i18n';
 
 interface SavedRecipeCardProps {
   savedRecipeRef: FragmentType<typeof SavedRecipeCard_SavedRecipeFragmentDoc>;
@@ -16,6 +17,7 @@ export const SavedRecipeCard: React.FC<SavedRecipeCardProps> = ({
   onPress,
   onRemove,
 }) => {
+  const { t } = useTranslation();
   // Per-entity cache subscription: re-renders only when this SavedRecipe (or
   // its nested recipe scalars) change in the cache.
   const { data: saved, complete } = useFragment({
@@ -25,7 +27,8 @@ export const SavedRecipeCard: React.FC<SavedRecipeCardProps> = ({
   });
 
   if (!complete) return null;
-  const recipe = saved.recipe;
+  // Null once the recipe is unpublished: the row stays so it can be removed.
+  const { recipe, recipeId } = saved;
 
   const actions: RecipeCardAction[] = onRemove
     ? [
@@ -34,18 +37,18 @@ export const SavedRecipeCard: React.FC<SavedRecipeCardProps> = ({
           icon: 'trash-outline',
           tone: 'error',
           labelKey: 'recipes.removeFromSavedA11y',
-          onPress: () => onRemove(recipe.id),
+          onPress: () => onRemove(recipeId),
         },
       ]
     : [];
 
   return (
     <RecipeCardView
-      name={recipe.name}
-      imageUrl={recipe.imageUrl}
-      servings={recipe.servings}
-      totalMinutes={recipeTotalMinutes(recipe)}
-      onPress={() => onPress(recipe.id)}
+      name={recipe ? recipe.name : t('errors.codes.resourceGone')}
+      imageUrl={recipe?.imageUrl}
+      servings={recipe ? recipe.servings : null}
+      totalMinutes={recipe ? recipeTotalMinutes(recipe) : null}
+      onPress={() => onPress(recipeId)}
       actions={actions}
     />
   );

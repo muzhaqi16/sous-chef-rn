@@ -141,6 +141,40 @@ describe('useMealPlans', () => {
     );
   });
 
+  it("follows a plan's own edit, which leaves the list query's result as it was", async () => {
+    const now = new Date();
+    const plan = {
+      id: 'active',
+      startDate: new Date(now.getTime() - 86400000).toISOString(),
+      endDate: new Date(now.getTime() + 86400000).toISOString(),
+    };
+    const cache = seedPlanCache([plan]);
+    const { result } = renderHookWithApollo(() => useMealPlans(), {
+      operationMocks: [planData([plan])],
+      cache,
+    });
+    await waitFor(() =>
+      expect(result.current.state.currentPlan?.id).toBe('active'),
+    );
+
+    await act(async () => {
+      cache.updateFragment(
+        {
+          fragment: MealPlanDisplayFragmentDoc,
+          fragmentName: 'MealPlanDisplay',
+          id: cache.identify({ __typename: 'MealPlan', id: 'active' }),
+        },
+        cached => (cached ? { ...cached, name: 'Renamed' } : cached),
+      );
+      await Promise.resolve();
+    });
+
+    await waitFor(() =>
+      expect(result.current.state.currentPlan?.name).toBe('Renamed'),
+    );
+    expect(result.current.state.mealPlans[0]?.name).toBe('Renamed');
+  });
+
   // Resolving the current plan needs the few plans that can overlap today, not
   // a second full page of display nodes on every mount.
   it('asks for only the plans that can overlap today', async () => {

@@ -44,7 +44,12 @@ mutation InvitationAcceptanceModalAcceptShoppingListInvite(
     ... on AcceptShoppingListInvitePayload {
       collaborator {
         id
+        ...ShoppingListCollaboratorReaders
         ...InvitationAcceptanceModal_collaborator
+      }
+      shoppingList {
+        id
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -69,6 +74,10 @@ mutation InvitationAcceptanceModalDeclineShoppingListInvite(
     ... on DeclineShoppingListInvitePayload {
       collaborator {
         id
+      }
+      shoppingList {
+        id
+        ...ShoppingListReaders
       }
     }
     ... on Error {

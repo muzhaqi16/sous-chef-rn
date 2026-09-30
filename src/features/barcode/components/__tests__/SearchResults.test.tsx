@@ -18,6 +18,7 @@ jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
   safeEvict: jest.fn(),
@@ -40,11 +41,15 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
 
 jest.mock('#features/shoppingList/cache/items', () => {
   const { settledStatus } = jest.requireActual('#/apollo/utils/settleMutation');
+  const { buildAddItemsReconcileUpdate } = jest.requireActual(
+    '#features/shoppingList/cache/items',
+  );
   const revertOptimisticShoppingListItem = jest.fn();
   return {
+    buildAddItemsReconcileUpdate,
     revertOptimisticShoppingListItem,
-    addOptimisticShoppingListItem: jest.fn(),
-    createOptimisticShoppingListItem: jest.fn((id: string) => ({
+    addLocalShoppingListItem: jest.fn(),
+    createLocalShoppingListItem: jest.fn((id: string) => ({
       __typename: 'ShoppingListItem',
       id,
     })),

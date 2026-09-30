@@ -128,6 +128,8 @@
     "offlineSearchUnavailable": "La ricerca delle ricette richiede una connessione. Le tue ricette salvate sono ancora qui.",
     "queuedChangeOverwrittenResource": "{{resource}}: la tua modifica è stata sostituita da una più recente ed è stata annullata.",
     "queuedChangeOverwritten": "Una modifica è stata sostituita da una più recente ed è stata annullata.",
+    "queuedRemovalKeptResource": "{{resource}}: la rimozione non è stata applicata, perché la voce era stata unita a una già presente.",
+    "queuedRemovalKept": "Una rimozione non è stata applicata, perché la voce era stata unita a una già presente.",
     "itemNameRequired": "Inserisci il nome dell'articolo",
     "invalidQuantity": "Inserisci una quantità valida",
     "itemNotFound": "Articolo non trovato",

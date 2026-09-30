@@ -15,7 +15,7 @@ import {
   type PantryItemFixture,
 } from '../../../../../__tests__/helpers/fixtures/pantryItemFixtures';
 import { PantryItemDetail } from '../PantryItemDetail';
-import { toDateKey } from '#/utils/dateUtils';
+import { toDateKey, todayKey } from '#/utils/dateUtils';
 
 // Recipe-suggestions hook is its own concern (covered by
 // useRecipeSuggestionsForItem.test). Mock it so this integration test
@@ -354,8 +354,8 @@ describe('PantryItemDetail (integration)', () => {
       operationMocks: [
         itemMock({
           ...fullItem,
-          expiresOn: toDateKey(new Date()),
-          earliestBatchExpiresOn: toDateKey(new Date()),
+          expiresOn: todayKey(),
+          earliestBatchExpiresOn: todayKey(),
         }),
       ],
     });

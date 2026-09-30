@@ -5,7 +5,7 @@
  * targets `itemsConnection` and tells variants apart by `storeFieldName`.
  */
 
-import { gql, type ApolloCache } from '@apollo/client';
+import type { ApolloCache } from '@apollo/client';
 import {
   type ConnectionData,
   createRemoveFromParentConnectionUpdater,
@@ -13,6 +13,7 @@ import {
 } from '#/apollo/utils/cacheUpdaters';
 import type { ShoppingList } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
+import { Connections_ListCountersFragmentDoc } from './connections.generated';
 
 type ListCounter = keyof Pick<
   ShoppingList,
@@ -27,15 +28,6 @@ const LIST_COUNTERS = [
   'completionRate',
 ] satisfies ListCounter[];
 
-const LIST_COUNTERS_FRAGMENT = gql`
-  fragment ListCounters on ShoppingList {
-    totalItems
-    completedItems
-    remainingItems
-    completionRate
-  }
-`;
-
 /** A list's counters before and after one local write. */
 export interface ListCounterChange {
   listId: string;
@@ -43,14 +35,22 @@ export interface ListCounterChange {
   after: ListCounters;
 }
 
-function readListCounters(cache: ApolloCache, listCacheId: string) {
+export function readListCounters(
+  cache: ApolloCache,
+  listCacheId: string,
+): ListCounters {
   // Partial: a list cached without one counter still records the others.
-  const counters = cache.readFragment<ListCounters>({
+  const counters = cache.readFragment({
     id: listCacheId,
-    fragment: LIST_COUNTERS_FRAGMENT,
+    fragment: Connections_ListCountersFragmentDoc,
     returnPartialData: true,
   });
-  return { ...counters };
+  return {
+    totalItems: counters?.totalItems,
+    completedItems: counters?.completedItems,
+    remainingItems: counters?.remainingItems,
+    completionRate: counters?.completionRate,
+  };
 }
 
 /** Runs `write`, recording the list counters it moves so a revert can restore them exactly. */
@@ -326,20 +326,24 @@ export function moveShoppingListItemToUnpurchased(
  * Add an item to a shopping list's cache. The `isPurchased:true` variant REMOVES
  * the row (re-adding a purchased item); every other variant adds it. Pass
  * `bumpTotalItems: false` when a local-first
- * {@link addOptimisticShoppingListItem} has already counted it.
+ * {@link addLocalShoppingListItem} has already counted it.
+ *
+ * Returns true when a cached `isPurchased: false` variant already listed the
+ * line — it was on the list, not reused from a bought or removed one.
  */
 export function addNewItemToShoppingListCache(
   cache: ApolloCache,
   listId: string,
   item: { id: string },
   bumpTotalItems = true,
-): void {
+): boolean {
+  let listedActive = false;
   try {
     const parentCacheId = cache.identify({
       __typename: 'ShoppingList',
       id: listId,
     });
-    if (!parentCacheId) return;
+    if (!parentCacheId) return false;
 
     cache.modify({
       id: parentCacheId,
@@ -368,7 +372,10 @@ export function addNewItemToShoppingListCache(
           const alreadyExists = existing.edges.some(
             edge => readField<string>('id', edge.node) === item.id,
           );
-          if (alreadyExists) return existing;
+          if (alreadyExists) {
+            if (isUnpurchasedVariant(storeFieldName)) listedActive = true;
+            return existing;
+          }
 
           const node = toReference(
             { __typename: 'ShoppingListItem', id: item.id },
@@ -396,6 +403,7 @@ export function addNewItemToShoppingListCache(
   } catch (error) {
     logger.warn('Failed to update cache for new shopping list item:', error);
   }
+  return listedActive;
 }
 
 /**

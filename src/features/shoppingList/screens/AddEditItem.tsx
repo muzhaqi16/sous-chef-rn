@@ -187,7 +187,6 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
         const created = await createItem(
           {
-            shoppingListId: listId,
             itemName,
             quantity: parseQuantityInput() ?? 1,
             quantityInput: apiQuantityText,

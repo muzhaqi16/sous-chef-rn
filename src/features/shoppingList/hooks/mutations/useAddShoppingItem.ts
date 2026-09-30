@@ -7,16 +7,10 @@
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  addOptimisticShoppingListItem,
-  createOptimisticShoppingListItem,
-  reconcileShoppingCreate,
-  buildAddItemsReconcileUpdate,
-} from '#features/shoppingList/cache/items';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
+import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
-import { generateEntityId } from '#/utils/generateEntityId';
 import type { ShoppingListItemInput } from './types';
 import {
   normalizeNumericTextForApi,
@@ -59,8 +53,6 @@ export function useAddShoppingItem({
   const addItem = async (input: ShoppingListItemInput): Promise<boolean> => {
     if (!listId) return false;
 
-    const id = generateEntityId();
-
     // The manual-add form sends a raw FlexibleQuantity string, quick-add a number;
     // the string wins (the server parses it). The optimistic entity needs its
     // numeric value, fractions included ("1 1/2" → 1.5).
@@ -78,9 +70,8 @@ export function useAddShoppingItem({
         ? null
         : normalizeNumericTextForApi(input.quantityInput);
 
-    // `shoppingListId` rides on the batch input below, not on the item.
-    const itemInput = {
-      id,
+    // `shoppingListId` rides on the batch input, not on the line.
+    const line = {
       item: { itemName: input.itemName },
       quantity: apiQuantityText ?? input.quantity ?? 1,
       ...lineUnitFields(input.unitId, input.unitName),
@@ -104,51 +95,25 @@ export function useAddShoppingItem({
       }),
     };
 
-    const optimisticItem = createOptimisticShoppingListItem(id, {
-      shoppingListId: listId,
-      itemName: input.itemName,
-      quantity: optimisticQuantity,
-      quantityInput: apiQuantityText,
-      unitName: input.unitName ?? null,
-      category: input.category ?? null,
-      itemId: undefined,
-      unitId: input.unitId,
-    });
-
-    try {
-      addOptimisticShoppingListItem(client.cache, listId, optimisticItem);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Add Shopping List Item (optimistic)',
-      });
-    }
-
-    const settled = await settleMutation(
-      () =>
-        addItemMutation({
-          variables: { input: { shoppingListId: listId, items: [itemInput] } },
-          context: { localFirst: true },
-        }),
-      {
-        document: AddItemToShoppingListDocument,
-        fallback: t('errors.addItemFailed'),
-        onFailed: () => {
-          reconcileShoppingCreate(client.cache, listId, id, undefined);
-        },
+    const created = await createShoppingListRow(client.cache, {
+      listId,
+      row: {
+        itemName: input.itemName,
+        quantity: optimisticQuantity,
+        quantityInput: apiQuantityText,
+        unitName: input.unitName ?? null,
+        category: input.category ?? null,
+        unitId: input.unitId,
       },
-    );
-    if (settled.status === 'failed') return false;
-
-    // The batch can apply while refusing its only item; that refusal carries no
-    // code to classify, so it takes the caller's copy.
-    const kept = reconcileShoppingCreate(client.cache, listId, id, {
-      data: settled.data,
+      line,
+      send: addItemMutation,
+      document: AddItemToShoppingListDocument,
+      fallback: t('errors.addItemFailed'),
     });
-    if (kept === 'reverted') {
-      alertService.alert(t('labels.error'), t('errors.addItemFailed'));
-      return false;
+    if (created.failure) {
+      alertService.alert(created.failure.title, created.failure.body);
     }
-    return true;
+    return created.outcome === 'kept';
   };
 
   return { addItem };

@@ -14,6 +14,7 @@ export function useUnfavoriteRecipe() {
   const { t } = useTranslation();
   const [unfavoriteRecipeMutation] = useMutation(
     RemoveRecipeFromFavoritesDocument,
+    { context: { localFirst: true } },
   );
 
   /** True when the removal was kept — false means it reverted and was reported. */
@@ -24,9 +25,6 @@ export function useUnfavoriteRecipe() {
       mutate: () =>
         unfavoriteRecipeMutation({
           variables: { input: { recipeId } },
-          // Local-first: queue + replay (idempotent) when the API is
-          // unreachable instead of surfacing a blocking error.
-          context: { localFirst: true },
         }),
       fallback: t('recipes.removeRecipeFailed'),
     });

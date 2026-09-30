@@ -58,7 +58,7 @@ export async function performOptimisticUnfavorite({
           savedRecipesConnection: {
             ...existing.me.savedRecipesConnection,
             edges: existing.me.savedRecipesConnection.edges.filter(
-              edge => edge.node.recipe.id !== recipeId,
+              edge => edge.node.recipeId !== recipeId,
             ),
             totalCount: Math.max(
               0,

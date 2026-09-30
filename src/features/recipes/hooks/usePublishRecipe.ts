@@ -11,58 +11,46 @@ import { useTranslation } from '#/i18n';
 import { UpdateRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import {
+  snapshotFields,
+  writeEntityFields,
+} from '#/apollo/utils/localFirstFields';
+import {
+  RecipeReadersFragmentDoc,
+  type RecipeReadersFragment,
+} from '#/graphql/readers/recipeReaders.generated';
 
 export function usePublishRecipe() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [mutate, { loading: publishing }] = useMutation(UpdateRecipeDocument);
+  const [mutate, { loading: publishing }] = useMutation(UpdateRecipeDocument, {
+    context: { localFirst: true },
+  });
 
   /** `true` submits the recipe for review; `false` returns it to a draft. */
   const setSubmitted = async (
     recipeId: string,
     submitted: boolean,
   ): Promise<boolean> => {
-    // `cache.modify` only runs a modifier when the field is already cached, so
-    // `didWrite` gates the revert to that case.
-    const cacheId = client.cache.identify({
-      __typename: 'Recipe',
-      id: recipeId,
+    const entity = { __typename: 'Recipe', id: recipeId };
+    const held = client.cache.readFragment<RecipeReadersFragment>({
+      id: client.cache.identify(entity),
+      fragment: RecipeReadersFragmentDoc,
+      returnPartialData: true,
     });
-    let previous: { status: RecipeStatus; isPublished: boolean } | undefined;
-    if (cacheId) {
-      client.cache.modify<{ status: RecipeStatus; isPublished: boolean }>({
-        id: cacheId,
-        fields: {
-          status(existing, { readField }) {
-            previous = {
-              status: existing,
-              isPublished: readField<boolean>('isPublished') ?? false,
-            };
-            return submitted ? RecipeStatus.PendingReview : RecipeStatus.Draft;
-          },
-          isPublished: () => false,
-        },
-      });
-    }
-    const revert = () => {
-      const snapshot = previous;
-      if (cacheId && snapshot) {
-        client.cache.modify<{ status: RecipeStatus; isPublished: boolean }>({
-          id: cacheId,
-          fields: {
-            status: () => snapshot.status,
-            isPublished: () => snapshot.isPublished,
-          },
-        });
-      }
+    const patch = {
+      status: submitted ? RecipeStatus.PendingReview : RecipeStatus.Draft,
+      isPublished: false,
     };
+    const previous = snapshotFields(held, patch);
+    writeEntityFields(client.cache, entity, patch);
+    const revert = () => writeEntityFields(client.cache, entity, previous);
 
     const status = submitted ? RecipeStatus.Published : RecipeStatus.Draft;
     const settled = await settleMutation(
       () =>
         mutate({
           variables: { input: { id: recipeId, status } },
-          context: { localFirst: true },
         }),
       {
         document: UpdateRecipeDocument,

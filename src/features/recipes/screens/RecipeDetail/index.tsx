@@ -3,10 +3,7 @@ import React, { useState } from 'react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { View, ScrollView } from 'react-native';
 import { useTranslation, type TranslationKey } from '#/i18n';
-import {
-  RecipeStatus,
-  type ExternalSource,
-} from '#/graphql/generated/schemaTypes';
+import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { openWebUrl } from '#features/recipes/utils/externalUrl';
 import {
@@ -31,11 +28,14 @@ import { useRecipeReviews } from '#features/recipes/hooks/useRecipeReviews';
 import { ReviewSection } from '#features/recipes/components/ReviewSection';
 
 import { useRecipeDetail } from '../../hooks/useRecipeDetail';
+import type { CatalogRecipeHint } from '#features/recipes/hooks/useOpenCatalogRecipe';
+import type { RecipeDetails } from '#features/recipes/hooks/useRecipeData';
+import { AlertBanner } from '#components/molecules/AlertBanner';
+import { RecipeDetailSkeleton } from '#features/recipes/components/skeletons/RecipeDetailSkeleton';
 import { useForkRecipe } from '#features/recipes/hooks/useForkRecipe';
 import { usePublishRecipe } from '#features/recipes/hooks/usePublishRecipe';
 import { RecipeEnrichment } from '#features/recipes/components/recipeDetail/RecipeEnrichment';
 import { IngredientCard } from '#features/recipes/components/recipeDetail/IngredientCard';
-import { useAppSettings } from '#features/profile/hooks/useAppSettings';
 import { RecipeHeroImage } from '#features/recipes/components/recipeDetail/RecipeHeroImage';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
@@ -45,7 +45,6 @@ import { ShoppingListPickerSheet } from '#features/shoppingList/ui/ShoppingListP
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useUser } from '#store/useAppStore';
-import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { recipesTestIDs } from '#features/recipes/testIDs';
@@ -65,24 +64,68 @@ const PUBLISH_ACTION_LABEL: Readonly<Record<RecipeStatus, TranslationKey>> = {
   [RecipeStatus.Published]: 'recipes.unpublishA11y',
 };
 
+/** What a catalog recipe still lacks, above the parts it would fill. */
+const DETAILS_NOTICE: Readonly<
+  Record<
+    Exclude<RecipeDetails, 'complete' | 'opening'>,
+    { title: TranslationKey; subtitle: TranslationKey; icon: IconName }
+  >
+> = {
+  pending: {
+    title: 'recipes.catalogPendingTitle',
+    subtitle: 'recipes.catalogPendingSubtitle',
+    icon: 'hourglass-outline',
+  },
+  unavailable: {
+    title: 'recipes.catalogUnavailableTitle',
+    subtitle: 'recipes.catalogUnavailableSubtitle',
+    icon: 'cloud-offline-outline',
+  },
+};
+
+const DetailsNotice: React.FC<{ details: RecipeDetails; saved: boolean }> = ({
+  details,
+  saved,
+}) => {
+  const { t } = useTranslation();
+  if (details === 'complete') return null;
+  if (details === 'opening') return <RecipeDetailSkeleton />;
+  const notice = DETAILS_NOTICE[details];
+  // A saved recipe's fetch is already queued, so it is not asked to save.
+  const subtitle: TranslationKey =
+    details === 'pending' && saved
+      ? 'recipes.catalogPendingSavedSubtitle'
+      : notice.subtitle;
+  return (
+    <View style={styles.detailsNotice}>
+      <AlertBanner
+        title={t(notice.title)}
+        subtitle={t(subtitle)}
+        icon={notice.icon}
+        iconLibrary="Ionicons"
+        variant={details === 'pending' ? 'info' : 'warning'}
+      />
+    </View>
+  );
+};
+
 const RecipeDetailScreen: React.FC = () => {
   const { t } = useTranslation();
   useScreenTransition('RecipeDetail');
 
   const { toRecipeEdit, toRecipeDetail } = useAppNavigation();
   const user = useUser();
-  const { settings } = useAppSettings();
-  const preferredUnitSystem = settings.preferredUnitSystem;
   const { forkRecipe, forking } = useForkRecipe();
   const { setSubmitted, publishing } = usePublishRecipe();
   const {
     goBack,
     recipeId,
-    externalId,
+    catalogExternalId,
     loading,
     error,
+    refreshing,
+    handleRefresh,
     displayData,
-    isBackendRecipe,
     backendRecipe,
     saving,
     isSaved,
@@ -137,8 +180,11 @@ const RecipeDetailScreen: React.FC = () => {
   const showHeartIcon = !isSaved || isInFavorites || !savedFolder;
   const showFolderIcon = !isSaved || isInOtherFolder || !savedFolder;
 
-  // Check if user is recipe creator (can edit)
-  const isOwner = isBackendRecipe && backendRecipe?.createdBy?.id === user?.id;
+  // A catalog recipe has no author, so nobody owns it and it offers a fork,
+  // once fetched: a fork of a stub copies only its name and image.
+  const isOwner = !!user && backendRecipe?.createdBy?.id === user.id;
+  const canFork =
+    !!backendRecipe && !isOwner && displayData?.details === 'complete';
 
   const handleEditRecipe = () => {
     if (recipeId) {
@@ -254,7 +300,7 @@ const RecipeDetailScreen: React.FC = () => {
           } satisfies HeaderAction,
         ]
       : []),
-    ...(isBackendRecipe && !isOwner && recipeId
+    ...(canFork
       ? [
           {
             icon: 'git-branch-outline',
@@ -307,14 +353,9 @@ const RecipeDetailScreen: React.FC = () => {
       <CollapsingHeroDetail
         testID={recipesTestIDs.recipeDetail}
         onBack={goBack}
+        contentStyle={styles.recipeContent}
       >
-        <View style={styles.centerContainer}>
-          <SousChefLoader
-            size="small"
-            showBrand={false}
-            message={t('recipes.loadingRecipe')}
-          />
-        </View>
+        <RecipeDetailSkeleton showTitle />
       </CollapsingHeroDetail>
     );
   }
@@ -329,15 +370,23 @@ const RecipeDetailScreen: React.FC = () => {
         ? t('recipes.recipeNotFoundDb')
         : t('recipes.recipeNotFound'));
 
+    // Inside the template, so the back chip stays and a pull retries.
     return (
-      <View style={styles.centerContainer}>
-        <EmptyState
-          icon="alert-circle-outline"
-          title={errorMessage}
-          description={t('errors.codes.genericRetry')}
-          action={{ label: t('labels.goBack'), onPress: goBack }}
-        />
-      </View>
+      <CollapsingHeroDetail
+        testID={recipesTestIDs.recipeDetail}
+        onBack={goBack}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+      >
+        <View style={styles.centerContainer}>
+          <EmptyState
+            icon="alert-circle-outline"
+            title={errorMessage}
+            description={t('errors.codes.genericRetry')}
+            action={{ label: t('labels.tryAgain'), onPress: handleRefresh }}
+          />
+        </View>
+      </CollapsingHeroDetail>
     );
   }
 
@@ -351,12 +400,14 @@ const RecipeDetailScreen: React.FC = () => {
         actions={headerActions}
         title={displayData.title}
         contentStyle={styles.recipeContent}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
         renderHero={
           heroImage
             ? heroHeight => (
                 <RecipeHeroImage
                   imageUrl={heroImage}
-                  externalId={externalId}
+                  externalId={catalogExternalId}
                   height={heroHeight}
                 />
               )
@@ -394,7 +445,7 @@ const RecipeDetailScreen: React.FC = () => {
               </Text>
             )}
           {/* Cooked count - inline with metadata */}
-          {!!isBackendRecipe && !!recipeId && !!isSaved && (
+          {!!isSaved && (
             <Pressable
               style={({ pressed }) => [
                 styles.cookedMetadata,
@@ -438,12 +489,11 @@ const RecipeDetailScreen: React.FC = () => {
           forkedFromName={displayData.forkedFromName}
           originalAuthor={displayData.originalAuthor}
           tags={displayData.tags}
-          isBackendRecipe={isBackendRecipe}
           status={displayData.status}
           reviewNote={displayData.reviewNote}
         />
 
-        {!!isBackendRecipe && !!recipeId && !!isSaved && (
+        {!!isSaved && (
           <SavedRecipeMetadataPanel
             savedFolder={savedFolder}
             savedTags={savedTags}
@@ -454,8 +504,15 @@ const RecipeDetailScreen: React.FC = () => {
           />
         )}
 
-        {/* Dietary Tags */}
-        {!isBackendRecipe && (
+        <DetailsNotice details={displayData.details} saved={isSaved} />
+
+        {/* Dietary tags, from the provider's own data */}
+        {[
+          displayData.vegetarian,
+          displayData.vegan,
+          displayData.glutenFree,
+          displayData.dairyFree,
+        ].some(Boolean) && (
           <View style={styles.tags}>
             {!!displayData.vegetarian && (
               <View style={styles.tag}>
@@ -495,9 +552,7 @@ const RecipeDetailScreen: React.FC = () => {
               {t('recipes.about')}
             </SectionHeader>
             <Text role="body" style={styles.description}>
-              {typeof displayData.summary === 'string'
-                ? displayData.summary.replace(/<[^>]*>/g, '')
-                : displayData.summary}
+              {displayData.summary}
             </Text>
           </View>
         )}
@@ -531,7 +586,6 @@ const RecipeDetailScreen: React.FC = () => {
                     ingredient={ingredient}
                     isAdded={addedIngredients.has(ingredient.id)}
                     onPress={() => handleAddSingleIngredient(ingredient)}
-                    unitSystem={preferredUnitSystem}
                   />
                 </React.Fragment>
               ))}
@@ -539,14 +593,10 @@ const RecipeDetailScreen: React.FC = () => {
           </View>
         )}
 
-        <RecipeInstructions
-          isBackendRecipe={isBackendRecipe}
-          instructions={displayData.instructions}
-          instructionsHtml={displayData.instructionsHtml}
-        />
+        <RecipeInstructions instructions={displayData.instructions} />
 
         {/* Reviews Section */}
-        {!!isBackendRecipe && !!recipeId && (
+        {!!backendRecipe && (
           <ReviewSection {...reviewState} {...reviewActions} />
         )}
 
@@ -666,8 +716,8 @@ const RecipeDetailScreen: React.FC = () => {
 export const RecipeDetail: React.FC<
   StaticScreenProps<{
     recipeId?: string;
-    externalSource?: ExternalSource;
-    externalId?: string;
+    /** A Spoonacular recipe the screen opens itself, shown as the row was. */
+    catalog?: CatalogRecipeHint;
   }>
 > = () => (
   <RecipeDetailErrorBoundary>
@@ -685,6 +735,9 @@ const styles = StyleSheet.create(theme => ({
   },
   recipeContent: {
     paddingTop: theme.spacing.md,
+  },
+  detailsNotice: {
+    marginBottom: theme.spacing.md,
   },
   titleSpacing: {
     marginBottom: theme.spacing.md,

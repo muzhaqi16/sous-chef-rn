@@ -12,7 +12,7 @@ import {
 import { Text, type TextTone } from '#components/atoms/Text';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
-  formatQuantityForDisplay,
+  formatQuantityDisplay,
   formatQuantityForInput,
 } from '#/utils/formatQuantity';
 
@@ -106,13 +106,10 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
           <Text role="caption" tone="secondary" numberOfLines={1}>
             {t('ingredientMatch.matchedPantryItem', {
               name: match.matchedPantryItem.itemName,
-              amount: `${formatQuantityForDisplay(
-                match.matchedPantryItem.quantity,
-              )}${
-                match.matchedPantryItem.unit.symbol
-                  ? ` ${match.matchedPantryItem.unit.symbol}`
-                  : ''
-              }`,
+              amount: formatQuantityDisplay(
+                match.matchedPantryItem.displayAmount.quantity,
+                match.matchedPantryItem.displayAmount.unit.symbol,
+              ),
             })}
           </Text>
         )}

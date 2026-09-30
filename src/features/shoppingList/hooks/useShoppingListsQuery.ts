@@ -15,6 +15,10 @@ export type ShoppingListFromQuery = NonNullable<
   NonNullable<ShoppingListEdge>['node']
 >;
 
+// Every reader of `Query.shoppingLists` asks for this page: `first` is not a
+// key argument, so a smaller page read first answers the overview offline.
+export const SHOPPING_LISTS_PAGE_SIZE = 50;
+
 /**
  * List METADATA only — no items, collaborators or home membership, which come
  * from `useShoppingListItemsQuery` for the selected list. Returns every list the
@@ -24,7 +28,7 @@ export function useShoppingListsQuery() {
   const { data, previousData, loading, error, refetch } = useQuery(
     GetShoppingListsLiteDocument,
     {
-      variables: { first: 50 },
+      variables: { first: SHOPPING_LISTS_PAGE_SIZE },
     },
   );
 

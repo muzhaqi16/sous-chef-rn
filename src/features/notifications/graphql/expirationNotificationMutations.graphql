@@ -8,8 +8,8 @@ mutation MarkExpirationAction($input: MarkExpirationActionInput!) {
     ... on MarkExpirationActionPayload {
       expirationNotification {
         id
+        ...ExpirationNotificationReaders
         status
-        actionTaken
       }
     }
     ... on Error {
@@ -34,8 +34,8 @@ mutation MarkExpirationNotificationAsRead(
     ... on MarkExpirationNotificationAsReadPayload {
       expirationNotification {
         id
+        ...ExpirationNotificationReaders
         status
-        actionTaken
       }
     }
     ... on Error {

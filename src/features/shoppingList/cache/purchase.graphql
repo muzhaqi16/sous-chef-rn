@@ -1,0 +1,18 @@
+# The fields a local write owns; the merge keeps every other one as held. Also
+# the read counterpart, so a caller never reaches into the record itself.
+fragment purchase_write on ShoppingListItem {
+  id
+  purchaseInfo {
+    isPurchased
+    movedToPantryAt
+  }
+}
+
+fragment purchase_writeWithUpdatedAt on ShoppingListItem {
+  id
+  updatedAt
+  purchaseInfo {
+    isPurchased
+    movedToPantryAt
+  }
+}

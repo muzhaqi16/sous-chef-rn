@@ -12,7 +12,11 @@ import {
 // render the result are responsible for re-running these on a language change.
 import { isTranslationKey, t as tGlobal } from '#/i18n';
 import type { Translate } from '#/i18n/types';
-import { daysUntilExpiry, expiryLabel } from '#domain/expiry';
+import {
+  daysUntilExpiry,
+  EXPIRING_SOON_DAYS,
+  expiryLabel,
+} from '#domain/expiry';
 import { formatCurrency as formatMoney } from '#/utils/formatters/number';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { firstNonBlank } from '#/utils/firstNonBlank';
@@ -58,7 +62,7 @@ export const getExpirationStatus = (
   const text = expiryLabel(expiresIn, tGlobal);
   if (expiresIn < 0) return { text, type: 'expired' };
   if (expiresIn === 0) return { text, type: 'critical' };
-  if (expiresIn <= 3) return { text, type: 'warning' };
+  if (expiresIn <= EXPIRING_SOON_DAYS) return { text, type: 'warning' };
   return { text, type: 'normal' };
 };
 
@@ -178,7 +182,7 @@ export const getExpiryInfo = (
   return {
     text: expiryLabel(diffDays, tGlobal),
     isExpired: diffDays < 0,
-    isUrgent: diffDays <= 3,
+    isUrgent: diffDays <= EXPIRING_SOON_DAYS,
   };
 };
 

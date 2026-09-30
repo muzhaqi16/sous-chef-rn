@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useLazyQuery } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import {
   GetBrandsDocument,
   GetCategoriesDocument,
@@ -8,6 +8,7 @@ import { GetStoresDocument } from '#operations/store/store.generated';
 import { GetCommonUnitsDocument } from '#operations/item/unit.generated';
 import type { CategorySuggestion } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
+import { fromServer } from '#/apollo/utils/fromServer';
 import {
   useAppStore,
   useIsOnline,
@@ -59,22 +60,7 @@ export function useDataPreloading() {
   const lastBrandsFetchedAt = useAppStore(state => state.lastBrandsFetchedAt);
   const lastStoresFetchedAt = useAppStore(state => state.lastStoresFetchedAt);
 
-  const [fetchUnits] = useLazyQuery(GetCommonUnitsDocument, {
-    fetchPolicy: 'cache-first',
-    errorPolicy: 'ignore',
-  });
-  const [fetchCategories] = useLazyQuery(GetCategoriesDocument, {
-    fetchPolicy: 'cache-first',
-    errorPolicy: 'ignore',
-  });
-  const [fetchBrands] = useLazyQuery(GetBrandsDocument, {
-    fetchPolicy: 'cache-first',
-    errorPolicy: 'ignore',
-  });
-  const [fetchStores] = useLazyQuery(GetStoresDocument, {
-    fetchPolicy: 'cache-first',
-    errorPolicy: 'ignore',
-  });
+  const client = useApolloClient();
 
   // Guards a dataset from being re-fetched before its timestamp updates.
   const inFlightRef = useRef<Set<string>>(new Set());
@@ -104,25 +90,35 @@ export function useDataPreloading() {
       });
     };
 
-    // `commitWarm` stamps the timestamp on any resolved fetch (so it isn't
-    // re-fetched until the TTL) and skips a genuinely failed fetch (`map` over
-    // `undefined` edges yields `undefined`), leaving the timestamp null to retry
-    // on the next online tick.
+    // `commitWarm` stamps the timestamp on a server answer (so it isn't
+    // re-fetched until the TTL) and skips anything else (`map` over `undefined`
+    // edges yields `undefined`), leaving the timestamp null to retry on the
+    // next online tick.
     warm('units', lastUnitsFetchedAt, async () => {
-      const result = await fetchUnits();
+      const data = await fromServer(() =>
+        client.query({
+          query: GetCommonUnitsDocument,
+          fetchPolicy: 'network-only',
+        }),
+      );
       const store = useStore.getState();
       commitWarm(
-        result.data?.units,
+        data?.units,
         store.setCachedUnits,
         store.setLastUnitsFetchedAt,
       );
     });
 
     warm('categories', lastCategoriesFetchedAt, async () => {
-      const result = await fetchCategories();
+      const data = await fromServer(() =>
+        client.query({
+          query: GetCategoriesDocument,
+          fetchPolicy: 'network-only',
+        }),
+      );
       const store = useStore.getState();
       commitWarm(
-        result.data?.categories.edges.map(
+        data?.categories.edges.map(
           (edge): CategorySuggestion => ({
             __typename: 'CategorySuggestion',
             id: edge.node.id,
@@ -139,10 +135,12 @@ export function useDataPreloading() {
     });
 
     warm('brands', lastBrandsFetchedAt, async () => {
-      const result = await fetchBrands();
+      const data = await fromServer(() =>
+        client.query({ query: GetBrandsDocument, fetchPolicy: 'network-only' }),
+      );
       const store = useStore.getState();
       commitWarm(
-        result.data?.brands.edges.map(edge => ({
+        data?.brands.edges.map(edge => ({
           id: edge.node.id,
           name: edge.node.name,
         })),
@@ -152,10 +150,12 @@ export function useDataPreloading() {
     });
 
     warm('stores', lastStoresFetchedAt, async () => {
-      const result = await fetchStores();
+      const data = await fromServer(() =>
+        client.query({ query: GetStoresDocument, fetchPolicy: 'network-only' }),
+      );
       const store = useStore.getState();
       commitWarm(
-        result.data?.stores.edges.map(edge => ({
+        data?.stores.edges.map(edge => ({
           id: edge.node.id,
           name: edge.node.name,
           address: edge.node.address,
@@ -171,9 +171,6 @@ export function useDataPreloading() {
     lastCategoriesFetchedAt,
     lastBrandsFetchedAt,
     lastStoresFetchedAt,
-    fetchUnits,
-    fetchCategories,
-    fetchBrands,
-    fetchStores,
+    client,
   ]);
 }

@@ -7,7 +7,7 @@ import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { FilteredPantryItems } from '../FilteredPantryItems';
 import { SkeletonCircle } from '#components/atoms/Skeleton/SkeletonCircle';
 import { pantryTestIDs } from '#features/pantry/testIDs';
-import { toDateKey } from '#/utils/dateUtils';
+import { toDateKey, todayKey } from '#/utils/dateUtils';
 
 // Structural shape consumed by the screen via the mocked `usePantryManagement`.
 type MockPantryItem = {
@@ -519,7 +519,7 @@ describe('FilteredPantryItems', () => {
       expect(mockUsePantryManagement).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
-          filters: { expiringSoon: true, today: toDateKey(new Date()) },
+          filters: { expiringSoon: true, today: todayKey() },
         }),
       );
     });
@@ -531,7 +531,7 @@ describe('FilteredPantryItems', () => {
       expect(mockUsePantryManagement).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
-          filters: { expiringSoon: true, today: toDateKey(new Date()) },
+          filters: { expiringSoon: true, today: todayKey() },
         }),
       );
     });

@@ -61,7 +61,9 @@ export const useConfigurableSettings = () => {
   // No optimistic response — UserSettings has many required fields that are
   // hard to predict; normalization writes the response by id. Failures settle
   // in `updateUserPreferences` below, the single alerter.
-  const [updateSettingsMutation] = useMutation(UpdateUserPreferencesDocument);
+  const [updateSettingsMutation] = useMutation(UpdateUserPreferencesDocument, {
+    context: { localFirst: true },
+  });
 
   // Biometric state
   const [biometricAvailable, setBiometricAvailable] = useState(false);
@@ -163,7 +165,6 @@ export const useConfigurableSettings = () => {
       () =>
         updateSettingsMutation({
           variables: { input },
-          context: { localFirst: true },
         }),
       {
         document: UpdateUserPreferencesDocument,

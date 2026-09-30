@@ -1,4 +1,4 @@
-import { useQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import {
   MySavedRecipesDocument,
   type MySavedRecipesQuery,
@@ -70,10 +70,7 @@ export function useSavedRecipes({
 
   const { data, loading, error, refetch, fetchMore } = useQuery(
     MySavedRecipesDocument,
-    {
-      variables: { first: SAVED_RECIPES_PAGE_SIZE },
-      skip: isLoggedOut,
-    },
+    isLoggedOut ? skipToken : { variables: { first: SAVED_RECIPES_PAGE_SIZE } },
   );
 
   useApolloErrorLogger(MySavedRecipesDocument, error);
@@ -81,6 +78,7 @@ export function useSavedRecipes({
   const connectionData = useConnectionData({
     data,
     selector: d => d.me?.savedRecipesConnection,
+    key: 'MySavedRecipes',
     loading,
     fetchMore,
     refetch,

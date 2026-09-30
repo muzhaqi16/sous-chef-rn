@@ -43,13 +43,18 @@ export function useToggleShoppingItem({
   const client = useApolloClient();
   const { t } = useTranslation();
 
+  // An API unreachable while "online" queues for replay rather than raising a
+  // blocking error; the toggle is idempotent on a real id.
   const [togglePurchasedMutation] = useMutation(
     ToggleShoppingListItemPurchasedDocument,
+    { context: { localFirst: true } },
   );
 
   // Amounts go through updateShoppingListItem — the toggle input can't carry
-  // purchaseTracking. Its replay fragment SyncShoppingListItem forwards it.
-  const [updatePurchaseMutation] = useMutation(UpdateShoppingListItemDocument);
+  // purchaseTracking.
+  const [updatePurchaseMutation] = useMutation(UpdateShoppingListItemDocument, {
+    context: { localFirst: true },
+  });
 
   const toggleItem = async (itemId: string) => {
     if (!listId) return false;
@@ -131,9 +136,6 @@ export function useToggleShoppingItem({
       typeof togglePurchasedMutation
     >[0] = {
       variables: { input: { id: itemId, purchased: newStatus } },
-      // An API unreachable while "online" queues for replay rather than raising a
-      // blocking error; the toggle is idempotent on a real id.
-      context: { localFirst: true },
       onCompleted: data => {
         // Drop the offline marker only once the server confirms — a queued
         // completion resolves with a null payload and must keep it.
@@ -273,7 +275,6 @@ export function useToggleShoppingItem({
           },
         },
       },
-      context: { localFirst: true },
       onCompleted: data => {
         if (appliedPayload(data)) clearPersistence();
       },

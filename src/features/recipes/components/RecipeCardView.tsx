@@ -24,7 +24,8 @@ export interface RecipeCardAction {
 interface RecipeCardViewProps {
   name: string;
   imageUrl?: string | null;
-  servings: number;
+  /** Servings, or null to omit them. */
+  servings: number | null;
   /** Total minutes, or null to omit the time entirely. */
   totalMinutes: number | null;
   onPress: () => void;
@@ -68,17 +69,25 @@ export const RecipeCardView: React.FC<RecipeCardViewProps> = ({
         <Text role={rowType.title} numberOfLines={1}>
           {name}
         </Text>
-        <Text
-          role={rowType.subtitle}
-          tone="secondary"
-          numberOfLines={1}
-          style={commonStyles.rowTextGap}
-        >
-          {t('recipes.servingsCount', { count: servings })}
-          {totalMinutes != null
-            ? ` • ${t('labels.min', { count: totalMinutes })}`
-            : ''}
-        </Text>
+        {(servings != null || totalMinutes != null) && (
+          <Text
+            role={rowType.subtitle}
+            tone="secondary"
+            numberOfLines={1}
+            style={commonStyles.rowTextGap}
+          >
+            {[
+              servings != null
+                ? t('recipes.servingsCount', { count: servings })
+                : null,
+              totalMinutes != null
+                ? t('labels.min', { count: totalMinutes })
+                : null,
+            ]
+              .filter(part => part !== null)
+              .join(' • ')}
+          </Text>
+        )}
       </View>
       {!!actions?.length && (
         <View style={styles.actions}>

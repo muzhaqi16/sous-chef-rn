@@ -29,7 +29,10 @@ describe('home hooks utils', () => {
       const mockCache = {
         modify: jest.fn(),
       } as Partial<ApolloCache> as ApolloCache;
-      const mockItem = { id: 'home-1' };
+      const mockItem: Parameters<typeof addToHomesCache>[1] = {
+        __typename: 'Home',
+        id: 'home-1',
+      };
       const options: { position: 'end' } = { position: 'end' };
 
       addToHomesCache(mockCache, mockItem, options);

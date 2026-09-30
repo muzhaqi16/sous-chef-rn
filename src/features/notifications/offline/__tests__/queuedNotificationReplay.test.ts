@@ -13,6 +13,7 @@ import {
   MarkNotificationAsReadDocument,
 } from '#features/notifications/graphql/notificationMutations.generated';
 import { DeleteMultipleNotificationsDocument } from '#features/notifications/graphql/bulkNotificationMutations.generated';
+import { NotificationSummaryDocument } from '#features/notifications/graphql/notifications.generated';
 import { ErrorCode, NotificationStatus } from '#/graphql/generated/schemaTypes';
 import { QueueManager } from '#/apollo/offlineQueue/queueManager';
 import { isRecord } from '#/utils/isRecord';
@@ -130,5 +131,47 @@ describe('a queued mark-read of a notification deleted elsewhere', () => {
     expect(result.success).toBe(true);
     expect(failureHandler).not.toHaveBeenCalled();
     expect(cachedNotifications(mockClient)).toEqual([]);
+  });
+});
+
+describe('a queued mark-read replayed later', () => {
+  // The local −1 stood in while the write was queued; the replay's stated
+  // summary replaces it rather than moving it again.
+  it("settles the badge to the replay's stated summary", async () => {
+    mockClient = replayClient(MarkNotificationAsReadDocument, {
+      markNotificationAsRead: {
+        __typename: 'MarkNotificationAsReadPayload',
+        notificationSummary: {
+          __typename: 'NotificationSummary',
+          id: 'user-1',
+          unreadCount: 7,
+          hasUrgent: false,
+        },
+      },
+    });
+    mockClient.cache.writeQuery({
+      query: NotificationSummaryDocument,
+      data: {
+        __typename: 'Query',
+        notificationSummary: {
+          __typename: 'NotificationSummary',
+          id: 'user-1',
+          unreadCount: 4,
+          hasUrgent: true,
+        },
+      },
+    });
+
+    await new QueueManager()['executeMutation'](
+      makeQueuedMutation({
+        ...queuedMutationFor(MarkNotificationAsReadDocument),
+        variables: { input: { id: 'n1' } },
+      }),
+    );
+
+    expect(
+      mockClient.cache.readQuery({ query: NotificationSummaryDocument })
+        ?.notificationSummary,
+    ).toMatchObject({ unreadCount: 7, hasUrgent: false });
   });
 });

@@ -46,9 +46,9 @@ jest.mock('#features/shoppingList/cache/items', () => {
   const revert = jest.fn();
   return {
     revertOptimisticShoppingListItem: revert,
-    addOptimisticShoppingListItem: jest.fn(),
+    addLocalShoppingListItem: jest.fn(),
     buildAddItemsReconcileUpdate: jest.fn(() => jest.fn()),
-    createOptimisticShoppingListItem: jest.fn((id: string) => ({
+    createLocalShoppingListItem: jest.fn((id: string) => ({
       __typename: 'ShoppingListItem',
       id,
     })),
@@ -484,8 +484,6 @@ describe('usePantryItemDetailActions', () => {
                 index: 0,
                 clientId: null,
                 success: true,
-                quantityIncremented: false,
-                error: null,
                 item: { __typename: 'ShoppingListItem', id: 'sli-1' },
               },
             ],
@@ -528,8 +526,6 @@ describe('usePantryItemDetailActions', () => {
                 index: 0,
                 clientId: null,
                 success: true,
-                quantityIncremented: false,
-                error: null,
                 item: { __typename: 'ShoppingListItem', id: 'sli-1' },
               },
             ],
@@ -566,8 +562,6 @@ describe('usePantryItemDetailActions', () => {
                 index: 0,
                 clientId: null,
                 success: true,
-                quantityIncremented: false,
-                error: null,
                 item: { __typename: 'ShoppingListItem', id: 'sli-1' },
               },
             ],

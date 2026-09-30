@@ -4,28 +4,35 @@
  */
 import {
   addPantryItemLocally,
+  carriesPantryCount,
   removePantryItemLocally,
   revertOptimisticPantryItem,
 } from '#features/pantry/cache/items';
 import { extractMutationPayload } from '#/utils/errors/mutationPayload';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import type { ReplayReconcilerTable } from '#/apollo/offlineQueue/types';
 import { isRecord } from '#/utils/isRecord';
 import type { ApolloCache } from '@apollo/client';
 
-type Withdraw = (cache: ApolloCache, pantryId: string, itemId: string) => void;
+type Withdraw = (
+  cache: ApolloCache,
+  pantryId: string,
+  itemId: string,
+  options: { countsSettled: boolean },
+) => void;
 
 /**
- * A replay whose payload names a different row than the one minted locally:
- * the ghost is withdrawn AND the server's row linked, since withdrawing alone
- * leaves neither. Both helpers are membership-gated, so a re-drain is a no-op.
+ * A replay whose payload names a different row than the one minted locally
+ * (`outcome: MERGED`): the ghost is withdrawn AND the server's row linked, since
+ * withdrawing alone leaves neither, and later writes move to it. Both helpers
+ * are membership-gated, so a re-drain is a no-op.
  */
 const adoptServerRow =
   (
-    mintedKey: 'pantryItemId' | 'clientId',
-    returnedKey: 'pantryItem' | 'item',
+    mintedKey: 'pantryItemId' | 'id',
     withdraw: Withdraw,
   ): ReplayReconcilerTable[string] =>
-  (cache, variables, data) => {
+  (cache, variables, data, adopt) => {
     const input: unknown = variables.input;
     if (!isRecord(input)) return;
     const mintedId = input[mintedKey];
@@ -33,17 +40,33 @@ const adoptServerRow =
     if (typeof mintedId !== 'string' || typeof pantryId !== 'string') return;
 
     const payload: unknown = extractMutationPayload(data);
-    const returned = isRecord(payload) ? payload[returnedKey] : undefined;
+    const returned = isRecord(payload) ? payload.pantryItem : undefined;
     const serverId = isRecord(returned) ? returned.id : undefined;
     // No id back (a refusal, or a shape without one): nothing to compare.
     if (typeof serverId !== 'string' || !serverId || serverId === mintedId) {
       return;
     }
 
-    withdraw(cache, pantryId, mintedId);
-    addPantryItemLocally(cache, pantryId, {
-      __typename: 'PantryItem',
-      id: serverId,
+    // A document queued by an older build reads its pantry through the row;
+    // one queued before either was returned carries no count.
+    const countsSettled = [
+      isRecord(payload) ? payload.pantry : undefined,
+      isRecord(returned) ? returned.pantry : undefined,
+    ].some(pantry => carriesPantryCount(pantry, pantryId));
+    withdraw(cache, pantryId, mintedId, { countsSettled });
+    addPantryItemLocally(
+      cache,
+      pantryId,
+      { __typename: 'PantryItem', id: serverId },
+      { countsSettled },
+    );
+    adopt?.({
+      mintedId,
+      survivingId: serverId,
+      version:
+        isRecord(returned) && typeof returned.version === 'number'
+          ? returned.version
+          : undefined,
     });
   };
 
@@ -54,7 +77,6 @@ const adoptServerRow =
  */
 export const reconcileMoveToPantryReplay = adoptServerRow(
   'pantryItemId',
-  'pantryItem',
   removePantryItemLocally,
 );
 
@@ -63,7 +85,21 @@ export const reconcileMoveToPantryReplay = adoptServerRow(
  * unit that another member added meanwhile absorbs it under its own id.
  */
 export const reconcileCreatePantryItemReplay = adoptServerRow(
-  'clientId',
-  'item',
+  'id',
   revertOptimisticPantryItem,
 );
+
+/**
+ * An applied delete answers with its row's `{ id }`, which re-creates the entity
+ * the local removal evicted; it goes again. A converged replay answers `null`.
+ */
+const settleDelete =
+  (typename: string): ReplayReconcilerTable[string] =>
+  (cache, variables) => {
+    const input: unknown = variables.input;
+    if (!isRecord(input)) return;
+    if (typeof input.id === 'string') safeEvict(cache, typename, input.id);
+  };
+
+export const settlePantryItemDelete = settleDelete('PantryItem');
+export const settlePantryDelete = settleDelete('Pantry');

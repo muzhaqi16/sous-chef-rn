@@ -5,7 +5,6 @@
 import { applyNotificationRemoved } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import { isRecord } from '#/utils/isRecord';
-import { useStore } from '#store';
 import type { ReplayReconcilerTable } from '#/apollo/offlineQueue/types';
 
 export const removeGoneNotification: ReplayReconcilerTable[string] = (
@@ -14,6 +13,6 @@ export const removeGoneNotification: ReplayReconcilerTable[string] = (
 ) => {
   const input: unknown = variables.input;
   if (!isRecord(input) || typeof input.id !== 'string') return;
-  applyNotificationRemoved(cache, useStore.getState().user?.id, input.id);
+  applyNotificationRemoved(cache, input.id);
   useNotificationStore.getState().clearExpirationLink(input.id);
 };

@@ -6,16 +6,15 @@ import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { useTranslation } from '#/i18n';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
+import type { ShownQuantity } from '#features/pantry/components/modals/PantryActionModal';
 
 interface QuantityInputFeedbackProps {
-  /** Remaining quantity after subtracting user input (null = no valid input) */
-  remaining: number | null;
-  /** Available quantity in the active unit (for the "exceeds" message) */
-  availableInUnit: number | null;
-  /** Unit symbol for remaining display (e.g. "g" for dual-tracked, or same as consumeUnitSymbol) */
-  activeUnitSymbol: string;
+  /** What is left after the input, as it will read (null = no valid input) */
+  remaining: ShownQuantity | null;
+  /** What is available, for the "exceeds" message */
+  available: ShownQuantity | null;
   /** Unit symbol for quick-select chips (the consumption unit, e.g. "c") */
-  consumeUnitSymbol?: string;
+  consumeUnitSymbol: string;
   /** Whether a converted (non-tracking) unit is selected */
   isConvertedUnit: boolean;
   /** Conversion preview text (e.g. "0.25 c ≈ 0.03 bag") */
@@ -40,8 +39,7 @@ interface QuantityInputFeedbackProps {
  */
 export const QuantityInputFeedback: React.FC<QuantityInputFeedbackProps> = ({
   remaining,
-  availableInUnit,
-  activeUnitSymbol,
+  available,
   isConvertedUnit,
   previewText,
   previewLoading,
@@ -54,7 +52,6 @@ export const QuantityInputFeedback: React.FC<QuantityInputFeedbackProps> = ({
   const { t } = useTranslation();
   const showConversion = isConvertedUnit;
   const showRemaining = remaining !== null;
-  const chipUnitSymbol = consumeUnitSymbol ?? activeUnitSymbol;
 
   return (
     <>
@@ -63,7 +60,7 @@ export const QuantityInputFeedback: React.FC<QuantityInputFeedbackProps> = ({
           fractions={commonFractions}
           onSelect={onFractionSelect}
           selectedValue={selectedFractionValue}
-          unitSymbol={chipUnitSymbol}
+          unitSymbol={consumeUnitSymbol}
           displayAsFraction
         />
       ) : null}
@@ -71,17 +68,17 @@ export const QuantityInputFeedback: React.FC<QuantityInputFeedbackProps> = ({
         <View style={commonStyles.bottomSheetInfoRow}>
           {showRemaining ? (
             <Text
-              role={remaining < 0 ? 'error' : 'caption'}
-              tone={remaining < 0 ? 'error' : 'secondary'}
+              role={remaining.quantity < 0 ? 'error' : 'caption'}
+              tone={remaining.quantity < 0 ? 'error' : 'secondary'}
             >
-              {remaining >= 0 || availableInUnit === null
+              {remaining.quantity >= 0 || available === null
                 ? t('deduction.remainingAfter', {
-                    amount: formatQuantityForDisplay(remaining),
-                    unit: activeUnitSymbol,
+                    amount: formatQuantityForDisplay(remaining.quantity),
+                    unit: remaining.unitSymbol,
                   })
                 : t('deduction.exceedsAvailable', {
-                    amount: formatQuantityForDisplay(availableInUnit),
-                    unit: activeUnitSymbol,
+                    amount: formatQuantityForDisplay(available.quantity),
+                    unit: available.unitSymbol,
                   })}
             </Text>
           ) : null}

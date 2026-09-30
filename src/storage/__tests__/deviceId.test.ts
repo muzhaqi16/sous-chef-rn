@@ -233,3 +233,43 @@ describe('the superseded identifier', () => {
     expect(__mockStore.has('device_fingerprint')).toBe(false);
   });
 });
+
+describe('the registered locale', () => {
+  it('is new when none is on record, and recorded', () => {
+    const mod = loadModule();
+
+    expect(mod.recordRegisteredLocale('en-US')).toBe(true);
+    expect(mod.recordRegisteredLocale('en-US')).toBe(false);
+  });
+
+  it('is new when the device locale changed since the last registration', () => {
+    const mod = loadModule();
+    mod.recordRegisteredLocale('en-US');
+
+    expect(mod.recordRegisteredLocale('de-DE')).toBe(true);
+  });
+
+  it('records a locale the device could not read, so it is not new twice', () => {
+    const mod = loadModule();
+
+    expect(mod.recordRegisteredLocale(null)).toBe(true);
+    expect(mod.recordRegisteredLocale(null)).toBe(false);
+  });
+
+  it('is new again once a session end forgets it', () => {
+    const mod = loadModule();
+    mod.recordRegisteredLocale('en-US');
+
+    mod.clearRegisteredLocale();
+
+    expect(mod.recordRegisteredLocale('en-US')).toBe(true);
+  });
+
+  it('is always new where nothing survives to compare with', () => {
+    (isRecoveryStorage as jest.Mock).mockReturnValue(true);
+    const mod = loadModule();
+
+    expect(mod.recordRegisteredLocale('en-US')).toBe(true);
+    expect(mod.recordRegisteredLocale('en-US')).toBe(true);
+  });
+});

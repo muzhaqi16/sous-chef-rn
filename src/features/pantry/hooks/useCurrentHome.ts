@@ -18,7 +18,7 @@ export function useCurrentHome() {
   });
 
   // Preserve homes (connection-shape nodes) across incomplete cache reads.
-  const homes = usePreservedNodes(homesData?.homes);
+  const homes = usePreservedNodes(homesData?.homes, 'GetHomes');
 
   const currentHome = isHomeSelectionReady
     ? homes.find(h => h.id === selectedHomeId)

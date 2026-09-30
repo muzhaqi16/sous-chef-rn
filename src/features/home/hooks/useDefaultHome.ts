@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { gql, type ApolloCache } from '@apollo/client';
-import { useApolloClient, useLazyQuery } from '@apollo/client/react';
+import type { ApolloCache } from '@apollo/client';
+import { skipToken, useApolloClient, useQuery } from '@apollo/client/react';
 import { safeEvictMany } from '#/apollo/utils/cacheUpdaters';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import {
@@ -14,32 +14,7 @@ import { useStore } from '#store';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import { pantriesOf, defaultPantryOf } from '#domain/homePantries';
 import { logger } from '#/utils/environment';
-
-/**
- * Narrow on purpose: a `readQuery` of the whole `GetHomes` document is
- * all-or-nothing, so one unrelated evicted record makes the check unanswerable.
- */
-const SELECTED_HOME_PANTRIES = gql`
-  fragment SelectedHomePantries_home on Home {
-    id
-    pantriesConnection {
-      totalCount
-      edges {
-        node {
-          id
-        }
-      }
-    }
-  }
-`;
-
-/** What the fragment above reads back. */
-type SelectedHomePantries = {
-  pantriesConnection?: {
-    totalCount?: number | null;
-    edges?: Array<{ node?: { id: string } | null } | null> | null;
-  } | null;
-};
+import { UseDefaultHome_HomeFragmentDoc } from './useDefaultHome.generated';
 
 /**
  * True only when the cached connection holds the whole set. `GetHomes` pages
@@ -64,16 +39,16 @@ const checkPantryBelongsToHome = (
   const cacheId = cache.identify({ __typename: 'Home', id: homeId });
   const home =
     cacheId &&
-    cache.readFragment<SelectedHomePantries>({
+    cache.readFragment({
       id: cacheId,
-      fragment: SELECTED_HOME_PANTRIES,
+      fragment: UseDefaultHome_HomeFragmentDoc,
     });
 
   const connection = home ? home.pantriesConnection : null;
   if (!connection) return 'unknown';
   if (!isConnectionComplete(connection)) return 'unknown';
 
-  return (connection.edges ?? []).some(edge => edge?.node?.id === pantryId)
+  return connection.edges.some(edge => edge.node.id === pantryId)
     ? 'valid'
     : 'invalid';
 };
@@ -119,14 +94,18 @@ export const useDefaultHome = () => {
   const isHomeSelectionReady = useIsHomeSelectionReady();
   const setIsHomeSelectionReady = useSetIsHomeSelectionReady();
 
-  // PERFORMANCE: Use lazy queries with STABLE options to control when they execute
-  // Using hardcoded 'cache-first' instead of dynamic policy prevents function recreation
-  // on network status changes which caused query cascades
-  const [getHomes, { data: homes, loading, called, refetch: refetchHomes }] =
-    useLazyQuery(GetHomesDocument, {
-      fetchPolicy: 'cache-first',
-      errorPolicy: 'ignore',
-    });
+  // Cache-first: a same-user cold start paints from the persisted cache, and a
+  // fresh login misses (logout clears the store) and fetches that user's homes.
+  const {
+    data: homes,
+    loading,
+    refetch: refetchHomes,
+  } = useQuery(
+    GetHomesDocument,
+    canAttemptQueries
+      ? { fetchPolicy: 'cache-first', errorPolicy: 'ignore' }
+      : skipToken,
+  );
 
   // Opens the pantry query in parallel with GetHomes when the persisted pair
   // still checks out against the synchronously restored cache. `unknown` takes
@@ -163,11 +142,9 @@ export const useDefaultHome = () => {
     client,
   ]);
 
-  // Execute query ONCE when authenticated to populate Apollo cache
-  // This runs on every app startup (hasInitializedHomeData resets) to ensure
-  // the cache has home data, even if selectedHomeId is already persisted
-  // PERF: Read hasInitializedHomeData non-reactively to avoid triggering a full
-  // re-render of PantryMainScreen when this flag changes (false→true)
+  // The app-wide "core data is loading" signal the reference-data warmers wait
+  // on. Read non-reactively: a reactive read re-renders PantryMainScreen when it
+  // flips.
   useEffect(() => {
     const {
       hasInitializedHomeData: hasInitialized,
@@ -175,18 +152,14 @@ export const useDefaultHome = () => {
     } = useStore.getState();
     if (canAttemptQueries && !hasInitialized) {
       setHasInitializedHomeData(true);
-      // Logout calls client.clearStore(), so on a fresh login this cache-first
-      // read misses and fetches from the network (fresh data for the new user);
-      // on a same-user cold start it paints instantly from the persisted cache.
-      void getHomes();
     }
-  }, [canAttemptQueries, getHomes]);
+  }, [canAttemptQueries]);
 
   // Preserve homes data even when query fails - prevents cascade failures.
   // Each node carries `id`, `isDefault`, `myMembership`, and
   // `pantriesConnection` from the operation plus a masked `HomeCard_home`
   // ref. Pantry lookups read the connection nodes via `extractNodes`.
-  const homesList = usePreservedNodes(homes?.homes);
+  const homesList = usePreservedNodes(homes?.homes, 'GetHomes');
 
   // Derive default home from isDefault field (no separate query needed)
   const remoteDefaultHomeId = homesList.find(h => h.isDefault)?.id ?? null;
@@ -286,7 +259,7 @@ export const useDefaultHome = () => {
   // "no home" fallback. Refetch once per selected home; a genuinely empty list
   // stays empty without re-triggering.
   const hasSelectionButNoHomes = !!(
-    called &&
+    canAttemptQueries &&
     !loading &&
     selectedHomeId &&
     homesList.length === 0
@@ -357,7 +330,7 @@ export const useDefaultHome = () => {
   // selection is local only: the server makes a first created or joined home
   // the default itself, and this can see a home whose create is still in flight.
   useEffect(() => {
-    if (hasAutoSelectedRef.current || loading || !called) return;
+    if (hasAutoSelectedRef.current || loading || !canAttemptQueries) return;
     const [firstHome] = homesList;
     if (!firstHome || selectedHomeId || remoteDefaultHomeId) return;
 
@@ -374,7 +347,7 @@ export const useDefaultHome = () => {
     hasInitializedRef.current = true;
   }, [
     loading,
-    called,
+    canAttemptQueries,
     homesList,
     selectedHomeId,
     selectedPantryId,
@@ -386,8 +359,8 @@ export const useDefaultHome = () => {
   // SET HOME SELECTION READY: Only when initialization is truly complete
   // This gates pantry queries to prevent race conditions
   useEffect(() => {
-    // Don't update if query hasn't been called yet
-    if (!called) return;
+    // Don't update before the homes are asked for
+    if (!canAttemptQueries) return;
 
     // Don't update while loading
     if (loading) return;
@@ -438,7 +411,7 @@ export const useDefaultHome = () => {
     // Case 3: Homes exist but none selected yet - wait for auto-selection
     // Don't set ready yet, let the auto-select effects run first
   }, [
-    called,
+    canAttemptQueries,
     loading,
     homesList,
     selectedHomeId,

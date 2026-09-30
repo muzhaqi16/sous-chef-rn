@@ -2,9 +2,8 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreateHomeDocument } from '#operations/home/home.generated';
 import {
   adoptServerMembership,
-  buildOptimisticHome,
   revertOptimisticHome,
-  writeOptimisticHome,
+  writeLocalHome,
 } from '#features/home/cache/optimisticHome';
 import { addToHomesCache } from '#features/home/hooks/homeCacheUpdaters';
 import {
@@ -38,6 +37,7 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
   const [createHomeMutation, { loading: creating }] = useMutation(
     CreateHomeDocument,
     {
+      context: { localFirst: true },
       update: (cache, { data }) => {
         // The queue answers a queued create with a null payload, which the
         // schema's non-null result type does not admit.
@@ -78,10 +78,7 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
     let linked = true;
     if (user) {
       try {
-        linked = writeOptimisticHome(
-          client.cache,
-          buildOptimisticHome(id, input, user),
-        );
+        linked = writeLocalHome(client.cache, id, input, user);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Create Home (optimistic)',
@@ -108,7 +105,6 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
       () =>
         createHomeMutation({
           variables: { input },
-          context: { localFirst: true },
         }),
       {
         document: CreateHomeDocument,

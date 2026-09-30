@@ -1,0 +1,15 @@
+# A local-first template item's row, and a restored one's: everything a query
+# reads on one.
+fragment mealTemplateItem_row on MealTemplateItem {
+  id
+  ...MealTemplateItemReaders
+}
+
+# The recipe fields an item edit writes onto the row, read off the cached Recipe.
+fragment mealTemplateItem_recipeRef on Recipe {
+  id
+  name
+  imageUrl
+  servings
+  totalTimeMinutes
+}

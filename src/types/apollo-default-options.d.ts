@@ -6,6 +6,14 @@
 import '@apollo/client';
 
 declare module '@apollo/client' {
+  // The resync triggers `src/apollo/refetchEvents.ts` feeds the client's
+  // `RefetchEventManager`; a query's `refetchOn` may name each one.
+  interface RefetchEvents {
+    appForeground: void;
+    apiReachable: void;
+    wsReconnected: void;
+  }
+
   namespace ApolloClient {
     namespace DeclareDefaultOptions {
       // Non-optional on purpose: ANY non-optional property here switches every

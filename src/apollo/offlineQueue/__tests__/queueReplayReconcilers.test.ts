@@ -14,10 +14,8 @@ import {
   AddItemToShoppingListDocument,
   MoveShoppingItemToPantryDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  reconcileShoppingItemCreateUpdate,
-  revertOptimisticShoppingListItem,
-} from '#features/shoppingList/cache/items';
+import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
+import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
 import { CreateShoppingListItemFromRecipeIngredientDocument } from '#features/recipes/graphql/recipe.generated';
 
@@ -26,12 +24,15 @@ jest.mock('#/apollo/clientRegistry', () => ({
   registerApolloClient: jest.fn(),
   clearApolloClient: jest.fn(),
 }));
-jest.mock('#features/shoppingList/cache/items', () => ({
-  ...jest.requireActual('#features/shoppingList/cache/items'),
-  revertOptimisticShoppingListItem: jest.fn(),
-  reconcileShoppingItemCreateUpdate: jest.fn(),
+jest.mock('#features/shoppingList/cache/withdraw', () => ({
+  withdrawShoppingListItems: jest.fn(),
+}));
+jest.mock('#features/shoppingList/cache/connections', () => ({
+  ...jest.requireActual('#features/shoppingList/cache/connections'),
+  addNewItemToShoppingListCache: jest.fn(),
 }));
 jest.mock('#features/pantry/cache/items', () => ({
+  ...jest.requireActual('#features/pantry/cache/items'),
   addPantryItemLocally: jest.fn(),
   removePantryItemLocally: jest.fn(),
   revertOptimisticPantryItem: jest.fn(),
@@ -76,13 +77,40 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
       {},
       'pantry-1',
       'minted-1',
+      { countsSettled: false },
     );
     // Withdrawing the ghost is only half of it. The foreground path also links
     // the row the server returned; without this the user is left with neither.
-    expect(addPantryItemLocally).toHaveBeenCalledWith({}, 'pantry-1', {
-      __typename: 'PantryItem',
-      id: 'existing-99',
+    expect(addPantryItemLocally).toHaveBeenCalledWith(
+      {},
+      'pantry-1',
+      { __typename: 'PantryItem', id: 'existing-99' },
+      { countsSettled: false },
+    );
+  });
+
+  it("moves no count when the response stated the pantry's", () => {
+    // The server row is usually already listed, so its link is a no-op and a
+    // relative withdrawal would take one off the server's count.
+    reconcileReplaySuccess(moveOperation, variables, {
+      moveShoppingItemToPantry: {
+        ...payloadWith('existing-99').moveShoppingItemToPantry,
+        pantry: { id: 'pantry-1', stats: { totalItems: 7 } },
+      },
     });
+
+    expect(removePantryItemLocally).toHaveBeenCalledWith(
+      {},
+      'pantry-1',
+      'minted-1',
+      { countsSettled: true },
+    );
+    expect(addPantryItemLocally).toHaveBeenCalledWith(
+      {},
+      'pantry-1',
+      { __typename: 'PantryItem', id: 'existing-99' },
+      { countsSettled: true },
+    );
   });
 
   it('leaves the row alone when the server used the minted id', () => {
@@ -167,11 +195,11 @@ describe('reconcileReplaySuccess — AddItemToShoppingList batch', () => {
       },
     });
 
-    expect(revertOptimisticShoppingListItem).toHaveBeenCalledTimes(1);
-    expect(revertOptimisticShoppingListItem).toHaveBeenCalledWith(
+    expect(withdrawShoppingListItems).toHaveBeenCalledTimes(1);
+    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
       {},
       'list-1',
-      'row-b',
+      ['row-b'],
       { countsSettled: false },
     );
   });
@@ -196,10 +224,10 @@ describe('reconcileReplaySuccess — AddItemToShoppingList batch', () => {
       },
     });
 
-    expect(revertOptimisticShoppingListItem).toHaveBeenCalledWith(
+    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
       {},
       'list-1',
-      'row-b',
+      ['row-b'],
       { countsSettled: true },
     );
   });
@@ -215,10 +243,10 @@ describe('reconcileReplaySuccess — AddItemToShoppingList batch', () => {
       },
     });
 
-    expect(revertOptimisticShoppingListItem).toHaveBeenCalledWith(
+    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
       {},
       'list-1',
-      'row-b',
+      ['row-b'],
       expect.anything(),
     );
   });
@@ -231,20 +259,95 @@ describe('reconcileReplaySuccess — AddItemToShoppingList batch', () => {
       },
     });
 
-    expect(reconcileShoppingItemCreateUpdate).toHaveBeenCalledWith(
+    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
+      {},
+      'list-1',
+      ['row-a'],
+      { countsSettled: false },
+    );
+    expect(addNewItemToShoppingListCache).toHaveBeenCalledWith(
       {},
       'list-1',
       expect.objectContaining({ id: 'existing-row' }),
-      'row-a',
+      false,
+    );
+  });
+});
+
+/**
+ * One row replays as `SyncShoppingListItem`, whose variables carry the row
+ * under `item` and answer in the sync shape. The service merges a line into
+ * the list's existing row for the same item, so the payload can name that row.
+ */
+describe('reconcileReplaySuccess — AddItemToShoppingList merged into a held line', () => {
+  const addOperation = operationNameOf(AddItemToShoppingListDocument);
+  const replayed = {
+    input: { shoppingListId: 'list-1', items: [{ id: 'row-a' }] },
+  };
+  const answeredWith = (item: object, shoppingList?: object) => ({
+    addItemsToShoppingList: {
+      __typename: 'AddItemsToShoppingListPayload',
+      ...(shoppingList && { shoppingList }),
+      results: [{ index: 0, success: true, item }],
+    },
+  });
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('withdraws the minted row and links the one the service merged it into', () => {
+    const adopt = jest.fn();
+    reconcileReplaySuccess(
+      addOperation,
+      replayed,
+      answeredWith({ id: 'existing-row', version: 7 }),
+      adopt,
+    );
+
+    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
+      {},
+      'list-1',
+      ['row-a'],
+      { countsSettled: false },
+    );
+    expect(addNewItemToShoppingListCache).toHaveBeenCalledWith(
+      {},
+      'list-1',
+      expect.objectContaining({ id: 'existing-row' }),
+      false,
+    );
+    expect(adopt).toHaveBeenCalledWith({
+      mintedId: 'row-a',
+      survivingId: 'existing-row',
+      version: 7,
+    });
+  });
+
+  it("moves no count when the answer stated the list's", () => {
+    reconcileReplaySuccess(
+      addOperation,
+      replayed,
+      answeredWith({ id: 'existing-row' }, { id: 'list-1', totalItems: 3 }),
+    );
+
+    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
+      {},
+      'list-1',
+      ['row-a'],
+      { countsSettled: true },
     );
   });
 
-  it('leaves a single-row replay, answered in the sync shape, alone', () => {
-    reconcileReplaySuccess(addOperation, variables, {
-      syncShoppingListItem: { __typename: 'SyncShoppingListItemPayload' },
-    });
+  it('leaves a row the service created under the minted id', () => {
+    const adopt = jest.fn();
+    reconcileReplaySuccess(
+      addOperation,
+      replayed,
+      answeredWith({ id: 'row-a' }),
+      adopt,
+    );
 
-    expect(revertOptimisticShoppingListItem).not.toHaveBeenCalled();
+    expect(addNewItemToShoppingListCache).not.toHaveBeenCalled();
+    expect(adopt).not.toHaveBeenCalled();
   });
 });
 
@@ -271,10 +374,10 @@ describe('reconcileReplaySuccess — recipe copies of the shopping adds', () => 
       },
     );
 
-    expect(revertOptimisticShoppingListItem).toHaveBeenCalledWith(
+    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
       {},
       'list-1',
-      'row-b',
+      ['row-b'],
       { countsSettled: false },
     );
   });
@@ -298,11 +401,17 @@ describe('reconcileReplaySuccess — recipe copies of the shopping adds', () => 
       },
     );
 
-    expect(reconcileShoppingItemCreateUpdate).toHaveBeenCalledWith(
+    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
+      {},
+      'list-1',
+      ['minted-1'],
+      { countsSettled: false },
+    );
+    expect(addNewItemToShoppingListCache).toHaveBeenCalledWith(
       {},
       'list-1',
       expect.objectContaining({ id: 'existing-row' }),
-      'minted-1',
+      false,
     );
   });
 
@@ -318,8 +427,8 @@ describe('reconcileReplaySuccess — recipe copies of the shopping adds', () => 
       },
     );
 
-    expect(reconcileShoppingItemCreateUpdate).not.toHaveBeenCalled();
-    expect(revertOptimisticShoppingListItem).not.toHaveBeenCalled();
+    expect(withdrawShoppingListItems).not.toHaveBeenCalled();
+    expect(addNewItemToShoppingListCache).not.toHaveBeenCalled();
   });
 });
 
@@ -329,13 +438,14 @@ describe('reconcileReplaySuccess — recipe copies of the shopping adds', () => 
  * then a second row for the same stack.
  */
 describe('reconcileReplaySuccess — a queued pantry create joining a held stack', () => {
-  const syncVariables = {
-    input: { clientId: 'minted-1', pantryId: 'pantry-1', forceAdd: true },
+  const replayed = {
+    input: { id: 'minted-1', pantryId: 'pantry-1', forceAdd: true },
   };
-  const syncPayload = (id: string) => ({
-    syncPantryItem: {
-      __typename: 'SyncPantryItemPayload',
-      item: { __typename: 'PantryItem', id },
+  const answer = (id: string) => ({
+    createPantryItem: {
+      __typename: 'CreatePantryItemPayload',
+      outcome: id === 'minted-1' ? 'CREATED' : 'MERGED',
+      pantryItem: { __typename: 'PantryItem', id, version: 4 },
     },
   });
 
@@ -344,20 +454,31 @@ describe('reconcileReplaySuccess — a queued pantry create joining a held stack
   it.each([CreatePantryItemDocument, BarcodeCreatePantryItemDocument])(
     'swaps the minted row for the held stack (%#)',
     document => {
+      const adopt = jest.fn();
       reconcileReplaySuccess(
         operationNameOf(document),
-        syncVariables,
-        syncPayload('held-9'),
+        replayed,
+        answer('held-9'),
+        adopt,
       );
 
       expect(revertOptimisticPantryItem).toHaveBeenCalledWith(
         {},
         'pantry-1',
         'minted-1',
+        { countsSettled: false },
       );
-      expect(addPantryItemLocally).toHaveBeenCalledWith({}, 'pantry-1', {
-        __typename: 'PantryItem',
-        id: 'held-9',
+      expect(addPantryItemLocally).toHaveBeenCalledWith(
+        {},
+        'pantry-1',
+        { __typename: 'PantryItem', id: 'held-9' },
+        { countsSettled: false },
+      );
+      // Writes still queued against the minted id move to the held stack.
+      expect(adopt).toHaveBeenCalledWith({
+        mintedId: 'minted-1',
+        survivingId: 'held-9',
+        version: 4,
       });
     },
   );
@@ -365,8 +486,8 @@ describe('reconcileReplaySuccess — a queued pantry create joining a held stack
   it('leaves a row the server created under the minted id', () => {
     reconcileReplaySuccess(
       operationNameOf(CreatePantryItemDocument),
-      syncVariables,
-      syncPayload('minted-1'),
+      replayed,
+      answer('minted-1'),
     );
 
     expect(revertOptimisticPantryItem).not.toHaveBeenCalled();

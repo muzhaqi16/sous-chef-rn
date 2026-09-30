@@ -1,0 +1,5 @@
+# A local-first create's line: everything a query reads on one.
+fragment items_row on ShoppingListItem {
+  id
+  ...ShoppingListItemReaders
+}

@@ -91,13 +91,15 @@ export function transientBatchRowCode(payload: unknown): string | null {
   const results: unknown = isRecord(payload) ? payload.results : undefined;
   if (!Array.isArray(results)) return null;
   for (const result of results as unknown[]) {
+    const failure: unknown = isRecord(result) ? result.failure : undefined;
     if (
       isRecord(result) &&
       result.success === false &&
-      typeof result.code === 'string' &&
-      TRANSIENT_ROW_CODES.includes(result.code)
+      isRecord(failure) &&
+      typeof failure.code === 'string' &&
+      TRANSIENT_ROW_CODES.includes(failure.code)
     ) {
-      return result.code;
+      return failure.code;
     }
   }
   return null;
@@ -235,9 +237,8 @@ export function classifyError(error: unknown): QueueError {
         retryable: true,
       };
     }
-    // The entity moved on since the write was made. Re-sendable, but only
-    // without the stale `version` the write captured — QueueManager strips it
-    // and re-sends once.
+    // The entity moved on since the write was made, so nothing applied.
+    // QueueManager withdraws and reports it rather than re-sending.
     if (
       error.payloadCode !== null &&
       VERSION_CONFLICT_CODES.includes(error.payloadCode)

@@ -1,0 +1,21 @@
+# Read with the arguments UNDEFINED on purpose: the field is keyed on them, so
+# client mode stores `itemsConnection:{}`. Server mode keys on the live filter
+# and sort, which no fragment can name.
+fragment findCachedPantryItemDuplicate_pantry on Pantry {
+  id
+  itemsConnection(filters: $itemsFilter, orderBy: $itemsOrderBy) {
+    edges {
+      node {
+        id
+        itemName
+        quantity
+        item {
+          id
+        }
+        unit {
+          id
+        }
+      }
+    }
+  }
+}

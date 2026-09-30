@@ -2,8 +2,12 @@ import {
   useConversionPreview,
   type UseConversionPreviewOptions,
 } from './useConversionPreview';
-import type { PantryActionSharedState } from '#features/pantry/components/modals/PantryActionModal';
+import type {
+  PantryActionSharedState,
+  ShownQuantity,
+} from '#features/pantry/components/modals/PantryActionModal';
 import { snapDeductionToCap } from '#features/pantry/utils/validateDeductionQuantity';
+import { inCountedUnit } from '#domain/stockDisplay';
 
 interface QuantityFeedbackResult {
   /** Conversion preview (text, loading state, raw value, server certainty) */
@@ -13,12 +17,10 @@ interface QuantityFeedbackResult {
     convertedValue: number | null;
     confidence: number | null;
   };
-  /** Remaining quantity after subtracting input (null if no valid input) */
-  remaining: number | null;
-  /** Available quantity for display (net weight or selected unit) */
-  availableInUnit: number | null;
-  /** Unit symbol for the remaining display (may differ from active unit for dual-tracked) */
-  remainingUnitSymbol: string;
+  /** What is left after the input, as it will read (null if no valid input) */
+  remaining: ShownQuantity | null;
+  /** What is available, for the "exceeds" message */
+  available: ShownQuantity | null;
 }
 
 /** A pantry action's preview: a dual-tracked item previews into its net weight. */
@@ -64,19 +66,41 @@ export function useQuantityFeedback(
   );
 
   const hasInput = inputQuantity !== null && !isNaN(inputQuantity);
-  let remaining: number | null = null;
-  let availableInUnit: number | null = null;
-  let remainingUnitSymbol = shared.activeUnitSymbol;
+  const inActiveUnit = (quantity: number): ShownQuantity => ({
+    quantity,
+    unitSymbol: shared.activeUnitSymbol,
+    displayAsFraction: shared.displayAsFractionOf(shared.activeUnitId),
+  });
+  let remaining: ShownQuantity | null = null;
+  let available: ShownQuantity | null = null;
 
-  if (!shared.isConvertedUnit) {
+  if (shared.exactFactor !== null) {
+    // The tracking unit or a dozen of it: what is left reads as the stack
+    // will ("11 pc", "2 doz"), whichever of the two was typed in.
+    const factor = shared.exactFactor;
+    const cap = shared.trackingQuantity;
+    available = shared.showStock(cap);
+    remaining = hasInput
+      ? shared.showStock(
+          cap -
+            inCountedUnit(
+              snapDeductionToCap(inputQuantity, cap / factor),
+              factor,
+            ),
+        )
+      : null;
+  } else if (!shared.isConvertedUnit) {
     // Tracking unit selected — prefer the converter's cap when available
     // (handles dual-tracked items where tracking unit matches net-weight unit).
-    availableInUnit = Math.max(
+    const availableInUnit = Math.max(
       shared.availableInSelectedUnit ?? 0,
       shared.trackingQuantity,
     );
+    available = inActiveUnit(availableInUnit);
     remaining = hasInput
-      ? availableInUnit - snapDeductionToCap(inputQuantity, availableInUnit)
+      ? inActiveUnit(
+          availableInUnit - snapDeductionToCap(inputQuantity, availableInUnit),
+        )
       : null;
   } else if (
     shared.isDualTracked &&
@@ -86,19 +110,26 @@ export function useQuantityFeedback(
   ) {
     // API converted input to net weight — subtract directly. Dual tracking
     // implies both the remaining weight and its unit are present.
-    availableInUnit = shared.remainingNetWeight;
-    remainingUnitSymbol = shared.netWeightUnitSymbol;
+    const unitSymbol = shared.netWeightUnitSymbol;
+    const inNetWeight = (quantity: number): ShownQuantity => ({
+      quantity,
+      unitSymbol,
+      displayAsFraction: shared.displayAsFractionOf(shared.netWeightUnitId),
+    });
+    available = inNetWeight(shared.remainingNetWeight);
     remaining = hasInput
-      ? shared.remainingNetWeight - conversion.convertedValue
+      ? inNetWeight(shared.remainingNetWeight - conversion.convertedValue)
       : null;
   } else if (shared.availableInSelectedUnit != null) {
     // Non-dual-tracked converted unit — subtract in selected unit
-    availableInUnit = shared.availableInSelectedUnit;
+    available = inActiveUnit(shared.availableInSelectedUnit);
     remaining = hasInput
-      ? shared.availableInSelectedUnit -
-        snapDeductionToCap(inputQuantity, shared.availableInSelectedUnit)
+      ? inActiveUnit(
+          shared.availableInSelectedUnit -
+            snapDeductionToCap(inputQuantity, shared.availableInSelectedUnit),
+        )
       : null;
   }
 
-  return { conversion, remaining, availableInUnit, remainingUnitSymbol };
+  return { conversion, remaining, available };
 }

@@ -468,7 +468,7 @@ The whole-tree gates, and where each runs:
 | `check-unistyles-variant-staleness` | no `useVariants` read frozen at its first-render value                                       | pre-push, CI          |
 | `check:dead-modules` (knip)         | every `src/` module and export has a production importer; a test import or `jest.mock()` does not count, an export used only in its own file is fine, and a test seam is tagged `@internal` | pre-push, CI          |
 | `check:import-cycles` (madge)       | no load-time import cycle; `import type` and `await import()` edges are skipped              | pre-push, CI          |
-| `find-stale-cache-fields`           | no new mutation that leaves a server-recomputed field stale in the cache                     | CI                    |
+| `find-stale-cache-fields`           | every mutation returns what the queries read on each entity it returns and on the collection it moves (via the generated `<Type>Readers`); the readers files are current; API-blocked pairs expire when the schema gains the field | CI                    |
 | `check-bundled-secrets`             | every credential in a built bundle carries a recorded decision                               | build                 |
 | `check-build-provenance`            | the build identity in `env.generated.ts` is the one CI intended                              | build                 |
 

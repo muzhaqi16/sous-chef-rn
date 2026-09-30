@@ -3,7 +3,6 @@ import { logger } from '#/utils/environment';
 import type {
   SearchRecipesByIngredientsParams,
   RecipeSearchResult,
-  GetRecipeInformationParams,
   RecipeInformation,
   SearchRecipesParams,
   SearchRecipesParamsWithoutInfo,
@@ -11,7 +10,6 @@ import type {
   SearchRecipesResponseWithInfo,
   GetRandomRecipesParams,
   GetRandomRecipesResponse,
-  RecipePriceBreakdown,
   SpoonacularApiError,
 } from './types';
 
@@ -145,22 +143,6 @@ class SpoonacularService {
     );
   }
 
-  /** https://spoonacular.com/food-api/docs#Get-Recipe-Information */
-  async getRecipeInformation(
-    params: GetRecipeInformationParams,
-    signal?: AbortSignal,
-  ): Promise<RecipeInformation> {
-    const { id, includeNutrition = true } = params;
-
-    return this.fetch<RecipeInformation>(
-      `/recipes/${id}/information`,
-      {
-        includeNutrition,
-      },
-      signal,
-    );
-  }
-
   /**
    * Complex search, basic results only — for full details per result use
    * `searchRecipesWithInfo`.
@@ -233,22 +215,6 @@ class SpoonacularService {
       {
         ids: idsString,
       },
-      signal,
-    );
-  }
-
-  /**
-   * Per-ingredient estimated cost + totals; `price` fields are in US cents. The
-   * `.json` widget variant returns raw data instead of HTML.
-   * https://spoonacular.com/food-api/docs#Price-Breakdown-by-ID
-   */
-  async getRecipePriceBreakdown(
-    id: number,
-    signal?: AbortSignal,
-  ): Promise<RecipePriceBreakdown> {
-    return this.fetch<RecipePriceBreakdown>(
-      `/recipes/${id}/priceBreakdownWidget.json`,
-      {},
       signal,
     );
   }

@@ -6,7 +6,31 @@ import {
   formatQuantityForInput,
   resolveQuantityNotation,
 } from '#/utils/formatQuantity';
-import type { PantryActionSharedState } from '#features/pantry/components/modals/PantryActionModal';
+import type {
+  PantryActionSharedState,
+  ShownQuantity,
+} from '#features/pantry/components/modals/PantryActionModal';
+import { inCountedUnit } from '#domain/stockDisplay';
+
+function alertExceeds(
+  actionVerb: 'consume' | 'waste',
+  cap: ShownQuantity,
+): void {
+  alertService.alert(
+    t('labels.error'),
+    t(
+      actionVerb === 'waste'
+        ? 'deduction.exceedsAvailableWaste'
+        : 'deduction.exceedsAvailableConsume',
+      {
+        amount: formatQuantityForDisplay(cap.quantity, {
+          notation: resolveQuantityNotation(null, cap.displayAsFraction),
+        }),
+        unit: cap.unitSymbol,
+      },
+    ),
+  );
+}
 
 /**
  * Validates a deduction quantity (consume or waste) against available stock.
@@ -30,6 +54,19 @@ export function validateDeductionQuantity(
     return null;
   }
 
+  // The tracking unit or a dozen of it: checked in the tracking unit, and a
+  // refusal names the cap as the stack shows it ("11 pc", not "0.917 doz").
+  const factor = shared.exactFactor;
+  if (factor !== null) {
+    const cap = shared.trackingQuantity;
+    const deduction = snapDeductionToCap(value, cap / factor);
+    if (inCountedUnit(deduction, factor) > cap) {
+      alertExceeds(actionVerb, shared.showStock(cap));
+      return null;
+    }
+    return deduction;
+  }
+
   if (shared.isConvertedUnit && shared.availableLoading) {
     alertService.alert(t('labels.pleaseWait'), t('deduction.stillCalculating'));
     return null;
@@ -45,23 +82,11 @@ export function validateDeductionQuantity(
 
   const deduction = snapDeductionToCap(value, cap);
   if (deduction > cap) {
-    alertService.alert(
-      t('labels.error'),
-      t(
-        actionVerb === 'waste'
-          ? 'deduction.exceedsAvailableWaste'
-          : 'deduction.exceedsAvailableConsume',
-        {
-          amount: formatQuantityForDisplay(cap, {
-            notation: resolveQuantityNotation(
-              null,
-              shared.displayAsFractionOf(shared.activeUnitId),
-            ),
-          }),
-          unit: shared.activeUnitSymbol,
-        },
-      ),
-    );
+    alertExceeds(actionVerb, {
+      quantity: cap,
+      unitSymbol: shared.activeUnitSymbol,
+      displayAsFraction: shared.displayAsFractionOf(shared.activeUnitId),
+    });
     return null;
   }
 

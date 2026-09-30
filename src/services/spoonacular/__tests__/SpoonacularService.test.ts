@@ -56,21 +56,6 @@ describe('SpoonacularService', () => {
     });
   });
 
-  describe('getRecipeInformation', () => {
-    it('includes nutrition by default', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ id: 1, title: 'Test Recipe' }),
-      });
-
-      await spoonacularService.getRecipeInformation({ id: 123 });
-
-      const calledUrl = new URL(mockFetch.mock.calls[0][0]);
-      expect(calledUrl.pathname).toBe('/recipes/123/information');
-      expect(calledUrl.searchParams.get('includeNutrition')).toBe('true');
-    });
-  });
-
   describe('searchRecipes', () => {
     it('caps number at 100', async () => {
       mockFetch.mockResolvedValue({

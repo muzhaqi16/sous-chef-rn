@@ -18,6 +18,7 @@ import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
 import { writeHeldStock } from '#features/pantry/cache/stock';
+import { todayKey } from '#/utils/dateUtils';
 
 interface UseAdjustPantryItemQuantityOptions {
   onSuccess?: () => void;
@@ -29,7 +30,9 @@ export function useAdjustPantryItemQuantity({
   const { t } = useTranslation();
   const client = useApolloClient();
 
-  const [adjustMutation] = useMutation(AdjustPantryItemQuantityDocument);
+  const [adjustMutation] = useMutation(AdjustPantryItemQuantityDocument, {
+    context: { localFirst: true },
+  });
 
   const adjustQuantity = async (
     pantryItemId: string,
@@ -118,6 +121,7 @@ export function useAdjustPantryItemQuantity({
       () =>
         adjustMutation({
           variables: {
+            today: todayKey(),
             input: {
               id: pantryItemId,
               newQuantity,
@@ -127,7 +131,6 @@ export function useAdjustPantryItemQuantity({
               ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
             },
           },
-          context: { localFirst: true },
         }),
       {
         document: AdjustPantryItemQuantityDocument,

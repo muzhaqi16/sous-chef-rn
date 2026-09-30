@@ -3,12 +3,14 @@
  * revert, and the reconcile that adopts the server id.
  */
 
-import { gql, type ApolloCache } from '@apollo/client';
+import type { ApolloCache } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
+import { Items_RowFragmentDoc } from './items.generated';
 import {
-  ShoppingListItemDisplayFragmentDoc,
-  type ShoppingListItemDisplayFragment,
-} from '#features/shoppingList/graphql/shoppingListFragments.generated';
+  NEUTRAL_LOCAL_SHOPPING_LIST_ITEM,
+  NEUTRAL_LOCAL_SHOPPING_LIST_ITEM_BY_TYPE,
+} from './shoppingListItemRowNeutral.generated';
+import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import {
   settleMutation,
@@ -16,15 +18,13 @@ import {
   type SettledFailure,
 } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { isRecord } from '#/utils/isRecord';
 import { errorService } from '#/services/errorService';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { addNewItemToShoppingListCache } from './connections';
+import { addNewItemToShoppingListCache, readListCounters } from './connections';
+import { withdrawShoppingListItems } from './withdraw';
 
 export interface OptimisticShoppingListItemFields {
-  /**
-   * Required, not optional: the offline queue reads it back to build a
-   * toggle/quantity/update replay, and a row written without it fails permanently.
-   */
+  /** The row names its list by it; `moveToPantry` reads it back. */
   shoppingListId: string;
   itemName: string;
   quantity?: number | null;
@@ -35,77 +35,33 @@ export interface OptimisticShoppingListItemFields {
   unitId?: string | null;
 }
 
-/**
- * Build a complete optimistic `ShoppingListItem` for local-first creates. `id` is
- * the client-minted cuid (the row's PK), so the online create and the queued replay
- * converge on one row. The full display shape is mandatory offline — an incomplete
- * one makes a cell's `useFragment` report `complete: false` and blank the row.
- */
-export function createOptimisticShoppingListItem(
-  id: string,
-  fields: OptimisticShoppingListItemFields,
-): ShoppingListItemDisplayFragment {
-  return {
-    __typename: 'ShoppingListItem',
-    id,
-    // The server owns the version; its response carries the real one.
-    version: 1,
-    updatedAt: new Date().toISOString(),
-    shoppingList: {
-      __typename: 'ShoppingList',
-      id: fields.shoppingListId,
-    },
-    itemName: fields.itemName,
-    quantity: fields.quantity ?? 1,
-    quantityInput: fields.quantityInput ?? null,
-    displayFormat: DisplayFormat.Auto,
-    unitName: fields.unitName ?? null,
-    category: fields.category ?? null,
-    notes: null,
-    sortOrder: '',
-    // Built whole rather than through `writePurchaseInfo`, which patches an
-    // existing record. A just-created line has no prior purchase to preserve.
-    purchaseInfo: {
-      __typename: 'ShoppingListItemPurchaseInfo',
-      isPurchased: false,
-      // Present rather than omitted: the row reads it, and one absent field
-      // makes the whole list read incomplete.
-      movedToPantryAt: null,
-    },
-    item: fields.itemId
-      ? { __typename: 'Item', id: fields.itemId, imageUrl: null, images: [] }
-      : null,
-    unit: fields.unitId
-      ? { __typename: 'Unit', id: fields.unitId, name: '', symbol: '' }
-      : null,
-  };
-}
+/** What a create knows about the line it adds, under its client-minted id. */
+export type LocalShoppingListItem = OptimisticShoppingListItemFields & {
+  id: string;
+};
 
 /**
- * Minimal stats read used by {@link addOptimisticShoppingListItem} to recompute
- * `remainingItems` / `completionRate` after an optimistic add.
+ * The line a local-first create adds. `id` is the client-minted cuid (the row's
+ * PK), so the online create and the queued replay converge on one row.
  */
-const ShoppingListStatsForOptimisticAddFragment = gql`
-  fragment _ShoppingListStatsForOptimisticAdd on ShoppingList {
-    totalItems
-    completedItems
-    remainingItems
-    completionRate
-  }
-`;
+export const createLocalShoppingListItem = (
+  id: string,
+  fields: OptimisticShoppingListItemFields,
+): LocalShoppingListItem => ({ ...fields, id });
 
 export function reconcileShoppingItemCreateUpdate(
   cache: ApolloCache,
   listId: string,
   serverItem: { id: string },
   clientId: string | null | undefined,
+  { countsSettled = false }: { countsSettled?: boolean } = {},
 ): void {
   if (clientId && serverItem.id !== clientId) {
     // Catalog merge: the server folded the line into an EXISTING row, so the
     // optimistic add counted a row that never came to exist. Its count comes
-    // back relatively only when the response did not bring the totals.
+    // back relatively only when the response did not state the totals.
     revertOptimisticShoppingListItem(cache, listId, clientId, {
-      countsSettled: carriesListTotals(serverItem, listId),
+      countsSettled,
     });
   }
   addNewItemToShoppingListCache(cache, listId, serverItem, false);
@@ -115,9 +71,11 @@ export function reconcileShoppingItemCreateUpdate(
 // add-to-shopping-list mutation document satisfies the shape.
 interface AddItemsReconcilePayloadLike {
   __typename?: string;
+  shoppingList?: unknown;
   results?:
     | readonly ({
         index?: number | null;
+        success?: boolean | null;
         item?: { id: string } | null;
       } | null)[]
     | null;
@@ -163,18 +121,38 @@ export function buildAddItemsReconcileUpdate({
     if (!payload || !targetListId || !variables) return;
     const results = payload.results;
     if (!results?.length) return;
-    const run = () =>
+    const run = () => {
+      // The payload's list is resolved after the whole batch, so the refused
+      // lines are already out of its count.
+      const countsSettled = carriesListTotals(
+        payload.shoppingList,
+        targetListId,
+      );
+      const refused: string[] = [];
       results.forEach((result, position) => {
-        // Null when that item failed.
-        const item = result?.item;
-        if (!item) return;
+        if (!result) return;
         // Paired by the input INDEX the server echoes, not by `result.clientId`:
         // that field is a response-matching token a call site picks freely (the
         // recipe add sends a Spoonacular ingredient id), never this row's
         // minted cuid. Array position is the fallback.
         const clientId = variables.input.items?.[result.index ?? position]?.id;
-        reconcileShoppingItemCreateUpdate(cache, targetListId, item, clientId);
+        const { item } = result;
+        if (item && result.success !== false) {
+          reconcileShoppingItemCreateUpdate(
+            cache,
+            targetListId,
+            item,
+            clientId,
+            { countsSettled },
+          );
+        } else if (clientId) {
+          refused.push(clientId);
+        }
       });
+      withdrawShoppingListItems(cache, targetListId, refused, {
+        countsSettled,
+      });
+    };
     if (wrap) {
       try {
         run();
@@ -191,21 +169,50 @@ export function buildAddItemsReconcileUpdate({
 /**
  * Local-first optimistic add: writes the FULL display entity, the connection edge
  * and recomputed stats PERMANENTLY before the create fires, so it survives a
- * fully-offline create (the queue replays `SyncShoppingListItem(clientId = id)`).
+ * fully-offline create (the queue replays the batch add under the same id).
  * `item.id` MUST be the client-minted cuid sent as `input.id`, or the replay dupes.
  */
-export function addOptimisticShoppingListItem(
+export function addLocalShoppingListItem(
   cache: ApolloCache,
   listId: string,
-  item: ShoppingListItemDisplayFragment,
+  line: LocalShoppingListItem,
 ): void {
-  // 1. Full entity, so the bare-ref edge resolves with display fields offline.
-  cache.writeFragment({
-    id: cache.identify(item),
-    fragment: ShoppingListItemDisplayFragmentDoc,
-    fragmentName: 'ShoppingListItemDisplayFragment',
-    data: item,
+  // 1. The row, complete for every screen: what the create knows, else what the
+  //    cache holds (a catalog item's image, a unit's symbol), else neutral.
+  const now = new Date().toISOString();
+  writeLocalEntity(cache, {
+    fragment: Items_RowFragmentDoc,
+    fragmentName: 'items_row',
+    neutral: NEUTRAL_LOCAL_SHOPPING_LIST_ITEM,
+    neutralByType: NEUTRAL_LOCAL_SHOPPING_LIST_ITEM_BY_TYPE,
+    known: {
+      __typename: 'ShoppingListItem',
+      id: line.id,
+      // The server owns the version; its response carries the real one.
+      version: 1,
+      createdAt: now,
+      updatedAt: now,
+      shoppingList: { __typename: 'ShoppingList', id: line.shoppingListId },
+      itemName: line.itemName,
+      quantity: line.quantity ?? 1,
+      quantityInput: line.quantityInput ?? null,
+      displayFormat: DisplayFormat.Auto,
+      unitName: line.unitName ?? null,
+      category: line.category ?? null,
+      notes: null,
+      sortOrder: '',
+      // Whole rather than through `writePurchaseInfo`, which patches an
+      // existing record: a new line has no prior purchase to preserve.
+      purchaseInfo: {
+        __typename: 'ShoppingListItemPurchaseInfo',
+        isPurchased: false,
+        movedToPantryAt: null,
+      },
+      item: line.itemId ? { __typename: 'Item', id: line.itemId } : null,
+      unit: line.unitId ? { __typename: 'Unit', id: line.unitId } : null,
+    },
   });
+  const item = { __typename: 'ShoppingListItem', id: line.id };
 
   const parentCacheId = cache.identify({
     __typename: 'ShoppingList',
@@ -214,14 +221,8 @@ export function addOptimisticShoppingListItem(
 
   // 2. Snapshot completedItems BEFORE the add — a new row is unpurchased, so it
   //    is unchanged, and remaining/completion derive from it.
-  const stats = parentCacheId
-    ? cache.readFragment<{ completedItems: number }>({
-        id: parentCacheId,
-        fragment: ShoppingListStatsForOptimisticAddFragment,
-        fragmentName: '_ShoppingListStatsForOptimisticAdd',
-      })
-    : null;
-  const completed = stats?.completedItems ?? 0;
+  const counters = parentCacheId ? readListCounters(cache, parentCacheId) : {};
+  const completed = counters.completedItems ?? 0;
 
   // 3. Add the edge + bump totalItems.
   addNewItemToShoppingListCache(cache, listId, item);
@@ -244,10 +245,11 @@ export function addOptimisticShoppingListItem(
 }
 
 /**
- * Reverse {@link addOptimisticShoppingListItem} on a rejected create. Evicting the
+ * Reverse {@link addLocalShoppingListItem} on a rejected create. Evicting the
  * entity alone is NOT enough: the optimistic add also bumped `totalItems` /
  * `remainingItems` / `completionRate`, and the self-healing `itemsConnection` read
- * repairs only its own `totalCount`. That read drops the dangling edge.
+ * repairs only its own `totalCount`. That read drops the dangling edge. One line
+ * of {@link withdrawShoppingListItems}, so a second run changes nothing.
  */
 export function revertOptimisticShoppingListItem(
   cache: ApolloCache,
@@ -255,61 +257,16 @@ export function revertOptimisticShoppingListItem(
   clientId: string,
   { countsSettled = false }: { countsSettled?: boolean } = {},
 ): void {
-  safeEvict(cache, 'ShoppingListItem', clientId);
-  // A response carrying the list's totals already wrote the server's count;
-  // a relative decrement on top counts the same row twice.
-  if (countsSettled) return;
-
-  const parentCacheId = cache.identify({
-    __typename: 'ShoppingList',
-    id: listId,
-  });
-  if (!parentCacheId) return;
-
-  // Partial: without it a list missing either stat reads as null, and the
-  // fallback below would write a total of zero over a list of any size.
-  const stats = cache.readFragment<{
-    totalItems?: number;
-    completedItems?: number;
-  }>({
-    id: parentCacheId,
-    fragment: ShoppingListStatsForOptimisticAddFragment,
-    fragmentName: '_ShoppingListStatsForOptimisticAdd',
-    returnPartialData: true,
-  });
-  const total = stats?.totalItems;
-  if (total === undefined) return;
-
-  const newTotal = Math.max(0, total - 1);
-  const completed = stats?.completedItems;
-  cache.modify({
-    id: parentCacheId,
-    fields: {
-      totalItems: () => newTotal,
-      ...(completed !== undefined && {
-        remainingItems: () => Math.max(0, newTotal - completed),
-        completionRate: () => (newTotal > 0 ? completed / newTotal : 0),
-      }),
-    },
-  });
+  withdrawShoppingListItems(cache, listId, [clientId], { countsSettled });
 }
 
 /**
- * Whether an add result carried THIS list's totals, which Apollo has already
- * written over the local count. Totals for another list settle nothing here.
+ * Whether `list`, from a response, is THIS list with its totals, which Apollo
+ * has already written over the local count. Another list settles nothing here.
  */
-export function carriesListTotals(item: unknown, listId: string): boolean {
-  if (typeof item !== 'object' || item === null || !('shoppingList' in item)) {
-    return false;
-  }
-  const list: unknown = item.shoppingList;
+export function carriesListTotals(list: unknown, listId: string): boolean {
   return (
-    typeof list === 'object' &&
-    list !== null &&
-    'id' in list &&
-    list.id === listId &&
-    'totalItems' in list &&
-    typeof list.totalItems === 'number'
+    isRecord(list) && list.id === listId && typeof list.totalItems === 'number'
   );
 }
 
@@ -392,14 +349,12 @@ function revertSlice(
   listId: string,
   slice: readonly { id?: string | null }[],
 ): void {
-  for (const line of slice) {
-    if (!line.id) continue;
-    try {
-      revertOptimisticShoppingListItem(cache, listId, line.id);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Revert refused shopping list batch',
-      });
-    }
+  const ids = slice.flatMap(line => (line.id ? [line.id] : []));
+  try {
+    withdrawShoppingListItems(cache, listId, ids);
+  } catch (cacheError) {
+    errorService.reportError(cacheError, {
+      operation: 'Revert refused shopping list batch',
+    });
   }
 }

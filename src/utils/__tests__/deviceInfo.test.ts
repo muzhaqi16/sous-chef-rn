@@ -410,10 +410,40 @@ describe('deviceInfo', () => {
       expect(info.hasNotch).toBe(true);
     });
 
-    it('collects locale info with fallback', async () => {
+    it('invents no country or currency for the device', async () => {
       const info = await collectDeviceInformation();
-      expect(info.country).toBe('US');
-      expect(info.currency).toBe('USD');
+      expect(info).not.toHaveProperty('country');
+      expect(info).not.toHaveProperty('currency');
+    });
+
+    /** The locale as React Native reads it: Intl only, no `navigator.language`. */
+    const collectUnderLocale = async (locale: string) => {
+      const navigatorLanguage = jest
+        .spyOn(navigator, 'language', 'get')
+        .mockReturnValue(undefined as unknown as string);
+      const resolved = jest
+        .spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions')
+        .mockReturnValue({
+          ...new Intl.DateTimeFormat().resolvedOptions(),
+          locale,
+        });
+      try {
+        return await collectDeviceInformation();
+      } finally {
+        navigatorLanguage.mockRestore();
+        resolved.mockRestore();
+      }
+    };
+
+    it("sends the device's own locale", async () => {
+      expect((await collectUnderLocale('en-GB')).language).toBe('en-GB');
+    });
+
+    // The server reads a "Device default" user's unit system from the
+    // locale's region: a guessed en-US would register the device as American,
+    // and a field left out keeps whatever an earlier registration stored.
+    it('reports a locale it cannot read as none, rather than guess one', async () => {
+      expect((await collectUnderLocale('')).language).toBeNull();
     });
 
     it('handles getDeviceName failure gracefully', async () => {

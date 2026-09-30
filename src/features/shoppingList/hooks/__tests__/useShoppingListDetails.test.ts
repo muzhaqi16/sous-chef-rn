@@ -1,4 +1,5 @@
-import { waitFor } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import {
@@ -234,6 +235,49 @@ describe('useShoppingListDetails', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.isShared).toBe(false);
+  });
+
+  // A role change edits only the collaborator, so the details query's result
+  // stays the same object.
+  it("follows a collaborator's own edit", async () => {
+    const cache = makeCache();
+    const { result } = renderHookWithApollo(
+      () => useShoppingListDetails('list-1'),
+      {
+        cache,
+        operationMocks: [
+          buildDetailsMock(
+            'list-1',
+            buildShoppingList({
+              collaborators: [{ id: 'c1', email: 'c1@test.com' }],
+            }),
+          ),
+        ],
+      },
+    );
+    await waitFor(() =>
+      expect(result.current.collaborators[0]?.role).toBe(
+        CollaboratorRole.Editor,
+      ),
+    );
+
+    await act(async () => {
+      cache.modify({
+        id: cache.identify({
+          __typename: 'ShoppingListCollaborator',
+          id: 'c1',
+        }),
+        fields: { role: () => CollaboratorRole.Viewer },
+      });
+      await Promise.resolve();
+    });
+
+    await waitFor(() =>
+      expect(result.current.collaborators[0]?.role).toBe(
+        CollaboratorRole.Viewer,
+      ),
+    );
+    expect(result.current.isShared).toBe(true);
   });
 
   it('exposes isRefetching boolean from network status', async () => {

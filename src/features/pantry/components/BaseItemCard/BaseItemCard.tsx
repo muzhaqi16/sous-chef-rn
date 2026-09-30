@@ -139,6 +139,10 @@ const styles = StyleSheet.create(theme => ({
           backgroundColor: theme.colors.surface,
           borderColor: theme.colors.expiration.expiredBorder,
         },
+        lowStock: {
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.alertBanner.info.border,
+        },
         success: {
           backgroundColor: theme.colors.alertBanner.success.bg,
           borderColor: theme.colors.alertBanner.success.border,

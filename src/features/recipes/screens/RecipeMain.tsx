@@ -30,7 +30,6 @@ import { RecipeFilterSheet } from '#features/recipes/components/RecipeFilterShee
 import { ActiveFilterChipsRow } from '#features/recipes/components/ActiveFilterChipsRow';
 import { Text } from '#components/atoms/Text';
 import { Screen } from '#components/templates/Screen';
-import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import type { BarAction } from '#components/molecules/BarActions';
 import { getRecipeTutorialSteps } from '#features/recipes/components/recipeTutorialSteps';
@@ -176,7 +175,11 @@ const RecipeMainInner: React.FC = () => {
     const externalId = idStr.startsWith('spoonacular-')
       ? idStr.replace('spoonacular-', '')
       : idStr;
-    toRecipeDetail({ externalSource: ExternalSource.Spoonacular, externalId });
+    // The row's own title and image show while the API opens the recipe.
+    const row = screen.items.find(item => item.id === idStr);
+    toRecipeDetail({
+      catalog: { externalId, name: row?.title, imageUrl: row?.imageUrl },
+    });
   };
 
   const hasIngredientSelection = screen.selectedIngredients.size > 0;
@@ -342,10 +345,10 @@ const RecipeMainInner: React.FC = () => {
       (screen.discovery.loading &&
         !screen.showSearchResults &&
         screen.items.length === 0) ? (
-        <View style={styles.gutter}>
-          {recipeListHeader}
+        <>
+          <View style={styles.gutter}>{recipeListHeader}</View>
           <RecipeSkeleton />
-        </View>
+        </>
       ) : (
         <ItemList
           items={screen.items}
@@ -454,9 +457,7 @@ const RecipeMainFallback: React.FC = () => {
           editable={false}
         />
       </View>
-      <View style={styles.gutter}>
-        <RecipeSkeleton />
-      </View>
+      <RecipeSkeleton />
     </Screen>
   );
 };
@@ -469,8 +470,8 @@ export const RecipeMain: React.FC = () => (
 );
 
 const styles = StyleSheet.create(theme => ({
-  // Chrome and skeletons render bare under `gutter="none"`, with no list
-  // content container to inset them, so this screen supplies the gutter.
+  // Chrome renders bare under `gutter="none"`, with no list content container
+  // to inset it, so this screen supplies the gutter.
   gutter: {
     paddingHorizontal: theme.layout.pageGutter,
   },

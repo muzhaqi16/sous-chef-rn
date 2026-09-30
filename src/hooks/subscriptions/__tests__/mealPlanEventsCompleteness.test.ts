@@ -21,6 +21,11 @@ import {
   MealPlanForEventDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import { MealPlanDisplayFragmentDoc } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import {
+  GetMealTemplateDocument,
+  GetMealTemplateForEditDocument,
+} from '#features/mealPlan/graphql/mealTemplate.generated';
+import { MealTemplateItemsForEventDocument } from '#features/mealPlan/hooks/useMealPlanSubscriptions.generated';
 
 /**
  * Every field path in a selection set, by field NAME — aliases ignored.
@@ -138,7 +143,47 @@ function subscriptionPlanBranch(document: DocumentNode): SelectionSetNode {
   throw new Error('MealPlan branch not found on mealPlanEvents.node');
 }
 
+/** The `mealTemplate.items` selection of a template query. */
+function templateItemsSelection(document: DocumentNode): SelectionSetNode {
+  const operation = document.definitions.find(
+    def => def.kind === 'OperationDefinition',
+  );
+  const templateField = operation?.selectionSet.selections.find(
+    (s): s is FieldNode =>
+      s.kind === 'Field' && s.name.value === 'mealTemplate',
+  );
+  const itemsField = templateField?.selectionSet?.selections.find(
+    (s): s is FieldNode => s.kind === 'Field' && s.name.value === 'items',
+  );
+  if (!itemsField?.selectionSet) {
+    throw new Error('mealTemplate.items not found');
+  }
+  return itemsField.selectionSet;
+}
+
 describe('MealPlanEvents completeness', () => {
+  it.each([
+    ['GetMealTemplate', () => GetMealTemplateDocument],
+    ['GetMealTemplateForEdit', () => GetMealTemplateForEditDocument],
+  ])('reads back every template-item field %s reads', (_name, reader) => {
+    // The read-back REPLACES `MealTemplate.items`, so an item it leaves short
+    // makes the template screen's read incomplete and refetches it whole.
+    const fragments = collectFragments([
+      reader(),
+      MealTemplateItemsForEventDocument,
+    ]);
+    const required = fieldPaths(templateItemsSelection(reader()), fragments);
+    const fetched = new Set(
+      fieldPaths(
+        templateItemsSelection(MealTemplateItemsForEventDocument),
+        fragments,
+      ),
+    );
+
+    expect(required).toContain('recipe.name');
+    expect(required.filter(path => !fetched.has(path))).toEqual([]);
+  });
+
   it('reads back every field MealPlanDisplay needs', () => {
     // Built here, not at module scope: the generated documents import each
     // other, so a module-level array can capture a binding before it resolves.

@@ -3,6 +3,7 @@ fragment PantryItemCard_pantryItem on PantryItem {
   itemName
   quantity
   heldQuantity
+  isLowStock
   displayAmount {
     quantity
     unit {

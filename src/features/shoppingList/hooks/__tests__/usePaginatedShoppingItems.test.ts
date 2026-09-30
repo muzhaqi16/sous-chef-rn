@@ -51,11 +51,12 @@ function buildConnectionData(
   pageInfo = { hasNextPage: false, endCursor: null as string | null },
   totalCount?: number,
   isPurchased = false,
+  listId = 'list-1',
 ): MockPart<GetShoppingListItemsFilteredQuery> {
   return {
     shoppingList: {
       __typename: 'ShoppingList',
-      id: 'list-1',
+      id: listId,
       itemsConnection: {
         __typename: 'ShoppingListItemConnection',
         edges: edges.map(node => ({
@@ -246,7 +247,7 @@ describe('usePaginatedShoppingItems', () => {
     expect(typeof result.current.actions.refetch).toBe('function');
   });
 
-  it('returns isTransitioning false when listId is stable', () => {
+  it('is not transitioning once the list it shows is held', async () => {
     const { result } = renderHookWithApollo(
       ({ listId }: { listId: string }) => usePaginatedShoppingItems({ listId }),
       {
@@ -255,7 +256,111 @@ describe('usePaginatedShoppingItems', () => {
       },
     );
 
+    await waitFor(() => expect(result.current.state.loading).toBe(false));
     expect(result.current.state.isTransitioning).toBe(false);
+  });
+
+  describe('switching to a list that is not held', () => {
+    const listOneMock = (
+      isPurchased: boolean,
+    ): MockFor<typeof GetShoppingListItemsFilteredDocument> => ({
+      request: {
+        query: GetShoppingListItemsFilteredDocument,
+        variables: vars =>
+          vars.id === 'list-1' && vars.isPurchased === isPurchased,
+      },
+      maxUsageCount: Number.POSITIVE_INFINITY,
+      result: {
+        data: buildConnectionData(
+          [{ id: isPurchased ? 'p1' : 'u1', itemName: 'Old', sortOrder: 'a' }],
+          undefined,
+          undefined,
+          isPurchased,
+        ),
+      },
+    });
+
+    const listTwo = (
+      isPurchased: boolean,
+      response: { delay: number } | { error: Error },
+    ): MockFor<typeof GetShoppingListItemsFilteredDocument> => ({
+      request: {
+        query: GetShoppingListItemsFilteredDocument,
+        variables: vars =>
+          vars.id === 'list-2' && vars.isPurchased === isPurchased,
+      },
+      maxUsageCount: Number.POSITIVE_INFINITY,
+      ...('error' in response
+        ? { error: response.error }
+        : {
+            delay: response.delay,
+            result: {
+              data: buildConnectionData(
+                [{ id: 'n1', itemName: 'New', sortOrder: 'a' }],
+                undefined,
+                undefined,
+                isPurchased,
+                'list-2',
+              ),
+            },
+          }),
+    });
+
+    const renderSwitch = (
+      listTwoMocks: MockFor<typeof GetShoppingListItemsFilteredDocument>[],
+    ) =>
+      renderHookWithApollo(
+        ({ listId }: { listId: string }) =>
+          usePaginatedShoppingItems({ listId }),
+        {
+          operationMocks: [
+            listOneMock(false),
+            listOneMock(true),
+            ...listTwoMocks,
+          ],
+          initialProps: { listId: 'list-1' },
+        },
+      );
+
+    it('shows none of the old list while the new one loads', async () => {
+      const { result, rerender } = renderSwitch([
+        listTwo(false, { delay: 50 }),
+        listTwo(true, { delay: 50 }),
+      ]);
+      await waitFor(() =>
+        expect(result.current.state.purchased.items).toHaveLength(1),
+      );
+
+      rerender({ listId: 'list-2' });
+
+      expect(result.current.state.unpurchased.items).toEqual([]);
+      expect(result.current.state.purchased.items).toEqual([]);
+      expect(result.current.state.isTransitioning).toBe(true);
+
+      await waitFor(() =>
+        expect(result.current.state.unpurchased.items.map(i => i.id)).toEqual([
+          'n1',
+        ]),
+      );
+      expect(result.current.state.isTransitioning).toBe(false);
+    });
+
+    it('offline, serves no old-list row under the new list', async () => {
+      const offline = new Error('Network request failed');
+      const { result, rerender } = renderSwitch([
+        listTwo(false, { error: offline }),
+        listTwo(true, { error: offline }),
+      ]);
+      await waitFor(() =>
+        expect(result.current.state.purchased.items).toHaveLength(1),
+      );
+
+      rerender({ listId: 'list-2' });
+
+      await waitFor(() => expect(result.current.state.error).toBeDefined());
+      expect(result.current.state.unpurchased.items).toEqual([]);
+      expect(result.current.state.purchased.items).toEqual([]);
+    });
   });
 
   it('combines errors from both queries', async () => {

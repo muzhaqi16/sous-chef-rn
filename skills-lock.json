@@ -7,6 +7,54 @@
       "skillPath": "skills/apollo-client/SKILL.md",
       "computedHash": "008c067a3d480ab905aa37aab113b8dc54028e29e593610866b7ea8131377ce1"
     },
+    "apollo-connectors": {
+      "source": "apollographql/skills",
+      "sourceType": "github",
+      "skillPath": "skills/apollo-connectors/SKILL.md",
+      "computedHash": "d17205617c0b71611f0f240a4d1432e64e057ad7e8f2384ba27c0800151fb44e"
+    },
+    "apollo-federation": {
+      "source": "apollographql/skills",
+      "sourceType": "github",
+      "skillPath": "skills/apollo-federation/SKILL.md",
+      "computedHash": "91ef44a3d6f60b60610c00dfed2037fe01819e8355a40e990d8bb3549df935b4"
+    },
+    "apollo-ios": {
+      "source": "apollographql/skills",
+      "sourceType": "github",
+      "skillPath": "skills/apollo-ios/SKILL.md",
+      "computedHash": "0a0f898406d8c72eb8eebfdd026e62aa976451fca5894da4e2296540033826df"
+    },
+    "apollo-kotlin": {
+      "source": "apollographql/skills",
+      "sourceType": "github",
+      "skillPath": "skills/apollo-kotlin/SKILL.md",
+      "computedHash": "8d2b5199c730c443d33a687d3fceb9e397282d3d41c08f57cf1470d674426196"
+    },
+    "apollo-mcp-server": {
+      "source": "apollographql/skills",
+      "sourceType": "github",
+      "skillPath": "skills/apollo-mcp-server/SKILL.md",
+      "computedHash": "7bf2b3403ef5925e3dd78973b7035317b4957be05d6ef994749f3ab2ad6b1ef5"
+    },
+    "apollo-router": {
+      "source": "apollographql/skills",
+      "sourceType": "github",
+      "skillPath": "skills/apollo-router/SKILL.md",
+      "computedHash": "fe0ca97e47381fa7edc12501bcf354a16353c93080ebc12b52bbdfef2aecb401"
+    },
+    "apollo-router-plugin-creator": {
+      "source": "apollographql/skills",
+      "sourceType": "github",
+      "skillPath": "skills/apollo-router-plugin-creator/SKILL.md",
+      "computedHash": "dae6c2958115ffc842f73fee0da3364bc5582f80f04bc905048b49f4794fa8f2"
+    },
+    "apollo-server": {
+      "source": "apollographql/skills",
+      "sourceType": "github",
+      "skillPath": "skills/apollo-server/SKILL.md",
+      "computedHash": "48e0099a2515d5c3b905f5c3891e8d5291a3466d194524b5a8b49e56e0689533"
+    },
     "argent-android-emulator-setup": {
       "source": "software-mansion/argent",
       "ref": "v0.26.0",
@@ -210,6 +258,24 @@
       "sourceType": "github",
       "skillPath": "skills/react-navigation/SKILL.md",
       "computedHash": "f09111c137b0bac6e43ff5ff57297afc93ae51583797acf779733ace4d1ced60"
+    },
+    "rover": {
+      "source": "apollographql/skills",
+      "sourceType": "github",
+      "skillPath": "skills/rover/SKILL.md",
+      "computedHash": "a0234964c186105ecc3268596f6b78aa5d5aeee90e479bdeb1a28dbf379e27ac"
+    },
+    "rust-best-practices": {
+      "source": "apollographql/skills",
+      "sourceType": "github",
+      "skillPath": "skills/rust-best-practices/SKILL.md",
+      "computedHash": "a3db351ec552ed9d36b59e547d6c1d94077867eb5bcb98b3f802dfebb0a8a248"
+    },
+    "skill-creator": {
+      "source": "apollographql/skills",
+      "sourceType": "github",
+      "skillPath": "skills/skill-creator/SKILL.md",
+      "computedHash": "31bbb8fd3590224ef566286aa1df8019e15c9f0f4c9d182b77ed8e054158462a"
     },
     "upgrade-react-navigation": {
       "source": "react-navigation/skills",

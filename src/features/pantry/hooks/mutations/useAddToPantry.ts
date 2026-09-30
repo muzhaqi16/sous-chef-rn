@@ -12,21 +12,20 @@ import {
   addToPantryItemsCache,
   revertOptimisticPantryItem,
 } from '#features/pantry/cache/items';
-import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
-import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
 import { findCachedPantryItemDuplicate } from '#features/pantry/utils/pantryCacheReaders';
 import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
+import { writeEntityFields } from '#/apollo/utils/localFirstFields';
 import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { extractNodes } from '#/utils/connectionUtils';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { toDateKey } from '#/utils/dateUtils';
+import { todayKey } from '#/utils/dateUtils';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import { writeHeldStock } from '#features/pantry/cache/stock';
+import { writeLocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
 
 /** What became of an add. The caller owns the toast and the animation. */
 export type AddPantryItemOutcome =
@@ -55,6 +54,7 @@ export function useAddToPantry({
   const client = useApolloClient();
 
   const [createPantryItem] = useMutation(CreatePantryItemDocument, {
+    context: { localFirst: true },
     update: (cache, { data }, { variables }) => {
       const payload = appliedPayload(data);
       if (!payload || !pantryId) return;
@@ -79,6 +79,7 @@ export function useAddToPantry({
   });
 
   const [restockPantryItem] = useMutation(RestockPantryItemDocument, {
+    context: { localFirst: true },
     update: (cache, { data }) => {
       const payload = appliedPayload(data);
       if (!payload || !pantryId) return;
@@ -156,17 +157,13 @@ export function useAddToPantry({
     pantryItemId: string,
     cachedQuantity: number | null,
   ): Promise<RestockOutcome> => {
-    const cacheId = client.cache.identify({
-      __typename: 'PantryItem',
-      id: pantryItemId,
+    const entity =
+      cachedQuantity === null
+        ? undefined
+        : { __typename: 'PantryItem', id: pantryItemId };
+    writeEntityFields(client.cache, entity, {
+      quantity: (cachedQuantity ?? 0) + 1,
     });
-    const optimistic = optimisticFieldUpdate(
-      client.cache,
-      cacheId,
-      cachedQuantity === null ? null : { quantity: cachedQuantity },
-      { quantity: (cachedQuantity ?? 0) + 1 },
-      'Restock Pantry Item',
-    );
     // The amount the screens show moves with the count.
     const undoHeld =
       cachedQuantity === null
@@ -178,6 +175,7 @@ export function useAddToPantry({
       () =>
         restockPantryItem({
           variables: {
+            today: todayKey(),
             input: {
               id: pantryItemId,
               quantity: 1,
@@ -185,13 +183,14 @@ export function useAddToPantry({
               idempotencyKey: generateEntityId(),
             },
           },
-          context: { localFirst: true },
         }),
       {
         document: RestockPantryItemDocument,
         fallback: t('addToPantry.restockFailed'),
         onFailed: () => {
-          optimistic.revert();
+          writeEntityFields(client.cache, entity, {
+            quantity: cachedQuantity ?? undefined,
+          });
           undoHeld();
         },
         present: 'none',
@@ -221,18 +220,11 @@ export function useAddToPantry({
     try {
       // Publishes the row AND counts it, so the header cannot fall behind the
       // list offline, where no response arrives to correct it.
-      addPantryItemLocally(
-        client.cache,
-        pantryId,
-        buildOptimisticPantryItem(
-          id,
-          { pantryId, itemName, itemId },
-          client.cache,
-        ),
-      );
-      // Detail-shape the same row so tapping it renders from cache instead of
-      // querying an id the server does not have yet.
-      writePantryItemDetailStub(client.cache, id, { itemId, itemName });
+      writeLocalPantryItem(client.cache, id, { pantryId, itemName, itemId });
+      addPantryItemLocally(client.cache, pantryId, {
+        __typename: 'PantryItem',
+        id,
+      });
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Add Pantry Item (optimistic)',
@@ -241,14 +233,13 @@ export function useAddToPantry({
 
     let result;
     let thrown: unknown;
-    const today = toDateKey(new Date());
+    const today = todayKey();
     try {
       result = await createPantryItem({
         variables: {
           input: { id, pantryId, item: { id: itemId }, today },
           today,
         },
-        context: { localFirst: true },
       });
     } catch (error) {
       thrown = error;

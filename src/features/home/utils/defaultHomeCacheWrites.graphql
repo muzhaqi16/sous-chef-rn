@@ -1,0 +1,10 @@
+# Existence only: a home cached without `isDefault` still satisfies it.
+fragment defaultHomeCacheWrites_identity on Home {
+  id
+}
+
+# The pre-write flag, restored as it was found.
+fragment defaultHomeCacheWrites_isDefault on Home {
+  id
+  isDefault
+}

@@ -5,9 +5,9 @@
  * The Feature API Boundary Convention stops a feature importing another's
  * `graphql/`, so several mutations exist as near-identical copies — four of
  * `AddItemsToShoppingList`, two of `CreatePantryItem`. Every copy is registered
- * in `SYNC_REGISTRY` and replays through the SAME `Sync*` fragment,
- * so the queue treats them as one operation while their selection sets are
- * maintained by hand, separately, in different features.
+ * in `REPLAY_PREPARATIONS` with the same preparer, so the queue treats them as
+ * one operation while their selection sets are maintained by hand, separately,
+ * in different features.
  *
  * They had already drifted before this test existed, and nothing reported it:
  * the two pantry copies of `AddItemsToShoppingList` omit the parent-list
@@ -27,7 +27,7 @@
  * has already put it there complete) rather than from the response. That is a
  * different architecture, not drift, and the exemption below says so.
  *
- * The operation list is derived from the sync registries rather than hand-kept,
+ * The operation list is derived from the replay registry rather than hand-kept,
  * so a newly registered copy is covered by being registered.
  */
 import type {
@@ -36,15 +36,9 @@ import type {
   FragmentDefinitionNode,
   SelectionSetNode,
 } from 'graphql';
-import { SYNC_REGISTRY } from '#/apollo/offlineQueue/syncRegistry';
-import {
-  CreatePantryItemDocument,
-  SyncPantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
-import {
-  AddItemToShoppingListDocument,
-  SyncShoppingListItemDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import { REPLAY_PREPARATIONS } from '#/apollo/offlineQueue/preparationRegistry';
+import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   BarcodeCreatePantryItemDocument,
   BarcodeAddItemToShoppingListDocument,
@@ -160,7 +154,6 @@ const FAMILIES: Family[] = [
     fragmentSources: [
       CreatePantryItemDocument,
       BarcodeCreatePantryItemDocument,
-      SyncPantryItemDocument,
     ],
   },
   {
@@ -188,15 +181,14 @@ const FAMILIES: Family[] = [
       BarcodeAddItemToShoppingListDocument,
       AddItemToShoppingListFromFilteredPantryDocument,
       AddItemToShoppingListFromPantryItemDocument,
-      SyncShoppingListItemDocument,
     ],
   },
 ];
 
-const REGISTERED = new Set(Object.keys(SYNC_REGISTRY));
+const REGISTERED = new Set(Object.keys(REPLAY_PREPARATIONS));
 
 describe('local-first copy drift', () => {
-  it('covers every copy the sync registries actually replay', () => {
+  it('covers every copy the replay registry actually replays', () => {
     // Derived, not hand-kept: a copy registered for replay but absent from
     // FAMILIES would go unchecked, which is exactly how the current drift got
     // in. This fails when someone registers a new copy without listing it.

@@ -8,7 +8,7 @@ import { useStore } from '#store';
 import { shouldTreatAsOffline } from '#store/slices/networkSlice';
 import { queueStore } from './queueStore';
 import { queueManager } from './queueManager';
-import { captureReplayInputs, hasSyncMapping } from './convertToSyncMutation';
+import { captureReplayInputs, hasReplayPreparation } from './prepareReplay';
 import { OfflineRejectedError } from './OfflineRejectedError';
 import { QueueCapacityError } from './types';
 import type { QueuedMutation } from './types';
@@ -64,10 +64,10 @@ export const createQueueLink = () => {
     const state = useStore.getState();
     const localFirst = operation.getContext().localFirst === true;
     // Replay allowlist: local-first opt-ins (their hooks already wrote the
-    // change to the cache and read the queued result as success) plus
-    // Sync*-mapped idempotent upserts, which are safe without the opt-in.
+    // change to the cache and read the queued result as success) plus the
+    // registered canonical writes, which are safe without the opt-in.
     const replayable =
-      localFirst || hasSyncMapping(operation.operationName ?? '');
+      localFirst || hasReplayPreparation(operation.operationName ?? '');
 
     if (shouldTreatAsOffline(state)) {
       if (!replayable) {

@@ -8,11 +8,8 @@
 
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
-import {
-  addOptimisticShoppingList,
-  buildOptimisticShoppingList,
-  revertOptimisticShoppingList,
-} from '../list';
+import { revertOptimisticShoppingList, writeLocalShoppingList } from '../list';
+import { List_RowFragmentDoc } from '../list.generated';
 
 const LISTS_OVERVIEW_QUERY = gql`
   query TestShoppingLists($homeId: ID) {
@@ -98,16 +95,22 @@ function seedEmptyOverview(cache: ReturnType<typeof makeCache>) {
   });
 }
 
-function buildList(
+/** Writes the local list, then reads its row back as the screens would. */
+function writeList(
   cache: ReturnType<typeof makeCache>,
   input: { name: string; isDefault?: boolean; homeId?: string } = {
     name: 'Groceries',
   },
 ) {
-  return buildOptimisticShoppingList(cache, LIST_ID, input, OWNER);
+  writeLocalShoppingList(cache, LIST_ID, input, OWNER);
+  return cache.readFragment({
+    id: `ShoppingList:${LIST_ID}`,
+    fragment: List_RowFragmentDoc,
+    fragmentName: 'list_row',
+  });
 }
 
-describe('buildOptimisticShoppingList', () => {
+describe('writeLocalShoppingList: the row', () => {
   it('materializes owner display data from the cached canonical User entity', () => {
     const cache = makeCache();
     cache.writeFragment({
@@ -138,17 +141,17 @@ describe('buildOptimisticShoppingList', () => {
       },
     });
 
-    const list = buildList(cache);
+    const list = writeList(cache);
 
-    expect(list.ownerships).toHaveLength(1);
-    expect(list.ownerships[0]!.userId).toBe(OWNER.id);
-    expect(list.ownerships[0]!.user.profile?.displayName).toBe('Tani');
+    expect(list?.ownerships).toHaveLength(1);
+    expect(list?.ownerships[0]?.userId).toBe(OWNER.id);
+    expect(list?.ownerships[0]?.user.profile?.displayName).toBe('Tani');
   });
 
   it('falls back to the auth identity with a null profile when the User entity is not cached', () => {
-    const list = buildList(makeCache());
+    const list = writeList(makeCache());
 
-    expect(list.ownerships[0]!.user).toEqual({
+    expect(list?.ownerships[0]?.user).toEqual({
       __typename: 'User',
       id: OWNER.id,
       email: OWNER.email,
@@ -170,23 +173,19 @@ describe('buildOptimisticShoppingList', () => {
       data: { __typename: 'Home', id: 'home-1', name: 'Casa' },
     });
 
-    const linked = buildList(cache, { name: 'Groceries', homeId: 'home-1' });
-    expect(linked.home).toEqual({
-      __typename: 'Home',
-      id: 'home-1',
-      name: 'Casa',
-    });
+    const linked = writeList(cache, { name: 'Groceries', homeId: 'home-1' });
+    expect(linked?.home).toMatchObject({ id: 'home-1', name: 'Casa' });
 
-    const unknownHome = buildList(cache, {
+    const unknownHome = writeList(cache, {
       name: 'Groceries',
       homeId: 'home-9',
     });
-    expect(unknownHome.home).toBeNull();
-    expect(unknownHome.homeId).toBe('home-9');
+    expect(unknownHome?.home).toBeNull();
+    expect(unknownHome?.homeId).toBe('home-9');
   });
 });
 
-describe('addOptimisticShoppingList', () => {
+describe('writeLocalShoppingList: the caches it joins', () => {
   it('leaves the templates connection alone — a new list is never a template', () => {
     // `Query.shoppingLists` is keyed by `filters`, and a cache.modify write
     // fans out across every variant. The template picker's variant selects
@@ -216,7 +215,7 @@ describe('addOptimisticShoppingList', () => {
       },
     });
 
-    addOptimisticShoppingList(cache, buildList(cache));
+    writeList(cache);
 
     const templates = cache.readQuery<{
       shoppingLists: {
@@ -234,7 +233,7 @@ describe('addOptimisticShoppingList', () => {
     const cache = makeCache();
     seedEmptyOverview(cache);
 
-    addOptimisticShoppingList(cache, buildList(cache));
+    writeList(cache);
 
     const overview = cache.readQuery<{
       shoppingLists: {
@@ -281,10 +280,7 @@ describe('addOptimisticShoppingList', () => {
       seedHomeVariant(cache, 'home-b');
       seedHomeVariant(cache, null);
 
-      addOptimisticShoppingList(
-        cache,
-        buildList(cache, { name: 'Groceries', homeId: 'home-a' }),
-      );
+      writeList(cache, { name: 'Groceries', homeId: 'home-a' });
 
       expect(readHomeIds(cache, 'home-a')).toEqual([LIST_ID]);
       expect(readHomeIds(cache, 'home-b')).toEqual([]);
@@ -296,7 +292,7 @@ describe('addOptimisticShoppingList', () => {
       seedHomeVariant(cache, 'home-a');
       seedHomeVariant(cache, null);
 
-      addOptimisticShoppingList(cache, buildList(cache));
+      writeList(cache);
 
       expect(readHomeIds(cache, 'home-a')).toEqual([]);
       expect(readHomeIds(cache, null)).toEqual([LIST_ID]);
@@ -306,7 +302,7 @@ describe('addOptimisticShoppingList', () => {
   it('serves by-id lookups through the Query.shoppingList redirect with seeded empty itemsConnection variants', () => {
     const cache = makeCache();
 
-    addOptimisticShoppingList(cache, buildList(cache));
+    writeList(cache);
 
     // No server response ever wrote ROOT_QUERY.shoppingList({id}) — the
     // redirect resolves the normalized entity, and the seeded variant makes
@@ -338,7 +334,7 @@ describe('revertOptimisticShoppingList', () => {
   it('removes the overview edge and evicts the entity', () => {
     const cache = makeCache();
     seedEmptyOverview(cache);
-    addOptimisticShoppingList(cache, buildList(cache));
+    writeList(cache);
 
     revertOptimisticShoppingList(cache, LIST_ID);
 

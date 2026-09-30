@@ -1,7 +1,7 @@
 /**
  * The one hook that fires `MarkHomeAsDefault`, so every route that moves the
- * account default is local-first and writes `Home.isDefault`. Replay is safe
- * without a `Sync*` mapping: marking the same home twice is idempotent.
+ * account default is local-first and writes `Home.isDefault`. Replay is safe:
+ * marking the same home twice is idempotent.
  */
 import { useMutation, useApolloClient } from '@apollo/client/react';
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
@@ -18,6 +18,7 @@ import {
   restoreDefaultHome,
 } from '#features/home/utils/defaultHomeCacheWrites';
 import { useDefaultHomeSyncStore } from '#features/home/store/useDefaultHomeSyncStore';
+import { todayKey } from '#/utils/dateUtils';
 
 interface MarkHomeAsDefaultResult {
   /** `refused`: the server ruled against it. `failed`: it never ruled. */
@@ -51,7 +52,7 @@ export const useMarkHomeAsDefault = () => {
     markPending(homeId);
 
     const settled = await settleMutation(
-      () => mutate({ variables: { input: { homeId } } }),
+      () => mutate({ variables: { input: { homeId }, today: todayKey() } }),
       {
         document: MarkHomeAsDefaultDocument,
         fallback: t('errors.setDefaultHomeFailed'),

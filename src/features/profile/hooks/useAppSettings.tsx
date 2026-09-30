@@ -1,7 +1,12 @@
 import { useEffect } from 'react';
 import { useUser } from '#store/useAppStore';
 import { useStore } from '#store';
-import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import {
+  skipToken,
+  useApolloClient,
+  useMutation,
+  useQuery,
+} from '@apollo/client/react';
 import {
   GetUserSettingsDocument,
   UpdateUserPreferencesDocument,
@@ -16,6 +21,7 @@ import {
   updateEntityFieldsLocalFirst,
 } from '#/apollo/utils/localFirstFields';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { dropUnitSystemAnswers } from '#/apollo/utils/unitSystemAnswers';
 import { useTranslation } from '#/i18n';
 
 export interface AppSettings {
@@ -33,10 +39,14 @@ export const useAppSettings = () => {
   const { t } = useTranslation();
   const user = useUser();
   const client = useApolloClient();
-  const { data, loading, error, refetch } = useQuery(GetUserSettingsDocument, {
-    skip: !user?.id,
+  const { data, loading, error, refetch } = useQuery(
+    GetUserSettingsDocument,
+    user?.id ? {} : skipToken,
+  );
+  const [updateSettings] = useMutation(UpdateUserPreferencesDocument, {
+    // An unreachable API queues the change, so a flipped setting isn't lost.
+    context: { localFirst: true },
   });
-  const [updateSettings] = useMutation(UpdateUserPreferencesDocument);
 
   const settings = data?.me?.settings;
 
@@ -47,7 +57,8 @@ export const useAppSettings = () => {
       showTutorials: settings?.showTutorials ?? true,
       autoSync: settings?.autoSync ?? true,
       offlineMode: settings?.offlineMode ?? false,
-      preferredUnitSystem: settings?.preferredUnitSystem ?? UnitSystem.Metric,
+      // The server's default, and what a user with no settings row reads.
+      preferredUnitSystem: settings?.preferredUnitSystem ?? UnitSystem.System,
       enabledFeatures: settings?.enabledFeatures ?? [],
       betaFeatures: settings?.betaFeatures ?? [],
     };
@@ -112,14 +123,15 @@ export const useAppSettings = () => {
       mutate: async () => {
         const settled = await settleMutation(
           () =>
-            // localFirst: an unreachable API queues the change for replay
-            // instead of failing it, so the flipped setting isn't lost.
             updateSettings({
               variables: { input: toSettingsInput(updates) },
-              context: { localFirst: true },
             }),
           { document: UpdateUserPreferencesDocument, fallback: failureMessage },
         );
+        // A queued change drops them when it replays (`reconcileSettingsReplay`).
+        if (settled.status === 'applied' && 'preferredUnitSystem' in updates) {
+          dropUnitSystemAnswers(client.cache);
+        }
         return { data: settled.data, error: settled.failure };
       },
       logLabel: 'Update Settings',
@@ -140,7 +152,7 @@ export const useAppSettings = () => {
       showTutorials: true,
       autoSync: true,
       offlineMode: false,
-      preferredUnitSystem: UnitSystem.Metric,
+      preferredUnitSystem: UnitSystem.System,
     };
 
     return updateMultipleSettings(

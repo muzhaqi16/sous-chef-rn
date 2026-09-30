@@ -18,3 +18,11 @@ fragment useConvertExpiredToWaste_pantryItem on PantryItem {
   wasteReason
   storageState
 }
+
+# The pre-convert values a refused convert restores.
+fragment useConvertExpiredToWaste_state on PantryItem {
+  id
+  quantity
+  heldQuantity
+  condition
+}

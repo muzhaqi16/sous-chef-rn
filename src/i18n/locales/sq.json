@@ -128,6 +128,8 @@
     "offlineSearchUnavailable": "Kërkimi i recetave kërkon lidhje. Recetat e tua të ruajtura janë ende këtu.",
     "queuedChangeOverwrittenResource": "{{resource}}: ndryshimi juaj u zëvendësua nga një më i ri dhe u zhbë.",
     "queuedChangeOverwritten": "Një ndryshim u zëvendësua nga një më i ri dhe u zhbë.",
+    "queuedRemovalKeptResource": "{{resource}}: heqja nuk u zbatua, sepse hyrja ishte bashkuar me një që ekzistonte tashmë.",
+    "queuedRemovalKept": "Një heqje nuk u zbatua, sepse hyrja ishte bashkuar me një që ekzistonte tashmë.",
     "itemNameRequired": "Ju lutemi shkruani emrin e artikullit",
     "invalidQuantity": "Ju lutemi shkruani një sasi të vlefshme",
     "itemNotFound": "Artikulli nuk u gjet",

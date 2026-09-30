@@ -9,7 +9,8 @@
 import notifee from '@notifee/react-native';
 import type { InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
-import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
+import { NotificationSummaryDocument } from '#features/notifications/graphql/notifications.generated';
+import { NotificationSummaryReadersFragmentDoc } from '#/graphql/readers/notificationSummaryReaders.generated';
 import { logger } from '#/utils/environment';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -36,23 +37,14 @@ const mockSetBadgeCount = notifee.setBadgeCount as jest.Mock;
 
 const writeCount = (count: number) =>
   mockCache.writeQuery({
-    query: GetUnreadNotificationsDocument,
+    query: NotificationSummaryDocument,
     data: {
       __typename: 'Query',
-      me: {
-        __typename: 'User',
+      notificationSummary: {
+        __typename: 'NotificationSummary',
         id: 'me',
-        unreadNotificationCount: count,
-        hasUrgentNotifications: false,
-        notificationsConnection: {
-          __typename: 'NotificationConnection',
-          edges: [],
-          pageInfo: {
-            __typename: 'PageInfo',
-            hasNextPage: false,
-            endCursor: null,
-          },
-        },
+        unreadCount: count,
+        hasUrgent: false,
       },
     },
   });
@@ -116,6 +108,28 @@ describe('setupBadgeSync', () => {
     await Promise.resolve();
 
     expect(mockSetBadgeCount).toHaveBeenCalledWith(0);
+  });
+
+  // A notification write's payload states the summary; it lands on the
+  // normalized entity, never through `Query.notificationSummary` itself.
+  it("applies the count a write's payload states", async () => {
+    writeCount(4);
+    teardown = setupBadgeSync();
+    mockSetBadgeCount.mockClear();
+
+    mockCache.writeFragment({
+      id: 'NotificationSummary:me',
+      fragment: NotificationSummaryReadersFragmentDoc,
+      data: {
+        __typename: 'NotificationSummary',
+        id: 'me',
+        unreadCount: 7,
+        hasUrgent: false,
+      },
+    });
+    await Promise.resolve();
+
+    expect(mockSetBadgeCount).toHaveBeenCalledWith(7);
   });
 
   it('does not re-apply an unchanged count', async () => {

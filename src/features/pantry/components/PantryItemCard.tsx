@@ -171,6 +171,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   const name = pantryItem.itemName;
   const imageUrl = resolveImageUrl(pantryItem);
 
+  const isOutOfStock = pantryItem.heldQuantity <= 0;
   const expiresOn = pantryItem.expiresOn;
   const expiresIn = expiresOn ? daysUntilExpiry(expiresOn, today) : null;
   const expStatus = getExpirationStatus(expiresIn);
@@ -195,7 +196,6 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   );
   // Custom names only; the default locations are the filter tabs.
   const location = pantryItem.storageLocation?.name ?? null;
-  const isOutOfStock = pantryItem.heldQuantity <= 0;
   // Each of the row's four text slots has ONE owner, and an absent value leaves
   // its slot empty rather than letting another value move in. Amounts and
   // breakdowns belong to the detail screen.
@@ -210,7 +210,16 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
     onRestock: onItemRestock ? () => onItemRestock(id) : undefined,
   };
 
-  const cardVariant: CardVariant = variant;
+  // ONE status per row, read by its border and its status line alike. An
+  // empty stack has nothing left to expire, so it reads as low stock whatever
+  // its date; otherwise expiry outranks stock.
+  const cardVariant: CardVariant = isOutOfStock
+    ? 'lowStock'
+    : variant !== 'normal'
+    ? variant
+    : pantryItem.isLowStock
+    ? 'lowStock'
+    : 'normal';
 
   // Always rendered: the placeholder tile keeps rows aligned when there is no
   // image.
@@ -226,10 +235,12 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
         </Text>
       );
     }
-    if (isOutOfStock) {
+    if (cardVariant === 'lowStock') {
       return (
-        <Text role="footnoteStrong" tone="warning" style={styles.outOfStock}>
-          {t('pantryScreen.outOfStock')}
+        <Text role="footnoteStrong" tone="info">
+          {isOutOfStock
+            ? t('pantryScreen.outOfStock')
+            : t('pantryScreen.runningLow')}
         </Text>
       );
     }
@@ -306,7 +317,6 @@ const styles = StyleSheet.create(theme => ({
   pendingSync: {
     fontStyle: 'italic',
   },
-  outOfStock: {},
 }));
 
 // PantryItemVariant alias for backwards compatibility

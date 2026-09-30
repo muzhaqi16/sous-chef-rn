@@ -79,6 +79,11 @@ const createMockHomeNode = (
     pantries
       ? {
           __typename: 'PantryConnection',
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: false,
+            endCursor: null,
+          },
           totalCount: pantries.length,
           edges: pantries.map(pantry => ({
             __typename: 'PantryEdge',
@@ -111,6 +116,7 @@ const createMockHomeNode = (
     },
     pantriesConnection: {
       __typename: 'PantryConnection',
+      pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: null },
       totalCount: 0,
       edges: [],
     },
@@ -294,7 +300,10 @@ describe('useHomeSelection', () => {
       });
 
       expect(success!).toBe(true);
-      expect(m.fired).toContainEqual({ input: { homeId: 'brand-new-home' } });
+      expect(m.fired).toContainEqual({
+        input: { homeId: 'brand-new-home' },
+        today: expect.any(String),
+      });
       expect(alertService.alert).not.toHaveBeenCalled();
       // No local record, so no pantry hint — the server's `defaultPantry` is
       // what lands the selection.
@@ -317,6 +326,11 @@ describe('useHomeSelection', () => {
           ...createMockHomeNode({ id: 'home-2', name: 'Home 2' }),
           pantriesConnection: {
             __typename: 'PantryConnection',
+            pageInfo: {
+              __typename: 'PageInfo',
+              hasNextPage: false,
+              endCursor: null,
+            },
             totalCount: 2,
             edges: [
               {

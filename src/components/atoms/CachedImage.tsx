@@ -207,22 +207,3 @@ export function preloadImages(uris: string[]): void {
     );
   }
 }
-
-/**
- * Downloads one image before anything shows it, waiting at most `maxWaitMs`,
- * so a view that mounts next renders it with no loading shimmer. A slow or
- * failed download only ends the wait; the view then loads it as usual.
- */
-export async function warmImage(uri: string, maxWaitMs: number): Promise<void> {
-  if (loadedUris.has(uri)) return;
-  const downloaded = TurboImage.prefetch([{ uri }], 'dataCache').then(
-    ok => {
-      if (ok) rememberLoaded(uri);
-    },
-    (error: unknown) => logger.warn('Image prefetch failed', error),
-  );
-  await Promise.race([
-    downloaded,
-    new Promise(resolve => setTimeout(resolve, maxWaitMs)),
-  ]);
-}

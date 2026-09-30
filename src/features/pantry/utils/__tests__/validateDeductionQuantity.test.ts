@@ -1,34 +1,13 @@
 import { alertService } from '#/services/alertService';
-import type { PantryActionSharedState } from '#features/pantry/components/modals/PantryActionModal';
+import {
+  eggsShared,
+  pantryActionShared as shared,
+} from '#/test-utils/pantryActionShared';
 import { validateDeductionQuantity } from '../validateDeductionQuantity';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
-
-const shared = (trackingQuantity: number): PantryActionSharedState => ({
-  selectedUnitInfo: null,
-  setSelectedUnitInfo: jest.fn(),
-  notes: '',
-  setNotes: jest.fn(),
-  trackingQuantity,
-  trackingUnitSymbol: 'cup',
-  trackingUnitId: 'u1',
-  displayAsFractionOf: () => true,
-  activeUnitSymbol: 'cup',
-  activeUnitId: 'u1',
-  isConvertedUnit: false,
-  pantryItemId: 'pi1',
-  defaultUnit: null,
-  defaultIncrement: null,
-  commonFractions: null,
-  availableInSelectedUnit: null,
-  availableLoading: false,
-  remainingNetWeight: null,
-  netWeightUnitSymbol: undefined,
-  netWeightUnitId: undefined,
-  isDualTracked: false,
-});
 
 describe('validateDeductionQuantity', () => {
   beforeEach(() => jest.clearAllMocks());
@@ -45,12 +24,11 @@ describe('validateDeductionQuantity', () => {
     expect(
       validateDeductionQuantity(
         '1',
-        {
-          ...shared(0.25),
+        shared(0.25, {
           trackingUnitSymbol: 'kg',
           activeUnitSymbol: 'kg',
           displayAsFractionOf: () => false,
-        },
+        }),
         'consume',
       ),
     ).toBeNull();
@@ -110,6 +88,46 @@ describe('validateDeductionQuantity', () => {
     expect(alertService.alert).toHaveBeenCalledWith(
       expect.any(String),
       'Cannot waste more than available quantity (2.456 cup)',
+    );
+  });
+
+  it('names the cap as the stack shows it when a dozen is more than is left', () => {
+    expect(
+      validateDeductionQuantity('1', eggsShared(11, 'doz'), 'consume'),
+    ).toBeNull();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      expect.any(String),
+      'Cannot consume more than available quantity (11 pc)',
+    );
+  });
+
+  it('names a cap that is a common fraction of a dozen in dozens', () => {
+    expect(
+      validateDeductionQuantity('3', eggsShared(32, 'doz'), 'waste'),
+    ).toBeNull();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      expect.any(String),
+      'Cannot waste more than available quantity (2 2/3 doz)',
+    );
+  });
+
+  it('reads a typed dozen fraction of the whole stock as the whole stock', () => {
+    expect(
+      validateDeductionQuantity('0.917', eggsShared(11, 'doz'), 'consume'),
+    ).toBe(11 / 12);
+    expect(alertService.alert).not.toHaveBeenCalled();
+  });
+
+  it('checks a dozen amount against the pieces held', () => {
+    expect(
+      validateDeductionQuantity('3', eggsShared(36, 'doz'), 'consume'),
+    ).toBe(3);
+    expect(
+      validateDeductionQuantity('3 1/12', eggsShared(36, 'doz'), 'consume'),
+    ).toBeNull();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      expect.any(String),
+      'Cannot consume more than available quantity (3 doz)',
     );
   });
 });

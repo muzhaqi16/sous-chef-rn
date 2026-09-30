@@ -6,7 +6,6 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import type { ApolloCache } from '@apollo/client';
 import {
   CreateMealPlanDocument,
   UpdateMealPlanDocument,
@@ -16,23 +15,14 @@ import {
   MealPlanDisplayFragmentDoc,
   type MealPlanDisplayFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import {
-  UseMealPlanActions_CreatorFragmentDoc,
-  type UseMealPlanActions_CreatorFragment,
-  UseMealPlanActions_HomeFragmentDoc,
-  type UseMealPlanActions_HomeFragment,
-  UseMealPlanActions_DetailStubFragmentDoc,
-  type UseMealPlanActions_DetailStubFragment,
-} from './useMealPlanActions.generated';
-import { NEUTRAL_MEAL_PLAN_DETAIL } from './mealPlanDetailNeutral.generated';
+import { writeLocalMealPlan } from '#features/mealPlan/cache/mealPlan';
 import type {
   CreateMealPlanInput,
   UpdateMealPlanInput,
 } from '#/graphql/generated/schemaTypes';
-import {
-  createAddToQueryConnectionUpdater,
-  createRemoveFromQueryConnectionUpdater,
-} from '#/apollo/utils/cacheUpdaters';
+import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { removeFromMealPlans } from '#features/mealPlan/cache/removals';
+import { settleMealPlanDelete } from '#features/mealPlan/offline/replayReconcilers';
 import {
   settleMutation,
   type SettledFailure,
@@ -48,10 +38,6 @@ const addToMealPlans = createAddToQueryConnectionUpdater(
   'mealPlans',
   'MealPlan',
 );
-const removeFromMealPlans = createRemoveFromQueryConnectionUpdater(
-  'mealPlans',
-  'MealPlan',
-);
 
 /** A plan create as its caller acts on it; `failure` is what to show. */
 export type MealPlanCreateOutcome =
@@ -61,84 +47,6 @@ export type MealPlanCreateOutcome =
 interface CreateMealPlanOptions {
   /** `'none'` leaves the failure to the caller, e.g. to show on a form field. */
   present?: 'alert' | 'none';
-}
-
-/**
- * Materialize a complete `MealPlanDisplay` entity for a local-first create.
- * Creator identity and home display fields come from the cache's canonical
- * entities; both degrade gracefully (profile-less creator, null home) when the
- * cache copy is incomplete — the post-replay refetch heals the gap.
- */
-function buildOptimisticMealPlan(
-  cache: ApolloCache,
-  id: string,
-  input: CreateMealPlanInput,
-  creatorId: string,
-): MealPlanDisplayFragment {
-  const creatorCacheId = cache.identify({ __typename: 'User', id: creatorId });
-  const cachedCreator = creatorCacheId
-    ? cache.readFragment<UseMealPlanActions_CreatorFragment>({
-        id: creatorCacheId,
-        fragment: UseMealPlanActions_CreatorFragmentDoc,
-        fragmentName: 'useMealPlanActions_creator',
-      })
-    : null;
-
-  const homeCacheId = input.homeId
-    ? cache.identify({ __typename: 'Home', id: input.homeId })
-    : undefined;
-  const home = homeCacheId
-    ? cache.readFragment<UseMealPlanActions_HomeFragment>({
-        id: homeCacheId,
-        fragment: UseMealPlanActions_HomeFragmentDoc,
-        fragmentName: 'useMealPlanActions_home',
-      })
-    : null;
-
-  const now = new Date().toISOString();
-  return {
-    __typename: 'MealPlan',
-    id,
-    name: input.name,
-    description: input.description ?? null,
-    planType: input.planType,
-    startDate: input.startDate,
-    endDate: input.endDate,
-    servings: input.servings ?? 2,
-    totalCalories: null,
-    totalProtein: null,
-    totalCarbs: null,
-    totalFat: null,
-    actualCost: 0,
-    budgetAmount: input.budgetAmount ?? null,
-    homeId: input.homeId ?? null,
-    home,
-    // The creator of a new plan is also its owner — used for permission gating.
-    user: {
-      __typename: 'User',
-      id: creatorId,
-    },
-    createdBy: cachedCreator ?? {
-      __typename: 'User',
-      id: creatorId,
-      profile: null,
-    },
-    version: 1,
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
-/**
- * `useMealPlan` returns null unless `MealPlanMain_mealPlan` is `complete`, so an
- * offline-created plan needs its detail-only fields too. The values are the
- * SDL-derived neutral base (`scripts/generate-optimistic-fillers.mjs`), so a new
- * fragment field cannot be forgotten here — invisible until the screen blanks.
- */
-function buildMealPlanDetailStub(
-  planId: string,
-): UseMealPlanActions_DetailStubFragment {
-  return { ...NEUTRAL_MEAL_PLAN_DETAIL, id: planId };
 }
 
 /** Fields an update can change that live on the cached `MealPlanDisplay`. */
@@ -169,6 +77,7 @@ export function useMealPlanActions() {
   const [createMealPlanMutation, { loading: creating }] = useMutation(
     CreateMealPlanDocument,
     {
+      context: { localFirst: true },
       update: (cache, { data }) => {
         const payload = appliedPayload(data);
         if (payload)
@@ -177,10 +86,19 @@ export function useMealPlanActions() {
     },
   );
 
-  const [updateMealPlanMutation] = useMutation(UpdateMealPlanDocument);
+  const [updateMealPlanMutation] = useMutation(UpdateMealPlanDocument, {
+    context: { localFirst: true },
+  });
 
   const [deleteMealPlanMutation, { loading: deleting }] = useMutation(
     DeleteMealPlanDocument,
+    {
+      context: { localFirst: true },
+      update: (cache, { data }, { variables }) => {
+        if (variables && appliedPayload(data))
+          settleMealPlanDelete(cache, variables, data);
+      },
+    },
   );
 
   const writePlan = (data: MealPlanDisplayFragment) =>
@@ -189,14 +107,6 @@ export function useMealPlanActions() {
       fragment: MealPlanDisplayFragmentDoc,
       fragmentName: 'MealPlanDisplay',
       data,
-    });
-
-  const writePlanDetailStub = (planId: string) =>
-    client.cache.writeFragment({
-      id: client.cache.identify({ __typename: 'MealPlan', id: planId }),
-      fragment: UseMealPlanActions_DetailStubFragmentDoc,
-      fragmentName: 'useMealPlanActions_detailStub',
-      data: buildMealPlanDetailStub(planId),
     });
 
   const readPlanSnapshot = (id: string) => {
@@ -222,15 +132,11 @@ export function useMealPlanActions() {
     // detail query on MealPlanMain. Hold that query off until the server has a
     // row to answer with — see `unconfirmedCreates`.
     unconfirmedCreates.mark(id);
-    const optimisticPlan = user
-      ? buildOptimisticMealPlan(client.cache, id, input, user.id)
-      : null;
-    if (optimisticPlan) {
+    const creatorId = user?.id;
+    if (creatorId) {
       try {
-        writePlan(optimisticPlan);
-        // Make the complete-gated detail screen render offline too.
-        writePlanDetailStub(id);
-        addToMealPlans(client.cache, optimisticPlan, { position: 'start' });
+        const plan = writeLocalMealPlan(client.cache, id, input, creatorId);
+        addToMealPlans(client.cache, plan, { position: 'start' });
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Create Meal Plan (optimistic)',
@@ -239,7 +145,7 @@ export function useMealPlanActions() {
     }
 
     const revertCreate = () => {
-      if (!optimisticPlan) return;
+      if (!creatorId) return;
       try {
         removeFromMealPlans(client.cache, id, { evictItem: true });
       } catch (cacheError) {
@@ -253,7 +159,6 @@ export function useMealPlanActions() {
       () =>
         createMealPlanMutation({
           variables: { input: { ...input, id } },
-          context: { localFirst: true },
         }),
       {
         document: CreateMealPlanDocument,
@@ -306,7 +211,6 @@ export function useMealPlanActions() {
       () =>
         updateMealPlanMutation({
           variables: { input: { ...input, id } },
-          context: { localFirst: true },
         }),
       {
         document: UpdateMealPlanDocument,
@@ -348,7 +252,6 @@ export function useMealPlanActions() {
       () =>
         deleteMealPlanMutation({
           variables: { input: { id } },
-          context: { localFirst: true },
         }),
       {
         document: DeleteMealPlanDocument,

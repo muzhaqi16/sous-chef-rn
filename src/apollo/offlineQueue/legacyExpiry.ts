@@ -7,7 +7,6 @@ import { toDateKey } from '#/utils/dateUtils';
 const DATE_ONLY_EXPIRY_INPUTS = new Set([
   'CreatePantryItemInput',
   'UpdatePantryItemInput',
-  'SyncPantryItemInput',
   'RestockPantryItemInput',
   'MoveShoppingItemToPantryInput',
 ]);

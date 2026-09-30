@@ -1,8 +1,15 @@
 import React from 'react';
 import { screen } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  seedCache,
+  toFragmentRef,
+} from '#/test-utils/apolloMockProvider';
 import { MealPlanItemCard } from '../MealPlanItemCard';
-import type { MealPlanItemCard_ItemFragment } from '../MealPlanItemCard.generated';
+import {
+  MealPlanItemCard_ItemFragmentDoc,
+  type MealPlanItemCard_ItemFragment,
+} from '../MealPlanItemCard.generated';
 
 const meal = (
   totalTimeMinutes: number | null,
@@ -23,18 +30,44 @@ const meal = (
   },
 });
 
+const ref = toFragmentRef<typeof MealPlanItemCard_ItemFragmentDoc>({
+  __typename: 'MealPlanItem',
+  id: 'mpi-1',
+});
+
+const renderCard = (item: MealPlanItemCard_ItemFragment | null) =>
+  renderWithApollo(<MealPlanItemCard item={ref} />, {
+    cache: seedCache(
+      item
+        ? [
+            {
+              data: item,
+              fragment: MealPlanItemCard_ItemFragmentDoc,
+              fragmentName: 'MealPlanItemCard_item',
+            },
+          ]
+        : [],
+    ),
+  });
+
 describe('MealPlanItemCard', () => {
   // A recipe with no known time stores 0.
   it('shows no time for a recipe whose time is 0', () => {
-    renderWithApollo(<MealPlanItemCard item={meal(0)} />);
+    renderCard(meal(0));
 
     expect(screen.getByText('Pizza')).toBeTruthy();
     expect(screen.queryByText('0 min')).toBeNull();
   });
 
   it('shows the time a recipe takes', () => {
-    renderWithApollo(<MealPlanItemCard item={meal(25)} />);
+    renderCard(meal(25));
 
     expect(screen.getByText('25 min')).toBeTruthy();
+  });
+
+  it('renders nothing while the item is not completely cached', () => {
+    renderCard(null);
+
+    expect(screen.queryByText('Pizza')).toBeNull();
   });
 });

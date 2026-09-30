@@ -77,7 +77,6 @@ interface RecipeEnrichmentProps {
   forkedFromName?: string;
   originalAuthor?: string;
   tags?: string[];
-  isBackendRecipe: boolean;
   status?: RecipeStatus;
   reviewNote?: string;
 }
@@ -90,7 +89,6 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
   forkedFromName,
   originalAuthor,
   tags,
-  isBackendRecipe,
   status,
   reviewNote,
 }) => {
@@ -184,7 +182,7 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
       )}
 
       {/* Only the author sees a recipe that is not published. */}
-      {!!(isBackendRecipe && status === RecipeStatus.Draft) && (
+      {status === RecipeStatus.Draft && (
         <View style={styles.draftBadge}>
           <Icon name="eye-off-outline" size={14} tone="textSecondary" />
           <Text role="caption" tone="secondary" style={styles.metaText}>
@@ -192,7 +190,7 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
           </Text>
         </View>
       )}
-      {!!(isBackendRecipe && status === RecipeStatus.PendingReview) && (
+      {status === RecipeStatus.PendingReview && (
         <View style={styles.draftBadge}>
           <Icon name="hourglass-outline" size={14} tone="textSecondary" />
           <Text role="caption" tone="secondary" style={styles.metaText}>
@@ -201,7 +199,7 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
         </View>
       )}
       {/* A rejection returns the recipe as a draft, always with a note. */}
-      {!!(isBackendRecipe && status === RecipeStatus.Draft && reviewNote) && (
+      {status === RecipeStatus.Draft && !!reviewNote && (
         <Text role="caption" tone="secondary" style={styles.reviewNote}>
           {t('recipes.reviewNote', { note: reviewNote })}
         </Text>

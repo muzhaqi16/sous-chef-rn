@@ -1,6 +1,11 @@
 import { useEffect } from 'react';
 import { useUser } from '#store/useAppStore';
-import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import {
+  skipToken,
+  useApolloClient,
+  useMutation,
+  useQuery,
+} from '@apollo/client/react';
 import {
   GetNotificationPreferencesDocument,
   UpdateNotificationPreferencesDocument,
@@ -204,10 +209,7 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
   const skipped = !user?.id || !!options?.skip;
   const { data, loading, error, refetch } = useQuery(
     GetNotificationPreferencesDocument,
-    {
-      skip: skipped,
-      fetchPolicy: 'cache-and-network',
-    },
+    skipped ? skipToken : {},
   );
 
   const preferences = data?.me?.notificationPreferences;
@@ -234,6 +236,7 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
   // completion is `queueLink`'s null result, which snaps every toggle back.
   const [updatePreferences] = useMutation(
     UpdateNotificationPreferencesDocument,
+    { context: { localFirst: true } },
   );
 
   // PERFORMANCE: Memoize settings object to prevent recreating on every render
@@ -293,7 +296,6 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
       mutate: input =>
         updatePreferences({
           variables: { input },
-          context: { localFirst: true },
         }),
     });
   };

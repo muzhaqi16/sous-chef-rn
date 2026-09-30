@@ -230,7 +230,7 @@ if (!keyAbsent || !anyColonOnly) {
   console.error(
     '✗ Apollo no longer behaves as the rules built on this probe assume.\n' +
       '  Re-read scripts/lib and the guards in cacheUpdaters.ts / ' +
-      'writePantryItemDetailStub.ts before trusting either.',
+      'writeLocalEntity.ts before trusting either.',
   );
   process.exit(1);
 }

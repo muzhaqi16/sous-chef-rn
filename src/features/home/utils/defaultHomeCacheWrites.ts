@@ -3,24 +3,14 @@
  * payload never returns the flag.
  */
 
-import { gql, type ApolloCache, type Reference } from '@apollo/client';
+import type { ApolloCache, Reference } from '@apollo/client';
+import {
+  DefaultHomeCacheWrites_IdentityFragmentDoc,
+  DefaultHomeCacheWrites_IsDefaultFragmentDoc,
+} from './defaultHomeCacheWrites.generated';
 
 /** Cached `homes` edge: normalized `{ node: Reference }`, or a bare ref. */
 type HomeEdge = { node?: Reference } | Reference;
-
-/** Existence only — a home cached without `isDefault` still satisfies it. */
-const HOME_IDENTITY = gql`
-  fragment DefaultHomeWrite_identity on Home {
-    id
-  }
-`;
-
-const HOME_IS_DEFAULT = gql`
-  fragment DefaultHomeWrite_isDefault on Home {
-    id
-    isDefault
-  }
-`;
 
 /**
  * Pre-write `isDefault` per cache id. `undefined` means the record carried no
@@ -60,10 +50,10 @@ const cachedHomes = (cache: ApolloCache) => {
 };
 
 const readIsDefault = (cache: ApolloCache, cacheId: string) =>
-  cache.readFragment<{ isDefault?: boolean | null }>({
+  cache.readFragment({
     id: cacheId,
-    fragment: HOME_IS_DEFAULT,
-  })?.isDefault ?? undefined;
+    fragment: DefaultHomeCacheWrites_IsDefaultFragmentDoc,
+  })?.isDefault;
 
 /**
  * Make `defaultHomeId` the only cached home carrying `isDefault: true`.
@@ -81,9 +71,9 @@ export const applyDefaultHome = (
   });
   const targetIsCached =
     !!targetCacheId &&
-    cache.readFragment<{ id: string }>({
+    cache.readFragment({
       id: targetCacheId,
-      fragment: HOME_IDENTITY,
+      fragment: DefaultHomeCacheWrites_IdentityFragmentDoc,
     }) !== null;
 
   if (!targetIsCached) {

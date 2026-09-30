@@ -339,7 +339,8 @@
     "tutorialPantrySettingsSubtitle": "Passa tra gli elenchi delle dispense e crea nuove dispense",
     "tutorialAddItemsTitle": "Aggiungi articoli rapidamente",
     "tutorialAddItemsSubtitle": "Tocca + per aggiungere articoli alla tua dispensa",
-    "outOfStock": "Esaurito"
+    "outOfStock": "Esaurito",
+    "runningLow": "Sta finendo"
   },
   "storageState": {
     "AMBIENT": "Temperatura ambiente",

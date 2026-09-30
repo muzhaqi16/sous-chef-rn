@@ -15,7 +15,10 @@ export function useDeleteAccount() {
     loading: checkingEligibility,
     error: eligibilityError,
     refetch: refetchEligibility,
-  } = useQuery(CanDeleteAccountDocument, { fetchPolicy: 'network-only' });
+  } = useQuery(CanDeleteAccountDocument, {
+    fetchPolicy: 'network-only',
+    refetchOn: false,
+  });
 
   const [deleteAccountMutation] = useMutation(DeleteAccountDocument);
 

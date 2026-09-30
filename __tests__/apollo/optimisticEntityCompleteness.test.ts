@@ -15,18 +15,14 @@
  *    is invisible for the whole offline session — the local-first promise
  *    silently broken, with no error anywhere.
  *
- * That is exactly what shipped: `buildOptimisticPantryItem` never wrote
- * `createdAt`, which `GetPantry` selects on every node.
+ * One field short is enough: a row without `createdAt`, which `GetPantry`
+ * selects on every node, strands the whole list.
  *
- * Three writers are covered, because all three produce the entity the list
- * reads:
- *  1. the optimistic entity written before the mutation fires,
- *  2. the mutation's own response shape (`CreatePantryItem`), and
- *  3. the offline queue's replay response (`SyncPantryItem`) — the only one of
- *     the three that lands while still offline, so a field missing there is the
- *     worst case: the row the user added stays invisible until a full network
- *     read. Its fragment carries a comment saying it must remain a superset of
- *     what `GetPantry` reads off a node; this is what holds it to that.
+ * Two writers are covered, because both produce the entity the list reads:
+ *  1. the optimistic entity written before the mutation fires, and
+ *  2. the mutation's own response shape (`CreatePantryItem`), which a queued
+ *     create's replay lands too, possibly while still offline, where a missing
+ *     field leaves the row invisible until a full network read.
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -34,19 +30,32 @@ import { graphql, parse, print, Kind, type DocumentNode } from 'graphql';
 import type { SelectionSetNode, FragmentDefinitionNode } from 'graphql';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { addMocksToSchema } from '@graphql-tools/mock';
-import { gql } from '@apollo/client';
+import { gql, type ApolloCache } from '@apollo/client';
+import {
+  Home_MembershipRowFragmentDoc,
+  Home_RowFragmentDoc,
+} from '#features/home/cache/home.generated';
 import type { Unmasked } from '@apollo/client/masking';
 import {
+  MealPlanType,
+  MealType,
   UnitType,
   type CreateRecipeInput,
 } from '#/graphql/generated/schemaTypes';
-import { makeCache } from '#/apollo/cache';
-import { queuedMutationFor } from '#/test-utils/queuedMutation';
+import { MealPlanReadersFragmentDoc } from '#/graphql/readers/mealPlanReaders.generated';
+import { MealPlanItemReadersFragmentDoc } from '#/graphql/readers/mealPlanItemReaders.generated';
+import { MealTemplateReadersFragmentDoc } from '#/graphql/readers/mealTemplateReaders.generated';
+import { MealTemplateItemReadersFragmentDoc } from '#/graphql/readers/mealTemplateItemReaders.generated';
+import { writeLocalMealPlan } from '#features/mealPlan/cache/mealPlan';
+import { writeLocalMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
+import { writeLocalMealTemplate } from '#features/mealPlan/cache/mealTemplate';
 import {
-  GetShoppingListsLiteForRecipeDocument,
-  CreateShoppingListForRecipeDocument,
-} from '#features/recipes/hooks/useRecipeDetail.generated';
-import { GetShoppingListsLiteForMealPlanDocument } from '#features/mealPlan/components/GenerateShoppingListSheet.generated';
+  addTemplateItemToCache,
+  localTemplateItem,
+} from '#features/mealPlan/cache/mealTemplateItem';
+import { writeLocalFavorite } from '#features/recipes/cache/favorites';
+import { makeCache } from '#/apollo/cache';
+import { CreateShoppingListForRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
 import {
   GetMealPlansDocument,
   GetMealPlanDocument,
@@ -60,14 +69,11 @@ import {
   CreateMealTemplateDocument,
 } from '#features/mealPlan/graphql/mealTemplate.generated';
 import * as cacheUpdaters from '#/apollo/utils/cacheUpdaters';
-import { convertToSyncMutation } from '#/apollo/offlineQueue/convertToSyncMutation';
-import { QueueStatus } from '#/apollo/offlineQueue/types';
 import {
   GetPantryDocument,
   GetPantryItemDocument,
   GetPantryItemBatchesDocument,
   CreatePantryItemDocument,
-  SyncPantryItemDocument,
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -80,10 +86,7 @@ import {
   AcceptHomeInviteDocument,
   type GetHomesQuery,
 } from '#operations/home/home.generated';
-import {
-  buildOptimisticHome,
-  writeOptimisticHome,
-} from '#features/home/cache/optimisticHome';
+import { writeLocalHome } from '#features/home/cache/optimisticHome';
 import {
   CreateStorageLocationDocument,
   GetStorageLocationsDocument,
@@ -98,33 +101,34 @@ import {
   GetShoppingListsLiteDocument,
   CreateShoppingListDocument,
   AddCollaboratorDocument,
-  ToggleShoppingListItemPurchasedDocument,
   type GetShoppingListItemsFilteredQuery,
   type GetShoppingListsLiteQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
+  AddRecipeToFavoritesDocument,
   MyRecipesDocument,
+  MySavedRecipesDocument,
   GetRecipeDocument,
   type MyRecipesQuery,
+  type MySavedRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
-import { writeOptimisticRecipe } from '#features/recipes/utils/recipeCacheWriters';
-import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
-import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
-import { addToPantryItemsCache } from '#features/pantry/cache/items';
+import { writeLocalRecipe } from '#features/recipes/utils/recipeCacheWriters';
 import {
-  buildOptimisticPantry,
-  writeOptimisticPantry,
-} from '#features/pantry/utils/optimisticPantry';
+  writeLocalPantryItem,
+  type LocalPantryItem,
+} from '#features/pantry/cache/writeLocalPantryItem';
+import {
+  addToPantryItemsCache,
+  type PantryItemRef,
+} from '#features/pantry/cache/items';
+import { writeLocalPantry } from '#features/pantry/cache/pantry';
 import { AddedShoppingListItemFieldsFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import {
-  addOptimisticShoppingListItem,
-  createOptimisticShoppingListItem,
+  addLocalShoppingListItem,
+  createLocalShoppingListItem,
 } from '#features/shoppingList/cache/items';
-import {
-  addOptimisticShoppingList,
-  buildOptimisticShoppingList,
-} from '#features/shoppingList/cache/list';
+import { writeLocalShoppingList } from '#features/shoppingList/cache/list';
 
 const mockedSchema = addMocksToSchema({
   schema: makeExecutableSchema({
@@ -156,7 +160,6 @@ const mockedSchema = addMocksToSchema({
     // Result unions default to their first member (an error type), which would
     // leave the success inline fragment unmatched and the payload undefined.
     CreatePantryItemResult: () => ({ __typename: 'CreatePantryItemPayload' }),
-    SyncPantryItemResult: () => ({ __typename: 'SyncPantryItemPayload' }),
     MoveShoppingItemToPantryResult: () => ({
       __typename: 'MoveShoppingItemToPantryPayload',
     }),
@@ -196,6 +199,16 @@ const TestUnitFragment = gql`
 
 const PANTRY_VARS = { id: 'pantry-1', itemsFirst: 50, today: '2026-09-22' };
 const LIST_VARS = { id: 'list-1', first: 20, isPurchased: false };
+
+/** A local create, as production makes one: write the row, then link it. */
+function addLocalRow(
+  cache: ApolloCache,
+  id: string,
+  row: LocalPantryItem,
+): void {
+  writeLocalPantryItem(cache, id, row);
+  addToPantryItemsCache(cache, row.pantryId, { __typename: 'PantryItem', id });
+}
 
 async function seedPantryCache() {
   const cache = makeCache();
@@ -496,13 +509,11 @@ describe('optimistic entity completeness', () => {
     // nothing at all, which shows as an empty pantry the user cannot add to.
     it('an optimistic-only pantry reads complete for GetPantry', () => {
       const cache = makeCache();
-      const pantry = buildOptimisticPantry('pantry-1', {
+      writeLocalPantry(cache, 'pantry-1', {
         homeId: 'home-1',
         name: 'Kitchen Pantry',
         isDefault: true,
       });
-
-      writeOptimisticPantry(cache, pantry);
 
       const diff = readPantry(cache);
       expect(describeMissing(diff.missing)).toBe('none');
@@ -512,19 +523,11 @@ describe('optimistic entity completeness', () => {
     it('keeps GetPantry complete after an optimistic add', async () => {
       const cache = await seedPantryCache();
 
-      addToPantryItemsCache(
-        cache,
-        'pantry-1',
-        buildOptimisticPantryItem(
-          'client-cuid-1',
-          {
-            pantryId: 'pantry-1',
-            itemName: 'Offline Milk',
-            quantity: 2,
-          },
-          cache,
-        ),
-      );
+      addLocalRow(cache, 'client-cuid-1', {
+        pantryId: 'pantry-1',
+        itemName: 'Offline Milk',
+        quantity: 2,
+      });
 
       expectCompletePantry(readPantry(cache));
     });
@@ -547,20 +550,12 @@ describe('optimistic entity completeness', () => {
         },
       });
 
-      addToPantryItemsCache(
-        cache,
-        'pantry-1',
-        buildOptimisticPantryItem(
-          'client-cuid-2',
-          {
-            pantryId: 'pantry-1',
-            itemName: 'Offline Milk',
-            quantity: 2,
-            unitId: 'unit-1',
-          },
-          cache,
-        ),
-      );
+      addLocalRow(cache, 'client-cuid-2', {
+        pantryId: 'pantry-1',
+        itemName: 'Offline Milk',
+        quantity: 2,
+        unitId: 'unit-1',
+      });
 
       const pantry = expectCompletePantry(readPantry(cache));
       // The cached unit is referenced, not overwritten with placeholders.
@@ -573,19 +568,11 @@ describe('optimistic entity completeness', () => {
     it('keeps GetPantry complete when the unit is NOT cached', async () => {
       const cache = await seedPantryCache();
 
-      addToPantryItemsCache(
-        cache,
-        'pantry-1',
-        buildOptimisticPantryItem(
-          'client-cuid-3',
-          {
-            pantryId: 'pantry-1',
-            itemName: 'Offline Milk',
-            unitId: 'never-fetched-unit',
-          },
-          cache,
-        ),
-      );
+      addLocalRow(cache, 'client-cuid-3', {
+        pantryId: 'pantry-1',
+        itemName: 'Offline Milk',
+        unitId: 'never-fetched-unit',
+      });
 
       // No complete Unit to reference → no unit at all, rather than a stub that
       // would strand the read.
@@ -595,7 +582,7 @@ describe('optimistic entity completeness', () => {
     it('keeps GetPantry complete after the CreatePantryItem response lands', async () => {
       const cache = await seedPantryCache();
       const created = await runAgainstSchema<{
-        createPantryItem: { pantryItem: { id: string; pantryId: string } };
+        createPantryItem: { pantryItem: PantryItemRef & { pantryId: string } };
         // The mocks resolve every field regardless of the input, so this only
         // has to satisfy the required-variable check.
       }>(CreatePantryItemDocument, {
@@ -611,25 +598,6 @@ describe('optimistic entity completeness', () => {
       expectCompletePantry(readPantry(cache));
     });
 
-    it('keeps GetPantry complete after a SyncPantryItem replay lands', async () => {
-      // The offline queue replays a queued create as SyncPantryItem and writes
-      // the response back. That happens while the app may still be offline, so
-      // a field its fragment omits can't be repaired by a refetch.
-      const cache = await seedPantryCache();
-      const synced = await runAgainstSchema<{
-        syncPantryItem: { item: { id: string; pantryId: string } };
-      }>(SyncPantryItemDocument, {
-        input: { clientId: 'client-cuid-5', pantryId: 'pantry-1' },
-      });
-      const item = synced.syncPantryItem.item;
-      item.id = 'client-cuid-5';
-      item.pantryId = 'pantry-1';
-
-      addToPantryItemsCache(cache, 'pantry-1', item);
-
-      expectCompletePantry(readPantry(cache));
-    });
-
     it('keeps GetPantry complete after a MoveShoppingItemToPantry response lands', async () => {
       // A move that RESTOCKS an existing stack returns that stack's id, and
       // this response is the only field source for the row linked into the
@@ -637,7 +605,7 @@ describe('optimistic entity completeness', () => {
       const cache = await seedPantryCache();
       const moved = await runAgainstSchema<{
         moveShoppingItemToPantry: {
-          pantryItem: { id: string; pantryId: string };
+          pantryItem: PantryItemRef & { pantryId: string };
         };
       }>(MoveShoppingItemToPantryDocument, {
         input: {
@@ -645,6 +613,7 @@ describe('optimistic entity completeness', () => {
           pantryId: 'pantry-1',
           actualQuantity: 1,
         },
+        today: '2026-09-22',
       });
       const pantryItem = moved.moveShoppingItemToPantry.pantryItem;
       pantryItem.id = 'server-item-restocked';
@@ -662,7 +631,7 @@ describe('optimistic entity completeness', () => {
       // blanks the viewer's list until the screen is remounted.
       const cache = await seedPantryCache();
       const event = await runAgainstSchema<{
-        pantryItem: { id: string; pantryId: string };
+        pantryItem: PantryItemRef & { pantryId: string };
       }>(PantryItemForEventDocument, { id: 'server-item-from-event' });
       const item = event.pantryItem;
       item.id = 'server-item-from-event';
@@ -681,20 +650,8 @@ describe('optimistic entity completeness', () => {
     describe('detail queries', () => {
       it('keeps GetPantryItem complete after an optimistic add', async () => {
         const cache = await seedPantryCache();
-        addToPantryItemsCache(
-          cache,
-          'pantry-1',
-          buildOptimisticPantryItem(
-            'client-cuid-detail',
-            {
-              pantryId: 'pantry-1',
-              itemName: 'Offline Milk',
-              quantity: 2,
-            },
-            cache,
-          ),
-        );
-        writePantryItemDetailStub(cache, 'client-cuid-detail', {
+        addLocalRow(cache, 'client-cuid-detail', {
+          pantryId: 'pantry-1',
           itemName: 'Offline Milk',
           quantity: 2,
         });
@@ -710,15 +667,10 @@ describe('optimistic entity completeness', () => {
       });
 
       it('keeps GetPantryItem complete for a row carrying a unit', async () => {
-        // The regression this case exists for. `buildOptimisticPantryItem`
-        // embeds the unit through `toReference(unit, true)` with the five
-        // fields the LIST selects, while `PantryItemDetail_pantryItem` selects
-        // eleven — so `cache.diff` came back
-        // `Can't find field 'isMetric' on object { __typename: Unit, … }` and
-        // the detail screen was blank offline for the rest of the session.
-        //
-        // It bites precisely when the Unit IS well cached, which is why every
-        // case above — none of which passes a `unitId` — stayed green.
+        // A unit cached with the five fields the LIST selects, while the detail
+        // selects eleven: the local row must complete the unit, or the detail
+        // read reports `Can't find field 'isMetric'` and blanks offline. It
+        // bites precisely when the Unit IS cached, which no case above covers.
         const cache = await seedPantryCache();
         cache.writeFragment({
           id: 'Unit:unit-1',
@@ -741,23 +693,11 @@ describe('optimistic entity completeness', () => {
           },
         });
 
-        addToPantryItemsCache(
-          cache,
-          'pantry-1',
-          buildOptimisticPantryItem(
-            'client-cuid-unit',
-            {
-              pantryId: 'pantry-1',
-              itemName: 'Offline Flour',
-              quantity: 2,
-              unitId: 'unit-1',
-            },
-            cache,
-          ),
-        );
-        writePantryItemDetailStub(cache, 'client-cuid-unit', {
+        addLocalRow(cache, 'client-cuid-unit', {
+          pantryId: 'pantry-1',
           itemName: 'Offline Flour',
           quantity: 2,
+          unitId: 'unit-1',
         });
 
         const diff = cache.diff({
@@ -775,29 +715,23 @@ describe('optimistic entity completeness', () => {
         // offline create has none. The fields must still be WRITTEN as null:
         // absent is not null to `cache.diff`, and one missing field makes the
         // whole detail read incomplete, which blanks the screen offline.
-        const optimistic = buildOptimisticPantryItem(
-          'client-cuid-profile',
-          { pantryId: 'pantry-1', itemName: 'Offline Garlic', quantity: 1 },
-          makeCache(),
-        );
+        const cache = makeCache();
+        writeLocalPantryItem(cache, 'client-cuid-profile', {
+          pantryId: 'pantry-1',
+          itemName: 'Offline Garlic',
+          quantity: 1,
+        });
+        const row = cache.extract()['PantryItem:client-cuid-profile'];
 
-        expect(optimistic).toHaveProperty('portionUnitId', null);
-        expect(optimistic).toHaveProperty('portionUnit', null);
-        expect(optimistic).toHaveProperty('remainingPortions', null);
+        expect(row).toHaveProperty('portionUnitId', null);
+        expect(row).toHaveProperty('portionUnit', null);
+        expect(row).toHaveProperty('remainingPortions', null);
       });
 
       it('keeps GetPantryItemBatches complete after an optimistic add', async () => {
         const cache = await seedPantryCache();
-        addToPantryItemsCache(
-          cache,
-          'pantry-1',
-          buildOptimisticPantryItem(
-            'client-cuid-batches',
-            { pantryId: 'pantry-1', itemName: 'Offline Milk', quantity: 1 },
-            cache,
-          ),
-        );
-        writePantryItemDetailStub(cache, 'client-cuid-batches', {
+        addLocalRow(cache, 'client-cuid-batches', {
+          pantryId: 'pantry-1',
           itemName: 'Offline Milk',
           quantity: 1,
         });
@@ -941,23 +875,11 @@ describe('optimistic entity completeness', () => {
           data: realItem,
         });
 
-        addToPantryItemsCache(
-          cache,
-          'pantry-1',
-          buildOptimisticPantryItem(
-            'client-cuid-catalog',
-            {
-              pantryId: 'pantry-1',
-              itemName: 'Whole Milk',
-              itemId: 'catalog-item-1',
-              quantity: 1,
-            },
-            cache,
-          ),
-        );
-        writePantryItemDetailStub(cache, 'client-cuid-catalog', {
-          itemId: 'catalog-item-1',
+        addLocalRow(cache, 'client-cuid-catalog', {
+          pantryId: 'pantry-1',
           itemName: 'Whole Milk',
+          itemId: 'catalog-item-1',
+          quantity: 1,
         });
 
         const diff = cache.diff<{
@@ -1092,10 +1014,10 @@ describe('optimistic entity completeness', () => {
     it('keeps GetShoppingListItemsFiltered complete after an optimistic add', async () => {
       const cache = await seedListCache();
 
-      addOptimisticShoppingListItem(
+      addLocalShoppingListItem(
         cache,
         'list-1',
-        createOptimisticShoppingListItem('client-cuid-4', {
+        createLocalShoppingListItem('client-cuid-4', {
           shoppingListId: 'list-1',
           itemName: 'Offline Bread',
           quantity: 1,
@@ -1115,56 +1037,6 @@ describe('optimistic entity completeness', () => {
       expect(diff.complete).toBe(true);
     });
 
-    /**
-     * The other direction of completeness, and the one that shipped broken: a
-     * row can be COMPLETE for every query that displays it and still be
-     * unreplayable, because the offline queue reads a field no display query
-     * needs.
-     *
-     * `ToggleShoppingListItemPurchased` / `UpdateShoppingListItemQuantity` /
-     * `UpdateShoppingListItem` send only the row id, so the replay builder has
-     * to backfill `SyncShoppingListItemFieldsInput.shoppingListId` by reading
-     * `shoppingList { id }` back off the cached row. No query that populates
-     * the list selected it, so the read returned null, the builder threw, and
-     * the queue withdrew the change — every offline toggle silently reverted on
-     * reconnect with "A change couldn't be saved and has been undone".
-     *
-     * The builder's own tests could not catch it: they stub `readFragment`, so
-     * they assert the builder works GIVEN the parent link, never that a real
-     * cache holds one. This drives the real cache, seeded by the real list
-     * query, through the real dispatch.
-     */
-    it('can build a toggle replay from a row the list query cached', async () => {
-      const cache = await seedListCache();
-
-      const row = cache.readQuery<Unmasked<GetShoppingListItemsFilteredQuery>>({
-        query: GetShoppingListItemsFilteredDocument,
-        variables: LIST_VARS,
-      })?.shoppingList?.itemsConnection.edges[0]?.node;
-      // The parent link the builder has to find, read from the same cache the
-      // builder reads — so this asserts the round trip, not a literal.
-      expect(row?.shoppingList?.id).toBeTruthy();
-
-      const { syncVariables } = convertToSyncMutation(
-        {
-          id: 'queued-1',
-          userId: 'user-1',
-          ...queuedMutationFor(ToggleShoppingListItemPurchasedDocument),
-          variables: { input: { id: row!.id, purchased: true } },
-          status: QueueStatus.PENDING,
-          createdAt: 0,
-          updatedAt: 0,
-          retryCount: 0,
-          maxRetries: 3,
-          requiresAuth: true,
-        },
-        cache,
-      );
-
-      const input = syncVariables.input as { item: { shoppingListId: string } };
-      expect(input.item.shoppingListId).toBe(row!.shoppingList.id);
-    });
-
     it('keeps GetShoppingListsLite complete after an optimistic list create', async () => {
       const cache = makeCache();
       const vars = { homeId: 'home-1', first: 20 };
@@ -1178,14 +1050,11 @@ describe('optimistic entity completeness', () => {
         data,
       });
 
-      addOptimisticShoppingList(
+      writeLocalShoppingList(
         cache,
-        buildOptimisticShoppingList(
-          cache,
-          'client-list-1',
-          { name: 'Offline list', homeId: 'home-1' },
-          { id: 'user-1', email: 'user@example.com' },
-        ),
+        'client-list-1',
+        { name: 'Offline list', homeId: 'home-1' },
+        { id: 'user-1', email: 'user@example.com' },
       );
 
       const diff = cache.diff({
@@ -1201,25 +1070,159 @@ describe('optimistic entity completeness', () => {
     // The overview fragment and the DETAIL query select different things, so an
     // optimistic row satisfying only the first makes the list appear and then
     // dead-end when opened: Apollo serves no partial data and goes to the
-    // network for an id the server does not have yet. 22 fields (status, the
-    // recurring/template/reminder/budget groups, canMoveToPantry, shareLink,
-    // collaboratorsConnection) come from the detail stub in
-    // `addOptimisticShoppingList`.
+    // network for an id the server does not have yet.
     it('keeps GetShoppingListDetails complete after an optimistic list create', async () => {
       const cache = makeCache();
-      addOptimisticShoppingList(
+      writeLocalShoppingList(
         cache,
-        buildOptimisticShoppingList(
-          cache,
-          'client-list-detail',
-          { name: 'Offline list', homeId: 'home-1' },
-          { id: 'user-1', email: 'user@example.com' },
-        ),
+        'client-list-detail',
+        { name: 'Offline list', homeId: 'home-1' },
+        { id: 'user-1', email: 'user@example.com' },
       );
 
       const diff = cache.diff({
         query: GetShoppingListDetailsDocument,
         variables: { id: 'client-list-detail' },
+        optimistic: true,
+        returnPartialData: true,
+      });
+      expect(describeMissing(diff.missing)).toBe('none');
+      expect(diff.complete).toBe(true);
+    });
+  });
+
+  /**
+   * A readers fragment is the union of what every query reads on its type, so
+   * a row that reads it complete leaves no query reading that row incomplete.
+   */
+  describe('meal plans, templates and saved recipes', () => {
+    const readsComplete = (
+      cache: ApolloCache,
+      fragment: DocumentNode,
+      entity: { __typename: string; id: string },
+    ) => cache.readFragment({ id: cache.identify(entity), fragment }) !== null;
+
+    const PLAN = {
+      name: 'Offline week',
+      planType: MealPlanType.Weekly,
+      startDate: '2026-10-05T00:00:00.000Z',
+      endDate: '2026-10-11T00:00:00.000Z',
+      homeId: 'home-uncached',
+    };
+
+    it('a local plan reads complete for every query', () => {
+      const cache = makeCache();
+      writeLocalMealPlan(cache, 'plan-1', PLAN, 'user-1');
+
+      expect(
+        readsComplete(cache, MealPlanReadersFragmentDoc, {
+          __typename: 'MealPlan',
+          id: 'plan-1',
+        }),
+      ).toBe(true);
+    });
+
+    it('a local meal reads complete, and so does the plan listing it', () => {
+      const cache = makeCache();
+      writeLocalMealPlan(cache, 'plan-2', PLAN, 'user-1');
+      writeLocalMealPlanItem(cache, {
+        id: 'meal-1',
+        mealPlanId: 'plan-2',
+        date: '2026-10-06T00:00:00.000Z',
+        mealType: MealType.Dinner,
+        meal: { customMealName: 'Soup' },
+      });
+
+      expect(
+        readsComplete(cache, MealPlanItemReadersFragmentDoc, {
+          __typename: 'MealPlanItem',
+          id: 'meal-1',
+        }),
+      ).toBe(true);
+      expect(
+        readsComplete(cache, MealPlanReadersFragmentDoc, {
+          __typename: 'MealPlan',
+          id: 'plan-2',
+        }),
+      ).toBe(true);
+    });
+
+    it('a local template reads complete with the items it was created with', () => {
+      const cache = makeCache();
+      writeLocalMealTemplate(
+        cache,
+        'tpl-1',
+        {
+          name: 'Weekdays',
+          items: [
+            {
+              id: 'tpl-item-1',
+              dayOffset: 0,
+              mealType: MealType.Breakfast,
+              meal: { customMealName: 'Oats' },
+            },
+          ],
+        },
+        'user-1',
+      );
+
+      const template = cache.readFragment<{ items: { id: string }[] }>({
+        id: cache.identify({ __typename: 'MealTemplate', id: 'tpl-1' }),
+        fragment: MealTemplateReadersFragmentDoc,
+      });
+      expect(template?.items.map(item => item.id)).toEqual(['tpl-item-1']);
+    });
+
+    it('an added item and a restored one read complete', () => {
+      const cache = makeCache();
+      writeLocalMealTemplate(cache, 'tpl-2', { name: 'Weekend' }, 'user-1');
+      addTemplateItemToCache(
+        cache,
+        'tpl-2',
+        localTemplateItem(cache, 'tpl-item-2', {
+          dayOffset: 1,
+          mealType: MealType.Lunch,
+          meal: { customMealName: 'Salad' },
+        }),
+      );
+      // A remove's snapshot may carry only what the editor's query selected.
+      addTemplateItemToCache(cache, 'tpl-2', {
+        __typename: 'MealTemplateItem',
+        id: 'tpl-item-3',
+        dayOffset: 2,
+      });
+
+      for (const id of ['tpl-item-2', 'tpl-item-3']) {
+        expect(
+          readsComplete(cache, MealTemplateItemReadersFragmentDoc, {
+            __typename: 'MealTemplateItem',
+            id,
+          }),
+        ).toBe(true);
+      }
+      expect(
+        readsComplete(cache, MealTemplateReadersFragmentDoc, {
+          __typename: 'MealTemplate',
+          id: 'tpl-2',
+        }),
+      ).toBe(true);
+    });
+
+    it('keeps MySavedRecipes complete after a local save', async () => {
+      const cache = makeCache();
+      const data = await runAgainstSchema<Unmasked<MySavedRecipesQuery>>(
+        MySavedRecipesDocument,
+        {},
+      );
+      cache.writeQuery({ query: MySavedRecipesDocument, data });
+
+      writeLocalFavorite(cache, 'saved-1', 'recipe-uncached', {
+        folder: 'Soups',
+      });
+
+      const diff = cache.diff({
+        query: MySavedRecipesDocument,
+        variables: {},
         optimistic: true,
         returnPartialData: true,
       });
@@ -1244,7 +1247,7 @@ describe('optimistic entity completeness', () => {
       );
       cache.writeQuery({ query: MyRecipesDocument, data });
 
-      writeOptimisticRecipe(cache, 'client-recipe-1', RECIPE_INPUT, null);
+      writeLocalRecipe(cache, 'client-recipe-1', RECIPE_INPUT, null);
 
       const diff = cache.diff({
         query: MyRecipesDocument,
@@ -1261,7 +1264,7 @@ describe('optimistic entity completeness', () => {
       // create has to materialize both or the detail screen (and the edit form)
       // are blank offline.
       const cache = makeCache();
-      writeOptimisticRecipe(cache, 'client-recipe-1', RECIPE_INPUT, null);
+      writeLocalRecipe(cache, 'client-recipe-1', RECIPE_INPUT, null);
 
       const diff = cache.diff({
         query: GetRecipeDocument,
@@ -1299,13 +1302,11 @@ describe('optimistic entity completeness', () => {
       );
       cache.writeQuery({ query: GetHomesDocument, variables: vars, data });
 
-      writeOptimisticHome(
+      writeLocalHome(
         cache,
-        buildOptimisticHome(
-          'client-home-1',
-          { ...HOME_INPUT, id: 'client-home-1' },
-          CREATOR,
-        ),
+        'client-home-1',
+        { ...HOME_INPUT, id: 'client-home-1' },
+        CREATOR,
       );
 
       const diff = cache.diff({
@@ -1322,13 +1323,11 @@ describe('optimistic entity completeness', () => {
     // satisfying only the first appears and then dead-ends when opened.
     it('keeps GetHome complete after an optimistic home create', () => {
       const cache = makeCache();
-      writeOptimisticHome(
+      writeLocalHome(
         cache,
-        buildOptimisticHome(
-          'client-home-detail',
-          { ...HOME_INPUT, id: 'client-home-detail' },
-          CREATOR,
-        ),
+        'client-home-detail',
+        { ...HOME_INPUT, id: 'client-home-detail' },
+        CREATOR,
       );
 
       const diff = cache.diff({
@@ -1345,12 +1344,18 @@ describe('optimistic entity completeness', () => {
     // what the server grants an owner or the creator cannot use their own home.
     it('writes the creator an Owner membership with every capability', () => {
       const cache = makeCache();
-      const home = buildOptimisticHome(
+      writeLocalHome(
+        cache,
         'client-home-2',
         { ...HOME_INPUT, id: 'client-home-2' },
         CREATOR,
       );
-      writeOptimisticHome(cache, home);
+      const home = cache.readFragment({
+        id: 'Home:client-home-2',
+        fragment: Home_RowFragmentDoc,
+        fragmentName: 'home_row',
+      });
+      if (!home) throw new Error('the local home did not resolve');
 
       expect(home.myMembership).toMatchObject({
         role: 'OWNER',
@@ -1365,7 +1370,14 @@ describe('optimistic entity completeness', () => {
       // The same row is the home's only member, so the members list shows the
       // creator rather than an empty home.
       expect(home.membersConnection.totalCount).toBe(1);
-      expect(home.membersConnection.edges[0]?.node.userId).toBe('user-1');
+      const [member] = home.membersConnection.edges;
+      expect(
+        cache.readFragment({
+          id: `Membership:${member?.node.id ?? ''}`,
+          fragment: Home_MembershipRowFragmentDoc,
+          fragmentName: 'home_membershipRow',
+        })?.userId,
+      ).toBe('user-1');
     });
   });
 
@@ -1397,7 +1409,7 @@ describe('optimistic entity completeness', () => {
   describe('every connection-linking writer is accounted for', () => {
     const LINKING_MODULES: Record<string, string> = {
       'src/features/pantry/cache/items.ts':
-        'covered: the GetPantry cases above (optimistic, CreatePantryItem, SyncPantryItem, MoveShoppingItemToPantry, PantryItemForEvent)',
+        'covered: the GetPantry cases above (optimistic, CreatePantryItem, MoveShoppingItemToPantry, PantryItemForEvent)',
       'src/features/pantry/hooks/usePantrySubscriptions.ts':
         'covered: the pantry event read-back case, and the fragment comparison below',
       'src/features/shoppingList/hooks/useMoveToPantry.ts':
@@ -1405,7 +1417,7 @@ describe('optimistic entity completeness', () => {
       'src/features/notifications/utils/notificationCacheWrites.ts':
         'covered: the notification feed fragment comparison above',
       'src/features/barcode/hooks/useAddScannedItem.ts':
-        'covered indirectly: the row is written in full by buildOptimisticPantryItem before the mutation fires, so the narrow response merges onto a complete record — the optimistic-add case above is what holds that',
+        'covered indirectly: the row is written in full by writeLocalPantryItem before the mutation fires, so the narrow response merges onto a complete record — the optimistic-add case above is what holds that',
       'src/features/catalog/hooks/useCreateStorageLocation.ts':
         'covered: the GetStorageLocations reader is compared below',
       'src/features/catalog/hooks/useStorageLocationManagement.ts':
@@ -1430,6 +1442,8 @@ describe('optimistic entity completeness', () => {
         'covered: CreateMealPlanItem is compared below against the mealPlanItems array GetMealPlan reads',
       'src/features/mealPlan/hooks/useMealPlanSubscriptions.ts':
         'covered: both event read-backs (MealPlanForEvent, MealTemplateForEvent) are compared below — it links a bare ref, so completeness rests entirely on the read-back',
+      'src/features/recipes/cache/favorites.ts':
+        'covered: AddRecipeToFavorites is compared below against MySavedRecipes; the optimistic row spreads SavedRecipeReaders',
     };
 
     // Every way the app links an entity into a collection a screen reads: a
@@ -1564,36 +1578,31 @@ describe('optimistic entity completeness', () => {
         'Home (acceptHomeInvite)',
         'homes',
       );
-      // Three queries read `Query.shoppingLists`, in three features. A creator
-      // covering only its own feature's reader blanks the other two offline.
-      // The templates-only variant is deliberately not here: `list.ts` skips
-      // it, because a created list is never a template.
-      for (const [readerLabel, reader] of [
-        ['GetShoppingListsLite', GetShoppingListsLiteDocument],
-        [
-          'GetShoppingListsLiteForRecipe',
-          GetShoppingListsLiteForRecipeDocument,
-        ],
-        [
-          'GetShoppingListsLiteForMealPlan',
-          GetShoppingListsLiteForMealPlanDocument,
-        ],
-      ] as const) {
-        expectWriterCoversReader(
-          CreateShoppingListDocument,
-          'shoppingList',
-          reader,
-          `ShoppingList (createShoppingList vs ${readerLabel})`,
-          'shoppingLists',
-        );
-        expectWriterCoversReader(
-          CreateShoppingListForRecipeDocument,
-          'shoppingList',
-          reader,
-          `ShoppingList (createShoppingListForRecipe vs ${readerLabel})`,
-          'shoppingLists',
-        );
-      }
+      expectWriterCoversReader(
+        AddRecipeToFavoritesDocument,
+        'savedRecipe',
+        MySavedRecipesDocument,
+        'SavedRecipe (addRecipeToFavorites)',
+        'savedRecipesConnection',
+      );
+      // Every feature's list picker reads `Query.shoppingLists` through
+      // `GetShoppingListsLite`, so each creator must cover it. The
+      // templates-only variant is deliberately not here: `list.ts` skips it,
+      // because a created list is never a template.
+      expectWriterCoversReader(
+        CreateShoppingListDocument,
+        'shoppingList',
+        GetShoppingListsLiteDocument,
+        'ShoppingList (createShoppingList)',
+        'shoppingLists',
+      );
+      expectWriterCoversReader(
+        CreateShoppingListForRecipeDocument,
+        'shoppingList',
+        GetShoppingListsLiteDocument,
+        'ShoppingList (createShoppingListForRecipe)',
+        'shoppingLists',
+      );
     });
 
     // The subscription links a bare `{ __typename, id }` after its read-back

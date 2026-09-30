@@ -22,8 +22,9 @@ import { getNotificationAction } from '#features/notifications/utils/notificatio
 import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 
 /**
- * Mirrors the server's definition, which drives `unreadNotificationCount` and
- * the `unreadOnly` filter, so the local badge agrees with the seeded one.
+ * Mirrors the server's definition, which drives
+ * `notificationSummary.unreadCount` and the `unreadOnly` filter, so the local
+ * badge agrees with the stated one.
  * Listed POSITIVELY: a status added to the enum later must read as terminal
  * rather than silently inflating every badge.
  */

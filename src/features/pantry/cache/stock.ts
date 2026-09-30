@@ -1,16 +1,43 @@
 import type { ApolloCache } from '@apollo/client';
-import { heldDisplayAmount } from '#domain/stockDisplay';
+import { shownStock } from '#domain/stockDisplay';
 import {
   WriteHeldStock_PantryItemFragmentDoc,
+  WriteHeldStock_ShownInFragmentDoc,
   type WriteHeldStock_PantryItemFragment,
+  type WriteHeldStock_ShownInFragment,
 } from './stock.generated';
 
 type ShownAmount = WriteHeldStock_PantryItemFragment['displayAmount'];
+type CountedIn = WriteHeldStock_PantryItemFragment['unit'];
+
+/** `heldQuantity` as the server will show it; in `unit` when the dozen is not cached. */
+function shownAmount(
+  cache: ApolloCache,
+  id: string,
+  heldQuantity: number,
+  unit: CountedIn,
+): ShownAmount {
+  const shownIn = cache.readFragment<WriteHeldStock_ShownInFragment>({
+    id,
+    fragment: WriteHeldStock_ShownInFragmentDoc,
+    fragmentName: 'writeHeldStock_shownIn',
+  })?.displayUnit;
+  const amount = shownStock(heldQuantity, unit, shownIn);
+  return {
+    __typename: 'DisplayAmount',
+    quantity: amount.quantity,
+    unit: {
+      __typename: 'Unit',
+      id: amount.unit.id,
+      symbol: amount.unit.symbol,
+    },
+  };
+}
 
 /**
  * The ONE writer of what a stack holds before the server answers: `heldQuantity`
- * and, with it, `displayAmount` in the unit the stack counts in, so a screen never
- * shows the server's "1 doz" over a stack that now holds 11. `shown` restores the
+ * and, with it, `displayAmount` by the server's rule (`shownStock`), so a screen
+ * never shows "1 doz" over a stack that now holds 11 pc. `shown` restores the
  * server's own display together with the amount it described. Returns the undo.
  */
 export function writeHeldStock(
@@ -44,7 +71,7 @@ export function writeHeldStock(
       id: pantryItemId,
       heldQuantity,
       unit,
-      displayAmount: shown ?? heldDisplayAmount(heldQuantity, unit),
+      displayAmount: shown ?? shownAmount(cache, id, heldQuantity, unit),
     },
   });
   const before = cached.displayAmount;

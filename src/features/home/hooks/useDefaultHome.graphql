@@ -1,0 +1,14 @@
+# Read-only (`checkPantryBelongsToHome`). Narrow on purpose: a `readQuery` of
+# the whole `GetHomes` document is all-or-nothing, so one unrelated evicted
+# record would make the check unanswerable.
+fragment useDefaultHome_home on Home {
+  id
+  pantriesConnection {
+    totalCount
+    edges {
+      node {
+        id
+      }
+    }
+  }
+}

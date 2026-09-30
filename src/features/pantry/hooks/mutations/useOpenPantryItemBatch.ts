@@ -6,33 +6,27 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { gql } from '@apollo/client';
 import { OpenPantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
+import { UseOpenPantryItemBatch_StateFragmentDoc } from './useOpenPantryItemBatch.generated';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useTranslation } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { toDateKey } from '#/utils/dateUtils';
+import { todayKey } from '#/utils/dateUtils';
 import { errorService } from '#/services/errorService';
 
 interface UseOpenPantryItemBatchOptions {
   onSuccess?: () => void;
 }
 
-const BATCH_OPEN_STATE_FRAGMENT = gql`
-  fragment useOpenPantryItemBatch_state on PantryItemBatch {
-    id
-    isOpened
-    openedAt
-  }
-`;
-
 export function useOpenPantryItemBatch({
   onSuccess,
 }: UseOpenPantryItemBatchOptions = {}) {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [openMutation] = useMutation(OpenPantryItemBatchDocument);
+  const [openMutation] = useMutation(OpenPantryItemBatchDocument, {
+    context: { localFirst: true },
+  });
 
   const openBatch = async (batchId: string): Promise<boolean> => {
     const now = new Date().toISOString();
@@ -40,12 +34,9 @@ export function useOpenPantryItemBatch({
       __typename: 'PantryItemBatch',
       id: batchId,
     });
-    const snapshot = client.cache.readFragment<{
-      isOpened: boolean;
-      openedAt: string | null;
-    }>({
+    const snapshot = client.cache.readFragment({
       id: batchCacheId,
-      fragment: BATCH_OPEN_STATE_FRAGMENT,
+      fragment: UseOpenPantryItemBatch_StateFragmentDoc,
       fragmentName: 'useOpenPantryItemBatch_state',
     });
 
@@ -92,13 +83,13 @@ export function useOpenPantryItemBatch({
       () =>
         openMutation({
           variables: {
+            today: todayKey(),
             input: {
               batchId,
-              today: toDateKey(new Date()),
+              today: todayKey(),
               idempotencyKey: generateEntityId(),
             },
           },
-          context: { localFirst: true },
         }),
       {
         document: OpenPantryItemBatchDocument,

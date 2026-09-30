@@ -1,7 +1,12 @@
 import { useRef } from 'react';
 import { useUser } from '#store/useAppStore';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
-import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import {
+  skipToken,
+  useApolloClient,
+  useMutation,
+  useQuery,
+} from '@apollo/client/react';
 import type { ApolloCache, Reference } from '@apollo/client';
 import {
   GetDietaryProfileDocument,
@@ -18,7 +23,10 @@ import type {
   RestrictionKindInput,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
-import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
+import {
+  snapshotFields,
+  writeEntityFields,
+} from '#/apollo/utils/localFirstFields';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -80,16 +88,22 @@ export const useDietaryProfile = () => {
 
   // The cache-and-network → cache-first pair
   // means first mount fires once, subsequent mounts read cache only.
-  const { data, loading } = useQuery(GetDietaryProfileDocument, {
-    skip: !user?.id,
-    errorPolicy: 'ignore',
-  });
+  const { data, loading } = useQuery(
+    GetDietaryProfileDocument,
+    user?.id ? { errorPolicy: 'ignore' } : skipToken,
+  );
 
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
-  const profile = usePreservedQueryData(data?.me?.dietaryProfile, null);
+  const profileKey = user?.id ?? '';
+  const profile = usePreservedQueryData(
+    data?.me?.dietaryProfile,
+    null,
+    profileKey,
+  );
   const hasLoadedProfile = usePreservedQueryData(
     data?.me ? true : undefined,
     false,
+    profileKey,
   );
 
   // A profile row is created by the first write, never by a read.
@@ -101,10 +115,13 @@ export const useDietaryProfile = () => {
   // Local-first: the changed fields are written to the cached DietaryProfile
   // PERMANENTLY before firing (an optimisticResponse would be torn down on the
   // offline queue's null result) and reverted on failure.
-  const [updateProfile] = useMutation(UpdateDietaryProfileDocument);
+  const [updateProfile] = useMutation(UpdateDietaryProfileDocument, {
+    context: { localFirst: true },
+  });
 
   // ===== MUTATION 2: Add Dietary Restriction =====
   const [addRestriction] = useMutation(AddDietaryRestrictionDocument, {
+    context: { localFirst: true },
     // Note: No optimistic response - DietaryRestriction has complex enum types that need server validation
     // cache.modify() handles instant UI update when server responds (~100-200ms)
     update: (cache, { data }) => {
@@ -144,7 +161,10 @@ export const useDietaryProfile = () => {
 
   // ===== MUTATION 3: Remove Dietary Restriction =====
   // The cache removal runs after the settle, for every outcome but a failure.
-  const [removeRestriction] = useMutation(RemoveDietaryRestrictionDocument);
+  const [removeRestriction] = useMutation(RemoveDietaryRestrictionDocument, {
+    // Queued offline and replayed idempotently; no optimistic layer to tear down.
+    context: { localFirst: true },
+  });
 
   const getDietaryProfile = (): DietaryProfileData | null => {
     if (!profile) return null;
@@ -197,28 +217,21 @@ export const useDietaryProfile = () => {
       Object.entries(updates).map(([key, value]) => [key, value ?? undefined]),
     );
 
-    // Permanent optimistic write of the changed (flat) fields + snapshot revert.
-    const cacheId = profile
-      ? client.cache.identify({ __typename: 'DietaryProfile', id: profile.id })
+    const entity = profile
+      ? { __typename: 'DietaryProfile', id: profile.id }
       : undefined;
-    const { revert } = optimisticFieldUpdate(
-      client.cache,
-      cacheId,
-      profile,
-      cleanedUpdates,
-      'Update Dietary Profile',
-    );
+    const previous = snapshotFields(profile, cleanedUpdates);
+    writeEntityFields(client.cache, entity, cleanedUpdates);
 
     const settled = await settleMutation(
       () =>
         updateProfile({
           variables: { input: cleanedUpdates },
-          context: { localFirst: true },
         }),
       {
         document: UpdateDietaryProfileDocument,
         fallback: t('errors.codes.genericRetry'),
-        onFailed: revert,
+        onFailed: () => writeEntityFields(client.cache, entity, previous),
       },
     );
     return settled.status !== 'failed';
@@ -251,9 +264,6 @@ export const useDietaryProfile = () => {
           variables: {
             input: { kind: restriction, severity, notes, appliesToHomeId },
           },
-          // No optimisticResponse to tear down — queue offline and replay
-          // idempotently; the cache update runs on the (replayed) response.
-          context: { localFirst: true },
         }),
       {
         document: AddDietaryRestrictionDocument,
@@ -271,9 +281,6 @@ export const useDietaryProfile = () => {
       () =>
         removeRestriction({
           variables: { input: { id } },
-          // No optimisticResponse to tear down — queue offline and replay
-          // idempotently; the cache removal runs on the (replayed) response.
-          context: { localFirst: true },
         }),
       {
         document: RemoveDietaryRestrictionDocument,

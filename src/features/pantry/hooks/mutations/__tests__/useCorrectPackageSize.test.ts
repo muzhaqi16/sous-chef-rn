@@ -89,6 +89,7 @@ it('sends the batch, its size, the stack version and an idempotency key', async 
         // Without the key a queued replay writes the history row twice.
         idempotencyKey: expect.any(String),
       },
+      today: expect.any(String),
     },
   ]);
 });

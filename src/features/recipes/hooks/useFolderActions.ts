@@ -83,7 +83,9 @@ export function useFolderActions() {
   const client = useApolloClient();
   const [loading, setLoading] = useState(false);
 
-  const [deleteRecipeFolderMutation] = useMutation(DeleteRecipeFolderDocument);
+  const [deleteRecipeFolderMutation] = useMutation(DeleteRecipeFolderDocument, {
+    context: { localFirst: true },
+  });
 
   /**
    * Rename a folder by moving all recipes to a new folder name
@@ -118,7 +120,6 @@ export function useFolderActions() {
       () =>
         deleteRecipeFolderMutation({
           variables: { input: { folder: oldName, moveTo: newName } },
-          context: { localFirst: true },
         }),
       {
         document: DeleteRecipeFolderDocument,
@@ -170,7 +171,6 @@ export function useFolderActions() {
       () =>
         deleteRecipeFolderMutation({
           variables: { input: { folder: folderName } },
-          context: { localFirst: true },
         }),
       {
         document: DeleteRecipeFolderDocument,

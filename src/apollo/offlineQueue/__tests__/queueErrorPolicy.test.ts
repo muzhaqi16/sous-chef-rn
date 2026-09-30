@@ -31,9 +31,9 @@ describe('classifyReplayResult', () => {
     ).toEqual({ status: 'applied' });
     expect(
       classifyReplayResult({
-        __typename: 'SyncPantryItemPayload',
-        clientId: 'c1',
+        __typename: 'DeletePantryItemPayload',
         converged: true,
+        pantryItem: null,
       }),
     ).toEqual({ status: 'applied' });
   });

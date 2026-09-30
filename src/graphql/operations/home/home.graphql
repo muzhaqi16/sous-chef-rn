@@ -14,6 +14,10 @@ query GetHome($homeId: ID!) {
           isDefault
         }
       }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
     }
     ...HomeDetailScreen_home
   }
@@ -50,6 +54,10 @@ query GetHomes($first: Int, $after: String) {
             }
           }
           totalCount
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
         }
         membersConnection(first: 5) {
           totalCount
@@ -97,6 +105,10 @@ query GetHomeByJoinCode($joinCode: String!) {
         }
       }
       totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
     }
   }
 }
@@ -111,19 +123,7 @@ mutation CreateHome($input: CreateHomeInput!) {
     ... on CreateHomePayload {
       home {
         id
-        name
-        isDefault
-        version
-        myMembership {
-          id
-          role
-          canManageHome
-          canViewPantry
-          canEditPantry
-          canAddItems
-          canRemoveItems
-          canInviteOthers
-        }
+        ...HomeReaders
         pantriesConnection(first: 10) {
           edges {
             node {
@@ -133,6 +133,10 @@ mutation CreateHome($input: CreateHomeInput!) {
             }
           }
           totalCount
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
         }
         ...HomeCard_home
       }
@@ -153,11 +157,7 @@ mutation UpdateHome($input: UpdateHomeInput!) {
     ... on UpdateHomePayload {
       home {
         id
-        name
-        allowJoinCode
-        joinCode
-        version
-        updatedAt
+        ...HomeReaders
       }
     }
     ... on Error {
@@ -180,14 +180,7 @@ mutation EnableHomeJoinLink($input: EnableHomeJoinLinkInput!) {
     ... on UpdateHomePayload {
       home {
         id
-        allowJoinCode
-        joinCode
-        joinLink {
-          universal
-          scheme
-        }
-        version
-        updatedAt
+        ...HomeReaders
       }
     }
     ... on Error {
@@ -210,14 +203,7 @@ mutation UpdateHomeJoinCode($input: UpdateHomeJoinCodeInput!) {
     ... on UpdateHomePayload {
       home {
         id
-        allowJoinCode
-        joinCode
-        joinLink {
-          universal
-          scheme
-        }
-        version
-        updatedAt
+        ...HomeReaders
       }
     }
     ... on Error {
@@ -247,13 +233,7 @@ mutation TransferHomeOwnership($input: TransferHomeOwnershipInput!) {
     ... on TransferHomeOwnershipPayload {
       home {
         id
-        version
-        myMembership {
-          id
-          role
-          canManageHome
-          canInviteOthers
-        }
+        ...HomeReaders
         membersConnection(first: 20) {
           edges {
             node {
@@ -263,6 +243,10 @@ mutation TransferHomeOwnership($input: TransferHomeOwnershipInput!) {
             }
           }
           totalCount
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
         }
       }
     }
@@ -286,7 +270,6 @@ mutation DeleteHome($input: DeleteHomeInput!) {
     ... on DeleteHomePayload {
       home {
         id
-        name
       }
     }
     ... on Error {
@@ -333,22 +316,11 @@ mutation AcceptHomeInvite($input: AcceptHomeInviteInput!) {
     ... on AcceptHomeInvitePayload {
       membership {
         id
+        ...MembershipReaders
         homeId
         home {
           id
-          name
-          isDefault
-          version
-          myMembership {
-            id
-            role
-            canManageHome
-            canViewPantry
-            canEditPantry
-            canAddItems
-            canRemoveItems
-            canInviteOthers
-          }
+          ...HomeReaders
           pantriesConnection(first: 10) {
             edges {
               node {
@@ -358,6 +330,10 @@ mutation AcceptHomeInvite($input: AcceptHomeInviteInput!) {
               }
             }
             totalCount
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
           }
           membersConnection(first: 5) {
             totalCount
@@ -409,6 +385,7 @@ mutation UpdateMembership($input: UpdateMembershipInput!) {
     ... on UpdateMembershipPayload {
       membership {
         id
+        ...MembershipReaders
         ...HomeMemberCard_member
       }
     }
@@ -476,26 +453,13 @@ mutation JoinHomeByCode($input: JoinHomeByCodeInput!) {
     ... on JoinHomeByCodePayload {
       membership {
         id
-        homeId
+        ...MembershipReaders
         ...HomeMemberCard_member
+        homeId
       }
-      # Written into the cached homes list, so it selects what a GetHomes node
-      # does; a thinner node makes that list read incomplete.
       home {
         id
-        name
-        isDefault
-        version
-        myMembership {
-          id
-          role
-          canManageHome
-          canViewPantry
-          canEditPantry
-          canAddItems
-          canRemoveItems
-          canInviteOthers
-        }
+        ...HomeReaders
         pantriesConnection(first: 10) {
           edges {
             node {
@@ -505,6 +469,10 @@ mutation JoinHomeByCode($input: JoinHomeByCodeInput!) {
             }
           }
           totalCount
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
         }
         membersConnection(first: 5) {
           totalCount

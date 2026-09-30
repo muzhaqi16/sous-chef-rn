@@ -53,7 +53,6 @@ import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions'
 import { toastService } from '#/services/toastService';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
-import { toDateKey } from '#/utils/dateUtils';
 import { Screen, type ScreenHeaderConfig } from '#components/templates/Screen';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 import { toMealDateTime } from '#/utils/dateUtils';
@@ -154,6 +153,7 @@ const MealPlanMainInner: React.FC = () => {
     mealPlan: activeMealPlan,
     mealPlanRef: activeMealPlanRef,
     items,
+    itemDetails,
     nutritionSummary,
     refetch,
   } = useActiveMealPlan({
@@ -213,7 +213,10 @@ const MealPlanMainInner: React.FC = () => {
   });
 
   // Daily meals for selected date
-  const { dailyMeals, isEmpty } = useDailyMeals(items, calendar.selectedDate);
+  const { dailyMeals, isEmpty, daysWithMeals } = useDailyMeals(
+    items,
+    calendar.selectedDate,
+  );
 
   // Meal plan item actions
   const { createItem, toggleCompleted, deleteItem } =
@@ -228,15 +231,6 @@ const MealPlanMainInner: React.FC = () => {
 
   // Delete meal plan
   const { deleteMealPlan, deleting: deletingPlan } = useMealPlanActions();
-
-  // Compute days with meals for calendar indicators
-  const daysWithMeals = (() => {
-    const days = new Set<string>();
-    items.forEach(item => {
-      days.add(toDateKey(new Date(item.date)));
-    });
-    return days;
-  })();
 
   // Tap-to-toggle calendar between week and month view
   const toggleCalendarView = () => {
@@ -262,7 +256,7 @@ const MealPlanMainInner: React.FC = () => {
     isCompleted: boolean,
     hasRecipe: boolean,
   ) => {
-    const item = items.find(i => i.id === id);
+    const item = itemDetails.find(i => i.id === id);
     if (!item) return;
 
     // Show MarkCookedModal when marking a recipe meal as complete
@@ -332,7 +326,7 @@ const MealPlanMainInner: React.FC = () => {
   };
 
   const handleItemPress = (id: string) => {
-    const item = items.find(i => i.id === id);
+    const item = itemDetails.find(i => i.id === id);
     if (item?.recipe?.id) {
       toRecipeDetail({ recipeId: item.recipe.id });
     }

@@ -110,3 +110,11 @@ fragment useMoveToPantry_pantryItem on PantryItem {
     }
   }
 }
+
+# Which filtered variant of the list's connection the moved row sits in.
+fragment useMoveToPantry_wasPurchased on ShoppingListItem {
+  id
+  purchaseInfo {
+    isPurchased
+  }
+}

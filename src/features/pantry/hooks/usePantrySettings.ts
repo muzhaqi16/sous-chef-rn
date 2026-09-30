@@ -27,11 +27,12 @@ import { appliedPayload } from '#/utils/errors/mutationPayload';
 import {
   removeOptimisticPantry,
   restorePantryToHomeCache,
-} from '#features/pantry/utils/optimisticPantry';
+} from '#features/pantry/cache/pantry';
 import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
 import { useTranslation } from '#/i18n';
+import { todayKey } from '#/utils/dateUtils';
 
 /** Module-level so the try/catch does not bail the hook out of the compiler. */
 function buildDeletePantryUpdater(homeId: string | null | undefined) {
@@ -86,13 +87,18 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
   const pantry = pantryData?.pantry;
 
   const [updatePantry] = useMutation(UpdatePantryDocument, {
+    context: { localFirst: true },
     // No `update`: Apollo merges the returned Pantry entity, and membership
     // lists are unchanged by an edit.
   });
 
-  const [markAsDefault] = useMutation(MarkPantryAsDefaultDocument);
+  const [markAsDefault] = useMutation(MarkPantryAsDefaultDocument, {
+    // Absolute flag on an existing row, so a replay lands the same state.
+    context: { localFirst: true },
+  });
 
   const [deletePantryMutation] = useMutation(DeletePantryDocument, {
+    context: { localFirst: true },
     update: buildDeletePantryUpdater(homeId),
   });
 
@@ -101,9 +107,7 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
     const settled = await settleMutation(
       () =>
         markAsDefault({
-          variables: { input: { id } },
-          // Absolute flag on an existing row, so a replay lands the same state.
-          context: { localFirst: true },
+          variables: { input: { id }, today: todayKey() },
         }),
       {
         document: MarkPantryAsDefaultDocument,
@@ -141,8 +145,7 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
     const settled = await settleMutation(
       () =>
         updatePantry({
-          variables: { input: { id, ...updates } },
-          context: { localFirst: true },
+          variables: { input: { id, ...updates }, today: todayKey() },
         }),
       {
         document: UpdatePantryDocument,
@@ -187,7 +190,6 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
       () =>
         deletePantryMutation({
           variables: { input: { id } },
-          context: { localFirst: true },
         }),
       {
         document: DeletePantryDocument,

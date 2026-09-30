@@ -1,4 +1,9 @@
-import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import {
+  skipToken,
+  useApolloClient,
+  useMutation,
+  useQuery,
+} from '@apollo/client/react';
 import {
   GetRecipeDocument,
   CreateRecipeDocument,
@@ -16,7 +21,7 @@ import type {
 } from '#/graphql/generated/schemaTypes';
 import {
   upsertMyRecipesEdge,
-  writeOptimisticRecipe,
+  writeLocalRecipe,
   revertOptimisticRecipe,
   type RecipeCreatedBy,
 } from '#features/recipes/utils/recipeCacheWriters';
@@ -46,10 +51,10 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
   const client = useApolloClient();
   const { t } = useTranslation();
 
-  const { data: recipeData } = useQuery(GetRecipeDocument, {
-    variables: { id: recipeId ?? '' },
-    skip: !recipeId,
-  });
+  const { data: recipeData } = useQuery(
+    GetRecipeDocument,
+    recipeId ? { variables: { id: recipeId } } : skipToken,
+  );
   const recipeRef = recipeData?.recipe ?? null;
 
   /**
@@ -69,6 +74,7 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
   const [createRecipeMutation, { loading: creating }] = useMutation(
     CreateRecipeDocument,
     {
+      context: { localFirst: true },
       update: (cache, { data }) => {
         const payload = appliedPayload(data);
         if (!payload) return;
@@ -78,10 +84,14 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
       },
     },
   );
-  const [updateRecipeMutation, { loading: updating }] =
-    useMutation(UpdateRecipeDocument);
+  const [updateRecipeMutation, { loading: updating }] = useMutation(
+    UpdateRecipeDocument,
+    { context: { localFirst: true } },
+  );
   const [updateRecipeIngredientsMutation, { loading: updatingIngredients }] =
-    useMutation(UpdateRecipeIngredientsDocument);
+    useMutation(UpdateRecipeIngredientsDocument, {
+      context: { localFirst: true },
+    });
 
   /**
    * Mint the permanent cuid (the row's real PK) and write the recipe into My
@@ -94,7 +104,7 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
   ): Promise<RecipeWriteOutcome> => {
     const id = generateEntityId();
     try {
-      writeOptimisticRecipe(client.cache, id, input, createdBy);
+      writeLocalRecipe(client.cache, id, input, createdBy);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Create Recipe (optimistic)',
@@ -116,7 +126,6 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
       () =>
         createRecipeMutation({
           variables: { input: { ...input, id } },
-          context: { localFirst: true },
         }),
       {
         document: CreateRecipeDocument,
@@ -145,7 +154,6 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
         () =>
           updateRecipeMutation({
             variables: { input: { ...input, id } },
-            context: { localFirst: true },
           }),
         { document: UpdateRecipeDocument, fallback, present: 'none' },
       ),
@@ -153,7 +161,6 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
         () =>
           updateRecipeIngredientsMutation({
             variables: { input: { recipeId: id, ingredients } },
-            context: { localFirst: true },
           }),
         {
           document: UpdateRecipeIngredientsDocument,

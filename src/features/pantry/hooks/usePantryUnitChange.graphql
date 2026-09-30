@@ -88,13 +88,25 @@ fragment usePantryUnitChange_pantryItem on PantryItem {
   }
 }
 
-mutation ChangePantryItemUnit($input: ChangePantryItemUnitInput!) {
+mutation ChangePantryItemUnit(
+  $input: ChangePantryItemUnitInput!
+  $today: LocalDate!
+) {
   changePantryItemUnit(input: $input) {
     __typename
     ... on ChangePantryItemUnitPayload {
+      storageLocation {
+        id
+        ...StorageLocationReaders
+      }
       pantryItem {
         id
+        ...PantryItemReaders
         ...usePantryUnitChange_pantryItem
+      }
+      pantry {
+        id
+        ...PantryReaders
       }
     }
     ... on Error {

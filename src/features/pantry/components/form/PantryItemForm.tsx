@@ -331,6 +331,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       onSave={save}
       canSave={canSave}
       loading={isSaving}
+      leadIn={false}
       testID={pantryTestIDs.editItemModal}
       submitButtonTestID={pantryTestIDs.editItemSubmitButton}
     >

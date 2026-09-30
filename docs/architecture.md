@@ -125,7 +125,7 @@ imports:
 | `hooks/mutations/`, deeper hooks  | 🔒      | Internal lifecycle primitives                                                                                                                                                                                                                                                                                       |
 | `utils/`                          | 🔒      | Internal                                                                                                                                                                                                                                                                                                            |
 | `store/` (recipes only)           | ✅      | The recipe result caches. Two other features read them (pantry's per-item suggestions, mealPlan's recipe picker), so like catalog's `ui/` they belong in neither a domain-free kernel nor one consumer. A feature store MUST call `registerSessionScopedStore` — `SESSION_SCOPED_STATE` only reaches the root store |
-| `offline/` (pantry, shoppingList) | 🔒\*    | Public to the OFFLINE QUEUE only. A feature's sync builders say what its queued mutation's input means, which nothing but the replayer needs — the kernel imports it, other features may not                                                                                                                        |
+| `offline/` (pantry, shoppingList) | 🔒\*    | Public to the OFFLINE QUEUE only. A feature's replay preparers and reconcilers say what its queued mutation means, which nothing but the replayer needs — the kernel imports it, other features may not                                                                                                                        |
 
 Shared UI atoms, molecules, organisms, and templates live in `src/components/`,
 beside `providers/` and `performance/`. That is the whole taxonomy — there is no
@@ -189,7 +189,7 @@ convention, not a deviation — see § Fragments.
 
 One asymmetry in those zones is deliberate: `graphql/` is absent from the
 shared-layer zone (while feature-to-feature zones do block it). The offline
-queue replays every feature's `Sync*` mutations and the subscription layer
+queue replays every feature's queued mutations and the subscription layer
 mounts every feature's event subscription centrally, so neither can move into
 a feature — listing `graphql/` would need ~19 `except` entries and excuse more
 than it forbids. Generated operation documents are typed and side-effect-free;
@@ -429,8 +429,8 @@ instantly on cold start. `cache-and-network` then refreshes in the background;
 brief stale pagination state is expected and self-corrects.
 
 **2. A mutation queue.** `src/apollo/offlineQueue/` intercepts mutations while
-offline, converts them to replayable `Sync*` operations, and drains the queue on
-reconnect. Writes apply to the cache **before** firing (local-first) rather than
+offline and replays each as the canonical mutation it was queued as, each safe
+to send again, when the device reconnects. Writes apply to the cache **before** firing (local-first) rather than
 via `optimisticResponse`, because Apollo tears optimistic layers down when a
 mutation "completes" — and offline, completion is the queue's null result, which
 would visibly revert the change while it sits queued.

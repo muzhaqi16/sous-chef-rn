@@ -11,18 +11,26 @@ import {
   CreatePantryItemUsageDocument,
   RestockPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { UsagePurpose, WasteReason } from '#/graphql/generated/schemaTypes';
+import {
+  UnitType,
+  UsagePurpose,
+  WasteReason,
+} from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
 import { t } from '#/i18n';
 import { changeLanguage } from '#/i18n/config';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { toDateKey } from '#/utils/dateUtils';
+import { todayKey } from '#/utils/dateUtils';
 import { usePantryItemActions } from '../usePantryItemActions';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
-import { WriteHeldStock_PantryItemFragmentDoc } from '#features/pantry/cache/stock.generated';
 import {
+  WriteHeldStock_PantryItemFragmentDoc,
+  WriteHeldStock_ShownInFragmentDoc,
+} from '#features/pantry/cache/stock.generated';
+import {
+  UsePantryItemActions_EnteredUnitFragmentDoc,
   UsePantryItemActions_IdFragmentDoc,
   UsePantryItemActions_QuantityFragmentDoc,
   UsePantryItemActions_TrackingUnitFragmentDoc,
@@ -63,11 +71,48 @@ const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
     }),
   );
 
-const cachedItem = (cache: ReturnType<typeof seedPantryItems>) =>
+const cachedItem = (cache: ReturnType<typeof seedPantryItems>, id = 'item-1') =>
   cache.readFragment<{ quantity: number }>({
-    id: cache.identify({ __typename: 'PantryItem', id: 'item-1' }),
+    id: cache.identify({ __typename: 'PantryItem', id }),
     fragment: UsePantryItemActions_QuantityFragmentDoc,
   });
+
+const PIECE = { __typename: 'Unit', id: 'pc', symbol: 'pc' };
+const DOZEN = {
+  __typename: 'Unit',
+  id: 'doz',
+  symbol: 'doz',
+  type: UnitType.Count,
+  hasStandardCountFactor: true,
+  baseUnitId: 'pc',
+  conversionFactor: 12,
+  commonFractions: [1 / 4, 1 / 3, 1 / 2, 2 / 3, 3 / 4],
+};
+
+/** A stack of eggs counted in pieces and shown in dozens, as the server holds one. */
+const seedEggs = (held: number) => {
+  const data = {
+    __typename: 'PantryItem',
+    id: 'eggs',
+    quantity: held,
+    heldQuantity: held,
+    displayAmount: {
+      __typename: 'DisplayAmount',
+      quantity: held / 12,
+      unit: DOZEN,
+    },
+    unit: PIECE,
+    displayUnit: DOZEN,
+  };
+  return seedCache([
+    { fragment: UsePantryItemActions_IdFragmentDoc, data },
+    { fragment: UsePantryItemActions_QuantityFragmentDoc, data },
+    { fragment: UsePantryItemActions_TrackingUnitFragmentDoc, data },
+    { fragment: WriteHeldStock_PantryItemFragmentDoc, data },
+    { fragment: WriteHeldStock_ShownInFragmentDoc, data },
+    { fragment: UsePantryItemActions_EnteredUnitFragmentDoc, data: DOZEN },
+  ]);
+};
 
 const createOptions = () => ({
   removeItem: jest.fn().mockResolvedValue(undefined),
@@ -304,13 +349,14 @@ describe('usePantryItemActions', () => {
       });
 
       expect(m.fired).toContainEqual({
+        today: expect.any(String),
         input: {
           pantryItemId: 'item-1',
           amount: { quantity: 2 },
           purpose: UsagePurpose.Cooking,
           notes: 'For dinner',
           usageUnitId: undefined,
-          today: toDateKey(new Date()),
+          today: todayKey(),
           idempotencyKey: expect.any(String),
         },
       });
@@ -401,6 +447,7 @@ describe('usePantryItemActions', () => {
       });
 
       expect(m.fired).toContainEqual({
+        today: expect.any(String),
         input: {
           pantryItemId: 'item-1',
           amount: { quantity: 1 },
@@ -410,7 +457,7 @@ describe('usePantryItemActions', () => {
           wasteReason: 'EXPIRED',
           isComposted: true,
           isRecycled: false,
-          today: toDateKey(new Date()),
+          today: todayKey(),
           idempotencyKey: expect.any(String),
         },
       });
@@ -436,6 +483,7 @@ describe('usePantryItemActions', () => {
       });
 
       expect(m.fired).toContainEqual({
+        today: expect.any(String),
         input: {
           id: 'item-1',
           quantity: 3,
@@ -768,6 +816,95 @@ describe('usePantryItemActions', () => {
   });
 
   describe('a write that is queued, or fails', () => {
+    describe('on a stack of pieces shown in dozens', () => {
+      const queuedUsage = () => {
+        const data: MockDataFor<typeof CreatePantryItemUsageDocument> = {
+          createPantryItemUsage: null,
+        };
+        return recordMock(CreatePantryItemUsageDocument, { data });
+      };
+
+      it('shows what is left in pieces when it is no common fraction of a dozen', async () => {
+        const cache = seedEggs(36);
+        const { result } = renderHookWithApollo(
+          () => usePantryItemActions(createOptions()),
+          { cache, operationMocks: [queuedUsage().mock] },
+        );
+
+        act(() => {
+          result.current.handleConsumeItem('eggs');
+        });
+        await act(async () => {
+          await result.current.handleConfirmConsume(
+            25,
+            '25',
+            UsagePurpose.Cooking,
+            '',
+            'pc',
+          );
+        });
+
+        expect(cachedItem(cache, 'eggs')).toMatchObject({
+          heldQuantity: 11,
+          displayAmount: { quantity: 11, unit: { id: 'pc', symbol: 'pc' } },
+        });
+      });
+
+      it('shows what is left in dozens when it is a common fraction of one', async () => {
+        const cache = seedEggs(36);
+        const { result } = renderHookWithApollo(
+          () => usePantryItemActions(createOptions()),
+          { cache, operationMocks: [queuedUsage().mock] },
+        );
+
+        act(() => {
+          result.current.handleConsumeItem('eggs');
+        });
+        await act(async () => {
+          await result.current.handleConfirmConsume(
+            4,
+            '4',
+            UsagePurpose.Cooking,
+            '',
+            'pc',
+          );
+        });
+
+        expect(cachedItem(cache, 'eggs')).toMatchObject({
+          heldQuantity: 32,
+          displayAmount: { quantity: 32 / 12, unit: { id: 'doz' } },
+        });
+      });
+
+      it('moves the stock by the pieces a dozen entry names', async () => {
+        const cache = seedEggs(36);
+        const { result } = renderHookWithApollo(
+          () => usePantryItemActions(createOptions()),
+          { cache, operationMocks: [queuedUsage().mock] },
+        );
+
+        act(() => {
+          result.current.handleWasteItem('eggs');
+        });
+        await act(async () => {
+          // ⅓ doz typed to three decimals is 4 eggs, as the server reads it.
+          await result.current.handleConfirmWaste(
+            0.333,
+            WasteReason.Expired,
+            false,
+            false,
+            '',
+            'doz',
+          );
+        });
+
+        expect(cachedItem(cache, 'eggs')).toMatchObject({
+          heldQuantity: 32,
+          displayAmount: { quantity: 32 / 12, unit: { id: 'doz' } },
+        });
+      });
+    });
+
     it('keeps a queued consume, closes the modal and says nothing', async () => {
       // The offline queue resolves with the payload field null and no error;
       // that is an accepted write, not a failure to revert.

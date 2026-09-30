@@ -20,49 +20,54 @@ import { nextRecurringList } from '#features/shoppingList/utils/nextRecurringLis
 import { useCopyShoppingList } from './useCopyShoppingList';
 import type { RecurringPattern } from '#/graphql/generated/schemaTypes';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
+import {
+  snapshotFields,
+  writeEntityFields,
+} from '#/apollo/utils/localFirstFields';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { toastService } from '#/services/toastService';
 
 export function useRecurringShoppingList() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [setupMutation] = useMutation(CreateRecurringShoppingListDocument);
-  const [cancelMutation] = useMutation(CancelRecurringDocument);
+  const [setupMutation] = useMutation(CreateRecurringShoppingListDocument, {
+    context: { localFirst: true },
+  });
+  const [cancelMutation] = useMutation(CancelRecurringDocument, {
+    context: { localFirst: true },
+  });
   const { copyList, copying: generating } = useCopyShoppingList(
     t('shoppingListScreens.failedToGenerateNext'),
   );
 
+  /** Writes `patch` over the list and returns what restores the held values. */
   const applyOptimistic = (
     id: string,
     patch: Partial<UseRecurringShoppingList_ListFragment>,
-    label: string,
-  ): (() => void) =>
-    applyOptimisticFragmentPatch(
-      client.cache,
-      { typename: 'ShoppingList', id },
-      {
+  ): (() => void) => {
+    const entity = { __typename: 'ShoppingList', id };
+    const held =
+      client.cache.readFragment<UseRecurringShoppingList_ListFragment>({
+        id: client.cache.identify(entity),
         fragment: UseRecurringShoppingList_ListFragmentDoc,
         fragmentName: 'useRecurringShoppingList_list',
-      },
-      patch,
-      label,
-    );
+        returnPartialData: true,
+      });
+    const previous = snapshotFields(held, patch);
+    writeEntityFields(client.cache, entity, patch);
+    return () => writeEntityFields(client.cache, entity, previous);
+  };
 
   const setRecurring = async (
     id: string,
     pattern: RecurringPattern,
     interval: number,
   ): Promise<boolean> => {
-    const revert = applyOptimistic(
-      id,
-      {
-        isRecurring: true,
-        recurringPattern: pattern,
-        recurringInterval: interval,
-      },
-      'Set Recurring',
-    );
+    const revert = applyOptimistic(id, {
+      isRecurring: true,
+      recurringPattern: pattern,
+      recurringInterval: interval,
+    });
 
     const settled = await settleMutation(
       () =>
@@ -74,7 +79,6 @@ export function useRecurringShoppingList() {
               recurringInterval: interval,
             },
           },
-          context: { localFirst: true },
         }),
       {
         document: CreateRecurringShoppingListDocument,
@@ -86,17 +90,12 @@ export function useRecurringShoppingList() {
   };
 
   const cancelRecurring = async (id: string): Promise<boolean> => {
-    const revert = applyOptimistic(
-      id,
-      { isRecurring: false },
-      'Cancel Recurring',
-    );
+    const revert = applyOptimistic(id, { isRecurring: false });
 
     const settled = await settleMutation(
       () =>
         cancelMutation({
           variables: { input: { id } },
-          context: { localFirst: true },
         }),
       {
         document: CancelRecurringDocument,
@@ -172,11 +171,7 @@ export function useRecurringShoppingList() {
     const { recurringPattern, recurringInterval } = recurrence;
     if (recurringPattern == null || recurringInterval == null) return;
 
-    const revert = applyOptimistic(
-      id,
-      { nextRecurringDate },
-      'Advance Recurrence',
-    );
+    const revert = applyOptimistic(id, { nextRecurringDate });
     await settleMutation(
       () =>
         setupMutation({
@@ -188,7 +183,6 @@ export function useRecurringShoppingList() {
               nextRecurringDate,
             },
           },
-          context: { localFirst: true },
         }),
       {
         document: CreateRecurringShoppingListDocument,

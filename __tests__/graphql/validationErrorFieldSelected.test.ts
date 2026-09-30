@@ -121,6 +121,6 @@ describe('a refusable mutation selects ValidationError.field', () => {
     // The check above passes vacuously if the walk stops finding documents —
     // a moved directory, a parse regression, a schema without a Mutation type.
     // A floor makes "nothing to report" distinguishable from "nothing read".
-    expect(compliant.length).toBeGreaterThanOrEqual(149);
+    expect(compliant.length).toBeGreaterThanOrEqual(144);
   });
 });

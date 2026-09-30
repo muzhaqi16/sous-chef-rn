@@ -16,7 +16,10 @@ import { readCopyableList } from '#features/shoppingList/cache/copySource';
 import { listFromTemplate } from '#features/shoppingList/utils/listFromTemplate';
 import { useCopyShoppingList } from './useCopyShoppingList';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
+import {
+  snapshotFields,
+  writeEntityFields,
+} from '#/apollo/utils/localFirstFields';
 import { toastService } from '#/services/toastService';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
@@ -25,6 +28,7 @@ export function useShoppingListTemplate() {
   const client = useApolloClient();
   const [markMutation, { loading: marking }] = useMutation(
     MarkAsTemplateDocument,
+    { context: { localFirst: true } },
   );
   const { copyList, copying: creating } = useCopyShoppingList(
     t('shoppingListScreens.failedToCreateFromTemplate'),
@@ -34,23 +38,23 @@ export function useShoppingListTemplate() {
     id: string,
     templateName: string,
   ): Promise<boolean> => {
-    const revert =
-      applyOptimisticFragmentPatch<UseShoppingListTemplate_ListFragment>(
-        client.cache,
-        { typename: 'ShoppingList', id },
-        {
-          fragment: UseShoppingListTemplate_ListFragmentDoc,
-          fragmentName: 'useShoppingListTemplate_list',
-        },
-        { isTemplate: true, templateName },
-        'Mark As Template',
-      );
+    const entity = { __typename: 'ShoppingList', id };
+    const patch = { isTemplate: true, templateName };
+    const held =
+      client.cache.readFragment<UseShoppingListTemplate_ListFragment>({
+        id: client.cache.identify(entity),
+        fragment: UseShoppingListTemplate_ListFragmentDoc,
+        fragmentName: 'useShoppingListTemplate_list',
+        returnPartialData: true,
+      });
+    const previous = snapshotFields(held, patch);
+    writeEntityFields(client.cache, entity, patch);
+    const revert = () => writeEntityFields(client.cache, entity, previous);
 
     const settled = await settleMutation(
       () =>
         markMutation({
           variables: { input: { id, templateName } },
-          context: { localFirst: true },
         }),
       {
         document: MarkAsTemplateDocument,

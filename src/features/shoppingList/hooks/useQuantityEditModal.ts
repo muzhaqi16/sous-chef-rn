@@ -14,7 +14,7 @@ import { resolveImageUrl } from '#utils/imageUtils';
 import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { setCachedFields } from '#/apollo/utils/cacheUpdaters';
+import { writeEntityFields } from '#/apollo/utils/localFirstFields';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 
@@ -69,7 +69,9 @@ export function useQuantityEditModal(
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [updateQuantity] = useMutation(UpdateShoppingListItemQuantityDocument);
+  const [updateQuantity] = useMutation(UpdateShoppingListItemQuantityDocument, {
+    context: { localFirst: true },
+  });
 
   // `from: null` makes `useFragment` return `complete: false`.
   const { data: liveItem, complete: liveItemComplete } = useFragment({
@@ -158,7 +160,8 @@ export function useQuantityEditModal(
       quantityInput,
       ...(parsed !== null && { quantity: parsed }),
     };
-    setCachedFields(client.cache, 'ShoppingListItem', itemId, next);
+    const entity = { __typename: 'ShoppingListItem', id: itemId };
+    writeEntityFields(client.cache, entity, next);
     optimisticDataPersistence.save(
       'ShoppingListItem',
       itemId,
@@ -193,7 +196,6 @@ export function useQuantityEditModal(
               version: selectedItemRaw.version,
             },
           },
-          context: { localFirst: true },
           onCompleted: result => {
             if (appliedPayload(result)) clearPersisted();
           },
@@ -203,7 +205,7 @@ export function useQuantityEditModal(
         fallback: t('errors.adjustQuantityFailed'),
         onFailed: () => {
           clearPersisted();
-          setCachedFields(client.cache, 'ShoppingListItem', itemId, previous);
+          writeEntityFields(client.cache, entity, previous);
         },
       },
     );

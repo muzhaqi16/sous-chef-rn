@@ -13,6 +13,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAppStore } from '#store/useAppStore';
 import { useNotificationActionData } from '#features/notifications/hooks/useNotificationActionData';
 import { useExpirationNotificationSync } from '#features/notifications/hooks/useExpirationNotificationSync';
+import { useNotificationSync } from '#features/notifications/hooks/useNotificationSync';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
 interface NotificationActionHandlerProps {
@@ -40,6 +41,7 @@ export const NotificationActionHandler: React.FC<
   const [selectedExpirationNotification, setSelectedExpirationNotification] =
     useState<NotificationItem | null>(null);
   const { syncMarkAction, syncMarkRead } = useExpirationNotificationSync();
+  const { syncMarkAsRead } = useNotificationSync();
   const { toPantryMain, toShoppingListMain, toNotifications } =
     useAppNavigation();
   const setHomeAndPantry = useAppStore(state => state.setHomeAndPantry);
@@ -122,6 +124,9 @@ export const NotificationActionHandler: React.FC<
       );
       // Also mark the expiration notification as read on the server
       void syncMarkRead(notification.expirationNotificationId);
+      // Neither call above moves the generic row; its own mark-read settles it
+      // and the badge.
+      void syncMarkAsRead(notification.id);
     }
     setSelectedExpirationNotification(null);
   };

@@ -109,16 +109,18 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
+const mockNoUnits = {
+  groups: [],
+  allUnits: [],
+  defaultUnit: null,
+  defaultIncrement: null,
+  defaultCommonFractions: null,
+  loading: false,
+};
+const mockUseOperationUnits = jest.fn(() => mockNoUnits);
 jest.mock('#features/pantry/hooks/useOperationUnits', () => ({
   ...jest.requireActual('#features/pantry/hooks/useOperationUnits'),
-  useOperationUnits: () => ({
-    groups: [],
-    allUnits: [],
-    defaultUnit: null,
-    defaultIncrement: null,
-    defaultCommonFractions: null,
-    loading: false,
-  }),
+  useOperationUnits: () => mockUseOperationUnits(),
 }));
 
 jest.mock('#features/pantry/hooks/useConvertAvailableQuantity', () => ({
@@ -166,6 +168,7 @@ function makeCache(overrides: Record<string, unknown> = {}) {
           type: 'WEIGHT',
           displayAsFraction: false,
         },
+        displayUnit: null,
         netWeightUnit: null,
         packageBreakdown: null,
         quantityBreakdown: null,
@@ -201,6 +204,7 @@ describe('PantryActionModal', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseOperationUnits.mockReturnValue(mockNoUnits);
   });
 
   it('renders with the provided title', () => {
@@ -361,5 +365,112 @@ describe('PantryActionModal', () => {
       />,
     );
     expect(onReset).toHaveBeenCalledWith(expect.any(Object), null, null);
+  });
+
+  describe('on a stack of pieces shown in dozens', () => {
+    const eggs = {
+      itemName: 'Eggs',
+      quantity: 36,
+      displayAmount: {
+        __typename: 'DisplayAmount',
+        quantity: 3,
+        unit: { __typename: 'Unit', id: 'doz', symbol: 'doz' },
+      },
+      unit: {
+        __typename: 'Unit',
+        id: 'pc',
+        symbol: 'pc',
+        name: 'piece',
+        type: 'COUNT',
+        displayAsFraction: false,
+      },
+      displayUnit: {
+        __typename: 'Unit',
+        id: 'doz',
+        symbol: 'doz',
+        type: 'COUNT',
+        hasStandardCountFactor: true,
+        baseUnitId: 'pc',
+        conversionFactor: 12,
+        commonFractions: [1 / 4, 1 / 3, 1 / 2, 2 / 3, 3 / 4],
+      },
+    };
+    const dozen = {
+      unitId: 'doz',
+      unitSymbol: 'doz',
+      unitName: 'dozen',
+      unitType: 'COUNT',
+      isTrackingUnit: false,
+      countFactor: 12,
+      conversionRatio: null,
+      conversionConfidence: null,
+    };
+
+    const renderedState = () => {
+      renderWithApollo(<PantryActionModal {...defaultProps} />, {
+        cache: makeCache(eggs),
+      });
+      return mockRenderActionFields.mock.calls.at(-1)![0];
+    };
+
+    it('shows a held amount as the stack does', () => {
+      const shared = renderedState();
+      expect(shared.showStock(24)).toEqual({
+        quantity: 2,
+        unitSymbol: 'doz',
+        displayAsFraction: null,
+      });
+      expect(shared.showStock(11)).toEqual({
+        quantity: 11,
+        unitSymbol: 'pc',
+        displayAsFraction: false,
+      });
+    });
+
+    it('needs no conversion in pieces', () => {
+      expect(renderedState().exactFactor).toBe(1);
+    });
+
+    it('needs no conversion in dozens, which count 12 pieces each', () => {
+      const { rerender } = renderWithApollo(
+        <PantryActionModal {...defaultProps} />,
+        { cache: makeCache(eggs) },
+      );
+      // The ranked units arrive after the first render; the dozen leads them.
+      mockUseOperationUnits.mockReturnValue({
+        ...mockNoUnits,
+        allUnits: [dozen],
+        defaultUnit: dozen,
+      } as never);
+      rerender(<PantryActionModal {...defaultProps} />);
+      expect(mockRenderActionFields.mock.calls.at(-1)![0].exactFactor).toBe(12);
+    });
+
+    it('converts on a dual-tracked stack, whose count moves by whole packages', () => {
+      const { rerender } = renderWithApollo(
+        <PantryActionModal {...defaultProps} />,
+        {
+          cache: makeCache({
+            ...eggs,
+            netWeight: 50,
+            netWeightUnit: {
+              __typename: 'Unit',
+              id: 'g',
+              name: 'gram',
+              symbol: 'g',
+            },
+          }),
+        },
+      );
+      mockUseOperationUnits.mockReturnValue({
+        ...mockNoUnits,
+        allUnits: [dozen],
+        defaultUnit: dozen,
+      } as never);
+      rerender(<PantryActionModal {...defaultProps} />);
+      const shared = mockRenderActionFields.mock.calls.at(-1)![0];
+      expect(shared.activeUnitId).toBe('doz');
+      expect(shared.exactFactor).toBeNull();
+    });
   });
 });

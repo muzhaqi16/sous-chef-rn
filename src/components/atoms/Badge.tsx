@@ -3,8 +3,14 @@ import type { ViewStyle } from 'react-native';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text, type TextTone } from '#components/atoms/Text';
+import { Icon, type IconName, type IconTone } from '#/utils/iconUtils';
 
-type BadgeVariant = 'default' | 'primary' | 'success' | 'warning' | 'danger';
+export type BadgeVariant =
+  | 'default'
+  | 'primary'
+  | 'success'
+  | 'warning'
+  | 'danger';
 
 const BADGE_TEXT_TONE: Record<BadgeVariant, TextTone> = {
   default: 'primary',
@@ -13,6 +19,28 @@ const BADGE_TEXT_TONE: Record<BadgeVariant, TextTone> = {
   warning: 'warning',
   danger: 'danger',
 };
+
+const BADGE_ICON_TONE: Record<BadgeVariant, IconTone> = {
+  default: 'textPrimary',
+  primary: 'primary',
+  success: 'success',
+  warning: 'warning',
+  danger: 'danger',
+};
+
+/** One line of a stacked badge: an icon and a short value, in its own tone. */
+export interface BadgeLine {
+  icon: IconName;
+  text: string;
+  variant: BadgeVariant;
+}
+
+/** A row's badge as data. With `lines` it stacks, and `text` is what is read aloud. */
+export interface BadgeContent {
+  text: string;
+  variant?: BadgeVariant;
+  lines?: BadgeLine[];
+}
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -38,12 +66,34 @@ export const Badge: React.FC<BadgeProps> = ({
       accessibilityLabel={typeof children === 'string' ? children : undefined}
       style={[styles.badge, style]}
     >
-      <Text role="bodyStrong" tone={BADGE_TEXT_TONE[variant]}>
+      <Text role="footnoteStrong" tone={BADGE_TEXT_TONE[variant]}>
         {children}
       </Text>
     </View>
   );
 };
+
+/** Values that read as a set, stacked so they take one short column. */
+export const BadgeStack: React.FC<{ label: string; lines: BadgeLine[] }> = ({
+  label,
+  lines,
+}) => (
+  <View
+    accessible
+    accessibilityRole="text"
+    accessibilityLabel={label}
+    style={styles.stack}
+  >
+    {lines.map(line => (
+      <View key={`${line.icon}:${line.text}`} style={styles.stackLine}>
+        <Icon name={line.icon} size="xs" tone={BADGE_ICON_TONE[line.variant]} />
+        <Text role="footnoteStrong" tone={BADGE_TEXT_TONE[line.variant]}>
+          {line.text}
+        </Text>
+      </View>
+    ))}
+  </View>
+);
 
 const styles = StyleSheet.create(theme => ({
   badge: {
@@ -70,5 +120,13 @@ const styles = StyleSheet.create(theme => ({
         },
       },
     },
+  },
+  stack: {
+    gap: theme.spacing['2xs'],
+  },
+  stackLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
   },
 }));

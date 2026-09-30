@@ -40,6 +40,10 @@ fragment HomeDetailScreen_home on Home {
       }
     }
     totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
   }
   invitesConnection(first: 20) {
     edges {
@@ -52,6 +56,10 @@ fragment HomeDetailScreen_home on Home {
       }
     }
     totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
   }
   # Lightweight pantries selection — consumed by PantryItemForm's
   # "default pantry" lookup. The detail screen itself doesn't render pantries
@@ -65,5 +73,9 @@ fragment HomeDetailScreen_home on Home {
       }
     }
     totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
   }
 }

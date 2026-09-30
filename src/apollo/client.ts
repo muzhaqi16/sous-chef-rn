@@ -20,6 +20,7 @@ import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import { isStorageReady } from '#storage/mmkv';
 import { CLIENT_NAME, CLIENT_VERSION } from './clientIdentity';
 import { APOLLO_DEFAULT_OPTIONS } from './defaultOptions';
+import { createRefetchEventManager } from './refetchEvents';
 
 // Lazy histogram emit — defers loading of the telemetry singleton (which
 // touches Environment + device ID at module init) so this module remains
@@ -116,6 +117,7 @@ function initializeClient() {
     dataMasking: true,
     defaultOptions: APOLLO_DEFAULT_OPTIONS,
     queryDeduplication: true,
+    refetchEventManager: createRefetchEventManager(),
   });
 
   // Set up cache persistence
@@ -204,13 +206,10 @@ function setupCachePersistence(
     return result;
   };
 
+  // No forced `resetResultCache`: an evict already invalidates every read of
+  // the entity. Verified: #apollo-gc-needs-no-result-cache-reset-to-drop-evicted-entities
   cache.gc = function (gcOptions?: { resetResultCache?: boolean }) {
-    // Always reset the result cache so stale query results referencing
-    // evicted entities are discarded immediately. Without this, components
-    // can read dangling __ref pointers and crash (production-only because
-    // dev mode's loadDevMessages() masks the error).
-    const options = { resetResultCache: true, ...gcOptions };
-    const result = originalGc(options);
+    const result = originalGc(gcOptions);
     schedulePersistence();
     return result;
   };

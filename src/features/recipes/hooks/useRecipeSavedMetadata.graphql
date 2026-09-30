@@ -1,0 +1,13 @@
+# The cached `SavedRecipe` behind a recipe. The metadata mutations key on
+# `recipeId` but the edits land on the SavedRecipe, so without its id an
+# offline edit toasts success and changes nothing.
+fragment useRecipeSavedMetadata_recipe on Recipe {
+  id
+  savedDetails {
+    id
+    folder
+    tags
+    notes
+    personalRating
+  }
+}

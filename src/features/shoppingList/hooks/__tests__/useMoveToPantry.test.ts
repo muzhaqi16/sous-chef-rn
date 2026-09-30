@@ -118,6 +118,7 @@ describe('useMoveToPantry', () => {
         actualPrice: undefined,
         notes: undefined,
       }),
+      today: expect.any(String),
     });
     expect(moveResult).toBe(true);
   });
@@ -155,6 +156,7 @@ describe('useMoveToPantry', () => {
         actualPrice: 5.99,
         notes: 'Keep frozen',
       }),
+      today: expect.any(String),
     });
   });
 
@@ -474,7 +476,11 @@ describe('useMoveToPantry pantry item count', () => {
 
   it('detail-shapes the row it publishes, so it reads offline', async () => {
     const cache = seededCache();
-    const move = echoingMoveMock();
+    // Queued: no response lands, so the row the detail screen reads is the
+    // local one.
+    const move = recordMock(MoveShoppingItemToPantryDocument, {
+      data: { moveShoppingItemToPantry: null },
+    });
     const { result } = renderHookWithApollo(
       () => useMoveToPantry({ currentListId: 'list-1' }),
       { operationMocks: [move.mock], cache },
@@ -499,10 +505,7 @@ describe('useMoveToPantry pantry item count', () => {
         totalCost
       }
     `;
-    // `acquisitionMethod` is NOT in the mutation's response fragment, so its
-    // presence is the stub's signature: the detail screen reads from cache
-    // instead of dead-ending, which offline is the only thing that runs.
-    // The stub's own arithmetic is pinned in writePantryItemDetailStub.test.ts.
+    // The row's own arithmetic is pinned in writeLocalPantryItem.test.ts.
     expect(
       cache.readFragment({
         id: `PantryItem:${mintedId}`,
@@ -667,11 +670,23 @@ describe('useMoveToPantry pantry item count', () => {
     refetchQueries.mockRestore();
   });
 
-  it('withdraws the count when the server supersedes the optimistic row', async () => {
+  it('takes the count from the response when the server restocks another row', async () => {
     const cache = seededCache();
     // A different id means the server restocked an existing stack; the hook
-    // evicts the row it published, so the count it added must go with it.
-    const move = moveMock();
+    // evicts the row it published, and the response states the pantry's count.
+    const move = recordMock(MoveShoppingItemToPantryDocument, {
+      data: {
+        moveShoppingItemToPantry: {
+          __typename: 'MoveShoppingItemToPantryPayload',
+          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-1' },
+          pantry: {
+            __typename: 'Pantry',
+            id: 'pantry-1',
+            stats: { __typename: 'PantryStats', totalItems: 63 },
+          },
+        },
+      },
+    });
     const { result } = renderHookWithApollo(
       () => useMoveToPantry({ currentListId: 'list-1' }),
       { operationMocks: [move.mock], cache },

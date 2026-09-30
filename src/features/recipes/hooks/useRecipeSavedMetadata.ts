@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { gql, type ApolloCache } from '@apollo/client';
+import type { ApolloCache } from '@apollo/client';
 import {
   snapshotFields,
   writeEntityFields,
@@ -19,61 +19,37 @@ import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { performOptimisticUnfavorite } from '#features/recipes/utils/optimisticUnfavorite';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
+import {
+  UseRecipeSavedMetadata_RecipeFragmentDoc,
+  type UseRecipeSavedMetadata_RecipeFragment,
+} from './useRecipeSavedMetadata.generated';
 
 interface UseRecipeSavedMetadataOptions {
   recipeId: string | undefined;
-  /** Falls back to this id when the recipe was saved as an external recipe (no recipeId yet). */
-  preloadedRecipeId: string | undefined;
-  /** Called after a successful unfavorite so external-recipe state can be cleared by the caller. */
-  onUnfavoriteSuccess: () => void;
 }
 
-/**
- * The cached `SavedRecipe` behind a recipe, off `Recipe.savedDetails`. The
- * metadata mutations key on `recipeId` but the edits land on the SavedRecipe,
- * so without its id an offline edit toasts success and changes nothing.
- */
-const SavedDetailsRefFragment = gql`
-  fragment _SavedDetailsRef on Recipe {
-    id
-    savedDetails {
-      id
-      folder
-      tags
-      notes
-      personalRating
-    }
-  }
-`;
+type SavedDetails = NonNullable<
+  UseRecipeSavedMetadata_RecipeFragment['savedDetails']
+>;
 
-interface SavedDetailsRef {
-  id: string;
-  folder: string | null;
-  tags: string[] | null;
-  notes: string | null;
-  personalRating: number | null;
-}
-
+/** The cached `SavedRecipe` behind a recipe, off `Recipe.savedDetails`. */
 function readSavedDetails(
   cache: ApolloCache,
   recipeId: string | undefined,
-): SavedDetailsRef | undefined {
+): SavedDetails | undefined {
   if (!recipeId) return undefined;
   const cacheId = cache.identify({ __typename: 'Recipe', id: recipeId });
   if (!cacheId) return undefined;
   return (
-    cache.readFragment<{ savedDetails: SavedDetailsRef | null }>({
+    cache.readFragment({
       id: cacheId,
-      fragment: SavedDetailsRefFragment,
-      fragmentName: '_SavedDetailsRef',
+      fragment: UseRecipeSavedMetadata_RecipeFragmentDoc,
     })?.savedDetails ?? undefined
   );
 }
 
 export function useRecipeSavedMetadata({
   recipeId,
-  preloadedRecipeId,
-  onUnfavoriteSuccess,
 }: UseRecipeSavedMetadataOptions) {
   const { t } = useTranslation();
   const client = useApolloClient();
@@ -84,7 +60,7 @@ export function useRecipeSavedMetadata({
    * its existing id — so a replay lands the same state twice.
    */
   const applyMetadataUpdate = async (
-    updates: Partial<SavedDetailsRef>,
+    updates: Partial<SavedDetails>,
     input: Record<string, unknown>,
   ): Promise<boolean> => {
     // Every caller returns early without a recipe; this keeps the id typed.
@@ -101,7 +77,6 @@ export function useRecipeSavedMetadata({
       () =>
         updateFavoriteRecipeMutation({
           variables: { input: { recipeId, ...input } },
-          context: { localFirst: true },
         }),
       {
         document: UpdateFavoriteRecipeDocument,
@@ -119,6 +94,7 @@ export function useRecipeSavedMetadata({
   const [updateFavoriteRecipeMutation] = useMutation(
     UpdateFavoriteRecipeDocument,
     {
+      context: { localFirst: true },
       update: (cache, { data }) => {
         const payload = appliedPayload(data);
         if (!payload) return;
@@ -175,6 +151,7 @@ export function useRecipeSavedMetadata({
   // callback here.
   const [unfavoriteRecipeMutation] = useMutation(
     RemoveRecipeFromFavoritesDocument,
+    { context: { localFirst: true } },
   );
 
   const handleUpdateFolder = (folder: string | null): Promise<void> => {
@@ -241,9 +218,8 @@ export function useRecipeSavedMetadata({
   };
 
   const handleUnfavoriteRecipe = (): Promise<void> => {
-    // For backend recipes, use recipeId. For external recipes, fall back to
-    // the preloadedRecipe id from the preload cache.
-    const targetRecipeId = recipeId ?? preloadedRecipeId;
+    // A catalog recipe still being opened has no id yet.
+    const targetRecipeId = recipeId;
 
     if (!targetRecipeId) {
       toastService.error(t('recipes.cannotRemoveNoId'));
@@ -257,16 +233,12 @@ export function useRecipeSavedMetadata({
         mutate: () =>
           unfavoriteRecipeMutation({
             variables: { input: { recipeId: targetRecipeId } },
-            // Local-first: queue + replay (idempotent) when the API is
-            // unreachable instead of surfacing a blocking error.
-            context: { localFirst: true },
           }),
         fallback: t('recipes.removeFromSavedFailed'),
         present: failure => toastService.error(failure.body),
       });
       if (!kept) return;
 
-      onUnfavoriteSuccess();
       toastService.success(t('recipes.recipeRemovedFromSaved'));
     }, setUpdatingFolderTags);
   };

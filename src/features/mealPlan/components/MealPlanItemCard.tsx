@@ -5,6 +5,7 @@ import { useTranslation } from '#/i18n';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment } from '@apollo/client/react';
+import type { FragmentType } from '@apollo/client/masking';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
@@ -12,15 +13,12 @@ import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem
 import { ListItem } from '#components/molecules/ListItem';
 import { commonStyles } from '#/styles/commonStyles';
 import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
-import {
-  MealPlanItemCard_ItemFragmentDoc,
-  type MealPlanItemCard_ItemFragment,
-} from './MealPlanItemCard.generated';
+import { MealPlanItemCard_ItemFragmentDoc } from './MealPlanItemCard.generated';
 import { hitSlop } from '#/theme/foundations/sizes';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 
 interface MealPlanItemCardProps {
-  item: MealPlanItemCard_ItemFragment;
+  item: FragmentType<typeof MealPlanItemCard_ItemFragmentDoc>;
   onToggleCompleted?: (
     id: string,
     isCompleted: boolean,
@@ -41,15 +39,13 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
   onSwipeableClose,
 }) => {
   const { t } = useTranslation();
-  // Subscribe to this entity's MealPlanItemCard_item fields. Re-renders happen
-  // only when these specific fields change in the cache.
   const fragmentResult = useFragment({
     fragment: MealPlanItemCard_ItemFragmentDoc,
     fragmentName: 'MealPlanItemCard_item',
     from: itemSource,
   });
-  // Cache miss (e.g., entity evicted) — fall back to source data so we never blank out a list item.
-  const item = fragmentResult.complete ? fragmentResult.data : itemSource;
+  if (!fragmentResult.complete) return null;
+  const item = fragmentResult.data;
 
   const recipeName =
     item.recipe?.name ?? item.customMealName ?? t('mealPlanItem.unnamedMeal');

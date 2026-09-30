@@ -1,98 +1,37 @@
-import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
-import { gql, type Reference } from '@apollo/client';
+import {
+  adoptServerEntityId,
+  createAddToParentConnectionUpdater,
+  safeEvict,
+} from '#/apollo/utils/cacheUpdaters';
+import type { ApolloCache, Reference } from '@apollo/client';
 import {
   MySavedRecipesDocument,
-  type MySavedRecipesQuery,
+  SavedRecipeFoldersDocument,
+  type SavedRecipeFoldersQuery,
 } from '#features/recipes/graphql/recipe.generated';
-import type { SavedRecipeCard_SavedRecipeFragment } from '#features/recipes/components/SavedRecipeCard.generated';
-import type { ApolloCache } from '@apollo/client';
-import type { SaveToFavoritesOptions } from '#features/recipes/hooks/useRecipePreload';
+import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import {
+  Favorites_RowFragmentDoc,
+  Favorites_SavedDetailsFragmentDoc,
+} from './favorites.generated';
+import {
+  NEUTRAL_LOCAL_SAVED_RECIPE,
+  NEUTRAL_LOCAL_SAVED_RECIPE_BY_TYPE,
+} from './savedRecipeRowNeutral.generated';
 
-const OptimisticSavedRecipeFragment = gql`
-  fragment _OptimisticSavedRecipe on SavedRecipe {
-    id
-    folder
-    tags
-    notes
-    personalRating
-    cookedCount
-    lastCookedAt
-    createdAt
-    updatedAt
-    recipe {
-      id
-    }
-  }
-`;
-
-/** Shape written by {@link OptimisticSavedRecipeFragment}. */
-type OptimisticSavedRecipe = {
-  __typename: 'SavedRecipe';
-  id: string;
-  folder: string | null;
-  tags: string[];
-  notes: string | null;
-  personalRating: number | null;
-  cookedCount: number;
-  lastCookedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  recipe: { __typename: 'Recipe'; id: string };
-};
-
-/**
- * Recipe display fields the saved-list card renders (the
- * `SavedRecipeCard_savedRecipe → recipe` selection). Read from the already-cached
- * `Recipe` entity so the optimistic `MySavedRecipes` edge node is complete and
- * the card doesn't blank offline.
- */
-const SavedRecipeCardRecipeFragment = gql`
-  fragment _SavedRecipeCardRecipe on Recipe {
-    id
-    name
-    description
-    imageUrl
-    servings
-    prepTimeMinutes
-    cookTimeMinutes
-    totalTimeMinutes
-  }
-`;
-
-/**
- * Writes / reads `Recipe.savedDetails` for the optimistic favorite (and its
- * revert snapshot). writeFragment is used instead of cache.modify because a
- * freshly-upserted Recipe has no `savedDetails` field yet, and cache.modify
- * only fires a modifier for a field that already exists on the entity.
- */
-const RecipeSavedDetailsFragment = gql`
-  fragment _RecipeSavedDetails on Recipe {
-    id
-    savedDetails {
-      id
-    }
-  }
-`;
-
-/** The `recipe` node the saved-list card renders. */
-type SavedRecipeCardRecipe = SavedRecipeCard_SavedRecipeFragment['recipe'];
-
-/**
- * The `MySavedRecipes` edge node — Apollo's `updateQuery` deep-resolves
- * fragments, so this is the UNMASKED `SavedRecipe`: the query's inline
- * `createdAt`/`updatedAt` plus every `SavedRecipeCard_savedRecipe` field.
- */
-type SavedRecipeEdgeNode = Omit<
-  SavedRecipeCard_SavedRecipeFragment,
-  ' $fragmentName'
-> & { createdAt: string; updatedAt: string };
+/** What a save files the recipe under; all optional. */
+export interface SaveToFavoritesOptions {
+  folder?: string;
+  tags?: string[];
+  notes?: string;
+}
 
 /**
  * Re-points `Recipe.savedDetails` when the server resolves to an EXISTING
  * `SavedRecipe` and evicts the client-id entity. Must run AFTER the server
  * edge roots that row, or gc collects it.
  */
-export const adoptServerFavoriteId = (
+const adoptServerFavoriteId = (
   cache: ApolloCache,
   clientId: string,
   savedRecipeId: string,
@@ -102,8 +41,7 @@ export const adoptServerFavoriteId = (
   if (recipeCacheId) {
     cache.writeFragment({
       id: recipeCacheId,
-      fragment: RecipeSavedDetailsFragment,
-      fragmentName: '_RecipeSavedDetails',
+      fragment: Favorites_SavedDetailsFragmentDoc,
       data: {
         __typename: 'Recipe',
         id: recipeId,
@@ -114,62 +52,112 @@ export const adoptServerFavoriteId = (
   adoptServerEntityId(cache, 'SavedRecipe', savedRecipeId, clientId);
 };
 
+const addToSavedRecipes = createAddToParentConnectionUpdater<{
+  __typename: 'SavedRecipe';
+  id: string;
+}>('User', 'savedRecipesConnection', 'SavedRecipe');
+
+/** The `SavedRecipe` a save's response names, read off the written row. */
+export interface SavedFavorite {
+  id: string;
+  recipeId: string;
+  folder: string | null | undefined;
+}
+
+/**
+ * Settles a save the server answered, in the foreground or on replay: the
+ * saved row is listed, its folder offered, and a save the server converged on
+ * an existing row moves off the minted one. Running it twice equals once.
+ */
+export const linkSavedFavorite = (
+  cache: ApolloCache,
+  saved: SavedFavorite,
+  clientId: string | null | undefined,
+): void => {
+  const me = cache.readQuery({ query: MySavedRecipesDocument })?.me;
+  if (me) {
+    addToSavedRecipes(
+      cache,
+      me.id,
+      { __typename: 'SavedRecipe', id: saved.id },
+      { position: 'end' },
+    );
+  }
+
+  const { folder } = saved;
+  if (folder) {
+    cache.updateQuery<SavedRecipeFoldersQuery>(
+      { query: SavedRecipeFoldersDocument },
+      existing => {
+        if (!existing || existing.savedRecipeFolders.includes(folder)) {
+          return existing;
+        }
+        return {
+          ...existing,
+          savedRecipeFolders: [...existing.savedRecipeFolders, folder],
+        };
+      },
+    );
+  }
+
+  // After the server row is listed, so gc does not collect it.
+  if (clientId && saved.id !== clientId) {
+    adoptServerFavoriteId(cache, clientId, saved.id, saved.recipeId);
+  }
+};
+
 /**
  * Writes the optimistic favorite and returns its undo. Three writes reverted
  * together: the `SavedRecipe` entity under the client-minted id,
  * `Recipe.savedDetails` pointed at it (the heart), and its `MySavedRecipes`
  * edge (the saved list).
  */
-export const writeOptimisticFavorite = (
+export const writeLocalFavorite = (
   cache: ApolloCache,
   savedRecipeId: string,
   recipeId: string,
   saveOptions: SaveToFavoritesOptions | undefined,
 ): (() => void) => {
-  const now = new Date().toISOString();
-  const optimisticSavedRecipe: OptimisticSavedRecipe = {
-    __typename: 'SavedRecipe',
-    id: savedRecipeId,
-    folder: saveOptions?.folder ?? null,
-    tags: saveOptions?.tags ?? [],
-    notes: saveOptions?.notes ?? null,
-    personalRating: null,
-    cookedCount: 0,
-    lastCookedAt: null,
-    createdAt: now,
-    updatedAt: now,
-    recipe: { __typename: 'Recipe', id: recipeId },
-  };
-
-  // (a) Write the full entity so the (bare-ref) edge and savedDetails resolve
-  //     even fully offline, where no response ever arrives to materialize it.
-  cache.writeFragment({
-    id: cache.identify(optimisticSavedRecipe),
-    fragment: OptimisticSavedRecipeFragment,
-    fragmentName: '_OptimisticSavedRecipe',
-    data: optimisticSavedRecipe,
-  });
-
-  // (b) Point Recipe.savedDetails at the new SavedRecipe (snapshot the
-  //     previous ref for revert). Use writeFragment, not cache.modify — a
-  //     freshly-upserted Recipe has no `savedDetails` field yet, and
-  //     cache.modify only fires a modifier for a field that already exists.
   const recipeCacheId = cache.identify({
     __typename: 'Recipe',
     id: recipeId,
   });
+  const now = new Date().toISOString();
+
+  // (a) The whole row, so the edge and savedDetails resolve even fully
+  //     offline, where no response ever arrives to materialize it. The recipe
+  //     is the cached one; an uncached one gets neutral fields until the
+  //     post-replay refetch.
+  writeLocalEntity(cache, {
+    fragment: Favorites_RowFragmentDoc,
+    fragmentName: 'favorites_row',
+    neutral: NEUTRAL_LOCAL_SAVED_RECIPE,
+    neutralByType: NEUTRAL_LOCAL_SAVED_RECIPE_BY_TYPE,
+    known: {
+      __typename: 'SavedRecipe',
+      id: savedRecipeId,
+      recipeId,
+      folder: saveOptions?.folder ?? null,
+      tags: saveOptions?.tags ?? [],
+      notes: saveOptions?.notes ?? null,
+      createdAt: now,
+      updatedAt: now,
+      recipe: { __typename: 'Recipe', id: recipeId },
+    },
+  });
+
+  // (b) Point Recipe.savedDetails at the new SavedRecipe, snapshotting the
+  //     previous one for revert. The read yields data, not a reference.
   const savedDetailsSnapshot = recipeCacheId
-    ? cache.readFragment<{ savedDetails: Reference | null }>({
+    ? cache.readFragment({
         id: recipeCacheId,
-        fragment: RecipeSavedDetailsFragment,
-        fragmentName: '_RecipeSavedDetails',
+        fragment: Favorites_SavedDetailsFragmentDoc,
       })?.savedDetails ?? null
     : null;
   if (recipeCacheId) {
     cache.writeFragment({
       id: recipeCacheId,
-      fragment: RecipeSavedDetailsFragment,
-      fragmentName: '_RecipeSavedDetails',
+      fragment: Favorites_SavedDetailsFragmentDoc,
       data: {
         __typename: 'Recipe',
         id: recipeId,
@@ -178,78 +166,16 @@ export const writeOptimisticFavorite = (
     });
   }
 
-  // (c) Add a MySavedRecipes edge (snapshot the query first for revert).
-  //     Read the recipe display fields from the already-cached Recipe so the
-  //     saved-list card renders complete offline. Fall back to an id-only
-  //     recipe when the Recipe entity isn't cached yet — the post-replay
-  //     refetch heals the gap.
-  const cachedRecipe = recipeCacheId
-    ? cache.readFragment<SavedRecipeCardRecipe>({
-        id: recipeCacheId,
-        fragment: SavedRecipeCardRecipeFragment,
-        fragmentName: '_SavedRecipeCardRecipe',
-      })
-    : null;
-  const edgeRecipe: SavedRecipeCardRecipe = cachedRecipe ?? {
-    __typename: 'Recipe',
-    id: recipeId,
-    name: '',
-    description: null,
-    imageUrl: null,
-    servings: 0,
-    prepTimeMinutes: null,
-    cookTimeMinutes: null,
-    totalTimeMinutes: null,
-  };
-
-  const savedRecipesSnapshot = cache.readQuery<MySavedRecipesQuery>({
+  // (c) List the row first in MySavedRecipes, snapshotting the query for revert.
+  const savedRecipesSnapshot = cache.readQuery({
     query: MySavedRecipesDocument,
   });
-  cache.updateQuery<MySavedRecipesQuery>(
-    { query: MySavedRecipesDocument },
-    existing => {
-      if (!existing?.me) return existing;
-      // Guard against a duplicate edge for the same SavedRecipe id.
-      const alreadyEdged = existing.me.savedRecipesConnection.edges.some(
-        edge => edge.node.id === savedRecipeId,
-      );
-      if (alreadyEdged) return existing;
-      const node: SavedRecipeEdgeNode = {
-        __typename: 'SavedRecipe',
-        id: savedRecipeId,
-        folder: optimisticSavedRecipe.folder,
-        tags: optimisticSavedRecipe.tags,
-        notes: optimisticSavedRecipe.notes,
-        personalRating: optimisticSavedRecipe.personalRating,
-        cookedCount: optimisticSavedRecipe.cookedCount,
-        lastCookedAt: optimisticSavedRecipe.lastCookedAt,
-        createdAt: optimisticSavedRecipe.createdAt,
-        updatedAt: optimisticSavedRecipe.updatedAt,
-        recipe: edgeRecipe,
-      };
-      const newEdge: {
-        __typename: 'SavedRecipeEdge';
-        cursor: string;
-        node: SavedRecipeEdgeNode;
-      } = {
-        __typename: 'SavedRecipeEdge',
-        cursor: savedRecipeId,
-        node,
-      };
-      return {
-        ...existing,
-        me: {
-          ...existing.me,
-          savedRecipesConnection: {
-            ...existing.me.savedRecipesConnection,
-            edges: [newEdge, ...existing.me.savedRecipesConnection.edges],
-            totalCount:
-              (existing.me.savedRecipesConnection.totalCount ?? 0) + 1,
-          },
-        },
-      };
-    },
-  );
+  if (savedRecipesSnapshot?.me) {
+    addToSavedRecipes(cache, savedRecipesSnapshot.me.id, {
+      __typename: 'SavedRecipe',
+      id: savedRecipeId,
+    });
+  }
 
   return () => {
     if (savedRecipesSnapshot) {
@@ -259,12 +185,16 @@ export const writeOptimisticFavorite = (
       });
     }
     if (recipeCacheId) {
+      // `modify` stores what it is given as is: a plain object stays embedded.
       cache.modify<{ savedDetails: Reference | null }>({
         id: recipeCacheId,
-        fields: { savedDetails: () => savedDetailsSnapshot },
+        fields: {
+          savedDetails: (_, { toReference }) =>
+            savedDetailsSnapshot && (toReference(savedDetailsSnapshot) ?? null),
+        },
       });
     }
-    cache.evict({ id: `SavedRecipe:${savedRecipeId}` });
-    cache.gc();
+    // Releases the retain `writeLocalEntity` took, which a bare evict keeps.
+    safeEvict(cache, 'SavedRecipe', savedRecipeId);
   };
 };

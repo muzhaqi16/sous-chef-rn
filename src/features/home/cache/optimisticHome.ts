@@ -3,12 +3,18 @@
  * plus the creator's Owner membership, plus its place in the homes connection.
  */
 
-import { gql, type ApolloCache, type Reference } from '@apollo/client';
+import type { ApolloCache, Reference } from '@apollo/client';
 import {
-  Home_HomeDetailFragmentDoc,
-  type Home_HomeDetailFragment,
+  Home_MembershipRowFragmentDoc,
+  Home_RowFragmentDoc,
+  type Home_MembershipRowFragment,
 } from './home.generated';
-import { NEUTRAL_HOME_DETAIL } from './homeDetailNeutral.generated';
+import {
+  NEUTRAL_LOCAL_HOME,
+  NEUTRAL_LOCAL_HOME_BY_TYPE,
+  NEUTRAL_LOCAL_MEMBERSHIP,
+  NEUTRAL_LOCAL_MEMBERSHIP_BY_TYPE,
+} from './homeRowNeutral.generated';
 import { addToHomesCache } from '#features/home/hooks/homeCacheUpdaters';
 import {
   MembershipRole,
@@ -16,6 +22,8 @@ import {
   type CreateHomeInput,
 } from '#/graphql/generated/schemaTypes';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import type { Unmasked } from '@apollo/client/masking';
 
 /** The signed-in user, as the membership and its `user` record name them. */
 export interface HomeCreator {
@@ -24,133 +32,90 @@ export interface HomeCreator {
   displayName?: string | null;
 }
 
-type OptimisticMembership = NonNullable<
-  Home_HomeDetailFragment['myMembership']
->;
-
-/**
- * The creator's own membership row. The server mints the real one — the client
- * cannot name its id — so this is a PLACEHOLDER, keyed off the home's id so the
- * replay reconciler can find it. Every capability is granted because that is
- * what the server grants a home's owner, and `homePermissions` reads the cache.
- */
-export function buildOptimisticMembership(
-  homeId: string,
-  creator: HomeCreator,
-): OptimisticMembership {
-  return {
-    __typename: 'Membership',
-    id: placeholderMembershipId(homeId),
-    role: MembershipRole.Owner,
-    status: MembershipStatus.Active,
-    displayName: creator.displayName ?? null,
-    canManageHome: true,
-    canViewPantry: true,
-    canEditPantry: true,
-    canAddItems: true,
-    canRemoveItems: true,
-    canInviteOthers: true,
-  };
-}
-
 /** The id a placeholder membership carries, derived so it can be found again. */
 export const placeholderMembershipId = (homeId: string) => `${homeId}:owner`;
 
 /**
- * The whole home under the client-minted id. The neutral base covers every
- * field no create input supplies, so both the list and the detail screen read
- * complete while the create is queued.
+ * Write the home and its creator's membership permanently, then link the home
+ * into the homes connection. False when that link could not be made —
+ * `cache.modify` reports rather than throws when `Query.homes` is not cached —
+ * so the caller can refetch. The entity stands either way.
  */
-export function buildOptimisticHome(
+export function writeLocalHome(
+  cache: ApolloCache,
   id: string,
   input: CreateHomeInput,
   creator: HomeCreator,
-): Home_HomeDetailFragment {
-  const membership = buildOptimisticMembership(id, creator);
-  return {
-    ...NEUTRAL_HOME_DETAIL,
-    id,
-    name: input.name,
-    description: input.description ?? null,
-    timezone: input.timezone ?? null,
-    currency: input.currency ?? null,
-    isPublic: input.isPublic ?? false,
-    allowJoinCode: input.allowJoinCode ?? false,
-    maxMembers: input.maxMembers ?? null,
-    version: 1,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    myMembership: membership,
-    membersConnection: {
-      ...NEUTRAL_HOME_DETAIL.membersConnection,
-      edges: [
-        {
-          __typename: 'MembershipEdge',
-          node: {
-            ...membership,
-            homeId: id,
-            userId: creator.id,
-            user: {
-              __typename: 'User',
-              id: creator.id,
-              email: creator.email ?? null,
-              displayName: creator.displayName ?? null,
-            },
-          },
-        },
-      ],
-      totalCount: 1,
-    },
-  };
-}
-
-/**
- * Write the home permanently, then link it into the homes connection. False
- * when that link could not be made — `cache.modify` reports rather than throws
- * when `Query.homes` is not cached — so the caller can refetch. The entity
- * stands either way.
- */
-export function writeOptimisticHome(
-  cache: ApolloCache,
-  home: Home_HomeDetailFragment,
 ): boolean {
-  cache.writeFragment({
-    id: cache.identify({ __typename: 'Home', id: home.id }),
-    fragment: Home_HomeDetailFragmentDoc,
-    fragmentName: 'home_homeDetail',
-    data: home,
+  // The server mints the real membership, so this one is a PLACEHOLDER keyed
+  // off the home, for the replay reconciler to find. Every capability is
+  // granted because that is what the server grants a home's owner.
+  const membership = {
+    __typename: 'Membership',
+    id: placeholderMembershipId(id),
+  };
+  writeLocalEntity(cache, {
+    fragment: Home_MembershipRowFragmentDoc,
+    fragmentName: 'home_membershipRow',
+    neutral: NEUTRAL_LOCAL_MEMBERSHIP,
+    neutralByType: NEUTRAL_LOCAL_MEMBERSHIP_BY_TYPE,
+    known: {
+      ...membership,
+      homeId: id,
+      userId: creator.id,
+      role: MembershipRole.Owner,
+      status: MembershipStatus.Active,
+      displayName: creator.displayName ?? null,
+      canManageHome: true,
+      canViewPantry: true,
+      canEditPantry: true,
+      canAddItems: true,
+      canRemoveItems: true,
+      canInviteOthers: true,
+      user: {
+        __typename: 'User',
+        id: creator.id,
+        email: creator.email ?? null,
+        displayName: creator.displayName ?? null,
+      },
+    },
+  });
+
+  const now = new Date().toISOString();
+  writeLocalEntity(cache, {
+    fragment: Home_RowFragmentDoc,
+    fragmentName: 'home_row',
+    neutral: NEUTRAL_LOCAL_HOME,
+    neutralByType: NEUTRAL_LOCAL_HOME_BY_TYPE,
+    known: {
+      __typename: 'Home',
+      id,
+      name: input.name,
+      description: input.description ?? null,
+      timezone: input.timezone ?? null,
+      currency: input.currency ?? null,
+      isPublic: input.isPublic ?? false,
+      allowJoinCode: input.allowJoinCode ?? false,
+      maxMembers: input.maxMembers ?? null,
+      version: 1,
+      createdAt: now,
+      updatedAt: now,
+      myMembership: membership,
+      membersConnection: {
+        __typename: 'MembershipConnection',
+        edges: [{ __typename: 'MembershipEdge', node: membership }],
+        totalCount: 1,
+      },
+    },
   });
   // Only the identity: the updater's `toReference(_, true)` WRITES what it is
-  // given, and an object with plain field keys writes a second, argument-less
-  // copy of each connection beside the one above.
-  const identity = { __typename: 'Home', id: home.id };
-  return addToHomesCache(cache, identity, { position: 'end' });
+  // given, and plain field keys would write a second copy of each connection.
+  return addToHomesCache(
+    cache,
+    { __typename: 'Home', id },
+    { position: 'end' },
+  );
 }
-
-/** The placeholder's own fields, carried onto the row the server minted. */
-const AdoptableMembershipFragment = gql`
-  fragment _AdoptableMembership on Membership {
-    id
-    homeId
-    userId
-    role
-    status
-    displayName
-    canManageHome
-    canViewPantry
-    canEditPantry
-    canAddItems
-    canRemoveItems
-    canInviteOthers
-    user {
-      id
-      email
-      displayName
-    }
-  }
-`;
-
-type AdoptableMembership = { id: string } & Record<string, unknown>;
 
 /**
  * The membership row is the one thing the client cannot key, so the server's
@@ -166,10 +131,10 @@ export function adoptServerMembership(
   const placeholderId = placeholderMembershipId(homeId);
   if (!serverMembershipId || serverMembershipId === placeholderId) return;
 
-  const placeholder = cache.readFragment<AdoptableMembership>({
+  const placeholder = cache.readFragment<Unmasked<Home_MembershipRowFragment>>({
     id: cache.identify({ __typename: 'Membership', id: placeholderId }),
-    fragment: AdoptableMembershipFragment,
-    fragmentName: '_AdoptableMembership',
+    fragment: Home_MembershipRowFragmentDoc,
+    fragmentName: 'home_membershipRow',
   });
   if (!placeholder) return;
 
@@ -181,8 +146,8 @@ export function adoptServerMembership(
       __typename: 'Membership',
       id: serverMembershipId,
     }),
-    fragment: AdoptableMembershipFragment,
-    fragmentName: '_AdoptableMembership',
+    fragment: Home_MembershipRowFragmentDoc,
+    fragmentName: 'home_membershipRow',
     data: { ...placeholder, id: serverMembershipId },
   });
 

@@ -19,11 +19,7 @@ mutation MarkPrimaryItemImage($input: MarkPrimaryItemImageInput!) {
     ... on MarkPrimaryItemImagePayload {
       item {
         id
-        imageUrl
-        photos {
-          id
-          ...ItemPhotoCarousel_itemPhoto
-        }
+        ...ItemReaders
       }
     }
     ... on Error {

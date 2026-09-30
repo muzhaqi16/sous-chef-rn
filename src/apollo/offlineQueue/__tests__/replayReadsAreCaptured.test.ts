@@ -1,35 +1,42 @@
 /**
- * A builder that reads the cache at replay must also capture those reads when
- * the write is queued, or a row that leaves the cache makes the write unsendable
- * until it ages out.
+ * What a replay reads from the cache must also be captured when the write is
+ * queued, or a unit that leaves the cache makes the replay name an id the
+ * vocabulary repair may have retired.
  */
-import {
-  makeQueuedMutation,
-  makeSyncCacheStub,
-} from '#/test-utils/queuedMutation';
-import { SYNC_REGISTRY } from '#/apollo/offlineQueue/syncRegistry';
+import { gql } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
+import { makeQueuedMutation } from '#/test-utils/queuedMutation';
+import { REPLAY_PREPARATIONS } from '#/apollo/offlineQueue/preparationRegistry';
+import { captureReplayInputs } from '#/apollo/offlineQueue/prepareReplay';
 
 describe('replay reads are captured when queued', () => {
-  it.each(Object.entries(SYNC_REGISTRY))(
-    '%s captures every cache value its replay reads',
-    (operationName, build) => {
-      const cache = makeSyncCacheStub();
-      cache.readFragment.mockReturnValue(null);
+  it.each(Object.keys(REPLAY_PREPARATIONS))(
+    '%s captures the unit symbols its replay reads',
+    operationName => {
+      const cache = makeCache();
+      cache.writeFragment({
+        fragment: gql`
+          fragment CapturedUnit on Unit {
+            id
+            symbol
+          }
+        `,
+        data: { __typename: 'Unit', id: 'unit-1', symbol: 'tbsp' },
+      });
       const mutation = makeQueuedMutation({
         operationName,
         variables: {
-          input: { id: 'row-1', itemId: 'row-1', pantryItemId: 'row-1' },
+          input: {
+            unit: { id: 'unit-1' },
+            unitId: 'unit-1',
+            items: [{ unit: { id: 'unit-1' } }],
+          },
         },
       });
 
-      try {
-        build(mutation, cache);
-      } catch {
-        // A missing value is the case under test, not a failure of it.
-      }
-
-      const readsTheCache = cache.readFragment.mock.calls.length > 0;
-      expect(readsTheCache && !build.captureReplayInputs).toBe(false);
+      expect(captureReplayInputs(mutation, cache)).toEqual({
+        'unit:unit-1': 'tbsp',
+      });
     },
   );
 });

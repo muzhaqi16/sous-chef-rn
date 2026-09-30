@@ -20,7 +20,7 @@ const markDefault = (
 ): MockFor<typeof MarkPantryAsDefaultDocument> => ({
   request: {
     query: MarkPantryAsDefaultDocument,
-    variables: { input: { id: 'pantry-1' } },
+    variables: ({ input }) => input.id === 'pantry-1',
   },
   result: { data: { markPantryAsDefault: payload } },
 });

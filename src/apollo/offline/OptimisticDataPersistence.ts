@@ -249,44 +249,46 @@ class OptimisticDataPersistence {
    */
   clearEntity(entityType: string, entityId: string): void {
     if (!isPersistedEntityType(entityType)) return;
-    try {
-      const all = this.loadAll();
-      const filtered = Object.fromEntries(
-        Object.entries(all).filter(
-          ([, data]) =>
-            !(data.entityType === entityType && data.entityId === entityId),
-        ),
-      );
+    this.removeWhere(
+      data => data.entityType === entityType && data.entityId === entityId,
+      `${entityType}:${entityId}`,
+    );
+  }
 
-      const clearedCount =
-        Object.keys(all).length - Object.keys(filtered).length;
-
-      if (Object.keys(filtered).length === 0) {
-        storage.remove(OPTIMISTIC_DATA_KEY);
-        this.cache = {};
-      } else {
-        storage.set(OPTIMISTIC_DATA_KEY, JSON.stringify(filtered));
-        this.cache = filtered;
-      }
-
-      if (__DEV__ && clearedCount > 0) {
-        logger.debug(
-          `🧹 Optimistic: Cleared ${clearedCount} fields for ${entityType}:${entityId}`,
-        );
-      }
-    } catch (error) {
-      logger.error('Failed to clear entity optimistic data:', error);
-    }
+  /**
+   * Drops the fields of one entity saved inside `(after, until]` — the ones a
+   * landed write owns when a save always precedes its enqueue. A field saved
+   * for a write queued before `after` or after `until` stays for that write.
+   */
+  clearEntitySavedBetween(
+    entityType: string,
+    entityId: string,
+    { after, until }: { after: number; until: number },
+  ): void {
+    if (!isPersistedEntityType(entityType)) return;
+    this.removeWhere(
+      data =>
+        data.entityType === entityType &&
+        data.entityId === entityId &&
+        data.timestamp > after &&
+        data.timestamp <= until,
+      `${entityType}:${entityId}`,
+    );
   }
 
   /** Drops every persisted field of an entity type. */
   clearType(entityType: PersistedEntityType): void {
+    this.removeWhere(data => data.entityType === entityType, entityType);
+  }
+
+  private removeWhere(
+    matches: (data: OptimisticFieldUpdate) => boolean,
+    label: string,
+  ): void {
     try {
       const all = this.loadAll();
       const filtered = Object.fromEntries(
-        Object.entries(all).filter(
-          ([, data]) => data.entityType !== entityType,
-        ),
+        Object.entries(all).filter(([, data]) => !matches(data)),
       );
 
       const clearedCount =
@@ -302,11 +304,11 @@ class OptimisticDataPersistence {
 
       if (__DEV__ && clearedCount > 0) {
         logger.debug(
-          `🧹 Optimistic: Cleared ${clearedCount} fields for ${entityType}`,
+          `🧹 Optimistic: Cleared ${clearedCount} fields for ${label}`,
         );
       }
     } catch (error) {
-      logger.error('Failed to clear type optimistic data:', error);
+      logger.error('Failed to clear optimistic data:', error);
     }
   }
 

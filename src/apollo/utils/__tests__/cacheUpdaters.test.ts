@@ -9,8 +9,6 @@ import {
   createRemoveFromParentArrayUpdater,
   skipUnmatchedFilterVariants,
   skipUnmatchedArgVariants,
-  setCachedFields,
-  applyOptimisticFragmentPatch,
   safeEvict,
   safeEvictMany,
   adoptServerEntityId,
@@ -1112,9 +1110,8 @@ describe('skipUnmatchedArgVariants', () => {
 // ---------------------------------------------------------------------------
 
 /**
- * These five run against a real `makeCache()`, not the mock above: `safeEvict*`
- * narrow on `instanceof InMemoryCache` and `applyOptimisticFragmentPatch` does a
- * readFragment/writeFragment round trip, so a double would exercise the branch
+ * These run against a real `makeCache()`, not the mock above: `safeEvict*`
+ * narrow on `instanceof InMemoryCache`, so a double would exercise the branch
  * the production path never takes.
  */
 describe('direct cache helpers', () => {
@@ -1143,82 +1140,6 @@ describe('direct cache helpers', () => {
       },
     });
   };
-
-  const readLocation = (cache: ApolloCache, id: string) =>
-    cache.readFragment<{ name: string; updatedAt: string }>({
-      id: `StorageLocation:${id}`,
-      fragment: STORAGE_LOCATION,
-      fragmentName: 'ProbeStorageLocation',
-    });
-
-  describe('setCachedFields', () => {
-    it('writes scalar fields onto an existing record', () => {
-      const cache = makeCache();
-      seedLocation(cache, 'loc-1');
-
-      setCachedFields(cache, 'StorageLocation', 'loc-1', { name: 'Pantry' });
-
-      expect(readLocation(cache, 'loc-1')?.name).toBe('Pantry');
-    });
-
-    it('leaves the cache alone for a record it does not hold', () => {
-      const cache = makeCache();
-      seedLocation(cache, 'loc-1');
-      const before = cache.extract();
-
-      setCachedFields(cache, 'StorageLocation', 'absent', { name: 'Pantry' });
-
-      expect(cache.extract()).toEqual(before);
-    });
-  });
-
-  describe('applyOptimisticFragmentPatch', () => {
-    it('writes the patch permanently and hands back a working revert', () => {
-      const cache = makeCache();
-      seedLocation(cache, 'loc-1', 'Freezer');
-
-      const revert = applyOptimisticFragmentPatch(
-        cache,
-        { typename: 'StorageLocation', id: 'loc-1' },
-        { fragment: STORAGE_LOCATION, fragmentName: 'ProbeStorageLocation' },
-        { name: 'Cupboard' },
-        'rename',
-      );
-
-      expect(readLocation(cache, 'loc-1')?.name).toBe('Cupboard');
-      // Not Apollo's optimistic layer: the write outlives a broadcast, which is
-      // what lets it survive a queued mutation.
-      expect(readLocation(cache, 'loc-1')?.updatedAt).not.toBe(
-        '2020-01-01T00:00:00.000Z',
-      );
-
-      revert();
-
-      expect(readLocation(cache, 'loc-1')).toEqual({
-        __typename: 'StorageLocation',
-        id: 'loc-1',
-        name: 'Freezer',
-        updatedAt: '2020-01-01T00:00:00.000Z',
-      });
-    });
-
-    it('writes nothing when the fragment reads incomplete, and its revert no-ops', () => {
-      const cache = makeCache();
-      const before = cache.extract();
-
-      const revert = applyOptimisticFragmentPatch(
-        cache,
-        { typename: 'StorageLocation', id: 'never-cached' },
-        { fragment: STORAGE_LOCATION, fragmentName: 'ProbeStorageLocation' },
-        { name: 'Cupboard' },
-        'rename',
-      );
-
-      expect(cache.extract()).toEqual(before);
-      revert();
-      expect(cache.extract()).toEqual(before);
-    });
-  });
 
   describe('safeEvict', () => {
     it('removes the entity from the extract', () => {
@@ -1254,6 +1175,22 @@ describe('direct cache helpers', () => {
       expect(extract).not.toHaveProperty('StorageLocation:loc-1');
       expect(extract).toHaveProperty('StorageLocation:loc-2');
       expect(extract).not.toHaveProperty('StorageLocation:loc-3');
+    });
+
+    // An explicit write retains its entity; one left retained is a root `gc()`
+    // skips and `extract()` pins under `__META.extraRootIds` for the next launch.
+    it('releases what it evicts, so nothing is pinned as a retained root', () => {
+      const cache = makeCache();
+      seedLocation(cache, 'loc-1');
+      seedLocation(cache, 'loc-1', 'Pantry');
+
+      safeEvictMany(cache, [{ typename: 'StorageLocation', id: 'loc-1' }]);
+
+      const extract = cache.extract();
+      expect(extract).not.toHaveProperty('StorageLocation:loc-1');
+      expect(extract.__META?.extraRootIds ?? []).not.toContain(
+        'StorageLocation:loc-1',
+      );
     });
 
     it('does not throw on a cache that is not an InMemoryCache', () => {
@@ -1294,6 +1231,74 @@ describe('direct cache helpers', () => {
       adoptServerEntityId(cache, 'StorageLocation', 'server-1', null);
 
       expect(cache.extract()).toHaveProperty('StorageLocation:server-1');
+    });
+  });
+});
+
+/**
+ * A delete's response writes the deleted row back as an `{ id }` stub. An edge
+ * left pointing at it would then resolve to a row missing every other field,
+ * and the whole list would read incomplete.
+ */
+describe('an evicting removal', () => {
+  const LOCATIONS = gql`
+    query EvictingRemovalProbe {
+      storageLocations {
+        totalCount
+        edges {
+          node {
+            id
+            name
+          }
+        }
+      }
+    }
+  `;
+  const STUB = gql`
+    fragment EvictingRemovalStub on StorageLocation {
+      id
+    }
+  `;
+  const node = (id: string) => ({
+    __typename: 'StorageLocation',
+    id,
+    name: id,
+  });
+
+  it('drops the edge too, so the response stub cannot bring the row back', () => {
+    const cache = makeCache();
+    cache.writeQuery({
+      query: LOCATIONS,
+      data: {
+        storageLocations: {
+          __typename: 'StorageLocationConnection',
+          totalCount: 2,
+          edges: [
+            { __typename: 'StorageLocationEdge', node: node('loc-1') },
+            { __typename: 'StorageLocationEdge', node: node('loc-2') },
+          ],
+        },
+      },
+    });
+
+    createRemoveFromQueryConnectionUpdater(
+      'storageLocations',
+      'StorageLocation',
+    )(cache, 'loc-2', { evictItem: true });
+    cache.writeFragment({
+      fragment: STUB,
+      data: { __typename: 'StorageLocation', id: 'loc-2' },
+    });
+
+    const read = cache.diff<{
+      storageLocations: {
+        totalCount: number;
+        edges: { node: { id: string } }[];
+      };
+    }>({ query: LOCATIONS, returnPartialData: false, optimistic: false });
+    expect(read.complete).toBe(true);
+    expect(read.result).toMatchObject({
+      storageLocations: { totalCount: 1, edges: [{ node: { id: 'loc-1' } }] },
     });
   });
 });

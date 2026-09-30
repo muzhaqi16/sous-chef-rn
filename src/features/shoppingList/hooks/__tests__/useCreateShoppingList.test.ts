@@ -7,9 +7,8 @@ import {
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useCreateShoppingList } from '../useCreateShoppingList';
 import {
-  addOptimisticShoppingList,
-  buildOptimisticShoppingList,
   revertOptimisticShoppingList,
+  writeLocalShoppingList,
 } from '#features/shoppingList/cache/list';
 import { useUser } from '#store/useAppStore';
 import type { CreateShoppingListOutcome } from '../useCreateShoppingList';
@@ -21,14 +20,7 @@ jest.mock('#store/useAppStore', () => ({
 
 jest.mock('#features/shoppingList/cache/list', () => ({
   addShoppingListToQueryCache: jest.fn(),
-  addOptimisticShoppingList: jest.fn(),
-  buildOptimisticShoppingList: jest.fn(
-    (_cache: unknown, id: string, input: { name: string }) => ({
-      __typename: 'ShoppingList',
-      id,
-      name: input.name,
-    }),
-  ),
+  writeLocalShoppingList: jest.fn(),
   revertOptimisticShoppingList: jest.fn(),
 }));
 
@@ -91,18 +83,15 @@ describe('useCreateShoppingList', () => {
       'Weekly',
     );
 
-    // The optimistic list was built with a real cuid2 id (the row's PK)
-    // from the create input and the auth identity.
-    expect(buildOptimisticShoppingList).toHaveBeenCalledTimes(1);
-    const [, mintedId, input, owner] = jest.mocked(buildOptimisticShoppingList)
-      .mock.calls[0]!;
+    // The local list was written with a real cuid2 id (the row's PK) from the
+    // create input and the auth identity, before the mutation fired.
+    expect(writeLocalShoppingList).toHaveBeenCalledTimes(1);
+    const [, mintedId, input, owner] = jest.mocked(writeLocalShoppingList).mock
+      .calls[0]!;
     // Matches the server id validator (cuid2 or legacy cuid v1 / 24-char hex).
     expect(mintedId).toMatch(CUID);
     expect(input).toEqual({ name: 'Weekly' });
     expect(owner).toEqual(mockUser);
-
-    // ...written into the cache BEFORE the mutation fired.
-    expect(addOptimisticShoppingList).toHaveBeenCalledTimes(1);
     // Online success returns the server entity. The rest of the selection set
     // is filled from the SDL, so this pins the identity the assertion is about
     // rather than the exhaustive shape.
@@ -197,8 +186,7 @@ describe('useCreateShoppingList', () => {
       'Weekly',
     );
 
-    expect(buildOptimisticShoppingList).not.toHaveBeenCalled();
-    expect(addOptimisticShoppingList).not.toHaveBeenCalled();
+    expect(writeLocalShoppingList).not.toHaveBeenCalled();
     expect(outcome).toMatchObject({
       status: 'created',
       shoppingList: { id: 'srv-1' },

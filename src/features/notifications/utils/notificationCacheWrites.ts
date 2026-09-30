@@ -1,8 +1,9 @@
 /**
  * Every cache write that changes a notification's state — local action and
- * server event both route through here. A transition moves the row AND
- * `User.unreadNotificationCount` together, and only when the read-state
- * actually changed, which is what makes a repeated event safe.
+ * server event both route through here. A transition moves the row AND the
+ * badge (`Query.notificationSummary`) together, and only when the read-state
+ * actually changed, which is what makes a repeated event safe. The badge delta
+ * stands only until the write's response states the summary.
  */
 import type { ApolloCache } from '@apollo/client';
 import type { NotificationCategory } from '#/graphql/generated/schemaTypes';
@@ -65,27 +66,22 @@ export function writeNotificationStatus(
  * Mark read, moving the badge only if it was actually unread.
  * @returns whether anything changed — callers use it to decide what to revert.
  */
-export function applyNotificationRead(
-  cache: ApolloCache,
-  userId: string | null | undefined,
-  id: string,
-): boolean {
+export function applyNotificationRead(cache: ApolloCache, id: string): boolean {
   if (!isUnreadStatus(readNotificationStatus(cache, id))) return false;
   writeNotificationStatus(cache, id, NotificationStatus.Read);
-  adjustUnreadNotificationCount(cache, userId, -1);
+  adjustUnreadNotificationCount(cache, -1);
   return true;
 }
 
 /** Mark unread, moving the badge only if it was actually read. */
 export function applyNotificationUnread(
   cache: ApolloCache,
-  userId: string | null | undefined,
   id: string,
 ): boolean {
   const status = readNotificationStatus(cache, id);
   if (status === undefined || isUnreadStatus(status)) return false;
   writeNotificationStatus(cache, id, NotificationStatus.Sent);
-  adjustUnreadNotificationCount(cache, userId, 1);
+  adjustUnreadNotificationCount(cache, 1);
   return true;
 }
 
@@ -140,7 +136,6 @@ export function captureNotification(
  */
 export function restoreNotifications(
   cache: ApolloCache,
-  userId: string | null | undefined,
   captured: CapturedNotification[],
 ): void {
   let unreadRestored = 0;
@@ -152,17 +147,16 @@ export function restoreNotifications(
     });
     if (wasUnread) unreadRestored += 1;
   });
-  adjustUnreadNotificationCount(cache, userId, unreadRestored);
+  adjustUnreadNotificationCount(cache, unreadRestored);
 }
 
 export function applyNotificationRemoved(
   cache: ApolloCache,
-  userId: string | null | undefined,
   id: string,
 ): boolean {
   const wasUnread = isUnreadStatus(readNotificationStatus(cache, id));
   if (!evictNotification(cache, id)) return false;
-  if (wasUnread) adjustUnreadNotificationCount(cache, userId, -1);
+  if (wasUnread) adjustUnreadNotificationCount(cache, -1);
   return true;
 }
 
@@ -220,14 +214,11 @@ export function cachedUnreadNotificationIds(cache: ApolloCache): string[] {
  * Mark every cached notification read and zero the badge.
  * @returns the ids that changed, so a refusal can put exactly those back.
  */
-export function applyAllNotificationsRead(
-  cache: ApolloCache,
-  userId: string | null | undefined,
-): string[] {
+export function applyAllNotificationsRead(cache: ApolloCache): string[] {
   const ids = cachedUnreadNotificationIds(cache);
   ids.forEach(id =>
     writeNotificationStatus(cache, id, NotificationStatus.Read),
   );
-  if (ids.length > 0) clearUnreadNotificationCount(cache, userId);
+  if (ids.length > 0) clearUnreadNotificationCount(cache);
   return ids;
 }

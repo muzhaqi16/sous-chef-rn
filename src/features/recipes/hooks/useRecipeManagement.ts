@@ -1,4 +1,4 @@
-import { useQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import {
   MyRecipesDocument,
   type MyRecipesQuery,
@@ -40,10 +40,7 @@ export function useRecipeManagement({
 
   const { data, loading, error, refetch, fetchMore } = useQuery(
     MyRecipesDocument,
-    {
-      variables: { first: 25 },
-      skip: isLoggedOut,
-    },
+    isLoggedOut ? skipToken : { variables: { first: 25 } },
   );
 
   useApolloErrorLogger(MyRecipesDocument, error);
@@ -51,6 +48,7 @@ export function useRecipeManagement({
   const connectionData = useConnectionData({
     data,
     selector: d => d.recipes,
+    key: 'MyRecipes',
     loading,
     fetchMore,
     cursorVariableName: 'cursor',

@@ -32,7 +32,6 @@ import {
   CreateShoppingListDocument,
   MoveShoppingListItemDocument,
   RemoveItemFromShoppingListDocument,
-  SyncDeleteShoppingListItemDocument,
   ToggleShoppingListItemPurchasedDocument,
   UpdateShoppingListDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -42,7 +41,6 @@ import {
   CreatePantryItemDocument,
   DeletePantryItemDocument,
   OpenPantryItemBatchDocument,
-  SyncPantryItemDocument,
   UpdatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
 } from '#features/pantry/graphql/pantry.generated';
@@ -141,7 +139,10 @@ const { refreshUnitVocabulary } = jest.requireMock('../refreshUnitVocabulary');
 // Mock persisted optimistic-field storage — replay success/convergence must
 // clear entries so restoration can't re-apply stale values.
 jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: { clearEntity: jest.fn() },
+  optimisticDataPersistence: {
+    clearEntity: jest.fn(),
+    clearEntitySavedBetween: jest.fn(),
+  },
 }));
 const { optimisticDataPersistence } = jest.requireMock(
   '#/apollo/offline/OptimisticDataPersistence',
@@ -1242,7 +1243,7 @@ describe('QueueManager', () => {
 
     it('drains a scheduled-but-unfired drain instead of reporting idle', async () => {
       // An API-only outage never flips `isOnline`, so the replay arrives
-      // through `requestDrain`'s debounce while the reconnect backfill fires on
+      // through `requestDrain`'s debounce while the resync fires on
       // the reachability edge. Reading "idle" in that gap refetches a server
       // that has not received the queued writes yet.
       (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([]);
@@ -1353,57 +1354,21 @@ describe('QueueManager', () => {
       });
     });
 
-    // The captured version is knowingly stale, so re-checking it can only fail
-    // again. The user's value is re-sent against the current row instead.
-    it('re-sends without the captured version after a version conflict', async () => {
-      const mutation = makeMutation({
-        id: 'conflict-1',
-        ...queuedMutationFor(SyncPantryItemDocument),
-        variables: { input: { clientId: 'cuid-1', quantity: 3, version: 7 } },
-      });
-      mockClient.mutate
-        .mockResolvedValueOnce({
-          data: {
-            syncPantryItem: {
-              __typename: 'ConflictError',
-              code: 'VERSION_CONFLICT',
-              message: 'Version conflict',
-            },
-          },
-        })
-        .mockResolvedValueOnce({
-          data: { syncPantryItem: { item: {}, converged: false } },
-        });
-
-      jest.useRealTimers();
-      const result = await processMutation(mutation);
-      jest.useFakeTimers();
-
-      expect(result.success).toBe(true);
-      expect(mockClient.mutate).toHaveBeenCalledTimes(2);
-      expect(mockClient.mutate.mock.calls[1][0].variables.input).toEqual({
-        clientId: 'cuid-1',
-        quantity: 3,
-      });
-      expect(queueStore.updateMutation).toHaveBeenCalledWith('conflict-1', {
-        conflictCount: 1,
-      });
-    });
-
-    it('reports a conflict instead of re-sending an input that requires a version', async () => {
-      // `AdjustPantryItemQuantityInput.version` is `Int!` and the operation has
-      // no Sync twin: a version-free re-send would be refused as malformed and
-      // that 400 would withdraw the write under the generic copy.
+    // A stale version applied nothing, and someone else's change stands: the
+    // write is withdrawn and reported, never re-sent without its version.
+    it('lets the server keep its row after a version conflict', async () => {
       const failureHandler = jest.fn();
       manager.setFailureHandler(failureHandler);
       const mutation = makeMutation({
-        id: 'conflict-int-bang',
-        ...queuedMutationFor(AdjustPantryItemQuantityDocument),
-        variables: { input: { id: 'item-7', newQuantity: 2, version: 4 } },
+        id: 'conflict-1',
+        ...queuedMutationFor(UpdatePantryItemQuantityDocument),
+        variables: {
+          input: { pantryItemId: 'item-1', quantity: '3', version: 7 },
+        },
       });
-      mockClient.mutate.mockResolvedValueOnce({
+      mockClient.mutate.mockResolvedValue({
         data: {
-          adjustPantryItemQuantity: {
+          updatePantryItemQuantity: {
             __typename: 'ConflictError',
             code: 'VERSION_CONFLICT',
             message: 'Version conflict',
@@ -1418,25 +1383,23 @@ describe('QueueManager', () => {
       expect(result.success).toBe(false);
       expect(mockClient.mutate).toHaveBeenCalledTimes(1);
       expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
-        'conflict-int-bang',
+        'conflict-1',
         expect.objectContaining({ type: 'conflict', retryable: false }),
       );
       expect(failureHandler).toHaveBeenCalledWith(
         expect.objectContaining({
-          mutationId: 'conflict-int-bang',
+          mutationId: 'conflict-1',
           error: expect.objectContaining({ type: 'conflict' }),
         }),
       );
       expect(Telemetry.increment).toHaveBeenCalledWith(
         'offline_queue_conflicts_total',
         1,
-        { operation: operationNameOf(AdjustPantryItemQuantityDocument) },
+        { operation: operationNameOf(UpdatePantryItemQuantityDocument) },
       );
     });
 
-    it('reports a conflict on a queued rename instead of re-sending it without its version', async () => {
-      // A rename replays as its original `UpdatePantryItem`, whose input's
-      // `version` is `Int!`, so it cannot be re-sent version-free.
+    it('reports a conflict on a queued rename the same way', async () => {
       const failureHandler = jest.fn();
       manager.setFailureHandler(failureHandler);
       const mutation = makeMutation({
@@ -1470,90 +1433,6 @@ describe('QueueManager', () => {
       );
     });
 
-    it('withdraws a write that conflicts again without its version', async () => {
-      const failureHandler = jest.fn();
-      manager.setFailureHandler(failureHandler);
-      const conflict = {
-        data: {
-          syncPantryItem: {
-            __typename: 'ConflictError',
-            code: 'VERSION_CONFLICT',
-            message: 'Version conflict',
-          },
-        },
-      };
-      const mutation = makeMutation({
-        id: 'conflict-2',
-        ...queuedMutationFor(SyncPantryItemDocument),
-        variables: { input: { clientId: 'cuid-2', quantity: 3, version: 7 } },
-      });
-      mockClient.mutate.mockResolvedValue(conflict);
-
-      jest.useRealTimers();
-      const result = await processMutation(mutation);
-      jest.useFakeTimers();
-
-      expect(result.success).toBe(false);
-      expect(mockClient.mutate).toHaveBeenCalledTimes(2);
-      expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
-        'conflict-2',
-        expect.objectContaining({ type: 'conflict', retryable: false }),
-      );
-      expect(failureHandler).toHaveBeenCalled();
-    });
-
-    // The server accepted the replay and kept its own value. The entry dequeues
-    // as success, so nothing else on this path would tell the person.
-    it('reports an overwrite when the server keeps its own value', async () => {
-      const reporter = jest.fn();
-      manager.setOverwriteReporter(reporter);
-      const mutation = makeMutation({
-        id: 'converged-1',
-        ...queuedMutationFor(SyncPantryItemDocument),
-        variables: { input: { clientId: 'cuid-3', quantity: 3 } },
-      });
-      mockClient.mutate.mockResolvedValue({
-        data: {
-          syncPantryItem: {
-            item: {},
-            converged: true,
-            conflict: {
-              clientVersion: 3,
-              serverVersion: 5,
-              message: 'Version mismatch',
-            },
-          },
-        },
-      });
-
-      jest.useRealTimers();
-      const result = await processMutation(mutation);
-      jest.useFakeTimers();
-
-      expect(result.success).toBe(true);
-      expect(reporter).toHaveBeenCalledWith(
-        expect.objectContaining({
-          mutationId: 'converged-1',
-          operationName: operationNameOf(SyncPantryItemDocument),
-        }),
-      );
-    });
-
-    it('says nothing when the replay carried no conflict', async () => {
-      const reporter = jest.fn();
-      manager.setOverwriteReporter(reporter);
-      const mutation = makeMutation({ id: 'clean-1' });
-      mockClient.mutate.mockResolvedValue({
-        data: { syncPantryItem: { item: {}, converged: false } },
-      });
-
-      jest.useRealTimers();
-      await processMutation(mutation);
-      jest.useFakeTimers();
-
-      expect(reporter).not.toHaveBeenCalled();
-    });
-
     it('handles mutation failure', async () => {
       const mutation = makeMutation({
         id: 'proc-fail',
@@ -1570,7 +1449,7 @@ describe('QueueManager', () => {
     });
 
     describe('persisted optimistic-field clearing', () => {
-      it('clears the entity entry on replay success', async () => {
+      it('clears the entity entries it owns on replay success', async () => {
         const mutation = makeMutation({
           id: 'proc-clear',
           variables: { input: { id: 'cuid-item-1' } },
@@ -1586,10 +1465,9 @@ describe('QueueManager', () => {
         await processMutation(mutation);
         jest.useFakeTimers();
 
-        expect(optimisticDataPersistence.clearEntity).toHaveBeenCalledWith(
-          'PantryItem',
-          'cuid-item-1',
-        );
+        expect(
+          optimisticDataPersistence.clearEntitySavedBetween,
+        ).toHaveBeenCalledWith('PantryItem', 'cuid-item-1', expect.anything());
       });
 
       it('clears every item entry of a batch-shaped create', async () => {
@@ -1608,11 +1486,9 @@ describe('QueueManager', () => {
         });
         mockClient.mutate.mockResolvedValue({
           data: {
-            syncShoppingListItem: {
-              __typename: 'SyncShoppingListItemPayload',
-              clientId: 'cuid-a',
-              item: {},
-              converged: false,
+            addItemsToShoppingList: {
+              __typename: 'AddItemsToShoppingListPayload',
+              results: [],
             },
           },
         });
@@ -1627,14 +1503,12 @@ describe('QueueManager', () => {
         await processMutation(mutation);
         jest.useFakeTimers();
 
-        expect(optimisticDataPersistence.clearEntity).toHaveBeenCalledWith(
-          'ShoppingListItem',
-          'cuid-a',
-        );
-        expect(optimisticDataPersistence.clearEntity).toHaveBeenCalledWith(
-          'ShoppingListItem',
-          'cuid-b',
-        );
+        expect(
+          optimisticDataPersistence.clearEntitySavedBetween,
+        ).toHaveBeenCalledWith('ShoppingListItem', 'cuid-a', expect.anything());
+        expect(
+          optimisticDataPersistence.clearEntitySavedBetween,
+        ).toHaveBeenCalledWith('ShoppingListItem', 'cuid-b', expect.anything());
         // One snapshot for the whole batch, not one per entity id.
         expect(mockClient.cache.extract).toHaveBeenCalledTimes(1);
       });
@@ -1665,10 +1539,54 @@ describe('QueueManager', () => {
         jest.useFakeTimers();
 
         expect(result.success).toBe(true);
-        expect(optimisticDataPersistence.clearEntity).toHaveBeenCalledWith(
+        expect(
+          optimisticDataPersistence.clearEntitySavedBetween,
+        ).toHaveBeenCalledWith(
           'ShoppingList',
           'cuid-list-1',
+          expect.anything(),
         );
+      });
+
+      it('keeps the fields an earlier write still queued for the entity owns', async () => {
+        const earlier = makeMutation({
+          id: 'proc-earlier',
+          createdAt: 1_000,
+          variables: { input: { id: 'cuid-item-1' } },
+        });
+        const landed = makeMutation({
+          id: 'proc-landed',
+          createdAt: 2_000,
+          variables: { input: { id: 'cuid-item-1' } },
+        });
+        (queueStore.getMutationsForUser as jest.Mock).mockReturnValue([
+          earlier,
+          landed,
+          makeMutation({
+            id: 'proc-later',
+            createdAt: 3_000,
+            variables: { input: { id: 'cuid-item-1' } },
+          }),
+        ]);
+        mockClient.mutate.mockResolvedValue({
+          data: { syncPantryItem: { item: {}, converged: false } },
+        });
+        mockClient.cache.extract.mockReturnValue(
+          normalizedFixture([{ __typename: 'PantryItem', id: 'cuid-item-1' }]),
+        );
+
+        jest.useRealTimers();
+        await processMutation(landed);
+        jest.useFakeTimers();
+        (queueStore.getMutationsForUser as jest.Mock).mockReturnValue([]);
+
+        expect(
+          optimisticDataPersistence.clearEntitySavedBetween,
+        ).toHaveBeenCalledWith('PantryItem', 'cuid-item-1', {
+          after: 1_000,
+          until: 2_000,
+        });
+        expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
       });
 
       it('does not clear when the replay fails', async () => {
@@ -1684,7 +1602,9 @@ describe('QueueManager', () => {
         await processMutation(mutation);
         jest.useFakeTimers();
 
-        expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
+        expect(
+          optimisticDataPersistence.clearEntitySavedBetween,
+        ).not.toHaveBeenCalled();
       });
 
       it('skips entities absent from the cache without throwing', async () => {
@@ -1702,7 +1622,9 @@ describe('QueueManager', () => {
         jest.useFakeTimers();
 
         expect(result.success).toBe(true);
-        expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
+        expect(
+          optimisticDataPersistence.clearEntitySavedBetween,
+        ).not.toHaveBeenCalled();
       });
     });
 
@@ -1935,39 +1857,42 @@ describe('QueueManager', () => {
   // -------------------------------------------------------------------------
 
   // -------------------------------------------------------------------------
-  // executeMutation - sync replay and conflict handling
+  // executeMutation - replay as queued
   // -------------------------------------------------------------------------
   describe('executeMutation', () => {
-    let executeSyncMutation: (mutation: QueuedMutation) => Promise<unknown>;
+    let executeMutation: (mutation: QueuedMutation) => Promise<unknown>;
 
     beforeEach(() => {
-      executeSyncMutation = manager['executeMutation'].bind(manager);
+      executeMutation = manager['executeMutation'].bind(manager);
     });
 
-    it('handles conflict in sync response', async () => {
+    it('replays a queued write as its own document', async () => {
       mockClient.mutate.mockResolvedValue({
         data: {
-          syncPantryItem: {
-            item: { id: 'server-1' },
-            converged: false,
-            conflict: { message: 'Version mismatch' },
+          updatePantryItem: {
+            __typename: 'UpdatePantryItemPayload',
+            pantryItem: { __typename: 'PantryItem', id: 'item-1', version: 3 },
           },
         },
-      });
-
-      mockClient.cache.readFragment.mockReturnValue({
-        id: 'item-1',
-        pantryId: 'pan-1',
       });
       jest.useRealTimers();
       const mutation = makeMutation({
         ...queuedMutationFor(UpdatePantryItemDocument),
-        variables: { input: { id: 'item-1' } },
+        variables: {
+          input: { id: 'item-1', itemName: 'Oat milk', version: 2 },
+        },
       });
-      const result = await executeSyncMutation(mutation);
+      await executeMutation(mutation);
       jest.useFakeTimers();
 
-      expect(result).toBeDefined();
+      expect(mockClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mutation: UpdatePantryItemDocument,
+          variables: expect.objectContaining({
+            input: { id: 'item-1', itemName: 'Oat milk', version: 2 },
+          }),
+        }),
+      );
     });
 
     it('keeps a write the server committed when a field in its selection errors', async () => {
@@ -1976,11 +1901,9 @@ describe('QueueManager', () => {
       const failureHandler = jest.fn();
       manager.setFailureHandler(failureHandler);
       const data = {
-        syncPantryItem: {
-          __typename: 'SyncPantryItemPayload',
-          clientId: 'item-c',
-          converged: false,
-          item: { __typename: 'PantryItem', id: 'item-c', brand: null },
+        createPantryItem: {
+          __typename: 'CreatePantryItemPayload',
+          pantryItem: { __typename: 'PantryItem', id: 'item-c', brand: null },
         },
       };
       mockClient.mutate.mockResolvedValue({
@@ -1990,7 +1913,7 @@ describe('QueueManager', () => {
           errors: [
             {
               message: 'brand failed to resolve',
-              path: ['syncPantryItem', 'item', 'brand'],
+              path: ['createPantryItem', 'pantryItem', 'brand'],
             },
           ],
         }),
@@ -2024,14 +1947,14 @@ describe('QueueManager', () => {
                   __typename: 'BatchAddShoppingListItemResult',
                   index: 0,
                   success: true,
-                  code: null,
+                  failure: null,
                   item: { __typename: 'ShoppingListItem', id: 'row-1' },
                 },
                 {
                   __typename: 'BatchAddShoppingListItemResult',
                   index: 1,
                   success: false,
-                  code,
+                  failure: { __typename: 'BatchElementFailure', code },
                   item: null,
                 },
               ],
@@ -2069,9 +1992,7 @@ describe('QueueManager', () => {
         ...queuedMutationFor(CreatePantryItemDocument),
         variables: { input: { id: 'item-1', pantryId: 'pan-1' } },
       });
-      await expect(executeSyncMutation(mutation)).rejects.toThrow(
-        'Server error',
-      );
+      await expect(executeMutation(mutation)).rejects.toThrow('Server error');
       jest.useFakeTimers();
     });
   });
@@ -2895,8 +2816,7 @@ describe('QueueManager', () => {
         expect(mockClient.mutate).toHaveBeenCalledTimes(1);
         expect(mockClient.mutate).toHaveBeenCalledWith(
           expect.objectContaining({
-            mutation: SyncDeleteShoppingListItemDocument,
-            variables: { input: { clientId: 'sli-1' } },
+            variables: { input: { id: 'sli-1' } },
           }),
         );
         expect(

@@ -19,6 +19,7 @@ export const recipesTestIDs = {
   recipeFormScreen: 'recipe-form-screen',
 
   recipeDetail: 'recipe-detail',
+  recipeDetailSkeleton: 'recipe-detail-skeleton',
   mealPlanButton: 'recipe-mealplan-button',
   editButton: 'recipe-edit-button',
   publishButton: 'recipe-publish-button',

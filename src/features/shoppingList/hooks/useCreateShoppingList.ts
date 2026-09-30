@@ -8,10 +8,9 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
-  addOptimisticShoppingList,
   addShoppingListToQueryCache,
-  buildOptimisticShoppingList,
   revertOptimisticShoppingList,
+  writeLocalShoppingList,
 } from '#features/shoppingList/cache/list';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { settleMutation } from '#/apollo/utils/settleMutation';
@@ -30,6 +29,7 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
   const user = useUser();
 
   const [mutate, { loading }] = useMutation(CreateShoppingListDocument, {
+    context: { localFirst: true },
     update(cache, { data }) {
       const created = appliedPayload(data);
       if (created) addShoppingListToQueryCache(cache, created.shoppingList);
@@ -43,12 +43,9 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
 
     // Materializing the ownership row needs an auth identity; without one the
     // create falls back to online-only (no create surface should hit this).
-    const optimisticList = user
-      ? buildOptimisticShoppingList(client.cache, id, input, user)
-      : null;
-    if (optimisticList) {
+    if (user) {
       try {
-        addOptimisticShoppingList(client.cache, optimisticList);
+        writeLocalShoppingList(client.cache, id, input, user);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Create Shopping List (optimistic)',
@@ -60,14 +57,13 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
       () =>
         mutate({
           variables: { input: { ...input, id } },
-          context: { localFirst: true },
         }),
       {
         document: CreateShoppingListDocument,
         fallback: fallbackErrorMessage,
         present: 'none',
         onFailed: () => {
-          if (!optimisticList) return;
+          if (!user) return;
           try {
             revertOptimisticShoppingList(client.cache, id);
           } catch (cacheError) {
@@ -89,8 +85,8 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
     const created = appliedPayload(settled.data)?.shoppingList;
     if (created) return { status: 'created', shoppingList: created };
     // Queued: the local list stands and the create replays under the same id.
-    if (optimisticList) {
-      return { status: 'created', shoppingList: optimisticList };
+    if (user) {
+      return { status: 'created', shoppingList: { id, name: input.name } };
     }
     return { status: 'failed', body: fallbackErrorMessage };
   };

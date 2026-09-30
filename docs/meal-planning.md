@@ -79,7 +79,6 @@ model in `utils/homeLinkedPermissions.ts`: the owner is `plan.user` (not
 | `useAddToMealPlanSheet`                                           | Public entry point to `AddToMealPlanSheet`, used by `RecipeDetail`                                                     |
 | `useDuplicateMealPlan`                                            | Recreates a plan from the cache under new dates                                                                        |
 | `useGenerateShoppingList`                                         | Derives a shopping list from the cached plan and writes it local-first                                                 |
-| `useShoppingListsForMealPlan`                                     | Lists (`first: 20`) the generate sheet can write into                                                                  |
 | `useMealTemplates` / `useMealTemplate` / `useMealTemplateForEdit` | Template list (search + category, paginated), one template grouped by day, the builder's edit read                     |
 | `useMealTemplateActions`                                          | Plan from template, template from plan, delete template, duplicate template                                            |
 | `useMealTemplateEditor`                                           | Builder writes: create/update template, add/update/remove template items                                               |

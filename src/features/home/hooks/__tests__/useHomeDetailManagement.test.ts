@@ -62,7 +62,6 @@ jest.mock('#/utils/connectionUtils', () => ({
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
   safeEvict: jest.fn(),
-  setCachedFields: jest.fn(),
 }));
 
 jest.mock('#/utils/finallyHelpers');
@@ -180,7 +179,6 @@ function enableJoinLinkMock() {
           joinLink: {
             __typename: 'ShareLink',
             universal: 'https://x/join/ABC123',
-            scheme: 'souschef://join/ABC123',
           },
           version: 2,
           updatedAt: '2025-01-02T00:00:00.000Z',
@@ -330,7 +328,6 @@ describe('useHomeDetailManagement', () => {
               joinLink: {
                 __typename: 'ShareLink',
                 universal: 'https://x/join/NEW999',
-                scheme: 'souschef://join/NEW999',
               },
               version: 3,
               updatedAt: '2025-01-03T00:00:00.000Z',

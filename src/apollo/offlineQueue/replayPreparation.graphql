@@ -1,0 +1,6 @@
+# A queued unit id's cached symbol, which the replay can still resolve after the
+# vocabulary repair retired the id.
+fragment replayPreparation_unit on Unit {
+  id
+  symbol
+}

@@ -19,7 +19,7 @@ import { useStore } from '#store/index';
 import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscriptions';
 import { PantryEventsDocument } from '#features/pantry/graphql/pantry.generated';
 import { PantrySummaryForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
-import { toDateKey } from '#/utils/dateUtils';
+import { todayKey } from '#/utils/dateUtils';
 
 type CapturedOnData = (data: unknown, client: unknown) => void;
 
@@ -162,7 +162,13 @@ describe('usePantrySubscriptions', () => {
     const getOnData = captureCustomOnData();
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));
     const client = makeClient(
-      jest.fn(),
+      jest.fn().mockReturnValue({
+        __typename: 'PantryItem',
+        id: 'item-1',
+        itemId: 'catalog-1',
+        storageState: 'REFRIGERATED',
+        storageLocation: null,
+      }),
       jest.fn().mockResolvedValue({
         data: { pantryItem: { __typename: 'PantryItem', id: 'item-1' } },
       }),
@@ -175,10 +181,39 @@ describe('usePantrySubscriptions', () => {
     );
     // The ref, not the read-back object: the updater merges what it is handed
     // over the stored record, so a denormalized read would inline entity refs.
-    expect(mockAddToConnection).toHaveBeenCalledWith(client.cache, 'pantry-1', {
-      __typename: 'PantryItem',
-      id: 'item-1',
-    });
+    expect(mockAddToConnection).toHaveBeenCalledWith(
+      client.cache,
+      'pantry-1',
+      { __typename: 'PantryItem', id: 'item-1' },
+      expect.objectContaining({ skipStoreField: expect.any(Function) }),
+    );
+  });
+
+  it("writes into the event's pantry, not the one selected when it arrives", async () => {
+    const getOnData = captureCustomOnData();
+    renderHookWithApollo(() => usePantrySubscriptions('user-1'));
+    const client = makeClient();
+
+    await deliver(
+      getOnData(),
+      { ...itemEvent(MutationType.ItemRemoved), pantryId: 'pantry-2' },
+      client,
+    );
+    await flushSummaryRead();
+
+    expect(mockRemoveFromConnection).toHaveBeenCalledWith(
+      client.cache,
+      'pantry-2',
+      'item-1',
+      { evictItem: true },
+    );
+    expect(summaryReads(client.query)).toEqual([
+      [
+        expect.objectContaining({
+          variables: expect.objectContaining({ id: 'pantry-2' }),
+        }),
+      ],
+    ]);
   });
 
   it('skips the add when the item cannot be read back', async () => {
@@ -451,7 +486,7 @@ describe('usePantrySubscriptions: the counts after a change made elsewhere', () 
   it('brings the header and tab counts back in line with the rows', async () => {
     // Another device cleared 12 rows: each event removes its row, and nothing
     // else moved the counts until they were read back.
-    const variables = { id: 'pantry-1', today: toDateKey(new Date()) };
+    const variables = { id: 'pantry-1', today: todayKey() };
     const cache = makeCache();
     cache.writeQuery({
       query: PantrySummaryForEventDocument,

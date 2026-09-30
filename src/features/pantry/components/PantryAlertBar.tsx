@@ -99,8 +99,8 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
               count: stats.lowStockCount,
             })}
           >
-            <Icon name="trending-down-outline" size={14} tone="warning" />
-            <Text role="label" tone="warning">
+            <Icon name="trending-down-outline" size={14} tone="info" />
+            <Text role="label" tone="info">
               {stats.lowStockCount}
             </Text>
           </AppPressable>

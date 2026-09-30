@@ -36,13 +36,13 @@ import {
   updateEntityFieldsLocalFirst,
 } from '#/apollo/utils/localFirstFields';
 import {
-  buildOptimisticTemplateItem,
   addTemplateItemToCache,
+  localTemplateItem,
   removeTemplateItemFromCache,
   readTemplateItem,
-  toRestorableTemplateItem,
   readRecipeRef,
-} from '#features/mealPlan/utils/optimisticTemplateItem';
+  type LocalTemplateItem,
+} from '#features/mealPlan/cache/mealTemplateItem';
 import { useUser } from '#store/useAppStore';
 import {
   TemplateCategory,
@@ -101,6 +101,7 @@ export function useMealTemplateEditor() {
   const [createMutation, { loading: creating }] = useMutation(
     CreateMealTemplateDocument,
     {
+      context: { localFirst: true },
       update: (cache, { data }) => {
         const payload = appliedPayload(data);
         if (payload) {
@@ -119,10 +120,17 @@ export function useMealTemplateEditor() {
   );
   const [updateMutation, { loading: updating }] = useMutation(
     UpdateMealTemplateDocument,
+    { context: { localFirst: true } },
   );
-  const [addItemMutation] = useMutation(AddTemplateItemDocument);
-  const [updateItemMutation] = useMutation(UpdateTemplateItemDocument);
-  const [removeItemMutation] = useMutation(RemoveTemplateItemDocument);
+  const [addItemMutation] = useMutation(AddTemplateItemDocument, {
+    context: { localFirst: true },
+  });
+  const [updateItemMutation] = useMutation(UpdateTemplateItemDocument, {
+    context: { localFirst: true },
+  });
+  const [removeItemMutation] = useMutation(RemoveTemplateItemDocument, {
+    context: { localFirst: true },
+  });
 
   // `AddTemplateItemInput.id` accepts a client-minted CUID2, so a replayed add
   // resolves to the same row (`IDEMPOTENT_REPLAY`), update writes absolute
@@ -179,7 +187,6 @@ export function useMealTemplateEditor() {
       () =>
         createMutation({
           variables: { input: { ...input, id } },
-          context: { localFirst: true },
         }),
       {
         document: CreateMealTemplateDocument,
@@ -255,7 +262,6 @@ export function useMealTemplateEditor() {
       () =>
         updateMutation({
           variables: { input: { ...input, id } },
-          context: { localFirst: true },
         }),
       {
         document: UpdateMealTemplateDocument,
@@ -268,10 +274,10 @@ export function useMealTemplateEditor() {
 
   const addItem = async (input: AddTemplateItemInput): Promise<boolean> => {
     const id = generateEntityId();
-    const optimisticItem = buildOptimisticTemplateItem(client.cache, id, input);
+    const localItem = localTemplateItem(client.cache, id, input);
 
     try {
-      addTemplateItemToCache(client.cache, input.templateId, optimisticItem);
+      addTemplateItemToCache(client.cache, input.templateId, localItem);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Add Template Item (optimistic)',
@@ -292,7 +298,6 @@ export function useMealTemplateEditor() {
       () =>
         addItemMutation({
           variables: { input: { ...input, id } },
-          context: { localFirst: true },
         }),
       {
         document: AddTemplateItemDocument,
@@ -339,7 +344,6 @@ export function useMealTemplateEditor() {
           () =>
             updateItemMutation({
               variables: { input },
-              context: { localFirst: true },
             }),
           {
             document: UpdateTemplateItemDocument,
@@ -366,11 +370,11 @@ export function useMealTemplateEditor() {
   ): Promise<boolean> => {
     // Snapshot before evicting: a refusal has to put the row back, and an
     // evicted entity is one the cache cannot describe. The read is partial (the
-    // editor's query selects no `recipe`), so it is completed here.
-    const removed = toRestorableTemplateItem(
-      readTemplateItem(client.cache, itemId),
-      itemId,
-    );
+    // editor's query selects no `recipe`); the restore completes it.
+    const snapshot = readTemplateItem(client.cache, itemId);
+    const removed: LocalTemplateItem | null = snapshot
+      ? { ...snapshot, __typename: 'MealTemplateItem', id: itemId }
+      : null;
     const parentTemplateId = templateId;
 
     // No snapshot means no revert. Evicting anyway is how a refused remove left
@@ -409,7 +413,6 @@ export function useMealTemplateEditor() {
       () =>
         removeItemMutation({
           variables: { input: { id: itemId } },
-          context: { localFirst: true },
         }),
       {
         document: RemoveTemplateItemDocument,

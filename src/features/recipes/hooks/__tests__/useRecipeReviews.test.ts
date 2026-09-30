@@ -1,4 +1,6 @@
 import { act, waitFor } from '@testing-library/react-native';
+import { gql } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import type { MockFor, MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
@@ -9,6 +11,7 @@ import {
   CreateRecipeReviewDocument,
   DeleteRecipeReviewDocument,
   ToggleReviewHelpfulDocument,
+  UpdateRecipeReviewDocument,
 } from '#features/recipes/graphql/recipeReview.generated';
 import { useRecipeReviews } from '../useRecipeReviews';
 import { ErrorCode, RecipeStatus } from '#/graphql/generated/schemaTypes';
@@ -206,6 +209,9 @@ const makeBackendRecipe = (
   source: null,
   sourceUrl: null,
   instructions: null,
+  isExternal: false,
+  sourceMapping: null,
+  externalDetails: null,
   savedDetails: null,
   ingredientsConnection: {
     __typename: 'RecipeIngredientConnection',
@@ -264,6 +270,40 @@ describe('useRecipeReviews', () => {
     // rev-1 has helpful=3, rev-2 has helpful=1
     expect(result.current.state.reviews[0]!.id).toBe('rev-1');
     expect(result.current.state.reviews[1]!.id).toBe('rev-2');
+  });
+
+  // A vote edits only the review, so the reviews query's result stays the
+  // same object; the order follows the review itself.
+  it('re-sorts when a review overtakes another on helpful votes', async () => {
+    const cache = makeCache();
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeReviews({
+          recipeId: 'recipe-1',
+          backendRecipe: makeBackendRecipe(),
+        }),
+      { operationMocks: [buildGetRecipeReviewsMock()], cache },
+    );
+    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+    expect(result.current.state.reviews.map(r => r.id)).toEqual([
+      'rev-1',
+      'rev-2',
+    ]);
+
+    await act(async () => {
+      cache.modify({
+        id: cache.identify({ __typename: 'RecipeReview', id: 'rev-2' }),
+        fields: { helpful: () => 5 },
+      });
+      await Promise.resolve();
+    });
+
+    await waitFor(() =>
+      expect(result.current.state.reviews.map(r => r.id)).toEqual([
+        'rev-2',
+        'rev-1',
+      ]),
+    );
   });
 
   it('identifies current user review', async () => {
@@ -488,6 +528,122 @@ describe('useRecipeReviews', () => {
     const input = (fired[0] as { input: { id?: string } }).input;
     expect(typeof input.id).toBe('string');
     expect(input.id!.length).toBeGreaterThan(0);
+  });
+
+  describe("takes the recipe's aggregates from the response, once", () => {
+    const AGGREGATES = gql`
+      fragment ReviewAggregates on Recipe {
+        id
+        totalReviews
+        rating4Count
+        rating5Count
+      }
+    `;
+    const seededCache = () => {
+      const cache = makeCache();
+      cache.writeFragment({
+        fragment: AGGREGATES,
+        data: {
+          __typename: 'Recipe',
+          id: 'recipe-1',
+          totalReviews: 3,
+          rating4Count: 1,
+          rating5Count: 1,
+        },
+      });
+      return cache;
+    };
+    const aggregatesIn = (cache: ReturnType<typeof makeCache>) =>
+      cache.readFragment({
+        fragment: AGGREGATES,
+        from: { __typename: 'Recipe', id: 'recipe-1' },
+      });
+
+    it('on create', async () => {
+      const data: MockDataFor<typeof CreateRecipeReviewDocument> = {
+        createRecipeReview: {
+          __typename: 'CreateRecipeReviewPayload',
+          recipeReview: {
+            __typename: 'RecipeReview',
+            id: 'rev-new',
+            rating: 5,
+          },
+          recipe: {
+            __typename: 'Recipe',
+            id: 'recipe-1',
+            totalReviews: 4,
+            rating4Count: 1,
+            rating5Count: 2,
+          },
+        },
+      };
+      const cache = seededCache();
+      const { result } = renderHookWithApollo(
+        () =>
+          useRecipeReviews({
+            recipeId: 'recipe-1',
+            backendRecipe: makeBackendRecipe(),
+          }),
+        {
+          cache,
+          operationMocks: [
+            buildGetRecipeReviewsMock(),
+            recordMock(CreateRecipeReviewDocument, { data }).mock,
+          ],
+        },
+      );
+      await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+
+      await act(async () => {
+        await result.current.actions.createReview(5, 'Amazing!');
+      });
+
+      expect(aggregatesIn(cache)).toMatchObject({
+        totalReviews: 4,
+        rating5Count: 2,
+      });
+    });
+
+    it('on a rating change', async () => {
+      const data: MockDataFor<typeof UpdateRecipeReviewDocument> = {
+        updateRecipeReview: {
+          __typename: 'UpdateRecipeReviewPayload',
+          recipeReview: { __typename: 'RecipeReview', id: 'rev-2', rating: 5 },
+          recipe: {
+            __typename: 'Recipe',
+            id: 'recipe-1',
+            totalReviews: 3,
+            rating4Count: 0,
+            rating5Count: 2,
+          },
+        },
+      };
+      const cache = seededCache();
+      const { result } = renderHookWithApollo(
+        () =>
+          useRecipeReviews({
+            recipeId: 'recipe-1',
+            backendRecipe: makeBackendRecipe(),
+          }),
+        {
+          cache,
+          operationMocks: [
+            buildGetRecipeReviewsMock(),
+            recordMock(UpdateRecipeReviewDocument, { data }).mock,
+          ],
+        },
+      );
+      await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+
+      await act(async () => {
+        await result.current.actions.updateReview('rev-2', { rating: 5 });
+      });
+
+      expect(aggregatesIn(cache)).toMatchObject({
+        rating4Count: 0,
+        rating5Count: 2,
+      });
+    });
   });
 
   it('deleteReview calls mutation and shows toast', async () => {

@@ -1,14 +1,17 @@
-mutation MarkHomeAsDefault($input: MarkHomeAsDefaultInput!) {
+mutation MarkHomeAsDefault(
+  $input: MarkHomeAsDefaultInput!
+  $today: LocalDate!
+) {
   markHomeAsDefault(input: $input) {
     __typename
     ... on MarkHomeAsDefaultPayload {
       settings {
         id
+        ...UserSettingsReaders
       }
       defaultPantry {
         id
-        name
-        isDefault
+        ...PantryReaders
       }
     }
     ... on Error {

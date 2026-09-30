@@ -224,7 +224,7 @@ both sides.
 | `offline_queue_conflicts_total` | `operation` | A replayed mutation came back as a conflict. |
 | `mutation_refused_total` | `operation`, `code` | The server REFUSED a write and said so in the payload - a business outcome, not an app error, so it is counted here rather than reported to error tracking. |
 | `offline_queue_auth_parked_total` | `operation` | A queued write was parked because the token could not be refreshed. NOT a rejection - the server never saw it; it is revived on the next sign-in. |
-| `reconnect_backfill_queries_total` | | Active queries refetched after an outage ended. Incremented by the number refetched, so it is a volume, not an event count. |
+| `resync_queries_total` | `source` | Active queries refetched by a resync (`src/apollo/refetchEvents.ts`). `source` names the triggers the resync coalesced (`appForeground`, `apiReachable`, `wsReconnected`, sorted and joined with `+`). Incremented by the number refetched, so it is a volume, not an event count. |
 | `storage_recovery_instance_used` | | The device key was unavailable and the session fell back to unencrypted recovery storage. Any non-zero value means encrypted data was not readable that launch. |
 | `offline_reads_served_total` | `operation` | A query was answered entirely from cache because the network leg was unwanted or doomed (offline mode, device offline, or the reachability breaker open). The offline promise working. |
 | `offline_reads_probed_total` | `operation` | Cache miss while the breaker was open but the device is online, so the request was forwarded as an organic probe rather than blocked. |

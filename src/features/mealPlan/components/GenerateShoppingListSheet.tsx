@@ -10,7 +10,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { FormInput } from '#components/atoms/FormInput';
-import { useShoppingListsForMealPlan } from '#features/mealPlan/hooks/useShoppingListsForMealPlan';
+import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
@@ -50,7 +50,7 @@ export const GenerateShoppingListSheet: React.FC<
     }
   }
 
-  const { shoppingLists } = useShoppingListsForMealPlan(!visible);
+  const { lists: shoppingLists } = useShoppingListsLite({ skip: !visible });
 
   const handleGenerate = () => {
     onGenerate({

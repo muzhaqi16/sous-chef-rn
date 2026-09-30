@@ -58,9 +58,10 @@ function semanticItemToSuggestion(node: SemanticItem): ItemSuggestion {
 export function useItemAutocomplete(options?: { debounceMs?: number }) {
   const [fetchItems, { data, loading }] = useLazyQuery(
     AutocompleteItemsDocument,
+    { refetchOn: false },
   );
   const [fetchSemantic, { data: semanticData, loading: semanticLoading }] =
-    useLazyQuery(SearchItemsSemanticDocument);
+    useLazyQuery(SearchItemsSemanticDocument, { refetchOn: false });
 
   const [activeTerm, setActiveTerm] = useState('');
 

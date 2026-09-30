@@ -32,8 +32,6 @@ type ListItemsConnectionResult = {
 type PantryItemsConnectionResult = {
   pantry: { __typename: string; id: string; itemsConnection: Connection };
 };
-type ShoppingListsResult = { shoppingLists: NodeRef[] | null };
-type PantriesResult = { pantries: NodeRef[] | null };
 type StorageLocationsResult = { storageLocations: NodeRef[] | null };
 type ListSuggestionsResult = {
   shoppingList: {
@@ -785,176 +783,155 @@ describe('cache', () => {
     });
   });
 
-  describe('Query-level simple merge policies', () => {
-    it('Query.shoppingLists preserves existing on null incoming', () => {
-      const cache = makeCache();
-
-      const QUERY = gql`
-        query GetLists($filters: ShoppingListFilters) {
-          shoppingLists(filters: $filters) {
-            id
-            name
+  describe('Query.shoppingLists', () => {
+    const QUERY = gql`
+      query GetLists($homeId: ID, $first: Int) {
+        shoppingLists(homeId: $homeId, first: $first) {
+          edges {
+            node {
+              id
+              name
+            }
           }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          totalCount
         }
-      `;
+      }
+    `;
+    type ListsResult = {
+      shoppingLists: { edges: { node: { id: string } }[] } | null;
+    };
 
-      cache.writeQuery({
-        query: QUERY,
-        variables: { filters: { homeId: 'h1' } },
-        data: {
-          shoppingLists: [
-            { __typename: 'ShoppingList', id: 'sl-1', name: 'Groceries' },
-          ],
-        },
-      });
+    const page = (
+      ids: string[],
+      { hasNextPage = false, totalCount = ids.length } = {},
+    ) => ({
+      __typename: 'ShoppingListConnection',
+      edges: ids.map(id => ({
+        __typename: 'ShoppingListEdge',
+        node: { __typename: 'ShoppingList', id, name: `List ${id}` },
+      })),
+      pageInfo: {
+        __typename: 'PageInfo',
+        hasNextPage,
+        endCursor: ids[ids.length - 1] ?? null,
+      },
+      totalCount,
+    });
+    const ids = (count: number) =>
+      Array.from({ length: count }, (_, i) => `sl-${i}`);
 
-      // Writing null should preserve existing
-      cache.writeQuery({
-        query: QUERY,
-        variables: { filters: { homeId: 'h1' } },
-        data: {
-          shoppingLists: null,
-        },
-      });
+    const write = (
+      cache: ReturnType<typeof makeCache>,
+      variables: { homeId?: string; first?: number },
+      shoppingLists: ReturnType<typeof page> | null,
+    ) => cache.writeQuery({ query: QUERY, variables, data: { shoppingLists } });
 
-      const result = cache.readQuery<ShoppingListsResult>({
-        query: QUERY,
-        variables: { filters: { homeId: 'h1' } },
-      });
-      expect(result?.shoppingLists).toHaveLength(1);
+    const readIds = (
+      cache: ReturnType<typeof makeCache>,
+      variables: { homeId?: string; first?: number },
+    ) =>
+      cache
+        .readQuery<ListsResult>({ query: QUERY, variables })
+        ?.shoppingLists?.edges.map(e => e.node.id);
+
+    it('preserves existing on null incoming', () => {
+      const cache = makeCache();
+      write(cache, { homeId: 'h1' }, page(['sl-1']));
+      write(cache, { homeId: 'h1' }, null);
+
+      expect(readIds(cache, { homeId: 'h1' })).toEqual(['sl-1']);
     });
 
-    it('Query.shoppingLists replaces on empty array', () => {
+    it('clears on an authoritatively empty page', () => {
       const cache = makeCache();
+      write(cache, { homeId: 'h1' }, page(['sl-1']));
+      write(cache, { homeId: 'h1' }, page([], { totalCount: 0 }));
 
-      const QUERY = gql`
-        query GetLists($filters: ShoppingListFilters) {
-          shoppingLists(filters: $filters) {
-            id
-            name
-          }
-        }
-      `;
-
-      cache.writeQuery({
-        query: QUERY,
-        variables: { filters: { homeId: 'h1' } },
-        data: {
-          shoppingLists: [
-            { __typename: 'ShoppingList', id: 'sl-1', name: 'Groceries' },
-          ],
-        },
-      });
-
-      cache.writeQuery({
-        query: QUERY,
-        variables: { filters: { homeId: 'h1' } },
-        data: {
-          shoppingLists: [],
-        },
-      });
-
-      const result = cache.readQuery<ShoppingListsResult>({
-        query: QUERY,
-        variables: { filters: { homeId: 'h1' } },
-      });
-      expect(result?.shoppingLists).toEqual([]);
+      expect(readIds(cache, { homeId: 'h1' })).toEqual([]);
     });
 
-    it('Query.shoppingLists keeps a read per home and page size', () => {
+    it('serves every page size from one held collection per home', () => {
       const cache = makeCache();
-      const QUERY = gql`
-        query GetLists($homeId: ID, $first: Int) {
-          shoppingLists(homeId: $homeId, first: $first) {
-            id
-            name
-          }
-        }
-      `;
-      const lists = (count: number) =>
-        Array.from({ length: count }, (_, i) => ({
-          __typename: 'ShoppingList',
-          id: `sl-${i}`,
-          name: `List ${i}`,
-        }));
+      write(cache, { homeId: 'h1', first: 50 }, page(ids(30)));
+      write(cache, { homeId: 'h2', first: 50 }, page(['other']));
 
-      cache.writeQuery({
-        query: QUERY,
-        variables: { homeId: 'h1', first: 50 },
-        data: { shoppingLists: lists(30) },
-      });
-      cache.writeQuery({
-        query: QUERY,
-        variables: { homeId: 'h1', first: 20 },
-        data: { shoppingLists: lists(20) },
-      });
-      cache.writeQuery({
-        query: QUERY,
-        variables: { homeId: 'h2', first: 50 },
-        data: { shoppingLists: lists(1) },
-      });
+      // A picker asking for a smaller page reads what the overview holds,
+      // with no request of its own (offline included).
+      expect(readIds(cache, { homeId: 'h1', first: 20 })).toEqual(ids(30));
 
-      const overview = cache.readQuery<ShoppingListsResult>({
-        query: QUERY,
-        variables: { homeId: 'h1', first: 50 },
-      });
-      expect(overview?.shoppingLists).toHaveLength(30);
+      // Its own first page, when it lands, does not truncate the overview.
+      write(
+        cache,
+        { homeId: 'h1', first: 20 },
+        page(ids(20), { hasNextPage: true, totalCount: 30 }),
+      );
+      expect(readIds(cache, { homeId: 'h1', first: 50 })).toEqual(ids(30));
+      expect(readIds(cache, { homeId: 'h2', first: 20 })).toEqual(['other']);
     });
   });
 
-  describe('Query-level pantries merge policy', () => {
-    const PANTRIES_QUERY = gql`
-      query GetPantries($homeId: ID!) {
-        pantries(homeId: $homeId) {
+  describe('connections keyed on their real arguments', () => {
+    const LOCATIONS_QUERY = gql`
+      query GetPantryLocations($id: ID!, $orderBy: StorageLocationOrderBy) {
+        pantry(id: $id) {
           id
-          name
+          storageLocationsConnection(orderBy: $orderBy) {
+            edges {
+              node {
+                id
+              }
+            }
+          }
         }
       }
     `;
 
-    it('preserves existing pantries on null incoming', () => {
-      const cache = makeCache();
+    const writeOrder = (
+      cache: ReturnType<typeof makeCache>,
+      orderBy: Record<string, string>,
+      ids: string[],
+    ) =>
       cache.writeQuery({
-        query: PANTRIES_QUERY,
-        variables: { homeId: 'h1' },
+        query: LOCATIONS_QUERY,
+        variables: { id: 'p1', orderBy },
         data: {
-          pantries: [{ __typename: 'Pantry', id: 'p1', name: 'Kitchen' }],
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p1',
+            storageLocationsConnection: {
+              __typename: 'StorageLocationConnection',
+              edges: ids.map(id => ({
+                __typename: 'StorageLocationEdge',
+                node: { __typename: 'StorageLocation', id },
+              })),
+            },
+          },
         },
       });
-      cache.writeQuery({
-        query: PANTRIES_QUERY,
-        variables: { homeId: 'h1' },
-        data: { pantries: null },
-      });
-      const result = cache.readQuery<PantriesResult>({
-        query: PANTRIES_QUERY,
-        variables: { homeId: 'h1' },
-      });
-      expect(result?.pantries).toHaveLength(1);
-    });
 
-    it('replaces pantries on incoming data', () => {
+    const readOrder = (
+      cache: ReturnType<typeof makeCache>,
+      orderBy: Record<string, string>,
+    ) =>
+      cache
+        .readQuery<{
+          pantry: {
+            storageLocationsConnection: { edges: { node: { id: string } }[] };
+          };
+        }>({ query: LOCATIONS_QUERY, variables: { id: 'p1', orderBy } })
+        ?.pantry.storageLocationsConnection.edges.map(e => e.node.id);
+
+    it('Pantry.storageLocationsConnection keeps each ordering its own entry', () => {
       const cache = makeCache();
-      cache.writeQuery({
-        query: PANTRIES_QUERY,
-        variables: { homeId: 'h1' },
-        data: {
-          pantries: [{ __typename: 'Pantry', id: 'p1', name: 'Kitchen' }],
-        },
-      });
-      cache.writeQuery({
-        query: PANTRIES_QUERY,
-        variables: { homeId: 'h1' },
-        data: {
-          pantries: [{ __typename: 'Pantry', id: 'p2', name: 'Garage' }],
-        },
-      });
-      const result = cache.readQuery<PantriesResult>({
-        query: PANTRIES_QUERY,
-        variables: { homeId: 'h1' },
-      });
-      expect(result?.pantries).toHaveLength(1);
-      expect(result?.pantries?.[0]!.name).toBe('Garage');
+      writeOrder(cache, { name: 'ASC' }, ['a', 'b']);
+      writeOrder(cache, { createdAt: 'DESC' }, ['b', 'a']);
+
+      expect(readOrder(cache, { name: 'ASC' })).toEqual(['a', 'b']);
+      expect(readOrder(cache, { createdAt: 'DESC' })).toEqual(['b', 'a']);
     });
   });
 
@@ -1542,10 +1519,102 @@ describe('cache', () => {
         endCursor: 'c2',
       });
 
-      const ids = readIds(cache);
-      expect(ids[0]).toBe('d');
-      // …and only once, despite still being in the cached tail.
-      expect(ids.filter(id => id === 'd')).toHaveLength(1);
+      // `d` appears once, and `b`, `c` — pushed past page 1 — stay.
+      expect(readIds(cache)).toEqual(['d', 'a', 'b', 'c']);
+    });
+
+    it('keeps the entry an insert at the top pushes past page 1', () => {
+      const cache = seedTwoPages();
+
+      writePage(cache, [edge('n', 'N'), edge('a', 'A')], {
+        hasNextPage: true,
+        endCursor: 'c2',
+      });
+
+      expect(readIds(cache)).toEqual(['n', 'a', 'b', 'c', 'd']);
+    });
+
+    it('drops a page-1 entry the refresh no longer lists', () => {
+      const cache = seedTwoPages();
+
+      writePage(cache, [edge('b', 'B'), edge('c', 'C')], {
+        hasNextPage: true,
+        endCursor: 'c3',
+      });
+
+      expect(readIds(cache)).toEqual(['b', 'c', 'd']);
+    });
+
+    it('replaces the window when the page shares no entry with it', () => {
+      const cache = seedTwoPages();
+
+      writePage(cache, [edge('x', 'X'), edge('y', 'Y')], {
+        hasNextPage: true,
+        endCursor: 'y2',
+      });
+
+      expect(readIds(cache)).toEqual(['x', 'y']);
+    });
+
+    it('restarts from the refreshed page once the window dropped the head', () => {
+      const cache = makeCache();
+      const ids = (from: number, to: number) =>
+        Array.from({ length: to - from + 1 }, (_, i) => `r${from + i}`);
+      const page = (from: number, to: number) =>
+        ids(from, to).map(id => edge(id, id.toUpperCase()));
+      writePage(cache, page(1, 25), { hasNextPage: true, endCursor: 'c25' });
+      for (const from of [26, 51, 76, 101]) {
+        writePage(
+          cache,
+          page(from, from + 24),
+          { hasNextPage: true, endCursor: `c${from + 24}` },
+          { id: 'list-1', after: `c${from - 1}` },
+        );
+      }
+      // Five pages of 25 against a window of 100: the first page is gone.
+      expect(readIds(cache)).toEqual(ids(26, 125));
+
+      writePage(cache, page(1, 25), { hasNextPage: true, endCursor: 'c25' });
+
+      expect(readIds(cache)).toEqual(ids(1, 25));
+      const pageInfo = cache.readQuery<{
+        shoppingList: { itemsConnection: { pageInfo: { endCursor: string } } };
+      }>({ query: LIST_QUERY, variables: { id: 'list-1' } })?.shoppingList
+        .itemsConnection.pageInfo;
+      expect(pageInfo?.endCursor).toBe('c25');
+
+      writePage(
+        cache,
+        page(26, 50),
+        { hasNextPage: true, endCursor: 'c50' },
+        { id: 'list-1', after: 'c25' },
+      );
+
+      expect(readIds(cache)).toEqual(ids(1, 50));
+    });
+
+    it('skips nothing when fetchMore resumes after the merge', () => {
+      const cache = seedTwoPages();
+      writePage(cache, [edge('n', 'N'), edge('a', 'A')], {
+        hasNextPage: true,
+        endCursor: 'c2',
+      });
+
+      // The surviving tail keeps the cached cursor, so the next page follows `d`.
+      const pageInfo = cache.readQuery<{
+        shoppingList: { itemsConnection: { pageInfo: { endCursor: string } } };
+      }>({ query: LIST_QUERY, variables: { id: 'list-1' } })?.shoppingList
+        .itemsConnection.pageInfo;
+      expect(pageInfo?.endCursor).toBe('c4');
+
+      writePage(
+        cache,
+        [edge('e', 'E'), edge('f', 'F')],
+        { hasNextPage: false, endCursor: 'c6' },
+        { id: 'list-1', after: 'c4' },
+      );
+
+      expect(readIds(cache)).toEqual(['n', 'a', 'b', 'c', 'd', 'e', 'f']);
     });
 
     it('keeps pages the refresh did not cover', () => {

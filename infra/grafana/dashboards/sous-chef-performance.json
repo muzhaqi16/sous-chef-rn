@@ -3174,7 +3174,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Queries refetched after the websocket reconnected, to backfill events missed while disconnected.",
+      "description": "Active queries refetched by a resync (foreground, API reachable again, websocket reconnected), by trigger.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3238,13 +3238,13 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(reconnect_backfill_queries_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) * 60",
-          "legendFormat": "backfilled/min",
+          "expr": "sum by (source) (rate(resync_queries_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) * 60",
+          "legendFormat": "{{source}}",
           "refId": "A"
         }
       ],
       "type": "timeseries",
-      "title": "Reconnect Backfill Queries (per min)"
+      "title": "Resync Queries (per min)"
     }
   ],
   "refresh": "10s",

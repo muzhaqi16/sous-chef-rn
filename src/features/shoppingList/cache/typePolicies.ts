@@ -5,6 +5,7 @@ import type {
   StoreObject,
 } from '@apollo/client';
 import { isReference } from '@apollo/client';
+import type { FieldMergeFunctionOptions } from '@apollo/client/cache';
 import type { StoreValue } from '@apollo/client/utilities';
 import {
   mergeConnectionByNodeId,
@@ -36,11 +37,13 @@ export const shoppingListTypePolicies: TypePolicies = {
   // are ONE FACT, so a flipped `isPurchased` must not inherit the previous
   // purchase's amounts. So: an unchanged `isPurchased` merges field-wise, a
   // changed one clears what it omits as `null` (removing reads INCOMPLETE).
+  // A local write (`extensions.local`, from `writePurchaseInfo`) always merges:
+  // the amounts it omits are the server's record, not a different purchase.
   ShoppingListItemPurchaseInfo: {
     merge(
       existing: StoreObject | Reference | undefined,
       incoming: StoreObject,
-      options: FieldFunctionOptions,
+      options: FieldMergeFunctionOptions,
     ) {
       if (!existing) return incoming;
       // A value object with no key fields is never stored as a reference,
@@ -48,6 +51,9 @@ export const shoppingListTypePolicies: TypePolicies = {
       // would build `{ __ref: null }` and write it over the object. Cheaper
       // to refuse the shape than to rely on it not occurring.
       if (isReference(existing)) return incoming;
+      if (options.extensions?.local === true) {
+        return options.mergeObjects(existing, incoming);
+      }
 
       const wasPurchased = options.readField('isPurchased', existing);
       const isPurchased = options.readField('isPurchased', incoming);
@@ -113,18 +119,10 @@ export const shoppingListTypePolicies: TypePolicies = {
         },
       },
       // List-level queries (return collections of lists/homes)
-      shoppingLists: {
-        // `cache.modify` by field name still reaches every stored variant.
-        keyArgs: ['filters', 'homeId', 'first'],
-        merge(existing: StoreValue = [], incoming: StoreValue) {
-          // Preserve existing cache only on network errors (null/undefined)
-          // Allow empty arrays through - user may genuinely have no lists
-          if (incoming == null) {
-            return existing;
-          }
-          return incoming;
-        },
-      },
+      // Not keyed on page size: a picker asking for fewer lists reads the
+      // collection the overview holds, offline included. `cache.modify` by
+      // field name still reaches every stored variant.
+      shoppingLists: mergeConnectionByNodeId(['filters', 'homeId', 'orderBy']),
     },
   },
 };

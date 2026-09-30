@@ -1,4 +1,4 @@
-import { useQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import {
   GetHomesDocument,
   GetMyPendingInvitesDocument,
@@ -22,11 +22,11 @@ export function useCreateHomeFlow({ userId }: CreateHomeFlowArgs) {
     data: homesData,
     loading: homesLoading,
     refetch: refetchHomes,
-  } = useQuery(GetHomesDocument, { skip: !userId });
+  } = useQuery(GetHomesDocument, userId ? {} : skipToken);
 
   const { data: pendingInvitesData, loading: invitesLoading } = useQuery(
     GetMyPendingInvitesDocument,
-    { skip: !userId },
+    userId ? {} : skipToken,
   );
 
   // One home create, wherever it is made — the local-first one, which writes

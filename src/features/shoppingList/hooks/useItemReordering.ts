@@ -54,6 +54,8 @@ export function useItemReordering<T extends ShoppingListItem>(
   const { t } = useTranslation();
 
   const [moveItem] = useMutation(MoveShoppingListItemDocument, {
+    // Moves coalesce latest-wins on replay via SyncMoveShoppingListItem.
+    context: { localFirst: true },
     // No optimisticResponse and no update callback: cache.modify runs BEFORE the
     // mutation call for immediate feedback.
   });
@@ -210,9 +212,6 @@ export function useItemReordering<T extends ShoppingListItem>(
               beforeItemId: moveBeforeItemId,
             },
           },
-          // Local-first: queue on an API-down-while-online failure (moves are
-          // coalesced latest-wins on replay via SyncMoveShoppingListItem).
-          context: { localFirst: true },
         }),
       {
         document: MoveShoppingListItemDocument,

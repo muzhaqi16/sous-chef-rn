@@ -1,27 +1,9 @@
 import type { ApolloCache, Cache, Reference } from '@apollo/client';
 import { InMemoryCache } from '@apollo/client';
-import type { TypedDocumentNode } from '@apollo/client';
 import type { ModifierDetails } from '@apollo/client/cache';
 import { isRecord } from '#/utils/isRecord';
-// The GraphQLCodegenDataMasking variant matches what the project's HKT
-// registration (src/types/apollo-masking.d.ts) makes read/writeFragment use.
-import type { GraphQLCodegenDataMasking } from '@apollo/client/masking';
-
-type Unmasked<TData> = GraphQLCodegenDataMasking.Unmasked<TData>;
 import { serializeError } from '#/utils/errorSerialization';
 import { logger } from '#/utils/environment';
-
-/**
- * gc with `resetResultCache`, so stale results referencing evicted entities are
- * discarded immediately. Only `InMemoryCache` exposes the option, hence the
- * `instanceof` narrowing — `ApolloCache.gc()`'s abstract signature omits it.
- */
-function gcResetResultCache(cache: ApolloCache): string[] {
-  if (cache instanceof InMemoryCache) {
-    return cache.gc({ resetResultCache: true });
-  }
-  return cache.gc();
-}
 
 /**
  * Drop the retain `writeFragment`/`writeQuery` adds for every id it writes
@@ -50,7 +32,7 @@ function evictEntity(
   if (!cacheId) return false;
   cache.evict({ id: cacheId });
   releaseEntity(cache, cacheId);
-  gcResetResultCache(cache);
+  cache.gc();
   return true;
 }
 
@@ -320,10 +302,11 @@ export function createAddToQueryConnectionUpdater<T extends { id: string }>(
 }
 
 /**
- * Remove an item from a Query root Connection field. `evictItem: true` evicts the
- * entity and gcs — the connection's `read` policy then drops the dangling edge and
- * decrements `totalCount` on the next read. Otherwise the edge is filtered here.
- * Reports whether anything was removed.
+ * Remove an item from a Query root Connection field. The edge is filtered here;
+ * `evictItem: true` also evicts the entity and gcs. The edge goes either way: a
+ * delete response's `{ id }` stub re-creates the entity, and an edge left to
+ * dangle then resolves to a row missing every field. Reports whether anything
+ * was removed.
  */
 export function createRemoveFromQueryConnectionUpdater(
   fieldName: string,
@@ -335,7 +318,6 @@ export function createRemoveFromQueryConnectionUpdater(
     { evictItem = false }: RemoveOptions = {},
   ): boolean => {
     try {
-      if (evictItem) return evictEntity(cache, typename, itemId);
       let removed = false;
       cache.modify({
         fields: {
@@ -344,6 +326,7 @@ export function createRemoveFromQueryConnectionUpdater(
           }),
         },
       });
+      if (evictItem) return evictEntity(cache, typename, itemId) || removed;
       return removed;
     } catch (error) {
       logger.warn(
@@ -386,7 +369,8 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
 /**
  * Remove an item from a parent entity's Connection field; the same two modes as
  * {@link createRemoveFromQueryConnectionUpdater}. Reports whether an edge was
- * removed, so a caller pairing this with a counter adjusts only on a real change.
+ * removed, so a caller pairing this with a counter adjusts only on a real change;
+ * with `evictItem`, also whether the entity was.
  */
 export function createRemoveFromParentConnectionUpdater(
   parentTypename: string,
@@ -400,18 +384,19 @@ export function createRemoveFromParentConnectionUpdater(
     { evictItem = false }: RemoveOptions = {},
   ): boolean => {
     try {
-      if (evictItem) return evictEntity(cache, itemTypename, itemId);
       const id = identifyParent(cache, parentTypename, parentId);
-      if (!id) return false;
       let removed = false;
-      cache.modify({
-        id,
-        fields: {
-          [connectionField]: removeEdgeModifier(itemId, () => {
-            removed = true;
-          }),
-        },
-      });
+      if (id) {
+        cache.modify({
+          id,
+          fields: {
+            [connectionField]: removeEdgeModifier(itemId, () => {
+              removed = true;
+            }),
+          },
+        });
+      }
+      if (evictItem) return evictEntity(cache, itemTypename, itemId) || removed;
       return removed;
     } catch (error) {
       logger.warn(
@@ -487,98 +472,6 @@ export function createRemoveFromParentArrayUpdater(
   };
 }
 
-/**
- * Set scalar fields on a cached entity. The value type is deliberately narrow: for
- * objects, arrays or `Reference` writes call `cache.modify` directly, so the field
- * modifier can compose the new value from `existing` plus its helpers.
- */
-export function setCachedFields(
-  cache: ApolloCache,
-  typename: string,
-  entityId: string,
-  fieldValues: Record<string, string | number | boolean | null | undefined>,
-): void {
-  try {
-    const cacheId = cache.identify({ __typename: typename, id: entityId });
-    if (!cacheId) return;
-
-    const fields: Record<
-      string,
-      () => string | number | boolean | null | undefined
-    > = {};
-    for (const [key, value] of Object.entries(fieldValues)) {
-      fields[key] = () => value;
-    }
-
-    cache.modify({ id: cacheId, fields });
-  } catch (error) {
-    logger.warn(
-      `Cache update failed for ${typename}:${entityId}:`,
-      serializeError(error),
-    );
-  }
-}
-
-/**
- * Snapshot an entity via its fragment, write `patch` over it PERMANENTLY (not
- * Apollo's transient optimistic layer, so it survives a queued mutation), and
- * return a revert. The fragment must select every patched field plus `updatedAt`,
- * and `readFragment` returns null on ANY missing one — write and revert then no-op.
- */
-export function applyOptimisticFragmentPatch<TFragment>(
-  cache: ApolloCache,
-  entity: { typename: string; id: string },
-  doc: {
-    fragment: TypedDocumentNode<TFragment, unknown>;
-    fragmentName: string;
-  },
-  patch: Partial<Unmasked<TFragment>>,
-  label: string,
-): () => void {
-  const cacheId = cache.identify({
-    __typename: entity.typename,
-    id: entity.id,
-  });
-  // readFragment/writeFragment operate on Unmasked<TFragment> — Apollo's own
-  // signature for the round trip, not a mask bypass; these fragments are flat.
-  const snapshot = cacheId
-    ? cache.readFragment<TFragment>({
-        id: cacheId,
-        fragment: doc.fragment,
-        fragmentName: doc.fragmentName,
-      })
-    : null;
-
-  const write = (data: Unmasked<TFragment>, writeLabel: string) => {
-    try {
-      cache.writeFragment({
-        id: cacheId,
-        fragment: doc.fragment,
-        fragmentName: doc.fragmentName,
-        data,
-      });
-    } catch (error) {
-      logger.warn(
-        `Cache update failed for ${writeLabel}:`,
-        serializeError(error),
-      );
-    }
-  };
-
-  if (snapshot) {
-    write(
-      { ...snapshot, ...patch, updatedAt: new Date().toISOString() },
-      `${label} (optimistic)`,
-    );
-  }
-
-  return () => {
-    if (snapshot) {
-      write(snapshot, `Revert ${label}`);
-    }
-  };
-}
-
 /** Evict one entity, release its retains and gc; use instead of evict + gc. */
 export function safeEvict(
   cache: ApolloCache,
@@ -612,7 +505,7 @@ export function adoptServerEntityId(
   }
 }
 
-/** Evict several entities with a single gc pass. */
+/** Evict several entities, releasing each one's retains, with a single gc pass. */
 export function safeEvictMany(
   cache: ApolloCache,
   items: ReadonlyArray<{ typename: string; id: string }>,
@@ -622,9 +515,10 @@ export function safeEvictMany(
       const cacheId = cache.identify({ __typename: typename, id });
       if (cacheId) {
         cache.evict({ id: cacheId });
+        releaseEntity(cache, cacheId);
       }
     }
-    gcResetResultCache(cache);
+    cache.gc();
   } catch (error) {
     logger.warn('Batch cache eviction failed:', serializeError(error));
   }

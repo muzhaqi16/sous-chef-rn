@@ -1,11 +1,12 @@
 import { logger } from '#/utils/environment';
 import { useEffect, useRef, useState } from 'react';
-import { useLazyQuery, useQuery } from '@apollo/client/react';
+import { skipToken, useApolloClient, useQuery } from '@apollo/client/react';
 import {
   SearchUnitsDocument,
   GetCommonUnitsDocument,
 } from '#operations/item/unit.generated';
 import { useAppStore, useIsOnline } from '#store/useAppStore';
+import { fromServer } from '#/apollo/utils/fromServer';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
 import type { UnitType } from '#/graphql/generated/schemaTypes';
@@ -34,10 +35,7 @@ export function useUnitAutocomplete() {
   // Lazy preload: fetch common units on first mount (when AddItemSheet opens)
   // and cache in Zustand for local-first autocomplete on subsequent uses
   const hasPreloadedRef = useRef(false);
-  const [fetchCommonUnits] = useLazyQuery(GetCommonUnitsDocument, {
-    fetchPolicy: 'cache-first',
-    errorPolicy: 'ignore',
-  });
+  const client = useApolloClient();
 
   useEffect(() => {
     if (hasPreloadedRef.current) return;
@@ -51,10 +49,15 @@ export function useUnitAutocomplete() {
     if (isCacheFresh) return;
 
     requestIdleCallback(() => {
-      void fetchCommonUnits()
-        .then(result => {
-          if (result.data?.units && result.data.units.length > 0) {
-            setCachedUnits(result.data.units);
+      void fromServer(() =>
+        client.query({
+          query: GetCommonUnitsDocument,
+          fetchPolicy: 'network-only',
+        }),
+      )
+        .then(data => {
+          if (data && data.units.length > 0) {
+            setCachedUnits(data.units);
             setLastUnitsFetchedAt(Date.now());
           }
         })
@@ -63,17 +66,22 @@ export function useUnitAutocomplete() {
   }, [
     cachedUnits.length,
     lastUnitsFetchedAt,
-    fetchCommonUnits,
+    client,
     setCachedUnits,
     setLastUnitsFetchedAt,
   ]);
 
-  // Skip-based query (not lazy)
-  const { data: searchData, loading } = useQuery(SearchUnitsDocument, {
-    variables: { query: debouncedSearchTerm, limit: 10 },
-    skip: !debouncedSearchTerm || debouncedSearchTerm.length < 2,
-    fetchPolicy: 'cache-first',
-  });
+  // Gated by `skipToken` (not lazy)
+  const { data: searchData, loading } = useQuery(
+    SearchUnitsDocument,
+    debouncedSearchTerm.length >= 2
+      ? {
+          variables: { query: debouncedSearchTerm, limit: 10 },
+          fetchPolicy: 'cache-first',
+          refetchOn: false,
+        }
+      : skipToken,
+  );
 
   const search = (term: string) => {
     setDebouncedSearchTerm(term);

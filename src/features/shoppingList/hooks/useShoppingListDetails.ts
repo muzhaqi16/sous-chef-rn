@@ -1,5 +1,6 @@
 import { NetworkStatus } from '@apollo/client';
-import { useApolloClient, useQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
+import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { GetShoppingListDetailsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   ShoppingListCollaboratorFragmentDoc,
@@ -10,54 +11,51 @@ import {
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 
 export function useShoppingListDetails(listId: string | undefined) {
-  const client = useApolloClient();
-  // Fetch policies per docs/apollo-client-patterns.md:
-  // - cache-and-network: Shows cache immediately, fetches fresh in background
-  // - nextFetchPolicy: cache-first prevents re-fetch on re-render/tab switch
-  // - notifyOnNetworkStatusChange: lets Apollo emit a re-render when the
-  //   network status transitions (used by RefreshControl in ShareList).
-  const { data, loading, refetch, networkStatus } = useQuery(
+  const {
+    data: result,
+    variables,
+    loading,
+    refetch,
+    networkStatus,
+  } = useQuery(
     GetShoppingListDetailsDocument,
-    {
-      variables: { id: listId ?? '' },
-      skip: !listId,
-      errorPolicy: 'ignore',
-      notifyOnNetworkStatusChange: true,
-    },
+    listId ? { variables: { id: listId }, errorPolicy: 'ignore' } : skipToken,
   );
+  // `skipToken` keeps the last run's variables AND data, so a result for a
+  // previous list is dropped.
+  const data = variables.id === listId ? result : undefined;
 
   // Real-time updates via subscription are now handled by SubscriptionProvider.
   // The MyShoppingListsEvents subscription automatically updates the cache via
   // Apollo's normalization, eliminating the need for manual client.writeQuery.
 
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
-  const shoppingList = usePreservedQueryData(data?.shoppingList, null);
+  const shoppingList = usePreservedQueryData(
+    data?.shoppingList,
+    null,
+    listId ?? '',
+  );
   const isRefetching = networkStatus === NetworkStatus.refetch;
 
-  // Materialize masked collaborator + ownership refs once so downstream
-  // consumers (ownership helpers, ListSettings, ShareList) read fragment
-  // fields directly without each call site re-doing the lookup.
-  const isNonNull = <T>(v: T | null): v is T => v !== null;
-  const collaborators: ShoppingListCollaboratorFragment[] =
-    shoppingList?.collaboratorsConnection.edges
-      .map(edge =>
-        client.cache.readFragment<ShoppingListCollaboratorFragment>({
-          fragment: ShoppingListCollaboratorFragmentDoc,
-          fragmentName: 'ShoppingListCollaboratorFragment',
-          from: { __typename: 'ShoppingListCollaborator', id: edge.node.id },
-        }),
-      )
-      .filter(isNonNull) ?? [];
-  const ownerships: ShoppingListOwnershipFragment[] =
-    shoppingList?.ownerships
-      .map(o =>
-        client.cache.readFragment<ShoppingListOwnershipFragment>({
-          fragment: ShoppingListOwnershipFragmentDoc,
-          fragmentName: 'ShoppingListOwnershipFragment',
-          from: { __typename: 'ShoppingListOwnership', id: o.id },
-        }),
-      )
-      .filter(isNonNull) ?? [];
+  // Read live, once, so downstream consumers (ownership helpers, ListSettings,
+  // ShareList) read fragment fields directly and follow a role or status edit,
+  // which leaves the query result as it was.
+  const collaboratorEntries = useFragmentList({
+    fragment: ShoppingListCollaboratorFragmentDoc,
+    fragmentName: 'ShoppingListCollaboratorFragment',
+    from: shoppingList?.collaboratorsConnection.edges.map(e => e.node) ?? [],
+  });
+  const ownershipEntries = useFragmentList({
+    fragment: ShoppingListOwnershipFragmentDoc,
+    fragmentName: 'ShoppingListOwnershipFragment',
+    from: shoppingList?.ownerships ?? [],
+  });
+  const collaborators = collaboratorEntries.filter(
+    (c): c is ShoppingListCollaboratorFragment => c !== null,
+  );
+  const ownerships = ownershipEntries.filter(
+    (o): o is ShoppingListOwnershipFragment => o !== null,
+  );
 
   return {
     shoppingList,
@@ -66,10 +64,11 @@ export function useShoppingListDetails(listId: string | undefined) {
     // preserved is the only sign a read failed.
     hasResult: shoppingList !== null,
     isRefetching,
-    refetch,
+    refetch: () => (listId ? refetch() : Promise.resolve()),
     name: shoppingList?.name ?? '',
     collaborators,
     ownerships,
-    isShared: collaborators.length > 0,
+    // Counted by entry, so a collaborator not fully cached still counts.
+    isShared: collaboratorEntries.length > 0,
   };
 }

@@ -22,6 +22,7 @@ mutation RegisterDevice($input: RegisterDeviceInput!) {
     ... on RegisterDevicePayload {
       device {
         id
+        ...DeviceReaders
       }
     }
     ... on Error {
@@ -42,6 +43,7 @@ mutation UpdateDevice($input: UpdateDeviceInput!) {
     ... on UpdateDevicePayload {
       device {
         id
+        ...DeviceReaders
       }
     }
     ... on Error {

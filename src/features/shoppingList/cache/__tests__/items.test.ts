@@ -3,48 +3,59 @@
  * reconcile that adopts the server id.
  */
 
+import { gql } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import {
   reconcileShoppingItemCreateUpdate,
   buildAddItemsReconcileUpdate,
-  createOptimisticShoppingListItem,
+  addLocalShoppingListItem,
+  createLocalShoppingListItem,
   revertOptimisticShoppingListItem,
 } from '../items';
+import { Items_RowFragmentDoc } from '../items.generated';
 import { createMockCache, invokeFieldModifier } from './helpers/mockCache';
 import type { MockedCache } from './helpers/mockCache';
 
-describe('createOptimisticShoppingListItem', () => {
-  it('bakes the passed client id straight into the entity (no temp- prefix)', () => {
-    const entity = createOptimisticShoppingListItem('c-abc123', {
-      shoppingListId: 'list-1',
-      itemName: 'Milk',
+describe('addLocalShoppingListItem: the row', () => {
+  const writeLine = (
+    cache: ReturnType<typeof makeCache>,
+    fields: Parameters<typeof createLocalShoppingListItem>[1],
+  ) => {
+    addLocalShoppingListItem(
+      cache,
+      fields.shoppingListId,
+      createLocalShoppingListItem('c-1', fields),
+    );
+    return cache.readFragment({
+      id: 'ShoppingListItem:c-1',
+      fragment: Items_RowFragmentDoc,
+      fragmentName: 'items_row',
     });
-    expect(entity.id).toBe('c-abc123');
-    expect(entity.__typename).toBe('ShoppingListItem');
-  });
+  };
 
-  it('defaults quantity to 1, optional fields to null, displayFormat to AUTO', () => {
-    const entity = createOptimisticShoppingListItem('c-1', {
+  it('writes a complete row under the client id, with neutral defaults', () => {
+    const line = writeLine(makeCache(), {
       shoppingListId: 'list-1',
       itemName: 'Bread',
     });
-    expect(entity.quantity).toBe(1);
-    expect(entity.quantityInput).toBeNull();
-    expect(entity.unitName).toBeNull();
-    expect(entity.category).toBeNull();
-    expect(entity.notes).toBeNull();
-    expect(entity.displayFormat).toBe('AUTO');
-    expect(entity.sortOrder).toBe('');
-    expect(entity.purchaseInfo).toEqual({
-      __typename: 'ShoppingListItemPurchaseInfo',
-      isPurchased: false,
-      movedToPantryAt: null,
+
+    expect(line).toMatchObject({
+      __typename: 'ShoppingListItem',
+      id: 'c-1',
+      quantity: 1,
+      quantityInput: null,
+      unitName: null,
+      category: null,
+      notes: null,
+      displayFormat: 'AUTO',
+      item: null,
+      unit: null,
     });
-    expect(entity.item).toBeNull();
-    expect(entity.unit).toBeNull();
+    expect(line?.purchaseInfo.isPurchased).toBe(false);
   });
 
-  it('uses provided optional fields', () => {
-    const entity = createOptimisticShoppingListItem('c-2', {
+  it('uses the fields the create states', () => {
+    const line = writeLine(makeCache(), {
       shoppingListId: 'list-1',
       itemName: 'Milk',
       quantity: 2,
@@ -52,30 +63,52 @@ describe('createOptimisticShoppingListItem', () => {
       unitName: 'gallon',
       category: 'Dairy',
     });
-    expect(entity.quantity).toBe(2);
-    expect(entity.quantityInput).toBe('2');
-    expect(entity.unitName).toBe('gallon');
-    expect(entity.category).toBe('Dairy');
+
+    expect(line).toMatchObject({
+      quantity: 2,
+      quantityInput: '2',
+      unitName: 'gallon',
+      category: 'Dairy',
+    });
   });
 
-  it('builds item ref from itemId and unit ref from unitId', () => {
-    const entity = createOptimisticShoppingListItem('c-3', {
+  it('keeps the unit and catalog item the cache holds', () => {
+    const cache = makeCache();
+    cache.writeFragment({
+      fragment: gql`
+        fragment HeldUnit on Unit {
+          id
+          name
+          symbol
+        }
+      `,
+      data: { __typename: 'Unit', id: 'unit-g', name: 'gram', symbol: 'g' },
+    });
+    cache.writeFragment({
+      fragment: gql`
+        fragment HeldItem on Item {
+          id
+          imageUrl
+        }
+      `,
+      data: {
+        __typename: 'Item',
+        id: 'item-milk',
+        imageUrl: 'https://cdn.example.com/milk.jpg',
+      },
+    });
+
+    const line = writeLine(cache, {
       shoppingListId: 'list-1',
       itemName: 'Milk',
-      itemId: 'item-456',
-      unitId: 'unit-789',
+      itemId: 'item-milk',
+      unitId: 'unit-g',
     });
-    expect(entity.item).toEqual({
-      __typename: 'Item',
-      id: 'item-456',
-      imageUrl: null,
-      images: [],
-    });
-    expect(entity.unit).toEqual({
-      __typename: 'Unit',
-      id: 'unit-789',
-      name: '',
-      symbol: '',
+
+    expect(line?.unit).toMatchObject({ id: 'unit-g', symbol: 'g' });
+    expect(line?.item).toMatchObject({
+      id: 'item-milk',
+      imageUrl: 'https://cdn.example.com/milk.jpg',
     });
   });
 });

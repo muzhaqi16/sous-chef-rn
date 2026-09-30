@@ -6,7 +6,7 @@
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { toDateKey } from '#/utils/dateUtils';
+import { todayKey } from '#/utils/dateUtils';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
@@ -36,6 +36,7 @@ export function usePantryItemMutations({
   // Apollo re-normalizes from `pantryItem { id }`; a converged delete carries no
   // item, and evicting by the input id keeps both answers on one path.
   const [removeItemMutation] = useMutation(DeletePantryItemDocument, {
+    context: { localFirst: true },
     update: (cache, { data }, { variables }) => {
       if (!appliedPayload(data) || !pantryId || !variables) {
         return;
@@ -83,8 +84,7 @@ export function usePantryItemMutations({
     const settled = await settleMutation(
       () =>
         removeItemMutation({
-          variables: { input: { id: itemId }, today: toDateKey(new Date()) },
-          context: { localFirst: true },
+          variables: { input: { id: itemId }, today: todayKey() },
         }),
       {
         document: DeletePantryItemDocument,

@@ -10,7 +10,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { CreateHomeDocument } from '#operations/home/home.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
-import { Home_HomeDetailFragmentDoc } from '#features/home/cache/home.generated';
+import { Home_RowFragmentDoc } from '#features/home/cache/home.generated';
 import { useCreateHome } from '../useCreateHome';
 import { useCreatePantry } from '#features/pantry/hooks/useCreatePantry';
 import { useStore } from '#store';
@@ -42,8 +42,8 @@ const readHome = (cache: ReturnType<typeof seedCache>, id: string) =>
     pantriesConnection: { edges: Array<{ node: { id: string } }> };
   }>({
     id: cache.identify({ __typename: 'Home', id }),
-    fragment: Home_HomeDetailFragmentDoc,
-    fragmentName: 'home_homeDetail',
+    fragment: Home_RowFragmentDoc,
+    fragmentName: 'home_row',
   });
 
 describe('creating a home with the API unreachable', () => {

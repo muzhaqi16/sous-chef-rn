@@ -15,13 +15,11 @@ import {
 import { planFromTemplate } from '#features/mealPlan/utils/planFromTemplate';
 import { templateFromPlan } from '#features/mealPlan/utils/templateFromPlan';
 import { duplicateTemplate as deriveTemplateCopy } from '#features/mealPlan/utils/duplicateTemplate';
-import {
-  buildOptimisticTemplate,
-  writeOptimisticTemplate,
-} from '#features/mealPlan/utils/buildOptimisticTemplate';
+import { writeLocalMealTemplate } from '#features/mealPlan/cache/mealTemplate';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
-import { writeOptimisticMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
+import { writeLocalMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
 import { useUser } from '#store/useAppStore';
+import { generateEntityId } from '#/utils/generateEntityId';
 import {
   MealTemplateDisplayFragmentDoc,
   type MealTemplateDisplayFragment,
@@ -41,17 +39,14 @@ import {
 } from '#/apollo/utils/settleMutation';
 import {
   createAddToQueryConnectionUpdater,
-  createRemoveFromQueryConnectionUpdater,
   skipUnmatchedFilterVariants,
 } from '#/apollo/utils/cacheUpdaters';
 import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
+import { removeFromMealTemplates } from '#features/mealPlan/cache/removals';
+import { settleMealTemplateDelete } from '#features/mealPlan/offline/replayReconcilers';
 
 const addToMealTemplates = createAddToQueryConnectionUpdater(
-  'mealTemplates',
-  'MealTemplate',
-);
-const removeFromMealTemplates = createRemoveFromQueryConnectionUpdater(
   'mealTemplates',
   'MealTemplate',
 );
@@ -65,6 +60,7 @@ export function useMealTemplateActions() {
   const [createTemplateMutation, { loading: creatingTemplate }] = useMutation(
     CreateMealTemplateDocument,
     {
+      context: { localFirst: true },
       update: (cache, { data }) => {
         const payload = appliedPayload(data);
         if (payload) {
@@ -84,11 +80,17 @@ export function useMealTemplateActions() {
 
   const [createPlanItem, { loading: addingMeals }] = useMutation(
     CreateMealPlanItemDocument,
+    { context: { localFirst: true } },
   );
 
-  // The optimistic remove + revert live in deleteTemplate (local-first), so this
-  // mutation has no update callback.
-  const [deleteTemplateMutation] = useMutation(DeleteMealTemplateDocument);
+  // The optimistic remove + revert live in deleteTemplate (local-first).
+  const [deleteTemplateMutation] = useMutation(DeleteMealTemplateDocument, {
+    context: { localFirst: true },
+    update: (cache, { data }, { variables }) => {
+      if (variables && appliedPayload(data))
+        settleMealTemplateDelete(cache, variables, data);
+    },
+  });
 
   const reportSkipped = (count: number) => {
     if (count === 0) return;
@@ -109,14 +111,21 @@ export function useMealTemplateActions() {
   const createTemplate = async (
     input: CreateMealTemplateInput,
   ): Promise<boolean> => {
-    const optimistic = user ? buildOptimisticTemplate(input, user.id) : null;
-    if (optimistic) {
+    // The minted id is the row's PK, so the replay converges on this row.
+    const id = input.id ?? generateEntityId();
+    const ownerId = user?.id;
+    if (ownerId) {
       try {
-        writeOptimisticTemplate(client.cache, optimistic);
-        addToMealTemplates(client.cache, optimistic, {
+        const template = writeLocalMealTemplate(
+          client.cache,
+          id,
+          input,
+          ownerId,
+        );
+        addToMealTemplates(client.cache, template, {
           position: 'start',
           skipStoreField: skipUnmatchedFilterVariants({
-            category: optimistic.category,
+            category: template.category,
           }),
         });
       } catch (cacheError) {
@@ -127,9 +136,9 @@ export function useMealTemplateActions() {
     }
 
     const revertCreate = () => {
-      if (!optimistic) return;
+      if (!ownerId) return;
       try {
-        removeFromMealTemplates(client.cache, optimistic.id, {
+        removeFromMealTemplates(client.cache, id, {
           evictItem: true,
         });
       } catch (cacheError) {
@@ -142,8 +151,7 @@ export function useMealTemplateActions() {
     const settled = await settleMutation(
       () =>
         createTemplateMutation({
-          variables: { input },
-          context: { localFirst: true },
+          variables: { input: { ...input, id } },
         }),
       {
         document: CreateMealTemplateDocument,
@@ -178,12 +186,11 @@ export function useMealTemplateActions() {
     let failedMeal: SettledFailure | undefined;
     for (const meal of derived.items) {
       // Offline the new plan shows its meals only from this write.
-      const revert = writeOptimisticMealPlanItem(client.cache, meal);
+      const revert = writeLocalMealPlanItem(client.cache, meal);
       const settled = await settleMutation(
         () =>
           createPlanItem({
             variables: { input: meal },
-            context: { localFirst: true },
           }),
         {
           document: CreateMealPlanItemDocument,
@@ -295,7 +302,6 @@ export function useMealTemplateActions() {
       () =>
         deleteTemplateMutation({
           variables: { input: { id } },
-          context: { localFirst: true },
         }),
       {
         document: DeleteMealTemplateDocument,

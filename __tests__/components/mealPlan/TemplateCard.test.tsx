@@ -3,17 +3,47 @@
 import React from 'react';
 import { userEvent } from '@testing-library/react-native';
 import { TemplateCategory } from '../../../src/graphql/generated/schemaTypes';
-import type { MealTemplateDisplayFragment } from '../../../src/features/mealPlan/graphql/mealPlanFragments.generated';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  MealTemplateDisplayFragmentDoc,
+  type MealTemplateDisplayFragment,
+} from '../../../src/features/mealPlan/graphql/mealPlanFragments.generated';
+import {
+  renderWithApollo,
+  seedCache,
+  toFragmentRef,
+} from '#/test-utils/apolloMockProvider';
 import { TemplateCard } from '../../../src/features/mealPlan/components/TemplateCard';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
 
-// TemplateCard uses useFragment to subscribe to per-entity cache updates.
-// Wrapping with MockedProvider lets the hook's useApolloClient() resolve;
-// the in-test cache miss is expected (renderer falls back to source prop).
-const render = renderWithApollo;
+/** A strict cell: the template is read from the cache, the prop is its key. */
+const renderCard = (
+  template: MealTemplateDisplayFragment | null,
+  onPress: (template: MealTemplateDisplayFragment) => void,
+) =>
+  renderWithApollo(
+    <TemplateCard
+      template={toFragmentRef<typeof MealTemplateDisplayFragmentDoc>({
+        __typename: 'MealTemplate',
+        id: 't1',
+      })}
+      onPress={onPress}
+    />,
+    {
+      cache: seedCache(
+        template
+          ? [
+              {
+                data: template,
+                fragment: MealTemplateDisplayFragmentDoc,
+                fragmentName: 'MealTemplateDisplay',
+              },
+            ]
+          : [],
+      ),
+    },
+  );
 
 const makeTemplate = (
   overrides: Partial<MealTemplateDisplayFragment> = {},
@@ -40,30 +70,22 @@ describe('TemplateCard', () => {
   const onPress = jest.fn();
 
   it('renders template name', () => {
-    const { getByText } = render(
-      <TemplateCard template={makeTemplate()} onPress={onPress} />,
-    );
+    const { getByText } = renderCard(makeTemplate(), onPress);
     expect(getByText('Weekly Dinner Plan')).toBeTruthy();
   });
 
   it('renders description', () => {
-    const { getByText } = render(
-      <TemplateCard template={makeTemplate()} onPress={onPress} />,
-    );
+    const { getByText } = renderCard(makeTemplate(), onPress);
     expect(getByText('A balanced dinner plan')).toBeTruthy();
   });
 
   it('shows usage count', () => {
-    const { getByText } = render(
-      <TemplateCard template={makeTemplate()} onPress={onPress} />,
-    );
+    const { getByText } = renderCard(makeTemplate(), onPress);
     expect(getByText('Used 3x')).toBeTruthy();
   });
 
   it('renders duration and servings meta', () => {
-    const { getByText } = render(
-      <TemplateCard template={makeTemplate()} onPress={onPress} />,
-    );
+    const { getByText } = renderCard(makeTemplate(), onPress);
     expect(getByText('7 days')).toBeTruthy();
     expect(getByText('4 servings')).toBeTruthy();
   });
@@ -71,10 +93,13 @@ describe('TemplateCard', () => {
   it('calls onPress when pressed', async () => {
     const user = userEvent.setup();
     const template = makeTemplate();
-    const { getByText } = render(
-      <TemplateCard template={template} onPress={onPress} />,
-    );
+    const { getByText } = renderCard(template, onPress);
     await user.press(getByText('Weekly Dinner Plan'));
     expect(onPress).toHaveBeenCalledWith(template);
+  });
+
+  it('renders nothing while the template is not completely cached', () => {
+    const { queryByText } = renderCard(null, onPress);
+    expect(queryByText('Weekly Dinner Plan')).toBeNull();
   });
 });

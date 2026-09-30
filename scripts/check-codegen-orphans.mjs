@@ -16,16 +16,40 @@ const SKIP = [/(^|\/)(node_modules|generated)(\/|$)/];
 // `exclude`, which is called with bare basenames for files.
 const SKIP_FILES = new Set([
   fromRoot('src', 'config', 'env.generated.ts'),
-  // Written by `scripts/generate-optimistic-fillers.mjs` from the SDL, so its
-  // `.graphql` sibling is the fragment file it DERIVES from
-  // (`writePantryItemDetailStub.graphql`), under a different name. Same
-  // situation as env.generated.ts: generator-owned, not a codegen leftover.
+  // Same generator, derived from `useCreateStorageLocation.graphql`.
+  fromRoot(
+    'src',
+    'features',
+    'catalog',
+    'hooks',
+    'useCreateStorageLocationNeutral.generated.ts',
+  ),
+  // Same generator, derived from `items.graphql`.
+  fromRoot(
+    'src',
+    'features',
+    'shoppingList',
+    'cache',
+    'shoppingListItemRowNeutral.generated.ts',
+  ),
+  // Same generator, derived from `pantry.graphql`.
   fromRoot(
     'src',
     'features',
     'pantry',
-    'hooks',
-    'pantryItemDetailNeutral.generated.ts',
+    'cache',
+    'pantryRowNeutral.generated.ts',
+  ),
+  // Written by `scripts/generate-optimistic-fillers.mjs` from the SDL, so its
+  // `.graphql` sibling is the fragment file it DERIVES from
+  // (`writeLocalPantryItem.graphql`), under a different name. Same situation
+  // as env.generated.ts: generator-owned, not a codegen leftover.
+  fromRoot(
+    'src',
+    'features',
+    'pantry',
+    'cache',
+    'writeLocalPantryItemNeutral.generated.ts',
   ),
   // Same generator, derived from `list.graphql`.
   fromRoot(
@@ -33,7 +57,7 @@ const SKIP_FILES = new Set([
     'features',
     'shoppingList',
     'cache',
-    'shoppingListDetailNeutral.generated.ts',
+    'shoppingListRowNeutral.generated.ts',
   ),
   // Same generator, derived from `recipeCacheWriters.graphql`.
   fromRoot(
@@ -41,24 +65,47 @@ const SKIP_FILES = new Set([
     'features',
     'recipes',
     'utils',
-    'recipeFormFieldsNeutral.generated.ts',
+    'recipeRowNeutral.generated.ts',
   ),
-  // Same generator, derived from `useMealPlanActions.graphql`.
+  // Same generator, derived from `mealPlan.graphql`, `mealPlanItem.graphql`,
+  // `mealTemplate.graphql`, `mealTemplateItem.graphql` and `favorites.graphql`.
   fromRoot(
     'src',
     'features',
     'mealPlan',
-    'hooks',
-    'mealPlanDetailNeutral.generated.ts',
+    'cache',
+    'mealPlanRowNeutral.generated.ts',
   ),
-  // Same generator, derived from `home.graphql`.
   fromRoot(
     'src',
     'features',
-    'home',
+    'mealPlan',
     'cache',
-    'homeDetailNeutral.generated.ts',
+    'mealPlanItemRowNeutral.generated.ts',
   ),
+  fromRoot(
+    'src',
+    'features',
+    'mealPlan',
+    'cache',
+    'mealTemplateRowNeutral.generated.ts',
+  ),
+  fromRoot(
+    'src',
+    'features',
+    'mealPlan',
+    'cache',
+    'mealTemplateItemRowNeutral.generated.ts',
+  ),
+  fromRoot(
+    'src',
+    'features',
+    'recipes',
+    'cache',
+    'savedRecipeRowNeutral.generated.ts',
+  ),
+  // Same generator, derived from `home.graphql`.
+  fromRoot('src', 'features', 'home', 'cache', 'homeRowNeutral.generated.ts'),
 ]);
 
 const fix = process.argv.includes('--fix');

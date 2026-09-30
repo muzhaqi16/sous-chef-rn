@@ -23,7 +23,7 @@ export interface UseMoveToPantryModalResult {
   pantries: readonly MoveTarget[];
   selectedPantryId: string | null;
   /** Lazy-loads the pantry list on first open. */
-  openForItem: (itemId: string) => Promise<void>;
+  openForItem: (itemId: string) => void;
   close: () => void;
   /** Resolves true once the move is applied or queued. */
   confirm: (input: MoveToPantryInput) => Promise<boolean>;
@@ -61,13 +61,13 @@ export function useMoveToPantryModal(
     },
   });
 
-  const openForItem = async (itemId: string) => {
+  const openForItem = (itemId: string) => {
     if (!homeDataLoaded) {
-      await fetchHomeData();
+      fetchHomeData();
     }
 
-    // `targets` and `homeDataLoaded` are this render's values: the awaited fetch
-    // populates them on the next render, so the alert lands on the second open.
+    // `targets` and `homeDataLoaded` are this render's values: the requested
+    // homes land on a later render, so the alert lands on the second open.
     if (homeDataLoaded && targets.status === 'noPantry') {
       alertService.alert(
         t('moveToPantry.noPantryTitle'),

@@ -27,14 +27,26 @@ subscription NotificationEvents {
 # QUERIES
 # ============================================
 
+# The badge alone: the server-event re-read, and what the badge readers watch.
+query NotificationSummary {
+  notificationSummary {
+    id
+    unreadCount
+    hasUrgent
+  }
+}
+
 query GetUnreadNotifications {
+  # Server-authoritative badge: it stays correct when more are unread than the
+  # page below loads, and after a cache clear (a list recompute under-counts
+  # both).
+  notificationSummary {
+    id
+    unreadCount
+    hasUrgent
+  }
   me {
     id
-    # Server-authoritative counts — the badge seeds from these so it stays
-    # correct even when there are more unread than the page below loads, or
-    # after a cache clear (the local list-recompute alone under-counts both).
-    unreadNotificationCount
-    hasUrgentNotifications
     notificationsConnection(
       filters: { unreadOnly: true }
       first: 50
@@ -63,13 +75,15 @@ query GetNotifications(
   $first: Int = 30
   $after: String
 ) {
+  # Server-authoritative badge, re-read with the history: it stays correct when
+  # more are unread than this page holds, as in GetUnreadNotifications.
+  notificationSummary {
+    id
+    unreadCount
+    hasUrgent
+  }
   me {
     id
-    # Server-authoritative counts — re-seed the badge after the history loads so
-    # it stays correct even when more are unread than this page holds (the local
-    # list-recompute alone under-counts), mirroring GetUnreadNotifications.
-    unreadNotificationCount
-    hasUrgentNotifications
     notificationsConnection(
       filters: $filter
       first: $first

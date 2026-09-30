@@ -4,15 +4,9 @@ import {
   GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  addOptimisticShoppingListItem,
-  createOptimisticShoppingListItem,
-  reconcileShoppingCreate,
-  buildAddItemsReconcileUpdate,
-  revertOptimisticShoppingListItem,
-} from '#features/shoppingList/cache/items';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { errorService } from '#/services/errorService';
+import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
+import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
+import { useTranslation } from '#/i18n';
 
 /** Whether the row survived. The caller owns the toast and the animation. */
 export type AddItemOutcome = 'kept' | 'reverted';
@@ -39,6 +33,7 @@ export function useAddToShoppingList({
   suggestionsLimit,
 }: UseAddToShoppingListArgs) {
   const client = useApolloClient();
+  const { t } = useTranslation();
 
   const [addItemMutation, { loading: adding }] = useMutation(
     AddItemToShoppingListDocument,
@@ -86,60 +81,19 @@ export function useAddToShoppingList({
     unitId,
   }: NewItem): Promise<AddItemOutcome> => {
     if (!shoppingListId) return 'reverted';
-    const id = generateEntityId();
-
-    try {
-      addOptimisticShoppingListItem(
-        client.cache,
-        shoppingListId,
-        createOptimisticShoppingListItem(id, {
-          shoppingListId,
-          itemName,
-          itemId,
-          unitId,
-        }),
-      );
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Add Shopping List Item (optimistic)',
-      });
-    }
-
-    // Built outside the try: a ternary is a value block, and one inside a try
-    // body bails the React Compiler out of the whole function.
-    const variables = {
-      input: {
-        shoppingListId,
-        items: [
-          {
-            id,
-            item: { itemId },
-            quantity: null,
-            unit: unitId ? { id: unitId } : undefined,
-          },
-        ],
+    const { outcome } = await createShoppingListRow(client.cache, {
+      listId: shoppingListId,
+      row: { itemName, itemId, unitId },
+      line: {
+        item: { itemId },
+        quantity: null,
+        unit: unitId ? { id: unitId } : undefined,
       },
-    };
-
-    let result;
-    let threw = false;
-    try {
-      result = await addItemMutation({
-        variables,
-        context: { localFirst: true },
-      });
-    } catch {
-      threw = true;
-    }
-
-    if (threw || !result) {
-      revertOptimisticShoppingListItem(client.cache, shoppingListId, id);
-      return 'reverted';
-    }
-    // A queued create (offline / API down) resolves with no data and no error —
-    // keep the row. A real rejection lands here too under `errorPolicy: 'all'`,
-    // so the reconciler classifies the result rather than relying on a throw.
-    return reconcileShoppingCreate(client.cache, shoppingListId, id, result);
+      send: addItemMutation,
+      document: AddItemToShoppingListDocument,
+      fallback: t('errors.addItemFailed'),
+    });
+    return outcome;
   };
 
   return { addItem, removeSuggestion, adding };

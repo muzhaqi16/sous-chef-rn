@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "4.6.10",
+  "version": "4.6.11",
   "private": true,
   "scripts": {
     "android": "bash scripts/run-android.sh",
@@ -33,8 +33,9 @@
     "reset:cache": "npx react-native start --reset-cache",
     "npm:clean": "rm -rf node_modules/ && npm cache clean --force",
     "codegen:schema": "graphql-codegen --config codegen.schema.ts",
-    "codegen": "npm run codegen:schema && graphql-codegen --config codegen.ts && npm run codegen:fillers && npm run codegen:manifest",
+    "codegen": "npm run codegen:schema && npm run codegen:readers && graphql-codegen --config codegen.ts && npm run codegen:fillers && npm run codegen:manifest",
     "codegen:manifest": "node scripts/generate-pq-manifest.mjs",
+    "codegen:readers": "node scripts/generate-readers-fragments.mjs",
     "check:echo": "node scripts/check-subscription-echo.mjs",
     "check:codegen-orphans": "node scripts/check-codegen-orphans.mjs",
     "check:version-sync": "node scripts/check-version-sync.mjs",

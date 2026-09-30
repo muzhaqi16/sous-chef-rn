@@ -4,11 +4,9 @@ import {
   useMutation,
   useQuery,
 } from '@apollo/client/react';
-import type { ApolloCache } from '@apollo/client';
 import {
   GetPantryDocument,
   CreatePantryItemDocument,
-  type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import {
   UsePantryItemSelection_PantryItemFragmentDoc,
@@ -19,8 +17,6 @@ import {
   addToPantryItemsCache,
   revertOptimisticPantryItem,
 } from '#features/pantry/cache/items';
-import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
-import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
 import { usePantryItemMutations } from '#features/pantry/hooks/mutations/usePantryItemMutations';
 import type { AddPantryItemOutcome } from '#features/pantry/hooks/mutations/useAddToPantry';
 import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
@@ -29,15 +25,13 @@ import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { extractNodes } from '#/utils/connectionUtils';
+import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
 import { useToday } from '#hooks/useToday';
-
-type PantryItemsConnection = NonNullable<
-  GetPantryQuery['pantry']
->['itemsConnection'];
+import { writeLocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
 
 interface ExistingPantryIndex {
   /** catalog id -> the pantry row's id */
@@ -45,34 +39,23 @@ interface ExistingPantryIndex {
   existingCatalogIds: Set<string>;
 }
 
-// Keyed by the connection object, which Apollo replaces whenever the underlying
-// rows change, so a hit cannot go stale.
-const indexCache = new WeakMap<object, ExistingPantryIndex>();
+type PantryRow = UsePantryItemSelection_PantryItemFragment | null;
+
+// Keyed by the live rows array, which Apollo replaces whenever a row changes,
+// so a hit cannot go stale.
+const indexCache = new WeakMap<readonly PantryRow[], ExistingPantryIndex>();
 
 /**
- * Each row is a masked ref, so resolving costs one cache read apiece. The React
- * Compiler leaves this derivation uncached in a component body, so it is cached
- * explicitly against the connection identity.
+ * The React Compiler leaves this derivation uncached in a component body, so
+ * it is cached explicitly against the rows' identity.
  */
-function buildIndex(
-  cache: ApolloCache,
-  itemsConnection: PantryItemsConnection | undefined,
-): ExistingPantryIndex {
-  if (!itemsConnection) {
-    return { existingItemMap: new Map(), existingCatalogIds: new Set() };
-  }
-  const cached = indexCache.get(itemsConnection);
+function buildIndex(rows: readonly PantryRow[]): ExistingPantryIndex {
+  const cached = indexCache.get(rows);
   if (cached) return cached;
 
   const existingItemMap = new Map<string, string>();
   const existingCatalogIds = new Set<string>();
-  for (const ref of extractNodes(itemsConnection)) {
-    const pantryItem =
-      cache.readFragment<UsePantryItemSelection_PantryItemFragment>({
-        fragment: UsePantryItemSelection_PantryItemFragmentDoc,
-        fragmentName: 'usePantryItemSelection_pantryItem',
-        from: ref,
-      });
+  for (const pantryItem of rows) {
     if (!pantryItem) continue;
     const catalogId = pantryItem.item.id;
     if (catalogId) {
@@ -81,7 +64,7 @@ function buildIndex(
     }
   }
   const index = { existingItemMap, existingCatalogIds };
-  indexCache.set(itemsConnection, index);
+  indexCache.set(rows, index);
   return index;
 }
 
@@ -116,6 +99,7 @@ export function usePantryItemSelection(pantryId: string | null | undefined) {
   });
 
   const [createPantryItem] = useMutation(CreatePantryItemDocument, {
+    context: { localFirst: true },
     update: (cache, { data: result }, { variables }) => {
       const payload = appliedPayload(result);
       if (!payload || !pantryId) return;
@@ -138,10 +122,12 @@ export function usePantryItemSelection(pantryId: string | null | undefined) {
     },
   });
 
-  const { existingItemMap, existingCatalogIds } = buildIndex(
-    client.cache,
-    data?.pantry?.itemsConnection,
-  );
+  const rows = useFragmentList({
+    fragment: UsePantryItemSelection_PantryItemFragmentDoc,
+    fragmentName: 'usePantryItemSelection_pantryItem',
+    from: extractNodes(data?.pantry?.itemsConnection),
+  });
+  const { existingItemMap, existingCatalogIds } = buildIndex(rows);
 
   /**
    * The row is written and counted before firing, so a queued create shows at
@@ -158,22 +144,21 @@ export function usePantryItemSelection(pantryId: string | null | undefined) {
     unconfirmedCreates.mark(id);
     const itemId = input.item.id ?? null;
     // Built outside the try: a value block inside a try body bails the compiler.
-    const optimistic = buildOptimisticPantryItem(
-      id,
-      {
-        pantryId,
-        itemName,
-        itemId,
-        quantity: input.quantity,
-        unitId: input.unit?.id,
-        storageState: input.storage?.storageState,
-      },
-      client.cache,
-    );
+    const localRow = {
+      pantryId,
+      itemName,
+      itemId,
+      quantity: input.quantity,
+      unitId: input.unit?.id,
+      storageState: input.storage?.storageState,
+    };
 
     try {
-      addPantryItemLocally(client.cache, pantryId, optimistic);
-      writePantryItemDetailStub(client.cache, id, { itemId, itemName });
+      writeLocalPantryItem(client.cache, id, localRow);
+      addPantryItemLocally(client.cache, pantryId, {
+        __typename: 'PantryItem',
+        id,
+      });
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Add Pantry Item (optimistic)',
@@ -185,7 +170,6 @@ export function usePantryItemSelection(pantryId: string | null | undefined) {
     try {
       result = await createPantryItem({
         variables: { input: { ...input, id, pantryId, today }, today },
-        context: { localFirst: true },
       });
     } catch (error) {
       thrown = error;

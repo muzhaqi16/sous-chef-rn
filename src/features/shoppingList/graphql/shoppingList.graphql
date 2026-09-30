@@ -71,14 +71,7 @@ query GetShoppingListDetails($id: ID!) {
         cursor
         node {
           id
-          role
-          status
-          canAddItems
-          canRemoveItems
-          canEditItems
-          canMarkPurchased
           ...ShoppingListCollaboratorFragment
-          invitedAt
         }
       }
       pageInfo {
@@ -340,21 +333,8 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
     ... on CreateShoppingListPayload {
       shoppingList {
         id
+        ...ShoppingListReaders
         name
-        isDefault
-        totalItems
-        completedItems
-        createdAt
-        updatedAt
-        homeId
-        home {
-          id
-          name
-        }
-        ownerships {
-          id
-          ...ShoppingListOwnershipFragment
-        }
       }
     }
     ... on Error {
@@ -373,29 +353,7 @@ mutation UpdateShoppingList($input: UpdateShoppingListInput!) {
     ... on UpdateShoppingListPayload {
       shoppingList {
         id
-        name
-        isDefault
-        status
-        isCompleted
-        completedShopDate
-        budgetAmount
-        currency
-        priceTracking
-        totalCost
-        estimatedTotal
-        totalItems
-        completedItems
-        remainingItems
-        completionRate
-        createdAt
-        updatedAt
-        # Every versioned write bumps it; without it the cache keeps the old
-        # one and Save's follow-up budget write is refused as a conflict.
-        version
-        ownerships {
-          id
-          ...ShoppingListOwnershipFragment
-        }
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -418,12 +376,7 @@ mutation CompleteShoppingList($input: CompleteShoppingListInput!) {
     ... on CompleteShoppingListPayload {
       shoppingList {
         id
-        status
-        isCompleted
-        completedShopDate
-        totalCost
-        updatedAt
-        version
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -446,11 +399,7 @@ mutation MarkShoppingListActive($input: MarkShoppingListActiveInput!) {
     ... on MarkShoppingListActivePayload {
       shoppingList {
         id
-        status
-        isCompleted
-        completedShopDate
-        updatedAt
-        version
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -475,12 +424,7 @@ mutation CreateRecurringShoppingList(
     ... on CreateRecurringShoppingListPayload {
       shoppingList {
         id
-        isRecurring
-        recurringPattern
-        recurringInterval
-        nextRecurringDate
-        updatedAt
-        version
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -503,12 +447,7 @@ mutation CancelRecurring($input: CancelRecurringInput!) {
     ... on CancelRecurringPayload {
       shoppingList {
         id
-        isRecurring
-        recurringPattern
-        recurringInterval
-        nextRecurringDate
-        updatedAt
-        version
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -531,11 +470,7 @@ mutation MarkAsTemplate($input: MarkAsTemplateInput!) {
     ... on MarkAsTemplatePayload {
       shoppingList {
         id
-        isTemplate
-        templateName
-        status
-        updatedAt
-        version
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -558,10 +493,7 @@ mutation UpdateShoppingListReminder($input: UpdateShoppingListReminderInput!) {
     ... on UpdateShoppingListReminderPayload {
       shoppingList {
         id
-        reminderEnabled
-        reminderDate
-        updatedAt
-        version
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -584,10 +516,7 @@ mutation DeleteShoppingListReminder($input: DeleteShoppingListReminderInput!) {
     ... on DeleteShoppingListReminderPayload {
       shoppingList {
         id
-        reminderEnabled
-        reminderDate
-        updatedAt
-        version
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -610,9 +539,7 @@ mutation MarkShoppingListAsDefault($input: MarkShoppingListAsDefaultInput!) {
     ... on MarkShoppingListAsDefaultPayload {
       shoppingList {
         id
-        isDefault
-        updatedAt
-        version
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -635,7 +562,6 @@ mutation DeleteShoppingList($input: DeleteShoppingListInput!) {
     ... on DeleteShoppingListPayload {
       shoppingList {
         id
-        name
       }
     }
     ... on Error {
@@ -658,9 +584,13 @@ mutation AddCollaborator($input: InviteToShoppingListInput!) {
     ... on InviteToShoppingListPayload {
       collaborator {
         id
+        ...ShoppingListCollaboratorReaders
         ...ShoppingListCollaboratorFragment
         canEdit
-        invitedAt
+      }
+      shoppingList {
+        id
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -684,6 +614,10 @@ mutation RemoveCollaborator($input: RemoveShoppingListCollaboratorInput!) {
       collaborator {
         id
       }
+      shoppingList {
+        id
+        ...ShoppingListReaders
+      }
     }
     ... on Error {
       code
@@ -703,16 +637,23 @@ mutation AddItemToShoppingList($input: AddItemsToShoppingListInput!) {
   addItemsToShoppingList(input: $input) {
     __typename
     ... on AddItemsToShoppingListPayload {
+      shoppingList {
+        id
+        ...ShoppingListReaders
+      }
       results {
         index
         clientId
         success
-        code
-        quantityIncremented
+        failure {
+          code
+          reason
+          errorId
+        }
         packageSizeCleared
-        error
         item {
           id
+          ...ShoppingListItemReaders
           ...AddedShoppingListItemFields
         }
       }
@@ -737,40 +678,12 @@ mutation UpdateShoppingListItem($input: UpdateShoppingListItemInput!) {
     ... on UpdateShoppingListItemPayload {
       shoppingListItem {
         id
+        ...ShoppingListItemReaders
         ...UpdateShoppingListItem_item
-        # Marking an item purchased records a purchase server-side, so this
-        # summary moves with the write. Selected here (not in the fragment,
-        # which mirrors the optimistic shape) so ItemDetail's count and last
-        # date are right straight from the response, with no refetch.
-        purchaseHistory {
-          previouslyPurchased
-          purchaseCount
-          lastPurchaseDate
-        }
-        purchaseInfo {
-          ...ShoppingListItemPurchaseInfoFragment
-        }
-        # Brand and package size are editable from AddEditItem now that the
-        # update input accepts them. Selected here so the saved values land in
-        # the cache for ItemDetail and the form without a refetch; kept out of
-        # the hook fragment, which mirrors the optimistic shape.
-        brand {
-          id
-          name
-        }
-        netWeight
-        netWeightUnit {
-          id
-          name
-          symbol
-        }
       }
       shoppingList {
         id
-        totalItems
-        completedItems
-        remainingItems
-        completionRate
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -793,13 +706,10 @@ mutation RemoveItemFromShoppingList($input: RemoveItemFromShoppingListInput!) {
     ... on RemoveItemFromShoppingListPayload {
       shoppingListItem {
         id
-        shoppingList {
-          id
-          totalItems
-          completedItems
-          remainingItems
-          completionRate
-        }
+      }
+      shoppingList {
+        id
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -822,7 +732,12 @@ mutation MoveShoppingListItem($input: MoveShoppingListItemInput!) {
     ... on MoveShoppingListItemPayload {
       shoppingListItem {
         id
+        ...ShoppingListItemReaders
         ...useItemReordering_moveResult
+      }
+      shoppingList {
+        id
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -851,28 +766,12 @@ mutation ToggleShoppingListItemPurchased(
     ... on ToggleShoppingListItemPurchasedPayload {
       shoppingListItem {
         id
+        ...ShoppingListItemReaders
         ...useToggleShoppingItem_item
-        # Marking an item purchased creates a purchase row server-side, so this
-        # summary changes with every toggle. Selected here (not in the fragment,
-        # which mirrors the optimistic shape) so Apollo writes the new count
-        # through on the response. Without it the normalized item keeps the old
-        # `purchaseCount: 0`, and ItemDetail — which reads exactly these fields —
-        # paints "no purchase history" from cache until its own refetch lands.
-        purchaseHistory {
-          previouslyPurchased
-          purchaseCount
-          lastPurchaseDate
-        }
-        purchaseInfo {
-          ...ShoppingListItemPurchaseInfoFragment
-        }
-        shoppingList {
-          id
-          totalItems
-          completedItems
-          remainingItems
-          completionRate
-        }
+      }
+      shoppingList {
+        id
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -897,7 +796,12 @@ mutation UpdateShoppingListItemQuantity(
     ... on UpdateShoppingListItemQuantityPayload {
       shoppingListItem {
         id
+        ...ShoppingListItemReaders
         ...useQuantityEditModal_updateQuantityResult
+      }
+      shoppingList {
+        id
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -920,6 +824,11 @@ mutation UpdateCollaboratorRole($input: UpdateCollaboratorRoleInput!) {
     ... on UpdateCollaboratorRolePayload {
       collaborator {
         id
+        ...ShoppingListCollaboratorReaders
+      }
+      shoppingList {
+        id
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -944,10 +853,11 @@ mutation UpdateCollaboratorPermissions(
     ... on UpdateCollaboratorPermissionsPayload {
       collaborator {
         id
-        canAddItems
-        canRemoveItems
-        canEditItems
-        canMarkPurchased
+        ...ShoppingListCollaboratorReaders
+      }
+      shoppingList {
+        id
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -964,13 +874,29 @@ mutation UpdateCollaboratorPermissions(
   }
 }
 
-mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {
+mutation MoveShoppingItemToPantry(
+  $input: MoveShoppingItemToPantryInput!
+  $today: LocalDate!
+) {
   moveShoppingItemToPantry(input: $input) {
     __typename
     ... on MoveShoppingItemToPantryPayload {
+      storageLocation {
+        id
+        ...StorageLocationReaders
+      }
+      shoppingList {
+        id
+        ...ShoppingListReaders
+      }
       pantryItem {
         id
+        ...PantryItemReaders
         ...useMoveToPantry_pantryItem
+      }
+      pantry {
+        id
+        ...PantryReaders
       }
     }
     ... on Error {
@@ -1012,16 +938,15 @@ mutation RemoveItemsFromShoppingList(
       shoppingListItems {
         id
       }
+      shoppingList {
+        id
+        ...ShoppingListReaders
+      }
     }
     ... on Error {
       code
       message
     }
-    # `settleMutation` routes a refusal that names a field to `errors.field.*`
-    # and shows the server's unlocalizable English only as a last resort. It
-    # reads `field` off the payload, so not selecting it here made that branch
-    # unreachable: every rejection of this mutation fell back to the generic
-    # copy no matter which input the server actually refused.
     ... on ValidationError {
       field
     }
@@ -1034,12 +959,7 @@ mutation ShareShoppingList($input: ShareShoppingListInput!) {
     ... on ShareShoppingListPayload {
       shoppingList {
         id
-        shareCode
-        isPublic
-        # Keep the cached link in sync when public sharing is toggled on/off.
-        shareLink {
-          universal
-        }
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -1064,6 +984,7 @@ mutation JoinShoppingListByShareCode(
     ... on JoinShoppingListByShareCodePayload {
       shoppingList {
         id
+        ...ShoppingListReaders
         name
       }
     }
@@ -1084,109 +1005,6 @@ mutation JoinShoppingListByShareCode(
 # ============================================
 # OFFLINE SYNC MUTATIONS
 # ============================================
-
-mutation SyncShoppingListItem($input: SyncShoppingListItemInput!) {
-  syncShoppingListItem(input: $input) {
-    __typename
-    ... on SyncShoppingListItemPayload {
-      clientId
-      serverId
-      operation
-      converged
-      item {
-        id
-        ...queueManager_syncItem
-      }
-      conflict {
-        clientVersion
-        serverVersion
-        message
-        serverItem {
-          id
-          version
-          sortOrder
-        }
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on ValidationError {
-      field
-    }
-    ... on NotFoundError {
-      resource
-    }
-  }
-}
-
-mutation SyncDeleteShoppingListItem($input: SyncDeleteShoppingListItemInput!) {
-  syncDeleteShoppingListItem(input: $input) {
-    __typename
-    ... on SyncShoppingListItemPayload {
-      clientId
-      serverId
-      operation
-      converged
-      item {
-        id
-        itemName
-      }
-      conflict {
-        clientVersion
-        serverVersion
-        message
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on ValidationError {
-      field
-    }
-    ... on NotFoundError {
-      resource
-    }
-  }
-}
-
-mutation SyncMoveShoppingListItem($input: SyncMoveShoppingListItemInput!) {
-  syncMoveShoppingListItem(input: $input) {
-    __typename
-    ... on SyncShoppingListItemPayload {
-      clientId
-      serverId
-      operation
-      converged
-      item {
-        id
-        ...queueManager_syncMoveItem
-      }
-      conflict {
-        clientVersion
-        serverVersion
-        message
-        serverItem {
-          id
-          version
-          sortOrder
-        }
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on ValidationError {
-      field
-    }
-    ... on NotFoundError {
-      resource
-    }
-  }
-}
 
 # ============================================
 # SUBSCRIPTIONS

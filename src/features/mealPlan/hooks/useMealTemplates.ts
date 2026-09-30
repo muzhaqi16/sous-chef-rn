@@ -2,16 +2,23 @@ import { useState } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GetMealTemplatesDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import type { TemplateCategory } from '#/graphql/generated/schemaTypes';
-import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import type { FragmentType } from '@apollo/client/masking';
+import type { MealTemplateDisplayFragmentDoc } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
+import { useDebouncedValue } from '#hooks/utils/useDebouncedValue';
 import type { HookReturn } from '#hooks/types';
 
 interface UseMealTemplatesOptions {
   category?: TemplateCategory;
 }
 
+/** A template row as the query holds it; `TemplateCard` reads its fields. */
+export type MealTemplateRef = FragmentType<
+  typeof MealTemplateDisplayFragmentDoc
+> & { id: string };
+
 interface MealTemplatesState {
-  templates: MealTemplateDisplayFragment[];
+  templates: MealTemplateRef[];
   loading: boolean;
   error: Error | undefined;
   /**
@@ -33,6 +40,8 @@ interface MealTemplatesActions {
   setSelectedCategory: (category: TemplateCategory | undefined) => void;
 }
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 type UseMealTemplatesResult = HookReturn<
   MealTemplatesState,
   MealTemplatesActions
@@ -46,13 +55,16 @@ export function useMealTemplates(
     TemplateCategory | undefined
   >(options.category);
 
+  // Each keystroke would otherwise be its own query and cache entry.
+  const search = useDebouncedValue(searchQuery.trim(), SEARCH_DEBOUNCE_MS);
+
   const { data, loading, error, refetch, fetchMore } = useQuery(
     GetMealTemplatesDocument,
     {
       variables: {
         filters: {
           category: selectedCategory,
-          search: searchQuery.trim() || undefined,
+          search: search || undefined,
         },
         first: 20,
       },
@@ -62,16 +74,13 @@ export function useMealTemplates(
   const connectionData = useConnectionData({
     data,
     selector: d => d.mealTemplates,
+    key: JSON.stringify([selectedCategory ?? null, search]),
     loading,
     fetchMore,
     refetch,
   });
 
-  // `search` and `category` are live controls, so every combination is its own
-  // cache entry — offline, the first search is a guaranteed miss. Without this
-  // the sheet would claim "no templates found", which is a different statement
-  // from "we couldn't check".
-  const templates = connectionData.items as MealTemplateDisplayFragment[];
+  const templates: MealTemplateRef[] = connectionData.items;
 
   return {
     state: {

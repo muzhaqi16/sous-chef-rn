@@ -8,10 +8,11 @@ import {
 } from '#/apollo/utils/cacheUpdaters';
 
 // Cache updater utilities for homes
-export const addToHomesCache = createAddToQueryConnectionUpdater(
-  'homes',
-  'Home',
-);
+// The connection write identifies the row by `__typename`.
+export const addToHomesCache = createAddToQueryConnectionUpdater<{
+  __typename: 'Home';
+  id: string;
+}>('homes', 'Home');
 export const removeFromHomesCache = createRemoveFromQueryConnectionUpdater(
   'homes',
   'Home',

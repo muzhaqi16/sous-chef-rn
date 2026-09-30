@@ -1,0 +1,32 @@
+# Event read-back: INVITE_CREATED names the invite by id only, and the home's
+# invite list needs every field its readers select before the new row can
+# join it.
+query HomeInvitesForEvent($id: ID!) {
+  home(id: $id) {
+    id
+    invitesConnection(first: 20) {
+      edges {
+        node {
+          id
+          status
+          email
+          recipientName
+          ...HomeInviteCard_invite
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
+    }
+  }
+}
+
+# The viewer's own membership, to tell whether a membership event is about them.
+fragment useHomeSubscriptions_home on Home {
+  id
+  myMembership {
+    id
+  }
+}

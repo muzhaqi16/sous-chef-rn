@@ -1,4 +1,4 @@
-import { useQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import { ResolveShareLinkDocument } from '#features/home/screens/JoinByLinkScreen.generated';
 
 /**
@@ -6,11 +6,10 @@ import { ResolveShareLinkDocument } from '#features/home/screens/JoinByLinkScree
  * `@optionalAuth`, so this works while logged out.
  */
 export function useResolveShareLink(code: string) {
-  const { data, loading } = useQuery(ResolveShareLinkDocument, {
-    variables: { code },
-    skip: !code,
-    fetchPolicy: 'cache-and-network',
-  });
+  const { data, loading } = useQuery(
+    ResolveShareLinkDocument,
+    code ? { variables: { code } } : skipToken,
+  );
 
   return { link: data?.resolveShareLink ?? null, loading };
 }

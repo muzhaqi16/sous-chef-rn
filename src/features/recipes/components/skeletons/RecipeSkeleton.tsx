@@ -23,9 +23,10 @@ export const RecipeSkeleton: React.FC = () => (
 );
 
 const styles = StyleSheet.create(theme => ({
-  // No horizontal inset: of its three hosts two already sit inside a
-  // gutter-padded container, so carrying one here double-insets them.
+  // A sibling of the real list, so it owns the gutter the list pads inside
+  // its content: a gutter outside the ScrollView clips the row shadows square.
   container: {
+    paddingHorizontal: theme.layout.pageGutter,
     paddingTop: theme.spacing.xs,
     paddingBottom: theme.spacing.md,
   },

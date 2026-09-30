@@ -184,6 +184,32 @@ describe('useRemoveShoppingItem', () => {
       expect(alertService.alert).not.toHaveBeenCalled();
     });
 
+    it('reports a removal that lost a race to another as done', async () => {
+      // Two removals of one line overlap: the second converges on the first,
+      // answering success with no line.
+      const converged = recordMock(RemoveItemFromShoppingListDocument, {
+        data: {
+          removeItemFromShoppingList: {
+            __typename: 'RemoveItemFromShoppingListPayload',
+            shoppingListItem: null,
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(
+        () => useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+        { operationMocks: [converged.mock] },
+      );
+
+      let removed: unknown;
+      await act(async () => {
+        removed = await result.current.removeItem('item-1');
+      });
+
+      expect(removed).toBe(true);
+      expect(mockRefetch).not.toHaveBeenCalled();
+      expect(alertService.alert).not.toHaveBeenCalled();
+    });
+
     it('reports a landed removal as done', async () => {
       const landed = removeMock();
       const { result } = renderHookWithApollo(

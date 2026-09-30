@@ -361,7 +361,7 @@ describe('server mode, where the field is keyed on the live filter and sort', ()
   });
 
   // `toReference(item, true)` normalizes a re-merged PantryItem but leaves its
-  // nested objects EMBEDDED (`writePantryItemDetailStub.ts` documents it). The
+  // nested objects EMBEDDED. The
   // store scan reads raw records, so it has to recognise both shapes.
   const embedNested = (cache: ReturnType<typeof seedServerMode>) => {
     const store: NormalizedCacheObject = cache.extract();

@@ -14,7 +14,6 @@ export function usePantryUsageHistory(pantryItemId: string) {
     GetPantryItemUsageHistoryDocument,
     {
       variables: { pantryItemId, first: PAGE_SIZE },
-      notifyOnNetworkStatusChange: true,
       // NOT the app-wide `'all'`: a field error nulls the non-null
       // `usageRecordsConnection` and so `pantryItem`, and `'all'` WRITES that null onto
       // `ROOT_QUERY.pantryItem({id})` — the field the detail screen reads —

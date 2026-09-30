@@ -1,5 +1,6 @@
 import { NetworkStatus } from '@apollo/client';
-import { useApolloClient, useQuery } from '@apollo/client/react';
+import { useQuery } from '@apollo/client/react';
+import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { loadPageWithCursorRecovery } from '#hooks/utils/cursorRecovery';
 import { GetPantryItemBatchHistoryDocument } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -27,10 +28,8 @@ const byActiveThenExpiry = (
   return a.expiresOn.localeCompare(b.expiresOn);
 };
 
-/** A pantry item's batch ledger, materialized out from behind data masking. */
+/** A pantry item's batch ledger, each batch read live from the cache. */
 export function usePantryBatchHistory(pantryItemId: string) {
-  const client = useApolloClient();
-
   const { data, loading, error, refetch, fetchMore, networkStatus } = useQuery(
     GetPantryItemBatchHistoryDocument,
     {
@@ -44,17 +43,15 @@ export function usePantryBatchHistory(pantryItemId: string) {
   );
 
   const connection = data?.pantryItemBatchesConnection;
-  // Edges arrive MASKED, so `edge.node.status` is undefined — materialize each
-  // before sorting or counting by it, as the detail screen does.
-  const materialized = (connection?.edges ?? []).map(edge =>
-    client.cache.readFragment<PantryItemBatchFragment>({
-      fragment: PantryItemBatchFragmentDoc,
-      fragmentName: 'PantryItemBatchFragment',
-      from: edge.node,
-    }),
-  );
-  // `readFragment` returns null for a PARTIALLY cached batch exactly as for a
-  // missing one, so a dropped row would vanish while every count still had it.
+  // Edges arrive MASKED, so `edge.node.status` is undefined; a waste or an
+  // open changes only masked fields, so the sort and counts read each live.
+  const materialized = useFragmentList({
+    fragment: PantryItemBatchFragmentDoc,
+    fragmentName: 'PantryItemBatchFragment',
+    from: connection?.edges.map(edge => edge.node) ?? [],
+  });
+  // A PARTIALLY cached batch reads as null, so a dropped row would vanish
+  // while every count still had it.
   const unreadable = materialized.filter(b => b == null).length;
 
   const batches: PantryItemBatchFragment[] = materialized

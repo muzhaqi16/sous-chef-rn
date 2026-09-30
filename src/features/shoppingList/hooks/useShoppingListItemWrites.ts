@@ -1,4 +1,5 @@
 import {
+  skipToken,
   useApolloClient,
   useFragment,
   useMutation,
@@ -14,20 +15,17 @@ import type {
   ShoppingListItem,
   UpdateShoppingListItemInput,
 } from '#/graphql/generated/schemaTypes';
-import { setCachedFields } from '#/apollo/utils/cacheUpdaters';
+import { writeEntityFields } from '#/apollo/utils/localFirstFields';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { parseStoredQuantityText } from '#/utils/formatQuantity';
 import { UseShoppingListItemForm_ItemFragmentDoc } from '#features/shoppingList/hooks/useShoppingListItemForm.generated';
+import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
 import {
-  addOptimisticShoppingListItem,
-  createOptimisticShoppingListItem,
-  reconcileShoppingCreate,
-  buildAddItemsReconcileUpdate,
-  type OptimisticShoppingListItemFields,
-} from '#features/shoppingList/cache/items';
+  createShoppingListRow,
+  type ShoppingRowFields,
+} from '#features/shoppingList/cache/createShoppingListRow';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
@@ -94,10 +92,10 @@ export function useShoppingListItemWrites(
   const client = useApolloClient();
   const { t } = useTranslation();
 
-  const { data, refetch } = useQuery(GetShoppingListItemDocument, {
-    variables: { id: itemId ?? '' },
-    skip: !itemId,
-  });
+  const { data, refetch } = useQuery(
+    GetShoppingListItemDocument,
+    itemId ? { variables: { id: itemId } } : skipToken,
+  );
 
   // The form hook owns its own narrow fragment. Subscribing to the entity's
   // cache record is what lets an edit made elsewhere flow back in with no
@@ -119,60 +117,33 @@ export function useShoppingListItemWrites(
     update: buildAddItemsReconcileUpdate({ listId }),
   });
 
-  const [updateItemMutation] = useMutation(UpdateShoppingListItemDocument);
+  const [updateItemMutation] = useMutation(UpdateShoppingListItemDocument, {
+    context: { localFirst: true },
+  });
 
   const createItem = async (
-    optimistic: OptimisticShoppingListItemFields,
-    input: Omit<BatchAddShoppingListItemInput, 'id'>,
+    row: ShoppingRowFields,
+    line: Omit<BatchAddShoppingListItemInput, 'id'>,
   ) => {
-    const id = generateEntityId();
-    try {
-      addOptimisticShoppingListItem(
-        client.cache,
-        listId,
-        createOptimisticShoppingListItem(id, optimistic),
-      );
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Add Shopping List Item (optimistic)',
-      });
-    }
-
-    const failureMessage = t('shoppingListScreens.serverNotUpdated', {
-      action: t('shoppingListScreens.added'),
+    const created = await createShoppingListRow(client.cache, {
+      listId,
+      row,
+      line,
+      send: addItemMutation,
+      document: AddItemToShoppingListDocument,
+      fallback: t('shoppingListScreens.serverNotUpdated', {
+        action: t('shoppingListScreens.added'),
+      }),
     });
-    const settled = await settleMutation(
-      () =>
-        addItemMutation({
-          variables: {
-            input: { shoppingListId: listId, items: [{ ...input, id }] },
-          },
-          context: { localFirst: true },
-        }),
-      {
-        document: AddItemToShoppingListDocument,
-        fallback: failureMessage,
-        onFailed: () => {
-          reconcileShoppingCreate(client.cache, listId, id, undefined);
-        },
-      },
-    );
-    if (settled.status === 'failed') return false;
-
-    // The batch can apply while refusing its only item; that refusal carries no
-    // code to classify, so it takes the caller's copy.
-    const kept = reconcileShoppingCreate(client.cache, listId, id, {
-      data: settled.data,
-    });
-    if (kept === 'reverted') {
-      alertService.alert(t('labels.error'), failureMessage);
+    if (created.failure) {
+      alertService.alert(created.failure.title, created.failure.body);
       return false;
     }
-    const [result] = appliedPayload(settled.data)?.results ?? [];
+    const [result] = appliedPayload(created.data)?.results ?? [];
     if (result?.packageSizeCleared) {
       toastService.info(t('shoppingListScreens.packageSizeCleared'));
     }
-    return true;
+    return created.outcome === 'kept';
   };
 
   const updateItem = async (
@@ -184,7 +155,11 @@ export function useShoppingListItemWrites(
     const persisted = LOCAL_ITEM_FIELDS.filter(
       field => fields[field] !== undefined,
     );
-    setCachedFields(client.cache, 'ShoppingListItem', input.id, fields);
+    writeEntityFields(
+      client.cache,
+      { __typename: 'ShoppingListItem', id: input.id },
+      fields,
+    );
     for (const field of persisted) {
       optimisticDataPersistence.save(
         'ShoppingListItem',
@@ -205,7 +180,6 @@ export function useShoppingListItemWrites(
       () =>
         updateItemMutation({
           variables: { input },
-          context: { localFirst: true },
           onCompleted: result => {
             if (appliedPayload(result)) clearPersisted();
           },

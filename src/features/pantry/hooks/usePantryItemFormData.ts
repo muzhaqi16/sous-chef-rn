@@ -1,14 +1,10 @@
-import { useApolloClient, useFragment, useQuery } from '@apollo/client/react';
+import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { GetHomeDocument } from '#operations/home/home.generated';
 import {
   GetPantryDocument,
   GetPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import {
-  PantryItemForm_PantryItemFragmentDoc,
-  PantryItemForm_HomeFragmentDoc,
-  type PantryItemForm_HomeFragment,
-} from '#features/pantry/components/form/PantryItemForm.generated';
+import { PantryItemForm_PantryItemFragmentDoc } from '#features/pantry/components/form/PantryItemForm.generated';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { extractNodes } from '#/utils/connectionUtils';
 import { defaultPantryOf } from '#domain/homePantries';
@@ -27,24 +23,22 @@ export function usePantryItemFormData({
   selectedPantryId,
 }: UsePantryItemFormDataArgs) {
   const today = useToday();
-  const client = useApolloClient();
 
-  const { data: homeData } = useQuery(GetHomeDocument, {
-    variables: { homeId: selectedHomeId ?? '' },
-    skip: !selectedHomeId,
-  });
+  const { data: homeData } = useQuery(
+    GetHomeDocument,
+    selectedHomeId ? { variables: { homeId: selectedHomeId } } : skipToken,
+  );
 
   const isUnconfirmed = useIsCreateUnconfirmed(itemId);
-  const { loading: itemLoading, refetch: refetchItem } = useQuery(
+  // A client-minted id is cached (and edit-swipeable) before the server has
+  // the row; querying in that window can only return RESOURCE_NOT_FOUND,
+  // which renders as the dead-end "item not found" state.
+  const fetchedItemId = itemId && !isUnconfirmed ? itemId : null;
+  const { loading: itemLoading, refetch } = useQuery(
     GetPantryItemDocument,
-    {
-      variables: { id: itemId ?? '' },
-      // A client-minted id is cached (and edit-swipeable) before the server has
-      // the row; querying in that window can only return RESOURCE_NOT_FOUND,
-      // which renders as the dead-end "item not found" state.
-      skip: !itemId || isUnconfirmed,
-    },
+    fetchedItemId ? { variables: { id: fetchedItemId } } : skipToken,
   );
+  const refetchItem = () => (fetchedItemId ? refetch() : Promise.resolve());
 
   // Watched by ENTITY key, not read off the query result: a locally created
   // item is in the cache before any round trip. Never a render-time
@@ -57,23 +51,19 @@ export function usePantryItemFormData({
   });
   const existingPantryItem = liveItem.complete ? liveItem.data : null;
 
-  // Masking hides `pantriesConnection` on the raw query result.
-  const home = homeData?.home
-    ? client.cache.readFragment<PantryItemForm_HomeFragment>({
-        fragment: PantryItemForm_HomeFragmentDoc,
-        fragmentName: 'PantryItemForm_home',
-        from: homeData.home,
-      })
-    : null;
-  const pantry = defaultPantryOf(home) ?? null;
+  const pantry = defaultPantryOf(homeData?.home) ?? null;
   const currentPantryId =
     selectedPantryId ?? pantry?.id ?? existingPantryItem?.pantryId;
 
-  const { data: pantryData } = useQuery(GetPantryDocument, {
-    variables: { id: currentPantryId ?? '', today },
-    skip: !currentPantryId,
-    fetchPolicy: 'cache-first',
-  });
+  const { data: pantryData } = useQuery(
+    GetPantryDocument,
+    currentPantryId
+      ? {
+          variables: { id: currentPantryId, today },
+          fetchPolicy: 'cache-first',
+        }
+      : skipToken,
+  );
 
   const storageLocations = extractNodes(
     pantryData?.pantry?.storageLocationsConnection,

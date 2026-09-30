@@ -1,6 +1,11 @@
 'use no memo';
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react-native';
 import { AddMealSheet } from '../AddMealSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -147,16 +152,15 @@ function renderWithApollo(ui: React.ReactElement) {
   return render(<Wrapper>{ui}</Wrapper>);
 }
 
-jest.mock('#features/recipes/hooks/useRecipePreload', () => ({
-  useRecipePreload: jest.fn(() => ({
-    preloadRecipe: jest.fn().mockResolvedValue({ id: 'preloaded-1' }),
-  })),
+const mockOpenCatalogRecipe = jest.fn();
+jest.mock('#features/recipes/hooks/useOpenCatalogRecipe', () => ({
+  useOpenCatalogRecipe: () => ({ openCatalogRecipe: mockOpenCatalogRecipe }),
 }));
 
 jest.mock('#/services/spoonacular/SpoonacularService', () => ({
   spoonacularService: {
     searchRecipes: jest.fn().mockResolvedValue({ results: [] }),
-    getRecipeInformation: jest.fn(),
+    searchRecipesWithInfo: jest.fn().mockResolvedValue({ results: [] }),
   },
 }));
 
@@ -237,6 +241,28 @@ describe('AddMealSheet', () => {
     renderWithApollo(<AddMealSheet {...defaultProps} />);
     expect(screen.getByText(/4 servings · 30 min/)).toBeTruthy();
     expect(screen.getByText(/2 servings · 15 min/)).toBeTruthy();
+  });
+
+  it('leaves an unpublished recipe out of the picker, searching included', () => {
+    mockUseSavedRecipes.mockImplementation(() => ({
+      ...savedRecipesResult(false),
+      state: {
+        ...savedRecipesResult(false).state,
+        recipes: [
+          ...savedRecipeNodes,
+          { ...savedRecipeNodes[0], id: 'sr-gone', recipe: null },
+        ],
+      },
+    }));
+    renderWithApollo(<AddMealSheet {...defaultProps} />);
+
+    fireEvent.changeText(
+      screen.getByPlaceholderText('Search recipes or add a custom meal...'),
+      'Pasta',
+    );
+
+    expect(screen.getByText('Pasta Carbonara')).toBeTruthy();
+    expect(screen.queryByText('Chicken Salad')).toBeNull();
   });
 
   it('shows custom meal option when search query has text', () => {
@@ -330,5 +356,76 @@ describe('AddMealSheet', () => {
     expect(
       await screen.findByText('No recipes match your search'),
     ).toBeTruthy();
+  });
+
+  describe('a Spoonacular result', () => {
+    const lasagna = {
+      id: 'spoonacular-42',
+      title: 'Lasagna',
+      subtitle: '',
+      spoonacularId: 42,
+      imageUrl: 'https://img.spoonacular.com/recipes/42-312x231.jpg',
+    };
+
+    beforeEach(() => {
+      const { spoonacularService } = jest.requireMock<{
+        spoonacularService: { searchRecipesWithInfo: jest.Mock };
+      }>('#/services/spoonacular/SpoonacularService');
+      spoonacularService.searchRecipesWithInfo.mockResolvedValue({
+        results: [lasagna],
+        totalResults: 1,
+      });
+    });
+
+    const pickLasagna = async () => {
+      renderWithApollo(<AddMealSheet {...defaultProps} />);
+      fireEvent.changeText(
+        screen.getByPlaceholderText('Search recipes or add a custom meal...'),
+        'Lasagna',
+      );
+      // The search is debounced, so the row arrives after it settles.
+      fireEvent.press(
+        await screen.findByText('Lasagna', {}, { timeout: 3000 }),
+      );
+    };
+
+    it('is added by the id the API gives it', async () => {
+      mockOpenCatalogRecipe.mockResolvedValue({
+        opened: true,
+        recipeId: 'recipe-42',
+      });
+      await pickLasagna();
+
+      await waitFor(() =>
+        expect(defaultProps.onAddRecipe).toHaveBeenCalledWith(
+          'recipe-42',
+          expect.anything(),
+        ),
+      );
+      expect(mockOpenCatalogRecipe).toHaveBeenCalledWith({
+        externalId: '42',
+        name: 'Lasagna',
+        imageUrl: lasagna.imageUrl,
+      });
+    });
+
+    it('stays open with the reason when the API cannot open it', async () => {
+      const { toastService } = jest.requireMock<{
+        toastService: { error: jest.Mock };
+      }>('#/services/toastService');
+      mockOpenCatalogRecipe.mockResolvedValue({
+        opened: false,
+        failure: 'Try this one tomorrow',
+      });
+      await pickLasagna();
+
+      await waitFor(() =>
+        expect(toastService.error).toHaveBeenCalledWith(
+          'Try this one tomorrow',
+        ),
+      );
+      expect(defaultProps.onAddRecipe).not.toHaveBeenCalled();
+      expect(defaultProps.onClose).not.toHaveBeenCalled();
+    });
   });
 });

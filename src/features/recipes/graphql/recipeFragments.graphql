@@ -56,39 +56,3 @@ fragment RecipeReviewFragment on RecipeReview {
   # true` instead of un-voting.
   viewerHasVotedHelpful
 }
-
-# Shared hydration shape for "basic recipe" reads. Spread by SearchRecipes,
-# CreateRecipe, ForkRecipe, and AddRecipeToFavorites — four operations that
-# all hydrate the cache with the same shallow recipe shape. Per-operation
-# narrowing would duplicate this selection 4× with no clarity gain. Hooks
-# that need narrower reads (useRecipeFavoriteState, etc.) have co-located
-# fragments next to their hook file.
-fragment BasicRecipeFragment on Recipe {
-  id
-  name
-  description
-  imageUrl
-  servings
-  prepTimeMinutes
-  cookTimeMinutes
-  totalTimeMinutes
-  difficulty
-  category
-  cuisines
-  status
-  isExternal
-  externalSource
-  externalId
-  primarySource
-  caloriesPerServing
-  createdAt
-  updatedAt
-  savedDetails {
-    id
-    folder
-    tags
-    notes
-    personalRating
-    cookedCount
-  }
-}

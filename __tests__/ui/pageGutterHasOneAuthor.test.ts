@@ -67,6 +67,8 @@ const AUTHORS: Record<string, string> = {
     'skeleton list, overlaid on a padded list it is not inside',
   'src/features/mealPlan/components/skeletons/MealPlanSkeleton.tsx':
     'single host, self-inset',
+  'src/features/recipes/components/skeletons/RecipeSkeleton.tsx':
+    'its own scroll view, a sibling of the list; an outer inset clips its shadows',
   'src/features/notifications/components/NotificationFilters.tsx':
     'single host, self-inset',
 };
@@ -95,8 +97,6 @@ const SKELETON_INHERITS_AN_INSET: Record<string, string> = {
     'PantryMain and the list empty state, both of which inset bare children',
   'src/features/profile/components/ProfileSkeleton.tsx':
     'ProfileScreen, a gutter="page" Screen',
-  'src/features/recipes/components/skeletons/RecipeSkeleton.tsx':
-    'RecipeMain, which insets bare children',
 };
 
 /**

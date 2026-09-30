@@ -12,6 +12,7 @@ const { restrictedImports } = require('./restrictedImports');
 const {
   restrictedSyntax,
   restrictedSyntaxForTests,
+  restrictedSyntaxForFeatureHooks,
 } = require('./restrictedSyntax');
 const {
   BOUNDARY_ZONES,
@@ -193,6 +194,17 @@ const overrides = [
     ignores: [...TEST_FILES, '**/__mocks__/**', '**/*.generated.ts'],
     languageOptions: { parserOptions: TYPED },
     rules: { 'sous-chef/hook-returns-no-library-type': 'error' },
+  },
+  {
+    // What a feature hook reads while rendering must re-render when the cache
+    // changes. Mutation hooks read the cache to write it.
+    files: ['src/features/**/hooks/**/*.{ts,tsx}'],
+    ignores: [
+      ...TEST_FILES,
+      '**/__mocks__/**',
+      'src/features/*/hooks/mutations/**',
+    ],
+    rules: { 'no-restricted-syntax': restrictedSyntaxForFeatureHooks() },
   },
   {
     // The queue BUILDS and replays these writes; it is not one of their

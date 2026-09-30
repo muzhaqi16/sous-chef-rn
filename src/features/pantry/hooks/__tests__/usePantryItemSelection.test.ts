@@ -237,3 +237,42 @@ describe('usePantryItemSelection.removeItem', () => {
     expect(readPantry(cache).totalItems).toBe(1);
   });
 });
+
+describe('usePantryItemSelection index', () => {
+  // Relinking a row to another catalog item edits only the row, so the pantry
+  // query's result stays the same object.
+  it('follows a row relinked to another catalog item', async () => {
+    const cache = makeCache();
+    const getPantry = recordMock(GetPantryDocument, { data: PANTRY });
+    const { result } = renderHookWithApollo(
+      () => usePantryItemSelection('p1'),
+      { cache, operationMocks: [getPantry.mock] },
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect([...result.current.existingCatalogIds]).toEqual(['cat-eggs']);
+
+    // The new catalog item carries every field the pantry query reads, so the
+    // relink leaves that query complete rather than sending it to the network.
+    const { 'Item:cat-eggs': eggs, ...rest } = cache.extract();
+    cache.restore({
+      ...rest,
+      'Item:cat-eggs': eggs,
+      'Item:cat-milk': { ...eggs, id: 'cat-milk' },
+    });
+    await act(async () => {
+      cache.modify({
+        id: cache.identify({ __typename: 'PantryItem', id: 'pi-1' }),
+        fields: {
+          item: (_existing, { toReference }) =>
+            toReference({ __typename: 'Item', id: 'cat-milk' }),
+        },
+      });
+      await Promise.resolve();
+    });
+
+    await waitFor(() =>
+      expect([...result.current.existingCatalogIds]).toEqual(['cat-milk']),
+    );
+    expect(result.current.existingItemMap.get('cat-milk')).toBe('pi-1');
+  });
+});

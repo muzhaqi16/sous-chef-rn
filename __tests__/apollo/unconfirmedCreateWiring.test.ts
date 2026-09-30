@@ -134,7 +134,7 @@ describe('unconfirmed-create wiring (pantry items)', () => {
       const adopts = code.includes('adoptServerEntityId(');
       const withdraws =
         code.includes('removeFromPantryItemsCache(') &&
-        code.includes('evictPantryItemDetailStub(');
+        code.includes('evictLocalPantryItemSeeds(');
 
       expect(adopts || withdraws).toBe(true);
     },
@@ -175,8 +175,8 @@ describe('unconfirmed-create wiring (homes and pantries)', () => {
         /useMutation\(\s*(CreateHomeDocument|CreatePantryDocument)\b/.test(
           code,
         ) &&
-        (code.includes('writeOptimisticHome(') ||
-          code.includes('writeOptimisticPantry(')),
+        (code.includes('writeLocalHome(') ||
+          code.includes('writeLocalPantry(')),
     )
     .map(({ path }) => path)
     .sort();

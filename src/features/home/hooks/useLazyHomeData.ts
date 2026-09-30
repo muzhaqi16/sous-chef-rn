@@ -1,4 +1,5 @@
-import { useLazyQuery } from '@apollo/client/react';
+import { useState } from 'react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
@@ -12,20 +13,19 @@ import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 export function useLazyHomeData() {
   const selectedPantryId = useSelectedPantryId();
 
-  const [getHomes, { data: homesData }] = useLazyQuery(GetHomesDocument, {
-    fetchPolicy: 'cache-first',
-    errorPolicy: 'ignore',
-  });
+  const [requested, setRequested] = useState(false);
+  const { data: homesData } = useQuery(
+    GetHomesDocument,
+    requested
+      ? { fetchPolicy: 'cache-first', errorPolicy: 'ignore' }
+      : skipToken,
+  );
 
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined
   // (preserve the connection BEFORE extracting — see usePreservedConnection).
-  const homes = usePreservedNodes(homesData?.homes);
+  const homes = usePreservedNodes(homesData?.homes, 'GetHomes');
 
-  const fetchHomeData = async () => {
-    if (!homesData) {
-      await getHomes();
-    }
-  };
+  const fetchHomeData = () => setRequested(true);
 
   return {
     homes,

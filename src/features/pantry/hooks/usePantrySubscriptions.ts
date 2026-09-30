@@ -32,9 +32,10 @@ import { MutationType, PantrySubtype } from '#/graphql/generated/schemaTypes';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
+  skipUnmatchedFilterVariants,
 } from '#/apollo/utils/cacheUpdaters';
 import { logger } from '#/utils/environment';
-import { toDateKey } from '#/utils/dateUtils';
+import { todayKey } from '#/utils/dateUtils';
 import { useSubscriptionTransportRecovery } from '#hooks/subscriptions/useSubscriptionTransportRecovery';
 import { useEntitySubscriptionSkip } from '#hooks/subscriptions/useEntitySubscriptionSkip';
 
@@ -60,19 +61,25 @@ const isAdd = (mutation: MutationType) =>
 const isDelete = (mutation: MutationType) =>
   mutation === MutationType.Deleted || mutation === MutationType.ItemRemoved;
 
+/** The row as the cache holds it; `null` when no complete copy is held. */
+function readCachedItem(
+  client: SubscriptionApolloClient,
+  itemId: string,
+): UsePantrySubscriptions_PantryItemFragment | null {
+  return client.cache.readFragment<UsePantrySubscriptions_PantryItemFragment>({
+    fragment: UsePantrySubscriptions_PantryItemFragmentDoc,
+    fragmentName: 'usePantrySubscriptions_pantryItem',
+    from: { __typename: 'PantryItem', id: itemId },
+  });
+}
+
 /** A complete read means some mounted list holds this row, so an update to it
  *  is worth a round trip. */
 function isItemCached(
   client: SubscriptionApolloClient,
   itemId: string,
 ): boolean {
-  const cached =
-    client.cache.readFragment<UsePantrySubscriptions_PantryItemFragment>({
-      fragment: UsePantrySubscriptions_PantryItemFragmentDoc,
-      fragmentName: 'usePantrySubscriptions_pantryItem',
-      from: { __typename: 'PantryItem', id: itemId },
-    });
-  return cached !== null;
+  return readCachedItem(client, itemId) !== null;
 }
 
 /**
@@ -93,7 +100,7 @@ function refreshPantrySummary(
     void fetchEventEntity(
       client,
       PantrySummaryForEventDocument,
-      { id: pantryId, today: toDateKey(new Date()) },
+      { id: pantryId, today: todayKey() },
       'Pantry',
     );
   }, SUMMARY_REFRESH_DELAY_MS);
@@ -102,10 +109,10 @@ function refreshPantrySummary(
 async function handleItemChanged(
   payload: PantryEventsPayload,
   client: SubscriptionApolloClient,
-  selectedPantryId: string,
 ) {
   if (payload.node.__typename !== 'PantryItem') return;
 
+  const { pantryId } = payload;
   const itemId = payload.node.id;
   const mutation = payload.mutation;
 
@@ -120,11 +127,11 @@ async function handleItemChanged(
   }
 
   // Any item change can move a count the header and tabs show.
-  refreshPantrySummary(client, payload.pantryId);
+  refreshPantrySummary(client, pantryId);
 
   // A delete needs no values — the id is the whole event.
   if (isDelete(mutation)) {
-    removeFromPantryItemsConnection(client.cache, selectedPantryId, itemId, {
+    removeFromPantryItemsConnection(client.cache, pantryId, itemId, {
       evictItem: true,
     });
     return;
@@ -146,13 +153,26 @@ async function handleItemChanged(
   // re-adding the row the user just removed is worse than a missed update.
   if (subscriptionService.isPendingDelete(itemId)) return;
 
-  if (add) {
-    addToPantryItemsConnection(client.cache, selectedPantryId, {
-      __typename: 'PantryItem',
-      id: itemId,
-    });
-  }
   // An update needs nothing further — the read-back normalized the new values.
+  if (!add) return;
+
+  const item = readCachedItem(client, itemId);
+  if (!item) return;
+
+  // Only the variants whose filters the row matches: `itemsConnection` is keyed
+  // on `filters`, and a bare add drops a frozen row into the fridge tab.
+  addToPantryItemsConnection(
+    client.cache,
+    pantryId,
+    { __typename: 'PantryItem', id: itemId },
+    {
+      skipStoreField: skipUnmatchedFilterVariants({
+        storageState: item.storageState,
+        storageLocationId: item.storageLocation?.id ?? null,
+        itemId: item.itemId,
+      }),
+    },
+  );
 }
 
 /**
@@ -246,7 +266,7 @@ export function usePantrySubscriptions(userId?: string) {
 
       switch (payload.subtype) {
         case PantrySubtype.ItemChanged:
-          void handleItemChanged(payload, client, selectedPantryId);
+          void handleItemChanged(payload, client);
           break;
 
         // An alert is a change to the item's `isLowStock` / `expiresOn` /

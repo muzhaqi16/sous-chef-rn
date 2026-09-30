@@ -7,6 +7,8 @@ jest.mock('#/services/toastService', () => ({
   toastService: { success: jest.fn(), error: jest.fn(), info: jest.fn() },
 }));
 
+import { gql } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -315,6 +317,60 @@ describe('useMealTemplateActions', () => {
       });
 
       expect(await result.current.deleteTemplate(TEMPLATE_ID)).toBe(false);
+    });
+
+    // The response's `mealTemplate { id }` re-creates the evicted template; a
+    // list edge left pointing at it would read a card with no fields.
+    it('leaves the list readable without the template once the response lands', async () => {
+      const TEMPLATES = gql`
+        query TestDeleteTemplatesList {
+          mealTemplates {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            totalCount
+          }
+        }
+      `;
+      const cache = makeCache();
+      cache.writeQuery({
+        query: TEMPLATES,
+        data: {
+          mealTemplates: {
+            __typename: 'MealTemplateConnection',
+            totalCount: 2,
+            edges: [TEMPLATE_ID, 'template-2'].map(id => ({
+              __typename: 'MealTemplateEdge',
+              node: { __typename: 'MealTemplate', id, name: id },
+            })),
+          },
+        },
+      });
+      const del = recordMock(DeleteMealTemplateDocument, {
+        data: {
+          deleteMealTemplate: {
+            __typename: 'DeleteMealTemplatePayload',
+            mealTemplate: { __typename: 'MealTemplate', id: TEMPLATE_ID },
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(() => useMealTemplateActions(), {
+        operationMocks: [del.mock],
+        cache,
+      });
+
+      expect(await result.current.deleteTemplate(TEMPLATE_ID)).toBe(true);
+
+      const list = cache.readQuery<{
+        mealTemplates: { edges: Array<{ node: { id: string } }> };
+      }>({ query: TEMPLATES });
+      expect(list?.mealTemplates.edges.map(({ node }) => node.id)).toEqual([
+        'template-2',
+      ]);
+      expect(cache.extract()[`MealTemplate:${TEMPLATE_ID}`]).toBeUndefined();
     });
   });
 });

@@ -18,7 +18,13 @@ export interface DeviceInformation {
   browserVersion?: string;
   screenResolution?: string;
   timezone: string;
-  language: string;
+  /**
+   * The device's BCP 47 locale ("en-US"), null when it cannot be read: the
+   * server takes a "Device default" user's unit system from its region, so a
+   * guess would register the device as American. Null, not absent: the server
+   * keeps a stored locale for a field left out.
+   */
+  language: string | null;
 
   // Enhanced device identification
   manufacturer?: string;
@@ -75,10 +81,6 @@ export interface DeviceInformation {
   availableLocationProviders?: string[];
   hostNames?: string[];
   supportedMediaTypes?: string[];
-
-  // Locale information
-  country?: string;
-  currency?: string;
 }
 
 /**
@@ -356,22 +358,17 @@ const collectAdditionalInfo = async () => {
   return additionalInfo;
 };
 
-/**
- * Collects locale and region information
- */
-const collectLocaleInfo = async () => {
-  const localeInfo: Partial<DeviceInformation> = {};
-
+/** The device's locale, or null when neither source can say. */
+function readDeviceLocale(): string | null {
   try {
-    // Use fallback values since specific country/currency methods may not be available
-    localeInfo.country = 'US'; // Fallback country
-    localeInfo.currency = 'USD'; // Fallback currency
-  } catch (error) {
-    logger.warn('Error collecting locale info:', error);
+    if (typeof navigator !== 'undefined' && navigator.language) {
+      return navigator.language;
+    }
+    return Intl.DateTimeFormat().resolvedOptions().locale || null;
+  } catch {
+    return null;
   }
-
-  return localeInfo;
-};
+}
 
 /**
  * Collects display-related information
@@ -481,7 +478,6 @@ export const collectDeviceInformation =
         batteryInfo,
         peripheralInfo,
         additionalInfo,
-        localeInfo,
         displayInfo,
       ] = await Promise.all([
         DeviceInfo.getDeviceName().catch(() => `${Platform.OS} Device`),
@@ -497,26 +493,11 @@ export const collectDeviceInformation =
         collectBatteryInfo(),
         collectPeripheralInfo(),
         collectAdditionalInfo(),
-        collectLocaleInfo(),
         collectDisplayInfo(),
       ]);
 
-      // Get timezone and language
       const timezone =
         Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-      let language = 'en-US';
-      try {
-        // Use browser language detection or fallback
-        if (typeof navigator !== 'undefined' && navigator.language) {
-          language = navigator.language;
-        } else {
-          // Fallback to Intl API
-          language = Intl.DateTimeFormat().resolvedOptions().locale || 'en-US';
-        }
-      } catch {
-        // Fallback to default language
-        language = 'en-US';
-      }
 
       // Combine all collected comprehensive information
       const deviceInfo: DeviceInformation = {
@@ -530,7 +511,7 @@ export const collectDeviceInformation =
         appVersion,
         screenResolution,
         timezone,
-        language,
+        language: readDeviceLocale(),
         ...browserInfo,
 
         // Enhanced security & identification
@@ -550,9 +531,6 @@ export const collectDeviceInformation =
 
         // Additional tracking capabilities
         ...additionalInfo,
-
-        // Locale information
-        ...localeInfo,
 
         // Display characteristics
         ...displayInfo,
@@ -591,7 +569,7 @@ export const collectDeviceInformation =
         osVersion: Platform.Version.toString(),
         appVersion: '1.0.0',
         timezone: 'UTC',
-        language: 'en-US',
+        language: readDeviceLocale(),
       };
     }
   };

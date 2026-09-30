@@ -8,17 +8,24 @@ mutation AddItemsToShoppingListFromRecipe(
   addItemsToShoppingList(input: $input) {
     __typename
     ... on AddItemsToShoppingListPayload {
+      shoppingList {
+        id
+        ...ShoppingListReaders
+      }
       results {
         index
         clientId
         success
-        code
+        failure {
+          code
+          reason
+          errorId
+        }
         item {
           id
+          ...ShoppingListItemReaders
           ...useRecipeShoppingList_addedItem
         }
-        quantityIncremented
-        error
       }
       summary {
         succeeded
@@ -36,73 +43,17 @@ mutation AddItemsToShoppingListFromRecipe(
   }
 }
 
-# Locally-named copy per the Feature API Boundary Convention — the
-# shoppingList feature's graphql/ folder is internal. The NAME must be
-# unique across the document set: three copies shared `GetShoppingListsLite`,
-# which codegen now emits only once (breaking the other importers) and which
-# the persisted-query manifest keys by, so it held one entry for three
-# definitions.
-query GetShoppingListsLiteForRecipe($homeId: ID, $first: Int, $after: String) {
-  shoppingLists(homeId: $homeId, first: $first, after: $after) {
-    edges {
-      cursor
-      node {
-        id
-        name
-        isDefault
-        totalItems
-        completedItems
-        homeId
-        home {
-          id
-          name
-        }
-        ownerships {
-          id
-          userId
-          user {
-            id
-            email
-            displayName
-            profile {
-              id
-              displayName
-              avatar
-            }
-          }
-        }
-      }
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
-  }
-}
-
-# Locally-named copy — see the note above.
+# Locally-named copy per the Feature API Boundary Convention. The NAME must be
+# unique across the document set: codegen emits a shared name only once, and
+# the persisted-query manifest keys by it.
 mutation CreateShoppingListForRecipe($input: CreateShoppingListInput!) {
   createShoppingList(input: $input) {
     __typename
     ... on CreateShoppingListPayload {
       shoppingList {
         id
+        ...ShoppingListReaders
         name
-        isDefault
-        totalItems
-        completedItems
-        createdAt
-        updatedAt
-        homeId
-        home {
-          id
-          name
-        }
-        ownerships {
-          id
-          ...ShoppingListOwnershipFragment
-        }
       }
     }
     ... on Error {

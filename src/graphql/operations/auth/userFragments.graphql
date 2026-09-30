@@ -32,6 +32,10 @@ fragment LoginUser on User {
           isDefault
         }
       }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
     }
   }
   # The CURRENT user's profile is written here with the SAME shape

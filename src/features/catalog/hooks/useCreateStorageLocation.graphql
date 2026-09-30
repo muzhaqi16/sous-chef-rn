@@ -1,0 +1,5 @@
+# A local-first create's storage location: everything a query reads on one.
+fragment useCreateStorageLocation_row on StorageLocation {
+  id
+  ...StorageLocationReaders
+}

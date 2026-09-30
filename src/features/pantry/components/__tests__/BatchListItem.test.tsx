@@ -1,9 +1,11 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { BatchStatus } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#/apollo/cache';
+import { BatchStatus, UnitType } from '#/graphql/generated/schemaTypes';
 import type { PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { BatchListItem } from '../BatchListItem';
+import { BatchListItem_PantryItemFragmentDoc } from '../BatchListItem.generated';
 
 const batch = (quantity: number): PantryItemBatchFragment => ({
   __typename: 'PantryItemBatch',
@@ -66,5 +68,45 @@ describe('BatchListItem', () => {
   it('rounds a batch quantity no fraction fits to three decimals', () => {
     renderWithApollo(<BatchListItem batch={batch(177.4412)} unitSymbol="mL" />);
     expect(screen.getByText('177.441 mL')).toBeTruthy();
+  });
+
+  describe('on a stack of pieces shown in dozens', () => {
+    const eggsCache = () => {
+      const cache = makeCache();
+      cache.writeFragment({
+        fragment: BatchListItem_PantryItemFragmentDoc,
+        fragmentName: 'BatchListItem_pantryItem',
+        data: {
+          __typename: 'PantryItem',
+          id: 'pi1',
+          unit: { __typename: 'Unit', id: 'pc', symbol: 'pc' },
+          displayUnit: {
+            __typename: 'Unit',
+            id: 'doz',
+            symbol: 'doz',
+            type: UnitType.Count,
+            hasStandardCountFactor: true,
+            baseUnitId: 'pc',
+            conversionFactor: 12,
+            commonFractions: [1 / 4, 1 / 3, 1 / 2, 2 / 3, 3 / 4],
+          },
+        },
+      });
+      return cache;
+    };
+
+    it('shows a whole dozen or a common fraction of one in dozens', () => {
+      renderWithApollo(<BatchListItem batch={batch(18)} unitSymbol="pc" />, {
+        cache: eggsCache(),
+      });
+      expect(screen.getByText('1 1/2 doz')).toBeTruthy();
+    });
+
+    it('shows any other count in pieces, never a decimal of a dozen', () => {
+      renderWithApollo(<BatchListItem batch={batch(11)} unitSymbol="pc" />, {
+        cache: eggsCache(),
+      });
+      expect(screen.getByText('11 pc')).toBeTruthy();
+    });
   });
 });

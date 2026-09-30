@@ -162,9 +162,8 @@ const sampleIngredientSearchResponse = [
 ];
 
 // ── Local GraphQL SearchRecipes mocks ──
-// Node fixtures must include every field the document selects: the inline
-// display fields plus all BasicRecipeFragment fields (Apollo can't cache
-// partially-specified entities in operationMocks).
+// Node fixtures must include every field the document selects (Apollo can't
+// cache partially-specified entities in operationMocks).
 function makeLocalRecipeNode(overrides: Record<string, unknown> = {}) {
   return {
     __typename: 'Recipe',

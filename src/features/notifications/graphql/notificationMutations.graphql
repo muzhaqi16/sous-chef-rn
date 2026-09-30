@@ -2,13 +2,20 @@
 # MUTATIONS
 # ============================================
 
+# Each payload states the badge after the write (`notificationSummary`); its
+# normalization settles the delta the local write applied before firing.
+
 mutation MarkNotificationAsRead($input: MarkNotificationAsReadInput!) {
   markNotificationAsRead(input: $input) {
     __typename
     ... on MarkNotificationAsReadPayload {
       notification {
         id
-        status
+        ...NotificationReaders
+      }
+      notificationSummary {
+        id
+        ...NotificationSummaryReaders
       }
     }
     ... on Error {
@@ -30,6 +37,12 @@ mutation MarkNotificationAsRead($input: MarkNotificationAsReadInput!) {
 mutation DeleteNotification($input: DeleteNotificationInput!) {
   deleteNotification(input: $input) {
     __typename
+    ... on DeleteNotificationPayload {
+      notificationSummary {
+        id
+        ...NotificationSummaryReaders
+      }
+    }
     ... on Error {
       code
       message

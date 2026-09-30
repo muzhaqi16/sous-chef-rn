@@ -1,7 +1,7 @@
 # Canonical shape for a MealPlan list-card.
 # Spread by: mealPlan.graphql (GetMealPlans, CreateMealPlan, UpdateMealPlan,
 #   DuplicateMealPlan — 4 operations)
-# Read via cache.readFragment by: useMealPlans.ts
+# Read via useFragment by: useMealPlans.ts
 # Kept shared — all 5 consumers need the identical list-card shape.
 fragment MealPlanDisplay on MealPlan {
   id
@@ -48,7 +48,7 @@ fragment MealPlanDisplay on MealPlan {
 # Spread by: mealTemplate.graphql (GetMealTemplates, GetMealTemplate,
 #   DuplicateTemplate, CreateMealTemplate, UpdateMealTemplate,
 #   CreateTemplateFromMealPlan)
-# Read via cache.readFragment by: TemplateCard.tsx,
+# Read via useFragment by: TemplateCard.tsx; via cache.readFragment by:
 #   useMealTemplateActions.ts (deleteTemplate snapshot),
 #   useMealTemplateEditor.ts (optimistic local-first create write)
 # Kept shared — every consumer needs the identical template shape.
@@ -82,7 +82,7 @@ fragment MealTemplateDisplay on MealTemplate {
 # Spread by: mealTemplate.graphql (GetMealTemplate, DuplicateTemplate,
 #   CreateTemplateFromMealPlan, AddTemplateItem, UpdateTemplateItem,
 #   RemoveTemplateItem)
-# Read via cache.readFragment by: useMealTemplate.ts
+# Read via useFragment by: useMealTemplate.ts
 # Kept shared — every consumer needs the identical item shape.
 fragment MealTemplateItemFragment on MealTemplateItem {
   id

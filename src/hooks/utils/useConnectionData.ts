@@ -20,6 +20,11 @@ export interface UseConnectionDataConfig<TData, C extends ConnectionResult> {
   data: TData | undefined;
   /** Selector to extract the connection from query data */
   selector: (data: TData) => C | null | undefined;
+  /**
+   * The subject the query reads (its identifying variables): a connection
+   * preserved across a failed read is only re-served for the same key.
+   */
+  key: string;
   /** Whether the query is currently loading */
   loading: boolean;
   /** Apollo fetchMore function */
@@ -57,6 +62,7 @@ export function useConnectionData<TData, C extends ConnectionResult>(
   const {
     data,
     selector,
+    key,
     loading,
     fetchMore,
     fetchMoreVariables,
@@ -67,7 +73,7 @@ export function useConnectionData<TData, C extends ConnectionResult>(
   const connection = data ? selector(data) : undefined;
   // Preserved BEFORE extracting nodes, or a transient blip flattens
   // `undefined → []` and wipes a list still safely in the cache.
-  const preserved = usePreservedConnection(connection);
+  const preserved = usePreservedConnection(connection, key);
   const items = preserved.nodes;
   const totalCount = preserved.totalCount;
 

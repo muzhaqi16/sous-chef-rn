@@ -52,8 +52,8 @@ import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermission
 import { useRecipeSuggestionsForItem } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
 import { commonStyles } from '#/styles/commonStyles';
-import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import { daysUntilExpiry } from '#domain/expiry';
+import type { RecipeInformation } from '#/services/spoonacular/types';
 import { useToday } from '#hooks/useToday';
 
 /**
@@ -142,10 +142,13 @@ export const PantryItemDetail: React.FC<
     toPantryItem({ itemId });
   };
 
-  const handleRecipePress = (recipeId: number) => {
+  const handleRecipePress = (recipe: RecipeInformation) => {
     toRecipeDetail({
-      externalSource: ExternalSource.Spoonacular,
-      externalId: String(recipeId),
+      catalog: {
+        externalId: String(recipe.id),
+        name: recipe.title,
+        imageUrl: recipe.image,
+      },
     });
   };
 
@@ -467,7 +470,7 @@ export const PantryItemDetail: React.FC<
                 <AppPressable
                   key={String(recipe.id)}
                   style={styles.recipeCard}
-                  onPress={() => handleRecipePress(recipe.id)}
+                  onPress={() => handleRecipePress(recipe)}
                 >
                   <CachedImage
                     uri={recipe.image}

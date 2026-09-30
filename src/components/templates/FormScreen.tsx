@@ -1,4 +1,6 @@
 import React from 'react';
+import { View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Screen } from './Screen';
 
@@ -9,6 +11,8 @@ interface FormScreenProps {
   loading?: boolean;
   /** False while there is nothing to save — the form is still loading, or gone. */
   canSave?: boolean;
+  /** False when the first child brings its own lead-in, as a tab strip does. */
+  leadIn?: boolean;
   children: React.ReactNode;
   testID?: string;
   submitButtonTestID?: string;
@@ -25,11 +29,13 @@ export const FormScreen: React.FC<FormScreenProps> = ({
   onSave,
   loading = false,
   canSave = true,
+  leadIn = true,
   children,
   testID,
   submitButtonTestID,
 }) => {
   const { t } = useTranslation();
+  styles.useVariants({ leadIn });
   return (
     <Screen
       testID={testID}
@@ -50,7 +56,20 @@ export const FormScreen: React.FC<FormScreenProps> = ({
         close: onClose,
       }}
     >
-      {children}
+      <View style={styles.body}>{children}</View>
     </Screen>
   );
 };
+
+const styles = StyleSheet.create(theme => ({
+  // Grows so a centred loading or error state still fills the screen.
+  body: {
+    flexGrow: 1,
+    variants: {
+      leadIn: {
+        true: { paddingTop: theme.layout.pageTop },
+        false: {},
+      },
+    },
+  },
+}));

@@ -32,9 +32,9 @@ export const SavedRecipeRow: React.FC<SavedRecipeRowProps> = ({
     from: savedRecipeRef,
   });
 
-  if (!complete) return null;
-
-  const { recipe } = data;
+  const recipe = complete ? data.recipe : null;
+  // An unpublished recipe cannot be planned; the sheet filters it out first.
+  if (!recipe) return null;
   return (
     <AppPressable onPress={() => onPress(recipe.id)} style={styles.recipeItem}>
       {!!recipe.imageUrl && (

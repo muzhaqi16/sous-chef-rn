@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { AppState, Platform } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { toDateKey } from '#/utils/dateUtils';
+import { todayKey } from '#/utils/dateUtils';
 import { useApolloClient, useSubscription } from '@apollo/client/react';
 import type { ApolloClient } from '@apollo/client';
 import {
   NotificationEventsDocument,
   GetUnreadNotificationsDocument,
+  NotificationSummaryDocument,
 } from '#features/notifications/graphql/notifications.generated';
 import {
   UseNotifications_NotificationFragmentDoc,
@@ -61,30 +62,51 @@ interface NotificationConfig {
 }
 
 /**
- * Coalesces the unread-count reseed: `GetUnreadNotifications` pulls the first
- * 50 with the full fragment, so a burst would fire one round trip per event.
+ * Coalesces the badge re-read (`Query.notificationSummary`), so a burst of
+ * events costs one round trip. An aggregate event re-reads the unread feed
+ * instead, whose rows it changed without naming them; that query states the
+ * badge too.
  */
 const RESEED_DEBOUNCE_MS = 300;
 let reseedTimer: ReturnType<typeof setTimeout> | null = null;
+let reseedFeed = false;
 
-const scheduleUnreadReseed = (client: ApolloClient): void => {
+const ignoreReseedFailure = (): void => {
+  // Transient failure: the foreground / WS-reconnect re-query paths converge
+  // the badge and the feed later.
+};
+
+const scheduleUnreadReseed = (
+  client: ApolloClient,
+  scope: 'badge' | 'feed',
+): void => {
+  if (scope === 'feed') reseedFeed = true;
   if (reseedTimer !== null) clearTimeout(reseedTimer);
   reseedTimer = setTimeout(() => {
     reseedTimer = null;
-    client
-      .query({
-        query: GetUnreadNotificationsDocument,
-        fetchPolicy: 'network-only',
-      })
-      .catch(() => {
-        // Transient failure: the foreground / WS-reconnect re-query paths
-        // converge the feed later.
-      });
+    const withFeed = reseedFeed;
+    reseedFeed = false;
+    if (withFeed) {
+      client
+        .query({
+          query: GetUnreadNotificationsDocument,
+          fetchPolicy: 'network-only',
+        })
+        .catch(ignoreReseedFailure);
+    } else {
+      client
+        .query({
+          query: NotificationSummaryDocument,
+          fetchPolicy: 'network-only',
+        })
+        .catch(ignoreReseedFailure);
+    }
   }, RESEED_DEBOUNCE_MS);
 };
 
 /** Test seam, and what stops a pending reseed outliving the session. */
 export const cancelPendingUnreadReseed = (): void => {
+  reseedFeed = false;
   if (reseedTimer === null) return;
   clearTimeout(reseedTimer);
   reseedTimer = null;
@@ -109,7 +131,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
   // guard that makes local writes idempotent already sees the new value. The
   // badge also counts notifications this device never paged in, which a local
   // ±1 could only ever approximate.
-  const reseedUnreadCount = () => scheduleUnreadReseed(client);
+  const reseedUnreadCount = () => scheduleUnreadReseed(client, 'badge');
 
   // A ref, not state: AppState changes must not re-render this listener.
   const appStateRef = useRef(AppState.currentState);
@@ -258,11 +280,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       appStateRef.current !== 'active' &&
       !isQuietTime()
     ) {
-      const copy = getNotificationCopy(
-        processedNotification,
-        t,
-        toDateKey(new Date()),
-      );
+      const copy = getNotificationCopy(processedNotification, t, todayKey());
       void showLocalNotification({
         id: processedNotification.id,
         title: copy.title,
@@ -303,7 +321,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
         event.subtype === NotificationSubtype.BulkCleared ||
         event.subtype === NotificationSubtype.BulkExpired
       ) {
-        reseedUnreadCount();
+        scheduleUnreadReseed(client, 'feed');
         return;
       }
 

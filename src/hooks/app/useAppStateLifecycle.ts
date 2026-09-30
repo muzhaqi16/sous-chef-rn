@@ -10,7 +10,8 @@ import { handleTokenRefreshOnResume } from '#store/slices/authSlice';
 import { logger } from '#/utils/environment';
 
 /**
- * The app's one AppState listener. The previous state is tracked in a closure so
+ * Session and persistence work on AppState changes; the resync's own listener
+ * lives in `src/apollo/refetchEvents.ts`. The previous state is tracked in a closure so
  * the resume branch fires only on a real background → active transition, not on
  * launch. Gated on `isHydrated`: an earlier `active` event reaches
  * `Telemetry.trackEvent()` before MMKV is up and crashes telemetry init.

@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
-import { useLazyQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import {
   ConvertQuantityDocument,
   CanConvertDocument,
 } from '#operations/item/conversions.generated';
-import { errorService } from '#/services/errorService';
+import { useDebouncedValue } from '#hooks/utils/useDebouncedValue';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import {
   formatQuantityForDisplay,
   resolveQuantityNotation,
@@ -54,20 +54,6 @@ const formatSide = (
     notation: resolveQuantityNotation(null, displayAsFraction),
   })} ${symbol}`;
 
-/**
- * Generates a stable "request key" for debounce identity.
- * When this key changes, a new debounced conversion fires.
- */
-function makePreviewKey(
-  shouldShow: boolean,
-  inputQuantity: number | null,
-  selectedUnitId: string | undefined,
-  trackingUnitId: string | undefined,
-): string {
-  if (!shouldShow) return '';
-  return `${inputQuantity}|${selectedUnitId}|${trackingUnitId}`;
-}
-
 export function useConversionPreview({
   pantryItemId,
   inputQuantity,
@@ -79,179 +65,92 @@ export function useConversionPreview({
   trackingDisplayAsFraction,
   conversionRatio,
 }: UseConversionPreviewOptions): ConversionPreviewResult {
-  const [previewText, setPreviewText] = useState<string | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [convertedValue, setConvertedValue] = useState<number | null>(null);
-  const [confidence, setConfidence] = useState<number | null>(null);
-
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const [convertQuantity] = useLazyQuery(ConvertQuantityDocument, {
-    fetchPolicy: 'network-only',
-  });
-  // Cache-first: a conversion's certainty is a property of the unit pair, not
-  // of the amount, so it does not change as the user types.
-  const [checkConversion] = useLazyQuery(CanConvertDocument, {
-    fetchPolicy: 'cache-first',
-  });
-
-  const isSameUnit =
-    selectedUnitId === trackingUnitId || !selectedUnitId || !trackingUnitId;
-  const shouldShowPreview =
-    !isSameUnit && inputQuantity != null && inputQuantity > 0;
-
-  // Track preview request key to detect when a new conversion is needed (render-time state update)
-  const currentKey = makePreviewKey(
-    shouldShowPreview,
-    inputQuantity,
-    selectedUnitId,
-    trackingUnitId,
-  );
-  const [prevKey, setPrevKey] = useState(currentKey);
-  if (currentKey !== prevKey) {
-    setPrevKey(currentKey);
-    if (!shouldShowPreview) {
-      // Clearing — no conversion needed
-      setPreviewText(null);
-      setPreviewLoading(false);
-      setConvertedValue(null);
-      setConfidence(null);
-    } else if (conversionRatio != null) {
-      // Local computation — instant, no debounce
-      const trackingValue = inputQuantity / conversionRatio;
-      setConvertedValue(trackingValue);
-      setPreviewText(
-        `${formatSide(
-          inputQuantity,
-          selectedUnitSymbol,
-          selectedDisplayAsFraction,
-        )} \u2248 ${formatSide(
-          trackingValue,
-          trackingUnitSymbol,
-          trackingDisplayAsFraction,
-        )}`,
-      );
-      setPreviewLoading(false);
-    } else {
-      // Mark as loading, effect will debounce the actual fetch
-      setPreviewLoading(true);
-    }
-  }
+  const unitPair =
+    selectedUnitId &&
+    trackingUnitId &&
+    selectedUnitId !== trackingUnitId &&
+    inputQuantity != null &&
+    inputQuantity > 0
+      ? {
+          pantryItemId,
+          fromUnitId: selectedUnitId,
+          toUnitId: trackingUnitId,
+          quantity: inputQuantity,
+        }
+      : null;
 
   // Certainty rides on the unit pair alone, so it is asked once per pair
   // rather than per keystroke — and asked even when a local ratio makes the
   // preview itself free, since an assumed density is invisible in the number.
-  useEffect(() => {
-    if (!shouldShowPreview) return;
-
-    let cancelled = false;
-    const checkCertainty = async () => {
-      let result;
-      try {
-        result = await checkConversion({
+  const { data: certaintyData, error: certaintyError } = useQuery(
+    CanConvertDocument,
+    unitPair
+      ? {
           variables: {
             pantryItemId,
-            fromUnitId: selectedUnitId,
-            toUnitId: trackingUnitId,
+            fromUnitId: unitPair.fromUnitId,
+            toUnitId: unitPair.toUnitId,
           },
-        });
-      } catch (error) {
-        errorService.reportError(error, {
-          operation: 'Error checking conversion certainty:',
-        });
-      }
-      if (cancelled) return;
-      const availability = result?.data?.canConvert;
-      setConfidence(availability?.available ? availability.confidence : null);
-    };
-    void checkCertainty();
+          fetchPolicy: 'cache-first',
+          refetchOn: false,
+        }
+      : skipToken,
+  );
 
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    shouldShowPreview,
-    pantryItemId,
-    selectedUnitId,
-    trackingUnitId,
-    checkConversion,
-  ]);
+  // The server converts only without a local ratio, and only once the input
+  // has held still; a key still debouncing asks nothing.
+  const serverRequest = unitPair && conversionRatio == null ? unitPair : null;
+  const requestKey = serverRequest
+    ? `${serverRequest.quantity}|${serverRequest.fromUnitId}|${serverRequest.toUnitId}`
+    : null;
+  const settledKey = useDebouncedValue(requestKey, DEBOUNCE_MS);
+  const settledRequest = requestKey === settledKey ? serverRequest : null;
 
-  // Debounced input preview conversion — network fallback only (skipped when local ratio available)
-  useEffect(() => {
-    if (!shouldShowPreview || conversionRatio != null) return;
+  const {
+    data: convertData,
+    loading: converting,
+    error: convertError,
+  } = useQuery(
+    ConvertQuantityDocument,
+    settledRequest
+      ? {
+          variables: settledRequest,
+          fetchPolicy: 'network-only',
+          refetchOn: false,
+        }
+      : skipToken,
+  );
 
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
+  useApolloErrorLogger(CanConvertDocument, certaintyError);
+  useApolloErrorLogger(ConvertQuantityDocument, convertError);
 
-    // Clearing the timer does not recall a request already in flight, so a
-    // superseded conversion would land after the current one and overwrite it.
-    let cancelled = false;
-    const runConversion = async () => {
-      let result: Awaited<ReturnType<typeof convertQuantity>> | undefined;
-      try {
-        result = await convertQuantity({
-          variables: {
-            pantryItemId: pantryItemId,
-            quantity: inputQuantity,
-            fromUnitId: selectedUnitId,
-            toUnitId: trackingUnitId,
-          },
-        });
-      } catch (error) {
-        // Leaving `result` undefined falls through to the cleared-preview
-        // branch below, which also drops the loading flag.
-        errorService.reportError(error, {
-          operation: 'Error converting preview quantity:',
-        });
-      }
+  const availability = certaintyData?.canConvert;
+  const confidence =
+    unitPair && availability?.available ? availability.confidence : null;
 
-      if (cancelled) return;
+  let convertedValue: number | null = null;
+  let previewLoading = false;
+  if (unitPair && conversionRatio != null) {
+    convertedValue = unitPair.quantity / conversionRatio;
+  } else if (serverRequest) {
+    previewLoading = !settledRequest || converting;
+    convertedValue = previewLoading
+      ? null
+      : convertData?.convertQuantity?.value ?? null;
+  }
 
-      const converted = result?.data?.convertQuantity;
-      if (converted) {
-        setPreviewText(
-          `${formatSide(
-            inputQuantity,
-            selectedUnitSymbol,
-            selectedDisplayAsFraction,
-          )} \u2248 ${formatSide(
-            converted.value,
-            trackingUnitSymbol,
-            trackingDisplayAsFraction,
-          )}`,
-        );
-        setConvertedValue(converted.value);
-      } else {
-        setPreviewText(null);
-        setConvertedValue(null);
-      }
-      setPreviewLoading(false);
-    };
-    debounceTimer.current = setTimeout(() => {
-      void runConversion();
-    }, DEBOUNCE_MS);
-
-    return () => {
-      cancelled = true;
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
-      }
-    };
-  }, [
-    shouldShowPreview,
-    inputQuantity,
-    selectedUnitId,
-    trackingUnitId,
-    selectedUnitSymbol,
-    selectedDisplayAsFraction,
-    trackingUnitSymbol,
-    trackingDisplayAsFraction,
-    pantryItemId,
-    convertQuantity,
-    conversionRatio,
-  ]);
+  const previewText =
+    unitPair && convertedValue != null
+      ? `${formatSide(
+          unitPair.quantity,
+          selectedUnitSymbol,
+          selectedDisplayAsFraction,
+        )} \u2248 ${formatSide(
+          convertedValue,
+          trackingUnitSymbol,
+          trackingDisplayAsFraction,
+        )}`
+      : null;
 
   return {
     previewText,

@@ -3,28 +3,33 @@ import { useState } from 'react';
 /**
  * Keeps the last successful value when a later query fails. For queries on
  * `errorPolicy: 'ignore'`, where `undefined` would otherwise read as "empty".
+ * `key` names the subject (the variables that identify it): a value is only
+ * ever preserved for the subject it was loaded for.
  */
 export function usePreservedQueryData<T>(
   currentData: T | undefined,
   initialValue: T,
+  key: string,
 ): T {
-  const [lastSuccessfulValue, setLastSuccessfulValue] =
-    useState<T>(initialValue);
-  // Seeded `undefined`, NOT `currentData`: the persisted cache can resolve
-  // synchronously on render #1, and seeding it would skip storing that value —
-  // leaving a later network error with nothing to preserve.
-  const [prevData, setPrevData] = useState<T | undefined>(undefined);
+  const [lastSuccessful, setLastSuccessful] = useState<{
+    key: string;
+    value: T;
+  } | null>(null);
 
-  if (currentData !== prevData) {
-    setPrevData(currentData);
-    if (currentData !== undefined) {
-      setLastSuccessfulValue(currentData);
-    }
+  if (
+    currentData !== undefined &&
+    (lastSuccessful === null ||
+      lastSuccessful.value !== currentData ||
+      lastSuccessful.key !== key)
+  ) {
+    setLastSuccessful({ key, value: currentData });
   }
 
   if (currentData !== undefined) {
     return currentData;
   }
 
-  return lastSuccessfulValue;
+  return lastSuccessful !== null && lastSuccessful.key === key
+    ? lastSuccessful.value
+    : initialValue;
 }

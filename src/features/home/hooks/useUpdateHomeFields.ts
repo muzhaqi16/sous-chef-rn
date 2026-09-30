@@ -21,7 +21,9 @@ export interface HomeFieldUpdates {
 export function useUpdateHomeFields(homeId: string) {
   const client = useApolloClient();
   // The mutation returns updated scalar fields; Apollo merges by __typename + id.
-  const [updateHomeMutation] = useMutation(UpdateHomeDocument);
+  const [updateHomeMutation] = useMutation(UpdateHomeDocument, {
+    context: { localFirst: true },
+  });
 
   /**
    * `home` is the CACHED ROW, not a stub: the revert reads its previous values
@@ -49,7 +51,6 @@ export function useUpdateHomeFields(homeId: string) {
               variables: {
                 input: { id: homeId, ...updates, version: home?.version ?? 1 },
               },
-              context: { localFirst: true },
             }),
           { document: UpdateHomeDocument, fallback },
         );

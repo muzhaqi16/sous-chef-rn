@@ -122,8 +122,8 @@ export const SavedRecipes: React.FC = () => {
     }
 
     return filterByTerm(result, searchQuery, [
-      saved => saved.recipe.name,
-      saved => saved.recipe.description,
+      saved => saved.recipe?.name,
+      saved => saved.recipe?.description,
     ]);
   })();
 

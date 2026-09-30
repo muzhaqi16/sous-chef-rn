@@ -1,4 +1,4 @@
-import { useFragment, useQuery } from '@apollo/client/react';
+import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import {
   GetPantryActionItemDocument,
   PantryActionModal_PantryItemFragmentDoc,
@@ -15,12 +15,16 @@ export function usePantryActionItem(pantryItemId: string | null | undefined): {
   pantryItem: PantryActionModal_PantryItemFragment | null;
   loading: boolean;
 } {
-  const { loading } = useQuery(GetPantryActionItemDocument, {
-    variables: { id: pantryItemId ?? '' },
-    skip: !pantryItemId,
-    fetchPolicy: 'cache-first',
-    errorPolicy: 'all',
-  });
+  const { loading } = useQuery(
+    GetPantryActionItemDocument,
+    pantryItemId
+      ? {
+          variables: { id: pantryItemId },
+          fetchPolicy: 'cache-first',
+          errorPolicy: 'all',
+        }
+      : skipToken,
+  );
 
   const { data, complete } = useFragment({
     fragment: PantryActionModal_PantryItemFragmentDoc,

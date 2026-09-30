@@ -1,0 +1,13 @@
+# Event read-back for a template item added or edited elsewhere. The event
+# names the item by id only and there is no single-item query, so the
+# template's items come back whole — the server's list, complete for every
+# reader of `MealTemplate.items`.
+query MealTemplateItemsForEvent($id: ID!) {
+  mealTemplate(id: $id) {
+    id
+    items {
+      id
+      ...MealTemplateItemFragment
+    }
+  }
+}

@@ -11,6 +11,28 @@ jest.mock('#/services/toastService', () => ({
   },
 }));
 
+// Captured, never invoked automatically: a rendered hook starts focused.
+type FocusCallback = () => (() => void) | void;
+let focusCallback: FocusCallback | undefined;
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (cb: FocusCallback) => {
+    focusCallback = cb;
+  },
+}));
+
+const mockUsePantryQuery = jest.fn();
+jest.mock('#features/pantry/hooks/usePantryQuery', () => {
+  const actual = jest.requireActual<
+    typeof import('#features/pantry/hooks/usePantryQuery')
+  >('#features/pantry/hooks/usePantryQuery');
+  return {
+    usePantryQuery: (...args: Parameters<typeof actual.usePantryQuery>) => {
+      mockUsePantryQuery(...args);
+      return actual.usePantryQuery(...args);
+    },
+  };
+});
+
 import {
   recordMock,
   renderHookWithApollo,
@@ -27,6 +49,7 @@ import { UseGenerateShoppingList_MealPlanFragmentDoc } from '#features/mealPlan/
 import { useStore } from '#store';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n';
+import { act } from '@testing-library/react-native';
 import { useGenerateShoppingList } from '../useGenerateShoppingList';
 
 /**
@@ -153,6 +176,35 @@ describe('generating a shopping list from a cached meal plan', () => {
 
     expect(await result.current.generateShoppingList({})).toBeNull();
     expect(create.fired).toHaveLength(0);
+  });
+
+  it('stands its pantry watcher down while the tab is blurred', () => {
+    renderHookWithApollo(() => useGenerateShoppingList(PLAN_ID), {
+      operationMocks: [],
+    });
+    expect(mockUsePantryQuery).toHaveBeenLastCalledWith(
+      undefined,
+      null,
+      null,
+      undefined,
+      { skip: false, fetchPolicy: 'cache-only' },
+    );
+
+    let blur: (() => void) | void;
+    act(() => {
+      blur = focusCallback?.();
+    });
+    act(() => {
+      if (typeof blur === 'function') blur();
+    });
+
+    expect(mockUsePantryQuery).toHaveBeenLastCalledWith(
+      undefined,
+      null,
+      null,
+      undefined,
+      { skip: true, fetchPolicy: 'cache-only' },
+    );
   });
 
   it('does not expose an offline gate — the action is derived, not requested', () => {

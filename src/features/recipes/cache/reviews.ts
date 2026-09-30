@@ -1,41 +1,22 @@
 import type { ApolloCache } from '@apollo/client';
-import { gql } from '@apollo/client';
 import { safeEvict, type ConnectionData } from '#/apollo/utils/cacheUpdaters';
+import {
+  Reviews_RatingCountsFragmentDoc,
+  Reviews_ReviewRatingFragmentDoc,
+} from './reviews.generated';
 
 const ratingCountField = (rating: number): string | null => {
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) return null;
   return `rating${rating}Count`;
 };
 
-const ReviewRatingFragment = gql`
-  fragment _RecipeReviewRating on RecipeReview {
-    id
-    rating
-  }
-`;
-
-const RecipeRatingCountsFragment = gql`
-  fragment _RecipeRatingCounts on Recipe {
-    totalReviews
-    rating1Count
-    rating2Count
-    rating3Count
-    rating4Count
-    rating5Count
-  }
-`;
-
 const recomputeAverageRating = (cache: ApolloCache, recipeId: string): void => {
   const cacheId = cache.identify({ __typename: 'Recipe', id: recipeId });
   if (!cacheId) return;
-  const counts = cache.readFragment<{
-    totalReviews: number;
-    rating1Count: number;
-    rating2Count: number;
-    rating3Count: number;
-    rating4Count: number;
-    rating5Count: number;
-  }>({ id: cacheId, fragment: RecipeRatingCountsFragment });
+  const counts = cache.readFragment({
+    id: cacheId,
+    fragment: Reviews_RatingCountsFragmentDoc,
+  });
   if (!counts) return;
   const buckets = [
     { rating: 1, count: counts.rating1Count },
@@ -53,7 +34,8 @@ const recomputeAverageRating = (cache: ApolloCache, recipeId: string): void => {
   cache.modify({ id: cacheId, fields: { averageRating: () => average } });
 };
 
-const addReviewEdge = (
+/** Link a created review into its recipe; the response states the aggregates. */
+export const addReviewEdge = (
   cache: ApolloCache,
   recipeId: string,
   reviewId: string,
@@ -118,11 +100,7 @@ const removeReviewEdge = (
   });
 };
 
-/**
- * Add a new review to a Recipe's reviews connection and update aggregates.
- * Server-side `averageRating` may use a different formula; cache-and-network
- * background refetch reconciles any drift.
- */
+/** Put a review back with its aggregates, when a delete removed it locally and was refused. */
 export const addReviewToRecipe = (
   cache: ApolloCache,
   recipeId: string,
@@ -138,32 +116,6 @@ export const addReviewToRecipe = (
     fields: {
       totalReviews: (existing: number = 0) => existing + 1,
       [countField]: (existing: number = 0) => existing + 1,
-    },
-  });
-  recomputeAverageRating(cache, recipeId);
-};
-
-/**
- * Adjust aggregates when a review's rating changes. Reads the prior rating
- * from cache via `getReviewRating` before the mutation fires.
- */
-export const changeReviewRating = (
-  cache: ApolloCache,
-  recipeId: string,
-  prevRating: number,
-  nextRating: number,
-): void => {
-  if (prevRating === nextRating) return;
-  const prevField = ratingCountField(prevRating);
-  const nextField = ratingCountField(nextRating);
-  if (!prevField || !nextField) return;
-  const cacheId = cache.identify({ __typename: 'Recipe', id: recipeId });
-  if (!cacheId) return;
-  cache.modify({
-    id: cacheId,
-    fields: {
-      [prevField]: (existing: number = 0) => Math.max(0, existing - 1),
-      [nextField]: (existing: number = 0) => existing + 1,
     },
   });
   recomputeAverageRating(cache, recipeId);
@@ -200,14 +152,13 @@ export const removeReviewFromRecipe = (
  * Read the rating currently cached for a review, to capture it before an update
  * changes the rating field.
  */
-export const getReviewRating = (
+const getReviewRating = (
   cache: ApolloCache,
   reviewId: string,
 ): number | null => {
-  const review = cache.readFragment<{ id: string; rating: number }>({
+  const review = cache.readFragment({
     id: cache.identify({ __typename: 'RecipeReview', id: reviewId }),
-    fragment: ReviewRatingFragment,
-    fragmentName: '_RecipeReviewRating',
+    fragment: Reviews_ReviewRatingFragmentDoc,
   });
   return review?.rating ?? null;
 };

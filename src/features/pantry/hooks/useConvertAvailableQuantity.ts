@@ -44,8 +44,12 @@ export function useConvertAvailableQuantity({
   >(null);
   const [availableLoading, setAvailableLoading] = useState(false);
 
+  // `nextFetchPolicy` too: a re-execute otherwise inherits the client's
+  // `cache-first` and repeats the first answer.
   const [convertQuantity] = useLazyQuery(ConvertQuantityDocument, {
     fetchPolicy: 'network-only',
+    nextFetchPolicy: 'network-only',
+    refetchOn: false,
   });
 
   // For dual-tracked items, the authoritative remaining is in net weight units

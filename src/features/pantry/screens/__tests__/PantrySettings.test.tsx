@@ -1,6 +1,6 @@
 'use no memo';
 
-import { toDateKey } from '#/utils/dateUtils';
+import { todayKey } from '#/utils/dateUtils';
 import React from 'react';
 import type { BarAction } from '#components/molecules/BarActions';
 import { makeCache } from '#/apollo/cache';
@@ -14,7 +14,7 @@ import {
 import {
   removeOptimisticPantry,
   restorePantryToHomeCache,
-} from '#features/pantry/utils/optimisticPantry';
+} from '#features/pantry/cache/pantry';
 import {
   pantryData,
   type PantryFixture,
@@ -60,8 +60,8 @@ jest.mock('#/services/alertService', () => ({
 
 // Spread the real module: the screen imports several of its writers, and a
 // trimmed factory fails at import rather than at the assertion.
-jest.mock('#features/pantry/utils/optimisticPantry', () => ({
-  ...jest.requireActual('#features/pantry/utils/optimisticPantry'),
+jest.mock('#features/pantry/cache/pantry', () => ({
+  ...jest.requireActual('#features/pantry/cache/pantry'),
   removeOptimisticPantry: jest.fn(),
   restorePantryToHomeCache: jest.fn(),
 }));
@@ -139,7 +139,7 @@ function cacheWithPantry(pantry: PantryFixture): InMemoryCache {
       id: pantry.id,
       itemsFirst: 25,
       storageLocationsFirst: 15,
-      today: toDateKey(new Date()),
+      today: todayKey(),
     },
     data: pantryData(pantry),
   });
@@ -288,7 +288,7 @@ describe('PantrySettings', () => {
         data: {
           deletePantry: {
             __typename: 'DeletePantryPayload',
-            pantry: { __typename: 'Pantry', id: 'p1', name: 'Test Pantry' },
+            pantry: { __typename: 'Pantry', id: 'p1' },
           },
         },
       });

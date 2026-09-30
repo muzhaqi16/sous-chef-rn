@@ -12,8 +12,10 @@ export type StoreItem = {
 };
 
 export function useStoreAutocomplete() {
-  const [searchStores, { data: storesData, loading }] =
-    useLazyQuery(SearchStoresDocument);
+  const [searchStores, { data: storesData, loading }] = useLazyQuery(
+    SearchStoresDocument,
+    { refetchOn: false },
+  );
 
   // Reference data warmed while online (useDataPreloading) for offline fallback.
   const cachedStores = useAppStore(state => state.cachedStores);

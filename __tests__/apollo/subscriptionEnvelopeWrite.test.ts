@@ -4,13 +4,14 @@
  * `PantryEvents` and `MyShoppingListsEvents` carry an envelope plus
  * `node { __typename id }`; every handler reads the entity back with a query.
  * Left cacheable, Apollo normalises that node — and a delete has just evicted
- * it: `removeItem` evicts before the mutation fires, and the server pushes the
- * event before the mutation resolves. The write re-creates the entity as a bare
- * `{ id }`. Its connection edge stops dangling (the `itemsConnection` read
- * policy only drops edges whose node is unreadable), the node now lacks every
- * other field the list query selects, and the list's watched result is
- * incomplete — which Apollo repairs with a network refetch. That was one full
- * page refetch per delete.
+ * it, and the server pushes the event before the mutation resolves. The write
+ * re-creates the entity as a bare `{ id }`. Wherever the removal only evicted,
+ * leaving the `itemsConnection` read policy to drop the dangling edge, that
+ * edge stops dangling (the policy drops only edges whose node is unreadable),
+ * the node lacks every other field the list query selects, and the list's
+ * watched result is incomplete — which Apollo repairs with a network refetch.
+ * That was one full page refetch per delete. An evicting removal through the
+ * connection updaters also drops the edge, which the last case pins.
  *
  * These tests perform the write Apollo would perform, directly against the
  * real cache, and assert the incompleteness — the mechanism, checked without a
@@ -38,7 +39,7 @@ import {
   MyShoppingListsEventsDocument,
   type GetShoppingListItemsFilteredQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { removeFromPantryItemsCache } from '#features/pantry/cache/items';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { removeFromShoppingListItemsCache } from '#features/shoppingList/hooks/mutations/utils';
 
 const mockedSchema = addMocksToSchema({
@@ -134,8 +135,8 @@ describe('event envelope written to the cache after a local delete', () => {
     const { cache, itemId } = await seedPantry();
     expect(diffPantry(cache).complete).toBe(true);
 
-    // What `removeItem` does before the mutation fires.
-    removeFromPantryItemsCache(cache, 'pantry-1', itemId, { evictItem: true });
+    // A removal that only evicts, leaving the edge to the read policy.
+    safeEvict(cache, 'PantryItem', itemId);
     expect(cache.extract()[`PantryItem:${itemId}`]).toBeUndefined();
     // The read policy drops the dangling edge, so the list stays complete.
     expect(diffPantry(cache).complete).toBe(true);
@@ -174,31 +175,11 @@ describe('event envelope written to the cache after a local delete', () => {
     const { cache, itemId } = await seedList();
     expect(diffList(cache).complete).toBe(true);
 
-    removeFromShoppingListItemsCache(cache, 'list-1', itemId, {
-      evictItem: true,
-    });
+    safeEvict(cache, 'ShoppingListItem', itemId);
     expect(cache.extract()[`ShoppingListItem:${itemId}`]).toBeUndefined();
     expect(diffList(cache).complete).toBe(true);
 
-    cache.write({
-      dataId: 'ROOT_SUBSCRIPTION',
-      query: MyShoppingListsEventsDocument,
-      result: {
-        __typename: 'Subscription',
-        myShoppingListsEvents: {
-          __typename: 'ShoppingListEvent',
-          subtype: ShoppingListSubtype.ItemsChanged,
-          mutation: MutationType.ItemRemoved,
-          listId: 'list-1',
-          originatorClientId: 'device_other',
-          actorUserId: 'user-2',
-          timestamp: '2026-01-01T00:00:00.000Z',
-          updatedFields: [],
-          clearedItemIds: [],
-          node: { __typename: 'ShoppingListItem', id: itemId },
-        },
-      },
-    });
+    writeShoppingEvent(cache, itemId);
 
     expect(cache.extract()[`ShoppingListItem:${itemId}`]).toEqual({
       __typename: 'ShoppingListItem',
@@ -206,4 +187,40 @@ describe('event envelope written to the cache after a local delete', () => {
     });
     expect(diffList(cache).complete).toBe(false);
   });
+
+  it('an evicting removal drops the edge too, so the stub leaves the list complete', async () => {
+    const { cache, itemId } = await seedList();
+
+    removeFromShoppingListItemsCache(cache, 'list-1', itemId, {
+      evictItem: true,
+    });
+    writeShoppingEvent(cache, itemId);
+
+    expect(diffList(cache).complete).toBe(true);
+  });
 });
+
+function writeShoppingEvent(
+  cache: ReturnType<typeof makeCache>,
+  itemId: string,
+): void {
+  cache.write({
+    dataId: 'ROOT_SUBSCRIPTION',
+    query: MyShoppingListsEventsDocument,
+    result: {
+      __typename: 'Subscription',
+      myShoppingListsEvents: {
+        __typename: 'ShoppingListEvent',
+        subtype: ShoppingListSubtype.ItemsChanged,
+        mutation: MutationType.ItemRemoved,
+        listId: 'list-1',
+        originatorClientId: 'device_other',
+        actorUserId: 'user-2',
+        timestamp: '2026-01-01T00:00:00.000Z',
+        updatedFields: [],
+        clearedItemIds: [],
+        node: { __typename: 'ShoppingListItem', id: itemId },
+      },
+    },
+  });
+}

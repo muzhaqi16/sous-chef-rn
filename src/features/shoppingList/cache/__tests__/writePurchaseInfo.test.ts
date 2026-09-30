@@ -5,7 +5,7 @@
  * `cache.modify` cannot observe — it sees only what the modifier returns, never
  * what the cache does with it.
  */
-import { gql } from '@apollo/client';
+import { gql, type Cache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { writePurchaseInfo } from '../purchase';
 
@@ -70,12 +70,10 @@ describe('writePurchaseInfo', () => {
 
     const after = read(cache);
     expect(after?.isPurchased).toBe(false);
-    // The type policy clears every field a write OMITS when the flag changes —
-    // written for a narrow server response, which describes a different
-    // purchase. A local flip is not that: the SDL documents a clearing contract
+    // The type policy clears every field a SERVER write omits when the flag
+    // changes. A local flip is not that: the SDL documents a clearing contract
     // for `movedToPantryAt` alone, and these amounts are the server's record,
-    // not this write's to discard. The writer carries them so the policy has
-    // nothing to clear.
+    // not this write's to discard.
     expect(after?.purchasedQuantity).toBe(3);
     expect(after?.purchasedPrice).toBe(9.5);
     expect(after?.purchaseDate).toBe('2026-01-01');
@@ -169,11 +167,113 @@ describe('writePurchaseInfo', () => {
     expect(after?.movedToPantryAt).toBe('2026-02-02');
   });
 
+  it('keeps a held field the writer never names through a flip', () => {
+    const cache = makeCache();
+    const WITH_BUYER = gql`
+      fragment BuyerRow on ShoppingListItem {
+        __typename
+        id
+        purchaseInfo {
+          __typename
+          isPurchased
+          movedToPantryAt
+          purchasedById
+          purchasedBy {
+            __typename
+            id
+          }
+        }
+      }
+    `;
+    cache.writeFragment({
+      id: 'ShoppingListItem:sli-1',
+      fragment: WITH_BUYER,
+      data: {
+        __typename: 'ShoppingListItem',
+        id: 'sli-1',
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: true,
+          movedToPantryAt: null,
+          purchasedById: 'user-1',
+          purchasedBy: { __typename: 'User', id: 'user-1' },
+        },
+      },
+    });
+
+    writePurchaseInfo(cache, 'sli-1', { isPurchased: false });
+
+    const after = cache.readFragment<{
+      purchaseInfo: {
+        isPurchased: boolean;
+        purchasedById: string | null;
+        purchasedBy: { id: string } | null;
+      };
+    }>({ id: 'ShoppingListItem:sli-1', fragment: WITH_BUYER })?.purchaseInfo;
+    expect(after?.isPurchased).toBe(false);
+    expect(after?.purchasedById).toBe('user-1');
+    expect(after?.purchasedBy?.id).toBe('user-1');
+  });
+
   it('is a no-op for an unidentifiable row', () => {
     const cache = makeCache();
     expect(() =>
       writePurchaseInfo(cache, '', { isPurchased: true }),
     ).not.toThrow();
+  });
+});
+
+describe('the purchaseInfo merge and `extensions.local`', () => {
+  const FLAG = gql`
+    fragment FlagOnly on ShoppingListItem {
+      __typename
+      id
+      purchaseInfo {
+        __typename
+        isPurchased
+      }
+    }
+  `;
+  const flipTo = (
+    cache: ReturnType<typeof makeCache>,
+    isPurchased: boolean,
+    extensions?: Record<string, unknown>,
+  ) => {
+    // `WriteFragmentOptions` omits `extensions`; `writeFragment` forwards them.
+    const write: Cache.WriteFragmentOptions<unknown, never> &
+      Pick<Cache.WriteOptions, 'extensions'> = {
+      id: 'ShoppingListItem:sli-1',
+      fragment: FLAG,
+      data: {
+        __typename: 'ShoppingListItem',
+        id: 'sli-1',
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased,
+        },
+      },
+      extensions,
+    };
+    cache.writeFragment(write);
+  };
+
+  it('clears the previous purchase on a server write that flips the flag', () => {
+    const cache = seed();
+
+    flipTo(cache, false);
+
+    expect(read(cache)?.purchasedQuantity).toBeNull();
+    expect(read(cache)?.purchaseDate).toBeNull();
+  });
+
+  it('merges field-wise on a local write that flips the flag', () => {
+    const cache = seed();
+
+    flipTo(cache, false, { local: true });
+
+    expect(read(cache)?.isPurchased).toBe(false);
+    expect(read(cache)?.purchasedQuantity).toBe(3);
+    expect(read(cache)?.purchaseDate).toBe('2026-01-01');
   });
 });
 

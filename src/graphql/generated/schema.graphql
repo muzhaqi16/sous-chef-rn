@@ -309,11 +309,12 @@ input AddItemsToShoppingListInput {
 
 type AddItemsToShoppingListPayload {
   """
-  Per-item results, in input order. Each element carries its own
-  success/error and quantityIncremented flag (add-vs-increment split lives
-  here; increments are counted under summary.skipped).
+  Per-item results, in input order. Each element carries its line and
+  outcome, or its failure; a MERGED entry is counted under summary.skipped.
   """
   results: [BatchAddShoppingListItemResult!]!
+  """The list the batch added to, after the batch."""
+  shoppingList: ShoppingList!
   summary: BulkSummary!
 }
 
@@ -558,6 +559,7 @@ input AdjustPantryItemQuantityInput {
 type AdjustPantryItemQuantityPayload {
   pantry: Pantry
   pantryItem: PantryItem!
+  storageLocation: StorageLocation
 }
 
 """
@@ -767,25 +769,17 @@ input BatchAddShoppingListItemInput {
 type BatchAddShoppingListItemResult {
   """Client ID if provided in input"""
   clientId: String
-  """
-  Why the entry failed, as the code a result-union member carries for the same
-  error. Set exactly when success is false. Branch on this, not on the text.
-  """
-  code: ErrorCode
-  """
-  Client-safe failure text, set exactly when success is false. An
-  unexpected fault is masked in production and carries errorId.
-  """
-  error: String
-  """
-  Set only when the failure text was masked. Names the log entry holding the
-  real error, so support can look it up.
-  """
-  errorId: String
+  """Why the entry failed; set exactly when success is false"""
+  failure: BatchElementFailure
   """Index in the input array"""
   index: Int!
   """The created/updated item (null if failed)"""
   item: ShoppingListItem
+  """
+  MERGED when the entry landed on a line already on the list (its quantity
+  added, or a removed or purchased line reused); null when the entry failed.
+  """
+  outcome: CreateOutcome
   """
   True when this add merged into a line whose package size it could not keep:
   it stated another size, or scanned another barcode stating none onto a line
@@ -793,10 +787,27 @@ type BatchAddShoppingListItemResult {
   stack's default at the move unless the move states one.
   """
   packageSizeCleared: Boolean
-  """Whether quantity was incremented (item already existed)"""
-  quantityIncremented: Boolean
   """Whether the operation succeeded"""
   success: Boolean!
+}
+
+"""
+Why one element of a batch failed. Every batch that reports per-element
+outcomes uses this one shape.
+"""
+type BatchElementFailure {
+  """
+  The code a result-union member carries for the same error. Branch on this,
+  not on the reason text.
+  """
+  code: ErrorCode!
+  """Set only when the reason was masked."""
+  errorId: String
+  """
+  Client-safe explanation. An unexpected fault reads as a generic message,
+  with errorId naming the log entry that holds the real error.
+  """
+  reason: String!
 }
 
 """Lifecycle status of a pantry item batch"""
@@ -820,20 +831,10 @@ input BatchUpsertItemInput {
 }
 
 type BatchUpsertItemResult {
-  """
-  Why the entry failed, as the code a result-union member carries for the same
-  error. Set exactly when success is false. Branch on this, not on the text.
-  """
-  code: ErrorCode
   created: Boolean
-  """Client-safe failure text, set exactly when success is false."""
-  error: String
-  """
-  Set only when the failure text was masked. Names the log entry holding the
-  real error, so support can look it up.
-  """
-  errorId: String
   externalId: String!
+  """Why the entry failed; set exactly when success is false"""
+  failure: BatchElementFailure
   item: Item
   mapping: ExternalSourceMapping
   source: ExternalSource!
@@ -1321,6 +1322,7 @@ type ChangePantryItemUnitPayload {
   pantryItem: PantryItem!
   """True when a quantity was sent and an exact route made it unused"""
   quantityIgnored: Boolean!
+  storageLocation: StorageLocation
 }
 
 """
@@ -1620,6 +1622,7 @@ input ConvertExpiredBatchesToWasteInput {
 type ConvertExpiredBatchesToWastePayload {
   pantry: Pantry
   pantryItem: PantryItem!
+  storageLocation: StorageLocation
 }
 
 """
@@ -1637,6 +1640,7 @@ input ConvertExpiredToWasteInput {
 type ConvertExpiredToWastePayload {
   pantry: Pantry
   pantryItem: PantryItem!
+  storageLocation: StorageLocation
 }
 
 """
@@ -1769,6 +1773,7 @@ type CorrectPantryItemPackageSizePayload {
   batch: PantryItemBatch!
   pantry: Pantry
   pantryItem: PantryItem!
+  storageLocation: StorageLocation
 }
 
 """
@@ -2117,6 +2122,18 @@ Always include a __typename so the variant can be discriminated.
 """
 union CreateMealTemplateResult = ConflictError | CreateMealTemplatePayload | ForbiddenError | NotFoundError | ValidationError
 
+"""
+Whether a create wrote a new row, or joined a row that already existed. On
+MERGED the returned entity is the surviving row under its own id, which a
+client adopts in place of the id it minted.
+"""
+enum CreateOutcome {
+  """A new row was written"""
+  CREATED
+  """An existing row absorbed the create"""
+  MERGED
+}
+
 input CreatePantryInput {
   description: String
   homeId: ID!
@@ -2183,8 +2200,11 @@ input CreatePantryItemInput {
 }
 
 type CreatePantryItemPayload {
+  """MERGED when a forced add joined a stack the pantry already held"""
+  outcome: CreateOutcome!
   pantry: Pantry
   pantryItem: PantryItem!
+  storageLocation: StorageLocation
 }
 
 """
@@ -2223,6 +2243,7 @@ type CreatePantryItemUsagePayload {
   pantry: Pantry
   pantryItem: PantryItem
   pantryItemUsage: PantryItemUsage!
+  storageLocation: StorageLocation
 }
 
 """
@@ -2283,9 +2304,6 @@ input CreateRecipeInput {
   attribution: RecipeAttributionInput
   description: String
   dietary: DietaryTagsInput
-  externalSourceData: JSON
-  externalSourceId: String
-  externalSourceUrl: URL
   """
   Optional client-generated permanent ID (CUID2) for offline-first idempotency.
   """
@@ -2297,7 +2315,6 @@ input CreateRecipeInput {
   name: String!
   notes: String
   nutrition: NutritionInfoInput
-  source: ExternalSource
   """
   DRAFT keeps the recipe private. PUBLISHED or PENDING_REVIEW submits it for
   admin review: it is PENDING_REVIEW until an admin approves it.
@@ -2417,15 +2434,15 @@ input CreateShoppingListItemsFromRecipeInput {
 }
 
 type CreateShoppingListItemsFromRecipePayload {
-  """Items newly added to the shopping list."""
-  addedItems: [ShoppingListItem!]!
-  """Recipe ingredients skipped (e.g. already stocked)."""
-  skippedItems: [RecipeIngredient!]!
-  totalAdded: Int!
-  totalSkipped: Int!
-  totalUpdated: Int!
-  """Existing items whose quantity was increased."""
-  updatedItems: [ShoppingListItem!]!
+  """One result per ingredient, in the recipe's ingredient order"""
+  results: [RecipeIngredientAddResult!]!
+  """The list the ingredients were added to, after the batch."""
+  shoppingList: ShoppingList!
+  """
+  summary.succeeded = new lines; summary.skipped = ingredients merged into a
+  line already on the list; summary.failed = ingredients that failed.
+  """
+  summary: BulkSummary!
 }
 
 """
@@ -2720,6 +2737,8 @@ Always include a __typename so the variant can be discriminated.
 union DeleteAccountResult = ConflictError | DeleteAccountPayload | ForbiddenError | NotFoundError | ValidationError
 
 type DeleteAllReadNotificationsPayload {
+  """The caller's badge after this write"""
+  notificationSummary: NotificationSummary!
   summary: BulkSummary!
 }
 
@@ -2875,6 +2894,8 @@ input DeleteMultipleNotificationsInput {
 }
 
 type DeleteMultipleNotificationsPayload {
+  """The caller's badge after this write"""
+  notificationSummary: NotificationSummary!
   summary: BulkSummary!
 }
 
@@ -2891,6 +2912,8 @@ input DeleteNotificationInput {
 
 type DeleteNotificationPayload {
   notification: Notification!
+  """The caller's badge after this write"""
+  notificationSummary: NotificationSummary!
 }
 
 """
@@ -2915,12 +2938,17 @@ type DeletePantryItemPayload {
   The canonical, API-wide replay flag.
   """
   converged: Boolean!
+  """The removed stack's pantry, also on a converged replay"""
   pantry: Pantry
   """
   The removed stack, or null when it was already removed — an idempotent
   replay (or second device) that converged as success. See converged.
   """
   pantryItem: PantryItem
+  """
+  The removed stack's location, also on a converged replay; null when it had none
+  """
+  storageLocation: StorageLocation
 }
 
 """
@@ -3051,6 +3079,8 @@ input DeleteShoppingListItemsInput {
 }
 
 type DeleteShoppingListItemsPayload {
+  """The list the batch cleared, after the batch."""
+  shoppingList: ShoppingList!
   """Shopping list items that were cleared (soft-deleted) by the batch."""
   shoppingListItems: [ShoppingListItem!]!
   summary: BulkSummary!
@@ -4103,6 +4133,9 @@ enum ExpirationNotificationType {
   WEEKLY_DIGEST
 }
 
+"""A catalog recipe's provider-specific data, one member per provider."""
+union ExternalRecipeDetails = SpoonacularRecipeDetails
+
 enum ExternalSource {
   ALLRECIPES
   BARCODE_LOOKUP
@@ -4192,37 +4225,30 @@ input ExternalSourceMappingInput {
   storage: JSON
 }
 
+"""Where the API's copy of a catalog recipe stands against its provider."""
+enum ExternalSyncStatus {
+  """
+  Content an app supplied before the API fetched recipes itself; shown until
+  the API re-fetches it from the provider.
+  """
+  CLIENT_SUPPLIED
+  """
+  The provider answered that it has no such recipe, and the API never held
+  its content. Not final: the API asks again, less often each time.
+  """
+  NOT_FOUND
+  """
+  Not fetched from the provider yet: a stub with the name and image the
+  importing app supplied, filled in once a user saves the recipe.
+  """
+  PENDING
+  """The provider's own content, fetched and stored by the API."""
+  SYNCED
+}
+
 type FailedIPStat {
   count: Int!
   ipAddress: String
-}
-
-"""
-A purchased line movePurchasedItemsToPantry could not move, with the reason.
-Counted in summary.failed.
-"""
-type FailedMoveInfo {
-  """
-  Why this line failed, as the code a result-union member carries for the
-  same error. Branch on this, not on the reason text.
-  """
-  code: ErrorCode!
-  """
-  Present only when the reason was masked. Names the log entry holding the
-  real error, so support can look it up.
-  """
-  errorId: String
-  itemName: String!
-  """
-  Client-safe explanation. A failure the client can act on (not found, a
-  conflict, a validation refusal) states itself. Anything else — a database
-  fault, a timeout, an unexpected error — reports a generic message and an
-  errorId instead: this field is payload DATA and so does not pass through the
-  response error masking, and returning the underlying text here would leak
-  what that masking exists to withhold.
-  """
-  reason: String!
-  shoppingListItemId: ID!
 }
 
 """Sub-input for feature-specific notifications"""
@@ -5127,9 +5153,9 @@ type Item {
   """
   categories: [ItemCategory!]!
   """
-  A PACKAGE netWeight converted to the caller's preferred unit system, so two
-  callers reading the same item can get different answers. Null for a serving
-  or reference figure.
+  A PACKAGE netWeight converted to the caller's unit system (see UnitSystem),
+  so two callers reading the same item can get different answers. Null for a
+  serving or reference figure.
   """
   convertedNetWeight: ConvertedValue
   """When the item was created."""
@@ -6421,6 +6447,8 @@ type LowStockItem {
 }
 
 type MarkAllNotificationsAsReadPayload {
+  """The caller's badge after this write"""
+  notificationSummary: NotificationSummary!
   summary: BulkSummary!
 }
 
@@ -6518,6 +6546,8 @@ input MarkNotificationAsReadInput {
 
 type MarkNotificationAsReadPayload {
   notification: Notification!
+  """The caller's badge after this write"""
+  notificationSummary: NotificationSummary!
 }
 
 """
@@ -6533,6 +6563,8 @@ input MarkNotificationUnreadInput {
 
 type MarkNotificationUnreadPayload {
   notification: Notification!
+  """The caller's badge after this write"""
+  notificationSummary: NotificationSummary!
 }
 
 """
@@ -6576,6 +6608,7 @@ input MarkPantryItemExpiredInput {
 type MarkPantryItemExpiredPayload {
   pantry: Pantry
   pantryItem: PantryItem!
+  storageLocation: StorageLocation
 }
 
 """
@@ -7323,16 +7356,12 @@ input MovePurchasedItemsToPantryInput {
 }
 
 type MovePurchasedItemsToPantryPayload {
+  """One result per purchased line this call attempted, moved or failed."""
+  results: [MovePurchasedLineResult!]!
+  """The list the purchased lines came from, after the move."""
+  shoppingList: ShoppingList!
   """
-  Purchased lines that could not be moved, each with a registered code and a client-safe reason. Counted in summary.failed. Was always empty before failures were reported per line.
-  """
-  failedItems: [FailedMoveInfo!]!
-  """
-  Purchased lines that are now in the pantry — both the ones this call moved and the ones an earlier call in the SAME purchase cycle had already moved (see alreadyInPantry). Not a count of what this call stocked: read summary.succeeded for that.
-  """
-  movedItems: [MovedItemInfo!]!
-  """
-  summary.succeeded = lines moved by THIS call; summary.skipped = lines this purchase had already put in the pantry; summary.failed = lines that errored. All three changed meaning without changing name or type — failed was previously always 0, and skipped previously meant a line that could not be moved.
+  summary.succeeded = lines moved by THIS call; summary.skipped = lines this purchase had already put in the pantry; summary.failed = lines that errored.
   """
   summary: BulkSummary!
 }
@@ -7343,6 +7372,27 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union MovePurchasedItemsToPantryResult = ConflictError | ForbiddenError | MovePurchasedItemsToPantryPayload | NotFoundError | ValidationError
+
+"""One purchased line's outcome in movePurchasedItemsToPantry."""
+type MovePurchasedLineResult {
+  """
+  True when an earlier move had already placed this line and this call wrote nothing
+  """
+  alreadyInPantry: Boolean!
+  """Why the line failed; set exactly when success is false"""
+  failure: BatchElementFailure
+  itemName: String!
+  """
+  MERGED when the purchase restocked a stack the pantry already held; null when the line failed
+  """
+  outcome: CreateOutcome
+  """The stack the purchase is in; null when the line failed"""
+  pantryItem: PantryItem
+  """The purchased amount moved; null when the line failed"""
+  quantity: Float
+  shoppingListItemId: ID!
+  success: Boolean!
+}
 
 """
 Input for moving a shopping list item to the pantry.
@@ -7404,13 +7454,21 @@ type MoveShoppingItemToPantryPayload {
   """
   True when this line's purchase was already in the pantry and the call
   wrote nothing — a replay, or a move retargeted at a different pantry.
-  Same meaning as MovedItemInfo.alreadyInPantry in the batch form, so a
+  Same meaning as MovePurchasedLineResult.alreadyInPantry in the batch form, so a
   client does not have to call the batch to learn whether its single call
   did anything.
   """
   alreadyInPantry: Boolean!
+  """MERGED when the purchase restocked a stack the pantry already held"""
+  outcome: CreateOutcome!
   pantry: Pantry
   pantryItem: PantryItem!
+  shoppingList: ShoppingList
+  """
+  The source line after the move; the removed line when removeFromList was set.
+  """
+  shoppingListItem: ShoppingListItem
+  storageLocation: StorageLocation
 }
 
 """
@@ -7451,26 +7509,6 @@ input MoveToPantryIdHintInput {
   """
   pantryItemId: ID!
   """The purchased shopping list item this hint applies to."""
-  shoppingListItemId: ID!
-}
-
-"""
-Info about a line that is now in the pantry (the per-element entity of
-movePurchasedItemsToPantry). Covers both outcomes — read alreadyInPantry to
-tell them apart.
-"""
-type MovedItemInfo {
-  """
-  True when an earlier move had already placed this line and the call wrote
-  nothing. The batch leaves its lines on the shopping list, so a line stays in
-  the purchased section and is re-attempted on every invocation; this is how a
-  client tells "already stocked" from "just moved" and stops counting the same
-  line as new work. Counted in summary.skipped, not summary.succeeded.
-  """
-  alreadyInPantry: Boolean!
-  itemName: String!
-  pantryItemId: ID!
-  quantity: Float!
   shoppingListItemId: ID!
 }
 
@@ -7645,9 +7683,9 @@ type Mutation {
   """Create a new purchase record."""
   createPurchase(input: CreatePurchaseInput!): CreatePurchaseResult!
   """
-  Create a recipe, either entered manually or carried over from an external
-  source. A new recipe from a catalog source is PENDING_REVIEW; any other
-  follows its input status (see CreateRecipeInput.status).
+  Create a recipe the caller writes. It follows its input status (see
+  CreateRecipeInput.status); a catalog recipe comes in through
+  upsertExternalRecipe instead.
   """
   createRecipe(input: CreateRecipeInput!): CreateRecipeResult!
   """Create a review for a published recipe."""
@@ -7906,10 +7944,10 @@ type Mutation {
   row as already stocked; it is available on any read, not only here.
   
   Read the summary accordingly: succeeded = lines this call moved; failed =
-  lines that errored, each in failedItems with its code and reason; skipped =
-  a line THIS purchase had already put in the pantry and that had lost its
-  stamp. movedItems carries the moved and the skipped together, told apart by
-  alreadyInPantry — so movedItems.length is not "lines stocked by this call",
+  lines that errored, each with its failure in results; skipped = a line THIS
+  purchase had already put in the pantry and that had lost its stamp. results
+  carries the moved and the skipped together, told apart by alreadyInPantry —
+  so the successful results are not "lines stocked by this call",
   summary.succeeded is.
   
   Re-adding, unmarking or restoring a line starts a new purchase CYCLE: the
@@ -7920,8 +7958,8 @@ type Mutation {
   
   Three counters carry meanings a client cannot infer from their names, so
   read them as defined above rather than by analogy with other bulk payloads:
-  failed can be non-zero, skipped is "already stocked" rather than "could not
-  be moved", and movedItems.length is not a count of what this call stocked.
+  failed can be non-zero, and skipped is "already stocked" rather than "could
+  not be moved".
   
   A line whose catalog item was deleted is re-resolved from the name it still
   carries rather than skipped; only a line with neither fails.
@@ -7974,7 +8012,10 @@ type Mutation {
   registerDevice(input: RegisterDeviceInput!): RegisterDeviceResult!
   """Remove an item from a category."""
   removeItemFromCategory(input: RemoveItemFromCategoryInput!): RemoveItemFromCategoryResult!
-  """Remove an item from a shopping list."""
+  """
+  Remove an item from a shopping list. Removing a line that is already removed
+  converges: success with shoppingListItem null and converged true.
+  """
   removeItemFromShoppingList(input: RemoveItemFromShoppingListInput!): RemoveItemFromShoppingListResult!
   """Remove the primary image from an item, deleting its stored file"""
   removeItemImage(input: RemoveItemImageInput!): RemoveItemImageResult!
@@ -8038,33 +8079,6 @@ type Mutation {
   revokeDeviceSessions(input: RevokeDeviceSessionsInput!): RevokeDeviceSessionsResult!
   """Share a shopping list publicly with an optional share code."""
   shareShoppingList(input: ShareShoppingListInput!): ShareShoppingListResult!
-  """
-  Offline-sync twin of deletePantryItem — idempotent by a client-minted id.
-  """
-  syncDeletePantryItem(input: SyncDeletePantryItemInput!): SyncDeletePantryItemResult!
-  """
-  Offline-sync twin of removeItemFromShoppingList — idempotent by a
-  client-minted id.
-  """
-  syncDeleteShoppingListItem(input: SyncDeleteShoppingListItemInput!): SyncDeleteShoppingListItemResult!
-  """
-  Offline-sync twin of moveShoppingListItem (reorder) — idempotent by a
-  client-minted id.
-  """
-  syncMoveShoppingListItem(input: SyncMoveShoppingListItemInput!): SyncMoveShoppingListItemResult!
-  """
-  Offline-sync twin of createPantryItem/updatePantryItem — idempotent by a
-  client-minted id (the primary key for creates, idempotencyKey for
-  cumulative deltas). Use the online mutations directly when not syncing
-  offline edits.
-  """
-  syncPantryItem(input: SyncPantryItemInput!): SyncPantryItemResult!
-  """
-  Offline-sync twin of addItemsToShoppingList/updateShoppingListItem —
-  idempotent by a client-minted id (the primary key or idempotencyKey). Use
-  the online mutations directly when not syncing offline edits.
-  """
-  syncShoppingListItem(input: SyncShoppingListItemInput!): SyncShoppingListItemResult!
   """Toggle a helpful vote on a recipe review."""
   toggleReviewHelpful(input: ToggleReviewHelpfulInput!): ToggleReviewHelpfulResult!
   """Toggle the purchased state of a shopping list item."""
@@ -8136,8 +8150,6 @@ type Mutation {
   updatePantry(input: UpdatePantryInput!): UpdatePantryResult!
   """Update an existing pantry item."""
   updatePantryItem(input: UpdatePantryItemInput!): UpdatePantryItemResult!
-  """Move a pantry item to a different storage location."""
-  updatePantryItemLocation(input: UpdatePantryItemLocationInput!): UpdatePantryItemLocationResult!
   """
   Set a pantry item's quantity directly (supports fractions). A plain setter
   with no audit record. When reconciling to a physical count and you want an
@@ -8216,11 +8228,15 @@ type Mutation {
   """
   updateUserAppeal(input: UpdateUserAppealInput!): UpdateUserAppealResult!
   """
-  Import a recipe from an external source, matching on source plus external
-  id. Returns the existing recipe when one already matches rather than
-  creating a duplicate, so replaying an import is safe. A new import is
-  PENDING_REVIEW, visible only to the caller until an admin approves it; an
-  existing one the caller cannot see is NotFoundError.
+  Get the API's copy of a catalog recipe, named by provider and provider id.
+  The API fetches the content from the provider itself: a SYNCED recipe is
+  returned as is, and any other is fetched now when the daily provider
+  budget allows (a NOT_FOUND or CLIENT_SUPPLIED one only once its recheck is
+  due). Otherwise it is returned as held; a PENDING stub carries the name and
+  image hints and is fetched once a user saves it. Catalog recipes have no author and are published; fork one
+  to edit it. Replaying is safe: created is false for a recipe already held.
+  A user may bring in a limited number of new recipes a day (a rate-limit
+  error beyond it); a source the API cannot fetch from is a ValidationError.
   """
   upsertExternalRecipe(input: UpsertExternalRecipeInput!): UpsertExternalRecipeResult!
   """Create or update an item based on its external source ID."""
@@ -8327,6 +8343,12 @@ input NetworkLocationInput {
   isProxy: Boolean
   isTor: Boolean
   isVpn: Boolean
+  """
+  The device's BCP 47 locale (en-US, en-US-u-ms-metric). Its measurement
+  keyword or region decides the unit system of a user whose
+  preferredUnitSystem is SYSTEM. Send null rather than guess: an omitted
+  value keeps the one recorded.
+  """
   language: String
   timezone: String
 }
@@ -8719,6 +8741,18 @@ enum NotificationSubtype {
   UPDATED
 }
 
+"""
+The signed-in caller's notification badge. id is the caller's user id, so a
+client keys one badge per user.
+"""
+type NotificationSummary {
+  """Whether an unread notification has URGENT priority"""
+  hasUrgent: Boolean!
+  id: ID!
+  """How many of the caller's notifications are unread"""
+  unreadCount: Int!
+}
+
 """Identifies the category of a notification sent to a user"""
 enum NotificationType {
   """A collaborator accepted a shopping list invitation"""
@@ -9019,6 +9053,7 @@ input OpenPantryItemBatchInput {
 type OpenPantryItemBatchPayload {
   pantry: Pantry
   pantryItem: PantryItem!
+  storageLocation: StorageLocation
 }
 
 """
@@ -9048,6 +9083,7 @@ input OpenPantryItemInput {
 type OpenPantryItemPayload {
   pantry: Pantry
   pantryItem: PantryItem!
+  storageLocation: StorageLocation
 }
 
 """
@@ -10760,11 +10796,15 @@ type Query {
   serving → the net-weight unit → its measured family → the tracking unit →
   every other unit the stack converts.
   
-  The list is exactly what createPantryItemUsage accepts, with one unit per
+  Every unit listed is one createPantryItemUsage accepts, with one unit per
   count factor (piece, not also its synonym item). Curation only ranks: a unit
-  that converts into the stack is listed however it is curated. Re-query after
-  any edit to the stack's unit, net weight, portion definition or density —
-  all four change the answer.
+  that converts into the stack is listed however it is curated — unless it is
+  a weight, volume or length outside the caller's unit system (see
+  UnitSystem) and not one of the stack's own units, which is withheld though
+  still accepted. No system lists a length unit or a regional measure (dL).
+  Re-query after any edit to the stack's unit, net weight, portion definition
+  or density, or to the caller's preferredUnitSystem — each changes the
+  answer.
   """
   consumptionUnitsForPantryItem(
     """The pantry item's id"""
@@ -11083,6 +11123,12 @@ type Query {
     filters: NotificationFilters
   ): NotificationStats!
   """
+  The signed-in caller's notification badge: the unread count and whether an
+  unread notification is URGENT. Every notification write that changes it
+  returns it too.
+  """
+  notificationSummary: NotificationSummary!
+  """
   Get pantries for a specific home. Requires homeId.
   Replaces: defaultPantry (use filters: { isDefault: true })
   """
@@ -11289,7 +11335,8 @@ type Query {
   Ranked units this pantry stack can be restocked in, best first: the tracking
   unit → its own portion unit → units curated for buying → its measured family
   → every other unit the stack converts. The same units the consume list
-  holds, ranked for buying: exactly what restockPantryItem accepts.
+  holds, ranked for buying, each accepted by restockPantryItem; a weight or
+  volume outside the caller's unit system is withheld as it is there.
   """
   restockUnitsForPantryItem(
     """The pantry item's id"""
@@ -11649,6 +11696,12 @@ type Recipe {
   """
   externalData: JSON
   """
+  The provider's data for a catalog recipe that has no canonical field here,
+  read from the stored provider payload; null for a recipe created in the app
+  or a catalog recipe not fetched yet.
+  """
+  externalDetails: ExternalRecipeDetails
+  """
   The recipe's identifier in its external source, or null for a recipe created in the app.
   """
   externalId: String
@@ -11979,13 +12032,14 @@ type RecipeForkEdge implements Edge {
 type RecipeIngredient {
   availablePantryItemIds: [ID!]!
   """
-  quantity auto-converted to the caller's preferred unit system.
+  quantity auto-converted to the caller's unit system (see UnitSystem):
+  metric when no system is known.
   
-  Viewer-scoped: it resolves through context.user to
-  userSettings.preferredUnitSystem, so two callers reading the same recipe get
+  Viewer-scoped: it resolves through the caller's preferredUnitSystem and, for
+  SYSTEM, their device's locale, so two callers reading the same recipe get
   different answers. The pin is what keeps it out of a shared cache. Null when
-  the ingredient names no unit, or when no seeded unit of the preferred system
-  shares its dimension.
+  the ingredient names no unit, or when no seeded unit of the system shares
+  its dimension.
   """
   convertedQuantity: ConvertedValue
   estimatedPrice: Float
@@ -12002,6 +12056,20 @@ type RecipeIngredient {
   section: String
   sortOrder: Int!
   unit: Unit
+}
+
+"""One recipe ingredient's outcome in createShoppingListItemsFromRecipe."""
+type RecipeIngredientAddResult {
+  """Why the ingredient failed; set exactly when success is false"""
+  failure: BatchElementFailure
+  """The line the ingredient became or joined; null when it failed"""
+  item: ShoppingListItem
+  """
+  MERGED when the ingredient joined a line already on the list; null when it failed
+  """
+  outcome: CreateOutcome
+  recipeIngredient: RecipeIngredient!
+  success: Boolean!
 }
 
 """
@@ -12134,7 +12202,8 @@ type RecipeReview {
   helpful: Int!
   id: ID!
   rating: Int!
-  recipe: Recipe!
+  """Null when the viewer can no longer see the recipe (it was unpublished)"""
+  recipe: Recipe
   updatedAt: DateTime!
   """
   Null when the author's account was permanently deleted. The rating still counts toward the recipe's totals.
@@ -12188,9 +12257,20 @@ type RecipeSourceMapping {
   externalType: String
   id: ID!
   isPrimary: Boolean!
+  """When the provider's content was last fetched; null when it never was."""
   lastSyncedAt: DateTime
   metadata: JSON
+  """
+  The provider schema version the stored payload was validated against; null when the API never fetched it.
+  """
+  schemaVersion: Int
   source: ExternalSource!
+  """
+  When the provider's supplementary data (Spoonacular: prices) was fetched; null until the recipe is first saved or planned.
+  """
+  supplementsSyncedAt: DateTime
+  """Where the API's copy stands against the provider."""
+  syncStatus: ExternalSyncStatus!
   updatedAt: DateTime!
 }
 
@@ -12377,8 +12457,19 @@ input RemoveItemFromShoppingListInput {
 }
 
 type RemoveItemFromShoppingListPayload {
+  """
+  True when this call CONVERGED on a line that was already removed — a
+  no-op success that did not re-remove or re-publish. The canonical,
+  API-wide replay flag.
+  """
+  converged: Boolean!
+  """The line's list after the removal, also on a converged replay"""
   shoppingList: ShoppingList
-  shoppingListItem: ShoppingListItem!
+  """
+  The removed line, or null when it was already removed — a replay (or a
+  second device) that converged as success. See converged.
+  """
+  shoppingListItem: ShoppingListItem
 }
 
 """
@@ -12426,6 +12517,10 @@ input RemoveItemsFromShoppingListInput {
 }
 
 type RemoveItemsFromShoppingListPayload {
+  """
+  The list the batch removed from, after the batch — also when every id was skipped.
+  """
+  shoppingList: ShoppingList!
   """Shopping list items that were removed (soft-deleted) by the batch."""
   shoppingListItems: [ShoppingListItem!]!
   """
@@ -12650,6 +12745,7 @@ type RestockPantryItemPayload {
   pantry: Pantry
   pantryItem: PantryItem
   pantryItemUsage: PantryItemUsage!
+  storageLocation: StorageLocation
 }
 
 """
@@ -12681,6 +12777,7 @@ input RestorePantryItemInput {
 type RestorePantryItemPayload {
   pantry: Pantry
   pantryItem: PantryItem!
+  storageLocation: StorageLocation
 }
 
 """
@@ -12764,7 +12861,8 @@ type SavedRecipe {
   lastCookedAt: DateTime
   notes: String
   personalRating: Int
-  recipe: Recipe!
+  """Null when the viewer can no longer see the recipe (it was unpublished)"""
+  recipe: Recipe
   recipeId: ID!
   tags: [String!]!
   updatedAt: DateTime!
@@ -13712,6 +13810,21 @@ input SpoonacularIngredientInput {
   unitShort: String
 }
 
+type SpoonacularInstructionGroup {
+  """The group's heading, e.g. For the sauce; null for an unnamed group."""
+  name: String
+  steps: [SpoonacularInstructionStep!]!
+}
+
+type SpoonacularInstructionStep {
+  equipment: [SpoonacularStepEquipment!]!
+  ingredients: [SpoonacularStepIngredient!]!
+  """How long the step takes, as Spoonacular states it."""
+  length: SpoonacularQuantity
+  number: Int!
+  text: String!
+}
+
 input SpoonacularMeasureInput {
   amount: Float
   unitLong: String
@@ -13736,6 +13849,86 @@ input SpoonacularNutritionInput {
   nutrients: [SpoonacularNutrientInput!]
   properties: [SpoonacularNutrientInput!]
   weightPerServing: SpoonacularWeightPerServingInput
+}
+
+type SpoonacularPriceTotals {
+  """The whole recipe's cost, in US cents."""
+  totalCost: Float!
+  """Cost per serving, in US cents."""
+  totalCostPerServing: Float!
+}
+
+type SpoonacularQuantity {
+  number: Float!
+  unit: String!
+}
+
+"""
+A Spoonacular recipe's data that has no canonical recipe field, typed from
+Spoonacular's documented response. Prices are US cents, as Spoonacular reports
+them.
+"""
+type SpoonacularRecipeDetails {
+  aggregateLikes: Float
+  cheap: Boolean
+  creditsText: String
+  """
+  Cuisine names as Spoonacular writes them; the canonical cuisines are on the recipe.
+  """
+  cuisines: [String!]!
+  dairyFree: Boolean
+  """
+  Diet names as Spoonacular writes them; the canonical diets are on the recipe.
+  """
+  diets: [String!]!
+  dishTypes: [String!]!
+  """The recipe's Spoonacular id."""
+  externalId: String!
+  """GAPS diet compliance as Spoonacular states it, e.g. no."""
+  gaps: String
+  glutenFree: Boolean
+  healthScore: Float
+  instructionGroups: [SpoonacularInstructionGroup!]!
+  """
+  The instructions as Spoonacular's markup; the recipe's own steps come from the structured groups when there are any.
+  """
+  instructionsHtml: String
+  ketogenic: Boolean
+  language: String
+  """The licence the recipe is published under, which attribution follows."""
+  license: String
+  lowFodmap: Boolean
+  occasions: [String!]!
+  """
+  Price totals in US cents; null until the recipe is first saved or planned.
+  """
+  priceBreakdown: SpoonacularPriceTotals
+  """Estimated cost per serving, in US cents."""
+  pricePerServing: Float
+  sourceName: String
+  sourceUrl: String
+  spoonacularScore: Float
+  spoonacularSourceUrl: String
+  sustainable: Boolean
+  vegan: Boolean
+  vegetarian: Boolean
+  veryHealthy: Boolean
+  veryPopular: Boolean
+  weightWatcherSmartPoints: Float
+  whole30: Boolean
+}
+
+type SpoonacularStepEquipment {
+  id: Int
+  image: String
+  name: String!
+  temperature: SpoonacularQuantity
+}
+
+type SpoonacularStepIngredient {
+  id: Int
+  image: String
+  name: String!
 }
 
 input SpoonacularWeightPerServingInput {
@@ -14380,226 +14573,11 @@ type SuspiciousActivity {
   unusualTimeLogins: [LoginHistory!]!
 }
 
-"""Information about a sync conflict"""
-type SyncConflictInfo {
-  """The version the client had"""
-  clientVersion: Int!
-  """Description of the conflict"""
-  message: String!
-  """The current state of the item on the server"""
-  serverItem: ShoppingListItem!
-  """The current version on the server"""
-  serverVersion: Int!
-}
-
-input SyncDeletePantryItemInput {
-  clientId: ID!
-  version: Int
-}
-
-"""
-Result of SyncDeletePantryItem. Select on SyncPantryItemPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union SyncDeletePantryItemResult = ConflictError | ForbiddenError | NotFoundError | SyncPantryItemPayload | ValidationError
-
-input SyncDeleteShoppingListItemInput {
-  clientId: ID!
-  version: Int
-}
-
-"""
-Result of SyncDeleteShoppingListItem. Select on SyncShoppingListItemPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union SyncDeleteShoppingListItemResult = ConflictError | ForbiddenError | NotFoundError | SyncShoppingListItemPayload | ValidationError
-
-input SyncMoveShoppingListItemInput {
-  afterId: ID
-  beforeId: ID
-  clientId: ID!
-  version: Int
-}
-
-"""
-Result of SyncMoveShoppingListItem. Select on SyncShoppingListItemPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union SyncMoveShoppingListItemResult = ConflictError | ForbiddenError | NotFoundError | SyncShoppingListItemPayload | ValidationError
-
-enum SyncOperation {
-  CREATE
-  DELETE
-  MOVE
-  UPDATE
-}
-
-input SyncPantryItemInput {
-  brand: BrandRefInput
-  clientId: ID!
-  expirationAlert: Boolean
-  """
-  The expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
-  where the field may be cleared.
-  """
-  expiresOn: LocalDate
-  """
-  When the pantry already holds this item in the resolved unit, add the quantity to that
-  stack and return it instead of refusing with DuplicatePantryItemError. A pantry holds one
-  active stack per item per unit. The added stock is measured by this input's own net weight
-  and records its linked purchase. Stack-level fields (brand, storage, tags, thresholds and
-  the item name) are not applied to the held stack.
-  """
-  forceAdd: Boolean
-  isComposted: Boolean
-  isRecycled: Boolean
-  """
-  The catalog item the stack holds; required when the sync creates it, ignored when it updates
-  """
-  item: PantryItemSourceInput
-  lastUsedAt: DateTime
-  """
-  Opt-in for low-stock notifications on this stack (default false): with it on
-  and a minQuantity set, falling to or below the minimum notifies the home.
-  """
-  lowStockAlert: Boolean
-  netWeight: NetWeightInput
-  pantryId: ID!
-  purchase: PurchaseInfoInput
-  quantity: Float
-  storage: StorageDetailsInput
-  tags: [String!]
-  thresholds: InventoryThresholdsInput
-  """
-  The viewer's calendar date. With no expiresOn, the expiry is this date plus the
-  item's shelf life; without it no expiry is set. Send the date the user acted, not the
-  replay date. Applies to a create only; an update never derives an expiry.
-  """
-  today: LocalDate
-  unit: UnitRefInput
-  """
-  The label shown for the unit, e.g. "cans" on a stack counted in piece. When
-  omitted: the name the unit reference used, else the item's name for the unit,
-  else the unit's symbol.
-  """
-  unitLabel: String
-  version: Int
-  wasteReason: WasteReason
-}
-
-type SyncPantryItemPayload {
-  clientId: ID!
-  conflict: SyncConflictInfo
-  """
-  True when this sync CONVERGED on a pre-existing row (the client id matched,
-  so it was an update/replay rather than a fresh create). The canonical,
-  API-wide replay flag.
-  """
-  converged: Boolean!
-  item: PantryItem
-  operation: SyncOperation!
-  serverId: ID
-}
-
-"""
-Result of SyncPantryItem. Select on SyncPantryItemPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union SyncPantryItemResult = ConflictError | ForbiddenError | NotFoundError | SyncPantryItemPayload | ValidationError
-
 """Sub-input for sync settings"""
 input SyncSettingsInput {
   autoSync: Boolean
   offlineMode: Boolean
 }
-
-input SyncShoppingListItemFieldsInput {
-  brand: BrandRefInput
-  category: String
-  """
-  Optional client-minted CUID2 making a sync that MERGES into an existing row
-  idempotent. Defaults to the enclosing clientId, which already identifies the
-  queued operation — supply this only to key the merge on something other than
-  the row id. Same semantics as BatchAddShoppingListItemInput.idempotencyKey.
-  """
-  idempotencyKey: ID
-  """
-  Item reference: exactly one of a catalog item id or a free-text name (@oneOf).
-  """
-  item: ItemRefInput!
-  """
-  Package size for this item.
-  
-  A netWeightUnitId with no netWeight is always rejected — a unit with nothing
-  to measure means nothing. A netWeight with no netWeightUnitId is rejected
-  unless the row the add lands on already carries a netWeightUnitId to
-  inherit: a create never does, and a merge, restore or re-add does only if
-  the existing row was given one.
-  """
-  netWeight: NetWeightInput
-  """User-provided information"""
-  notes: String
-  pricing: PricingEstimatesInput
-  priority: Int
-  purchaseTracking: PurchaseTrackingInput
-  """
-  Quantity of the item. Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5.
-  Unitless by default; specify a unit via the unit field when needed (shopping
-  items are frequently unitless, e.g. Milk x2). Same handling as the batch add.
-  """
-  quantity: FlexibleQuantity
-  recipeContext: RecipeContextInput
-  """Required: ID of the shopping list this item belongs to"""
-  shoppingListId: ID!
-  sortOrder: String
-  storePrefs: StorePreferencesInput
-  unit: UnitRefInput
-  """
-  The label shown for the unit, e.g. "milliliters". When omitted: the name the
-  unit reference used, else the unit's symbol.
-  """
-  unitLabel: String
-  """Version for optimistic locking (null if new item)"""
-  version: Int
-}
-
-input SyncShoppingListItemInput {
-  clientId: ID!
-  item: SyncShoppingListItemFieldsInput!
-}
-
-"""Result of syncing a shopping list item"""
-type SyncShoppingListItemPayload {
-  """The client-provided permanent ID (CUID) echoed back for correlation"""
-  clientId: ID!
-  """Conflict information if version mismatch occurred"""
-  conflict: SyncConflictInfo
-  """
-  True when this sync CONVERGED on a pre-existing row (the client id matched,
-  so it was an update/replay rather than a fresh create). The canonical,
-  API-wide replay flag.
-  """
-  converged: Boolean!
-  """The synced shopping list item (null for delete operations)"""
-  item: ShoppingListItem
-  """The operation that was performed"""
-  operation: SyncOperation!
-  """
-  The server-assigned database ID (equals clientId; null if item was deleted before reaching server)
-  """
-  serverId: ID
-}
-
-"""
-Result of SyncShoppingListItem. Select on SyncShoppingListItemPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union SyncShoppingListItemResult = ConflictError | ForbiddenError | NotFoundError | SyncShoppingListItemPayload | ValidationError
 
 """Sub-input for tag-based filters"""
 input TagFilterInput {
@@ -14926,7 +14904,9 @@ enum UnitDenial {
 
 """
 A unit a stock operation cannot take. `field` names the input that carried
-it; `validUnits` are the symbols the operation would take, best first.
+it; `validUnits` are the symbols the operation would take in the caller's
+unit system, best first. The operation also takes another system's units,
+which are not listed.
 """
 type UnitEligibilityError implements Error {
   code: ErrorCode!
@@ -15010,9 +14990,22 @@ enum UnitSource {
   TRACKING_UNIT
 }
 
+"""
+How a user reads weights and volumes. IMPERIAL is US customary. A teaspoon,
+tablespoon, pinch or dash belongs to both; a count, container or portion to
+neither.
+"""
 enum UnitSystem {
+  """US customary: oz, lb, cup, fl oz, pt, qt, gal"""
   IMPERIAL
+  """Metric: g, kg, mL, L"""
   METRIC
+  """
+  The region of the requesting device's registered locale
+  (NetworkLocationInput.language): the US, Liberia and Myanmar read IMPERIAL,
+  every other region METRIC. With no region known, the unit pickers offer both
+  systems and conversions read metric.
+  """
   SYSTEM
 }
 
@@ -15553,33 +15546,14 @@ input UpdatePantryItemInput {
   wasteReason: WasteReason
 }
 
-input UpdatePantryItemLocationInput {
-  id: ID!
-  storageLocationId: ID!
-  """
-  Optimistic concurrency control. REQUIRED: the caller is updating a row it
-  already holds, so it has the version — and an update that silently skipped
-  the check when the field was omitted is one that reports success while
-  overwriting somebody else's concurrent edit.
-  """
-  version: Int!
-}
-
-type UpdatePantryItemLocationPayload {
-  pantry: Pantry
-  pantryItem: PantryItem!
-}
-
-"""
-Result of UpdatePantryItemLocation. Select on UpdatePantryItemLocationPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union UpdatePantryItemLocationResult = ConflictError | ForbiddenError | NotFoundError | UpdatePantryItemLocationPayload | ValidationError
-
 type UpdatePantryItemPayload {
   pantry: Pantry
   pantryItem: PantryItem!
+  """
+  The location the stack left when this update moved it (or cleared its location); null when the location did not change.
+  """
+  previousStorageLocation: StorageLocation
+  storageLocation: StorageLocation
 }
 
 """Input for updating pantry item quantity"""
@@ -15601,6 +15575,7 @@ input UpdatePantryItemQuantityInput {
 type UpdatePantryItemQuantityPayload {
   pantry: Pantry
   pantryItem: PantryItem!
+  storageLocation: StorageLocation
 }
 
 """
@@ -16075,32 +16050,20 @@ type UploadFormField {
 }
 
 """
-A recipe imported from an external source. The source and its external id
-identify it: an import that matches an existing recipe returns that recipe.
+A catalog recipe named by its provider and the provider's id. The API
+fetches the content itself; the name and image are shown only until it has.
 """
 input UpsertExternalRecipeInput {
-  attribution: RecipeAttributionInput
-  description: String
-  dietary: DietaryTagsInput
-  externalSourceData: JSON
-  externalSourceId: String!
-  externalSourceUrl: URL
-  ingredients: [RecipeIngredientInput!]!
-  instructions: JSON!
-  media: RecipeMediaInput
-  metadata: RecipeMetadataInput
-  name: String!
-  notes: String
-  nutrition: NutritionInfoInput
+  """The recipe's id at the provider (Spoonacular: a positive integer)."""
+  externalId: String!
+  """The image the app already shows, on the provider's own image host."""
+  imageUrl: URL
+  """
+  The title the app already shows, kept on the recipe until it is fetched.
+  """
+  name: String
+  """The provider; one the API cannot fetch from is refused."""
   source: ExternalSource!
-  """
-  DRAFT keeps the recipe private. PUBLISHED or PENDING_REVIEW submits it for
-  admin review: it is PENDING_REVIEW until an admin approves it.
-  """
-  status: RecipeStatus
-  tags: [String!]
-  timing: TimeEstimatesInput
-  tips: String
 }
 
 type UpsertExternalRecipePayload {
@@ -16457,10 +16420,6 @@ type User {
     orderBy: ExpirationNotificationOrderBy
   ): ExpirationNotificationConnection!
   """
-  Whether the user has an unread URGENT notification; false for anyone but the user themselves
-  """
-  hasUrgentNotifications: Boolean!
-  """
   The user's home ownership entries, current and past, newest first. An
   entry with transferredAt set is ownership the user no longer holds. Empty
   unless the caller is this user or an admin.
@@ -16728,10 +16687,6 @@ type User {
   with updateAccount. Null unless the caller is this user or an admin.
   """
   timezone: TimeZone
-  """
-  How many of the user's notifications are unread; 0 for anyone but the user themselves
-  """
-  unreadNotificationCount: Int!
 }
 
 """
@@ -17079,6 +17034,7 @@ input WastePantryItemBatchInput {
 type WastePantryItemBatchPayload {
   pantry: Pantry
   pantryItem: PantryItem!
+  storageLocation: StorageLocation
 }
 
 """

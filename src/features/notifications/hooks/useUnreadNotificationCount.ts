@@ -1,14 +1,14 @@
 /**
- * The unread badge count. `cache-only` — the feed query, the subscription and
- * every notification mutation keep it current, and this renders on screens that
- * never display the notifications themselves.
+ * The unread badge count (`Query.notificationSummary`). `cache-only` — the feed
+ * queries, the server-event re-read and every notification write's payload keep
+ * it current, and this renders on screens that never display the notifications.
  */
 import { useQuery } from '@apollo/client/react';
-import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
+import { NotificationSummaryDocument } from '#features/notifications/graphql/notifications.generated';
 
 export function useUnreadNotificationCount(): number {
-  const { data } = useQuery(GetUnreadNotificationsDocument, {
+  const { data } = useQuery(NotificationSummaryDocument, {
     fetchPolicy: 'cache-only',
   });
-  return data?.me?.unreadNotificationCount ?? 0;
+  return data?.notificationSummary.unreadCount ?? 0;
 }

@@ -4,14 +4,14 @@ import {
   getNotificationIcon,
 } from '#features/notifications/utils/notificationHelpers';
 import { getI18n } from '#/i18n/config';
-import { toDateKey } from '#/utils/dateUtils';
+import { toDateKey, todayKey } from '#/utils/dateUtils';
 import { getPushTrayCopy } from '#features/notifications/pushCopy';
 import type { NotificationPayload } from '#features/notifications/types';
 
 // Real i18n instance (auto-initialized on config import) so the test exercises
 // the actual locale keys + interpolation rather than a stubbed translator.
 const t = getI18n().t;
-const today = toDateKey(new Date());
+const today = todayKey();
 
 const makeExpiry = (payload: NotificationPayload) => ({
   type: NotificationType.ExpiryReminder,

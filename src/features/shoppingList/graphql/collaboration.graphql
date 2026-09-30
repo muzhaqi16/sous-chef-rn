@@ -17,15 +17,14 @@ mutation AcceptShoppingListInvite($input: AcceptShoppingListInviteInput!) {
     ... on AcceptShoppingListInvitePayload {
       collaborator {
         id
+        ...ShoppingListCollaboratorReaders
         ...ShoppingListCollaboratorFragment
         canEdit
         canInviteOthers
-        invitedAt
-        shoppingList {
-          id
-          name
-          description
-        }
+      }
+      shoppingList {
+        id
+        ...ShoppingListReaders
       }
     }
     ... on Error {
@@ -48,6 +47,10 @@ mutation DeclineShoppingListInvite($input: DeclineShoppingListInviteInput!) {
     ... on DeclineShoppingListInvitePayload {
       collaborator {
         id
+      }
+      shoppingList {
+        id
+        ...ShoppingListReaders
       }
     }
     ... on Error {

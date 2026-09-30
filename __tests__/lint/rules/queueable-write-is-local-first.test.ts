@@ -13,6 +13,12 @@ testRule('queueable-write-is-local-first', {
     'client.mutate({ mutation: GetPantryDocument });',
     // An optimisticResponse is fine on a write the queue does not take.
     'const [fire] = useMutation(GetPantryDocument, { optimisticResponse: build() }); fire({ variables });',
+    // Set on the hook: a call without its own `context` inherits it.
+    'const [fire] = useMutation(UpdatePantryItemQuantityDocument, { context: { localFirst: true } }); fire({ variables });',
+    'const [fire] = useMutation(UpdatePantryItemQuantityDocument, { context: { localFirst: true } }); const options = { variables }; fire(options);',
+    // The callback form merges into the hook's context rather than replacing it.
+    'const [fire] = useMutation(UpdatePantryItemQuantityDocument, { context: { localFirst: true } }); fire({ variables, context: hookContext => ({ ...hookContext, skipRetryLink: true }) });',
+    'const [fire] = useMutation(GetPantryDocument, { context: { localFirst: true } }); fire();',
   ],
   invalid: [
     {
@@ -39,6 +45,28 @@ testRule('queueable-write-is-local-first', {
     },
     {
       code: 'client.mutate({ mutation: UpdatePantryItemQuantityDocument, context: { localFirst: true }, optimisticResponse: build() });',
+      errors: ['optimisticWithLocalFirst'],
+    },
+    {
+      // The hook already carries the marker, queueable document or not.
+      code: 'const [fire] = useMutation(GetPantryDocument, { context: { localFirst: true } }); fire({ variables, context: { localFirst: true } });',
+      errors: ['redundantLocalFirst'],
+    },
+    {
+      code: 'const [fire] = useMutation(UpdatePantryItemQuantityDocument, { context: { localFirst: true } }); const options = { context: { localFirst: true } }; fire(options);',
+      errors: ['redundantLocalFirst'],
+    },
+    {
+      // An object `context` on the call replaces the hook's, marker and all.
+      code: 'const [fire] = useMutation(UpdatePantryItemQuantityDocument, { context: { localFirst: true } }); fire({ variables, context: { skipRetryLink: true } });',
+      errors: ['missingLocalFirst', 'contextDropsLocalFirst'],
+    },
+    {
+      code: 'const [fire] = useMutation(GetPantryDocument, { context: { localFirst: true } }); fire({ context: { skipRetryLink: true } });',
+      errors: ['contextDropsLocalFirst'],
+    },
+    {
+      code: 'const [fire] = useMutation(UpdatePantryItemQuantityDocument, { context: { localFirst: true }, optimisticResponse: build() }); fire({ variables });',
       errors: ['optimisticWithLocalFirst'],
     },
   ],

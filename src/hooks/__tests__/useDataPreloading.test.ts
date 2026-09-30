@@ -10,6 +10,7 @@ import {
 } from '#operations/item/item.generated';
 import { GetStoresDocument } from '#operations/store/store.generated';
 import { CategoryType, UnitType } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#/apollo/cache';
 import { useDataPreloading } from '../useDataPreloading';
 
 jest.mock('../../apollo/links/tokenScheduler');
@@ -54,8 +55,14 @@ jest.mock('#store/useAppStore', () => ({
   useIsPantryQueryComplete: () => mockState.isPantryQueryComplete,
 }));
 
+const mockNetwork = {
+  isOnline: true,
+  apiReachable: true as boolean | null,
+  offlineModeEnabled: false,
+};
+
 jest.mock('#store', () => ({
-  useStore: { getState: () => mockSetters },
+  useStore: { getState: () => ({ ...mockSetters, ...mockNetwork }) },
 }));
 
 function referenceMocks() {
@@ -136,6 +143,7 @@ function referenceMocks() {
 beforeEach(() => {
   jest.clearAllMocks();
   mockIsOnline = true;
+  mockNetwork.apiReachable = true;
   mockState.hasInitializedHomeData = true;
   mockState.isPantryQueryComplete = false;
   mockState.lastUnitsFetchedAt = null;
@@ -184,5 +192,66 @@ describe('useDataPreloading', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0));
     expect(mockSetters.setCachedCategories).not.toHaveBeenCalled();
+  });
+
+  it('refreshes an expired time-to-live from the server, not the cache', async () => {
+    const cache = makeCache();
+    cache.writeQuery({
+      query: GetCommonUnitsDocument,
+      data: {
+        __typename: 'Query',
+        units: [
+          {
+            __typename: 'Unit',
+            id: 'u-cached',
+            name: 'Cached',
+            symbol: 'c',
+            type: UnitType.Weight,
+            isMetric: true,
+            isCommon: true,
+            sortOrder: 0,
+            displayAsFraction: false,
+            minPrecision: 0,
+          },
+        ],
+      },
+    });
+    const now = Date.now();
+    const expired = now - 25 * 60 * 60 * 1000;
+    mockState.lastUnitsFetchedAt = expired;
+    mockState.lastCategoriesFetchedAt = now;
+    mockState.lastBrandsFetchedAt = now;
+    mockState.lastStoresFetchedAt = now;
+    const units = recordMock(GetCommonUnitsDocument, {
+      data: { units: [{ __typename: 'Unit', id: 'u-fresh', name: 'Fresh' }] },
+    });
+
+    renderHookWithApollo(() => useDataPreloading(), {
+      operationMocks: [units.mock],
+      cache,
+    });
+
+    await waitFor(() =>
+      expect(mockSetters.setLastUnitsFetchedAt).toHaveBeenCalled(),
+    );
+    expect(units.fired).toHaveLength(1);
+    expect(mockSetters.setCachedUnits).toHaveBeenCalledWith([
+      expect.objectContaining({ id: 'u-fresh' }),
+    ]);
+  });
+
+  it('does not stamp a refresh the network was withheld from', async () => {
+    mockNetwork.apiReachable = false;
+    const units = recordMock(GetCommonUnitsDocument, {
+      data: { units: [{ __typename: 'Unit', id: 'u-fresh' }] },
+    });
+
+    renderHookWithApollo(() => useDataPreloading(), {
+      operationMocks: [units.mock],
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(units.fired).toHaveLength(0);
+    expect(mockSetters.setLastUnitsFetchedAt).not.toHaveBeenCalled();
   });
 });

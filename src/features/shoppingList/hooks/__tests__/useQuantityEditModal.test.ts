@@ -418,7 +418,7 @@ describe('useQuantityEditModal', () => {
   });
 
   // Offline, the mutation resolves with the field null — queueLink's shape for
-  // "queued for replay". That is an acceptance, not a failure: `SyncShoppingListItem`
+  // "queued for replay". That is an acceptance, not a failure: the queue
   // replays it later, so the sheet must close silently rather than alert.
   it('closes without alerting when the write is queued offline', async () => {
     const m = recordMock(UpdateShoppingListItemQuantityDocument, {

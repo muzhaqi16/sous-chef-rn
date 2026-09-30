@@ -1,7 +1,7 @@
-# Screen-level fragment for the recipe-detail flow. Materialized via
-# `cache.readFragment` so the screen + `RecipeDetail` consumers can read
-# display fields directly. Composes the form fragment so the same query
-# also populates the edit screen's cache.
+# Screen-level fragment for the recipe-detail flow, read live through
+# `useFragment` so the screen + `RecipeDetail` consumers read display fields
+# directly. `GetRecipe` also spreads the form fragment, so the same query
+# populates the edit screen's cache.
 fragment useRecipeData_recipe on Recipe {
   id
   name
@@ -27,6 +27,23 @@ fragment useRecipeData_recipe on Recipe {
   source
   sourceUrl
   instructions
+  isExternal
+  # A catalog recipe's copy against its provider: PENDING and NOT_FOUND carry
+  # only the name and image.
+  sourceMapping {
+    id
+    syncStatus
+  }
+  externalDetails {
+    __typename
+    ... on SpoonacularRecipeDetails {
+      healthScore
+      vegetarian
+      vegan
+      glutenFree
+      dairyFree
+    }
+  }
   # Display/badge fields for the detail screen
   savedDetails {
     id

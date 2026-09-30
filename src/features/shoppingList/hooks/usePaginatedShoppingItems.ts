@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import {
   GetShoppingListItemsFilteredDocument,
   type GetShoppingListItemsFilteredQuery,
@@ -61,56 +61,68 @@ export function usePaginatedShoppingItems({
   const hasValidListId = !!listId && !isLoggedOut;
   const shouldSkip = skip || !hasValidListId;
 
-  // Adjusting state during render — a ref must never be read or written there.
-  const [previousListId, setPreviousListId] = useState<
+  // Defer purchased query until JS thread is idle — it's for the non-default
+  // tab. Recorded per list, so a switch defers the new list's read again.
+  const [purchasedReadyFor, setPurchasedReadyFor] = useState<
     string | null | undefined
-  >(listId);
-  const listIdChanged = previousListId !== listId;
-  if (listIdChanged) {
-    setPreviousListId(listId);
-  }
-
-  // Defer purchased query until JS thread is idle — it's for the non-default tab
-  const [purchasedReady, setPurchasedReady] = useState(false);
-  if (listIdChanged) {
-    setPurchasedReady(false);
-  }
+  >(null);
+  const purchasedReady = purchasedReadyFor === listId;
 
   useEffect(() => {
     if (shouldSkip) return;
-    const id = requestIdleCallback(() => setPurchasedReady(true));
+    const id = requestIdleCallback(() => setPurchasedReadyFor(listId));
     return () => cancelIdleCallback(id);
   }, [shouldSkip, listId]);
 
+  const unpurchasedListId = !shouldSkip && listId ? listId : null;
+  const purchasedListId = purchasedReady ? unpurchasedListId : null;
+
   const {
-    data: unpurchasedData,
+    data: unpurchasedResult,
+    variables: unpurchasedVariables,
     loading: uLoading,
     error: uError,
     fetchMore: uFetchMore,
     refetch: uRefetch,
-  } = useQuery(GetShoppingListItemsFilteredDocument, {
-    variables: {
-      id: listId ?? '',
-      first: PAGINATION.ITEMS_PAGE_SIZE,
-      isPurchased: false,
-    },
-    skip: shouldSkip,
-  });
+  } = useQuery(
+    GetShoppingListItemsFilteredDocument,
+    unpurchasedListId
+      ? {
+          variables: {
+            id: unpurchasedListId,
+            first: PAGINATION.ITEMS_PAGE_SIZE,
+            isPurchased: false,
+          },
+        }
+      : skipToken,
+  );
 
   const {
-    data: purchasedData,
+    data: purchasedResult,
+    variables: purchasedVariables,
     loading: pLoading,
     error: pError,
     fetchMore: pFetchMore,
     refetch: pRefetch,
-  } = useQuery(GetShoppingListItemsFilteredDocument, {
-    variables: {
-      id: listId ?? '',
-      first: PAGINATION.ITEMS_PAGE_SIZE,
-      isPurchased: true,
-    },
-    skip: shouldSkip || !purchasedReady,
-  });
+  } = useQuery(
+    GetShoppingListItemsFilteredDocument,
+    purchasedListId
+      ? {
+          variables: {
+            id: purchasedListId,
+            first: PAGINATION.ITEMS_PAGE_SIZE,
+            isPurchased: true,
+          },
+        }
+      : skipToken,
+  );
+
+  // `skipToken` keeps the last run's variables AND data: a list switch must not
+  // serve the previous list's rows while the new one's query is skipped.
+  const unpurchasedData =
+    unpurchasedVariables.id === listId ? unpurchasedResult : undefined;
+  const purchasedData =
+    purchasedVariables.id === listId ? purchasedResult : undefined;
 
   useApolloErrorLogger(GetShoppingListItemsFilteredDocument, uError);
   useApolloErrorLogger(GetShoppingListItemsFilteredDocument, pError);
@@ -120,6 +132,7 @@ export function usePaginatedShoppingItems({
   const unpurchased = useConnectionData({
     data: unpurchasedData,
     selector: d => d.shoppingList?.itemsConnection,
+    key: listId ?? '',
     loading: uLoading,
     fetchMore: uFetchMore,
     refetch: uRefetch,
@@ -128,6 +141,7 @@ export function usePaginatedShoppingItems({
   const purchased = useConnectionData({
     data: purchasedData,
     selector: d => d.shoppingList?.itemsConnection,
+    key: listId ?? '',
     loading: pLoading,
     fetchMore: pFetchMore,
     refetch: pRefetch,
@@ -145,16 +159,19 @@ export function usePaginatedShoppingItems({
     }
   };
 
+  // A skipped query may never have run, and then has no variables to send.
   const handleRefetch = async () => {
     await Promise.all([
-      refetchQuietly(
-        uRefetch,
-        '[usePaginatedShoppingItems] Unpurchased refetch failed:',
-      ),
-      refetchQuietly(
-        pRefetch,
-        '[usePaginatedShoppingItems] Purchased refetch failed:',
-      ),
+      unpurchasedListId &&
+        refetchQuietly(
+          uRefetch,
+          '[usePaginatedShoppingItems] Unpurchased refetch failed:',
+        ),
+      purchasedListId &&
+        refetchQuietly(
+          pRefetch,
+          '[usePaginatedShoppingItems] Purchased refetch failed:',
+        ),
     ]);
   };
 
@@ -167,7 +184,8 @@ export function usePaginatedShoppingItems({
       purchased,
       loading,
       error: uError ?? pError,
-      isTransitioning: listIdChanged && (uLoading || pLoading),
+      isTransitioning:
+        (uLoading || pLoading) && unpurchasedData?.shoppingList?.id !== listId,
     },
     actions: {
       refetch: handleRefetch,

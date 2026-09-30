@@ -15,7 +15,7 @@ import {
 import {
   revertOptimisticRecipe,
   upsertMyRecipesEdge,
-  writeOptimisticRecipe,
+  writeLocalRecipe,
   type RecipeCreatedBy,
 } from '#features/recipes/utils/recipeCacheWriters';
 import { forkRecipe as buildFork } from '#features/recipes/utils/forkRecipe';
@@ -31,6 +31,7 @@ export function useForkRecipe() {
   const client = useApolloClient();
   const user = useUser();
   const [forkMutation, { loading: forking }] = useMutation(ForkRecipeDocument, {
+    context: { localFirst: true },
     update: (cache, { data }) => {
       const payload = appliedPayload(data);
       // Upsert: the pre-fire write already inserted the edge under this same
@@ -70,7 +71,7 @@ export function useForkRecipe() {
         }
       : null;
     try {
-      writeOptimisticRecipe(client.cache, id, copy, createdBy);
+      writeLocalRecipe(client.cache, id, copy, createdBy);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Fork Recipe (optimistic)',
@@ -91,7 +92,6 @@ export function useForkRecipe() {
       () =>
         forkMutation({
           variables: { input: { id: recipeId, newRecipeId: id } },
-          context: { localFirst: true },
         }),
       {
         document: ForkRecipeDocument,

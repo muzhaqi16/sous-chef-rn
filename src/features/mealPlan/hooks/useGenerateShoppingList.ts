@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import type { ApolloCache } from '@apollo/client';
 import {
   useApolloClient,
   useFragment,
@@ -17,9 +20,9 @@ import {
 } from '#features/mealPlan/utils/deriveShoppingListFromMealPlan';
 import {
   addItemsInSlices,
-  addOptimisticShoppingListItem,
+  addLocalShoppingListItem,
   buildAddItemsReconcileUpdate,
-  createOptimisticShoppingListItem,
+  createLocalShoppingListItem,
 } from '#features/shoppingList/cache/items';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
@@ -56,7 +59,16 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
 
   // Cache-only: the pantry tab mounts at cold start, so its rows are already
   // there — and a miss must read as "not checked", never as an empty pantry.
+  // Stands down while this tab is blurred (`inactiveBehavior: 'none'` keeps it
+  // mounted); the preserved connection holds the last read meanwhile.
+  const [isFocused, setIsFocused] = useState(true);
+  const [onFocusChange] = useState(() => () => {
+    setIsFocused(true);
+    return () => setIsFocused(false);
+  });
+  useFocusEffect(onFocusChange);
   const pantry = usePantryQuery(pantryId ?? undefined, null, null, undefined, {
+    skip: !isFocused,
     fetchPolicy: 'cache-only',
   });
 
@@ -66,10 +78,15 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
 
   const [addItems, { loading: adding }] = useMutation(
     AddDerivedItemsToShoppingListDocument,
-    { update: buildAddItemsReconcileUpdate({}) },
+    {
+      context: { localFirst: true },
+      update: buildAddItemsReconcileUpdate({}),
+    },
   );
 
-  const [linkToPlan] = useMutation(LinkDerivedListToMealPlanDocument);
+  const [linkToPlan] = useMutation(LinkDerivedListToMealPlanDocument, {
+    context: { localFirst: true },
+  });
   const apiUnavailable = useAppStore(isApiUnavailable);
 
   // An imported recipe's ingredients link to catalog items on a server job, so
@@ -159,9 +176,14 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
       options.shoppingListId ?? (await createList(listName, source.homeId));
     if (!listId) return null;
 
-    for (const line of inputs) {
-      writeLineToCache(listId, line, displayNames);
-    }
+    // One batch: watchers re-read once for the whole list, not once per line.
+    client.cache.batch({
+      update: cache => {
+        for (const line of inputs) {
+          writeLineToCache(cache, listId, line, displayNames);
+        }
+      },
+    });
 
     const addFailure = await addItemsInSlices(
       client.cache,
@@ -170,7 +192,6 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
       slice =>
         addItems({
           variables: { input: { shoppingListId: listId, items: slice } },
-          context: { localFirst: true },
         }),
       {
         document: AddDerivedItemsToShoppingListDocument,
@@ -186,7 +207,6 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
           () =>
             linkToPlan({
               variables: { input: { id: listId, mealPlanId } },
-              context: { localFirst: true },
             }),
           {
             document: LinkDerivedListToMealPlanDocument,
@@ -226,6 +246,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
   }
 
   function writeLineToCache(
+    cache: ApolloCache,
     listId: string,
     line: { id?: string | null; item: { itemId?: string | null } },
     names: Map<string, string>,
@@ -233,13 +254,13 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     if (!line.id) return;
     // Built before the try: a value block inside one bails the whole function
     // out of the React Compiler.
-    const row = createOptimisticShoppingListItem(line.id, {
+    const row = createLocalShoppingListItem(line.id, {
       shoppingListId: listId,
       itemName: names.get(line.id) ?? t('labels.item'),
       itemId: line.item.itemId,
     });
     try {
-      addOptimisticShoppingListItem(client.cache, listId, row);
+      addLocalShoppingListItem(cache, listId, row);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Generate shopping list (optimistic)',

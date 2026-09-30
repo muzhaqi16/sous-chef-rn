@@ -1,4 +1,9 @@
-import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import {
+  skipToken,
+  useApolloClient,
+  useMutation,
+  useQuery,
+} from '@apollo/client/react';
 import {
   GetHomeByJoinCodeDocument,
   GetHomesDocument,
@@ -28,11 +33,12 @@ export type JoinHomeOutcome =
 export function useJoinHomeByCode({ code, skip }: UseJoinHomeByCodeArgs) {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const { data, loading } = useQuery(GetHomeByJoinCodeDocument, {
-    variables: { joinCode: code },
-    skip: !code || skip,
-    fetchPolicy: 'cache-and-network',
-  });
+  const { data, loading } = useQuery(
+    GetHomeByJoinCodeDocument,
+    code && !skip
+      ? { variables: { joinCode: code }, refetchOn: false }
+      : skipToken,
+  );
 
   const [joinMutation] = useMutation(JoinHomeByCodeDocument, {
     update: (cache, { data }) => {

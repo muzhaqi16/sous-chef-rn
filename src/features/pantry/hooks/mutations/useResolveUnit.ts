@@ -4,6 +4,7 @@ import { GetUnitBySymbolDocument } from '#operations/item/unit.generated';
 export function useResolveUnit() {
   const [unitQuery] = useLazyQuery(GetUnitBySymbolDocument, {
     fetchPolicy: 'cache-first',
+    refetchOn: false,
   });
 
   const resolveUnitId = async (

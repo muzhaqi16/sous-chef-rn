@@ -2,7 +2,7 @@
  * Updates the non-quantity fields the form dirtied. Local-first: the entity is
  * written to the cache PERMANENTLY before firing (an `optimisticResponse` rolls
  * back on the offline queue's null result), so a queued update stays visible and
- * replays via the idempotent `SyncPantryItem` upsert.
+ * replays as itself at the version it holds.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -20,7 +20,7 @@ import { buildDirtyUpdateInput } from './utils';
 import type { DirtyFieldFlags, FormDataInput } from './types';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { logger } from '#/utils/environment';
-import { toDateKey } from '#/utils/dateUtils';
+import { toDateKey, todayKey } from '#/utils/dateUtils';
 
 interface UseUpdatePantryItemOptions {
   refetch?: () => void;
@@ -43,7 +43,9 @@ export function useUpdatePantryItem({ refetch }: UseUpdatePantryItemOptions) {
   const { t } = useTranslation();
   const client = useApolloClient();
 
-  const [updateMutation] = useMutation(UpdatePantryItemDocument);
+  const [updateMutation] = useMutation(UpdatePantryItemDocument, {
+    context: { localFirst: true },
+  });
 
   /**
    * Updates the dirtied non-quantity fields. Resolves once the write settles —
@@ -167,10 +169,8 @@ export function useUpdatePantryItem({ refetch }: UseUpdatePantryItemOptions) {
         updateMutation({
           variables: {
             input: { ...updateInput, id: itemId, version: currentItem.version },
-            today: toDateKey(new Date()),
+            today: todayKey(),
           },
-          // Queue offline / on API-down — replays via the idempotent SyncPantryItem.
-          context: { localFirst: true },
         }),
       {
         document: UpdatePantryItemDocument,

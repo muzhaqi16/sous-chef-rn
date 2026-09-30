@@ -21,7 +21,10 @@ import {
   ChipScrollRow,
   type ChipOption,
 } from '#components/molecules/ChipScrollRow';
-import { useMealTemplates } from '#features/mealPlan/hooks/useMealTemplates';
+import {
+  useMealTemplates,
+  type MealTemplateRef,
+} from '#features/mealPlan/hooks/useMealTemplates';
 import { TemplateCategory } from '#/graphql/generated/schemaTypes';
 import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -57,10 +60,10 @@ const CATEGORY_KEYS: {
   { key: TemplateCategory.Custom, labelKey: 'saveAsTemplate.categoryCustom' },
 ];
 
-const keyExtractor = (item: MealTemplateDisplayFragment) => item.id;
+const keyExtractor = (item: MealTemplateRef) => item.id;
 
 const TemplateBrowserRenderItemComponent: React.FC<{
-  item: MealTemplateDisplayFragment;
+  item: MealTemplateRef;
 }> = ({ item }) => {
   const { onSelectTemplate } = useTemplateBrowserActions();
   return <TemplateCard template={item} onPress={onSelectTemplate} />;
@@ -68,7 +71,7 @@ const TemplateBrowserRenderItemComponent: React.FC<{
 
 const TemplateBrowserRenderItem = TemplateBrowserRenderItemComponent;
 
-const renderTemplate = ({ item }: { item: MealTemplateDisplayFragment }) => (
+const renderTemplate = ({ item }: { item: MealTemplateRef }) => (
   <TemplateBrowserRenderItem item={item} />
 );
 

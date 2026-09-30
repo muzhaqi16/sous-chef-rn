@@ -180,7 +180,10 @@ const styles = StyleSheet.create(theme => ({
   errorText: {
     marginTop: theme.spacing.xs,
   },
-  wrapper: {},
+  // A form field's own bottom spacing, as `FormFieldWrapper` gives its fields.
+  wrapper: {
+    marginBottom: theme.spacing.md,
+  },
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',

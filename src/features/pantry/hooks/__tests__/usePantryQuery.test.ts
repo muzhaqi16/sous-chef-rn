@@ -1,7 +1,12 @@
 'use no memo';
 
 import { act, waitFor } from '@testing-library/react-native';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
+import { PAGE_SIZE } from '#features/pantry/constants/pagination';
 import {
   type PantryItemOrderBy,
   SortOrder,
@@ -225,6 +230,32 @@ describe('usePantryQuery: consumer options', () => {
     expect(result.current.state.skipped).toBe(true);
     expect(result.current.state.loading).toBe(false);
     expect(result.current.state.pantryItems).toEqual([]);
+  });
+
+  it('sends nothing while skipped and the real pantry id once it activates', async () => {
+    const pantry = recordMock(GetPantryDocument, {
+      data: { pantry: { id: 'pantry-1' } },
+    });
+    const { result, rerender } = renderHookWithApollo(
+      ({ pantryId }: { pantryId: string | undefined }) =>
+        usePantryQuery(pantryId),
+      {
+        initialProps: { pantryId: undefined as string | undefined },
+        operationMocks: [pantry.mock],
+      },
+    );
+
+    await act(async () => {
+      await result.current.actions.refetch();
+    });
+    expect(pantry.fired).toHaveLength(0);
+
+    rerender({ pantryId: 'pantry-1' });
+    await waitFor(() => expect(pantry.fired).toHaveLength(1));
+    expect(pantry.fired[0]).toMatchObject({
+      id: 'pantry-1',
+      itemsFirst: PAGE_SIZE.MAX,
+    });
   });
 
   it('starts the query once options.skip is lifted', async () => {

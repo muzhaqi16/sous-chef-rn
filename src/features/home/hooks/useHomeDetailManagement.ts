@@ -200,7 +200,7 @@ export function useHomeDetailManagement(homeId: string) {
   // than the masked ref so it resolves by key; on `!complete` we fall back to
   // null and show the loader, because partial data would render an owner as a
   // non-owner while `myMembership.role` is still absent.
-  const homeRef = usePreservedQueryData(data?.home, null);
+  const homeRef = usePreservedQueryData(data?.home, null, homeId);
   const { data: unmaskedData, complete: unmaskedComplete } = useFragment({
     fragment: HomeDetailScreen_HomeFragmentDoc,
     fragmentName: 'HomeDetailScreen_home',

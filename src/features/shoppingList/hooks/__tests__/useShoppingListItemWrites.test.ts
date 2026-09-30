@@ -228,7 +228,7 @@ describe('useShoppingListItemWrites.createItem', () => {
 
     await act(async () => {
       await result.current.createItem(
-        { shoppingListId: 'list-1', itemName: 'Pasta sauce', quantity: 1 },
+        { itemName: 'Pasta sauce', quantity: 1 },
         {
           item: { itemName: 'Pasta sauce' },
           quantity: '1',
@@ -247,7 +247,7 @@ describe('useShoppingListItemWrites.createItem', () => {
 
     await act(async () => {
       await result.current.createItem(
-        { shoppingListId: 'list-1', itemName: 'Pasta sauce', quantity: 1 },
+        { itemName: 'Pasta sauce', quantity: 1 },
         { item: { itemName: 'Pasta sauce' }, quantity: '1' },
       );
     });

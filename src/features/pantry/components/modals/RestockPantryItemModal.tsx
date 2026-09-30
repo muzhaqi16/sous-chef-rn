@@ -15,11 +15,13 @@ import {
 } from '#/utils/formatQuantity';
 import { useConversionPreview } from '#features/pantry/hooks/useConversionPreview';
 import { actionConversionOptions } from '#features/pantry/hooks/useQuantityFeedback';
+import { inCountedUnit } from '#domain/stockDisplay';
 import { commonStyles } from '#/styles/commonStyles';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import {
   PantryActionModal,
   type PantryActionSharedState,
+  type ShownQuantity,
 } from '#features/pantry/components/modals/PantryActionModal';
 import { Text } from '#components/atoms/Text';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
@@ -162,16 +164,28 @@ const RestockActionFields: React.FC<{
       ? shared.netWeightUnitSymbol
       : shared.activeUnitSymbol;
 
-  const newQuantity =
-    addAmount !== null &&
-    !isNaN(addAmount) &&
-    currentInUnit != null &&
-    (shared.isDualTracked ? conversion.convertedValue != null : true)
-      ? currentInUnit +
-        (shared.isDualTracked && conversion.convertedValue != null
-          ? conversion.convertedValue
-          : addAmount)
-      : null;
+  let newQuantity: ShownQuantity | null = null;
+  if (addAmount !== null && !isNaN(addAmount)) {
+    if (shared.exactFactor !== null) {
+      // The tracking unit or a dozen of it: the total reads as the stack will.
+      newQuantity = shared.showStock(
+        shared.trackingQuantity + inCountedUnit(addAmount, shared.exactFactor),
+      );
+    } else if (
+      currentInUnit != null &&
+      (shared.isDualTracked ? conversion.convertedValue != null : true)
+    ) {
+      newQuantity = {
+        quantity:
+          currentInUnit +
+          (shared.isDualTracked && conversion.convertedValue != null
+            ? conversion.convertedValue
+            : addAmount),
+        unitSymbol: newQuantitySymbol,
+        displayAsFraction: null,
+      };
+    }
+  }
 
   return (
     <>
@@ -190,7 +204,8 @@ const RestockActionFields: React.FC<{
             {newQuantity !== null ? (
               <Text role="label" tone="accent" style={styles.newQuantityText}>
                 {t('restockItem.newQuantityPrefix')}
-                {formatQuantityForDisplay(newQuantity)} {newQuantitySymbol}
+                {formatQuantityForDisplay(newQuantity.quantity)}{' '}
+                {newQuantity.unitSymbol}
               </Text>
             ) : null}
             {shared.isConvertedUnit ? (

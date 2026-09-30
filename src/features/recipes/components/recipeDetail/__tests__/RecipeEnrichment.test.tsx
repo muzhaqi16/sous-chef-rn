@@ -14,9 +14,7 @@ const NUTRITION = {
 
 describe('RecipeEnrichment', () => {
   it('renders parsed macros from the nutrition JSON blob', () => {
-    render(
-      <RecipeEnrichment nutritionData={NUTRITION} isBackendRecipe={true} />,
-    );
+    render(<RecipeEnrichment nutritionData={NUTRITION} />);
     expect(screen.getByText('Nutrition')).toBeTruthy();
     expect(screen.getByText('22 g')).toBeTruthy(); // protein
     expect(screen.getByText('15 g')).toBeTruthy(); // fat
@@ -29,7 +27,6 @@ describe('RecipeEnrichment', () => {
       <RecipeEnrichment
         tips="Chill the dough."
         forkedFromName="Grandma's Cookies"
-        isBackendRecipe={true}
       />,
     );
     expect(screen.getByText('Tips')).toBeTruthy();
@@ -39,31 +36,21 @@ describe('RecipeEnrichment', () => {
 
   it('renders nothing when a backend recipe has no enrichment', () => {
     const { toJSON } = render(
-      <RecipeEnrichment
-        isBackendRecipe={true}
-        status={RecipeStatus.Published}
-      />,
+      <RecipeEnrichment status={RecipeStatus.Published} />,
     );
     // Published backend recipe with no nutrition/tips/tags → empty fragment.
     expect(toJSON()).toBeNull();
   });
 
   it('shows the draft badge for an unpublished backend recipe', () => {
-    render(
-      <RecipeEnrichment isBackendRecipe={true} status={RecipeStatus.Draft} />,
-    );
+    render(<RecipeEnrichment status={RecipeStatus.Draft} />);
     expect(screen.getByText('Draft — not published')).toBeTruthy();
   });
 
   // Submitting lands in review, never straight in PUBLISHED: a publish badge
   // there would claim a visibility the recipe does not have.
   it('says a recipe waiting for a moderator is in review', () => {
-    render(
-      <RecipeEnrichment
-        isBackendRecipe={true}
-        status={RecipeStatus.PendingReview}
-      />,
-    );
+    render(<RecipeEnrichment status={RecipeStatus.PendingReview} />);
     expect(
       screen.getByText("In review — only you can see it until it's approved"),
     ).toBeTruthy();
@@ -73,7 +60,6 @@ describe('RecipeEnrichment', () => {
   it("shows a returned draft's moderator note", () => {
     render(
       <RecipeEnrichment
-        isBackendRecipe={true}
         status={RecipeStatus.Draft}
         reviewNote="Add the oven temperature."
       />,

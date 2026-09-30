@@ -20,7 +20,7 @@ export function useHomeQuery() {
   // Preserve homes data even when the query fails, to prevent cascade
   // failures. Each node carries `id` + `isDefault` directly plus a masked ref
   // for `HomeCard_home`.
-  const homes = usePreservedNodes(data?.homes);
+  const homes = usePreservedNodes(data?.homes, 'GetHomes');
 
   // Derive default home from isDefault field (no separate query needed)
   const remoteDefaultHomeId = homes.find(h => h.isDefault)?.id ?? null;

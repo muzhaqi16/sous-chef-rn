@@ -82,16 +82,10 @@ afterEach(() => {
 });
 
 describe('useRecipeSavedMetadata — offline unfavorite', () => {
-  it('optimistically clears Recipe.savedDetails and calls onUnfavoriteSuccess', async () => {
+  it('optimistically clears Recipe.savedDetails', async () => {
     const cache = seedRecipeWithSavedDetails();
-    const onUnfavoriteSuccess = jest.fn();
     const { result } = renderHookWithApollo(
-      () =>
-        useRecipeSavedMetadata({
-          recipeId: 'r1',
-          preloadedRecipeId: undefined,
-          onUnfavoriteSuccess,
-        }),
+      () => useRecipeSavedMetadata({ recipeId: 'r1' }),
       {
         cache,
         operationMocks: [
@@ -105,19 +99,12 @@ describe('useRecipeSavedMetadata — offline unfavorite', () => {
     });
 
     expect(readSavedDetails(cache)).toBeNull();
-    expect(onUnfavoriteSuccess).toHaveBeenCalledTimes(1);
   });
 
-  it('reverts savedDetails (and skips onUnfavoriteSuccess) when the server rejects', async () => {
+  it('reverts savedDetails when the server rejects', async () => {
     const cache = seedRecipeWithSavedDetails();
-    const onUnfavoriteSuccess = jest.fn();
     const { result } = renderHookWithApollo(
-      () =>
-        useRecipeSavedMetadata({
-          recipeId: 'r1',
-          preloadedRecipeId: undefined,
-          onUnfavoriteSuccess,
-        }),
+      () => useRecipeSavedMetadata({ recipeId: 'r1' }),
       {
         cache,
         operationMocks: [unfavoriteMock({ __typename: 'ForbiddenError' })],
@@ -132,7 +119,6 @@ describe('useRecipeSavedMetadata — offline unfavorite', () => {
     expect(readSavedDetails(cache)).toEqual(
       expect.objectContaining({ id: 'sr1' }),
     );
-    expect(onUnfavoriteSuccess).not.toHaveBeenCalled();
   });
 });
 
@@ -171,8 +157,6 @@ describe('useRecipeSavedMetadata — clearing an optional field', () => {
       () =>
         useRecipeSavedMetadata({
           recipeId: 'r1',
-          preloadedRecipeId: undefined,
-          onUnfavoriteSuccess: jest.fn(),
         }),
       { cache: seedSavedRecipe(), operationMocks: [mock] },
     );
@@ -255,8 +239,6 @@ describe('useRecipeSavedMetadata — clearing an optional field', () => {
       () =>
         useRecipeSavedMetadata({
           recipeId: 'r1',
-          preloadedRecipeId: undefined,
-          onUnfavoriteSuccess: jest.fn(),
         }),
       { cache, operationMocks: [refused.mock] },
     );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { Badge } from '../Badge';
+import { Badge, BadgeStack } from '../Badge';
 
 describe('Badge', () => {
   it('renders children text', () => {
@@ -46,5 +46,19 @@ describe('Badge', () => {
   it('renders with medium size', () => {
     const { toJSON } = render(<Badge size="medium">Medium</Badge>);
     expect(toJSON()).toBeTruthy();
+  });
+});
+
+describe('BadgeStack', () => {
+  const lines = [
+    { icon: 'checkmark-circle', text: '6', variant: 'success' },
+    { icon: 'cart-outline', text: '4', variant: 'warning' },
+  ] as const;
+
+  it('renders every line and is read aloud as one label', () => {
+    render(<BadgeStack label="6 of 10, 4 to buy" lines={[...lines]} />);
+    expect(screen.getByText('6')).toBeTruthy();
+    expect(screen.getByText('4')).toBeTruthy();
+    expect(screen.getByLabelText('6 of 10, 4 to buy')).toBeTruthy();
   });
 });

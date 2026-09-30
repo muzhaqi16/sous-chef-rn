@@ -5,7 +5,7 @@
  * do not offer the option, so list settings fires no extra request.
  */
 
-import { useQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import { GetShoppingListTemplatesDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { COPYABLE_ITEM_LIMIT } from '#features/shoppingList/cache/copySource';
 import { extractNodes } from '#/utils/connectionUtils';
@@ -20,12 +20,14 @@ export interface ShoppingListTemplateOption {
 }
 
 export function useShoppingListTemplates(options: { skip?: boolean } = {}) {
-  const { data, error } = useQuery(GetShoppingListTemplatesDocument, {
-    // The lines come with the picker so a template can be copied offline;
-    // `copySource` reads them straight back out of the cache.
-    variables: { first: 50, copyableItemLimit: COPYABLE_ITEM_LIMIT },
-    skip: options.skip,
-  });
+  // The lines come with the picker so a template can be copied offline;
+  // `copySource` reads them straight back out of the cache.
+  const { data, error } = useQuery(
+    GetShoppingListTemplatesDocument,
+    options.skip
+      ? skipToken
+      : { variables: { first: 50, copyableItemLimit: COPYABLE_ITEM_LIMIT } },
+  );
 
   useApolloErrorLogger(GetShoppingListTemplatesDocument, error);
 

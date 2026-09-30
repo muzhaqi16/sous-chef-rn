@@ -17,19 +17,15 @@ import {
 import type { AddedShoppingListItemFieldsFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import { useAddShoppingItem } from '../useAddShoppingItem';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
 import { generateEntityId } from '#/utils/generateEntityId';
 
-// Stub the eviction + connection writers so the catalog-merge branch can be
+// Stub the withdrawal + connection writers so the catalog-merge branch can be
 // asserted in isolation; the mutation itself still flows through Apollo so the
-// real `update` callback runs.
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
-  safeEvict: jest.fn(),
+// real `update` callback runs, through the REAL reconcileShoppingItemCreateUpdate.
+jest.mock('#features/shoppingList/cache/withdraw', () => ({
+  withdrawShoppingListItems: jest.fn(),
 }));
-// Keep the REAL reconcileShoppingItemCreateUpdate / revertOptimisticShoppingListItem
-// so the catalog-merge eviction path runs through to the (mocked) safeEvict that
-// these assertions watch; stub only the writers.
 jest.mock('#features/shoppingList/cache/connections', () => ({
   ...jest.requireActual('#features/shoppingList/cache/connections'),
   addNewItemToShoppingListCache: jest.fn(),
@@ -37,8 +33,8 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
 
 jest.mock('#features/shoppingList/cache/items', () => ({
   ...jest.requireActual('#features/shoppingList/cache/items'),
-  addOptimisticShoppingListItem: jest.fn(),
-  createOptimisticShoppingListItem: jest.fn((id: string) => ({
+  addLocalShoppingListItem: jest.fn(),
+  createLocalShoppingListItem: jest.fn((id: string) => ({
     __typename: 'ShoppingListItem',
     id,
     itemName: 'X',
@@ -49,7 +45,10 @@ jest.mock('#/utils/generateEntityId', () => ({
 }));
 
 const mockGenerateEntityId = generateEntityId as jest.Mock;
-const mockSafeEvict = safeEvict as jest.Mock;
+const mockWithdraw = jest.mocked(withdrawShoppingListItems);
+
+/** Every minted id any call withdrew. */
+const withdrawnIds = () => mockWithdraw.mock.calls.flatMap(call => call[2]);
 
 /** The success member of the batch add: the union's non-error arm. */
 type BatchPayload = MockPart<
@@ -88,10 +87,7 @@ const payloadItem = (id: string): MockPart<PayloadItem> => ({
 
 // The single add fires the batch mutation with one item; the created/merged row
 // is the one entry in `results`.
-const batchPayload = (
-  item: ReturnType<typeof payloadItem>,
-  merged: boolean,
-): BatchPayload => ({
+const batchPayload = (item: ReturnType<typeof payloadItem>): BatchPayload => ({
   __typename: 'AddItemsToShoppingListPayload',
   results: [
     {
@@ -99,8 +95,7 @@ const batchPayload = (
       index: 0,
       clientId: null,
       success: true,
-      quantityIncremented: merged,
-      error: null,
+      failure: null,
       item,
     },
   ],
@@ -114,7 +109,6 @@ const echoMock = (): MockFor<typeof AddItemToShoppingListDocument> => ({
     data: {
       addItemsToShoppingList: batchPayload(
         payloadItem(vars.input.items[0]?.id ?? 'item-1'),
-        false,
       ),
     },
   }),
@@ -128,7 +122,7 @@ const mergeMock = (
   maxUsageCount: Number.POSITIVE_INFINITY,
   result: () => ({
     data: {
-      addItemsToShoppingList: batchPayload(payloadItem(canonicalId), true),
+      addItemsToShoppingList: batchPayload(payloadItem(canonicalId)),
     },
   }),
 });
@@ -151,11 +145,7 @@ describe('useAddShoppingItem — catalog-merge id adoption', () => {
       await result.current.addItem({ itemName: 'Milk', quantity: 1 });
     });
 
-    expect(mockSafeEvict).toHaveBeenCalledWith(
-      expect.anything(),
-      'ShoppingListItem',
-      'cuid-A',
-    );
+    expect(withdrawnIds()).toEqual(['cuid-A']);
   });
 
   it('does NOT cross-evict when two adds overlap (regression: per-call variables, not a shared ref)', async () => {
@@ -177,6 +167,6 @@ describe('useAddShoppingItem — catalog-merge id adoption', () => {
     // Each mutation's response echoes its OWN sent id (no merge), so neither
     // item should be evicted. The old single-`lastClientIdRef` implementation
     // evicted whichever id the ref last held — cross-evicting a sibling add.
-    expect(mockSafeEvict).not.toHaveBeenCalled();
+    expect(withdrawnIds()).toEqual([]);
   });
 });

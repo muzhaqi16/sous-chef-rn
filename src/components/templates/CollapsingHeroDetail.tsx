@@ -2,7 +2,10 @@ import React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from '#/i18n';
-import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
+import {
+  PlainScrollRefreshControl,
+  ThemedActivityIndicator,
+} from '#components/atoms/themedComponents';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -269,6 +272,20 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
           </View>
         </View>
       </View>
+
+      {/* iOS draws a pull's own spinner at the scroll view's top edge, which an
+          edge-to-edge hero puts under the status bar; this one sits centred
+          just below the chips, in view through the whole pull. */}
+      {hasHero && refreshing ? (
+        <View
+          pointerEvents="none"
+          style={[styles.refreshRow, { top: insets.top + HEADER_BAND_HEIGHT }]}
+        >
+          <View style={styles.chip}>
+            <ThemedActivityIndicator />
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -299,6 +316,7 @@ const styles = StyleSheet.create(theme => ({
   contentCardNoHero: {
     marginTop: 0,
   },
+
   bar: {
     position: 'absolute',
     top: 0,
@@ -329,6 +347,13 @@ const styles = StyleSheet.create(theme => ({
   actionsRow: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
+  },
+  refreshRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: theme.zIndex.sticky,
   },
   chip: {
     width: BUTTON_SIZE,

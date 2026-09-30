@@ -125,7 +125,7 @@ describe('wsLink', () => {
       onHandlers.connected({}, undefined);
       expect(listener).not.toHaveBeenCalled();
 
-      // A subsequent connect is a reconnect — fires the backfill listener.
+      // A subsequent connect is a reconnect — fires the reconnect listener.
       onHandlers.connected({}, undefined);
       expect(listener).toHaveBeenCalledTimes(1);
 

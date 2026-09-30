@@ -314,7 +314,7 @@ export function useRecipeScreen() {
         );
       }
     } else {
-      discovery.refresh();
+      await discovery.refresh();
     }
   };
 

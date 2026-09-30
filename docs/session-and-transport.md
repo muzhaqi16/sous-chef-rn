@@ -209,6 +209,17 @@ subscriptions are finished until something re-subscribes.
 `useSubscription`; `isLibraryFatalCloseCode` records the list, and the library
 test pins it to the installed package's actual behaviour.
 
+**Re-subscribing restores the stream, not what it missed.** A subscription
+only delivers what happens after it connects. `onWebSocketReconnected` feeds
+two listeners: `useSubscriptionTransportRecovery` restarts errored
+subscriptions, and the resync's `wsReconnected` event
+(`src/apollo/refetchEvents.ts`) re-requests the active queries once the offline
+queue has drained, skipping when no session is live or one is ending
+(`LogoutCleanup.isInLogoutProcess()`). A session end's `disposeWebSocket()`
+stops the socket, so it stops `wsReconnected` with it. Nothing else refetches on
+reconnect; see
+[Apollo client patterns § Resync](apollo-client-patterns.md#resync).
+
 **Never branch on the close reason.** Each code carries exactly one verdict,
 and the same reason string is emitted for several distinct conditions.
 
@@ -220,7 +231,7 @@ connects once and then refuses every retry — silently. `disposeWebSocket()`
 
 ## See also
 
-- [Apollo client patterns § Subscriptions](apollo-client-patterns.md) — the
-  hook-level subscription patterns and cache write scoping.
+- [Apollo client patterns](apollo-client-patterns.md) — subscription cache
+  write scoping, and § Resync for what runs after a reconnect.
 - [Local-first architecture](local-first-architecture.md) — the offline queue
   the teardown deliberately does not delete.

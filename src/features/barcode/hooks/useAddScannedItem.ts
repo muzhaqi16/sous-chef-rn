@@ -1,10 +1,10 @@
-import { gql } from '@apollo/client';
-import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
+import { writeEntityFields } from '#/apollo/utils/localFirstFields';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   BarcodeAddItemToShoppingListDocument,
   BarcodeCreatePantryItemDocument,
   BarcodeRestockPantryItemDocument,
+  UseAddScannedItem_RestockQuantityFragmentDoc,
 } from '#features/barcode/hooks/useAddScannedItem.generated';
 import {
   SearchResults_PantryItemFragmentDoc,
@@ -20,28 +20,27 @@ import {
   adoptServerEntityId,
 } from '#/apollo/utils/cacheUpdaters';
 import {
-  addOptimisticShoppingListItem,
-  reconcileShoppingItemCreateUpdate,
-  createOptimisticShoppingListItem,
+  addLocalShoppingListItem,
+  buildAddItemsReconcileUpdate,
+  createLocalShoppingListItem,
   reconcileShoppingCreate,
 } from '#features/shoppingList/cache/items';
 import {
   addPantryItemLocally,
   revertOptimisticPantryItem,
 } from '#features/pantry/cache/items';
-import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
-import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { toDateKey } from '#/utils/dateUtils';
+import { todayKey } from '#/utils/dateUtils';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import { writeHeldStock } from '#features/pantry/cache/stock';
 import { refByIdOrName } from '#/utils/refInput';
+import { writeLocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
 
 // Only reads `{ id }` from the new item, so the local SearchResults_pantryItem
 // fragment is sufficient.
@@ -67,13 +66,6 @@ const scannedListItemRef = (item: ScannedItem) =>
 /** The unit an add naming none counts in; the default unit on a fresh item. */
 const scannedUnitId = (item: ScannedItem) =>
   item.trackingUnit?.id ?? item.unitId;
-
-const RESTOCKED_QUANTITY = gql`
-  fragment _ScannedRestockQuantity on PantryItem {
-    id
-    quantity
-  }
-`;
 
 /** Whether the shopping-list row survived the create. */
 export type ScannedListOutcome = 'kept' | 'reverted';
@@ -101,6 +93,7 @@ export function useAddScannedItem({
   const client = useApolloClient();
 
   const [addToPantryMutation] = useMutation(BarcodeCreatePantryItemDocument, {
+    context: { localFirst: true },
     update: (cache, { data }, { variables }) => {
       const payload = appliedPayload(data);
       if (!payload || !pantryId) return;
@@ -127,29 +120,15 @@ export function useAddScannedItem({
     },
   });
 
-  const [restockPantryItem] = useMutation(BarcodeRestockPantryItemDocument, {});
+  const [restockPantryItem] = useMutation(BarcodeRestockPantryItemDocument, {
+    context: { localFirst: true },
+  });
 
   const [addToShoppingListMutation] = useMutation(
     BarcodeAddItemToShoppingListDocument,
     {
-      update: (cache, { data }, { variables }) => {
-        const payload = appliedPayload(data);
-        if (!payload || !shoppingListId || !variables) {
-          return;
-        }
-        // Single add via the batch mutation — the created/merged row is the one
-        // entry in `results`. Null when that item failed.
-        const maskedItem = payload.results[0]?.item;
-        if (!maskedItem) return;
-        // Catalog-merge: the withdrawal takes `totalItems` back with the row
-        // the server folded away, and the add is counted once.
-        reconcileShoppingItemCreateUpdate(
-          cache,
-          shoppingListId,
-          maskedItem,
-          variables.input.items[0]?.id,
-        );
-      },
+      context: { localFirst: true },
+      update: buildAddItemsReconcileUpdate({ listId: shoppingListId }),
     },
   );
 
@@ -172,22 +151,19 @@ export function useAddScannedItem({
       pantryId,
       item: scannedPantrySource(item),
       quantity: SCANNED_QUANTITY,
-      today: toDateKey(new Date()),
+      today: todayKey(),
     };
 
     // Built before the try: `?.`/`??` are value blocks, and one inside a try
     // body bails the React Compiler out of the whole function.
-    const optimisticPantryItem = buildOptimisticPantryItem(
-      id,
-      {
-        pantryId,
-        itemName: item.name,
-        itemId: item.id,
-        quantity: SCANNED_QUANTITY,
-        unitId: scannedUnitId(item),
-      },
-      client.cache,
-    );
+    const localRow = {
+      pantryId,
+      itemName: item.name,
+      itemId: item.id,
+      quantity: SCANNED_QUANTITY,
+      unitId: scannedUnitId(item),
+      acquisitionMethod: AcquisitionMethod.BarcodeScan,
+    };
 
     // Publishing and withdrawing the row are a pair; named so the halves
     // cannot drift.
@@ -196,15 +172,10 @@ export function useAddScannedItem({
         // Publishes the row AND counts it: the header's "N items" reads
         // `Pantry.stats.totalItems`, which the mutation's `update` never
         // touches when the create is queued offline.
-        addPantryItemLocally(client.cache, pantryId, optimisticPantryItem);
-        // Detail-shape the same row so tapping it renders from cache instead of
-        // querying an id the server does not have yet. A scanned add always
-        // carries a catalog item, so `item` resolves to the real entity.
-        writePantryItemDetailStub(client.cache, id, {
-          itemId: item.id,
-          itemName: item.name,
-          acquisitionMethod: AcquisitionMethod.BarcodeScan,
-          quantity: SCANNED_QUANTITY,
+        writeLocalPantryItem(client.cache, id, localRow);
+        addPantryItemLocally(client.cache, pantryId, {
+          __typename: 'PantryItem',
+          id,
         });
       } catch (cacheError) {
         errorService.reportError(cacheError, {
@@ -225,8 +196,7 @@ export function useAddScannedItem({
     await executeAsyncWithCleanup(
       async () => {
         result = await addToPantryMutation({
-          variables: { input },
-          context: { localFirst: true },
+          variables: { input, today: todayKey() },
         });
       },
       () => unconfirmedCreates.confirm(id),
@@ -277,23 +247,15 @@ export function useAddScannedItem({
   ): Promise<boolean> => {
     // Offline no payload arrives, so the row keeps its old count until the
     // replay unless it is bumped here.
-    const cacheId = client.cache.identify({
-      __typename: 'PantryItem',
-      id: existingPantryItemId,
+    const row = { __typename: 'PantryItem', id: existingPantryItemId };
+    const cached = client.cache.readFragment({
+      id: client.cache.identify(row),
+      fragment: UseAddScannedItem_RestockQuantityFragmentDoc,
     });
-    const cached = cacheId
-      ? client.cache.readFragment<{ quantity: number }>({
-          id: cacheId,
-          fragment: RESTOCKED_QUANTITY,
-        })
-      : null;
-    const optimistic = optimisticFieldUpdate(
-      client.cache,
-      cacheId,
-      cached ? { quantity: cached.quantity } : null,
-      { quantity: (cached?.quantity ?? 0) + SCANNED_QUANTITY },
-      'Restock scanned Pantry Item',
-    );
+    const entity = cached ? row : undefined;
+    writeEntityFields(client.cache, entity, {
+      quantity: (cached?.quantity ?? 0) + SCANNED_QUANTITY,
+    });
     // The amount the screens show moves with the count.
     const undoHeld = cached
       ? writeHeldStock(
@@ -307,6 +269,7 @@ export function useAddScannedItem({
       () =>
         restockPantryItem({
           variables: {
+            today: todayKey(),
             input: {
               id: existingPantryItemId,
               quantity: SCANNED_QUANTITY,
@@ -314,14 +277,14 @@ export function useAddScannedItem({
               idempotencyKey: generateEntityId(),
             },
           },
-          // Local-first: queued offline, replayed as the canonical mutation.
-          context: { localFirst: true },
         }),
       {
         document: BarcodeRestockPantryItemDocument,
         fallback: t('errors.restockFailedRetry'),
         onFailed: () => {
-          optimistic.revert();
+          writeEntityFields(client.cache, entity, {
+            quantity: cached?.quantity,
+          });
           undoHeld();
         },
       },
@@ -336,7 +299,7 @@ export function useAddScannedItem({
     const id = generateEntityId();
 
     // Built before the try, for the same compiler reason as above.
-    const optimisticListItem = createOptimisticShoppingListItem(id, {
+    const optimisticListItem = createLocalShoppingListItem(id, {
       shoppingListId,
       itemName: item.name,
       quantity: SCANNED_QUANTITY,
@@ -345,7 +308,7 @@ export function useAddScannedItem({
       unitName: item.trackingUnit?.symbol,
     });
     try {
-      addOptimisticShoppingListItem(
+      addLocalShoppingListItem(
         client.cache,
         shoppingListId,
         optimisticListItem,
@@ -375,7 +338,6 @@ export function useAddScannedItem({
 
     const result = await addToShoppingListMutation({
       variables,
-      context: { localFirst: true },
     });
 
     // A queued create (offline / API down) resolves with no data and no error —

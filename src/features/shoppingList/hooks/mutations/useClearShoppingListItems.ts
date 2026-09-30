@@ -21,7 +21,6 @@ import {
 type ClearMutationFn = (options: {
   variables: RemoveItemsFromShoppingListMutationVariables;
   update?: () => void;
-  context?: { localFirst: boolean };
 }) => Promise<{ data?: unknown; error?: unknown }>;
 
 // The hook only reads `id` and the array length from the item lists.
@@ -59,7 +58,6 @@ async function executeClearItems(
       clearMutation({
         variables: { input: { shoppingListId: listId, ids: itemIds } },
         update: () => {}, // Cache already cleared optimistically
-        context: { localFirst: true },
       }),
     { document: RemoveItemsFromShoppingListDocument, fallback: failureMessage },
   );
@@ -79,7 +77,9 @@ export function useClearShoppingListItems({
   const client = useApolloClient();
   const isClearingRef = useRef(false);
 
-  const [clearMutation] = useMutation(RemoveItemsFromShoppingListDocument, {});
+  const [clearMutation] = useMutation(RemoveItemsFromShoppingListDocument, {
+    context: { localFirst: true },
+  });
 
   const clearItems = async (purchased: boolean) => {
     if (!listId || isClearingRef.current) return;

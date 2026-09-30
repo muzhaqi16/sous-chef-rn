@@ -3,48 +3,10 @@
  * does not have to reach the server to find out. Offline the server cannot
  * answer at all, and its refusal carries no usable ids on the replay path.
  */
-import { gql, type ApolloCache } from '@apollo/client';
+import type { ApolloCache } from '@apollo/client';
 import type { PantryItemDuplicateInfo } from '#domain/pantryItemDuplicate';
 import { logger } from '#/utils/environment';
-
-/**
- * Args passed UNDEFINED on purpose: the field is keyed on them, so client mode
- * stores `itemsConnection:{}`. Client mode only — see {@link scanCachedPantryItems}.
- */
-const CACHED_PANTRY_ITEMS_FRAGMENT = gql`
-  fragment CachedPantryItemsForDuplicateCheck on Pantry {
-    id
-    itemsConnection(filters: $itemsFilter, orderBy: $itemsOrderBy) {
-      edges {
-        node {
-          id
-          itemName
-          quantity
-          item {
-            id
-          }
-          unit {
-            id
-          }
-        }
-      }
-    }
-  }
-`;
-
-interface CachedPantryItemsForDuplicateCheck {
-  itemsConnection: {
-    edges: ({
-      node: {
-        id: string;
-        itemName: string | null;
-        quantity: number | null;
-        item: { id: string } | null;
-        unit: { id: string } | null;
-      } | null;
-    } | null)[];
-  } | null;
-}
+import { FindCachedPantryItemDuplicate_PantryFragmentDoc } from './pantryCacheReaders.generated';
 
 /** The matched row, plus what an optimistic restock needs to bump it locally. */
 export interface CachedPantryItemDuplicate extends PantryItemDuplicateInfo {
@@ -152,22 +114,23 @@ export function findCachedPantryItemDuplicate(
   // React Compiler out of the whole function.
   let pantry;
   try {
-    pantry = cache.readFragment<CachedPantryItemsForDuplicateCheck>({
+    // Args UNDEFINED on purpose: client mode stores `itemsConnection:{}`.
+    pantry = cache.readFragment({
       id: pantryCacheId,
-      fragment: CACHED_PANTRY_ITEMS_FRAGMENT,
+      fragment: FindCachedPantryItemDuplicate_PantryFragmentDoc,
       variables: { itemsFilter: undefined, itemsOrderBy: undefined },
     });
   } catch (error) {
     logger.warn('Pantry duplicate pre-check could not read the cache:', error);
   }
 
-  const edges = pantry?.itemsConnection?.edges;
+  const edges = pantry?.itemsConnection.edges;
   // A miss on the client-mode key is not "no duplicate": in server mode the
   // field is keyed on the live filter and sort, so the rows are cached under a
   // key this fragment cannot name. Without this the same duplicate prompts on
   // a small pantry and not on a large one.
   const nodes: CachedNode[] = edges
-    ? edges.flatMap(edge => (edge?.node ? [edge.node] : []))
+    ? edges.map(edge => edge.node)
     : scanCachedPantryItems(cache, pantryCacheId);
 
   for (const node of nodes) {

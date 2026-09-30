@@ -12,10 +12,15 @@
 
 const mockMutate = jest.fn();
 const mockQuery = jest.fn().mockResolvedValue({ data: {} });
+const mockCache = { evict: jest.fn(), gc: jest.fn() };
 jest.mock('#/apollo/client', () => ({
   client: {
     mutate: (...args: unknown[]) => mockMutate(...args),
     query: (...args: unknown[]) => mockQuery(...args),
+    // A getter: the factory runs before `mockCache` is initialised.
+    get cache() {
+      return mockCache;
+    },
   },
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
@@ -75,8 +80,10 @@ import { authService } from '#/services/authService';
 import { logger } from '#/utils/environment';
 import {
   clearLegacyDeviceFingerprint,
+  clearRegisteredLocale,
   ensureDeviceId,
   readLegacyDeviceFingerprint,
+  recordRegisteredLocale,
 } from '#/storage/deviceId';
 import { MOCK_DEVICE_ID } from '#/storage/__mocks__/deviceId';
 
@@ -128,6 +135,7 @@ beforeEach(() => {
   // identity down has to be undone here or it leaks into every case after it.
   (ensureDeviceId as jest.Mock).mockResolvedValue(MOCK_DEVICE_ID);
   (readLegacyDeviceFingerprint as jest.Mock).mockReturnValue(null);
+  (recordRegisteredLocale as jest.Mock).mockReturnValue(false);
   mockCollect.mockResolvedValue({ deviceId: 'local-1' });
   routeMutate();
   Object.assign(mockStoreState, {
@@ -192,6 +200,67 @@ describe('registerDeviceInBackground — push token write intent', () => {
     await flush();
 
     expect(registerCall()?.pushToken).toBeUndefined();
+  });
+});
+
+// The server reads a "Device default" user's unit system from the registered
+// locale, so a picker asked before registration, or under another locale,
+// answered in the wrong system.
+describe('registerDeviceInBackground — the unit pickers', () => {
+  const droppedPickers = () =>
+    mockCache.evict.mock.calls.map(([options]) => options?.fieldName);
+
+  it('drops them once a registration lands a locale new to this session', async () => {
+    mockCollect.mockResolvedValueOnce({
+      deviceId: 'local-1',
+      language: 'en-US',
+    });
+    (recordRegisteredLocale as jest.Mock).mockReturnValueOnce(true);
+
+    authService.registerDeviceInBackground();
+    await flush();
+
+    expect(recordRegisteredLocale).toHaveBeenCalledWith('en-US');
+    expect(droppedPickers()).toEqual([
+      'consumptionUnitsForPantryItem',
+      'restockUnitsForPantryItem',
+    ]);
+  });
+
+  it('keeps them when the locale is the one already registered', async () => {
+    authService.registerDeviceInBackground();
+    await flush();
+
+    expect(recordRegisteredLocale).toHaveBeenCalled();
+    expect(mockCache.evict).not.toHaveBeenCalled();
+  });
+
+  it('records nothing when the registration did not land', async () => {
+    mockMutate.mockResolvedValue({
+      data: {
+        registerDevice: { __typename: 'ValidationError', message: 'no' },
+      },
+    });
+
+    authService.registerDeviceInBackground();
+    await flush();
+
+    expect(recordRegisteredLocale).not.toHaveBeenCalled();
+  });
+
+  // Null, not left out: the server keeps a stored locale for a missing field,
+  // so an en-US an earlier build guessed would never clear.
+  it("clears the stored locale when the device's cannot be read", async () => {
+    mockCollect.mockResolvedValueOnce({ deviceId: 'local-1', language: null });
+
+    authService.registerDeviceInBackground();
+    await flush();
+
+    const location = registerCall()?.location;
+
+    expect(location).toHaveProperty('language', null);
+    // Nor a country it never read.
+    expect(location).not.toHaveProperty('ipCountry');
   });
 });
 
@@ -481,6 +550,12 @@ describe('a session end leaves the push registration to the server', () => {
     await teardown();
 
     expect(clearRetiredDeviceRow).toHaveBeenCalled();
+  });
+
+  it('forgets the registered locale, which the next account has not sent', async () => {
+    await teardown();
+
+    expect(clearRegisteredLocale).toHaveBeenCalled();
   });
 
   it('cannot skip the rest of the teardown', async () => {

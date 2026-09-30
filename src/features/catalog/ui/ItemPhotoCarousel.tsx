@@ -193,8 +193,8 @@ export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
 };
 
 /**
- * One page. Materializes its own fragment (Pattern A) because `useFragment`
- * cannot be called in a loop over the array of masked refs.
+ * One page. Reads its own fragment (Pattern A) rather than the carousel reading
+ * an array `from`, so one photo's change re-renders only its page.
  */
 const PhotoPage: React.FC<{
   photoRef: ItemPhotoRef;

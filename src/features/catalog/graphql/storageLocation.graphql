@@ -44,23 +44,8 @@ mutation CreateStorageLocation($input: CreateStorageLocationInput!) {
     ... on CreateStorageLocationPayload {
       storageLocation {
         id
-        name
-        type
-        icon
-        color
-        temperature
-        description
-        isClimateControlled
-        capacity
-        capacityUnit
-        sortOrder
-        isDefault
-        currentItemCount
+        ...StorageLocationReaders
         homeId
-        parentLocation {
-          id
-          name
-        }
       }
     }
     ... on Error {
@@ -83,18 +68,7 @@ mutation UpdateStorageLocation($input: UpdateStorageLocationInput!) {
     ... on UpdateStorageLocationPayload {
       storageLocation {
         id
-        name
-        type
-        icon
-        color
-        temperature
-        description
-        isClimateControlled
-        capacity
-        capacityUnit
-        sortOrder
-        isDefault
-        currentItemCount
+        ...StorageLocationReaders
         parentLocationId
       }
     }
@@ -142,8 +116,7 @@ mutation MarkStorageLocationAsDefault(
     ... on MarkStorageLocationAsDefaultPayload {
       storageLocation {
         id
-        name
-        isDefault
+        ...StorageLocationReaders
       }
     }
     ... on Error {
