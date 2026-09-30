@@ -28,9 +28,6 @@ module.exports = {
     // Native module that needs to be mocked before anything imports unistyles
     'react-native-nitro-modules':
       '<rootDir>/__tests__/__mocks__/react-native-nitro-modules.js',
-    // MLKit text recognition — stubbed in tests to avoid loading native bindings
-    '^@react-native-ml-kit/text-recognition$':
-      '<rootDir>/__tests__/__mocks__/react-native-ml-kit-text-recognition.js',
     // Path aliases, derived from tsconfig.json — see scripts/lib/aliases.js.
     // Spread last so the explicit mocks above still win where they overlap.
     ...jestModuleNameMapper(),
