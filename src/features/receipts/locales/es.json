@@ -1,0 +1,28 @@
+{
+  "receipts": {
+    "title": "Escanear recibo",
+    "intro": {
+      "title": "Escanea un recibo",
+      "body": "Coloca el recibo plano y con buena luz. Un recibo largo puede necesitar varias tomas, de arriba abajo."
+    },
+    "reading": "Leyendo el recibo…",
+    "unreadable": {
+      "title": "No se pudo leer este recibo",
+      "body": "Vuelve a tomarlo plano y con buena luz, con todo el ancho dentro del encuadre."
+    },
+    "failed": {
+      "title": "No se pudo escanear el recibo",
+      "body": "Algo salió mal al escanear. Inténtalo de nuevo."
+    },
+    "saved": {
+      "title": "Recibo guardado",
+      "body": "Solo se guarda este texto. Las fotos se eliminaron y se quitaron los números de tarjeta y de fidelidad.",
+      "scanAnother": "Escanear otro recibo"
+    },
+    "replace": {
+      "title": "¿Reemplazar el recibo guardado?",
+      "body": "Solo se guarda un recibo a la vez.",
+      "confirm": "Reemplazar"
+    }
+  }
+}

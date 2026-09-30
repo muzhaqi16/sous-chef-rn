@@ -1,0 +1,28 @@
+{
+  "receipts": {
+    "title": "Scan receipt",
+    "intro": {
+      "title": "Scan a receipt",
+      "body": "Lay the receipt flat in good light. A long receipt can take several shots, top to bottom."
+    },
+    "reading": "Reading the receipt…",
+    "unreadable": {
+      "title": "Couldn't read this receipt",
+      "body": "Retake it flat and in good light, with its whole width in the frame."
+    },
+    "failed": {
+      "title": "Couldn't scan the receipt",
+      "body": "Something went wrong while scanning. Try again."
+    },
+    "saved": {
+      "title": "Receipt saved",
+      "body": "Only this text is kept. The photos were deleted, and card and loyalty numbers removed.",
+      "scanAnother": "Scan another receipt"
+    },
+    "replace": {
+      "title": "Replace the saved receipt?",
+      "body": "Only one receipt is kept at a time.",
+      "confirm": "Replace"
+    }
+  }
+}

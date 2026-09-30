@@ -1,0 +1,28 @@
+{
+  "receipts": {
+    "title": "Skano faturën",
+    "intro": {
+      "title": "Skano një faturë",
+      "body": "Vendose faturën të shtrirë dhe në dritë të mirë. Një faturë e gjatë mund të kërkojë disa fotografime, nga lart poshtë."
+    },
+    "reading": "Po lexohet fatura…",
+    "unreadable": {
+      "title": "Kjo faturë nuk u lexua",
+      "body": "Fotografoje sërish të shtrirë dhe në dritë të mirë, me gjithë gjerësinë brenda kuadrit."
+    },
+    "failed": {
+      "title": "Fatura nuk u skanua",
+      "body": "Diçka shkoi keq gjatë skanimit. Provo sërish."
+    },
+    "saved": {
+      "title": "Fatura u ruajt",
+      "body": "Ruhet vetëm ky tekst. Fotot u fshinë dhe numrat e kartës e të besnikërisë u hoqën.",
+      "scanAnother": "Skano një faturë tjetër"
+    },
+    "replace": {
+      "title": "Të zëvendësohet fatura e ruajtur?",
+      "body": "Ruhet vetëm një faturë në një kohë.",
+      "confirm": "Zëvendëso"
+    }
+  }
+}
