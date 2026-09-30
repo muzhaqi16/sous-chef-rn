@@ -23,6 +23,11 @@
       "title": "Të zëvendësohet fatura e ruajtur?",
       "body": "Ruhet vetëm një faturë në një kohë.",
       "confirm": "Zëvendëso"
+    },
+    "parsed": {
+      "title_one": "{{count}} artikull u lexua në këtë telefon",
+      "title_other": "{{count}} artikuj u lexuan në këtë telefon",
+      "atPrice": "{{quantity}} me {{price}}"
     }
   }
 }

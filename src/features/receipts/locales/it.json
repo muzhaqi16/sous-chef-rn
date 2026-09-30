@@ -23,6 +23,11 @@
       "title": "Sostituire lo scontrino salvato?",
       "body": "Si conserva un solo scontrino alla volta.",
       "confirm": "Sostituisci"
+    },
+    "parsed": {
+      "title_one": "{{count}} articolo letto su questo telefono",
+      "title_other": "{{count}} articoli letti su questo telefono",
+      "atPrice": "{{quantity}} a {{price}}"
     }
   }
 }

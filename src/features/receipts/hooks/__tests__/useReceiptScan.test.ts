@@ -3,6 +3,8 @@ import DocumentScanner, {
   ScanDocumentResponseStatus,
 } from 'react-native-document-scanner-plugin';
 import { TextRecognition, type RecognizedPage } from '#/native/TextRecognition';
+import { ReceiptStructuring } from '#/native/ReceiptStructuring';
+import { errorService } from '#/services/errorService';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import { useReceiptScan } from '../useReceiptScan';
@@ -11,9 +13,14 @@ jest.mock('#/storage/mmkv');
 jest.mock('#/native/TextRecognition', () => ({
   TextRecognition: { recognizeAndDelete: jest.fn() },
 }));
+jest.mock('#/native/ReceiptStructuring', () => ({
+  ReceiptStructuring: { availability: jest.fn(), labelLines: jest.fn() },
+}));
 
 const scanDocument = jest.mocked(DocumentScanner.scanDocument);
 const recognizeAndDelete = jest.mocked(TextRecognition.recognizeAndDelete);
+const availability = jest.mocked(ReceiptStructuring.availability);
+const labelLines = jest.mocked(ReceiptStructuring.labelLines);
 
 const line = (text: string, y: number) => ({
   text,
@@ -43,7 +50,16 @@ const renderScan = () => {
 beforeEach(() => {
   jest.clearAllMocks();
   useReceiptDraftStore.getState().clearDraft();
+  availability.mockResolvedValue('unavailable');
 });
+
+const scannedOnePage = () => {
+  scanDocument.mockResolvedValue({
+    status: ScanDocumentResponseStatus.Success,
+    scannedImages: ['file:///page.jpg'],
+  });
+  recognizeAndDelete.mockResolvedValue(RECEIPT);
+};
 
 describe('useReceiptScan', () => {
   it('keeps only the redacted text of every page as the draft', async () => {
@@ -127,5 +143,85 @@ describe('useReceiptScan', () => {
       .saveDraft({ pages: ['MILK  3.48'], scannedAt: '2026-09-30T12:00:00Z' });
     resetSessionScopedStores();
     expect(useReceiptDraftStore.getState().draft).toBeNull();
+  });
+
+  describe('on-device structuring', () => {
+    it('adds what the phone’s model read to the draft', async () => {
+      scannedOnePage();
+      availability.mockResolvedValue('available');
+      labelLines.mockResolvedValue({
+        storeName: 'WALMART',
+        lines: [
+          { line: 0, label: 'header' },
+          { line: 1, label: 'item', product: 'GV WHOLE MILK' },
+        ],
+      });
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+
+      expect(labelLines).toHaveBeenCalledWith([
+        'WALMART',
+        'GV WHOLE MILK  3.48 N',
+      ]);
+      expect(result.current.status).toBe('saved');
+      const draft = useReceiptDraftStore.getState().draft;
+      expect(draft?.pages).toEqual(['WALMART\nGV WHOLE MILK  3.48 N']);
+      expect(draft?.parsed?.merchant).toBe('WALMART');
+      expect(
+        draft?.parsed?.lines.filter(parsed => parsed.kind === 'item'),
+      ).toEqual([
+        expect.objectContaining({
+          product: 'GV WHOLE MILK',
+          lineTotal: 3.48,
+        }),
+      ]);
+    });
+
+    it('keeps the plain text when the model fails', async () => {
+      scannedOnePage();
+      availability.mockResolvedValue('available');
+      labelLines.mockRejectedValue(new Error('model busy'));
+      const reportError = jest.spyOn(errorService, 'reportError');
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+
+      expect(result.current.status).toBe('saved');
+      expect(useReceiptDraftStore.getState().draft?.pages).toHaveLength(1);
+      expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
+      expect(reportError).toHaveBeenCalledWith(expect.any(Error), {
+        operation: 'Label receipt lines on device',
+      });
+      reportError.mockRestore();
+    });
+
+    it('stops waiting for a model that does not answer', async () => {
+      jest.useFakeTimers();
+      scannedOnePage();
+      availability.mockResolvedValue('available');
+      labelLines.mockReturnValue(new Promise(() => {}));
+      const { result } = renderScan();
+
+      const scanning = result.current.scan();
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(20_000);
+        await scanning;
+      });
+
+      expect(result.current.status).toBe('saved');
+      expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
+      jest.useRealTimers();
+    });
+
+    it('never asks a phone without a model', async () => {
+      scannedOnePage();
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+
+      expect(labelLines).not.toHaveBeenCalled();
+      expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
+    });
   });
 });
