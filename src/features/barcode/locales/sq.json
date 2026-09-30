@@ -22,6 +22,13 @@
     "upc": "UPC/Barkod",
     "added": "U shtua",
     "servingAmount": "Një racion: {{amount}}",
-    "referenceAmount": "Vlerat ushqyese për {{amount}}"
+    "referenceAmount": "Vlerat ushqyese për {{amount}}",
+    "openFoodFactsCredit": "Të dhënat e produktit nga Open Food Facts (ODbL)",
+    "packSize": {
+      "body": "Open Food Facts nuk e tregon madhësinë e këtij produkti. Vendose një herë për ta shtuar në qilar.",
+      "label": "Madhësia e një pakete",
+      "invalid": "Vendos një madhësi më të madhe se 0.",
+      "unitRequired": "Zgjidh një njësi nga lista."
+    }
   }
 }

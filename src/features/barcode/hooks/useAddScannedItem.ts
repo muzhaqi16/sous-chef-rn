@@ -134,6 +134,7 @@ export function useAddScannedItem({
 
   const addToPantry = async (
     item: ScannedItem,
+    packageSize?: { netWeight: number; netWeightUnitId: string },
   ): Promise<ScannedPantryOutcome> => {
     if (!pantryId) return { status: 'rejected' };
 
@@ -144,14 +145,16 @@ export function useAddScannedItem({
     const id = generateEntityId();
     unconfirmedCreates.mark(id);
 
-    // No `netWeight` or `unit`: the scan's own figure is the record's to store,
-    // and one sent here would be kept as the user's edit.
+    // No `unit`, and `netWeight` only when the record states no pack size and
+    // the user entered one: the scan's own figure is the record's to store, and
+    // one sent here is kept as the user's.
     const input: CreatePantryItemInput = {
       id,
       pantryId,
       item: scannedPantrySource(item),
       quantity: SCANNED_QUANTITY,
       today: todayKey(),
+      ...(packageSize && { netWeight: packageSize }),
     };
 
     // Built before the try: `?.`/`??` are value blocks, and one inside a try
