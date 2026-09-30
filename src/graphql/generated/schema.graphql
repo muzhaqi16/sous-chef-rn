@@ -8344,8 +8344,10 @@ input NetworkLocationInput {
   isTor: Boolean
   isVpn: Boolean
   """
-  The device's BCP 47 locale (en-US). Its region decides the unit system of a
-  user whose preferredUnitSystem is SYSTEM; omit it rather than guess.
+  The device's BCP 47 locale (en-US, en-US-u-ms-metric). Its measurement
+  keyword or region decides the unit system of a user whose
+  preferredUnitSystem is SYSTEM. Send null rather than guess: an omitted
+  value keeps the one recorded.
   """
   language: String
   timezone: String
@@ -10797,8 +10799,9 @@ type Query {
   Every unit listed is one createPantryItemUsage accepts, with one unit per
   count factor (piece, not also its synonym item). Curation only ranks: a unit
   that converts into the stack is listed however it is curated — unless it is
-  a weight or volume outside the caller's unit system (see UnitSystem) and not
-  one of the stack's own units, which is withheld though still accepted.
+  a weight, volume or length outside the caller's unit system (see
+  UnitSystem) and not one of the stack's own units, which is withheld though
+  still accepted. No system lists a length unit or a regional measure (dL).
   Re-query after any edit to the stack's unit, net weight, portion definition
   or density, or to the caller's preferredUnitSystem — each changes the
   answer.
@@ -14901,7 +14904,9 @@ enum UnitDenial {
 
 """
 A unit a stock operation cannot take. `field` names the input that carried
-it; `validUnits` are the symbols the operation would take, best first.
+it; `validUnits` are the symbols the operation would take in the caller's
+unit system, best first. The operation also takes another system's units,
+which are not listed.
 """
 type UnitEligibilityError implements Error {
   code: ErrorCode!
