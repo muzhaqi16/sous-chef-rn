@@ -15350,6 +15350,12 @@ input UpdateItemInput {
   packageInfo: PackageInfoInput
   popularity: Int
   productDetails: ProductDetailsInput
+  """
+  Why an admin changes a sourced catalog fact (name, description, brand, pack
+  size, storage, shelf life, nutrition, allergens, ingredients, barcodes,
+  tags). Required then: the change is kept over every source as an override.
+  """
+  reason: String
   showInOnboarding: Boolean
   status: ItemStatus
   storeSkuOps: StoreSkuOpsInput
