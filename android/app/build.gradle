@@ -152,6 +152,10 @@ dependencies {
     // AndroidX Photo Picker backport for devices running Android < 30
     implementation("androidx.activity:activity:1.9.+")
 
+    // Receipt text recognition (TextRecognitionModule). The Play services variant
+    // downloads its model on demand instead of bundling it in the APK.
+    implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
+
     // Detox dependencies
     androidTestImplementation('com.wix:detox:+')
     androidTestImplementation 'junit:junit:4.13.2'
