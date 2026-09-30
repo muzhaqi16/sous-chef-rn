@@ -5,11 +5,11 @@ import {
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { CreateItemDocument } from '#operations/item/item.generated';
 import {
   ItemByUpcFilterDocument,
   ItemBySkuFilterDocument,
-  CreateItemDocument,
-} from '#operations/item/item.generated';
+} from '../useSearchResults.generated';
 import { useSearchResults } from '../useSearchResults';
 import { useStore } from '#store';
 import { t } from '#/i18n';
@@ -253,6 +253,33 @@ describe('useSearchResults', () => {
       },
     );
 
+    it("carries where the scanned pack's facts came from", async () => {
+      renderHookWithApollo(() => useSearchResults('0012345678905', 'ean-13'), {
+        operationMocks: [
+          upcMock([
+            {
+              ...SAMPLE_UPC_ITEM,
+              matchedVariation: {
+                __typename: 'ProductVariation',
+                id: 'off-1',
+                upc: '0012345678905',
+                source: 'OPENFOODFACTS',
+              },
+            },
+          ]),
+        ],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchResults).toHaveBeenCalledWith([
+          expect.objectContaining({
+            variationId: 'off-1',
+            source: 'OPENFOODFACTS',
+          }),
+        ]),
+      );
+    });
+
     // Both flags carry through to the card, which hides its edit action when
     // they are explicitly false — a scan can surface an item the user may not
     // touch. Absent is not false: the card only hides on a definite no.
@@ -428,6 +455,23 @@ describe('useSearchResults', () => {
           t('errors.networkError'),
         ),
       );
+    });
+
+    it('keeps the new-item form closed when the lookup fails', async () => {
+      renderHookWithApollo(() => useSearchResults('1234567890'), {
+        operationMocks: [
+          upcErrorMock(new NetworkRequestError('Network request failed')),
+        ],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchError).toHaveBeenCalledWith(
+          t('errors.networkError'),
+        ),
+      );
+      // Offline is not "unknown": the product may exist, so nothing offers
+      // to create it.
+      expect(mockShowBottomSheet).not.toHaveBeenCalled();
     });
 
     it("shows the app's retry copy for a server failure, never its message", async () => {

@@ -27,6 +27,8 @@ export interface ScannedItem {
    * scan reported: its size, brand and barcode.
    */
   variationId?: string;
+  /** Where that record's facts came from, e.g. `OPENFOODFACTS`, which the card credits. */
+  source?: string;
   unitId?: string;
   /** The scanned barcode's own figure, in `displayUnit`. */
   netWeight?: number;
