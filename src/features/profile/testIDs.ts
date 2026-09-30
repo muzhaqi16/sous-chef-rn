@@ -10,6 +10,8 @@ export const profileTestIDs = {
   logoutButton: 'profile-logout-button',
 
   settingsScreen: 'settings-screen',
+  dataSourcesScreen: 'data-sources-screen',
+  dataSourceLink: (id: string) => `data-source-link-${id}`,
   settingsState: 'settings-state',
   settingsUnitSystemPicker: 'settings-unit-system-picker',
   settingsAutoSyncSwitch: 'settings-auto-sync-switch',

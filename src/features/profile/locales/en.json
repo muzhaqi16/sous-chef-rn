@@ -197,7 +197,26 @@
     "loadingImage": "Loading image...",
     "cropInstructions": "Pinch to zoom, drag to move. The circular view area will be your profile photo.",
     "imageNotLoaded": "Image not loaded properly",
-    "cropImageFailed": "Failed to crop image. Please try again."
+    "cropImageFailed": "Failed to crop image. Please try again.",
+    "dataSources": {
+      "title": "Data sources",
+      "intro": "{{appName}} builds its food catalog on these open datasets.",
+      "visit": "Open website",
+      "publicDomain": "Public domain (a U.S. government work).",
+      "openFoodFacts": {
+        "name": "Open Food Facts",
+        "provides": "Product names, brands, package sizes and photos for scanned barcodes.",
+        "licence": "Database: Open Database License (ODbL). Photos: Creative Commons Attribution-ShareAlike (CC BY-SA)."
+      },
+      "usdaFoodDataCentral": {
+        "name": "USDA FoodData Central",
+        "provides": "Nutrition facts and product records."
+      },
+      "usdaFoodKeeper": {
+        "name": "USDA FoodKeeper",
+        "provides": "How long foods keep in the pantry, fridge and freezer."
+      }
+    }
   },
   "personalInformation": {
     "sectionPrivacySettings": "Privacy Settings",
