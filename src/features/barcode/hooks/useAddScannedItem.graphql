@@ -105,8 +105,11 @@ mutation BarcodeRestockPantryItem(
         ...PantryItemUsageReaders
         costPerUnit
         totalCost
+        # The readers too: a restock carrying `today` can date the row, and
+        # nothing else would refresh its expiry in the cache.
         pantryItem {
           id
+          ...PantryItemReaders
           version
           quantity
           heldQuantity

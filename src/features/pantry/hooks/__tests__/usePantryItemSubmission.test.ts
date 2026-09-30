@@ -491,9 +491,15 @@ describe('usePantryItemSubmission', () => {
     await waitFor(() =>
       expect(restock.fired).toContainEqual({
         today: expect.any(String),
-        input: expect.objectContaining({ id: 'existing-1', quantity: 2 }),
+        input: expect.objectContaining({
+          id: 'existing-1',
+          quantity: 2,
+          today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        }),
       }),
     );
+    const [fired] = restock.fired;
+    expect(fired?.input).toMatchObject({ today: fired?.today });
     await waitFor(() => expect(mockOnSuccess).toHaveBeenCalled());
     expect(refused.fired).toHaveLength(1);
   });

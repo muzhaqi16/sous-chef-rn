@@ -265,16 +265,18 @@ export function useAddScannedItem({
         )
       : () => {};
 
+    const today = todayKey();
     const settled = await settleMutation(
       () =>
         restockPantryItem({
           variables: {
-            today: todayKey(),
+            today,
             input: {
               id: existingPantryItemId,
               quantity: SCANNED_QUANTITY,
               // Dedupes the restock ledger row on replay.
               idempotencyKey: generateEntityId(),
+              today,
             },
           },
         }),
