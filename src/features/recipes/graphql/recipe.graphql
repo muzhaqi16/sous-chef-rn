@@ -495,11 +495,17 @@ query MatchRecipeIngredientsToPantry(
     matchedPantryItem {
       id
       itemName
-      quantity
       unit {
         id
         name
         symbol
+      }
+      displayAmount {
+        quantity
+        unit {
+          id
+          symbol
+        }
       }
     }
   }

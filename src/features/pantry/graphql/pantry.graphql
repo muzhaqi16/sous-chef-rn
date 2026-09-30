@@ -370,6 +370,8 @@ query ConsumptionUnitsForPantryItem($pantryItemId: ID!) {
       commonFractions
       displayAsFraction
       hasStandardCountFactor
+      baseUnitId
+      conversionFactor
     }
     rank
     source
@@ -390,6 +392,8 @@ query RestockUnitsForPantryItem($pantryItemId: ID!) {
       commonFractions
       displayAsFraction
       hasStandardCountFactor
+      baseUnitId
+      conversionFactor
     }
     rank
     source

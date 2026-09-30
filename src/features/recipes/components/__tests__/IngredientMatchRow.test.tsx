@@ -16,6 +16,16 @@ jest.mock('#features/recipes/hooks/useRecipeIngredientMatching', () => ({
   ),
 }));
 
+type ShownAmount = NonNullable<
+  EditableMatch['match']['matchedPantryItem']
+>['displayAmount'];
+
+const shown = (quantity: number, symbol: string): ShownAmount => ({
+  __typename: 'DisplayAmount',
+  quantity,
+  unit: { __typename: 'Unit', id: symbol, symbol },
+});
+
 describe('IngredientMatchRow', () => {
   // Minimal structural fixtures: the strict `EditableMatch` type requires
   // fully-materialized masked-fragment shapes (RecipeIngredientFragment, full
@@ -120,8 +130,8 @@ describe('IngredientMatchRow', () => {
         __typename: 'PantryItem',
         id: 'p1',
         itemName: 'White Sugar',
-        quantity: 5,
         unit: { __typename: 'Unit', id: 'u1', name: 'cup', symbol: 'cups' },
+        displayAmount: shown(5, 'cups'),
       },
     });
     render(<IngredientMatchRow {...defaultProps} editableMatch={matched} />);
@@ -134,8 +144,8 @@ describe('IngredientMatchRow', () => {
         __typename: 'PantryItem',
         id: 'p1',
         itemName: 'White Sugar',
-        quantity: 1.25,
         unit: { __typename: 'Unit', id: 'u1', name: 'cup', symbol: 'cups' },
+        displayAmount: shown(1.25, 'cups'),
       },
     });
     render(<IngredientMatchRow {...defaultProps} editableMatch={matched} />);
@@ -148,17 +158,31 @@ describe('IngredientMatchRow', () => {
         __typename: 'PantryItem',
         id: 'p1',
         itemName: 'Milk',
-        quantity: 177.4412,
         unit: {
           __typename: 'Unit',
           id: 'u1',
           name: 'millilitre',
           symbol: 'mL',
         },
+        displayAmount: shown(177.4412, 'mL'),
       },
     });
     render(<IngredientMatchRow {...defaultProps} editableMatch={matched} />);
     expect(screen.getByText(/177\.441 mL/)).toBeTruthy();
+  });
+
+  it('names the matched stack as the pantry shows it, in dozens', () => {
+    const matched = makeMatch('Eggs', {
+      matchedPantryItem: {
+        __typename: 'PantryItem',
+        id: 'p1',
+        itemName: 'Eggs',
+        unit: { __typename: 'Unit', id: 'pc', name: 'piece', symbol: 'pc' },
+        displayAmount: shown(3, 'doz'),
+      },
+    });
+    render(<IngredientMatchRow {...defaultProps} editableMatch={matched} />);
+    expect(screen.getByText('Matched: Eggs (3 doz available)')).toBeTruthy();
   });
 
   it('seeds the decimal-pad quantity input rounded to three decimals, never a fraction', () => {

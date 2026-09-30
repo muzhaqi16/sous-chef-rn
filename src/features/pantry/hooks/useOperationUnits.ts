@@ -10,6 +10,7 @@ import {
 } from '#features/pantry/graphql/pantry.generated';
 import type { UnitRole } from '#/graphql/generated/schemaTypes';
 import { UnitType, type UnitSource } from '#/graphql/generated/schemaTypes';
+import { countFactorOver } from '#domain/stockDisplay';
 export enum PantryOperation {
   Consume = 'CONSUME',
   Waste = 'WASTE',
@@ -36,6 +37,8 @@ export interface RankedUnitInfo {
   commonFractions: number[] | null;
   isWholeContainer: boolean;
   displayAsFraction: boolean;
+  /** 12 for a dozen of the pieces the stack counts in; null for any other unit. */
+  countFactor: number | null;
   // For useConversionPreview compatibility (not available from ranked queries)
   conversionRatio: number | null;
   conversionConfidence: number | null;
@@ -95,6 +98,7 @@ function toRankedUnitInfo(
     commonFractions: ru.commonFractions,
     isWholeContainer: ru.isWholeContainer,
     displayAsFraction: ru.unit.displayAsFraction,
+    countFactor: countFactorOver(ru.unit, trackingUnitId),
     conversionRatio: null,
     conversionConfidence: null,
   };

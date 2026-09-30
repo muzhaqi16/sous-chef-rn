@@ -119,6 +119,7 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
       type: UnitType.Count,
       displayAsFraction: false,
     },
+    displayUnit: null,
     netWeightUnit: null,
     storageLocation: null,
     packageBreakdown: null,

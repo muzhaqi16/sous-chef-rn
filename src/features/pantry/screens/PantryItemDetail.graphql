@@ -6,6 +6,7 @@
 fragment PantryItemDetail_pantryItem on PantryItem {
   ...PantryDetailInfo_pantryItem
   ...PantryItemForm_pantryItem
+  ...BatchListItem_pantryItem
   id
   pantryId
   itemId

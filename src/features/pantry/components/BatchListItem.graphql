@@ -1,0 +1,18 @@
+# The stack a batch belongs to: a batch's amount reads as the stack's does,
+# in the dozen it is shown in when that is whole or a common fraction of one.
+fragment BatchListItem_pantryItem on PantryItem {
+  id
+  unit {
+    id
+    symbol
+  }
+  displayUnit {
+    id
+    symbol
+    type
+    hasStandardCountFactor
+    baseUnitId
+    conversionFactor
+    commonFractions
+  }
+}

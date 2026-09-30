@@ -163,8 +163,10 @@ const WasteActionFields: React.FC<{
 }) => {
   const { t } = useTranslation();
   const wasteAmount = parseFractionalInput(wasteAmountInput);
-  const { conversion, remaining, availableInUnit, remainingUnitSymbol } =
-    useQuantityFeedback(wasteAmount, shared);
+  const { conversion, remaining, available } = useQuantityFeedback(
+    wasteAmount,
+    shared,
+  );
 
   return (
     <>
@@ -180,8 +182,7 @@ const WasteActionFields: React.FC<{
         />
         <QuantityInputFeedback
           remaining={remaining}
-          availableInUnit={availableInUnit}
-          activeUnitSymbol={remainingUnitSymbol}
+          available={available}
           consumeUnitSymbol={shared.activeUnitSymbol}
           isConvertedUnit={shared.isConvertedUnit}
           previewText={conversion.previewText}

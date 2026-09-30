@@ -68,6 +68,15 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
     type
     displayAsFraction
   }
+  displayUnit {
+    id
+    symbol
+    type
+    hasStandardCountFactor
+    baseUnitId
+    conversionFactor
+    commonFractions
+  }
   netWeightUnit {
     id
     name

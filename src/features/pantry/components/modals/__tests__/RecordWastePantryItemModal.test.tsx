@@ -16,6 +16,8 @@ type MockSharedState = Pick<
   | 'activeUnitId'
   | 'displayAsFractionOf'
   | 'isConvertedUnit'
+  | 'exactFactor'
+  | 'showStock'
   | 'setSelectedUnitInfo'
   | 'notes'
   | 'setNotes'
@@ -99,6 +101,12 @@ jest.mock('#features/pantry/components/modals/PantryActionModal', () => ({
       activeUnitId: 'unit-1',
       displayAsFractionOf: () => null,
       isConvertedUnit: false,
+      exactFactor: 1,
+      showStock: (held: number) => ({
+        quantity: held,
+        unitSymbol: 'oz',
+        displayAsFraction: null,
+      }),
       selectedUnitInfo: {
         unitId: 'unit-1',
         unitSymbol: 'oz',

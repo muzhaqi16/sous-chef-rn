@@ -21,10 +21,13 @@ import {
   UsePantryItemActions_TrackingUnitFragmentDoc,
   UsePantryItemActions_QuantityFragmentDoc,
   UsePantryItemActions_IdFragmentDoc,
+  UsePantryItemActions_EnteredUnitFragmentDoc,
   type UsePantryItemActions_QuantityFragment,
+  type UsePantryItemActions_EnteredUnitFragment,
 } from './usePantryItemActions.generated';
 import { toDateKey, todayKey } from '#/utils/dateUtils';
 import { writeHeldStock } from '#features/pantry/cache/stock';
+import { countFactorOver, inCountedUnit } from '#domain/stockDisplay';
 
 interface UsePantryItemActionsOptions {
   removeItem: (id: string) => Promise<void>;
@@ -92,6 +95,32 @@ export function usePantryItemActions({
       fragment: UsePantryItemActions_TrackingUnitFragmentDoc,
     });
     return data?.unit?.id ?? undefined;
+  };
+
+  /**
+   * An amount entered in `unitId`, in the stack's tracking unit when no
+   * conversion is needed: the tracking unit itself, or a dozen of it. Null
+   * when only the server can convert it.
+   */
+  const inTrackingUnit = (
+    itemId: string,
+    amount: number,
+    unitId: string | undefined,
+  ): number | null => {
+    const trackingUnitId = readTrackingUnitId(itemId);
+    if (!unitId || unitId === trackingUnitId) return amount;
+    const unitCacheId = client.cache.identify({
+      __typename: 'Unit',
+      id: unitId,
+    });
+    const entered = unitCacheId
+      ? client.cache.readFragment<UsePantryItemActions_EnteredUnitFragment>({
+          id: unitCacheId,
+          fragment: UsePantryItemActions_EnteredUnitFragmentDoc,
+        })
+      : null;
+    const factor = entered ? countFactorOver(entered, trackingUnitId) : null;
+    return factor === null ? null : inCountedUnit(amount, factor);
   };
 
   /** The stock as cached, to restore if the write is refused. */
@@ -185,18 +214,15 @@ export function usePantryItemActions({
 
     const itemId = activeModal.itemId;
     const original = readCurrentStock(itemId);
-    const trackingUnitId = readTrackingUnitId(itemId);
-    // Only apply optimistic update when using the tracking unit (same unit = direct subtraction)
-    // When using a converted unit, the server response will update the cache
-    const canOptimistic = !usageUnitId || usageUnitId === trackingUnitId;
-    if (canOptimistic) {
-      optimisticUpdateStock(itemId, -quantityUsed);
+    // A converted unit moves the stock when the server answers.
+    const used = inTrackingUnit(itemId, quantityUsed, usageUnitId);
+    if (used !== null) {
+      optimisticUpdateStock(itemId, -used);
     }
 
     const consumeNotes = notes || undefined;
-    const revertOptimistic = canOptimistic
-      ? () => revertStock(itemId, original)
-      : undefined;
+    const revertOptimistic =
+      used !== null ? () => revertStock(itemId, original) : undefined;
 
     const settled = await settleMutation(
       () =>
@@ -238,16 +264,14 @@ export function usePantryItemActions({
 
     const itemId = activeModal.itemId;
     const original = readCurrentStock(itemId);
-    const trackingUnitId = readTrackingUnitId(itemId);
-    const canOptimistic = !wasteUnitId || wasteUnitId === trackingUnitId;
-    if (canOptimistic) {
-      optimisticUpdateStock(itemId, -wasteAmount);
+    const wasted = inTrackingUnit(itemId, wasteAmount, wasteUnitId);
+    if (wasted !== null) {
+      optimisticUpdateStock(itemId, -wasted);
     }
 
     const wasteNotes = notes || undefined;
-    const revertOptimistic = canOptimistic
-      ? () => revertStock(itemId, original)
-      : undefined;
+    const revertOptimistic =
+      wasted !== null ? () => revertStock(itemId, original) : undefined;
 
     const settled = await settleMutation(
       () =>
@@ -293,10 +317,9 @@ export function usePantryItemActions({
 
     const itemId = activeModal.itemId;
     const original = readCurrentStock(itemId);
-    const trackingUnitId = readTrackingUnitId(itemId);
-    const canOptimistic = !unitId || unitId === trackingUnitId;
-    if (canOptimistic) {
-      optimisticUpdateStock(itemId, quantity);
+    const added = inTrackingUnit(itemId, quantity, unitId);
+    if (added !== null) {
+      optimisticUpdateStock(itemId, added);
     }
 
     // Optimistically increment activeBatchCount for instant UI feedback
@@ -318,7 +341,7 @@ export function usePantryItemActions({
     const restockNotes = notes || undefined;
     const expiresOn = expiresAt ? toDateKey(expiresAt) : null;
     const revertOptimistic = () => {
-      if (canOptimistic) {
+      if (added !== null) {
         revertStock(itemId, original);
       }
       if (cacheIdForBatch) {

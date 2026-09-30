@@ -14,6 +14,8 @@ import {
   type PantryItemBatchFragment,
 } from '#features/pantry/graphql/pantryFragments.generated';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import { shownStock } from '#domain/stockDisplay';
+import { BatchListItem_PantryItemFragmentDoc } from './BatchListItem.generated';
 import { Text } from '#components/atoms/Text';
 import { Badge } from '#components/atoms/Badge';
 import { formatMonthDay } from '#/utils/formatters/date';
@@ -77,6 +79,16 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
     from: batchSource,
   });
   const batch = fragmentResult.complete ? fragmentResult.data : batchSource;
+  // A batch reads as its stack does: "1 doz" when that is whole or a common
+  // fraction of the dozen the stack is shown in, else its own unit.
+  const stack = useFragment({
+    fragment: BatchListItem_PantryItemFragmentDoc,
+    fragmentName: 'BatchListItem_pantryItem',
+    from: { __typename: 'PantryItem', id: batch.pantryItemId },
+  });
+  const shown = stack.complete
+    ? shownStock(batch.quantity, stack.data.unit, stack.data.displayUnit)
+    : null;
 
   const expiryInfo = getExpiryText(batch.expiresOn, today, t);
   const isActive = batch.status === BatchStatus.Active;
@@ -102,7 +114,8 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
         </View>
 
         <Text role="caption" style={styles.quantityText}>
-          {formatQuantityForDisplay(batch.quantity)} {unitSymbol ?? ''}
+          {formatQuantityForDisplay(shown?.quantity ?? batch.quantity)}{' '}
+          {shown?.unit.symbol ?? unitSymbol ?? ''}
         </Text>
 
         {batch.netWeight != null && !!netWeightUnitSymbol && (

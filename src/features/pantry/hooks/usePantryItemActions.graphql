@@ -21,3 +21,13 @@ fragment usePantryItemActions_quantity on PantryItem {
 fragment usePantryItemActions_id on PantryItem {
   id
 }
+
+# The unit a use or restock was entered in: a dozen of the stack's own unit
+# moves the cached stock before the server answers, as the unit itself does.
+fragment usePantryItemActions_enteredUnit on Unit {
+  id
+  type
+  hasStandardCountFactor
+  baseUnitId
+  conversionFactor
+}
