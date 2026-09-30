@@ -1,6 +1,7 @@
 import {
   adoptServerEntityId,
   createAddToParentConnectionUpdater,
+  safeEvict,
 } from '#/apollo/utils/cacheUpdaters';
 import type { ApolloCache, Reference } from '@apollo/client';
 import {
@@ -146,9 +147,9 @@ export const writeLocalFavorite = (
   });
 
   // (b) Point Recipe.savedDetails at the new SavedRecipe, snapshotting the
-  //     previous ref for revert.
+  //     previous one for revert. The read yields data, not a reference.
   const savedDetailsSnapshot = recipeCacheId
-    ? cache.readFragment<{ savedDetails: Reference | null }>({
+    ? cache.readFragment({
         id: recipeCacheId,
         fragment: Favorites_SavedDetailsFragmentDoc,
       })?.savedDetails ?? null
@@ -184,12 +185,16 @@ export const writeLocalFavorite = (
       });
     }
     if (recipeCacheId) {
+      // `modify` stores what it is given as is: a plain object stays embedded.
       cache.modify<{ savedDetails: Reference | null }>({
         id: recipeCacheId,
-        fields: { savedDetails: () => savedDetailsSnapshot },
+        fields: {
+          savedDetails: (_, { toReference }) =>
+            savedDetailsSnapshot && (toReference(savedDetailsSnapshot) ?? null),
+        },
       });
     }
-    cache.evict({ id: `SavedRecipe:${savedRecipeId}` });
-    cache.gc();
+    // Releases the retain `writeLocalEntity` took, which a bare evict keeps.
+    safeEvict(cache, 'SavedRecipe', savedRecipeId);
   };
 };

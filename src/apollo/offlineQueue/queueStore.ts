@@ -218,7 +218,6 @@ export class QueueStore {
           queue.push({
             ...mutation,
             agedFrom: superseded.agedFrom ?? superseded.createdAt,
-            conflictCount: superseded.conflictCount,
           });
           this.saveQueue(queue);
           return;

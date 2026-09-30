@@ -108,49 +108,77 @@ describe('prepareReplay', () => {
   });
 
   describe('units', () => {
-    it('names a unit by its cached symbol, which outlives a retired id', async () => {
-      const replayed = await prepare(
-        queued(UpdatePantryItemDocument, {
-          input: { id: 'row-1', unit: { id: 'unit-1' }, version: 2 },
-        }),
-        cacheWithUnit('unit-1', 'tbsp'),
-      );
-
-      expect(replayed.input).toMatchObject({ unit: { symbol: 'tbsp' } });
-    });
-
-    it('restates every line of a batch add', async () => {
-      const replayed = await prepare(
-        queued(AddItemToShoppingListDocument, {
-          input: {
-            shoppingListId: 'list-1',
-            items: [
-              { id: 'row-1', unit: { id: 'unit-1' } },
-              { id: 'row-2', unit: { name: 'handful' } },
-            ],
-          },
-        }),
-        cacheWithUnit('unit-1', 'tbsp'),
-      );
-
-      expect(replayed.input).toMatchObject({
-        items: [{ unit: { symbol: 'tbsp' } }, { unit: { name: 'handful' } }],
-      });
-    });
-
-    it('sends the symbol captured when queued once the unit left the cache', async () => {
+    it('names a single row’s unit by its id until a refusal names the id retired', async () => {
       const mutation = queued(UpdatePantryItemDocument, {
         input: { id: 'row-1', unit: { id: 'unit-1' }, version: 2 },
       });
-      mutation.replayInputs = captureReplayInputs(
-        mutation,
-        cacheWithUnit('unit-1', 'tbsp'),
-      );
+      const cache = cacheWithUnit('unit-1', 'tbsp');
+      mutation.replayInputs = captureReplayInputs(mutation, cache);
 
-      const replayed = await prepare(mutation);
+      const first = await prepare(mutation, cache);
+      // The unit has left the cache by the retry; the captured symbol stands.
+      const retry = await prepare(mutation, makeCache(), {
+        unitsRefreshed: true,
+      });
 
       expect(mutation.replayInputs).toEqual({ 'unit:unit-1': 'tbsp' });
-      expect(replayed.input).toMatchObject({ unit: { symbol: 'tbsp' } });
+      expect(first.input).toEqual(
+        expect.objectContaining({ unit: { id: 'unit-1' } }),
+      );
+      expect(retry.input).toEqual(
+        expect.objectContaining({ unit: { symbol: 'tbsp' } }),
+      );
+    });
+
+    it.each([
+      ['an older build’s one symbol', { unitSymbol: 'tbsp' }, makeCache()],
+      [
+        'none, by its cached symbol',
+        undefined,
+        cacheWithUnit('unit-1', 'tbsp'),
+      ],
+    ])(
+      'names by symbol a single row that captured %s',
+      async (_, replayInputs, cache) => {
+        const replayed = await prepare(
+          queued(
+            UpdatePantryItemDocument,
+            { input: { id: 'row-1', unit: { id: 'unit-1' }, version: 2 } },
+            { replayInputs },
+          ),
+          cache,
+        );
+
+        expect(replayed.input).toEqual(
+          expect.objectContaining({ unit: { symbol: 'tbsp' } }),
+        );
+      },
+    );
+
+    it('names every line of a batch add by symbol, its id captured or not', async () => {
+      const mutation = queued(AddItemToShoppingListDocument, {
+        input: {
+          shoppingListId: 'list-1',
+          items: [
+            { id: 'row-1', unit: { id: 'unit-1' } },
+            { id: 'row-2', unit: { name: 'handful' } },
+          ],
+        },
+      });
+      const cache = cacheWithUnit('unit-1', 'tbsp');
+      mutation.replayInputs = captureReplayInputs(mutation, cache);
+
+      const replayed = await prepare(mutation, cache);
+
+      expect(mutation.replayInputs).toEqual({ 'unit:unit-1': 'tbsp' });
+      expect(replayed.input).toEqual(
+        expect.objectContaining({
+          items: [
+            { id: 'row-1', unit: { symbol: 'tbsp' } },
+            { id: 'row-2', unit: { name: 'handful' } },
+          ],
+        }),
+      );
     });
 
     it('keeps the id when no symbol is known', async () => {

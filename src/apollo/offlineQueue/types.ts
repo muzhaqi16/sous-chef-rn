@@ -31,8 +31,8 @@ export interface QueueError {
   /**
    * `stale-reference` is its own type, not `server`: recovery is a side effect
    * (refresh the vocabulary) before a retry, and a deferral replays the same
-   * dead id until the entry ages out. `conflict` re-sends once WITHOUT the
-   * captured `version` — an optimistic lock on a stale value can only fail.
+   * dead id until the entry ages out. `conflict` is withdrawn, never
+   * re-sent: an optimistic lock on a stale value can only fail.
    */
   type:
     | 'network'
@@ -81,9 +81,6 @@ export interface QueuedMutation {
   retryCount: number;
   maxRetries: number;
   lastError?: QueueError;
-
-  /** Version conflicts survived. Absent on entries queued before it existed. */
-  conflictCount?: number;
 
   requiresAuth: boolean;
 }
@@ -157,6 +154,12 @@ export type UnlinkWithdrawal = (
  * A create the server merged into a row it already held (`outcome: MERGED`):
  * writes still queued against the minted id move to the surviving row.
  */
+/**
+ * Told when a queued removal is dropped because the entry it named merged into
+ * one that already existed; `entityType` is the surviving entry's, if known.
+ */
+export type RemovalKeptHandler = (entityType: string | null) => void;
+
 export interface RowAdoption {
   mintedId: string;
   survivingId: string;

@@ -12,10 +12,14 @@ import {
   settlePantryItemDelete,
 } from '#features/pantry/offline/replayReconcilers';
 import {
+  AdjustPantryItemQuantityDocument,
   CreatePantryItemDocument,
   DeletePantryDocument,
   DeletePantryItemDocument,
+  UpdatePantryItemDocument,
+  UpdatePantryItemQuantityDocument,
 } from '#features/pantry/graphql/pantry.generated';
+import { ChangePantryItemUnitDocument } from '#features/pantry/hooks/usePantryUnitChange.generated';
 import { CreateHomeDocument } from '#operations/home/home.generated';
 import {
   reconcileShoppingAddReplay,
@@ -26,6 +30,8 @@ import {
   AddItemToShoppingListDocument,
   MoveShoppingItemToPantryDocument,
   RemoveItemFromShoppingListDocument,
+  UpdateShoppingListItemDocument,
+  UpdateShoppingListItemQuantityDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
 import {
@@ -43,10 +49,12 @@ import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/
 import {
   CreateMealPlanItemDocument,
   DeleteMealPlanDocument,
+  DeleteMealPlanItemDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import { DeleteMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import {
   reconcileCreateMealPlanItemReplay,
+  settleGoneMealPlanItem,
   settleMealPlanDelete,
   settleMealTemplateDelete,
 } from '#features/mealPlan/offline/replayReconcilers';
@@ -95,4 +103,26 @@ export const REPLAY_RECONCILERS: ReplayReconcilerTable = byOperation([
 export const GONE_REPLAYS: ReplayReconcilerTable = byOperation([
   [MarkNotificationAsReadDocument, removeGoneNotification],
   [DeleteNotificationDocument, removeGoneNotification],
+  [DeleteMealPlanItemDocument, settleGoneMealPlanItem],
+]);
+
+const always = (): boolean => true;
+const setsQuantityOrUnit = (input: Record<string, unknown>): boolean =>
+  input.quantity !== undefined || input.unit !== undefined;
+
+/**
+ * Writes that overwrite the quantity a merged create combined. Moved onto the
+ * surviving entry they would replace amounts the person never saw, so they are
+ * withdrawn as conflicts instead; a delta (a usage, a restock) is not listed.
+ */
+export const MERGED_QUANTITY_OVERWRITES: Record<
+  string,
+  (input: Record<string, unknown>) => boolean
+> = byOperation([
+  [UpdatePantryItemQuantityDocument, always],
+  [UpdateShoppingListItemQuantityDocument, always],
+  [AdjustPantryItemQuantityDocument, always],
+  [ChangePantryItemUnitDocument, always],
+  [UpdatePantryItemDocument, setsQuantityOrUnit],
+  [UpdateShoppingListItemDocument, setsQuantityOrUnit],
 ]);

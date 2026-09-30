@@ -316,14 +316,13 @@ describe('QueueStore', () => {
         ]);
       });
 
-      it("keeps the first move's age and conflict count on the surviving move", () => {
+      it("keeps the first move's age", () => {
         store.addMutation(
           makeMutation({
             id: 'move-1',
             ...queuedMutationFor(MoveShoppingListItemDocument),
             variables: { input: { itemId: 'item-A', afterItemId: 'item-Y' } },
             createdAt: 1_000,
-            conflictCount: 1,
           }),
         );
         store.addMutation(
@@ -344,7 +343,6 @@ describe('QueueStore', () => {
           id: 'move-2',
           createdAt: 5_000,
           agedFrom: 1_000,
-          conflictCount: 1,
         });
       });
 

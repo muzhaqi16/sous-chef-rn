@@ -128,17 +128,20 @@ export function useRecipeData({
   openFailure,
 }: UseRecipeDataParams): UseRecipeDataResult {
   const { t } = useTranslation();
-  const { data, loading, error, refetch } = useQuery(
+  const { data, loading, error, refetch, variables } = useQuery(
     GetRecipeDocument,
     recipeId ? { variables: { id: recipeId } } : skipToken,
   );
+  // `skipToken` keeps the last run's variables, data and error: a result for
+  // another recipe is not this one's.
+  const current = !!recipeId && variables.id === recipeId;
 
   // Live: a save changes only fields behind the query's mask, which leaves
   // `data.recipe` the same object.
   const recipe = useFragment({
     fragment: UseRecipeData_RecipeFragmentDoc,
     fragmentName: 'useRecipeData_recipe',
-    from: data?.recipe ?? null,
+    from: current ? data?.recipe ?? null : null,
   });
   const backendRecipe = recipe.complete ? recipe.data : undefined;
 
@@ -157,7 +160,9 @@ export function useRecipeData({
 
   const resolveError = () => {
     if (openFailure) return openFailure;
-    if (error) return localizedErrorMessage(error, t('recipes.loadFailed'));
+    if (current && error) {
+      return localizedErrorMessage(error, t('recipes.loadFailed'));
+    }
     if (!recipeId && !hint) return t('recipes.recipeNotFound');
     return null;
   };

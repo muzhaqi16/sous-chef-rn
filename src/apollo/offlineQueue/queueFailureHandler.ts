@@ -143,11 +143,25 @@ function withdrawalMessage(
 }
 
 /**
+ * A removal the queue dropped because the entry merged into one already
+ * there: the entry is back on screen, and the person should know why.
+ */
+function handleRemovalKept(entityType: string | null): void {
+  const resourceKey = `errors.resourceNames.${entityType ?? ''}`;
+  toastService.info(
+    isTranslationKey(resourceKey)
+      ? t('errors.queuedRemovalKeptResource', { resource: t(resourceKey) })
+      : t('errors.queuedRemovalKept'),
+  );
+}
+
+/**
  * The ONE registration of {@link handleQueueFailure}, from `useStartupInit`.
  * `setFailureHandler` is last-write-wins, and effects run after imports, so a
  * second registration at module scope elsewhere would silently be dead.
  */
 export function registerQueueFailureHandler(): void {
   queueManager.setFailureHandler(handleQueueFailure);
+  queueManager.setRemovalKeptHandler(handleRemovalKept);
   queueManager.setDrainedHandler(onQueueDrained);
 }

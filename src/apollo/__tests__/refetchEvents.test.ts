@@ -76,7 +76,12 @@ const SearchQuery = gql`
   }
 `;
 
-const flush = () => act(() => new Promise(resolve => setTimeout(resolve, 0)));
+const elapse = (ms: number) =>
+  act(async () => {
+    await jest.advanceTimersByTimeAsync(ms);
+  });
+/** Past the settle window (about 1.5 s) and its cap (about 5 s). */
+const pastTheWindow = () => elapse(6_000);
 
 const deferred = () => {
   let resolve: () => void = () => {};
@@ -107,7 +112,20 @@ const triggers = {
 };
 
 let requests: string[];
+let heldResponses: Array<() => void> | null;
 let client: ApolloClient;
+
+/** Keeps every request in flight until `release`. */
+const holdResponses = () => {
+  heldResponses = [];
+  return {
+    release: () => {
+      const held = heldResponses ?? [];
+      heldResponses = null;
+      held.forEach(respond => respond());
+    },
+  };
+};
 const watchers: Array<{ unsubscribe: () => void }> = [];
 
 const watch = (
@@ -119,6 +137,7 @@ const watch = (
 };
 
 beforeEach(async () => {
+  jest.useFakeTimers();
   jest.clearAllMocks();
   mockReconnectListeners.clear();
   resetSessionEndingGate();
@@ -128,6 +147,7 @@ beforeEach(async () => {
     apiReachable: true,
   });
   requests = [];
+  heldResponses = null;
   client = new ApolloClient({
     cache: new InMemoryCache(),
     defaultOptions: APOLLO_DEFAULT_OPTIONS,
@@ -135,8 +155,12 @@ beforeEach(async () => {
       operation =>
         new Observable(observer => {
           requests.push(operation.operationName ?? '');
-          observer.next({ data: { list: 'value', search: 'value' } });
-          observer.complete();
+          const respond = () => {
+            observer.next({ data: { list: 'value', search: 'value' } });
+            observer.complete();
+          };
+          if (heldResponses) heldResponses.push(respond);
+          else respond();
         }),
     ),
     refetchEventManager: createRefetchEventManager(),
@@ -144,13 +168,15 @@ beforeEach(async () => {
   connectResyncSources(client);
   watch(ListQuery);
   watch(SearchQuery, { refetchOn: false });
-  await flush();
+  await elapse(0);
   requests = [];
 });
 
 afterEach(() => {
   watchers.splice(0).forEach(watcher => watcher.unsubscribe());
   client.stop();
+  jest.clearAllTimers();
+  jest.useRealTimers();
 });
 
 describe('resync', () => {
@@ -158,7 +184,7 @@ describe('resync', () => {
     '%s refetches each active query once',
     async trigger => {
       triggers[trigger]();
-      await flush();
+      await pastTheWindow();
 
       expect(requests).toEqual(['ListForResync']);
       await waitFor(() =>
@@ -176,12 +202,14 @@ describe('resync', () => {
     jest.mocked(queueManager.whenIdle).mockReturnValueOnce(idle.promise);
 
     triggers.appForeground();
+    await pastTheWindow();
     triggers.apiReachable();
     triggers.wsReconnected();
     idle.resolve();
-    await flush();
+    await pastTheWindow();
 
     expect(requests).toEqual(['ListForResync']);
+    expect(queueManager.whenIdle).toHaveBeenCalledTimes(1);
     await waitFor(() =>
       expect(Telemetry.increment).toHaveBeenCalledWith(
         'resync_queries_total',
@@ -196,17 +224,17 @@ describe('resync', () => {
     jest.mocked(queueManager.whenIdle).mockReturnValueOnce(idle.promise);
 
     triggers.appForeground();
-    await flush();
+    await pastTheWindow();
     expect(requests).toEqual([]);
 
     idle.resolve();
-    await flush();
+    await pastTheWindow();
     expect(requests).toEqual(['ListForResync']);
   });
 
   it('does not refetch a query that declined resync', async () => {
     triggers.wsReconnected();
-    await flush();
+    await pastTheWindow();
 
     expect(requests).not.toContain('SearchForResync');
   });
@@ -219,9 +247,18 @@ describe('resync', () => {
 
     triggers.appForeground();
     idle.resolve();
-    await flush();
+    await pastTheWindow();
     release.resolve();
     await ending;
+
+    expect(requests).toEqual([]);
+  });
+
+  it('does not refetch for a trigger the ended session made', async () => {
+    triggers.appForeground();
+    await elapse(500);
+    useStore.setState({ user: null });
+    await pastTheWindow();
 
     expect(requests).toEqual([]);
   });
@@ -230,17 +267,79 @@ describe('resync', () => {
     useStore.setState({ user: null });
 
     triggers.apiReachable();
-    await flush();
+    await pastTheWindow();
 
     expect(requests).toEqual([]);
   });
 
-  it('starts a new resync for a trigger that arrives after the queue drained', async () => {
-    triggers.appForeground();
-    await flush();
-    triggers.wsReconnected();
-    await flush();
+  describe('the settle window', () => {
+    it('makes the socket re-ack a second after foreground one resync', async () => {
+      triggers.appForeground();
+      await elapse(1_000);
+      triggers.wsReconnected();
+      await elapse(1_000);
+      expect(requests).toEqual([]);
 
-    expect(requests).toEqual(['ListForResync', 'ListForResync']);
+      await pastTheWindow();
+
+      expect(requests).toEqual(['ListForResync']);
+      await waitFor(() =>
+        expect(Telemetry.increment).toHaveBeenCalledWith(
+          'resync_queries_total',
+          1,
+          { source: 'appForeground+wsReconnected' },
+        ),
+      );
+    });
+
+    it('resyncs for each of two triggers further apart than the window', async () => {
+      triggers.appForeground();
+      await elapse(2_000);
+      expect(requests).toEqual(['ListForResync']);
+
+      triggers.wsReconnected();
+      await pastTheWindow();
+
+      expect(requests).toEqual(['ListForResync', 'ListForResync']);
+    });
+
+    it('resyncs within 5 s of the first trigger however long triggers keep coming', async () => {
+      triggers.wsReconnected();
+      for (let second = 1; second < 5; second++) {
+        await elapse(1_000);
+        triggers.wsReconnected();
+      }
+      expect(requests).toEqual([]);
+
+      await elapse(1_000);
+
+      expect(requests).toEqual(['ListForResync']);
+    });
+
+    it('follows a resync with one more for triggers that arrive while it re-requests', async () => {
+      const refetchQueries = jest.spyOn(client, 'refetchQueries');
+      const inFlight = holdResponses();
+      triggers.appForeground();
+      await pastTheWindow();
+      expect(requests).toEqual(['ListForResync']);
+
+      triggers.wsReconnected();
+      triggers.apiReachable();
+      await pastTheWindow();
+      expect(refetchQueries).toHaveBeenCalledTimes(1);
+
+      inFlight.release();
+      await pastTheWindow();
+      await pastTheWindow();
+
+      expect(requests).toEqual(['ListForResync', 'ListForResync']);
+      await waitFor(() =>
+        expect(Telemetry.increment).toHaveBeenLastCalledWith(
+          'resync_queries_total',
+          1,
+          { source: 'apiReachable+wsReconnected' },
+        ),
+      );
+    });
   });
 });

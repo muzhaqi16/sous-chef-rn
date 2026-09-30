@@ -21,8 +21,7 @@ import {
 } from '#/apollo/utils/cacheUpdaters';
 import {
   addLocalShoppingListItem,
-  carriesListTotals,
-  reconcileShoppingItemCreateUpdate,
+  buildAddItemsReconcileUpdate,
   createLocalShoppingListItem,
   reconcileShoppingCreate,
 } from '#features/shoppingList/cache/items';
@@ -129,30 +128,7 @@ export function useAddScannedItem({
     BarcodeAddItemToShoppingListDocument,
     {
       context: { localFirst: true },
-      update: (cache, { data }, { variables }) => {
-        const payload = appliedPayload(data);
-        if (!payload || !shoppingListId || !variables) {
-          return;
-        }
-        // Single add via the batch mutation — the created/merged row is the one
-        // entry in `results`. Null when that item failed.
-        const maskedItem = payload.results[0]?.item;
-        if (!maskedItem) return;
-        // Catalog-merge: the withdrawal takes `totalItems` back with the row
-        // the server folded away, and the add is counted once.
-        reconcileShoppingItemCreateUpdate(
-          cache,
-          shoppingListId,
-          maskedItem,
-          variables.input.items[0]?.id,
-          {
-            countsSettled: carriesListTotals(
-              payload.shoppingList,
-              shoppingListId,
-            ),
-          },
-        );
-      },
+      update: buildAddItemsReconcileUpdate({ listId: shoppingListId }),
     },
   );
 

@@ -83,7 +83,7 @@ const symbolFor = (
  * vocabulary repair retired cannot be re-resolved, a symbol can. `@oneOf`, so
  * the symbol replaces the id.
  */
-function unitRef(
+function bySymbol(
   mutation: QueuedMutation,
   cache: ApolloCache,
   ref: unknown,
@@ -94,24 +94,46 @@ function unitRef(
 }
 
 /**
- * The input with each unit restated for the server as it stands: a reference
- * by symbol, and a flat `unitId` (which takes no symbol) re-resolved to the
- * unit's current id once a refusal has named it retired.
+ * A single row's unit keeps the id it captured a symbol for until a refusal
+ * names that id retired: the service creates a counting unit for a symbol it
+ * does not know, so sending the symbol first can turn a renamed unit into a
+ * stray one.
+ */
+function rowUnitRef(
+  mutation: QueuedMutation,
+  { cache, unitsRefreshed }: ReplayContext,
+  ref: unknown,
+): unknown {
+  const holdsId =
+    !unitsRefreshed &&
+    isRecord(ref) &&
+    typeof ref.id === 'string' &&
+    mutation.replayInputs?.[capturedSymbolKey(ref.id)] !== undefined;
+  return holdsId ? ref : bySymbol(mutation, cache, ref);
+}
+
+/**
+ * The input with each unit restated for the server as it stands. A batch
+ * line goes by symbol on every attempt: its refusal does not say which
+ * reference failed, so waiting for one would lose the line. A flat `unitId`
+ * (which takes no symbol) is re-resolved to the unit's current id once a
+ * refusal has named it retired.
  */
 export async function withCurrentUnits(
   mutation: QueuedMutation,
-  { cache, unitsRefreshed, unitIdForSymbol }: ReplayContext,
+  context: ReplayContext,
 ): Promise<OperationVariables> {
+  const { cache, unitsRefreshed, unitIdForSymbol } = context;
   const { variables } = mutation;
   const input: unknown = variables.input;
   if (!isRecord(input)) return variables;
 
   const next: Input = { ...input };
-  if ('unit' in input) next.unit = unitRef(mutation, cache, input.unit);
+  if ('unit' in input) next.unit = rowUnitRef(mutation, context, input.unit);
   if (Array.isArray(input.items)) {
     next.items = (input.items as unknown[]).map(line =>
       isRecord(line) && 'unit' in line
-        ? { ...line, unit: unitRef(mutation, cache, line.unit) }
+        ? { ...line, unit: bySymbol(mutation, cache, line.unit) }
         : line,
     );
   }

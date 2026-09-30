@@ -1556,6 +1556,43 @@ describe('cache', () => {
       expect(readIds(cache)).toEqual(['x', 'y']);
     });
 
+    it('restarts from the refreshed page once the window dropped the head', () => {
+      const cache = makeCache();
+      const ids = (from: number, to: number) =>
+        Array.from({ length: to - from + 1 }, (_, i) => `r${from + i}`);
+      const page = (from: number, to: number) =>
+        ids(from, to).map(id => edge(id, id.toUpperCase()));
+      writePage(cache, page(1, 25), { hasNextPage: true, endCursor: 'c25' });
+      for (const from of [26, 51, 76, 101]) {
+        writePage(
+          cache,
+          page(from, from + 24),
+          { hasNextPage: true, endCursor: `c${from + 24}` },
+          { id: 'list-1', after: `c${from - 1}` },
+        );
+      }
+      // Five pages of 25 against a window of 100: the first page is gone.
+      expect(readIds(cache)).toEqual(ids(26, 125));
+
+      writePage(cache, page(1, 25), { hasNextPage: true, endCursor: 'c25' });
+
+      expect(readIds(cache)).toEqual(ids(1, 25));
+      const pageInfo = cache.readQuery<{
+        shoppingList: { itemsConnection: { pageInfo: { endCursor: string } } };
+      }>({ query: LIST_QUERY, variables: { id: 'list-1' } })?.shoppingList
+        .itemsConnection.pageInfo;
+      expect(pageInfo?.endCursor).toBe('c25');
+
+      writePage(
+        cache,
+        page(26, 50),
+        { hasNextPage: true, endCursor: 'c50' },
+        { id: 'list-1', after: 'c25' },
+      );
+
+      expect(readIds(cache)).toEqual(ids(1, 50));
+    });
+
     it('skips nothing when fetchMore resumes after the merge', () => {
       const cache = seedTwoPages();
       writePage(cache, [edge('n', 'N'), edge('a', 'A')], {

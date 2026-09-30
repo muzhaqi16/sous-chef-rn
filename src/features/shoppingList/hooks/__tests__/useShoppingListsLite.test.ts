@@ -1,6 +1,6 @@
 import { waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
-import type { MockPart } from '#/test-utils/apolloMockProvider';
+import type { MockDataFor, MockPart } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
@@ -34,6 +34,34 @@ function overviewMock() {
           endCursor: null,
         },
       },
+    },
+  });
+}
+
+const ALL_LISTS = 30;
+const SERVER_DEFAULT_PAGE = 20;
+
+/** The API's page of the account's 30 lists: `first` rows, else its default. */
+function serverMock() {
+  return recordMock(GetShoppingListsLiteDocument, {
+    dataFor: (vars): MockDataFor<typeof GetShoppingListsLiteDocument> => {
+      const first =
+        typeof vars.first === 'number' ? vars.first : SERVER_DEFAULT_PAGE;
+      const size = Math.min(first, ALL_LISTS);
+      return {
+        shoppingLists: {
+          __typename: 'ShoppingListConnection',
+          totalCount: ALL_LISTS,
+          edges: Array.from({ length: size }, (_, i) =>
+            listEdge(`sl-${i + 1}`, `List ${i + 1}`),
+          ),
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: size < ALL_LISTS,
+            endCursor: `c${size}`,
+          },
+        },
+      };
     },
   });
 }
@@ -73,6 +101,75 @@ describe('useShoppingListsLite', () => {
       'Party',
     ]);
     picker.unmount();
+  });
+
+  it('leaves the overview its rows when a shorter page arrives', async () => {
+    const cache = makeCache();
+    const overview = renderHookWithApollo(() => useShoppingListsQuery(), {
+      cache,
+      operationMocks: [serverMock().mock],
+    });
+    await waitFor(() =>
+      expect(overview.result.current.lists).toHaveLength(ALL_LISTS),
+    );
+
+    const shortPage = recordMock(GetShoppingListsLiteDocument, {
+      data: {
+        shoppingLists: {
+          __typename: 'ShoppingListConnection',
+          totalCount: ALL_LISTS,
+          edges: Array.from({ length: SERVER_DEFAULT_PAGE }, (_, i) =>
+            listEdge(`sl-${i + 1}`, `List ${i + 1}`),
+          ),
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: true,
+            endCursor: `c${SERVER_DEFAULT_PAGE}`,
+          },
+        },
+      },
+    });
+    const picker = renderHookWithApollo(() => useShoppingListsLite(), {
+      cache,
+      operationMocks: [shortPage.mock],
+    });
+    await waitFor(() => expect(shortPage.fired).toHaveLength(1));
+    await waitFor(() => expect(picker.result.current.loading).toBe(false));
+
+    expect(overview.result.current.lists).toHaveLength(ALL_LISTS);
+    const held = cache.readQuery({
+      query: GetShoppingListsLiteDocument,
+      variables: {},
+    })?.shoppingLists;
+    expect(held?.edges).toHaveLength(ALL_LISTS);
+    expect(held?.pageInfo).toEqual(
+      expect.objectContaining({ hasNextPage: false, endCursor: 'c30' }),
+    );
+    picker.unmount();
+    overview.unmount();
+  });
+
+  // The warm-up reads `cache-first`, so a page a picker loaded first answers it
+  // and is all the overview has offline.
+  it('loads the overview’s page, so a picker that loads first leaves it whole', async () => {
+    const cache = makeCache();
+    const picker = renderHookWithApollo(() => useShoppingListsLite(), {
+      cache,
+      operationMocks: [serverMock().mock],
+    });
+    await waitFor(() => expect(picker.result.current.loading).toBe(false));
+    picker.unmount();
+
+    const offline = recordMock(GetShoppingListsLiteDocument, {
+      delay: 60_000,
+    });
+    const overview = renderHookWithApollo(() => useShoppingListsQuery(), {
+      cache,
+      operationMocks: [offline.mock],
+    });
+
+    expect(overview.result.current.lists.length).toBe(ALL_LISTS);
+    overview.unmount();
   });
 
   it('returns nothing when skipped', () => {

@@ -111,6 +111,42 @@ describe('queue failure handler', () => {
     spy.mockRestore();
   });
 
+  describe('a removal the queue kept because its entry merged', () => {
+    const registeredNotice = () => {
+      const spy = jest.spyOn(queueManager, 'setRemovalKeptHandler');
+      registerQueueFailureHandler();
+      const [[notice]] = spy.mock.calls as [[(type: string | null) => void]];
+      spy.mockRestore();
+      return notice;
+    };
+
+    it('is told to the person, naming the entry that stays', () => {
+      registeredNotice()('ShoppingListItem');
+
+      expect(toastService.info).toHaveBeenCalledWith(
+        t('errors.queuedRemovalKeptResource', {
+          resource: t('errors.resourceNames.ShoppingListItem'),
+        }),
+      );
+      expect(toastService.error).not.toHaveBeenCalled();
+    });
+
+    it('is told without a name when the entry has none', () => {
+      const notice = registeredNotice();
+      notice(null);
+      notice('NoSuchEntity');
+
+      expect(toastService.info).toHaveBeenNthCalledWith(
+        1,
+        t('errors.queuedRemovalKept'),
+      );
+      expect(toastService.info).toHaveBeenNthCalledWith(
+        2,
+        t('errors.queuedRemovalKept'),
+      );
+    });
+  });
+
   it('withdraws the locally-applied change from the cache', () => {
     handleQueueFailure(failure());
     expect(safeEvict).toHaveBeenCalledWith(

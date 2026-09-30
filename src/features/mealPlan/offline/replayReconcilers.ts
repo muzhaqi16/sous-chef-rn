@@ -1,6 +1,7 @@
 /**
  * Settling a meal plan replay: a create the server resolved onto a row it
- * already held, and a delete whose response names the removed row.
+ * already held, a delete whose response names the removed row, and a delete
+ * of a meal the server does not have.
  */
 import { adoptServerMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
 import {
@@ -10,14 +11,16 @@ import {
 import { extractMutationPayload } from '#/utils/errors/mutationPayload';
 import type { ReplayReconcilerTable } from '#/apollo/offlineQueue/types';
 import { isRecord } from '#/utils/isRecord';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 
 /**
  * A replayed recipe meal converges on the (plan, date, meal type, recipe) key,
  * so a meal another device already added comes back under its own id; the
- * minted row is withdrawn and the server's linked, as the foreground does.
+ * minted row is withdrawn and the server's linked, as the foreground does, and
+ * the writes still queued against the minted row follow it.
  */
 export const reconcileCreateMealPlanItemReplay: ReplayReconcilerTable[string] =
-  (cache, variables, data) => {
+  (cache, variables, data, adopt) => {
     const input: unknown = variables.input;
     if (!isRecord(input)) return;
     const { id: mintedId, mealPlanId } = input;
@@ -27,6 +30,10 @@ export const reconcileCreateMealPlanItemReplay: ReplayReconcilerTable[string] =
     const item = isRecord(payload) ? payload.mealPlanItem : undefined;
     if (!isRecord(item) || typeof item.id !== 'string') return;
     adoptServerMealPlanItem(cache, mealPlanId, item.id, mintedId);
+    if (item.id !== mintedId) {
+      // `UpdateMealPlanItemInput` carries no version to move.
+      adopt?.({ mintedId, survivingId: item.id, version: undefined });
+    }
   };
 
 /** The id a delete's input names, or null. */
@@ -57,4 +64,14 @@ export const settleMealTemplateDelete: ReplayReconcilerTable[string] = (
   const id = deletedId(variables);
   if (!id) return;
   removeFromMealTemplates(cache, id, { evictItem: true });
+};
+
+/** A delete of a meal the server does not have: gone locally already, so only its record goes. */
+export const settleGoneMealPlanItem: ReplayReconcilerTable[string] = (
+  cache,
+  variables,
+) => {
+  const id = deletedId(variables);
+  if (!id) return;
+  safeEvict(cache, 'MealPlanItem', id);
 };

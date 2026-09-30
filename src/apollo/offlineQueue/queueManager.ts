@@ -13,14 +13,16 @@ import {
   QueueStatus,
   type FailedMutationInfo,
   type FailureHandler,
+  type RemovalKeptHandler,
   type RowAdoption,
 } from './types';
 import { prepareReplay } from './prepareReplay';
 import {
+  overwritesMergedQuantity,
   reconcileReplaySuccess,
   settleGoneReplay,
 } from './queueReplayReconcilers';
-import { queuedSubject } from './queuedSubject';
+import { deletesItsSubject, queuedSubject } from './queuedSubject';
 import { GetUnitBySymbolDocument } from '#operations/item/unit.generated';
 import { proactiveTokenRefresh } from '../links/refreshToken';
 import { LogoutCleanup } from '../logoutCleanup';
@@ -127,19 +129,25 @@ const versionOf = (record: unknown): number | undefined =>
     ? record.version
     : undefined;
 
-/** The version the server returned for `entityId`, on the payload or one level down. */
+/** The version the server returned for `entityId`, wherever the payload holds it. */
 const returnedVersionOf = (
   payload: unknown,
   entityId: string,
 ): number | undefined => {
-  if (!isRecord(payload)) return undefined;
-  const returned = [payload, ...Object.values(payload)].find(
-    candidate =>
-      isRecord(candidate) &&
-      candidate.id === entityId &&
-      versionOf(candidate) !== undefined,
-  );
-  return versionOf(returned);
+  if (isRecord(payload) && payload.id === entityId) {
+    const own = versionOf(payload);
+    if (own !== undefined) return own;
+  }
+  const children: unknown[] = Array.isArray(payload)
+    ? payload
+    : isRecord(payload)
+    ? Object.values(payload)
+    : [];
+  for (const child of children) {
+    const found = returnedVersionOf(child, entityId);
+    if (found !== undefined) return found;
+  }
+  return undefined;
 };
 
 /** The fields a replay reads off whichever union member the server returned. */
@@ -161,6 +169,7 @@ export class QueueManager {
   private isProcessing = false;
   private processingPromise: Promise<void> | null = null;
   private failureHandler: FailureHandler | null = null;
+  private removalKeptHandler: RemovalKeptHandler | null = null;
   private drainedHandler: ((userId: string) => void) | null = null;
   private drainTimer: ReturnType<typeof setTimeout> | null = null;
   /** Epoch ms before which no drain replays: the server's rate-limit window. */
@@ -173,6 +182,8 @@ export class QueueManager {
   private staleReferenceRetried = new Set<string>();
   /** Variables a replay rewrote this drain, for entries read before it ran. */
   private rewrittenThisDrain = new Map<string, OperationVariables>();
+  /** Entries an adoption dropped or withdrew this drain, still in its snapshot. */
+  private settledByAdoption = new Set<string>();
 
   constructor(config: Partial<QueueConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -183,7 +194,10 @@ export class QueueManager {
     this.failureHandler = handler;
   }
 
-  /** Invoked when the server accepted a replay but kept its own value. */
+  /** Invoked when a queued removal is dropped because its entry merged into another. */
+  setRemovalKeptHandler(handler: RemovalKeptHandler): void {
+    this.removalKeptHandler = handler;
+  }
 
   /** Invoked when a pass ends with nothing left pending for the user. */
   setDrainedHandler(handler: (userId: string) => void): void {
@@ -286,6 +300,7 @@ export class QueueManager {
     this.hasRefreshedUnits = false;
     this.staleReferenceRetried.clear();
     this.rewrittenThisDrain.clear();
+    this.settledByAdoption.clear();
 
     // Recover entries a killed process left mid-replay: drains are serialized
     // by isProcessing, so any PROCESSING entry visible here is stranded debris,
@@ -336,6 +351,10 @@ export class QueueManager {
         .flatMap(parked => this.getAllEntityIds(parked)),
     );
     for (const mutation of mutations) {
+      // An adoption earlier in this drain settled it (a dropped removal, a
+      // withdrawn overwrite); the snapshot still lists it.
+      if (this.settledByAdoption.has(mutation.id)) continue;
+
       // Stop replaying the moment the server becomes unreachable — the rest
       // of the queue stays PENDING for the next drain.
       if (isApiUnavailable(useStore.getState())) {
@@ -601,10 +620,10 @@ export class QueueManager {
     }
 
     // A unit the write names was merged away by the API's vocabulary repair.
-    // Refresh the vocabulary and re-send ONCE — `prepareReplay` restates the
-    // write's units on every attempt, so the re-sent write resolves against
-    // current rows. A second refusal is a real one: drop `retryable` so it
-    // falls through to revert-and-inform below.
+    // Refresh the vocabulary and re-send ONCE — on the retry `prepareReplay`
+    // restates the write's units by symbol, so the re-sent write resolves
+    // against current rows. A second refusal is a real one: drop `retryable`
+    // so it falls through to revert-and-inform below.
     if (queueError.type === 'stale-reference') {
       if (this.staleReferenceRetried.has(mutation.id)) {
         logger.warn(
@@ -721,7 +740,7 @@ export class QueueManager {
 
   /**
    * Moves the writes still queued against `entityId` at the version this replay
-   * captured onto the one the server returned: made in the same offline
+   * was built on onto the one the server returned: made in the same offline
    * stretch, they build on this one. Written to the queue, so a restart
    * mid-drain keeps it.
    */
@@ -731,31 +750,78 @@ export class QueueManager {
     capturedVersion: number | undefined,
     payload: unknown,
   ): void {
-    if (entityId === undefined || capturedVersion === undefined) return;
+    if (entityId === undefined) return;
     const returned = returnedVersionOf(payload, entityId);
-    if (returned === undefined || returned === capturedVersion) return;
+    if (returned === undefined) return;
+    // A write that sends no version (a usage, a restock) still moves the
+    // entry's by exactly one. A larger gap is another device's change, and
+    // the writes built before it must still meet it as a conflict.
+    const base = capturedVersion ?? returned - 1;
+    if (returned === base) return;
     this.rewritePending(
       replayed,
       pending => queuedSubject(pending).subjectIds.includes(entityId),
       input =>
-        input.version === capturedVersion
-          ? { ...input, version: returned }
-          : input,
+        input.version === base ? { ...input, version: returned } : input,
     );
   }
 
   /**
-   * A create the server merged into a row it already held: every write still
-   * queued against the minted id moves to the surviving row, sent at its
-   * version, since the server refuses the minted id from now on.
+   * A create the server merged into a row it already held, which may be
+   * another member's; the server refuses the minted id from now on. A removal
+   * of the minted row is dropped — it would delete a row the person never saw.
+   * An overwrite of the quantity the merge combined is withdrawn as a conflict.
+   * Every other write naming the minted id moves to the surviving row, sent at
+   * its version.
    */
   private adoptSurvivingRow(
     replayed: QueuedMutation,
     { mintedId, survivingId, version }: RowAdoption,
   ): void {
+    const onMinted = queueStore
+      .getPendingMutationsForUser(replayed.userId)
+      .map(stored => ({
+        ...stored,
+        variables: this.rewrittenThisDrain.get(stored.id) ?? stored.variables,
+      }))
+      .filter(
+        pending =>
+          pending.id !== replayed.id &&
+          queuedSubject(pending).subjectIds.includes(mintedId),
+      );
+    const removals = onMinted.filter(pending => deletesItsSubject(pending));
+    const overwrites = onMinted.filter(
+      pending =>
+        !deletesItsSubject(pending) && overwritesMergedQuantity(pending),
+    );
+
+    for (const removal of removals) {
+      queueStore.removeMutation(removal.id);
+      this.rewrittenThisDrain.delete(removal.id);
+    }
+    // The minted row is already evicted; the survivor's type names the change.
+    const survivingType =
+      removals.length > 0 || overwrites.length > 0
+        ? this.typenamesById().get(survivingId)
+        : undefined;
+    if (removals.length > 0) {
+      logger.info(
+        `🔀 Queue: removal of ${mintedId} dropped, merged into ${survivingId}`,
+      );
+      this.removalKeptHandler?.(survivingType ?? null);
+    }
+    for (const overwrite of overwrites) {
+      this.withdrawAsConflict(overwrite, survivingType);
+    }
+
+    for (const { id } of [...removals, ...overwrites]) {
+      this.settledByAdoption.add(id);
+    }
     this.rewritePending(
       replayed,
-      pending => mentionsId(pending.variables.input, mintedId),
+      pending =>
+        !this.settledByAdoption.has(pending.id) &&
+        mentionsId(pending.variables.input, mintedId),
       input => {
         const moved = replaceId(input, mintedId, survivingId);
         if (!isRecord(moved)) return input;
@@ -764,7 +830,29 @@ export class QueueManager {
           : moved;
       },
     );
+    // Nothing under the minted id is replayed onto the survivor at launch:
+    // the carried writes' own responses state the survivor's values.
+    optimisticDataPersistence.clearEntityById(mintedId);
     logger.info(`🔀 Queue: writes for ${mintedId} now target ${survivingId}`);
+  }
+
+  /** Withdraws a pending write the server would take over a state it never saw. */
+  private withdrawAsConflict(
+    mutation: QueuedMutation,
+    entityType: string | undefined,
+  ): void {
+    const queueError: QueueError = {
+      type: 'conflict',
+      message: `${mutation.operationName} would overwrite a merged entry`,
+      code: ErrorCode.VersionConflict,
+      timestamp: Date.now(),
+      retryable: false,
+    };
+    queueStore.markMutationFailed(mutation.id, queueError);
+    Telemetry.increment('offline_queue_conflicts_total', 1, {
+      operation: mutation.operationName,
+    });
+    this.invokeFailureHandler(mutation, queueError, entityType);
   }
 
   /** Rewrites the input of each other pending write `affects` picks. */
@@ -964,9 +1052,11 @@ export class QueueManager {
     this.invokeFailureHandler(mutation, error);
   }
 
+  /** `knownType` names an entity the cache does not hold, such as a merged-away row. */
   private invokeFailureHandler(
     mutation: QueuedMutation,
     error: QueueError,
+    knownType?: string,
   ): void {
     if (!this.failureHandler) {
       logger.debug(
@@ -975,7 +1065,9 @@ export class QueueManager {
       return;
     }
 
-    const { entityType, entityId } = this.extractEntityInfo(mutation);
+    const extracted = this.extractEntityInfo(mutation);
+    const { entityId } = extracted;
+    const entityType = extracted.entityType ?? knownType ?? null;
 
     const info: FailedMutationInfo = {
       mutationId: mutation.id,

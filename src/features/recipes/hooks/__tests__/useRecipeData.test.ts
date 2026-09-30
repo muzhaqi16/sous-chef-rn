@@ -251,6 +251,55 @@ describe('useRecipeData', () => {
     });
   });
 
+  // `skipToken` keeps serving the last run's data, error and variables.
+  describe('an id cleared while its request is suspended', () => {
+    const ROW: CatalogRecipeHint = { externalId: 'x', name: 'Row' };
+
+    const openThenClear = async (mock: MockedResponse) => {
+      const initialProps: UseRecipeDataParams = {
+        recipeId: 'r1',
+        hint: undefined,
+        openFailure: null,
+      };
+      const rendered = renderHookWithApollo(
+        (params: UseRecipeDataParams) => useRecipeData(params),
+        { operationMocks: [mock], cache: makeCache(), initialProps },
+      );
+      await waitFor(() => expect(rendered.result.current.loading).toBe(false));
+      return rendered;
+    };
+
+    it('shows none of the previous recipe', async () => {
+      const { result, rerender } = await openThenClear(
+        recipeMock(authoredRecipe()),
+      );
+      expect(result.current.backendRecipe?.id).toBe('r1');
+
+      rerender({ recipeId: undefined, hint: ROW, openFailure: null });
+
+      expect(result.current.backendRecipe).toBeUndefined();
+      expect(result.current.displayData).toEqual({
+        title: 'Row',
+        image: undefined,
+        ingredients: [],
+        details: 'opening',
+      });
+      expect(result.current.error).toBeNull();
+    });
+
+    it('surfaces none of the previous recipe’s error', async () => {
+      const { result, rerender } = await openThenClear(
+        recordMock(GetRecipeDocument, { error: new Error('offline') }).mock,
+      );
+      expect(result.current.error).not.toBeNull();
+
+      rerender({ recipeId: undefined, hint: ROW, openFailure: null });
+
+      expect(result.current.error).toBeNull();
+      expect(result.current.displayData?.details).toBe('opening');
+    });
+  });
+
   it('reports "Recipe not found" with neither an id nor a hint', () => {
     const { result } = renderData({});
 

@@ -128,14 +128,36 @@ describe('a replayed meal create the server converged onto a held meal', () => {
 
   it('keeps a meal the server created under its minted id', () => {
     const cache = seedPlan([MINTED_ID]);
+    const adopt = jest.fn();
 
     reconcileCreateMealPlanItemReplay(
       cache,
       createVariables,
       createdAs(MINTED_ID),
+      adopt,
     );
 
     expect(planMealIds(cache)).toEqual([MINTED_ID]);
+    expect(adopt).not.toHaveBeenCalled();
+  });
+
+  it('moves the writes queued against the minted meal onto the kept one', () => {
+    const cache = seedPlan([MINTED_ID]);
+    writeServerMeal(cache);
+    const adopt = jest.fn();
+
+    reconcileCreateMealPlanItemReplay(
+      cache,
+      createVariables,
+      createdAs(SERVER_ID),
+      adopt,
+    );
+
+    expect(adopt).toHaveBeenCalledWith({
+      mintedId: MINTED_ID,
+      survivingId: SERVER_ID,
+      version: undefined,
+    });
   });
 });
 

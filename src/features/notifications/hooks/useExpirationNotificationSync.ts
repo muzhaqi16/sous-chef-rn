@@ -6,7 +6,7 @@
  */
 
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import {
   MarkExpirationActionDocument,
@@ -14,14 +14,9 @@ import {
 } from '#features/notifications/graphql/expirationNotificationMutations.generated';
 import type { ExpirationAction } from '#/graphql/generated/schemaTypes';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import {
-  applyNotificationRead,
-  applyNotificationUnread,
-} from '#features/notifications/utils/notificationCacheWrites';
 import { toastService } from '#/services/toastService';
 
 export function useExpirationNotificationSync() {
-  const client = useApolloClient();
   const { t } = useTranslation();
   const [markActionMutation] = useMutation(MarkExpirationActionDocument, {
     context: { localFirst: true },
@@ -38,16 +33,15 @@ export function useExpirationNotificationSync() {
     expirationNotificationId: string,
     action: ExpirationAction,
   ) => {
-    // The action is client-side enrichment and stays in the store; the row's
-    // read-state is server state and goes to the cache.
+    // The action is client-side enrichment and stays in the store. The generic
+    // row and the badge are not this mutation's: the service never moves them
+    // here, and its payload states neither.
     useNotificationStore.getState().setExpirationAction(notificationId, action);
-    const markedRead = applyNotificationRead(client.cache, notificationId);
 
     toastService.success(t(`expirationAction.toast.${action}`));
 
     const revertAction = () => {
       useNotificationStore.getState().setExpirationAction(notificationId, '');
-      if (markedRead) applyNotificationUnread(client.cache, notificationId);
     };
 
     await settleMutation(

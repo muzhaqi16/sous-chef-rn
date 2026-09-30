@@ -128,6 +128,8 @@
     "offlineSearchUnavailable": "La búsqueda de recetas necesita conexión. Tus recetas guardadas siguen aquí.",
     "queuedChangeOverwrittenResource": "Tu cambio en {{resource}} se sustituyó por uno más reciente y se ha deshecho.",
     "queuedChangeOverwritten": "Un cambio fue sustituido por uno más reciente y se ha deshecho.",
+    "queuedRemovalKeptResource": "Tu eliminación en {{resource}} no se aplicó: se había combinado con una entrada que ya existía.",
+    "queuedRemovalKept": "Una eliminación no se aplicó: se había combinado con una entrada que ya existía.",
     "itemNameRequired": "Introduce el nombre del artículo",
     "invalidQuantity": "Introduce una cantidad válida",
     "itemNotFound": "Artículo no encontrado",

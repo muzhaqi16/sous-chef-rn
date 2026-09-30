@@ -237,9 +237,8 @@ export function classifyError(error: unknown): QueueError {
         retryable: true,
       };
     }
-    // The entity moved on since the write was made. Re-sendable, but only
-    // without the stale `version` the write captured — QueueManager strips it
-    // and re-sends once.
+    // The entity moved on since the write was made, so nothing applied.
+    // QueueManager withdraws and reports it rather than re-sending.
     if (
       error.payloadCode !== null &&
       VERSION_CONFLICT_CODES.includes(error.payloadCode)

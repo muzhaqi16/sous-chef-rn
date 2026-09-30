@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import type { ApolloClient } from '@apollo/client';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { SHOPPING_LISTS_PAGE_SIZE } from '#features/shoppingList/hooks/useShoppingListsQuery';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { SortOrder } from '#/graphql/generated/schemaTypes';
 import {
@@ -45,7 +46,7 @@ const WARM_TARGETS: Array<{
     warm: client =>
       client.query({
         query: GetShoppingListsLiteDocument,
-        variables: { first: 50 },
+        variables: { first: SHOPPING_LISTS_PAGE_SIZE },
         ...WARM_OPTIONS,
       }),
   },

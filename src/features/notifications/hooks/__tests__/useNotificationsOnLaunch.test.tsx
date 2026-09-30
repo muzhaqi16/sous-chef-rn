@@ -77,7 +77,14 @@ beforeEach(() => {
 
 afterEach(() => {
   useStore.setState({ user: null });
+  jest.useRealTimers();
 });
+
+/** Past the resync's settle window and its cap, on the fake clock. */
+const pastTheResyncWindow = () =>
+  act(async () => {
+    await jest.advanceTimersByTimeAsync(6_000);
+  });
 
 describe('useNotificationsOnLaunch', () => {
   it('waits for the deferred start before loading unread notifications', async () => {
@@ -93,6 +100,7 @@ describe('useNotificationsOnLaunch', () => {
   });
 
   it('reaches the network again when the app returns to the foreground', async () => {
+    jest.useFakeTimers();
     const { requests, wrapper, client } = setup();
     renderHook(() => useNotificationsOnLaunch(USER.id), { wrapper });
     act(() => mockFireDeferred?.());
@@ -109,6 +117,7 @@ describe('useNotificationsOnLaunch', () => {
       emitAppState('background');
       emitAppState('active');
     });
+    await pastTheResyncWindow();
 
     await waitFor(() =>
       expect(requests).toEqual([

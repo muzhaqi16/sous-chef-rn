@@ -67,9 +67,8 @@ const removeShoppingListFromQueryCache = createRemoveFromQueryConnectionUpdater(
 );
 
 /**
- * Write a list row — held data kept, the rest neutral — with both filtered
- * `itemsConnection` variants seeded empty, and link it into the overview. The
- * variants are what make it usable offline: a `cache.modify` never creates one.
+ * Write a list row — held data kept, the rest neutral — and link it into the
+ * overview.
  */
 function writeListRow(cache: ApolloCache, row: ShoppingListSnapshot): void {
   writeLocalEntity(cache, {
@@ -79,14 +78,23 @@ function writeListRow(cache: ApolloCache, row: ShoppingListSnapshot): void {
     neutralByType: NEUTRAL_LOCAL_SHOPPING_LIST_BY_TYPE,
     known: row,
   });
+  addShoppingListToQueryCache(cache, row);
+}
+
+/**
+ * Seed both filtered `itemsConnection` variants empty, which is what makes a
+ * new list usable offline: a `cache.modify` never creates one. Only a list the
+ * device created may say it has no items.
+ */
+function writeEmptyItemVariants(cache: ApolloCache, listId: string): void {
   for (const isPurchased of [false, true]) {
     cache.writeFragment({
-      id: cache.identify({ __typename: 'ShoppingList', id: row.id }),
+      id: cache.identify({ __typename: 'ShoppingList', id: listId }),
       fragment: List_EmptyItemsVariantFragmentDoc,
       variables: { isPurchased },
       data: {
         __typename: 'ShoppingList',
-        id: row.id,
+        id: listId,
         itemsConnection: {
           __typename: 'ShoppingListItemConnection',
           totalCount: 0,
@@ -100,7 +108,6 @@ function writeListRow(cache: ApolloCache, row: ShoppingListSnapshot): void {
       },
     });
   }
-  addShoppingListToQueryCache(cache, row);
 }
 
 /**
@@ -118,6 +125,7 @@ export function writeLocalShoppingList(
   const user = { __typename: 'User', id: owner.id };
   const homeId = input.homeId ?? null;
   const home = homeId ? { __typename: 'Home', id: homeId } : null;
+  writeEmptyItemVariants(cache, id);
   writeListRow(cache, {
     __typename: 'ShoppingList',
     id,
@@ -192,7 +200,10 @@ export function readShoppingListSnapshot(
   return { ...row, __typename: 'ShoppingList', id: listId, homeId };
 }
 
-/** Put back a list whose delete the server refused. */
+/**
+ * Put back a list whose delete the server refused. Its items left the device
+ * with it, so they stay unknown for the next read to fetch, never empty.
+ */
 export function restoreShoppingList(
   cache: ApolloCache,
   snapshot: ShoppingListSnapshot,

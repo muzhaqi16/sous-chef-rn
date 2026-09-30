@@ -47,27 +47,24 @@ const wsReconnected = () =>
     onWebSocketReconnected(() => observer.next()),
   );
 
+// The socket re-acks a second or two after the app returns to the foreground.
+const SETTLE_MS = 1_500;
+// A steady trickle of triggers still resyncs.
+const MAX_SETTLE_MS = 5_000;
+
 interface PendingResync {
   sources: Set<RefetchSource>;
   matchers: Array<(query: ObservableQuery) => boolean>;
+  firstTriggerAt: number;
 }
 
 const hasLiveSession = (): boolean =>
   !!useStore.getState().user?.id && !LogoutCleanup.isInLogoutProcess();
 
-async function runResync(
+async function refetchActive(
   client: ApolloClient,
   batch: PendingResync,
-  closeBatch: () => void,
 ): Promise<void> {
-  // Replay first: a refetch racing the queue would paint the server's older
-  // values over writes that have not landed yet.
-  // A rejection must still close the batch, or every later trigger joins it.
-  await queueManager.whenIdle().catch(() => {});
-  // Triggers from here on start the next resync; this one may already be past
-  // the change they announce.
-  closeBatch();
-
   if (!hasLiveSession()) return;
 
   const source = [...batch.sources].sort().join('+');
@@ -91,33 +88,58 @@ async function runResync(
 }
 
 /**
- * The client's resync: one per burst, since a trigger arriving while a resync
- * waits on the queue joins it, so each active query is re-requested at most
- * once. A transient query (a search, a preview, analytics) opts out with
- * `refetchOn: false`.
+ * The client's resync. Triggers until a settle window passes quietly are one
+ * resync, and so is a trigger arriving while it waits on the queue; one
+ * arriving while it re-requests starts exactly one more after it, never a
+ * parallel run. A transient query (a search, a preview, analytics) opts out
+ * with `refetchOn: false`.
  */
 export const createRefetchEventManager = (): RefetchEventManager => {
   let pending: PendingResync | null = null;
+  let settleTimer: ReturnType<typeof setTimeout> | undefined;
+  // From the settle timer firing until its refetch settles.
+  let running = false;
 
-  // Returns synchronously, as a handler must; the queue wait is `runResync`'s.
+  const takePending = (): PendingResync | null => {
+    const batch = pending;
+    pending = null;
+    return batch;
+  };
+
+  const settleThenResync = (client: ApolloClient, batch: PendingResync) => {
+    clearTimeout(settleTimer);
+    const capLeft = batch.firstTriggerAt + MAX_SETTLE_MS - Date.now();
+    settleTimer = setTimeout(() => {
+      void resync(client);
+    }, Math.min(SETTLE_MS, Math.max(0, capLeft)));
+  };
+
+  const resync = async (client: ApolloClient) => {
+    running = true;
+    // Replay first: a refetch racing the queue would paint the server's older
+    // values over writes that have not landed yet.
+    await queueManager.whenIdle().catch(() => {});
+    const batch = takePending();
+    // A throw must still end the run, or every later trigger waits on it.
+    if (batch) await refetchActive(client, batch).catch(() => {});
+    running = false;
+    if (pending) settleThenResync(client, pending);
+  };
+
+  // Returns synchronously, as a handler must; the waits are `resync`'s.
   const coalescingHandler: RefetchEventManager.EventHandler = ({
     client,
     source,
     matchesRefetchOn,
   }) => {
-    if (pending) {
-      pending.sources.add(source);
-      pending.matchers.push(matchesRefetchOn);
-      return;
-    }
-    const batch: PendingResync = {
-      sources: new Set([source]),
-      matchers: [matchesRefetchOn],
+    pending ??= {
+      sources: new Set(),
+      matchers: [],
+      firstTriggerAt: Date.now(),
     };
-    pending = batch;
-    void runResync(client, batch, () => {
-      pending = null;
-    });
+    pending.sources.add(source);
+    pending.matchers.push(matchesRefetchOn);
+    if (!running) settleThenResync(client, pending);
   };
 
   return new RefetchEventManager({ defaultHandler: coalescingHandler });

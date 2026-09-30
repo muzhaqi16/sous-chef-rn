@@ -128,6 +128,8 @@
     "offlineSearchUnavailable": "Recipe search needs a connection. Your saved recipes are still here.",
     "queuedChangeOverwrittenResource": "Your change to the {{resource}} was overwritten by a newer one and has been undone.",
     "queuedChangeOverwritten": "A change was overwritten by a newer one and has been undone.",
+    "queuedRemovalKeptResource": "The {{resource}} you removed had been combined with one already there, so it stays.",
+    "queuedRemovalKept": "Something you removed had been combined with an entry already there, so it stays.",
     "itemNameRequired": "Please enter an item name",
     "invalidQuantity": "Please enter a valid quantity",
     "itemNotFound": "Item not found",

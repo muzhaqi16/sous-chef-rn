@@ -1,5 +1,10 @@
 import { errorService } from '#/services/errorService';
-import { GONE_REPLAYS, REPLAY_RECONCILERS } from './replayRegistry';
+import {
+  GONE_REPLAYS,
+  MERGED_QUANTITY_OVERWRITES,
+  REPLAY_RECONCILERS,
+} from './replayRegistry';
+import { isRecord } from '#/utils/isRecord';
 import type { OperationVariables } from '@apollo/client';
 import { getApolloClient } from '#/apollo/clientRegistry';
 import type { ReplayReconcilerTable, RowAdoption } from './types';
@@ -48,3 +53,16 @@ export const settleGoneReplay = (
   operationName: string,
   variables: OperationVariables,
 ): boolean => runReconciler(GONE_REPLAYS, operationName, variables, undefined);
+
+/** Whether a queued write overwrites the quantity a merged create combined. */
+export const overwritesMergedQuantity = ({
+  operationName,
+  variables,
+}: {
+  operationName: string;
+  variables: OperationVariables;
+}): boolean => {
+  const overwrites = MERGED_QUANTITY_OVERWRITES[operationName];
+  const input: unknown = variables.input;
+  return overwrites !== undefined && isRecord(input) && overwrites(input);
+};

@@ -405,6 +405,33 @@ describe('useRecipeFavoriteState', () => {
       expect(mockToastSuccess).not.toHaveBeenCalled();
     });
 
+    it('re-points the heart at the earlier save by reference and releases the minted row when refused', async () => {
+      const cache = seedFavoriteCache();
+      cache.writeFragment({
+        id: cache.identify({ __typename: 'Recipe', id: 'backend-1' }),
+        fragment: SAVED_DETAILS_FRAGMENT,
+        data: {
+          __typename: 'Recipe',
+          id: 'backend-1',
+          savedDetails: { __typename: 'SavedRecipe', id: 'sr-old' },
+        },
+      });
+      const { result } = renderFavorite(recipe(), {
+        cache,
+        operationMocks: [favoriteMock('rejected')],
+      });
+
+      await save(result, 'Dinner');
+
+      const store = cache.extract();
+      expect(store['Recipe:backend-1']?.savedDetails).toEqual({
+        __ref: 'SavedRecipe:sr-old',
+      });
+      expect(store.__META?.extraRootIds ?? []).not.toContain(
+        `SavedRecipe:${SAVED_RECIPE_ID}`,
+      );
+    });
+
     it('does not duplicate the saved-list edge when the server echoes the client id', async () => {
       const cache = seedFavoriteCache();
       const { result } = renderFavorite(recipe(), {
