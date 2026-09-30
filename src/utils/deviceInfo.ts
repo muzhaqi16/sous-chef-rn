@@ -19,11 +19,12 @@ export interface DeviceInformation {
   screenResolution?: string;
   timezone: string;
   /**
-   * The device's BCP 47 locale ("en-US"), absent when it cannot be read: the
+   * The device's BCP 47 locale ("en-US"), null when it cannot be read: the
    * server takes a "Device default" user's unit system from its region, so a
-   * guess would register the device as American.
+   * guess would register the device as American. Null, not absent: the server
+   * keeps a stored locale for a field left out.
    */
-  language?: string;
+  language: string | null;
 
   // Enhanced device identification
   manufacturer?: string;
@@ -357,15 +358,15 @@ const collectAdditionalInfo = async () => {
   return additionalInfo;
 };
 
-/** The device's locale, or undefined when neither source can say. */
-function readDeviceLocale(): string | undefined {
+/** The device's locale, or null when neither source can say. */
+function readDeviceLocale(): string | null {
   try {
     if (typeof navigator !== 'undefined' && navigator.language) {
       return navigator.language;
     }
-    return Intl.DateTimeFormat().resolvedOptions().locale || undefined;
+    return Intl.DateTimeFormat().resolvedOptions().locale || null;
   } catch {
-    return undefined;
+    return null;
   }
 }
 

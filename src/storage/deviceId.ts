@@ -108,7 +108,7 @@ export function clearRetiredDeviceRow(): void {
  * last one, or none is on record. The server reads a "Device default" user's
  * unit system from it, so what it answered under the old one is stale.
  */
-export function recordRegisteredLocale(locale: string | undefined): boolean {
+export function recordRegisteredLocale(locale: string | null): boolean {
   if (!mirrorIsUsable()) return true;
   const value = locale ?? '';
   if (storage.getString(REGISTERED_LOCALE_KEY) === value) return false;

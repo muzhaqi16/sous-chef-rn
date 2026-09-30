@@ -248,13 +248,17 @@ describe('registerDeviceInBackground — the unit pickers', () => {
     expect(recordRegisteredLocale).not.toHaveBeenCalled();
   });
 
-  it("sends no locale when the device's cannot be read", async () => {
+  // Null, not left out: the server keeps a stored locale for a missing field,
+  // so an en-US an earlier build guessed would never clear.
+  it("clears the stored locale when the device's cannot be read", async () => {
+    mockCollect.mockResolvedValueOnce({ deviceId: 'local-1', language: null });
+
     authService.registerDeviceInBackground();
     await flush();
 
     const location = registerCall()?.location;
 
-    expect(location).toHaveProperty('language', undefined);
+    expect(location).toHaveProperty('language', null);
     // Nor a country it never read.
     expect(location).not.toHaveProperty('ipCountry');
   });

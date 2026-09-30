@@ -440,9 +440,10 @@ describe('deviceInfo', () => {
     });
 
     // The server reads a "Device default" user's unit system from the
-    // locale's region: a guessed en-US would register the device as American.
-    it('leaves the locale out rather than guess one it cannot read', async () => {
-      expect((await collectUnderLocale('')).language).toBeUndefined();
+    // locale's region: a guessed en-US would register the device as American,
+    // and a field left out keeps whatever an earlier registration stored.
+    it('reports a locale it cannot read as none, rather than guess one', async () => {
+      expect((await collectUnderLocale('')).language).toBeNull();
     });
 
     it('handles getDeviceName failure gracefully', async () => {

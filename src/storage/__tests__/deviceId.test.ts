@@ -252,8 +252,8 @@ describe('the registered locale', () => {
   it('records a locale the device could not read, so it is not new twice', () => {
     const mod = loadModule();
 
-    expect(mod.recordRegisteredLocale(undefined)).toBe(true);
-    expect(mod.recordRegisteredLocale(undefined)).toBe(false);
+    expect(mod.recordRegisteredLocale(null)).toBe(true);
+    expect(mod.recordRegisteredLocale(null)).toBe(false);
   });
 
   it('is new again once a session end forgets it', () => {
