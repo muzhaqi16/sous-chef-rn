@@ -24,6 +24,9 @@ export const SESSION_SCOPED_PERSISTED_KEYS: string[] = [
   // src/features/recipes/store/useRecipeSuggestionsStore.ts — personalized
   // suggestions derived from the account's pantry.
   'recipe-suggestions-cache',
+  // src/features/receipts/store/receiptDraftStore.ts — a scanned receipt's
+  // redacted text names the shop and what was bought.
+  'sous-chef-receipt-draft',
 ];
 
 /**

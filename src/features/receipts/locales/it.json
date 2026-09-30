@@ -1,0 +1,28 @@
+{
+  "receipts": {
+    "title": "Scansiona scontrino",
+    "intro": {
+      "title": "Scansiona uno scontrino",
+      "body": "Appoggia lo scontrino in piano e con una buona luce. Uno scontrino lungo può richiedere più scatti, dall'alto in basso."
+    },
+    "reading": "Lettura dello scontrino…",
+    "unreadable": {
+      "title": "Impossibile leggere questo scontrino",
+      "body": "Riprendilo in piano e con una buona luce, con tutta la larghezza nell'inquadratura."
+    },
+    "failed": {
+      "title": "Impossibile scansionare lo scontrino",
+      "body": "Si è verificato un errore durante la scansione. Riprova."
+    },
+    "saved": {
+      "title": "Scontrino salvato",
+      "body": "Viene conservato solo questo testo. Le foto sono state eliminate e i numeri di carta e fedeltà rimossi.",
+      "scanAnother": "Scansiona un altro scontrino"
+    },
+    "replace": {
+      "title": "Sostituire lo scontrino salvato?",
+      "body": "Si conserva un solo scontrino alla volta.",
+      "confirm": "Sostituisci"
+    }
+  }
+}
