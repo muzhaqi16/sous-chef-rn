@@ -20,10 +20,10 @@ import {
   adoptServerEntityId,
 } from '#/apollo/utils/cacheUpdaters';
 import {
-  addOptimisticShoppingListItem,
+  addLocalShoppingListItem,
   carriesListTotals,
   reconcileShoppingItemCreateUpdate,
-  createOptimisticShoppingListItem,
+  createLocalShoppingListItem,
   reconcileShoppingCreate,
 } from '#features/shoppingList/cache/items';
 import {
@@ -323,7 +323,7 @@ export function useAddScannedItem({
     const id = generateEntityId();
 
     // Built before the try, for the same compiler reason as above.
-    const optimisticListItem = createOptimisticShoppingListItem(id, {
+    const optimisticListItem = createLocalShoppingListItem(id, {
       shoppingListId,
       itemName: item.name,
       quantity: SCANNED_QUANTITY,
@@ -332,7 +332,7 @@ export function useAddScannedItem({
       unitName: item.trackingUnit?.symbol,
     });
     try {
-      addOptimisticShoppingListItem(
+      addLocalShoppingListItem(
         client.cache,
         shoppingListId,
         optimisticListItem,

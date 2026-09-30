@@ -5,8 +5,8 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { useAddShoppingItem } from '../useAddShoppingItem';
 import {
-  addOptimisticShoppingListItem,
-  createOptimisticShoppingListItem,
+  addLocalShoppingListItem,
+  createLocalShoppingListItem,
 } from '#features/shoppingList/cache/items';
 import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -54,9 +54,9 @@ jest.mock('#features/shoppingList/cache/items', () => {
     ...actual,
     // Leaf cache writers are stubbed so the hook runs without a live cache;
     // the keep/withdraw decision stays production's.
-    addOptimisticShoppingListItem: jest.fn(),
+    addLocalShoppingListItem: jest.fn(),
     // Signature: (id, fields) => entity (the cuid is baked straight in).
-    createOptimisticShoppingListItem: jest.fn(
+    createLocalShoppingListItem: jest.fn(
       (id: string, fields: { itemName?: string }) => ({
         __typename: 'ShoppingListItem',
         id,
@@ -99,8 +99,8 @@ describe('useAddShoppingItem', () => {
     });
 
     // The optimistic item was written with a real cuid2 id (the row's PK).
-    expect(addOptimisticShoppingListItem).toHaveBeenCalledTimes(1);
-    const writtenItem = (addOptimisticShoppingListItem as jest.Mock).mock
+    expect(addLocalShoppingListItem).toHaveBeenCalledTimes(1);
+    const writtenItem = (addLocalShoppingListItem as jest.Mock).mock
       .calls[0][2];
     // Matches the server id validator (cuid2 or legacy cuid v1 / 24-char hex).
     expect(writtenItem.id).toMatch(
@@ -125,7 +125,7 @@ describe('useAddShoppingItem', () => {
       });
     });
 
-    expect(createOptimisticShoppingListItem).toHaveBeenCalledWith(
+    expect(createLocalShoppingListItem).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({ quantity: 1.5, quantityInput: '1 1/2' }),
     );
@@ -210,7 +210,7 @@ describe('useAddShoppingItem', () => {
       await result.current.addItem({ itemName: 'Milk' });
     });
 
-    expect(addOptimisticShoppingListItem).not.toHaveBeenCalled();
+    expect(addLocalShoppingListItem).not.toHaveBeenCalled();
     expect(created.fired).toHaveLength(0);
   });
 });

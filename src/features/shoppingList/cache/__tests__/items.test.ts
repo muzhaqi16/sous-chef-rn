@@ -8,23 +8,23 @@ import { makeCache } from '#/apollo/cache';
 import {
   reconcileShoppingItemCreateUpdate,
   buildAddItemsReconcileUpdate,
-  addOptimisticShoppingListItem,
-  createOptimisticShoppingListItem,
+  addLocalShoppingListItem,
+  createLocalShoppingListItem,
   revertOptimisticShoppingListItem,
 } from '../items';
 import { Items_RowFragmentDoc } from '../items.generated';
 import { createMockCache, invokeFieldModifier } from './helpers/mockCache';
 import type { MockedCache } from './helpers/mockCache';
 
-describe('addOptimisticShoppingListItem: the row', () => {
+describe('addLocalShoppingListItem: the row', () => {
   const writeLine = (
     cache: ReturnType<typeof makeCache>,
-    fields: Parameters<typeof createOptimisticShoppingListItem>[1],
+    fields: Parameters<typeof createLocalShoppingListItem>[1],
   ) => {
-    addOptimisticShoppingListItem(
+    addLocalShoppingListItem(
       cache,
       fields.shoppingListId,
-      createOptimisticShoppingListItem('c-1', fields),
+      createLocalShoppingListItem('c-1', fields),
     );
     return cache.readFragment({
       id: 'ShoppingListItem:c-1',

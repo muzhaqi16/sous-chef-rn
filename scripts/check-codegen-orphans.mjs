@@ -32,13 +32,13 @@ const SKIP_FILES = new Set([
     'cache',
     'shoppingListItemRowNeutral.generated.ts',
   ),
-  // Same generator, derived from `optimisticPantry.graphql`.
+  // Same generator, derived from `pantry.graphql`.
   fromRoot(
     'src',
     'features',
     'pantry',
-    'utils',
-    'optimisticPantryNeutral.generated.ts',
+    'cache',
+    'pantryRowNeutral.generated.ts',
   ),
   // Written by `scripts/generate-optimistic-fillers.mjs` from the SDL, so its
   // `.graphql` sibling is the fragment file it DERIVES from
@@ -68,8 +68,7 @@ const SKIP_FILES = new Set([
     'recipeRowNeutral.generated.ts',
   ),
   // Same generator, derived from `mealPlan.graphql`, `mealPlanItem.graphql`,
-  // `optimisticTemplate.graphql`, `optimisticTemplateItem.graphql` and
-  // `favorites.graphql`.
+  // `mealTemplate.graphql`, `mealTemplateItem.graphql` and `favorites.graphql`.
   fromRoot(
     'src',
     'features',
@@ -88,14 +87,14 @@ const SKIP_FILES = new Set([
     'src',
     'features',
     'mealPlan',
-    'utils',
+    'cache',
     'mealTemplateRowNeutral.generated.ts',
   ),
   fromRoot(
     'src',
     'features',
     'mealPlan',
-    'utils',
+    'cache',
     'mealTemplateItemRowNeutral.generated.ts',
   ),
   fromRoot(

@@ -84,7 +84,7 @@ export const writeMealPlanItem = (
  * named only when the cache holds it (the user just picked it); a miss is a
  * recipe-less card until the server answers.
  */
-function writeLocalMealPlanItem(
+function writeMealPlanItemRow(
   cache: ApolloCache,
   id: string,
   input: CreateMealPlanItemInput,
@@ -117,14 +117,14 @@ function writeLocalMealPlanItem(
  * returns the revert for a refusal. Only an input carrying its minted id is
  * written; without one there is nothing to revert.
  */
-export function writeOptimisticMealPlanItem(
+export function writeLocalMealPlanItem(
   cache: ApolloCache,
   input: CreateMealPlanItemInput,
 ): (() => void) | undefined {
   const { id, mealPlanId } = input;
   if (!id) return undefined;
   try {
-    const item = writeLocalMealPlanItem(cache, id, input);
+    const item = writeMealPlanItemRow(cache, id, input);
     addToMealPlanItems(cache, mealPlanId, item, { position: 'end' });
   } catch (cacheError) {
     errorService.reportError(cacheError, {

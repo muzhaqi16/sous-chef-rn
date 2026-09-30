@@ -42,7 +42,7 @@ import {
   readTemplateItem,
   readRecipeRef,
   type LocalTemplateItem,
-} from '#features/mealPlan/utils/optimisticTemplateItem';
+} from '#features/mealPlan/cache/mealTemplateItem';
 import { useUser } from '#store/useAppStore';
 import {
   TemplateCategory,

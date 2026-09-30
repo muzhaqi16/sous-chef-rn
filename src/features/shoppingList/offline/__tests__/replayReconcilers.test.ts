@@ -6,8 +6,8 @@
 import { gql, type InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
-  addOptimisticShoppingListItem,
-  createOptimisticShoppingListItem,
+  addLocalShoppingListItem,
+  createLocalShoppingListItem,
 } from '#features/shoppingList/cache/items';
 import { removeFromShoppingListItemsConnection } from '#features/shoppingList/cache/connections';
 import {
@@ -92,10 +92,10 @@ function seedList(held: ReturnType<typeof row>[]): InMemoryCache {
 
 /** A line added locally under `id`, counted as the add sites count it. */
 function mint(cache: InMemoryCache, id: string, itemName: string) {
-  addOptimisticShoppingListItem(
+  addLocalShoppingListItem(
     cache,
     'list-1',
-    createOptimisticShoppingListItem(id, {
+    createLocalShoppingListItem(id, {
       shoppingListId: 'list-1',
       itemName,
     }),

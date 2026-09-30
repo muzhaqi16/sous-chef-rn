@@ -14,7 +14,7 @@
 import { makeCache } from '#/apollo/cache';
 import { MealType, TemplateCategory } from '#/graphql/generated/schemaTypes';
 import { GetMealTemplateForEditDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
-import { readTemplateItem } from '../optimisticTemplateItem';
+import { readTemplateItem } from '../mealTemplateItem';
 
 function seedTemplateWithRecipeBackedRow() {
   const cache = makeCache();

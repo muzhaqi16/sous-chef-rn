@@ -27,7 +27,7 @@ import { appliedPayload } from '#/utils/errors/mutationPayload';
 import {
   removeOptimisticPantry,
   restorePantryToHomeCache,
-} from '#features/pantry/utils/optimisticPantry';
+} from '#features/pantry/cache/pantry';
 import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';

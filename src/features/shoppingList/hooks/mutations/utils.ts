@@ -4,7 +4,7 @@
 
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 
-// `createOptimisticShoppingListItem` lives in
+// `createLocalShoppingListItem` lives in
 // `#features/shoppingList/cache/items`, so add surfaces in other features build
 // the same optimistic entity rather than each shaping its own.
 

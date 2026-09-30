@@ -11,7 +11,7 @@ import {
   type MockFor,
 } from '#/test-utils/apolloMockProvider';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
-import { writeOptimisticFavorite } from '#features/recipes/cache/favorites';
+import { writeLocalFavorite } from '#features/recipes/cache/favorites';
 import { useRecipeData, type UseRecipeDataParams } from '../useRecipeData';
 import type { CatalogRecipeHint } from '../useOpenCatalogRecipe';
 
@@ -281,7 +281,7 @@ describe('useRecipeData', () => {
       expect(result.current.backendRecipe?.savedDetails).toBeNull();
 
       await act(async () => {
-        writeOptimisticFavorite(cache, 'saved-1', 'r1', { notes: 'Less salt' });
+        writeLocalFavorite(cache, 'saved-1', 'r1', { notes: 'Less salt' });
         await Promise.resolve();
       });
       await waitFor(() =>

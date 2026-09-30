@@ -21,7 +21,7 @@ import type {
 } from '#/graphql/generated/schemaTypes';
 import {
   upsertMyRecipesEdge,
-  writeOptimisticRecipe,
+  writeLocalRecipe,
   revertOptimisticRecipe,
   type RecipeCreatedBy,
 } from '#features/recipes/utils/recipeCacheWriters';
@@ -104,7 +104,7 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
   ): Promise<RecipeWriteOutcome> => {
     const id = generateEntityId();
     try {
-      writeOptimisticRecipe(client.cache, id, input, createdBy);
+      writeLocalRecipe(client.cache, id, input, createdBy);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Create Recipe (optimistic)',

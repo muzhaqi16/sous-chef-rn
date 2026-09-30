@@ -20,8 +20,8 @@ import { isRecord } from '#/utils/isRecord';
 import { errorService } from '#/services/errorService';
 import { t } from '#/i18n';
 import {
-  addOptimisticShoppingListItem,
-  createOptimisticShoppingListItem,
+  addLocalShoppingListItem,
+  createLocalShoppingListItem,
   type OptimisticShoppingListItemFields,
 } from './items';
 import { withdrawShoppingListItems } from './withdraw';
@@ -77,12 +77,12 @@ export async function createShoppingListRow<TData>(
       });
     }
   };
-  const local = createOptimisticShoppingListItem(id, {
+  const local = createLocalShoppingListItem(id, {
     ...row,
     shoppingListId: listId,
   });
   try {
-    addOptimisticShoppingListItem(cache, listId, local);
+    addLocalShoppingListItem(cache, listId, local);
   } catch (cacheError) {
     errorService.reportError(cacheError, {
       operation: 'Add Shopping List Item (optimistic)',

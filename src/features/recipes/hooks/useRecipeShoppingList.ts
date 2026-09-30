@@ -22,9 +22,9 @@ import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import {
-  addOptimisticShoppingListItem,
+  addLocalShoppingListItem,
   carriesListTotals,
-  createOptimisticShoppingListItem,
+  createLocalShoppingListItem,
   reconcileShoppingItemCreateUpdate,
   revertOptimisticShoppingListItem,
 } from '#features/shoppingList/cache/items';
@@ -249,7 +249,7 @@ export function useRecipeShoppingList({
         // survives being queued — the `update:` callbacks only run with a
         // server payload, so offline they never fire.
         writeOptimisticRow: (rowId, fields) => {
-          const row = createOptimisticShoppingListItem(rowId, {
+          const row = createLocalShoppingListItem(rowId, {
             shoppingListId: listId,
             itemName: fields.itemName,
             quantity: fields.quantity,
@@ -260,7 +260,7 @@ export function useRecipeShoppingList({
             unitId: undefined,
           });
           try {
-            addOptimisticShoppingListItem(client.cache, listId, row);
+            addLocalShoppingListItem(client.cache, listId, row);
           } catch (cacheError) {
             errorService.reportError(cacheError, {
               operation: 'Add recipe ingredient (optimistic)',

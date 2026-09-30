@@ -46,9 +46,9 @@ jest.mock('#features/shoppingList/cache/items', () => {
   const revert = jest.fn();
   return {
     revertOptimisticShoppingListItem: revert,
-    addOptimisticShoppingListItem: jest.fn(),
+    addLocalShoppingListItem: jest.fn(),
     buildAddItemsReconcileUpdate: jest.fn(() => jest.fn()),
-    createOptimisticShoppingListItem: jest.fn((id: string) => ({
+    createLocalShoppingListItem: jest.fn((id: string) => ({
       __typename: 'ShoppingListItem',
       id,
     })),

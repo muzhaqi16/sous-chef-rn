@@ -111,7 +111,7 @@ export const linkSavedFavorite = (
  * `Recipe.savedDetails` pointed at it (the heart), and its `MySavedRecipes`
  * edge (the saved list).
  */
-export const writeOptimisticFavorite = (
+export const writeLocalFavorite = (
   cache: ApolloCache,
   savedRecipeId: string,
   recipeId: string,

@@ -4,7 +4,7 @@ import {
   addPantryToHomeCache,
   removeOptimisticPantry,
   writeLocalPantry,
-} from '#features/pantry/utils/optimisticPantry';
+} from '#features/pantry/cache/pantry';
 import {
   settleMutation,
   type SettledFailure,

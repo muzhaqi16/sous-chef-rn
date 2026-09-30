@@ -47,13 +47,13 @@ import { MealPlanItemReadersFragmentDoc } from '#/graphql/readers/mealPlanItemRe
 import { MealTemplateReadersFragmentDoc } from '#/graphql/readers/mealTemplateReaders.generated';
 import { MealTemplateItemReadersFragmentDoc } from '#/graphql/readers/mealTemplateItemReaders.generated';
 import { writeLocalMealPlan } from '#features/mealPlan/cache/mealPlan';
-import { writeOptimisticMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
-import { writeLocalMealTemplate } from '#features/mealPlan/utils/optimisticTemplate';
+import { writeLocalMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
+import { writeLocalMealTemplate } from '#features/mealPlan/cache/mealTemplate';
 import {
   addTemplateItemToCache,
   localTemplateItem,
-} from '#features/mealPlan/utils/optimisticTemplateItem';
-import { writeOptimisticFavorite } from '#features/recipes/cache/favorites';
+} from '#features/mealPlan/cache/mealTemplateItem';
+import { writeLocalFavorite } from '#features/recipes/cache/favorites';
 import { makeCache } from '#/apollo/cache';
 import { CreateShoppingListForRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
 import {
@@ -112,7 +112,7 @@ import {
   type MyRecipesQuery,
   type MySavedRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
-import { writeOptimisticRecipe } from '#features/recipes/utils/recipeCacheWriters';
+import { writeLocalRecipe } from '#features/recipes/utils/recipeCacheWriters';
 import {
   writeLocalPantryItem,
   type LocalPantryItem,
@@ -121,12 +121,12 @@ import {
   addToPantryItemsCache,
   type PantryItemRef,
 } from '#features/pantry/cache/items';
-import { writeLocalPantry } from '#features/pantry/utils/optimisticPantry';
+import { writeLocalPantry } from '#features/pantry/cache/pantry';
 import { AddedShoppingListItemFieldsFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import {
-  addOptimisticShoppingListItem,
-  createOptimisticShoppingListItem,
+  addLocalShoppingListItem,
+  createLocalShoppingListItem,
 } from '#features/shoppingList/cache/items';
 import { writeLocalShoppingList } from '#features/shoppingList/cache/list';
 
@@ -1014,10 +1014,10 @@ describe('optimistic entity completeness', () => {
     it('keeps GetShoppingListItemsFiltered complete after an optimistic add', async () => {
       const cache = await seedListCache();
 
-      addOptimisticShoppingListItem(
+      addLocalShoppingListItem(
         cache,
         'list-1',
-        createOptimisticShoppingListItem('client-cuid-4', {
+        createLocalShoppingListItem('client-cuid-4', {
           shoppingListId: 'list-1',
           itemName: 'Offline Bread',
           quantity: 1,
@@ -1125,7 +1125,7 @@ describe('optimistic entity completeness', () => {
     it('a local meal reads complete, and so does the plan listing it', () => {
       const cache = makeCache();
       writeLocalMealPlan(cache, 'plan-2', PLAN, 'user-1');
-      writeOptimisticMealPlanItem(cache, {
+      writeLocalMealPlanItem(cache, {
         id: 'meal-1',
         mealPlanId: 'plan-2',
         date: '2026-10-06T00:00:00.000Z',
@@ -1216,7 +1216,7 @@ describe('optimistic entity completeness', () => {
       );
       cache.writeQuery({ query: MySavedRecipesDocument, data });
 
-      writeOptimisticFavorite(cache, 'saved-1', 'recipe-uncached', {
+      writeLocalFavorite(cache, 'saved-1', 'recipe-uncached', {
         folder: 'Soups',
       });
 
@@ -1247,7 +1247,7 @@ describe('optimistic entity completeness', () => {
       );
       cache.writeQuery({ query: MyRecipesDocument, data });
 
-      writeOptimisticRecipe(cache, 'client-recipe-1', RECIPE_INPUT, null);
+      writeLocalRecipe(cache, 'client-recipe-1', RECIPE_INPUT, null);
 
       const diff = cache.diff({
         query: MyRecipesDocument,
@@ -1264,7 +1264,7 @@ describe('optimistic entity completeness', () => {
       // create has to materialize both or the detail screen (and the edit form)
       // are blank offline.
       const cache = makeCache();
-      writeOptimisticRecipe(cache, 'client-recipe-1', RECIPE_INPUT, null);
+      writeLocalRecipe(cache, 'client-recipe-1', RECIPE_INPUT, null);
 
       const diff = cache.diff({
         query: GetRecipeDocument,

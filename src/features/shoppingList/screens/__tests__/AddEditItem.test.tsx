@@ -71,8 +71,8 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
 
 jest.mock('#features/shoppingList/cache/items', () => ({
   buildAddItemsReconcileUpdate: jest.fn(() => jest.fn()),
-  addOptimisticShoppingListItem: jest.fn(),
-  createOptimisticShoppingListItem: jest.fn((id: string) => ({ id })),
+  addLocalShoppingListItem: jest.fn(),
+  createLocalShoppingListItem: jest.fn((id: string) => ({ id })),
 }));
 jest.mock('#features/shoppingList/cache/withdraw', () => ({
   withdrawShoppingListItems: jest.fn(),
@@ -1096,7 +1096,7 @@ describe('AddEditItem', () => {
           values: { itemName: 'Flour', quantityInput: '2,2' },
         }),
       );
-    const { createOptimisticShoppingListItem } = jest.requireMock(
+    const { createLocalShoppingListItem } = jest.requireMock(
       '#features/shoppingList/cache/items',
     );
 
@@ -1111,7 +1111,7 @@ describe('AddEditItem', () => {
         items: [expect.objectContaining({ quantity: '2.2' })],
       }),
     });
-    expect(createOptimisticShoppingListItem).toHaveBeenCalledWith(
+    expect(createLocalShoppingListItem).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({ quantity: 2.2, quantityInput: '2.2' }),
     );

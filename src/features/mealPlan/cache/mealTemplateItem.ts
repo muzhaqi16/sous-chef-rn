@@ -6,9 +6,9 @@ import {
 import type { MealTemplateItemInput } from '#/graphql/generated/schemaTypes';
 import { isHeld, writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
 import {
-  OptimisticTemplateItem_RecipeRefFragmentDoc,
-  OptimisticTemplateItem_RowFragmentDoc,
-} from './optimisticTemplateItem.generated';
+  MealTemplateItem_RecipeRefFragmentDoc,
+  MealTemplateItem_RowFragmentDoc,
+} from './mealTemplateItem.generated';
 import {
   NEUTRAL_LOCAL_MEAL_TEMPLATE_ITEM,
   NEUTRAL_LOCAL_MEAL_TEMPLATE_ITEM_BY_TYPE,
@@ -30,7 +30,7 @@ export function readRecipeRef(
   if (!cacheId) return null;
   const recipe = cache.readFragment({
     id: cacheId,
-    fragment: OptimisticTemplateItem_RecipeRefFragmentDoc,
+    fragment: MealTemplateItem_RecipeRefFragmentDoc,
   });
   // A recipe the cache has never seen still has to render as SOMETHING, or the
   // whole items read goes incomplete and the builder blanks. Neutral defaults
@@ -94,8 +94,8 @@ export function addTemplateItemToCache(
   if (!parent) return;
 
   writeLocalEntity(cache, {
-    fragment: OptimisticTemplateItem_RowFragmentDoc,
-    fragmentName: 'optimisticTemplateItem_row',
+    fragment: MealTemplateItem_RowFragmentDoc,
+    fragmentName: 'mealTemplateItem_row',
     neutral: NEUTRAL_LOCAL_MEAL_TEMPLATE_ITEM,
     neutralByType: NEUTRAL_LOCAL_MEAL_TEMPLATE_ITEM_BY_TYPE,
     known: item,

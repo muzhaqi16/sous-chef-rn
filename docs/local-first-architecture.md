@@ -126,7 +126,7 @@ The same cuid rides the create input as `input.id` and, on queue replay, becomes
 So a newly-added item is visible immediately and survives a fully-offline create, every add site writes
 the item into the cache before firing. Two shared writers keep this DRY:
 
-- **`createOptimisticShoppingListItem(id, fields)` + `addOptimisticShoppingListItem(cache, listId, item)`**
+- **`createLocalShoppingListItem(id, fields)` + `addLocalShoppingListItem(cache, listId, item)`**
   (both `features/shoppingList/cache/items.ts`) — the row a create adds, written through
   `writeLocalEntity` over the readers-based `items_row` fragment: what the create knows, else what the
   cache holds, else the SDL neutral. A related `unit` / `item` is named by reference only when the cache
@@ -455,7 +455,7 @@ permanent cache write):**
 
 - **Pantry update** (`useUpdatePantryItem` / `useUpdatePantryItemQuantity`) — permanent write + revert
   snapshot; replays as itself at the version it holds (§ 5).
-- **Pantry create** (`PantrySettings` + `src/features/pantry/utils/optimisticPantry.ts`) — the pantry
+- **Pantry create** (`PantrySettings` + `src/features/pantry/cache/pantry.ts`) — the pantry
   container itself. Client-minted id; the optimistic write materializes the entity, zeroed `stats`,
   empty `itemsConnection` (no-args variant — matches the screen's undefined filters/orderBy) and
   `storageLocationsConnection(first: PAGE_SIZE.COMPACT)` variants, plus the home's `pantries` /
@@ -545,7 +545,7 @@ drain reads the parent reference off the input, so no per-feature special-casing
 - **Catalog-merge id divergence** (shopping) — `reconcileShoppingItemCreateUpdate` (foreground) and
   `reconcileShoppingAddReplay` (replay) withdraw the minted row when the returned row is another, reading
   the minted id off the mutation's own variables (§4, §7).
-- **`totalCount` / stats drift** — the optimistic write adjusts list counts (`addOptimisticShoppingListItem`
+- **`totalCount` / stats drift** — the optimistic write adjusts list counts (`addLocalShoppingListItem`
   bumps `totalItems` + recomputes `remainingItems` / `completionRate`); a **rejection reverses them**
   symmetrically via `revertOptimisticShoppingListItem` (a bare evict would leave the header inflated until
   the next stats refetch).
@@ -600,10 +600,10 @@ drain reads the parent reference off the input, so no per-feature special-casing
 | Cache persistence (debounce + `flushPending`) | `src/apollo/offline/ApolloCachePersistence.ts`, `src/apollo/client.ts` (`flushCachePersistence`), `src/apollo/offlineQueue/queueLink.ts` (flush on enqueue) |
 | Background flush trigger | `src/hooks/app/useAppStateLifecycle.ts` |
 | Pending-aware connection merge | `src/apollo/cacheFieldPolicies.ts` (`itemsConnectionFieldPolicy`, `mergeAuthoritativeFirstPage`) + `queueStore.getUnconfirmedCreateIds()` |
-| Shared shopping writers/reconcilers | `src/features/shoppingList/cache/items.ts` (`createOptimisticShoppingListItem`, `addOptimisticShoppingListItem`, `reconcileShoppingCreate`, `revertOptimisticShoppingListItem`), `createShoppingListRow.ts`, `withdraw.ts` (`withdrawShoppingListItems`) |
+| Shared shopping writers/reconcilers | `src/features/shoppingList/cache/items.ts` (`createLocalShoppingListItem`, `addLocalShoppingListItem`, `reconcileShoppingCreate`, `revertOptimisticShoppingListItem`), `createShoppingListRow.ts`, `withdraw.ts` (`withdrawShoppingListItems`) |
 | Replay reconcilers | `src/apollo/offlineQueue/queueReplayReconcilers.ts` (`REPLAY_RECONCILERS`), each feature's `offline/replayReconcilers.ts`; coverage: `__tests__/apollo/replayReconcilerCoverage.test.ts` |
 | Resync after foreground / reconnect | `src/apollo/refetchEvents.ts` |
-| Local row writers (`writeLocalEntity`) | `src/apollo/utils/writeLocalEntity.ts`; `writeLocalPantryItem`, `writeLocalPantry` (`src/features/pantry/`), `writeLocalHome` (`src/features/home/cache/optimisticHome.ts`), `writeLocalStorageLocation` (`src/features/catalog/hooks/useCreateStorageLocation.ts`), `writeLocalShoppingList` and `addOptimisticShoppingListItem` (`src/features/shoppingList/cache/`), `writeLocalRecipe` (`src/features/recipes/utils/recipeCacheWriters.ts`), `writeOptimisticFavorite` (`src/features/recipes/cache/favorites.ts`), `writeLocalMealPlan` and `writeOptimisticMealPlanItem` (`src/features/mealPlan/cache/`), `writeLocalMealTemplate` and `addTemplateItemToCache` (`src/features/mealPlan/utils/`) |
+| Local row writers (`writeLocalEntity`) | `src/apollo/utils/writeLocalEntity.ts`; `writeLocalPantryItem`, `writeLocalPantry` (`src/features/pantry/cache/`), `writeLocalHome` (`src/features/home/cache/optimisticHome.ts`), `writeLocalStorageLocation` (`src/features/catalog/hooks/useCreateStorageLocation.ts`), `writeLocalShoppingList` and `addLocalShoppingListItem` (`src/features/shoppingList/cache/`), `writeLocalRecipe` (`src/features/recipes/utils/recipeCacheWriters.ts`), `writeLocalFavorite` (`src/features/recipes/cache/favorites.ts`), `writeLocalMealPlan` and `writeLocalMealPlanItem` (`src/features/mealPlan/cache/`), `writeLocalMealTemplate` and `addTemplateItemToCache` (`src/features/mealPlan/cache/`) |
 | Settings-shaped field writer | `src/apollo/utils/localFirstFields.ts` (`updateEntityFieldsLocalFirst`, `writeEntityFields`) |
 | Write-outcome settling and classification | `src/apollo/utils/settleMutation.ts` (`settleMutation`, `settledStatus`) |
 | Optimistic-entity completeness guard | `__tests__/apollo/optimisticEntityCompleteness.test.ts` |

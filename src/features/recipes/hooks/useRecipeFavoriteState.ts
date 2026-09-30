@@ -10,7 +10,7 @@ import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import {
   linkSavedFavorite,
-  writeOptimisticFavorite,
+  writeLocalFavorite,
   type SaveToFavoritesOptions,
 } from '#features/recipes/cache/favorites';
 import { toastService } from '#/services/toastService';
@@ -71,7 +71,7 @@ export function useRecipeFavoriteState({
     const savedRecipeId = generateEntityId();
     // Written before firing, so the heart fills offline and a queued favorite
     // survives; `revert()` undoes it on a refusal.
-    const revert = writeOptimisticFavorite(
+    const revert = writeLocalFavorite(
       client.cache,
       savedRecipeId,
       recipeId,

@@ -326,7 +326,7 @@ export function moveShoppingListItemToUnpurchased(
  * Add an item to a shopping list's cache. The `isPurchased:true` variant REMOVES
  * the row (re-adding a purchased item); every other variant adds it. Pass
  * `bumpTotalItems: false` when a local-first
- * {@link addOptimisticShoppingListItem} has already counted it.
+ * {@link addLocalShoppingListItem} has already counted it.
  */
 export function addNewItemToShoppingListCache(
   cache: ApolloCache,

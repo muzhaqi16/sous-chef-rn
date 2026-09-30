@@ -23,7 +23,7 @@ import {
   adoptServerMealPlanItem,
   removeFromMealPlanItems,
   writeMealPlanItem,
-  writeOptimisticMealPlanItem,
+  writeLocalMealPlanItem,
 } from '#features/mealPlan/cache/mealPlanItem';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
@@ -86,7 +86,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       id: generateEntityId(),
       date: keepMealInsidePlan(input.date, bounds ?? undefined),
     };
-    const revertCreate = writeOptimisticMealPlanItem(client.cache, itemInput);
+    const revertCreate = writeLocalMealPlanItem(client.cache, itemInput);
 
     const settled = await settleMutation(
       () =>

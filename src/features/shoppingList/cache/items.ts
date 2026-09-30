@@ -44,7 +44,7 @@ export type LocalShoppingListItem = OptimisticShoppingListItemFields & {
  * The line a local-first create adds. `id` is the client-minted cuid (the row's
  * PK), so the online create and the queued replay converge on one row.
  */
-export const createOptimisticShoppingListItem = (
+export const createLocalShoppingListItem = (
   id: string,
   fields: OptimisticShoppingListItemFields,
 ): LocalShoppingListItem => ({ ...fields, id });
@@ -172,7 +172,7 @@ export function buildAddItemsReconcileUpdate({
  * fully-offline create (the queue replays the batch add under the same id).
  * `item.id` MUST be the client-minted cuid sent as `input.id`, or the replay dupes.
  */
-export function addOptimisticShoppingListItem(
+export function addLocalShoppingListItem(
   cache: ApolloCache,
   listId: string,
   line: LocalShoppingListItem,
@@ -245,7 +245,7 @@ export function addOptimisticShoppingListItem(
 }
 
 /**
- * Reverse {@link addOptimisticShoppingListItem} on a rejected create. Evicting the
+ * Reverse {@link addLocalShoppingListItem} on a rejected create. Evicting the
  * entity alone is NOT enough: the optimistic add also bumped `totalItems` /
  * `remainingItems` / `completionRate`, and the self-healing `itemsConnection` read
  * repairs only its own `totalCount`. That read drops the dangling edge. One line

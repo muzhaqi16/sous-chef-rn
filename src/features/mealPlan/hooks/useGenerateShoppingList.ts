@@ -20,9 +20,9 @@ import {
 } from '#features/mealPlan/utils/deriveShoppingListFromMealPlan';
 import {
   addItemsInSlices,
-  addOptimisticShoppingListItem,
+  addLocalShoppingListItem,
   buildAddItemsReconcileUpdate,
-  createOptimisticShoppingListItem,
+  createLocalShoppingListItem,
 } from '#features/shoppingList/cache/items';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
@@ -254,13 +254,13 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     if (!line.id) return;
     // Built before the try: a value block inside one bails the whole function
     // out of the React Compiler.
-    const row = createOptimisticShoppingListItem(line.id, {
+    const row = createLocalShoppingListItem(line.id, {
       shoppingListId: listId,
       itemName: names.get(line.id) ?? t('labels.item'),
       itemId: line.item.itemId,
     });
     try {
-      addOptimisticShoppingListItem(cache, listId, row);
+      addLocalShoppingListItem(cache, listId, row);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Generate shopping list (optimistic)',

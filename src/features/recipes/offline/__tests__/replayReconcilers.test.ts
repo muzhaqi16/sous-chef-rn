@@ -5,7 +5,7 @@ import {
   SavedRecipeFoldersDocument,
   type MySavedRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
-import { writeOptimisticFavorite } from '#features/recipes/cache/favorites';
+import { writeLocalFavorite } from '#features/recipes/cache/favorites';
 import { reconcileAddRecipeToFavoritesReplay } from '../replayReconcilers';
 
 const MINTED_ID = 'minted-saved-1';
@@ -81,7 +81,7 @@ function seed(): InMemoryCache {
     data: { __typename: 'Query', savedRecipeFolders: [] },
   });
   // Saved offline: the minted row, the heart and the list edge.
-  writeOptimisticFavorite(cache, MINTED_ID, RECIPE_ID, { folder: 'Dinner' });
+  writeLocalFavorite(cache, MINTED_ID, RECIPE_ID, { folder: 'Dinner' });
   return cache;
 }
 

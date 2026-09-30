@@ -4,12 +4,12 @@ import {
   type CreateMealTemplateInput,
 } from '#/graphql/generated/schemaTypes';
 import { isHeld, writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
-import { OptimisticTemplate_RowFragmentDoc } from './optimisticTemplate.generated';
+import { MealTemplate_RowFragmentDoc } from './mealTemplate.generated';
 import {
   NEUTRAL_LOCAL_MEAL_TEMPLATE,
   NEUTRAL_LOCAL_MEAL_TEMPLATE_BY_TYPE,
 } from './mealTemplateRowNeutral.generated';
-import { localTemplateItem } from './optimisticTemplateItem';
+import { localTemplateItem } from './mealTemplateItem';
 
 /**
  * Writes a local-first template complete for every query reading one, with the
@@ -26,8 +26,8 @@ export function writeLocalMealTemplate(
   const home = input.homeId ? { __typename: 'Home', id: input.homeId } : null;
   const now = new Date().toISOString();
   writeLocalEntity(cache, {
-    fragment: OptimisticTemplate_RowFragmentDoc,
-    fragmentName: 'optimisticTemplate_row',
+    fragment: MealTemplate_RowFragmentDoc,
+    fragmentName: 'mealTemplate_row',
     neutral: NEUTRAL_LOCAL_MEAL_TEMPLATE,
     neutralByType: NEUTRAL_LOCAL_MEAL_TEMPLATE_BY_TYPE,
     known: {

@@ -15,9 +15,9 @@ import {
 import { planFromTemplate } from '#features/mealPlan/utils/planFromTemplate';
 import { templateFromPlan } from '#features/mealPlan/utils/templateFromPlan';
 import { duplicateTemplate as deriveTemplateCopy } from '#features/mealPlan/utils/duplicateTemplate';
-import { writeLocalMealTemplate } from '#features/mealPlan/utils/optimisticTemplate';
+import { writeLocalMealTemplate } from '#features/mealPlan/cache/mealTemplate';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
-import { writeOptimisticMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
+import { writeLocalMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
 import { useUser } from '#store/useAppStore';
 import { generateEntityId } from '#/utils/generateEntityId';
 import {
@@ -186,7 +186,7 @@ export function useMealTemplateActions() {
     let failedMeal: SettledFailure | undefined;
     for (const meal of derived.items) {
       // Offline the new plan shows its meals only from this write.
-      const revert = writeOptimisticMealPlanItem(client.cache, meal);
+      const revert = writeLocalMealPlanItem(client.cache, meal);
       const settled = await settleMutation(
         () =>
           createPlanItem({

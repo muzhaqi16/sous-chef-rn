@@ -48,7 +48,7 @@ function totalTime(prep: number | null, cook: number | null): number | null {
  * Write the recipe a create makes: ratings zeroed, no reviews, not saved, and
  * client-minted ingredient ids; the rest what the create states or neutral.
  */
-function writeLocalRecipe(
+function writeRecipeRow(
   cache: ApolloCache,
   id: string,
   input: CreateRecipeInput,
@@ -173,13 +173,13 @@ function removeMyRecipesEdge(cache: ApolloCache, id: string): void {
 }
 
 /** Local-first create write: the recipe's row, then its MyRecipes edge. */
-export function writeOptimisticRecipe(
+export function writeLocalRecipe(
   cache: ApolloCache,
   id: string,
   input: CreateRecipeInput,
   createdBy: RecipeCreatedBy,
 ): void {
-  writeLocalRecipe(cache, id, input, createdBy);
+  writeRecipeRow(cache, id, input, createdBy);
   const row = cache.readFragment({
     id: cache.identify({ __typename: 'Recipe', id }),
     fragment: RecipeCacheWriters_RowFragmentDoc,

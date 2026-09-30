@@ -9,11 +9,11 @@ import { PAGE_SIZE } from '#features/pantry/constants/pagination';
 import { safeEvict, type ConnectionData } from '#/apollo/utils/cacheUpdaters';
 import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
 import { todayKey } from '#/utils/dateUtils';
-import { OptimisticPantry_RowFragmentDoc } from './optimisticPantry.generated';
+import { Pantry_RowFragmentDoc } from './pantry.generated';
 import {
   NEUTRAL_LOCAL_PANTRY,
   NEUTRAL_LOCAL_PANTRY_BY_TYPE,
-} from './optimisticPantryNeutral.generated';
+} from './pantryRowNeutral.generated';
 
 /** Write the pantry a create makes, complete for every screen that reads one. */
 export function writeLocalPantry(
@@ -27,8 +27,8 @@ export function writeLocalPantry(
   },
 ): void {
   writeLocalEntity(cache, {
-    fragment: OptimisticPantry_RowFragmentDoc,
-    fragmentName: 'optimisticPantry_row',
+    fragment: Pantry_RowFragmentDoc,
+    fragmentName: 'pantry_row',
     neutral: NEUTRAL_LOCAL_PANTRY,
     neutralByType: NEUTRAL_LOCAL_PANTRY_BY_TYPE,
     known: {

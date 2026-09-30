@@ -11,8 +11,8 @@ import { settleMutation } from '#/apollo/utils/settleMutation';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import {
-  addOptimisticShoppingListItem,
-  createOptimisticShoppingListItem,
+  addLocalShoppingListItem,
+  createLocalShoppingListItem,
   reconcileShoppingCreate,
   buildAddItemsReconcileUpdate,
 } from '#features/shoppingList/cache/items';
@@ -228,7 +228,7 @@ export function usePantryItemDetailActions({
     // replays later.
     // Built before the try: the `??`/`?.` below are value blocks, and the React
     // Compiler bails out of a hook when one appears inside a try body.
-    const optimisticListItem = createOptimisticShoppingListItem(id, {
+    const optimisticListItem = createLocalShoppingListItem(id, {
       shoppingListId: selectedShoppingListId,
       itemName,
       quantity,
@@ -237,7 +237,7 @@ export function usePantryItemDetailActions({
       unitName: item?.unit?.name,
     });
     try {
-      addOptimisticShoppingListItem(
+      addLocalShoppingListItem(
         client.cache,
         selectedShoppingListId,
         optimisticListItem,

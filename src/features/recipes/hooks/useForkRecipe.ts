@@ -15,7 +15,7 @@ import {
 import {
   revertOptimisticRecipe,
   upsertMyRecipesEdge,
-  writeOptimisticRecipe,
+  writeLocalRecipe,
   type RecipeCreatedBy,
 } from '#features/recipes/utils/recipeCacheWriters';
 import { forkRecipe as buildFork } from '#features/recipes/utils/forkRecipe';
@@ -71,7 +71,7 @@ export function useForkRecipe() {
         }
       : null;
     try {
-      writeOptimisticRecipe(client.cache, id, copy, createdBy);
+      writeLocalRecipe(client.cache, id, copy, createdBy);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Fork Recipe (optimistic)',

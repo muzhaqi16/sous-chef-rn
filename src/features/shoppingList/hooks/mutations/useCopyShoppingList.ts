@@ -10,9 +10,9 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   addItemsInSlices,
-  addOptimisticShoppingListItem,
+  addLocalShoppingListItem,
   buildAddItemsReconcileUpdate,
-  createOptimisticShoppingListItem,
+  createLocalShoppingListItem,
 } from '#features/shoppingList/cache/items';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
 import type { DerivedList } from '#features/shoppingList/utils/listFromTemplate';
@@ -91,7 +91,7 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
     if (!display) return;
     // Built before the try: a value block inside one bails the whole function
     // out of the React Compiler.
-    const row = createOptimisticShoppingListItem(lineId, {
+    const row = createLocalShoppingListItem(lineId, {
       shoppingListId: listId,
       itemName: display.itemName || t('labels.item'),
       quantity: display.quantity,
@@ -102,7 +102,7 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
       unitId: display.unitId,
     });
     try {
-      addOptimisticShoppingListItem(cache, listId, row);
+      addLocalShoppingListItem(cache, listId, row);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Copy shopping list (optimistic)',
