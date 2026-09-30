@@ -3,6 +3,7 @@
  * scripts, so the check and the readers generator cannot disagree.
  */
 import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   buildSchema,
   getNamedType,
@@ -34,9 +35,16 @@ export function loadSchema(check) {
   return buildSchema(readFileSync(SCHEMA_PATH, 'utf8'));
 }
 
-/** Every fragment (by name) and operation under `src/`, tests excluded. */
-export function loadDocuments() {
-  const files = filesUnder('src/**/*.graphql', {
+/** The app's documents, or the tree `--src <dir>` names (a test's fixture). */
+export const documentsRoot = (argv = process.argv) => {
+  const at = argv.indexOf('--src');
+  return at === -1 ? fromRoot('src') : resolve(argv[at + 1]);
+};
+
+/** Every fragment (by name) and operation under `root`, tests excluded. */
+export function loadDocuments(root = fromRoot('src')) {
+  const files = filesUnder('**/*.graphql', {
+    cwd: root,
     exclude: [/(^|\/)(generated|__tests__)(\/|$)/],
   });
   const fragments = new Map();

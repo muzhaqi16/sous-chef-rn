@@ -17,14 +17,13 @@ import {
 import { filesUnder, fromRoot } from './tooling.mjs';
 import { isEntity, isOwnedElsewhere } from './graphqlDocuments.mjs';
 
-export const READERS_DIR = fromRoot('src', 'graphql', 'readers');
+/** Where a documents tree keeps its generated readers. */
+export const readersDirOf = root => join(root, 'graphql', 'readers');
+export const READERS_DIR = readersDirOf(fromRoot('src'));
 const SUFFIX = 'Readers';
 
-const readersFile = type =>
-  join(
-    READERS_DIR,
-    `${type[0].toLowerCase()}${type.slice(1)}${SUFFIX}.graphql`,
-  );
+const readersFile = (type, dir) =>
+  join(dir, `${type[0].toLowerCase()}${type.slice(1)}${SUFFIX}.graphql`);
 
 // A selection tree: Map<type condition, Map<key, { name, args, sub }>>, where
 // the key is the field name plus its printed arguments.
@@ -324,7 +323,7 @@ function renderReaders(schema, type, tree) {
 }
 
 /** Every readers file that should exist, by path, with its contents. */
-export function expectedReadersFiles(schema, documents) {
+export function expectedReadersFiles(schema, documents, dir = READERS_DIR) {
   const readers = computeReaders(schema, documents);
   const files = new Map();
   for (const type of [...readersDemand(schema, documents)].sort()) {
@@ -335,22 +334,20 @@ export function expectedReadersFiles(schema, documents) {
           'nothing for a mutation to keep current',
       );
     }
-    files.set(readersFile(type), renderReaders(schema, type, tree));
+    files.set(readersFile(type, dir), renderReaders(schema, type, tree));
   }
   return files;
 }
 
 /** Readers files that are missing, out of date, or no longer spread. */
-export function staleReadersFiles(schema, documents) {
-  const expected = expectedReadersFiles(schema, documents);
+export function staleReadersFiles(schema, documents, dir = READERS_DIR) {
+  const expected = expectedReadersFiles(schema, documents, dir);
   const stale = [];
   for (const [path, text] of expected) {
     if (!existsSync(path) || readFileSync(path, 'utf8') !== text)
       stale.push(path);
   }
-  const present = existsSync(READERS_DIR)
-    ? filesUnder('*.graphql', { cwd: READERS_DIR })
-    : [];
+  const present = existsSync(dir) ? filesUnder('*.graphql', { cwd: dir }) : [];
   for (const path of present) {
     if (!expected.has(path)) stale.push(path);
   }

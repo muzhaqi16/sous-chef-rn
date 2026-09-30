@@ -10,10 +10,10 @@
  *
  * It exits non-zero on any gap and on a stale readers file.
  *
- *   node scripts/find-stale-cache-fields.mjs
+ *   node scripts/find-stale-cache-fields.mjs [--src <documents dir>]
  */
 import { relative } from 'node:path';
-import { fromRoot, REPO_ROOT, requireNonEmptyScan } from './lib/tooling.mjs';
+import { REPO_ROOT, requireNonEmptyScan } from './lib/tooling.mjs';
 import {
   TypeInfo,
   getNamedType,
@@ -24,12 +24,13 @@ import {
 } from 'graphql';
 import {
   KEY_FIELDS,
+  documentsRoot,
   isEntity,
   isOwnedElsewhere,
   loadDocuments,
   loadSchema,
 } from './lib/graphqlDocuments.mjs';
-import { staleReadersFiles } from './lib/readersFragments.mjs';
+import { readersDirOf, staleReadersFiles } from './lib/readersFragments.mjs';
 
 /** Fields whose value is derived from other rows; listed first in the report. */
 const DERIVED =
@@ -55,10 +56,10 @@ const PARENT_FIELDS = {
  * (the client evicts them) and the collections they left in full: a returned
  * parent type is owed unless it is the type the noun names (`deleteShoppingList`).
  */
-const REMOVAL =
-  /^(?:delete|remove|syncDelete|purge|decline|revoke|leave)([A-Z]\w*)$/;
+const REMOVAL = /^(?:delete|remove|purge|decline|revoke|leave)([A-Z]\w*)$/;
+const srcRoot = documentsRoot();
 const schema = loadSchema('find-stale-cache-fields');
-const documents = loadDocuments();
+const documents = loadDocuments(srcRoot);
 const { fragments, operations } = documents;
 
 /** Replaces every fragment spread with its selections, guarding cycles. */
@@ -210,7 +211,7 @@ for (const op of operations) {
   const written = collect(op.ast);
   const entities = returnedEntities(op.ast);
   const returned = new Set(entities.map(e => e.type));
-  const file = relative(fromRoot('src'), op.file);
+  const file = relative(srcRoot, op.file);
 
   const noun = REMOVAL.exec(op.ast.selectionSet.selections[0].name.value)?.[1];
   const removed = new Set(
@@ -294,7 +295,7 @@ const describe = f =>
       : ''
   }`;
 const gaps = findings;
-const { stale } = staleReadersFiles(schema, documents);
+const { stale } = staleReadersFiles(schema, documents, readersDirOf(srcRoot));
 
 const print = (log, list) => {
   let family = null;
