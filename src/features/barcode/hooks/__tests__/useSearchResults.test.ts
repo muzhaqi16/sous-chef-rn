@@ -15,6 +15,8 @@ import { useStore } from '#store';
 import { t } from '#/i18n';
 import { TimeoutError } from '#/utils/errors/timeoutError';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { alertService } from '#/services/alertService';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 
 // Partial item-node shapes for mock connection edges. Kept as a loose record
 // because the fixtures deliberately omit required Item fields (type,
@@ -206,6 +208,50 @@ describe('useSearchResults', () => {
       await waitFor(() => expect(mockAddToRecentlyScanned).toHaveBeenCalled());
       expect(mockHideBottomSheet).toHaveBeenCalled();
     });
+
+    // The API matches every spelling of one code (UPC-A, EAN-13 with a leading
+    // zero, GTIN-14, UPC-E), so the lookup sends exactly what the camera read.
+    it.each([
+      ['0012345678905', 'ean-13', 'EAN_13'],
+      ['012345678905', 'upc-a', 'UPC_A'],
+    ])(
+      'looks up %s (%s) as scanned and shows the product',
+      async (code, format, upcFormat) => {
+        const stored: MockItemNode = {
+          ...SAMPLE_UPC_ITEM,
+          primaryUpc: '012345678905',
+        };
+        const upc = recordMock(ItemByUpcFilterDocument, {
+          data: {
+            items: {
+              __typename: 'ItemConnection',
+              edges: [
+                {
+                  __typename: 'ItemEdge',
+                  cursor: 'c0',
+                  node: { __typename: 'Item', ...stored },
+                },
+              ],
+            },
+          },
+        });
+
+        renderHookWithApollo(() => useSearchResults(code, format), {
+          operationMocks: [upc.mock],
+        });
+
+        await waitFor(() =>
+          expect(upc.fired).toContainEqual(
+            expect.objectContaining({ upc: code, upcFormat }),
+          ),
+        );
+        await waitFor(() =>
+          expect(mockSetSearchResults).toHaveBeenCalledWith(
+            expect.arrayContaining([expect.objectContaining({ id: 'item-1' })]),
+          ),
+        );
+      },
+    );
 
     // Both flags carry through to the card, which hides its edit action when
     // they are explicitly false — a scan can surface an item the user may not
@@ -518,6 +564,62 @@ describe('useSearchResults', () => {
         expect.any(String),
       );
       expect(useStore.getState().pendingItemImages).toBeNull();
+    });
+
+    it('hands an invalid barcode back to the form, not an alert', async () => {
+      const refused = recordMock(CreateItemDocument, {
+        data: {
+          createItem: {
+            __typename: 'ValidationError',
+            code: ErrorCode.ValidationFailed,
+            message: 'invalid GTIN',
+            field: 'productDetails.primaryUpc',
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(
+        () => useSearchResults('1234567890'),
+        { operationMocks: [refused.mock] },
+      );
+
+      let refusal: unknown;
+      await act(async () => {
+        refusal = await result.current.handleAddItem({
+          name: 'New Item',
+          upc: '012345678901',
+        });
+      });
+
+      expect(refusal).toEqual({
+        field: 'upc',
+        message: t('errors.field.primaryUpc'),
+      });
+      expect(alertService.alert).not.toHaveBeenCalled();
+    });
+
+    it('alerts any other refusal, with nothing for the form to show', async () => {
+      const refused = recordMock(CreateItemDocument, {
+        data: {
+          createItem: {
+            __typename: 'ValidationError',
+            code: ErrorCode.ValidationFailed,
+            message: 'bad',
+            field: 'name',
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(
+        () => useSearchResults('1234567890'),
+        { operationMocks: [refused.mock] },
+      );
+
+      let refusal: unknown = 'unset';
+      await act(async () => {
+        refusal = await result.current.handleAddItem({ name: 'New Item' });
+      });
+
+      expect(refusal).toBeUndefined();
+      expect(alertService.alert).toHaveBeenCalledTimes(1);
     });
 
     it('takes a singular selectedImage as a one-image batch', async () => {

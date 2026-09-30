@@ -185,7 +185,8 @@
       "packageSize": "Inserisci la dimensione della confezione in un'unità dello stesso tipo di quella dell'articolo (peso con peso, volume con volume).",
       "resolution": "Scegli se usare la stima o inserire tu la quantità.",
       "amount": "È più di quanto resta di questo articolo.",
-      "unitId": "Quell'unità non può essere usata qui. Scegline una dall'elenco."
+      "unitId": "Quell'unità non può essere usata qui. Scegline una dall'elenco.",
+      "primaryUpc": "Quel codice a barre non è valido. Controlla le cifre e riprova."
     },
     "unitDenied": {
       "noRoute": "Quell'unità non può essere convertita nel modo in cui questo articolo viene registrato.",

@@ -26,6 +26,8 @@ import {
   type AddItemFormData,
 } from '#/utils/items/createItemMapping';
 import { errorService } from '#/services/errorService';
+import { alertService } from '#/services/alertService';
+import type { AddItemFieldRefusal } from '#features/catalog/ui/AddItemForm/AddItemForm';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
@@ -351,7 +353,9 @@ export const useSearchResults = (
     }
   }, [upcLoading, skuLoading, setSearching]);
 
-  const handleAddItem = async (formData: AddItemFormData) => {
+  const handleAddItem = async (
+    formData: AddItemFormData,
+  ): Promise<AddItemFieldRefusal | undefined> => {
     // Store brand name for use in mutation callback
     pendingBrandNameRef.current = formData.brandName;
 
@@ -359,7 +363,7 @@ export const useSearchResults = (
 
     // A refusal leaves the stashed images and brand name behind, so both are
     // dropped with it; `onCompleted` consumes them on success.
-    await settleMutation(
+    const settled = await settleMutation(
       () =>
         addNewItem({
           variables: { input: mapFormToCreateItemInput(formData) },
@@ -371,8 +375,17 @@ export const useSearchResults = (
           cleanupPendingImageStorage();
           pendingBrandNameRef.current = undefined;
         },
+        present: 'none',
       },
     );
+    const { failure } = settled;
+    if (settled.status !== 'failed' || !failure) return undefined;
+    // An invalid barcode is the user's to fix, so it lands on the field.
+    if (failure.field === 'primaryUpc') {
+      return { field: 'upc', message: t('errors.field.primaryUpc') };
+    }
+    alertService.alert(failure.title, failure.body);
+    return undefined;
   };
 
   // Re-runs the query that failed; its outcome reaches the error effect above,

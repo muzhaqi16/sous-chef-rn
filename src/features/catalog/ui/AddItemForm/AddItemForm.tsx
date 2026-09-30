@@ -90,6 +90,17 @@ export type AddItemSubmitPayload = AddItemFormData & {
   selectedImages: SelectedImage[];
 };
 
+/** A server refusal the user can fix, shown on the form field it names. */
+export interface AddItemFieldRefusal {
+  field: 'upc';
+  message: string;
+}
+
+/** The page each refusable field is on: a refusal is shown where its field is. */
+const REFUSAL_PAGE: Record<AddItemFieldRefusal['field'], PageName> = {
+  upc: 'Product',
+};
+
 /**
  * Editor rows → the shape `createItemSchema` validates. An entirely empty row
  * is the one "Add" just created and is dropped; a half-filled one is KEPT so
@@ -159,7 +170,10 @@ interface AddItemFormProps {
   barcode?: string;
   format?: string;
   scannedValue?: string; // The actual scanned value (could be barcode or SKU)
-  onSubmit: (formData: AddItemSubmitPayload) => void;
+  /** Resolves with a refusal to show on its field, or with nothing. */
+  onSubmit: (
+    formData: AddItemSubmitPayload,
+  ) => Promise<AddItemFieldRefusal | void>;
   onClose: () => void;
   loading?: boolean;
   enableAutocomplete?: boolean;
@@ -293,6 +307,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     control,
     handleSubmit,
     setValue,
+    setError,
     formState: { errors, isValid },
   } = useForm<CreateItemFormData>({
     // Only the review path mandates a note — see `requiresEditNote`.
@@ -327,7 +342,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   const netWeightsError = firstMessage(errors.netWeights);
   const unitsError = firstMessage(errors.units);
 
-  const handleFormSubmit = (data: CreateItemFormData) => {
+  const handleFormSubmit = async (data: CreateItemFormData) => {
     let tags: string[] = [];
     if (data.tags) {
       if (Array.isArray(data.tags)) {
@@ -393,7 +408,10 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       selectedImages,
     };
 
-    onSubmit(processedData);
+    const refusal = await onSubmit(processedData);
+    if (!refusal) return;
+    setCurrentPage(PAGES.indexOf(REFUSAL_PAGE[refusal.field]));
+    setError(refusal.field, { type: 'server', message: refusal.message });
   };
 
   const activePage = PAGES[currentPage] ?? PAGES[0];
