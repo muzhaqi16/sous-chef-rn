@@ -310,7 +310,7 @@ describe('useSuggestItemEdit', () => {
     const { result } = renderHook([mock]);
 
     const outcome = await result.current.submitEdit(
-      snapshot({ canEdit: true }),
+      snapshot({ canEdit: true, canSuggest: false }),
       form(),
     );
 
@@ -349,7 +349,7 @@ describe('useSuggestItemEdit', () => {
   });
 
   describe('routing', () => {
-    it('writes straight through when the user may edit the item', async () => {
+    it('writes the user’s own private item straight through', async () => {
       const { mock, fired } = recordMock(UpdateItemDocument, {
         data: {
           updateItem: {
@@ -369,7 +369,7 @@ describe('useSuggestItemEdit', () => {
               baseDimension: null,
               imageUrl: null,
               canEdit: true,
-              canSuggest: true,
+              canSuggest: false,
               displayUnit: null,
               brands: [],
             },
@@ -379,7 +379,7 @@ describe('useSuggestItemEdit', () => {
       const { result } = renderHook([mock]);
 
       const outcome = await result.current.submitEdit(
-        snapshot({ canEdit: true }),
+        snapshot({ canEdit: true, canSuggest: false }),
         form(),
       );
 
@@ -389,32 +389,6 @@ describe('useSuggestItemEdit', () => {
           input: { id: 'item-1', name: 'Skim Milk' },
         }),
       );
-    });
-
-    // A stale cached canEdit is absorbed: updateItem's Forbidden explicitly
-    // tells the client to use createItemSuggestion, so do that.
-    it('falls back to a suggestion when a direct write is forbidden', async () => {
-      const update = recordMock(UpdateItemDocument, {
-        data: {
-          updateItem: {
-            __typename: 'ForbiddenError',
-            code: ErrorCode.Forbidden,
-            message: 'Use createItemSuggestion',
-          },
-        },
-      });
-      const suggest = recordMock(CreateItemSuggestionDocument, {
-        data: suggestionPayload(NOTE),
-      });
-      const { result } = renderHook([update.mock, suggest.mock]);
-
-      const outcome = await result.current.submitEdit(
-        snapshot({ canEdit: true }),
-        form(),
-      );
-
-      expect(outcome).toEqual({ status: 'suggested' });
-      await waitFor(() => expect(suggest.fired).toHaveLength(1));
     });
 
     // canEdit=false does not imply "suggest": a PRIVATE item the user doesn't
@@ -470,7 +444,9 @@ describe('useSuggestItemEdit', () => {
 
     // The flags are not mutually exclusive — an admin on a public item has both.
     // The direct write wins: there is nothing to review when you can just write.
-    it('writes through rather than suggesting when both paths are open', async () => {
+    // An admin on a public item holds both rights. The app uses no admin
+    // rights, so the edit goes for review like anyone else's.
+    it('suggests on a public item even when the viewer may edit it', async () => {
       const update = recordMock(UpdateItemDocument, {
         data: {
           updateItem: {
@@ -507,9 +483,9 @@ describe('useSuggestItemEdit', () => {
         form(),
       );
 
-      expect(outcome).toEqual({ status: 'updated' });
-      await waitFor(() => expect(update.fired).toHaveLength(1));
-      expect(suggest.fired).toHaveLength(0);
+      expect(outcome).toEqual({ status: 'suggested' });
+      await waitFor(() => expect(suggest.fired).toHaveLength(1));
+      expect(update.fired).toHaveLength(0);
     });
   });
 });

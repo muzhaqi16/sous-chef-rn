@@ -22,6 +22,7 @@ import type { BarcodeSource } from '#features/barcode/types';
 import type { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
 import type { ScannedPack } from '#utils/items/suggestItemChanges';
 import { Screen } from '#components/templates/Screen';
+import { writesItemDirectly } from '#domain/itemWriteAccess';
 
 /** Build form initialData from a ScannedItem for edit/variant modes */
 function buildInitialDataFromItem(item: ScannedItem): AddItemFormInitialData {
@@ -146,12 +147,13 @@ export const SearchResultsScreen: React.FC<
       ? buildInitialDataFromItem(currentItem)
       : undefined;
 
-  // Cosmetic only — the sheet re-reads canEdit from the authoritative item
-  // snapshot. It is absent on a cached scan, and the suggestion wording is the
-  // safe default.
-  const editActionLabel = currentItem?.canEdit
-    ? t('labels.edit')
-    : t('labels.suggestEdit');
+  // Cosmetic only — the sheet re-reads the flags from the authoritative item
+  // snapshot. They are absent on a cached scan, and the suggestion wording is
+  // the safe default.
+  const editActionLabel =
+    currentItem && writesItemDirectly(currentItem)
+      ? t('labels.edit')
+      : t('labels.suggestEdit');
 
   // Withholding onEditItem drops the action rather than offering an edit that
   // could only be refused on submit. Only an EXPLICIT false on both hides it —

@@ -54,8 +54,7 @@ import { catalogTestIDs } from '#features/catalog/testIDs';
 /**
  * `edit` proposes changes for admin review (createItemSuggestion); `directEdit`
  * writes them straight through (updateItem). They render identically — the
- * caller picks by the item's viewer-scoped `canEdit`, and only the wording
- * differs.
+ * caller picks with `writesItemDirectly`, and only the wording differs.
  */
 export type AddItemFormMode = 'create' | 'edit' | 'variant' | 'directEdit';
 
