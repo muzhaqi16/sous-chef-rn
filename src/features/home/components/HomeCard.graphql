@@ -18,6 +18,10 @@ fragment HomeCard_home on Home {
       }
     }
     totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
   }
   invitesConnection(first: 5) {
     edges {
@@ -29,6 +33,10 @@ fragment HomeCard_home on Home {
       }
     }
     totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
   }
   pantriesConnection(first: 10) {
     totalCount

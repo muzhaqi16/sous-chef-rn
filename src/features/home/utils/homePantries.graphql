@@ -1,0 +1,12 @@
+# Read-only (`readDefaultPantryId`): the home's pantries, to pick its default.
+fragment homePantries_home on Home {
+  id
+  pantriesConnection {
+    edges {
+      node {
+        id
+        isDefault
+      }
+    }
+  }
+}

@@ -14,6 +14,10 @@ query GetHome($homeId: ID!) {
           isDefault
         }
       }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
     }
     ...HomeDetailScreen_home
   }
@@ -50,6 +54,10 @@ query GetHomes($first: Int, $after: String) {
             }
           }
           totalCount
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
         }
         membersConnection(first: 5) {
           totalCount
@@ -97,6 +105,10 @@ query GetHomeByJoinCode($joinCode: String!) {
         }
       }
       totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
     }
   }
 }
@@ -121,6 +133,10 @@ mutation CreateHome($input: CreateHomeInput!) {
             }
           }
           totalCount
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
         }
         ...HomeCard_home
       }
@@ -227,6 +243,10 @@ mutation TransferHomeOwnership($input: TransferHomeOwnershipInput!) {
             }
           }
           totalCount
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
         }
       }
     }
@@ -310,6 +330,10 @@ mutation AcceptHomeInvite($input: AcceptHomeInviteInput!) {
               }
             }
             totalCount
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
           }
           membersConnection(first: 5) {
             totalCount
@@ -445,6 +469,10 @@ mutation JoinHomeByCode($input: JoinHomeByCodeInput!) {
             }
           }
           totalCount
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
         }
         membersConnection(first: 5) {
           totalCount

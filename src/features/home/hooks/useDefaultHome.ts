@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { gql, type ApolloCache } from '@apollo/client';
+import type { ApolloCache } from '@apollo/client';
 import { skipToken, useApolloClient, useQuery } from '@apollo/client/react';
 import { safeEvictMany } from '#/apollo/utils/cacheUpdaters';
 import { GetHomesDocument } from '#operations/home/home.generated';
@@ -14,32 +14,7 @@ import { useStore } from '#store';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import { pantriesOf, defaultPantryOf } from '#domain/homePantries';
 import { logger } from '#/utils/environment';
-
-/**
- * Narrow on purpose: a `readQuery` of the whole `GetHomes` document is
- * all-or-nothing, so one unrelated evicted record makes the check unanswerable.
- */
-const SELECTED_HOME_PANTRIES = gql`
-  fragment SelectedHomePantries_home on Home {
-    id
-    pantriesConnection {
-      totalCount
-      edges {
-        node {
-          id
-        }
-      }
-    }
-  }
-`;
-
-/** What the fragment above reads back. */
-type SelectedHomePantries = {
-  pantriesConnection?: {
-    totalCount?: number | null;
-    edges?: Array<{ node?: { id: string } | null } | null> | null;
-  } | null;
-};
+import { UseDefaultHome_HomeFragmentDoc } from './useDefaultHome.generated';
 
 /**
  * True only when the cached connection holds the whole set. `GetHomes` pages
@@ -64,16 +39,16 @@ const checkPantryBelongsToHome = (
   const cacheId = cache.identify({ __typename: 'Home', id: homeId });
   const home =
     cacheId &&
-    cache.readFragment<SelectedHomePantries>({
+    cache.readFragment({
       id: cacheId,
-      fragment: SELECTED_HOME_PANTRIES,
+      fragment: UseDefaultHome_HomeFragmentDoc,
     });
 
   const connection = home ? home.pantriesConnection : null;
   if (!connection) return 'unknown';
   if (!isConnectionComplete(connection)) return 'unknown';
 
-  return (connection.edges ?? []).some(edge => edge?.node?.id === pantryId)
+  return connection.edges.some(edge => edge.node.id === pantryId)
     ? 'valid'
     : 'invalid';
 };

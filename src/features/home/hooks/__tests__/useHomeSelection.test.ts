@@ -79,6 +79,11 @@ const createMockHomeNode = (
     pantries
       ? {
           __typename: 'PantryConnection',
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: false,
+            endCursor: null,
+          },
           totalCount: pantries.length,
           edges: pantries.map(pantry => ({
             __typename: 'PantryEdge',
@@ -111,6 +116,7 @@ const createMockHomeNode = (
     },
     pantriesConnection: {
       __typename: 'PantryConnection',
+      pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: null },
       totalCount: 0,
       edges: [],
     },
@@ -320,6 +326,11 @@ describe('useHomeSelection', () => {
           ...createMockHomeNode({ id: 'home-2', name: 'Home 2' }),
           pantriesConnection: {
             __typename: 'PantryConnection',
+            pageInfo: {
+              __typename: 'PageInfo',
+              hasNextPage: false,
+              endCursor: null,
+            },
             totalCount: 2,
             edges: [
               {

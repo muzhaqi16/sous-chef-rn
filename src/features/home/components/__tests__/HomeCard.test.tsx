@@ -113,11 +113,13 @@ function buildHome(
     name: overrides.name ?? 'My Kitchen',
     membersConnection: {
       __typename: 'MembershipConnection',
+      pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: null },
       totalCount: overrides.memberCount ?? 2,
       edges: members.slice(0, overrides.memberCount ?? members.length),
     },
     invitesConnection: {
       __typename: 'HomeInviteConnection',
+      pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: null },
       totalCount: 0,
       edges: [],
     },

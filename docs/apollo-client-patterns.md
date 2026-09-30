@@ -1127,6 +1127,12 @@ into application code.
   (`src/apollo/cacheFieldPolicies.ts`) for merge logic.
 - Use `extractNodes()` (`src/utils/connectionUtils.ts`), which returns `[]` for
   missing edges.
+- Every document that writes a merged connection's `edges` also selects
+  `pageInfo { hasNextPage endCursor }`, even for a fixed-size preview: the
+  first-page merge reads a missing `hasNextPage` as "this page is the whole
+  list" and cuts every other reader of the field down to it. A fragment used
+  only to read the cache (`readFragment`, `useFragment`) writes nothing and is
+  exempt on its own; there is no allowlist (`sharedConnectionSelections.test.ts`).
 - Use a `cache-and-network` → `cache-first` fetch policy so the network fires
   immediately on restore; stale persisted `pageInfo`/edges self-correct when
   the response arrives (a brief flash of stale pagination state is acceptable).
