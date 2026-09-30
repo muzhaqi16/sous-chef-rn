@@ -5,6 +5,7 @@ import { generateId } from '#/utils/generateId';
 const DEVICE_ID_KEY = 'device_id';
 const LEGACY_FINGERPRINT_KEY = 'device_fingerprint';
 const DEVICE_ROW_KEY = 'device_row';
+const REGISTERED_LOCALE_KEY = 'registered_locale';
 
 let cachedDeviceId: string | null = null;
 let hydration: Promise<string | null> | null = null;
@@ -100,4 +101,22 @@ export function clearLegacyDeviceFingerprint(): void {
  */
 export function clearRetiredDeviceRow(): void {
   if (mirrorIsUsable()) storage.remove(DEVICE_ROW_KEY);
+}
+
+/**
+ * Records the locale a registration landed with; true when it differs from the
+ * last one, or none is on record. The server reads a "Device default" user's
+ * unit system from it, so what it answered under the old one is stale.
+ */
+export function recordRegisteredLocale(locale: string | undefined): boolean {
+  if (!mirrorIsUsable()) return true;
+  const value = locale ?? '';
+  if (storage.getString(REGISTERED_LOCALE_KEY) === value) return false;
+  storage.set(REGISTERED_LOCALE_KEY, value);
+  return true;
+}
+
+/** Removed on session end: the next account's device row starts without one. */
+export function clearRegisteredLocale(): void {
+  if (mirrorIsUsable()) storage.remove(REGISTERED_LOCALE_KEY);
 }

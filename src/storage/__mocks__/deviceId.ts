@@ -34,3 +34,10 @@ export const readLegacyDeviceFingerprint = jest.fn<string | null, []>(
 export const clearLegacyDeviceFingerprint = jest.fn<void, []>(() => undefined);
 
 export const clearRetiredDeviceRow = jest.fn<void, []>(() => undefined);
+
+/** An unchanged locale by default: registration drops no cached answers. */
+export const recordRegisteredLocale = jest.fn<boolean, [string | undefined]>(
+  () => false,
+);
+
+export const clearRegisteredLocale = jest.fn<void, []>(() => undefined);

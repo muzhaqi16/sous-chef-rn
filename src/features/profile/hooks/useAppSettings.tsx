@@ -21,6 +21,7 @@ import {
   updateEntityFieldsLocalFirst,
 } from '#/apollo/utils/localFirstFields';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { dropUnitSystemAnswers } from '#/apollo/utils/unitSystemAnswers';
 import { useTranslation } from '#/i18n';
 
 export interface AppSettings {
@@ -56,7 +57,8 @@ export const useAppSettings = () => {
       showTutorials: settings?.showTutorials ?? true,
       autoSync: settings?.autoSync ?? true,
       offlineMode: settings?.offlineMode ?? false,
-      preferredUnitSystem: settings?.preferredUnitSystem ?? UnitSystem.Metric,
+      // The server's default, and what a user with no settings row reads.
+      preferredUnitSystem: settings?.preferredUnitSystem ?? UnitSystem.System,
       enabledFeatures: settings?.enabledFeatures ?? [],
       betaFeatures: settings?.betaFeatures ?? [],
     };
@@ -126,6 +128,10 @@ export const useAppSettings = () => {
             }),
           { document: UpdateUserPreferencesDocument, fallback: failureMessage },
         );
+        // A queued change drops them when it replays (`reconcileSettingsReplay`).
+        if (settled.status === 'applied' && 'preferredUnitSystem' in updates) {
+          dropUnitSystemAnswers(client.cache);
+        }
         return { data: settled.data, error: settled.failure };
       },
       logLabel: 'Update Settings',
@@ -146,7 +152,7 @@ export const useAppSettings = () => {
       showTutorials: true,
       autoSync: true,
       offlineMode: false,
-      preferredUnitSystem: UnitSystem.Metric,
+      preferredUnitSystem: UnitSystem.System,
     };
 
     return updateMultipleSettings(

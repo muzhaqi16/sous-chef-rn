@@ -22,10 +22,13 @@ import {
 } from '#/utils/deviceInfo';
 import {
   clearLegacyDeviceFingerprint,
+  clearRegisteredLocale,
   clearRetiredDeviceRow,
   ensureDeviceId,
   readLegacyDeviceFingerprint,
+  recordRegisteredLocale,
 } from '#/storage/deviceId';
+import { dropUnitSystemAnswers } from '#/apollo/utils/unitSystemAnswers';
 import { registerSessionTeardown } from '#/store/sessionTeardown';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 
@@ -135,7 +138,6 @@ function buildDeviceInput(
     },
     location: {
       ipAddress: deviceInfo.deviceIpAddress,
-      ipCountry: deviceInfo.country,
       timezone: deviceInfo.timezone,
       language: deviceInfo.language,
     },
@@ -206,6 +208,7 @@ registerSessionTeardown('devicePushToken', () => {
   pushTokenRefreshUnsubscribe?.();
   pushTokenRefreshUnsubscribe = null;
   clearRetiredDeviceRow();
+  clearRegisteredLocale();
 });
 
 /**
@@ -328,6 +331,11 @@ async function registerDeviceOnce(): Promise<RegistrationOutcome> {
     }
 
     logger.info('Device registered successfully:', { deviceId });
+    // Until a session's first registration lands, or after the device's locale
+    // changes, the pickers answered a "Device default" user in the wrong system.
+    if (recordRegisteredLocale(deviceInfo.language)) {
+      dropUnitSystemAnswers(client.cache);
+    }
     await retireLegacyDeviceRow();
     return 'ok';
   } catch (error) {
