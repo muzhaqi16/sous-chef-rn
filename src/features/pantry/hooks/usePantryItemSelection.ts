@@ -18,7 +18,7 @@ import {
   revertOptimisticPantryItem,
 } from '#features/pantry/cache/items';
 import { usePantryItemMutations } from '#features/pantry/hooks/mutations/usePantryItemMutations';
-import type { AddPantryItemOutcome } from '#features/pantry/hooks/mutations/useAddToPantry';
+import type { AddPantryItemOutcome } from '#features/pantry/hooks/usePantryIntake';
 import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';

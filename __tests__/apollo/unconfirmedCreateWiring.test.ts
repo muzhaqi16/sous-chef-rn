@@ -104,7 +104,7 @@ describe('unconfirmed-create wiring (pantry items)', () => {
     expect(creators).toEqual(
       expect.arrayContaining([
         'src/features/barcode/hooks/useAddScannedItem.ts',
-        'src/features/pantry/hooks/mutations/useAddToPantry.ts',
+        'src/features/pantry/hooks/usePantryIntake.ts',
         'src/features/pantry/hooks/usePantryItemSubmission.ts',
         'src/features/shoppingList/hooks/useMoveToPantry.ts',
       ]),
