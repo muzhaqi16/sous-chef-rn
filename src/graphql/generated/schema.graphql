@@ -7353,6 +7353,11 @@ input MovePurchasedItemsToPantryInput {
   """
   pantryItemHints: [MoveToPantryIdHintInput!]
   shoppingListId: ID!
+  """
+  The viewer's calendar date, for every line. Each new batch expires on this date
+  plus its item's shelf life; without it no expiry is set.
+  """
+  today: LocalDate
 }
 
 type MovePurchasedItemsToPantryPayload {
@@ -7448,6 +7453,11 @@ input MoveShoppingItemToPantryInput {
   storageLocationId: ID
   """Storage state (FROZEN, REFRIGERATED, AMBIENT, NONE)"""
   storageState: StorageState
+  """
+  The viewer's calendar date. With no expiresOn, the new batch expires on this date
+  plus the item's shelf life; without it no expiry is set.
+  """
+  today: LocalDate
 }
 
 type MoveShoppingItemToPantryPayload {
@@ -12737,6 +12747,11 @@ input RestockPantryItemInput {
   quantity: Float!
   restockedAt: DateTime
   storeId: ID
+  """
+  The viewer's calendar date. With no expiresOn, the new batch expires on this date
+  plus the item's shelf life; without it no expiry is set.
+  """
+  today: LocalDate
   totalCost: Float
   unitId: ID
 }
