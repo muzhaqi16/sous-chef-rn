@@ -5153,9 +5153,9 @@ type Item {
   """
   categories: [ItemCategory!]!
   """
-  A PACKAGE netWeight converted to the caller's preferred unit system, so two
-  callers reading the same item can get different answers. Null for a serving
-  or reference figure.
+  A PACKAGE netWeight converted to the caller's unit system (see UnitSystem),
+  so two callers reading the same item can get different answers. Null for a
+  serving or reference figure.
   """
   convertedNetWeight: ConvertedValue
   """When the item was created."""
@@ -8343,6 +8343,10 @@ input NetworkLocationInput {
   isProxy: Boolean
   isTor: Boolean
   isVpn: Boolean
+  """
+  The device's BCP 47 locale (en-US). Its region decides the unit system of a
+  user whose preferredUnitSystem is SYSTEM; omit it rather than guess.
+  """
   language: String
   timezone: String
 }
@@ -10790,11 +10794,14 @@ type Query {
   serving → the net-weight unit → its measured family → the tracking unit →
   every other unit the stack converts.
   
-  The list is exactly what createPantryItemUsage accepts, with one unit per
+  Every unit listed is one createPantryItemUsage accepts, with one unit per
   count factor (piece, not also its synonym item). Curation only ranks: a unit
-  that converts into the stack is listed however it is curated. Re-query after
-  any edit to the stack's unit, net weight, portion definition or density —
-  all four change the answer.
+  that converts into the stack is listed however it is curated — unless it is
+  a weight or volume outside the caller's unit system (see UnitSystem) and not
+  one of the stack's own units, which is withheld though still accepted.
+  Re-query after any edit to the stack's unit, net weight, portion definition
+  or density, or to the caller's preferredUnitSystem — each changes the
+  answer.
   """
   consumptionUnitsForPantryItem(
     """The pantry item's id"""
@@ -11325,7 +11332,8 @@ type Query {
   Ranked units this pantry stack can be restocked in, best first: the tracking
   unit → its own portion unit → units curated for buying → its measured family
   → every other unit the stack converts. The same units the consume list
-  holds, ranked for buying: exactly what restockPantryItem accepts.
+  holds, ranked for buying, each accepted by restockPantryItem; a weight or
+  volume outside the caller's unit system is withheld as it is there.
   """
   restockUnitsForPantryItem(
     """The pantry item's id"""
@@ -12021,13 +12029,14 @@ type RecipeForkEdge implements Edge {
 type RecipeIngredient {
   availablePantryItemIds: [ID!]!
   """
-  quantity auto-converted to the caller's preferred unit system.
+  quantity auto-converted to the caller's unit system (see UnitSystem):
+  metric when no system is known.
   
-  Viewer-scoped: it resolves through context.user to
-  userSettings.preferredUnitSystem, so two callers reading the same recipe get
+  Viewer-scoped: it resolves through the caller's preferredUnitSystem and, for
+  SYSTEM, their device's locale, so two callers reading the same recipe get
   different answers. The pin is what keeps it out of a shared cache. Null when
-  the ingredient names no unit, or when no seeded unit of the preferred system
-  shares its dimension.
+  the ingredient names no unit, or when no seeded unit of the system shares
+  its dimension.
   """
   convertedQuantity: ConvertedValue
   estimatedPrice: Float
@@ -14976,9 +14985,22 @@ enum UnitSource {
   TRACKING_UNIT
 }
 
+"""
+How a user reads weights and volumes. IMPERIAL is US customary. A teaspoon,
+tablespoon, pinch or dash belongs to both; a count, container or portion to
+neither.
+"""
 enum UnitSystem {
+  """US customary: oz, lb, cup, fl oz, pt, qt, gal"""
   IMPERIAL
+  """Metric: g, kg, mL, L"""
   METRIC
+  """
+  The region of the requesting device's registered locale
+  (NetworkLocationInput.language): the US, Liberia and Myanmar read IMPERIAL,
+  every other region METRIC. With no region known, the unit pickers offer both
+  systems and conversions read metric.
+  """
   SYSTEM
 }
 
