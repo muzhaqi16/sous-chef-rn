@@ -76,6 +76,11 @@ const ENUM_DEFAULTS = {
   // "USER_CREATED when it came from no external source" — every local create.
   'Recipe.primarySource': 'USER_CREATED',
   'Recipe.status': 'DRAFT',
+  // Every meal-plan and template create states these; they stand in for none.
+  'MealPlan.planType': 'CUSTOM',
+  'MealPlanItem.mealType': 'DINNER',
+  'MealTemplate.category': 'CUSTOM',
+  'MealTemplateItem.mealType': 'DINNER',
 };
 
 /**
@@ -246,22 +251,113 @@ const TARGETS = [
       'src',
       'features',
       'mealPlan',
-      'hooks',
-      'useMealPlanActions.graphql',
+      'cache',
+      'mealPlan.graphql',
     ),
     out: fromRoot(
       'src',
       'features',
       'mealPlan',
-      'hooks',
-      'mealPlanDetailNeutral.generated.ts',
+      'cache',
+      'mealPlanRowNeutral.generated.ts',
     ),
-    typesFrom: './useMealPlanActions.generated',
+    typesFrom: './mealPlan.generated',
+    unmasked: true,
     fragments: {
-      useMealPlanActions_detailStub: [
-        'NEUTRAL_MEAL_PLAN_DETAIL',
-        'UseMealPlanActions_DetailStubFragment',
+      mealPlan_row: ['NEUTRAL_LOCAL_MEAL_PLAN', 'MealPlan_RowFragment'],
+    },
+  },
+  {
+    graphql: fromRoot(
+      'src',
+      'features',
+      'mealPlan',
+      'cache',
+      'mealPlanItem.graphql',
+    ),
+    out: fromRoot(
+      'src',
+      'features',
+      'mealPlan',
+      'cache',
+      'mealPlanItemRowNeutral.generated.ts',
+    ),
+    typesFrom: './mealPlanItem.generated',
+    unmasked: true,
+    fragments: {
+      mealPlanItem_row: [
+        'NEUTRAL_LOCAL_MEAL_PLAN_ITEM',
+        'MealPlanItem_RowFragment',
       ],
+    },
+  },
+  {
+    graphql: fromRoot(
+      'src',
+      'features',
+      'mealPlan',
+      'utils',
+      'optimisticTemplate.graphql',
+    ),
+    out: fromRoot(
+      'src',
+      'features',
+      'mealPlan',
+      'utils',
+      'mealTemplateRowNeutral.generated.ts',
+    ),
+    typesFrom: './optimisticTemplate.generated',
+    unmasked: true,
+    fragments: {
+      optimisticTemplate_row: [
+        'NEUTRAL_LOCAL_MEAL_TEMPLATE',
+        'OptimisticTemplate_RowFragment',
+      ],
+    },
+  },
+  {
+    graphql: fromRoot(
+      'src',
+      'features',
+      'mealPlan',
+      'utils',
+      'optimisticTemplateItem.graphql',
+    ),
+    out: fromRoot(
+      'src',
+      'features',
+      'mealPlan',
+      'utils',
+      'mealTemplateItemRowNeutral.generated.ts',
+    ),
+    typesFrom: './optimisticTemplateItem.generated',
+    unmasked: true,
+    fragments: {
+      optimisticTemplateItem_row: [
+        'NEUTRAL_LOCAL_MEAL_TEMPLATE_ITEM',
+        'OptimisticTemplateItem_RowFragment',
+      ],
+    },
+  },
+  {
+    graphql: fromRoot(
+      'src',
+      'features',
+      'recipes',
+      'cache',
+      'favorites.graphql',
+    ),
+    out: fromRoot(
+      'src',
+      'features',
+      'recipes',
+      'cache',
+      'savedRecipeRowNeutral.generated.ts',
+    ),
+    typesFrom: './favorites.generated',
+    unmasked: true,
+    fragments: {
+      favorites_row: ['NEUTRAL_LOCAL_SAVED_RECIPE', 'Favorites_RowFragment'],
     },
   },
 ];

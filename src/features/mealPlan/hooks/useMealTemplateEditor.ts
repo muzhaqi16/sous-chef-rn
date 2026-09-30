@@ -36,12 +36,12 @@ import {
   updateEntityFieldsLocalFirst,
 } from '#/apollo/utils/localFirstFields';
 import {
-  buildOptimisticTemplateItem,
   addTemplateItemToCache,
+  localTemplateItem,
   removeTemplateItemFromCache,
   readTemplateItem,
-  toRestorableTemplateItem,
   readRecipeRef,
+  type LocalTemplateItem,
 } from '#features/mealPlan/utils/optimisticTemplateItem';
 import { useUser } from '#store/useAppStore';
 import {
@@ -274,10 +274,10 @@ export function useMealTemplateEditor() {
 
   const addItem = async (input: AddTemplateItemInput): Promise<boolean> => {
     const id = generateEntityId();
-    const optimisticItem = buildOptimisticTemplateItem(client.cache, id, input);
+    const localItem = localTemplateItem(client.cache, id, input);
 
     try {
-      addTemplateItemToCache(client.cache, input.templateId, optimisticItem);
+      addTemplateItemToCache(client.cache, input.templateId, localItem);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Add Template Item (optimistic)',
@@ -370,11 +370,11 @@ export function useMealTemplateEditor() {
   ): Promise<boolean> => {
     // Snapshot before evicting: a refusal has to put the row back, and an
     // evicted entity is one the cache cannot describe. The read is partial (the
-    // editor's query selects no `recipe`), so it is completed here.
-    const removed = toRestorableTemplateItem(
-      readTemplateItem(client.cache, itemId),
-      itemId,
-    );
+    // editor's query selects no `recipe`); the restore completes it.
+    const snapshot = readTemplateItem(client.cache, itemId);
+    const removed: LocalTemplateItem | null = snapshot
+      ? { ...snapshot, __typename: 'MealTemplateItem', id: itemId }
+      : null;
     const parentTemplateId = templateId;
 
     // No snapshot means no revert. Evicting anyway is how a refused remove left

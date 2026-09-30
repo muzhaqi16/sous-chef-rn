@@ -37,9 +37,23 @@ import {
 } from '#features/home/cache/home.generated';
 import type { Unmasked } from '@apollo/client/masking';
 import {
+  MealPlanType,
+  MealType,
   UnitType,
   type CreateRecipeInput,
 } from '#/graphql/generated/schemaTypes';
+import { MealPlanReadersFragmentDoc } from '#/graphql/readers/mealPlanReaders.generated';
+import { MealPlanItemReadersFragmentDoc } from '#/graphql/readers/mealPlanItemReaders.generated';
+import { MealTemplateReadersFragmentDoc } from '#/graphql/readers/mealTemplateReaders.generated';
+import { MealTemplateItemReadersFragmentDoc } from '#/graphql/readers/mealTemplateItemReaders.generated';
+import { writeLocalMealPlan } from '#features/mealPlan/cache/mealPlan';
+import { writeOptimisticMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
+import { writeLocalMealTemplate } from '#features/mealPlan/utils/optimisticTemplate';
+import {
+  addTemplateItemToCache,
+  localTemplateItem,
+} from '#features/mealPlan/utils/optimisticTemplateItem';
+import { writeOptimisticFavorite } from '#features/recipes/cache/favorites';
 import { makeCache } from '#/apollo/cache';
 import { CreateShoppingListForRecipeDocument } from '#features/recipes/hooks/useRecipeDetail.generated';
 import {
@@ -96,6 +110,7 @@ import {
   MySavedRecipesDocument,
   GetRecipeDocument,
   type MyRecipesQuery,
+  type MySavedRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import { writeOptimisticRecipe } from '#features/recipes/utils/recipeCacheWriters';
 import {
@@ -1068,6 +1083,146 @@ describe('optimistic entity completeness', () => {
       const diff = cache.diff({
         query: GetShoppingListDetailsDocument,
         variables: { id: 'client-list-detail' },
+        optimistic: true,
+        returnPartialData: true,
+      });
+      expect(describeMissing(diff.missing)).toBe('none');
+      expect(diff.complete).toBe(true);
+    });
+  });
+
+  /**
+   * A readers fragment is the union of what every query reads on its type, so
+   * a row that reads it complete leaves no query reading that row incomplete.
+   */
+  describe('meal plans, templates and saved recipes', () => {
+    const readsComplete = (
+      cache: ApolloCache,
+      fragment: DocumentNode,
+      entity: { __typename: string; id: string },
+    ) => cache.readFragment({ id: cache.identify(entity), fragment }) !== null;
+
+    const PLAN = {
+      name: 'Offline week',
+      planType: MealPlanType.Weekly,
+      startDate: '2026-10-05T00:00:00.000Z',
+      endDate: '2026-10-11T00:00:00.000Z',
+      homeId: 'home-uncached',
+    };
+
+    it('a local plan reads complete for every query', () => {
+      const cache = makeCache();
+      writeLocalMealPlan(cache, 'plan-1', PLAN, 'user-1');
+
+      expect(
+        readsComplete(cache, MealPlanReadersFragmentDoc, {
+          __typename: 'MealPlan',
+          id: 'plan-1',
+        }),
+      ).toBe(true);
+    });
+
+    it('a local meal reads complete, and so does the plan listing it', () => {
+      const cache = makeCache();
+      writeLocalMealPlan(cache, 'plan-2', PLAN, 'user-1');
+      writeOptimisticMealPlanItem(cache, {
+        id: 'meal-1',
+        mealPlanId: 'plan-2',
+        date: '2026-10-06T00:00:00.000Z',
+        mealType: MealType.Dinner,
+        meal: { customMealName: 'Soup' },
+      });
+
+      expect(
+        readsComplete(cache, MealPlanItemReadersFragmentDoc, {
+          __typename: 'MealPlanItem',
+          id: 'meal-1',
+        }),
+      ).toBe(true);
+      expect(
+        readsComplete(cache, MealPlanReadersFragmentDoc, {
+          __typename: 'MealPlan',
+          id: 'plan-2',
+        }),
+      ).toBe(true);
+    });
+
+    it('a local template reads complete with the items it was created with', () => {
+      const cache = makeCache();
+      writeLocalMealTemplate(
+        cache,
+        'tpl-1',
+        {
+          name: 'Weekdays',
+          items: [
+            {
+              id: 'tpl-item-1',
+              dayOffset: 0,
+              mealType: MealType.Breakfast,
+              meal: { customMealName: 'Oats' },
+            },
+          ],
+        },
+        'user-1',
+      );
+
+      const template = cache.readFragment<{ items: { id: string }[] }>({
+        id: cache.identify({ __typename: 'MealTemplate', id: 'tpl-1' }),
+        fragment: MealTemplateReadersFragmentDoc,
+      });
+      expect(template?.items.map(item => item.id)).toEqual(['tpl-item-1']);
+    });
+
+    it('an added item and a restored one read complete', () => {
+      const cache = makeCache();
+      writeLocalMealTemplate(cache, 'tpl-2', { name: 'Weekend' }, 'user-1');
+      addTemplateItemToCache(
+        cache,
+        'tpl-2',
+        localTemplateItem(cache, 'tpl-item-2', {
+          dayOffset: 1,
+          mealType: MealType.Lunch,
+          meal: { customMealName: 'Salad' },
+        }),
+      );
+      // A remove's snapshot may carry only what the editor's query selected.
+      addTemplateItemToCache(cache, 'tpl-2', {
+        __typename: 'MealTemplateItem',
+        id: 'tpl-item-3',
+        dayOffset: 2,
+      });
+
+      for (const id of ['tpl-item-2', 'tpl-item-3']) {
+        expect(
+          readsComplete(cache, MealTemplateItemReadersFragmentDoc, {
+            __typename: 'MealTemplateItem',
+            id,
+          }),
+        ).toBe(true);
+      }
+      expect(
+        readsComplete(cache, MealTemplateReadersFragmentDoc, {
+          __typename: 'MealTemplate',
+          id: 'tpl-2',
+        }),
+      ).toBe(true);
+    });
+
+    it('keeps MySavedRecipes complete after a local save', async () => {
+      const cache = makeCache();
+      const data = await runAgainstSchema<Unmasked<MySavedRecipesQuery>>(
+        MySavedRecipesDocument,
+        {},
+      );
+      cache.writeQuery({ query: MySavedRecipesDocument, data });
+
+      writeOptimisticFavorite(cache, 'saved-1', 'recipe-uncached', {
+        folder: 'Soups',
+      });
+
+      const diff = cache.diff({
+        query: MySavedRecipesDocument,
+        variables: {},
         optimistic: true,
         returnPartialData: true,
       });

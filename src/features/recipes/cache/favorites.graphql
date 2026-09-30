@@ -5,18 +5,6 @@ fragment favorites_row on SavedRecipe {
   ...SavedRecipeReaders
 }
 
-# The recipe fields the row carries, read off the already-cached Recipe.
-fragment favorites_recipe on Recipe {
-  id
-  name
-  description
-  imageUrl
-  servings
-  prepTimeMinutes
-  cookTimeMinutes
-  totalTimeMinutes
-}
-
 # The heart. Written whole: `cache.modify` cannot introduce `savedDetails` on a
 # Recipe cached without it.
 fragment favorites_savedDetails on Recipe {

@@ -3,8 +3,16 @@ import {
   MealTemplateItemFragmentDoc,
   type MealTemplateItemFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import type { AddTemplateItemInput } from '#/graphql/generated/schemaTypes';
-import { OptimisticTemplateItem_RecipeRefFragmentDoc } from './optimisticTemplateItem.generated';
+import type { MealTemplateItemInput } from '#/graphql/generated/schemaTypes';
+import { isHeld, writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import {
+  OptimisticTemplateItem_RecipeRefFragmentDoc,
+  OptimisticTemplateItem_RowFragmentDoc,
+} from './optimisticTemplateItem.generated';
+import {
+  NEUTRAL_LOCAL_MEAL_TEMPLATE_ITEM,
+  NEUTRAL_LOCAL_MEAL_TEMPLATE_ITEM_BY_TYPE,
+} from './mealTemplateItemRowNeutral.generated';
 
 /**
  * Local-first writes for a template's items: the item mutations return the whole
@@ -39,12 +47,24 @@ export function readRecipeRef(
   );
 }
 
-/** Build the complete `MealTemplateItem` the template's item list reads. */
-export function buildOptimisticTemplateItem(
+/** A template item as a create states it, for `writeLocalEntity` to complete. */
+export type LocalTemplateItem = Record<string, unknown> & {
+  __typename: 'MealTemplateItem';
+  id: string;
+};
+
+/**
+ * What a create knows about an item: its recipe named only when the cache
+ * holds it, as an item a plan or template was copied from does.
+ */
+export function localTemplateItem(
   cache: ApolloCache,
   id: string,
-  input: AddTemplateItemInput,
-): MealTemplateItemFragment {
+  input: Omit<MealTemplateItemInput, 'id'>,
+): LocalTemplateItem {
+  const recipe = input.meal.recipeId
+    ? { __typename: 'Recipe', id: input.meal.recipeId }
+    : null;
   return {
     __typename: 'MealTemplateItem',
     id,
@@ -53,15 +73,19 @@ export function buildOptimisticTemplateItem(
     customMealName: input.meal.customMealName ?? null,
     servings: input.servings ?? null,
     notes: input.notes ?? null,
-    recipe: readRecipeRef(cache, input.meal.recipeId),
+    recipe: recipe && isHeld(cache, recipe) ? recipe : null,
   };
 }
 
-/** Append an item to the template's `items` list. */
+/**
+ * Writes an item complete for every query reading one — what it states, else
+ * what the cache holds, else the neutral value — and appends it to the
+ * template's `items` list. Also restores a removed item from its snapshot.
+ */
 export function addTemplateItemToCache(
   cache: ApolloCache,
   templateId: string,
-  item: MealTemplateItemFragment,
+  item: LocalTemplateItem,
 ): void {
   const parent = cache.identify({
     __typename: 'MealTemplate',
@@ -69,18 +93,22 @@ export function addTemplateItemToCache(
   });
   if (!parent) return;
 
-  cache.writeFragment({
-    id: cache.identify(item),
-    fragment: MealTemplateItemFragmentDoc,
-    fragmentName: 'MealTemplateItemFragment',
-    data: item,
+  writeLocalEntity(cache, {
+    fragment: OptimisticTemplateItem_RowFragmentDoc,
+    fragmentName: 'optimisticTemplateItem_row',
+    neutral: NEUTRAL_LOCAL_MEAL_TEMPLATE_ITEM,
+    neutralByType: NEUTRAL_LOCAL_MEAL_TEMPLATE_ITEM_BY_TYPE,
+    known: item,
   });
 
   cache.modify({
     id: parent,
     fields: {
       items(existing: readonly Reference[] = [], { toReference, readField }) {
-        const ref = toReference(item, true);
+        const ref = toReference(
+          { __typename: item.__typename, id: item.id },
+          true,
+        );
         if (!ref) return existing;
         // The response normalizes the same id, so guard against a second edge.
         const already = existing.some(
@@ -119,29 +147,6 @@ export function removeTemplateItemFromCache(
     id: itemId,
   });
   if (cacheId) cache.evict({ id: cacheId });
-}
-
-/**
- * Completes a partial {@link readTemplateItem} snapshot into a restorable
- * entity, or null when it carries no id. Absent keys become explicit nulls: the
- * row must be complete to go back into `items`, and null is the honest value
- * for a field the cache never held. The next fetch repairs it.
- */
-export function toRestorableTemplateItem(
-  snapshot: Partial<MealTemplateItemFragment> | null,
-  itemId: string,
-): MealTemplateItemFragment | null {
-  if (!snapshot || (snapshot.id ?? itemId) !== itemId) return null;
-  return {
-    __typename: 'MealTemplateItem',
-    id: itemId,
-    dayOffset: snapshot.dayOffset ?? 0,
-    mealType: snapshot.mealType as MealTemplateItemFragment['mealType'],
-    customMealName: snapshot.customMealName ?? null,
-    servings: snapshot.servings ?? null,
-    notes: snapshot.notes ?? null,
-    recipe: snapshot.recipe ?? null,
-  };
 }
 
 /**

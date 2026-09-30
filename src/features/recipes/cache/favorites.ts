@@ -8,11 +8,15 @@ import {
   SavedRecipeFoldersDocument,
   type SavedRecipeFoldersQuery,
 } from '#features/recipes/graphql/recipe.generated';
+import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
 import {
-  Favorites_RecipeFragmentDoc,
   Favorites_RowFragmentDoc,
   Favorites_SavedDetailsFragmentDoc,
 } from './favorites.generated';
+import {
+  NEUTRAL_LOCAL_SAVED_RECIPE,
+  NEUTRAL_LOCAL_SAVED_RECIPE_BY_TYPE,
+} from './savedRecipeRowNeutral.generated';
 
 /** What a save files the recipe under; all optional. */
 export interface SaveToFavoritesOptions {
@@ -117,45 +121,27 @@ export const writeOptimisticFavorite = (
     __typename: 'Recipe',
     id: recipeId,
   });
-  // The already-cached recipe, so the saved row shows it offline. An uncached
-  // one gets neutral fields; the post-replay refetch heals them.
-  const cachedRecipe = recipeCacheId
-    ? cache.readFragment({
-        id: recipeCacheId,
-        fragment: Favorites_RecipeFragmentDoc,
-      })
-    : null;
   const now = new Date().toISOString();
 
   // (a) The whole row, so the edge and savedDetails resolve even fully
-  //     offline, where no response ever arrives to materialize it.
-  cache.writeFragment({
-    id: cache.identify({ __typename: 'SavedRecipe', id: savedRecipeId }),
+  //     offline, where no response ever arrives to materialize it. The recipe
+  //     is the cached one; an uncached one gets neutral fields until the
+  //     post-replay refetch.
+  writeLocalEntity(cache, {
     fragment: Favorites_RowFragmentDoc,
     fragmentName: 'favorites_row',
-    data: {
+    neutral: NEUTRAL_LOCAL_SAVED_RECIPE,
+    neutralByType: NEUTRAL_LOCAL_SAVED_RECIPE_BY_TYPE,
+    known: {
       __typename: 'SavedRecipe',
       id: savedRecipeId,
       recipeId,
       folder: saveOptions?.folder ?? null,
       tags: saveOptions?.tags ?? [],
       notes: saveOptions?.notes ?? null,
-      personalRating: null,
-      cookedCount: 0,
-      lastCookedAt: null,
       createdAt: now,
       updatedAt: now,
-      recipe: cachedRecipe ?? {
-        __typename: 'Recipe',
-        id: recipeId,
-        name: '',
-        description: null,
-        imageUrl: null,
-        servings: 0,
-        prepTimeMinutes: null,
-        cookTimeMinutes: null,
-        totalTimeMinutes: null,
-      },
+      recipe: { __typename: 'Recipe', id: recipeId },
     },
   });
 

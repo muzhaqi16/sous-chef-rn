@@ -1,0 +1,6 @@
+# A local-first template's row: everything a query reads on one, its items
+# included.
+fragment optimisticTemplate_row on MealTemplate {
+  id
+  ...MealTemplateReaders
+}

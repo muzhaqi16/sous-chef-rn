@@ -67,13 +67,43 @@ const SKIP_FILES = new Set([
     'utils',
     'recipeRowNeutral.generated.ts',
   ),
-  // Same generator, derived from `useMealPlanActions.graphql`.
+  // Same generator, derived from `mealPlan.graphql`, `mealPlanItem.graphql`,
+  // `optimisticTemplate.graphql`, `optimisticTemplateItem.graphql` and
+  // `favorites.graphql`.
   fromRoot(
     'src',
     'features',
     'mealPlan',
-    'hooks',
-    'mealPlanDetailNeutral.generated.ts',
+    'cache',
+    'mealPlanRowNeutral.generated.ts',
+  ),
+  fromRoot(
+    'src',
+    'features',
+    'mealPlan',
+    'cache',
+    'mealPlanItemRowNeutral.generated.ts',
+  ),
+  fromRoot(
+    'src',
+    'features',
+    'mealPlan',
+    'utils',
+    'mealTemplateRowNeutral.generated.ts',
+  ),
+  fromRoot(
+    'src',
+    'features',
+    'mealPlan',
+    'utils',
+    'mealTemplateItemRowNeutral.generated.ts',
+  ),
+  fromRoot(
+    'src',
+    'features',
+    'recipes',
+    'cache',
+    'savedRecipeRowNeutral.generated.ts',
   ),
   // Same generator, derived from `home.graphql`.
   fromRoot('src', 'features', 'home', 'cache', 'homeRowNeutral.generated.ts'),

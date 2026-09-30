@@ -4,6 +4,7 @@
  */
 
 import type { ApolloCache } from '@apollo/client';
+import type { Unmasked } from '@apollo/client/masking';
 import { MealPlanItemActions_OptimisticFullItemFragmentDoc } from '#features/mealPlan/hooks/useMealPlanItemActions.generated';
 import type { MealPlanItemCard_ItemFragment } from '#features/mealPlan/components/MealPlanItemCard.generated';
 import type { CreateMealPlanItemInput } from '#/graphql/generated/schemaTypes';
@@ -11,11 +12,16 @@ import {
   createAddToParentArrayUpdater,
   createRemoveFromParentArrayUpdater,
 } from '#/apollo/utils/cacheUpdaters';
+import { isHeld, writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
 import { errorService } from '#/services/errorService';
 import {
-  MealPlanItem_RecipeRefFragmentDoc,
-  type MealPlanItem_RecipeRefFragment,
+  MealPlanItem_RowFragmentDoc,
+  type MealPlanItem_RowFragment,
 } from './mealPlanItem.generated';
+import {
+  NEUTRAL_LOCAL_MEAL_PLAN_ITEM,
+  NEUTRAL_LOCAL_MEAL_PLAN_ITEM_BY_TYPE,
+} from './mealPlanItemRowNeutral.generated';
 
 export const addToMealPlanItems = createAddToParentArrayUpdater<{ id: string }>(
   'MealPlan',
@@ -58,7 +64,7 @@ export type OptimisticMealPlanItem = {
   notes: string | null;
   isCompleted: boolean;
   completedAt: string | null;
-  recipe: MealPlanItem_RecipeRefFragment | null;
+  recipe: Unmasked<MealPlanItem_RowFragment>['recipe'];
 };
 
 /** Writes a complete item under every display fragment that reads it. */
@@ -74,41 +80,36 @@ export const writeMealPlanItem = (
   });
 
 /**
- * Materialize a complete optimistic MealPlanItem for a local-first create.
- * The recipe ref resolves from the cache's canonical Recipe entity (the user
- * just picked it, so it's cached); a miss degrades to a recipe-less card that
- * the post-replay refetch heals.
+ * Writes a local-first meal complete for every query reading one. Its recipe is
+ * named only when the cache holds it (the user just picked it); a miss is a
+ * recipe-less card until the server answers.
  */
-function buildOptimisticMealPlanItem(
+function writeLocalMealPlanItem(
   cache: ApolloCache,
   id: string,
   input: CreateMealPlanItemInput,
-): OptimisticMealPlanItem {
-  const recipeCacheId = input.meal.recipeId
-    ? cache.identify({ __typename: 'Recipe', id: input.meal.recipeId })
-    : undefined;
-  const recipe = recipeCacheId
-    ? cache.readFragment<MealPlanItem_RecipeRefFragment>({
-        id: recipeCacheId,
-        fragment: MealPlanItem_RecipeRefFragmentDoc,
-        fragmentName: 'mealPlanItem_recipeRef',
-      })
+): { __typename: 'MealPlanItem'; id: string } {
+  const recipe = input.meal.recipeId
+    ? { __typename: 'Recipe', id: input.meal.recipeId }
     : null;
-
-  return {
-    __typename: 'MealPlanItem',
-    id,
-    date: input.date,
-    mealType: input.mealType,
-    customMealName: input.meal.customMealName ?? null,
-    servings: input.servings ?? null,
-    calories: input.calories ?? null,
-    usedPantryItems: [],
-    notes: input.notes ?? null,
-    isCompleted: false,
-    completedAt: null,
-    recipe,
-  };
+  writeLocalEntity(cache, {
+    fragment: MealPlanItem_RowFragmentDoc,
+    fragmentName: 'mealPlanItem_row',
+    neutral: NEUTRAL_LOCAL_MEAL_PLAN_ITEM,
+    neutralByType: NEUTRAL_LOCAL_MEAL_PLAN_ITEM_BY_TYPE,
+    known: {
+      __typename: 'MealPlanItem',
+      id,
+      date: input.date,
+      mealType: input.mealType,
+      customMealName: input.meal.customMealName ?? null,
+      servings: input.servings ?? null,
+      calories: input.calories ?? null,
+      notes: input.notes ?? null,
+      recipe: recipe && isHeld(cache, recipe) ? recipe : null,
+    },
+  });
+  return { __typename: 'MealPlanItem', id };
 }
 
 /**
@@ -122,10 +123,9 @@ export function writeOptimisticMealPlanItem(
 ): (() => void) | undefined {
   const { id, mealPlanId } = input;
   if (!id) return undefined;
-  const optimisticItem = buildOptimisticMealPlanItem(cache, id, input);
   try {
-    writeMealPlanItem(cache, optimisticItem);
-    addToMealPlanItems(cache, mealPlanId, optimisticItem, { position: 'end' });
+    const item = writeLocalMealPlanItem(cache, id, input);
+    addToMealPlanItems(cache, mealPlanId, item, { position: 'end' });
   } catch (cacheError) {
     errorService.reportError(cacheError, {
       operation: 'Add Meal (optimistic)',

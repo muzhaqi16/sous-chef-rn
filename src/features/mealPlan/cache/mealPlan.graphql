@@ -1,0 +1,6 @@
+# A local-first plan's row: everything a query reads on a plan, so the list
+# card and the complete-gated detail screen read it offline.
+fragment mealPlan_row on MealPlan {
+  id
+  ...MealPlanReaders
+}

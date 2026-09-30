@@ -15,13 +15,11 @@ import {
 import { planFromTemplate } from '#features/mealPlan/utils/planFromTemplate';
 import { templateFromPlan } from '#features/mealPlan/utils/templateFromPlan';
 import { duplicateTemplate as deriveTemplateCopy } from '#features/mealPlan/utils/duplicateTemplate';
-import {
-  buildOptimisticTemplate,
-  writeOptimisticTemplate,
-} from '#features/mealPlan/utils/buildOptimisticTemplate';
+import { writeLocalMealTemplate } from '#features/mealPlan/utils/optimisticTemplate';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
 import { writeOptimisticMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
 import { useUser } from '#store/useAppStore';
+import { generateEntityId } from '#/utils/generateEntityId';
 import {
   MealTemplateDisplayFragmentDoc,
   type MealTemplateDisplayFragment,
@@ -113,14 +111,21 @@ export function useMealTemplateActions() {
   const createTemplate = async (
     input: CreateMealTemplateInput,
   ): Promise<boolean> => {
-    const optimistic = user ? buildOptimisticTemplate(input, user.id) : null;
-    if (optimistic) {
+    // The minted id is the row's PK, so the replay converges on this row.
+    const id = input.id ?? generateEntityId();
+    const ownerId = user?.id;
+    if (ownerId) {
       try {
-        writeOptimisticTemplate(client.cache, optimistic);
-        addToMealTemplates(client.cache, optimistic, {
+        const template = writeLocalMealTemplate(
+          client.cache,
+          id,
+          input,
+          ownerId,
+        );
+        addToMealTemplates(client.cache, template, {
           position: 'start',
           skipStoreField: skipUnmatchedFilterVariants({
-            category: optimistic.category,
+            category: template.category,
           }),
         });
       } catch (cacheError) {
@@ -131,9 +136,9 @@ export function useMealTemplateActions() {
     }
 
     const revertCreate = () => {
-      if (!optimistic) return;
+      if (!ownerId) return;
       try {
-        removeFromMealTemplates(client.cache, optimistic.id, {
+        removeFromMealTemplates(client.cache, id, {
           evictItem: true,
         });
       } catch (cacheError) {
@@ -146,7 +151,7 @@ export function useMealTemplateActions() {
     const settled = await settleMutation(
       () =>
         createTemplateMutation({
-          variables: { input },
+          variables: { input: { ...input, id } },
         }),
       {
         document: CreateMealTemplateDocument,
