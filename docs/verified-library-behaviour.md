@@ -1595,13 +1595,15 @@ Re-check: connect the debugger (`argent-metro-debugger`) and evaluate
 `globalThis.nativeModuleProxy.ReceiptStructuringModule.labelLines([...lines]).then(r => (globalThis.__labels = r))`.
 The deployment target is iOS 16, so the app weak-links `FoundationModels.framework` and gates every use on `#available(iOS 26, *)`.
 
-### ML Kit GenAI Prompt API can't be added under the app's Kotlin 2.1
+### ML Kit GenAI Prompt API needs Kotlin 2.2 and a minSdk override
 
 Verified 2026-09-30 against `com.google.mlkit:genai-prompt:1.0.0-beta4` (with `genai-common` beta4). It is Gemini Nano's on-device Prompt API, with typed structured output. Adding the dependency fails twice:
 
 1. `processDebugMainManifest`: the library's minSdk is 26, against the app's 24. `tools:overrideLibrary` clears it, and Gemini Nano only runs on Android 14 devices anyway.
 2. `compileDebugKotlin`: "Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0". The app pins `kotlinVersion = "2.1.20"`, and the failure hits `MainApplication.kt`, so the whole app stops compiling, not just the code that uses the library.
 
-Android on-device structuring waits for a Kotlin toolchain that reads 2.3 metadata (≥ 2.2). Until then `ReceiptStructuring.availability()` reads `unavailable` on Android, because the module isn't linked.
+Resolved 2026-09-30 with `kotlinVersion = "2.2.0"` (React Native 0.87's default), with the Kotlin Gradle plugin's classpath entry versioned by it. Unversioned, RN 0.86's Gradle plugin supplies 2.1.20 and the ext property changes nothing. The error message then still says "expected version is 2.1.0". Under 2.2, one library also needed a newer version: `@react-navigation/native` alpha.44's `MaterialSymbolModule.kt` reads `currentActivity` in a way 2.2 rejects (fixed in alpha.49). With `tools:overrideLibrary` for the three `com.google.mlkit.genai.*` libraries, `:app:assembleDebug` succeeds and `ReceiptStructuringModule.kt` calls the API.
+
+Gemini Nano runs only on AICore devices (Pixel 9 and 10, Galaxy S25, Xiaomi 15 and others). The emulator has none, so its labelling is still unverified on a device. `availability()` maps `DOWNLOADABLE` to `downloading`, so a scan never starts a model download.
 
 Re-check: add `implementation("com.google.mlkit:genai-prompt:1.0.0-beta4")` to `android/app/build.gradle`, then run `./gradlew :app:compileDebugKotlin`.
