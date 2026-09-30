@@ -160,6 +160,26 @@ describe('useMoveToPantry', () => {
     });
   });
 
+  it('sends the day of the move on the input, for its default expiry', async () => {
+    const move = moveMock();
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [move.mock] },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 1,
+        removeFromList: true,
+      });
+    });
+
+    const [fired] = move.fired;
+    expect(fired?.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(fired?.input).toMatchObject({ today: fired?.today });
+  });
+
   // `errorPolicy: 'all'` resolves a transport failure with `error` set rather
   // than rejecting, so this drives the outcome the app actually gets.
   it('returns false when the move fails', async () => {
@@ -930,5 +950,53 @@ describe('useMoveToPantry keeping the row on the list', () => {
     });
     expect(open.completedItems).toBe(0);
     expect(read(cache, true).shoppingList.itemsConnection.edges).toEqual([]);
+  });
+});
+
+describe('useMoveToPantry default expiry', () => {
+  const { gql } = require('@apollo/client');
+  const EXPIRY = gql`
+    fragment MovedRowExpiryProbe on PantryItem {
+      id
+      expiresOn
+    }
+  `;
+
+  it("shows the server's default expiry on the moved row once the response lands", async () => {
+    const { makeCache } = require('#/apollo/cache');
+    const cache = makeCache();
+    const move = recordMock(MoveShoppingItemToPantryDocument, {
+      dataFor: (
+        vars,
+      ): MockDataFor<typeof MoveShoppingItemToPantryDocument> => ({
+        moveShoppingItemToPantry: {
+          __typename: 'MoveShoppingItemToPantryPayload',
+          pantryItem: {
+            __typename: 'PantryItem',
+            id: (vars.input as { pantryItemId: string }).pantryItemId,
+            expiresOn: '2026-10-12',
+          },
+        },
+      }),
+    });
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [move.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 1,
+        removeFromList: true,
+      });
+    });
+
+    const mintedId = (move.fired[0]!.input as { pantryItemId: string })
+      .pantryItemId;
+    expect(
+      cache.readFragment({ id: `PantryItem:${mintedId}`, fragment: EXPIRY })
+        ?.expiresOn,
+    ).toBe('2026-10-12');
   });
 });

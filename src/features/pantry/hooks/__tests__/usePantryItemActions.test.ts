@@ -493,8 +493,12 @@ describe('usePantryItemActions', () => {
           totalCost: undefined,
           expiresOn: null,
           idempotencyKey: expect.any(String),
+          today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
         },
       });
+      // The input's day is the one the stats are read on: the day of the restock.
+      const [fired] = m.fired;
+      expect(fired?.input).toMatchObject({ today: fired?.today });
 
       expect(result.current.restockModal.visible).toBe(false);
     });

@@ -332,14 +332,16 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
      */
     const promptDuplicateRecovery = (existingPantryItemId: string) => {
       const restockExisting = async () => {
+        const today = todayKey();
         const settled = await settleMutation(
           () =>
             restockPantryItem({
               variables: {
-                today: todayKey(),
+                today,
                 input: {
                   id: existingPantryItemId,
                   quantity,
+                  today,
                   // Forward the purchase details the user just entered so the
                   // restock records an ItemPriceHistory observation.
                   ...(costValue !== undefined && { costPerUnit: costValue }),

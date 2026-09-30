@@ -171,16 +171,18 @@ export function useAddToPantry({
         : writeHeldStock(client.cache, pantryItemId, held => held + 1);
 
     // The sheet tells the user; the settle classifies, reverts and reports.
+    const today = todayKey();
     const settled = await settleMutation(
       () =>
         restockPantryItem({
           variables: {
-            today: todayKey(),
+            today,
             input: {
               id: pantryItemId,
               quantity: 1,
               // Dedupes the restock ledger row on replay.
               idempotencyKey: generateEntityId(),
+              today,
             },
           },
         }),

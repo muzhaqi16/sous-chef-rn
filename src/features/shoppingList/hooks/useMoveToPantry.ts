@@ -292,11 +292,15 @@ export function useMoveToPantry({
       unconfirmedCreates.confirm(pantryItemId);
     };
 
+    // Read when the user acts. A queued replay re-dates only the top-level
+    // `$today` (`prepareReplay`); `input.today` keeps this day, so a default
+    // expiry counts from the day of the move, not the day it syncs.
+    const today = todayKey();
     const settled = await settleMutation(
       () =>
         moveShoppingItemToPantry({
           variables: {
-            today: todayKey(),
+            today,
             input: {
               shoppingListItemId: item.id,
               pantryId: input.pantryId,
@@ -306,6 +310,7 @@ export function useMoveToPantry({
               actualUnitId: input.actualUnitId,
               storageState: input.storageState,
               expiresOn: input.expiresOn,
+              today,
               removeFromList: input.removeFromList,
               actualPrice: input.actualPrice,
               notes: input.notes,
