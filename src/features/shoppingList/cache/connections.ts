@@ -327,19 +327,23 @@ export function moveShoppingListItemToUnpurchased(
  * the row (re-adding a purchased item); every other variant adds it. Pass
  * `bumpTotalItems: false` when a local-first
  * {@link addLocalShoppingListItem} has already counted it.
+ *
+ * Returns true when a cached `isPurchased: false` variant already listed the
+ * line — it was on the list, not reused from a bought or removed one.
  */
 export function addNewItemToShoppingListCache(
   cache: ApolloCache,
   listId: string,
   item: { id: string },
   bumpTotalItems = true,
-): void {
+): boolean {
+  let listedActive = false;
   try {
     const parentCacheId = cache.identify({
       __typename: 'ShoppingList',
       id: listId,
     });
-    if (!parentCacheId) return;
+    if (!parentCacheId) return false;
 
     cache.modify({
       id: parentCacheId,
@@ -368,7 +372,10 @@ export function addNewItemToShoppingListCache(
           const alreadyExists = existing.edges.some(
             edge => readField<string>('id', edge.node) === item.id,
           );
-          if (alreadyExists) return existing;
+          if (alreadyExists) {
+            if (isUnpurchasedVariant(storeFieldName)) listedActive = true;
+            return existing;
+          }
 
           const node = toReference(
             { __typename: 'ShoppingListItem', id: item.id },
@@ -396,6 +403,7 @@ export function addNewItemToShoppingListCache(
   } catch (error) {
     logger.warn('Failed to update cache for new shopping list item:', error);
   }
+  return listedActive;
 }
 
 /**

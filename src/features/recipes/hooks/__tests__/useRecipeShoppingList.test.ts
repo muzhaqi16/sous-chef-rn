@@ -1,6 +1,6 @@
 import { act, waitFor } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { CreateOutcome, ErrorCode } from '#/graphql/generated/schemaTypes';
 import { makeCache } from '#/apollo/cache';
 import type { InMemoryCache } from '@apollo/client';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
@@ -349,7 +349,6 @@ describe('useRecipeShoppingList — Add All', () => {
         createShoppingListItemsFromRecipe: {
           __typename: 'CreateShoppingListItemsFromRecipePayload',
           results: [],
-          summary: { __typename: 'BulkSummary', succeeded: 2, skipped: 0 },
         },
       },
     });
@@ -414,6 +413,124 @@ describe('useRecipeShoppingList — Add All', () => {
     await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
     const list = cache.extract()['ShoppingList:sl-1'] as { totalItems: number };
     expect(list.totalItems).toBe(7);
+  });
+
+  it('counts a reused bought line as added, and a line still on the list as updated', async () => {
+    // The server answers MERGED for both: a bought line it reuses reappears on
+    // the list, so only the line the list already showed took an update.
+    const cache = makeCache();
+    const lines = (ids: string[]) => ({
+      __typename: 'ShoppingListItemConnection',
+      totalCount: ids.length,
+      edges: ids.map(id => ({
+        __typename: 'ShoppingListItemEdge',
+        cursor: id,
+        node: { __typename: 'ShoppingListItem', id },
+      })),
+    });
+    cache.writeFragment({
+      id: 'ShoppingList:sl-1',
+      fragment: gql`
+        fragment SeedLines on ShoppingList {
+          id
+          active: itemsConnection(filters: { isPurchased: false }) {
+            totalCount
+            edges {
+              cursor
+              node {
+                id
+              }
+            }
+          }
+          bought: itemsConnection(filters: { isPurchased: true }) {
+            totalCount
+            edges {
+              cursor
+              node {
+                id
+              }
+            }
+          }
+        }
+      `,
+      data: {
+        __typename: 'ShoppingList',
+        id: 'sl-1',
+        active: lines(['sli-live']),
+        bought: lines(['sli-bought']),
+      },
+    });
+    const addAll = recordMock(CreateShoppingListItemsFromRecipeDocument, {
+      data: {
+        createShoppingListItemsFromRecipe: {
+          __typename: 'CreateShoppingListItemsFromRecipePayload',
+          results: [
+            {
+              __typename: 'RecipeIngredientAddResult',
+              outcome: CreateOutcome.Created,
+              item: { __typename: 'ShoppingListItem', id: 'sli-new' },
+            },
+            {
+              __typename: 'RecipeIngredientAddResult',
+              outcome: CreateOutcome.Merged,
+              item: { __typename: 'ShoppingListItem', id: 'sli-live' },
+            },
+            {
+              __typename: 'RecipeIngredientAddResult',
+              outcome: CreateOutcome.Merged,
+              item: { __typename: 'ShoppingListItem', id: 'sli-bought' },
+            },
+          ],
+        },
+      },
+    });
+    const { result: hook } = await renderShopping({
+      operationMocks: [addAll.mock],
+      cache,
+      backendRecipe: recipeWith([
+        ingredient({ id: 'ing-1' }),
+        ingredient({ id: 'ing-2' }),
+        ingredient({ id: 'ing-3' }),
+      ]),
+    });
+
+    await addAllTo(hook);
+
+    await waitFor(() =>
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Added 2 items to "My List", updated 1',
+      ),
+    );
+    const seeded = cache.readFragment<{
+      active: { edges: { node: { id: string } }[] };
+      bought: { edges: { node: { id: string } }[] };
+    }>({
+      id: 'ShoppingList:sl-1',
+      fragment: gql`
+        fragment ReadLines on ShoppingList {
+          active: itemsConnection(filters: { isPurchased: false }) {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+          bought: itemsConnection(filters: { isPurchased: true }) {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+        }
+      `,
+    });
+    expect(seeded?.bought.edges).toEqual([]);
+    expect(seeded?.active.edges.map(edge => edge.node.id).sort()).toEqual([
+      'sli-bought',
+      'sli-live',
+      'sli-new',
+    ]);
   });
 
   it('reports a refused add as a failure and marks nothing', async () => {

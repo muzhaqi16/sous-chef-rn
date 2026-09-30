@@ -417,15 +417,12 @@ mutation CreateShoppingListItemsFromRecipe(
       }
       results {
         success
+        outcome
         item {
           id
           ...ShoppingListItemReaders
           ...AddedShoppingListItemFields
         }
-      }
-      summary {
-        succeeded
-        skipped
       }
     }
     ... on Error {

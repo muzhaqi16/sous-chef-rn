@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { useApolloClient, useMutation } from '@apollo/client/react';
+import { CreateOutcome } from '#/graphql/generated/schemaTypes';
 import {
   CreateShoppingListItemsFromRecipeDocument,
   CreateShoppingListItemFromRecipeIngredientDocument,
@@ -168,34 +169,6 @@ export function useRecipeShoppingList({
 
   const [createShoppingListItemsFromRecipeMutation] = useMutation(
     CreateShoppingListItemsFromRecipeDocument,
-    {
-      update: (cache, { data }, { variables }) => {
-        const payload = appliedPayload(data);
-        if (!payload || !variables) return;
-        try {
-          const shoppingListId = variables.input.shoppingListId;
-          const bumpTotals = !carriesListTotals(
-            payload.shoppingList,
-            shoppingListId,
-          );
-          // A merged ingredient names a line the list already links.
-          payload.results.forEach(({ item }) => {
-            if (item) {
-              addNewItemToShoppingListCache(
-                cache,
-                shoppingListId,
-                item,
-                bumpTotals,
-              );
-            }
-          });
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Cache update failed for addRecipeToShoppingList:',
-          });
-        }
-      },
-    },
   );
 
   const [addRecipeIngredientMutation] = useMutation(
@@ -300,6 +273,10 @@ export function useRecipeShoppingList({
           toastService.error(t('recipes.noIngredientsToAdd'));
           return;
         }
+        // A MERGED line is an update only when the list already showed it: the
+        // server also answers MERGED for a bought or removed line it reuses,
+        // which reappears on the list.
+        const listedBefore = new Set<string>();
         const settled = await settleMutation(
           () =>
             createShoppingListItemsFromRecipeMutation({
@@ -307,6 +284,34 @@ export function useRecipeShoppingList({
                 // No `servings`: it counts servings to shop for, and the
                 // whole recipe is the default.
                 input: { recipeId, shoppingListId: listId },
+              },
+              update: (cache, { data }) => {
+                const payload = appliedPayload(data);
+                if (!payload) return;
+                try {
+                  const bumpTotals = !carriesListTotals(
+                    payload.shoppingList,
+                    listId,
+                  );
+                  payload.results.forEach(({ item }) => {
+                    if (
+                      item &&
+                      addNewItemToShoppingListCache(
+                        cache,
+                        listId,
+                        item,
+                        bumpTotals,
+                      )
+                    ) {
+                      listedBefore.add(item.id);
+                    }
+                  });
+                } catch (cacheError) {
+                  errorService.reportError(cacheError, {
+                    operation:
+                      'Cache update failed for addRecipeToShoppingList:',
+                  });
+                }
               },
             }),
           {
@@ -322,7 +327,16 @@ export function useRecipeShoppingList({
 
         const payload = appliedPayload(settled.data);
         if (payload) {
-          const { succeeded, skipped } = payload.summary;
+          let added = 0;
+          let updated = 0;
+          for (const { outcome, item } of payload.results) {
+            if (!item) continue;
+            if (outcome === CreateOutcome.Merged && listedBefore.has(item.id)) {
+              updated += 1;
+            } else {
+              added += 1;
+            }
+          }
           const allIngredientIds = extractNodes(
             backendRecipe.ingredientsConnection,
           ).map(ing => ing.id);
@@ -332,14 +346,14 @@ export function useRecipeShoppingList({
             return next;
           });
           toastService.success(
-            skipped > 0
+            updated > 0
               ? t('recipes.addedItemsToListUpdated', {
-                  count: succeeded,
+                  count: added,
                   listName: resolvedName,
-                  updated: skipped,
+                  updated,
                 })
               : t('recipes.addedItemsToList', {
-                  count: succeeded,
+                  count: added,
                   listName: resolvedName,
                 }),
           );
