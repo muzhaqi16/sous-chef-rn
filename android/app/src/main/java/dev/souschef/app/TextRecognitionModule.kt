@@ -1,6 +1,7 @@
 package dev.souschef.app
 
 import android.net.Uri
+import android.os.Build
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -27,10 +28,18 @@ class TextRecognitionModule(reactContext: ReactApplicationContext) :
 
   override fun getName(): String = NAME
 
-  /** Reads every page, then deletes the pages whatever the outcome. */
+  /**
+   * Reads every page, then deletes the pages, and any page an earlier scan left
+   * behind, whatever the outcome.
+   */
   @ReactMethod
   fun recognizeAndDelete(imageUris: ReadableArray, promise: Promise) {
     val uris = (0 until imageUris.size()).mapNotNull { imageUris.getString(it) }.map(Uri::parse)
+    if (ocrCrashesHere()) {
+      deletePages(uris)
+      promise.reject("text_recognition_unsupported", "On-device text recognition crashes this emulator")
+      return
+    }
     executor.execute {
       val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
       try {
@@ -41,9 +50,23 @@ class TextRecognitionModule(reactContext: ReactApplicationContext) :
         promise.reject("text_recognition_failed", error.message, error)
       } finally {
         recognizer.close()
-        for (uri in uris) uri.path?.takeIf { uri.scheme == "file" }?.let { File(it).delete() }
+        deletePages(uris)
       }
     }
+  }
+
+  // Play services' text model dies with SIGILL on the arm64 emulator, killing
+  // the app (docs/verified-library-behaviour.md); a rejection lets JS fall back.
+  private fun ocrCrashesHere(): Boolean =
+    Build.HARDWARE == "ranchu" && Build.SUPPORTED_ABIS.firstOrNull() == "arm64-v8a"
+
+  // A scan whose recognition never finished (the app was killed) leaves its
+  // pages in the ML Kit scanner's cache folder; they go with the next call.
+  private fun deletePages(uris: List<Uri>) {
+    for (uri in uris) uri.path?.takeIf { uri.scheme == "file" }?.let { File(it).delete() }
+    File(reactApplicationContext.cacheDir, "mlkit_docscan_ui_client")
+      .listFiles()
+      ?.forEach { it.delete() }
   }
 
   private fun recognize(

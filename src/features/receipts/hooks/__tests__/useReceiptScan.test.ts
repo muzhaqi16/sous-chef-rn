@@ -13,6 +13,14 @@ jest.mock('#/storage/mmkv');
 jest.mock('#/native/TextRecognition', () => ({
   TextRecognition: { recognizeAndDelete: jest.fn() },
 }));
+const mockTakePhoto = jest.fn();
+const mockPickPhoto = jest.fn();
+jest.mock('#hooks/usePhotoCapture', () => ({
+  usePhotoCapture: () => ({
+    takePhoto: mockTakePhoto,
+    pickPhoto: mockPickPhoto,
+  }),
+}));
 jest.mock('#/native/ReceiptStructuring', () => ({
   ReceiptStructuring: { availability: jest.fn(), labelLines: jest.fn() },
 }));
@@ -109,13 +117,8 @@ describe('useReceiptScan', () => {
     expect(useReceiptDraftStore.getState().draft).toBeNull();
   });
 
-  it('reports a scanner or recognition failure without keeping anything', async () => {
-    scanDocument.mockRejectedValueOnce(new Error('not supported'));
+  it('reports a recognition failure without keeping anything', async () => {
     const { result } = renderScan();
-
-    await act(() => result.current.scan());
-    expect(result.current.status).toBe('failed');
-
     scanDocument.mockResolvedValue({
       status: ScanDocumentResponseStatus.Success,
       scannedImages: ['file:///page.jpg'],
@@ -222,6 +225,61 @@ describe('useReceiptScan', () => {
 
       expect(labelLines).not.toHaveBeenCalled();
       expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
+    });
+  });
+
+  describe('without a document scanner', () => {
+    beforeEach(() => {
+      scanDocument.mockRejectedValue(
+        new Error('Document scanning is not supported on this device'),
+      );
+    });
+
+    it('offers a photo instead of failing', async () => {
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+
+      expect(result.current.status).toBe('scannerUnavailable');
+      expect(recognizeAndDelete).not.toHaveBeenCalled();
+    });
+
+    it('reads a photo taken with the camera like a scanned page', async () => {
+      mockTakePhoto.mockResolvedValue([{ uri: 'file:///cache/photo.jpg' }]);
+      recognizeAndDelete.mockResolvedValue(RECEIPT);
+      const { result } = renderScan();
+      await act(() => result.current.scan());
+
+      await act(() => result.current.takePhoto());
+
+      expect(recognizeAndDelete).toHaveBeenCalledWith([
+        'file:///cache/photo.jpg',
+      ]);
+      expect(result.current.status).toBe('saved');
+      expect(useReceiptDraftStore.getState().draft?.pages).toEqual([
+        'WALMART\nGV WHOLE MILK  3.48 N',
+      ]);
+    });
+
+    it('reads a chosen photo too, and stays put when none is chosen', async () => {
+      mockPickPhoto.mockResolvedValueOnce([]);
+      const { result } = renderScan();
+      await act(() => result.current.scan());
+
+      await act(() => result.current.pickPhoto());
+      expect(result.current.status).toBe('scannerUnavailable');
+      expect(recognizeAndDelete).not.toHaveBeenCalled();
+
+      mockPickPhoto.mockResolvedValueOnce([
+        { uri: 'file:///cache/chosen.jpg' },
+      ]);
+      recognizeAndDelete.mockResolvedValue(RECEIPT);
+      await act(() => result.current.pickPhoto());
+
+      expect(recognizeAndDelete).toHaveBeenCalledWith([
+        'file:///cache/chosen.jpg',
+      ]);
+      expect(result.current.status).toBe('saved');
     });
   });
 });

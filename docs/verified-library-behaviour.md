@@ -1607,3 +1607,20 @@ Resolved 2026-09-30 with `kotlinVersion = "2.2.0"` (React Native 0.87's default)
 Gemini Nano runs only on AICore devices (Pixel 9 and 10, Galaxy S25, Xiaomi 15 and others). The emulator has none, so its labelling is still unverified on a device. `availability()` maps `DOWNLOADABLE` to `downloading`, so a scan never starts a model download.
 
 Re-check: add `implementation("com.google.mlkit:genai-prompt:1.0.0-beta4")` to `android/app/build.gradle`, then run `./gradlew :app:compileDebugKotlin`.
+
+### ML Kit text recognition kills the app on the arm64 Android emulator
+
+Verified 2026-09-30 on `Medium_Phone_API_36.1` (Android 16, arm64, Apple-silicon host) with `play-services-mlkit-text-recognition` 19.0.1.
+
+**Claim:** the first `TextRecognizer.process` loads Play services' TensorFlow Lite module into the app process. It dies there with `signal 4 (SIGILL), code 1 (ILL_ILLOPC)`, with frames in `dl-TfliteDynamiteDynamite` called from `dl-MlkitOcrCommon`. It is a native crash, so neither Kotlin nor JS can catch it. `TextRecognitionModule` therefore rejects with `text_recognition_unsupported` when `Build.HARDWARE == "ranchu"` on arm64, and the screen shows its failure state instead of the app vanishing.
+
+The document scanner works on the same emulator, because it runs in Play services' own process:
+- On first use it downloads its module ("Downloading updates to Google Play services…"), so a phone's first scan needs a connection.
+- It detects the page in the virtual camera scene.
+- It writes pages to `cache/mlkit_docscan_ui_client/<id>.jpg`. A crash between scan and recognition left the page there, so recognition now empties that folder on every call, as iOS does for `DOCUMENT_SCAN_*`.
+
+Re-check: `adb logcat | grep -E "SIGILL|TfliteDynamite"` while scanning on the emulator with the guard removed.
+
+### The image picker's copy is deleted with the scanned pages
+
+Verified 2026-09-30 on the iPhone 18 Pro simulator: the photo fallback (`usePhotoCapture().pickPhoto`) hands `recognizeAndDelete` the picker's temporary copy. After the read, no image newer than the scan remains under the app container's `tmp/`, `Library/Caches/` or `Documents/`. The photo in the user's library is untouched, since the picker only copies it.

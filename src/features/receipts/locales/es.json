@@ -28,6 +28,10 @@
       "title_one": "{{count}} artículo leído en este teléfono",
       "title_other": "{{count}} artículos leídos en este teléfono",
       "atPrice": "{{quantity}} a {{price}}"
+    },
+    "photo": {
+      "title": "Haz una foto en su lugar",
+      "body": "Este teléfono no puede escanear documentos. Fotografía el recibo plano y con buena luz, o elige una foto que ya hayas hecho."
     }
   }
 }

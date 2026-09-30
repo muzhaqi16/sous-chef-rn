@@ -28,6 +28,10 @@
       "title_one": "{{count}} item read on this phone",
       "title_other": "{{count}} items read on this phone",
       "atPrice": "{{quantity}} at {{price}}"
+    },
+    "photo": {
+      "title": "Take a photo instead",
+      "body": "This phone can't scan documents. Photograph the receipt flat and in good light, or choose a photo you've taken."
     }
   }
 }
