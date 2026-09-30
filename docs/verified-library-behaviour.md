@@ -1387,6 +1387,19 @@ The mechanism is Apollo's own dependency tracking: a read depends on each
 entity's `__exists`, which `evict` dirties, so no stale memoized result can
 survive it.
 
+In the app (2026-09-30, iPhone 18 Pro simulator, debug build, the signed-in
+cache: 519 entities, 23 cache watches, 9 active queries), `cache.gc()` followed
+by `cache.broadcastWatches()`, 15 runs each, bracketed by a control run:
+
+```
+default gc   -> median 0.50 ms, p90 0.88 ms (control after: 0.50 / 1.09)
+forced reset -> median 33.83 ms, p90 35.86 ms
+```
+
+A debug build on a simulator overstates absolute times, but the ratio is the
+point: the reset re-reads every watcher cold, about two frames of JS at 60 fps
+per eviction, for no difference in what any read returns.
+
 **What depends on it:** the `cache.gc` wrapper in `src/apollo/client.ts` no
 longer forces the reset, and `safeEvict` / `safeEvictMany` in
 `src/apollo/utils/cacheUpdaters.ts` call a plain `cache.gc()`.
