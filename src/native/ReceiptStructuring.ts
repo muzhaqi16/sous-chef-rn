@@ -56,7 +56,7 @@ const isStructuringModule = (
   typeof Reflect.get(value, 'labelLines') === 'function';
 
 // Resolved per call, like `StartupMark`, so a module registered after this
-// file loads is still found. Android has none yet: it reads as unavailable.
+// file loads is still found. A build without it reads as unavailable.
 const nativeModule = (): ReceiptStructuringNativeModule | null => {
   const candidate: unknown = NativeModules.ReceiptStructuringModule;
   return isStructuringModule(candidate) ? candidate : null;
@@ -78,7 +78,10 @@ const toLabeledLine = (value: unknown): LabeledLine | null => {
     : { line, label: kind };
 };
 
-/** The platform's on-device model, which labels receipt lines; iOS 26+ only. */
+/**
+ * The platform's on-device model, which labels receipt lines: Foundation
+ * Models on iOS 26+, Gemini Nano on AICore Android devices.
+ */
 export const ReceiptStructuring = {
   async availability(): Promise<StructuringAvailability> {
     const module = nativeModule();
