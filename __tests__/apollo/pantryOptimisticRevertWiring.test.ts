@@ -89,7 +89,7 @@ describe('optimistic pantry-item revert wiring', () => {
     expect(creators).toEqual(
       expect.arrayContaining([
         'src/features/barcode/hooks/useAddScannedItem.ts',
-        'src/features/pantry/hooks/mutations/useAddToPantry.ts',
+        'src/features/pantry/hooks/usePantryIntake.ts',
         'src/features/pantry/hooks/usePantryItemSubmission.ts',
       ]),
     );
