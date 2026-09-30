@@ -30,9 +30,13 @@ fragment useItemForEdit_item on Item {
   # The two write paths, which are mutually exclusive and each hard-fail when
   # picked wrongly:
   #
-  #     canEdit    -> updateItem            (direct write)
-  #     canSuggest -> createItemSuggestion  (proposed for review)
-  #     neither    -> read-only
+  #     canSuggest            -> createItemSuggestion  (proposed for review)
+  #     canEdit, not canSuggest -> updateItem          (direct write)
+  #     neither               -> read-only
+  #
+  # A PUBLIC item is only ever suggested to, even by an admin: the app uses no
+  # admin rights (`writesItemDirectly`), so a direct write is the viewer's own
+  # PRIVATE item.
   #
   # Both are needed: canEdit=false does NOT imply "suggest". A PRIVATE item you
   # do not own — a housemate's pantry entry, a shared list's item, a recipe

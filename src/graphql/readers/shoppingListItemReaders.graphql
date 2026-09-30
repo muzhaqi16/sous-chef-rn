@@ -21,6 +21,7 @@ fragment ShoppingListItemReaders on ShoppingListItem {
   item {
     id
     canEdit
+    canSuggest
     displayUnit {
       id
       name

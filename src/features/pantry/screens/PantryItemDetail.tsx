@@ -55,6 +55,7 @@ import { commonStyles } from '#/styles/commonStyles';
 import { daysUntilExpiry } from '#domain/expiry';
 import type { RecipeInformation } from '#/services/spoonacular/types';
 import { useToday } from '#hooks/useToday';
+import { writesItemDirectly } from '#domain/itemWriteAccess';
 
 /**
  * Extracted so `styles.useVariants` is called once per instance.
@@ -518,7 +519,7 @@ export const PantryItemDetail: React.FC<
           photos={itemPhotos}
           initialIndex={viewerIndex ?? 0}
           onClose={() => setViewerIndex(null)}
-          canEdit={item.item.canEdit}
+          canEdit={writesItemDirectly(item.item)}
         />
       )}
     </>

@@ -122,6 +122,7 @@ export function pantryItemData(
         // gated on this, and a fixture that grants it would exercise a path
         // most callers of these fixtures never reach.
         canEdit: false,
+        canSuggest: false,
         name: 'Milk',
         imageUrl: null,
         images: [],

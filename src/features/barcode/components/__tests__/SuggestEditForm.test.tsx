@@ -137,9 +137,9 @@ describe('SuggestEditForm', () => {
     );
   });
 
-  it('words the form as a direct edit when the user may edit it', async () => {
+  it('words the form as a direct edit for the user’s own private item', async () => {
     const { mock } = recordMock(GetItemForEditDocument, {
-      data: itemData({ canEdit: true }),
+      data: itemData({ canEdit: true, canSuggest: false }),
     });
     renderForm([mock]);
 
@@ -147,6 +147,21 @@ describe('SuggestEditForm', () => {
       expect(screen.getByTestId('add-item-form')).toHaveTextContent(
         'directEdit',
       ),
+    );
+  });
+
+  // An admin holds both rights on a public item; the app uses none of them.
+  it('words a public item as a suggestion, even for an admin', async () => {
+    const { mock } = recordMock(GetItemForEditDocument, {
+      data: itemData({ canEdit: true, canSuggest: true }),
+    });
+    renderForm([mock]);
+
+    await waitFor(() =>
+      expect(screen.getByTestId('add-item-form')).toHaveTextContent('edit'),
+    );
+    expect(screen.getByTestId('add-item-form')).not.toHaveTextContent(
+      'directEdit',
     );
   });
 
@@ -186,7 +201,7 @@ describe('SuggestEditForm', () => {
   // A direct edit writes the item, so it stays on the item's own figure.
   it("opens a direct edit on the item's own size", async () => {
     const { mock } = recordMock(GetItemForEditDocument, {
-      data: itemData({ canEdit: true }),
+      data: itemData({ canEdit: true, canSuggest: false }),
     });
     renderWithApollo(
       <SuggestEditForm

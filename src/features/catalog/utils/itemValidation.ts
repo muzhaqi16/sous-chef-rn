@@ -264,8 +264,8 @@ export type CreateItemFormData = InferType<typeof createItemSchema>;
 /**
  * Create, plus a MANDATORY note: `CreateItemSuggestionInput.note` is `String!`,
  * and the reviewing admin has nothing else to judge the diff against. The
- * direct-edit path has no reviewer and `UpdateItemInput` takes no note, so it
- * keeps `createItemSchema` and omits the field.
+ * direct-edit path (the viewer's own private item) has no reviewer, so it keeps
+ * `createItemSchema` and omits the field.
  */
 export const suggestItemEditSchema = createItemSchema.shape({
   editReason: editReasonRequiredRule,
