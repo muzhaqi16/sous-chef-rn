@@ -28,6 +28,10 @@
       "title_one": "{{count}} articolo letto su questo telefono",
       "title_other": "{{count}} articoli letti su questo telefono",
       "atPrice": "{{quantity}} a {{price}}"
+    },
+    "photo": {
+      "title": "Scatta invece una foto",
+      "body": "Questo telefono non può scansionare documenti. Fotografa lo scontrino in piano e con una buona luce, oppure scegli una foto già scattata."
     }
   }
 }

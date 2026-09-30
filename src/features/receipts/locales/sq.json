@@ -28,6 +28,10 @@
       "title_one": "{{count}} artikull u lexua në këtë telefon",
       "title_other": "{{count}} artikuj u lexuan në këtë telefon",
       "atPrice": "{{quantity}} me {{price}}"
+    },
+    "photo": {
+      "title": "Bëj një foto në vend të kësaj",
+      "body": "Ky telefon nuk mund të skanojë dokumente. Fotografoje faturën të shtrirë dhe në dritë të mirë, ose zgjidh një foto që ke bërë."
     }
   }
 }

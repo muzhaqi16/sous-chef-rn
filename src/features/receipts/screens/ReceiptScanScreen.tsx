@@ -17,9 +17,11 @@ import { receiptsTestIDs } from '../testIDs';
 export const ReceiptScanScreen: React.FC = () => {
   const { t } = useTranslation();
   const { goBack } = useAppNavigation();
-  const { status, draft, scan, discard } = useReceiptScan({
-    onCancel: goBack,
-  });
+  const { status, draft, scan, takePhoto, pickPhoto, discard } = useReceiptScan(
+    {
+      onCancel: goBack,
+    },
+  );
 
   const header: ScreenHeaderConfig = {
     title: t('receipts.title'),
@@ -27,6 +29,12 @@ export const ReceiptScanScreen: React.FC = () => {
   };
   const startScan = () => {
     void scan();
+  };
+  const startPhoto = () => {
+    void takePhoto();
+  };
+  const startPick = () => {
+    void pickPhoto();
   };
 
   const scanReplacing = () => {
@@ -76,6 +84,24 @@ export const ReceiptScanScreen: React.FC = () => {
     switch (status) {
       case 'reading':
         return <Loading message={t('receipts.reading')} />;
+      case 'scannerUnavailable':
+        return (
+          <EmptyState
+            icon="camera-outline"
+            title={t('receipts.photo.title')}
+            description={t('receipts.photo.body')}
+            action={{
+              label: t('labels.takePhoto'),
+              onPress: startPhoto,
+              icon: 'camera-outline',
+            }}
+            secondaryAction={{
+              label: t('a11y.choosePhoto'),
+              onPress: startPick,
+              icon: 'images-outline',
+            }}
+          />
+        );
       case 'unreadable':
         return (
           <ErrorState
