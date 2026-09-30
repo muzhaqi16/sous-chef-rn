@@ -185,7 +185,8 @@
       "packageSize": "Indica el tamaño del paquete en una unidad del mismo tipo que la de este artículo (peso con peso, volumen con volumen).",
       "resolution": "Elige si usar la estimación o introducir la cantidad tú mismo.",
       "amount": "Es más de lo que le queda a este artículo.",
-      "unitId": "Esa unidad no se puede usar aquí. Elige una de la lista."
+      "unitId": "Esa unidad no se puede usar aquí. Elige una de la lista.",
+      "primaryUpc": "Ese código de barras no es válido. Comprueba los dígitos e inténtalo de nuevo."
     },
     "unitDenied": {
       "noRoute": "Esa unidad no se puede convertir a la forma en que se registra este artículo.",
