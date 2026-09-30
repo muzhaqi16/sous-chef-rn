@@ -17,6 +17,7 @@ class MainApplication : Application(), ReactApplication {
               // Packages that cannot be autolinked yet can be added manually here, for example:
               // add(MyReactNativePackage())
               add(StartupMarkPackage())
+              add(TextRecognitionPackage())
             },
       // Defaults to react-android's own BuildConfig.DEBUG, which resolves to the
       // library's debug variant for build types it doesn't publish (localRelease,

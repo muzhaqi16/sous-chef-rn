@@ -1515,3 +1515,61 @@ a hook that exposes `refetch` guards it. Resync is unaffected: a never-run
 is skipped). `useSubscription` has no `skipToken` overload in 4.2.12, so the
 subscription hooks stay on `skip`, which also gates
 `useSubscriptionTransportRecovery`.
+
+### Google ML Kit's iOS pods have no arm64-simulator slice
+
+Verified 2026-09-30 against `MLKitTextRecognition` 7.0.0 (the pod behind
+`GoogleMLKit/TextRecognition` 8.0.0, which `@react-native-ml-kit/text-recognition`
+2.0.0 pins).
+
+**Claim:** ML Kit's iOS frameworks ship an arm64 slice built for devices and an
+x86_64 slice built for the simulator, and nothing else. On Apple silicon with
+an arm64-only iOS 26+ simulator runtime, any ML Kit pod fails to link. That's
+why `react-native.config.js` keeps the barcode scanner's pod off iOS, and why
+receipt text recognition uses Apple Vision on iOS (`TextRecognitionModule.swift`).
+
+Re-check (the pod's source URL is in its podspec on the CocoaPods CDN):
+
+```
+curl -sL -o t.tgz https://dl.google.com/dl/cpdc/d19e9c059f422b0c/MLKitTextRecognition-7.0.0.tar.gz
+tar xzf t.tgz && F=Frameworks/MLKitTextRecognition.framework/MLKitTextRecognition
+lipo -info $F                               # x86_64 arm64
+for a in arm64 x86_64; do lipo -thin $a $F -output /tmp/s && otool -l /tmp/s | grep -m1 ' platform '; done
+# arm64 → platform 2 (iOS device); x86_64 → platform 7 (iOS simulator)
+```
+
+### Apple Vision reads a two-column receipt as separate columns
+
+Verified 2026-09-30 on the iPhone 18 Pro simulator (iOS 27, arm64) through
+`TextRecognitionModule.recognizeAndDelete` (`VNRecognizeTextRequest`,
+`.accurate`, language correction off).
+
+**Claim:** Vision returns a receipt's left column top to bottom, and then its
+price column as separate observations. A row's name and price are never one
+observation. `receipts/utils/assembleReceiptLines.ts` rebuilds rows by vertical
+overlap before redaction and parsing. The same call deletes the pages it read,
+plus any `DOCUMENT_SCAN_*.jpg` that `react-native-document-scanner-plugin`
+2.0.4 left in Documents: the plugin writes every page there, and iCloud backs
+that folder up.
+
+Measured on a rendered 18-row receipt (1800×2032 JPEG):
+- 24 observations in 1.3 s, every text exact;
+- the 16 left-column rows first, then 8 prices;
+- each price's `y` within 0.005 of its row's `y`;
+- both files gone from Documents afterwards.
+
+Re-check: put a JPEG in the app's Documents directory, connect the debugger
+(`argent-metro-debugger`), then evaluate:
+
+```js
+globalThis.nativeModuleProxy.TextRecognitionModule
+  .recognizeAndDelete(['file://<Documents>/probe.jpg'])
+  .then(pages => (globalThis.__probe = pages));
+```
+
+The document scanner itself needs a device: on the simulator, `scanDocument`
+rejects with `Document scanning is not supported on this device` (the plugin's
+`VNDocumentCameraViewController.isSupported` check), and the screen shows its
+failure state. The plugin's open iOS crash on
+a zero-page Done (websitebeaver/react-native-document-scanner-plugin#184) is
+accepted: a patch is out of bounds, and JS can't catch it.

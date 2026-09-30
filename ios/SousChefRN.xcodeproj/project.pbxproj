@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		16A858AB987FF9BCA820269B /* libPods-SousChef.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 014461885C99122C44001B04 /* libPods-SousChef.a */; };
+		36AD646A2F707013CEB1F5AF /* TextRecognitionModule.m in Sources */ = {isa = PBXBuildFile; fileRef = EA5A51CD1E92F8B1BD192479 /* TextRecognitionModule.m */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		9058099E05341522253DC8A7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
@@ -16,6 +17,7 @@
 		A1B2C3D4E5F6A7B800000003 /* WindowBackgroundModule.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B800000004 /* WindowBackgroundModule.m */; };
 		A1B2C3D4E5F6A7B800000005 /* PushNotificationForwarder.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B800000006 /* PushNotificationForwarder.m */; };
 		C1945D0219D8B0D4943130D4 /* StartupMarkModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = F27910D27828985604CDD2C3 /* StartupMarkModule.mm */; };
+		E9FCC700806CCE313DFF5908 /* TextRecognitionModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A8286C87D5B07D0DC7DFAFB /* TextRecognitionModule.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +26,7 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = SousChef/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = SousChef/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = SousChef/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		2A8286C87D5B07D0DC7DFAFB /* TextRecognitionModule.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TextRecognitionModule.swift; path = SousChef/TextRecognitionModule.swift; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = SousChef/AppDelegate.swift; sourceTree = "<group>"; };
 		7D011261455248FCBEC7103F /* Pods-SousChef.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SousChef.release.xcconfig"; path = "Target Support Files/Pods-SousChef/Pods-SousChef.release.xcconfig"; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = SousChef/LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -34,6 +37,7 @@
 		A1B2C3D4E5F6A7B800000008 /* SousChef-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "SousChef-Bridging-Header.h"; path = "SousChef/SousChef-Bridging-Header.h"; sourceTree = "<group>"; };
 		AF21E45479A23913AB3C227A /* Pods-SousChef.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SousChef.debug.xcconfig"; path = "Target Support Files/Pods-SousChef/Pods-SousChef.debug.xcconfig"; sourceTree = "<group>"; };
 		B8515327E8B8493A80BF6463 /* Config.xcconfig */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
+		EA5A51CD1E92F8B1BD192479 /* TextRecognitionModule.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = TextRecognitionModule.m; path = SousChef/TextRecognitionModule.m; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F27910D27828985604CDD2C3 /* StartupMarkModule.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = StartupMarkModule.mm; path = SousChef/StartupMarkModule.mm; sourceTree = "<group>"; };
 		F2D1A3B82D4E0F0000A1C2E3 /* SousChef.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = SousChef.entitlements; path = SousChef/SousChef.entitlements; sourceTree = "<group>"; };
@@ -66,6 +70,8 @@
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
 				F2D1A3B82D4E0F0000A1C2E3 /* SousChef.entitlements */,
 				F27910D27828985604CDD2C3 /* StartupMarkModule.mm */,
+				2A8286C87D5B07D0DC7DFAFB /* TextRecognitionModule.swift */,
+				EA5A51CD1E92F8B1BD192479 /* TextRecognitionModule.m */,
 			);
 			name = SousChef;
 			sourceTree = "<group>";
@@ -272,6 +278,8 @@
 				A1B2C3D4E5F6A7B800000003 /* WindowBackgroundModule.m in Sources */,
 				A1B2C3D4E5F6A7B800000005 /* PushNotificationForwarder.m in Sources */,
 				C1945D0219D8B0D4943130D4 /* StartupMarkModule.mm in Sources */,
+				E9FCC700806CCE313DFF5908 /* TextRecognitionModule.swift in Sources */,
+				36AD646A2F707013CEB1F5AF /* TextRecognitionModule.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
