@@ -12,6 +12,7 @@ import { FormInput } from '#components/atoms/FormInput';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { Button } from '#components/molecules/Button';
+import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { localizeNumericHint } from '#/utils/formatters/number';
@@ -29,6 +30,8 @@ import { receiptsTestIDs } from '../testIDs';
 interface ReceiptLineFormProps {
   line: ReceiptReviewLine;
   choice: ReceiptLineChoice | undefined;
+  /** The shopping list line it matches, when it matches one. */
+  listItemName: string | undefined;
   onClose: () => void;
   onSave: (choice: ReceiptLineChoice) => void;
   onRemove: () => void;
@@ -38,6 +41,7 @@ interface ReceiptLineFormProps {
 const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   line,
   choice,
+  listItemName,
   onClose,
   onSave,
   onRemove,
@@ -160,6 +164,29 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
         </View>
       </DropdownStack>
 
+      {!!listItemName && (
+        <View style={styles.listToggle}>
+          <View style={styles.listToggleText}>
+            <Text role="bodyStrong">{t('receipts.review.tickOffTitle')}</Text>
+            <Text role="caption" tone="secondary">
+              {t('receipts.review.tickOffBody', { name: listItemName })}
+            </Text>
+          </View>
+          <Controller
+            control={control}
+            name="offList"
+            render={({ field }) => (
+              <BaseSwitch
+                accessibilityLabel={t('receipts.review.tickOffTitle')}
+                value={!field.value}
+                onValueChange={on => field.onChange(!on)}
+                testID={receiptsTestIDs.lineTickOff}
+              />
+            )}
+          />
+        </View>
+      )}
+
       {!!choice && (
         <Button variant="ghost" icon="close-circle-outline" onPress={onRemove}>
           {t('receipts.review.dontAdd')}
@@ -174,6 +201,7 @@ interface ReceiptLineSheetProps {
   /** The line being edited, kept after closing so the sheet animates out full. */
   line: ReceiptReviewLine | null;
   choice: ReceiptLineChoice | undefined;
+  listItemName: string | undefined;
   /** Changes on every opening, so each one starts from the saved choice. */
   opening: number;
   onClose: () => void;
@@ -186,6 +214,7 @@ export const ReceiptLineSheet: React.FC<ReceiptLineSheetProps> = ({
   visible,
   line,
   choice,
+  listItemName,
   opening,
   onClose,
   onSave,
@@ -203,6 +232,7 @@ export const ReceiptLineSheet: React.FC<ReceiptLineSheetProps> = ({
         key={opening}
         line={line}
         choice={choice}
+        listItemName={listItemName}
         onClose={onClose}
         onSave={onSave}
         onRemove={onRemove}
@@ -242,6 +272,20 @@ const styles = StyleSheet.create(theme => ({
   },
   quantityField: {
     flex: 0.4,
+  },
+  listToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
+  },
+  listToggleText: {
+    flex: 1,
+    gap: theme.spacing.xs,
   },
   unitField: {
     flex: 0.6,

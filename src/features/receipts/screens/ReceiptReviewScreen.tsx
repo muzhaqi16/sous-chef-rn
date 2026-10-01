@@ -51,8 +51,8 @@ export const ReceiptReviewScreen: React.FC = () => {
   };
   const closeSheet = () => setSheetVisible(false);
   // The saved choice, not the one captured when the row was tapped.
-  const editingChoice = editing
-    ? rows.find(row => row.index === editing.index)?.choice
+  const editingRow = editing
+    ? rows.find(row => row.index === editing.index)
     : undefined;
 
   const subtitleOf = (row: ReceiptReviewRow) => {
@@ -72,6 +72,8 @@ export const ReceiptReviewScreen: React.FC = () => {
     if (row.failure) {
       return { text: t('receipts.review.notAdded'), variant: 'danger' };
     }
+    if (row.onList)
+      return { text: t('receipts.review.onList'), variant: 'primary' };
     return undefined;
   };
 
@@ -165,7 +167,8 @@ export const ReceiptReviewScreen: React.FC = () => {
       <ReceiptLineSheet
         visible={sheetVisible}
         line={editing}
-        choice={editingChoice}
+        choice={editingRow?.choice}
+        listItemName={editingRow?.listItemName}
         opening={opening}
         onClose={closeSheet}
         onSave={choice => {
