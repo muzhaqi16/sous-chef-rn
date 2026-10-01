@@ -54,7 +54,10 @@
       "dontAdd": "Non aggiungere questa riga",
       "invalidPrice": "Inserisci l'importo pagato, ad esempio 3,49, oppure lascia vuoto.",
       "totalsTitle": "Le righe non tornano con lo scontrino",
-      "totalsBody": "Gli articoli letti fanno {{counted}}, ma lo scontrino dice {{printed}}. Potrebbe mancare una riga: confronta l'elenco con lo scontrino prima di aggiungere."
+      "totalsBody": "Gli articoli letti fanno {{counted}}, ma lo scontrino dice {{printed}}. Potrebbe mancare una riga: confronta l'elenco con lo scontrino prima di aggiungere.",
+      "onList": "Nella tua lista",
+      "tickOffTitle": "Spuntalo dalla lista della spesa",
+      "tickOffBody": "“{{name}}” è nella tua lista. Viene segnato come comprato e spostato in dispensa invece di essere aggiunto due volte."
     }
   }
 }

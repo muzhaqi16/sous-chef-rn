@@ -13,4 +13,5 @@ export const receiptsTestIDs = {
   reviewLine: 'receipt-review-line',
   lineProduct: 'receipt-line-product',
   lineSave: 'receipt-line-save',
+  lineTickOff: 'receipt-line-tick-off',
 };

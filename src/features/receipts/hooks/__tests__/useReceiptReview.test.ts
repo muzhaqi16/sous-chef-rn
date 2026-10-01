@@ -14,6 +14,11 @@ import {
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import { usePantryItemSelection } from '#features/pantry/hooks/usePantryItemSelection';
+import {
+  GetShoppingListItemsFilteredDocument,
+  MoveShoppingItemToPantryDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import { useStore } from '#store';
 import { AcquisitionMethod, ErrorCode } from '#/graphql/generated/schemaTypes';
 import { isRecord } from '#/utils/isRecord';
 import {
@@ -31,6 +36,15 @@ jest.mock('#/services/alertService', () => ({
 jest.mock('#features/pantry/hooks/useCurrentPantry', () => ({
   useCurrentPantry: () => ({ pantry: { id: 'p1', name: 'Kitchen' } }),
 }));
+jest.mock('#hooks/auth/useIsLoggedOut', () => ({
+  useIsLoggedOut: () => false,
+}));
+
+globalThis.requestIdleCallback = jest.fn((cb: IdleRequestCallback) => {
+  cb({ didTimeout: false, timeRemaining: () => 0 });
+  return 1;
+});
+globalThis.cancelIdleCallback = jest.fn();
 
 const PANTRY_VARS = { id: 'p1', itemsFirst: 100 };
 const PANTRY: MockDataFor<typeof GetPantryDocument> = {
@@ -136,21 +150,72 @@ const createFor = (
       };
 };
 
+// Milk is open on the active list; nothing has been bought from it yet.
+const listItems = (
+  vars: Record<string, unknown>,
+): MockDataFor<typeof GetShoppingListItemsFilteredDocument> => ({
+  shoppingList: {
+    __typename: 'ShoppingList',
+    id: 'list-1',
+    itemsConnection: {
+      totalCount: vars.isPurchased ? 0 : 1,
+      pageInfo: { hasNextPage: false, endCursor: null },
+      edges: vars.isPurchased
+        ? []
+        : [
+            {
+              cursor: 'c1',
+              node: {
+                id: 'sli-milk',
+                itemName: 'Milk',
+                quantity: 2,
+                unit: null,
+                item: { id: 'cat-milk' },
+                shoppingList: { id: 'list-1' },
+                purchaseInfo: { isPurchased: false, movedToPantryAt: null },
+              },
+            },
+          ],
+    },
+  },
+});
+
+const movedFor = (
+  vars: Record<string, unknown>,
+): MockDataFor<typeof MoveShoppingItemToPantryDocument> => {
+  const input = isRecord(vars.input) ? vars.input : {};
+  return {
+    moveShoppingItemToPantry: {
+      __typename: 'MoveShoppingItemToPantryPayload',
+      pantryItem: { id: String(input.pantryItemId) },
+    },
+  };
+};
+
 async function setup() {
   const cache = makeCache();
   const getPantry = recordMock(GetPantryDocument, { data: PANTRY });
   const create = recordMock(CreatePantryItemDocument, { dataFor: createFor });
+  const list = recordMock(GetShoppingListItemsFilteredDocument, {
+    dataFor: listItems,
+  });
+  const move = recordMock(MoveShoppingItemToPantryDocument, {
+    dataFor: movedFor,
+  });
   const rendered = renderHookWithApollo(
     () => {
       const pantry = usePantryItemSelection('p1');
       return { pantry, review: useReceiptReview() };
     },
-    { cache, operationMocks: [getPantry.mock, create.mock] },
+    {
+      cache,
+      operationMocks: [getPantry.mock, create.mock, list.mock, move.mock],
+    },
   );
   await waitFor(() =>
     expect(rendered.result.current.pantry.hasLoaded).toBe(true),
   );
-  return { ...rendered, cache, create };
+  return { ...rendered, cache, create, move };
 }
 
 beforeEach(() => {
@@ -173,7 +238,7 @@ describe('useReceiptReview', () => {
 
   it('adds the chosen lines, keeps what was added, and names why the rest failed', async () => {
     const { result, cache, create } = await setup();
-    act(() => {
+    await act(async () => {
       result.current.review.chooseLine(1, MILK);
       result.current.review.chooseLine(3, BANANAS);
     });
@@ -218,10 +283,79 @@ describe('useReceiptReview', () => {
 
   it('forgets a line the user chose not to add', async () => {
     const { result } = await setup();
-    act(() => result.current.review.chooseLine(1, MILK));
-    act(() => result.current.review.chooseLine(1, null));
+    await act(async () => {
+      result.current.review.chooseLine(1, MILK);
+    });
+    await act(async () => {
+      result.current.review.chooseLine(1, null);
+    });
 
     expect(result.current.review.rows[0]?.choice).toBeUndefined();
     expect(result.current.review.pendingCount).toBe(0);
+  });
+
+  describe('with the milk open on the shopping list', () => {
+    beforeEach(() => {
+      useStore.getState().setSelectedShoppingListId('list-1');
+    });
+    afterEach(() => {
+      useStore.getState().setSelectedShoppingListId(null);
+    });
+
+    it('ticks the list line off instead of adding the milk again', async () => {
+      const { result, create, move } = await setup();
+      await act(async () => {
+        result.current.review.chooseLine(1, MILK);
+        result.current.review.chooseLine(3, {
+          ...BANANAS,
+          itemId: 'cat-bananas',
+        });
+      });
+      await waitFor(() =>
+        expect(result.current.review.rows[0]?.onList).toBe(true),
+      );
+      expect(result.current.review.rows[0]?.listItemName).toBe('Milk');
+      expect(result.current.review.rows[1]?.onList).toBe(false);
+
+      let outcome: unknown;
+      await act(async () => {
+        outcome = await result.current.review.addChosen();
+      });
+
+      expect(outcome).toEqual({ added: 2, failed: 0 });
+      // The amount and price the review shows, whatever the list asked for.
+      expect(move.fired.map(vars => vars.input)).toEqual([
+        expect.objectContaining({
+          shoppingListItemId: 'sli-milk',
+          pantryId: 'p1',
+          actualQuantity: 1,
+          actualPrice: 2.79,
+          removeFromList: true,
+        }),
+      ]);
+      expect(create.fired.map(vars => vars.input)).toEqual([
+        expect.objectContaining({ item: { id: 'cat-bananas' } }),
+      ]);
+    });
+
+    it('adds a line on its own when the user keeps it off the list', async () => {
+      const { result, create, move } = await setup();
+      await act(async () => {
+        result.current.review.chooseLine(1, { ...MILK, offList: true });
+      });
+      await waitFor(() =>
+        expect(result.current.review.rows[0]?.listItemName).toBe('Milk'),
+      );
+      expect(result.current.review.rows[0]?.onList).toBe(false);
+
+      await act(async () => {
+        await result.current.review.addChosen();
+      });
+
+      expect(move.fired).toEqual([]);
+      expect(create.fired.map(vars => vars.input)).toEqual([
+        expect.objectContaining({ item: { id: 'cat-milk' } }),
+      ]);
+    });
   });
 });

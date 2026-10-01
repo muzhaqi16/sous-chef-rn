@@ -15,6 +15,8 @@ export interface ReceiptLineChoice {
   unitText: string;
   /** The total paid for the line. */
   price: number | null;
+  /** Added on its own, leaving the shopping list line it matches open. */
+  offList?: boolean;
 }
 
 export interface ReceiptDraft {
