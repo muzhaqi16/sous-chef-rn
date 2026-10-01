@@ -41,9 +41,10 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
   const draft = useReceiptDraftStore(state => state.draft);
   const saveDraft = useReceiptDraftStore(state => state.saveDraft);
   const clearDraft = useReceiptDraftStore(state => state.clearDraft);
-  const [status, setStatus] = useState<ReceiptScanStatus>(
-    draft ? 'saved' : 'idle',
-  );
+  const [phase, setStatus] = useState<ReceiptScanStatus>('idle');
+  // The draft store hydrates asynchronously, so a saved draft can arrive after
+  // the first render; it is read on every render, never only as a seed.
+  const status = phase === 'idle' && draft ? 'saved' : phase;
 
   const { takePhoto: capturePhoto, pickPhoto: choosePhoto } = usePhotoCapture();
 
