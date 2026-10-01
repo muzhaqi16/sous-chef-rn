@@ -7,12 +7,18 @@ export interface OpenListLine {
   unit: { id: string; name: string; symbol: string } | null;
 }
 
+/** What decides a line's list match: its product and unit, saved or still being picked. */
+export type ListMatchKey = Pick<
+  ReceiptLineChoice,
+  'itemId' | 'unitId' | 'unitText'
+>;
+
 /**
  * A move records the purchase in a unit by id, or in the list line's own. A
  * picked unit fits a line in that unit or in none; a typed one only a line in
  * that unit, whose id the move then carries; no unit takes the line's.
  */
-function unitFits(choice: ReceiptLineChoice, line: OpenListLine): boolean {
+function unitFits(choice: ListMatchKey, line: OpenListLine): boolean {
   if (choice.unitId) return !line.unit || choice.unitId === line.unit.id;
   const typed = choice.unitText.trim().toLowerCase();
   if (!typed) return true;
@@ -25,7 +31,7 @@ function unitFits(choice: ReceiptLineChoice, line: OpenListLine): boolean {
 
 /** The open list line a chosen receipt line is for: the same catalog item, in a unit it fits. */
 export function listLineFor<Line extends OpenListLine>(
-  choice: ReceiptLineChoice,
+  choice: ListMatchKey,
   lines: readonly Line[],
 ): Line | undefined {
   const { itemId } = choice;

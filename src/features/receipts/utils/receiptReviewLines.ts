@@ -5,6 +5,8 @@ export interface ReceiptReviewLine {
   index: number;
   /** The product words as printed, else the whole line. */
   printed: string;
+  /** The barcode or store item number printed on the line. */
+  code?: string;
   quantity?: number;
   unit?: string;
   /** What was paid for the line once its discounts are taken off. */
@@ -41,6 +43,7 @@ export function receiptReviewLines(
         index: line.index,
         printed: line.product ?? line.rawText,
       };
+      if (line.code) review.code = line.code;
       if (line.quantity !== undefined) review.quantity = line.quantity;
       if (line.unit) review.unit = line.unit;
       if (line.lineTotal !== undefined) {
