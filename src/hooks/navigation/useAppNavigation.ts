@@ -99,6 +99,10 @@ export function useAppNavigation() {
     toAppSettings: () => navigation.navigate('AppSettings'),
     toPerformanceDashboard: () => navigation.navigate('PerformanceDashboard'),
     toDebugInfo: () => navigation.navigate('DebugInfo'),
+    toReceiptScan: () =>
+      navigation.navigate('Receipts', { screen: 'ReceiptScan' }),
+    toReceiptReview: () =>
+      navigation.navigate('Receipts', { screen: 'ReceiptReview' }),
     toChangePassword: () => navigation.navigate('ChangePassword'),
     toAppearance: () => navigation.navigate('Appearance'),
 

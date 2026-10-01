@@ -14,6 +14,7 @@ import type notificationsCopy from '#features/notifications/locales/en.json';
 import type onboardingCopy from '#features/onboarding/locales/en.json';
 import type pantryCopy from '#features/pantry/locales/en.json';
 import type profileCopy from '#features/profile/locales/en.json';
+import type receiptsCopy from '#features/receipts/locales/en.json';
 import type recipesCopy from '#features/recipes/locales/en.json';
 import type shoppingListCopy from '#features/shoppingList/locales/en.json';
 
@@ -28,5 +29,6 @@ export type TranslationResources = typeof core &
   typeof onboardingCopy &
   typeof pantryCopy &
   typeof profileCopy &
+  typeof receiptsCopy &
   typeof recipesCopy &
   typeof shoppingListCopy;

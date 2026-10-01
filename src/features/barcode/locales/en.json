@@ -20,7 +20,6 @@
     "barcodeValue": "Barcode: {{barcode}}",
     "formatValue": "Format: {{format}}",
     "upc": "UPC/Barcode",
-    "added": "Added",
     "servingAmount": "One serving: {{amount}}",
     "referenceAmount": "Nutrition per {{amount}}"
   }
