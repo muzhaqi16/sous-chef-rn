@@ -22,12 +22,21 @@ jest.mock('#features/pantry/hooks/usePantryAnalytics', () => ({
     wasteData: {
       totalWasteCount: 5,
       wasteRate: 10.5,
-      totalWasteValue: 12.5,
+      valueByCurrency: [
+        { currencyCode: 'USD', amount: 12.5 },
+        { currencyCode: 'EUR', amount: 3.1 },
+      ],
       composted: 2.0,
       recycled: 1.5,
       wasteTrend: [],
       wasteByReason: [{ reason: 'EXPIRED', count: 3, percentage: 60 }],
-      topWastedItems: [{ itemName: 'Lettuce', count: 2, estimatedValue: 4.0 }],
+      topWastedItems: [
+        {
+          itemName: 'Lettuce',
+          count: 2,
+          valueByCurrency: [{ currencyCode: 'USD', amount: 4.0 }],
+        },
+      ],
     },
     ledgerData: {
       summary: {
@@ -210,10 +219,10 @@ describe('PantryAnalytics', () => {
     expect(screen.getByText('10.5%')).toBeTruthy();
   });
 
-  it('shows estimated value lost in waste tab', () => {
+  it('shows the value lost in each currency apart, never added together', () => {
     render(<PantryAnalytics route={route} />);
     expect(screen.getByText('Est. Value Lost')).toBeTruthy();
-    expect(screen.getByText('$12.50')).toBeTruthy();
+    expect(screen.getByText('$12.50 · €3.10')).toBeTruthy();
   });
 
   it('shows composted value in waste tab', () => {
@@ -265,7 +274,7 @@ describe('PantryAnalytics', () => {
         wasteData: {
           totalWasteCount: 0,
           wasteRate: 0,
-          totalWasteValue: 0,
+          valueByCurrency: [],
           composted: 0,
           recycled: 0,
           wasteTrend: [],
@@ -325,7 +334,7 @@ describe('PantryAnalytics', () => {
         wasteData: {
           totalWasteCount: 0,
           wasteRate: 0,
-          totalWasteValue: 0,
+          valueByCurrency: [],
           composted: 0,
           recycled: 0,
           wasteTrend: [],
@@ -402,7 +411,7 @@ describe('PantryAnalytics', () => {
         wasteData: {
           totalWasteCount: 0,
           wasteRate: 0,
-          totalWasteValue: 0,
+          valueByCurrency: [],
           composted: 0,
           recycled: 0,
           wasteTrend: [],
@@ -479,7 +488,7 @@ describe('PantryAnalytics', () => {
         wasteData: {
           totalWasteCount: 0,
           wasteRate: 0,
-          totalWasteValue: 0,
+          valueByCurrency: [],
           composted: 0,
           recycled: 0,
           wasteTrend: [],
@@ -536,7 +545,7 @@ describe('PantryAnalytics', () => {
         wasteData: {
           totalWasteCount: 0,
           wasteRate: 0,
-          totalWasteValue: 0,
+          valueByCurrency: [],
           composted: 0,
           recycled: 0,
           wasteTrend: [],

@@ -20,7 +20,6 @@
     "barcodeValue": "Barkodi: {{barcode}}",
     "formatValue": "Formati: {{format}}",
     "upc": "UPC/Barkod",
-    "added": "U shtua",
     "servingAmount": "Një racion: {{amount}}",
     "referenceAmount": "Vlerat ushqyese për {{amount}}"
   }
