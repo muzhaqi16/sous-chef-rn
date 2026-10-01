@@ -277,6 +277,23 @@ describe('structureReceipt', () => {
     expect(parsed.lines[1]).toMatchObject({ kind: 'other', appliesToIndex: 2 });
   });
 
+  it('keeps every code at the line end out of the product words', () => {
+    const [line] = items(
+      ['SH FN 2CT BK 071641180510  888849007170 F  6.96 Y'],
+      {
+        lines: [
+          {
+            line: 0,
+            label: 'item',
+            product: 'SH FN 2CT BK 071641180510 888849007170 F 6.96 Y',
+          },
+        ],
+      },
+    );
+
+    expect(line).toMatchObject({ product: 'SH FN 2CT BK', lineTotal: 6.96 });
+  });
+
   it('keeps the price, and the flag after the code, out of the product words', () => {
     const [line] = items(['SBX PPR GR 7 762111466790 F  4.28 R'], {
       lines: [

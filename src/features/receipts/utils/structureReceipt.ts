@@ -67,20 +67,16 @@ const KIND_OF_LABEL: Record<ReceiptLineLabel, ParsedLineKind | 'detail'> = {
 
 const cents = (value: number) => Math.round(value * 100);
 
-// The model copies the printed words, so Costco's `E 1234567 KS WATER` keeps
-// its tax flag and item number, and a Walmart line its price and the flag after
-// its code; all are read from the line on their own.
+// The model copies the printed words, so a Walmart line keeps its price, its
+// codes and the flag after them at the line's end (`SH FN 2CT BK 071641180510
+// 888849007170 F 6.96 Y`), and Costco's `E 1234567 KS WATER` its flag and item
+// number; all are read from the line on their own. A short word after a code
+// mid-line is the name's (Costco's `KS`).
+const TRAILING_CODES = /(?:\s+\d{4,14})+(?:\s+[A-Z]{1,2})?\s*$/;
+
 const cleanProduct = (product: string, code: string | undefined) => {
-  const priceless = withoutAmount(product);
-  // A flag follows the code only at the line's end; elsewhere a short word
-  // after it is the name's (Costco's `KS`).
-  return (
-    code
-      ? priceless
-          .replace(new RegExp(`${code}(?:\\s+[A-Z]{1,2})?\\s*$`), '')
-          .replace(code, ' ')
-      : priceless
-  )
+  const words = withoutAmount(product).replace(TRAILING_CODES, '');
+  return (code ? words.replace(code, ' ') : words)
     .replace(/^\s*[A-Z]\s+(?=\S)/, '')
     .replace(/\s+/g, ' ')
     .trim();
