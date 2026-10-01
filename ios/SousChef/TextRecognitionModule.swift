@@ -44,6 +44,10 @@ class TextRecognitionModule: NSObject {
     let lines: [[String: Any]] = (request.results ?? []).compactMap { observation in
       guard let text = observation.topCandidates(1).first?.string else { return nil }
       let box = observation.boundingBox
+      // The rise of the line's top edge per unit across, down positive: a tilted
+      // photo's rows are read along it (assembleReceiptLines.ts).
+      let run = observation.topRight.x - observation.topLeft.x
+      let slope = run > 0 ? (observation.topLeft.y - observation.topRight.y) / run : 0
       // Vision's origin is bottom-left; the bridge's is top-left.
       return [
         "text": text,
@@ -51,6 +55,7 @@ class TextRecognitionModule: NSObject {
         "y": 1 - box.maxY,
         "width": box.width,
         "height": box.height,
+        "slope": slope,
       ]
     }
     return ["lines": lines]

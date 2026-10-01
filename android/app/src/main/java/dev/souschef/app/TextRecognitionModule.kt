@@ -1,5 +1,6 @@
 package dev.souschef.app
 
+import android.graphics.Point
 import android.net.Uri
 import android.os.Build
 import com.facebook.react.bridge.Arguments
@@ -90,11 +91,22 @@ class TextRecognitionModule(reactContext: ReactApplicationContext) :
             putDouble("y", box.top / height)
             putDouble("width", box.width() / width)
             putDouble("height", box.height() / height)
+            slopeOf(line.cornerPoints, width, height)?.let { putDouble("slope", it) }
           },
         )
       }
     }
     return Arguments.createMap().apply { putArray("lines", lines) }
+  }
+
+  // The rise of the line's top edge per unit across, in page fractions, down
+  // positive: a tilted photo's rows are read along it (assembleReceiptLines.ts).
+  private fun slopeOf(corners: Array<Point>?, width: Double, height: Double): Double? {
+    val topLeft = corners?.getOrNull(0) ?: return null
+    val topRight = corners.getOrNull(1) ?: return null
+    val run = (topRight.x - topLeft.x) / width
+    if (run <= 0) return null
+    return (topRight.y - topLeft.y) / height / run
   }
 
   companion object {

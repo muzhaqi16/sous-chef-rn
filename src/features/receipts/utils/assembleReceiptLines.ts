@@ -128,11 +128,6 @@ const cleanLatin = (text: string) =>
     )
     .replace(NOISE_AFTER_FIGURE, '$1');
 
-/**
- * Rebuilds each page's printed rows, top to bottom. Text recognition returns a
- * receipt's price column apart from the item names, so a row is re-joined from
- * the lines beside each other, left to right, two spaces marking the gap.
- */
 // A receipt that prints its prices as `$3.49` can read one `$` as an 8
 // (Shop 'n Save's `$1.50` as `81.50`). Only a trailing price is read back.
 const DOLLAR_AMOUNT = /\$\d+[.,]\d{2}/g;
@@ -148,6 +143,53 @@ const printsDollars = (rows: readonly string[]) => {
   return dollars >= 3 && dollars > bare;
 };
 
+// Under this tilt a page reads its rows by height alone: there the slopes are
+// the paper's curl, not the photo's angle (Pak'nSave's names read -0.03 on
+// rows that are level across the page).
+const LEVEL = 0.025;
+
+// One printed row when the centres sit within half the shorter line's height.
+function levelRows(lines: readonly RecognizedLine[]): RecognizedLine[][] {
+  const rows: RecognizedLine[][] = [];
+  for (const line of [...lines].sort((a, b) => centerYOf(a) - centerYOf(b))) {
+    const row = rows.at(-1);
+    const [first] = row ?? [];
+    const sameRow =
+      first &&
+      Math.abs(centerYOf(first) - centerYOf(line)) <
+        Math.min(first.height, line.height) / 2;
+    if (row && sameRow) row.push(line);
+    else rows.push([line]);
+  }
+  return rows;
+}
+
+function tiltedRows(
+  lines: readonly RecognizedLine[],
+  tilt: number,
+  slopes: readonly MeasuredSlope[],
+): RecognizedLine[][] {
+  const rows: Placed[][] = [];
+  const byRow = lines
+    .map(line => place(line, tilt, slopes))
+    .sort((a, b) => a.row - b.row);
+  for (const placed of byRow) {
+    const [best] = rows
+      .slice(-OPEN_ROWS)
+      .map(row => ({ row, gap: rowGap(widestOf(row), placed) }))
+      .filter(({ gap }) => gap < 1)
+      .sort((a, b) => a.gap - b.gap);
+    if (best) best.row.push(placed);
+    else rows.push([placed]);
+  }
+  return rows.map(row => row.map(({ line }) => line));
+}
+
+/**
+ * Rebuilds each page's printed rows, top to bottom. Text recognition returns a
+ * receipt's price column apart from the item names, so a row is re-joined from
+ * the lines beside each other, left to right, two spaces marking the gap.
+ */
 export function assembleReceiptLines(
   pages: readonly RecognizedPage[],
 ): string[][] {
@@ -155,26 +197,17 @@ export function assembleReceiptLines(
     const clean = isMostlyLatin(page.lines)
       ? cleanLatin
       : (text: string) => text;
-    const slopes = measuredSlopes(page.lines);
+    const lines = page.lines.filter(line => line.text.trim() !== '');
+    const slopes = measuredSlopes(lines);
     const tilt = weightedMedian(slopes);
-    const rows: Placed[][] = [];
-    const byRow = page.lines
-      .filter(line => line.text.trim() !== '')
-      .map(line => place(line, tilt, slopes))
-      .sort((a, b) => a.row - b.row);
-    for (const placed of byRow) {
-      const [best] = rows
-        .slice(-OPEN_ROWS)
-        .map(row => ({ row, gap: rowGap(widestOf(row), placed) }))
-        .filter(({ gap }) => gap < 1)
-        .sort((a, b) => a.gap - b.gap);
-      if (best) best.row.push(placed);
-      else rows.push([placed]);
-    }
+    const rows =
+      Math.abs(tilt) < LEVEL
+        ? levelRows(lines)
+        : tiltedRows(lines, tilt, slopes);
     const texts = rows.map(row =>
       row
-        .sort((a, b) => a.line.x - b.line.x)
-        .map(({ line }) => clean(line.text.trim()))
+        .sort((a, b) => a.x - b.x)
+        .map(line => clean(line.text.trim()))
         .join('  '),
     );
     return printsDollars(texts)
