@@ -73,9 +73,9 @@ interface ItemPhotoViewerProps {
   initialIndex: number;
   onClose: () => void;
   /**
-   * The item's viewer-scoped `Item.canEdit`. Gates the "set as main photo"
-   * action, which the server refuses for anyone but the item's creator or an
-   * admin. Omitted means read-only — no affordance.
+   * `writesItemDirectly(item)`: the viewer's own private item. Gates the "set
+   * as main photo" action, which the app never takes on a public item, even for
+   * an admin. Omitted means read-only — no affordance.
    */
   canEdit?: boolean;
 }

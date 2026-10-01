@@ -14,6 +14,7 @@ import {
   splitBarcodeChanges,
   type EditableItemSnapshot,
 } from '#utils/items/suggestItemChanges';
+import { writesItemDirectly } from '#domain/itemWriteAccess';
 import type { CreateItemSuggestionInput } from '#/graphql/generated/schemaTypes';
 import type { AddItemSubmitPayload } from '#features/catalog/ui/AddItemForm/AddItemForm';
 import { errorService } from '#/services/errorService';
@@ -104,9 +105,9 @@ export function useSuggestItemEdit() {
 
     // The two write paths are mutually exclusive and each hard-fails when
     // picked wrongly, so route on the server's own predicates rather than
-    // inferring from visibility. canEdit wins when both are true (an admin on a
-    // public item) — a direct write needs no review.
-    if (original.canEdit) {
+    // inferring from visibility. An admin on a public item has both, and
+    // suggests like anyone else.
+    if (writesItemDirectly(original)) {
       const settled = await settleMutation(
         () =>
           updateItem({
@@ -115,7 +116,8 @@ export function useSuggestItemEdit() {
         { document: UpdateItemDocument, ...failureCopy, present: 'none' },
       );
       // Forbidden means the cached canEdit was stale (the item was published,
-      // or ownership changed): do what the server asks and suggest instead.
+      // or ownership changed). This snapshot offered no suggestion, so the
+      // read-only answer below takes it.
       if (settled.failure?.code !== ErrorCode.Forbidden) {
         if (settled.failure) {
           alertService.alert(settled.failure.title, settled.failure.body);

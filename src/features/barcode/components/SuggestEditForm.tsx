@@ -14,6 +14,7 @@ import {
   withScannedPack,
   type ScannedPack,
 } from '#utils/items/suggestItemChanges';
+import { writesItemDirectly } from '#domain/itemWriteAccess';
 
 interface SuggestEditFormProps {
   itemId: string;
@@ -43,8 +44,7 @@ export const SuggestEditForm: React.FC<SuggestEditFormProps> = ({
   // A suggestion on a scanned barcode corrects that barcode's pack, so it opens
   // on, and is diffed against, the pack the scan showed. A direct edit writes
   // the item, and stays on the item's own figures.
-  const targetsBarcode =
-    !!scan && !!snapshot && !snapshot.canEdit && snapshot.canSuggest;
+  const targetsBarcode = !!scan && !!snapshot && snapshot.canSuggest;
   const original =
     snapshot && scan && targetsBarcode
       ? withScannedPack(snapshot, scan)
@@ -106,7 +106,7 @@ export const SuggestEditForm: React.FC<SuggestEditFormProps> = ({
     <AddItemForm
       barcode={barcode}
       format={format}
-      mode={snapshot.canEdit ? 'directEdit' : 'edit'}
+      mode={writesItemDirectly(snapshot) ? 'directEdit' : 'edit'}
       initialData={buildInitialDataFromSnapshot(original ?? snapshot)}
       onSubmit={handleSubmit}
       onClose={onClose}
