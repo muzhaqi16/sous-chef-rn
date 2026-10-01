@@ -400,7 +400,7 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> =
       keys: [
         'pantryItemDetail.fields.added',
         'pantryAnalytics.added',
-        'barcode.added',
+        'labels.added',
       ],
       reason:
         'The English is one word for two roles: sq "Shtuar" vs "Të ' +
