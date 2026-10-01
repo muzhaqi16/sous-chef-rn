@@ -8,11 +8,11 @@
   },
   "printedOn": "2021-07-25",
   "pages": [
-    "Thank you: IDN.70CS75Y5%Walmart.com  Thank you!\nVN 10  Walmart •\nGA D\nTE# 06 TR# 03530\nAll lig  2.67\nHLAVANED LEP 00/251 oвaв.\n)07874227620 -\n007017707510\n007874211456\nGT SOURDNLES 007874202021\nHNY BNEH BAT 088051201927\n00380002314\nFLOUR\n002892211888\nJIC\n007874235187\n007874211700\nDPEANTEA SHECE 002-293030  002529300380\n-002529300119\n00/8/4205231\n004400003327 F\nTENSION T 007073405334 F\nBREAN ABCT\nGV\nGV POM ROOM  007874234635 F  0.88\nBASIL 007874234635  0.88\nGREESBEDSE  085296600539 F\n1USHROOMS  3:54 R\nBANANAS\nCHEEZY MÁC ®  087145900133 F\nCILANTRO  000000004889KF  å: 38 R\nSALAD  )681131085\n000000002082kF\n3.16 R\n2:04 R\n7.48 R\n1b  4.34 Y\n4.03 Y\n8 AT\n007874208557 E\n003710267602\n003710267602\nKV PARP CHRY 085381100361  -085331100361\nCKN GIZZARD  026059400150 F\n025994881140\nẠỊBRST 026163800903 F\nSUBTOTAL\nTAX 2  6.975  12.40\nTOTAI  191 -13\nDEBIT  TEND  191.13\n801  CHANGE DUE  0.00"
+    "Thank you: IDN.70CS75Y5%Walmart.com  Thank you!\nVN 10  Walmart •\nGA D\nTE# 06 TR# 03530\n2.67\nAll lig  HLAVANED LEP 00/251 oвaв.\n)07874227620 -\n007017707510\n007874211456\nGT SOURDNLES 007874202021\nHNY BNEH BAT 088051201927\n00380002314\nFLOUR\n002892211888\nJIC\n007874235187\n007874211700\nDPEANTEA SHECE 002-293030  002529300380\n-002529300119\n00/8/4205231\n004400003327 F\nTENSION T 007073405334 F\nBREAN ABCT\nGV\nGV POM ROOM  BASIL 007874234635  007874234635 F  0.88  0.88\nGREESBEDSE  085296600539 F\n1USHROOMS  3:54 R\nBANANAS\nCHEEZY MÁC ®  087145900133 F\nCILANTRO  000000004889KF  å: 38 R\nSALAD  )681131085\n000000002082kF\n3.16 R\n2:04 R\n7.48 R\n1b  4.34 Y\n4.03 Y\n8 AT\n007874208557 E\n003710267602\n003710267602\nKV PARP CHRY 085381100361  -085331100361\nCKN GIZZARD  026059400150 F\n025994881140\nẠỊBRST 026163800903 F\nSUBTOTAL\nTAX 2  6.975  12.40\nTOTAI  191 -13\nDEBIT  TEND  191.13\n801  CHANGE DUE  0.00"
   ],
   "onDevice": {
     "model": "Apple Foundation Models, macOS 27.0.1 (26A434), greedy sampling",
-    "seconds": 29.5,
+    "seconds": 30.1,
     "storeName": "Walmart",
     "lines": [
       {
@@ -37,13 +37,13 @@
       },
       {
         "line": 4,
-        "label": "itemDetail",
+        "label": "discount",
         "product": "2.67"
       },
       {
         "line": 5,
-        "label": "itemDetail",
-        "product": "HLAVANED LEP 00/251 oвaв."
+        "label": "other",
+        "product": "All lig HLAVANED LEP 00/251 ovaв."
       },
       {
         "line": 6,
@@ -92,18 +92,18 @@
       },
       {
         "line": 15,
-        "label": "item",
+        "label": "discount",
         "product": "007874235187"
       },
       {
         "line": 16,
-        "label": "item",
+        "label": "discount",
         "product": "007874211700"
       },
       {
         "line": 17,
-        "label": "itemDetail",
-        "product": "DPEANTEA SHECE 002-293030  002529300380"
+        "label": "item",
+        "product": "DPEANTEA SHECE 002-293030 002529300380"
       },
       {
         "line": 18,
@@ -117,7 +117,7 @@
       },
       {
         "line": 20,
-        "label": "item",
+        "label": "discount",
         "product": "004400003327 F"
       },
       {
@@ -138,82 +138,82 @@
       {
         "line": 24,
         "label": "item",
-        "product": "GV POM ROOM  007874234635 F  0.88"
+        "product": "GV POM ROOM BASIL 007874234635 007874234635 F 0.88 0.88"
       },
       {
         "line": 25,
         "label": "item",
-        "product": "BASIL 007874234635  0.88"
+        "product": "GREESBEDSE"
       },
       {
         "line": 26,
         "label": "item",
-        "product": "GREESBEDSE  085296600539 F"
+        "product": "1USHROOMS 3:54 R"
       },
       {
         "line": 27,
-        "label": "other",
-        "product": "1USHROOMS  3:54 R"
-      },
-      {
-        "line": 28,
         "label": "item",
         "product": "BANANAS"
       },
       {
+        "line": 28,
+        "label": "item",
+        "product": "CHEEZY MÁC ®"
+      },
+      {
         "line": 29,
         "label": "item",
-        "product": "CHEEZY MÁC ®  087145900133 F"
+        "product": "CILANTRO 000000004889KF å: 38 R"
       },
       {
         "line": 30,
         "label": "item",
-        "product": "CILANTRO  000000004889KF  å: 38 R"
+        "product": "SALAD 681131085"
       },
       {
         "line": 31,
-        "label": "item",
-        "product": "SALAD  )681131085"
-      },
-      {
-        "line": 32,
         "label": "discount",
         "product": "000000002082kF"
       },
       {
-        "line": 33,
+        "line": 32,
         "label": "discount",
         "product": "3.16 R"
       },
       {
-        "line": 34,
+        "line": 33,
         "label": "discount",
         "product": "2:04 R"
       },
       {
-        "line": 35,
+        "line": 34,
         "label": "discount",
         "product": "7.48 R"
       },
       {
-        "line": 36,
+        "line": 35,
         "label": "discount",
-        "product": "1b  4.34 Y"
+        "product": "1b 4.34 Y"
       },
       {
-        "line": 37,
+        "line": 36,
         "label": "discount",
         "product": "4.03 Y"
       },
       {
-        "line": 38,
+        "line": 37,
         "label": "other",
         "product": "8 AT"
       },
       {
-        "line": 39,
-        "label": "item",
+        "line": 38,
+        "label": "discount",
         "product": "007874208557 E"
+      },
+      {
+        "line": 39,
+        "label": "discount",
+        "product": "003710267602"
       },
       {
         "line": 40,
@@ -222,53 +222,48 @@
       },
       {
         "line": 41,
-        "label": "discount",
-        "product": "003710267602"
+        "label": "item",
+        "product": "KV PARP CHRY 085381100361 -085331100361"
       },
       {
         "line": 42,
         "label": "item",
-        "product": "KV PARP CHRY 085381100361  -085331100361"
+        "product": "CKN GIZZARD 026059400150 F"
       },
       {
         "line": 43,
-        "label": "item",
-        "product": "CKN GIZZARD  026059400150 F"
-      },
-      {
-        "line": 44,
         "label": "discount",
         "product": "025994881140"
       },
       {
-        "line": 45,
+        "line": 44,
         "label": "item",
         "product": "ẠỊBRST 026163800903 F"
       },
       {
-        "line": 46,
-        "label": "discount",
+        "line": 45,
+        "label": "tax",
         "product": "SUBTOTAL"
       },
       {
+        "line": 46,
+        "label": "tax",
+        "product": "TAX 2 6.975 12.40"
+      },
+      {
         "line": 47,
-        "label": "discount",
-        "product": "TAX 2  6.975  12.40"
+        "label": "total",
+        "product": "TOTAI 191 -13"
       },
       {
         "line": 48,
-        "label": "discount",
-        "product": "TOTAI  191 -13"
+        "label": "payment",
+        "product": "DEBIT TEND 191.13"
       },
       {
         "line": 49,
-        "label": "payment",
-        "product": "DEBIT  TEND  191.13"
-      },
-      {
-        "line": 50,
         "label": "discount",
-        "product": "801  CHANGE DUE  0.00"
+        "product": "801 CHANGE DUE 0.00"
       }
     ]
   }

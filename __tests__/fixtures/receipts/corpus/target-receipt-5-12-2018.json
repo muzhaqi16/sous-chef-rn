@@ -8,11 +8,11 @@
   },
   "printedOn": "2018-05-12",
   "pages": [
-    "TARGET®\nEXPECT MORE. PAY LESS:\nOAHU HONOLULU ALA MOANA\n05/12/2018 02:05 PM EXPIRES 08/10/18\nGROCERY\n267008011  BANANA  FT  $0.39\nSUBTOTAL  $0.39\nT = HI TAX  4.7120% on  $0.02\nFOTAL  $0.41\nCASH PAYMENT  $0.41\nEverything\ncome up\nroses?\nHelp make your Target Run better.\nTake a 2 minute survey about today's trip:\nintormtarget.com\nUser ID: 7186 7713 0983\nPassword: 064 887\nCUÉNTENOS EN ESPAÑOL\nPlease take this survey within / days."
+    "TARGET®\nEXPECT MORE. PAY LESS:\nOAHU HONOLULU ALA MOANA\n05/12/2018 02:05 PM EXPIRES 08/10/18\nGROCERY\n267008011  BANANA  FT  $0.39\nSUBTOTAL  $0.39\nT = HI TAX  4.7120% on  FOTAL  $0.02\n$0.41\nCASH PAYMENT  $0.41\nEverything\ncome up\nroses?\nHelp make your Target Run better.\nTake a 2 minute survey about today's trip:\nintormtarget.com\nUser ID: 7186 7713 0983\nPassword: 064 887\nCUÉNTENOS EN ESPAÑOL\nPlease take this survey within / days."
   ],
   "onDevice": {
     "model": "Apple Foundation Models, macOS 27.0.1 (26A434), greedy sampling",
-    "seconds": 6.6,
+    "seconds": 6.8,
     "storeName": "TARGET®",
     "lines": [
       {
@@ -46,23 +46,22 @@
       },
       {
         "line": 6,
-        "label": "subtotal",
-        "product": "none"
+        "label": "subtotal"
       },
       {
         "line": 7,
         "label": "tax",
-        "product": "T = HI TAX  4.7120% on  $0.02"
+        "product": "T = HI TAX  4.7120% on  FOTAL  $0.02"
       },
       {
         "line": 8,
         "label": "total",
-        "product": "none"
+        "product": "$0.41"
       },
       {
         "line": 9,
         "label": "payment",
-        "product": "CASH PAYMENT"
+        "product": "CASH PAYMENT  $0.41"
       },
       {
         "line": 10,

@@ -8,11 +8,11 @@
   },
   "printedOn": null,
   "pages": [
-    "FAMILY I DOLLAR\nSTOkfemlly Ty1 gily dollar\n. York Stree\nMuskogee.OK. 918-682-1561\nCOCA COLA 1.25 LTR. 049000055375 1.00 T\nRIP IT ENERGY ORINK CITRÜS 16FL OZ\n042200002675\n1.00 :\nSUBTOTAL  $2.00\nTAX1\nTOTAL  30.19\nCASH  $2.13\nCHANGE  $2.25"
+    "FAMILY I DOLLAR\nSTOkfemlly Ty1 gily dollar\n. York Stree\nMuskogee.OK. 918-682-1561\nCOCA COLA 1.25 LTR. 049000055375 1.00 T\nRIP IT ENERGY ORINK CITRÜS 16FL OZ\n042200002675  1.00 :\nSUBTOTAL\nTAX1  $2.00\n30.19\nTOTAL\nCASH  $2.13\nCHANGE  $2.25"
   ],
   "onDevice": {
     "model": "Apple Foundation Models, macOS 27.0.1 (26A434), greedy sampling",
-    "seconds": 5.2,
+    "seconds": 5.4,
     "storeName": "FAMILY I DOLLAR",
     "lines": [
       {
@@ -27,12 +27,12 @@
       },
       {
         "line": 2,
-        "label": "header",
+        "label": "other",
         "product": "York Stree"
       },
       {
         "line": 3,
-        "label": "header",
+        "label": "other",
         "product": "Muskogee.OK. 918-682-1561"
       },
       {
@@ -47,28 +47,37 @@
       },
       {
         "line": 6,
-        "label": "discount",
+        "label": "item",
         "product": "042200002675"
       },
       {
         "line": 7,
-        "label": "discount",
-        "product": "1.00"
+        "label": "subtotal"
       },
       {
         "line": 8,
-        "label": "subtotal",
-        "product": "$2.00"
-      },
-      {
-        "line": 9,
         "label": "tax",
         "product": "TAX1"
       },
       {
+        "line": 9,
+        "label": "total",
+        "product": "30.19"
+      },
+      {
         "line": 10,
         "label": "total",
-        "product": "TOTAL 30.19"
+        "product": "TOTAL"
+      },
+      {
+        "line": 11,
+        "label": "payment",
+        "product": "CASH"
+      },
+      {
+        "line": 12,
+        "label": "payment",
+        "product": "CHANGE"
       }
     ]
   }

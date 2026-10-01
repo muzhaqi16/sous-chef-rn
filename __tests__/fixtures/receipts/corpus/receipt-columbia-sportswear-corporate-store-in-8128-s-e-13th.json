@@ -12,7 +12,7 @@
   ],
   "onDevice": {
     "model": "Apple Foundation Models, macOS 27.0.1 (26A434), greedy sampling",
-    "seconds": 4.5,
+    "seconds": 4.4,
     "storeName": "Columbia Sportswear Company",
     "lines": [
       {

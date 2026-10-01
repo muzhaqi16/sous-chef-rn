@@ -1,10 +1,106 @@
 import type { RecognizedLine, RecognizedPage } from '#/native/TextRecognition';
 
-const centerOf = (line: RecognizedLine) => line.y + line.height / 2;
+// A photo held at an angle tilts every printed row, and a curled receipt tilts
+// each row differently: the name and its price sit at different heights on
+// the page. A line reads its rows along the slope of the lines nearest it,
+// weighted by width: a short line's own slope is noise (Giant Eagle's prices
+// read three times the tilt of their names; `126817šę` a third less).
+const SLOPED_LINE = 0.07;
+const NEIGHBOURS = 5;
+// Steeper than this is text running down the margin (Costco's tax flags).
+const MAX_SLOPE = 0.5;
 
-// One printed row when the centres sit within half the shorter line's height.
-const onSameRow = (a: RecognizedLine, b: RecognizedLine) =>
-  Math.abs(centerOf(a) - centerOf(b)) < Math.min(a.height, b.height) / 2;
+interface MeasuredSlope {
+  centerY: number;
+  slope: number;
+  width: number;
+}
+
+const centerYOf = (line: RecognizedLine) => line.y + line.height / 2;
+
+/** The slopes of the lines long enough to measure, by height on the page. */
+function measuredSlopes(lines: readonly RecognizedLine[]): MeasuredSlope[] {
+  return lines.flatMap(line => {
+    const { slope } = line;
+    return line.width >= SLOPED_LINE &&
+      slope !== undefined &&
+      Math.abs(slope) <= MAX_SLOPE
+      ? [{ centerY: centerYOf(line), slope, width: line.width }]
+      : [];
+  });
+}
+
+// The slope half the nearby width agrees on.
+const weightedMedian = (slopes: readonly MeasuredSlope[]) => {
+  const sorted = [...slopes].sort((a, b) => a.slope - b.slope);
+  const half = sorted.reduce((sum, { width }) => sum + width, 0) / 2;
+  let seen = 0;
+  for (const { slope, width } of sorted) {
+    seen += width;
+    if (seen >= half) return slope;
+  }
+  return 0;
+};
+
+const slopeNear = (centerY: number, slopes: readonly MeasuredSlope[]) =>
+  weightedMedian(
+    [...slopes]
+      .sort(
+        (a, b) => Math.abs(a.centerY - centerY) - Math.abs(b.centerY - centerY),
+      )
+      .slice(0, NEIGHBOURS),
+  );
+
+interface Placed {
+  line: RecognizedLine;
+  centerX: number;
+  centerY: number;
+  /** Height along the page's median slope, the order rows are read in. */
+  row: number;
+  /** The slope of the rows around it. */
+  slope: number;
+  /** The text's own height; a tilted line's box is taller by its rise. */
+  textHeight: number;
+}
+
+const place = (
+  line: RecognizedLine,
+  tilt: number,
+  slopes: readonly MeasuredSlope[],
+): Placed => {
+  const centerX = line.x + line.width / 2;
+  const centerY = centerYOf(line);
+  const slope = slopeNear(centerY, slopes);
+  return {
+    line,
+    centerX,
+    centerY,
+    row: centerY - tilt * centerX,
+    slope,
+    textHeight: Math.max(
+      line.height - Math.abs(slope) * line.width,
+      line.height / 3,
+    ),
+  };
+};
+
+// How far apart two lines sit across the wider one's slope, in halves of the
+// shorter text's height: under 1 is one printed row.
+const rowGap = (a: Placed, b: Placed) => {
+  const { slope } = a.line.width >= b.line.width ? a : b;
+  const apart = b.centerY - a.centerY - slope * (b.centerX - a.centerX);
+  return Math.abs(apart) / (Math.min(a.textHeight, b.textHeight) / 2);
+};
+
+// Where a receipt curls, the page's tilt reads its rows a little out of order,
+// so a line joins whichever of the last few rows it fits best, measured from
+// each row's widest line: measured from any member, tight rows chain.
+const OPEN_ROWS = 3;
+
+const widestOf = (row: readonly Placed[]) =>
+  row.reduce((widest, placed) =>
+    placed.line.width > widest.line.width ? placed : widest,
+  );
 
 // Recognition reads some Latin letters as their Cyrillic twins (`TAХ`, ALDI's
 // tax flag `4.38 А`) and ends a figure with a run of noise (`BALANCE
@@ -59,20 +155,26 @@ export function assembleReceiptLines(
     const clean = isMostlyLatin(page.lines)
       ? cleanLatin
       : (text: string) => text;
-    const rows: RecognizedLine[][] = [];
-    const byCenter = page.lines
+    const slopes = measuredSlopes(page.lines);
+    const tilt = weightedMedian(slopes);
+    const rows: Placed[][] = [];
+    const byRow = page.lines
       .filter(line => line.text.trim() !== '')
-      .sort((a, b) => centerOf(a) - centerOf(b));
-    for (const line of byCenter) {
-      const row = rows.at(-1);
-      const [first] = row ?? [];
-      if (row && first && onSameRow(first, line)) row.push(line);
-      else rows.push([line]);
+      .map(line => place(line, tilt, slopes))
+      .sort((a, b) => a.row - b.row);
+    for (const placed of byRow) {
+      const [best] = rows
+        .slice(-OPEN_ROWS)
+        .map(row => ({ row, gap: rowGap(widestOf(row), placed) }))
+        .filter(({ gap }) => gap < 1)
+        .sort((a, b) => a.gap - b.gap);
+      if (best) best.row.push(placed);
+      else rows.push([placed]);
     }
     const texts = rows.map(row =>
       row
-        .sort((a, b) => a.x - b.x)
-        .map(line => clean(line.text.trim()))
+        .sort((a, b) => a.line.x - b.line.x)
+        .map(({ line }) => clean(line.text.trim()))
         .join('  '),
     );
     return printsDollars(texts)

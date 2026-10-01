@@ -12,7 +12,7 @@
   ],
   "onDevice": {
     "model": "Apple Foundation Models, macOS 27.0.1 (26A434), greedy sampling",
-    "seconds": 13.1,
+    "seconds": 12.9,
     "storeName": "St: 41 Wilshire",
     "lines": [
       {

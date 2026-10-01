@@ -8,6 +8,8 @@ export interface RecognizedLine {
   y: number;
   width: number;
   height: number;
+  /** The text's rise per unit across, as fractions of the page; down is +. */
+  slope?: number;
 }
 
 export interface RecognizedPage {
@@ -25,7 +27,7 @@ const isTextRecognitionModule = (
 
 const toLine = (value: unknown): RecognizedLine | null => {
   if (!isRecord(value)) return null;
-  const { text, x, y, width, height } = value;
+  const { text, x, y, width, height, slope } = value;
   if (
     typeof text !== 'string' ||
     typeof x !== 'number' ||
@@ -35,7 +37,9 @@ const toLine = (value: unknown): RecognizedLine | null => {
   ) {
     return null;
   }
-  return { text, x, y, width, height };
+  return typeof slope === 'number' && Number.isFinite(slope)
+    ? { text, x, y, width, height, slope }
+    : { text, x, y, width, height };
 };
 
 const toPage = (value: unknown): RecognizedPage => {
