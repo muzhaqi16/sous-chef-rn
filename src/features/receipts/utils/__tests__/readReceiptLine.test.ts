@@ -42,6 +42,15 @@ describe('readReceiptLine', () => {
       unitPrice: 2.49,
       amount: 7.47,
     });
+    // ALDI UK writes the count with an x.
+    expect(readReceiptLine('2 x  2.19')).toEqual({
+      quantity: 2,
+      unitPrice: 2.19,
+    });
+  });
+
+  it('reads no price from a deal line (Giant Eagle)', () => {
+    expect(readReceiptLine('1 @ 2/3.00')).toEqual({});
   });
 
   it('takes the line amount, not a percentage or a phone number', () => {
