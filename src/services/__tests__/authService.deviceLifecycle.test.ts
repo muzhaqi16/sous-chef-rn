@@ -141,6 +141,9 @@ beforeEach(() => {
   Object.assign(mockStoreState, {
     isOnline: true,
     user: null,
+    // Registration belongs to a session; the cases below run inside one.
+    accessToken: 'access-1',
+    refreshToken: 'refresh-1',
     clearAuth: jest.fn(),
     resetStore: jest.fn(() => Promise.resolve()),
     setNavigationState: jest.fn(),
@@ -277,6 +280,70 @@ describe('registerDeviceInBackground — no identity to register under', () => {
     expect(mockCollect).not.toHaveBeenCalled();
     expect(ensureDeviceId).toHaveBeenCalledTimes(1);
     expect(mockMutate).not.toHaveBeenCalled();
+  });
+});
+
+// A restored session can turn out to be expired: the sign-out then lands while
+// the registration it started is still retrying. Each retry would go out with no
+// credential and set off a refresh that has no token to present.
+describe('registerDeviceInBackground — a session that ends', () => {
+  const refuse = () =>
+    mockMutate.mockResolvedValue({
+      data: {
+        registerDevice: {
+          __typename: 'ValidationError',
+          code: 'VALIDATION_FAILED',
+          message: 'refused',
+        },
+      },
+    });
+  const registerCalls = () =>
+    mockMutate.mock.calls.filter(
+      ([opts]) => 'deviceId' in (opts?.variables?.input ?? {}),
+    ).length;
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('stops retrying once the session ends', async () => {
+    jest.useFakeTimers();
+    refuse();
+
+    authService.registerDeviceInBackground();
+    await flush();
+    expect(registerCalls()).toBe(1);
+
+    await require('#store/sessionTeardown').runSessionTeardown();
+    await jest.advanceTimersByTimeAsync(10_000);
+    await flush();
+
+    expect(registerCalls()).toBe(1);
+  });
+
+  it('does not start once the session has already ended', async () => {
+    Object.assign(mockStoreState, { accessToken: null, refreshToken: null });
+
+    authService.registerDeviceInBackground();
+    await flush();
+
+    expect(mockCollect).not.toHaveBeenCalled();
+    expect(mockMutate).not.toHaveBeenCalled();
+    expect(logger.warn).not.toHaveBeenCalledWith(
+      'Background device registration failed',
+    );
+  });
+
+  it('still retries a refusal while the session lasts', async () => {
+    jest.useFakeTimers();
+    refuse();
+
+    authService.registerDeviceInBackground();
+    await flush();
+    await jest.advanceTimersByTimeAsync(2_000);
+    await flush();
+
+    expect(registerCalls()).toBe(2);
   });
 });
 
