@@ -32,8 +32,8 @@
     },
     "review": {
       "title": "Receipt",
-      "intro": "Choose what each line is. Only the lines you choose are added to your pantry.",
-      "introTo": "Choose what each line is. Only the lines you choose are added to {{pantry}}.",
+      "intro": "Check the product on each line. Only lines with a product are added to your pantry.",
+      "introTo": "Check the product on each line. Only lines with a product are added to {{pantry}}.",
       "choose": "Tap to choose the product",
       "chosenDetail": "{{printed}} · {{amount}}",
       "notAdded": "Not added",
@@ -52,7 +52,15 @@
       "printedLabel": "On the receipt",
       "productPlaceholder": "Search for a product",
       "dontAdd": "Don't add this line",
-      "invalidPrice": "Enter the amount paid, like 3.49, or leave it empty."
+      "invalidPrice": "Enter the amount paid, like 3.49, or leave it empty.",
+      "totalsTitle": "The lines don't add up to the receipt",
+      "totalsBody": "The items read add up to {{counted}}, but the receipt says {{printed}}. A line may have been missed, so check the list against the receipt before adding.",
+      "onList": "On your list",
+      "tickOffTitle": "Tick it off the shopping list",
+      "tickOffBody": "“{{name}}” is on your list. It's marked bought and moved to the pantry rather than added twice.",
+      "matching": "Finding the products…",
+      "check": "Check",
+      "maybe": "Maybe {{name}}?"
     }
   }
 }
