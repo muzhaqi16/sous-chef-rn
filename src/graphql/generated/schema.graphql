@@ -12424,10 +12424,19 @@ union RecordItemPopularityResult = ConflictError | ForbiddenError | NotFoundErro
 
 """Input for recording a price observation (historical tracking)"""
 input RecordPriceObservationInput {
+  """The price's currency; the user's own when omitted"""
+  currency: CurrencyCode
   itemId: ID!
   observedAt: DateTime
+  """
+  The net weight of one unitId (a can, a jar), so the price compares per kg or L
+  """
+  packageSize: PackageSizeInput
+  """The price per one unitId"""
   price: Float!
   storeId: ID!
+  """The unit the price is per; the item's default unit when omitted"""
+  unitId: ID
 }
 
 type RecordPriceObservationPayload {
