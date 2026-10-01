@@ -16,6 +16,7 @@ import {
   type ListMatchKey,
 } from '../utils/linkReceiptLines';
 import { useApplyReceipt } from './useApplyReceipt';
+import { toDateKey } from '#/utils/dateUtils';
 
 export interface ReceiptReviewRow extends ReceiptReviewLine {
   choice?: ReceiptLineChoice;
@@ -87,6 +88,12 @@ export function useReceiptReview() {
     addChosen: () =>
       apply(
         pending.map(line => ({ ...line, listLine: links.get(line.index) })),
+        // A receipt that printed no readable day was bought the day it was scanned.
+        {
+          purchasedOn:
+            draft?.purchasedOn ??
+            toDateKey(draft ? new Date(draft.scannedAt) : new Date()),
+        },
       ),
     finish: clearDraft,
   };

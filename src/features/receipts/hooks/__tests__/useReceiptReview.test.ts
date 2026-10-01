@@ -19,7 +19,11 @@ import {
   MoveShoppingItemToPantryDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useStore } from '#store';
-import { AcquisitionMethod, ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  AcquisitionMethod,
+  ErrorCode,
+  PriceSource,
+} from '#/graphql/generated/schemaTypes';
 import { isRecord } from '#/utils/isRecord';
 import {
   useReceiptDraftStore,
@@ -82,6 +86,7 @@ const seedDraft = () =>
     draft: {
       pages: ['KROGER'],
       scannedAt: '2026-09-30T10:00:00.000Z',
+      purchasedOn: '2026-09-28',
       parsed: {
         merchant: 'KROGER',
         lines: [
@@ -255,13 +260,22 @@ describe('useReceiptReview', () => {
       expect.objectContaining({
         item: { id: 'cat-milk' },
         forceAdd: true,
+        // A scanned receipt's price, observed on the day it printed. No rate:
+        // the bare 1 is the API's to default, so a rate could price the wrong amount.
         purchase: {
           acquisitionMethod: AcquisitionMethod.Purchased,
           totalCost: 2.79,
+          receipt: { purchasedOn: '2026-09-28' },
+          priceSource: PriceSource.ReceiptScan,
         },
       }),
       expect.objectContaining({
         item: { inline: { name: 'Bananas' } },
+        // A stated amount carries its rate, which the price history records.
+        purchase: expect.objectContaining({
+          totalCost: 1.26,
+          costPerUnit: 1.26 / 2.14,
+        }),
         quantity: 2.14,
         unit: { name: 'lb' },
         forceAdd: true,
@@ -382,6 +396,8 @@ describe('useReceiptReview', () => {
           actualQuantity: 1,
           actualPrice: 2.79,
           removeFromList: true,
+          receipt: { purchasedOn: '2026-09-28' },
+          priceSource: PriceSource.ReceiptScan,
         }),
       ]);
       expect(create.fired.map(vars => vars.input)).toEqual([
