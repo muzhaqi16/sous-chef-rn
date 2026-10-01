@@ -32,8 +32,8 @@
     },
     "review": {
       "title": "Scontrino",
-      "intro": "Scegli cosa è ogni riga. Solo le righe che scegli vengono aggiunte alla dispensa.",
-      "introTo": "Scegli cosa è ogni riga. Solo le righe che scegli vengono aggiunte a {{pantry}}.",
+      "intro": "Controlla il prodotto di ogni riga. Solo le righe con un prodotto vengono aggiunte alla dispensa.",
+      "introTo": "Controlla il prodotto di ogni riga. Solo le righe con un prodotto vengono aggiunte a {{pantry}}.",
       "choose": "Tocca per scegliere il prodotto",
       "chosenDetail": "{{printed}} · {{amount}}",
       "notAdded": "Non aggiunto",
@@ -57,7 +57,10 @@
       "totalsBody": "Gli articoli letti fanno {{counted}}, ma lo scontrino dice {{printed}}. Potrebbe mancare una riga: confronta l'elenco con lo scontrino prima di aggiungere.",
       "onList": "Nella tua lista",
       "tickOffTitle": "Spuntalo dalla lista della spesa",
-      "tickOffBody": "“{{name}}” è nella tua lista. Viene segnato come comprato e spostato in dispensa invece di essere aggiunto due volte."
+      "tickOffBody": "“{{name}}” è nella tua lista. Viene segnato come comprato e spostato in dispensa invece di essere aggiunto due volte.",
+      "matching": "Cerco i prodotti…",
+      "check": "Verifica",
+      "maybe": "Forse {{name}}?"
     }
   }
 }

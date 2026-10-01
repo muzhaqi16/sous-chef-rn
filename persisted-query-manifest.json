@@ -1011,6 +1011,12 @@
       "body": "query PreviewPantryItemUnitChange($input: PreviewPantryItemUnitChangeInput!) {\n  previewPantryItemUnitChange(input: $input) {\n    version\n    method\n    exact\n    quantityIgnored\n    fromUnit {\n      id\n      symbol\n      displayAsFraction\n      __typename\n    }\n    toUnit {\n      id\n      symbol\n      displayAsFraction\n      __typename\n    }\n    quantityBefore\n    heldQuantityBefore\n    quantityAfter\n    heldQuantityAfter\n    batches {\n      batchId\n      quantityBefore\n      quantityAfter\n      __typename\n    }\n    minQuantityAfter\n    restockQuantityAfter\n    dropsNetWeight\n    dropsPortions\n    dropsThresholds\n    conflictingPantryItemId\n    displayAmountAfter {\n      quantity\n      text\n      __typename\n    }\n    refusal {\n      code\n      field\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
+      "id": "817e989af30c46e27e36cd5ec41651e666d9b5c4f8126f5476a27e62e003fa39",
+      "name": "RecordReceiptMatches",
+      "type": "mutation",
+      "body": "mutation RecordReceiptMatches($input: RecordReceiptMatchesInput!) {\n  recordReceiptMatches(input: $input) {\n    __typename\n    ... on RecordReceiptMatchesPayload {\n      recorded\n      skipped\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
+    },
+    {
       "id": "5deabb7504e9e8323b06fd37247f6b16673050e14e7d3f8cd483f7df0fa3aa57",
       "name": "RefreshToken",
       "type": "mutation",
@@ -1087,6 +1093,12 @@
       "name": "ResetPassword",
       "type": "mutation",
       "body": "mutation ResetPassword($input: ResetPasswordInput!) {\n  resetPassword(input: $input) {\n    __typename\n    ... on ResetPasswordPayload {\n      status\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
+    },
+    {
+      "id": "9270a9e3ef242c734fc2de29b1ef6d74881c2d86382ba64c7d95d53fcd3b2181",
+      "name": "ResolveReceiptLines",
+      "type": "query",
+      "body": "query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {\n  resolveReceiptLines(input: $input) {\n    store {\n      id\n      __typename\n    }\n    lines {\n      clientId\n      confidence\n      best {\n        method\n        item {\n          id\n          name\n          __typename\n        }\n        __typename\n      }\n      candidates {\n        method\n        item {\n          id\n          name\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "99f5afdb269e6dd2077029b830990affeb6536c9fec9e740f4bdc25f1576646a",

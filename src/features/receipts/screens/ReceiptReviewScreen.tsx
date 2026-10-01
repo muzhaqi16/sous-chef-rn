@@ -31,6 +31,7 @@ export const ReceiptReviewScreen: React.FC = () => {
     rows,
     merchant,
     totalsGap,
+    matching,
     pantryName,
     pendingCount,
     applying,
@@ -59,6 +60,7 @@ export const ReceiptReviewScreen: React.FC = () => {
   const subtitleOf = (row: ReceiptReviewRow) => {
     if (row.failure) return row.failure;
     const { choice } = row;
+    if (row.guess) return t('receipts.review.maybe', { name: row.guess });
     if (!choice) return t('receipts.review.choose');
     // One of no stated unit says nothing the receipt line does not.
     if (!choice.unitText && choice.quantity === 1) return row.printed;
@@ -75,6 +77,9 @@ export const ReceiptReviewScreen: React.FC = () => {
     }
     if (row.onList)
       return { text: t('receipts.review.onList'), variant: 'primary' };
+    if (row.guess) {
+      return { text: t('receipts.review.check'), variant: 'warning' };
+    }
     return undefined;
   };
 
@@ -139,7 +144,9 @@ export const ReceiptReviewScreen: React.FC = () => {
           rows.length > 0 ? (
             <View style={styles.intro}>
               <Text role="body" tone="secondary">
-                {pantryName
+                {matching
+                  ? t('receipts.review.matching')
+                  : pantryName
                   ? t('receipts.review.introTo', { pantry: pantryName })
                   : t('receipts.review.intro')}
               </Text>
@@ -169,6 +176,7 @@ export const ReceiptReviewScreen: React.FC = () => {
         visible={sheetVisible}
         line={editing}
         choice={editingRow?.choice}
+        candidates={editingRow?.candidates ?? []}
         listItemNameFor={key =>
           editing ? listItemNameFor(editing.index, key) : undefined
         }

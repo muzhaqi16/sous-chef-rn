@@ -139,7 +139,7 @@ export function useApplyReceipt(listId: string | undefined) {
     markAdded(added);
     setFailures(failed);
     setApplying(false);
-    return { added: added.length, failed: failed.length };
+    return { addedIndexes: added, failed: failed.length };
   };
 
   return { pantryName: pantry?.name ?? null, applying, failures, apply };
