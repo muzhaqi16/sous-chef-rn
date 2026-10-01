@@ -2,6 +2,7 @@ import type { RecognizedPage } from '#/native/TextRecognition';
 import { assembleReceiptLines } from '../assembleReceiptLines';
 
 type Row = [text: string, x: number, y: number, width: number, height: number];
+type SlopedRow = [...Row, slope: number];
 
 const page = (rows: Row[]): RecognizedPage => ({
   lines: rows.map(([text, x, y, width, height]) => ({
@@ -10,6 +11,17 @@ const page = (rows: Row[]): RecognizedPage => ({
     y,
     width,
     height,
+  })),
+});
+
+const sloped = (rows: SlopedRow[]): RecognizedPage => ({
+  lines: rows.map(([text, x, y, width, height, slope]) => ({
+    text,
+    x,
+    y,
+    width,
+    height,
+    slope,
   })),
 });
 
@@ -63,6 +75,51 @@ describe('assembleReceiptLines', () => {
         '# ITEMS SOLD 3',
         'SURVEY ID 7GHJ-KL12',
       ],
+    ]);
+  });
+
+  // Apple Vision's reading of a hand-held Costco photo, tilted up to the right:
+  // by height alone each name pairs with the price of the row below it.
+  it("reads a tilted photo's rows along its slope", () => {
+    const [lines] = assembleReceiptLines([
+      sloped([
+        ['12.49 E', 0.669, 0.266, 0.084, 0.032, -0.177],
+        ['KS ORG A2 PR', 0.414, 0.286, 0.212, 0.052, -0.167],
+        ['14.43 E', 0.672, 0.284, 0.088, 0.032, -0.177],
+        ['KS CHEWY PRO', 0.419, 0.303, 0.213, 0.054, -0.17],
+        ['18.43 E', 0.676, 0.303, 0.085, 0.033, -0.188],
+        ['BEER BAT COD', 0.435, 0.322, 0.201, 0.051, -0.173],
+        ['14.99 E', 0.68, 0.322, 0.084, 0.031, -0.171],
+        ['KS BACON', 0.44, 0.347, 0.158, 0.042, -0.167],
+      ]),
+    ]);
+
+    expect(lines).toEqual([
+      'KS ORG A2 PR  12.49 E',
+      'KS CHEWY PRO  14.43 E',
+      'BEER BAT COD  18.43 E',
+      'KS BACON  14.99 E',
+    ]);
+  });
+
+  // A Pak'nSave photo: its long names curl to -0.026 on rows that are level.
+  it("reads a level page by height, whatever its lines' curl", () => {
+    const [lines] = assembleReceiptLines([
+      sloped([
+        ['Our Shopping Hours are Mon - Sun', 0.1, 0.5, 0.7, 0.03, 0],
+        ['$9.84 EA =', 0.554, 0.61, 0.141, 0.0248, 0],
+        ['KIWIFRUIT GREEN KG NZ', 0.125, 0.611, 0.283, 0.0296, -0.026],
+        ['$9.84', 0.74, 0.612, 0.07, 0.025, -0.004],
+        ['$1.87 EA =', 0.554, 0.637, 0.141, 0.0248, 0],
+        ['$1.87', 0.735, 0.637, 0.076, 0.0305, 0.05],
+        ['APPLES ROYAL GALA KG', 0.127, 0.639, 0.271, 0.0299, -0.026],
+      ]),
+    ]);
+
+    expect(lines).toEqual([
+      'Our Shopping Hours are Mon - Sun',
+      'KIWIFRUIT GREEN KG NZ  $9.84 EA =  $9.84',
+      'APPLES ROYAL GALA KG  $1.87 EA =  $1.87',
     ]);
   });
 
