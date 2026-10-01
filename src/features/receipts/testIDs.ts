@@ -8,6 +8,7 @@ export const receiptsTestIDs = {
   savedReview: 'receipt-scan-saved-review',
   reviewScreen: 'receipt-review-screen',
   reviewAdd: 'receipt-review-add',
+  reviewTotalsGap: 'receipt-review-totals-gap',
   /** Prefix of each line's row: `receipt-review-line-<index>`. */
   reviewLine: 'receipt-review-line',
   lineProduct: 'receipt-line-product',

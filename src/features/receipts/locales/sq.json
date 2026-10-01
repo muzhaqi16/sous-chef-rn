@@ -52,7 +52,9 @@
       "printedLabel": "Në faturë",
       "productPlaceholder": "Kërko një produkt",
       "dontAdd": "Mos e shto këtë rresht",
-      "invalidPrice": "Shkruaj shumën e paguar, p.sh. 3,49, ose lëre bosh."
+      "invalidPrice": "Shkruaj shumën e paguar, p.sh. 3,49, ose lëre bosh.",
+      "totalsTitle": "Rreshtat nuk përputhen me faturën",
+      "totalsBody": "Artikujt e lexuar bëjnë {{counted}}, por fatura thotë {{printed}}. Mund të ketë mbetur jashtë një rresht, ndaj krahasoje listën me faturën para se të shtosh."
     }
   }
 }

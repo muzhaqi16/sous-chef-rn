@@ -6,6 +6,7 @@ import {
   receiptReviewLines,
   type ReceiptReviewLine,
 } from '../utils/receiptReviewLines';
+import { receiptTotalsGap } from '../utils/receiptTotalsGap';
 import { useApplyReceipt } from './useApplyReceipt';
 
 export interface ReceiptReviewRow extends ReceiptReviewLine {
@@ -42,6 +43,8 @@ export function useReceiptReview() {
   return {
     rows,
     merchant: draft?.parsed?.merchant ?? null,
+    /** The read lines disagree with the receipt's own total: one may be missing. */
+    totalsGap: draft?.parsed ? receiptTotalsGap(draft.parsed) : null,
     pantryName,
     pendingCount: pending.length,
     applying,

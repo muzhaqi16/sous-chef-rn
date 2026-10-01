@@ -52,7 +52,9 @@
       "printedLabel": "En el recibo",
       "productPlaceholder": "Busca un producto",
       "dontAdd": "No añadir esta línea",
-      "invalidPrice": "Introduce el importe pagado, como 3,49, o déjalo vacío."
+      "invalidPrice": "Introduce el importe pagado, como 3,49, o déjalo vacío.",
+      "totalsTitle": "Las líneas no suman lo que dice el recibo",
+      "totalsBody": "Los artículos leídos suman {{counted}}, pero el recibo dice {{printed}}. Puede que falte una línea, así que compara la lista con el recibo antes de añadir."
     }
   }
 }
