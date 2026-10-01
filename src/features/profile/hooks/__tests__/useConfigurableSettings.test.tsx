@@ -103,12 +103,14 @@ jest.mock('#hooks/navigation/useAuthPreferences', () => ({
 // production cannot reach — and would keep unreachable branches in the hook
 // alive.
 const mockToAppearance = jest.fn();
+const mockToDataSources = jest.fn();
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: () => ({
     toPersonalInformation: jest.fn(),
     toNotificationSettings: jest.fn(),
     toDietaryProfile: jest.fn(),
     toAppSettings: jest.fn(),
+    toDataSources: mockToDataSources,
     toAppearance: mockToAppearance,
     toDebugInfo: jest.fn(),
     toPerformanceDashboard: jest.fn(),
@@ -128,6 +130,11 @@ jest.mock('#/config/settingsConfig', () => ({
           type: 'navigation',
         },
         { key: 'language', labelKey: 'labels.language', type: 'modal' },
+        {
+          key: 'dataSources',
+          labelKey: 'profile.dataSources.title',
+          type: 'navigation',
+        },
       ],
     },
     {
@@ -242,6 +249,21 @@ describe('useConfigurableSettings', () => {
     appearance?.onPress?.();
 
     expect(mockToAppearance).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the data sources screen from its row', () => {
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
+    const dataSources = sectionById(
+      result.current.sections,
+      'appearanceAndLanguage',
+    ).items.find(item => item.key === 'dataSources');
+
+    dataSources?.onPress?.();
+
+    expect(mockToDataSources).toHaveBeenCalledTimes(1);
   });
 
   it('returns sections from config', () => {

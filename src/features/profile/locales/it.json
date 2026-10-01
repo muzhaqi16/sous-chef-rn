@@ -197,7 +197,26 @@
     "loadingImage": "Caricamento immagine...",
     "cropInstructions": "Pizzica per ingrandire, trascina per spostare. L'area circolare sarà la tua foto del profilo.",
     "imageNotLoaded": "Immagine non caricata correttamente",
-    "cropImageFailed": "Impossibile ritagliare l'immagine. Riprova."
+    "cropImageFailed": "Impossibile ritagliare l'immagine. Riprova.",
+    "dataSources": {
+      "title": "Fonti dei dati",
+      "intro": "{{appName}} costruisce il suo catalogo alimentare su questi dataset aperti.",
+      "visit": "Apri il sito",
+      "publicDomain": "Pubblico dominio (opera del governo degli Stati Uniti).",
+      "openFoodFacts": {
+        "name": "Open Food Facts",
+        "provides": "Nomi, marchi, dimensioni delle confezioni e foto dei prodotti scansionati.",
+        "licence": "Database: Open Database License (ODbL). Foto: Creative Commons Attribuzione-Condividi allo stesso modo (CC BY-SA)."
+      },
+      "usdaFoodDataCentral": {
+        "name": "USDA FoodData Central",
+        "provides": "Valori nutrizionali e schede prodotto."
+      },
+      "usdaFoodKeeper": {
+        "name": "USDA FoodKeeper",
+        "provides": "Quanto si conservano gli alimenti in dispensa, in frigorifero e nel congelatore."
+      }
+    }
   },
   "personalInformation": {
     "sectionPrivacySettings": "Impostazioni Privacy",

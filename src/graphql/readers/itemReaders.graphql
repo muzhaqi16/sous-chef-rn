@@ -40,6 +40,7 @@ fragment ItemReaders on Item {
   imageUrl
   matchedVariation {
     id
+    source
     upc
   }
   name
