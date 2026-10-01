@@ -32,8 +32,8 @@
     },
     "review": {
       "title": "Recibo",
-      "intro": "Elige qué es cada línea. Solo se añaden a tu despensa las líneas que elijas.",
-      "introTo": "Elige qué es cada línea. Solo se añaden a {{pantry}} las líneas que elijas.",
+      "intro": "Revisa el producto de cada línea. Solo se añaden a tu despensa las líneas con un producto.",
+      "introTo": "Revisa el producto de cada línea. Solo se añaden a {{pantry}} las líneas con un producto.",
       "choose": "Toca para elegir el producto",
       "chosenDetail": "{{printed}} · {{amount}}",
       "notAdded": "No añadido",
@@ -57,7 +57,10 @@
       "totalsBody": "Los artículos leídos suman {{counted}}, pero el recibo dice {{printed}}. Puede que falte una línea, así que compara la lista con el recibo antes de añadir.",
       "onList": "En tu lista",
       "tickOffTitle": "Tacharlo de la lista de la compra",
-      "tickOffBody": "«{{name}}» está en tu lista. Se marca como comprado y se pasa a la despensa en vez de añadirse dos veces."
+      "tickOffBody": "«{{name}}» está en tu lista. Se marca como comprado y se pasa a la despensa en vez de añadirse dos veces.",
+      "matching": "Buscando los productos…",
+      "check": "Revisar",
+      "maybe": "¿Quizás {{name}}?"
     }
   }
 }

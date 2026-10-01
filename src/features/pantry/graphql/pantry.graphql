@@ -256,7 +256,10 @@ query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
     wasteAnalytics(filters: $filter) {
       totalWasteCount
       totalWasteQuantity
-      totalWasteValue
+      valueByCurrency {
+        currencyCode
+        amount
+      }
       averageWastePerDay
       wasteRate
       composted
@@ -268,7 +271,6 @@ query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
         count
         totalQuantity
         percentage
-        estimatedValue
       }
       topWastedItems {
         itemId
@@ -277,7 +279,10 @@ query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
         count
         totalQuantity
         unitName
-        estimatedValue
+        valueByCurrency {
+          currencyCode
+          amount
+        }
       }
       wasteTrend {
         date
