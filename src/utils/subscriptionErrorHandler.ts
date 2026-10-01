@@ -1,3 +1,5 @@
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 import { serializeError } from './errorSerialization';
 import { getTopLevelGraphQLError } from './errors/graphqlErrors';
@@ -47,6 +49,24 @@ export const classifyTransportTermination = (
   return isRetryableWebSocketClose({ code: close.code, reason: '' })
     ? close
     : null;
+};
+
+/**
+ * The SERVER ended the subscription with a fault a later attempt can get past:
+ * `SUBSCRIPTION_ERROR`, which the schema documents as retryable, or an internal
+ * error the API tags `category: "infrastructure"` (a database or pool it could
+ * not reach, as while it restarts). Any other server error repeats as it is.
+ */
+export const isRetryableServerEnd = (error: unknown): boolean => {
+  if (!CombinedGraphQLErrors.is(error)) return false;
+  const [first] = error.errors;
+  if (!first) return false;
+  const code = first.extensions?.code;
+  return (
+    code === TopLevelErrorCode.SubscriptionError ||
+    (code === TopLevelErrorCode.InternalServerError &&
+      first.extensions?.category === 'infrastructure')
+  );
 };
 
 /**
