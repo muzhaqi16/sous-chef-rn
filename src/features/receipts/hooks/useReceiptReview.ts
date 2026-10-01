@@ -10,7 +10,11 @@ import {
   type ReceiptReviewLine,
 } from '../utils/receiptReviewLines';
 import { receiptTotalsGap } from '../utils/receiptTotalsGap';
-import { linkReceiptLines, listLineFor } from '../utils/linkReceiptLines';
+import {
+  linkReceiptLines,
+  listLineFor,
+  type ListMatchKey,
+} from '../utils/linkReceiptLines';
 import { useApplyReceipt } from './useApplyReceipt';
 
 export interface ReceiptReviewRow extends ReceiptReviewLine {
@@ -18,10 +22,8 @@ export interface ReceiptReviewRow extends ReceiptReviewLine {
   added: boolean;
   /** Why the last attempt to add it failed. */
   failure?: string;
-  /** Adding it ticks this shopping-list line off rather than adding it again. */
+  /** Adding it ticks a shopping-list line off rather than adding it again. */
   onList: boolean;
-  /** The list line it matches, shown even while it is kept off the list. */
-  listItemName?: string;
 }
 
 /**
@@ -53,24 +55,23 @@ export function useReceiptReview() {
   });
   const openLines = list.unpurchased.items;
   const links = linkReceiptLines(pending, openLines);
-  const linked = new Set(links.values());
-  const unclaimed = openLines.filter(line => !linked.has(line));
 
-  const rows: ReceiptReviewRow[] = lines.map(line => {
-    const choice = draft?.choices?.[line.index];
-    const isAdded = added.has(line.index);
-    const link = links.get(line.index);
-    const kept =
-      choice?.offList && !isAdded ? listLineFor(choice, unclaimed) : undefined;
-    return {
-      ...line,
-      choice,
-      added: isAdded,
-      failure: failures.find(failure => failure.index === line.index)?.reason,
-      onList: !!link,
-      listItemName: (link ?? kept)?.itemName ?? undefined,
-    };
-  });
+  const rows: ReceiptReviewRow[] = lines.map(line => ({
+    ...line,
+    choice: draft?.choices?.[line.index],
+    added: added.has(line.index),
+    failure: failures.find(failure => failure.index === line.index)?.reason,
+    onList: links.has(line.index),
+  }));
+
+  // Every other row keeps its link, so a line never shows one already taken.
+  const listItemNameFor = (index: number, key: ListMatchKey) => {
+    const held = new Set(
+      [...links].flatMap(([other, line]) => (other === index ? [] : [line])),
+    );
+    const open = openLines.filter(line => !held.has(line));
+    return listLineFor(key, open)?.itemName ?? undefined;
+  };
 
   return {
     rows,
@@ -81,6 +82,8 @@ export function useReceiptReview() {
     pendingCount: pending.length,
     applying,
     chooseLine,
+    /** The list line a line would tick off with this product and unit, as they are picked. */
+    listItemNameFor,
     addChosen: () =>
       apply(
         pending.map(line => ({ ...line, listLine: links.get(line.index) })),

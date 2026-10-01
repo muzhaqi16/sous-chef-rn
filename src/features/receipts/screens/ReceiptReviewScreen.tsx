@@ -35,6 +35,7 @@ export const ReceiptReviewScreen: React.FC = () => {
     pendingCount,
     applying,
     chooseLine,
+    listItemNameFor,
     addChosen,
     finish,
   } = useReceiptReview();
@@ -168,7 +169,9 @@ export const ReceiptReviewScreen: React.FC = () => {
         visible={sheetVisible}
         line={editing}
         choice={editingRow?.choice}
-        listItemName={editingRow?.listItemName}
+        listItemNameFor={key =>
+          editing ? listItemNameFor(editing.index, key) : undefined
+        }
         opening={opening}
         onClose={closeSheet}
         onSave={choice => {
