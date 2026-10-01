@@ -15,6 +15,7 @@ export const catalogTestIDs = {
   /** `AddItemSheet`, under its host's `testIDPrefix`. */
   addItemSheetModal: (prefix: string) => `${prefix}-modal`,
   addItemSheetSearchInput: (prefix: string) => `${prefix}-search-input`,
+  addItemSheetReceiptAction: (prefix: string) => `${prefix}-receipt-action`,
   addManuallyButton: (prefix: string) => `${prefix}-add-manually-button`,
 
   /** `SuggestionListItem` / `BottomSheetAutocompleteInput`, under the field's id. */

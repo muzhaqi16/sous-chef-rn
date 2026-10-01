@@ -91,6 +91,8 @@ export interface AddItemSheetProps<
   isMutating: boolean;
   onAddManually: (searchValue: string) => void;
   onScanPress: () => void;
+  /** Scan a receipt; only the pantry's sheet offers it. */
+  onReceiptPress?: () => void;
   exitingItems?: Set<string>;
   onExitComplete?: (itemId: string) => void;
   shouldFetch?: boolean;
