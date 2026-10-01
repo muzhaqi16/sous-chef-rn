@@ -1,6 +1,7 @@
 'use no memo';
 import React from 'react';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, NetWeightKind } from '#/graphql/generated/schemaTypes';
+import { barcodeTestIDs } from '#features/barcode/testIDs';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
@@ -110,6 +111,30 @@ jest.mock('../ProductResultCard', () => ({
   ProductResultCard: ({ item }: { item: { name: string } }) => {
     const { Text } = require('react-native');
     return require('react').createElement(Text, null, item.name);
+  },
+}));
+
+// The sheet's own form is pinned in `packSizeFormConfig.test.ts`; here it
+// only has to hand back a size when shown.
+jest.mock('../PackSizeSheet', () => ({
+  PackSizeSheet: ({
+    visible,
+    onConfirm,
+  }: {
+    visible: boolean;
+    onConfirm: (size: { netWeight: number; netWeightUnitId: string }) => void;
+  }) => {
+    if (!visible) return null;
+    const RN = require('react-native');
+    const R = require('react');
+    return R.createElement(
+      RN.Pressable,
+      {
+        testID: 'pack-size-stub',
+        onPress: () => onConfirm({ netWeight: 32, netWeightUnitId: 'unit-oz' }),
+      },
+      R.createElement(RN.Text, null, 'size'),
+    );
   },
 }));
 
@@ -234,6 +259,93 @@ describe('SearchResults', () => {
     expect(firedInput.item).toEqual({ variation: 'esm-1' });
     expect(firedInput).not.toHaveProperty('netWeight');
     expect(firedInput).not.toHaveProperty('unit');
+  });
+
+  describe('a product from Open Food Facts', () => {
+    const created = () =>
+      recordMock(BarcodeCreatePantryItemDocument, {
+        data: {
+          createPantryItem: {
+            __typename: 'CreatePantryItemPayload',
+            pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+          },
+        },
+      });
+
+    it('credits Open Food Facts', () => {
+      renderWithApollo(
+        <SearchResults
+          {...defaultProps}
+          item={{ ...mockItem, source: 'OPENFOODFACTS' }}
+        />,
+      );
+      expect(
+        screen.getByTestId(barcodeTestIDs.openFoodFactsCredit),
+      ).toHaveTextContent('Product details from Open Food Facts (ODbL)');
+    });
+
+    it('credits nobody for a catalog product', () => {
+      renderWithApollo(<SearchResults {...defaultProps} />);
+      expect(
+        screen.queryByTestId(barcodeTestIDs.openFoodFactsCredit),
+      ).toBeNull();
+    });
+
+    it('asks for the pack size it lacks, then stores the one entered', async () => {
+      const rec = created();
+      renderWithApollo(
+        <SearchResults
+          {...defaultProps}
+          item={{
+            ...mockItem,
+            source: 'OPENFOODFACTS',
+            netWeight: undefined,
+            variationId: 'off-1',
+          }}
+        />,
+        { operationMocks: [rec.mock] },
+      );
+
+      fireEvent.press(screen.getByTestId('primary-btn'));
+      // Nothing is added until the size is given.
+      expect(rec.fired).toHaveLength(0);
+
+      fireEvent.press(screen.getByTestId('pack-size-stub'));
+
+      await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+      const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
+        .input;
+      expect(firedInput.netWeight).toEqual({
+        netWeight: 32,
+        netWeightUnitId: 'unit-oz',
+      });
+      expect(firedInput.item).toEqual({ variation: 'off-1' });
+    });
+
+    it('adds in one tap when the record states its pack size', async () => {
+      const rec = created();
+      renderWithApollo(
+        <SearchResults
+          {...defaultProps}
+          item={{
+            ...mockItem,
+            source: 'OPENFOODFACTS',
+            netWeight: 16,
+            netWeightKind: NetWeightKind.Package,
+            variationId: 'off-2',
+          }}
+        />,
+        { operationMocks: [rec.mock] },
+      );
+
+      fireEvent.press(screen.getByTestId('primary-btn'));
+
+      await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+      expect(screen.queryByTestId('pack-size-stub')).toBeNull();
+      const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
+        .input;
+      expect(firedInput).not.toHaveProperty('netWeight');
+    });
   });
 
   it('names the item when the scan found no record for the barcode', async () => {

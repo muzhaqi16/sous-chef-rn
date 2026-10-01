@@ -21,6 +21,13 @@
     "formatValue": "Formato: {{format}}",
     "upc": "UPC/Codice a barre",
     "servingAmount": "Una porzione: {{amount}}",
-    "referenceAmount": "Valori nutrizionali per {{amount}}"
+    "referenceAmount": "Valori nutrizionali per {{amount}}",
+    "openFoodFactsCredit": "Dati del prodotto da Open Food Facts (ODbL)",
+    "packSize": {
+      "body": "Open Food Facts non indica la dimensione di questo prodotto. Inseriscila una volta per aggiungerlo alla dispensa.",
+      "label": "Dimensione di una confezione",
+      "invalid": "Inserisci una dimensione maggiore di 0.",
+      "unitRequired": "Scegli un’unità dall’elenco."
+    }
   }
 }

@@ -97,6 +97,7 @@ export function useAppNavigation() {
     toDietaryProfile: () => navigation.navigate('DietaryProfile'),
     toPersonalInformation: () => navigation.navigate('PersonalInformation'),
     toAppSettings: () => navigation.navigate('AppSettings'),
+    toDataSources: () => navigation.navigate('DataSources'),
     toPerformanceDashboard: () => navigation.navigate('PerformanceDashboard'),
     toDebugInfo: () => navigation.navigate('DebugInfo'),
     toReceiptScan: () =>

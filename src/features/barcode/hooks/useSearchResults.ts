@@ -3,11 +3,13 @@ import { useMutation, useQuery } from '@apollo/client/react';
 import { logger } from '#/utils/environment';
 
 import {
-  ItemByUpcFilterDocument,
-  ItemBySkuFilterDocument,
   CreateItemDocument,
   type CreateItemMutation,
 } from '#operations/item/item.generated';
+import {
+  ItemByUpcFilterDocument,
+  ItemBySkuFilterDocument,
+} from './useSearchResults.generated';
 import { UpcFormat, type NetWeightKind } from '#/graphql/generated/schemaTypes';
 import {
   useSearchState,
@@ -101,6 +103,7 @@ const convertToScannedItem = (
     } | null;
     matchedVariation?: {
       id: string;
+      source?: string | null;
     } | null;
   },
   scannedCode: string,
@@ -114,6 +117,7 @@ const convertToScannedItem = (
   canSuggest: item.canSuggest ?? undefined,
   upc: scannedCode,
   variationId: item.matchedVariation?.id,
+  source: firstNonBlank(item.matchedVariation?.source),
   unitId: item.units.find(u => u.isDefault)?.unitId,
   netWeight: item.netWeight ?? undefined,
   netWeightKind: item.netWeightKind ?? undefined,
@@ -317,7 +321,9 @@ export const useSearchResults = (
   ]);
 
   // `isNetworkError` covers the request timeout too. The server's own message is
-  // unlocalized English, so the copy is always the app's.
+  // unlocalized English, so the copy is always the app's. A failed lookup is not
+  // a miss: the product may well exist, so the new-item form stays closed and
+  // the screen offers a retry.
   useEffect(() => {
     const error = upcError ?? skuError;
     if (!error) return;
@@ -328,20 +334,7 @@ export const useSearchResults = (
         ? t('errors.networkError')
         : t('errors.codes.genericRetry'),
     );
-
-    if (!upcData?.items.edges.length && !skuData?.items.edges.length) {
-      showBottomSheet(1);
-    }
-  }, [
-    upcError,
-    skuError,
-    upcData,
-    skuData,
-    setSearching,
-    setSearchError,
-    showBottomSheet,
-    t,
-  ]);
+  }, [upcError, skuError, setSearching, setSearchError, t]);
 
   // Handle loading state from both queries
   useEffect(() => {
