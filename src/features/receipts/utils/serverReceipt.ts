@@ -46,6 +46,13 @@ const KIND_OF: Record<ReceiptLineKind, ParsedLineKind> = {
 const MEASURE =
   /^(?:lbs?|kg|g|oz|fl\.?\s?oz|l|ml|ct|ea|each|pk|pkg|gal|qt|pt|dz|doz)$/i;
 
+// A product code as printed, less a tax flag run into it (`000000040110KF`).
+// The server has returned a line's price (`4.94`) as its code.
+const PRINTED_CODE = /^(\d{4,14})[A-Z]{0,2}$/;
+
+const codeOf = (line: ServerReceiptLine, printed: string | undefined) =>
+  PRINTED_CODE.exec(line.code?.trim() ?? '')?.[1] ?? printed;
+
 // The figures come from the printed text, as they do for the phone's labels,
 // and the server's only where the text states none: it has priced a line with
 // the next row's amount (`BANANAS ... 1.02 R` as 4.94).
@@ -57,7 +64,7 @@ const toLine = (line: ServerReceiptLine, index: number): ParsedReceiptLine => {
   const unit =
     reading.unit ??
     (line.unit && MEASURE.test(line.unit) ? line.unit : undefined);
-  const code = line.code ?? reading.code;
+  const code = codeOf(line, reading.code);
   return {
     index,
     rawText: line.text,
@@ -106,9 +113,27 @@ const foldDetails = (lines: ParsedReceiptLine[]): ParsedReceiptLine[] =>
     };
   });
 
+// On a skewed photo the server has priced the last item, which printed no
+// price, with the subtotal printed below it. An item does not cost the whole
+// receipt unless it is the only item.
+const dropSumsAsPrices = (lines: ParsedReceiptLine[]): ParsedReceiptLine[] => {
+  const items = lines.filter(line => line.kind === 'item');
+  if (items.length < 2) return lines;
+  const sums = new Set(
+    lines
+      .filter(line => line.kind === 'subtotal' || line.kind === 'total')
+      .map(line => line.lineTotal),
+  );
+  return lines.map(line => {
+    if (line.kind !== 'item' || !sums.has(line.lineTotal)) return line;
+    const { lineTotal: _sum, ...unpriced } = line;
+    return unpriced;
+  });
+};
+
 /** The server's reading in the shape the review reads, as the phone's is. */
 export function fromServerReceipt(receipt: ServerReceipt): ParsedReceipt {
-  const lines = foldDetails(receipt.lines.map(toLine));
+  const lines = dropSumsAsPrices(foldDetails(receipt.lines.map(toLine)));
   const merchant = receipt.merchant.name?.trim();
   return merchant ? { merchant, lines } : { lines };
 }

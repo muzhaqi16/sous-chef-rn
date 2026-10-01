@@ -161,6 +161,89 @@ describe('fromServerReceipt', () => {
     expect(parsed.lines[1]?.lineTotal).toBeUndefined();
   });
 
+  // As the dev parser answered for the same receipt read on the simulator.
+  it('takes no price for a code, and no subtotal for an item price', () => {
+    const parsed = fromServerReceipt({
+      merchant: { name: 'Walmart' },
+      lines: [
+        {
+          text: 'BANANAS  000000040110KF  1.02 R',
+          kind: ReceiptLineKind.Item,
+          product: 'BANANAS',
+          code: '000000040110KF',
+          quantity: 1,
+          unit: 'R',
+          amount: 1.02,
+        },
+        {
+          text: '2.21 lb. @ 1lb.  /0.46  4.94 Y',
+          kind: ReceiptLineKind.Item,
+          product: '2.21 lb. @ 1lb.',
+          code: '4.94',
+          quantity: 2.21,
+          unit: 'lb.',
+          amount: 4.94,
+        },
+        {
+          text: 'DEVILED EGG  078742213510 F  4.96 R',
+          kind: ReceiptLineKind.Item,
+          product: 'DEVILED EGG',
+          code: '078742213510',
+          amount: 4.96,
+        },
+        {
+          text: 'PRG CHED SC  038000138970',
+          kind: ReceiptLineKind.Item,
+          product: 'PRG CHED SC',
+          code: '038000138970',
+          quantity: 1,
+          amount: 27.13,
+        },
+        { text: 'SUBTOTAL', kind: ReceiptLineKind.Subtotal, amount: 27.13 },
+      ],
+    });
+
+    expect(receiptReviewLines(parsed)).toEqual([
+      {
+        index: 0,
+        printed: 'BANANAS',
+        code: '000000040110',
+        quantity: 2.21,
+        unit: 'lb',
+        price: 1.02,
+      },
+      {
+        index: 2,
+        printed: 'DEVILED EGG',
+        code: '078742213510',
+        price: 4.96,
+      },
+      {
+        index: 3,
+        printed: 'PRG CHED SC',
+        code: '038000138970',
+        quantity: 1,
+      },
+    ]);
+  });
+
+  it('keeps the price of the only item, which is the subtotal', () => {
+    const parsed = fromServerReceipt({
+      merchant: { name: 'Walmart' },
+      lines: [
+        {
+          text: 'GV WHOLE MILK 007874235186 F 3.48 N',
+          kind: ReceiptLineKind.Item,
+          product: 'GV WHOLE MILK',
+          amount: 3.48,
+        },
+        { text: 'SUBTOTAL 3.48', kind: ReceiptLineKind.Subtotal, amount: 3.48 },
+      ],
+    });
+
+    expect(parsed.lines[0]?.lineTotal).toBe(3.48);
+  });
+
   it('leaves out a merchant the server could not name', () => {
     expect(fromServerReceipt({ merchant: { name: null }, lines: [] })).toEqual({
       lines: [],
