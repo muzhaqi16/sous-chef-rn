@@ -15,16 +15,23 @@ export interface ReceiptLineChoice {
   unitText: string;
   /** The total paid for the line. */
   price: number | null;
+  /** Added on its own, leaving the shopping list line it matches open. */
+  offList?: boolean;
 }
 
 export interface ReceiptDraft {
   /** Each page's redacted text, in scan order; never an image. */
   pages: string[];
   scannedAt: string;
+  /** The day printed on the receipt (YYYY-MM-DD), read before redaction cut it. */
+  purchasedOn?: string;
   /** Structured on the phone, when its model could. */
   parsed?: ParsedReceipt;
-  /** The review's picks by line index; a line without one is not added. */
-  choices?: Partial<Record<number, ReceiptLineChoice>>;
+  /**
+   * The review's picks by line index. Null keeps a line out even when the API
+   * proposes an item for it; a line with neither is not added.
+   */
+  choices?: Partial<Record<number, ReceiptLineChoice | null>>;
   /** Lines already in the pantry, so a retry sends only what failed. */
   added?: number[];
 }
@@ -32,6 +39,7 @@ export interface ReceiptDraft {
 interface ReceiptDraftState {
   draft: ReceiptDraft | null;
   saveDraft: (draft: ReceiptDraft) => void;
+  /** A choice, or null to leave the line out. */
   chooseLine: (index: number, choice: ReceiptLineChoice | null) => void;
   markAdded: (indexes: readonly number[]) => void;
   clearDraft: () => void;
@@ -46,16 +54,16 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
       draft: null,
       saveDraft: draft => set({ draft }),
       chooseLine: (index, choice) =>
-        set(({ draft }) => {
-          if (!draft) return {};
-          const { [index]: _previous, ...others } = draft.choices ?? {};
-          return {
-            draft: {
-              ...draft,
-              choices: choice ? { ...others, [index]: choice } : others,
-            },
-          };
-        }),
+        set(({ draft }) =>
+          draft
+            ? {
+                draft: {
+                  ...draft,
+                  choices: { ...draft.choices, [index]: choice },
+                },
+              }
+            : {},
+        ),
       markAdded: indexes =>
         set(({ draft }) =>
           draft
