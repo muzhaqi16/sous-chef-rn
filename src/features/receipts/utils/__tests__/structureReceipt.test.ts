@@ -1,5 +1,9 @@
 import type { ReceiptLineLabels } from '#/native/ReceiptStructuring';
-import { isUsableReceipt, structureReceipt } from '../structureReceipt';
+import {
+  isUsableReceipt,
+  linesThroughTotal,
+  structureReceipt,
+} from '../structureReceipt';
 
 // Receipt lines and the labels Foundation Models returned for them in the app
 // on the iOS simulator (docs/verified-library-behaviour.md).
@@ -188,6 +192,33 @@ describe('structureReceipt', () => {
     });
 
     expect(parsed.lines.map(line => line.kind)).toEqual(['item', 'subtotal']);
+  });
+});
+
+describe('linesThroughTotal', () => {
+  it('stops at the first printed total, leaving the tender and footer out', () => {
+    expect(
+      linesThroughTotal([
+        'ALDI',
+        'Celery  1.65  FA',
+        'SUBTOTAL  15.83',
+        'AMOUNT DUE  16.19',
+        'Debit Card  16.19',
+        'Enter the drawing for a chance',
+        'Must be 18 years old to enter.',
+      ]),
+    ).toEqual([
+      'ALDI',
+      'Celery  1.65  FA',
+      'SUBTOTAL  15.83',
+      'AMOUNT DUE  16.19',
+    ]);
+  });
+
+  it('passes over a store name or total with no amount', () => {
+    const lines = ['TOTAL WINE & MORE', 'MERLOT  9.99', 'TOTAL ITEMS 1'];
+
+    expect(linesThroughTotal(lines)).toEqual(lines);
   });
 });
 

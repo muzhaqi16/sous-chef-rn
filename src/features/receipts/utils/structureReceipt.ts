@@ -35,9 +35,12 @@ export interface ParsedReceipt {
 // The printed words decide these whatever the model said.
 const PRINTED_KIND: readonly [RegExp, ParsedLineKind][] = [
   [/^\W*SUB\s*-?\s*TOTAL\b/i, 'subtotal'],
-  [/^\W*(?:TOTAL|BALANCE)(?:\s+DUE)?\b/i, 'total'],
+  [/^\W*(?:(?:TOTAL|BALANCE)(?:\s+DUE)?|AMOUNT\s+DUE)\b/i, 'total'],
   [/^\W*(?:SALES\s+)?TAX\b/i, 'tax'],
 ];
+
+const printedKind = (text: string) =>
+  PRINTED_KIND.find(([pattern]) => pattern.test(text))?.[1];
 
 const KIND_OF_LABEL: Record<ReceiptLineLabel, ParsedLineKind | 'detail'> = {
   item: 'item',
@@ -71,8 +74,8 @@ function kindOf(
   reading: ReceiptLineReading,
   label: ReceiptLineLabel | undefined,
 ): ParsedLineKind | 'detail' {
-  const printed = PRINTED_KIND.find(([pattern]) => pattern.test(text));
-  if (printed) return printed[1];
+  const printed = printedKind(text);
+  if (printed) return printed;
   if (reading.amount !== undefined && reading.amount < 0) return 'discount';
   return label ? KIND_OF_LABEL[label] : 'other';
 }
@@ -98,6 +101,20 @@ function detailTarget(
     .filter(line => line.index < detail.index)
     .reverse()
     .find(line => line.lineTotal === undefined || line.quantity === undefined);
+}
+
+/**
+ * The lines worth labelling: through the first printed total, as no item
+ * follows it, else all of them. A footer's sweepstakes text can make Apple's
+ * model refuse the whole receipt (docs/verified-library-behaviour.md).
+ */
+export function linesThroughTotal(lines: readonly string[]): string[] {
+  const end = lines.findIndex(
+    line =>
+      printedKind(line) === 'total' &&
+      readReceiptLine(line).amount !== undefined,
+  );
+  return end === -1 ? [...lines] : lines.slice(0, end + 1);
 }
 
 /**

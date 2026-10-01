@@ -1,6 +1,7 @@
 import { ReceiptStructuring } from '#/native/ReceiptStructuring';
 import {
   isUsableReceipt,
+  linesThroughTotal,
   structureReceipt,
   type ParsedReceipt,
 } from '../utils/structureReceipt';
@@ -19,7 +20,7 @@ export async function parseReceiptOnDevice(
 ): Promise<ParsedReceipt | null> {
   if ((await ReceiptStructuring.availability()) !== 'available') return null;
 
-  const lines = pages.flatMap(page => page.split('\n'));
+  const lines = linesThroughTotal(pages.flatMap(page => page.split('\n')));
   let timer: ReturnType<typeof setTimeout> | undefined;
   const expired = new Promise<null>(resolve => {
     timer = setTimeout(() => resolve(null), LABELLING_TIMEOUT_MS);
