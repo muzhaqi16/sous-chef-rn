@@ -42,6 +42,35 @@ describe('readReceiptLine', () => {
       unitPrice: 2.49,
       amount: 7.47,
     });
+    // ALDI UK writes the count with an x.
+    expect(readReceiptLine('2 x  2.19')).toEqual({
+      quantity: 2,
+      unitPrice: 2.19,
+    });
+  });
+
+  it('reads a weight at a rate per one unit, as Walmart prints it', () => {
+    const weighed = { quantity: 2.21, unit: 'lb', unitPrice: 0.46 };
+    expect(readReceiptLine('2.21 lb @ 1 lb /0.46')).toEqual(weighed);
+    // As recognition reads it: a full stop after each unit, `lb` as `1b`.
+    expect(readReceiptLine('2.21 lb. @ 1 1b. /0.46')).toEqual(weighed);
+    expect(readReceiptLine('2.211b. @ 1 lb. /0.46  1.02 R')).toEqual({
+      ...weighed,
+      amount: 1.02,
+    });
+  });
+
+  it('reads a unit price printed without its leading zero', () => {
+    expect(readReceiptLine('PLUMS  2.54 lb @ .99/lb  2.51')).toEqual({
+      quantity: 2.54,
+      unit: 'lb',
+      unitPrice: 0.99,
+      amount: 2.51,
+    });
+  });
+
+  it('reads no price from a deal line (Giant Eagle)', () => {
+    expect(readReceiptLine('1 @ 2/3.00')).toEqual({});
   });
 
   it('takes the line amount, not a percentage or a phone number', () => {
