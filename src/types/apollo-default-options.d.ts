@@ -12,6 +12,7 @@ declare module '@apollo/client' {
     appForeground: void;
     apiReachable: void;
     wsReconnected: void;
+    languageChanged: void;
   }
 
   namespace ApolloClient {

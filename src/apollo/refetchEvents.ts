@@ -12,6 +12,7 @@ import { queueManager } from './offlineQueue/queueManager';
 import { LogoutCleanup } from './logoutCleanup';
 import { onWebSocketReconnected } from './links/wsLink';
 import { Telemetry } from '#services/telemetry';
+import { getResolvedLanguage, onLanguageChanged } from '#/i18n';
 import { logger } from '#/utils/environment';
 
 type RefetchSource = keyof RefetchEvents;
@@ -46,6 +47,20 @@ const wsReconnected = () =>
   new Observable<void>(observer =>
     onWebSocketReconnected(() => observer.next()),
   );
+
+// Catalog names come in the request's language (`languageLink`), so a switch
+// re-reads what is on screen; a screen that mounts later fetches on its own.
+// Only a real change counts: i18next also reports a switch to the same language.
+const languageChanged = () =>
+  new Observable<void>(observer => {
+    let current = getResolvedLanguage();
+    return onLanguageChanged(() => {
+      const next = getResolvedLanguage();
+      if (next === current) return;
+      current = next;
+      observer.next();
+    });
+  });
 
 // The socket re-acks a second or two after the app returns to the foreground.
 const SETTLE_MS = 1_500;
@@ -146,7 +161,7 @@ export const createRefetchEventManager = (): RefetchEventManager => {
 };
 
 /**
- * Starts the three triggers. Called once at app start rather than from
+ * Starts the triggers. Called once at app start rather than from
  * `client.ts`: a source subscribes as it is set, and importing the client must
  * not subscribe to the store, AppState and the socket.
  */
@@ -156,4 +171,5 @@ export const connectResyncSources = (client: ApolloClient): void => {
   manager.setEventSource('appForeground', appForeground);
   manager.setEventSource('apiReachable', apiReachable);
   manager.setEventSource('wsReconnected', wsReconnected);
+  manager.setEventSource('languageChanged', languageChanged);
 };
