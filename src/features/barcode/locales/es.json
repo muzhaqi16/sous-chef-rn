@@ -20,7 +20,6 @@
     "barcodeValue": "Código de barras: {{barcode}}",
     "formatValue": "Formato: {{format}}",
     "upc": "UPC/Código de barras",
-    "added": "Añadido",
     "servingAmount": "Una porción: {{amount}}",
     "referenceAmount": "Información nutricional por {{amount}}"
   }

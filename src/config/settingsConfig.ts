@@ -241,6 +241,7 @@ export const PROFILE_SETTINGS_CONFIG: SettingSectionConfig[] = [
         labelKey: 'labels.performanceDashboard',
         type: 'navigation',
       },
+      { key: 'receiptScan', labelKey: 'receipts.title', type: 'navigation' },
     ],
   },
 ];

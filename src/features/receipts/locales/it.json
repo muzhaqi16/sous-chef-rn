@@ -1,0 +1,66 @@
+{
+  "receipts": {
+    "title": "Scansiona scontrino",
+    "intro": {
+      "title": "Scansiona uno scontrino",
+      "body": "Appoggia lo scontrino in piano e con una buona luce. Uno scontrino lungo può richiedere più scatti, dall'alto in basso."
+    },
+    "reading": "Lettura dello scontrino…",
+    "unreadable": {
+      "title": "Impossibile leggere questo scontrino",
+      "body": "Riprendilo in piano e con una buona luce, con tutta la larghezza nell'inquadratura."
+    },
+    "failed": {
+      "title": "Impossibile scansionare lo scontrino",
+      "body": "Si è verificato un errore durante la scansione. Riprova."
+    },
+    "saved": {
+      "title": "Scontrino salvato",
+      "body": "Viene conservato solo questo testo. Le foto sono state eliminate e i numeri di carta e fedeltà rimossi.",
+      "scanAnother": "Scansiona un altro scontrino",
+      "review_one": "Rivedi {{count}} articolo",
+      "review_other": "Rivedi {{count}} articoli"
+    },
+    "replace": {
+      "title": "Sostituire lo scontrino salvato?",
+      "body": "Si conserva un solo scontrino alla volta.",
+      "confirm": "Sostituisci"
+    },
+    "photo": {
+      "title": "Scatta invece una foto",
+      "body": "Questo telefono non può scansionare documenti. Fotografa lo scontrino in piano e con una buona luce, oppure scegli una foto già scattata."
+    },
+    "review": {
+      "title": "Scontrino",
+      "intro": "Controlla il prodotto di ogni riga. Solo le righe con un prodotto vengono aggiunte alla dispensa.",
+      "introTo": "Controlla il prodotto di ogni riga. Solo le righe con un prodotto vengono aggiunte a {{pantry}}.",
+      "choose": "Tocca per scegliere il prodotto",
+      "chosenDetail": "{{printed}} · {{amount}}",
+      "notAdded": "Non aggiunto",
+      "add_one": "Aggiungi {{count}} articolo alla dispensa",
+      "add_other": "Aggiungi {{count}} articoli alla dispensa",
+      "addNone": "Scegli gli articoli da aggiungere",
+      "someFailed_one": "Non è stato possibile aggiungere {{count}} articolo. Riprova.",
+      "someFailed_other": "Non è stato possibile aggiungere {{count}} articoli. Riprova.",
+      "addedTo_one": "{{count}} articolo aggiunto a {{pantry}}",
+      "addedTo_other": "{{count}} articoli aggiunti a {{pantry}}",
+      "addedCount_one": "{{count}} articolo aggiunto alla dispensa",
+      "addedCount_other": "{{count}} articoli aggiunti alla dispensa",
+      "emptyTitle": "Nessun articolo da rivedere",
+      "emptyBody": "Da questo scontrino non è stata letta nessuna riga di articolo. Scansionalo di nuovo o aggiungi gli articoli a mano.",
+      "editTitle": "Riga dello scontrino",
+      "printedLabel": "Sullo scontrino",
+      "productPlaceholder": "Cerca un prodotto",
+      "dontAdd": "Non aggiungere questa riga",
+      "invalidPrice": "Inserisci l'importo pagato, ad esempio 3,49, oppure lascia vuoto.",
+      "totalsTitle": "Le righe non tornano con lo scontrino",
+      "totalsBody": "Gli articoli letti fanno {{counted}}, ma lo scontrino dice {{printed}}. Potrebbe mancare una riga: confronta l'elenco con lo scontrino prima di aggiungere.",
+      "onList": "Nella tua lista",
+      "tickOffTitle": "Spuntalo dalla lista della spesa",
+      "tickOffBody": "“{{name}}” è nella tua lista. Viene segnato come comprato e spostato in dispensa invece di essere aggiunto due volte.",
+      "matching": "Cerco i prodotti…",
+      "check": "Verifica",
+      "maybe": "Forse {{name}}?"
+    }
+  }
+}
