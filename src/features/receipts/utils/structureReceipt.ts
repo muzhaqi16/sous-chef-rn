@@ -156,30 +156,42 @@ const comparable = (text: string) =>
 
 /**
  * Each label on the line it describes. The model numbers lines itself and can
- * drift from the numbers it was given (a Walmart receipt's every label two lines
- * early), so a label lands where its copied product words are printed, nearest
- * the current drift; one without them keeps the drift of the label before it.
+ * drift from the numbers it was given, further with every line it skips (a
+ * Walmart receipt's labels two, then four lines early), so a label lands where
+ * its copied product words are printed, nearest the current drift; one without
+ * them keeps the drift of the label before it.
+ * Words already found on a line are not found again there (a weight line
+ * labelled with its item's `BANANAS`), and a label found by its words takes the
+ * line from one placed by drift alone.
  */
 function alignLabels(
   lines: readonly string[],
   labels: ReceiptLineLabels,
 ): Map<number, LabeledLine> {
-  const aligned = new Map<number, LabeledLine>();
+  const aligned = new Map<number, { label: LabeledLine; found: boolean }>();
   let drift = 0;
   for (const label of [...labels.lines].sort((a, b) => a.line - b.line)) {
     const product = label.product ? comparable(label.product) : '';
-    if (product.length >= 3) {
-      const found = [drift, 0, 1, -1, 2, -2, 3, -3].find(offset =>
-        comparable(lines[label.line + offset] ?? '').includes(product),
-      );
-      if (found !== undefined) drift = found;
-    }
+    const offset =
+      product.length >= 3
+        ? [0, 1, -1, 2, -2, 3, -3]
+            .map(step => drift + step)
+            .find(
+              candidate =>
+                !aligned.get(label.line + candidate)?.found &&
+                comparable(lines[label.line + candidate] ?? '').includes(
+                  product,
+                ),
+            )
+        : undefined;
+    if (offset !== undefined) drift = offset;
     const index = label.line + drift;
-    if (index >= 0 && index < lines.length && !aligned.has(index)) {
-      aligned.set(index, label);
-    }
+    if (index < 0 || index >= lines.length) continue;
+    const held = aligned.get(index);
+    const found = offset !== undefined;
+    if (!held || (found && !held.found)) aligned.set(index, { label, found });
   }
-  return aligned;
+  return new Map([...aligned].map(([index, { label }]) => [index, label]));
 }
 
 /**
@@ -233,6 +245,21 @@ export function structureReceipt(
     return line;
   });
 
+  // A skewed photo reads the price column a row off its words: a total or tax
+  // line that read no figure takes the price alone on the row next to it.
+  for (const sum of working) {
+    const isSum =
+      sum.kind === 'subtotal' || sum.kind === 'total' || sum.kind === 'tax';
+    if (!isSum || sum.lineTotal !== undefined) continue;
+    const beside = [working[sum.index - 1], working[sum.index + 1]].find(
+      line => line?.isDetail && PRICE_ONLY.test(line.rawText),
+    );
+    if (!beside || beside.reading.amount === undefined) continue;
+    sum.lineTotal = beside.reading.amount;
+    beside.isDetail = false;
+    delete beside.lineTotal;
+  }
+
   for (const detail of working.filter(line => line.isDetail)) {
     const item = detailTarget(working, detail);
     if (!item) continue;
@@ -268,9 +295,14 @@ export function structureReceipt(
   return merchant ? { merchant, lines: parsed } : { lines: parsed };
 }
 
+// The model skips lines that carry no words (a lone `F`, a price on its own
+// row): it labelled 19 of a skewed Walmart photo's 23. Aligned by their words,
+// the labels it gave still read the receipt; far fewer is a run that failed.
+const MIN_PLACED = 0.75;
+
 /**
- * Worth keeping: the model placed nearly every line, and at least one item has
- * a price. Anything less goes back to the draft's plain text.
+ * Worth keeping: the model placed most lines, and at least one item has a
+ * price. Anything less goes back to the draft's plain text.
  */
 export function isUsableReceipt(
   parsed: ParsedReceipt,
@@ -279,7 +311,7 @@ export function isUsableReceipt(
   const placed = new Set(labels.lines.map(line => line.line)).size;
   const covered = parsed.lines.length === 0 ? 0 : placed / parsed.lines.length;
   return (
-    covered >= 0.9 &&
+    covered >= MIN_PLACED &&
     parsed.lines.some(
       line => line.kind === 'item' && line.lineTotal !== undefined,
     )
