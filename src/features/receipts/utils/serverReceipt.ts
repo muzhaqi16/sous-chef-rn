@@ -1,9 +1,10 @@
 import { ReceiptLineKind } from '#/graphql/generated/schemaTypes';
 import { readReceiptLine } from './readReceiptLine';
-import type {
-  ParsedLineKind,
-  ParsedReceipt,
-  ParsedReceiptLine,
+import {
+  hasProductWords,
+  type ParsedLineKind,
+  type ParsedReceipt,
+  type ParsedReceiptLine,
 } from './structureReceipt';
 
 /** A line as the server's receipt parser reads it. */
@@ -40,45 +41,63 @@ const KIND_OF: Record<ReceiptLineKind, ParsedLineKind> = {
   [ReceiptLineKind.Other]: 'other',
 };
 
-const toLine = (line: ServerReceiptLine, index: number): ParsedReceiptLine => ({
-  index,
-  rawText: line.text,
-  kind: KIND_OF[line.kind],
-  ...(line.product ? { product: line.product } : {}),
-  ...(line.code ? { code: line.code } : {}),
-  ...(line.quantity == null ? {} : { quantity: line.quantity }),
-  ...(line.unit ? { unit: line.unit } : {}),
-  ...(line.unitPrice == null ? {} : { unitPrice: line.unitPrice }),
-  ...(line.amount == null ? {} : { lineTotal: line.amount }),
-  ...(line.appliesTo == null ? {} : { appliesToIndex: line.appliesTo }),
-});
+// A unit the review can show and the API can take: the server has returned a
+// line's tax flag (`R`) as its unit.
+const MEASURE =
+  /^(?:lbs?|kg|g|oz|fl\.?\s?oz|l|ml|ct|ea|each|pk|pkg|gal|qt|pt|dz|doz)$/i;
 
-// The server can return a weight or count line as an item of its own with no
-// amount (Walmart's `2.21 lb @ 0.46`). One that states a count or weight and
-// prints no code describes the item above it, as a detail line does on the
-// phone; an amount-less line with a code is a real item whose price was missed.
+// The figures come from the printed text, as they do for the phone's labels,
+// and the server's only where the text states none: it has priced a line with
+// the next row's amount (`BANANAS ... 1.02 R` as 4.94).
+const toLine = (line: ServerReceiptLine, index: number): ParsedReceiptLine => {
+  const reading = readReceiptLine(line.text);
+  const amount = reading.amount ?? line.amount ?? undefined;
+  const quantity = reading.quantity ?? line.quantity ?? undefined;
+  const unitPrice = reading.unitPrice ?? line.unitPrice ?? undefined;
+  const unit =
+    reading.unit ??
+    (line.unit && MEASURE.test(line.unit) ? line.unit : undefined);
+  const code = line.code ?? reading.code;
+  return {
+    index,
+    rawText: line.text,
+    kind: KIND_OF[line.kind],
+    ...(line.product ? { product: line.product } : {}),
+    ...(code ? { code } : {}),
+    ...(quantity === undefined ? {} : { quantity }),
+    ...(unit ? { unit } : {}),
+    ...(unitPrice === undefined ? {} : { unitPrice }),
+    ...(amount === undefined ? {} : { lineTotal: amount }),
+    ...(line.appliesTo == null ? {} : { appliesToIndex: line.appliesTo }),
+  };
+};
+
+// The server can return the weight or count line under an item as an item of
+// its own (Walmart's `2.21 lb @ 0.46`), with or without an amount. One that
+// states a count or weight, names no product and prints no code describes the
+// item above it, as a detail line does on the phone: that item takes its
+// figures, and the line is not counted toward the subtotal.
 const foldDetails = (lines: ParsedReceiptLine[]): ParsedReceiptLine[] =>
   lines.map((line, at) => {
-    const reading = readReceiptLine(line.rawText);
-    const statesAmount =
-      line.quantity !== undefined || reading.quantity !== undefined;
     const [above] = lines
       .slice(0, at)
       .reverse()
       .filter(candidate => candidate.kind === 'item');
     if (
       line.kind !== 'item' ||
-      line.lineTotal !== undefined ||
       line.code !== undefined ||
-      reading.code !== undefined ||
-      !statesAmount ||
+      line.quantity === undefined ||
+      hasProductWords(line.rawText) ||
       !above
     ) {
       return line;
     }
-    above.quantity ??= line.quantity ?? reading.quantity;
-    above.unit ??= line.unit ?? reading.unit;
-    above.unitPrice ??= line.unitPrice ?? reading.unitPrice;
+    // As on the phone, the weight line states the item's amount, over the 1
+    // the server gives an item it has no count for.
+    above.quantity = line.quantity;
+    if (line.unit) above.unit = line.unit;
+    if (line.unitPrice !== undefined) above.unitPrice = line.unitPrice;
+    above.lineTotal ??= line.lineTotal;
     return {
       index: line.index,
       rawText: line.rawText,

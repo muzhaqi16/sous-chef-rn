@@ -109,6 +109,58 @@ describe('fromServerReceipt', () => {
     ]);
   });
 
+  // As the dev parser answered for a photographed Walmart receipt (corpus:
+  // walmart-food-receipt-8-sep-2021).
+  it("takes the figures the line prints over the server's, and drops a tax flag given as a unit", () => {
+    const parsed = fromServerReceipt({
+      merchant: { name: 'Walmart' },
+      lines: [
+        {
+          text: 'BANANAS  000000040110KF  1.02 R',
+          kind: ReceiptLineKind.Item,
+          product: 'BANANAS',
+          quantity: 1,
+          unit: 'R',
+          amount: 4.94,
+        },
+        {
+          text: '2.21 lb. @ 1 1b. /0.46  4.94 Y',
+          kind: ReceiptLineKind.Item,
+          product: '2.21 lb. @ 1 1b. /0.46',
+          amount: 4.94,
+        },
+        {
+          text: 'DEVILED EGG 078742213510 F  4.96 R',
+          kind: ReceiptLineKind.Item,
+          product: 'DEVILED EGG',
+          quantity: 1,
+          unit: 'R',
+          amount: 4.96,
+        },
+      ],
+    });
+
+    expect(receiptReviewLines(parsed)).toEqual([
+      {
+        index: 0,
+        printed: 'BANANAS',
+        code: '000000040110',
+        quantity: 2.21,
+        unit: 'lb',
+        price: 1.02,
+      },
+      {
+        index: 2,
+        printed: 'DEVILED EGG',
+        code: '078742213510',
+        quantity: 1,
+        price: 4.96,
+      },
+    ]);
+    expect(parsed.lines[1]).toMatchObject({ kind: 'other', appliesToIndex: 0 });
+    expect(parsed.lines[1]?.lineTotal).toBeUndefined();
+  });
+
   it('leaves out a merchant the server could not name', () => {
     expect(fromServerReceipt({ merchant: { name: null }, lines: [] })).toEqual({
       lines: [],
