@@ -17556,7 +17556,6 @@ type WasteAnalytics {
   topWastedItems: [WasteByItem!]!
   totalWasteCount: Int!
   totalWasteQuantity: Float!
-  totalWasteValue: Float! @deprecated(reason: "Sums across currencies. Use valueByCurrency instead.")
   """
   What the waste was worth, per currency, at the cost of the batches it
   came from; currencies are never summed together.
@@ -17570,7 +17569,6 @@ type WasteAnalytics {
 """Waste breakdown by item - most wasted items"""
 type WasteByItem {
   count: Int!
-  estimatedValue: Float @deprecated(reason: "Sums across currencies. Use valueByCurrency instead.")
   imageUrl: String
   itemId: ID!
   itemName: String!
@@ -17583,7 +17581,6 @@ type WasteByItem {
 """Waste breakdown by reason (expired, spoiled, etc.)"""
 type WasteByReason {
   count: Int!
-  estimatedValue: Float @deprecated(reason: "Sums across currencies. Use valueByCurrency instead.")
   percentage: Float!
   reason: WasteReason!
   totalQuantity: Float!
