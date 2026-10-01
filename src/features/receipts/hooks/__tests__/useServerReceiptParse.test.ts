@@ -193,22 +193,59 @@ describe('useServerReceiptParse', () => {
     expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
   });
 
-  it('stops at the daily limit, as when no worker runs', async () => {
+  const overTheLimit = (
+    retryAfter?: number,
+  ): MockFor<typeof CreateReceiptParseDocument> => ({
+    request: { query: CreateReceiptParseDocument, variables: () => true },
+    result: {
+      errors: [
+        new GraphQLError('Too many receipt parses today', {
+          extensions: {
+            code: TopLevelErrorCode.RateLimitExceeded,
+            ...(retryAfter === undefined ? {} : { retryAfter }),
+          },
+        }),
+      ],
+    },
+  });
+
+  it('waits out the daily limit, then asks again on a later visit', async () => {
     seedDraft();
-    const limited: MockFor<typeof CreateReceiptParseDocument> = {
-      request: { query: CreateReceiptParseDocument, variables: () => true },
-      result: {
-        errors: [
-          new GraphQLError('Too many receipt parses today', {
-            extensions: {
-              code: TopLevelErrorCode.RateLimitExceeded,
-              retryAfter: 3600,
-            },
-          }),
-        ],
-      },
-    };
-    const { result } = render([limited]);
+    const { result, unmount } = render([overTheLimit(3600)]);
+
+    await waitFor(() => expect(result.current.readingStatus).toBe('limited'));
+    const asked = useReceiptDraftStore.getState().draft?.serverParse;
+    expect(asked).toEqual({
+      id: expect.any(String),
+      state: 'limited',
+      retryAt: new Date(Date.now() + 3_600_000).toISOString(),
+    });
+    expect(result.current.retryAt).toEqual(new Date(Date.now() + 3_600_000));
+    unmount();
+
+    // Before the hour is up, a visit asks nothing.
+    const early = created(ReceiptParseStatus.Pending);
+    const second = render([early.mock]);
+    await pollOnce();
+    expect(early.fired).toEqual([]);
+    expect(second.result.current.readingStatus).toBe('limited');
+    second.unmount();
+
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(3_600_000);
+    });
+    const later = created(ReceiptParseStatus.Pending);
+    const third = render([later.mock]);
+    await waitFor(() => expect(later.fired).toHaveLength(1));
+    expect(later.fired[0]).toEqual({
+      input: expect.objectContaining({ id: asked?.id }),
+    });
+    expect(third.result.current.readingStatus).toBe('reading');
+  });
+
+  it('stops at a limit that names no wait, as when no worker runs', async () => {
+    seedDraft();
+    const { result } = render([overTheLimit()]);
 
     await waitFor(() =>
       expect(result.current.readingStatus).toBe('unavailable'),

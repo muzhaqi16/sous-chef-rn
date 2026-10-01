@@ -23,10 +23,10 @@ export interface ReceiptLineChoice {
  * The server's reading of a receipt the phone could not structure. `id` is
  * minted before it is asked for, so a resend returns the same parse.
  */
-export interface ServerReceiptParse {
-  id: string;
-  state: 'pending' | 'unavailable' | 'failed' | 'unreadable';
-}
+export type ServerReceiptParse =
+  | { id: string; state: 'pending' | 'unavailable' | 'failed' | 'unreadable' }
+  /** Over the daily allowance: asked again on a visit after `retryAt`. */
+  | { id: string; state: 'limited'; retryAt: string };
 
 export interface ReceiptDraft {
   /** Each page's redacted text, in scan order; never an image. */
@@ -54,16 +54,21 @@ interface ReceiptDraftState {
   /** A choice, or null to leave the line out. */
   chooseLine: (index: number, choice: ReceiptLineChoice | null) => void;
   markAdded: (indexes: readonly number[]) => void;
-  /** Records that server parse `id` was asked for, if nothing read the draft yet. */
+  /**
+   * Records that server parse `id` was asked for, if nothing read the draft
+   * yet, or asked again after the daily allowance turned it away.
+   */
   askServerParse: (id: string) => void;
   /**
    * Records what became of server parse `id`: a state, the receipt it read,
-   * or null to ask again later. Ignored once the draft has moved on.
+   * when the daily allowance lets it be asked again, or null to ask again
+   * later. Ignored once the draft has moved on.
    */
   settleServerParse: (
     id: string,
     outcome:
-      | ServerReceiptParse['state']
+      | Exclude<ServerReceiptParse['state'], 'limited'>
+      | { retryAt: string }
       | { parsed: ParsedReceipt; purchasedOn?: string }
       | null,
   ) => void;
@@ -102,7 +107,9 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
         ),
       askServerParse: id =>
         set(({ draft }) =>
-          draft && !draft.parsed && !draft.serverParse
+          draft &&
+          !draft.parsed &&
+          (!draft.serverParse || draft.serverParse.state === 'limited')
             ? { draft: { ...draft, serverParse: { id, state: 'pending' } } }
             : {},
         ),
@@ -115,6 +122,15 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
           }
           if (typeof outcome === 'string') {
             return { draft: { ...draft, serverParse: { id, state: outcome } } };
+          }
+          if ('retryAt' in outcome) {
+            const { retryAt } = outcome;
+            return {
+              draft: {
+                ...draft,
+                serverParse: { id, state: 'limited', retryAt },
+              },
+            };
           }
           const { serverParse: _asked, ...rest } = draft;
           // The day read on the phone, before redaction, stands.

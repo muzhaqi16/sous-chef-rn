@@ -13,6 +13,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { alertService } from '#/services/alertService';
 import { useReceiptScan } from '../hooks/useReceiptScan';
 import { useServerReceiptParse } from '../hooks/useServerReceiptParse';
+import { formatDateTime } from '#/utils/formatters/date';
 import { receiptReviewLines } from '../utils/receiptReviewLines';
 import { receiptsTestIDs } from '../testIDs';
 
@@ -25,7 +26,7 @@ export const ReceiptScanScreen: React.FC = () => {
     },
   );
   // Only once the phone has had its go at the receipt.
-  const { readingStatus } = useServerReceiptParse({
+  const { readingStatus, retryAt } = useServerReceiptParse({
     enabled: status === 'saved',
   });
 
@@ -90,6 +91,17 @@ export const ReceiptScanScreen: React.FC = () => {
               iconLibrary="Ionicons"
               title={t('receipts.unreadable.title')}
               subtitle={t('receipts.unreadable.body')}
+            />
+          )}
+          {readingStatus === 'limited' && retryAt !== undefined && (
+            <AlertBanner
+              variant="info"
+              icon="time-outline"
+              iconLibrary="Ionicons"
+              title={t('receipts.saved.limitedTitle')}
+              subtitle={t('receipts.saved.limitedBody', {
+                time: formatDateTime(retryAt),
+              })}
             />
           )}
           {readingStatus === 'unavailable' && (
