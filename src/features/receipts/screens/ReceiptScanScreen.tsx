@@ -10,13 +10,13 @@ import { ErrorState } from '#components/molecules/ErrorState';
 import { Loading } from '#components/molecules/Loading';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { alertService } from '#/services/alertService';
-import { ParsedReceiptItems } from '../components/ParsedReceiptItems';
 import { useReceiptScan } from '../hooks/useReceiptScan';
+import { receiptReviewLines } from '../utils/receiptReviewLines';
 import { receiptsTestIDs } from '../testIDs';
 
 export const ReceiptScanScreen: React.FC = () => {
   const { t } = useTranslation();
-  const { goBack } = useAppNavigation();
+  const { goBack, toReceiptReview } = useAppNavigation();
   const { status, draft, scan, takePhoto, pickPhoto, discard } = useReceiptScan(
     {
       onCancel: goBack,
@@ -52,6 +52,9 @@ export const ReceiptScanScreen: React.FC = () => {
   };
 
   if (status === 'saved' && draft) {
+    const itemCount = draft.parsed
+      ? receiptReviewLines(draft.parsed).length
+      : 0;
     return (
       <Screen header={header} testID={receiptsTestIDs.scanScreen}>
         <View style={styles.saved}>
@@ -60,14 +63,26 @@ export const ReceiptScanScreen: React.FC = () => {
             {t('receipts.saved.body')}
           </Text>
           <View style={styles.actions}>
-            <Button onPress={scanReplacing} icon="receipt-outline">
+            {itemCount > 0 && (
+              <Button
+                onPress={toReceiptReview}
+                icon="list-outline"
+                testID={receiptsTestIDs.savedReview}
+              >
+                {t('receipts.saved.review', { count: itemCount })}
+              </Button>
+            )}
+            <Button
+              variant={itemCount > 0 ? 'secondary' : 'primary'}
+              onPress={scanReplacing}
+              icon="receipt-outline"
+            >
               {t('receipts.saved.scanAnother')}
             </Button>
             <Button variant="ghost" onPress={discard}>
               {t('labels.discard')}
             </Button>
           </View>
-          {!!draft.parsed && <ParsedReceiptItems receipt={draft.parsed} />}
           <Text
             role="footnote"
             tone="secondary"

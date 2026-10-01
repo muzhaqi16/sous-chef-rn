@@ -21,7 +21,8 @@ import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
 export type AddPantryItemOutcome =
   | { status: 'added' }
   | { status: 'duplicate'; existingPantryItemId: string }
-  | { status: 'rejected' };
+  /** `reason` is the refusal as the user is told it. */
+  | { status: 'rejected'; reason: string };
 
 /**
  * The pantry's one local-first create: the row is written before the mutation
@@ -66,7 +67,9 @@ export function usePantryIntake(pantryId: string | undefined) {
     itemName: string,
     input: Omit<CreatePantryItemInput, 'id' | 'pantryId' | 'today'>,
   ): Promise<AddPantryItemOutcome> => {
-    if (!pantryId) return { status: 'rejected' };
+    if (!pantryId) {
+      return { status: 'rejected', reason: t('errors.addItemFailedRetry') };
+    }
 
     const id = generateEntityId();
     // Publishing this id to `Pantry.itemsConnection` makes the row tappable,
@@ -81,6 +84,7 @@ export function usePantryIntake(pantryId: string | undefined) {
       quantity: input.quantity,
       unitId: input.unit?.id,
       storageState: input.storage?.storageState,
+      acquisitionMethod: input.purchase?.acquisitionMethod,
     };
 
     try {
@@ -140,7 +144,12 @@ export function usePantryIntake(pantryId: string | undefined) {
           present: 'none',
         },
       );
-      if (settled.status === 'failed') outcome = { status: 'rejected' };
+      if (settled.status === 'failed') {
+        outcome = {
+          status: 'rejected',
+          reason: settled.failure?.body ?? t('errors.addItemFailedRetry'),
+        };
+      }
     }
 
     // Released on every outcome; a queued create is tracked by the offline
