@@ -22,6 +22,7 @@ export interface ChipOption<T> {
   key: T;
   label: string;
   icon?: IconName;
+  testID?: string;
 }
 
 interface ChipScrollRowProps<T> {
@@ -69,6 +70,7 @@ export function ChipScrollRow<T>({
         key={opt.label}
         onPress={() => onSelect(opt.key)}
         onLayout={e => onItemLayout(opt.key, e)}
+        testID={opt.testID}
       >
         <View style={[styles.chip, isActive && styles.chipActive, chipStyle]}>
           {opt.icon ? (

@@ -12,5 +12,8 @@ export const receiptsTestIDs = {
   /** Prefix of each line's row: `receipt-review-line-<index>`. */
   reviewLine: 'receipt-review-line',
   lineProduct: 'receipt-line-product',
+  /** A proposed item's chip in the line sheet, best first. */
+  lineSuggestion: (index: number) => `receipt-line-suggestion-${index}`,
   lineSave: 'receipt-line-save',
+  lineTickOff: 'receipt-line-tick-off',
 };

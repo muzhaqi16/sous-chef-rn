@@ -1,4 +1,4 @@
-import { object, string, type ObjectSchema } from 'yup';
+import { boolean, object, string, type ObjectSchema } from 'yup';
 import { t, type TranslationKey } from '#/i18n';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
@@ -19,6 +19,8 @@ export interface ReceiptLineFormValues {
   unitId: string | null;
   /** The total paid for the line; blank when unknown. */
   priceInput: string;
+  /** Leave the shopping list line it matches open and add it on its own. */
+  offList: boolean;
 }
 
 const parsedQuantity = (value: string) => {
@@ -51,6 +53,7 @@ export const receiptLineSchema: ObjectSchema<ReceiptLineFormValues> = object({
       msg('receipts.review.invalidPrice'),
       value => parsedPrice(value) !== undefined,
     ),
+  offList: boolean().defined(),
 });
 
 /** The form for a line: its saved choice, else what the receipt printed. */
@@ -66,6 +69,7 @@ export const receiptLineDefaults = (
         unitValue: choice.unitText,
         unitId: choice.unitId,
         priceInput: formatNumberForInput(choice.price),
+        offList: choice.offList ?? false,
       }
     : {
         itemName: '',
@@ -74,6 +78,7 @@ export const receiptLineDefaults = (
         unitValue: line.unit ?? '',
         unitId: null,
         priceInput: formatNumberForInput(line.price),
+        offList: false,
       };
 
 /** A valid form as the choice the draft keeps. */
@@ -86,4 +91,5 @@ export const toLineChoice = (
   unitId: values.unitId,
   unitText: values.unitValue.trim(),
   price: parsedPrice(values.priceInput) ?? null,
+  ...(values.offList ? { offList: true } : {}),
 });

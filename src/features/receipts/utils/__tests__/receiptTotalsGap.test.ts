@@ -73,6 +73,18 @@ describe('receiptTotalsGap', () => {
     ).toEqual({ counted: 3.98, printed: 5.98 });
   });
 
+  it('passes over a subtotal read as 0.00 to the figure printed after it', () => {
+    expect(
+      receiptTotalsGap(
+        receipt(
+          line('item', 'BLUEBERRIES 4.99', 4.99),
+          line('subtotal', '0.00', 0),
+          line('total', 'BALANCE 18.76', 18.76),
+        ),
+      ),
+    ).toEqual({ counted: 4.99, printed: 18.76 });
+  });
+
   it('says nothing when the receipt prints no total to check against', () => {
     expect(
       receiptTotalsGap(receipt(line('item', 'BREAD 3.98', 3.98))),

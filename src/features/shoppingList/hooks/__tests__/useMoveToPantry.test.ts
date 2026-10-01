@@ -18,7 +18,7 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
 import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
-import { useMoveToPantry } from '../useMoveToPantry';
+import { useMoveToPantry, type MoveToPantryOutcome } from '../useMoveToPantry';
 
 // Spread the real module: a partial factory silently omits whatever the hook
 // imports NEXT — the local-first move added two more updaters, and a trimmed
@@ -95,7 +95,7 @@ describe('useMoveToPantry', () => {
       { operationMocks: [move.mock] },
     );
 
-    let moveResult: boolean = false;
+    let moveResult: MoveToPantryOutcome | undefined;
     await act(async () => {
       moveResult = await result.current.moveToPantry(createItem(), {
         pantryId: 'pantry-1',
@@ -120,7 +120,7 @@ describe('useMoveToPantry', () => {
       }),
       today: expect.any(String),
     });
-    expect(moveResult).toBe(true);
+    expect(moveResult).toEqual({ status: 'moved' });
   });
 
   it('passes optional fields to mutation', async () => {
@@ -192,7 +192,7 @@ describe('useMoveToPantry', () => {
       { operationMocks: [failing.mock] },
     );
 
-    let moveResult: boolean = false;
+    let moveResult: MoveToPantryOutcome | undefined;
     await act(async () => {
       moveResult = await result.current.moveToPantry(createItem(), {
         pantryId: 'pantry-1',
@@ -201,7 +201,10 @@ describe('useMoveToPantry', () => {
       });
     });
 
-    expect(moveResult).toBe(false);
+    expect(moveResult).toEqual({
+      status: 'rejected',
+      reason: expect.any(String),
+    });
   });
 
   it('tells the shopper when the server refuses the move', async () => {
@@ -223,7 +226,7 @@ describe('useMoveToPantry', () => {
       { operationMocks: [conflicted.mock] },
     );
 
-    let moveResult: boolean = true;
+    let moveResult: MoveToPantryOutcome | undefined;
     await act(async () => {
       moveResult = await result.current.moveToPantry(createItem(), {
         pantryId: 'pantry-1',
@@ -232,7 +235,10 @@ describe('useMoveToPantry', () => {
       });
     });
 
-    expect(moveResult).toBe(false);
+    expect(moveResult).toEqual({
+      status: 'rejected',
+      reason: expect.any(String),
+    });
     // `CONFLICT` is a state refusal, not a stale version: one alert, described
     // by its code rather than as "changed somewhere else".
     expect(alertSpy).toHaveBeenCalledTimes(1);
@@ -248,6 +254,39 @@ describe('useMoveToPantry', () => {
       expect.anything(),
       'Pantry item was modified',
     );
+  });
+
+  it('leaves a refusal to the caller when asked to, with the reason it would have shown', async () => {
+    const conflicted = recordMock(MoveShoppingItemToPantryDocument, {
+      data: {
+        moveShoppingItemToPantry: {
+          __typename: 'ConflictError',
+          message: 'Pantry item was modified',
+          code: ErrorCode.Conflict,
+        },
+      },
+    });
+    const alertSpy = jest.spyOn(alertService, 'alert');
+
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1', present: 'none' }),
+      { operationMocks: [conflicted.mock] },
+    );
+
+    let moveResult: MoveToPantryOutcome | undefined;
+    await act(async () => {
+      moveResult = await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 1,
+        removeFromList: true,
+      });
+    });
+
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(moveResult).toEqual({
+      status: 'rejected',
+      reason: expect.not.stringContaining('Pantry item was modified'),
+    });
   });
 
   it('accepts onSuccess callback', () => {
