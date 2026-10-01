@@ -11966,7 +11966,9 @@ A receipt queued for the server to read, for phones that cannot read one themsel
 type ReceiptParse {
   completedAt: DateTime
   createdAt: DateTime!
-  """Why it is FAILED or UNAVAILABLE"""
+  """
+  What FAILED or UNAVAILABLE means for the user, in a sentence; null otherwise
+  """
   failureReason: String
   id: ID!
   """The receipt once PARSED"""
