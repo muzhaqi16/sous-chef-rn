@@ -2615,6 +2615,12 @@ type Currency {
   updatedAt: DateTime!
 }
 
+"""An amount of money in one currency, rounded to its minor unit."""
+type CurrencyAmount {
+  amount: Float!
+  currencyCode: CurrencyCode!
+}
+
 """An ISO 4217 currency code, e.g. "EUR" or "ALL"."""
 scalar CurrencyCode @specifiedBy(url: "https://www.iso.org/iso-4217-currency-codes.html")
 
@@ -5715,14 +5721,59 @@ type ItemPhoto {
   variants: [ItemImage!]!
 }
 
-"""Price history for items - may contain user-specific pricing data"""
+"""
+Where an item is cheaper. Every household's paid prices count, anonymously;
+estimates do not. Rows are cheapest first within each basis.
+"""
+type ItemPriceComparison {
+  currency: Currency!
+  item: Item!
+  rows: [PriceComparisonRow!]!
+  windowDays: Int!
+}
+
+input ItemPriceComparisonInput {
+  """The currency compared; the caller's own when omitted"""
+  currency: CurrencyCode
+  """One barcode of the item; all of them when omitted"""
+  gtin: String
+  itemId: ID!
+  """How far back observations count: default 90 days, at most 365"""
+  windowDays: Int
+}
+
+"""
+One price observation. Individual observations are visible to the household
+that made them, plus those no user made (store catalogs, imports).
+"""
 type ItemPriceHistory {
+  """0 to 1: how far the price is trusted"""
+  confidence: Float
   createdAt: DateTime!
+  currency: Currency!
+  """The day the price was observed"""
+  effectiveDate: DateTime!
+  """The barcode bought, as a GTIN-14"""
+  gtin: String
   id: ID!
   item: Item!
+  normalizedBasis: PriceBasis
+  """
+  The price per one kg, L or piece; null when the facts did not allow it without an assumption
+  """
+  normalizedPrice: Float
+  """The net weight (or volume) of one unit, when known"""
+  packageNetWeight: Float
+  packageNetWeightUnit: Unit
+  """The price per one unit"""
   price: Float!
+  """How many units were bought at this price"""
+  quantity: Float
   """Where this price came from."""
   source: PriceSource!
+  store: Store
+  """The unit the price is per"""
+  unit: Unit!
 }
 
 """
@@ -5753,7 +5804,31 @@ type ItemPriceHistoryEdge implements Edge {
 
 input ItemPriceHistoryOrderBy {
   createdAt: SortOrder
+  """The day observed; the default, newest first"""
+  effectiveDate: SortOrder
   price: SortOrder
+}
+
+"""
+An item's median price per month. Months with no observations are absent.
+"""
+type ItemPriceTrend {
+  currency: Currency!
+  item: Item!
+  months: Int!
+  points: [PriceTrendPoint!]!
+}
+
+input ItemPriceTrendInput {
+  """One chain; every store when omitted"""
+  chainId: ID
+  """The currency; the caller's own when omitted"""
+  currency: CurrencyCode
+  """One barcode of the item; all of them when omitted"""
+  gtin: String
+  itemId: ID!
+  """How many months back: default 12, at most 24"""
+  months: Int
 }
 
 """
@@ -7353,6 +7428,11 @@ input MovePurchasedItemsToPantryInput {
   """
   pantryItemHints: [MoveToPantryIdHintInput!]
   shoppingListId: ID!
+  """
+  The viewer's calendar date, for every line. Each new batch expires on this date
+  plus its item's shelf life; without it no expiry is set.
+  """
+  today: LocalDate
 }
 
 type MovePurchasedItemsToPantryPayload {
@@ -7437,6 +7517,13 @@ input MoveShoppingItemToPantryInput {
   that already exists returns IDEMPOTENT_REPLAY.
   """
   pantryItemId: ID
+  """Where the price came from: PURCHASE (default) or RECEIPT_SCAN."""
+  priceSource: PriceSource
+  """
+  The receipt this line was bought on: its store (over the line's preferred
+  store), day and number are recorded on the purchase and its price.
+  """
+  receipt: ReceiptRefInput
   """
   Whether to remove the item from the shopping list after moving. Default false:
   the line stays on the list, stamped as moved.
@@ -7448,6 +7535,11 @@ input MoveShoppingItemToPantryInput {
   storageLocationId: ID
   """Storage state (FROZEN, REFRIGERATED, AMBIENT, NONE)"""
   storageState: StorageState
+  """
+  The viewer's calendar date. With no expiresOn, the new batch expires on this date
+  plus the item's shelf life; without it no expiry is set.
+  """
+  today: LocalDate
 }
 
 type MoveShoppingItemToPantryPayload {
@@ -7994,6 +8086,13 @@ type Mutation {
   recordItemPopularity(input: RecordItemPopularityInput!): RecordItemPopularityResult!
   """Record a price observation for historical tracking"""
   recordPriceObservation(input: RecordPriceObservationInput!): RecordPriceObservationResult!
+  """
+  Remember the household's confirmed items for a receipt's lines, so the same
+  line at the same chain resolves by ALIAS next time. A household's later
+  choice for a line replaces its earlier one; a line becomes a shared alias
+  once enough households agree.
+  """
+  recordReceiptMatches(input: RecordReceiptMatchesInput!): RecordReceiptMatchesResult!
   """Record that a saved recipe was cooked (increments the cooked count)."""
   recordRecipeCooked(input: RecordRecipeCookedInput!): RecordRecipeCookedResult!
   """Refresh an expired access token using a refresh token."""
@@ -10300,6 +10399,38 @@ input PreviewPantryItemUnitChangeInput {
   unitId: ID!
 }
 
+"""What a normalized price is per."""
+enum PriceBasis {
+  """Per piece"""
+  EACH
+  """Per kilogram"""
+  PER_KG
+  """Per litre"""
+  PER_L
+}
+
+"""One store's or chain's prices for an item, in one currency and basis."""
+type PriceComparisonRow {
+  basis: PriceBasis!
+  """Set when scope is CHAIN"""
+  chain: StoreChain
+  lastObservedAt: DateTime!
+  """The most recent observation's price per basis"""
+  latestPrice: Float!
+  """The median price per basis over the window"""
+  medianPrice: Float!
+  observations: Int!
+  scope: PriceComparisonScope!
+  """Set when scope is STORE"""
+  store: Store
+}
+
+"""Whether a comparison row is one store or a whole chain."""
+enum PriceComparisonScope {
+  CHAIN
+  STORE
+}
+
 """Price estimate information for a shopping list item"""
 type PriceEstimate {
   """User-provided budget limit"""
@@ -10335,6 +10466,37 @@ enum PriceSource {
   STORE_API
   """From web scraping"""
   WEB_SCRAPING
+}
+
+"""A price suggested for a shopping line from recorded observations."""
+type PriceSuggestion {
+  """Per one of the line's unit"""
+  amount: Float!
+  """The basis the observations were compared on"""
+  basis: PriceBasis!
+  currency: Currency!
+  observations: Int!
+  """The latest observation behind it"""
+  observedAt: DateTime!
+  scope: PriceSuggestionScope!
+}
+
+"""Where a suggested price came from."""
+enum PriceSuggestionScope {
+  """Any store"""
+  ANY
+  """Other stores of the line's store's chain"""
+  CHAIN
+  """The line's own store"""
+  STORE
+}
+
+type PriceTrendPoint {
+  basis: PriceBasis!
+  medianPrice: Float!
+  """The first day of the month"""
+  month: DateTime!
+  observations: Int!
 }
 
 """Sub-input for pricing estimates"""
@@ -10518,7 +10680,14 @@ type PurchaseHistorySummary {
 input PurchaseInfoInput {
   acquisitionMethod: AcquisitionMethod
   costPerUnit: Float
+  """Where the price came from: PURCHASE (default) or RECEIPT_SCAN."""
+  priceSource: PriceSource
   purchaseId: ID
+  """
+  The receipt this stock was bought on. With it, the cost is recorded in the
+  item's price history as a price observed at that store on that day.
+  """
+  receipt: ReceiptRefInput
   storeId: ID
   totalCost: Float
 }
@@ -10952,6 +11121,10 @@ type Query {
     """The catalog item's id"""
     itemId: ID!
   ): [ItemUnitConversion!]!
+  """Where an item is cheaper, by store and by chain."""
+  itemPriceComparison(input: ItemPriceComparisonInput!): ItemPriceComparison!
+  """How an item's price has moved, month by month."""
+  itemPriceTrend(input: ItemPriceTrendInput!): ItemPriceTrend!
   """
   List items with filtering and cursor-based pagination (Relay spec).
   Use filters for UPC or SKU lookups:
@@ -11291,6 +11464,12 @@ type Query {
     """How many to return: default 10, at most 100; a larger value is refused"""
     limit: Int = 10
   ): [ItemSuggestion!]!
+  """
+  Catalog candidates for each line of a receipt, whichever parser read it:
+  the printed code first, then the store's own item number, then scored
+  search. Reads only; confirming a match is the intake mutations' job.
+  """
+  resolveReceiptLines(input: ResolveReceiptLinesInput!): ResolveReceiptLinesPayload!
   """
   Resolve an anyone-with-link code (home join code or list share code)
   without knowing its type. Returns null when the code matches nothing.
@@ -11632,6 +11811,87 @@ type RankedUnit {
 type RapidAttempt {
   count: Int!
   hour: String!
+}
+
+"""A catalog item proposed for a receipt line."""
+type ReceiptLineCandidate {
+  """The pantry given has a stack of this item"""
+  inPantry: Boolean!
+  item: Item!
+  method: ReceiptMatchMethod!
+  """
+  How well the item fits the line, 0 to 1; comparable within one line only
+  """
+  score: Float!
+}
+
+"""One line of a receipt, as the client's parser read it."""
+input ReceiptLineInput {
+  """The client's id for the line, echoed back on its resolution"""
+  clientId: String!
+  """
+  The code printed on the line: a barcode (often without its check digit) or the store's item number
+  """
+  code: String
+  """The line's product text as printed, e.g. GV WHL MLK 1G"""
+  text: String!
+}
+
+type ReceiptLineResolution {
+  """The candidate to preselect; null when confidence is NONE"""
+  best: ReceiptLineCandidate
+  """Candidates, best first; may hold weak ones when confidence is NONE"""
+  candidates: [ReceiptLineCandidate!]!
+  clientId: String!
+  confidence: ReceiptMatchConfidence!
+}
+
+"""How sure a receipt line's best candidate is."""
+enum ReceiptMatchConfidence {
+  """A printed code or the store's own item number named the item"""
+  HIGH
+  """Search found candidates, but none clearly ahead: ask the user"""
+  LOW
+  """Search found one candidate clearly ahead of the rest"""
+  MEDIUM
+  """Nothing close enough to propose"""
+  NONE
+}
+
+"""Which step found a receipt line's candidate."""
+enum ReceiptMatchMethod {
+  """
+  A correction this household, or enough households, made before at this chain
+  """
+  ALIAS
+  """
+  The line's printed barcode, its check digit computed when the receipt leaves it off
+  """
+  CODE
+  """Scored text and semantic search over the line's text"""
+  SEARCH
+  """The store's own item number, for a known store"""
+  STORE_SKU
+}
+
+"""What turned the receipt's text into lines."""
+enum ReceiptParser {
+  """The phone's on-device model"""
+  DEVICE
+  """The server"""
+  SERVER
+}
+
+"""The receipt a purchase was made on."""
+input ReceiptRefInput {
+  """The day on the receipt, as YYYY-MM-DD; not later than today."""
+  purchasedOn: LocalDate!
+  """The receipt's own number, as printed."""
+  receiptNumber: String
+  """
+  The store the receipt is from; when the purchase also names one, they must agree.
+  """
+  storeId: ID
 }
 
 """
@@ -12306,10 +12566,19 @@ union RecordItemPopularityResult = ConflictError | ForbiddenError | NotFoundErro
 
 """Input for recording a price observation (historical tracking)"""
 input RecordPriceObservationInput {
+  """The price's currency; the user's own when omitted"""
+  currency: CurrencyCode
   itemId: ID!
   observedAt: DateTime
+  """
+  The net weight of one unitId (a can, a jar), so the price compares per kg or L
+  """
+  packageSize: PackageSizeInput
+  """The price per one unitId"""
   price: Float!
   storeId: ID!
+  """The unit the price is per; the item's default unit when omitted"""
+  unitId: ID
 }
 
 type RecordPriceObservationPayload {
@@ -12324,6 +12593,62 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union RecordPriceObservationResult = ConflictError | ForbiddenError | NotFoundError | RecordPriceObservationPayload | ValidationError
+
+"""One confirmed line of a receipt."""
+input RecordReceiptMatchLineInput {
+  """The user changed or chose the item rather than accepting the proposal"""
+  edited: Boolean!
+  """The item the household chose for it"""
+  itemId: ID!
+  """The line's product text as printed"""
+  rawText: String!
+  """
+  The step that proposed the item the user saw; null when nothing was proposed
+  """
+  resolvedBy: ReceiptMatchMethod
+}
+
+input RecordReceiptMatchesInput {
+  """The household the corrections are remembered for"""
+  homeId: ID!
+  """
+  Client-minted CUID2 for this receipt's confirmation. A replay is refused
+  with IDEMPOTENT_REPLAY and changes nothing.
+  """
+  idempotencyKey: ID!
+  """The confirmed lines, at most 100"""
+  lines: [RecordReceiptMatchLineInput!]!
+  """
+  The receipt's locale, e.g. en-US; corrections are remembered per language, the user's own when omitted
+  """
+  locale: String
+  """The receipt's merchant header, when no store is given"""
+  merchantHeader: String
+  """The receipt's store; its chain keys the corrections"""
+  storeId: ID
+}
+
+type RecordReceiptMatchesPayload {
+  """
+  The chain they were remembered under; null when the receipt's chain is unknown
+  """
+  chain: StoreChain
+  """The household the corrections were remembered for"""
+  home: Home!
+  """Lines remembered"""
+  recorded: Int!
+  """
+  Lines not remembered: no chain is known, or no text is left once prices and codes are set aside
+  """
+  skipped: Int!
+}
+
+"""
+Result of RecordReceiptMatches. Select on RecordReceiptMatchesPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RecordReceiptMatchesResult = ConflictError | ForbiddenError | NotFoundError | RecordReceiptMatchesPayload | ValidationError
 
 input RecordRecipeCookedInput {
   idempotencyKey: ID
@@ -12684,6 +13009,46 @@ Always include a __typename so the variant can be discriminated.
 """
 union ResetPasswordResult = ConflictError | ForbiddenError | NotFoundError | ResetPasswordPayload | ValidationError
 
+input ResolveReceiptLinesInput {
+  """Candidates per line: default 5, at most 10"""
+  candidatesPerLine: Int
+  """
+  The household whose past corrections apply; the pantry's home when a pantry is given
+  """
+  homeId: ID
+  """The receipt's lines, at most 100"""
+  lines: [ReceiptLineInput!]!
+  """
+  The receipt's locale, e.g. en-US; corrections are remembered per language, the user's own when omitted
+  """
+  locale: String
+  """
+  The receipt's merchant header, its first lines; resolves the store chain
+  """
+  merchantHeader: String
+  """
+  The pantry the stock is going to: an item it has a stack of ranks ahead of a close rival
+  """
+  pantryId: ID
+  """What read the lines, for resolution metrics"""
+  parsedBy: ReceiptParser
+  """The store, when the client already knows it; wins over the header"""
+  storeId: ID
+}
+
+type ResolveReceiptLinesPayload {
+  """The chain the merchant header names"""
+  chain: StoreChain
+  """One resolution per input line, in input order"""
+  lines: [ReceiptLineResolution!]!
+  """
+  The receipt's store: the one given, else the header's chain and store number when that store is on file
+  """
+  store: Store
+  """The store number the merchant header prints"""
+  storeNumber: String
+}
+
 """
 Resolution of a shareable code (home join code or list share code) into a
 preview plus the deep link to follow. Lets the app and the web fallback
@@ -12737,6 +13102,11 @@ input RestockPantryItemInput {
   quantity: Float!
   restockedAt: DateTime
   storeId: ID
+  """
+  The viewer's calendar date. With no expiresOn, the new batch expires on this date
+  plus the item's shelf life; without it no expiry is set.
+  """
+  today: LocalDate
   totalCost: Float
   unitId: ID
 }
@@ -13156,6 +13526,15 @@ type ShoppingList {
   updateShoppingList sets ARCHIVED, PAUSED and CANCELLED.
   """
   status: ListStatus!
+  """How many lines suggestedTotal prices by suggestion"""
+  suggestedLines: Int!
+  """
+  The estimated cost with a suggestion standing in for each catalog line that
+  has no estimated price: each line's estimate, else its suggested price,
+  times its quantity, summed and rounded to two places. estimatedTotal is
+  unchanged by suggestions.
+  """
+  suggestedTotal: Float!
   """
   Items worth adding to this shopping list, one list per section. An item
   appears at most once, in the first section that offers it: recentlyDeleted,
@@ -13426,6 +13805,13 @@ type ShoppingListItem {
   sortOrder: String!
   source: ShoppingListItemSource!
   storeInfo: ShoppingListItemStoreInfo!
+  """
+  A price from recorded observations, per one of this line's unit, in the
+  list's currency: the line's store first, then its chain, then any store.
+  Null with no usable observation, or when the unit cannot be converted
+  without an assumption. Never written onto the line.
+  """
+  suggestedPrice: PriceSuggestion
   unit: Unit
   unitName: String
   updatedAt: DateTime!
@@ -14128,6 +14514,10 @@ Cache: 30 minutes - store information changes rarely
 type Store {
   address: String
   averageShelfLife: JSON
+  """
+  The chain this store belongs to; null for an independent or unmatched store.
+  """
+  chain: StoreChain
   createdAt: DateTime!
   id: ID!
   lastPriceUpdate: DateTime
@@ -14171,6 +14561,8 @@ type Store {
   qualityRating: Float
   stats: StoreStats
   storeInfo: StoreInfo
+  """The store's number within its chain, as its receipts print it."""
+  storeNumber: String
   storeSkusConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
@@ -14184,6 +14576,15 @@ type Store {
   ): ItemStoreSkuConnection!
   supportsPriceAPI: Boolean!
   updatedAt: DateTime!
+}
+
+"""
+A retail chain, as receipt headers name it.
+Cache: 30 minutes - chains change rarely
+"""
+type StoreChain {
+  id: ID!
+  name: String!
 }
 
 """
@@ -14321,11 +14722,27 @@ input StorePreferencesInput {
   storeSection: String
 }
 
+"""
+One store's price for an item. Observed stores come first, ranked by their
+latest price per basis within the caller's currency; a store known only by
+its listed price comes last, with no unit price.
+"""
 type StorePriceComparison {
+  """What unitPrice is per; null for a listed price"""
+  basis: PriceBasis
+  chain: StoreChain
+  """The currency of an observed price"""
+  currency: Currency
   lastUpdated: DateTime
+  """
+  The latest observed price per basis; the store's listed price when none was observed
+  """
   price: Float
   storeId: ID!
   storeName: String!
+  """
+  The latest observed price per one kg, L or piece; null for a listed price
+  """
   unitPrice: Float
 }
 
@@ -15335,6 +15752,12 @@ input UpdateItemInput {
   packageInfo: PackageInfoInput
   popularity: Int
   productDetails: ProductDetailsInput
+  """
+  Why an admin changes a sourced catalog fact (name, description, brand, pack
+  size, storage, shelf life, nutrition, allergens, ingredients, barcodes,
+  tags). Required then: the change is kept over every source as an override.
+  """
+  reason: String
   showInOnboarding: Boolean
   status: ItemStatus
   storeSkuOps: StoreSkuOpsInput
@@ -16156,6 +16579,12 @@ input UsageAmountInput @oneOf {
 """Comprehensive usage analytics for a pantry"""
 type UsageAnalytics {
   averageUsagePerDay: Float!
+  """
+  What was consumed (cooked, eaten, given, moved out) was worth, per
+  currency, at the cost of the batches it came from. Stock with no known
+  cost adds nothing; currencies are never summed together.
+  """
+  consumedValueByCurrency: [CurrencyAmount!]!
   periodEnd: DateTime!
   periodStart: DateTime!
   topUsedItems: [UsageByItem!]!
@@ -16995,7 +17424,12 @@ type WasteAnalytics {
   topWastedItems: [WasteByItem!]!
   totalWasteCount: Int!
   totalWasteQuantity: Float!
-  totalWasteValue: Float!
+  totalWasteValue: Float! @deprecated(reason: "Sums across currencies. Use valueByCurrency instead.")
+  """
+  What the waste was worth, per currency, at the cost of the batches it
+  came from; currencies are never summed together.
+  """
+  valueByCurrency: [CurrencyAmount!]!
   wasteByReason: [WasteByReason!]!
   wasteRate: Float!
   wasteTrend: [TimeSeriesDataPoint!]!
@@ -17004,21 +17438,25 @@ type WasteAnalytics {
 """Waste breakdown by item - most wasted items"""
 type WasteByItem {
   count: Int!
-  estimatedValue: Float
+  estimatedValue: Float @deprecated(reason: "Sums across currencies. Use valueByCurrency instead.")
   imageUrl: String
   itemId: ID!
   itemName: String!
   totalQuantity: Float!
   unitName: String
+  """What this item's waste was worth, per currency"""
+  valueByCurrency: [CurrencyAmount!]!
 }
 
 """Waste breakdown by reason (expired, spoiled, etc.)"""
 type WasteByReason {
   count: Int!
-  estimatedValue: Float
+  estimatedValue: Float @deprecated(reason: "Sums across currencies. Use valueByCurrency instead.")
   percentage: Float!
   reason: WasteReason!
   totalQuantity: Float!
+  """What this reason's waste was worth, per currency"""
+  valueByCurrency: [CurrencyAmount!]!
 }
 
 """Input for wasting a specific batch"""
