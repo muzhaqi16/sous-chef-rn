@@ -46,6 +46,9 @@ const PRINTED_KIND: readonly [RegExp, ParsedLineKind][] = [
 
 const PRODUCT_WORD = /[A-Za-z]{3,}/;
 
+/** Whether a line names a product, not only a count, weight or price. */
+export const hasProductWords = (text: string) => PRODUCT_WORD.test(text);
+
 // A price alone on its row: ALDI's `6.19` under `2 x` beef, or a skewed photo's
 // price column read apart from its names.
 const PRICE_ONLY = /^\W*\$?\d{1,6}[.,]\d{2}\s*[A-Z]{0,2}\W*$/i;
@@ -107,7 +110,7 @@ function kindOf(
     label === 'itemDetail' &&
     reading.amount !== undefined &&
     reading.quantity === undefined &&
-    PRODUCT_WORD.test(text)
+    hasProductWords(text)
   ) {
     return 'item';
   }
