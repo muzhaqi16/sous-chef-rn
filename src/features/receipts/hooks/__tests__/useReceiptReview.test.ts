@@ -130,12 +130,17 @@ const seedDraft = () =>
     },
   });
 
-function pantryItemNames(cache: ReturnType<typeof makeCache>) {
-  const pantry = cache.readQuery<Unmasked<GetPantryQuery>>({
+const readPantry = (cache: ReturnType<typeof makeCache>) =>
+  cache.readQuery<Unmasked<GetPantryQuery>>({
     query: GetPantryDocument,
     variables: PANTRY_VARS,
   })?.pantry;
-  return pantry?.itemsConnection.edges.map(edge => edge.node.itemName) ?? [];
+
+function pantryItemNames(cache: ReturnType<typeof makeCache>) {
+  return (
+    readPantry(cache)?.itemsConnection.edges.map(edge => edge.node.itemName) ??
+    []
+  );
 }
 
 // The catalog item is created; the typed one is refused.
@@ -251,12 +256,15 @@ const RESOLVED: MockDataFor<typeof ResolveReceiptLinesDocument> = {
 async function setup({
   create = recordMock(CreatePantryItemDocument, { dataFor: createFor }),
   resolve,
+  held = PANTRY,
 }: {
   create?: ReturnType<typeof recordMock>;
   resolve?: ReturnType<typeof recordMock>;
+  /** What the pantry holds before the receipt is added. */
+  held?: MockDataFor<typeof GetPantryDocument>;
 } = {}) {
   const cache = makeCache();
-  const getPantry = recordMock(GetPantryDocument, { data: PANTRY });
+  const getPantry = recordMock(GetPantryDocument, { data: held });
   const list = recordMock(GetShoppingListItemsFilteredDocument, {
     dataFor: listItems,
   });
@@ -365,6 +373,140 @@ describe('useReceiptReview', () => {
     // A retry sends only the line that failed.
     expect(result.current.review.pendingCount).toBe(1);
     expect(useReceiptDraftStore.getState().draft?.added).toEqual([1]);
+  });
+
+  it('restocks an item the pantry holds and adds a new one beside it', async () => {
+    const held: MockDataFor<typeof GetPantryDocument> = {
+      pantry: {
+        __typename: 'Pantry',
+        id: 'p1',
+        stats: { totalItems: 1 },
+        itemsConnection: {
+          totalCount: 1,
+          pageInfo: { hasNextPage: false, endCursor: null },
+          edges: [
+            {
+              node: {
+                id: 'pi-milk',
+                itemName: 'Whole milk',
+                quantity: 1,
+                item: { id: 'cat-milk' },
+              },
+            },
+          ],
+        },
+      },
+    };
+    // `forceAdd` restocks a held item: the create answers with the held row.
+    const create = recordMock(CreatePantryItemDocument, {
+      dataFor: (vars): MockDataFor<typeof CreatePantryItemDocument> => {
+        const input = isRecord(vars.input) ? vars.input : {};
+        const item = isRecord(input.item) ? input.item : {};
+        const restocked = item.id === 'cat-milk';
+        return {
+          createPantryItem: {
+            __typename: 'CreatePantryItemPayload',
+            pantryItem: restocked
+              ? {
+                  id: 'pi-milk',
+                  itemName: 'Whole milk',
+                  quantity: 2,
+                  item: { id: 'cat-milk' },
+                }
+              : {
+                  id: String(input.id),
+                  itemName: 'Bananas',
+                  item: { id: 'cat-bananas' },
+                },
+            pantry: { id: 'p1', stats: { totalItems: restocked ? 1 : 2 } },
+          },
+        };
+      },
+    });
+    const { result, cache } = await setup({ create, held });
+    await act(async () => {
+      result.current.review.chooseLine(1, MILK);
+      result.current.review.chooseLine(3, {
+        ...BANANAS,
+        itemId: 'cat-bananas',
+      });
+    });
+
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await result.current.review.addChosen();
+    });
+
+    expect(outcome).toEqual({ added: 2, failed: 0 });
+    // One milk row, restocked, beside the new bananas; the count is the server's.
+    expect(pantryItemNames(cache).sort()).toEqual(['Bananas', 'Whole milk']);
+    expect(readPantry(cache)?.stats.totalItems).toBe(2);
+  });
+
+  it('adds nine lines of ten when the API refuses one, and keeps that one to retry', async () => {
+    const products = Array.from({ length: 10 }, (_, at) => `ITEM ${at}`);
+    useReceiptDraftStore.setState({
+      draft: {
+        pages: ['STORE'],
+        scannedAt: '2026-09-30T10:00:00.000Z',
+        parsed: {
+          lines: products.map((product, index) => ({
+            index,
+            rawText: `${product}  1.00`,
+            kind: 'item',
+            product,
+            lineTotal: 1,
+          })),
+        },
+      },
+    });
+    const create = recordMock(CreatePantryItemDocument, {
+      dataFor: (vars): MockDataFor<typeof CreatePantryItemDocument> => {
+        const input = isRecord(vars.input) ? vars.input : {};
+        const item = isRecord(input.item) ? input.item : {};
+        return item.id === 'cat-6'
+          ? {
+              createPantryItem: {
+                __typename: 'ValidationError',
+                code: ErrorCode.ValidationFailed,
+                field: 'item',
+              },
+            }
+          : {
+              createPantryItem: {
+                __typename: 'CreatePantryItemPayload',
+                pantryItem: {
+                  id: String(input.id),
+                  item: { id: String(item.id) },
+                },
+              },
+            };
+      },
+    });
+    const { result } = await setup({ create });
+    await act(async () => {
+      products.forEach((product, index) =>
+        result.current.review.chooseLine(index, {
+          ...MILK,
+          itemId: `cat-${index}`,
+          itemName: product,
+        }),
+      );
+    });
+
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await result.current.review.addChosen();
+    });
+
+    expect(outcome).toEqual({ added: 9, failed: 1 });
+    expect(
+      result.current.review.rows
+        .filter(row => row.failure)
+        .map(row => row.index),
+    ).toEqual([6]);
+    expect(result.current.review.pendingCount).toBe(1);
+    expect(useReceiptDraftStore.getState().draft?.added).toHaveLength(9);
   });
 
   it('counts a create queued offline as added and shows it at once', async () => {
