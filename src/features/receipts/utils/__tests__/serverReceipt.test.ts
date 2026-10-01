@@ -68,6 +68,47 @@ describe('fromServerReceipt', () => {
     expect(receiptTotalsGap(fromServerReceipt(receipt))).toBeNull();
   });
 
+  it('folds a weight line the server returned as an item into the item above', () => {
+    const parsed = fromServerReceipt({
+      merchant: { name: 'WALMART' },
+      lines: [
+        {
+          text: 'BANANAS 000000040110KF 1.02 R',
+          kind: ReceiptLineKind.Item,
+          product: 'BANANAS',
+          code: '000000040110',
+          amount: 1.02,
+        },
+        { text: '2.21 lb @ 1 lb /0.46', kind: ReceiptLineKind.Item },
+        // An item whose price the server missed stays an item.
+        {
+          text: 'PRG CHED SC 038000138970',
+          kind: ReceiptLineKind.Item,
+          product: 'PRG CHED SC',
+          code: '038000138970',
+        },
+      ],
+    });
+
+    expect(parsed.lines[1]).toEqual({
+      index: 1,
+      rawText: '2.21 lb @ 1 lb /0.46',
+      kind: 'other',
+      appliesToIndex: 0,
+    });
+    expect(receiptReviewLines(parsed)).toEqual([
+      {
+        index: 0,
+        printed: 'BANANAS',
+        code: '000000040110',
+        quantity: 2.21,
+        unit: 'lb',
+        price: 1.02,
+      },
+      { index: 2, printed: 'PRG CHED SC', code: '038000138970' },
+    ]);
+  });
+
   it('leaves out a merchant the server could not name', () => {
     expect(fromServerReceipt({ merchant: { name: null }, lines: [] })).toEqual({
       lines: [],
