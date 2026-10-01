@@ -37,6 +37,21 @@ const cleanLatin = (text: string) =>
  * receipt's price column apart from the item names, so a row is re-joined from
  * the lines beside each other, left to right, two spaces marking the gap.
  */
+// A receipt that prints its prices as `$3.49` can read one `$` as an 8
+// (Shop 'n Save's `$1.50` as `81.50`). Only a trailing price is read back.
+const DOLLAR_AMOUNT = /\$\d+[.,]\d{2}/g;
+const BARE_AMOUNT = /(?<![\d$.,])\d+[.,]\d{2}(?!\d)/g;
+const EIGHT_FOR_DOLLAR = /(?<=\s)8(\d{1,3}[.,]\d{2})(?=\s*[A-Z*]{0,2}\s*$)/;
+
+const printsDollars = (rows: readonly string[]) => {
+  const dollars = rows.reduce(
+    (sum, row) => sum + countOf(row, DOLLAR_AMOUNT),
+    0,
+  );
+  const bare = rows.reduce((sum, row) => sum + countOf(row, BARE_AMOUNT), 0);
+  return dollars >= 3 && dollars > bare;
+};
+
 export function assembleReceiptLines(
   pages: readonly RecognizedPage[],
 ): string[][] {
@@ -54,11 +69,14 @@ export function assembleReceiptLines(
       if (row && first && onSameRow(first, line)) row.push(line);
       else rows.push([line]);
     }
-    return rows.map(row =>
+    const texts = rows.map(row =>
       row
         .sort((a, b) => a.x - b.x)
         .map(line => clean(line.text.trim()))
         .join('  '),
     );
+    return printsDollars(texts)
+      ? texts.map(text => text.replace(EIGHT_FOR_DOLLAR, '$$$1'))
+      : texts;
   });
 }

@@ -244,6 +244,42 @@ export function structureReceipt(
     return line;
   });
 
+  // Costco Australia prints the name on one row and `22278  1x 19.99  19.99`
+  // under it: a row of figures with a code is the priced half of the name
+  // above. Its total can read clipped (`18.9`); the count and price state it.
+  for (const row of working) {
+    const name = working[row.index - 1];
+    const { quantity, unitPrice } = row;
+    const total =
+      row.lineTotal ??
+      (quantity !== undefined && unitPrice !== undefined
+        ? cents(quantity * unitPrice) / 100
+        : undefined);
+    if (
+      row.kind !== 'item' ||
+      row.code === undefined ||
+      total === undefined ||
+      hasProductWords(row.rawText) ||
+      name?.kind !== 'item' ||
+      name.lineTotal !== undefined ||
+      name.code !== undefined ||
+      !hasProductWords(name.rawText)
+    ) {
+      continue;
+    }
+    name.code = row.code;
+    name.lineTotal = total;
+    if (quantity !== undefined) name.quantity = quantity;
+    if (unitPrice !== undefined) name.unitPrice = unitPrice;
+    row.kind = 'other';
+    row.appliesToIndex = name.index;
+    delete row.product;
+    delete row.code;
+    delete row.lineTotal;
+    delete row.quantity;
+    delete row.unitPrice;
+  }
+
   // A skewed photo reads the price column a row off its words: a total or tax
   // line that read no figure takes the price alone on the row next to it.
   for (const sum of working) {

@@ -106,6 +106,25 @@ describe('assembleReceiptLines', () => {
     ]);
   });
 
+  it('reads back a dollar sign read as an 8 on a page printing dollars', () => {
+    const [dollars, plain] = assembleReceiptLines([
+      page([
+        ['CREAM CHEESE BAR  $1.75  F', 0.05, 0.1, 0.9, 0.03],
+        ['CREAM CHEESE BAR  81.75  F', 0.05, 0.15, 0.9, 0.03],
+        ['HOAGIE ROLLS  $3.25  F', 0.05, 0.2, 0.9, 0.03],
+        ['SUBTOTAL  $6.75', 0.05, 0.25, 0.9, 0.03],
+      ]),
+      page([
+        ['MILK  3.48', 0.05, 0.1, 0.9, 0.03],
+        ['STEAK  81.75', 0.05, 0.15, 0.9, 0.03],
+        ['SUBTOTAL  85.23', 0.05, 0.2, 0.9, 0.03],
+      ]),
+    ]);
+
+    expect(dollars?.[1]).toBe('CREAM CHEESE BAR  $1.75  F');
+    expect(plain?.[1]).toBe('STEAK  81.75');
+  });
+
   it('leaves a page printed in Cyrillic as read', () => {
     const cyrillic = page([['МОЛОКО 3,2%  89.90 А', 0.05, 0.1, 0.5, 0.03]]);
 
