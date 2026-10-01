@@ -14169,6 +14169,10 @@ Cache: 30 minutes - store information changes rarely
 type Store {
   address: String
   averageShelfLife: JSON
+  """
+  The chain this store belongs to; null for an independent or unmatched store.
+  """
+  chain: StoreChain
   createdAt: DateTime!
   id: ID!
   lastPriceUpdate: DateTime
@@ -14212,6 +14216,8 @@ type Store {
   qualityRating: Float
   stats: StoreStats
   storeInfo: StoreInfo
+  """The store's number within its chain, as its receipts print it."""
+  storeNumber: String
   storeSkusConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
@@ -14225,6 +14231,15 @@ type Store {
   ): ItemStoreSkuConnection!
   supportsPriceAPI: Boolean!
   updatedAt: DateTime!
+}
+
+"""
+A retail chain, as receipt headers name it.
+Cache: 30 minutes - chains change rarely
+"""
+type StoreChain {
+  id: ID!
+  name: String!
 }
 
 """
