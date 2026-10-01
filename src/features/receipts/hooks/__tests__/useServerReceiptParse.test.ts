@@ -156,6 +156,31 @@ describe('useServerReceiptParse', () => {
     expect(result.current.readingStatus).toBe('none');
   });
 
+  it.each([
+    [
+      "takes the server's day when the phone read none",
+      '2026-09-29',
+      '2026-09-29',
+    ],
+    ['drops a day the server read in the future', '2026-12-29', undefined],
+  ])('%s', async (_name, served, kept) => {
+    jest.setSystemTime(new Date(2026, 9, 1, 12));
+    seedDraft({ purchasedOn: undefined });
+    const poll = polledTo({
+      status: ReceiptParseStatus.Parsed,
+      warnings: [],
+      receipt: { ...MILK_RECEIPT, purchasedOn: served },
+    });
+    render([created(ReceiptParseStatus.Pending).mock, ...poll.mocks]);
+
+    await pollOnce();
+    await pollOnce();
+
+    const draft = useReceiptDraftStore.getState().draft;
+    expect(draft?.parsedBy).toBe('server');
+    expect(draft?.purchasedOn).toBe(kept);
+  });
+
   it('keeps the text when no receipt worker runs, and asks nothing more', async () => {
     seedDraft();
     const create = created(ReceiptParseStatus.Unavailable);

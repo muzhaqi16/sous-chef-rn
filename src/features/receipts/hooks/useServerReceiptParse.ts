@@ -9,6 +9,7 @@ import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { getDeviceLocale } from '#/utils/deviceLocale';
+import { todayKey } from '#/utils/dateUtils';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { getRateLimitDetails } from '#/utils/errors/rateLimit';
 import { useIsOnline } from '#store/useAppStore';
@@ -61,7 +62,9 @@ function outcomeOf(
       // Never an empty review: too little text to read is a retake.
       if (!receipt || !parsed || lowText) return 'unreadable';
       if (receiptReviewLines(parsed).length === 0) return 'unreadable';
-      return receipt.purchasedOn
+      // The API refuses an intake dated after tomorrow, so a misread future
+      // day is dropped rather than failing the add.
+      return receipt.purchasedOn && receipt.purchasedOn <= todayKey()
         ? { parsed, purchasedOn: receipt.purchasedOn }
         : { parsed };
     }
