@@ -80,6 +80,7 @@ export function useReceiptReview() {
       code: line.code,
     })),
     firstPage.split('\n').slice(0, HEADER_LINES).join('\n') || undefined,
+    draft?.parsedBy,
   );
 
   const added = new Set(draft?.added);

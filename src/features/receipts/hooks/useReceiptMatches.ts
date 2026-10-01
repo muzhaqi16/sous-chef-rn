@@ -66,6 +66,7 @@ const toCandidate = (candidate: {
 export function useReceiptMatches(
   lines: readonly ReceiptMatchLine[],
   merchantHeader: string | undefined,
+  parsedBy: 'device' | 'server' | undefined,
 ) {
   const { t } = useTranslation();
   const { pantry, currentHome } = useCurrentPantry();
@@ -79,8 +80,10 @@ export function useReceiptMatches(
             input: {
               merchantHeader,
               pantryId: pantry?.id,
-              // Only the phone's model structures a receipt today.
-              parsedBy: ReceiptParser.Device,
+              parsedBy:
+                parsedBy === 'server'
+                  ? ReceiptParser.Server
+                  : ReceiptParser.Device,
               lines: sent.map(line => ({
                 clientId: String(line.index),
                 text: line.text,

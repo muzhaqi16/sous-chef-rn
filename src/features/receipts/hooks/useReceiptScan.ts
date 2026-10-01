@@ -88,7 +88,7 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
         operation: 'Label receipt lines on device',
       });
     }
-    if (parsed) saveDraft({ ...next, parsed });
+    if (parsed) saveDraft({ ...next, parsed, parsedBy: 'device' });
     setStatus('saved');
   };
 

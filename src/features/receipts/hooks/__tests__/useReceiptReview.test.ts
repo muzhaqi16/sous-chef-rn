@@ -572,6 +572,22 @@ describe('useReceiptReview', () => {
       ]);
     });
 
+    it('tells the matcher the server read a receipt it read', async () => {
+      const draft = useReceiptDraftStore.getState().draft;
+      if (draft) {
+        useReceiptDraftStore.setState({
+          draft: { ...draft, parsedBy: 'server' },
+        });
+      }
+      const resolve = resolved();
+      const { result } = await setup({ resolve });
+      await waitFor(() => expect(result.current.review.matching).toBe(false));
+
+      expect(resolve.fired[0]).toEqual({
+        input: expect.objectContaining({ parsedBy: ReceiptParser.Server }),
+      });
+    });
+
     it('chooses the item it is sure of, and only offers the one it guesses', async () => {
       const { result } = await setup({ resolve: resolved() });
 

@@ -19,14 +19,26 @@ export interface ReceiptLineChoice {
   offList?: boolean;
 }
 
+/**
+ * The server's reading of a receipt the phone could not structure. `id` is
+ * minted before it is asked for, so a resend returns the same parse.
+ */
+export interface ServerReceiptParse {
+  id: string;
+  state: 'pending' | 'unavailable' | 'failed' | 'unreadable';
+}
+
 export interface ReceiptDraft {
   /** Each page's redacted text, in scan order; never an image. */
   pages: string[];
   scannedAt: string;
   /** The day printed on the receipt (YYYY-MM-DD), read before redaction cut it. */
   purchasedOn?: string;
-  /** Structured on the phone, when its model could. */
+  /** Structured on the phone, when its model could, else by the server. */
   parsed?: ParsedReceipt;
+  /** Which of the two structured `parsed`. */
+  parsedBy?: 'device' | 'server';
+  serverParse?: ServerReceiptParse;
   /**
    * The review's picks by line index. Null keeps a line out even when the API
    * proposes an item for it; a line with neither is not added.
@@ -42,6 +54,19 @@ interface ReceiptDraftState {
   /** A choice, or null to leave the line out. */
   chooseLine: (index: number, choice: ReceiptLineChoice | null) => void;
   markAdded: (indexes: readonly number[]) => void;
+  /** Records that server parse `id` was asked for, if nothing read the draft yet. */
+  askServerParse: (id: string) => void;
+  /**
+   * Records what became of server parse `id`: a state, the receipt it read,
+   * or null to ask again later. Ignored once the draft has moved on.
+   */
+  settleServerParse: (
+    id: string,
+    outcome:
+      | ServerReceiptParse['state']
+      | { parsed: ParsedReceipt; purchasedOn?: string }
+      | null,
+  ) => void;
   clearDraft: () => void;
 }
 
@@ -75,6 +100,34 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
               }
             : {},
         ),
+      askServerParse: id =>
+        set(({ draft }) =>
+          draft && !draft.parsed && !draft.serverParse
+            ? { draft: { ...draft, serverParse: { id, state: 'pending' } } }
+            : {},
+        ),
+      settleServerParse: (id, outcome) =>
+        set(({ draft }) => {
+          if (draft?.serverParse?.id !== id) return {};
+          if (outcome === null) {
+            const { serverParse: _asked, ...rest } = draft;
+            return { draft: rest };
+          }
+          if (typeof outcome === 'string') {
+            return { draft: { ...draft, serverParse: { id, state: outcome } } };
+          }
+          const { serverParse: _asked, ...rest } = draft;
+          // The day read on the phone, before redaction, stands.
+          const purchasedOn = draft.purchasedOn ?? outcome.purchasedOn;
+          return {
+            draft: {
+              ...rest,
+              parsed: outcome.parsed,
+              parsedBy: 'server',
+              ...(purchasedOn ? { purchasedOn } : {}),
+            },
+          };
+        }),
       clearDraft: () => set({ draft: null }),
     }),
     {
