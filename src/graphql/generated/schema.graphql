@@ -8011,6 +8011,13 @@ type Mutation {
   recordItemPopularity(input: RecordItemPopularityInput!): RecordItemPopularityResult!
   """Record a price observation for historical tracking"""
   recordPriceObservation(input: RecordPriceObservationInput!): RecordPriceObservationResult!
+  """
+  Remember the household's confirmed items for a receipt's lines, so the same
+  line at the same chain resolves by ALIAS next time. A household's later
+  choice for a line replaces its earlier one; a line becomes a shared alias
+  once enough households agree.
+  """
+  recordReceiptMatches(input: RecordReceiptMatchesInput!): RecordReceiptMatchesResult!
   """Record that a saved recipe was cooked (increments the cooked count)."""
   recordRecipeCooked(input: RecordRecipeCookedInput!): RecordRecipeCookedResult!
   """Refresh an expired access token using a refresh token."""
@@ -11316,6 +11323,12 @@ type Query {
     limit: Int = 10
   ): [ItemSuggestion!]!
   """
+  Catalog candidates for each line of a receipt, whichever parser read it:
+  the printed code first, then the store's own item number, then scored
+  search. Reads only; confirming a match is the intake mutations' job.
+  """
+  resolveReceiptLines(input: ResolveReceiptLinesInput!): ResolveReceiptLinesPayload!
+  """
   Resolve an anyone-with-link code (home join code or list share code)
   without knowing its type. Returns null when the code matches nothing.
   Reachable anonymously so a not-yet-signed-up recipient can preview.
@@ -11656,6 +11669,75 @@ type RankedUnit {
 type RapidAttempt {
   count: Int!
   hour: String!
+}
+
+"""A catalog item proposed for a receipt line."""
+type ReceiptLineCandidate {
+  """The pantry given has a stack of this item"""
+  inPantry: Boolean!
+  item: Item!
+  method: ReceiptMatchMethod!
+  """
+  How well the item fits the line, 0 to 1; comparable within one line only
+  """
+  score: Float!
+}
+
+"""One line of a receipt, as the client's parser read it."""
+input ReceiptLineInput {
+  """The client's id for the line, echoed back on its resolution"""
+  clientId: String!
+  """
+  The code printed on the line: a barcode (often without its check digit) or the store's item number
+  """
+  code: String
+  """The line's product text as printed, e.g. GV WHL MLK 1G"""
+  text: String!
+}
+
+type ReceiptLineResolution {
+  """The candidate to preselect; null when confidence is NONE"""
+  best: ReceiptLineCandidate
+  """Candidates, best first; may hold weak ones when confidence is NONE"""
+  candidates: [ReceiptLineCandidate!]!
+  clientId: String!
+  confidence: ReceiptMatchConfidence!
+}
+
+"""How sure a receipt line's best candidate is."""
+enum ReceiptMatchConfidence {
+  """A printed code or the store's own item number named the item"""
+  HIGH
+  """Search found candidates, but none clearly ahead: ask the user"""
+  LOW
+  """Search found one candidate clearly ahead of the rest"""
+  MEDIUM
+  """Nothing close enough to propose"""
+  NONE
+}
+
+"""Which step found a receipt line's candidate."""
+enum ReceiptMatchMethod {
+  """
+  A correction this household, or enough households, made before at this chain
+  """
+  ALIAS
+  """
+  The line's printed barcode, its check digit computed when the receipt leaves it off
+  """
+  CODE
+  """Scored text and semantic search over the line's text"""
+  SEARCH
+  """The store's own item number, for a known store"""
+  STORE_SKU
+}
+
+"""What turned the receipt's text into lines."""
+enum ReceiptParser {
+  """The phone's on-device model"""
+  DEVICE
+  """The server"""
+  SERVER
 }
 
 """The receipt a purchase was made on."""
@@ -12361,6 +12443,62 @@ Always include a __typename so the variant can be discriminated.
 """
 union RecordPriceObservationResult = ConflictError | ForbiddenError | NotFoundError | RecordPriceObservationPayload | ValidationError
 
+"""One confirmed line of a receipt."""
+input RecordReceiptMatchLineInput {
+  """The user changed or chose the item rather than accepting the proposal"""
+  edited: Boolean!
+  """The item the household chose for it"""
+  itemId: ID!
+  """The line's product text as printed"""
+  rawText: String!
+  """
+  The step that proposed the item the user saw; null when nothing was proposed
+  """
+  resolvedBy: ReceiptMatchMethod
+}
+
+input RecordReceiptMatchesInput {
+  """The household the corrections are remembered for"""
+  homeId: ID!
+  """
+  Client-minted CUID2 for this receipt's confirmation. A replay is refused
+  with IDEMPOTENT_REPLAY and changes nothing.
+  """
+  idempotencyKey: ID!
+  """The confirmed lines, at most 100"""
+  lines: [RecordReceiptMatchLineInput!]!
+  """
+  The receipt's locale, e.g. en-US; corrections are remembered per language, the user's own when omitted
+  """
+  locale: String
+  """The receipt's merchant header, when no store is given"""
+  merchantHeader: String
+  """The receipt's store; its chain keys the corrections"""
+  storeId: ID
+}
+
+type RecordReceiptMatchesPayload {
+  """
+  The chain they were remembered under; null when the receipt's chain is unknown
+  """
+  chain: StoreChain
+  """The household the corrections were remembered for"""
+  home: Home!
+  """Lines remembered"""
+  recorded: Int!
+  """
+  Lines not remembered: no chain is known, or no text is left once prices and codes are set aside
+  """
+  skipped: Int!
+}
+
+"""
+Result of RecordReceiptMatches. Select on RecordReceiptMatchesPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RecordReceiptMatchesResult = ConflictError | ForbiddenError | NotFoundError | RecordReceiptMatchesPayload | ValidationError
+
 input RecordRecipeCookedInput {
   idempotencyKey: ID
   recipeId: ID!
@@ -12719,6 +12857,46 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union ResetPasswordResult = ConflictError | ForbiddenError | NotFoundError | ResetPasswordPayload | ValidationError
+
+input ResolveReceiptLinesInput {
+  """Candidates per line: default 5, at most 10"""
+  candidatesPerLine: Int
+  """
+  The household whose past corrections apply; the pantry's home when a pantry is given
+  """
+  homeId: ID
+  """The receipt's lines, at most 100"""
+  lines: [ReceiptLineInput!]!
+  """
+  The receipt's locale, e.g. en-US; corrections are remembered per language, the user's own when omitted
+  """
+  locale: String
+  """
+  The receipt's merchant header, its first lines; resolves the store chain
+  """
+  merchantHeader: String
+  """
+  The pantry the stock is going to: an item it has a stack of ranks ahead of a close rival
+  """
+  pantryId: ID
+  """What read the lines, for resolution metrics"""
+  parsedBy: ReceiptParser
+  """The store, when the client already knows it; wins over the header"""
+  storeId: ID
+}
+
+type ResolveReceiptLinesPayload {
+  """The chain the merchant header names"""
+  chain: StoreChain
+  """One resolution per input line, in input order"""
+  lines: [ReceiptLineResolution!]!
+  """
+  The receipt's store: the one given, else the header's chain and store number when that store is on file
+  """
+  store: Store
+  """The store number the merchant header prints"""
+  storeNumber: String
+}
 
 """
 Resolution of a shareable code (home join code or list share code) into a
