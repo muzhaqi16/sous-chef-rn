@@ -17,17 +17,50 @@
     "saved": {
       "title": "Fatura u ruajt",
       "body": "Ruhet vetëm ky tekst. Fotot u fshinë dhe numrat e kartës e të besnikërisë u hoqën.",
-      "scanAnother": "Skano një faturë tjetër"
+      "scanAnother": "Skano një faturë tjetër",
+      "review_one": "Shqyrto {{count}} artikull",
+      "review_other": "Shqyrto {{count}} artikuj"
     },
     "replace": {
       "title": "Të zëvendësohet fatura e ruajtur?",
       "body": "Ruhet vetëm një faturë në një kohë.",
       "confirm": "Zëvendëso"
     },
-    "parsed": {
-      "title_one": "{{count}} artikull u lexua në këtë telefon",
-      "title_other": "{{count}} artikuj u lexuan në këtë telefon",
-      "atPrice": "{{quantity}} me {{price}}"
+    "photo": {
+      "title": "Bëj një foto në vend të kësaj",
+      "body": "Ky telefon nuk mund të skanojë dokumente. Fotografoje faturën të shtrirë dhe në dritë të mirë, ose zgjidh një foto që ke bërë."
+    },
+    "review": {
+      "title": "Fatura",
+      "intro": "Kontrollo produktin në çdo rresht. Në qilar shtohen vetëm rreshtat me një produkt.",
+      "introTo": "Kontrollo produktin në çdo rresht. Në {{pantry}} shtohen vetëm rreshtat me një produkt.",
+      "choose": "Prek për të zgjedhur produktin",
+      "chosenDetail": "{{printed}} · {{amount}}",
+      "notAdded": "Nuk u shtua",
+      "add_one": "Shto {{count}} artikull në qilar",
+      "add_other": "Shto {{count}} artikuj në qilar",
+      "addNone": "Zgjidh artikujt që do të shtosh",
+      "someFailed_one": "{{count}} artikull nuk u shtua dot. Provo përsëri.",
+      "someFailed_other": "{{count}} artikuj nuk u shtuan dot. Provo përsëri.",
+      "addedTo_one": "U shtua {{count}} artikull në {{pantry}}",
+      "addedTo_other": "U shtuan {{count}} artikuj në {{pantry}}",
+      "addedCount_one": "U shtua {{count}} artikull në qilar",
+      "addedCount_other": "U shtuan {{count}} artikuj në qilar",
+      "emptyTitle": "Nuk ka artikuj për të shqyrtuar",
+      "emptyBody": "Nga kjo faturë nuk u lexua asnjë rresht artikulli. Skanoje përsëri ose shtoji artikujt me dorë.",
+      "editTitle": "Rresht i faturës",
+      "printedLabel": "Në faturë",
+      "productPlaceholder": "Kërko një produkt",
+      "dontAdd": "Mos e shto këtë rresht",
+      "invalidPrice": "Shkruaj shumën e paguar, p.sh. 3,49, ose lëre bosh.",
+      "totalsTitle": "Rreshtat nuk përputhen me faturën",
+      "totalsBody": "Artikujt e lexuar bëjnë {{counted}}, por fatura thotë {{printed}}. Mund të ketë mbetur jashtë një rresht, ndaj krahasoje listën me faturën para se të shtosh.",
+      "onList": "Në listën tënde",
+      "tickOffTitle": "Shënoje si të blerë në listën e blerjeve",
+      "tickOffBody": "“{{name}}” është në listën tënde. Shënohet si i blerë dhe kalon në qilar, në vend që të shtohet dy herë.",
+      "matching": "Po kërkohen produktet…",
+      "check": "Kontrollo",
+      "maybe": "Mos është {{name}}?"
     }
   }
 }

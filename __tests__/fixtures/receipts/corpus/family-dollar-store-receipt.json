@@ -1,0 +1,75 @@
+{
+  "id": "family-dollar-store-receipt",
+  "group": "grocery",
+  "source": {
+    "page": "https://commons.wikimedia.org/wiki/File:Family_Dollar_store_receipt.jpg",
+    "license": "CC BY-SA 3.0",
+    "author": "Corn cheese"
+  },
+  "printedOn": null,
+  "pages": [
+    "FAMILY I DOLLAR\nSTOkfemlly Ty1 gily dollar\n. York Stree\nMuskogee.OK. 918-682-1561\nCOCA COLA 1.25 LTR. 049000055375 1.00 T\nRIP IT ENERGY ORINK CITRÜS 16FL OZ\n042200002675\n1.00 :\nSUBTOTAL  $2.00\nTAX1\nTOTAL  30.19\nCASH  $2.13\nCHANGE  $2.25"
+  ],
+  "onDevice": {
+    "model": "Apple Foundation Models, macOS 27.0.1 (26A434), greedy sampling",
+    "seconds": 5.2,
+    "storeName": "FAMILY I DOLLAR",
+    "lines": [
+      {
+        "line": 0,
+        "label": "header",
+        "product": "FAMILY I DOLLAR"
+      },
+      {
+        "line": 1,
+        "label": "item",
+        "product": "Stock firmly Ty1 gily dollar"
+      },
+      {
+        "line": 2,
+        "label": "header",
+        "product": "York Stree"
+      },
+      {
+        "line": 3,
+        "label": "header",
+        "product": "Muskogee.OK. 918-682-1561"
+      },
+      {
+        "line": 4,
+        "label": "item",
+        "product": "COCA COLA 1.25 LTR."
+      },
+      {
+        "line": 5,
+        "label": "item",
+        "product": "RIP IT ENERGY ORINK CITRÜS 16FL OZ"
+      },
+      {
+        "line": 6,
+        "label": "discount",
+        "product": "042200002675"
+      },
+      {
+        "line": 7,
+        "label": "discount",
+        "product": "1.00"
+      },
+      {
+        "line": 8,
+        "label": "subtotal",
+        "product": "$2.00"
+      },
+      {
+        "line": 9,
+        "label": "tax",
+        "product": "TAX1"
+      },
+      {
+        "line": 10,
+        "label": "total",
+        "product": "TOTAL 30.19"
+      }
+    ]
+  }
+}

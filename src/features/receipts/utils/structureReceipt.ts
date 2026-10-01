@@ -1,8 +1,13 @@
 import type {
+  LabeledLine,
   ReceiptLineLabel,
   ReceiptLineLabels,
 } from '#/native/ReceiptStructuring';
-import { readReceiptLine, type ReceiptLineReading } from './readReceiptLine';
+import {
+  readReceiptLine,
+  withoutAmount,
+  type ReceiptLineReading,
+} from './readReceiptLine';
 
 export type ParsedLineKind =
   | 'item'
@@ -35,9 +40,18 @@ export interface ParsedReceipt {
 // The printed words decide these whatever the model said.
 const PRINTED_KIND: readonly [RegExp, ParsedLineKind][] = [
   [/^\W*SUB\s*-?\s*TOTAL\b/i, 'subtotal'],
-  [/^\W*(?:TOTAL|BALANCE)(?:\s+DUE)?\b/i, 'total'],
+  [/^\W*(?:(?:TOTAL|BALANCE)(?:\s+DUE)?|AMOUNT\s+DUE)\b/i, 'total'],
   [/^\W*(?:SALES\s+)?TAX\b/i, 'tax'],
 ];
+
+const PRODUCT_WORD = /[A-Za-z]{3,}/;
+
+// A price alone on its row: ALDI's `6.19` under `2 x` beef, or a skewed photo's
+// price column read apart from its names.
+const PRICE_ONLY = /^\W*\$?\d{1,6}[.,]\d{2}\s*[A-Z]{0,2}\W*$/i;
+
+const printedKind = (text: string) =>
+  PRINTED_KIND.find(([pattern]) => pattern.test(text))?.[1];
 
 const KIND_OF_LABEL: Record<ReceiptLineLabel, ParsedLineKind | 'detail'> = {
   item: 'item',
@@ -53,13 +67,20 @@ const KIND_OF_LABEL: Record<ReceiptLineLabel, ParsedLineKind | 'detail'> = {
 
 const cents = (value: number) => Math.round(value * 100);
 
-// The model copies the printed words, so Costco's `E 1234567 KS WATER` keeps
-// its tax flag and item number; both are read from the line on their own.
-const cleanProduct = (product: string, code: string | undefined) =>
-  (code ? product.replace(code, ' ') : product)
+// The model copies the printed words, so a Walmart line keeps its price, its
+// codes and the flag after them at the line's end (`SH FN 2CT BK 071641180510
+// 888849007170 F 6.96 Y`), and Costco's `E 1234567 KS WATER` its flag and item
+// number; all are read from the line on their own. A short word after a code
+// mid-line is the name's (Costco's `KS`).
+const TRAILING_CODES = /(?:\s+\d{4,14})+(?:\s+[A-Z]{1,2})?\s*$/;
+
+const cleanProduct = (product: string, code: string | undefined) => {
+  const words = withoutAmount(product).replace(TRAILING_CODES, '');
+  return (code ? words.replace(code, ' ') : words)
     .replace(/^\s*[A-Z]\s+(?=\S)/, '')
     .replace(/\s+/g, ' ')
     .trim();
+};
 
 interface Working extends ParsedReceiptLine {
   reading: ReceiptLineReading;
@@ -71,13 +92,33 @@ function kindOf(
   reading: ReceiptLineReading,
   label: ReceiptLineLabel | undefined,
 ): ParsedLineKind | 'detail' {
-  const printed = PRINTED_KIND.find(([pattern]) => pattern.test(text));
-  if (printed) return printed[1];
+  const printed = printedKind(text);
+  if (printed) return printed;
   if (reading.amount !== undefined && reading.amount < 0) return 'discount';
-  return label ? KIND_OF_LABEL[label] : 'other';
+  // A count or weight is never a saving, whatever the model called it.
+  if (label === 'discount' && reading.quantity !== undefined) return 'detail';
+  const kind = label ? KIND_OF_LABEL[label] : 'other';
+  if (PRICE_ONLY.test(text) && (kind === 'item' || kind === 'other')) {
+    return 'detail';
+  }
+  // The model calls many priced product lines details (ALDI's `Dark Red Kidney
+  // 0.81 FA`); a detail states a count or weight, or no words at all.
+  if (
+    label === 'itemDetail' &&
+    reading.amount !== undefined &&
+    reading.quantity === undefined &&
+    PRODUCT_WORD.test(text)
+  ) {
+    return 'item';
+  }
+  return kind;
 }
 
-/** The item a count or weight line describes: the one its price multiplies to, else the one above still missing its total. */
+/**
+ * The item a count or weight line describes: the one its price multiplies to,
+ * else the one above still missing its total, else the one below still missing
+ * it (Fanzz prints the price line above the product name).
+ */
 function detailTarget(
   lines: readonly Working[],
   detail: Working,
@@ -94,10 +135,73 @@ function detailTarget(
     );
     if (byArithmetic) return byArithmetic;
   }
-  return nearby
+  const above = nearby
     .filter(line => line.index < detail.index)
     .reverse()
     .find(line => line.lineTotal === undefined || line.quantity === undefined);
+  return (
+    above ??
+    nearby.find(
+      line => line.index > detail.index && line.lineTotal === undefined,
+    )
+  );
+}
+
+const comparable = (text: string) =>
+  text.replace(/\s+/g, ' ').trim().toUpperCase();
+
+/**
+ * Each label on the line it describes. The model numbers lines itself and can
+ * drift from the numbers it was given, further with every line it skips (a
+ * Walmart receipt's labels two, then four lines early), so a label lands where
+ * its copied product words are printed, nearest the current drift; one without
+ * them keeps the drift of the label before it.
+ * Words already found on a line are not found again there (a weight line
+ * labelled with its item's `BANANAS`), and a label found by its words takes the
+ * line from one placed by drift alone.
+ */
+function alignLabels(
+  lines: readonly string[],
+  labels: ReceiptLineLabels,
+): Map<number, LabeledLine> {
+  const aligned = new Map<number, { label: LabeledLine; found: boolean }>();
+  let drift = 0;
+  for (const label of [...labels.lines].sort((a, b) => a.line - b.line)) {
+    const product = label.product ? comparable(label.product) : '';
+    const offset =
+      product.length >= 3
+        ? [0, 1, -1, 2, -2, 3, -3]
+            .map(step => drift + step)
+            .find(
+              candidate =>
+                !aligned.get(label.line + candidate)?.found &&
+                comparable(lines[label.line + candidate] ?? '').includes(
+                  product,
+                ),
+            )
+        : undefined;
+    if (offset !== undefined) drift = offset;
+    const index = label.line + drift;
+    if (index < 0 || index >= lines.length) continue;
+    const held = aligned.get(index);
+    const found = offset !== undefined;
+    if (!held || (found && !held.found)) aligned.set(index, { label, found });
+  }
+  return new Map([...aligned].map(([index, { label }]) => [index, label]));
+}
+
+/**
+ * The lines worth labelling: through the first printed total, as no item
+ * follows it, else all of them. A footer's sweepstakes text can make Apple's
+ * model refuse the whole receipt (docs/verified-library-behaviour.md).
+ */
+export function linesThroughTotal(lines: readonly string[]): string[] {
+  const end = lines.findIndex(
+    line =>
+      printedKind(line) === 'total' &&
+      readReceiptLine(line).amount !== undefined,
+  );
+  return end === -1 ? [...lines] : lines.slice(0, end + 1);
 }
 
 /**
@@ -108,7 +212,7 @@ export function structureReceipt(
   lines: readonly string[],
   labels: ReceiptLineLabels,
 ): ParsedReceipt {
-  const labelAt = new Map(labels.lines.map(line => [line.line, line]));
+  const labelAt = alignLabels(lines, labels);
 
   const working: Working[] = lines.map((rawText, index) => {
     const reading = readReceiptLine(rawText);
@@ -136,6 +240,21 @@ export function structureReceipt(
     }
     return line;
   });
+
+  // A skewed photo reads the price column a row off its words: a total or tax
+  // line that read no figure takes the price alone on the row next to it.
+  for (const sum of working) {
+    const isSum =
+      sum.kind === 'subtotal' || sum.kind === 'total' || sum.kind === 'tax';
+    if (!isSum || sum.lineTotal !== undefined) continue;
+    const beside = [working[sum.index - 1], working[sum.index + 1]].find(
+      line => line?.isDetail && PRICE_ONLY.test(line.rawText),
+    );
+    if (!beside || beside.reading.amount === undefined) continue;
+    sum.lineTotal = beside.reading.amount;
+    beside.isDetail = false;
+    delete beside.lineTotal;
+  }
 
   for (const detail of working.filter(line => line.isDetail)) {
     const item = detailTarget(working, detail);
@@ -172,9 +291,14 @@ export function structureReceipt(
   return merchant ? { merchant, lines: parsed } : { lines: parsed };
 }
 
+// The model skips lines that carry no words (a lone `F`, a price on its own
+// row): it labelled 19 of a skewed Walmart photo's 23. Aligned by their words,
+// the labels it gave still read the receipt; far fewer is a run that failed.
+const MIN_PLACED = 0.75;
+
 /**
- * Worth keeping: the model placed nearly every line, and at least one item has
- * a price. Anything less goes back to the draft's plain text.
+ * Worth keeping: the model placed most lines, and at least one item has a
+ * price. Anything less goes back to the draft's plain text.
  */
 export function isUsableReceipt(
   parsed: ParsedReceipt,
@@ -183,7 +307,7 @@ export function isUsableReceipt(
   const placed = new Set(labels.lines.map(line => line.line)).size;
   const covered = parsed.lines.length === 0 ? 0 : placed / parsed.lines.length;
   return (
-    covered >= 0.9 &&
+    covered >= MIN_PLACED &&
     parsed.lines.some(
       line => line.kind === 'item' && line.lineTotal !== undefined,
     )

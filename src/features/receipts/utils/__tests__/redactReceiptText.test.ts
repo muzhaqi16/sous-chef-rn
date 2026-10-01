@@ -1,7 +1,7 @@
 import { redactReceiptText } from '../redactReceiptText';
 
-// Formats as each chain prints them. The real corpus (tasks 1.2) replaces these
-// with redacted scans; until then these hold the deny-list's shape.
+// Formats as each chain prints them; the scanned corpus is held to the same
+// deny-list in receiptCorpus.test.ts.
 const redactOne = (lines: string[]) => redactReceiptText([lines])[0];
 
 describe('redactReceiptText', () => {
@@ -131,6 +131,74 @@ describe('redactReceiptText', () => {
         'MEMBER # 9876543210',
       ]),
     ).toEqual(['SAFEWAY', 'LUCERNE MILK  3.99', 'CLUB CARD SAVINGS  1.50-']);
+  });
+
+  // Shapes from the scanned corpus (__tests__/fixtures/receipts/corpus), with
+  // made-up digits.
+  it('ALDI US: a reference after the date and the chip record continuation go', () => {
+    expect(
+      redactReceiptText([
+        [
+          'Celery  1.65  FA',
+          'VISA  16.19',
+          '***************4242 OTHER',
+          '09/30/26 09:51 Ref/Seq # 123456',
+          'Trace # 123456',
+          'Auth # 012345',
+          'AID A0000000031010',
+          'IAD 0F1E2D3C4B5A69788796A5B4C3D2E1F00',
+          '00112233445566778899AABBCCDDEEFF',
+          'TSI 0000    ARC 000    EntryMode 07',
+          '++APPROVED++',
+        ],
+      ]),
+    ).toEqual([['Celery  1.65  FA', 'VISA  16.19']]);
+  });
+
+  it('ALDI UK: the British spelling and a partly masked merchant id go', () => {
+    expect(
+      redactReceiptText([
+        [
+          'Total  29.78',
+          'Merchant ID: **12345',
+          'Terminal ID: ****1234',
+          'EFT No: 1234',
+          'Authorisation Code: 654321',
+          'AID: A0000000041010',
+          'Please keep this receipt for your records',
+        ],
+      ]),
+    ).toEqual([['Total  29.78', 'Please keep this receipt for your records']]);
+  });
+
+  it('Giant Eagle: a split tender with the card network and last four goes', () => {
+    expect(
+      redactOne([
+        'TAX  0.49',
+        'MC 4242  4.49',
+        'MC 4242 Tax  0.49-',
+        'VISA  12.50',
+        'VISA 1234.56',
+      ]),
+    ).toEqual(['TAX  0.49', 'VISA  12.50', 'VISA 1234.56']);
+  });
+
+  it("Trader Joe's: a labelled chip cryptogram goes", () => {
+    expect(
+      redactOne(['AVOCADO HASS EACH  5.97', 'C: 0123456789ABCDEF']),
+    ).toEqual(['AVOCADO HASS EACH  5.97']);
+  });
+
+  it('cuts at a balance whose last digit recognition dropped', () => {
+    expect(redactOne(['**** BALANCE  154.7', 'MC 4242  95.39'])).toEqual([
+      '**** BALANCE  154.7',
+    ]);
+  });
+
+  it('cuts at a change line recognition read margin noise before', () => {
+    expect(redactOne(['801  CHANGE DUE  0.00', 'TERAINAC 1 X612326'])).toEqual([
+      '801  CHANGE DUE  0.00',
+    ]);
   });
 
   it('removes a full card number, grouped or not', () => {

@@ -8,15 +8,18 @@ import com.facebook.react.uimanager.ReactShadowNode
 import com.facebook.react.uimanager.ViewManager
 
 /**
- * Registers [StartupMarkModule]. This is the app's first local React package —
- * everything else is autolinked — so `MainApplication`'s `packages.apply { }`
- * block was empty until now.
+ * The app's own native modules; everything else is autolinked. A new module
+ * joins this list rather than bringing a package of its own.
  */
-class StartupMarkPackage : ReactPackage {
+class AppModulesPackage : ReactPackage {
 
   override fun createNativeModules(
     reactContext: ReactApplicationContext,
-  ): List<NativeModule> = listOf(StartupMarkModule(reactContext))
+  ): List<NativeModule> = listOf(
+    StartupMarkModule(reactContext),
+    TextRecognitionModule(reactContext),
+    ReceiptStructuringModule(reactContext),
+  )
 
   override fun createViewManagers(
     reactContext: ReactApplicationContext,

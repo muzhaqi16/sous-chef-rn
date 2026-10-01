@@ -10,16 +10,18 @@ import { ErrorState } from '#components/molecules/ErrorState';
 import { Loading } from '#components/molecules/Loading';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { alertService } from '#/services/alertService';
-import { ParsedReceiptItems } from '../components/ParsedReceiptItems';
 import { useReceiptScan } from '../hooks/useReceiptScan';
+import { receiptReviewLines } from '../utils/receiptReviewLines';
 import { receiptsTestIDs } from '../testIDs';
 
 export const ReceiptScanScreen: React.FC = () => {
   const { t } = useTranslation();
-  const { goBack } = useAppNavigation();
-  const { status, draft, scan, discard } = useReceiptScan({
-    onCancel: goBack,
-  });
+  const { goBack, toReceiptReview } = useAppNavigation();
+  const { status, draft, scan, takePhoto, pickPhoto, discard } = useReceiptScan(
+    {
+      onCancel: goBack,
+    },
+  );
 
   const header: ScreenHeaderConfig = {
     title: t('receipts.title'),
@@ -27,6 +29,12 @@ export const ReceiptScanScreen: React.FC = () => {
   };
   const startScan = () => {
     void scan();
+  };
+  const startPhoto = () => {
+    void takePhoto();
+  };
+  const startPick = () => {
+    void pickPhoto();
   };
 
   const scanReplacing = () => {
@@ -44,6 +52,9 @@ export const ReceiptScanScreen: React.FC = () => {
   };
 
   if (status === 'saved' && draft) {
+    const itemCount = draft.parsed
+      ? receiptReviewLines(draft.parsed).length
+      : 0;
     return (
       <Screen header={header} testID={receiptsTestIDs.scanScreen}>
         <View style={styles.saved}>
@@ -52,14 +63,26 @@ export const ReceiptScanScreen: React.FC = () => {
             {t('receipts.saved.body')}
           </Text>
           <View style={styles.actions}>
-            <Button onPress={scanReplacing} icon="receipt-outline">
+            {itemCount > 0 && (
+              <Button
+                onPress={toReceiptReview}
+                icon="list-outline"
+                testID={receiptsTestIDs.savedReview}
+              >
+                {t('receipts.saved.review', { count: itemCount })}
+              </Button>
+            )}
+            <Button
+              variant={itemCount > 0 ? 'secondary' : 'primary'}
+              onPress={scanReplacing}
+              icon="receipt-outline"
+            >
               {t('receipts.saved.scanAnother')}
             </Button>
             <Button variant="ghost" onPress={discard}>
               {t('labels.discard')}
             </Button>
           </View>
-          {!!draft.parsed && <ParsedReceiptItems receipt={draft.parsed} />}
           <Text
             role="footnote"
             tone="secondary"
@@ -76,6 +99,24 @@ export const ReceiptScanScreen: React.FC = () => {
     switch (status) {
       case 'reading':
         return <Loading message={t('receipts.reading')} />;
+      case 'scannerUnavailable':
+        return (
+          <EmptyState
+            icon="camera-outline"
+            title={t('receipts.photo.title')}
+            description={t('receipts.photo.body')}
+            action={{
+              label: t('labels.takePhoto'),
+              onPress: startPhoto,
+              icon: 'camera-outline',
+            }}
+            secondaryAction={{
+              label: t('a11y.choosePhoto'),
+              onPress: startPick,
+              icon: 'images-outline',
+            }}
+          />
+        );
       case 'unreadable':
         return (
           <ErrorState

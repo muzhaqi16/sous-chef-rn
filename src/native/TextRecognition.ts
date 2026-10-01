@@ -1,4 +1,5 @@
 import { NativeModules } from 'react-native';
+import { isRecord } from '#/utils/isRecord';
 
 export interface RecognizedLine {
   text: string;
@@ -20,38 +21,27 @@ interface TextRecognitionNativeModule {
 const isTextRecognitionModule = (
   value: unknown,
 ): value is TextRecognitionNativeModule =>
-  typeof value === 'object' &&
-  value !== null &&
-  typeof Reflect.get(value, 'recognizeAndDelete') === 'function';
-
-const isRecord = (value: unknown): value is object =>
-  typeof value === 'object' && value !== null;
-
-const isNumberAt = (value: object, key: string): boolean =>
-  typeof Reflect.get(value, key) === 'number';
+  isRecord(value) && typeof value.recognizeAndDelete === 'function';
 
 const toLine = (value: unknown): RecognizedLine | null => {
   if (!isRecord(value)) return null;
-  const text: unknown = Reflect.get(value, 'text');
-  if (typeof text !== 'string') return null;
-  if (!['x', 'y', 'width', 'height'].every(key => isNumberAt(value, key))) {
+  const { text, x, y, width, height } = value;
+  if (
+    typeof text !== 'string' ||
+    typeof x !== 'number' ||
+    typeof y !== 'number' ||
+    typeof width !== 'number' ||
+    typeof height !== 'number'
+  ) {
     return null;
   }
-  return {
-    text,
-    x: Number(Reflect.get(value, 'x')),
-    y: Number(Reflect.get(value, 'y')),
-    width: Number(Reflect.get(value, 'width')),
-    height: Number(Reflect.get(value, 'height')),
-  };
+  return { text, x, y, width, height };
 };
 
 const toPage = (value: unknown): RecognizedPage => {
-  const lines: unknown = isRecord(value) ? Reflect.get(value, 'lines') : null;
+  const lines = isRecord(value) ? value.lines : null;
   if (!Array.isArray(lines)) return { lines: [] };
-  return {
-    lines: lines.flatMap(line => toLine(line) ?? []),
-  };
+  return { lines: lines.flatMap(line => toLine(line) ?? []) };
 };
 
 /**
