@@ -46,7 +46,6 @@ export const useConfigurableSettings = () => {
     toAppearance,
     toDebugInfo,
     toPerformanceDashboard,
-    toReceiptScan,
     toChangePassword,
   } = useAppNavigation();
   const { language, setLanguage } = usePreferences();
@@ -288,8 +287,6 @@ export const useConfigurableSettings = () => {
         return { ...baseItem, onPress: toDebugInfo };
       case 'performanceDashboard':
         return { ...baseItem, onPress: toPerformanceDashboard };
-      case 'receiptScan':
-        return { ...baseItem, onPress: toReceiptScan };
       case 'changePassword':
         return { ...baseItem, onPress: toChangePassword };
 
