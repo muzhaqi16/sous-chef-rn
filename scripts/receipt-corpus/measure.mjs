@@ -1,5 +1,6 @@
 /**
- * Scores the app's receipt parser on the corpus's stored text and on-device
+ * Scores the app's receipt parser on a corpus `build.mjs` wrote (its default
+ * out-dir unless given): the stored text and on-device
  * labels, without the model: run it before and after a parser change and put
  * both in the PR (design.md § D8 of the `receipt-scanning` change).
  *
@@ -11,6 +12,7 @@
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { register } from 'node:module';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -20,7 +22,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '../..');
 const UTILS = join(REPO, 'src/features/receipts/utils');
 const corpus =
-  process.argv[2] ?? join(REPO, '__tests__/fixtures/receipts/corpus');
+  process.argv[2] ?? join(tmpdir(), 'sous-chef-receipt-corpus', 'corpus');
 
 const { isUsableReceipt, linesThroughTotal, structureReceipt } = await import(
   `${UTILS}/structureReceipt.ts`

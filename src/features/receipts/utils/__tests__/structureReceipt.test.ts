@@ -183,7 +183,7 @@ describe('structureReceipt', () => {
     });
   });
 
-  // Shapes from the photographed corpus (__tests__/fixtures/receipts/corpus).
+  // Shapes from photographed receipts.
   it('follows each label to the line its product words were copied from', () => {
     // A Walmart photo: the model skipped two lines and numbered the rest from 0.
     const drifted: ReceiptLineLabels = {
