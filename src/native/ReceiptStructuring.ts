@@ -1,4 +1,5 @@
 import { NativeModules } from 'react-native';
+import { isRecord } from '#/utils/isRecord';
 
 export type StructuringAvailability =
   | 'available'
@@ -50,13 +51,12 @@ interface ReceiptStructuringNativeModule {
 const isStructuringModule = (
   value: unknown,
 ): value is ReceiptStructuringNativeModule =>
-  typeof value === 'object' &&
-  value !== null &&
-  typeof Reflect.get(value, 'availability') === 'function' &&
-  typeof Reflect.get(value, 'labelLines') === 'function';
+  isRecord(value) &&
+  typeof value.availability === 'function' &&
+  typeof value.labelLines === 'function';
 
 // Resolved per call, like `StartupMark`, so a module registered after this
-// file loads is still found. Android has none yet: it reads as unavailable.
+// file loads is still found. A build without it reads as unavailable.
 const nativeModule = (): ReceiptStructuringNativeModule | null => {
   const candidate: unknown = NativeModules.ReceiptStructuringModule;
   return isStructuringModule(candidate) ? candidate : null;
@@ -66,10 +66,8 @@ const isLabel = (value: unknown): value is ReceiptLineLabel =>
   typeof value === 'string' && Object.hasOwn(LABELS, value);
 
 const toLabeledLine = (value: unknown): LabeledLine | null => {
-  if (typeof value !== 'object' || value === null) return null;
-  const line: unknown = Reflect.get(value, 'line');
-  const kind: unknown = Reflect.get(value, 'kind');
-  const product: unknown = Reflect.get(value, 'product');
+  if (!isRecord(value)) return null;
+  const { line, kind, product } = value;
   if (typeof line !== 'number' || !Number.isInteger(line) || !isLabel(kind)) {
     return null;
   }
@@ -78,7 +76,10 @@ const toLabeledLine = (value: unknown): LabeledLine | null => {
     : { line, label: kind };
 };
 
-/** The platform's on-device model, which labels receipt lines; iOS 26+ only. */
+/**
+ * The platform's on-device model, which labels receipt lines: Foundation
+ * Models on iOS 26+, Gemini Nano on AICore Android devices.
+ */
 export const ReceiptStructuring = {
   async availability(): Promise<StructuringAvailability> {
     const module = nativeModule();
@@ -94,9 +95,8 @@ export const ReceiptStructuring = {
     const module = nativeModule();
     if (!module) throw new Error('ReceiptStructuringModule is not linked');
     const result: unknown = await module.labelLines([...lines]);
-    if (typeof result !== 'object' || result === null) return { lines: [] };
-    const labeled: unknown = Reflect.get(result, 'lines');
-    const storeName: unknown = Reflect.get(result, 'storeName');
+    if (!isRecord(result)) return { lines: [] };
+    const { lines: labeled, storeName } = result;
     const parsed = Array.isArray(labeled)
       ? labeled.flatMap(line => toLabeledLine(line) ?? [])
       : [];

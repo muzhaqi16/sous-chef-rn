@@ -38,7 +38,7 @@ export function useAddToPantry({
   const { t } = useTranslation();
   const client = useApolloClient();
 
-  const { addItem } = usePantryIntake(pantryId);
+  const intake = usePantryIntake(pantryId);
 
   const [restockPantryItem] = useMutation(RestockPantryItemDocument, {
     context: { localFirst: true },
@@ -163,6 +163,10 @@ export function useAddToPantry({
     if (settled.status === 'failed') return { status: 'rejected' };
     return { status: 'restocked' };
   };
+
+  /** The sheet adds a catalog item as-is: the server fills quantity and unit. */
+  const addItem = (itemId: string, itemName: string) =>
+    intake.addItem(itemName, { item: { id: itemId } });
 
   return {
     addItem,

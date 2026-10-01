@@ -153,7 +153,7 @@ describe('usePantryItemSelection.addItem', () => {
       outcome = await pending;
     });
 
-    expect(outcome).toEqual({ status: 'rejected' });
+    expect(outcome).toEqual({ status: 'rejected', reason: expect.any(String) });
     expect(catalogIds(cache)).not.toContain('cat-milk');
     expect(readPantry(cache).totalItems).toBe(1);
   });

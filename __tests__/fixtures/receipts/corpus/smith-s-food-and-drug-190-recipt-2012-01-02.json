@@ -1,0 +1,70 @@
+{
+  "id": "smith-s-food-and-drug-190-recipt-2012-01-02",
+  "group": "grocery",
+  "source": {
+    "page": "https://commons.wikimedia.org/wiki/File:Smith's_Food_and_Drug_190_recipt_(2012-01-02).jpg",
+    "license": "Public domain",
+    "author": "Amin Eshaiker"
+  },
+  "printedOn": "2012-01-02",
+  "pages": [
+    "SMITH'S #190\nDiesel Tax 18c\n1/2/12  9:10  AM\nPUMP# 02 CREDIT/\nUNL  @_$3.129/G\nVOLUME  15.380 GAL\nGAS TOTAL  $48.12\nGRAND  TOTAL  $48.12\nDebit\nXXXXXXXX  XXX"
+  ],
+  "onDevice": {
+    "model": "Apple Foundation Models, macOS 27.0.1 (26A434), greedy sampling",
+    "seconds": 4.7,
+    "storeName": "SMITH'S #190",
+    "lines": [
+      {
+        "line": 0,
+        "label": "header",
+        "product": "SMITH'S #190"
+      },
+      {
+        "line": 1,
+        "label": "tax",
+        "product": "Diesel Tax 18c"
+      },
+      {
+        "line": 2,
+        "label": "other",
+        "product": "1/2/12  9:10  AM"
+      },
+      {
+        "line": 3,
+        "label": "discount",
+        "product": "PUMP# 02 CREDIT/"
+      },
+      {
+        "line": 4,
+        "label": "item",
+        "product": "UNL"
+      },
+      {
+        "line": 5,
+        "label": "itemDetail",
+        "product": "VOLUME 15.380 GAL"
+      },
+      {
+        "line": 6,
+        "label": "total",
+        "product": "GAS TOTAL $48.12"
+      },
+      {
+        "line": 7,
+        "label": "total",
+        "product": "GRAND TOTAL $48.12"
+      },
+      {
+        "line": 8,
+        "label": "payment",
+        "product": "Debit"
+      },
+      {
+        "line": 9,
+        "label": "other",
+        "product": "XXXXXXXXXXX XXX"
+      }
+    ]
+  }
+}
