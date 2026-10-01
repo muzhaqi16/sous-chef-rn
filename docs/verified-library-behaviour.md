@@ -1581,6 +1581,7 @@ Verified 2026-09-30 on macOS 27.0.1 (host `swift` probes) and on the iPhone 18 P
 **Claim:** with guided generation (`@Generable`) and greedy sampling, the on-device model labels numbered receipt lines reliably, but produces wrong figures when asked for the whole receipt.
 - **Asked for the full structure** (index, kind, quantity, unit price, total, code, date) it invented purchase dates, negated item prices, shifted line indices and put text in `code`.
 - **Asked only to label** each line's kind and name an item's product, it placed 10 of 10 lines, in order, on Walmart, Kroger and Costco formats. It only mislabelled Costco's instant saving (`/ 987654 TPD/EGGS 1.50-`) as a detail line.
+- **On a longer, skewed receipt it numbers lines itself** (2026-10-01, a 23-line Walmart photo, in the app on the iPhone 18 Pro simulator, 9.4–10.4 s). It gave 19 labels, skipping lines with no words (a lone `F`, a price on its own row), so its line 7 was the receipt's line 9. A detail line's `product` was its item's (`BANANAS` on the weight line). So `structureReceipt` places each label by the words it copied, and `isUsableReceipt` asks for 75% of lines placed, not 90%.
 
 So `receipts/utils/structureReceipt.ts` reads every figure from the printed text and lets the printed words overrule a label. The model also copies flags and item numbers into product names (`E 1234567 KS WATER 40PK`), which the structuring strips.
 
