@@ -192,10 +192,11 @@ const movedFor = (
   };
 };
 
-async function setup() {
+async function setup({
+  create = recordMock(CreatePantryItemDocument, { dataFor: createFor }),
+}: { create?: ReturnType<typeof recordMock> } = {}) {
   const cache = makeCache();
   const getPantry = recordMock(GetPantryDocument, { data: PANTRY });
-  const create = recordMock(CreatePantryItemDocument, { dataFor: createFor });
   const list = recordMock(GetShoppingListItemsFilteredDocument, {
     dataFor: listItems,
   });
@@ -281,6 +282,32 @@ describe('useReceiptReview', () => {
     expect(useReceiptDraftStore.getState().draft?.added).toEqual([1]);
   });
 
+  it('counts a create queued offline as added and shows it at once', async () => {
+    // The offline queue completes a queued create with null data.
+    const data: MockDataFor<typeof CreatePantryItemDocument> = {
+      createPantryItem: null,
+    };
+    const { result, cache } = await setup({
+      create: recordMock(CreatePantryItemDocument, { data, partial: true }),
+    });
+    await act(async () => {
+      result.current.review.chooseLine(1, MILK);
+      result.current.review.chooseLine(3, {
+        ...BANANAS,
+        itemId: 'cat-bananas',
+      });
+    });
+
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await result.current.review.addChosen();
+    });
+
+    expect(outcome).toEqual({ added: 2, failed: 0 });
+    expect(pantryItemNames(cache).sort()).toEqual(['Bananas', 'Whole milk']);
+    expect(result.current.review.pendingCount).toBe(0);
+  });
+
   it('forgets a line the user chose not to add', async () => {
     const { result } = await setup();
     await act(async () => {
@@ -295,6 +322,28 @@ describe('useReceiptReview', () => {
   });
 
   describe('with the milk open on the shopping list', () => {
+    it('offers the list line for a product as it is picked, before it is saved', async () => {
+      const { result } = await setup();
+
+      await waitFor(() =>
+        expect(
+          result.current.review.listItemNameFor(1, {
+            itemId: 'cat-milk',
+            unitId: null,
+            unitText: '',
+          }),
+        ).toBe('Milk'),
+      );
+      expect(
+        result.current.review.listItemNameFor(1, {
+          itemId: 'cat-milk',
+          unitId: null,
+          unitText: 'kg',
+        }),
+      ).toBeUndefined();
+      expect(result.current.review.rows[0]?.onList).toBe(false);
+    });
+
     beforeEach(() => {
       useStore.getState().setSelectedShoppingListId('list-1');
     });
@@ -314,8 +363,10 @@ describe('useReceiptReview', () => {
       await waitFor(() =>
         expect(result.current.review.rows[0]?.onList).toBe(true),
       );
-      expect(result.current.review.rows[0]?.listItemName).toBe('Milk');
       expect(result.current.review.rows[1]?.onList).toBe(false);
+      // The milk's list line is taken, so no other line is offered it.
+      expect(result.current.review.listItemNameFor(1, MILK)).toBe('Milk');
+      expect(result.current.review.listItemNameFor(3, MILK)).toBeUndefined();
 
       let outcome: unknown;
       await act(async () => {
@@ -343,8 +394,9 @@ describe('useReceiptReview', () => {
       await act(async () => {
         result.current.review.chooseLine(1, { ...MILK, offList: true });
       });
+      // Still offered, so the line can be put back on the list.
       await waitFor(() =>
-        expect(result.current.review.rows[0]?.listItemName).toBe('Milk'),
+        expect(result.current.review.listItemNameFor(1, MILK)).toBe('Milk'),
       );
       expect(result.current.review.rows[0]?.onList).toBe(false);
 

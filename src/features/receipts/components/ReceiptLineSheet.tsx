@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useTranslation } from '#/i18n';
 import { useMoney } from '#domain/money';
@@ -19,6 +19,7 @@ import { localizeNumericHint } from '#/utils/formatters/number';
 import { logValidationErrors } from '#/utils/validation/common';
 import type { ReceiptLineChoice } from '../store/receiptDraftStore';
 import type { ReceiptReviewLine } from '../utils/receiptReviewLines';
+import type { ListMatchKey } from '../utils/linkReceiptLines';
 import {
   receiptLineDefaults,
   receiptLineSchema,
@@ -30,8 +31,8 @@ import { receiptsTestIDs } from '../testIDs';
 interface ReceiptLineFormProps {
   line: ReceiptReviewLine;
   choice: ReceiptLineChoice | undefined;
-  /** The shopping list line it matches, when it matches one. */
-  listItemName: string | undefined;
+  /** The shopping list line the product and unit being picked would tick off. */
+  listItemNameFor: (key: ListMatchKey) => string | undefined;
   onClose: () => void;
   onSave: (choice: ReceiptLineChoice) => void;
   onRemove: () => void;
@@ -41,7 +42,7 @@ interface ReceiptLineFormProps {
 const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   line,
   choice,
-  listItemName,
+  listItemNameFor,
   onClose,
   onSave,
   onRemove,
@@ -52,6 +53,12 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
     resolver: yupResolver(receiptLineSchema),
     defaultValues: receiptLineDefaults(line, choice),
   });
+
+  // `useWatch`, not `watch`: the compiler cannot memoize the latter's function.
+  const itemId = useWatch({ control, name: 'itemId' });
+  const unitId = useWatch({ control, name: 'unitId' });
+  const unitText = useWatch({ control, name: 'unitValue' });
+  const listItemName = listItemNameFor({ itemId, unitId, unitText });
 
   const save = handleSubmit(values => {
     onSave(toLineChoice(values));
@@ -112,6 +119,29 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
           />
         </View>
 
+        {!!listItemName && (
+          <View style={styles.listToggle}>
+            <View style={styles.listToggleText}>
+              <Text role="bodyStrong">{t('receipts.review.tickOffTitle')}</Text>
+              <Text role="caption" tone="secondary">
+                {t('receipts.review.tickOffBody', { name: listItemName })}
+              </Text>
+            </View>
+            <Controller
+              control={control}
+              name="offList"
+              render={({ field }) => (
+                <BaseSwitch
+                  accessibilityLabel={t('receipts.review.tickOffTitle')}
+                  value={!field.value}
+                  onValueChange={on => field.onChange(!on)}
+                  testID={receiptsTestIDs.lineTickOff}
+                />
+              )}
+            />
+          </View>
+        )}
+
         <View style={styles.amountRow}>
           <View style={styles.quantityField}>
             <Controller
@@ -164,29 +194,6 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
         </View>
       </DropdownStack>
 
-      {!!listItemName && (
-        <View style={styles.listToggle}>
-          <View style={styles.listToggleText}>
-            <Text role="bodyStrong">{t('receipts.review.tickOffTitle')}</Text>
-            <Text role="caption" tone="secondary">
-              {t('receipts.review.tickOffBody', { name: listItemName })}
-            </Text>
-          </View>
-          <Controller
-            control={control}
-            name="offList"
-            render={({ field }) => (
-              <BaseSwitch
-                accessibilityLabel={t('receipts.review.tickOffTitle')}
-                value={!field.value}
-                onValueChange={on => field.onChange(!on)}
-                testID={receiptsTestIDs.lineTickOff}
-              />
-            )}
-          />
-        </View>
-      )}
-
       {!!choice && (
         <Button variant="ghost" icon="close-circle-outline" onPress={onRemove}>
           {t('receipts.review.dontAdd')}
@@ -201,7 +208,7 @@ interface ReceiptLineSheetProps {
   /** The line being edited, kept after closing so the sheet animates out full. */
   line: ReceiptReviewLine | null;
   choice: ReceiptLineChoice | undefined;
-  listItemName: string | undefined;
+  listItemNameFor: (key: ListMatchKey) => string | undefined;
   /** Changes on every opening, so each one starts from the saved choice. */
   opening: number;
   onClose: () => void;
@@ -214,7 +221,7 @@ export const ReceiptLineSheet: React.FC<ReceiptLineSheetProps> = ({
   visible,
   line,
   choice,
-  listItemName,
+  listItemNameFor,
   opening,
   onClose,
   onSave,
@@ -232,7 +239,7 @@ export const ReceiptLineSheet: React.FC<ReceiptLineSheetProps> = ({
         key={opening}
         line={line}
         choice={choice}
-        listItemName={listItemName}
+        listItemNameFor={listItemNameFor}
         onClose={onClose}
         onSave={onSave}
         onRemove={onRemove}
