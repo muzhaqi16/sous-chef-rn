@@ -13,6 +13,7 @@ import type { StoreApi } from 'zustand';
 import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { APOLLO_DEFAULT_OPTIONS } from '../defaultOptions';
+import { changeLanguage, getResolvedLanguage } from '#/i18n';
 import {
   connectResyncSources,
   createRefetchEventManager,
@@ -109,6 +110,9 @@ const triggers = {
     useStore.setState({ apiReachable: true });
   },
   wsReconnected: () => mockReconnectListeners.forEach(listener => listener()),
+  languageChanged: () => {
+    void changeLanguage(getResolvedLanguage() === 'es' ? 'en' : 'es');
+  },
 };
 
 let requests: string[];
@@ -232,6 +236,13 @@ describe('resync', () => {
     expect(requests).toEqual(['ListForResync']);
   });
 
+  it('does not resync for a switch to the language already in use', async () => {
+    void changeLanguage(getResolvedLanguage());
+    await pastTheWindow();
+
+    expect(requests).toEqual([]);
+  });
+
   it('does not refetch a query that declined resync', async () => {
     triggers.wsReconnected();
     await pastTheWindow();
@@ -342,4 +353,8 @@ describe('resync', () => {
       );
     });
   });
+});
+
+afterAll(async () => {
+  await changeLanguage('en');
 });
