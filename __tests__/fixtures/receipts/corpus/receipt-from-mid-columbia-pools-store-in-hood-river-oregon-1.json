@@ -1,0 +1,125 @@
+{
+  "id": "receipt-from-mid-columbia-pools-store-in-hood-river-oregon-1",
+  "group": "retail",
+  "source": {
+    "page": "https://commons.wikimedia.org/wiki/File:Receipt_from_Mid-Columbia_Pools_store_in_Hood_River%2C_Oregon_%E2%80%94_1990_%E2%80%94_Mattes.jpg",
+    "license": "CC BY-SA 4.0",
+    "author": "User:Mateus2019"
+  },
+  "printedOn": null,
+  "pages": [
+    "MID-COLUMBIA POOLS, INC.\nand SKI-MART\n112 Oak St.  517 E. 2nd St.\nHood River, OR 97031  The Dalles, OR 97058\n386-5011  298-4611\nCUSTOMER'S ORDER NO.  PHONE\n2/24/90\nNAME\nADDRESS\nSOLD BY  CASH  C.O.D.  CHARGE  ON ACCT. MDSE. RET'D  PAID OUT\nQTY.  DESCRIPTION  PRICE  AMOUNT\nPPo - 4 Styt Fyas  55-\nboo6LE\nFAGLU0O00V-  36-  28 -\nTAX\nRECEIVED\nTOTAL  83-\nAll claims and returned  goods\nMUST be accompanied by this bill.\n31150  Thank You\nPRODUCT 610"
+  ],
+  "onDevice": {
+    "model": "Apple Foundation Models, macOS 27.0.1 (26A434), greedy sampling",
+    "seconds": 9.9,
+    "storeName": "MID-COLUMBIA POOLS, INC. and SKI-MART",
+    "lines": [
+      {
+        "line": 0,
+        "label": "header",
+        "product": "MID-COLUMBIA POOLS, INC. and SKI-MART"
+      },
+      {
+        "line": 1,
+        "label": "header",
+        "product": "and SKI-MART"
+      },
+      {
+        "line": 2,
+        "label": "header",
+        "product": "112 Oak St. 517 E. 2nd St."
+      },
+      {
+        "line": 3,
+        "label": "header",
+        "product": "Hood River, OR 97031 The Dalles, OR 97058"
+      },
+      {
+        "line": 4,
+        "label": "header",
+        "product": "386-5011 298-4611"
+      },
+      {
+        "line": 5,
+        "label": "header",
+        "product": "CUSTOMER'S ORDER NO. PHONE"
+      },
+      {
+        "line": 6,
+        "label": "header",
+        "product": "2/24/90"
+      },
+      {
+        "line": 7,
+        "label": "header",
+        "product": "NAME"
+      },
+      {
+        "line": 8,
+        "label": "header",
+        "product": "ADDRESS"
+      },
+      {
+        "line": 9,
+        "label": "header",
+        "product": "SOLD BY CASH C.O.D. CHARGE ON ACCT. MDSE. RET'D PAID OUT"
+      },
+      {
+        "line": 10,
+        "label": "item",
+        "product": "PPo - 4 Styt Fyas"
+      },
+      {
+        "line": 11,
+        "label": "itemDetail",
+        "product": "boo6LE"
+      },
+      {
+        "line": 12,
+        "label": "itemDetail",
+        "product": "FAGLU0O00V-"
+      },
+      {
+        "line": 13,
+        "label": "discount",
+        "product": "36- 28 -"
+      },
+      {
+        "line": 14,
+        "label": "tax",
+        "product": "TAX"
+      },
+      {
+        "line": 15,
+        "label": "other",
+        "product": "RECEIVED"
+      },
+      {
+        "line": 16,
+        "label": "subtotal",
+        "product": "TOTAL 83-"
+      },
+      {
+        "line": 17,
+        "label": "other",
+        "product": "All claims and returned goods"
+      },
+      {
+        "line": 18,
+        "label": "other",
+        "product": "MUST be accompanied by this bill."
+      },
+      {
+        "line": 19,
+        "label": "other",
+        "product": "31150 Thank You"
+      },
+      {
+        "line": 20,
+        "label": "other",
+        "product": "PRODUCT 610"
+      }
+    ]
+  }
+}

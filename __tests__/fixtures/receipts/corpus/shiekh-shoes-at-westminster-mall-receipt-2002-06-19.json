@@ -1,0 +1,80 @@
+{
+  "id": "shiekh-shoes-at-westminster-mall-receipt-2002-06-19",
+  "group": "retail",
+  "source": {
+    "page": "https://commons.wikimedia.org/wiki/File:Shiekh_Shoes_at_Westminster_Mall_receipt_(2002-06-19).jpg",
+    "license": "Public domain",
+    "author": "Amin Eshaiker"
+  },
+  "printedOn": "2002-06-19",
+  "pages": [
+    "SHIEKH SHOES LLC\n2039 Westminster mall\nWestmi14-99-482926\nReceipt #: A18385  Date:  6-19-02\nCashier: 28  Time: 11:07\nSalesPerson: 10 ENRIQUE\nTrans Type: 01 Sale\nHow Paid: 01 Cash\nSKU Descrip SP Siz Wth Qty  Amount\n33-869 A FRC1 MID  11  1  79.97\nTax  6.20\nTotal  $ 86.17\nAmount Paid  100.00\nChange  $ 13.83"
+  ],
+  "onDevice": {
+    "model": "Apple Foundation Models, macOS 27.0.1 (26A434), greedy sampling",
+    "seconds": 5.6,
+    "storeName": "SHIEKH SHOES LLC",
+    "lines": [
+      {
+        "line": 0,
+        "label": "header",
+        "product": "SHIEKH SHOES LLC"
+      },
+      {
+        "line": 1,
+        "label": "other",
+        "product": "2039 Westminster mall"
+      },
+      {
+        "line": 2,
+        "label": "other",
+        "product": "Westmi14-99-482926"
+      },
+      {
+        "line": 3,
+        "label": "header",
+        "product": "Receipt #: A18385  Date:  6-19-02"
+      },
+      {
+        "line": 4,
+        "label": "other",
+        "product": "Cashier: 28  Time: 11:07"
+      },
+      {
+        "line": 5,
+        "label": "other",
+        "product": "SalesPerson: 10 ENRIQUE"
+      },
+      {
+        "line": 6,
+        "label": "item",
+        "product": "A FRC1 MID"
+      },
+      {
+        "line": 7,
+        "label": "itemDetail",
+        "product": "11"
+      },
+      {
+        "line": 8,
+        "label": "itemDetail",
+        "product": "1"
+      },
+      {
+        "line": 9,
+        "label": "subtotal",
+        "product": "79.97"
+      },
+      {
+        "line": 10,
+        "label": "discount",
+        "product": "6.20"
+      },
+      {
+        "line": 11,
+        "label": "total",
+        "product": "$ 86.17"
+      }
+    ]
+  }
+}
