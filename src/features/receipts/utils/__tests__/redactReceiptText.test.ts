@@ -1,7 +1,6 @@
 import { redactReceiptText } from '../redactReceiptText';
 
-// Formats as each chain prints them; the scanned corpus is held to the same
-// deny-list in receiptCorpus.test.ts.
+// Formats as each chain prints them.
 const redactOne = (lines: string[]) => redactReceiptText([lines])[0];
 
 describe('redactReceiptText', () => {
@@ -133,8 +132,7 @@ describe('redactReceiptText', () => {
     ).toEqual(['SAFEWAY', 'LUCERNE MILK  3.99', 'CLUB CARD SAVINGS  1.50-']);
   });
 
-  // Shapes from the scanned corpus (__tests__/fixtures/receipts/corpus), with
-  // made-up digits.
+  // Shapes from scanned receipts, with made-up digits.
   it('ALDI US: a reference after the date and the chip record continuation go', () => {
     expect(
       redactReceiptText([
