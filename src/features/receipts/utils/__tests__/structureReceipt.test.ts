@@ -277,6 +277,82 @@ describe('structureReceipt', () => {
     expect(parsed.lines[1]).toMatchObject({ kind: 'other', appliesToIndex: 2 });
   });
 
+  it('keeps every code at the line end out of the product words', () => {
+    const [line] = items(
+      ['SH FN 2CT BK 071641180510  888849007170 F  6.96 Y'],
+      {
+        lines: [
+          {
+            line: 0,
+            label: 'item',
+            product: 'SH FN 2CT BK 071641180510 888849007170 F 6.96 Y',
+          },
+        ],
+      },
+    );
+
+    expect(line).toMatchObject({ product: 'SH FN 2CT BK', lineTotal: 6.96 });
+  });
+
+  it('keeps the price, and the flag after the code, out of the product words', () => {
+    const [line] = items(['SBX PPR GR 7 762111466790 F  4.28 R'], {
+      lines: [
+        {
+          line: 0,
+          label: 'item',
+          product: 'SBX PPR GR 7 762111466790 F 4.28 R',
+        },
+      ],
+    });
+
+    expect(line).toMatchObject({
+      product: 'SBX PPR GR 7',
+      code: '762111466790',
+      lineTotal: 4.28,
+    });
+  });
+
+  it('a skewed photo: the total and tax take the price beside them, a weight line stays with its item', () => {
+    // The model's own numbering, as it labelled this photo in the app: it
+    // skipped the lines with no words and gave the weight line its item's name.
+    const lines = [
+      'WALMART',
+      '4.72 Y',
+      'HUMMUS W/RO  040822017510 F',
+      'BANANAS  000000040110KF  1.02 R',
+      '2.21 lb. @ 1lb.  /0.46',
+      'F',
+      '5.74',
+      'SUBTOTAL',
+      '0.38',
+      'TAX2  6.9750 %',
+      'TOTAL  6.12',
+    ];
+    const parsed = structureReceipt(lines, {
+      lines: [
+        { line: 0, label: 'header', product: 'WALMART' },
+        { line: 1, label: 'item', product: 'HUMMUS W/RO' },
+        { line: 2, label: 'item', product: 'BANANAS' },
+        { line: 3, label: 'itemDetail', product: 'BANANAS' },
+        { line: 4, label: 'subtotal', product: 'SUBTOTAL' },
+        { line: 5, label: 'tax', product: 'TAX2' },
+        { line: 6, label: 'total', product: 'TOTAL' },
+      ],
+    });
+    const byIndex = new Map(parsed.lines.map(line => [line.index, line]));
+
+    expect(byIndex.get(2)).toMatchObject({ kind: 'item', lineTotal: 4.72 });
+    expect(byIndex.get(3)).toMatchObject({
+      kind: 'item',
+      product: 'BANANAS',
+      lineTotal: 1.02,
+    });
+    expect(byIndex.get(4)).toMatchObject({ appliesToIndex: 3 });
+    expect(byIndex.get(7)).toMatchObject({ kind: 'subtotal', lineTotal: 5.74 });
+    expect(byIndex.get(9)).toMatchObject({ kind: 'tax', lineTotal: 0.38 });
+    expect(byIndex.get(6)?.lineTotal).toBeUndefined();
+  });
+
   it('lets the printed words overrule a wrong label', () => {
     const parsed = structureReceipt(['MILK  3.48', 'SUBTOTAL  3.48'], {
       lines: [
@@ -323,6 +399,18 @@ describe('isUsableReceipt', () => {
         structureReceipt(WALMART, WALMART_LABELS),
         WALMART_LABELS,
       ),
+    ).toBe(true);
+  });
+
+  it('keeps one where the model skipped a few wordless lines', () => {
+    const skippedTwo: ReceiptLineLabels = {
+      lines: WALMART_LABELS.lines.filter(
+        label => label.line !== 6 && label.line !== 9,
+      ),
+    };
+
+    expect(
+      isUsableReceipt(structureReceipt(WALMART, skippedTwo), skippedTwo),
     ).toBe(true);
   });
 

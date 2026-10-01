@@ -621,10 +621,10 @@
       "body": "query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {\n  pantry(id: $pantryId) {\n    id\n    usageAnalytics(filters: $filter) {\n      totalUsageCount\n      totalQuantityUsed\n      averageUsagePerDay\n      periodStart\n      periodEnd\n      usageByPurpose {\n        purpose\n        count\n        totalQuantity\n        percentage\n        __typename\n      }\n      usageBySource {\n        source\n        count\n        totalQuantity\n        percentage\n        __typename\n      }\n      topUsedItems {\n        itemId\n        itemName\n        imageUrl\n        count\n        totalQuantity\n        unitName\n        __typename\n      }\n      usageTrend {\n        date\n        value\n        count\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
-      "id": "e313bc2130d7139e2f0ce8b0433bd52dc91e31c4b2192ecb56a1a17bebf38de0",
+      "id": "5d4a38577ee3e7194cfc68093de54b51e4f5e6285a863780fbac3d523ff953df",
       "name": "GetPantryWasteAnalytics",
       "type": "query",
-      "body": "query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {\n  pantry(id: $pantryId) {\n    id\n    wasteAnalytics(filters: $filter) {\n      totalWasteCount\n      totalWasteQuantity\n      totalWasteValue\n      averageWastePerDay\n      wasteRate\n      composted\n      recycled\n      periodStart\n      periodEnd\n      wasteByReason {\n        reason\n        count\n        totalQuantity\n        percentage\n        estimatedValue\n        __typename\n      }\n      topWastedItems {\n        itemId\n        itemName\n        imageUrl\n        count\n        totalQuantity\n        unitName\n        estimatedValue\n        __typename\n      }\n      wasteTrend {\n        date\n        value\n        count\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
+      "body": "query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {\n  pantry(id: $pantryId) {\n    id\n    wasteAnalytics(filters: $filter) {\n      totalWasteCount\n      totalWasteQuantity\n      valueByCurrency {\n        currencyCode\n        amount\n        __typename\n      }\n      averageWastePerDay\n      wasteRate\n      composted\n      recycled\n      periodStart\n      periodEnd\n      wasteByReason {\n        reason\n        count\n        totalQuantity\n        percentage\n        __typename\n      }\n      topWastedItems {\n        itemId\n        itemName\n        imageUrl\n        count\n        totalQuantity\n        unitName\n        valueByCurrency {\n          currencyCode\n          amount\n          __typename\n        }\n        __typename\n      }\n      wasteTrend {\n        date\n        value\n        count\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "4455cdf69649df434a97f9f3e6fe5e53556289cf2ff2163e75cafbd244b45dab",
@@ -1011,6 +1011,12 @@
       "body": "query PreviewPantryItemUnitChange($input: PreviewPantryItemUnitChangeInput!) {\n  previewPantryItemUnitChange(input: $input) {\n    version\n    method\n    exact\n    quantityIgnored\n    fromUnit {\n      id\n      symbol\n      displayAsFraction\n      __typename\n    }\n    toUnit {\n      id\n      symbol\n      displayAsFraction\n      __typename\n    }\n    quantityBefore\n    heldQuantityBefore\n    quantityAfter\n    heldQuantityAfter\n    batches {\n      batchId\n      quantityBefore\n      quantityAfter\n      __typename\n    }\n    minQuantityAfter\n    restockQuantityAfter\n    dropsNetWeight\n    dropsPortions\n    dropsThresholds\n    conflictingPantryItemId\n    displayAmountAfter {\n      quantity\n      text\n      __typename\n    }\n    refusal {\n      code\n      field\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
+      "id": "817e989af30c46e27e36cd5ec41651e666d9b5c4f8126f5476a27e62e003fa39",
+      "name": "RecordReceiptMatches",
+      "type": "mutation",
+      "body": "mutation RecordReceiptMatches($input: RecordReceiptMatchesInput!) {\n  recordReceiptMatches(input: $input) {\n    __typename\n    ... on RecordReceiptMatchesPayload {\n      recorded\n      skipped\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
+    },
+    {
       "id": "5deabb7504e9e8323b06fd37247f6b16673050e14e7d3f8cd483f7df0fa3aa57",
       "name": "RefreshToken",
       "type": "mutation",
@@ -1087,6 +1093,12 @@
       "name": "ResetPassword",
       "type": "mutation",
       "body": "mutation ResetPassword($input: ResetPasswordInput!) {\n  resetPassword(input: $input) {\n    __typename\n    ... on ResetPasswordPayload {\n      status\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
+    },
+    {
+      "id": "9270a9e3ef242c734fc2de29b1ef6d74881c2d86382ba64c7d95d53fcd3b2181",
+      "name": "ResolveReceiptLines",
+      "type": "query",
+      "body": "query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {\n  resolveReceiptLines(input: $input) {\n    store {\n      id\n      __typename\n    }\n    lines {\n      clientId\n      confidence\n      best {\n        method\n        item {\n          id\n          name\n          __typename\n        }\n        __typename\n      }\n      candidates {\n        method\n        item {\n          id\n          name\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "99f5afdb269e6dd2077029b830990affeb6536c9fec9e740f4bdc25f1576646a",
