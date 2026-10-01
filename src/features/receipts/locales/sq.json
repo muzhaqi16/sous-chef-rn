@@ -32,8 +32,8 @@
     },
     "review": {
       "title": "Fatura",
-      "intro": "Zgjidh çfarë është çdo rresht. Në qilar shtohen vetëm rreshtat që zgjedh.",
-      "introTo": "Zgjidh çfarë është çdo rresht. Në {{pantry}} shtohen vetëm rreshtat që zgjedh.",
+      "intro": "Kontrollo produktin në çdo rresht. Në qilar shtohen vetëm rreshtat me një produkt.",
+      "introTo": "Kontrollo produktin në çdo rresht. Në {{pantry}} shtohen vetëm rreshtat me një produkt.",
       "choose": "Prek për të zgjedhur produktin",
       "chosenDetail": "{{printed}} · {{amount}}",
       "notAdded": "Nuk u shtua",
@@ -52,7 +52,15 @@
       "printedLabel": "Në faturë",
       "productPlaceholder": "Kërko një produkt",
       "dontAdd": "Mos e shto këtë rresht",
-      "invalidPrice": "Shkruaj shumën e paguar, p.sh. 3,49, ose lëre bosh."
+      "invalidPrice": "Shkruaj shumën e paguar, p.sh. 3,49, ose lëre bosh.",
+      "totalsTitle": "Rreshtat nuk përputhen me faturën",
+      "totalsBody": "Artikujt e lexuar bëjnë {{counted}}, por fatura thotë {{printed}}. Mund të ketë mbetur jashtë një rresht, ndaj krahasoje listën me faturën para se të shtosh.",
+      "onList": "Në listën tënde",
+      "tickOffTitle": "Shënoje si të blerë në listën e blerjeve",
+      "tickOffBody": "“{{name}}” është në listën tënde. Shënohet si i blerë dhe kalon në qilar, në vend që të shtohet dy herë.",
+      "matching": "Po kërkohen produktet…",
+      "check": "Kontrollo",
+      "maybe": "Mos është {{name}}?"
     }
   }
 }
