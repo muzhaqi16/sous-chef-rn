@@ -8,10 +8,12 @@ export interface ReceiptTotalsGap {
 
 const cents = (value: number) => Math.round(value * 100);
 
+// A subtotal or total read as 0.00 is a misread (a skewed photo puts the tax's
+// 0.00 on the subtotal's row), never a figure to compare against.
 const firstPriced = (
   lines: readonly ParsedReceiptLine[],
   kind: ParsedReceiptLine['kind'],
-) => lines.find(line => line.kind === kind && line.lineTotal !== undefined);
+) => lines.find(line => line.kind === kind && line.lineTotal);
 
 /**
  * The item lines after their discounts, with any fee or deposit printed among
