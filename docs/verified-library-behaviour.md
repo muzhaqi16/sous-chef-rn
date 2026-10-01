@@ -1581,6 +1581,7 @@ Verified 2026-09-30 on macOS 27.0.1 (host `swift` probes) and on the iPhone 18 P
 **Claim:** with guided generation (`@Generable`) and greedy sampling, the on-device model labels numbered receipt lines reliably, but produces wrong figures when asked for the whole receipt.
 - **Asked for the full structure** (index, kind, quantity, unit price, total, code, date) it invented purchase dates, negated item prices, shifted line indices and put text in `code`.
 - **Asked only to label** each line's kind and name an item's product, it placed 10 of 10 lines, in order, on Walmart, Kroger and Costco formats. It only mislabelled Costco's instant saving (`/ 987654 TPD/EGGS 1.50-`) as a detail line.
+- **On a longer, skewed receipt it numbers lines itself** (2026-10-01, a 23-line Walmart photo, in the app on the iPhone 18 Pro simulator, 9.4–10.4 s). It gave 19 labels, skipping lines with no words (a lone `F`, a price on its own row), so its line 7 was the receipt's line 9. A detail line's `product` was its item's (`BANANAS` on the weight line). So `structureReceipt` places each label by the words it copied, and `isUsableReceipt` asks for 75% of lines placed, not 90%.
 
 So `receipts/utils/structureReceipt.ts` reads every figure from the printed text and lets the printed words overrule a label. The model also copies flags and item numbers into product names (`E 1234567 KS WATER 40PK`), which the structuring strips.
 
@@ -1594,6 +1595,31 @@ Phones will differ, so the timeout is set from device runs (`on-device-receipt-r
 Re-check: connect the debugger (`argent-metro-debugger`) and evaluate
 `globalThis.nativeModuleProxy.ReceiptStructuringModule.labelLines([...lines]).then(r => (globalThis.__labels = r))`.
 The deployment target is iOS 16, so the app weak-links `FoundationModels.framework` and gates every use on `#available(iOS 26, *)`.
+
+### Apple Foundation Models can refuse a whole receipt over its footer
+
+Verified 2026-09-30 on macOS 27.0.1 (26A434), with `scripts/receipt-corpus/label.swift`, which uses `ReceiptStructuringModule`'s schema, prompt and greedy sampling.
+
+**Claim:** the model's guardrail can refuse a whole labelling request because of a receipt's promotional footer. It throws `GenerationError.guardrailViolation` ("May contain unsafe content"), and which text trips it can't be predicted.
+- A photographed ALDI US receipt was refused. Its footer has a sweepstakes ("Enter the drawing for a chance / to win a $100 ALDI gift card.") and an age line ("Must be 18 years old to enter."). Removing either one let it through. So did labelling only the lines up to the printed total.
+- The same three lines inside a short Walmart-format receipt passed. So did alcohol, tobacco, sexual-health, ammunition and pharmacy item names.
+
+So `parseReceiptOnDevice` sends only `linesThroughTotal`: no item follows the printed total, so the footer is never needed. A refusal still resolves to no parse, and the draft's text stands.
+
+Re-check with a made-up receipt in the same shape. Write this as `entry.json`:
+
+```json
+{"id":"sweepstakes","pages":["ALDI\nStore #101\n100 Main St\nSpringfield\n800-555-0100\nwww.ALDI.us\nOrg Grnd Beef  12.38  FA\nCelery  1.65  FA\nKidney Beans  0.81  FA\nPinto Beans  0.99 FA\nSUBTOTAL  15.83\nA-Taxable @0.00%  0.36\nAMOUNT DUE  16.19\n5 ITEMS\nDebit Card  16.19\n****************************************\nLike ALDI? Tell ALDI!\nTell us how we did at\nwww.tellaldi.us\nEnter the drawing for a chance\nto win a $100 ALDI gift card.\nMust be 18 years old to enter.\nNo purchase necessary.\nSign up for ALDI emails and save!\nwww.aldi.us/signup\nVISA  16.19"]}
+```
+
+Then run:
+
+```
+swiftc -O -parse-as-library scripts/receipt-corpus/label.swift -o /tmp/label
+/tmp/label /tmp entry.json
+```
+
+The labeller prints `FAILED May contain unsafe content` and writes the error to `/tmp/sweepstakes.json`. The first 13 lines alone label in about 6 s.
 
 ### ML Kit GenAI Prompt API needs Kotlin 2.2 and a minSdk override
 
