@@ -9,6 +9,7 @@ import { logger } from '#/utils/environment';
 import {
   classifyTransportTermination,
   isPermanentSubscriptionRejection,
+  isRetryableServerEnd,
 } from '#/utils/subscriptionErrorHandler';
 
 /**
@@ -16,6 +17,8 @@ import {
  * restart and the client is `lazy`, so an errored sink stays dark. Covers only
  * the closes graphql-ws refuses to re-dial, never one that latched reconnection
  * off; {@link classifyTransportTermination} is the table the socket reads too.
+ * A server end a retry can get past ({@link isRetryableServerEnd}) is restarted
+ * the same way: the socket stays up, so nothing else would.
  */
 
 /**
@@ -64,11 +67,12 @@ export function useSubscriptionTransportRecovery(
   // `restart()` THROWS when the subscription is skipped, so `skip` gates every
   // path reaching it; read at render, so flipping it cancels a scheduled
   // restart through the effect cleanup below.
-  const transportEnded =
+  const recoverable =
     !!error &&
     !isPermanentSubscriptionRejection(error) &&
-    classifyTransportTermination(error) !== null;
-  const shouldRecover = !skip && transportEnded;
+    (classifyTransportTermination(error) !== null ||
+      isRetryableServerEnd(error));
+  const shouldRecover = !skip && recoverable;
   const exhausted = attempt >= MAX_RESTART_ATTEMPTS;
 
   useEffect(() => {
@@ -78,7 +82,7 @@ export function useSubscriptionTransportRecovery(
 
     const delay = getRestartDelay(attempt);
     logger.debug(
-      `🔌 [${subscriptionName}] transport ended the subscription — re-subscribing in ${Math.round(
+      `🔌 [${subscriptionName}] subscription ended — re-subscribing in ${Math.round(
         delay,
       )}ms (attempt ${attempt + 1}/${MAX_RESTART_ATTEMPTS})`,
     );
