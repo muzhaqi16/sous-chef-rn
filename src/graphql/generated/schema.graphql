@@ -2300,6 +2300,33 @@ Always include a __typename so the variant can be discriminated.
 """
 union CreatePurchaseResult = ConflictError | CreatePurchasePayload | ForbiddenError | NotFoundError | ValidationError
 
+input CreateReceiptParseInput {
+  """
+  Client-minted CUID2. Creating the same id again returns the parse it
+  created, so a retried request queues the receipt once.
+  """
+  id: ID!
+  """The receipt's locale, e.g. en-GB, which decides how its dates read"""
+  locale: String
+  """
+  The receipt's recognized text, one string per photographed page. Payment,
+  card and contact details are removed on the server before anything is
+  stored or read.
+  """
+  pages: [String!]!
+}
+
+type CreateReceiptParsePayload {
+  receiptParse: ReceiptParse!
+}
+
+"""
+Result of CreateReceiptParse. Select on CreateReceiptParsePayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union CreateReceiptParseResult = ConflictError | CreateReceiptParsePayload | ForbiddenError | NotFoundError | ValidationError
+
 input CreateRecipeInput {
   attribution: RecipeAttributionInput
   description: String
@@ -7775,6 +7802,12 @@ type Mutation {
   """Create a new purchase record."""
   createPurchase(input: CreatePurchaseInput!): CreatePurchaseResult!
   """
+  Queue a receipt's text for the server to read into lines, for a phone
+  without on-device parsing. Returns at once with the parse PENDING; poll
+  receiptParse until it is not. Each user has a daily number of parses.
+  """
+  createReceiptParse(input: CreateReceiptParseInput!): CreateReceiptParseResult!
+  """
   Create a recipe the caller writes. It follows its input status (see
   CreateRecipeInput.status); a catalog recipe comes in through
   upsertExternalRecipe instead.
@@ -10320,6 +10353,42 @@ type PantryUsageStats {
   lowStockItemCount: Int!
 }
 
+type ParsedReceipt {
+  """ISO 4217, when the receipt shows it"""
+  currency: String
+  lines: [ParsedReceiptLine!]!
+  merchant: ParsedReceiptMerchant!
+  purchasedOn: LocalDate
+  subtotal: Float
+  tax: Float
+  total: Float
+}
+
+"""One printed line, every amount as printed and never corrected."""
+type ParsedReceiptLine {
+  """The line's printed total; a discount is negative"""
+  amount: Float
+  """On a DISCOUNT: the index in lines of the ITEM it reduces"""
+  appliesTo: Int
+  """The printed article or barcode number"""
+  code: String
+  kind: ReceiptLineKind!
+  """The product name as printed, on an ITEM"""
+  product: String
+  quantity: Float
+  """The line as the receipt prints it"""
+  text: String!
+  """The quantity's unit as printed: lb, kg, ea"""
+  unit: String
+  unitPrice: Float
+}
+
+type ParsedReceiptMerchant {
+  address: String
+  name: String
+  storeNumber: String
+}
+
 """
 One partly used package: its batch, its size, and the fraction of it that remains.
 """
@@ -11404,6 +11473,10 @@ type Query {
     shoppingListId: ID
   ): PurchaseConnection!
   """
+  A receipt parse the caller created; null for any other. Deleted after 7 days.
+  """
+  receiptParse(id: ID!): ReceiptParse
+  """
   A single recipe by id. Anonymous callers see published recipes only;
   authenticated callers also see their own private recipes when they own them.
   Returns null when no readable recipe has that id.
@@ -11837,6 +11910,19 @@ input ReceiptLineInput {
   text: String!
 }
 
+"""What a receipt line is."""
+enum ReceiptLineKind {
+  DEPOSIT
+  DISCOUNT
+  FEE
+  ITEM
+  OTHER
+  PAYMENT
+  SUBTOTAL
+  TAX
+  TOTAL
+}
+
 type ReceiptLineResolution {
   """The candidate to preselect; null when confidence is NONE"""
   best: ReceiptLineCandidate
@@ -11872,6 +11958,52 @@ enum ReceiptMatchMethod {
   SEARCH
   """The store's own item number, for a known store"""
   STORE_SKU
+}
+
+"""
+A receipt queued for the server to read, for phones that cannot read one themselves.
+"""
+type ReceiptParse {
+  completedAt: DateTime
+  createdAt: DateTime!
+  """Why it is FAILED or UNAVAILABLE"""
+  failureReason: String
+  id: ID!
+  """The receipt once PARSED"""
+  receipt: ParsedReceipt
+  status: ReceiptParseStatus!
+  warnings: [ReceiptParseWarning!]!
+}
+
+"""Where a server receipt parse stands."""
+enum ReceiptParseStatus {
+  """The model answered, but never with valid lines"""
+  FAILED
+  """Read: the receipt is returned"""
+  PARSED
+  """Queued or running; poll again"""
+  PENDING
+  """
+  No model or receipt worker could take it; parse on the device or enter the lines
+  """
+  UNAVAILABLE
+}
+
+type ReceiptParseWarning {
+  code: ReceiptParseWarningCode!
+  detail: String!
+}
+
+"""Something a parse noticed about what it read."""
+enum ReceiptParseWarningCode {
+  """The pages held little readable text"""
+  LOW_TEXT
+  """
+  The items, discounts, fees and deposits do not add up to the printed subtotal: a line was likely missed or misread
+  """
+  TOTALS_MISMATCH
+  """The model returned a line the receipt does not print; it was dropped"""
+  UNGROUNDED_LINE
 }
 
 """What turned the receipt's text into lines."""
