@@ -49,7 +49,14 @@ export interface MoveToPantryInput {
 interface UseMoveToPantryOptions {
   currentListId: string | undefined;
   onSuccess?: () => void;
+  /** `'none'` leaves telling the user about a refusal to the caller, via `reason`. */
+  present?: 'alert' | 'none';
 }
+
+/** What became of a move: applied or queued, or refused with the reason the user is told. */
+export type MoveToPantryOutcome =
+  | { status: 'moved' }
+  | { status: 'rejected'; reason: string };
 
 /**
  * Which filtered variant of the list's connection the row sits in. Both the
@@ -136,6 +143,7 @@ function applyMoveToPantryCacheUpdate(
 export function useMoveToPantry({
   currentListId,
   onSuccess,
+  present = 'alert',
 }: UseMoveToPantryOptions) {
   const [moveShoppingItemToPantry] = useMutation(
     MoveShoppingItemToPantryDocument,
@@ -182,7 +190,7 @@ export function useMoveToPantry({
   const moveToPantry = async (
     item: ShoppingListItemDisplayFragment,
     input: MoveToPantryInput,
-  ) => {
+  ): Promise<MoveToPantryOutcome> => {
     const pantryItemId = generateEntityId();
 
     // Built before the try: `?.`/`??` are value blocks, and the React Compiler
@@ -322,9 +330,15 @@ export function useMoveToPantry({
         document: MoveShoppingItemToPantryDocument,
         fallback: t('errors.moveToPantryFailedRetry'),
         onFailed: revert,
+        present,
       },
     );
-    if (settled.status === 'failed') return false;
+    if (settled.status === 'failed') {
+      return {
+        status: 'rejected',
+        reason: settled.failure?.body ?? t('errors.moveToPantryFailedRetry'),
+      };
+    }
 
     // The minted id is honoured only on the CREATE branch: a restock returns the
     // EXISTING row's id, which makes the locally written entity a ghost. Evict it
@@ -355,7 +369,7 @@ export function useMoveToPantry({
       remove_from_list: input.removeFromList,
     });
 
-    return true;
+    return { status: 'moved' };
   };
 
   return { moveToPantry };
