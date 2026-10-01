@@ -12,7 +12,7 @@
   ],
   "onDevice": {
     "model": "Apple Foundation Models, macOS 27.0.1 (26A434), greedy sampling",
-    "seconds": 7.3,
+    "seconds": 6.9,
     "storeName": "Cline's Hallmark #2",
     "lines": [
       {

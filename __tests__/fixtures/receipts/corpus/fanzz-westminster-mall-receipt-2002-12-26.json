@@ -12,7 +12,7 @@
   ],
   "onDevice": {
     "model": "Apple Foundation Models, macOS 27.0.1 (26A434), greedy sampling",
-    "seconds": 7.1,
+    "seconds": 7,
     "storeName": "2024 WESTMINSTER MALL",
     "lines": [
       {

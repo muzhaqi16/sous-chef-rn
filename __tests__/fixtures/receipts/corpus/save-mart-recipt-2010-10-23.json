@@ -8,12 +8,12 @@
   },
   "printedOn": "2010-10-23",
   "pages": [
-    "SAYAMAST\n1K5TS\n200 Country Club denter\n831-373-7381\nVeMc +\nClerk#  2503\nCashier: FastLane3\n10/23/10  13:37:34\nPRODUCE-GARDEN\nAPPLES FUJI BAG OR  3.99 F\nSUBTOTAL  3.99\nTOTAL TAX  00\nTOTAL  3.99\nCASH  TENDER  5.00\nCASH  CHANGE  1.01\n1\nNUMBER OF ITEMS\nTrx:70  Term: 23  Store: 738  13:38:09\nValue Is... Our Brands!\nGet Great Value From Our\nFull Circle, World Classics, Paws\nTop Care and Valu Time Brands"
+    "SAYAMAST\n1K5TS\n200 Country Club denter\n831-373-7381\nVeMc +\nCashier: FastLane3  Clerk#  2503\n13:37:34\n10/23/10\nPRODUCE-GARDEN\nAPPLES FUJI BAG OR  3.99 F\nSUBTOTAL  3.99\nTOTAL TAX  00\nTOTAL  3.99\nCASH  TENDER  5.00\nCASH  CHANGE  1.01\nNUMBER OF ITEMS  1\nTrx:70  Term: 23  Store: 738  13:38:09\nValue Is... Our Brands!\nGet Great Value From Our\nFull Circle, World Classics, Paws\nTop Care and Valu Time Brands"
   ],
   "onDevice": {
     "model": "Apple Foundation Models, macOS 27.0.1 (26A434), greedy sampling",
-    "seconds": 8.9,
-    "storeName": "200 Country Club denter",
+    "seconds": 5.6,
+    "storeName": "PRODUCE-GARDEN",
     "lines": [
       {
         "line": 0,
@@ -28,7 +28,7 @@
       {
         "line": 2,
         "label": "itemDetail",
-        "product": "APPLES FUJI BAG OR"
+        "product": "200 Country Club denter"
       },
       {
         "line": 3,
@@ -43,17 +43,17 @@
       {
         "line": 5,
         "label": "payment",
-        "product": "Clerk#  2503"
+        "product": "Cashier: FastLane3 Clerk# 2503"
       },
       {
         "line": 6,
-        "label": "payment",
-        "product": "Cashier: FastLane3"
+        "label": "other",
+        "product": "13:37:34"
       },
       {
         "line": 7,
         "label": "other",
-        "product": "10/23/10  13:37:34"
+        "product": "10/23/10"
       },
       {
         "line": 8,

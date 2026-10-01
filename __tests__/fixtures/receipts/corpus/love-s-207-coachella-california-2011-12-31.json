@@ -12,7 +12,7 @@
   ],
   "onDevice": {
     "model": "Apple Foundation Models, macOS 27.0.1 (26A434), greedy sampling",
-    "seconds": 2.5,
+    "seconds": 2.4,
     "storeName": "Loves",
     "lines": [
       {
