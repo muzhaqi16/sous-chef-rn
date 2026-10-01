@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
@@ -40,6 +40,16 @@ export const ReceiptReviewScreen: React.FC = () => {
     addChosen,
     finish,
   } = useReceiptReview();
+
+  // The draft is cleared once the screen has gone: cleared first, the review
+  // shows its "no items" state while it slides away.
+  const applied = useRef(false);
+  useEffect(
+    () => () => {
+      if (applied.current) finish();
+    },
+    [finish],
+  );
 
   const [editing, setEditing] = useState<ReceiptReviewRow | null>(null);
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -108,7 +118,7 @@ export const ReceiptReviewScreen: React.FC = () => {
         ? t('receipts.review.addedTo', { count: added, pantry: pantryName })
         : t('receipts.review.addedCount', { count: added }),
     );
-    finish();
+    applied.current = true;
     toPantryMain();
   };
 
