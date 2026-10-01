@@ -38,6 +38,7 @@ fragment PantryItemReaders on PantryItem {
   item {
     id
     canEdit
+    canSuggest
     categories {
       id
       category {

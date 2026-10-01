@@ -19,10 +19,10 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat, $pantry: ID) {
         primaryUpc
         type
         # Together these decide whether the card offers an edit action at all,
-        # and which wording it uses. canEdit is viewer-scoped (true only for the
-        # item's creator and admins); canSuggest is structural (true for active
-        # PUBLIC catalog items). Neither is inferable from visibility, and both
-        # false means read-only — a scan can surface an item you may not touch.
+        # and which wording it uses (`writesItemDirectly`). canEdit is
+        # viewer-scoped (the item's creator and admins); canSuggest is
+        # structural (active PUBLIC catalog items). Both false means read-only —
+        # a scan can surface an item you may not touch.
         canEdit
         canSuggest
         storageState
@@ -92,10 +92,10 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: ID, $pantry: ID) {
         primaryUpc
         type
         # Together these decide whether the card offers an edit action at all,
-        # and which wording it uses. canEdit is viewer-scoped (true only for the
-        # item's creator and admins); canSuggest is structural (true for active
-        # PUBLIC catalog items). Neither is inferable from visibility, and both
-        # false means read-only — a scan can surface an item you may not touch.
+        # and which wording it uses (`writesItemDirectly`). canEdit is
+        # viewer-scoped (the item's creator and admins); canSuggest is
+        # structural (active PUBLIC catalog items). Both false means read-only —
+        # a scan can surface an item you may not touch.
         canEdit
         canSuggest
         storageState
