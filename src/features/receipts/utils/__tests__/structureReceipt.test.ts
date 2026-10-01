@@ -430,3 +430,49 @@ describe('isUsableReceipt', () => {
     ).toBe(false);
   });
 });
+
+describe('structureReceipt: a name printed above its figures', () => {
+  // Costco Australia's layout; made-up codes.
+  const lines = [
+    'OAT MILK 6X1L',
+    '1234567  1x 12.49  12.49',
+    'RICE CRACKERS',
+    '7654321  1x  6.99  6.9',
+    'SUBTOTAL  19.48',
+  ];
+  const labels: ReceiptLineLabels = {
+    lines: [
+      { line: 0, label: 'item', product: 'OAT MILK 6X1L' },
+      { line: 1, label: 'item', product: '1234567  1x 12.49  12.49' },
+      { line: 2, label: 'item', product: 'RICE CRACKERS' },
+      { line: 3, label: 'item', product: '7654321  1x  6.99  6.9' },
+      { line: 4, label: 'subtotal', product: 'SUBTOTAL' },
+    ],
+  };
+
+  it('prices each name from the row under it, a clipped total from its count', () => {
+    const parsed = structureReceipt(lines, labels);
+
+    expect(parsed.lines.filter(line => line.kind === 'item')).toEqual([
+      expect.objectContaining({
+        index: 0,
+        product: 'OAT MILK 6X1L',
+        code: '1234567',
+        quantity: 1,
+        lineTotal: 12.49,
+      }),
+      expect.objectContaining({
+        index: 2,
+        product: 'RICE CRACKERS',
+        code: '7654321',
+        lineTotal: 6.99,
+      }),
+    ]);
+    expect(parsed.lines[1]).toEqual({
+      index: 1,
+      rawText: '1234567  1x 12.49  12.49',
+      kind: 'other',
+      appliesToIndex: 0,
+    });
+  });
+});

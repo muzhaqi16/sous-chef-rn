@@ -71,6 +71,7 @@ describe('readReceiptLine', () => {
 
   it('reads no price from a deal line (Giant Eagle)', () => {
     expect(readReceiptLine('1 @ 2/3.00')).toEqual({});
+    expect(readReceiptLine('1 @ 2/$4.00')).toEqual({});
   });
 
   it('takes the line amount, not a percentage or a phone number', () => {

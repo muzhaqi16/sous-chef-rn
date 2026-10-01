@@ -26,7 +26,7 @@ const WEIGHT_AT_RATE =
 // `KF`, `*`). A minus on either side marks a discount: `0.50-`, `-0.50`. A
 // deal's price (`1 @ 2/3.00`) is not the line's.
 const TRAILING_AMOUNT =
-  /(?<![\d/])(-)?\$?(\d{1,6}[.,]\d{2})(-)?\s*(?:[A-Z]{1,2}|\*)?\s*$/i;
+  /(?<![\d/$])(-)?\$?(\d{1,6}[.,]\d{2})(-)?\s*(?:[A-Z]{1,2}|\*)?\s*$/i;
 
 const CODE = /(?<![\d.,])\d{4,14}(?![\d.,])/;
 
