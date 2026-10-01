@@ -17,21 +17,42 @@
     "saved": {
       "title": "Receipt saved",
       "body": "Only this text is kept. The photos were deleted, and card and loyalty numbers removed.",
-      "scanAnother": "Scan another receipt"
+      "scanAnother": "Scan another receipt",
+      "review_one": "Review {{count}} item",
+      "review_other": "Review {{count}} items"
     },
     "replace": {
       "title": "Replace the saved receipt?",
       "body": "Only one receipt is kept at a time.",
       "confirm": "Replace"
     },
-    "parsed": {
-      "title_one": "{{count}} item read on this phone",
-      "title_other": "{{count}} items read on this phone",
-      "atPrice": "{{quantity}} at {{price}}"
-    },
     "photo": {
       "title": "Take a photo instead",
       "body": "This phone can't scan documents. Photograph the receipt flat and in good light, or choose a photo you've taken."
+    },
+    "review": {
+      "title": "Receipt",
+      "intro": "Choose what each line is. Only the lines you choose are added to your pantry.",
+      "introTo": "Choose what each line is. Only the lines you choose are added to {{pantry}}.",
+      "choose": "Tap to choose the product",
+      "chosenDetail": "{{printed}} · {{amount}}",
+      "notAdded": "Not added",
+      "add_one": "Add {{count}} item to the pantry",
+      "add_other": "Add {{count}} items to the pantry",
+      "addNone": "Choose the items to add",
+      "someFailed_one": "{{count}} item couldn't be added. Try again.",
+      "someFailed_other": "{{count}} items couldn't be added. Try again.",
+      "addedTo_one": "Added {{count}} item to {{pantry}}",
+      "addedTo_other": "Added {{count}} items to {{pantry}}",
+      "addedCount_one": "Added {{count}} item to the pantry",
+      "addedCount_other": "Added {{count}} items to the pantry",
+      "emptyTitle": "No items to review",
+      "emptyBody": "No item lines were read from this receipt. Scan it again, or add the items by hand.",
+      "editTitle": "Receipt line",
+      "printedLabel": "On the receipt",
+      "productPlaceholder": "Search for a product",
+      "dontAdd": "Don't add this line",
+      "invalidPrice": "Enter the amount paid, like 3.49, or leave it empty."
     }
   }
 }

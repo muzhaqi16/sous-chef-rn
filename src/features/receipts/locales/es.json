@@ -17,21 +17,42 @@
     "saved": {
       "title": "Recibo guardado",
       "body": "Solo se guarda este texto. Las fotos se eliminaron y se quitaron los números de tarjeta y de fidelidad.",
-      "scanAnother": "Escanear otro recibo"
+      "scanAnother": "Escanear otro recibo",
+      "review_one": "Revisar {{count}} artículo",
+      "review_other": "Revisar {{count}} artículos"
     },
     "replace": {
       "title": "¿Reemplazar el recibo guardado?",
       "body": "Solo se guarda un recibo a la vez.",
       "confirm": "Reemplazar"
     },
-    "parsed": {
-      "title_one": "{{count}} artículo leído en este teléfono",
-      "title_other": "{{count}} artículos leídos en este teléfono",
-      "atPrice": "{{quantity}} a {{price}}"
-    },
     "photo": {
       "title": "Haz una foto en su lugar",
       "body": "Este teléfono no puede escanear documentos. Fotografía el recibo plano y con buena luz, o elige una foto que ya hayas hecho."
+    },
+    "review": {
+      "title": "Recibo",
+      "intro": "Elige qué es cada línea. Solo se añaden a tu despensa las líneas que elijas.",
+      "introTo": "Elige qué es cada línea. Solo se añaden a {{pantry}} las líneas que elijas.",
+      "choose": "Toca para elegir el producto",
+      "chosenDetail": "{{printed}} · {{amount}}",
+      "notAdded": "No añadido",
+      "add_one": "Añadir {{count}} artículo a la despensa",
+      "add_other": "Añadir {{count}} artículos a la despensa",
+      "addNone": "Elige los artículos que quieres añadir",
+      "someFailed_one": "No se pudo añadir {{count}} artículo. Inténtalo de nuevo.",
+      "someFailed_other": "No se pudieron añadir {{count}} artículos. Inténtalo de nuevo.",
+      "addedTo_one": "Se añadió {{count}} artículo a {{pantry}}",
+      "addedTo_other": "Se añadieron {{count}} artículos a {{pantry}}",
+      "addedCount_one": "Se añadió {{count}} artículo a la despensa",
+      "addedCount_other": "Se añadieron {{count}} artículos a la despensa",
+      "emptyTitle": "No hay artículos que revisar",
+      "emptyBody": "No se leyó ninguna línea de artículo en este recibo. Vuelve a escanearlo o añade los artículos a mano.",
+      "editTitle": "Línea del recibo",
+      "printedLabel": "En el recibo",
+      "productPlaceholder": "Busca un producto",
+      "dontAdd": "No añadir esta línea",
+      "invalidPrice": "Introduce el importe pagado, como 3,49, o déjalo vacío."
     }
   }
 }
