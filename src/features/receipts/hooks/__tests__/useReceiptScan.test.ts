@@ -130,6 +130,19 @@ describe('useReceiptScan', () => {
     expect(useReceiptDraftStore.getState().draft).toBeNull();
   });
 
+  it('shows a draft that the store restores after the screen opened', async () => {
+    const { result } = renderScan();
+    expect(result.current.status).toBe('idle');
+
+    await act(async () => {
+      useReceiptDraftStore.getState().saveDraft({
+        pages: ['MILK  3.48'],
+        scannedAt: '2026-09-30T12:00:00Z',
+      });
+    });
+    expect(result.current.status).toBe('saved');
+  });
+
   it('reopens on a saved draft, discards it, and loses it at sign-out', async () => {
     useReceiptDraftStore
       .getState()
