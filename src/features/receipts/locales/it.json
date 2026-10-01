@@ -23,7 +23,9 @@
       "reading": "Individuo i prodotti…",
       "offline": "Sei offline. I prodotti verranno individuati quando tornerai online.",
       "notReadTitle": "Impossibile individuare i prodotti",
-      "notReadBody": "È stato conservato solo il testo. Scansiona di nuovo lo scontrino per riprovare."
+      "notReadBody": "È stato conservato solo il testo. Scansiona di nuovo lo scontrino per riprovare.",
+      "limitedTitle": "Raggiunto il limite di scontrini di oggi",
+      "limitedBody": "Il testo è stato conservato. Riapri questo scontrino dopo {{time}} per individuarne i prodotti."
     },
     "replace": {
       "title": "Sostituire lo scontrino salvato?",

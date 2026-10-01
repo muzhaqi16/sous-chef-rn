@@ -23,7 +23,9 @@
       "reading": "Identificando los productos…",
       "offline": "Estás sin conexión. Los productos se identificarán cuando vuelvas a estar en línea.",
       "notReadTitle": "No se pudieron identificar los productos",
-      "notReadBody": "Solo se guardó el texto. Vuelve a escanear el recibo para intentarlo de nuevo."
+      "notReadBody": "Solo se guardó el texto. Vuelve a escanear el recibo para intentarlo de nuevo.",
+      "limitedTitle": "Se alcanzó el límite de recibos de hoy",
+      "limitedBody": "El texto se guardó. Vuelve a abrir este recibo después de {{time}} para identificar sus productos."
     },
     "replace": {
       "title": "¿Reemplazar el recibo guardado?",

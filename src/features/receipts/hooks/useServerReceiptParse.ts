@@ -10,6 +10,7 @@ import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { getDeviceLocale } from '#/utils/deviceLocale';
 import { isNetworkError } from '#/utils/isNetworkError';
+import { getRateLimitDetails } from '#/utils/errors/rateLimit';
 import { useIsOnline } from '#store/useAppStore';
 import {
   useReceiptDraftStore,
@@ -33,10 +34,11 @@ export type ServerReadingStatus =
   | 'reading'
   | 'offline'
   | 'unreadable'
-  | 'unavailable';
+  | 'unavailable'
+  | 'limited';
 
 type Outcome =
-  | ServerReceiptParse['state']
+  | Exclude<ServerReceiptParse['state'], 'limited'>
   | { parsed: ParsedReceipt; purchasedOn?: string };
 
 /** What a finished parse leaves on the draft; nothing while it runs. */
@@ -91,10 +93,13 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
     enabled &&
     !!draft &&
     !draft.parsed &&
-    (!asked || asked.state === 'pending');
+    (!asked || asked.state === 'pending' || asked.state === 'limited');
 
   useEffect(() => {
     if (!waiting || !isOnline) return;
+    if (asked?.state === 'limited' && Date.now() < Date.parse(asked.retryAt)) {
+      return;
+    }
     const id = draft.serverParse?.id ?? generateEntityId();
     if (sent.current === id) return;
     sent.current = id;
@@ -127,13 +132,31 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
       } else if (status) {
         setPolling(id);
       } else if (!isNetworkError(error)) {
-        // Refused, the daily limit included: no retry, as for UNAVAILABLE.
-        settleServerParse(id, 'unavailable');
+        // The daily allowance is asked again once it says; any other refusal
+        // is not, as for UNAVAILABLE.
+        const retryAfter = getRateLimitDetails(error)?.retryAfter;
+        settleServerParse(
+          id,
+          retryAfter && retryAfter > 0
+            ? {
+                retryAt: new Date(Date.now() + retryAfter * 1000).toISOString(),
+              }
+            : 'unavailable',
+        );
       }
       // Otherwise no answer came: still pending, sent again next visit.
     };
     void send();
-  }, [waiting, isOnline, draft, askServerParse, settleServerParse, create, t]);
+  }, [
+    waiting,
+    isOnline,
+    asked,
+    draft,
+    askServerParse,
+    settleServerParse,
+    create,
+    t,
+  ]);
 
   const polled = polling && asked?.id === polling && asked.state === 'pending';
   const { data } = useQuery(
@@ -167,8 +190,13 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
     if (!asked || asked.state === 'pending') {
       return isOnline ? 'reading' : 'offline';
     }
+    if (asked.state === 'limited') return 'limited';
     return asked.state === 'unreadable' ? 'unreadable' : 'unavailable';
   };
 
-  return { readingStatus: readingStatus() };
+  return {
+    readingStatus: readingStatus(),
+    /** When a receipt over the daily allowance is read on the next visit. */
+    retryAt: asked?.state === 'limited' ? new Date(asked.retryAt) : undefined,
+  };
 }

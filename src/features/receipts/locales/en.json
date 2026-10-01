@@ -23,7 +23,9 @@
       "reading": "Picking out the items…",
       "offline": "You're offline. The items will be picked out when you're back online.",
       "notReadTitle": "Couldn't pick out the items",
-      "notReadBody": "Only the text was kept. Scan the receipt again to try once more."
+      "notReadBody": "Only the text was kept. Scan the receipt again to try once more.",
+      "limitedTitle": "Today's receipt limit is reached",
+      "limitedBody": "The text is kept. Open this receipt again after {{time}} to pick out its items."
     },
     "replace": {
       "title": "Replace the saved receipt?",

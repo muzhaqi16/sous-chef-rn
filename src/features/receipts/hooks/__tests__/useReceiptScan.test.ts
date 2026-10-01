@@ -4,6 +4,7 @@ import DocumentScanner, {
 } from 'react-native-document-scanner-plugin';
 import { TextRecognition, type RecognizedPage } from '#/native/TextRecognition';
 import { ReceiptStructuring } from '#/native/ReceiptStructuring';
+import { onDeviceStructuring } from '../../utils/onDeviceStructuring';
 import { errorService } from '#/services/errorService';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
 import { toDateKey } from '#/utils/dateUtils';
@@ -197,6 +198,14 @@ describe('useReceiptScan', () => {
   });
 
   describe('on-device structuring', () => {
+    let turnedOn: jest.ReplaceProperty<boolean | undefined>;
+    beforeEach(() => {
+      turnedOn = jest.replaceProperty(onDeviceStructuring, 'ios', true);
+    });
+    afterEach(() => {
+      turnedOn.restore();
+    });
+
     it('adds what the phone’s model read to the draft', async () => {
       scannedOnePage();
       availability.mockResolvedValue('available');
@@ -263,6 +272,20 @@ describe('useReceiptScan', () => {
       expect(result.current.status).toBe('saved');
       expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
       jest.useRealTimers();
+    });
+
+    it('never asks the model on a platform where it is turned off', async () => {
+      turnedOn.replaceValue(false);
+      scannedOnePage();
+      availability.mockResolvedValue('available');
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+
+      expect(availability).not.toHaveBeenCalled();
+      expect(labelLines).not.toHaveBeenCalled();
+      expect(result.current.status).toBe('saved');
+      expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
     });
 
     it('never asks a phone without a model', async () => {

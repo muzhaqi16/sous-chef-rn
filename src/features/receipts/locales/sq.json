@@ -23,7 +23,9 @@
       "reading": "Po dallohen produktet…",
       "offline": "Je jashtë linje. Produktet do të dallohen kur të jesh sërish në linjë.",
       "notReadTitle": "Produktet nuk u dalluan",
-      "notReadBody": "U ruajt vetëm teksti. Skano sërish faturën për të provuar përsëri."
+      "notReadBody": "U ruajt vetëm teksti. Skano sërish faturën për të provuar përsëri.",
+      "limitedTitle": "U arrit kufiri i faturave për sot",
+      "limitedBody": "Teksti u ruajt. Hape sërish këtë faturë pas {{time}} për të dalluar produktet."
     },
     "replace": {
       "title": "Të zëvendësohet fatura e ruajtur?",
