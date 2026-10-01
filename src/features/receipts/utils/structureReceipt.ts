@@ -3,7 +3,11 @@ import type {
   ReceiptLineLabel,
   ReceiptLineLabels,
 } from '#/native/ReceiptStructuring';
-import { readReceiptLine, type ReceiptLineReading } from './readReceiptLine';
+import {
+  readReceiptLine,
+  withoutAmount,
+  type ReceiptLineReading,
+} from './readReceiptLine';
 
 export type ParsedLineKind =
   | 'item'
@@ -64,12 +68,23 @@ const KIND_OF_LABEL: Record<ReceiptLineLabel, ParsedLineKind | 'detail'> = {
 const cents = (value: number) => Math.round(value * 100);
 
 // The model copies the printed words, so Costco's `E 1234567 KS WATER` keeps
-// its tax flag and item number; both are read from the line on their own.
-const cleanProduct = (product: string, code: string | undefined) =>
-  (code ? product.replace(code, ' ') : product)
+// its tax flag and item number, and a Walmart line its price and the flag after
+// its code; all are read from the line on their own.
+const cleanProduct = (product: string, code: string | undefined) => {
+  const priceless = withoutAmount(product);
+  // A flag follows the code only at the line's end; elsewhere a short word
+  // after it is the name's (Costco's `KS`).
+  return (
+    code
+      ? priceless
+          .replace(new RegExp(`${code}(?:\\s+[A-Z]{1,2})?\\s*$`), '')
+          .replace(code, ' ')
+      : priceless
+  )
     .replace(/^\s*[A-Z]\s+(?=\S)/, '')
     .replace(/\s+/g, ' ')
     .trim();
+};
 
 interface Working extends ParsedReceiptLine {
   reading: ReceiptLineReading;

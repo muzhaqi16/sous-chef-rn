@@ -25,6 +25,10 @@ const TRAILING_AMOUNT =
 
 const CODE = /(?<![\d.,])\d{4,14}(?![\d.,])/;
 
+/** The line without its trailing amount and tax flags. */
+export const withoutAmount = (text: string) =>
+  text.replace(TRAILING_AMOUNT, '');
+
 /** What the line itself states; which line is which is decided elsewhere. */
 export function readReceiptLine(text: string): ReceiptLineReading {
   const reading: ReceiptLineReading = {};

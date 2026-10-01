@@ -277,6 +277,24 @@ describe('structureReceipt', () => {
     expect(parsed.lines[1]).toMatchObject({ kind: 'other', appliesToIndex: 2 });
   });
 
+  it('keeps the price, and the flag after the code, out of the product words', () => {
+    const [line] = items(['SBX PPR GR 7 762111466790 F  4.28 R'], {
+      lines: [
+        {
+          line: 0,
+          label: 'item',
+          product: 'SBX PPR GR 7 762111466790 F 4.28 R',
+        },
+      ],
+    });
+
+    expect(line).toMatchObject({
+      product: 'SBX PPR GR 7',
+      code: '762111466790',
+      lineTotal: 4.28,
+    });
+  });
+
   it('lets the printed words overrule a wrong label', () => {
     const parsed = structureReceipt(['MILK  3.48', 'SUBTOTAL  3.48'], {
       lines: [
