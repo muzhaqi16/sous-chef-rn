@@ -6,6 +6,8 @@ export const receiptsTestIDs = {
   scanScreen: 'receipt-scan-screen',
   savedText: 'receipt-scan-saved-text',
   savedReview: 'receipt-scan-saved-review',
+  /** The server is picking out a saved receipt's items. */
+  savedReading: 'receipt-scan-saved-reading',
   reviewScreen: 'receipt-review-screen',
   reviewAdd: 'receipt-review-add',
   reviewTotalsGap: 'receipt-review-totals-gap',

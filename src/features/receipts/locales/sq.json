@@ -19,7 +19,11 @@
       "body": "Ruhet vetëm ky tekst. Fotot u fshinë dhe numrat e kartës e të besnikërisë u hoqën.",
       "scanAnother": "Skano një faturë tjetër",
       "review_one": "Shqyrto {{count}} artikull",
-      "review_other": "Shqyrto {{count}} artikuj"
+      "review_other": "Shqyrto {{count}} artikuj",
+      "reading": "Po dallohen produktet…",
+      "offline": "Je jashtë linje. Produktet do të dallohen kur të jesh sërish në linjë.",
+      "notReadTitle": "Produktet nuk u dalluan",
+      "notReadBody": "U ruajt vetëm teksti. Skano sërish faturën për të provuar përsëri."
     },
     "replace": {
       "title": "Të zëvendësohet fatura e ruajtur?",

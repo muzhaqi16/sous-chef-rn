@@ -19,7 +19,11 @@
       "body": "Viene conservato solo questo testo. Le foto sono state eliminate e i numeri di carta e fedeltà rimossi.",
       "scanAnother": "Scansiona un altro scontrino",
       "review_one": "Rivedi {{count}} articolo",
-      "review_other": "Rivedi {{count}} articoli"
+      "review_other": "Rivedi {{count}} articoli",
+      "reading": "Individuo i prodotti…",
+      "offline": "Sei offline. I prodotti verranno individuati quando tornerai online.",
+      "notReadTitle": "Impossibile individuare i prodotti",
+      "notReadBody": "È stato conservato solo il testo. Scansiona di nuovo lo scontrino per riprovare."
     },
     "replace": {
       "title": "Sostituire lo scontrino salvato?",

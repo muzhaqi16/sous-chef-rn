@@ -19,7 +19,11 @@
       "body": "Solo se guarda este texto. Las fotos se eliminaron y se quitaron los números de tarjeta y de fidelidad.",
       "scanAnother": "Escanear otro recibo",
       "review_one": "Revisar {{count}} artículo",
-      "review_other": "Revisar {{count}} artículos"
+      "review_other": "Revisar {{count}} artículos",
+      "reading": "Identificando los productos…",
+      "offline": "Estás sin conexión. Los productos se identificarán cuando vuelvas a estar en línea.",
+      "notReadTitle": "No se pudieron identificar los productos",
+      "notReadBody": "Solo se guardó el texto. Vuelve a escanear el recibo para intentarlo de nuevo."
     },
     "replace": {
       "title": "¿Reemplazar el recibo guardado?",

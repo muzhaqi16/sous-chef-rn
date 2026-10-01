@@ -8,9 +8,11 @@ import { Button } from '#components/molecules/Button';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { ErrorState } from '#components/molecules/ErrorState';
 import { Loading } from '#components/molecules/Loading';
+import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { alertService } from '#/services/alertService';
 import { useReceiptScan } from '../hooks/useReceiptScan';
+import { useServerReceiptParse } from '../hooks/useServerReceiptParse';
 import { receiptReviewLines } from '../utils/receiptReviewLines';
 import { receiptsTestIDs } from '../testIDs';
 
@@ -22,6 +24,10 @@ export const ReceiptScanScreen: React.FC = () => {
       onCancel: goBack,
     },
   );
+  // Only once the phone has had its go at the receipt.
+  const { readingStatus } = useServerReceiptParse({
+    enabled: status === 'saved',
+  });
 
   const header: ScreenHeaderConfig = {
     title: t('receipts.title'),
@@ -62,6 +68,39 @@ export const ReceiptScanScreen: React.FC = () => {
           <Text role="body" tone="secondary">
             {t('receipts.saved.body')}
           </Text>
+          {readingStatus === 'reading' && (
+            <Loading
+              size="small"
+              message={t('receipts.saved.reading')}
+              testID={receiptsTestIDs.savedReading}
+            />
+          )}
+          {readingStatus === 'offline' && (
+            <AlertBanner
+              variant="info"
+              icon="cloud-offline-outline"
+              iconLibrary="Ionicons"
+              title={t('receipts.saved.offline')}
+            />
+          )}
+          {readingStatus === 'unreadable' && (
+            <AlertBanner
+              variant="warning"
+              icon="alert-circle-outline"
+              iconLibrary="Ionicons"
+              title={t('receipts.unreadable.title')}
+              subtitle={t('receipts.unreadable.body')}
+            />
+          )}
+          {readingStatus === 'unavailable' && (
+            <AlertBanner
+              variant="info"
+              icon="information-circle-outline"
+              iconLibrary="Ionicons"
+              title={t('receipts.saved.notReadTitle')}
+              subtitle={t('receipts.saved.notReadBody')}
+            />
+          )}
           <View style={styles.actions}>
             {itemCount > 0 && (
               <Button

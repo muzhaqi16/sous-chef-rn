@@ -19,7 +19,11 @@
       "body": "Only this text is kept. The photos were deleted, and card and loyalty numbers removed.",
       "scanAnother": "Scan another receipt",
       "review_one": "Review {{count}} item",
-      "review_other": "Review {{count}} items"
+      "review_other": "Review {{count}} items",
+      "reading": "Picking out the items…",
+      "offline": "You're offline. The items will be picked out when you're back online.",
+      "notReadTitle": "Couldn't pick out the items",
+      "notReadBody": "Only the text was kept. Scan the receipt again to try once more."
     },
     "replace": {
       "title": "Replace the saved receipt?",
