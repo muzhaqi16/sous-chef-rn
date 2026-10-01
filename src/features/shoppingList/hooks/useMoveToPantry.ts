@@ -2,7 +2,11 @@ import type { ApolloCache } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UseMoveToPantry_WasPurchasedFragmentDoc } from './useMoveToPantry.generated';
-import type { StorageState } from '#/graphql/generated/schemaTypes';
+import type {
+  PriceSource,
+  ReceiptRefInput,
+  StorageState,
+} from '#/graphql/generated/schemaTypes';
 import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { Telemetry } from '#/services/telemetry';
@@ -44,6 +48,9 @@ export interface MoveToPantryInput {
   notes?: string;
   /** This package's own size; omitted, the line's size or the stack's default. */
   packageSize?: { netWeight: number; netWeightUnitId: string };
+  /** The receipt it was bought on; its day and store go on the purchase and price. */
+  receipt?: ReceiptRefInput;
+  priceSource?: PriceSource;
 }
 
 interface UseMoveToPantryOptions {
@@ -323,6 +330,8 @@ export function useMoveToPantry({
               actualPrice: input.actualPrice,
               notes: input.notes,
               packageSize: input.packageSize,
+              receipt: input.receipt,
+              priceSource: input.priceSource,
             },
           },
         }),

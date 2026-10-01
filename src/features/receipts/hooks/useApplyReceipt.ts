@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
+import {
+  AcquisitionMethod,
+  PriceSource,
+  type ReceiptRefInput,
+} from '#/graphql/generated/schemaTypes';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { useMoveToPantry } from '#features/shoppingList/hooks/useMoveToPantry';
@@ -23,21 +27,32 @@ export interface ReceiptApplyLine {
   listLine?: ShoppingListItemDisplayFragment;
 }
 
-// The total is the API's authoritative figure; it derives the rate per unit.
-const purchaseOf = (choice: ReceiptLineChoice) =>
-  choice.price === null
-    ? { acquisitionMethod: AcquisitionMethod.Purchased }
-    : {
-        acquisitionMethod: AcquisitionMethod.Purchased,
-        totalCost: choice.price,
-      };
-
 // A bare 1 with no unit is left to the API: one, or the item's package size,
 // rather than one of its tracking unit (1 mL of milk).
 const statedQuantity = (choice: ReceiptLineChoice) =>
   choice.unitId || choice.unitText || choice.quantity !== 1
     ? choice.quantity
     : undefined;
+
+// The total is the API's authoritative figure. A rate goes with it only for a
+// stated amount: the receipt's price history is recorded from the rate, and a
+// rate for an amount the API defaults would price the wrong quantity.
+const purchaseOf = (choice: ReceiptLineChoice, receipt: ReceiptRefInput) => {
+  const quantity = statedQuantity(choice);
+  return {
+    acquisitionMethod: AcquisitionMethod.Purchased,
+    receipt,
+    priceSource: PriceSource.ReceiptScan,
+    ...(choice.price === null
+      ? {}
+      : {
+          totalCost: choice.price,
+          ...(quantity === undefined
+            ? {}
+            : { costPerUnit: choice.price / quantity }),
+        }),
+  };
+};
 
 /**
  * Adds a receipt's chosen lines to the current pantry. A line on the shopping
@@ -57,7 +72,10 @@ export function useApplyReceipt(listId: string | undefined) {
   const [applying, setApplying] = useState(false);
   const [failures, setFailures] = useState<ReceiptLineFailure[]>([]);
 
-  const addOnItsOwn = async (choice: ReceiptLineChoice) => {
+  const addOnItsOwn = async (
+    choice: ReceiptLineChoice,
+    receipt: ReceiptRefInput,
+  ) => {
     const outcome = await addItem(choice.itemName, {
       item: choice.itemId
         ? { id: choice.itemId }
@@ -65,7 +83,7 @@ export function useApplyReceipt(listId: string | undefined) {
       quantity: statedQuantity(choice),
       unit: refByIdOrName(choice.unitId, choice.unitText),
       forceAdd: true,
-      purchase: purchaseOf(choice),
+      purchase: purchaseOf(choice, receipt),
     });
     switch (outcome.status) {
       case 'added':
@@ -81,6 +99,7 @@ export function useApplyReceipt(listId: string | undefined) {
   const moveFromList = async (
     choice: ReceiptLineChoice,
     listLine: ShoppingListItemDisplayFragment,
+    receipt: ReceiptRefInput,
   ) => {
     if (!pantryId) return t('errors.moveToPantryFailedRetry');
     // The amount the review shows: a move takes no default from the API.
@@ -95,19 +114,25 @@ export function useApplyReceipt(listId: string | undefined) {
       removeFromList: true,
       // Per unit, as the move takes it.
       actualPrice: choice.price === null ? undefined : choice.price / quantity,
+      receipt,
+      priceSource: PriceSource.ReceiptScan,
     });
     return outcome.status === 'moved' ? null : outcome.reason;
   };
 
-  const apply = async (lines: readonly ReceiptApplyLine[]) => {
+  /** `receipt` is what every line was bought on: its day, and its store once known. */
+  const apply = async (
+    lines: readonly ReceiptApplyLine[],
+    receipt: ReceiptRefInput,
+  ) => {
     setApplying(true);
     const added: number[] = [];
     const failed: ReceiptLineFailure[] = [];
     // One at a time, so a long receipt never puts dozens of writes in flight at once.
     for (const { index, choice, listLine } of lines) {
       const reason = listLine
-        ? await moveFromList(choice, listLine)
-        : await addOnItsOwn(choice);
+        ? await moveFromList(choice, listLine, receipt)
+        : await addOnItsOwn(choice, receipt);
       if (reason === null) added.push(index);
       else failed.push({ index, reason });
     }

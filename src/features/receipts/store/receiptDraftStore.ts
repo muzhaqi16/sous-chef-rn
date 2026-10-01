@@ -23,6 +23,8 @@ export interface ReceiptDraft {
   /** Each page's redacted text, in scan order; never an image. */
   pages: string[];
   scannedAt: string;
+  /** The day printed on the receipt (YYYY-MM-DD), read before redaction cut it. */
+  purchasedOn?: string;
   /** Structured on the phone, when its model could. */
   parsed?: ParsedReceipt;
   /** The review's picks by line index; a line without one is not added. */

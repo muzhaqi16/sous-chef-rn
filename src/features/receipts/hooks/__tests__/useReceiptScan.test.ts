@@ -6,6 +6,7 @@ import { TextRecognition, type RecognizedPage } from '#/native/TextRecognition';
 import { ReceiptStructuring } from '#/native/ReceiptStructuring';
 import { errorService } from '#/services/errorService';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
+import { toDateKey } from '#/utils/dateUtils';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import { useReceiptScan } from '../useReceiptScan';
 
@@ -88,6 +89,40 @@ describe('useReceiptScan', () => {
     const draft = useReceiptDraftStore.getState().draft;
     expect(draft?.pages).toEqual(['WALMART\nGV WHOLE MILK  3.48 N']);
     expect(JSON.stringify(draft)).not.toMatch(/4242|123456|file:/);
+  });
+
+  // Receipts print the day under the payment block, which redaction cuts, so it
+  // is read first; the cut lines still never reach the draft.
+  it('keeps the day the receipt printed below its payment block', async () => {
+    const today = new Date();
+    const printed = [
+      today.getMonth() + 1,
+      today.getDate(),
+      today.getFullYear() % 100,
+    ]
+      .map(part => String(part).padStart(2, '0'))
+      .join('/');
+    scannedOnePage();
+    recognizeAndDelete.mockResolvedValue([
+      {
+        lines: [
+          line('WALMART', 0.05),
+          line('GV WHOLE MILK  3.48 N', 0.1),
+          line('CHANGE DUE  0.00', 0.15),
+          line(`${printed} 14:22:31  TC# 4412 0021`, 0.2),
+        ],
+      },
+    ]);
+    const { result } = renderScan();
+
+    await act(() => result.current.scan());
+
+    const draft = useReceiptDraftStore.getState().draft;
+    expect(draft?.purchasedOn).toBe(toDateKey(today));
+    expect(draft?.pages).toEqual([
+      'WALMART\nGV WHOLE MILK  3.48 N\nCHANGE DUE  0.00',
+    ]);
+    expect(JSON.stringify(draft)).not.toMatch(/TC#|14:22/);
   });
 
   it('returns to the add sheet with nothing kept when the scanner is cancelled', async () => {
