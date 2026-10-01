@@ -183,6 +183,100 @@ describe('structureReceipt', () => {
     });
   });
 
+  // Shapes from the photographed corpus (__tests__/fixtures/receipts/corpus).
+  it('follows each label to the line its product words were copied from', () => {
+    // A Walmart photo: the model skipped two lines and numbered the rest from 0.
+    const drifted: ReceiptLineLabels = {
+      lines: WALMART_LABELS.lines
+        .slice(2)
+        .map(label => ({ ...label, line: label.line - 2 })),
+    };
+
+    expect(
+      items(WALMART, drifted).map(line => [
+        line.index,
+        line.product,
+        line.lineTotal,
+      ]),
+    ).toEqual([
+      [2, 'GV WHOLE MILK', 3.48],
+      [3, 'BNLS SKNLS CHKN', 11.97],
+      [4, 'BANANAS', 1.24],
+    ]);
+  });
+
+  it('ALDI US: a priced product line the model called a detail is an item', () => {
+    const lines = [
+      'ALDI',
+      'Org Grnd Beef  12.38  FA',
+      '6.19',
+      'Kidney Beans  0.81  FA',
+      'SUBTOTAL  13.19',
+    ];
+    const parsed = structureReceipt(lines, {
+      lines: [
+        { line: 0, label: 'header' },
+        { line: 1, label: 'itemDetail', product: 'Org Grnd Beef' },
+        { line: 2, label: 'item' },
+        { line: 3, label: 'itemDetail', product: 'Kidney Beans' },
+        { line: 4, label: 'subtotal' },
+      ],
+    });
+
+    expect(
+      parsed.lines
+        .filter(line => line.kind === 'item')
+        .map(line => [line.product, line.lineTotal]),
+    ).toEqual([
+      ['Org Grnd Beef', 12.38],
+      ['Kidney Beans', 0.81],
+    ]);
+    // The unit price alone on its row describes the beef; it is not a fee.
+    expect(parsed.lines[2]).toMatchObject({ kind: 'other', appliesToIndex: 1 });
+    expect(parsed.lines[2]?.lineTotal).toBeUndefined();
+  });
+
+  it('ALDI UK: a count the model called a discount takes nothing off', () => {
+    const parsed = structureReceipt(
+      [
+        '701185 CHICKEN FILLETS  4.49',
+        '2 x  2.19',
+        '13317 BUTTER 250G  4.38 A',
+      ],
+      {
+        lines: [
+          { line: 0, label: 'item', product: 'CHICKEN FILLETS' },
+          { line: 1, label: 'discount' },
+          { line: 2, label: 'item', product: 'BUTTER 250G' },
+        ],
+      },
+    );
+
+    expect(parsed.lines.some(line => line.kind === 'discount')).toBe(false);
+    expect(parsed.lines[2]).toMatchObject({
+      product: 'BUTTER 250G',
+      quantity: 2,
+      unitPrice: 2.19,
+      lineTotal: 4.38,
+    });
+  });
+
+  it('prices an item from a price read on the row above it (a skewed photo)', () => {
+    const parsed = structureReceipt(
+      ['ALDI STORES', '1.15 A', '740418 CHUTNEY'],
+      {
+        lines: [
+          { line: 0, label: 'header' },
+          { line: 1, label: 'item' },
+          { line: 2, label: 'item', product: 'CHUTNEY' },
+        ],
+      },
+    );
+
+    expect(parsed.lines[2]).toMatchObject({ kind: 'item', lineTotal: 1.15 });
+    expect(parsed.lines[1]).toMatchObject({ kind: 'other', appliesToIndex: 2 });
+  });
+
   it('lets the printed words overrule a wrong label', () => {
     const parsed = structureReceipt(['MILK  3.48', 'SUBTOTAL  3.48'], {
       lines: [
