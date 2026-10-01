@@ -23,6 +23,9 @@ import {
   AcquisitionMethod,
   ErrorCode,
   PriceSource,
+  ReceiptMatchConfidence,
+  ReceiptMatchMethod,
+  ReceiptParser,
 } from '#/graphql/generated/schemaTypes';
 import { isRecord } from '#/utils/isRecord';
 import {
@@ -30,6 +33,10 @@ import {
   type ReceiptLineChoice,
 } from '../../store/receiptDraftStore';
 import { useReceiptReview } from '../useReceiptReview';
+import {
+  RecordReceiptMatchesDocument,
+  ResolveReceiptLinesDocument,
+} from '../useReceiptMatches.generated';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -38,7 +45,10 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 jest.mock('#features/pantry/hooks/useCurrentPantry', () => ({
-  useCurrentPantry: () => ({ pantry: { id: 'p1', name: 'Kitchen' } }),
+  useCurrentPantry: () => ({
+    pantry: { id: 'p1', name: 'Kitchen' },
+    currentHome: { id: 'home-1' },
+  }),
 }));
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
   useIsLoggedOut: () => false,
@@ -197,9 +207,54 @@ const movedFor = (
   };
 };
 
+// The API is sure of the milk by its code and only guesses at the bananas.
+const RESOLVED: MockDataFor<typeof ResolveReceiptLinesDocument> = {
+  resolveReceiptLines: {
+    store: { id: 'store-27' },
+    lines: [
+      {
+        clientId: '1',
+        confidence: ReceiptMatchConfidence.High,
+        best: {
+          method: ReceiptMatchMethod.Code,
+          item: { id: 'cat-milk', name: 'Whole milk' },
+        },
+        candidates: [
+          {
+            method: ReceiptMatchMethod.Code,
+            item: { id: 'cat-milk', name: 'Whole milk' },
+          },
+        ],
+      },
+      {
+        clientId: '3',
+        confidence: ReceiptMatchConfidence.Low,
+        best: {
+          method: ReceiptMatchMethod.Search,
+          item: { id: 'cat-bananas', name: 'Bananas' },
+        },
+        candidates: [
+          {
+            method: ReceiptMatchMethod.Search,
+            item: { id: 'cat-bananas', name: 'Bananas' },
+          },
+          {
+            method: ReceiptMatchMethod.Search,
+            item: { id: 'cat-plantains', name: 'Plantains' },
+          },
+        ],
+      },
+    ],
+  },
+};
+
 async function setup({
   create = recordMock(CreatePantryItemDocument, { dataFor: createFor }),
-}: { create?: ReturnType<typeof recordMock> } = {}) {
+  resolve,
+}: {
+  create?: ReturnType<typeof recordMock>;
+  resolve?: ReturnType<typeof recordMock>;
+} = {}) {
   const cache = makeCache();
   const getPantry = recordMock(GetPantryDocument, { data: PANTRY });
   const list = recordMock(GetShoppingListItemsFilteredDocument, {
@@ -208,6 +263,15 @@ async function setup({
   const move = recordMock(MoveShoppingItemToPantryDocument, {
     dataFor: movedFor,
   });
+  const record = recordMock(RecordReceiptMatchesDocument, {
+    data: {
+      recordReceiptMatches: {
+        __typename: 'RecordReceiptMatchesPayload',
+        recorded: 1,
+        skipped: 0,
+      },
+    },
+  });
   const rendered = renderHookWithApollo(
     () => {
       const pantry = usePantryItemSelection('p1');
@@ -215,13 +279,20 @@ async function setup({
     },
     {
       cache,
-      operationMocks: [getPantry.mock, create.mock, list.mock, move.mock],
+      operationMocks: [
+        getPantry.mock,
+        create.mock,
+        list.mock,
+        move.mock,
+        record.mock,
+        ...(resolve ? [resolve.mock] : []),
+      ],
     },
   );
   await waitFor(() =>
     expect(rendered.result.current.pantry.hasLoaded).toBe(true),
   );
-  return { ...rendered, cache, create, move };
+  return { ...rendered, cache, create, move, record };
 }
 
 beforeEach(() => {
@@ -333,6 +404,120 @@ describe('useReceiptReview', () => {
 
     expect(result.current.review.rows[0]?.choice).toBeUndefined();
     expect(result.current.review.pendingCount).toBe(0);
+  });
+
+  describe('with the API proposing items', () => {
+    const resolved = () =>
+      recordMock(ResolveReceiptLinesDocument, { data: RESOLVED });
+
+    it('asks once for the item lines, with the header and the pantry', async () => {
+      const resolve = resolved();
+      const { result } = await setup({ resolve });
+      await waitFor(() => expect(result.current.review.matching).toBe(false));
+
+      expect(resolve.fired).toEqual([
+        {
+          input: {
+            merchantHeader: 'KROGER',
+            pantryId: 'p1',
+            parsedBy: ReceiptParser.Device,
+            lines: [
+              { clientId: '1', text: 'KRO WHL MILK' },
+              { clientId: '3', text: 'BANANAS' },
+            ],
+          },
+        },
+      ]);
+    });
+
+    it('chooses the item it is sure of, and only offers the one it guesses', async () => {
+      const { result } = await setup({ resolve: resolved() });
+
+      await waitFor(() =>
+        expect(result.current.review.rows[0]?.proposed).toBe(true),
+      );
+      const [milk, bananas] = result.current.review.rows;
+      expect(milk?.choice).toEqual({
+        itemId: 'cat-milk',
+        itemName: 'Whole milk',
+        quantity: 1,
+        unitId: null,
+        unitText: '',
+        price: 2.79,
+      });
+      expect(bananas?.choice).toBeUndefined();
+      expect(bananas?.guess).toBe('Bananas');
+      expect(bananas?.candidates.map(candidate => candidate.itemName)).toEqual([
+        'Bananas',
+        'Plantains',
+      ]);
+      expect(result.current.review.pendingCount).toBe(1);
+    });
+
+    it('keeps a line the user left out, out, whatever the API proposes', async () => {
+      const { result } = await setup({ resolve: resolved() });
+      await waitFor(() =>
+        expect(result.current.review.rows[0]?.proposed).toBe(true),
+      );
+
+      await act(async () => {
+        result.current.review.chooseLine(1, null);
+      });
+
+      expect(result.current.review.rows[0]?.choice).toBeUndefined();
+      expect(result.current.review.pendingCount).toBe(0);
+    });
+
+    it('adds at the receipt store, then remembers what the household confirmed', async () => {
+      const { result, create, record } = await setup({ resolve: resolved() });
+      await waitFor(() =>
+        expect(result.current.review.rows[0]?.proposed).toBe(true),
+      );
+      // The guess was wrong: the user picks the second candidate.
+      await act(async () => {
+        result.current.review.chooseLine(3, {
+          ...BANANAS,
+          itemId: 'cat-plantains',
+          itemName: 'Plantains',
+        });
+      });
+
+      await act(async () => {
+        await result.current.review.addChosen();
+      });
+
+      expect(create.fired.map(vars => vars.input)).toEqual([
+        expect.objectContaining({
+          item: { id: 'cat-milk' },
+          purchase: expect.objectContaining({
+            receipt: { purchasedOn: '2026-09-28', storeId: 'store-27' },
+          }),
+        }),
+        expect.objectContaining({ item: { id: 'cat-plantains' } }),
+      ]);
+      await waitFor(() => expect(record.fired).toHaveLength(1));
+      expect(record.fired[0]).toEqual({
+        input: {
+          idempotencyKey: expect.any(String),
+          homeId: 'home-1',
+          storeId: 'store-27',
+          lines: [
+            {
+              rawText: 'KRO WHL MILK',
+              itemId: 'cat-milk',
+              resolvedBy: ReceiptMatchMethod.Code,
+              edited: false,
+            },
+            {
+              rawText: 'BANANAS',
+              itemId: 'cat-plantains',
+              resolvedBy: ReceiptMatchMethod.Search,
+              edited: true,
+            },
+          ],
+        },
+      });
+    });
   });
 
   describe('with the milk open on the shopping list', () => {
