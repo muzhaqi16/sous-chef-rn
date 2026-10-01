@@ -7,6 +7,7 @@ import { ItemList } from '#components/organisms/ItemList';
 import { Text } from '#components/atoms/Text';
 import type { BadgeContent } from '#components/atoms/Badge';
 import { Button } from '#components/molecules/Button';
+import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { toastService } from '#/services/toastService';
 import { rowType } from '#/theme/foundations/type';
@@ -29,6 +30,7 @@ export const ReceiptReviewScreen: React.FC = () => {
   const {
     rows,
     merchant,
+    totalsGap,
     pantryName,
     pendingCount,
     applying,
@@ -138,6 +140,19 @@ export const ReceiptReviewScreen: React.FC = () => {
                   ? t('receipts.review.introTo', { pantry: pantryName })
                   : t('receipts.review.intro')}
               </Text>
+              {!!totalsGap && (
+                <AlertBanner
+                  variant="warning"
+                  icon="alert-circle-outline"
+                  iconLibrary="Ionicons"
+                  title={t('receipts.review.totalsTitle')}
+                  subtitle={t('receipts.review.totalsBody', {
+                    counted: money(totalsGap.counted),
+                    printed: money(totalsGap.printed),
+                  })}
+                  testID={receiptsTestIDs.reviewTotalsGap}
+                />
+              )}
             </View>
           ) : null
         }
@@ -167,6 +182,7 @@ export const ReceiptReviewScreen: React.FC = () => {
 
 const styles = StyleSheet.create(theme => ({
   intro: {
+    gap: theme.spacing.md,
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.md,
   },

@@ -52,7 +52,9 @@
       "printedLabel": "On the receipt",
       "productPlaceholder": "Search for a product",
       "dontAdd": "Don't add this line",
-      "invalidPrice": "Enter the amount paid, like 3.49, or leave it empty."
+      "invalidPrice": "Enter the amount paid, like 3.49, or leave it empty.",
+      "totalsTitle": "The lines don't add up to the receipt",
+      "totalsBody": "The items read add up to {{counted}}, but the receipt says {{printed}}. A line may have been missed, so check the list against the receipt before adding."
     }
   }
 }

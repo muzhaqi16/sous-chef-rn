@@ -52,7 +52,9 @@
       "printedLabel": "Sullo scontrino",
       "productPlaceholder": "Cerca un prodotto",
       "dontAdd": "Non aggiungere questa riga",
-      "invalidPrice": "Inserisci l'importo pagato, ad esempio 3,49, oppure lascia vuoto."
+      "invalidPrice": "Inserisci l'importo pagato, ad esempio 3,49, oppure lascia vuoto.",
+      "totalsTitle": "Le righe non tornano con lo scontrino",
+      "totalsBody": "Gli articoli letti fanno {{counted}}, ma lo scontrino dice {{printed}}. Potrebbe mancare una riga: confronta l'elenco con lo scontrino prima di aggiungere."
     }
   }
 }
