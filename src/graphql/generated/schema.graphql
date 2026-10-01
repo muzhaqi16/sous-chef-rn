@@ -11984,7 +11984,7 @@ enum ReceiptParseStatus {
   """Queued or running; poll again"""
   PENDING
   """
-  No model or receipt worker could take it; parse on the device or enter the lines
+  No receipt service or worker could take it; parse on the device or enter the lines
   """
   UNAVAILABLE
 }
