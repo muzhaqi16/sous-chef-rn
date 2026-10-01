@@ -47,6 +47,18 @@ export function getDeviceDecimalSeparator(): DecimalSeparator {
   return resolved;
 }
 
+/** The device's locale (`en-US`), or null when neither source can say. */
+export function getDeviceLocale(): string | null {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.language) {
+      return navigator.language;
+    }
+    return Intl.DateTimeFormat().resolvedOptions().locale || null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Test-only: the underlying values cannot change while the app runs, so nothing
  * in the app should call this.
