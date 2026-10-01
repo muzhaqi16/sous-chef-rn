@@ -6,12 +6,21 @@ import { TextRecognition, type RecognizedPage } from '#/native/TextRecognition';
 import { ReceiptStructuring } from '#/native/ReceiptStructuring';
 import { errorService } from '#/services/errorService';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
+import { toDateKey } from '#/utils/dateUtils';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import { useReceiptScan } from '../useReceiptScan';
 
 jest.mock('#/storage/mmkv');
 jest.mock('#/native/TextRecognition', () => ({
   TextRecognition: { recognizeAndDelete: jest.fn() },
+}));
+const mockTakePhoto = jest.fn();
+const mockPickPhoto = jest.fn();
+jest.mock('#hooks/usePhotoCapture', () => ({
+  usePhotoCapture: () => ({
+    takePhoto: mockTakePhoto,
+    pickPhoto: mockPickPhoto,
+  }),
 }));
 jest.mock('#/native/ReceiptStructuring', () => ({
   ReceiptStructuring: { availability: jest.fn(), labelLines: jest.fn() },
@@ -82,6 +91,40 @@ describe('useReceiptScan', () => {
     expect(JSON.stringify(draft)).not.toMatch(/4242|123456|file:/);
   });
 
+  // Receipts print the day under the payment block, which redaction cuts, so it
+  // is read first; the cut lines still never reach the draft.
+  it('keeps the day the receipt printed below its payment block', async () => {
+    const today = new Date();
+    const printed = [
+      today.getMonth() + 1,
+      today.getDate(),
+      today.getFullYear() % 100,
+    ]
+      .map(part => String(part).padStart(2, '0'))
+      .join('/');
+    scannedOnePage();
+    recognizeAndDelete.mockResolvedValue([
+      {
+        lines: [
+          line('WALMART', 0.05),
+          line('GV WHOLE MILK  3.48 N', 0.1),
+          line('CHANGE DUE  0.00', 0.15),
+          line(`${printed} 14:22:31  TC# 4412 0021`, 0.2),
+        ],
+      },
+    ]);
+    const { result } = renderScan();
+
+    await act(() => result.current.scan());
+
+    const draft = useReceiptDraftStore.getState().draft;
+    expect(draft?.purchasedOn).toBe(toDateKey(today));
+    expect(draft?.pages).toEqual([
+      'WALMART\nGV WHOLE MILK  3.48 N\nCHANGE DUE  0.00',
+    ]);
+    expect(JSON.stringify(draft)).not.toMatch(/TC#|14:22/);
+  });
+
   it('returns to the add sheet with nothing kept when the scanner is cancelled', async () => {
     scanDocument.mockResolvedValue({
       status: ScanDocumentResponseStatus.Cancel,
@@ -109,13 +152,8 @@ describe('useReceiptScan', () => {
     expect(useReceiptDraftStore.getState().draft).toBeNull();
   });
 
-  it('reports a scanner or recognition failure without keeping anything', async () => {
-    scanDocument.mockRejectedValueOnce(new Error('not supported'));
+  it('reports a recognition failure without keeping anything', async () => {
     const { result } = renderScan();
-
-    await act(() => result.current.scan());
-    expect(result.current.status).toBe('failed');
-
     scanDocument.mockResolvedValue({
       status: ScanDocumentResponseStatus.Success,
       scannedImages: ['file:///page.jpg'],
@@ -125,6 +163,19 @@ describe('useReceiptScan', () => {
     await act(() => result.current.scan());
     expect(result.current.status).toBe('failed');
     expect(useReceiptDraftStore.getState().draft).toBeNull();
+  });
+
+  it('shows a draft that the store restores after the screen opened', async () => {
+    const { result } = renderScan();
+    expect(result.current.status).toBe('idle');
+
+    await act(async () => {
+      useReceiptDraftStore.getState().saveDraft({
+        pages: ['MILK  3.48'],
+        scannedAt: '2026-09-30T12:00:00Z',
+      });
+    });
+    expect(result.current.status).toBe('saved');
   });
 
   it('reopens on a saved draft, discards it, and loses it at sign-out', async () => {
@@ -222,6 +273,61 @@ describe('useReceiptScan', () => {
 
       expect(labelLines).not.toHaveBeenCalled();
       expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
+    });
+  });
+
+  describe('without a document scanner', () => {
+    beforeEach(() => {
+      scanDocument.mockRejectedValue(
+        new Error('Document scanning is not supported on this device'),
+      );
+    });
+
+    it('offers a photo instead of failing', async () => {
+      const { result } = renderScan();
+
+      await act(() => result.current.scan());
+
+      expect(result.current.status).toBe('scannerUnavailable');
+      expect(recognizeAndDelete).not.toHaveBeenCalled();
+    });
+
+    it('reads a photo taken with the camera like a scanned page', async () => {
+      mockTakePhoto.mockResolvedValue([{ uri: 'file:///cache/photo.jpg' }]);
+      recognizeAndDelete.mockResolvedValue(RECEIPT);
+      const { result } = renderScan();
+      await act(() => result.current.scan());
+
+      await act(() => result.current.takePhoto());
+
+      expect(recognizeAndDelete).toHaveBeenCalledWith([
+        'file:///cache/photo.jpg',
+      ]);
+      expect(result.current.status).toBe('saved');
+      expect(useReceiptDraftStore.getState().draft?.pages).toEqual([
+        'WALMART\nGV WHOLE MILK  3.48 N',
+      ]);
+    });
+
+    it('reads a chosen photo too, and stays put when none is chosen', async () => {
+      mockPickPhoto.mockResolvedValueOnce([]);
+      const { result } = renderScan();
+      await act(() => result.current.scan());
+
+      await act(() => result.current.pickPhoto());
+      expect(result.current.status).toBe('scannerUnavailable');
+      expect(recognizeAndDelete).not.toHaveBeenCalled();
+
+      mockPickPhoto.mockResolvedValueOnce([
+        { uri: 'file:///cache/chosen.jpg' },
+      ]);
+      recognizeAndDelete.mockResolvedValue(RECEIPT);
+      await act(() => result.current.pickPhoto());
+
+      expect(recognizeAndDelete).toHaveBeenCalledWith([
+        'file:///cache/chosen.jpg',
+      ]);
+      expect(result.current.status).toBe('saved');
     });
   });
 });

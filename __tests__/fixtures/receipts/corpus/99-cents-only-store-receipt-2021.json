@@ -1,0 +1,155 @@
+{
+  "id": "99-cents-only-store-receipt-2021",
+  "group": "grocery",
+  "source": {
+    "page": "https://commons.wikimedia.org/wiki/File:99_cents_only_store_receipt_2021.jpg",
+    "license": "CC BY-SA 4.0",
+    "author": "Downtowngal"
+  },
+  "printedOn": "2021-08-18",
+  "pages": [
+    "St: 41 Wilshire\nWilshire Blvd & Fairfax\n6121 Wilshire Blvd\nLos Angeles CA 90048\nBigRollPaperTowels/100sh/11x8 1 @  .9999  0.9999 T\nBigRollPaperTowels/100sh/11x8  1 0  .9999  0.9999\nBigRollPaperTowels/100sh/11x8  1 0  .9999  0.9999 T\nGladGallonZipperStorageBag10c  1 @  .9999  0.9999 T\nCelery 1 Stalk  1 @  .9999  0.9999\nRed Onions/2Lbs/#60101  .9999  0.9999\nDomesticPlum  2.54 lb @  .99/1bźŘšę  2.5146\nDURABLE-WaxPaper/505qFt#75050  1 @  .9999  0.9999\nTemptUnsveetenedCoconotHempMi  1 @  .9999  0.9999\nHalloweenCrmcPintrNnPDND31102  1  . 9999  0.9999 T\nApricots/21bs/#40250  1 g  1.99  1.9900\nFreshWhiteGarlicBag/#02005  1 @  .9999  0.999\nMORTON-IodizedSalt/2602#01003  1 @  .9999  0.9999\nMOREHOUSE-JalapenoNustard/17o  1 0  .9999  0.9999\nAlsurArtichokeHearts6.5oz#725  .9999  0.9999\nPremiunOrchard-PeanutsR/S/8oz  . 9999  0.9999\nPremiumOrchard-Peanut&R/S/8oz  .9999  0.9999\nEncoreBlkPeprButhchrürindi.41  1 0  .9999  0.9999\nSeasonBrndSardineTom@Slt4.375  ,9999  0.9999\nVenezia Soap Coconut  1 Q  . 9999  0.9999 T\nSUBTOTAL  $22.50\nTAX  $0.67\nTOTAL  $23.17\nCASH  $40.00\nCHANGE  $16.83"
+  ],
+  "onDevice": {
+    "model": "Apple Foundation Models, macOS 27.0.1 (26A434), greedy sampling",
+    "seconds": 13.1,
+    "storeName": "St: 41 Wilshire",
+    "lines": [
+      {
+        "line": 0,
+        "label": "header",
+        "product": "St: 41 Wilshire"
+      },
+      {
+        "line": 1,
+        "label": "header",
+        "product": "Wilshire Blvd & Fairfax"
+      },
+      {
+        "line": 2,
+        "label": "header",
+        "product": "6121 Wilshire Blvd"
+      },
+      {
+        "line": 3,
+        "label": "header",
+        "product": "Los Angeles CA 90048"
+      },
+      {
+        "line": 4,
+        "label": "item",
+        "product": "BigRollPaperTowels"
+      },
+      {
+        "line": 5,
+        "label": "item",
+        "product": "BigRollPaperTowels"
+      },
+      {
+        "line": 6,
+        "label": "item",
+        "product": "BigRollPaperTowels"
+      },
+      {
+        "line": 7,
+        "label": "item",
+        "product": "GladGallonZipperStorageBag10c"
+      },
+      {
+        "line": 8,
+        "label": "itemDetail",
+        "product": "Celery"
+      },
+      {
+        "line": 9,
+        "label": "item",
+        "product": "Red Onions"
+      },
+      {
+        "line": 10,
+        "label": "item",
+        "product": "DomesticPlum"
+      },
+      {
+        "line": 11,
+        "label": "item",
+        "product": "DURABLE-WaxPaper"
+      },
+      {
+        "line": 12,
+        "label": "item",
+        "product": "TemptUnsveetenedCoconotHempMi"
+      },
+      {
+        "line": 13,
+        "label": "item",
+        "product": "HalloweenCrmcPintrNnPDND31102"
+      },
+      {
+        "line": 14,
+        "label": "item",
+        "product": "Apricots"
+      },
+      {
+        "line": 15,
+        "label": "item",
+        "product": "FreshWhiteGarlicBag"
+      },
+      {
+        "line": 16,
+        "label": "item",
+        "product": "MORTON-IodizedSalt"
+      },
+      {
+        "line": 17,
+        "label": "item",
+        "product": "MOREHOUSE-JalapenoNustard"
+      },
+      {
+        "line": 18,
+        "label": "item",
+        "product": "AlsurArtichokeHearts"
+      },
+      {
+        "line": 19,
+        "label": "item",
+        "product": "PremiunOrchard-Peanuts"
+      },
+      {
+        "line": 20,
+        "label": "item",
+        "product": "PremiumOrchard-Peanut"
+      },
+      {
+        "line": 21,
+        "label": "item",
+        "product": "EncoreBlkPeprButhchrürindi.41"
+      },
+      {
+        "line": 22,
+        "label": "item",
+        "product": "SeasonBrndSardineTom@Slt4.375"
+      },
+      {
+        "line": 23,
+        "label": "item",
+        "product": "Venezia Soap Coconut"
+      },
+      {
+        "line": 24,
+        "label": "subtotal",
+        "product": "SUBTOTAL"
+      },
+      {
+        "line": 25,
+        "label": "tax",
+        "product": "TAX"
+      },
+      {
+        "line": 26,
+        "label": "total",
+        "product": "TOTAL"
+      }
+    ]
+  }
+}

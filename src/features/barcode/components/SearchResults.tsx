@@ -120,7 +120,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   // Determine button label based on source and state
   const getButtonLabel = () => {
     if (isAdded) {
-      return t('barcode.added');
+      return t('labels.added');
     }
 
     return source === 'pantry'

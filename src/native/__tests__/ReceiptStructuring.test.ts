@@ -8,7 +8,7 @@ afterEach(() => {
 });
 
 describe('ReceiptStructuring', () => {
-  it('reads as unavailable where the app has no module (Android today)', async () => {
+  it('reads as unavailable where the app has no module', async () => {
     await expect(ReceiptStructuring.availability()).resolves.toBe(
       'unavailable',
     );

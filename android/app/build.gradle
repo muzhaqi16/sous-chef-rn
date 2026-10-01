@@ -155,6 +155,9 @@ dependencies {
     // Receipt text recognition (TextRecognitionModule). The Play services variant
     // downloads its model on demand instead of bundling it in the APK.
     implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
+    // Receipt line labelling (ReceiptStructuringModule): Gemini Nano through
+    // AICore, so no model ships in the APK. Needs Kotlin >= 2.2 (2.3 metadata).
+    implementation("com.google.mlkit:genai-prompt:1.0.0-beta4")
 
     // Detox dependencies
     androidTestImplementation('com.wix:detox:+')
