@@ -1120,6 +1120,11 @@ input BulkUpdateItemFieldsInput {
 
 input BulkUpdateItemsInput {
   ids: [ID!]!
+  """
+  Why the change: required when an admin changes a catalog fact, which is
+  then kept over every source as an override. One reason for the batch.
+  """
+  reason: String
   update: BulkUpdateItemFieldsInput!
 }
 
