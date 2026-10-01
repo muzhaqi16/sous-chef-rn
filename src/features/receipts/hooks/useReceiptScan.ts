@@ -11,6 +11,8 @@ import type { ImageFile } from '#/types/media';
 import { assembleReceiptLines } from '../utils/assembleReceiptLines';
 import { hasItemLines } from '../utils/hasItemLines';
 import { redactReceiptText } from '../utils/redactReceiptText';
+import { readReceiptDate } from '../utils/receiptDate';
+import { todayKey } from '#/utils/dateUtils';
 import type { ParsedReceipt } from '../utils/structureReceipt';
 import { parseReceiptOnDevice } from './onDeviceReceiptParser';
 import {
@@ -59,14 +61,22 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
       return;
     }
 
-    const redacted = redactReceiptText(assembleReceiptLines(pages));
+    const lines = assembleReceiptLines(pages);
+    // Read before redaction: receipts print the day below the payment block,
+    // which redaction cuts. Only the day is kept from it.
+    const purchasedOn = readReceiptDate(
+      lines.map(page => page.join('\n')),
+      todayKey(),
+    );
+    const redacted = redactReceiptText(lines);
     if (!hasItemLines(redacted)) {
       setStatus('unreadable');
       return;
     }
     const next: ReceiptDraft = {
-      pages: redacted.map(lines => lines.join('\n')),
+      pages: redacted.map(page => page.join('\n')),
       scannedAt: new Date().toISOString(),
+      ...(purchasedOn ? { purchasedOn } : {}),
     };
     saveDraft(next);
 

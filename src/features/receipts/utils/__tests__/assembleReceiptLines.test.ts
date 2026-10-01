@@ -75,4 +75,42 @@ describe('assembleReceiptLines', () => {
 
     expect(assembleReceiptLines([first, second])).toEqual([['MILK'], ['EGGS']]);
   });
+
+  // Apple Vision's reading of photographed Giant Eagle and ALDI UK receipts.
+  it('maps Cyrillic twins back and drops noise after a figure on a Latin page', () => {
+    const rows = (texts: string[]): Row[] =>
+      texts.map((text, index) => [text, 0.05, 0.1 + index * 0.05, 0.5, 0.03]);
+
+    expect(
+      assembleReceiptLines([
+        page(
+          rows([
+            'BK PIE 4 -PEACH  АC  1.50 F',
+            'TAХ  0.12',
+            '**** BALANCE  154.7îźś',
+            'HAW PUNCH 6P (.95)  3.04-ÍŘ',
+            '807344 MANGO LOOSE  0.69 Aę',
+            'CAFÉ AU LAIT  2.99',
+          ]),
+        ),
+      ]),
+    ).toEqual([
+      [
+        'BK PIE 4 -PEACH  AC  1.50 F',
+        'TAX  0.12',
+        '**** BALANCE  154.7',
+        'HAW PUNCH 6P (.95)  3.04-',
+        '807344 MANGO LOOSE  0.69 A',
+        'CAFÉ AU LAIT  2.99',
+      ],
+    ]);
+  });
+
+  it('leaves a page printed in Cyrillic as read', () => {
+    const cyrillic = page([['МОЛОКО 3,2%  89.90 А', 0.05, 0.1, 0.5, 0.03]]);
+
+    expect(assembleReceiptLines([cyrillic])).toEqual([
+      ['МОЛОКО 3,2%  89.90 А'],
+    ]);
+  });
 });
