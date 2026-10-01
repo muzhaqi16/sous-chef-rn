@@ -7442,6 +7442,13 @@ input MoveShoppingItemToPantryInput {
   that already exists returns IDEMPOTENT_REPLAY.
   """
   pantryItemId: ID
+  """Where the price came from: PURCHASE (default) or RECEIPT_SCAN."""
+  priceSource: PriceSource
+  """
+  The receipt this line was bought on: its store (over the line's preferred
+  store), day and number are recorded on the purchase and its price.
+  """
+  receipt: ReceiptRefInput
   """
   Whether to remove the item from the shopping list after moving. Default false:
   the line stays on the list, stamped as moved.
@@ -10528,7 +10535,14 @@ type PurchaseHistorySummary {
 input PurchaseInfoInput {
   acquisitionMethod: AcquisitionMethod
   costPerUnit: Float
+  """Where the price came from: PURCHASE (default) or RECEIPT_SCAN."""
+  priceSource: PriceSource
   purchaseId: ID
+  """
+  The receipt this stock was bought on. With it, the cost is recorded in the
+  item's price history as a price observed at that store on that day.
+  """
+  receipt: ReceiptRefInput
   storeId: ID
   totalCost: Float
 }
@@ -11642,6 +11656,18 @@ type RankedUnit {
 type RapidAttempt {
   count: Int!
   hour: String!
+}
+
+"""The receipt a purchase was made on."""
+input ReceiptRefInput {
+  """The day on the receipt, as YYYY-MM-DD; not later than today."""
+  purchasedOn: LocalDate!
+  """The receipt's own number, as printed."""
+  receiptNumber: String
+  """
+  The store the receipt is from; when the purchase also names one, they must agree.
+  """
+  storeId: ID
 }
 
 """
