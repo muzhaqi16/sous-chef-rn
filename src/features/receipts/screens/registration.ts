@@ -5,6 +5,11 @@ import { createNativeStackScreen } from '@react-navigation/native-stack';
 const ReceiptScanScreen = React.lazy(() =>
   import('./ReceiptScanScreen').then(m => ({ default: m.ReceiptScanScreen })),
 );
+const ReceiptReviewScreen = React.lazy(() =>
+  import('./ReceiptReviewScreen').then(m => ({
+    default: m.ReceiptReviewScreen,
+  })),
+);
 
 /**
  * The receipts feature's screens, spread into `ReceiptsStack`, which keeps the
@@ -14,5 +19,11 @@ export const receiptScreens = {
   ReceiptScan: createNativeStackScreen({
     screen: ReceiptScanScreen,
     linking: null,
+  }),
+  ReceiptReview: createNativeStackScreen({
+    screen: ReceiptReviewScreen,
+    linking: null,
+    // A step of the scan, pushed rather than stacked as a second sheet.
+    options: { presentation: 'card' },
   }),
 };

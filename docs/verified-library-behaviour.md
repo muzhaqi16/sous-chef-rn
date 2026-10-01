@@ -1581,6 +1581,7 @@ Verified 2026-09-30 on macOS 27.0.1 (host `swift` probes) and on the iPhone 18 P
 **Claim:** with guided generation (`@Generable`) and greedy sampling, the on-device model labels numbered receipt lines reliably, but produces wrong figures when asked for the whole receipt.
 - **Asked for the full structure** (index, kind, quantity, unit price, total, code, date) it invented purchase dates, negated item prices, shifted line indices and put text in `code`.
 - **Asked only to label** each line's kind and name an item's product, it placed 10 of 10 lines, in order, on Walmart, Kroger and Costco formats. It only mislabelled Costco's instant saving (`/ 987654 TPD/EGGS 1.50-`) as a detail line.
+- **On a longer, skewed receipt it numbers lines itself** (2026-10-01, a 23-line Walmart photo, in the app on the iPhone 18 Pro simulator, 9.4–10.4 s). It gave 19 labels, skipping lines with no words (a lone `F`, a price on its own row), so its line 7 was the receipt's line 9. A detail line's `product` was its item's (`BANANAS` on the weight line). So `structureReceipt` places each label by the words it copied, and `isUsableReceipt` asks for 75% of lines placed, not 90%.
 
 So `receipts/utils/structureReceipt.ts` reads every figure from the printed text and lets the printed words overrule a label. The model also copies flags and item numbers into product names (`E 1234567 KS WATER 40PK`), which the structuring strips.
 
@@ -1595,13 +1596,57 @@ Re-check: connect the debugger (`argent-metro-debugger`) and evaluate
 `globalThis.nativeModuleProxy.ReceiptStructuringModule.labelLines([...lines]).then(r => (globalThis.__labels = r))`.
 The deployment target is iOS 16, so the app weak-links `FoundationModels.framework` and gates every use on `#available(iOS 26, *)`.
 
-### ML Kit GenAI Prompt API can't be added under the app's Kotlin 2.1
+### Apple Foundation Models can refuse a whole receipt over its footer
+
+Verified 2026-09-30 on macOS 27.0.1 (26A434), with `scripts/receipt-corpus/label.swift`, which uses `ReceiptStructuringModule`'s schema, prompt and greedy sampling.
+
+**Claim:** the model's guardrail can refuse a whole labelling request because of a receipt's promotional footer. It throws `GenerationError.guardrailViolation` ("May contain unsafe content"), and which text trips it can't be predicted.
+- A photographed ALDI US receipt was refused. Its footer has a sweepstakes ("Enter the drawing for a chance / to win a $100 ALDI gift card.") and an age line ("Must be 18 years old to enter."). Removing either one let it through. So did labelling only the lines up to the printed total.
+- The same three lines inside a short Walmart-format receipt passed. So did alcohol, tobacco, sexual-health, ammunition and pharmacy item names.
+
+So `parseReceiptOnDevice` sends only `linesThroughTotal`: no item follows the printed total, so the footer is never needed. A refusal still resolves to no parse, and the draft's text stands.
+
+Re-check with a made-up receipt in the same shape. Write this as `entry.json`:
+
+```json
+{"id":"sweepstakes","pages":["ALDI\nStore #101\n100 Main St\nSpringfield\n800-555-0100\nwww.ALDI.us\nOrg Grnd Beef  12.38  FA\nCelery  1.65  FA\nKidney Beans  0.81  FA\nPinto Beans  0.99 FA\nSUBTOTAL  15.83\nA-Taxable @0.00%  0.36\nAMOUNT DUE  16.19\n5 ITEMS\nDebit Card  16.19\n****************************************\nLike ALDI? Tell ALDI!\nTell us how we did at\nwww.tellaldi.us\nEnter the drawing for a chance\nto win a $100 ALDI gift card.\nMust be 18 years old to enter.\nNo purchase necessary.\nSign up for ALDI emails and save!\nwww.aldi.us/signup\nVISA  16.19"]}
+```
+
+Then run:
+
+```
+swiftc -O -parse-as-library scripts/receipt-corpus/label.swift -o /tmp/label
+/tmp/label /tmp entry.json
+```
+
+The labeller prints `FAILED May contain unsafe content` and writes the error to `/tmp/sweepstakes.json`. The first 13 lines alone label in about 6 s.
+
+### ML Kit GenAI Prompt API needs Kotlin 2.2 and a minSdk override
 
 Verified 2026-09-30 against `com.google.mlkit:genai-prompt:1.0.0-beta4` (with `genai-common` beta4). It is Gemini Nano's on-device Prompt API, with typed structured output. Adding the dependency fails twice:
 
 1. `processDebugMainManifest`: the library's minSdk is 26, against the app's 24. `tools:overrideLibrary` clears it, and Gemini Nano only runs on Android 14 devices anyway.
 2. `compileDebugKotlin`: "Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0". The app pins `kotlinVersion = "2.1.20"`, and the failure hits `MainApplication.kt`, so the whole app stops compiling, not just the code that uses the library.
 
-Android on-device structuring waits for a Kotlin toolchain that reads 2.3 metadata (≥ 2.2). Until then `ReceiptStructuring.availability()` reads `unavailable` on Android, because the module isn't linked.
+Resolved 2026-09-30 with `kotlinVersion = "2.2.0"` (React Native 0.87's default), with the Kotlin Gradle plugin's classpath entry versioned by it. Unversioned, RN 0.86's Gradle plugin supplies 2.1.20 and the ext property changes nothing. The error message then still says "expected version is 2.1.0". Under 2.2, one library also needed a newer version: `@react-navigation/native` alpha.44's `MaterialSymbolModule.kt` reads `currentActivity` in a way 2.2 rejects (fixed in alpha.49). With `tools:overrideLibrary` for the three `com.google.mlkit.genai.*` libraries, `:app:assembleDebug` succeeds and `ReceiptStructuringModule.kt` calls the API.
+
+Gemini Nano runs only on AICore devices (Pixel 9 and 10, Galaxy S25, Xiaomi 15 and others). The emulator has none, so its labelling is still unverified on a device. `availability()` maps `DOWNLOADABLE` to `downloading`, so a scan never starts a model download.
 
 Re-check: add `implementation("com.google.mlkit:genai-prompt:1.0.0-beta4")` to `android/app/build.gradle`, then run `./gradlew :app:compileDebugKotlin`.
+
+### ML Kit text recognition kills the app on the arm64 Android emulator
+
+Verified 2026-09-30 on `Medium_Phone_API_36.1` (Android 16, arm64, Apple-silicon host) with `play-services-mlkit-text-recognition` 19.0.1.
+
+**Claim:** the first `TextRecognizer.process` loads Play services' TensorFlow Lite module into the app process. It dies there with `signal 4 (SIGILL), code 1 (ILL_ILLOPC)`, with frames in `dl-TfliteDynamiteDynamite` called from `dl-MlkitOcrCommon`. It is a native crash, so neither Kotlin nor JS can catch it. `TextRecognitionModule` therefore rejects with `text_recognition_unsupported` when `Build.HARDWARE == "ranchu"` on arm64, and the screen shows its failure state instead of the app vanishing.
+
+The document scanner works on the same emulator, because it runs in Play services' own process:
+- On first use it downloads its module ("Downloading updates to Google Play services…"), so a phone's first scan needs a connection.
+- It detects the page in the virtual camera scene.
+- It writes pages to `cache/mlkit_docscan_ui_client/<id>.jpg`. A crash between scan and recognition left the page there, so recognition now empties that folder on every call, as iOS does for `DOCUMENT_SCAN_*`.
+
+Re-check: `adb logcat | grep -E "SIGILL|TfliteDynamite"` while scanning on the emulator with the guard removed.
+
+### The image picker's copy is deleted with the scanned pages
+
+Verified 2026-09-30 on the iPhone 18 Pro simulator: the photo fallback (`usePhotoCapture().pickPhoto`) hands `recognizeAndDelete` the picker's temporary copy. After the read, no image newer than the scan remains under the app container's `tmp/`, `Library/Caches/` or `Documents/`. The photo in the user's library is untouched, since the picker only copies it.
