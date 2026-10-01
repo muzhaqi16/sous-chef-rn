@@ -1,0 +1,120 @@
+{
+  "id": "walmart-food-receipt-8-sep-2021",
+  "group": "grocery",
+  "source": {
+    "page": "https://commons.wikimedia.org/wiki/File:Walmart_Food_Receipt_8_Sep_2021.jpeg",
+    "license": "CC BY-SA 4.0",
+    "author": "Cryptogoth"
+  },
+  "printedOn": "2021-09-08",
+  "pages": [
+    "Give us feedback @ survey.walmart.com\nThank you! ID #:7QDD9S15SK2\nWalmart\nWM Supercenter\n816-632-9900 Mgr. ASHELY\n2000 N WALNUT ST\nCAMERON MO 64429\nST# 00109 OP# 009046 TE# 46 TR# 06069  4.72 Y\nHUMMUS W/RO 040822017510 F\nBANANAS  000000040110KF  1.02 R\n2.21 lb. @ 1 1b. /0.46  4.94 Y\nDEVILED EGG 078742213510 F  4.96 R\nCASHEW R/S  078742362690 F  4.98 R\nGV BANANA CH 078742363170 F  4.98 R\nGRN GOODNESS 071464240800 F  1.53 R\nPRG CHED SC 038000138970 F\nSUBTOTAL  27.13\n6.9750 %  1.89\nTAX2  29.02\nTOTAL\nVISA TEND  29.02\nCHANGE DUE  0.00"
+  ],
+  "onDevice": {
+    "model": "Apple Foundation Models, macOS 27.0.1 (26A434), greedy sampling",
+    "seconds": 8.9,
+    "storeName": "WM Supercenter",
+    "lines": [
+      {
+        "line": 0,
+        "label": "header",
+        "product": "Walmart"
+      },
+      {
+        "line": 1,
+        "label": "header",
+        "product": "WM Supercenter"
+      },
+      {
+        "line": 2,
+        "label": "header",
+        "product": "816-632-9900 Mgr. ASHELY"
+      },
+      {
+        "line": 3,
+        "label": "header",
+        "product": "2000 N WALNUT ST"
+      },
+      {
+        "line": 4,
+        "label": "header",
+        "product": "CAMERON MO 64429"
+      },
+      {
+        "line": 5,
+        "label": "other",
+        "product": "ST# 00109 OP# 009046 TE# 46 TR# 06069  4.72 Y"
+      },
+      {
+        "line": 6,
+        "label": "item",
+        "product": "HUMMUS W/RO"
+      },
+      {
+        "line": 7,
+        "label": "item",
+        "product": "BANANAS"
+      },
+      {
+        "line": 8,
+        "label": "itemDetail",
+        "product": "2.21 lb."
+      },
+      {
+        "line": 9,
+        "label": "item",
+        "product": "DEVILED EGG"
+      },
+      {
+        "line": 10,
+        "label": "item",
+        "product": "CASHEW R/S"
+      },
+      {
+        "line": 11,
+        "label": "item",
+        "product": "GV BANANA CH"
+      },
+      {
+        "line": 12,
+        "label": "item",
+        "product": "GRN GOODNESS"
+      },
+      {
+        "line": 13,
+        "label": "item",
+        "product": "PRG CHED SC"
+      },
+      {
+        "line": 14,
+        "label": "subtotal",
+        "product": "27.13"
+      },
+      {
+        "line": 15,
+        "label": "discount",
+        "product": "6.9750 % 1.89"
+      },
+      {
+        "line": 16,
+        "label": "tax",
+        "product": "TAX2 29.02"
+      },
+      {
+        "line": 17,
+        "label": "total",
+        "product": "TOTAL"
+      },
+      {
+        "line": 18,
+        "label": "payment",
+        "product": "VISA TEND 29.02"
+      },
+      {
+        "line": 19,
+        "label": "payment",
+        "product": "CHANGE DUE 0.00"
+      }
+    ]
+  }
+}
