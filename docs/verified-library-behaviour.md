@@ -218,7 +218,9 @@ grep -rn "touchAction" node_modules/react-native-gesture-handler/android/src/mai
 them together is accepted and discarded, silently.
 
 **Verified against `react-native-gesture-handler@3.3.0` +
-`react-native-unistyles@3.3.0`.** The chain:
+`react-native-unistyles@3.3.0`** (re-run 2026-10-02 against Unistyles 3.4.0 and
+`@shopify/flash-list@2.3.3`: the probe passes and the FlashList excerpt is
+unchanged). The chain:
 
 1. `v3/components/GestureComponents.tsx:97-105` — RNGH's `ScrollView` renders
    `refreshControl` as
@@ -346,11 +348,12 @@ npx eslint src --rule '{"sous-chef/rngh-refresh-control-matches-host":"error"}'
 silently discards a function-style `style={({ pressed }) => [...]}` callback —
 the child receives `{}`.
 
-**Verified against `react-native-unistyles@3.3.0`.**
+**Verified against `react-native-unistyles@3.4.0` (2026-10-02).**
 `node_modules/react-native-unistyles/src/core/withUnistyles/withUnistyles.native.tsx` builds the forwarded style
-with `Object.assign({}, uni__getStyles())`, and for a function-valued `style`
-prop `uni__getStyles()` returns the function itself. `Object.assign({}, fn)`
-copies a function's own enumerable properties — an arrow function has none.
+by reducing its style entries with `Object.assign(acc, secret.uni__getStyles())`
+from `{}`. For a function-valued `style` prop, `uni__getStyles()` returns the
+function itself, and `Object.assign` copies a function's own enumerable
+properties. An arrow function has none.
 
 Re-check:
 
@@ -373,7 +376,10 @@ the global dim rests at 0.5 while React holds 0.
 
 **Verified against `react-native-unistyles@3.3.0` +
 `react-native-reanimated@4.6.0` (default static flags) + `react-native@0.86.3`,
-2026-09-23.** The chain:
+2026-09-23.** The source chain was re-checked on 2026-10-02 against Unistyles
+3.4.0 and Reanimated 4.7.1. Step 4 changed: the update map is now drained. The
+`nativeProps_DEPRECATED` leg is unchanged, so the rule stays. The symptom was
+not re-observed on device. The chain:
 
 1. Reanimated's `AnimatedComponent` renders the host with
    `style: [...yourStyles, <animated style's initial value>, state.settledStyle]`:
@@ -388,10 +394,11 @@ the global dim rests at 0.5 while React holds 0.
 4. A theme rebuild of the node (`useAppearance` calls `updateTheme` on every
    cold start) parses each exotic entry from its raw value
    (`cxx/parser/Parser.cpp`, "compute styles only once"). The node's props,
-   the captured opacity included, go into the update map, which
-   `ShadowTrafficController` never drains, and into
-   `family->nativeProps_DEPRECATED`, which `ShadowNode::clone` re-applies to
-   any props-less clone.
+   the captured opacity included, go into the update map. On 3.3.0
+   `ShadowTrafficController` never drained it. On 3.4.0
+   `ShadowTreeManager::updateShadowTree` takes the map and commits it once.
+   Each commit also merges the props into `family->nativeProps_DEPRECATED`,
+   which `ShadowNode::clone` re-applies to any props-less clone.
 5. These are non-React commits. With `USE_COMMIT_HOOK_ONLY_FOR_REACT_COMMITS`
    on, reanimated's commit hook skips them. A settled animation has no next
    frame to correct the value, so the stale value holds until a React
@@ -412,15 +419,16 @@ has the same symptom and is open. Reanimated
 [#8513](https://github.com/software-mansion/react-native-reanimated/issues/8513)
 says mixing the two libraries on one node is unsupported. Unistyles
 [#1252](https://github.com/jpudysz/react-native-unistyles/issues/1252)
-covers the undrained update map. There is no fix in either package as of
-unistyles 3.3.0 and reanimated 4.7.0.
+is open and covers the per-node commits on unfreeze. Unistyles 3.4.0 drains the
+update map but still writes the captured props into `nativeProps_DEPRECATED`.
+Neither package fixes the symptom as of Unistyles 3.4.0 and Reanimated 4.7.1.
 
 Re-check:
 
 ```
 grep -n "unistylesFromNonExistentNativeState" -A 6 node_modules/react-native-unistyles/cxx/core/UnistyleWrapper.h
 grep -n "compute styles only once" -A 5 node_modules/react-native-unistyles/cxx/parser/Parser.cpp
-grep -n "getUpdates\|removeShadowNode" node_modules/react-native-unistyles/cxx/shadowTree/ShadowTrafficController.h
+grep -n "takeUpdates\|mergeNativeProps" node_modules/react-native-unistyles/cxx/shadowTree/ShadowTreeManager.cpp
 grep -n "propsOverride.emplace" -B 4 node_modules/react-native/ReactCommon/react/renderer/core/ShadowNode.cpp
 grep -n "USE_COMMIT_HOOK_ONLY_FOR_REACT_COMMITS" -A 6 node_modules/react-native-reanimated/Common/cpp/reanimated/Fabric/ReanimatedCommitHook.cpp
 ```
@@ -762,7 +770,8 @@ layout effect on the container's `renderId`, which `commitLayout()` increments
 at the end of EVERY settled layout pass, including the first one after a data
 change.
 
-**Verified against `@shopify/flash-list@2.3.2`**, and on-device
+**Verified against `@shopify/flash-list@2.3.2`** (re-checks re-run 2026-10-02
+against 2.3.3, whose only source change is `EngagedIndicesTracker.ts`), and on-device
 (SM-S908U1, `localRelease`, 67 items): the gate is a 300–342 ms header-only
 blank frame between skeleton dismissal and rows, eliminated by releasing
 skeletons on the first `onCommitLayoutEffect` that lands with real content.
@@ -788,7 +797,8 @@ short `data` array only caps it incidentally (25 entries cannot mount more than
 window look like it is saving mount work when it is really just hiding
 `drawDistance`.
 
-**Verified against `@shopify/flash-list@2.3.2`**, on-device (SM-S908U1,
+**Verified against `@shopify/flash-list@2.3.2`** (re-checks re-run 2026-10-02
+against 2.3.3), on-device (SM-S908U1,
 `localRelease`, 92 items). The pantry kept a local render window
 (`slice(0, clientWindow)`) whose growth changed both the data array and
 `handleEndReached`'s identity: one growth cost **597 ms / 2203 fibers**,
@@ -801,11 +811,19 @@ Note the mounted-cell count is a RE-RENDER multiplier, not a frame-time driver:
 UI-thread work is ~1.5 ms of a 17 ms frame on this screen
 (`docs/flashlist-performance-analysis.md` § Two different symptoms).
 
+Since 2.3.3, a fling can mount cells beyond `drawDistance`
+([#2510](https://github.com/Shopify/flash-list/pull/2510)). The window is computed from
+the projected scroll offset. When the trailing buffer is smaller than the projection
+delta, FlashList now clamps the window to also cover the real viewport. At rest the
+window matches 2.3.2. Our small values are the ones this applies to: pantry's
+`DRAW_DISTANCE` (half a screen) and the `bottomSheet` preset (250).
+
 Re-check:
 
 ```
 grep -rn "prevProps.item === nextProps.item\|areEqual" node_modules/@shopify/flash-list/src/recyclerview/ViewHolder.tsx
 grep -rn "drawDistance" node_modules/@shopify/flash-list/src/recyclerview/RecyclerViewManager.ts
+grep -n "offset + viewportSize" node_modules/@shopify/flash-list/src/recyclerview/helpers/EngagedIndicesTracker.ts
 ```
 
 ### Unistyles' useVariants rewrite needs a scope re-crawl before the compiler
@@ -824,7 +842,9 @@ does. The crawl only works at `Program.enter`; at `Program.exit` the compiler
 has already analysed the file and the crawl is a silent no-op.
 
 **Verified against `react-native-unistyles@3.3.0` +
-`babel-plugin-react-compiler@1.0.0`.** Three orders, three outcomes:
+`babel-plugin-react-compiler@1.0.0`** (probe re-run 2026-10-02 against Unistyles
+3.4.0, whose Babel plugin is unchanged: all three legs hold). Three orders,
+three outcomes:
 
 | plugin order                             | compiler                                                                                                                                             | variant read                                                |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
@@ -1019,7 +1039,8 @@ builders already honour the OS "reduce motion" setting with no config and no
 call-site branch. A branch is needed only for motion a zero duration cannot
 stop — a loop's resting state, an ambient illustration, a shimmer.
 
-**Verified 2026-09-03 against `react-native-reanimated@4.6.0`.**
+**Verified 2026-09-03 against `react-native-reanimated@4.6.0`; probe re-run
+2026-10-02 against 4.7.1.**
 `getReduceMotionFromConfig` in `animation/utilCommon.js` reads
 `!config || config === ReduceMotion.System ? isReduceMotionOnUI.value : …`, so
 an animation that passes no `reduceMotion` resolves to the device setting;
@@ -1052,7 +1073,8 @@ nothing itself: it disables recycling and offset correction for the next
 commit only.
 
 **Verified 2026-09-28 against `react-native-reanimated@4.6.0` and
-`@shopify/flash-list@2.3.2`.** `CSSManager.update` builds a normalized style
+`@shopify/flash-list@2.3.2`; source re-checks re-run 2026-10-02 against 4.7.1 and
+2.3.3.** `CSSManager.update` builds a normalized style
 only while a transition is attached (`hasTransition`), so with none it passes
 `undefined` and `CSSTransitionsManager.update` stores `prevProps = null`; the
 attaching commit then reads no previous props and triggers nothing. On the
@@ -1082,7 +1104,8 @@ Reanimated's CSS transitions and animations have no reduce-motion handling: a
 transition runs at its full duration under the OS setting. Motion driven by one
 reads `useMotionEnabled()` and skips attaching it.
 
-**Verified 2026-09-28 against `react-native-reanimated@4.6.0`** by source
+**Verified 2026-09-28 against `react-native-reanimated@4.6.0`, re-checked
+2026-10-02 against 4.7.1,** by source
 only: neither the JS side (`src/css`) nor the native engine
 (`Common/cpp/reanimated/CSS`) reads a reduced-motion setting. Not probed on a
 device.
@@ -1249,7 +1272,7 @@ no `Wrapped error:` prefix. The entry can never be read again, so
 
 Re-check: the rethrow, the pass-through and the regeneration are pinned by
 `src/storage/__tests__/keychainAndroidErrors.library.test.ts`. On device: remove
-and re-add the screen lock and a fingerprint, then tap *Use Biometric Login*.
+and re-add the screen lock and a fingerprint, then tap _Use Biometric Login_.
 
 ### An Android biometric cancel is indistinguishable from an invalidated key by code
 
@@ -1501,7 +1524,10 @@ switched mid-load) must check the result's `variables` against the current
 subject before using `data`:
 
 ```ts
-const result = useQuery(Doc, listId ? { variables: { id: listId } } : skipToken);
+const result = useQuery(
+  Doc,
+  listId ? { variables: { id: listId } } : skipToken,
+);
 const data = result.variables?.id === listId ? result.data : undefined;
 ```
 

@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "4.6.11",
+  "version": "4.6.12",
   "private": true,
   "scripts": {
     "android": "bash scripts/run-android.sh",
@@ -106,7 +106,7 @@
     "@react-navigation/elements": "^3.0.0-alpha.44",
     "@react-navigation/native": "^8.0.0-alpha.40",
     "@react-navigation/native-stack": "8.0.0-alpha.48",
-    "@shopify/flash-list": "^2.3.2",
+    "@shopify/flash-list": "^2.3.3",
     "@shopify/react-native-skia": "^2.11.2",
     "chroma-js": "^3.2.0",
     "date-fns": "^4.1.0",
@@ -139,16 +139,16 @@
     "react-native-pager-view": "^7.0.2",
     "react-native-performance": "^6.0.0",
     "react-native-permissions": "^5.6.2",
-    "react-native-reanimated": "^4.6.0",
+    "react-native-reanimated": "^4.7.1",
     "react-native-safe-area-context": "^5.8.0",
     "react-native-screens": "^4.27.0",
     "react-native-svg": "^15.15.5",
     "react-native-tab-view": "^4.2.1",
     "react-native-turbo-image": "^1.24.1",
-    "react-native-unistyles": "^3.3.0",
+    "react-native-unistyles": "^3.4.0",
     "react-native-vision-camera": "^5.2.2",
     "react-native-vision-camera-barcode-scanner": "^5.1.0",
-    "react-native-worklets": "^0.12.1",
+    "react-native-worklets": "^0.13.0",
     "uuid": "^14.0.0",
     "victory-native": "^41.20.2",
     "yup": "^1.7.0",
@@ -221,6 +221,7 @@
     "typescript": "^5.8.3"
   },
   "overrides": {
+    "@grpc/grpc-js": "^1.14.5",
     "eslint-plugin-ft-flow": "^3.0.11"
   },
   "lint-staged": {
