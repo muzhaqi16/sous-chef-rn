@@ -63,10 +63,6 @@ export function readReceiptDate(
   today: string,
   order: DateOrder,
 ): string | null {
-  const latest = fromDateKey(today);
-  const earliest = new Date(latest);
-  earliest.setDate(earliest.getDate() - OLDEST_DAYS);
-
   for (const page of pages) {
     const found = [
       ...[...page.matchAll(SLASH_DATE)].map(match => ({
@@ -80,9 +76,7 @@ export function readReceiptDate(
     ].sort((a, b) => a.at - b.at);
 
     for (const { key } of found) {
-      if (!key) continue;
-      const day = fromDateKey(key);
-      if (day <= latest && day >= earliest) return key;
+      if (key && isPlausibleReceiptDay(key, today)) return key;
     }
   }
   return null;

@@ -154,14 +154,10 @@ const comparable = (text: string) =>
   text.replace(/\s+/g, ' ').trim().toUpperCase();
 
 /**
- * Each label on the line it describes. The model numbers lines itself and can
- * drift from the numbers it was given, further with every line it skips (a
- * Walmart receipt's labels two, then four lines early), so a label lands where
- * its copied product words are printed, nearest the current drift; one without
- * them keeps the drift of the label before it.
- * Words already found on a line are not found again there (a weight line
- * labelled with its item's `BANANAS`), and a label found by its words takes the
- * line from one placed by drift alone.
+ * Each label on its line. The model drifts from the line numbers it was given
+ * (a Walmart receipt's labels two, then four lines early), so a label lands
+ * where its product words print, nearest the drift, or keeps the drift without
+ * them. A line found by words is not searched again, and wins over drift.
  */
 function alignLabels(
   lines: readonly string[],
