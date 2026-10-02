@@ -6,12 +6,16 @@ import { SubScreen } from '#components/templates/SubScreen';
 import { ItemList } from '#components/organisms/ItemList';
 import { Text } from '#components/atoms/Text';
 import type { BadgeContent } from '#components/atoms/Badge';
+import { Icon, type IconTone } from '#utils/iconUtils';
 import { Button } from '#components/molecules/Button';
 import { AlertBanner } from '#components/molecules/AlertBanner';
+import { DatePickerField } from '#components/molecules/DatePickerField';
+import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { toastService } from '#/services/toastService';
 import { rowType } from '#/theme/foundations/type';
 import { useMoney } from '#domain/money';
+import { fromDateKey, toDateKey } from '#/utils/dateUtils';
 import {
   formatQuantityDisplay,
   formatQuantityForDisplay,
@@ -20,8 +24,40 @@ import { ReceiptLineSheet } from '../components/ReceiptLineSheet';
 import {
   useReceiptReview,
   type ReceiptReviewRow,
+  type ReceiptRowStatus,
 } from '../hooks/useReceiptReview';
 import { receiptsTestIDs } from '../testIDs';
+
+type ReviewSection = 'toAdd' | 'pending' | 'notAdded' | 'added';
+
+// Lines that will be added first, then those waiting for a match, those that
+// won't be added, and those already in.
+const SECTION_OF: Record<ReceiptRowStatus, ReviewSection> = {
+  add: 'toAdd',
+  failed: 'toAdd',
+  pending: 'pending',
+  guess: 'notAdded',
+  unmatched: 'notAdded',
+  skipped: 'notAdded',
+  added: 'added',
+};
+const SECTION_ORDER: readonly ReviewSection[] = [
+  'toAdd',
+  'pending',
+  'notAdded',
+  'added',
+];
+
+const STATUS_ICON: Record<ReceiptRowStatus, { name: string; tone: IconTone }> =
+  {
+    add: { name: 'checkmark-circle', tone: 'success' },
+    failed: { name: 'alert-circle', tone: 'error' },
+    added: { name: 'checkmark-done-circle', tone: 'success' },
+    pending: { name: 'hourglass-outline', tone: 'iconTertiary' },
+    guess: { name: 'help-circle', tone: 'warning' },
+    unmatched: { name: 'ellipse-outline', tone: 'iconTertiary' },
+    skipped: { name: 'remove-circle-outline', tone: 'iconTertiary' },
+  };
 
 export const ReceiptReviewScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -30,8 +66,14 @@ export const ReceiptReviewScreen: React.FC = () => {
   const {
     rows,
     merchant,
+    store,
+    purchasedOn,
+    dayIsScanDay,
+    setPurchasedOn,
+    chooseStore,
     totalsGap,
-    matching,
+    matchState,
+    retryMatching,
     pantryName,
     pendingCount,
     applying,
@@ -68,43 +110,93 @@ export const ReceiptReviewScreen: React.FC = () => {
     : undefined;
 
   const subtitleOf = (row: ReceiptReviewRow) => {
-    if (row.failure) return row.failure;
     const { choice } = row;
-    if (row.guess) return t('receipts.review.maybe', { name: row.guess });
-    if (!choice) return t('receipts.review.choose');
-    // One of no stated unit says nothing the receipt line does not.
-    if (!choice.unitText && choice.quantity === 1) return row.printed;
-    const amount = choice.unitText
-      ? formatQuantityDisplay(choice.quantity, choice.unitText)
-      : formatQuantityForDisplay(choice.quantity);
-    return t('receipts.review.chosenDetail', { printed: row.printed, amount });
+    switch (row.status) {
+      case 'failed':
+        return row.failure ?? t('receipts.review.notAdded');
+      case 'pending':
+        return matchState === 'failed'
+          ? t('receipts.review.notMatchedYet')
+          : t('receipts.review.findingMatch');
+      case 'guess':
+        return t('receipts.review.maybe', { name: row.guess ?? '' });
+      case 'unmatched':
+        return t('receipts.review.choose');
+      case 'skipped':
+        return t('receipts.review.leftOut');
+      case 'add':
+      case 'added': {
+        if (!choice) return row.printed;
+        const amount = choice.unitText
+          ? formatQuantityDisplay(choice.quantity, choice.unitText)
+          : formatQuantityForDisplay(choice.quantity);
+        return t('receipts.review.chosenDetail', {
+          printed: row.printed,
+          amount,
+        });
+      }
+    }
   };
 
   const badgeOf = (row: ReceiptReviewRow): BadgeContent | undefined => {
-    if (row.added) return { text: t('labels.added'), variant: 'success' };
-    if (row.failure) {
-      return { text: t('receipts.review.notAdded'), variant: 'danger' };
+    switch (row.status) {
+      case 'added':
+        return { text: t('labels.added'), variant: 'success' };
+      case 'failed':
+        return { text: t('receipts.review.notAdded'), variant: 'danger' };
+      case 'guess':
+        return { text: t('receipts.review.check'), variant: 'warning' };
+      case 'add':
+        return row.onList
+          ? { text: t('receipts.review.onList'), variant: 'primary' }
+          : undefined;
+      case 'pending':
+      case 'unmatched':
+      case 'skipped':
+        return undefined;
     }
-    if (row.onList)
-      return { text: t('receipts.review.onList'), variant: 'primary' };
-    if (row.guess) {
-      return { text: t('receipts.review.check'), variant: 'warning' };
-    }
-    return undefined;
   };
 
-  const items = rows.map(row => {
-    const price = row.choice ? row.choice.price : row.price;
-    return {
-      id: String(row.index),
-      title: row.choice?.itemName ?? row.printed,
-      subtitle: subtitleOf(row),
-      badge: badgeOf(row),
-      rightElement:
-        price === undefined || price === null ? undefined : (
-          <Text role={rowType.title}>{money(price)}</Text>
-        ),
-    };
+  const sectionTitle = (section: ReviewSection, count: number) => {
+    switch (section) {
+      case 'toAdd':
+        return t('receipts.review.sectionToAdd', { count });
+      case 'pending':
+        return matchState === 'failed'
+          ? t('receipts.review.sectionNotMatchedYet', { count })
+          : t('receipts.review.sectionMatching', { count });
+      case 'notAdded':
+        return t('receipts.review.sectionNotAdded', { count });
+      case 'added':
+        return t('receipts.review.sectionAdded', { count });
+    }
+  };
+
+  const items = SECTION_ORDER.flatMap(section => {
+    const inSection = rows.filter(row => SECTION_OF[row.status] === section);
+    return inSection.map((row, at) => {
+      const price = row.choice ? row.choice.price : row.price;
+      const icon = STATUS_ICON[row.status];
+      return {
+        id: String(row.index),
+        title: row.choice?.itemName ?? row.printed,
+        subtitle: subtitleOf(row),
+        badge: badgeOf(row),
+        leftElement: <Icon name={icon.name} size="md" tone={icon.tone} />,
+        rightElement:
+          price === undefined || price === null ? undefined : (
+            <Text
+              role={rowType.title}
+              tone={section === 'toAdd' ? 'primary' : 'secondary'}
+            >
+              {money(price)}
+            </Text>
+          ),
+        ...(at === 0
+          ? { sectionTitle: sectionTitle(section, inSection.length) }
+          : {}),
+      };
+    });
   });
 
   const handleAdd = async () => {
@@ -141,7 +233,7 @@ export const ReceiptReviewScreen: React.FC = () => {
 
   return (
     <SubScreen
-      title={merchant ?? t('receipts.review.title')}
+      title={store?.name ?? merchant ?? t('receipts.review.title')}
       scroll="list"
       footer={footer}
       testID={receiptsTestIDs.reviewScreen}
@@ -153,13 +245,56 @@ export const ReceiptReviewScreen: React.FC = () => {
         ListHeaderComponent={
           rows.length > 0 ? (
             <View style={styles.intro}>
+              <View style={styles.details}>
+                <StoreAutocompleteField
+                  variant="modal"
+                  label={t('labels.store')}
+                  value={store?.name ?? ''}
+                  // Kept by id, from the pick: typed text alone is no store.
+                  onChangeText={() => undefined}
+                  onStoreSelected={(id, name) => {
+                    if (id && name) chooseStore({ id, name });
+                  }}
+                  placeholder={t('receipts.review.storePlaceholder')}
+                  helperText={t('labels.storeSelectHint')}
+                  testID={receiptsTestIDs.reviewStore}
+                />
+                <View>
+                  <DatePickerField
+                    label={t('receipts.review.dateLabel')}
+                    value={fromDateKey(purchasedOn)}
+                    onChange={date => {
+                      if (date) setPurchasedOn(toDateKey(date));
+                    }}
+                    maximumDate={new Date()}
+                    testID={receiptsTestIDs.reviewDate}
+                  />
+                  {dayIsScanDay ? (
+                    <Text role="caption" tone="tertiary">
+                      {t('receipts.review.dateScanned')}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
               <Text role="body" tone="secondary">
-                {matching
+                {matchState === 'matching'
                   ? t('receipts.review.matching')
                   : pantryName
                   ? t('receipts.review.introTo', { pantry: pantryName })
                   : t('receipts.review.intro')}
               </Text>
+              {matchState === 'failed' && (
+                <AlertBanner
+                  variant="warning"
+                  icon="cloud-offline-outline"
+                  iconLibrary="Ionicons"
+                  title={t('receipts.review.matchFailedTitle')}
+                  subtitle={t('receipts.review.matchFailedBody')}
+                  onPress={retryMatching}
+                  showChevron
+                  testID={receiptsTestIDs.reviewMatchRetry}
+                />
+              )}
               {!!totalsGap && (
                 <AlertBanner
                   variant="warning"
@@ -205,6 +340,9 @@ export const ReceiptReviewScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
+  details: {
+    gap: theme.spacing.md,
+  },
   intro: {
     gap: theme.spacing.md,
     paddingTop: theme.spacing.md,

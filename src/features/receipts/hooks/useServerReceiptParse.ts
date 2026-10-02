@@ -1,23 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { skipToken, useMutation, useQuery } from '@apollo/client/react';
+import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import { useTranslation } from '#/i18n';
 import {
   ReceiptParseStatus,
   ReceiptParseWarningCode,
+  TopLevelErrorCode,
 } from '#/graphql/generated/schemaTypes';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { getDeviceLocale } from '#/utils/deviceLocale';
 import { todayKey } from '#/utils/dateUtils';
-import { isNetworkError } from '#/utils/isNetworkError';
 import { getRateLimitDetails } from '#/utils/errors/rateLimit';
+import { isAuthRefusalCode } from '#/utils/authErrorCodes';
 import { useIsOnline } from '#store/useAppStore';
 import {
   useReceiptDraftStore,
   type ServerReceiptParse,
 } from '../store/receiptDraftStore';
 import { fromServerReceipt } from '../utils/serverReceipt';
+import { isPlausibleReceiptDay } from '../utils/receiptDate';
 import { receiptReviewLines } from '../utils/receiptReviewLines';
 import type { ParsedReceipt } from '../utils/structureReceipt';
 import {
@@ -29,14 +32,44 @@ import {
 // The API asks for a poll every 2–3 s and allows 120 a minute.
 const POLL_MS = 2500;
 
+// The waits before each resend of an ask that got no verdict; after the last,
+// it is sent again on the next visit.
+const RESEND_MS = [POLL_MS, POLL_MS * 2, POLL_MS * 4];
+
 /** What the saved screen says about the server's reading. */
 export type ServerReadingStatus =
   | 'none'
   | 'reading'
   | 'offline'
+  | 'retryLater'
   | 'unreadable'
   | 'unavailable'
   | 'limited';
+
+const PASSING_CODES: readonly string[] = [
+  TopLevelErrorCode.InternalServerError,
+  TopLevelErrorCode.ServiceUnavailable,
+];
+
+/**
+ * Whether a failed ask is the API's answer on this receipt, which stands. One
+ * that never arrived, a server fault and a session mid-refresh are not: the
+ * same ask may well succeed when sent again.
+ */
+function isVerdict(error: unknown): boolean {
+  if (ServerError.is(error)) {
+    return error.statusCode < 500 && error.statusCode !== 401;
+  }
+  if (!CombinedGraphQLErrors.is(error)) return false;
+  return error.errors.every(({ extensions }) => {
+    const code = extensions?.code;
+    return (
+      typeof code === 'string' &&
+      !PASSING_CODES.includes(code) &&
+      !isAuthRefusalCode(code)
+    );
+  });
+}
 
 type Outcome =
   | Exclude<ServerReceiptParse['state'], 'limited'>
@@ -62,9 +95,10 @@ function outcomeOf(
       // Never an empty review: too little text to read is a retake.
       if (!receipt || !parsed || lowText) return 'unreadable';
       if (receiptReviewLines(parsed).length === 0) return 'unreadable';
-      // The API refuses an intake dated after tomorrow, so a misread future
-      // day is dropped rather than failing the add.
-      return receipt.purchasedOn && receipt.purchasedOn <= todayKey()
+      // Held to the phone's own window: a misread day would date the prices
+      // and the shelf life, and the API refuses one after tomorrow.
+      return receipt.purchasedOn &&
+        isPlausibleReceiptDay(receipt.purchasedOn, todayKey())
         ? { parsed, purchasedOn: receipt.purchasedOn }
         : { parsed };
     }
@@ -74,9 +108,10 @@ function outcomeOf(
 /**
  * Asks the server to read a saved receipt the phone could not structure, and
  * waits for it while the screen is open: never part of the scan itself, which
- * `enabled` marks as finished. A parse already asked for is sent again on the
- * next visit, which the API answers with the same parse; offline, nothing is
- * asked until the phone is back online.
+ * `enabled` marks as finished. An ask that got no verdict is sent again while
+ * the screen is open, a few times, then on the next visit; the API answers a
+ * resend with the same parse. Offline, nothing is asked until the phone is back
+ * online.
  */
 export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
   const { t } = useTranslation();
@@ -90,13 +125,24 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
   // The parse this visit sent, so it is sent once per visit, never in a loop.
   const sent = useRef<string | null>(null);
   const [polling, setPolling] = useState<string | null>(null);
+  // Resends this visit of an ask that got no verdict.
+  const [resends, setResends] = useState(0);
+  const resendTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [gaveUp, setGaveUp] = useState(false);
+
+  useEffect(() => () => clearTimeout(resendTimer.current), []);
 
   const asked = draft?.serverParse;
+  // A refused photo parse loses its photos with it, so one over the daily
+  // allowance waits for a new scan, never a resend.
+  const resendsWhenAllowed = !draft?.photoKeys;
   const waiting =
     enabled &&
     !!draft &&
     !draft.parsed &&
-    (!asked || asked.state === 'pending' || asked.state === 'limited');
+    (!asked ||
+      asked.state === 'pending' ||
+      (asked.state === 'limited' && resendsWhenAllowed));
 
   useEffect(() => {
     if (!waiting || !isOnline) return;
@@ -108,14 +154,21 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
     sent.current = id;
     askServerParse(id);
     const locale = getDeviceLocale();
+    // The text, or the photos of a receipt the phone could not read.
+    const content = draft.photoKeys
+      ? { photos: draft.photoKeys }
+      : { pages: draft.pages };
     const send = async () => {
       let error: unknown;
       const settled = await settleMutation(
         async () => {
           const result = await create({
             variables: {
-              input: { id, pages: draft.pages, ...(locale ? { locale } : {}) },
+              input: { id, ...content, ...(locale ? { locale } : {}) },
             },
+          }).catch((thrown: unknown) => {
+            error = thrown;
+            throw thrown;
           });
           error = result.error;
           return result;
@@ -128,26 +181,33 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
         },
       );
       const status = appliedPayload(settled.data)?.receiptParse.status;
+      const retryAfter = getRateLimitDetails(error)?.retryAfter;
       if (status === ReceiptParseStatus.Unavailable) {
         settleServerParse(id, 'unavailable');
       } else if (status === ReceiptParseStatus.Failed) {
         settleServerParse(id, 'failed');
       } else if (status) {
         setPolling(id);
-      } else if (!isNetworkError(error)) {
-        // The daily allowance is asked again once it says; any other refusal
-        // is not, as for UNAVAILABLE.
-        const retryAfter = getRateLimitDetails(error)?.retryAfter;
-        settleServerParse(
-          id,
-          retryAfter && retryAfter > 0
-            ? {
-                retryAt: new Date(Date.now() + retryAfter * 1000).toISOString(),
-              }
-            : 'unavailable',
-        );
+      } else if (retryAfter && retryAfter > 0) {
+        // The daily allowance is asked again once it says.
+        settleServerParse(id, {
+          retryAt: new Date(Date.now() + retryAfter * 1000).toISOString(),
+        });
+      } else if (error === undefined || isVerdict(error)) {
+        // A refusal, in the payload or not, stands, as UNAVAILABLE does.
+        settleServerParse(id, 'unavailable');
+      } else {
+        // No verdict: still pending, sent again shortly, then next visit.
+        const wait = RESEND_MS[resends];
+        if (wait === undefined) {
+          setGaveUp(true);
+        } else {
+          resendTimer.current = setTimeout(() => {
+            sent.current = null;
+            setResends(count => count + 1);
+          }, wait);
+        }
       }
-      // Otherwise no answer came: still pending, sent again next visit.
     };
     void send();
   }, [
@@ -155,6 +215,7 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
     isOnline,
     asked,
     draft,
+    resends,
     askServerParse,
     settleServerParse,
     create,
@@ -191,7 +252,8 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
   const readingStatus = (): ServerReadingStatus => {
     if (!enabled || !draft || draft.parsed) return 'none';
     if (!asked || asked.state === 'pending') {
-      return isOnline ? 'reading' : 'offline';
+      if (!isOnline) return 'offline';
+      return gaveUp ? 'retryLater' : 'reading';
     }
     if (asked.state === 'limited') return 'limited';
     return asked.state === 'unreadable' ? 'unreadable' : 'unavailable';

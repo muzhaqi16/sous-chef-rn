@@ -20,11 +20,18 @@ import { receiptsTestIDs } from '../testIDs';
 export const ReceiptScanScreen: React.FC = () => {
   const { t } = useTranslation();
   const { goBack, toReceiptReview } = useAppNavigation();
-  const { status, draft, scan, takePhoto, pickPhoto, discard } = useReceiptScan(
-    {
-      onCancel: goBack,
-    },
-  );
+  const {
+    status,
+    draft,
+    pickedFromLibrary,
+    canSendPhotos,
+    scan,
+    takePhoto,
+    pickPhoto,
+    sendPhotos,
+    declinePhotos,
+    discard,
+  } = useReceiptScan({ onCancel: goBack });
   // Only once the phone has had its go at the receipt.
   const { readingStatus, retryAt } = useServerReceiptParse({
     enabled: status === 'saved',
@@ -42,6 +49,9 @@ export const ReceiptScanScreen: React.FC = () => {
   };
   const startPick = () => {
     void pickPhoto();
+  };
+  const startSend = () => {
+    void sendPhotos();
   };
 
   const scanReplacing = () => {
@@ -62,13 +72,22 @@ export const ReceiptScanScreen: React.FC = () => {
     const itemCount = draft.parsed
       ? receiptReviewLines(draft.parsed).length
       : 0;
+    // A receipt sent as photos keeps no text until the server reads it.
+    const sentPhotos = !!draft.photoKeys;
     return (
       <Screen header={header} testID={receiptsTestIDs.scanScreen}>
         <View style={styles.saved}>
           <Text role="title">{t('receipts.saved.title')}</Text>
           <Text role="body" tone="secondary">
-            {t('receipts.saved.body')}
+            {sentPhotos
+              ? t('receipts.saved.bodyPhoto')
+              : t('receipts.saved.body')}
           </Text>
+          {pickedFromLibrary ? (
+            <Text role="body" tone="secondary">
+              {t('receipts.saved.libraryPhoto')}
+            </Text>
+          ) : null}
           {readingStatus === 'reading' && (
             <Loading
               size="small"
@@ -82,6 +101,15 @@ export const ReceiptScanScreen: React.FC = () => {
               icon="cloud-offline-outline"
               iconLibrary="Ionicons"
               title={t('receipts.saved.offline')}
+            />
+          )}
+          {readingStatus === 'retryLater' && (
+            <AlertBanner
+              variant="info"
+              icon="time-outline"
+              iconLibrary="Ionicons"
+              title={t('receipts.saved.retryLaterTitle')}
+              subtitle={t('receipts.saved.retryLaterBody')}
             />
           )}
           {readingStatus === 'unreadable' && (
@@ -98,10 +126,20 @@ export const ReceiptScanScreen: React.FC = () => {
               variant="info"
               icon="time-outline"
               iconLibrary="Ionicons"
-              title={t('receipts.saved.limitedTitle')}
-              subtitle={t('receipts.saved.limitedBody', {
-                time: formatDateTime(retryAt),
-              })}
+              title={
+                sentPhotos
+                  ? t('receipts.saved.photoLimitedTitle')
+                  : t('receipts.saved.limitedTitle')
+              }
+              subtitle={
+                sentPhotos
+                  ? t('receipts.saved.photoLimitedBody', {
+                      time: formatDateTime(retryAt),
+                    })
+                  : t('receipts.saved.limitedBody', {
+                      time: formatDateTime(retryAt),
+                    })
+              }
             />
           )}
           {readingStatus === 'unavailable' && (
@@ -109,8 +147,16 @@ export const ReceiptScanScreen: React.FC = () => {
               variant="info"
               icon="information-circle-outline"
               iconLibrary="Ionicons"
-              title={t('receipts.saved.notReadTitle')}
-              subtitle={t('receipts.saved.notReadBody')}
+              title={
+                sentPhotos
+                  ? t('receipts.saved.photoNotReadTitle')
+                  : t('receipts.saved.notReadTitle')
+              }
+              subtitle={
+                sentPhotos
+                  ? t('receipts.saved.photoNotReadBody')
+                  : t('receipts.saved.notReadBody')
+              }
             />
           )}
           <View style={styles.actions}>
@@ -134,13 +180,6 @@ export const ReceiptScanScreen: React.FC = () => {
               {t('labels.discard')}
             </Button>
           </View>
-          <Text
-            role="footnote"
-            tone="secondary"
-            testID={receiptsTestIDs.savedText}
-          >
-            {draft.pages.join('\n\n')}
-          </Text>
         </View>
       </Screen>
     );
@@ -168,6 +207,29 @@ export const ReceiptScanScreen: React.FC = () => {
             }}
           />
         );
+      case 'readFailed':
+        return (
+          <EmptyState
+            icon="cloud-upload-outline"
+            title={t('receipts.photoSend.title')}
+            description={t('receipts.photoSend.body')}
+            {...(canSendPhotos
+              ? {}
+              : { hint: t('receipts.photoSend.offline') })}
+            action={{
+              label: t('receipts.photoSend.send'),
+              onPress: startSend,
+              icon: 'cloud-upload-outline',
+            }}
+            secondaryAction={{
+              label: t('receipts.photoSend.dontSend'),
+              onPress: declinePhotos,
+            }}
+            testID={receiptsTestIDs.photoSend}
+          />
+        );
+      case 'sending':
+        return <Loading message={t('receipts.photoSend.sending')} />;
       case 'unreadable':
         return (
           <ErrorState

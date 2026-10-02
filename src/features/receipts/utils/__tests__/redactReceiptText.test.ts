@@ -120,6 +120,22 @@ describe('redactReceiptText', () => {
     ]);
   });
 
+  it('Costco: a member number recognition broke with a bar goes from the header', () => {
+    expect(
+      redactOne([
+        'COSTCO WHOLESALE',
+        'Leesburg #123',
+        '9Q Member 123| 456',
+        'Member 1l2I 345!678',
+        '540003 FIRE EXT.  39.99 A',
+      ]),
+    ).toEqual([
+      'COSTCO WHOLESALE',
+      'Leesburg #123',
+      '540003 FIRE EXT.  39.99 A',
+    ]);
+  });
+
   it('Safeway: a club card number goes, the club savings stay', () => {
     expect(
       redactOne([

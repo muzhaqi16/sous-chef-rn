@@ -2,7 +2,9 @@
 
 import { act, waitFor } from '@testing-library/react-native';
 import { GraphQLError } from 'graphql';
+import { ServerError } from '@apollo/client/errors';
 import {
+  ErrorCode,
   ReceiptLineKind,
   ReceiptParseStatus,
   ReceiptParseWarningCode,
@@ -17,6 +19,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { useStore } from '#store';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { TimeoutError } from '#/utils/errors/timeoutError';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import {
   CreateReceiptParseDocument,
@@ -163,6 +166,8 @@ describe('useServerReceiptParse', () => {
       '2026-09-29',
     ],
     ['drops a day the server read in the future', '2026-12-29', undefined],
+    // OCR noise at a receipt's top (`86/9/18`) read as a day years back.
+    ['drops a day the server read years back', '2018-09-06', undefined],
   ])('%s', async (_name, served, kept) => {
     jest.setSystemTime(new Date(2026, 9, 1, 12));
     seedDraft({ purchasedOn: undefined });
@@ -234,6 +239,58 @@ describe('useServerReceiptParse', () => {
     },
   });
 
+  it('sends a receipt the phone could not read as its photos, not its text', async () => {
+    seedDraft({ pages: [], photoKeys: ['receipt-photos/u1/p1.jpg'] });
+    const create = created(ReceiptParseStatus.Pending);
+    render([create.mock]);
+
+    await waitFor(() => expect(create.fired).toHaveLength(1));
+    expect(create.fired[0]).toEqual({
+      input: {
+        id: expect.any(String),
+        photos: ['receipt-photos/u1/p1.jpg'],
+        locale: expect.any(String),
+      },
+    });
+  });
+
+  it("fills a photo draft from the server's reading, as for text", async () => {
+    seedDraft({ pages: [], photoKeys: ['receipt-photos/u1/p1.jpg'] });
+    const create = created(ReceiptParseStatus.Pending);
+    const poll = polledTo({
+      status: ReceiptParseStatus.Parsed,
+      warnings: [],
+      receipt: MILK_RECEIPT,
+    });
+    render([create.mock, ...poll.mocks]);
+
+    await waitFor(() => expect(create.fired).toHaveLength(1));
+    await pollOnce();
+    await pollOnce();
+
+    const draft = useReceiptDraftStore.getState().draft;
+    expect(draft?.parsedBy).toBe('server');
+    expect(draft?.parsed?.merchant).toBe('WALMART');
+    expect(draft?.serverParse).toBeUndefined();
+  });
+
+  it('never asks again for photos the daily limit turned away: they are gone', async () => {
+    seedDraft({ pages: [], photoKeys: ['receipt-photos/u1/p1.jpg'] });
+    const { result, unmount } = render([overTheLimit(3600)]);
+    await waitFor(() => expect(result.current.readingStatus).toBe('limited'));
+    unmount();
+
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(3_600_000);
+    });
+    const later = created(ReceiptParseStatus.Pending);
+    const next = render([later.mock]);
+    await pollOnce();
+
+    expect(later.fired).toEqual([]);
+    expect(next.result.current.readingStatus).toBe('limited');
+  });
+
   it('waits out the daily limit, then asks again on a later visit', async () => {
     seedDraft();
     const { result, unmount } = render([overTheLimit(3600)]);
@@ -292,6 +349,98 @@ describe('useServerReceiptParse', () => {
       id: expect.any(String),
       state: 'pending',
     });
+  });
+
+  it('asks again after a server fault, and reads the receipt then', async () => {
+    seedDraft({ purchasedOn: undefined });
+    const fault = recordMock(CreateReceiptParseDocument, {
+      error: new ServerError('Bad Gateway', {
+        response: new Response('', { status: 502 }),
+        bodyText: '',
+      }),
+      maxUsageCount: 1,
+    });
+    const create = created(ReceiptParseStatus.Pending);
+    const poll = polledTo({
+      status: ReceiptParseStatus.Parsed,
+      warnings: [],
+      receipt: MILK_RECEIPT,
+    });
+    const { result } = render([fault.mock, create.mock, ...poll.mocks]);
+
+    await waitFor(() => expect(fault.fired).toHaveLength(1));
+    expect(useReceiptDraftStore.getState().draft?.serverParse?.state).toBe(
+      'pending',
+    );
+    expect(result.current.readingStatus).toBe('reading');
+
+    await pollOnce();
+    await waitFor(() => expect(create.fired).toHaveLength(1));
+    expect(create.fired[0]).toEqual({
+      input: expect.objectContaining({
+        id: useReceiptDraftStore.getState().draft?.serverParse?.id,
+      }),
+    });
+    await pollOnce();
+    await pollOnce();
+    await waitFor(() =>
+      expect(useReceiptDraftStore.getState().draft?.parsedBy).toBe('server'),
+    );
+  });
+
+  it('stops asking for this visit after three resends, and says so', async () => {
+    seedDraft();
+    const timedOut = recordMock(CreateReceiptParseDocument, {
+      error: new TimeoutError('createReceiptParse', 30_000),
+    });
+    const { result } = render([timedOut.mock]);
+
+    await waitFor(() => expect(timedOut.fired).toHaveLength(1));
+    // Each resend is timed from the answer before it.
+    for (const [wait, count] of [
+      [2500, 2],
+      [5000, 3],
+      [10_000, 4],
+    ] as const) {
+      expect(result.current.readingStatus).toBe('reading');
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(wait);
+      });
+      await waitFor(() => expect(timedOut.fired).toHaveLength(count));
+    }
+    await waitFor(() =>
+      expect(result.current.readingStatus).toBe('retryLater'),
+    );
+
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(60_000);
+    });
+    expect(timedOut.fired).toHaveLength(4);
+    expect(useReceiptDraftStore.getState().draft?.serverParse?.state).toBe(
+      'pending',
+    );
+  });
+
+  it('takes a refusal as final, and never sends it again', async () => {
+    seedDraft();
+    const refused = recordMock(CreateReceiptParseDocument, {
+      data: {
+        createReceiptParse: {
+          __typename: 'ValidationError',
+          code: ErrorCode.ValidationFailed,
+          field: 'pages',
+        },
+      },
+    });
+    const { result } = render([refused.mock]);
+
+    await waitFor(() =>
+      expect(result.current.readingStatus).toBe('unavailable'),
+    );
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(20_000);
+    });
+    expect(refused.fired).toHaveLength(1);
   });
 
   it('asks nothing offline, and says the items are read once back online', async () => {

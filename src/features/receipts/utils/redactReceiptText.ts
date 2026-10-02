@@ -45,8 +45,9 @@ const REFERENCE_ANYWHERE =
 // label: the second line of ALDI US's IAD, Trader Joe's `C: 0123456789ABCDEF`.
 const CHIP_DATA = /^\W*(?:[A-Z]{1,4}\s*[:#]\s*)?[0-9A-F]{16,}\W*$/;
 
+// Recognition can read a digit as `|`, `I`, `l` or `!` (Costco's `Member 123| 456`).
 const MEMBER_NUMBER =
-  /\b(?:MEMBER(?:SHIP)?|LOYALTY|REWARDS?|CLUB|PLUS\s*CARD|ACCOUNT|ACCT|CARD)\s*(?:#|NO\.?|NUM(?:BER)?|ID)?\s*[:#-]?\s*[\d*Xx#•][\d*Xx#• -]{3,}/i;
+  /\b(?:MEMBER(?:SHIP)?|LOYALTY|REWARDS?|CLUB|PLUS\s*CARD|ACCOUNT|ACCT|CARD)\s*(?:#|NO\.?|NUM(?:BER)?|ID)?\s*[:#-]?\s*[\d*Xx#•][\d*Xx#•|Il! -]{3,}/i;
 
 // The change or balance line of the payment block. Only one carrying an amount
 // ends the receipt, so a header such as `BALANCE REWARDS` cannot cut the items.

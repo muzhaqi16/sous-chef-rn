@@ -31,9 +31,19 @@ export type ServerReceiptParse =
 export interface ReceiptDraft {
   /** Each page's redacted text, in scan order; never an image. */
   pages: string[];
+  /**
+   * The upload keys of photos sent for the server to read, from a phone that
+   * could not read the text: `pages` is empty. The server deletes the photos.
+   */
+  photoKeys?: string[];
   scannedAt: string;
-  /** The day printed on the receipt (YYYY-MM-DD), read before redaction cut it. */
+  /**
+   * The day of the shop (YYYY-MM-DD): read from the receipt before redaction
+   * cut it, or set by the user in the review.
+   */
   purchasedOn?: string;
+  /** The store the user picked in the review, over the one the API resolved. */
+  store?: { id: string; name: string };
   /** Structured on the phone, when its model could, else by the server. */
   parsed?: ParsedReceipt;
   /** Which of the two structured `parsed`. */
@@ -54,6 +64,10 @@ interface ReceiptDraftState {
   /** A choice, or null to leave the line out. */
   chooseLine: (index: number, choice: ReceiptLineChoice | null) => void;
   markAdded: (indexes: readonly number[]) => void;
+  /** The day of the shop, as the user corrected it (YYYY-MM-DD). */
+  setPurchasedOn: (day: string) => void;
+  /** The store, as the user corrected it. */
+  chooseStore: (store: { id: string; name: string }) => void;
   /**
    * Records that server parse `id` was asked for, if nothing read the draft
    * yet, or asked again after the daily allowance turned it away.
@@ -105,6 +119,12 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
               }
             : {},
         ),
+      setPurchasedOn: day =>
+        set(({ draft }) =>
+          draft ? { draft: { ...draft, purchasedOn: day } } : {},
+        ),
+      chooseStore: store =>
+        set(({ draft }) => (draft ? { draft: { ...draft, store } } : {})),
       askServerParse: id =>
         set(({ draft }) =>
           draft &&

@@ -16,14 +16,30 @@ export interface RecognizedPage {
   lines: RecognizedLine[];
 }
 
-interface TextRecognitionNativeModule {
-  recognizeAndDelete: (imageUris: string[]) => Promise<unknown>;
+/** A page rewritten for the server to read: upright, at most 2048 px, no metadata. */
+export interface PreparedPhoto {
+  uri: string;
+  fileSize: number;
 }
 
-const isTextRecognitionModule = (
-  value: unknown,
-): value is TextRecognitionNativeModule =>
-  isRecord(value) && typeof value.recognizeAndDelete === 'function';
+type NativeMethod = 'recognizeAndDelete' | 'preparePhotos' | 'deletePhotos';
+
+// Resolved per call, like `StartupMark`, so a module registered after this
+// file loads is still found; a build older than a method lacks it.
+const nativeMethod = (
+  name: NativeMethod,
+): ((imageUris: string[]) => Promise<unknown>) => {
+  const nativeModule: unknown = NativeModules.TextRecognitionModule;
+  if (!isRecord(nativeModule)) {
+    throw new Error('TextRecognitionModule is not linked');
+  }
+  const method: unknown = nativeModule[name];
+  if (typeof method !== 'function') {
+    throw new Error(`TextRecognitionModule has no ${name}`);
+  }
+  return (imageUris: string[]) =>
+    Promise.resolve(Reflect.apply(method, nativeModule, [imageUris]));
+};
 
 const toLine = (value: unknown): RecognizedLine | null => {
   if (!isRecord(value)) return null;
@@ -48,23 +64,39 @@ const toPage = (value: unknown): RecognizedPage => {
   return { lines: lines.flatMap(line => toLine(line) ?? []) };
 };
 
+const toPhoto = (value: unknown): PreparedPhoto | null => {
+  if (!isRecord(value)) return null;
+  const { uri, fileSize } = value;
+  return typeof uri === 'string' && typeof fileSize === 'number'
+    ? { uri, fileSize }
+    : null;
+};
+
 /**
  * On-device text recognition: Apple Vision on iOS, ML Kit through Play services
- * on Android. Resolved per call, like `StartupMark`, so a module registered
- * after this file loads is still found.
+ * on Android, and the photos a phone that cannot read sends instead.
  */
 export const TextRecognition = {
-  /** Recognizes each image in order, then deletes every image, even on failure. */
+  /**
+   * Recognizes each image in order, then deletes them. A failed read keeps
+   * them for {@link preparePhotos} or {@link deletePhotos}.
+   */
   async recognizeAndDelete(
     imageUris: readonly string[],
   ): Promise<RecognizedPage[]> {
-    const nativeModule: unknown = NativeModules.TextRecognitionModule;
-    if (!isTextRecognitionModule(nativeModule)) {
-      throw new Error('TextRecognitionModule is not linked');
-    }
-    const pages: unknown = await nativeModule.recognizeAndDelete([
-      ...imageUris,
-    ]);
+    const pages = await nativeMethod('recognizeAndDelete')([...imageUris]);
     return Array.isArray(pages) ? pages.map(toPage) : [];
+  },
+
+  /** Rewrites each image for the server to read and deletes the originals, whatever the outcome. */
+  async preparePhotos(imageUris: readonly string[]): Promise<PreparedPhoto[]> {
+    const photos = await nativeMethod('preparePhotos')([...imageUris]);
+    return Array.isArray(photos)
+      ? photos.flatMap(photo => toPhoto(photo) ?? [])
+      : [];
+  },
+
+  async deletePhotos(imageUris: readonly string[]): Promise<void> {
+    await nativeMethod('deletePhotos')([...imageUris]);
   },
 };

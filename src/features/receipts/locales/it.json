@@ -16,16 +16,24 @@
     },
     "saved": {
       "title": "Scontrino salvato",
-      "body": "Viene conservato solo questo testo. Le foto sono state eliminate e i numeri di carta e fedeltà rimossi.",
+      "body": "Viene conservato solo il testo dello scontrino, senza i numeri di carta e fedeltà.",
       "scanAnother": "Scansiona un altro scontrino",
       "review_one": "Rivedi {{count}} articolo",
       "review_other": "Rivedi {{count}} articoli",
       "reading": "Individuo i prodotti…",
       "offline": "Sei offline. I prodotti verranno individuati quando tornerai online.",
+      "retryLaterTitle": "Non è stato ancora possibile individuare i prodotti",
+      "retryLaterBody": "Il testo è conservato. I prodotti verranno individuati la prossima volta che apri questo scontrino.",
+      "libraryPhoto": "La foto che hai scelto è ancora nella tua galleria.",
       "notReadTitle": "Impossibile individuare i prodotti",
       "notReadBody": "È stato conservato solo il testo. Scansiona di nuovo lo scontrino per riprovare.",
       "limitedTitle": "Raggiunto il limite di scontrini di oggi",
-      "limitedBody": "Il testo è stato conservato. Riapri questo scontrino dopo {{time}} per individuarne i prodotti."
+      "limitedBody": "Il testo è stato conservato. Riapri questo scontrino dopo {{time}} per individuarne i prodotti.",
+      "bodyPhoto": "La foto è stata inviata per essere letta e viene eliminata appena letta. I numeri di carta e fedeltà vengono rimossi da ciò che viene conservato.",
+      "photoNotReadTitle": "La foto non è stata letta",
+      "photoNotReadBody": "Non è stato conservato nulla. Scansiona di nuovo lo scontrino per riprovare.",
+      "photoLimitedTitle": "Hai raggiunto il limite di foto di oggi",
+      "photoLimitedBody": "Non è stato conservato nulla. Scansiona di nuovo lo scontrino dopo le {{time}}."
     },
     "replace": {
       "title": "Sostituire lo scontrino salvato?",
@@ -38,9 +46,12 @@
     },
     "review": {
       "title": "Scontrino",
+      "dateLabel": "Data di acquisto",
+      "dateScanned": "Non è stampata sullo scontrino, quindi è il giorno in cui l'hai scansionato.",
+      "storePlaceholder": "Scegli il negozio",
       "intro": "Controlla il prodotto di ogni riga. Solo le righe con un prodotto vengono aggiunte alla dispensa.",
       "introTo": "Controlla il prodotto di ogni riga. Solo le righe con un prodotto vengono aggiunte a {{pantry}}.",
-      "choose": "Tocca per scegliere il prodotto",
+      "choose": "Nessuna corrispondenza. Tocca per scegliere il prodotto.",
       "chosenDetail": "{{printed}} · {{amount}}",
       "notAdded": "Non aggiunto",
       "add_one": "Aggiungi {{count}} articolo alla dispensa",
@@ -66,7 +77,30 @@
       "tickOffBody": "“{{name}}” è nella tua lista. Viene segnato come comprato e spostato in dispensa invece di essere aggiunto due volte.",
       "matching": "Cerco i prodotti…",
       "check": "Verifica",
-      "maybe": "Forse {{name}}?"
+      "maybe": "Forse {{name}}?",
+      "leftOut": "Esclusa. Tocca per aggiungerla.",
+      "sectionToAdd_one": "Verrà aggiunto {{count}} articolo",
+      "sectionToAdd_other": "Verranno aggiunti {{count}} articoli",
+      "sectionNotAdded_one": "Non verrà aggiunta {{count}} riga",
+      "sectionNotAdded_other": "Non verranno aggiunte {{count}} righe",
+      "sectionAdded_one": "{{count}} articolo già aggiunto",
+      "sectionAdded_other": "{{count}} articoli già aggiunti",
+      "findingMatch": "Ricerca di una corrispondenza…",
+      "notMatchedYet": "Ancora senza corrispondenza. Tocca per scegliere il prodotto.",
+      "sectionMatching_one": "Ricerca del prodotto per {{count}} riga",
+      "sectionMatching_other": "Ricerca dei prodotti per {{count}} righe",
+      "sectionNotMatchedYet_one": "{{count}} riga ancora senza corrispondenza",
+      "sectionNotMatchedYet_other": "{{count}} righe ancora senza corrispondenza",
+      "matchFailedTitle": "Impossibile cercare i prodotti",
+      "matchFailedBody": "Tocca per riprovare quando sei online. Puoi anche scegliere ogni prodotto da te."
+    },
+    "photoSend": {
+      "title": "Inviare la foto per leggerla?",
+      "body": "Questo telefono non è riuscito a leggere lo scontrino. Con il tuo consenso, la foto viene inviata a {{appName}} per essere letta, poi eliminata. I numeri di carta e fedeltà vengono rimossi da ciò che viene conservato.",
+      "send": "Invia la foto",
+      "dontSend": "Non inviare",
+      "offline": "Connettiti a internet per inviare la foto.",
+      "sending": "Invio della foto…"
     }
   }
 }

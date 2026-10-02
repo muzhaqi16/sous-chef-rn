@@ -70,4 +70,38 @@ describe('TextRecognition', () => {
       { lines: [] },
     ]);
   });
+
+  it('prepares photos and keeps only well-formed ones', async () => {
+    const preparePhotos = jest
+      .fn()
+      .mockResolvedValue([
+        { uri: 'file:///RECEIPT_PHOTO_1.jpg', fileSize: 41_000 },
+        { uri: 'file:///no-size.jpg' },
+      ]);
+    nativeModules.TextRecognitionModule = { preparePhotos };
+
+    await expect(
+      TextRecognition.preparePhotos(['file:///page.jpg']),
+    ).resolves.toEqual([
+      { uri: 'file:///RECEIPT_PHOTO_1.jpg', fileSize: 41_000 },
+    ]);
+    expect(preparePhotos).toHaveBeenCalledWith(['file:///page.jpg']);
+  });
+
+  it('rejects a method an older build lacks', async () => {
+    nativeModules.TextRecognitionModule = { recognizeAndDelete: jest.fn() };
+
+    await expect(
+      TextRecognition.preparePhotos(['file:///page.jpg']),
+    ).rejects.toThrow('TextRecognitionModule has no preparePhotos');
+  });
+
+  it('deletes photos through the module', async () => {
+    const deletePhotos = jest.fn().mockResolvedValue(null);
+    nativeModules.TextRecognitionModule = { deletePhotos };
+
+    await TextRecognition.deletePhotos(['file:///page.jpg']);
+
+    expect(deletePhotos).toHaveBeenCalledWith(['file:///page.jpg']);
+  });
 });
