@@ -12,7 +12,7 @@ import { writeLocalPantryItem } from '../writeLocalPantryItem';
 
 type Cache = ReturnType<typeof makeCache>;
 
-/** What `ItemByUpcFilter` leaves after a scan: no images, no nutrition. */
+/** What `ItemByLookup` leaves after a scan: no images, no nutrition. */
 const SCANNED_ITEM = gql`
   fragment ScannedItem on Item {
     id

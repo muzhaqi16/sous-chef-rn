@@ -6,10 +6,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { CreateItemDocument } from '#operations/item/item.generated';
-import {
-  ItemByUpcFilterDocument,
-  ItemBySkuFilterDocument,
-} from '../useSearchResults.generated';
+import { ItemByLookupDocument } from '../useSearchResults.generated';
 import { useSearchResults } from '../useSearchResults';
 import { useStore } from '#store';
 import { t } from '#/i18n';
@@ -17,6 +14,7 @@ import { TimeoutError } from '#/utils/errors/timeoutError';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import { alertService } from '#/services/alertService';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { isRecord } from '#/utils/isRecord';
 
 // Partial item-node shapes for mock connection edges. Kept as a loose record
 // because the fixtures deliberately omit required Item fields (type,
@@ -85,11 +83,18 @@ beforeEach(() => {
 
 // --- Mock builders ---
 
+// One document serves both lookups, told apart by `lookup`.
+const byUpc = { match: (vars: Record<string, unknown>) => isUpcLookup(vars) };
+const bySku = { match: (vars: Record<string, unknown>) => !isUpcLookup(vars) };
+function isUpcLookup(vars: Record<string, unknown>): boolean {
+  return isRecord(vars.lookup) && 'upc' in vars.lookup;
+}
+
 function upcMock(
   items: MockItemNode[],
   options: { partial?: boolean } = {},
 ): MockedResponse {
-  const data: MockDataFor<typeof ItemByUpcFilterDocument> = {
+  const data: MockDataFor<typeof ItemByLookupDocument> = {
     items: {
       __typename: 'ItemConnection',
       edges: items.map((node, i) => ({
@@ -99,14 +104,15 @@ function upcMock(
       })),
     },
   };
-  return recordMock(ItemByUpcFilterDocument, {
+  return recordMock(ItemByLookupDocument, {
+    ...byUpc,
     data,
     partial: options.partial,
   }).mock;
 }
 
 function skuMock(items: MockItemNode[]): MockedResponse {
-  const data: MockDataFor<typeof ItemBySkuFilterDocument> = {
+  const data: MockDataFor<typeof ItemByLookupDocument> = {
     items: {
       __typename: 'ItemConnection',
       edges: items.map((node, i) => ({
@@ -116,14 +122,18 @@ function skuMock(items: MockItemNode[]): MockedResponse {
       })),
     },
   };
-  return recordMock(ItemBySkuFilterDocument, { data }).mock;
+  return recordMock(ItemByLookupDocument, {
+    ...bySku,
+    data,
+  }).mock;
 }
 
 function upcErrorMock(
   error: Error,
   options: { maxUsageCount?: number } = {},
 ): MockedResponse {
-  return recordMock(ItemByUpcFilterDocument, {
+  return recordMock(ItemByLookupDocument, {
+    ...byUpc,
     error,
     maxUsageCount: options.maxUsageCount,
   }).mock;
@@ -221,7 +231,8 @@ describe('useSearchResults', () => {
           ...SAMPLE_UPC_ITEM,
           primaryUpc: '012345678905',
         };
-        const upc = recordMock(ItemByUpcFilterDocument, {
+        const upc = recordMock(ItemByLookupDocument, {
+          ...byUpc,
           data: {
             items: {
               __typename: 'ItemConnection',
@@ -242,7 +253,9 @@ describe('useSearchResults', () => {
 
         await waitFor(() =>
           expect(upc.fired).toContainEqual(
-            expect.objectContaining({ upc: code, upcFormat }),
+            expect.objectContaining({
+              lookup: { upc: { code, format: upcFormat } },
+            }),
           ),
         );
         await waitFor(() =>
@@ -399,7 +412,8 @@ describe('useSearchResults', () => {
     });
 
     it('asks for the unit the destination pantry counts the item in', async () => {
-      const upc = recordMock(ItemByUpcFilterDocument, {
+      const upc = recordMock(ItemByLookupDocument, {
+        ...byUpc,
         data: { items: { __typename: 'ItemConnection', edges: [] } },
       });
 
@@ -410,8 +424,7 @@ describe('useSearchResults', () => {
 
       await waitFor(() =>
         expect(upc.fired).toContainEqual({
-          upc: '1234567890',
-          upcFormat: 'EAN_13',
+          lookup: { upc: { code: '1234567890', format: 'EAN_13' } },
           pantry: 'pantry-7',
         }),
       );
@@ -459,7 +472,8 @@ describe('useSearchResults', () => {
 
     it('keeps the new-item form closed when the lookup fails', async () => {
       // The SKU lookup would answer, with nothing: it must not be asked.
-      const sku = recordMock(ItemBySkuFilterDocument, {
+      const sku = recordMock(ItemByLookupDocument, {
+        ...bySku,
         data: { items: { __typename: 'ItemConnection', edges: [] } },
       });
       renderHookWithApollo(() => useSearchResults('1234567890'), {
@@ -531,7 +545,8 @@ describe('useSearchResults', () => {
 
   describe('format mapping', () => {
     it('maps ean-13 → EAN_13 and fires UPC query with that variable', async () => {
-      const upc = recordMock(ItemByUpcFilterDocument, {
+      const upc = recordMock(ItemByLookupDocument, {
+        ...byUpc,
         data: { items: { __typename: 'ItemConnection', edges: [] } },
       });
 
@@ -541,14 +556,14 @@ describe('useSearchResults', () => {
 
       await waitFor(() =>
         expect(upc.fired).toContainEqual({
-          upc: '1234567890',
-          upcFormat: 'EAN_13',
+          lookup: { upc: { code: '1234567890', format: 'EAN_13' } },
         }),
       );
     });
 
     it('maps upc-a → UPC_A', async () => {
-      const upc = recordMock(ItemByUpcFilterDocument, {
+      const upc = recordMock(ItemByLookupDocument, {
+        ...byUpc,
         data: { items: { __typename: 'ItemConnection', edges: [] } },
       });
 
@@ -558,14 +573,14 @@ describe('useSearchResults', () => {
 
       await waitFor(() =>
         expect(upc.fired).toContainEqual({
-          upc: '1234567890',
-          upcFormat: 'UPC_A',
+          lookup: { upc: { code: '1234567890', format: 'UPC_A' } },
         }),
       );
     });
 
     it('passes undefined upcFormat for unknown formats', async () => {
-      const upc = recordMock(ItemByUpcFilterDocument, {
+      const upc = recordMock(ItemByLookupDocument, {
+        ...byUpc,
         data: { items: { __typename: 'ItemConnection', edges: [] } },
       });
 
@@ -576,8 +591,7 @@ describe('useSearchResults', () => {
 
       await waitFor(() =>
         expect(upc.fired).toContainEqual({
-          upc: '1234567890',
-          upcFormat: undefined,
+          lookup: { upc: { code: '1234567890', format: undefined } },
         }),
       );
     });

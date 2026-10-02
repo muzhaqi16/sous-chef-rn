@@ -6,10 +6,7 @@ import {
   CreateItemDocument,
   type CreateItemMutation,
 } from '#operations/item/item.generated';
-import {
-  ItemByUpcFilterDocument,
-  ItemBySkuFilterDocument,
-} from './useSearchResults.generated';
+import { ItemByLookupDocument } from './useSearchResults.generated';
 import { UpcFormat, type NetWeightKind } from '#/graphql/generated/schemaTypes';
 import {
   useSearchState,
@@ -226,8 +223,11 @@ export const useSearchResults = (
     loading: upcLoading,
     error: upcError,
     refetch: refetchUpc,
-  } = useQuery(ItemByUpcFilterDocument, {
-    variables: { upc: barcode, upcFormat, pantry: pantryId },
+  } = useQuery(ItemByLookupDocument, {
+    variables: {
+      lookup: { upc: { code: barcode, format: upcFormat } },
+      pantry: pantryId,
+    },
     // `items` is keyed by `filters`, so another code's result never serves this
     // one; network-only is for a code the catalog has gained or changed since.
     fetchPolicy: 'network-only',
@@ -242,8 +242,8 @@ export const useSearchResults = (
     loading: skuLoading,
     error: skuError,
     refetch: refetchSku,
-  } = useQuery(ItemBySkuFilterDocument, {
-    variables: { sku: barcode, skuStoreId: undefined, pantry: pantryId },
+  } = useQuery(ItemByLookupDocument, {
+    variables: { lookup: { sku: { sku: barcode } }, pantry: pantryId },
     // Skip SKU search while UPC is loading OR if UPC found a result
     // Must include upcLoading to prevent using stale upcItem from previous scan.
     // A failed UPC lookup is not a miss, so an empty SKU answer never follows it.
