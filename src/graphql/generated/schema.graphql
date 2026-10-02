@@ -12030,6 +12030,10 @@ enum ReceiptParseWarningCode {
   TOTALS_MISMATCH
   """The model returned a line the receipt does not print; it was dropped"""
   UNGROUNDED_LINE
+  """
+  The printed date did not read as a calendar day; purchasedOn is null and the lines are kept
+  """
+  UNREADABLE_DATE
 }
 
 """What turned the receipt's text into lines."""
