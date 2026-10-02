@@ -35,6 +35,9 @@ export interface ReceiptMatchLine {
   code?: string;
 }
 
+/** Whether the API has said which items the lines are, is asking, or could not be asked. */
+export type ReceiptMatchState = 'matching' | 'failed' | 'done';
+
 export interface ConfirmedReceiptLine {
   index: number;
   text: string;
@@ -61,26 +64,32 @@ const toCandidate = (candidate: {
 /**
  * The catalog items the API proposes for a receipt's item lines, and the step
  * that tells it which ones the household confirmed, so the same printed line at
- * the same chain resolves to them next time.
+ * the same chain resolves to them next time. A store the user picked wins over
+ * the one the header names, for the matches and for what is remembered.
  */
 export function useReceiptMatches(
   lines: readonly ReceiptMatchLine[],
   merchantHeader: string | undefined,
+  parsedBy: 'device' | 'server' | undefined,
+  pickedStoreId: string | undefined,
 ) {
   const { t } = useTranslation();
   const { pantry, currentHome } = useCurrentPantry();
   const sent = lines.slice(0, MAX_LINES);
 
-  const { data, loading } = useQuery(
+  const { data, loading, error, refetch } = useQuery(
     ResolveReceiptLinesDocument,
     sent.length > 0
       ? {
           variables: {
             input: {
               merchantHeader,
+              ...(pickedStoreId ? { storeId: pickedStoreId } : {}),
               pantryId: pantry?.id,
-              // Only the phone's model structures a receipt today.
-              parsedBy: ReceiptParser.Device,
+              parsedBy:
+                parsedBy === 'server'
+                  ? ReceiptParser.Server
+                  : ReceiptParser.Device,
               lines: sent.map(line => ({
                 clientId: String(line.index),
                 text: line.text,
@@ -94,7 +103,7 @@ export function useReceiptMatches(
       : skipToken,
   );
   const resolved = data?.resolveReceiptLines;
-  const storeId = resolved?.store?.id;
+  const storeId = pickedStoreId ?? resolved?.store?.id;
 
   const matches = new Map<number, ReceiptLineMatch>();
   for (const line of resolved?.lines ?? []) {
@@ -147,12 +156,22 @@ export function useReceiptMatches(
     );
   };
 
+  const answered = sent.length === 0 || !!data;
+  const matchState: ReceiptMatchState = answered
+    ? 'done'
+    : error && !loading
+    ? 'failed'
+    : 'matching';
+
   return {
     matchFor: (index: number) => matches.get(index),
-    /** Still asking the API which items the lines are. */
-    matching: loading && !data,
-    /** The receipt's store, when the API knows it. */
-    storeId,
+    matchState,
+    /** Asks again after a lookup that failed. */
+    retryMatching: () => {
+      void refetch().catch(() => undefined);
+    },
+    /** The store the API resolved from the receipt's header, when it knows it. */
+    resolvedStore: resolved?.store ?? null,
     recordConfirmed,
   };
 }

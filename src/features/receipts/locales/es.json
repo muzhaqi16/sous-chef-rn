@@ -16,10 +16,24 @@
     },
     "saved": {
       "title": "Recibo guardado",
-      "body": "Solo se guarda este texto. Las fotos se eliminaron y se quitaron los números de tarjeta y de fidelidad.",
+      "body": "Solo se guarda el texto del recibo, sin los números de tarjeta ni de fidelidad.",
       "scanAnother": "Escanear otro recibo",
       "review_one": "Revisar {{count}} artículo",
-      "review_other": "Revisar {{count}} artículos"
+      "review_other": "Revisar {{count}} artículos",
+      "reading": "Identificando los productos…",
+      "offline": "Estás sin conexión. Los productos se identificarán cuando vuelvas a estar en línea.",
+      "retryLaterTitle": "Aún no se pudieron identificar los productos",
+      "retryLaterBody": "El texto se guarda. Los productos se identificarán la próxima vez que abras este recibo.",
+      "libraryPhoto": "La foto que elegiste sigue en tu galería de fotos.",
+      "notReadTitle": "No se pudieron identificar los productos",
+      "notReadBody": "Solo se guardó el texto. Vuelve a escanear el recibo para intentarlo de nuevo.",
+      "limitedTitle": "Se alcanzó el límite de recibos de hoy",
+      "limitedBody": "El texto se guardó. Vuelve a abrir este recibo después de {{time}} para identificar sus productos.",
+      "bodyPhoto": "La foto se envió para leerla y se elimina en cuanto se lee. Los números de tarjeta y de fidelidad se quitan de lo que se guarda.",
+      "photoNotReadTitle": "La foto no se leyó",
+      "photoNotReadBody": "No se guardó nada. Vuelve a escanear el recibo para intentarlo de nuevo.",
+      "photoLimitedTitle": "Se alcanzó el límite de fotos de hoy",
+      "photoLimitedBody": "No se guardó nada. Vuelve a escanear el recibo después de {{time}}."
     },
     "replace": {
       "title": "¿Reemplazar el recibo guardado?",
@@ -32,9 +46,12 @@
     },
     "review": {
       "title": "Recibo",
+      "dateLabel": "Fecha de compra",
+      "dateScanned": "No figura en el recibo, así que es el día en que lo escaneaste.",
+      "storePlaceholder": "Elige la tienda",
       "intro": "Revisa el producto de cada línea. Solo se añaden a tu despensa las líneas con un producto.",
       "introTo": "Revisa el producto de cada línea. Solo se añaden a {{pantry}} las líneas con un producto.",
-      "choose": "Toca para elegir el producto",
+      "choose": "Sin coincidencia. Toca para elegir el producto.",
       "chosenDetail": "{{printed}} · {{amount}}",
       "notAdded": "No añadido",
       "add_one": "Añadir {{count}} artículo a la despensa",
@@ -60,7 +77,30 @@
       "tickOffBody": "«{{name}}» está en tu lista. Se marca como comprado y se pasa a la despensa en vez de añadirse dos veces.",
       "matching": "Buscando los productos…",
       "check": "Revisar",
-      "maybe": "¿Quizás {{name}}?"
+      "maybe": "¿Quizás {{name}}?",
+      "leftOut": "Excluida. Toca para añadirla.",
+      "sectionToAdd_one": "Se añadirá {{count}} artículo",
+      "sectionToAdd_other": "Se añadirán {{count}} artículos",
+      "sectionNotAdded_one": "No se añadirá {{count}} línea",
+      "sectionNotAdded_other": "No se añadirán {{count}} líneas",
+      "sectionAdded_one": "{{count}} artículo ya añadido",
+      "sectionAdded_other": "{{count}} artículos ya añadidos",
+      "findingMatch": "Buscando una coincidencia…",
+      "notMatchedYet": "Aún sin coincidencia. Toca para elegir el producto.",
+      "sectionMatching_one": "Buscando el producto de {{count}} línea",
+      "sectionMatching_other": "Buscando los productos de {{count}} líneas",
+      "sectionNotMatchedYet_one": "{{count}} línea aún sin coincidencia",
+      "sectionNotMatchedYet_other": "{{count}} líneas aún sin coincidencia",
+      "matchFailedTitle": "No se pudieron buscar los productos",
+      "matchFailedBody": "Toca para reintentar cuando tengas conexión. También puedes elegir cada producto tú mismo."
+    },
+    "photoSend": {
+      "title": "¿Enviar la foto para leerla?",
+      "body": "Este teléfono no pudo leer el recibo. Si aceptas, la foto se envía a {{appName}} para leerla y luego se elimina. Los números de tarjeta y de fidelidad se quitan de lo que se guarda.",
+      "send": "Enviar la foto",
+      "dontSend": "No enviar",
+      "offline": "Conéctate a internet para enviar la foto.",
+      "sending": "Enviando la foto…"
     }
   }
 }

@@ -3,11 +3,11 @@
 **Status: resolved — does not occur in this app.** Fixed on the client on 2026-08-20 by
 never handing FlashList `data` a value produced by `useDeferredValue`, and validated on
 device the same day (see "Validation"). No library patch is carried or needed: the
-unguarded accessor inside `@shopify/flash-list@2.3.2` is unreachable from our code once
+unguarded accessor inside `@shopify/flash-list` (still unguarded in 2.3.3) is unreachable from our code once
 the list's data updates render synchronously.
 
 **Nothing enforces this automatically, and it re-entered twice through indirection** — not
-through a `useDeferredValue` call next to a `<FlashList>`, but through a *hook* that
+through a `useDeferredValue` call next to a `<FlashList>`, but through a _hook_ that
 deferred internally while its result was passed to `data` several layers up
 (`useDeferredSearch`, `useItemAutocomplete`). Both now debounce or pass through instead.
 When auditing, follow the `data` prop back to its origin rather than grepping for

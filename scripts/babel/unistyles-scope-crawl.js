@@ -1,7 +1,7 @@
 /**
  * Re-crawl Babel's scope between the Unistyles plugin and the React Compiler.
  *
- * `extractVariants` in react-native-unistyles@3.3.0 (plugin/index.js) rewrites a
+ * `extractVariants` in react-native-unistyles@3.4.0 (plugin/index.js) rewrites a
  * component body that calls `styles.useVariants(...)`: it inserts
  * `const _styles = styles;`, wraps every following statement in a NEW
  * BlockStatement, and inside it declares a shadowing

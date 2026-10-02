@@ -126,15 +126,17 @@ describe('unconfirmed-create wiring (pantry items)', () => {
     //
     // Two valid reconciliations: adopt the server's id, or withdraw the local
     // row and let `update` add the server's. The move path must take the
-    // second — its divergence names a row that already exists.
+    // second — its divergence names a row that already exists. The pantry's
+    // create paths withdraw through `reconcileCreatedPantryItem`.
     file => {
       const code = stripComments(
         readFileSync(join(process.cwd(), file), 'utf8'),
       );
       const adopts = code.includes('adoptServerEntityId(');
       const withdraws =
-        code.includes('removeFromPantryItemsCache(') &&
-        code.includes('evictLocalPantryItemSeeds(');
+        (code.includes('removeFromPantryItemsCache(') &&
+          code.includes('evictLocalPantryItemSeeds(')) ||
+        code.includes('reconcileCreatedPantryItem(');
 
       expect(adopts || withdraws).toBe(true);
     },

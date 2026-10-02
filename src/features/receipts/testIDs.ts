@@ -4,11 +4,19 @@
  */
 export const receiptsTestIDs = {
   scanScreen: 'receipt-scan-screen',
-  savedText: 'receipt-scan-saved-text',
   savedReview: 'receipt-scan-saved-review',
+  /** The server is picking out a saved receipt's items. */
+  savedReading: 'receipt-scan-saved-reading',
+  /** The ask to send a receipt the phone could not read as photos. */
+  photoSend: 'receipt-photo-send',
   reviewScreen: 'receipt-review-screen',
   reviewAdd: 'receipt-review-add',
   reviewTotalsGap: 'receipt-review-totals-gap',
+  /** The review's store and purchase-date fields. */
+  reviewStore: 'receipt-review-store',
+  reviewDate: 'receipt-review-date',
+  /** The banner that asks the API again after a failed match. */
+  reviewMatchRetry: 'receipt-review-match-retry',
   /** Prefix of each line's row: `receipt-review-line-<index>`. */
   reviewLine: 'receipt-review-line',
   lineProduct: 'receipt-line-product',

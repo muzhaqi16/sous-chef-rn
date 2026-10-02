@@ -1,4 +1,6 @@
+import { Platform } from 'react-native';
 import { ReceiptStructuring } from '#/native/ReceiptStructuring';
+import { onDeviceStructuring } from '../utils/onDeviceStructuring';
 import {
   isUsableReceipt,
   linesThroughTotal,
@@ -12,12 +14,13 @@ const LABELLING_TIMEOUT_MS = 20_000;
 
 /**
  * Structures the draft's pages with the phone's own model, or answers null:
- * no capable model, a timeout, or a result not worth keeping. The draft's text
- * stands either way.
+ * turned off on this platform, no capable model, a timeout, or a result not
+ * worth keeping. The draft's text stands, and the server reads it.
  */
 export async function parseReceiptOnDevice(
   pages: readonly string[],
 ): Promise<ParsedReceipt | null> {
+  if (onDeviceStructuring[Platform.OS] !== true) return null;
   if ((await ReceiptStructuring.availability()) !== 'available') return null;
 
   const lines = linesThroughTotal(pages.flatMap(page => page.split('\n')));

@@ -510,6 +510,21 @@ export const useImageUpload = () => {
     return results;
   };
 
+  /**
+   * A receipt photo for `createReceiptParse`: presigned and posted like any
+   * photo but never confirmed, since the parse takes the key and the server
+   * deletes the photo once read. Null offline; a failure throws, unreported.
+   */
+  const uploadReceiptPhoto = (file: ImageFile): Promise<string | null> =>
+    uploadImage(
+      file,
+      ImageUploadPurpose.ReceiptPhoto,
+      false,
+      undefined,
+      key => Promise.resolve(key),
+      { suppressAlert: true },
+    );
+
   const updateProfileAvatarUrl = async (avatarUrl: string) => {
     const settled = await settleMutation(
       () => updateProfile({ variables: { input: { avatar: avatarUrl } } }),
@@ -532,6 +547,7 @@ export const useImageUpload = () => {
     uploading,
     uploadProfileImage,
     uploadItemImages,
+    uploadReceiptPhoto,
     updateProfileAvatarUrl,
   };
 };

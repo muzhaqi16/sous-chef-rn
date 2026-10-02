@@ -12,6 +12,7 @@ import com.google.mlkit.genai.common.FeatureStatus
 import com.google.mlkit.genai.prompt.Generation
 import com.google.mlkit.genai.prompt.TextPart
 import com.google.mlkit.genai.prompt.generateContentRequest
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -43,10 +44,16 @@ class ReceiptStructuringModule(reactContext: ReactApplicationContext) :
       promise.resolve("unavailable")
       return
     }
-    scope.launch {
-      val model = Generation.getClient()
-      val status = runCatching { model.checkStatus() }.getOrNull()
-      model.close()
+    scope.launch(settleOnFailure(promise)) {
+      // A device without AICore can throw creating the client: unavailable too.
+      val model = runCatching { Generation.getClient() }.getOrNull()
+      val status = model?.let { client ->
+        try {
+          runCatching { client.checkStatus() }.getOrNull()
+        } finally {
+          client.close()
+        }
+      }
       promise.resolve(
         when (status) {
           FeatureStatus.AVAILABLE -> "available"
@@ -65,8 +72,13 @@ class ReceiptStructuringModule(reactContext: ReactApplicationContext) :
       return
     }
     val texts = (0 until lines.size()).map { lines.getString(it) ?: "" }
-    scope.launch {
-      val model = Generation.getClient()
+    scope.launch(settleOnFailure(promise)) {
+      val model = try {
+        Generation.getClient()
+      } catch (error: Exception) {
+        promise.reject("receipt_structuring_unavailable", error.message, error)
+        return@launch
+      }
       try {
         val request = generateContentRequest(TextPart(prompt(texts))) {
           temperature = 0f
@@ -81,6 +93,13 @@ class ReceiptStructuringModule(reactContext: ReactApplicationContext) :
       }
     }
   }
+
+  // Whatever escapes a launch settles its promise rather than reaching the
+  // thread's uncaught handler, which would end the app.
+  private fun settleOnFailure(promise: Promise) =
+    CoroutineExceptionHandler { _, error ->
+      promise.reject("receipt_structuring_failed", error.message, error)
+    }
 
   private fun prompt(lines: List<String>): String {
     val numbered = lines.mapIndexed { index, line -> "$index: $line" }.joinToString("\n")

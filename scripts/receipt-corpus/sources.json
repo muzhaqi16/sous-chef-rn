@@ -119,5 +119,110 @@
     "file": "Cline's_Hallmark_recipt_2010-11-20.jpg",
     "license": "Public domain",
     "author": "Amin Eshaiker"
+  },
+  {
+    "id": "ose-food-receipt-cameron-market-21-july-2021",
+    "group": "grocery",
+    "file": "OSE_Food_Receipt_-_Cameron_Market_21_July_2021.jpeg",
+    "license": "CC BY-SA 4.0",
+    "author": "Cryptogoth"
+  },
+  {
+    "id": "alexander-s-supermarket-receipt-late-twentieth-century",
+    "group": "grocery",
+    "file": "Alexander's_Supermarket_receipt,_late_twentieth_century.tif",
+    "license": "CC0",
+    "author": "Struthious Bandersnatch"
+  },
+  {
+    "id": "omni-receipt",
+    "group": "grocery",
+    "file": "Omni_receipt.jpg",
+    "license": "Public domain",
+    "author": "Retaildesigner (en.wikipedia)"
+  },
+  {
+    "id": "walgreens-receipt-with-rx-number-2",
+    "group": "grocery",
+    "file": "Walgreens_Receipt_with_RX_number_2.jpg",
+    "license": "CC BY-SA 4.0",
+    "author": "MCruz (WMF)"
+  },
+  {
+    "id": "tractor-supply-receipt-luhn-algorithm",
+    "group": "retail",
+    "file": "Tractor_Supply_Receipt_Luhn_Algorithm.png",
+    "license": "CC BY-SA 4.0",
+    "author": "Sara D."
+  },
+  {
+    "id": "wherehouse-entertainment-receipt",
+    "group": "retail",
+    "file": "Wherehouse_Entertainment_receipt.jpg",
+    "license": "Public domain",
+    "author": "Amin Eshaiker"
+  },
+  {
+    "id": "circuit-city-receipt-december-17-1987",
+    "group": "retail",
+    "file": "Circuit_City_Receipt_-_December_17,_1987.jpg",
+    "license": "CC0",
+    "author": "Mopenstein"
+  },
+  {
+    "id": "arco-3076-receipt-2003-09-16",
+    "group": "retail",
+    "file": "Arco_3076_receipt_(2003-09-16).jpg",
+    "license": "Public domain",
+    "author": "Amin Eshaiker"
+  },
+  {
+    "id": "arco-9714-receipt-2003-10-20",
+    "group": "retail",
+    "file": "Arco_9714_receipt_(2003-10-20).jpg",
+    "license": "Public domain",
+    "author": "Amin Eshaiker"
+  },
+  {
+    "id": "nb-oil-co-shell-1-receipt-2007-02-18",
+    "group": "retail",
+    "file": "NB_Oil_Co_(Shell)_1_receipt_(2007-02-18).jpg",
+    "license": "Public domain",
+    "author": "Amin Eshaiker"
+  },
+  {
+    "id": "g-m-oil-chevron-145-palm-desert-california",
+    "group": "retail",
+    "file": "G&M_Oil_(Chevron)_145_(Palm_Desert,_California).jpg",
+    "license": "Public domain",
+    "author": "Amin Eshaiker"
+  },
+  {
+    "id": "receipt-j-k-gill-lloyds-center-portland-or-1989",
+    "group": "retail",
+    "file": "Receipt_J.K.Gill_Lloyds_Center_Portland_OR_1989.jpg",
+    "license": "Public domain",
+    "author": "J.K. Gill, Inc.; scan by Mattes"
+  },
+  {
+    "id": "tchotchke-receipt",
+    "group": "retail",
+    "file": "Tchotchke_receipt.jpg",
+    "license": "CC BY-SA 3.0",
+    "author": "Downtowngal"
+  },
+  {
+    "id": "the-print-shop-deluxe-ii-box-diskettes-and-store-receipt",
+    "group": "retail",
+    "file": "The_Print_Shop_Deluxe_II_box_diskettes_and_store_receipt.jpg",
+    "license": "CC BY-SA 4.0",
+    "author": "Jonathan Schilling"
+  },
+  {
+    "id": "turbotax-basic-2003-box-disc-and-store-receipt",
+    "group": "retail",
+    "file": "TurboTax_Basic_2003_box_disc_and_store_receipt.jpg",
+    "license": "CC BY-SA 4.0",
+    "author": "Jonathan Schilling"
   }
 ]

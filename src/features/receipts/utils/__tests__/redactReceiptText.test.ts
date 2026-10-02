@@ -1,7 +1,6 @@
 import { redactReceiptText } from '../redactReceiptText';
 
-// Formats as each chain prints them; the scanned corpus is held to the same
-// deny-list in receiptCorpus.test.ts.
+// Formats as each chain prints them.
 const redactOne = (lines: string[]) => redactReceiptText([lines])[0];
 
 describe('redactReceiptText', () => {
@@ -121,6 +120,22 @@ describe('redactReceiptText', () => {
     ]);
   });
 
+  it('Costco: a member number recognition broke with a bar goes from the header', () => {
+    expect(
+      redactOne([
+        'COSTCO WHOLESALE',
+        'Leesburg #123',
+        '9Q Member 123| 456',
+        'Member 1l2I 345!678',
+        '540003 FIRE EXT.  39.99 A',
+      ]),
+    ).toEqual([
+      'COSTCO WHOLESALE',
+      'Leesburg #123',
+      '540003 FIRE EXT.  39.99 A',
+    ]);
+  });
+
   it('Safeway: a club card number goes, the club savings stay', () => {
     expect(
       redactOne([
@@ -133,8 +148,7 @@ describe('redactReceiptText', () => {
     ).toEqual(['SAFEWAY', 'LUCERNE MILK  3.99', 'CLUB CARD SAVINGS  1.50-']);
   });
 
-  // Shapes from the scanned corpus (__tests__/fixtures/receipts/corpus), with
-  // made-up digits.
+  // Shapes from scanned receipts, with made-up digits.
   it('ALDI US: a reference after the date and the chip record continuation go', () => {
     expect(
       redactReceiptText([

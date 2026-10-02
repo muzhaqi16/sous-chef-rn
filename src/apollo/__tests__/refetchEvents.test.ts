@@ -76,6 +76,20 @@ const SearchQuery = gql`
     search
   }
 `;
+const DetailQuery = gql`
+  query DetailForResync {
+    detail
+  }
+`;
+
+const navigationListeners = new Set<() => void>();
+const navigate = () => navigationListeners.forEach(listener => listener());
+const onNavigation = (listener: () => void) => {
+  navigationListeners.add(listener);
+  return () => {
+    navigationListeners.delete(listener);
+  };
+};
 
 const elapse = (ms: number) =>
   act(async () => {
@@ -144,6 +158,7 @@ beforeEach(async () => {
   jest.useFakeTimers();
   jest.clearAllMocks();
   mockReconnectListeners.clear();
+  navigationListeners.clear();
   resetSessionEndingGate();
   useStore.setState({
     user: { id: 'user-1' },
@@ -160,7 +175,9 @@ beforeEach(async () => {
         new Observable(observer => {
           requests.push(operation.operationName ?? '');
           const respond = () => {
-            observer.next({ data: { list: 'value', search: 'value' } });
+            observer.next({
+              data: { list: 'value', search: 'value', detail: 'value' },
+            });
             observer.complete();
           };
           if (heldResponses) heldResponses.push(respond);
@@ -241,6 +258,84 @@ describe('resync', () => {
     await pastTheWindow();
 
     expect(requests).toEqual([]);
+  });
+
+  describe('the language catch-up', () => {
+    beforeEach(() => {
+      connectResyncSources(client, { onNavigation });
+    });
+
+    it('re-asks a screen paused at the switch once it resumes, and only it', async () => {
+      // A screen beneath the one the switch was made on: paused, so its
+      // query has no observer and no refetch reaches it.
+      const paused = client.watchQuery({ query: DetailQuery });
+      const first = paused.subscribe(() => {});
+      await elapse(0);
+      first.unsubscribe();
+      requests = [];
+
+      triggers.languageChanged();
+      await pastTheWindow();
+      expect(requests).toEqual(['ListForResync']);
+
+      // Resuming reads the cache, still in the old language.
+      requests = [];
+      watchers.push(paused.subscribe(() => {}));
+      await elapse(0);
+      expect(requests).toEqual([]);
+
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['DetailForResync']);
+      expect(queueManager.whenIdle).toHaveBeenCalled();
+
+      // Asked in this language now, as the list was at the switch.
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['DetailForResync']);
+    });
+
+    it('re-asks a screen first opened after the switch that reads the cache', async () => {
+      // What the old language left in the cache.
+      await client.query({ query: DetailQuery });
+      triggers.languageChanged();
+      await pastTheWindow();
+      requests = [];
+
+      watchers.push(
+        client
+          .watchQuery({ query: DetailQuery, fetchPolicy: 'cache-first' })
+          .subscribe(() => {}),
+      );
+      await elapse(0);
+      expect(requests).toEqual([]);
+
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['DetailForResync']);
+
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['DetailForResync']);
+    });
+
+    it('asks nothing on navigation before a real switch', async () => {
+      void changeLanguage(getResolvedLanguage());
+      navigate();
+      await pastTheWindow();
+
+      expect(requests).toEqual([]);
+      expect(navigationListeners.size).toBe(0);
+    });
+
+    it('never re-asks a query that declined resync', async () => {
+      triggers.languageChanged();
+      await pastTheWindow();
+      navigate();
+      await pastTheWindow();
+
+      expect(requests).not.toContain('SearchForResync');
+    });
   });
 
   it('does not refetch a query that declined resync', async () => {

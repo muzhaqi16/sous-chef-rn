@@ -14,6 +14,7 @@ import {
   PantrySuggestionSource,
 } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { AddToPantrySheet } from '../AddToPantrySheet';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -125,6 +126,12 @@ describe('AddToPantrySheet', () => {
   it('renders AddItemSheet when visible', () => {
     renderWithApollo(<AddToPantrySheet {...defaultProps} />);
     expect(screen.getByTestId('add-item-sheet')).toBeTruthy();
+  });
+
+  it('offers a receipt scan, which opens the receipt scanner', () => {
+    renderWithApollo(<AddToPantrySheet {...defaultProps} />);
+    const { onReceiptPress } = sheetProps.current;
+    expect(onReceiptPress).toBe(useAppNavigation().toReceiptScan);
   });
 
   it('renders without crashing when pantryId is undefined', () => {

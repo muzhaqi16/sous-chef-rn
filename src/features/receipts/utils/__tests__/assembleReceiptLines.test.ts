@@ -2,6 +2,7 @@ import type { RecognizedPage } from '#/native/TextRecognition';
 import { assembleReceiptLines } from '../assembleReceiptLines';
 
 type Row = [text: string, x: number, y: number, width: number, height: number];
+type SlopedRow = [...Row, slope: number];
 
 const page = (rows: Row[]): RecognizedPage => ({
   lines: rows.map(([text, x, y, width, height]) => ({
@@ -10,6 +11,17 @@ const page = (rows: Row[]): RecognizedPage => ({
     y,
     width,
     height,
+  })),
+});
+
+const sloped = (rows: SlopedRow[]): RecognizedPage => ({
+  lines: rows.map(([text, x, y, width, height, slope]) => ({
+    text,
+    x,
+    y,
+    width,
+    height,
+    slope,
   })),
 });
 
@@ -66,6 +78,51 @@ describe('assembleReceiptLines', () => {
     ]);
   });
 
+  // Apple Vision's reading of a hand-held Costco photo, tilted up to the right:
+  // by height alone each name pairs with the price of the row below it.
+  it("reads a tilted photo's rows along its slope", () => {
+    const [lines] = assembleReceiptLines([
+      sloped([
+        ['12.49 E', 0.669, 0.266, 0.084, 0.032, -0.177],
+        ['KS ORG A2 PR', 0.414, 0.286, 0.212, 0.052, -0.167],
+        ['14.43 E', 0.672, 0.284, 0.088, 0.032, -0.177],
+        ['KS CHEWY PRO', 0.419, 0.303, 0.213, 0.054, -0.17],
+        ['18.43 E', 0.676, 0.303, 0.085, 0.033, -0.188],
+        ['BEER BAT COD', 0.435, 0.322, 0.201, 0.051, -0.173],
+        ['14.99 E', 0.68, 0.322, 0.084, 0.031, -0.171],
+        ['KS BACON', 0.44, 0.347, 0.158, 0.042, -0.167],
+      ]),
+    ]);
+
+    expect(lines).toEqual([
+      'KS ORG A2 PR  12.49 E',
+      'KS CHEWY PRO  14.43 E',
+      'BEER BAT COD  18.43 E',
+      'KS BACON  14.99 E',
+    ]);
+  });
+
+  // A Pak'nSave photo: its long names curl to -0.026 on rows that are level.
+  it("reads a level page by height, whatever its lines' curl", () => {
+    const [lines] = assembleReceiptLines([
+      sloped([
+        ['Our Shopping Hours are Mon - Sun', 0.1, 0.5, 0.7, 0.03, 0],
+        ['$9.84 EA =', 0.554, 0.61, 0.141, 0.0248, 0],
+        ['KIWIFRUIT GREEN KG NZ', 0.125, 0.611, 0.283, 0.0296, -0.026],
+        ['$9.84', 0.74, 0.612, 0.07, 0.025, -0.004],
+        ['$1.87 EA =', 0.554, 0.637, 0.141, 0.0248, 0],
+        ['$1.87', 0.735, 0.637, 0.076, 0.0305, 0.05],
+        ['APPLES ROYAL GALA KG', 0.127, 0.639, 0.271, 0.0299, -0.026],
+      ]),
+    ]);
+
+    expect(lines).toEqual([
+      'Our Shopping Hours are Mon - Sun',
+      'KIWIFRUIT GREEN KG NZ  $9.84 EA =  $9.84',
+      'APPLES ROYAL GALA KG  $1.87 EA =  $1.87',
+    ]);
+  });
+
   it('keeps pages apart and in scan order, and drops blank lines', () => {
     const first = page([['MILK', 0.1, 0.1, 0.3, 0.03]]);
     const second = page([
@@ -104,6 +161,25 @@ describe('assembleReceiptLines', () => {
         'CAFÉ AU LAIT  2.99',
       ],
     ]);
+  });
+
+  it('reads back a dollar sign read as an 8 on a page printing dollars', () => {
+    const [dollars, plain] = assembleReceiptLines([
+      page([
+        ['CREAM CHEESE BAR  $1.75  F', 0.05, 0.1, 0.9, 0.03],
+        ['CREAM CHEESE BAR  81.75  F', 0.05, 0.15, 0.9, 0.03],
+        ['HOAGIE ROLLS  $3.25  F', 0.05, 0.2, 0.9, 0.03],
+        ['SUBTOTAL  $6.75', 0.05, 0.25, 0.9, 0.03],
+      ]),
+      page([
+        ['MILK  3.48', 0.05, 0.1, 0.9, 0.03],
+        ['STEAK  81.75', 0.05, 0.15, 0.9, 0.03],
+        ['SUBTOTAL  85.23', 0.05, 0.2, 0.9, 0.03],
+      ]),
+    ]);
+
+    expect(dollars?.[1]).toBe('CREAM CHEESE BAR  $1.75  F');
+    expect(plain?.[1]).toBe('STEAK  81.75');
   });
 
   it('leaves a page printed in Cyrillic as read', () => {

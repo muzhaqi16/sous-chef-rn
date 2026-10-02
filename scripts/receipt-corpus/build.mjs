@@ -1,6 +1,6 @@
 /**
- * Builds the receipt evaluation corpus (`__tests__/fixtures/receipts/corpus`):
- * each receipt photo is read, assembled, dated and redacted by the app's own
+ * Builds the receipt evaluation corpus, outside the repo (the system temp dir's
+ * `sous-chef-receipt-corpus/corpus` by default): each receipt photo is read, assembled, dated and redacted by the app's own
  * code, then labelled by Apple's on-device model, and only the redacted text is
  * kept. macOS 26+ with Apple Intelligence on.
  *
@@ -8,7 +8,7 @@
  *
  * The default sources are the Wikimedia Commons photos in `sources.json`,
  * downloaded and cached in the system temp dir. A private set (`"path"` in
- * place of `"file"`) builds the same way into an out-dir outside the repo.
+ * place of `"file"`) builds the same way.
  *
  * `ocr.swift` and `label.swift` copy the request settings, schema and prompt of
  * `ios/SousChef/TextRecognitionModule.swift` and `ReceiptStructuringModule.swift`;
@@ -27,9 +27,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '../..');
 const UTILS = join(REPO, 'src/features/receipts/utils');
 const sourcesPath = process.argv[2] ?? join(HERE, 'sources.json');
-const outDir =
-  process.argv[3] ?? join(REPO, '__tests__/fixtures/receipts/corpus');
 const cache = join(tmpdir(), 'sous-chef-receipt-corpus');
+const outDir = process.argv[3] ?? join(cache, 'corpus');
 for (const dir of ['images', 'ocr', 'pages', 'labels']) {
   mkdirSync(join(cache, dir), { recursive: true });
 }
