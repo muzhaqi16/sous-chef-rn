@@ -202,6 +202,8 @@ export function useReceiptReview() {
     merchant: draft?.parsed?.merchant ?? null,
     /** The receipt's store: the user's pick, else the one its header names. */
     store,
+    /** Neither the receipt nor the API names the shop, so the user is asked for it. */
+    storeUnrecognized: !resolvedStore && !draft?.parsed?.merchant,
     /** The day of the shop, YYYY-MM-DD; the scan's day when none was read. */
     purchasedOn,
     /** No day was read from the receipt and the user set none: it is the scan's. */

@@ -340,6 +340,21 @@ describe('useReceiptReview', () => {
     expect(pendingCount).toBe(0);
   });
 
+  it('asks for the store only when neither the receipt nor the API names the shop', async () => {
+    const { result, unmount } = await setup();
+    // The receipt names KROGER: nothing to ask.
+    expect(result.current.review.storeUnrecognized).toBe(false);
+    unmount();
+
+    const draft = useReceiptDraftStore.getState().draft;
+    if (draft?.parsed) {
+      const { merchant: _named, ...unnamed } = draft.parsed;
+      useReceiptDraftStore.setState({ draft: { ...draft, parsed: unnamed } });
+    }
+    const unnamed = await setup();
+    expect(unnamed.result.current.review.storeUnrecognized).toBe(true);
+  });
+
   it('adds the chosen lines, keeps what was added, and names why the rest failed', async () => {
     const { result, cache, create } = await setup();
     await act(async () => {

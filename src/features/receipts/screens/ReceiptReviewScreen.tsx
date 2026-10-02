@@ -67,6 +67,7 @@ export const ReceiptReviewScreen: React.FC = () => {
     rows,
     merchant,
     store,
+    storeUnrecognized,
     purchasedOn,
     dayIsScanDay,
     setPurchasedOn,
@@ -246,19 +247,21 @@ export const ReceiptReviewScreen: React.FC = () => {
           rows.length > 0 ? (
             <View style={styles.intro}>
               <View style={styles.details}>
-                <StoreAutocompleteField
-                  variant="modal"
-                  label={t('labels.store')}
-                  value={store?.name ?? ''}
-                  // Kept by id, from the pick: typed text alone is no store.
-                  onChangeText={() => undefined}
-                  onStoreSelected={(id, name) => {
-                    if (id && name) chooseStore({ id, name });
-                  }}
-                  placeholder={t('receipts.review.storePlaceholder')}
-                  helperText={t('labels.storeSelectHint')}
-                  testID={receiptsTestIDs.reviewStore}
-                />
+                {storeUnrecognized ? (
+                  <StoreAutocompleteField
+                    variant="modal"
+                    label={t('labels.store')}
+                    value={store?.name ?? ''}
+                    // Kept by id, from the pick: typed text alone is no store.
+                    onChangeText={() => undefined}
+                    onStoreSelected={(id, name) => {
+                      if (id && name) chooseStore({ id, name });
+                    }}
+                    placeholder={t('receipts.review.storePlaceholder')}
+                    helperText={t('labels.storeSelectHint')}
+                    testID={receiptsTestIDs.reviewStore}
+                  />
+                ) : null}
                 <View>
                   <DatePickerField
                     label={t('receipts.review.dateLabel')}
