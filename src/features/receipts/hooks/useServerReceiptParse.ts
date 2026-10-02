@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { skipToken, useMutation, useQuery } from '@apollo/client/react';
+import {
+  skipToken,
+  useApolloClient,
+  useMutation,
+  useQuery,
+} from '@apollo/client/react';
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import { useTranslation } from '#/i18n';
 import {
@@ -15,6 +20,10 @@ import { todayKey } from '#/utils/dateUtils';
 import { getRateLimitDetails } from '#/utils/errors/rateLimit';
 import { isAuthRefusalCode } from '#/utils/authErrorCodes';
 import { useIsOnline } from '#store/useAppStore';
+import {
+  ReceiptParseReadersFragmentDoc,
+  type ReceiptParseReadersFragment,
+} from '#/graphql/readers/receiptParseReaders.generated';
 import {
   useReceiptDraftStore,
   type ServerReceiptParse,
@@ -121,6 +130,7 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
   const settleServerParse = useReceiptDraftStore(
     state => state.settleServerParse,
   );
+  const client = useApolloClient();
   const [create] = useMutation(CreateReceiptParseDocument);
   // The parse this visit sent, so it is sent once per visit, never in a loop.
   const sent = useRef<string | null>(null);
@@ -187,7 +197,18 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
       } else if (status === ReceiptParseStatus.Failed) {
         settleServerParse(id, 'failed');
       } else if (status) {
-        setPolling(id);
+        // A finished parse (a resend, or a fast worker) is settled from what
+        // the payload wrote to the cache, without a poll.
+        const parse =
+          status === ReceiptParseStatus.Parsed
+            ? client.cache.readFragment<ReceiptParseReadersFragment>({
+                id: client.cache.identify({ __typename: 'ReceiptParse', id }),
+                fragment: ReceiptParseReadersFragmentDoc,
+              })
+            : null;
+        const outcome = parse ? outcomeOf(parse) : undefined;
+        if (outcome === undefined) setPolling(id);
+        else settleServerParse(id, outcome);
       } else if (retryAfter && retryAfter > 0) {
         // The daily allowance is asked again once it says.
         settleServerParse(id, {
@@ -218,6 +239,7 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
     resends,
     askServerParse,
     settleServerParse,
+    client,
     create,
     t,
   ]);

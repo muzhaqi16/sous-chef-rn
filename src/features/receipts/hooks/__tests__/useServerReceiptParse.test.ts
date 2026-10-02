@@ -18,6 +18,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { useStore } from '#store';
+import { isRecord } from '#/utils/isRecord';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import { TimeoutError } from '#/utils/errors/timeoutError';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
@@ -184,6 +185,35 @@ describe('useServerReceiptParse', () => {
     const draft = useReceiptDraftStore.getState().draft;
     expect(draft?.parsedBy).toBe('server');
     expect(draft?.purchasedOn).toBe(kept);
+  });
+
+  it('reads a parse the server has already finished from its answer, with no poll', async () => {
+    seedDraft();
+    const create = recordMock(CreateReceiptParseDocument, {
+      dataFor: (vars): MockDataFor<typeof CreateReceiptParseDocument> => ({
+        createReceiptParse: {
+          __typename: 'CreateReceiptParsePayload',
+          receiptParse: {
+            id: isRecord(vars.input) ? String(vars.input.id) : '',
+            status: ReceiptParseStatus.Parsed,
+            warnings: [],
+            receipt: MILK_RECEIPT,
+          },
+        },
+      }),
+    });
+    const poll = polledTo({
+      status: ReceiptParseStatus.Parsed,
+      warnings: [],
+      receipt: MILK_RECEIPT,
+    });
+    const { result } = render([create.mock, ...poll.mocks]);
+
+    await waitFor(() => expect(result.current.readingStatus).toBe('none'));
+    const draft = useReceiptDraftStore.getState().draft;
+    expect(draft?.parsedBy).toBe('server');
+    expect(draft?.parsed?.merchant).toBe('WALMART');
+    expect(poll.fired()).toEqual([]);
   });
 
   it('keeps the text when no receipt worker runs, and asks nothing more', async () => {
