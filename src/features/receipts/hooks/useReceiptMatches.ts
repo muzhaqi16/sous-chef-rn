@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { skipToken, useMutation, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import {
@@ -76,10 +77,12 @@ export function useReceiptMatches(
   const { t } = useTranslation();
   const { pantry, currentHome } = useCurrentPantry();
   const sent = lines.slice(0, MAX_LINES);
+  // Asked once the pantry is known (or known to be none), never twice.
+  const pantryKnown = !!pantry || !!currentHome;
 
   const { data, loading, error, refetch } = useQuery(
     ResolveReceiptLinesDocument,
-    sent.length > 0
+    sent.length > 0 && pantryKnown
       ? {
           variables: {
             input: {
@@ -102,7 +105,13 @@ export function useReceiptMatches(
         }
       : skipToken,
   );
-  const resolved = data?.resolveReceiptLines;
+  // A picked store asks again for the same lines: the last answer stands until
+  // the new one lands, so the proposals stay on screen.
+  const linesKey = JSON.stringify(sent);
+  const [held, setHeld] = useState<{ key: string; data: typeof data }>();
+  if (data && data !== held?.data) setHeld({ key: linesKey, data });
+  const answer = data ?? (held?.key === linesKey ? held.data : undefined);
+  const resolved = answer?.resolveReceiptLines;
   const storeId = pickedStoreId ?? resolved?.store?.id;
 
   const matches = new Map<number, ReceiptLineMatch>();
@@ -156,7 +165,7 @@ export function useReceiptMatches(
     );
   };
 
-  const answered = sent.length === 0 || !!data;
+  const answered = sent.length === 0 || !!answer;
   const matchState: ReceiptMatchState = answered
     ? 'done'
     : error && !loading
@@ -170,8 +179,11 @@ export function useReceiptMatches(
     retryMatching: () => {
       void refetch().catch(() => undefined);
     },
-    /** The store the API resolved from the receipt's header, when it knows it. */
-    resolvedStore: resolved?.store ?? null,
+    /**
+     * The store the API resolved from the receipt's header, when it knows it.
+     * Never the picked one, which the API echoes as the receipt's store.
+     */
+    resolvedStore: pickedStoreId ? null : resolved?.store ?? null,
     recordConfirmed,
   };
 }

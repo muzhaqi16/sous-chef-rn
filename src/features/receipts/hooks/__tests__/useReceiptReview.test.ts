@@ -45,11 +45,17 @@ jest.mock('#/services/errorService');
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
+interface CurrentPantry {
+  pantry: { id: string; name: string } | null;
+  currentHome: { id: string } | null;
+}
+const KITCHEN: CurrentPantry = {
+  pantry: { id: 'p1', name: 'Kitchen' },
+  currentHome: { id: 'home-1' },
+};
+const mockCurrentPantry = jest.fn<CurrentPantry, []>();
 jest.mock('#features/pantry/hooks/useCurrentPantry', () => ({
-  useCurrentPantry: () => ({
-    pantry: { id: 'p1', name: 'Kitchen' },
-    currentHome: { id: 'home-1' },
-  }),
+  useCurrentPantry: () => mockCurrentPantry(),
 }));
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
   useIsLoggedOut: () => false,
@@ -323,6 +329,7 @@ async function setup({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockCurrentPantry.mockReturnValue(KITCHEN);
   seedDraft();
 });
 
@@ -671,6 +678,23 @@ describe('useReceiptReview', () => {
       ]);
     });
 
+    it('waits for the pantry to be known rather than asking twice', async () => {
+      mockCurrentPantry.mockReturnValue({ pantry: null, currentHome: null });
+      const resolve = resolved();
+      const { result, rerender } = await setup({ resolve });
+      expect(resolve.fired).toHaveLength(0);
+      expect(result.current.review.matchState).toBe('matching');
+
+      mockCurrentPantry.mockReturnValue(KITCHEN);
+      rerender({});
+      await waitFor(() =>
+        expect(result.current.review.matchState).toBe('done'),
+      );
+      expect(resolve.fired).toEqual([
+        { input: expect.objectContaining({ pantryId: 'p1' }) },
+      ]);
+    });
+
     it('tells the matcher the server read a receipt it read', async () => {
       const draft = useReceiptDraftStore.getState().draft;
       if (draft) {
@@ -806,6 +830,68 @@ describe('useReceiptReview', () => {
             },
           ],
         },
+      });
+    });
+
+    it('keeps the store field and the proposals while the picked store is asked', async () => {
+      const draft = useReceiptDraftStore.getState().draft;
+      if (draft?.parsed) {
+        const { merchant: _named, ...unnamed } = draft.parsed;
+        useReceiptDraftStore.setState({ draft: { ...draft, parsed: unnamed } });
+      }
+      const resolveAgain = recordMock(ResolveReceiptLinesDocument, {
+        // The API echoes the picked store, and is sure of the bananas there.
+        data: {
+          resolveReceiptLines: {
+            store: { id: 'store-99', name: 'Kroger #87' },
+            lines: RESOLVED.resolveReceiptLines?.lines?.map(line => ({
+              ...line,
+              confidence: ReceiptMatchConfidence.High,
+            })),
+          },
+        },
+        delay: 100,
+      });
+      const { result } = await setup({
+        resolve: recordMock(ResolveReceiptLinesDocument, {
+          data: {
+            resolveReceiptLines: {
+              ...RESOLVED.resolveReceiptLines,
+              store: null,
+            },
+          },
+          maxUsageCount: 1,
+        }),
+        resolveAgain,
+      });
+      await waitFor(() =>
+        expect(result.current.review.matchState).toBe('done'),
+      );
+      expect(result.current.review.storeUnrecognized).toBe(true);
+
+      await act(async () => {
+        result.current.review.chooseStore({
+          id: 'store-99',
+          name: 'Kroger #87',
+        });
+      });
+      await waitFor(() => expect(resolveAgain.fired).toHaveLength(1));
+      expect(result.current.review.rows.map(row => row.status)).toEqual([
+        'add',
+        'guess',
+      ]);
+
+      await waitFor(() =>
+        expect(result.current.review.rows.map(row => row.status)).toEqual([
+          'add',
+          'add',
+        ]),
+      );
+      // The pick stays open to change.
+      expect(result.current.review.storeUnrecognized).toBe(true);
+      expect(result.current.review.store).toEqual({
+        id: 'store-99',
+        name: 'Kroger #87',
       });
     });
 
