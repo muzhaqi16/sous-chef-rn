@@ -338,6 +338,43 @@ describe('useReceiptScan', () => {
       expect(result.current.status).toBe('readFailed');
     });
 
+    it('saves nothing, and sends no more, once the screen has gone', async () => {
+      const { result, unmount } = await failedRead();
+      preparePhotos.mockImplementation(async uris =>
+        uris.map((_, at) => ({
+          uri: `file:///prepared-${at}.jpg`,
+          fileSize: 900,
+        })),
+      );
+      let upload: (key: string) => void = () => {};
+      mockUploadReceiptPhoto.mockImplementationOnce(
+        () =>
+          new Promise<string>(resolve => {
+            upload = resolve;
+          }),
+      );
+
+      let sending: Promise<void> = Promise.resolve();
+      await act(async () => {
+        sending = result.current.sendPhotos();
+      });
+      // A later scan saved while the first photo is still going up.
+      unmount();
+      const later = { pages: ['LATER'], scannedAt: '2026-10-02T09:00:00Z' };
+      useReceiptDraftStore.getState().saveDraft(later);
+      upload('receipt-photos/u1/p-0.jpg');
+      await act(() => sending);
+
+      expect(mockUploadReceiptPhoto).toHaveBeenCalledTimes(1);
+      expect(deletePhotos).toHaveBeenCalledWith([
+        'file:///prepared-0.jpg',
+        'file:///prepared-1.jpg',
+        'file:///prepared-2.jpg',
+        'file:///prepared-3.jpg',
+      ]);
+      expect(useReceiptDraftStore.getState().draft).toEqual(later);
+    });
+
     it('deletes the pages when the screen goes before the user decides', async () => {
       const { unmount } = await failedRead();
 

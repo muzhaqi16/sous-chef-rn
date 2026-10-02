@@ -95,9 +95,16 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
   // Pages the phone could not read, kept while the user decides whether to
   // send them; deleted if the screen goes first.
   const unread = useRef<string[]>([]);
+  // A send outlives a closed screen. It must not save: a later scan's draft
+  // stands, and that scan's read deletes the photos still going up.
+  const open = useRef(false);
   useEffect(() => {
     const held = unread;
-    return () => dropPhotos(held.current);
+    open.current = true;
+    return () => {
+      open.current = false;
+      dropPhotos(held.current);
+    };
   }, []);
 
   const readPages = async (imageUris: string[], library = false) => {
@@ -191,6 +198,7 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
   const uploadAll = async (photos: readonly PreparedPhoto[]) => {
     const keys: string[] = [];
     for (const photo of photos) {
+      if (!open.current) return null;
       let key: string | null = null;
       try {
         key = await uploadReceiptPhoto(toUpload(photo));
@@ -220,6 +228,7 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
     }
     const keys = await uploadAll(photos);
     dropPhotos(photos.map(photo => photo.uri));
+    if (!open.current) return;
     if (!keys) {
       setStatus('failed');
       return;
