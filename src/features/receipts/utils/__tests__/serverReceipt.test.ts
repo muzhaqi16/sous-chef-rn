@@ -1,27 +1,51 @@
 import { ReceiptLineKind } from '#/graphql/generated/schemaTypes';
+import type { ReceiptParseReadersFragment } from '#/graphql/readers/receiptParseReaders.generated';
 import { fromServerReceipt } from '../serverReceipt';
 import { receiptReviewLines } from '../receiptReviewLines';
 import { receiptTotalsGap } from '../receiptTotalsGap';
 
+type ServerReceipt = NonNullable<ReceiptParseReadersFragment['receipt']>;
+type ServerLine = ServerReceipt['lines'][number];
+
+/** A line as the API returns it: a field it leaves out is null. */
+const line = (
+  fields: Pick<ServerLine, 'text' | 'kind'> & Partial<ServerLine>,
+): ServerLine => ({
+  __typename: 'ParsedReceiptLine',
+  product: null,
+  code: null,
+  quantity: null,
+  unit: null,
+  unitPrice: null,
+  amount: null,
+  appliesTo: null,
+  ...fields,
+});
+
+const merchant = (name: string | null): ServerReceipt['merchant'] => ({
+  __typename: 'ParsedReceiptMerchant',
+  name,
+});
+
 describe('fromServerReceipt', () => {
   const receipt = {
-    merchant: { name: ' KROGER ' },
+    merchant: merchant(' KROGER '),
     lines: [
-      { text: 'KROGER #412', kind: ReceiptLineKind.Other },
-      {
+      line({ text: 'KROGER #412', kind: ReceiptLineKind.Other }),
+      line({
         text: 'KRO WHL MILK 3.29 F',
         kind: ReceiptLineKind.Item,
         product: 'KRO WHL MILK',
         code: '0001111041700',
         amount: 3.29,
-      },
-      {
+      }),
+      line({
         text: 'SC KROGER SAVINGS 0.50-',
         kind: ReceiptLineKind.Discount,
         amount: -0.5,
         appliesTo: 1,
-      },
-      {
+      }),
+      line({
         text: 'BANANAS 2.14 lb @ 0.59 /lb 1.26',
         kind: ReceiptLineKind.Item,
         product: 'BANANAS',
@@ -29,15 +53,19 @@ describe('fromServerReceipt', () => {
         unit: 'lb',
         unitPrice: 0.59,
         amount: 1.26,
-      },
-      {
+      }),
+      line({
         text: 'BOTTLE DEPOSIT 0.10',
         kind: ReceiptLineKind.Deposit,
         amount: 0.1,
-      },
-      { text: 'SUBTOTAL 4.15', kind: ReceiptLineKind.Subtotal, amount: 4.15 },
-      { text: 'TAX 0.00', kind: ReceiptLineKind.Tax, amount: 0 },
-      { text: 'VISA 4.15', kind: ReceiptLineKind.Payment, amount: 4.15 },
+      }),
+      line({
+        text: 'SUBTOTAL 4.15',
+        kind: ReceiptLineKind.Subtotal,
+        amount: 4.15,
+      }),
+      line({ text: 'TAX 0.00', kind: ReceiptLineKind.Tax, amount: 0 }),
+      line({ text: 'VISA 4.15', kind: ReceiptLineKind.Payment, amount: 4.15 }),
     ],
   };
 
@@ -70,23 +98,23 @@ describe('fromServerReceipt', () => {
 
   it('folds a weight line the server returned as an item into the item above', () => {
     const parsed = fromServerReceipt({
-      merchant: { name: 'WALMART' },
+      merchant: merchant('WALMART'),
       lines: [
-        {
+        line({
           text: 'BANANAS 000000040110KF 1.02 R',
           kind: ReceiptLineKind.Item,
           product: 'BANANAS',
           code: '000000040110',
           amount: 1.02,
-        },
-        { text: '2.21 lb @ 1 lb /0.46', kind: ReceiptLineKind.Item },
+        }),
+        line({ text: '2.21 lb @ 1 lb /0.46', kind: ReceiptLineKind.Item }),
         // An item whose price the server missed stays an item.
-        {
+        line({
           text: 'PRG CHED SC 038000138970',
           kind: ReceiptLineKind.Item,
           product: 'PRG CHED SC',
           code: '038000138970',
-        },
+        }),
       ],
     });
 
@@ -113,30 +141,30 @@ describe('fromServerReceipt', () => {
   // walmart-food-receipt-8-sep-2021).
   it("takes the figures the line prints over the server's, and drops a tax flag given as a unit", () => {
     const parsed = fromServerReceipt({
-      merchant: { name: 'Walmart' },
+      merchant: merchant('Walmart'),
       lines: [
-        {
+        line({
           text: 'BANANAS  000000040110KF  1.02 R',
           kind: ReceiptLineKind.Item,
           product: 'BANANAS',
           quantity: 1,
           unit: 'R',
           amount: 4.94,
-        },
-        {
+        }),
+        line({
           text: '2.21 lb. @ 1 1b. /0.46  4.94 Y',
           kind: ReceiptLineKind.Item,
           product: '2.21 lb. @ 1 1b. /0.46',
           amount: 4.94,
-        },
-        {
+        }),
+        line({
           text: 'DEVILED EGG 078742213510 F  4.96 R',
           kind: ReceiptLineKind.Item,
           product: 'DEVILED EGG',
           quantity: 1,
           unit: 'R',
           amount: 4.96,
-        },
+        }),
       ],
     });
 
@@ -163,15 +191,15 @@ describe('fromServerReceipt', () => {
 
   it('takes no pack size for a code', () => {
     const parsed = fromServerReceipt({
-      merchant: {},
+      merchant: merchant(null),
       lines: [
-        {
+        line({
           text: 'OATS 1500G  3.99',
           kind: ReceiptLineKind.Item,
           product: 'OATS',
           code: '1500G',
           amount: 3.99,
-        },
+        }),
       ],
     });
 
@@ -181,9 +209,9 @@ describe('fromServerReceipt', () => {
   // As the dev parser answered for the same receipt read on the simulator.
   it('takes no price for a code, and no subtotal for an item price', () => {
     const parsed = fromServerReceipt({
-      merchant: { name: 'Walmart' },
+      merchant: merchant('Walmart'),
       lines: [
-        {
+        line({
           text: 'BANANAS  000000040110KF  1.02 R',
           kind: ReceiptLineKind.Item,
           product: 'BANANAS',
@@ -191,8 +219,8 @@ describe('fromServerReceipt', () => {
           quantity: 1,
           unit: 'R',
           amount: 1.02,
-        },
-        {
+        }),
+        line({
           text: '2.21 lb. @ 1lb.  /0.46  4.94 Y',
           kind: ReceiptLineKind.Item,
           product: '2.21 lb. @ 1lb.',
@@ -200,23 +228,27 @@ describe('fromServerReceipt', () => {
           quantity: 2.21,
           unit: 'lb.',
           amount: 4.94,
-        },
-        {
+        }),
+        line({
           text: 'DEVILED EGG  078742213510 F  4.96 R',
           kind: ReceiptLineKind.Item,
           product: 'DEVILED EGG',
           code: '078742213510',
           amount: 4.96,
-        },
-        {
+        }),
+        line({
           text: 'PRG CHED SC  038000138970',
           kind: ReceiptLineKind.Item,
           product: 'PRG CHED SC',
           code: '038000138970',
           quantity: 1,
           amount: 27.13,
-        },
-        { text: 'SUBTOTAL', kind: ReceiptLineKind.Subtotal, amount: 27.13 },
+        }),
+        line({
+          text: 'SUBTOTAL',
+          kind: ReceiptLineKind.Subtotal,
+          amount: 27.13,
+        }),
       ],
     });
 
@@ -246,15 +278,19 @@ describe('fromServerReceipt', () => {
 
   it('keeps the price of the only item, which is the subtotal', () => {
     const parsed = fromServerReceipt({
-      merchant: { name: 'Walmart' },
+      merchant: merchant('Walmart'),
       lines: [
-        {
+        line({
           text: 'GV WHOLE MILK 007874235186 F 3.48 N',
           kind: ReceiptLineKind.Item,
           product: 'GV WHOLE MILK',
           amount: 3.48,
-        },
-        { text: 'SUBTOTAL 3.48', kind: ReceiptLineKind.Subtotal, amount: 3.48 },
+        }),
+        line({
+          text: 'SUBTOTAL 3.48',
+          kind: ReceiptLineKind.Subtotal,
+          amount: 3.48,
+        }),
       ],
     });
 
@@ -263,21 +299,25 @@ describe('fromServerReceipt', () => {
 
   it('keeps an item price its own line prints, though it is the subtotal', () => {
     const parsed = fromServerReceipt({
-      merchant: {},
+      merchant: merchant(null),
       lines: [
-        {
+        line({
           text: 'COFFEE  9.99',
           kind: ReceiptLineKind.Item,
           product: 'COFFEE',
           amount: 9.99,
-        },
-        {
+        }),
+        line({
           text: 'MUG  0.00',
           kind: ReceiptLineKind.Item,
           product: 'MUG',
           amount: 0,
-        },
-        { text: 'SUBTOTAL 9.99', kind: ReceiptLineKind.Subtotal, amount: 9.99 },
+        }),
+        line({
+          text: 'SUBTOTAL 9.99',
+          kind: ReceiptLineKind.Subtotal,
+          amount: 9.99,
+        }),
       ],
     });
 
@@ -286,23 +326,27 @@ describe('fromServerReceipt', () => {
 
   it('folds two detail lines into the item, never one into the other', () => {
     const parsed = fromServerReceipt({
-      merchant: {},
+      merchant: merchant(null),
       lines: [
-        { text: 'BANANAS', kind: ReceiptLineKind.Item, product: 'BANANAS' },
-        {
+        line({
+          text: 'BANANAS',
+          kind: ReceiptLineKind.Item,
+          product: 'BANANAS',
+        }),
+        line({
           text: '2.21 lb @ 0.46',
           kind: ReceiptLineKind.Item,
           quantity: 2.21,
           unit: 'lb',
           unitPrice: 0.46,
-        },
-        {
+        }),
+        line({
           text: '1 @ 1.02',
           kind: ReceiptLineKind.Item,
           quantity: 1,
           unitPrice: 1.02,
           amount: 1.02,
-        },
+        }),
       ],
     });
 
@@ -319,8 +363,53 @@ describe('fromServerReceipt', () => {
     expect(parsed.lines[2]).toMatchObject({ kind: 'other', appliesToIndex: 0 });
   });
 
+  // The server gives every item a quantity; only a printed one is a detail's.
+  it('keeps items with short or non-Latin names as items of their own', () => {
+    const parsed = fromServerReceipt({
+      merchant: merchant('MARKET'),
+      lines: [
+        line({
+          text: 'BUKË 1.20',
+          kind: ReceiptLineKind.Item,
+          product: 'BUKË',
+          quantity: 1,
+          amount: 1.2,
+        }),
+        line({
+          text: 'UJË 0.50',
+          kind: ReceiptLineKind.Item,
+          product: 'UJË',
+          quantity: 1,
+          amount: 0.5,
+        }),
+        line({
+          text: 'OJ 2.99',
+          kind: ReceiptLineKind.Item,
+          product: 'OJ',
+          quantity: 1,
+          amount: 2.99,
+        }),
+        line({
+          text: 'МОЛОКО 2 x 1.20 2.40',
+          kind: ReceiptLineKind.Item,
+          product: 'МОЛОКО',
+          quantity: 2,
+          unitPrice: 1.2,
+          amount: 2.4,
+        }),
+      ],
+    });
+
+    expect(receiptReviewLines(parsed)).toEqual([
+      { index: 0, printed: 'BUKË', quantity: 1, price: 1.2 },
+      { index: 1, printed: 'UJË', quantity: 1, price: 0.5 },
+      { index: 2, printed: 'OJ', quantity: 1, price: 2.99 },
+      { index: 3, printed: 'МОЛОКО', quantity: 2, price: 2.4 },
+    ]);
+  });
+
   it('leaves out a merchant the server could not name', () => {
-    expect(fromServerReceipt({ merchant: { name: null }, lines: [] })).toEqual({
+    expect(fromServerReceipt({ merchant: merchant(null), lines: [] })).toEqual({
       lines: [],
     });
   });

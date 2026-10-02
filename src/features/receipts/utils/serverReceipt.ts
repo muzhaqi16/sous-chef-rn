@@ -1,4 +1,5 @@
 import { ReceiptLineKind } from '#/graphql/generated/schemaTypes';
+import type { ReceiptParseReadersFragment } from '#/graphql/readers/receiptParseReaders.generated';
 import { readReceiptLine } from './readReceiptLine';
 import { NOT_BEFORE_PACK_UNIT, RECEIPT_UNIT } from './receiptMeasures';
 import {
@@ -8,25 +9,11 @@ import {
   type ParsedReceiptLine,
 } from './structureReceipt';
 
-/** A line as the server's receipt parser reads it. */
-export interface ServerReceiptLine {
-  text: string;
-  kind: ReceiptLineKind;
-  product?: string | null;
-  code?: string | null;
-  quantity?: number | null;
-  unit?: string | null;
-  unitPrice?: number | null;
-  /** As printed; a discount is negative. */
-  amount?: number | null;
-  /** On a discount, the index of the item line it reduces. */
-  appliesTo?: number | null;
-}
-
-export interface ServerReceipt {
-  merchant: { name?: string | null };
-  lines: readonly ServerReceiptLine[];
-}
+type ServerReceipt = Pick<
+  NonNullable<ReceiptParseReadersFragment['receipt']>,
+  'merchant' | 'lines'
+>;
+type ServerReceiptLine = ServerReceipt['lines'][number];
 
 // A fee or a deposit reads as `other`, which the totals check counts toward the
 // subtotal, as it does for a fee the phone read.
@@ -81,11 +68,10 @@ const toLine = (line: ServerReceiptLine, index: number): ParsedReceiptLine => {
 };
 
 // The server can return the weight or count line under an item as an item of
-// its own (Walmart's `2.21 lb @ 0.46`), with or without an amount. One that
-// states a count or weight, names no product and prints no code describes the
-// item above it, as a detail line does on the phone: that item takes its
-// figures, and the line is not counted toward the subtotal. A folded line is
-// never the item a later one describes.
+// its own (Walmart's `2.21 lb @ 0.46`). One that prints a count or weight (the
+// server gives every item a quantity), no product words and no code describes
+// the item above, as a detail line does on the phone: that item takes its
+// figures, and the line is not counted. A folded line is never described.
 const foldDetails = (lines: ParsedReceiptLine[]): ParsedReceiptLine[] => {
   let above: ParsedReceiptLine | undefined;
   const described = new Set<ParsedReceiptLine>();
@@ -93,7 +79,7 @@ const foldDetails = (lines: ParsedReceiptLine[]): ParsedReceiptLine[] => {
     if (line.kind !== 'item') return line;
     if (
       line.code !== undefined ||
-      line.quantity === undefined ||
+      readReceiptLine(line.rawText).quantity === undefined ||
       hasProductWords(line.rawText) ||
       !above
     ) {

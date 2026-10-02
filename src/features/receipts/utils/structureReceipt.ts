@@ -45,7 +45,8 @@ const PRINTED_KIND: readonly [RegExp, ParsedLineKind][] = [
   [/^\W*(?:SALES\s+)?TAX\b/i, 'tax'],
 ];
 
-const PRODUCT_WORD = /[A-Za-z]{3,}/;
+// Accented Latin (`UJË`), Greek and Cyrillic names too.
+const PRODUCT_WORD = /[A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF]{3,}/;
 
 /** Whether a line names a product, not only a count, weight or price. */
 export const hasProductWords = (text: string) => PRODUCT_WORD.test(text);
