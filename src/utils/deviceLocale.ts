@@ -47,6 +47,39 @@ export function getDeviceDecimalSeparator(): DecimalSeparator {
   return resolved;
 }
 
+/** Which part a device's slash date (`05/09/2026`) puts first. */
+export type DateOrder = 'monthFirst' | 'dayFirst';
+
+let cachedDateOrder: DateOrder | undefined;
+
+/**
+ * The order the device's region writes day and month in, read back from
+ * `format`, as {@link getDeviceDecimalSeparator} is, rather than via
+ * `formatToParts`. Falls back to month-first, the US order.
+ */
+export function getDeviceDateOrder(): DateOrder {
+  if (cachedDateOrder !== undefined) return cachedDateOrder;
+
+  let resolved: DateOrder = 'monthFirst';
+  try {
+    // February 3rd: the month prints as 02 and the day as 03 in every locale
+    // with Latin digits; any other script leaves the fallback.
+    const formatted = new Intl.DateTimeFormat(undefined, {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date(2001, 1, 3));
+    const month = formatted.indexOf('02');
+    const day = formatted.indexOf('03');
+    if (month >= 0 && day >= 0 && day < month) resolved = 'dayFirst';
+  } catch {
+    // Left at the fallback.
+  }
+
+  cachedDateOrder = resolved;
+  return resolved;
+}
+
 /** The device's locale (`en-US`), or null when neither source can say. */
 export function getDeviceLocale(): string | null {
   try {
@@ -66,4 +99,5 @@ export function getDeviceLocale(): string | null {
  */
 export function resetDeviceLocaleCache(): void {
   cachedSeparator = undefined;
+  cachedDateOrder = undefined;
 }

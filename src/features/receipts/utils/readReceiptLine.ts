@@ -1,3 +1,5 @@
+import { NOT_BEFORE_PACK_UNIT } from './receiptMeasures';
+
 export interface ReceiptLineReading {
   /** The line's own amount, negative for a discount. */
   amount?: number;
@@ -28,7 +30,11 @@ const WEIGHT_AT_RATE =
 const TRAILING_AMOUNT =
   /(?<![\d/$])(-)?\$?(\d{1,6}[.,]\d{2})(-)?\s*(?:[A-Z]{1,2}|\*)?\s*$/i;
 
-const CODE = /(?<![\d.,])\d{4,14}(?![\d.,])/;
+// Not a pack size (`1750ML`), which is digits too.
+const CODE = new RegExp(
+  `(?<![\\d.,])\\d{4,14}(?![\\d.,])${NOT_BEFORE_PACK_UNIT}`,
+  'i',
+);
 
 /** The line without its trailing amount and tax flags. */
 export const withoutAmount = (text: string) =>

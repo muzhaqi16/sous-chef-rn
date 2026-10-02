@@ -2,14 +2,13 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   addPantryItemLocally,
-  addToPantryItemsCache,
+  reconcileCreatedPantryItem,
   revertOptimisticPantryItem,
 } from '#features/pantry/cache/items';
 import { writeLocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
 import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { todayKey } from '#/utils/dateUtils';
@@ -44,12 +43,7 @@ export function usePantryIntake(pantryId: string | undefined) {
       const clientId = variables?.input.id;
 
       try {
-        // NOT the counting helper: the eager write already counted this row.
-        // This re-add reconciles the server's entity into the same edge.
-        addToPantryItemsCache(cache, pantryId, pantryItem);
-        // The re-add dedupes BY ID, so a server-resolved id divergence would
-        // leave the client cuid as a second, permanently unresolvable edge.
-        adoptServerEntityId(cache, 'PantryItem', pantryItem.id, clientId);
+        reconcileCreatedPantryItem(cache, pantryId, pantryItem, clientId);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Cache update failed for createPantryItem:',

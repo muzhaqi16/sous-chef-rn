@@ -1,4 +1,5 @@
 import type { ParsedReceipt } from './structureReceipt';
+import { toCents } from './money';
 
 /** One bought product as the review list shows it. */
 export interface ReceiptReviewLine {
@@ -12,8 +13,6 @@ export interface ReceiptReviewLine {
   /** What was paid for the line once its discounts are taken off. */
   price?: number;
 }
-
-const cents = (value: number) => Math.round(value * 100);
 
 /** The receipt's item lines, each priced after the discounts that name it. */
 export function receiptReviewLines(
@@ -29,7 +28,7 @@ export function receiptReviewLines(
       continue;
     }
     // Printed either way round: `0.50-` reads as negative, `SAVINGS 0.50` as positive.
-    const taken = Math.abs(cents(line.lineTotal));
+    const taken = Math.abs(toCents(line.lineTotal));
     discountCents.set(
       line.appliesToIndex,
       (discountCents.get(line.appliesToIndex) ?? 0) + taken,
@@ -48,7 +47,7 @@ export function receiptReviewLines(
       if (line.unit) review.unit = line.unit;
       if (line.lineTotal !== undefined) {
         const paid =
-          cents(line.lineTotal) - (discountCents.get(line.index) ?? 0);
+          toCents(line.lineTotal) - (discountCents.get(line.index) ?? 0);
         review.price = Math.max(0, paid) / 100;
       }
       return review;

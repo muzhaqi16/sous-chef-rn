@@ -5,6 +5,7 @@ query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {
   resolveReceiptLines(input: $input) {
     store {
       id
+      name
     }
     lines {
       clientId

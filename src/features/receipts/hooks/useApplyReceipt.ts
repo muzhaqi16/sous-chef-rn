@@ -102,20 +102,31 @@ export function useApplyReceipt(listId: string | undefined) {
     receipt: ReceiptRefInput,
   ) => {
     if (!pantryId) return t('errors.moveToPantryFailedRetry');
-    // The amount the review shows: a move takes no default from the API.
-    const { quantity } = choice;
+    // A move takes no default from the API. A line with no unit counts what
+    // was bought, so against a list line in a unit (500 g of beef) the list's
+    // amount stands, never 1 of its unit.
+    const ownAmount =
+      choice.unitId !== null || choice.unitText !== '' || !listLine.unit;
+    const quantity = ownAmount
+      ? choice.quantity
+      : listLine.quantity ?? choice.quantity;
     // A typed unit links only to a line in that unit, so the line's id stands for it.
-    const unitId =
-      choice.unitId ?? (choice.unitText ? listLine.unit?.id : undefined);
+    const unitId = choice.unitId ?? listLine.unit?.id;
     const outcome = await moveToPantry(listLine, {
       pantryId,
       actualQuantity: quantity,
       actualUnitId: unitId,
       removeFromList: true,
-      // Per unit, as the move takes it.
-      actualPrice: choice.price === null ? undefined : choice.price / quantity,
-      receipt,
-      priceSource: PriceSource.ReceiptScan,
+      // With no price read it is a plain tick-off: the API would otherwise
+      // record the list's estimate as a price seen on this receipt.
+      ...(choice.price === null
+        ? {}
+        : {
+            // Per unit, as the move takes it.
+            actualPrice: choice.price / quantity,
+            receipt,
+            priceSource: PriceSource.ReceiptScan,
+          }),
     });
     return outcome.status === 'moved' ? null : outcome.reason;
   };

@@ -16,6 +16,20 @@ describe('readReceiptLine', () => {
     });
   });
 
+  it('reads a pack size as no code, run together or spaced', () => {
+    expect(readReceiptLine('JUICE 1750ML  3.49')).toEqual({ amount: 3.49 });
+    expect(readReceiptLine('RICE 2000 G  4.29')).toEqual({ amount: 4.29 });
+    expect(readReceiptLine('OIL 1000 ml  5.99')).toEqual({ amount: 5.99 });
+    expect(readReceiptLine('000000040110KF BANANAS  1.02')).toEqual({
+      amount: 1.02,
+      code: '000000040110',
+    });
+    expect(readReceiptLine('AVOCADO 4046 EA  1.00')).toEqual({
+      amount: 1,
+      code: '4046',
+    });
+  });
+
   it('reads a minus on either side as a discount', () => {
     expect(readReceiptLine('SC KROGER SAVINGS  0.50-')).toEqual({
       amount: -0.5,

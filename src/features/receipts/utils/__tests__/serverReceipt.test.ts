@@ -161,6 +161,23 @@ describe('fromServerReceipt', () => {
     expect(parsed.lines[1]?.lineTotal).toBeUndefined();
   });
 
+  it('takes no pack size for a code', () => {
+    const parsed = fromServerReceipt({
+      merchant: {},
+      lines: [
+        {
+          text: 'OATS 1500G  3.99',
+          kind: ReceiptLineKind.Item,
+          product: 'OATS',
+          code: '1500G',
+          amount: 3.99,
+        },
+      ],
+    });
+
+    expect(parsed.lines[0]?.code).toBeUndefined();
+  });
+
   // As the dev parser answered for the same receipt read on the simulator.
   it('takes no price for a code, and no subtotal for an item price', () => {
     const parsed = fromServerReceipt({
@@ -242,6 +259,64 @@ describe('fromServerReceipt', () => {
     });
 
     expect(parsed.lines[0]?.lineTotal).toBe(3.48);
+  });
+
+  it('keeps an item price its own line prints, though it is the subtotal', () => {
+    const parsed = fromServerReceipt({
+      merchant: {},
+      lines: [
+        {
+          text: 'COFFEE  9.99',
+          kind: ReceiptLineKind.Item,
+          product: 'COFFEE',
+          amount: 9.99,
+        },
+        {
+          text: 'MUG  0.00',
+          kind: ReceiptLineKind.Item,
+          product: 'MUG',
+          amount: 0,
+        },
+        { text: 'SUBTOTAL 9.99', kind: ReceiptLineKind.Subtotal, amount: 9.99 },
+      ],
+    });
+
+    expect(parsed.lines[0]?.lineTotal).toBe(9.99);
+  });
+
+  it('folds two detail lines into the item, never one into the other', () => {
+    const parsed = fromServerReceipt({
+      merchant: {},
+      lines: [
+        { text: 'BANANAS', kind: ReceiptLineKind.Item, product: 'BANANAS' },
+        {
+          text: '2.21 lb @ 0.46',
+          kind: ReceiptLineKind.Item,
+          quantity: 2.21,
+          unit: 'lb',
+          unitPrice: 0.46,
+        },
+        {
+          text: '1 @ 1.02',
+          kind: ReceiptLineKind.Item,
+          quantity: 1,
+          unitPrice: 1.02,
+          amount: 1.02,
+        },
+      ],
+    });
+
+    expect(receiptReviewLines(parsed)).toEqual([
+      {
+        index: 0,
+        printed: 'BANANAS',
+        quantity: 2.21,
+        unit: 'lb',
+        price: 1.02,
+      },
+    ]);
+    expect(parsed.lines[1]).toMatchObject({ kind: 'other', appliesToIndex: 0 });
+    expect(parsed.lines[2]).toMatchObject({ kind: 'other', appliesToIndex: 0 });
   });
 
   it('leaves out a merchant the server could not name', () => {

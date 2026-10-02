@@ -1542,6 +1542,27 @@ is skipped). `useSubscription` has no `skipToken` overload in 4.2.12, so the
 subscription hooks stay on `skip`, which also gates
 `useSubscriptionTransportRecovery`.
 
+### Apollo tears down a paused screen's query; resubscribing reads the current fetch policy
+
+Verified 2026-10-02 vs `@apollo/client@4.2.12` — re-check:
+`npx jest src/apollo/__tests__/refetchEvents.test.ts -t "paused at the switch"`.
+
+**Claim:** native-stack's `inactiveBehavior: 'pause'` hides a screen in a React
+`Activity`, whose effects are cleaned up, so the screen's `useQuery` loses its
+last observer. An `ObservableQuery` with no observer is torn down and removed
+from the client's set (`tearDownQuery` → `obsQueries.delete`). Neither
+`refetchQueries({ include: 'active' })` nor `include: 'all'` reaches it. On
+resume the first subscriber calls `reobserve()` with no options, which runs the
+current `fetchPolicy`. That is `cache-first` once the global `nextFetchPolicy`
+has applied, so the screen serves what the cache holds and sends nothing.
+Query objects carry no id or creation order to tell a resumed query from one
+first mounted since.
+
+**What depends on it:** the language catch-up in `src/apollo/refetchEvents.ts`.
+After a switch, every navigation refetches only the active queries without the
+current language's stamp, because a refetch at the switch cannot reach a paused
+screen, and nor can a remount for a query that sets `cache-first` itself.
+
 ### Google ML Kit's iOS pods have no arm64-simulator slice
 
 Verified 2026-09-30 against `MLKitTextRecognition` 7.0.0 (the pod behind

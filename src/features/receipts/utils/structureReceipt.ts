@@ -8,6 +8,7 @@ import {
   withoutAmount,
   type ReceiptLineReading,
 } from './readReceiptLine';
+import { toCents } from './money';
 
 export type ParsedLineKind =
   | 'item'
@@ -67,8 +68,6 @@ const KIND_OF_LABEL: Record<ReceiptLineLabel, ParsedLineKind | 'detail'> = {
   header: 'other',
   other: 'other',
 };
-
-const cents = (value: number) => Math.round(value * 100);
 
 // The model copies the printed words, so a Walmart line keeps its price, its
 // codes and the flag after them at the line's end (`SH FN 2CT BK 071641180510
@@ -131,10 +130,10 @@ function detailTarget(
   );
   const { quantity, unitPrice } = detail.reading;
   if (quantity !== undefined && unitPrice !== undefined) {
-    const expected = cents(quantity * unitPrice);
+    const expected = toCents(quantity * unitPrice);
     const byArithmetic = nearby.find(
       line =>
-        line.lineTotal !== undefined && cents(line.lineTotal) === expected,
+        line.lineTotal !== undefined && toCents(line.lineTotal) === expected,
     );
     if (byArithmetic) return byArithmetic;
   }
@@ -253,7 +252,7 @@ export function structureReceipt(
     const total =
       row.lineTotal ??
       (quantity !== undefined && unitPrice !== undefined
-        ? cents(quantity * unitPrice) / 100
+        ? toCents(quantity * unitPrice) / 100
         : undefined);
     if (
       row.kind !== 'item' ||

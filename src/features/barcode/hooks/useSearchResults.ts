@@ -245,8 +245,9 @@ export const useSearchResults = (
   } = useQuery(ItemBySkuFilterDocument, {
     variables: { sku: barcode, skuStoreId: undefined, pantry: pantryId },
     // Skip SKU search while UPC is loading OR if UPC found a result
-    // Must include upcLoading to prevent using stale upcItem from previous scan
-    skip: upcLoading || !!upcItem,
+    // Must include upcLoading to prevent using stale upcItem from previous scan.
+    // A failed UPC lookup is not a miss, so an empty SKU answer never follows it.
+    skip: upcLoading || !!upcItem || !!upcError,
     fetchPolicy: 'network-only', // As the UPC lookup above.
     refetchOn: false,
   });

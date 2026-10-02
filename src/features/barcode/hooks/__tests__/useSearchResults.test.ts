@@ -458,9 +458,14 @@ describe('useSearchResults', () => {
     });
 
     it('keeps the new-item form closed when the lookup fails', async () => {
+      // The SKU lookup would answer, with nothing: it must not be asked.
+      const sku = recordMock(ItemBySkuFilterDocument, {
+        data: { items: { __typename: 'ItemConnection', edges: [] } },
+      });
       renderHookWithApollo(() => useSearchResults('1234567890'), {
         operationMocks: [
           upcErrorMock(new NetworkRequestError('Network request failed')),
+          sku.mock,
         ],
       });
 
@@ -469,8 +474,12 @@ describe('useSearchResults', () => {
           t('errors.networkError'),
         ),
       );
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
       // Offline is not "unknown": the product may exist, so nothing offers
       // to create it.
+      expect(sku.fired).toEqual([]);
       expect(mockShowBottomSheet).not.toHaveBeenCalled();
     });
 

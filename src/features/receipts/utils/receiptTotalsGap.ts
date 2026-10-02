@@ -1,12 +1,11 @@
 import type { ParsedReceipt, ParsedReceiptLine } from './structureReceipt';
+import { toCents } from './money';
 
 /** What the read lines add up to, against what the receipt printed for them. */
 export interface ReceiptTotalsGap {
   counted: number;
   printed: number;
 }
-
-const cents = (value: number) => Math.round(value * 100);
 
 // A subtotal or total read as 0.00 is a misread (a skewed photo puts the tax's
 // 0.00 on the subtotal's row), never a figure to compare against.
@@ -37,17 +36,17 @@ export function receiptTotalsGap(
     ? 0
     : lines
         .filter(line => line.kind === 'tax' && line.index < end.index)
-        .reduce((sum, line) => sum + cents(line.lineTotal ?? 0), 0);
-  const printed = cents(end.lineTotal) - tax;
+        .reduce((sum, line) => sum + toCents(line.lineTotal ?? 0), 0);
+  const printed = toCents(end.lineTotal) - tax;
 
   let counted = 0;
   for (const line of lines) {
     if (line.index < firstItem.index || line.index >= end.index) continue;
     if (line.lineTotal === undefined) continue;
-    if (line.kind === 'discount') counted -= Math.abs(cents(line.lineTotal));
+    if (line.kind === 'discount') counted -= Math.abs(toCents(line.lineTotal));
     // A fee or deposit reads as `other`, and the subtotal includes it.
     else if (line.kind === 'item' || line.kind === 'other') {
-      counted += cents(line.lineTotal);
+      counted += toCents(line.lineTotal);
     }
   }
 
