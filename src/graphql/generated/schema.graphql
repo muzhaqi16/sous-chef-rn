@@ -618,11 +618,14 @@ enum AllergenSeverity {
 
 """Input for filtering analytics queries by time period"""
 input AnalyticsFilters {
-  """Custom date range - overrides dateRange if both provided"""
+  """
+  Custom date range - overrides dateRange if both provided. Runs forward and
+  spans at most 366 days.
+  """
   customRange: DateRangeInput
   """Predefined date range (TODAY, LAST_WEEK, LAST_MONTH, etc.)"""
   dateRange: DateRange
-  """Limit for top items lists (default: 10)"""
+  """Limit for top items lists (default: 10, at most 50)"""
   topItemsLimit: Int
 }
 
@@ -2316,9 +2319,15 @@ input CreateReceiptParseInput {
   """
   The receipt's recognized text, one string per photographed page. Payment,
   card and contact details are removed on the server before anything is
-  stored or read.
+  stored or read. Send pages or photos, not both.
   """
-  pages: [String!]!
+  pages: [String!]
+  """
+  The receipt's photos, 1 to 4, for a phone that cannot read the text: keys
+  from createImageUploadUrl with purpose RECEIPT_PHOTO. The server reads them
+  and deletes them, whatever the outcome. Send pages or photos, not both.
+  """
+  photos: [String!]
 }
 
 type CreateReceiptParsePayload {
@@ -4889,6 +4898,10 @@ enum ImageUploadPurpose {
   PANTRY_ITEM_PHOTO
   PROFILE_AVATAR
   PROFILE_COVER
+  """
+  A receipt photo for createReceiptParse: at most 4 MB and 4000 px on its longest edge, never served, deleted once parsed
+  """
+  RECEIPT_PHOTO
 }
 
 """Input for ingredient usage when marking recipe as cooked"""
@@ -7807,9 +7820,10 @@ type Mutation {
   """Create a new purchase record."""
   createPurchase(input: CreatePurchaseInput!): CreatePurchaseResult!
   """
-  Queue a receipt's text for the server to read into lines, for a phone
-  without on-device parsing. Returns at once with the parse PENDING; poll
-  receiptParse until it is not. Each user has a daily number of parses.
+  Queue a receipt's text, or its photos, for the server to read into lines,
+  for a phone without on-device parsing. Returns at once with the parse
+  PENDING; poll receiptParse until it is not. Each user has a daily number of
+  parses, and a smaller one of photo parses.
   """
   createReceiptParse(input: CreateReceiptParseInput!): CreateReceiptParseResult!
   """
@@ -11544,8 +11558,9 @@ type Query {
   ): [ItemSuggestion!]!
   """
   Catalog candidates for each line of a receipt, whichever parser read it:
-  the printed code first, then the store's own item number, then scored
-  search. Reads only; confirming a match is the intake mutations' job.
+  the printed code first, then a receipt alias at the receipt's chain, then
+  the store's own item number, then scored search. Reads only; send the items
+  the user confirmed to recordReceiptMatches.
   """
   resolveReceiptLines(input: ResolveReceiptLinesInput!): ResolveReceiptLinesPayload!
   """
@@ -11939,11 +11954,15 @@ type ReceiptLineResolution {
 
 """How sure a receipt line's best candidate is."""
 enum ReceiptMatchConfidence {
-  """A printed code or the store's own item number named the item"""
+  """
+  A printed code, the store's own item number, this household's alias, or an alias many households share named the item
+  """
   HIGH
   """Search found candidates, but none clearly ahead: ask the user"""
   LOW
-  """Search found one candidate clearly ahead of the rest"""
+  """
+  An alias a few households share, or search with one candidate clearly ahead of the rest
+  """
   MEDIUM
   """Nothing close enough to propose"""
   NONE
