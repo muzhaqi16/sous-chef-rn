@@ -505,11 +505,18 @@ The handler:
 request's language, but a screen paused at the switch has no active query for
 the refetch to reach, and resumes on `cache-first`
 ([probe](verified-library-behaviour.md#apollo-tears-down-a-paused-screens-query-resubscribing-reads-the-current-fetch-policy)).
-So each query is stamped with the language it was last refetched in, and after a
-real switch `languageChanged` also fires on every navigation (`onNavigation`,
-wired in `App.tsx`). A batch of only that event refetches just the active
-queries without the current stamp. No screen carries code for it, and none is
+So after a real switch `languageChanged` also fires on every navigation
+(`onNavigation`, wired in `App.tsx`; payload `switched: false`), and a batch of
+only that event refetches just the active queries not answered since the
+switch. The set is per switch, not per language: names live on shared entities,
+so a screen paused through `en` → `es` → `en` reads what the `es` screens wrote.
+A query joins it only once its refetch answers, and a catch-up waits while the
+API is unavailable. A switch before any query exists (rehydration applying the
+saved language) is not one. No screen carries code for it, and none is
 remounted.
+
+Evicting the names instead would blank every screen offline, and
+`include: 'all'` does not reach a paused screen's torn-down query.
 
 **A transient query opts out** with `refetchOn: false`: searches,
 autocompletes, analytics, conversion and join-code previews, barcode lookups,

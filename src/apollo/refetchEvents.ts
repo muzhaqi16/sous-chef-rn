@@ -54,24 +54,29 @@ export type NavigationSubscribe = (listener: () => void) => () => void;
 // Catalog names come in the request's language (`languageLink`), so a switch
 // re-reads what is on screen. A screen paused at the switch is not active, so
 // no refetch reaches it, and on resume it reads the cache: after a switch,
-// every navigation catches up on what has not been asked in this language.
-// Only a real change counts: i18next also reports a switch to the same language.
-const languageChanged = (onNavigation?: NavigationSubscribe) => () =>
-  new Observable<void>(observer => {
-    let current = getResolvedLanguage();
-    let stopNavigation: (() => void) | undefined;
-    const stopLanguage = onLanguageChanged(() => {
-      const next = getResolvedLanguage();
-      if (next === current) return;
-      current = next;
-      stopNavigation ??= onNavigation?.(() => observer.next());
-      observer.next();
+// every navigation catches up on what has not been asked since.
+// Only a real change counts: i18next also reports a switch to the same
+// language, and rehydration applies the saved one before any query exists.
+const languageChanged =
+  (client: ApolloClient, onNavigation?: NavigationSubscribe) => () =>
+    new Observable<RefetchEvents['languageChanged']>(observer => {
+      let current = getResolvedLanguage();
+      let stopNavigation: (() => void) | undefined;
+      const stopLanguage = onLanguageChanged(() => {
+        const next = getResolvedLanguage();
+        if (next === current) return;
+        current = next;
+        if (client.getObservableQueries('all').size === 0) return;
+        stopNavigation ??= onNavigation?.(() =>
+          observer.next({ switched: false }),
+        );
+        observer.next({ switched: true });
+      });
+      return () => {
+        stopLanguage();
+        stopNavigation?.();
+      };
     });
-    return () => {
-      stopLanguage();
-      stopNavigation?.();
-    };
-  });
 
 // The socket re-acks a second or two after the app returns to the foreground.
 const SETTLE_MS = 1_500;
@@ -87,34 +92,44 @@ interface PendingResync {
 const hasLiveSession = (): boolean =>
   !!useStore.getState().user?.id && !LogoutCleanup.isInLogoutProcess();
 
-/** The language each query was last re-requested in. */
-type LanguageStamps = WeakMap<ObservableQuery, string>;
+/**
+ * The queries a resync has re-asked, with an answer, since the last language
+ * switch; a switch starts a new set. Per switch, not per language: the names
+ * are shared entities, so a screen paused through `en` → `es` → `en` holds
+ * what the `es` screens wrote.
+ */
+type AskedSinceSwitch = WeakSet<ObservableQuery>;
 
 async function refetchActive(
   client: ApolloClient,
   batch: PendingResync,
-  stamps: LanguageStamps,
+  asked: AskedSinceSwitch,
 ): Promise<void> {
   if (!hasLiveSession()) return;
 
   const source = [...batch.sources].sort().join('+');
-  const language = getResolvedLanguage();
-  // A language catch-up re-asks only what has not been asked in this language;
+  // A language catch-up re-asks only what has not been asked since the switch;
   // any other trigger re-asks everything.
   const catchUp = [...batch.sources].every(name => name === 'languageChanged');
+  // Offline it would only fail: `apiReachable` re-asks what is active.
+  if (catchUp && isApiUnavailable(useStore.getState())) return;
   let refetched = 0;
   try {
     await client.refetchQueries({
       include: 'active',
       onQueryUpdated: query => {
-        const matches =
-          batch.matchers.some(matcher => matcher(query)) &&
-          !(catchUp && stamps.get(query) === language);
-        if (matches) {
-          refetched++;
-          stamps.set(query, language);
+        if (
+          !batch.matchers.some(matcher => matcher(query)) ||
+          (catchUp && asked.has(query))
+        ) {
+          return false;
         }
-        return matches;
+        refetched++;
+        // Asked once answered: a failed ask is caught up on a later navigation.
+        return query.refetch().then(result => {
+          if (!result.error) asked.add(query);
+          return result;
+        });
       },
     });
   } catch (error) {
@@ -137,7 +152,7 @@ async function refetchActive(
  */
 export const createRefetchEventManager = (): RefetchEventManager => {
   let pending: PendingResync | null = null;
-  const stamps: LanguageStamps = new WeakMap();
+  let asked: AskedSinceSwitch = new WeakSet();
   let settleTimer: ReturnType<typeof setTimeout> | undefined;
   // From the settle timer firing until its refetch settles.
   let running = false;
@@ -163,17 +178,18 @@ export const createRefetchEventManager = (): RefetchEventManager => {
     await queueManager.whenIdle().catch(() => {});
     const batch = takePending();
     // A throw must still end the run, or every later trigger waits on it.
-    if (batch) await refetchActive(client, batch, stamps).catch(() => {});
+    if (batch) await refetchActive(client, batch, asked).catch(() => {});
     running = false;
     if (pending) settleThenResync(client, pending);
   };
 
   // Returns synchronously, as a handler must; the waits are `resync`'s.
-  const coalescingHandler: RefetchEventManager.EventHandler = ({
-    client,
-    source,
-    matchesRefetchOn,
-  }) => {
+  const coalescingHandler: RefetchEventManager.EventHandler = context => {
+    const { client, source, matchesRefetchOn } = context;
+    // A run in flight keeps the set it started with: it asked in the old language.
+    if (context.source === 'languageChanged' && context.payload.switched) {
+      asked = new WeakSet();
+    }
     pending ??= {
       sources: new Set(),
       matchers: [],
@@ -202,5 +218,8 @@ export const connectResyncSources = (
   manager.setEventSource('appForeground', appForeground);
   manager.setEventSource('apiReachable', apiReachable);
   manager.setEventSource('wsReconnected', wsReconnected);
-  manager.setEventSource('languageChanged', languageChanged(onNavigation));
+  manager.setEventSource(
+    'languageChanged',
+    languageChanged(client, onNavigation),
+  );
 };

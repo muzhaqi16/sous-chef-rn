@@ -1559,9 +1559,9 @@ Query objects carry no id or creation order to tell a resumed query from one
 first mounted since.
 
 **What depends on it:** the language catch-up in `src/apollo/refetchEvents.ts`.
-After a switch, every navigation refetches only the active queries without the
-current language's stamp, because a refetch at the switch cannot reach a paused
-screen, and nor can a remount for a query that sets `cache-first` itself.
+After a switch, every navigation refetches only the active queries not answered
+since it, because a refetch at the switch cannot reach a paused screen, and nor
+can a remount for a query that sets `cache-first` itself.
 
 ### Google ML Kit's iOS pods have no arm64-simulator slice
 

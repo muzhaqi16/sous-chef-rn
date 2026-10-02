@@ -12,7 +12,8 @@ declare module '@apollo/client' {
     appForeground: void;
     apiReachable: void;
     wsReconnected: void;
-    languageChanged: void;
+    /** `switched` at the switch itself; not on a navigation after one. */
+    languageChanged: { switched: boolean };
   }
 
   namespace ApolloClient {

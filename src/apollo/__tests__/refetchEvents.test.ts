@@ -130,6 +130,8 @@ const triggers = {
 };
 
 let requests: string[];
+/** Operations the server fails with a 503 until cleared. */
+let failing: Set<string>;
 let heldResponses: Array<() => void> | null;
 let client: ApolloClient;
 
@@ -166,6 +168,7 @@ beforeEach(async () => {
     apiReachable: true,
   });
   requests = [];
+  failing = new Set();
   heldResponses = null;
   client = new ApolloClient({
     cache: new InMemoryCache(),
@@ -174,6 +177,10 @@ beforeEach(async () => {
       operation =>
         new Observable(observer => {
           requests.push(operation.operationName ?? '');
+          if (failing.has(operation.operationName ?? '')) {
+            observer.error(new Error('503 Service Unavailable'));
+            return undefined;
+          }
           const respond = () => {
             observer.next({
               data: { list: 'value', search: 'value', detail: 'value' },
@@ -321,6 +328,70 @@ describe('resync', () => {
 
     it('asks nothing on navigation before a real switch', async () => {
       void changeLanguage(getResolvedLanguage());
+      navigate();
+      await pastTheWindow();
+
+      expect(requests).toEqual([]);
+      expect(navigationListeners.size).toBe(0);
+    });
+
+    // Per switch, not per language: the names are shared entities, so the
+    // screens open in `es` wrote theirs over what the paused one reads.
+    it('re-asks a screen paused through a switch and back', async () => {
+      const paused = client.watchQuery({ query: DetailQuery });
+      const first = paused.subscribe(() => {});
+      triggers.appForeground();
+      await pastTheWindow();
+      first.unsubscribe();
+
+      triggers.languageChanged();
+      await pastTheWindow();
+      triggers.languageChanged();
+      await pastTheWindow();
+      requests = [];
+
+      watchers.push(paused.subscribe(() => {}));
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['DetailForResync']);
+    });
+
+    it('re-asks on the next navigation a query whose catch-up failed', async () => {
+      failing.add('ListForResync');
+      triggers.languageChanged();
+      await pastTheWindow();
+      expect(requests).toEqual(['ListForResync']);
+
+      failing.clear();
+      requests = [];
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['ListForResync']);
+
+      requests = [];
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual([]);
+    });
+
+    it('waits for the API to catch up', async () => {
+      useStore.setState({ apiReachable: false });
+      triggers.languageChanged();
+      navigate();
+      await pastTheWindow();
+
+      expect(requests).toEqual([]);
+    });
+
+    // Rehydration applies the saved language after the sources subscribe.
+    it('ignores a switch made before any query exists', async () => {
+      watchers.splice(0).forEach(watcher => watcher.unsubscribe());
+      triggers.languageChanged();
+      await pastTheWindow();
+
+      watch(ListQuery);
+      await elapse(0);
+      requests = [];
       navigate();
       await pastTheWindow();
 
