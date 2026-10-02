@@ -14,6 +14,12 @@
  *
  * Each account parses at most RECEIPT_PARSE_DAILY_LIMIT (30) receipts a day, so
  * a corpus over 30 needs a second account.
+ *
+ * With `--labels <dir>` (what `device-labels.mjs` wrote) it runs the on-device
+ * half instead (design.md § D6 of the `on-device-receipt-recognition` change),
+ * writing to `<dir>/pipeline/`. As in `parseReceiptOnDevice`, a receipt the
+ * model failed, was too slow for or left unusable goes to the server, so it
+ * keeps the server run's result: run without `--labels` first.
  */
 import { createId } from '@paralleldrive/cuid2';
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -21,20 +27,33 @@ import { register } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
 
 register('./resolveAppAliases.mjs', import.meta.url);
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const UTILS = join(resolve(HERE, '../..'), 'src/features/receipts/utils');
+const { values: options, positionals } = parseArgs({
+  options: { labels: { type: 'string' } },
+  allowPositionals: true,
+});
 const corpus =
-  process.argv[2] ?? join(tmpdir(), 'sous-chef-receipt-corpus', 'corpus');
-const api = process.argv[3] ?? 'http://localhost:4000/graphql';
-const outDir = join(corpus, 'pipeline');
+  positionals[0] ?? join(tmpdir(), 'sous-chef-receipt-corpus', 'corpus');
+const api = positionals[1] ?? 'http://localhost:4000/graphql';
+const labelsDir = options.labels;
+const outDir = join(labelsDir ?? corpus, 'pipeline');
 mkdirSync(outDir, { recursive: true });
 
 const { fromServerReceipt } = await import(`${UTILS}/serverReceipt.ts`);
 const { receiptReviewLines } = await import(`${UTILS}/receiptReviewLines.ts`);
 const { receiptTotalsGap } = await import(`${UTILS}/receiptTotalsGap.ts`);
+const { isUsableReceipt, linesThroughTotal, structureReceipt } = await import(
+  `${UTILS}/structureReceipt.ts`
+);
+const { LABELLING_TIMEOUT_MS } = await import(
+  `${UTILS}/onDeviceStructuring.ts`
+);
+const readJson = path => JSON.parse(readFileSync(path, 'utf8'));
 
 const accounts = (process.env.RECEIPT_EVAL_ACCOUNTS ?? '')
   .split(',')
@@ -144,7 +163,8 @@ for (const account of accounts) {
 const files = readdirSync(corpus)
   .filter(name => name.endsWith('.json'))
   .sort();
-if (files.length > tokens.length * PER_ACCOUNT) {
+// A device run parses nothing on the server, so one account does.
+if (!labelsDir && files.length > tokens.length * PER_ACCOUNT) {
   throw new Error(
     `${files.length} receipts need ${Math.ceil(
       files.length / PER_ACCOUNT,
@@ -169,53 +189,30 @@ const parseOf = async (token, pages) => {
   return { ...parse, ms: Date.now() - started };
 };
 
-for (const [at, file] of files.entries()) {
-  const receipt = JSON.parse(readFileSync(join(corpus, file), 'utf8'));
-  const token = tokens[Math.floor(at / PER_ACCOUNT)];
-  const pageLines = receipt.pages.flatMap(page => page.split('\n'));
-  const leaks = pageLines.filter(
-    line => PAYMENT_FIELD.test(line) || CARD_TAIL.test(line),
-  );
+const leaksIn = lines =>
+  lines.filter(line => PAYMENT_FIELD.test(line) || CARD_TAIL.test(line));
 
-  const parse = await parseOf(token, receipt.pages);
-  const result = {
-    id: receipt.id,
-    group: receipt.group,
-    leaks,
-    parse: { status: parse.status, ms: parse.ms },
-  };
+const headerOf = receipt =>
+  (receipt.pages[0] ?? '').split('\n').slice(0, HEADER_LINES).join('\n');
 
-  if (parse.status === 'PARSED' && parse.receipt) {
-    const parsed = fromServerReceipt(parse.receipt);
-    const review = receiptReviewLines(parsed);
-    const kinds = {};
-    for (const line of parse.receipt.lines) {
-      kinds[line.kind] = (kinds[line.kind] ?? 0) + 1;
-    }
-    result.parse.warnings = parse.warnings.map(warning => warning.code);
-    result.parse.kinds = kinds;
-    result.totalsGap = receiptTotalsGap(parsed);
-
-    const started = Date.now();
-    const { resolveReceiptLines: resolved } = await graphql(token, RESOLVE, {
-      input: {
-        merchantHeader:
-          (receipt.pages[0] ?? '')
-            .split('\n')
-            .slice(0, HEADER_LINES)
-            .join('\n') || undefined,
-        parsedBy: 'SERVER',
-        lines: review.map(line => ({
-          clientId: String(line.index),
-          text: line.printed,
-          ...(line.code ? { code: line.code } : {}),
-        })),
-      },
-    });
-    result.resolveMs = Date.now() - started;
-    result.store = resolved.store?.id ?? null;
-    const byClient = new Map(resolved.lines.map(line => [line.clientId, line]));
-    result.items = review.map(line => {
+const resolveLines = async (token, receipt, review, parsedBy) => {
+  const started = Date.now();
+  const { resolveReceiptLines: resolved } = await graphql(token, RESOLVE, {
+    input: {
+      merchantHeader: headerOf(receipt) || undefined,
+      parsedBy,
+      lines: review.map(line => ({
+        clientId: String(line.index),
+        text: line.printed,
+        ...(line.code ? { code: line.code } : {}),
+      })),
+    },
+  });
+  const byClient = new Map(resolved.lines.map(line => [line.clientId, line]));
+  return {
+    resolveMs: Date.now() - started,
+    store: resolved.store?.id ?? null,
+    items: review.map(line => {
       const match = byClient.get(String(line.index));
       return {
         printed: line.printed,
@@ -229,17 +226,88 @@ for (const [at, file] of files.entries()) {
           candidate => candidate.item.name,
         ),
       };
-    });
+    }),
+  };
+};
+
+const serverRun = async (token, receipt) => {
+  const parse = await parseOf(token, receipt.pages);
+  const result = {
+    id: receipt.id,
+    group: receipt.group,
+    leaks: leaksIn(receipt.pages.flatMap(page => page.split('\n'))),
+    parse: { status: parse.status, by: 'SERVER', ms: parse.ms },
+  };
+  if (parse.status !== 'PARSED' || !parse.receipt) return result;
+
+  const parsed = fromServerReceipt(parse.receipt);
+  const kinds = {};
+  for (const line of parse.receipt.lines) {
+    kinds[line.kind] = (kinds[line.kind] ?? 0) + 1;
   }
+  result.parse.warnings = parse.warnings.map(warning => warning.code);
+  result.parse.kinds = kinds;
+  result.totalsGap = receiptTotalsGap(parsed);
+  const review = receiptReviewLines(parsed);
+  return {
+    ...result,
+    ...(await resolveLines(token, receipt, review, 'SERVER')),
+  };
+};
+
+const deviceRun = async (token, receipt, file) => {
+  const labels = readJson(join(labelsDir, file));
+  const lines = linesThroughTotal(
+    receipt.pages.flatMap(page => page.split('\n')),
+  );
+  const parsed = labels.error ? null : structureReceipt(lines, labels);
+  const fallback = !parsed
+    ? 'failed'
+    : labels.seconds * 1000 > LABELLING_TIMEOUT_MS
+    ? 'too slow'
+    : isUsableReceipt(parsed, labels)
+    ? null
+    : 'unusable';
+  if (fallback) {
+    return { ...readJson(join(corpus, 'pipeline', file)), fallback };
+  }
+
+  const review = receiptReviewLines(parsed);
+  const kinds = {};
+  for (const line of parsed.lines) {
+    const kind = line.kind.toUpperCase();
+    kinds[kind] = (kinds[kind] ?? 0) + 1;
+  }
+  return {
+    id: receipt.id,
+    group: receipt.group,
+    // Only the header and the review's lines leave the phone.
+    leaks: leaksIn([
+      ...headerOf(receipt).split('\n'),
+      ...review.map(line => line.printed),
+    ]),
+    parse: { status: 'PARSED', by: 'DEVICE', ms: labels.seconds * 1000, kinds },
+    totalsGap: receiptTotalsGap(parsed),
+    ...(await resolveLines(token, receipt, review, 'DEVICE')),
+  };
+};
+
+for (const [at, file] of files.entries()) {
+  const receipt = readJson(join(corpus, file));
+  const token = tokens[Math.floor(at / PER_ACCOUNT) % tokens.length];
+  const result = labelsDir
+    ? await deviceRun(token, receipt, file)
+    : await serverRun(token, receipt);
 
   writeFileSync(join(outDir, file), `${JSON.stringify(result, null, 2)}\n`);
   console.log(
     [
       receipt.id.slice(0, 44).padEnd(44),
-      String(parse.status).padEnd(11),
+      String(result.parse.status).padEnd(11),
       `items ${String(result.items?.length ?? 0).padStart(2)}`,
-      `parse ${Math.round(parse.ms / 1000)}s`,
-      leaks.length ? `LEAKS ${leaks.length}` : '',
+      `parse ${Math.round(result.parse.ms / 1000)}s`,
+      result.fallback ? `server (${result.fallback})` : '',
+      result.leaks.length ? `LEAKS ${result.leaks.length}` : '',
     ].join('  '),
   );
 }

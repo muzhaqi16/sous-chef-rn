@@ -1637,6 +1637,8 @@ Timings for 10 lines:
 - in the app on the simulator: 8.0 s cold (model load), then 4.0–5.4 s;
 - the full `parseReceiptOnDevice` on Kroger: 9.2 s.
 
+Time grows with length: over the 32-receipt corpus in the app on the simulator (2026-10-02), labelling took a median 0.55 s per labelled line (0.3–0.95 s). 5 receipts of 48–79 lines ran past the 20 s timeout, the longest taking 74 s. The module's labels there matched `label.swift`'s on the host for all 681 lines, so the corpus's labels stand for the simulator's; only the timing differs.
+
 Phones will differ, so the timeout is set from device runs (`on-device-receipt-recognition` task 5.1).
 
 Re-check: connect the debugger (`argent-metro-debugger`) and evaluate

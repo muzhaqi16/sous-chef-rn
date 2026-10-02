@@ -4,7 +4,10 @@ import DocumentScanner, {
 } from 'react-native-document-scanner-plugin';
 import { TextRecognition, type RecognizedPage } from '#/native/TextRecognition';
 import { ReceiptStructuring } from '#/native/ReceiptStructuring';
-import { onDeviceStructuring } from '../../utils/onDeviceStructuring';
+import {
+  LABELLING_TIMEOUT_MS,
+  onDeviceStructuring,
+} from '../../utils/onDeviceStructuring';
 import { errorService } from '#/services/errorService';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
 import { toDateKey } from '#/utils/dateUtils';
@@ -483,7 +486,7 @@ describe('useReceiptScan', () => {
 
       const scanning = result.current.scan();
       await act(async () => {
-        await jest.advanceTimersByTimeAsync(20_000);
+        await jest.advanceTimersByTimeAsync(LABELLING_TIMEOUT_MS);
         await scanning;
       });
 

@@ -4,6 +4,9 @@
  *
  *   node scripts/receipt-corpus/pipeline-report.mjs <corpus-dir> <judgements.json>
  *
+ * For a device run, pass the `--labels` dir: its receipts are split by the
+ * parser that read them (design.md § D6 of `on-device-receipt-recognition`).
+ *
  * `judgements.json` maps a receipt id to one entry per review line, in order:
  * `{ "product": false }` for a line that is not a bought product (a total,
  * a fee, a header), else `{ "product": true, "best": true | false }` — whether
@@ -14,7 +17,9 @@ import { join } from 'node:path';
 
 const [corpus, judgementsPath] = process.argv.slice(2);
 if (!corpus || !judgementsPath) {
-  throw new Error('usage: pipeline-report.mjs <corpus-dir> <judgements.json>');
+  throw new Error(
+    'usage: pipeline-report.mjs <corpus-dir | labels-dir> <judgements.json>',
+  );
 }
 const judgements = JSON.parse(readFileSync(judgementsPath, 'utf8'));
 const dir = join(corpus, 'pipeline');
@@ -39,10 +44,10 @@ const t = {
   nonItemLines: 0,
   nonItemInReview: 0,
 };
-const parseMs = [];
 const resolveMs = [];
 // D8 is about grocery chains; the Commons set also holds other shops.
 const byGroup = {};
+const byParser = {};
 
 for (const file of readdirSync(dir).filter(name => name.endsWith('.json'))) {
   const result = JSON.parse(readFileSync(join(dir, file), 'utf8'));
@@ -53,7 +58,6 @@ for (const file of readdirSync(dir).filter(name => name.endsWith('.json'))) {
     continue;
   }
   t.parsed++;
-  parseMs.push(result.parse.ms);
   resolveMs.push(result.resolveMs);
 
   const judged = judgements[result.id] ?? [];
@@ -81,6 +85,17 @@ for (const file of readdirSync(dir).filter(name => name.endsWith('.json'))) {
   const group = (byGroup[result.group] ??= { products: 0, correct: 0 });
   group.products += products;
   group.correct += correct;
+  // A result from before `parse.by` was recorded is the server's.
+  const parser = (byParser[result.parse.by ?? 'SERVER'] ??= {
+    receipts: 0,
+    products: 0,
+    correct: 0,
+    ms: [],
+  });
+  parser.receipts++;
+  parser.products += products;
+  parser.correct += correct;
+  parser.ms.push(result.parse.ms);
   const kinds = result.parse.kinds ?? {};
   t.nonItemLines +=
     Object.entries(kinds)
@@ -93,6 +108,7 @@ for (const file of readdirSync(dir).filter(name => name.endsWith('.json'))) {
       `products ${String(products).padStart(2)}`,
       `right ${String(correct).padStart(2)}`,
       `parse ${Math.round(result.parse.ms / 1000)}s`,
+      (result.parse.by ?? 'SERVER').toLowerCase(),
     ].join('  '),
   );
 }
@@ -117,6 +133,15 @@ Non-item lines kept out of the review:     ${
   t.nonItemLines - t.nonItemInReview
 }/${t.nonItemLines} (${pct(t.nonItemLines - t.nonItemInReview, t.nonItemLines)})
 Payment fields leaked:                     ${t.leaks}
-Median server parse: ${(median(parseMs) / 1000).toFixed(1)} s; median match: ${(
-  median(resolveMs) / 1000
-).toFixed(1)} s`);
+${Object.entries(byParser)
+  .map(
+    ([by, { receipts, products, correct, ms }]) =>
+      `Parsed by ${by.padEnd(
+        6,
+      )}  ${receipts} receipts, ${correct}/${products} (${pct(
+        correct,
+        products,
+      )}) right with no edit; median parse ${(median(ms) / 1000).toFixed(1)} s`,
+  )
+  .join('\n')}
+Median match: ${(median(resolveMs) / 1000).toFixed(1)} s`);

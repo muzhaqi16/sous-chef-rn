@@ -1,16 +1,15 @@
 import { Platform } from 'react-native';
 import { ReceiptStructuring } from '#/native/ReceiptStructuring';
-import { onDeviceStructuring } from '../utils/onDeviceStructuring';
+import {
+  LABELLING_TIMEOUT_MS,
+  onDeviceStructuring,
+} from '../utils/onDeviceStructuring';
 import {
   isUsableReceipt,
   linesThroughTotal,
   structureReceipt,
   type ParsedReceipt,
 } from '../utils/structureReceipt';
-
-// Labelling took 4–8 s for ten lines on the simulator; a long receipt on an
-// older phone takes longer. Set from device runs (tasks 5.1).
-const LABELLING_TIMEOUT_MS = 20_000;
 
 /**
  * Structures the draft's pages with the phone's own model, or answers null:
