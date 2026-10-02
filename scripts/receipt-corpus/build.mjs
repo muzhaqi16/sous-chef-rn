@@ -8,7 +8,8 @@
  *
  * The default sources are the Wikimedia Commons photos in `sources.json`,
  * downloaded and cached in the system temp dir. A private set (`"path"` in
- * place of `"file"`) builds the same way.
+ * place of `"file"`) builds the same way. A receipt's slash dates are read
+ * month first, as the US prints them, unless it says `"dateOrder": "dayFirst"`.
  *
  * `ocr.swift` and `label.swift` copy the request settings, schema and prompt of
  * `ios/SousChef/TextRecognitionModule.swift` and `ReceiptStructuringModule.swift`;
@@ -81,7 +82,10 @@ for (const source of sources) {
   ]);
   const pages = redactReceiptText(lines).map(page => page.join('\n'));
   pagesOf.set(source.id, {
-    printedOn: printedOn(lines.map(page => page.join('\n'))),
+    printedOn: printedOn(
+      lines.map(page => page.join('\n')),
+      source.dateOrder ?? 'monthFirst',
+    ),
     pages,
   });
   // What `parseReceiptOnDevice` sends the model.
@@ -164,9 +168,9 @@ async function download(file) {
 
 // The date reader keeps to the year before `today`, so an old photo is read
 // against each year in turn; the first that finds a day is the receipt's.
-function printedOn(pages) {
+function printedOn(pages, order) {
   for (let year = 1990; year <= new Date().getFullYear(); year++) {
-    const day = readReceiptDate(pages, `${year}-12-31`);
+    const day = readReceiptDate(pages, `${year}-12-31`, order);
     if (day) return day;
   }
   return null;
