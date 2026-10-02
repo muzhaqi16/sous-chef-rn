@@ -399,7 +399,7 @@ they read it.
 
 ## Lists (FlashList v2)
 
-- **`estimatedItemSize` does not exist** in FlashList 2.3.2's props, so passing it
+- **`estimatedItemSize` does not exist** in FlashList 2.3.3's props, so passing it
   is a type error. No workalike replaces it.
 - **A FlashList needs a height from its host.** Its root is `flex: 1`, so
   `flexBasis: 0`: it claims free space and contributes none. A container that
