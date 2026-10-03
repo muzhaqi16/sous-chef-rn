@@ -10,6 +10,7 @@ import { extractNodes } from '#/utils/connectionUtils';
 import { knownEntry } from '#/utils/closedEnum';
 import {
   ExternalSyncStatus,
+  RecipeRevisionStatus,
   type RecipeStatus,
 } from '#/graphql/generated/schemaTypes';
 import type { CatalogRecipeHint } from './useOpenCatalogRecipe';
@@ -54,6 +55,10 @@ export interface RecipeDisplayData {
   status?: RecipeStatus;
   /** A moderator's note on the last decision; the author's own recipes only. */
   reviewNote?: string;
+  /** The author's edit to a published recipe is waiting for review. */
+  hasPendingRevision: boolean;
+  /** Why the author's last edit to a published recipe was rejected. */
+  revisionRejectionNote?: string;
   publishedAt?: string;
   forkedFromId?: string;
   forkedFromName?: string;
@@ -104,6 +109,11 @@ function buildDisplayData(recipe: MaterializedRecipe): RecipeDisplayData {
     nutritionData: recipe.nutritionData ?? undefined,
     status: recipe.status,
     reviewNote: recipe.reviewNote ?? undefined,
+    hasPendingRevision: !!recipe.pendingRevision,
+    revisionRejectionNote:
+      recipe.latestRevision?.status === RecipeRevisionStatus.Rejected
+        ? recipe.latestRevision.reviewNote ?? undefined
+        : undefined,
     publishedAt: recipe.publishedAt ?? undefined,
     forkedFromId: recipe.forkedFromId ?? undefined,
     forkedFromName: recipe.forkedFrom?.name ?? undefined,
@@ -154,6 +164,7 @@ export function useRecipeData({
         title: hint.name,
         image: hint.imageUrl,
         ingredients: [],
+        hasPendingRevision: false,
         details: 'opening',
       }
     : null;

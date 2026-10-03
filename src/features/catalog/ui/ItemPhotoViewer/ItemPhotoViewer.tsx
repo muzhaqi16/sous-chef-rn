@@ -41,6 +41,7 @@ import {
   type ItemPhotoRef,
 } from '#features/catalog/ui/ItemPhotoCarousel';
 import { useMarkPrimaryItemImage } from '#features/catalog/hooks/useMarkPrimaryItemImage';
+import { PhotoCredit } from '#features/catalog/ui/PhotoCredit';
 import { hitSlop } from '#/theme/foundations/sizes';
 
 const MIN_SCALE = 1;
@@ -73,9 +74,9 @@ interface ItemPhotoViewerProps {
   initialIndex: number;
   onClose: () => void;
   /**
-   * The item's viewer-scoped `Item.canEdit`. Gates the "set as main photo"
-   * action, which the server refuses for anyone but the item's creator or an
-   * admin. Omitted means read-only — no affordance.
+   * `writesItemDirectly(item)`: the viewer's own private item. Gates the "set
+   * as main photo" action, which the app never takes on a public item, even for
+   * an admin. Omitted means read-only — no affordance.
    */
   canEdit?: boolean;
 }
@@ -180,6 +181,7 @@ export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
               </Text>
             )}
           </View>
+          {!!photos[index] && <CurrentPhotoCredit photoRef={photos[index]} />}
         </View>
       </GestureHandlerRootView>
     </Modal>
@@ -479,6 +481,23 @@ const PhotoCaption: React.FC<{ photoRef: ItemPhotoRef }> = ({ photoRef }) => {
       )}
     </View>
   );
+};
+
+/** The licence credit of the photo on screen; its links take taps. */
+const CurrentPhotoCredit: React.FC<{ photoRef: ItemPhotoRef }> = ({
+  photoRef,
+}) => {
+  const result = useFragment({
+    fragment: ItemPhotoCarousel_ItemPhotoFragmentDoc,
+    fragmentName: 'ItemPhotoCarousel_itemPhoto',
+    from: photoRef,
+  });
+
+  const photo: ItemPhotoCarousel_ItemPhotoFragment | null = result.complete
+    ? result.data
+    : materializedPhoto(photoRef);
+  if (!photo?.credit) return null;
+  return <PhotoCredit credit={photo.credit} overPhoto />;
 };
 
 const styles = StyleSheet.create(theme => ({

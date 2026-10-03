@@ -27,37 +27,57 @@ import { errorService } from '#/services/errorService';
 type IngredientMatch =
   MatchRecipeIngredientsToPantryQuery['matchRecipeIngredientsToPantry'][number];
 
+export type PantryStackOption = NonNullable<
+  IngredientMatch['matchedPantryItem']
+>;
+
 export interface EditableMatch {
   match: IngredientMatch;
   /** Materialized RecipeIngredient fragment (id, isOptional, unit, …). The
    *  match's `ingredient` field is a masked fragment ref; we unmask once
    *  when building the editable so consumers can read fields directly. */
   ingredient: RecipeIngredientFragment;
+  /** Every stack that could serve the ingredient, the server's pick first. */
+  stackOptions: PantryStackOption[];
+  /** The stack the deduction draws on: the server's pick until the user picks. */
+  selectedStack: PantryStackOption | null;
   adjustedQuantity: number;
   adjustedUnitId: string | null;
   isIncluded: boolean;
 }
+
+export type MatchUpdate = Partial<
+  Pick<EditableMatch, 'adjustedQuantity' | 'isIncluded' | 'selectedStack'>
+>;
 
 export interface MatchSummary {
   total: number;
   available: number;
   partial: number;
   missing: number;
+  unsure: number;
   included: number;
 }
 
-type AvailabilityStatus = 'available' | 'partial' | 'missing';
+type AvailabilityStatus = 'available' | 'partial' | 'missing' | 'unsure';
 
+/** Below this the server matched by name alone ("olives" finds "Kalamata Olives"). */
+const CONFIDENT_MATCH = 0.8;
+
+/**
+ * `unsure` is a stack found by name only: it is offered, never deducted
+ * until the user turns it on. `missing` is no stack, or an empty one.
+ */
 export function getAvailabilityStatus(
   match: IngredientMatch,
 ): AvailabilityStatus {
-  if (match.isAvailable && match.matchConfidence >= 0.8) return 'available';
-  if (
-    match.matchedPantryItem &&
-    !match.isAvailable &&
-    match.availableQuantity > 0
-  )
-    return 'partial';
+  const stack = match.matchedPantryItem;
+  if (!stack) return 'missing';
+  if (match.matchConfidence < CONFIDENT_MATCH) return 'unsure';
+  if (match.isAvailable) return 'available';
+  // `availableQuantity` is null when the recipe's unit cannot express the
+  // stack (a loaf against a pound), so what the stack holds decides these two.
+  if (stack.displayAmount.quantity > 0) return 'partial';
   return 'missing';
 }
 
@@ -126,13 +146,22 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
           );
           return null;
         }
+        const status = getAvailabilityStatus(match);
         return {
           match,
           ingredient,
+          stackOptions: match.matchedPantryItem
+            ? [match.matchedPantryItem, ...match.alternativeMatches]
+            : [],
+          selectedStack: match.matchedPantryItem,
           adjustedQuantity: match.suggestedQuantity,
           adjustedUnitId:
             match.suggestedUnit?.id ?? ingredient.unit?.id ?? null,
-          isIncluded: !ingredient.isOptional && !!match.matchedPantryItem,
+          // An empty stack would only fail the deduction; picking another
+          // stack includes the line.
+          isIncluded:
+            !ingredient.isOptional &&
+            (status === 'available' || status === 'partial'),
         };
       })
       .filter((m): m is EditableMatch => m !== null);
@@ -142,12 +171,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     return true;
   };
 
-  const updateMatch = (
-    index: number,
-    updates: Partial<
-      Pick<EditableMatch, 'adjustedQuantity' | 'adjustedUnitId' | 'isIncluded'>
-    >,
-  ) => {
+  const updateMatch = (index: number, updates: MatchUpdate) => {
     setEditableMatches(prev => {
       const next = [...prev];
       const existing = next[index];
@@ -160,12 +184,14 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
   let available = 0;
   let partial = 0;
   let missing = 0;
+  let unsure = 0;
   let included = 0;
 
   for (const em of editableMatches) {
     const status = getAvailabilityStatus(em.match);
     if (status === 'available') available++;
     else if (status === 'partial') partial++;
+    else if (status === 'unsure') unsure++;
     else missing++;
     if (em.isIncluded) included++;
   }
@@ -175,15 +201,20 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     available,
     partial,
     missing,
+    unsure,
     included,
   };
 
-  const confirmConsumption = async () => {
+  /** `cook` is what the cook entered before the review: the log records it. */
+  const confirmConsumption = async (cook?: {
+    servings: number;
+    notes?: string;
+  }) => {
     if (!recipeId || !pantryId) return;
 
     const consumptions: ConfirmedIngredientConsumptionInput[] =
       editableMatches.flatMap(em => {
-        const pantryItem = em.match.matchedPantryItem;
+        const pantryItem = em.selectedStack;
         if (!em.isIncluded || !pantryItem || em.adjustedQuantity <= 0) {
           return [];
         }
@@ -213,7 +244,14 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
       () =>
         confirmMutation({
           variables: {
-            input: { id: generateEntityId(), recipeId, pantryId, consumptions },
+            input: {
+              id: generateEntityId(),
+              recipeId,
+              pantryId,
+              consumptions,
+              servings: cook?.servings,
+              notes: cook?.notes,
+            },
           },
         }),
       {

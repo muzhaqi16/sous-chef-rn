@@ -111,6 +111,8 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.surfaceVariant,
+    // Keeps the text inside this pill, as `rowSurface` does its slots.
+    isolation: 'isolate',
     variants: {
       inline: {
         true: { flexDirection: 'row', gap: theme.spacing['2xs'] },

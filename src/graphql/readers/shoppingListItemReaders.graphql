@@ -21,6 +21,7 @@ fragment ShoppingListItemReaders on ShoppingListItem {
   item {
     id
     canEdit
+    canSuggest
     displayUnit {
       id
       name
@@ -32,6 +33,8 @@ fragment ShoppingListItemReaders on ShoppingListItem {
       url
     }
     imageUrl
+    netWeight
+    netWeightKind
     nutritionFacts {
       id
       addedSugars
@@ -54,6 +57,12 @@ fragment ShoppingListItemReaders on ShoppingListItem {
     }
     photos {
       id
+      credit {
+        license
+        licenseUrl
+        sourceUrl
+        text
+      }
       isPrimary
       perspective
       status
@@ -126,6 +135,7 @@ fragment ShoppingListItemReaders on ShoppingListItem {
     id
     name
     symbol
+    type
   }
   unitName
   updatedAt

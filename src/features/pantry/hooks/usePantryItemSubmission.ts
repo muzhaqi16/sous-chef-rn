@@ -16,12 +16,11 @@ import {
   type LocalPantryItem,
 } from '#features/pantry/cache/writeLocalPantryItem';
 import {
-  addToPantryItemsCache,
   addPantryItemLocally,
+  reconcileCreatedPantryItem,
   revertOptimisticPantryItem,
 } from '#features/pantry/cache/items';
 import { findCachedPantryItemDuplicate } from '#features/pantry/utils/pantryCacheReaders';
-import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { parseFractionalInput } from '#/utils/fractionUtils';
@@ -113,16 +112,10 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
         // body bails the React Compiler out of the whole hook.
         const clientId = variables?.input.id;
 
-        // Idempotent re-add (same cuid id) so the connection holds the
-        // authoritative server entity.
+        // The client id comes off this mutation's own variables, so
+        // overlapping creates stay correct.
         try {
-          addToPantryItemsCache(cache, pantryId, pantryItem);
-          // The re-add above dedupes BY ID, so if the server resolved the
-          // create to a different row the client cuid survives as a second,
-          // permanently unresolvable edge — tapping it 404s for the rest of
-          // the session. Read the client id off this mutation's own variables
-          // so overlapping creates stay correct.
-          adoptServerEntityId(cache, 'PantryItem', pantryItem.id, clientId);
+          reconcileCreatedPantryItem(cache, pantryId, pantryItem, clientId);
         } catch (cacheError) {
           errorService.reportError(cacheError, {
             operation: 'Cache update failed for createPantryItem:',
@@ -332,14 +325,16 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
      */
     const promptDuplicateRecovery = (existingPantryItemId: string) => {
       const restockExisting = async () => {
+        const today = todayKey();
         const settled = await settleMutation(
           () =>
             restockPantryItem({
               variables: {
-                today: todayKey(),
+                today,
                 input: {
                   id: existingPantryItemId,
                   quantity,
+                  today,
                   // Forward the purchase details the user just entered so the
                   // restock records an ItemPriceHistory observation.
                   ...(costValue !== undefined && { costPerUnit: costValue }),

@@ -70,9 +70,13 @@ export function useAppNavigation() {
       navigation.navigate('Onboarding', { screen: 'ImageCrop', params }),
 
     // ─── Tab main screens (nested under Home) ─────────────────────────────
-    toPantryMain: () => navigation.navigate('Home', { screen: 'Pantry' }),
+    // `pop`: from a modal or a pushed screen, back down to the tabs. Without
+    // it the root stack only reuses a route above the current one, so it
+    // pushes a second `Home` over the screen.
+    toPantryMain: () =>
+      navigation.navigate('Home', { screen: 'Pantry' }, { pop: true }),
     toShoppingListMain: () =>
-      navigation.navigate('Home', { screen: 'ShoppingList' }),
+      navigation.navigate('Home', { screen: 'ShoppingList' }, { pop: true }),
 
     // ─── Profile / home management ────────────────────────────────────────
     toProfile: () => navigation.navigate('Profile'),
@@ -97,8 +101,13 @@ export function useAppNavigation() {
     toDietaryProfile: () => navigation.navigate('DietaryProfile'),
     toPersonalInformation: () => navigation.navigate('PersonalInformation'),
     toAppSettings: () => navigation.navigate('AppSettings'),
+    toDataSources: () => navigation.navigate('DataSources'),
     toPerformanceDashboard: () => navigation.navigate('PerformanceDashboard'),
     toDebugInfo: () => navigation.navigate('DebugInfo'),
+    toReceiptScan: () =>
+      navigation.navigate('Receipts', { screen: 'ReceiptScan' }),
+    toReceiptReview: () =>
+      navigation.navigate('Receipts', { screen: 'ReceiptReview' }),
     toChangePassword: () => navigation.navigate('ChangePassword'),
     toAppearance: () => navigation.navigate('Appearance'),
 

@@ -83,6 +83,7 @@ describe('IngredientMatchingSheet', () => {
       shortfall: null,
       ingredient: { __typename: 'RecipeIngredient', id },
       matchedPantryItem: null,
+      alternativeMatches: [],
       suggestedUnit: null,
     },
     ingredient: {
@@ -100,6 +101,8 @@ describe('IngredientMatchingSheet', () => {
       item: null,
       unit: null,
     },
+    stackOptions: [],
+    selectedStack: null,
     adjustedQuantity: 1,
     adjustedUnitId: null,
     isIncluded: true,
@@ -109,6 +112,7 @@ describe('IngredientMatchingSheet', () => {
     available: 1,
     partial: 0,
     missing: 1,
+    unsure: 0,
     included: 2,
     total: 2,
   };
@@ -138,6 +142,19 @@ describe('IngredientMatchingSheet', () => {
     // One sentence per plural form, not a number glued to a noun label.
     expect(screen.getByText('1 available')).toBeTruthy();
     expect(screen.getByText('1 missing')).toBeTruthy();
+  });
+
+  it('counts the name-only matches waiting for a check, only when there are some', () => {
+    const { rerender } = render(<IngredientMatchingSheet {...defaultProps} />);
+    expect(screen.queryByText(/to check/)).toBeNull();
+
+    rerender(
+      <IngredientMatchingSheet
+        {...defaultProps}
+        matchSummary={{ ...matchSummary, unsure: 2 }}
+      />,
+    );
+    expect(screen.getByText('2 to check')).toBeTruthy();
   });
 
   it('renders included count', () => {

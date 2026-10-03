@@ -14,6 +14,7 @@ import {
   PantrySuggestionSource,
 } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { AddToPantrySheet } from '../AddToPantrySheet';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -125,6 +126,12 @@ describe('AddToPantrySheet', () => {
   it('renders AddItemSheet when visible', () => {
     renderWithApollo(<AddToPantrySheet {...defaultProps} />);
     expect(screen.getByTestId('add-item-sheet')).toBeTruthy();
+  });
+
+  it('offers a receipt scan, which opens the receipt scanner', () => {
+    renderWithApollo(<AddToPantrySheet {...defaultProps} />);
+    const { onReceiptPress } = sheetProps.current;
+    expect(onReceiptPress).toBe(useAppNavigation().toReceiptScan);
   });
 
   it('renders without crashing when pantryId is undefined', () => {
@@ -491,20 +498,19 @@ describe('AddToPantrySheet', () => {
       defaultUnit: { __typename: 'ItemUnitSuggestion', id: 'unit-l' },
     };
 
-    const restocked: MockFor<typeof RestockPantryItemDocument> = {
-      request: { query: RestockPantryItemDocument, variables: () => true },
-      result: {
-        data: {
-          restockPantryItem: {
-            __typename: 'RestockPantryItemPayload',
-            pantryItemUsage: {
-              __typename: 'PantryItemUsage',
-              id: 'usage-1',
-              pantryItem: { __typename: 'PantryItem', id: 'pi-1' },
-            },
-          },
+    const restockData = {
+      restockPantryItem: {
+        __typename: 'RestockPantryItemPayload',
+        pantryItemUsage: {
+          __typename: 'PantryItemUsage',
+          id: 'usage-1',
+          pantryItem: { __typename: 'PantryItem', id: 'pi-1' },
         },
       },
+    } as const;
+    const restocked: MockFor<typeof RestockPantryItemDocument> = {
+      request: { query: RestockPantryItemDocument, variables: () => true },
+      result: { data: restockData },
     };
 
     const readQuantity = (cache: ReturnType<typeof makeCache>) =>
@@ -523,9 +529,12 @@ describe('AddToPantrySheet', () => {
           },
         },
       });
+      const restock = recordMock(RestockPantryItemDocument, {
+        data: restockData,
+      });
       renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
         cache,
-        operationMocks: [create.mock, restocked],
+        operationMocks: [create.mock, restock.mock],
       });
 
       const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
@@ -539,6 +548,12 @@ describe('AddToPantrySheet', () => {
       // The point of the whole exercise: nothing was queued that the server would
       // only refuse, so there is nothing to undo on reconnect.
       expect(create.fired).toHaveLength(0);
+      // The restock carries the day it was made, which dates its default expiry.
+      const [fired] = restock.fired;
+      expect(fired?.input).toMatchObject({
+        today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      });
+      expect(fired?.input).toMatchObject({ today: fired?.today });
       expect(toastService.error).not.toHaveBeenCalled();
       // Once, not twice — the generic "Added" toast must not fire alongside it.
       expect(toastService.success).toHaveBeenCalledTimes(1);

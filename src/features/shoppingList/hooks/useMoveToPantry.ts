@@ -2,17 +2,22 @@ import type { ApolloCache } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UseMoveToPantry_WasPurchasedFragmentDoc } from './useMoveToPantry.generated';
-import type { StorageState } from '#/graphql/generated/schemaTypes';
+import type {
+  PriceSource,
+  ReceiptRefInput,
+  StorageState,
+} from '#/graphql/generated/schemaTypes';
 import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { Telemetry } from '#/services/telemetry';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { errorService } from '#/services/errorService';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import {
   addToPantryItemsCache,
   adjustPantryItemCount,
+  reconcileCreatedPantryItem,
   removeFromPantryItemsCache,
+  type PantryItemRef,
 } from '#features/pantry/cache/items';
 import type { ListCounterChange } from '#features/shoppingList/cache/connections';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -44,12 +49,22 @@ export interface MoveToPantryInput {
   notes?: string;
   /** This package's own size; omitted, the line's size or the stack's default. */
   packageSize?: { netWeight: number; netWeightUnitId: string };
+  /** The receipt it was bought on; its day and store go on the purchase and price. */
+  receipt?: ReceiptRefInput;
+  priceSource?: PriceSource;
 }
 
 interface UseMoveToPantryOptions {
   currentListId: string | undefined;
   onSuccess?: () => void;
+  /** `'none'` leaves telling the user about a refusal to the caller, via `reason`. */
+  present?: 'alert' | 'none';
 }
+
+/** What became of a move: applied or queued, or refused with the reason the user is told. */
+export type MoveToPantryOutcome =
+  | { status: 'moved' }
+  | { status: 'rejected'; reason: string };
 
 /**
  * Which filtered variant of the list's connection the row sits in. Both the
@@ -71,8 +86,9 @@ function readWasPurchased(cache: ApolloCache, itemId: string): boolean {
 }
 
 /**
- * Cache side of a move-to-pantry: add the returned `PantryItem` to the pantry's
- * connection, then drop the shopping-list row or mark it purchased and stamped.
+ * Cache side of a move-to-pantry: reconcile the returned `PantryItem` with the
+ * row written under the minted id, then drop the shopping-list row or mark it
+ * purchased and stamped.
  * Kept at module level because its value blocks (`?.`/`??`/ternary) would bail
  * the whole hook out of the React Compiler from inside the caller's try body.
  */
@@ -83,20 +99,16 @@ function applyMoveToPantryCacheUpdate(
     shoppingListItemId: string;
     removeFromList: boolean | null | undefined;
     currentListId: string | undefined;
-    pantryItem: { id: string };
+    pantryItem: PantryItemRef;
+    /** The id the move minted for the row it wrote. */
+    clientId: string | null | undefined;
   },
 ): void {
   const { pantryId, shoppingListItemId, removeFromList, currentListId } = args;
 
-  // The server may return an EXISTING row restocked rather than a new one, so
-  // the returned id can already be in the connection; the updater dedupes by id
-  // and Apollo normalizes the restocked fields onto the existing entity.
-  const addToPantryCache = createAddToParentConnectionUpdater(
-    'Pantry',
-    'itemsConnection',
-    'PantryItem',
-  );
-  addToPantryCache(cache, pantryId, args.pantryItem);
+  // A restock answers with the EXISTING row's id: the row written under the
+  // minted id goes, and the restocked fields normalize onto the existing one.
+  reconcileCreatedPantryItem(cache, pantryId, args.pantryItem, args.clientId);
 
   if (!currentListId) return;
 
@@ -136,6 +148,7 @@ function applyMoveToPantryCacheUpdate(
 export function useMoveToPantry({
   currentListId,
   onSuccess,
+  present = 'alert',
 }: UseMoveToPantryOptions) {
   const [moveShoppingItemToPantry] = useMutation(
     MoveShoppingItemToPantryDocument,
@@ -157,6 +170,7 @@ export function useMoveToPantry({
             removeFromList,
             currentListId,
             pantryItem: payload.pantryItem,
+            clientId: input.pantryItemId,
           });
         } catch (cacheError) {
           errorService.reportError(cacheError, {
@@ -182,7 +196,7 @@ export function useMoveToPantry({
   const moveToPantry = async (
     item: ShoppingListItemDisplayFragment,
     input: MoveToPantryInput,
-  ) => {
+  ): Promise<MoveToPantryOutcome> => {
     const pantryItemId = generateEntityId();
 
     // Built before the try: `?.`/`??` are value blocks, and the React Compiler
@@ -292,11 +306,15 @@ export function useMoveToPantry({
       unconfirmedCreates.confirm(pantryItemId);
     };
 
+    // Read when the user acts. A queued replay re-dates only the top-level
+    // `$today` (`prepareReplay`); `input.today` keeps this day, so a default
+    // expiry counts from the day of the move, not the day it syncs.
+    const today = todayKey();
     const settled = await settleMutation(
       () =>
         moveShoppingItemToPantry({
           variables: {
-            today: todayKey(),
+            today,
             input: {
               shoppingListItemId: item.id,
               pantryId: input.pantryId,
@@ -306,10 +324,13 @@ export function useMoveToPantry({
               actualUnitId: input.actualUnitId,
               storageState: input.storageState,
               expiresOn: input.expiresOn,
+              today,
               removeFromList: input.removeFromList,
               actualPrice: input.actualPrice,
               notes: input.notes,
               packageSize: input.packageSize,
+              receipt: input.receipt,
+              priceSource: input.priceSource,
             },
           },
         }),
@@ -317,28 +338,14 @@ export function useMoveToPantry({
         document: MoveShoppingItemToPantryDocument,
         fallback: t('errors.moveToPantryFailedRetry'),
         onFailed: revert,
+        present,
       },
     );
-    if (settled.status === 'failed') return false;
-
-    // The minted id is honoured only on the CREATE branch: a restock returns the
-    // EXISTING row's id, which makes the locally written entity a ghost. Evict it
-    // so the pantry does not show the item twice; `update` adds the server's row,
-    // and the response's pantry already states the count.
-    const serverId = appliedPayload(settled.data)?.pantryItem.id;
-    if (serverId && serverId !== pantryItemId) {
-      try {
-        // Evicted, not only unlinked: a cached row persists and a detail read finds it.
-        removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId, {
-          evictItem: true,
-        });
-        // What the local write put beside the row survives evicting it.
-        evictLocalPantryItemSeeds(client.cache, pantryItemId);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Evict superseded optimistic pantry row',
-        });
-      }
+    if (settled.status === 'failed') {
+      return {
+        status: 'rejected',
+        reason: settled.failure?.body ?? t('errors.moveToPantryFailedRetry'),
+      };
     }
 
     // The id is the server's now, so the detail screen may query it.
@@ -350,7 +357,7 @@ export function useMoveToPantry({
       remove_from_list: input.removeFromList,
     });
 
-    return true;
+    return { status: 'moved' };
   };
 
   return { moveToPantry };

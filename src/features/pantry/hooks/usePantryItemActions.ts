@@ -356,11 +356,12 @@ export function usePantryItemActions({
       }
     };
 
+    const today = todayKey();
     const settled = await settleMutation(
       () =>
         restockPantryItem({
           variables: {
-            today: todayKey(),
+            today,
             input: {
               id: itemId,
               quantity,
@@ -369,6 +370,7 @@ export function usePantryItemActions({
               costPerUnit,
               totalCost,
               expiresOn,
+              today,
               // idempotencyKey dedups the restock ledger row on replay.
               idempotencyKey: generateEntityId(),
             },

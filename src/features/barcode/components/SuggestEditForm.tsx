@@ -14,13 +14,14 @@ import {
   withScannedPack,
   type ScannedPack,
 } from '#utils/items/suggestItemChanges';
+import { writesItemDirectly } from '#domain/itemWriteAccess';
 
 interface SuggestEditFormProps {
   itemId: string;
   barcode?: string;
   format?: string;
-  /** The scanned barcode's record and pack, when the lookup found one. */
-  scan?: ScannedPack & { variationId: string };
+  /** The scanned barcode's pack, when the lookup found its record. */
+  scan?: ScannedPack;
   onClose: () => void;
 }
 
@@ -40,23 +41,17 @@ export const SuggestEditForm: React.FC<SuggestEditFormProps> = ({
   const { snapshot, loading, error, refetch } = useItemForEdit(itemId);
   const { submitEdit, loading: submitting } = useSuggestItemEdit();
 
-  // A suggestion on a scanned barcode corrects that barcode's pack, so it opens
-  // on, and is diffed against, the pack the scan showed. A direct edit writes
-  // the item, and stays on the item's own figures.
-  const targetsBarcode =
-    !!scan && !!snapshot && !snapshot.canEdit && snapshot.canSuggest;
+  // A suggestion from a scan corrects the pack the scan showed, so it opens on,
+  // and is diffed against, that pack. A direct edit writes the item, and stays
+  // on the item's own figures.
   const original =
-    snapshot && scan && targetsBarcode
+    snapshot && scan && snapshot.canSuggest
       ? withScannedPack(snapshot, scan)
       : snapshot;
 
   const handleSubmit = async (formData: AddItemSubmitPayload) => {
     if (!original) return;
-    const result = await submitEdit(
-      original,
-      formData,
-      targetsBarcode ? scan.variationId : undefined,
-    );
+    const result = await submitEdit(original, formData);
     // Keep the sheet open when there's nothing to send or the send failed, so
     // the user's edits survive and they can correct and retry.
     if (result.status !== 'failed' && result.status !== 'noChanges') {
@@ -106,7 +101,7 @@ export const SuggestEditForm: React.FC<SuggestEditFormProps> = ({
     <AddItemForm
       barcode={barcode}
       format={format}
-      mode={snapshot.canEdit ? 'directEdit' : 'edit'}
+      mode={writesItemDirectly(snapshot) ? 'directEdit' : 'edit'}
       initialData={buildInitialDataFromSnapshot(original ?? snapshot)}
       onSubmit={handleSubmit}
       onClose={onClose}

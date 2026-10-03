@@ -43,7 +43,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   initialSearchQuery = '',
 }) => {
   const { t } = useTranslation();
-  const { toBarcode } = useAppNavigation();
+  const { toBarcode, toReceiptScan } = useAppNavigation();
 
   // Details step state. The shared AddItemSheet owns which step is visible
   // (search vs details); here we only prep the inputs the details form reads.
@@ -260,6 +260,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       isMutating={false}
       onAddManually={handleAddManually}
       onScanPress={handleScanPress}
+      onReceiptPress={toReceiptScan}
       exitingItems={state.exitingItems}
       onExitComplete={handleExitComplete}
       shouldFetch={state.shouldFetch}

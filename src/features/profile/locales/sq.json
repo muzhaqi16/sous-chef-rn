@@ -197,7 +197,26 @@
     "loadingImage": "Duke ngarkuar imazhin...",
     "cropInstructions": "Mbledh gishtat për zmadhim, tërhiq për të lëvizur. Zona rrethore do të jetë fotoja jote e profilit.",
     "imageNotLoaded": "Imazhi nuk u ngarkua si duhet",
-    "cropImageFailed": "Dështoi prerja e imazhit. Provo përsëri."
+    "cropImageFailed": "Dështoi prerja e imazhit. Provo përsëri.",
+    "dataSources": {
+      "title": "Burimet e të dhënave",
+      "intro": "{{appName}} e ndërton katalogun e ushqimeve mbi këto grupe të dhënash të hapura.",
+      "visit": "Hap faqen e internetit",
+      "publicDomain": "Domen publik (vepër e qeverisë së SHBA-së).",
+      "openFoodFacts": {
+        "name": "Open Food Facts",
+        "provides": "Emrat, markat, madhësitë e paketimit dhe fotot e produkteve të skanuara.",
+        "licence": "Baza e të dhënave: Open Database License (ODbL). Fotot: Creative Commons Atribuim-Shpërndaj njësoj (CC BY-SA)."
+      },
+      "usdaFoodDataCentral": {
+        "name": "USDA FoodData Central",
+        "provides": "Vlerat ushqyese dhe të dhënat e produkteve."
+      },
+      "usdaFoodKeeper": {
+        "name": "USDA FoodKeeper",
+        "provides": "Sa kohë ruhen ushqimet në qilar, frigorifer dhe ngrirës."
+      }
+    }
   },
   "personalInformation": {
     "sectionPrivacySettings": "Cilësimet e Privatësisë",

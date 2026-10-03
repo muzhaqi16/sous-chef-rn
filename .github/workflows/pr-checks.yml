@@ -175,8 +175,10 @@ jobs:
         with:
           node-version: "22"
 
+      # Fails on a high or critical advisory, less the accepted ones listed in
+      # the script; the scheduled audit still reports those.
       - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
+        run: npm run check:audit
 
   # The bundled-secret scanner runs in the BUILD workflows, against a real
   # artifact. This exercises the scanner itself on every PR so it cannot rot

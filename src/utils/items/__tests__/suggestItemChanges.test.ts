@@ -7,7 +7,6 @@ import {
 import {
   buildInitialDataFromSnapshot,
   buildSuggestibleItemChanges,
-  splitBarcodeChanges,
   withScannedPack,
   type EditableItemSnapshot,
 } from '../suggestItemChanges';
@@ -185,7 +184,10 @@ describe('buildSuggestibleItemChanges', () => {
       }),
     );
 
-    expect(diff.changes.packageInfo).toEqual({ netWeight: 750 });
+    expect(diff.changes.packageInfo).toEqual({
+      netWeight: 750,
+      netWeightKind: NetWeightKind.Package,
+    });
   });
 
   // A unit the catalog doesn't have comes back from the picker with no unitId.
@@ -326,44 +328,6 @@ describe('buildInitialDataFromSnapshot — what a net weight measures', () => {
       expect(initial.netWeights).toBeUndefined();
     });
   }
-});
-
-// A barcode's record takes only its pack: size, what the size measures, unit
-// and brand. Anything else in the edit is the item's.
-describe('splitBarcodeChanges', () => {
-  it("sends the pack's size and brand to the barcode, the rest to the item", () => {
-    const { barcode, item } = splitBarcodeChanges({
-      name: 'Oat Milk',
-      brand: { id: 'brand-2' },
-      brandOps: { removeBrandIds: ['brand-1'] },
-      packageInfo: {
-        netWeight: 500,
-        displayUnit: { id: 'unit-g' },
-        baseDimension: BaseDimension.Mass,
-      },
-    });
-
-    expect(barcode).toEqual({
-      brand: { id: 'brand-2' },
-      packageInfo: {
-        netWeight: 500,
-        netWeightKind: NetWeightKind.Package,
-        displayUnit: { id: 'unit-g' },
-      },
-    });
-    // Replacing the barcode's brand removes nothing from the item's brands.
-    expect(item).toEqual({
-      name: 'Oat Milk',
-      packageInfo: { baseDimension: BaseDimension.Mass },
-    });
-  });
-
-  it('leaves the barcode nothing when the edit touches no pack fact', () => {
-    expect(splitBarcodeChanges({ name: 'Oat Milk' })).toEqual({
-      barcode: {},
-      item: { name: 'Oat Milk' },
-    });
-  });
 });
 
 describe('withScannedPack', () => {

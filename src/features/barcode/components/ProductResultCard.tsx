@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
@@ -11,6 +11,10 @@ import { formatQuantity } from '#utils/formatQuantity';
 import { Card } from '#components/atoms/Card';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
 import { NetWeightKind } from '#/graphql/generated/schemaTypes';
+import {
+  PhotoCredit,
+  type PhotoCreditValue,
+} from '#features/catalog/ui/PhotoCredit';
 
 interface Item {
   id: string;
@@ -24,6 +28,8 @@ interface Item {
   price?: number;
   upc: string;
   imageUrl?: string;
+  imageCredit?: PhotoCreditValue;
+  photo?: { url: string; credit?: PhotoCreditValue };
 }
 
 interface ItemCardProps {
@@ -45,7 +51,15 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
 }) => {
   const { t } = useTranslation();
   const money = useMoney();
+  const { width: windowWidth } = useWindowDimensions();
   const showActions = !!onEditItem || !!onCreateVariant;
+  // An item with photos has a `photo`; one without shows `imageUrl`, then its
+  // only image. Each carries its own credit.
+  const image =
+    item.photo ??
+    (item.imageUrl
+      ? { url: item.imageUrl, credit: item.imageCredit }
+      : undefined);
   const amount =
     item.netWeight == null
       ? null
@@ -64,12 +78,17 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
 
   return (
     <Card padding="none" style={styles.itemCard}>
-      {item.imageUrl ? (
-        <CachedImage
-          uri={item.imageUrl}
-          style={styles.itemImage}
-          displaySize={200}
-        />
+      {image ? (
+        <View style={styles.imageBlock}>
+          <CachedImage
+            uri={image.url}
+            style={styles.itemImage}
+            // `displaySize` sets the decode WIDTH: the image spans the card,
+            // which the window bounds, not its 200pt height.
+            displaySize={windowWidth}
+          />
+          {image.credit ? <PhotoCredit credit={image.credit} /> : null}
+        </View>
       ) : (
         <View style={styles.placeholderImage}>
           <Text role="body" style={styles.placeholderText}>
@@ -145,12 +164,16 @@ const styles = StyleSheet.create(theme => ({
   itemCard: {
     padding: theme.spacing.lg,
   },
+  imageBlock: {
+    alignItems: 'flex-end',
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.md,
+  },
   itemImage: {
     width: '100%',
     height: 200,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-    marginBottom: theme.spacing.md,
   },
   placeholderImage: {
     width: '100%',

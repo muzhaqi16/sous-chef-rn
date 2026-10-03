@@ -5,7 +5,7 @@ import { View, ScrollView } from 'react-native';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
-import { openWebUrl } from '#features/recipes/utils/externalUrl';
+import { openWebUrl } from '#utils/externalUrl';
 import {
   Pressable,
   SuccessActivityIndicator,
@@ -145,6 +145,7 @@ const RecipeDetailScreen: React.FC = () => {
     markingAsCooked,
     handleMarkAsCooked,
     handleSkipReview,
+    handleConfirmReview,
     ingredientMatching,
     showFolderPicker,
     setShowFolderPicker,
@@ -491,6 +492,8 @@ const RecipeDetailScreen: React.FC = () => {
           tags={displayData.tags}
           status={displayData.status}
           reviewNote={displayData.reviewNote}
+          hasPendingRevision={displayData.hasPendingRevision}
+          revisionRejectionNote={displayData.revisionRejectionNote}
         />
 
         {!!isSaved && (
@@ -657,7 +660,7 @@ const RecipeDetailScreen: React.FC = () => {
         editableMatches={ingredientMatching.editableMatches}
         matchSummary={ingredientMatching.matchSummary}
         onUpdate={ingredientMatching.updateMatch}
-        onConfirm={ingredientMatching.confirmConsumption}
+        onConfirm={handleConfirmReview}
         onSkip={handleSkipReview}
         onClose={ingredientMatching.closeSheet}
         confirmLoading={ingredientMatching.confirmLoading}

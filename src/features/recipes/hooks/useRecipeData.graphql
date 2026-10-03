@@ -15,6 +15,16 @@ fragment useRecipeData_recipe on Recipe {
   isPublished
   publishedAt
   reviewNote
+  # The author's edit to a PUBLISHED recipe, held for review while the recipe
+  # stays live; both are null for anyone but the author.
+  pendingRevision {
+    id
+  }
+  latestRevision {
+    id
+    status
+    reviewNote
+  }
   forkedFromId
   forkedFrom {
     id

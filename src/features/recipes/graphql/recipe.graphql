@@ -468,6 +468,10 @@ mutation CreateShoppingListItemFromRecipeIngredient(
   }
 }
 
+# `matchConfidence`: 1 the ingredient's own item, 0.9 another item under its
+# concept, 0.7 a whole-word name match (only for an ingredient with no catalog
+# item). The pick and up to three `alternativeMatches` come in the order a cook
+# draws them, so an empty stack is last.
 query MatchRecipeIngredientsToPantry(
   $pantryId: ID!
   $recipeId: ID!
@@ -493,6 +497,22 @@ query MatchRecipeIngredientsToPantry(
       symbol
     }
     matchedPantryItem {
+      id
+      itemName
+      unit {
+        id
+        name
+        symbol
+      }
+      displayAmount {
+        quantity
+        unit {
+          id
+          symbol
+        }
+      }
+    }
+    alternativeMatches {
       id
       itemName
       unit {

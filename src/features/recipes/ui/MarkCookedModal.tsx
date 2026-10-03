@@ -105,7 +105,6 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
         onCancel={onClose}
         onConfirm={handleConfirm}
         confirmLabel={t('markCookedModal.markCooked')}
-        confirmColor="success"
         confirmDisabled={!!servingsError}
       />
 

@@ -1,0 +1,94 @@
+# The scan lookups: a barcode first, then the same code as a store SKU, by
+# `lookup`, so both read the same fields.
+
+# A scan reports the scanned barcode's own pack: `netWeight`, `netWeightKind`,
+# `displayUnit` and `variationBrand` are that barcode's, never another pack's.
+# An add names `matchedVariation.id` to store exactly those facts.
+query ItemByLookup($lookup: ItemLookupInput!, $pantry: ID) {
+  items(filters: { lookup: $lookup }, first: 1) {
+    edges {
+      cursor
+      node {
+        id
+        imageUrl
+        imageCredit {
+          text
+          license
+          licenseUrl
+          sourceUrl
+        }
+        # The card shows the photo full-width, and `imageUrl` is its thumbnail:
+        # the card takes the first photo (gallery order leads with the primary)
+        # at its original size, with its credit.
+        photos {
+          id
+          url
+          credit {
+            text
+            license
+            licenseUrl
+            sourceUrl
+          }
+        }
+        name
+        description
+        netWeight
+        primaryUpc
+        type
+        # Together these decide whether the card offers an edit action at all,
+        # and which wording it uses (`writesItemDirectly`). canEdit is
+        # viewer-scoped (the item's creator and admins); canSuggest is
+        # structural (active PUBLIC catalog items). Both false means read-only —
+        # a scan can surface an item you may not touch.
+        canEdit
+        canSuggest
+        storageState
+        shelfLifeDays
+        shelfLifeOpenedDays
+        tags
+        netWeightKind
+        displayUnit {
+          id
+          name
+          symbol
+        }
+        # The unit an add naming no unit counts in, for the local row.
+        trackingUnit(pantry: $pantry) {
+          id
+          name
+          symbol
+          type
+          displayAsFraction
+        }
+        categories {
+          id
+          isPrimary
+          category {
+            id
+            name
+            type
+          }
+        }
+        units {
+          id
+          isDefault
+          unitId
+        }
+        variationBrand {
+          id
+          name
+        }
+        matchedVariation {
+          id
+          upc
+          source
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+}

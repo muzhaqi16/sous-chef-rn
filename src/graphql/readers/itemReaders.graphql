@@ -32,14 +32,22 @@ fragment ItemReaders on Item {
     name
     symbol
   }
+  imageCredit {
+    license
+    licenseUrl
+    sourceUrl
+    text
+  }
   images {
     id
     kind
     url
   }
   imageUrl
+  level
   matchedVariation {
     id
+    source
     upc
   }
   name
@@ -67,6 +75,12 @@ fragment ItemReaders on Item {
   }
   photos {
     id
+    credit {
+      license
+      licenseUrl
+      sourceUrl
+      text
+    }
     isPrimary
     perspective
     status

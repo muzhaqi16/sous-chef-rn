@@ -31,6 +31,7 @@ import { totalFromUnitPrice } from '#features/shoppingList/utils/purchasePrice';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { writesItemDirectly } from '#domain/itemWriteAccess';
 
 type RouteParams = {
   listId: string;
@@ -397,7 +398,7 @@ export const ShoppingListItemDetail: React.FC<
           photos={itemPhotos}
           initialIndex={viewerIndex ?? 0}
           onClose={() => setViewerIndex(null)}
-          canEdit={!!item.item?.canEdit}
+          canEdit={!!item.item && writesItemDirectly(item.item)}
         />
       )}
     </>

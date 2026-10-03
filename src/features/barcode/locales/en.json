@@ -20,8 +20,14 @@
     "barcodeValue": "Barcode: {{barcode}}",
     "formatValue": "Format: {{format}}",
     "upc": "UPC/Barcode",
-    "added": "Added",
     "servingAmount": "One serving: {{amount}}",
-    "referenceAmount": "Nutrition per {{amount}}"
+    "referenceAmount": "Nutrition per {{amount}}",
+    "openFoodFactsCredit": "Product details from Open Food Facts (ODbL)",
+    "packSize": {
+      "body": "Open Food Facts doesn’t list this product’s size. Enter it once to add it to your pantry.",
+      "label": "Size of one package",
+      "invalid": "Enter a size greater than 0.",
+      "unitRequired": "Pick a unit from the list."
+    }
   }
 }

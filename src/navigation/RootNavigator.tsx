@@ -25,6 +25,7 @@ import { AuthStack } from './stacks/AuthStack';
 import { OnboardingStack } from './stacks/OnboardingStack';
 import { HomeTabs } from './stacks/HomeTabs';
 import { BarcodeStack } from './stacks/BarcodeStack';
+import { ReceiptsStack } from './stacks/ReceiptsStack';
 import { NotificationStack } from './stacks/NotificationStack';
 import { VerificationGateScreen } from '#features/auth/screens/CodeVerificationScreen';
 import { EmailVerificationDeepLinkScreen } from '#features/auth/screens/EmailVerificationDeepLinkScreen';
@@ -139,6 +140,10 @@ const RootStack = createNativeStackNavigator({
         }),
         Barcode: createNativeStackScreen({
           screen: BarcodeStack,
+          layout: noInsetScreenLayout,
+        }),
+        Receipts: createNativeStackScreen({
+          screen: ReceiptsStack,
           layout: noInsetScreenLayout,
         }),
         Notifications: createNativeStackScreen({

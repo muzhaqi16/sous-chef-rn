@@ -29,6 +29,7 @@ const photo = (
     isPrimary: boolean;
     status: ItemImageStatus;
     perspective: string | null;
+    credit: ItemPhotoCarousel_ItemPhotoFragment['credit'];
   }> = {},
 ): ItemPhotoCarousel_ItemPhotoFragment => ({
   __typename: 'ItemPhoto',
@@ -37,6 +38,7 @@ const photo = (
   perspective: null,
   isPrimary: false,
   status: ItemImageStatus.Approved,
+  credit: null,
   variants: [],
   ...overrides,
 });
@@ -113,5 +115,31 @@ describe('ItemPhotoViewer set-as-main action', () => {
     await waitFor(() =>
       expect(fired).toContainEqual({ input: { imageId: 'photo-1' } }),
     );
+  });
+});
+
+describe('ItemPhotoViewer credit', () => {
+  it('credits the licensed photo on screen', () => {
+    renderViewer({
+      photos: [
+        photo('photo-1', {
+          credit: {
+            __typename: 'ImageCredit',
+            text: 'Open Food Facts',
+            license: 'CC BY-SA 3.0',
+            licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
+            sourceUrl: 'https://world.openfoodfacts.org/product/1',
+          },
+        }),
+      ],
+    });
+
+    expect(screen.getByText('Photo: Open Food Facts')).toBeTruthy();
+    expect(screen.getByText('CC BY-SA 3.0')).toBeTruthy();
+  });
+
+  it('shows no credit for a photo that needs none', () => {
+    renderViewer();
+    expect(screen.queryByText(/^Photo:/)).toBeNull();
   });
 });

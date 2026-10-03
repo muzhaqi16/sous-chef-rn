@@ -1,15 +1,15 @@
 'use no memo';
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import type {
-  getAvailabilityStatus as getAvailabilityStatusFn,
-  EditableMatch,
+import {
+  getAvailabilityStatus,
+  type EditableMatch,
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { IngredientMatchRow } from '../IngredientMatchRow';
 
 jest.mock('#features/recipes/hooks/useRecipeIngredientMatching', () => ({
   getAvailabilityStatus: jest.fn(
-    (match: Parameters<typeof getAvailabilityStatusFn>[0]) => {
+    (match: Parameters<typeof getAvailabilityStatus>[0]) => {
       if (match.matchedPantryItem) return 'available';
       return 'missing';
     },
@@ -46,6 +46,7 @@ describe('IngredientMatchRow', () => {
       ingredient: { __typename: 'RecipeIngredient', id: 'i1' },
       suggestedUnit: null,
       matchedPantryItem: null,
+      alternativeMatches: [],
     };
 
     const ingredientDefaults: EditableMatch['ingredient'] = {
@@ -73,6 +74,10 @@ describe('IngredientMatchRow', () => {
     return {
       match,
       ingredient,
+      stackOptions: match.matchedPantryItem
+        ? [match.matchedPantryItem, ...match.alternativeMatches]
+        : [],
+      selectedStack: match.matchedPantryItem,
       adjustedQuantity: 2,
       adjustedUnitId: null,
       isIncluded: true,
@@ -122,6 +127,78 @@ describe('IngredientMatchRow', () => {
       <IngredientMatchRow {...defaultProps} editableMatch={optionalMatch} />,
     );
     expect(screen.getByText('Optional')).toBeTruthy();
+  });
+
+  type Stack = NonNullable<EditableMatch['selectedStack']>;
+  const stack = (id: string, itemName: string, amount: number): Stack => ({
+    __typename: 'PantryItem',
+    id,
+    itemName,
+    unit: { __typename: 'Unit', id: 'u-ml', name: 'milliliter', symbol: 'mL' },
+    displayAmount: shown(amount, 'mL'),
+  });
+
+  // A name-only match ("olives" finding "Kalamata Olives") is offered, not
+  // deducted, until the user turns it on.
+  it('asks before deducting a stack matched by name only', () => {
+    jest.mocked(getAvailabilityStatus).mockReturnValueOnce('unsure');
+    const unsure = {
+      ...makeMatch('Olives', {
+        matchConfidence: 0.7,
+        matchedPantryItem: stack('p1', 'Kalamata Olives', 250),
+      }),
+      isIncluded: false,
+    };
+    render(<IngredientMatchRow {...defaultProps} editableMatch={unsure} />);
+
+    expect(screen.getByText('Check')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Matched by name only. Turn it on if this is the right item.',
+      ),
+    ).toBeTruthy();
+  });
+
+  // "Olive oil" is served by the plain bottle and by the extra virgin one
+  // under it; the user picks which one the cook draws on.
+  it('offers every stack that serves the ingredient and takes the one picked', () => {
+    const onUpdate = jest.fn();
+    const evoo = stack('p2', 'Extra virgin olive oil', 500);
+    const match = makeMatch('Olive oil', {
+      matchConfidence: 1,
+      matchedPantryItem: stack('p1', 'Olive oil', 1000),
+      alternativeMatches: [evoo],
+    });
+    render(
+      <IngredientMatchRow
+        {...defaultProps}
+        editableMatch={match}
+        onUpdate={onUpdate}
+      />,
+    );
+
+    fireEvent.press(screen.getByText('Extra virgin olive oil (500 mL)'));
+
+    expect(onUpdate).toHaveBeenCalledWith(0, {
+      selectedStack: evoo,
+      isIncluded: true,
+    });
+  });
+
+  // The server's availability describes its own pick, not a stack the user chose.
+  it('drops the availability badge once another stack is picked', () => {
+    const evoo = stack('p2', 'Extra virgin olive oil', 500);
+    const match = {
+      ...makeMatch('Olive oil', {
+        matchConfidence: 1,
+        matchedPantryItem: stack('p1', 'Olive oil', 1000),
+        alternativeMatches: [evoo],
+      }),
+      selectedStack: evoo,
+    };
+    render(<IngredientMatchRow {...defaultProps} editableMatch={match} />);
+
+    expect(screen.queryByText('Available')).toBeNull();
   });
 
   it('renders matched pantry item info', () => {

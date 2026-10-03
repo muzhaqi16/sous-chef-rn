@@ -375,6 +375,7 @@ describe('useRecipeDetail', () => {
             ? {
                 title: 'Pasta with Garlic',
                 ingredients: [],
+                hasPendingRevision: false,
                 details: 'pending',
               }
             : null,

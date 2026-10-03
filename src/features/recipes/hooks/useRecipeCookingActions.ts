@@ -45,6 +45,12 @@ export function useRecipeCookingActions({
   const { t } = useTranslation();
   const [cookedModalVisible, setCookedModalVisible] = useState(false);
   const [markingAsCooked, setMarkingAsCooked] = useState(false);
+  // What the cook entered before the review opened: a confirm or a skip
+  // records it.
+  const [reviewedCook, setReviewedCook] = useState<{
+    servings: number;
+    notes?: string;
+  } | null>(null);
 
   const ingredientMatching = useRecipeIngredientMatching(recipeId);
 
@@ -154,6 +160,7 @@ export function useRecipeCookingActions({
 
     // Granular deduction: load ingredient matches and open review sheet
     if (input.useGranularDeduction) {
+      setReviewedCook({ servings: input.servings, notes: input.notes });
       void executeWithLoadingState(async () => {
         const loaded = await ingredientMatching.loadMatches(input.servings);
         if (!loaded) {
@@ -195,15 +202,16 @@ export function useRecipeCookingActions({
     }, setMarkingAsCooked);
   };
 
-  // Skip review handler — falls back to simple markRecipeAsCooked with deductFromPantry: true
+  // Skipping the review lets the server pick the stacks (markRecipeAsCooked).
   const handleSkipReview = () => {
     if (!recipeId) return;
     ingredientMatching.closeSheet();
     void executeWithLoadingState(async () => {
       const { failure, skipped } = await fireMarkCooked({
         recipeId,
-        servings: undefined,
+        servings: reviewedCook?.servings,
         deductFromPantry: true,
+        notes: reviewedCook?.notes,
       });
       if (failure) {
         toastService.error(failure.body);
@@ -213,12 +221,16 @@ export function useRecipeCookingActions({
     }, setMarkingAsCooked);
   };
 
+  const handleConfirmReview = () =>
+    ingredientMatching.confirmConsumption(reviewedCook ?? undefined);
+
   return {
     cookedModalVisible,
     setCookedModalVisible,
     markingAsCooked,
     handleMarkAsCooked,
     handleSkipReview,
+    handleConfirmReview,
     ingredientMatching,
   };
 }

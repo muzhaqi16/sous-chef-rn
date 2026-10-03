@@ -1,0 +1,49 @@
+# Catalog candidates for a receipt's item lines: by printed code, the store's
+# item number, a remembered correction, else search. A read only; the lines
+# reach the pantry through the intake mutations.
+query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {
+  resolveReceiptLines(input: $input) {
+    store {
+      id
+      name
+    }
+    lines {
+      clientId
+      confidence
+      best {
+        method
+        item {
+          id
+          name
+        }
+      }
+      candidates {
+        method
+        item {
+          id
+          name
+        }
+      }
+    }
+  }
+}
+
+# The items a household confirmed for a receipt's lines, remembered per chain so
+# the same printed line resolves to them next time. Keyed by `idempotencyKey`,
+# so a queued replay converges.
+mutation RecordReceiptMatches($input: RecordReceiptMatchesInput!) {
+  recordReceiptMatches(input: $input) {
+    __typename
+    ... on RecordReceiptMatchesPayload {
+      recorded
+      skipped
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

@@ -7,7 +7,11 @@ import {
 } from '#operations/item/item.generated';
 import { useItemAutocomplete } from '#features/catalog/hooks/useItemAutocomplete';
 import type { RootState } from '#store/index';
-import { ItemType, type ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import {
+  ItemLevel,
+  ItemType,
+  type ItemSuggestion,
+} from '#/graphql/generated/schemaTypes';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -17,6 +21,7 @@ const makeSuggestion = (id: string, name: string): ItemSuggestion => ({
   id,
   name,
   type: ItemType.Food,
+  level: ItemLevel.Concept,
   brands: [],
   category: null,
   defaultUnit: null,

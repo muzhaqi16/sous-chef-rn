@@ -209,6 +209,14 @@ subscriptions are finished until something re-subscribes.
 `useSubscription`; `isLibraryFatalCloseCode` records the list, and the library
 test pins it to the installed package's actual behaviour.
 
+**A server end a retry can get past is restarted too.** The server can end one
+subscription with an error result while the socket stays up: `SUBSCRIPTION_ERROR`
+(documented retryable), or an `INTERNAL_SERVER_ERROR` tagged
+`category: "infrastructure"` (a database or pool it could not reach, as while it
+restarts). No reconnect follows, so `isRetryableServerEnd` sends those through
+the same backoff and cap. Any other server error repeats as it is and stays
+ended.
+
 **Re-subscribing restores the stream, not what it missed.** A subscription
 only delivers what happens after it connects. `onWebSocketReconnected` feeds
 two listeners: `useSubscriptionTransportRecovery` restarts errored

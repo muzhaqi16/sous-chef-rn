@@ -26,6 +26,9 @@ const COLLECTED = {
   NSPrivacyCollectedDataTypeName: { linked: true },
   // Item and profile photos uploaded by the person.
   NSPrivacyCollectedDataTypePhotosorVideos: { linked: true },
+  // A scanned receipt: its redacted lines are matched to items, and its day,
+  // store and prices are recorded with what it adds to the pantry.
+  NSPrivacyCollectedDataTypePurchaseHistory: { linked: true },
   // Error reports. Carries a device and session id, never an account id.
   NSPrivacyCollectedDataTypeCrashData: { linked: false },
   // Startup and render timings, same device-scoped identifiers.

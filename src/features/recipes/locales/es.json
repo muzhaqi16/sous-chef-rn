@@ -94,6 +94,8 @@
     "draftBadge": "Borrador — no publicado",
     "inReviewBadge": "En revisión — solo tú puedes verla hasta que se apruebe",
     "reviewNote": "Nota de moderación: {{note}}",
+    "pendingChangesBadge": "Cambios en revisión — todos ven la versión publicada hasta que se aprueben",
+    "revisionRejectedNote": "Tus últimos cambios no se aprobaron. Nota de moderación: {{note}}",
     "forkFailed": "No se pudo bifurcar la receta",
     "forkSourceNotLoaded": "Abre esta receta con conexión una vez, para que esté en tu dispositivo y se pueda copiar.",
     "forkCopyName": "{{name}} (mi versión)",
@@ -377,6 +379,8 @@
     "summaryPartial_other": "{{count}} parciales",
     "summaryMissing_one": "{{count}} faltante",
     "summaryMissing_other": "{{count}} faltantes",
+    "summaryUnsure_one": "{{count}} por revisar",
+    "summaryUnsure_other": "{{count}} por revisar",
     "skipReview": "Omitir revisión"
   },
   "markCookedModal": {
@@ -462,6 +466,8 @@
   "ingredientMatch": {
     "optional": "Opcional",
     "matchedPantryItem": "Coincide: {{name}} ({{amount}} disponible)",
-    "qtyLabel": "Cant.:"
+    "qtyLabel": "Cant.:",
+    "unsureHint": "Coincide solo por el nombre. Actívalo si es el artículo correcto.",
+    "stackOption": "{{name}} ({{amount}})"
   }
 }

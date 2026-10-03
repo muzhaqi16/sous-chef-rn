@@ -5,6 +5,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { zustandStorage } from '#/storage/mmkv';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
 import type { NetWeightKind } from '#/graphql/generated/schemaTypes';
+import type { PhotoCreditValue } from '#features/catalog/ui/PhotoCredit';
 
 /** One row of the scanner's result list and its recent-scan history. */
 export interface ScannedItem {
@@ -12,6 +13,13 @@ export interface ScannedItem {
   name: string;
   description?: string;
   imageUrl?: string;
+  /** The licence credit `imageUrl` needs, shown under it. */
+  imageCredit?: PhotoCreditValue;
+  /**
+   * The card's full-width image: `imageUrl` is the primary photo's thumbnail,
+   * so this is the photo's original, with its credit.
+   */
+  photo?: { url: string; credit?: PhotoCreditValue };
   /** Labels the edit action ("Suggest Edit" vs "Edit"). Cosmetic only — the
    *  submit path re-reads canEdit from the authoritative item snapshot. */
   canEdit?: boolean;
@@ -27,6 +35,8 @@ export interface ScannedItem {
    * scan reported: its size, brand and barcode.
    */
   variationId?: string;
+  /** Where that record's facts came from, e.g. `OPENFOODFACTS`, which the card credits. */
+  source?: string;
   unitId?: string;
   /** The scanned barcode's own figure, in `displayUnit`. */
   netWeight?: number;

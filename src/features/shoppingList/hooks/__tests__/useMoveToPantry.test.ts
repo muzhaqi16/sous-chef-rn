@@ -18,7 +18,7 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
 import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
-import { useMoveToPantry } from '../useMoveToPantry';
+import { useMoveToPantry, type MoveToPantryOutcome } from '../useMoveToPantry';
 
 // Spread the real module: a partial factory silently omits whatever the hook
 // imports NEXT — the local-first move added two more updaters, and a trimmed
@@ -95,7 +95,7 @@ describe('useMoveToPantry', () => {
       { operationMocks: [move.mock] },
     );
 
-    let moveResult: boolean = false;
+    let moveResult: MoveToPantryOutcome | undefined;
     await act(async () => {
       moveResult = await result.current.moveToPantry(createItem(), {
         pantryId: 'pantry-1',
@@ -120,7 +120,7 @@ describe('useMoveToPantry', () => {
       }),
       today: expect.any(String),
     });
-    expect(moveResult).toBe(true);
+    expect(moveResult).toEqual({ status: 'moved' });
   });
 
   it('passes optional fields to mutation', async () => {
@@ -160,6 +160,26 @@ describe('useMoveToPantry', () => {
     });
   });
 
+  it('sends the day of the move on the input, for its default expiry', async () => {
+    const move = moveMock();
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [move.mock] },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 1,
+        removeFromList: true,
+      });
+    });
+
+    const [fired] = move.fired;
+    expect(fired?.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(fired?.input).toMatchObject({ today: fired?.today });
+  });
+
   // `errorPolicy: 'all'` resolves a transport failure with `error` set rather
   // than rejecting, so this drives the outcome the app actually gets.
   it('returns false when the move fails', async () => {
@@ -172,7 +192,7 @@ describe('useMoveToPantry', () => {
       { operationMocks: [failing.mock] },
     );
 
-    let moveResult: boolean = false;
+    let moveResult: MoveToPantryOutcome | undefined;
     await act(async () => {
       moveResult = await result.current.moveToPantry(createItem(), {
         pantryId: 'pantry-1',
@@ -181,7 +201,10 @@ describe('useMoveToPantry', () => {
       });
     });
 
-    expect(moveResult).toBe(false);
+    expect(moveResult).toEqual({
+      status: 'rejected',
+      reason: expect.any(String),
+    });
   });
 
   it('tells the shopper when the server refuses the move', async () => {
@@ -203,7 +226,7 @@ describe('useMoveToPantry', () => {
       { operationMocks: [conflicted.mock] },
     );
 
-    let moveResult: boolean = true;
+    let moveResult: MoveToPantryOutcome | undefined;
     await act(async () => {
       moveResult = await result.current.moveToPantry(createItem(), {
         pantryId: 'pantry-1',
@@ -212,7 +235,10 @@ describe('useMoveToPantry', () => {
       });
     });
 
-    expect(moveResult).toBe(false);
+    expect(moveResult).toEqual({
+      status: 'rejected',
+      reason: expect.any(String),
+    });
     // `CONFLICT` is a state refusal, not a stale version: one alert, described
     // by its code rather than as "changed somewhere else".
     expect(alertSpy).toHaveBeenCalledTimes(1);
@@ -228,6 +254,39 @@ describe('useMoveToPantry', () => {
       expect.anything(),
       'Pantry item was modified',
     );
+  });
+
+  it('leaves a refusal to the caller when asked to, with the reason it would have shown', async () => {
+    const conflicted = recordMock(MoveShoppingItemToPantryDocument, {
+      data: {
+        moveShoppingItemToPantry: {
+          __typename: 'ConflictError',
+          message: 'Pantry item was modified',
+          code: ErrorCode.Conflict,
+        },
+      },
+    });
+    const alertSpy = jest.spyOn(alertService, 'alert');
+
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1', present: 'none' }),
+      { operationMocks: [conflicted.mock] },
+    );
+
+    let moveResult: MoveToPantryOutcome | undefined;
+    await act(async () => {
+      moveResult = await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 1,
+        removeFromList: true,
+      });
+    });
+
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(moveResult).toEqual({
+      status: 'rejected',
+      reason: expect.not.stringContaining('Pantry item was modified'),
+    });
   });
 
   it('accepts onSuccess callback', () => {
@@ -930,5 +989,53 @@ describe('useMoveToPantry keeping the row on the list', () => {
     });
     expect(open.completedItems).toBe(0);
     expect(read(cache, true).shoppingList.itemsConnection.edges).toEqual([]);
+  });
+});
+
+describe('useMoveToPantry default expiry', () => {
+  const { gql } = require('@apollo/client');
+  const EXPIRY = gql`
+    fragment MovedRowExpiryProbe on PantryItem {
+      id
+      expiresOn
+    }
+  `;
+
+  it("shows the server's default expiry on the moved row once the response lands", async () => {
+    const { makeCache } = require('#/apollo/cache');
+    const cache = makeCache();
+    const move = recordMock(MoveShoppingItemToPantryDocument, {
+      dataFor: (
+        vars,
+      ): MockDataFor<typeof MoveShoppingItemToPantryDocument> => ({
+        moveShoppingItemToPantry: {
+          __typename: 'MoveShoppingItemToPantryPayload',
+          pantryItem: {
+            __typename: 'PantryItem',
+            id: (vars.input as { pantryItemId: string }).pantryItemId,
+            expiresOn: '2026-10-12',
+          },
+        },
+      }),
+    });
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [move.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.moveToPantry(createItem(), {
+        pantryId: 'pantry-1',
+        actualQuantity: 1,
+        removeFromList: true,
+      });
+    });
+
+    const mintedId = (move.fired[0]!.input as { pantryItemId: string })
+      .pantryItemId;
+    expect(
+      cache.readFragment({ id: `PantryItem:${mintedId}`, fragment: EXPIRY })
+        ?.expiresOn,
+    ).toBe('2026-10-12');
   });
 });

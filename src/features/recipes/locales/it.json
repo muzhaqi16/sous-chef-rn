@@ -94,6 +94,8 @@
     "draftBadge": "Bozza — non pubblicata",
     "inReviewBadge": "In revisione — solo tu puoi vederla finché non viene approvata",
     "reviewNote": "Nota di moderazione: {{note}}",
+    "pendingChangesBadge": "Modifiche in revisione — tutti vedono la versione pubblicata finché non vengono approvate",
+    "revisionRejectedNote": "Le tue ultime modifiche non sono state approvate. Nota di moderazione: {{note}}",
     "forkFailed": "Impossibile duplicare la ricetta",
     "forkSourceNotLoaded": "Apri questa ricetta una volta con la connessione, così è sul dispositivo e si può copiare.",
     "forkCopyName": "{{name}} (la mia versione)",
@@ -377,6 +379,8 @@
     "summaryPartial_other": "{{count}} parziali",
     "summaryMissing_one": "{{count}} mancante",
     "summaryMissing_other": "{{count}} mancanti",
+    "summaryUnsure_one": "{{count}} da verificare",
+    "summaryUnsure_other": "{{count}} da verificare",
     "skipReview": "Salta revisione"
   },
   "markCookedModal": {
@@ -462,6 +466,8 @@
   "ingredientMatch": {
     "optional": "Opzionale",
     "matchedPantryItem": "Abbinato: {{name}} ({{amount}} disponibili)",
-    "qtyLabel": "Q.tà:"
+    "qtyLabel": "Q.tà:",
+    "unsureHint": "Corrisponde solo il nome. Attivalo se è l’articolo giusto.",
+    "stackOption": "{{name}} ({{amount}})"
   }
 }

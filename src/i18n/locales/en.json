@@ -185,7 +185,8 @@
       "packageSize": "Enter the package size in a unit of the same kind as this item's (weight with weight, volume with volume).",
       "resolution": "Choose whether to use the estimate or enter the amount yourself.",
       "amount": "That's more than this item has left.",
-      "unitId": "That unit can't be used here. Pick one from the list."
+      "unitId": "That unit can't be used here. Pick one from the list.",
+      "primaryUpc": "That barcode isn’t valid. Check its digits and try again."
     },
     "unitDenied": {
       "noRoute": "That unit can't be converted to how this item is tracked.",
@@ -262,6 +263,7 @@
     "addNamed": "Add {{name}}",
     "addToShoppingList": "Add to Shopping List",
     "adding": "Adding...",
+    "added": "Added",
     "admin": "Admin",
     "alertWhenBelow": "Alert When Below",
     "allergiesIntolerances": "Allergies & Intolerances",
@@ -293,6 +295,7 @@
     "changePassword": "Change Password",
     "clear": "Clear",
     "clearAll": "Clear all",
+    "check": "Check",
     "clearInput": "Clear input",
     "clearRead": "Clear read",
     "close": "Close",

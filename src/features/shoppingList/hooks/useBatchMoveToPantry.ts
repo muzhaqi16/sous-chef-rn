@@ -13,6 +13,7 @@ import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { todayKey } from '#/utils/dateUtils';
 
 /**
  * Mark moved lines as stocked so their rows stop offering a no-op action.
@@ -76,11 +77,13 @@ export function useBatchMoveToPantry({
     }));
 
     // Built outside the try: a `&&` spread is a value block, and one inside a
-    // try body bails this whole hook out of the React Compiler.
+    // try body bails this whole hook out of the React Compiler. `today` is the
+    // day of the move, kept by a queued replay.
+    const today = todayKey();
     const moveInput: MovePurchasedItemsToPantryInput =
       idHints.length > 0
-        ? { shoppingListId: currentListId, pantryItemHints: idHints }
-        : { shoppingListId: currentListId };
+        ? { shoppingListId: currentListId, pantryItemHints: idHints, today }
+        : { shoppingListId: currentListId, today };
 
     const settled = await settleMutation(
       () =>

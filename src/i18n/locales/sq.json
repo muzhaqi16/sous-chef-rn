@@ -185,7 +185,8 @@
       "packageSize": "Vendosni madhësinë e paketimit në një njësi të të njëjtit lloj si ajo e artikullit (peshë me peshë, vëllim me vëllim).",
       "resolution": "Zgjidhni nëse do të përdorni vlerësimin apo do të vendosni vetë sasinë.",
       "amount": "Kjo është më shumë se sa ka mbetur nga ky artikull.",
-      "unitId": "Kjo njësi nuk mund të përdoret këtu. Zgjidhni një nga lista."
+      "unitId": "Kjo njësi nuk mund të përdoret këtu. Zgjidhni një nga lista.",
+      "primaryUpc": "Ai barkod nuk është i vlefshëm. Kontrollo shifrat dhe provo përsëri."
     },
     "unitDenied": {
       "noRoute": "Kjo njësi nuk mund të konvertohet në mënyrën si regjistrohet ky artikull.",
@@ -262,6 +263,7 @@
     "addNamed": "Shto {{name}}",
     "addToShoppingList": "Shto në listën e blerjeve",
     "adding": "Po shtohet...",
+    "added": "U shtua",
     "admin": "Administrator",
     "alertWhenBelow": "Sinjalizo kur është nën",
     "allergiesIntolerances": "Alergjitë & Intolerancat",
@@ -293,6 +295,7 @@
     "changePassword": "Ndrysho fjalëkalimin",
     "clear": "Pastro",
     "clearAll": "Pastro të gjitha",
+    "check": "Kontrollo",
     "clearInput": "Pastro fushën",
     "clearRead": "Pastro të lexuarat",
     "close": "Mbyll",

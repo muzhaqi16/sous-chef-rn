@@ -8,6 +8,7 @@ it first, then follow the links into the deep dives.
 - [State: two systems, one rule](#state-two-systems-one-rule)
 - [The data layer](#the-data-layer)
 - [Offline-first](#offline-first)
+- [Data ingestion seams](#data-ingestion-seams)
 - [Navigation](#navigation)
 - [The UI layer](#the-ui-layer)
 - [Code conventions](#code-conventions)
@@ -449,6 +450,50 @@ The user-visible surface is the offline banner (offline / server unreachable /
 _N_ pending / back online) and an explicit Offline Mode toggle in settings.
 
 Deep dive: **[`local-first-architecture.md`](local-first-architecture.md)**.
+
+---
+
+## Data ingestion seams
+
+Six OpenSpec changes (planned 2026-09-30, in `openspec/changes/`) add ways for
+data to enter the catalog and the pantry. They share a handful of seams. Each
+seam has exactly one owning change; the other changes only add to it, so changes
+that run at the same time never edit each other's code. API and admin-app work
+for all six is filed on GitHub (tracking issue `muzhaqi16/sous-chef-api#358`).
+This client never edits those repos.
+
+```
+ingestion-foundations ──┬──▶ openfoodfacts-catalog ──▶ multilingual-catalog
+catalog-golden-record ──┘                               (also after receipt-scanning R2)
+ingestion-foundations ─────▶ receipt-scanning ──▶ on-device-receipt-recognition
+```
+
+| Seam | Owner | Other changes may |
+|---|---|---|
+| The intake expiry default and `today` on every intake input; the shelf-life resolver | `ingestion-foundations` | extend the resolver's data (`openfoodfacts-catalog`); pass `today` (`receipt-scanning`) |
+| `CatalogResolutionService` and its ordered step list; GTIN equivalence | `ingestion-foundations` | add one step each: Open Food Facts, `rankCandidates`, aliases |
+| Survivorship engine, admin field overrides, provenance, refresh scheduler, review queue | `catalog-golden-record` | add a mapper and precedence entries, name overrides, flag kinds |
+| Local Open Food Facts MongoDB mirror; barcode miss/result flow; the embedding model | `openfoodfacts-catalog` | read the mirror's per-language names |
+| `receipts` feature; the add sheet's receipt action; public `usePantryIntake`; `ReceiptParser` | `receipt-scanning` | add an on-device parser (`on-device-receipt-recognition`) |
+| Per-language names and search; the language header; the `languageChanged` resync event | `multilingual-catalog` | feed agreed receipt aliases in as synonyms |
+
+Four rules keep the parallel changes apart:
+
+- **A public hook ships with its first production consumer.**
+  `check:dead-modules` and `hookMembersAreConsumed.test.ts` reject one added
+  "for later", so the change that consumes a hook creates it.
+- **New GraphQL operations live in the owning feature's folder,** not the shared
+  `src/graphql/operations/item/item.graphql`.
+- **Generated files are regenerated after a rebase, never hand-merged:**
+  `schema.graphql`, `schemaTypes.ts` and the persisted-query manifest. One change
+  pulls the schema at a time, and commits it on its own.
+- **Append-only shared files** (`registry.ts`, `registry.static.ts`,
+  `src/i18n/localeTypes.ts`, `useAppNavigation.ts`,
+  `verified-library-behaviour.md`) take one-line or one-block additions in their
+  own sections. A textual conflict there keeps both sides.
+
+`openspec/` is git-ignored, so the changes' planning files stay local. This
+table and the GitHub issues are the shared record.
 
 ---
 

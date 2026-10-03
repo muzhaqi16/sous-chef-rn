@@ -175,6 +175,12 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
     id
     name
     symbol
+    type
+  }
+  # The list query reads a line's package size (receipt moves).
+  netWeight
+  netWeightUnit {
+    id
   }
   sortOrder
   item {
@@ -184,6 +190,11 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
       id
       url
       kind
+    }
+    netWeight
+    netWeightKind
+    displayUnit {
+      id
     }
   }
   shoppingList {

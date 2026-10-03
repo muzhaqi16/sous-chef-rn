@@ -12,6 +12,7 @@ describe('profileScreens', () => {
       'AppSettings',
       'Appearance',
       'ChangePassword',
+      'DataSources',
       'DebugInfo',
       'DeleteAccount',
       'DietaryProfile',

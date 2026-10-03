@@ -38,10 +38,58 @@ fragment RecipeReaders on Recipe {
   isExternal
   isPublished
   isSaved
+  latestRevision {
+    id
+    reviewNote
+    status
+  }
   name
   notes
   nutritionData
   originalAuthor
+  pendingRevision {
+    id
+    proposed {
+      caloriesPerServing
+      category
+      cookTimeMinutes
+      cuisines
+      description
+      diets
+      difficulty
+      healthGoals
+      imageUrl
+      ingredients {
+        isOptional
+        item {
+          id
+          imageUrl
+          name
+        }
+        name
+        notes
+        preparation
+        quantity
+        section
+        sortOrder
+        unit {
+          id
+          name
+          symbol
+        }
+      }
+      instructions
+      intolerances
+      name
+      notes
+      originalAuthor
+      prepTimeMinutes
+      servings
+      tags
+      tips
+      videoUrl
+    }
+  }
   prepTimeMinutes
   primarySource
   publishedAt

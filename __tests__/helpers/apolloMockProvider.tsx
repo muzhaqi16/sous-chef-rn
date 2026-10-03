@@ -163,7 +163,7 @@ const DEFAULT_SCALAR_MOCKS: IMocks = {
   TimeZone: () => 'UTC',
   CountryCode: () => 'US',
   CurrencyCode: () => 'USD',
-  Upload:() => ({ uri: 'file://mock', type: 'image/png', name: 'mock.png' }),
+  Upload: () => ({ uri: 'file://mock', type: 'image/png', name: 'mock.png' }),
 };
 
 interface SharedApolloTestOptions {
@@ -745,6 +745,8 @@ export interface RecordMockOptions<TData = Record<string, unknown>> {
   delay?: number;
   /** Cap on how many times this mock can match. Default: unbounded. */
   maxUsageCount?: number;
+  /** Answers only the requests whose variables this accepts. Default: every one. */
+  match?: (vars: Record<string, unknown>) => boolean;
   /**
    * Serve `data` exactly as written, without completing it from the SDL.
    * Only for a test whose SUBJECT is incomplete data — one asserting that a
@@ -1328,7 +1330,8 @@ export function recordMock<
   options: RecordMockOptions<TData> = {},
 ): RecordedMock {
   const fired: Array<Record<string, unknown>> = [];
-  const { data, dataFor, error, delay, maxUsageCount, partial } = options;
+  const { data, dataFor, error, delay, maxUsageCount, match, partial } =
+    options;
 
   // Completion happens per invocation because it needs the variables the
   // operation actually fired with, so `result` is a function even when the
@@ -1346,6 +1349,7 @@ export function recordMock<
     request: {
       query,
       variables: vars => {
+        if (match && !match(vars)) return false;
         fired.push(vars);
         return true;
       },

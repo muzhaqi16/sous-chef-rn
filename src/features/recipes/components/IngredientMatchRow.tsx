@@ -7,9 +7,13 @@ import { ThemedTextInput } from '#components/atoms/themedComponents';
 
 import {
   type EditableMatch,
+  type MatchUpdate,
+  type PantryStackOption,
   getAvailabilityStatus,
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
-import { Text, type TextTone } from '#components/atoms/Text';
+import { Text } from '#components/atoms/Text';
+import { Badge, type BadgeVariant } from '#components/atoms/Badge';
+import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
   formatQuantityDisplay,
@@ -19,48 +23,25 @@ import {
 interface IngredientMatchRowProps {
   editableMatch: EditableMatch;
   index: number;
-  onUpdate: (
-    index: number,
-    updates: Partial<Pick<EditableMatch, 'adjustedQuantity' | 'isIncluded'>>,
-  ) => void;
+  onUpdate: (index: number, updates: MatchUpdate) => void;
 }
-
-type BadgeColor = 'success' | 'warning' | 'error';
-
-const BADGE_TEXT_TONE: Record<BadgeColor, TextTone> = {
-  success: 'success',
-  warning: 'warning',
-  error: 'danger',
-};
 
 /** Key paths — module-level table, resolved by the row that renders it. */
 const BADGE_CONFIG: Record<
   ReturnType<typeof getAvailabilityStatus>,
-  { labelKey: TranslationKey; color: BadgeColor }
+  { labelKey: TranslationKey; variant: BadgeVariant }
 > = {
-  available: { labelKey: 'labels.available', color: 'success' },
-  partial: { labelKey: 'labels.partial', color: 'warning' },
-  missing: { labelKey: 'labels.missing', color: 'error' },
+  available: { labelKey: 'labels.available', variant: 'success' },
+  partial: { labelKey: 'labels.partial', variant: 'warning' },
+  missing: { labelKey: 'labels.missing', variant: 'danger' },
+  unsure: { labelKey: 'labels.check', variant: 'warning' },
 };
 
-/**
- * Owns the `badgeColor` variant and its `useVariants` call. Extracted so the
- * row itself keeps compiling: Unistyles' variant transform bails the React
- * Compiler out of the containing function, and this row renders per ingredient.
- */
-const AvailabilityBadge: React.FC<{
-  badgeColor: BadgeColor;
-  children: React.ReactNode;
-}> = ({ badgeColor, children }) => {
-  styles.useVariants({ badgeColor });
-  return (
-    <View style={styles.badge}>
-      <Text role="label" tone={BADGE_TEXT_TONE[badgeColor]}>
-        {children}
-      </Text>
-    </View>
+const stackAmount = (stack: PantryStackOption) =>
+  formatQuantityDisplay(
+    stack.displayAmount.quantity,
+    stack.displayAmount.unit.symbol,
   );
-};
 
 const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
   editableMatch,
@@ -68,10 +49,19 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
   onUpdate,
 }) => {
   const { t } = useTranslation();
-  const { match, ingredient, adjustedQuantity, isIncluded } = editableMatch;
+  const {
+    match,
+    ingredient,
+    stackOptions,
+    selectedStack,
+    adjustedQuantity,
+    isIncluded,
+  } = editableMatch;
   const status = getAvailabilityStatus(match);
   const badge = BADGE_CONFIG[status];
   const isOptional = ingredient.isOptional;
+  // The server's availability speaks for its own pick only.
+  const showsServerPick = selectedStack?.id === match.matchedPantryItem?.id;
 
   // The field keeps its own text so a half-typed decimal ("1.") survives; it is
   // reseeded only when the quantity changes from outside the field.
@@ -97,20 +87,50 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
           >
             {ingredient.name}
           </Text>
-          <AvailabilityBadge badgeColor={badge.color}>
-            {isOptional ? t('ingredientMatch.optional') : t(badge.labelKey)}
-          </AvailabilityBadge>
+          {isOptional ? (
+            <Badge variant={badge.variant}>
+              {t('ingredientMatch.optional')}
+            </Badge>
+          ) : (
+            showsServerPick && (
+              <Badge variant={badge.variant}>{t(badge.labelKey)}</Badge>
+            )
+          )}
         </View>
 
-        {!!match.matchedPantryItem && (
-          <Text role="caption" tone="secondary" numberOfLines={1}>
-            {t('ingredientMatch.matchedPantryItem', {
-              name: match.matchedPantryItem.itemName,
-              amount: formatQuantityDisplay(
-                match.matchedPantryItem.displayAmount.quantity,
-                match.matchedPantryItem.displayAmount.unit.symbol,
-              ),
-            })}
+        {stackOptions.length > 1 && selectedStack ? (
+          <ChipScrollRow
+            options={stackOptions.map(stack => ({
+              key: stack.id,
+              label: t('ingredientMatch.stackOption', {
+                name: stack.itemName,
+                amount: stackAmount(stack),
+              }),
+            }))}
+            selected={selectedStack.id}
+            onSelect={id => {
+              const picked = stackOptions.find(stack => stack.id === id);
+              // Picking a stack is the confirmation an unsure match waits for.
+              if (picked) {
+                onUpdate(index, { selectedStack: picked, isIncluded: true });
+              }
+            }}
+            edgeFadeColor="surface"
+          />
+        ) : (
+          !!selectedStack && (
+            <Text role="caption" tone="secondary" numberOfLines={1}>
+              {t('ingredientMatch.matchedPantryItem', {
+                name: selectedStack.itemName,
+                amount: stackAmount(selectedStack),
+              })}
+            </Text>
+          )
+        )}
+
+        {status === 'unsure' && !isIncluded && (
+          <Text role="caption" tone="warning">
+            {t('ingredientMatch.unsureHint')}
           </Text>
         )}
 
@@ -160,7 +180,7 @@ const styles = StyleSheet.create(theme => ({
     borderBottomColor: theme.colors.border,
   },
   rowExcluded: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   content: {
     gap: theme.spacing.xs,
@@ -176,19 +196,6 @@ const styles = StyleSheet.create(theme => ({
   },
   textExcluded: {
     color: theme.colors.textTertiary,
-  },
-  badge: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing['2xs'],
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    variants: {
-      badgeColor: {
-        success: { backgroundColor: theme.colors.success + '20' },
-        warning: { backgroundColor: theme.colors.warning + '20' },
-        error: { backgroundColor: theme.colors.error + '20' },
-      },
-    },
   },
   bottomRow: {
     flexDirection: 'row',

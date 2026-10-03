@@ -20,8 +20,14 @@
     "barcodeValue": "Código de barras: {{barcode}}",
     "formatValue": "Formato: {{format}}",
     "upc": "UPC/Código de barras",
-    "added": "Añadido",
     "servingAmount": "Una porción: {{amount}}",
-    "referenceAmount": "Información nutricional por {{amount}}"
+    "referenceAmount": "Información nutricional por {{amount}}",
+    "openFoodFactsCredit": "Datos del producto de Open Food Facts (ODbL)",
+    "packSize": {
+      "body": "Open Food Facts no indica el tamaño de este producto. Introdúcelo una vez para añadirlo a tu despensa.",
+      "label": "Tamaño de un paquete",
+      "invalid": "Introduce un tamaño mayor que 0.",
+      "unitRequired": "Elige una unidad de la lista."
+    }
   }
 }

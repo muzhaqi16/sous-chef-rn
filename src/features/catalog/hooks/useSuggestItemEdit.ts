@@ -11,10 +11,9 @@ import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   buildSuggestibleItemChanges,
-  splitBarcodeChanges,
   type EditableItemSnapshot,
 } from '#utils/items/suggestItemChanges';
-import type { CreateItemSuggestionInput } from '#/graphql/generated/schemaTypes';
+import { writesItemDirectly } from '#domain/itemWriteAccess';
 import type { AddItemSubmitPayload } from '#features/catalog/ui/AddItemForm/AddItemForm';
 import { errorService } from '#/services/errorService';
 
@@ -57,14 +56,9 @@ export function useSuggestItemEdit() {
     },
   };
 
-  /**
-   * `variationId` names the scanned barcode's record: its size and brand go to
-   * that barcode alone, the rest of the edit to the item.
-   */
   const submitEdit = async (
     original: EditableItemSnapshot,
     formData: AddItemSubmitPayload,
-    variationId?: string,
   ): Promise<ItemEditResult> => {
     const note =
       typeof formData.editReason === 'string' ? formData.editReason.trim() : '';
@@ -104,9 +98,9 @@ export function useSuggestItemEdit() {
 
     // The two write paths are mutually exclusive and each hard-fails when
     // picked wrongly, so route on the server's own predicates rather than
-    // inferring from visibility. canEdit wins when both are true (an admin on a
-    // public item) — a direct write needs no review.
-    if (original.canEdit) {
+    // inferring from visibility. An admin on a public item has both, and
+    // suggests like anyone else.
+    if (writesItemDirectly(original)) {
       const settled = await settleMutation(
         () =>
           updateItem({
@@ -115,7 +109,8 @@ export function useSuggestItemEdit() {
         { document: UpdateItemDocument, ...failureCopy, present: 'none' },
       );
       // Forbidden means the cached canEdit was stale (the item was published,
-      // or ownership changed): do what the server asks and suggest instead.
+      // or ownership changed). This snapshot offered no suggestion, so the
+      // read-only answer below takes it.
       if (settled.failure?.code !== ErrorCode.Forbidden) {
         if (settled.failure) {
           alertService.alert(settled.failure.title, settled.failure.body);
@@ -141,37 +136,19 @@ export function useSuggestItemEdit() {
       return { status: 'readOnly' };
     }
 
-    const split = variationId
-      ? splitBarcodeChanges(changes)
-      : { barcode: {}, item: changes };
-    const inputs: CreateItemSuggestionInput[] = [
-      ...(Object.keys(split.barcode).length > 0
-        ? [
-            {
-              itemId: original.id,
-              variation: variationId,
-              note,
-              changes: split.barcode,
-            },
-          ]
-        : []),
-      ...(Object.keys(split.item).length > 0
-        ? [{ itemId: original.id, note, changes: split.item }]
-        : []),
-    ];
+    const settled = await settleMutation(
+      () =>
+        suggestEdit({
+          variables: { input: { itemId: original.id, note, changes } },
+        }),
+      { document: CreateItemSuggestionDocument, ...failureCopy },
+    );
+    const payload = appliedPayload(settled.data);
+    if (settled.status === 'failed' || !payload) return FAILED;
     // The server collapses a byte-identical pending suggestion onto the
     // existing one and silently drops the new note, so a note that differs
     // from what we sent is the only signal that nothing new was recorded.
-    let collapsed = true;
-    for (const input of inputs) {
-      const settled = await settleMutation(
-        () => suggestEdit({ variables: { input } }),
-        { document: CreateItemSuggestionDocument, ...failureCopy },
-      );
-      const payload = appliedPayload(settled.data);
-      if (settled.status === 'failed' || !payload) return FAILED;
-      if (payload.suggestion.note.trim() === note) collapsed = false;
-    }
+    const collapsed = payload.suggestion.note.trim() !== note;
 
     await uploadImages(uploadItemImages, images, original.id);
     alertService.alert(
