@@ -492,6 +492,8 @@ const RecipeDetailScreen: React.FC = () => {
           tags={displayData.tags}
           status={displayData.status}
           reviewNote={displayData.reviewNote}
+          hasPendingRevision={displayData.hasPendingRevision}
+          revisionRejectionNote={displayData.revisionRejectionNote}
         />
 
         {!!isSaved && (

@@ -94,6 +94,8 @@
     "draftBadge": "Borrador — no publicado",
     "inReviewBadge": "En revisión — solo tú puedes verla hasta que se apruebe",
     "reviewNote": "Nota de moderación: {{note}}",
+    "pendingChangesBadge": "Cambios en revisión — todos ven la versión publicada hasta que se aprueben",
+    "revisionRejectedNote": "Tus últimos cambios no se aprobaron. Nota de moderación: {{note}}",
     "forkFailed": "No se pudo bifurcar la receta",
     "forkSourceNotLoaded": "Abre esta receta con conexión una vez, para que esté en tu dispositivo y se pueda copiar.",
     "forkCopyName": "{{name}} (mi versión)",

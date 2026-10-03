@@ -1,7 +1,10 @@
 import { act, waitFor } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
-import { ExternalSyncStatus } from '#/graphql/generated/schemaTypes';
+import {
+  ExternalSyncStatus,
+  RecipeRevisionStatus,
+} from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
@@ -99,6 +102,54 @@ describe('useRecipeData', () => {
       );
       expect(result.current.backendRecipe?.id).toBe('r1');
       expect(result.current.error).toBeNull();
+    });
+
+    // Both are null for anyone but the author, whose edit to a published
+    // recipe waits for review while the recipe stays live.
+    it("reads the author's pending edit and a rejected edit's note", async () => {
+      const { result } = renderData({ recipeId: 'r1' }, [
+        recipeMock(
+          authoredRecipe({
+            pendingRevision: { __typename: 'RecipeRevision', id: 'rev-2' },
+            latestRevision: {
+              __typename: 'RecipeRevision',
+              id: 'rev-2',
+              status: RecipeRevisionStatus.Pending,
+              reviewNote: null,
+            },
+          }),
+        ),
+      ]);
+      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      expect(result.current.displayData).toEqual(
+        expect.objectContaining({
+          hasPendingRevision: true,
+          revisionRejectionNote: undefined,
+        }),
+      );
+    });
+
+    it('carries the note of a rejected edit once nothing is pending', async () => {
+      const { result } = renderData({ recipeId: 'r1' }, [
+        recipeMock(
+          authoredRecipe({
+            pendingRevision: null,
+            latestRevision: {
+              __typename: 'RecipeRevision',
+              id: 'rev-1',
+              status: RecipeRevisionStatus.Rejected,
+              reviewNote: 'Keep the original photo.',
+            },
+          }),
+        ),
+      ]);
+      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      expect(result.current.displayData).toEqual(
+        expect.objectContaining({
+          hasPendingRevision: false,
+          revisionRejectionNote: 'Keep the original photo.',
+        }),
+      );
     });
 
     it('carries no provider chips for a recipe the user wrote', async () => {
@@ -224,6 +275,7 @@ describe('useRecipeData', () => {
         title: 'Pasta with Garlic',
         image: HINT.imageUrl,
         ingredients: [],
+        hasPendingRevision: false,
         details: 'opening',
       });
       expect(result.current.loading).toBe(true);
@@ -282,6 +334,7 @@ describe('useRecipeData', () => {
         title: 'Row',
         image: undefined,
         ingredients: [],
+        hasPendingRevision: false,
         details: 'opening',
       });
       expect(result.current.error).toBeNull();

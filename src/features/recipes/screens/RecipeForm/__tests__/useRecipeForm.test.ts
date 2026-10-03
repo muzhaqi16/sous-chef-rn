@@ -402,6 +402,7 @@ describe('useRecipeForm', () => {
       },
       instructions: [{ text: 'Add salt' }],
       notes: 'A note',
+      pendingRevision: null,
     };
 
     act(() => {
@@ -453,6 +454,7 @@ describe('useRecipeForm', () => {
         { number: 2, step: 'Cook the pasta' },
       ],
       notes: null,
+      pendingRevision: null,
     };
 
     act(() => {
@@ -462,6 +464,111 @@ describe('useRecipeForm', () => {
     expect(result.current.state.steps).toHaveLength(2);
     expect(result.current.state.steps[0]!.instruction).toBe('Boil the water');
     expect(result.current.state.steps[1]!.instruction).toBe('Cook the pasta');
+  });
+
+  // A save sends the whole form: filled from the live recipe, it would set
+  // every change the pending edit holds back to the published value.
+  it('populateFromRecipe reopens a pending edit from what it proposes', () => {
+    const { result } = renderHook(() => useRecipeForm());
+
+    const recipe: RecipeForm_RecipeFragment = {
+      __typename: 'Recipe',
+      id: 'recipe-3',
+      name: 'Live Name',
+      description: 'Live description',
+      imageUrl: null,
+      videoUrl: null,
+      servings: 2,
+      prepTimeMinutes: 10,
+      cookTimeMinutes: null,
+      caloriesPerServing: null,
+      difficulty: Difficulty.Easy,
+      category: RecipeCategory.MainCourse,
+      cuisines: [],
+      status: RecipeStatus.Published,
+      diets: [],
+      healthGoals: [],
+      intolerances: [],
+      tips: null,
+      originalAuthor: null,
+      tags: ['live'],
+      ingredientsConnection: {
+        __typename: 'RecipeIngredientConnection',
+        edges: [],
+      },
+      instructions: [{ text: 'Live step' }],
+      notes: null,
+      pendingRevision: {
+        __typename: 'RecipeRevision',
+        id: 'rev-1',
+        proposed: {
+          __typename: 'RecipeContent',
+          name: 'Proposed Name',
+          description: 'Proposed description',
+          imageUrl: null,
+          videoUrl: null,
+          servings: 6,
+          prepTimeMinutes: 15,
+          cookTimeMinutes: 30,
+          caloriesPerServing: null,
+          difficulty: Difficulty.Medium,
+          category: RecipeCategory.MainCourse,
+          cuisines: [Cuisine.Italian],
+          diets: [],
+          healthGoals: [],
+          intolerances: [],
+          notes: null,
+          tips: null,
+          originalAuthor: null,
+          tags: ['proposed'],
+          instructions: [{ text: 'Proposed step' }],
+          ingredients: [
+            {
+              __typename: 'RecipeIngredientLine',
+              name: 'Olive oil',
+              quantity: 2,
+              item: {
+                __typename: 'Item',
+                id: 'item-oil',
+                name: 'Olive oil',
+                imageUrl: null,
+              },
+              unit: {
+                __typename: 'Unit',
+                id: 'unit-tbsp',
+                name: 'tablespoon',
+                symbol: 'tbsp',
+              },
+              isOptional: false,
+              notes: null,
+              preparation: null,
+              sortOrder: 0,
+              section: null,
+            },
+          ],
+        },
+      },
+    };
+
+    act(() => {
+      result.current.populateFromRecipe(recipe);
+    });
+
+    expect(result.current.state.name).toBe('Proposed Name');
+    expect(result.current.state.servings).toBe('6');
+    expect(result.current.state.difficulty).toBe(Difficulty.Medium);
+    expect(result.current.state.tags).toBe('proposed');
+    expect(result.current.state.steps[0]!.instruction).toBe('Proposed step');
+    expect(result.current.state.ingredients).toEqual([
+      expect.objectContaining({
+        name: 'Olive oil',
+        quantity: 2,
+        unitId: 'unit-tbsp',
+        itemId: 'item-oil',
+      }),
+    ]);
+    // The status is the recipe's own: a pending edit leaves it PUBLISHED.
+    expect(result.current.state.status).toBe(RecipeStatus.Published);
   });
 
   it('setDiets, setHealthGoals, setIntolerances update tags', () => {

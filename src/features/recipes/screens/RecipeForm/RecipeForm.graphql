@@ -47,4 +47,50 @@ fragment RecipeForm_recipe on Recipe {
       }
     }
   }
+  # The author's edit waiting for review. The editor reopens from `proposed`,
+  # never from the live fields above: a save sends the whole form, and live
+  # values would set every pending change back.
+  pendingRevision {
+    id
+    proposed {
+      name
+      description
+      imageUrl
+      videoUrl
+      servings
+      prepTimeMinutes
+      cookTimeMinutes
+      caloriesPerServing
+      difficulty
+      category
+      cuisines
+      diets
+      healthGoals
+      intolerances
+      notes
+      tips
+      originalAuthor
+      tags
+      instructions
+      ingredients {
+        name
+        quantity
+        item {
+          id
+          name
+          imageUrl
+        }
+        unit {
+          id
+          name
+          symbol
+        }
+        isOptional
+        notes
+        preparation
+        sortOrder
+        section
+      }
+    }
+  }
 }

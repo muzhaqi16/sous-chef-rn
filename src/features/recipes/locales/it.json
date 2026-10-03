@@ -94,6 +94,8 @@
     "draftBadge": "Bozza — non pubblicata",
     "inReviewBadge": "In revisione — solo tu puoi vederla finché non viene approvata",
     "reviewNote": "Nota di moderazione: {{note}}",
+    "pendingChangesBadge": "Modifiche in revisione — tutti vedono la versione pubblicata finché non vengono approvate",
+    "revisionRejectedNote": "Le tue ultime modifiche non sono state approvate. Nota di moderazione: {{note}}",
     "forkFailed": "Impossibile duplicare la ricetta",
     "forkSourceNotLoaded": "Apri questa ricetta una volta con la connessione, così è sul dispositivo e si può copiare.",
     "forkCopyName": "{{name}} (la mia versione)",

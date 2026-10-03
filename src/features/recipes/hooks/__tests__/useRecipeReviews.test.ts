@@ -200,6 +200,8 @@ const makeBackendRecipe = (
   isPublished: false,
   publishedAt: null,
   reviewNote: null,
+  pendingRevision: null,
+  latestRevision: null,
   forkedFromId: null,
   forkedFrom: null,
   originalAuthor: null,
