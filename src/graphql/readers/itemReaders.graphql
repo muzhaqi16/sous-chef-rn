@@ -44,6 +44,7 @@ fragment ItemReaders on Item {
     url
   }
   imageUrl
+  level
   matchedVariation {
     id
     source
