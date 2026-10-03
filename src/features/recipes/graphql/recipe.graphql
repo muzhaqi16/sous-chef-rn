@@ -468,6 +468,9 @@ mutation CreateShoppingListItemFromRecipeIngredient(
   }
 }
 
+# `matchConfidence` ranks the pick: 1 the ingredient's own item, 0.9 another
+# item under its concept, 0.7 a name match only. `alternativeMatches` are the
+# other stacks that could serve it, ranked the same way, at most three.
 query MatchRecipeIngredientsToPantry(
   $pantryId: ID!
   $recipeId: ID!
@@ -493,6 +496,22 @@ query MatchRecipeIngredientsToPantry(
       symbol
     }
     matchedPantryItem {
+      id
+      itemName
+      unit {
+        id
+        name
+        symbol
+      }
+      displayAmount {
+        quantity
+        unit {
+          id
+          symbol
+        }
+      }
+    }
+    alternativeMatches {
       id
       itemName
       unit {

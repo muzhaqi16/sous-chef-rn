@@ -377,6 +377,8 @@
     "summaryPartial_other": "{{count}} parziali",
     "summaryMissing_one": "{{count}} mancante",
     "summaryMissing_other": "{{count}} mancanti",
+    "summaryUnsure_one": "{{count}} da verificare",
+    "summaryUnsure_other": "{{count}} da verificare",
     "skipReview": "Salta revisione"
   },
   "markCookedModal": {
@@ -462,6 +464,8 @@
   "ingredientMatch": {
     "optional": "Opzionale",
     "matchedPantryItem": "Abbinato: {{name}} ({{amount}} disponibili)",
-    "qtyLabel": "Q.tà:"
+    "qtyLabel": "Q.tà:",
+    "unsureHint": "Corrisponde solo il nome. Attivalo se è l’articolo giusto.",
+    "stackOption": "{{name}} ({{amount}})"
   }
 }

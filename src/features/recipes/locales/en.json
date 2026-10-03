@@ -377,6 +377,8 @@
     "summaryPartial_other": "{{count}} partial",
     "summaryMissing_one": "{{count}} missing",
     "summaryMissing_other": "{{count}} missing",
+    "summaryUnsure_one": "{{count}} to check",
+    "summaryUnsure_other": "{{count}} to check",
     "skipReview": "Skip Review"
   },
   "markCookedModal": {
@@ -462,6 +464,8 @@
   "ingredientMatch": {
     "optional": "Optional",
     "matchedPantryItem": "Matched: {{name}} ({{amount}} available)",
-    "qtyLabel": "Qty:"
+    "qtyLabel": "Qty:",
+    "unsureHint": "Matched by name only. Turn it on if this is the right item.",
+    "stackOption": "{{name}} ({{amount}})"
   }
 }

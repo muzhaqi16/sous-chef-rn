@@ -21,6 +21,7 @@ import {
 import type {
   EditableMatch,
   MatchSummary,
+  MatchUpdate,
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { Text, type TextTone } from '#components/atoms/Text';
 
@@ -49,17 +50,16 @@ const renderItem = ({ item, index }: ListRenderItemInfo<EditableMatch>) => (
   <IngredientMatchRenderItem item={item} index={index} />
 );
 
-const getMatchItemType = (item: EditableMatch) =>
-  item.match.matchedPantryItem ? 'matched' : 'unmatched';
+const getMatchItemType = (item: EditableMatch) => {
+  if (item.stackOptions.length > 1) return 'choice';
+  return item.selectedStack ? 'matched' : 'unmatched';
+};
 
 interface IngredientMatchingSheetProps {
   visible: boolean;
   editableMatches: EditableMatch[];
   matchSummary: MatchSummary;
-  onUpdate: (
-    index: number,
-    updates: Partial<Pick<EditableMatch, 'adjustedQuantity' | 'isIncluded'>>,
-  ) => void;
+  onUpdate: (index: number, updates: MatchUpdate) => void;
   onConfirm: () => void;
   onSkip: () => void;
   onClose: () => void;
@@ -127,6 +127,14 @@ export const IngredientMatchingSheet: React.FC<
             })}
             tone="error"
           />
+          {matchSummary.unsure > 0 && (
+            <SummaryPill
+              text={t('ingredientMatching.summaryUnsure', {
+                count: matchSummary.unsure,
+              })}
+              tone="warning"
+            />
+          )}
           <Text role="caption" tone="secondary" style={styles.includedText}>
             {t('ingredientMatching.includedCount', {
               n: matchSummary.included,

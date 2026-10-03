@@ -7,9 +7,12 @@ import { ThemedTextInput } from '#components/atoms/themedComponents';
 
 import {
   type EditableMatch,
+  type MatchUpdate,
+  type PantryStackOption,
   getAvailabilityStatus,
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { Text, type TextTone } from '#components/atoms/Text';
+import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
   formatQuantityDisplay,
@@ -19,10 +22,7 @@ import {
 interface IngredientMatchRowProps {
   editableMatch: EditableMatch;
   index: number;
-  onUpdate: (
-    index: number,
-    updates: Partial<Pick<EditableMatch, 'adjustedQuantity' | 'isIncluded'>>,
-  ) => void;
+  onUpdate: (index: number, updates: MatchUpdate) => void;
 }
 
 type BadgeColor = 'success' | 'warning' | 'error';
@@ -41,7 +41,14 @@ const BADGE_CONFIG: Record<
   available: { labelKey: 'labels.available', color: 'success' },
   partial: { labelKey: 'labels.partial', color: 'warning' },
   missing: { labelKey: 'labels.missing', color: 'error' },
+  unsure: { labelKey: 'labels.check', color: 'warning' },
 };
+
+const stackAmount = (stack: PantryStackOption) =>
+  formatQuantityDisplay(
+    stack.displayAmount.quantity,
+    stack.displayAmount.unit.symbol,
+  );
 
 /**
  * Owns the `badgeColor` variant and its `useVariants` call. Extracted so the
@@ -68,10 +75,19 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
   onUpdate,
 }) => {
   const { t } = useTranslation();
-  const { match, ingredient, adjustedQuantity, isIncluded } = editableMatch;
+  const {
+    match,
+    ingredient,
+    stackOptions,
+    selectedStack,
+    adjustedQuantity,
+    isIncluded,
+  } = editableMatch;
   const status = getAvailabilityStatus(match);
   const badge = BADGE_CONFIG[status];
   const isOptional = ingredient.isOptional;
+  // The server's availability speaks for its own pick only.
+  const showsServerPick = selectedStack?.id === match.matchedPantryItem?.id;
 
   // The field keeps its own text so a half-typed decimal ("1.") survives; it is
   // reseeded only when the quantity changes from outside the field.
@@ -97,20 +113,52 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
           >
             {ingredient.name}
           </Text>
-          <AvailabilityBadge badgeColor={badge.color}>
-            {isOptional ? t('ingredientMatch.optional') : t(badge.labelKey)}
-          </AvailabilityBadge>
+          {isOptional ? (
+            <AvailabilityBadge badgeColor={badge.color}>
+              {t('ingredientMatch.optional')}
+            </AvailabilityBadge>
+          ) : (
+            showsServerPick && (
+              <AvailabilityBadge badgeColor={badge.color}>
+                {t(badge.labelKey)}
+              </AvailabilityBadge>
+            )
+          )}
         </View>
 
-        {!!match.matchedPantryItem && (
-          <Text role="caption" tone="secondary" numberOfLines={1}>
-            {t('ingredientMatch.matchedPantryItem', {
-              name: match.matchedPantryItem.itemName,
-              amount: formatQuantityDisplay(
-                match.matchedPantryItem.displayAmount.quantity,
-                match.matchedPantryItem.displayAmount.unit.symbol,
-              ),
-            })}
+        {stackOptions.length > 1 && selectedStack ? (
+          <ChipScrollRow
+            options={stackOptions.map(stack => ({
+              key: stack.id,
+              label: t('ingredientMatch.stackOption', {
+                name: stack.itemName,
+                amount: stackAmount(stack),
+              }),
+            }))}
+            selected={selectedStack.id}
+            onSelect={id => {
+              const picked = stackOptions.find(stack => stack.id === id);
+              // Picking a stack is the confirmation an unsure match waits for.
+              if (picked) {
+                onUpdate(index, { selectedStack: picked, isIncluded: true });
+              }
+            }}
+            edgeFadeColor="surface"
+          />
+        ) : (
+          !!selectedStack && (
+            <Text role="caption" tone="secondary" numberOfLines={1}>
+              {t('ingredientMatch.matchedPantryItem', {
+                name: selectedStack.itemName,
+                amount: stackAmount(selectedStack),
+              })}
+            </Text>
+          )
+        )}
+
+        {status === 'unsure' && !isIncluded && (
+          <Text role="caption" tone="warning">
+            {t('ingredientMatch.unsureHint')}
           </Text>
         )}
 
