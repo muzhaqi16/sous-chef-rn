@@ -35,6 +35,14 @@ class TextRecognitionModule(reactContext: ReactApplicationContext) :
 
   override fun getName(): String = NAME
 
+  // A reload builds a new module, so this one's thread would otherwise stay
+  // parked for the life of the process. `shutdown`, not `shutdownNow`: a read
+  // in flight still finishes and deletes its pages.
+  override fun invalidate() {
+    executor.shutdown()
+    super.invalidate()
+  }
+
   /**
    * Reads every page, then deletes the pages and any page an earlier scan left
    * behind. A failed read keeps its pages: the caller sends them ([preparePhotos])
