@@ -12636,11 +12636,20 @@ input RecipeIngredientInput {
 
 type RecipeIngredientMatch {
   alternativeMatches: [PantryItem!]!
-  availableQuantity: Float!
+  """
+  What the matched stack holds, in the ingredient's unit; 0 with no match or
+  an empty stack. Null when the stack holds stock that unit cannot express
+  (a loaf against a pound): unknown, not none.
+  """
+  availableQuantity: Float
   ingredient: RecipeIngredient!
   isAvailable: Boolean!
   matchConfidence: Float!
   matchedPantryItem: PantryItem
+  """
+  How much more the ingredient needs, in its unit. Null when it is available,
+  or when `availableQuantity` is unknown.
+  """
   shortfall: Float
   suggestedQuantity: Float!
   suggestedUnit: Unit
