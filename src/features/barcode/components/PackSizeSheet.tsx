@@ -119,7 +119,9 @@ export const PackSizeSheet: React.FC<PackSizeSheetProps> = ({
               value={field.value}
               onChangeText={field.onChange}
               onUnitSelected={(unitId, unitName) => {
-                setValue('unitId', unitId, { shouldValidate: true });
+                // Typing clears the pick on every keystroke; only a pick is
+                // checked here, so the error waits for a submit without one.
+                setValue('unitId', unitId, { shouldValidate: unitId !== null });
                 if (unitName) setValue('unitDisplay', unitName);
               }}
               error={unitState.error?.message}
