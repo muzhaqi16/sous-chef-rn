@@ -11,12 +11,24 @@ query ItemByLookup($lookup: ItemLookupInput!, $pantry: ID) {
       node {
         id
         imageUrl
-        # The licence credit the card shows under that image.
         imageCredit {
           text
           license
           licenseUrl
           sourceUrl
+        }
+        # The card shows the photo full-width, and `imageUrl` is its thumbnail:
+        # the card takes the first photo (gallery order leads with the primary)
+        # at its original size, with its credit.
+        photos {
+          id
+          url
+          credit {
+            text
+            license
+            licenseUrl
+            sourceUrl
+          }
         }
         name
         description

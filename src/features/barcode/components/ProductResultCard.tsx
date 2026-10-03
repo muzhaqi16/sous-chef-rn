@@ -29,6 +29,7 @@ interface Item {
   upc: string;
   imageUrl?: string;
   imageCredit?: PhotoCreditValue;
+  photo?: { url: string; credit?: PhotoCreditValue };
 }
 
 interface ItemCardProps {
@@ -52,6 +53,13 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
   const money = useMoney();
   const { width: windowWidth } = useWindowDimensions();
   const showActions = !!onEditItem || !!onCreateVariant;
+  // An item with photos has a `photo`; one without shows `imageUrl`, then its
+  // only image. Each carries its own credit.
+  const image =
+    item.photo ??
+    (item.imageUrl
+      ? { url: item.imageUrl, credit: item.imageCredit }
+      : undefined);
   const amount =
     item.netWeight == null
       ? null
@@ -70,16 +78,16 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
 
   return (
     <Card padding="none" style={styles.itemCard}>
-      {item.imageUrl ? (
+      {image ? (
         <View style={styles.imageBlock}>
           <CachedImage
-            uri={item.imageUrl}
+            uri={image.url}
             style={styles.itemImage}
             // `displaySize` sets the decode WIDTH: the image spans the card,
             // which the window bounds, not its 200pt height.
             displaySize={windowWidth}
           />
-          {item.imageCredit ? <PhotoCredit credit={item.imageCredit} /> : null}
+          {image.credit ? <PhotoCredit credit={image.credit} /> : null}
         </View>
       ) : (
         <View style={styles.placeholderImage}>

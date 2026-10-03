@@ -243,7 +243,9 @@ const PhotoPage: React.FC<{
 
   const frame = (
     <PhotoFrame
-      uri={photoDisplayUrl(photo, 'large')}
+      // The band spans the screen, and a rendition (512px at most) is soft at
+      // that width on a 3x phone, so it shows the original.
+      uri={photoDisplayUrl(photo, 'xlarge')}
       width={width}
       height={height}
       resizeMode={resizeMode}

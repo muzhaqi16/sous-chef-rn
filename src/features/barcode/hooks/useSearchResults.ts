@@ -54,6 +54,19 @@ const mapVisionCameraFormatToUpcFormat = (
   }
 };
 
+/** The primary photo, first in gallery order, at its original size. */
+const cardPhotoOf = (
+  photos:
+    | ReadonlyArray<{ url: string; credit?: PhotoCreditValue | null }>
+    | undefined,
+): ScannedItem['photo'] => {
+  const [image] = photos ?? [];
+  if (!image) return undefined;
+  return image.credit
+    ? { url: image.url, credit: image.credit }
+    : { url: image.url };
+};
+
 /**
  * A lookup's item as a scan result. On a barcode lookup the size, its kind, its
  * unit and `variationBrand` are the scanned barcode's own (API
@@ -66,6 +79,10 @@ const convertToScannedItem = (
     description?: string | null;
     imageUrl?: string | null;
     imageCredit?: PhotoCreditValue | null;
+    photos?: ReadonlyArray<{
+      url: string;
+      credit?: PhotoCreditValue | null;
+    }>;
     canEdit?: boolean | null;
     canSuggest?: boolean | null;
     netWeight?: number | null;
@@ -113,6 +130,7 @@ const convertToScannedItem = (
   description: firstNonBlank(item.description),
   imageUrl: firstNonBlank(item.imageUrl),
   imageCredit: item.imageCredit ?? undefined,
+  photo: cardPhotoOf(item.photos),
   canEdit: item.canEdit ?? undefined,
   canSuggest: item.canSuggest ?? undefined,
   upc: scannedCode,

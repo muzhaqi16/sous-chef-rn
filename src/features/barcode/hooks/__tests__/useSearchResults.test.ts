@@ -293,6 +293,46 @@ describe('useSearchResults', () => {
       );
     });
 
+    // `imageUrl` is the primary photo's thumbnail; the card's full-width image
+    // is the photo's original, with its credit.
+    it('carries the photo the card shows, with its credit', async () => {
+      const credit = {
+        text: 'Open Food Facts',
+        license: 'CC BY-SA 3.0',
+        licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
+        sourceUrl: 'https://world.openfoodfacts.org/product/0012345678905',
+      };
+      renderHookWithApollo(() => useSearchResults('0012345678905', 'ean-13'), {
+        operationMocks: [
+          upcMock([
+            {
+              ...SAMPLE_UPC_ITEM,
+              photos: [
+                {
+                  __typename: 'ItemPhoto',
+                  id: 'photo-front',
+                  url: 'https://cdn.test/front.jpg',
+                  credit,
+                },
+              ],
+            },
+          ]),
+        ],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchResults).toHaveBeenCalledWith([
+          expect.objectContaining({
+            imageUrl: SAMPLE_UPC_ITEM.imageUrl,
+            photo: {
+              url: 'https://cdn.test/front.jpg',
+              credit: expect.objectContaining(credit),
+            },
+          }),
+        ]),
+      );
+    });
+
     // Both flags carry through to the card, which hides its edit action when
     // they are explicitly false — a scan can surface an item the user may not
     // touch. Absent is not false: the card only hides on a definite no.

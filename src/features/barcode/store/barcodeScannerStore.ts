@@ -15,6 +15,11 @@ export interface ScannedItem {
   imageUrl?: string;
   /** The licence credit `imageUrl` needs, shown under it. */
   imageCredit?: PhotoCreditValue;
+  /**
+   * The card's full-width image: `imageUrl` is the primary photo's thumbnail,
+   * so this is the photo's original, with its credit.
+   */
+  photo?: { url: string; credit?: PhotoCreditValue };
   /** Labels the edit action ("Suggest Edit" vs "Edit"). Cosmetic only — the
    *  submit path re-reads canEdit from the authoritative item snapshot. */
   canEdit?: boolean;
