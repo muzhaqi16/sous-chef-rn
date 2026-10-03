@@ -2317,9 +2317,11 @@ input CreateReceiptParseInput {
   """The receipt's locale, e.g. en-GB, which decides how its dates read"""
   locale: String
   """
-  The receipt's recognized text, one string per photographed page. Payment,
-  card and contact details are removed on the server before anything is
-  stored or read. Send pages or photos, not both.
+  The receipt's recognized text, one string per photographed page: 1 to 10
+  pages, with a deployment limit on their characters in all. A receipt over
+  either limit is refused with a ValidationError on `pages`. Payment, card
+  and contact details are removed on the server before anything is stored or
+  read. Send pages or photos, not both.
   """
   pages: [String!]
   """
@@ -7525,9 +7527,10 @@ Creates a PantryItem from a ShoppingListItem after purchase.
 """
 input MoveShoppingItemToPantryInput {
   """
-  Actual per-unit price paid (optional).
-  If not provided, auto-derived from shopping item's purchasedPrice, then estimatedPrice.
-  Server calculates totalCost = actualPrice × actualQuantity for analytics.
+  Per-unit price paid. Omitted, the line's purchasedPrice is the price paid,
+  recorded as PURCHASE whatever priceSource says; with neither, the purchase
+  records no price. An estimate is never a price paid, though it still values
+  the stock. Server calculates totalCost = price × actualQuantity.
   """
   actualPrice: Float
   """Actual quantity purchased (may differ from planned)"""
@@ -7562,11 +7565,12 @@ input MoveShoppingItemToPantryInput {
   that already exists returns IDEMPOTENT_REPLAY.
   """
   pantryItemId: ID
-  """Where the price came from: PURCHASE (default) or RECEIPT_SCAN."""
+  """Where actualPrice came from: PURCHASE (default) or RECEIPT_SCAN."""
   priceSource: PriceSource
   """
   The receipt this line was bought on: its store (over the line's preferred
-  store), day and number are recorded on the purchase and its price.
+  store), day and number are recorded on the purchase and its price. Send it
+  with or without a price read from it.
   """
   receipt: ReceiptRefInput
   """
