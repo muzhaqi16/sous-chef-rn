@@ -28,9 +28,8 @@ import {
 } from '#features/catalog/ui/ItemPhotoCarousel.generated';
 import { PhotoCredit } from '#features/catalog/ui/PhotoCredit';
 
-// The floated dot pill: its 10pt active dot and 2pt padding above and below.
-const DOTS_PILL_HEIGHT = 14;
-const CREDIT_GAP = 4;
+// The current page's dot; the credit clears the pill it sets the height of.
+const ACTIVE_DOT_SIZE = 10;
 
 /**
  * A photo as a caller can hold it: the masked ref Apollo hands back at runtime,
@@ -140,11 +139,8 @@ export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
   }
 
   const showDots = pages.length > 1;
-  // A credit sits on the photo's bottom edge, above the floated dots when
-  // there are any.
-  const creditBottom = overlayDots
-    ? dotsBottomOffset + (showDots ? DOTS_PILL_HEIGHT + CREDIT_GAP : 0)
-    : CREDIT_GAP * 2;
+  // Floated dots lift a credit above them; dots below the photo leave it on the edge.
+  const creditDotsOffset = overlayDots ? dotsBottomOffset : null;
 
   return (
     <View style={[styles.container, style]} onLayout={handleLayout}>
@@ -171,7 +167,8 @@ export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
             width={pageWidth}
             height={imageHeight}
             resizeMode={resizeMode}
-            creditBottom={creditBottom}
+            creditDotsOffset={creditDotsOffset}
+            showDots={showDots}
             onPress={onPhotoPress ? () => onPhotoPress(pageIndex) : undefined}
             onFailed={pages.length === 1 ? onUnrenderable : undefined}
           />
@@ -212,7 +209,8 @@ const PhotoPage: React.FC<{
   width: number;
   height: number;
   resizeMode: 'cover' | 'contain';
-  creditBottom: number;
+  creditDotsOffset: number | null;
+  showDots: boolean;
   onPress?: () => void;
   onFailed?: () => void;
 }> = ({
@@ -220,7 +218,8 @@ const PhotoPage: React.FC<{
   width,
   height,
   resizeMode,
-  creditBottom,
+  creditDotsOffset,
+  showDots,
   onPress,
   onFailed,
 }) => {
@@ -286,7 +285,7 @@ const PhotoPage: React.FC<{
       {/* box-none: a tap beside the credit still opens the viewer. */}
       {photo.credit ? (
         <View
-          style={[styles.credit, { bottom: creditBottom }]}
+          style={styles.credit(creditDotsOffset, showDots)}
           pointerEvents="box-none"
         >
           <PhotoCredit credit={photo.credit} overPhoto />
@@ -378,12 +377,21 @@ const styles = StyleSheet.create(theme => ({
   pendingText: {
     color: theme.colors.onScrim,
   },
-  credit: {
+  // On the photo's bottom edge, or above the floated dot pill: its active dot
+  // and its padding above and below.
+  credit: (dotsOffset: number | null, showDots: boolean) => ({
     position: 'absolute',
     left: theme.spacing.sm,
     right: theme.spacing.sm,
     alignItems: 'flex-end',
-  },
+    bottom:
+      dotsOffset === null
+        ? theme.spacing.sm
+        : dotsOffset +
+          (showDots
+            ? ACTIVE_DOT_SIZE + theme.spacing['2xs'] * 2 + theme.spacing.xs
+            : 0),
+  }),
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -417,8 +425,8 @@ const styles = StyleSheet.create(theme => ({
       active: {
         true: {
           backgroundColor: theme.colors.primary,
-          width: 10,
-          height: 10,
+          width: ACTIVE_DOT_SIZE,
+          height: ACTIVE_DOT_SIZE,
           borderRadius: theme.radii.full,
           borderCurve: 'continuous',
         },
