@@ -138,14 +138,14 @@ describe('IngredientMatchRow', () => {
     displayAmount: shown(amount, 'mL'),
   });
 
-  // A name-only match ("salt" finding "unsalted butter") is offered, not
+  // A name-only match ("olives" finding "Kalamata Olives") is offered, not
   // deducted, until the user turns it on.
   it('asks before deducting a stack matched by name only', () => {
     jest.mocked(getAvailabilityStatus).mockReturnValueOnce('unsure');
     const unsure = {
-      ...makeMatch('Salt', {
+      ...makeMatch('Olives', {
         matchConfidence: 0.7,
-        matchedPantryItem: stack('p1', 'Unsalted butter', 250),
+        matchedPantryItem: stack('p1', 'Kalamata Olives', 250),
       }),
       isIncluded: false,
     };

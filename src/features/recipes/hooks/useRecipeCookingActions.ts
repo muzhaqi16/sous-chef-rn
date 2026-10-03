@@ -45,7 +45,8 @@ export function useRecipeCookingActions({
   const { t } = useTranslation();
   const [cookedModalVisible, setCookedModalVisible] = useState(false);
   const [markingAsCooked, setMarkingAsCooked] = useState(false);
-  // What the cook entered before the review opened, for a skip to cook as asked.
+  // What the cook entered before the review opened: a confirm or a skip
+  // records it.
   const [reviewedCook, setReviewedCook] = useState<{
     servings: number;
     notes?: string;
@@ -220,12 +221,16 @@ export function useRecipeCookingActions({
     }, setMarkingAsCooked);
   };
 
+  const handleConfirmReview = () =>
+    ingredientMatching.confirmConsumption(reviewedCook ?? undefined);
+
   return {
     cookedModalVisible,
     setCookedModalVisible,
     markingAsCooked,
     handleMarkAsCooked,
     handleSkipReview,
+    handleConfirmReview,
     ingredientMatching,
   };
 }

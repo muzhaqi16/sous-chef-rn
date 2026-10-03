@@ -113,18 +113,43 @@ describe('getAvailabilityStatus', () => {
     ).toBe('available');
   });
 
-  it('returns "partial" when pantry item exists, not available, but quantity > 0', () => {
+  it('returns "partial" when the stack holds some, but not enough', () => {
     expect(
       getAvailabilityStatus({
         isAvailable: false,
         matchConfidence: 0.9,
-        matchedPantryItem: { id: 'pi-1' },
+        matchedPantryItem: { id: 'pi-1', displayAmount: { quantity: 1 } },
         availableQuantity: 1,
       } as IngredientMatch),
     ).toBe('partial');
   });
 
-  // The server's 0.7 is a name match only ("salt" finding "unsalted butter"),
+  // The server reports 0 available when no conversion reaches the recipe's
+  // unit (a stack of eggs in pieces, a recipe in "large"); the stack still
+  // holds them.
+  it('returns "partial" for a stocked stack the recipe unit does not convert to', () => {
+    expect(
+      getAvailabilityStatus({
+        isAvailable: false,
+        matchConfidence: 1,
+        matchedPantryItem: { id: 'pi-1', displayAmount: { quantity: 1 } },
+        availableQuantity: 0,
+      } as IngredientMatch),
+    ).toBe('partial');
+  });
+
+  it('returns "missing" for a matched stack that holds nothing', () => {
+    expect(
+      getAvailabilityStatus({
+        isAvailable: false,
+        matchConfidence: 1,
+        matchedPantryItem: { id: 'pi-1', displayAmount: { quantity: 0 } },
+        availableQuantity: 0,
+      } as IngredientMatch),
+    ).toBe('missing');
+  });
+
+  // The server's 0.7 is a name match only ("olives" finding "Kalamata Olives"),
   // whatever the stack holds.
   it('returns "unsure" for a stack matched by name only', () => {
     expect(
@@ -536,6 +561,26 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     expect(result.current.editableMatches).toEqual([]);
   });
 
+  // The log records what the cook entered before the review, not the
+  // recipe's own servings and a placeholder note.
+  it('records the servings and note the cook entered', async () => {
+    const confirm = confirmMock({ kind: 'success' });
+    const { result } = await loadOneMatch(confirm);
+
+    await act(async () => {
+      await result.current.confirmConsumption({
+        servings: 2,
+        notes: 'Halved it',
+      });
+    });
+
+    expect(confirm.fired).toContainEqual(
+      expect.objectContaining({
+        input: expect.objectContaining({ servings: 2, notes: 'Halved it' }),
+      }),
+    );
+  });
+
   it('does not deduct a row whose quantity was cleared', async () => {
     const confirm = confirmMock({ kind: 'success' });
     const { result } = await loadOneMatch(confirm);
@@ -588,10 +633,20 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     );
   });
 
-  // The server can pick a stack that holds nothing (an emptied "milk" beside
-  // a full "Whole Milk"); deducting from it could only fail.
+  // The server can pick a stack that holds nothing (an emptied "milk");
+  // deducting from it could only fail.
   it('leaves out a line whose matched stack is empty', async () => {
-    const matchesM = matchesMock([{ ...includedMatch, availableQuantity: 0 }]);
+    const matchesM = matchesMock([
+      {
+        ...includedMatch,
+        isAvailable: false,
+        availableQuantity: 0,
+        matchedPantryItem: {
+          ...includedMatch.matchedPantryItem,
+          displayAmount: { __typename: 'DisplayAmount', quantity: 0 },
+        },
+      },
+    ]);
     const { result } = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
       {
