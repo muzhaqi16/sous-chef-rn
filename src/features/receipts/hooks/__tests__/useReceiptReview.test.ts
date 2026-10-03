@@ -1075,7 +1075,7 @@ describe('useReceiptReview', () => {
       ]);
     });
 
-    it('records no receipt price for a line whose price was not read', async () => {
+    it('sends the receipt but no price for a line whose price was not read', async () => {
       const { result, move } = await setup();
       await act(async () => {
         result.current.review.chooseLine(1, { ...MILK, price: null });
@@ -1093,14 +1093,13 @@ describe('useReceiptReview', () => {
         expect.objectContaining({
           shoppingListItemId: 'sli-milk',
           actualQuantity: 1,
+          // The purchase keeps the receipt's store and day.
+          receipt: { purchasedOn: '2026-09-28' },
+          priceSource: PriceSource.ReceiptScan,
         }),
       );
       // Undefined is left out of the request.
-      expect(input).toMatchObject({
-        actualPrice: undefined,
-        receipt: undefined,
-        priceSource: undefined,
-      });
+      expect(input).toMatchObject({ actualPrice: undefined });
     });
 
     it('adds a line on its own when the user keeps it off the list', async () => {

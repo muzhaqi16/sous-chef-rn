@@ -117,16 +117,14 @@ export function useApplyReceipt(listId: string | undefined) {
       actualQuantity: quantity,
       actualUnitId: unitId,
       removeFromList: true,
-      // With no price read it is a plain tick-off: the API would otherwise
-      // record the list's estimate as a price seen on this receipt.
+      receipt,
+      // Labels only `actualPrice`: with none read, the API records the price
+      // typed on the list as a PURCHASE at the receipt's store and day.
+      priceSource: PriceSource.ReceiptScan,
+      // Per unit, as the move takes it.
       ...(choice.price === null
         ? {}
-        : {
-            // Per unit, as the move takes it.
-            actualPrice: choice.price / quantity,
-            receipt,
-            priceSource: PriceSource.ReceiptScan,
-          }),
+        : { actualPrice: choice.price / quantity }),
     });
     return outcome.status === 'moved' ? null : outcome.reason;
   };
