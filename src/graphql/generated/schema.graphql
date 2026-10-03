@@ -1973,14 +1973,6 @@ input CreateItemSuggestionInput {
   changes: SuggestibleItemChangesInput!
   itemId: ID!
   note: String!
-  """
-  One barcode of the item to correct instead of the item itself: a product
-  record, as Item.matchedVariation returned it. It may change only
-  packageInfo.netWeight, packageInfo.netWeightKind, packageInfo.displayUnit
-  and brand; approving it changes that barcode only. A record that is not one
-  of the item's barcodes is refused.
-  """
-  variation: ID
 }
 
 type CreateItemSuggestionPayload {
@@ -4926,6 +4918,12 @@ enum ImageUploadPurpose {
 input IngredientUsageInput {
   actualQuantity: Float!
   actualUnitId: ID!
+  """
+  A pantry stack to draw on first for this ingredient. The rest of the
+  stacks under the ingredient's concept follow: opened first, then the
+  soonest expiry.
+  """
+  pantryItemId: ID
   recipeIngredientId: ID!
 }
 
@@ -5155,6 +5153,11 @@ type Item {
   """
   alternateUpcs: [String!]!
   """
+  The concepts above this item, nearest first: a product's concept and that
+  concept's ancestors, or a concept's ancestors.
+  """
+  ancestors: [Item!]!
+  """
   When this item was approved into the public catalog, or null if it was never approved.
   """
   approvedAt: DateTime
@@ -5221,6 +5224,11 @@ type Item {
   Categories this item is filed under; callers other than admins see only public categories.
   """
   categories: [ItemCategory!]!
+  """
+  A product's root concept, which recipes match it through. Null for a
+  concept, and for a product not yet placed.
+  """
+  concept: Item
   """
   A PACKAGE netWeight converted to the caller's unit system (see UnitSystem),
   so two callers reading the same item can get different answers. Null for a
@@ -5367,6 +5375,10 @@ type Item {
   has no field for.
   """
   nutritions: JSON
+  """
+  A concept's parent concept, used for matching only. Null for a product or a top-level concept.
+  """
+  parentConcept: Item
   """Number of PENDING community edit suggestions for this item."""
   pendingSuggestionCount: Int!
   """
@@ -5416,6 +5428,17 @@ type Item {
   ): ItemPriceHistoryConnection!
   """The item's main UPC barcode, or null when it has none."""
   primaryUpc: String
+  """A concept's products, most popular first. Empty for a product."""
+  products(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Resume before this cursor: a previous page's startCursor"""
+    before: String
+    """Page size, reading forward: default 20, at most 100"""
+    first: Int
+    """Page size, reading backward: default 20, at most 100"""
+    last: Int
+  ): ItemConnection!
   """
   Size of one labelled serving in servingSizeUnit (for example 240 for 240 mL), or null when unknown.
   """
@@ -5653,6 +5676,8 @@ input ItemFilters {
   dietary: DietaryFilterInput
   """Filter items that have a default unit assigned"""
   hasDefaultUnit: Boolean
+  """CONCEPT or PRODUCT only"""
+  level: ItemLevel
   lookup: ItemLookupInput
   priceRange: PriceRangeInput
   status: ItemStatus
@@ -6004,6 +6029,8 @@ type ItemSuggestion {
   displayUnit: String
   id: ID!
   imageUrl: String
+  """CONCEPT for what recipes name; PRODUCT for one brand and pack size"""
+  level: ItemLevel!
   name: String!
   netWeight: Float
   type: ItemType!
