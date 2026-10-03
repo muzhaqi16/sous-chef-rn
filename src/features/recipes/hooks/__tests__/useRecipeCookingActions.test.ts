@@ -4,7 +4,10 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
+import {
+  MarkRecipeAsCookedDocument,
+  MatchRecipeIngredientsToPantryDocument,
+} from '#features/recipes/graphql/recipe.generated';
 import type { RootState } from '#store';
 import { useRecipeCookingActions } from '../useRecipeCookingActions';
 
@@ -384,5 +387,54 @@ describe('useRecipeCookingActions', () => {
         'Recipe marked as cooked! Ingredients deducted from pantry.',
       ),
     );
+  });
+
+  // The review opens with the servings and notes the cook entered; skipping it
+  // must cook those, not the whole recipe without the notes.
+  it('skip review cooks the servings and notes entered before the review', async () => {
+    const matches = recordMock(MatchRecipeIngredientsToPantryDocument, {
+      data: {
+        matchRecipeIngredientsToPantry: [
+          {
+            __typename: 'RecipeIngredientMatch',
+            matchConfidence: 1,
+            matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
+          },
+        ],
+      },
+    });
+    const cooked = cookedMock({ kind: 'success' });
+    const { result } = renderHookWithApollo(
+      () => useRecipeCookingActions({ recipeId: 'recipe-1' }),
+      { operationMocks: [matches.mock, cooked.mock] },
+    );
+
+    await act(async () => {
+      result.current.handleMarkAsCooked({
+        servings: 2,
+        deductFromPantry: true,
+        useGranularDeduction: true,
+        notes: 'Halved it',
+      });
+    });
+    await waitFor(() =>
+      expect(result.current.ingredientMatching.isSheetVisible).toBe(true),
+    );
+
+    await act(async () => {
+      result.current.handleSkipReview();
+    });
+
+    await waitFor(() => expect(cooked.fired.length).toBeGreaterThan(0));
+    expect(cooked.fired).toContainEqual(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          servings: 2,
+          notes: 'Halved it',
+          deductFromPantry: true,
+        }),
+      }),
+    );
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
   });
 });
