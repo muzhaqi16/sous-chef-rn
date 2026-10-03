@@ -451,6 +451,43 @@ describe('useServerReceiptParse', () => {
     );
   });
 
+  // "Scan another" keeps the screen, so the next receipt must not inherit the
+  // last one's spent resends or a wait still pending for it.
+  it('gives a receipt scanned after one that gave up its own resends', async () => {
+    seedDraft();
+    const timedOut = recordMock(CreateReceiptParseDocument, {
+      error: new TimeoutError('createReceiptParse', 30_000),
+    });
+    const { result } = render([timedOut.mock]);
+
+    await waitFor(() => expect(timedOut.fired).toHaveLength(1));
+    for (const [wait, count] of [
+      [2500, 2],
+      [5000, 3],
+      [10_000, 4],
+    ] as const) {
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(wait);
+      });
+      await waitFor(() => expect(timedOut.fired).toHaveLength(count));
+    }
+    await waitFor(() =>
+      expect(result.current.readingStatus).toBe('retryLater'),
+    );
+
+    act(() => {
+      seedDraft({ scannedAt: '2026-10-01T10:05:00.000Z' });
+    });
+
+    await waitFor(() => expect(timedOut.fired).toHaveLength(5));
+    expect(result.current.readingStatus).toBe('reading');
+    // Its first resend comes after the first wait again.
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(2500);
+    });
+    await waitFor(() => expect(timedOut.fired).toHaveLength(6));
+  });
+
   it.each([
     ['pages', 'tooLong'],
     ['locale', 'unavailable'],

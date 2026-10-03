@@ -144,7 +144,16 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
   const resendTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [gaveUp, setGaveUp] = useState(false);
 
-  useEffect(() => () => clearTimeout(resendTimer.current), []);
+  // Resends belong to one receipt: "Scan another" on this screen starts the
+  // next one afresh, and a wait left from the last one never fires for it.
+  const receiptKey = draft?.scannedAt ?? null;
+  const [resendsFor, setResendsFor] = useState(receiptKey);
+  if (resendsFor !== receiptKey) {
+    setResendsFor(receiptKey);
+    setResends(0);
+    setGaveUp(false);
+  }
+  useEffect(() => () => clearTimeout(resendTimer.current), [receiptKey]);
 
   const asked = draft?.serverParse;
   // A refused photo parse loses its photos with it, so one over the daily
@@ -232,6 +241,7 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
           setGaveUp(true);
         } else {
           resendTimer.current = setTimeout(() => {
+            if (sent.current !== id) return;
             sent.current = null;
             setResends(count => count + 1);
           }, wait);
