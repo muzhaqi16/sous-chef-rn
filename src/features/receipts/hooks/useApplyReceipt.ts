@@ -10,6 +10,7 @@ import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { useMoveToPantry } from '#features/shoppingList/hooks/useMoveToPantry';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { refByIdOrName } from '#/utils/refInput';
+import { errorService } from '#/services/errorService';
 import {
   useReceiptDraftStore,
   type ReceiptLineChoice,
@@ -129,6 +130,24 @@ export function useApplyReceipt(listId: string | undefined) {
     return outcome.status === 'moved' ? null : outcome.reason;
   };
 
+  // A line whose write throws fails alone: the rest still run, and the lines
+  // already written are marked added, so a retry never adds them twice.
+  const writeLine = (
+    { choice, listLine }: ReceiptApplyLine,
+    receipt: ReceiptRefInput,
+  ): Promise<string | null> =>
+    (listLine
+      ? moveFromList(choice, listLine, receipt)
+      : addOnItsOwn(choice, receipt)
+    ).catch((error: unknown) => {
+      errorService.reportError(error, { operation: 'Apply receipt line' });
+      return t(
+        listLine
+          ? 'errors.moveToPantryFailedRetry'
+          : 'errors.addItemFailedRetry',
+      );
+    });
+
   /** `receipt` is what every line was bought on: its day, and its store once known. */
   const apply = async (
     lines: readonly ReceiptApplyLine[],
@@ -138,12 +157,10 @@ export function useApplyReceipt(listId: string | undefined) {
     const added: number[] = [];
     const failed: ReceiptLineFailure[] = [];
     // One at a time, so a long receipt never puts dozens of writes in flight at once.
-    for (const { index, choice, listLine } of lines) {
-      const reason = listLine
-        ? await moveFromList(choice, listLine, receipt)
-        : await addOnItsOwn(choice, receipt);
-      if (reason === null) added.push(index);
-      else failed.push({ index, reason });
+    for (const line of lines) {
+      const reason = await writeLine(line, receipt);
+      if (reason === null) added.push(line.index);
+      else failed.push({ index: line.index, reason });
     }
     markAdded(added);
     setFailures(failed);
