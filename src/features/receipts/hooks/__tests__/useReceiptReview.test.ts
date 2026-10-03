@@ -22,10 +22,12 @@ import { useStore } from '#store';
 import {
   AcquisitionMethod,
   ErrorCode,
+  NetWeightKind,
   PriceSource,
   ReceiptMatchConfidence,
   ReceiptMatchMethod,
   ReceiptParser,
+  UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { isRecord } from '#/utils/isRecord';
 import { toDateKey } from '#/utils/dateUtils';
@@ -177,10 +179,29 @@ const createFor = (
       };
 };
 
+type ListNode = NonNullable<
+  NonNullable<
+    NonNullable<
+      NonNullable<
+        MockDataFor<typeof GetShoppingListItemsFilteredDocument>['shoppingList']
+      >['itemsConnection']
+    >['edges']
+  >[number]
+>['node'];
+
+const GRAM = {
+  __typename: 'Unit',
+  id: 'unit-g',
+  name: 'gram',
+  symbol: 'g',
+  type: UnitType.Weight,
+} as const;
+
 // Milk (counted) and beef (in grams) are open on the active list; nothing has
-// been bought from it yet.
+// been bought from it yet. `beef` restates the beef line.
 const listItems = (
   vars: Record<string, unknown>,
+  beef: ListNode = {},
 ): MockDataFor<typeof GetShoppingListItemsFilteredDocument> => ({
   shoppingList: {
     __typename: 'ShoppingList',
@@ -209,10 +230,18 @@ const listItems = (
                 id: 'sli-beef',
                 itemName: 'Ground beef',
                 quantity: 500,
-                unit: { id: 'unit-g', name: 'gram', symbol: 'g' },
-                item: { id: 'cat-beef' },
+                unit: GRAM,
+                netWeight: null,
+                netWeightUnit: null,
+                item: {
+                  id: 'cat-beef',
+                  netWeight: null,
+                  netWeightKind: null,
+                  displayUnit: null,
+                },
                 shoppingList: { id: 'list-1' },
                 purchaseInfo: { isPurchased: false, movedToPantryAt: null },
+                ...beef,
               },
             },
           ],
@@ -278,7 +307,10 @@ async function setup({
   resolve,
   resolveAgain,
   held = PANTRY,
+  beef,
 }: {
+  /** Restates the list's beef line. */
+  beef?: ListNode;
   create?: ReturnType<typeof recordMock>;
   resolve?: ReturnType<typeof recordMock>;
   /** What the matcher answers when it is asked again. */
@@ -289,7 +321,7 @@ async function setup({
   const cache = makeCache();
   const getPantry = recordMock(GetPantryDocument, { data: held });
   const list = recordMock(GetShoppingListItemsFilteredDocument, {
-    dataFor: listItems,
+    dataFor: vars => listItems(vars, beef),
   });
   const move = recordMock(MoveShoppingItemToPantryDocument, {
     dataFor: movedFor,
@@ -1043,6 +1075,94 @@ describe('useReceiptReview', () => {
           actualPrice: 7.99 / 500,
         }),
       ]);
+    });
+
+    // A receipt's printed count (2 @ 1.99) against the list line, as the API
+    // takes it: a count of packs on a weighed stack would open a second one.
+    describe('a printed count with no unit', () => {
+      const moveTwo = async (beef: ListNode) => {
+        const { result, move } = await setup({ beef });
+        await act(async () => {
+          result.current.review.chooseLine(3, {
+            itemId: 'cat-beef',
+            itemName: 'Ground beef',
+            quantity: 2,
+            unitId: null,
+            unitText: '',
+            price: 3.98,
+          });
+        });
+        await waitFor(() =>
+          expect(result.current.review.rows[1]?.onList).toBe(true),
+        );
+        await act(async () => {
+          await result.current.review.addChosen();
+        });
+        return move.fired.map(vars => vars.input);
+      };
+
+      it('moves the count against a line counted in pieces', async () => {
+        const inputs = await moveTwo({
+          quantity: 6,
+          unit: {
+            __typename: 'Unit',
+            id: 'unit-pc',
+            name: 'piece',
+            symbol: 'pc',
+            type: UnitType.Count,
+          },
+        });
+        expect(inputs).toEqual([
+          expect.objectContaining({
+            actualQuantity: 2,
+            actualUnitId: 'unit-pc',
+            actualPrice: 3.98 / 2,
+          }),
+        ]);
+      });
+
+      it("moves that many of the line's package size against a weighed line", async () => {
+        const inputs = await moveTwo({
+          netWeight: 500,
+          netWeightUnit: { __typename: 'Unit', id: 'unit-g' },
+        });
+        expect(inputs).toEqual([
+          expect.objectContaining({
+            actualQuantity: 1000,
+            actualUnitId: 'unit-g',
+            actualPrice: 3.98 / 1000,
+          }),
+        ]);
+      });
+
+      it("takes the item's package size when the line states none", async () => {
+        const inputs = await moveTwo({
+          item: {
+            __typename: 'Item',
+            id: 'cat-beef',
+            netWeight: 450,
+            netWeightKind: NetWeightKind.Package,
+            displayUnit: { __typename: 'Unit', id: 'unit-g' },
+          },
+        });
+        expect(inputs).toEqual([
+          expect.objectContaining({
+            actualQuantity: 900,
+            actualUnitId: 'unit-g',
+          }),
+        ]);
+      });
+
+      it("keeps the list's amount when no package size is known, never 2 g", async () => {
+        const inputs = await moveTwo({});
+        expect(inputs).toEqual([
+          expect.objectContaining({
+            actualQuantity: 500,
+            actualUnitId: 'unit-g',
+            actualPrice: 3.98 / 500,
+          }),
+        ]);
+      });
     });
 
     it('moves its own amount for a line that states a unit', async () => {

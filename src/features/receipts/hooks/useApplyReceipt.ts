@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import {
   AcquisitionMethod,
+  NetWeightKind,
   PriceSource,
+  UnitType,
   type ReceiptRefInput,
 } from '#/graphql/generated/schemaTypes';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { useMoveToPantry } from '#features/shoppingList/hooks/useMoveToPantry';
-import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import type { ShoppingListItemNode } from '#features/shoppingList/hooks/usePaginatedShoppingItems';
 import { refByIdOrName } from '#/utils/refInput';
 import { errorService } from '#/services/errorService';
 import {
@@ -25,7 +27,7 @@ export interface ReceiptApplyLine {
   index: number;
   choice: ReceiptLineChoice;
   /** The open shopping-list line it ticks off instead of adding on its own. */
-  listLine?: ShoppingListItemDisplayFragment;
+  listLine?: ShoppingListItemNode;
 }
 
 // A bare 1 with no unit is left to the API: one, or the item's package size,
@@ -53,6 +55,53 @@ const purchaseOf = (choice: ReceiptLineChoice, receipt: ReceiptRefInput) => {
             : { costPerUnit: choice.price / quantity }),
         }),
   };
+};
+
+/** One counted pack in the line's unit: the line's package size, else its item's. */
+const packSizeIn = (
+  line: ShoppingListItemNode,
+  unitId: string,
+): number | undefined => {
+  if (line.netWeight && line.netWeightUnit?.id === unitId) {
+    return line.netWeight;
+  }
+  const { item } = line;
+  return item?.netWeight &&
+    item.netWeightKind === NetWeightKind.Package &&
+    item.displayUnit?.id === unitId
+    ? item.netWeight
+    : undefined;
+};
+
+/**
+ * What a move records for a receipt line, as the API takes it: a move has no
+ * default, and a count of packs on a weighed stack opens a second stack. A line
+ * stating a unit moves its own amount. One without counts what was bought: in a
+ * COUNT unit (pieces, jars) that count; in a weighed line (500 g) that many of
+ * its package size; with no size known, or a bare 1, the list's amount, never
+ * 2 of a gram.
+ */
+const moveAmount = (
+  choice: ReceiptLineChoice,
+  line: ShoppingListItemNode,
+): { quantity: number; unitId: string | undefined } => {
+  const lineUnit = line.unit;
+  if (choice.unitId !== null || choice.unitText !== '' || !lineUnit) {
+    // A typed unit links only to a line in that unit, so the line's id stands for it.
+    return { quantity: choice.quantity, unitId: choice.unitId ?? lineUnit?.id };
+  }
+  const listAmount = {
+    quantity: line.quantity ?? choice.quantity,
+    unitId: lineUnit.id,
+  };
+  if (choice.quantity === 1) return listAmount;
+  if (lineUnit.type === UnitType.Count) {
+    return { quantity: choice.quantity, unitId: lineUnit.id };
+  }
+  const pack = packSizeIn(line, lineUnit.id);
+  return pack === undefined
+    ? listAmount
+    : { quantity: choice.quantity * pack, unitId: lineUnit.id };
 };
 
 /**
@@ -99,20 +148,11 @@ export function useApplyReceipt(listId: string | undefined) {
 
   const moveFromList = async (
     choice: ReceiptLineChoice,
-    listLine: ShoppingListItemDisplayFragment,
+    listLine: ShoppingListItemNode,
     receipt: ReceiptRefInput,
   ) => {
     if (!pantryId) return t('errors.moveToPantryFailedRetry');
-    // A move takes no default from the API. A line with no unit counts what
-    // was bought, so against a list line in a unit (500 g of beef) the list's
-    // amount stands, never 1 of its unit.
-    const ownAmount =
-      choice.unitId !== null || choice.unitText !== '' || !listLine.unit;
-    const quantity = ownAmount
-      ? choice.quantity
-      : listLine.quantity ?? choice.quantity;
-    // A typed unit links only to a line in that unit, so the line's id stands for it.
-    const unitId = choice.unitId ?? listLine.unit?.id;
+    const { quantity, unitId } = moveAmount(choice, listLine);
     const outcome = await moveToPantry(listLine, {
       pantryId,
       actualQuantity: quantity,
