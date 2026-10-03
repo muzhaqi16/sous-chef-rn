@@ -11,11 +11,9 @@ import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   buildSuggestibleItemChanges,
-  splitBarcodeChanges,
   type EditableItemSnapshot,
 } from '#utils/items/suggestItemChanges';
 import { writesItemDirectly } from '#domain/itemWriteAccess';
-import type { CreateItemSuggestionInput } from '#/graphql/generated/schemaTypes';
 import type { AddItemSubmitPayload } from '#features/catalog/ui/AddItemForm/AddItemForm';
 import { errorService } from '#/services/errorService';
 
@@ -58,14 +56,9 @@ export function useSuggestItemEdit() {
     },
   };
 
-  /**
-   * `variationId` names the scanned barcode's record: its size and brand go to
-   * that barcode alone, the rest of the edit to the item.
-   */
   const submitEdit = async (
     original: EditableItemSnapshot,
     formData: AddItemSubmitPayload,
-    variationId?: string,
   ): Promise<ItemEditResult> => {
     const note =
       typeof formData.editReason === 'string' ? formData.editReason.trim() : '';
@@ -143,37 +136,19 @@ export function useSuggestItemEdit() {
       return { status: 'readOnly' };
     }
 
-    const split = variationId
-      ? splitBarcodeChanges(changes)
-      : { barcode: {}, item: changes };
-    const inputs: CreateItemSuggestionInput[] = [
-      ...(Object.keys(split.barcode).length > 0
-        ? [
-            {
-              itemId: original.id,
-              variation: variationId,
-              note,
-              changes: split.barcode,
-            },
-          ]
-        : []),
-      ...(Object.keys(split.item).length > 0
-        ? [{ itemId: original.id, note, changes: split.item }]
-        : []),
-    ];
+    const settled = await settleMutation(
+      () =>
+        suggestEdit({
+          variables: { input: { itemId: original.id, note, changes } },
+        }),
+      { document: CreateItemSuggestionDocument, ...failureCopy },
+    );
+    const payload = appliedPayload(settled.data);
+    if (settled.status === 'failed' || !payload) return FAILED;
     // The server collapses a byte-identical pending suggestion onto the
     // existing one and silently drops the new note, so a note that differs
     // from what we sent is the only signal that nothing new was recorded.
-    let collapsed = true;
-    for (const input of inputs) {
-      const settled = await settleMutation(
-        () => suggestEdit({ variables: { input } }),
-        { document: CreateItemSuggestionDocument, ...failureCopy },
-      );
-      const payload = appliedPayload(settled.data);
-      if (settled.status === 'failed' || !payload) return FAILED;
-      if (payload.suggestion.note.trim() === note) collapsed = false;
-    }
+    const collapsed = payload.suggestion.note.trim() !== note;
 
     await uploadImages(uploadItemImages, images, original.id);
     alertService.alert(

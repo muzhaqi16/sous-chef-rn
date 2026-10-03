@@ -73,7 +73,6 @@ const itemData = ({ canEdit = false, canSuggest = true } = {}): MockDataFor<
 
 // The pack a barcode lookup reported: a 500 g jar of a 1 kg catalog item.
 const SCANNED_PACK = {
-  variationId: 'esm-1',
   netWeight: 500,
   netWeightKind: NetWeightKind.Package,
   displayUnit: { id: 'unit-g', name: 'g' },

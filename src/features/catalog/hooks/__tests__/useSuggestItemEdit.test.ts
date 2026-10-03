@@ -128,12 +128,11 @@ describe('useSuggestItemEdit', () => {
     );
   });
 
-  // A size corrected from a scan is that barcode's, not the item's: the item
-  // can carry other packs. The rest of the edit still goes to the item.
-  it("aims a scanned barcode's size at its record and the rest at the item", async () => {
+  // A scan returns the product holding the barcode, so a pack correction is an
+  // edit to that item like any other, in one suggestion.
+  it('sends a scanned pack size and the rest of the edit as one suggestion', async () => {
     const { mock, fired } = recordMock(CreateItemSuggestionDocument, {
       data: suggestionPayload(NOTE),
-      maxUsageCount: 2,
     });
     const { result } = renderHook([mock]);
 
@@ -142,7 +141,6 @@ describe('useSuggestItemEdit', () => {
       form({
         netWeights: [{ value: 500, unitName: 'g', unitId: 'unit-g' }],
       }),
-      'esm-1',
     );
 
     expect(outcome).toEqual({ status: 'suggested' });
@@ -151,18 +149,11 @@ describe('useSuggestItemEdit', () => {
         {
           input: {
             itemId: 'item-1',
-            variation: 'esm-1',
             note: NOTE,
             changes: {
+              name: 'Skim Milk',
               packageInfo: { netWeight: 500, netWeightKind: 'PACKAGE' },
             },
-          },
-        },
-        {
-          input: {
-            itemId: 'item-1',
-            note: NOTE,
-            changes: { name: 'Skim Milk' },
           },
         },
       ]),

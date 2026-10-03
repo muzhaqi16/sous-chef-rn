@@ -43,13 +43,10 @@ function buildInitialDataFromItem(item: ScannedItem): AddItemFormInitialData {
   };
 }
 
-/** The scanned barcode's record and pack, for a correction aimed at it. */
-function scannedPackOf(
-  item: ScannedItem,
-): (ScannedPack & { variationId: string }) | undefined {
+/** The pack the scanned barcode's record reported, for a correction of it. */
+function scannedPackOf(item: ScannedItem): ScannedPack | undefined {
   if (!item.variationId) return undefined;
   return {
-    variationId: item.variationId,
     netWeight: item.netWeight,
     netWeightKind: item.netWeightKind,
     displayUnit: item.displayUnit,
