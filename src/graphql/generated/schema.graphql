@@ -1505,8 +1505,16 @@ input ConfirmRecipeConsumptionInput {
   items. When omitted, the server generates one. Must match the CUID2 format.
   """
   id: ID
+  """The cook's note, recorded on the cooking log."""
+  notes: String
   pantryId: ID!
   recipeId: ID!
+  """
+  Servings made, counted as `markRecipeAsCooked` counts them, recorded on the
+  cooking log (rounded to whole servings). Omit for the recipe's own servings.
+  The consumptions carry their own amounts; this does not scale them.
+  """
+  servings: Float
 }
 
 type ConfirmRecipeConsumptionPayload {
@@ -15997,7 +16005,8 @@ input UpdateItemInput {
   """
   Why an admin changes a sourced catalog fact (name, description, brand, pack
   size, storage, shelf life, nutrition, allergens, ingredients, barcodes,
-  tags). Required then: the change is kept over every source as an override.
+  tags, or a product's concept: classification.conceptId). Required then:
+  the change is kept over every source as an override.
   """
   reason: String
   showInOnboarding: Boolean
