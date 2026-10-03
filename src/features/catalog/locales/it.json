@@ -282,6 +282,7 @@
     "counter": "{{current}} di {{total}}",
     "setAsMain": "Imposta come foto principale",
     "mainPhoto": "Foto principale",
+    "credit": "Foto: {{source}}",
     "setPrimary": {
       "notFoundTitle": "Foto non trovata",
       "notFoundBody": "Questa foto non è più sull'articolo: potrebbe essere stata rimossa.",

@@ -26,6 +26,11 @@ import {
   ItemPhotoCarousel_ItemPhotoFragmentDoc,
   type ItemPhotoCarousel_ItemPhotoFragment,
 } from '#features/catalog/ui/ItemPhotoCarousel.generated';
+import { PhotoCredit } from '#features/catalog/ui/PhotoCredit';
+
+// The floated dot pill: its 10pt active dot and 2pt padding above and below.
+const DOTS_PILL_HEIGHT = 14;
+const CREDIT_GAP = 4;
 
 /**
  * A photo as a caller can hold it: the masked ref Apollo hands back at runtime,
@@ -135,6 +140,11 @@ export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
   }
 
   const showDots = pages.length > 1;
+  // A credit sits on the photo's bottom edge, above the floated dots when
+  // there are any.
+  const creditBottom = overlayDots
+    ? dotsBottomOffset + (showDots ? DOTS_PILL_HEIGHT + CREDIT_GAP : 0)
+    : CREDIT_GAP * 2;
 
   return (
     <View style={[styles.container, style]} onLayout={handleLayout}>
@@ -161,6 +171,7 @@ export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
             width={pageWidth}
             height={imageHeight}
             resizeMode={resizeMode}
+            creditBottom={creditBottom}
             onPress={onPhotoPress ? () => onPhotoPress(pageIndex) : undefined}
             onFailed={pages.length === 1 ? onUnrenderable : undefined}
           />
@@ -201,9 +212,18 @@ const PhotoPage: React.FC<{
   width: number;
   height: number;
   resizeMode: 'cover' | 'contain';
+  creditBottom: number;
   onPress?: () => void;
   onFailed?: () => void;
-}> = ({ photoRef, width, height, resizeMode, onPress, onFailed }) => {
+}> = ({
+  photoRef,
+  width,
+  height,
+  resizeMode,
+  creditBottom,
+  onPress,
+  onFailed,
+}) => {
   const { t } = useTranslation();
   const result = useFragment({
     fragment: ItemPhotoCarousel_ItemPhotoFragmentDoc,
@@ -260,6 +280,16 @@ const PhotoPage: React.FC<{
           </Text>
         </View>
       )}
+
+      {/* box-none: a tap beside the credit still opens the viewer. */}
+      {photo.credit ? (
+        <View
+          style={[styles.credit, { bottom: creditBottom }]}
+          pointerEvents="box-none"
+        >
+          <PhotoCredit credit={photo.credit} overPhoto />
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -294,7 +324,8 @@ const PhotoFrame: React.FC<{
     <CachedImage
       uri={uri}
       style={{ width, height }}
-      displaySize={height}
+      // The decode WIDTH: a band is wider than it is tall.
+      displaySize={width}
       resizeMode={resizeMode}
       accessibilityLabel={accessibilityLabel}
       onError={() => {
@@ -344,6 +375,12 @@ const styles = StyleSheet.create(theme => ({
   },
   pendingText: {
     color: theme.colors.onScrim,
+  },
+  credit: {
+    position: 'absolute',
+    left: theme.spacing.sm,
+    right: theme.spacing.sm,
+    alignItems: 'flex-end',
   },
   dotsContainer: {
     flexDirection: 'row',

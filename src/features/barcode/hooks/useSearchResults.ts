@@ -27,6 +27,7 @@ import {
 import { errorService } from '#/services/errorService';
 import { alertService } from '#/services/alertService';
 import type { AddItemFieldRefusal } from '#features/catalog/ui/AddItemForm/AddItemForm';
+import type { PhotoCreditValue } from '#features/catalog/ui/PhotoCredit';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
@@ -64,6 +65,7 @@ const convertToScannedItem = (
     name: string;
     description?: string | null;
     imageUrl?: string | null;
+    imageCredit?: PhotoCreditValue | null;
     canEdit?: boolean | null;
     canSuggest?: boolean | null;
     netWeight?: number | null;
@@ -110,6 +112,7 @@ const convertToScannedItem = (
   name: item.name,
   description: firstNonBlank(item.description),
   imageUrl: firstNonBlank(item.imageUrl),
+  imageCredit: item.imageCredit ?? undefined,
   canEdit: item.canEdit ?? undefined,
   canSuggest: item.canSuggest ?? undefined,
   upc: scannedCode,

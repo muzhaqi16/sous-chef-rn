@@ -5,7 +5,7 @@ import { View, ScrollView } from 'react-native';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
-import { openWebUrl } from '#features/recipes/utils/externalUrl';
+import { openWebUrl } from '#utils/externalUrl';
 import {
   Pressable,
   SuccessActivityIndicator,

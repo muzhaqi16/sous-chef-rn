@@ -70,4 +70,31 @@ describe('ProductResultCard', () => {
     render(<ProductResultCard item={baseItem} format="UPC-A" />);
     expect(screen.getByText('Format: UPC-A')).toBeTruthy();
   });
+
+  it('credits a licensed image under it', () => {
+    render(
+      <ProductResultCard
+        item={{
+          ...baseItem,
+          imageUrl: 'https://cdn.test/front.jpg',
+          imageCredit: {
+            text: 'Open Food Facts',
+            license: 'CC BY-SA 3.0',
+            licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
+            sourceUrl: 'https://world.openfoodfacts.org/product/1',
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText('Photo: Open Food Facts')).toBeTruthy();
+  });
+
+  it('shows no credit for an image that needs none', () => {
+    render(
+      <ProductResultCard
+        item={{ ...baseItem, imageUrl: 'https://cdn.test/front.jpg' }}
+      />,
+    );
+    expect(screen.queryByText(/^Photo:/)).toBeNull();
+  });
 });

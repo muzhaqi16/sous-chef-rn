@@ -11,6 +11,13 @@ query ItemByLookup($lookup: ItemLookupInput!, $pantry: ID) {
       node {
         id
         imageUrl
+        # The licence credit the card shows under that image.
+        imageCredit {
+          text
+          license
+          licenseUrl
+          sourceUrl
+        }
         name
         description
         netWeight

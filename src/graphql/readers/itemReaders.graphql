@@ -32,6 +32,12 @@ fragment ItemReaders on Item {
     name
     symbol
   }
+  imageCredit {
+    license
+    licenseUrl
+    sourceUrl
+    text
+  }
   images {
     id
     kind
@@ -68,6 +74,12 @@ fragment ItemReaders on Item {
   }
   photos {
     id
+    credit {
+      license
+      licenseUrl
+      sourceUrl
+      text
+    }
     isPrimary
     perspective
     status

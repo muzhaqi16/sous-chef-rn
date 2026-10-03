@@ -34,6 +34,7 @@ const photo = (
   perspective: null,
   isPrimary,
   status: ItemImageStatus.Approved,
+  credit: null,
   variants: [],
 });
 

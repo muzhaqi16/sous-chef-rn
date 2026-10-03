@@ -21,6 +21,7 @@ const photo = (
   perspective: 'front',
   isPrimary: true,
   status: ItemImageStatus.Approved,
+  credit: null,
   variants: [
     {
       __typename: 'ItemImage',
@@ -114,6 +115,41 @@ describe('ItemPhotoCarousel', () => {
     );
 
     expect(screen.getByText('Pending review')).toBeTruthy();
+  });
+
+  it('credits a licensed photo on its page', () => {
+    renderWithApollo(
+      <ItemPhotoCarousel
+        photos={[
+          photo({
+            credit: {
+              __typename: 'ImageCredit',
+              text: 'Open Food Facts',
+              license: 'CC BY-SA 3.0',
+              licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
+              sourceUrl: 'https://world.openfoodfacts.org/product/1',
+            },
+          }),
+        ]}
+        imageHeight={280}
+        resizeMode="cover"
+      />,
+    );
+
+    expect(screen.getByText('Photo: Open Food Facts')).toBeTruthy();
+    expect(screen.getByText('CC BY-SA 3.0')).toBeTruthy();
+  });
+
+  it('shows no credit on a photo that needs none', () => {
+    renderWithApollo(
+      <ItemPhotoCarousel
+        photos={[photo()]}
+        imageHeight={280}
+        resizeMode="cover"
+      />,
+    );
+
+    expect(screen.queryByText(/^Photo:/)).toBeNull();
   });
 
   it('does not badge an approved photo', () => {

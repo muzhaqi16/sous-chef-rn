@@ -76,6 +76,12 @@ fragment PantryItemReaders on PantryItem {
     }
     photos {
       id
+      credit {
+        license
+        licenseUrl
+        sourceUrl
+        text
+      }
       isPrimary
       perspective
       status

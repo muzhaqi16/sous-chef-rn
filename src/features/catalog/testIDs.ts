@@ -11,6 +11,9 @@ export const catalogTestIDs = {
   reportItemCancelButton: 'report-item-cancel-button',
   reportItemSubmitButton: 'report-item-submit-button',
   dropdownSpacer: 'dropdown-spacer',
+  /** `PhotoCredit`: a licensed photo's credit and licence links. */
+  photoCreditSource: 'photo-credit-source',
+  photoCreditLicense: 'photo-credit-license',
 
   /** `AddItemSheet`, under its host's `testIDPrefix`. */
   addItemSheetModal: (prefix: string) => `${prefix}-modal`,

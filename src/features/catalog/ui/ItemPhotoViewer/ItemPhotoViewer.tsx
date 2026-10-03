@@ -41,6 +41,7 @@ import {
   type ItemPhotoRef,
 } from '#features/catalog/ui/ItemPhotoCarousel';
 import { useMarkPrimaryItemImage } from '#features/catalog/hooks/useMarkPrimaryItemImage';
+import { PhotoCredit } from '#features/catalog/ui/PhotoCredit';
 import { hitSlop } from '#/theme/foundations/sizes';
 
 const MIN_SCALE = 1;
@@ -180,6 +181,7 @@ export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
               </Text>
             )}
           </View>
+          {!!photos[index] && <CurrentPhotoCredit photoRef={photos[index]} />}
         </View>
       </GestureHandlerRootView>
     </Modal>
@@ -479,6 +481,23 @@ const PhotoCaption: React.FC<{ photoRef: ItemPhotoRef }> = ({ photoRef }) => {
       )}
     </View>
   );
+};
+
+/** The licence credit of the photo on screen; its links take taps. */
+const CurrentPhotoCredit: React.FC<{ photoRef: ItemPhotoRef }> = ({
+  photoRef,
+}) => {
+  const result = useFragment({
+    fragment: ItemPhotoCarousel_ItemPhotoFragmentDoc,
+    fragmentName: 'ItemPhotoCarousel_itemPhoto',
+    from: photoRef,
+  });
+
+  const photo: ItemPhotoCarousel_ItemPhotoFragment | null = result.complete
+    ? result.data
+    : materializedPhoto(photoRef);
+  if (!photo?.credit) return null;
+  return <PhotoCredit credit={photo.credit} overPhoto />;
 };
 
 const styles = StyleSheet.create(theme => ({

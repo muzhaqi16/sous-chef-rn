@@ -5,6 +5,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { zustandStorage } from '#/storage/mmkv';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
 import type { NetWeightKind } from '#/graphql/generated/schemaTypes';
+import type { PhotoCreditValue } from '#features/catalog/ui/PhotoCredit';
 
 /** One row of the scanner's result list and its recent-scan history. */
 export interface ScannedItem {
@@ -12,6 +13,8 @@ export interface ScannedItem {
   name: string;
   description?: string;
   imageUrl?: string;
+  /** The licence credit `imageUrl` needs, shown under it. */
+  imageCredit?: PhotoCreditValue;
   /** Labels the edit action ("Suggest Edit" vs "Edit"). Cosmetic only — the
    *  submit path re-reads canEdit from the authoritative item snapshot. */
   canEdit?: boolean;
