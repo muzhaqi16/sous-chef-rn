@@ -1,10 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import {
-  Pressable,
-  OnPrimaryActivityIndicator,
-} from '#components/atoms/themedComponents';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -13,6 +9,8 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
+import { Button } from '#components/molecules/Button';
+import { Badge } from '#components/atoms/Badge';
 import { IngredientMatchRow } from '#features/recipes/components/IngredientMatchRow';
 import {
   IngredientMatchingProvider,
@@ -23,7 +21,7 @@ import type {
   MatchSummary,
   MatchUpdate,
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
-import { Text, type TextTone } from '#components/atoms/Text';
+import { Text } from '#components/atoms/Text';
 
 const keyExtractor = (item: EditableMatch) => item.ingredient.id;
 
@@ -98,42 +96,35 @@ export const IngredientMatchingSheet: React.FC<
           title={t('ingredientMatching.reviewIngredients')}
           onCancel={onClose}
           onConfirm={onConfirm}
-          confirmLabel={
-            confirmLoading
-              ? t('ingredientMatching.deducting')
-              : t('ingredientMatching.confirmAndDeduct')
-          }
-          confirmDisabled={confirmLoading || matchSummary.included === 0}
-          confirmColor="success"
+          confirmLabel={t('ingredientMatching.confirmAndDeduct')}
+          confirmDisabled={matchSummary.included === 0}
+          saving={confirmLoading}
+          savingLabel={t('ingredientMatching.deducting')}
         />
 
         {/* Summary bar */}
         <View style={styles.summaryBar}>
-          <SummaryPill
-            text={t('ingredientMatching.summaryAvailable', {
+          <Badge variant="success">
+            {t('ingredientMatching.summaryAvailable', {
               count: matchSummary.available,
             })}
-            tone="success"
-          />
-          <SummaryPill
-            text={t('ingredientMatching.summaryPartial', {
+          </Badge>
+          <Badge variant="warning">
+            {t('ingredientMatching.summaryPartial', {
               count: matchSummary.partial,
             })}
-            tone="warning"
-          />
-          <SummaryPill
-            text={t('ingredientMatching.summaryMissing', {
+          </Badge>
+          <Badge variant="danger">
+            {t('ingredientMatching.summaryMissing', {
               count: matchSummary.missing,
             })}
-            tone="error"
-          />
+          </Badge>
           {matchSummary.unsure > 0 && (
-            <SummaryPill
-              text={t('ingredientMatching.summaryUnsure', {
+            <Badge variant="warning">
+              {t('ingredientMatching.summaryUnsure', {
                 count: matchSummary.unsure,
               })}
-              tone="warning"
-            />
+            </Badge>
           )}
           <Text role="caption" tone="secondary" style={styles.includedText}>
             {t('ingredientMatching.includedCount', {
@@ -157,64 +148,28 @@ export const IngredientMatchingSheet: React.FC<
           />
         </IngredientMatchingProvider>
 
-        {/* Bottom actions */}
         <View style={styles.bottomActions}>
-          <Pressable
+          <Button
+            variant="secondary"
             onPress={onSkip}
-            style={({ pressed }) => [
-              styles.skipButton,
-              pressed && styles.buttonPressed,
-            ]}
+            disabled={confirmLoading}
+            style={styles.skip}
           >
-            <Text role="bodyStrong" tone="secondary">
-              {t('ingredientMatching.skipReview')}
-            </Text>
-          </Pressable>
-          <Pressable
+            {t('ingredientMatching.skipReview')}
+          </Button>
+          <Button
             onPress={onConfirm}
-            disabled={confirmLoading || matchSummary.included === 0}
-            style={({ pressed }) => [
-              styles.confirmButton,
-              pressed && styles.buttonPressed,
-              (confirmLoading || matchSummary.included === 0) &&
-                styles.buttonDisabled,
-            ]}
+            loading={confirmLoading}
+            disabled={matchSummary.included === 0}
+            style={styles.confirm}
           >
-            {confirmLoading ? (
-              <OnPrimaryActivityIndicator size="small" />
-            ) : (
-              <Text role="bodyStrong" style={styles.confirmText}>
-                {t('ingredientMatching.confirmAndDeductCount', {
-                  count: matchSummary.included,
-                })}
-              </Text>
-            )}
-          </Pressable>
+            {t('ingredientMatching.confirmAndDeductCount', {
+              count: matchSummary.included,
+            })}
+          </Button>
         </View>
       </View>
     </BottomSheetModal>
-  );
-};
-
-type SummaryTone = 'success' | 'warning' | 'error';
-
-const SUMMARY_TEXT_TONE: Record<SummaryTone, TextTone> = {
-  success: 'success',
-  warning: 'warning',
-  error: 'danger',
-};
-
-const SummaryPill: React.FC<{
-  text: string;
-  tone: SummaryTone;
-}> = ({ text, tone }) => {
-  styles.useVariants({ tone });
-  return (
-    <View style={styles.pill}>
-      <Text role="label" tone={SUMMARY_TEXT_TONE[tone]}>
-        {text}
-      </Text>
-    </View>
   );
 };
 
@@ -230,19 +185,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
     flexWrap: 'wrap',
   },
-  pill: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing['2xsPlus'],
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    variants: {
-      tone: {
-        success: { backgroundColor: theme.colors.success + '20' },
-        warning: { backgroundColor: theme.colors.warning + '20' },
-        error: { backgroundColor: theme.colors.error + '20' },
-      },
-    },
-  },
   includedText: {
     marginLeft: 'auto',
   },
@@ -254,31 +196,10 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
     paddingTop: theme.spacing.md,
   },
-  skipButton: {
+  skip: {
     flex: 1,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-    alignItems: 'center',
   },
-  confirmButton: {
+  confirm: {
     flex: 2,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.success,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  confirmText: {
-    color: theme.colors.onSuccess,
-  },
-  buttonPressed: {
-    opacity: theme.opacity.pressed,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
   },
 }));
