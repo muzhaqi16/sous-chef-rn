@@ -13,6 +13,10 @@ import { LogoutCleanup } from './logoutCleanup';
 import { onWebSocketReconnected } from './links/wsLink';
 import { Telemetry } from '#services/telemetry';
 import { getResolvedLanguage, onLanguageChanged } from '#/i18n';
+import {
+  startAnswersForSwitch,
+  wasAnsweredSinceSwitch,
+} from './answeredSinceSwitch';
 import { logger } from '#/utils/environment';
 
 type RefetchSource = keyof RefetchEvents;
@@ -118,6 +122,14 @@ async function refetchActive(
     await client.refetchQueries({
       include: 'active',
       onQueryUpdated: query => {
+        // A screen first opened after the switch asked as it mounted.
+        if (
+          catchUp &&
+          !!query.queryName &&
+          wasAnsweredSinceSwitch(query.queryName, query.variables)
+        ) {
+          asked.add(query);
+        }
         if (
           !batch.matchers.some(matcher => matcher(query)) ||
           (catchUp && asked.has(query))
@@ -189,6 +201,7 @@ export const createRefetchEventManager = (): RefetchEventManager => {
     // A run in flight keeps the set it started with: it asked in the old language.
     if (context.source === 'languageChanged' && context.payload.switched) {
       asked = new WeakSet();
+      startAnswersForSwitch();
     }
     pending ??= {
       sources: new Set(),

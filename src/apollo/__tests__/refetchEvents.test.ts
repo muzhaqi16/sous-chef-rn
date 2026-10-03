@@ -14,6 +14,7 @@ import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { APOLLO_DEFAULT_OPTIONS } from '../defaultOptions';
 import { changeLanguage, getResolvedLanguage } from '#/i18n';
+import { languageLink } from '../links/languageLink';
 import {
   connectResyncSources,
   createRefetchEventManager,
@@ -173,24 +174,29 @@ beforeEach(async () => {
   client = new ApolloClient({
     cache: new InMemoryCache(),
     defaultOptions: APOLLO_DEFAULT_OPTIONS,
-    link: new ApolloLink(
-      operation =>
-        new Observable(observer => {
-          requests.push(operation.operationName ?? '');
-          if (failing.has(operation.operationName ?? '')) {
-            observer.error(new Error('503 Service Unavailable'));
-            return undefined;
-          }
-          const respond = () => {
-            observer.next({
-              data: { list: 'value', search: 'value', detail: 'value' },
-            });
-            observer.complete();
-          };
-          if (heldResponses) heldResponses.push(respond);
-          else respond();
-        }),
-    ),
+    // The production language link in front: it records what was answered
+    // in the language a catch-up asks for.
+    link: ApolloLink.from([
+      languageLink,
+      new ApolloLink(
+        operation =>
+          new Observable(observer => {
+            requests.push(operation.operationName ?? '');
+            if (failing.has(operation.operationName ?? '')) {
+              observer.error(new Error('503 Service Unavailable'));
+              return undefined;
+            }
+            const respond = () => {
+              observer.next({
+                data: { list: 'value', search: 'value', detail: 'value' },
+              });
+              observer.complete();
+            };
+            if (heldResponses) heldResponses.push(respond);
+            else respond();
+          }),
+      ),
+    ]),
     refetchEventManager: createRefetchEventManager(),
   });
   connectResyncSources(client);
@@ -319,6 +325,30 @@ describe('resync', () => {
 
       navigate();
       await pastTheWindow();
+      expect(requests).toEqual(['DetailForResync']);
+
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['DetailForResync']);
+    });
+
+    // The app's default: a screen opened after the switch asked the network as
+    // it mounted, so a catch-up would ask every new screen twice.
+    it('leaves a screen first opened after the switch that asked the network itself', async () => {
+      triggers.languageChanged();
+      await pastTheWindow();
+      requests = [];
+
+      watchers.push(
+        client
+          .watchQuery({
+            query: DetailQuery,
+            fetchPolicy: 'cache-and-network',
+            nextFetchPolicy: 'cache-first',
+          })
+          .subscribe(() => {}),
+      );
+      await elapse(0);
       expect(requests).toEqual(['DetailForResync']);
 
       navigate();
