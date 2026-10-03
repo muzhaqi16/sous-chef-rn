@@ -5302,6 +5302,11 @@ type Item {
   """
   isUserCreated: Boolean!
   """
+  CONCEPT for what users and recipes name ("Olive oil"); PRODUCT for one brand
+  and pack size, found by its barcode. Recipes match a product through its concept.
+  """
+  level: ItemLevel!
+  """
   The product record (package size, brand, images) of the barcode a lookup
   returned this item for, whether that barcode is the item's primary, an
   alternate, or known only through the record. An add names it as
@@ -5537,6 +5542,11 @@ type ItemCategorySuggestion {
 
 input ItemClassificationInput {
   categoryIds: [ID!]
+  """
+  A product's root concept: a live CONCEPT item. Null leaves the product
+  unplaced. Refused on a concept.
+  """
+  conceptId: ID
   storageState: StorageState
   tags: [String!]
 }
@@ -5704,6 +5714,16 @@ enum ItemImageStatus {
 }
 
 """
+The two levels of catalog item. A CONCEPT ("Olive oil") is what users and
+recipes name; a PRODUCT is one brand and pack size, found by its barcode, and
+sits under one concept. A product is tracked as its own pantry stack.
+"""
+enum ItemLevel {
+  CONCEPT
+  PRODUCT
+}
+
+"""
 Find one item by a single identifier: exactly one of a barcode or a store SKU.
 The result is a single page.
 """
@@ -5718,7 +5738,6 @@ enum ItemMatchType {
   CREATED
   EXISTING_NAME
   EXISTING_UPC
-  VARIATION
 }
 
 """
