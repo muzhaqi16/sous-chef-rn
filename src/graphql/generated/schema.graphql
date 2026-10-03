@@ -4845,6 +4845,22 @@ type IPStat {
   ipAddress: String!
 }
 
+"""
+The attribution a licensed photo needs, shown beside it: the credit text and
+the licence, each linking to its page (for example "Photo: Open Food Facts,
+CC BY-SA 3.0").
+"""
+type ImageCredit {
+  """The licence the photo is under, such as CC BY-SA 3.0."""
+  license: String!
+  """The licence's text."""
+  licenseUrl: String!
+  """The page the photo came from."""
+  sourceUrl: String!
+  """Who the photo is credited to."""
+  text: String!
+}
+
 input ImageInput {
   featured: Boolean
   format: String
@@ -5255,6 +5271,12 @@ type Item {
   Number of distinct photos, NOT of image rows — size renditions are excluded.
   """
   imageCount: Int!
+  """
+  The credit the image at "imageUrl" needs, such as an Open Food Facts photo's
+  licence. Show it wherever that image is shown full-size. Null when the image
+  needs none, or there is no image.
+  """
+  imageCredit: ImageCredit
   """URL of the primary photo, or its thumbnail rendition when one exists."""
   imageUrl: String
   """
@@ -5642,6 +5664,10 @@ Select Item.photos to get that structure.
 """
 type ItemImage {
   createdAt: DateTime
+  """
+  The credit this image needs; a rendition carries its photo's. Null when none is needed.
+  """
+  credit: ImageCredit
   featured: Boolean
   hash: String
   id: ID!
@@ -5742,6 +5768,10 @@ processing pipeline derived from them.
 """
 type ItemPhoto {
   createdAt: DateTime!
+  """
+  The credit this photo needs when shown, such as its source's licence. Null when none is needed.
+  """
+  credit: ImageCredit
   featured: Boolean!
   id: ID!
   """Whether this is the item's hero photo. At most one photo per item is."""
