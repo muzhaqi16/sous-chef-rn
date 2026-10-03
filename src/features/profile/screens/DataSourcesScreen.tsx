@@ -1,12 +1,11 @@
 import React from 'react';
-import { Linking } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { SubScreen } from '#components/templates/SubScreen';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { Text } from '#components/atoms/Text';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { logger } from '#/utils/environment';
+import { openWebUrl } from '#utils/externalUrl';
 import { profileTestIDs } from '#features/profile/testIDs';
 
 interface DataSource {
@@ -43,12 +42,6 @@ const SOURCES: readonly DataSource[] = [
   },
 ];
 
-const openSource = (url: string) => {
-  Linking.openURL(url).catch(error => {
-    logger.warn('Failed to open URL:', error);
-  });
-};
-
 export const DataSourcesScreen: React.FC = () => {
   const { t } = useTranslation();
 
@@ -72,7 +65,9 @@ export const DataSourcesScreen: React.FC = () => {
           </Text>
           <AppPressable
             accessibilityRole="link"
-            onPress={() => openSource(source.url)}
+            onPress={() => {
+              void openWebUrl(source.url);
+            }}
             style={styles.link}
             testID={profileTestIDs.dataSourceLink(source.id)}
           >
