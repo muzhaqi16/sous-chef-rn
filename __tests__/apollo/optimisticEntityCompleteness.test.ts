@@ -1419,8 +1419,6 @@ describe('optimistic entity completeness', () => {
         'covered: the GetPantry cases above (optimistic, CreatePantryItem, MoveShoppingItemToPantry, PantryItemForEvent)',
       'src/features/pantry/hooks/usePantrySubscriptions.ts':
         'covered: the pantry event read-back case, and the fragment comparison below',
-      'src/features/shoppingList/hooks/useMoveToPantry.ts':
-        'covered: the MoveShoppingItemToPantry case, and the fragment comparison below',
       'src/features/notifications/utils/notificationCacheWrites.ts':
         'covered: the notification feed fragment comparison above',
       'src/features/barcode/hooks/useAddScannedItem.ts':

@@ -10,13 +10,14 @@ import type {
 import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { Telemetry } from '#/services/telemetry';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { errorService } from '#/services/errorService';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import {
   addToPantryItemsCache,
   adjustPantryItemCount,
+  reconcileCreatedPantryItem,
   removeFromPantryItemsCache,
+  type PantryItemRef,
 } from '#features/pantry/cache/items';
 import type { ListCounterChange } from '#features/shoppingList/cache/connections';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -85,8 +86,9 @@ function readWasPurchased(cache: ApolloCache, itemId: string): boolean {
 }
 
 /**
- * Cache side of a move-to-pantry: add the returned `PantryItem` to the pantry's
- * connection, then drop the shopping-list row or mark it purchased and stamped.
+ * Cache side of a move-to-pantry: reconcile the returned `PantryItem` with the
+ * row written under the minted id, then drop the shopping-list row or mark it
+ * purchased and stamped.
  * Kept at module level because its value blocks (`?.`/`??`/ternary) would bail
  * the whole hook out of the React Compiler from inside the caller's try body.
  */
@@ -97,20 +99,16 @@ function applyMoveToPantryCacheUpdate(
     shoppingListItemId: string;
     removeFromList: boolean | null | undefined;
     currentListId: string | undefined;
-    pantryItem: { id: string };
+    pantryItem: PantryItemRef;
+    /** The id the move minted for the row it wrote. */
+    clientId: string | null | undefined;
   },
 ): void {
   const { pantryId, shoppingListItemId, removeFromList, currentListId } = args;
 
-  // The server may return an EXISTING row restocked rather than a new one, so
-  // the returned id can already be in the connection; the updater dedupes by id
-  // and Apollo normalizes the restocked fields onto the existing entity.
-  const addToPantryCache = createAddToParentConnectionUpdater(
-    'Pantry',
-    'itemsConnection',
-    'PantryItem',
-  );
-  addToPantryCache(cache, pantryId, args.pantryItem);
+  // A restock answers with the EXISTING row's id: the row written under the
+  // minted id goes, and the restocked fields normalize onto the existing one.
+  reconcileCreatedPantryItem(cache, pantryId, args.pantryItem, args.clientId);
 
   if (!currentListId) return;
 
@@ -172,6 +170,7 @@ export function useMoveToPantry({
             removeFromList,
             currentListId,
             pantryItem: payload.pantryItem,
+            clientId: input.pantryItemId,
           });
         } catch (cacheError) {
           errorService.reportError(cacheError, {
@@ -347,26 +346,6 @@ export function useMoveToPantry({
         status: 'rejected',
         reason: settled.failure?.body ?? t('errors.moveToPantryFailedRetry'),
       };
-    }
-
-    // The minted id is honoured only on the CREATE branch: a restock returns the
-    // EXISTING row's id, which makes the locally written entity a ghost. Evict it
-    // so the pantry does not show the item twice; `update` adds the server's row,
-    // and the response's pantry already states the count.
-    const serverId = appliedPayload(settled.data)?.pantryItem.id;
-    if (serverId && serverId !== pantryItemId) {
-      try {
-        // Evicted, not only unlinked: a cached row persists and a detail read finds it.
-        removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId, {
-          evictItem: true,
-        });
-        // What the local write put beside the row survives evicting it.
-        evictLocalPantryItemSeeds(client.cache, pantryItemId);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Evict superseded optimistic pantry row',
-        });
-      }
     }
 
     // The id is the server's now, so the detail screen may query it.
