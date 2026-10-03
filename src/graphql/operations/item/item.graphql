@@ -36,6 +36,7 @@ query AutocompleteItems($input: AutocompleteInput!) {
       id
       name
       type
+      level
       imageUrl
       netWeight
       displayUnit
@@ -79,6 +80,7 @@ query SearchItemsSemantic(
         id
         name
         type
+        level
         imageUrl
         netWeight
         defaultConsumeUnit {

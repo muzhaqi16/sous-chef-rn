@@ -81,10 +81,10 @@
       "body": "query AutocompleteCategories($input: AutocompleteCategoryInput!) {\n  autocompleteCategories(input: $input) {\n    suggestions {\n      id\n      name\n      type\n      icon\n      __typename\n    }\n    totalCount\n    __typename\n  }\n}"
     },
     {
-      "id": "1a59e46dc2279fe99613039cd46c46e7fa5a604dee2f21547bf9775a2c892ec7",
+      "id": "913fa754ba9bcf7165b06c22e9347375ca7ebd94340fb503732efbd3bc419b36",
       "name": "AutocompleteItems",
       "type": "query",
-      "body": "query AutocompleteItems($input: AutocompleteInput!) {\n  autocompleteItems(input: $input) {\n    suggestions {\n      id\n      name\n      type\n      imageUrl\n      netWeight\n      displayUnit\n      defaultUnit {\n        id\n        name\n        symbol\n        type\n        isDefault\n        isPreferred\n        __typename\n      }\n      brands {\n        id\n        name\n        __typename\n      }\n      category {\n        id\n        name\n        type\n        isPrimary\n        __typename\n      }\n      __typename\n    }\n    totalCount\n    __typename\n  }\n}"
+      "body": "query AutocompleteItems($input: AutocompleteInput!) {\n  autocompleteItems(input: $input) {\n    suggestions {\n      id\n      name\n      type\n      level\n      imageUrl\n      netWeight\n      displayUnit\n      defaultUnit {\n        id\n        name\n        symbol\n        type\n        isDefault\n        isPreferred\n        __typename\n      }\n      brands {\n        id\n        name\n        __typename\n      }\n      category {\n        id\n        name\n        type\n        isPrimary\n        __typename\n      }\n      __typename\n    }\n    totalCount\n    __typename\n  }\n}"
     },
     {
       "id": "bfa53d45a1ac0d4f6c2f20d4bd051afdf023d33646aa8044cb73d19db70ed10c",
@@ -1143,10 +1143,10 @@
       "body": "query SearchBrands($search: String!, $limit: Int) {\n  brands(filters: {search: $search}, first: $limit) {\n    edges {\n      node {\n        id\n        name\n        __typename\n      }\n      __typename\n    }\n    totalCount\n    __typename\n  }\n}"
     },
     {
-      "id": "bc505d0a3ab299c79f25ee88a0054e0e44e8289ab367f251ada8a324903fd146",
+      "id": "66601a6f38a0f36715df995cbb91198744de38d17a14f45b2f230cf21354b792",
       "name": "SearchItemsSemantic",
       "type": "query",
-      "body": "query SearchItemsSemantic($prompt: String!, $first: Int, $maxDistance: Float, $filters: ItemFilters) {\n  searchItemsSemantic(\n    prompt: $prompt\n    first: $first\n    maxDistance: $maxDistance\n    filters: $filters\n  ) {\n    edges {\n      node {\n        id\n        name\n        type\n        imageUrl\n        netWeight\n        defaultConsumeUnit {\n          id\n          name\n          symbol\n          type\n          __typename\n        }\n        brands {\n          id\n          brand {\n            id\n            name\n            __typename\n          }\n          __typename\n        }\n        categories {\n          id\n          isPrimary\n          category {\n            id\n            name\n            type\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
+      "body": "query SearchItemsSemantic($prompt: String!, $first: Int, $maxDistance: Float, $filters: ItemFilters) {\n  searchItemsSemantic(\n    prompt: $prompt\n    first: $first\n    maxDistance: $maxDistance\n    filters: $filters\n  ) {\n    edges {\n      node {\n        id\n        name\n        type\n        level\n        imageUrl\n        netWeight\n        defaultConsumeUnit {\n          id\n          name\n          symbol\n          type\n          __typename\n        }\n        brands {\n          id\n          brand {\n            id\n            name\n            __typename\n          }\n          __typename\n        }\n        categories {\n          id\n          isPrimary\n          category {\n            id\n            name\n            type\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "55e12f5af6388f2acdd6140e76bf8b97bacb894021707df4772ae29ac1836fec",
