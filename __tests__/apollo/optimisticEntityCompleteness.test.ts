@@ -776,6 +776,7 @@ describe('optimistic entity completeness', () => {
               perspective: 'FRONT',
               isPrimary: true,
               status: 'READY',
+              credit: null,
               variants: [],
             },
           ],
@@ -834,6 +835,12 @@ describe('optimistic entity completeness', () => {
                 perspective
                 isPrimary
                 status
+                credit {
+                  license
+                  licenseUrl
+                  sourceUrl
+                  text
+                }
                 variants {
                   id
                   url
