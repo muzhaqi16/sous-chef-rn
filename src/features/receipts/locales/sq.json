@@ -78,7 +78,6 @@
       "tickOffTitle": "Shënoje si të blerë në listën e blerjeve",
       "tickOffBody": "“{{name}}” është në listën tënde. Shënohet si i blerë dhe kalon në qilar, në vend që të shtohet dy herë.",
       "matching": "Po kërkohen produktet…",
-      "check": "Kontrollo",
       "maybe": "Mos është {{name}}?",
       "leftOut": "E lënë jashtë. Prek për ta shtuar.",
       "sectionToAdd_one": "Do të shtohet {{count}} artikull",

@@ -78,7 +78,6 @@
       "tickOffTitle": "Tick it off the shopping list",
       "tickOffBody": "“{{name}}” is on your list. It's marked bought and moved to the pantry rather than added twice.",
       "matching": "Finding the products…",
-      "check": "Check",
       "maybe": "Maybe {{name}}?",
       "leftOut": "Left out. Tap to add it.",
       "sectionToAdd_one": "{{count}} item will be added",

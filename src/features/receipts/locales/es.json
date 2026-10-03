@@ -78,7 +78,6 @@
       "tickOffTitle": "Tacharlo de la lista de la compra",
       "tickOffBody": "«{{name}}» está en tu lista. Se marca como comprado y se pasa a la despensa en vez de añadirse dos veces.",
       "matching": "Buscando los productos…",
-      "check": "Revisar",
       "maybe": "¿Quizás {{name}}?",
       "leftOut": "Excluida. Toca para añadirla.",
       "sectionToAdd_one": "Se añadirá {{count}} artículo",

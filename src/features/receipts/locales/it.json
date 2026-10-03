@@ -78,7 +78,6 @@
       "tickOffTitle": "Spuntalo dalla lista della spesa",
       "tickOffBody": "“{{name}}” è nella tua lista. Viene segnato come comprato e spostato in dispensa invece di essere aggiunto due volte.",
       "matching": "Cerco i prodotti…",
-      "check": "Verifica",
       "maybe": "Forse {{name}}?",
       "leftOut": "Esclusa. Tocca per aggiungerla.",
       "sectionToAdd_one": "Verrà aggiunto {{count}} articolo",

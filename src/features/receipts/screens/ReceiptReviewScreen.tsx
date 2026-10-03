@@ -146,7 +146,7 @@ export const ReceiptReviewScreen: React.FC = () => {
       case 'failed':
         return { text: t('receipts.review.notAdded'), variant: 'danger' };
       case 'guess':
-        return { text: t('receipts.review.check'), variant: 'warning' };
+        return { text: t('labels.check'), variant: 'warning' };
       case 'add':
         return row.onList
           ? { text: t('receipts.review.onList'), variant: 'primary' }
