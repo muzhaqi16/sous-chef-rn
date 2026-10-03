@@ -4927,8 +4927,9 @@ input IngredientUsageInput {
   actualQuantity: Float!
   actualUnitId: ID!
   """
-  A pantry stack to draw on first for this ingredient. The rest of the
-  stacks under the ingredient's concept follow: opened first, then the
+  A pantry stack to draw on first for this ingredient: one of the
+  ingredient's own item or an item under its concept, else a ValidationError.
+  The rest of the stacks under the concept follow: opened first, then the
   soonest expiry.
   """
   pantryItemId: ID
@@ -12952,7 +12953,9 @@ enum RecipeRevisionStatus {
   Discarded with a note to the author; the published recipe is unchanged.
   """
   REJECTED
-  """The author unpublished the recipe, and the edit went into the draft."""
+  """
+  The recipe left PUBLISHED (unpublished or deleted); an unpublish put the edit into the recipe.
+  """
   WITHDRAWN
 }
 
