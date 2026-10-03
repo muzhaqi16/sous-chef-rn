@@ -67,7 +67,7 @@ export function ChipScrollRow<T>({
     const isActive = selected === opt.key;
     return (
       <Pressable
-        key={opt.label}
+        key={String(opt.key)}
         onPress={() => onSelect(opt.key)}
         onLayout={e => onItemLayout(opt.key, e)}
         testID={opt.testID}

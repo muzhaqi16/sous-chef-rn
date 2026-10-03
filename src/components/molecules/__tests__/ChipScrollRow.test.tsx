@@ -70,4 +70,24 @@ describe('ChipScrollRow', () => {
     );
     expect(screen.getByText('Only Option')).toBeTruthy();
   });
+
+  // Two choices can read the same (two empty stacks, "milk (0 mL)"); each is
+  // still its own chip, and pressing one selects that one.
+  it('keeps two chips with the same label apart by their keys', async () => {
+    const user = userEvent.setup();
+    render(
+      <ChipScrollRow
+        options={[
+          { key: 'stack-a', label: 'milk (0 mL)' },
+          { key: 'stack-b', label: 'milk (0 mL)' },
+        ]}
+        selected="stack-a"
+        onSelect={mockOnSelect}
+      />,
+    );
+    const chips = screen.getAllByText('milk (0 mL)');
+    expect(chips).toHaveLength(2);
+    await user.press(chips[1]!);
+    expect(mockOnSelect).toHaveBeenCalledWith('stack-b');
+  });
 });
