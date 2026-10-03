@@ -159,6 +159,15 @@ export const ReceiptScanScreen: React.FC = () => {
               }
             />
           )}
+          {readingStatus === 'tooLong' && (
+            <AlertBanner
+              variant="info"
+              icon="information-circle-outline"
+              iconLibrary="Ionicons"
+              title={t('receipts.saved.tooLongTitle')}
+              subtitle={t('receipts.saved.tooLongBody')}
+            />
+          )}
           <View style={styles.actions}>
             {itemCount > 0 && (
               <Button

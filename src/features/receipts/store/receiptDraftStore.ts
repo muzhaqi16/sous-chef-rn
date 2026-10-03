@@ -24,7 +24,11 @@ export interface ReceiptLineChoice {
  * minted before it is asked for, so a resend returns the same parse.
  */
 export type ServerReceiptParse =
-  | { id: string; state: 'pending' | 'unavailable' | 'failed' | 'unreadable' }
+  | {
+      id: string;
+      /** `tooLong`: refused for its size, which a resend would only repeat. */
+      state: 'pending' | 'unavailable' | 'failed' | 'unreadable' | 'tooLong';
+    }
   /** Over the daily allowance: asked again on a visit after `retryAt`. */
   | { id: string; state: 'limited'; retryAt: string };
 

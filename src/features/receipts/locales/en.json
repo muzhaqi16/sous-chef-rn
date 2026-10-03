@@ -27,6 +27,8 @@
       "libraryPhoto": "The photo you chose is still in your photo library.",
       "notReadTitle": "Couldn't pick out the items",
       "notReadBody": "Only the text was kept. Scan the receipt again to try once more.",
+      "tooLongTitle": "This receipt is too long to read at once",
+      "tooLongBody": "Only the text was kept. Scan it in two parts to pick out the items.",
       "limitedTitle": "Today's receipt limit is reached",
       "limitedBody": "The text is kept. Open this receipt again after {{time}} to pick out its items.",
       "bodyPhoto": "The photo was sent to be read and is deleted once it's read. Card and loyalty numbers are removed from what's kept.",

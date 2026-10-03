@@ -451,27 +451,31 @@ describe('useServerReceiptParse', () => {
     );
   });
 
-  it('takes a refusal as final, and never sends it again', async () => {
-    seedDraft();
-    const refused = recordMock(CreateReceiptParseDocument, {
-      data: {
-        createReceiptParse: {
-          __typename: 'ValidationError',
-          code: ErrorCode.ValidationFailed,
-          field: 'pages',
+  it.each([
+    ['pages', 'tooLong'],
+    ['locale', 'unavailable'],
+  ])(
+    'takes a refusal on %s as final (%s), and never sends it again',
+    async (field, status) => {
+      seedDraft();
+      const refused = recordMock(CreateReceiptParseDocument, {
+        data: {
+          createReceiptParse: {
+            __typename: 'ValidationError',
+            code: ErrorCode.ValidationFailed,
+            field,
+          },
         },
-      },
-    });
-    const { result } = render([refused.mock]);
+      });
+      const { result } = render([refused.mock]);
 
-    await waitFor(() =>
-      expect(result.current.readingStatus).toBe('unavailable'),
-    );
-    await act(async () => {
-      await jest.advanceTimersByTimeAsync(20_000);
-    });
-    expect(refused.fired).toHaveLength(1);
-  });
+      await waitFor(() => expect(result.current.readingStatus).toBe(status));
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(20_000);
+      });
+      expect(refused.fired).toHaveLength(1);
+    },
+  );
 
   it('asks nothing offline, and says the items are read once back online', async () => {
     seedDraft();

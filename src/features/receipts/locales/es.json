@@ -27,6 +27,8 @@
       "libraryPhoto": "La foto que elegiste sigue en tu galería de fotos.",
       "notReadTitle": "No se pudieron identificar los productos",
       "notReadBody": "Solo se guardó el texto. Vuelve a escanear el recibo para intentarlo de nuevo.",
+      "tooLongTitle": "Este recibo es demasiado largo para leerlo de una vez",
+      "tooLongBody": "Solo se guardó el texto. Escanéalo en dos partes para identificar los productos.",
       "limitedTitle": "Se alcanzó el límite de recibos de hoy",
       "limitedBody": "El texto se guardó. Vuelve a abrir este recibo después de {{time}} para identificar sus productos.",
       "bodyPhoto": "La foto se envió para leerla y se elimina en cuanto se lee. Los números de tarjeta y de fidelidad se quitan de lo que se guarda.",

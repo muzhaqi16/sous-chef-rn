@@ -13,7 +13,10 @@ import {
   TopLevelErrorCode,
 } from '#/graphql/generated/schemaTypes';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
+import {
+  appliedPayload,
+  validationFieldName,
+} from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { getDeviceLocale } from '#/utils/deviceLocale';
 import { todayKey } from '#/utils/dateUtils';
@@ -53,6 +56,7 @@ export type ServerReadingStatus =
   | 'retryLater'
   | 'unreadable'
   | 'unavailable'
+  | 'tooLong'
   | 'limited';
 
 const PASSING_CODES: readonly string[] = [
@@ -209,6 +213,10 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
         const outcome = parse ? outcomeOf(parse) : undefined;
         if (outcome === undefined) setPolling(id);
         else settleServerParse(id, outcome);
+      } else if (validationFieldName(settled.data) === 'pages') {
+        // Every refusal on `pages` is a size bound: the scan caps the pages at
+        // ten, so it is the character limit, which only the API knows.
+        settleServerParse(id, 'tooLong');
       } else if (retryAfter && retryAfter > 0) {
         // The daily allowance is asked again once it says.
         settleServerParse(id, {
@@ -277,8 +285,15 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
       if (!isOnline) return 'offline';
       return gaveUp ? 'retryLater' : 'reading';
     }
-    if (asked.state === 'limited') return 'limited';
-    return asked.state === 'unreadable' ? 'unreadable' : 'unavailable';
+    switch (asked.state) {
+      case 'limited':
+      case 'unreadable':
+      case 'tooLong':
+        return asked.state;
+      case 'unavailable':
+      case 'failed':
+        return 'unavailable';
+    }
   };
 
   return {

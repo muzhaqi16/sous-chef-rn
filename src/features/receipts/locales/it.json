@@ -27,6 +27,8 @@
       "libraryPhoto": "La foto che hai scelto è ancora nella tua galleria.",
       "notReadTitle": "Impossibile individuare i prodotti",
       "notReadBody": "È stato conservato solo il testo. Scansiona di nuovo lo scontrino per riprovare.",
+      "tooLongTitle": "Questo scontrino è troppo lungo da leggere in una volta",
+      "tooLongBody": "È stato conservato solo il testo. Scansionalo in due parti per individuare i prodotti.",
       "limitedTitle": "Raggiunto il limite di scontrini di oggi",
       "limitedBody": "Il testo è stato conservato. Riapri questo scontrino dopo {{time}} per individuarne i prodotti.",
       "bodyPhoto": "La foto è stata inviata per essere letta e viene eliminata appena letta. I numeri di carta e fedeltà vengono rimossi da ciò che viene conservato.",
