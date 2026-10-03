@@ -5233,6 +5233,19 @@ type Item {
   """
   categories: [ItemCategory!]!
   """
+  The concepts directly under this concept, by name. Empty for a product.
+  """
+  childConcepts(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Resume before this cursor: a previous page's startCursor"""
+    before: String
+    """Page size, reading forward: default 20, at most 100"""
+    first: Int
+    """Page size, reading backward: default 20, at most 100"""
+    last: Int
+  ): ItemConnection!
+  """
   A product's root concept, which recipes match it through. Null for a
   concept, and for a product not yet placed.
   """
@@ -5684,9 +5697,16 @@ input ItemFilters {
   dietary: DietaryFilterInput
   """Filter items that have a default unit assigned"""
   hasDefaultUnit: Boolean
+  """
+  Concepts with a parent (true), or without one (false). A product never has
+  a parent, so pair false with level CONCEPT for the top of the tree.
+  """
+  hasParent: Boolean
   """CONCEPT or PRODUCT only"""
   level: ItemLevel
   lookup: ItemLookupInput
+  """The concepts directly under this concept"""
+  parentConceptId: ID
   priceRange: PriceRangeInput
   status: ItemStatus
   statuses: [ItemStatus!]
@@ -12291,6 +12311,11 @@ type Recipe {
   """
   isSaved: Boolean!
   """
+  The newest revision whatever its status, so the author can read a
+  rejection's note. Null for anyone but the author and admins.
+  """
+  latestRevision: RecipeRevision
+  """
   How much of this recipe you can already make from your pantry, 0-100.
   Null when unauthenticated.
   """
@@ -12325,6 +12350,11 @@ type Recipe {
   stated.
   """
   originalAuthor: String
+  """
+  The author's edit waiting for review; the recipe as served is the published
+  one. Null when there is none, and for anyone but the author and admins.
+  """
+  pendingRevision: RecipeRevision
   """Preparation time in minutes, or null when not stated."""
   prepTimeMinutes: Int
   """
@@ -12451,6 +12481,67 @@ type RecipeConnection implements Connection {
   totalCount: Int
 }
 
+"""
+A recipe's content as a revision proposes it: the published recipe with the
+changes applied. The fields are Recipe's, by name and type, so a client maps it
+as it maps a recipe; it has no id, since it is not a Recipe.
+"""
+type RecipeContent {
+  caloriesPerServing: Float
+  category: RecipeCategory!
+  cookTimeMinutes: Int
+  cuisines: [Cuisine!]!
+  description: String
+  diets: [Diet!]!
+  difficulty: Difficulty!
+  healthGoals: [HealthGoal!]!
+  imageUrl: String
+  """
+  The whole ingredient list, in order: the proposed one, or the published one when the revision leaves it alone.
+  """
+  ingredients: [RecipeIngredientLine!]!
+  instructions: JSON!
+  intolerances: [Intolerance!]!
+  name: String!
+  notes: String
+  nutritionData: JSON
+  originalAuthor: String
+  prepTimeMinutes: Int
+  servings: Int!
+  source: String
+  sourceUrl: URL
+  tags: [String!]!
+  tips: String
+  totalTimeMinutes: Int
+  videoUrl: URL
+}
+
+"""A recipe field an author edits."""
+enum RecipeContentField {
+  CALORIES_PER_SERVING
+  CATEGORY
+  COOK_TIME_MINUTES
+  CUISINES
+  DESCRIPTION
+  DIETS
+  DIFFICULTY
+  HEALTH_GOALS
+  IMAGE_URL
+  INSTRUCTIONS
+  INTOLERANCES
+  NAME
+  NOTES
+  NUTRITION_DATA
+  ORIGINAL_AUTHOR
+  PREP_TIME_MINUTES
+  SERVINGS
+  SOURCE
+  SOURCE_URL
+  TAGS
+  TIPS
+  VIDEO_URL
+}
+
 """Sub-input for recipe context"""
 input RecipeContextInput {
   """How the item came to be on the list."""
@@ -12479,6 +12570,17 @@ type RecipeEdge implements Edge {
   cursor: String!
   """The Recipe this edge wraps."""
   node: Recipe!
+}
+
+"""
+One recipe field a revision changes: the live value, and the one proposed.
+"""
+type RecipeFieldChange {
+  field: RecipeContentField!
+  """The published value, as the Recipe field holds it; null when unset."""
+  from: JSON
+  """The proposed value; null clears the field."""
+  to: JSON
 }
 
 """
@@ -12582,6 +12684,22 @@ type RecipeIngredientAddResult {
   success: Boolean!
 }
 
+"""One ingredient line a revision adds, removes or changes."""
+type RecipeIngredientChange {
+  """The proposed line; null for a removed one."""
+  after: RecipeIngredientLine
+  """The live line; null for an added one."""
+  before: RecipeIngredientLine
+  kind: RecipeIngredientChangeKind!
+}
+
+"""Whether a revision adds, removes or changes an ingredient line."""
+enum RecipeIngredientChangeKind {
+  ADDED
+  CHANGED
+  REMOVED
+}
+
 """
 A page of RecipeIngredient results. Read "edges" for the rows and "pageInfo" to decide
 whether to request another page.
@@ -12632,6 +12750,19 @@ input RecipeIngredientInput {
   unitId: ID
   usAmount: Float
   usUnit: String
+}
+
+"""One ingredient line, live or proposed."""
+type RecipeIngredientLine {
+  isOptional: Boolean!
+  item: Item
+  name: String!
+  notes: String
+  preparation: String
+  quantity: Float!
+  section: String
+  sortOrder: Int!
+  unit: Unit
 }
 
 type RecipeIngredientMatch {
@@ -12767,6 +12898,62 @@ type RecipeReviewEdge implements Edge {
 input RecipeReviewOrderBy {
   createdAt: SortOrder
   rating: SortOrder
+}
+
+"""
+An author's edit to a PUBLISHED recipe, held for review while the recipe stays
+live. A recipe has at most one PENDING revision, and further author edits
+update it. Seen only by the author and admins.
+"""
+type RecipeRevision {
+  """The author who submitted it; null once their account is gone."""
+  author: User
+  """
+  The fields it changes, against the recipe as published now. Empty when it
+  changes only ingredients.
+  """
+  changes: [RecipeFieldChange!]!
+  id: ID!
+  """
+  The ingredient lines it adds, removes or changes, against the recipe as
+  published now. Empty when it leaves the ingredients alone.
+  """
+  ingredientChanges: [RecipeIngredientChange!]!
+  """
+  The recipe as approving would leave it, for an editor to reopen the pending
+  edit from. Null once the recipe is gone.
+  """
+  proposed: RecipeContent
+  """
+  The whole proposed ingredient list, in order; null when it leaves the ingredients alone.
+  """
+  proposedIngredients: [RecipeIngredientLine!]
+  recipe: Recipe!
+  """The admin's note; a rejection always carries one."""
+  reviewNote: String
+  """When an admin decided it."""
+  reviewedAt: DateTime
+  status: RecipeRevisionStatus!
+  submittedAt: DateTime!
+  updatedAt: DateTime!
+  """
+  Bumped by every author edit; approveRecipeRevision names the version reviewed.
+  """
+  version: Int!
+}
+
+"""Where an author's edit to a published recipe stands."""
+enum RecipeRevisionStatus {
+  """Applied to the recipe."""
+  APPROVED
+  """Waiting for an admin; the published recipe is unchanged."""
+  PENDING
+  """
+  Discarded with a note to the author; the published recipe is unchanged.
+  """
+  REJECTED
+  """The author unpublished the recipe, and the edit went into the draft."""
+  WITHDRAWN
 }
 
 type RecipeSourceMapping {
