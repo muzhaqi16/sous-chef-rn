@@ -124,16 +124,15 @@ describe('getAvailabilityStatus', () => {
     ).toBe('partial');
   });
 
-  // The server reports 0 available when no conversion reaches the recipe's
-  // unit (a stack of eggs in pieces, a recipe in "large"); the stack still
-  // holds them.
-  it('returns "partial" for a stocked stack the recipe unit does not convert to', () => {
+  // The server reports null available when the recipe's unit cannot express
+  // the stack (a loaf against a pound): unknown, and the stack holds some.
+  it('returns "partial" for a stocked stack the recipe unit cannot express', () => {
     expect(
       getAvailabilityStatus({
         isAvailable: false,
         matchConfidence: 1,
         matchedPantryItem: { id: 'pi-1', displayAmount: { quantity: 1 } },
-        availableQuantity: 0,
+        availableQuantity: null,
       } as IngredientMatch),
     ).toBe('partial');
   });

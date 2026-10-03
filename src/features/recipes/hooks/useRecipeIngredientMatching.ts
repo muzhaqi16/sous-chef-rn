@@ -75,8 +75,8 @@ export function getAvailabilityStatus(
   if (!stack) return 'missing';
   if (match.matchConfidence < CONFIDENT_MATCH) return 'unsure';
   if (match.isAvailable) return 'available';
-  // `availableQuantity` is 0 when no conversion reaches the recipe's unit
-  // (eggs in "large"), so what the stack holds decides between these two.
+  // `availableQuantity` is null when the recipe's unit cannot express the
+  // stack (a loaf against a pound), so what the stack holds decides these two.
   if (stack.displayAmount.quantity > 0) return 'partial';
   return 'missing';
 }
