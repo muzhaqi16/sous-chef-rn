@@ -142,6 +142,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
               id: edge.node.id,
               name: edge.node.name,
               quantity: edge.node.quantity,
+              isOptional: edge.node.isOptional,
               unitId: edge.node.unit?.id,
               itemId: edge.node.item?.id,
             })),
