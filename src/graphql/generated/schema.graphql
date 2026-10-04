@@ -7363,6 +7363,16 @@ type MealTypeNutrition {
   totalProtein: Float!
 }
 
+"""An amount in a unit."""
+input MeasuredAmountInput {
+  """Greater than zero."""
+  quantity: Float!
+  """
+  Omitted, the unit the door defaults to: the list line's, or the stack's.
+  """
+  unitId: ID
+}
+
 """
 How THIS stack is measured, beyond its net weight: one tracking unit holds
 portionsPerTrackingUnit of portionUnit (1 bulb = 10 cloves), and
@@ -7632,16 +7642,15 @@ Creates a PantryItem from a ShoppingListItem after purchase.
 """
 input MoveShoppingItemToPantryInput {
   """
-  Per-unit price paid. Omitted, the line's purchasedPrice is the price paid,
+  Price paid per unit bought: per amount.measured unit, or per package for
+  amount.packages. Omitted, the line's purchasedPrice is the price paid,
   recorded as PURCHASE whatever priceSource says; with neither, the purchase
   records no price. An estimate is never a price paid, though it still values
-  the stock. Server calculates totalCost = price × actualQuantity.
+  the stock. Not with totalCost.
   """
   actualPrice: Float
-  """Actual quantity purchased (may differ from planned)"""
-  actualQuantity: Float!
-  """Unit ID for the quantity (defaults to shopping item's unit)"""
-  actualUnitId: ID
+  """What was bought: an amount in a unit, or a count of packages."""
+  amount: StockAmountInput!
   """
   The expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
   where the field may be cleared.
@@ -7650,11 +7659,6 @@ input MoveShoppingItemToPantryInput {
   idempotencyKey: ID
   """Additional notes"""
   notes: String
-  """
-  The purchased packages' own size (1 jar of 22 oz), recorded on the new batch. Omitted,
-  the line's own package size applies, else the pantry item's default.
-  """
-  packageSize: PackageSizeInput
   """ID of the target pantry"""
   pantryId: ID!
   """
@@ -7694,6 +7698,11 @@ input MoveShoppingItemToPantryInput {
   plus the item's shelf life; without it no expiry is set.
   """
   today: LocalDate
+  """
+  The total paid for the line, as the receipt states it. Recorded exactly; the
+  unit price is derived from it. Not with actualPrice.
+  """
+  totalCost: Float
 }
 
 type MoveShoppingItemToPantryPayload {
@@ -9399,6 +9408,25 @@ it, the batch takes the item's default package size.
 input PackageSizeInput {
   netWeight: Float!
   netWeightUnitId: ID!
+}
+
+"""
+A count of packages, each holding `size`. Counted stock (pieces, jars) takes the
+count in its own unit, with the size recorded on the batch. Stock counted by
+weight or volume takes count × size, converted into its unit through recorded
+facts only: directly within a dimension, across one only through a recorded
+density or the item's own conversion. With no size, or one that cannot be
+converted, it is refused on `amount.packages.size`; it never opens a second stack.
+"""
+input PackagesInput {
+  """Whole packages; greater than zero."""
+  count: Int!
+  """
+  One package's net content. Omitted: the list line's stated size, else the
+  item's own PACKAGE size when the item is one pack (a product holding one
+  barcode). A size the catalog only infers is never used.
+  """
+  size: PackageSizeInput
 }
 
 type PageInfo {
@@ -13527,6 +13555,13 @@ type ResolveShareLinkResult {
 Input for restocking a pantry item - adds quantity and creates ledger record
 """
 input RestockPantryItemInput {
+  """
+  What was restocked: an amount in a unit (the stack's, when omitted), or a count of packages.
+  """
+  amount: StockAmountInput!
+  """
+  Per unit restocked: per amount.measured unit, or per package for amount.packages.
+  """
   costPerUnit: Float
   """
   The new batch's expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
@@ -13542,13 +13577,6 @@ input RestockPantryItemInput {
   Omitted, the item's default applies.
   """
   packagePortions: Float
-  """
-  The restocked packages' own size, when counted in the item's unit (1 jar of 22 oz).
-  Omitted, the new batch takes the item's default package size. A size the item's
-  weight cannot be expressed in is refused on packageSize.
-  """
-  packageSize: PackageSizeInput
-  quantity: Float!
   restockedAt: DateTime
   storeId: ID
   """
@@ -13556,8 +13584,8 @@ input RestockPantryItemInput {
   plus the item's shelf life; without it no expiry is set.
   """
   today: LocalDate
+  """The total paid, recorded exactly; it wins over costPerUnit."""
   totalCost: Float
-  unitId: ID
 }
 
 type RestockPantryItemPayload {
@@ -14769,6 +14797,18 @@ type SpoonacularStepIngredient {
 input SpoonacularWeightPerServingInput {
   amount: Float
   unit: String
+}
+
+"""
+How much stock enters a pantry: exactly one of an amount in a unit, or a count
+of packages. The server owns the package arithmetic: a client states what was
+bought, as the receipt or the shopper says it, and never multiplies or converts.
+"""
+input StockAmountInput @oneOf {
+  """An amount in a unit (500 g, 2 pieces)."""
+  measured: MeasuredAmountInput
+  """A count of packages (2 packs of 500 g)."""
+  packages: PackagesInput
 }
 
 """
