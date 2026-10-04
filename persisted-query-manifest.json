@@ -1101,10 +1101,10 @@
       "body": "mutation ResetPassword($input: ResetPasswordInput!) {\n  resetPassword(input: $input) {\n    __typename\n    ... on ResetPasswordPayload {\n      status\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "d878eb0d39dbad6a5d2c5fd33ad36aad663623948f2d3e9c3e271963a5e04de0",
+      "id": "49a5132306e16204812fee72d40c69bc489282455894b234a876fb1b27b2c28d",
       "name": "ResolveReceiptLines",
       "type": "query",
-      "body": "query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {\n  resolveReceiptLines(input: $input) {\n    store {\n      id\n      name\n      __typename\n    }\n    lines {\n      clientId\n      confidence\n      best {\n        method\n        item {\n          id\n          name\n          __typename\n        }\n        __typename\n      }\n      candidates {\n        method\n        item {\n          id\n          name\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
+      "body": "query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {\n  resolveReceiptLines(input: $input) {\n    store {\n      id\n      name\n      __typename\n    }\n    lines {\n      clientId\n      confidence\n      best {\n        method\n        item {\n          id\n          name\n          brands {\n            id\n            brand {\n              id\n              name\n              __typename\n            }\n            __typename\n          }\n          netWeight\n          netWeightKind\n          displayUnit {\n            id\n            symbol\n            name\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      candidates {\n        method\n        item {\n          id\n          name\n          brands {\n            id\n            brand {\n              id\n              name\n              __typename\n            }\n            __typename\n          }\n          netWeight\n          netWeightKind\n          displayUnit {\n            id\n            symbol\n            name\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "99f5afdb269e6dd2077029b830990affeb6536c9fec9e740f4bdc25f1576646a",

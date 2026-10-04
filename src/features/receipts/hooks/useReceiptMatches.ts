@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { skipToken, useMutation, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import {
+  NetWeightKind,
   ReceiptMatchConfidence,
   ReceiptParser,
   type ReceiptMatchMethod,
@@ -9,15 +10,19 @@ import {
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
+import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import {
   RecordReceiptMatchesDocument,
   ResolveReceiptLinesDocument,
+  type ResolveReceiptLinesQuery,
 } from './useReceiptMatches.generated';
 
 /** A catalog item the API proposes for a receipt line. */
 export interface ReceiptCandidate {
   itemId: string;
   itemName: string;
+  /** What sets it apart from an item of the same name: its brand, else its pack size. */
+  detail: string | null;
   method: ReceiptMatchMethod;
 }
 
@@ -53,12 +58,21 @@ const SURE = new Set([
   ReceiptMatchConfidence.Medium,
 ]);
 
-const toCandidate = (candidate: {
-  method: ReceiptMatchMethod;
-  item: { id: string; name: string };
-}): ReceiptCandidate => ({
+type ResolvedCandidate =
+  ResolveReceiptLinesQuery['resolveReceiptLines']['lines'][number]['candidates'][number];
+
+const candidateDetail = ({ item }: ResolvedCandidate): string | null => {
+  const [onlyBrand, ...otherBrands] = item.brands;
+  if (onlyBrand && otherBrands.length === 0) return onlyBrand.brand.name;
+  return item.netWeightKind === NetWeightKind.Package
+    ? formatNetWeightDisplay(item.netWeight, item.displayUnit)
+    : null;
+};
+
+const toCandidate = (candidate: ResolvedCandidate): ReceiptCandidate => ({
   itemId: candidate.item.id,
   itemName: candidate.item.name,
+  detail: candidateDetail(candidate),
   method: candidate.method,
 });
 

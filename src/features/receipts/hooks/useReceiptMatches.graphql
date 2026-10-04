@@ -15,6 +15,20 @@ query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {
         item {
           id
           name
+          brands {
+            id
+            brand {
+              id
+              name
+            }
+          }
+          netWeight
+          netWeightKind
+          displayUnit {
+            id
+            symbol
+            name
+          }
         }
       }
       candidates {
@@ -22,6 +36,22 @@ query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {
         item {
           id
           name
+          # What tells two candidates of one name apart: a single brand, else
+          # the pack size (useReceiptMatches' candidateDetail).
+          brands {
+            id
+            brand {
+              id
+              name
+            }
+          }
+          netWeight
+          netWeightKind
+          displayUnit {
+            id
+            symbol
+            name
+          }
         }
       }
     }

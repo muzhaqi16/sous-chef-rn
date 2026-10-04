@@ -22,6 +22,7 @@ import { useStore } from '#store';
 import {
   AcquisitionMethod,
   ErrorCode,
+  NetWeightKind,
   PriceSource,
   ReceiptMatchConfidence,
   ReceiptMatchMethod,
@@ -790,6 +791,75 @@ describe('useReceiptReview', () => {
         'Plantains',
       ]);
       expect(result.current.review.pendingCount).toBe(1);
+    });
+
+    it('says what sets each candidate apart: its one brand, else its pack size', async () => {
+      const resolve = recordMock(ResolveReceiptLinesDocument, {
+        data: {
+          resolveReceiptLines: {
+            store: null,
+            lines: [
+              {
+                clientId: '3',
+                confidence: ReceiptMatchConfidence.Low,
+                best: null,
+                candidates: [
+                  {
+                    method: ReceiptMatchMethod.Search,
+                    item: {
+                      id: 'milk-kirkland',
+                      name: 'Whole milk',
+                      brands: [
+                        { id: 'ib-1', brand: { id: 'b-1', name: 'Kirkland' } },
+                      ],
+                    },
+                  },
+                  {
+                    method: ReceiptMatchMethod.Search,
+                    item: {
+                      id: 'milk-gallon',
+                      name: 'Whole milk',
+                      netWeight: 1,
+                      netWeightKind: NetWeightKind.Package,
+                      displayUnit: {
+                        id: 'u-gal',
+                        symbol: 'gal',
+                        name: 'gallon',
+                      },
+                    },
+                  },
+                  {
+                    method: ReceiptMatchMethod.Search,
+                    item: {
+                      id: 'milk-label',
+                      name: 'Whole milk',
+                      netWeight: 100,
+                      netWeightKind: NetWeightKind.Reference,
+                      displayUnit: { id: 'u-g', symbol: 'g', name: 'gram' },
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      });
+      const { result } = await setup({ resolve });
+
+      await waitFor(() =>
+        expect(result.current.review.matchState).toBe('done'),
+      );
+      expect(
+        result.current.review.rows[1]?.candidates.map(({ itemId, detail }) => ({
+          itemId,
+          detail,
+        })),
+      ).toEqual([
+        { itemId: 'milk-kirkland', detail: 'Kirkland' },
+        { itemId: 'milk-gallon', detail: '1 gal' },
+        // A 100 g nutrition basis is no pack size.
+        { itemId: 'milk-label', detail: null },
+      ]);
     });
 
     it('keeps a line the user left out, out, whatever the API proposes', async () => {

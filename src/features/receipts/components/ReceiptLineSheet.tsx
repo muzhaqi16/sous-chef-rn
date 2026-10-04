@@ -22,6 +22,7 @@ import type { ReceiptLineChoice } from '../store/receiptDraftStore';
 import type { ReceiptReviewLine } from '../utils/receiptReviewLines';
 import type { ListMatchKey } from '../utils/linkReceiptLines';
 import type { ReceiptCandidate } from '../hooks/useReceiptMatches';
+import { detailBesideName } from '../utils/receiptCandidates';
 import {
   receiptLineDefaults,
   receiptLineSchema,
@@ -64,12 +65,12 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   const unitId = useWatch({ control, name: 'unitId' });
   const unitText = useWatch({ control, name: 'unitValue' });
   const listItemName = listItemNameFor({ itemId, unitId, unitText });
-  // A chip is keyed by its name, and two items of one name read as one.
-  const suggestions = candidates.filter(
-    (candidate, at) =>
-      candidates.findIndex(other => other.itemName === candidate.itemName) ===
-      at,
-  );
+  const chipLabel = (candidate: ReceiptCandidate): string => {
+    const detail = detailBesideName(candidate, candidates);
+    return detail === null
+      ? candidate.itemName
+      : t('labels.nameWithDetail', { name: candidate.itemName, detail });
+  };
 
   const save = handleSubmit(values => {
     onSave(toLineChoice(values));
@@ -128,20 +129,20 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
               />
             )}
           />
-          {suggestions.length > 0 && (
+          {candidates.length > 0 && (
             <View style={styles.suggestions}>
               <Text role="caption" tone="secondary">
                 {t('labels.suggested')}
               </Text>
               <ChipScrollRow
-                options={suggestions.map((candidate, at) => ({
+                options={candidates.map((candidate, at) => ({
                   key: candidate.itemId,
-                  label: candidate.itemName,
+                  label: chipLabel(candidate),
                   testID: receiptsTestIDs.lineSuggestion(at),
                 }))}
                 selected={itemId}
                 onSelect={key => {
-                  const picked = suggestions.find(
+                  const picked = candidates.find(
                     candidate => candidate.itemId === key,
                   );
                   if (!picked) return;
