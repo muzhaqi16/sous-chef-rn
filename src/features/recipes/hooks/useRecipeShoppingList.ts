@@ -10,7 +10,6 @@ import type { MaterializedRecipe, DisplayIngredient } from './useRecipeData';
 import { CreateShoppingListForRecipeDocument } from './useRecipeDetail.generated';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
 import { useAppStore, useSelectedShoppingListId } from '#store/useAppStore';
-import { extractNodes } from '#/utils/connectionUtils';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import { addShoppingListToQueryCache } from '#features/shoppingList/cache/list';
@@ -337,12 +336,11 @@ export function useRecipeShoppingList({
               added += 1;
             }
           }
-          const allIngredientIds = extractNodes(
-            backendRecipe.ingredientsConnection,
-          ).map(ing => ing.id);
           setAddedIngredients(prev => {
             const next = new Set(prev);
-            allIngredientIds.forEach(id => next.add(id));
+            for (const { success, recipeIngredient } of payload.results) {
+              if (success) next.add(recipeIngredient.id);
+            }
             return next;
           });
           toastService.success(
