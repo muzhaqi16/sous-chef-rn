@@ -20,6 +20,8 @@ import { refByIdOrName } from '#/utils/refInput';
  */
 export interface EditableItemSnapshot {
   id: string;
+  /** The version a direct edit sends back; `updateItem` refuses a stale one. */
+  version: number;
   /**
    * May this user write to the item directly with `updateItem`? Viewer-scoped.
    * `false` does NOT mean "suggest instead" — the two flags are independent, and
@@ -86,6 +88,7 @@ export function itemToEditableSnapshot(
   const primaryBrand = item.brands[0]?.brand;
   return {
     id: item.id,
+    version: item.version,
     canEdit: item.canEdit,
     canSuggest: item.canSuggest,
     name: item.name,

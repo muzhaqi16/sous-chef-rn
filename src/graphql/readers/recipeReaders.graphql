@@ -126,5 +126,6 @@ fragment RecipeReaders on Recipe {
   totalReviews
   totalTimeMinutes
   updatedAt
+  version
   videoUrl
 }

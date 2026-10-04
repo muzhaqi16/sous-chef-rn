@@ -112,4 +112,5 @@ fragment ItemReaders on Item {
     id
     name
   }
+  version
 }

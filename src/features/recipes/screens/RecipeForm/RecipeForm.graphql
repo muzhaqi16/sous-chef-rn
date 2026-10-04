@@ -2,6 +2,8 @@
 # when hydrating the form for edit mode.
 fragment RecipeForm_recipe on Recipe {
   id
+  # Sent back on save, so an edit made elsewhere since is refused.
+  version
   name
   description
   imageUrl

@@ -51,6 +51,7 @@ const snapshot = (
   overrides: Partial<EditableItemSnapshot> = {},
 ): EditableItemSnapshot => ({
   id: 'item-1',
+  version: 1,
   // The default target: a public catalog item this user may propose edits to
   // but not write through — the suggestion path.
   canEdit: false,
@@ -375,11 +376,33 @@ describe('useSuggestItemEdit', () => {
       );
 
       expect(outcome).toEqual({ status: 'updated' });
+      // With the version the form opened on, so an edit made since is refused.
       await waitFor(() =>
         expect(fired).toContainEqual({
-          input: { id: 'item-1', name: 'Skim Milk' },
+          input: { id: 'item-1', version: 1, name: 'Skim Milk' },
         }),
       );
+    });
+
+    it('hands a write refused as changed elsewhere back to the form, unalerted', async () => {
+      const { mock } = recordMock(UpdateItemDocument, {
+        data: {
+          updateItem: {
+            __typename: 'ConflictError',
+            code: ErrorCode.VersionConflict,
+            message: 'stale',
+          },
+        },
+      });
+      const { result } = renderHook([mock]);
+
+      const outcome = await result.current.submitEdit(
+        snapshot({ canEdit: true, canSuggest: false }),
+        form(),
+      );
+
+      expect(outcome).toEqual({ status: 'conflict' });
+      expect(alertService.alert).not.toHaveBeenCalled();
     });
 
     // canEdit=false does not imply "suggest": a PRIVATE item the user doesn't

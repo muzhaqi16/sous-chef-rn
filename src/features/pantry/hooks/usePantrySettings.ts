@@ -70,6 +70,7 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
     data: pantryData,
     loading: loadingPantry,
     error: pantryError,
+    refetch: refetchPantry,
   } = useQuery(
     GetPantryDocument,
     hasValidPantryId && pantryId
@@ -140,17 +141,23 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
     // Omits keys the read did not carry, so a refusal arriving before the
     // query resolves reverts nothing rather than blanking the real name.
     const previous = snapshotFields(pantry, updates);
+    // The version the screen shows: a save made elsewhere since is refused,
+    // not overwritten.
+    const version = pantry?.id === id ? pantry.version : undefined;
     writeEntityFields(client.cache, entity, updates);
 
     const settled = await settleMutation(
       () =>
         updatePantry({
-          variables: { input: { id, ...updates }, today: todayKey() },
+          variables: { input: { id, ...updates, version }, today: todayKey() },
         }),
       {
         document: UpdatePantryDocument,
         fallback: t('errors.saveSettingsFailed'),
         onFailed: () => writeEntityFields(client.cache, entity, previous),
+        onConflictRefresh: () => {
+          void refetchPantry();
+        },
       },
     );
     return settled.status !== 'failed';

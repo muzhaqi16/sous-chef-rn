@@ -144,6 +144,7 @@ export const recipeFormSchema: ObjectSchema<RecipeFormState> = object({
       msgWith('recipes.tagTooLong', { count: TAG_MAX_LENGTH }),
       value => parseCommaTags(value).every(tag => tag.length <= TAG_MAX_LENGTH),
     ),
+  version: number().nullable().defined(),
 });
 
 export const recipeFormDefaults = (): RecipeFormState => ({
@@ -168,4 +169,5 @@ export const recipeFormDefaults = (): RecipeFormState => ({
   tips: '',
   originalAuthor: '',
   tags: '',
+  version: null,
 });

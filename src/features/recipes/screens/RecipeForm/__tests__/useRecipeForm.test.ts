@@ -360,6 +360,7 @@ describe('useRecipeForm', () => {
     const recipe: RecipeForm_RecipeFragment = {
       __typename: 'Recipe',
       id: 'recipe-1',
+      version: 4,
       name: 'Existing Recipe',
       description: 'A recipe',
       imageUrl: 'http://img.jpg',
@@ -419,6 +420,8 @@ describe('useRecipeForm', () => {
     expect(result.current.state.diets).toEqual([Diet.Keto]);
     expect(result.current.state.healthGoals).toEqual([HealthGoal.HighProtein]);
     expect(result.current.state.intolerances).toEqual([Intolerance.Dairy]);
+    // A save sends the version it loaded, so an edit made since is refused.
+    expect(result.current.buildUpdateInput().version).toBe(4);
   });
 
   it('populateFromRecipe handles { number, step } instruction format', () => {
@@ -427,6 +430,7 @@ describe('useRecipeForm', () => {
     const recipe: RecipeForm_RecipeFragment = {
       __typename: 'Recipe',
       id: 'recipe-2',
+      version: 1,
       name: 'External Recipe',
       description: '',
       imageUrl: null,
@@ -474,6 +478,7 @@ describe('useRecipeForm', () => {
     const recipe: RecipeForm_RecipeFragment = {
       __typename: 'Recipe',
       id: 'recipe-3',
+      version: 2,
       name: 'Live Name',
       description: 'Live description',
       imageUrl: null,

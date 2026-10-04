@@ -16,6 +16,7 @@ const snapshot = (
   overrides: Partial<EditableItemSnapshot> = {},
 ): EditableItemSnapshot => ({
   id: 'item-1',
+  version: 1,
   canEdit: false,
   canSuggest: true,
   name: 'Whole Milk',

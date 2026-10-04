@@ -234,6 +234,7 @@ export function useRecipeForm() {
   // `servings` (NOT NULL), so those stay omitted when blank.
   const buildUpdateInput = (): Omit<UpdateRecipeInput, 'id'> => {
     return {
+      version: state.version ?? undefined,
       name: state.name.trim() || undefined,
       description: state.description.trim() || null,
       status: state.status,
@@ -322,6 +323,7 @@ export function useRecipeForm() {
       tips: content.tips ?? '',
       originalAuthor: content.originalAuthor ?? '',
       tags: content.tags.join(', '),
+      version: recipe.version,
     };
     // `reset` re-baselines `isDirty`, so loading a recipe does not read as an
     // edit — which is what the hand-rolled initial-state snapshot was for.

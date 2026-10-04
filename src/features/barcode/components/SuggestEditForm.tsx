@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
@@ -15,6 +15,8 @@ import {
   type ScannedPack,
 } from '#utils/items/suggestItemChanges';
 import { writesItemDirectly } from '#domain/itemWriteAccess';
+import { alertService } from '#/services/alertService';
+import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
 
 interface SuggestEditFormProps {
   itemId: string;
@@ -40,6 +42,10 @@ export const SuggestEditForm: React.FC<SuggestEditFormProps> = ({
   const { t } = useTranslation();
   const { snapshot, loading, error, refetch } = useItemForEdit(itemId);
   const { submitEdit, loading: submitting } = useSuggestItemEdit();
+  // The version the form opened on. The snapshot is live, so a write that
+  // lands while the sheet is open must not stand in for what the user saw.
+  const [openedVersion, setOpenedVersion] = useState<number | null>(null);
+  if (snapshot && openedVersion === null) setOpenedVersion(snapshot.version);
 
   // A suggestion from a scan corrects the pack the scan showed, so it opens on,
   // and is diffed against, that pack. A direct edit writes the item, and stays
@@ -51,7 +57,29 @@ export const SuggestEditForm: React.FC<SuggestEditFormProps> = ({
 
   const handleSubmit = async (formData: AddItemSubmitPayload) => {
     if (!original) return;
-    const result = await submitEdit(original, formData);
+    const result = await submitEdit(
+      { ...original, version: openedVersion ?? original.version },
+      formData,
+    );
+    if (result.status === 'conflict') {
+      // Refresh closes the sheet over a refetch, so it reopens on the latest;
+      // Cancel keeps the user's edits in front of them.
+      alertService.alert(
+        t('errors.changedElsewhereTitle'),
+        getVersionConflictMessage(),
+        [
+          {
+            text: t('labels.refresh'),
+            onPress: () => {
+              refetch();
+              onClose();
+            },
+          },
+          { text: t('labels.cancel'), style: 'cancel' },
+        ],
+      );
+      return;
+    }
     // Keep the sheet open when there's nothing to send or the send failed, so
     // the user's edits survive and they can correct and retry.
     if (result.status !== 'failed' && result.status !== 'noChanges') {

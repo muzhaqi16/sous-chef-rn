@@ -10,6 +10,8 @@ import {
   CreateMealPlanDocument,
   UpdateMealPlanDocument,
   DeleteMealPlanDocument,
+  GetMealPlanDocument,
+  GetMealPlansDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
   MealPlanDisplayFragmentDoc,
@@ -207,15 +209,23 @@ export function useMealPlanActions() {
       }
     };
 
+    // The version the screen shows: a save made elsewhere since is refused,
+    // not overwritten.
+    const version = snapshot?.version;
     const settled = await settleMutation(
       () =>
         updateMealPlanMutation({
-          variables: { input: { ...input, id } },
+          variables: { input: { version, ...input, id } },
         }),
       {
         document: UpdateMealPlanDocument,
         fallback: t('errors.saveFailed'),
         onFailed: revertUpdate,
+        onConflictRefresh: () => {
+          void client.refetchQueries({
+            include: [GetMealPlanDocument, GetMealPlansDocument],
+          });
+        },
       },
     );
     return settled.status !== 'failed';

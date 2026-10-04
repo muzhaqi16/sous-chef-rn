@@ -55,4 +55,6 @@ export interface RecipeFormState {
   originalAuthor: string;
   // Comma-separated recipe tags (freeform), split into a string[] on save.
   tags: string;
+  // The version the form loaded; null for a new recipe.
+  version: number | null;
 }

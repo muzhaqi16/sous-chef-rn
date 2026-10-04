@@ -26,6 +26,7 @@ jest.mock('#/services/toastService', () => ({
 const SOURCE = {
   __typename: 'Recipe',
   id: 'recipe-1',
+  version: 1,
   name: 'Lasagna',
   description: 'Layered',
   imageUrl: null,
