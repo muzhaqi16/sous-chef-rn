@@ -174,6 +174,24 @@ describe('settleMutation', () => {
       ]);
     });
 
+    // A nested input's field (`amount.packages.size`) has copy of its own that
+    // its last segment alone could never name.
+    it("shows a nested field's own copy, by its whole path", async () => {
+      const settled = await settleMutation(
+        create({
+          __typename: 'ValidationError',
+          code: ErrorCode.ValidationFailed,
+          field: 'amount.packages.size',
+        }),
+        { ...options, present: 'none' },
+      );
+
+      expect(settled.failure).toMatchObject({
+        field: 'size',
+        body: t('errors.field.amountPackagesSize'),
+      });
+    });
+
     it("shows the code's own copy when it says more than the field does", async () => {
       // Over-consuming reports INSUFFICIENT_QUANTITY on the quantity field. The
       // number the user typed is a valid one, so the field's "that quantity

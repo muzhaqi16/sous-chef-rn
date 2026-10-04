@@ -185,6 +185,8 @@
       "packageSize": "Enter the package size in a unit of the same kind as this item's (weight with weight, volume with volume).",
       "resolution": "Choose whether to use the estimate or enter the amount yourself.",
       "amount": "That's more than this item has left.",
+      "amountMeasuredQuantity": "Enter an amount greater than zero.",
+      "amountPackagesSize": "We don't know how much one package of this holds. Enter the package size, or the amount with its unit (like 1 kg).",
       "unitId": "That unit can't be used here. Pick one from the list.",
       "primaryUpc": "That barcode isn’t valid. Check its digits and try again."
     },

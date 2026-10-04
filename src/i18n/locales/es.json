@@ -185,6 +185,8 @@
       "packageSize": "Indica el tamaño del paquete en una unidad del mismo tipo que la de este artículo (peso con peso, volumen con volumen).",
       "resolution": "Elige si usar la estimación o introducir la cantidad tú mismo.",
       "amount": "Es más de lo que le queda a este artículo.",
+      "amountMeasuredQuantity": "Indica una cantidad mayor que cero.",
+      "amountPackagesSize": "No sabemos cuánto contiene un paquete de esto. Indica el tamaño del paquete o la cantidad con su unidad (por ejemplo, 1 kg).",
       "unitId": "Esa unidad no se puede usar aquí. Elige una de la lista.",
       "primaryUpc": "Ese código de barras no es válido. Comprueba los dígitos e inténtalo de nuevo."
     },

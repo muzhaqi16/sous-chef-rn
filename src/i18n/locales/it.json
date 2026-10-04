@@ -185,6 +185,8 @@
       "packageSize": "Inserisci la dimensione della confezione in un'unità dello stesso tipo di quella dell'articolo (peso con peso, volume con volume).",
       "resolution": "Scegli se usare la stima o inserire tu la quantità.",
       "amount": "È più di quanto resta di questo articolo.",
+      "amountMeasuredQuantity": "Inserisci una quantità maggiore di zero.",
+      "amountPackagesSize": "Non sappiamo quanto contiene una confezione. Indica la dimensione della confezione o la quantità con la sua unità (ad esempio 1 kg).",
       "unitId": "Quell'unità non può essere usata qui. Scegline una dall'elenco.",
       "primaryUpc": "Quel codice a barre non è valido. Controlla le cifre e riprova."
     },

@@ -185,6 +185,8 @@
       "packageSize": "Vendosni madhësinë e paketimit në një njësi të të njëjtit lloj si ajo e artikullit (peshë me peshë, vëllim me vëllim).",
       "resolution": "Zgjidhni nëse do të përdorni vlerësimin apo do të vendosni vetë sasinë.",
       "amount": "Kjo është më shumë se sa ka mbetur nga ky artikull.",
+      "amountMeasuredQuantity": "Shkruaj një sasi më të madhe se zero.",
+      "amountPackagesSize": "Nuk e dimë sa përmban një paketë e kësaj. Shkruaj madhësinë e paketës ose sasinë me njësinë e saj (p.sh. 1 kg).",
       "unitId": "Kjo njësi nuk mund të përdoret këtu. Zgjidhni një nga lista.",
       "primaryUpc": "Ai barkod nuk është i vlefshëm. Kontrollo shifrat dhe provo përsëri."
     },
