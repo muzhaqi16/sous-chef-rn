@@ -47,6 +47,12 @@ fragment PantryItemReaders on PantryItem {
       }
       isPrimary
     }
+    dataAttributions {
+      licenseUrl
+      notice
+      source
+      sourceUrl
+    }
     images {
       id
       kind

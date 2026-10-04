@@ -12,6 +12,12 @@ fragment RecipeReaders on Recipe {
     email
   }
   cuisines
+  dataAttributions {
+    licenseUrl
+    notice
+    source
+    sourceUrl
+  }
   description
   diets
   difficulty

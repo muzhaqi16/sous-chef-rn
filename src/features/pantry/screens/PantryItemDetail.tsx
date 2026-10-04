@@ -2,6 +2,7 @@ import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
 import { DetailSection } from '#components/molecules/DetailSection';
+import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
@@ -391,6 +392,7 @@ export const PantryItemDetail: React.FC<
                   itemId: item.id,
                   itemName: item.itemName,
                   nutritionFacts,
+                  dataAttributions: item.item.dataAttributions,
                 })
               }
             />
@@ -494,6 +496,12 @@ export const PantryItemDetail: React.FC<
             </Text>
           )}
         </DetailSection>
+
+        {item.item.dataAttributions.length > 0 && (
+          <DetailSection transparent>
+            <DataAttributionNotices attributions={item.item.dataAttributions} />
+          </DetailSection>
+        )}
       </CollapsingHeroDetail>
 
       {!!actions.adjustModalVisible && (

@@ -48,6 +48,13 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     # PRIVATE/no-store for its membership data.
     canEdit
     canSuggest
+    # The notices the catalog data's licences ask a reader to see.
+    dataAttributions {
+      source
+      notice
+      licenseUrl
+      sourceUrl
+    }
     imageUrl
     images {
       id

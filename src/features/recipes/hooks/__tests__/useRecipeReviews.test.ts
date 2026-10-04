@@ -210,6 +210,7 @@ const makeBackendRecipe = (
   tags: [],
   source: null,
   sourceUrl: null,
+  dataAttributions: [],
   instructions: null,
   isExternal: false,
   sourceMapping: null,

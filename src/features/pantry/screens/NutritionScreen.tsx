@@ -5,18 +5,23 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { NutritionDetailList } from '#features/pantry/components/NutritionDetailList';
 import { SubScreen } from '#components/templates/SubScreen';
+import {
+  DataAttributionNotices,
+  type DataAttributionValue,
+} from '#components/molecules/DataAttributionNotices';
 import type { NutritionFactsValues } from '#domain/nutrition';
 
 type NutritionScreenParams = {
   itemId: string;
   itemName: string;
   nutritionFacts: NutritionFactsValues;
+  dataAttributions: readonly DataAttributionValue[];
 };
 
 export const NutritionScreen: React.FC<
   StaticScreenProps<NutritionScreenParams>
 > = ({ route }) => {
-  const { itemName, nutritionFacts } = route.params;
+  const { itemName, nutritionFacts, dataAttributions } = route.params;
 
   return (
     <SubScreen title={itemName}>
@@ -30,6 +35,12 @@ export const NutritionScreen: React.FC<
         <View style={styles.section}>
           <NutritionDetailList nutritionFacts={nutritionFacts} />
         </View>
+
+        {dataAttributions.length > 0 && (
+          <View style={styles.section}>
+            <DataAttributionNotices attributions={dataAttributions} />
+          </View>
+        )}
       </View>
     </SubScreen>
   );

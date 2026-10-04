@@ -14,6 +14,7 @@ import {
   type RecipeStatus,
 } from '#/graphql/generated/schemaTypes';
 import type { CatalogRecipeHint } from './useOpenCatalogRecipe';
+import type { DataAttributionValue } from '#components/molecules/DataAttributionNotices';
 
 export type MaterializedRecipe = UseRecipeData_RecipeFragment;
 
@@ -50,6 +51,8 @@ export interface RecipeDisplayData {
   dairyFree?: boolean;
   sourceName?: string;
   sourceUrl?: string;
+  /** The provider's notices, shown beside the recipe; empty for an in-app one. */
+  dataAttributions: readonly DataAttributionValue[];
   caloriesPerServing?: number;
   nutritionData?: unknown;
   status?: RecipeStatus;
@@ -105,6 +108,7 @@ function buildDisplayData(recipe: MaterializedRecipe): RecipeDisplayData {
     dairyFree: provider?.dairyFree ?? undefined,
     sourceName: recipe.source ?? undefined,
     sourceUrl: recipe.sourceUrl ?? undefined,
+    dataAttributions: recipe.dataAttributions,
     caloriesPerServing: recipe.caloriesPerServing ?? undefined,
     nutritionData: recipe.nutritionData ?? undefined,
     status: recipe.status,
@@ -164,6 +168,7 @@ export function useRecipeData({
         title: hint.name,
         image: hint.imageUrl,
         ingredients: [],
+        dataAttributions: [],
         hasPendingRevision: false,
         details: 'opening',
       }

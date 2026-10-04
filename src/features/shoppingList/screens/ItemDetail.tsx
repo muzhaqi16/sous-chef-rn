@@ -21,6 +21,7 @@ import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
 import { DetailSection } from '#components/molecules/DetailSection';
+import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import {
@@ -391,6 +392,12 @@ export const ShoppingListItemDetail: React.FC<
             </DetailRow>
           )}
         </DetailSection>
+
+        {!!item.item?.dataAttributions.length && (
+          <DetailSection transparent>
+            <DataAttributionNotices attributions={item.item.dataAttributions} />
+          </DetailSection>
+        )}
       </CollapsingHeroDetail>
       {itemPhotos.length > 0 && (
         <ItemPhotoViewer

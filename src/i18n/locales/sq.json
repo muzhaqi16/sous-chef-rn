@@ -311,6 +311,7 @@
     "copy": "Kopjo",
     "copyOfName": "{{name}} (Kopje)",
     "nameWithDetail": "{{name}} ({{detail}})",
+    "license": "Licenca",
     "couldnTSendThat": "Nuk u dërgua dot",
     "couldnTSetThatPhoto": "Fotoja nuk u vendos dot",
     "create": "Krijo",

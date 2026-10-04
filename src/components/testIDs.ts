@@ -43,4 +43,9 @@ export const kitTestIDs = {
   /** `BiometricSetupView`'s two buttons, under the caller's id. */
   biometricEnable: (prefix: string) => `${prefix}-enable`,
   biometricSkip: (prefix: string) => `${prefix}-skip`,
+  /** `DataAttributionNotices`: a notice's link and its licence link, by source. */
+  dataAttributionSource: (source: string) =>
+    `data-attribution-${source.toLowerCase()}`,
+  dataAttributionLicense: (source: string) =>
+    `data-attribution-${source.toLowerCase()}-license`,
 };

@@ -149,6 +149,7 @@ describe('useAppNavigation', () => {
       const params = {
         itemId: 'i1',
         itemName: 'Apple',
+        dataAttributions: [],
         nutritionFacts: {
           calories: 52,
           totalFat: 0.2,

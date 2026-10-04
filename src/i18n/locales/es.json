@@ -311,6 +311,7 @@
     "copy": "Copiar",
     "copyOfName": "{{name}} (Copia)",
     "nameWithDetail": "{{name}} ({{detail}})",
+    "license": "Licencia",
     "couldnTSendThat": "No se pudo enviar",
     "couldnTSetThatPhoto": "No se pudo establecer la foto",
     "create": "Crear",

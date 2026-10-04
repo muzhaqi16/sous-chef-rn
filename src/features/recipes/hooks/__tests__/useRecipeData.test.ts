@@ -275,6 +275,7 @@ describe('useRecipeData', () => {
         title: 'Pasta with Garlic',
         image: HINT.imageUrl,
         ingredients: [],
+        dataAttributions: [],
         hasPendingRevision: false,
         details: 'opening',
       });
@@ -334,6 +335,7 @@ describe('useRecipeData', () => {
         title: 'Row',
         image: undefined,
         ingredients: [],
+        dataAttributions: [],
         hasPendingRevision: false,
         details: 'opening',
       });

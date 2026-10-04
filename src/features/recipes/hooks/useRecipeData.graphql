@@ -36,6 +36,13 @@ fragment useRecipeData_recipe on Recipe {
   tags
   source
   sourceUrl
+  # The provider's notices (Spoonacular's backlink); empty for an in-app recipe.
+  dataAttributions {
+    source
+    notice
+    licenseUrl
+    sourceUrl
+  }
   instructions
   isExternal
   # A catalog recipe's copy against its provider: PENDING and NOT_FOUND carry

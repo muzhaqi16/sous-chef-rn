@@ -31,6 +31,7 @@ import { useRecipeDetail } from '../../hooks/useRecipeDetail';
 import type { CatalogRecipeHint } from '#features/recipes/hooks/useOpenCatalogRecipe';
 import type { RecipeDetails } from '#features/recipes/hooks/useRecipeData';
 import { AlertBanner } from '#components/molecules/AlertBanner';
+import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { RecipeDetailSkeleton } from '#features/recipes/components/skeletons/RecipeDetailSkeleton';
 import { useForkRecipe } from '#features/recipes/hooks/useForkRecipe';
 import { usePublishRecipe } from '#features/recipes/hooks/usePublishRecipe';
@@ -630,6 +631,15 @@ const RecipeDetailScreen: React.FC = () => {
             )}
           </Pressable>
         )}
+
+        {displayData.dataAttributions.length > 0 && (
+          <View style={styles.dataAttributions}>
+            <DataAttributionNotices
+              attributions={displayData.dataAttributions}
+              centered
+            />
+          </View>
+        )}
       </CollapsingHeroDetail>
 
       <ShoppingListPickerSheet
@@ -798,6 +808,9 @@ const styles = StyleSheet.create(theme => ({
     borderTopWidth: theme.borderWidth.hairline,
     borderTopColor: theme.colors.border,
     marginTop: theme.spacing.xl,
+  },
+  dataAttributions: {
+    marginTop: theme.spacing.md,
   },
   attributionText: {
     color: theme.colors.textSecondary,
