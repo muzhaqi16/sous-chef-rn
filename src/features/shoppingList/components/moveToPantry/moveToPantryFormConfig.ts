@@ -1,6 +1,6 @@
 import { boolean, date, mixed, object, string, type ObjectSchema } from 'yup';
 import { t, type TranslationKey } from '#/i18n';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { StorageState, UnitType } from '#/graphql/generated/schemaTypes';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
@@ -13,6 +13,8 @@ export interface MoveToPantryFormValues {
   quantityInput: string;
   unitValue: string;
   unitId: string | null;
+  /** The chosen unit's kind; null for a typed one the catalog has not named. */
+  unitType: UnitType | null;
   storageState: StorageState;
   expirationDate?: Date;
   removeFromList: boolean;
@@ -42,6 +44,10 @@ export const moveToPantrySchema: ObjectSchema<MoveToPantryFormValues> = object({
         schema.trim().required(msg('moveToPantry.selectUnitError')),
     }),
   unitId: string().nullable().defined(),
+  unitType: mixed<UnitType>()
+    .oneOf(Object.values(UnitType))
+    .nullable()
+    .defined(),
   storageState: mixed<StorageState>()
     .oneOf(Object.values(StorageState))
     .required(),
@@ -56,7 +62,22 @@ export const moveToPantrySchema: ObjectSchema<MoveToPantryFormValues> = object({
       if (!value.trim()) return true;
       const parsed = parseDecimalInput(value);
       return !isNaN(parsed) && parsed > 0;
-    }),
+    })
+    // A size is one package's: it goes with a whole count in a counted unit
+    // (2 jars), never with an amount, where 500 g would read as 500 packages.
+    .test(
+      'package-count',
+      msg('moveToPantry.packageSizeNeedsCount'),
+      (value, context: { parent: Partial<MoveToPantryFormValues> }) => {
+        if (!value.trim()) return true;
+        const count = parseFractionalInput(context.parent.quantityInput ?? '');
+        return (
+          context.parent.unitType === UnitType.Count &&
+          count !== null &&
+          Number.isInteger(count)
+        );
+      },
+    ),
   packageSizeUnitValue: string()
     .defined()
     .test(
@@ -78,6 +99,7 @@ export const moveToPantryDefaults = (
   quantityInput: '',
   unitValue: '',
   unitId: null,
+  unitType: null,
   storageState,
   expirationDate: undefined,
   removeFromList: true,

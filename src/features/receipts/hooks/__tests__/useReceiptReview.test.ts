@@ -22,7 +22,6 @@ import { useStore } from '#store';
 import {
   AcquisitionMethod,
   ErrorCode,
-  NetWeightKind,
   PriceSource,
   ReceiptMatchConfidence,
   ReceiptMatchMethod,
@@ -231,14 +230,7 @@ const listItems = (
                 itemName: 'Ground beef',
                 quantity: 500,
                 unit: GRAM,
-                netWeight: null,
-                netWeightUnit: null,
-                item: {
-                  id: 'cat-beef',
-                  netWeight: null,
-                  netWeightKind: null,
-                  displayUnit: null,
-                },
+                item: { id: 'cat-beef' },
                 shoppingList: { id: 'list-1' },
                 purchaseInfo: { isPurchased: false, movedToPantryAt: null },
                 ...beef,
@@ -1035,8 +1027,8 @@ describe('useReceiptReview', () => {
         expect.objectContaining({
           shoppingListItemId: 'sli-milk',
           pantryId: 'p1',
-          actualQuantity: 1,
-          actualPrice: 2.79,
+          amount: { measured: { quantity: 1 } },
+          totalCost: 2.79,
           removeFromList: true,
           receipt: { purchasedOn: '2026-09-28' },
           priceSource: PriceSource.ReceiptScan,
@@ -1070,99 +1062,42 @@ describe('useReceiptReview', () => {
       expect(move.fired.map(vars => vars.input)).toEqual([
         expect.objectContaining({
           shoppingListItemId: 'sli-beef',
-          actualQuantity: 500,
-          actualUnitId: 'unit-g',
-          actualPrice: 7.99 / 500,
+          amount: { measured: { quantity: 500, unitId: 'unit-g' } },
+          totalCost: 7.99,
         }),
       ]);
     });
 
-    // A receipt's printed count (2 @ 1.99) against the list line, as the API
-    // takes it: a count of packs on a weighed stack would open a second one.
-    describe('a printed count with no unit', () => {
-      const moveTwo = async (beef: ListNode) => {
-        const { result, move } = await setup({ beef });
-        await act(async () => {
-          result.current.review.chooseLine(3, {
-            itemId: 'cat-beef',
-            itemName: 'Ground beef',
-            quantity: 2,
-            unitId: null,
-            unitText: '',
-            price: 3.98,
-          });
+    // A receipt's printed count (2 @ 1.99): the client states it as packages
+    // and the total as printed; the API owns the package arithmetic.
+    it('states a printed count as that many packages, with the total as printed', async () => {
+      const { result, move } = await setup();
+      await act(async () => {
+        result.current.review.chooseLine(3, {
+          itemId: 'cat-beef',
+          itemName: 'Ground beef',
+          quantity: 2,
+          unitId: null,
+          unitText: '',
+          price: 3.98,
         });
-        await waitFor(() =>
-          expect(result.current.review.rows[1]?.onList).toBe(true),
-        );
-        await act(async () => {
-          await result.current.review.addChosen();
-        });
-        return move.fired.map(vars => vars.input);
-      };
-
-      it('moves the count against a line counted in pieces', async () => {
-        const inputs = await moveTwo({
-          quantity: 6,
-          unit: {
-            __typename: 'Unit',
-            id: 'unit-pc',
-            name: 'piece',
-            symbol: 'pc',
-            type: UnitType.Count,
-          },
-        });
-        expect(inputs).toEqual([
-          expect.objectContaining({
-            actualQuantity: 2,
-            actualUnitId: 'unit-pc',
-            actualPrice: 3.98 / 2,
-          }),
-        ]);
+      });
+      await waitFor(() =>
+        expect(result.current.review.rows[1]?.onList).toBe(true),
+      );
+      await act(async () => {
+        await result.current.review.addChosen();
       });
 
-      it("moves that many of the line's package size against a weighed line", async () => {
-        const inputs = await moveTwo({
-          netWeight: 500,
-          netWeightUnit: { __typename: 'Unit', id: 'unit-g' },
-        });
-        expect(inputs).toEqual([
-          expect.objectContaining({
-            actualQuantity: 1000,
-            actualUnitId: 'unit-g',
-            actualPrice: 3.98 / 1000,
-          }),
-        ]);
-      });
-
-      it("takes the item's package size when the line states none", async () => {
-        const inputs = await moveTwo({
-          item: {
-            __typename: 'Item',
-            id: 'cat-beef',
-            netWeight: 450,
-            netWeightKind: NetWeightKind.Package,
-            displayUnit: { __typename: 'Unit', id: 'unit-g' },
-          },
-        });
-        expect(inputs).toEqual([
-          expect.objectContaining({
-            actualQuantity: 900,
-            actualUnitId: 'unit-g',
-          }),
-        ]);
-      });
-
-      it("keeps the list's amount when no package size is known, never 2 g", async () => {
-        const inputs = await moveTwo({});
-        expect(inputs).toEqual([
-          expect.objectContaining({
-            actualQuantity: 500,
-            actualUnitId: 'unit-g',
-            actualPrice: 3.98 / 500,
-          }),
-        ]);
-      });
+      const [input] = move.fired.map(vars => vars.input);
+      expect(input).toEqual(
+        expect.objectContaining({
+          shoppingListItemId: 'sli-beef',
+          amount: { packages: { count: 2 } },
+          totalCost: 3.98,
+        }),
+      );
+      expect(input).not.toHaveProperty('actualPrice');
     });
 
     it('moves its own amount for a line that states a unit', async () => {
@@ -1188,9 +1123,8 @@ describe('useReceiptReview', () => {
       expect(move.fired.map(vars => vars.input)).toEqual([
         expect.objectContaining({
           shoppingListItemId: 'sli-beef',
-          actualQuantity: 750,
-          actualUnitId: 'unit-g',
-          actualPrice: 9.99 / 750,
+          amount: { measured: { quantity: 750, unitId: 'unit-g' } },
+          totalCost: 9.99,
         }),
       ]);
     });
@@ -1212,14 +1146,14 @@ describe('useReceiptReview', () => {
       expect(input).toEqual(
         expect.objectContaining({
           shoppingListItemId: 'sli-milk',
-          actualQuantity: 1,
+          amount: { measured: { quantity: 1 } },
           // The purchase keeps the receipt's store and day.
           receipt: { purchasedOn: '2026-09-28' },
           priceSource: PriceSource.ReceiptScan,
         }),
       );
-      // Undefined is left out of the request.
-      expect(input).toMatchObject({ actualPrice: undefined });
+      // No price read, so none is sent: the list's own price stands.
+      expect(input).toMatchObject({ totalCost: undefined });
     });
 
     it('adds a line on its own when the user keeps it off the list', async () => {

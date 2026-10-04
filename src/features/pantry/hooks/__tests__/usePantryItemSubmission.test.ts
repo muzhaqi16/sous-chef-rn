@@ -16,7 +16,9 @@ import {
   ErrorCode,
   ItemCondition,
   StorageState,
+  UnitType,
 } from '#/graphql/generated/schemaTypes';
+import { ReadStackUnitType_PantryItemFragmentDoc } from '#features/pantry/utils/pantryCacheReaders.generated';
 import { alertService } from '#/services/alertService';
 import { usePantryItemSubmission } from '../usePantryItemSubmission';
 
@@ -493,7 +495,7 @@ describe('usePantryItemSubmission', () => {
         today: expect.any(String),
         input: expect.objectContaining({
           id: 'existing-1',
-          quantity: 2,
+          amount: { measured: { quantity: 2 } },
           today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
         }),
       }),
@@ -504,8 +506,7 @@ describe('usePantryItemSubmission', () => {
     expect(refused.fired).toHaveLength(1);
   });
 
-  it('restocks with the package size entered, not the stack default', async () => {
-    // A 22 oz jar restocking a 32 oz stack keeps its own size.
+  const restockWithSize = async (stackUnitType: UnitType) => {
     const refused = recordMock(CreatePantryItemDocument, {
       data: {
         createPantryItem: {
@@ -521,6 +522,15 @@ describe('usePantryItemSubmission', () => {
         restockPantryItem: { __typename: 'RestockPantryItemPayload' },
       },
     });
+    const cache = makeCache();
+    cache.writeFragment({
+      fragment: ReadStackUnitType_PantryItemFragmentDoc,
+      data: {
+        __typename: 'PantryItem',
+        id: 'existing-1',
+        unit: { __typename: 'Unit', id: 'unit-1', type: stackUnitType },
+      },
+    });
     const { result } = renderHookWithApollo(
       () =>
         usePantryItemSubmission({
@@ -528,7 +538,7 @@ describe('usePantryItemSubmission', () => {
           pantryNetWeight: '22',
           pantryNetWeightUnitId: 'u-oz',
         }),
-      { operationMocks: [refused.mock, restock.mock] },
+      { operationMocks: [refused.mock, restock.mock], cache },
     );
 
     await act(async () => {
@@ -541,15 +551,28 @@ describe('usePantryItemSubmission', () => {
     await act(async () => {
       buttons[1]?.onPress?.();
     });
+    await waitFor(() => expect(restock.fired).toHaveLength(1));
+    const [fired] = restock.fired;
+    return fired?.input;
+  };
 
-    await waitFor(() =>
-      expect(restock.fired).toContainEqual({
-        today: expect.any(String),
-        input: expect.objectContaining({
-          packageSize: { netWeight: 22, netWeightUnitId: 'u-oz' },
-        }),
-      }),
-    );
+  it('restocks counted packages with the size entered, not the stack default', async () => {
+    // Two 22 oz jars restocking a stack of 32 oz jars keep their own size.
+    expect(await restockWithSize(UnitType.Count)).toMatchObject({
+      amount: {
+        packages: {
+          count: 2,
+          size: { netWeight: 22, netWeightUnitId: 'u-oz' },
+        },
+      },
+    });
+  });
+
+  it('restocks an amount, never packages, on a stack held by weight or volume', async () => {
+    // 2 cups beside a 22 oz size would otherwise read as two 22 oz packages.
+    expect(await restockWithSize(UnitType.Volume)).toMatchObject({
+      amount: { measured: { quantity: 2 } },
+    });
   });
 
   it('shows error when result has error but is not duplicate', async () => {

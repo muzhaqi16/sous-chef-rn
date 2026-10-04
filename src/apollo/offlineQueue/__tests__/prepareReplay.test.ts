@@ -104,7 +104,7 @@ describe('prepareReplay', () => {
         input: {
           shoppingListItemId: 'line-1',
           pantryId: 'pantry-1',
-          actualQuantity: 1,
+          amount: { measured: { quantity: 1 } },
           idempotencyKey: 'key-1',
           today: '2026-01-01',
         },

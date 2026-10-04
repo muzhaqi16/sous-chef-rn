@@ -611,7 +611,7 @@ describe('optimistic entity completeness', () => {
         input: {
           shoppingListItemId: 'list-item-1',
           pantryId: 'pantry-1',
-          actualQuantity: 1,
+          amount: { measured: { quantity: 1 } },
         },
         today: '2026-09-22',
       });

@@ -364,8 +364,7 @@ export function usePantryItemActions({
             today,
             input: {
               id: itemId,
-              quantity,
-              unitId,
+              amount: { measured: { quantity, unitId } },
               notes: restockNotes,
               costPerUnit,
               totalCost,

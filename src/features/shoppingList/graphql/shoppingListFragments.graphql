@@ -31,6 +31,8 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
     id
     name
     symbol
+    # A counted line takes a move's package count as its own (useMoveToPantry).
+    type
   }
   sortOrder
   item {
@@ -177,11 +179,6 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
     symbol
     type
   }
-  # The list query reads a line's package size (receipt moves).
-  netWeight
-  netWeightUnit {
-    id
-  }
   sortOrder
   item {
     id
@@ -190,11 +187,6 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
       id
       url
       kind
-    }
-    netWeight
-    netWeightKind
-    displayUnit {
-      id
     }
   }
   shoppingList {

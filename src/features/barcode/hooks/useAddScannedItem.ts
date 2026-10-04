@@ -276,7 +276,7 @@ export function useAddScannedItem({
             today,
             input: {
               id: existingPantryItemId,
-              quantity: SCANNED_QUANTITY,
+              amount: { measured: { quantity: SCANNED_QUANTITY } },
               // Dedupes the restock ledger row on replay.
               idempotencyKey: generateEntityId(),
               today,

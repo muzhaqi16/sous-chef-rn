@@ -7,6 +7,7 @@ import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { MoveToPantryPurchaseInfoDocument } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal.generated';
 import { MoveToPantryModal_ShoppingListItemFragmentDoc } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal.generated';
+import { UnitType } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -159,11 +160,13 @@ jest.mock('#components/atoms/FormInput', () => {
       value,
       onChangeText,
       placeholder,
+      error,
     }: {
       label: string;
       value?: string;
       onChangeText?: (text: string) => void;
       placeholder?: string;
+      error?: string;
     }) =>
       R.createElement(
         RN.View,
@@ -175,6 +178,7 @@ jest.mock('#components/atoms/FormInput', () => {
           onChangeText,
           placeholder,
         }),
+        error ? R.createElement(RN.Text, null, error) : null,
       ),
   };
 });
@@ -215,6 +219,7 @@ function makeCache(overrides: Record<string, unknown> = {}) {
           id: 'u1',
           symbol: 'gal',
           name: 'Gallons',
+          type: UnitType.Volume,
         },
         ...overrides,
       },
@@ -445,6 +450,7 @@ describe('MoveToPantryModal', () => {
       purchasedQuantity: number | null,
       purchasedPrice: number | null,
       onConfirm = jest.fn().mockResolvedValue(true),
+      line: Record<string, unknown> = {},
     ) => {
       const { rerender } = renderWithApollo(
         <MoveToPantryModal
@@ -453,7 +459,7 @@ describe('MoveToPantryModal', () => {
           onConfirm={onConfirm}
         />,
         {
-          cache: makeCache(),
+          cache: makeCache(line),
           operationMocks: [purchaseMock(purchasedQuantity, purchasedPrice)],
         },
       );
@@ -504,7 +510,7 @@ describe('MoveToPantryModal', () => {
       );
     });
 
-    it('sends the per-unit price the API expects', async () => {
+    it('sends the total paid, which the server records exactly', async () => {
       const onConfirm = openWithPurchase(5, 0.59);
       await waitFor(() =>
         expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
@@ -513,10 +519,10 @@ describe('MoveToPantryModal', () => {
       fireEvent.press(screen.getByTestId('header-action-checkmark'));
       await waitFor(() => expect(onConfirm).toHaveBeenCalled());
       const sent = onConfirm.mock.calls[0][0];
-      expect(sent.actualQuantity).toBe(5);
-      // Unrounded on purpose (`unitPriceFromTotal`): the server rounds the
-      // PRODUCT, so a total that does not divide evenly still comes back whole.
-      expect(sent.actualPrice).toBeCloseTo(0.59, 10);
+      expect(sent.amount).toEqual({ measured: { quantity: 5, unitId: 'u1' } });
+      // The total as shown; the server derives the unit price, never the client.
+      expect(sent.totalCost).toBeCloseTo(2.95, 10);
+      expect(sent).not.toHaveProperty('actualPrice');
     });
 
     it('holds the per-unit price when fewer units are stocked', async () => {
@@ -535,7 +541,10 @@ describe('MoveToPantryModal', () => {
       fireEvent.press(screen.getByTestId('header-action-checkmark'));
       await waitFor(() => expect(onConfirm).toHaveBeenCalled());
       expect(onConfirm).toHaveBeenCalledWith(
-        expect.objectContaining({ actualQuantity: 3, actualPrice: 0.59 }),
+        expect.objectContaining({
+          amount: { measured: { quantity: 3, unitId: 'u1' } },
+          totalCost: 1.77,
+        }),
       );
     });
 
@@ -588,11 +597,20 @@ describe('MoveToPantryModal', () => {
       expect(onClose).not.toHaveBeenCalled();
     });
 
-    it("sends this package's own size when one is given", async () => {
+    it('sends a whole count of jars with their size as packages', async () => {
       // A 22 oz jar moving onto a 32 oz stack keeps its size.
-      const onConfirm = openWithPurchase(5, 0.59);
+      const onConfirm = openWithPurchase(5, 0.59, undefined, {
+        unitName: 'jar',
+        unit: {
+          __typename: 'Unit',
+          id: 'u-jar',
+          symbol: 'jar',
+          name: 'Jars',
+          type: UnitType.Count,
+        },
+      });
       await waitFor(() =>
-        expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+        expect(screen.getByText('Purchased: 5 jar')).toBeTruthy(),
       );
 
       fireEvent.changeText(
@@ -609,10 +627,42 @@ describe('MoveToPantryModal', () => {
       await waitFor(() =>
         expect(onConfirm).toHaveBeenCalledWith(
           expect.objectContaining({
-            packageSize: { netWeight: 22, netWeightUnitId: 'unit-kg' },
+            amount: {
+              packages: {
+                count: 5,
+                size: { netWeight: 22, netWeightUnitId: 'unit-kg' },
+              },
+            },
           }),
         ),
       );
+    });
+
+    // A size is one package's: beside an amount (5 gallons) it would read as
+    // five packages of it, so the sheet asks instead of sending it.
+    it('refuses a package size beside an amount, on the size', async () => {
+      const onConfirm = openWithPurchase(5, 0.59);
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
+      );
+
+      fireEvent.changeText(
+        screen.getByTestId('move-to-pantry-field-Package size'),
+        '22',
+      );
+      fireEvent.press(
+        screen.getByTestId(
+          `${shoppingListTestIDs.moveToPantryPackageSizeUnit}-pick-unit`,
+        ),
+      );
+      fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+      expect(
+        await screen.findByText(
+          'A package size goes with a whole number of packages in a counted unit, like 2 jars. Leave it empty for an amount like 500 g.',
+        ),
+      ).toBeTruthy();
+      expect(onConfirm).not.toHaveBeenCalled();
     });
 
     it('asks for the unit of a size given without one', async () => {
@@ -667,7 +717,9 @@ describe('MoveToPantryModal', () => {
       );
       fireEvent.press(screen.getByTestId('header-action-checkmark'));
       await waitFor(() => expect(onConfirm).toHaveBeenCalled());
-      expect(onConfirm.mock.calls[0][0].actualUnitId).toBe('u-purchase');
+      expect(onConfirm.mock.calls[0][0].amount.measured.unitId).toBe(
+        'u-purchase',
+      );
     });
 
     it("keeps the line's own unit when a purchase names a different one", async () => {
@@ -712,7 +764,7 @@ describe('MoveToPantryModal', () => {
       await waitFor(() => expect(onConfirm).toHaveBeenCalled());
 
       // The line's unit, not `u-purchase`.
-      expect(onConfirm.mock.calls[0][0].actualUnitId).toBe('u1');
+      expect(onConfirm.mock.calls[0][0].amount.measured.unitId).toBe('u1');
     });
 
     it('falls back to the requested quantity when nothing was recorded', async () => {

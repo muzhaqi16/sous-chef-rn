@@ -33,8 +33,6 @@ fragment ShoppingListItemReaders on ShoppingListItem {
       url
     }
     imageUrl
-    netWeight
-    netWeightKind
     nutritionFacts {
       id
       addedSugars

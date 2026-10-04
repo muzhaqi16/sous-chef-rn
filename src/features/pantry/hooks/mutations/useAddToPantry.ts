@@ -141,7 +141,7 @@ export function useAddToPantry({
             today,
             input: {
               id: pantryItemId,
-              quantity: 1,
+              amount: { measured: { quantity: 1 } },
               // Dedupes the restock ledger row on replay.
               idempotencyKey: generateEntityId(),
               today,

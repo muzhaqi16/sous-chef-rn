@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import {
   AcquisitionMethod,
-  NetWeightKind,
   PriceSource,
-  UnitType,
   type ReceiptRefInput,
+  type StockAmountInput,
 } from '#/graphql/generated/schemaTypes';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
@@ -57,51 +56,35 @@ const purchaseOf = (choice: ReceiptLineChoice, receipt: ReceiptRefInput) => {
   };
 };
 
-/** One counted pack in the line's unit: the line's package size, else its item's. */
-const packSizeIn = (
-  line: ShoppingListItemNode,
-  unitId: string,
-): number | undefined => {
-  if (line.netWeight && line.netWeightUnit?.id === unitId) {
-    return line.netWeight;
-  }
-  const { item } = line;
-  return item?.netWeight &&
-    item.netWeightKind === NetWeightKind.Package &&
-    item.displayUnit?.id === unitId
-    ? item.netWeight
-    : undefined;
-};
-
 /**
- * What a move records for a receipt line, as the API takes it: a move has no
- * default, and a count of packs on a weighed stack opens a second stack. A line
- * stating a unit moves its own amount. One without counts what was bought: in a
- * COUNT unit (pieces, jars) that count; in a weighed line (500 g) that many of
- * its package size; with no size known, or a bare 1, the list's amount, never
- * 2 of a gram.
+ * What a move records for a receipt line, as the receipt states it: the API
+ * owns the package arithmetic. A line with a unit is that amount. A printed
+ * count (2 @) is that many packages, which the server turns into the line's
+ * unit. A bare 1 says only that it was bought, so the list's amount stands.
  */
-const moveAmount = (
+const stockAmountOf = (
   choice: ReceiptLineChoice,
   line: ShoppingListItemNode,
-): { quantity: number; unitId: string | undefined } => {
+): StockAmountInput => {
   const lineUnit = line.unit;
   if (choice.unitId !== null || choice.unitText !== '' || !lineUnit) {
     // A typed unit links only to a line in that unit, so the line's id stands for it.
-    return { quantity: choice.quantity, unitId: choice.unitId ?? lineUnit?.id };
+    return {
+      measured: {
+        quantity: choice.quantity,
+        unitId: choice.unitId ?? lineUnit?.id,
+      },
+    };
   }
-  const listAmount = {
-    quantity: line.quantity ?? choice.quantity,
-    unitId: lineUnit.id,
+  if (choice.quantity !== 1 && Number.isInteger(choice.quantity)) {
+    return { packages: { count: choice.quantity } };
+  }
+  return {
+    measured: {
+      quantity: line.quantity ?? choice.quantity,
+      unitId: lineUnit.id,
+    },
   };
-  if (choice.quantity === 1) return listAmount;
-  if (lineUnit.type === UnitType.Count) {
-    return { quantity: choice.quantity, unitId: lineUnit.id };
-  }
-  const pack = packSizeIn(line, lineUnit.id);
-  return pack === undefined
-    ? listAmount
-    : { quantity: choice.quantity * pack, unitId: lineUnit.id };
 };
 
 /**
@@ -152,20 +135,16 @@ export function useApplyReceipt(listId: string | undefined) {
     receipt: ReceiptRefInput,
   ) => {
     if (!pantryId) return t('errors.moveToPantryFailedRetry');
-    const { quantity, unitId } = moveAmount(choice, listLine);
     const outcome = await moveToPantry(listLine, {
       pantryId,
-      actualQuantity: quantity,
-      actualUnitId: unitId,
+      amount: stockAmountOf(choice, listLine),
       removeFromList: true,
       receipt,
-      // Labels only `actualPrice`: with none read, the API records the price
-      // typed on the list as a PURCHASE at the receipt's store and day.
+      // Labels the price paid: with none read, the API records the price typed
+      // on the list as a PURCHASE at the receipt's store and day.
       priceSource: PriceSource.ReceiptScan,
-      // Per unit, as the move takes it.
-      ...(choice.price === null
-        ? {}
-        : { actualPrice: choice.price / quantity }),
+      // The line's total as printed; the server derives the unit price.
+      ...(choice.price === null ? {} : { totalCost: choice.price }),
     });
     return outcome.status === 'moved' ? null : outcome.reason;
   };

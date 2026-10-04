@@ -7,8 +7,9 @@ import {
 import type {
   StorageState,
   ItemCondition,
+  StockAmountInput,
 } from '#/graphql/generated/schemaTypes';
-import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
+import { AcquisitionMethod, UnitType } from '#/graphql/generated/schemaTypes';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import {
@@ -20,7 +21,10 @@ import {
   reconcileCreatedPantryItem,
   revertOptimisticPantryItem,
 } from '#features/pantry/cache/items';
-import { findCachedPantryItemDuplicate } from '#features/pantry/utils/pantryCacheReaders';
+import {
+  findCachedPantryItemDuplicate,
+  readStackUnitType,
+} from '#features/pantry/utils/pantryCacheReaders';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { parseFractionalInput } from '#/utils/fractionUtils';
@@ -326,6 +330,25 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     const promptDuplicateRecovery = (existingPantryItemId: string) => {
       const restockExisting = async () => {
         const today = todayKey();
+        // A stated size is one package's, so it goes with a whole count on a
+        // counted stack (2 jars), never with an amount; the server does the
+        // arithmetic. A stack the cache does not hold takes the plain amount.
+        const amount: StockAmountInput =
+          effectivePantryNetWeight &&
+          effectiveNetWeightUnitId &&
+          Number.isInteger(quantity) &&
+          readStackUnitType(client.cache, existingPantryItemId) ===
+            UnitType.Count
+            ? {
+                packages: {
+                  count: quantity,
+                  size: {
+                    netWeight: effectivePantryNetWeight,
+                    netWeightUnitId: effectiveNetWeightUnitId,
+                  },
+                },
+              }
+            : { measured: { quantity } };
         const settled = await settleMutation(
           () =>
             restockPantryItem({
@@ -333,7 +356,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
                 today,
                 input: {
                   id: existingPantryItemId,
-                  quantity,
+                  amount,
                   today,
                   // Forward the purchase details the user just entered so the
                   // restock records an ItemPriceHistory observation.
@@ -342,16 +365,6 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
                   ...(expirationDate && {
                     expiresOn: toDateKey(expirationDate),
                   }),
-                  // These packages' own size; without it the batch takes the
-                  // stack's default, which may be another size (a 22 oz jar
-                  // on a 32 oz stack).
-                  ...(effectivePantryNetWeight &&
-                    effectiveNetWeightUnitId && {
-                      packageSize: {
-                        netWeight: effectivePantryNetWeight,
-                        netWeightUnitId: effectiveNetWeightUnitId,
-                      },
-                    }),
                   // idempotencyKey dedups the restock ledger row on replay.
                   idempotencyKey: generateEntityId(),
                 },

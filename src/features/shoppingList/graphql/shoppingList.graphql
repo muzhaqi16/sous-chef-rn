@@ -204,14 +204,8 @@ query GetShoppingListItemsFiltered(
             id
             name
             symbol
-            # COUNT tells a receipt's printed count (2 @) apart from an amount.
+            # A package size goes with a counted unit (the move sheet's rule).
             type
-          }
-          # The line's package size, else its item's: what one counted pack is
-          # in a weighed line's unit (receipt moves, useApplyReceipt).
-          netWeight
-          netWeightUnit {
-            id
           }
           sortOrder
           item {
@@ -221,11 +215,6 @@ query GetShoppingListItemsFiltered(
               id
               url
               kind
-            }
-            netWeight
-            netWeightKind
-            displayUnit {
-              id
             }
           }
           ...SortableItem_item

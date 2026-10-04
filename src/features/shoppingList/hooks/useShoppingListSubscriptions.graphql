@@ -34,11 +34,6 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
     symbol
     type
   }
-  # The list query reads a line's package size (receipt moves).
-  netWeight
-  netWeightUnit {
-    id
-  }
   sortOrder
   item {
     id
@@ -47,11 +42,6 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
       id
       url
       kind
-    }
-    netWeight
-    netWeightKind
-    displayUnit {
-      id
     }
   }
 }

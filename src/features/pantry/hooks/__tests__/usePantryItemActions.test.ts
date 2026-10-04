@@ -486,8 +486,7 @@ describe('usePantryItemActions', () => {
         today: expect.any(String),
         input: {
           id: 'item-1',
-          quantity: 3,
-          unitId: undefined,
+          amount: { measured: { quantity: 3, unitId: undefined } },
           notes: 'Bought more',
           costPerUnit: undefined,
           totalCost: undefined,
@@ -590,7 +589,9 @@ describe('usePantryItemActions', () => {
       });
 
       const input = m.fired[0]!.input as Record<string, unknown>;
-      expect(input.unitId).toBe('unit-kg');
+      expect(input.amount).toEqual({
+        measured: { quantity: 5, unitId: 'unit-kg' },
+      });
       expect(input.costPerUnit).toBe(2.5);
       expect(input.totalCost).toBe(12.5);
       expect(input.expiresOn).toBe('2026-12-31');

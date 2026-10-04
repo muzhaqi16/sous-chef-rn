@@ -7,6 +7,8 @@ fragment MoveToPantryModal_shoppingListItem on ShoppingListItem {
     id
     name
     symbol
+    # A package size goes with a counted unit (moveToPantryFormConfig).
+    type
   }
 }
 

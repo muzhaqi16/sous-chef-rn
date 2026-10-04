@@ -5,9 +5,10 @@ import { UseMoveToPantry_WasPurchasedFragmentDoc } from './useMoveToPantry.gener
 import type {
   PriceSource,
   ReceiptRefInput,
+  StockAmountInput,
   StorageState,
 } from '#/graphql/generated/schemaTypes';
-import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
+import { AcquisitionMethod, UnitType } from '#/graphql/generated/schemaTypes';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { Telemetry } from '#/services/telemetry';
 import { errorService } from '#/services/errorService';
@@ -39,16 +40,15 @@ import {
 
 export interface MoveToPantryInput {
   pantryId: string;
-  actualQuantity: number;
-  actualUnitId?: string;
+  /** What was bought, as stated: the server does any package arithmetic. */
+  amount: StockAmountInput;
   storageState?: StorageState;
   /** YYYY-MM-DD. */
   expiresOn?: string;
   removeFromList: boolean;
-  actualPrice?: number;
+  /** The total paid; the server records it exactly and derives the unit price. */
+  totalCost?: number;
   notes?: string;
-  /** This package's own size; omitted, the line's size or the stack's default. */
-  packageSize?: { netWeight: number; netWeightUnitId: string };
   /** The receipt it was bought on; its day and store go on the purchase and price. */
   receipt?: ReceiptRefInput;
   priceSource?: PriceSource;
@@ -83,6 +83,18 @@ function readWasPurchased(cache: ApolloCache, itemId: string): boolean {
       fragment: UseMoveToPantry_WasPurchasedFragmentDoc,
     })?.purchaseInfo.isPurchased ?? false
   );
+}
+
+// The row's amount until the server answers. Packages of a counted line are
+// that many of it; on a weighed line only the server can turn packages into
+// grams, so the row shows the line's own amount meanwhile.
+function localQuantity(
+  amount: StockAmountInput,
+  item: ShoppingListItemDisplayFragment,
+): number {
+  if (amount.measured) return amount.measured.quantity;
+  const { count } = amount.packages;
+  return item.unit?.type === UnitType.Count ? count : item.quantity ?? count;
 }
 
 /**
@@ -201,19 +213,21 @@ export function useMoveToPantry({
 
     // Built before the try: `?.`/`??` are value blocks, and the React Compiler
     // bails out of the whole hook when one appears inside a try body.
-    // `actualPrice` is per unit, so the row's `costPerUnit x quantity`
-    // reproduces what the server will compute.
+    const { measured } = input.amount;
     const localRow = {
       pantryId: input.pantryId,
       itemName: item.itemName ?? '',
-      quantity: input.actualQuantity,
+      quantity: localQuantity(input.amount, item),
       itemId: item.item?.id,
       // The API tracks the stack in the stated unit, else the line's own.
-      unitId: input.actualUnitId ?? item.unit?.id,
+      unitId: measured?.unitId ?? item.unit?.id,
       storageState: input.storageState,
       expiresOn: input.expiresOn,
       acquisitionMethod: AcquisitionMethod.ShoppingList,
-      costPerUnit: input.actualPrice ?? null,
+      costPerUnit:
+        measured && input.totalCost !== undefined
+          ? input.totalCost / measured.quantity
+          : null,
     };
 
     // BOTH sides are written eagerly: offline neither the mutation's `update` nor
@@ -320,15 +334,13 @@ export function useMoveToPantry({
               pantryId: input.pantryId,
               pantryItemId,
               idempotencyKey: generateEntityId(),
-              actualQuantity: input.actualQuantity,
-              actualUnitId: input.actualUnitId,
+              amount: input.amount,
               storageState: input.storageState,
               expiresOn: input.expiresOn,
               today,
               removeFromList: input.removeFromList,
-              actualPrice: input.actualPrice,
+              totalCost: input.totalCost,
               notes: input.notes,
-              packageSize: input.packageSize,
               receipt: input.receipt,
               priceSource: input.priceSource,
             },
