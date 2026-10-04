@@ -51,9 +51,6 @@ const REVIEWED_SLOTS: Record<string, string> = {
   'errors.queuedChangeOverwrittenResource': 'colon frame or `en`; no agreement',
   // Same frames; es/it/sq participles agree with `eliminación` / `voce` / `hyrja`.
   'errors.queuedRemovalKeptResource': 'colon frame or `en`; no agreement',
-  // Fed bare capitalised nouns, not the resourceNames map. es/it use a colon
-  // and a fixed noun rather than a participle.
-  'errors.entityUpdatedTitle': 'bare-noun slot; no participle in es/it',
 };
 
 /**

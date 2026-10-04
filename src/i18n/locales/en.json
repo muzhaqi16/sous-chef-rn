@@ -147,7 +147,6 @@
     "openBatchFailed": "Could not open this batch.",
     "wasteBatchFailed": "Could not mark this as wasted.",
     "updateShoppingItemFailed": "Could not update the item.",
-    "entityUpdatedTitle": "{{entity}} Updated",
     "changedElsewhereTitle": "Changed Elsewhere",
     "entityHome": "Home",
     "entityMember": "Member",

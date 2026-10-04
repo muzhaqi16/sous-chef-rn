@@ -147,7 +147,6 @@
     "openBatchFailed": "No se pudo abrir este lote.",
     "wasteBatchFailed": "No se pudo marcar como desperdiciado.",
     "updateShoppingItemFailed": "No se pudo actualizar el artículo.",
-    "entityUpdatedTitle": "{{entity}}: actualización",
     "changedElsewhereTitle": "Modificado en otro lugar",
     "entityHome": "Hogar",
     "entityMember": "Miembro",

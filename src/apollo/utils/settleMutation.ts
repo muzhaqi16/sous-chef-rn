@@ -9,10 +9,7 @@ import { alertService } from '#/services/alertService';
 import { errorService, isTransportFailure } from '#/services/errorService';
 import { isTranslationKey, t, type TranslationKey } from '#/i18n';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
-import {
-  alertVersionConflict,
-  reportMutationFailure,
-} from '#/utils/errorHandlers';
+import { reportMutationFailure } from '#/utils/errorHandlers';
 import {
   extractMutationPayload,
   isErrorTypename,
@@ -344,11 +341,12 @@ function fail(
 
   const isConflict =
     !!failure.code && VERSION_CONFLICT_CODES.includes(failure.code);
-  if (isConflict && options.onConflictRefresh) {
-    alertVersionConflict({
-      onRefresh: options.onConflictRefresh,
-      customMessage: described.body,
-    });
+  const { onConflictRefresh } = options;
+  if (isConflict && onConflictRefresh) {
+    alertService.alert(described.title, described.body, [
+      { text: t('labels.refresh'), onPress: onConflictRefresh },
+      { text: t('labels.cancel'), style: 'cancel' },
+    ]);
   } else {
     alertService.alert(described.title, described.body);
   }

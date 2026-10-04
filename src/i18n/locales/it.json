@@ -147,7 +147,6 @@
     "openBatchFailed": "Impossibile aprire questo lotto.",
     "wasteBatchFailed": "Impossibile contrassegnare come sprecato.",
     "updateShoppingItemFailed": "Impossibile aggiornare l'articolo.",
-    "entityUpdatedTitle": "{{entity}}: aggiornamento",
     "changedElsewhereTitle": "Modificato altrove",
     "entityHome": "Casa",
     "entityMember": "Membro",

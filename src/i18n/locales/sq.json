@@ -147,7 +147,6 @@
     "openBatchFailed": "Ky grumbull nuk mund të hapej.",
     "wasteBatchFailed": "Nuk mund të shënohej si i mbetur.",
     "updateShoppingItemFailed": "Artikulli nuk mund të përditësohej.",
-    "entityUpdatedTitle": "{{entity}} u përditësua",
     "changedElsewhereTitle": "U ndryshua diku tjetër",
     "entityHome": "Shtëpia",
     "entityMember": "Anëtar",

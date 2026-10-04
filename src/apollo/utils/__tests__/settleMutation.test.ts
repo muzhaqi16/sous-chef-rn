@@ -312,7 +312,7 @@ describe('settleMutation', () => {
       ]);
     });
 
-    it("offers the caller's refresh", async () => {
+    it("offers the caller's refresh, under the same heading whatever changed", async () => {
       const onConflictRefresh = jest.fn();
       await settleMutation(
         create({
@@ -322,6 +322,10 @@ describe('settleMutation', () => {
         { ...options, onConflictRefresh },
       );
 
+      expect(alerts()[0]?.slice(0, 2)).toEqual([
+        t('errors.changedElsewhereTitle'),
+        getVersionConflictMessage(),
+      ]);
       const buttons = alerts()[0]?.[2] as AlertButton[];
       buttons.find(button => button.style !== 'cancel')?.onPress?.();
       expect(onConflictRefresh).toHaveBeenCalledTimes(1);
