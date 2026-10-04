@@ -467,7 +467,6 @@
     "optional": "Opzionale",
     "matchedPantryItem": "Abbinato: {{name}} ({{amount}} disponibili)",
     "qtyLabel": "Q.tà:",
-    "unsureHint": "Corrisponde solo il nome. Attivalo se è l’articolo giusto.",
-    "stackOption": "{{name}} ({{amount}})"
+    "unsureHint": "Corrisponde solo il nome. Attivalo se è l’articolo giusto."
   }
 }

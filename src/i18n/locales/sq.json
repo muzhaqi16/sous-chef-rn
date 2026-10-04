@@ -310,6 +310,7 @@
     "copied": "U kopjua",
     "copy": "Kopjo",
     "copyOfName": "{{name}} (Kopje)",
+    "nameWithDetail": "{{name}} ({{detail}})",
     "couldnTSendThat": "Nuk u dërgua dot",
     "couldnTSetThatPhoto": "Fotoja nuk u vendos dot",
     "create": "Krijo",

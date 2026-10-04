@@ -467,7 +467,6 @@
     "optional": "Opsional",
     "matchedPantryItem": "U përputh: {{name}} ({{amount}} në dispozicion)",
     "qtyLabel": "Sasia:",
-    "unsureHint": "Përputhet vetëm emri. Aktivizoje nëse është artikulli i duhur.",
-    "stackOption": "{{name}} ({{amount}})"
+    "unsureHint": "Përputhet vetëm emri. Aktivizoje nëse është artikulli i duhur."
   }
 }

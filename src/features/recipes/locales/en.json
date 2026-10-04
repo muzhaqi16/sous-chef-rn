@@ -467,7 +467,6 @@
     "optional": "Optional",
     "matchedPantryItem": "Matched: {{name}} ({{amount}} available)",
     "qtyLabel": "Qty:",
-    "unsureHint": "Matched by name only. Turn it on if this is the right item.",
-    "stackOption": "{{name}} ({{amount}})"
+    "unsureHint": "Matched by name only. Turn it on if this is the right item."
   }
 }

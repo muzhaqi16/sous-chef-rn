@@ -102,9 +102,9 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
           <ChipScrollRow
             options={stackOptions.map(stack => ({
               key: stack.id,
-              label: t('ingredientMatch.stackOption', {
+              label: t('labels.nameWithDetail', {
                 name: stack.itemName,
-                amount: stackAmount(stack),
+                detail: stackAmount(stack),
               }),
             }))}
             selected={selectedStack.id}

@@ -310,6 +310,7 @@
     "copied": "Copiado",
     "copy": "Copiar",
     "copyOfName": "{{name}} (Copia)",
+    "nameWithDetail": "{{name}} ({{detail}})",
     "couldnTSendThat": "No se pudo enviar",
     "couldnTSetThatPhoto": "No se pudo establecer la foto",
     "create": "Crear",

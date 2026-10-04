@@ -467,7 +467,6 @@
     "optional": "Opcional",
     "matchedPantryItem": "Coincide: {{name}} ({{amount}} disponible)",
     "qtyLabel": "Cant.:",
-    "unsureHint": "Coincide solo por el nombre. Actívalo si es el artículo correcto.",
-    "stackOption": "{{name}} ({{amount}})"
+    "unsureHint": "Coincide solo por el nombre. Actívalo si es el artículo correcto."
   }
 }
