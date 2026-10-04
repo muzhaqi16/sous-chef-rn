@@ -70,36 +70,13 @@ Example:
 directive @optionalAuth on FIELD_DEFINITION
 
 """
-Require that the current user is the owner of the parent resource
-Returns null for the field if user is not the owner (soft denial)
-This is useful for sensitive fields that should only be visible to the owner
-
-The owner check uses:
-1. parent.userId (if exists) - compared to context.userId
-2. parent.authorId (if exists) - for author-owned resources like recipes
-3. parent.ownerId (if exists) - for explicitly owned resources
-
-Example:
-type User {
-  email: EmailAddress! @auth
-  settings: UserSettings @ownerOnly
-  notificationsConnection: NotificationConnection! @ownerOnly
-}
-
-type Recipe {
-  privateNotes: String @ownerOnly
-}
-"""
-directive @ownerOnly on FIELD_DEFINITION
-
-"""
 Mark a Query/Mutation field as INTENTIONALLY PUBLIC — reachable without
 authentication. Use this only for the auth-bootstrap surface (login,
 register, password reset, etc.) where there is no token yet.
 
 Why this exists: schema startup performs a default-deny audit and refuses
 to boot if any root-level field is missing one of @auth, @optionalAuth,
-@requireMembershipRole, @requireAccess, @requireSystemRole, @ownerOnly, or @public.
+@requireMembershipRole, @requireAccess, @requireSystemRole, or @public.
 Marking a field @public is the explicit way to say "yes, this is meant to
 be unauthenticated" — so a forgotten directive on a new mutation is a
 loud failure instead of a silent security hole.
@@ -1109,10 +1086,7 @@ input BulkUpdateItemFieldsInput {
   name: String
   nutritionFacts: [NutritionFactInput!]
   packageInfo: PackageInfoInput
-  popularity: Int
   productDetails: ProductDetailsInput
-  showInOnboarding: Boolean
-  status: ItemStatus
   storeSkuOps: StoreSkuOpsInput
   tagOps: TagOpsInput
   type: ItemType
@@ -2694,6 +2668,17 @@ type CurrencySpend {
   purchaseCount: Int!
   """Sum of the prices that were recorded."""
   totalSpent: Float!
+}
+
+"""A notice an external catalog's licence or terms ask a reader to see."""
+type DataAttribution {
+  """The licence the source's data is under, or null when it names none."""
+  licenseUrl: String
+  """The notice to show, as written."""
+  notice: String!
+  source: ExternalSource!
+  """The source's page for this item, or its home page."""
+  sourceUrl: String
 }
 
 enum DataSource {
@@ -5259,6 +5244,12 @@ type Item {
   convertedNetWeight: ConvertedValue
   """When the item was created."""
   createdAt: DateTime!
+  """
+  The notices this item's catalog data carries, one per external catalog its
+  records come from: Open Food Facts (ODbL), USDA FoodData Central and
+  Spoonacular. A client shows them wherever it shows the item's facts.
+  """
+  dataAttributions: [DataAttribution!]!
   """
   Where this catalog entry came from: manual entry, a barcode scan, an import or an external source.
   """
@@ -8001,7 +7992,10 @@ type Mutation {
   deleteHome(input: DeleteHomeInput!): DeleteHomeResult!
   """Delete a pending home invitation."""
   deleteHomeInvite(input: DeleteHomeInviteInput!): DeleteHomeInviteResult!
-  """Delete an item (soft delete by default, permanent if specified)"""
+  """
+  Soft-delete an item; restoreItem brings it back. Permanent removal is the
+  admin purge's alone.
+  """
   deleteItem(input: DeleteItemInput!): DeleteItemResult!
   """Delete a meal plan."""
   deleteMealPlan(input: DeleteMealPlanInput!): DeleteMealPlanResult!
@@ -11333,7 +11327,10 @@ type Query {
     """Sort order; newest first when omitted"""
     orderBy: HomeOrderBy
   ): HomeConnection!
-  """Fetch a single item by its ID."""
+  """
+  Fetch a single item by its ID. An id a merge removed returns the item it
+  was merged into.
+  """
   item(
     """The id of the Item to read"""
     id: ID!
@@ -11362,7 +11359,8 @@ type Query {
   request's mode does not apply is refused with a validation error naming
   it, never ignored. The orderBy applies in every mode: isPopular and
   isTrending still select the most popular items, and isRecent the newest,
-  then return them in the requested order.
+  then return them in the requested order. totalCount stops at 10,000: that
+  figure means at least that many.
   """
   items(
     """Resume after this cursor: a previous page's endCursor"""
@@ -11767,7 +11765,8 @@ type Query {
   description, tag or UPC match. Within each tier come the caller's own private
   items, then their frequent items, then name similarity and popularity. A ranked list has
   no cursor, so only its first page is served: after, before and last are
-  refused with a validation error until an orderBy is named.
+  refused with a validation error until an orderBy is named. totalCount stops
+  at 10,000: that figure means at least that many.
   """
   searchItems(
     """Resume after this cursor: a previous page's endCursor"""
@@ -12240,6 +12239,12 @@ type Recipe {
   The recipe's cuisines, such as ITALIAN and MEDITERRANEAN; empty when none is stated.
   """
   cuisines: [Cuisine!]!
+  """
+  The notices the recipe's provider asks a reader to see, such as
+  Spoonacular's backlink; empty for a recipe created in the app. The original
+  source's own credit is source, sourceUrl and originalAuthor.
+  """
+  dataAttributions: [DataAttribution!]!
   """Short summary of the recipe, or null when none."""
   description: String
   """
@@ -14589,7 +14594,10 @@ type SkippedRecipeIngredient {
   error, so support can look it up.
   """
   errorId: String
-  fromUnitId: ID!
+  """
+  The ingredient's unit, or null when neither the recipe nor the cook names one.
+  """
+  fromUnitId: ID
   itemName: String!
   reason: String!
   toUnitId: ID!
@@ -16239,7 +16247,6 @@ input UpdateItemInput {
   name: String
   nutritionFacts: [NutritionFactInput!]
   packageInfo: PackageInfoInput
-  popularity: Int
   productDetails: ProductDetailsInput
   """
   Why an admin changes a sourced catalog fact (name, description, brand, pack
@@ -16248,13 +16255,16 @@ input UpdateItemInput {
   the change is kept over every source as an override.
   """
   reason: String
-  showInOnboarding: Boolean
-  status: ItemStatus
   storeSkuOps: StoreSkuOpsInput
   tagOps: TagOpsInput
   type: ItemType
   unitConfig: ItemUnitConfigInput
   unitOps: UnitOpsInput
+  """
+  The version the caller read. When sent, an update made since is refused
+  (a ConflictError, code VERSION_CONFLICT) instead of overwritten.
+  """
+  version: Int
   visibility: Visibility
 }
 
@@ -16281,6 +16291,11 @@ input UpdateMealPlanInput {
   planType: MealPlanType
   servings: Int
   startDate: DateTime
+  """
+  The version the caller read. When sent, an update made since is refused
+  (a ConflictError, code VERSION_CONFLICT) instead of overwritten.
+  """
+  version: Int
 }
 
 input UpdateMealPlanItemInput {
@@ -16371,6 +16386,11 @@ input UpdateMembershipInput {
   displayName: String
   id: ID!
   role: MembershipRole
+  """
+  The version the caller read. When sent, an update made since is refused
+  (a ConflictError, code VERSION_CONFLICT) instead of overwritten.
+  """
+  version: Int
 }
 
 type UpdateMembershipPayload {
@@ -16411,6 +16431,11 @@ input UpdatePantryInput {
   name: String
   tags: [String!]
   temperature: String
+  """
+  The version the caller read. When sent, an update made since is refused
+  (a ConflictError, code VERSION_CONFLICT) instead of overwritten.
+  """
+  version: Int
 }
 
 input UpdatePantryItemInput {
@@ -16557,6 +16582,11 @@ input UpdatePurchaseInput {
   totalPrice: Float
   transactionId: String
   unitPrice: Float
+  """
+  The version the caller read. When sent, an update made since is refused
+  (a ConflictError, code VERSION_CONFLICT) instead of overwritten.
+  """
+  version: Int
 }
 
 type UpdatePurchasePayload {
@@ -16606,6 +16636,11 @@ input UpdateRecipeInput {
   tags: [String!]
   timing: TimeEstimatesInput
   tips: String
+  """
+  The version the caller read. When sent, an update made since is refused
+  (a ConflictError, code VERSION_CONFLICT) instead of overwritten.
+  """
+  version: Int
 }
 
 type UpdateRecipePayload {
