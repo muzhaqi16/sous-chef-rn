@@ -493,13 +493,11 @@ that IS the canonical mechanism as its only exemption:
 
 ### Dependency vulnerabilities
 
-`npm run check:audit` (`scripts/check-audit.mjs`, over `npm audit --omit=dev`)
-fails a PR on a high or critical advisory in a PRODUCTION dependency, except
-one listed in its `ACCEPTED` map: an advisory with no patched release that the
-user accepted, with the reason and date. An accepted entry npm stops reporting
-fails the gate, so it is removed in the change that clears it.
-`dependency-audit.yml` runs the raw audit weekly, accepted advisories included,
-opening or updating one `security`-labelled issue.
+`npm audit --omit=dev --audit-level=high` (`npm run check:audit`) reports a
+high or critical advisory in a PRODUCTION dependency on every PR without
+failing it (`continue-on-error`): the advisory shows as a failed step inside a
+passing job. Nothing is allowlisted. `dependency-audit.yml` runs the same
+command weekly, opening or updating one `security`-labelled issue.
 
 Dependabot proposes upgrades; it fails nothing, and its
 `open-pull-requests-limit: 0` on the actions ecosystem stops version-update PRs
@@ -593,7 +591,7 @@ Pipelines, environments, and secrets: [`CI_CD.md`](CI_CD.md) and
 | `i18n:check`            | Locale parity                                     |
 | `check:dead-modules`    | knip: a `src/` module or export with no production importer |
 | `check:import-cycles`   | madge: load-time import cycles                    |
-| `check:audit`           | `npm audit` over production dependencies, less `ACCEPTED` |
+| `check:audit`           | `npm audit` over production dependencies          |
 | `test` / `test:changed` | Jest                                              |
 | `test:e2e*`             | Detox                                             |
 

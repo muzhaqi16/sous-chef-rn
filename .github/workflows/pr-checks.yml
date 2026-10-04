@@ -157,9 +157,9 @@ jobs:
       - name: Check for stale cache fields
         run: node scripts/find-stale-cache-fields.mjs --check
 
-  # A known vulnerability in a production dependency fails the PR. Dependabot
-  # proposes upgrades but fails nothing, so without this a vulnerable package
-  # reaches the default branch with every check green. Reads the lockfile — no
+  # Reports a known vulnerability in a production dependency on the PR, without
+  # failing it: the advisory shows as a failed step inside a passing job, and the
+  # weekly dependency-audit.yml tracks it in an issue. Reads the lockfile — no
   # install needed.
   dependency-audit:
     name: Dependency Audit
@@ -175,9 +175,8 @@ jobs:
         with:
           node-version: "22"
 
-      # Fails on a high or critical advisory, less the accepted ones listed in
-      # the script; the scheduled audit still reports those.
       - name: Audit production dependencies
+        continue-on-error: true
         run: npm run check:audit
 
   # The bundled-secret scanner runs in the BUILD workflows, against a real

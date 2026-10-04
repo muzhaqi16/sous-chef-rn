@@ -81,7 +81,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"./*.{json,js}\"",
     "codegen:fillers": "node scripts/generate-optimistic-fillers.mjs",
     "check:fillers": "node scripts/generate-optimistic-fillers.mjs --check",
-    "check:audit": "node scripts/check-audit.mjs"
+    "check:audit": "npm audit --omit=dev --audit-level=high"
   },
   "dependencies": {
     "@apollo/client": "^4.2.12",
