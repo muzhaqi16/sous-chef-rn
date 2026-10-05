@@ -264,6 +264,9 @@ enum AcquisitionMethod {
 """Input for categorizing an item"""
 input AddItemToCategoryInput {
   categoryId: ID!
+  """
+  Make this the item's primary category; its other categories stop being primary.
+  """
   isPrimary: Boolean
   itemId: ID!
 }
