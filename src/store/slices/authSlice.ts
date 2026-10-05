@@ -160,6 +160,11 @@ const backoffForAttempt = (attempt: number): number =>
     Math.min(Math.max(attempt, 0), BIOMETRIC_BACKOFF_SECONDS.length - 1)
   ] ?? 0) * 1000;
 
+/** A session's tokens are held: signed in, or signing back in from either one. */
+export const holdsSessionTokens = (
+  state: Pick<AuthState, 'accessToken' | 'refreshToken'>,
+): boolean => !!state.accessToken || !!state.refreshToken;
+
 const initialAuthState = {
   user: null,
   accessToken: null,

@@ -31,6 +31,7 @@ import {
 import { dropUnitSystemAnswers } from '#/apollo/utils/unitSystemAnswers';
 import { registerSessionTeardown } from '#/store/sessionTeardown';
 import { useStore } from '#store';
+import { holdsSessionTokens } from '#store/slices/authSlice';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 
 // Registering THIS device with the server. Fire-and-forget: a failure here must
@@ -353,17 +354,14 @@ async function registerDeviceOnce(): Promise<RegistrationOutcome> {
   }
 }
 
-// Scheduled on idle, so a session can end before the first attempt runs too.
-const hasSession = (): boolean => {
-  const { accessToken, refreshToken } = useStore.getState();
-  return !!accessToken || !!refreshToken;
-};
-
 async function registerDeviceWithRetry(
   maxRetries = 3,
 ): Promise<'ok' | 'failed' | 'sessionEnded'> {
   const generation = sessionGeneration;
-  const sessionEnded = () => generation !== sessionGeneration || !hasSession();
+  // Scheduled on idle, so a session can end before the first attempt runs too.
+  const sessionEnded = () =>
+    generation !== sessionGeneration ||
+    !holdsSessionTokens(useStore.getState());
   let attempts = 0;
   while (attempts < maxRetries) {
     if (sessionEnded()) return 'sessionEnded';
