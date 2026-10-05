@@ -401,6 +401,10 @@ describe('MoveToPantryModal', () => {
     const purchaseMock = (
       purchasedQuantity: number | null,
       purchasedPrice: number | null,
+      unit: { symbol: string; type: UnitType } = {
+        symbol: 'lb',
+        type: UnitType.Weight,
+      },
     ): MockFor<typeof MoveToPantryPurchaseInfoDocument> => ({
       request: {
         query: MoveToPantryPurchaseInfoDocument,
@@ -424,8 +428,12 @@ describe('MoveToPantryModal', () => {
                   node: {
                     __typename: 'Purchase',
                     id: 'pu1',
-                    unitId: 'u-purchase',
-                    unitSymbol: 'lb',
+                    unitSymbol: unit.symbol,
+                    unit: {
+                      __typename: 'Unit',
+                      id: 'u-purchase',
+                      type: unit.type,
+                    },
                   },
                 },
               ],
@@ -443,6 +451,30 @@ describe('MoveToPantryModal', () => {
         },
       },
     });
+
+    const NEEDS_COUNT =
+      'A package size goes with a whole number of packages in a counted unit, like 2 jars. Leave it empty for an amount like 500 g.';
+    const jarLine = {
+      unitName: 'jar',
+      unit: {
+        __typename: 'Unit',
+        id: 'u-jar',
+        symbol: 'jar',
+        name: 'Jars',
+        type: UnitType.Count,
+      },
+    };
+    const enterPackageSize = () => {
+      fireEvent.changeText(
+        screen.getByTestId('move-to-pantry-field-Package size'),
+        '22',
+      );
+      fireEvent.press(
+        screen.getByTestId(
+          `${shoppingListTestIDs.moveToPantryPackageSizeUnit}-pick-unit`,
+        ),
+      );
+    };
 
     // Mounted closed, then opened: the seed runs on the closed -> open
     // transition, which is the lifecycle the sheet actually sees.
@@ -599,29 +631,12 @@ describe('MoveToPantryModal', () => {
 
     it('sends a whole count of jars with their size as packages', async () => {
       // A 22 oz jar moving onto a 32 oz stack keeps its size.
-      const onConfirm = openWithPurchase(5, 0.59, undefined, {
-        unitName: 'jar',
-        unit: {
-          __typename: 'Unit',
-          id: 'u-jar',
-          symbol: 'jar',
-          name: 'Jars',
-          type: UnitType.Count,
-        },
-      });
+      const onConfirm = openWithPurchase(5, 0.59, undefined, jarLine);
       await waitFor(() =>
         expect(screen.getByText('Purchased: 5 jar')).toBeTruthy(),
       );
 
-      fireEvent.changeText(
-        screen.getByTestId('move-to-pantry-field-Package size'),
-        '22',
-      );
-      fireEvent.press(
-        screen.getByTestId(
-          `${shoppingListTestIDs.moveToPantryPackageSizeUnit}-pick-unit`,
-        ),
-      );
+      enterPackageSize();
       fireEvent.press(screen.getByTestId('header-action-checkmark'));
 
       await waitFor(() =>
@@ -646,24 +661,111 @@ describe('MoveToPantryModal', () => {
         expect(screen.getByText('Purchased: 5 gal')).toBeTruthy(),
       );
 
-      fireEvent.changeText(
-        screen.getByTestId('move-to-pantry-field-Package size'),
-        '22',
-      );
-      fireEvent.press(
-        screen.getByTestId(
-          `${shoppingListTestIDs.moveToPantryPackageSizeUnit}-pick-unit`,
-        ),
-      );
+      enterPackageSize();
       fireEvent.press(screen.getByTestId('header-action-checkmark'));
 
-      expect(
-        await screen.findByText(
-          'A package size goes with a whole number of packages in a counted unit, like 2 jars. Leave it empty for an amount like 500 g.',
-        ),
-      ).toBeTruthy();
+      expect(await screen.findByText(NEEDS_COUNT)).toBeTruthy();
       expect(onConfirm).not.toHaveBeenCalled();
     });
+
+    // The rule reads the quantity but reports on the size, so fixing the count
+    // has to re-run it.
+    it('clears the size refusal once the count is fixed', async () => {
+      openWithPurchase(5, 0.59, undefined, jarLine);
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 jar')).toBeTruthy(),
+      );
+
+      fireEvent.changeText(
+        screen.getByTestId('move-to-pantry-quantity'),
+        '2.5',
+      );
+      enterPackageSize();
+      fireEvent.press(screen.getByTestId('header-action-checkmark'));
+      expect(await screen.findByText(NEEDS_COUNT)).toBeTruthy();
+
+      fireEvent.changeText(screen.getByTestId('move-to-pantry-quantity'), '2');
+
+      await waitFor(() => expect(screen.queryByText(NEEDS_COUNT)).toBeNull());
+    });
+
+    it('raises no size refusal while the count is still being typed', async () => {
+      openWithPurchase(5, 1, undefined, jarLine);
+      await waitFor(() =>
+        expect(screen.getByText('Purchased: 5 jar')).toBeTruthy(),
+      );
+      enterPackageSize();
+
+      fireEvent.changeText(
+        screen.getByTestId('move-to-pantry-quantity'),
+        '2.5',
+      );
+      await waitFor(() =>
+        expect(
+          screen.getByTestId('move-to-pantry-field-Total price').props.value,
+        ).toBe('2.5'),
+      );
+
+      expect(screen.queryByText(NEEDS_COUNT)).toBeNull();
+    });
+
+    // A line with no unit of its own counts in the purchase's, so the
+    // purchase's kind decides whether a size can go with it — on a cold cache
+    // (seeded a beat after opening) and a warm one (seeded on open) alike.
+    it.each(['cold', 'warm'])(
+      'takes a size beside a count the purchase was recorded in (%s cache)',
+      async warmth => {
+        const onConfirm = jest.fn().mockResolvedValue(true);
+        const mock = purchaseMock(5, 0.59, {
+          symbol: 'jar',
+          type: UnitType.Count,
+        });
+        const cache = makeCache({ unit: null, unitName: null });
+        if (warmth === 'warm') {
+          cache.writeQuery({
+            query: MoveToPantryPurchaseInfoDocument,
+            variables: { id: ITEM_ID },
+            data: (mock as { result: { data: Record<string, unknown> } }).result
+              .data,
+          });
+        }
+        const { rerender } = renderWithApollo(
+          <MoveToPantryModal
+            {...defaultProps}
+            visible={false}
+            onConfirm={onConfirm}
+          />,
+          { cache, operationMocks: [mock] },
+        );
+        rerender(
+          <MoveToPantryModal
+            {...defaultProps}
+            visible={true}
+            onConfirm={onConfirm}
+          />,
+        );
+        await waitFor(() =>
+          expect(screen.getByText('Purchased: 5 jar')).toBeTruthy(),
+        );
+
+        enterPackageSize();
+        fireEvent.press(screen.getByTestId('header-action-checkmark'));
+
+        await waitFor(() =>
+          expect(onConfirm).toHaveBeenCalledWith(
+            expect.objectContaining({
+              amount: {
+                packages: {
+                  count: 5,
+                  size: { netWeight: 22, netWeightUnitId: 'unit-kg' },
+                },
+              },
+            }),
+          ),
+        );
+        expect(screen.queryByText(NEEDS_COUNT)).toBeNull();
+      },
+    );
 
     it('asks for the unit of a size given without one', async () => {
       const onConfirm = openWithPurchase(5, 0.59);
@@ -687,7 +789,7 @@ describe('MoveToPantryModal', () => {
 
     it('takes the unit from the purchase when the line carries none', async () => {
       // `purchaseInfo` has the amounts but no unit, and a line's own unit is
-      // nullable — `Purchase.unitId` is not.
+      // nullable — `Purchase.unit` is not.
       const onConfirm = jest.fn().mockResolvedValue(true);
       const { rerender } = renderWithApollo(
         <MoveToPantryModal

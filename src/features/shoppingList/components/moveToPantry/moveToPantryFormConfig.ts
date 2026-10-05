@@ -1,12 +1,11 @@
 import { boolean, date, mixed, object, string, type ObjectSchema } from 'yup';
-import { t, type TranslationKey } from '#/i18n';
+import {
+  lazyMessage,
+  positiveDecimalRule,
+  quantityRule,
+} from '#/utils/validation/common';
 import { StorageState, UnitType } from '#/graphql/generated/schemaTypes';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
-
-// Messages resolve LAZILY: the schema is built once at module scope, so an
-// eagerly resolved one freezes whichever language was active at import time.
-const msg = (key: TranslationKey) => (): string => t(key);
 
 export interface MoveToPantryFormValues {
   pantryId: string | null;
@@ -27,13 +26,10 @@ export interface MoveToPantryFormValues {
 }
 
 export const moveToPantrySchema: ObjectSchema<MoveToPantryFormValues> = object({
-  pantryId: string().nullable().required(msg('moveToPantry.selectPantryError')),
-  quantityInput: string()
-    .defined()
-    .test('positive', msg('errors.invalidQuantity'), value => {
-      const parsed = parseFractionalInput(value);
-      return parsed !== null && !Number.isNaN(parsed) && parsed > 0;
-    }),
+  pantryId: string()
+    .nullable()
+    .required(lazyMessage('moveToPantry.selectPantryError')),
+  quantityInput: quantityRule('errors.invalidQuantity'),
   // A unit is chosen from the catalog OR typed; either satisfies the field, so
   // the rule lives on the one the person sees.
   unitValue: string()
@@ -41,7 +37,7 @@ export const moveToPantrySchema: ObjectSchema<MoveToPantryFormValues> = object({
     .when('unitId', {
       is: (id: string | null) => !id,
       then: schema =>
-        schema.trim().required(msg('moveToPantry.selectUnitError')),
+        schema.trim().required(lazyMessage('moveToPantry.selectUnitError')),
     }),
   unitId: string().nullable().defined(),
   unitType: mixed<UnitType>()
@@ -56,18 +52,14 @@ export const moveToPantrySchema: ObjectSchema<MoveToPantryFormValues> = object({
   actualPriceInput: string().defined(),
   notes: string().defined(),
   // Both or neither: a size needs the unit it is measured in.
-  packageSizeInput: string()
-    .defined()
-    .test('package-size', msg('errors.field.netWeight'), value => {
-      if (!value.trim()) return true;
-      const parsed = parseDecimalInput(value);
-      return !isNaN(parsed) && parsed > 0;
-    })
+  packageSizeInput: positiveDecimalRule('errors.field.netWeight', {
+    optional: true,
+  })
     // A size is one package's: it goes with a whole count in a counted unit
     // (2 jars), never with an amount, where 500 g would read as 500 packages.
     .test(
       'package-count',
-      msg('moveToPantry.packageSizeNeedsCount'),
+      lazyMessage('moveToPantry.packageSizeNeedsCount'),
       (value, context: { parent: Partial<MoveToPantryFormValues> }) => {
         if (!value.trim()) return true;
         const count = parseFractionalInput(context.parent.quantityInput ?? '');
@@ -82,7 +74,7 @@ export const moveToPantrySchema: ObjectSchema<MoveToPantryFormValues> = object({
     .defined()
     .test(
       'package-size-unit',
-      msg('errors.field.netWeight'),
+      lazyMessage('errors.field.netWeight'),
       (value, context: { parent: Partial<MoveToPantryFormValues> }) => {
         const size = (context.parent.packageSizeInput ?? '').trim();
         const unitId = context.parent.packageSizeUnitId;

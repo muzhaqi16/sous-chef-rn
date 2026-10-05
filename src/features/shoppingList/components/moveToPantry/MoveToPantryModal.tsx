@@ -16,10 +16,8 @@ import {
   formatQuantityForInput,
 } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
-import {
-  StorageState,
-  type StockAmountInput,
-} from '#/graphql/generated/schemaTypes';
+import { StorageState } from '#/graphql/generated/schemaTypes';
+import { stockAmountOf } from '#domain/stockAmount';
 import type { MoveToPantryInput } from '#features/shoppingList/hooks/useMoveToPantry';
 import { useMoveToPantryItem } from '#features/shoppingList/hooks/useMoveToPantryItem';
 import { PantrySelector } from './PantrySelector';
@@ -30,10 +28,7 @@ import {
   formatNumberForInput,
   localizeNumericHint,
 } from '#/utils/formatters/number';
-import {
-  totalFromUnitPrice,
-  unitPriceFromTotal,
-} from '#features/shoppingList/utils/purchasePrice';
+import { totalFromUnitPrice, unitPriceFromTotal } from '#domain/purchasePrice';
 import { Sheet } from '#components/templates/Sheet';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -84,6 +79,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     handleSubmit,
     setValue,
     trigger,
+    getFieldState,
     formState: { errors },
   } = useForm<MoveToPantryFormValues>({
     resolver: yupResolver(moveToPantrySchema),
@@ -126,7 +122,11 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     : shoppingListItem?.unitName
     ? { symbol: shoppingListItem.unitName, id: null, type: null }
     : purchasedUnit
-    ? { symbol: purchasedUnit.unitSymbol, id: purchasedUnit.unitId, type: null }
+    ? {
+        symbol: purchasedUnit.unitSymbol,
+        id: purchasedUnit.unit.id,
+        type: purchasedUnit.unit.type,
+      }
     : { symbol: '', id: null, type: null };
 
   // Reset form when modal opens with new item (render-time state update).
@@ -182,7 +182,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   // the sheet opens. Seed them then too — but never over something typed.
   const [prevSeed, setPrevSeed] = useState<string | null>(null);
   const seedKey = `${purchasedQuantity ?? ''}|${purchasedUnitPrice ?? ''}|${
-    purchasedUnit?.unitId ?? ''
+    purchasedUnit?.unit.id ?? ''
   }`;
   if (visible && seedKey !== prevSeed) {
     setPrevSeed(seedKey);
@@ -192,8 +192,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       seedThisPass = {
         ...seedThisPass,
         unitValue: purchasedUnit.unitSymbol,
-        unitId: purchasedUnit.unitId,
-        unitType: null,
+        unitId: purchasedUnit.unit.id,
+        unitType: purchasedUnit.unit.type,
       };
     }
     if (!amountsTouched && purchasedQuantity != null) {
@@ -222,6 +222,11 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   // the shopper types a total of their own, that total wins instead.
   const handleQuantityChange = (value: string) => {
     setValue('quantityInput', value);
+    // The size's count rule reads the quantity. Re-run only a refusal already
+    // shown, so a fix clears it without a half-typed count raising a new one.
+    if (getFieldState('packageSizeInput').invalid) {
+      void trigger('packageSizeInput');
+    }
     setAmountsTouched(true);
     if (priceTouched || seededUnitPrice == null) return;
     const parsed = parseFractionalInput(value);
@@ -282,23 +287,18 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     // The schema passed, so a stated size carries its unit and goes with a
     // whole count in a counted unit: that many packages, which the server
     // records. Without one, the amount as typed.
-    const amount: StockAmountInput =
+    const packageSize =
       packageSizeInput.trim() && packageSizeUnitId
         ? {
-            packages: {
-              count: quantityValue,
-              size: {
-                netWeight: parseDecimalInput(packageSizeInput),
-                netWeightUnitId: packageSizeUnitId,
-              },
-            },
+            netWeight: parseDecimalInput(packageSizeInput),
+            netWeightUnitId: packageSizeUnitId,
           }
-        : {
-            measured: {
-              quantity: quantityValue,
-              unitId: confirmedUnitId ?? undefined,
-            },
-          };
+        : null;
+    const amount = stockAmountOf(quantityValue, {
+      asPackages: packageSize !== null,
+      packageSize,
+      unitId: confirmedUnitId,
+    });
 
     // The field asks for the TOTAL paid, as Mark Purchased does; the server
     // records it exactly and derives the unit price.
