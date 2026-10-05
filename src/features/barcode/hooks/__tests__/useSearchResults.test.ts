@@ -1,4 +1,10 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { createElement, type ReactNode } from 'react';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { ApolloClient, ApolloLink, Observable } from '@apollo/client';
+import { ApolloProvider } from '@apollo/client/react';
+import { makeCache } from '#/apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { createOfflineModeLink } from '#/apollo/links/offlineModeLink';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
@@ -535,6 +541,69 @@ describe('useSearchResults', () => {
       // to create it.
       expect(sku.fired).toEqual([]);
       expect(mockShowBottomSheet).not.toHaveBeenCalled();
+    });
+
+    describe('while offline', () => {
+      const online = useStore.getState();
+      afterEach(() => {
+        useStore.setState({
+          isOnline: online.isOnline,
+          apiReachable: online.apiReachable,
+        });
+      });
+
+      // The real `offlineModeLink` in front of a network that records calls.
+      function renderOffline() {
+        useStore.setState({ isOnline: false, apiReachable: null });
+        const network = jest.fn(
+          () =>
+            new Observable<ApolloLink.Result>(observer => {
+              observer.complete();
+            }),
+        );
+        const client = new ApolloClient({
+          cache: makeCache(),
+          link: ApolloLink.from([
+            createOfflineModeLink(),
+            new ApolloLink(network),
+          ]),
+          defaultOptions: APOLLO_DEFAULT_OPTIONS,
+        });
+        renderHook(() => useSearchResults('1234567890'), {
+          wrapper: ({ children }: { children: ReactNode }) =>
+            createElement(ApolloProvider, { client, children }),
+        });
+        return network;
+      }
+
+      it('shows the connection copy, not a miss, and asks nobody', async () => {
+        const network = renderOffline();
+
+        await waitFor(() =>
+          expect(mockSetSearchError).toHaveBeenCalledWith(
+            t('errors.networkError'),
+          ),
+        );
+        expect(network).not.toHaveBeenCalled();
+        expect(mockShowBottomSheet).not.toHaveBeenCalled();
+      });
+
+      it('keeps the connection copy when the connection comes back', async () => {
+        renderOffline();
+        await waitFor(() =>
+          expect(mockSetSearchError).toHaveBeenCalledWith(
+            t('errors.networkError'),
+          ),
+        );
+
+        act(() => {
+          useStore.setState({ isOnline: true, apiReachable: true });
+        });
+
+        expect(mockSetSearchError).not.toHaveBeenCalledWith(
+          t('errors.codes.genericRetry'),
+        );
+      });
     });
 
     it("shows the app's retry copy for a server failure, never its message", async () => {

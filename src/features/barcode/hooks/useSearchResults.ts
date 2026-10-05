@@ -30,6 +30,8 @@ import type { AddItemFieldRefusal } from '#features/catalog/ui/AddItemForm/AddIt
 import type { PhotoCreditValue } from '#features/catalog/ui/PhotoCredit';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { useStore } from '#store';
+import { blocksCacheMissQueries } from '#store/slices/networkSlice';
 
 // Map Vision Camera barcode format to GraphQL UpcFormat enum.
 // Source: react-native-vision-camera-barcode-scanner's BarcodeFormat
@@ -350,9 +352,12 @@ export const useSearchResults = (
     const error = upcError ?? skuError;
     if (!error) return;
 
+    // Offline, `offlineModeLink` answers the uncached lookup itself. Read when
+    // the error lands, so reconnecting doesn't relabel that answer.
+    const neverAsked = blocksCacheMissQueries(useStore.getState());
     setSearching(false);
     setSearchError(
-      isNetworkError(error)
+      neverAsked || isNetworkError(error)
         ? t('errors.networkError')
         : t('errors.codes.genericRetry'),
     );
