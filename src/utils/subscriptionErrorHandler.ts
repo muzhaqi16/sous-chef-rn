@@ -1,4 +1,3 @@
-import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 import { serializeError } from './errorSerialization';
@@ -58,14 +57,11 @@ export const classifyTransportTermination = (
  * not reach, as while it restarts). Any other server error repeats as it is.
  */
 export const isRetryableServerEnd = (error: unknown): boolean => {
-  if (!CombinedGraphQLErrors.is(error)) return false;
-  const [first] = error.errors;
-  if (!first) return false;
-  const code = first.extensions?.code;
+  const top = getTopLevelGraphQLError(error);
   return (
-    code === TopLevelErrorCode.SubscriptionError ||
-    (code === TopLevelErrorCode.InternalServerError &&
-      first.extensions?.category === 'infrastructure')
+    top?.code === TopLevelErrorCode.SubscriptionError ||
+    (top?.code === TopLevelErrorCode.InternalServerError &&
+      top.category === 'infrastructure')
   );
 };
 

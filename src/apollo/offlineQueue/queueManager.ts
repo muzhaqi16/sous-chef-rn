@@ -45,6 +45,7 @@ import {
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { TimeoutError } from '#/utils/errors/timeoutError';
+import { withinMs } from '#/utils/withinMs';
 import { Telemetry } from '#/services/telemetry';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { registerSessionTeardown } from '#store/sessionTeardown';
@@ -67,6 +68,8 @@ const DEFAULT_CONFIG: QueueConfig = {
   retryDelayMs: 1000,
   processingTimeoutMs: 30000,
 };
+
+const TIMED_OUT = Symbol('timedOut');
 
 /** Deferrals that belong to one row, so the rest of the pass still runs. */
 const ENTRY_SCOPED_DEFERRALS: ReadonlySet<string> = new Set([
@@ -1085,31 +1088,17 @@ export class QueueManager {
     }
   }
 
-  /**
-   * Races the replay against the processing timeout. The timer must be cleared
-   * once either settles, or every replay keeps the JS engine busy for 30s.
-   */
   private async executeWithTimeout(
     mutation: QueuedMutation,
   ): Promise<Record<string, unknown> | undefined> {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const timeout = new Promise<never>((_, reject) => {
-      timer = setTimeout(
-        () =>
-          reject(
-            new TimeoutError(
-              'Operation timed out',
-              this.config.processingTimeoutMs,
-            ),
-          ),
-        this.config.processingTimeoutMs,
-      );
-    });
-    try {
-      return await Promise.race([this.executeMutation(mutation), timeout]);
-    } finally {
-      clearTimeout(timer);
-    }
+    const ms = this.config.processingTimeoutMs;
+    const result = await withinMs(
+      this.executeMutation(mutation),
+      ms,
+      TIMED_OUT,
+    );
+    if (result === TIMED_OUT) throw new TimeoutError('Operation timed out', ms);
+    return result;
   }
 
   /**

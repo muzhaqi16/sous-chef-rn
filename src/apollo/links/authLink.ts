@@ -14,6 +14,7 @@ import {
   RegisterDocument,
 } from '#operations/auth/auth.generated';
 import { operationNameOf } from '../utils/documentOperation';
+import { withinMs } from '#/utils/withinMs';
 
 // Sent without an access token: each runs before a session exists.
 const PUBLIC_OPERATIONS = [
@@ -29,21 +30,13 @@ const REFRESH_BUFFER_MS = 5 * 60 * 1000;
 const AWAITED_REFRESH_CEILING_MS = 12_000;
 
 /** The refresh, or null if it outruns the ceiling. Never rejects. */
-const refreshWithinCeiling = async (): Promise<string | null> => {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const ceiling = new Promise<null>(resolve => {
-    timer = setTimeout(() => resolve(null), AWAITED_REFRESH_CEILING_MS);
-  });
-
-  let winner: string | null = null;
-  try {
-    winner = await Promise.race([proactiveTokenRefresh(), ceiling]);
-  } catch (error) {
-    logger.warn('[AuthLink] Awaited refresh rejected:', error);
-  }
-  clearTimeout(timer);
-  return winner;
-};
+const refreshWithinCeiling = (): Promise<string | null> =>
+  withinMs(proactiveTokenRefresh(), AWAITED_REFRESH_CEILING_MS, null).catch(
+    (error: unknown) => {
+      logger.warn('[AuthLink] Awaited refresh rejected:', error);
+      return null;
+    },
+  );
 
 // Apollo types every context value `any`; an object is spread as the headers.
 const isHeaderRecord = (value: unknown): value is Record<string, unknown> =>

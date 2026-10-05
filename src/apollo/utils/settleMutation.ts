@@ -5,7 +5,6 @@ import {
   TopLevelErrorCode,
   UnitDenial,
 } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
 import { errorService, isTransportFailure } from '#/services/errorService';
 import { isTranslationKey, t, type TranslationKey } from '#/i18n';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
@@ -16,9 +15,10 @@ import {
 } from '#/utils/errors/mutationPayload';
 import {
   getVersionConflictMessage,
-  VERSION_CONFLICT_CODES,
+  isVersionConflictCode,
 } from '#/utils/errors/versionConflict';
 import { getNotFoundMessage } from '#/utils/errors/notFoundMessage';
+import { presentFailure } from '#/utils/errors/presentFailure';
 import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
 import {
   getRateLimitMessage,
@@ -47,6 +47,8 @@ export interface Settled<TData> {
   status: SettleStatus;
   data: TData | null | undefined;
   failure?: SettledFailure;
+  /** What a failure was thrown or resolved as; absent for a refusal member. */
+  error?: unknown;
 }
 
 type Code = `${ErrorCode}` | `${TopLevelErrorCode}`;
@@ -252,7 +254,7 @@ function describe(
   }
   // Only the version codes mean the row changed since it was read; `CONFLICT`
   // is a state refusal and takes its code's own copy below.
-  if (code && VERSION_CONFLICT_CODES.includes(code)) {
+  if (isVersionConflictCode(code)) {
     return {
       code,
       field,
@@ -337,19 +339,7 @@ function fail(
   if (failure.code) handlers[failure.code]?.();
 
   const described = describe(failure, error, options);
-  if (options.present === 'none') return described;
-
-  const isConflict =
-    !!failure.code && VERSION_CONFLICT_CODES.includes(failure.code);
-  const { onConflictRefresh } = options;
-  if (isConflict && onConflictRefresh) {
-    alertService.alert(described.title, described.body, [
-      { text: t('labels.refresh'), onPress: onConflictRefresh },
-      { text: t('labels.cancel'), style: 'cancel' },
-    ]);
-  } else {
-    alertService.alert(described.title, described.body);
-  }
+  if (options.present !== 'none') presentFailure(described, options);
   return described;
 }
 
@@ -374,12 +364,13 @@ export async function settleMutation<TData>(
   const operation = operationNameOf(options.document);
   if ('error' in classified) {
     reportMutationFailure(classified.error, operation);
-  } else {
-    // A refusal the server returned is a business outcome, not an app error.
-    Telemetry.increment('mutation_refused_total', 1, {
-      operation,
-      code: classified.failure.code ?? 'none',
-    });
+    const { error } = classified;
+    return { status: 'failed', data: result?.data, failure, error };
   }
+  // A refusal the server returned is a business outcome, not an app error.
+  Telemetry.increment('mutation_refused_total', 1, {
+    operation,
+    code: classified.failure.code ?? 'none',
+  });
   return { status: 'failed', data: result?.data, failure };
 }

@@ -7,7 +7,7 @@ import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isAuthRefusalCode } from '#/utils/authErrorCodes';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { firstNonBlank } from '#/utils/firstNonBlank';
-import { VERSION_CONFLICT_CODES } from '#/utils/errors/versionConflict';
+import { isVersionConflictCode } from '#/utils/errors/versionConflict';
 import { getRateLimitDetails } from '#/utils/errors/rateLimit';
 import {
   isErrorTypename,
@@ -241,7 +241,7 @@ export function classifyError(error: unknown): QueueError {
     // QueueManager withdraws and reports it rather than re-sending.
     if (
       error.payloadCode !== null &&
-      VERSION_CONFLICT_CODES.includes(error.payloadCode)
+      isVersionConflictCode(error.payloadCode)
     ) {
       return {
         type: 'conflict',
@@ -284,7 +284,7 @@ export function classifyError(error: unknown): QueueError {
   const code = readErrorCode(error);
 
   // The thrown spelling of the same condition as the union member above.
-  if (code && VERSION_CONFLICT_CODES.includes(code)) {
+  if (isVersionConflictCode(code)) {
     return {
       type: 'conflict',
       message,

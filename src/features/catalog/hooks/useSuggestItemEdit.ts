@@ -6,7 +6,10 @@ import {
 } from '#features/catalog/hooks/useSuggestItemEdit.generated';
 import { useImageUpload } from '#hooks/useImageUpload';
 import { alertService } from '#/services/alertService';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import {
+  settleMutation,
+  type SettledFailure,
+} from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
@@ -16,7 +19,8 @@ import {
 import { writesItemDirectly } from '#domain/itemWriteAccess';
 import type { AddItemSubmitPayload } from '#features/catalog/ui/AddItemForm/AddItemForm';
 import { errorService } from '#/services/errorService';
-import { VERSION_CONFLICT_CODES } from '#/utils/errors/versionConflict';
+import { isVersionConflictCode } from '#/utils/errors/versionConflict';
+import { presentFailure } from '#/utils/errors/presentFailure';
 
 export type ItemEditResult =
   | { status: 'suggested' }
@@ -26,13 +30,10 @@ export type ItemEditResult =
   | { status: 'noChanges' }
   | { status: 'readOnly' }
   /** The item changed since the form opened; the caller offers a refresh. */
-  | { status: 'conflict' }
+  | { status: 'conflict'; failure: SettledFailure }
   | { status: 'failed' };
 
 const FAILED: ItemEditResult = { status: 'failed' };
-
-const isVersionConflict = (code: string | null | undefined): boolean =>
-  !!code && VERSION_CONFLICT_CODES.includes(code);
 
 export function useSuggestItemEdit() {
   const { t } = useTranslation();
@@ -120,11 +121,11 @@ export function useSuggestItemEdit() {
       // or ownership changed). This snapshot offered no suggestion, so the
       // read-only answer below takes it.
       if (settled.failure?.code !== ErrorCode.Forbidden) {
-        if (isVersionConflict(settled.failure?.code)) {
-          return { status: 'conflict' };
-        }
         if (settled.failure) {
-          alertService.alert(settled.failure.title, settled.failure.body);
+          if (isVersionConflictCode(settled.failure.code)) {
+            return { status: 'conflict', failure: settled.failure };
+          }
+          presentFailure(settled.failure);
           return FAILED;
         }
         await uploadImages(uploadItemImages, images, original.id);

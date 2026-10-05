@@ -401,7 +401,10 @@ describe('useSuggestItemEdit', () => {
         form(),
       );
 
-      expect(outcome).toEqual({ status: 'conflict' });
+      expect(outcome).toMatchObject({
+        status: 'conflict',
+        failure: { code: ErrorCode.VersionConflict },
+      });
       expect(alertService.alert).not.toHaveBeenCalled();
     });
 

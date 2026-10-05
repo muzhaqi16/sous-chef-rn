@@ -15,8 +15,7 @@ import {
   type ScannedPack,
 } from '#utils/items/suggestItemChanges';
 import { writesItemDirectly } from '#domain/itemWriteAccess';
-import { alertService } from '#/services/alertService';
-import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
+import { presentFailure } from '#/utils/errors/presentFailure';
 
 interface SuggestEditFormProps {
   itemId: string;
@@ -64,20 +63,12 @@ export const SuggestEditForm: React.FC<SuggestEditFormProps> = ({
     if (result.status === 'conflict') {
       // Refresh closes the sheet over a refetch, so it reopens on the latest;
       // Cancel keeps the user's edits in front of them.
-      alertService.alert(
-        t('errors.changedElsewhereTitle'),
-        getVersionConflictMessage(),
-        [
-          {
-            text: t('labels.refresh'),
-            onPress: () => {
-              refetch();
-              onClose();
-            },
-          },
-          { text: t('labels.cancel'), style: 'cancel' },
-        ],
-      );
+      presentFailure(result.failure, {
+        onConflictRefresh: () => {
+          refetch();
+          onClose();
+        },
+      });
       return;
     }
     // Keep the sheet open when there's nothing to send or the send failed, so

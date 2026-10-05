@@ -33,7 +33,7 @@ import { localizedErrorMessage } from '#/services/errorService';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { logValidationErrors } from '#/utils/validation/common';
-import { VERSION_CONFLICT_CODES } from '#/utils/errors/versionConflict';
+import { presentFailure } from '#/utils/errors/presentFailure';
 
 /** The fields whose sections render their own validation message. */
 const FIELDS_WITH_MESSAGES: ReadonlyArray<keyof RecipeFormState> = [
@@ -86,21 +86,13 @@ export const RecipeFormScreen: React.FC<
       form.setError(field, { type: 'server', message: failure.body });
       return;
     }
-    if (failure.code && VERSION_CONFLICT_CODES.includes(failure.code)) {
-      alertService.alert(failure.title, failure.body, [
-        {
-          text: t('labels.refresh'),
-          onPress: () => {
-            void reloadRecipe().then(recipe => {
-              if (recipe) populateFromRecipe(recipe);
-            });
-          },
-        },
-        { text: t('labels.cancel'), style: 'cancel' },
-      ]);
-      return;
-    }
-    alertService.alert(failure.title, failure.body);
+    presentFailure(failure, {
+      onConflictRefresh: () => {
+        void reloadRecipe().then(recipe => {
+          if (recipe) populateFromRecipe(recipe);
+        });
+      },
+    });
   };
 
   const onValid = async () => {
