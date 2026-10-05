@@ -79,8 +79,8 @@ export default DataSourcesScreen;
 
 const styles = StyleSheet.create(theme => ({
   intro: {
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.md,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
   licence: {
     paddingHorizontal: theme.spacing.md,
