@@ -49,6 +49,8 @@ function trip() {
 describe('apiReachabilityBreaker', () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    // No jitter, so each probe lands on its schedule's exact tick.
+    jest.spyOn(Math, 'random').mockReturnValue(0);
     setAppState('active');
     mockState();
     apiReachabilityBreaker.reset(); // singleton — clear state between tests
@@ -168,6 +170,23 @@ describe('apiReachabilityBreaker', () => {
     expect(apiReachabilityBreaker._getState()).toBe('closed');
     expect(setApiReachable).toHaveBeenLastCalledWith(true);
     expect(queueManager.requestDrain).toHaveBeenCalledTimes(1);
+  });
+
+  it('spreads the probe up to a quarter past its delay', async () => {
+    jest.mocked(Math.random).mockReturnValue(1);
+    trip();
+    // The first failure's arbiter probe fails too, so the next one is the
+    // schedule's second step: 40s, and 50s at full jitter.
+    await flushProbe();
+    expect(mockedProbe).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(INITIAL_PROBE_MS * 2);
+    await flushProbe();
+    expect(mockedProbe).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(INITIAL_PROBE_MS / 2);
+    await flushProbe();
+    expect(mockedProbe).toHaveBeenCalledTimes(2);
   });
 
   it('stays open on a failed probe and backs off the next one', async () => {

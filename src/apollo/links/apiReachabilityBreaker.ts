@@ -16,9 +16,10 @@ import { backoffDelay } from '#/utils/backoff';
 const FAILURE_THRESHOLD = 3;
 /**
  * The first /health probe comes 20s after the circuit opens; the cap keeps
- * probing a long-dead API cheap on battery.
+ * probing a long-dead API cheap on battery. Jitter, or every device the outage
+ * tripped together probes the recovering API together.
  */
-const PROBE_BACKOFF = { baseMs: 20_000, maxMs: 120_000 };
+const PROBE_BACKOFF = { baseMs: 20_000, maxMs: 120_000, jitter: 0.25 };
 
 type CircuitState = 'closed' | 'open';
 

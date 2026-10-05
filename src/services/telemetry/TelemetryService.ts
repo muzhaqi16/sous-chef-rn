@@ -84,8 +84,9 @@ const MAX_METRIC_BUFFER = 2000;
 
 // Backoff between failed flushes; without it a dead endpoint is retried on every
 // interval tick plus every error log's immediate flush. Recovery is lazy — the
-// next allowed flush — since telemetry is fire-and-forget.
-const FLUSH_BACKOFF = { baseMs: 5_000, maxMs: 300_000 };
+// next allowed flush — since telemetry is fire-and-forget. Jittered, as every
+// device loses the endpoint at once.
+const FLUSH_BACKOFF = { baseMs: 5_000, maxMs: 300_000, jitter: 0.25 };
 
 interface FlushBackoff {
   consecutiveFailures: number;

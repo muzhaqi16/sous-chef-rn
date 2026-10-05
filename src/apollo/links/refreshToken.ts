@@ -112,7 +112,9 @@ type RefreshReason = 'scheduled' | 'recovery';
 
 const REFRESH_CONFIG = {
   MAX_RETRIES: 3,
-  RETRY_BACKOFF: { baseMs: 1000 },
+  // Jittered: an outage fails every device's refresh at once, against an
+  // endpoint with its own rate limit.
+  RETRY_BACKOFF: { baseMs: 1000, jitter: 0.25 },
   MIN_REFRESH_INTERVAL: 5000, // Minimum time between refresh attempts
   // How long to give the winner of a rotation race to store its successor
   // before concluding there isn't one. Short, because the server's reuse grace
