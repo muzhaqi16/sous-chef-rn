@@ -261,6 +261,32 @@ describe('SearchResults', () => {
     expect(firedInput).not.toHaveProperty('unit');
   });
 
+  it('sends the day of the add on the input, for its default expiry', async () => {
+    const rec = recordMock(BarcodeCreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'CreatePantryItemPayload',
+          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+        },
+      },
+    });
+
+    renderWithApollo(
+      <SearchResults
+        {...defaultProps}
+        item={{ ...mockItem, variationId: 'esm-1' }}
+      />,
+      { operationMocks: [rec.mock] },
+    );
+
+    fireEvent.press(screen.getByTestId('primary-btn'));
+
+    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    const [fired] = rec.fired;
+    expect(fired?.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(fired?.input).toMatchObject({ today: fired?.today });
+  });
+
   describe('a product from Open Food Facts', () => {
     const created = () =>
       recordMock(BarcodeCreatePantryItemDocument, {
