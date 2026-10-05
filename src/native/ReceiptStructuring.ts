@@ -1,5 +1,5 @@
-import { NativeModules } from 'react-native';
 import { isRecord } from '#/utils/isRecord';
+import { nativeMethod, parseList } from './nativeModule';
 
 export type StructuringAvailability =
   | 'available'
@@ -43,24 +43,7 @@ export interface ReceiptLineLabels {
   lines: LabeledLine[];
 }
 
-interface ReceiptStructuringNativeModule {
-  availability: () => Promise<unknown>;
-  labelLines: (lines: string[]) => Promise<unknown>;
-}
-
-const isStructuringModule = (
-  value: unknown,
-): value is ReceiptStructuringNativeModule =>
-  isRecord(value) &&
-  typeof value.availability === 'function' &&
-  typeof value.labelLines === 'function';
-
-// Resolved per call, like `StartupMark`, so a module registered after this
-// file loads is still found. A build without it reads as unavailable.
-const nativeModule = (): ReceiptStructuringNativeModule | null => {
-  const candidate: unknown = NativeModules.ReceiptStructuringModule;
-  return isStructuringModule(candidate) ? candidate : null;
-};
+const MODULE = 'ReceiptStructuringModule';
 
 const isLabel = (value: unknown): value is ReceiptLineLabel =>
   typeof value === 'string' && Object.hasOwn(LABELS, value);
@@ -81,10 +64,11 @@ const toLabeledLine = (value: unknown): LabeledLine | null => {
  * Models on iOS 26+, Gemini Nano on AICore Android devices.
  */
 export const ReceiptStructuring = {
+  /** A build without the module reads as unavailable. */
   async availability(): Promise<StructuringAvailability> {
-    const module = nativeModule();
-    if (!module) return 'unavailable';
-    const status: unknown = await module.availability();
+    const availability = nativeMethod(MODULE, 'availability');
+    if (!availability) return 'unavailable';
+    const status = await availability();
     return status === 'available' || status === 'downloading'
       ? status
       : 'unavailable';
@@ -92,14 +76,12 @@ export const ReceiptStructuring = {
 
   /** One label per line the model could place; a line it skipped has none. */
   async labelLines(lines: readonly string[]): Promise<ReceiptLineLabels> {
-    const module = nativeModule();
-    if (!module) throw new Error('ReceiptStructuringModule is not linked');
-    const result: unknown = await module.labelLines([...lines]);
+    const labelLines = nativeMethod(MODULE, 'labelLines');
+    if (!labelLines) throw new Error(`${MODULE} is not linked`);
+    const result = await labelLines([...lines]);
     if (!isRecord(result)) return { lines: [] };
     const { lines: labeled, storeName } = result;
-    const parsed = Array.isArray(labeled)
-      ? labeled.flatMap(line => toLabeledLine(line) ?? [])
-      : [];
+    const parsed = parseList(labeled, toLabeledLine);
     return typeof storeName === 'string' && storeName.trim() !== ''
       ? { storeName: storeName.trim(), lines: parsed }
       : { lines: parsed };

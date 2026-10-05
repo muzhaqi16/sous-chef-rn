@@ -1,5 +1,5 @@
-import { NativeModules } from 'react-native';
 import { isRecord } from '#/utils/isRecord';
+import { nativeMethod, parseList } from './nativeModule';
 
 export interface RecognizedLine {
   text: string;
@@ -24,21 +24,16 @@ export interface PreparedPhoto {
 
 type NativeMethod = 'recognizeAndDelete' | 'preparePhotos' | 'deletePhotos';
 
-// Resolved per call, like `StartupMark`, so a module registered after this
-// file loads is still found; a build older than a method lacks it.
-const nativeMethod = (
+// A build older than a method lacks it.
+const call = async (
   name: NativeMethod,
-): ((imageUris: string[]) => Promise<unknown>) => {
-  const nativeModule: unknown = NativeModules.TextRecognitionModule;
-  if (!isRecord(nativeModule)) {
-    throw new Error('TextRecognitionModule is not linked');
+  imageUris: readonly string[],
+): Promise<unknown> => {
+  const method = nativeMethod('TextRecognitionModule', name);
+  if (!method) {
+    throw new Error(`TextRecognitionModule is not linked or has no ${name}`);
   }
-  const method: unknown = nativeModule[name];
-  if (typeof method !== 'function') {
-    throw new Error(`TextRecognitionModule has no ${name}`);
-  }
-  return (imageUris: string[]) =>
-    Promise.resolve(Reflect.apply(method, nativeModule, [imageUris]));
+  return method([...imageUris]);
 };
 
 const toLine = (value: unknown): RecognizedLine | null => {
@@ -58,11 +53,9 @@ const toLine = (value: unknown): RecognizedLine | null => {
     : { text, x, y, width, height };
 };
 
-const toPage = (value: unknown): RecognizedPage => {
-  const lines = isRecord(value) ? value.lines : null;
-  if (!Array.isArray(lines)) return { lines: [] };
-  return { lines: lines.flatMap(line => toLine(line) ?? []) };
-};
+const toPage = (value: unknown): RecognizedPage => ({
+  lines: parseList(isRecord(value) ? value.lines : null, toLine),
+});
 
 const toPhoto = (value: unknown): PreparedPhoto | null => {
   if (!isRecord(value)) return null;
@@ -84,19 +77,15 @@ export const TextRecognition = {
   async recognizeAndDelete(
     imageUris: readonly string[],
   ): Promise<RecognizedPage[]> {
-    const pages = await nativeMethod('recognizeAndDelete')([...imageUris]);
-    return Array.isArray(pages) ? pages.map(toPage) : [];
+    return parseList(await call('recognizeAndDelete', imageUris), toPage);
   },
 
   /** Rewrites each image for the server to read and deletes the originals, whatever the outcome. */
   async preparePhotos(imageUris: readonly string[]): Promise<PreparedPhoto[]> {
-    const photos = await nativeMethod('preparePhotos')([...imageUris]);
-    return Array.isArray(photos)
-      ? photos.flatMap(photo => toPhoto(photo) ?? [])
-      : [];
+    return parseList(await call('preparePhotos', imageUris), toPhoto);
   },
 
   async deletePhotos(imageUris: readonly string[]): Promise<void> {
-    await nativeMethod('deletePhotos')([...imageUris]);
+    await call('deletePhotos', imageUris);
   },
 };

@@ -93,7 +93,7 @@ describe('TextRecognition', () => {
 
     await expect(
       TextRecognition.preparePhotos(['file:///page.jpg']),
-    ).rejects.toThrow('TextRecognitionModule has no preparePhotos');
+    ).rejects.toThrow('has no preparePhotos');
   });
 
   it('deletes photos through the module', async () => {
