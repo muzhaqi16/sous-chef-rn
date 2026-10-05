@@ -46,6 +46,7 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { TimeoutError } from '#/utils/errors/timeoutError';
 import { withinMs } from '#/utils/withinMs';
+import { sleep } from '#/utils/backoff';
 import { Telemetry } from '#/services/telemetry';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { registerSessionTeardown } from '#store/sessionTeardown';
@@ -672,7 +673,7 @@ export class QueueManager {
         mutation.retryCount,
         this.config.retryDelayMs,
       );
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await sleep(delay);
 
       // Gate on `isApiUnavailable`, not bare `isOnline`: an open reachability
       // breaker (device online, API down) must defer rather than re-trip it.

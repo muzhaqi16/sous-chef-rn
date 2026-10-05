@@ -19,6 +19,7 @@ import { getDeviceLocale } from '#/utils/deviceLocale';
 import { todayKey } from '#/utils/dateUtils';
 import { getRateLimitDetails } from '#/utils/errors/rateLimit';
 import { isAuthRefusalCode } from '#/utils/authErrorCodes';
+import { backoffDelay } from '#/utils/backoff';
 import { useIsOnline } from '#store/useAppStore';
 import {
   ReceiptParseReadersFragmentDoc,
@@ -41,9 +42,9 @@ import {
 // The API asks for a poll every 2–3 s and allows 120 a minute.
 const POLL_MS = 2500;
 
-// The waits before each resend of an ask that got no verdict; after the last,
-// it is sent again on the next visit.
-const RESEND_MS = [POLL_MS, POLL_MS * 2, POLL_MS * 4];
+// An ask that got no verdict is resent after a poll, then two, then four;
+// after the last, it is sent again on the next visit.
+const RESENDS_PER_VISIT = 3;
 
 /** What the saved screen says about the server's reading. */
 export type ServerReadingStatus =
@@ -213,15 +214,14 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
         settleServerParse(id, 'unavailable');
       } else {
         // No verdict: still pending, sent again shortly, then next visit.
-        const wait = RESEND_MS[resends];
-        if (wait === undefined) {
+        if (resends >= RESENDS_PER_VISIT) {
           setGaveUp(true);
         } else {
           resendTimer.current = setTimeout(() => {
             if (sent.current !== id) return;
             sent.current = null;
             setResends(count => count + 1);
-          }, wait);
+          }, backoffDelay(resends, { baseMs: POLL_MS }));
         }
       }
     };

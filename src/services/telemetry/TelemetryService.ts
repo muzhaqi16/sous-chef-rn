@@ -16,6 +16,7 @@ import { serializeError } from '#/utils/errorSerialization';
 import { getDeviceId } from '#/storage/deviceId';
 import { generateId } from '#/utils/generateId';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { backoffDelay } from '#/utils/backoff';
 import { getVersion, isEmulatorSync } from 'react-native-device-info';
 import { env as buildEnv } from '#/config/env';
 import { useStore } from '#store';
@@ -84,8 +85,7 @@ const MAX_METRIC_BUFFER = 2000;
 // Backoff between failed flushes; without it a dead endpoint is retried on every
 // interval tick plus every error log's immediate flush. Recovery is lazy — the
 // next allowed flush — since telemetry is fire-and-forget.
-const INITIAL_FLUSH_BACKOFF_MS = 5_000;
-const MAX_FLUSH_BACKOFF_MS = 300_000;
+const FLUSH_BACKOFF = { baseMs: 5_000, maxMs: 300_000 };
 
 interface FlushBackoff {
   consecutiveFailures: number;
@@ -489,10 +489,7 @@ export class TelemetryService {
     detail?: string,
   ): void {
     backoff.consecutiveFailures += 1;
-    const delay = Math.min(
-      INITIAL_FLUSH_BACKOFF_MS * 2 ** (backoff.consecutiveFailures - 1),
-      MAX_FLUSH_BACKOFF_MS,
-    );
+    const delay = backoffDelay(backoff.consecutiveFailures - 1, FLUSH_BACKOFF);
     backoff.nextAttemptAt = Date.now() + delay;
     const summary = `Failed to send ${pipeline} via ${transports} (attempt ${
       backoff.consecutiveFailures

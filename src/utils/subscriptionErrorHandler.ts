@@ -8,6 +8,7 @@ import {
   socketCloseOf,
 } from './errors/libraryErrorMessages';
 import { isNetworkError } from './isNetworkError';
+import { backoffDelay } from './backoff';
 import { isRetryableWebSocketClose } from '#/apollo/links/wsCloseCodes';
 
 interface SubscriptionError {
@@ -17,13 +18,11 @@ interface SubscriptionError {
 interface RetryState {
   count: number;
   lastAttempt: number;
-  backoffMs: number;
 }
 
 const retryStates = new Map<string, RetryState>();
 const MAX_RETRIES = 3;
-const INITIAL_BACKOFF_MS = 1000;
-const MAX_BACKOFF_MS = 30000;
+const RETRY_BACKOFF = { baseMs: 1000, maxMs: 30000 };
 
 /**
  * True for a transport failure that auto-recovers (app backgrounding, network
@@ -124,7 +123,6 @@ export const handleSubscriptionError = (
   const state = retryStates.get(operationName) ?? {
     count: 0,
     lastAttempt: 0,
-    backoffMs: INITIAL_BACKOFF_MS,
   };
 
   // Check if we've exceeded max retries
@@ -135,14 +133,13 @@ export const handleSubscriptionError = (
 
   // Check if we're still in backoff period
   const now = Date.now();
-  if (now - state.lastAttempt < state.backoffMs) {
+  if (now - state.lastAttempt < backoffDelay(state.count, RETRY_BACKOFF)) {
     return false;
   }
 
-  // Increment retry count and update backoff
+  // Increment retry count; the backoff grows from it
   state.count += 1;
   state.lastAttempt = now;
-  state.backoffMs = Math.min(state.backoffMs * 2, MAX_BACKOFF_MS);
 
   retryStates.set(operationName, state);
 
@@ -150,7 +147,7 @@ export const handleSubscriptionError = (
   if (onRetry) {
     setTimeout(() => {
       onRetry();
-    }, state.backoffMs);
+    }, backoffDelay(state.count, RETRY_BACKOFF));
   }
 
   return true;

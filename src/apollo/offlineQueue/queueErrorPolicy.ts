@@ -14,6 +14,7 @@ import {
   type MutationErrorTypename,
 } from '#/utils/errors/mutationPayload';
 import { isRecord } from '#/utils/isRecord';
+import { backoffDelay } from '#/utils/backoff';
 import type { QueueError } from './types';
 
 /**
@@ -395,14 +396,16 @@ export function classifyError(error: unknown): QueueError {
 }
 
 /**
- * Exponential backoff with jitter, capped at 30s. `baseDelayMs` is the queue's
- * configured retry delay; delay = min(baseDelayMs * 2^retryCount + jitter, 30s).
+ * `baseDelayMs` (the queue's configured retry delay) doubling per retry, plus up
+ * to 500ms of jitter against a thundering herd, capped at 30s after the jitter.
  */
 export function calculateRetryDelay(
   retryCount: number,
   baseDelayMs: number,
 ): number {
-  const exponentialDelay = baseDelayMs * Math.pow(2, retryCount);
-  const jitter = Math.random() * 500; // Prevents a thundering herd.
-  return Math.min(exponentialDelay + jitter, 30000);
+  const jitter = Math.random() * 500;
+  return Math.min(
+    backoffDelay(retryCount, { baseMs: baseDelayMs }) + jitter,
+    30000,
+  );
 }

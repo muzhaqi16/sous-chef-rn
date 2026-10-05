@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRoute } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { sleep } from '#/utils/backoff';
 import { useRecipeData } from './useRecipeData';
 import { useRecipeFavoriteState } from './useRecipeFavoriteState';
 import { useRecipeSavedMetadata } from './useRecipeSavedMetadata';
@@ -20,10 +21,6 @@ const RECHECK_AFTER_SAVE_MS = [3000, 10000];
 // A local read settles in tens of milliseconds, too fast for the spinner to
 // register as the pull having done anything.
 const MIN_REFRESH_MS = 500;
-const wait = (ms: number) =>
-  new Promise<void>(resolve => {
-    setTimeout(resolve, ms);
-  });
 
 /** The backend id behind a catalog hint, opened once per recipe. */
 function useOpenedCatalogRecipe(hint: CatalogRecipeHint | undefined) {
@@ -131,7 +128,7 @@ export function useRecipeDetail() {
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = () => {
     void executeRefreshWithFinally(
-      () => Promise.all([refreshRecipe(), wait(MIN_REFRESH_MS)]),
+      () => Promise.all([refreshRecipe(), sleep(MIN_REFRESH_MS)]),
       setRefreshing,
     );
   };

@@ -32,6 +32,7 @@ import { dropUnitSystemAnswers } from '#/apollo/utils/unitSystemAnswers';
 import { registerSessionTeardown } from '#/store/sessionTeardown';
 import { useStore } from '#store';
 import { holdsSessionTokens } from '#store/slices/authSlice';
+import { backoffDelay, sleep } from '#/utils/backoff';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 
 // Registering THIS device with the server. Fire-and-forget: a failure here must
@@ -370,9 +371,9 @@ async function registerDeviceWithRetry(
     if (outcome === 'ok') return 'ok';
     if (outcome === 'unretryable') return 'failed';
     if (attempts < maxRetries) {
-      const delay = Math.pow(2, attempts) * 1000;
+      const delay = backoffDelay(attempts, { baseMs: 1000 });
       logger.info(`Device registration retry in ${delay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await sleep(delay);
     }
   }
   logger.warn(`Device registration failed after ${maxRetries} attempts`);

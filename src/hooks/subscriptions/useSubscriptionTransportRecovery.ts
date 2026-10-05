@@ -6,6 +6,7 @@ import { onWebSocketReconnected } from '#/apollo/links/wsLink';
 import { errorService } from '#/services/errorService';
 import { useIsOnline } from '#store/useAppStore';
 import { logger } from '#/utils/environment';
+import { backoffDelay } from '#/utils/backoff';
 import {
   classifyTransportTermination,
   isPermanentSubscriptionRejection,
@@ -26,8 +27,8 @@ import {
  * a socket that connects afterwards re-arms the count from zero.
  */
 export const MAX_RESTART_ATTEMPTS = 6;
-const BASE_RESTART_DELAY_MS = 1000;
-const MAX_RESTART_DELAY_MS = 30_000;
+// Jitter so several subscriptions killed by one close don't re-dial together.
+const RESTART_BACKOFF = { baseMs: 1000, maxMs: 30_000, jitter: 0.25 };
 
 /**
  * Error-free time before the attempt count returns to zero. Counterpart of
@@ -36,15 +37,6 @@ const MAX_RESTART_DELAY_MS = 30_000;
  * faults would accumulate until the subscription goes dark.
  */
 export const RESTART_STABLE_MS = 10_000;
-
-const getRestartDelay = (attempt: number): number => {
-  const delay = Math.min(
-    BASE_RESTART_DELAY_MS * Math.pow(2, attempt),
-    MAX_RESTART_DELAY_MS,
-  );
-  // Jitter so several subscriptions killed by one close don't re-dial together.
-  return delay + delay * 0.25 * Math.random();
-};
 
 /** The part of `useSubscription`'s result this needs. */
 export interface RecoverableSubscription {
@@ -80,7 +72,7 @@ export function useSubscriptionTransportRecovery(
     // this effect re-runs on the transition back, restarting immediately.
     if (!shouldRecover || exhausted || !isOnline) return;
 
-    const delay = getRestartDelay(attempt);
+    const delay = backoffDelay(attempt, RESTART_BACKOFF);
     logger.debug(
       `🔌 [${subscriptionName}] subscription ended — re-subscribing in ${Math.round(
         delay,
