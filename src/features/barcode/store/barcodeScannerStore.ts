@@ -1,25 +1,25 @@
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { immer } from 'zustand/middleware/immer';
-import { createJSONStorage, persist } from 'zustand/middleware';
-import { zustandStorage } from '#/storage/mmkv';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
 import type { NetWeightKind } from '#/graphql/generated/schemaTypes';
 import type { PhotoCreditValue } from '#features/catalog/ui/PhotoCredit';
+import type { DataAttributionValue } from '#components/molecules/DataAttributionNotices';
 
-/** One row of the scanner's result list and its recent-scan history. */
+/** One row of the scanner's result list. */
 export interface ScannedItem {
   id: string;
   name: string;
   description?: string;
+  /** The primary photo's thumbnail, which an edit form starts from. */
   imageUrl?: string;
-  /** The licence credit `imageUrl` needs, shown under it. */
-  imageCredit?: PhotoCreditValue;
   /**
-   * The card's full-width image: `imageUrl` is the primary photo's thumbnail,
-   * so this is the photo's original, with its credit.
+   * The card's full-width image: the primary photo's original, else
+   * `imageUrl`, with the licence credit it needs.
    */
-  photo?: { url: string; credit?: PhotoCreditValue };
+  image?: { url: string; credit?: PhotoCreditValue };
+  /** The notices the item's catalog data asks a reader to see. */
+  dataAttributions?: DataAttributionValue[];
   /** Labels the edit action ("Suggest Edit" vs "Edit"). Cosmetic only — the
    *  submit path re-reads canEdit from the authoritative item snapshot. */
   canEdit?: boolean;
@@ -35,7 +35,7 @@ export interface ScannedItem {
    * scan reported: its size, brand and barcode.
    */
   variationId?: string;
-  /** Where that record's facts came from, e.g. `OPENFOODFACTS`, which the card credits. */
+  /** Where that record's facts came from, e.g. `OPENFOODFACTS`. */
   source?: string;
   unitId?: string;
   /** The scanned barcode's own figure, in `displayUnit`. */
@@ -77,9 +77,6 @@ export interface BarcodeScannerState {
   scannerSheetVisible: boolean;
   scannerSheetIndex: number;
 
-  /** The last 10 scans, kept across app launches. The only persisted field. */
-  recentlyScanned: ScannedItem[];
-
   // Actions
   setScanning: (isScanning: boolean) => void;
   setSearchResults: (results: ScannedItem[]) => void;
@@ -87,15 +84,13 @@ export interface BarcodeScannerState {
   setSearchError: (error: string | null) => void;
   showBottomSheet: (index?: number) => void;
   hideBottomSheet: () => void;
-  addToRecentlyScanned: (item: ScannedItem) => void;
   clearSearch: () => void;
   resetScanner: () => void;
 }
 
 /**
- * Everything empty, `recentlyScanned` included — `resetScanner` deliberately
- * keeps the history, a session end must not. Exported so the session reset
- * clears the whole store rather than a hand-copied subset.
+ * Everything empty. Exported so the session reset clears the whole store rather
+ * than a hand-copied subset.
  */
 export const initialBarcodeScannerState = {
   isScanning: false,
@@ -104,106 +99,61 @@ export const initialBarcodeScannerState = {
   searchError: null as string | null,
   scannerSheetVisible: false,
   scannerSheetIndex: 0,
-  recentlyScanned: [] as ScannedItem[],
 };
 
-const PERSIST_KEY = 'sous-chef-barcode';
-
 export const useBarcodeScannerStore = create<BarcodeScannerState>()(
-  persist(
-    immer(set => ({
-      ...initialBarcodeScannerState,
+  immer(set => ({
+    ...initialBarcodeScannerState,
 
-      setScanning: isScanning =>
-        set(state => {
-          state.isScanning = isScanning;
-        }),
+    setScanning: isScanning =>
+      set(state => {
+        state.isScanning = isScanning;
+      }),
 
-      setSearchResults: results =>
-        set(state => {
-          state.searchResults = results;
-          state.isSearching = false;
+    setSearchResults: results =>
+      set(state => {
+        state.searchResults = results;
+        state.isSearching = false;
+        state.searchError = null;
+      }),
+
+    setSearching: isSearching =>
+      set(state => {
+        state.isSearching = isSearching;
+        if (isSearching) {
           state.searchError = null;
-        }),
+        }
+      }),
 
-      setSearching: isSearching =>
-        set(state => {
-          state.isSearching = isSearching;
-          if (isSearching) {
-            state.searchError = null;
-          }
-        }),
+    setSearchError: error =>
+      set(state => {
+        state.searchError = error;
+        state.isSearching = false;
+      }),
 
-      setSearchError: error =>
-        set(state => {
-          state.searchError = error;
-          state.isSearching = false;
-        }),
+    showBottomSheet: (index = 1) =>
+      set(state => {
+        state.scannerSheetVisible = true;
+        state.scannerSheetIndex = index;
+      }),
 
-      showBottomSheet: (index = 1) =>
-        set(state => {
-          state.scannerSheetVisible = true;
-          state.scannerSheetIndex = index;
-        }),
+    hideBottomSheet: () =>
+      set(state => {
+        state.scannerSheetVisible = false;
+        state.scannerSheetIndex = 0;
+      }),
 
-      hideBottomSheet: () =>
-        set(state => {
-          state.scannerSheetVisible = false;
-          state.scannerSheetIndex = 0;
-        }),
+    clearSearch: () =>
+      set(state => {
+        state.searchResults = [];
+        state.searchError = null;
+        state.isSearching = false;
+      }),
 
-      addToRecentlyScanned: item =>
-        set(state => {
-          // Remove if already exists to avoid duplicates
-          const existingIndex = state.recentlyScanned.findIndex(
-            existing => existing.upc === item.upc,
-          );
-          if (existingIndex !== -1) {
-            state.recentlyScanned.splice(existingIndex, 1);
-          }
-
-          // Add to beginning of array
-          state.recentlyScanned.unshift(item);
-
-          // Keep only last 10 items
-          if (state.recentlyScanned.length > 10) {
-            state.recentlyScanned = state.recentlyScanned.slice(0, 10);
-          }
-        }),
-
-      clearSearch: () =>
-        set(state => {
-          state.searchResults = [];
-          state.searchError = null;
-          state.isSearching = false;
-        }),
-
-      // Deliberately does NOT clear `recentlyScanned`: closing the scanner
-      // keeps the history, only a session end empties it.
-      resetScanner: () =>
-        set(state => {
-          state.isScanning = false;
-          state.searchResults = [];
-          state.isSearching = false;
-          state.searchError = null;
-          state.scannerSheetVisible = false;
-          state.scannerSheetIndex = 0;
-        }),
-    })),
-    {
-      name: PERSIST_KEY,
-      storage: createJSONStorage(() => zustandStorage),
-      version: 1,
-      // Only the history persists. The scan/search/sheet fields are all
-      // in-flight state; restoring `isScanning: true` would open the app onto a
-      // camera that is not running.
-      partialize: state => ({ recentlyScanned: state.recentlyScanned }),
-    },
-  ),
+    resetScanner: () => set(() => ({ ...initialBarcodeScannerState })),
+  })),
 );
 
-// The history is persisted, so a sign-out on a shared device must clear it —
-// and this store is outside the root's `SESSION_SCOPED_STATE` by construction.
 registerSessionScopedStore('barcodeScanner', () =>
   useBarcodeScannerStore.setState(() => ({ ...initialBarcodeScannerState })),
 );
@@ -225,7 +175,6 @@ export const useSearchState = () =>
       setSearching: state.setSearching,
       setSearchError: state.setSearchError,
       clearSearch: state.clearSearch,
-      addToRecentlyScanned: state.addToRecentlyScanned,
     })),
   );
 

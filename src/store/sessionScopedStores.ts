@@ -16,9 +16,6 @@ const stores = new Map<string, StoreReset>();
  * missing here survives sign-out on a shared device.
  */
 export const SESSION_SCOPED_PERSISTED_KEYS: string[] = [
-  // src/features/barcode/store/barcodeScannerStore.ts — scan history carries
-  // item names, brands and UPCs.
-  'sous-chef-barcode',
   // src/features/recipes/store/useRecipeCacheStore.ts — search terms and results.
   'recipe-search-cache',
   // src/features/recipes/store/useRecipeSuggestionsStore.ts — personalized
@@ -27,6 +24,12 @@ export const SESSION_SCOPED_PERSISTED_KEYS: string[] = [
   // src/features/receipts/store/receiptDraftStore.ts — a scanned receipt's
   // redacted text names the shop and what was bought.
   'sous-chef-receipt-draft',
+];
+
+/** Keys a removed store persisted under, still on disk for older installs. */
+const RETIRED_PERSISTED_KEYS: readonly string[] = [
+  // The barcode scanner's scan history (item names, brands, UPCs), before 4.7.0.
+  'sous-chef-barcode',
 ];
 
 /**
@@ -57,7 +60,10 @@ export const resetSessionScopedStores = (): void => {
 
   // Independent of the loop above: a store whose module was never evaluated has
   // no registration, but its persisted key is still on disk.
-  for (const key of SESSION_SCOPED_PERSISTED_KEYS) {
+  for (const key of [
+    ...SESSION_SCOPED_PERSISTED_KEYS,
+    ...RETIRED_PERSISTED_KEYS,
+  ]) {
     try {
       storage.remove(key);
     } catch (error) {

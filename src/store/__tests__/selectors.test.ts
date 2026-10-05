@@ -78,7 +78,6 @@ const mockState: Record<string, unknown> = {
   setSearching: jest.fn(),
   setSearchError: jest.fn(),
   clearSearch: jest.fn(),
-  addToRecentlyScanned: jest.fn(),
 };
 
 // Mock the store module so hooks read from mockState
