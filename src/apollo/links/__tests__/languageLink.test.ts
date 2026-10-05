@@ -1,7 +1,12 @@
 import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
+import type { DocumentNode, FormattedExecutionResult } from 'graphql';
 import { Observable } from 'rxjs';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { changeLanguage } from '#/i18n';
+import {
+  startAnswersForSwitch,
+  wasAnsweredSinceSwitch,
+} from '#/apollo/answeredSinceSwitch';
 import { languageLink } from '../languageLink';
 
 const query = gql`
@@ -38,6 +43,23 @@ const headersSent = (context: Record<string, unknown> = {}) =>
     ).subscribe({ error: reject, complete: () => resolve(seen) });
   });
 
+/** Runs one operation through the link, answered with `result`. */
+const answer = (document: DocumentNode, result: FormattedExecutionResult) =>
+  new Promise<void>((resolve, reject) => {
+    const downstream = new ApolloLink(
+      () =>
+        new Observable(observer => {
+          observer.next(result);
+          observer.complete();
+        }),
+    );
+    ApolloLink.execute(
+      ApolloLink.from([languageLink, downstream]),
+      { query: document, variables: {} },
+      { client },
+    ).subscribe({ error: reject, complete: resolve });
+  });
+
 afterEach(async () => {
   await changeLanguage('en');
 });
@@ -52,6 +74,39 @@ describe('languageLink', () => {
     await changeLanguage('sq');
     await expect(headersSent()).resolves.toMatchObject({
       'accept-language': 'sq',
+    });
+  });
+
+  describe('what it records as answered since a switch', () => {
+    beforeEach(() => {
+      startAnswersForSwitch();
+    });
+
+    it('records a query answered without errors', async () => {
+      await answer(query, { data: { me: { id: '1' } } });
+
+      expect(wasAnsweredSinceSwitch('TestOp', {})).toBe(true);
+    });
+
+    it('leaves out an answer that carried errors', async () => {
+      await answer(query, {
+        data: { me: null },
+        errors: [{ message: 'Internal server error' }],
+      });
+
+      expect(wasAnsweredSinceSwitch('TestOp', {})).toBe(false);
+    });
+
+    // A write is never re-asked, and a receipt parse's variables are large.
+    it('leaves out a mutation', async () => {
+      const mutation = gql`
+        mutation TestWrite {
+          touch
+        }
+      `;
+      await answer(mutation, { data: { touch: true } });
+
+      expect(wasAnsweredSinceSwitch('TestWrite', {})).toBe(false);
     });
   });
 

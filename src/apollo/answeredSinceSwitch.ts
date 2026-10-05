@@ -1,9 +1,11 @@
 import { canonicalStringify } from '@apollo/client/utilities';
 
 /**
- * The operations the network answered in the app's language since the last
- * switch, by name and variables. The language catch-up skips them: a screen
- * first opened after the switch asked as it mounted. Nothing is held before a
+ * The queries the network answered, without errors, in the app's language
+ * since the last switch, by name and variables; the language catch-up skips
+ * them, whether a resync or a mounting screen asked. Per switch, not per
+ * language: the names are shared entities, so a screen paused through `en` →
+ * `es` → `en` holds what the `es` screens wrote. Nothing is held before a
  * first switch.
  */
 let answered: Set<string> | null = null;

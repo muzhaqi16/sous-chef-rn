@@ -413,6 +413,28 @@ describe('resync', () => {
       expect(requests).toEqual([]);
     });
 
+    // Each catch-up first waits on a full drain of the queue, which offline or
+    // signed out only fails, once per navigation.
+    it.each([
+      ['offline', { apiReachable: false }],
+      ['signed out', { user: null }],
+    ] as const)(
+      'makes no catch-up on a navigation while %s',
+      async (_state, change) => {
+        triggers.languageChanged();
+        await pastTheWindow();
+        jest.mocked(queueManager.whenIdle).mockClear();
+        requests = [];
+
+        useStore.setState(change);
+        navigate();
+        await pastTheWindow();
+
+        expect(queueManager.whenIdle).not.toHaveBeenCalled();
+        expect(requests).toEqual([]);
+      },
+    );
+
     // Rehydration applies the saved language after the sources subscribe.
     it('ignores a switch made before any query exists', async () => {
       watchers.splice(0).forEach(watcher => watcher.unsubscribe());

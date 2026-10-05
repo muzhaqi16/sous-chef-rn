@@ -53,7 +53,14 @@ const wsReconnected = () =>
   );
 
 /** Subscribes to navigation state changes; returns the unsubscribe. */
-export type NavigationSubscribe = (listener: () => void) => () => void;
+type NavigationSubscribe = (listener: () => void) => () => void;
+
+const hasLiveSession = (): boolean =>
+  !!useStore.getState().user?.id && !LogoutCleanup.isInLogoutProcess();
+
+// Offline a catch-up would only fail: `apiReachable` re-asks what is active.
+const canCatchUp = (): boolean =>
+  hasLiveSession() && !isApiUnavailable(useStore.getState());
 
 // Catalog names come in the request's language (`languageLink`), so a switch
 // re-reads what is on screen. A screen paused at the switch is not active, so
@@ -71,9 +78,9 @@ const languageChanged =
         if (next === current) return;
         current = next;
         if (client.getObservableQueries('all').size === 0) return;
-        stopNavigation ??= onNavigation?.(() =>
-          observer.next({ switched: false }),
-        );
+        stopNavigation ??= onNavigation?.(() => {
+          if (canCatchUp()) observer.next({ switched: false });
+        });
         observer.next({ switched: true });
       });
       return () => {
@@ -93,55 +100,30 @@ interface PendingResync {
   firstTriggerAt: number;
 }
 
-const hasLiveSession = (): boolean =>
-  !!useStore.getState().user?.id && !LogoutCleanup.isInLogoutProcess();
-
-/**
- * The queries a resync has re-asked, with an answer, since the last language
- * switch; a switch starts a new set. Per switch, not per language: the names
- * are shared entities, so a screen paused through `en` → `es` → `en` holds
- * what the `es` screens wrote.
- */
-type AskedSinceSwitch = WeakSet<ObservableQuery>;
-
 async function refetchActive(
   client: ApolloClient,
   batch: PendingResync,
-  asked: AskedSinceSwitch,
 ): Promise<void> {
-  if (!hasLiveSession()) return;
-
   const source = [...batch.sources].sort().join('+');
-  // A language catch-up re-asks only what has not been asked since the switch;
-  // any other trigger re-asks everything.
+  // A language catch-up re-asks only what has not been answered since the
+  // switch, whoever asked; any other trigger re-asks everything.
   const catchUp = [...batch.sources].every(name => name === 'languageChanged');
-  // Offline it would only fail: `apiReachable` re-asks what is active.
-  if (catchUp && isApiUnavailable(useStore.getState())) return;
+  if (!(catchUp ? canCatchUp() : hasLiveSession())) return;
   let refetched = 0;
   try {
     await client.refetchQueries({
       include: 'active',
       onQueryUpdated: query => {
-        // A screen first opened after the switch asked as it mounted.
-        if (
-          catchUp &&
-          !!query.queryName &&
-          wasAnsweredSinceSwitch(query.queryName, query.variables)
-        ) {
-          asked.add(query);
-        }
         if (
           !batch.matchers.some(matcher => matcher(query)) ||
-          (catchUp && asked.has(query))
+          (catchUp &&
+            !!query.queryName &&
+            wasAnsweredSinceSwitch(query.queryName, query.variables))
         ) {
           return false;
         }
         refetched++;
-        // Asked once answered: a failed ask is caught up on a later navigation.
-        return query.refetch().then(result => {
-          if (!result.error) asked.add(query);
-          return result;
-        });
+        return true;
       },
     });
   } catch (error) {
@@ -164,7 +146,6 @@ async function refetchActive(
  */
 export const createRefetchEventManager = (): RefetchEventManager => {
   let pending: PendingResync | null = null;
-  let asked: AskedSinceSwitch = new WeakSet();
   let settleTimer: ReturnType<typeof setTimeout> | undefined;
   // From the settle timer firing until its refetch settles.
   let running = false;
@@ -190,7 +171,7 @@ export const createRefetchEventManager = (): RefetchEventManager => {
     await queueManager.whenIdle().catch(() => {});
     const batch = takePending();
     // A throw must still end the run, or every later trigger waits on it.
-    if (batch) await refetchActive(client, batch, asked).catch(() => {});
+    if (batch) await refetchActive(client, batch).catch(() => {});
     running = false;
     if (pending) settleThenResync(client, pending);
   };
@@ -198,9 +179,7 @@ export const createRefetchEventManager = (): RefetchEventManager => {
   // Returns synchronously, as a handler must; the waits are `resync`'s.
   const coalescingHandler: RefetchEventManager.EventHandler = context => {
     const { client, source, matchesRefetchOn } = context;
-    // A run in flight keeps the set it started with: it asked in the old language.
     if (context.source === 'languageChanged' && context.payload.switched) {
-      asked = new WeakSet();
       startAnswersForSwitch();
     }
     pending ??= {

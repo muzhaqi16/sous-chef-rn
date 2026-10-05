@@ -1,5 +1,6 @@
 import { ApolloLink } from '@apollo/client';
 import { SetContextLink } from '@apollo/client/link/context';
+import { OperationTypeNode } from 'graphql';
 import { tap } from 'rxjs';
 import { getResolvedLanguage } from '#/i18n';
 import { isRecord } from '#/utils/isRecord';
@@ -17,14 +18,23 @@ const sendLanguage = new SetContextLink(({ headers }) => ({
   },
 }));
 
-// An answer counts only in the language it was asked in: one in flight across
-// a switch still carries the old names.
+// Only a query is re-asked, and only its answer counts: complete, and in the
+// language it was asked in, since one in flight across a switch still carries
+// the old names.
 const noteAnswers = new ApolloLink((operation, forward) => {
+  if (operation.operationType !== OperationTypeNode.QUERY) {
+    return forward(operation);
+  }
   const askedIn = getResolvedLanguage();
   return forward(operation).pipe(
     tap(result => {
       const { operationName } = operation;
-      if (operationName && result.data && askedIn === getResolvedLanguage()) {
+      if (
+        operationName &&
+        result.data &&
+        !result.errors?.length &&
+        askedIn === getResolvedLanguage()
+      ) {
         noteAnsweredInLanguage(operationName, operation.variables);
       }
     }),
