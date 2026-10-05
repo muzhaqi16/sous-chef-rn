@@ -364,33 +364,114 @@ RN's `Pressable` needs no wrapper: the Unistyles babel plugin auto-binds it to
 the C++ ShadowTree, so function-style callbacks with `StyleSheet.create`
 proxies work natively.
 
-### Unistyles can drop a theme change on a freshly mounted animated node
+### A React commit reverts Unistyles' theme values at and under a Reanimated view
 
-**Claim:** a node Reanimated animates that also carries a themed Unistyles
-style can keep the previous theme's value through the first theme change after
-it mounts; the next change applies. The same value read in a `useAnimatedStyle`
-over `useAnimatedTheme()` follows the first change.
+**Claim:** after a theme change, Unistyles commits the new values outside
+React, and the next React commit can put the old values back on a view that a
+Reanimated animated style has registered, and on everything under it.
+Reanimated re-applies only the props it owns.
 
 **Verified against `react-native-unistyles@3.5.0` +
 `react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-05, iOS
-simulator, debug build).** The alert card (`AlertProvider`) with its surface in
-`styles.card`, on the node that animates its entry: shown through
-`alertService.alert`, then `setTheme('DARK')` 1.2 s later. The card stayed
-white while its text turned light, 2 of 2 runs; a second toggle applied. With
-the surface in a theme-only worklet (`cardSurfaceStyle`) the first change
-applied. `UnistylesShadowRegistry.verify()` reported no mismatch for the white
-card, so it does not detect this case.
+simulator, debug build),** by running `UnistylesShadowRegistry.verify()` after
+every commit:
 
-Plain views can lose the first change too: on a freshly mounted
-`PantryItemDetail`, the first `DARK` left `ItemPhotoCarousel`'s inactive dots
-and `GalleryHero`'s `heroInner` on light values (4 `verify()` mismatches), and
-the next change applied. Only an animated node has the worklet alternative,
-which `sous-chef/animated-node-takes-no-themed-style` holds it to.
+- Right after the Unistyles theme commit, there were 0 mismatches (18 of 18).
+  The next React commit, the navigator re-render that `Navigation`'s
+  `useUnistyles()` triggers, put `CollapsingHeroDetail`'s hero carousel
+  container and inactive dots back on the old theme (3 of 3).
+- Without the hero's parallax animated style: 0, 0, 0 mismatches against
+  4, 4, 4.
+- After a paused screen was revealed, the first theme change reverted 50
+  content-card views under the same template's `Animated.ScrollView`.
+- With the alert card's surface in `styles.card` on its animated node, the card
+  stayed white after a switch to dark (2 of 2). With the surface in a
+  theme-only worklet, it followed the change.
+- With a `ThemeEpochSentinel` in both of the template's Reanimated containers:
+  0, 0, 0 mismatches, also after navigating away and back, and 0, 0 after a
+  reveal.
 
-Re-check: move a themed surface onto the animated node (e.g. `AlertCard`'s
-`cardSurfaceStyle` into `styles.card`), then in the running app call
-`alertService.alert(...)` and `setTheme('DARK')` 1.2 s later with
-`debugger-evaluate`, and screenshot the card.
+The mechanism: on every React commit `ReanimatedCommitHook` clones each
+registered view and its ancestors (`cloneShadowTreeWithNewProps`) without a
+runtime shadow node reference, so React's own instance of those views is never
+mounted. Unistyles' `refreshReactNodes` re-points React's node references after
+its commit, but skips any node never mounted (`getHasBeenPromoted()` is
+`hasBeenMounted_`). React keeps the pre-theme instance and re-attaches its
+subtree on its next commit. RN's `updateRuntimeShadowNodeReferencesOnCommit`
+flag cannot help, because Reanimated's clones carry no reference.
+
+Upstream:
+[reanimated#7728](https://github.com/software-mansion/react-native-reanimated/issues/7728)
+has the same symptom. The closed
+[reanimated#8776](https://github.com/software-mansion/react-native-reanimated/pull/8776)
+discusses turning reference updates on: it is blocked on CSS animation
+fill-mode, and RN's Animation Backend is named as the long-term fix.
+[unistyles#1170](https://github.com/jpudysz/react-native-unistyles/issues/1170)
+and [unistyles#1007](https://github.com/jpudysz/react-native-unistyles/issues/1007)
+are open. The maintainer's workaround in #1007 re-keys the animated view on the
+theme name.
+
+The fixes: themed values on the animated view itself go in a theme-only
+`useAnimatedStyle` over `useAnimatedTheme()` (enforced by
+`sous-chef/animated-node-takes-no-themed-style`). A Reanimated container whose
+descendants carry themed styles renders a `ThemeEpochSentinel`, a child
+re-keyed on each theme commit, so React rebuilds that view from the current
+shadow nodes without remounting the container.
+
+Re-check: remove the sentinel from `CollapsingHeroDetail`'s hero, then open a
+fresh `PantryItemDetail`, `setTheme('DARK')`, and navigate away and back.
+`UnistylesShadowRegistry.verify()` (module
+`react-native-unistyles/src/specs/ShadowRegistry`) through `debugger-evaluate`
+then reports `dot` / `heroInner` mismatches.
+
+### withUnistyles and useUnistyles miss a theme change made while their screen is paused
+
+**Claim:** a `withUnistyles` or `useUnistyles` consumer in a screen paused by
+`inactiveBehavior: 'pause'` keeps the previous theme after the screen is
+revealed, if the theme changed while it was hidden. Every `<Text>` and `<Icon>`
+is such a consumer.
+
+**Verified against `react-native-unistyles@3.5.0` (2026-10-05; the same on
+3.4.0, checked on screen).** `useProxifiedUnistyles` keeps the theme in
+`useState` and disposes its listener in an effect cleanup, and a hidden
+`Activity` runs that cleanup. On reveal, `reinitListener` subscribes again but
+never compares the theme. After a switch to dark while `PantryItemDetail` was
+paused, 73 of 73 of its hook instances still held the light theme.
+
+The fix: `Screen` and `CollapsingHeroDetail` call `useThemeResyncOnReveal()`.
+When a reveal follows a theme change, it re-registers the current theme
+(`UnistylesRuntime.updateTheme(name, theme => theme)`), which replays the change
+to every listener. The same pass re-commits any linked view the hidden period
+missed. One was found: a `PantrySettings` header border.
+
+Re-check:
+
+```
+grep -n "reinitListener\|disposeRef" node_modules/react-native-unistyles/src/core/useProxifiedUnistyles/useProxifiedUnistyles.ts
+```
+
+### Metro bundles two copies of Unistyles unless it resolves them with `require`
+
+**Claim:** Unistyles' exports list `import` before `react-native`, and this app's
+Metro (`experimentalImportSupport`) resolves an ESM `import` with the `import`
+condition. So `react-native-unistyles` itself lands in `lib/module`, while the
+Babel plugin's `react-native-unistyles/components/native/*` imports fall back to
+the `react-native` field and land in `src`. The bundle then holds both copies:
+one shared `StyleSheet`, but two `ShadowRegistry` JS objects, each with its own
+`add`/`remove`, tracked handles and refresh listener.
+
+**Verified against `react-native-unistyles@3.5.0` (also 3.4.0's layout) +
+`metro@0.84.5` (2026-10-05).** Before the fix, 40 `lib/module` and 37 `src`
+Unistyles modules were initialized. With `metro.config.js` resolving every
+Unistyles request as `require`, there were 53 `src` modules and none from
+`lib`. The duplicate copy is not the cause of the theme reverts above: both
+reproduce with one copy.
+
+Re-check, through `debugger-evaluate`:
+
+```
+[...__r.getModules().values()].filter(m => m?.isInitialized && m.verboseName?.includes('react-native-unistyles/lib/')).length   // 0
+```
 
 ### react-compiler try shapes
 

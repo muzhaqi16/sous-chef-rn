@@ -142,14 +142,24 @@ they read it.
   package itself is an import ban.
 - **A node reanimated animates takes no themed Unistyles style**
   ([`sous-chef/animated-node-takes-no-themed-style`](rules/animated-node-takes-no-themed-style.md)).
-  Unistyles can drop the first theme change after such a node mounts, while a
-  `useAnimatedStyle` over `useAnimatedTheme()` follows every change
-  ([Unistyles can drop a theme change on a freshly mounted animated node](verified-library-behaviour.md#unistyles-can-drop-a-theme-change-on-a-freshly-mounted-animated-node)).
+  After a theme change, the next React commit puts the old values back at and
+  under a Reanimated view, while a `useAnimatedStyle` over `useAnimatedTheme()`
+  follows every change
+  ([A React commit reverts Unistyles' theme values at and under a Reanimated view](verified-library-behaviour.md#a-react-commit-reverts-unistyles-theme-values-at-and-under-a-reanimated-view)).
+  A Reanimated container with a scroll-driven style and themed descendants
+  renders `<ThemeEpochSentinel />`, which re-keys on each theme commit so React
+  rebuilds the container from current nodes (`CollapsingHeroDetail`'s hero and
+  scroll view).
   The node's static key keeps only structure. Themed values go in a
   `useAnimatedStyle` of their own that reads only `useAnimatedTheme()`, which
   re-runs on a theme change and never per frame (`Toast`, `AlertProvider`,
-  `FloatingTabBar`). Or they sit on a non-animated parent or child
-  (`GlobalBackdrop`, `SkeletonBase`, the list rows' `rowWrapper`).
+  `FloatingTabBar`). Or they sit on a non-animated parent (the list rows'
+  `rowWrapper`).
+- **A paused screen replays a theme change on reveal.** `Screen` and
+  `CollapsingHeroDetail` call `useThemeResyncOnReveal()`: `withUnistyles` and
+  `useUnistyles` drop their listener while an `Activity` hides the screen and
+  never catch up
+  ([withUnistyles and useUnistyles miss a theme change made while their screen is paused](verified-library-behaviour.md#withunistyles-and-useunistyles-miss-a-theme-change-made-while-their-screen-is-paused)).
 - **Never wrap `Pressable`/`TouchableX` with `withUnistyles`.** The wrapper
   copies a function-style `style={({ pressed }) => [...]}` into `{}`. RN's
   `Pressable` needs no wrapper, because the Unistyles Babel plugin binds it to

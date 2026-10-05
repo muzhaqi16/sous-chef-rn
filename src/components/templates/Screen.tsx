@@ -23,6 +23,7 @@ import {
   KEYBOARD_DISMISS_MODE,
   KEYBOARD_PERSIST_TAPS,
 } from '#components/templates/keyboardTaps';
+import { useThemeResyncOnReveal } from '#hooks/ui/useThemeEpoch';
 
 const NO_AUTOMATIC_INSET: ScrollViewProps['contentInsetAdjustmentBehavior'] =
   'never';
@@ -116,6 +117,7 @@ export const Screen: React.FC<ScreenProps> = props => {
       ? props.scrollTestID
       : undefined;
   const insets = useSafeAreaInsets();
+  useThemeResyncOnReveal();
   // With a footer the footer clears the home indicator, so the content only
   // needs its own trailing space.
   const contentBottom = footer ? 0 : insets.bottom;

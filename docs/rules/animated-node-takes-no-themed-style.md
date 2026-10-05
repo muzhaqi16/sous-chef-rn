@@ -15,12 +15,13 @@ binding, or a prop or hook return named `…animated…Style` — and also:
 
 ## Why
 
-Unistyles can drop the first theme change after a node mounts, so a freshly
-shown alert card stays on the old theme's surface while its text follows the
-new one. On an animated node there is a path that cannot drop it: a
-`useAnimatedStyle` that reads `useAnimatedTheme()` re-runs on every theme
-change. Evidence and the probe:
-[Unistyles can drop a theme change on a freshly mounted animated node](../verified-library-behaviour.md#unistyles-can-drop-a-theme-change-on-a-freshly-mounted-animated-node).
+Unistyles commits a theme change outside React, and the next React commit can
+put the old values back on a view Reanimated animates, because React's
+reference to that view is never refreshed. A freshly shown alert card stayed on
+the old theme's surface while its text followed the new one. Reanimated
+re-applies only the props it owns, so a `useAnimatedStyle` that reads
+`useAnimatedTheme()` follows every theme change. Evidence and the probe:
+[A React commit reverts Unistyles' theme values at and under a Reanimated view](../verified-library-behaviour.md#a-react-commit-reverts-unistyles-theme-values-at-and-under-a-reanimated-view).
 
 The app moves spacing, radii and the brand colour through `updateTheme`
 (density, font scale, high contrast, primary colour), so layout tokens count as
@@ -48,8 +49,10 @@ const motionStyle = useAnimatedStyle(() => ({ opacity: progress.get() }));
 // styles.card: { position: 'absolute', borderCurve: 'continuous' }
 ```
 
-Or move the themed style to a non-animated parent or child, as `GlobalBackdrop`
-does with its colour and the list rows do with `commonStyles.rowWrapper`.
+Or move the themed style to a non-animated parent, as the list rows do with
+`commonStyles.rowWrapper`. A non-animated child is not safe on its own: it
+reverts with the view above it unless the container renders a
+`ThemeEpochSentinel`.
 
 When the probe stops reproducing, turn this rule off. Code written this way
 stays correct either way.
