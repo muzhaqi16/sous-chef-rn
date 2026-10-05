@@ -302,10 +302,13 @@ describe('resync', () => {
       expect(requests).toEqual(['DetailForResync']);
       expect(queueManager.whenIdle).toHaveBeenCalled();
 
-      // Asked in this language now, as the list was at the switch.
+      // Asked in this language now, as the list was at the switch, so the
+      // catch-up does not even wait on the queue.
+      jest.mocked(queueManager.whenIdle).mockClear();
       navigate();
       await pastTheWindow();
       expect(requests).toEqual(['DetailForResync']);
+      expect(queueManager.whenIdle).not.toHaveBeenCalled();
     });
 
     it('re-asks a screen first opened after the switch that reads the cache', async () => {

@@ -100,28 +100,34 @@ interface PendingResync {
   firstTriggerAt: number;
 }
 
+const isCatchUp = (batch: PendingResync): boolean =>
+  [...batch.sources].every(name => name === 'languageChanged');
+
+// A language catch-up re-asks only what has not been answered since the
+// switch, whoever asked; any other trigger re-asks everything.
+const reasks =
+  (batch: PendingResync) =>
+  (query: ObservableQuery): boolean =>
+    batch.matchers.some(matcher => matcher(query)) &&
+    !(
+      isCatchUp(batch) &&
+      !!query.queryName &&
+      wasAnsweredSinceSwitch(query.queryName, query.variables)
+    );
+
 async function refetchActive(
   client: ApolloClient,
   batch: PendingResync,
 ): Promise<void> {
   const source = [...batch.sources].sort().join('+');
-  // A language catch-up re-asks only what has not been answered since the
-  // switch, whoever asked; any other trigger re-asks everything.
-  const catchUp = [...batch.sources].every(name => name === 'languageChanged');
-  if (!(catchUp ? canCatchUp() : hasLiveSession())) return;
+  if (!(isCatchUp(batch) ? canCatchUp() : hasLiveSession())) return;
+  const wanted = reasks(batch);
   let refetched = 0;
   try {
     await client.refetchQueries({
       include: 'active',
       onQueryUpdated: query => {
-        if (
-          !batch.matchers.some(matcher => matcher(query)) ||
-          (catchUp &&
-            !!query.queryName &&
-            wasAnsweredSinceSwitch(query.queryName, query.variables))
-        ) {
-          return false;
-        }
+        if (!wanted(query)) return false;
         refetched++;
         return true;
       },
@@ -166,6 +172,17 @@ export const createRefetchEventManager = (): RefetchEventManager => {
 
   const resync = async (client: ApolloClient) => {
     running = true;
+    // A catch-up after a navigation mostly finds every active query asked
+    // since the switch: then it touches neither the queue nor the network.
+    if (
+      pending &&
+      isCatchUp(pending) &&
+      ![...client.getObservableQueries('active')].some(reasks(pending))
+    ) {
+      takePending();
+      running = false;
+      return;
+    }
     // Replay first: a refetch racing the queue would paint the server's older
     // values over writes that have not landed yet.
     await queueManager.whenIdle().catch(() => {});
