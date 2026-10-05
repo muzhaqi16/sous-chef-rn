@@ -1600,6 +1600,7 @@ plus any `DOCUMENT_SCAN_*.jpg` that `react-native-document-scanner-plugin`
 that folder up.
 
 Measured on a rendered 18-row receipt (1800×2032 JPEG):
+
 - 24 observations in 1.3 s, every text exact;
 - the 16 left-column rows first, then 8 prices;
 - each price's `y` within 0.005 of its row's `y`;
@@ -1609,9 +1610,9 @@ Re-check: put a JPEG in the app's Documents directory, connect the debugger
 (`argent-metro-debugger`), then evaluate:
 
 ```js
-globalThis.nativeModuleProxy.TextRecognitionModule
-  .recognizeAndDelete(['file://<Documents>/probe.jpg'])
-  .then(pages => (globalThis.__probe = pages));
+globalThis.nativeModuleProxy.TextRecognitionModule.recognizeAndDelete([
+  'file://<Documents>/probe.jpg',
+]).then(pages => (globalThis.__probe = pages));
 ```
 
 The document scanner itself needs a device: on the simulator, `scanDocument`
@@ -1626,6 +1627,7 @@ accepted: a patch is out of bounds, and JS can't catch it.
 Verified 2026-09-30 on macOS 27.0.1 (host `swift` probes) and on the iPhone 18 Pro simulator (iOS 27), through `ReceiptStructuringModule`. The simulator uses the host's model, so `SystemLanguageModel.default.availability` reads `available` there.
 
 **Claim:** with guided generation (`@Generable`) and greedy sampling, the on-device model labels numbered receipt lines reliably, but produces wrong figures when asked for the whole receipt.
+
 - **Asked for the full structure** (index, kind, quantity, unit price, total, code, date) it invented purchase dates, negated item prices, shifted line indices and put text in `code`.
 - **Asked only to label** each line's kind and name an item's product, it placed 10 of 10 lines, in order, on Walmart, Kroger and Costco formats. It only mislabelled Costco's instant saving (`/ 987654 TPD/EGGS 1.50-`) as a detail line.
 - **On a longer, skewed receipt it numbers lines itself** (2026-10-01, a 23-line Walmart photo, in the app on the iPhone 18 Pro simulator, 9.4–10.4 s). It gave 19 labels, skipping lines with no words (a lone `F`, a price on its own row), so its line 7 was the receipt's line 9. A detail line's `product` was its item's (`BANANAS` on the weight line). So `structureReceipt` places each label by the words it copied, and `isUsableReceipt` asks for 75% of lines placed, not 90%.
@@ -1633,6 +1635,7 @@ Verified 2026-09-30 on macOS 27.0.1 (host `swift` probes) and on the iPhone 18 P
 So `receipts/utils/structureReceipt.ts` reads every figure from the printed text and lets the printed words overrule a label. The model also copies flags and item numbers into product names (`E 1234567 KS WATER 40PK`), which the structuring strips.
 
 Timings for 10 lines:
+
 - host: 3.5–5 s;
 - in the app on the simulator: 8.0 s cold (model load), then 4.0–5.4 s;
 - the full `parseReceiptOnDevice` on Kroger: 9.2 s.
@@ -1650,6 +1653,7 @@ The deployment target is iOS 16, so the app weak-links `FoundationModels.framewo
 Verified 2026-09-30 on macOS 27.0.1 (26A434), with `scripts/receipt-corpus/label.swift`, which uses `ReceiptStructuringModule`'s schema, prompt and greedy sampling.
 
 **Claim:** the model's guardrail can refuse a whole labelling request because of a receipt's promotional footer. It throws `GenerationError.guardrailViolation` ("May contain unsafe content"), and which text trips it can't be predicted.
+
 - A photographed ALDI US receipt was refused. Its footer has a sweepstakes ("Enter the drawing for a chance / to win a $100 ALDI gift card.") and an age line ("Must be 18 years old to enter."). Removing either one let it through. So did labelling only the lines up to the printed total.
 - The same three lines inside a short Walmart-format receipt passed. So did alcohol, tobacco, sexual-health, ammunition and pharmacy item names.
 
@@ -1658,7 +1662,12 @@ So `parseReceiptOnDevice` sends only `linesThroughTotal`: no item follows the pr
 Re-check with a made-up receipt in the same shape. Write this as `entry.json`:
 
 ```json
-{"id":"sweepstakes","pages":["ALDI\nStore #101\n100 Main St\nSpringfield\n800-555-0100\nwww.ALDI.us\nOrg Grnd Beef  12.38  FA\nCelery  1.65  FA\nKidney Beans  0.81  FA\nPinto Beans  0.99 FA\nSUBTOTAL  15.83\nA-Taxable @0.00%  0.36\nAMOUNT DUE  16.19\n5 ITEMS\nDebit Card  16.19\n****************************************\nLike ALDI? Tell ALDI!\nTell us how we did at\nwww.tellaldi.us\nEnter the drawing for a chance\nto win a $100 ALDI gift card.\nMust be 18 years old to enter.\nNo purchase necessary.\nSign up for ALDI emails and save!\nwww.aldi.us/signup\nVISA  16.19"]}
+{
+  "id": "sweepstakes",
+  "pages": [
+    "ALDI\nStore #101\n100 Main St\nSpringfield\n800-555-0100\nwww.ALDI.us\nOrg Grnd Beef  12.38  FA\nCelery  1.65  FA\nKidney Beans  0.81  FA\nPinto Beans  0.99 FA\nSUBTOTAL  15.83\nA-Taxable @0.00%  0.36\nAMOUNT DUE  16.19\n5 ITEMS\nDebit Card  16.19\n****************************************\nLike ALDI? Tell ALDI!\nTell us how we did at\nwww.tellaldi.us\nEnter the drawing for a chance\nto win a $100 ALDI gift card.\nMust be 18 years old to enter.\nNo purchase necessary.\nSign up for ALDI emails and save!\nwww.aldi.us/signup\nVISA  16.19"
+  ]
+}
 ```
 
 Then run:
@@ -1690,6 +1699,7 @@ Verified 2026-09-30 on `Medium_Phone_API_36.1` (Android 16, arm64, Apple-silicon
 **Claim:** the first `TextRecognizer.process` loads Play services' TensorFlow Lite module into the app process. It dies there with `signal 4 (SIGILL), code 1 (ILL_ILLOPC)`, with frames in `dl-TfliteDynamiteDynamite` called from `dl-MlkitOcrCommon`. It is a native crash, so neither Kotlin nor JS can catch it. `TextRecognitionModule` therefore rejects with `text_recognition_unsupported` when `Build.HARDWARE == "ranchu"` on arm64, and the screen shows its failure state instead of the app vanishing.
 
 The document scanner works on the same emulator, because it runs in Play services' own process:
+
 - On first use it downloads its module ("Downloading updates to Google Play services…"), so a phone's first scan needs a connection.
 - It detects the page in the virtual camera scene.
 - It writes pages to `cache/mlkit_docscan_ui_client/<id>.jpg`. A crash between scan and recognition left the page there, so recognition now empties that folder on every call, as iOS does for `DOCUMENT_SCAN_*`.

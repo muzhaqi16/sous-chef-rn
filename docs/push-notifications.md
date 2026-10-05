@@ -31,13 +31,13 @@ event → backend → APNs / FCM → device
 
 Two distinct pieces of identity:
 
-- **Device token** — Apple/Google hand this to the *app*; it is the *address* of
+- **Device token** — Apple/Google hand this to the _app_; it is the _address_ of
   one app install. The app uploads it via `registerDevice`. **Not secret.**
-- **Private key** (the `.p8` / the service-account JSON) — the *credential* that
+- **Private key** (the `.p8` / the service-account JSON) — the _credential_ that
   proves the sender is allowed to push for this app. Held **only by the
   backend**; it never ships in the app binary.
 
-The backend needs **both**: the token for *where*, the key for *permission*. It
+The backend needs **both**: the token for _where_, the key for _permission_. It
 signs each send:
 
 - **APNs:** an ES256 JWT signed with the `.p8` → HTTP/2
@@ -47,7 +47,7 @@ signs each send:
   OAuth2 access token (scope `firebase.messaging`) →
   `POST https://fcm.googleapis.com/v1/projects/<project>/messages:send`.
 
-Because the key can push to *any* user of the app, it must never be in the
+Because the key can push to _any_ user of the app, it must never be in the
 client — that is the whole reason for the client/server split.
 
 ## Creating the iOS APNs Auth Key (`.p8`)
@@ -62,12 +62,12 @@ client — that is the whole reason for the client/server split.
 
 Record these — the backend needs all four:
 
-| Value | Where to find it | Notes |
-|---|---|---|
-| `.p8` file | the download | the private key — **secret** |
-| **Key ID** | key detail page / the `AuthKey_<KeyID>.p8` filename | 10 chars |
-| **Team ID** | portal, top-right (this project: `KRR7955LB8`) | 10 chars |
-| **Bundle ID** | Xcode target (`dev.souschef.app`) | becomes `apns-topic` |
+| Value         | Where to find it                                    | Notes                        |
+| ------------- | --------------------------------------------------- | ---------------------------- |
+| `.p8` file    | the download                                        | the private key — **secret** |
+| **Key ID**    | key detail page / the `AuthKey_<KeyID>.p8` filename | 10 chars                     |
+| **Team ID**   | portal, top-right (this project: `KRR7955LB8`)      | 10 chars                     |
+| **Bundle ID** | Xcode target (`dev.souschef.app`)                   | becomes `apns-topic`         |
 
 The APNs key is **non-expiring** and **team-wide** ("one key is used for all of
 your apps").
@@ -104,12 +104,12 @@ Project Settings → the Android app, package `dev.souschef.app`) in
 The keys are backend secrets. Full details are in the **API repo**
 (`docs/guides/push-notifications.md`). Summary of the env vars:
 
-| Var | Secret | Purpose |
-|---|---|---|
-| `APNS_AUTH_KEY` | Vault | the `.p8` PEM |
-| `APNS_KEY_ID` / `APNS_TEAM_ID` / `APNS_BUNDLE_ID` | — | JWT header + issuer + `apns-topic` |
-| `APNS_PRODUCTION` | — | `false` = sandbox (dev), `true` = TestFlight / App Store |
-| `FCM_SERVICE_ACCOUNT` | Vault | the whole service-account JSON |
+| Var                                               | Secret | Purpose                                                  |
+| ------------------------------------------------- | ------ | -------------------------------------------------------- |
+| `APNS_AUTH_KEY`                                   | Vault  | the `.p8` PEM                                            |
+| `APNS_KEY_ID` / `APNS_TEAM_ID` / `APNS_BUNDLE_ID` | —      | JWT header + issuer + `apns-topic`                       |
+| `APNS_PRODUCTION`                                 | —      | `false` = sandbox (dev), `true` = TestFlight / App Store |
+| `FCM_SERVICE_ACCOUNT`                             | Vault  | the whole service-account JSON                           |
 
 ## Security
 
@@ -126,12 +126,12 @@ The keys are backend secrets. Full details are in the **API repo**
 
 The mobile side is complete; pointers for future changes:
 
-| Concern | Where |
-|---|---|
+| Concern                      | Where                                                                                                                   |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Acquire token (per platform) | `iosPushProvider` (APNs) / `nativePushProvider` (FCM), injected in `App.tsx`; sent via `authService` → `registerDevice` |
-| iOS native forwarding | `AppDelegate` → `PushNotificationForwarder` (+ `SousChef-Bridging-Header.h`) → `RNCPushNotificationIOS` |
-| Receive / tap → deep-link | `iosPushMessaging` / `nativePushMessaging` → `routeNotificationTap` (routes on `data.category`) |
-| OS app-icon badge | `badgeSync` keeps it in sync with the unread count |
+| iOS native forwarding        | `AppDelegate` → `PushNotificationForwarder` (+ `SousChef-Bridging-Header.h`) → `RNCPushNotificationIOS`                 |
+| Receive / tap → deep-link    | `iosPushMessaging` / `nativePushMessaging` → `routeNotificationTap` (routes on `data.category`)                         |
+| OS app-icon badge            | `badgeSync` keeps it in sync with the unread count                                                                      |
 
 ## Payload contract
 
@@ -149,7 +149,7 @@ Android words it from the count, and a tap opens the feed. A deferred push with
 one member left arrives as that notification itself.
 
 **Where `title` / `body` live differs by platform:** iOS puts them in
-`aps.alert` (the OS auto-displays it when backgrounded/killed), so they are *not*
+`aps.alert` (the OS auto-displays it when backgrounded/killed), so they are _not_
 in the iOS `data`; Android sends **data-only** (no `notification` block), so
 `title` / `body` ride inside the FCM `data` and Notifee draws the tray entry.
 

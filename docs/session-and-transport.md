@@ -29,7 +29,7 @@ the test until someone classifies it.
 tokens leaves the socket dialling, in-flight queries landing and the offline
 queue waking — all against credentials the server has already refused, which is
 what the user sees as a screen that never loads. `endSession` therefore runs
-`runSessionTeardown()` (`src/store/sessionTeardown.ts`) *before* the state
+`runSessionTeardown()` (`src/store/sessionTeardown.ts`) _before_ the state
 reset.
 
 That registry exists because the steps live in the Apollo layer while
@@ -188,17 +188,17 @@ skips `retryWait` for close 1000 — pacing lives in `url()`, which every dial
 passes through. Asserted by the "server that accepts then immediately closes"
 cases in the library test.)
 
-| Code                      | Meaning                                                            | Response                                                         |
-| ------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------- |
-| 4403                      | Token is stale — expired, or superseded by a rotation we lost      | **Never terminal.** Retry; one HTTP refresh as a fast path       |
-| 4410                      | Subscription lifetime cap                                          | Retry with the counter reset, so the next wait is the base delay |
-| 4411                      | Build below the server minimum                                     | Stop; prompt to update                                           |
-| 4412                      | Session unrecoverable — at the handshake **or** revoked mid-stream | Stop **and** `endSession`                                        |
-| 4429 / 4500               | Transient, but the library refuses to retry them regardless        | The subscription layer re-subscribes (see below)                 |
-| 4413                      | API key refused                                                    | Stop, but do **not** sign the user out — it is a build fault     |
-| 1006 / 1000               | Transient                                                          | Library retry with backoff                                       |
-| 4400 / 4401 / 4406 / 4409 | Protocol violation                                                 | Stop; only a code change fixes it                                |
-| 4004 / 4005               | graphql-ws's own BadResponse / InternalClientError — never sent by our server | Library-fatal; the subscription layer re-subscribes    |
+| Code                      | Meaning                                                                       | Response                                                         |
+| ------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| 4403                      | Token is stale — expired, or superseded by a rotation we lost                 | **Never terminal.** Retry; one HTTP refresh as a fast path       |
+| 4410                      | Subscription lifetime cap                                                     | Retry with the counter reset, so the next wait is the base delay |
+| 4411                      | Build below the server minimum                                                | Stop; prompt to update                                           |
+| 4412                      | Session unrecoverable — at the handshake **or** revoked mid-stream            | Stop **and** `endSession`                                        |
+| 4429 / 4500               | Transient, but the library refuses to retry them regardless                   | The subscription layer re-subscribes (see below)                 |
+| 4413                      | API key refused                                                               | Stop, but do **not** sign the user out — it is a build fault     |
+| 1006 / 1000               | Transient                                                                     | Library retry with backoff                                       |
+| 4400 / 4401 / 4406 / 4409 | Protocol violation                                                            | Stop; only a code change fixes it                                |
+| 4004 / 4005               | graphql-ws's own BadResponse / InternalClientError — never sent by our server | Library-fatal; the subscription layer re-subscribes              |
 
 **`shouldRetry` is not consulted for every code.** `shouldRetryConnectOrThrow`
 (graphql-ws `dist/client.js`) rethrows 4400, 4401, 4406, 4409, 4429, 4500 and

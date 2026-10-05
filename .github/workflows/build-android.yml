@@ -9,33 +9,33 @@ env:
 on:
   push:
     tags:
-      - "dev-v*"
-      - "stg-v*"
-      - "prod-v*"
-      - "playstore-v*"
+      - 'dev-v*'
+      - 'stg-v*'
+      - 'prod-v*'
+      - 'playstore-v*'
   workflow_dispatch:
     inputs:
       environment:
-        description: "Environment to build"
+        description: 'Environment to build'
         required: true
-        default: "dev"
+        default: 'dev'
         type: choice
         options:
           - dev
           - stg
           - prod
       build_type:
-        description: "Build type"
+        description: 'Build type'
         required: true
-        default: "apk"
+        default: 'apk'
         type: choice
         options:
           - apk
           - playstore
       runner_type:
-        description: "Runner to use (default uses repo variables)"
+        description: 'Runner to use (default uses repo variables)'
         required: false
-        default: "default"
+        default: 'default'
         type: choice
         options:
           - default
@@ -93,7 +93,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: '22'
 
       - name: Detect Android SDK and Java paths
         run: |
@@ -438,13 +438,13 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: '17'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3

@@ -126,7 +126,7 @@ imports:
 | `hooks/mutations/`, deeper hooks  | 🔒      | Internal lifecycle primitives                                                                                                                                                                                                                                                                                       |
 | `utils/`                          | 🔒      | Internal                                                                                                                                                                                                                                                                                                            |
 | `store/` (recipes only)           | ✅      | The recipe result caches. Two other features read them (pantry's per-item suggestions, mealPlan's recipe picker), so like catalog's `ui/` they belong in neither a domain-free kernel nor one consumer. A feature store MUST call `registerSessionScopedStore` — `SESSION_SCOPED_STATE` only reaches the root store |
-| `offline/` (pantry, shoppingList) | 🔒\*    | Public to the OFFLINE QUEUE only. A feature's replay preparers and reconcilers say what its queued mutation means, which nothing but the replayer needs — the kernel imports it, other features may not                                                                                                                        |
+| `offline/` (pantry, shoppingList) | 🔒\*    | Public to the OFFLINE QUEUE only. A feature's replay preparers and reconcilers say what its queued mutation means, which nothing but the replayer needs — the kernel imports it, other features may not                                                                                                             |
 
 Shared UI atoms, molecules, organisms, and templates live in `src/components/`,
 beside `providers/` and `performance/`. That is the whole taxonomy — there is no
@@ -468,14 +468,14 @@ catalog-golden-record ──┘                               (also after receip
 ingestion-foundations ─────▶ receipt-scanning ──▶ on-device-receipt-recognition
 ```
 
-| Seam | Owner | Other changes may |
-|---|---|---|
-| The intake expiry default and `today` on every intake input; the shelf-life resolver | `ingestion-foundations` | extend the resolver's data (`openfoodfacts-catalog`); pass `today` (`receipt-scanning`) |
-| `CatalogResolutionService` and its ordered step list; GTIN equivalence | `ingestion-foundations` | add one step each: Open Food Facts, `rankCandidates`, aliases |
-| Survivorship engine, admin field overrides, provenance, refresh scheduler, review queue | `catalog-golden-record` | add a mapper and precedence entries, name overrides, flag kinds |
-| Local Open Food Facts MongoDB mirror; barcode miss/result flow; the embedding model | `openfoodfacts-catalog` | read the mirror's per-language names |
-| `receipts` feature; the add sheet's receipt action; public `usePantryIntake`; `ReceiptParser` | `receipt-scanning` | add an on-device parser (`on-device-receipt-recognition`) |
-| Per-language names and search; the language header; the `languageChanged` resync event | `multilingual-catalog` | feed agreed receipt aliases in as synonyms |
+| Seam                                                                                          | Owner                   | Other changes may                                                                       |
+| --------------------------------------------------------------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------- |
+| The intake expiry default and `today` on every intake input; the shelf-life resolver          | `ingestion-foundations` | extend the resolver's data (`openfoodfacts-catalog`); pass `today` (`receipt-scanning`) |
+| `CatalogResolutionService` and its ordered step list; GTIN equivalence                        | `ingestion-foundations` | add one step each: Open Food Facts, `rankCandidates`, aliases                           |
+| Survivorship engine, admin field overrides, provenance, refresh scheduler, review queue       | `catalog-golden-record` | add a mapper and precedence entries, name overrides, flag kinds                         |
+| Local Open Food Facts MongoDB mirror; barcode miss/result flow; the embedding model           | `openfoodfacts-catalog` | read the mirror's per-language names                                                    |
+| `receipts` feature; the add sheet's receipt action; public `usePantryIntake`; `ReceiptParser` | `receipt-scanning`      | add an on-device parser (`on-device-receipt-recognition`)                               |
+| Per-language names and search; the language header; the `languageChanged` resync event        | `multilingual-catalog`  | feed agreed receipt aliases in as synonyms                                              |
 
 Four rules keep the parallel changes apart:
 

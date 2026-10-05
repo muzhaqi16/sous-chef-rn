@@ -14,9 +14,7 @@ const read = (file: string): LocaleTree =>
 export const featureLocaleDirs = (): string[] =>
   fs
     .readdirSync(FEATURES_DIR)
-    .filter(name =>
-      fs.existsSync(path.join(FEATURES_DIR, name, 'locales')),
-    )
+    .filter(name => fs.existsSync(path.join(FEATURES_DIR, name, 'locales')))
     .sort();
 
 /**

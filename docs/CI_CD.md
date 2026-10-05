@@ -11,14 +11,14 @@ This document describes the Continuous Integration and Continuous Deployment (CI
 
 The CI/CD pipeline consists of 6 GitHub Actions workflows that automate testing, building, and deployment:
 
-| Workflow | Trigger | Duration | Purpose |
-|----------|---------|----------|---------|
-| **PR Checks** | Every PR | ~15-20 min | Fast feedback: lint, typecheck, unit tests, smoke tests |
-| **E2E Smoke Tests** | PR + Push | ~10-15 min | Quick E2E verification |
-| **E2E Tests** | PR + Push to main/dev | ~60 min | Full E2E test suite (iOS + Android) |
-| **E2E Nightly** | Daily at 2 AM UTC | ~90 min | Comprehensive nightly regression testing |
-| **Build Android** | Git tags or manual dispatch | ~30 min | Build & release Android APK/AAB |
-| **Build iOS** | Git tags (`v*`, `ios-v*`) | ~30 min | Build, sign & upload to App Store Connect |
+| Workflow            | Trigger                     | Duration   | Purpose                                                 |
+| ------------------- | --------------------------- | ---------- | ------------------------------------------------------- |
+| **PR Checks**       | Every PR                    | ~15-20 min | Fast feedback: lint, typecheck, unit tests, smoke tests |
+| **E2E Smoke Tests** | PR + Push                   | ~10-15 min | Quick E2E verification                                  |
+| **E2E Tests**       | PR + Push to main/dev       | ~60 min    | Full E2E test suite (iOS + Android)                     |
+| **E2E Nightly**     | Daily at 2 AM UTC           | ~90 min    | Comprehensive nightly regression testing                |
+| **Build Android**   | Git tags or manual dispatch | ~30 min    | Build & release Android APK/AAB                         |
+| **Build iOS**       | Git tags (`v*`, `ios-v*`)   | ~30 min    | Build, sign & upload to App Store Connect               |
 
 ---
 
@@ -27,11 +27,13 @@ The CI/CD pipeline consists of 6 GitHub Actions workflows that automate testing,
 ### 1. PR Checks (`pr-checks.yml`)
 
 **Triggers:**
+
 - When a PR is opened
 - When commits are pushed to an open PR
 - When a PR is reopened
 
 **Jobs:**
+
 1. **TypeScript Check** - Verify no type errors
 2. **Lint** - Run ESLint
 3. **Unit Tests** - Run Jest unit tests with coverage
@@ -45,12 +47,14 @@ The CI/CD pipeline consists of 6 GitHub Actions workflows that automate testing,
 **Duration:** ~15-20 minutes
 
 **Usage:**
+
 ```bash
 # Automatically runs on PR creation/update
 # No manual trigger needed
 ```
 
 **Example Output:**
+
 ```
 ✅ All PR checks passed!
 - ✅ TypeScript
@@ -66,16 +70,19 @@ The CI/CD pipeline consists of 6 GitHub Actions workflows that automate testing,
 ### 2. E2E Smoke Tests (`e2e-smoke-tests.yml`)
 
 **Triggers:**
+
 - Pull requests to main/develop
 - Pushes to main/develop
 
 **Jobs:**
+
 1. **Smoke Tests (iOS)** - Run 5 smoke tests on iOS simulator
 2. **Smoke Tests (Android)** - Run 5 smoke tests on Android emulator
 
 **Duration:** ~10-15 minutes
 
 **Tests Run:**
+
 - App launches successfully
 - Shows login or home screen
 - Has bottom navigation
@@ -83,11 +90,13 @@ The CI/CD pipeline consists of 6 GitHub Actions workflows that automate testing,
 - Renders text elements
 
 **Artifacts:**
+
 - Screenshots on failure
 - Detox logs on failure
 - Retention: 3 days
 
 **Usage:**
+
 ```bash
 # Automatically runs on PR/push
 # Or trigger manually:
@@ -99,11 +108,13 @@ gh workflow run e2e-smoke-tests.yml
 ### 3. E2E Tests (`e2e-tests.yml`)
 
 **Triggers:**
+
 - Pull requests to main/develop
 - Pushes to main/develop
 - Manual workflow dispatch
 
 **Jobs:**
+
 1. **E2E Tests (iOS)** - Run all 200+ tests on iOS
 2. **E2E Tests (Android)** - Run all 200+ tests on Android
 3. **E2E Summary** - Report combined results
@@ -111,6 +122,7 @@ gh workflow run e2e-smoke-tests.yml
 **Duration:** ~60 minutes
 
 **Test Suites:**
+
 - Authentication (35 tests)
 - Shopping List (40+ tests)
 - Pantry (35+ tests)
@@ -119,12 +131,14 @@ gh workflow run e2e-smoke-tests.yml
 - Onboarding (30+ tests)
 
 **Artifacts:**
+
 - Screenshots on failure
 - Detox logs (all tests)
 - Test results
 - Retention: 7 days
 
 **Usage:**
+
 ```bash
 # Automatically runs on PR/push to main/develop
 
@@ -137,10 +151,12 @@ gh workflow run e2e-tests.yml
 ### 4. E2E Nightly Tests (`e2e-nightly.yml`)
 
 **Triggers:**
+
 - Scheduled: Daily at 2 AM UTC
 - Manual workflow dispatch
 
 **Jobs:**
+
 - **Full Suite (iOS)** - 6 parallel jobs (one per test suite)
 - **Full Suite (Android)** - 6 parallel jobs (one per test suite)
 - **Report Results** - Summary and notifications
@@ -148,6 +164,7 @@ gh workflow run e2e-tests.yml
 **Duration:** ~90 minutes (parallel execution)
 
 **Test Matrix:**
+
 ```yaml
 matrix:
   suite:
@@ -160,6 +177,7 @@ matrix:
 ```
 
 **Artifacts:**
+
 - Screenshots on failure
 - Videos on failure (iOS only)
 - Detox logs
@@ -167,6 +185,7 @@ matrix:
 - Retention: 14 days
 
 **Usage:**
+
 ```bash
 # Automatically runs nightly at 2 AM UTC
 
@@ -175,6 +194,7 @@ gh workflow run e2e-nightly.yml
 ```
 
 **Benefits:**
+
 - Catch regressions overnight
 - Parallel execution for speed
 - Detailed artifacts for debugging
@@ -187,6 +207,7 @@ gh workflow run e2e-nightly.yml
 ### 5. Build Android (`build-android.yml`)
 
 **Triggers:**
+
 - Push tags: `dev-v*`, `stg-v*`, `prod-v*`, `playstore-v*`
 - Manual workflow dispatch (choose environment + build type)
 
@@ -194,12 +215,12 @@ gh workflow run e2e-nightly.yml
 
 **Environment:** Resolved from tag prefix or manual input
 
-| Tag prefix | Environment | Build output |
-|---|---|---|
-| `dev-v*` | dev | APK |
-| `stg-v*` | stg | APK (staging variant) |
-| `prod-v*` | prod | APK |
-| `playstore-v*` | prod | AAB (Play Store bundle) |
+| Tag prefix     | Environment | Build output            |
+| -------------- | ----------- | ----------------------- |
+| `dev-v*`       | dev         | APK                     |
+| `stg-v*`       | stg         | APK (staging variant)   |
+| `prod-v*`      | prod        | APK                     |
+| `playstore-v*` | prod        | AAB (Play Store bundle) |
 
 **Pipeline steps:**
 
@@ -217,6 +238,7 @@ gh workflow run e2e-nightly.yml
 12. Cleanup sensitive files and Gradle caches
 
 **Usage:**
+
 ```bash
 # Using npm tag scripts (recommended)
 npm run tag:dev                # Dev APK
@@ -239,6 +261,7 @@ git tag playstore-v1.2.0 && git push origin playstore-v1.2.0
 ### 6. Build iOS (`build-ios.yml`)
 
 **Triggers:**
+
 - Push tags: `v*`, `ios-v*`
 
 **Runner:** Self-hosted macOS (mac-mini-m1)
@@ -263,6 +286,7 @@ The version number is extracted from the tag (stripping the `v` or `ios-v` prefi
 12. Upload build artifact to GitHub Actions (3-day retention)
 
 **Usage:**
+
 ```bash
 # Using npm tag script (recommended)
 npm run tag:ios           # Creates ios-v{version} from package.json
@@ -274,17 +298,17 @@ git tag v1.2.0 && git push origin v1.2.0       # alternate pattern
 
 **Required secrets (prod environment):**
 
-| Secret | Purpose |
-|---|---|
-| `IOS_API_KEY` | Backend API key for iOS builds |
-| `SPOONACULAR_API_KEY` | Spoonacular recipe API key |
+| Secret                         | Purpose                                      |
+| ------------------------------ | -------------------------------------------- |
+| `IOS_API_KEY`                  | Backend API key for iOS builds               |
+| `SPOONACULAR_API_KEY`          | Spoonacular recipe API key                   |
 | `IOS_BUILD_CERTIFICATE_BASE64` | Apple Distribution certificate (p12, base64) |
-| `P12_PASSWORD` | Certificate password |
-| `PROVISION_PROFILES_BASE64` | Provisioning profiles archive (tgz, base64) |
-| `KEYCHAIN_PASSWORD` | Temporary keychain password |
-| `ASC_API_KEY_BASE64` | App Store Connect API key (p8, base64) |
-| `ASC_API_KEY_ID` | App Store Connect key ID |
-| `ASC_API_ISSUER_ID` | App Store Connect issuer ID |
+| `P12_PASSWORD`                 | Certificate password                         |
+| `PROVISION_PROFILES_BASE64`    | Provisioning profiles archive (tgz, base64)  |
+| `KEYCHAIN_PASSWORD`            | Temporary keychain password                  |
+| `ASC_API_KEY_BASE64`           | App Store Connect API key (p8, base64)       |
+| `ASC_API_KEY_ID`               | App Store Connect key ID                     |
+| `ASC_API_ISSUER_ID`            | App Store Connect issuer ID                  |
 
 ---
 
@@ -310,14 +334,14 @@ npm run tag:android:prod  # Creates prod-v{version} (skips iOS)
 npm run tag:ios           # Creates ios-v{version} (always prod)
 ```
 
-| Command | Tag(s) Created | Triggers |
-|---|---|---|
-| `npm run tag:dev` | `dev-v{version}` | Android dev build |
-| `npm run tag:stg` | `stg-v{version}` | Android staging build |
-| `npm run tag:prod` | `prod-v{version}` + `ios-v{version}` | Android prod + iOS prod |
-| `npm run tag:playstore` | `playstore-v{version}` | Android Play Store AAB |
-| `npm run tag:android:prod` | `prod-v{version}` | Android prod only (no iOS) |
-| `npm run tag:ios` | `ios-v{version}` | iOS prod only |
+| Command                    | Tag(s) Created                       | Triggers                   |
+| -------------------------- | ------------------------------------ | -------------------------- |
+| `npm run tag:dev`          | `dev-v{version}`                     | Android dev build          |
+| `npm run tag:stg`          | `stg-v{version}`                     | Android staging build      |
+| `npm run tag:prod`         | `prod-v{version}` + `ios-v{version}` | Android prod + iOS prod    |
+| `npm run tag:playstore`    | `playstore-v{version}`               | Android Play Store AAB     |
+| `npm run tag:android:prod` | `prod-v{version}`                    | Android prod only (no iOS) |
+| `npm run tag:ios`          | `ios-v{version}`                     | iOS prod only              |
 
 If a tag already exists locally or on the remote, the script will prompt for confirmation before deleting and recreating it.
 
@@ -348,6 +372,7 @@ gh run list --workflow=build-ios.yml
 **Runner:** Self-hosted macOS (mac-mini-m1, labels: `self-hosted`, `macOS`)
 
 **Environment:**
+
 - Node.js 20
 - Ruby 3.2
 - CocoaPods
@@ -355,6 +380,7 @@ gh run list --workflow=build-ios.yml
 - Detox with applesimutils
 
 **Build Command:**
+
 ```bash
 npm run test:e2e:build
 # Runs: detox build --configuration ios.sim.debug
@@ -365,36 +391,40 @@ npm run test:e2e:build
 **Runner:** Self-hosted Linux (ubuntu, labels: `self-hosted`, `Linux`)
 
 **Environment:**
+
 - Node.js 20
 - Java 17 (Temurin)
 - Android SDK API 34
 - Android Emulator (Pixel 7)
 
 **Build Command:**
+
 ```bash
 npm run test:e2e:build:android
 # Runs: detox build --configuration android.emu.debug
 ```
 
 **Emulator:**
+
 - Device: Pixel 7
 - API Level: 34
 - Target: google_apis
 - Architecture: x86_64
 
 **Optimizations:**
+
 - AVD caching for faster startup
 - Snapshot creation on first run
 - No window, no audio, no animations
 
 ### Runner Assignment Summary
 
-| Job Type | Runner |
-|---|---|
-| iOS E2E / smoke / nightly | `[self-hosted, macOS]` |
-| Android E2E / smoke / nightly | `[self-hosted, Linux]` |
-| iOS production build | `[self-hosted, macOS]` |
-| Android build (all envs) | `[self-hosted, Linux]` |
+| Job Type                                             | Runner                          |
+| ---------------------------------------------------- | ------------------------------- |
+| iOS E2E / smoke / nightly                            | `[self-hosted, macOS]`          |
+| Android E2E / smoke / nightly                        | `[self-hosted, Linux]`          |
+| iOS production build                                 | `[self-hosted, macOS]`          |
+| Android build (all envs)                             | `[self-hosted, Linux]`          |
 | Utility (typecheck, lint, unit tests, status checks) | `ubuntu-latest` (GitHub-hosted) |
 
 ---
@@ -404,15 +434,18 @@ npm run test:e2e:build:android
 ### Test Artifacts
 
 **On Failure:**
+
 - Screenshots of failures
 - Detox logs
 - Videos (iOS nightly only)
 
 **Always:**
+
 - Test results (JSON)
 - Coverage reports (unit tests)
 
 **Retention:**
+
 - PR checks: 3 days
 - E2E tests: 7 days
 - Nightly tests: 14 days
@@ -472,18 +505,21 @@ detox test e2e/tests/auth/login.e2e.ts --configuration ios.sim.debug --loglevel 
 ### 4. Common Issues
 
 **Issue:** iOS simulator fails to launch
+
 ```bash
 # Solution: Rebuild framework cache
 npm run test:e2e:rebuild
 ```
 
 **Issue:** Android emulator timeout
+
 ```yaml
 # Increase timeout in workflow
 timeout-minutes: 90
 ```
 
 **Issue:** Tests flaky in CI but pass locally
+
 ```typescript
 // Add more robust wait conditions
 await waitFor(element).toBeVisible().withTimeout(10000);
@@ -496,6 +532,7 @@ await waitFor(element).toBeVisible().withTimeout(10000);
 ### For Developers
 
 1. **Run tests locally before pushing:**
+
    ```bash
    npm run typecheck
    npm run lint
@@ -504,10 +541,12 @@ await waitFor(element).toBeVisible().withTimeout(10000);
    ```
 
 2. **Keep PRs focused:**
+
    - Small, focused changes pass checks faster
    - Easier to identify test failures
 
 3. **Fix failing tests immediately:**
+
    - Don't merge with failing tests
    - Investigate CI failures, don't retry blindly
 
@@ -518,17 +557,20 @@ await waitFor(element).toBeVisible().withTimeout(10000);
 ### For Test Writers
 
 1. **Make tests deterministic:**
+
    - Use proper wait conditions
    - Avoid hardcoded delays
    - Clean up test data
 
 2. **Use descriptive test names:**
+
    ```typescript
    ✅ it('should show error for invalid email')
    ❌ it('test login')
    ```
 
 3. **Follow AAA pattern:**
+
    ```typescript
    // Arrange
    await loginScreen.waitForScreen();
@@ -563,15 +605,18 @@ await waitFor(element).toBeVisible().withTimeout(10000);
 ### Metrics to Track
 
 1. **Test Pass Rate:**
+
    - Target: >95% on main
    - Monitor weekly trends
 
 2. **Test Duration:**
+
    - PR checks: <20 minutes
    - Full E2E: <60 minutes
    - Nightly: <90 minutes
 
 3. **Flakiness:**
+
    - Track tests that fail intermittently
    - Fix or skip flaky tests
 
@@ -622,18 +667,19 @@ npm install --save-dev detox@latest
 
 ## ✅ Workflow Status
 
-| Workflow | Status | Last Run | Pass Rate |
-|----------|--------|----------|-----------|
-| PR Checks | ✅ Active | - | - |
-| E2E Smoke Tests | ✅ Active | - | - |
-| E2E Tests | ✅ Active | - | - |
-| E2E Nightly | ✅ Active | - | - |
+| Workflow        | Status    | Last Run | Pass Rate |
+| --------------- | --------- | -------- | --------- |
+| PR Checks       | ✅ Active | -        | -         |
+| E2E Smoke Tests | ✅ Active | -        | -         |
+| E2E Tests       | ✅ Active | -        | -         |
+| E2E Nightly     | ✅ Active | -        | -         |
 
 ---
 
 ## 🆘 Support
 
 **Issues with CI/CD?**
+
 1. Check workflow logs
 2. Download and review artifacts
 3. Reproduce locally
@@ -643,6 +689,7 @@ npm install --save-dev detox@latest
    - Steps to reproduce
 
 **Need to modify workflows?**
+
 1. Create PR with changes
 2. Test thoroughly
 3. Document changes in PR description
