@@ -11,24 +11,20 @@ import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAut
 import { commonStyles } from '#/styles/commonStyles';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { logValidationErrors } from '#/utils/validation/common';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
+import type { PackageSizeInput } from '#/graphql/generated/schemaTypes';
 import {
   packSizeDefaults,
   packSizeSchema,
-  parsePackSize,
   type PackSizeFormValues,
 } from './packSizeFormConfig';
-
-export interface PackSize {
-  netWeight: number;
-  netWeightUnitId: string;
-}
 
 interface PackSizeSheetProps {
   visible: boolean;
   itemName: string;
   onDismiss: () => void;
-  onConfirm: (packSize: PackSize) => void;
+  onConfirm: (packSize: PackageSizeInput) => void;
 }
 
 /** Asks for the one fact a scanned product needs before it can be added. */
@@ -55,7 +51,10 @@ export const PackSizeSheet: React.FC<PackSizeSheetProps> = ({
   const submit = handleSubmit(values => {
     const { unitId } = values;
     if (!unitId) return;
-    onConfirm({ netWeight: parsePackSize(values), netWeightUnitId: unitId });
+    onConfirm({
+      netWeight: parseDecimalInput(values.sizeInput),
+      netWeightUnitId: unitId,
+    });
     reset(packSizeDefaults());
   }, logValidationErrors);
 

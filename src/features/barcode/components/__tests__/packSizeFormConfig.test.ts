@@ -1,9 +1,5 @@
 import type { ValidationError } from 'yup';
-import {
-  packSizeDefaults,
-  packSizeSchema,
-  parsePackSize,
-} from '../packSizeFormConfig';
+import { packSizeDefaults, packSizeSchema } from '../packSizeFormConfig';
 
 /**
  * The size a scanned product is missing is reported on the field the user can
@@ -19,7 +15,6 @@ describe('the pack-size schema', () => {
 
   it('accepts a positive size in a picked unit', async () => {
     await expect(packSizeSchema.validate(filled)).resolves.toBeTruthy();
-    expect(parsePackSize(filled)).toBe(32);
   });
 
   it.each([

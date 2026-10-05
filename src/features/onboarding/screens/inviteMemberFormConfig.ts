@@ -1,10 +1,5 @@
 import { object, string, type ObjectSchema } from 'yup';
-import { t, type TranslationKey } from '#/i18n';
-import { isEmailAddress } from '#utils/validation/common';
-
-// Messages resolve LAZILY: the schema is built once at module scope, so an
-// eagerly resolved one freezes whichever language was active at import time.
-const msg = (key: TranslationKey) => (): string => t(key);
+import { isEmailAddress, lazyMessage } from '#utils/validation/common';
 
 export interface InviteEmailFormValues {
   email: string;
@@ -31,12 +26,19 @@ export const inviteEmailSchema = (
   object({
     email: string()
       .transform(normalizeInviteEmail)
-      .required(msg('commonValidation.emailInvalid'))
-      .test('email', msg('commonValidation.emailInvalid'), isEmailAddress)
-      .notOneOf(context.existing, msg('inviteMembers.duplicateEmailMessage'))
+      .required(lazyMessage('commonValidation.emailInvalid'))
+      .test(
+        'email',
+        lazyMessage('commonValidation.emailInvalid'),
+        isEmailAddress,
+      )
+      .notOneOf(
+        context.existing,
+        lazyMessage('inviteMembers.duplicateEmailMessage'),
+      )
       .test(
         'not-self',
-        msg('inviteMembers.cantInviteSelf'),
+        lazyMessage('inviteMembers.cantInviteSelf'),
         value =>
           !context.ownEmail || value !== normalizeInviteEmail(context.ownEmail),
       ),
