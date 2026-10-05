@@ -396,16 +396,16 @@ export function classifyError(error: unknown): QueueError {
 }
 
 /**
- * `baseDelayMs` (the queue's configured retry delay) doubling per retry, plus up
- * to 500ms of jitter against a thundering herd, capped at 30s after the jitter.
+ * `baseDelayMs` (the queue's configured retry delay) doubling per retry, capped
+ * at 30s, then up to half again at random so devices don't retry in step.
  */
 export function calculateRetryDelay(
   retryCount: number,
   baseDelayMs: number,
 ): number {
-  const jitter = Math.random() * 500;
-  return Math.min(
-    backoffDelay(retryCount, { baseMs: baseDelayMs }) + jitter,
-    30000,
-  );
+  return backoffDelay(retryCount, {
+    baseMs: baseDelayMs,
+    maxMs: 30_000,
+    jitter: 0.5,
+  });
 }
