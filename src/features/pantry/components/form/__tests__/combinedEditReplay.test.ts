@@ -5,13 +5,15 @@ import { QueueManager } from '#/apollo/offlineQueue/queueManager';
 import { useStore } from '#store';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { completeMockedResponse } from '#/test-utils/apolloMockProvider';
+import {
+  completeMockedResponse,
+  inputOf,
+} from '#/test-utils/apolloMockProvider';
 import {
   makeQueuedMutation,
   queuedMutationFor,
 } from '#/test-utils/queuedMutation';
 import { ErrorCode, UnitType } from '#/graphql/generated/schemaTypes';
-import { isRecord } from '#/utils/isRecord';
 import {
   UpdatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
@@ -84,7 +86,7 @@ const gqlPantryName = gql`
 
 /** The fields the fake server reads off a write's input. */
 function readWrite(variables: Record<string, unknown>) {
-  const input = isRecord(variables.input) ? variables.input : {};
+  const input = inputOf(variables);
   const num = (value: unknown) =>
     typeof value === 'number'
       ? value

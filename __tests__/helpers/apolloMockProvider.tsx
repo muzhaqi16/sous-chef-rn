@@ -8,6 +8,7 @@ import {
 import type { InMemoryCache } from '@apollo/client';
 import { gql, type OperationVariables } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
+import { isRecord } from '#/utils/isRecord';
 import { SchemaLink } from '@apollo/client/link/schema';
 import { MockedProvider } from '@apollo/client/testing/react';
 import type { MockLink } from '@apollo/client/testing';
@@ -1361,6 +1362,16 @@ export function recordMock<
 
   if (partial) markPartial(mock);
   return { fired, mock };
+}
+
+/** The `input` an operation fired with; throws when it fired without one. */
+export function inputOf(
+  vars: Record<string, unknown>,
+): Record<string, unknown> {
+  if (!isRecord(vars.input)) {
+    throw new Error('The operation fired with no `input` object');
+  }
+  return vars.input;
 }
 
 /**
