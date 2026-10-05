@@ -15,17 +15,17 @@ binding, or a prop or hook return named `…animated…Style` — and also:
 
 ## Why
 
-Reanimated renders its host with React-side copies of the values it animates:
-each animated style's initial value, then its settled-props snapshot. Unistyles
-links every plain object in the style array to the node. When a theme rebuild
-reaches the node, Unistyles writes all of them back through commits Reanimated
-does not correct, and the node shows the stale copy until its next React
-re-render. The global dim flickered off at the end of every sheet open this
-way. Mechanism, versions and upstream issues:
-[Unistyles re-applies reanimated's React-side value](../verified-library-behaviour.md#unistyles-re-applies-reanimateds-react-side-value-over-an-animation).
+Unistyles can drop the first theme change after a node mounts, so a freshly
+shown alert card stays on the old theme's surface while its text follows the
+new one. On an animated node there is a path that cannot drop it: a
+`useAnimatedStyle` that reads `useAnimatedTheme()` re-runs on every theme
+change. Evidence and the probe:
+[Unistyles can drop a theme change on a freshly mounted animated node](../verified-library-behaviour.md#unistyles-can-drop-a-theme-change-on-a-freshly-mounted-animated-node).
 
-A key that reads no theme has no Unistyles dependency, so no theme rebuild
-ever reaches the node.
+The app moves spacing, radii and the brand colour through `updateTheme`
+(density, font scale, high contrast, primary colour), so layout tokens count as
+themed too. A key that reads no theme has no Unistyles dependency, so no theme
+change can be lost on it.
 
 ## Use instead
 
@@ -51,7 +51,7 @@ const motionStyle = useAnimatedStyle(() => ({ opacity: progress.get() }));
 Or move the themed style to a non-animated parent or child, as `GlobalBackdrop`
 does with its colour and the list rows do with `commonStyles.rowWrapper`.
 
-If Unistyles or Reanimated fixes this upstream, turn this rule off. Code
-written this way stays correct either way.
+When the probe stops reproducing, turn this rule off. Code written this way
+stays correct either way.
 
 Source: [`eslint/plugin/rules/animated-node-takes-no-themed-style.js`](../../eslint/plugin/rules/animated-node-takes-no-themed-style.js) · spec: [`__tests__/lint/rules/animated-node-takes-no-themed-style.test.ts`](../../__tests__/lint/rules/animated-node-takes-no-themed-style.test.ts)

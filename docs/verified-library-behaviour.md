@@ -218,9 +218,8 @@ grep -rn "touchAction" node_modules/react-native-gesture-handler/android/src/mai
 them together is accepted and discarded, silently.
 
 **Verified against `react-native-gesture-handler@3.3.0` +
-`react-native-unistyles@3.3.0`** (re-run 2026-10-02 against Unistyles 3.4.0 and
-`@shopify/flash-list@2.3.3`: the probe passes and the FlashList excerpt is
-unchanged). The chain:
+`react-native-unistyles@3.5.0` + `@shopify/flash-list@2.3.3`** (2026-10-05).
+The chain:
 
 1. `v3/components/GestureComponents.tsx:97-105` — RNGH's `ScrollView` renders
    `refreshControl` as
@@ -348,7 +347,7 @@ npx eslint src --rule '{"sous-chef/rngh-refresh-control-matches-host":"error"}'
 silently discards a function-style `style={({ pressed }) => [...]}` callback —
 the child receives `{}`.
 
-**Verified against `react-native-unistyles@3.4.0` (2026-10-02).**
+**Verified against `react-native-unistyles@3.5.0` (2026-10-05).**
 `node_modules/react-native-unistyles/src/core/withUnistyles/withUnistyles.native.tsx` builds the forwarded style
 by reducing its style entries with `Object.assign(acc, secret.uni__getStyles())`
 from `{}`. For a function-valued `style` prop, `uni__getStyles()` returns the
@@ -365,73 +364,33 @@ RN's `Pressable` needs no wrapper: the Unistyles babel plugin auto-binds it to
 the C++ ShadowTree, so function-style callbacks with `StyleSheet.create`
 proxies work natively.
 
-### Unistyles re-applies reanimated's React-side value over an animation
+### Unistyles can drop a theme change on a freshly mounted animated node
 
-**Claim:** an element reanimated animates must not also carry a theme-reading
-Unistyles style. Unistyles captures reanimated's React-side value of the
-animated prop and writes it back over the animation, so the element shows a
-stale value until its next React re-render. It is invisible when the animation
-comes to rest at the value React already holds, and visible when it does not:
-the global dim rests at 0.5 while React holds 0.
+**Claim:** a node Reanimated animates that also carries a themed Unistyles
+style can keep the previous theme's value through the first theme change after
+it mounts; the next change applies. The same value read in a `useAnimatedStyle`
+over `useAnimatedTheme()` follows the first change.
 
-**Verified against `react-native-unistyles@3.3.0` +
-`react-native-reanimated@4.6.0` (default static flags) + `react-native@0.86.3`,
-2026-09-23.** The source chain was re-checked on 2026-10-02 against Unistyles
-3.4.0 and Reanimated 4.7.1. Step 4 changed: the update map is now drained. The
-`nativeProps_DEPRECATED` leg is unchanged, so the rule stays. The symptom was
-not re-observed on device. The chain:
+**Verified against `react-native-unistyles@3.5.0` +
+`react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-05, iOS
+simulator, debug build).** The alert card (`AlertProvider`) with its surface in
+`styles.card`, on the node that animates its entry: shown through
+`alertService.alert`, then `setTheme('DARK')` 1.2 s later. The card stayed
+white while its text turned light, 2 of 2 runs; a second toggle applied. With
+the surface in a theme-only worklet (`cardSurfaceStyle`) the first change
+applied. `UnistylesShadowRegistry.verify()` reported no mismatch for the white
+card, so it does not detect this case.
 
-1. Reanimated's `AnimatedComponent` renders the host with
-   `style: [...yourStyles, <animated style's initial value>, state.settledStyle]`:
-   plain objects that hold the animated prop's React-side value.
-2. The Unistyles babel plugin binds that host. Its ref callback calls
-   `UnistylesShadowRegistry.add(ref, props.style)` on every commit
-   (`src/core/createUnistylesElement.native.tsx`).
-3. `HybridShadowRegistry::link` → `unistyleFromValue` wraps every plain object
-   in the array as a static "exotic" unistyle and links it to the node beside
-   the real one (`cxx/core/UnistyleWrapper.h`). A node with no themed style has
-   nothing that ever triggers an update.
-4. A theme rebuild of the node (`useAppearance` calls `updateTheme` on every
-   cold start) parses each exotic entry from its raw value
-   (`cxx/parser/Parser.cpp`, "compute styles only once"). The node's props,
-   the captured opacity included, go into the update map. On 3.3.0
-   `ShadowTrafficController` never drained it. On 3.4.0
-   `ShadowTreeManager::updateShadowTree` takes the map and commits it once.
-   Each commit also merges the props into `family->nativeProps_DEPRECATED`,
-   which `ShadowNode::clone` re-applies to any props-less clone.
-5. These are non-React commits. With `USE_COMMIT_HOOK_ONLY_FOR_REACT_COMMITS`
-   on, reanimated's commit hook skips them. A settled animation has no next
-   frame to correct the value, so the stale value holds until a React
-   re-render. Reanimated's settled-props sync is usually that re-render, 0.5 s
-   to 1.5 s later.
+Plain views can lose the first change too: on a freshly mounted
+`PantryItemDetail`, the first `DARK` left `ItemPhotoCarousel`'s inactive dots
+and `GalleryHero`'s `heroInner` on light values (4 `verify()` mismatches), and
+the next change applied. Only an animated node has the worklet alternative,
+which `sous-chef/animated-node-takes-no-themed-style` holds it to.
 
-Observed 2026-09-23 on the iOS simulator by measuring the dimmed header's
-luminance per recorded frame (Meal Plan → Add a meal, open/close ×4). With
-`[styles.backdrop, animatedStyle]`, every open dimmed in, then snapped to
-undimmed as the sheet settled, and closes sometimes flashed the dim back on.
-The SharedValue was correct throughout. With the settled-props sync stubbed
-out, the view stayed wrong. With `[StyleSheet.absoluteFill, animatedStyle]`
-and the colour on a child, 16 of 16 transitions were clean. Removing the
-sheets' `CurrentThemeScope` did not help. Every animated node in `src` was
-then converted, and `sous-chef/animated-node-takes-no-themed-style` holds it. Upstream: reanimated
-[#10444](https://github.com/software-mansion/react-native-reanimated/issues/10444)
-has the same symptom and is open. Reanimated
-[#8513](https://github.com/software-mansion/react-native-reanimated/issues/8513)
-says mixing the two libraries on one node is unsupported. Unistyles
-[#1252](https://github.com/jpudysz/react-native-unistyles/issues/1252)
-is open and covers the per-node commits on unfreeze. Unistyles 3.4.0 drains the
-update map but still writes the captured props into `nativeProps_DEPRECATED`.
-Neither package fixes the symptom as of Unistyles 3.4.0 and Reanimated 4.7.1.
-
-Re-check:
-
-```
-grep -n "unistylesFromNonExistentNativeState" -A 6 node_modules/react-native-unistyles/cxx/core/UnistyleWrapper.h
-grep -n "compute styles only once" -A 5 node_modules/react-native-unistyles/cxx/parser/Parser.cpp
-grep -n "takeUpdates\|mergeNativeProps" node_modules/react-native-unistyles/cxx/shadowTree/ShadowTreeManager.cpp
-grep -n "propsOverride.emplace" -B 4 node_modules/react-native/ReactCommon/react/renderer/core/ShadowNode.cpp
-grep -n "USE_COMMIT_HOOK_ONLY_FOR_REACT_COMMITS" -A 6 node_modules/react-native-reanimated/Common/cpp/reanimated/Fabric/ReanimatedCommitHook.cpp
-```
+Re-check: move a themed surface onto the animated node (e.g. `AlertCard`'s
+`cardSurfaceStyle` into `styles.card`), then in the running app call
+`alertService.alert(...)` and `setTheme('DARK')` 1.2 s later with
+`debugger-evaluate`, and screenshot the card.
 
 ### react-compiler try shapes
 
@@ -841,10 +800,9 @@ the two plugins fixes it, which is what `scripts/babel/unistyles-scope-crawl.js`
 does. The crawl only works at `Program.enter`; at `Program.exit` the compiler
 has already analysed the file and the crawl is a silent no-op.
 
-**Verified against `react-native-unistyles@3.3.0` +
-`babel-plugin-react-compiler@1.0.0`** (probe re-run 2026-10-02 against Unistyles
-3.4.0, whose Babel plugin is unchanged: all three legs hold). Three orders,
-three outcomes:
+**Verified against `react-native-unistyles@3.5.0` +
+`babel-plugin-react-compiler@1.0.0`** (2026-10-05). Three orders, three
+outcomes:
 
 | plugin order                             | compiler                                                                                                                                             | variant read                                                |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |

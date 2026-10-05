@@ -279,10 +279,10 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 - **Never wrap `Pressable`/`TouchableX` with `withUnistyles`**: it drops a
   function-style `style`. Verified: `#unistyles-withunistyles-drops-function-styles`.
 - **A node reanimated animates takes no themed Unistyles style**
-  (`sous-chef/animated-node-takes-no-themed-style`): Unistyles writes
-  reanimated's stale React-side value back over the animation. Themed values go
-  in a theme-only `useAnimatedStyle` over `useAnimatedTheme()`, or on a
-  non-animated parent or child. Verified: `#unistyles-re-applies-reanimateds-react-side-value-over-an-animation`.
+  (`sous-chef/animated-node-takes-no-themed-style`): Unistyles can drop the
+  first theme change after it mounts. Themed values go in a theme-only
+  `useAnimatedStyle` over `useAnimatedTheme()`, or on a non-animated parent or
+  child. Verified: `#unistyles-can-drop-a-theme-change-on-a-freshly-mounted-animated-node`.
 - **`useUnistyles()` only for runtime metadata** (`rt.*`); a `theme.*` read
   re-renders on every theme change. The cross-library exceptions are listed in
   `docs/ui-layer.md`.

@@ -142,12 +142,9 @@ they read it.
   package itself is an import ban.
 - **A node reanimated animates takes no themed Unistyles style**
   ([`sous-chef/animated-node-takes-no-themed-style`](rules/animated-node-takes-no-themed-style.md)).
-  Reanimated renders its animated prop's React-side value into the host's style
-  array. Unistyles links those plain objects to the node, and after a theme
-  rebuild its non-React commits write them back over the animation. The view
-  then shows a stale value until its next React re-render. The global dim
-  (`GlobalBackdrop`) snapped off at the end of every sheet open this way
-  ([Unistyles re-applies reanimated's React-side value](verified-library-behaviour.md#unistyles-re-applies-reanimateds-react-side-value-over-an-animation)).
+  Unistyles can drop the first theme change after such a node mounts, while a
+  `useAnimatedStyle` over `useAnimatedTheme()` follows every change
+  ([Unistyles can drop a theme change on a freshly mounted animated node](verified-library-behaviour.md#unistyles-can-drop-a-theme-change-on-a-freshly-mounted-animated-node)).
   The node's static key keeps only structure. Themed values go in a
   `useAnimatedStyle` of their own that reads only `useAnimatedTheme()`, which
   re-runs on a theme change and never per frame (`Toast`, `AlertProvider`,
@@ -358,10 +355,6 @@ they read it.
   resets the tab bar's scroll-hide and holds the pantry rows still behind a
   sheet. `isOverlayOpen` in `TabBarActionsContext`, set only by selectors, pauses
   the tutorials, which open sheets of their own and must not pause themselves.
-- **A flicker in the dim is a rendering bug, not a claim bug.** Traces of the
-  last one showed one claim and one release per cycle; Unistyles was writing
-  Reanimated's stale value back over the animation
-  ([Unistyles re-applies reanimated's React-side value](verified-library-behaviour.md#unistyles-re-applies-reanimateds-react-side-value-over-an-animation)).
 - **Inputs in a sheet resolve to `BottomSheetTextInput`.** A plain RN `TextInput`
   leaves the sheet blind to the keyboard. `BottomSheetTextInput` throws outside a
   sheet, so shared inputs pick it from context —
