@@ -5647,10 +5647,6 @@ type ItemEditSuggestion {
   """The contributor who proposed the change."""
   suggestedBy: User
   updatedAt: DateTime!
-  """
-  The barcode's product record the suggestion corrects; null when it targets the item.
-  """
-  variation: ProductVariation
 }
 
 """
@@ -11132,13 +11128,6 @@ type Query {
     """Only these stores; every store when omitted"""
     storeIds: [ID!]
   ): [ItemAvailability!]!
-  """Compare prices for an item across multiple stores."""
-  compareItemPrices(
-    """The catalog item's id"""
-    itemId: ID!
-    """Only these stores; every store when omitted"""
-    storeIds: [ID!]
-  ): [StorePriceComparison!]!
   """List compatible units for an item with conversion metadata."""
   compatibleUnitsForItem(
     """
@@ -12965,10 +12954,6 @@ type RecipeRevision {
   edit from. Null once the recipe is gone.
   """
   proposed: RecipeContent
-  """
-  The whole proposed ingredient list, in order; null when it leaves the ingredients alone.
-  """
-  proposedIngredients: [RecipeIngredientLine!]
   recipe: Recipe!
   """The admin's note; a rejection always carries one."""
   reviewNote: String
@@ -15226,30 +15211,6 @@ input StorePreferencesInput {
   storeSection: String
 }
 
-"""
-One store's price for an item. Observed stores come first, ranked by their
-latest price per basis within the caller's currency; a store known only by
-its listed price comes last, with no unit price.
-"""
-type StorePriceComparison {
-  """What unitPrice is per; null for a listed price"""
-  basis: PriceBasis
-  chain: StoreChain
-  """The currency of an observed price"""
-  currency: Currency
-  lastUpdated: DateTime
-  """
-  The latest observed price per basis; the store's listed price when none was observed
-  """
-  price: Float
-  storeId: ID!
-  storeName: String!
-  """
-  The latest observed price per one kg, L or piece; null for a listed price
-  """
-  unitPrice: Float
-}
-
 input StoreSkuInput {
   price: Float
   sku: String!
@@ -16267,10 +16228,7 @@ input UpdateItemInput {
   type: ItemType
   unitConfig: ItemUnitConfigInput
   unitOps: UnitOpsInput
-  """
-  The version the caller read. When sent, an update made since is refused
-  (a ConflictError, code VERSION_CONFLICT) instead of overwritten.
-  """
+  """The version read; a newer one refuses the update (VERSION_CONFLICT)."""
   version: Int
   visibility: Visibility
 }
@@ -16298,10 +16256,7 @@ input UpdateMealPlanInput {
   planType: MealPlanType
   servings: Int
   startDate: DateTime
-  """
-  The version the caller read. When sent, an update made since is refused
-  (a ConflictError, code VERSION_CONFLICT) instead of overwritten.
-  """
+  """The version read; a newer one refuses the update (VERSION_CONFLICT)."""
   version: Int
 }
 
@@ -16393,10 +16348,7 @@ input UpdateMembershipInput {
   displayName: String
   id: ID!
   role: MembershipRole
-  """
-  The version the caller read. When sent, an update made since is refused
-  (a ConflictError, code VERSION_CONFLICT) instead of overwritten.
-  """
+  """The version read; a newer one refuses the update (VERSION_CONFLICT)."""
   version: Int
 }
 
@@ -16438,10 +16390,7 @@ input UpdatePantryInput {
   name: String
   tags: [String!]
   temperature: String
-  """
-  The version the caller read. When sent, an update made since is refused
-  (a ConflictError, code VERSION_CONFLICT) instead of overwritten.
-  """
+  """The version read; a newer one refuses the update (VERSION_CONFLICT)."""
   version: Int
 }
 
@@ -16589,10 +16538,7 @@ input UpdatePurchaseInput {
   totalPrice: Float
   transactionId: String
   unitPrice: Float
-  """
-  The version the caller read. When sent, an update made since is refused
-  (a ConflictError, code VERSION_CONFLICT) instead of overwritten.
-  """
+  """The version read; a newer one refuses the update (VERSION_CONFLICT)."""
   version: Int
 }
 
@@ -16643,10 +16589,7 @@ input UpdateRecipeInput {
   tags: [String!]
   timing: TimeEstimatesInput
   tips: String
-  """
-  The version the caller read. When sent, an update made since is refused
-  (a ConflictError, code VERSION_CONFLICT) instead of overwritten.
-  """
+  """The version read; a newer one refuses the update (VERSION_CONFLICT)."""
   version: Int
 }
 
