@@ -1,4 +1,4 @@
-import { isValid } from 'date-fns';
+import { isExists, isWithinInterval, subDays } from 'date-fns';
 import { fromDateKey, toDateKey } from '#/utils/dateUtils';
 import type { DateOrder } from '#/utils/deviceLocale';
 
@@ -13,16 +13,10 @@ const fullYear = (year: string) =>
 /** Older than this is a misread, not the day of the shop. */
 const OLDEST_DAYS = 366;
 
-const keyOf = (year: number, month: number, day: number): string | null => {
-  const date = new Date(year, month - 1, day);
-  // `new Date` rolls 02/30 over into March; a real day maps back to itself.
-  const real =
-    isValid(date) &&
-    date.getFullYear() === year &&
-    date.getMonth() === month - 1 &&
-    date.getDate() === day;
-  return real ? toDateKey(date) : null;
-};
+const keyOf = (year: number, month: number, day: number): string | null =>
+  isExists(year, month - 1, day)
+    ? toDateKey(new Date(year, month - 1, day))
+    : null;
 
 /**
  * Whether `key` (YYYY-MM-DD) can be the day of a shop scanned on `today`: in
@@ -30,10 +24,10 @@ const keyOf = (year: number, month: number, day: number): string | null => {
  */
 export function isPlausibleReceiptDay(key: string, today: string): boolean {
   const latest = fromDateKey(today);
-  const earliest = new Date(latest);
-  earliest.setDate(earliest.getDate() - OLDEST_DAYS);
-  const day = fromDateKey(key);
-  return day <= latest && day >= earliest;
+  return isWithinInterval(fromDateKey(key), {
+    start: subDays(latest, OLDEST_DAYS),
+    end: latest,
+  });
 }
 
 // A date only one order reads as a real day is read that way in any region

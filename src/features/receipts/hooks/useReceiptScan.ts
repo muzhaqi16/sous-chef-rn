@@ -21,9 +21,10 @@ import { readReceiptDate } from '../utils/receiptDate';
 import { todayKey } from '#/utils/dateUtils';
 import { getDeviceDateOrder } from '#/utils/deviceLocale';
 import type { ParsedReceipt } from '../utils/structureReceipt';
-import { parseReceiptOnDevice } from './onDeviceReceiptParser';
+import { parseReceiptOnDevice } from '../utils/onDeviceReceiptParser';
 import {
-  useReceiptDraftStore,
+  useReceiptDraft,
+  useReceiptDraftActions,
   type ReceiptDraft,
 } from '../store/receiptDraftStore';
 
@@ -77,9 +78,8 @@ interface UseReceiptScanOptions {
  * are deleted on the phone either way.
  */
 export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
-  const draft = useReceiptDraftStore(state => state.draft);
-  const saveDraft = useReceiptDraftStore(state => state.saveDraft);
-  const clearDraft = useReceiptDraftStore(state => state.clearDraft);
+  const draft = useReceiptDraft();
+  const { saveDraft, clearDraft } = useReceiptDraftActions();
   const [phase, setStatus] = useState<ReceiptScanStatus>('idle');
   // The draft store hydrates asynchronously, so a saved draft can arrive after
   // the first render; it is read on every render, never only as a seed.

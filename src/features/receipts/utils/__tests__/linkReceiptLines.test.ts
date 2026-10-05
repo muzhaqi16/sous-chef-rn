@@ -1,19 +1,18 @@
 import type { ReceiptLineChoice } from '../../store/receiptDraftStore';
+import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
 import { linkReceiptLines, type OpenListLine } from '../linkReceiptLines';
 
 const choice = (
   itemId: string | null,
   unit: { id?: string; text?: string } = {},
   offList?: boolean,
-): ReceiptLineChoice => ({
-  itemId,
-  itemName: itemId ?? 'typed',
-  quantity: 1,
-  unitId: unit.id ?? null,
-  unitText: unit.text ?? '',
-  price: null,
-  ...(offList ? { offList } : {}),
-});
+) =>
+  lineChoice({
+    itemId,
+    unitId: unit.id ?? null,
+    unitText: unit.text ?? '',
+    ...(offList ? { offList } : {}),
+  });
 
 const LB = { id: 'u-lb', name: 'pound', symbol: 'lb' };
 const listLine = (

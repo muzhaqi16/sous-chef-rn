@@ -11,6 +11,7 @@ import {
   TopLevelErrorCode,
 } from '#/graphql/generated/schemaTypes';
 import {
+  inputOf,
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
@@ -18,10 +19,13 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { useStore } from '#store';
-import { isRecord } from '#/utils/isRecord';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import { TimeoutError } from '#/utils/errors/timeoutError';
-import { useReceiptDraftStore } from '../../store/receiptDraftStore';
+import {
+  useReceiptDraftStore,
+  type ReceiptDraft,
+} from '../../store/receiptDraftStore';
+import { seedDraft } from '../../__tests__/helpers/receiptFixtures';
 import {
   CreateReceiptParseDocument,
   ReceiptParseDocument,
@@ -34,31 +38,35 @@ jest.mock('#/services/errorService');
 
 const PAGES = ['WALMART\nGV WHOLE MILK 007874235186 F  3.48 N\nTOTAL  3.48'];
 
-const seedDraft = (extra = {}) =>
-  useReceiptDraftStore.setState({
-    draft: {
-      pages: PAGES,
-      scannedAt: '2026-10-01T10:00:00.000Z',
-      purchasedOn: '2026-09-30',
-      ...extra,
-    },
-  });
+const seedMilkDraft = (draft: Partial<ReceiptDraft> = {}) =>
+  seedDraft({ pages: PAGES, purchasedOn: '2026-09-30', ...draft });
 
-const created = (status: ReceiptParseStatus) =>
-  recordMock(CreateReceiptParseDocument, {
-    dataFor: (vars): MockDataFor<typeof CreateReceiptParseDocument> => {
-      const input =
-        typeof vars.input === 'object' && vars.input !== null
-          ? (vars.input as { id: string })
-          : { id: '' };
-      return {
-        createReceiptParse: {
-          __typename: 'CreateReceiptParsePayload',
-          receiptParse: { id: input.id, status, warnings: [], receipt: null },
+const created = (
+  answer: ReceiptParseStatus | Error,
+  {
+    receipt = null,
+    maxUsageCount,
+  }: { receipt?: typeof MILK_RECEIPT | null; maxUsageCount?: number } = {},
+) =>
+  recordMock(
+    CreateReceiptParseDocument,
+    answer instanceof Error
+      ? { error: answer, maxUsageCount }
+      : {
+          maxUsageCount,
+          dataFor: (vars): MockDataFor<typeof CreateReceiptParseDocument> => ({
+            createReceiptParse: {
+              __typename: 'CreateReceiptParsePayload',
+              receiptParse: {
+                id: String(inputOf(vars).id),
+                status: answer,
+                warnings: [],
+                receipt,
+              },
+            },
+          }),
         },
-      };
-    },
-  });
+  );
 
 const MILK_RECEIPT = {
   merchant: { name: 'WALMART' },
@@ -129,7 +137,7 @@ const pollOnce = () =>
 
 describe('useServerReceiptParse', () => {
   it('asks the server once the scan is saved, and fills the draft from its reading', async () => {
-    seedDraft();
+    seedMilkDraft();
     const create = created(ReceiptParseStatus.Pending);
     const poll = polledTo({
       status: ReceiptParseStatus.Parsed,
@@ -171,7 +179,7 @@ describe('useServerReceiptParse', () => {
     ['drops a day the server read years back', '2018-09-06', undefined],
   ])('%s', async (_name, served, kept) => {
     jest.setSystemTime(new Date(2026, 9, 1, 12));
-    seedDraft({ purchasedOn: undefined });
+    seedMilkDraft({ purchasedOn: undefined });
     const poll = polledTo({
       status: ReceiptParseStatus.Parsed,
       warnings: [],
@@ -188,19 +196,9 @@ describe('useServerReceiptParse', () => {
   });
 
   it('reads a parse the server has already finished from its answer, with no poll', async () => {
-    seedDraft();
-    const create = recordMock(CreateReceiptParseDocument, {
-      dataFor: (vars): MockDataFor<typeof CreateReceiptParseDocument> => ({
-        createReceiptParse: {
-          __typename: 'CreateReceiptParsePayload',
-          receiptParse: {
-            id: isRecord(vars.input) ? String(vars.input.id) : '',
-            status: ReceiptParseStatus.Parsed,
-            warnings: [],
-            receipt: MILK_RECEIPT,
-          },
-        },
-      }),
+    seedMilkDraft();
+    const create = created(ReceiptParseStatus.Parsed, {
+      receipt: MILK_RECEIPT,
     });
     const poll = polledTo({
       status: ReceiptParseStatus.Parsed,
@@ -217,7 +215,7 @@ describe('useServerReceiptParse', () => {
   });
 
   it('keeps the text when no receipt worker runs, and asks nothing more', async () => {
-    seedDraft();
+    seedMilkDraft();
     const create = created(ReceiptParseStatus.Unavailable);
     const poll = polledTo({
       status: ReceiptParseStatus.Parsed,
@@ -236,7 +234,7 @@ describe('useServerReceiptParse', () => {
   });
 
   it('calls a receipt the server could barely read unreadable, never an empty review', async () => {
-    seedDraft();
+    seedMilkDraft();
     const { result } = render([
       created(ReceiptParseStatus.Pending).mock,
       ...polledTo({
@@ -270,7 +268,7 @@ describe('useServerReceiptParse', () => {
   });
 
   it('sends a receipt the phone could not read as its photos, not its text', async () => {
-    seedDraft({ pages: [], photoKeys: ['receipt-photos/u1/p1.jpg'] });
+    seedMilkDraft({ pages: [], photoKeys: ['receipt-photos/u1/p1.jpg'] });
     const create = created(ReceiptParseStatus.Pending);
     render([create.mock]);
 
@@ -285,7 +283,7 @@ describe('useServerReceiptParse', () => {
   });
 
   it("fills a photo draft from the server's reading, as for text", async () => {
-    seedDraft({ pages: [], photoKeys: ['receipt-photos/u1/p1.jpg'] });
+    seedMilkDraft({ pages: [], photoKeys: ['receipt-photos/u1/p1.jpg'] });
     const create = created(ReceiptParseStatus.Pending);
     const poll = polledTo({
       status: ReceiptParseStatus.Parsed,
@@ -305,7 +303,7 @@ describe('useServerReceiptParse', () => {
   });
 
   it('never asks again for photos the daily limit turned away: they are gone', async () => {
-    seedDraft({ pages: [], photoKeys: ['receipt-photos/u1/p1.jpg'] });
+    seedMilkDraft({ pages: [], photoKeys: ['receipt-photos/u1/p1.jpg'] });
     const { result, unmount } = render([overTheLimit(3600)]);
     await waitFor(() => expect(result.current.readingStatus).toBe('limited'));
     unmount();
@@ -322,7 +320,7 @@ describe('useServerReceiptParse', () => {
   });
 
   it('waits out the daily limit, then asks again on a later visit', async () => {
-    seedDraft();
+    seedMilkDraft();
     const { result, unmount } = render([overTheLimit(3600)]);
 
     await waitFor(() => expect(result.current.readingStatus).toBe('limited'));
@@ -356,7 +354,7 @@ describe('useServerReceiptParse', () => {
   });
 
   it('stops at a limit that names no wait, as when no worker runs', async () => {
-    seedDraft();
+    seedMilkDraft();
     const { result } = render([overTheLimit()]);
 
     await waitFor(() =>
@@ -365,10 +363,8 @@ describe('useServerReceiptParse', () => {
   });
 
   it('keeps a parse whose ask never got an answer, to send it again', async () => {
-    seedDraft();
-    const dropped = recordMock(CreateReceiptParseDocument, {
-      error: new NetworkRequestError('Network request failed'),
-    });
+    seedMilkDraft();
+    const dropped = created(new NetworkRequestError('Network request failed'));
     const { result } = render([dropped.mock]);
 
     await waitFor(() => expect(dropped.fired).toHaveLength(1));
@@ -382,14 +378,14 @@ describe('useServerReceiptParse', () => {
   });
 
   it('asks again after a server fault, and reads the receipt then', async () => {
-    seedDraft({ purchasedOn: undefined });
-    const fault = recordMock(CreateReceiptParseDocument, {
-      error: new ServerError('Bad Gateway', {
+    seedMilkDraft({ purchasedOn: undefined });
+    const fault = created(
+      new ServerError('Bad Gateway', {
         response: new Response('', { status: 502 }),
         bodyText: '',
       }),
-      maxUsageCount: 1,
-    });
+      { maxUsageCount: 1 },
+    );
     const create = created(ReceiptParseStatus.Pending);
     const poll = polledTo({
       status: ReceiptParseStatus.Parsed,
@@ -419,10 +415,8 @@ describe('useServerReceiptParse', () => {
   });
 
   it('stops asking for this visit after three resends, and says so', async () => {
-    seedDraft();
-    const timedOut = recordMock(CreateReceiptParseDocument, {
-      error: new TimeoutError('createReceiptParse', 30_000),
-    });
+    seedMilkDraft();
+    const timedOut = created(new TimeoutError('createReceiptParse', 30_000));
     const { result } = render([timedOut.mock]);
 
     await waitFor(() => expect(timedOut.fired).toHaveLength(1));
@@ -454,10 +448,8 @@ describe('useServerReceiptParse', () => {
   // "Scan another" keeps the screen, so the next receipt must not inherit the
   // last one's spent resends or a wait still pending for it.
   it('gives a receipt scanned after one that gave up its own resends', async () => {
-    seedDraft();
-    const timedOut = recordMock(CreateReceiptParseDocument, {
-      error: new TimeoutError('createReceiptParse', 30_000),
-    });
+    seedMilkDraft();
+    const timedOut = created(new TimeoutError('createReceiptParse', 30_000));
     const { result } = render([timedOut.mock]);
 
     await waitFor(() => expect(timedOut.fired).toHaveLength(1));
@@ -476,7 +468,7 @@ describe('useServerReceiptParse', () => {
     );
 
     act(() => {
-      seedDraft({ scannedAt: '2026-10-01T10:05:00.000Z' });
+      seedMilkDraft({ scannedAt: '2026-10-01T10:05:00.000Z' });
     });
 
     await waitFor(() => expect(timedOut.fired).toHaveLength(5));
@@ -494,7 +486,7 @@ describe('useServerReceiptParse', () => {
   ])(
     'takes a refusal on %s as final (%s), and never sends it again',
     async (field, status) => {
-      seedDraft();
+      seedMilkDraft();
       const refused = recordMock(CreateReceiptParseDocument, {
         data: {
           createReceiptParse: {
@@ -515,7 +507,7 @@ describe('useServerReceiptParse', () => {
   );
 
   it('asks nothing offline, and says the items are read once back online', async () => {
-    seedDraft();
+    seedMilkDraft();
     useStore.setState({ isOnline: false });
     const create = created(ReceiptParseStatus.Pending);
     const { result } = render([create.mock]);
@@ -527,7 +519,7 @@ describe('useServerReceiptParse', () => {
   });
 
   it('sends a parse already asked for again with its own id', async () => {
-    seedDraft({ serverParse: { id: 'parse-1', state: 'pending' } });
+    seedMilkDraft({ serverParse: { id: 'parse-1', state: 'pending' } });
     const create = created(ReceiptParseStatus.Pending);
     render([create.mock]);
 
@@ -538,13 +530,13 @@ describe('useServerReceiptParse', () => {
   });
 
   it('waits for the scan to finish, and leaves a receipt the phone read alone', async () => {
-    seedDraft();
+    seedMilkDraft();
     const create = created(ReceiptParseStatus.Pending);
     render([create.mock], { enabled: false });
     await pollOnce();
     expect(create.fired).toEqual([]);
 
-    seedDraft({ parsed: { lines: [] }, parsedBy: 'device' });
+    seedMilkDraft({ parsed: { lines: [] }, parsedBy: 'device' });
     render([create.mock]);
     await pollOnce();
     expect(create.fired).toEqual([]);

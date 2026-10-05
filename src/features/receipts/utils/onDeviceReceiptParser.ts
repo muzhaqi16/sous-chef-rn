@@ -1,15 +1,16 @@
 import { Platform } from 'react-native';
 import { ReceiptStructuring } from '#/native/ReceiptStructuring';
+import { withinMs } from '#/utils/withinMs';
 import {
   LABELLING_TIMEOUT_MS,
   onDeviceStructuring,
-} from '../utils/onDeviceStructuring';
+} from './onDeviceStructuring';
 import {
   isUsableReceipt,
   linesThroughTotal,
   structureReceipt,
   type ParsedReceipt,
-} from '../utils/structureReceipt';
+} from './structureReceipt';
 
 /**
  * Structures the draft's pages with the phone's own model, or answers null:
@@ -23,15 +24,11 @@ export async function parseReceiptOnDevice(
   if ((await ReceiptStructuring.availability()) !== 'available') return null;
 
   const lines = linesThroughTotal(pages.flatMap(page => page.split('\n')));
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const expired = new Promise<null>(resolve => {
-    timer = setTimeout(() => resolve(null), LABELLING_TIMEOUT_MS);
-  });
-  const labels = await Promise.race([
+  const labels = await withinMs(
     ReceiptStructuring.labelLines(lines),
-    expired,
-  ]);
-  clearTimeout(timer);
+    LABELLING_TIMEOUT_MS,
+    null,
+  );
   if (!labels) return null;
 
   const parsed = structureReceipt(lines, labels);

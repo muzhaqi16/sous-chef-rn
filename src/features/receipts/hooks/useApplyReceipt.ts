@@ -11,9 +11,11 @@ import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { useMoveToPantry } from '#features/shoppingList/hooks/useMoveToPantry';
 import type { ShoppingListItemNode } from '#features/shoppingList/hooks/usePaginatedShoppingItems';
 import { refByIdOrName } from '#/utils/refInput';
+import { stockAmountOf } from '#domain/stockAmount';
+import { unitPriceFromTotal } from '#domain/purchasePrice';
 import { errorService } from '#/services/errorService';
 import {
-  useReceiptDraftStore,
+  useReceiptDraftActions,
   type ReceiptLineChoice,
 } from '../store/receiptDraftStore';
 
@@ -51,7 +53,7 @@ const purchaseOf = (choice: ReceiptLineChoice, receipt: ReceiptRefInput) => {
           totalCost: choice.price,
           ...(quantity === undefined
             ? {}
-            : { costPerUnit: choice.price / quantity }),
+            : { costPerUnit: unitPriceFromTotal(choice.price, quantity) }),
         }),
   };
 };
@@ -62,29 +64,23 @@ const purchaseOf = (choice: ReceiptLineChoice, receipt: ReceiptRefInput) => {
  * count (2 @) is that many packages, which the server turns into the line's
  * unit. A bare 1 says only that it was bought, so the list's amount stands.
  */
-const stockAmountOf = (
+const lineAmountOf = (
   choice: ReceiptLineChoice,
   line: ShoppingListItemNode,
 ): StockAmountInput => {
   const lineUnit = line.unit;
   if (choice.unitId !== null || choice.unitText !== '' || !lineUnit) {
     // A typed unit links only to a line in that unit, so the line's id stands for it.
-    return {
-      measured: {
-        quantity: choice.quantity,
-        unitId: choice.unitId ?? lineUnit?.id,
-      },
-    };
+    return stockAmountOf(choice.quantity, {
+      unitId: choice.unitId ?? lineUnit?.id,
+    });
   }
   if (choice.quantity !== 1 && Number.isInteger(choice.quantity)) {
-    return { packages: { count: choice.quantity } };
+    return stockAmountOf(choice.quantity, { asPackages: true });
   }
-  return {
-    measured: {
-      quantity: line.quantity ?? choice.quantity,
-      unitId: lineUnit.id,
-    },
-  };
+  return stockAmountOf(line.quantity ?? choice.quantity, {
+    unitId: lineUnit.id,
+  });
 };
 
 /**
@@ -101,7 +97,7 @@ export function useApplyReceipt(listId: string | undefined) {
     currentListId: listId,
     present: 'none',
   });
-  const markAdded = useReceiptDraftStore(state => state.markAdded);
+  const { markAdded } = useReceiptDraftActions();
   const [applying, setApplying] = useState(false);
   const [failures, setFailures] = useState<ReceiptLineFailure[]>([]);
 
@@ -137,7 +133,7 @@ export function useApplyReceipt(listId: string | undefined) {
     if (!pantryId) return t('errors.moveToPantryFailedRetry');
     const outcome = await moveToPantry(listLine, {
       pantryId,
-      amount: stockAmountOf(choice, listLine),
+      amount: lineAmountOf(choice, listLine),
       removeFromList: true,
       receipt,
       // Labels the price paid: with none read, the API records the price typed

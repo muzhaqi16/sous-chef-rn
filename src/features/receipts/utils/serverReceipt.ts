@@ -1,8 +1,9 @@
 import { ReceiptLineKind } from '#/graphql/generated/schemaTypes';
 import type { ReceiptParseReadersFragment } from '#/graphql/readers/receiptParseReaders.generated';
-import { readReceiptLine } from './readReceiptLine';
+import { readReceiptLine, type ReceiptLineReading } from './readReceiptLine';
 import { NOT_BEFORE_PACK_UNIT, RECEIPT_UNIT } from './receiptMeasures';
 import {
+  foldDetail,
   hasProductWords,
   type ParsedLineKind,
   type ParsedReceipt,
@@ -14,6 +15,11 @@ type ServerReceipt = Pick<
   'merchant' | 'lines'
 >;
 type ServerReceiptLine = ServerReceipt['lines'][number];
+
+/** A line with what its printed text states, read once. */
+interface Working extends ParsedReceiptLine {
+  reading: ReceiptLineReading;
+}
 
 // A fee or a deposit reads as `other`, which the totals check counts toward the
 // subtotal, as it does for a fee the phone read.
@@ -43,7 +49,7 @@ const codeOf = (line: ServerReceiptLine, printed: string | undefined) =>
 // The figures come from the printed text, as they do for the phone's labels,
 // and the server's only where the text states none: it has priced a line with
 // the next row's amount (`BANANAS ... 1.02 R` as 4.94).
-const toLine = (line: ServerReceiptLine, index: number): ParsedReceiptLine => {
+const toLine = (line: ServerReceiptLine, index: number): Working => {
   const reading = readReceiptLine(line.text);
   const amount = reading.amount ?? line.amount ?? undefined;
   const quantity = reading.quantity ?? line.quantity ?? undefined;
@@ -64,6 +70,7 @@ const toLine = (line: ServerReceiptLine, index: number): ParsedReceiptLine => {
     ...(unitPrice === undefined ? {} : { unitPrice }),
     ...(amount === undefined ? {} : { lineTotal: amount }),
     ...(line.appliesTo == null ? {} : { appliesToIndex: line.appliesTo }),
+    reading,
   };
 };
 
@@ -72,14 +79,14 @@ const toLine = (line: ServerReceiptLine, index: number): ParsedReceiptLine => {
 // server gives every item a quantity), no product words and no code describes
 // the item above, as a detail line does on the phone: that item takes its
 // figures, and the line is not counted. A folded line is never described.
-const foldDetails = (lines: ParsedReceiptLine[]): ParsedReceiptLine[] => {
-  let above: ParsedReceiptLine | undefined;
-  const described = new Set<ParsedReceiptLine>();
+const foldDetails = (lines: Working[]): Working[] => {
+  let above: Working | undefined;
+  const described = new Set<Working>();
   return lines.map(line => {
     if (line.kind !== 'item') return line;
     if (
       line.code !== undefined ||
-      readReceiptLine(line.rawText).quantity === undefined ||
+      line.reading.quantity === undefined ||
       hasProductWords(line.rawText) ||
       !above
     ) {
@@ -90,20 +97,19 @@ const foldDetails = (lines: ParsedReceiptLine[]): ParsedReceiptLine[] => {
       // A second detail line fills in only what the first left unstated.
       above.unit ??= line.unit;
       above.unitPrice ??= line.unitPrice;
+      above.lineTotal ??= line.lineTotal;
     } else {
       // As on the phone, the weight line states the item's amount, over the 1
       // the server gives an item it has no count for.
       described.add(above);
-      above.quantity = line.quantity;
-      if (line.unit) above.unit = line.unit;
-      if (line.unitPrice !== undefined) above.unitPrice = line.unitPrice;
+      foldDetail(above, line);
     }
-    above.lineTotal ??= line.lineTotal;
     return {
       index: line.index,
       rawText: line.rawText,
       kind: 'other',
       appliesToIndex: above.index,
+      reading: line.reading,
     };
   });
 };
@@ -111,7 +117,7 @@ const foldDetails = (lines: ParsedReceiptLine[]): ParsedReceiptLine[] => {
 // On a skewed photo the server has priced the last item, which printed no
 // price, with the subtotal printed below it. An item does not cost the whole
 // receipt unless it is the only item, or its own line prints that amount.
-const dropSumsAsPrices = (lines: ParsedReceiptLine[]): ParsedReceiptLine[] => {
+const dropSumsAsPrices = (lines: Working[]): Working[] => {
   const items = lines.filter(line => line.kind === 'item');
   if (items.length < 2) return lines;
   const sums = new Set(
@@ -123,7 +129,7 @@ const dropSumsAsPrices = (lines: ParsedReceiptLine[]): ParsedReceiptLine[] => {
     if (
       line.kind !== 'item' ||
       !sums.has(line.lineTotal) ||
-      readReceiptLine(line.rawText).amount !== undefined
+      line.reading.amount !== undefined
     ) {
       return line;
     }
@@ -134,7 +140,9 @@ const dropSumsAsPrices = (lines: ParsedReceiptLine[]): ParsedReceiptLine[] => {
 
 /** The server's reading in the shape the review reads, as the phone's is. */
 export function fromServerReceipt(receipt: ServerReceipt): ParsedReceipt {
-  const lines = dropSumsAsPrices(foldDetails(receipt.lines.map(toLine)));
+  const lines = dropSumsAsPrices(foldDetails(receipt.lines.map(toLine))).map(
+    ({ reading: _reading, ...line }) => line,
+  );
   const merchant = receipt.merchant.name?.trim();
   return merchant ? { merchant, lines } : { lines };
 }

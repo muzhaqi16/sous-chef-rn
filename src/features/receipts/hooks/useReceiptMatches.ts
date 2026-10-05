@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { skipToken, useMutation, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import {
@@ -8,9 +7,10 @@ import {
   type ReceiptMatchMethod,
 } from '#/graphql/generated/schemaTypes';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
-import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
+import { formatNetWeightDisplay } from '#/utils/formatQuantity';
 import {
   RecordReceiptMatchesDocument,
   ResolveReceiptLinesDocument,
@@ -21,7 +21,10 @@ import {
 export interface ReceiptCandidate {
   itemId: string;
   itemName: string;
-  /** What sets it apart from an item of the same name: its brand, else its pack size. */
+  /**
+   * What sets it apart from another candidate of the same name: its brand,
+   * else its pack size. None when no other candidate shares its name.
+   */
   detail: string | null;
   method: ReceiptMatchMethod;
 }
@@ -69,12 +72,21 @@ const candidateDetail = ({ item }: ResolvedCandidate): string | null => {
     : null;
 };
 
-const toCandidate = (candidate: ResolvedCandidate): ReceiptCandidate => ({
-  itemId: candidate.item.id,
-  itemName: candidate.item.name,
-  detail: candidateDetail(candidate),
-  method: candidate.method,
-});
+const toCandidate = (
+  candidate: ResolvedCandidate,
+  among: readonly ResolvedCandidate[],
+): ReceiptCandidate => {
+  const { id, name } = candidate.item;
+  const sharesItsName = among.some(
+    other => other.item.id !== id && other.item.name === name,
+  );
+  return {
+    itemId: id,
+    itemName: name,
+    detail: sharesItsName ? candidateDetail(candidate) : null,
+    method: candidate.method,
+  };
+};
 
 /**
  * The catalog items the API proposes for a receipt's item lines, and the step
@@ -121,21 +133,22 @@ export function useReceiptMatches(
   );
   // A picked store asks again for the same lines: the last answer stands until
   // the new one lands, so the proposals stay on screen.
-  const linesKey = JSON.stringify(sent);
-  const [held, setHeld] = useState<{ key: string; data: typeof data }>();
-  if (data && data !== held?.data) setHeld({ key: linesKey, data });
-  const answer = data ?? (held?.key === linesKey ? held.data : undefined);
+  const answer = usePreservedQueryData(data, undefined, JSON.stringify(sent));
   const resolved = answer?.resolveReceiptLines;
   const storeId = pickedStoreId ?? resolved?.store?.id;
 
   const matches = new Map<number, ReceiptLineMatch>();
   for (const line of resolved?.lines ?? []) {
-    const best = line.best ? toCandidate(line.best) : undefined;
+    const best = line.best
+      ? toCandidate(line.best, line.candidates)
+      : undefined;
     const sure = SURE.has(line.confidence);
     matches.set(Number(line.clientId), {
       ...(best && sure ? { preselect: best } : {}),
       ...(best && !sure ? { guess: best } : {}),
-      candidates: line.candidates.map(toCandidate),
+      candidates: line.candidates.map(candidate =>
+        toCandidate(candidate, line.candidates),
+      ),
     });
   }
 

@@ -55,6 +55,24 @@ export const hasProductWords = (text: string) => PRODUCT_WORD.test(text);
 // price column read apart from its names.
 const PRICE_ONLY = /^\W*\$?\d{1,6}[.,]\d{2}\s*[A-Z]{0,2}\W*$/i;
 
+type DetailFigures = Pick<
+  ParsedReceiptLine,
+  'quantity' | 'unit' | 'unitPrice' | 'lineTotal'
+>;
+
+/**
+ * An item takes the count or weight a detail line under it states, and its
+ * total when the item printed none.
+ */
+export function foldDetail(item: ParsedReceiptLine, detail: DetailFigures) {
+  if (detail.quantity !== undefined) item.quantity = detail.quantity;
+  if (detail.unit) item.unit = detail.unit;
+  if (detail.unitPrice !== undefined) item.unitPrice = detail.unitPrice;
+  if (item.lineTotal === undefined && detail.lineTotal !== undefined) {
+    item.lineTotal = detail.lineTotal;
+  }
+}
+
 const printedKind = (text: string) =>
   PRINTED_KIND.find(([pattern]) => pattern.test(text))?.[1];
 
@@ -296,12 +314,7 @@ export function structureReceipt(
     if (!item) continue;
     detail.appliesToIndex = item.index;
     const { quantity, unit, unitPrice, amount } = detail.reading;
-    if (quantity !== undefined) item.quantity = quantity;
-    if (unit) item.unit = unit;
-    if (unitPrice !== undefined) item.unitPrice = unitPrice;
-    if (amount !== undefined && item.lineTotal === undefined) {
-      item.lineTotal = amount;
-    }
+    foldDetail(item, { quantity, unit, unitPrice, lineTotal: amount });
     // The figures moved to the item, so the detail line is not summed twice.
     delete detail.lineTotal;
   }

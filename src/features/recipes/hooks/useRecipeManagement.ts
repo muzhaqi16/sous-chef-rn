@@ -6,7 +6,7 @@ import {
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { useLoadRemainingPages } from '#features/recipes/hooks/useLoadRemainingPages';
+import { useLoadRemainingPages } from '#hooks/utils/useLoadRemainingPages';
 
 /**
  * Connection node type emitted by the MyRecipes query. The cell renders via

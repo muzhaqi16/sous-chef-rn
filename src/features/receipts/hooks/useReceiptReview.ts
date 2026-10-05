@@ -1,12 +1,17 @@
 import { useSelectedShoppingListId } from '#store/useAppStore';
+import { useToday } from '#hooks/useToday';
+import { useLoadRemainingPages } from '#hooks/utils/useLoadRemainingPages';
 import { usePaginatedShoppingItems } from '#features/shoppingList/hooks/usePaginatedShoppingItems';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
+import { useActiveShoppingListId } from '#features/shoppingList/hooks/useActiveShoppingListId';
 import {
-  useReceiptDraftStore,
+  useReceiptDraft,
+  useReceiptDraftActions,
   type ReceiptLineChoice,
 } from '../store/receiptDraftStore';
 import {
   receiptReviewLines,
+  seedChoice,
   type ReceiptReviewLine,
 } from '../utils/receiptReviewLines';
 import { receiptTotalsGap } from '../utils/receiptTotalsGap';
@@ -17,10 +22,6 @@ import {
 } from '../utils/linkReceiptLines';
 import { useApplyReceipt } from './useApplyReceipt';
 import { useReceiptMatches, type ReceiptCandidate } from './useReceiptMatches';
-import {
-  receiptLineDefaults,
-  toLineChoice,
-} from '../components/receiptLineFormConfig';
 import { toDateKey } from '#/utils/dateUtils';
 
 // The chain and its store number print above the items (`ALDI` / `Store #027`).
@@ -44,29 +45,15 @@ export type ReceiptRowStatus =
 export interface ReceiptReviewRow extends ReceiptReviewLine {
   status: ReceiptRowStatus;
   choice?: ReceiptLineChoice;
-  /** The choice is the API's proposal, not yet one the user made. */
-  proposed: boolean;
   /** The API's best guess when it is unsure: offered, never chosen for the user. */
   guess?: string;
   /** Items the API proposes for the line, best first. */
   candidates: ReceiptCandidate[];
-  added: boolean;
   /** Why the last attempt to add it failed. */
   failure?: string;
   /** Adding it ticks a shopping-list line off rather than adding it again. */
   onList: boolean;
 }
-
-// The line sheet's seed for a line, with the proposed item picked.
-const proposedChoice = (
-  line: ReceiptReviewLine,
-  candidate: ReceiptCandidate,
-): ReceiptLineChoice =>
-  toLineChoice({
-    ...receiptLineDefaults(line, undefined),
-    itemName: candidate.itemName,
-    itemId: candidate.itemId,
-  });
 
 /**
  * The saved receipt's item lines, each with what the user chose it to be (else
@@ -74,19 +61,23 @@ const proposedChoice = (
  * it matches, and the step that adds the chosen ones to the current pantry.
  */
 export function useReceiptReview() {
-  const draft = useReceiptDraftStore(state => state.draft);
-  const chooseLine = useReceiptDraftStore(state => state.chooseLine);
-  const setPurchasedOn = useReceiptDraftStore(state => state.setPurchasedOn);
-  const chooseStore = useReceiptDraftStore(state => state.chooseStore);
-  const clearDraft = useReceiptDraftStore(state => state.clearDraft);
+  const draft = useReceiptDraft();
+  const { chooseLine, setPurchasedOn, chooseStore, clearDraft } =
+    useReceiptDraftActions();
+  const today = useToday();
   const selectedListId = useSelectedShoppingListId();
   // Until the list tab has opened one, the active list is the default, as there.
   const { lists } = useShoppingListsLite({ skip: !!selectedListId });
-  const listId =
-    selectedListId ??
-    (lists.find(list => list.isDefault) ?? lists[0])?.id ??
-    undefined;
+  const activeListId = useActiveShoppingListId(lists);
+  const listId = selectedListId ?? activeListId;
   const { state: list } = usePaginatedShoppingItems({ listId });
+  // A receipt line matches an open list line on any page.
+  const { isLoadingRemainingPages } = useLoadRemainingPages(
+    !!listId,
+    list.loading,
+    list.unpurchased,
+    listId ?? '',
+  );
   const { pantryName, applying, failures, apply } = useApplyReceipt(listId);
 
   const lines = draft?.parsed ? receiptReviewLines(draft.parsed) : [];
@@ -116,7 +107,7 @@ export function useReceiptReview() {
   // A receipt that printed no readable day was bought the day it was scanned.
   const purchasedOn =
     draft?.purchasedOn ??
-    toDateKey(draft ? new Date(draft.scannedAt) : new Date());
+    (draft ? toDateKey(new Date(draft.scannedAt)) : today);
 
   const added = new Set(draft?.added);
   const chosen = lines.map(line => {
@@ -124,14 +115,17 @@ export function useReceiptReview() {
     const match = matchFor(line.index);
     const proposal =
       explicit === undefined && match?.preselect
-        ? proposedChoice(line, match.preselect)
+        ? {
+            ...seedChoice(line),
+            itemId: match.preselect.itemId,
+            itemName: match.preselect.itemName,
+          }
         : undefined;
     return {
       line,
       match,
       // Null is the user leaving the line out, proposal or not.
       choice: explicit === undefined ? proposal : explicit ?? undefined,
-      proposed: !!proposal,
       skipped: explicit === null,
     };
   });
@@ -155,7 +149,7 @@ export function useReceiptReview() {
   };
 
   const rows: ReceiptReviewRow[] = chosen.map(entry => {
-    const { line, match, choice, proposed } = entry;
+    const { line, match, choice } = entry;
     const failure = failures.find(
       failed => failed.index === line.index,
     )?.reason;
@@ -163,10 +157,8 @@ export function useReceiptReview() {
       ...line,
       status: statusOf(entry, failure),
       ...(choice ? { choice } : {}),
-      proposed,
       ...(match?.guess && !choice ? { guess: match.guess.itemName } : {}),
       candidates: match?.candidates ?? [],
-      added: added.has(line.index),
       failure,
       onList: links.has(line.index),
     };
@@ -218,6 +210,8 @@ export function useReceiptReview() {
     pantryName,
     pendingCount: pending.length,
     applying,
+    /** Later list pages are still loading: adding now could miss a list line. */
+    listLoading: isLoadingRemainingPages,
     chooseLine,
     /** The list line a line would tick off with this product and unit, as they are picked. */
     listItemNameFor,

@@ -1,27 +1,23 @@
 import type { RecognizedPage } from '#/native/TextRecognition';
 import { assembleReceiptLines } from '../assembleReceiptLines';
 
-type Row = [text: string, x: number, y: number, width: number, height: number];
-type SlopedRow = [...Row, slope: number];
+type Row = [
+  text: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  slope?: number,
+];
 
 const page = (rows: Row[]): RecognizedPage => ({
-  lines: rows.map(([text, x, y, width, height]) => ({
-    text,
-    x,
-    y,
-    width,
-    height,
-  })),
-});
-
-const sloped = (rows: SlopedRow[]): RecognizedPage => ({
   lines: rows.map(([text, x, y, width, height, slope]) => ({
     text,
     x,
     y,
     width,
     height,
-    slope,
+    ...(slope === undefined ? {} : { slope }),
   })),
 });
 
@@ -82,7 +78,7 @@ describe('assembleReceiptLines', () => {
   // by height alone each name pairs with the price of the row below it.
   it("reads a tilted photo's rows along its slope", () => {
     const [lines] = assembleReceiptLines([
-      sloped([
+      page([
         ['12.49 E', 0.669, 0.266, 0.084, 0.032, -0.177],
         ['KS ORG A2 PR', 0.414, 0.286, 0.212, 0.052, -0.167],
         ['14.43 E', 0.672, 0.284, 0.088, 0.032, -0.177],
@@ -105,7 +101,7 @@ describe('assembleReceiptLines', () => {
   // A Pak'nSave photo: its long names curl to -0.026 on rows that are level.
   it("reads a level page by height, whatever its lines' curl", () => {
     const [lines] = assembleReceiptLines([
-      sloped([
+      page([
         ['Our Shopping Hours are Mon - Sun', 0.1, 0.5, 0.7, 0.03, 0],
         ['$9.84 EA =', 0.554, 0.61, 0.141, 0.0248, 0],
         ['KIWIFRUIT GREEN KG NZ', 0.125, 0.611, 0.283, 0.0296, -0.026],

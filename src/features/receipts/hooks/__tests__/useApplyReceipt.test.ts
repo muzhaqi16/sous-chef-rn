@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react-native';
 import { errorService } from '#/services/errorService';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import { useApplyReceipt, type ReceiptApplyLine } from '../useApplyReceipt';
+import { lineChoice, seedDraft } from '../../__tests__/helpers/receiptFixtures';
 
 jest.mock('#/services/errorService');
 
@@ -18,21 +19,12 @@ jest.mock('#features/shoppingList/hooks/useMoveToPantry', () => ({
 
 const line = (index: number, itemName: string): ReceiptApplyLine => ({
   index,
-  choice: {
-    itemId: `cat-${index}`,
-    itemName,
-    quantity: 1,
-    unitId: null,
-    unitText: '',
-    price: 2.5,
-  },
+  choice: lineChoice({ itemId: `cat-${index}`, itemName, price: 2.5 }),
 });
 
 beforeEach(() => {
   mockAddItem.mockReset();
-  useReceiptDraftStore.setState({
-    draft: { pages: ['RECEIPT'], scannedAt: '2026-10-01T10:00:00.000Z' },
-  });
+  seedDraft();
 });
 
 describe('useApplyReceipt', () => {

@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { SubScreen } from '#components/templates/SubScreen';
 import { ItemList } from '#components/organisms/ItemList';
 import { Text } from '#components/atoms/Text';
-import type { BadgeContent } from '#components/atoms/Badge';
+import type { BadgeVariant } from '#components/atoms/Badge';
 import { Icon, type IconTone } from '#utils/iconUtils';
 import { Button } from '#components/molecules/Button';
 import { AlertBanner } from '#components/molecules/AlertBanner';
@@ -15,11 +15,9 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { toastService } from '#/services/toastService';
 import { rowType } from '#/theme/foundations/type';
 import { useMoney } from '#domain/money';
+import { useToday } from '#hooks/useToday';
 import { fromDateKey, toDateKey } from '#/utils/dateUtils';
-import {
-  formatQuantityDisplay,
-  formatQuantityForDisplay,
-} from '#/utils/formatQuantity';
+import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { ReceiptLineSheet } from '../components/ReceiptLineSheet';
 import {
   useReceiptReview,
@@ -32,15 +30,6 @@ type ReviewSection = 'toAdd' | 'pending' | 'notAdded' | 'added';
 
 // Lines that will be added first, then those waiting for a match, those that
 // won't be added, and those already in.
-const SECTION_OF: Record<ReceiptRowStatus, ReviewSection> = {
-  add: 'toAdd',
-  failed: 'toAdd',
-  pending: 'pending',
-  guess: 'notAdded',
-  unmatched: 'notAdded',
-  skipped: 'notAdded',
-  added: 'added',
-};
 const SECTION_ORDER: readonly ReviewSection[] = [
   'toAdd',
   'pending',
@@ -48,20 +37,59 @@ const SECTION_ORDER: readonly ReviewSection[] = [
   'added',
 ];
 
-const STATUS_ICON: Record<ReceiptRowStatus, { name: string; tone: IconTone }> =
-  {
-    add: { name: 'checkmark-circle', tone: 'success' },
-    failed: { name: 'alert-circle', tone: 'error' },
-    added: { name: 'checkmark-done-circle', tone: 'success' },
-    pending: { name: 'hourglass-outline', tone: 'iconTertiary' },
-    guess: { name: 'help-circle', tone: 'warning' },
-    unmatched: { name: 'ellipse-outline', tone: 'iconTertiary' },
-    skipped: { name: 'remove-circle-outline', tone: 'iconTertiary' },
-  };
+interface StatusLook {
+  section: ReviewSection;
+  icon: string;
+  tone: IconTone;
+  badge?: { text: TranslationKey; variant: BadgeVariant };
+}
+
+const STATUS_LOOK: Record<ReceiptRowStatus, StatusLook> = {
+  add: {
+    section: 'toAdd',
+    icon: 'checkmark-circle',
+    tone: 'success',
+    badge: { text: 'receipts.review.onList', variant: 'primary' },
+  },
+  failed: {
+    section: 'toAdd',
+    icon: 'alert-circle',
+    tone: 'error',
+    badge: { text: 'receipts.review.notAdded', variant: 'danger' },
+  },
+  pending: {
+    section: 'pending',
+    icon: 'hourglass-outline',
+    tone: 'iconTertiary',
+  },
+  guess: {
+    section: 'notAdded',
+    icon: 'help-circle',
+    tone: 'warning',
+    badge: { text: 'labels.check', variant: 'warning' },
+  },
+  unmatched: {
+    section: 'notAdded',
+    icon: 'ellipse-outline',
+    tone: 'iconTertiary',
+  },
+  skipped: {
+    section: 'notAdded',
+    icon: 'remove-circle-outline',
+    tone: 'iconTertiary',
+  },
+  added: {
+    section: 'added',
+    icon: 'checkmark-done-circle',
+    tone: 'success',
+    badge: { text: 'labels.added', variant: 'success' },
+  },
+};
 
 export const ReceiptReviewScreen: React.FC = () => {
   const { t } = useTranslation();
   const money = useMoney();
+  const today = useToday();
   const { toPantryMain } = useAppNavigation();
   const {
     rows,
@@ -78,6 +106,7 @@ export const ReceiptReviewScreen: React.FC = () => {
     pantryName,
     pendingCount,
     applying,
+    listLoading,
     chooseLine,
     listItemNameFor,
     addChosen,
@@ -94,21 +123,19 @@ export const ReceiptReviewScreen: React.FC = () => {
     [finish],
   );
 
-  const [editing, setEditing] = useState<ReceiptReviewRow | null>(null);
+  // Kept after closing, so the sheet animates out full.
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [sheetVisible, setSheetVisible] = useState(false);
   const [opening, setOpening] = useState(0);
+  const editing = rows.find(row => row.index === editingIndex);
   const openLine = (id: string) => {
     const row = rows.find(candidate => String(candidate.index) === id);
-    if (!row || row.added) return;
-    setEditing(row);
+    if (!row || row.status === 'added') return;
+    setEditingIndex(row.index);
     setOpening(count => count + 1);
     setSheetVisible(true);
   };
   const closeSheet = () => setSheetVisible(false);
-  // The saved choice, not the one captured when the row was tapped.
-  const editingRow = editing
-    ? rows.find(row => row.index === editing.index)
-    : undefined;
 
   const subtitleOf = (row: ReceiptReviewRow) => {
     const { choice } = row;
@@ -128,33 +155,11 @@ export const ReceiptReviewScreen: React.FC = () => {
       case 'add':
       case 'added': {
         if (!choice) return row.printed;
-        const amount = choice.unitText
-          ? formatQuantityDisplay(choice.quantity, choice.unitText)
-          : formatQuantityForDisplay(choice.quantity);
         return t('receipts.review.chosenDetail', {
           printed: row.printed,
-          amount,
+          amount: formatQuantityDisplay(choice.quantity, choice.unitText),
         });
       }
-    }
-  };
-
-  const badgeOf = (row: ReceiptReviewRow): BadgeContent | undefined => {
-    switch (row.status) {
-      case 'added':
-        return { text: t('labels.added'), variant: 'success' };
-      case 'failed':
-        return { text: t('receipts.review.notAdded'), variant: 'danger' };
-      case 'guess':
-        return { text: t('labels.check'), variant: 'warning' };
-      case 'add':
-        return row.onList
-          ? { text: t('receipts.review.onList'), variant: 'primary' }
-          : undefined;
-      case 'pending':
-      case 'unmatched':
-      case 'skipped':
-        return undefined;
     }
   };
 
@@ -174,16 +179,22 @@ export const ReceiptReviewScreen: React.FC = () => {
   };
 
   const items = SECTION_ORDER.flatMap(section => {
-    const inSection = rows.filter(row => SECTION_OF[row.status] === section);
+    const inSection = rows.filter(
+      row => STATUS_LOOK[row.status].section === section,
+    );
     return inSection.map((row, at) => {
       const price = row.choice ? row.choice.price : row.price;
-      const icon = STATUS_ICON[row.status];
+      const { icon, tone, badge } = STATUS_LOOK[row.status];
       return {
         id: String(row.index),
         title: row.choice?.itemName ?? row.printed,
         subtitle: subtitleOf(row),
-        badge: badgeOf(row),
-        leftElement: <Icon name={icon.name} size="md" tone={icon.tone} />,
+        // A line to add is badged only when it ticks a list line off.
+        badge:
+          badge && (row.status !== 'add' || row.onList)
+            ? { text: t(badge.text), variant: badge.variant }
+            : undefined,
+        leftElement: <Icon name={icon} size="md" tone={tone} />,
         rightElement:
           price === undefined || price === null ? undefined : (
             <Text
@@ -222,7 +233,7 @@ export const ReceiptReviewScreen: React.FC = () => {
           void handleAdd();
         }}
         disabled={pendingCount === 0}
-        loading={applying}
+        loading={applying || listLoading}
         icon="add-circle-outline"
         testID={receiptsTestIDs.reviewAdd}
       >
@@ -269,7 +280,7 @@ export const ReceiptReviewScreen: React.FC = () => {
                     onChange={date => {
                       if (date) setPurchasedOn(toDateKey(date));
                     }}
-                    maximumDate={new Date()}
+                    maximumDate={fromDateKey(today)}
                     testID={receiptsTestIDs.reviewDate}
                   />
                   {dayIsScanDay ? (
@@ -322,9 +333,9 @@ export const ReceiptReviewScreen: React.FC = () => {
       />
       <ReceiptLineSheet
         visible={sheetVisible}
-        line={editing}
-        choice={editingRow?.choice}
-        candidates={editingRow?.candidates ?? []}
+        line={editing ?? null}
+        choice={editing?.choice}
+        candidates={editing?.candidates ?? []}
         listItemNameFor={key =>
           editing ? listItemNameFor(editing.index, key) : undefined
         }

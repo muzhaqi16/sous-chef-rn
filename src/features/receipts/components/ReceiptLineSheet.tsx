@@ -12,7 +12,7 @@ import { FormInput } from '#components/atoms/FormInput';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { Button } from '#components/molecules/Button';
-import { BaseSwitch } from '#components/atoms/BaseSwitch';
+import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
@@ -22,7 +22,6 @@ import type { ReceiptLineChoice } from '../store/receiptDraftStore';
 import type { ReceiptReviewLine } from '../utils/receiptReviewLines';
 import type { ListMatchKey } from '../utils/linkReceiptLines';
 import type { ReceiptCandidate } from '../hooks/useReceiptMatches';
-import { detailBesideName } from '../utils/receiptCandidates';
 import {
   receiptLineDefaults,
   receiptLineSchema,
@@ -65,12 +64,10 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   const unitId = useWatch({ control, name: 'unitId' });
   const unitText = useWatch({ control, name: 'unitValue' });
   const listItemName = listItemNameFor({ itemId, unitId, unitText });
-  const chipLabel = (candidate: ReceiptCandidate): string => {
-    const detail = detailBesideName(candidate, candidates);
-    return detail === null
-      ? candidate.itemName
-      : t('labels.nameWithDetail', { name: candidate.itemName, detail });
-  };
+  const chipLabel = ({ itemName, detail }: ReceiptCandidate): string =>
+    detail === null
+      ? itemName
+      : t('labels.nameWithDetail', { name: itemName, detail });
 
   const save = handleSubmit(values => {
     onSave(toLineChoice(values));
@@ -158,26 +155,22 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
         </View>
 
         {!!listItemName && (
-          <View style={styles.listToggle}>
-            <View style={styles.listToggleText}>
-              <Text role="bodyStrong">{t('receipts.review.tickOffTitle')}</Text>
-              <Text role="caption" tone="secondary">
-                {t('receipts.review.tickOffBody', { name: listItemName })}
-              </Text>
-            </View>
-            <Controller
-              control={control}
-              name="offList"
-              render={({ field }) => (
-                <BaseSwitch
-                  accessibilityLabel={t('receipts.review.tickOffTitle')}
-                  value={!field.value}
-                  onValueChange={on => field.onChange(!on)}
-                  testID={receiptsTestIDs.lineTickOff}
-                />
-              )}
-            />
-          </View>
+          <Controller
+            control={control}
+            name="offList"
+            render={({ field }) => (
+              <SettingSwitch
+                title={t('receipts.review.tickOffTitle')}
+                description={t('receipts.review.tickOffBody', {
+                  name: listItemName,
+                })}
+                value={!field.value}
+                onValueChange={on => field.onChange(!on)}
+                testID={receiptsTestIDs.lineTickOff}
+                containerStyle={styles.listToggle}
+              />
+            )}
+          />
         )}
 
         <View style={styles.amountRow}>
@@ -326,18 +319,10 @@ const styles = StyleSheet.create(theme => ({
     flex: 0.4,
   },
   listToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.md,
     marginBottom: theme.spacing.lg,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
+    borderBottomWidth: theme.borderWidth.none,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
-  },
-  listToggleText: {
-    flex: 1,
-    gap: theme.spacing.xs,
   },
   unitField: {
     flex: 0.6,

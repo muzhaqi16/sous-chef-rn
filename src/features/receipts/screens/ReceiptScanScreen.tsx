@@ -1,7 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
 import { Screen, type ScreenHeaderConfig } from '#components/templates/Screen';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
@@ -11,11 +10,76 @@ import { Loading } from '#components/molecules/Loading';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { alertService } from '#/services/alertService';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { useReceiptScan } from '../hooks/useReceiptScan';
-import { useServerReceiptParse } from '../hooks/useServerReceiptParse';
+import {
+  useServerReceiptParse,
+  type ServerReadingStatus,
+} from '../hooks/useServerReceiptParse';
 import { formatDateTime } from '#/utils/formatters/date';
 import { receiptReviewLines } from '../utils/receiptReviewLines';
 import { receiptsTestIDs } from '../testIDs';
+
+interface BannerCopy {
+  title: TranslationKey;
+  body?: TranslationKey;
+}
+
+interface ReadingBanner extends BannerCopy {
+  variant: 'info' | 'warning';
+  icon: string;
+  /** Its copy when the receipt went to the server as photos. */
+  photos?: BannerCopy;
+}
+
+// What the saved screen says of the server's reading, past `reading`'s spinner.
+const READING_BANNER: Record<ServerReadingStatus, ReadingBanner | null> = {
+  none: null,
+  reading: null,
+  offline: {
+    variant: 'info',
+    icon: 'cloud-offline-outline',
+    title: 'receipts.saved.offline',
+  },
+  retryLater: {
+    variant: 'info',
+    icon: 'time-outline',
+    title: 'receipts.saved.retryLaterTitle',
+    body: 'receipts.saved.retryLaterBody',
+  },
+  unreadable: {
+    variant: 'warning',
+    icon: 'alert-circle-outline',
+    title: 'receipts.unreadable.title',
+    body: 'receipts.unreadable.body',
+  },
+  limited: {
+    variant: 'info',
+    icon: 'time-outline',
+    title: 'receipts.saved.limitedTitle',
+    body: 'receipts.saved.limitedBody',
+    photos: {
+      title: 'receipts.saved.photoLimitedTitle',
+      body: 'receipts.saved.photoLimitedBody',
+    },
+  },
+  unavailable: {
+    variant: 'info',
+    icon: 'information-circle-outline',
+    title: 'receipts.saved.notReadTitle',
+    body: 'receipts.saved.notReadBody',
+    photos: {
+      title: 'receipts.saved.photoNotReadTitle',
+      body: 'receipts.saved.photoNotReadBody',
+    },
+  },
+  tooLong: {
+    variant: 'info',
+    icon: 'information-circle-outline',
+    title: 'receipts.saved.tooLongTitle',
+    body: 'receipts.saved.tooLongBody',
+  },
+};
 
 export const ReceiptScanScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -74,6 +138,24 @@ export const ReceiptScanScreen: React.FC = () => {
       : 0;
     // A receipt sent as photos keeps no text until the server reads it.
     const sentPhotos = !!draft.photoKeys;
+    const readingBanner = (banner: ReadingBanner) => {
+      const { title, body } =
+        sentPhotos && banner.photos ? banner.photos : banner;
+      return (
+        <AlertBanner
+          variant={banner.variant}
+          icon={banner.icon}
+          iconLibrary="Ionicons"
+          title={t(title)}
+          subtitle={
+            body
+              ? t(body, { time: retryAt && formatDateTime(retryAt) })
+              : undefined
+          }
+        />
+      );
+    };
+    const banner = READING_BANNER[readingStatus];
     return (
       <Screen header={header} testID={receiptsTestIDs.scanScreen}>
         <View style={styles.saved}>
@@ -95,79 +177,7 @@ export const ReceiptScanScreen: React.FC = () => {
               testID={receiptsTestIDs.savedReading}
             />
           )}
-          {readingStatus === 'offline' && (
-            <AlertBanner
-              variant="info"
-              icon="cloud-offline-outline"
-              iconLibrary="Ionicons"
-              title={t('receipts.saved.offline')}
-            />
-          )}
-          {readingStatus === 'retryLater' && (
-            <AlertBanner
-              variant="info"
-              icon="time-outline"
-              iconLibrary="Ionicons"
-              title={t('receipts.saved.retryLaterTitle')}
-              subtitle={t('receipts.saved.retryLaterBody')}
-            />
-          )}
-          {readingStatus === 'unreadable' && (
-            <AlertBanner
-              variant="warning"
-              icon="alert-circle-outline"
-              iconLibrary="Ionicons"
-              title={t('receipts.unreadable.title')}
-              subtitle={t('receipts.unreadable.body')}
-            />
-          )}
-          {readingStatus === 'limited' && retryAt !== undefined && (
-            <AlertBanner
-              variant="info"
-              icon="time-outline"
-              iconLibrary="Ionicons"
-              title={
-                sentPhotos
-                  ? t('receipts.saved.photoLimitedTitle')
-                  : t('receipts.saved.limitedTitle')
-              }
-              subtitle={
-                sentPhotos
-                  ? t('receipts.saved.photoLimitedBody', {
-                      time: formatDateTime(retryAt),
-                    })
-                  : t('receipts.saved.limitedBody', {
-                      time: formatDateTime(retryAt),
-                    })
-              }
-            />
-          )}
-          {readingStatus === 'unavailable' && (
-            <AlertBanner
-              variant="info"
-              icon="information-circle-outline"
-              iconLibrary="Ionicons"
-              title={
-                sentPhotos
-                  ? t('receipts.saved.photoNotReadTitle')
-                  : t('receipts.saved.notReadTitle')
-              }
-              subtitle={
-                sentPhotos
-                  ? t('receipts.saved.photoNotReadBody')
-                  : t('receipts.saved.notReadBody')
-              }
-            />
-          )}
-          {readingStatus === 'tooLong' && (
-            <AlertBanner
-              variant="info"
-              icon="information-circle-outline"
-              iconLibrary="Ionicons"
-              title={t('receipts.saved.tooLongTitle')}
-              subtitle={t('receipts.saved.tooLongBody')}
-            />
-          )}
+          {banner ? readingBanner(banner) : null}
           <View style={styles.actions}>
             {itemCount > 0 && (
               <Button

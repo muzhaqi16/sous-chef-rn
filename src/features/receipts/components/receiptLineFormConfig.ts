@@ -1,14 +1,14 @@
 import { boolean, object, string, type ObjectSchema } from 'yup';
-import { t, type TranslationKey } from '#/i18n';
+import { lazyMessage, quantityRule } from '#/utils/validation/common';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatQuantityForInput } from '#/utils/formatQuantity';
 import { formatNumberForInput } from '#/utils/formatters/number';
 import type { ReceiptLineChoice } from '../store/receiptDraftStore';
-import type { ReceiptReviewLine } from '../utils/receiptReviewLines';
-
-// Messages resolve LAZILY: the schema is built once at module scope.
-const msg = (key: TranslationKey) => (): string => t(key);
+import {
+  seedChoice,
+  type ReceiptReviewLine,
+} from '../utils/receiptReviewLines';
 
 export interface ReceiptLineFormValues {
   itemName: string;
@@ -35,22 +35,16 @@ const parsedPrice = (value: string) => {
 };
 
 export const receiptLineSchema: ObjectSchema<ReceiptLineFormValues> = object({
-  itemName: string().trim().required(msg('errors.itemNameRequired')),
+  itemName: string().trim().required(lazyMessage('errors.itemNameRequired')),
   itemId: string().nullable().defined(),
-  quantityInput: string()
-    .defined()
-    .test(
-      'positive',
-      msg('errors.invalidQuantity'),
-      value => parsedQuantity(value) !== null,
-    ),
+  quantityInput: quantityRule('errors.invalidQuantity'),
   unitValue: string().defined(),
   unitId: string().nullable().defined(),
   priceInput: string()
     .defined()
     .test(
       'price',
-      msg('receipts.review.invalidPrice'),
+      lazyMessage('receipts.review.invalidPrice'),
       value => parsedPrice(value) !== undefined,
     ),
   offList: boolean().defined(),
@@ -60,26 +54,19 @@ export const receiptLineSchema: ObjectSchema<ReceiptLineFormValues> = object({
 export const receiptLineDefaults = (
   line: ReceiptReviewLine,
   choice: ReceiptLineChoice | undefined,
-): ReceiptLineFormValues =>
-  choice
-    ? {
-        itemName: choice.itemName,
-        itemId: choice.itemId,
-        quantityInput: formatQuantityForInput(choice.quantity),
-        unitValue: choice.unitText,
-        unitId: choice.unitId,
-        priceInput: formatNumberForInput(choice.price),
-        offList: choice.offList ?? false,
-      }
-    : {
-        itemName: '',
-        itemId: null,
-        quantityInput: formatQuantityForInput(line.quantity ?? 1),
-        unitValue: line.unit ?? '',
-        unitId: null,
-        priceInput: formatNumberForInput(line.price),
-        offList: false,
-      };
+): ReceiptLineFormValues => {
+  const { itemName, itemId, quantity, unitText, unitId, price, offList } =
+    choice ?? seedChoice(line);
+  return {
+    itemName,
+    itemId,
+    quantityInput: formatQuantityForInput(quantity),
+    unitValue: unitText,
+    unitId,
+    priceInput: formatNumberForInput(price),
+    offList: offList ?? false,
+  };
+};
 
 /** A valid form as the choice the draft keeps. */
 export const toLineChoice = (

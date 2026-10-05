@@ -1,3 +1,4 @@
+import type { ReceiptLineChoice } from '../store/receiptDraftStore';
 import type { ParsedReceipt } from './structureReceipt';
 import { toCents } from './money';
 
@@ -13,6 +14,16 @@ export interface ReceiptReviewLine {
   /** What was paid for the line once its discounts are taken off. */
   price?: number;
 }
+
+/** A line as printed, before an item is picked for it: its amount and price. */
+export const seedChoice = (line: ReceiptReviewLine): ReceiptLineChoice => ({
+  itemId: null,
+  itemName: '',
+  quantity: line.quantity ?? 1,
+  unitId: null,
+  unitText: line.unit ?? '',
+  price: line.price ?? null,
+});
 
 /** The receipt's item lines, each priced after the discounts that name it. */
 export function receiptReviewLines(

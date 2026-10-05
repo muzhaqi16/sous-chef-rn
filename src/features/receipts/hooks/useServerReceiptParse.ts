@@ -13,10 +13,7 @@ import {
   TopLevelErrorCode,
 } from '#/graphql/generated/schemaTypes';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import {
-  appliedPayload,
-  validationFieldName,
-} from '#/utils/errors/mutationPayload';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { getDeviceLocale } from '#/utils/deviceLocale';
 import { todayKey } from '#/utils/dateUtils';
@@ -28,13 +25,13 @@ import {
   type ReceiptParseReadersFragment,
 } from '#/graphql/readers/receiptParseReaders.generated';
 import {
-  useReceiptDraftStore,
-  type ServerReceiptParse,
+  useReceiptDraft,
+  useReceiptDraftActions,
+  type ServerParseOutcome,
 } from '../store/receiptDraftStore';
 import { fromServerReceipt } from '../utils/serverReceipt';
 import { isPlausibleReceiptDay } from '../utils/receiptDate';
 import { receiptReviewLines } from '../utils/receiptReviewLines';
-import type { ParsedReceipt } from '../utils/structureReceipt';
 import {
   CreateReceiptParseDocument,
   ReceiptParseDocument,
@@ -84,14 +81,10 @@ function isVerdict(error: unknown): boolean {
   });
 }
 
-type Outcome =
-  | Exclude<ServerReceiptParse['state'], 'limited'>
-  | { parsed: ParsedReceipt; purchasedOn?: string };
-
 /** What a finished parse leaves on the draft; nothing while it runs. */
 function outcomeOf(
   parse: NonNullable<ReceiptParseQuery['receiptParse']>,
-): Outcome | undefined {
+): ServerParseOutcome | undefined {
   switch (parse.status) {
     case ReceiptParseStatus.Pending:
       return undefined;
@@ -129,11 +122,8 @@ function outcomeOf(
 export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
   const { t } = useTranslation();
   const isOnline = useIsOnline();
-  const draft = useReceiptDraftStore(state => state.draft);
-  const askServerParse = useReceiptDraftStore(state => state.askServerParse);
-  const settleServerParse = useReceiptDraftStore(
-    state => state.settleServerParse,
-  );
+  const draft = useReceiptDraft();
+  const { askServerParse, settleServerParse } = useReceiptDraftActions();
   const client = useApolloClient();
   const [create] = useMutation(CreateReceiptParseDocument);
   // The parse this visit sent, so it is sent once per visit, never in a loop.
@@ -182,20 +172,13 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
       ? { photos: draft.photoKeys }
       : { pages: draft.pages };
     const send = async () => {
-      let error: unknown;
       const settled = await settleMutation(
-        async () => {
-          const result = await create({
+        () =>
+          create({
             variables: {
               input: { id, ...content, ...(locale ? { locale } : {}) },
             },
-          }).catch((thrown: unknown) => {
-            error = thrown;
-            throw thrown;
-          });
-          error = result.error;
-          return result;
-        },
+          }),
         {
           document: CreateReceiptParseDocument,
           fallback: t('errors.generic'),
@@ -203,26 +186,20 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
           present: 'none',
         },
       );
-      const status = appliedPayload(settled.data)?.receiptParse.status;
+      const { error } = settled;
+      const accepted = appliedPayload(settled.data);
       const retryAfter = getRateLimitDetails(error)?.retryAfter;
-      if (status === ReceiptParseStatus.Unavailable) {
-        settleServerParse(id, 'unavailable');
-      } else if (status === ReceiptParseStatus.Failed) {
-        settleServerParse(id, 'failed');
-      } else if (status) {
+      if (accepted) {
         // A finished parse (a resend, or a fast worker) is settled from what
         // the payload wrote to the cache, without a poll.
-        const parse =
-          status === ReceiptParseStatus.Parsed
-            ? client.cache.readFragment<ReceiptParseReadersFragment>({
-                id: client.cache.identify({ __typename: 'ReceiptParse', id }),
-                fragment: ReceiptParseReadersFragmentDoc,
-              })
-            : null;
+        const parse = client.cache.readFragment<ReceiptParseReadersFragment>({
+          id: client.cache.identify({ __typename: 'ReceiptParse', id }),
+          fragment: ReceiptParseReadersFragmentDoc,
+        });
         const outcome = parse ? outcomeOf(parse) : undefined;
         if (outcome === undefined) setPolling(id);
         else settleServerParse(id, outcome);
-      } else if (validationFieldName(settled.data) === 'pages') {
+      } else if (settled.failure?.field === 'pages') {
         // Every refusal on `pages` is a size bound: the scan caps the pages at
         // ten, so it is the character limit, which only the API knows.
         settleServerParse(id, 'tooLong');

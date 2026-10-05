@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { useShallow } from 'zustand/react/shallow';
 import { zustandStorage } from '#/storage/mmkv';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
 import type { ParsedReceipt } from '../utils/structureReceipt';
@@ -31,6 +32,11 @@ export type ServerReceiptParse =
     }
   /** Over the daily allowance: asked again on a visit after `retryAt`. */
   | { id: string; state: 'limited'; retryAt: string };
+
+/** What a finished server parse leaves on the draft: a state, or the receipt it read. */
+export type ServerParseOutcome =
+  | Exclude<ServerReceiptParse['state'], 'limited'>
+  | { parsed: ParsedReceipt; purchasedOn?: string };
 
 export interface ReceiptDraft {
   /** Each page's redacted text, in scan order; never an image. */
@@ -78,17 +84,12 @@ interface ReceiptDraftState {
    */
   askServerParse: (id: string) => void;
   /**
-   * Records what became of server parse `id`: a state, the receipt it read,
-   * when the daily allowance lets it be asked again, or null to ask again
-   * later. Ignored once the draft has moved on.
+   * Records what became of server parse `id`, or when the daily allowance lets
+   * it be asked again. Ignored once the draft has moved on.
    */
   settleServerParse: (
     id: string,
-    outcome:
-      | Exclude<ServerReceiptParse['state'], 'limited'>
-      | { retryAt: string }
-      | { parsed: ParsedReceipt; purchasedOn?: string }
-      | null,
+    outcome: ServerParseOutcome | { retryAt: string },
   ) => void;
   clearDraft: () => void;
 }
@@ -140,10 +141,6 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
       settleServerParse: (id, outcome) =>
         set(({ draft }) => {
           if (draft?.serverParse?.id !== id) return {};
-          if (outcome === null) {
-            const { serverParse: _asked, ...rest } = draft;
-            return { draft: rest };
-          }
           if (typeof outcome === 'string') {
             return { draft: { ...draft, serverParse: { id, state: outcome } } };
           }
@@ -182,3 +179,9 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
 registerSessionScopedStore('receiptDraft', () =>
   useReceiptDraftStore.getState().clearDraft(),
 );
+
+export const useReceiptDraft = () => useReceiptDraftStore(state => state.draft);
+
+/** The draft's writes. Stable, so reading them never re-renders. */
+export const useReceiptDraftActions = () =>
+  useReceiptDraftStore(useShallow(({ draft: _draft, ...actions }) => actions));
