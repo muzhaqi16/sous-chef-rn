@@ -6863,6 +6863,11 @@ input MarkRecipeAsCookedInput {
   match the CUID2 format; invalid formats are rejected by ID validation.
   """
   id: ID
+  """
+  What was actually used, per ingredient; an entry of 0 means none. An
+  ingredient with no entry deducts its scaled recipe amount, except an
+  optional one ("salt to taste"), which is deducted only when an entry names it.
+  """
   ingredientsUsed: [IngredientUsageInput!]
   notes: String
   recipeId: ID!
@@ -7637,7 +7642,7 @@ input MoveShoppingItemToPantryInput {
   amount.packages. Omitted, the line's purchasedPrice is the price paid,
   recorded as PURCHASE whatever priceSource says; with neither, the purchase
   records no price. An estimate is never a price paid, though it still values
-  the stock. Not with totalCost.
+  the stock. A totalCost sent with it wins.
   """
   actualPrice: Float
   """What was bought: an amount in a unit, or a count of packages."""
@@ -7691,7 +7696,7 @@ input MoveShoppingItemToPantryInput {
   today: LocalDate
   """
   The total paid for the line, as the receipt states it. Recorded exactly; the
-  unit price is derived from it. Not with actualPrice.
+  unit price is derived from it, and it wins over actualPrice.
   """
   totalCost: Float
 }
@@ -12679,7 +12684,9 @@ type RecipeIngredient {
   availablePantryItemIds: [ID!]!
   """
   quantity auto-converted to the caller's unit system (see UnitSystem):
-  metric when no system is known.
+  metric when no system is known. A recipe source's own figure in that system
+  is used while its measure still states quantity; a unit both systems use (a
+  spoon, a pinch) reads as itself.
   
   Viewer-scoped: it resolves through the caller's preferredUnitSystem and, for
   SYSTEM, their device's locale, so two callers reading the same recipe get
