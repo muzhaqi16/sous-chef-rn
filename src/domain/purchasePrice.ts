@@ -1,7 +1,7 @@
 /**
- * The API's `purchasedPrice` is PER-UNIT (the server records
- * `totalPrice = purchasedPrice × purchasedQuantity`), while the Mark Purchased
- * sheet asks for the TOTAL on the receipt. The conversion lives here.
+ * The API's per-unit prices (`purchasedPrice`, `costPerUnit`) are recorded as
+ * `total = price × quantity`, while the Mark Purchased sheet, a move and a
+ * receipt state the TOTAL paid. The conversion lives here.
  */
 
 /**

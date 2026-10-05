@@ -16,10 +16,7 @@ import {
   UpdateShoppingListItemDocument,
   UpdateShoppingListItemQuantityDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  BarcodeAddItemToShoppingListDocument,
-  BarcodeCreatePantryItemDocument,
-} from '#features/barcode/hooks/useAddScannedItem.generated';
+import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import {
   asQueued,
   withCurrentUnits,
@@ -37,7 +34,6 @@ import {
 export const REPLAY_PREPARATIONS: Readonly<Record<string, ReplayPreparer>> =
   byOperation([
     [CreatePantryItemDocument, preparePantryItemCreate],
-    [BarcodeCreatePantryItemDocument, preparePantryItemCreate],
     [UpdatePantryItemDocument, withCurrentUnits],
     [UpdatePantryItemQuantityDocument, withCurrentUnits],
     [DeletePantryItemDocument, asQueued],

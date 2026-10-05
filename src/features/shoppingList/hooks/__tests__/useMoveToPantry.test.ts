@@ -18,7 +18,11 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
 import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
-import { useMoveToPantry, type MoveToPantryOutcome } from '../useMoveToPantry';
+import {
+  useMoveToPantry,
+  type MoveToPantryInput,
+  type MoveToPantryOutcome,
+} from '../useMoveToPantry';
 
 // Spread the real module: a partial factory silently omits whatever the hook
 // imports NEXT — the local-first move added two more updaters, and a trimmed
@@ -68,6 +72,12 @@ function createItem(
   } as Partial<ShoppingListItemDisplayFragment> as ShoppingListItemDisplayFragment;
 }
 
+const MOVE_INPUT: MoveToPantryInput = {
+  pantryId: 'pantry-1',
+  amount: { measured: { quantity: 2 } },
+  removeFromList: true,
+};
+
 function moveMock() {
   return recordMock(MoveShoppingItemToPantryDocument, {
     data: {
@@ -97,11 +107,7 @@ describe('useMoveToPantry', () => {
 
     let moveResult: MoveToPantryOutcome | undefined;
     await act(async () => {
-      moveResult = await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        amount: { measured: { quantity: 2 } },
-        removeFromList: true,
-      });
+      moveResult = await result.current.moveToPantry(createItem(), MOVE_INPUT);
     });
 
     expect(move.fired).toContainEqual({
@@ -135,7 +141,7 @@ describe('useMoveToPantry', () => {
 
     await act(async () => {
       await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
+        ...MOVE_INPUT,
         amount: { measured: { quantity: 3, unitId: 'unit-2' } },
         storageState: StorageState.Frozen,
         expiresOn: '2024-12-31',
@@ -167,9 +173,8 @@ describe('useMoveToPantry', () => {
 
     await act(async () => {
       await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
+        ...MOVE_INPUT,
         amount: { measured: { quantity: 1 } },
-        removeFromList: true,
       });
     });
 
@@ -193,9 +198,8 @@ describe('useMoveToPantry', () => {
     let moveResult: MoveToPantryOutcome | undefined;
     await act(async () => {
       moveResult = await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
+        ...MOVE_INPUT,
         amount: { measured: { quantity: 1 } },
-        removeFromList: true,
       });
     });
 
@@ -227,9 +231,8 @@ describe('useMoveToPantry', () => {
     let moveResult: MoveToPantryOutcome | undefined;
     await act(async () => {
       moveResult = await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
+        ...MOVE_INPUT,
         amount: { measured: { quantity: 1 } },
-        removeFromList: true,
       });
     });
 
@@ -274,9 +277,8 @@ describe('useMoveToPantry', () => {
     let moveResult: MoveToPantryOutcome | undefined;
     await act(async () => {
       moveResult = await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
+        ...MOVE_INPUT,
         amount: { measured: { quantity: 1 } },
-        removeFromList: true,
       });
     });
 
@@ -307,9 +309,8 @@ describe('useMoveToPantry', () => {
 
     await act(async () => {
       await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
+        ...MOVE_INPUT,
         amount: { measured: { quantity: 1 } },
-        removeFromList: true,
       });
     });
 
@@ -343,11 +344,7 @@ describe('useMoveToPantry', () => {
       );
 
       await act(async () => {
-        await result.current.moveToPantry(createItem(), {
-          pantryId: 'pantry-1',
-          amount: { measured: { quantity: 2 } },
-          removeFromList: true,
-        });
+        await result.current.moveToPantry(createItem(), MOVE_INPUT);
       });
 
       expect(move.fired).toHaveLength(1);
@@ -362,11 +359,7 @@ describe('useMoveToPantry', () => {
       );
 
       await act(async () => {
-        await result.current.moveToPantry(createItem(), {
-          pantryId: 'pantry-1',
-          amount: { measured: { quantity: 2 } },
-          removeFromList: true,
-        });
+        await result.current.moveToPantry(createItem(), MOVE_INPUT);
       });
 
       const input = move.fired[0]?.input as {
@@ -393,11 +386,7 @@ describe('useMoveToPantry', () => {
       );
 
       await act(async () => {
-        await result.current.moveToPantry(createItem(), {
-          pantryId: 'pantry-1',
-          amount: { measured: { quantity: 2 } },
-          removeFromList: true,
-        });
+        await result.current.moveToPantry(createItem(), MOVE_INPUT);
       });
 
       expect(removeItemFromShoppingListForMoveToPantry).toHaveBeenCalledWith(
@@ -419,8 +408,7 @@ describe('useMoveToPantry', () => {
 
       await act(async () => {
         await result.current.moveToPantry(createItem(), {
-          pantryId: 'pantry-1',
-          amount: { measured: { quantity: 2 } },
+          ...MOVE_INPUT,
           removeFromList: false,
         });
       });
@@ -436,11 +424,7 @@ describe('useMoveToPantry', () => {
       );
 
       await act(async () => {
-        await result.current.moveToPantry(createItem(), {
-          pantryId: 'pantry-1',
-          amount: { measured: { quantity: 2 } },
-          removeFromList: true,
-        });
+        await result.current.moveToPantry(createItem(), MOVE_INPUT);
       });
 
       expect(move.fired).toHaveLength(1);
@@ -521,11 +505,7 @@ describe('useMoveToPantry pantry item count', () => {
     );
 
     await act(async () => {
-      await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        amount: { measured: { quantity: 2 } },
-        removeFromList: true,
-      });
+      await result.current.moveToPantry(createItem(), MOVE_INPUT);
     });
 
     expect(readTotal(cache)).toBe(64);
@@ -545,10 +525,9 @@ describe('useMoveToPantry pantry item count', () => {
 
     await act(async () => {
       await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
+        ...MOVE_INPUT,
         amount: { measured: { quantity: 5 } },
         totalCost: 0.59,
-        removeFromList: true,
       });
     });
 
@@ -605,10 +584,9 @@ describe('useMoveToPantry pantry item count', () => {
 
       await act(async () => {
         await result.current.moveToPantry(line, {
-          pantryId: 'pantry-1',
+          ...MOVE_INPUT,
           amount: { packages: { count: 2 } },
           totalCost: 3.98,
-          removeFromList: true,
         });
       });
 
@@ -659,11 +637,7 @@ describe('useMoveToPantry pantry item count', () => {
     );
 
     await act(async () => {
-      await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        amount: { measured: { quantity: 2 } },
-        removeFromList: true,
-      });
+      await result.current.moveToPantry(createItem(), MOVE_INPUT);
     });
 
     expect(readTotal(cache)).toBe(63);
@@ -689,11 +663,7 @@ describe('useMoveToPantry pantry item count', () => {
     );
 
     await act(async () => {
-      await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        amount: { measured: { quantity: 2 } },
-        removeFromList: true,
-      });
+      await result.current.moveToPantry(createItem(), MOVE_INPUT);
     });
 
     // The removal is stubbed here, so it records no counter change to pass on.
@@ -720,11 +690,7 @@ describe('useMoveToPantry pantry item count', () => {
     );
 
     await act(async () => {
-      await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        amount: { measured: { quantity: 2 } },
-        removeFromList: true,
-      });
+      await result.current.moveToPantry(createItem(), MOVE_INPUT);
     });
 
     const mintedId = (rejected.fired[0]!.input as { pantryItemId: string })
@@ -749,11 +715,7 @@ describe('useMoveToPantry pantry item count', () => {
     );
 
     await act(async () => {
-      await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        amount: { measured: { quantity: 2 } },
-        removeFromList: true,
-      });
+      await result.current.moveToPantry(createItem(), MOVE_INPUT);
     });
 
     const mintedId = (move.fired[0]!.input as { pantryItemId: string })
@@ -787,11 +749,7 @@ describe('useMoveToPantry pantry item count', () => {
     );
 
     await act(async () => {
-      await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        amount: { measured: { quantity: 2 } },
-        removeFromList: true,
-      });
+      await result.current.moveToPantry(createItem(), MOVE_INPUT);
     });
 
     expect(refetchQueries).toHaveBeenCalled();
@@ -821,11 +779,7 @@ describe('useMoveToPantry pantry item count', () => {
     );
 
     await act(async () => {
-      await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
-        amount: { measured: { quantity: 2 } },
-        removeFromList: true,
-      });
+      await result.current.moveToPantry(createItem(), MOVE_INPUT);
     });
 
     expect(readTotal(cache)).toBe(63);
@@ -939,8 +893,7 @@ describe('useMoveToPantry keeping the row on the list', () => {
     );
     await act(async () => {
       await result.current.moveToPantry(row, {
-        pantryId: 'pantry-1',
-        amount: { measured: { quantity: 2 } },
+        ...MOVE_INPUT,
         removeFromList: false,
       });
     });
@@ -978,8 +931,7 @@ describe('useMoveToPantry keeping the row on the list', () => {
 
     await act(async () => {
       await result.current.moveToPantry(unpurchased, {
-        pantryId: 'pantry-1',
-        amount: { measured: { quantity: 2 } },
+        ...MOVE_INPUT,
         removeFromList: false,
       });
     });
@@ -1094,9 +1046,8 @@ describe('useMoveToPantry default expiry', () => {
 
     await act(async () => {
       await result.current.moveToPantry(createItem(), {
-        pantryId: 'pantry-1',
+        ...MOVE_INPUT,
         amount: { measured: { quantity: 1 } },
-        removeFromList: true,
       });
     });
 

@@ -5,7 +5,10 @@ import {
   reconcileCreatedPantryItem,
   revertOptimisticPantryItem,
 } from '#features/pantry/cache/items';
-import { writeLocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
+import {
+  writeLocalPantryItem,
+  type LocalPantryItem,
+} from '#features/pantry/cache/writeLocalPantryItem';
 import { getPantryItemDuplicateFromResult } from '#domain/pantryItemDuplicate';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -23,34 +26,47 @@ export type AddPantryItemOutcome =
   /** `reason` is the refusal as the user is told it. */
   | { status: 'rejected'; reason: string };
 
+interface AddItemOptions {
+  /** What the row shows before the server answers, over what `input` states. */
+  local?: Omit<LocalPantryItem, 'pantryId' | 'itemName'>;
+  /** `'alert'` tells the user about a refusal here as well as in `reason`. */
+  present?: 'alert' | 'none';
+  /** The refusal copy when nothing more specific describes it. */
+  fallback?: string;
+}
+
 /**
  * The pantry's one local-first create: the row is written before the mutation
  * fires, withdrawn on a refusal or a duplicate, and kept when the create is
- * queued. The add sheet, onboarding's picker and a receipt's apply all use it.
+ * queued. The add sheet and its details form, onboarding's picker, a barcode
+ * scan and a receipt's apply all use it.
  */
 export function usePantryIntake(pantryId: string | undefined) {
   const { t } = useTranslation();
   const client = useApolloClient();
 
-  const [createPantryItem] = useMutation(CreatePantryItemDocument, {
-    context: { localFirst: true },
-    update: (cache, { data }, { variables }) => {
-      const payload = appliedPayload(data);
-      if (!payload || !pantryId) return;
-      const pantryItem = payload.pantryItem;
-      // Read outside the try: `?.` is a value block, and one inside a try body
-      // bails the React Compiler out of the whole function.
-      const clientId = variables?.input.id;
+  const [createPantryItem, { loading: adding }] = useMutation(
+    CreatePantryItemDocument,
+    {
+      context: { localFirst: true },
+      update: (cache, { data }, { variables }) => {
+        const payload = appliedPayload(data);
+        if (!payload || !pantryId) return;
+        const pantryItem = payload.pantryItem;
+        // Read outside the try: `?.` is a value block, and one inside a try
+        // body bails the React Compiler out of the whole function.
+        const clientId = variables?.input.id;
 
-      try {
-        reconcileCreatedPantryItem(cache, pantryId, pantryItem, clientId);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Cache update failed for createPantryItem:',
-        });
-      }
+        try {
+          reconcileCreatedPantryItem(cache, pantryId, pantryItem, clientId);
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Cache update failed for createPantryItem:',
+          });
+        }
+      },
     },
-  });
+  );
 
   /**
    * Write the row, fire the create, and report what became of it. The row is
@@ -60,9 +76,14 @@ export function usePantryIntake(pantryId: string | undefined) {
   const addItem = async (
     itemName: string,
     input: Omit<CreatePantryItemInput, 'id' | 'pantryId' | 'today'>,
+    {
+      local,
+      present = 'none',
+      fallback = t('errors.addItemFailedRetry'),
+    }: AddItemOptions = {},
   ): Promise<AddPantryItemOutcome> => {
     if (!pantryId) {
-      return { status: 'rejected', reason: t('errors.addItemFailedRetry') };
+      return { status: 'rejected', reason: fallback };
     }
 
     const id = generateEntityId();
@@ -71,7 +92,7 @@ export function usePantryIntake(pantryId: string | undefined) {
     // has the row — see `unconfirmedCreates`.
     unconfirmedCreates.mark(id);
     // Built outside the try: a value block inside a try body bails the compiler.
-    const localRow = {
+    const localRow: LocalPantryItem = {
       pantryId,
       itemName,
       itemId: input.item.id ?? null,
@@ -79,6 +100,7 @@ export function usePantryIntake(pantryId: string | undefined) {
       unitId: input.unit?.id,
       storageState: input.storage?.storageState,
       acquisitionMethod: input.purchase?.acquisitionMethod,
+      ...local,
     };
 
     try {
@@ -126,22 +148,22 @@ export function usePantryIntake(pantryId: string | undefined) {
         existingPantryItemId: duplicate.existingPantryItemId,
       };
     } else {
-      // Keeps the row for a queued create and for IDEMPOTENT_REPLAY; the
-      // caller tells the user about a refusal.
+      // Keeps the row for a queued create and for IDEMPOTENT_REPLAY. A refusal
+      // naming a field reads as its localized `errors.field.*` copy.
       const settled = await settleMutation(
         () => (answered ? Promise.resolve(answered) : Promise.reject(thrown)),
         {
           document: CreatePantryItemDocument,
-          fallback: t('errors.addItemFailedRetry'),
+          fallback,
           onFailed: () =>
             revertOptimisticPantryItem(client.cache, pantryId, id),
-          present: 'none',
+          present,
         },
       );
       if (settled.status === 'failed') {
         outcome = {
           status: 'rejected',
-          reason: settled.failure?.body ?? t('errors.addItemFailedRetry'),
+          reason: settled.failure?.body ?? fallback,
         };
       }
     }
@@ -152,5 +174,5 @@ export function usePantryIntake(pantryId: string | undefined) {
     return outcome;
   };
 
-  return { addItem };
+  return { addItem, adding };
 }

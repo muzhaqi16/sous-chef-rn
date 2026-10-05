@@ -1421,8 +1421,6 @@ describe('optimistic entity completeness', () => {
         'covered: the pantry event read-back case, and the fragment comparison below',
       'src/features/notifications/utils/notificationCacheWrites.ts':
         'covered: the notification feed fragment comparison above',
-      'src/features/barcode/hooks/useAddScannedItem.ts':
-        'covered indirectly: the row is written in full by writeLocalPantryItem before the mutation fires, so the narrow response merges onto a complete record — the optimistic-add case above is what holds that',
       'src/features/catalog/hooks/useCreateStorageLocation.ts':
         'covered: the GetStorageLocations reader is compared below',
       'src/features/catalog/hooks/useStorageLocationManagement.ts':

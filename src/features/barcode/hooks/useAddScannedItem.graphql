@@ -1,7 +1,7 @@
-# Composed locally: pantry/graphql and shoppingList/graphql are internal to
-# their features. Each result selects only the ids the cache updaters read.
-# Barcode-prefixed so they do not collide with the richer same-mutation
-# operations those features own; the offline queue registers them by name.
+# Composed locally: shoppingList/graphql is internal to its feature.
+# Barcode-prefixed so it does not collide with the richer same-mutation
+# operation that feature owns; the offline queue registers it by name. The
+# pantry add and restock go through the pantry's own hooks.
 
 mutation BarcodeAddItemToShoppingList($input: AddItemsToShoppingListInput!) {
   addItemsToShoppingList(input: $input) {
@@ -38,108 +38,6 @@ mutation BarcodeAddItemToShoppingList($input: AddItemsToShoppingListInput!) {
     }
     ... on ValidationError {
       field
-    }
-  }
-}
-
-mutation BarcodeCreatePantryItem(
-  $input: CreatePantryItemInput!
-  $today: LocalDate!
-) {
-  createPantryItem(input: $input) {
-    __typename
-    ... on CreatePantryItemPayload {
-      storageLocation {
-        id
-        ...StorageLocationReaders
-      }
-      pantryItem {
-        id
-        ...PantryItemReaders
-        ...SearchResults_pantryItem
-      }
-      pantry {
-        id
-        ...PantryReaders
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-    ... on UnitEligibilityError {
-      field
-      validUnits
-      denial
-    }
-    ... on DuplicatePantryItemError {
-      existingPantryItemIds
-    }
-  }
-}
-
-mutation BarcodeRestockPantryItem(
-  $input: RestockPantryItemInput!
-  $today: LocalDate!
-) {
-  restockPantryItem(input: $input) {
-    __typename
-    ... on RestockPantryItemPayload {
-      storageLocation {
-        id
-        ...StorageLocationReaders
-      }
-      pantry {
-        id
-        ...PantryReaders
-      }
-      pantryItemUsage {
-        id
-        ...PantryItemUsageReaders
-        costPerUnit
-        totalCost
-        # The readers too: a restock carrying `today` can date the row, and
-        # nothing else would refresh its expiry in the cache.
-        pantryItem {
-          id
-          ...PantryItemReaders
-          version
-          quantity
-          heldQuantity
-          displayAmount {
-            quantity
-            unit {
-              id
-              symbol
-            }
-          }
-          isLowStock
-          ...SearchResults_pantryItem
-        }
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-    ... on UnitEligibilityError {
-      field
-      validUnits
-      denial
     }
   }
 }

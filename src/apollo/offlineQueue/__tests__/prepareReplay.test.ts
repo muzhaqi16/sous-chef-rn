@@ -17,7 +17,6 @@ import {
   UpdatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { BarcodeCreatePantryItemDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import {
   AddItemToShoppingListDocument,
   MoveShoppingItemToPantryDocument,
@@ -242,23 +241,20 @@ describe('prepareReplay', () => {
   });
 
   describe('a pantry create', () => {
-    it.each([CreatePantryItemDocument, BarcodeCreatePantryItemDocument])(
-      'lands on a stack another member added meanwhile (%#)',
-      async document => {
-        const replayed = await prepare(
-          queued(document, {
-            input: {
-              id: 'row-1',
-              pantryId: 'pantry-1',
-              item: { inline: { name: 'Milk' } },
-              quantity: 1,
-            },
-          }),
-        );
+    it('lands on a stack another member added meanwhile', async () => {
+      const replayed = await prepare(
+        queued(CreatePantryItemDocument, {
+          input: {
+            id: 'row-1',
+            pantryId: 'pantry-1',
+            item: { inline: { name: 'Milk' } },
+            quantity: 1,
+          },
+        }),
+      );
 
-        expect(replayed.input).toMatchObject({ id: 'row-1', forceAdd: true });
-      },
-    );
+      expect(replayed.input).toMatchObject({ id: 'row-1', forceAdd: true });
+    });
 
     it('leaves an update to the stack it names', async () => {
       const replayed = await prepare(

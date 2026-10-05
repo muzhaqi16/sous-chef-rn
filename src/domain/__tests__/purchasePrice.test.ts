@@ -1,4 +1,4 @@
-import { totalFromUnitPrice, unitPriceFromTotal } from '../purchasePrice';
+import { totalFromUnitPrice, unitPriceFromTotal } from '#domain/purchasePrice';
 
 describe('unitPriceFromTotal', () => {
   it('divides the total paid by the quantity', () => {

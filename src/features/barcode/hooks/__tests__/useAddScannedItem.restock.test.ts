@@ -8,7 +8,7 @@ import {
   type MockFor,
 } from '#/test-utils/apolloMockProvider';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { BarcodeRestockPantryItemDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
+import { RestockPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { useAddScannedItem } from '../useAddScannedItem';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -55,10 +55,10 @@ const readQuantity = (cache: ReturnType<typeof makeCache>) =>
   })?.quantity;
 
 const restockAnswer = (
-  data: MockDataFor<typeof BarcodeRestockPantryItemDocument>,
-): MockFor<typeof BarcodeRestockPantryItemDocument> => ({
+  data: MockDataFor<typeof RestockPantryItemDocument>,
+): MockFor<typeof RestockPantryItemDocument> => ({
   request: {
-    query: BarcodeRestockPantryItemDocument,
+    query: RestockPantryItemDocument,
     variables: () => true,
   },
   result: { data },
@@ -134,7 +134,7 @@ describe('restocking the row a scan duplicated', () => {
   });
 
   it('sends the day of the restock on the input, for its default expiry', async () => {
-    const restock = recordMock(BarcodeRestockPantryItemDocument, {
+    const restock = recordMock(RestockPantryItemDocument, {
       data: {
         restockPantryItem: {
           __typename: 'RestockPantryItemPayload',

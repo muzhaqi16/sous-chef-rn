@@ -8,7 +8,9 @@ import type {
   StockAmountInput,
   StorageState,
 } from '#/graphql/generated/schemaTypes';
-import { AcquisitionMethod, UnitType } from '#/graphql/generated/schemaTypes';
+import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
+import { localQuantity } from '#domain/stockAmount';
+import { unitPriceFromTotal } from '#domain/purchasePrice';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { Telemetry } from '#/services/telemetry';
 import { errorService } from '#/services/errorService';
@@ -83,18 +85,6 @@ function readWasPurchased(cache: ApolloCache, itemId: string): boolean {
       fragment: UseMoveToPantry_WasPurchasedFragmentDoc,
     })?.purchaseInfo.isPurchased ?? false
   );
-}
-
-// The row's amount until the server answers. Packages of a counted line are
-// that many of it; on a weighed line only the server can turn packages into
-// grams, so the row shows the line's own amount meanwhile.
-function localQuantity(
-  amount: StockAmountInput,
-  item: ShoppingListItemDisplayFragment,
-): number {
-  if (amount.measured) return amount.measured.quantity;
-  const { count } = amount.packages;
-  return item.unit?.type === UnitType.Count ? count : item.quantity ?? count;
 }
 
 /**
@@ -224,10 +214,9 @@ export function useMoveToPantry({
       storageState: input.storageState,
       expiresOn: input.expiresOn,
       acquisitionMethod: AcquisitionMethod.ShoppingList,
-      costPerUnit:
-        measured && input.totalCost !== undefined
-          ? input.totalCost / measured.quantity
-          : null,
+      costPerUnit: measured
+        ? unitPriceFromTotal(input.totalCost ?? null, measured.quantity)
+        : null,
     };
 
     // BOTH sides are written eagerly: offline neither the mutation's `update` nor

@@ -1,24 +1,14 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import {
-  RestockPantryItemDocument,
   GetPantryDocument,
   GetPantryItemSuggestionsDocument,
   type GetPantryQuery,
   type GetPantryItemSuggestionsQuery,
 } from '#features/pantry/graphql/pantry.generated';
-import { addToPantryItemsCache } from '#features/pantry/cache/items';
 import { findCachedPantryItemDuplicate } from '#features/pantry/utils/pantryCacheReaders';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { writeEntityFields } from '#/apollo/utils/localFirstFields';
+import { usePantryRestock } from '#features/pantry/hooks/usePantryRestock';
 import { extractNodes } from '#/utils/connectionUtils';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { todayKey } from '#/utils/dateUtils';
-import { useTranslation } from '#/i18n';
-import { writeHeldStock } from '#features/pantry/cache/stock';
-
-export type RestockOutcome = { status: 'restocked' } | { status: 'rejected' };
 
 interface UseAddToPantryArgs {
   pantryId: string | undefined;
@@ -35,24 +25,11 @@ export function useAddToPantry({
   pantryId,
   suggestionsLimit,
 }: UseAddToPantryArgs) {
-  const { t } = useTranslation();
   const client = useApolloClient();
 
   const intake = usePantryIntake(pantryId);
 
-  const [restockPantryItem] = useMutation(RestockPantryItemDocument, {
-    context: { localFirst: true },
-    update: (cache, { data }) => {
-      const payload = appliedPayload(data);
-      if (!payload || !pantryId) return;
-      const pantryItem = payload.pantryItemUsage.pantryItem;
-      if (!pantryItem) return;
-      // Forces the connection to broadcast: the row already exists, so the
-      // re-add returns the connection unchanged, but `cache.modify` still makes
-      // query watchers re-emit.
-      addToPantryItemsCache(cache, pantryId, pantryItem);
-    },
-  });
+  const { restock } = usePantryRestock(pantryId);
 
   /** Drop a suggestion from every list it appears in, synchronously. */
   const removeSuggestion = (itemId: string) => {
@@ -111,58 +88,11 @@ export function useAddToPantry({
       : null;
 
   /**
-   * Bump the row's quantity locally, then restock it — offline the mutation's
-   * `update` never runs. A null `cachedQuantity` skips the bump, for a
+   * Restock the row by one. A null `cachedQuantity` skips the local bump, for a
    * duplicate the server named: that reaches us only online.
    */
-  const restockItem = async (
-    pantryItemId: string,
-    cachedQuantity: number | null,
-  ): Promise<RestockOutcome> => {
-    const entity =
-      cachedQuantity === null
-        ? undefined
-        : { __typename: 'PantryItem', id: pantryItemId };
-    writeEntityFields(client.cache, entity, {
-      quantity: (cachedQuantity ?? 0) + 1,
-    });
-    // The amount the screens show moves with the count.
-    const undoHeld =
-      cachedQuantity === null
-        ? () => {}
-        : writeHeldStock(client.cache, pantryItemId, held => held + 1);
-
-    // The sheet tells the user; the settle classifies, reverts and reports.
-    const today = todayKey();
-    const settled = await settleMutation(
-      () =>
-        restockPantryItem({
-          variables: {
-            today,
-            input: {
-              id: pantryItemId,
-              amount: { measured: { quantity: 1 } },
-              // Dedupes the restock ledger row on replay.
-              idempotencyKey: generateEntityId(),
-              today,
-            },
-          },
-        }),
-      {
-        document: RestockPantryItemDocument,
-        fallback: t('addToPantry.restockFailed'),
-        onFailed: () => {
-          writeEntityFields(client.cache, entity, {
-            quantity: cachedQuantity ?? undefined,
-          });
-          undoHeld();
-        },
-        present: 'none',
-      },
-    );
-    if (settled.status === 'failed') return { status: 'rejected' };
-    return { status: 'restocked' };
-  };
+  const restockItem = (pantryItemId: string, cachedQuantity: number | null) =>
+    restock(pantryItemId, { quantity: 1, cachedQuantity, present: 'none' });
 
   /** The sheet adds a catalog item as-is: the server fills quantity and unit. */
   const addItem = (itemId: string, itemName: string) =>

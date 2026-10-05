@@ -7,6 +7,7 @@ import { deletesItsSubject, queuedSubject } from './queuedSubject';
 import { withExpiresOn } from './legacyExpiry';
 import { withRefInputs } from './legacyRefs';
 import { withoutRemovedFields } from './legacySelections';
+import { currentOperationName } from './legacyOperations';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
@@ -113,6 +114,7 @@ export class QueueStore {
         );
         return {
           ...item,
+          operationName: currentOperationName(item.operationName),
           mutation,
           variables: withRefInputs(
             mutation,

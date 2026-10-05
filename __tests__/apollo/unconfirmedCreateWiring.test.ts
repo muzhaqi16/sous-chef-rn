@@ -24,7 +24,7 @@ import { join, relative } from 'path';
  *   - a create that marks but never `confirm`s strands the gate closed, so the
  *     screen never fetches at all.
  *
- * Derived from the tree rather than a hand-kept list, so a fourth pantry create
+ * Derived from the tree rather than a hand-kept list, so another pantry create
  * path cannot ship without the decision being made.
  */
 
@@ -36,7 +36,6 @@ const SRC = join(process.cwd(), 'src');
  */
 const CREATE_DOCUMENTS = [
   'CreatePantryItemDocument',
-  'BarcodeCreatePantryItemDocument',
   'MoveShoppingItemToPantryDocument',
 ];
 
@@ -100,12 +99,9 @@ const creators = sources
 
 describe('unconfirmed-create wiring (pantry items)', () => {
   it('finds the create paths at all, so the checks below are not vacuous', () => {
-    expect(creators.length).toBeGreaterThanOrEqual(4);
     expect(creators).toEqual(
       expect.arrayContaining([
-        'src/features/barcode/hooks/useAddScannedItem.ts',
         'src/features/pantry/hooks/usePantryIntake.ts',
-        'src/features/pantry/hooks/usePantryItemSubmission.ts',
         'src/features/shoppingList/hooks/useMoveToPantry.ts',
       ]),
     );
