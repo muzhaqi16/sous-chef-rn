@@ -12808,7 +12808,17 @@ type RecipeIngredientMatch {
   availableQuantity: Float
   ingredient: RecipeIngredient!
   isAvailable: Boolean!
+  """
+  The match kind as a number: ITEM 1, CONCEPT 0.9, NAME 0.7, NONE 0.
+  Superseded by matchKind; read that instead.
+  """
   matchConfidence: Float!
+  """
+  How matchedPantryItem was found. An ingredient with a catalog item is
+  matched only by ITEM or CONCEPT, its alternativeMatches included; one
+  without is matched only by NAME.
+  """
+  matchKind: RecipeIngredientMatchKind!
   matchedPantryItem: PantryItem
   """
   How much more the ingredient needs, in its unit. Null when it is available,
@@ -12817,6 +12827,24 @@ type RecipeIngredientMatch {
   shortfall: Float
   suggestedQuantity: Float!
   suggestedUnit: Unit
+}
+
+"""How a recipe ingredient's pantry stack was found."""
+enum RecipeIngredientMatchKind {
+  """
+  A stack of another item under the ingredient's concept: a brand of it, or a narrower concept.
+  """
+  CONCEPT
+  """A stack of the ingredient's own catalog item."""
+  ITEM
+  """
+  A stack whose name shares every word of the ingredient's name, for an
+  ingredient with no catalog item. Unsure: offer it, but use it only when the
+  user turns it on.
+  """
+  NAME
+  """No stack serves the ingredient."""
+  NONE
 }
 
 input RecipeIngredientSourceInput {
