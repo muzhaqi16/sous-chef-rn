@@ -1,5 +1,8 @@
 import { act, waitFor } from '@testing-library/react-native';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  RecipeIngredientMatchKind,
+} from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
@@ -398,7 +401,7 @@ describe('useRecipeCookingActions', () => {
         matchRecipeIngredientsToPantry: [
           {
             __typename: 'RecipeIngredientMatch',
-            matchConfidence: 1,
+            matchKind: RecipeIngredientMatchKind.Item,
             matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
           },
         ],
@@ -445,7 +448,7 @@ describe('useRecipeCookingActions', () => {
         matchRecipeIngredientsToPantry: [
           {
             __typename: 'RecipeIngredientMatch',
-            matchConfidence: 1,
+            matchKind: RecipeIngredientMatchKind.Item,
             availableQuantity: 5,
             suggestedQuantity: 1,
             matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },

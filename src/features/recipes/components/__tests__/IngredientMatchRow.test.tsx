@@ -1,5 +1,6 @@
 'use no memo';
 import React from 'react';
+import { RecipeIngredientMatchKind } from '#/graphql/generated/schemaTypes';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import {
   getAvailabilityStatus,
@@ -39,7 +40,7 @@ describe('IngredientMatchRow', () => {
     const matchDefaults: EditableMatch['match'] = {
       __typename: 'RecipeIngredientMatch',
       isAvailable: false,
-      matchConfidence: 0,
+      matchKind: RecipeIngredientMatchKind.None,
       availableQuantity: 0,
       suggestedQuantity: 2,
       shortfall: null,
@@ -144,7 +145,7 @@ describe('IngredientMatchRow', () => {
     jest.mocked(getAvailabilityStatus).mockReturnValueOnce('unsure');
     const unsure = {
       ...makeMatch('Olives', {
-        matchConfidence: 0.7,
+        matchKind: RecipeIngredientMatchKind.Name,
         matchedPantryItem: stack('p1', 'Kalamata Olives', 250),
       }),
       isIncluded: false,
@@ -165,7 +166,7 @@ describe('IngredientMatchRow', () => {
     const onUpdate = jest.fn();
     const evoo = stack('p2', 'Extra virgin olive oil', 500);
     const match = makeMatch('Olive oil', {
-      matchConfidence: 1,
+      matchKind: RecipeIngredientMatchKind.Item,
       matchedPantryItem: stack('p1', 'Olive oil', 1000),
       alternativeMatches: [evoo],
     });
@@ -190,7 +191,7 @@ describe('IngredientMatchRow', () => {
     const evoo = stack('p2', 'Extra virgin olive oil', 500);
     const match = {
       ...makeMatch('Olive oil', {
-        matchConfidence: 1,
+        matchKind: RecipeIngredientMatchKind.Item,
         matchedPantryItem: stack('p1', 'Olive oil', 1000),
         alternativeMatches: [evoo],
       }),

@@ -1,5 +1,8 @@
 import { act, waitFor } from '@testing-library/react-native';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  RecipeIngredientMatchKind,
+} from '#/graphql/generated/schemaTypes';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
@@ -102,11 +105,11 @@ function matchesMock(
 }
 
 describe('getAvailabilityStatus', () => {
-  it('returns "available" when isAvailable and confidence >= 0.8', () => {
+  it('returns "available" for an available stack of a catalog match', () => {
     expect(
       getAvailabilityStatus({
         isAvailable: true,
-        matchConfidence: 0.9,
+        matchKind: RecipeIngredientMatchKind.Concept,
         matchedPantryItem: { id: 'pi-1' },
         availableQuantity: 2,
       } as IngredientMatch),
@@ -117,7 +120,7 @@ describe('getAvailabilityStatus', () => {
     expect(
       getAvailabilityStatus({
         isAvailable: false,
-        matchConfidence: 0.9,
+        matchKind: RecipeIngredientMatchKind.Concept,
         matchedPantryItem: { id: 'pi-1', displayAmount: { quantity: 1 } },
         availableQuantity: 1,
       } as IngredientMatch),
@@ -130,7 +133,7 @@ describe('getAvailabilityStatus', () => {
     expect(
       getAvailabilityStatus({
         isAvailable: false,
-        matchConfidence: 1,
+        matchKind: RecipeIngredientMatchKind.Item,
         matchedPantryItem: { id: 'pi-1', displayAmount: { quantity: 1 } },
         availableQuantity: null,
       } as IngredientMatch),
@@ -141,7 +144,7 @@ describe('getAvailabilityStatus', () => {
     expect(
       getAvailabilityStatus({
         isAvailable: false,
-        matchConfidence: 1,
+        matchKind: RecipeIngredientMatchKind.Item,
         matchedPantryItem: { id: 'pi-1', displayAmount: { quantity: 0 } },
         availableQuantity: 0,
       } as IngredientMatch),
@@ -154,7 +157,7 @@ describe('getAvailabilityStatus', () => {
     expect(
       getAvailabilityStatus({
         isAvailable: true,
-        matchConfidence: 0.7,
+        matchKind: RecipeIngredientMatchKind.Name,
         matchedPantryItem: { id: 'pi-1' },
         availableQuantity: 5,
       } as IngredientMatch),
@@ -165,7 +168,7 @@ describe('getAvailabilityStatus', () => {
     expect(
       getAvailabilityStatus({
         isAvailable: false,
-        matchConfidence: 0,
+        matchKind: RecipeIngredientMatchKind.None,
         matchedPantryItem: null,
         availableQuantity: 0,
       } as IngredientMatch),
@@ -223,7 +226,7 @@ describe('useRecipeIngredientMatching', () => {
           },
         },
         isAvailable: true,
-        matchConfidence: 0.95,
+        matchKind: RecipeIngredientMatchKind.Item,
         matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
         availableQuantity: 5,
         suggestedQuantity: 2,
@@ -267,7 +270,7 @@ describe('useRecipeIngredientMatching', () => {
           },
         },
         isAvailable: true,
-        matchConfidence: 0.95,
+        matchKind: RecipeIngredientMatchKind.Item,
         matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
         availableQuantity: 5,
         suggestedQuantity: 2,
@@ -311,7 +314,7 @@ describe('useRecipeIngredientMatching', () => {
           },
         },
         isAvailable: true,
-        matchConfidence: 0.9,
+        matchKind: RecipeIngredientMatchKind.Concept,
         matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
         availableQuantity: 5,
         suggestedQuantity: 2,
@@ -352,7 +355,7 @@ describe('useRecipeIngredientMatching', () => {
           },
         },
         isAvailable: true,
-        matchConfidence: 0.9,
+        matchKind: RecipeIngredientMatchKind.Concept,
         matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
         availableQuantity: 5,
         suggestedQuantity: 2,
@@ -394,7 +397,7 @@ describe('useRecipeIngredientMatching', () => {
           },
         },
         isAvailable: true,
-        matchConfidence: 0.9,
+        matchKind: RecipeIngredientMatchKind.Concept,
         matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
         availableQuantity: 5,
         suggestedQuantity: 2,
@@ -413,7 +416,7 @@ describe('useRecipeIngredientMatching', () => {
           },
         },
         isAvailable: false,
-        matchConfidence: 0.3,
+        matchKind: RecipeIngredientMatchKind.Name,
         matchedPantryItem: { __typename: 'PantryItem', id: 'pi-2' },
         availableQuantity: 1,
         suggestedQuantity: 3,
@@ -432,7 +435,7 @@ describe('useRecipeIngredientMatching', () => {
           },
         },
         isAvailable: false,
-        matchConfidence: 0,
+        matchKind: RecipeIngredientMatchKind.None,
         matchedPantryItem: null,
         availableQuantity: 0,
         suggestedQuantity: 1,
@@ -481,7 +484,7 @@ const includedMatch = {
     },
   },
   isAvailable: true,
-  matchConfidence: 0.95,
+  matchKind: RecipeIngredientMatchKind.Item,
   matchedPantryItem: {
     __typename: 'PantryItem',
     id: 'pi-1',
@@ -600,7 +603,9 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
   // A name-only match is offered but not deducted until the user turns it on.
   it('holds back a stack matched by name only until the user includes it', async () => {
     const confirm = confirmMock({ kind: 'success' });
-    const matchesM = matchesMock([{ ...includedMatch, matchConfidence: 0.7 }]);
+    const matchesM = matchesMock([
+      { ...includedMatch, matchKind: RecipeIngredientMatchKind.Name },
+    ]);
     const { result } = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
       {

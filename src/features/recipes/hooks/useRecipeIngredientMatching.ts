@@ -14,7 +14,10 @@ import {
   RecipeIngredientFragmentDoc,
   type RecipeIngredientFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
-import type { ConfirmedIngredientConsumptionInput } from '#/graphql/generated/schemaTypes';
+import {
+  RecipeIngredientMatchKind,
+  type ConfirmedIngredientConsumptionInput,
+} from '#/graphql/generated/schemaTypes';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
@@ -67,9 +70,6 @@ export interface MatchSummary {
 
 type AvailabilityStatus = 'available' | 'partial' | 'missing' | 'unsure';
 
-/** Below this the server matched by name alone ("olives" finds "Kalamata Olives"). */
-const CONFIDENT_MATCH = 0.8;
-
 /**
  * `unsure` is a stack found by name only: it is offered, never deducted
  * until the user turns it on. `missing` is no stack, or an empty one.
@@ -79,7 +79,7 @@ export function getAvailabilityStatus(
 ): AvailabilityStatus {
   const stack = match.matchedPantryItem;
   if (!stack) return 'missing';
-  if (match.matchConfidence < CONFIDENT_MATCH) return 'unsure';
+  if (match.matchKind === RecipeIngredientMatchKind.Name) return 'unsure';
   if (match.isAvailable) return 'available';
   // `availableQuantity` is null when the recipe's unit cannot express the
   // stack (a loaf against a pound), so what the stack holds decides these two.

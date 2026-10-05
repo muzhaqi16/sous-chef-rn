@@ -1,5 +1,6 @@
 'use no memo';
 import React from 'react';
+import { RecipeIngredientMatchKind } from '#/graphql/generated/schemaTypes';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { IngredientMatchingSheet } from '#features/recipes/components/modals/IngredientMatchingSheet';
 import type {
@@ -77,7 +78,7 @@ describe('IngredientMatchingSheet', () => {
     match: {
       __typename: 'RecipeIngredientMatch',
       isAvailable: true,
-      matchConfidence: 1,
+      matchKind: RecipeIngredientMatchKind.Item,
       availableQuantity: 1,
       suggestedQuantity: 1,
       shortfall: null,
