@@ -10,6 +10,13 @@ query ItemByLookup($lookup: ItemLookupInput!, $pantry: ID) {
       cursor
       node {
         id
+        # The notices the catalog data's licences ask a reader to see.
+        dataAttributions {
+          source
+          notice
+          licenseUrl
+          sourceUrl
+        }
         imageUrl
         imageCredit {
           text

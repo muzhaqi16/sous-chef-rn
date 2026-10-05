@@ -117,30 +117,6 @@ export const formatPackageBreakdownFull = (
   return short;
 };
 
-// Helper to format net weight for primary display (no "ea" suffix, with g→kg / ml→L upscaling)
-export const formatNetWeightDisplay = (
-  netWeight?: number | null,
-  netWeightUnit?: { symbol?: string | null; name?: string | null } | null,
-): string | null => {
-  if (!netWeight) return null;
-  const unitStr =
-    firstNonBlank(netWeightUnit?.symbol, netWeightUnit?.name) ?? '';
-
-  // Same g→kg, mL→L upscaling as formatQuantityDisplay — and the same
-  // case-insensitive match, the canonical symbol being `mL`.
-  if (
-    netWeight >= 1000 &&
-    (unitStr === 'g' || unitStr.toLowerCase() === 'ml')
-  ) {
-    return `${(netWeight / 1000).toFixed(1)} ${unitStr === 'g' ? 'kg' : 'L'}`;
-  }
-
-  const formatted = Number.isInteger(netWeight)
-    ? netWeight.toString()
-    : netWeight.toFixed(netWeight < 10 ? 2 : 1).replace(/\.?0+$/, '');
-  return `${formatted} ${unitStr}`.trim();
-};
-
 // Helper to format live quantity breakdown (e.g., "1 full case + 9 loose cans")
 export const formatQuantityBreakdown = (
   breakdown:

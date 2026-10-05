@@ -4,6 +4,7 @@ import {
   formatQuantityAsFraction,
   formatQuantityForDisplay,
   formatQuantityForInput,
+  formatNetWeightDisplay,
   getUnitDisplayText,
   parseStoredQuantityText,
 } from '../formatQuantity';
@@ -84,6 +85,21 @@ describe('formatQuantityDisplay', () => {
 
   it('formats integers cleanly', () => {
     expect(formatQuantityDisplay(5, 'lb')).toBe('5 lb');
+  });
+});
+
+describe('formatNetWeightDisplay', () => {
+  it('returns null for no weight', () => {
+    expect(formatNetWeightDisplay(null)).toBeNull();
+  });
+  it('upscales g to kg when >= 1000', () => {
+    expect(formatNetWeightDisplay(1500, { symbol: 'g' })).toBe('1.5 kg');
+  });
+  it('upscales ml to L when >= 1000', () => {
+    expect(formatNetWeightDisplay(2000, { symbol: 'ml' })).toBe('2.0 L');
+  });
+  it('formats integer values', () => {
+    expect(formatNetWeightDisplay(500, { symbol: 'g' })).toBe('500 g');
   });
 });
 

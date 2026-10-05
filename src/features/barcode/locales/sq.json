@@ -22,7 +22,6 @@
     "upc": "UPC/Barkod",
     "servingAmount": "Një racion: {{amount}}",
     "referenceAmount": "Vlerat ushqyese për {{amount}}",
-    "openFoodFactsCredit": "Të dhënat e produktit nga Open Food Facts (ODbL)",
     "packSize": {
       "body": "Open Food Facts nuk e tregon madhësinë e këtij produkti. Vendose një herë për ta shtuar në qilar.",
       "label": "Madhësia e një pakete",

@@ -2,11 +2,9 @@ import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
+import { Link } from '#components/atoms/Link';
 import { Text } from '#components/atoms/Text';
 import type { DataAttribution } from '#/graphql/generated/schemaTypes';
-import { openWebUrl } from '#utils/externalUrl';
-import { hitSlop } from '#/theme/foundations/sizes';
 import { kitTestIDs } from '#components/testIDs';
 
 export type DataAttributionValue = Pick<
@@ -39,36 +37,26 @@ export const DataAttributionNotices: React.FC<DataAttributionNoticesProps> = ({
       {attributions.map(({ source, notice, licenseUrl, sourceUrl }) => (
         <View key={source} style={styles.row}>
           {sourceUrl ? (
-            <Pressable
-              onPress={() => {
-                void openWebUrl(sourceUrl);
-              }}
-              hitSlop={hitSlop.sm}
-              accessibilityRole="link"
+            <Link
+              variant="caption"
+              href={sourceUrl}
               testID={kitTestIDs.dataAttributionSource(source)}
             >
-              <Text role="caption" tone="secondary" style={styles.link}>
-                {notice}
-              </Text>
-            </Pressable>
+              {notice}
+            </Link>
           ) : (
             <Text role="caption" tone="secondary">
               {notice}
             </Text>
           )}
           {!!licenseUrl && (
-            <Pressable
-              onPress={() => {
-                void openWebUrl(licenseUrl);
-              }}
-              hitSlop={hitSlop.sm}
-              accessibilityRole="link"
+            <Link
+              variant="caption"
+              href={licenseUrl}
               testID={kitTestIDs.dataAttributionLicense(source)}
             >
-              <Text role="caption" tone="secondary" style={styles.link}>
-                {t('labels.license')}
-              </Text>
-            </Pressable>
+              {t('labels.license')}
+            </Link>
           )}
         </View>
       ))}
@@ -93,8 +81,5 @@ const styles = StyleSheet.create(theme => ({
         },
       },
     },
-  },
-  link: {
-    textDecorationLine: 'underline',
   },
 }));

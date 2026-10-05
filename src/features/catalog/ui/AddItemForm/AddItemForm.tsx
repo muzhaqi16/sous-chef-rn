@@ -95,11 +95,6 @@ export interface AddItemFieldRefusal {
   message: string;
 }
 
-/** The page each refusable field is on: a refusal is shown where its field is. */
-const REFUSAL_PAGE: Record<AddItemFieldRefusal['field'], PageName> = {
-  upc: 'Product',
-};
-
 /**
  * Editor rows → the shape `createItemSchema` validates. An entirely empty row
  * is the one "Add" just created and is dropped; a half-filled one is KEPT so
@@ -301,6 +296,10 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     mode,
     onScanUpc,
   );
+  const fieldsOn = (page: PageName) => {
+    const { primary, advanced } = TAB_FIELDS[page];
+    return [...primary, ...advanced];
+  };
 
   const {
     control,
@@ -409,7 +408,11 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
 
     const refusal = await onSubmit(processedData);
     if (!refusal) return;
-    setCurrentPage(PAGES.indexOf(REFUSAL_PAGE[refusal.field]));
+    setCurrentPage(
+      PAGES.findIndex(page =>
+        fieldsOn(page).some(f => f.name === refusal.field),
+      ),
+    );
     setError(refusal.field, { type: 'server', message: refusal.message });
   };
 
@@ -422,10 +425,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   // auto-expansion of "More options" when an errored field lives inside it.
   // react-hook-form deletes a field's key when its error clears.
   const fieldHasError = (name: string) => name in errors;
-  const tabHasError = (page: PageName) => {
-    const { primary, advanced } = TAB_FIELDS[page];
-    return [...primary, ...advanced].some(f => fieldHasError(String(f.name)));
-  };
+  const tabHasError = (page: PageName) =>
+    fieldsOn(page).some(f => fieldHasError(String(f.name)));
   const advancedHasError = activeTab.advanced.some(f =>
     fieldHasError(String(f.name)),
   );

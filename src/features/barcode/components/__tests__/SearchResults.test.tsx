@@ -1,15 +1,16 @@
 'use no memo';
 import React from 'react';
-import { ErrorCode, NetWeightKind } from '#/graphql/generated/schemaTypes';
-import { barcodeTestIDs } from '#features/barcode/testIDs';
+import {
+  ErrorCode,
+  ExternalSource,
+  NetWeightKind,
+} from '#/graphql/generated/schemaTypes';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { recordMock } from '#/test-utils/apolloMockProvider';
-import {
-  BarcodeAddItemToShoppingListDocument,
-  BarcodeCreatePantryItemDocument,
-} from '#features/barcode/hooks/useAddScannedItem.generated';
+import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
+import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -228,7 +229,7 @@ describe('SearchResults', () => {
   // which the add names: a netWeight sent beside it would be stored as the
   // user's own edit.
   it('adds one container naming the scanned record, and no size of its own', async () => {
-    const rec = recordMock(BarcodeCreatePantryItemDocument, {
+    const rec = recordMock(CreatePantryItemDocument, {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
@@ -262,7 +263,7 @@ describe('SearchResults', () => {
   });
 
   it('sends the day of the add on the input, for its default expiry', async () => {
-    const rec = recordMock(BarcodeCreatePantryItemDocument, {
+    const rec = recordMock(CreatePantryItemDocument, {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
@@ -289,7 +290,7 @@ describe('SearchResults', () => {
 
   describe('a product from Open Food Facts', () => {
     const created = () =>
-      recordMock(BarcodeCreatePantryItemDocument, {
+      recordMock(CreatePantryItemDocument, {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
@@ -298,23 +299,30 @@ describe('SearchResults', () => {
         },
       });
 
-    it('credits Open Food Facts', () => {
+    const notice = {
+      source: ExternalSource.Openfoodfacts,
+      notice: 'Product data from Open Food Facts, available under the ODbL.',
+      licenseUrl: 'https://opendatacommons.org/licenses/odbl/1-0/',
+      sourceUrl: 'https://world.openfoodfacts.org/product/123456',
+    };
+
+    it('shows the notice its data asks for', () => {
       renderWithApollo(
         <SearchResults
           {...defaultProps}
-          item={{ ...mockItem, source: 'OPENFOODFACTS' }}
+          item={{
+            ...mockItem,
+            source: 'OPENFOODFACTS',
+            dataAttributions: [notice],
+          }}
         />,
       );
-      expect(
-        screen.getByTestId(barcodeTestIDs.openFoodFactsCredit),
-      ).toHaveTextContent('Product details from Open Food Facts (ODbL)');
+      expect(screen.getByText(notice.notice)).toBeTruthy();
     });
 
-    it('credits nobody for a catalog product', () => {
+    it('credits nobody for an item whose data asks for no notice', () => {
       renderWithApollo(<SearchResults {...defaultProps} />);
-      expect(
-        screen.queryByTestId(barcodeTestIDs.openFoodFactsCredit),
-      ).toBeNull();
+      expect(screen.queryByText(/Open Food Facts/)).toBeNull();
     });
 
     it('asks for the pack size it lacks, then stores the one entered', async () => {
@@ -375,7 +383,7 @@ describe('SearchResults', () => {
   });
 
   it('names the item when the scan found no record for the barcode', async () => {
-    const rec = recordMock(BarcodeCreatePantryItemDocument, {
+    const rec = recordMock(CreatePantryItemDocument, {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
@@ -446,7 +454,7 @@ describe('SearchResults', () => {
       jest.requireMock('#features/pantry/cache/items');
 
     it('moves with the optimistic row, before the server answers', async () => {
-      const rec = recordMock(BarcodeCreatePantryItemDocument, {
+      const rec = recordMock(CreatePantryItemDocument, {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
@@ -470,7 +478,7 @@ describe('SearchResults', () => {
     });
 
     it('is taken back when the server refuses the create', async () => {
-      const rec = recordMock(BarcodeCreatePantryItemDocument, {
+      const rec = recordMock(CreatePantryItemDocument, {
         data: {
           createPantryItem: {
             __typename: 'ValidationError',

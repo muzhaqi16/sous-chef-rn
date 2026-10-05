@@ -34,7 +34,6 @@ jest.mock('#/services/alertService', () => ({
 const mockSetSearchResults = jest.fn();
 const mockSetSearching = jest.fn();
 const mockSetSearchError = jest.fn();
-const mockAddToRecentlyScanned = jest.fn();
 const mockClearSearch = jest.fn();
 const mockShowBottomSheet = jest.fn();
 const mockHideBottomSheet = jest.fn();
@@ -44,7 +43,6 @@ jest.mock('#features/barcode/store/barcodeScannerStore', () => ({
     searchResults: [],
     setSearchResults: mockSetSearchResults,
     setSearching: mockSetSearching,
-    addToRecentlyScanned: mockAddToRecentlyScanned,
     clearSearch: mockClearSearch,
     setSearchError: mockSetSearchError,
   })),
@@ -96,10 +94,7 @@ function isUpcLookup(vars: Record<string, unknown>): boolean {
   return isRecord(vars.lookup) && 'upc' in vars.lookup;
 }
 
-function upcMock(
-  items: MockItemNode[],
-  options: { partial?: boolean } = {},
-): MockedResponse {
+function upcMock(items: MockItemNode[], options: { partial?: boolean } = {}) {
   const data: MockDataFor<typeof ItemByLookupDocument> = {
     items: {
       __typename: 'ItemConnection',
@@ -114,7 +109,7 @@ function upcMock(
     ...byUpc,
     data,
     partial: options.partial,
-  }).mock;
+  });
 }
 
 function skuMock(items: MockItemNode[]): MockedResponse {
@@ -211,7 +206,7 @@ describe('useSearchResults', () => {
   describe('UPC query results', () => {
     it('sets search results when UPC query finds an item', async () => {
       renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
-        operationMocks: [upcMock([SAMPLE_UPC_ITEM])],
+        operationMocks: [upcMock([SAMPLE_UPC_ITEM]).mock],
       });
 
       await waitFor(() =>
@@ -221,37 +216,22 @@ describe('useSearchResults', () => {
           ]),
         ),
       );
-      await waitFor(() => expect(mockAddToRecentlyScanned).toHaveBeenCalled());
       expect(mockHideBottomSheet).toHaveBeenCalled();
     });
 
     // The API matches every spelling of one code (UPC-A, EAN-13 with a leading
-    // zero, GTIN-14, UPC-E), so the lookup sends exactly what the camera read.
+    // zero, GTIN-14, UPC-E), so the lookup sends exactly what the camera read;
+    // a format it does not name is left for the API to detect.
     it.each([
       ['0012345678905', 'ean-13', 'EAN_13'],
       ['012345678905', 'upc-a', 'UPC_A'],
+      ['012345678905', 'unknown-format', undefined],
     ])(
       'looks up %s (%s) as scanned and shows the product',
       async (code, format, upcFormat) => {
-        const stored: MockItemNode = {
-          ...SAMPLE_UPC_ITEM,
-          primaryUpc: '012345678905',
-        };
-        const upc = recordMock(ItemByLookupDocument, {
-          ...byUpc,
-          data: {
-            items: {
-              __typename: 'ItemConnection',
-              edges: [
-                {
-                  __typename: 'ItemEdge',
-                  cursor: 'c0',
-                  node: { __typename: 'Item', ...stored },
-                },
-              ],
-            },
-          },
-        });
+        const upc = upcMock([
+          { ...SAMPLE_UPC_ITEM, primaryUpc: '012345678905' },
+        ]);
 
         renderHookWithApollo(() => useSearchResults(code, format), {
           operationMocks: [upc.mock],
@@ -285,7 +265,7 @@ describe('useSearchResults', () => {
                 source: 'OPENFOODFACTS',
               },
             },
-          ]),
+          ]).mock,
         ],
       });
 
@@ -299,8 +279,8 @@ describe('useSearchResults', () => {
       );
     });
 
-    // `imageUrl` is the primary photo's thumbnail; the card's full-width image
-    // is the photo's original, with its credit.
+    // `imageUrl` is the primary photo's thumbnail, which an edit form starts
+    // from; the card's full-width image is the photo's original, with its credit.
     it('carries the photo the card shows, with its credit', async () => {
       const credit = {
         text: 'Open Food Facts',
@@ -322,7 +302,7 @@ describe('useSearchResults', () => {
                 },
               ],
             },
-          ]),
+          ]).mock,
         ],
       });
 
@@ -330,11 +310,55 @@ describe('useSearchResults', () => {
         expect(mockSetSearchResults).toHaveBeenCalledWith([
           expect.objectContaining({
             imageUrl: SAMPLE_UPC_ITEM.imageUrl,
-            photo: {
+            image: {
               url: 'https://cdn.test/front.jpg',
               credit: expect.objectContaining(credit),
             },
           }),
+        ]),
+      );
+    });
+
+    it('shows an item with no photos by its only image and credit', async () => {
+      const imageCredit = {
+        __typename: 'ImageCredit',
+        text: 'Open Food Facts',
+        license: 'CC BY-SA 3.0',
+        licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
+        sourceUrl: 'https://world.openfoodfacts.org/product/0012345678905',
+      };
+      renderHookWithApollo(() => useSearchResults('0012345678905', 'ean-13'), {
+        operationMocks: [
+          upcMock([{ ...SAMPLE_UPC_ITEM, photos: [], imageCredit }]).mock,
+        ],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchResults).toHaveBeenCalledWith([
+          expect.objectContaining({
+            image: { url: SAMPLE_UPC_ITEM.imageUrl, credit: imageCredit },
+          }),
+        ]),
+      );
+    });
+
+    it('carries the notices the item data asks for', async () => {
+      const notice = {
+        __typename: 'DataAttribution',
+        source: 'OPENFOODFACTS',
+        notice: 'Product data from Open Food Facts, available under the ODbL.',
+        licenseUrl: 'https://opendatacommons.org/licenses/odbl/1-0/',
+        sourceUrl: 'https://world.openfoodfacts.org/product/0012345678905',
+      };
+      renderHookWithApollo(() => useSearchResults('0012345678905', 'ean-13'), {
+        operationMocks: [
+          upcMock([{ ...SAMPLE_UPC_ITEM, dataAttributions: [notice] }]).mock,
+        ],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchResults).toHaveBeenCalledWith([
+          expect.objectContaining({ dataAttributions: [notice] }),
         ]),
       );
     });
@@ -345,7 +369,8 @@ describe('useSearchResults', () => {
     it('carries the write-path flags through to the scanned item', async () => {
       renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
         operationMocks: [
-          upcMock([{ ...SAMPLE_UPC_ITEM, canEdit: false, canSuggest: false }]),
+          upcMock([{ ...SAMPLE_UPC_ITEM, canEdit: false, canSuggest: false }])
+            .mock,
         ],
       });
 
@@ -364,7 +389,7 @@ describe('useSearchResults', () => {
         // flags this test asserts are absent. Marking THIS mock partial
         // excuses exactly the fields it leaves out — the old whole-test flag
         // switched the missing-field guard off for everything.
-        operationMocks: [upcMock([SAMPLE_UPC_ITEM], { partial: true })],
+        operationMocks: [upcMock([SAMPLE_UPC_ITEM], { partial: true }).mock],
       });
 
       await waitFor(() =>
@@ -394,7 +419,7 @@ describe('useSearchResults', () => {
       };
 
       renderHookWithApollo(() => useSearchResults('SKU123'), {
-        operationMocks: [upcMock([]), skuMock([skuItem])],
+        operationMocks: [upcMock([]).mock, skuMock([skuItem])],
       });
 
       await waitFor(() =>
@@ -438,7 +463,7 @@ describe('useSearchResults', () => {
                 displayAsFraction: false,
               },
             },
-          ]),
+          ]).mock,
         ],
       });
 
@@ -478,7 +503,7 @@ describe('useSearchResults', () => {
 
     it('shows bottom sheet when neither UPC nor SKU finds results', async () => {
       renderHookWithApollo(() => useSearchResults('UNKNOWN'), {
-        operationMocks: [upcMock([]), skuMock([])],
+        operationMocks: [upcMock([]).mock, skuMock([])],
       });
 
       await waitFor(() => expect(mockShowBottomSheet).toHaveBeenCalledWith(1));
@@ -629,7 +654,7 @@ describe('useSearchResults', () => {
         {
           operationMocks: [
             upcErrorMock(new Error('Server error'), { maxUsageCount: 1 }),
-            upcMock([SAMPLE_UPC_ITEM]),
+            upcMock([SAMPLE_UPC_ITEM]).mock,
           ],
         },
       );
@@ -648,60 +673,6 @@ describe('useSearchResults', () => {
         expect(mockSetSearchResults).toHaveBeenCalledWith([
           expect.objectContaining({ id: 'item-1' }),
         ]),
-      );
-    });
-  });
-
-  describe('format mapping', () => {
-    it('maps ean-13 → EAN_13 and fires UPC query with that variable', async () => {
-      const upc = recordMock(ItemByLookupDocument, {
-        ...byUpc,
-        data: { items: { __typename: 'ItemConnection', edges: [] } },
-      });
-
-      renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
-        operationMocks: [upc.mock],
-      });
-
-      await waitFor(() =>
-        expect(upc.fired).toContainEqual({
-          lookup: { upc: { code: '1234567890', format: 'EAN_13' } },
-        }),
-      );
-    });
-
-    it('maps upc-a → UPC_A', async () => {
-      const upc = recordMock(ItemByLookupDocument, {
-        ...byUpc,
-        data: { items: { __typename: 'ItemConnection', edges: [] } },
-      });
-
-      renderHookWithApollo(() => useSearchResults('1234567890', 'upc-a'), {
-        operationMocks: [upc.mock],
-      });
-
-      await waitFor(() =>
-        expect(upc.fired).toContainEqual({
-          lookup: { upc: { code: '1234567890', format: 'UPC_A' } },
-        }),
-      );
-    });
-
-    it('passes undefined upcFormat for unknown formats', async () => {
-      const upc = recordMock(ItemByLookupDocument, {
-        ...byUpc,
-        data: { items: { __typename: 'ItemConnection', edges: [] } },
-      });
-
-      renderHookWithApollo(
-        () => useSearchResults('1234567890', 'unknown-format'),
-        { operationMocks: [upc.mock] },
-      );
-
-      await waitFor(() =>
-        expect(upc.fired).toContainEqual({
-          lookup: { upc: { code: '1234567890', format: undefined } },
-        }),
       );
     });
   });

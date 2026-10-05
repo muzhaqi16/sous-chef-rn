@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { useMutation } from '@apollo/client/react';
 import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
-import { useRecipeIngredientMatching } from '#features/recipes/hooks/useRecipeIngredientMatching';
+import {
+  useRecipeIngredientMatching,
+  type CookEntry,
+} from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { settleMutation } from '#/apollo/utils/settleMutation';
@@ -45,12 +48,8 @@ export function useRecipeCookingActions({
   const { t } = useTranslation();
   const [cookedModalVisible, setCookedModalVisible] = useState(false);
   const [markingAsCooked, setMarkingAsCooked] = useState(false);
-  // What the cook entered before the review opened: a confirm or a skip
-  // records it.
-  const [reviewedCook, setReviewedCook] = useState<{
-    servings: number;
-    notes?: string;
-  } | null>(null);
+  // A confirm or a skip of the review records it.
+  const [reviewedCook, setReviewedCook] = useState<CookEntry | null>(null);
 
   const ingredientMatching = useRecipeIngredientMatching(recipeId);
 

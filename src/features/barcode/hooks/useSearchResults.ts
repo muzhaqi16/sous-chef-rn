@@ -28,6 +28,7 @@ import { errorService } from '#/services/errorService';
 import { alertService } from '#/services/alertService';
 import type { AddItemFieldRefusal } from '#features/catalog/ui/AddItemForm/AddItemForm';
 import type { PhotoCreditValue } from '#features/catalog/ui/PhotoCredit';
+import type { DataAttributionValue } from '#components/molecules/DataAttributionNotices';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { useStore } from '#store';
@@ -56,17 +57,71 @@ const mapVisionCameraFormatToUpcFormat = (
   }
 };
 
-/** The primary photo, first in gallery order, at its original size. */
-const cardPhotoOf = (
-  photos:
-    | ReadonlyArray<{ url: string; credit?: PhotoCreditValue | null }>
-    | undefined,
-): ScannedItem['photo'] => {
-  const [image] = photos ?? [];
-  if (!image) return undefined;
-  return image.credit
-    ? { url: image.url, credit: image.credit }
-    : { url: image.url };
+interface LookupItem {
+  id: string;
+  name: string;
+  description?: string | null;
+  dataAttributions?: DataAttributionValue[];
+  imageUrl?: string | null;
+  imageCredit?: PhotoCreditValue | null;
+  photos?: ReadonlyArray<{
+    url: string;
+    credit?: PhotoCreditValue | null;
+  }>;
+  canEdit?: boolean | null;
+  canSuggest?: boolean | null;
+  netWeight?: number | null;
+  netWeightKind?: NetWeightKind | null;
+  type?: string | null;
+  storageState?: string | null;
+  shelfLifeDays?: number | null;
+  shelfLifeOpenedDays?: number | null;
+  tags?: string[] | null;
+  displayUnit?: {
+    id: string;
+    name: string;
+    symbol: string;
+  } | null;
+  trackingUnit?: {
+    id: string;
+    name: string;
+    symbol: string;
+  } | null;
+  categories?: Array<{
+    isPrimary?: boolean | null;
+    category: {
+      id: string;
+      name: string;
+    };
+  }> | null;
+  units: Array<{
+    unitId: string;
+    isDefault?: boolean | null;
+  }>;
+  variationBrand?: {
+    id: string;
+    name: string;
+  } | null;
+  matchedVariation?: {
+    id: string;
+    source?: string | null;
+  } | null;
+}
+
+/**
+ * The card's full-width image: the primary photo, first in gallery order, at
+ * its original size; else `imageUrl`, the item's only image. Each carries its
+ * own credit.
+ */
+const cardImageOf = ({
+  photos,
+  imageUrl,
+  imageCredit,
+}: LookupItem): ScannedItem['image'] => {
+  const [photo] = photos ?? [];
+  if (photo) return { url: photo.url, credit: photo.credit ?? undefined };
+  const url = firstNonBlank(imageUrl);
+  return url ? { url, credit: imageCredit ?? undefined } : undefined;
 };
 
 /**
@@ -75,55 +130,7 @@ const cardPhotoOf = (
  * `barcodePackage`), so nothing here borrows another pack's figure or brand.
  */
 const convertToScannedItem = (
-  item: {
-    id: string;
-    name: string;
-    description?: string | null;
-    imageUrl?: string | null;
-    imageCredit?: PhotoCreditValue | null;
-    photos?: ReadonlyArray<{
-      url: string;
-      credit?: PhotoCreditValue | null;
-    }>;
-    canEdit?: boolean | null;
-    canSuggest?: boolean | null;
-    netWeight?: number | null;
-    netWeightKind?: NetWeightKind | null;
-    type?: string | null;
-    storageState?: string | null;
-    shelfLifeDays?: number | null;
-    shelfLifeOpenedDays?: number | null;
-    tags?: string[] | null;
-    displayUnit?: {
-      id: string;
-      name: string;
-      symbol: string;
-    } | null;
-    trackingUnit?: {
-      id: string;
-      name: string;
-      symbol: string;
-    } | null;
-    categories?: Array<{
-      isPrimary?: boolean | null;
-      category: {
-        id: string;
-        name: string;
-      };
-    }> | null;
-    units: Array<{
-      unitId: string;
-      isDefault?: boolean | null;
-    }>;
-    variationBrand?: {
-      id: string;
-      name: string;
-    } | null;
-    matchedVariation?: {
-      id: string;
-      source?: string | null;
-    } | null;
-  },
+  item: LookupItem,
   scannedCode: string,
   brandNameOverride?: string,
 ): ScannedItem => ({
@@ -131,8 +138,8 @@ const convertToScannedItem = (
   name: item.name,
   description: firstNonBlank(item.description),
   imageUrl: firstNonBlank(item.imageUrl),
-  imageCredit: item.imageCredit ?? undefined,
-  photo: cardPhotoOf(item.photos),
+  image: cardImageOf(item),
+  dataAttributions: item.dataAttributions,
   canEdit: item.canEdit ?? undefined,
   canSuggest: item.canSuggest ?? undefined,
   upc: scannedCode,
@@ -188,7 +195,6 @@ export const useSearchResults = (
   const {
     searchResults,
     setSearching,
-    addToRecentlyScanned,
     clearSearch,
     setSearchError,
     setSearchResults,
@@ -234,7 +240,6 @@ export const useSearchResults = (
           );
           pendingBrandNameRef.current = undefined;
           setSearchResults([newItem]);
-          addToRecentlyScanned(newItem);
           hideBottomSheet();
         }
       },
@@ -285,7 +290,6 @@ export const useSearchResults = (
       setSearching(false);
       const item = convertToScannedItem(upcItem, barcode);
       setSearchResults([item]);
-      addToRecentlyScanned(item);
       hideBottomSheet();
     }
   }, [
@@ -294,7 +298,6 @@ export const useSearchResults = (
     barcode,
     setSearching,
     setSearchResults,
-    addToRecentlyScanned,
     hideBottomSheet,
   ]);
 
@@ -323,7 +326,6 @@ export const useSearchResults = (
         // API handles SKU matching - just show the result
         const item = convertToScannedItem(skuItem, barcode);
         setSearchResults([item]);
-        addToRecentlyScanned(item);
         hideBottomSheet();
         return;
       }
@@ -339,7 +341,6 @@ export const useSearchResults = (
     upcItem,
     setSearching,
     setSearchResults,
-    addToRecentlyScanned,
     hideBottomSheet,
     showBottomSheet,
   ]);

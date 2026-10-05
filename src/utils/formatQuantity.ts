@@ -174,6 +174,23 @@ export function formatQuantityDisplay(quantity: number, unit?: string): string {
   return `${formatQuantityForDisplay(quantity)} ${unitStr}`.trim();
 }
 
+/** A package size, with g→kg / mL→L upscaling and no "ea": 1500 g → "1.5 kg". */
+export function formatNetWeightDisplay(
+  netWeight?: number | null,
+  netWeightUnit?: { symbol?: string | null; name?: string | null } | null,
+): string | null {
+  if (!netWeight) return null;
+  const unitStr =
+    firstNonBlank(netWeightUnit?.symbol, netWeightUnit?.name) ?? '';
+  if (netWeight >= 1000 && (unitStr === 'g' || isMillilitre(unitStr))) {
+    return `${(netWeight / 1000).toFixed(1)} ${unitStr === 'g' ? 'kg' : 'L'}`;
+  }
+  const formatted = Number.isInteger(netWeight)
+    ? netWeight.toString()
+    : netWeight.toFixed(netWeight < 10 ? 2 : 1).replace(/\.?0+$/, '');
+  return `${formatted} ${unitStr}`.trim();
+}
+
 /** Prefers the unit's symbol over its name. */
 export function getUnitDisplayText(
   unit?: { symbol?: string; name?: string } | null,

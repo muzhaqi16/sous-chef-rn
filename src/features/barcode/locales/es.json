@@ -22,7 +22,6 @@
     "upc": "UPC/Código de barras",
     "servingAmount": "Una porción: {{amount}}",
     "referenceAmount": "Información nutricional por {{amount}}",
-    "openFoodFactsCredit": "Datos del producto de Open Food Facts (ODbL)",
     "packSize": {
       "body": "Open Food Facts no indica el tamaño de este producto. Introdúcelo una vez para añadirlo a tu despensa.",
       "label": "Tamaño de un paquete",

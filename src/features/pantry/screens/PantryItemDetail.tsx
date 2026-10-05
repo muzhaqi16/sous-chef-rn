@@ -23,7 +23,6 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { resolveImageUrl, galleryPhotos } from '#utils/imageUtils';
 import {
   formatPackageBreakdownFull,
-  formatNetWeightDisplay,
   formatQuantityBreakdown,
   formatStorageState,
   getExpiryInfo,
@@ -31,6 +30,7 @@ import {
   formatDaysInPantry,
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import {
+  formatNetWeightDisplay,
   formatQuantityForDisplay,
   resolveQuantityNotation,
 } from '#utils/formatQuantity';
@@ -56,7 +56,6 @@ import { commonStyles } from '#/styles/commonStyles';
 import { daysUntilExpiry } from '#domain/expiry';
 import type { RecipeInformation } from '#/services/spoonacular/types';
 import { useToday } from '#hooks/useToday';
-import { writesItemDirectly } from '#domain/itemWriteAccess';
 
 /**
  * Extracted so `styles.useVariants` is called once per instance.
@@ -527,7 +526,7 @@ export const PantryItemDetail: React.FC<
           photos={itemPhotos}
           initialIndex={viewerIndex ?? 0}
           onClose={() => setViewerIndex(null)}
-          canEdit={writesItemDirectly(item.item)}
+          item={item.item}
         />
       )}
     </>

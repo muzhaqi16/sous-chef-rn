@@ -2,11 +2,9 @@ import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
+import { Link } from '#components/atoms/Link';
 import { Text } from '#components/atoms/Text';
 import type { ImageCredit } from '#/graphql/generated/schemaTypes';
-import { openWebUrl } from '#utils/externalUrl';
-import { hitSlop } from '#/theme/foundations/sizes';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 
 export type PhotoCreditValue = Pick<
@@ -31,37 +29,28 @@ export const PhotoCredit: React.FC<PhotoCreditProps> = ({
 }) => {
   const { t } = useTranslation();
   styles.useVariants({ overPhoto });
-  const tone = overPhoto ? undefined : 'secondary';
 
   return (
     <View style={styles.row}>
-      <Pressable
-        onPress={() => {
-          void openWebUrl(credit.sourceUrl);
-        }}
-        hitSlop={hitSlop.sm}
-        accessibilityRole="link"
+      <Link
+        variant="caption"
+        href={credit.sourceUrl}
+        style={styles.onPhoto}
         testID={catalogTestIDs.photoCreditSource}
       >
-        <Text role="caption" tone={tone} style={styles.link}>
-          {t('itemPhotos.credit', { source: credit.text })}
-        </Text>
-      </Pressable>
-      <Text role="caption" tone={tone} style={styles.separator}>
+        {t('itemPhotos.credit', { source: credit.text })}
+      </Link>
+      <Text role="caption" tone="secondary" style={styles.onPhoto}>
         ·
       </Text>
-      <Pressable
-        onPress={() => {
-          void openWebUrl(credit.licenseUrl);
-        }}
-        hitSlop={hitSlop.sm}
-        accessibilityRole="link"
+      <Link
+        variant="caption"
+        href={credit.licenseUrl}
+        style={styles.onPhoto}
         testID={catalogTestIDs.photoCreditLicense}
       >
-        <Text role="caption" tone={tone} style={styles.link}>
-          {credit.license}
-        </Text>
-      </Pressable>
+        {credit.license}
+      </Link>
     </View>
   );
 };
@@ -84,17 +73,7 @@ const styles = StyleSheet.create(theme => ({
       },
     },
   },
-  link: {
-    textDecorationLine: 'underline',
-    variants: {
-      overPhoto: {
-        true: {
-          color: theme.colors.onScrim,
-        },
-      },
-    },
-  },
-  separator: {
+  onPhoto: {
     variants: {
       overPhoto: {
         true: {

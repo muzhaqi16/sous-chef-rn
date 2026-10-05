@@ -4,7 +4,7 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
-import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
+import { formatNetWeightDisplay } from '#utils/formatQuantity';
 import { useShoppingListItemDetail } from '#features/shoppingList/hooks/useShoppingListItemDetail';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
@@ -28,11 +28,10 @@ import {
   priorityOptionOf,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
-import { totalFromUnitPrice } from '#features/shoppingList/utils/purchasePrice';
+import { totalFromUnitPrice } from '#domain/purchasePrice';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { firstNonBlank } from '#/utils/firstNonBlank';
-import { writesItemDirectly } from '#domain/itemWriteAccess';
 
 type RouteParams = {
   listId: string;
@@ -405,7 +404,7 @@ export const ShoppingListItemDetail: React.FC<
           photos={itemPhotos}
           initialIndex={viewerIndex ?? 0}
           onClose={() => setViewerIndex(null)}
-          canEdit={!!item.item && writesItemDirectly(item.item)}
+          item={item.item}
         />
       )}
     </>

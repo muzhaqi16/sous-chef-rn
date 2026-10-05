@@ -43,6 +43,8 @@ const photo = (
   ...overrides,
 });
 
+const OWN_ITEM = { canEdit: true, canSuggest: false };
+
 const renderViewer = (
   props: Partial<React.ComponentProps<typeof ItemPhotoViewer>> = {},
   operationMocks: MockedResponse[] = [],
@@ -66,12 +68,17 @@ describe('ItemPhotoViewer set-as-main action', () => {
   // The server gates the mutation on the item's creator or an admin, so a
   // viewer without canEdit must not show an affordance that can only Forbidden.
   it('is hidden without canEdit', () => {
-    renderViewer({ canEdit: false });
+    renderViewer({ item: { canEdit: false, canSuggest: false } });
     expect(screen.queryByLabelText('Set as main photo')).toBeNull();
   });
 
-  it('is offered for an approved, non-primary photo when canEdit', () => {
-    renderViewer({ canEdit: true });
+  it('is hidden on a public item, even for an admin', () => {
+    renderViewer({ item: { canEdit: true, canSuggest: true } });
+    expect(screen.queryByLabelText('Set as main photo')).toBeNull();
+  });
+
+  it("is offered for an approved, non-primary photo of the viewer's own item", () => {
+    renderViewer({ item: OWN_ITEM });
     expect(screen.getByLabelText('Set as main photo')).toBeTruthy();
   });
 
@@ -79,7 +86,7 @@ describe('ItemPhotoViewer set-as-main action', () => {
   // on a pending upload buys the user a ValidationError and nothing else.
   it('is hidden for a pending photo', () => {
     renderViewer({
-      canEdit: true,
+      item: OWN_ITEM,
       photos: [photo('photo-1', { status: ItemImageStatus.Pending })],
     });
     expect(screen.queryByLabelText('Set as main photo')).toBeNull();
@@ -87,7 +94,7 @@ describe('ItemPhotoViewer set-as-main action', () => {
 
   it('shows a static badge instead once the photo is the hero', () => {
     renderViewer({
-      canEdit: true,
+      item: OWN_ITEM,
       photos: [photo('photo-1', { isPrimary: true })],
     });
     expect(screen.queryByLabelText('Set as main photo')).toBeNull();
@@ -109,7 +116,7 @@ describe('ItemPhotoViewer set-as-main action', () => {
       },
     });
 
-    renderViewer({ canEdit: true }, [mock]);
+    renderViewer({ item: OWN_ITEM }, [mock]);
     fireEvent.press(screen.getByLabelText('Set as main photo'));
 
     await waitFor(() =>

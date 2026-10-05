@@ -27,6 +27,12 @@ import { errorService } from '#/services/errorService';
 type IngredientMatch =
   MatchRecipeIngredientsToPantryQuery['matchRecipeIngredientsToPantry'][number];
 
+/** What the cook entered before the review: the cooking log records it. */
+export interface CookEntry {
+  servings: number;
+  notes?: string;
+}
+
 export type PantryStackOption = NonNullable<
   IngredientMatch['matchedPantryItem']
 >;
@@ -205,11 +211,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     included,
   };
 
-  /** `cook` is what the cook entered before the review: the log records it. */
-  const confirmConsumption = async (cook?: {
-    servings: number;
-    notes?: string;
-  }) => {
+  const confirmConsumption = async (cook?: CookEntry) => {
     if (!recipeId || !pantryId) return;
 
     const consumptions: ConfirmedIngredientConsumptionInput[] =

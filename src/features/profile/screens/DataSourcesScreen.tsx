@@ -4,8 +4,7 @@ import { useTranslation, type TranslationKey } from '#/i18n';
 import { SubScreen } from '#components/templates/SubScreen';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { Text } from '#components/atoms/Text';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { openWebUrl } from '#utils/externalUrl';
+import { Link } from '#components/atoms/Link';
 import { profileTestIDs } from '#features/profile/testIDs';
 
 interface DataSource {
@@ -63,18 +62,13 @@ export const DataSourcesScreen: React.FC = () => {
           <Text role="caption" tone="secondary" style={styles.licence}>
             {t(source.licenceKey)}
           </Text>
-          <AppPressable
-            accessibilityRole="link"
-            onPress={() => {
-              void openWebUrl(source.url);
-            }}
+          <Link
+            href={source.url}
             style={styles.link}
             testID={profileTestIDs.dataSourceLink(source.id)}
           >
-            <Text role="bodyStrong" tone="accent">
-              {t('profile.dataSources.visit')}
-            </Text>
-          </AppPressable>
+            {t('profile.dataSources.visit')}
+          </Link>
         </SettingsSection>
       ))}
     </SubScreen>

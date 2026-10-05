@@ -71,33 +71,12 @@ describe('ProductResultCard', () => {
     expect(screen.getByText('Format: UPC-A')).toBeTruthy();
   });
 
-  it('credits a licensed image under it', () => {
+  it('shows its image, credited under it', () => {
     render(
       <ProductResultCard
         item={{
           ...baseItem,
-          imageUrl: 'https://cdn.test/front.jpg',
-          imageCredit: {
-            text: 'Open Food Facts',
-            license: 'CC BY-SA 3.0',
-            licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
-            sourceUrl: 'https://world.openfoodfacts.org/product/1',
-          },
-        }}
-      />,
-    );
-    expect(screen.getByText('Photo: Open Food Facts')).toBeTruthy();
-  });
-
-  // `imageUrl` is the primary photo's thumbnail: full-width, the card shows the
-  // photo itself and credits it.
-  it('shows the photo rather than the thumbnail, credited as the photo is', () => {
-    render(
-      <ProductResultCard
-        item={{
-          ...baseItem,
-          imageUrl: 'https://cdn.test/front_thumb.webp',
-          photo: {
+          image: {
             url: 'https://cdn.test/front.jpg',
             credit: {
               text: 'Open Food Facts',
@@ -118,7 +97,7 @@ describe('ProductResultCard', () => {
   it('shows no credit for an image that needs none', () => {
     render(
       <ProductResultCard
-        item={{ ...baseItem, imageUrl: 'https://cdn.test/front.jpg' }}
+        item={{ ...baseItem, image: { url: 'https://cdn.test/front.jpg' } }}
       />,
     );
     expect(screen.queryByText(/^Photo:/)).toBeNull();

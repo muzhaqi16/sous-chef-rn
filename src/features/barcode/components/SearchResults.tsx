@@ -12,10 +12,13 @@ import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import type { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
 import type { BarcodeSource } from '#features/barcode/types';
 import { ScrollView } from 'react-native';
-import { Text } from '#components/atoms/Text';
-import { ExternalSource, NetWeightKind } from '#/graphql/generated/schemaTypes';
-import { barcodeTestIDs } from '#features/barcode/testIDs';
-import { PackSizeSheet, type PackSize } from './PackSizeSheet';
+import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
+import {
+  ExternalSource,
+  NetWeightKind,
+  type PackageSizeInput,
+} from '#/graphql/generated/schemaTypes';
+import { PackSizeSheet } from './PackSizeSheet';
 
 export interface SearchResultsProps {
   item: ScannedItem;
@@ -64,7 +67,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     (item.netWeightKind !== NetWeightKind.Package ||
       item.netWeight === undefined);
 
-  const addItem = (packSize?: PackSize) => {
+  const addItem = (packSize?: PackageSizeInput) => {
     void executeWithLoadingState(
       async () => {
         if (source === 'pantry' && pantryId) {
@@ -137,7 +140,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     addItem();
   };
 
-  const handlePackSize = (packSize: PackSize) => {
+  const handlePackSize = (packSize: PackageSizeInput) => {
     setIsAskingPackSize(false);
     addItem(packSize);
   };
@@ -166,16 +169,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         editActionLabel={editActionLabel}
       />
 
-      {!!fromOpenFoodFacts && (
-        <Text
-          role="caption"
-          tone="secondary"
-          style={styles.credit}
-          testID={barcodeTestIDs.openFoodFactsCredit}
-        >
-          {t('barcode.openFoodFactsCredit')}
-        </Text>
-      )}
+      <DataAttributionNotices
+        attributions={item.dataAttributions ?? []}
+        centered
+      />
 
       <ActionButtons
         /*
@@ -220,8 +217,5 @@ const styles = StyleSheet.create(theme => ({
   scrollContent: {
     paddingVertical: theme.spacing.lg,
     gap: theme.spacing.lg,
-  },
-  credit: {
-    textAlign: 'center',
   },
 }));

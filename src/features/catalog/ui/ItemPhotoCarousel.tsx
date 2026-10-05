@@ -41,14 +41,21 @@ export type ItemPhotoRef =
   | ItemPhotoCarousel_ItemPhotoFragment;
 
 /**
- * The already-materialized form of a ref, or null when it is a bare masked ref.
- * Used as the fallback when the cache read comes back incomplete — a masked ref
- * carries no `url`, so rendering it would put `undefined` into an <Image>.
+ * A photo ref read through its fragment. An incomplete read falls back to the
+ * ref's materialized form, or null for a bare masked ref: it carries no `url`,
+ * so rendering it would put `undefined` into an <Image>.
  */
-export const materializedPhoto = (
+export const useItemPhoto = (
   ref: ItemPhotoRef,
-): ItemPhotoCarousel_ItemPhotoFragment | null =>
-  'url' in ref && typeof ref.url === 'string' ? ref : null;
+): ItemPhotoCarousel_ItemPhotoFragment | null => {
+  const result = useFragment({
+    fragment: ItemPhotoCarousel_ItemPhotoFragmentDoc,
+    fragmentName: 'ItemPhotoCarousel_itemPhoto',
+    from: ref,
+  });
+  if (result.complete) return result.data;
+  return 'url' in ref && typeof ref.url === 'string' ? ref : null;
+};
 
 interface ItemPhotoCarouselProps {
   /** `Item.photos`, in the server's gallery order. Capped at 6 for display. */
@@ -224,15 +231,7 @@ const PhotoPage: React.FC<{
   onFailed,
 }) => {
   const { t } = useTranslation();
-  const result = useFragment({
-    fragment: ItemPhotoCarousel_ItemPhotoFragmentDoc,
-    fragmentName: 'ItemPhotoCarousel_itemPhoto',
-    from: photoRef,
-  });
-
-  const photo: ItemPhotoCarousel_ItemPhotoFragment | null = result.complete
-    ? result.data
-    : materializedPhoto(photoRef);
+  const photo = useItemPhoto(photoRef);
 
   if (!photo) return <View style={{ width, height }} />;
 
