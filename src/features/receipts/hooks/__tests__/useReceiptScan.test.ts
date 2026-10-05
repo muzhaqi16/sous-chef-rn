@@ -9,6 +9,7 @@ import {
   onDeviceStructuring,
 } from '../../utils/onDeviceStructuring';
 import { errorService } from '#/services/errorService';
+import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
 import { toDateKey } from '#/utils/dateUtils';
 import * as deviceLocale from '#/utils/deviceLocale';
@@ -24,9 +25,9 @@ jest.mock('#/native/TextRecognition', () => ({
     deletePhotos: jest.fn(),
   },
 }));
-const mockUploadReceiptPhoto = jest.fn();
+const mockUploadUnconfirmed = jest.fn();
 jest.mock('#hooks/useImageUpload', () => ({
-  useImageUpload: () => ({ uploadReceiptPhoto: mockUploadReceiptPhoto }),
+  useImageUpload: () => ({ uploadUnconfirmed: mockUploadUnconfirmed }),
 }));
 const mockTakePhoto = jest.fn();
 const mockPickPhoto = jest.fn();
@@ -261,7 +262,7 @@ describe('useReceiptScan', () => {
       expect(result.current.status).toBe('readFailed');
       expect(deletePhotos).not.toHaveBeenCalled();
       expect(preparePhotos).not.toHaveBeenCalled();
-      expect(mockUploadReceiptPhoto).not.toHaveBeenCalled();
+      expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
       expect(useReceiptDraftStore.getState().draft).toBeNull();
     });
 
@@ -273,7 +274,7 @@ describe('useReceiptScan', () => {
           fileSize: 900,
         })),
       );
-      mockUploadReceiptPhoto.mockImplementation(async (file: { uri: string }) =>
+      mockUploadUnconfirmed.mockImplementation(async (file: { uri: string }) =>
         file.uri.replace('file:///prepared', 'receipt-photos/u1/p'),
       );
 
@@ -282,7 +283,11 @@ describe('useReceiptScan', () => {
       expect(preparePhotos).toHaveBeenCalledWith(PAGES.slice(0, 4));
       // The fifth page is not sent and goes at once.
       expect(deletePhotos).toHaveBeenCalledWith(PAGES.slice(4));
-      expect(mockUploadReceiptPhoto).toHaveBeenCalledTimes(4);
+      expect(mockUploadUnconfirmed).toHaveBeenCalledTimes(4);
+      expect(mockUploadUnconfirmed).toHaveBeenCalledWith(
+        expect.anything(),
+        ImageUploadPurpose.ReceiptPhoto,
+      );
       expect(deletePhotos).toHaveBeenCalledWith([
         'file:///prepared-0.jpg',
         'file:///prepared-1.jpg',
@@ -308,7 +313,7 @@ describe('useReceiptScan', () => {
       preparePhotos.mockResolvedValue([
         { uri: 'file:///prepared-0.jpg', fileSize: 900 },
       ]);
-      mockUploadReceiptPhoto.mockRejectedValueOnce(
+      mockUploadUnconfirmed.mockRejectedValueOnce(
         new Error('Upload failed: 400'),
       );
 
@@ -326,7 +331,7 @@ describe('useReceiptScan', () => {
 
       expect(deletePhotos).toHaveBeenCalledWith(PAGES);
       expect(preparePhotos).not.toHaveBeenCalled();
-      expect(mockUploadReceiptPhoto).not.toHaveBeenCalled();
+      expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
       expect(result.current.status).toBe('idle');
     });
 
@@ -350,7 +355,7 @@ describe('useReceiptScan', () => {
         })),
       );
       let upload: (key: string) => void = () => {};
-      mockUploadReceiptPhoto.mockImplementationOnce(
+      mockUploadUnconfirmed.mockImplementationOnce(
         () =>
           new Promise<string>(resolve => {
             upload = resolve;
@@ -368,7 +373,7 @@ describe('useReceiptScan', () => {
       upload('receipt-photos/u1/p-0.jpg');
       await act(() => sending);
 
-      expect(mockUploadReceiptPhoto).toHaveBeenCalledTimes(1);
+      expect(mockUploadUnconfirmed).toHaveBeenCalledTimes(1);
       expect(deletePhotos).toHaveBeenCalledWith([
         'file:///prepared-0.jpg',
         'file:///prepared-1.jpg',

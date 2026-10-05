@@ -272,10 +272,10 @@ describe('useImageUpload', () => {
 
       let key: string | null = null;
       await act(async () => {
-        key = await result.current.uploadReceiptPhoto({
-          ...file,
-          type: 'image/jpeg',
-        });
+        key = await result.current.uploadUnconfirmed(
+          { ...file, type: 'image/jpeg' },
+          ImageUploadPurpose.ReceiptPhoto,
+        );
       });
 
       expect(key).toBe('receipt-photos/u1/p1.jpg');

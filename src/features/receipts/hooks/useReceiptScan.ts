@@ -12,6 +12,7 @@ import {
 import { errorService } from '#/services/errorService';
 import { usePhotoCapture } from '#hooks/usePhotoCapture';
 import { useImageUpload } from '#hooks/useImageUpload';
+import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { useIsOnline } from '#store/useAppStore';
 import type { ImageFile } from '#/types/media';
 import { assembleReceiptLines } from '../utils/assembleReceiptLines';
@@ -89,7 +90,7 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
   const [fromLibrary, setFromLibrary] = useState(false);
 
   const { takePhoto: capturePhoto, pickPhoto: choosePhoto } = usePhotoCapture();
-  const { uploadReceiptPhoto } = useImageUpload();
+  const { uploadUnconfirmed } = useImageUpload();
   const isOnline = useIsOnline();
 
   // Pages the phone could not read, kept while the user decides whether to
@@ -201,7 +202,10 @@ export function useReceiptScan({ onCancel }: UseReceiptScanOptions) {
       if (!open.current) return null;
       let key: string | null = null;
       try {
-        key = await uploadReceiptPhoto(toUpload(photo));
+        key = await uploadUnconfirmed(
+          toUpload(photo),
+          ImageUploadPurpose.ReceiptPhoto,
+        );
       } catch (error) {
         errorService.reportError(error, { operation: 'Upload receipt photo' });
       }
