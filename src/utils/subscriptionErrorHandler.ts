@@ -8,21 +8,11 @@ import {
   socketCloseOf,
 } from './errors/libraryErrorMessages';
 import { isNetworkError } from './isNetworkError';
-import { backoffDelay } from './backoff';
 import { isRetryableWebSocketClose } from '#/apollo/links/wsCloseCodes';
 
 interface SubscriptionError {
   message?: string;
 }
-
-interface RetryState {
-  count: number;
-  lastAttempt: number;
-}
-
-const retryStates = new Map<string, RetryState>();
-const MAX_RETRIES = 3;
-const RETRY_BACKOFF = { baseMs: 1000, maxMs: 30000 };
 
 /**
  * True for a transport failure that auto-recovers (app backgrounding, network
@@ -94,72 +84,29 @@ export const isPermanentSubscriptionRejection = (
   return isArmorRejection(top) || PERMANENT_REJECTION_CODES.has(top.code);
 };
 
-export const handleSubscriptionError = (
+/**
+ * Reports a subscription failure neither transport churn, which recovers on its
+ * own, nor a resolver that returned no stream explains. Re-subscribing is
+ * `useSubscriptionTransportRecovery`'s.
+ */
+export const reportSubscriptionError = (
   operationName: string,
   error: SubscriptionError,
-  onRetry?: () => void,
-): boolean => {
-  // Transport churn recovers on its own.
-  if (isExpectedTransportError(error)) {
-    return false;
+): void => {
+  if (
+    isExpectedTransportError(error) ||
+    isNonIterableSubscriptionResolver(error)
+  ) {
+    return;
   }
-
-  if (!isNonIterableSubscriptionResolver(error)) {
-    // For non-resolver errors, don't retry. Socket/network errors already
-    // returned above, so anything reaching here is an unexpected failure worth
-    // reporting to telemetry.
-    errorService.reportError(
-      new Error(`Subscription ${operationName} failed with non-resolver error`),
-      {
-        operation: 'subscriptionError',
-        subscription: operationName,
-        error: serializeError(error),
-      },
-    );
-    return false;
-  }
-
-  // Get or create retry state
-  const state = retryStates.get(operationName) ?? {
-    count: 0,
-    lastAttempt: 0,
-  };
-
-  // Check if we've exceeded max retries
-  if (state.count >= MAX_RETRIES) {
-    retryStates.delete(operationName);
-    return false;
-  }
-
-  // Check if we're still in backoff period
-  const now = Date.now();
-  if (now - state.lastAttempt < backoffDelay(state.count, RETRY_BACKOFF)) {
-    return false;
-  }
-
-  // Increment retry count; the backoff grows from it
-  state.count += 1;
-  state.lastAttempt = now;
-
-  retryStates.set(operationName, state);
-
-  // Schedule retry if callback provided
-  if (onRetry) {
-    setTimeout(() => {
-      onRetry();
-    }, backoffDelay(state.count, RETRY_BACKOFF));
-  }
-
-  return true;
-};
-
-/** @internal Test seam. */
-export const clearRetryState = (operationName: string): void => {
-  retryStates.delete(operationName);
-};
-
-export const clearAllRetryStates = (): void => {
-  retryStates.clear();
+  errorService.reportError(
+    new Error(`Subscription ${operationName} failed with non-resolver error`),
+    {
+      operation: 'subscriptionError',
+      subscription: operationName,
+      error: serializeError(error),
+    },
+  );
 };
 
 /** A subscription resolver that returned no event stream. */

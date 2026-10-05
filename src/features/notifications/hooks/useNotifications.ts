@@ -34,9 +34,8 @@ import {
   type NotificationPayload,
 } from '#features/notifications/types';
 import {
-  handleSubscriptionError,
-  clearAllRetryStates,
   isExpectedTransportError,
+  reportSubscriptionError,
 } from '#utils/subscriptionErrorHandler';
 import {
   addNotificationToFeed,
@@ -299,7 +298,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
     if (!isExpectedTransportError(error)) {
       logger.warn(`${subscriptionName} subscription error:`, error.message);
     }
-    handleSubscriptionError(subscriptionName, error);
+    reportSubscriptionError(subscriptionName, error);
   };
 
   // Consolidated notification stream — CREATED + UPDATED on one subscription,
@@ -429,13 +428,6 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       unsubscribeApns();
     };
   }, [config.skip, user?.id]);
-
-  // Cleanup on logout
-  useEffect(() => {
-    if (!user?.id) {
-      clearAllRetryStates();
-    }
-  }, [user?.id]);
 };
 
 /**
