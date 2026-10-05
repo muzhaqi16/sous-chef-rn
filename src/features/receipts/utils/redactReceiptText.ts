@@ -18,9 +18,26 @@ const STARRED_LAST_FOUR = /(?:^|\s)[*•]{1,3}\d{4}\b(?![.,]\d)/;
 const NETWORK_LAST_FOUR =
   /\b(?:MC|VISA|AMEX|DISC(?:OVER)?|MASTER\s?CARD)\s+\d{4}\b(?![.,]\d)/i;
 
-// A full card number: 16–19 digits, optionally in groups. Item codes (UPC, EAN,
-// PLU) are at most 14 digits.
-const CARD_DIGITS = /\b(?:\d[ -]?){15,18}\d\b/;
+// A full card number: groups of four (the last of one to three) or Amex's
+// 4-6-5, split by one separator or none, that passes the Luhn check. An item
+// code beside a short number (`041220576054 1234`) is no card.
+const CARD_NUMBER =
+  /\b\d{4}([ -]?)(?:\d{4}\1\d{4}\1\d{4}(?:\1\d{1,3})?|\d{6}\1\d{5})\b/g;
+
+const passesLuhn = (digits: string) => {
+  const sum = [...digits].reverse().reduce((total, char, at) => {
+    const digit = Number(char) * (at % 2 === 1 ? 2 : 1);
+    return total + (digit > 9 ? digit - 9 : digit);
+  }, 0);
+  return sum % 10 === 0;
+};
+
+// A short last group can be the next figure on the line, not the card's.
+const hasCardNumber = (line: string) =>
+  [...line.matchAll(CARD_NUMBER)].some(([number]) => {
+    const digits = number.replace(/\D/g, '');
+    return passesLuhn(digits) || passesLuhn(digits.slice(0, 16));
+  });
 
 // A label that names only a payment field, whatever follows it.
 const PAYMENT_LABEL =
@@ -60,7 +77,7 @@ const isPaymentDetail = (line: string) =>
   MASKED_CARD.test(line) ||
   STARRED_LAST_FOUR.test(line) ||
   NETWORK_LAST_FOUR.test(line) ||
-  CARD_DIGITS.test(line) ||
+  hasCardNumber(line) ||
   PAYMENT_LABEL.test(line) ||
   PAYMENT_ID.test(line) ||
   AUTH_CODE_ANYWHERE.test(line) ||

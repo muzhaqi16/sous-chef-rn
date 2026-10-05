@@ -221,11 +221,18 @@ describe('redactReceiptText', () => {
         '4111 1111 1111 1111',
         '4111-1111-1111-1111',
         '4111111111111111',
+        '4111 1111 1111 1111 7.49',
       ]),
     ).toEqual([]);
   });
 
-  it('keeps items that only look like payment labels, and item codes up to 14 digits', () => {
+  it('removes an Amex number in its 4-6-5 groups', () => {
+    expect(
+      redactOne(['3782 822463 10005', '3782-822463-10005', '378282246310005']),
+    ).toEqual([]);
+  });
+
+  it('keeps items that only look like payment labels or card numbers, and item codes up to 14 digits', () => {
     const items = [
       'AIDELLS CHKN SAUSAGE  5.99',
       'TRACE MINERALS DROPS  9.99',
@@ -235,6 +242,11 @@ describe('redactReceiptText', () => {
       'GIFT CARD  25.00',
       'SODA 12PK  *12.99',
       '00012345678905 CASE WATER  5.99',
+      // A code beside a short number, and card-shaped digits that fail Luhn.
+      '041220576054 1234 PEANUT BTR  3.49',
+      '00012345678905 12 BANANAS  1.24',
+      '4111 1111-1111 1111 MIXED NUTS  4.99',
+      '1234 5678 9012 3456 GIFT BAG  1.00',
     ];
 
     expect(redactOne(items)).toEqual(items);
