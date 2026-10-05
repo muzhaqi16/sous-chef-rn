@@ -455,45 +455,34 @@ Deep dive: **[`local-first-architecture.md`](local-first-architecture.md)**.
 
 ## Data ingestion seams
 
-Six OpenSpec changes (planned 2026-09-30, in `openspec/changes/`) add ways for
-data to enter the catalog and the pantry. They share a handful of seams. Each
-seam has exactly one owning change; the other changes only add to it, so changes
-that run at the same time never edit each other's code. API and admin-app work
-for all six is filed on GitHub (tracking issue `muzhaqi16/sous-chef-api#358`).
-This client never edits those repos.
+Data enters the catalog and the pantry through a handful of shared seams. Each
+seam has one home, and a new source extends it rather than adding a parallel
+path. The API and the admin app own the server side; this client never edits
+those repos.
 
-```
-ingestion-foundations ──┬──▶ openfoodfacts-catalog ──▶ multilingual-catalog
-catalog-golden-record ──┘                               (also after receipt-scanning R2)
-ingestion-foundations ─────▶ receipt-scanning ──▶ on-device-receipt-recognition
-```
+| Seam                                                                                               | A new source                                                                 |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| The intake expiry default: `today` on every intake input, read by the server's shelf-life resolver | sends `today` from its intake hook; supplies shelf-life data to the resolver |
+| `CatalogResolutionService` and its ordered steps; GTIN equivalence                                 | adds one resolution step                                                     |
+| Survivorship engine, admin field overrides, provenance, refresh scheduler, review queue            | adds a mapper and its precedence entries                                     |
+| The barcode miss/result flow; the embedding model                                                  | reaches the scan through a resolution step, never its own lookup             |
+| `receipts` feature; the add sheet's receipt action; `usePantryIntake`; `ReceiptParser`             | implements `ReceiptParser`                                                   |
+| Per-language names and search; the language header; the `languageChanged` resync event             | adds names as synonyms in their language                                     |
 
-| Seam                                                                                          | Owner                   | Other changes may                                                                       |
-| --------------------------------------------------------------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------- |
-| The intake expiry default and `today` on every intake input; the shelf-life resolver          | `ingestion-foundations` | extend the resolver's data (`openfoodfacts-catalog`); pass `today` (`receipt-scanning`) |
-| `CatalogResolutionService` and its ordered step list; GTIN equivalence                        | `ingestion-foundations` | add one step each: Open Food Facts, `rankCandidates`, aliases                           |
-| Survivorship engine, admin field overrides, provenance, refresh scheduler, review queue       | `catalog-golden-record` | add a mapper and precedence entries, name overrides, flag kinds                         |
-| Local Open Food Facts MongoDB mirror; barcode miss/result flow; the embedding model           | `openfoodfacts-catalog` | read the mirror's per-language names                                                    |
-| `receipts` feature; the add sheet's receipt action; public `usePantryIntake`; `ReceiptParser` | `receipt-scanning`      | add an on-device parser (`on-device-receipt-recognition`)                               |
-| Per-language names and search; the language header; the `languageChanged` resync event        | `multilingual-catalog`  | feed agreed receipt aliases in as synonyms                                              |
-
-Four rules keep the parallel changes apart:
+Four rules keep parallel work apart:
 
 - **A public hook ships with its first production consumer.**
   `check:dead-modules` and `hookMembersAreConsumed.test.ts` reject one added
-  "for later", so the change that consumes a hook creates it.
+  "for later", so the work that consumes a hook creates it.
 - **New GraphQL operations live in the owning feature's folder,** not the shared
   `src/graphql/operations/item/item.graphql`.
 - **Generated files are regenerated after a rebase, never hand-merged:**
-  `schema.graphql`, `schemaTypes.ts` and the persisted-query manifest. One change
-  pulls the schema at a time, and commits it on its own.
+  `schema.graphql`, `schemaTypes.ts` and the persisted-query manifest. One
+  session pulls the schema at a time, and commits it on its own.
 - **Append-only shared files** (`registry.ts`, `registry.static.ts`,
   `src/i18n/localeTypes.ts`, `useAppNavigation.ts`,
   `verified-library-behaviour.md`) take one-line or one-block additions in their
   own sections. A textual conflict there keeps both sides.
-
-`openspec/` is git-ignored, so the changes' planning files stay local. This
-table and the GitHub issues are the shared record.
 
 ---
 
@@ -635,7 +624,7 @@ The Unistyles babel plugin must run **before** the React Compiler plugin.
 `SortableShoppingList` handles drag-and-drop. Never `.map()` an unbounded list
 inside a `ScrollView`.
 
-`estimatedItemSize` is **removed** in FlashList v2 — the prop no longer exists. List
+FlashList v2 takes no `estimatedItemSize`. List
 `data` must never come through `useDeferredValue` / `startTransition` —
 [`flashlist-layout-index-race.md`](flashlist-layout-index-race.md). How the two
 big lists are fed and what an append costs:
