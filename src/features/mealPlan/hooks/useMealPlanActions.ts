@@ -23,6 +23,7 @@ import type {
   UpdateMealPlanInput,
 } from '#/graphql/generated/schemaTypes';
 import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { chainEntityWrite } from '#/apollo/utils/entityWriteChain';
 import { removeFromMealPlans } from '#features/mealPlan/cache/removals';
 import { settleMealPlanDelete } from '#features/mealPlan/offline/replayReconcilers';
 import {
@@ -209,14 +210,17 @@ export function useMealPlanActions() {
       }
     };
 
-    // The version the screen shows: a save made elsewhere since is refused,
-    // not overwritten.
-    const version = snapshot?.version;
+    // A save made elsewhere since is refused, not overwritten.
     const settled = await settleMutation(
       () =>
-        updateMealPlanMutation({
-          variables: { input: { version, ...input, id } },
-        }),
+        chainEntityWrite(
+          client.cache,
+          { __typename: 'MealPlan', id },
+          version =>
+            updateMealPlanMutation({
+              variables: { input: { version, ...input, id } },
+            }),
+        ),
       {
         document: UpdateMealPlanDocument,
         fallback: t('errors.saveFailed'),

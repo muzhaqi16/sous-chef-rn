@@ -23,6 +23,7 @@ import {
   writeEntityFields,
 } from '#/apollo/utils/localFirstFields';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { chainEntityWrite } from '#/apollo/utils/entityWriteChain';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import {
   removeOptimisticPantry,
@@ -103,13 +104,18 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
     update: buildDeletePantryUpdater(homeId),
   });
 
-  /** False when the flag did not stick, so the caller can put its switch back. */
+  /**
+   * False when the flag did not stick, so the caller can put its switch back.
+   * In line with the pantry's saves: the server moves its version.
+   */
   const setDefault = async (id: string): Promise<boolean> => {
     const settled = await settleMutation(
       () =>
-        markAsDefault({
-          variables: { input: { id }, today: todayKey() },
-        }),
+        chainEntityWrite(client.cache, { __typename: 'Pantry', id }, () =>
+          markAsDefault({
+            variables: { input: { id }, today: todayKey() },
+          }),
+        ),
       {
         document: MarkPantryAsDefaultDocument,
         fallback: t('errors.saveSettingsFailed'),
@@ -141,16 +147,19 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
     // Omits keys the read did not carry, so a refusal arriving before the
     // query resolves reverts nothing rather than blanking the real name.
     const previous = snapshotFields(pantry, updates);
-    // The version the screen shows: a save made elsewhere since is refused,
-    // not overwritten.
-    const version = pantry?.id === id ? pantry.version : undefined;
     writeEntityFields(client.cache, entity, updates);
 
+    // A save made elsewhere since is refused, not overwritten.
     const settled = await settleMutation(
       () =>
-        updatePantry({
-          variables: { input: { id, ...updates, version }, today: todayKey() },
-        }),
+        chainEntityWrite(client.cache, entity, version =>
+          updatePantry({
+            variables: {
+              input: { id, ...updates, version },
+              today: todayKey(),
+            },
+          }),
+        ),
       {
         document: UpdatePantryDocument,
         fallback: t('errors.saveSettingsFailed'),

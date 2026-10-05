@@ -1,12 +1,18 @@
-import { waitFor } from '@testing-library/react-native';
-import type { MockFor } from '#/test-utils/apolloMockProvider';
+import { gql } from '@apollo/client';
+import { act, waitFor } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
+import type { MockDataFor, MockFor } from '#/test-utils/apolloMockProvider';
 import {
+  inputOf,
   recordMock,
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { usePantrySettings } from '#features/pantry/hooks/usePantrySettings';
-import { MarkPantryAsDefaultDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  MarkPantryAsDefaultDocument,
+  UpdatePantryDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 
 /**
@@ -91,5 +97,63 @@ describe('usePantrySettings.setDefault', () => {
 
     await waitFor(() => expect(result.current.setDefault).toBeDefined());
     await expect(result.current.setDefault('pantry-1')).resolves.toBe(true);
+  });
+});
+
+describe('usePantrySettings, a toggle and a save inside one round trip', () => {
+  // The default toggle moves the pantry's version server-side, and a save
+  // sent alongside it at the old one was refused as changed elsewhere.
+  it('sends the save at the version the toggle answered with', async () => {
+    const cache = makeCache();
+    cache.writeFragment({
+      fragment: gql`
+        fragment SeedPantryVersion on Pantry {
+          id
+          version
+        }
+      `,
+      data: { __typename: 'Pantry', id: 'pantry-1', version: 5 },
+    });
+    const markDefaultMock = recordMock(MarkPantryAsDefaultDocument, {
+      data: {
+        markPantryAsDefault: {
+          __typename: 'MarkPantryAsDefaultPayload',
+          pantry: { __typename: 'Pantry', id: 'pantry-1', version: 6 },
+        },
+      },
+      delay: 20,
+    });
+    const save = recordMock(UpdatePantryDocument, {
+      dataFor: (vars): MockDataFor<typeof UpdatePantryDocument> => ({
+        updatePantry: {
+          __typename: 'UpdatePantryPayload',
+          pantry: {
+            __typename: 'Pantry',
+            id: 'pantry-1',
+            version: Number(inputOf(vars).version) + 1,
+          },
+        },
+      }),
+    });
+    const { result } = renderHookWithApollo(
+      () => usePantrySettings({ pantryId: 'pantry-1', homeId: 'home-1' }),
+      { operationMocks: [markDefaultMock.mock, save.mock], cache },
+    );
+
+    await act(async () => {
+      await Promise.all([
+        result.current.setDefault('pantry-1'),
+        result.current.savePantryFields('pantry-1', {
+          name: 'Kitchen',
+          description: '',
+        }),
+      ]);
+    });
+
+    expect(save.fired).toEqual([
+      expect.objectContaining({
+        input: expect.objectContaining({ id: 'pantry-1', version: 6 }),
+      }),
+    ]);
   });
 });
